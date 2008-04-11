@@ -40,17 +40,3 @@ Candidate changes:
 
 Approved changes (all releases):
 ================================
-  * r30510
-    Fixes a minor bug When filtering self-referential mergeinfo from incoming
-    property additions during a merge:  If the incoming property addition
-    was simply empty mergeinfo, then that property got discarded.  No
-    practical effect on the ultimate mergeinfo set by the merge, but the merge
-    notifications were incorrect.  See
-    http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=137120.
-    Notes:
-      This replaces r30503, which claimed to do the same thing, and it did.
-      Sadly it did other things too.  Bad things.  Things which got it
-      reverted in r30509.
-    Votes:
-      +1: pburba, epg, kameshj
-
