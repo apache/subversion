@@ -591,10 +591,22 @@ module Svn
         Client.get_config(self)
       end
 
-      def mergeinfo(path_or_url, revision=nil)
-        info = Client.mergeinfo_get_merged(path_or_url, revision, self)
+      def merged(path_or_url, peg_revision=nil)
+        info = Client.mergeinfo_get_merged(path_or_url, peg_revision, self)
         return nil if info.nil?
         Core::MergeInfo.new(info)
+      end
+
+      def log_merged(path_or_url, peg_revision, merge_source_url,
+                     source_peg_revision, discover_changed_path=true,
+                     interested_revision_prop_names=nil,
+                     &receiver)
+        raise ArgumentError, "Block isn't given" if receiver.nil?
+        Client.mergeinfo_log_merged(path_or_url, peg_revision,
+                                    merge_source_url, source_peg_revision,
+                                    receiver, discover_changed_path,
+                                    interested_revision_prop_names,
+                                    self)
       end
 
       def add_to_changelist(changelist_name, paths, depth=nil, changelists_names=nil)

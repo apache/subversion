@@ -933,6 +933,18 @@ test_path_is_ancestor(const char **msg,
     { "../foo",          "..",            FALSE},
     { SVN_EMPTY_PATH,    SVN_EMPTY_PATH,  TRUE},
     { "/",               "/",             TRUE},
+
+    { "http://test",    "http://test",     TRUE},
+    { "http://test",    "http://taste",    FALSE},
+    { "http://test",    "http://test/foo", TRUE},
+    { "http://test",    "file://test/foo", FALSE},
+    { "http://test",    "http://testF",    FALSE},
+/*
+    TODO: this testcase fails, showing that svn_path_is_ancestor
+    shouldn't be used on urls. This is related to issue #1711.
+
+    { "http://",        "http://test",     FALSE},
+*/
   };
 
   *msg = "test svn_path_is_ancestor";
@@ -1083,6 +1095,8 @@ test_get_longest_ancestor(const char **msg,
     { "http://test",    "http://taste",    ""},
     { "http://test",    "http://test/foo", "http://test"},
     { "http://test",    "file://test/foo", ""},
+    { "http://test",    "http://testF",    ""},
+    { "http://",        "http://test",     ""},
   };
 
   *msg = "test svn_path_get_longest_ancestor";
