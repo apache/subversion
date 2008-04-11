@@ -23,6 +23,14 @@ Candidate changes:
     Votes
       +1: dlr
 
+ * r30546
+   Fix a segfault when a merge removes explicit mergeinfo.
+   Notes:
+     Follow-up to r30510 which was one of the backports between RC1 and RC2. 
+    Votes
+      +1: pburba
+
+
 Status of 1.5.1:
 ================
 
