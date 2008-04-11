@@ -23,13 +23,6 @@ Candidate changes:
    Votes
      +1: dlr
 
- * r30548, r30551, r30552
-   Allow just '--with-junit rather than requiring '--with-junit bogus'
-   for folks who have junit installed where Java can find it.
-   (not 1.5.0 blocker)
-   Votes:
-     +1: epg
-
 Status of 1.5.1:
 ================
 
@@ -44,3 +37,10 @@ Approved changes (all releases):
      Follow-up to r30510 which was one of the backports between RC1 and RC2. 
    Votes
      +1: pburba, dlr
+
+ * r30548, r30551, r30552
+   Allow just '--with-junit rather than requiring '--with-junit bogus'
+   for folks who have junit installed where Java can find it.
+   (not 1.5.0 blocker)
+   Votes:
+     +1: epg, dlr
