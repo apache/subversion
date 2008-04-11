@@ -432,6 +432,16 @@ def verify_windows_paths_in_repos(sbox):
 
 #----------------------------------------------------------------------
 
+# Returns the filename of the rev or revprop file (according to KIND)
+# numbered REV in REPO_DIR, which must be in the first shard if we're
+# using a sharded repository.
+def fsfs_file(repo_dir, kind, rev):
+  if svntest.main.server_minor_version >= 5:
+    return os.path.join(repo_dir, 'db', kind, '0', rev)
+  else:
+    return os.path.join(repo_dir, 'db', kind, rev)
+
+
 def verify_incremental_fsfs(sbox):
   """svnadmin verify detects corruption dump can't"""
 
@@ -448,7 +458,7 @@ def verify_incremental_fsfs(sbox):
   # "dir 7-1.0.r1/1569" (increment offset) and updating the checksum for
   # this directory listing to "c9b5a2d26473a4e28088673dda9df804" so that
   # the listing itself is valid.
-  r2 = sbox.repo_dir + "/db/revs/0/2"
+  r2 = fsfs_file(sbox.repo_dir, 'revs', '2')
   fp = open(r2, 'wb')
   fp.write("""id: 0-2.0.r2/0
 type: dir

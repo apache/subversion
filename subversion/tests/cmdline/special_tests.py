@@ -22,6 +22,7 @@ import sys, os, re
 # Our testing module
 import svntest
 
+from svntest.main import server_has_mergeinfo
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -635,7 +636,9 @@ test_list = [ None,
               SkipUnless(copy_tree_with_symlink, svntest.main.is_posix_os),
               SkipUnless(replace_symlink_with_file, svntest.main.is_posix_os),
               SkipUnless(remove_symlink, svntest.main.is_posix_os),
-              SkipUnless(merge_symlink_into_file, svntest.main.is_posix_os),
+              SkipUnless(SkipUnless(merge_symlink_into_file,
+                                    svntest.main.is_posix_os),
+                         server_has_mergeinfo),
               SkipUnless(merge_file_into_symlink, svntest.main.is_posix_os),
               checkout_repo_with_symlinks,
               XFail(SkipUnless(diff_symlink_to_dir, svntest.main.is_posix_os)),

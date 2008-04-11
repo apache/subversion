@@ -17,18 +17,3 @@ Candidate changes:
 Approved changes (all releases):
 ================================
 
-  * r30439, r30441, r30442, r30443, r30466, r30469, r30470, r30471,
-     r30472, r30473
-    Make the test suite in server-minor-version=4 mode pass
-    against 1.4.x servers.
-    Notes:
-      r30443 conflicts trying to modify an svnadmin test which isn't in
-      1.5.x; the proper resolution is to delete the whole conflict block
-      from <<< to >>> (which looks like the addition of
-      fsfs_recover_handle_missing_revs_or_revprops_file).
-    How to test:
-      1.5.x-checkout$ svnserve-1.4.x -d -r `pwd`/subversion/tests/cmdline &
-      1.5.x-checkout$ make svncheck SERVER_MINOR_VERSION=4
-    Votes:
-      +1: glasser, epg, cmpilato
-

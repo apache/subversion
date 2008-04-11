@@ -843,6 +843,14 @@ def server_authz_has_aliases():
   _check_command_line_parsed()
   return server_minor_version >= 5
 
+def server_gets_client_capabilities():
+  _check_command_line_parsed()
+  return server_minor_version >= 5
+
+def server_has_partial_replay():
+  _check_command_line_parsed()
+  return server_minor_version >= 5
+
 
 ######################################################################
 # Sandbox handling

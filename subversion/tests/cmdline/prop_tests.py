@@ -385,7 +385,7 @@ def commit_conflict_dirprops(sbox):
   svntest.main.run_svn(None, 'propset', 'foo', 'eek', wc_dir)
 
   svntest.actions.run_and_verify_commit(wc_dir, None, None,
-                                        "out[- ]of[- ]date",
+                                        "[oO]ut[- ]of[- ]date",
                                         wc_dir)
 
 #----------------------------------------------------------------------
