@@ -708,17 +708,13 @@ AC_ARG_WITH(junit,
 AS_HELP_STRING([--with-junit=PATH],
                [Specify a path to the junit JAR file.]),
 [
-    if test "$withval" = "yes" ; then
-      AC_MSG_ERROR([--with-junit requires an argument.])
-    else
-      if test "$withval" != "no"; then
-        if test -n "$JAVA_CLASSPATH"; then
-          JAVA_CLASSPATH="$withval:$JAVA_CLASSPATH"
-        else
-          JAVA_CLASSPATH="$withval"
-        fi
-        JAVAHL_TESTS_TARGET="javahl-tests"
+    if test "$withval" != "no"; then
+      if test -n "$JAVA_CLASSPATH"; then
+        JAVA_CLASSPATH="$withval:$JAVA_CLASSPATH"
+      else
+        JAVA_CLASSPATH="$withval"
       fi
+      JAVAHL_TESTS_TARGET="javahl-tests"
     fi
 ])
 AC_SUBST(JAVA_CLASSPATH)
