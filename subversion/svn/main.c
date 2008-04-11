@@ -564,7 +564,9 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  2. Print the log messages for the PATHs (default: '.') under URL.\n"
      "     If specified, REV determines in which revision the URL is first\n"
-     "     looked up.  The default revision range is HEAD:1.\n"
+     "     looked up, and the default revision range is REV:1; otherwise,\n"
+     "     the URL is looked up in HEAD, and the default revision range is\n"
+     "     HEAD:1.\n"
      "\n"
      "  With -v, also print all affected paths with each log message.\n"
      "  With -q, don't print the log message body itself (note that this is\n"
@@ -605,7 +607,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     for each revision range provided.  If REV is not specified, HEAD\n"
      "     is assumed.  '-c M' is equivalent to '-r <M-1>:M', and '-c -M'\n"
      "     does the reverse: '-r M:<M-1>'.  If no revision ranges are\n"
-     "     specified, the default range of 0:HEAD is used.  Multiple '-c'\n"
+     "     specified, the default range of 0:REV is used.  Multiple '-c'\n"
      "     and/or '-r' instances may be specified, and mixing of forward\n"
      "     and reverse ranges is allowed.\n"
      "\n"
@@ -629,7 +631,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  Query information related to merges (or potential merges) between\n"
      "  SOURCE-URL and TARGET.  If the --show-revs option is not provided,\n"
-     "  display revisions which have been merged from sourceURL to TARGET.\n"
+     "  display revisions which have been merged from SOURCE-URL to TARGET.\n"
      "  Otherwise, display the type of information specified by the\n"
      "  --show-revs option.\n"),
     {'r', opt_show_revs} },
@@ -1173,6 +1175,13 @@ main(int argc, const char *argv[])
 
           do
             {
+              /* Allow any number of 'r's to prefix a revision number.
+                 ### TODO: Any reason we're not just using opt.c's
+                 ### revision-parsing code here?  Then -c could take
+                 ### "{DATE}" and the special words. */ 
+              while (*opt_arg == 'r')
+                opt_arg++;
+              
               changeno = strtol(opt_arg, &end, 10);
               if (end == opt_arg || !(*end == '\0' || *end == ',') )
                 {
@@ -1474,7 +1483,8 @@ main(int argc, const char *argv[])
         if (opt_state.accept_which == svn_cl__accept_invalid)
           return svn_cmdline_handle_exit_error
             (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                               _("'%s' is not a valid accept value"), opt_arg),
+                               _("'%s' is not a valid --accept value"),
+                               opt_arg),
              pool, "svn: ");
         break;
       case opt_show_revs:
@@ -1482,7 +1492,7 @@ main(int argc, const char *argv[])
         if (opt_state.show_revs == svn_cl__show_revs_invalid)
           return svn_cmdline_handle_exit_error
             (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                               _("'%s' is not a valid show-revs value"), 
+                               _("'%s' is not a valid --show-revs value"), 
                                opt_arg),
              pool, "svn: ");
         break;

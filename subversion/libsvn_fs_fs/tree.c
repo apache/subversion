@@ -2993,7 +2993,7 @@ fs_node_origin_rev(svn_revnum_t *revision,
                    const char *path,
                    apr_pool_t *pool)
 {
-  svn_fs_t *fs = svn_fs_root_fs(root);
+  svn_fs_t *fs = root->fs;
   const svn_fs_id_t *given_noderev_id, *cached_origin_id;
   const char *node_id, *dash;
 

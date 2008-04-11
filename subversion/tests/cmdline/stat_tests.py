@@ -933,13 +933,16 @@ def status_add_plus_conflict(sbox):
                                      'merge',
                                      branch_url, '-r', '4:5', trunk_dir)
 
-  expected_output = svntest.verify.UnorderedOutput([
+  lines = [
     "?      " + os.path.join(wc_dir, "trunk", "file.merge-left.r4") + "\n",
     "?      " + os.path.join(wc_dir, "trunk", "file.merge-right.r5") + "\n",
     "?      " + os.path.join(wc_dir, "trunk", "file.working") + "\n",
-    " M     " + os.path.join(wc_dir, "trunk") + "\n",
     "C  +   " + os.path.join(wc_dir, "trunk", "file") + "\n",
-  ])
+  ]
+  if svntest.main.server_has_mergeinfo():
+    lines.append(" M     " + os.path.join(wc_dir, "trunk") + "\n")
+
+  expected_output = svntest.verify.UnorderedOutput(lines)
 
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'status', wc_dir)

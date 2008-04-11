@@ -1,4 +1,4 @@
-.\" Copyright (C) 2005, 2006, 2007 Arthur de Jong
+.\" Copyright (C) 2005, 2006, 2007, 2008 Arthur de Jong
 .\"
 .\" Redistribution and use in source and binary forms, with or without
 .\" modification, are permitted provided that the following conditions
@@ -12,7 +12,7 @@
 .\" 3. The name of the author may not be used to endorse or promote
 .\"    products derived from this software without specific prior
 .\"    written permission.
-.\" 
+.\"
 .\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
 .\" IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 .\" WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -24,7 +24,7 @@
 .\" IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 .\" OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 .\" IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-.TH "svn2cl" "1" "Apr 2007" "Version 0.9" "User Commands"
+.TH "svn2cl" "1" "Apr 2008" "Version 0.10" "User Commands"
 .nh
 .SH "NAME"
 svn2cl - Create a ChangeLog from a subversion log.
@@ -35,10 +35,10 @@ svn2cl - Create a ChangeLog from a subversion log.
 
 .SH "DESCRIPTION"
 \fBsvn2cl\fP generates a classic GNU-style ChangeLog from the log messages in a subversion repository.
-It acts as a wrapper around the `\fBsvn log\fP' command, parsing the XML output with an XSLT stylesheet.
+It acts as a wrapper around the '\fBsvn log\fP' command, parsing the XML output with an XSLT stylesheet.
 Alternatively it can generate HTML output intended for use with the \fBsvn2html.css\fP style sheet that comes with \fBsvn2cl\fP.
 
-In addition to its own options, it accepts and passes along most svn log options; see `\fBsvn help log\fP' for a list of those and their documentation.
+In addition to its own options, it accepts and passes along most svn log options; see '\fBsvn help log\fP' for a list of those and their documentation.
 If PATH is not given, \fBsvn2cl\fP will run svn log on the current directory, so it should do the right thing when run from the top of a subversion checkout of the project.
 
 .TP
@@ -69,6 +69,11 @@ Include the subversion revision number in the ChangeLog.
 If the \-\-html option is specified this is implied, edit \fBsvn2html.css\fP to turn it off.
 
 .TP
+\fB\-a\fR, \fB\-\-include\-actions\fR
+Add action labels [ADD], [DEL] and [CPY] tags to files to show the operation
+that is performned on the files.
+
+.TP
 \fB\-\-break\-before\-msg\fR[=\fINUM\fR]
 Add a line break (or multiple line breadks) between the paths and the log message.
 If the \-\-html option is specified this option is ignored, edit \fBsvn2html.css\fP to set spacing.
@@ -86,8 +91,8 @@ This option is ignored for normal text output.
 .TP
 \fB\-\-revision\-link\fR=\fINAME\fR
 This option is used to generate links from the revision numbers in the generated HTML file.
-If \fINAME\fR contains two hashes `\fB##\fP' that part will be replaced by the revision number, otherwise the revision number will be appended to \fINAME\fR.
-Only the first occurrence of `\fB##\fP' will be replaced.
+If \fINAME\fR contains two hashes '\fB##\fP' that part will be replaced by the revision number, otherwise the revision number will be appended to \fINAME\fR.
+Only the first occurrence of '\fB##\fP' will be replaced.
 .br
 This option is ignored for normal text output.
 
@@ -126,10 +131,10 @@ Show short summary of options.
 Show version of program.
 
 .PP
-Optional PATH arguments and the following options are passed directly to the `\fBsvn \-\-xml log\fP' command:
+Optional PATH arguments and the following options are passed directly to the '\fBsvn \-\-xml log\fP' command:
 \fB\-r\fR, \fB\-\-revision\fR, \fB\-\-targets\fR, \fB\-\-stop\-on\-copy\fR, \fB\-\-username\fR, \fB\-\-password\fR, \fB\-\-no\-auth\-cache\fR, \fB\-\-non\-interactive\fR, \fB\-\-config\-dir\fR and \fB\-\-limit\fR.
 .br
-See `\fBsvn help log\fP' for more information on these options.
+See '\fBsvn help log\fP' for more information on these options.
 
 .SH "AUTHORS FILES"
 
@@ -164,6 +169,13 @@ As a bonus a plain text authors file that looks like the following is automatica
     arthur:Arthur de Jong <arthur@ch.tudelft.nl>
 .ft R
 
+.SH "NOTES"
+
+Note that the default revison range for \fBsvn log\fP is BASE:1.
+This means that \fBsvn2cl\fP will not always include the most recent revisons
+of the repository. Either run '\fBsvn update\fP' before running \fBsvn2cl\fP
+or pass '\fB\-r HEAD:1\fP'.
+
 .SH "EXAMPLES"
 
 Run svn log recursively on the current directory and generate a text ChangeLog file in the current directory for the entire log history:
@@ -182,14 +194,15 @@ Generate an HTML changelog for svn://svn.example.com/project/trunk, removing "pr
 Group all commits per day into one ChangeLog entry and only include changes from 2005:
 .ft B
     svn2cl \-\-html \-\-strip\-prefix=project/trunk \-\-group\-by\-day \e
-           \-r '{2006\-01\-01}:{2005\-01\-01}' svn://svn.example.com/project/trunk
+           \-r '{2006\-01\-01}:{2005\-01\-01}' \e
+           svn://svn.example.com/project/trunk
 .ft R
 
 .SH "SEE ALSO"
-.BR `\fBsvn\ help\ log\fP'
+.BR '\fBsvn\ help\ log\fP'
 
 .SH "COPYRIGHT"
-Copyright \(co 2005, 2006, 2007 Arthur de Jong <arthur@ch.tudelft.nl>.
+Copyright \(co 2005, 2006, 2007, 2008 Arthur de Jong <arthur@ch.tudelft.nl>.
 .br
 This is free software; see the license for copying conditions.  There is NO
 warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.

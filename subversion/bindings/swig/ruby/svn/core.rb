@@ -802,5 +802,11 @@ module Svn
         Core.rangelist_to_string(self)
       end
     end
+
+    class LogEntry
+      alias_method(:revision_properties, :revprops)
+      alias_method(:has_children?, :has_children)
+      undef_method(:has_children)
+    end
   end
 end
