@@ -48,9 +48,9 @@ General::
     commit r<N>
     get-dir <PATH> r<N> text? props?
     get-file <PATH> r<N> text? props?
-    lock <PATH> steal?
+    lock (<PATH> ...) steal?
     rev-proplist r<N>
-    unlock <PATH> break?
+    unlock (<PATH> ...) break?
 
 Reports::
 
@@ -65,7 +65,7 @@ The update report::
     diff <FROM-PATH>@<N> <TO-PATH>@<M> depth=<D>? ignore-ancestry?
     diff <PATH> r<N>:<M> depth=<D>? ignore-ancestry?
     status <PATH> r<N> depth=<D>?
-    switch <FROM-PATH>@<N> <TO-PATH>@<M> depth=<D>?
+    switch <FROM-PATH> <TO-PATH>@<N> depth=<D>?
     update <PATH> r<N> depth=<D>? send-copyfrom-args?
 """
 
@@ -219,8 +219,9 @@ class Parser(object):
         return line[m.end():]
 
     def _parse_lock(self, line):
-        m = _match(line, pPATH, ['steal'])
-        self.handle_lock(m.group(1), m.group(2) is not None)
+        m = _match(line, pPATHS, ['steal'])
+        paths = m.group(1).split()
+        self.handle_lock(paths, m.group(2) is not None)
         return line[m.end():]
 
     def _parse_change_rev_prop(self, line):
@@ -236,8 +237,9 @@ class Parser(object):
         return line[m.end():]
 
     def _parse_unlock(self, line):
-        m = _match(line, pPATH, ['break'])
-        self.handle_unlock(m.group(1), m.group(2) is not None)
+        m = _match(line, pPATHS, ['break'])
+        paths = m.group(1).split()
+        self.handle_unlock(paths, m.group(2) is not None)
         return line[m.end():]
 
     # reports
@@ -347,13 +349,12 @@ class Parser(object):
         return line[m.end():]
 
     def _parse_switch(self, line):
-        m = _match(line, pPATHREV, pPATHREV, [pDEPTH])
+        m = _match(line, pPATH, pPATHREV, [pDEPTH])
         from_path = m.group(1)
-        from_rev = int(m.group(2))
-        to_path = m.group(3)
-        to_rev = int(m.group(4))
-        depth = _parse_depth(m.group(6))
-        self.handle_switch(from_path, from_rev, to_path, to_rev, depth)
+        to_path = m.group(2)
+        to_rev = int(m.group(3))
+        depth = _parse_depth(m.group(5))
+        self.handle_switch(from_path, to_path, to_rev, depth)
         return line[m.end():]
 
     def _parse_update(self, line):
