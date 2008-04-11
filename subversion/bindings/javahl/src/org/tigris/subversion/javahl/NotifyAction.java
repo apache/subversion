@@ -135,15 +135,9 @@ public interface NotifyAction
 
     /**
      * @since 1.5
-     * Changelist operation failed.
-     */
-    public static final int changelist_failed = 28;
-
-    /**
-     * @since 1.5
      * A merge operation has begun.
      */
-    public static final int merge_begin = 29;
+    public static final int merge_begin = 28;
 
     /**
      * textual representation of the action types
