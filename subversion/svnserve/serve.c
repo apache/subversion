@@ -1433,12 +1433,9 @@ static svn_error_t *switch_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                           svn_path_uri_decode(switch_url, pool),
                           &switch_path));
 
-  /* TODO(svnserve-log): Dav gets from_rev from the set_path on "",
-   * but that's as meaningless for switch as for update, for which dav
-   * doesn't log from_rev... */
   {
     const char *full_path = svn_path_join(b->fs_path->data, target, pool);
-    SLOG(svn_log__switch(full_path, rev, switch_path, rev, depth, pool));
+    SLOG(svn_log__switch(full_path, switch_path, rev, depth, pool));
   }
 
   return accept_report(conn, pool, b, rev, target, switch_path, TRUE,
@@ -2129,7 +2126,7 @@ static svn_error_t *lock(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   SVN_ERR(must_have_access(conn, pool, b, svn_authz_write,
                            full_path, TRUE));
-  SLOG(svn_log__lock(full_path, steal_lock, pool));
+  SLOG(svn_log__lock_one_path(full_path, steal_lock, pool));
 
   SVN_CMD_ERR(svn_repos_fs_lock(&l, b->repos, full_path, NULL, comment, 0,
                                 0, /* No expiration time. */
@@ -2154,6 +2151,7 @@ static svn_error_t *lock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   const char *path;
   const char *full_path;
   svn_revnum_t current_rev;
+  apr_array_header_t *log_paths;
   svn_lock_t *l;
   svn_error_t *err = SVN_NO_ERROR, *write_err;
 
@@ -2169,6 +2167,7 @@ static svn_error_t *lock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(must_have_access(conn, pool, b, svn_authz_write, NULL, TRUE));
 
   /* Loop through the lock requests. */
+  log_paths = apr_array_make(pool, path_revs->nelts, sizeof(full_path));
   for (i = 0; i < path_revs->nelts; ++i)
     {
       svn_ra_svn_item_t *item = &APR_ARRAY_IDX(path_revs, i,
@@ -2183,9 +2182,12 @@ static svn_error_t *lock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       SVN_ERR(svn_ra_svn_parse_tuple(item->u.list, pool, "c(?r)", &path,
                                      &current_rev));
 
+      /* Allocate the full_path out of pool so it will survive for use
+       * by operational logging, after this loop. */
       full_path = svn_path_join(b->fs_path->data,
                                 svn_path_canonicalize(path, subpool),
-                                subpool);
+                                pool);
+      APR_ARRAY_PUSH(log_paths, const char *) = full_path;
 
       if (! lookup_access(pool, b, svn_authz_write, full_path, TRUE))
         {
@@ -2194,7 +2196,6 @@ static svn_error_t *lock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
           break;
         }
 
-      SLOG(svn_log__lock(full_path, steal_lock, subpool));
       err = svn_repos_fs_lock(&l, b->repos, full_path,
                               NULL, comment, FALSE,
                               0, /* No expiration time. */
@@ -2223,6 +2224,8 @@ static svn_error_t *lock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   svn_pool_destroy(subpool);
 
+  SLOG(svn_log__lock(log_paths, steal_lock, subpool));
+
   /* NOTE: err might contain a fatal locking error from the loop above. */
   write_err = svn_ra_svn_write_word(conn, pool, "done");
   if (!write_err)
@@ -2250,7 +2253,7 @@ static svn_error_t *unlock(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   /* Username required unless break_lock was specified. */
   SVN_ERR(must_have_access(conn, pool, b, svn_authz_write,
                            full_path, ! break_lock));
-  SLOG(svn_log__unlock(full_path, break_lock, pool));
+  SLOG(svn_log__unlock_one_path(full_path, break_lock, pool));
 
   SVN_CMD_ERR(svn_repos_fs_unlock(b->repos, full_path, token, break_lock,
                                   pool));
@@ -2270,6 +2273,7 @@ static svn_error_t *unlock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   apr_pool_t *subpool;
   const char *path;
   const char *full_path;
+  apr_array_header_t *log_paths;
   const char *token;
   svn_error_t *err = SVN_NO_ERROR, *write_err;
 
@@ -2282,6 +2286,7 @@ static svn_error_t *unlock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   subpool = svn_pool_create(pool);
 
   /* Loop through the unlock requests. */
+  log_paths = apr_array_make(pool, unlock_tokens->nelts, sizeof(full_path));
   for (i = 0; i < unlock_tokens->nelts; i++)
     {
       svn_ra_svn_item_t *item = &APR_ARRAY_IDX(unlock_tokens, i,
@@ -2296,9 +2301,12 @@ static svn_error_t *unlock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       SVN_ERR(svn_ra_svn_parse_tuple(item->u.list, subpool, "c(?c)", &path,
                                      &token));
 
+      /* Allocate the full_path out of pool so it will survive for use
+       * by operational logging, after this loop. */
       full_path = svn_path_join(b->fs_path->data,
                                 svn_path_canonicalize(path, subpool),
-                                subpool);
+                                pool);
+      APR_ARRAY_PUSH(log_paths, const char *) = full_path;
 
       if (! lookup_access(subpool, b, svn_authz_write, full_path,
                           ! break_lock))
@@ -2306,7 +2314,6 @@ static svn_error_t *unlock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                 svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED,
                                                  NULL, NULL), NULL);
 
-      SLOG(svn_log__unlock(full_path, break_lock, subpool));
       err = svn_repos_fs_unlock(b->repos, full_path, token, break_lock,
                                 subpool);
       if (err)
@@ -2327,6 +2334,8 @@ static svn_error_t *unlock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     }
 
   svn_pool_destroy(subpool);
+
+  SLOG(svn_log__unlock(log_paths, break_lock, subpool));
 
   /* NOTE: err might contain a fatal unlocking error from the loop above. */
   write_err = svn_ra_svn_write_word(conn, pool, "done");

@@ -1333,7 +1333,7 @@ dav_svn__update_report(const dav_resource *resource,
       {
         /* diff/merge don't ask for inline text-deltas. */
         if (uc.send_all)
-          action = svn_log__switch(spath, from_revnum, dst_path, revnum,
+          action = svn_log__switch(spath, dst_path, revnum,
                                    requested_depth, resource->pool);
         else
           action = svn_log__diff(spath, from_revnum, dst_path, revnum,
