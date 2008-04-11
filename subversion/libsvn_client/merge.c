@@ -345,11 +345,14 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
     {
       svn_prop_t *prop = &APR_ARRAY_IDX((*props), i, svn_prop_t);
 
-      /* If this property isn't mergeinfo or is empty mergeinfo it
-         does not require any special handling (there is nothing to
-         filter out of empty mergeinfo). */
+      /* If this property isn't mergeinfo or is NULL valued (i.e. prop removal)
+         or empty mergeinfo it does not require any special handling.  There
+         is nothing to filter out of empty mergeinfo and the concept of
+         filtering doesn't apply if we are trying to remove mergeinfo
+         entirely. */
       if ((strcmp(prop->name, SVN_PROP_MERGEINFO) != 0)
-          || (! prop->value->len))
+          || (! prop->value)       /* Removal of mergeinfo */
+          || (! prop->value->len)) /* Empty mergeinfo */
         {
           APR_ARRAY_PUSH(adjusted_props, svn_prop_t) = *prop;
         }
