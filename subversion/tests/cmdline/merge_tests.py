@@ -10831,6 +10831,86 @@ def merge_unknown_url(sbox):
   svntest.actions.run_and_verify_svn("", None, expected_err,
                                      "merge", url, wc_dir)
 
+def reverse_merge_away_all_mergeinfo(sbox):
+  "merges that remove all mergeinfo work"
+
+  # 
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  wc_disk, wc_status = set_up_branch(sbox)
+
+  # Some paths we'll care about
+  A_COPY_H_path = os.path.join(wc_dir, "A_COPY", "D", "H")
+
+  # Merge r4:8 from A/D/H into A_COPY/D/H.
+  short_H_COPY_path = shorten_path_kludge(A_COPY_H_path)
+  expected_output = wc.State(short_H_COPY_path, {
+    'omega' : Item(status='U '),
+    'psi'   : Item(status='U ')
+    })
+  expected_status = wc.State(short_H_COPY_path, {
+    ''      : Item(status=' M', wc_rev=2),
+    'psi'   : Item(status='M ', wc_rev=2),
+    'omega' : Item(status='M ', wc_rev=2),
+    'chi'   : Item(status='  ', wc_rev=2),
+    })
+  expected_disk = wc.State('', {
+    ''      : Item(props={SVN_PROP_MERGEINFO : '/A/D/H:3-6'}),
+    'psi'   : Item("New content"),
+    'omega' : Item("New content"),
+    'chi'   : Item("This is the file 'chi'.\n"),
+    })
+  expected_skip = wc.State(short_H_COPY_path, { })
+  saved_cwd = os.getcwd()
+  os.chdir(svntest.main.work_dir)
+  svntest.actions.run_and_verify_merge(short_H_COPY_path, '2', '6',
+                                       sbox.repo_url + '/A/D/H',
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       None, None, None, None, None, 1)
+  os.chdir(saved_cwd)
+
+  # Commit the merge as r7
+  expected_output = wc.State(wc_dir, {
+    'A_COPY/D/H'       : Item(verb='Sending'),
+    'A_COPY/D/H/omega' : Item(verb='Sending'),
+    'A_COPY/D/H/psi'   : Item(verb='Sending'),
+    })
+  wc_status.tweak('A_COPY/D/H', 'A_COPY/D/H/omega', 'A_COPY/D/H/psi',
+                  wc_rev=7)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        wc_status,
+                                        None,
+                                        wc_dir)
+
+  # Now reverse merge r7 from itself, all mergeinfo should be removed.
+  expected_output = wc.State(short_H_COPY_path, {
+    ''      : Item(status=' U'),
+    'omega' : Item(status='U '),
+    'psi'   : Item(status='U ')
+    })
+  expected_status = wc.State(short_H_COPY_path, {
+    ''      : Item(status=' M', wc_rev=7),
+    'psi'   : Item(status='M ', wc_rev=7),
+    'omega' : Item(status='M ', wc_rev=7),
+    'chi'   : Item(status='  ', wc_rev=2),
+    })
+  expected_disk = wc.State('', {
+    'psi'   : Item("This is the file 'psi'.\n"),
+    'omega' : Item("This is the file 'omega'.\n"),
+    'chi'   : Item("This is the file 'chi'.\n"),
+    })
+  expected_skip = wc.State(short_H_COPY_path, { })
+  os.chdir(svntest.main.work_dir)
+  svntest.actions.run_and_verify_merge(short_H_COPY_path, '7', '6',
+                                       sbox.repo_url + '/A_COPY/D/H',
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       None, None, None, None, None, 1)
+  os.chdir(saved_cwd)
+
 ########################################################################
 # Run the tests
 
@@ -10986,6 +11066,8 @@ test_list = [ None,
               foreign_repos_2_url,
               XFail(merge_added_subtree),
               SkipUnless(merge_unknown_url,
+                         server_has_mergeinfo),
+              SkipUnless(reverse_merge_away_all_mergeinfo,
                          server_has_mergeinfo),
              ]
 
