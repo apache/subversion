@@ -37,7 +37,7 @@ def verbose_print(line):
 # If verbose mode is enabled, print the (assumed newline-terminated) LINES.
 def verbose_printlines(lines):
   if main.verbose_mode:
-    print line
+    map(sys.stdout.write, lines)
 
 ######################################################################
 # Tests
@@ -283,6 +283,8 @@ def ensure_status_c_on_parent(lines, path):
 # Ensure that the result in each case includes a tree conflict on the parent.
 # OPERATION = 'update' or 'switch' or 'merge'
 def ensure_tree_conflict(sbox, operation, incoming_scenarios, localmod_scenarios):
+  failures = 0
+
   sbox.build()
   wc_dir = sbox.wc_dir
 
@@ -317,27 +319,40 @@ def ensure_tree_conflict(sbox, operation, incoming_scenarios, localmod_scenarios
         modify(modaction, wc_dir, P)
 
       # perform the operation that tries to apply the changes to the WC
-      if operation == 'update':
-        verbose_print("--- Updating")
-        exitcode, stdout, stderr = main.run_svn(None, 'update', P)
-      elif operation == 'merge':
-        verbose_print("--- Merging")
-        exitcode, stdout, stderr = main.run_svn(None, 'merge',
-                                                '--ignore-ancestry',
-                                                '-r2:3', P_url, P)
-      else:
-        raise "unknown operation: '" + operation + "'"
+      try:
+        if operation == 'update':
+          verbose_print("--- Updating")
+          exitcode, stdout, stderr = main.run_svn(None, 'update', P)
+        elif operation == 'merge':
+          verbose_print("--- Merging")
+          exitcode, stdout, stderr = main.run_svn(None, 'merge',
+                                                  '--ignore-ancestry',
+                                                  '-r2:3', P_url, P)
+        else:
+          raise "unknown operation: '" + operation + "'"
+      except svntest.Failure, msg:
+        print("EXCEPTION for '" + in_path + "' onto " + str(loc_action) + ": " + str(msg))
+        failures += 1
+      #finally:
       verbose_printlines(stdout)
 
       # ensure F has a conflict and nothing else is changed
       verbose_print("--- Status")
       exitcode, stdout, stderr = main.run_svn(None, 'status', P)
       verbose_printlines(stdout)
-      ensure_status_c_on_parent(stdout, in_path)
+      try:
+        ensure_status_c_on_parent(stdout, in_path)
+      except svntest.Failure, msg:
+        print("EXCEPTION for '" + in_path + "' onto " + str(loc_action) + ": " + str(msg))
+        failures += 1
+
       verbose_print("")
 
     # clean up WC
     main.run_svn(None, 'revert', '-R', wc_dir)
+
+  if failures > 0:
+    raise svntest.Failure(str(failures) + " '" + operation + "' sub-tests failed")
 
 #----------------------------------------------------------------------
 

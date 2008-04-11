@@ -1290,11 +1290,14 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
       SVN_ERR(check_scheme_match(adm_access, copyfrom_url));
     }
 
+  /* Find the version-control state of this path */
+  SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, subpool));
+
+  /* Switch on the on-disk state of this path */
   SVN_ERR(svn_io_check_path(path, &kind, subpool));
   switch (kind)
     {
     case svn_node_none:
-      SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, subpool));
       if (entry && entry->schedule != svn_wc_schedule_delete)
         {
           /* Versioned but missing */
@@ -1303,6 +1306,7 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
           svn_pool_destroy(subpool);
           return SVN_NO_ERROR;
         }
+      /* Unversioned or schedule-delete */
       if (merge_b->dry_run)
         merge_b->added_path = apr_pstrdup(merge_b->pool, path);
       else
@@ -1321,9 +1325,10 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
       break;
     case svn_node_dir:
       /* Adding an unversioned directory doesn't destroy data */
-      SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, subpool));
       if (! entry || entry->schedule == svn_wc_schedule_delete)
         {
+          /* The dir is not known to Subversion, or is schedule-delete.
+           * We will make it schedule-add. */
           if (!merge_b->dry_run)
             SVN_ERR(svn_wc_add2(path, adm_access,
                                 copyfrom_url, copyfrom_rev,
@@ -1336,28 +1341,47 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
           if (state)
             *state = svn_wc_notify_state_changed;
         }
-      else if (state)
+      else
         {
+          /* The dir is known to Subversion as already existing. */
           if (dry_run_deleted_p(merge_b, path))
-            *state = svn_wc_notify_state_changed;
+            {
+              if (state)
+                *state = svn_wc_notify_state_changed;
+            }
           else
-            *state = svn_wc_notify_state_obstructed;
+            {
+              /* This is a tree conflict. */
+              SVN_ERR(tree_conflict(merge_b, adm_access, path,
+                                    svn_node_dir,
+                                    svn_wc_conflict_action_add,
+                                    svn_wc_conflict_reason_added));
+              if (state)
+                *state = svn_wc_notify_state_obstructed;
+            }
         }
       break;
     case svn_node_file:
       if (merge_b->dry_run)
         merge_b->added_path = NULL;
 
-      if (state)
+      if (entry && dry_run_deleted_p(merge_b, path))
         {
-          SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, subpool));
-
-          if (entry && dry_run_deleted_p(merge_b, path))
-            /* ### TODO: Retain record of this dir being added to
-               ### avoid problems from subsequent edits which try to
-               ### add children. */
+          /* ### TODO: Retain record of this dir being added to
+             ### avoid problems from subsequent edits which try to
+             ### add children. */
+          if (state)
             *state = svn_wc_notify_state_changed;
-          else
+        }
+      else
+        {
+          /* Obstructed: we can't add a dir because there's a file here
+           * (whatever the entry says should be here). */
+          SVN_ERR(tree_conflict(merge_b, adm_access, path,
+                                svn_node_dir,
+                                svn_wc_conflict_action_add,
+                                svn_wc_conflict_reason_obstructed));
+          if (state)
             *state = svn_wc_notify_state_obstructed;
         }
       break;
@@ -1383,6 +1407,7 @@ merge_dir_deleted(svn_wc_adm_access_t *adm_access,
   merge_cmd_baton_t *merge_b = baton;
   apr_pool_t *subpool = svn_pool_create(merge_b->pool);
   svn_node_kind_t kind;
+  const svn_wc_entry_t *entry;
   svn_wc_adm_access_t *parent_access;
   const char *parent_path;
   svn_error_t *err;
@@ -1399,28 +1424,44 @@ merge_dir_deleted(svn_wc_adm_access_t *adm_access,
       return SVN_NO_ERROR;
     }
 
+  /* Find the version-control state of this path */
+  SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, subpool));
+
+  /* Switch on the on-disk state of this path */
   SVN_ERR(svn_io_check_path(path, &kind, subpool));
   switch (kind)
     {
     case svn_node_dir:
       {
-        svn_path_split(path, &parent_path, NULL, subpool);
-        SVN_ERR(svn_wc_adm_retrieve(&parent_access, adm_access, parent_path,
-                                    subpool));
-        /* Passing NULL for the notify_func and notify_baton because
-           repos_diff.c:delete_entry() will do it for us. */
-        err = svn_client__wc_delete(path, parent_access, merge_b->force,
-                                    merge_b->dry_run, FALSE,
-                                    NULL, NULL,
-                                    merge_b->ctx, subpool);
-        if (err && state)
+        if (!entry || entry->schedule == svn_wc_schedule_delete)
           {
-            *state = svn_wc_notify_state_obstructed;
-            svn_error_clear(err);
+            SVN_ERR(tree_conflict(merge_b, adm_access, path,
+                                  svn_node_dir,
+                                  svn_wc_conflict_action_delete,
+                                  svn_wc_conflict_reason_deleted));
           }
-        else if (state)
+        else
           {
-            *state = svn_wc_notify_state_changed;
+            svn_path_split(path, &parent_path, NULL, subpool);
+            SVN_ERR(svn_wc_adm_retrieve(&parent_access, adm_access, parent_path,
+                                        subpool));
+            /* Passing NULL for the notify_func and notify_baton because
+               repos_diff.c:delete_entry() will do it for us. */
+            err = svn_client__wc_delete(path, parent_access, merge_b->force,
+                                        merge_b->dry_run, FALSE,
+                                        NULL, NULL,
+                                        merge_b->ctx, subpool);
+            if (err)
+              {
+                if (state)
+                  *state = svn_wc_notify_state_obstructed;
+                svn_error_clear(err);
+              }
+            else
+              {
+                if (state)
+                  *state = svn_wc_notify_state_changed;
+              }
           }
       }
       break;
@@ -1429,7 +1470,11 @@ merge_dir_deleted(svn_wc_adm_access_t *adm_access,
         *state = svn_wc_notify_state_obstructed;
       break;
     case svn_node_none:
-      /* dir is already non-existent, this is a no-op. */
+      /* Dir is already non-existent. Conflict. (Formerly treated as no-op.) */
+      SVN_ERR(tree_conflict(merge_b, adm_access, path,
+                            svn_node_dir,
+                            svn_wc_conflict_action_delete,
+                            svn_wc_conflict_reason_deleted));
       if (state)
         *state = svn_wc_notify_state_missing;
       break;
@@ -1450,7 +1495,7 @@ merge_dir_opened(svn_wc_adm_access_t *adm_access,
                  svn_revnum_t rev,
                  void *baton)
 {
-  merge_cmd_baton_t *merge_b = baton;
+  /* merge_cmd_baton_t *merge_b = baton; */
       
   return SVN_NO_ERROR;
 }

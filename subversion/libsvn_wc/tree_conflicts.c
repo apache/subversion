@@ -611,6 +611,9 @@ svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
           case svn_wc_conflict_reason_deleted:
             svn_stringbuf_appendcstr(buf, SVN_WC__CONFLICT_REASON_DELETED);
             break;
+          case svn_wc_conflict_reason_added:
+            svn_stringbuf_appendcstr(buf, SVN_WC__CONFLICT_REASON_ADDED);
+            break;
           case svn_wc_conflict_reason_missing:
             svn_stringbuf_appendcstr(buf, SVN_WC__CONFLICT_REASON_MISSING);
             break;

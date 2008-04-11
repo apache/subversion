@@ -1060,6 +1060,7 @@ typedef enum svn_wc_conflict_reason_t
   svn_wc_conflict_reason_edited,     /* local edits are already present */
   svn_wc_conflict_reason_obstructed, /* another object is in the way */
   svn_wc_conflict_reason_deleted,    /* object is already schedule-delete */
+  svn_wc_conflict_reason_added,      /* object is already added or schedule-add */
   svn_wc_conflict_reason_missing,    /* object is unknown or missing */
   svn_wc_conflict_reason_unversioned /* object is unversioned */
 

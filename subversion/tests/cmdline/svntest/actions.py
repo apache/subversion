@@ -1466,7 +1466,7 @@ def make_conflict_marker_text(wc_text, merged_text, merged_rev):
 
 def set_up_tree_conflicts(sbox, do_copy=False):
   """Edit and delete files in two working copies so that tree conflicts
-  will appear.  See notes/tree-conflict/use-cases.txt for background.
+  will appear.  See notes/tree-conflicts/use-cases.txt for background.
 
   For update testing, wc 2 is a duplicate of wc 1 (with the same URL), so
   DO_COPY should be False.
@@ -1498,19 +1498,19 @@ def set_up_tree_conflicts(sbox, do_copy=False):
   # Replace the files in /A/D/H of wc 1 to break the common ancestry.
   # TODO: first implement ancestry-checking.
 
-  # Use case 1
+  # Use cases 1 and 4, except they call for "move" rather than "delete"
   # Action: Edited
   main.file_append(j(G, 'pi'), "Edited in wc 1.\n")
   # Reason: Deleted
   main.run_svn(None, 'del', j(G2, 'pi'))
 
-  # Use case 2
+  # Use cases 2 and 5, except they call for "move" rather than "delete"
   # Action: Deleted
   main.run_svn(None, 'del', j(G, 'rho'))
   # Reason: Edited
   main.file_append(j(G2, 'rho'), "Edited in wc 2.\n")
 
-  # Use case 3
+  # Use cases 3 and 6, except they call for "move" rather than "delete"
   # Action: Deleted
   main.run_svn(None, 'del', j(G, 'tau'))
   # Reason: Deleted

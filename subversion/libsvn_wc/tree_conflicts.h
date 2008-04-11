@@ -118,6 +118,7 @@
 
 #define SVN_WC__CONFLICT_REASON_EDITED "edited"
 #define SVN_WC__CONFLICT_REASON_DELETED "deleted"
+#define SVN_WC__CONFLICT_REASON_ADDED "added"
 #define SVN_WC__CONFLICT_REASON_MISSING "missing"
 #define SVN_WC__CONFLICT_REASON_OBSTRUCTED "obstructed"
 
