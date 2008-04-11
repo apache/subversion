@@ -21,7 +21,7 @@ Candidate changes:
      This is a follow-up to r28591, which is a fix for issue #3054,
      'svn cl foo README; svn cl foo README' has unexpected output.
    Votes
-     +1: dlr
+     +1: dlr, epg
 
 Status of 1.5.1:
 ================
