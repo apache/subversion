@@ -585,6 +585,20 @@ static char *parse_one_rev(svn_opt_revision_t *revision, char *str,
 {
   char *end, save;
 
+  /* Allow any number of 'r's to prefix a revision number, because
+     that way if a script pastes svn output into another svn command
+     (like "svn log -r${REV_COPIED_FROM_OUTPUT}"), it'll Just Work,
+     even when compounded.
+
+     As it happens, none of our special revision words begins with
+     "r".  If any ever do, then this code will have to get smarter.
+
+     Incidentally, this allows "r{DATE}".  We could avoid that with
+     some trivial code rearrangement, but it's not clear what would
+     be gained by doing so. */
+  while (*str == 'r')
+    str++;
+
   if (*str == '{')
     {
       svn_boolean_t matched;

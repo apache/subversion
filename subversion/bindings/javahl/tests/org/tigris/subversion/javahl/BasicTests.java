@@ -114,6 +114,28 @@ public class BasicTests extends SVNTests
     }
 
     /**
+     * Tests Mergeinfo and RevisionRange classes.
+     * @since 1.5
+     */
+    public void testMergeinfoParser() throws Throwable
+    {
+        String mergeInfoPropertyValue =
+            "/trunk:1-300,305,307,400-405\n/branches/branch:308-400";
+        Mergeinfo info = new Mergeinfo(mergeInfoPropertyValue);
+        String[] paths = info.getPaths();
+        assertEquals(2, paths.length);
+        RevisionRange[] trunkRange = info.getRevisionRange("/trunk");
+        assertEquals(4, trunkRange.length);
+        assertEquals("1-300", trunkRange[0].toString());
+        assertEquals("305", trunkRange[1].toString());
+        assertEquals("307", trunkRange[2].toString());
+        assertEquals("400-405", trunkRange[3].toString());
+        RevisionRange[] branchRange =
+            info.getRevisionRange("/branches/branch");
+        assertEquals(1, branchRange.length);
+    }
+
+    /**
      * Test the basic SVNClient.status functionality.
      * @throws Throwable
      */
@@ -863,24 +885,29 @@ public class BasicTests extends SVNTests
 
     }
    
+    /**
+     * Tests that the passed start and end revision are contained
+     * within the array of revisions.
+     * @since 1.5
+     */
     private void assertExpectedMergeRange(long start, long end,
                                           long[] revisions)
     {
         Arrays.sort(revisions);
-    	for (int i = 0; i < revisions.length; i++) {
-			if (revisions[i] <= start) {
-				for (int j = i; j < revisions.length; j++)
+        for (int i = 0; i < revisions.length; i++) {
+            if (revisions[i] <= start) {
+                for (int j = i; j < revisions.length; j++)
                 {
-					if (end <= revisions[j])
-						return;
-				}
-				fail("End revision: " + end + " was not in range: " + revisions[0] +
-						" : " + revisions[revisions.length - 1]);
-				return;
-			}
-		}
-		fail("Start revision: " + start + " was not in range: " + revisions[0] +
-				" : " + revisions[revisions.length - 1]);
+                    if (end <= revisions[j])
+                        return;
+                }
+                fail("End revision: " + end + " was not in range: " + revisions[0] +
+                        " : " + revisions[revisions.length - 1]);
+                return;
+            }
+        }
+        fail("Start revision: " + start + " was not in range: " + revisions[0] +
+                " : " + revisions[revisions.length - 1]);
     }
 
     /**
@@ -2106,35 +2133,45 @@ public class BasicTests extends SVNTests
      * Helper method for testing mergeinfo retrieval.  Assumes
      * that <code>targetPath</code> has both merge history and
      * available merges.
-     * @param expectedMergedRevs The expected revision ranges from the
+     * @param expectedMergedStart The expected start revision from the
      * merge history for <code>mergeSrc</code>.
-     * @param expectedAvailableRevs The expected available revision
-     * ranges from the available merges for <code>mergeSrc</code>.
+     * @param expectedMergedEnd The expected end revision from the
+     * merge history for <code>mergeSrc</code>.
+     * @param expectedAvailableStart The expected start available revision
+     * from the merge history for <code>mergeSrc</code>.  Zero if no need
+     * to test the available range.
+     * @param expectedAvailableEnd The expected end available revision
+     * from the merge history for <code>mergeSrc</code>.
      * @param targetPath The path for which to acquire mergeinfo.
      * @param mergeSrc The URL from which to consider merges.
      */
     private void acquireMergeinfoAndAssertEquals(long expectedMergeStart,
-    											 long expectedMergeEnd,
-    											 long expectedAvailableStart,
+                                                 long expectedMergeEnd,
+                                                 long expectedAvailableStart,
                                                  long expectedAvailableEnd,
                                                  String targetPath,
                                                  String mergeSrc)
         throws SubversionException
     {
         // Verify expected merge history.
-    	long[] revs = getMergeinfoRevisions(MergeinfoLogKind.merged, targetPath,
-    			Revision.HEAD, mergeSrc, Revision.HEAD);
+        Mergeinfo mergeInfo = client.getMergeinfo(targetPath, Revision.HEAD);
         assertNotNull("Missing merge info on '" + targetPath + '\'',
-                      revs);
-
-        assertExpectedMergeRange(expectedMergeStart, expectedMergeEnd, revs);
+                      mergeInfo);
+        List ranges = mergeInfo.getRevisions(mergeSrc);
+        assertTrue("Missing merge info for source '" + mergeSrc + "' on '" +
+                   targetPath + '\'', ranges != null && !ranges.isEmpty());
+        RevisionRange range = (RevisionRange) ranges.get(0);
+        String expectedMergedRevs = expectedMergeStart + "-" + expectedMergeEnd;
+        assertEquals("Unexpected first merged revision range for '" +
+                     mergeSrc + "' on '" + targetPath + '\'',
+                     expectedMergedRevs, range.toString());
 
         // Verify expected available merges.
         if (expectedAvailableStart > 0)
         {
-        	long[] availableRevs =
+            long[] availableRevs =
                     getMergeinfoRevisions(MergeinfoLogKind.eligible, targetPath,
-        			                      Revision.HEAD, mergeSrc,
+                                          Revision.HEAD, mergeSrc,
                                           Revision.HEAD);
             assertNotNull("Missing eligible merge info on '"+targetPath + '\'',
                           availableRevs);
@@ -2143,40 +2180,46 @@ public class BasicTests extends SVNTests
             }
     }
     
+    /**
+     * Calls the API to get mergeinfo revisions and returns
+     * the revision numbers in a sorted array, or null if there
+     * are no revisions to return.
+     * @since 1.5
+     */
     private long[] getMergeinfoRevisions(int kind, String pathOrUrl,
                                          Revision pegRevision,
-    		                             String mergeSourceUrl,
+                                         String mergeSourceUrl,
                                          Revision srcPegRevision) {
-    	class Callback implements LogMessageCallback {
-    		
-    		List revList = new ArrayList();
+        class Callback implements LogMessageCallback {
+            
+            List revList = new ArrayList();
 
-			public void singleMessage(ChangePath[] changedPaths, long revision,
-					String author, long timeMicros, String message,
-					boolean hasChildren) {
-				revList.add(new Long(revision));
-			}
-			
-			public long[] getRevisions() {
-				long[] revisions = new long[revList.size()];
-				int i = 0;
-				for (Iterator iter = revList.iterator(); iter.hasNext();) {
-					Long revision = (Long) iter.next();
-					revisions[i] = revision.longValue();
-					i++;
-				}
-				return revisions;
-			}
-    	}
-    	try {
-        	Callback callback = new Callback();
-			client.getMergeinfoLog(kind, pathOrUrl, pegRevision, mergeSourceUrl,
-			                       srcPegRevision, false, null, callback);
-	    	return callback.getRevisions();
-		} catch (ClientException e) {
-			return null;
-		}
-    	
+            public void singleMessage(ChangePath[] changedPaths, long revision,
+                    String author, long timeMicros, String message,
+                    boolean hasChildren) {
+                revList.add(new Long(revision));
+            }
+            
+            public long[] getRevisions() {
+                long[] revisions = new long[revList.size()];
+                int i = 0;
+                for (Iterator iter = revList.iterator(); iter.hasNext();) {
+                    Long revision = (Long) iter.next();
+                    revisions[i] = revision.longValue();
+                    i++;
+                }
+                return revisions;
+            }
+        }
+        try {
+            Callback callback = new Callback();
+            client.getMergeinfoLog(kind, pathOrUrl, pegRevision, mergeSourceUrl,
+                                   srcPegRevision, false, null, callback);
+            return callback.getRevisions();
+        } catch (ClientException e) {
+            return null;
+        }
+        
     }
 
     /**
@@ -2210,16 +2253,6 @@ public class BasicTests extends SVNTests
         return f;
     }
 
-    private String getMergeinfo(File path, Revision rev) {
-    	try {
-			PropertyData prop = client.propertyGet(fileToSVNPath(path, false), "svn:mergeinfo", rev);
-			if (prop == null) return null;
-			else return prop.getValue();
-    	} catch (ClientException e) {
-			return null;
-		}
-    }
-    
     /**
      * Test the basic functionality of SVNClient.merge().
      * @throws Throwable
@@ -2237,7 +2270,8 @@ public class BasicTests extends SVNTests
         assertEquals(1, suggestedSrcs.length);
 
         // Test that getMergeinfo() returns null.
-        assertNull(getMergeinfo(new File(thisTest.getWCPath(), "A"), Revision.HEAD));
+        assertNull(client.getMergeinfo(new File(thisTest.getWCPath(), "A")
+                                       .toString(), Revision.HEAD));
 
         // Merge and commit some changes (r4).
         appendText(thisTest, "A/mu", "xxx", 4);
@@ -2308,11 +2342,11 @@ public class BasicTests extends SVNTests
         String targetPath =
             new File(thisTest.getWCPath(), "branches/A/mu").getPath();
         final String mergeSrc = thisTest.getUrl() + "/A/mu";
-        acquireMergeinfoAndAssertEquals(4, 4, 6, 6, targetPath, mergeSrc);
+        acquireMergeinfoAndAssertEquals(2, 4, 6, 6, targetPath, mergeSrc);
 
         // Test retrieval of mergeinfo from the repository.
         targetPath = thisTest.getUrl() + "/branches/A/mu";
-        acquireMergeinfoAndAssertEquals(4, 4, 5, 6, targetPath, mergeSrc);
+        acquireMergeinfoAndAssertEquals(2, 4, 6, 6, targetPath, mergeSrc);
     }
 
     /**
@@ -2325,9 +2359,9 @@ public class BasicTests extends SVNTests
     {
         OneTest thisTest = setupAndPerformMerge();
 
-        // Test that svn:mergeinfo returns null.
-        assertNull(getMergeinfo(new File(thisTest.getWCPath(), "A"),
-                                Revision.HEAD));
+        // Test that getMergeinfo() returns null.
+        assertNull(client.getMergeinfo(new File(thisTest.getWCPath(), "A")
+                                       .toString(), Revision.HEAD));
 
         // Merge and commit some changes (r4).
         appendText(thisTest, "A/mu", "xxx", 4);
@@ -2365,8 +2399,9 @@ public class BasicTests extends SVNTests
     {
         OneTest thisTest = setupAndPerformMerge();
 
-        // Test that svn:mergeinfo returns null.
-        assertNull(getMergeinfo(new File(thisTest.getWCPath(), "A"), Revision.HEAD));
+        // Test that getMergeinfo() returns null.
+        assertNull(client.getMergeinfo(new File(thisTest.getWCPath(), "A")
+                                       .toString(), Revision.HEAD));
 
         // Merge and commit some changes to main (r4).
         appendText(thisTest, "A/mu", "xxx", 4);
@@ -2493,8 +2528,9 @@ public class BasicTests extends SVNTests
         assertNotNull(suggestedSrcs);
         assertEquals(1, suggestedSrcs.length);
 
-        // Test that svn:mergeinfo returns null.
-        assertNull(getMergeinfo(new File(thisTest.getWCPath(), "A"), Revision.HEAD));
+        // Test that getMergeinfo() returns null.
+        assertNull(client.getMergeinfo(new File(thisTest.getWCPath(), "A")
+                                       .toString(), Revision.HEAD));
 
         // Merge and commit some changes (r4).
         appendText(thisTest, "A/mu", "xxx", 4);
@@ -2526,7 +2562,7 @@ public class BasicTests extends SVNTests
         String targetPath =
             new File(thisTest.getWCPath(), "branches/A").getPath();
         final String mergeSrc = thisTest.getUrl() + "/A";
-        acquireMergeinfoAndAssertEquals(4, 4, 0, 0, targetPath, mergeSrc);
+        acquireMergeinfoAndAssertEquals(2, 4, 0, 0, targetPath, mergeSrc);
     }
 
     /**

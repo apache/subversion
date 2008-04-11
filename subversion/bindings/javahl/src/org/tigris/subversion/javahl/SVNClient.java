@@ -772,6 +772,12 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.5
      */
+    public native Mergeinfo getMergeinfo(String path, Revision pegRevision)
+            throws SubversionException;
+
+    /**
+     * @since 1.5
+     */
     public native void getMergeinfoLog(int kind, String pathOrUrl,
                                        Revision pegRevision,
                                        String mergeSourceUrl,

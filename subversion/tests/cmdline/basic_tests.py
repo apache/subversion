@@ -2119,11 +2119,11 @@ def automatic_conflict_resolution(sbox):
                                      None,
                                      ".*invalid 'accept' ARG",
                                      'resolve', '--accept=launch')
-  # Run 'svn resolved --accept=NOTVALID.  Using omega for the test.
+  # Run 'svn resolved --accept=NOPE.  Using omega for the test.
   svntest.actions.run_and_verify_svn("Resolve command", None,
-                                     ".*NOTVALID' is not a valid accept value",
+                                     ".*NOPE' is not a valid --accept value",
                                      'resolve',
-                                     '--accept=NOTVALID',
+                                     '--accept=NOPE',
                                      omega_path_backup)
 
   # Resolve lambda, mu, and rho with different --accept options.

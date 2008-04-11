@@ -197,6 +197,41 @@ using Cyrus SASL with Subversion.</p>
 
 </div>  <!-- sasl-compatibility -->
 
+<div class="h3" id="revprops-compatibility" title="revprops-compatibility">
+<h3>Custom revprops may now need to be examined by <tt>pre-commit</tt>
+  hooks</h3>
+
+<p>Each revision in Subversion has a set of <q>revision properties</q>
+associated with it; in addition to the standard log message, author,
+and date, arbitrary user-defined properties can be set.  These
+properties are not themselves versioned, so there is no way to revert
+changes to them.  Because of this, you cannot modify revprops on a
+committed revision without setting up a <tt>pre-revprop-change</tt>
+hook on the server.  Before Subversion 1.5, only the three standard
+revprops could be set at commit time; administrators using hooks to
+control the contents of the three standard revprops needed to check
+during <tt>pre-commit</tt> and <tt>pre-revprop-change</tt>, but for
+custom revprops, only <tt>pre-revprop-change</tt> appeared
+relevant.</p>
+
+<p>Subversion 1.5 adds
+a <a href="#commit-revprops"><tt>--with-revprop</tt> option to <tt>svn
+commit</tt></a> which allows users to specify revprops for revisions
+as they commit them.  Thus, in Subversion 1.5, it is possible for
+revproperties to be set on revisions without
+any <tt>pre-revprop-change</tt>.  The <tt>pre-commit</tt> hook can
+examine the transaction's revision properties before it is committed
+(just like many servers already use <tt>pre-commit</tt> to check for
+properly formatted log messages, e.g.).</p>
+
+<p>This means that if you previously relied
+on <tt>pre-revprop-change</tt> to control the ability to write to
+revprops (as opposed to just keeping track of their history), you may
+want to add similar controls to <tt>pre-commit</tt>.</p>
+
+</div>  <!-- revprops-compatibility -->
+
+
 </div>  <!-- compatibility -->
 
 <div class="h2" id="new-features" title="new-features">
@@ -1106,7 +1141,7 @@ href="http://subversion.tigris.org/issues/show_bug.cgi?id=1643" >issue
 <h4>Creation of intermediate directories with copy/move
     (<em>client and server</em>)</h4>
 
-<p>See the section on the new <a href="#>intermediate-directories</a>"
+<p>See the section on the new <a href="#intermediate-directories"
 >--parents option</a> for more about this.</p>
 
 </div>  <!-- cp-mv-intermediate-dirs -->
@@ -1255,6 +1290,56 @@ more 1.3.x bugfix releases, except perhaps for absolutely critical
 security or data-loss bugs.</p>
 
 </div>  <!-- svn-1.3-deprecation -->
+
+<div class="h2" id="deps" title="deps">
+<h2>Subversion Dependencies Distribution: Binary Compatibility Issues</h2>
+
+<div class="h3" id="deps-background" title="deps-background">
+<h3>Background</h3>
+
+<p>APR 0.9.x and 1.x are binary-incompatible.  This means if you are
+already using Subversion with APR 0.9.x, and then upgrade your libapr
+to 1.X <em>without rebuilding Subversion</em>, things will break.
+Things will also break if your Subversion server libraries are linked
+to one version of APR but your Apache HTTPD server is linked to a
+different version.</p>
+
+<p>For a long time, Subversion's main source distribution included APR
+0.9.x, which was the latest available at the time, along with a few
+other things (e.g., Neon, zlib) that weren't yet widespread on
+installation systems.</p>
+
+</div> <!-- deps-background -->
+
+<div class="h3" id="deps-now" title="deps-now">
+<h3>Subversion 1.5.0 Dependencies Distribution</h3>
+
+<p>Today, these dependencies are no longer exotic, so our source
+distribution contains just Subversion itself.  Those building
+Subversion are expected to have the necessary libraries already
+installed, or to be able to fetch them easily.  But for convenience,
+we still offer a "deps" distribution: it doesn't contain Subversion,
+it just has source code for those third-party libraries.</p>
+
+<p>Until Subversion 1.5.0, the deps distribution contained APR 0.9.x,
+but as of 1.5.0, we're finally upgrading it to APR 1.x.  This is
+because by now there are very few systems that will have binary
+compatibility issues, and of those, few are likely to build using the
+"deps" dist.</p>
+
+<p>If you already have a Subversion installation using APR 0.9.x, it's
+still possible to move to APR 1.x safely (although you are not
+required to, unless you use the deps dist).  Just be sure to recompile
+Subversion, and Apache httpd if necessary, after upgrading APR.</p>
+
+<p>Note that it's perfectly safe to use APR 1.x from the beginning.
+In fact, we recommend it.  If you're building Subversion for the first
+time, there's no compatibility issue to worry about, so just grab the
+latest version of APR (or use our deps dist).</p>
+
+</div> <!-- deps-now -->
+
+</div>  <!-- deps -->
 
 </div>  <!-- app -->
 </body>

@@ -43,6 +43,7 @@ extern "C" {
 #define SVN_RA_SVN_CAP_EDIT_PIPELINE "edit-pipeline"
 #define SVN_RA_SVN_CAP_SVNDIFF1 "svndiff1"
 #define SVN_RA_SVN_CAP_ABSENT_ENTRIES "absent-entries"
+/* maps to SVN_RA_CAPABILITY_COMMIT_REVPROPS: */
 #define SVN_RA_SVN_CAP_COMMIT_REVPROPS "commit-revprops"
 /* maps to SVN_RA_CAPABILITY_MERGEINFO: */
 #define SVN_RA_SVN_CAP_MERGEINFO "mergeinfo"

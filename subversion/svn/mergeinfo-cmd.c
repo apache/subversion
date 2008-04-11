@@ -43,7 +43,7 @@ print_log_rev(void *baton,
               svn_log_entry_t *log_entry,
               apr_pool_t *pool)
 {
-  svn_cmdline_printf(pool, "%ld\n", log_entry->revision);
+  svn_cmdline_printf(pool, "r%ld\n", log_entry->revision);
   return SVN_NO_ERROR;
 }
  
