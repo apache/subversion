@@ -24,15 +24,6 @@ Candidate changes:
     Votes:
       +1: glasser, epg
 
-  * r30517, r30518, r30523
-    Improve dav-svn operational logging and compat with svnserve logging.
-    Notes:
-      Revert on trunk if these don't make it into 1.5.0.
-      Probably easiest to handle these three blocks at once (tested):
-        merge -c 30474 -r30515:30523
-    Votes:
-      +1: epg, glasser
-
 Status of 1.5.1:
 ================
 
@@ -40,3 +31,12 @@ Candidate changes:
 
 Approved changes (all releases):
 ================================
+  * r30517, r30518, r30523
+    Improve dav-svn operational logging and compat with svnserve logging.
+    Notes:
+      Revert on trunk if these don't make it into 1.5.0.
+      Probably easiest to handle these three blocks at once (tested):
+        merge -c 30474 -r30515:30523
+    Votes:
+      +1: epg, glasser, kameshj
+
