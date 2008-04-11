@@ -664,7 +664,6 @@ AC_ARG_ENABLE(javahl,
 JAVAHL_OBJDIR=""
 INSTALL_EXTRA_JAVAHL_LIB=""
 FIX_JAVAHL_LIB=""
-JAVAHL_TESTS_TARGET=""
 LT_CXX_LIBADD=""
 if test "$do_javahl_build" = "yes"; then
   dnl Check for suitable JDK
@@ -716,11 +715,9 @@ AS_HELP_STRING([--with-junit=PATH],
       else
         JAVA_CLASSPATH="$withval"
       fi
-      JAVAHL_TESTS_TARGET="javahl-tests"
     fi
 ])
 AC_SUBST(JAVA_CLASSPATH)
-AC_SUBST(JAVAHL_TESTS_TARGET)
 
 # ==== Miscellaneous bits ====================================================
 
