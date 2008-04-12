@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-AUTOCONF=autoconf-2.61
+AUTOCONF=autoconf-2.62
 LIBTOOL=libtool-1.5.26
 SWIG=swig-1.3.31
 
