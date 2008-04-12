@@ -294,7 +294,6 @@
 #endif
 
 /* -----------------------------------------------------------------------
-/* -----------------------------------------------------------------------
    output mergeinfo hash
 */
 
@@ -439,6 +438,9 @@
     }
     else if (PyInt_Check($input)) {
         $1 = (void *)PyInt_AsLong($input);
+    }
+    else if ($input == Py_None) {
+        $1 = NULL;
     }
     else {
         PyErr_SetString(PyExc_TypeError, "not a known type");
