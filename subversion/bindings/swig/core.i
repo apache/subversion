@@ -454,6 +454,8 @@
     else if ($input == Py_None) {
         $1 = NULL;
     }
+    else if (svn_swig_ConvertPtr($input, (void **)&$1, $descriptor(svn_auth_ssl_server_cert_info_t *)) == 0) {
+    }
     else {
         PyErr_SetString(PyExc_TypeError, "not a known type");
         SWIG_fail;
