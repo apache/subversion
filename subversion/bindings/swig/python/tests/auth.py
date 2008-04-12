@@ -13,6 +13,7 @@ class SubversionAuthTestCase(unittest.TestCase):
     baton = core.svn_auth_open([])
     core.svn_auth_set_parameter(baton, "name", "somedata")
     core.svn_auth_set_parameter(baton, "name", None)
+    core.svn_auth_set_parameter(baton, "name", 2)
 
   def test_invalid_cred_kind(self):
     baton = core.svn_auth_open([])
