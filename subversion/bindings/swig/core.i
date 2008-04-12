@@ -429,15 +429,27 @@
 
 /* set */
 #ifdef SWIGPYTHON
-%typemap(in) const void *value {
+%typemap(in) const void *value 
+  (apr_pool_t *_global_pool = NULL, PyObject *_global_py_pool = NULL)
+{
+    if (_global_pool == NULL)
+    {
+       if (svn_swig_py_get_parent_pool(args, $descriptor(apr_pool_t *),
+                                     &_global_py_pool, &_global_pool))
+       SWIG_fail;
+    }
+
     if (PyString_Check($input)) {
-        $1 = (void *)PyString_AS_STRING($input);
+        char *value = PyString_AS_STRING($input);
+        $1 = apr_pstrdup(_global_pool, value);
     }
     else if (PyLong_Check($input)) {
-        $1 = (void *)PyLong_AsLong($input);
+        $1 = apr_palloc(_global_pool, sizeof(apr_uint32_t));
+        *((apr_uint32_t *)$1) = PyLong_AsLong($input);
     }
     else if (PyInt_Check($input)) {
-        $1 = (void *)PyInt_AsLong($input);
+        $1 = apr_palloc(_global_pool, sizeof(apr_uint32_t));
+        *((apr_uint32_t *)$1) = PyInt_AsLong($input);
     }
     else if ($input == Py_None) {
         $1 = NULL;
