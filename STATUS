@@ -9,19 +9,6 @@ Status of 1.5.0:
 
 Candidate changes:
 
- * r30544
-   Remove the now-unused svn_wc_notify_changelist_failed enum element,
-   and change libsvn_wc to clear the error it passes to its
-   notification callback.
-   Justification:
-     This take the (undocumented) responsibility for this cleanup off
-     of the library consumer (who would potentially otherwise leak
-     errors).
-   Notes:
-     This is a follow-up to r28591, which is a fix for issue #3054,
-     'svn cl foo README; svn cl foo README' has unexpected output.
-   Votes
-     +1: dlr, epg
 
 Status of 1.5.1:
 ================

@@ -2979,14 +2979,15 @@ svn_wc_set_changelist(const char *path,
      user about this, but still allow the reassignment to happen. */
   if (entry->changelist && changelist && notify_func)
     {
-      svn_error_t *unversioned_err =
+      svn_error_t *reassign_err =
         svn_error_createf(SVN_ERR_WC_CHANGELIST_MOVE, NULL,
                           _("Removing '%s' from changelist '%s'."),
                           path, entry->changelist);
       notify = svn_wc_create_notify(path, svn_wc_notify_changelist_moved, 
                                     pool);
-      notify->err = unversioned_err;
+      notify->err = reassign_err;
       notify_func(notify_baton, notify, pool);
+      svn_error_clear(notify->err);
     }
   
   /* Tweak the entry. */
