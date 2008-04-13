@@ -17,8 +17,3 @@ Candidate changes:
 Approved changes (all releases):
 ================================
 
- * r30567
-   Follows on to r30544.  Fixes segfault in the Ruby bindings when using
-   changelists.
-   Votes:
-     +1: joeswatosh, kou
