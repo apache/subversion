@@ -92,6 +92,7 @@ typedef struct item_baton_t {
 
   svn_boolean_t text_changed;        /* Did the file's contents change? */
   svn_boolean_t added;               /* File added? (Implies text_changed.) */
+  svn_boolean_t copyfrom;            /* File copied? */
   apr_array_header_t *changed_props; /* array of const char * prop names */
   apr_array_header_t *removed_props; /* array of const char * prop names */
 
@@ -352,6 +353,8 @@ add_helper(svn_boolean_t is_dir,
                                " copyfrom-rev=\"%ld\">" DEBUG_CR,
                                DIR_OR_FILE(is_dir),
                                qname, qcopy, copyfrom_revision);
+
+          child->copyfrom = TRUE;
         }
 
       /* Resist the temptation to pass 'elt' as the format string.
@@ -404,7 +407,8 @@ close_helper(svn_boolean_t is_dir, item_baton_t *baton)
     return SVN_NO_ERROR;
 
   /* ### ack!  binary names won't float here! */
-  if (baton->removed_props && (! baton->added))
+  /* If this is a copied file/dir, we can have removed props. */
+  if (baton->removed_props && (! baton->added || baton->copyfrom))
     {
       const char *qname;
 
