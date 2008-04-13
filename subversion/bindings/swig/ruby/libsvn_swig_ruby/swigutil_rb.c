@@ -2211,9 +2211,6 @@ svn_swig_rb_notify_func2(void *baton,
     cbb.args = rb_ary_new3(1, c2r_wc_notify__dup(notify));
   }
 
-  if (notify->err)
-    svn_error_clear(notify->err);
-
   if (!NIL_P(proc))
     invoke_callback((VALUE)(&cbb), rb_pool);
 }
