@@ -37,15 +37,10 @@ class SubversionException(Exception):
     """
     # Be compatible with pre-1.5 .args behavior:
     args = []
-    if message is None:
-      # SubversionException().args => ()
-      pass
-    else:
-      # SubversionException('message').args => ('message',)
-      args.append(message)
-      if apr_err is not None:
-        # SubversionException('message', 123) => ('message', 123)
-        args.append(apr_err)
+    if message is not None or apr_err is not None:
+        args.append(message)
+        if apr_err is not None:
+            args.append(apr_err)
     Exception.__init__(self, *args)
 
     self.apr_err = apr_err
