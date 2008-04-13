@@ -9,6 +9,11 @@ Status of 1.5.0:
 
 Candidate changes:
 
+ * r30574
+   Use `neon-config --libs` when `neon-config --la-file` isn't available.
+   Votes:
+     +1: arfrever
+
 Status of 1.5.1:
 ================
 
