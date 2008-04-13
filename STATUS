@@ -9,6 +9,14 @@ Status of 1.5.0:
 
 Candidate changes:
 
+ * r30573
+   Fix issue in mod_dav_svn: add missing remove-props element(s) in update-
+    report with send-all=False. No blocker, only used with ra_serf. But, 
+    fixing this now will avoid that we have to provide a workaround in ra_serf
+    later.
+   Votes:
+     +1: lgo
+
  * r30574
    Use `neon-config --libs` when `neon-config --la-file` isn't available.
    Votes:
