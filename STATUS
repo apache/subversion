@@ -13,7 +13,7 @@ Candidate changes:
    Follows on to r30544.  Fixes segfault in the Ruby bindings when using
    changelists.
    Votes:
-     +1: joeswatosh
+     +1: joeswatosh, kou
 
 Status of 1.5.1:
 ================
