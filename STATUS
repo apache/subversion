@@ -15,12 +15,12 @@ Candidate changes:
    when "SVNAllowBulkUpdates off" is present in httpd.conf, and by
    serf (all the time).
    Votes:
-     +1: lgo
+     +1: lgo, cmpilato
 
  * r30574
    Use `neon-config --libs` when `neon-config --la-file` isn't available.
    Votes:
-     +1: arfrever
+     +1: arfrever, cmpilato
 
  * r30583
    Fix the Python bindings version of svn_repos_node_location_segments().
