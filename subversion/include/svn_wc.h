@@ -782,9 +782,6 @@ typedef enum svn_wc_notify_action_t
   /** Changelist name cleared. @since New in 1.5. */
   svn_wc_notify_changelist_clear,
 
-  /** Failed to update a path's changelist association. @since New in 1.5. */
-  svn_wc_notify_changelist_failed,
-
   /** Warn user that a path has moved from one changelist to another.
       @since New in 1.5. */
   svn_wc_notify_changelist_moved,

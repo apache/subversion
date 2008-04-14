@@ -507,7 +507,8 @@ svn_ra_serf__open(svn_ra_session_t *session,
                                _("Illegal repository URL '%s'"),
                                repos_URL);
     }
-  /* Work around an issue in apr-util 1.2.12 and older */
+  /* Contrary to what the comment for apr_uri_t.path says in apr-util 1.2.12 and
+     older, for root paths url.path will be "", where serf requires "/". */
   if (url.path == NULL || url.path[0] == '\0')
     url.path = apr_pstrdup(serf_sess->pool, "/");
 
