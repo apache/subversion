@@ -89,6 +89,92 @@ program written to the 1.0, 1.1, 1.2, 1.3, or 1.4 API can both compile
 and run using 1.5 libraries.  However, a program written for 1.5
 cannot necessarily compile or run against older libraries.</p>
 
+<div class="h3" id="new-feature-compatibility-table"
+             title="new-feature-compatibility-table">
+<h3>New Feature Compatibility Table</h3>
+<table border="1">
+  <tr>
+    <th>New Feature</th>
+    <th>Minimum Client</th>
+    <th>Minimum Server</th>
+    <th>Minimum Repository</th>
+    <th>Notes</th></tr>
+  <tr>
+    <td><a href="#merge-tracking">Merge tracking</a></td>
+    <td>1.5</td>
+    <td>1.5</td>
+    <td>1.5</td>
+    <td></td></tr>
+  <tr>
+    <td><a href="#sparse-checkouts">Sparse checkouts</a></td>
+    <td>1.5</td>
+    <td>any</td>
+    <td>any</td>
+    <td></td></tr>
+  <tr>
+    <td><a href="#interactive-conflict-resolution">Interactive conflict resolution</a></td>
+    <td>1.5</td>
+    <td>any</td>
+    <td>any</td>
+    <td></td></tr>
+  <tr>
+    <td><a href="#changelists">Changelist support</a></td>
+    <td>1.5</td>
+    <td>any</td>
+    <td>any</td>
+    <td></td></tr>
+  <tr>
+    <td><a href="#externals">Relative URLs, peg revisions in <tt>svn:externals</tt></a></td>
+    <td>1.5</td>
+    <td>any</td>
+    <td>any</td>
+    <td></td></tr>
+  <tr>
+    <td><a href="#cyrus-sasl"> Cyrus SASL support for ra_svn and <tt>svnserve</tt></a></td>
+    <td>any<sup>*</sup>, 1.5</td>
+    <td>any<sup>*</sup>, 1.5</td>
+    <td>any</td>
+    <td><sup>*</sup>Limited, see <a href="#sasl-compatibility">SASL&nbsp;and&nbsp;<code>svn://</code>&nbsp;compatibility</a></td></tr>
+  <tr>
+    <td><a href="#fsfs-sharding"> Improved support for large deployments on FSFS, via sharding</a></td>
+    <td>any<sup>*</sup>, 1.5</td>
+    <td>1.5</td>
+    <td>1.5</td>
+    <td><sup>*</sup>1.5 required for <code>file://</code> compatibility</td></tr>
+  <tr>
+    <td><a href="#fsfs-isolate-immutable">Improved FSFS optimizability, via immutable file isolation</a></td>
+    <td>any<sup>*</sup>, 1.5</td>
+    <td>1.5</td>
+    <td>1.5</td>
+    <td><sup>*</sup>1.5 required for <code>file://</code> compatibility</td></tr>
+  <tr>
+    <td><a href="#webdav-proxy">WebDAV transparent write-through proxy</a></td>
+    <td>any</td>
+    <td>1.5<sup>*</sup></td>
+    <td>any</td>
+    <td><sup>*</sup>Apache 2.2 server also required</td></tr>
+  <tr>
+    <td><a href="#copy-move-improvements">Improvements to <tt>copy</tt> and <tt>move</tt></a></td>
+    <td>1.5</td>
+    <td>any<sup>*</sup>, 1.5</td>
+    <td>any</td>
+    <td><sup>*</sup>Limited, see <a href="#copy-move-improvements">Copy/move<tt>-</tt>related&nbsp;improvements</a></td></tr>
+  <tr>
+    <td><a href="#cancellation-improvements">Speed improvements, cancellation response improvements</a></td>
+    <td>1.5</td>
+    <td>any</td>
+    <td>any</td>
+    <td></td></tr>
+  <tr>
+    <td><a href="#dav-modules">Easier to try experimental <tt>ra_serf</tt> DAV access module</a></td>
+    <td>1.5</td>
+    <td>any</td>
+    <td>any</td>
+    <td></td></tr>
+</table>
+
+</div>  <!-- new-feature-compatibility-table -->
+
 <div class="h3" id="wc-and-repos-format-change"
              title="wc-and-repos-format-change">
 <h3>Working Copy and Repository Format Changes</h3>
