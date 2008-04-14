@@ -40,6 +40,7 @@ struct tree_conflict_phrases
   
   /* Used during merge. */
   const char *we_edited_merge;       
+  const char *we_added_merge;
   const char *does_not_exist_merge;
   const char *obstructed;
 };
@@ -52,22 +53,25 @@ new_tree_conflict_phrases(apr_pool_t *pool)
   struct tree_conflict_phrases *phrases =
     apr_pcalloc(pool, sizeof(struct tree_conflict_phrases));
 
-  phrases->update_deleted = _("The update attempted to delete the file '%s'\n"
+  phrases->update_deleted = _("The update attempted to delete '%s'\n"
                               "(possibly as part of a rename operation).\n");
 
-  phrases->update_edited = _("The update attempted to edit the file '%s'.\n");
+  phrases->update_edited = _("The update attempted to edit '%s'.\n");
 
-  phrases->merge_deleted = _("The merge attempted to delete the file '%s'\n"
+  phrases->merge_deleted = _("The merge attempted to delete '%s'\n"
                              "(possibly as part of a rename operation).\n");
 
-  phrases->merge_edited = _("The merge attempted to edit the file '%s'.\n");
+  phrases->merge_edited = _("The merge attempted to edit '%s'.\n");
 
-  phrases->merge_added = _("The merge attempted to add the file '%s'.\n");
+  phrases->merge_added = _("The merge attempted to add '%s'.\n");
 
   phrases->we_deleted = _("You have deleted '%s' locally.\n"
                           "Maybe you renamed it?\n");
 
   phrases->we_edited_update = _("You have edited '%s' locally.\n");
+
+  phrases->does_not_exist_update = _("'%s' does not exist locally.\n"
+                                     "Maybe you renamed it?\n");
 
   /* This one only comes up together with merge_deleted, never with
    * merge_edited. Otherwise we would have a text conflict. So we can
@@ -78,10 +82,12 @@ new_tree_conflict_phrases(apr_pool_t *pool)
                                "but those edits are not present on the"
                                " branch you are merging from.\n");
 
-  phrases->does_not_exist_update = _("The file '%s' does not exist locally.\n"
-                                     "Maybe you renamed it?\n");
+  phrases->we_added_merge = _("Either you have added '%s' locally,\n"
+                               "or it has been added in the history of"
+                               " the branch you are merging into.\n");
 
-  phrases->does_not_exist_merge = _("The file '%s' does not exist locally.\n"
+
+  phrases->does_not_exist_merge = _("'%s' does not exist locally.\n"
                                     "Maybe you renamed it? Or has it been"
                                     " renamed in the history of the branch\n"
                                     "you are merging into?\n");
@@ -167,6 +173,18 @@ select_our_phrase(svn_wc_conflict_description_t *conflict,
         else if (conflict->operation == svn_wc_operation_merge)
           {
             return phrases->obstructed;
+          }
+        return NULL; /* Should never happen! */
+
+      case svn_wc_conflict_reason_added:
+        if (conflict->operation == svn_wc_operation_update
+            || conflict->operation == svn_wc_operation_switch)
+          {
+            return NULL; /* Should never happen! */
+          }
+        else if (conflict->operation == svn_wc_operation_merge)
+          {
+            return phrases->merge_added;
           }
         return NULL; /* Should never happen! */
 
@@ -410,6 +428,8 @@ read_reason(svn_wc_conflict_description_t *conflict,
     conflict->reason = svn_wc_conflict_reason_missing;
   else if (advance_on_match(start, SVN_WC__CONFLICT_REASON_OBSTRUCTED))
     conflict->reason = svn_wc_conflict_reason_obstructed;
+  else if (advance_on_match(start, SVN_WC__CONFLICT_REASON_ADDED))
+    conflict->reason = svn_wc_conflict_reason_added;
   else
     return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
              _("Invalid 'reason' field in tree conflict description"));
@@ -784,6 +804,8 @@ svn_wc_append_tree_conflict_info_xml(svn_stringbuf_t *str,
       case svn_wc_conflict_reason_obstructed:
         tmp = SVN_WC__CONFLICT_REASON_OBSTRUCTED;
         break;
+      case svn_wc_conflict_reason_added:
+        tmp = SVN_WC__CONFLICT_REASON_ADDED;
       default:
         return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
             _("Bad reason in tree conflict description"));
