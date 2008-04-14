@@ -25,7 +25,7 @@ Candidate changes:
  * r30583
    Fix the Python bindings version of svn_repos_node_location_segments().
    Votes:
-     +1: cmpilato
+     +1: cmpilato, hwright
 
 Status of 1.5.1:
 ================
