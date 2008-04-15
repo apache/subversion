@@ -3760,7 +3760,7 @@ their implications.</p>
 <p>The Neon library, used for communication between a Subversion server and
 client over HTTP, is usually built as a static library.  But it is
 subsequently linked into a different shared library.  This causes an error
-during the build process on 64-bit AMD systems similar to this:
+during the build process on 64-bit AMD systems similar to this:</p>
 
 <blockquote>
 <div><pre><code>
@@ -3773,7 +3773,7 @@ read symbols: Bad value
 </blockquote>
 
 <p>There was a
-<a href="http://subversion.tigris.org/servlets/ReadMsg?listName=dev&msgNo=119669">
+<a href="http://subversion.tigris.org/servlets/ReadMsg?listName=dev&amp;msgNo=119669">
 thread</a> on the developers' list about this.</p>
 
 <p>The solution is to supply the "--enable-shared" option to Subversion's
