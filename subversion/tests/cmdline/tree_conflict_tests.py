@@ -201,21 +201,29 @@ d_adds = [
 # file-mod(F) = text-mod(F) and/or prop-mod(F)
 # dir-mod(D)  = prop-mod(D) and/or file-mod(child-F) and/or dir-mod(child-D)
 
-# GO-AWAY and REPLACE scenarios (lumped together)
 f_dels = [
   ( 'f/del/only',   ['fD'],             [['fa']] ),
   ( 'f/del/move',   ['fM'],             [['fa']] ),
-  ( 'f/del/repl',   ['fD','fA'],        [['fd']] ),
-  #( 'f/del/both',   ['fM','fA'],        [['fd']] ),  # don't test all combinations
 ]
 d_dels = [
   ( 'd/del/only',   ['dD'],             [] ),
   ( 'd/del/move',   ['dM'],             [] ),
-  #( 'd/del/repl',   ['dD','dA'],        [] ),
-  #( 'd/del/both',   ['dM','dA'],        [] ),
+]
+
+f_rpls = [
+  ( 'f/rpl/only',   ['fD','fA'],        [['fd']] ),
+  #( 'f/rpl/move',   ['fM','fA'],        [['fd']] ),  # don't test all combinations
+]
+d_rpls = [
+  #( 'd/rpl/only',   ['dD','dA'],        [] ),
+  #( 'd/rpl/move',   ['dM','dA'],        [] ),
   # Replacement involves a complication: re-using a dir rather than strictly
   # creating a new dir, as the old one still exists, so action 'dA' fails.
   ### Need a "schedule this existing dir for re-addition" action to do this.
+]
+f_rpl_d = [
+]
+d_rpl_f = [
 ]
 
 f_mods = [
@@ -333,8 +341,8 @@ def ensure_tree_conflict(sbox, operation, incoming_scenarios, localmod_scenarios
       except svntest.Failure, msg:
         print("EXCEPTION for '" + in_path + "' onto " + str(loc_action) + ": " + str(msg))
         failures += 1
-      #finally:
-      verbose_printlines(stdout)
+      else:
+        verbose_printlines(stdout)
 
       # ensure F has a conflict and nothing else is changed
       verbose_print("--- Status")
@@ -359,19 +367,22 @@ def ensure_tree_conflict(sbox, operation, incoming_scenarios, localmod_scenarios
 # The main entry points for testing a set of scenarios.
 #
 # INCOMING_SCEN is a list of scenarios describing the incoming changes to apply.
-# WC_BASE_SCEN  is a list of scenarios describing how the local branch has
+# BR_SCEN  is a list of scenarios describing how the local branch has
 #   been modified relative to the merge-left source.
-# WC_SCHED_SCEN is a list of scenarios describing the local WC mods.
+# WC_SCEN is a list of scenarios describing the local WC mods.
+#
+# Expected results:
+#   A tree conflict marked on the Parent, with F or D as the victim.
 
 # Test 'update' and/or 'switch'
-def test_tc_up_sw(sbox, incoming_scen, wc_sched_scen):
-  ensure_tree_conflict(sbox, 'update', incoming_scen, wc_sched_scen)
+def test_tc_up_sw(sbox, incoming_scen, wc_scen):
+  ensure_tree_conflict(sbox, 'update', incoming_scen, wc_scen)
+  #ensure_tree_conflict(sbox, 'switch', incoming_scen, wc_scen)  ###
 
 # Test 'merge'
-def test_tc_merge(sbox, incoming_scen, wc_base_scen=None,
-                                       wc_sched_scen=None):
-  if wc_base_scen == None:
-    ensure_tree_conflict(sbox, 'merge', incoming_scen, wc_sched_scen)
+def test_tc_merge(sbox, incoming_scen, br_scen=None, wc_scen=None):
+  if br_scen == None:
+    ensure_tree_conflict(sbox, 'merge', incoming_scen, wc_scen)
   else:
     raise svntest.Skip  ###
 
@@ -381,15 +392,11 @@ def test_tc_merge(sbox, incoming_scen, wc_base_scen=None,
 # conflicts with a scheduled change in the WC.
 #
 # WC state: as scheduled (no obstruction)
-#
-# Results: tree-conflict on F
-#          no other change to WC (except possibly other half of a move)
 
 def up_sw_file_mod_onto_del(sbox):
   "up/sw file: modify onto del/rpl/mv"
-  test_tc_up_sw(sbox, f_mods, f_dels)
+  test_tc_up_sw(sbox, f_mods, f_dels + f_rpls)
   # Note: See UC1 in notes/tree-conflicts/use-cases.txt.
-  # Note: Desired: for 'move', modify the moved file and not raise a conflict.
 
 def up_sw_file_del_onto_mod(sbox):
   "up/sw file: del/rpl/mv onto modify"
@@ -398,13 +405,12 @@ def up_sw_file_del_onto_mod(sbox):
   #          ### OR (see Nico's email <>):
   #          schedule-delete but leave F on disk (can only apply with
   #            text-mod; prop-mod can't be preserved in this way)
-  test_tc_up_sw(sbox, f_dels, f_mods)
+  test_tc_up_sw(sbox, f_dels + f_rpls, f_mods)
   # Note: See UC2 in notes/tree-conflicts/use-cases.txt.
-  # Note: Desired: for 'move', move the modified file and not raise a conflict.
 
 def up_sw_file_del_onto_del(sbox):
   "up/sw file: del/rpl/mv onto del/rpl/mv"
-  test_tc_up_sw(sbox, f_dels, f_dels)
+  test_tc_up_sw(sbox, f_dels + f_rpls, f_dels + f_rpls)
   # Note: See UC3 in notes/tree-conflicts/use-cases.txt.
 
 def up_sw_file_add_onto_add(sbox):
@@ -415,26 +421,21 @@ def up_sw_file_add_onto_add(sbox):
 
 # Tests for update/switch affecting a dir, where the incoming change
 # conflicts with a scheduled change in the WC.
-#
-# Results: tree-conflict on D
-#          no other change to WC (except possibly other half of a move)
 
 def up_sw_dir_mod_onto_del(sbox):
   "up/sw dir: modify onto del/rpl/mv"
   # WC state: any (D necessarily exists; children may have any state)
-  test_tc_up_sw(sbox, d_mods, d_dels)
-  # Note: Desired: for 'move', modify the moved dir and not raise a conflict.
+  test_tc_up_sw(sbox, d_mods, d_dels + d_rpls)
 
 def up_sw_dir_del_onto_mod(sbox):
   "up/sw dir: del/rpl/mv onto modify"
   # WC state: any (D necessarily exists; children may have any state)
-  test_tc_up_sw(sbox, d_dels, d_mods)
-  # Note: Desired: for 'move', move the modified dir and not raise a conflict.
+  test_tc_up_sw(sbox, d_dels + d_rpls, d_mods)
 
 def up_sw_dir_del_onto_del(sbox):
   "up/sw dir: del/rpl/mv onto del/rpl/mv"
   # WC state: any (D necessarily exists; children may have any state)
-  test_tc_up_sw(sbox, d_dels, d_dels)
+  test_tc_up_sw(sbox, d_dels + d_rpls, d_dels + d_rpls)
 
 def up_sw_dir_add_onto_add(sbox):
   "up/sw dir: add onto add"
@@ -444,66 +445,54 @@ def up_sw_dir_add_onto_add(sbox):
 #----------------------------------------------------------------------
 
 # Tests for merge affecting a file, where the incoming change
-# conflicts with a change in the target branch.
+# conflicts with the target branch.
+# (A change is made on the target branch, and committed.)
 #
 # WC sched: nil
 # WC state: pristine
-#
-# Results: tree-conflict on F
-#          no other change to WC (except possibly other half of a move)
 
-def merge_file_mod_onto_br_del(sbox):
-  "merge file: modify onto branch del/rpl/mv"
-  test_tc_merge(sbox, f_mods, wc_base_scen=f_dels)
+def merge_file_mod_onto_br_not_file(sbox):
+  "merge file: modify onto branch not-file"
+  test_tc_merge(sbox, f_mods, br_scen = f_dels + f_rpl_d)
   # Note: See UC4 in notes/tree-conflicts/use-cases.txt.
-  # Note: Desired: for 'move', modify the moved file and not raise a conflict.
 
-def merge_file_del_onto_br_mod(sbox):
-  "merge file: del/rpl/mv onto branch modify"
-  test_tc_merge(sbox, f_dels, wc_base_scen=f_mods)
+def merge_file_del_onto_br_not_same(sbox):
+  "merge file: del/rpl/mv onto branch not-same"
+  test_tc_merge(sbox, f_dels + f_rpls, br_scen = f_mods)
   # Note: See UC5 in notes/tree-conflicts/use-cases.txt.
-  # Note: Desired: for 'move', move the modified file and not raise a conflict.
 
-def merge_file_del_onto_br_del(sbox):
-  "merge file: del/rpl/mv onto branch del/rpl/mv"
-  test_tc_merge(sbox, f_dels, wc_base_scen=f_dels)
+def merge_file_del_onto_br_not_file(sbox):
+  "merge file: del/rpl/mv onto branch not-file"
+  test_tc_merge(sbox, f_dels + f_rpls, br_scen = f_dels + f_rpl_d)
   # Note: See UC6 in notes/tree-conflicts/use-cases.txt.
 
-def merge_file_add_onto_br_add(sbox):
-  "merge file: add onto branch add"
-  test_tc_merge(sbox, f_adds, wc_base_scen=f_adds)
+def merge_file_add_onto_br_not_none(sbox):
+  "merge file: add onto branch not-none"
+  test_tc_merge(sbox, f_adds, br_scen = f_adds)  ### + d_adds (at path "F")
 
 #----------------------------------------------------------------------
 
 # Tests for merge affecting a dir, where the incoming change
-# conflicts with a change in the target branch.
+# conflicts with the target branch.
 #
 # WC sched: nil
 # WC state: pristine
-#
-# Results: tree-conflict on F
-#          no other change to WC (except possibly other half of a move)
 
-def merge_dir_mod_onto_br_del(sbox):
-  "merge dir: modify onto branch del/rpl/mv"
-  test_tc_merge(sbox, d_mods, wc_base_scen=d_dels)
-  # Note: See UC4 in notes/tree-conflicts/use-cases.txt.
-  # Note: Desired: for 'move', modify the moved dir and not raise a conflict.
+def merge_dir_mod_onto_br_not_dir(sbox):
+  "merge dir: modify onto branch not-dir"
+  test_tc_merge(sbox, d_mods, br_scen = d_dels + d_rpl_f)
 
-def merge_dir_del_onto_br_mod(sbox):
-  "merge dir: del/rpl/mv onto branch modify"
-  test_tc_merge(sbox, d_dels, wc_base_scen=d_mods)
-  # Note: See UC5 in notes/tree-conflicts/use-cases.txt.
-  # Note: Desired: for 'move', move the modified dir and not raise a conflict.
+def merge_dir_del_onto_br_not_same(sbox):
+  "merge dir: del/rpl/mv onto branch not-same"
+  test_tc_merge(sbox, d_dels + d_rpls, br_scen = d_mods)
 
-def merge_dir_del_onto_br_del(sbox):
-  "merge dir: del/rpl/mv onto branch del/rpl/mv"
-  test_tc_merge(sbox, d_dels, wc_base_scen=d_dels)
-  # Note: See UC6 in notes/tree-conflicts/use-cases.txt.
+def merge_dir_del_onto_br_not_dir(sbox):
+  "merge dir: del/rpl/mv onto branch not-dir"
+  test_tc_merge(sbox, d_dels + d_rpls, br_scen = d_dels + d_rpl_f)
 
-def merge_dir_add_onto_br_add(sbox):
-  "merge dir: add onto branch add"
-  test_tc_merge(sbox, d_adds, wc_base_scen=d_adds)
+def merge_dir_add_onto_br_not_none(sbox):
+  "merge dir: add onto branch not-none"
+  test_tc_merge(sbox, d_adds, br_scen = d_adds)  ### + f_adds (at path "D")
 
 #----------------------------------------------------------------------
 
@@ -512,27 +501,22 @@ def merge_dir_add_onto_br_add(sbox):
 #
 # WC base: identical to merge-left source
 # WC state: as scheduled
-#
-# Results: tree-conflict on F
-#          no other change to WC (except possibly other half of a move)
 
-def merge_file_mod_onto_wc_del(sbox):
-  "merge file: modify onto WC del/rpl/mv"
-  test_tc_merge(sbox, f_mods, wc_sched_scen=f_dels)
-  # Note: Desired: for 'move', modify the moved file and not raise a conflict.
+def merge_file_mod_onto_wc_not_file(sbox):
+  "merge file: modify onto WC not-file"
+  test_tc_merge(sbox, f_mods, wc_scen = f_dels)
 
-def merge_file_del_onto_wc_mod(sbox):
-  "merge file: del/rpl/mv onto WC modify"
-  test_tc_merge(sbox, f_dels, wc_sched_scen=f_mods)
-  # Note: Desired: for 'move', move the modified file and not raise a conflict.
+def merge_file_del_onto_wc_not_same(sbox):
+  "merge file: del/rpl/mv onto WC not-same"
+  test_tc_merge(sbox, f_dels + f_rpls, wc_scen = f_mods)
 
-def merge_file_del_onto_wc_del(sbox):
-  "merge file: del/rpl/mv onto WC del/rpl/mv"
-  test_tc_merge(sbox, f_dels, wc_sched_scen=f_dels)
+def merge_file_del_onto_wc_not_file(sbox):
+  "merge file: del/rpl/mv onto WC not-file"
+  test_tc_merge(sbox, f_dels + f_rpls, wc_scen = f_dels)
 
-def merge_file_add_onto_wc_add(sbox):
-  "merge file: add onto WC add"
-  test_tc_merge(sbox, f_adds, wc_sched_scen=f_adds)
+def merge_file_add_onto_wc_not_none(sbox):
+  "merge file: add onto WC not-none"
+  test_tc_merge(sbox, f_adds, wc_scen = f_adds)  ### + d_adds (at path "F")
 
 #----------------------------------------------------------------------
 
@@ -541,27 +525,22 @@ def merge_file_add_onto_wc_add(sbox):
 #
 # WC base: identical to merge-left source
 # WC state: as scheduled
-#
-# Results: tree-conflict on F
-#          no other change to WC (except possibly other half of a move)
 
-def merge_dir_mod_onto_wc_del(sbox):
-  "merge dir: modify onto WC del/rpl/mv"
-  test_tc_merge(sbox, d_mods, wc_sched_scen=d_dels)
-  # Note: Desired: for 'move', modify the moved dir and not raise a conflict.
+def merge_dir_mod_onto_wc_not_dir(sbox):
+  "merge dir: modify onto WC not-dir"
+  test_tc_merge(sbox, d_mods, wc_scen = d_dels)
 
-def merge_dir_del_onto_wc_mod(sbox):
-  "merge dir: del/rpl/mv onto WC modify"
-  test_tc_merge(sbox, d_dels, wc_sched_scen=d_mods)
-  # Note: Desired: for 'move', move the modified dir and not raise a conflict.
+def merge_dir_del_onto_wc_not_same(sbox):
+  "merge dir: del/rpl/mv onto WC not-same"
+  test_tc_merge(sbox, d_dels + d_rpls, wc_scen = d_mods)
 
-def merge_dir_del_onto_wc_del(sbox):
-  "merge dir: del/rpl/mv onto WC del/rpl/mv"
-  test_tc_merge(sbox, d_dels, wc_sched_scen=d_dels)
+def merge_dir_del_onto_wc_not_dir(sbox):
+  "merge dir: del/rpl/mv onto WC not-dir"
+  test_tc_merge(sbox, d_dels + d_rpls, wc_scen = d_dels)
 
-def merge_dir_add_onto_wc_add(sbox):
-  "merge dir: add onto WC add"
-  test_tc_merge(sbox, d_adds, wc_sched_scen=d_adds)
+def merge_dir_add_onto_wc_not_none(sbox):
+  "merge dir: add onto WC not-none"
+  test_tc_merge(sbox, d_adds, wc_scen = d_adds)  ### + f_adds (at path "D")
 
 #----------------------------------------------------------------------
 
@@ -569,9 +548,6 @@ def merge_dir_add_onto_wc_add(sbox):
 # is compatible with the scheduled change in the WC but the disk file
 # is obstructed (unexpectedly missing, unexpectedly present, or wrong
 # node type).
-#
-# Results: tree-conflict on F
-#          no other change to WC (except possibly other half of a move)
 
 def up_sw_file_mod_onto_obstr(sbox):
   "up/sw file: modify onto obstructed"
@@ -582,7 +558,7 @@ def up_sw_file_mod_onto_obstr(sbox):
 
 def up_sw_file_del_onto_obstr(sbox):
   "up/sw file: del/rpl/mv onto obstructed"
-  # Incoming: f_dels
+  # Incoming: f_dels + f_rpls
   # WC sched: text-sched:normal, possibly with prop-mods
   # WC state: {missing, is-directory}
   raise svntest.Skip  ###
@@ -600,9 +576,6 @@ def up_sw_file_add_onto_obstr(sbox):
 # is compatible with the scheduled change in the WC but the disk dir
 # is obstructed (unexpectedly missing, unexpectedly present, or wrong
 # node type).
-#
-# Results: tree-conflict on D
-#          no other change to WC (except possibly other half of a move)
 
 def up_sw_dir_mod_onto_obstr(sbox):
   "up/sw dir: modify onto obstructed"
@@ -613,7 +586,7 @@ def up_sw_dir_mod_onto_obstr(sbox):
 
 def up_sw_dir_del_onto_obstr(sbox):
   "up/sw dir: del/rpl/mv onto obstructed"
-  # Incoming: d_dels
+  # Incoming: d_dels + d_rpls
   # WC sched: (dir is known to its WC parent)
   # WC state: {missing, is-file}
   raise svntest.Skip  ###
@@ -624,51 +597,6 @@ def up_sw_dir_add_onto_obstr(sbox):
   # WC sched: (dir is not known to its WC parent)
   # WC state: {is-file, is-directory}
   raise svntest.Skip  ###
-
-#----------------------------------------------------------------------
-
-def EXAMPLE__tree_conflicts_in_updated_files(sbox):
-  "EXAMPLE TEST (from update_tests.py): tree conflicts in updated files"
-
-  # Detect simple tree conflicts among files edited or deleted in a single
-  # directory.
-
-  # See use cases 1-3 in notes/tree-conflicts/use-cases.txt for background.
-  # Note that we do not try to track renames.  The only difference from
-  # the behavior of Subversion 1.4 and 1.5 is the conflicted status of the
-  # parent directory.
-
-  sbox.build()
-  wc_dir = sbox.wc_dir
-
-  # Set up tree conflicts in wc 2
-  wc_dir_2 = svntest.actions.set_up_tree_conflicts(sbox)
-
-  # Update in wc 2
-  expected_output = wc.State(wc_dir_2, {
-    'A/D/G'       : Item(status='C '),
-    'A/D/G/pi'    : Item(status='U '),
-    'A/D/G/rho'   : Item(status='D '),
-    'A/D/G/tau'   : Item(status='D '),
-    })
-
-  expected_disk = svntest.main.greek_state.copy()
-  expected_disk.tweak('A/D/G/pi',
-                      contents="This is the file 'pi'.\nEdited in wc 1.\n")
-  expected_disk.tweak('A/D/G/rho',
-                      contents="This is the file 'rho'.\nEdited in wc 2.\n")
-  expected_disk.remove('A/D/G/tau')
-
-  expected_status = svntest.actions.get_virginal_state(wc_dir_2, 2)
-  expected_status.tweak('A/D/G',     status='C ')
-  expected_status.tweak('A/D/G/pi',  status='D ')
-  expected_status.remove('A/D/G/rho',
-                         'A/D/G/tau')
-
-  svntest.actions.run_and_verify_update(wc_dir_2,
-                                        expected_output,
-                                        expected_disk,
-                                        expected_status)
 
 
 #######################################################################
@@ -685,22 +613,22 @@ test_list = [ None,
               up_sw_dir_del_onto_mod,
               up_sw_dir_del_onto_del,
               up_sw_dir_add_onto_add,
-              merge_file_mod_onto_br_del,
-              merge_file_del_onto_br_mod,
-              merge_file_del_onto_br_del,
-              merge_file_add_onto_br_add,
-              merge_dir_mod_onto_br_del,
-              merge_dir_del_onto_br_mod,
-              merge_dir_del_onto_br_del,
-              merge_dir_add_onto_br_add,
-              merge_file_mod_onto_wc_del,
-              merge_file_del_onto_wc_mod,
-              merge_file_del_onto_wc_del,
-              merge_file_add_onto_wc_add,
-              merge_dir_mod_onto_wc_del,
-              merge_dir_del_onto_wc_mod,
-              merge_dir_del_onto_wc_del,
-              merge_dir_add_onto_wc_add,
+              merge_file_mod_onto_br_not_file,
+              merge_file_del_onto_br_not_same,
+              merge_file_del_onto_br_not_file,
+              merge_file_add_onto_br_not_none,
+              merge_dir_mod_onto_br_not_dir,
+              merge_dir_del_onto_br_not_same,
+              merge_dir_del_onto_br_not_dir,
+              merge_dir_add_onto_br_not_none,
+              merge_file_mod_onto_wc_not_file,
+              merge_file_del_onto_wc_not_same,
+              merge_file_del_onto_wc_not_file,
+              merge_file_add_onto_wc_not_none,
+              merge_dir_mod_onto_wc_not_dir,
+              merge_dir_del_onto_wc_not_same,
+              merge_dir_del_onto_wc_not_dir,
+              merge_dir_add_onto_wc_not_none,
               up_sw_file_mod_onto_obstr,
               up_sw_file_del_onto_obstr,
               up_sw_file_add_onto_obstr,
