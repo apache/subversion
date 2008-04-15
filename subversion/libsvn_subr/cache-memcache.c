@@ -18,10 +18,7 @@
 
 #include <assert.h>
 
-/* ### Do the configuration games required to get this when not
-   ### running APU trunk. */
-#include <apr_memcache.h>
-
+#include "svn_cache.h"
 #include "svn_pools.h"
 #include "svn_base64.h"
 #include "svn_path.h"
@@ -29,6 +26,10 @@
 #include "svn_private_config.h"
 
 #include "cache.h"
+
+#if SVN_HAVE_MEMCACHE
+
+#include <apr_memcache.h>
 
 /* A note on thread safety:
 
@@ -55,6 +56,11 @@ typedef struct {
   svn_cache_serialize_func_t *serialize_func;
   svn_cache_deserialize_func_t *deserialize_func;
 } memcache_t;
+
+/* The wrapper around apr_memcache_t. */
+struct svn_memcache_t {
+  apr_memcache_t *c;
+};
 
 
 /* Returns a memcache key for the given key KEY for CACHE, allocated
@@ -166,7 +172,7 @@ static svn_cache__vtable_t memcache_vtable = {
 
 svn_error_t *
 svn_cache_create_memcache(svn_cache_t **cache_p,
-                          apr_memcache_t *memcache,
+                          svn_memcache_t *memcache,
                           svn_cache_serialize_func_t *serialize_func,
                           svn_cache_deserialize_func_t *deserialize_func,
                           apr_ssize_t klen,
@@ -180,7 +186,7 @@ svn_cache_create_memcache(svn_cache_t **cache_p,
   cache->deserialize_func = deserialize_func;
   cache->klen = klen;
   cache->prefix = svn_path_uri_encode(prefix, pool);
-  cache->memcache = memcache;
+  cache->memcache = memcache->c;
 
   wrapper->vtable = &memcache_vtable;
   wrapper->cache_internal = cache;
@@ -279,15 +285,34 @@ nop_enumerator(const char *name,
   return TRUE;
 }
 
+#else /* ! SVN_HAVE_MEMCACHE */
+
+/* Stubs for no apr memcache library. */
+
+struct svn_memcache_t {
+  void *unused; /* Let's not have a size-zero struct. */
+};
+
 svn_error_t *
-svn_cache_make_memcache_from_config(apr_memcache_t **memcache_p,
+svn_cache_create_memcache(svn_cache_t **cache_p,
+                          svn_memcache_t *memcache,
+                          svn_cache_serialize_func_t *serialize_func,
+                          svn_cache_deserialize_func_t *deserialize_func,
+                          apr_ssize_t klen,
+                          const char *prefix,
+                          apr_pool_t *pool)
+{
+  return svn_error_create(SVN_ERR_NO_APR_MEMCACHE, NULL, NULL);
+}
+
+#endif /* SVN_HAVE_MEMCACHE */
+
+svn_error_t *
+svn_cache_make_memcache_from_config(svn_memcache_t **memcache_p,
                                     svn_config_t *config,
                                     apr_pool_t *pool)
 {
-  apr_memcache_t *memcache;
-  apr_status_t apr_err;
   apr_uint16_t server_count;
-  struct ams_baton b;
   apr_pool_t *subpool = svn_pool_create(pool);
 
   server_count =
@@ -302,28 +327,37 @@ svn_cache_make_memcache_from_config(apr_memcache_t **memcache_p,
       return SVN_NO_ERROR;
     }
 
-  apr_err = apr_memcache_create(pool,
-                                server_count,
-                                0, /* flags */
-                                &memcache);
-  if (apr_err != APR_SUCCESS)
-    return svn_error_wrap_apr(apr_err,
-                              _("Unknown error creating apr_memcache_t"));
+#if SVN_HAVE_MEMCACHE
+  {
+    struct ams_baton b;
+    svn_memcache_t *memcache = apr_pcalloc(pool, sizeof(*memcache));
+    apr_status_t apr_err = apr_memcache_create(pool,
+                                               server_count,
+                                               0, /* flags */
+                                               &(memcache->c));
+    if (apr_err != APR_SUCCESS)
+      return svn_error_wrap_apr(apr_err,
+                                _("Unknown error creating apr_memcache_t"));
 
-  b.memcache = memcache;
-  b.memcache_pool = pool;
-  b.err = SVN_NO_ERROR;
-  svn_config_enumerate2(config,
-                        SVN_CACHE_CONFIG_CATEGORY_MEMCACHED_SERVERS,
-                        add_memcache_server, &b,
-                        subpool);
+    b.memcache = memcache->c;
+    b.memcache_pool = pool;
+    b.err = SVN_NO_ERROR;
+    svn_config_enumerate2(config,
+                          SVN_CACHE_CONFIG_CATEGORY_MEMCACHED_SERVERS,
+                          add_memcache_server, &b,
+                          subpool);
 
-  if (b.err)
-    return b.err;
+    if (b.err)
+      return b.err;
 
-  *memcache_p = memcache;
+    *memcache_p = memcache;
 
-  svn_pool_destroy(subpool);
-  return SVN_NO_ERROR;
-
+    svn_pool_destroy(subpool);
+    return SVN_NO_ERROR;
+  }
+#else /* ! SVN_HAVE_MEMCACHE */
+  {
+    return svn_error_create(SVN_ERR_NO_APR_MEMCACHE, NULL, NULL);
+  }
+#endif /* SVN_HAVE_MEMCACHE */
 }

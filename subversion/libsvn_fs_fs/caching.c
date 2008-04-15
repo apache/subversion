@@ -110,7 +110,7 @@ dup_dir_listing(void **out,
    just passed to the FS warning handler.  Use FS->pool for allocating
    the memcache, and POOL for temporary allocations. */
 svn_error_t *
-read_config(apr_memcache_t **memcache_p,
+read_config(svn_memcache_t **memcache_p,
             svn_boolean_t *fail_stop,
             svn_fs_t *fs,
             apr_pool_t *pool)
@@ -151,7 +151,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                                    "fsfs:", ffd->uuid,
                                    "/", fs->path, ":",
                                    NULL);
-  apr_memcache_t *memcache;
+  svn_memcache_t *memcache;
   svn_boolean_t no_handler;
 
   SVN_ERR(read_config(&memcache, &no_handler, fs, pool));
