@@ -176,7 +176,7 @@ class Parser(object):
     example, "lock <PATH> steal?" => def handle_lock(self, path, steal)
     where steal will be True if "steal" was present.
 
-    See the end of test_svn_dav_log_parse.py for a complete example.
+    See the end of test_svn_server_log_parse.py for a complete example.
     """
     def parse(self, line):
         """Parse line and call appropriate handle_ method.
