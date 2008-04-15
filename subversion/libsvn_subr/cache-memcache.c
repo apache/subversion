@@ -18,6 +18,8 @@
 
 #include <assert.h>
 
+#include "svn_private_config.h"
+
 #if SVN_HAVE_MEMCACHE
 
 #include <apr_memcache.h>
@@ -25,8 +27,6 @@
 #include "svn_pools.h"
 #include "svn_base64.h"
 #include "svn_path.h"
-
-#include "svn_private_config.h"
 
 #include "cache.h"
 
