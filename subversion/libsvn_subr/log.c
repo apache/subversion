@@ -137,13 +137,14 @@ svn_log__update(const char *path, svn_revnum_t rev, svn_depth_t depth,
                 int entry_count, svn_boolean_t entry_is_empty,
                 apr_pool_t *pool)
 {
+  svn_boolean_t is_checkout = entry_count == 1 && entry_is_empty;
   return apr_psprintf(pool, "%s %s r%ld%s%s",
-                      (entry_count == 1 && entry_is_empty
+                      (is_checkout
                        ? "checkout-or-export"
                        : "update"),
                       svn_path_uri_encode(path, pool), rev,
                       log_depth(depth, pool),
-                      (send_copyfrom_args
+                      (!is_checkout && send_copyfrom_args
                        ? " send-copyfrom-args"
                        : ""));
 }
