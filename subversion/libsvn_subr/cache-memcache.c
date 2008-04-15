@@ -274,17 +274,6 @@ add_memcache_server(const char *name,
   return TRUE;
 }
 
-/* Implements svn_config_enumerator2_t.  Just used for the
-   entry-counting return value of svn_config_enumerate2. */
-static svn_boolean_t
-nop_enumerator(const char *name,
-               const char *value,
-               void *baton,
-               apr_pool_t *pool)
-{
-  return TRUE;
-}
-
 #else /* ! SVN_HAVE_MEMCACHE */
 
 /* Stubs for no apr memcache library. */
@@ -306,6 +295,17 @@ svn_cache_create_memcache(svn_cache_t **cache_p,
 }
 
 #endif /* SVN_HAVE_MEMCACHE */
+
+/* Implements svn_config_enumerator2_t.  Just used for the
+   entry-counting return value of svn_config_enumerate2. */
+static svn_boolean_t
+nop_enumerator(const char *name,
+               const char *value,
+               void *baton,
+               apr_pool_t *pool)
+{
+  return TRUE;
+}
 
 svn_error_t *
 svn_cache_make_memcache_from_config(svn_memcache_t **memcache_p,
