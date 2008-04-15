@@ -24,13 +24,13 @@ import unittest
 
 import svn.core
 
-import svn_dav_log_parse
+import svn_server_log_parse
 
 class TestCase(unittest.TestCase):
     def setUp(self):
         # Define a class to stuff everything passed to any handle_
         # method into self.result.
-        class cls(svn_dav_log_parse.Parser):
+        class cls(svn_server_log_parse.Parser):
             def __getattr__(cls_self, attr):
                 if attr.startswith('handle_'):
                     return lambda *a: setattr(self, 'result', a)
@@ -43,8 +43,8 @@ class TestCase(unittest.TestCase):
         self.assertEqual(self.result, (line,))
 
     def test_commit(self):
-        self.assertRaises(svn_dav_log_parse.Error, self.parse, 'commit')
-        self.assertRaises(svn_dav_log_parse.Error, self.parse, 'commit 3')
+        self.assertRaises(svn_server_log_parse.Error, self.parse, 'commit')
+        self.assertRaises(svn_server_log_parse.Error, self.parse, 'commit 3')
         self.assertEqual(self.parse('commit r3'), '')
         self.assertEqual(self.result, (3,))
         self.assertEqual(self.parse('commit r3 leftover'), ' leftover')
@@ -57,15 +57,15 @@ class TestCase(unittest.TestCase):
         self.get_dir_or_file('get-file')
 
     def get_dir_or_file(self, c):
-        self.assertRaises(svn_dav_log_parse.Error, self.parse, c)
-        self.assertRaises(svn_dav_log_parse.Error, self.parse, c + ' foo')
-        self.assertRaises(svn_dav_log_parse.Error, self.parse, c + ' foo 3')
+        self.assertRaises(svn_server_log_parse.Error, self.parse, c)
+        self.assertRaises(svn_server_log_parse.Error, self.parse, c + ' foo')
+        self.assertRaises(svn_server_log_parse.Error, self.parse, c + ' foo 3')
         self.assertEqual(self.parse(c + ' /a/b/c r3 ...'), ' ...')
         self.assertEqual(self.result, ('/a/b/c', 3, False, False))
         self.assertEqual(self.parse(c + ' / r3'), '')
         self.assertEqual(self.result, ('/', 3, False, False))
         # path must be absolute
-        self.assertRaises(svn_dav_log_parse.Error,
+        self.assertRaises(svn_server_log_parse.Error,
                           self.parse, c + ' a/b/c r3')
         self.assertEqual(self.parse(c + ' /k r27 text'), '')
         self.assertEqual(self.result, ('/k', 27, True, False))
@@ -78,7 +78,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(self.result, ('/k', 27, False, True))
 
     def test_lock(self):
-        self.assertRaises(svn_dav_log_parse.Error, self.parse, 'lock')
+        self.assertRaises(svn_server_log_parse.Error, self.parse, 'lock')
         self.parse('lock (/foo)')
         self.assertEqual(self.result, (['/foo'], False))
         self.assertEqual(self.parse('lock (/foo) steal ...'), ' ...')
@@ -86,27 +86,27 @@ class TestCase(unittest.TestCase):
         self.assertEqual(self.parse('lock (/foo) stear'), ' stear')
 
     def test_change_rev_prop(self):
-        self.assertRaises(svn_dav_log_parse.Error,
+        self.assertRaises(svn_server_log_parse.Error,
                           self.parse, 'change-rev-prop r3')
-        self.assertRaises(svn_dav_log_parse.Error,
+        self.assertRaises(svn_server_log_parse.Error,
                           self.parse, 'change-rev-prop r svn:log')
-        self.assertRaises(svn_dav_log_parse.Error,
+        self.assertRaises(svn_server_log_parse.Error,
                           self.parse, 'change-rev-prop rX svn:log')
         self.assertEqual(self.parse('change-rev-prop r3 svn:log ...'), ' ...')
         self.assertEqual(self.result, (3, 'svn:log'))
 
     def test_rev_proplist(self):
-        self.assertRaises(svn_dav_log_parse.Error,
+        self.assertRaises(svn_server_log_parse.Error,
                           self.parse, 'rev-proplist')
-        self.assertRaises(svn_dav_log_parse.Error,
+        self.assertRaises(svn_server_log_parse.Error,
                           self.parse, 'rev-proplist r')
-        self.assertRaises(svn_dav_log_parse.Error,
+        self.assertRaises(svn_server_log_parse.Error,
                           self.parse, 'rev-proplist rX')
         self.assertEqual(self.parse('rev-proplist r3 ...'), ' ...')
         self.assertEqual(self.result, (3,))
 
     def test_unlock(self):
-        self.assertRaises(svn_dav_log_parse.Error, self.parse, 'unlock')
+        self.assertRaises(svn_server_log_parse.Error, self.parse, 'unlock')
         self.parse('unlock (/foo)')
         self.assertEqual(self.result, (['/foo'], False))
         self.assertEqual(self.parse('unlock (/foo) break ...'), ' ...')
@@ -114,12 +114,12 @@ class TestCase(unittest.TestCase):
         self.assertEqual(self.parse('unlock (/foo) bear'), ' bear')
 
     def test_get_file_revs(self):
-        self.assertRaises(svn_dav_log_parse.Error, self.parse, 'get-file-revs')
-        self.assertRaises(svn_dav_log_parse.Error,
+        self.assertRaises(svn_server_log_parse.Error, self.parse, 'get-file-revs')
+        self.assertRaises(svn_server_log_parse.Error,
                           self.parse, 'get-file-revs /foo 3')
-        self.assertRaises(svn_dav_log_parse.Error,
+        self.assertRaises(svn_server_log_parse.Error,
                           self.parse, 'get-file-revs /foo 3:a')
-        self.assertRaises(svn_dav_log_parse.Error,
+        self.assertRaises(svn_server_log_parse.Error,
                           self.parse, 'get-file-revs /foo r3:a')
         self.assertEqual(self.parse('get-file-revs /foo r3:4 ...'), ' ...')
         self.assertEqual(self.result, ('/foo', 3, 4, False))
@@ -128,17 +128,17 @@ class TestCase(unittest.TestCase):
         self.assertEqual(self.result, ('/foo', 3, 4, True))
 
     def test_get_mergeinfo(self):
-        self.assertRaises(svn_dav_log_parse.Error,
+        self.assertRaises(svn_server_log_parse.Error,
                           self.parse, 'get-mergeinfo')
-        self.assertRaises(svn_dav_log_parse.Error,
+        self.assertRaises(svn_server_log_parse.Error,
                           self.parse, 'get-mergeinfo /foo')
-        self.assertRaises(svn_dav_log_parse.Error,
+        self.assertRaises(svn_server_log_parse.Error,
                           self.parse, 'get-mergeinfo (/foo')
-        self.assertRaises(svn_dav_log_parse.Error,
+        self.assertRaises(svn_server_log_parse.Error,
                           self.parse, 'get-mergeinfo (/foo /bar')
-        self.assertRaises(svn_dav_log_parse.Error,
+        self.assertRaises(svn_server_log_parse.Error,
                           self.parse, 'get-mergeinfo (/foo)')
-        self.assertRaises(svn_dav_log_parse.BadMergeinfoInheritanceError,
+        self.assertRaises(svn_server_log_parse.BadMergeinfoInheritanceError,
                           self.parse, 'get-mergeinfo (/foo) bork')
         self.assertEqual(self.parse('get-mergeinfo (/foo) explicit'), '')
         self.assertEqual(self.result, (['/foo'],
@@ -151,10 +151,10 @@ class TestCase(unittest.TestCase):
                                        svn.core.svn_mergeinfo_inherited, False))
 
     def test_log(self):
-        self.assertRaises(svn_dav_log_parse.Error, self.parse, 'log')
-        self.assertRaises(svn_dav_log_parse.Error,
+        self.assertRaises(svn_server_log_parse.Error, self.parse, 'log')
+        self.assertRaises(svn_server_log_parse.Error,
                           self.parse, 'log /foo')
-        self.assertRaises(svn_dav_log_parse.Error,
+        self.assertRaises(svn_server_log_parse.Error,
                           self.parse, 'log (/foo)')
         self.assertEqual(self.parse('log (/foo) r3:4'
                                     ' include-merged-revisions'), '')
@@ -173,33 +173,33 @@ class TestCase(unittest.TestCase):
                          (['/foo'], 8, 1, 3, False, False, False, []))
 
     def test_replay(self):
-        self.assertRaises(svn_dav_log_parse.Error, self.parse, 'replay')
-        self.assertRaises(svn_dav_log_parse.Error,
+        self.assertRaises(svn_server_log_parse.Error, self.parse, 'replay')
+        self.assertRaises(svn_server_log_parse.Error,
                           self.parse, 'replay /foo')
-        self.assertRaises(svn_dav_log_parse.Error,
+        self.assertRaises(svn_server_log_parse.Error,
                           self.parse, 'replay (/foo) r9')
-        self.assertRaises(svn_dav_log_parse.Error,
+        self.assertRaises(svn_server_log_parse.Error,
                           self.parse, 'replay (/foo) r9:10')
         self.assertEqual(self.parse('replay /foo r9'), '')
         self.assertEqual(self.result, ('/foo', 9))
 
     def test_checkout_or_export(self):
-        self.assertRaises(svn_dav_log_parse.Error,
+        self.assertRaises(svn_server_log_parse.Error,
                           self.parse, 'checkout-or-export')
-        self.assertRaises(svn_dav_log_parse.Error,
+        self.assertRaises(svn_server_log_parse.Error,
                           self.parse, 'checkout-or-export /foo')
         self.assertEqual(self.parse('checkout-or-export /foo r9'), '')
         self.assertEqual(self.result, ('/foo', 9, svn.core.svn_depth_unknown))
-        self.assertRaises(svn_dav_log_parse.BadDepthError, self.parse,
+        self.assertRaises(svn_server_log_parse.BadDepthError, self.parse,
                           'checkout-or-export /foo r9 depth=INVALID-DEPTH')
-        self.assertRaises(svn_dav_log_parse.BadDepthError, self.parse,
+        self.assertRaises(svn_server_log_parse.BadDepthError, self.parse,
                           'checkout-or-export /foo r9 depth=bork')
         self.assertEqual(self.parse('checkout-or-export /foo r9 depth=files .'),
                          ' .')
         self.assertEqual(self.result, ('/foo', 9, svn.core.svn_depth_files))
 
     def test_diff_1path(self):
-        self.assertRaises(svn_dav_log_parse.Error,
+        self.assertRaises(svn_server_log_parse.Error,
                           self.parse, 'diff')
         self.assertEqual(self.parse('diff /foo r9:10'), '')
         self.assertEqual(self.result, ('/foo', 9, 10,
@@ -226,15 +226,15 @@ class TestCase(unittest.TestCase):
                                        svn.core.svn_depth_files, True))
 
     def test_status(self):
-        self.assertRaises(svn_dav_log_parse.Error,
+        self.assertRaises(svn_server_log_parse.Error,
                           self.parse, 'status')
-        self.assertRaises(svn_dav_log_parse.Error,
+        self.assertRaises(svn_server_log_parse.Error,
                           self.parse, 'status /foo')
         self.assertEqual(self.parse('status /foo r9'), '')
         self.assertEqual(self.result, ('/foo', 9, svn.core.svn_depth_unknown))
-        self.assertRaises(svn_dav_log_parse.BadDepthError, self.parse,
+        self.assertRaises(svn_server_log_parse.BadDepthError, self.parse,
                           'status /foo r9 depth=INVALID-DEPTH')
-        self.assertRaises(svn_dav_log_parse.BadDepthError, self.parse,
+        self.assertRaises(svn_server_log_parse.BadDepthError, self.parse,
                           'status /foo r9 depth=bork')
         self.assertEqual(self.parse('status /foo r9 depth=files .'),
                          ' .')
@@ -250,16 +250,16 @@ class TestCase(unittest.TestCase):
                                        svn.core.svn_depth_files))
 
     def test_update(self):
-        self.assertRaises(svn_dav_log_parse.Error,
+        self.assertRaises(svn_server_log_parse.Error,
                           self.parse, 'update')
-        self.assertRaises(svn_dav_log_parse.Error,
+        self.assertRaises(svn_server_log_parse.Error,
                           self.parse, 'update /foo')
         self.assertEqual(self.parse('update /foo r9'), '')
         self.assertEqual(self.result, ('/foo', 9, svn.core.svn_depth_unknown,
                                        False))
-        self.assertRaises(svn_dav_log_parse.BadDepthError, self.parse,
+        self.assertRaises(svn_server_log_parse.BadDepthError, self.parse,
                           'update /foo r9 depth=INVALID-DEPTH')
-        self.assertRaises(svn_dav_log_parse.BadDepthError, self.parse,
+        self.assertRaises(svn_server_log_parse.BadDepthError, self.parse,
                           'update /foo r9 depth=bork')
         self.assertEqual(self.parse('update /foo r9 depth=files .'), ' .')
         self.assertEqual(self.result, ('/foo', 9, svn.core.svn_depth_files,
@@ -279,7 +279,7 @@ if __name__ == '__main__':
     # Use the argument as the path to a log file to test against.
 
     # Define a class to reconstruct the SVN-ACTION string.
-    class Test(svn_dav_log_parse.Parser):
+    class Test(svn_server_log_parse.Parser):
         def handle_unknown(self, line):
             sys.stderr.write('unknown log line at %d\n' % (self.linenum,))
             sys.exit(2)
