@@ -21,7 +21,7 @@ AC_DEFUN(SVN_LIB_APR_MEMCACHE,
       apr_memcache_prefix=$withval
       save_cppflags="$CPPFLAGS"
       CPPFLAGS="$CPPFLAGS $SVN_APR_INCLUDES $SVN_APRUTIL_INCLUDES -I$apr_memcache_prefix/include/apr_memcache-0"
-      AC_CHECK_HEADERS(apr_memcache.h,[
+      AC_CHECK_HEADER(apr_memcache.h,[
         save_ldflags="$LDFLAGS"
         LDFLAGS="$LDFLAGS -L$apr_memcache_prefix/lib"
         AC_CHECK_LIB(apr_memcache, apr_memcache_create,
