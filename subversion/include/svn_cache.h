@@ -154,6 +154,19 @@ svn_cache_create_memcache(svn_cache_t **cache_p,
                           apr_pool_t *pool);
 
 /**
+ * Given @a config, returns an APR memcached interface in @a
+ * *memcache_p allocated in @a pool if @a config contains entries in
+ * the SVN_CACHE_CONFIG_CATEGORY_MEMCACHED_SERVERS section describing
+ * memcached servers; otherwise, sets @a *memcache_p to NULL.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_cache_make_memcache_from_config(apr_memcache_t **memcache_p,
+                                    svn_config_t *config,
+                                    apr_pool_t *pool);
+
+/**
  * Sets @a handler to be @a cache's error handling routine.  If any
  * error is returned from a call to svn_cache_get or svn_cache_set, @a
  * handler will be called with @a baton and the error, and the
@@ -172,19 +185,6 @@ svn_cache_set_error_handler(svn_cache_t *cache,
 
 
 #define SVN_CACHE_CONFIG_CATEGORY_MEMCACHED_SERVERS "memcached-servers"
-
-/**
- * Given @a config, returns an APR memcached interface in @a
- * *memcache_p allocated in @a pool if @a config contains entries in
- * the SVN_CACHE_CONFIG_CATEGORY_MEMCACHED_SERVERS section describing
- * memcached servers; otherwise, sets @a *memcache_p to NULL.
- *
- * @since New in 1.6.
- */
-svn_error_t *
-svn_cache_make_memcache_from_config(apr_memcache_t **memcache_p,
-                                    svn_config_t *config,
-                                    apr_pool_t *pool);
 
 /**
  * Fetches a value indexed by @a key from @a cache into @a *value,
