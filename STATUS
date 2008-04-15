@@ -29,9 +29,3 @@ Candidate changes:
 
 Approved changes (all releases):
 ================================
-
- * r30597
-   JavaHL: Added missing notify mapping for Replaced action.
-   Votes:
-     +1: markphip, hwright
-
