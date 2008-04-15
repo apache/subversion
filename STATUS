@@ -27,6 +27,12 @@ Candidate changes:
    Votes:
      +1: cmpilato, hwright
 
+ * r30591
+   Follow-up to r30544.  JavaHL simple fix to remove changelist_failed
+   from actionNames array.
+   Votes:
+     +1: markphip
+
 Status of 1.5.1:
 ================
 
