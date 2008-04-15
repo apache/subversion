@@ -3,9 +3,6 @@
   entries rather than interwoven).
   -- glasser
 
-- Verify that mod_dav_svn is still logging the same stuff (I may have
-  broken something in moving some of the logic into svn_log__*).
-
 - Fix serve.c:update XXX so it distinguishes checkout-or-export from update.
 
 - tools/server-side/svn_dav_log_parse.py
@@ -16,3 +13,8 @@
 - Document svn_log.h
 
 - Will add diagnostic logging after merging back to trunk.
+
+DONE:
+
+- Verify that mod_dav_svn is still logging the same stuff (I may have
+  broken something in moving some of the logic into svn_log__*).
