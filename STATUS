@@ -30,11 +30,6 @@ Candidate changes:
 Approved changes (all releases):
 ================================
 
- * r30583
-   Fix the Python bindings version of svn_repos_node_location_segments().
-   Votes:
-     +1: cmpilato, hwright
-
  * r30591
    Follow-up to r30544.  JavaHL simple fix to remove changelist_failed
    from actionNames array.
