@@ -22,10 +22,10 @@
 #include <apr_lib.h>
 #include <apr_time.h>
 
-#include "svn_private_config.h"
-
 #include "svn_cache.h"
 #include "svn_pools.h"
+
+#include "svn_private_config.h"
 
 #include "../svn_test.h"
 
@@ -163,7 +163,6 @@ test_memcache_basic(const char **msg,
                     svn_test_opts_t *opts,
                     apr_pool_t *pool)
 {
-#if SVN_HAVE_MEMCACHE
   svn_cache_t *cache;
   svn_config_t *config;
   apr_memcache_t *memcache = NULL;
@@ -197,10 +196,6 @@ test_memcache_basic(const char **msg,
                                     pool));
 
   return basic_cache_test(cache, FALSE, pool);
-#else
-  *msg = "basic memcache svn_cache test";
-  return SVN_NO_ERROR;
-#endif
 }
 
 
@@ -210,10 +205,6 @@ struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS(test_inprocess_cache_basic),
-#if SVN_HAVE_MEMCACHE
     SVN_TEST_PASS(test_memcache_basic),
-#else
-    SVN_TEST_SKIP(test_memcache_basic, 1),
-#endif
     SVN_TEST_NULL
   };

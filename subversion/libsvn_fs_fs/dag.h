@@ -18,8 +18,6 @@
 #ifndef SVN_LIBSVN_FS_DAG_H
 #define SVN_LIBSVN_FS_DAG_H
 
-#include "svn_private_config.h"
-
 #include "svn_fs.h"
 #include "svn_delta.h"
 #include "svn_cache.h"

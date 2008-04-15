@@ -20,18 +20,12 @@
  */
 
 
-/* Warning: In Subversion  code, you MUST include svn_private_config.h
- * *before* including this! */
-
 #ifndef SVN_CACHE_H
 #define SVN_CACHE_H
 
 #include <apr_pools.h>
 #include <apr_hash.h>
-
-#if SVN_HAVE_MEMCACHE
 #include <apr_memcache.h>
-#endif
 
 #include "svn_types.h"
 #include "svn_error.h"
@@ -134,8 +128,6 @@ svn_cache_create_inprocess(svn_cache_t **cache_p,
                            apr_int64_t items_per_page,
                            svn_boolean_t thread_safe,
                            apr_pool_t *pool);
-
-#if SVN_HAVE_MEMCACHE
 /**
  * Creates a new cache in @a *cache_p, communicating to a memcached
  * process via @a memcache.  The elements in the cache will be indexed
@@ -173,7 +165,6 @@ svn_error_t *
 svn_cache_make_memcache_from_config(apr_memcache_t **memcache_p,
                                     svn_config_t *config,
                                     apr_pool_t *pool);
-#endif
 
 /**
  * Sets @a handler to be @a cache's error handling routine.  If any
