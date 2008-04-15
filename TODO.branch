@@ -5,8 +5,6 @@
   - Teach about new log items dav-svn doesn't log
   - Teach __main__ block how to parse svnserve log file as well
 
-- Document svn_log.h
-
 - Will add diagnostic logging after merging back to trunk.
 
 DONE:
@@ -18,3 +16,5 @@ DONE:
   should use apr_file_write (and err on the side of truncated log
   entries rather than interwoven).
   -- glasser
+
+- Document svn_log.h
