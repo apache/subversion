@@ -214,6 +214,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(test_memcache_basic),
 #else
     SVN_TEST_SKIP(test_memcache_basic, 1),
-#end
+#endif
     SVN_TEST_NULL
   };
