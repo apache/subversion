@@ -18,15 +18,15 @@
 
 #include <assert.h>
 
-#include "svn_private_config.h"
-
-#if SVN_HAVE_MEMCACHE
-
+/* ### Do the configuration games required to get this when not
+   ### running APU trunk. */
 #include <apr_memcache.h>
 
 #include "svn_pools.h"
 #include "svn_base64.h"
 #include "svn_path.h"
+
+#include "svn_private_config.h"
 
 #include "cache.h"
 
@@ -327,5 +327,3 @@ svn_cache_make_memcache_from_config(apr_memcache_t **memcache_p,
   return SVN_NO_ERROR;
 
 }
-
-#endif
