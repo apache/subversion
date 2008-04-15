@@ -198,6 +198,69 @@ test_memcache_basic(const char **msg,
   return basic_cache_test(cache, FALSE, pool);
 }
 
+
+
+static svn_error_t *
+test_memcache_long_key(const char **msg,
+                       svn_boolean_t msg_only,
+                       svn_test_opts_t *opts,
+                       apr_pool_t *pool)
+{
+  svn_cache_t *cache;
+  svn_config_t *config;
+  svn_memcache_t *memcache = NULL;
+  svn_revnum_t fifty = 50, *answer;
+  svn_boolean_t found = FALSE;
+  const char *prefix = apr_psprintf(pool,
+                                    "test_memcache_long_key-%" APR_TIME_T_FMT,
+                                    apr_time_now());
+  static const char *long_key =
+    "0123456789" "0123456789" "0123456789" "0123456789" "0123456789" /* 50 */
+    "0123456789" "0123456789" "0123456789" "0123456789" "0123456789" /* 100 */
+    "0123456789" "0123456789" "0123456789" "0123456789" "0123456789" /* 150 */
+    "0123456789" "0123456789" "0123456789" "0123456789" "0123456789" /* 200 */
+    "0123456789" "0123456789" "0123456789" "0123456789" "0123456789" /* 250 */
+    "0123456789" "0123456789" "0123456789" "0123456789" "0123456789" /* 300 */
+    ;
+
+  *msg = "memcache svn_cache with very long keys";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  if (opts->config_file)
+    {
+      SVN_ERR(svn_config_read(&config, opts->config_file, TRUE, pool));
+      SVN_ERR(svn_cache_make_memcache_from_config(&memcache, config, pool));
+    }
+
+  if (! memcache)
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
+                            "not configured to use memcached");
+
+
+  /* Create a memcache-based cache. */
+  SVN_ERR(svn_cache_create_memcache(&cache,
+                                    memcache,
+                                    serialize_revnum,
+                                    deserialize_revnum,
+                                    APR_HASH_KEY_STRING,
+                                    prefix,
+                                    pool));
+
+  SVN_ERR(svn_cache_set(cache, long_key, &fifty, pool));
+  SVN_ERR(svn_cache_get((void **) &answer, &found, cache, long_key, pool));
+
+  if (! found)
+    return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                            "cache failed to find entry for 'fifty'");
+  if (*answer != 50)
+    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                             "expected 50 but found '%ld'", *answer);
+
+  return SVN_NO_ERROR;
+}
+
 
 /* The test table.  */
 
@@ -206,5 +269,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_NULL,
     SVN_TEST_PASS(test_inprocess_cache_basic),
     SVN_TEST_PASS(test_memcache_basic),
+    SVN_TEST_XFAIL(test_memcache_long_key),
     SVN_TEST_NULL
   };
