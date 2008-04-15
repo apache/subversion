@@ -19,6 +19,7 @@
 #ifndef SVN_LIBSVN_SUBR_CACHE_H
 #define SVN_LIBSVN_SUBR_CACHE_H
 
+#include "svn_private_config.h"
 #include "svn_cache.h"
 
 #ifdef __cplusplus

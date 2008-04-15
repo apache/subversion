@@ -24,6 +24,8 @@
 #include <apr_thread_mutex.h>
 #include <apr_network_io.h>
 
+#include "svn_private_config.h"
+
 #include "svn_fs.h"
 #include "svn_cache.h"
 #include "svn_config.h"

@@ -18,8 +18,8 @@
 
 #include <assert.h>
 
-/* ### Do the configuration games required to get this when not
-   ### running APU trunk. */
+#if SVN_HAVE_MEMCACHE
+
 #include <apr_memcache.h>
 
 #include "svn_pools.h"
@@ -327,3 +327,5 @@ svn_cache_make_memcache_from_config(apr_memcache_t **memcache_p,
   return SVN_NO_ERROR;
 
 }
+
+#endif
