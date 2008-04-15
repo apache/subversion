@@ -165,7 +165,7 @@ test_memcache_basic(const char **msg,
 {
   svn_cache_t *cache;
   svn_config_t *config;
-  apr_memcache_t *memcache = NULL;
+  svn_memcache_t *memcache = NULL;
   const char *prefix = apr_psprintf(pool,
                                     "test_memcache_basic-%" APR_TIME_T_FMT,
                                     apr_time_now());

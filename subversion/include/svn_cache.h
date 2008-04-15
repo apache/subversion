@@ -25,7 +25,6 @@
 
 #include <apr_pools.h>
 #include <apr_hash.h>
-#include <apr_memcache.h>
 
 #include "svn_types.h"
 #include "svn_error.h"
@@ -87,6 +86,14 @@ typedef svn_error_t *(svn_cache_error_handler_t)(svn_error_t *err,
                                                  void *baton,
                                                  apr_pool_t *pool);
 
+/**
+ * A wrapper around apr_memcache_t, provided essentially so that the
+ * Subversion public API doesn't depend on whether or not you have
+ * access to the APR memcache libraries.
+ *
+ * @since New in 1.6.
+ */
+typedef struct svn_memcache_t svn_memcache_t;
 
 /**
  * Opaque type for an in-memory cache.
@@ -142,11 +149,14 @@ svn_cache_create_inprocess(svn_cache_t **cache_p,
  *
  * These caches do not support svn_cache_iter.
  *
+ * If Subversion was not built with apr_memcache support, always
+ * raises SVN_ERR_NO_APR_MEMCACHE.
+ *
  * @since New in 1.6.
  */
 svn_error_t *
 svn_cache_create_memcache(svn_cache_t **cache_p,
-                          apr_memcache_t *memcache,
+                          svn_memcache_t *memcache,
                           svn_cache_serialize_func_t *serialize_func,
                           svn_cache_deserialize_func_t *deserialize_func,
                           apr_ssize_t klen,
@@ -159,10 +169,14 @@ svn_cache_create_memcache(svn_cache_t **cache_p,
  * the SVN_CACHE_CONFIG_CATEGORY_MEMCACHED_SERVERS section describing
  * memcached servers; otherwise, sets @a *memcache_p to NULL.
  *
+ * If Subversion was not built with apr_memcache_support, then raises
+ * SVN_ERR_NO_APR_MEMCACHE if and only if @a config is configured to
+ * use memcache.
+ *
  * @since New in 1.6.
  */
 svn_error_t *
-svn_cache_make_memcache_from_config(apr_memcache_t **memcache_p,
+svn_cache_make_memcache_from_config(svn_memcache_t **memcache_p,
                                     svn_config_t *config,
                                     apr_pool_t *pool);
 
