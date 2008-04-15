@@ -33,6 +33,11 @@ Candidate changes:
    Votes:
      +1: markphip
 
+ * r30597
+   JavaHL: Added missing notify mapping for Replaced action.
+   Votes:
+     +1: markphip
+
 Status of 1.5.1:
 ================
 
