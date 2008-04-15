@@ -172,7 +172,6 @@ public interface NotifyAction
         "path exists",
         "changelist set",
         "changelist cleared",
-        "changelist failed",
         "merge begin",
     };
 }
