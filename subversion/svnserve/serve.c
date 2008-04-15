@@ -161,6 +161,7 @@ static svn_error_t *svnserve_log(server_baton_t *b,
 {
   const char *remote_host, *timestr, *log, *line;
   va_list ap;
+  apr_size_t nbytes;
 
   if (b->log_file == NULL)
       return SVN_NO_ERROR;
@@ -177,8 +178,8 @@ static svn_error_t *svnserve_log(server_baton_t *b,
                       getpid(), timestr,
                       (remote_host ? remote_host : "-"),
                       (b->user ? b->user : "-"), b->repos_name, log);
-
-  return svn_io_file_write_full(b->log_file, line, strlen(line), NULL, pool);
+  nbytes = strlen(line);
+  return svn_io_file_write(b->log_file, line, &nbytes, pool);
 }
 
 #define SLOG(...) SVN_ERR(svnserve_log(baton, conn, pool,  __VA_ARGS__))

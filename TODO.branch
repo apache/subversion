@@ -1,8 +1,3 @@
-- Oh, and the use of apr_file_write_full is incorrect; svnserve_log
-  should use apr_file_write (and err on the side of truncated log
-  entries rather than interwoven).
-  -- glasser
-
 - Fix serve.c:update XXX so it distinguishes checkout-or-export from update.
 
 - tools/server-side/svn_dav_log_parse.py
@@ -18,3 +13,8 @@ DONE:
 
 - Verify that mod_dav_svn is still logging the same stuff (I may have
   broken something in moving some of the logic into svn_log__*).
+
+- Oh, and the use of apr_file_write_full is incorrect; svnserve_log
+  should use apr_file_write (and err on the side of truncated log
+  entries rather than interwoven).
+  -- glasser
