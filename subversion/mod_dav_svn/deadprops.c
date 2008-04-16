@@ -547,11 +547,16 @@ db_first_name(dav_db *db, dav_prop_name *pname)
                                      db->p);
 
           if (! serr)
-            action = apr_psprintf(db->resource->pool, "get-%s %s r%ld props",
-                                  (kind == svn_node_dir ? "dir" : "file"),
-                                  svn_path_uri_encode(db->resource->info->repos_path,
-                                                      db->resource->pool),
-                                  db->resource->info->root.rev);
+            {
+              if (kind == svn_node_dir)
+                action = svn_log__get_dir(db->resource->info->repos_path,
+                                          db->resource->info->root.rev,
+                                          FALSE, TRUE, 0, db->resource->pool);
+              else
+                action = svn_log__get_file(db->resource->info->repos_path,
+                                           db->resource->info->root.rev,
+                                           FALSE, TRUE, db->resource->pool);
+            }
         }
       if (serr != NULL)
         return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
