@@ -20,7 +20,14 @@ Candidate changes:
      If we don't backport this, we need to increment the @since line
      for svn_wc_notify_foreign_merge_begin.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, pburba
+
+ * r30644
+   Make --record-only merges record and elide mergeinfo on subtrees.
+   Notes:
+     Record only merges without this functionality are a lot less useful.
+   Votes:
+     +1: pburba
 
 Status of 1.5.1:
 ================
