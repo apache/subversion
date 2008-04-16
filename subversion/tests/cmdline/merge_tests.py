@@ -11033,6 +11033,126 @@ def dont_merge_revs_into_subtree_that_predate_it(sbox):
                                      expected_props, [],
                                      'pl', '-vR', wc_dir)
 
+# Test for issue #3174: 'Merge algorithm chokes on subtrees needing
+# special attention that have been renamed'
+#
+# Set as XFail until that issue is resolved.
+def merge_chokes_on_renamed_subtrees(sbox):
+  "merge fails with renamed subtrees with mergeinfo"
+
+  # Create our good 'ole greek tree.
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Some paths we'll care about
+  psi_path            = os.path.join(wc_dir, "A", "D", "H", "psi")
+  psi_moved_path      = os.path.join(wc_dir, "A", "D", "H", "psi_moved")
+  psi_COPY_moved_path = os.path.join(wc_dir, "H_COPY", "psi_moved")
+  H_COPY_path    = os.path.join(wc_dir, "H_COPY")
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_disk = svntest.main.greek_state.copy()
+
+  # Make a text mod to 'A/D/H/psi' and commit it as r2
+  svntest.main.file_write(psi_path, "New content")
+  expected_output = wc.State(wc_dir, {'A/D/H/psi' : Item(verb='Sending')})
+  expected_status.tweak('A/D/H/psi', wc_rev=2)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+  expected_disk.tweak('A/D/H/psi', contents="New content")
+
+  # Move 'A/D/H/psi' to 'A/D/H/psi_moved' and commit it as r3.
+  svntest.actions.run_and_verify_svn(None, None, [], 'move',
+                                     psi_path, psi_moved_path)
+  expected_output = wc.State(wc_dir, {
+    'A/D/H/psi'       : Item(verb='Deleting'),
+    'A/D/H/psi_moved' : Item(verb='Adding')
+    })
+  expected_status.add({'A/D/H/psi_moved' : Item(status='  ', wc_rev=3)})
+  expected_status.remove('A/D/H/psi')
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  # Copy 'A/D/H' to 'H_COPY' in r4.
+  svntest.actions.run_and_verify_svn(None,
+                                     ['\n', 'Committed revision 4.\n'],
+                                     [], 'copy',
+                                     sbox.repo_url + "/A/D/H",
+                                     sbox.repo_url + "/H_COPY",
+                                     "-m", "Copy A/D/H to H_COPY")
+  expected_status.add({
+    "H_COPY"       : Item(),
+    "H_COPY/chi"   : Item(),
+    "H_COPY/omega" : Item(),
+    "H_COPY/psi_moved"   : Item()})
+
+  # Update to pull the previous copy into the WC
+  svntest.main.run_svn(None, 'up', wc_dir)
+  expected_status.tweak(status='  ', wc_rev=4)
+
+  # Make a text mod to 'A/D/H/psi_moved' and commit it as r5
+  svntest.main.file_write(psi_moved_path, "Even *Newer* content")
+  expected_output = wc.State(wc_dir,
+                             {'A/D/H/psi_moved' : Item(verb='Sending')})
+  expected_status.tweak('A/D/H/psi_moved', wc_rev=5)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+  expected_disk.remove('A/D/H/psi')
+  expected_disk.add({
+    'A/D/H/psi_moved' : Item("Even *Newer* content"),
+    })
+
+  # Update for a uniform working copy before merging.
+  svntest.main.run_svn(None, 'up', wc_dir)
+  expected_status.tweak(status='  ', wc_rev=4)
+
+  # Merge r5 from 'A/D/H/psi_moved' to 'H_COPY/psi_moved'.
+  #
+  # Search for the comment entitled "The Merge Kluge" elsewhere in
+  # this file, to understand why we shorten and chdir() below.
+  saved_cwd = os.getcwd()
+  os.chdir(svntest.main.work_dir)
+  short_psi_COPY_moved_path = shorten_path_kludge(psi_COPY_moved_path)
+  svntest.actions.run_and_verify_svn(
+    None,
+    expected_merge_output([[5]], 'U    ' + short_psi_COPY_moved_path + '\n'),
+    [], 'merge', '-c5',
+    sbox.repo_url + '/A/D/H/psi_moved', short_psi_COPY_moved_path)
+  os.chdir(saved_cwd)
+
+  # Merge r2 from 'A/D/H' to 'H_COPY'.  This should be a no-op as r2 is
+  # already a part of H_COPY's natural history and won't be repeated (and
+  # therefore we don't expect to see even a skipped notification for
+  # H_COPY/psi).
+  #
+  # Here is where issue #3174 appears, the merge fails with:
+  # svn: File not found: revision 5, path '/A_COPY/D/H'
+  short_H_COPY_path = shorten_path_kludge(H_COPY_path)
+  expected_output = wc.State(short_H_COPY_path, {})
+  expected_status = wc.State(short_H_COPY_path, {
+    ''          : Item(status=' M', wc_rev=5),
+    'psi_moved' : Item(status='MM', wc_rev=5),
+    'omega'     : Item(status='  ', wc_rev=5),
+    'chi'       : Item(status='  ', wc_rev=5),
+    })
+  # Note: Due to issue #3157 we do get some self-referential
+  # mergeinfo on H_COPY.
+  expected_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGEINFO : '/A/D/H:2'}),
+    'psi_moved' : Item("Even *Newer* content",
+                       props={SVN_PROP_MERGEINFO : '/A/D/H/psi_moved:5'}),
+    'omega'     : Item("This is the file 'omega'.\n"),
+    'chi'       : Item("This is the file 'chi'.\n"),
+    })
+  expected_skip = wc.State(short_H_COPY_path, { })
+  os.chdir(svntest.main.work_dir)
+  svntest.actions.run_and_verify_merge(short_H_COPY_path, '1', '2',
+                                       sbox.repo_url + '/A_COPY/D/H',
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       None, None, None, None, None, 1)
+  os.chdir(saved_cwd)
+
 ########################################################################
 # Run the tests
 
@@ -11192,6 +11312,8 @@ test_list = [ None,
               SkipUnless(reverse_merge_away_all_mergeinfo,
                          server_has_mergeinfo),
               XFail(SkipUnless(dont_merge_revs_into_subtree_that_predate_it,
+                               server_has_mergeinfo)),
+              XFail(SkipUnless(merge_chokes_on_renamed_subtrees,
                                server_has_mergeinfo)),
              ]
 
