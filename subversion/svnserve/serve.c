@@ -2939,12 +2939,6 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
   warn_baton.pool = svn_pool_create(pool);
   svn_fs_set_warning_func(b.fs, log_fs_warning, &warn_baton);
 
-  err = svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                         "TESTchild Not authorized for access");
-  err = svn_error_create(SVN_ERR_NODE_UNEXPECTED_KIND, err, NULL);
-  log_fs_warning(&warn_baton, err);
-  svn_error_clear(err);
-
   SVN_ERR(svn_fs_get_uuid(b.fs, &uuid, pool));
 
   /* We can't claim mergeinfo capability until we know whether the
