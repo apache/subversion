@@ -25,6 +25,7 @@
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 #include <apr_general.h>
+#include <apr_lib.h>
 #include <apr_strings.h>
 #include <apr_md5.h>
 
@@ -79,6 +80,12 @@ typedef struct {
   svn_ra_svn_conn_t *conn;
   apr_pool_t *pool;  /* Pool provided in the handler call. */
 } file_revs_baton_t;
+
+typedef struct {
+  server_baton_t *server;
+  svn_ra_svn_conn_t *conn;
+  apr_pool_t *pool;
+} fs_warning_baton_t;
 
 svn_error_t *load_configs(svn_config_t **cfg,
                           svn_config_t **pwdb,
@@ -152,6 +159,150 @@ static svn_error_t *get_fs_path(const char *repos_url, const char *url,
     *fs_path = "/";
 
   return SVN_NO_ERROR;
+}
+
+/* copied from httpd-2.2.4/include/httpd.h */
+#define MAX_STRING_LEN 8192
+
+/* copied from httpd-2.2.4/server/util.c */
+/* c2x takes an unsigned, and expects the caller has guaranteed that
+ * 0 <= what < 256... which usually means that you have to cast to
+ * unsigned char first, because (unsigned)(char)(x) first goes through
+ * signed extension to an int before the unsigned cast.
+ *
+ * The reason for this assumption is to assist gcc code generation --
+ * the unsigned char -> unsigned extension is already done earlier in
+ * both uses of this code, so there's no need to waste time doing it
+ * again.
+ */
+static const char c2x_table[] = "0123456789abcdef";
+
+/* copied from httpd-2.2.4/server/util.c */
+static APR_INLINE unsigned char *c2x(unsigned what, unsigned char prefix,
+                                     unsigned char *where)
+{
+#if APR_CHARSET_EBCDIC
+    what = apr_xlate_conv_byte(ap_hdrs_to_ascii, (unsigned char)what);
+#endif /*APR_CHARSET_EBCDIC*/
+    *where++ = prefix;
+    *where++ = c2x_table[what >> 4];
+    *where++ = c2x_table[what & 0xf];
+    return where;
+}
+
+/* copied from httpd-2.2.4/server/util.c */
+static apr_size_t escape_errorlog_item(char *dest, const char *source,
+                                               apr_size_t buflen)
+{
+    unsigned char *d, *ep;
+    const unsigned char *s;
+
+    if (!source || !buflen) { /* be safe */
+        return 0;
+    }
+
+    d = (unsigned char *)dest;
+    s = (const unsigned char *)source;
+    ep = d + buflen - 1;
+
+    for (; d < ep && *s; ++s) {
+
+        /* httpd-2.2.4/server/util.c has this:
+             if (TEST_CHAR(*s, T_ESCAPE_LOGITEM)) {
+           which does this same check with a fast lookup table.  Well,
+           mostly the same; we don't escape quotes, as that does.
+        */
+        if (*s && (!apr_isprint(*s) || *s == '\\' || apr_iscntrl(*s))) {
+            *d++ = '\\';
+            if (d >= ep) {
+                --d;
+                break;
+            }
+
+            switch(*s) {
+            case '\b':
+                *d++ = 'b';
+                break;
+            case '\n':
+                *d++ = 'n';
+                break;
+            case '\r':
+                *d++ = 'r';
+                break;
+            case '\t':
+                *d++ = 't';
+                break;
+            case '\v':
+                *d++ = 'v';
+                break;
+            case '\\':
+                *d++ = *s;
+                break;
+            case '"': /* no need for this in error log */
+                d[-1] = *s;
+                break;
+            default:
+                if (d >= ep - 2) {
+                    ep = --d; /* break the for loop as well */
+                    break;
+                }
+                c2x(*s, 'x', d);
+                d += 3;
+            }
+        }
+        else {
+            *d++ = *s;
+        }
+    }
+    *d = '\0';
+
+    return (d - (unsigned char *)dest);
+}
+
+static void
+log_fs_warning(void *baton, svn_error_t *err)
+{
+  fs_warning_baton_t *b = baton;
+  server_baton_t *server = b->server;
+  svn_ra_svn_conn_t *conn = b->conn;
+  const char *timestr, *remote_host, *user, *continuation;
+  char errbuf[256];
+  char errstr[MAX_STRING_LEN];
+
+  if (server->log_file == NULL)
+    return;
+
+  svn_pool_clear(b->pool);
+  timestr = svn_time_to_cstring(apr_time_now(), b->pool);
+  remote_host = svn_ra_svn_conn_remote_host(conn);
+  remote_host = (remote_host ? remote_host : "-");
+  user = (server->user ? server->user : "-");
+
+  continuation = "";
+  while (err != NULL)
+    {
+      const char *message = svn_err_best_message(err, errbuf, sizeof(errbuf));
+      /* based on httpd-2.2.4/server/log.c:log_error_core */
+      int len = apr_snprintf(errstr, sizeof(errstr),
+                             "%" APR_PID_T_FMT
+                             " %s %s %s %s ERR%s %d ",
+                             getpid(), timestr, remote_host, user,
+                             server->repos_name, continuation, err->apr_err);
+
+      len += escape_errorlog_item(errstr + len, message,
+                                  sizeof(errstr) - len);
+      /* Truncate for the terminator (as apr_snprintf does) */
+      if (len > sizeof(errstr) - sizeof(APR_EOL_STR)) {
+        len = sizeof(errstr) - sizeof(APR_EOL_STR);
+      }
+      strcpy(errstr + len, APR_EOL_STR);
+      len += strlen(APR_EOL_STR);
+      svn_error_clear(svn_io_file_write(server->log_file, errstr, &len,
+                                        b->pool));
+
+      continuation = "-";
+      err = err->child;
+    }
 }
 
 static svn_error_t *svnserve_log(server_baton_t *b,
@@ -2699,6 +2850,7 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
   const char *uuid, *client_url;
   apr_array_header_t *caplist, *cap_words;
   server_baton_t b;
+  fs_warning_baton_t warn_baton;
 
   b.tunnel = params->tunnel;
   b.tunnel_user = get_tunnel_user(params, pool);
@@ -2781,6 +2933,17 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
       SVN_ERR(io_err);
       return svn_ra_svn_flush(conn, pool);
     }
+
+  warn_baton.server = &b;
+  warn_baton.conn = conn;
+  warn_baton.pool = svn_pool_create(pool);
+  svn_fs_set_warning_func(b.fs, log_fs_warning, &warn_baton);
+
+  err = svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
+                         "TESTchild Not authorized for access");
+  err = svn_error_create(SVN_ERR_NODE_UNEXPECTED_KIND, err, NULL);
+  log_fs_warning(&warn_baton, err);
+  svn_error_clear(err);
 
   SVN_ERR(svn_fs_get_uuid(b.fs, &uuid, pool));
 
