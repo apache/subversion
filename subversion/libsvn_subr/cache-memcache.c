@@ -21,6 +21,7 @@
 #include "svn_cache.h"
 #include "svn_pools.h"
 #include "svn_base64.h"
+#include "svn_md5.h"
 #include "svn_path.h"
 
 #include "svn_private_config.h"
@@ -63,6 +64,13 @@ struct svn_memcache_t {
 };
 
 
+/* The memcached protocol says the maximum key length is 250.  Let's
+   just say 249, to be safe. */
+#define MAX_MEMCACHED_KEY_LEN 249
+#define MEMCACHED_KEY_UNHASHED_LEN (MAX_MEMCACHED_KEY_LEN - \
+                                    2 * APR_MD5_DIGESTSIZE)
+
+
 /* Returns a memcache key for the given key KEY for CACHE, allocated
    in POOL. */
 const char *
@@ -71,6 +79,8 @@ build_key(memcache_t *cache,
           apr_pool_t *pool)
 {
   const char *encoded_suffix;
+  const char *long_key;
+  apr_size_t long_key_len;
 
   if (cache->klen == APR_HASH_KEY_STRING)
     encoded_suffix = svn_path_uri_encode(raw_key, pool);
@@ -82,7 +92,31 @@ build_key(memcache_t *cache,
       encoded_suffix = encoded->data;
     }
 
-  return apr_pstrcat(pool, "SVN:", cache->prefix, ":", encoded_suffix, NULL);
+  long_key = apr_pstrcat(pool, "SVN:", cache->prefix, ":", encoded_suffix,
+                         NULL);
+  long_key_len = strlen(long_key);
+
+  /* We don't want to have a key that's too big.  If it was going to
+     be too big, we MD5 the entire string, then replace the last bit
+     with the checksum.  Note that APR_MD5_DIGESTSIZE is for the pure
+     binary digest; we have to double that when we convert to hex.
+
+     Every key we use will either be at most
+     MEMCACHED_KEY_UNHASHED_LEN bytes long, or be exactly
+     MAX_MEMCACHED_KEY_LEN bytes long. */
+  if (long_key_len > MEMCACHED_KEY_UNHASHED_LEN)
+    {
+      unsigned char digest[APR_MD5_DIGESTSIZE];
+      apr_md5(digest, long_key, long_key_len);
+
+      long_key = apr_pstrcat(pool,
+                             apr_pstrmemdup(pool, long_key,
+                                            MEMCACHED_KEY_UNHASHED_LEN),
+                             svn_md5_digest_to_cstring_display(digest, pool),
+                             NULL);
+    }
+
+  return long_key;
 }
 
 
