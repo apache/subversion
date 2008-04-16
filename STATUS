@@ -14,6 +14,14 @@ Candidate changes:
    Votes:
      +1: arfrever, cmpilato
 
+ * r30633, r30634
+   Make 'svn merge' output state when the merge is from a foreign repository.
+   Notes:
+     If we don't backport this, we need to increment the @since line
+     for svn_wc_notify_foreign_merge_begin.
+   Votes:
+     +1: cmpilato
+
 Status of 1.5.1:
 ================
 
