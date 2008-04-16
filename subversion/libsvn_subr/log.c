@@ -53,6 +53,13 @@ log_include_merged_revisions(svn_boolean_t include_merged_revisions)
 
 
 const char *
+svn_log__reparent(const char *path, apr_pool_t *pool)
+{
+  return apr_psprintf(pool, "reparent %s", svn_path_uri_encode(path, pool));
+
+}
+
+const char *
 svn_log__change_rev_prop(svn_revnum_t rev, const char *name, apr_pool_t *pool)
 {
   return apr_psprintf(pool, "change-rev-prop r%ld %s", rev,

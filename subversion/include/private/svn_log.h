@@ -29,6 +29,14 @@ extern "C" {
 #endif /* __cplusplus */
 
 /**
+ * Return a log string for a reparent action.
+ *
+ * @since New in 1.6.
+ */
+const char *
+svn_log__reparent(const char *path, apr_pool_t *pool);
+
+/**
  * Return a log string for a change-rev-prop action.
  *
  * @since New in 1.6.

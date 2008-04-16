@@ -164,7 +164,7 @@ static svn_error_t *svnserve_log(server_baton_t *b,
   apr_size_t nbytes;
 
   if (b->log_file == NULL)
-      return SVN_NO_ERROR;
+    return SVN_NO_ERROR;
 
   remote_host = svn_ra_svn_conn_remote_host(conn);
   timestr = svn_time_to_cstring(apr_time_now(), pool);
@@ -174,7 +174,7 @@ static svn_error_t *svnserve_log(server_baton_t *b,
   va_end(ap);
 
   line = apr_psprintf(pool, "%" APR_PID_T_FMT
-                      " %s %s %s %s %s\n",
+                      " %s %s %s %s %s" APR_EOL_STR,
                       getpid(), timestr,
                       (remote_host ? remote_host : "-"),
                       (b->user ? b->user : "-"), b->repos_name, log);
@@ -796,7 +796,7 @@ static svn_error_t *reparent(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(trivial_auth_request(conn, pool, b));
   SVN_CMD_ERR(get_fs_path(svn_path_uri_decode(b->repos_url, pool),
                           url, &fs_path));
-  SLOG("reparent %s", fs_path);
+  SLOG("%s", svn_log__reparent(fs_path, pool));
   svn_stringbuf_set(b->fs_path, fs_path);
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
   return SVN_NO_ERROR;
@@ -2085,8 +2085,8 @@ static svn_error_t *get_file_revs(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   else
     include_merged_revisions = (svn_boolean_t) include_merged_revs_param;
 
-  SLOG("%s", svn_log__get_file_revs(path, start_rev, end_rev,
-                              include_merged_revisions, pool));
+  SLOG("%s", svn_log__get_file_revs(full_path, start_rev, end_rev,
+                                    include_merged_revisions, pool));
 
   frb.conn = conn;
   frb.pool = NULL;
