@@ -411,14 +411,8 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
         goto print_error;
       break;
 
-    case svn_wc_notify_changelist_failed:
-      svn_handle_warning(stderr, n->err);
-      svn_error_clear(n->err);
-      break;
-
     case svn_wc_notify_changelist_moved:
       svn_handle_warning(stderr, n->err);
-      svn_error_clear(n->err);
       break;
 
     case svn_wc_notify_merge_begin:
@@ -445,6 +439,40 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
         err = svn_cmdline_printf(pool,
                                  _("--- Reverse-merging r%ld through r%ld "
                                    "into '%s':\n"),
+                                 n->merge_range->start,
+                                 n->merge_range->end + 1, path_local);
+      if (err)
+        goto print_error;
+      break;
+
+    case svn_wc_notify_foreign_merge_begin:
+      if (n->merge_range == NULL)
+        err = svn_cmdline_printf(pool,
+                                 _("--- Merging differences between "
+                                   "foreign repository URLs into '%s':\n"),
+                                 path_local);
+      else if (n->merge_range->start == n->merge_range->end - 1
+          || n->merge_range->start == n->merge_range->end)
+        err = svn_cmdline_printf(pool, 
+                                 _("--- Merging (from foreign repository) "
+                                   "r%ld into '%s':\n"),
+                                 n->merge_range->end, path_local);
+      else if (n->merge_range->start - 1 == n->merge_range->end)
+        err = svn_cmdline_printf(pool,
+                                 _("--- Reverse-merging (from foreign "
+                                   "repository) r%ld into '%s':\n"),
+                                 n->merge_range->start, path_local);
+      else if (n->merge_range->start < n->merge_range->end)
+        err = svn_cmdline_printf(pool,
+                                 _("--- Merging (from foreign repository) "
+                                   "r%ld through r%ld into '%s':\n"),
+                                 n->merge_range->start + 1,
+                                 n->merge_range->end, path_local);
+      else /* n->merge_range->start > n->merge_range->end - 1 */
+        err = svn_cmdline_printf(pool,
+                                 _("--- Reverse-merging (from foreign "
+                                   "repository) r%ld through r%ld into "
+                                   "'%s':\n"),
                                  n->merge_range->start,
                                  n->merge_range->end + 1, path_local);
       if (err)

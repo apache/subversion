@@ -235,7 +235,9 @@ typedef enum
      the deeper it descends.  This allows us to compare two depths
      numerically to decide which should govern. */
 
-  /* Depth undetermined or ignored. */
+  /* Depth undetermined or ignored.  In some contexts, this means the
+     client should choose an appropriate default depth.  The server
+     will generally treat it as @c svn_depth_infinity. */
   svn_depth_unknown    = -2,
 
   /* Exclude (i.e., don't descend into) directory D. */

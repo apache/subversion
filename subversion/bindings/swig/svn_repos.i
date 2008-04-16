@@ -70,6 +70,13 @@
                             svn_swig_pl_thunk_authz_func,
                             svn_swig_rb_repos_authz_func)
 
+#ifdef SWIGPYTHON
+%callback_typemap(svn_location_segment_receiver_t receiver, void *receiver_baton,
+                  svn_swig_py_location_segment_receiver_func,
+                  ,
+                  )
+#endif
+
 #ifdef SWIGRUBY
 %typemap(in) (svn_error_t *(*start_callback)(void *), void *start_callback_baton)
 {

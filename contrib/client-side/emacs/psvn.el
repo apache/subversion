@@ -1391,6 +1391,7 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
                  ((eq svn-process-cmd 'revert)
                   (when (member 'revert svn-status-unmark-files-after-list)
                     (svn-status-unset-all-usermarks))
+                  (svn-revert-some-buffers)
                   (svn-status-update)
                   (message "svn revert finished"))
                  ((eq svn-process-cmd 'resolved)
@@ -1483,6 +1484,8 @@ To be run after a commit, an update or a merge."
                            (string= root tree)
                            ;; buffer is modified and in the tree TREE.
                            svn-status-auto-revert-buffers)
+                  (when svn-status-fancy-file-state-in-modeline
+                    (svn-status-update-modeline))
                   ;; (message "svn-revert-some-buffers: %s %s" (buffer-file-name) (verify-visited-file-modtime (current-buffer)))
                   ;; Keep the buffer if the file doesn't exist
                   (when (and (file-exists-p file) (not (verify-visited-file-modtime (current-buffer))))
@@ -5423,6 +5426,8 @@ Currently is the output from the svn update command known."
                            (progn (beginning-of-line) (re-search-forward ".. +") (point))
                            (line-end-position)))
                (pos))
+           (when (eq system-type 'windows-nt)
+             (setq file-name (replace-regexp-in-string "\\\\" "/" file-name)))
            (goto-char cur-pos)
            (with-current-buffer svn-status-buffer-name
              (setq pos (svn-status-get-file-name-buffer-position file-name)))

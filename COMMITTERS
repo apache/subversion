@@ -55,6 +55,7 @@ Blanket commit access:
       markphip   Mark Phippard <mphippard@collab.net>
       arfrever   Arfrever Frehtes Taifersar Arahesis <arfrever.fta@gmail.com>
           stsp   Stefan Sperling <stsp@elego.de>
+           kou   Kouhei Sutou <kou@cozmixng.org>
 
 Commit access for specific areas:
 
@@ -63,7 +64,6 @@ Commit access for specific areas:
        pmayweg   Patrick Mayweg <mayweg@qint.de>             (JavaHL bindings)
           rey4   Russell Yanofsky <rey4@columbia.edu>        (Swig bindings)
          clkao   Chia-liang Kao <clkao@clkao.org>            (Swig-Perl b.)
-           kou   Kouhei Sutou <kou@cozmixng.org>             (Swig-Ruby b.)
     joeswatosh   Joe Swatosh <joe.swatosh@gmail.com>         (Swig-Ruby b.)
     jrvernooij   Jelmer Vernooij <jelmer@samba.org>          (Python bindings)
         holden   Holden Karau <holden@pigscanfly.ca>         (Swig-Scheme bindings)
@@ -125,7 +125,7 @@ Commit access for specific areas:
        marcosc   Marcos Chaves <marcos.nospam@gmail.com>     (po: pt_BR)
         pynoos   Hojin Choi <hojin.choi@gmail.com>           (po: ko)
        blueboh   Jeong Seolin <blueboh@ahnlab.com>           (po: ko)
-        cauchy   Dongsheng Song <dongsheng.song@gmail.com>   (po: zh_CN)
+        cauchy   Dongsheng Song <songdongsheng@live.cn>      (po: zh_CN)
         hynnet   YingNing Huang <hyn@bao.hynnet.com>         (po: zh_CN)
           lark   Wang Jian <lark@linux.net.cn>               (po: zh_CN)
 giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
@@ -146,6 +146,9 @@ giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
                                                               bindings br.)
        cacknin   Charles Acknin <charlesacknin@gmail.com>    (svnpatch-diff
                                                                 br.)
+       sbutler   Stephen Butler <sbutler@elego.de>           (tree-conflicts
+                                                              br., diff-
+                                                              callbacks3 br.)
 
   Subprojects that are complete, abandoned or have moved elsewhere:
 

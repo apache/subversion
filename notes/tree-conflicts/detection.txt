@@ -145,7 +145,7 @@ OBSTRUCTIONS DURING MERGE
 
 If 'svn merge' fails to apply an operation to a file because the
 file is obstructed (i.e. an unversioned item of the same name is
-in the file's place), this is a tree conflict.
+in the file's place), the obstructed file is a tree conflict victim.
 
 Rationale:
 

@@ -158,7 +158,7 @@ wc_path_to_repos_urls(const char **url, const char **repos_root,
      the entry.  The entry might not hold a URL -- in that case, we'll
      need a fallback plan. */
   if (*repos_root == NULL)
-    *repos_root = entry->repos;
+    *repos_root = apr_pstrdup(pool, entry->repos);
 
   return SVN_NO_ERROR;
 }

@@ -92,6 +92,7 @@ typedef struct item_baton_t {
 
   svn_boolean_t text_changed;        /* Did the file's contents change? */
   svn_boolean_t added;               /* File added? (Implies text_changed.) */
+  svn_boolean_t copyfrom;            /* File copied? */
   apr_array_header_t *changed_props; /* array of const char * prop names */
   apr_array_header_t *removed_props; /* array of const char * prop names */
 
@@ -352,6 +353,8 @@ add_helper(svn_boolean_t is_dir,
                                " copyfrom-rev=\"%ld\">" DEBUG_CR,
                                DIR_OR_FILE(is_dir),
                                qname, qcopy, copyfrom_revision);
+
+          child->copyfrom = TRUE;
         }
 
       /* Resist the temptation to pass 'elt' as the format string.
@@ -404,7 +407,8 @@ close_helper(svn_boolean_t is_dir, item_baton_t *baton)
     return SVN_NO_ERROR;
 
   /* ### ack!  binary names won't float here! */
-  if (baton->removed_props && (! baton->added))
+  /* If this is a copied file/dir, we can have removed props. */
+  if (baton->removed_props && (! baton->added || baton->copyfrom))
     {
       const char *qname;
 
@@ -1330,26 +1334,33 @@ dav_svn__update_report(const dav_resource *resource,
     if (dst_path)
       {
         /* diff/merge don't ask for inline text-deltas. */
-        if (!uc.send_all && strcmp(spath, dst_path) == 0)
+        if (uc.send_all)
           action = apr_psprintf(resource->pool,
-                                "diff %s r%ld:%ld%s%s",
+                                "switch %s %s@%ld%s",
                                 svn_path_uri_encode(spath, resource->pool),
-                                from_revnum,
-                                revnum, log_depth,
-                                ignore_ancestry ? " ignore-ancestry" : "");
-        else
-          action = apr_psprintf(resource->pool,
-                                "%s %s@%ld %s@%ld%s%s",
-                                (uc.send_all ? "switch" : "diff"),
-                                svn_path_uri_encode(spath, resource->pool),
-                                from_revnum,
                                 svn_path_uri_encode(dst_path, resource->pool),
-                                revnum, log_depth,
-                                /* ignore-ancestry only applies to merge, and
-                                   we use uc.send_all to know if this is a
-                                   diff/merge or not. */
-                                (!uc.send_all && ignore_ancestry
-                                 ? " ignore-ancestry" : ""));
+                                revnum, log_depth);
+        else
+          {
+            if (strcmp(spath, dst_path) == 0)
+              action = apr_psprintf(resource->pool,
+                                    "diff %s r%ld:%ld%s%s",
+                                    svn_path_uri_encode(spath, resource->pool),
+                                    from_revnum,
+                                    revnum, log_depth,
+                                    ignore_ancestry ? " ignore-ancestry" : "");
+            else
+              action = apr_psprintf(resource->pool,
+                                    "diff %s@%ld %s@%ld%s%s",
+                                    svn_path_uri_encode(spath, resource->pool),
+                                    from_revnum,
+                                    svn_path_uri_encode(dst_path,
+                                                        resource->pool),
+                                    revnum, log_depth,
+                                    (ignore_ancestry
+                                     ? " ignore-ancestry"
+                                     : ""));
+          }
       }
 
     /* Otherwise, it must be checkout, export, update, or status -u. */

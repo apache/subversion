@@ -253,6 +253,10 @@ a <tt>file:</tt> URL?</a></li>
 <li><a href="#working-copy-format-change">I got an error saying "This
     client is too old to work with working copy '...' ".  How can I
     fix it without upgrading Subversion?</a></li>
+<li><a href="#relocation-against-local-symbol">I got an error saying
+    "relocation R_X86_64_32 against `a local symbol' can not be used
+    when making a shared object" when building the Neon library on 64-bit
+    Linux.</a></li>
 </ul>
 
 <h4>Developer questions:</h4>
@@ -3746,8 +3750,38 @@ their implications.</p>
 
 </div>
 
+<div class="h3"
+     id="relocation-against-local-symbol"
+     title="relocation-against-local-symbol">
+<h3>I got an error saying  "relocation R_X86_64_32 against `a local symbol'
+    can not be used when making a shared object" when building the Neon
+    library on 64-bit Linux.</h3>
+
+<p>The Neon library, used for communication between a Subversion server and
+client over HTTP, is usually built as a static library.  But it is
+subsequently linked into a different shared library.  This causes an error
+during the build process on 64-bit AMD systems similar to this:</p>
+
+<blockquote>
+<div><pre><code>
+subversion-1.4.6/neon/src/.libs/libneon.a(ne_request.o): relocation R_X86_64_32
+against `a local symbol' can not be used when making a shared object;
+recompile with -fPIC
+/home/jrandom/subversion/subversion-1.4.6/neon/src/.libs/libneon.a: could not
+read symbols: Bad value
+</code></pre></div>
+</blockquote>
+
+<p>There was a
+<a href="http://subversion.tigris.org/servlets/ReadMsg?listName=dev&amp;msgNo=119669">
+thread</a> on the developers' list about this.</p>
+
+<p>The solution is to supply the "--enable-shared" option to Subversion's
+configure script.</p>
+
 </div>
 
+</div>
 
 <div class="h2" id="developer-questions" title="developer-questions">
 <h2>Developer questions:</h2>
