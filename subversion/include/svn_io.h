@@ -33,6 +33,7 @@
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_string.h"
+#include "svn_checksum.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -658,7 +659,21 @@ svn_stream_t *svn_stream_compressed(svn_stream_t *stream,
  * The @a stream passed into this function is closed when the created
  * stream is closed.
  *
+ * @since New in 1.6.
+ */
+svn_stream_t *
+svn_stream_checksummed2(svn_stream_t *stream,
+                        svn_checksum_t *read_checksum,
+                        svn_checksum_t *write_checksum,
+                        svn_boolean_t read_all,
+                        apr_pool_t *pool);
+
+/**
+ * Similar to svn_stream_checksummed2(), but always returning the MD5
+ * checksum in @a read_digest and @a write_digest.
+ *
  * @since New in 1.4.
+ * @deprecated Provided for backward compatibility with the 1.5 API.
  */
 svn_stream_t *svn_stream_checksummed(svn_stream_t *stream,
                                      const unsigned char **read_digest,

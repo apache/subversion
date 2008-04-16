@@ -36,7 +36,10 @@ extern "C" {
  */
 typedef enum
 {
+  /** The checksum is (or should be set to) an MD5 checksum. */
   svn_checksum_md5,
+
+  /** The checksum is (or should be set to) a SHA1 checksum. */
   svn_checksum_sha1
 } svn_checksum_kind_t;
 
@@ -58,6 +61,11 @@ typedef struct svn_checksum_t
       pool that this checksum was allocated from. */
   apr_pool_t *pool;
 } svn_checksum_t;
+
+/**
+ * Opaque type for creating checksums of data.
+ */
+typedef struct svn_checksum_ctx_t svn_checksum_ctx_t;
 
 /** Allocate, initialize and return a @c svn_checksum_t structure of type
  * @a kind.  The checksum is allocated in @a pool.
@@ -107,6 +115,41 @@ svn_checksum_to_cstring_display(svn_checksum_t *checksum,
 const char *
 svn_checksum_to_cstring(svn_checksum_t *checksum,
                         apr_pool_t *pool);
+
+
+/**
+ * Create a new @c svn_checksum_ctx_t structure, allocated from @a pool for
+ * calculating checksums of type @a checksum->kind.  When the checksum is
+ * finalized with svn_checksum_final(), the result will be placed in
+ * @a checksum->digest.
+ *
+ * @since New in 1.6.
+ */
+svn_checksum_ctx_t *
+svn_checksum_ctx_create(svn_checksum_t *checksum,
+                        apr_pool_t *pool);
+
+/**
+ * Update the checksum represented by @a ctx, with @a len bytes starting at
+ * @a data.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_checksum_update(svn_checksum_ctx_t *ctx,
+                    const void *data,
+                    apr_size_t len);
+
+
+/**
+ * Finalize the checksum used when creating @a ctx.  The digest will be copied
+ * into the digest field of the checksum used when svn_checksum_ctx_create()
+ * was called.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_checksum_final(svn_checksum_ctx_t *ctx);
 
 
 #ifdef __cplusplus
