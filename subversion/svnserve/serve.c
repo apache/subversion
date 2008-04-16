@@ -788,17 +788,15 @@ static svn_error_t *reparent(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                              apr_array_header_t *params, void *baton)
 {
   server_baton_t *b = baton;
-  const char *encoded_url, *url;
+  const char *url;
   const char *fs_path;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c", &url));
-  encoded_url = svn_path_canonicalize(url, pool);
-  SLOG("reparent %s", encoded_url);
-  url = svn_path_uri_decode(encoded_url, pool);
-
+  url = svn_path_uri_decode(svn_path_canonicalize(url, pool), pool);
   SVN_ERR(trivial_auth_request(conn, pool, b));
   SVN_CMD_ERR(get_fs_path(svn_path_uri_decode(b->repos_url, pool),
                           url, &fs_path));
+  SLOG("reparent %s", fs_path);
   svn_stringbuf_set(b->fs_path, fs_path);
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
   return SVN_NO_ERROR;

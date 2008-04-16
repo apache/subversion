@@ -90,8 +90,10 @@ svn_log__get_file(const char *path, svn_revnum_t rev,
                   svn_boolean_t want_contents, svn_boolean_t want_props,
                   apr_pool_t *pool)
 {
-  return apr_psprintf(pool, "get-file %s@%ld",
-                      svn_path_uri_encode(path, pool), rev);
+  return apr_psprintf(pool, "get-file %s %ld%s%s",
+                      svn_path_uri_encode(path, pool), rev,
+                      want_contents ? " text" : "",
+                      want_props ? " props" : "");
 }
 
 const char *
@@ -100,8 +102,10 @@ svn_log__get_dir(const char *path, svn_revnum_t rev,
                  apr_uint64_t dirent_fields,
                  apr_pool_t *pool)
 {
-  return apr_psprintf(pool, "get-dir %s@%ld",
-                      svn_path_uri_encode(path, pool), rev);
+  return apr_psprintf(pool, "get-dir %s %ld%s%s",
+                      svn_path_uri_encode(path, pool), rev,
+                      want_contents ? " text" : "",
+                      want_props ? " props" : "");
 }
 
 const char *
