@@ -790,6 +790,10 @@ typedef enum svn_wc_notify_action_t
       @c svn_wc_notify_t. @since New in 1.5. */
   svn_wc_notify_merge_begin,
 
+  /** A merge operation (to path) from a foreign repository has begun.
+      See @c merge_range in @c svn_wc_notify_t. @since New in 1.5. */
+  svn_wc_notify_foreign_merge_begin,
+
   /** Replace notification. @since New in 1.5. */
   svn_wc_notify_update_replace,
 
