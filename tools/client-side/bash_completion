@@ -109,8 +109,10 @@ function _svn_lls()
 #     Argument completion outside a working copy results in an error message.
 #     Filenames with spaces are not completed properly.
 #     
-# - to do: other options? 
-#   obsolete options could be removed from auto-comp? (e.g. -N)
+# TODO 
+# - other options? 
+# - obsolete options could be removed from auto-comp? (e.g. -N)
+# - obsolete commands could be removed? (e.g. resolved)
 _svn()
 {
 	local cur cmds cmdOpts pOpts mOpts rOpts qOpts nOpts optsParam opt
@@ -124,7 +126,7 @@ _svn()
               copy cp delete remove rm diff export help import info \
               list ls lock log merge mergeinfo mkdir move mv rename \
               propdel pdel propedit pedit propget pget \
-              proplist plist propset pset resolved revert \
+              proplist plist propset pset resolve resolved revert \
               status switch unlock update'
 
 	# help options have a strange command status...
@@ -172,6 +174,7 @@ _svn()
 	#    hasRevPropOpt: is --revprop set
 	#    hasRevisionOpt: is --revision set
 	#    hasRelocateOpt: is --relocate set
+	#    acceptOpt: the value of --accept
 	# nargs: how many arguments were found
 	# stat: status of parsing at the 'current' word
 	#
@@ -181,6 +184,7 @@ _svn()
 	local cmd= isPropCmd= isPsCmd= isHelpCmd= nExpectArgs= isCur= i=0
 	local prev= help= prop= val= isRevProp= last='none' nargs=0 stat=
 	local options= hasRevPropOpt= hasRevisionOpt= hasRelocateOpt=
+	local acceptOpt=
 
 	for opt in "${COMP_WORDS[@]}"
 	do
@@ -197,6 +201,10 @@ _svn()
 
 	    # SKIP option arguments
 	    if [[ $prev == @($optsParam) ]] ; then
+
+		# record accept value
+		[[ $prev = '--accept' ]] && acceptOpt=$opt
+
 		prev=''
 		last='skip'
 		continue ;
@@ -352,11 +360,13 @@ _svn()
 
 	    [[ $previous = '--accept' ]] && \
 	    {
-	        # the list is reduced for 'resolved'
-                if [[ $cmd = 'resolved' ]] ; then
-		    values='base mine theirs'
+	        # the list is different for 'resolve'
+                if [[ $cmd = 'resolve' ]] ; then
+		    # from svn help resolve
+		    values='mine working mine-full theirs-full'
 		else # checkout merge switch update
-		    values='postpone base mine theirs edit launch'
+		    # not implemented yet: mine-conflict theirs-conflict
+		    values='postpone base mine-full theirs-full edit launch'
 		fi
 	    }
 
@@ -502,6 +512,13 @@ _svn()
 	    [[ ${COMPREPLY} ]] && return 0
 	fi
 
+	# force mandatory --accept option for 'resolve' command
+	if [[ $cmd = 'resolve' && ! $acceptOpt ]]
+	then
+	    COMPREPLY=( $( compgen -W '--accept' -- $cur ) )
+	    return 0
+	fi
+
 	# maximum number of additional arguments expected in various forms
 	case $cmd in
 	    merge)
@@ -571,7 +588,7 @@ _svn()
 		    unlock) # unlock locked files
 			files=$($status $cs| _svn_grcut '@(??L*|?????[KOTB]*)')
 			;;
-		    resolved) # files in conflict
+		    resolve*) # files in conflict
 			files=$($status $cs| _svn_grcut '@(?C*|C*)')
 			;;
 		    praise|blame|ann*) # any svn file but added
@@ -649,7 +666,7 @@ _svn()
 		;;
 	add)
 		cmdOpts="--auto-props --no-auto-props --force --targets \
-		         --no-ignore $nOpts $qOpts"
+		         --no-ignore --parents $nOpts $qOpts $pOpts"
 		;;
 	blame|annotate|ann|praise)
 		cmdOpts="$rOpts $pOpts -v --verbose --incremental --xml \
@@ -659,29 +676,31 @@ _svn()
 		cmdOpts="$rOpts $pOpts"
 		;;
 	changelist|cl)
-		cmdOpts="--clear --targets"
+		cmdOpts="--targets $pOpts $qOpts --changelist \
+                         -R --recursive --depth --remove"
 		;;
 	checkout|co)
 		cmdOpts="$rOpts $qOpts $nOpts $pOpts --ignore-externals \
                          --force --accept"
 		;;
 	cleanup)
-		cmdOpts="--diff3-cmd"
+		cmdOpts="--diff3-cmd $pOpts"
 		;;
 	commit|ci)
 		cmdOpts="$mOpts $qOpts $nOpts --targets --editor-cmd $pOpts \
-		         --no-unlock --changelist --keep-changelist"
+		         --no-unlock --changelist --keep-changelists"
 		;;
 	copy|cp)
-		cmdOpts="$mOpts $rOpts $qOpts --editor-cmd $pOpts $gOpts"
+		cmdOpts="$mOpts $rOpts $qOpts --editor-cmd $pOpts --parents"
 		;;
 	delete|del|remove|rm)
-		cmdOpts="--force $mOpts $qOpts --targets --editor-cmd $pOpts"
+		cmdOpts="--force $mOpts $qOpts --targets --editor-cmd $pOpts \
+                         --keep-local"
 		;;
 	diff|di)
 		cmdOpts="$rOpts -x --extensions --diff-cmd --no-diff-deleted \
 		         $nOpts $pOpts --force --old --new --notice-ancestry \
-		         -c --change --summarize"
+		         -c --change --summarize --changelist --xml"
 		;;
 	export)
 		cmdOpts="$rOpts $qOpts $pOpts $nOpts --force --native-eol \
@@ -692,83 +711,93 @@ _svn()
 		;;
 	import)
 		cmdOpts="--auto-props --no-auto-props $mOpts $qOpts $nOpts \
-		         --no-ignore --editor-cmd $pOpts"
+		         --no-ignore --editor-cmd $pOpts --force"
 		;; 
 	info)
-		cmdOpts="$pOpts $rOpts --targets -R --recursive \
+		cmdOpts="$pOpts $rOpts --targets -R --recursive --depth \
                          --incremental --xml --changelist"
 		;;
 	list|ls)
 		cmdOpts="$rOpts -v --verbose -R --recursive $pOpts \
-                         --incremental --xml"
+                         --incremental --xml --depth"
 		;;
 	lock)
-		cmdOpts="$mOpts --targets --force $pOpts"
+		cmdOpts="-m --message -F --file --encoding --force-log \
+                         --targets --force $pOpts"
 		;;
 	log)
 		cmdOpts="$rOpts -v --verbose --targets $pOpts --stop-on-copy \
-		         --incremental --xml $qOpts -l --limit --changelist \
-                         $gOpts"
+		         --incremental --xml $qOpts -l --limit -c --change \
+                         $gOpts --with-all-revprops --with-revprop"
 		;;
 	merge)
 		cmdOpts="$rOpts $nOpts $qOpts --force --dry-run --diff3-cmd \
 		         $pOpts --ignore-ancestry -c --change -x --extensions \
-                         --record-only --accept"
+                         --record-only --accept --reintegrate"
 		;;
 	mergeinfo)
-	        cmdOpts="$rOpts $pOpts"
+	        cmdOpts="$rOpts $pOpts --show-revs"
 		;;
 	mkdir)
-		cmdOpts="$mOpts $qOpts --editor-cmd $pOpts"
+		cmdOpts="$mOpts $qOpts --editor-cmd $pOpts --parents"
 		;;
 	move|mv|rename|ren)
 		cmdOpts="$mOpts $rOpts $qOpts --force --editor-cmd $pOpts \
-                         $gOpts"
+                         --parents"
 		;;
 	propdel|pdel|pd)
-		cmdOpts="$qOpts -R --recursive $rOpts $pOpts"
+		cmdOpts="$qOpts -R --recursive $rOpts $pOpts --changelist \
+                         --depth"
 		[[ $isRevProp || ! $prop ]] && cmdOpts="$cmdOpts --revprop"
 		;;
 	propedit|pedit|pe)
-		cmdOpts="--encoding --editor-cmd $pOpts --force"
+		cmdOpts="--editor-cmd $pOpts $mOpts --force"
 		[[ $isRevProp || ! $prop ]] && \
 		    cmdOpts="$cmdOpts --revprop $rOpts"
 		;;
 	propget|pget|pg)
-	        cmdOpts="-R --recursive $rOpts --strict $pOpts"
+	        cmdOpts="-R --recursive $rOpts --strict $pOpts --changelist \
+                         --depth --xml"
 		[[ $isRevProp || ! $prop ]] && cmdOpts="$cmdOpts --revprop"
 		;;
 	proplist|plist|pl)
 		cmdOpts="-v --verbose -R --recursive $rOpts --revprop $qOpts \
-		         $pOpts"
+		         $pOpts --changelist --depth --xml"
 		;;
 	propset|pset|ps)
 		cmdOpts="$qOpts --targets -R --recursive \
-		         --encoding $pOpts --force"
+		         --encoding $pOpts --force --changelist --depth"
 		[[ $isRevProp || ! $prop ]] && \
 		    cmdOpts="$cmdOpts --revprop $rOpts"
 		[[ $val ]] || cmdOpts="$cmdOpts -F --file"
 		;;
+        resolve)
+                cmdOpts="--targets -R --recursive $qOpts $pOpts --accept \
+                         --depth"
+                ;;
 	resolved)
-		cmdOpts="--targets -R --recursive $qOpts --accept"
+		cmdOpts="--targets -R --recursive $qOpts $pOpts --depth"
 		;;
 	revert)
-		cmdOpts="--targets -R --recursive $qOpts --changelist"
+		cmdOpts="--targets -R --recursive $qOpts --changelist \
+                         --depth $pOpts"
 		;;
 	status|stat|st)
 		cmdOpts="-u --show-updates -v --verbose $nOpts $qOpts $pOpts \
-		         --no-ignore --ignore-externals --incremental --xml"
+		         --no-ignore --ignore-externals --incremental --xml \
+                         --changelist"
 		;;
 	switch|sw)
 		cmdOpts="--relocate $rOpts $nOpts $qOpts $pOpts --diff3-cmd \
-                         --force --accept"
+                         --force --accept --ignore-externals --set-depth"
 		;;
 	unlock)
 		cmdOpts="--targets --force $pOpts"
 		;;
 	update|up)
 		cmdOpts="$rOpts $nOpts $qOpts $pOpts --diff3-cmd \
-                         --ignore-externals --force --accept"
+                         --ignore-externals --force --accept --changelist \
+                         --editor-cmd --set-depth"
 		;;
 	*)
 		;;
@@ -777,6 +806,12 @@ _svn()
 	# add options that are nearly always available
 	[[ "$cmd" != "--version" ]] && cmdOpts="$cmdOpts $helpOpts"
 	cmdOpts="$cmdOpts --config-dir"
+
+        # --accept (edit|launch) incompatible with --non-interactive
+	if [[ $acceptOpt == @(edit|launch) ]] ;
+	then
+	    cmdOpts=${cmdOpts/ --non-interactive / }
+	fi
 
 	# take out options already given
 	for opt in $options
@@ -791,7 +826,7 @@ _svn()
 
 		cmdOpts=" $cmdOpts "
 		cmdOpts=${cmdOpts/ ${optBase} / }
-
+		
 		# take out alternatives and mutually exclusives
 		case $optBase in
 		-v)              cmdOpts=${cmdOpts/ --verbose / } ;;
