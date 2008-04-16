@@ -36,88 +36,17 @@
 
 /*** Code. ***/
 
-static void
-print_merge_ranges(apr_array_header_t *ranges, apr_pool_t *pool)
-{
-  int i;
-  for (i = 0; i < ranges->nelts; i++)
-    {
-      svn_merge_range_t *range = APR_ARRAY_IDX(ranges, i, svn_merge_range_t *);
-      svn_cmdline_printf(pool, "r%ld:%ld%s", range->start, range->end,
-                         (i == (ranges->nelts - 1)) ? "" : ", ");
-    }
-  svn_cmdline_printf(pool, "\n");
-}
-
-
-static const char *
-relative_path(const char *root_url,
-              const char *url,
+/* Implements the svn_log_entry_receiver_t interface.  BATON is a
+   pointer to a mergeinfo rangelist array. */
+static svn_error_t *
+print_log_rev(void *baton,
+              svn_log_entry_t *log_entry,
               apr_pool_t *pool)
 {
-  const char *relurl = svn_path_is_child(root_url, url, pool);
-  return relurl ? apr_pstrcat(pool, "/",
-                              svn_path_uri_decode(relurl, pool), NULL)
-                : "/";
-}
-
-
-static svn_error_t *
-show_mergeinfo_for_source(const char *merge_source,
-                          apr_array_header_t *merge_ranges,
-                          const char *path,
-                          svn_opt_revision_t *peg_revision,
-                          const char *root_url,
-                          svn_client_ctx_t *ctx,
-                          apr_pool_t *pool)
-{
-  apr_array_header_t *available_ranges;
-  svn_error_t *err;
-
-  svn_cmdline_printf(pool, _("  Source path: %s\n"),
-                     relative_path(root_url, merge_source, pool));
-  svn_cmdline_printf(pool, _("    Merged ranges: "));
-  print_merge_ranges(merge_ranges, pool);
-
-  /* Now fetch the available merges for this source. */
-
-  /* ### FIXME: There's no reason why this API should fail to
-     ### answer the question (when asked of a 1.5+ server),
-     ### short of something being quite wrong with the
-     ### question.  Certainly, that the merge source URL can't
-     ### be found in HEAD shouldn't mean we can't get any
-     ### decent information about it out of the system.  It
-     ### may just mean the system has to work harder to
-     ### provide that information.
-  */
-  svn_cmdline_printf(pool, _("    Eligible ranges: "));
-  err = svn_client_mergeinfo_get_available(&available_ranges,
-                                           path,
-                                           peg_revision,
-                                           merge_source,
-                                           ctx,
-                                           pool);
-  if (err)
-    {
-      if ((err->apr_err == SVN_ERR_FS_NOT_FOUND)
-          || (err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND))
-        {
-          svn_error_clear(err);
-          svn_cmdline_printf(pool, _("(source no longer available "
-                                     "in HEAD)\n"));
-        }
-      else
-        {
-          svn_cmdline_printf(pool, "\n");
-          return err;
-        }
-    }
-  else
-    {
-      print_merge_ranges(available_ranges, pool);
-    }
+  svn_cmdline_printf(pool, "r%ld\n", log_entry->revision);
   return SVN_NO_ERROR;
 }
+ 
 
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
@@ -128,85 +57,70 @@ svn_cl__mergeinfo(apr_getopt_t *os,
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
-  apr_pool_t *subpool = svn_pool_create(pool);
-  int i;
+  const char *source_url, *target;
+  svn_opt_revision_t src_peg_revision, tgt_peg_revision;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets, 
                                                       pool));
 
-  /* Add "." if user passed 0 arguments. */
-  svn_opt_push_implicit_dot_target(targets, pool);
+  /* We expect a single source URL followed by a single target --
+     nothing more, nothing less. */
+  if (targets->nelts < 1)
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                            _("Not enough arguments given"));
+  if (targets->nelts > 2)
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                            _("Too many arguments given"));
 
-  for (i = 0; i < targets->nelts; i++)
+  /* Parse the SOURCE-URL[@REV] argument. */
+  SVN_ERR(svn_opt_parse_path(&src_peg_revision, &source_url, 
+                             APR_ARRAY_IDX(targets, 0, const char *), pool));
+  if (! svn_path_is_url(source_url))
+    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("Path '%s' is not a URL"), source_url);
+
+  /* Parse the TARGET[@REV] argument (if provided). */
+  if (targets->nelts == 2)
     {
-      const char *target = APR_ARRAY_IDX(targets, i, const char *);
-      const char *truepath;
-      svn_opt_revision_t peg_revision;
-      apr_hash_t *mergeinfo;
-      const char *root_url;
-      apr_hash_index_t *hi;
-
-      svn_pool_clear(subpool);
-      SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
-
-      /* Parse the path into a path and peg revision. */
-      SVN_ERR(svn_opt_parse_path(&peg_revision, &truepath, target, subpool));
-
-      /* If no peg-rev was attached to a URL target, then assume HEAD. */
-      if ((peg_revision.kind == svn_opt_revision_unspecified)
-          && svn_path_is_url(target))
-        peg_revision.kind = svn_opt_revision_head;
-
-      /* If no peg-rev was attached to a non-URL target, then assume BASE. */
-      if ((peg_revision.kind == svn_opt_revision_unspecified)
-          && (! svn_path_is_url(target)))
-        peg_revision.kind = svn_opt_revision_base;
-
-      /* Get the already-merged information. */
-      SVN_ERR(svn_client_mergeinfo_get_merged(&mergeinfo, truepath,
-                                              &peg_revision, ctx, subpool));
-
-      svn_cmdline_printf(pool, _("Path: %s\n"),
-                         svn_path_local_style(truepath, pool));
-      if (mergeinfo == NULL)
-        mergeinfo = apr_hash_make(pool);
-
-      SVN_ERR(svn_client_root_url_from_path(&root_url, truepath, ctx, pool));
-
-      if (opt_state->from_source)
-        {
-          apr_array_header_t *merged_ranges = 
-            apr_hash_get(mergeinfo, opt_state->from_source, 
-                         APR_HASH_KEY_STRING);
-          if (! merged_ranges)
-            merged_ranges = apr_array_make(pool, 1, 
-                                           sizeof(svn_merge_range_t *));
-          SVN_ERR(show_mergeinfo_for_source(opt_state->from_source, 
-                                            merged_ranges, truepath, 
-                                            &peg_revision, root_url, 
-                                            ctx, subpool));
-        }
-      else if (apr_hash_count(mergeinfo) > 0)
-        {
-          apr_pool_t *iterpool = svn_pool_create(subpool);
-          for (hi = apr_hash_first(NULL, mergeinfo); 
-               hi; hi = apr_hash_next(hi))
-            {
-              const void *key;
-              void *val;
-              
-              svn_pool_clear(iterpool);
-              apr_hash_this(hi, &key, NULL, &val);
-              SVN_ERR(show_mergeinfo_for_source(key, val, truepath, 
-                                                &peg_revision, root_url, 
-                                                ctx, iterpool));
-            }
-          svn_pool_destroy(iterpool);
-        }
-      svn_cmdline_printf(subpool, "\n");
+      SVN_ERR(svn_opt_parse_path(&tgt_peg_revision, &target, 
+                                 APR_ARRAY_IDX(targets, 1, const char *), 
+                                 pool));
+    }
+  else
+    {
+      target = "";
+      tgt_peg_revision.kind = svn_opt_revision_unspecified;
     }
 
-  svn_pool_destroy(subpool);
+  /* If no peg-rev was attached to the source URL, assume HEAD. */
+  if (src_peg_revision.kind == svn_opt_revision_unspecified)
+    src_peg_revision.kind = svn_opt_revision_head;
+
+  /* If no peg-rev was attached to a URL target, then assume HEAD; if
+     no peg-rev was attached to a non-URL target, then assume BASE. */
+  if (tgt_peg_revision.kind == svn_opt_revision_unspecified)
+    {
+      if (svn_path_is_url(target))
+        tgt_peg_revision.kind = svn_opt_revision_head;
+      else
+        tgt_peg_revision.kind = svn_opt_revision_base;
+    }
+
+  /* Do the real work, depending on the requested data flavor. */
+  if (opt_state->show_revs == svn_cl__show_revs_merged)
+    {
+      SVN_ERR(svn_client_mergeinfo_log_merged(target, &tgt_peg_revision, 
+                                              source_url, &src_peg_revision,
+                                              print_log_rev, NULL, 
+                                              FALSE, NULL, ctx, pool));
+    }
+  else if (opt_state->show_revs == svn_cl__show_revs_eligible)
+    {
+      SVN_ERR(svn_client_mergeinfo_log_eligible(target, &tgt_peg_revision,
+                                                source_url, &src_peg_revision,
+                                                print_log_rev, NULL, 
+                                                FALSE, NULL, ctx, pool));
+    }
   return SVN_NO_ERROR;
 }

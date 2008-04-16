@@ -336,6 +336,19 @@ close_edit(void *edit_baton,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+abort_edit(void *edit_baton,
+           apr_pool_t *pool)
+{
+  struct edit_baton *eb = edit_baton;
+
+  SVN_ERR(eb->cancel_func(eb->cancel_baton));
+
+  SVN_ERR(eb->wrapped_editor->abort_edit(eb->wrapped_edit_baton, pool));
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_delta_get_cancellation_editor(svn_cancel_func_t cancel_func,
                                   void *cancel_baton,
@@ -365,6 +378,7 @@ svn_delta_get_cancellation_editor(svn_cancel_func_t cancel_func,
       tree_editor->close_file = close_file;
       tree_editor->absent_file = absent_file;
       tree_editor->close_edit = close_edit;
+      tree_editor->abort_edit = abort_edit;
 
       eb->wrapped_editor = wrapped_editor;
       eb->wrapped_edit_baton = wrapped_edit_baton;

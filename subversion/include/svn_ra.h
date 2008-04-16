@@ -1376,7 +1376,7 @@ svn_ra_stat(svn_ra_session_t *session,
 /**
  * Set @a *uuid to the repository's UUID, allocated in @a pool.
  *
- * @since New in 1.6.
+ * @since New in 1.5.
  */
 svn_error_t *
 svn_ra_get_uuid2(svn_ra_session_t *session,
@@ -1387,7 +1387,7 @@ svn_ra_get_uuid2(svn_ra_session_t *session,
  * Similar to svn_ra_get_uuid2(), but returns the value allocated in
  * @a session's pool.
  *
- * @deprecated Provided for backward compatibility with the 1.5 API.
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  * @since New in 1.2.
  */
 svn_error_t *
@@ -1400,7 +1400,7 @@ svn_ra_get_uuid(svn_ra_session_t *session,
  * The value will not include a trailing '/'.  The returned URL is
  * guaranteed to be a prefix of the @a session's URL.
  *
- * @since New in 1.6.
+ * @since New in 1.5.
  */
 svn_error_t *
 svn_ra_get_repos_root2(svn_ra_session_t *session,
@@ -1412,7 +1412,7 @@ svn_ra_get_repos_root2(svn_ra_session_t *session,
  * Similar to svn_ra_get_repos_root2(), but returns the value
  * allocated in @a session's pool.
  *
- * @deprecated Provided for backward compatibility with the 1.5 API.
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  * @since New in 1.2.
  */
 svn_error_t *
@@ -1748,6 +1748,13 @@ svn_ra_has_capability(svn_ra_session_t *session,
  * @since New in 1.5.
  */
 #define SVN_RA_CAPABILITY_PARTIAL_REPLAY "partial-replay"
+
+/**
+ * The capability of including revision properties in a commit.
+ *
+ * @since New in 1.5.
+ */
+#define SVN_RA_CAPABILITY_COMMIT_REVPROPS "commit-revprops"
 
 /*       *** PLEASE READ THIS IF YOU ADD A NEW CAPABILITY ***
  *

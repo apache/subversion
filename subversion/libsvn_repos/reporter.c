@@ -1179,9 +1179,7 @@ drive(report_baton_t *b, svn_revnum_t s_rev, path_info_t *info,
                          t_entry, root_baton, b->s_operand, info,
                          info->depth, b->requested_depth, pool));
 
-  SVN_ERR(b->editor->close_directory(root_baton, pool));
-  SVN_ERR(b->editor->close_edit(b->edit_baton, pool));
-  return SVN_NO_ERROR;
+  return b->editor->close_directory(root_baton, pool);
 }
 
 /* Initialize the baton fields for editor-driving, and drive the editor. */
@@ -1239,7 +1237,13 @@ finish_report(report_baton_t *b, apr_pool_t *pool)
   for (i = 0; i < NUM_CACHED_SOURCE_ROOTS; i++)
     b->s_roots[i] = NULL;
 
-  return drive(b, s_rev, info, pool);
+  {
+    svn_error_t *err = drive(b, s_rev, info, pool);
+    if (err == SVN_NO_ERROR)
+      return b->editor->close_edit(b->edit_baton, pool);
+    svn_error_clear(b->editor->abort_edit(b->edit_baton, pool));
+    return err;
+  }
 }
 
 /* --- COLLECTING THE REPORT INFORMATION --- */

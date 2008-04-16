@@ -197,8 +197,8 @@ svn_mergeinfo_remove(svn_mergeinfo_t *mergeinfo, svn_mergeinfo_t eraser,
 
 /** Calculate the delta between two rangelists consisting of @c
  * svn_merge_range_t * elements (sorted in ascending order), @a from
- * and @a to, and place the result in @a deleted and @a added (neither
- * output argument will ever be @c NULL).
+ * and @a to, and place the result in @a *deleted and @a *added
+ * (neither output argument will ever be @c NULL).
  *
  * @a consider_inheritance determines how to account for the inheritability
  * of the two rangelist's ranges when calculating the diff,

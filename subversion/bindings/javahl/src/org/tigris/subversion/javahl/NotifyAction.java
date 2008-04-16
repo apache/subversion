@@ -135,15 +135,15 @@ public interface NotifyAction
 
     /**
      * @since 1.5
-     * Changelist operation failed.
+     * A merge operation has begun.
      */
-    public static final int changelist_failed = 28;
+    public static final int merge_begin = 28;
 
     /**
      * @since 1.5
-     * A merge operation has begun.
+     * Got a replaced in an update.
      */
-    public static final int merge_begin = 29;
+    public static final int update_replaced = 29;
 
     /**
      * textual representation of the action types
@@ -178,7 +178,7 @@ public interface NotifyAction
         "path exists",
         "changelist set",
         "changelist cleared",
-        "changelist failed",
         "merge begin",
+        "replaced"
     };
 }

@@ -158,6 +158,10 @@ jint EnumMapper::mapNotifyAction(svn_wc_notify_action_t action)
       /* Got an add in an update. */
       return org_tigris_subversion_javahl_NotifyAction_update_add;
 
+    case svn_wc_notify_update_replace:
+      /* Got a replaced in an update. */
+      return org_tigris_subversion_javahl_NotifyAction_update_replaced;
+
     case svn_wc_notify_update_update:
       /* Got any other action in an update. */
       return org_tigris_subversion_javahl_NotifyAction_update_update;
@@ -222,10 +226,6 @@ jint EnumMapper::mapNotifyAction(svn_wc_notify_action_t action)
     case svn_wc_notify_changelist_clear:
       /* Changelist name cleared. */
       return org_tigris_subversion_javahl_NotifyAction_changelist_clear;
-
-    case svn_wc_notify_changelist_failed:
-      /* Changelist operation failed. */
-      return org_tigris_subversion_javahl_NotifyAction_changelist_failed;
 
     case svn_wc_notify_merge_begin:
       /* A merge operation has begun. */

@@ -782,9 +782,6 @@ typedef enum svn_wc_notify_action_t
   /** Changelist name cleared. @since New in 1.5. */
   svn_wc_notify_changelist_clear,
 
-  /** Failed to update a path's changelist association. @since New in 1.5. */
-  svn_wc_notify_changelist_failed,
-
   /** Warn user that a path has moved from one changelist to another.
       @since New in 1.5. */
   svn_wc_notify_changelist_moved,
@@ -792,6 +789,10 @@ typedef enum svn_wc_notify_action_t
   /** A merge operation (to path) has begun.  See @c merge_range in
       @c svn_wc_notify_t. @since New in 1.5. */
   svn_wc_notify_merge_begin,
+
+  /** A merge operation (to path) from a foreign repository has begun.
+      See @c merge_range in @c svn_wc_notify_t. @since New in 1.5. */
+  svn_wc_notify_foreign_merge_begin,
 
   /** Replace notification. @since New in 1.5. */
   svn_wc_notify_update_replace,

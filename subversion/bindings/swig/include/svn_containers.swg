@@ -229,6 +229,11 @@
     svn_swig_rb_pop_pool(_global_svn_swig_rb_pool);
   }
 }
+
+%typemap(out) apr_hash_t *PROPHASH
+{
+  %append_output(svn_swig_rb_apr_hash_to_hash_svn_string($1));
+}
 #endif
 
 #if defined(SWIGPYTHON) || defined(SWIGRUBY)
@@ -239,6 +244,20 @@
   apr_hash_t *props,
   apr_hash_t *revprop_table,
   apr_hash_t *revprops
+};
+#endif
+
+#ifdef SWIGRUBY
+%typemap(out) apr_hash_t *CHANGED_PATH_HASH
+{
+  VALUE rb_changed_path_hash;
+  rb_changed_path_hash =
+    svn_swig_rb_apr_hash_to_hash_swig_type($1, "svn_log_changed_path_t *");
+  %append_output(rb_changed_path_hash);
+}
+
+%apply apr_hash_t *CHANGED_PATH_HASH {
+  apr_hash_t *changed_paths
 };
 #endif
 
@@ -499,6 +518,12 @@
   const apr_array_header_t *targets,
   apr_array_header_t *preserved_exts
 };
+
+#ifdef SWIGRUBY
+%apply const apr_array_header_t *STRINGLIST_MAY_BE_NULL {
+  apr_array_header_t *revprops
+};
+#endif
 
 /* -----------------------------------------------------------------------
    auth provider convertors

@@ -583,7 +583,6 @@ parse_top(const char **input, const char *end, svn_mergeinfo_t hash,
   return SVN_NO_ERROR;
 }
 
-/* Parse mergeinfo.  */
 svn_error_t *
 svn_mergeinfo_parse(svn_mergeinfo_t *mergeinfo,
                     const char *input,
@@ -603,8 +602,6 @@ svn_mergeinfo_parse(svn_mergeinfo_t *mergeinfo,
 }
 
 
-/* Merge revision list RANGELIST into *MERGEINFO, doing some trivial
-   attempts to combine ranges as we go. */
 svn_error_t *
 svn_rangelist_merge(apr_array_header_t **rangelist,
                     apr_array_header_t *changes,
@@ -890,7 +887,6 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
 }
 
 
-/* Expected to handle all the range overlap cases: non, partial, full */
 svn_error_t *
 svn_rangelist_intersect(apr_array_header_t **output,
                         apr_array_header_t *rangelist1,
@@ -912,40 +908,39 @@ svn_rangelist_remove(apr_array_header_t **output,
                                        consider_inheritance, pool);
 }
 
-/* Output deltas via *DELETED and *ADDED, which will never be @c NULL.
-
-   The following diagrams illustrate some common range delta scenarios:
-
-    (from)           deleted
-    r0 <===========(=========)============[=========]===========> rHEAD
-    [to]                                    added
-
-    (from)           deleted                deleted
-    r0 <===========(=========[============]=========)===========> rHEAD
-    [to]
-
-    (from)           deleted
-    r0 <===========(=========[============)=========]===========> rHEAD
-    [to]                                    added
-
-    (from)                                  deleted
-    r0 <===========[=========(============]=========)===========> rHEAD
-    [to]             added
-
-    (from)
-    r0 <===========[=========(============)=========]===========> rHEAD
-    [to]             added                  added
-
-    (from)  d                                  d             d
-    r0 <===(=[=)=]=[==]=[=(=)=]=[=]=[=(===|===(=)==|=|==[=(=]=)=> rHEAD
-    [to]        a   a    a   a   a   a                   a
-*/
 svn_error_t *
 svn_rangelist_diff(apr_array_header_t **deleted, apr_array_header_t **added,
                    apr_array_header_t *from, apr_array_header_t *to,
                    svn_boolean_t consider_inheritance,
                    apr_pool_t *pool)
 {
+  /* The following diagrams illustrate some common range delta scenarios:
+
+     (from)           deleted
+     r0 <===========(=========)============[=========]===========> rHEAD
+     [to]                                    added
+
+     (from)           deleted                deleted
+     r0 <===========(=========[============]=========)===========> rHEAD
+     [to]
+
+     (from)           deleted
+     r0 <===========(=========[============)=========]===========> rHEAD
+     [to]                                    added
+
+     (from)                                  deleted
+     r0 <===========[=========(============]=========)===========> rHEAD
+     [to]             added
+
+     (from)
+     r0 <===========[=========(============)=========]===========> rHEAD
+     [to]             added                  added
+
+     (from)  d                                  d             d
+     r0 <===(=[=)=]=[==]=[=(=)=]=[=]=[=(===|===(=)==|=|==[=(=]=)=> rHEAD
+     [to]        a   a    a   a   a   a                   a
+  */
+
   /* The items that are present in from, but not in to, must have been
      deleted. */
   SVN_ERR(svn_rangelist_remove(deleted, to, from, consider_inheritance,
@@ -1269,8 +1264,7 @@ svn_mergeinfo_to_string(svn_string_t **output, svn_mergeinfo_t input,
   return SVN_NO_ERROR;
 }
 
-/* Perform an in-place sort of the rangelists in a mergeinfo hash.  */
-svn_error_t*
+svn_error_t *
 svn_mergeinfo_sort(svn_mergeinfo_t input, apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
