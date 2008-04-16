@@ -269,6 +269,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_NULL,
     SVN_TEST_PASS(test_inprocess_cache_basic),
     SVN_TEST_PASS(test_memcache_basic),
-    SVN_TEST_XFAIL(test_memcache_long_key),
+    SVN_TEST_PASS(test_memcache_long_key),
     SVN_TEST_NULL
   };
