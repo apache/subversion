@@ -113,3 +113,79 @@ svn_checksum_copy(svn_checksum_t *dest,
 
   return SVN_NO_ERROR;
 }
+
+struct svn_checksum_ctx_t
+{
+  void *apr_ctx;
+  svn_checksum_t *checksum;
+};
+
+svn_checksum_ctx_t *
+svn_checksum_ctx_create(svn_checksum_t *checksum,
+                        apr_pool_t *pool)
+{
+  svn_checksum_ctx_t *ctx = apr_palloc(pool, sizeof(*ctx));
+
+  ctx->checksum = checksum;
+  switch (checksum->kind)
+    {
+      case svn_checksum_md5:
+        ctx->apr_ctx = apr_palloc(pool, sizeof(apr_md5_ctx_t));
+        apr_md5_init(ctx->apr_ctx);
+        break;
+
+      case svn_checksum_sha1:
+        ctx->apr_ctx = apr_palloc(pool, sizeof(apr_sha1_ctx_t));
+        apr_sha1_init(ctx->apr_ctx);
+        break;
+
+      default:
+        return NULL;
+    }
+
+  return ctx;
+}
+
+svn_error_t *
+svn_checksum_update(svn_checksum_ctx_t *ctx,
+                    const void *data,
+                    apr_size_t len)
+{
+  switch (ctx->checksum->kind)
+    {
+      case svn_checksum_md5:
+        apr_md5_update(ctx->apr_ctx, data, len);
+        break;
+
+      case svn_checksum_sha1:
+        apr_sha1_update(ctx->apr_ctx, data, len);
+        break;
+
+      default:
+        /* We really shouldn't get here, but if we do... */
+        return svn_error_create(SVN_ERR_BAD_CHECKSUM_KIND, NULL, NULL);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_checksum_final(svn_checksum_ctx_t *ctx)
+{
+  switch (ctx->checksum->kind)
+    {
+      case svn_checksum_md5:
+        apr_md5_final(ctx->checksum->digest, ctx->apr_ctx);
+        break;
+
+      case svn_checksum_sha1:
+        apr_sha1_final(ctx->checksum->digest, ctx->apr_ctx);
+        break;
+
+      default:
+        /* We really shouldn't get here, but if we do... */
+        return svn_error_create(SVN_ERR_BAD_CHECKSUM_KIND, NULL, NULL);
+    }
+
+  return SVN_NO_ERROR;
+}
