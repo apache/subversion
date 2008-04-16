@@ -2362,7 +2362,7 @@ static svn_error_t *get_lock(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   SVN_ERR(must_have_access(conn, pool, b, svn_authz_read,
                            full_path, FALSE));
-  SLOG("get-lock %s", svn_path_uri_encode(path, pool));
+  SLOG("get-lock %s", svn_path_uri_encode(full_path, pool));
 
   SVN_CMD_ERR(svn_fs_get_lock(&l, b->fs, full_path, pool));
 
