@@ -2939,10 +2939,9 @@ def mergeinfo_update_elision(sbox):
     # Construct a properly escaped regex when dealing with
     # '\' riddled paths on Windows.
     update_line = update_line.replace("\\", "\\\\")
+  notify_line = svntest.main.merge_notify_line(3, 5, True, False)
   svntest.actions.run_and_verify_svn(None,
-                                     '|'.join(
-                                        [svntest.main.merge_notify_line(3, 5),
-                                         update_line]),
+                                     '|'.join([notify_line, update_line]),
                                      [], 'merge', '-r2:5',
                                      sbox.repo_url + '/A/B/E/alpha',
                                      short_alpha_COPY_path)
