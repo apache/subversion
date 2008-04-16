@@ -272,7 +272,6 @@ log_fs_warning(void *baton, svn_error_t *err)
   if (server->log_file == NULL)
     return;
 
-  svn_pool_clear(b->pool);
   timestr = svn_time_to_cstring(apr_time_now(), b->pool);
   remote_host = svn_ra_svn_conn_remote_host(conn);
   remote_host = (remote_host ? remote_host : "-");
@@ -2936,7 +2935,7 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
 
   warn_baton.server = &b;
   warn_baton.conn = conn;
-  warn_baton.pool = svn_pool_create(pool);
+  warn_baton.pool = pool;
   svn_fs_set_warning_func(b.fs, log_fs_warning, &warn_baton);
 
   SVN_ERR(svn_fs_get_uuid(b.fs, &uuid, pool));
