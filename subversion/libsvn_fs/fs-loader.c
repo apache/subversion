@@ -905,9 +905,25 @@ svn_error_t *
 svn_fs_file_checksum(svn_checksum_t *checksum,
                      svn_fs_root_t *root,
                      const char *path,
+                     svn_boolean_t force,
                      apr_pool_t *pool)
 {
-  return root->vtable->file_checksum(checksum, root, path, pool);
+  if (force)
+    {
+      /* TODO: We only need to do a content check if the checksum returned by
+         the fs is empty. */
+      svn_stream_t *contents, *checksum_contents;
+
+      SVN_ERR(svn_fs_file_contents(&contents, root, path, pool));
+      checksum_contents = svn_stream_checksummed2(contents, checksum, NULL,
+                                                  TRUE, pool);
+
+      /* This will force a read of any remaining data (which is all of it in
+         this case) and dump the checksum into checksum->digest. */
+      return svn_stream_close(checksum_contents);
+    }
+  else
+    return root->vtable->file_checksum(checksum, root, path, pool);
 }
 
 svn_error_t *
@@ -919,7 +935,7 @@ svn_fs_file_md5_checksum(unsigned char digest[],
   svn_checksum_t *md5sum;
   
   md5sum = svn_checksum_create(svn_checksum_md5, pool);
-  SVN_ERR(svn_fs_file_checksum(md5sum, root, path, pool));
+  SVN_ERR(svn_fs_file_checksum(md5sum, root, path, TRUE, pool));
   memcpy(digest, md5sum->digest, APR_MD5_DIGESTSIZE);
 
   return SVN_NO_ERROR;
