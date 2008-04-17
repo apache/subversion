@@ -268,16 +268,16 @@ svn_cmdline_auth_ssl_client_cert_pw_prompt
  */
 svn_error_t *
 svn_cmdline_setup_auth_baton2(svn_auth_baton_t **ab,
-                             svn_boolean_t non_interactive,
-                             const char *username,
-                             const char *password,
-                             const char *config_dir,
-                             svn_boolean_t no_auth_cache,
-                             svn_boolean_t store_plaintext_passwords,
-                             svn_config_t *cfg,
-                             svn_cancel_func_t cancel_func,
-                             void *cancel_baton,
-                             apr_pool_t *pool);
+                              svn_boolean_t non_interactive,
+                              const char *username,
+                              const char *password,
+                              const char *config_dir,
+                              svn_boolean_t no_auth_cache,
+                              svn_boolean_t store_plaintext_passwords,
+                              svn_config_t *cfg,
+                              svn_cancel_func_t cancel_func,
+                              void *cancel_baton,
+                              apr_pool_t *pool);
 
 /** 
  * Like svn_cmdline_setup_auth_baton2, but with store_plaintext_passwords

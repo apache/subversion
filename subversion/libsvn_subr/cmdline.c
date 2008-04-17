@@ -354,16 +354,16 @@ svn_cmdline_handle_exit_error(svn_error_t *err,
 
 svn_error_t *
 svn_cmdline_setup_auth_baton2(svn_auth_baton_t **ab,
-                             svn_boolean_t non_interactive,
-                             const char *auth_username,
-                             const char *auth_password,
-                             const char *config_dir,
-                             svn_boolean_t no_auth_cache,
-                             svn_boolean_t store_plaintext_passwords,
-                             svn_config_t *cfg,
-                             svn_cancel_func_t cancel_func,
-                             void *cancel_baton,
-                             apr_pool_t *pool)
+                              svn_boolean_t non_interactive,
+                              const char *auth_username,
+                              const char *auth_password,
+                              const char *config_dir,
+                              svn_boolean_t no_auth_cache,
+                              svn_boolean_t store_plaintext_passwords,
+                              svn_config_t *cfg,
+                              svn_cancel_func_t cancel_func,
+                              void *cancel_baton,
+                              apr_pool_t *pool)
 {
   svn_boolean_t store_password_val = TRUE;
   svn_boolean_t store_plaintext_password_val = FALSE;

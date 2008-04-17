@@ -263,7 +263,7 @@ simple_save_creds_helper(svn_boolean_t *saved,
   /* Don't store passwords in any form if the user has told
    * us not to do so. If we are allowed to store passwords,
    * default to only storing encrypted passwords, unless the user
-   * has explicitely allowed us to store plain-text passwords. */
+   * has explicitly allowed us to store plain-text passwords. */
   if (! dont_store_passwords
       && (strcmp(passtype, SVN_AUTH__WINCRYPT_PASSWORD_TYPE) == 0
           || strcmp(passtype, SVN_AUTH__KEYCHAIN_PASSWORD_TYPE) == 0
