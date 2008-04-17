@@ -3912,37 +3912,47 @@ do_file_merge(const char *url1,
   range.start = revision1;
   range.end = revision2;
   range.inheritable = TRUE;
-  if (honor_mergeinfo && !merge_b->record_only)
+  if (honor_mergeinfo)
     {
       const char *source_root_url;
       svn_mergeinfo_t implicit_mergeinfo;
 
-      /* Fetch mergeinfo (temporarily reparenting ra_session1 to
-         working copy target URL). */
-      SVN_ERR(svn_ra_reparent(merge_b->ra_session1, entry->url, pool));
-      SVN_ERR(get_full_mergeinfo(&target_mergeinfo, &implicit_mergeinfo, 
-                                 entry, &indirect, svn_mergeinfo_inherited,
-                                 merge_b->ra_session1, target_wcpath, 
-                                 MAX(revision1, revision2),
-                                 MIN(revision1, revision2),
-                                 adm_access, ctx, pool));
-
-      SVN_ERR(svn_ra_reparent(merge_b->ra_session1, url1, pool));
-
-      /* Calculate remaining merges. */
+      
       SVN_ERR(svn_ra_get_repos_root2(merge_b->ra_session1,
                                      &source_root_url, pool));
       SVN_ERR(svn_client__path_relative_to_root(&mergeinfo_path, primary_url,
                                                 source_root_url, TRUE, NULL,
                                                 NULL, pool));
-      SVN_ERR(calculate_remaining_ranges(&remaining_ranges, source_root_url,
-                                         url1, revision1, url2, revision2,
-                                         TRUE, target_mergeinfo, 
-                                         implicit_mergeinfo,
-                                         merge_b->ra_session1,
-                                         entry, ctx, pool));
+
+      /* Calculate remaining merges unless this is a record only merge.
+         In that case the remaining range is the whole range described
+         by REVISION1:REVISION2. */
+      if (!merge_b->record_only)
+        {
+          /* Fetch mergeinfo (temporarily reparenting ra_session1 to
+             working copy target URL). */
+          SVN_ERR(svn_ra_reparent(merge_b->ra_session1, entry->url, pool));
+          SVN_ERR(get_full_mergeinfo(&target_mergeinfo, &implicit_mergeinfo, 
+                                     entry, &indirect, svn_mergeinfo_inherited,
+                                     merge_b->ra_session1, target_wcpath, 
+                                     MAX(revision1, revision2),
+                                     MIN(revision1, revision2),
+                                     adm_access, ctx, pool));
+
+          SVN_ERR(svn_ra_reparent(merge_b->ra_session1, url1, pool));
+
+          SVN_ERR(calculate_remaining_ranges(&remaining_ranges,
+                                             source_root_url,
+                                             url1, revision1, url2, revision2,
+                                             TRUE, target_mergeinfo, 
+                                             implicit_mergeinfo,
+                                             merge_b->ra_session1,
+                                             entry, ctx, pool));
+        }
     }
-  else
+
+  /* The simple cases where our remaining range is REVISION1:REVISION2. */
+  if (!honor_mergeinfo || merge_b->record_only)
     {
       remaining_ranges = apr_array_make(pool, 1, sizeof(&range));
       APR_ARRAY_PUSH(remaining_ranges, svn_merge_range_t *) = &range;
