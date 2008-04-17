@@ -93,8 +93,8 @@ svn_checksum_match(svn_checksum_t *d1,
  * @since New in 1.6.
  */
 svn_error_t *
-svn_checksum_copy(svn_checksum_t *dest,
-                  svn_checksum_t *src);
+svn_checksum_dup(svn_checksum_t *dest,
+                 svn_checksum_t *src);
 
 
 /** Return the hex representation of @a checksum, allocating the string
@@ -115,6 +115,27 @@ svn_checksum_to_cstring_display(svn_checksum_t *checksum,
 const char *
 svn_checksum_to_cstring(svn_checksum_t *checksum,
                         apr_pool_t *pool);
+
+
+/**
+ * Return in @a *checksum the checksum of type @a kind for the bytes beginning
+ * at @a data, and going for @a len.  @a *checksum is allocated in @a pool.
+ */
+svn_error_t *
+svn_checksum(svn_checksum_t **checksum,
+             svn_checksum_kind_t kind,
+             const void *data,
+             apr_size_t len,
+             apr_pool_t *pool);
+
+
+/**
+ * Return in @a pool a newly allocated checksum populated with the checksum
+ * of type @a kind for the empty string of type.
+ */
+svn_checksum_t *
+svn_checksum_empty_checksum(svn_checksum_kind_t kind,
+                            apr_pool_t *pool);
 
 
 /**

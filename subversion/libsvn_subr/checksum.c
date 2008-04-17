@@ -56,6 +56,9 @@ svn_boolean_t
 svn_checksum_match(svn_checksum_t *d1,
                    svn_checksum_t *d2)
 {
+  if (d1 == NULL || d1 == NULL)
+    return TRUE;
+
   if (d1->kind != d2->kind)
     return FALSE;
 
@@ -104,14 +107,85 @@ svn_checksum_to_cstring(svn_checksum_t *checksum,
 }
 
 svn_error_t *
-svn_checksum_copy(svn_checksum_t *dest,
-                  svn_checksum_t *src)
+svn_checksum_dup(svn_checksum_t *dest,
+                 svn_checksum_t *src)
 {
+  apr_size_t size;
+
   dest->kind = src->kind;
-  memcpy(dest->digest, src->digest, MAX(APR_MD5_DIGESTSIZE,
-                                        APR_SHA1_DIGESTSIZE));
+
+  if (src->kind == svn_checksum_md5)
+    size = APR_MD5_DIGESTSIZE;
+  else if (src->kind == svn_checksum_sha1)
+    size = APR_SHA1_DIGESTSIZE;
+  else
+    return svn_error_create(SVN_ERR_BAD_CHECKSUM_KIND, NULL, NULL);
+
+  dest->digest = apr_palloc(dest->pool, size);
+  memcpy(dest->digest, src->digest, size);
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_checksum(svn_checksum_t **checksum,
+             svn_checksum_kind_t kind,
+             const void *data,
+             apr_size_t len,
+             apr_pool_t *pool)
+{
+  apr_sha1_ctx_t sha1_ctx;
+
+  if ( !(kind == svn_checksum_md5 || kind == svn_checksum_sha1) )
+    return svn_error_create(SVN_ERR_BAD_CHECKSUM_KIND, NULL, NULL);
+
+  *checksum = svn_checksum_create(kind, pool);
+
+  switch (kind)
+    {
+      case svn_checksum_md5:
+        apr_md5((*checksum)->digest, data, len);
+        break;
+
+      case svn_checksum_sha1:
+        apr_sha1_init(&sha1_ctx);
+        apr_sha1_update(&sha1_ctx, data, len);
+        apr_sha1_final((*checksum)->digest, &sha1_ctx);
+        break;
+
+      default:
+        /* We really shouldn't get here, but if we do... */
+        return svn_error_create(SVN_ERR_BAD_CHECKSUM_KIND, NULL, NULL);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_checksum_t *
+svn_checksum_empty_checksum(svn_checksum_kind_t kind,
+                            apr_pool_t *pool)
+{
+  svn_checksum_t *checksum = svn_checksum_create(kind, pool);
+
+  switch (kind)
+    {
+      case svn_checksum_md5:
+        memcpy(checksum->digest, svn_md5_empty_string_digest(),
+               APR_MD5_DIGESTSIZE);
+        break;
+
+      case svn_checksum_sha1:
+        memcpy(checksum->digest, svn_sha1_empty_string_digest(),
+               APR_SHA1_DIGESTSIZE);
+        break;
+
+      default:
+        /* We really shouldn't get here, but if we do... */
+        return NULL;
+    }
+
+  return checksum;
 }
 
 struct svn_checksum_ctx_t
