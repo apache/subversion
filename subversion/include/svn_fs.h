@@ -1492,15 +1492,15 @@ svn_fs_file_length(svn_filesize_t *length_p,
                    apr_pool_t *pool);
 
 
-/** Put the checksum of file @a path into @a checksum->checksum, which has
+/** Put the checksum of file @a path into @a checksum->digest, which has
  * been previously allocated with svn_checksum_create().  The type of the
  * checksum returned will be determined by @a checksum->kind.  Use @a pool
  * only for temporary allocations.
  *
  * If the filesystem does not have a prerecorded checksum for @a path,
- * and do not calculate a checksum dynamically, just put all 0's into
- * @a digest.  (By convention, the all-zero checksum is considered to
- * match any checksum.)
+ * and @a force is not TRUE, do not calculate a checksum dynamically, just
+ * put all 0's into @a digest.  (By convention, the all-zero checksum is
+ * considered to match any checksum.)
  *
  * Notes:
  *
@@ -1530,6 +1530,7 @@ svn_error_t *
 svn_fs_file_checksum(svn_checksum_t *checksum,
                      svn_fs_root_t *root,
                      const char *path,
+                     svn_boolean_t force,
                      apr_pool_t *pool);
 
 /**
