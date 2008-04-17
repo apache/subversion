@@ -69,13 +69,6 @@ svn_txdelta_window_t *
 svn_txdelta__make_window(const svn_txdelta__ops_baton_t *build_baton,
                          apr_pool_t *pool);
 
-/* Create vdelta window data. Allocate temporary data from POOL. */
-void svn_txdelta__vdelta(svn_txdelta__ops_baton_t *build_baton,
-                         const char *start,
-                         apr_size_t source_len,
-                         apr_size_t target_len,
-                         apr_pool_t *pool);
-
 
 /* Create xdelta window data. Allocate temporary data from POOL. */
 void svn_txdelta__xdelta(svn_txdelta__ops_baton_t *build_baton,
