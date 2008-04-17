@@ -3288,11 +3288,10 @@ txn_body_file_checksum(void *baton,
 
   SVN_ERR(get_dag(&file, args->root, args->path, trail, trail->pool));
 
-  if (args->checksum->kind == svn_checksum_md5)
+  if (args->checksum->kind == svn_checksum_md5
+      || args->checksum->kind == svn_checksum_sha1)
     return svn_fs_base__dag_file_checksum(args->checksum->digest, file,
                                           trail, trail->pool);
-  else if (args->checksum->kind == svn_checksum_sha1)
-    memset(args->checksum->digest, 0, APR_SHA1_DIGESTSIZE);
   else
     return svn_error_create(SVN_ERR_BAD_CHECKSUM_KIND, NULL, NULL);
 
@@ -3310,10 +3309,8 @@ base_file_checksum(svn_checksum_t *checksum,
   args.root = root;
   args.path = path;
   args.checksum = checksum;
-  SVN_ERR(svn_fs_base__retry_txn(root->fs, txn_body_file_checksum, &args,
-                                 pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_base__retry_txn(root->fs, txn_body_file_checksum, &args,
+                                pool);
 }
 
 
