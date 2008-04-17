@@ -3561,35 +3561,19 @@ get_file_digest(unsigned char digest[APR_MD5_DIGESTSIZE],
                 apr_pool_t *pool)
 {
   svn_stream_t *stream;
-  apr_size_t len;
-  const apr_size_t buf_size = 100000;
-  apr_md5_ctx_t context;
-
-  /* ### todo:  Pool usage in svndiff is currently really, really
-     crappy.  We need to keep this buffer fairly large so we don't run
-     out of memory doing undeltification of large files into tiny
-     buffers.  Issue #465.  */
-  char *buf = apr_palloc(pool, buf_size);
+  svn_checksum_t *checksum;
+  svn_stream_t *checksum_stream;
 
   /* Get a stream for the file contents. */
   SVN_ERR(svn_fs_file_contents(&stream, root, path, pool));
 
-  /* Initialize APR MD5 context. */
-  apr_md5_init(&context);
+  /* Get a checksummed stream for the contents. */
+  checksum = svn_checksum_create(svn_checksum_md5, pool);
+  checksum_stream = svn_stream_checksummed2(stream, checksum, NULL, TRUE, pool);
 
-  do
-    {
-      /* "please fill the buf with bytes" */
-      len = buf_size;
-      SVN_ERR(svn_stream_read(stream, buf, &len));
-
-      /* Update the MD5 calculation with the data we just read.  */
-      apr_md5_update(&context, buf, len);
-
-    } while (len == buf_size);  /* Continue until a short read. */
-
-  /* Finalize MD5 calculation. */
-  apr_md5_final(digest, &context);
+  /* Close the stream, forcing a complete read and copy the digest. */
+  SVN_ERR(svn_stream_close(checksum_stream));
+  memcpy(digest, checksum->digest, APR_MD5_DIGESTSIZE);
 
   return SVN_NO_ERROR;
 }
@@ -3774,7 +3758,12 @@ file_integrity_helper(apr_size_t filesize, apr_uint32_t *seed,
       if (memcmp(digest, digest_list[j], APR_MD5_DIGESTSIZE))
         return svn_error_createf
           (SVN_ERR_FS_GENERAL, NULL,
-           "MD5 checksum failure, revision %ld", j);
+           "verify-checksum: checksum mismatch, revision %ld:\n"
+           "   expected:  %s\n"
+           "     actual:  %s\n", j,
+        svn_md5_digest_to_cstring(digest_list[j], pool),
+        svn_md5_digest_to_cstring(digest, pool));
+
       svn_pool_clear(subpool);
     }
 
