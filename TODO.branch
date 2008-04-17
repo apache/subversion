@@ -1,12 +1,5 @@
 - Fix serve.c:update XXX so it distinguishes checkout-or-export from update.
 
-- tools/server-side/svn_dav_log_parse.py
-  - Rename svn_server_log_parse.py
-  - Teach about new log items dav-svn doesn't log
-  - Teach __main__ block how to parse svnserve log file as well
-
-- Will add diagnostic logging after merging back to trunk.
-
 DONE:
 
 - Verify that mod_dav_svn is still logging the same stuff (I may have
@@ -18,3 +11,10 @@ DONE:
   -- glasser
 
 - Document svn_log.h
+
+- tools/server-side/svn_dav_log_parse.py
+  - Rename svn_server_log_parse.py
+  - Teach about new log items dav-svn doesn't log
+  - Teach __main__ block how to parse svnserve log file as well
+
+- Will add diagnostic logging after merging back to trunk.
