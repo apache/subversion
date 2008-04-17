@@ -245,8 +245,6 @@ simple_save_creds_helper(svn_boolean_t *saved,
   svn_boolean_t non_interactive = apr_hash_get(parameters,
                                                SVN_AUTH_PARAM_NON_INTERACTIVE,
                                                APR_HASH_KEY_STRING) != NULL;
-  svn_boolean_t password_stored = FALSE;
-
   *saved = FALSE;
 
   if (! creds->may_save)
@@ -256,7 +254,7 @@ simple_save_creds_helper(svn_boolean_t *saved,
                             SVN_AUTH_PARAM_CONFIG_DIR,
                             APR_HASH_KEY_STRING);
 
-  /* Put the credentials in a hash and save it to disk */
+  /* Put the username into the credentials hash. */
   creds_hash = apr_hash_make(pool);
   apr_hash_set(creds_hash, SVN_AUTH__AUTHFILE_USERNAME_KEY,
                APR_HASH_KEY_STRING,
@@ -271,26 +269,24 @@ simple_save_creds_helper(svn_boolean_t *saved,
           || strcmp(passtype, SVN_AUTH__KEYCHAIN_PASSWORD_TYPE) == 0
           || store_plaintext_passwords))
     {
+      svn_boolean_t password_stored;
       password_stored = password_set(creds_hash, realmstring, creds->username,
                                      creds->password, non_interactive, pool);
-      if (password_stored)
+      if (password_stored && passtype)
         {
           /* Store the password type with the auth data, so that we
              know which provider owns the password. */
-          if (passtype)
-            {
-              apr_hash_set(creds_hash, SVN_AUTH__AUTHFILE_PASSTYPE_KEY,
-                           APR_HASH_KEY_STRING,
-                           svn_string_create(passtype, pool));
-            }
-
-          /* Store the password to disk. */
-          err = svn_config_write_auth_data(creds_hash, SVN_AUTH_CRED_SIMPLE,
-                                           realmstring, config_dir, pool);
-          svn_error_clear(err);
-          *saved = ! err;
+          apr_hash_set(creds_hash, SVN_AUTH__AUTHFILE_PASSTYPE_KEY,
+                       APR_HASH_KEY_STRING,
+                       svn_string_create(passtype, pool));
         }
     }
+
+  /* Save credentials to disk. */
+  err = svn_config_write_auth_data(creds_hash, SVN_AUTH_CRED_SIMPLE,
+                                   realmstring, config_dir, pool);
+  svn_error_clear(err);
+  *saved = ! err;
 
   return SVN_NO_ERROR;
 }
