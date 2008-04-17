@@ -900,11 +900,18 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### Section for authentication and authorization customizations."   NL
         "[auth]"                                                             NL
         "### Set store-passwords to 'no' to avoid storing passwords in the"  NL
-        "### auth/ area of your config directory.  It defaults to 'yes'."    NL
+        "### auth/ area of your config directory.  It defaults to 'yes',"    NL
+        "### but note that Subversion will never save your password in"      NL
+        "### plain-text unless you tell it to (see below)."                  NL
         "### Note that this option only prevents saving of *new* passwords;" NL
         "### it doesn't invalidate existing passwords.  (To do that, remove" NL
         "### the cache files by hand as described in the Subversion book.)"  NL
         "# store-passwords = no"                                             NL
+        "### Set store-plaintext-passwords to 'yes' to allow storing "       NL
+        "### plain-text passwords in the auth/ area of your config "         NL
+        "### directory. It defaults to 'no'. If store-passwords (see above)" NL
+        "### is set to 'no', this option has no effect."                     NL
+        "# store-plaintext-passwords = yes"                                  NL
         "### Set store-auth-creds to 'no' to avoid storing any subversion"   NL
         "### credentials in the auth/ area of your config directory."        NL
         "### It defaults to 'yes'.  Note that this option only prevents"     NL
