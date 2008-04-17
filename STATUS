@@ -22,15 +22,12 @@ Candidate changes:
    Votes:
      +1: cmpilato, pburba
 
- * r30644
+ * r30644, r30668
    Make --record-only merges record and elide mergeinfo on subtrees.
    Notes:
      Record only merges without this functionality are a lot less useful.
    Votes:
-     -1: pburba - This is causing corrupt mergeinfo, see failures of
-         merge_tests.py 17 and 22 on the debian buildbot.  Would fail on
-         other platforms too if the test bothered to check the resulting
-         mergeinfo.  I'm looking into a fix for this.
+     +1: pburba
 
 Status of 1.5.1:
 ================
