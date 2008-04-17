@@ -363,7 +363,7 @@ _svn()
 	        # the list is different for 'resolve'
                 if [[ $cmd = 'resolve' ]] ; then
 		    # from svn help resolve
-		    values='mine working mine-full theirs-full'
+		    values='base working mine-full theirs-full'
 		else # checkout merge switch update
 		    # not implemented yet: mine-conflict theirs-conflict
 		    values='postpone base mine-full theirs-full edit launch'
@@ -516,6 +516,7 @@ _svn()
 	if [[ $cmd = 'resolve' && ! $acceptOpt ]]
 	then
 	    COMPREPLY=( $( compgen -W '--accept' -- $cur ) )
+	    # force option now! others will be available on later completions
 	    return 0
 	fi
 
