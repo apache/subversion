@@ -256,12 +256,34 @@ svn_cmdline_auth_ssl_client_cert_pw_prompt
 /** Initialize auth baton @a ab with the standard set of authentication
  * providers used by the command line client.  @a non_interactive,
  * @a username, @a password, @a config_dir, and @a no_auth_cache are the
- * values of the command line options of the same names.  @a cfg is the
- * @c SVN_CONFIG_CATEGORY_CONFIG configuration, and @a cancel_func and
- * @a cancel_baton control the cancellation of the prompting providers
- * that are initialized.  @a pool is used for all allocations.
+ * values of the command line options of the same names.
+ * @a store_plaintext_passwords indicates whether storing passwords to
+ * disk in plaintext is allowed.
+ * @a cfg is the @c SVN_CONFIG_CATEGORY_CONFIG configuration,
+ * and @a cancel_func and @a cancel_baton control the cancellation of
+ * the prompting providers that are initialized.
+ * @a pool is used for all allocations.
  *
- * @since New in 1.4.
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_cmdline_setup_auth_baton2(svn_auth_baton_t **ab,
+                             svn_boolean_t non_interactive,
+                             const char *username,
+                             const char *password,
+                             const char *config_dir,
+                             svn_boolean_t no_auth_cache,
+                             svn_boolean_t store_plaintext_passwords,
+                             svn_config_t *cfg,
+                             svn_cancel_func_t cancel_func,
+                             void *cancel_baton,
+                             apr_pool_t *pool);
+
+/** 
+ * Like svn_cmdline_setup_auth_baton2, but with store_plaintext_passwords
+ * set to TRUE.
+ *
+ * @deprecated Provided for backward compatibility with the 1.5 API.
  */
 svn_error_t *
 svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,

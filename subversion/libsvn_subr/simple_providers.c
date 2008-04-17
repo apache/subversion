@@ -238,10 +238,14 @@ simple_save_creds_helper(svn_boolean_t *saved,
     apr_hash_get(parameters,
                  SVN_AUTH_PARAM_DONT_STORE_PASSWORDS,
                  APR_HASH_KEY_STRING);
+  const char *store_plaintext_passwords =
+    apr_hash_get(parameters,
+                 SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS,
+                 APR_HASH_KEY_STRING);
   svn_boolean_t non_interactive = apr_hash_get(parameters,
                                                SVN_AUTH_PARAM_NON_INTERACTIVE,
                                                APR_HASH_KEY_STRING) != NULL;
-  svn_boolean_t password_stored = TRUE;
+  svn_boolean_t password_stored = FALSE;
 
   *saved = FALSE;
 
@@ -257,7 +261,15 @@ simple_save_creds_helper(svn_boolean_t *saved,
   apr_hash_set(creds_hash, SVN_AUTH__AUTHFILE_USERNAME_KEY,
                APR_HASH_KEY_STRING,
                svn_string_create(creds->username, pool));
-  if (! dont_store_passwords)
+
+  /* Don't store passwords in any form if the user has told
+   * us not to do so. If we are allowed to store passwords,
+   * default to only storing encrypted passwords, unless the user
+   * has explicitely allowed us to store plain-text passwords. */
+  if (! dont_store_passwords
+      && (strcmp(passtype, SVN_AUTH__WINCRYPT_PASSWORD_TYPE) == 0
+          || strcmp(passtype, SVN_AUTH__KEYCHAIN_PASSWORD_TYPE) == 0
+          || store_plaintext_passwords))
     {
       password_stored = password_set(creds_hash, realmstring, creds->username,
                                      creds->password, non_interactive, pool);
@@ -271,17 +283,13 @@ simple_save_creds_helper(svn_boolean_t *saved,
                            APR_HASH_KEY_STRING,
                            svn_string_create(passtype, pool));
             }
-        }
-      else
-        *saved = FALSE;
-    }
 
-  if (password_stored)
-    {
-      err = svn_config_write_auth_data(creds_hash, SVN_AUTH_CRED_SIMPLE,
-                                       realmstring, config_dir, pool);
-      svn_error_clear(err);
-      *saved = ! err;
+          /* Store the password to disk. */
+          err = svn_config_write_auth_data(creds_hash, SVN_AUTH_CRED_SIMPLE,
+                                           realmstring, config_dir, pool);
+          svn_error_clear(err);
+          *saved = ! err;
+        }
     }
 
   return SVN_NO_ERROR;
