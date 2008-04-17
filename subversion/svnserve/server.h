@@ -124,6 +124,12 @@ svn_error_t *cyrus_auth_request(svn_ra_svn_conn_t *conn,
                                 enum access_type required,
                                 svn_boolean_t needs_username);
 
+/* Escape SOURCE into DEST where SOURCE is null-terminated and DEST is
+   size BUFLEN DEST will be null-terminated.  Returns number of bytes
+   written, including terminating null byte. */
+apr_size_t escape_errorlog_item(char *dest, const char *source,
+                                apr_size_t buflen);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
