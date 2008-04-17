@@ -376,8 +376,9 @@ svn_txdelta__xdelta(svn_txdelta__ops_baton_t *build_baton,
                     apr_size_t target_len,
                     apr_pool_t *pool)
 {
-  /*  We should never be asked to compute something when the source_len is 0,
-      because it should have asked vdelta or some other compressor.  */
+  /*  We should never be asked to compute something when the source_len is 0;
+      we just use a single insert op there (and rely on zlib for
+      compression). */
   assert(source_len != 0);
   compute_delta(build_baton, data, source_len,
                 data + source_len, target_len,
