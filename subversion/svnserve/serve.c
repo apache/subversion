@@ -272,6 +272,7 @@ log_fs_warning(void *baton, svn_error_t *err)
   if (server->log_file == NULL)
     return;
 
+  svn_pool_clear(b->pool);
   timestr = svn_time_to_cstring(apr_time_now(), b->pool);
   remote_host = svn_ra_svn_conn_remote_host(conn);
   remote_host = (remote_host ? remote_host : "-");
@@ -2373,7 +2374,7 @@ static svn_error_t *lock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   svn_pool_destroy(subpool);
 
-  SLOG("%s", svn_log__lock(log_paths, steal_lock, subpool));
+  SLOG("%s", svn_log__lock(log_paths, steal_lock, pool));
 
   /* NOTE: err might contain a fatal locking error from the loop above. */
   write_err = svn_ra_svn_write_word(conn, pool, "done");
@@ -2484,7 +2485,7 @@ static svn_error_t *unlock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   svn_pool_destroy(subpool);
 
-  SLOG("%s", svn_log__unlock(log_paths, break_lock, subpool));
+  SLOG("%s", svn_log__unlock(log_paths, break_lock, pool));
 
   /* NOTE: err might contain a fatal unlocking error from the loop above. */
   write_err = svn_ra_svn_write_word(conn, pool, "done");
@@ -2935,7 +2936,7 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
 
   warn_baton.server = &b;
   warn_baton.conn = conn;
-  warn_baton.pool = pool;
+  warn_baton.pool = svn_pool_create(pool);
   svn_fs_set_warning_func(b.fs, log_fs_warning, &warn_baton);
 
   SVN_ERR(svn_fs_get_uuid(b.fs, &uuid, pool));
