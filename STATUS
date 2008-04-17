@@ -27,7 +27,10 @@ Candidate changes:
    Notes:
      Record only merges without this functionality are a lot less useful.
    Votes:
-     +1: pburba
+     -1: pburba - This is causing corrupt mergeinfo, see failures of
+         merge_tests.py 17 and 22 on the debian buildbot.  Would fail on
+         other platforms too if the test bothered to check the resulting
+         mergeinfo.  I'm looking into a fix for this.
 
 Status of 1.5.1:
 ================
