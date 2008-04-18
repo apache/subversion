@@ -62,22 +62,20 @@ def verbose_printlines(lines):
 #   - interactive conflict resolution
 
 # A "tree conflict on file P/F" means:
-#   - the operation reports action code "C" on path F  ### and/or on path P?
-#   - "svn status" reports status code "C" on path F  ### and/or on path P?
-#   - "svn info F" reports details of the conflict on F  ### and/or "svn info P" does?
+#   - the operation reports action code "C" on path P 
+#   - "svn status" reports status code "C" on path P
+#   - "svn info P" reports details of the conflict on F
 #   - "svn commit" fails if the user-requested targets include path F
 #   - "svn commit" fails if the user-requested targets include path P
 #   - "svn merge" fails if the merge tries to modify anything under P  ### except...?
 
 # A "tree conflict on dir P/D" means:
-#   - the operation reports action code "C" on path D  ### and/or on path P?
-#   - "svn status" reports status code "C" on path D  ### and/or on path P?
-#   - "svn info D" reports details of the conflict on D  ### and/or "svn info P" does?
+#   - the operation reports action code "C" on path P
+#   - "svn status" reports status code "C" on path P
+#   - "svn info P" reports details of the conflict on D
 #   - "svn commit" fails if the user-requested targets include path D
 #   - "svn commit" fails if the user-requested targets include path P
 #   - "svn merge" fails if the merge tries to modify anything under P  ### except...?
-# A "tree conflict on dir D" where D has no WC parent means:
-#   - (not yet defined)
 
 #----------------------------------------------------------------------
 
