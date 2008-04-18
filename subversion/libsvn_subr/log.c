@@ -143,19 +143,23 @@ svn_log__get_mergeinfo(const apr_array_header_t *paths,
 }
 
 const char *
+svn_log__checkout(const char *path, svn_revnum_t rev, svn_depth_t depth,
+                  apr_pool_t *pool)
+{
+  return apr_psprintf(pool, "checkout-or-export %s r%ld%s",
+                      svn_path_uri_encode(path, pool), rev,
+                      log_depth(depth, pool));
+}
+
+const char *
 svn_log__update(const char *path, svn_revnum_t rev, svn_depth_t depth,
                 svn_boolean_t send_copyfrom_args,
-                int entry_count, svn_boolean_t entry_is_empty,
                 apr_pool_t *pool)
 {
-  svn_boolean_t is_checkout = entry_count == 1 && entry_is_empty;
-  return apr_psprintf(pool, "%s %s r%ld%s%s",
-                      (is_checkout
-                       ? "checkout-or-export"
-                       : "update"),
+  return apr_psprintf(pool, "update %s r%ld%s%s",
                       svn_path_uri_encode(path, pool), rev,
                       log_depth(depth, pool),
-                      (!is_checkout && send_copyfrom_args
+                      (send_copyfrom_args
                        ? " send-copyfrom-args"
                        : ""));
 }
