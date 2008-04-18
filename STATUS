@@ -20,7 +20,7 @@ Candidate changes:
  * r30574
    Use `neon-config --libs` when `neon-config --la-file` isn't available.
    Votes:
-     +1: arfrever, cmpilato
+     +1: arfrever, cmpilato, kfogel
 
  * r30644, r30668
    Make --record-only merges record and elide mergeinfo on subtrees.
