@@ -137,7 +137,7 @@ memcache_get(void **value_p,
   mc_key = build_key(cache, key, subpool);
 
   apr_err = apr_memcache_getp(cache->memcache,
-                              subpool,
+                              (cache->deserialize_func ? subpool : pool),
                               mc_key,
                               &data,
                               &data_len,
@@ -145,6 +145,7 @@ memcache_get(void **value_p,
   if (apr_err == APR_NOTFOUND)
     {
       *found = FALSE;
+      svn_pool_destroy(subpool);
       return SVN_NO_ERROR;
     }
   else if (apr_err != APR_SUCCESS || !data)
@@ -152,7 +153,17 @@ memcache_get(void **value_p,
                               _("Unknown memcached error while reading"));
 
   /* We found it! */
-  SVN_ERR((cache->deserialize_func)(value_p, data, data_len, pool));
+  if (cache->deserialize_func)
+    {
+      SVN_ERR((cache->deserialize_func)(value_p, data, data_len, pool));
+    }
+  else
+    {
+      svn_string_t *value = apr_pcalloc(pool, sizeof(*value));
+      value->data = data;
+      value->len = data_len;
+      *value_p = value;
+    }
   *found = TRUE;
 
   svn_pool_destroy(subpool);
@@ -173,7 +184,16 @@ memcache_set(void *cache_void,
   apr_size_t data_len;
   apr_status_t apr_err;
 
-  SVN_ERR((cache->serialize_func)(&data, &data_len, value, subpool));
+  if (cache->serialize_func)
+    {
+      SVN_ERR((cache->serialize_func)(&data, &data_len, value, subpool));
+    }
+  else
+    {
+      svn_string_t *value_str = value;
+      data = value_str->data;
+      data_len = value_str->len;
+    }
 
   apr_err = apr_memcache_set(cache->memcache, mc_key, data, data_len, 0, 0);
 
