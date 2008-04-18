@@ -145,6 +145,10 @@ svn_cache_create_inprocess(svn_cache_t **cache_p,
  * @a prefix should be specified to differentiate this cache from
  * other caches.  @a *cache_p will be allocated in @a pool.
  *
+ * If @a deserialize_func is NULL, then the data is returned as an
+ * svn_string_t; if @a serialize_func is NULL, then the data is
+ * assumed to be an svn_string_t.
+ *
  * These caches are always thread safe.
  *
  * These caches do not support svn_cache_iter.
