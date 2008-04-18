@@ -1878,7 +1878,7 @@ def depth_fold_expand_clean_trees(sbox):
     'A'              : Item(status='  ', wc_rev=1),
     'A/mu'           : Item(status='  ', wc_rev=1),
     })
-  expected_status = svntest.wc.State(wc_dir, {
+  expected_disk = svntest.wc.State(wc_dir, {
     'A'           : Item(contents=None),
     'A/mu'        : Item(contents="This is the file 'mu'.\n")
     })
