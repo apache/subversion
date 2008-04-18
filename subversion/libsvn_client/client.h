@@ -668,7 +668,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
 svn_error_t *
 svn_client__get_diff_editor(const char *target,
                             svn_wc_adm_access_t *adm_access,
-                            const svn_wc_diff_callbacks2_t *diff_cmd,
+                            const svn_wc_diff_callbacks3_t *diff_cmd,
                             void *diff_cmd_baton,
                             svn_depth_t depth,
                             svn_boolean_t dry_run,
