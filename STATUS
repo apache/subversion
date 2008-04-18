@@ -28,7 +28,7 @@ Candidate changes:
      Record only merges without this functionality are a lot less useful.
      30644 will conflict if the r30633 group is not applied first.
    Votes:
-     +1: pburba
+     +1: pburba, kfogel
 
 Status of 1.5.1:
 ================
