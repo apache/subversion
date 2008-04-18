@@ -141,9 +141,15 @@ public interface NotifyAction
 
     /**
      * @since 1.5
+     * A merge operation from a foreign repository has begun.
+     */
+   public static final int foreign_merge_begin = 29;
+
+    /**
+     * @since 1.5
      * Got a replaced in an update.
      */
-    public static final int update_replaced = 29;
+    public static final int update_replaced = 30;
 
     /**
      * textual representation of the action types
@@ -179,6 +185,7 @@ public interface NotifyAction
         "changelist set",
         "changelist cleared",
         "merge begin",
+        "foreign merge begin",
         "replaced"
     };
 }
