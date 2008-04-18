@@ -50,7 +50,7 @@
 
 /* ### This file maps URL schemes to particular RA libraries.
    ### Currently, the only pair of RA libraries which support the same
-   ### protocols are neon and serf.  svn_ra_open2 makes the assumption
+   ### protocols are neon and serf.  svn_ra_open3 makes the assumption
    ### that this is the case; that their 'schemes' fields are both
    ### dav_schemes; and that "neon" is listed first.
 
@@ -378,8 +378,9 @@ svn_ra_create_callbacks(svn_ra_callbacks2_t **callbacks,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *svn_ra_open2(svn_ra_session_t **session_p,
+svn_error_t *svn_ra_open3(svn_ra_session_t **session_p,
                           const char *repos_URL,
+                          const char *uuid,
                           const svn_ra_callbacks2_t *callbacks,
                           void *callback_baton,
                           apr_hash_t *config,
@@ -468,8 +469,35 @@ svn_error_t *svn_ra_open2(svn_ra_session_t **session_p,
   SVN_ERR(vtable->open_session(session, repos_URL, callbacks, callback_baton,
                                config, pool));
 
+  /* Check the UUID. */
+  if (uuid)
+    {
+      const char *repository_uuid;
+
+      SVN_ERR(vtable->get_uuid(session, &repository_uuid, pool));
+
+      if (strcmp(uuid, repository_uuid) != 0)
+        {
+          return svn_error_createf(SVN_ERR_RA_UUID_MISMATCH, NULL,
+                                   _("Repository UUID '%s' doesn't match "
+                                     "expected UUID '%s'"),
+                                   repository_uuid, uuid);
+        }
+    }
+
   *session_p = session;
   return SVN_NO_ERROR;
+}
+
+svn_error_t *svn_ra_open2(svn_ra_session_t **session_p,
+                          const char *repos_URL,
+                          const svn_ra_callbacks2_t *callbacks,
+                          void *callback_baton,
+                          apr_hash_t *config,
+                          apr_pool_t *pool)
+{
+  return svn_ra_open3(session_p, repos_URL, NULL,
+                      callbacks, callback_baton, config, pool);
 }
 
 svn_error_t *svn_ra_open(svn_ra_session_t **session_p,
