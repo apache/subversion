@@ -231,6 +231,10 @@ jint EnumMapper::mapNotifyAction(svn_wc_notify_action_t action)
       /* A merge operation has begun. */
       return org_tigris_subversion_javahl_NotifyAction_merge_begin;
 
+    case svn_wc_notify_foreign_merge_begin:
+      /* A merge operation from a foreign repository has begun. */
+      return org_tigris_subversion_javahl_NotifyAction_foreign_merge_begin;
+
     default:
       return -1;
     }
