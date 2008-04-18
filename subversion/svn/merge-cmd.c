@@ -281,7 +281,7 @@ svn_cl__merge(apr_getopt_t *os,
           ranges_to_merge = apr_array_make(pool, 1, sizeof(range));
           range->start.kind = svn_opt_revision_number;
           range->start.value.number = 1;
-          range->end.kind = svn_opt_revision_head;
+          range->end = peg_revision1;
           APR_ARRAY_PUSH(ranges_to_merge, svn_opt_revision_range_t *) = range;
         }
 

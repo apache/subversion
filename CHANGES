@@ -42,6 +42,7 @@ http://svn.collab.net/repos/svn/tags/1.5.0
     * 'svn merge FILE' now honors '--ignore-ancestry' (issue #2853, r25891)
     * 'svn merge' handles multiple notifications for single items (issue #2828)
     * 'svn merge' handles skipped path better (issue #2829)
+    * 'svn merge' handles merges from foreign repositories more completely
     * 'update', 'checkout', 'switch' now handle obstructions gracefully (r22257)
     * 'svn update' now takes '--force' (issue #2392)
     * 'svn update' now sometimes copies or moves local files, for efficiency

@@ -88,6 +88,7 @@ class SVNClient :public SVNBase
   void properties(const char *path, Revision &revision,
                   Revision &pegRevision, svn_depth_t depth,
                   StringArray &changelists, ProplistCallback *callback);
+  jobject getMergeinfo(const char *target, Revision &pegRevision);
   void getMergeinfoLog(int type, const char *pathOrURL,
                        Revision &pegRevision, const char *mergeSourceURL,
                        Revision &srcPegREvision, bool discoverChangedPaths,
@@ -226,6 +227,8 @@ class SVNClient :public SVNBase
   Path m_lastPath;
   bool m_cancelOperation;
   CommitMessage *m_commitMessage;
+
+  jobjectArray makeJRevisionRangeArray(apr_array_header_t *ranges);
 
   /**
    * Implements the svn_client_get_commit_log3_t API.
