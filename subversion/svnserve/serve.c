@@ -68,9 +68,11 @@ typedef struct {
   const char *repos_url;  /* Decoded repository URL. */
   void *report_baton;
   svn_error_t *err;
-  /* so update() can distinguish checkout from update */
+  /* so update() can distinguish checkout from update in logging */
   int entry_counter;
   svn_boolean_t only_empty_entries;
+  /* for diff() logging */
+  svn_revnum_t *from_rev;
 } report_driver_baton_t;
 
 typedef struct {
@@ -626,6 +628,8 @@ static svn_error_t *set_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   if (depth_word)
     depth = svn_depth_from_word(depth_word);
   path = svn_path_canonicalize(path, pool);
+  if (b->from_rev && strcmp(path, "") == 0)
+    *b->from_rev = rev;
   if (!b->err)
     b->err = svn_repos_set_path3(b->report_baton, path, rev, depth,
                                  start_empty, lock_token, pool);
@@ -714,8 +718,12 @@ static const svn_ra_svn_cmd_entry_t report_commands[] = {
  * If only_empty_entry is not NULL and the report contains only one
  * item, and that item is empty, set *only_empty_entry to TRUE, else
  * set it to FALSE.
+ *
+ * If from_rev is not NULL, set *from_rev to the revision number from
+ * the set-path on "".
  */
 static svn_error_t *accept_report(svn_boolean_t *only_empty_entry,
+                                  svn_revnum_t *from_rev,
                                   svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                   server_baton_t *b, svn_revnum_t rev,
                                   const char *target, const char *tgt_path,
@@ -746,6 +754,7 @@ static svn_error_t *accept_report(svn_boolean_t *only_empty_entry,
   rb.err = NULL;
   rb.entry_counter = 0;
   rb.only_empty_entries = TRUE;
+  rb.from_rev = from_rev;
   err = svn_ra_svn_handle_commands(conn, pool, report_commands, &rb);
   if (err)
     {
@@ -1469,7 +1478,7 @@ static svn_error_t *update(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
 
-  SVN_ERR(accept_report(&is_checkout,
+  SVN_ERR(accept_report(&is_checkout, NULL,
                         conn, pool, b, rev, target, NULL, TRUE,
                         depth, send_copyfrom_args, FALSE));
   if (is_checkout)
@@ -1517,7 +1526,8 @@ static svn_error_t *switch_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     SLOG("%s", svn_log__switch(full_path, switch_path, rev, depth, pool));
   }
 
-  return accept_report(NULL, conn, pool, b, rev, target, switch_path, TRUE,
+  return accept_report(NULL, NULL,
+                       conn, pool, b, rev, target, switch_path, TRUE,
                        depth,
                        FALSE /* TODO(sussman): no copyfrom args for now */,
                        TRUE);
@@ -1553,7 +1563,7 @@ static svn_error_t *status(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     SLOG("%s", svn_log__status(full_path, rev, depth, pool));
   }
 
-  return accept_report(NULL, conn, pool, b, rev, target, NULL, FALSE,
+  return accept_report(NULL, NULL, conn, pool, b, rev, target, NULL, FALSE,
                        depth, FALSE, FALSE);
 }
 
@@ -1600,16 +1610,17 @@ static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_CMD_ERR(get_fs_path(svn_path_uri_decode(b->repos_url, pool),
                           svn_path_uri_decode(versus_url, pool),
                           &versus_path));
-  /* TODO(svnserve-log): Dav gets from_rev from the set_path on "";
-   * need to do that here, too. */
+
   {
     const char *full_path = svn_path_join(b->fs_path->data, target, pool);
-    SLOG("%s", svn_log__diff(full_path, rev, versus_path, rev, depth,
-                       ignore_ancestry, pool));
+    svn_revnum_t from_rev;
+    SVN_ERR(accept_report(NULL, &from_rev,
+                          conn, pool, b, rev, target, versus_path,
+                          text_deltas, depth, FALSE, ignore_ancestry));
+    SLOG("%s", svn_log__diff(full_path, from_rev, versus_path, rev, depth,
+                             ignore_ancestry, pool));
   }
-
-  return accept_report(NULL, conn, pool, b, rev, target, versus_path,
-                       text_deltas, depth, FALSE, ignore_ancestry);
+  return SVN_NO_ERROR;
 }
 
 /* Regardless of whether a client's capabilities indicate an
