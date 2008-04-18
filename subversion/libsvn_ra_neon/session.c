@@ -823,9 +823,18 @@ svn_ra_neon__has_capability(svn_ra_session_t *session,
                             apr_pool_t *pool)
 {
   svn_ra_neon__session_t *ras = session->priv;
-  const char *cap_result = apr_hash_get(ras->capabilities,
-                                        capability,
-                                        APR_HASH_KEY_STRING);
+  const char *cap_result;
+
+  /* This capability doesn't rely on anything server side. */
+  if (strcmp(capability, SVN_RA_CAPABILITY_COMMIT_REVPROPS) == 0)
+    {
+      *has = TRUE;
+      return SVN_NO_ERROR;
+    }
+
+ cap_result = apr_hash_get(ras->capabilities,
+                           capability,
+                           APR_HASH_KEY_STRING);
 
   /* If any capability is unknown, they're all unknown, so ask. */
   if (cap_result == NULL)
@@ -1134,6 +1143,8 @@ svn_ra_neon__open(svn_ra_session_t *session,
   ras->progress_baton = callbacks->progress_baton;
   ras->progress_func = callbacks->progress_func;
   ras->capabilities = apr_hash_make(ras->pool);
+  ras->vcc = NULL;
+  ras->uuid = NULL;
   /* save config and server group in the auth parameter hash */
   svn_auth_set_parameter(ras->callbacks->auth_baton,
                          SVN_AUTH_PARAM_CONFIG, cfg);
@@ -1314,31 +1325,24 @@ static svn_error_t *svn_ra_neon__do_get_uuid(svn_ra_session_t *session,
     {
       svn_ra_neon__resource_t *rsrc;
       const char *lopped_path;
-      const svn_string_t *uuid_propval;
 
       SVN_ERR(svn_ra_neon__search_for_starting_props(&rsrc, &lopped_path,
                                                      ras, ras->url->data,
                                                      pool));
       SVN_ERR(svn_ra_neon__maybe_store_auth_info(ras, pool));
 
-      uuid_propval = apr_hash_get(rsrc->propset,
-                                  SVN_RA_NEON__PROP_REPOSITORY_UUID,
-                                  APR_HASH_KEY_STRING);
-      if (uuid_propval == NULL)
-        /* ### better error reporting... */
-        return svn_error_create(APR_EGENERAL, NULL,
-                                _("The UUID property was not found on the "
-                                  "resource or any of its parents"));
-
-      if (uuid_propval && (uuid_propval->len > 0))
-        ras->uuid = apr_pstrdup(ras->pool, uuid_propval->data); /* cache */
-      else
-        return svn_error_create
-          (SVN_ERR_RA_NO_REPOS_UUID, NULL,
-           _("Please upgrade the server to 0.19 or later"));
+      if (! ras->uuid)
+        {
+          /* ### better error reporting... */
+          return svn_error_create(APR_EGENERAL, NULL,
+                                  _("The UUID property was not found on the "
+                                    "resource or any of its parents"));
+        }
     }
 
+  /* search_for_starting_props() filled it. */
   *uuid = ras->uuid;
+
   return SVN_NO_ERROR;
 }
 

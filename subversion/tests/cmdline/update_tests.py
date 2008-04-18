@@ -29,7 +29,8 @@ SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
-from svntest.main import SVN_PROP_MERGEINFO, server_sends_copyfrom_on_update
+from svntest.main import SVN_PROP_MERGEINFO, server_sends_copyfrom_on_update, \
+  server_has_mergeinfo
 
 ######################################################################
 # Tests
@@ -2938,10 +2939,9 @@ def mergeinfo_update_elision(sbox):
     # Construct a properly escaped regex when dealing with
     # '\' riddled paths on Windows.
     update_line = update_line.replace("\\", "\\\\")
+  notify_line = svntest.main.merge_notify_line(3, 5, True, False)
   svntest.actions.run_and_verify_svn(None,
-                                     '|'.join(
-                                        [svntest.main.merge_notify_line(3, 5),
-                                         update_line]),
+                                     '|'.join([notify_line, update_line]),
                                      [], 'merge', '-r2:5',
                                      sbox.repo_url + '/A/B/E/alpha',
                                      short_alpha_COPY_path)
@@ -3859,7 +3859,8 @@ test_list = [ None,
               update_wc_with_replaced_file,
               update_with_obstructing_additions,
               update_conflicted,
-              mergeinfo_update_elision,
+              SkipUnless(mergeinfo_update_elision,
+                         server_has_mergeinfo),
               SkipUnless(update_handles_copyfrom,
                          server_sends_copyfrom_on_update),
               copyfrom_degrades_gracefully,

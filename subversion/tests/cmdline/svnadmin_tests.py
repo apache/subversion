@@ -446,6 +446,16 @@ def verify_windows_paths_in_repos(sbox):
 
 #----------------------------------------------------------------------
 
+# Returns the filename of the rev or revprop file (according to KIND)
+# numbered REV in REPO_DIR, which must be in the first shard if we're
+# using a sharded repository.
+def fsfs_file(repo_dir, kind, rev):
+  if svntest.main.server_minor_version >= 5:
+    return os.path.join(repo_dir, 'db', kind, '0', rev)
+  else:
+    return os.path.join(repo_dir, 'db', kind, rev)
+
+
 def verify_incremental_fsfs(sbox):
   """svnadmin verify detects corruption dump can't"""
 
@@ -462,7 +472,7 @@ def verify_incremental_fsfs(sbox):
   # "dir 7-1.0.r1/1569" (increment offset) and updating the checksum for
   # this directory listing to "c9b5a2d26473a4e28088673dda9df804" so that
   # the listing itself is valid.
-  r2 = sbox.repo_dir + "/db/revs/0/2"
+  r2 = fsfs_file(sbox.repo_dir, 'revs', '2')
   fp = open(r2, 'wb')
   fp.write("""id: 0-2.0.r2/0
 type: dir
@@ -790,10 +800,12 @@ def fsfs_recover_handle_missing_revs_or_revprops_file(sbox):
   svntest.main.file_append(os.path.join(sbox.wc_dir, 'iota'), 'newest line\n')
   svntest.main.run_svn(None, 'ci', sbox.wc_dir, '--quiet', '-m', 'log msg')
 
+  rev_3 = fsfs_file(sbox.repo_dir, 'revs', '3')
+  rev_was_3 = fsfs_file(sbox.repo_dir, 'revs', 'was_3')
+
   # Move aside the revs file for r3.
-  os.rename(os.path.join(sbox.repo_dir, 'db','revs','0', '3'),
-            os.path.join(sbox.repo_dir, 'db','revs','0', 'was_3'));
-  
+  os.rename(rev_3, rev_was_3)
+
   # Verify 'svnadmin recover' fails when youngest has a revprops
   # file but no revs file.
   exit_code, output, errput = svntest.main.run_svnadmin("recover",
@@ -805,12 +817,13 @@ def fsfs_recover_handle_missing_revs_or_revprops_file(sbox):
     raise svntest.Failure
 
   # Restore the r3 revs file, thus repairing the repository.
-  os.rename(os.path.join(sbox.repo_dir, 'db','revs','0', 'was_3'),
-            os.path.join(sbox.repo_dir, 'db','revs','0', '3'));
-  
+  os.rename(rev_was_3, rev_3)
+
+  revprop_3 = fsfs_file(sbox.repo_dir, 'revprops', '3')
+  revprop_was_3 = fsfs_file(sbox.repo_dir, 'revprops', 'was_3')
+
   # Move aside the revprops file for r3.
-  os.rename(os.path.join(sbox.repo_dir, 'db','revprops','0', '3'),
-            os.path.join(sbox.repo_dir, 'db','revprops','0', 'was_3'));
+  os.rename(revprop_3, revprop_was_3)
 
   # Verify 'svnadmin recover' fails when youngest has a revs file
   # but no revprops file (issue #2992).
@@ -823,13 +836,11 @@ def fsfs_recover_handle_missing_revs_or_revprops_file(sbox):
     raise svntest.Failure
 
   # Restore the r3 revprops file, thus repairing the repository.
-  os.rename(os.path.join(sbox.repo_dir, 'db','revprops','0', 'was_3'),
-            os.path.join(sbox.repo_dir, 'db','revprops','0', '3'));
+  os.rename(revprop_was_3, revprop_3)
 
   # Change revprops file to a directory for revision 3
-  os.rename(os.path.join(sbox.repo_dir, 'db','revprops','0', '3'),
-            os.path.join(sbox.repo_dir, 'db','revprops','0', 'was_3'));
-  os.mkdir(os.path.join(sbox.repo_dir, 'db','revprops','0','3'));
+  os.rename(revprop_3, revprop_was_3)
+  os.mkdir(revprop_3)
 
   # Verify 'svnadmin recover' fails when youngest has a revs file
   # but revprops file is not a file (another aspect of issue #2992).

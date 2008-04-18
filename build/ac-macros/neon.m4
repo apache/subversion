@@ -153,7 +153,10 @@ AC_DEFUN(SVN_NEON_CONFIG,
            test "$svn_allowed_neon" = "any"; then
             svn_allowed_neon_on_system="yes"
             SVN_NEON_INCLUDES=[`$neon_config --cflags | sed -e 's/-D[^ ]*//g'`]
-            NEON_LIBS=`$neon_config --la-file`
+            NEON_LIBS=`$neon_config --la-file 2>/dev/null`
+            if test -z "$NEON_LIBS"; then
+              NEON_LIBS=`$neon_config --libs 2>/dev/null`
+            fi
             CFLAGS=["$CFLAGS `$neon_config --cflags | sed -e 's/-I[^ ]*//g'`"]
             svn_lib_neon="yes"
             break

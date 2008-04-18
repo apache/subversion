@@ -650,7 +650,6 @@ static svn_error_t *accept_report(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   else if (rb.err)
     {
       /* Some failure during the reporting or editing operations. */
-      svn_error_clear(editor->abort_edit(edit_baton, pool));
       SVN_CMD_ERR(rb.err);
     }
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));

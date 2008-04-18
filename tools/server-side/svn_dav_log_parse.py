@@ -48,14 +48,14 @@ General::
     commit r<N>
     get-dir <PATH> r<N> text? props?
     get-file <PATH> r<N> text? props?
-    lock <PATH> steal?
+    lock (<PATH> ...) steal?
     rev-proplist r<N>
-    unlock <PATH> break?
+    unlock (<PATH> ...) break?
 
 Reports::
 
     get-file-revs <PATH> r<N>:<M> include-merged-revisions?
-    get-mergeinfo (<PATH> ...) <I>
+    get-mergeinfo (<PATH> ...) <I> include-descendants?
     log (<PATH> ...) r<N>:<M> limit=<N>? discover-changed-paths? strict? include-merged-revisions? revprops=all|(<REVPROP> ...)?
     replay <PATH> r<N>
 
@@ -65,7 +65,7 @@ The update report::
     diff <FROM-PATH>@<N> <TO-PATH>@<M> depth=<D>? ignore-ancestry?
     diff <PATH> r<N>:<M> depth=<D>? ignore-ancestry?
     status <PATH> r<N> depth=<D>?
-    switch <FROM-PATH>@<N> <TO-PATH>@<M> depth=<D>?
+    switch <FROM-PATH> <TO-PATH>@<N> depth=<D>?
     update <PATH> r<N> depth=<D>? send-copyfrom-args?
 """
 
@@ -113,6 +113,11 @@ class BadDepthError(Error):
 class BadMergeinfoInheritanceError(Error):
     def __init__(self, value):
         Error.__init__(self, 'bad svn_mergeinfo_inheritance_t value ' + value)
+class MatchError(Error):
+    def __init__(self, pattern, line):
+        Error.__init__(self, '/%s/ does not match log line:\n%s'
+                             % (pattern, line))
+
 
 #
 # Helper functions
@@ -161,7 +166,7 @@ def _match(line, *patterns):
     pattern += ''.join([r'(\s+' + x + ')?' for x in optional])
     m = re.match(pattern, line)
     if m is None:
-        raise Error
+        raise MatchError(pattern, line)
     return m
 
 
@@ -214,8 +219,9 @@ class Parser(object):
         return line[m.end():]
 
     def _parse_lock(self, line):
-        m = _match(line, pPATH, ['steal'])
-        self.handle_lock(m.group(1), m.group(2) is not None)
+        m = _match(line, pPATHS, ['steal'])
+        paths = m.group(1).split()
+        self.handle_lock(paths, m.group(2) is not None)
         return line[m.end():]
 
     def _parse_change_rev_prop(self, line):
@@ -231,8 +237,9 @@ class Parser(object):
         return line[m.end():]
 
     def _parse_unlock(self, line):
-        m = _match(line, pPATH, ['break'])
-        self.handle_unlock(m.group(1), m.group(2) is not None)
+        m = _match(line, pPATHS, ['break'])
+        paths = m.group(1).split()
+        self.handle_unlock(paths, m.group(2) is not None)
         return line[m.end():]
 
     # reports
@@ -249,10 +256,13 @@ class Parser(object):
     def _parse_get_mergeinfo(self, line):
         # <I>
         pMERGEINFO_INHERITANCE = pWORD
-        m = _match(line, pPATHS, pMERGEINFO_INHERITANCE)
+        pINCLUDE_DESCENDANTS = pWORD
+        m = _match(line,
+                   pPATHS, pMERGEINFO_INHERITANCE, ['include-descendants'])
         paths = m.group(1).split()
         inheritance = _parse_mergeinfo_inheritance(m.group(2))
-        self.handle_get_mergeinfo(paths, inheritance)
+        include_descendants         = m.group(3) is not None
+        self.handle_get_mergeinfo(paths, inheritance, include_descendants)
         return line[m.end():]
 
     def _parse_log(self, line):
@@ -342,13 +352,12 @@ class Parser(object):
         return line[m.end():]
 
     def _parse_switch(self, line):
-        m = _match(line, pPATHREV, pPATHREV, [pDEPTH])
+        m = _match(line, pPATH, pPATHREV, [pDEPTH])
         from_path = m.group(1)
-        from_rev = int(m.group(2))
-        to_path = m.group(3)
-        to_rev = int(m.group(4))
-        depth = _parse_depth(m.group(6))
-        self.handle_switch(from_path, from_rev, to_path, to_rev, depth)
+        to_path = m.group(2)
+        to_rev = int(m.group(3))
+        depth = _parse_depth(m.group(5))
+        self.handle_switch(from_path, to_path, to_rev, depth)
         return line[m.end():]
 
     def _parse_update(self, line):
