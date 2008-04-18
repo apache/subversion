@@ -189,11 +189,12 @@ log_fs_warning(void *baton, svn_error_t *err)
     {
       const char *message = svn_err_best_message(err, errbuf, sizeof(errbuf));
       /* based on httpd-2.2.4/server/log.c:log_error_core */
-      int len = apr_snprintf(errstr, sizeof(errstr),
-                             "%" APR_PID_T_FMT
-                             " %s %s %s %s ERR%s %d ",
-                             getpid(), timestr, remote_host, user,
-                             server->repos_name, continuation, err->apr_err);
+      apr_size_t len = apr_snprintf(errstr, sizeof(errstr),
+                                    "%" APR_PID_T_FMT
+                                    " %s %s %s %s ERR%s %d ",
+                                    getpid(), timestr, remote_host, user,
+                                    server->repos_name, continuation,
+                                    err->apr_err);
 
       len += escape_errorlog_item(errstr + len, message,
                                   sizeof(errstr) - len);
