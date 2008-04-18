@@ -1892,6 +1892,46 @@ def depth_fold_expand_clean_trees(sbox):
                                         '--set-depth', 'files', Other_A_path)
   verify_depth(None, "files", Other_A_path)
 
+
+def pull_in_tree_with_depth_option(sbox):
+  """checkout and verify subtree with depth immediates"""
+
+  wc_empty,ign_a, ign_b, ign_c = set_up_depthy_working_copies(sbox,
+                                                              empty=True)
+  A_path = os.path.join(wc_empty, 'A')
+  expected_output = svntest.wc.State(wc_empty, {
+    'A'      : Item(status='A '),
+    'A/mu'   : Item(status='A '),
+    'A/B'    : Item(status='A '),
+    'A/C'    : Item(status='A '),
+    'A/D'    : Item(status='A ')
+    })
+  expected_disk = svntest.wc.State('', {
+    'A'      : Item(),
+    'A/mu'   : Item("This is the file 'mu'.\n"),
+    'A/B'    : Item(),
+    'A/C'    : Item(),
+    'A/D'    : Item(),
+    })
+  expected_status = svntest.wc.State(wc_empty, {
+    ''       : Item(status='  ', wc_rev=1),
+    'A'      : Item(status='  ', wc_rev=1),
+    'A/mu'   : Item(status='  ', wc_rev=1),
+    'A/B'    : Item(status='  ', wc_rev=1),
+    'A/C'    : Item(status='  ', wc_rev=1),
+    'A/D'    : Item(status='  ', wc_rev=1),
+    })
+  svntest.actions.run_and_verify_update(wc_empty,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None, False,
+                                        "--depth=immediates", A_path)
+
+  # Check that the A directory was pull ed in at depth=immediates.
+  verify_depth(None, "immediates", A_path)
+
+
 #----------------------------------------------------------------------
 # list all tests here, starting with None:
 test_list = [ None,
@@ -1923,6 +1963,7 @@ test_list = [ None,
               XFail(depth_folding_clean_trees_1),
               XFail(depth_folding_clean_trees_2),
               XFail(depth_fold_expand_clean_trees),
+              pull_in_tree_with_depth_option,
             ]
 
 if __name__ == "__main__":
