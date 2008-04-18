@@ -43,14 +43,14 @@ def shorten_path_kludge(path):
   shorten_by = len(svntest.main.work_dir) + len(os.sep)
   return path[shorten_by:]
 
-def expected_merge_output(rev_ranges, additional_lines=None):
+def expected_merge_output(rev_ranges, additional_lines=None, foreign=False):
   """Generate an (inefficient) regex representing the expected merge
   output from REV_RANGES (a list of 'range' lists of the form [start, end] or
   [single_rev] --> [single_rev - 1, single_rev]), and ADDITIONAL_LINES (a list
   of strings).  If REV_RANGES is None then only the standard notification for
   a 3-way merge is expected."""
   if rev_ranges is None:
-    lines = [svntest.main.merge_notify_line(None, None, False)]
+    lines = [svntest.main.merge_notify_line(None, None, False, foreign)]
   else:
    lines = []
    for rng in rev_ranges:
@@ -59,7 +59,8 @@ def expected_merge_output(rev_ranges, additional_lines=None):
        end_rev = rng[1]
      else:
        end_rev = None
-     lines += [svntest.main.merge_notify_line(start_rev, end_rev, True)]
+     lines += [svntest.main.merge_notify_line(start_rev, end_rev,
+                                              True, foreign)]
   if isinstance(additional_lines, list):
     # Address "The Backslash Plague"
     #
@@ -6415,8 +6416,8 @@ def prop_add_to_child_with_mergeinfo(sbox):
                                        None, None, None, None,
                                        None, 1)
 
-def diff_repos_does_not_update_mergeinfo(sbox):
-  "don't set mergeinfo when merging from another repo"
+def foreign_repos_does_not_update_mergeinfo(sbox):
+  "set no mergeinfo when merging from foreign repos"
 
   # Test for issue #2788.
 
@@ -6443,7 +6444,7 @@ def diff_repos_does_not_update_mergeinfo(sbox):
                                      expected_merge_output([[4]],
                                       'U    ' +
                                       os.path.join(short_G_COPY_path,
-                                                   "rho") + '\n'),
+                                                   "rho") + '\n', True),
                                      [], 'merge', '-c4',
                                      other_repo_url + '/A/D/G',
                                      short_G_COPY_path)
@@ -6459,7 +6460,7 @@ def diff_repos_does_not_update_mergeinfo(sbox):
                                      expected_merge_output([[5]],
                                       'U    ' +
                                       os.path.join(short_E_COPY_path,
-                                                   "beta") +'\n'),
+                                                   "beta") +'\n', True),
                                      [], 'merge',
                                      other_repo_url + '/A/B/E@4',
                                      other_repo_url + '/A/B/E@5',
@@ -10917,7 +10918,7 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(prop_add_to_child_with_mergeinfo,
                          server_has_mergeinfo),
-              diff_repos_does_not_update_mergeinfo,
+              foreign_repos_does_not_update_mergeinfo,
               XFail(avoid_reflected_revs),
               SkipUnless(update_loses_mergeinfo,
                          server_has_mergeinfo),

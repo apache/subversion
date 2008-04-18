@@ -30,18 +30,10 @@ Candidate changes:
 Approved changes (all releases):
 ================================
 
- * r30633, r30634
-   Make 'svn merge' output state when the merge is from a foreign repository.
-   Notes:
-     If we don't backport this, we need to increment the @since line
-     for svn_wc_notify_foreign_merge_begin.
-   Votes:
-     +1: cmpilato, pburba, hwright
-
  * r30678
    Include svn_wc_notify_foreign_merge_begin mapping in JavaHL.
    Notes:
-     This depends on the r30633 group, which is currently waiting merge.
+     This depends on the r30633 group, which has already been merged.
      Also, because this changes the values of contants in JavaHL, it should be
      either merged or reverted on trunk.
    Votes:

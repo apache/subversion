@@ -1388,7 +1388,10 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
                   svn_wc_notify_t *notify_merge_begin;
                   notify_merge_begin =
                     svn_wc_create_notify(child->path,
-                                         svn_wc_notify_merge_begin, pool);
+                                         notify_b->merge_b->same_repos 
+                                           ? svn_wc_notify_merge_begin
+                                           : svn_wc_notify_foreign_merge_begin,
+                                         pool);
                   notify_merge_begin->merge_range =
                     APR_ARRAY_IDX(child->remaining_ranges, 0,
                                   svn_merge_range_t *);
@@ -1454,9 +1457,12 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
            && is_operative_notification)
     {
       svn_wc_notify_t *notify_merge_begin;
-      notify_merge_begin = svn_wc_create_notify(notify_b->merge_b->target,
-                                                svn_wc_notify_merge_begin,
-                                                pool);
+      notify_merge_begin = 
+        svn_wc_create_notify(notify_b->merge_b->target,
+                             notify_b->merge_b->same_repos 
+                               ? svn_wc_notify_merge_begin
+                               : svn_wc_notify_foreign_merge_begin,
+                             pool);
       if (notify_b->wrapped_func)
         (*notify_b->wrapped_func)(notify_b->wrapped_baton, notify_merge_begin,
                                   pool);
@@ -4013,7 +4019,9 @@ do_file_merge(const char *url1,
       svn_pool_clear(subpool);
 
       n = svn_wc_create_notify(target_wcpath,
-                               svn_wc_notify_merge_begin,
+                               merge_b->same_repos 
+                                 ? svn_wc_notify_merge_begin
+                                 : svn_wc_notify_foreign_merge_begin,
                                subpool);
       if (merge_b->sources_ancestral)
         n->merge_range = r;
