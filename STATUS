@@ -29,12 +29,3 @@ Candidate changes:
 
 Approved changes (all releases):
 ================================
-
- * r30678
-   Include svn_wc_notify_foreign_merge_begin mapping in JavaHL.
-   Notes:
-     This depends on the r30633 group, which has already been merged.
-     Also, because this changes the values of contants in JavaHL, it should be
-     either merged or reverted on trunk.
-   Votes:
-     +1: hwright, markphip
