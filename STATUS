@@ -26,6 +26,7 @@ Candidate changes:
    Make --record-only merges record and elide mergeinfo on subtrees.
    Notes:
      Record only merges without this functionality are a lot less useful.
+     30644 will conflict if the r30633 group is not applied first.
    Votes:
      +1: pburba
 
