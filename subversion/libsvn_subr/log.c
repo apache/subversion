@@ -63,12 +63,6 @@ const char *
 svn_log__change_rev_prop(svn_revnum_t rev, const char *name, apr_pool_t *pool)
 {
   return apr_psprintf(pool, "change-rev-prop r%ld %s", rev,
-                      /* XXX Why do this and rev_prop (below) encode the
-                         property name?  Is that really necessary?  When I
-                         added logging for the log-with-revprops stuff, I
-                         didn't encode the revprop names there.  Can I stop
-                         encoding here and in rev_prop or must I encode in
-                         log? */
                       svn_path_uri_encode(name, pool));
 }
 
@@ -82,7 +76,6 @@ const char *
 svn_log__rev_prop(svn_revnum_t rev, const char *name, apr_pool_t *pool)
 {
   return apr_psprintf(pool, "rev-prop r%ld %s", rev,
-                      /* XXX See change_rev_prop above. */
                       svn_path_uri_encode(name, pool));
 }
 
@@ -242,15 +235,19 @@ svn_log__log(const apr_array_header_t *paths,
     svn_stringbuf_appendcstr(options, " revprops=all");
   else if (revprops->nelts > 0)
     {
+      apr_pool_t *iterpool = svn_pool_create(pool);
       svn_stringbuf_appendcstr(options, " revprops=(");
       for (i = 0; i < revprops->nelts; i++)
         {
           const char *name = APR_ARRAY_IDX(revprops, i, const char *);
+          svn_pool_clear(iterpool);
           if (i != 0)
             svn_stringbuf_appendcstr(options, " ");
-          svn_stringbuf_appendcstr(options, name);
+          svn_stringbuf_appendcstr(options, svn_path_uri_encode(name,
+                                                                iterpool));
         }
       svn_stringbuf_appendcstr(options, ")");
+      svn_pool_destroy(iterpool);
     }
   return apr_psprintf(pool, "log (%s) r%ld:%ld%s",
                       space_separated_paths->data, start, end,
