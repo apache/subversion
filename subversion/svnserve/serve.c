@@ -68,6 +68,9 @@ typedef struct {
   const char *repos_url;  /* Decoded repository URL. */
   void *report_baton;
   svn_error_t *err;
+  /* so update() can distinguish checkout from update */
+  int entry_counter;
+  svn_boolean_t only_empty_entries;
 } report_driver_baton_t;
 
 typedef struct {
@@ -625,6 +628,9 @@ static svn_error_t *set_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   if (!b->err)
     b->err = svn_repos_set_path3(b->report_baton, path, rev, depth,
                                  start_empty, lock_token, pool);
+  b->entry_counter++;
+  if (!start_empty)
+    b->only_empty_entries = FALSE;
   return SVN_NO_ERROR;
 }
 
@@ -664,6 +670,7 @@ static svn_error_t *link_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   if (!b->err)
     b->err = svn_repos_link_path3(b->report_baton, path, fs_path, rev,
                                   depth, start_empty, lock_token, pool);
+  b->entry_counter++;
   return SVN_NO_ERROR;
 }
 
@@ -701,8 +708,14 @@ static const svn_ra_svn_cmd_entry_t report_commands[] = {
 /* Accept a report from the client, drive the network editor with the
  * result, and then write an empty command response.  If there is a
  * non-protocol failure, accept_report will abort the edit and return
- * a command error to be reported by handle_commands(). */
-static svn_error_t *accept_report(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
+ * a command error to be reported by handle_commands().
+ *
+ * If only_empty_entry is not NULL and the report contains only one
+ * item, and that item is empty, set *only_empty_entry to TRUE, else
+ * set it to FALSE.
+ */
+static svn_error_t *accept_report(svn_boolean_t *only_empty_entry,
+                                  svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                   server_baton_t *b, svn_revnum_t rev,
                                   const char *target, const char *tgt_path,
                                   svn_boolean_t text_deltas,
@@ -730,6 +743,8 @@ static svn_error_t *accept_report(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   rb.repos_url = svn_path_uri_decode(b->repos_url, pool);
   rb.report_baton = report_baton;
   rb.err = NULL;
+  rb.entry_counter = 0;
+  rb.only_empty_entries = TRUE;
   err = svn_ra_svn_handle_commands(conn, pool, report_commands, &rb);
   if (err)
     {
@@ -744,6 +759,10 @@ static svn_error_t *accept_report(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       SVN_CMD_ERR(rb.err);
     }
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
+
+  if (only_empty_entry)
+    *only_empty_entry = rb.entry_counter == 1 && rb.only_empty_entries;
+
   return SVN_NO_ERROR;
 }
 
@@ -1427,6 +1446,7 @@ static svn_error_t *update(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   /* Default to unknown.  Old clients won't send depth, but we'll
      handle that by converting recurse if necessary. */
   svn_depth_t depth = svn_depth_unknown;
+  svn_boolean_t is_checkout;
 
   /* Parse the arguments. */
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cb?wB", &rev, &target,
@@ -1447,12 +1467,17 @@ static svn_error_t *update(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
-  SLOG("%s", svn_log__update(full_path, rev, depth, send_copyfrom_args,
-                       0, FALSE, /* XXX entry_counter/entry_is_empty */
-                       pool));
 
-  return accept_report(conn, pool, b, rev, target, NULL, TRUE,
-                       depth, send_copyfrom_args, FALSE);
+  SVN_ERR(accept_report(&is_checkout,
+                        conn, pool, b, rev, target, NULL, TRUE,
+                        depth, send_copyfrom_args, FALSE));
+  if (is_checkout)
+    SLOG("%s", svn_log__checkout(full_path, rev, depth, pool));
+  else
+    SLOG("%s", svn_log__update(full_path, rev, depth, send_copyfrom_args,
+                               pool));
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *switch_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
@@ -1491,7 +1516,7 @@ static svn_error_t *switch_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     SLOG("%s", svn_log__switch(full_path, switch_path, rev, depth, pool));
   }
 
-  return accept_report(conn, pool, b, rev, target, switch_path, TRUE,
+  return accept_report(NULL, conn, pool, b, rev, target, switch_path, TRUE,
                        depth,
                        FALSE /* TODO(sussman): no copyfrom args for now */,
                        TRUE);
@@ -1527,7 +1552,7 @@ static svn_error_t *status(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     SLOG("%s", svn_log__status(full_path, rev, depth, pool));
   }
 
-  return accept_report(conn, pool, b, rev, target, NULL, FALSE,
+  return accept_report(NULL, conn, pool, b, rev, target, NULL, FALSE,
                        depth, FALSE, FALSE);
 }
 
@@ -1582,7 +1607,7 @@ static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                        ignore_ancestry, pool));
   }
 
-  return accept_report(conn, pool, b, rev, target, versus_path,
+  return accept_report(NULL, conn, pool, b, rev, target, versus_path,
                        text_deltas, depth, FALSE, ignore_ancestry);
 }
 

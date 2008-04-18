@@ -1346,14 +1346,19 @@ dav_svn__update_report(const dav_resource *resource,
       {
         /* svn_client_checkout() creates a single root directory, then
            reports it (and it alone) to the server as being empty. */
-        if (!(entry_counter == 1 && entry_is_empty) && !text_deltas)
-          action = svn_log__status(spath, revnum, requested_depth,
-                                   resource->pool);
+        if (entry_counter == 1 && entry_is_empty)
+          action = svn_log__checkout(spath, revnum, requested_depth,
+                                     resource->pool);
         else
-          action = svn_log__update(spath, revnum, requested_depth,
-                                   send_copyfrom_args,
-                                   entry_counter, entry_is_empty,
-                                   resource->pool);
+          {
+            if (text_deltas)
+              action = svn_log__update(spath, revnum, requested_depth,
+                                       send_copyfrom_args,
+                                       resource->pool);
+            else
+              action = svn_log__status(spath, revnum, requested_depth,
+                                       resource->pool);
+          }
       }
 
     dav_svn__operational_log(resource->info, action);

@@ -101,14 +101,22 @@ svn_log__get_mergeinfo(const apr_array_header_t *paths,
                        apr_pool_t *pool);
 
 /**
- * Return a log string for a checkout/update action.
+ * Return a log string for a checkout action.
+ *
+ * @since New in 1.6.
+ */
+const char *
+svn_log__checkout(const char *path, svn_revnum_t rev, svn_depth_t depth,
+                  apr_pool_t *pool);
+
+/**
+ * Return a log string for a update action.
  *
  * @since New in 1.6.
  */
 const char *
 svn_log__update(const char *path, svn_revnum_t rev, svn_depth_t depth,
                 svn_boolean_t send_copyfrom_args,
-                int entry_count, svn_boolean_t entry_is_empty,
                 apr_pool_t *pool);
 
 /**
