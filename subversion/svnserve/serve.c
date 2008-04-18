@@ -720,7 +720,8 @@ static const svn_ra_svn_cmd_entry_t report_commands[] = {
  * set it to FALSE.
  *
  * If from_rev is not NULL, set *from_rev to the revision number from
- * the set-path on "".
+ * the set-path on ""; if somehow set-path "" never happens, set
+ * *from_rev to SVN_INVALID_REVNUM.
  */
 static svn_error_t *accept_report(svn_boolean_t *only_empty_entry,
                                   svn_revnum_t *from_rev,
@@ -755,6 +756,8 @@ static svn_error_t *accept_report(svn_boolean_t *only_empty_entry,
   rb.entry_counter = 0;
   rb.only_empty_entries = TRUE;
   rb.from_rev = from_rev;
+  if (from_rev)
+    *from_rev = SVN_INVALID_REVNUM;
   err = svn_ra_svn_handle_commands(conn, pool, report_commands, &rb);
   if (err)
     {
