@@ -324,6 +324,13 @@ def ensure_tree_conflict(sbox, operation, incoming_scenarios, localmod_scenarios
       for modaction in loc_action:
         modify(modaction, wc_dir, P)
 
+      verbose_print("---  Trying to commit (expecting 'out-of-date' error")
+      svntest.actions.run_and_verify_commit(wc_dir,
+                                            None,
+                                            None,
+                                            ".*[Oo]ut.of.date.*",
+                                            P)
+
       # perform the operation that tries to apply the changes to the WC
       try:
         if operation == 'update':
@@ -341,6 +348,13 @@ def ensure_tree_conflict(sbox, operation, incoming_scenarios, localmod_scenarios
         failures += 1
       else:
         verbose_printlines(stdout)
+
+      verbose_print("---  Trying to commit (expecting 'conflict' error")
+      svntest.actions.run_and_verify_commit(wc_dir,
+                                            None,
+                                            None,
+                                            ".*conflict.*",
+                                            P)
 
       # ensure F has a conflict and nothing else is changed
       verbose_print("--- Status")
