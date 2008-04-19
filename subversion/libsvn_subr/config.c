@@ -609,23 +609,15 @@ svn_config_set(svn_config_t *cfg,
 
 
 svn_error_t *
-svn_config_get_bool2(svn_config_t *cfg, svn_boolean_t *valuep,
-                     const char *section, const char *option,
-                     svn_boolean_t default_value,
-                     svn_boolean_t *default_value_was_used)
+svn_config_get_bool(svn_config_t *cfg, svn_boolean_t *valuep,
+                    const char *section, const char *option,
+                    svn_boolean_t default_value)
 {
   const char *tmp_value;
 
-  if (default_value_was_used)
-    *default_value_was_used = FALSE;
-
   svn_config_get(cfg, &tmp_value, section, option, NULL);
   if (tmp_value == NULL)
-    {
-      *valuep = default_value;
-      if (default_value_was_used)
-        *default_value_was_used = TRUE;
-    }
+    *valuep = default_value;
   else if (0 == svn_cstring_casecmp(tmp_value, SVN_CONFIG_TRUE)
            || 0 == svn_cstring_casecmp(tmp_value, "yes")
            || 0 == svn_cstring_casecmp(tmp_value, "on")
@@ -644,15 +636,6 @@ svn_config_get_bool2(svn_config_t *cfg, svn_boolean_t *valuep,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_config_get_bool(svn_config_t *cfg, svn_boolean_t *valuep,
-                    const char *section, const char *option,
-                    svn_boolean_t default_value)
-{
-  svn_boolean_t dummy;
-  return svn_config_get_bool2(cfg, valuep, section, option,
-                              default_value, &dummy);
-}
 
 
 void
@@ -664,6 +647,36 @@ svn_config_set_bool(svn_config_t *cfg,
                  (value ? SVN_CONFIG_TRUE : SVN_CONFIG_FALSE));
 }
 
+svn_error_t *
+svn_config_get_yes_no_prompt(svn_config_t *cfg, const char **valuep,
+                             const char *section, const char *option,
+                             const char* default_value)
+{
+  const char *tmp_value;
+
+  svn_config_get(cfg, &tmp_value, section, option, NULL);
+  if (tmp_value == NULL)
+    *valuep = default_value;
+  else if (0 == svn_cstring_casecmp(tmp_value, SVN_CONFIG_TRUE)
+           || 0 == svn_cstring_casecmp(tmp_value, "yes")
+           || 0 == svn_cstring_casecmp(tmp_value, "on")
+           || 0 == strcmp(tmp_value, "1"))
+    *valuep = SVN_CONFIG_TRUE;
+  else if (0 == svn_cstring_casecmp(tmp_value, SVN_CONFIG_FALSE)
+           || 0 == svn_cstring_casecmp(tmp_value, "no")
+           || 0 == svn_cstring_casecmp(tmp_value, "off")
+           || 0 == strcmp(tmp_value, "0"))
+    *valuep = SVN_CONFIG_FALSE;
+  else if (0 == svn_cstring_casecmp(tmp_value, SVN_CONFIG_PROMPT))
+    *valuep = SVN_CONFIG_PROMPT;
+  else
+    return svn_error_createf
+      (SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
+       _("Config error: invalid value '%s' for option '%s'"),
+       tmp_value, option);
+
+  return SVN_NO_ERROR;
+}
 
 
 int

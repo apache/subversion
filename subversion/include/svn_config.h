@@ -136,8 +136,9 @@ typedef struct svn_config_t svn_config_t;
   SVN_CONFIG__DEFAULT_GLOBAL_IGNORES_LINE_1 " " \
   SVN_CONFIG__DEFAULT_GLOBAL_IGNORES_LINE_2
 
-#define SVN_CONFIG_TRUE  "TRUE"
-#define SVN_CONFIG_FALSE "FALSE"
+#define SVN_CONFIG_TRUE   "TRUE"
+#define SVN_CONFIG_FALSE  "FALSE"
+#define SVN_CONFIG_PROMPT "PROMPT"
 
 
 /** Read configuration information from the standard sources and merge it
@@ -214,19 +215,6 @@ void svn_config_set(svn_config_t *cfg,
  * Parses the option as a boolean value. The recognized representations
  * are 'TRUE'/'FALSE', 'yes'/'no', 'on'/'off', '1'/'0'; case does not
  * matter. Returns an error if the option doesn't contain a known string.
- *
- * @a *default_value_was_used is non-NULL, it is set to TRUE if the option
- * was not found in the configuration file, and set to FALSE if it was.
- *
- * @since New in 1.6
- */
-svn_error_t *svn_config_get_bool2(svn_config_t *cfg, svn_boolean_t *valuep,
-                                  const char *section, const char *option,
-                                  svn_boolean_t default_value,
-                                  svn_boolean_t *default_value_was_used);
-
-/** Like svn_config_get_bool2(), but without the ability to determine
- * whether the supplied default value was used.
  */
 svn_error_t *svn_config_get_bool(svn_config_t *cfg, svn_boolean_t *valuep,
                                  const char *section, const char *option,
@@ -239,6 +227,23 @@ svn_error_t *svn_config_get_bool(svn_config_t *cfg, svn_boolean_t *valuep,
 void svn_config_set_bool(svn_config_t *cfg,
                          const char *section, const char *option,
                          svn_boolean_t value);
+
+/** Like svn_config_get(), but for values which can be either
+ * 'yes', 'no', or 'prompt'.
+ *
+ * Parses the option, and sets *valuep to either SVN_CONFIG_TRUE,
+ * SVN_CONFIG_FALSE, or SVN_CONFIG_PROMPT. The recognized representations
+ * are 'TRUE'/'FALSE', 'yes'/'no', 'on'/'off', '1'/'0', and 'PROMPT';
+ * case does not matter.
+ *
+ * Returns an error if the option doesn't contain a known string.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_config_get_yes_no_prompt(svn_config_t *cfg, const char **valuep,
+                             const char *section, const char *option,
+                             const char* default_value);
 
 /** Similar to @c svn_config_section_enumerator2_t, but is not
  * provided with a memory pool argument.
