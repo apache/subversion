@@ -217,7 +217,6 @@ svn_log__log(const apr_array_header_t *paths,
       svn_stringbuf_appendcstr(space_separated_paths,
                                svn_path_uri_encode(path, iterpool));
     }
-  svn_pool_destroy(iterpool);
 
   if (limit)
     {
@@ -235,7 +234,6 @@ svn_log__log(const apr_array_header_t *paths,
     svn_stringbuf_appendcstr(options, " revprops=all");
   else if (revprops->nelts > 0)
     {
-      apr_pool_t *iterpool = svn_pool_create(pool);
       svn_stringbuf_appendcstr(options, " revprops=(");
       for (i = 0; i < revprops->nelts; i++)
         {
@@ -247,8 +245,8 @@ svn_log__log(const apr_array_header_t *paths,
                                                                 iterpool));
         }
       svn_stringbuf_appendcstr(options, ")");
-      svn_pool_destroy(iterpool);
     }
+  svn_pool_destroy(iterpool);
   return apr_psprintf(pool, "log (%s) r%ld:%ld%s",
                       space_separated_paths->data, start, end,
                       options->data);
