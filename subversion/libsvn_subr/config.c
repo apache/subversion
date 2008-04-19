@@ -616,6 +616,8 @@ svn_config_get_bool2(svn_config_t *cfg, svn_boolean_t *valuep,
 {
   const char *tmp_value;
 
+  *default_value_was_used = FALSE;
+
   svn_config_get(cfg, &tmp_value, section, option, NULL);
   if (tmp_value == NULL)
     {
