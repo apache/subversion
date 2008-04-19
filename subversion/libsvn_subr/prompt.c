@@ -395,7 +395,7 @@ svn_cmdline_auth_plaintext_prompt(svn_boolean_t *may_save_plaintext,
   SVN_ERR(svn_cmdline_printf(pool, "-------------------------------------"
                              "----------------------------------\n"));
   SVN_ERR(svn_cmdline_printf(pool, _("You can get rid of this warning by "
-                               "editing your configuration file\n "
+                               "editing your configuration file\n"
                                "and setting 'store-plaintext-passwords' "
                                "to either 'yes' or 'no'.")));
   SVN_ERR(svn_cmdline_printf(pool, "\n"));
