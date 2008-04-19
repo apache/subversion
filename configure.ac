@@ -25,6 +25,9 @@ SVN_CONFIG_NICE(config.nice)
 # Look for a C compiler (before anything can set CFLAGS)
 AC_PROG_CC
 
+# Look for a C++ compiler
+AC_PROG_CXX
+
 # Look for a C pre-processor
 AC_PROG_CPP
 
@@ -672,8 +675,6 @@ if test "$do_javahl_build" = "yes"; then
     AC_MSG_ERROR([Cannot compile JavaHL without a suitable JDK. 
                   Please specify a suitable JDK using the --with-jdk option.])
   fi
-  
-  AC_PROG_CXX
   
   dnl The temporary directory where libtool compiles libsvnjavahl.
   dnl N.B. objdir is "the name of the directory that contains temporary

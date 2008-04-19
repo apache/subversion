@@ -153,6 +153,7 @@ LDFLAGS = @LDFLAGS@ $(EXTRA_LDFLAGS)
 COMPILE = $(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES)
 COMPILE_CXX = $(CXX) $(CPPFLAGS) $(CXXFLAGS) $(INCLUDES)
 LT_COMPILE = $(LIBTOOL) $(LTFLAGS) --mode=compile $(COMPILE)
+LT_COMPILE_CXX = $(LIBTOOL) $(LTCXXFLAGS) --mode=compile $(COMPILE_CXX)
 
 # special compilation for files destined for mod_dav_svn
 COMPILE_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS) $(APACHE_INCLUDES) $(INCLUDES) -o $@ -c
@@ -168,6 +169,7 @@ COMPILE_JAVAHL_JAVAC = $(JAVAC) $(JAVAC_FLAGS)
 COMPILE_JAVAHL_JAVAH = $(JAVAH)
 
 LINK = $(LIBTOOL) $(LTFLAGS) --mode=link $(CC) $(LT_LDFLAGS) $(CFLAGS) $(LDFLAGS) -rpath $(libdir)
+LINK_CXX = $(LIBTOOL) $(LTCXXFLAGS) --mode=link $(CXX) $(LT_LDFLAGS) $(CXXFLAGS) $(LDFLAGS) -rpath $(libdir)
 
 # special link rule for mod_dav_svn
 LINK_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=link $(CC) $(LT_LDFLAGS) $(CFLAGS) $(LDFLAGS) -rpath $(APACHE_LIBEXECDIR) -avoid-version -module $(APACHE_LDFLAGS)
@@ -562,14 +564,20 @@ schema-clean:
 # Implicit rules for creating outputs from input files
 #
 .SUFFIXES:
-.SUFFIXES: .c .lo .o .la-a .la \
+.SUFFIXES: .c .cpp .lo .o .la-a .la \
            .po .spo .mo .rnc .rng .dtd .xsd
 
 .c.o:
 	$(COMPILE) -o $@ -c $<
 
+.cpp.o:
+	$(COMPILE_CXX) -o $@ -c $<
+
 .c.lo:
 	$(LT_COMPILE) -o $@ -c $<
+
+.cpp.lo:
+	$(LT_COMPILE_CXX) -o $@ -c $<
 
 .la.la-a:
 	sed "/library_names/s/'.*'/''/" $< > $@
