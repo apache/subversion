@@ -1,0 +1,9 @@
+TODO items on this branch:
+
+- properly handle ^C during the prompt
+
+- Add the 'store-plaintext-passwords' option to ~/.subversion/servers,
+  in addition to the global one in ~/.subversion/config.
+  The use case being that some people may want to save plaintext
+  passwords for some servers, but not for others.
+  (Is this also possible on a per-repository basis?)
