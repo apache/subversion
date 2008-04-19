@@ -101,8 +101,7 @@ typedef enum {
   opt_parents,
   opt_accept,
   opt_show_revs,
-  opt_reintegrate,
-  opt_store_plaintext_passwords
+  opt_reintegrate
 } svn_cl__longopt_t;
 
 /* Option codes and descriptions for the command line client.
@@ -279,11 +278,6 @@ const apr_getopt_option_t svn_cl__options[] =
   {"reintegrate",   opt_reintegrate, 0,
                     N_("lump-merge all of source URL's unmerged changes")},
 
-  {"store-plaintext-pw", opt_store_plaintext_passwords, 0,
-                    N_("cache passwords on disk even if they are\n"
-                       "                             "
-                       "going to be stored in plain text")},
-
   /* Long-opt Aliases
    *
    * These have NULL desriptions, but an option code that matches some
@@ -315,7 +309,7 @@ const apr_getopt_option_t svn_cl__options[] =
    willy-nilly to every invocation of 'svn') . */
 const int svn_cl__global_options[] =
 { opt_auth_username, opt_auth_password, opt_no_auth_cache, opt_non_interactive,
-  opt_config_dir, opt_store_plaintext_passwords, 0
+  opt_config_dir, 0
 };
 
 /* Options for giving a log message.  (Some of these also have other uses.)
@@ -1505,9 +1499,6 @@ main(int argc, const char *argv[])
       case opt_reintegrate:
         opt_state.reintegrate = TRUE;
         break;
-      case opt_store_plaintext_passwords:
-        opt_state.store_plaintext_passwords = TRUE;
-        break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
            opts that commands like svn diff might need. Hmmm indeed. */
@@ -1924,17 +1915,16 @@ main(int argc, const char *argv[])
 #endif
 
   /* Set up Authentication stuff. */
-  if ((err = svn_cmdline_setup_auth_baton2(&ab,
-                                           opt_state.non_interactive,
-                                           opt_state.auth_username,
-                                           opt_state.auth_password,
-                                           opt_state.config_dir,
-                                           opt_state.no_auth_cache,
-                                           opt_state.store_plaintext_passwords,
-                                           cfg,
-                                           ctx->cancel_func,
-                                           ctx->cancel_baton,
-                                           pool)))
+  if ((err = svn_cmdline_setup_auth_baton(&ab,
+                                          opt_state.non_interactive,
+                                          opt_state.auth_username,
+                                          opt_state.auth_password,
+                                          opt_state.config_dir,
+                                          opt_state.no_auth_cache,
+                                          cfg,
+                                          ctx->cancel_func,
+                                          ctx->cancel_baton,
+                                          pool)))
     svn_handle_error2(err, stderr, TRUE, "svn: ");
 
   ctx->auth_baton = ab;

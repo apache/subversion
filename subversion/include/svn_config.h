@@ -214,6 +214,19 @@ void svn_config_set(svn_config_t *cfg,
  * Parses the option as a boolean value. The recognized representations
  * are 'TRUE'/'FALSE', 'yes'/'no', 'on'/'off', '1'/'0'; case does not
  * matter. Returns an error if the option doesn't contain a known string.
+ *
+ * @a *default_value_was_used is set to TRUE if the option was not found
+ * in the configuration file.
+ *
+ * @since New in 1.6
+ */
+svn_error_t *svn_config_get_bool2(svn_config_t *cfg, svn_boolean_t *valuep,
+                                  const char *section, const char *option,
+                                  svn_boolean_t default_value,
+                                  svn_boolean_t *default_value_was_used);
+
+/** Like svn_config_get_bool2(), but without the ability to determine
+ * whether a parameter was unspecified.
  */
 svn_error_t *svn_config_get_bool(svn_config_t *cfg, svn_boolean_t *valuep,
                                  const char *section, const char *option,
