@@ -216,7 +216,7 @@ void svn_config_set(svn_config_t *cfg,
  * matter. Returns an error if the option doesn't contain a known string.
  *
  * @a *default_value_was_used is set to TRUE if the option was not found
- * in the configuration file.
+ * in the configuration file, and set to FALSE if it was.
  *
  * @since New in 1.6
  */
