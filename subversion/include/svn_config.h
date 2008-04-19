@@ -226,7 +226,7 @@ svn_error_t *svn_config_get_bool2(svn_config_t *cfg, svn_boolean_t *valuep,
                                   svn_boolean_t *default_value_was_used);
 
 /** Like svn_config_get_bool2(), but without the ability to determine
- * whether a parameter was unspecified.
+ * whether the supplied default value was used.
  */
 svn_error_t *svn_config_get_bool(svn_config_t *cfg, svn_boolean_t *valuep,
                                  const char *section, const char *option,
