@@ -7,3 +7,8 @@ TODO items on this branch:
   The use case being that some people may want to save plaintext
   passwords for some servers, but not for others.
   (Is this also possible on a per-repository basis?)
+
+- During the prompt, tell users where exactly the configuration file is,
+  if possible.
+
+- Handle the non-interactive case properly.
