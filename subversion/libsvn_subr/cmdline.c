@@ -365,10 +365,9 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
                              apr_pool_t *pool)
 {
   svn_boolean_t store_password_val = TRUE;
-  svn_boolean_t store_plaintext_password_val = FALSE;
+  const char *store_plaintext_password_val;
   svn_boolean_t store_auth_creds_val = TRUE;
   svn_auth_provider_object_t *provider;
-  svn_boolean_t default_value_was_used = FALSE;
 
   /* The whole list of registered providers */
   apr_array_header_t *providers
@@ -473,23 +472,14 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
     svn_auth_set_parameter(*ab, SVN_AUTH_PARAM_DONT_STORE_PASSWORDS, "");
 
   /* Determine whether storing passwords in plaintext has been
-   * explicitly allowed or denied. */
-  SVN_ERR(svn_config_get_bool2(cfg, &store_plaintext_password_val,
-                               SVN_CONFIG_SECTION_AUTH,
-                               SVN_CONFIG_OPTION_STORE_PLAINTEXT_PASSWORDS,
-                               FALSE, /* <-- arbitrary */
-                               &default_value_was_used));
+   * explicitly allowed or denied, or whether we should prompt
+   * the user about it. */
+  SVN_ERR(svn_config_get_yes_no_prompt
+    (cfg, &store_plaintext_password_val, SVN_CONFIG_SECTION_AUTH,
+     SVN_CONFIG_OPTION_STORE_PLAINTEXT_PASSWORDS, SVN_CONFIG_PROMPT));
 
-  if (! default_value_was_used)
-    {
-      if (store_plaintext_password_val)
-        svn_auth_set_parameter(*ab, SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS,
-                              "");
-      else
-        svn_auth_set_parameter(*ab,
-                              SVN_AUTH_PARAM_DONT_STORE_PLAINTEXT_PASSWORDS,
-                              "");
-    }
+  svn_auth_set_parameter(*ab, SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS,
+                         store_plaintext_password_val);
 
   /* Determine whether we are allowed to write to the auth/ area. */
   SVN_ERR(svn_config_get_bool(cfg, &store_auth_creds_val,

@@ -901,18 +901,20 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "[auth]"                                                             NL
         "### Set store-passwords to 'no' to avoid storing passwords in the"  NL
         "### auth/ area of your config directory.  It defaults to 'yes',"    NL
-        "### but note that Subversion will never save your password in"      NL
-        "### plain-text unless you tell it to (see below)."                  NL
+        "### but Subversion will never save your password to disk in"        NL
+        "### plaintext unless you tell it to (see below)."                   NL
         "### Note that this option only prevents saving of *new* passwords;" NL
         "### it doesn't invalidate existing passwords.  (To do that, remove" NL
         "### the cache files by hand as described in the Subversion book.)"  NL
         "# store-passwords = no"                                             NL
-        "### Set store-plaintext-passwords to 'yes' or 'no' to avoid being"  NL
-        "### prompted about storing plain-text passwords in the auth/"       NL
-        "### area of your config directory. If store-passwords (see above)"  NL
-        "### is set to 'no', this option has no effect."                     NL
+        "### Set store-plaintext-passwords to 'no' to avoid storing"         NL
+        "### passwords in unencrypted form in the auth/ area of your config" NL
+        "### directory. Set it to 'yes' to allow Subversion to store"        NL
+        "### unencrypted passwords in the auth/ area.  The default is"       NL
+        "### 'prompt', which means that Subversion will ask you before"      NL
+        "### saving a password to disk in unencrypted form.  Note that"      NL
+        "### this option has no effect if 'store-passwords' is set to 'no'." NL
         "# store-plaintext-passwords = no"                                   NL
-        "# store-plaintext-passwords = yes"                                  NL
         "### Set store-auth-creds to 'no' to avoid storing any subversion"   NL
         "### credentials in the auth/ area of your config directory."        NL
         "### It defaults to 'yes'.  Note that this option only prevents"     NL

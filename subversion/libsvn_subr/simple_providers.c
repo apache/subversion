@@ -250,10 +250,6 @@ simple_save_creds_helper(svn_boolean_t *saved,
     apr_hash_get(parameters,
                  SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS,
                  APR_HASH_KEY_STRING);
-  const char *dont_store_plaintext_passwords =
-    apr_hash_get(parameters,
-                 SVN_AUTH_PARAM_DONT_STORE_PLAINTEXT_PASSWORDS,
-                 APR_HASH_KEY_STRING);
   svn_boolean_t non_interactive = apr_hash_get(parameters,
                                                SVN_AUTH_PARAM_NON_INTERACTIVE,
                                                APR_HASH_KEY_STRING) != NULL;
@@ -290,25 +286,45 @@ simple_save_creds_helper(svn_boolean_t *saved,
         }
       else
         {
-          if (! dont_store_plaintext_passwords && ! store_plaintext_passwords)
+          if (svn_cstring_casecmp(store_plaintext_passwords,
+                                  SVN_CONFIG_PROMPT) == 0)
             {
-              /* We have no information from the configuration file whether
-               * saving unencrypted is allowed. Prompt the user. */
+              /* TODO: We might want to default to not storing if the
+               * prompt callback is NULL, i.e. have may_save_plaintext
+               * default to FALSE here, in order to force clients to
+               * implement the callback.
+               *
+               * This would change the semantics of the old API though.
+               *
+               * So for now, clients that don't implement the callback
+               * cause unencrypted passwords to be stored by default.
+               * Needless to say, our own client is sane, but who knows
+               * what other clients are doing. */
               svn_boolean_t may_save_plaintext = TRUE;
-              /* TODO: At some point, we might want to default to not
-               * storing if the callback is NULL. */
+
               if (b->plaintext_prompt_func)
                 SVN_ERR((*b->plaintext_prompt_func)(&may_save_plaintext,
                                                     b->plaintext_prompt_baton,
                                                     pool));
               may_save_password = may_save_plaintext; 
             }
+          else if (svn_cstring_casecmp(store_plaintext_passwords,
+                                       SVN_CONFIG_FALSE) == 0)
+            {
+              may_save_password = FALSE;
+            }
+          else if (svn_cstring_casecmp(store_plaintext_passwords,
+                                       SVN_CONFIG_TRUE) == 0)
+            {
+              may_save_password = TRUE;
+            }
           else
             {
-              /* dont_store_plaintext_passwords overrides
-               * store_plaintext_passwords */
-              may_save_password = (dont_store_plaintext_passwords
-                                   ? FALSE : TRUE);
+              return svn_error_createf
+                (SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
+                 _("Config error: invalid value '%s' for option '%s'"),
+                store_plaintext_passwords,
+                SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS);
             }
         }
 

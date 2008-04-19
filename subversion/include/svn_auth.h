@@ -550,20 +550,11 @@ const void * svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
 #define SVN_AUTH_PARAM_DONT_STORE_PASSWORDS  SVN_AUTH_PARAM_PREFIX \
                                                  "dont-store-passwords"
 
-/** @brief The application wants providers to save passwords to disk in
- * plaintext. Property value is irrelevant; only property's existence
- * matters. */
+/** @brief Indicates whether providers may save passwords to disk in
+ * plaintext. Property value can be either SVN_CONFIG_TRUE,
+ * SVN_CONFIG_FALSE, or SVN_CONFIG_PROMPT. */
 #define SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS  SVN_AUTH_PARAM_PREFIX \
                                                   "store-plaintext-passwords"
-
-/** @brief The application does not want providers to save passwords to
- * disk in plaintext. Property value is irrelevant; only property's existence
- * matters. This overrides SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS.
- *
- * We use two parameters because we need to know whether there is an
- * explicit setting in the configuration file or not. */
-#define SVN_AUTH_PARAM_DONT_STORE_PLAINTEXT_PASSWORDS  SVN_AUTH_PARAM_PREFIX \
-                                             "dont-store-plaintext-passwords"
 
 /** @brief The application doesn't want any providers to save credentials
  * to disk. Property value is irrelevant; only property's existence
