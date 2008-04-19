@@ -396,12 +396,12 @@ svn_cmdline_auth_plaintext_prompt(svn_boolean_t *may_save_plaintext,
   do
     {
       SVN_ERR(prompt(&answer, prompt_string, FALSE, NULL, pool));
-      if (strcmp(answer, _("yes")) == 0)
+      if (svn_cstring_casecmp(answer, _("yes")) == 0)
         {
           *may_save_plaintext = TRUE;
           answered = TRUE;
         }
-      else if (strcmp(answer, _("no")) == 0)
+      else if (svn_cstring_casecmp(answer, _("no")) == 0)
         {
           *may_save_plaintext = FALSE;
           answered = TRUE;
