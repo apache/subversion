@@ -294,7 +294,7 @@ simple_save_creds_helper(svn_boolean_t *saved,
             {
               /* We have no information from the configuration file whether
                * saving unencrypted is allowed. Prompt the user. */
-              svn_boolean_t may_save_plaintext;
+              svn_boolean_t may_save_plaintext = TRUE;
               /* TODO: At some point, we might want to default to not
                * storing if the callback is NULL. */
               if (b->plaintext_prompt_func)
