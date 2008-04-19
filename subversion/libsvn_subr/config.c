@@ -616,13 +616,15 @@ svn_config_get_bool2(svn_config_t *cfg, svn_boolean_t *valuep,
 {
   const char *tmp_value;
 
-  *default_value_was_used = FALSE;
+  if (default_value_was_used)
+    *default_value_was_used = FALSE;
 
   svn_config_get(cfg, &tmp_value, section, option, NULL);
   if (tmp_value == NULL)
     {
       *valuep = default_value;
-      *default_value_was_used = TRUE;
+      if (default_value_was_used)
+        *default_value_was_used = TRUE;
     }
   else if (0 == svn_cstring_casecmp(tmp_value, SVN_CONFIG_TRUE)
            || 0 == svn_cstring_casecmp(tmp_value, "yes")
