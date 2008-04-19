@@ -609,15 +609,19 @@ svn_config_set(svn_config_t *cfg,
 
 
 svn_error_t *
-svn_config_get_bool(svn_config_t *cfg, svn_boolean_t *valuep,
-                    const char *section, const char *option,
-                    svn_boolean_t default_value)
+svn_config_get_bool2(svn_config_t *cfg, svn_boolean_t *valuep,
+                     const char *section, const char *option,
+                     svn_boolean_t default_value,
+                     svn_boolean_t *default_value_was_used)
 {
   const char *tmp_value;
 
   svn_config_get(cfg, &tmp_value, section, option, NULL);
   if (tmp_value == NULL)
-    *valuep = default_value;
+    {
+      *valuep = default_value;
+      *default_value_was_used = TRUE;
+    }
   else if (0 == svn_cstring_casecmp(tmp_value, SVN_CONFIG_TRUE)
            || 0 == svn_cstring_casecmp(tmp_value, "yes")
            || 0 == svn_cstring_casecmp(tmp_value, "on")
@@ -636,6 +640,15 @@ svn_config_get_bool(svn_config_t *cfg, svn_boolean_t *valuep,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_config_get_bool(svn_config_t *cfg, svn_boolean_t *valuep,
+                    const char *section, const char *option,
+                    svn_boolean_t default_value)
+{
+  svn_boolean_t dummy;
+  return svn_config_get_bool2(cfg, valuep, section, option,
+                              default_value, &dummy);
+}
 
 
 void

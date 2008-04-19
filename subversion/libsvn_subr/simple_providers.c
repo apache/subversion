@@ -44,6 +44,14 @@
 #define SVN_AUTH__WINCRYPT_PASSWORD_TYPE           "wincrypt"
 #define SVN_AUTH__KEYCHAIN_PASSWORD_TYPE           "keychain"
 
+/* Baton type for the simple provider. */
+typedef struct
+{
+  svn_auth_plaintext_prompt_func_t plaintext_prompt_func;
+  void *plaintext_prompt_baton;
+
+} simple_provider_baton_t;
+
 
 /* A function that stores PASSWORD (or some encrypted version thereof)
    either directly in CREDS, or externally using REALMSTRING and USERNAME
@@ -242,11 +250,17 @@ simple_save_creds_helper(svn_boolean_t *saved,
     apr_hash_get(parameters,
                  SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS,
                  APR_HASH_KEY_STRING);
-  svn_boolean_t non_interactive = apr_hash_get(parameters,
+  const char *dont_store_plaintext_passwords =
+    apr_hash_get(parameters,
+                 SVN_AUTH_PARAM_DONT_STORE_PLAINTEXT_PASSWORDS,
+                 APR_HASH_KEY_STRING);
+   svn_boolean_t non_interactive = apr_hash_get(parameters,
                                                SVN_AUTH_PARAM_NON_INTERACTIVE,
                                                APR_HASH_KEY_STRING) != NULL;
+  simple_provider_baton_t *b = (simple_provider_baton_t*)provider_baton;
   *saved = FALSE;
 
+  /* This is --no-auth-cache */
   if (! creds->may_save)
     return SVN_NO_ERROR;
 
@@ -261,24 +275,57 @@ simple_save_creds_helper(svn_boolean_t *saved,
                svn_string_create(creds->username, pool));
 
   /* Don't store passwords in any form if the user has told
-   * us not to do so. If we are allowed to store passwords,
-   * default to only storing encrypted passwords, unless the user
-   * has explicitly allowed us to store plain-text passwords. */
-  if (! dont_store_passwords
-      && (strcmp(passtype, SVN_AUTH__WINCRYPT_PASSWORD_TYPE) == 0
-          || strcmp(passtype, SVN_AUTH__KEYCHAIN_PASSWORD_TYPE) == 0
-          || store_plaintext_passwords))
+   * us not to do so. */
+  if (! dont_store_passwords)
     {
-      svn_boolean_t password_stored;
-      password_stored = password_set(creds_hash, realmstring, creds->username,
-                                     creds->password, non_interactive, pool);
-      if (password_stored && passtype)
+      svn_boolean_t may_save_password = FALSE;
+
+      /* If the password is going to be stored encrypted, go right
+       * ahead and store it to disk. Else determine whether saving
+       * in plaintext is OK. */
+      if (strcmp(passtype, SVN_AUTH__WINCRYPT_PASSWORD_TYPE) == 0
+          || strcmp(passtype, SVN_AUTH__KEYCHAIN_PASSWORD_TYPE) == 0)
         {
-          /* Store the password type with the auth data, so that we
-             know which provider owns the password. */
-          apr_hash_set(creds_hash, SVN_AUTH__AUTHFILE_PASSTYPE_KEY,
-                       APR_HASH_KEY_STRING,
-                       svn_string_create(passtype, pool));
+          may_save_password = TRUE;
+        }
+      else
+        {
+          if (! dont_store_plaintext_passwords && ! store_plaintext_passwords)
+            {
+              /* We have no information from the configuration file whether
+               * saving unencrypted is allowed. Prompt the user. */
+              svn_boolean_t may_save_plaintext;
+              /* TODO: At some point, we might want to default to not
+               * storing if the callback is NULL. */
+              if (b->plaintext_prompt_func)
+                SVN_ERR((*b->plaintext_prompt_func)(&may_save_plaintext,
+                                                    b->plaintext_prompt_baton,
+                                                    pool));
+              may_save_password = may_save_plaintext; 
+            }
+          else
+            {
+              /* dont_store_plaintext_passwords overrides
+               * store_plaintext_passwords */
+              may_save_password = (dont_store_plaintext_passwords
+                                   ? FALSE : TRUE);
+            }
+        }
+
+      if (may_save_password)
+        {
+          svn_boolean_t password_stored;
+          password_stored = password_set(creds_hash, realmstring,
+                                         creds->username, creds->password,
+                                         non_interactive, pool);
+          if (password_stored && passtype)
+            {
+              /* Store the password type with the auth data, so that we
+                 know which provider owns the password. */
+              apr_hash_set(creds_hash, SVN_AUTH__AUTHFILE_PASSTYPE_KEY,
+                           APR_HASH_KEY_STRING,
+                           svn_string_create(passtype, pool));
+            }
         }
     }
 
@@ -331,16 +378,30 @@ static const svn_auth_provider_t simple_provider = {
   simple_save_creds
 };
 
-
 /* Public API */
+void
+svn_auth_get_simple_provider2
+  (svn_auth_provider_object_t **provider,
+   svn_auth_plaintext_prompt_func_t plaintext_prompt_func,
+   void* plaintext_prompt_baton,
+   apr_pool_t *pool)
+{
+  svn_auth_provider_object_t *po = apr_pcalloc(pool, sizeof(*po));
+  simple_provider_baton_t *pb = apr_pcalloc(pool, sizeof(*pb));
+
+  pb->plaintext_prompt_func = plaintext_prompt_func;
+  pb->plaintext_prompt_baton = plaintext_prompt_baton;
+
+  po->vtable = &simple_provider;
+  po->provider_baton = pb;
+  *provider = po;
+}
+
 void
 svn_auth_get_simple_provider(svn_auth_provider_object_t **provider,
                              apr_pool_t *pool)
 {
-  svn_auth_provider_object_t *po = apr_pcalloc(pool, sizeof(*po));
-
-  po->vtable = &simple_provider;
-  *provider = po;
+  svn_auth_get_simple_provider2(provider, NULL, NULL, pool);
 }
 
 

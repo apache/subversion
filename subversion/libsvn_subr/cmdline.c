@@ -353,22 +353,22 @@ svn_cmdline_handle_exit_error(svn_error_t *err,
 }
 
 svn_error_t *
-svn_cmdline_setup_auth_baton2(svn_auth_baton_t **ab,
-                              svn_boolean_t non_interactive,
-                              const char *auth_username,
-                              const char *auth_password,
-                              const char *config_dir,
-                              svn_boolean_t no_auth_cache,
-                              svn_boolean_t store_plaintext_passwords,
-                              svn_config_t *cfg,
-                              svn_cancel_func_t cancel_func,
-                              void *cancel_baton,
-                              apr_pool_t *pool)
+svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
+                             svn_boolean_t non_interactive,
+                             const char *auth_username,
+                             const char *auth_password,
+                             const char *config_dir,
+                             svn_boolean_t no_auth_cache,
+                             svn_config_t *cfg,
+                             svn_cancel_func_t cancel_func,
+                             void *cancel_baton,
+                             apr_pool_t *pool)
 {
   svn_boolean_t store_password_val = TRUE;
   svn_boolean_t store_plaintext_password_val = FALSE;
   svn_boolean_t store_auth_creds_val = TRUE;
   svn_auth_provider_object_t *provider;
+  svn_boolean_t default_value_was_used = FALSE;
 
   /* The whole list of registered providers */
   apr_array_header_t *providers
@@ -384,7 +384,9 @@ svn_cmdline_setup_auth_baton2(svn_auth_baton_t **ab,
   svn_auth_get_keychain_simple_provider(&provider, pool);
   APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 #endif
-  svn_auth_get_simple_provider(&provider, pool);
+  svn_auth_get_simple_provider2(&provider,
+                                svn_cmdline_auth_plaintext_prompt,
+                                NULL, pool);
   APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
   svn_auth_get_username_provider(&provider, pool);
   APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
@@ -461,6 +463,7 @@ svn_cmdline_setup_auth_baton2(svn_auth_baton_t **ab,
     svn_auth_set_parameter(*ab, SVN_AUTH_PARAM_CONFIG_DIR,
                            config_dir);
 
+  /* Determine whether storing passwords in any form is allowed. */
   SVN_ERR(svn_config_get_bool(cfg, &store_password_val,
                               SVN_CONFIG_SECTION_AUTH,
                               SVN_CONFIG_OPTION_STORE_PASSWORDS,
@@ -469,17 +472,26 @@ svn_cmdline_setup_auth_baton2(svn_auth_baton_t **ab,
   if (! store_password_val)
     svn_auth_set_parameter(*ab, SVN_AUTH_PARAM_DONT_STORE_PASSWORDS, "");
 
-  SVN_ERR(svn_config_get_bool(cfg, &store_plaintext_password_val,
-                              SVN_CONFIG_SECTION_AUTH,
-                              SVN_CONFIG_OPTION_STORE_PLAINTEXT_PASSWORDS,
-                              FALSE));
+  /* Determine whether storing passwords in plaintext has been
+   * explicitly allowed or denied. */
+  SVN_ERR(svn_config_get_bool2(cfg, &store_plaintext_password_val,
+                               SVN_CONFIG_SECTION_AUTH,
+                               SVN_CONFIG_OPTION_STORE_PLAINTEXT_PASSWORDS,
+                               FALSE, /* <-- arbitrary */
+                               &default_value_was_used));
 
-  if (store_plaintext_passwords || store_plaintext_password_val)
-    svn_auth_set_parameter(*ab, SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS, "");
+  if (! default_value_was_used)
+    {
+      if (store_plaintext_password_val)
+        svn_auth_set_parameter(*ab, SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS,
+                              "");
+      else
+        svn_auth_set_parameter(*ab,
+                              SVN_AUTH_PARAM_DONT_STORE_PLAINTEXT_PASSWORDS,
+                              "");
+    }
 
-  /* There are two different ways the user can disable disk caching
-     of credentials:  either via --no-auth-cache, or in the config
-     file ('store-auth-creds = no'). */
+  /* Determine whether we are allowed to write to the auth/ area. */
   SVN_ERR(svn_config_get_bool(cfg, &store_auth_creds_val,
                               SVN_CONFIG_SECTION_AUTH,
                               SVN_CONFIG_OPTION_STORE_AUTH_CREDS,
@@ -489,24 +501,6 @@ svn_cmdline_setup_auth_baton2(svn_auth_baton_t **ab,
     svn_auth_set_parameter(*ab, SVN_AUTH_PARAM_NO_AUTH_CACHE, "");
 
   return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
-                             svn_boolean_t non_interactive,
-                             const char *username,
-                             const char *password,
-                             const char *config_dir,
-                             svn_boolean_t no_auth_cache,
-                             svn_config_t *cfg,
-                             svn_cancel_func_t cancel_func,
-                             void *cancel_baton,
-                             apr_pool_t *pool)
-{
-  return svn_cmdline_setup_auth_baton2(ab, non_interactive, username,
-                                       password, config_dir, no_auth_cache,
-                                       TRUE, cfg, cancel_func, cancel_baton,
-                                       pool);
 }
 
 svn_error_t *

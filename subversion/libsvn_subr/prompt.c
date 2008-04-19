@@ -376,6 +376,48 @@ svn_cmdline_auth_ssl_client_cert_pw_prompt
   return SVN_NO_ERROR;
 }
 
+/* This implements 'svn_auth_plaintext_prompt_func_t'. */
+svn_error_t *
+svn_cmdline_auth_plaintext_prompt(svn_boolean_t *may_save_plaintext,
+                                  void *baton,
+                                  apr_pool_t *pool)
+{
+  const char *answer = NULL;
+  svn_boolean_t answered = FALSE;
+  const char *prompt_string = _("Store password unencrypted (yes/no)? ");
+
+  SVN_ERR(svn_cmdline_printf(pool, "\n"));
+  SVN_ERR(svn_cmdline_printf(pool, "-------------------------------------"
+                             "----------------------------------\n"));
+  SVN_ERR(svn_cmdline_printf(pool, _("ATTENTION! Your password is going to "
+                               "be stored to disk unencrypted!")));
+  SVN_ERR(svn_cmdline_printf(pool, "\n"));
+  SVN_ERR(svn_cmdline_printf(pool, "-------------------------------------"
+                             "----------------------------------\n"));
+  SVN_ERR(svn_cmdline_printf(pool, _("You can get rid of this warning by "
+                               "editing your configuration file.")));
+  SVN_ERR(svn_cmdline_printf(pool, "\n"));
+
+  do
+    {
+      SVN_ERR(prompt(&answer, prompt_string, FALSE, NULL, pool));
+      if (strcmp(answer, _("yes")) == 0)
+        {
+          *may_save_plaintext = TRUE;
+          answered = TRUE;
+        }
+      else if (strcmp(answer, _("no")) == 0)
+        {
+          *may_save_plaintext = FALSE;
+          answered = TRUE;
+        }
+      else
+          prompt_string = _("Please type 'yes' or 'no': ");
+    }
+  while (! answered); 
+
+  return SVN_NO_ERROR;
+}
 
 
 /** Generic prompting. **/
