@@ -254,7 +254,7 @@ simple_save_creds_helper(svn_boolean_t *saved,
     apr_hash_get(parameters,
                  SVN_AUTH_PARAM_DONT_STORE_PLAINTEXT_PASSWORDS,
                  APR_HASH_KEY_STRING);
-   svn_boolean_t non_interactive = apr_hash_get(parameters,
+  svn_boolean_t non_interactive = apr_hash_get(parameters,
                                                SVN_AUTH_PARAM_NON_INTERACTIVE,
                                                APR_HASH_KEY_STRING) != NULL;
   simple_provider_baton_t *b = (simple_provider_baton_t *)provider_baton;
