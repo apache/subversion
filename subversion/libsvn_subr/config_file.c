@@ -766,7 +766,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
     {
       apr_file_t *f;
       const char *contents =
-        "### This file specifies server-specific protocol parameters,"       NL
+        "### This file specifies server-specific parameters,"                NL
         "### including HTTP proxy information, and HTTP timeout settings."   NL
         "###"                                                                NL
         "### The currently defined server options are:"                      NL
@@ -793,6 +793,17 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###   http-library               Which library to use for http/https"
                                                                              NL
         "###                              connections (neon or serf)"        NL
+        "###   store-plaintext-passwords  Specifies whether passwords used"  NL
+        "###                              to authenticate against a"         NL
+        "###                              Subversion server may be cached"   NL
+        "###                              on disk unencrypted."              NL
+        "###"                                                                NL
+        "### store-plaintext-passwords may be either 'yes', 'no', or 'prompt'."                                                                              NL
+        "### It defaults to 'prompt', which means that Subversion will ask"  NL
+        "### you before saving a password to disk in unencrypted form."      NL
+        "### This option can be set globally in the 'config' file, and will" NL
+        "### be ignored if it occurs in the [global] section of this file."  NL
+        "### The global setting is overridden by settings in this file."     NL
         "###"                                                                NL
         "### HTTP timeouts, if given, are specified in seconds.  A timeout"  NL
         "### of 0, i.e. zero, causes a builtin default to be used."          NL
@@ -822,12 +833,13 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "# http-auth-types = basic;digest;negotiate"                         NL
 #endif
         "# neon-debug-mask = 130"                                            NL
+        "# store-plaintext-passwords = no"                                   NL
         ""                                                                   NL
         "### Information for the second group:"                              NL
         "# [othergroup]"                                                     NL
         "# http-proxy-host = proxy2.some-domain-name.com"                    NL
         "# http-proxy-port = 9000"                                           NL
-        "# No username and password, so use the defaults below."             NL
+        "# No username and password for the proxy, so use the defaults below."                                                                               NL
         ""                                                                   NL
         "### You can set default parameters in the 'global' section."        NL
         "### These parameters apply if no corresponding parameter is set in" NL
@@ -914,6 +926,9 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### 'prompt', which means that Subversion will ask you before"      NL
         "### saving a password to disk in unencrypted form.  Note that"      NL
         "### this option has no effect if 'store-passwords' is set to 'no'." NL
+        "### This option can also be set on a per-server basis in the"       NL
+        "### 'servers' configuration file in your config directory."         NL
+        "### Values for specific servers override the value specified here." NL
         "# store-plaintext-passwords = no"                                   NL
         "### Set store-auth-creds to 'no' to avoid storing any subversion"   NL
         "### credentials in the auth/ area of your config directory."        NL
