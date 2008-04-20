@@ -281,6 +281,78 @@ else
 fi
 
 
+dnl pkg-config (required for support for KWallet and GNOME Keyring) -------------------
+
+AC_CHECK_PROG(HAVE_PKG_CONFIG, pkg-config, yes)
+
+
+dnl KWallet -------------------
+
+AC_ARG_ENABLE(kwallet,
+  AS_HELP_STRING([--enable-kwallet=PATH],
+                 [Enable use of KWallet for auth credentials]),
+  [
+    if test "$enableval" = "yes"; then
+      AC_MSG_ERROR([--enable-kwallet requires an argument.])
+    else
+      enable_kwallet="$enableval"
+    fi
+  ],
+  [enable_kwallet=no])
+
+old_CXXFLAGS="$CXXFLAGS"
+old_LDFLAGS="$LDFLAGS"
+old_LIBS="$LIBS"
+SVN_KWALLET_LIBS="-lQtCore -lQtDBus -lQtGui -lkdeui"
+if test "$enable_kwallet" != "no"; then
+  if test "$HAVE_PKG_CONFIG" = "yes"; then
+    AC_MSG_CHECKING([for QtCore, QtDBus, QtGui])
+    if pkg-config --exists QtCore QtDBus QtGui; then
+      AC_MSG_RESULT([yes])
+      AC_LANG(C++)
+      kde_dir="$enable_kwallet"
+      CXXFLAGS="$CXXFLAGS `pkg-config --cflags QtCore QtDBus QtGui` -I$kde_dir/include"
+      LIBS="$LIBS $SVN_KWALLET_LIBS"
+      for l in [`pkg-config --libs QtCore QtDBus QtGui | $GREP -o -- -L[^[:space:]]*`]; do
+        qt_lib_dirs="$qt_lib_dirs $l"
+      done
+      qt_lib_dirs="${qt_lib_dirs# }"
+      for kde_lib_subdir in lib64 lib; do
+        LDFLAGS="$old_LDFLAGS $qt_lib_dirs -L$kde_dir/$kde_lib_subdir"
+        AC_LINK_IFELSE([
+#include <kwallet.h>
+int main()
+{KWallet::Wallet::walletList();}], enable_kwallet=yes, enable_kwallet=no)
+        if test "$enable_kwallet" = "yes"; then
+          break
+        fi
+      done
+      AC_LANG(C)
+    else
+      enable_kwallet=no
+      AC_MSG_RESULT([no])
+      AC_MSG_ERROR([cannot find QtCore, QtDBus, QtGui])
+    fi
+  else
+    enable_kwallet=no
+  fi
+fi
+
+AC_MSG_CHECKING([for KWallet])
+if test "$enable_kwallet" = "yes"; then
+  AC_DEFINE([SVN_HAVE_KWALLET], [1],
+            [Is KWallet support enabled?])
+  AC_MSG_RESULT([yes])
+else
+  CXXFLAGS="$old_CXXFLAGS"
+  LDFLAGS="$old_LDFLAGS"
+  SVN_KWALLET_LIBS=""
+  AC_MSG_RESULT([no])
+fi
+LIBS="$old_LIBS"
+AC_SUBST(SVN_KWALLET_LIBS)
+
+
 dnl I18n -------------------
 
 AC_ARG_ENABLE(nls,
