@@ -35,8 +35,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.5\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2008-04-12 02:00+0200\n"
-"PO-Revision-Date: 2008-04-12 02:00+0200\n"
+"POT-Creation-Date: 2008-04-20 17:00+0200\n"
+"PO-Revision-Date: 2008-04-20 17:00+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Polish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -544,7 +544,7 @@ msgstr "Niezaimplementowana metoda dostępu do repozytorium"
 
 #: ../include/svn_error_codes.h:726
 msgid "Repository has no UUID"
-msgstr "Repozytorium nie ma UUID"
+msgstr "Repozytorium nie ma UUID-u"
 
 #: ../include/svn_error_codes.h:730
 msgid "Unsupported RA plugin ABI version"
@@ -1281,8 +1281,8 @@ msgstr "%s\t(kopia robocza)"
 msgid "Cannot display: file marked as a binary type.%s"
 msgstr "Nie można wyświetlić: plik binarny.%s"
 
-#: ../libsvn_client/diff.c:881 ../libsvn_client/merge.c:3711
-#: ../libsvn_client/merge.c:4983
+#: ../libsvn_client/diff.c:881 ../libsvn_client/merge.c:3717
+#: ../libsvn_client/merge.c:4991
 msgid "Not all required revisions are specified"
 msgstr "Nie wszystkie wymagane wersje zostały podane"
 
@@ -1387,9 +1387,9 @@ msgstr "URL '%s' nie istnieje w tej wersji"
 msgid "No common parent found, unable to operate on disjoint arguments"
 msgstr "Nie znaleziono wspólnego rodzica, nie można użyć rozłącznych argumentów"
 
-#: ../libsvn_client/locking_commands.c:261 ../libsvn_client/merge.c:5000
-#: ../libsvn_client/merge.c:5006 ../libsvn_client/merge.c:5577
-#: ../libsvn_client/merge.c:5733 ../libsvn_client/ra.c:386
+#: ../libsvn_client/locking_commands.c:261 ../libsvn_client/merge.c:5008
+#: ../libsvn_client/merge.c:5014 ../libsvn_client/merge.c:5585
+#: ../libsvn_client/merge.c:5741 ../libsvn_client/ra.c:386
 #: ../libsvn_client/ra.c:423 ../libsvn_client/ra.c:626
 #, c-format
 msgid "'%s' has no URL"
@@ -1464,11 +1464,11 @@ msgstr ".merge-lewo.w%ld"
 msgid ".merge-right.r%ld"
 msgstr ".merge-prawo.w%ld"
 
-#: ../libsvn_client/merge.c:1674
+#: ../libsvn_client/merge.c:1680
 msgid "Cannot reverse-merge a range from a path's own future history; try updating first"
 msgstr "Nie można połączyć odwróconych zmian z własnej przyszłości ścieżki. Spróbuj najpierw zaktualizować kopię roboczą"
 
-#: ../libsvn_client/merge.c:2166
+#: ../libsvn_client/merge.c:2172
 #, c-format
 msgid ""
 "One or more conflicts were produced while merging r%ld:%ld into\n"
@@ -1481,45 +1481,45 @@ msgstr ""
 "rozwiąż wszystkie konflikty i uruchom merge ponownie, by zastosować\n"
 "pozostałe wersje"
 
-#: ../libsvn_client/merge.c:4679
+#: ../libsvn_client/merge.c:4687
 msgid "Use of two URLs is not compatible with mergeinfo modification"
 msgstr "Użycie dwu URL-i jest niekompatybilne z modyfikacją informacji o połączeniach zmian"
 
-#: ../libsvn_client/merge.c:4686 ../libsvn_client/merge.c:4921
+#: ../libsvn_client/merge.c:4694 ../libsvn_client/merge.c:4929
 msgid "Merge from foreign repository is not compatible with mergeinfo modification"
 msgstr "Łączenie zmian z zewnętrznego repozytorium jest niekompatybilne z modyfikacją informacji o połączeniach zmian"
 
-#: ../libsvn_client/merge.c:5227
+#: ../libsvn_client/merge.c:5235
 msgid "Cannot reintegrate into a working copy with a switched subtree"
 msgstr "Nie można reintegrować do kopii roboczej z przełączonym poddrzewem"
 
-#: ../libsvn_client/merge.c:5232
+#: ../libsvn_client/merge.c:5240
 msgid "Cannot reintegrate into a working copy not entirely at infinite depth"
 msgstr "Nie można reintegrować do kopii roboczej z niecałkowicie nieskończoną głębokością"
 
-#: ../libsvn_client/merge.c:5237
+#: ../libsvn_client/merge.c:5245
 msgid "Cannot reintegrate into a working copy that has local modifications"
 msgstr "Nie można reintegrować do kopii roboczej posiadającej lokalne modyfikacje"
 
-#: ../libsvn_client/merge.c:5243
+#: ../libsvn_client/merge.c:5251
 msgid "Cannot determine revision of working copy"
 msgstr "Nie można określić wersji kopii roboczej"
 
-#: ../libsvn_client/merge.c:5247
+#: ../libsvn_client/merge.c:5255
 msgid "Cannot reintegrate into mixed-revision working copy; try updating first"
 msgstr "Nie można reintegrować do kopii roboczej z mieszanymi wersjami. Spróbuj najpierw zaktualizować kopię roboczą"
 
-#: ../libsvn_client/merge.c:5314
+#: ../libsvn_client/merge.c:5322
 #, c-format
 msgid "At least one revision (r%ld) not yet merged from '%s'"
 msgstr "Przynajmniej jedna wersja (r%ld) niepołączona jeszcze z '%s'"
 
-#: ../libsvn_client/merge.c:5472 ../libsvn_client/merge.c:5636
+#: ../libsvn_client/merge.c:5480 ../libsvn_client/merge.c:5644
 #, c-format
 msgid "'%s@%ld' must be ancestrally related to '%s@%ld'"
 msgstr "'%s@%ld' musi być spokrewnione z '%s@%ld'"
 
-#: ../libsvn_client/merge.c:5595
+#: ../libsvn_client/merge.c:5603
 #, c-format
 msgid "'%s' must be from the same repository as '%s'"
 msgstr "'%s' musi być z tego samego repozytorium co '%s'"
@@ -4153,24 +4153,24 @@ msgstr "Docelowa śieżka nie istnieje"
 msgid "Cannot replace a directory from within"
 msgstr "Nie można zastąpić katalogu podczas pobytu w tym katalogu"
 
-#: ../libsvn_repos/reporter.c:1209
+#: ../libsvn_repos/reporter.c:1211
 msgid "Invalid report for top level of working copy"
 msgstr "Niepoprawna operacja na katalogu głównym kopii roboczej"
 
-#: ../libsvn_repos/reporter.c:1224
+#: ../libsvn_repos/reporter.c:1226
 msgid "Two top-level reports with no target"
 msgstr "Dwa główne raporty bez obiektu docelowego"
 
-#: ../libsvn_repos/reporter.c:1282
+#: ../libsvn_repos/reporter.c:1278
 #, c-format
 msgid "Unsupported report depth '%s'"
 msgstr "Nieobsługiwana głębokość '%s' raportu"
 
-#: ../libsvn_repos/reporter.c:1326
+#: ../libsvn_repos/reporter.c:1322
 msgid "Depth 'exclude' not supported for link"
 msgstr "Głębokość 'exclude' nieobsługiwana dla odnośnika"
 
-#: ../libsvn_repos/reporter.c:1405
+#: ../libsvn_repos/reporter.c:1401
 msgid "Request depth 'exclude' not supported"
 msgstr "Żądana głębokość 'exclude' nieobsługiwana"
 
@@ -8434,30 +8434,55 @@ msgstr "Ścieżka '%s' jest teraz członkiem listy zmian '%s'.\n"
 msgid "Path '%s' is no longer a member of a changelist.\n"
 msgstr "Ścieżka '%s' już nie jest członkiem listy zmian.\n"
 
-#: ../svn/notify.c:427
+#: ../svn/notify.c:421
 #, c-format
 msgid "--- Merging differences between repository URLs into '%s':\n"
 msgstr "--- Łączenie zmian nastąpiłych pomiędzy URL-ami repozytorium do '%s':\n"
 
-#: ../svn/notify.c:432
+#: ../svn/notify.c:426
 #, c-format
 msgid "--- Merging r%ld into '%s':\n"
 msgstr "--- Łączenie zmian nastąpiłych w r%ld do '%s':\n"
 
-#: ../svn/notify.c:436
+#: ../svn/notify.c:430
 #, c-format
 msgid "--- Reverse-merging r%ld into '%s':\n"
 msgstr "--- Łączenie odwróconych zmian nastąpiłych w r%ld do '%s':\n"
 
-#: ../svn/notify.c:440
+#: ../svn/notify.c:434
 #, c-format
 msgid "--- Merging r%ld through r%ld into '%s':\n"
-msgstr "--- Łączenie zmian nastąpiłych od r%ld do r%ld do '%s':\n"
+msgstr "--- Łączenie zmian nastąpiłych w od r%ld do r%ld do '%s':\n"
 
-#: ../svn/notify.c:446
+#: ../svn/notify.c:440
 #, c-format
 msgid "--- Reverse-merging r%ld through r%ld into '%s':\n"
-msgstr "--- Łączenie odwróconych zmian nastąpiłych między r%ld a r%ld do '%s':\n"
+msgstr "--- Łączenie odwróconych zmian nastąpiłych w od r%ld do r%ld do '%s':\n"
+
+#: ../svn/notify.c:451
+#, c-format
+msgid "--- Merging differences between foreign repository URLs into '%s':\n"
+msgstr "--- Łączenie zmian nastąpiłych pomiędzy URL-ami obcego repozytorium do '%s':\n"
+
+#: ../svn/notify.c:457
+#, c-format
+msgid "--- Merging (from foreign repository) r%ld into '%s':\n"
+msgstr "--- Łączenie (z obcego repozytorium) zmian nastąpiłych w r%ld do '%s':\n"
+
+#: ../svn/notify.c:462
+#, c-format
+msgid "--- Reverse-merging (from foreign repository) r%ld into '%s':\n"
+msgstr "--- Łączenie (z obcego repozytorium) odwróconych zmian nastąpiłych w r%ld do '%s':\n"
+
+#: ../svn/notify.c:467
+#, c-format
+msgid "--- Merging (from foreign repository) r%ld through r%ld into '%s':\n"
+msgstr "--- Łączenie (z obcego repozytorium) zmian nastąpiłych w od r%ld do r%ld do '%s':\n"
+
+#: ../svn/notify.c:473
+#, c-format
+msgid "--- Reverse-merging (from foreign repository) r%ld through r%ld into '%s':\n"
+msgstr "--- Łączenie (z obcego repozytorium) odwróconych zmian nastąpiłych w od r%ld do r%ld do '%s':\n"
 
 #: ../svn/propdel-cmd.c:82
 #, c-format
