@@ -269,12 +269,40 @@ svn_cmdline_auth_plaintext_prompt(svn_boolean_t *may_save_plaintext,
 /** Initialize auth baton @a ab with the standard set of authentication
  * providers used by the command line client.  @a non_interactive,
  * @a username, @a password, @a config_dir, and @a no_auth_cache are the
- * values of the command line options of the same names.  @a cfg is the
- * @c SVN_CONFIG_CATEGORY_CONFIG configuration, and @a cancel_func and
- * @a cancel_baton control the cancellation of the prompting providers
- * that are initialized.  @a pool is used for all allocations.
+ * values of the command line options of the same names.  @a cfg_hash
+ * is a hash table as returned by svn_config_get_config, @a urls is a
+ * list of any URLs that were supplied as command line arguments (used to
+ * filter settings from SVN_CONFIG_CATEGORY_SERVERS), and @a cancel_func
+ * and @a cancel_baton control the cancellation of the prompting providers
+ * that are initialized.
+ *
+ * @a pool is used for all allocations.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_cmdline_setup_auth_baton2(svn_auth_baton_t **ab,
+                              svn_boolean_t non_interactive,
+                              const char *username,
+                              const char *password,
+                              const char *config_dir,
+                              svn_boolean_t no_auth_cache,
+                              apr_hash_t *cfg_hash,
+                              apr_array_header_t *urls,
+                              svn_cancel_func_t cancel_func,
+                              void *cancel_baton,
+                              apr_pool_t *pool);
+
+/** 
+ * Like svn_cmdline_setup_auth_baton2, but with a @a cfg parameter
+ * of type svn_config_t* instead of the cfg_hash parameter, and
+ * no list of urls either.
+ *
+ * Users of this function make it impossible to specify the
+ * 'store-plaintext-passwords' option on a per-server basis.
  *
  * @since New in 1.4.
+ * @deprecated Provided for backward compatibility with the 1.5 API.
  */
 svn_error_t *
 svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
