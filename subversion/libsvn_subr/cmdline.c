@@ -506,8 +506,8 @@ svn_cmdline_setup_auth_baton2(svn_auth_baton_t **ab,
    * try the 'config' file.
    */
 
-  store_plaintext_password_val = NULL;
-  if (urls)
+  store_plaintext_password_val = non_interactive ? SVN_CONFIG_FALSE : NULL;
+  if (urls && ! store_plaintext_password_val)
     {
       /* Check server groups in turn, first match wins. */
       subpool = svn_pool_create(pool);
