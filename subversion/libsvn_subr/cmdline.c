@@ -400,8 +400,9 @@ svn_cmdline_setup_auth_baton2(svn_auth_baton_t **ab,
   apr_array_header_t *providers
     = apr_array_make(pool, 12, sizeof(svn_auth_provider_object_t *));
 
-  /* The main disk-caching auth providers, for both
-     'username/password' creds and 'username' creds.  */
+  /* Disk-caching auth providers, for both
+     'username/password' creds and 'username' creds,
+     which store passwords encrypted.  */
 #if defined(WIN32) && !defined(__MINGW32__)
   svn_auth_get_windows_simple_provider(&provider, pool);
   APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
@@ -410,10 +411,6 @@ svn_cmdline_setup_auth_baton2(svn_auth_baton_t **ab,
   svn_auth_get_keychain_simple_provider(&provider, pool);
   APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 #endif
-  svn_auth_get_simple_provider2(&provider,
-                                svn_cmdline_auth_plaintext_prompt,
-                                NULL, pool);
-  APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
   svn_auth_get_username_provider(&provider, pool);
   APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
@@ -467,7 +464,19 @@ svn_cmdline_setup_auth_baton2(svn_auth_baton_t **ab,
       svn_auth_get_ssl_client_cert_pw_prompt_provider
         (&provider, svn_cmdline_auth_ssl_client_cert_pw_prompt, pb, 2, pool);
       APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+
+      /* The simple plaintext cache auth provider, interactive. */
+      svn_auth_get_simple_provider2(&provider,
+                                    svn_cmdline_auth_plaintext_prompt,
+                                    pb, pool);
+      APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
     }
+  else
+    {
+      /* The simple plaintext cache auth provider, non-interactive. */
+       svn_auth_get_simple_provider2(&provider, NULL, NULL, pool);
+       APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+     }
 
   /* Build an authentication baton to give to libsvn_client. */
   svn_auth_open(ab, providers, pool);

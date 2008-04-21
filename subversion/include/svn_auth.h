@@ -477,6 +477,10 @@ typedef svn_error_t *(*svn_auth_ssl_client_cert_pw_prompt_func_t)
  * is going to be stored unencrypted. In the future, providers may
  * default to not storing the password unencrypted if this callback is NULL.
  *
+ * Clients can however set the callback to NULL and set
+ * SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS to SVN_CONFIG_FALSE or
+ * SVN_CONFIG_TRUE to enforce a certain behaviour. 
+ *
  * @since New in 1.6
  */
 typedef svn_error_t *(*svn_auth_plaintext_prompt_func_t)
@@ -678,7 +682,7 @@ void svn_auth_get_username_prompt_provider
  * it calls @a plaintext_prompt_func before saving the
  * password.
  *
- * @a plaintext_prompt_baton is passed to @a plaintext_prompt_func.
+ * @a prompt_baton is passed to @a plaintext_prompt_func.
  *
  * Allocate @a *provider in @a pool.
  *
@@ -693,7 +697,7 @@ void svn_auth_get_username_prompt_provider
 void svn_auth_get_simple_provider2
   (svn_auth_provider_object_t **provider,
    svn_auth_plaintext_prompt_func_t plaintext_prompt_func,
-   void* plaintext_prompt_baton,
+   void* prompt_baton,
    apr_pool_t *pool);
 
 /** Like svn_auth_get_simple_provider2, but without the ability to

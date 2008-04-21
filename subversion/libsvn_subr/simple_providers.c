@@ -48,7 +48,7 @@
 typedef struct
 {
   svn_auth_plaintext_prompt_func_t plaintext_prompt_func;
-  void *plaintext_prompt_baton;
+  void *prompt_baton;
 
 } simple_provider_baton_t;
 
@@ -297,14 +297,17 @@ simple_save_creds_helper(svn_boolean_t *saved,
                * This would change the semantics of the old API though.
                *
                * So for now, clients that don't implement the callback
+               * and provide no explicit value for
+               * SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS
                * cause unencrypted passwords to be stored by default.
                * Needless to say, our own client is sane, but who knows
-               * what other clients are doing. */
+               * what other clients are doing.
+               */
               svn_boolean_t may_save_plaintext = TRUE;
 
               if (b->plaintext_prompt_func)
                 SVN_ERR((*b->plaintext_prompt_func)(&may_save_plaintext,
-                                                    b->plaintext_prompt_baton,
+                                                    b->prompt_baton,
                                                     pool));
               may_save_password = may_save_plaintext; 
             }
@@ -399,14 +402,14 @@ void
 svn_auth_get_simple_provider2
   (svn_auth_provider_object_t **provider,
    svn_auth_plaintext_prompt_func_t plaintext_prompt_func,
-   void* plaintext_prompt_baton,
+   void* prompt_baton,
    apr_pool_t *pool)
 {
   svn_auth_provider_object_t *po = apr_pcalloc(pool, sizeof(*po));
   simple_provider_baton_t *pb = apr_pcalloc(pool, sizeof(*pb));
 
   pb->plaintext_prompt_func = plaintext_prompt_func;
-  pb->plaintext_prompt_baton = plaintext_prompt_baton;
+  pb->prompt_baton = prompt_baton;
 
   po->vtable = &simple_provider;
   po->provider_baton = pb;
