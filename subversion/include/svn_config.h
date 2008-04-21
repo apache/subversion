@@ -456,6 +456,30 @@ svn_error_t * svn_config_write_auth_data(apr_hash_t *hash,
                                          const char *config_dir,
                                          apr_pool_t *pool);
 
+/** Put the absolute path to the user's configuration directory,
+ * or to a file within that directory, into @a *path.
+ *
+ * If @a config_dir is not NULL, it must point to an alternative
+ * config directory location. If it is NULL, the default location
+ * is used.  If @a fname is not NULL, it must specify the last
+ * component of the path to be returned. This can be used to create
+ * a path to any file in the configuration directory.
+ *
+ * Do all allocations in @a pool.
+ *
+ * Hint:
+ * To get the user configuration file, pass @c SVN_CONFIG_CATEGORY_CONFIG
+ * for @a fname. To get the servers configuration file, pass
+ * @c SVN_CONFIG_CATEGORY_SERVERS for @a fname.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_config_get_user_config_path(const char **path,
+                                const char *config_dir,
+                                const char *fname,
+                                apr_pool_t *pool);
+
 /** @} */
 
 #ifdef __cplusplus
