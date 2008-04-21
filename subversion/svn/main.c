@@ -1924,13 +1924,14 @@ main(int argc, const char *argv[])
       if (svn_path_is_url(os->argv[i]))
         {
           const char *utf8_url;
-          SVN_INT_ERR(svn_utf_cstring_to_utf8(&utf8_url, os->argv[i], pool));
+          if ((err = (svn_utf_cstring_to_utf8(&utf8_url, os->argv[i], pool))))
+            return svn_cmdline_handle_exit_error(err, pool, "svn: ");
           APR_ARRAY_PUSH(urls, const char *) = utf8_url;
         }
     }
 
   /* Set up Authentication stuff. */
-  SVN_INT_ERR(svn_cmdline_setup_auth_baton2(&ab,
+  if ((err = (svn_cmdline_setup_auth_baton2(&ab,
                                             opt_state.non_interactive,
                                             opt_state.auth_username,
                                             opt_state.auth_password,
@@ -1940,7 +1941,9 @@ main(int argc, const char *argv[])
                                             urls,
                                             ctx->cancel_func,
                                             ctx->cancel_baton,
-                                            pool));
+                                            pool))))
+    svn_handle_error2(err, stderr, TRUE, "svn: ");
+
   ctx->auth_baton = ab;
 
   /* Set up conflict resolution callback. */
