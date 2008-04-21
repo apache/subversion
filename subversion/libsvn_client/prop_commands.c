@@ -628,7 +628,9 @@ propget_walk_cb(const char *path,
  * KIND is the kind of the node at "TARGET_PREFIX/TARGET_RELATIVE".
  * Yes, caller passes this; it makes the recursion more efficient :-).
  *
- * Allocate the keys and values in POOL.
+ * Allocate the keys and values in PERM_POOL, but do all temporary
+ * work in WORK_POOL.  The two pools can be the same; recursive
+ * calls may use a different WORK_POOL, however.
  */
 static svn_error_t *
 remote_propget(apr_hash_t *props,
@@ -639,7 +641,8 @@ remote_propget(apr_hash_t *props,
                svn_revnum_t revnum,
                svn_ra_session_t *ra_session,
                svn_depth_t depth,
-               apr_pool_t *pool)
+               apr_pool_t *perm_pool,
+               apr_pool_t *work_pool)
 {
   apr_hash_t *dirents;
   apr_hash_t *prop_hash;
@@ -649,41 +652,47 @@ remote_propget(apr_hash_t *props,
       SVN_ERR(svn_ra_get_dir2(ra_session,
                               (depth >= svn_depth_files ? &dirents : NULL),
                               NULL, &prop_hash, target_relative, revnum,
-                              SVN_DIRENT_KIND, pool));
+                              SVN_DIRENT_KIND, work_pool));
     }
   else if (kind == svn_node_file)
     {
       SVN_ERR(svn_ra_get_file(ra_session, target_relative, revnum,
-                              NULL, NULL, &prop_hash, pool));
+                              NULL, NULL, &prop_hash, work_pool));
     }
   else if (kind == svn_node_none)
     {
       return svn_error_createf
         (SVN_ERR_ENTRY_NOT_FOUND, NULL,
          _("'%s' does not exist in revision %ld"),
-         svn_path_join(target_prefix, target_relative, pool), revnum);
+         svn_path_join(target_prefix, target_relative, work_pool), revnum);
     }
   else
     {
       return svn_error_createf
         (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
          _("Unknown node kind for '%s'"),
-         svn_path_join(target_prefix, target_relative, pool));
+         svn_path_join(target_prefix, target_relative, work_pool));
     }
 
-  apr_hash_set(props,
-               svn_path_join(target_prefix, target_relative, pool),
-               APR_HASH_KEY_STRING,
-               apr_hash_get(prop_hash, propname, APR_HASH_KEY_STRING));
+  {
+    svn_string_t *val = apr_hash_get(prop_hash, propname,
+                                     APR_HASH_KEY_STRING);
+    if (val)
+      val = svn_string_dup(val, perm_pool);
 
+    apr_hash_set(props,
+                 svn_path_join(target_prefix, target_relative, perm_pool),
+                 APR_HASH_KEY_STRING, val);
+  }
 
   if (depth >= svn_depth_files
       && kind == svn_node_dir
       && apr_hash_count(dirents) > 0)
     {
       apr_hash_index_t *hi;
+      apr_pool_t *iterpool = svn_pool_create(work_pool);
 
-      for (hi = apr_hash_first(pool, dirents);
+      for (hi = apr_hash_first(work_pool, dirents);
            hi;
            hi = apr_hash_next(hi))
         {
@@ -693,6 +702,8 @@ remote_propget(apr_hash_t *props,
           svn_dirent_t *this_ent;
           const char *new_target_relative;
           svn_depth_t depth_below_here = depth;
+
+          svn_pool_clear(iterpool);
 
           apr_hash_this(hi, &key, NULL, &val);
           this_name = key;
@@ -705,7 +716,7 @@ remote_propget(apr_hash_t *props,
             depth_below_here = svn_depth_empty;
 
           new_target_relative = svn_path_join(target_relative,
-                                              this_name, pool);
+                                              this_name, iterpool);
 
           SVN_ERR(remote_propget(props,
                                  propname,
@@ -715,8 +726,10 @@ remote_propget(apr_hash_t *props,
                                  revnum,
                                  ra_session,
                                  depth_below_here,
-                                 pool));
+                                 perm_pool, iterpool));
         }
+
+      svn_pool_destroy(iterpool);
     }
 
   return SVN_NO_ERROR;
@@ -866,7 +879,7 @@ svn_client_propget3(apr_hash_t **props,
 
       SVN_ERR(remote_propget(*props, propname, url, "",
                              kind, revnum, ra_session,
-                             depth, pool));
+                             depth, pool, pool));
     }
 
   if (actual_revnum)
