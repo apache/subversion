@@ -396,7 +396,7 @@ def test_tc_merge(sbox, incoming_scen, br_scen=None, wc_scen=None):
   if br_scen == None:
     ensure_tree_conflict(sbox, 'merge', incoming_scen, wc_scen)
   else:
-    raise svntest.Skip  ###
+    return  ###
 
 #----------------------------------------------------------------------
 
@@ -457,101 +457,54 @@ def up_sw_dir_add_onto_add(sbox):
 #----------------------------------------------------------------------
 
 # Tests for merge affecting a file, where the incoming change
-# conflicts with the target branch.
-# (A change is made on the target branch, and committed.)
-#
-# WC sched: nil
-# WC state: pristine
+# conflicts with the target.
 
-def merge_file_mod_onto_br_not_file(sbox):
-  "merge file: modify onto branch not-file"
+def merge_file_mod_onto_not_file(sbox):
+  "merge file: modify onto not-file"
   test_tc_merge(sbox, f_mods, br_scen = f_dels + f_rpl_d)
+  test_tc_merge(sbox, f_mods, wc_scen = f_dels)
   # Note: See UC4 in notes/tree-conflicts/use-cases.txt.
 
-def merge_file_del_onto_br_not_same(sbox):
-  "merge file: del/rpl/mv onto branch not-same"
+def merge_file_del_onto_not_same(sbox):
+  "merge file: del/rpl/mv onto not-same"
   test_tc_merge(sbox, f_dels + f_rpls, br_scen = f_mods)
+  test_tc_merge(sbox, f_dels + f_rpls, wc_scen = f_mods)
   # Note: See UC5 in notes/tree-conflicts/use-cases.txt.
 
-def merge_file_del_onto_br_not_file(sbox):
-  "merge file: del/rpl/mv onto branch not-file"
+def merge_file_del_onto_not_file(sbox):
+  "merge file: del/rpl/mv onto not-file"
   test_tc_merge(sbox, f_dels + f_rpls, br_scen = f_dels + f_rpl_d)
+  test_tc_merge(sbox, f_dels + f_rpls, wc_scen = f_dels)
   # Note: See UC6 in notes/tree-conflicts/use-cases.txt.
 
-def merge_file_add_onto_br_not_none(sbox):
-  "merge file: add onto branch not-none"
+def merge_file_add_onto_not_none(sbox):
+  "merge file: add onto not-none"
   test_tc_merge(sbox, f_adds, br_scen = f_adds)  ### + d_adds (at path "F")
-
-#----------------------------------------------------------------------
-
-# Tests for merge affecting a dir, where the incoming change
-# conflicts with the target branch.
-#
-# WC sched: nil
-# WC state: pristine
-
-def merge_dir_mod_onto_br_not_dir(sbox):
-  "merge dir: modify onto branch not-dir"
-  test_tc_merge(sbox, d_mods, br_scen = d_dels + d_rpl_f)
-
-def merge_dir_del_onto_br_not_same(sbox):
-  "merge dir: del/rpl/mv onto branch not-same"
-  test_tc_merge(sbox, d_dels + d_rpls, br_scen = d_mods)
-
-def merge_dir_del_onto_br_not_dir(sbox):
-  "merge dir: del/rpl/mv onto branch not-dir"
-  test_tc_merge(sbox, d_dels + d_rpls, br_scen = d_dels + d_rpl_f)
-
-def merge_dir_add_onto_br_not_none(sbox):
-  "merge dir: add onto branch not-none"
-  test_tc_merge(sbox, d_adds, br_scen = d_adds)  ### + f_adds (at path "D")
-
-#----------------------------------------------------------------------
-
-# Tests for merge affecting a file, where the incoming change
-# conflicts with a scheduled change in the WC.
-#
-# WC base: identical to merge-left source
-# WC state: as scheduled
-
-def merge_file_mod_onto_wc_not_file(sbox):
-  "merge file: modify onto WC not-file"
-  test_tc_merge(sbox, f_mods, wc_scen = f_dels)
-
-def merge_file_del_onto_wc_not_same(sbox):
-  "merge file: del/rpl/mv onto WC not-same"
-  test_tc_merge(sbox, f_dels + f_rpls, wc_scen = f_mods)
-
-def merge_file_del_onto_wc_not_file(sbox):
-  "merge file: del/rpl/mv onto WC not-file"
-  test_tc_merge(sbox, f_dels + f_rpls, wc_scen = f_dels)
-
-def merge_file_add_onto_wc_not_none(sbox):
-  "merge file: add onto WC not-none"
   test_tc_merge(sbox, f_adds, wc_scen = f_adds)  ### + d_adds (at path "F")
 
 #----------------------------------------------------------------------
 
 # Tests for merge affecting a dir, where the incoming change
-# conflicts with a scheduled change in the WC.
-#
-# WC base: identical to merge-left source
-# WC state: as scheduled
+# conflicts with the target branch.
 
-def merge_dir_mod_onto_wc_not_dir(sbox):
-  "merge dir: modify onto WC not-dir"
+def merge_dir_mod_onto_not_dir(sbox):
+  "merge dir: modify onto not-dir"
+  test_tc_merge(sbox, d_mods, br_scen = d_dels + d_rpl_f)
   test_tc_merge(sbox, d_mods, wc_scen = d_dels)
 
-def merge_dir_del_onto_wc_not_same(sbox):
-  "merge dir: del/rpl/mv onto WC not-same"
+def merge_dir_del_onto_not_same(sbox):
+  "merge dir: del/rpl/mv onto not-same"
+  test_tc_merge(sbox, d_dels + d_rpls, br_scen = d_mods)
   test_tc_merge(sbox, d_dels + d_rpls, wc_scen = d_mods)
 
-def merge_dir_del_onto_wc_not_dir(sbox):
-  "merge dir: del/rpl/mv onto WC not-dir"
+def merge_dir_del_onto_not_dir(sbox):
+  "merge dir: del/rpl/mv onto not-dir"
+  test_tc_merge(sbox, d_dels + d_rpls, br_scen = d_dels + d_rpl_f)
   test_tc_merge(sbox, d_dels + d_rpls, wc_scen = d_dels)
 
-def merge_dir_add_onto_wc_not_none(sbox):
-  "merge dir: add onto WC not-none"
+def merge_dir_add_onto_not_none(sbox):
+  "merge dir: add onto not-none"
+  test_tc_merge(sbox, d_adds, br_scen = d_adds)  ### + f_adds (at path "D")
   test_tc_merge(sbox, d_adds, wc_scen = d_adds)  ### + f_adds (at path "D")
 
 #----------------------------------------------------------------------
@@ -625,22 +578,14 @@ test_list = [ None,
               up_sw_dir_del_onto_mod,
               up_sw_dir_del_onto_del,
               up_sw_dir_add_onto_add,
-              merge_file_mod_onto_br_not_file,
-              merge_file_del_onto_br_not_same,
-              merge_file_del_onto_br_not_file,
-              merge_file_add_onto_br_not_none,
-              merge_dir_mod_onto_br_not_dir,
-              merge_dir_del_onto_br_not_same,
-              merge_dir_del_onto_br_not_dir,
-              merge_dir_add_onto_br_not_none,
-              merge_file_mod_onto_wc_not_file,
-              merge_file_del_onto_wc_not_same,
-              merge_file_del_onto_wc_not_file,
-              merge_file_add_onto_wc_not_none,
-              merge_dir_mod_onto_wc_not_dir,
-              merge_dir_del_onto_wc_not_same,
-              merge_dir_del_onto_wc_not_dir,
-              merge_dir_add_onto_wc_not_none,
+              merge_file_mod_onto_not_file,
+              merge_file_del_onto_not_same,
+              merge_file_del_onto_not_file,
+              merge_file_add_onto_not_none,
+              merge_dir_mod_onto_not_dir,
+              merge_dir_del_onto_not_same,
+              merge_dir_del_onto_not_dir,
+              merge_dir_add_onto_not_none,
               up_sw_file_mod_onto_obstr,
               up_sw_file_del_onto_obstr,
               up_sw_file_add_onto_obstr,
