@@ -204,7 +204,8 @@ def extra_headers(sbox):
   dumpfile[3:3] = \
        [ "X-Comment-Header: Ignored header normally not in dump stream\n" ]
 
-  load_and_verify_dumpstream(sbox,[],[], dumpfile_revisions, dumpfile)
+  load_and_verify_dumpstream(sbox,[],[], dumpfile_revisions, dumpfile,
+                             '--ignore-uuid')
 
 #----------------------------------------------------------------------
 # Ensure loading continues after skipping a bit of unknown extra content.
@@ -222,7 +223,8 @@ def extra_blockcontent(sbox):
   # Insert the extra content after "PROPS-END\n"
   dumpfile[11] = dumpfile[11][:-2] + "extra text\n\n\n"
 
-  load_and_verify_dumpstream(sbox,[],[], dumpfile_revisions, dumpfile)
+  load_and_verify_dumpstream(sbox,[],[], dumpfile_revisions, dumpfile,
+                             '--ignore-uuid')
 
 #----------------------------------------------------------------------
 def inconsistent_headers(sbox):
@@ -254,7 +256,8 @@ def empty_date(sbox):
          "K 7\nsvn:log\nV 0\n\nK 10\nsvn:author\nV 4\nerik\nPROPS-END\n\n\n"
          ]
 
-  load_and_verify_dumpstream(sbox,[],[], dumpfile_revisions, dumpfile)
+  load_and_verify_dumpstream(sbox,[],[], dumpfile_revisions, dumpfile,
+                             '--ignore-uuid')
 
   # Verify that the revision still lacks the svn:date property.
   svntest.actions.run_and_verify_svn(None, [], [], "propget",

@@ -765,7 +765,7 @@ upd_open_file(const char *path,
 
 
 /* We have our own window handler and baton as a simple wrapper around
-   the real handler (which converts vdelta windows to base64-encoded
+   the real handler (which converts txdelta windows to base64-encoded
    svndiff data).  The wrapper is responsible for sending the opening
    and closing XML tags around the svndiff data. */
 struct window_handler_baton
