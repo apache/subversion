@@ -48,7 +48,7 @@ struct txdelta_baton {
   svn_boolean_t more_source;    /* FALSE if source stream hit EOF. */
   svn_boolean_t more;           /* TRUE if there are more data in the pool. */
   svn_filesize_t pos;           /* Offset of next read in source file. */
-  char *buf;                    /* Buffer for vdelta data. */
+  char *buf;                    /* Buffer for input data. */
 
   apr_md5_ctx_t context;        /* APR's MD5 context container. */
 
@@ -133,7 +133,7 @@ svn_txdelta__make_window(const svn_txdelta__ops_baton_t *build_baton,
 }
 
 
-/* Compute and return a delta window using the vdelta or xdelta algorithm on
+/* Compute and return a delta window using the xdelta algorithm on
    DATA, which contains SOURCE_LEN bytes of source data and TARGET_LEN
    bytes of target data.  SOURCE_OFFSET gives the offset of the source
    data, and is simply copied into the window's sview_offset field. */
@@ -148,7 +148,8 @@ compute_window(const char *data, apr_size_t source_len, apr_size_t target_len,
   build_baton.new_data = svn_stringbuf_create("", pool);
 
   if (source_len == 0)
-    svn_txdelta__vdelta(&build_baton, data, source_len, target_len, pool);
+    svn_txdelta__insert_op(&build_baton, svn_txdelta_new, 0, target_len, data,
+                           pool);
   else
     svn_txdelta__xdelta(&build_baton, data, source_len, target_len, pool);
 
@@ -209,9 +210,9 @@ svn_txdelta__insert_op(svn_txdelta__ops_baton_t *build_baton,
 {
   svn_txdelta_op_t *op;
 
-  /* Check if this op can be merged with the previous op. The vdelta
-     algorithm will never generate such ops, but the delta combiner
-     can, and this is the obvious place to make the check. */
+  /* Check if this op can be merged with the previous op. The delta
+     combiner sometimes generates such ops, and this is the obvious
+     place to make the check. */
   if (build_baton->num_ops > 0)
     {
       op = &build_baton->ops[build_baton->num_ops - 1];

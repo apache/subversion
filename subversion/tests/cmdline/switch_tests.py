@@ -1067,7 +1067,7 @@ def switch_change_repos_root(sbox):
 
   svntest.main.create_repos(other_repo_dir)
   svntest.actions.run_and_verify_svn(None, None,
-                                     ".*not the same repository.*",
+                                     ".*UUID.*",
                                      'switch',
                                      other_A_url, A_wc_dir)
 

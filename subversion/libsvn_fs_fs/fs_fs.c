@@ -2616,10 +2616,14 @@ get_contents(struct rep_read_baton *rb,
               rs = APR_ARRAY_IDX(rb->rs_list, rb->rs_list->nelts - 1,
                                  struct rep_state *);
               /* Read window from last representation in list. */
-              /* We apply this window directly instead of combining it with the
-                 others.  We do this because vdelta is used for deltas against
-                 the empty stream, which will trigger quadratic behaviour in
-                 the delta combiner. */
+              /* We apply this window directly instead of combining it
+                 with the others.  We do this because vdelta used to
+                 be used for deltas against the empty stream, which
+                 will trigger quadratic behaviour in the delta
+                 combiner.  It's still likely that we'll find such
+                 deltas in an old repository; it may be worth
+                 considering whether or not this special case is still
+                 needed in the future, though. */
               SVN_ERR(read_window(&lwindow, rb->chunk_index, rs, rb->pool));
 
               if (lwindow->src_ops > 0)
