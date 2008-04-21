@@ -57,7 +57,7 @@ const svn_version_t *svn_ra_version(void);
  * @a close_baton as appropriate.
  *
  * @a path is relative to the "root" of the session, defined by the
- * @a repos_url passed to svn_ra_open2() vtable call.
+ * @a repos_URL passed to svn_ra_open3() vtable call.
  *
  * @a name is the name of the property to fetch. If the property is present,
  * then it is returned in @a value. Otherwise, @a *value is set to @c NULL.
@@ -284,7 +284,7 @@ typedef struct svn_ra_reporter3_t
    * implementor should assume the directory has no entries or props.
    *
    * This will *override* any previous set_path() calls made on parent
-   * paths.  @a path is relative to the URL specified in svn_ra_open2().
+   * paths.  @a path is relative to the URL specified in svn_ra_open3().
    *
    * If @a lock_token is non-NULL, it is the lock token for @a path in the WC.
    *
@@ -435,7 +435,7 @@ typedef struct svn_ra_reporter_t
 /** A collection of callbacks implemented by libsvn_client which allows
  * an RA layer to "pull" information from the client application, or
  * possibly store information.  libsvn_client passes this vtable to
- * svn_ra_open2().
+ * svn_ra_open3().
  *
  * Each routine takes a @a callback_baton originally provided with the
  * vtable.
@@ -571,6 +571,9 @@ typedef struct svn_ra_session_t svn_ra_session_t;
  * Open a repository session to @a repos_URL.  Return an opaque object
  * representing this session in @a *session_p, allocated in @a pool.
  *
+ * Return @c SVN_ERR_RA_UUID_MISMATCH if @a uuid is non-NULL and not equal
+ * to the UUID of the repository at @c repos_URL.
+ *
  * @a callbacks/@a callback_baton is a table of callbacks provided by the
  * client; see @c svn_ra_callbacks2_t.
  *
@@ -583,7 +586,22 @@ typedef struct svn_ra_session_t svn_ra_session_t;
  *
  * @see svn_client_open_ra_session().
  *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_ra_open3(svn_ra_session_t **session_p,
+             const char *repos_URL,
+             const char *uuid,
+             const svn_ra_callbacks2_t *callbacks,
+             void *callback_baton,
+             apr_hash_t *config,
+             apr_pool_t *pool);
+
+/**
+ * Similiar to svn_ra_open3(), but with @a uuid set to @c NULL.
+ *
  * @since New in 1.3.
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *
 svn_ra_open2(svn_ra_session_t **session_p,

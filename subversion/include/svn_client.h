@@ -4319,7 +4319,7 @@ svn_client_uuid_from_path(const char **uuid,
  *
  * @since New in 1.3.
  *
- * @note This function is similar to svn_ra_open2(), but the caller avoids
+ * @note This function is similar to svn_ra_open3(), but the caller avoids
  * having to providing its own callback functions.
  */
 svn_error_t *

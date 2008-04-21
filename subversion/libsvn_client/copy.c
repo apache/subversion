@@ -749,7 +749,7 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
                                              ctx, pool);
 
   /* If the two URLs appear not to be in the same repository, then
-     top_url will be empty and the call to svn_ra_open2()
+     top_url will be empty and the call to svn_ra_open3()
      above will have failed.  Below we check for that, and propagate a
      descriptive error back to the user.
 

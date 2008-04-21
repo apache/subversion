@@ -3817,6 +3817,45 @@ interactive-conflicts = true
                                         '-r1', wc_dir)
 
 
+#----------------------------------------------------------------------
+
+
+def update_uuid_changed(sbox):
+  "update fails when repos uuid changed"
+  
+  def wc_uuid(wc_dir):
+    "Return the UUID of the working copy at WC_DIR."
+
+    exit_code, output, errput = svntest.main.run_svn(None, 'info', wc_dir)
+    if errput:
+      raise svntest.verify.SVNUnexpectedStderr(errput)
+
+    for line in output:
+      if line.startswith('Repository UUID:'):
+        return line[17:].rstrip()
+
+    # No 'Repository UUID' line in 'svn info'?
+    raise svntest.verify.SVNUnexpectedStdout(output)
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+  repo_dir = sbox.repo_dir
+  
+  uuid_before = wc_uuid(wc_dir)
+
+  # Change repository's uuid.
+  svntest.actions.run_and_verify_svnadmin(None, None, [],
+                                          'setuuid', repo_dir)
+  
+  # 'update' detected the new uuid...
+  svntest.actions.run_and_verify_svn(None, None, '.*UUID.*',
+                                     'update', wc_dir)
+  
+  # ...and didn't overwrite the old uuid.
+  uuid_after = wc_uuid(wc_dir)
+  if uuid_before != uuid_after:
+    raise svntest.Failure
+
 
 #######################################################################
 # Run the tests
@@ -3870,6 +3909,7 @@ test_list = [ None,
               update_copied_and_deleted_prop,
               update_accept_conflicts,
               eof_in_interactive_conflict_resolver,
+              update_uuid_changed,
              ]
 
 if __name__ == '__main__':
