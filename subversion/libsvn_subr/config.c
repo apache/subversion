@@ -648,9 +648,9 @@ svn_config_set_bool(svn_config_t *cfg,
 }
 
 svn_error_t *
-svn_config_get_yes_no_prompt(svn_config_t *cfg, const char **valuep,
-                             const char *section, const char *option,
-                             const char* default_value)
+svn_config_get_yes_no_ask(svn_config_t *cfg, const char **valuep,
+                          const char *section, const char *option,
+                          const char* default_value)
 {
   const char *tmp_value;
 
@@ -667,8 +667,8 @@ svn_config_get_yes_no_prompt(svn_config_t *cfg, const char **valuep,
            || 0 == svn_cstring_casecmp(tmp_value, "off")
            || 0 == strcmp(tmp_value, "0"))
     *valuep = SVN_CONFIG_FALSE;
-  else if (0 == svn_cstring_casecmp(tmp_value, SVN_CONFIG_PROMPT))
-    *valuep = SVN_CONFIG_PROMPT;
+  else if (0 == svn_cstring_casecmp(tmp_value, SVN_CONFIG_ASK))
+    *valuep = SVN_CONFIG_ASK;
   else
     return svn_error_createf
       (SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,

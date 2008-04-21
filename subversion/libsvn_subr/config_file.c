@@ -798,8 +798,8 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###                              Subversion server may be cached"   NL
         "###                              on disk unencrypted."              NL
         "###"                                                                NL
-        "### store-plaintext-passwords may be either 'yes', 'no', or 'prompt'."                                                                              NL
-        "### It defaults to 'prompt', which means that Subversion will ask"  NL
+        "### store-plaintext-passwords may be either 'yes', 'no', or 'ask'." NL
+        "### It defaults to 'ask', which means that Subversion will ask"     NL
         "### you before saving a password to disk in unencrypted form."      NL
         "### This option can be set globally in the 'config' file, and will" NL
         "### be ignored if it occurs in the [global] section of this file."  NL
@@ -923,7 +923,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### passwords in unencrypted form in the auth/ area of your config" NL
         "### directory. Set it to 'yes' to allow Subversion to store"        NL
         "### unencrypted passwords in the auth/ area.  The default is"       NL
-        "### 'prompt', which means that Subversion will ask you before"      NL
+        "### 'ask', which means that Subversion will ask you before"         NL
         "### saving a password to disk in unencrypted form.  Note that"      NL
         "### this option has no effect if 'store-passwords' is set to 'no'." NL
         "### This option can also be set on a per-server basis in the"       NL
