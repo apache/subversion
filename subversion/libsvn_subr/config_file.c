@@ -796,7 +796,8 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "# [othergroup]"                                                     NL
         "# http-proxy-host = proxy2.some-domain-name.com"                    NL
         "# http-proxy-port = 9000"                                           NL
-        "# No username and password for the proxy, so use the defaults below."                                                                               NL
+        "# No username and password for the proxy, so use the defaults below."
+                                                                             NL
         ""                                                                   NL
         "### You can set default parameters in the 'global' section."        NL
         "### These parameters apply if no corresponding parameter is set in" NL

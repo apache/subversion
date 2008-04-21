@@ -271,8 +271,6 @@ svn_cmdline_auth_ssl_client_cert_pw_prompt
  * is OK on the command line.
  *
  * @since New in 1.6.
- *
- * Does not use @a baton.
  */
 svn_error_t *
 svn_cmdline_auth_plaintext_prompt(svn_boolean_t *may_save_plaintext,
