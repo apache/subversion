@@ -313,7 +313,7 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
 
   if (base_access)
     {
-      svn_wc_entry_t *entry;
+      const svn_wc_entry_t *entry;
       
       SVN_ERR(svn_wc_entry(&entry, base_dir, base_access, FALSE, pool));
 
