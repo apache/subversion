@@ -283,12 +283,13 @@ svn_cmdline_auth_plaintext_prompt(svn_boolean_t *may_save_plaintext,
  * providers used by the command line client.  @a non_interactive,
  * @a username, @a password, @a config_dir, and @a no_auth_cache are the
  * values of the command line options of the same names.  @a cfg_hash
- * is a hash table as returned by svn_config_get_config, @a urls is a
- * list of any URLs that were supplied as command line arguments (used to
- * filter settings from SVN_CONFIG_CATEGORY_SERVERS), and @a cancel_func
- * and @a cancel_baton control the cancellation of the prompting providers
- * that are initialized.
- *
+ * is a hash table as returned by svn_config_get_config.  @a urls is a
+ * list of (const char *) URLs that were supplied as command line
+ * arguments. The URLs are expected to be encoded in UTF-8, and are
+ * used to filter settings from SVN_CONFIG_CATEGORY_SERVERS. They may
+ * have peg revision specifiers appended to them, which are silently
+ * ignored.  @a cancel_func and @a cancel_baton control the
+ * cancellation of the prompting providers that are initialized.
  * @a pool is used for all allocations.
  *
  * @since New in 1.6.
