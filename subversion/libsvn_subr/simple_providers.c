@@ -287,7 +287,7 @@ simple_save_creds_helper(svn_boolean_t *saved,
       else
         {
           if (svn_cstring_casecmp(store_plaintext_passwords,
-                                  SVN_CONFIG_PROMPT) == 0)
+                                  SVN_CONFIG_ASK) == 0)
             {
               /* TODO: We might want to default to not storing if the
                * prompt callback is NULL, i.e. have may_save_plaintext

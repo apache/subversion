@@ -500,10 +500,10 @@ svn_cmdline_setup_auth_baton2(svn_auth_baton_t **ab,
 
   /**
    * Determine whether storing passwords in plaintext has been
-   * explicitly allowed or denied, or whether we should prompt
-   * the user about it. Check the setting from the 'servers' file
-   * first (ignoring its [global] section), and if not provided
-   * there, try the 'config' file.
+   * explicitly allowed or denied, or whether we should ask
+   * the user. Check the setting from the 'servers' file first
+   * (ignoring its [global] section), and if not provided there,
+   * try the 'config' file.
    */
 
   store_plaintext_password_val = NULL;
@@ -541,12 +541,12 @@ svn_cmdline_setup_auth_baton2(svn_auth_baton_t **ab,
               if (found && n > 0)
                 {
                   /* It's defined, grab the value. */
-                  SVN_ERR(svn_config_get_yes_no_prompt
+                  SVN_ERR(svn_config_get_yes_no_ask
                     (cfg_servers,
                      &store_plaintext_password_val,
                      server_group,
                      SVN_CONFIG_OPTION_STORE_PLAINTEXT_PASSWORDS,
-                     SVN_CONFIG_PROMPT));
+                     SVN_CONFIG_ASK));
                   break;
                 }
               else
@@ -559,9 +559,9 @@ svn_cmdline_setup_auth_baton2(svn_auth_baton_t **ab,
 
   if (! store_plaintext_password_val)
     /* No luck in 'servers' file, try 'config' file. */
-    SVN_ERR(svn_config_get_yes_no_prompt
+    SVN_ERR(svn_config_get_yes_no_ask
       (cfg_config, &store_plaintext_password_val, SVN_CONFIG_SECTION_AUTH,
-       SVN_CONFIG_OPTION_STORE_PLAINTEXT_PASSWORDS, SVN_CONFIG_PROMPT));
+       SVN_CONFIG_OPTION_STORE_PLAINTEXT_PASSWORDS, SVN_CONFIG_ASK));
 
   svn_auth_set_parameter(*ab, SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS,
                          store_plaintext_password_val);
