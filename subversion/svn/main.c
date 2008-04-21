@@ -1915,64 +1915,32 @@ main(int argc, const char *argv[])
   apr_signal(SIGXFSZ, SIG_IGN);
 #endif
 
-  /* Any URL targets supplied?
+  /* Any URL arguments supplied?
    * If any, svn_cmdline_setup_auth_baton2 wants them, so it can
    * properly read settings from the 'servers' config file. */
   urls = apr_array_make(pool, 0, sizeof(const char *));
-  {
-    apr_array_header_t *targets;
-    apr_pool_t *subpool;
-    int ind;
-
-    /* XXX: Work around the fact that svn_opt_args_to_target_array3
-     *      modifies the argument index. This is awfully ugly, but
-     *      better than duplicating its URL-specific code here... */
-    ind = os->ind;
-    err = svn_opt_args_to_target_array3(&targets, os, opt_state.targets, pool);
-    os->ind = ind;
-    if (err)
-      {
-        if (err->apr_err != SVN_ERR_RESERVED_FILENAME_SPECIFIED)
-          return svn_cmdline_handle_exit_error(err, pool, "svn: ");
-        else
-          /* This only means that a .svn directory was in the targets list. */
-          svn_error_clear(err);
-      }
-
-    subpool = svn_pool_create(pool);
-    for (i = 0; i < targets->nelts; i++)
-      {
-        const char *target = APR_ARRAY_IDX(targets, i, const char *);
-        const char *truepath;
-        svn_opt_revision_t dummy;
-
-        svn_pool_clear(subpool);
-
-        /* Strip peg revisions from paths since they might break
-         * regexes defining server groups in the 'servers' config file. */
-        if ((err = svn_opt_parse_path(&dummy, &truepath, target, subpool)))
-          svn_handle_error2(err, stderr, TRUE, "svn: ");
-
-        if (svn_path_is_url(truepath))
-          APR_ARRAY_PUSH(urls, const char *) = truepath;
-      }
-    svn_pool_destroy(subpool);
-  }
+  for (i = os->ind; i < os->argc; i++)
+    {
+      if (svn_path_is_url(os->argv[i]))
+        {
+          const char *utf8_url;
+          SVN_INT_ERR(svn_utf_cstring_to_utf8(&utf8_url, os->argv[i], pool));
+          APR_ARRAY_PUSH(urls, const char *) = utf8_url;
+        }
+    }
 
   /* Set up Authentication stuff. */
-  if ((err = svn_cmdline_setup_auth_baton2(&ab,
-                                           opt_state.non_interactive,
-                                           opt_state.auth_username,
-                                           opt_state.auth_password,
-                                           opt_state.config_dir,
-                                           opt_state.no_auth_cache,
-                                           ctx->config,
-                                           urls,
-                                           ctx->cancel_func,
-                                           ctx->cancel_baton,
-                                           pool)))
-    svn_handle_error2(err, stderr, TRUE, "svn: ");
-
+  SVN_INT_ERR(svn_cmdline_setup_auth_baton2(&ab,
+                                            opt_state.non_interactive,
+                                            opt_state.auth_username,
+                                            opt_state.auth_password,
+                                            opt_state.config_dir,
+                                            opt_state.no_auth_cache,
+                                            ctx->config,
+                                            urls,
+                                            ctx->cancel_func,
+                                            ctx->cancel_baton,
+                                            pool));
   ctx->auth_baton = ab;
 
   /* Set up conflict resolution callback. */
