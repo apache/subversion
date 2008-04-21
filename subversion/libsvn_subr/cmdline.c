@@ -428,7 +428,7 @@ svn_cmdline_setup_auth_baton2(svn_auth_baton_t **ab,
 
   if (non_interactive == FALSE)
     {
-      svn_cmdline_prompt_baton_t *pb = NULL;
+      svn_cmdline_prompt_baton2_t *pb = NULL;
 
       if (cancel_func)
         {
@@ -436,6 +436,7 @@ svn_cmdline_setup_auth_baton2(svn_auth_baton_t **ab,
 
           pb->cancel_func = cancel_func;
           pb->cancel_baton = cancel_baton;
+          pb->config_dir = config_dir;
         }
 
       /* Two basic prompt providers: username/password, and just username. */

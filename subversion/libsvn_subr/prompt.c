@@ -385,14 +385,19 @@ svn_cmdline_auth_plaintext_prompt(svn_boolean_t *may_save_plaintext,
   const char *answer = NULL;
   svn_boolean_t answered = FALSE;
   const char *prompt_string = _("Store password unencrypted (yes/no)? ");
-  svn_cmdline_prompt_baton_t *pb = (svn_cmdline_prompt_baton_t *)baton;
+  svn_cmdline_prompt_baton2_t *pb = baton;
+  const char *config_path;
+
+  SVN_ERR(svn_config_get_user_config_path(&config_path, pb->config_dir,
+                                          SVN_CONFIG_CATEGORY_CONFIG, pool));
 
   SVN_ERR(svn_cmdline_fprintf(stderr, pool,
   _("-----------------------------------------------------------------------\n"
     "ATTENTION! Your password is going to be stored to disk unencrypted!\n"
     "-----------------------------------------------------------------------\n"
-    "You can get rid of this warning by editing your configuration file\n"
-    "and setting 'store-plaintext-passwords' to either 'yes' or 'no'.\n")));
+    "You can get rid of this warning by editing %s\n"
+    "and setting 'store-plaintext-passwords' to either 'yes' or 'no'.\n"),
+    config_path));
 
   do
     {

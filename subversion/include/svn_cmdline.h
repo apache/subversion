@@ -140,10 +140,23 @@ int svn_cmdline_handle_exit_error(svn_error_t *error,
                                   apr_pool_t *pool,
                                   const char *prefix);
 
+/** A cancellation function/baton pair, and the path to the configuration
+ * directory, to be passed as the baton argument * to the
+ * @c svn_cmdline_*_prompt functions.
+ *
+ * @since New in 1.6.
+ */
+typedef struct svn_cmdline_prompt_baton2_t {
+  svn_cancel_func_t cancel_func;
+  void *cancel_baton;
+  const char *config_dir;
+} svn_cmdline_prompt_baton2_t;
+
 /** A cancellation function/baton pair to be passed as the baton argument
  * to the @c svn_cmdline_*_prompt functions.
  *
  * @since New in 1.4.
+ * @deprecated Provided for backward compatibility with the 1.5 API.
  */
 typedef struct svn_cmdline_prompt_baton_t {
   svn_cancel_func_t cancel_func;

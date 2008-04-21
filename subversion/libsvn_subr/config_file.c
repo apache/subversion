@@ -339,49 +339,6 @@ svn_config__sys_config_path(const char **path_p,
   return SVN_NO_ERROR;
 }
 
-
-svn_error_t *
-svn_config__user_config_path(const char *config_dir,
-                             const char **path_p,
-                             const char *fname,
-                             apr_pool_t *pool)
-{
-  /* ### This never actually returns error in practice.  Perhaps the
-     prototype should change? */
-
-  *path_p = NULL;
-
-  /* Note that even if fname is null, svn_path_join_many will DTRT. */
-
-  if (config_dir)
-    {
-      *path_p = svn_path_join_many(pool, config_dir, fname, NULL);
-      return SVN_NO_ERROR;
-    }
-
-#ifdef WIN32
-  {
-    const char *folder;
-    SVN_ERR(svn_config__win_config_path(&folder, FALSE, pool));
-    *path_p = svn_path_join_many(pool, folder,
-                                 SVN_CONFIG__SUBDIRECTORY, fname, NULL);
-  }
-
-#else  /* ! WIN32 */
-  {
-    const char *homedir = svn_user_get_homedir(pool);
-    if (! homedir)
-      return SVN_NO_ERROR;
-    *path_p = svn_path_join_many(pool,
-                                 svn_path_canonicalize(homedir, pool),
-                                 SVN_CONFIG__USR_DIRECTORY, fname, NULL);
-  }
-#endif /* WIN32 */
-
-  return SVN_NO_ERROR;
-}
-
-
 
 /*** Exported interfaces. ***/
 
@@ -551,7 +508,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
   svn_error_t *err;
 
   /* Ensure that the user-specific config directory exists.  */
-  SVN_ERR(svn_config__user_config_path(config_dir, &path, NULL, pool));
+  SVN_ERR(svn_config_get_user_config_path(&path, config_dir, NULL, pool));
 
   if (! path)
     return SVN_NO_ERROR;
@@ -591,8 +548,8 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
   ensure_auth_dirs(path, pool);
 
   /** Ensure that the `README.txt' file exists. **/
-  SVN_ERR(svn_config__user_config_path
-          (config_dir, &path, SVN_CONFIG__USR_README_FILE, pool));
+  SVN_ERR(svn_config_get_user_config_path
+          (&path, config_dir, SVN_CONFIG__USR_README_FILE, pool));
 
   if (! path)  /* highly unlikely, since a previous call succeeded */
     return SVN_NO_ERROR;
@@ -749,8 +706,8 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
     }
 
   /** Ensure that the `servers' file exists. **/
-  SVN_ERR(svn_config__user_config_path
-          (config_dir, &path, SVN_CONFIG_CATEGORY_SERVERS, pool));
+  SVN_ERR(svn_config_get_user_config_path
+          (&path, config_dir, SVN_CONFIG_CATEGORY_SERVERS, pool));
 
   if (! path)  /* highly unlikely, since a previous call succeeded */
     return SVN_NO_ERROR;
@@ -887,8 +844,8 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
     }
 
   /** Ensure that the `config' file exists. **/
-  SVN_ERR(svn_config__user_config_path
-          (config_dir, &path, SVN_CONFIG_CATEGORY_CONFIG, pool));
+  SVN_ERR(svn_config_get_user_config_path
+          (&path, config_dir, SVN_CONFIG_CATEGORY_CONFIG, pool));
 
   if (! path)  /* highly unlikely, since a previous call succeeded */
     return SVN_NO_ERROR;
@@ -1057,3 +1014,42 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_config_get_user_config_path(const char **path,
+                                const char *config_dir,
+                                const char *fname,
+                                apr_pool_t *pool)
+{
+  *path= NULL;
+
+  /* Note that even if fname is null, svn_path_join_many will DTRT. */
+
+  if (config_dir)
+    {
+      *path = svn_path_join_many(pool, config_dir, fname, NULL);
+      return SVN_NO_ERROR;
+    }
+
+#ifdef WIN32
+  {
+    const char *folder;
+    SVN_ERR(svn_config__win_config_path(&folder, FALSE, pool));
+    *path = svn_path_join_many(pool, folder,
+                               SVN_CONFIG__SUBDIRECTORY, fname, NULL);
+  }
+
+#else  /* ! WIN32 */
+  {
+    const char *homedir = svn_user_get_homedir(pool);
+    if (! homedir)
+      return SVN_NO_ERROR;
+    *path = svn_path_join_many(pool,
+                               svn_path_canonicalize(homedir, pool),
+                               SVN_CONFIG__USR_DIRECTORY, fname, NULL);
+  }
+#endif /* WIN32 */
+
+  return SVN_NO_ERROR;
+}
+
