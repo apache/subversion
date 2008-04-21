@@ -385,6 +385,7 @@ svn_cmdline_auth_plaintext_prompt(svn_boolean_t *may_save_plaintext,
   const char *answer = NULL;
   svn_boolean_t answered = FALSE;
   const char *prompt_string = _("Store password unencrypted (yes/no)? ");
+  svn_cmdline_prompt_baton_t *pb = (svn_cmdline_prompt_baton_t *)baton;
 
   SVN_ERR(svn_cmdline_fprintf(stderr, pool,
   _("-----------------------------------------------------------------------\n"
@@ -395,7 +396,18 @@ svn_cmdline_auth_plaintext_prompt(svn_boolean_t *may_save_plaintext,
 
   do
     {
-      SVN_ERR(prompt(&answer, prompt_string, FALSE, NULL, pool));
+      svn_error_t *err = prompt(&answer, prompt_string, FALSE, pb, pool);
+      if (err)
+        {
+          if (err->apr_err == SVN_ERR_CANCELLED)
+            {
+              svn_error_clear(err);
+              *may_save_plaintext = FALSE;
+              return SVN_NO_ERROR;
+            }
+          else
+            return err;
+        }
       if (svn_cstring_casecmp(answer, _("yes")) == 0)
         {
           *may_save_plaintext = TRUE;
