@@ -35,8 +35,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.5.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2008-04-14 15:00+0800\n"
-"PO-Revision-Date: 2008-04-14 15:01+0800\n"
+"POT-Creation-Date: 2008-04-21 09:29+0800\n"
+"PO-Revision-Date: 2008-04-21 10:13+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1279,8 +1279,8 @@ msgstr "%s\t（工作副本）"
 msgid "Cannot display: file marked as a binary type.%s"
 msgstr "无法显示: 文件标记为二进制类型。%s"
 
-#: ../libsvn_client/diff.c:881 ../libsvn_client/merge.c:3711
-#: ../libsvn_client/merge.c:4983
+#: ../libsvn_client/diff.c:881 ../libsvn_client/merge.c:3717
+#: ../libsvn_client/merge.c:4991
 msgid "Not all required revisions are specified"
 msgstr "没有全部提供需要的版本"
 
@@ -1385,9 +1385,9 @@ msgstr "该版本没有 URL “%s”"
 msgid "No common parent found, unable to operate on disjoint arguments"
 msgstr "没有找到公共父节点，不能在分离的参数上操作"
 
-#: ../libsvn_client/locking_commands.c:261 ../libsvn_client/merge.c:5000
-#: ../libsvn_client/merge.c:5006 ../libsvn_client/merge.c:5577
-#: ../libsvn_client/merge.c:5733 ../libsvn_client/ra.c:386
+#: ../libsvn_client/locking_commands.c:261 ../libsvn_client/merge.c:5008
+#: ../libsvn_client/merge.c:5014 ../libsvn_client/merge.c:5585
+#: ../libsvn_client/merge.c:5741 ../libsvn_client/ra.c:386
 #: ../libsvn_client/ra.c:423 ../libsvn_client/ra.c:626
 #, c-format
 msgid "'%s' has no URL"
@@ -1462,11 +1462,11 @@ msgstr ".merge-left.r%ld"
 msgid ".merge-right.r%ld"
 msgstr ".merge-right.r%ld"
 
-#: ../libsvn_client/merge.c:1674
+#: ../libsvn_client/merge.c:1680
 msgid "Cannot reverse-merge a range from a path's own future history; try updating first"
 msgstr "不能从路径的未来历史中反向合并范围；请先更新"
 
-#: ../libsvn_client/merge.c:2166
+#: ../libsvn_client/merge.c:2172
 #, c-format
 msgid ""
 "One or more conflicts were produced while merging r%ld:%ld into\n"
@@ -1477,45 +1477,45 @@ msgstr ""
 "当合并 r%ld:%ld 到 “%s” 时出现了一个或更多的冲突\n"
 "请解决所有冲突后，再次运行合并，处理剩余的未合并版本"
 
-#: ../libsvn_client/merge.c:4679
+#: ../libsvn_client/merge.c:4687
 msgid "Use of two URLs is not compatible with mergeinfo modification"
 msgstr "使用两个 URL 与合并信息修改不兼容"
 
-#: ../libsvn_client/merge.c:4686 ../libsvn_client/merge.c:4921
+#: ../libsvn_client/merge.c:4694 ../libsvn_client/merge.c:4929
 msgid "Merge from foreign repository is not compatible with mergeinfo modification"
 msgstr "从外部版本库合并与合并信息修改不兼容"
 
-#: ../libsvn_client/merge.c:5227
+#: ../libsvn_client/merge.c:5235
 msgid "Cannot reintegrate into a working copy with a switched subtree"
 msgstr "不能复兴到包含已经切换子目录的工作副本"
 
-#: ../libsvn_client/merge.c:5232
+#: ../libsvn_client/merge.c:5240
 msgid "Cannot reintegrate into a working copy not entirely at infinite depth"
 msgstr "不能复兴到非全部无限制深度的工作副本"
 
-#: ../libsvn_client/merge.c:5237
+#: ../libsvn_client/merge.c:5245
 msgid "Cannot reintegrate into a working copy that has local modifications"
 msgstr "不能复兴到有本地修改的工作副本"
 
-#: ../libsvn_client/merge.c:5243
+#: ../libsvn_client/merge.c:5251
 msgid "Cannot determine revision of working copy"
 msgstr "不能确定工作副本的版本"
 
-#: ../libsvn_client/merge.c:5247
+#: ../libsvn_client/merge.c:5255
 msgid "Cannot reintegrate into mixed-revision working copy; try updating first"
 msgstr "不能复兴到有混合版本的工作副本；请先更新"
 
-#: ../libsvn_client/merge.c:5314
+#: ../libsvn_client/merge.c:5322
 #, c-format
 msgid "At least one revision (r%ld) not yet merged from '%s'"
 msgstr "至少有一个版本(r%ld)没有自“%s”合并"
 
-#: ../libsvn_client/merge.c:5472 ../libsvn_client/merge.c:5636
+#: ../libsvn_client/merge.c:5480 ../libsvn_client/merge.c:5644
 #, c-format
 msgid "'%s@%ld' must be ancestrally related to '%s@%ld'"
 msgstr "“%s@%ld”必须与“%s@%ld”有祖先关系"
 
-#: ../libsvn_client/merge.c:5595
+#: ../libsvn_client/merge.c:5603
 #, c-format
 msgid "'%s' must be from the same repository as '%s'"
 msgstr "“%s”必须与“%s”在同一个版本库中"
@@ -4134,24 +4134,24 @@ msgstr "目标路径不存在"
 msgid "Cannot replace a directory from within"
 msgstr "不能在子目录中替换目录"
 
-#: ../libsvn_repos/reporter.c:1209
+#: ../libsvn_repos/reporter.c:1211
 msgid "Invalid report for top level of working copy"
 msgstr "最上层工作副本报告无效"
 
-#: ../libsvn_repos/reporter.c:1224
+#: ../libsvn_repos/reporter.c:1226
 msgid "Two top-level reports with no target"
 msgstr "两个最上层报告没有目标"
 
-#: ../libsvn_repos/reporter.c:1282
+#: ../libsvn_repos/reporter.c:1278
 #, c-format
 msgid "Unsupported report depth '%s'"
 msgstr "不支持报告深度“%s”"
 
-#: ../libsvn_repos/reporter.c:1326
+#: ../libsvn_repos/reporter.c:1322
 msgid "Depth 'exclude' not supported for link"
 msgstr "深度 “exclude” 不支持链接"
 
-#: ../libsvn_repos/reporter.c:1405
+#: ../libsvn_repos/reporter.c:1401
 msgid "Request depth 'exclude' not supported"
 msgstr "不支持请求的深度 “exclude”"
 
@@ -8262,7 +8262,7 @@ msgstr "路径“%s”不再是修改列表的成员。\n"
 #: ../svn/notify.c:421
 #, c-format
 msgid "--- Merging differences between repository URLs into '%s':\n"
-msgstr "--- 合并版本库 URL 之间的差异到 “%s”：\n"
+msgstr "--- 正在合并版本库 URL 之间的差异到 “%s”：\n"
 
 #: ../svn/notify.c:426
 #, c-format
@@ -8283,6 +8283,31 @@ msgstr "--- 正在合并 r%ld，经由 r%ld，到 “%s”:\n"
 #, c-format
 msgid "--- Reverse-merging r%ld through r%ld into '%s':\n"
 msgstr "--- 正在反向合并 r%ld，经由 r%ld，到 “%s”:\n"
+
+#: ../svn/notify.c:451
+#, c-format
+msgid "--- Merging differences between foreign repository URLs into '%s':\n"
+msgstr "--- 正在合并外部版本库 URL 之间的差异到 “%s”：\n"
+
+#: ../svn/notify.c:457
+#, c-format
+msgid "--- Merging (from foreign repository) r%ld into '%s':\n"
+msgstr "--- 正在合并(从外部版本库) r%ld 到 “%s”：\n"
+
+#: ../svn/notify.c:462
+#, c-format
+msgid "--- Reverse-merging (from foreign repository) r%ld into '%s':\n"
+msgstr "--- 正在反向合并(从外部版本库) r%ld 到 “%s”:\n"
+
+#: ../svn/notify.c:467
+#, c-format
+msgid "--- Merging (from foreign repository) r%ld through r%ld into '%s':\n"
+msgstr "--- 正在合并(从外部版本库) r%ld，经由 r%ld，到 “%s”:\n"
+
+#: ../svn/notify.c:473
+#, c-format
+msgid "--- Reverse-merging (from foreign repository) r%ld through r%ld into '%s':\n"
+msgstr "--- 正在反向合并(从外部版本库) r%ld，经由 r%ld，到 “%s”:\n"
 
 #: ../svn/propdel-cmd.c:82
 #, c-format
