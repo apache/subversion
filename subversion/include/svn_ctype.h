@@ -171,6 +171,10 @@ extern const apr_uint32_t *const svn_ctype_table;
  * Compare two characters @a a and @a b, treating case-equivalent
  * unaccented Latin (ASCII subset) letters as equal.
  *
+ * Returns in integer greater than, equal to, or less than 0,
+ * according to whether @a a is considered greater than, equal to,
+ * or less than @a b.
+ *
  * @since New in 1.5.
  */
 int svn_ctype_casecmp(int a, int b);
