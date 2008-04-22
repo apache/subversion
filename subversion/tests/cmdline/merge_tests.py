@@ -7269,14 +7269,13 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
                                         expected_status,
                                         None,
                                         wc_dir, wc_dir)
-
+  raise svntest.Failure("PTB")
   svntest.actions.run_and_verify_svn(None, expected_merge_output([[3,4]],
                                      'U    ' + Acopy_gamma_path + '\n'),
                                      [], 'merge', '-r1:4',
                                      A_url + '/D/gamma' + '@4',
                                      Acopy_gamma_path)
-
-  svntest.actions.run_and_verify_svn(None, expected_merge_output([[5]],
+  svntest.actions.run_and_verify_svn(None, expected_merge_output([[3,5]],
                                      'D    ' + Acopy_gamma_path + '\n'),
                                      [], 'merge', '-r1:5', '--force',
                                      A_url, Acopy_path)
