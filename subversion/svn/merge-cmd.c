@@ -52,7 +52,7 @@ svn_cl__merge(apr_getopt_t *os,
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets, 
-                                                      pool));
+                                                      ctx, pool));
 
   /* For now, we require at least one source.  That may change in
      future versions of Subversion, for example if we have support for

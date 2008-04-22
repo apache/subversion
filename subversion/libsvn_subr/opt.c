@@ -37,6 +37,8 @@
 #include "svn_utf.h"
 #include "svn_time.h"
 
+#include "private/svn_opt_private.h"
+
 #include "svn_private_config.h"
 
 
@@ -899,6 +901,8 @@ svn_opt_args_to_target_array2(apr_array_header_t **targets_p,
 }
 
 
+/* Note: This is substantially copied into svn_client_args_to_target_array() in
+ * order to move to libsvn_client while maintaining backward compatibility. */
 svn_error_t *
 svn_opt_args_to_target_array3(apr_array_header_t **targets_p,
                               apr_getopt_t *os,
@@ -979,58 +983,13 @@ svn_opt_args_to_target_array3(apr_array_header_t **targets_p,
       /* URLs and wc-paths get treated differently. */
       if (svn_path_is_url(utf8_target))
         {
-          /* No need to canonicalize a URL's case or path separators. */
-
-          /* Convert to URI. */
-          target = svn_path_uri_from_iri(utf8_target, pool);
-          /* Auto-escape some ASCII characters. */
-          target = svn_path_uri_autoescape(target, pool);
-
-          /* The above doesn't guarantee a valid URI. */
-          if (! svn_path_is_uri_safe(target))
-            return svn_error_createf(SVN_ERR_BAD_URL, 0,
-                                     _("URL '%s' is not properly URI-encoded"),
-                                     utf8_target);
-
-          /* Verify that no backpaths are present in the URL. */
-          if (svn_path_is_backpath_present(target))
-            return svn_error_createf(SVN_ERR_BAD_URL, 0,
-                                     _("URL '%s' contains a '..' element"),
-                                     utf8_target);
-
-          /* strip any trailing '/' */
-          target = svn_path_canonicalize(target, pool);
+          SVN_ERR(svn_opt__arg_canonicalize_url(&target, utf8_target, pool));
         }
       else  /* not a url, so treat as a path */
         {
-          const char *apr_target;
           const char *base_name;
-          char *truenamed_target; /* APR-encoded */
-          apr_status_t apr_err;
 
-          /* canonicalize case, and change all separators to '/'. */
-          SVN_ERR(svn_path_cstring_from_utf8(&apr_target, utf8_target,
-                                             pool));
-          apr_err = apr_filepath_merge(&truenamed_target, "", apr_target,
-                                       APR_FILEPATH_TRUENAME, pool);
-
-          if (!apr_err)
-            /* We have a canonicalized APR-encoded target now. */
-            apr_target = truenamed_target;
-          else if (APR_STATUS_IS_ENOENT(apr_err))
-            /* It's okay for the file to not exist, that just means we
-               have to accept the case given to the client. We'll use
-               the original APR-encoded target. */
-            ;
-          else
-            return svn_error_createf(apr_err, NULL,
-                                     _("Error resolving case of '%s'"),
-                                     svn_path_local_style(utf8_target,
-                                                          pool));
-
-          /* convert back to UTF-8. */
-          SVN_ERR(svn_path_cstring_to_utf8(&target, apr_target, pool));
-          target = svn_path_canonicalize(target, pool);
+          SVN_ERR(svn_opt__arg_canonicalize_path(&target, utf8_target, pool));
 
           /* If the target has the same name as a Subversion
              working copy administrative dir, skip it. */
@@ -1155,6 +1114,68 @@ svn_opt_parse_revprop(apr_hash_t **revprop_table_p, const char *revprop_spec,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_opt__arg_canonicalize_url(const char **url_out, const char *url_in,
+                              apr_pool_t *pool)
+{
+  const char *target;
+
+  /* Convert to URI. */
+  target = svn_path_uri_from_iri(url_in, pool);
+  /* Auto-escape some ASCII characters. */
+  target = svn_path_uri_autoescape(target, pool);
+
+  /* The above doesn't guarantee a valid URI. */
+  if (! svn_path_is_uri_safe(target))
+    return svn_error_createf(SVN_ERR_BAD_URL, 0,
+                             _("URL '%s' is not properly URI-encoded"),
+                             target);
+
+  /* Verify that no backpaths are present in the URL. */
+  if (svn_path_is_backpath_present(target))
+    return svn_error_createf(SVN_ERR_BAD_URL, 0,
+                             _("URL '%s' contains a '..' element"),
+                             target);
+
+  /* strip any trailing '/' and collapse other redundant elements */
+  target = svn_path_canonicalize(target, pool);
+
+  *url_out = target;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_opt__arg_canonicalize_path(const char **path_out, const char *path_in,
+                               apr_pool_t *pool)
+{
+  const char *apr_target;
+  char *truenamed_target; /* APR-encoded */
+  apr_status_t apr_err;
+
+  /* canonicalize case, and change all separators to '/'. */
+  SVN_ERR(svn_path_cstring_from_utf8(&apr_target, path_in, pool));
+  apr_err = apr_filepath_merge(&truenamed_target, "", apr_target,
+                               APR_FILEPATH_TRUENAME, pool);
+
+  if (!apr_err)
+    /* We have a canonicalized APR-encoded target now. */
+    apr_target = truenamed_target;
+  else if (APR_STATUS_IS_ENOENT(apr_err))
+    /* It's okay for the file to not exist, that just means we
+       have to accept the case given to the client. We'll use
+       the original APR-encoded target. */
+    ;
+  else
+    return svn_error_createf(apr_err, NULL,
+                             _("Error resolving case of '%s'"),
+                             svn_path_local_style(path_in, pool));
+
+  /* convert back to UTF-8. */
+  SVN_ERR(svn_path_cstring_to_utf8(path_out, apr_target, pool));
+  *path_out = svn_path_canonicalize(*path_out, pool);
+
+  return SVN_NO_ERROR;
+}
 
 /* Print version info for PGM_NAME.  If QUIET is  true, print in
  * brief.  Else if QUIET is not true, print the version more
