@@ -101,7 +101,7 @@ svn_cl__switch(apr_getopt_t *os,
      switch to ("switch_url"). */
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets, 
-                                                      pool));
+                                                      ctx, pool));
 
   /* handle only-rewrite case specially */
   if (opt_state->relocate)
