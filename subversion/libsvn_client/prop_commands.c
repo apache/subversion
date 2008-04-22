@@ -678,11 +678,11 @@ remote_propget(apr_hash_t *props,
     svn_string_t *val = apr_hash_get(prop_hash, propname,
                                      APR_HASH_KEY_STRING);
     if (val)
-      val = svn_string_dup(val, perm_pool);
-
-    apr_hash_set(props,
-                 svn_path_join(target_prefix, target_relative, perm_pool),
-                 APR_HASH_KEY_STRING, val);
+      {
+        apr_hash_set(props,
+                     svn_path_join(target_prefix, target_relative, perm_pool),
+                     APR_HASH_KEY_STRING, svn_string_dup(val, perm_pool));
+      }
   }
 
   if (depth >= svn_depth_files
