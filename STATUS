@@ -18,6 +18,16 @@ Candidate changes:
    Votes:
      +1: kfogel
 
+ * r30741
+   Fix bug whereby 'svn status --depth=files' still showed some dirs.
+   Votes:
+     +1: kfogel
+
+ * r30743, r30751
+   Fix memory leak in recursive remote propget.
+   Votes:
+     +1: kfogel
+
 Status of 1.5.1:
 ================
 
