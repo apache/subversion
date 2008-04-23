@@ -1252,19 +1252,26 @@ do_merged_logs(svn_fs_t *fs,
              iterate over them in reverse. */
           for (j = combined_list->nelts - 1; j >= 0; j--)
             {
+              svn_error_t *err;
               struct path_list_range *pl_range 
                 = APR_ARRAY_IDX(combined_list, j, struct path_list_range *);
 
               svn_pool_clear(iterpool2);
-              SVN_ERR(do_merged_logs(fs, pl_range->paths,
-                                     pl_range->range.start, 
-                                     pl_range->range.end,
-                                     0, discover_changed_paths,
-                                     strict_node_history, revprops, TRUE,
-                                     found_revisions, 
-                                     receiver, receiver_baton,
-                                     authz_read_func, authz_read_baton,
-                                     permpool, iterpool2));
+              err = do_merged_logs(fs, pl_range->paths,
+                                   pl_range->range.start, 
+                                   pl_range->range.end,
+                                   0, discover_changed_paths,
+                                   strict_node_history, revprops, TRUE,
+                                   found_revisions, 
+                                   receiver, receiver_baton,
+                                   authz_read_func, authz_read_baton,
+                                   permpool, iterpool2);
+              if (err && (err->apr_err == SVN_ERR_FS_NOT_FOUND ||
+                          err->apr_err == SVN_ERR_FS_NO_SUCH_REVISION))
+                {
+                  svn_error_clear(err);
+                  continue;
+                }
             }
           svn_pool_destroy(iterpool2);
 
