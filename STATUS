@@ -10,23 +10,13 @@ Status of 1.5.0:
 Candidate changes:
 
  * r30666, r30684, r30726
-   Cache repository UUID, have update check that it matches.
+   ra_neon: Cache repository UUID / ra_*: Have update check that it matches.
    Notes: Not strictly necessary for 1.5.0, but would be nice to get
      the new svn_ra_open3() API in if we can.  If we do backport,
      make sure to change "New in 1.6" to "New in 1.5", of course.
      r30726 is a trivial compiler-warning change, by the way.
    Votes:
-     +1: kfogel
-
- * r30741
-   Fix bug whereby 'svn status --depth=files' still showed some dirs.
-   Votes:
-     +1: kfogel, cmpilato
-
- * r30743, r30751
-   Fix memory leak in recursive remote propget.
-   Votes:
-     +1: kfogel, cmpilato
+     +1: kfogel, jerenkrantz
 
 Status of 1.5.1:
 ================
@@ -35,3 +25,14 @@ Candidate changes:
 
 Approved changes (all releases):
 ================================
+
+ * r30741
+   Fix bug whereby 'svn status --depth=files' still showed some dirs.
+   Votes:
+     +1: kfogel, cmpilato, jerenkrantz
+
+ * r30743, r30751
+   Fix memory leak in recursive remote propget.
+   Votes:
+     +1: kfogel, cmpilato, jerenkrantz
+
