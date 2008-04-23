@@ -18,6 +18,12 @@ Candidate changes:
    Votes:
      +1: kfogel, jerenkrantz
 
+ * r30761, r30762
+   Fix for issue 3172.
+   Notes: 'log -g' fails the moment it encounters a bogus mergeinfo which 
+     claims a merge from a non-existentpath@REV1-REV2.
+   Votes:
+     +1: kameshj
 Status of 1.5.1:
 ================
 
