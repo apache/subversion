@@ -234,18 +234,24 @@ simple_save_creds_helper(svn_boolean_t *saved,
   apr_hash_t *creds_hash = NULL;
   const char *config_dir;
   svn_error_t *err;
-  const char *dont_store_passwords =
+  svn_boolean_t dont_store_passwords =
     apr_hash_get(parameters,
                  SVN_AUTH_PARAM_DONT_STORE_PASSWORDS,
-                 APR_HASH_KEY_STRING);
+                 APR_HASH_KEY_STRING) != NULL;
   svn_boolean_t non_interactive = apr_hash_get(parameters,
                                                SVN_AUTH_PARAM_NON_INTERACTIVE,
                                                APR_HASH_KEY_STRING) != NULL;
+  svn_boolean_t no_auth_cache =
+    (! creds->may_save) || (apr_hash_get(parameters,
+                                         SVN_AUTH_PARAM_NO_AUTH_CACHE,
+                                         APR_HASH_KEY_STRING) != NULL);
+
+  svn_boolean_t username_stored = FALSE;
   svn_boolean_t password_stored = TRUE;
 
   *saved = FALSE;
 
-  if (! creds->may_save)
+  if (no_auth_cache)
     return SVN_NO_ERROR;
 
   config_dir = apr_hash_get(parameters,
@@ -254,9 +260,17 @@ simple_save_creds_helper(svn_boolean_t *saved,
 
   /* Put the credentials in a hash and save it to disk */
   creds_hash = apr_hash_make(pool);
-  apr_hash_set(creds_hash, SVN_AUTH__AUTHFILE_USERNAME_KEY,
-               APR_HASH_KEY_STRING,
-               svn_string_create(creds->username, pool));
+
+  /* Maybe cache the username. */
+  if (! no_auth_cache)
+    {
+      apr_hash_set(creds_hash, SVN_AUTH__AUTHFILE_USERNAME_KEY,
+                   APR_HASH_KEY_STRING,
+                   svn_string_create(creds->username, pool));
+      username_stored = TRUE;
+    }
+
+  /* Maybe cache the password. */
   if (! dont_store_passwords)
     {
       password_stored = password_set(creds_hash, realmstring, creds->username,
@@ -276,7 +290,8 @@ simple_save_creds_helper(svn_boolean_t *saved,
         *saved = FALSE;
     }
 
-  if (password_stored)
+  /* If we cached anything, write it to disk. */
+  if (username_stored || password_stored)
     {
       err = svn_config_write_auth_data(creds_hash, SVN_AUTH_CRED_SIMPLE,
                                        realmstring, config_dir, pool);
