@@ -1140,21 +1140,6 @@ svn_path_url_add_component(const char *url,
   return svn_path_join(url, svn_path_uri_encode(component, pool), pool);
 }
 
-const char *
-svn_path_url_get_hostname_part(const char *url, apr_pool_t *pool)
-{
-  if (! svn_path_is_url(url))
-    return NULL;
-
-  apr_array_header_t *parts = svn_cstring_split(url, "/", TRUE, pool);
-
-  if (parts->nelts < 2)
-    return NULL;
-
-  return APR_ARRAY_IDX(parts, 1, const char *);
-}
-
-
 svn_error_t *
 svn_path_get_absolute(const char **pabsolute,
                       const char *relative,

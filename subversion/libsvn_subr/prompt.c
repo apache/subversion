@@ -83,7 +83,7 @@ static svn_error_t *
 prompt(const char **result,
        const char *prompt_msg,
        svn_boolean_t hide,
-       svn_cmdline_prompt_baton_t *pb,
+       svn_cmdline_prompt_baton2_t *pb,
        apr_pool_t *pool)
 {
   apr_status_t status;
@@ -194,7 +194,7 @@ svn_cmdline_auth_simple_prompt(svn_auth_cred_simple_t **cred_p,
 {
   svn_auth_cred_simple_t *ret = apr_pcalloc(pool, sizeof(*ret));
   const char *pass_prompt;
-  svn_cmdline_prompt_baton_t *pb = baton;
+  svn_cmdline_prompt_baton2_t *pb = baton;
 
   SVN_ERR(maybe_print_realm(realm, pool));
 
@@ -220,7 +220,7 @@ svn_cmdline_auth_username_prompt(svn_auth_cred_username_t **cred_p,
                                  apr_pool_t *pool)
 {
   svn_auth_cred_username_t *ret = apr_pcalloc(pool, sizeof(*ret));
-  svn_cmdline_prompt_baton_t *pb = baton;
+  svn_cmdline_prompt_baton2_t *pb = baton;
 
   SVN_ERR(maybe_print_realm(realm, pool));
 
@@ -244,7 +244,7 @@ svn_cmdline_auth_ssl_server_trust_prompt
 {
   const char *choice;
   svn_stringbuf_t *msg;
-  svn_cmdline_prompt_baton_t *pb = baton;
+  svn_cmdline_prompt_baton2_t *pb = baton;
   svn_stringbuf_t *buf = svn_stringbuf_createf
     (pool, _("Error validating server certificate for '%s':\n"), realm);
 
@@ -337,7 +337,7 @@ svn_cmdline_auth_ssl_client_cert_prompt
 {
   svn_auth_cred_ssl_client_cert_t *cred = NULL;
   const char *cert_file = NULL;
-  svn_cmdline_prompt_baton_t *pb = baton;
+  svn_cmdline_prompt_baton2_t *pb = baton;
 
   SVN_ERR(maybe_print_realm(realm, pool));
   SVN_ERR(prompt(&cert_file, _("Client certificate filename: "),
@@ -364,7 +364,7 @@ svn_cmdline_auth_ssl_client_cert_pw_prompt
   svn_auth_cred_ssl_client_cert_pw_t *cred = NULL;
   const char *result;
   const char *text = apr_psprintf(pool, _("Passphrase for '%s': "), realm);
-  svn_cmdline_prompt_baton_t *pb = baton;
+  svn_cmdline_prompt_baton2_t *pb = baton;
 
   SVN_ERR(prompt(&result, text, TRUE, pb, pool));
 
@@ -440,9 +440,12 @@ svn_cmdline_prompt_user2(const char **result,
                          svn_cmdline_prompt_baton_t *baton,
                          apr_pool_t *pool)
 {
-  return prompt(result, prompt_str, FALSE /* don't hide input */, baton, pool);
+  /* XXX: We know prompt doesn't use the config_dir member
+   * of svn_cmdline_prompt_baton2_t. And we can't really get at
+   * the configuration directory path from here anyway... */
+  return prompt(result, prompt_str, FALSE /* don't hide input */,
+                (svn_cmdline_prompt_baton2_t *)baton, pool);
 }
-
 
 svn_error_t *
 svn_cmdline_prompt_user(const char **result,

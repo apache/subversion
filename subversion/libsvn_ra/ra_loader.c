@@ -389,20 +389,45 @@ svn_error_t *svn_ra_open3(svn_ra_session_t **session_p,
   svn_ra_session_t *session;
   const struct ra_lib_defn *defn;
   const svn_ra__vtable_t *vtable = NULL;
-#ifdef MUST_CHOOSE_DAV
   svn_config_t *servers = NULL;
-  const char *http_library = "neon";
+  const char *server_group;
+  apr_uri_t repos_URI;
+  apr_status_t apr_err;
+#ifdef MUST_CHOOSE_DAV
+  const char* http_library = "neon";
+#endif
+  /* Auth caching parameters. */
+  svn_boolean_t store_passwords = SVN_CONFIG_DEFAULT_OPTION_STORE_PASSWORDS;
+  const char *store_plaintext_passwords
+    = SVN_CONFIG_DEFAULT_OPTION_STORE_PLAINTEXT_PASSWORDS;
+  svn_boolean_t store_auth_creds = SVN_CONFIG_DEFAULT_OPTION_STORE_AUTH_CREDS;
 
   if (config)
     {
+      /* Grab the 'servers' config. */
       servers = apr_hash_get(config, SVN_CONFIG_CATEGORY_SERVERS,
                              APR_HASH_KEY_STRING);
       if (servers)
         {
-          apr_uri_t repos_URI;
-          apr_status_t apr_err;
-          const char *server_group;
+          /* First, look in the global section. */
 
+          SVN_ERR(svn_config_get_bool
+            (servers, &store_passwords, SVN_CONFIG_SECTION_GLOBAL,
+             SVN_CONFIG_OPTION_STORE_PASSWORDS,
+             SVN_CONFIG_DEFAULT_OPTION_STORE_PASSWORDS));
+
+          SVN_ERR(svn_config_get_yes_no_ask
+            (servers, &store_plaintext_passwords, SVN_CONFIG_SECTION_GLOBAL,
+             SVN_CONFIG_OPTION_STORE_PLAINTEXT_PASSWORDS,
+             SVN_CONFIG_DEFAULT_OPTION_STORE_PLAINTEXT_PASSWORDS));
+
+          SVN_ERR(svn_config_get_bool
+            (servers, &store_auth_creds, SVN_CONFIG_SECTION_GLOBAL,
+              SVN_CONFIG_OPTION_STORE_AUTH_CREDS,
+              SVN_CONFIG_DEFAULT_OPTION_STORE_AUTH_CREDS));
+
+          /* Find out where we're about to connect to, and
+           * try to pick a server group based on the destination. */
           apr_err = apr_uri_parse(pool, repos_URL, &repos_URI);
           if (apr_err != APR_SUCCESS)
             return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
@@ -411,9 +436,30 @@ svn_error_t *svn_ra_open3(svn_ra_session_t **session_p,
           server_group = svn_config_find_group(servers, repos_URI.hostname,
                                                SVN_CONFIG_SECTION_GROUPS, pool);
 
+          if (server_group)
+            {
+              /* Override global auth caching parameters with the ones
+               * for the server group, if any. */
+              SVN_ERR(svn_config_get_bool(servers, &store_auth_creds,
+                                          server_group,
+                                          SVN_CONFIG_OPTION_STORE_AUTH_CREDS,
+                                          store_auth_creds));
+
+              SVN_ERR(svn_config_get_bool(servers, &store_passwords,
+                                          server_group,
+                                          SVN_CONFIG_OPTION_STORE_PASSWORDS,
+                                          store_passwords));
+
+              SVN_ERR(svn_config_get_yes_no_ask
+                (servers, &store_plaintext_passwords, server_group,
+                 SVN_CONFIG_OPTION_STORE_PLAINTEXT_PASSWORDS,
+                 store_plaintext_passwords));
+            }
+#ifdef MUST_CHOOSE_DAV
+          /* Now, which DAV-based RA method do we want to use today? */
           http_library
             = svn_config_get_server_setting(servers,
-                                            server_group,
+                                            server_group, /* NULL is OK */
                                             SVN_CONFIG_OPTION_HTTP_LIBRARY,
                                             "neon");
 
@@ -421,9 +467,22 @@ svn_error_t *svn_ra_open3(svn_ra_session_t **session_p,
               strcmp(http_library, "serf") != 0)
             return svn_error_create(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
                                     _("Invalid config: unknown HTTP library"));
+#endif
         }
     }
-#endif
+
+  /* Save auth caching parameters in the auth parameter hash. */
+  if (! store_passwords)
+    svn_auth_set_parameter(callbacks->auth_baton,
+                           SVN_AUTH_PARAM_DONT_STORE_PASSWORDS, "");
+
+  svn_auth_set_parameter(callbacks->auth_baton,
+                         SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS,
+                         store_plaintext_passwords);
+
+  if (! store_auth_creds)
+    svn_auth_set_parameter(callbacks->auth_baton,
+                           SVN_AUTH_PARAM_NO_AUTH_CACHE, "");
 
   /* Find the library. */
   for (defn = ra_libraries; defn->ra_name != NULL; ++defn)

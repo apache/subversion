@@ -74,14 +74,14 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_SSL_CLIENT_CERT_PASSWORD  "ssl-client-cert-password"
 #define SVN_CONFIG_OPTION_SSL_PKCS11_PROVIDER       "ssl-pkcs11-provider"
 #define SVN_CONFIG_OPTION_HTTP_LIBRARY              "http-library"
-/* SVN_CONFIG_OPTION_STORE_PLAINTEXT_PASSWORDS is also valid for servers
- * (but not in SECTION_GLOBAL). It is defined below */
-
-#define SVN_CONFIG_CATEGORY_CONFIG          "config"
-#define SVN_CONFIG_SECTION_AUTH                 "auth"
 #define SVN_CONFIG_OPTION_STORE_PASSWORDS           "store-passwords"
 #define SVN_CONFIG_OPTION_STORE_PLAINTEXT_PASSWORDS "store-plaintext-passwords"
 #define SVN_CONFIG_OPTION_STORE_AUTH_CREDS          "store-auth-creds"
+
+#define SVN_CONFIG_CATEGORY_CONFIG          "config"
+#define SVN_CONFIG_SECTION_AUTH                 "auth"
+/* The "auth" section has been deprecated.
+ * Its options have been moved to SVN_CONFIG_CATEGORY_SERVERS. */
 #define SVN_CONFIG_SECTION_HELPERS              "helpers"
 #define SVN_CONFIG_OPTION_EDITOR_CMD                "editor-cmd"
 #define SVN_CONFIG_OPTION_DIFF_CMD                  "diff-cmd"
@@ -142,6 +142,12 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_FALSE "FALSE"
 #define SVN_CONFIG_ASK   "ASK"
 
+/* Default values for some options. Should be passed as default values
+ * to svn_config_get and friends, instead of hard-coding the defaults in
+ * multiple places. */
+#define SVN_CONFIG_DEFAULT_OPTION_STORE_PASSWORDS           TRUE
+#define SVN_CONFIG_DEFAULT_OPTION_STORE_PLAINTEXT_PASSWORDS SVN_CONFIG_ASK
+#define SVN_CONFIG_DEFAULT_OPTION_STORE_AUTH_CREDS          TRUE
 
 /** Read configuration information from the standard sources and merge it
  * into the hash @a *cfg_hash.  If @a config_dir is not NULL it specifies a
