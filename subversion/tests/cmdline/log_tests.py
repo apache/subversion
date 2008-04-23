@@ -24,6 +24,7 @@ import svntest
 from svntest import wc
 
 from svntest.main import server_has_mergeinfo
+from svntest.main import SVN_PROP_MERGEINFO
 
 ######################################################################
 #
@@ -1364,6 +1365,24 @@ def log_xml_with_bad_data(sbox):
   svntest.actions.run_and_verify_log_xml(
     expected_revprops=(r0_props,), args=[sbox.repo_url])
 
+def merge_sensitive_log_target_with_bogus_mergeinfo(sbox):
+  "'svn log -g target_with_bogus_mergeinfo'"
+  #Refer issue 3172 for details.
+  #Create greek tree
+  #svn ps 'svn:mergeinfo' '/A/B:0' A/D
+  #svn ci -m 'setting bogus mergeinfo'
+  #svn log -g -r2
+  sbox.build()
+  wc_path = sbox.wc_dir
+  D_path = os.path.join(wc_path, 'A', 'D')
+  svntest.main.run_svn(None, 'ps', SVN_PROP_MERGEINFO, '/A/B:0', D_path)
+  #commit at r2
+  svntest.main.run_svn(None, 'ci', '-m', 'setting bogus mergeinfo', D_path)
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, 
+                                                              [], 'log', 
+                                                              '-g', D_path)
+  if len(err):
+    raise svntest.Failure("svn log -g target_with_bogus_mergeinfo fails")
 
 ########################################################################
 # Run the tests
@@ -1400,6 +1419,9 @@ test_list = [ None,
               only_one_wc_path,
               retrieve_revprops,
               log_xml_with_bad_data,
+              SkipUnless(
+                      XFail(merge_sensitive_log_target_with_bogus_mergeinfo),
+                      server_has_mergeinfo),
              ]
 
 if __name__ == '__main__':
