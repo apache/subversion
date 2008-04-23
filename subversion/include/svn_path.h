@@ -481,10 +481,6 @@ const char *svn_path_url_add_component(const char *url,
                                        const char *component,
                                        apr_pool_t *pool);
 
-/** Return the hostname part of @a url, allocated in @a pool.
- *  May return NULL on invalid input. */
-const char *svn_path_url_get_hostname_part(const char *url, apr_pool_t *pool);
-
 /**
  * Convert @a iri (Internationalized URI) to an URI.
  * The return value may be the same as @a iri if it was already

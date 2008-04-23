@@ -1049,7 +1049,6 @@ main(int argc, const char *argv[])
   svn_boolean_t descend = TRUE;
   svn_boolean_t interactive_conflicts = FALSE;
   apr_hash_t *changelists;
-  apr_array_header_t *urls;
 
   /* Initialize the app. */
   if (svn_cmdline_init("svn", stderr) != EXIT_SUCCESS)
@@ -1915,33 +1914,17 @@ main(int argc, const char *argv[])
   apr_signal(SIGXFSZ, SIG_IGN);
 #endif
 
-  /* Any URL arguments supplied?
-   * If any, svn_cmdline_setup_auth_baton2 wants them, so it can
-   * properly read settings from the 'servers' config file. */
-  urls = apr_array_make(pool, 0, sizeof(const char *));
-  for (i = os->ind; i < os->argc; i++)
-    {
-      if (svn_path_is_url(os->argv[i]))
-        {
-          const char *utf8_url;
-          if ((err = (svn_utf_cstring_to_utf8(&utf8_url, os->argv[i], pool))))
-            return svn_cmdline_handle_exit_error(err, pool, "svn: ");
-          APR_ARRAY_PUSH(urls, const char *) = utf8_url;
-        }
-    }
-
   /* Set up Authentication stuff. */
-  if ((err = (svn_cmdline_setup_auth_baton2(&ab,
-                                            opt_state.non_interactive,
-                                            opt_state.auth_username,
-                                            opt_state.auth_password,
-                                            opt_state.config_dir,
-                                            opt_state.no_auth_cache,
-                                            ctx->config,
-                                            urls,
-                                            ctx->cancel_func,
-                                            ctx->cancel_baton,
-                                            pool))))
+  if ((err = svn_cmdline_setup_auth_baton(&ab,
+                                          opt_state.non_interactive,
+                                          opt_state.auth_username,
+                                          opt_state.auth_password,
+                                          opt_state.config_dir,
+                                          opt_state.no_auth_cache,
+                                          cfg,
+                                          ctx->cancel_func,
+                                          ctx->cancel_baton,
+                                          pool)))
     svn_handle_error2(err, stderr, TRUE, "svn: ");
 
   ctx->auth_baton = ab;

@@ -353,48 +353,21 @@ svn_cmdline_handle_exit_error(svn_error_t *err,
   return EXIT_FAILURE;
 }
 
-/** An implementation of svn_config_enumerator2_t. */
-static svn_boolean_t
-find_store_plaintext_passwords_option(const char *name,
-                                     const char *value,
-                                     void *baton,
-                                     apr_pool_t *pool)
-{
-  svn_boolean_t *found = (svn_boolean_t *)baton;
-
-  if (! *found)
-    *found = strcmp(name, SVN_CONFIG_OPTION_STORE_PLAINTEXT_PASSWORDS) == 0;
-
-  return TRUE;
-}
-
 svn_error_t *
-svn_cmdline_setup_auth_baton2(svn_auth_baton_t **ab,
-                              svn_boolean_t non_interactive,
-                              const char *auth_username,
-                              const char *auth_password,
-                              const char *config_dir,
-                              svn_boolean_t no_auth_cache,
-                              apr_hash_t *cfg_hash,
-                              apr_array_header_t *urls,
-                              svn_cancel_func_t cancel_func,
-                              void *cancel_baton,
-                              apr_pool_t *pool)
+svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
+                             svn_boolean_t non_interactive,
+                             const char *auth_username,
+                             const char *auth_password,
+                             const char *config_dir,
+                             svn_boolean_t no_auth_cache,
+                             svn_config_t *cfg,
+                             svn_cancel_func_t cancel_func,
+                             void *cancel_baton,
+                             apr_pool_t *pool)
 {
   svn_boolean_t store_password_val = TRUE;
-  const char *store_plaintext_password_val;
   svn_boolean_t store_auth_creds_val = TRUE;
   svn_auth_provider_object_t *provider;
-  int i;
-  apr_pool_t *subpool;
-
-  /* The 'config' and 'servers' config files, respectively. */
-  svn_config_t *cfg_config = apr_hash_get(cfg_hash,
-                                          SVN_CONFIG_CATEGORY_CONFIG,
-                                          APR_HASH_KEY_STRING);
-  svn_config_t *cfg_servers = apr_hash_get(cfg_hash,
-                                           SVN_CONFIG_CATEGORY_SERVERS,
-                                           APR_HASH_KEY_STRING);
 
   /* The whole list of registered providers */
   apr_array_header_t *providers
@@ -499,119 +472,28 @@ svn_cmdline_setup_auth_baton2(svn_auth_baton_t **ab,
     svn_auth_set_parameter(*ab, SVN_AUTH_PARAM_CONFIG_DIR,
                            config_dir);
 
-  /* Determine whether storing passwords in any form is allowed. */
-  SVN_ERR(svn_config_get_bool(cfg_config, &store_password_val,
+  /* Determine whether storing passwords in any form is allowed.
+   * This is the deprecated location for this option, the new
+   * location is SVN_CONFIG_CATEGORY_SERVERS. */
+  SVN_ERR(svn_config_get_bool(cfg, &store_password_val,
                               SVN_CONFIG_SECTION_AUTH,
                               SVN_CONFIG_OPTION_STORE_PASSWORDS,
-                              TRUE));
+                              SVN_CONFIG_DEFAULT_OPTION_STORE_PASSWORDS));
 
   if (! store_password_val)
     svn_auth_set_parameter(*ab, SVN_AUTH_PARAM_DONT_STORE_PASSWORDS, "");
 
-  /**
-   * Determine whether storing passwords in plaintext has been
-   * explicitly allowed or denied, or whether we should ask
-   * the user. Check the setting from the 'servers' file first
-   * (ignoring its [global] section), and if not provided there,
-   * try the 'config' file.
-   */
-
-  store_plaintext_password_val = non_interactive ? SVN_CONFIG_FALSE : NULL;
-  if (urls && ! store_plaintext_password_val)
-    {
-      /* Check server groups in turn, first match wins. */
-      subpool = svn_pool_create(pool);
-      for (i = 0; i < urls->nelts; i++)
-        {
-          const char *server_group;
-          const char *url;
-          const char *hostname;
-
-          svn_pool_clear(subpool);
-
-          url = APR_ARRAY_IDX(urls, i, const char *);
-
-          hostname = svn_path_url_get_hostname_part(url, subpool);
-          if (hostname == NULL)
-            continue;
-
-          server_group = svn_config_find_group(cfg_servers, hostname,
-                                               SVN_CONFIG_SECTION_GROUPS,
-                                               subpool);
-          if (server_group)
-            {
-              /* Check if the group has 'store-plaintext-passwords'
-               * defined. We don't care about the actual value just yet. */
-              svn_boolean_t found = FALSE;
-              int n;
-
-              n = svn_config_enumerate2(cfg_servers, server_group,
-                                        find_store_plaintext_passwords_option,
-                                        &found, subpool);
-              if (found && n > 0)
-                {
-                  /* It's defined, grab the value. */
-                  SVN_ERR(svn_config_get_yes_no_ask
-                    (cfg_servers,
-                     &store_plaintext_password_val,
-                     server_group,
-                     SVN_CONFIG_OPTION_STORE_PLAINTEXT_PASSWORDS,
-                     SVN_CONFIG_ASK));
-                  break;
-                }
-              else
-                /* No luck with this group, try next one. */
-                continue;
-            }
-        }
-      svn_pool_destroy(subpool);
-    }
-
-  if (! store_plaintext_password_val)
-    /* No luck in 'servers' file, try 'config' file. */
-    SVN_ERR(svn_config_get_yes_no_ask
-      (cfg_config, &store_plaintext_password_val, SVN_CONFIG_SECTION_AUTH,
-       SVN_CONFIG_OPTION_STORE_PLAINTEXT_PASSWORDS, SVN_CONFIG_ASK));
-
-  svn_auth_set_parameter(*ab, SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS,
-                         store_plaintext_password_val);
-
-  /* Determine whether we are allowed to write to the auth/ area. */
-  SVN_ERR(svn_config_get_bool(cfg_config, &store_auth_creds_val,
+  /* Determine whether we are allowed to write to the auth/ area.
+   * This is the deprecated location for this option, the new
+   * location is SVN_CONFIG_CATEGORY_SERVERS. */
+  SVN_ERR(svn_config_get_bool(cfg, &store_auth_creds_val,
                               SVN_CONFIG_SECTION_AUTH,
                               SVN_CONFIG_OPTION_STORE_AUTH_CREDS,
-                              TRUE));
+                              SVN_CONFIG_DEFAULT_OPTION_STORE_AUTH_CREDS));
 
   if (no_auth_cache || ! store_auth_creds_val)
     svn_auth_set_parameter(*ab, SVN_AUTH_PARAM_NO_AUTH_CACHE, "");
 
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
-                             svn_boolean_t non_interactive,
-                             const char *auth_username,
-                             const char *auth_password,
-                             const char *config_dir,
-                             svn_boolean_t no_auth_cache,
-                             svn_config_t *cfg,
-                             svn_cancel_func_t cancel_func,
-                             void *cancel_baton,
-                             apr_pool_t *pool)
-{
-  apr_hash_t *cfg_hash;
-  
-  /* Argh, this makes us read the config again, even if the
-   * client has already done so. But there's no other way
-   * to be backward compatible. */
-  SVN_ERR(svn_config_get_config(&cfg_hash, config_dir, pool));
-
-  SVN_ERR(svn_cmdline_setup_auth_baton2(ab, non_interactive,
-                                        auth_username, auth_password,
-                                        config_dir, no_auth_cache,
-                                        cfg_hash, NULL, cancel_func,
-                                        cancel_baton, pool));
   return SVN_NO_ERROR;
 }
 

@@ -724,7 +724,8 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
       apr_file_t *f;
       const char *contents =
         "### This file specifies server-specific parameters,"                NL
-        "### including HTTP proxy information, and HTTP timeout settings."   NL
+        "### including HTTP proxy information, HTTP timeout settings,"       NL
+        "### and authentication settings."                                   NL
         "###"                                                                NL
         "### The currently defined server options are:"                      NL
         "###   http-proxy-host            Proxy host for HTTP connection"    NL
@@ -750,17 +751,41 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###   http-library               Which library to use for http/https"
                                                                              NL
         "###                              connections (neon or serf)"        NL
-        "###   store-plaintext-passwords  Specifies whether passwords used"  NL
+        "###   store-passwords            Specifies whether passwords used"  NL
         "###                              to authenticate against a"         NL
         "###                              Subversion server may be cached"   NL
-        "###                              on disk unencrypted."              NL
+        "###                              to disk in any way."               NL
+        "###   store-plaintext-passwords  Specifies whether passwords may"   NL
+        "###                              be cached on disk unencrypted."    NL
         "###"                                                                NL
-        "### store-plaintext-passwords may be either 'yes', 'no', or 'ask'." NL
-        "### It defaults to 'ask', which means that Subversion will ask"     NL
-        "### you before saving a password to disk in unencrypted form."      NL
-        "### This option can be set globally in the 'config' file, and will" NL
-        "### be ignored if it occurs in the [global] section of this file."  NL
-        "### The global setting is overridden by settings in this file."     NL
+        "###   store-auth-creds           Specifies whether any auth info"   NL
+        "###                              (passwords as well as server certs)"
+                                                                             NL
+        "###                              may be cached to disk."            NL
+        "###"                                                                NL
+        "### Set store-passwords to 'no' to avoid storing passwords in the"  NL
+        "### auth/ area of your config directory.  It defaults to 'yes',"    NL
+        "### but Subversion will never save your password to disk in"        NL
+        "### plaintext unless you tell it to."                               NL
+        "### Note that this option only prevents saving of *new* passwords;" NL
+        "### it doesn't invalidate existing passwords.  (To do that, remove" NL
+        "### the cache files by hand as described in the Subversion book.)"  NL
+        "###"                                                                NL
+        "### Set store-plaintext-passwords to 'no' to avoid storing"         NL
+        "### passwords in unencrypted form in the auth/ area of your config" NL
+        "### directory. Set it to 'yes' to allow Subversion to store"        NL
+        "### unencrypted passwords in the auth/ area.  The default is"       NL
+        "### 'ask', which means that Subversion will ask you before"         NL
+        "### saving a password to disk in unencrypted form.  Note that"      NL
+        "### this option has no effect if either 'store-passwords' or "      NL
+        "### 'store-auth-creds' is set to 'no'."                             NL
+        "###"                                                                NL
+        "### Set store-auth-creds to 'no' to avoid storing any Subversion"   NL
+        "### credentials in the auth/ area of your config directory."        NL
+        "### Note that this includes SSL server certificates."               NL
+        "### It defaults to 'yes'.  Note that this option only prevents"     NL
+        "### saving of *new* credentials;  it doesn't invalidate existing"   NL
+        "### caches.  (To do that, remove the cache files by hand.)"         NL
         "###"                                                                NL
         "### HTTP timeouts, if given, are specified in seconds.  A timeout"  NL
         "### of 0, i.e. zero, causes a builtin default to be used."          NL
@@ -769,10 +794,10 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### demonstrate how to use this file; any resemblance to actual"    NL
         "### servers, living or dead, is entirely coincidental."             NL
         ""                                                                   NL
-        "### In this section, the URL of the repository you're trying to"    NL
-        "### access is matched against the patterns on the right.  If a"     NL
-        "### match is found, the server info is from the section with the"   NL
-        "### corresponding name."                                            NL
+        "### In the 'groups' section, the URL of the repository you're"      NL
+        "### trying to access is matched against the patterns on the right." NL
+        "### If a match is found, the server options are taken from the"     NL
+        "### section with the corresponding name on the left."               NL
         ""                                                                   NL
         "[groups]"                                                           NL
         "# group1 = *.collab.net"                                            NL
@@ -807,6 +832,10 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### information in the 'global' section and not bother with"        NL
         "### 'groups' or any other sections."                                NL
         "###"                                                                NL
+        "### Most people might want to configure password caching"           NL
+        "### parameters here, but you can also configure them per server"    NL
+        "### group (per-group settings override global settings)."           NL
+        "###"                                                                NL
         "### If you go through a proxy for all but a few sites, you can"     NL
         "### list those exceptions under 'http-proxy-exceptions'.  This only"NL
         "### overrides defaults, not explicitly matched server names."       NL
@@ -827,7 +856,11 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
 #endif
         "# No http-timeout, so just use the builtin default."                NL
         "# No neon-debug-mask, so neon debugging is disabled."               NL
-        "# ssl-authority-files = /path/to/CAcert.pem;/path/to/CAcert2.pem"   NL;
+        "# ssl-authority-files = /path/to/CAcert.pem;/path/to/CAcert2.pem"   NL
+        "#"                                                                  NL 
+        "# Password caching parameters:"                                     NL
+        "# store-passwords = no"                                             NL
+        "# store-plaintext-passwords = no"                                   NL;
 
       err = svn_io_file_open(&f, path,
                              (APR_WRITE | APR_CREATE | APR_EXCL),
@@ -867,27 +900,23 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### The commented-out examples below are intended to demonstrate"   NL
         "### how to use this file."                                          NL
         ""                                                                   NL
-        "### Section for authentication and authorization customizations."   NL
         "[auth]"                                                             NL
+        "### Section for authentication and authorization customizations."   NL
+        "###"                                                                NL
+        "### NOTE: The auth section in this file has been deprecated."       NL
+        "### Both 'store-passwords' and 'store-auth-creds' can now be"       NL
+        "### specified in the 'servers' file in your config directory."      NL
+        "### Anything specified in this section is overridden by settings"   NL
+        "### specified in the 'servers' file."                               NL
+        "###"                                                                NL
         "### Set store-passwords to 'no' to avoid storing passwords in the"  NL
         "### auth/ area of your config directory.  It defaults to 'yes',"    NL
         "### but Subversion will never save your password to disk in"        NL
-        "### plaintext unless you tell it to (see below)."                   NL
+        "### plaintext unless you tell it to (see the 'servers' file)."      NL
         "### Note that this option only prevents saving of *new* passwords;" NL
         "### it doesn't invalidate existing passwords.  (To do that, remove" NL
         "### the cache files by hand as described in the Subversion book.)"  NL
         "# store-passwords = no"                                             NL
-        "### Set store-plaintext-passwords to 'no' to avoid storing"         NL
-        "### passwords in unencrypted form in the auth/ area of your config" NL
-        "### directory. Set it to 'yes' to allow Subversion to store"        NL
-        "### unencrypted passwords in the auth/ area.  The default is"       NL
-        "### 'ask', which means that Subversion will ask you before"         NL
-        "### saving a password to disk in unencrypted form.  Note that"      NL
-        "### this option has no effect if 'store-passwords' is set to 'no'." NL
-        "### This option can also be set on a per-server basis in the"       NL
-        "### 'servers' configuration file in your config directory."         NL
-        "### Values for specific servers override the value specified here." NL
-        "# store-plaintext-passwords = no"                                   NL
         "### Set store-auth-creds to 'no' to avoid storing any subversion"   NL
         "### credentials in the auth/ area of your config directory."        NL
         "### It defaults to 'yes'.  Note that this option only prevents"     NL

@@ -397,6 +397,7 @@ static const svn_auth_provider_t simple_provider = {
   simple_save_creds
 };
 
+
 /* Public API */
 void
 svn_auth_get_simple_provider2
