@@ -1419,9 +1419,8 @@ test_list = [ None,
               only_one_wc_path,
               retrieve_revprops,
               log_xml_with_bad_data,
-              SkipUnless(
-                      XFail(merge_sensitive_log_target_with_bogus_mergeinfo),
-                      server_has_mergeinfo),
+              SkipUnless(merge_sensitive_log_target_with_bogus_mergeinfo,
+                         server_has_mergeinfo),
              ]
 
 if __name__ == '__main__':
