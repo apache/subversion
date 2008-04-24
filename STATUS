@@ -31,9 +31,3 @@ Candidate changes:
 
 Approved changes (all releases):
 ================================
-
- * r30743, r30751
-   Fix memory leak in recursive remote propget.
-   Votes:
-     +1: kfogel, cmpilato, jerenkrantz
-
