@@ -14,20 +14,30 @@ my $version = $ARGV[0];
 my %good_sigs;
 
 foreach my $filename (glob("subversion-*.asc")) {
-    my $gpg_output = `gpg --logger-fd 1 --verify $filename`;
-    if ($? >> 8 ) {
-        # gpg exited with a non zero exit value, die with an error
-        print $gpg_output;
-        die "BAD SIGNATURE in $filename";
-    }
-    foreach my $line (split /\n/, $gpg_output) {
-        # Extract the keyid from the GPG output.
-        my ($keyid) = $line =~ /^gpg: Signature made .*? using \w+ key ID (\w+)/;
-        if (defined($keyid)) {
-            # Put the resulting key in a hash to remove duplicates.
-            $good_sigs{$keyid}++;
+    `cp $filename $filename.bak`;
+
+    while (int(`wc -l $filename`) > 0)
+    {
+        my $gpg_output = `gpg --logger-fd 1 --verify $filename`;
+        if ($? >> 8 ) {
+            # gpg exited with a non zero exit value, die with an error
+            print $gpg_output;
+            die "BAD SIGNATURE in $filename";
         }
+        foreach my $line (split /\n/, $gpg_output) {
+            # Extract the keyid from the GPG output.
+            my ($keyid) = $line =~ /^gpg: Signature made .*? using \w+ key ID (\w+)/;
+            if (defined($keyid)) {
+                # Put the resulting key in a hash to remove duplicates.
+                $good_sigs{$keyid}++;
+            }
+        }
+
+        `tail -n +8 $filename > tmp`;
+        `mv tmp $filename`;
     }
+
+    `mv $filename.bak $filename`;
 }
 
 foreach my $keyid (keys %good_sigs) {
