@@ -267,6 +267,9 @@ One way to prevent the lengthy 'if()' blocks currently in wc-1.0, would be
 to design a dispatch mechanism based on the path-state in WORKING/BASE and the
 required transformation, dispatching to (small) functions which perform
 solely that specific task.
+#####XBC Do please note that this suggests yet another instance of
+         pure polymorphism coded in C. This runs contrary to the
+         developer sanity requirement.
 
 
 Speed
