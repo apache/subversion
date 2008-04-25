@@ -16,6 +16,11 @@ Candidate changes:
    Votes:
      +1: kameshj, arfrever
 
+ * r30785
+   Update bash completion for svnadmin.
+   Votes:
+     +1: arfrever
+
 Status of 1.5.1:
 ================
 
