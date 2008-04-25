@@ -2,7 +2,7 @@
  * simple_providers.c: providers for SVN_AUTH_CRED_SIMPLE
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2006, 2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -29,6 +29,8 @@
 #include "svn_config.h"
 #include "svn_user.h"
 
+#include "simple_providers.h"
+
 #include "svn_private_config.h"
 
 /*-----------------------------------------------------------------------*/
@@ -45,32 +47,6 @@
 #define SVN_AUTH__KEYCHAIN_PASSWORD_TYPE           "keychain"
 
 
-/* A function that stores PASSWORD (or some encrypted version thereof)
-   either directly in CREDS, or externally using REALMSTRING and USERNAME
-   as keys into the external store.  If NON_INTERACTIVE is set, the user
-   must not be involved in the storage process.  POOL is used for any
-   necessary allocation. */
-typedef svn_boolean_t (*password_set_t)(apr_hash_t *creds,
-                                        const char *realmstring,
-                                        const char *username,
-                                        const char *password,
-                                        svn_boolean_t non_interactive,
-                                        apr_pool_t *pool);
-
-/* A function that stores in *PASSWORD (potentially after decrypting it)
-   the user's password.  It might be obtained directly from CREDS, or
-   from an external store, using REALMSTRING and USERNAME as keys.
-   If NON_INTERACTIVE is set, the user must not be involved in the
-   retrieval process.  POOL is used for any necessary allocation. */
-typedef svn_boolean_t (*password_get_t)(const char **password,
-                                        apr_hash_t *creds,
-                                        const char *realmstring,
-                                        const char *username,
-                                        svn_boolean_t non_interactive,
-                                        apr_pool_t *pool);
-
-
-
 /* Implementation of password_get_t that retrieves the plaintext password
    from CREDS. */
 static svn_boolean_t
@@ -113,7 +89,7 @@ simple_password_set(apr_hash_t *creds,
    CREDENTIALS. PASSWORD_GET is used to obtain the password value.
    PASSTYPE identifies the type of the cached password. CREDENTIALS are
    allocated from POOL. */
-static svn_error_t *
+svn_error_t *
 simple_first_creds_helper(void **credentials,
                           void **iter_baton,
                           void *provider_baton,
@@ -220,7 +196,7 @@ simple_first_creds_helper(void **credentials,
    a set of CREDENTIALS to the simple auth provider's username and
    password cache. PASSWORD_SET is used to store the password.
    PASSTYPE identifies the type of the cached password. Allocates from POOL. */
-static svn_error_t *
+svn_error_t *
 simple_save_creds_helper(svn_boolean_t *saved,
                          void *credentials,
                          void *provider_baton,
