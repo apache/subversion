@@ -2,7 +2,7 @@
  * cmdline.c :  Helpers for command-line programs.
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -380,6 +380,10 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
 #endif
 #ifdef SVN_HAVE_KEYCHAIN_SERVICES
   svn_auth_get_keychain_simple_provider(&provider, pool);
+  APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+#endif
+#ifdef SVN_HAVE_KWALLET
+  svn_auth_get_kwallet_simple_provider(&provider, pool);
   APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 #endif
   svn_auth_get_simple_provider(&provider, pool);
