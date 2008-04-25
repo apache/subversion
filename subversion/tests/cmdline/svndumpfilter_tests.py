@@ -137,7 +137,7 @@ def svndumpfilter_loses_mergeinfo(sbox):
 # list all tests here, starting with None:
 test_list = [ None,
               reflect_dropped_renumbered_revs,
-              XFail(svndumpfilter_loses_mergeinfo),
+              svndumpfilter_loses_mergeinfo,
              ]
 
 if __name__ == '__main__':
