@@ -113,12 +113,14 @@ svn_auth_get_kwallet_simple_provider(svn_auth_provider_object_t **provider,
                                      apr_pool_t *pool)
 {
 #ifdef SVN_HAVE_KWALLET
-  svn_auth_provider_object_t *po = static_cast<svn_auth_provider_object_t *> (apr_pcalloc(pool, sizeof(*po)));
+  svn_auth_provider_object_t *po =
+    static_cast<svn_auth_provider_object_t *> (apr_pcalloc(pool, sizeof(*po)));
 
   po->vtable = &kwallet_simple_provider;
   *provider = po;
   return SVN_NO_ERROR;
 #else
-  return APR_ENOTIMPL;
+  return svn_error_create(APR_ENOTIMPL, NULL,
+                          _("Support for KWallet not implemented"));
 #endif /* SVN_HAVE_KWALLET */
 }
