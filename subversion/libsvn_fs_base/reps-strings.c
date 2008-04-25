@@ -81,9 +81,12 @@ make_fulltext_rep(const char *str_key,
   rep->kind = rep_kind_fulltext;
 
   if (checksum)
-    memcpy(rep->checksum, checksum, APR_MD5_DIGESTSIZE);
+    {
+      rep->checksum = svn_checksum_create(svn_checksum_md5, pool);
+      memcpy(rep->checksum->digest, checksum, APR_MD5_DIGESTSIZE);
+    }
   else
-    memset(rep->checksum, 0, APR_MD5_DIGESTSIZE);
+    rep->checksum = NULL;
 
   rep->contents.fulltext.string_key
     = str_key ? apr_pstrdup(pool, str_key) : NULL;
@@ -752,7 +755,10 @@ svn_fs_base__rep_contents_checksum(unsigned char digest[],
   representation_t *rep;
 
   SVN_ERR(svn_fs_bdb__read_rep(&rep, fs, rep_key, trail, pool));
-  memcpy(digest, rep->checksum, APR_MD5_DIGESTSIZE);
+  if (rep->checksum)
+    memcpy(digest, rep->checksum->digest, APR_MD5_DIGESTSIZE);
+  else
+    memset(digest, 0, APR_MD5_DIGESTSIZE);
 
   return SVN_NO_ERROR;
 }
@@ -805,13 +811,13 @@ svn_fs_base__rep_contents(svn_string_t *str,
     apr_md5_final(checksum, &md5_context);
 
     SVN_ERR(svn_fs_bdb__read_rep(&rep, fs, rep_key, trail, pool));
-    if (! svn_md5_digests_match(checksum, rep->checksum))
+    if (! svn_md5_digests_match(checksum, rep->checksum->digest))
       return svn_error_createf
         (SVN_ERR_FS_CORRUPT, NULL,
          _("Checksum mismatch on rep '%s':\n"
            "   expected:  %s\n"
            "     actual:  %s\n"), rep_key,
-         svn_md5_digest_to_cstring_display(rep->checksum, pool),
+         svn_md5_digest_to_cstring_display(rep->checksum->digest, pool),
          svn_md5_digest_to_cstring_display(checksum, pool));
   }
 
@@ -891,13 +897,13 @@ txn_body_read_rep(void *baton, trail_t *trail)
               SVN_ERR(svn_fs_bdb__read_rep(&rep, args->rb->fs,
                                            args->rb->rep_key,
                                            trail, trail->pool));
-              if (! svn_md5_digests_match(checksum, rep->checksum))
+              if (! svn_md5_digests_match(checksum, rep->checksum->digest))
                 return svn_error_createf
                   (SVN_ERR_FS_CORRUPT, NULL,
                    _("Checksum mismatch on rep '%s':\n"
                      "   expected:  %s\n"
                      "     actual:  %s\n"), args->rb->rep_key,
-                   svn_md5_digest_to_cstring_display(rep->checksum,
+                   svn_md5_digest_to_cstring_display(rep->checksum->digest,
                                                      trail->pool),
                    svn_md5_digest_to_cstring_display(checksum, trail->pool));
             }
@@ -1127,7 +1133,7 @@ txn_body_write_close_rep(void *baton, trail_t *trail)
 
   SVN_ERR(svn_fs_bdb__read_rep(&rep, wb->fs, wb->rep_key,
                                trail, trail->pool));
-  memcpy(rep->checksum, wb->md5_digest, APR_MD5_DIGESTSIZE);
+  memcpy(rep->checksum->digest, wb->md5_digest, APR_MD5_DIGESTSIZE);
   SVN_ERR(svn_fs_bdb__write_rep(wb->fs, wb->rep_key, rep,
                                 trail, trail->pool));
 
@@ -1227,7 +1233,7 @@ rep_contents_clear(svn_fs_t *fs,
   if (str_key && *str_key)
     {
       SVN_ERR(svn_fs_bdb__string_clear(fs, str_key, trail, pool));
-      memcpy(rep->checksum, svn_md5_empty_string_digest(),
+      memcpy(rep->checksum->digest, svn_md5_empty_string_digest(),
              APR_MD5_DIGESTSIZE);
       SVN_ERR(svn_fs_bdb__write_rep(fs, rep_key, rep, trail, pool));
     }
@@ -1526,7 +1532,7 @@ svn_fs_base__rep_deltify(svn_fs_t *fs,
       return UNKNOWN_NODE_KIND(target);
 
     /* Save the checksum, since the new rep needs it. */
-    memcpy(rep_digest, old_rep->checksum, APR_MD5_DIGESTSIZE);
+    memcpy(rep_digest, old_rep->checksum->digest, APR_MD5_DIGESTSIZE);
   }
 
   /* Hook the new strings we wrote into the rest of the filesystem by
@@ -1541,7 +1547,7 @@ svn_fs_base__rep_deltify(svn_fs_t *fs,
     new_rep.txn_id = NULL;
 
     /* Migrate the old rep's checksum to the new rep. */
-    memcpy(new_rep.checksum, rep_digest, APR_MD5_DIGESTSIZE);
+    memcpy(new_rep.checksum->digest, rep_digest, APR_MD5_DIGESTSIZE);
 
     chunks = apr_array_make(pool, windows->nelts, sizeof(chunk));
 

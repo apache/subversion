@@ -3773,6 +3773,26 @@ file_integrity_helper(apr_size_t filesize, apr_uint32_t *seed,
 
 
 static svn_error_t *
+small_file_integrity(const char **msg,
+                     svn_boolean_t msg_only,
+                     svn_test_opts_t *opts,
+                     apr_pool_t *pool)
+{
+  apr_uint32_t seed = (apr_uint32_t) apr_time_now();
+  *msg = apr_psprintf(pool,
+                      "create and modify small file (seed=%lu)",
+                      (unsigned long) seed);
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Just use a really small file size... */
+  return file_integrity_helper(20, &seed, opts->fs_type,
+                               "test-repo-small-file-integrity", pool);
+}
+
+
+static svn_error_t *
 medium_file_integrity(const char **msg,
                       svn_boolean_t msg_only,
                       svn_test_opts_t *opts,
@@ -4924,5 +4944,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(unordered_txn_dirprops),
     SVN_TEST_PASS(set_uuid),
     SVN_TEST_PASS(node_origin_rev),
+    SVN_TEST_PASS(small_file_integrity),
     SVN_TEST_NULL
   };
