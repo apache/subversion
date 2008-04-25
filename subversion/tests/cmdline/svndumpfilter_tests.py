@@ -104,8 +104,8 @@ def reflect_dropped_renumbered_revs(sbox):
                                      sbox.repo_url + '/branch2')
 
 def svndumpfilter_loses_mergeinfo(sbox):
-  "svndumpfilter looses mergeinfo"
-  #svndumpfilter looses mergeinfo if invoked without --renumber-revs
+  "svndumpfilter loses mergeinfo"
+  #svndumpfilter loses mergeinfo if invoked without --renumber-revs
 
   ## See http://subversion.tigris.org/issues/show_bug.cgi?id=3181. ##
 
