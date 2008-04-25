@@ -25,7 +25,7 @@ Candidate changes:
    Votes:
      +1: kameshj
 
- * r30776, r30777
+ * r30776, r30777, r30779
    Fix for issue 3181.
    Notes: svndumpfilter drops mergeinfo when it is *not* run with
    --renumber-revs.
