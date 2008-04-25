@@ -24,6 +24,14 @@ Candidate changes:
      claims a merge from a non-existentpath@REV1-REV2.
    Votes:
      +1: kameshj
+
+ * r30776, r30777
+   Fix for issue 3181.
+   Notes: svndumpfilter drops mergeinfo when it is *not* run with
+   --renumber-revs.
+   Votes:
+     +1: kameshj
+
 Status of 1.5.1:
 ================
 
