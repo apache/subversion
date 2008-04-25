@@ -50,9 +50,6 @@ typedef svn_boolean_t (*password_set_t)(apr_hash_t *creds,
    CREDENTIALS. PASSWORD_GET is used to obtain the password value.
    PASSTYPE identifies the type of the cached password. CREDENTIALS are
    allocated from POOL. */
-#ifdef __cplusplus
-extern
-#endif /* __cplusplus */
 svn_error_t *
 simple_first_creds_helper(void **credentials,
                           void **iter_baton,
@@ -68,9 +65,6 @@ simple_first_creds_helper(void **credentials,
    a set of CREDENTIALS to the simple auth provider's username and
    password cache. PASSWORD_SET is used to store the password.
    PASSTYPE identifies the type of the cached password. Allocates from POOL. */
-#ifdef __cplusplus
-extern
-#endif /* __cplusplus */
 svn_error_t *
 simple_save_creds_helper(svn_boolean_t *saved,
                          void *credentials,
