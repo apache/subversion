@@ -300,23 +300,35 @@ AC_ARG_ENABLE(kwallet,
   ],
   [enable_kwallet=no])
 
-old_CXXFLAGS="$CXXFLAGS"
-old_LDFLAGS="$LDFLAGS"
-old_LIBS="$LIBS"
-SVN_KWALLET_LIBS="-lQtCore -lQtDBus -lQtGui -lkdeui"
+AC_MSG_CHECKING([whether to look for KWallet])
 if test "$enable_kwallet" != "no"; then
+  AC_MSG_RESULT([yes])
   if test "$HAVE_PKG_CONFIG" = "yes"; then
     AC_MSG_CHECKING([for QtCore, QtDBus, QtGui])
     if pkg-config --exists QtCore QtDBus QtGui; then
       AC_MSG_RESULT([yes])
       AC_LANG(C++)
+      old_CXXFLAGS="$CXXFLAGS"
+      old_LDFLAGS="$LDFLAGS"
+      old_LIBS="$LIBS"
+      for d in [`pkg-config --cflags QtCore QtDBus QtGui | $GREP -o -- -D[^[:space:]]*`]; do
+        CPPFLAGS="$CPPFLAGS $d"
+      done
+      qt_include_dirs=""
+      for i in [`pkg-config --cflags QtCore QtDBus QtGui | $GREP -o -- -I[^[:space:]]*`]; do
+        qt_include_dirs="$qt_include_dirs $i"
+      done
+      qt_include_dirs="${qt_include_dirs## }"
       kde_dir="$enable_kwallet"
-      CXXFLAGS="$CXXFLAGS `pkg-config --cflags QtCore QtDBus QtGui` -I$kde_dir/include"
+      SVN_KWALLET_INCLUDES="$qt_include_dirs -I$kde_dir/include"
+      SVN_KWALLET_LIBS="-lQtCore -lQtDBus -lQtGui -lkdeui"
+      CXXFLAGS="$CXXFLAGS $SVN_KWALLET_INCLUDES"
       LIBS="$LIBS $SVN_KWALLET_LIBS"
+      qt_lib_dirs=""
       for l in [`pkg-config --libs QtCore QtDBus QtGui | $GREP -o -- -L[^[:space:]]*`]; do
         qt_lib_dirs="$qt_lib_dirs $l"
       done
-      qt_lib_dirs="${qt_lib_dirs# }"
+      qt_lib_dirs="${qt_lib_dirs## }"
       for kde_lib_subdir in lib64 lib; do
         LDFLAGS="$old_LDFLAGS $qt_lib_dirs -L$kde_dir/$kde_lib_subdir"
         AC_LINK_IFELSE([
@@ -328,28 +340,28 @@ int main()
         fi
       done
       AC_LANG(C)
+      AC_MSG_CHECKING([for KWallet])
+      if test "$enable_kwallet" = "yes"; then
+        AC_DEFINE([SVN_HAVE_KWALLET], [1],
+                  [Is KWallet support enabled?])
+        AC_MSG_RESULT([yes])
+        CXXFLAGS="$old_CXXFLAGS"
+        LIBS="$old_LIBS"
+      else
+        AC_MSG_RESULT([no])
+        AC_MSG_ERROR([cannot find KWallet])
+      fi
     else
-      enable_kwallet=no
       AC_MSG_RESULT([no])
       AC_MSG_ERROR([cannot find QtCore, QtDBus, QtGui])
     fi
   else
-    enable_kwallet=no
+    AC_MSG_ERROR([cannot find pkg-config])
   fi
-fi
-
-AC_MSG_CHECKING([for KWallet])
-if test "$enable_kwallet" = "yes"; then
-  AC_DEFINE([SVN_HAVE_KWALLET], [1],
-            [Is KWallet support enabled?])
-  AC_MSG_RESULT([yes])
 else
-  CXXFLAGS="$old_CXXFLAGS"
-  LDFLAGS="$old_LDFLAGS"
-  SVN_KWALLET_LIBS=""
   AC_MSG_RESULT([no])
 fi
-LIBS="$old_LIBS"
+AC_SUBST(SVN_KWALLET_INCLUDES)
 AC_SUBST(SVN_KWALLET_LIBS)
 
 
