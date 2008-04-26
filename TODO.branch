@@ -1,5 +1,75 @@
 TODOS in this branch:
 
+- Fix the following crash, no idea why this is happening yet.
+  Apparently the pool we're caching in is not persistent.
+
+  (gdb) rm -rf /tmp/svncfg
+  (gdb) br svn_cmdline_auth_plaintext_prompt
+  Breakpoint 1 at 0x814b527: file subversion/libsvn_subr/prompt.c, line 386.
+  (gdb) run --config-dir /tmp/svncfg ls svn://localhost svn://localhost
+  Starting program: /home/stsp/elego/prefix/svn-dont-save-plaintext-passwords-by-default-prefix/bin/svn --config-dir /tmp/svncfg ls svn://localhost svn://localhost
+  [New LWP 100152]
+  [New Thread 0x28801100 (LWP 100152)]
+  Authentication realm: <svn://localhost:3690> f2d6a8f5-8913-dd11-8d00-000b6ad51eb1
+  Password for 'stsp':
+  Authentication realm: <svn://localhost:3690> f2d6a8f5-8913-dd11-8d00-000b6ad51eb1
+  Username: harry
+  Password for 'harry':
+  [Switching to Thread 0x28801100 (LWP 100152)]
+  
+  Breakpoint 1, svn_cmdline_auth_plaintext_prompt (
+      may_save_plaintext=0xbfbfda68,
+      realmstring=0x2885cde0 "<svn://localhost:3690> f2d6a8f5-8913-dd11-8d00-000b6ad51eb1", baton=0x2883bba8, pool=0x2885a018)
+      at subversion/libsvn_subr/prompt.c:386
+  386       const char *answer = NULL;
+  (gdb) c
+  Continuing.
+  ATTENTION! Your password for authentication realm
+  '<svn://localhost:3690> f2d6a8f5-8913-dd11-8d00-000b6ad51eb1'
+  can only be stored to disk unencrypted! It is recommended to configure
+  your system so that Subversion can store passwords encrypted, if possible.
+  See the documentation for details. You can get rid of this warning by
+  editing '/tmp/svncfg/servers'
+  and setting 'store-plaintext-passwords' to either 'yes' or 'no'.
+  -----------------------------------------------------------------------
+  Store password unencrypted (yes/no)? yes
+  
+  Breakpoint 1, svn_cmdline_auth_plaintext_prompt (
+      may_save_plaintext=0xbfbfda68,
+      realmstring=0x28859de0 "<svn://localhost:3690> f2d6a8f5-8913-dd11-8d00-000b6ad51eb1", baton=0x2883bba8, pool=0x28857018)
+      at subversion/libsvn_subr/prompt.c:386
+  386       const char *answer = NULL;
+  (gdb) c
+  Continuing.
+
+
+  Note: Should have gotten answer from cache here, but it's 0x0.
+
+
+  -----------------------------------------------------------------------
+  ATTENTION! Your password for authentication realm
+  '<svn://localhost:3690> f2d6a8f5-8913-dd11-8d00-000b6ad51eb1'
+  can only be stored to disk unencrypted! It is recommended to configure
+  your system so that Subversion can store passwords encrypted, if possible.
+  See the documentation for details. You can get rid of this warning by
+  editing '/tmp/svncfg/servers'
+  and setting 'store-plaintext-passwords' to either 'yes' or 'no'.
+  -----------------------------------------------------------------------
+  Store password unencrypted (yes/no)? yes
+  
+  Program received signal SIGSEGV, Segmentation fault.
+  apr_palloc (pool=0x2885a018, size=24) at memory/unix/apr_pools.c:633
+  633         if (size < (apr_size_t)(active->endp - active->first_avail)) {
+  (gdb) p *pool
+  $1 = {parent = 0x2d2d2d2d, child = 0x2d2d2d2d, sibling = 0x2d2d2d2d,
+    ref = 0x2d2d2d2d, cleanups = 0x2d2d2d2d, free_cleanups = 0x2d2d2d2d,
+    allocator = 0x2d2d2d2d, subprocesses = 0x2d2d2d2d, abort_fn = 0x2d2d2d2d,
+    user_data = 0x2d2d2d2d,
+    tag = 0x2d2d2d2d <Error reading address 0x2d2d2d2d: Bad address>,
+    active = 0x2d2d2d2d, self = 0x2d2d2d2d,
+    self_first_avail = 0x2d2d2d2d <Error reading address 0x2d2d2d2d: Bad address>}
+  (gdb)
+  
 - Clean up any noise in the diff against trunk that is still left
   around from all the refactoring (if any).
 
@@ -11,11 +81,3 @@ TODOS in this branch:
   Does this need to be public (eg, because other implementors of the
   prompt need to use it or something)?  You don't use it outside of
   libsvn_subr.
-  
-  >  * subversion/libsvn_subr/cmdline.c
-  >   (svn_cmdline_setup_auth_baton2): Don't store plaintext passwords
-  >     in non-interactive mode, regardless of what any config files say.
-  
-  Hmm, so "svn whatever --non-interactive --password foo" wouldn't store
-  passwords even if it is explicitly configured to store them?
-

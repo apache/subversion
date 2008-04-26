@@ -304,7 +304,12 @@ simple_save_creds_helper(svn_boolean_t *saved,
                */
               svn_boolean_t may_save_plaintext = TRUE;
 
-              if (b->plaintext_prompt_func)
+              if (non_interactive)
+                /* In non-interactive mode, the default behaviour is
+                 * to not store the password, because it is usually
+                 * passed on the command line. */
+                may_save_plaintext = FALSE;
+              else if (b->plaintext_prompt_func)
                 SVN_ERR((*b->plaintext_prompt_func)(&may_save_plaintext,
                                                     realmstring,
                                                     b->prompt_baton,
