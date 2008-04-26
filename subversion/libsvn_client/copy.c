@@ -178,7 +178,7 @@ propagate_mergeinfo_within_wc(svn_client__copy_pair_t *pair,
   SVN_ERR(svn_wc__entry_versioned(&entry, pair->src, src_access, FALSE, pool));
 
   /* Don't attempt to figure out implied mergeinfo for a locally
-     added/replaced PAIR->src without histroy (if its deleted we
+     added/replaced PAIR->src without history (if its deleted we
      should never even get this far). */
   if (entry->schedule == svn_wc_schedule_normal
       || (entry->schedule == svn_wc_schedule_add && entry->copied))
@@ -262,7 +262,7 @@ get_copy_pair_ancestors(const apr_array_header_t *copy_pairs,
      1)  If we do, we can't use it to allocate the initial versions of
          top_src and top_dst (above).
      2)  We don't return any errors in the following loop, so we are guanteed
-         to destory the subpool at the end of this function.
+         to destroy the subpool at the end of this function.
      3)  The number of iterations is likely to be few, and the loop will be
          through quickly, so memory leakage will not be significant, in time or
          space.  */
@@ -1220,7 +1220,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
   /* ### todo: There should be only one hash entry, which currently
      has a hacked name until we have the entries files storing
      canonical repository URLs.  Then, the hacked name can go away and
-     be replaced with a entry->repos (or whereever the entry's
+     be replaced with a entry->repos (or wherever the entry's
      canonical repos URL is stored). */
   if (! (commit_items = apr_hash_get(committables,
                                      SVN_CLIENT__SINGLE_REPOS_NAME,
@@ -1714,7 +1714,7 @@ setup_copy(svn_commit_info_t **commit_info_p,
 
   /* Are either of our paths URLs?
    * Just check the first src_path.  If there are more than one, we'll check
-   * for homogeneity amoung them down below. */
+   * for homogeneity among them down below. */
   srcs_are_urls = svn_path_is_url(APR_ARRAY_IDX(sources, 0,
                                   svn_client_copy_source_t *)->path);
   dst_is_url = svn_path_is_url(dst_path_in);

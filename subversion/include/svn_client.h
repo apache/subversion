@@ -889,6 +889,44 @@ typedef struct svn_client_ctx_t
 #define SVN_CLIENT_AUTH_PASSWORD            "password"
 /** @} group end: Authentication information file names */
 
+/** Client argument processing
+ *
+ * @defgroup clnt_cmdline Client command-line processing
+ *
+ * @{
+ */
+
+/**
+ * Pull remaining target arguments from @a os into @a *targets_p,
+ * converting them to UTF-8, followed by targets from @a known_targets
+ * (which might come from, for example, the "--targets" command line option).
+ *
+ * On each URL target, do some IRI-to-URI encoding and some auto-escaping.
+ * On each local path, canonicalize case and path separators.
+ *
+ * Allocate @a *targets_p and its elements in @a pool.
+ *
+ * @a ctx is required for possible repository authentication.
+ *
+ * If a path has the same name as a Subversion working copy
+ * administrative directory, return SVN_ERR_RESERVED_FILENAME_SPECIFIED;
+ * if multiple reserved paths are encountered, return a chain of
+ * errors, all of which are SVN_ERR_RESERVED_FILENAME_SPECIFIED.  Do
+ * not return this type of error in a chain with any other type of
+ * error, and if this is the only type of error encountered, complete
+ * the operation before returning the error(s).
+ *
+ * @since New in 1.6
+ */
+svn_error_t *
+svn_client_args_to_target_array(apr_array_header_t **targets_p,
+                                apr_getopt_t *os,
+                                apr_array_header_t *known_targets,
+                                svn_client_ctx_t *ctx,
+                                apr_pool_t *pool);
+
+/** @} group end: Client command-line processing */
+
 /** @} */
 
 /**
