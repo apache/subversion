@@ -291,14 +291,8 @@ dnl KWallet -------------------
 AC_ARG_ENABLE(kwallet,
   AS_HELP_STRING([--enable-kwallet=PATH],
                  [Enable use of KWallet for auth credentials]),
-  [
-    if test "$enableval" = "yes"; then
-      AC_MSG_ERROR([--enable-kwallet requires an argument.])
-    else
-      enable_kwallet="$enableval"
-    fi
-  ],
-  [enable_kwallet=no])
+                 [enable_kwallet="$enableval"],
+                 [enable_kwallet=no])
 
 AC_MSG_CHECKING([whether to look for KWallet])
 if test "$enable_kwallet" != "no"; then
@@ -319,7 +313,11 @@ if test "$enable_kwallet" != "no"; then
         qt_include_dirs="$qt_include_dirs $i"
       done
       qt_include_dirs="${qt_include_dirs## }"
-      kde_dir="$enable_kwallet"
+      if test "$enable_kwallet" != "yes"; then
+        kde_dir="$enable_kwallet"
+      else
+        kde_dir="`kde4-config --prefix`"
+      fi
       SVN_KWALLET_INCLUDES="$qt_include_dirs -I$kde_dir/include"
       SVN_KWALLET_LIBS="-lQtCore -lQtDBus -lQtGui -lkdeui"
       CXXFLAGS="$CXXFLAGS $SVN_KWALLET_INCLUDES"
@@ -329,16 +327,11 @@ if test "$enable_kwallet" != "no"; then
         qt_lib_dirs="$qt_lib_dirs $l"
       done
       qt_lib_dirs="${qt_lib_dirs## }"
-      for kde_lib_subdir in lib64 lib; do
-        LDFLAGS="$old_LDFLAGS $qt_lib_dirs -L$kde_dir/$kde_lib_subdir"
-        AC_LINK_IFELSE([
+      LDFLAGS="$old_LDFLAGS $qt_lib_dirs -L$kde_dir/lib`kde4-config --libsuffix`"
+      AC_LINK_IFELSE([
 #include <kwallet.h>
 int main()
 {KWallet::Wallet::walletList();}], enable_kwallet=yes, enable_kwallet=no)
-        if test "$enable_kwallet" = "yes"; then
-          break
-        fi
-      done
       AC_LANG(C)
       AC_MSG_CHECKING([for KWallet])
       if test "$enable_kwallet" = "yes"; then
