@@ -19,7 +19,3 @@ TODOS in this branch:
   Hmm, so "svn whatever --non-interactive --password foo" wouldn't store
   passwords even if it is explicitly configured to store them?
 
-- kfogel says:
-
-  shouldn't say it's "going to store" if it's really going to ask
-  the user and then only store depending on the user's answer
