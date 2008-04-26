@@ -619,14 +619,14 @@ do_initialize(svn_ra_session_t *to_session,
 
   /* Now fill in our bookkeeping info in the dest repository. */
 
-  SVN_ERR(svn_ra_open2(&from_session, baton->from_url,
+  SVN_ERR(svn_ra_open3(&from_session, baton->from_url, NULL,
                        &(baton->source_callbacks), baton,
                        baton->config, pool));
   SVN_ERR(svn_ra_get_repos_root2(from_session, &root_url, pool));
 
   /* If we're doing a partial replay, we have to check first if the server 
      supports this. */
-  if (strcmp(root_url, baton->from_url) < 0)
+  if (svn_path_is_child(root_url, baton->from_url, pool))
     {
       svn_boolean_t server_supports_partial_replay;
       svn_error_t *err = svn_ra_has_capability(from_session,
@@ -636,9 +636,12 @@ do_initialize(svn_ra_session_t *to_session,
       if (err && err->apr_err == SVN_ERR_UNKNOWN_CAPABILITY)
         {
           svn_error_clear(err);
-          return svn_error_create(SVN_ERR_RA_PARTIAL_REPLAY_NOT_SUPPORTED, NULL, 
-                                  NULL);
+          server_supports_partial_replay = FALSE;
         }
+
+      if (!server_supports_partial_replay)
+        return svn_error_create(SVN_ERR_RA_PARTIAL_REPLAY_NOT_SUPPORTED, NULL,
+                                NULL);
     }
 
   SVN_ERR(svn_ra_change_rev_prop(to_session, 0, SVNSYNC_PROP_FROM_URL,
@@ -700,8 +703,8 @@ initialize_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
                              _("Path '%s' is not a URL"), from_url);
 
   baton = make_subcommand_baton(opt_baton, to_url, from_url, 0, 0, pool);
-  SVN_ERR(svn_ra_open2(&to_session, baton->to_url, &(baton->sync_callbacks),
-                       baton, baton->config, pool));
+  SVN_ERR(svn_ra_open3(&to_session, baton->to_url, NULL, 
+                       &(baton->sync_callbacks), baton, baton->config, pool));
   SVN_ERR(check_if_session_is_at_repos_root(to_session, baton->to_url, pool));
   SVN_ERR(with_locked(to_session, do_initialize, baton, pool));
 
@@ -1234,7 +1237,6 @@ open_source_session(svn_ra_session_t **from_session,
                     apr_pool_t *pool)
 {
   svn_string_t *from_url, *from_uuid;
-  const char *uuid;
 
   SVN_ERR(svn_ra_rev_prop(to_session, 0, SVNSYNC_PROP_FROM_URL,
                           &from_url, pool));
@@ -1249,19 +1251,8 @@ open_source_session(svn_ra_session_t **from_session,
        _("Destination repository has not been initialized"));
 
   /* Open the session to copy the revision data. */
-  SVN_ERR(svn_ra_open2(from_session, from_url->data, callbacks, baton,
-                       config, pool));
-
-  /* Ok, now sanity check the UUID of the source repository, it
-     wouldn't be a good thing to sync from a different repository. */
-
-  SVN_ERR(svn_ra_get_uuid2(*from_session, &uuid, pool));
-
-  if (strcmp(uuid, from_uuid->data) != 0)
-    return svn_error_createf(APR_EINVAL, NULL,
-                             _("UUID of source repository (%s) does not "
-                               "match expected UUID (%s)"),
-                             uuid, from_uuid->data);
+  SVN_ERR(svn_ra_open3(from_session, from_url->data, from_uuid->data,
+                       callbacks, baton, config, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1271,6 +1262,7 @@ typedef struct {
   svn_ra_session_t *from_session;
   svn_ra_session_t *to_session;
   subcommand_baton_t *sb;
+  svn_boolean_t has_commit_revprops_capability;
 } replay_baton_t;
 
 /* Return a replay baton allocated from POOL and populated with
@@ -1291,11 +1283,9 @@ make_replay_baton(svn_ra_session_t *from_session,
 static svn_boolean_t 
 filter_exclude_date_author_sync(const char *key)
 {
-  if (strncmp(key, SVN_PROP_REVISION_AUTHOR, 
-              sizeof(SVN_PROP_REVISION_AUTHOR) - 1) == 0)
+  if (strcmp(key, SVN_PROP_REVISION_AUTHOR) == 0)
     return TRUE;
-  else if (strncmp(key, SVN_PROP_REVISION_DATE, 
-                   sizeof(SVN_PROP_REVISION_DATE) - 1) == 0)
+  else if (strcmp(key, SVN_PROP_REVISION_DATE) == 0)
     return TRUE;
   else if (strncmp(key, SVNSYNC_PROP_PREFIX,
                    sizeof(SVNSYNC_PROP_PREFIX) - 1) == 0)
@@ -1310,6 +1300,25 @@ filter_include_date_author_sync(const char *key)
 {
   return ! filter_exclude_date_author_sync(key);
 }
+
+
+/* Only exclude svn:log .*/
+static svn_boolean_t
+filter_exclude_log(const char *key)
+{
+  if (strcmp(key, SVN_PROP_REVISION_LOG) == 0)
+    return TRUE;
+  else
+    return FALSE;
+}
+
+/* Only include svn:log. */
+static svn_boolean_t
+filter_include_log(const char *key)
+{
+  return ! filter_exclude_log(key);
+}
+
 
 /* Callback function for svn_ra_replay_range, invoked when starting to parse
  * a replay report.
@@ -1350,9 +1359,14 @@ replay_rev_started(svn_revnum_t revision,
   /* The actual copy is just a replay hooked up to a commit.  Include
      all the revision properties from the source repositories, except
      'svn:author' and 'svn:date', those are not guaranteed to get
-     through the editor anyway. */
+     through the editor anyway.
+     If we're syncing to an non-commit-revprops capable server, filter
+     out all revprops except svn:log and add them later in
+     revplay_rev_finished. */
   filtered = filter_props(&filtered_count, rev_props,
-                          filter_exclude_date_author_sync,
+                          (rb->has_commit_revprops_capability
+                            ? filter_exclude_date_author_sync
+                            : filter_include_log),
                           pool);
 
   /* svn_ra_get_commit_editor3 requires the log message to be
@@ -1418,9 +1432,13 @@ replay_rev_finished(svn_revnum_t revision,
 
 
   /* Ok, we're done with the data, now we just need to copy the remaining 
-     'svn:date' and 'svn:author' revprops and we're all set. */
-  filtered = filter_props(&filtered_count, rev_props, 
-                          filter_include_date_author_sync, 
+     'svn:date' and 'svn:author' revprops and we're all set.
+     If the server doesn't support revprops-in-a-commit, we still have to
+     set all revision properties except svn:log. */
+  filtered = filter_props(&filtered_count, rev_props,
+                          (rb->has_commit_revprops_capability
+                            ? filter_include_date_author_sync
+                            : filter_exclude_log),
                           subpool);
   SVN_ERR(write_revprops(&filtered_count, rb->to_session, revision, filtered, 
                          subpool));
@@ -1566,6 +1584,13 @@ do_synchronize(svn_ra_session_t *to_session,
      into the destination repository. */
   rb = make_replay_baton(from_session, to_session, baton, pool);
     
+  /* For compatibility with older svnserve versions, check first if we
+     support adding revprops to the commit. */
+  SVN_ERR(svn_ra_has_capability(rb->to_session, 
+                                &rb->has_commit_revprops_capability,
+                                SVN_RA_CAPABILITY_COMMIT_REVPROPS,
+                                pool));
+
   start_revision = atol(last_merged_rev->data) + 1;
   end_revision = from_latest;
   
@@ -1605,8 +1630,8 @@ synchronize_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
                              _("Path '%s' is not a URL"), to_url);
 
   baton = make_subcommand_baton(opt_baton, to_url, NULL, 0, 0, pool);
-  SVN_ERR(svn_ra_open2(&to_session, baton->to_url, &(baton->sync_callbacks),
-                       baton, baton->config, pool));
+  SVN_ERR(svn_ra_open3(&to_session, baton->to_url, NULL,
+                       &(baton->sync_callbacks), baton, baton->config, pool));
   SVN_ERR(check_if_session_is_at_repos_root(to_session, baton->to_url, pool));
   SVN_ERR(with_locked(to_session, do_synchronize, baton, pool));
 
@@ -1756,8 +1781,8 @@ copy_revprops_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
 
   baton = make_subcommand_baton(opt_baton, to_url, NULL,
                                 start_rev, end_rev, pool);
-  SVN_ERR(svn_ra_open2(&to_session, baton->to_url, &(baton->sync_callbacks),
-                       baton, baton->config, pool));
+  SVN_ERR(svn_ra_open3(&to_session, baton->to_url, NULL,
+                       &(baton->sync_callbacks), baton, baton->config, pool));
   SVN_ERR(check_if_session_is_at_repos_root(to_session, baton->to_url, pool));
   SVN_ERR(with_locked(to_session, do_copy_revprops, baton, pool));
 

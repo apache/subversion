@@ -24,6 +24,7 @@ import svntest
 from svntest import wc
 
 from svntest.main import server_has_mergeinfo
+from svntest.main import SVN_PROP_MERGEINFO
 
 ######################################################################
 #
@@ -262,7 +263,7 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
 
   # Do some mergeing - r6
   os.chdir('trunk')
-  svntest.main.run_svn(None, 'merge', os.path.join('..', branch_a))
+  svntest.main.run_svn(None, 'merge', os.path.join('..', branch_a) + '@HEAD')
   svntest.main.run_svn(None, 'ci', '-m',
                        'Merged branches/a to trunk.',
                        '--username', svntest.main.wc_author2)
@@ -319,7 +320,7 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
 
   # Merge branches/a to branches/b - r12
   os.chdir(branch_b)
-  svntest.main.run_svn(None, 'merge', os.path.join('..', 'a'))
+  svntest.main.run_svn(None, 'merge', os.path.join('..', 'a') + '@HEAD')
   svntest.main.run_svn(None, 'ci', '-m',
                        "Merged branches/a to branches/b.",
                        '--username', svntest.main.wc_author2)
@@ -333,7 +334,7 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
 
   # More merging - r14
   os.chdir('trunk')
-  svntest.main.run_svn(None, 'merge', os.path.join('..', branch_b))
+  svntest.main.run_svn(None, 'merge', os.path.join('..', branch_b) + '@HEAD')
   svntest.main.run_svn(None, 'ci', '-m',
                        "Merged branches/b to trunk.",
                        '--username', svntest.main.wc_author2)
@@ -341,7 +342,8 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
 
   # Even more merging - r15
   os.chdir(branch_c)
-  svntest.main.run_svn(None, 'merge', os.path.join('..', '..', 'trunk'))
+  svntest.main.run_svn(None, 'merge',
+                       os.path.join('..', '..', 'trunk') + '@HEAD')
   svntest.main.run_svn(None, 'ci', '-m',
                        "Bring branches/c up to date with trunk.",
                        '--username', svntest.main.wc_author2)
@@ -355,7 +357,7 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
 
   # Merge branches/c to trunk, which produces a conflict - r17
   os.chdir('trunk')
-  svntest.main.run_svn(None, 'merge', os.path.join('..', branch_c))
+  svntest.main.run_svn(None, 'merge', os.path.join('..', branch_c) + '@HEAD')
   svntest.main.file_write(os.path.join('A', 'mu'),
                           "This is the file 'mu'.\n" +
                           "Don't forget to look at 'upsilon', as well.\n" +
@@ -1363,6 +1365,24 @@ def log_xml_with_bad_data(sbox):
   svntest.actions.run_and_verify_log_xml(
     expected_revprops=(r0_props,), args=[sbox.repo_url])
 
+def merge_sensitive_log_target_with_bogus_mergeinfo(sbox):
+  "'svn log -g target_with_bogus_mergeinfo'"
+  #Refer issue 3172 for details.
+  #Create greek tree
+  #svn ps 'svn:mergeinfo' '/A/B:0' A/D
+  #svn ci -m 'setting bogus mergeinfo'
+  #svn log -g -r2
+  sbox.build()
+  wc_path = sbox.wc_dir
+  D_path = os.path.join(wc_path, 'A', 'D')
+  svntest.main.run_svn(None, 'ps', SVN_PROP_MERGEINFO, '/A/B:0', D_path)
+  #commit at r2
+  svntest.main.run_svn(None, 'ci', '-m', 'setting bogus mergeinfo', D_path)
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, 
+                                                              [], 'log', 
+                                                              '-g', D_path)
+  if len(err):
+    raise svntest.Failure("svn log -g target_with_bogus_mergeinfo fails")
 
 ########################################################################
 # Run the tests
@@ -1399,6 +1419,8 @@ test_list = [ None,
               only_one_wc_path,
               retrieve_revprops,
               log_xml_with_bad_data,
+              SkipUnless(merge_sensitive_log_target_with_bogus_mergeinfo,
+                         server_has_mergeinfo),
              ]
 
 if __name__ == '__main__':

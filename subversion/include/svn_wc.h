@@ -782,9 +782,6 @@ typedef enum svn_wc_notify_action_t
   /** Changelist name cleared. @since New in 1.5. */
   svn_wc_notify_changelist_clear,
 
-  /** Failed to update a path's changelist association. @since New in 1.5. */
-  svn_wc_notify_changelist_failed,
-
   /** Warn user that a path has moved from one changelist to another.
       @since New in 1.5. */
   svn_wc_notify_changelist_moved,
@@ -792,6 +789,10 @@ typedef enum svn_wc_notify_action_t
   /** A merge operation (to path) has begun.  See @c merge_range in
       @c svn_wc_notify_t. @since New in 1.5. */
   svn_wc_notify_merge_begin,
+
+  /** A merge operation (to path) from a foreign repository has begun.
+      See @c merge_range in @c svn_wc_notify_t. @since New in 1.5. */
+  svn_wc_notify_foreign_merge_begin,
 
   /** Replace notification. @since New in 1.5. */
   svn_wc_notify_update_replace,
@@ -1254,11 +1255,26 @@ typedef svn_error_t *(*svn_wc_conflict_resolver_func_t)
  * diffs from the server.  'svn diff' and 'svn merge' both implement
  * their own versions of this table.
  *
- * @since New in 1.2.
+ * Common parameters:
+ *
+ * @a adm_access will be an access baton for the directory containing
+ * @a path, or @c NULL if the diff editor is not using access batons.
+ *
+ * If @a state is non-NULL, set @a *state to the state of the item
+ * after the operation has been performed.  (In practice, this is only
+ * useful with merge, not diff; diff callbacks will probably set
+ * @a *state to @c svn_wc_notify_state_unknown, since they do not change
+ * the state and therefore do not bother to know the state after the
+ * operation.)  By default, @a state refers to the item's content
+ * state.  Functions concerned with property state have separate
+ * @a contentstate and @a propstate arguments.
+ *
+ * @since New in 1.6.
  */
-typedef struct svn_wc_diff_callbacks2_t
+typedef struct svn_wc_diff_callbacks3_t
 {
-  /** A file @a path has changed.  If @a tmpfile2 is non-NULL, the
+  /**
+   * A file @a path has changed.  If @a tmpfile2 is non-NULL, the
    * contents have changed and those changes can be seen by comparing
    * @a tmpfile1 and @a tmpfile2, which represent @a rev1 and @a rev2 of
    * the file, respectively.
@@ -1268,21 +1284,11 @@ typedef struct svn_wc_diff_callbacks2_t
    * be NULL.  The implementor can use this information to decide if
    * (or how) to generate differences.
    *
-   * @a propchanges is an array of (@c svn_prop_t) structures. If it has
+   * @a propchanges is an array of (@c svn_prop_t) structures. If it contains
    * any elements, the original list of properties is provided in
    * @a originalprops, which is a hash of @c svn_string_t values, keyed on the
    * property name.
    *
-   * @a adm_access will be an access baton for the directory containing
-   * @a path, or @c NULL if the diff editor is not using access batons.
-   *
-   * If @a contentstate is non-NULL, set @a *contentstate to the state of
-   * the file contents after the operation has been performed.  The same
-   * applies for @a propstate regarding the property changes.  (In
-   * practice, this is only useful with merge, not diff; diff callbacks
-   * will probably set @a *contentstate and @a *propstate to
-   * @c svn_wc_notify_state_unknown, since they do not change the state and
-   * therefore do not bother to know the state after the operation.)
    */
   svn_error_t *(*file_changed)(svn_wc_adm_access_t *adm_access,
                                svn_wc_notify_state_t *contentstate,
@@ -1298,7 +1304,8 @@ typedef struct svn_wc_diff_callbacks2_t
                                apr_hash_t *originalprops,
                                void *diff_baton);
 
-  /** A file @a path was added.  The contents can be seen by comparing
+  /**
+   * A file @a path was added.  The contents can be seen by comparing
    * @a tmpfile1 and @a tmpfile2, which represent @a rev1 and @a rev2
    * of the file, respectively.  (If either file is empty, the rev
    * will be 0.)
@@ -1312,18 +1319,6 @@ typedef struct svn_wc_diff_callbacks2_t
    * any elements, the original list of properties is provided in
    * @a originalprops, which is a hash of @c svn_string_t values, keyed on the
    * property name.
-   *
-   * @a adm_access will be an access baton for the directory containing
-   * @a path, or @c NULL if the diff editor is not using access batons.
-   *
-   * If @a contentstate is non-NULL, set @a *contentstate to the state of the
-   * file contents after the operation has been performed.  The same
-   * applies for @a propstate regarding the property changes.  (In practice,
-   * this is only useful with merge, not diff; diff callbacks will
-   * probably set @a *contentstate and *propstate to
-   * @c svn_wc_notify_state_unknown, since they do not change the state
-   * and therefore do not bother to know the state after the operation.)
-   *
    */
   svn_error_t *(*file_added)(svn_wc_adm_access_t *adm_access,
                              svn_wc_notify_state_t *contentstate,
@@ -1339,7 +1334,8 @@ typedef struct svn_wc_diff_callbacks2_t
                              apr_hash_t *originalprops,
                              void *diff_baton);
 
-  /** A file @a path was deleted.  The [loss of] contents can be seen by
+  /**
+   * A file @a path was deleted.  The [loss of] contents can be seen by
    * comparing @a tmpfile1 and @a tmpfile2.  @a originalprops provides
    * the properties of the file.
    *
@@ -1347,16 +1343,6 @@ typedef struct svn_wc_diff_callbacks2_t
    * @a mimetype1 and @a mimetype2;  either or both of the values can
    * be NULL.  The implementor can use this information to decide if
    * (or how) to generate differences.
-   *
-   * @a adm_access will be an access baton for the directory containing
-   * @a path, or @c NULL if the diff editor is not using access batons.
-   *
-   * If @a state is non-NULL, set @a *state to the state of the item
-   * after the delete operation has been performed.  (In practice,
-   * this is only useful with merge, not diff; diff callbacks will
-   * probably set @a *state to @c svn_wc_notify_state_unknown, since
-   * they do not change the state and therefore do not bother to know
-   * the state after the operation.)
    */
   svn_error_t *(*file_deleted)(svn_wc_adm_access_t *adm_access,
                                svn_wc_notify_state_t *state,
@@ -1368,11 +1354,9 @@ typedef struct svn_wc_diff_callbacks2_t
                                apr_hash_t *originalprops,
                                void *diff_baton);
 
-  /** A directory @a path was added.  @a rev is the revision that the
+  /**
+   * A directory @a path was added.  @a rev is the revision that the
    * directory came from.
-   *
-   * @a adm_access will be an access baton for the directory containing
-   * @a path, or @c NULL if the diff editor is not using access batons.
    */
   svn_error_t *(*dir_added)(svn_wc_adm_access_t *adm_access,
                             svn_wc_notify_state_t *state,
@@ -1380,24 +1364,16 @@ typedef struct svn_wc_diff_callbacks2_t
                             svn_revnum_t rev,
                             void *diff_baton);
 
-  /** A directory @a path was deleted.
-   *
-   * @a adm_access will be an access baton for the directory containing
-   * @a path, or @c NULL if the diff editor is not using access batons.
-   *
-   * If @a state is non-NULL, set @a *state to the state of the item
-   * after the delete operation has been performed.  (In practice,
-   * this is only useful with merge, not diff; diff callbacks will
-   * probably set @a *state to @c svn_wc_notify_state_unknown, since
-   * they do not change the state and therefore do not bother to know
-   * the state after the operation.)
+  /**
+   * A directory @a path was deleted.
    */
   svn_error_t *(*dir_deleted)(svn_wc_adm_access_t *adm_access,
                               svn_wc_notify_state_t *state,
                               const char *path,
                               void *diff_baton);
 
-  /** A list of property changes (@a propchanges) was applied to the
+  /**
+   * A list of property changes (@a propchanges) was applied to the
    * directory @a path.
    *
    * The array is a list of (@c svn_prop_t) structures.
@@ -1405,16 +1381,103 @@ typedef struct svn_wc_diff_callbacks2_t
    * The original list of properties is provided in @a original_props,
    * which is a hash of @c svn_string_t values, keyed on the property
    * name.
-   *
-   * @a adm_access will be an access baton for the directory containing
-   * @a path, or @c NULL if the diff editor is not using access batons.
-   *
-   * If @a state is non-NULL, set @a *state to the state of the properties
-   * after the operation has been performed.  (In practice, this is only
-   * useful with merge, not diff; diff callbacks will probably set @a *state
-   * to @c svn_wc_notify_state_unknown, since they do not change the state
-   * and therefore do not bother to know the state after the operation.)
    */
+  svn_error_t *(*dir_props_changed)(svn_wc_adm_access_t *adm_access,
+                                    svn_wc_notify_state_t *propstate,
+                                    const char *path,
+                                    const apr_array_header_t *propchanges,
+                                    apr_hash_t *original_props,
+                                    void *diff_baton);
+
+  /**
+   * A directory @a path has been opened.  @a rev is the revision that the
+   * directory came from.
+   *
+   */
+  svn_error_t *(*dir_opened)(svn_wc_adm_access_t *adm_access,
+                             const char *path,
+                             svn_revnum_t rev,
+                             void *diff_baton);
+
+  /**
+   * A directory @a path has been closed.
+   *
+   * If @a state is non-NULL, set @a *state to the tree-conflict state
+   * of the directory.
+   *
+   * The client may now report the final state of the directory's
+   * children (e.g., report a path as 'replaced').
+   */
+  svn_error_t *(*dir_closed)(svn_wc_adm_access_t *adm_access,
+                             svn_wc_notify_state_t *state,
+                             const char *path,
+                             void *diff_baton);
+
+} svn_wc_diff_callbacks3_t;
+
+/**
+ * Similar to @c svn_wc_diff_callbacks3_t, but without dir_opened or
+ * dir_closed functions.
+ *
+ * @deprecated Provided for backward compatibility with the 1.2 API.
+ */
+typedef struct svn_wc_diff_callbacks2_t
+{
+  /** The same as @c file_changed in @c svn_wc_diff_callbacks3_t. */
+  svn_error_t *(*file_changed)(svn_wc_adm_access_t *adm_access,
+                               svn_wc_notify_state_t *contentstate,
+                               svn_wc_notify_state_t *propstate,
+                               const char *path,
+                               const char *tmpfile1,
+                               const char *tmpfile2,
+                               svn_revnum_t rev1,
+                               svn_revnum_t rev2,
+                               const char *mimetype1,
+                               const char *mimetype2,
+                               const apr_array_header_t *propchanges,
+                               apr_hash_t *originalprops,
+                               void *diff_baton);
+
+  /** The same as @c file_added in @c svn_wc_diff_callbacks3_t. */
+  svn_error_t *(*file_added)(svn_wc_adm_access_t *adm_access,
+                             svn_wc_notify_state_t *contentstate,
+                             svn_wc_notify_state_t *propstate,
+                             const char *path,
+                             const char *tmpfile1,
+                             const char *tmpfile2,
+                             svn_revnum_t rev1,
+                             svn_revnum_t rev2,
+                             const char *mimetype1,
+                             const char *mimetype2,
+                             const apr_array_header_t *propchanges,
+                             apr_hash_t *originalprops,
+                             void *diff_baton);
+
+  /** The same as @c file_deleted in @c svn_wc_diff_callbacks3_t. */
+  svn_error_t *(*file_deleted)(svn_wc_adm_access_t *adm_access,
+                               svn_wc_notify_state_t *state,
+                               const char *path,
+                               const char *tmpfile1,
+                               const char *tmpfile2,
+                               const char *mimetype1,
+                               const char *mimetype2,
+                               apr_hash_t *originalprops,
+                               void *diff_baton);
+
+  /** The same as @c dir_added in @c svn_wc_diff_callbacks3_t. */
+  svn_error_t *(*dir_added)(svn_wc_adm_access_t *adm_access,
+                            svn_wc_notify_state_t *state,
+                            const char *path,
+                            svn_revnum_t rev,
+                            void *diff_baton);
+
+  /** The same as @c dir_deleted in @c svn_wc_diff_callbacks3_t. */
+  svn_error_t *(*dir_deleted)(svn_wc_adm_access_t *adm_access,
+                              svn_wc_notify_state_t *state,
+                              const char *path,
+                              void *diff_baton);
+
+  /** The same as @c dir_props_changed in @c svn_wc_diff_callbacks3_t. */
   svn_error_t *(*dir_props_changed)(svn_wc_adm_access_t *adm_access,
                                     svn_wc_notify_state_t *state,
                                     const char *path,
@@ -3743,7 +3806,29 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
  * it's a member of one of those changelists.  If @a changelists is
  * empty (or altogether @c NULL), no changelist filtering occurs.
  *
- * @since New in 1.5.
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_wc_get_diff_editor5(svn_wc_adm_access_t *anchor,
+                        const char *target,
+                        const svn_wc_diff_callbacks3_t *callbacks,
+                        void *callback_baton,
+                        svn_depth_t depth,
+                        svn_boolean_t ignore_ancestry,
+                        svn_boolean_t use_text_base,
+                        svn_boolean_t reverse_order,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
+                        const apr_array_header_t *changelists,
+                        const svn_delta_editor_t **editor,
+                        void **edit_baton,
+                        apr_pool_t *pool);
+
+/**
+ * Similar to svn_wc_get_diff_editor5(), but with an
+ * @c svn_wc_diff_callbacks2_t instead of @c svn_wc_diff_callbacks3_t.
+ *
+ * @deprecated Provided for backward compatibility with the 1.5 API.
  */
 svn_error_t *
 svn_wc_get_diff_editor4(svn_wc_adm_access_t *anchor,
@@ -3856,7 +3941,23 @@ svn_wc_get_diff_editor(svn_wc_adm_access_t *anchor,
  * it's a member of one of those changelists.  If @a changelists is
  * empty (or altogether @c NULL), no changelist filtering occurs.
  *
- * @since New in 1.5.
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_wc_diff5(svn_wc_adm_access_t *anchor,
+             const char *target,
+             const svn_wc_diff_callbacks3_t *callbacks,
+             void *callback_baton,
+             svn_depth_t depth,
+             svn_boolean_t ignore_ancestry,
+             const apr_array_header_t *changelists,
+             apr_pool_t *pool);
+
+/**
+ * Similar to svn_wc_diff5(), but with a @c svn_wc_diff_callbacks2_t argument
+ * instead of @c svn_wc_diff_callbacks3_t.
+ *
+ * @deprecated Provided for backward compatibility with the 1.5 API.
  */
 svn_error_t *
 svn_wc_diff4(svn_wc_adm_access_t *anchor,

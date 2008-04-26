@@ -650,7 +650,6 @@ static svn_error_t *accept_report(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   else if (rb.err)
     {
       /* Some failure during the reporting or editing operations. */
-      svn_error_clear(editor->abort_edit(edit_baton, pool));
       SVN_CMD_ERR(rb.err);
     }
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
@@ -2590,8 +2589,8 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
   b.tunnel_user = get_tunnel_user(params, pool);
   b.read_only = params->read_only;
   b.user = NULL;
-  b.cfg = params->cfg;   /* Ugly; can drop when we remove v1 support. */
-  b.pwdb = params->pwdb; /* Likewise. */
+  b.cfg = params->cfg;
+  b.pwdb = params->pwdb;
   b.authzdb = params->authzdb;
   b.realm = NULL;
   b.pool = pool;

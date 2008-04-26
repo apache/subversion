@@ -267,6 +267,9 @@ One way to prevent the lengthy 'if()' blocks currently in wc-1.0, would be
 to design a dispatch mechanism based on the path-state in WORKING/BASE and the
 required transformation, dispatching to (small) functions which perform
 solely that specific task.
+#####XBC Do please note that this suggests yet another instance of
+         pure polymorphism coded in C. This runs contrary to the
+         developer sanity requirement.
 
 
 Speed
@@ -384,6 +387,8 @@ in this document, or elsewhere in the subversion (source) tree:
  * Modularization
  * Agree on a UI to pull in other parts of the same repository
    (NOT svn:externals) [relates to issue #1167]
+#####XBC I submit this is a server-side feature that the client
+         (i.e. the WC library) should not know about.
  * Agree on behaviour for update on moved items (relates to issue #1736)
  * Case-sensitivity detection code to probe working copy filesystem
 
@@ -400,6 +405,7 @@ For now, these APIs can be separated:
 
  - the public API (presumably not to be used by any internal
      processing, but presents functionality to working copy users)
+#####XBC This is really required of all our module public APIs.
  - tree administration API (required for BASE, TARGET and WORKING)
      Admins which files are part of the tree, which ones map to
      which repositories and which textbase / propbase files belong
@@ -477,6 +483,11 @@ there's at least an active interest.  In order to prevent locking out
 some of the current use cases adding support for the open issues, we
 need a flexible modularized model.  This model will also prevent that
 we'll end up duplicating lots of code to support the different use cases.
+#####XBC Such flexibility will bring the WC to the kind of
+         purgatory the RA layers are in. We promise feature and semantics
+         parity between them, and the result is that even a small change
+         in that layer requires knowledge of three different protocols
+         and four different implementations.
 
 Given the assumption of 'little code duplication', the choice for
 having several modules which implement the same API (vtable) is

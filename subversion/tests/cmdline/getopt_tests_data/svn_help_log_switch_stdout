@@ -7,7 +7,9 @@ usage: 1. log [PATH]
 
   2. Print the log messages for the PATHs (default: '.') under URL.
      If specified, REV determines in which revision the URL is first
-     looked up.  The default revision range is HEAD:1.
+     looked up, and the default revision range is REV:1; otherwise,
+     the URL is looked up in HEAD, and the default revision range is
+     HEAD:1.
 
   With -v, also print all affected paths with each log message.
   With -q, don't print the log message body itself (note that this is

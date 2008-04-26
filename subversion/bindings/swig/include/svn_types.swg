@@ -731,6 +731,14 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 }
 #endif
 
+#ifdef SWIGRUBY
+%typemap(in) (svn_log_entry_receiver_t receiver, void *receiver_baton)
+{
+  $1 = svn_swig_rb_log_entry_receiver;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
+}
+#endif
+
 /* -----------------------------------------------------------------------
    Callback: svn_commit_callback_t
    svn_ra get_commit_editor()
