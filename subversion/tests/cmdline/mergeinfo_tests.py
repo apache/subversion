@@ -37,7 +37,7 @@ def adjust_error_for_server_version(expected_err):
   if server_has_mergeinfo():
     return expected_err
   else:
-    return "Retrieval of mergeinfo unsupported by '.+'"
+    return ".*Retrieval of mergeinfo unsupported by '.+'"
 
 ######################################################################
 # Tests
@@ -110,7 +110,8 @@ def mergeinfo_on_unknown_url(sbox):
                                      "ci", wc_dir, "-m", "log message")
 
   url = sbox.repo_url + "/iota"
-  expected_err = ".*File not found.*iota.*|.*iota.*path not found.*"
+  expected_err = adjust_error_for_server_version(".*File not found.*iota.*|"
+                                                 ".*iota.*path not found.*")
   svntest.actions.run_and_verify_svn("", None, expected_err,
                                      "mergeinfo", "--show-revs", "eligible", 
                                      url, wc_dir)
@@ -123,7 +124,7 @@ def mergeinfo_on_unknown_url(sbox):
 test_list = [ None,
               no_mergeinfo,
               mergeinfo,
-              XFail(explicit_mergeinfo_source),
+              XFail(explicit_mergeinfo_source, server_has_mergeinfo),
               mergeinfo_on_unknown_url,
              ]
 

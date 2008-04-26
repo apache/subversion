@@ -22,6 +22,7 @@ import sys, os, re
 # Our testing module
 import svntest
 
+from svntest.main import server_has_mergeinfo
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -613,18 +614,18 @@ def warn_on_reserved_name(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
   if os.path.exists(os.path.join(wc_dir, ".svn")):
-    reserved_path = os.path.join(wc_dir, "_svn")
-  elif os.path.exists(os.path.join(wc_dir, "_svn")):
     reserved_path = os.path.join(wc_dir, ".svn")
+  elif os.path.exists(os.path.join(wc_dir, "_svn")):
+    reserved_path = os.path.join(wc_dir, "_svn")
   else:
     # We don't know how to test this, but have no reason to believe
     # it would fail.  (TODO: any way to return 'Skip', though?)
     return
-  svntest.main.file_append(reserved_path, 'expecting rejection')
   svntest.actions.run_and_verify_svn(
-    "Adding a file with a reserved name failed to result in an error",
-    None, ".*Skipping argument: '.+' ends in a reserved name.*",
-    'add', reserved_path)
+    "Locking a file with a reserved name failed to result in an error",
+    None,
+    ".*Skipping argument: '.+' ends in a reserved name.*",
+    'lock', reserved_path)
 
 
 ########################################################################
@@ -639,7 +640,9 @@ test_list = [ None,
               SkipUnless(copy_tree_with_symlink, svntest.main.is_posix_os),
               SkipUnless(replace_symlink_with_file, svntest.main.is_posix_os),
               SkipUnless(remove_symlink, svntest.main.is_posix_os),
-              SkipUnless(merge_symlink_into_file, svntest.main.is_posix_os),
+              SkipUnless(SkipUnless(merge_symlink_into_file,
+                                    svntest.main.is_posix_os),
+                         server_has_mergeinfo),
               SkipUnless(merge_file_into_symlink, svntest.main.is_posix_os),
               checkout_repo_with_symlinks,
               XFail(SkipUnless(diff_symlink_to_dir, svntest.main.is_posix_os)),

@@ -1353,7 +1353,8 @@ svn_ra_local__has_capability(svn_ra_session_t *session,
 
   if (strcmp(capability, SVN_RA_CAPABILITY_DEPTH) == 0
       || strcmp(capability, SVN_RA_CAPABILITY_LOG_REVPROPS) == 0
-      || strcmp(capability, SVN_RA_CAPABILITY_PARTIAL_REPLAY) == 0)
+      || strcmp(capability, SVN_RA_CAPABILITY_PARTIAL_REPLAY) == 0
+      || strcmp(capability, SVN_RA_CAPABILITY_COMMIT_REVPROPS) == 0)
     {
       *has = TRUE;
     }

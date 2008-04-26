@@ -52,7 +52,7 @@ svn_cl__merge(apr_getopt_t *os,
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets, 
-                                                      pool));
+                                                      ctx, pool));
 
   /* For now, we require at least one source.  That may change in
      future versions of Subversion, for example if we have support for
@@ -281,7 +281,7 @@ svn_cl__merge(apr_getopt_t *os,
           ranges_to_merge = apr_array_make(pool, 1, sizeof(range));
           range->start.kind = svn_opt_revision_number;
           range->start.value.number = 1;
-          range->end.kind = svn_opt_revision_head;
+          range->end = peg_revision1;
           APR_ARRAY_PUSH(ranges_to_merge, svn_opt_revision_range_t *) = range;
         }
 
