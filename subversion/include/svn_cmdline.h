@@ -140,8 +140,9 @@ int svn_cmdline_handle_exit_error(svn_error_t *error,
                                   apr_pool_t *pool,
                                   const char *prefix);
 
-/** A cancellation function/baton pair, and the path to the configuration
- * directory, to be passed as the baton argument to the
+/** A cancellation function/baton pair, the path to the configuration
+ * directory, and a pointer to a hash table containing cached answers.
+ * To be passed as the baton argument to the
  * @c svn_cmdline_*_prompt functions.
  *
  * @since New in 1.6.
@@ -150,6 +151,7 @@ typedef struct svn_cmdline_prompt_baton2_t {
   svn_cancel_func_t cancel_func;
   void *cancel_baton;
   const char *config_dir;
+  apr_hash_t *cache;
 } svn_cmdline_prompt_baton2_t;
 
 /** A cancellation function/baton pair to be passed as the baton argument
@@ -274,6 +276,7 @@ svn_cmdline_auth_ssl_client_cert_pw_prompt
  */
 svn_error_t *
 svn_cmdline_auth_plaintext_prompt(svn_boolean_t *may_save_plaintext,
+                                  const char *realmstring,
                                   void *baton,
                                   apr_pool_t *pool);
 

@@ -379,25 +379,47 @@ svn_cmdline_auth_ssl_client_cert_pw_prompt
 /* This implements 'svn_auth_plaintext_prompt_func_t'. */
 svn_error_t *
 svn_cmdline_auth_plaintext_prompt(svn_boolean_t *may_save_plaintext,
+                                  const char *realmstring,
                                   void *baton,
                                   apr_pool_t *pool)
 {
   const char *answer = NULL;
+  svn_boolean_t *cached_answer;
   svn_boolean_t answered = FALSE;
   const char *prompt_string = _("Store password unencrypted (yes/no)? ");
   svn_cmdline_prompt_baton2_t *pb = baton;
   const char *config_path;
+  
+  /* We cache the user's answer in case we'll be called multiple
+   * times for the same realm. */
+  if (! pb->cache)
+    pb->cache = apr_hash_make(pool);
 
+  /* Check the cache first. */
+  cached_answer = (svn_boolean_t *)apr_hash_get(pb->cache, realmstring,
+                                                APR_HASH_KEY_STRING);
+  if (cached_answer)
+    {
+      *may_save_plaintext = *cached_answer;
+      return SVN_NO_ERROR;
+    }
+
+  /* No cached answer, so ask the user. */
   SVN_ERR(svn_config_get_user_config_path(&config_path, pb->config_dir,
-                                          SVN_CONFIG_CATEGORY_CONFIG, pool));
+                                          SVN_CONFIG_CATEGORY_SERVERS, pool));
 
   SVN_ERR(svn_cmdline_fprintf(stderr, pool,
   _("-----------------------------------------------------------------------\n"
-    "ATTENTION! Your password is going to be stored to disk unencrypted!\n"
+    "ATTENTION! Your password for authentication realm\n"
+    "'%s'\n"
+    "can only be stored to disk unencrypted! It is recommended to configure\n"
+    "your system so that Subversion can store passwords encrypted, "
+    "if possible.\n"
+    "See the documentation for details. You can get rid of this warning by\n"
+    "editing '%s'\n"
+    "and setting 'store-plaintext-passwords' to either 'yes' or 'no'.\n"
     "-----------------------------------------------------------------------\n"
-    "You can get rid of this warning by editing %s\n"
-    "and setting 'store-plaintext-passwords' to either 'yes' or 'no'.\n"),
-    config_path));
+    ), realmstring, config_path));
 
   do
     {
@@ -428,6 +450,11 @@ svn_cmdline_auth_plaintext_prompt(svn_boolean_t *may_save_plaintext,
     }
   while (! answered); 
 
+  /* Cache the user's answer. */
+  cached_answer = apr_palloc(pool, sizeof(svn_boolean_t));
+  *cached_answer = *may_save_plaintext;
+  apr_hash_set(pb->cache, realmstring, APR_HASH_KEY_STRING, cached_answer);
+
   return SVN_NO_ERROR;
 }
 
@@ -440,9 +467,8 @@ svn_cmdline_prompt_user2(const char **result,
                          svn_cmdline_prompt_baton_t *baton,
                          apr_pool_t *pool)
 {
-  /* XXX: We know prompt doesn't use the config_dir member
-   * of svn_cmdline_prompt_baton2_t. And we can't really get at
-   * the configuration directory path from here anyway... */
+  /* XXX: We know prompt doesn't use the new members
+   * of svn_cmdline_prompt_baton2_t. */
   return prompt(result, prompt_str, FALSE /* don't hide input */,
                 (svn_cmdline_prompt_baton2_t *)baton, pool);
 }

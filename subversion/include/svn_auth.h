@@ -459,15 +459,15 @@ typedef svn_error_t *(*svn_auth_ssl_client_cert_pw_prompt_func_t)
 
 /** Called only by providers which save passwords unencrypted.
  * In this callback, clients should ask the user whether storing
- * a password to disk in plaintext is allowed, and return the answer
- * in @a may_save_plaintext.
+ * a password for the realm identified by @a realmstring to disk
+ * in plaintext is allowed.
  *
+ * The answer is returned in @a *may_save_plaintext.
  * @a baton is an implementation-specific closure.
- *
  * All allocations should be done in @a pool.
  *
- * This callback is only called if the store-plaintext-passwords
- * directive in the configuration file is undefined.
+ * This callback may be called multiple times for the same realm.
+ * Keeping a cache of user answers keyed by realm is recommended.
  *
  * If this callback is NULL it is not called. This matches the
  * deprecated behaviour of storing unencrypted passwords by default,
@@ -485,6 +485,7 @@ typedef svn_error_t *(*svn_auth_ssl_client_cert_pw_prompt_func_t)
  */
 typedef svn_error_t *(*svn_auth_plaintext_prompt_func_t)
   (svn_boolean_t *may_save_plaintext, 
+   const char *realmstring,
    void *baton,
    apr_pool_t *pool);
 
