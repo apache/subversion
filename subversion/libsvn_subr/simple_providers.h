@@ -16,33 +16,40 @@
  * ====================================================================
  */
 
+
+#ifndef SVN_LIBSVN_SUBR_SIMPLE_PROVIDERS_H
+#define SVN_LIBSVN_SUBR_SIMPLE_PROVIDERS_H
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
+
 /* A function that stores in *PASSWORD (potentially after decrypting it)
    the user's password.  It might be obtained directly from CREDS, or
    from an external store, using REALMSTRING and USERNAME as keys.
    If NON_INTERACTIVE is set, the user must not be involved in the
    retrieval process.  POOL is used for any necessary allocation. */
-typedef svn_boolean_t (*password_get_t)(const char **password,
-                                        apr_hash_t *creds,
-                                        const char *realmstring,
-                                        const char *username,
-                                        svn_boolean_t non_interactive,
-                                        apr_pool_t *pool);
+typedef svn_boolean_t (*svn_simple_providers__password_get_t)
+  (const char **password,
+   apr_hash_t *creds,
+   const char *realmstring,
+   const char *username,
+   svn_boolean_t non_interactive,
+   apr_pool_t *pool);
 
 /* A function that stores PASSWORD (or some encrypted version thereof)
    either directly in CREDS, or externally using REALMSTRING and USERNAME
    as keys into the external store.  If NON_INTERACTIVE is set, the user
    must not be involved in the storage process.  POOL is used for any
    necessary allocation. */
-typedef svn_boolean_t (*password_set_t)(apr_hash_t *creds,
-                                        const char *realmstring,
-                                        const char *username,
-                                        const char *password,
-                                        svn_boolean_t non_interactive,
-                                        apr_pool_t *pool);
+typedef svn_boolean_t (*svn_simple_providers__password_set_t)
+  (apr_hash_t *creds,
+   const char *realmstring,
+   const char *username,
+   const char *password,
+   svn_boolean_t non_interactive,
+   apr_pool_t *pool);
 
 /* Common implementation for simple_first_creds and
    windows_simple_first_creds. Uses PARAMETERS, REALMSTRING and the
@@ -51,14 +58,14 @@ typedef svn_boolean_t (*password_set_t)(apr_hash_t *creds,
    PASSTYPE identifies the type of the cached password. CREDENTIALS are
    allocated from POOL. */
 svn_error_t *
-simple_first_creds_helper(void **credentials,
-                          void **iter_baton,
-                          void *provider_baton,
-                          apr_hash_t *parameters,
-                          const char *realmstring,
-                          password_get_t password_get,
-                          const char *passtype,
-                          apr_pool_t *pool);
+svn_simple_providers__simple_first_creds_helper(void **credentials,
+                                                void **iter_baton,
+                                                void *provider_baton,
+                                                apr_hash_t *parameters,
+                                                const char *realmstring,
+                                                svn_simple_providers__password_get_t password_get,
+                                                const char *passtype,
+                                                apr_pool_t *pool);
 
 /* Common implementation for simple_save_creds and
    windows_simple_save_creds. Uses PARAMETERS and REALMSTRING to save
@@ -66,15 +73,17 @@ simple_first_creds_helper(void **credentials,
    password cache. PASSWORD_SET is used to store the password.
    PASSTYPE identifies the type of the cached password. Allocates from POOL. */
 svn_error_t *
-simple_save_creds_helper(svn_boolean_t *saved,
-                         void *credentials,
-                         void *provider_baton,
-                         apr_hash_t *parameters,
-                         const char *realmstring,
-                         password_set_t password_set,
-                         const char *passtype,
-                         apr_pool_t *pool);
+svn_simple_providers__simple_save_creds_helper(svn_boolean_t *saved,
+                                               void *credentials,
+                                               void *provider_baton,
+                                               apr_hash_t *parameters,
+                                               const char *realmstring,
+                                               svn_simple_providers__password_set_t password_set,
+                                               const char *passtype,
+                                               apr_pool_t *pool);
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
+
+#endif /* SVN_LIBSVN_SUBR_SIMPLE_PROVIDERS_H */
