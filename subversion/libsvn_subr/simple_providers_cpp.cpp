@@ -25,6 +25,7 @@
 #include <apr_pools.h>
 #include "svn_auth.h"
 #include "svn_error.h"
+#include "svn_version.h"
 
 #include "simple_providers.h"
 
@@ -40,6 +41,8 @@
 #include <QtCore/QString>
 #include <QtGui/QWidget>
 
+#include <kapplication.h>
+#include <kcmdlineargs.h>
 #include <kwallet.h>
 
 /* Implementation of password_get_t that retrieves the password
@@ -52,6 +55,49 @@ kwallet_password_get(const char **password,
                      svn_boolean_t non_interactive,
                      apr_pool_t *pool)
 {
+  if (! KWallet::Wallet::isEnabled())
+  {
+    return FALSE;
+  }
+
+  KCmdLineArgs::init(1,
+                     (char *[1]) { "svn\0" },
+                     "Subversion",
+                     "subversion",
+                     ki18n("Subversion"),
+                     SVN_VER_NUMBER,
+                     ki18n("Version control system"),
+                     KCmdLineArgs::CmdLineArgKDE);
+  KApplication *application = new KApplication;
+  QWidget *widget = new QWidget;
+  WId *wid = new WId;
+  *wid = widget->winId();
+  svn_boolean_t ret = FALSE;
+  QString wallet_name = KWallet::Wallet::NetworkWallet();
+  QString folder = QString::fromUtf8("Subversion");
+  QString key = QString::fromUtf8(username) + "@" + QString::fromUtf8(realmstring);
+  if (! KWallet::Wallet::keyDoesNotExist(wallet_name, folder, key))
+    {
+      KWallet::Wallet *wallet = KWallet::Wallet::openWallet(wallet_name, *wid, KWallet::Wallet::Synchronous);
+      if (wallet)
+        {
+          if (wallet->hasFolder(folder))
+            {
+              if (wallet->setFolder(folder))
+                {
+                  QString q_password;
+                  wallet->readPassword(key, q_password);
+                  if (q_password.size() > 0)
+                    {
+                      *password = apr_pstrmemdup(pool, q_password.toUtf8().data(), q_password.size());
+                      ret = TRUE;
+                    }
+                }
+            }
+        }
+    }
+  KWallet::Wallet::closeWallet(wallet_name, false);
+  return ret;
 }
 
 /* Implementation of password_set_t that stores the password in the
@@ -64,6 +110,55 @@ kwallet_password_set(apr_hash_t *creds,
                      svn_boolean_t non_interactive,
                      apr_pool_t *pool)
 {
+  if (! KWallet::Wallet::isEnabled())
+  {
+    return FALSE;
+  }
+
+  KCmdLineArgs::init(1,
+                     (char *[1]) { "svn\0" },
+                     "Subversion",
+                     "subversion",
+                     ki18n("Subversion"),
+                     SVN_VER_NUMBER,
+                     ki18n("Version control system"),
+                     KCmdLineArgs::CmdLineArgKDE);
+  KApplication *application = new KApplication;
+  QWidget *widget = new QWidget;
+  WId *wid = new WId;
+  *wid = widget->winId();
+  svn_boolean_t ret = FALSE;
+  QString q_password = QString::fromUtf8(password);
+  if (q_password.size() > 0)
+    {
+      QString wallet_name = KWallet::Wallet::NetworkWallet();
+      QString folder = QString::fromUtf8("Subversion");
+      KWallet::Wallet *wallet = KWallet::Wallet::openWallet(wallet_name, *wid, KWallet::Wallet::Synchronous);
+      if (wallet)
+        {
+          if (! wallet->hasFolder(folder))
+            {
+              wallet->createFolder(folder);
+            }
+          if (wallet->hasFolder(folder))
+            {
+              if (wallet->setFolder(folder))
+                {
+                  QString key = QString::fromUtf8(username) + "@" + QString::fromUtf8(realmstring);
+                  if (wallet->writePassword(key, q_password))
+                    {
+                      ret = TRUE;
+                    }
+                }
+            }
+        }
+      KWallet::Wallet::closeWallet(wallet_name, false);
+    }
+  else
+    {
+      ret = TRUE;
+    }
+  return ret;
 }
 
 /* Get cached encrypted credentials from the simple provider's cache. */
@@ -121,6 +216,6 @@ svn_auth_get_kwallet_simple_provider(svn_auth_provider_object_t **provider,
   return SVN_NO_ERROR;
 #else
   return svn_error_create(APR_ENOTIMPL, NULL,
-                          _("Support for KWallet not implemented"));
+                          _("Support for KWallet not available"));
 #endif /* SVN_HAVE_KWALLET */
 }
