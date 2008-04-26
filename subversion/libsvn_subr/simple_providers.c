@@ -49,7 +49,6 @@ typedef struct
 {
   svn_auth_plaintext_prompt_func_t plaintext_prompt_func;
   void *prompt_baton;
-
 } simple_provider_baton_t;
 
 
@@ -307,6 +306,7 @@ simple_save_creds_helper(svn_boolean_t *saved,
 
               if (b->plaintext_prompt_func)
                 SVN_ERR((*b->plaintext_prompt_func)(&may_save_plaintext,
+                                                    realmstring,
                                                     b->prompt_baton,
                                                     pool));
               may_save_password = may_save_plaintext; 

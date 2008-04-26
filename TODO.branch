@@ -1,19 +1,5 @@
 TODOS in this branch:
 
-- Doing either of these results in two prompts in a row:
-
-   svn ls svn://localhost svn://localhost
-   svn ls svn://localhost /path/to/a/working/copy
-
-  I guess svn ls http://server1/ http://server2 might also
-  be affected.
-
-  The prompt callback should probably be made aware of the
-  authentication realm the password is for, print the
-  server/realm so the user can see which password is being
-  saved, and cache the user's answer in a hash table keyed by
-  server/realm.
-
 - Clean up any noise in the diff against trunk that is still left
   around from all the refactoring (if any).
 
@@ -25,12 +11,6 @@ TODOS in this branch:
   Does this need to be public (eg, because other implementors of the
   prompt need to use it or something)?  You don't use it outside of
   libsvn_subr.
-  
-  >  +    "You can get rid of this warning by editing %s\n"
-  
-  The config path is likely to be long, so put it on its own line (in
-  single quotes, perhaps).
-  
   
   >  * subversion/libsvn_subr/cmdline.c
   >   (svn_cmdline_setup_auth_baton2): Don't store plaintext passwords
