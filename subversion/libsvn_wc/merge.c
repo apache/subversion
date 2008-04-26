@@ -245,7 +245,7 @@ maybe_update_target_eols(const char **new_target,
                                       pool));
       SVN_ERR(svn_subst_copy_and_translate3(old_target,
                                             tmp_new,
-                                            eol, eol ? FALSE : TRUE,
+                                            eol, TRUE,
                                             NULL, FALSE,
                                             FALSE, pool));
       *new_target = tmp_new;

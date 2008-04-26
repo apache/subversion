@@ -606,6 +606,7 @@ svn_error_t *
 svn_cl__args_to_target_array_print_reserved(apr_array_header_t **targets_p,
                                             apr_getopt_t *os,
                                             apr_array_header_t *known_targets,
+                                            svn_client_ctx_t *ctx,
                                             apr_pool_t *pool);
 
 #ifdef __cplusplus

@@ -76,8 +76,7 @@ file_read_cb(void *baton, char *buffer, apr_size_t *len)
   if (status && !APR_STATUS_IS_EOF(status))
     return svn_error_wrap_apr(status, _("Can't read from connection"));
   if (*len == 0)
-    return svn_error_create(SVN_ERR_RA_SVN_CONNECTION_CLOSED, NULL,
-                            _("Connection closed unexpectedly"));
+    return svn_error_create(SVN_ERR_RA_SVN_CONNECTION_CLOSED, NULL, NULL);
   return SVN_NO_ERROR;
 }
 
@@ -151,8 +150,7 @@ sock_read_cb(void *baton, char *buffer, apr_size_t *len)
   if (status && !APR_STATUS_IS_EOF(status))
     return svn_error_wrap_apr(status, _("Can't read from connection"));
   if (*len == 0)
-    return svn_error_create(SVN_ERR_RA_SVN_CONNECTION_CLOSED, NULL,
-                            _("Connection closed unexpectedly"));
+    return svn_error_create(SVN_ERR_RA_SVN_CONNECTION_CLOSED, NULL, NULL);
   return SVN_NO_ERROR;
 }
 

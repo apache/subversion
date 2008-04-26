@@ -341,9 +341,17 @@ range_to_string(svn_string_t **result, svn_merge_range_t *range,
     *result = svn_string_createf(pool, "%ld%s", range->end,
                                  range->inheritable
                                  ? "" : SVN_MERGEINFO_NONINHERITABLE_STR);
-  else
+  else if (range->start - 1 == range->end)
+    *result = svn_string_createf(pool, "-%ld%s", range->start,
+                                 range->inheritable
+                                 ? "" : SVN_MERGEINFO_NONINHERITABLE_STR);
+  else if (range->start < range->end)
     *result = svn_string_createf(pool, "%ld-%ld%s", range->start + 1,
                                  range->end, range->inheritable
+                                 ? "" : SVN_MERGEINFO_NONINHERITABLE_STR);
+  else 
+    *result = svn_string_createf(pool, "%ld-%ld%s", range->start,
+                                 range->end + 1, range->inheritable
                                  ? "" : SVN_MERGEINFO_NONINHERITABLE_STR);
   return SVN_NO_ERROR;
 }
