@@ -290,7 +290,7 @@ dnl KWallet -------------------
 
 AC_ARG_WITH(kwallet,
   AS_HELP_STRING([--with-kwallet=PATH],
-                 [Enable use of KWallet for auth credentials]),
+                 [Enable use of KWallet (KDE 4) for auth credentials]),
                  [with_kwallet="$withval"],
                  [with_kwallet=no])
 
