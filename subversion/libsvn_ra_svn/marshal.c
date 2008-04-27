@@ -247,8 +247,7 @@ static svn_error_t *readbuf_input(svn_ra_svn_conn_t *conn, char *data,
 
   SVN_ERR(svn_ra_svn__stream_read(conn->stream, data, len));
   if (*len == 0)
-    return svn_error_create(SVN_ERR_RA_SVN_CONNECTION_CLOSED, NULL,
-                            _("Connection closed unexpectedly"));
+    return svn_error_create(SVN_ERR_RA_SVN_CONNECTION_CLOSED, NULL, NULL);
 
   if (session)
     {

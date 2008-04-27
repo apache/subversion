@@ -884,7 +884,7 @@ _svnadmin ()
 	# Possible expansions, without pure-prefix abbreviations such as "h".
 	cmds='crashtest create deltify dump help hotcopy list-dblogs \
 	      list-unused-dblogs load lslocks lstxns recover rmlocks \
-	      rmtxns setlog verify --version'
+	      rmtxns setlog setrevprop setuuid upgrade verify --version'
 
 	if [[ $COMP_CWORD -eq 1 ]] ; then
 		COMPREPLY=( $( compgen -W "$cmds" -- $cur ) )
@@ -908,7 +908,7 @@ _svnadmin ()
 	case ${COMP_WORDS[1]} in
 	create)
 		cmdOpts="--bdb-txn-nosync --bdb-log-keep --config-dir \
-                         --fs-type --pre-1.4-compatible"
+		         --fs-type --pre-1.4-compatible --pre-1.5-compatible"
 		;;
 	deltify)
 		cmdOpts="-r --revision -q --quiet"
@@ -934,6 +934,13 @@ _svnadmin ()
 		;;
 	setlog)
 		cmdOpts="-r --revision --bypass-hooks"
+		;;
+	setrevprop)
+		cmdOpts="-r --revision --use-pre-revprop-change-hook \
+		         --use-post-revprop-change-hook"
+		;;
+	verify)
+		cmdOpts="-r --revision -q --quiet"
 		;;
 	*)
 		;;

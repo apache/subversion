@@ -706,9 +706,9 @@ adjust_mergeinfo(svn_string_t **final_val, const svn_string_t *initial_val,
               range->start = revmap_start->rev;
               range->end = revmap_end->rev;
             }
-          apr_hash_set(final_mergeinfo, merge_source,
-                       APR_HASH_KEY_STRING, rangelist);
         }
+      apr_hash_set(final_mergeinfo, merge_source,
+                   APR_HASH_KEY_STRING, rangelist);
     }
 
   SVN_ERR(svn_mergeinfo_sort(final_mergeinfo, subpool));

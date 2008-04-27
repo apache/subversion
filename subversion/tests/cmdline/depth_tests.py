@@ -1931,6 +1931,66 @@ def pull_in_tree_with_depth_option(sbox):
   # Check that the A directory was pull ed in at depth=immediates.
   verify_depth(None, "immediates", A_path)
 
+def fold_tree_with_unversioned_modified_items(sbox):
+  "unversioned & modified items left untouched"
+  ign_a, ign_b, ign_c, wc_dir = set_up_depthy_working_copies(sbox,
+                                                             infinity=True)
+
+  A_path = os.path.join(wc_dir, 'A')
+  pi_path = os.path.join(A_path, 'D', 'G', 'pi')
+  mu_path = os.path.join(A_path, 'mu')
+  unv_path = os.path.join(A_path, 'B', 'unv')
+
+  # Modify file pi
+  svntest.main.file_write(pi_path, "pi modified\n")
+  # Modify file mu
+  svntest.main.file_write(mu_path, "mu modified\n")
+  # Create an unversioned file
+  svntest.main.file_write(unv_path, "new unversioned\n")
+
+  # Fold the A dir to empty, expect the modified & unversioned ones left
+  # unversioned rather than removed, along with paths to those items.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/lambda'     : Item(status='D '),
+    'A/B/E'          : Item(status='D '),
+    'A/B/E/alpha'    : Item(status='D '),
+    'A/B/E/beta'     : Item(status='D '),
+    'A/B/F'          : Item(status='D '),
+    'A/C'            : Item(status='D '),
+    'A/D/gamma'      : Item(status='D '),
+    'A/D/G/rho'      : Item(status='D '),
+    'A/D/G/tau'      : Item(status='D '),
+    'A/D/H'          : Item(status='D '),
+    'A/D/H/chi'      : Item(status='D '),
+    'A/D/H/psi'      : Item(status='D '),
+    'A/D/H/omega'    : Item(status='D ')
+    })
+  # unversioned items will be ignored in in the status tree, since the
+  # run_and_verify_update() function uses a quiet version of svn status
+  # Dir A is still versioned, since the wc root is in depth-infinity
+  expected_status = svntest.wc.State(wc_dir, {
+    ''               : Item(status='  ', wc_rev=1),
+    'iota'           : Item(status='  ', wc_rev=1),
+    'A'              : Item(status='  ', wc_rev=1)
+    })
+  expected_disk = svntest.wc.State(wc_dir, {
+    'iota'           : Item(contents="this is iota\n"),
+    'A'              : Item(contents=None),
+    'A/mu'           : Item(contents="mu modified\n"),
+    'A/B'            : Item(contents=None),
+    'A/B/unv'        : Item(contents="new unversioned\n"),
+    'A/D'            : Item(contents=None),
+    'A/D/G'          : Item(contents=None),
+    'A/D/G/pi'       : Item(contents="pi modified\n")
+    })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None,
+                                        None, None, None, None,
+                                        '--set-depth', 'empty', A_path)
+  verify_depth(None, "empty", A_path)
 
 #----------------------------------------------------------------------
 # list all tests here, starting with None:
@@ -1964,6 +2024,7 @@ test_list = [ None,
               XFail(depth_folding_clean_trees_2),
               XFail(depth_fold_expand_clean_trees),
               pull_in_tree_with_depth_option,
+              XFail(fold_tree_with_unversioned_modified_items),
             ]
 
 if __name__ == "__main__":

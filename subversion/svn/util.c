@@ -1014,10 +1014,12 @@ svn_error_t *
 svn_cl__args_to_target_array_print_reserved(apr_array_header_t **targets,
                                             apr_getopt_t *os,
                                             apr_array_header_t *known_targets,
+                                            svn_client_ctx_t *ctx,
                                             apr_pool_t *pool)
 {
-  svn_error_t *error = svn_opt_args_to_target_array3(targets, os,
-                                                     known_targets, pool);
+  svn_error_t *error = svn_client_args_to_target_array(targets, os,
+                                                       known_targets,
+                                                       ctx, pool);
   if (error)
     {
       if (error->apr_err ==  SVN_ERR_RESERVED_FILENAME_SPECIFIED)
