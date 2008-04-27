@@ -394,7 +394,7 @@ svn_error_t *svn_ra_open3(svn_ra_session_t **session_p,
   apr_uri_t repos_URI;
   apr_status_t apr_err;
 #ifdef MUST_CHOOSE_DAV
-  const char* http_library = "neon";
+  const char *http_library = "neon";
 #endif
   /* Auth caching parameters. */
   svn_boolean_t store_passwords = SVN_CONFIG_DEFAULT_OPTION_STORE_PASSWORDS;
