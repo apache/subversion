@@ -1,8 +1,5 @@
 TODOS in this branch:
 
-- Clean up any noise in the diff against trunk that is still left
-  around from all the refactoring (if any).
-
 - glasser says:
 
   >  * subversion/include/svn_config.h
