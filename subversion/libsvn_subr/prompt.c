@@ -384,27 +384,11 @@ svn_cmdline_auth_plaintext_prompt(svn_boolean_t *may_save_plaintext,
                                   apr_pool_t *pool)
 {
   const char *answer = NULL;
-  svn_boolean_t *cached_answer;
   svn_boolean_t answered = FALSE;
   const char *prompt_string = _("Store password unencrypted (yes/no)? ");
   svn_cmdline_prompt_baton2_t *pb = baton;
   const char *config_path;
   
-  /* We cache the user's answer in case we'll be called multiple
-   * times for the same realm. */
-  if (! pb->cache)
-    pb->cache = apr_hash_make(pool);
-
-  /* Check the cache first. */
-  cached_answer = (svn_boolean_t *)apr_hash_get(pb->cache, realmstring,
-                                                APR_HASH_KEY_STRING);
-  if (cached_answer)
-    {
-      *may_save_plaintext = *cached_answer;
-      return SVN_NO_ERROR;
-    }
-
-  /* No cached answer, so ask the user. */
   SVN_ERR(svn_config_get_user_config_path(&config_path, pb->config_dir,
                                           SVN_CONFIG_CATEGORY_SERVERS, pool));
 
@@ -449,11 +433,6 @@ svn_cmdline_auth_plaintext_prompt(svn_boolean_t *may_save_plaintext,
           prompt_string = _("Please type 'yes' or 'no': ");
     }
   while (! answered); 
-
-  /* Cache the user's answer. */
-  cached_answer = apr_palloc(pool, sizeof(svn_boolean_t));
-  *cached_answer = *may_save_plaintext;
-  apr_hash_set(pb->cache, realmstring, APR_HASH_KEY_STRING, cached_answer);
 
   return SVN_NO_ERROR;
 }
