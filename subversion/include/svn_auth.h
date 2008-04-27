@@ -133,6 +133,10 @@ typedef struct svn_auth_provider_t
    * reasons, return FALSE.  If the provider never saves data, then
    * this function pointer should simply be NULL. @a realmstring comes
    * from the svn_auth_first_credentials() call.
+   *
+   * All allocations should be done in @a pool, which can be assumed
+   * to survive across RA sessions; auth providers that store passwords
+   * in plaintext rely on this.
    */
   svn_error_t * (*save_credentials)(svn_boolean_t *saved,
                                     void *credentials,
@@ -466,8 +470,8 @@ typedef svn_error_t *(*svn_auth_ssl_client_cert_pw_prompt_func_t)
  * @a baton is an implementation-specific closure.
  * All allocations should be done in @a pool.
  *
- * This callback may be called multiple times for the same realm.
- * Keeping a cache of user answers keyed by realm is recommended.
+ * This callback is called only once per authentication realm,
+ * not once per RA session.
  *
  * If this callback is NULL it is not called. This matches the
  * deprecated behaviour of storing unencrypted passwords by default,

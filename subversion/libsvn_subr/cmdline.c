@@ -410,7 +410,6 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
           pb->cancel_func = cancel_func;
           pb->cancel_baton = cancel_baton;
           pb->config_dir = config_dir;
-          pb->cache = NULL;
         }
 
       /* Two basic prompt providers: username/password, and just username. */

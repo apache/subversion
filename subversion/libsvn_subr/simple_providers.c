@@ -49,6 +49,10 @@ typedef struct
 {
   svn_auth_plaintext_prompt_func_t plaintext_prompt_func;
   void *prompt_baton;
+  /* We cache the user's answer to the plaintext prompt, keyed
+   * by realm, in case we'll be called multiple times for the
+   * same realm. */
+  apr_hash_t *plaintext_answers;
 } simple_provider_baton_t;
 
 
@@ -288,8 +292,10 @@ simple_save_creds_helper(svn_boolean_t *saved,
           if (svn_cstring_casecmp(store_plaintext_passwords,
                                   SVN_CONFIG_ASK) == 0)
             {
+              svn_boolean_t *cached_answer;
+
               /* TODO: We might want to default to not storing if the
-               * prompt callback is NULL, i.e. have may_save_plaintext
+               * prompt callback is NULL, i.e. have may_save_password
                * default to FALSE here, in order to force clients to
                * implement the callback.
                *
@@ -302,19 +308,35 @@ simple_save_creds_helper(svn_boolean_t *saved,
                * Needless to say, our own client is sane, but who knows
                * what other clients are doing.
                */
-              svn_boolean_t may_save_plaintext = TRUE;
+              may_save_password = TRUE;
+              
+              cached_answer = apr_hash_get(b->plaintext_answers,
+                                           realmstring,
+                                           APR_HASH_KEY_STRING);
+              if (cached_answer)
+                {
+                  may_save_password = *cached_answer;
+                }
+              else
+                {
+                  if (non_interactive)
+                    /* In non-interactive mode, the default behaviour is
+                     * to not store the password, because it is usually
+                     * passed on the command line. */
+                    may_save_password = FALSE;
+                  else if (b->plaintext_prompt_func)
+                    SVN_ERR((*b->plaintext_prompt_func)(&may_save_password,
+                                                        realmstring,
+                                                        b->prompt_baton,
+                                                        pool));
 
-              if (non_interactive)
-                /* In non-interactive mode, the default behaviour is
-                 * to not store the password, because it is usually
-                 * passed on the command line. */
-                may_save_plaintext = FALSE;
-              else if (b->plaintext_prompt_func)
-                SVN_ERR((*b->plaintext_prompt_func)(&may_save_plaintext,
-                                                    realmstring,
-                                                    b->prompt_baton,
-                                                    pool));
-              may_save_password = may_save_plaintext; 
+                  /* Cache the user's answer in case we're called again
+                   * for the same realm. */
+                  cached_answer = apr_palloc(pool, sizeof(svn_boolean_t));
+                  *cached_answer = may_save_password;
+                  apr_hash_set(b->plaintext_answers, realmstring,
+                               APR_HASH_KEY_STRING, cached_answer);
+                }
             }
           else if (svn_cstring_casecmp(store_plaintext_passwords,
                                        SVN_CONFIG_FALSE) == 0)
@@ -343,13 +365,11 @@ simple_save_creds_helper(svn_boolean_t *saved,
                                          creds->username, creds->password,
                                          non_interactive, pool);
           if (password_stored && passtype)
-            {
               /* Store the password type with the auth data, so that we
                  know which provider owns the password. */
               apr_hash_set(creds_hash, SVN_AUTH__AUTHFILE_PASSTYPE_KEY,
                            APR_HASH_KEY_STRING,
                            svn_string_create(passtype, pool));
-            }
         }
     }
 
@@ -416,6 +436,7 @@ svn_auth_get_simple_provider2
 
   pb->plaintext_prompt_func = plaintext_prompt_func;
   pb->prompt_baton = prompt_baton;
+  pb->plaintext_answers = apr_hash_make(pool);
 
   po->vtable = &simple_provider;
   po->provider_baton = pb;
