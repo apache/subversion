@@ -365,11 +365,13 @@ const char *svn_config_find_group(svn_config_t *cfg, const char *key,
                                   const char *master_section,
                                   apr_pool_t *pool);
 
-/** Retrieve value corresponding to @a option_name for a given
- *  @a server_group in @a cfg , or return @a default_value if none is found.
+/** Retrieve value corresponding to @a option_name in @a cfg ,
+ *  or return @a default_value if none is found.
  *
- *  The config will first be checked for a default, then will be checked for
- *  an override in a server group.
+ *  The config will first be checked for a default.
+ *  If @a server_group is not @c NULL, the config will also be checked
+ *  for an override in a server group,
+ *
  */
 const char *svn_config_get_server_setting(svn_config_t *cfg,
                                           const char* server_group,

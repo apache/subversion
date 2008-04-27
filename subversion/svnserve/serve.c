@@ -2589,8 +2589,8 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
   b.tunnel_user = get_tunnel_user(params, pool);
   b.read_only = params->read_only;
   b.user = NULL;
-  b.cfg = params->cfg;   /* Ugly; can drop when we remove v1 support. */
-  b.pwdb = params->pwdb; /* Likewise. */
+  b.cfg = params->cfg;
+  b.pwdb = params->pwdb;
   b.authzdb = params->authzdb;
   b.realm = NULL;
   b.pool = pool;

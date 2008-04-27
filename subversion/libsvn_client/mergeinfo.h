@@ -36,6 +36,7 @@
         missing from the WC.
      4) Path has a sibling which is switched or otherwise missing
         from the WC.
+     5) Path is the target of a merge.
 */
 typedef struct svn_client__merge_path_t
 {

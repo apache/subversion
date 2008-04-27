@@ -245,10 +245,10 @@ simple_save_creds_helper(svn_boolean_t *saved,
   apr_hash_t *creds_hash = NULL;
   const char *config_dir;
   svn_error_t *err;
-  const char *dont_store_passwords =
+  svn_boolean_t dont_store_passwords =
     apr_hash_get(parameters,
                  SVN_AUTH_PARAM_DONT_STORE_PASSWORDS,
-                 APR_HASH_KEY_STRING);
+                 APR_HASH_KEY_STRING) != NULL;
   const char *store_plaintext_passwords =
     apr_hash_get(parameters,
                  SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS,
@@ -257,10 +257,15 @@ simple_save_creds_helper(svn_boolean_t *saved,
                                                SVN_AUTH_PARAM_NON_INTERACTIVE,
                                                APR_HASH_KEY_STRING) != NULL;
   simple_provider_baton_t *b = (simple_provider_baton_t *)provider_baton;
+
+  svn_boolean_t no_auth_cache =
+    (! creds->may_save) || (apr_hash_get(parameters,
+                                         SVN_AUTH_PARAM_NO_AUTH_CACHE,
+                                         APR_HASH_KEY_STRING) != NULL);
+
   *saved = FALSE;
 
-  /* This is --no-auth-cache */
-  if (! creds->may_save)
+  if (no_auth_cache)
     return SVN_NO_ERROR;
 
   config_dir = apr_hash_get(parameters,

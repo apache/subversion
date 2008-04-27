@@ -147,6 +147,7 @@ svn_cl__diff(apr_getopt_t *os,
              apr_pool_t *pool)
 {
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
+  svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *options;
   apr_array_header_t *targets;
   apr_file_t *outfile, *errfile;
@@ -190,7 +191,7 @@ svn_cl__diff(apr_getopt_t *os,
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets, 
-                                                      pool));
+                                                      ctx, pool));
 
   if (! opt_state->old_target && ! opt_state->new_target
       && (targets->nelts == 2)
@@ -230,7 +231,7 @@ svn_cl__diff(apr_getopt_t *os,
                                                            const char *));
 
       SVN_ERR(svn_cl__args_to_target_array_print_reserved(&tmp2, os, tmp, 
-                                                          pool));
+                                                          ctx, pool));
       SVN_ERR(svn_opt_parse_path(&old_rev, &old_target,
                                  APR_ARRAY_IDX(tmp2, 0, const char *),
                                  pool));
@@ -328,8 +329,7 @@ svn_cl__diff(apr_getopt_t *os,
                      opt_state->changelists,
                      summarize_func,
                      (void *) target1,
-                     ((svn_cl__cmd_baton_t *)baton)->ctx,
-                     iterpool));
+                     ctx, iterpool));
           else
             SVN_ERR(svn_client_diff4
                     (options,
@@ -346,8 +346,7 @@ svn_cl__diff(apr_getopt_t *os,
                      outfile,
                      errfile,
                      opt_state->changelists,
-                     ((svn_cl__cmd_baton_t *)baton)->ctx,
-                     iterpool));
+                     ctx, iterpool));
         }
       else
         {
@@ -374,8 +373,7 @@ svn_cl__diff(apr_getopt_t *os,
                      opt_state->changelists,
                      summarize_func,
                      (void *) truepath,
-                     ((svn_cl__cmd_baton_t *)baton)->ctx,
-                     iterpool));
+                     ctx, iterpool));
           else
             SVN_ERR(svn_client_diff_peg4
                     (options,
@@ -392,8 +390,7 @@ svn_cl__diff(apr_getopt_t *os,
                      outfile,
                      errfile,
                      opt_state->changelists,
-                     ((svn_cl__cmd_baton_t *)baton)->ctx,
-                     iterpool));
+                     ctx, iterpool));
         }
     }
 
