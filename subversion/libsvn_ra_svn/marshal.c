@@ -62,9 +62,18 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn(apr_socket_t *sock,
   conn->pool = pool;
 
   if (sock != NULL)
-    conn->stream = svn_ra_svn__stream_from_sock(sock, pool);
+    {
+      apr_sockaddr_t *sa;
+      conn->stream = svn_ra_svn__stream_from_sock(sock, pool);
+      if (!(apr_socket_addr_get(&sa, APR_REMOTE, sock) == APR_SUCCESS
+            && apr_sockaddr_ip_get(&conn->remote_ip, sa) == APR_SUCCESS))
+        conn->remote_ip = NULL;
+    }
   else
-    conn->stream = svn_ra_svn__stream_from_files(in_file, out_file, pool);
+    {
+      conn->stream = svn_ra_svn__stream_from_files(in_file, out_file, pool);
+      conn->remote_ip = NULL;
+    }
 
   return conn;
 }
@@ -93,6 +102,11 @@ svn_boolean_t svn_ra_svn_has_capability(svn_ra_svn_conn_t *conn,
 {
   return (apr_hash_get(conn->capabilities, capability,
                        APR_HASH_KEY_STRING) != NULL);
+}
+
+const char *svn_ra_svn_conn_remote_host(svn_ra_svn_conn_t *conn)
+{
+  return conn->remote_ip;
 }
 
 void
