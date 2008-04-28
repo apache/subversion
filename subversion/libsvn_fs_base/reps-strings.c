@@ -752,7 +752,7 @@ svn_fs_base__rep_contents_size(svn_filesize_t *size_p,
 
 
 svn_error_t *
-svn_fs_base__rep_contents_checksum(unsigned char digest[],
+svn_fs_base__rep_contents_checksum(svn_checksum_t *checksum,
                                    svn_fs_t *fs,
                                    const char *rep_key,
                                    trail_t *trail,
@@ -761,10 +761,10 @@ svn_fs_base__rep_contents_checksum(unsigned char digest[],
   representation_t *rep;
 
   SVN_ERR(svn_fs_bdb__read_rep(&rep, fs, rep_key, trail, pool));
-  if (rep->checksum)
-    memcpy(digest, rep->checksum->digest, APR_MD5_DIGESTSIZE);
+  if (rep->checksum && rep->checksum->kind == checksum->kind)
+    SVN_ERR(svn_checksum_dup(checksum, rep->checksum));
   else
-    memset(digest, 0, APR_MD5_DIGESTSIZE);
+    SVN_ERR(svn_checksum_clear(checksum));
 
   return SVN_NO_ERROR;
 }

@@ -1155,9 +1155,13 @@ svn_fs_base__dag_file_checksum(unsigned char digest[],
   SVN_ERR(svn_fs_bdb__get_node_revision(&noderev, file->fs, file->id,
                                         trail, pool));
   if (noderev->data_key)
-    SVN_ERR(svn_fs_base__rep_contents_checksum(digest, file->fs,
-                                               noderev->data_key,
-                                               trail, pool));
+    {
+      svn_checksum_t *checksum = svn_checksum_create(svn_checksum_md5, pool);
+      SVN_ERR(svn_fs_base__rep_contents_checksum(checksum, file->fs,
+                                                 noderev->data_key,
+                                                 trail, pool));
+      memcpy(digest, checksum->digest, APR_MD5_DIGESTSIZE);
+    }
   else
     memset(digest, 0, APR_MD5_DIGESTSIZE);
 
@@ -1232,7 +1236,7 @@ svn_fs_base__dag_finalize_edits(dag_node_t *file,
   node_revision_t *noderev;
   const char *old_data_key, *new_data_key, *useless_data_key = NULL;
   const char *rep_checksum;
-  unsigned char digest[APR_MD5_DIGESTSIZE];
+  svn_checksum_t *rep_digest;
 
   /* Make sure our node is a file. */
   if (file->kind != svn_node_file)
@@ -1255,9 +1259,10 @@ svn_fs_base__dag_finalize_edits(dag_node_t *file,
     return SVN_NO_ERROR;
 
   /* Get our representation's checksum. */
+  rep_digest = svn_checksum_create(svn_checksum_md5, pool);
   SVN_ERR(svn_fs_base__rep_contents_checksum
-          (digest, fs, noderev->edit_key, trail, pool));
-  rep_checksum = svn_md5_digest_to_cstring_display(digest, pool);
+          (rep_digest, fs, noderev->edit_key, trail, pool));
+  rep_checksum = svn_checksum_to_cstring_display(rep_digest, pool);
 
   /* If our caller provided a checksum to compare, do so. */
   if (checksum && (strcmp(checksum, rep_checksum) != 0))
@@ -1473,12 +1478,12 @@ store_checksum_rep(const char *rep,
                    apr_pool_t *pool)
 {
   svn_fs_t *fs = trail->fs;
-  unsigned char digest[APR_MD5_DIGESTSIZE];
-  const char *checksum;
+  svn_checksum_t *checksum = svn_checksum_create(svn_checksum_md5, pool);
+  const char *checksum_display;
 
-  SVN_ERR(svn_fs_base__rep_contents_checksum(digest, fs, rep, trail, pool));
-  checksum = svn_md5_digest_to_cstring_display(digest, pool);
-  return svn_fs_bdb__set_checksum_rep(fs, checksum, rep, trail, pool);
+  SVN_ERR(svn_fs_base__rep_contents_checksum(checksum, fs, rep, trail, pool));
+  checksum_display = svn_checksum_to_cstring_display(checksum, pool);
+  return svn_fs_bdb__set_checksum_rep(fs, checksum_display, rep, trail, pool);
 }
 
 svn_error_t *
