@@ -19,7 +19,7 @@ Candidate changes:
  * r30643, r30653, r30785
    Update bash completion script.
    Votes:
-     +1: arfrever, stylesen
+     +1: arfrever (r30785 only), stylesen
 
  * Apply patch at,
    http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=137828
