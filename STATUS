@@ -21,6 +21,13 @@ Candidate changes:
    Votes:
      +1: arfrever, stylesen
 
+ * Apply patch at,
+   http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=137828
+   Fixes compiler warning, which has been introduced while resolving the
+   conflict from merge of r30633 from trunk.
+   Votes: 
+     +1 kameshj
+
 Status of 1.5.1:
 ================
 
