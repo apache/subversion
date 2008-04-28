@@ -890,10 +890,11 @@ svn_error_t *svn_ra_svn_read_cmd_response(svn_ra_svn_conn_t *conn,
                            status);
 }
 
-svn_error_t *svn_ra_svn_handle_commands(svn_ra_svn_conn_t *conn,
-                                        apr_pool_t *pool,
-                                        const svn_ra_svn_cmd_entry_t *commands,
-                                        void *baton)
+svn_error_t *svn_ra_svn_handle_commands2(svn_ra_svn_conn_t *conn,
+                                         apr_pool_t *pool,
+                                         const svn_ra_svn_cmd_entry_t *commands,
+                                         void *baton,
+                                         svn_boolean_t error_on_disconnect)
 {
   apr_pool_t *subpool = svn_pool_create(pool);
   apr_pool_t *iterpool = svn_pool_create(subpool);
@@ -909,7 +910,18 @@ svn_error_t *svn_ra_svn_handle_commands(svn_ra_svn_conn_t *conn,
   while (1)
     {
       svn_pool_clear(iterpool);
-      SVN_ERR(svn_ra_svn_read_tuple(conn, iterpool, "wl", &cmdname, &params));
+      err = svn_ra_svn_read_tuple(conn, iterpool, "wl", &cmdname, &params);
+      if (err)
+        {
+          if (!error_on_disconnect
+              && err->apr_err == SVN_ERR_RA_SVN_CONNECTION_CLOSED)
+            {
+              svn_error_clear(err);
+              svn_pool_destroy(subpool);
+              return SVN_NO_ERROR;
+            }
+          return err;
+        }
       command = apr_hash_get(cmd_hash, cmdname, APR_HASH_KEY_STRING);
 
       if (command)
@@ -937,6 +949,14 @@ svn_error_t *svn_ra_svn_handle_commands(svn_ra_svn_conn_t *conn,
   svn_pool_destroy(iterpool);
   svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
+}
+
+svn_error_t *svn_ra_svn_handle_commands(svn_ra_svn_conn_t *conn,
+                                        apr_pool_t *pool,
+                                        const svn_ra_svn_cmd_entry_t *commands,
+                                        void *baton)
+{
+  return svn_ra_svn_handle_commands2(conn, pool, commands, baton, TRUE);
 }
 
 svn_error_t *svn_ra_svn_write_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
