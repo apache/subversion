@@ -16,10 +16,10 @@ Candidate changes:
    Votes:
      +1: kameshj, arfrever
 
- * r30785
-   Update bash completion for svnadmin.
+ * r30643, r30653, r30785
+   Update bash completion script.
    Votes:
-     +1: arfrever
+     +1: arfrever, stylesen
 
 Status of 1.5.1:
 ================
