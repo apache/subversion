@@ -76,6 +76,14 @@ svn_checksum_t *
 svn_checksum_create(svn_checksum_kind_t kind,
                     apr_pool_t *pool);
 
+/** Set @c checksum->digest to all zeros, which, by convention, matches
+ * all other checksums.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_checksum_clear(svn_checksum_t *checksum);
+
 /** Compare digests @a d1 and @a d2.  If their kinds do not match or
  * if neither is all zeros, and their content does not match, then
  * return FALSE; else return TRUE.

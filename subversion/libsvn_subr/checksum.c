@@ -52,6 +52,27 @@ svn_checksum_create(svn_checksum_kind_t kind,
   return checksum;
 }
 
+svn_error_t *
+svn_checksum_clear(svn_checksum_t *checksum)
+{
+  switch (checksum->kind)
+    {
+      case svn_checksum_md5:
+        memset(checksum->digest, 0, APR_MD5_DIGESTSIZE);
+        break;
+
+      case svn_checksum_sha1:
+        memset(checksum->digest, 0, APR_SHA1_DIGESTSIZE);
+        break;
+
+      default:
+        /* We really shouldn't get here, but if we do... */
+        return svn_error_create(SVN_ERR_BAD_CHECKSUM_KIND, NULL, NULL);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 svn_boolean_t
 svn_checksum_match(svn_checksum_t *d1,
                    svn_checksum_t *d2)
