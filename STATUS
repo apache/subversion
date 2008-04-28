@@ -44,12 +44,3 @@ Approved changes (all releases):
      r30726 is a trivial compiler-warning change, by the way.
    Votes:
      +1: kfogel, jerenkrantz, arfrever
-
- * r30776, r30777, r30779
-   Fix for issue 3181.
-   Notes: svndumpfilter drops mergeinfo when it is *not* run with
-   --renumber-revs.
-   Votes:
-     +1: kameshj, arfrever
-     +1: stylesen r30776, r30779 and r30777 (if it matters since I
-         originally wrote the patch for this feature)
