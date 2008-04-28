@@ -777,7 +777,7 @@ int main(int argc, const char *argv[])
         {
           err = serve(conn, &params, connection_pool);
 
-          if (err && err->apr_err != SVN_ERR_RA_SVN_CONNECTION_CLOSED)
+          if (err)
             svn_handle_error2(err, stdout, FALSE, "svnserve: ");
           svn_error_clear(err);
 

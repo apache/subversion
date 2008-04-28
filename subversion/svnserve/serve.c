@@ -758,7 +758,7 @@ static svn_error_t *accept_report(svn_boolean_t *only_empty_entry,
   rb.from_rev = from_rev;
   if (from_rev)
     *from_rev = SVN_INVALID_REVNUM;
-  err = svn_ra_svn_handle_commands(conn, pool, report_commands, &rb);
+  err = svn_ra_svn_handle_commands2(conn, pool, report_commands, &rb, TRUE);
   if (err)
     {
       /* Network or protocol error while handling commands. */
@@ -2900,6 +2900,6 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
       SVN_ERR(svn_ra_svn_write_word(conn, pool, SVN_RA_SVN_CAP_MERGEINFO));
     SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))"));
   }
-                      
-  return svn_ra_svn_handle_commands(conn, pool, main_commands, &b);
+
+  return svn_ra_svn_handle_commands2(conn, pool, main_commands, &b, FALSE);
 }
