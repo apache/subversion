@@ -11013,10 +11013,14 @@ def dont_merge_revs_into_subtree_that_predate_it(sbox):
 
   expected_skip = wc.State(short_H_COPY_path, { })
   os.chdir(svntest.main.work_dir)
+  # H_COPY needs r4-6 applied while H_COPY/nu needs only 4,6.
+  # This means r4 will be done as a separate editor drive targeted
+  # on H_COPY.  But r4 was only the copy of A/D/H to H_COPY and
+  # so is a no-op and there will no notification for r4.
   svntest.actions.run_and_verify_svn(
     None,
     expected_merge_output(
-      [[4,6]], 'U    ' + os.path.join(short_H_COPY_path, "psi") + '\n'),
+      [[5,6]], 'U    ' + os.path.join(short_H_COPY_path, "psi") + '\n'),
     [], 'merge', sbox.repo_url + '/A/D/H', short_H_COPY_path)
   os.chdir(saved_cwd)
 
