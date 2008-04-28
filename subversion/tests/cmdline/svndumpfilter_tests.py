@@ -104,6 +104,32 @@ def reflect_dropped_renumbered_revs(sbox):
                                      [], 'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url + '/branch2')
 
+def svndumpfilter_loses_mergeinfo(sbox):
+  "svndumpfilter loses mergeinfo"
+  #svndumpfilter loses mergeinfo if invoked without --renumber-revs
+
+  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=3181. ##
+
+  test_create(sbox)
+  dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
+                                   'svndumpfilter_tests_data',
+                                   'with_merges.dump')
+  dumpfile = svntest.main.file_read(dumpfile_location)
+
+  filtered_out = filter_and_return_output(dumpfile, "include",
+                                          "trunk", "branch1", "--quiet")
+  load_and_verify_dumpstream(sbox, [], [], None, filtered_out)
+
+  # Verify the svn:mergeinfo properties
+  svntest.actions.run_and_verify_svn(None,
+                                     [sbox.repo_url+"/trunk - /branch1:4-8\n"],
+                                     [], 'propget', 'svn:mergeinfo', '-R',
+                                     sbox.repo_url + '/trunk')
+  svntest.actions.run_and_verify_svn(None,
+                                     [sbox.repo_url+"/branch1 - /trunk:1-2\n"],
+                                     [], 'propget', 'svn:mergeinfo', '-R',
+                                     sbox.repo_url + '/branch1')
+
 
 ########################################################################
 # Run the tests
@@ -112,6 +138,7 @@ def reflect_dropped_renumbered_revs(sbox):
 # list all tests here, starting with None:
 test_list = [ None,
               reflect_dropped_renumbered_revs,
+              svndumpfilter_loses_mergeinfo,
              ]
 
 if __name__ == '__main__':
