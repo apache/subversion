@@ -1409,8 +1409,8 @@ svn_fs_base__rep_deltify(svn_fs_t *fs,
   /* TARGET's original string keys */
   apr_array_header_t *orig_str_keys;
 
-  /* The digest for the representation's fulltext contents. */
-  unsigned char rep_digest[APR_MD5_DIGESTSIZE];
+  /* The checksum for the representation's fulltext contents. */
+  svn_checksum_t *rep_checksum = svn_checksum_create(svn_checksum_md5, pool);
 
   /* MD5 digest */
   const unsigned char *digest;
@@ -1538,7 +1538,7 @@ svn_fs_base__rep_deltify(svn_fs_t *fs,
       return UNKNOWN_NODE_KIND(target);
 
     /* Save the checksum, since the new rep needs it. */
-    memcpy(rep_digest, old_rep->checksum->digest, APR_MD5_DIGESTSIZE);
+    SVN_ERR(svn_checksum_dup(rep_checksum, old_rep->checksum));
   }
 
   /* Hook the new strings we wrote into the rest of the filesystem by
@@ -1553,7 +1553,8 @@ svn_fs_base__rep_deltify(svn_fs_t *fs,
     new_rep.txn_id = NULL;
 
     /* Migrate the old rep's checksum to the new rep. */
-    memcpy(new_rep.checksum->digest, rep_digest, APR_MD5_DIGESTSIZE);
+    new_rep.checksum = svn_checksum_create(svn_checksum_md5, pool);
+    SVN_ERR(svn_checksum_dup(new_rep.checksum, rep_checksum));
 
     chunks = apr_array_make(pool, windows->nelts, sizeof(chunk));
 
