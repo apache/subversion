@@ -31,11 +31,12 @@ extern "C" {
 
 typedef struct server_baton_t {
   svn_repos_t *repos;
+  const char *repos_name;  /* URI-encoded name of repository (not for authz) */
   svn_fs_t *fs;            /* For convenience; same as svn_repos_fs(repos) */
   svn_config_t *cfg;       /* Parsed repository svnserve.conf */
   svn_config_t *pwdb;      /* Parsed password database */
   svn_authz_t *authzdb;    /* Parsed authz rules */
-  const char *authz_repos_name; /* The name of the repository */
+  const char *authz_repos_name; /* The name of the repository for authz */
   const char *realm;       /* Authentication realm */
   const char *repos_url;   /* URL to base of repository */
   svn_stringbuf_t *fs_path;/* Decoded base in-repos path (w/ leading slash) */
@@ -45,6 +46,7 @@ typedef struct server_baton_t {
   svn_boolean_t read_only; /* Disallow write access (global flag) */
   svn_boolean_t use_sasl;  /* Use Cyrus SASL for authentication;
                               always false if SVN_HAVE_SASL not defined */
+  apr_file_t *log_file;    /* Log filehandle. */
   apr_pool_t *pool;
 } server_baton_t;
 
@@ -89,6 +91,9 @@ typedef struct serve_params_t {
      command line, or it was specified and it did not refer to a
      authorization database. */
   svn_authz_t *authzdb;
+
+  /* A filehandle open for writing logs to; possibly NULL. */
+  apr_file_t *log_file;
 } serve_params_t;
 
 /* Serve the connection CONN according to the parameters PARAMS. */
@@ -118,6 +123,12 @@ svn_error_t *cyrus_auth_request(svn_ra_svn_conn_t *conn,
                                 server_baton_t *b,
                                 enum access_type required,
                                 svn_boolean_t needs_username);
+
+/* Escape SOURCE into DEST where SOURCE is null-terminated and DEST is
+   size BUFLEN DEST will be null-terminated.  Returns number of bytes
+   written, including terminating null byte. */
+apr_size_t escape_errorlog_item(char *dest, const char *source,
+                                apr_size_t buflen);
 
 #ifdef __cplusplus
 }

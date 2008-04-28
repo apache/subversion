@@ -26,6 +26,7 @@
 #include "svn_dav.h"
 #include "svn_base64.h"
 #include "svn_props.h"
+#include "private/svn_log.h"
 
 #include "dav_svn.h"
 
@@ -171,11 +172,10 @@ save_value(dav_db *db, const dav_prop_name *name, const svn_string_t *value)
 
         /* Tell the logging subsystem about the revprop change. */
         dav_svn__operational_log(db->resource->info,
-                                 apr_psprintf(db->resource->pool,
-                                   "change-rev-prop r%ld %s",
-                                   db->resource->info->root.rev,
-                                   svn_path_uri_encode(propname,
-                                                       db->resource->pool)));
+                                 svn_log__change_rev_prop(
+                                              db->resource->info->root.rev,
+                                              propname,
+                                              db->resource->pool));
       }
   else
     serr = svn_repos_fs_change_node_prop(db->resource->info->root.root,
@@ -507,7 +507,7 @@ static dav_error *
 db_first_name(dav_db *db, dav_prop_name *pname)
 {
   /* for operational logging */
-  char *action = NULL;
+  const char *action = NULL;
 
   /* if we don't have a copy of the properties, then get one */
   if (db->props == NULL)
@@ -523,8 +523,8 @@ db_first_name(dav_db *db, dav_prop_name *pname)
                                        db->p);
           else
             {
-              action = apr_psprintf(db->resource->pool, "rev-proplist r%ld",
-                                    db->resource->info->root.rev);
+              action = svn_log__rev_proplist(db->resource->info->root.rev,
+                                             db->resource->pool);
               serr = svn_repos_fs_revision_proplist
                 (&db->props,
                  db->resource->info->repos->repos,
@@ -547,11 +547,16 @@ db_first_name(dav_db *db, dav_prop_name *pname)
                                      db->p);
 
           if (! serr)
-            action = apr_psprintf(db->resource->pool, "get-%s %s r%ld props",
-                                  (kind == svn_node_dir ? "dir" : "file"),
-                                  svn_path_uri_encode(db->resource->info->repos_path,
-                                                      db->resource->pool),
-                                  db->resource->info->root.rev);
+            {
+              if (kind == svn_node_dir)
+                action = svn_log__get_dir(db->resource->info->repos_path,
+                                          db->resource->info->root.rev,
+                                          FALSE, TRUE, 0, db->resource->pool);
+              else
+                action = svn_log__get_file(db->resource->info->repos_path,
+                                           db->resource->info->root.rev,
+                                           FALSE, TRUE, db->resource->pool);
+            }
         }
       if (serr != NULL)
         return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
