@@ -16,6 +16,12 @@ Candidate changes:
    Votes:
      +1: kameshj, arfrever
 
+ * r30820
+   Fix pool issue which definitely can lead to assertion failures in
+   reintegrate, and quite possibly to other mergeinfo corruption.
+   Votes:
+     +1: glasser
+
  * r30643, r30653, r30785
    Update bash completion script.
    Votes:
