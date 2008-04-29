@@ -58,7 +58,7 @@ int svn_fs_bdb__open_checksum_reps_table(DB **checksum_reps_p,
 
 svn_error_t *svn_fs_bdb__get_checksum_rep(const char **rep_key,
                                           svn_fs_t *fs,
-                                          const char *checksum,
+                                          svn_checksum_t *checksum,
                                           trail_t *trail,
                                           apr_pool_t *pool)
 {
@@ -68,7 +68,7 @@ svn_error_t *svn_fs_bdb__get_checksum_rep(const char **rep_key,
   
   svn_fs_base__trail_debug(trail, "checksum-reps", "get");
   db_err = bfd->checksum_reps->get(bfd->checksum_reps, trail->db_txn,
-                                   svn_fs_base__str_to_dbt(&key, checksum),
+                                   svn_fs_base__checksum_to_dbt(&key, checksum),
                                    svn_fs_base__result_dbt(&value), 0);
   svn_fs_base__track_dbt(&value, pool);
   
@@ -80,7 +80,7 @@ svn_error_t *svn_fs_bdb__get_checksum_rep(const char **rep_key,
 }
 
 svn_error_t *svn_fs_bdb__set_checksum_rep(svn_fs_t *fs,
-                                          const char *checksum,
+                                          svn_checksum_t *checksum,
                                           const char *rep_key,
                                           trail_t *trail,
                                           apr_pool_t *pool)
@@ -92,7 +92,7 @@ svn_error_t *svn_fs_bdb__set_checksum_rep(svn_fs_t *fs,
 #endif
   
   /* Create a key from our CHECKSUM. */
-  svn_fs_base__str_to_dbt(&key, checksum);
+  svn_fs_base__checksum_to_dbt(&key, checksum);
 
 #ifdef SVN_DISALLOW_CHECKSUM_REP_CHANGES
   /* Check to see if we already have a mapping for CHECKSUM.  If so,
@@ -127,14 +127,14 @@ svn_error_t *svn_fs_bdb__set_checksum_rep(svn_fs_t *fs,
 }
 
 svn_error_t *svn_fs_bdb__delete_checksum_rep(svn_fs_t *fs,
-                                             const char *checksum,
+                                             svn_checksum_t *checksum,
                                              trail_t *trail,
                                              apr_pool_t *pool)
 {
   base_fs_data_t *bfd = fs->fsap_data;
   DBT key;
   
-  svn_fs_base__str_to_dbt(&key, checksum);
+  svn_fs_base__checksum_to_dbt(&key, checksum);
   svn_fs_base__trail_debug(trail, "checksum-reps", "del");
   SVN_ERR(BDB_WRAP(fs, "deleting entry from 'checksum-reps' table",
                    bfd->checksum_reps->del(bfd->checksum_reps,
