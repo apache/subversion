@@ -2874,10 +2874,11 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
 {
   svn_error_t *err, *io_err;
   apr_uint64_t ver;
-  const char *uuid, *client_url;
+  const char *uuid, *client_url, *ra_client_string, *client_string;
   apr_array_header_t *caplist, *cap_words;
   server_baton_t b;
   fs_warning_baton_t warn_baton;
+  svn_stringbuf_t *cap_log = svn_stringbuf_create("", pool);
 
   b.tunnel = params->tunnel;
   b.tunnel_user = get_tunnel_user(params, pool);
@@ -2906,8 +2907,10 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
   /* Read client response, which we assume to be in version 2 format:
    * version, capability list, and client URL; then we do an auth
    * request. */
-  SVN_ERR(svn_ra_svn_read_tuple(conn, pool, "nlc",
-                                &ver, &caplist, &client_url));
+  SVN_ERR(svn_ra_svn_read_tuple(conn, pool, "nlc?c(?c)",
+                                &ver, &caplist, &client_url,
+                                &ra_client_string,
+                                &client_string));
   if (ver != 2)
     return SVN_NO_ERROR;
 
@@ -2942,6 +2945,10 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
             APR_ARRAY_PUSH(cap_words, const char *)
               = SVN_RA_CAPABILITY_MERGEINFO;
           }
+        /* Save for operational log. */
+        if (cap_log->len > 0)
+          svn_stringbuf_appendcstr(cap_log, " ");
+        svn_stringbuf_appendcstr(cap_log, item->u.word);
       }
   }
 
@@ -2963,6 +2970,21 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
       SVN_ERR(io_err);
       return svn_ra_svn_flush(conn, pool);
     }
+
+  /* Log the open. */
+  if (ra_client_string == NULL || ra_client_string[0] == '\0')
+    ra_client_string = "-";
+  else
+    ra_client_string = svn_path_uri_encode(ra_client_string, pool);
+  if (client_string == NULL || client_string[0] == '\0')
+    client_string = "-";
+  else
+    client_string = svn_path_uri_encode(client_string, pool);
+  SVN_ERR(log_command(&b, conn, pool,
+                      "open %" APR_UINT64_T_FMT " cap=(%s) %s %s %s",
+                      ver, cap_log->data,
+                      svn_path_uri_encode(b.fs_path->data, pool),
+                      ra_client_string, client_string));
 
   warn_baton.server = &b;
   warn_baton.conn = conn;
