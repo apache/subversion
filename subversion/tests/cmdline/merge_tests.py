@@ -7269,14 +7269,12 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
                                         expected_status,
                                         None,
                                         wc_dir, wc_dir)
-
   svntest.actions.run_and_verify_svn(None, expected_merge_output([[3,4]],
                                      'U    ' + Acopy_gamma_path + '\n'),
                                      [], 'merge', '-r1:4',
                                      A_url + '/D/gamma' + '@4',
                                      Acopy_gamma_path)
-
-  svntest.actions.run_and_verify_svn(None, expected_merge_output([[5]],
+  svntest.actions.run_and_verify_svn(None, expected_merge_output([[3,5]],
                                      'D    ' + Acopy_gamma_path + '\n'),
                                      [], 'merge', '-r1:5', '--force',
                                      A_url, Acopy_path)
@@ -11015,10 +11013,14 @@ def dont_merge_revs_into_subtree_that_predate_it(sbox):
 
   expected_skip = wc.State(short_H_COPY_path, { })
   os.chdir(svntest.main.work_dir)
+  # H_COPY needs r4-6 applied while H_COPY/nu needs only 4,6.
+  # This means r4 will be done as a separate editor drive targeted
+  # on H_COPY.  But r4 was only the copy of A/D/H to H_COPY and
+  # so is a no-op and there will no notification for r4.
   svntest.actions.run_and_verify_svn(
     None,
     expected_merge_output(
-      [[4,6]], 'U    ' + os.path.join(short_H_COPY_path, "psi") + '\n'),
+      [[5,6]], 'U    ' + os.path.join(short_H_COPY_path, "psi") + '\n'),
     [], 'merge', sbox.repo_url + '/A/D/H', short_H_COPY_path)
   os.chdir(saved_cwd)
 
@@ -11105,9 +11107,12 @@ def merge_chokes_on_renamed_subtrees(sbox):
 
   # Update for a uniform working copy before merging.
   svntest.main.run_svn(None, 'up', wc_dir)
-  expected_status.tweak(status='  ', wc_rev=4)
+  expected_status.tweak(status='  ', wc_rev=5)
 
-  # Merge r5 from 'A/D/H/psi_moved' to 'H_COPY/psi_moved'.
+  # Cherry harvest all available revsions from 'A/D/H/psi' to 'H_COPY/psi'.
+  #
+  # Here is where issue #3174 appears, the merge fails with:
+  # svn: svn: File not found: revision 3, path '/A/D/H/psi'
   #
   # Search for the comment entitled "The Merge Kluge" elsewhere in
   # this file, to understand why we shorten and chdir() below.
@@ -11116,43 +11121,13 @@ def merge_chokes_on_renamed_subtrees(sbox):
   short_psi_COPY_moved_path = shorten_path_kludge(psi_COPY_moved_path)
   svntest.actions.run_and_verify_svn(
     None,
-    expected_merge_output([[5]], 'U    ' + short_psi_COPY_moved_path + '\n'),
-    [], 'merge', '-c5',
-    sbox.repo_url + '/A/D/H/psi_moved', short_psi_COPY_moved_path)
+    expected_merge_output([[4,5]], 'U    ' + short_psi_COPY_moved_path + '\n'),
+    [], 'merge', sbox.repo_url + '/A/D/H/psi_moved',
+    short_psi_COPY_moved_path)
   os.chdir(saved_cwd)
 
-  # Merge r2 from 'A/D/H' to 'H_COPY'.  This should be a no-op as r2 is
-  # already a part of H_COPY's natural history and won't be repeated (and
-  # therefore we don't expect to see even a skipped notification for
-  # H_COPY/psi).
-  #
-  # Here is where issue #3174 appears, the merge fails with:
-  # svn: File not found: revision 5, path '/A_COPY/D/H'
-  short_H_COPY_path = shorten_path_kludge(H_COPY_path)
-  expected_output = wc.State(short_H_COPY_path, {})
-  expected_status = wc.State(short_H_COPY_path, {
-    ''          : Item(status=' M', wc_rev=5),
-    'psi_moved' : Item(status='MM', wc_rev=5),
-    'omega'     : Item(status='  ', wc_rev=5),
-    'chi'       : Item(status='  ', wc_rev=5),
-    })
-  # Note: Due to issue #3157 we do get some self-referential
-  # mergeinfo on H_COPY.
-  expected_disk = wc.State('', {
-    ''          : Item(props={SVN_PROP_MERGEINFO : '/A/D/H:2'}),
-    'psi_moved' : Item("Even *Newer* content",
-                       props={SVN_PROP_MERGEINFO : '/A/D/H/psi_moved:5'}),
-    'omega'     : Item("This is the file 'omega'.\n"),
-    'chi'       : Item("This is the file 'chi'.\n"),
-    })
-  expected_skip = wc.State(short_H_COPY_path, { })
-  os.chdir(svntest.main.work_dir)
-  svntest.actions.run_and_verify_merge(short_H_COPY_path, '1', '2',
-                                       sbox.repo_url + '/A_COPY/D/H',
-                                       expected_output, expected_disk,
-                                       expected_status, expected_skip,
-                                       None, None, None, None, None, 1)
-  os.chdir(saved_cwd)
+  expected_status.tweak('H_COPY/psi_moved', status='MM')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 ########################################################################
 # Run the tests

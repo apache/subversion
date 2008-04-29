@@ -638,6 +638,8 @@ def authz_validate(sbox):
 
   if sbox.repo_url.startswith("http"):
     expected_err = ".*403 Forbidden.*"
+  elif sbox.repo_url.startswith("svn"):
+    expected_err = ".*Invalid authz configuration"
   else:
     expected_err = ".*@undefined_group.*"
 
@@ -656,6 +658,8 @@ devs = @devs1, dev3, dev4""" })
 
   if sbox.repo_url.startswith("http"):
     expected_err = ".*403 Forbidden.*"
+  elif sbox.repo_url.startswith("svn"):
+    expected_err = ".*Invalid authz configuration"
   else:
     expected_err = ".*Circular dependency.*"
 

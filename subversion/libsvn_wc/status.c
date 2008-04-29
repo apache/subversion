@@ -934,7 +934,9 @@ get_dir_status(struct edit_baton *eb,
   /* Make our iteration pool. */
   iterpool = svn_pool_create(subpool);
 
-  /* Add empty status structures for each of the unversioned things. */
+  /* Add empty status structures for each of the unversioned things.
+     This also catches externals; not sure whether that's good or bad,
+     but it's what's happening right now. */
   for (hi = apr_hash_first(subpool, dirents); hi; hi = apr_hash_next(hi))
     {
       const void *key;
@@ -942,23 +944,25 @@ get_dir_status(struct edit_baton *eb,
       void *val;
       svn_io_dirent_t *dirent_p;
 
+      svn_pool_clear(iterpool);
+
       apr_hash_this(hi, &key, &klen, &val);
 
-      /* Skip versioned things, and skip the administrative
-         directory. */
+      /* Skip versioned, non-external things, and skip the
+         administrative directory. */
       if (apr_hash_get(entries, key, klen)
-          || svn_wc_is_adm_dir(key, subpool))
+          || svn_wc_is_adm_dir(key, iterpool))
         continue;
 
-      svn_pool_clear(iterpool);
+      dirent_p = val;
+
+      if (depth == svn_depth_files && dirent_p->kind == svn_node_dir)
+        continue;
 
       if (ignore_patterns && ! patterns)
         SVN_ERR(collect_ignore_patterns(&patterns, ignore_patterns,
                                         adm_access, subpool));
 
-      /* Make an unversioned status item for KEY, and put it into our
-         return hash. */
-      dirent_p = val;
       SVN_ERR(send_unversioned_item(key, dirent_p->kind, dirent_p->special,
                                     adm_access,
                                     patterns, eb->externals, no_ignore,

@@ -34,6 +34,7 @@
 #include "svn_path.h"
 #include "svn_dav.h"
 #include "svn_props.h"
+#include "private/svn_log.h"
 
 #include "../dav_svn.h"
 
@@ -485,17 +486,9 @@ dav_svn__replay_report(const dav_resource *resource,
                                 "Problem closing editor drive",
                                 resource->pool);
 
-  {
-    const char *action, *log_base_dir;
-
-    if (base_dir && base_dir[0] != '\0')
-      log_base_dir = svn_path_uri_encode(base_dir, resource->info->r->pool);
-    else
-      log_base_dir = "/";
-    action = apr_psprintf(resource->info->r->pool, "replay %s r%ld",
-                          log_base_dir, rev);
-    dav_svn__operational_log(resource->info, action);
-  }
+  dav_svn__operational_log(resource->info,
+                           svn_log__replay(base_dir, rev,
+                                           resource->info->r->pool));
 
   /* Flush the brigade. */
   if ((apr_err = ap_fflush(output, bb)))

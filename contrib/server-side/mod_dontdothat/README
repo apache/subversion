@@ -50,4 +50,4 @@ Subversion command that goes through the update-report, like update, diff,
 checkout, merge, etc.
 
 The DontDoThatDisallowReplay option makes mod_dontdothat disallow
-replay requests, wihch is on by default.
+replay requests, which is on by default.
