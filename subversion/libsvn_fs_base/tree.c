@@ -42,6 +42,7 @@
 #include "svn_mergeinfo.h"
 #include "svn_fs.h"
 #include "svn_sorts.h"
+#include "svn_checksum.h"
 #include "fs.h"
 #include "err.h"
 #include "trail.h"
@@ -3290,7 +3291,7 @@ txn_body_file_checksum(void *baton,
 
   if (args->checksum->kind == svn_checksum_md5
       || args->checksum->kind == svn_checksum_sha1)
-    return svn_fs_base__dag_file_checksum(args->checksum->digest, file,
+    return svn_fs_base__dag_file_checksum(args->checksum, file,
                                           trail, trail->pool);
   else
     return svn_error_create(SVN_ERR_BAD_CHECKSUM_KIND, NULL, NULL);
@@ -3404,11 +3405,11 @@ typedef struct txdelta_baton_t
   svn_stream_t *string_stream;
   svn_stringbuf_t *target_string;
 
-  /* Hex MD5 digest for the base text against which a delta is to be
+  /* Checksums for the base text against which a delta is to be
      applied, and for the resultant fulltext, respectively.  Either or
      both may be null, in which case ignored. */
-  const char *base_checksum;
-  const char *result_checksum;
+  svn_checksum_t *base_checksum;
+  svn_checksum_t *result_checksum;
 
   /* Pool used by db txns */
   apr_pool_t *pool;
@@ -3534,22 +3535,23 @@ txn_body_apply_textdelta(void *baton, trail_t *trail)
 
   if (tb->base_checksum)
     {
-      unsigned char digest[APR_MD5_DIGESTSIZE];
-      const char *hex;
+      svn_checksum_t *checksum = svn_checksum_create(svn_checksum_md5,
+                                                     trail->pool);
 
       /* Until we finalize the node, its data_key points to the old
          contents, in other words, the base text. */
-      SVN_ERR(svn_fs_base__dag_file_checksum(digest, tb->node,
+      SVN_ERR(svn_fs_base__dag_file_checksum(checksum, tb->node,
                                              trail, trail->pool));
-      hex = svn_md5_digest_to_cstring(digest, trail->pool);
-      if (hex && (strcmp(tb->base_checksum, hex) != 0))
+      if (!svn_checksum_match(tb->base_checksum, checksum))
         return svn_error_createf
           (SVN_ERR_CHECKSUM_MISMATCH,
            NULL,
            _("Base checksum mismatch on '%s':\n"
              "   expected:  %s\n"
              "     actual:  %s\n"),
-           tb->path, tb->base_checksum, hex);
+           tb->path,
+           svn_checksum_to_cstring_display(tb->base_checksum, trail->pool),
+           svn_checksum_to_cstring_display(checksum, trail->pool));
     }
 
   /* Make a readable "source" stream out of the current contents of
@@ -3603,12 +3605,18 @@ base_apply_textdelta(svn_txdelta_window_handler_t *contents_p,
   tb->pool = pool;
 
   if (base_checksum)
-    tb->base_checksum = apr_pstrdup(pool, base_checksum);
+    {
+      tb->base_checksum = svn_checksum_create(svn_checksum_md5, pool);
+      SVN_ERR(svn_checksum_parse_hex(tb->base_checksum, base_checksum));
+    }
   else
     tb->base_checksum = NULL;
 
   if (result_checksum)
-    tb->result_checksum = apr_pstrdup(pool, result_checksum);
+    {
+      tb->result_checksum = svn_checksum_create(svn_checksum_md5, pool);
+      SVN_ERR(svn_checksum_parse_hex(tb->result_checksum, result_checksum));
+    }
   else
     tb->result_checksum = NULL;
 
@@ -3640,9 +3648,9 @@ struct text_baton_t
   /* The actual fs stream that the returned stream will write to. */
   svn_stream_t *file_stream;
 
-  /* Hex MD5 digest for the final fulltext written to the file.  May
+  /* Checksum for the final fulltext written to the file.  May
      be null, in which case ignored. */
-  const char *result_checksum;
+  svn_checksum_t *result_checksum;
 
   /* Pool used by db txns */
   apr_pool_t *pool;
@@ -3755,7 +3763,10 @@ base_apply_text(svn_stream_t **contents_p,
   tb->pool = pool;
 
   if (result_checksum)
-    tb->result_checksum = apr_pstrdup(pool, result_checksum);
+    {
+      tb->result_checksum = svn_checksum_create(svn_checksum_md5, pool);
+      SVN_ERR(svn_checksum_parse_hex(tb->result_checksum, result_checksum));
+    }
   else
     tb->result_checksum = NULL;
 
