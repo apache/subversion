@@ -563,6 +563,7 @@ int main(int argc, const char *argv[])
       SVN_INT_ERR(load_configs(&params.cfg, &params.pwdb, &params.authzdb,
                                config_filename, TRUE,
                                svn_path_dirname(config_filename, pool),
+                               NULL, NULL, /* server baton, conn */
                                pool));
 
   if (log_filename)
@@ -794,7 +795,12 @@ int main(int argc, const char *argv[])
           if (status == APR_INCHILD)
             {
               apr_socket_close(sock);
-              svn_error_clear(serve(conn, &params, connection_pool));
+              err = serve(conn, &params, connection_pool);
+              log_error(err, params.log_file,
+                        svn_ra_svn_conn_remote_host(conn),
+                        NULL, NULL, /* user, repos */
+                        connection_pool);
+              svn_error_clear(err);
               apr_socket_close(usock);
               exit(0);
             }
@@ -804,7 +810,12 @@ int main(int argc, const char *argv[])
             }
           else
             {
-              /* Log an error, when we support logging. */
+              err = svn_error_wrap_apr(status, "apr_proc_fork");
+              log_error(err, params.log_file,
+                        svn_ra_svn_conn_remote_host(conn),
+                        NULL, NULL, /* user, repos */
+                        connection_pool);
+              svn_error_clear(err);
               apr_socket_close(usock);
             }
           svn_pool_destroy(connection_pool);

@@ -105,13 +105,19 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
    authorization database into AUTHZDB.  If MUST_EXIST is true and
    FILENAME does not exist, then this returns an error.  BASE may be
    specified as the base path to any referenced password and
-   authorization files found in FILENAME. */
+   authorization files found in FILENAME.
+
+   If SERVER is not NULL, log the real errors with SERVER and CONN but
+   return generic errors to the client.  CONN must not be NULL if SERVER
+   is not NULL. */
 svn_error_t *load_configs(svn_config_t **cfg,
                           svn_config_t **pwdb,
                           svn_authz_t **authzdb,
                           const char *filename,
                           svn_boolean_t must_exist,
                           const char *base,
+                          server_baton_t *server,
+                          svn_ra_svn_conn_t *conn,
                           apr_pool_t *pool);
 
 /* Initialize the Cyrus SASL library. POOL is used for allocations. */
@@ -129,6 +135,13 @@ svn_error_t *cyrus_auth_request(svn_ra_svn_conn_t *conn,
    written, including terminating null byte. */
 apr_size_t escape_errorlog_item(char *dest, const char *source,
                                 apr_size_t buflen);
+
+/* Log ERR to LOG_FILE if LOG_FILE is not NULL.  Include REMOTE_HOST,
+   USER, and REPOS in the log if they are not NULL.  Allocate temporary
+   char buffers in POOL (which caller can then clear or dispose of). */
+void
+log_error(svn_error_t *err, apr_file_t *log_file, const char *remote_host,
+          const char *user, const char *repos, apr_pool_t *pool);
 
 #ifdef __cplusplus
 }
