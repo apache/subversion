@@ -1139,7 +1139,7 @@ svn_fs_base__dag_file_length(svn_filesize_t *length,
 
 
 svn_error_t *
-svn_fs_base__dag_file_checksum(unsigned char digest[],
+svn_fs_base__dag_file_checksum(svn_checksum_t *checksum,
                                dag_node_t *file,
                                trail_t *trail,
                                apr_pool_t *pool)
@@ -1154,15 +1154,11 @@ svn_fs_base__dag_file_checksum(unsigned char digest[],
   SVN_ERR(svn_fs_bdb__get_node_revision(&noderev, file->fs, file->id,
                                         trail, pool));
   if (noderev->data_key)
-    {
-      svn_checksum_t *checksum = svn_checksum_create(svn_checksum_md5, pool);
-      SVN_ERR(svn_fs_base__rep_contents_checksum(checksum, file->fs,
-                                                 noderev->data_key,
-                                                 trail, pool));
-      memcpy(digest, checksum->digest, APR_MD5_DIGESTSIZE);
-    }
+    SVN_ERR(svn_fs_base__rep_contents_checksum(checksum, file->fs,
+                                               noderev->data_key,
+                                               trail, pool));
   else
-    memset(digest, 0, APR_MD5_DIGESTSIZE);
+    SVN_ERR(svn_checksum_clear(checksum));
 
   return SVN_NO_ERROR;
 }
@@ -1225,7 +1221,7 @@ svn_fs_base__dag_get_edit_stream(svn_stream_t **contents,
 
 svn_error_t *
 svn_fs_base__dag_finalize_edits(dag_node_t *file,
-                                const char *checksum,
+                                svn_checksum_t *checksum,
                                 const char *txn_id,
                                 trail_t *trail,
                                 apr_pool_t *pool)
@@ -1235,7 +1231,6 @@ svn_fs_base__dag_finalize_edits(dag_node_t *file,
   node_revision_t *noderev;
   const char *old_data_key, *new_data_key, *useless_data_key = NULL;
   svn_checksum_t *rep_checksum;
-  const char *checksum_display;
 
   /* Make sure our node is a file. */
   if (file->kind != svn_node_file)
@@ -1261,15 +1256,16 @@ svn_fs_base__dag_finalize_edits(dag_node_t *file,
   rep_checksum = svn_checksum_create(svn_checksum_md5, pool);
   SVN_ERR(svn_fs_base__rep_contents_checksum(rep_checksum, fs,
                                              noderev->edit_key, trail, pool));
-  checksum_display = svn_checksum_to_cstring_display(rep_checksum, pool);
 
   /* If our caller provided a checksum to compare, do so. */
-  if (checksum && (strcmp(checksum, checksum_display) != 0))
+  if (checksum && !svn_checksum_match(checksum, rep_checksum))
     return svn_error_createf(SVN_ERR_CHECKSUM_MISMATCH, NULL,
                              _("Checksum mismatch, rep '%s':\n"
                                "   expected:  %s\n"
                                "     actual:  %s\n"),
-                             noderev->edit_key, checksum, checksum_display);
+                             noderev->edit_key,
+                        svn_checksum_to_cstring_display(checksum, pool),
+                        svn_checksum_to_cstring_display(rep_checksum, pool));
 
   /* Now, we want to delete the old representation and replace it with
      the new.  Of course, we don't actually delete anything until
