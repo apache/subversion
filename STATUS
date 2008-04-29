@@ -9,6 +9,12 @@ Status of 1.5.0:
 
 Candidate changes:
 
+ * r29632
+   Add optional pool parameter to the Editor methods missing it, matching
+   the rest (not to mention the C API!).
+   Votes:
+     +1: epg
+
  * r30761, r30762
    Fix for issue 3172.
    Notes: 'log -g' fails the moment it encounters a bogus mergeinfo which 
