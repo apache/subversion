@@ -45,7 +45,7 @@ svn_cl__revert(apr_getopt_t *os,
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets, 
-                                                      pool));
+                                                      ctx, pool));
 
   /* Revert has no implicit dot-target `.', so don't you put that code here! */
   if (! targets->nelts)

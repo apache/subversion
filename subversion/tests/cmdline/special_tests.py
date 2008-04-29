@@ -614,18 +614,18 @@ def warn_on_reserved_name(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
   if os.path.exists(os.path.join(wc_dir, ".svn")):
-    reserved_path = os.path.join(wc_dir, "_svn")
-  elif os.path.exists(os.path.join(wc_dir, "_svn")):
     reserved_path = os.path.join(wc_dir, ".svn")
+  elif os.path.exists(os.path.join(wc_dir, "_svn")):
+    reserved_path = os.path.join(wc_dir, "_svn")
   else:
     # We don't know how to test this, but have no reason to believe
     # it would fail.  (TODO: any way to return 'Skip', though?)
     return
-  svntest.main.file_append(reserved_path, 'expecting rejection')
   svntest.actions.run_and_verify_svn(
-    "Adding a file with a reserved name failed to result in an error",
-    None, ".*Skipping argument: '.+' ends in a reserved name.*",
-    'add', reserved_path)
+    "Locking a file with a reserved name failed to result in an error",
+    None,
+    ".*Skipping argument: '.+' ends in a reserved name.*",
+    'lock', reserved_path)
 
 
 ########################################################################

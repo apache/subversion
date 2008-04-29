@@ -527,6 +527,7 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
   apr_socket_t *sock;
   apr_uint64_t minver, maxver;
   apr_array_header_t *mechlist, *server_caplist, *repos_caplist;
+  const char *client_string = NULL;
 
   sess = apr_palloc(pool, sizeof(*sess));
   sess->pool = pool;
@@ -575,17 +576,22 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
     return svn_error_create(SVN_ERR_RA_SVN_BAD_VERSION, NULL,
                             _("Server does not support edit pipelining"));
 
+  if (sess->callbacks->get_client_string != NULL)
+    SVN_ERR(sess->callbacks->get_client_string(sess->callbacks_baton,
+                                               &client_string, pool));
+
   /* In protocol version 2, we send back our protocol version, our
    * capability list, and the URL, and subsequently there is an auth
    * request. */
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "n(wwwwww)c", (apr_uint64_t) 2,
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "n(wwwwww)cc(?c)",
+                                 (apr_uint64_t) 2,
                                  SVN_RA_SVN_CAP_EDIT_PIPELINE,
                                  SVN_RA_SVN_CAP_SVNDIFF1,
                                  SVN_RA_SVN_CAP_ABSENT_ENTRIES,
                                  SVN_RA_SVN_CAP_DEPTH,
                                  SVN_RA_SVN_CAP_MERGEINFO,
                                  SVN_RA_SVN_CAP_LOG_REVPROPS,
-                                 url));
+                                 url, "SVN/" SVN_VERSION, client_string));
   SVN_ERR(handle_auth_request(sess, pool));
 
   /* This is where the security layer would go into effect if we
