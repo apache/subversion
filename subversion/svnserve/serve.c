@@ -1157,7 +1157,7 @@ static svn_error_t *unlock_paths(apr_array_header_t *lock_tokens,
       /* The lock may have become defunct after the commit, so ignore such
          errors. */
       err = svn_repos_fs_unlock(sb->repos, full_path, token,
-                                FALSE, pool);
+                                FALSE, iterpool);
       log_server_error(err, sb, conn, iterpool);
       svn_error_clear(err);
     }
