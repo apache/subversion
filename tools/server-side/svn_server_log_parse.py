@@ -14,6 +14,8 @@
 # history and logs, available at http://subversion.tigris.org/.
 # ====================================================================
 
+# TODO: Decode URI-encoded log items before calling the callback.
+
 """Parse mod-dav-svn operational logs.
 
 SVN-ACTION strings
