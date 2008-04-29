@@ -1,5 +1,5 @@
 /*
- * serve.c :  Functions for serving the Subversion protocol
+ * log.c :  Functions for logging Subversion operations
  *
  * ====================================================================
  * Copyright (c) 2008 CollabNet.  All rights reserved.
