@@ -43,6 +43,17 @@ class TestCase(unittest.TestCase):
         self.parse(line)
         self.assertEqual(self.result, (line,))
 
+    def test_open(self):
+        self.assertRaises(svn_server_log_parse.Error, self.parse, 'open')
+        self.assertRaises(svn_server_log_parse.Error, self.parse, 'open 2 cap / SVN/1.60. fooclient')
+        self.assertRaises(svn_server_log_parse.Error, self.parse, 'open a cap=() / SVN/1.60. fooclient')
+        self.assertEqual(self.parse('open 2 cap=() / SVN fooclient'), '')
+        self.assertEqual(self.result, (2, [], '/', 'SVN', 'fooclient'))
+        # TODO: Teach it about the capabilities, rather than allowing
+        # any words at all.
+        self.assertEqual(self.parse('open 2 cap=(foo) / SVN foo%20client'), '')
+        self.assertEqual(self.result, (2, ['foo'], '/', 'SVN', 'foo%20client'))
+
     def test_reparent(self):
         self.assertRaises(svn_server_log_parse.Error, self.parse, 'reparent')
         self.assertEqual(self.parse('reparent /'), '')
@@ -347,6 +358,15 @@ if __name__ == '__main__':
             sys.stderr.write('unknown log line at %d:\n%s\n' % (self.linenum,
                                                                 line))
             sys.exit(2)
+
+        def handle_open(self, protocol, capabilities, path, ra_client, client):
+            capabilities = ' '.join(capabilities)
+            if ra_client is None:
+                ra_client = '-'
+            if client is None:
+                client = '-'
+            self.action = ('open %d cap=(%s) %s %s %s'
+                           % (protocol, capabilities, path, ra_client, client))
 
         def handle_reparent(self, path):
             self.action = 'reparent ' + path

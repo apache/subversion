@@ -209,6 +209,22 @@ class Parser(object):
         self.handle_commit(int(m.group(1)))
         return line[m.end():]
 
+    def _parse_open(self, line):
+        pINT = r'(\d+)'
+        pCAP = r'cap=\(([^)]*)\)'
+        pCLIENT = pWORD
+        m = _match(line, pINT, pCAP, pPATH, pCLIENT, pCLIENT)
+        protocol = int(m.group(1))
+        if m.group(2) is None:
+            capabilities = []
+        else:
+            capabilities = m.group(2).split()
+        path = m.group(3)
+        ra_client = m.group(4)
+        client = m.group(5)
+        self.handle_open(protocol, capabilities, path, ra_client, client)
+        return line[m.end():]
+
     def _parse_reparent(self, line):
         m = _match(line, pPATH)
         self.handle_reparent(m.group(1))
