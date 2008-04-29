@@ -795,7 +795,7 @@ typedef enum svn_wc_notify_action_t
   svn_wc_notify_foreign_merge_begin,
 
   /** Replace notification. @since New in 1.5. */
-  svn_wc_notify_update_replace,
+  svn_wc_notify_update_replace
 
 } svn_wc_notify_action_t;
 

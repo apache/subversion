@@ -35,9 +35,3 @@ Candidate changes:
 Approved changes (all releases):
 ================================
 
- * Apply patch at,
-   http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=137828
-   Fixes compiler warning, which has been introduced while resolving the
-   conflict from merge of r30633 from trunk.
-   Votes: 
-     +1 kameshj, arfrever, glasser
