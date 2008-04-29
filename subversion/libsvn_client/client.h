@@ -369,11 +369,11 @@ svn_client__default_walker_error_handler(const char *path,
 #define SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx) \
         ((ctx)->log_msg_func3 || (ctx)->log_msg_func2 || (ctx)->log_msg_func)
 
-/* This is the baton that we pass svn_ra_open2(), and is associated with
+/* This is the baton that we pass svn_ra_open3(), and is associated with
    the callback table we provide to RA. */
 typedef struct
 {
-  /* Holds the directory that corresponds to the REPOS_URL at svn_ra_open2()
+  /* Holds the directory that corresponds to the REPOS_URL at svn_ra_open3()
      time. When callbacks specify a relative path, they are joined with
      this base directory. */
   const char *base_dir;

@@ -35,15 +35,6 @@ Candidate changes:
 Approved changes (all releases):
 ================================
 
- * r30666, r30684, r30726
-   ra_neon: Cache repository UUID / ra_*: Have update check that it matches.
-   Notes: Not strictly necessary for 1.5.0, but would be nice to get
-     the new svn_ra_open3() API in if we can.  If we do backport,
-     make sure to change "New in 1.6" to "New in 1.5", of course.
-     r30726 is a trivial compiler-warning change, by the way.
-   Votes:
-     +1: kfogel, jerenkrantz, arfrever
-
  * Apply patch at,
    http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=137828
    Fixes compiler warning, which has been introduced while resolving the
