@@ -590,8 +590,7 @@ svn_fs_base__dag_set_proplist(dag_node_t *node,
   apr_size_t len;
   skel_t *proplist_skel;
   svn_stringbuf_t *raw_proplist_buf;
-  unsigned char digest[APR_MD5_DIGESTSIZE];
-  const char *checksum;
+  svn_checksum_t *checksum;
 
   /* Sanity check: this node better be mutable! */
   if (! svn_fs_base__dag_check_mutable(node, txn_id))
@@ -612,8 +611,8 @@ svn_fs_base__dag_set_proplist(dag_node_t *node,
   SVN_ERR(svn_fs_base__unparse_proplist_skel(&proplist_skel,
                                              proplist, pool));
   raw_proplist_buf = svn_fs_base__unparse_skel(proplist_skel, pool);
-  apr_md5(digest, raw_proplist_buf->data, raw_proplist_buf->len);
-  checksum = svn_md5_digest_to_cstring_display(digest, pool);
+  SVN_ERR(svn_checksum(&checksum, svn_checksum_md5, raw_proplist_buf->data,
+                       raw_proplist_buf->len, pool));
 
   /* If the resulting property list is exactly the same as another
      string in the database, just use the previously existing string
@@ -1235,8 +1234,8 @@ svn_fs_base__dag_finalize_edits(dag_node_t *file,
   svn_fs_t *fs = file->fs;   /* just for nicer indentation */
   node_revision_t *noderev;
   const char *old_data_key, *new_data_key, *useless_data_key = NULL;
-  const char *rep_checksum;
-  svn_checksum_t *rep_digest;
+  svn_checksum_t *rep_checksum;
+  const char *checksum_display;
 
   /* Make sure our node is a file. */
   if (file->kind != svn_node_file)
@@ -1259,18 +1258,18 @@ svn_fs_base__dag_finalize_edits(dag_node_t *file,
     return SVN_NO_ERROR;
 
   /* Get our representation's checksum. */
-  rep_digest = svn_checksum_create(svn_checksum_md5, pool);
-  SVN_ERR(svn_fs_base__rep_contents_checksum
-          (rep_digest, fs, noderev->edit_key, trail, pool));
-  rep_checksum = svn_checksum_to_cstring_display(rep_digest, pool);
+  rep_checksum = svn_checksum_create(svn_checksum_md5, pool);
+  SVN_ERR(svn_fs_base__rep_contents_checksum(rep_checksum, fs,
+                                             noderev->edit_key, trail, pool));
+  checksum_display = svn_checksum_to_cstring_display(rep_checksum, pool);
 
   /* If our caller provided a checksum to compare, do so. */
-  if (checksum && (strcmp(checksum, rep_checksum) != 0))
+  if (checksum && (strcmp(checksum, checksum_display) != 0))
     return svn_error_createf(SVN_ERR_CHECKSUM_MISMATCH, NULL,
                              _("Checksum mismatch, rep '%s':\n"
                                "   expected:  %s\n"
                                "     actual:  %s\n"),
-                             noderev->edit_key, checksum, rep_checksum);
+                             noderev->edit_key, checksum, checksum_display);
 
   /* Now, we want to delete the old representation and replace it with
      the new.  Of course, we don't actually delete anything until
@@ -1479,11 +1478,9 @@ store_checksum_rep(const char *rep,
 {
   svn_fs_t *fs = trail->fs;
   svn_checksum_t *checksum = svn_checksum_create(svn_checksum_md5, pool);
-  const char *checksum_display;
 
   SVN_ERR(svn_fs_base__rep_contents_checksum(checksum, fs, rep, trail, pool));
-  checksum_display = svn_checksum_to_cstring_display(checksum, pool);
-  return svn_fs_bdb__set_checksum_rep(fs, checksum_display, rep, trail, pool);
+  return svn_fs_bdb__set_checksum_rep(fs, checksum, rep, trail, pool);
 }
 
 svn_error_t *

@@ -18,6 +18,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <apr_pools.h>
+#include <apr_md5.h>
+#include <apr_sha1.h>
 
 #define APU_WANT_DB
 #include <apu_want.h>
@@ -151,5 +153,22 @@ DBT *
 svn_fs_base__str_to_dbt(DBT *dbt, const char *str)
 {
   svn_fs_base__set_dbt(dbt, str, strlen(str));
+  return dbt;
+}
+
+DBT *
+svn_fs_base__checksum_to_dbt(DBT *dbt, svn_checksum_t *checksum)
+{
+  switch (checksum->kind)
+    {
+      case svn_checksum_md5:
+        svn_fs_base__set_dbt(dbt, checksum->digest, APR_MD5_DIGESTSIZE);
+        break;
+
+      case svn_checksum_sha1:
+        svn_fs_base__set_dbt(dbt, checksum->digest, APR_SHA1_DIGESTSIZE);
+        break;
+    }
+
   return dbt;
 }

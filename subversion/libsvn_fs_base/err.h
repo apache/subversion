@@ -84,7 +84,7 @@ svn_error_t *svn_fs_base__err_no_such_node_origin(svn_fs_t *fs,
 
 /* SVN_ERR_FS_NO_SUCH_CHECKSUM_REP: no recorded rep key for CHECKSUM in FS. */
 svn_error_t *svn_fs_base__err_no_such_checksum_rep(svn_fs_t *fs, 
-                                                   const char *checksum);
+                                                   svn_checksum_t *checksum);
 
 #ifdef __cplusplus
 }

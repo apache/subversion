@@ -20,6 +20,7 @@
 
 #include "svn_fs.h"
 #include "svn_error.h"
+#include "svn_checksum.h"
 #include "../trail.h"
 #include "../fs.h"
 
@@ -43,7 +44,7 @@ int svn_fs_bdb__open_checksum_reps_table(DB **checksum_reps_p,
    SVN_ERR_FS_NO_SUCH_CHECKSUM_REP.  */
 svn_error_t *svn_fs_bdb__get_checksum_rep(const char **rep_key,
                                           svn_fs_t *fs,
-                                          const char *checksum,
+                                          svn_checksum_t *checksum,
                                           trail_t *trail,
                                           apr_pool_t *pool);
 
@@ -54,7 +55,7 @@ svn_error_t *svn_fs_bdb__get_checksum_rep(const char **rep_key,
    WARNING: NEVER store a record that maps a checksum to a mutable
    representation.  Ever.  Under pain of dismemberment and death.  */
 svn_error_t *svn_fs_bdb__set_checksum_rep(svn_fs_t *fs,
-                                          const char *checksum,
+                                          svn_checksum_t *checksum,
                                           const char *rep_key,
                                           trail_t *trail,
                                           apr_pool_t *pool);
@@ -63,7 +64,7 @@ svn_error_t *svn_fs_bdb__set_checksum_rep(svn_fs_t *fs,
    representation key in FS.  Do this as part of TRAIL.  Use POOL for
    temporary allocations.  */
 svn_error_t *svn_fs_bdb__delete_checksum_rep(svn_fs_t *fs,
-                                             const char *checksum,
+                                             svn_checksum_t *checksum,
                                              trail_t *trail,
                                              apr_pool_t *pool);
 
