@@ -3823,7 +3823,7 @@ def update_uuid_changed(sbox):
   def wc_uuid(wc_dir):
     "Return the UUID of the working copy at WC_DIR."
 
-    exit_code, output, errput = svntest.main.run_svn(None, 'info', wc_dir)
+    output, errput = svntest.main.run_svn(None, 'info', wc_dir)
     if errput:
       raise svntest.verify.SVNUnexpectedStderr(errput)
 
