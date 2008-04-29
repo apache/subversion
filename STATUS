@@ -37,6 +37,11 @@ Candidate changes:
    Votes:
      +1: arfrever, stylesen
 
+ * r30842
+   Improve error message when 'http-library' config value is unknown.
+   Votes:
+     +1: danielsh
+
 Status of 1.5.1:
 ================
 
