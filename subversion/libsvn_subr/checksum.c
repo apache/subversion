@@ -128,6 +128,28 @@ svn_checksum_to_cstring(svn_checksum_t *checksum,
 }
 
 svn_error_t *
+svn_checksum_parse_hex(svn_checksum_t *checksum,
+                       const char *hex)
+{
+  int len;
+  int i;
+
+  if (checksum->kind == svn_checksum_md5)
+    len = APR_MD5_DIGESTSIZE;
+  else if (checksum->kind == svn_checksum_sha1)
+    len = APR_SHA1_DIGESTSIZE;
+  else
+    return svn_error_create(SVN_ERR_BAD_CHECKSUM_KIND, NULL, NULL);
+
+  for (i = 0; i < len; i++)
+    checksum->digest[i] = 
+      (( isalpha(hex[i*2]) ? hex[i*2] - 'a' + 10 : hex[i*2] - '0') << 4) |
+      ( isalpha(hex[i*2+1]) ? hex[i*2+1] - 'a' + 10 : hex[i*2+1] - '0');
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_checksum_dup(svn_checksum_t *dest,
                  svn_checksum_t *src)
 {
