@@ -26,7 +26,7 @@ Candidate changes:
    Fix pool issue which definitely can lead to assertion failures in
    reintegrate, and quite possibly to other mergeinfo corruption.
    Votes:
-     +1: glasser
+     +1: glasser, epg
 
  * r30843
    Fix abort in ra_serf when server sends invalid xml during replay.
