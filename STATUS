@@ -12,12 +12,12 @@ Candidate changes:
  * r30843
    Fix abort in ra_serf when server sends invalid xml during replay.
    Votes:
-     +1: lgo
+     +1: lgo, kfogel
 
  * r30844
    Mark two tests as requiring server mergeinfo support.
    Votes:
-     +1: glasser, hwright
+     +1: glasser, hwright, kfogel
 
  * r30643, r30653, r30785
    Update bash completion script.
@@ -27,7 +27,7 @@ Candidate changes:
  * r30842
    Improve error message when 'http-library' config value is unknown.
    Votes:
-     +1: danielsh, hwright
+     +1: danielsh, hwright, kfogel
 
  * r30868
    In svnserve, tolerate unreadable passwd files.
@@ -35,7 +35,7 @@ Candidate changes:
      Don't error over svn+ssh:// when the user can't read passwd.
      One-line change.
    Votes:
-     +1: danielsh
+     +1: danielsh, kfogel
 
 Status of 1.5.1:
 ================
