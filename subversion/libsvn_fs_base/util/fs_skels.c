@@ -1079,6 +1079,20 @@ svn_fs_base__unparse_representation_skel(skel_t **skel_p,
         }
       svn_fs_base__prepend(checksum_skel, header_skel);
     }
+  else
+    {
+      /* Need to add a "empty" MD5 checksum. */
+      skel_t *checksum_skel = svn_fs_base__make_empty_list(pool);
+      svn_checksum_t *empty_md5 = svn_checksum_create(svn_checksum_md5, pool);
+      SVN_ERR(svn_checksum_clear(empty_md5));
+
+      svn_fs_base__prepend(svn_fs_base__mem_atom
+                           (empty_md5->digest, APR_MD5_DIGESTSIZE, pool),
+                           checksum_skel);
+      svn_fs_base__prepend(svn_fs_base__str_atom("md5", pool), checksum_skel);
+      
+      svn_fs_base__prepend(checksum_skel, header_skel);
+    }
 
   /* TXN */
   if (rep->txn_id)
