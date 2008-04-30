@@ -236,7 +236,14 @@ svn_error_t *load_configs(svn_config_t **cfg,
           if (server)
             /* Called by listening server; log error no matter what it is. */
             log_server_error(err, server, conn, pool);
-          if (err->apr_err != SVN_ERR_BAD_FILENAME)
+
+          /* XXX: why do ignore SVN_ERR_BAD_FILENAME here?  (see r16840)
+           *
+           * If the passwd file is unreadable, skip reading it and continue;
+           * some authentications (e.g. --tunnel) can proceed without it.
+           */
+          if (err->apr_err != SVN_ERR_BAD_FILENAME
+              && ! APR_STATUS_IS_EACCES(err->apr_err))
             {
               if (server)
                 {
@@ -252,7 +259,7 @@ svn_error_t *load_configs(svn_config_t **cfg,
               return err;
             }
           else
-            /* Ignore SVN_ERR_BAD_FILENAME and proceed. */
+            /* Ignore SVN_ERR_BAD_FILENAME and APR_EACCES and proceed. */
             svn_error_clear(err);
         }
     }
