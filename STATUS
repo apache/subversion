@@ -9,25 +9,6 @@ Status of 1.5.0:
 
 Candidate changes:
 
- * r29632
-   Add optional pool parameter to the Editor methods missing it, matching
-   the rest (not to mention the C API!).
-   Votes:
-     +1: epg
-
- * r30761, r30762
-   Fix for issue 3172.
-   Notes: 'log -g' fails the moment it encounters a bogus mergeinfo which 
-     claims a merge from a non-existentpath@REV1-REV2.
-   Votes:
-     +1: kameshj, arfrever
-
- * r30820
-   Fix pool issue which definitely can lead to assertion failures in
-   reintegrate, and quite possibly to other mergeinfo corruption.
-   Votes:
-     +1: glasser, epg
-
  * r30843
    Fix abort in ra_serf when server sends invalid xml during replay.
    Votes:
@@ -36,7 +17,7 @@ Candidate changes:
  * r30844
    Mark two tests as requiring server mergeinfo support.
    Votes:
-     +1: glasser
+     +1: glasser, hwright
 
  * r30643, r30653, r30785
    Update bash completion script.
@@ -46,7 +27,7 @@ Candidate changes:
  * r30842
    Improve error message when 'http-library' config value is unknown.
    Votes:
-     +1: danielsh
+     +1: danielsh, hwright
 
  * r30852
    Fix test backported in r30838 but not adjusted to still use 1.5
@@ -57,8 +38,7 @@ Candidate changes:
      If we roll another rc after rc4, it must include this backport.
      (The previous broken backport was not in rc4, though.)
    Votes:
-     +1: glasser
-
+     +1: glasser, hwright
 
 Status of 1.5.1:
 ================
@@ -68,3 +48,21 @@ Candidate changes:
 Approved changes (all releases):
 ================================
 
+ * r30761, r30762
+   Fix for issue 3172.
+   Notes: 'log -g' fails the moment it encounters a bogus mergeinfo which 
+     claims a merge from a non-existentpath@REV1-REV2.
+   Votes:
+     +1: kameshj, arfrever, hwright
+
+ * r30820
+   Fix pool issue which definitely can lead to assertion failures in
+   reintegrate, and quite possibly to other mergeinfo corruption.
+   Votes:
+     +1: glasser, epg, hwright
+
+ * r29632
+   Add optional pool parameter to the Editor methods missing it, matching
+   the rest (not to mention the C API!).
+   Votes:
+     +1: epg, hwright
