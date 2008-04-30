@@ -60,9 +60,3 @@ Approved changes (all releases):
    reintegrate, and quite possibly to other mergeinfo corruption.
    Votes:
      +1: glasser, epg, hwright
-
- * r29632
-   Add optional pool parameter to the Editor methods missing it, matching
-   the rest (not to mention the C API!).
-   Votes:
-     +1: epg, hwright

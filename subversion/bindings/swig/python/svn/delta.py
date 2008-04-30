@@ -25,7 +25,7 @@ del _unprefix_names
 
 class Editor:
 
-  def set_target_revision(self, target_revision):
+  def set_target_revision(self, target_revision, pool=None):
     pass
 
   def open_root(self, base_revision, dir_pool=None):
@@ -44,7 +44,7 @@ class Editor:
   def change_dir_prop(self, dir_baton, name, value, pool=None):
     pass
 
-  def close_directory(self, dir_baton):
+  def close_directory(self, dir_baton, pool=None):
     pass
 
   def add_file(self, path, parent_baton,
@@ -54,19 +54,19 @@ class Editor:
   def open_file(self, path, parent_baton, base_revision, file_pool=None):
     return None
 
-  def apply_textdelta(self, file_baton, base_checksum):
+  def apply_textdelta(self, file_baton, base_checksum, pool=None):
     return None
 
   def change_file_prop(self, file_baton, name, value, pool=None):
     pass
 
-  def close_file(self, file_baton, text_checksum):
+  def close_file(self, file_baton, text_checksum, pool=None):
     pass
 
-  def close_edit(self):
+  def close_edit(self, pool=None):
     pass
 
-  def abort_edit(self):
+  def abort_edit(self, pool=None):
     pass
 
 
