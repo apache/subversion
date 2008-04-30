@@ -713,7 +713,7 @@ svn_auth_get_keychain_simple_provider(svn_auth_provider_object_t **provider,
  * @note This function is only implemented on systems with KWallet
  * installed.
  */
-svn_error_t *
+void
 svn_auth_get_kwallet_simple_provider(svn_auth_provider_object_t **provider,
                                      apr_pool_t *pool);
 

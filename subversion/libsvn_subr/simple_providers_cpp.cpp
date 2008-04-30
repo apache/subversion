@@ -44,6 +44,7 @@
 #include <kapplication.h>
 #include <kcmdlineargs.h>
 #include <kwallet.h>
+#endif /* SVN_HAVE_KWALLET */
 
 /* Implementation of svn_simple_providers__password_get_t that retrieves
    the password from KWallet. */
@@ -55,6 +56,7 @@ kwallet_password_get(const char **password,
                      svn_boolean_t non_interactive,
                      apr_pool_t *pool)
 {
+#ifdef SVN_HAVE_KWALLET
   if (! KWallet::Wallet::isEnabled())
   {
     return FALSE;
@@ -97,6 +99,9 @@ kwallet_password_get(const char **password,
         }
     }
   KWallet::Wallet::closeWallet(wallet_name, false);
+#else
+  svn_boolean_t ret = FALSE;
+#endif /* SVN_HAVE_KWALLET */
   return ret;
 }
 
@@ -110,6 +115,7 @@ kwallet_password_set(apr_hash_t *creds,
                      svn_boolean_t non_interactive,
                      apr_pool_t *pool)
 {
+#ifdef SVN_HAVE_KWALLET
   if (! KWallet::Wallet::isEnabled())
   {
     return FALSE;
@@ -158,6 +164,9 @@ kwallet_password_set(apr_hash_t *creds,
     {
       ret = TRUE;
     }
+#else
+  svn_boolean_t ret = FALSE;
+#endif /* SVN_HAVE_KWALLET */
   return ret;
 }
 
@@ -204,22 +213,15 @@ static const svn_auth_provider_t kwallet_simple_provider = {
   NULL,
   kwallet_simple_save_creds
 };
-#endif /* SVN_HAVE_KWALLET */
 
 /* Public API */
-extern "C" svn_error_t *
+extern "C" void
 svn_auth_get_kwallet_simple_provider(svn_auth_provider_object_t **provider,
                                      apr_pool_t *pool)
 {
-#ifdef SVN_HAVE_KWALLET
   svn_auth_provider_object_t *po =
     static_cast<svn_auth_provider_object_t *> (apr_pcalloc(pool, sizeof(*po)));
 
   po->vtable = &kwallet_simple_provider;
   *provider = po;
-  return SVN_NO_ERROR;
-#else
-  return svn_error_create(APR_ENOTIMPL, NULL,
-                          _("Support for KWallet not available"));
-#endif /* SVN_HAVE_KWALLET */
 }
