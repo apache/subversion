@@ -137,7 +137,8 @@ make_file(const char *filename,
    in EXPECTED.  The files FILENAME1, FILENAME2 and FILENAME3 will be
    deleted if the merge is successful, and preserved otherwise.  If
    the merge fails the merge output will be in a file called
-   "merge-FILENAME1-FILENAME2-FILENAME3". */
+   "merge-FILENAME1-FILENAME2-FILENAME3".  The conflict style STYLE is
+   used. */
 static svn_error_t *
 three_way_merge(const char *filename1,
                 const char *filename2,
@@ -147,6 +148,7 @@ three_way_merge(const char *filename1,
                 const char *contents3,
                 const char *expected,
                 const svn_diff_file_options_t *options,
+                svn_diff_conflict_display_style_t style,
                 apr_pool_t *pool)
 {
   svn_diff_t *diff;
@@ -171,13 +173,13 @@ three_way_merge(const char *filename1,
   actual = svn_stringbuf_create("", pool);
   ostream = svn_stream_from_stringbuf(actual, pool);
 
-  SVN_ERR(svn_diff_mem_string_output_merge
+  SVN_ERR(svn_diff_mem_string_output_merge2
           (ostream, diff, original, modified, latest,
            apr_psprintf(pool, "||||||| %s", filename1),
            apr_psprintf(pool, "<<<<<<< %s", filename2),
            apr_psprintf(pool, ">>>>>>> %s", filename3),
            NULL, /* separator */
-           FALSE, FALSE, pool));
+           style, pool));
 
   SVN_ERR(svn_stream_close(ostream));
   if (strcmp(actual->data, expected) != 0)
@@ -199,12 +201,11 @@ three_way_merge(const char *filename1,
     return svn_error_createf(status, NULL, "failed to open '%s'", merge_name);
 
   ostream = svn_stream_from_aprfile(output, pool);
-  SVN_ERR(svn_diff_file_output_merge(ostream, diff,
-                                     filename1, filename2, filename3,
-                                     NULL, NULL, NULL, NULL,
-                                     FALSE,
-                                     FALSE,
-                                     pool));
+  SVN_ERR(svn_diff_file_output_merge2(ostream, diff,
+                                      filename1, filename2, filename3,
+                                      NULL, NULL, NULL, NULL,
+                                      style,
+                                      pool));
   SVN_ERR(svn_stream_close(ostream));
   status = apr_file_close(output);
   if (status)
@@ -304,9 +305,11 @@ two_way_diff(const char *filename1,
   /* May as well do the trivial merges while we are here */
   SVN_ERR(three_way_merge(filename1, filename2, filename1,
                           contents1, contents2, contents1, contents2, NULL,
+                          svn_diff_conflict_display_modified_latest,
                           pool));
   SVN_ERR(three_way_merge(filename2, filename1, filename2,
                           contents2, contents1, contents2, contents1, NULL,
+                          svn_diff_conflict_display_modified_latest,
                           pool));
 
   SVN_ERR(svn_io_remove_file(diff_name, pool));
@@ -1070,7 +1073,9 @@ test_three_way_merge_no_overlap(const char **msg,
                           "Bb\n"
                           "Cc\n"
                           "Yy\n",
-                          NULL, pool));
+                          NULL,
+                          svn_diff_conflict_display_modified_latest,
+                          pool));
 
   SVN_ERR(three_way_merge("zig1a", "zag1a", "zog1a",
                           "Aa\r\n"
@@ -1092,7 +1097,9 @@ test_three_way_merge_no_overlap(const char **msg,
                           "Bb\r\n"
                           "Cc\r\n"
                           "Yy\r\n",
-                          NULL, pool));
+                          NULL,
+                          svn_diff_conflict_display_modified_latest,
+                          pool));
 
   SVN_ERR(three_way_merge("zig1b", "zag1b", "zog1b",
                           "Aa\r"
@@ -1114,7 +1121,9 @@ test_three_way_merge_no_overlap(const char **msg,
                           "Bb\r"
                           "Cc\r"
                           "Yy\r",
-                          NULL, pool));
+                          NULL,
+                          svn_diff_conflict_display_modified_latest,
+                          pool));
 
   diff_opts->ignore_space = svn_diff_file_ignore_space_all;
   SVN_ERR(three_way_merge("zig1c", "zag1c", "zog1c",
@@ -1137,7 +1146,9 @@ test_three_way_merge_no_overlap(const char **msg,
                           "B b\n"
                           "C c\n"
                           "Yy\n",
-                          diff_opts, pool));
+                          diff_opts,
+                          svn_diff_conflict_display_modified_latest,
+                          pool));
   diff_opts->ignore_space = svn_diff_file_ignore_space_none;
 
   SVN_ERR(three_way_merge("zig2", "zag2", "zog2",
@@ -1162,7 +1173,9 @@ test_three_way_merge_no_overlap(const char **msg,
                           "Zz\n"
                           "Cc\n"
                           "Yy\n",
-                          NULL, pool));
+                          NULL,
+                          svn_diff_conflict_display_modified_latest,
+                          pool));
 
   SVN_ERR(three_way_merge("zig3a", "zag3a", "zog3a",
                           "Aa\n"
@@ -1180,7 +1193,9 @@ test_three_way_merge_no_overlap(const char **msg,
                           "Xx\n"
                           "Bb\n"
                           "Cc",
-                          NULL, pool));
+                          NULL,
+                          svn_diff_conflict_display_modified_latest,
+                          pool));
 
   SVN_ERR(three_way_merge("zig3b", "zag3b", "zog3b",
                           "Aa\n"
@@ -1198,7 +1213,9 @@ test_three_way_merge_no_overlap(const char **msg,
                           "Xx\n"
                           "Bb\n"
                           "Cc",
-                          NULL, pool));
+                          NULL,
+                          svn_diff_conflict_display_modified_latest,
+                          pool));
 
   diff_opts->ignore_space = svn_diff_file_ignore_space_all;
   diff_opts->ignore_eol_style = TRUE;
@@ -1224,7 +1241,9 @@ test_three_way_merge_no_overlap(const char **msg,
                           "Zz\n"
                           " Cc\r\n"
                           " Yy\r\n",
-                          diff_opts, pool));
+                          diff_opts,
+                          svn_diff_conflict_display_modified_latest,
+                          pool));
   diff_opts->ignore_space = svn_diff_file_ignore_space_none;
   diff_opts->ignore_eol_style = FALSE;
 
@@ -1268,7 +1287,9 @@ test_three_way_merge_no_overlap(const char **msg,
                           "Zz\n"
                           "Hh\n"
                           "Ii\n",
-                          NULL, pool));
+                          NULL,
+                          svn_diff_conflict_display_modified_latest,
+                          pool));
 
   SVN_ERR(three_way_merge("zig5", "zag5", "zog5",
                           "Aa\r\n"
@@ -1290,7 +1311,9 @@ test_three_way_merge_no_overlap(const char **msg,
                           "Bb\n"
                           "Cc\n"
                           "Yy\r\n",
-                          NULL, pool));
+                          NULL,
+                          svn_diff_conflict_display_modified_latest,
+                          pool));
 
   SVN_ERR(three_way_merge("zig6", "zag6", "zog6",
                           "AaAaAaAaAaAa\n"
@@ -1310,7 +1333,9 @@ test_three_way_merge_no_overlap(const char **msg,
                           "Bb\n"
                           "CcCcCcCcCcCc\n"
                           "Yy\n",
-                          NULL, pool));
+                          NULL,
+                          svn_diff_conflict_display_modified_latest,
+                          pool));
 
   SVN_ERR(three_way_merge("zig7", "zag7", "zog7",
                           "Aa\n"
@@ -1330,7 +1355,9 @@ test_three_way_merge_no_overlap(const char **msg,
                           "Bb\n"
                           "Cc\n"
                           "Dd",
-                          NULL, pool));
+                          NULL,
+                          svn_diff_conflict_display_modified_latest,
+                          pool));
 
   diff_opts->ignore_space = svn_diff_file_ignore_space_all;
   diff_opts->ignore_eol_style = FALSE;
@@ -1352,7 +1379,9 @@ test_three_way_merge_no_overlap(const char **msg,
                           "B b\n"
                           "C c\n"
                           "New line in zog8\n",
-                          diff_opts, pool));
+                          diff_opts,
+                          svn_diff_conflict_display_modified_latest,
+                          pool));
 
   return SVN_NO_ERROR;
 }
@@ -1396,7 +1425,9 @@ test_three_way_merge_with_overlap(const char **msg,
                           "Yy\n"
                           "Ee\n"
                           "Zz\n",
-                          NULL, pool));
+                          NULL,
+                          svn_diff_conflict_display_modified_latest,
+                          pool));
 
   SVN_ERR(three_way_merge("splish2", "splash2", "splosh2",
                           "Aa\n"
@@ -1437,7 +1468,9 @@ test_three_way_merge_with_overlap(const char **msg,
                           "Ff\n"
                           "Pp\n"
                           "Qq\n",
-                          NULL, pool));
+                          NULL,
+                          svn_diff_conflict_display_modified_latest,
+                          pool));
 
   SVN_ERR(three_way_merge("splish3", "splash3", "splosh3",
                           "Aa\n"
@@ -1459,7 +1492,9 @@ test_three_way_merge_with_overlap(const char **msg,
                           "Xx\n"
                           "Bb\n"
                           "Cc",
-                          NULL, pool));
+                          NULL,
+                          svn_diff_conflict_display_modified_latest,
+                          pool));
 
   SVN_ERR(three_way_merge("splish4", "splash4", "splosh4",
                           "Aa\n"
@@ -1510,7 +1545,9 @@ test_three_way_merge_with_overlap(const char **msg,
                           "Gg\n"
                           "Zz\n"
                           "Hh\n",
-                          NULL, pool));
+                          NULL,
+                          svn_diff_conflict_display_modified_latest,
+                          pool));
 
   return SVN_NO_ERROR;
 }
@@ -1536,7 +1573,9 @@ test_three_way_merge_with_conflict(const char **msg,
                           "",
 
                           "",
-                          NULL, pool));
+                          NULL,
+                          svn_diff_conflict_display_modified_latest,
+                          pool));
 
   SVN_ERR(three_way_merge("dig2", "dug2", "dag2",
                           "Aa\n"
@@ -1561,7 +1600,9 @@ test_three_way_merge_with_conflict(const char **msg,
                           "Ff\n"
                           "=======\n"
                           ">>>>>>> dag2\n",
-                          NULL, pool));
+                          NULL,
+                          svn_diff_conflict_display_modified_latest,
+                          pool));
 
   SVN_ERR(three_way_merge("dig2a", "dug2a", "dag2a",
                           "Aa\r\n"
@@ -1586,7 +1627,9 @@ test_three_way_merge_with_conflict(const char **msg,
                           "Ff\r\n"
                           "=======\r\n"
                           ">>>>>>> dag2a\r\n",
-                          NULL, pool));
+                          NULL,
+                          svn_diff_conflict_display_modified_latest,
+                          pool));
 
   SVN_ERR(three_way_merge("dig2b", "dug2b", "dag2b",
                           "Aa\n"
@@ -1611,7 +1654,9 @@ test_three_way_merge_with_conflict(const char **msg,
                           "Ff\r"
                           "=======\r"
                           ">>>>>>> dag2b\r",
-                          NULL, pool));
+                          NULL,
+                          svn_diff_conflict_display_modified_latest,
+                          pool));
 
   SVN_ERR(three_way_merge("dig3", "dug3", "dag3",
                           "Aa\n"
@@ -1637,7 +1682,9 @@ test_three_way_merge_with_conflict(const char **msg,
                           "Ff\n"
                           "=======\n"
                           ">>>>>>> dag3\n",
-                          NULL, pool));
+                          NULL,
+                          svn_diff_conflict_display_modified_latest,
+                          pool));
 
   SVN_ERR(three_way_merge("dig4", "dug4", "dag4",
                           "Aa\n"
@@ -1660,7 +1707,341 @@ test_three_way_merge_with_conflict(const char **msg,
                           "<<<<<<< dug4\n"
                           "Dd=======\n"
                           "Ee>>>>>>> dag4\n",
-                          NULL, pool));
+                          NULL,
+                          svn_diff_conflict_display_modified_latest,
+                          pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+test_three_way_merge_conflict_styles(const char **msg,
+                                     svn_boolean_t msg_only,
+                                     svn_test_opts_t *opts,
+                                     apr_pool_t *pool)
+{
+  *msg = "3-way merge with conflict styles";
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  static const char *original =
+    "a\n"
+    "b\n"
+    "c\n"
+    "d\n"
+    "e\n"
+    "f\n"
+    "g\n"
+    "h\n"
+    "i\n"
+    "j\n"
+    "k\n"
+    "l\n"
+    "m\n"
+    "n\n"
+    "o\n"
+    "p\n"
+    "q\n"
+    "r\n"
+    "s\n"
+    "t\n"
+    "u\n"
+    "v\n"
+    "w\n"
+    "x\n"
+    "y\n"
+    "z\n"
+    ;
+  static const char *modified =
+    "A\n"
+    "b\n"
+    "c\n"
+    "d\n"
+    "e\n"
+    "f\n"
+    "g\n"
+    "h\n"
+    "i\n"
+    "j\n"
+    "k\n"
+    "l\n"
+    "m\n"
+    "N\n"
+    "O\n"
+    "hello\n"
+    "world\n"
+    "yay\n"
+    "P\n"
+    "Q\n"
+    "r\n"
+    "s\n"
+    "t\n"
+    "u\n"
+    "v\n"
+    "w\n"
+    "x\n"
+    "y\n"
+    "z\n"
+    ;
+  static const char *latest =
+    "a\n"
+    "b\n"
+    "c\n"
+    "d\n"
+    "e\n"
+    "f\n"
+    "g\n"
+    "h\n"
+    "i\n"
+    "j\n"
+    "k1\n"
+    "l2\n"
+    "m3\n"
+    "n4\n"
+    "o5\n"
+    "hello\n"
+    "world\n"
+    "yay\n"
+    "p\n"
+    "q\n"
+    "r\n"
+    "s\n"
+    "t\n"
+    "u\n"
+    "v\n"
+    "w\n"
+    "x\n"
+    "y\n"
+    "Z\n"
+    ;
+  /* So, 'modified' capitalized N through Q; 'latest' added numbers to
+     'k' through 'o'; and they both inserted "hello world yay" in the
+     middle.  Also, there are non-conflicting changes to the first and
+     last lines. */
+
+  SVN_ERR(three_way_merge("style-normal1", "style-normal2", "style-normal3",
+                          original, modified, latest,
+                          "A\n"
+                          "b\n"
+                          "c\n"
+                          "d\n"
+                          "e\n"
+                          "f\n"
+                          "g\n"
+                          "h\n"
+                          "i\n"
+                          "j\n"
+                          "<<<<<<< style-normal2\n"
+                          "k\n"
+                          "l\n"
+                          "m\n"
+                          "N\n"
+                          "O\n"
+                          "hello\n"
+                          "world\n"
+                          "yay\n"
+                          "P\n"
+                          "Q\n"
+                          "=======\n"
+                          "k1\n"
+                          "l2\n"
+                          "m3\n"
+                          "n4\n"
+                          "o5\n"
+                          "hello\n"
+                          "world\n"
+                          "yay\n"
+                          "p\n"
+                          "q\n"
+                          ">>>>>>> style-normal3\n"
+                          "r\n"
+                          "s\n"
+                          "t\n"
+                          "u\n"
+                          "v\n"
+                          "w\n"
+                          "x\n"
+                          "y\n"
+                          "Z\n",
+                          NULL,
+                          svn_diff_conflict_display_modified_latest,
+                          pool));
+
+  SVN_ERR(three_way_merge("style-resolved1", "style-resolved2",
+                          "style-resolved3",
+                          original, modified, latest,
+                          "A\n"
+                          "b\n"
+                          "c\n"
+                          "d\n"
+                          "e\n"
+                          "f\n"
+                          "g\n"
+                          "h\n"
+                          "i\n"
+                          "j\n"
+                          "<<<<<<< style-resolved2\n"
+                          "k\n"
+                          "l\n"
+                          "m\n"
+                          "N\n"
+                          "O\n"
+                          "=======\n"
+                          "k1\n"
+                          "l2\n"
+                          "m3\n"
+                          "n4\n"
+                          "o5\n"
+                          ">>>>>>> style-resolved3\n"
+                          "hello\n"
+                          "world\n"
+                          "yay\n"
+                          "<<<<<<< style-resolved2\n"
+                          "P\n"
+                          "Q\n"
+                          "=======\n"
+                          "p\n"
+                          "q\n"
+                          ">>>>>>> style-resolved3\n"
+                          "r\n"
+                          "s\n"
+                          "t\n"
+                          "u\n"
+                          "v\n"
+                          "w\n"
+                          "x\n"
+                          "y\n"
+                          "Z\n",
+                          NULL,
+                          svn_diff_conflict_display_resolved_modified_latest,
+                          pool));
+
+  SVN_ERR(three_way_merge("style-three1", "style-three2", "style-three3",
+                          original, modified, latest,
+                          "A\n"
+                          "b\n"
+                          "c\n"
+                          "d\n"
+                          "e\n"
+                          "f\n"
+                          "g\n"
+                          "h\n"
+                          "i\n"
+                          "j\n"
+                          "<<<<<<< style-three2\n"
+                          "k\n"
+                          "l\n"
+                          "m\n"
+                          "N\n"
+                          "O\n"
+                          "hello\n"
+                          "world\n"
+                          "yay\n"
+                          "P\n"
+                          "Q\n"
+                          "||||||| style-three1\n"
+                          "k\n"
+                          "l\n"
+                          "m\n"
+                          "n\n"
+                          "o\n"
+                          "p\n"
+                          "q\n"
+                          "=======\n"
+                          "k1\n"
+                          "l2\n"
+                          "m3\n"
+                          "n4\n"
+                          "o5\n"
+                          "hello\n"
+                          "world\n"
+                          "yay\n"
+                          "p\n"
+                          "q\n"
+                          ">>>>>>> style-three3\n"
+                          "r\n"
+                          "s\n"
+                          "t\n"
+                          "u\n"
+                          "v\n"
+                          "w\n"
+                          "x\n"
+                          "y\n"
+                          "Z\n",
+                          NULL,
+                          svn_diff_conflict_display_modified_original_latest,
+                          pool));
+
+  SVN_ERR(three_way_merge("style-mod1", "style-mod2", "style-mod3",
+                          original, modified, latest,
+                          "A\n"
+                          "b\n"
+                          "c\n"
+                          "d\n"
+                          "e\n"
+                          "f\n"
+                          "g\n"
+                          "h\n"
+                          "i\n"
+                          "j\n"
+                          "k\n"
+                          "l\n"
+                          "m\n"
+                          "N\n"
+                          "O\n"
+                          "hello\n"
+                          "world\n"
+                          "yay\n"
+                          "P\n"
+                          "Q\n"
+                          "r\n"
+                          "s\n"
+                          "t\n"
+                          "u\n"
+                          "v\n"
+                          "w\n"
+                          "x\n"
+                          "y\n"
+                          "Z\n",
+                          NULL,
+                          svn_diff_conflict_display_modified,
+                          pool));
+
+  SVN_ERR(three_way_merge("style-latest1", "style-latest2", "style-latest3",
+                          original, modified, latest,
+                          "A\n"
+                          "b\n"
+                          "c\n"
+                          "d\n"
+                          "e\n"
+                          "f\n"
+                          "g\n"
+                          "h\n"
+                          "i\n"
+                          "j\n"
+                          "k1\n"
+                          "l2\n"
+                          "m3\n"
+                          "n4\n"
+                          "o5\n"
+                          "hello\n"
+                          "world\n"
+                          "yay\n"
+                          "p\n"
+                          "q\n"
+                          "r\n"
+                          "s\n"
+                          "t\n"
+                          "u\n"
+                          "v\n"
+                          "w\n"
+                          "x\n"
+                          "y\n"
+                          "Z\n",
+                          NULL,
+                          svn_diff_conflict_display_latest,
+                          pool));
 
   return SVN_NO_ERROR;
 }
@@ -1702,10 +2083,12 @@ random_trivial_merge(const char **msg,
       SVN_ERR(three_way_merge(filename1, filename2, filename1,
                               contents1->data, contents2->data,
                               contents1->data, contents2->data, NULL,
+                              svn_diff_conflict_display_modified_latest,
                               subpool));
       SVN_ERR(three_way_merge(filename2, filename1, filename2,
                               contents2->data, contents1->data,
                               contents2->data, contents1->data, NULL,
+                              svn_diff_conflict_display_modified_latest,
                               subpool));
       svn_pool_clear(subpool);
     }
@@ -1771,10 +2154,14 @@ random_three_way_merge(const char **msg,
 
       SVN_ERR(three_way_merge(filename1, filename2, filename3,
                               original->data, modified1->data,
-                              modified2->data, combined->data, NULL, subpool));
+                              modified2->data, combined->data, NULL,
+                              svn_diff_conflict_display_modified_latest,
+                              subpool));
       SVN_ERR(three_way_merge(filename1, filename3, filename2,
                               original->data, modified2->data,
-                              modified1->data, combined->data, NULL, subpool));
+                              modified1->data, combined->data, NULL,
+                              svn_diff_conflict_display_modified_latest,
+                              subpool));
 
       SVN_ERR(svn_io_remove_file(filename4, pool));
 
@@ -1846,10 +2233,14 @@ merge_with_part_already_present(const char **msg,
 
       SVN_ERR(three_way_merge(filename1, filename2, filename3,
                               original->data, modified1->data,
-                              modified2->data, combined->data, NULL, subpool));
+                              modified2->data, combined->data, NULL,
+                              svn_diff_conflict_display_modified_latest,
+                              subpool));
       SVN_ERR(three_way_merge(filename1, filename3, filename2,
                               original->data, modified2->data,
-                              modified1->data, combined->data, NULL, subpool));
+                              modified1->data, combined->data, NULL,
+                              svn_diff_conflict_display_modified_latest,
+                              subpool));
 
       SVN_ERR(svn_io_remove_file(filename4, pool));
 
@@ -1894,7 +2285,9 @@ merge_adjacent_changes(const char **msg,
                           "new_bar\n"
                           "new_baz\n",
 
-                          NULL, pool));
+                          NULL,
+                          svn_diff_conflict_display_modified_latest,
+                          pool));
 
   return SVN_NO_ERROR;
 }
@@ -1916,5 +2309,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(random_three_way_merge),
     SVN_TEST_PASS(merge_with_part_already_present),
     SVN_TEST_PASS(merge_adjacent_changes),
+    SVN_TEST_PASS(test_three_way_merge_conflict_styles),
     SVN_TEST_NULL
   };

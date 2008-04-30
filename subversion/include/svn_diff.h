@@ -289,6 +289,31 @@ typedef struct svn_diff_output_fns_t
                                   svn_diff_t *resolved_diff);
 } svn_diff_output_fns_t;
 
+/** Style for displaying conflicts during diff3 output.
+ *
+ * @since New in 1.6.
+ */
+typedef enum svn_diff_conflict_display_style_t
+{
+  /** Display modified and latest, with conflict markers. */
+  svn_diff_conflict_display_modified_latest,
+
+  /** Like svn_diff_conflict_display_modified_latest, but with an
+      extra effort to identify common sequences between modified and
+      latest. */
+  svn_diff_conflict_display_resolved_modified_latest,
+
+  /** Display modified, original, and latest, with conflict
+      markers. */
+  svn_diff_conflict_display_modified_original_latest,
+
+  /** Just display modified, with no markers. */
+  svn_diff_conflict_display_modified,
+
+  /** Just display latest, with no markers. */
+  svn_diff_conflict_display_latest
+} svn_diff_conflict_display_style_t;
+
 
 /** Given a vtable of @a output_fns/@a output_baton for consuming
  * differences, output the differences in @a diff.
@@ -532,8 +557,37 @@ svn_diff_file_output_unified(svn_stream_t *output_stream,
  * @a conflict_latest to be displayed as conflict markers in the output.
  * If @a conflict_original, @a conflict_modified, @a conflict_latest and/or
  * @a conflict_separator is @c NULL, a default marker will be displayed.
- * Set @a display_original_in_conflict and @a display_resolved_conflicts
- * as desired.  Note that these options are mutually exclusive.
+ * @a conflict_style dictates how conflicts are displayed.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_diff_file_output_merge2(svn_stream_t *output_stream,
+                            svn_diff_t *diff,
+                            const char *original_path,
+                            const char *modified_path,
+                            const char *latest_path,
+                            const char *conflict_original,
+                            const char *conflict_modified,
+                            const char *conflict_latest,
+                            const char *conflict_separator,
+                            svn_diff_conflict_display_style_t conflict_style,
+                            apr_pool_t *pool);
+
+
+/** Similar to svn_diff_file_output_merge2, but with @a
+ * display_original_in_conflict and @a display_resolved_conflicts
+ * booleans instead of the @a conflict_style enum.
+ *
+ * If both booleans are false, acts like
+ * svn_diff_conflict_display_modified_latest; if @a
+ * display_original_in_conflict is true, acts like
+ * svn_diff_conflict_display_modified_original_latest; if @a
+ * display_resolved_conflicts is true, acts like
+ * svn_diff_conflict_display_resolved_modified_latest.  The booleans
+ * may not both be true.
+ *
+ * @deprecated Provided for backward compatibility with the 1.5 API.
  */
 svn_error_t *
 svn_diff_file_output_merge(svn_stream_t *output_stream,
@@ -623,11 +677,36 @@ svn_diff_mem_string_output_unified(svn_stream_t *output_stream,
  * @a conflict_latest and @a conflict_separator or the default one for
  * each of these if @c NULL is passed.
  *
- * Insert the original in the output if @a display_original_in_conflict
- * is @c TRUE.
+ * @a conflict_style dictates how conflicts are displayed.
  *
- * @note @a display_original_in_conflict and @a display_resolved_conflicts
- *       are mutually exclusive.
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_diff_mem_string_output_merge2(svn_stream_t *output_stream,
+                                  svn_diff_t *diff,
+                                  const svn_string_t *original,
+                                  const svn_string_t *modified,
+                                  const svn_string_t *latest,
+                                  const char *conflict_original,
+                                  const char *conflict_modified,
+                                  const char *conflict_latest,
+                                  const char *conflict_separator,
+                                  svn_diff_conflict_display_style_t style,
+                                  apr_pool_t *pool);
+
+/** Similar to svn_diff_mem_string_output_merge2, but with @a
+ * display_original_in_conflict and @a display_resolved_conflicts
+ * booleans instead of the @a conflict_style enum.
+ *
+ * If both booleans are false, acts like
+ * svn_diff_conflict_display_modified_latest; if @a
+ * display_original_in_conflict is true, acts like
+ * svn_diff_conflict_display_modified_original_latest; if @a
+ * display_resolved_conflicts is true, acts like
+ * svn_diff_conflict_display_resolved_modified_latest.  The booleans
+ * may not both be true.
+ *
+ * @deprecated Provided for backward compatibility with the 1.5 API.
  */
 svn_error_t *
 svn_diff_mem_string_output_merge(svn_stream_t *output_stream,
