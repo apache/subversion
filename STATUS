@@ -29,6 +29,14 @@ Candidate changes:
    Votes:
      +1: danielsh, hwright
 
+Status of 1.5.1:
+================
+
+Candidate changes:
+
+Approved changes (all releases):
+================================
+
  * r30852
    Fix test backported in r30838 but not adjusted to still use 1.5
    test suite API.
@@ -38,12 +46,4 @@ Candidate changes:
      If we roll another rc after rc4, it must include this backport.
      (The previous broken backport was not in rc4, though.)
    Votes:
-     +1: glasser, hwright
-
-Status of 1.5.1:
-================
-
-Candidate changes:
-
-Approved changes (all releases):
-================================
+     +1: glasser, hwright, lgo
