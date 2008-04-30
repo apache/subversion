@@ -47,9 +47,3 @@ Candidate changes:
 
 Approved changes (all releases):
 ================================
-
- * r30820
-   Fix pool issue which definitely can lead to assertion failures in
-   reintegrate, and quite possibly to other mergeinfo corruption.
-   Votes:
-     +1: glasser, epg, hwright
