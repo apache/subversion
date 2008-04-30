@@ -1433,15 +1433,11 @@ merge_dir_deleted(svn_wc_adm_access_t *adm_access,
     {
     case svn_node_dir:
       {
-        if (!entry || entry->schedule == svn_wc_schedule_delete)
+        if (entry && (entry->schedule != svn_wc_schedule_delete))
           {
-            SVN_ERR(tree_conflict(merge_b, adm_access, path,
-                                  svn_node_dir,
-                                  svn_wc_conflict_action_delete,
-                                  svn_wc_conflict_reason_deleted));
-          }
-        else
-          {
+            /* ### TODO: Before deleting, we should ensure that this dir
+               tree is equal to the one we're being asked to delete. */
+
             svn_path_split(path, &parent_path, NULL, subpool);
             SVN_ERR(svn_wc_adm_retrieve(&parent_access, adm_access, parent_path,
                                         subpool));
@@ -1462,6 +1458,15 @@ merge_dir_deleted(svn_wc_adm_access_t *adm_access,
                 if (state)
                   *state = svn_wc_notify_state_changed;
               }
+          }
+        else
+          {
+            /* Dir is already not under version control at this path. */
+            /* Raise a tree conflict. */
+            SVN_ERR(tree_conflict(merge_b, adm_access, path,
+                                  svn_node_dir,
+                                  svn_wc_conflict_action_delete,
+                                  svn_wc_conflict_reason_deleted));
           }
       }
       break;

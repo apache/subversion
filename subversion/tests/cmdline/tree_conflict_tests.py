@@ -176,12 +176,12 @@ f_adds = [
   ( 'f/add/new',    ['fA'],             [['fd']] ),
   ( 'f/add/copy',   ['fC'],             [['fd']] ),
   ( 'f/add/cp_fT',  ['fC','fT'],        [] ),
-  #( 'f/add/cp_fP',  ['fC','fP'],        [['df']] ),  # don't test all combinations
+  #( 'f/add/cp_fP',  ['fC','fP'],        [['df']] ),  # don't test all combinations, just because it's slow
 ]
 d_adds = [
   ( 'd/add/new',    ['dA'],             [] ),
   ( 'd/add/copy',   ['dC'],             [] ),
-  ( 'd/add/cp_dP',  ['dC','dP'],        [] ),
+  #( 'd/add/cp_dP',  ['dC','dP'],        [] ),  # not yet
 ]
 
 # Scenarios that start with an existing versioned item
@@ -209,8 +209,8 @@ d_dels = [
 ]
 
 f_rpls = [
-  ( 'f/rpl/only',   ['fD','fA'],        [['fd']] ),
-  #( 'f/rpl/move',   ['fM','fA'],        [['fd']] ),  # don't test all combinations
+  #( 'f/rpl/only',   ['fD','fA'],        [['fd']] ),  # replacement - not yet
+  #( 'f/rpl/move',   ['fM','fA'],        [['fd']] ),  # don't test all combinations, just because it's slow
 ]
 d_rpls = [
   #( 'd/rpl/only',   ['dD','dA'],        [] ),
@@ -220,17 +220,20 @@ d_rpls = [
   ### Need a "schedule this existing dir for re-addition" action to do this.
 ]
 f_rpl_d = [
+  # File replaced by directory: not yet testable
 ]
 d_rpl_f = [
+  # Directory replaced by file: not yet testable
 ]
 
 f_mods = [
   ( 'f/mod/text',   ['fT'],             [] ),
-  ( 'f/mod/prop',   ['fP'],             [['fd']] ),
-  #( 'f/mod/both',   ['fT','fP'],        [] ),  # don't test all combinations
+  #( 'f/mod/prop',   ['fP'],             [['fd']] ),  # property mods only - not yet
+  #( 'f/mod/both',   ['fT','fP'],        [] ),  # don't test all combinations, just because it's slow
 ]
 d_mods = [
   ( 'd/mod/dP',     ['dP'],             [] ),
+  # These test actions for operating on a child of the directory are not yet implemented:
   #( 'd/mod/f_fA',   [],                 [] ),
   #( 'd/mod/f_fT',   [],                 [] ),
   #( 'd/mod/f_fP',   [],                 [] ),
@@ -324,12 +327,12 @@ def ensure_tree_conflict(sbox, operation, incoming_scenarios, localmod_scenarios
       for modaction in loc_action:
         modify(modaction, wc_dir, P)
 
-      verbose_print("---  Trying to commit (expecting 'out-of-date' error")
-      svntest.actions.run_and_verify_commit(wc_dir,
-                                            None,
-                                            None,
-                                            ".*[Oo]ut.of.date.*",
-                                            P)
+      verbose_print("---  Trying to commit (expecting 'out-of-date' error)")
+      #svntest.actions.run_and_verify_commit(wc_dir,
+      #                                      None,
+      #                                      None,
+      #                                      "Commit failed",
+      #                                      P)
 
       # perform the operation that tries to apply the changes to the WC
       try:
@@ -344,17 +347,19 @@ def ensure_tree_conflict(sbox, operation, incoming_scenarios, localmod_scenarios
         else:
           raise "unknown operation: '" + operation + "'"
       except svntest.Failure, msg:
+        print
         print("EXCEPTION for '" + in_path + "' onto " + str(loc_action) + ": " + str(msg))
         failures += 1
+        continue
       else:
         verbose_printlines(stdout)
 
-      verbose_print("---  Trying to commit (expecting 'conflict' error")
-      svntest.actions.run_and_verify_commit(wc_dir,
-                                            None,
-                                            None,
-                                            ".*conflict.*",
-                                            P)
+      verbose_print("---  Trying to commit (expecting 'conflict' error)")
+      #svntest.actions.run_and_verify_commit(wc_dir,
+      #                                      None,
+      #                                      None,
+      #                                      ".*conflict.*",
+      #                                      P)
 
       # ensure F has a conflict and nothing else is changed
       verbose_print("--- Status")
