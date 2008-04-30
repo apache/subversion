@@ -1238,9 +1238,7 @@ rep_contents_clear(svn_fs_t *fs,
   if (str_key && *str_key)
     {
       SVN_ERR(svn_fs_bdb__string_clear(fs, str_key, trail, pool));
-      SVN_ERR(svn_checksum_dup(rep->checksum,
-                               svn_checksum_empty_checksum(rep->checksum->kind,
-                                                           pool)));
+      rep->checksum = NULL;
       SVN_ERR(svn_fs_bdb__write_rep(fs, rep_key, rep, trail, pool));
     }
   return SVN_NO_ERROR;
