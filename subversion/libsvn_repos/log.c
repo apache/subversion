@@ -1449,31 +1449,24 @@ svn_repos_get_logs4(svn_repos_t *repos,
       hist_end = start;
     }
 
-
-  /* If paths were specified, then we only really care about revisions
-     in which those paths were changed.  So we ask the filesystem for
-     all the revisions in which any of the paths was changed.
-
-     SPECIAL CASE: If we were given only path, and that path is empty,
-     then the results are the same as if we were passed no paths at
-     all.  Why?  Because the answer to the question "In which
-     revisions was the root of the filesystem changed?" is always
-     "Every single one of them."  And since this section of code is
-     only about answering that question, and we already know the
-     answer ... well, you get the picture.
-  */
   if (! paths)
     paths = apr_array_make(pool, 0, sizeof(const char *));
 
-  if ((! paths->nelts)
-      || (paths->nelts == 1 &&
-          svn_path_is_empty(APR_ARRAY_IDX(paths, 0, const char *))))
+  /* If we're not including merged revisions, and we were given no
+     paths or a single empty (or "/") path, then we can bypass a bunch
+     of complexity because we already know in which revisions the root
+     directory was changed -- all of them.  */
+  if ((! include_merged_revisions)
+      && ((! paths->nelts)
+          || ((paths->nelts == 1)
+              && (svn_path_is_empty(APR_ARRAY_IDX(paths, 0, const char *)) 
+                  || (strcmp(APR_ARRAY_IDX(paths, 0, const char *), 
+                             "/") == 0)))))
     {
       int send_count = 0;
       int i;
       apr_pool_t *iterpool = svn_pool_create(pool);
 
-      /* They want history for the root path, so every rev has a change. */
       send_count = hist_end - hist_start + 1;
       if (limit && send_count > limit)
         send_count = limit;
