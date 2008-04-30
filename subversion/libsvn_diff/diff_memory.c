@@ -599,8 +599,7 @@ typedef struct merge_output_baton_t
   const char *markers[4]; /* 0 = original, 1 = modified,
                              2 = separator, 3 = latest (end) */
 
-  svn_boolean_t display_original_in_conflict;
-  svn_boolean_t display_resolved_conflicts;
+  svn_diff_conflict_display_style_t conflict_style;
 } merge_output_baton_t;
 
 
@@ -674,24 +673,43 @@ output_conflict(void *baton,
 {
   merge_output_baton_t *btn = baton;
 
-  if (diff && btn->display_resolved_conflicts)
-    return svn_diff_output(diff, baton, &merge_output_vtable);
+  svn_diff_conflict_display_style_t style = btn->conflict_style;
 
-  SVN_ERR(output_merge_marker(btn, 1/*modified*/));
-  SVN_ERR(output_merge_token_range(btn, 1/*modified*/,
-                                   modified_start, modified_length));
-
-  if (btn->display_original_in_conflict)
+  if (style == svn_diff_conflict_display_resolved_modified_latest)
     {
-      SVN_ERR(output_merge_marker(btn, 0/*original*/));
-      SVN_ERR(output_merge_token_range(btn, 0/*modified*/,
-                                       original_start, original_length));
+      if (diff)
+        return svn_diff_output(diff, baton, &merge_output_vtable);
+      else
+        style = svn_diff_conflict_display_modified_latest;
     }
 
-  SVN_ERR(output_merge_marker(btn, 2/*separator*/));
-  SVN_ERR(output_merge_token_range(btn, 2/*latest*/,
-                                   latest_start, latest_length));
-  SVN_ERR(output_merge_marker(btn, 3/*latest (end)*/));
+  if (style == svn_diff_conflict_display_modified_latest ||
+      style == svn_diff_conflict_display_modified_original_latest)
+    {
+      SVN_ERR(output_merge_marker(btn, 1/*modified*/));
+      SVN_ERR(output_merge_token_range(btn, 1/*modified*/,
+                                       modified_start, modified_length));
+
+      if (style == svn_diff_conflict_display_modified_original_latest)
+        {
+          SVN_ERR(output_merge_marker(btn, 0/*original*/));
+          SVN_ERR(output_merge_token_range(btn, 0/*original*/,
+                                           original_start, original_length));
+        }
+
+      SVN_ERR(output_merge_marker(btn, 2/*separator*/));
+      SVN_ERR(output_merge_token_range(btn, 2/*latest*/,
+                                       latest_start, latest_length));
+      SVN_ERR(output_merge_marker(btn, 3/*latest (end)*/));
+    }
+  else if (style == svn_diff_conflict_display_modified)
+      SVN_ERR(output_merge_token_range(btn, 1/*modified*/,
+                                       modified_start, modified_length));
+  else if (style == svn_diff_conflict_display_latest)
+      SVN_ERR(output_merge_token_range(btn, 2/*latest*/,
+                                       latest_start, latest_length));
+  else /* unknown style */
+    abort();
 
   return SVN_NO_ERROR;
 }
@@ -722,18 +740,17 @@ detect_eol(svn_string_t *token)
 }
 
 svn_error_t *
-svn_diff_mem_string_output_merge(svn_stream_t *output_stream,
-                                 svn_diff_t *diff,
-                                 const svn_string_t *original,
-                                 const svn_string_t *modified,
-                                 const svn_string_t *latest,
-                                 const char *conflict_original,
-                                 const char *conflict_modified,
-                                 const char *conflict_latest,
-                                 const char *conflict_separator,
-                                 svn_boolean_t display_original_in_conflict,
-                                 svn_boolean_t display_resolved_conflicts,
-                                 apr_pool_t *pool)
+svn_diff_mem_string_output_merge2(svn_stream_t *output_stream,
+                                  svn_diff_t *diff,
+                                  const svn_string_t *original,
+                                  const svn_string_t *modified,
+                                  const svn_string_t *latest,
+                                  const char *conflict_original,
+                                  const char *conflict_modified,
+                                  const char *conflict_latest,
+                                  const char *conflict_separator,
+                                  svn_diff_conflict_display_style_t style,
+                                  apr_pool_t *pool)
 {
   merge_output_baton_t btn;
   const char *eol;
@@ -745,8 +762,7 @@ svn_diff_mem_string_output_merge(svn_stream_t *output_stream,
   fill_source_tokens(&(btn.sources[1]), modified, pool);
   fill_source_tokens(&(btn.sources[2]), latest, pool);
 
-  btn.display_original_in_conflict = display_original_in_conflict;
-  btn.display_resolved_conflicts = display_resolved_conflicts;
+  btn.conflict_style = style;
 
   if (btn.sources[1].tokens->nelts > 0)
     {
@@ -789,4 +805,40 @@ svn_diff_mem_string_output_merge(svn_stream_t *output_stream,
   SVN_ERR(svn_diff_output(diff, &btn, &merge_output_vtable));
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_diff_mem_string_output_merge(svn_stream_t *output_stream,
+                                 svn_diff_t *diff,
+                                 const svn_string_t *original,
+                                 const svn_string_t *modified,
+                                 const svn_string_t *latest,
+                                 const char *conflict_original,
+                                 const char *conflict_modified,
+                                 const char *conflict_latest,
+                                 const char *conflict_separator,
+                                 svn_boolean_t display_original_in_conflict,
+                                 svn_boolean_t display_resolved_conflicts,
+                                 apr_pool_t *pool)
+{
+  svn_diff_conflict_display_style_t style =
+    svn_diff_conflict_display_modified_latest;
+
+  if (display_resolved_conflicts)
+    style = svn_diff_conflict_display_resolved_modified_latest;
+
+  if (display_original_in_conflict)
+    style = svn_diff_conflict_display_modified_original_latest;
+
+  return svn_diff_mem_string_output_merge2(output_stream,
+                                           diff,
+                                           original,
+                                           modified,
+                                           latest,
+                                           conflict_original,
+                                           conflict_modified,
+                                           conflict_latest,
+                                           conflict_separator,
+                                           style,
+                                           pool);
 }
