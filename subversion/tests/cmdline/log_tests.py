@@ -1100,7 +1100,7 @@ def check_merge_results(log_chain, expected_merges):
 
 
 def merge_sensitive_log_single_revision(sbox):
-  "test sensitive log on a single revision"
+  "test 'svn log -g' on a single revision"
 
   merge_history_repos(sbox)
 
@@ -1112,28 +1112,45 @@ def merge_sensitive_log_single_revision(sbox):
   # Run the merge sensitive log, and compare results
   saved_cwd = os.getcwd()
 
+  expected_merges = {
+    14: [], 13 : [14], 12 : [14], 11 : [14, 12],
+    }
   os.chdir(TRUNK_path)
+  # First try a single rev using -rN
   exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                               'log', '-g',
                                                               '-r14')
 
 
   log_chain = parse_log_output(output)
-  expected_merges = {
-    14: [], 13 : [14], 12 : [14], 11 : [14, 12],
-    }
   check_merge_results(log_chain, expected_merges)
+  # Then try a single rev using --limit 1
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'log', '-g',
+                                                              '--limit', '1',
+                                                              '-r14:1')
 
+
+  log_chain = parse_log_output(output)
+  check_merge_results(log_chain, expected_merges)
   os.chdir(saved_cwd)
 
+  expected_merges = {
+      12: [], 11 : [12],
+    }
+  # First try a single rev using -rN
   exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                               'log', '-g',
                                                               '-r12',
                                                               BRANCH_B_path)
   log_chain = parse_log_output(output)
-  expected_merges = {
-      12: [], 11 : [12],
-    }
+  check_merge_results(log_chain, expected_merges)
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'log', '-g',
+                                                              '--limit', '1',
+                                                              '-r12:1',
+                                                              BRANCH_B_path)
+  log_chain = parse_log_output(output)
   check_merge_results(log_chain, expected_merges)
 
 
