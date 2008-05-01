@@ -63,12 +63,10 @@ svn_cl__accept_from_word(const char *word)
     return svn_cl__accept_base;
   if (strcmp(word, SVN_CL__ACCEPT_WORKING) == 0)
     return svn_cl__accept_working;
-#if 0 /* not yet implemented */
   if (strcmp(word, SVN_CL__ACCEPT_MINE_CONFLICT) == 0)
     return svn_cl__accept_mine_conflict;
   if (strcmp(word, SVN_CL__ACCEPT_THEIRS_CONFLICT) == 0)
     return svn_cl__accept_theirs_conflict;
-#endif /* 0 */
   if (strcmp(word, SVN_CL__ACCEPT_MINE_FULL) == 0)
     return svn_cl__accept_mine_full;
   if (strcmp(word, SVN_CL__ACCEPT_THEIRS_FULL) == 0)
@@ -396,9 +394,16 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
 
           prompt = apr_pstrdup(subpool, _("Select: (p) postpone"));
           if (diff_allowed)
-            prompt = apr_pstrcat(subpool, prompt,
-                                 _(", (df) diff-full, (e) edit"),
-                                 NULL);
+            {
+              prompt = apr_pstrcat(subpool, prompt,
+                                   _(", (df) diff-full, (e) edit"),
+                                   NULL);
+              if (! desc->is_binary)
+                prompt = apr_pstrcat(subpool, prompt,
+                                     _(", (mc) mine-conflict, "
+                                       "(tc) theirs-conflict"),
+                                     NULL);
+            }
           else
             prompt = apr_pstrcat(subpool, prompt,
                                  _(", (mf) mine-full, (tf) theirs-full"),
@@ -418,13 +423,17 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
               SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
               _("  (p)  postpone    - mark the conflict to be "
                 "resolved later\n"
-                "  (df) diff-full   - show all changes made to merged file\n"
-                "  (e)  edit        - change merged file in an editor\n"
-                "  (r)  resolved    - accept merged version of file\n"
-                "  (mf) mine-full   - accept my version of entire file "
+                "  (df) diff-full       - show all changes made to merged file\n"
+                "  (e)  edit            - change merged file in an editor\n"
+                "  (r)  resolved        - accept merged version of file\n"
+                "  (mf) mine-full       - accept my version of entire file "
                 "(ignore their changes)\n"
-                "  (tf) theirs-full - accept their version of entire file "
+                "  (tf) theirs-full     - accept their version of entire file "
                 "(lose my changes)\n"
+                "  (mc) mine-conflict   - accept my version for conflicts"
+                "(ignore edited file)\n"
+                "  (tc) theirs-conflict - accept their version for conflicts "
+                "(ignore edited file)\n"
                 "  (l)  launch      - launch external tool to "
                 "resolve conflict\n"
                 "  (s)  show all    - show this list\n\n")));
@@ -437,21 +446,29 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
             }
           else if (strcmp(answer, "mc") == 0)
             {
-              SVN_ERR(svn_cmdline_fprintf
-                      (stderr, subpool,
-                       _("Sorry, '(mc) mine for conflicts' "
-                         "is not yet implemented; see\n"
-        "http://subversion.tigris.org/issues/show_bug.cgi?id=3049\n\n")));
-              continue;
+              if (desc->is_binary)
+                {
+                  SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
+                                              _("Invalid option; cannot choose "
+                                                "based on conflicts in a "
+                                                "binary file.\n\n")));
+                  continue;
+                }
+              (*result)->choice = svn_wc_conflict_choose_mine_conflict;
+              break;
             }
           else if (strcmp(answer, "tc") == 0)
             {
-              SVN_ERR(svn_cmdline_fprintf
-                      (stderr, subpool,
-                       _("Sorry, '(tc) theirs for conflicts' "
-                         "is not yet implemented; see\n"
-        "http://subversion.tigris.org/issues/show_bug.cgi?id=3049\n\n")));
-              continue;
+              if (desc->is_binary)
+                {
+                  SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
+                                              _("Invalid option; cannot choose "
+                                                "based on conflicts in a "
+                                                "binary file.\n\n")));
+                  continue;
+                }
+              (*result)->choice = svn_wc_conflict_choose_theirs_conflict;
+              break;
             }
           else if (strcmp(answer, "mf") == 0)
             {
