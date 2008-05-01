@@ -514,8 +514,7 @@ get_combined_mergeinfo(svn_mergeinfo_t *combined_mergeinfo,
   svn_fs_root_t *root;
   apr_hash_index_t *hi;
   svn_mergeinfo_catalog_t tree_mergeinfo;
-  apr_pool_t *subpool = svn_pool_create(pool);
-  apr_pool_t *iterpool = svn_pool_create(subpool);
+  apr_pool_t *subpool, *iterpool;
   apr_array_header_t *query_paths;
   int i;
 
@@ -523,9 +522,11 @@ get_combined_mergeinfo(svn_mergeinfo_t *combined_mergeinfo,
   if (rev == 0)
     {
       *combined_mergeinfo = apr_hash_make(pool);
-      svn_pool_destroy(subpool);
       return SVN_NO_ERROR;
     }
+
+  subpool = svn_pool_create(pool);
+  iterpool = svn_pool_create(subpool);
 
   /* Get the mergeinfo for each tree roots in PATHS. */
   SVN_ERR(svn_fs_revision_root(&root, fs, rev, subpool));
@@ -563,8 +564,7 @@ get_combined_mergeinfo(svn_mergeinfo_t *combined_mergeinfo,
      paths and the log messages when we go to fill the log entry.  See
      fill_log_entry() for details. */
   SVN_ERR(svn_fs_get_mergeinfo(&tree_mergeinfo, root, query_paths,
-                               svn_mergeinfo_inherited, TRUE,
-                               subpool));
+                               svn_mergeinfo_inherited, TRUE, subpool));
 
   *combined_mergeinfo = apr_hash_make(subpool);
 
