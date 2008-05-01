@@ -431,7 +431,7 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                 "(ignore their changes)\n"
                 "  (tf) theirs-full     - accept their version of entire file "
                 "(lose my changes)\n"
-                "  (mc) mine-conflict   - accept my version for conflicts"
+                "  (mc) mine-conflict   - accept my version for conflicts "
                 "(ignore edited file)\n"
                 "  (tc) theirs-conflict - accept their version for conflicts "
                 "(ignore edited file)\n"
