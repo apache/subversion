@@ -27,6 +27,14 @@ Candidate changes:
    Votes:
      pburba
 
+ * r30746, r30747
+   Fix a minor merge range notification header bug.
+   Notes:
+     r30747 is just cleanup of some cruft that snuck in with r30746,
+     thus adhering to my "every commit should need a follow-up" ethos.
+   Votes:
+     pburba
+
 Status of 1.5.1:
 ================
 
