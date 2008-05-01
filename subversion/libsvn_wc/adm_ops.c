@@ -2639,35 +2639,39 @@ resolve_conflict_on_entry(const char *path,
   svn_boolean_t was_present, need_feedback = FALSE;
   apr_uint64_t modify_flags = 0;
   svn_wc_entry_t *entry = svn_wc_entry_dup(orig_entry, pool);
-  const char *auto_resolve_src;
 
-  /* Handle automatic conflict resolution before the temporary files are
-   * deleted, if necessary. */
-  switch (conflict_choice)
+  if (resolve_text)
     {
-    case svn_wc_conflict_choose_base:
-      auto_resolve_src = entry->conflict_old;
-      break;
-    case svn_wc_conflict_choose_mine_full:
-      auto_resolve_src = entry->conflict_wrk;
-      break;
-    case svn_wc_conflict_choose_theirs_full:
-      auto_resolve_src = entry->conflict_new;
-      break;
-    case svn_wc_conflict_choose_merged:
-      auto_resolve_src = NULL;
-      break;
-    /** ### TODO(glasser): support mc/tc!! */
-    default:
-      return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
-                              _("Invalid 'conflict_result' argument"));
-    }
+      const char *auto_resolve_src;
 
-  if (auto_resolve_src)
-    SVN_ERR(svn_io_copy_file(
-      svn_path_join(svn_wc_adm_access_path(conflict_dir), auto_resolve_src,
-                    pool),
-      path, TRUE, pool));
+      /* Handle automatic conflict resolution before the temporary files are
+       * deleted, if necessary. */
+      switch (conflict_choice)
+        {
+        case svn_wc_conflict_choose_base:
+          auto_resolve_src = entry->conflict_old;
+          break;
+        case svn_wc_conflict_choose_mine_full:
+          auto_resolve_src = entry->conflict_wrk;
+          break;
+        case svn_wc_conflict_choose_theirs_full:
+          auto_resolve_src = entry->conflict_new;
+          break;
+        case svn_wc_conflict_choose_merged:
+          auto_resolve_src = NULL;
+          break;
+          /** ### TODO(glasser): support mc/tc!! */
+        default:
+          return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
+                                  _("Invalid 'conflict_result' argument"));
+        }
+
+      if (auto_resolve_src)
+        SVN_ERR(svn_io_copy_file(
+          svn_path_join(svn_wc_adm_access_path(conflict_dir), auto_resolve_src,
+                        pool),
+          path, TRUE, pool));
+    }
 
   /* Yes indeed, being able to map a function over a list would be nice. */
   if (resolve_text && entry->conflict_old)
