@@ -2657,6 +2657,7 @@ resolve_conflict_on_entry(const char *path,
     case svn_wc_conflict_choose_merged:
       auto_resolve_src = NULL;
       break;
+    /** ### TODO(glasser): support mc/tc!! */
     default:
       return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
                               _("Invalid 'conflict_result' argument"));

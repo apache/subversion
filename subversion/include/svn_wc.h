@@ -1229,6 +1229,10 @@ svn_wc_create_conflict_result(svn_wc_conflict_choice_t choice,
  * finished, the callback signals its resolution by returning a
  * structure in @a *result.  (See @c svn_wc_conflict_result_t.)
  *
+ * The values @c svn_wc_conflict_choose_mine_conflict and @c
+ * svn_wc_conflict_choose_theirs_conflict are not legal for conflicts
+ * in binary files.
+ *
  * Implementations of this callback are free to present the conflict
  * using any user interface.  This may include simple contextual
  * conflicts in a file's text or properties, or more complex
@@ -2944,12 +2948,9 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
  * @c svn_wc_conflict_choose_merged, don't change the contents at all,
  * just remove the conflict status, which is the pre-1.5 behavior.
  *
- * (@c svn_wc_conflict_choose_theirs_conflict and
- * @c svn_wc_conflict_choose_mine_conflict are not yet implemented;
- * the effect of passing one of those values as @a conflict_choice is
- * currently undefined, which may or may not be an underhanded way of
- * allowing real behaviors to be added for them later without revving
- * this interface.)
+ * @c svn_wc_conflict_choose_theirs_conflict and @c
+ * svn_wc_conflict_choose_mine_conflict are not legal for binary
+ * files.
  *
  * @a adm_access is an access baton, with a write lock, for @a path.
  *
