@@ -98,8 +98,15 @@ svn_error_t *load_configs(svn_config_t **cfg,
       /* Because it may be possible to read the pwdb file with some
        * access methods and not others, ignore errors reading the pwdb
        * file and just don't present password authentication as an
-       * option.  TODO: Log a warning in this case, when we have a way
-       * of doing logging. */
+       * option.  Also, some authentications (e.g. --tunnel) can
+       * proceed without it anyway.
+       *
+       * ### Not entirely sure why SVN_ERR_BAD_FILENAME is checked
+       * ### for here.  That seems to have been introduced in r16840,
+       * ### and only in r30868 was the APR_EACCES check introduced.
+       *
+       * TODO: Log a warning in this case, when we have a way of doing logging.
+       */
       err = svn_config_read(pwdb, pwdb_path, TRUE, pool);
       if (err
           && (err->apr_err == SVN_ERR_BAD_FILENAME
