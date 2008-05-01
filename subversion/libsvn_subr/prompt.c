@@ -86,6 +86,9 @@ prompt(const char **result,
        svn_cmdline_prompt_baton2_t *pb,
        apr_pool_t *pool)
 {
+  /* XXX: If this functions ever starts using members of *pb
+   * which were not included in svn_cmdline_prompt_baton_t,
+   * we need to update svn_cmdline_prompt_user2 and its callers. */
   apr_status_t status;
   apr_file_t *fp;
   char c;
@@ -419,12 +422,12 @@ svn_cmdline_auth_plaintext_prompt(svn_boolean_t *may_save_plaintext,
           else
             return err;
         }
-      if (svn_cstring_casecmp(answer, _("yes")) == 0)
+      if (apr_strnatcasecmp(answer, _("yes")) == 0)
         {
           *may_save_plaintext = TRUE;
           answered = TRUE;
         }
-      else if (svn_cstring_casecmp(answer, _("no")) == 0)
+      else if (apr_strnatcasecmp(answer, _("no")) == 0)
         {
           *may_save_plaintext = FALSE;
           answered = TRUE;

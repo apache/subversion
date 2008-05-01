@@ -152,8 +152,8 @@ typedef struct svn_cmdline_prompt_baton2_t {
   const char *config_dir;
 } svn_cmdline_prompt_baton2_t;
 
-/** A cancellation function/baton pair to be passed as the baton argument
- * to the @c svn_cmdline_*_prompt functions.
+/** Like svn_cmdline_prompt_baton2_t, but without the path to the
+ * configuration directory.
  *
  * @since New in 1.4.
  * @deprecated Provided for backward compatibility with the 1.5 API.
@@ -267,8 +267,7 @@ svn_cmdline_auth_ssl_client_cert_pw_prompt
    apr_pool_t *pool);
 
 /** An implementation of @c svn_auth_plaintext_prompt_func_t that
- * prompts the user whether storing unencypted passwords to disk
- * is OK on the command line.
+ * prompts the user whether storing unencypted passwords to disk is OK.
  *
  * @since New in 1.6.
  */

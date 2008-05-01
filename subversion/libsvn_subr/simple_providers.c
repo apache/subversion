@@ -297,50 +297,68 @@ simple_save_creds_helper(svn_boolean_t *saved,
           if (svn_cstring_casecmp(store_plaintext_passwords,
                                   SVN_CONFIG_ASK) == 0)
             {
-              svn_boolean_t *cached_answer;
-
-              /* TODO: We might want to default to not storing if the
-               * prompt callback is NULL, i.e. have may_save_password
-               * default to FALSE here, in order to force clients to
-               * implement the callback.
-               *
-               * This would change the semantics of the old API though.
-               *
-               * So for now, clients that don't implement the callback
-               * and provide no explicit value for
-               * SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS
-               * cause unencrypted passwords to be stored by default.
-               * Needless to say, our own client is sane, but who knows
-               * what other clients are doing.
-               */
-              may_save_password = TRUE;
-              
-              cached_answer = apr_hash_get(b->plaintext_answers,
-                                           realmstring,
-                                           APR_HASH_KEY_STRING);
-              if (cached_answer)
+              if (non_interactive)
+                /* In non-interactive mode, the default behaviour is
+                 * to not store the password, because it is usually
+                 * passed on the command line. */
+                may_save_password = FALSE;
+              else if (b->plaintext_prompt_func)
                 {
-                  may_save_password = *cached_answer;
+                  /* We're interactive, and the client provided a
+                   * prompt callback. So we can ask the user.
+                   *
+                   * Check for a cached answer before prompting. */
+                  svn_boolean_t *cached_answer;
+                  cached_answer = apr_hash_get(b->plaintext_answers,
+                                               realmstring,
+                                               APR_HASH_KEY_STRING);
+                  if (cached_answer)
+                    may_save_password = *cached_answer;
+                  else
+                    {
+                      /* Nothing cached for this realm, prompt the user. */
+                      SVN_ERR((*b->plaintext_prompt_func)(&may_save_password,
+                                                          realmstring,
+                                                          b->prompt_baton,
+                                                          pool));
+
+                      /* Cache the user's answer in case we're called again
+                       * for the same realm.
+                       *
+                       * XXX: Hopefully, our caller has passed us
+                       * a pool that survives across RA sessions!
+                       * We use that pool to cache user answers, and
+                       * we may be called again for the same realm when the
+                       * current RA session is reparented, or when a different
+                       * RA session using the same realm is opened.
+                       * If the pool does not survive until then, caching
+                       * won't work, and for some reason the call to
+                       * apr_hash_set() below may even end up crashing in
+                       * apr_palloc().
+                       */
+                      cached_answer = apr_palloc(pool, sizeof(svn_boolean_t));
+                      *cached_answer = may_save_password;
+                      apr_hash_set(b->plaintext_answers, realmstring,
+                                   APR_HASH_KEY_STRING, cached_answer);
+                    }
                 }
               else
                 {
-                  if (non_interactive)
-                    /* In non-interactive mode, the default behaviour is
-                     * to not store the password, because it is usually
-                     * passed on the command line. */
-                    may_save_password = FALSE;
-                  else if (b->plaintext_prompt_func)
-                    SVN_ERR((*b->plaintext_prompt_func)(&may_save_password,
-                                                        realmstring,
-                                                        b->prompt_baton,
-                                                        pool));
-
-                  /* Cache the user's answer in case we're called again
-                   * for the same realm. */
-                  cached_answer = apr_palloc(pool, sizeof(svn_boolean_t));
-                  *cached_answer = may_save_password;
-                  apr_hash_set(b->plaintext_answers, realmstring,
-                               APR_HASH_KEY_STRING, cached_answer);
+                  /* TODO: We might want to default to not storing if the
+                   * prompt callback is NULL, i.e. have may_save_password
+                   * default to FALSE here, in order to force clients to
+                   * implement the callback.
+                   *
+                   * This would change the semantics of old API though.
+                   *
+                   * So for now, clients that don't implement the callback
+                   * and provide no explicit value for
+                   * SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS
+                   * cause unencrypted passwords to be stored by default.
+                   * Needless to say, our own client is sane, but who knows
+                   * what other clients are doing.
+                   */
+                  may_save_password = TRUE;
                 }
             }
           else if (svn_cstring_casecmp(store_plaintext_passwords,
