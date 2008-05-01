@@ -39,6 +39,7 @@ Candidate changes:
      should be trivial / non-controversial, but as epg's logging
      changes involved some block rearrangement, the merge adjustments
      will be textually larger than one might expect.  Caveat Codor.
+   Branch: 1.5.x-r30868
    Votes:
      +1: danielsh, kfogel
 
