@@ -2663,11 +2663,11 @@ resolve_conflict_on_entry(const char *path,
                               _("Invalid 'conflict_result' argument"));
     }
 
-    if (auto_resolve_src)
-      SVN_ERR(svn_io_copy_file(
-        svn_path_join(svn_wc_adm_access_path(conflict_dir), auto_resolve_src,
-                      pool),
-        path, TRUE, pool));
+  if (auto_resolve_src)
+    SVN_ERR(svn_io_copy_file(
+      svn_path_join(svn_wc_adm_access_path(conflict_dir), auto_resolve_src,
+                    pool),
+      path, TRUE, pool));
 
   /* Yes indeed, being able to map a function over a list would be nice. */
   if (resolve_text && entry->conflict_old)
