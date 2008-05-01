@@ -106,7 +106,8 @@ Valid options:
   --ignore-externals       : ignore externals definitions
   --force                  : force operation to run
   --accept ARG             : specify automatic conflict resolution action
-                            ('postpone', 'base', 'mine-full', 'theirs-full',
+                            ('postpone', 'base', 'mine-conflict',
+                             'theirs-conflict', 'mine-full', 'theirs-full',
                              'edit', 'launch')
 
 Global options:
