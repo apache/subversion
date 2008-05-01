@@ -41,7 +41,7 @@ Candidate changes:
      r30896 was a bad attempt, but required for r30905 to apply
      cleanly.
    Votes:
-     +1: glasser
+     +1: glasser, markphip
 
  * r30907
    Fix the 'log --limit' compatability code in ra_svn, ra_serf, and ra_neon
