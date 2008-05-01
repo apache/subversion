@@ -9,25 +9,44 @@ Status of 1.5.0:
 
 Candidate changes:
 
- * r30843
-   Fix abort in ra_serf when server sends invalid xml during replay.
-   Votes:
-     +1: lgo, kfogel
-
- * r30844
-   Mark two tests as requiring server mergeinfo support.
-   Votes:
-     +1: glasser, hwright, kfogel
-
  * r30643, r30653, r30785
    Update bash completion script.
    Votes:
      +1: arfrever, stylesen
 
+Status of 1.5.1:
+================
+
+Candidate changes:
+
+Approved changes (all releases):
+================================
+
  * r30842
    Improve error message when 'http-library' config value is unknown.
    Votes:
-     +1: danielsh, hwright, kfogel
+     +1: danielsh, hwright, kfogel, arfrever
+
+ * r30843
+   Fix abort in ra_serf when server sends invalid xml during replay.
+   Votes:
+     +1: lgo, kfogel, arfrever
+
+ * r30844
+   Mark two tests as requiring server mergeinfo support.
+   Votes:
+     +1: glasser, hwright, kfogel, arfrever
+
+ * r30852
+   Fix test backported in r30838 but not adjusted to still use 1.5
+   test suite API.
+   Branch:
+     1.5.x-tests-pass
+   Notes:
+     If we roll another rc after rc4, it must include this backport.
+     (The previous broken backport was not in rc4, though.)
+   Votes:
+     +1: glasser, hwright, lgo
 
  * r30868, r30871
    In svnserve, tolerate unreadable passwd files.
@@ -41,23 +60,4 @@ Candidate changes:
      will be textually larger than one might expect.  Caveat Codor.
    Branch: 1.5.x-r30868
    Votes:
-     +1: danielsh, kfogel
-
-Status of 1.5.1:
-================
-
-Candidate changes:
-
-Approved changes (all releases):
-================================
-
- * r30852
-   Fix test backported in r30838 but not adjusted to still use 1.5
-   test suite API.
-   Branch:
-     1.5.x-tests-pass
-   Notes:
-     If we roll another rc after rc4, it must include this backport.
-     (The previous broken backport was not in rc4, though.)
-   Votes:
-     +1: glasser, hwright, lgo
+     +1: danielsh, kfogel, arfrever
