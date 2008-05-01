@@ -29,7 +29,7 @@ Candidate changes:
    Votes:
      +1: danielsh, hwright, kfogel
 
- * r30868
+ * r30868, r30871
    In svnserve, tolerate unreadable passwd files.
    Justification:
      Don't error over svn+ssh:// when the user can't read passwd.
@@ -41,7 +41,8 @@ Candidate changes:
      will be textually larger than one might expect.  Caveat Codor.
    Branch: 1.5.x-r30868
    Votes:
-     +1: danielsh, kfogel
+     +1: danielsh
+     +1: kfogel (r30868 only)
 
 Status of 1.5.1:
 ================
