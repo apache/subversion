@@ -35,6 +35,14 @@ Candidate changes:
    Votes:
      pburba
 
+ * r30896, r30905
+   Make Cyrus SASL client support DIGEST-MD5 (at the very least).
+   Notes:
+     r30896 was a bad attempt, but required for r30905 to apply
+     cleanly.
+   Votes:
+     +1: glasser
+
 Status of 1.5.1:
 ================
 
