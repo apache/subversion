@@ -22,11 +22,6 @@ Candidate changes:
 Approved changes (all releases):
 ================================
 
- * r30842
-   Improve error message when 'http-library' config value is unknown.
-   Votes:
-     +1: danielsh, hwright, kfogel, arfrever
-
  * r30843
    Fix abort in ra_serf when server sends invalid xml during replay.
    Votes:
