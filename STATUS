@@ -35,11 +35,6 @@ Candidate changes:
 Approved changes (all releases):
 ================================
 
- * r30843
-   Fix abort in ra_serf when server sends invalid xml during replay.
-   Votes:
-     +1: lgo, kfogel, arfrever
-
  * r30852
    Fix test backported in r30838 but not adjusted to still use 1.5
    test suite API.

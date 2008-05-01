@@ -116,6 +116,9 @@ typedef struct {
   apr_hash_t *revs_props;
   apr_hash_t *props;
 
+  /* Keep a reference to the XML parser ctx to report any errors. */
+  svn_ra_serf__xml_parser_t *parser_ctx;
+
 } replay_context_t;
 
 
@@ -693,6 +696,7 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
       svn_ra_serf__list_t *done_list;
       svn_ra_serf__list_t *done_reports = NULL;
       replay_context_t *replay_ctx;
+      int status_code;
 
       /* Send pending requests, if any. Limit the number of outstanding 
          requests to MAX_OUTSTANDING_REQUESTS. */
@@ -746,11 +750,15 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
           parser_ctx->start = start_replay;
           parser_ctx->end = end_replay;
           parser_ctx->cdata = cdata_replay;
+          parser_ctx->status_code = &status_code;
           parser_ctx->done = &replay_ctx->done;
           parser_ctx->done_list = &done_reports;
           parser_ctx->done_item = &replay_ctx->done_item;
           handler->response_handler = svn_ra_serf__handle_xml_parser;
           handler->response_baton = parser_ctx;
+
+          /* This is only needed to handle errors during XML parsing. */
+          replay_ctx->parser_ctx = parser_ctx;
 
           svn_ra_serf__request_create(handler);
 
@@ -763,14 +771,6 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
          responses to receive, so we have to be careful on our bookkeeping. */
       status = serf_context_run(session->context, SERF_DURATION_FOREVER, 
                                 pool);
-      if (status)
-        {
-          SVN_ERR(session->pending_error);
-
-          return svn_error_wrap_apr(status, 
-                                    _("Error retrieving replay REPORT (%d)"),
-                                    status);
-        }
 
       /* Substract the number of completely handled responses from our 
          total nr. of open requests', so we'll know when to stop this loop.
@@ -779,9 +779,26 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
       while (done_list)
         {
           replay_context_t *ctx = (replay_context_t *)done_list->data;
+          svn_ra_serf__xml_parser_t *parser_ctx = ctx->parser_ctx;
+          if (parser_ctx->error)
+            {
+              svn_error_clear(session->pending_error);
+              session->pending_error = SVN_NO_ERROR;
+              SVN_ERR(parser_ctx->error);
+            }
+
           done_list = done_list->next;
           svn_pool_destroy(ctx->pool);
           active_reports--;
+        }
+
+      if (status)
+        {
+          SVN_ERR(session->pending_error);
+
+          return svn_error_wrap_apr(status, 
+                                    _("Error retrieving replay REPORT (%d)"),
+                                    status);
         }
       done_reports = NULL;
     }
