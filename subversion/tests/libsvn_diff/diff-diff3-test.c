@@ -1721,10 +1721,6 @@ test_three_way_merge_conflict_styles(const char **msg,
                                      svn_test_opts_t *opts,
                                      apr_pool_t *pool)
 {
-  *msg = "3-way merge with conflict styles";
-  if (msg_only)
-    return SVN_NO_ERROR;
-
   static const char *original =
     "a\n"
     "b\n"
@@ -1819,6 +1815,11 @@ test_three_way_merge_conflict_styles(const char **msg,
      'k' through 'o'; and they both inserted "hello world yay" in the
      middle.  Also, there are non-conflicting changes to the first and
      last lines. */
+
+  *msg = "3-way merge with conflict styles";
+  if (msg_only)
+    return SVN_NO_ERROR;
+
 
   SVN_ERR(three_way_merge("style-normal1", "style-normal2", "style-normal3",
                           original, modified, latest,
