@@ -398,7 +398,8 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
               prompt = apr_pstrcat(subpool, prompt,
                                    _(", (df) diff-full, (e) edit"),
                                    NULL);
-              if (! desc->is_binary)
+              if (! desc->is_binary &&
+                  desc->kind != svn_wc_conflict_kind_property)
                 prompt = apr_pstrcat(subpool, prompt,
                                      _(", (mc) mine-conflict, "
                                        "(tc) theirs-conflict"),
@@ -454,6 +455,15 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                                                 "binary file.\n\n")));
                   continue;
                 }
+              else if (desc->kind == svn_wc_conflict_kind_property)
+                {
+                  SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
+                                              _("Invalid option; cannot choose "
+                                                "based on conflicts for "
+                                                "properties.\n\n")));
+                  continue;
+                }
+
               (*result)->choice = svn_wc_conflict_choose_mine_conflict;
               break;
             }
@@ -465,6 +475,14 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                                               _("Invalid option; cannot choose "
                                                 "based on conflicts in a "
                                                 "binary file.\n\n")));
+                  continue;
+                }
+              else if (desc->kind == svn_wc_conflict_kind_property)
+                {
+                  SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
+                                              _("Invalid option; cannot choose "
+                                                "based on conflicts for "
+                                                "properties.\n\n")));
                   continue;
                 }
               (*result)->choice = svn_wc_conflict_choose_theirs_conflict;

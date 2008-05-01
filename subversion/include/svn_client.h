@@ -2903,7 +2903,7 @@ svn_client_resolved(const char *path,
  *
  * @c svn_wc_conflict_choose_theirs_conflict and @c
  * svn_wc_conflict_choose_mine_conflict are not legal for binary
- * files.
+ * files or properties.
  *
  * If @a path is not in a state of conflict to begin with, do nothing.
  * If @a path's conflict state is removed and @a ctx->notify_func2 is non-NULL,

@@ -1231,7 +1231,7 @@ svn_wc_create_conflict_result(svn_wc_conflict_choice_t choice,
  *
  * The values @c svn_wc_conflict_choose_mine_conflict and @c
  * svn_wc_conflict_choose_theirs_conflict are not legal for conflicts
- * in binary files.
+ * in binary files or properties.
  *
  * Implementations of this callback are free to present the conflict
  * using any user interface.  This may include simple contextual
@@ -2950,7 +2950,7 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
  *
  * @c svn_wc_conflict_choose_theirs_conflict and @c
  * svn_wc_conflict_choose_mine_conflict are not legal for binary
- * files.
+ * files or properties.
  *
  * @a adm_access is an access baton, with a write lock, for @a path.
  *
