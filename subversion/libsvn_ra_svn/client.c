@@ -1240,6 +1240,7 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
   svn_ra_svn_conn_t *conn = sess_baton->conn;
   apr_pool_t *subpool;
   int i;
+  int nest_level = 0;
   const char *path, *cpath, *action, *copy_path;
   svn_string_t *author, *date, *message;
   svn_ra_svn_item_t *item, *elt;
@@ -1353,7 +1354,7 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
       else
         cphash = NULL;
 
-      if (! (limit && ++nreceived > limit))
+      if (! (limit && (nest_level == 0) && (++nreceived > limit)))
         {
           log_entry = svn_log_entry_create(subpool);
 
@@ -1396,6 +1397,15 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
                 }
             }
           SVN_ERR(receiver(receiver_baton, log_entry, subpool));
+          if (log_entry->has_children)
+            {
+              nest_level++;
+            }
+          if (! SVN_IS_VALID_REVNUM(log_entry->revision))
+            {
+              assert(nest_level);
+              nest_level--;
+            }
         }
       svn_pool_clear(subpool);
     }
