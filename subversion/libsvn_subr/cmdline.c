@@ -474,7 +474,8 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
 
   /* Determine whether storing passwords in any form is allowed.
    * This is the deprecated location for this option, the new
-   * location is SVN_CONFIG_CATEGORY_SERVERS. */
+   * location is SVN_CONFIG_CATEGORY_SERVERS. The RA layer may
+   * override the value we set here. */
   SVN_ERR(svn_config_get_bool(cfg, &store_password_val,
                               SVN_CONFIG_SECTION_AUTH,
                               SVN_CONFIG_OPTION_STORE_PASSWORDS,
@@ -485,7 +486,8 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
 
   /* Determine whether we are allowed to write to the auth/ area.
    * This is the deprecated location for this option, the new
-   * location is SVN_CONFIG_CATEGORY_SERVERS. */
+   * location is SVN_CONFIG_CATEGORY_SERVERS. The RA layer may
+   * override the value we set here. */
   SVN_ERR(svn_config_get_bool(cfg, &store_auth_creds_val,
                               SVN_CONFIG_SECTION_AUTH,
                               SVN_CONFIG_OPTION_STORE_AUTH_CREDS,

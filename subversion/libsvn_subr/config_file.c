@@ -900,8 +900,8 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### The commented-out examples below are intended to demonstrate"   NL
         "### how to use this file."                                          NL
         ""                                                                   NL
-        "[auth]"                                                             NL
         "### Section for authentication and authorization customizations."   NL
+        "[auth]"                                                             NL
         "###"                                                                NL
         "### NOTE: The auth section in this file has been deprecated."       NL
         "### Both 'store-passwords' and 'store-auth-creds' can now be"       NL

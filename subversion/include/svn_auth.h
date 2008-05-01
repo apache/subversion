@@ -471,7 +471,10 @@ typedef svn_error_t *(*svn_auth_ssl_client_cert_pw_prompt_func_t)
  * All allocations should be done in @a pool.
  *
  * This callback is called only once per authentication realm,
- * not once per RA session.
+ * not once per RA session. This means that clients implementing
+ * this callback must make sure that the pool passed to any
+ * implementation of save_credentials (part of svn_auth_provider_t)
+ * survives across RA sessions.
  *
  * If this callback is NULL it is not called. This matches the
  * deprecated behaviour of storing unencrypted passwords by default,
@@ -561,7 +564,7 @@ const void * svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
 
 /** @brief Indicates whether providers may save passwords to disk in
  * plaintext. Property value can be either SVN_CONFIG_TRUE,
- * SVN_CONFIG_FALSE, or SVN_CONFIG_PROMPT. */
+ * SVN_CONFIG_FALSE, or SVN_CONFIG_ASK. */
 #define SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS  SVN_AUTH_PARAM_PREFIX \
                                                   "store-plaintext-passwords"
 
@@ -628,7 +631,7 @@ svn_error_t * svn_auth_next_credentials(void **credentials,
  *
  * Ask @a state to store the most recently returned credentials,
  * presumably because they successfully authenticated.
- * All allocations should be done in @a pool, which can be
+ * All allocations should be done in @a pool, which is
  * assumed to survive across RA sessions; auth providers that store
  * passwords in plaintext rely on this.
  *
