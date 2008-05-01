@@ -43,6 +43,12 @@ Candidate changes:
    Votes:
      +1: glasser
 
+ * r30907
+   Fix the 'log --limit' compatability code in ra_svn, ra_serf, and ra_neon
+   to ignore nested logs when in '-g' mode.  (Issue #3185.)
+   Votes:
+     +1: cmpilato
+
 Status of 1.5.1:
 ================
 
