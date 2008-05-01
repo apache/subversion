@@ -1529,7 +1529,7 @@ filter_merged_revisions(apr_array_header_t **remaining_ranges,
           SVN_ERR(svn_rangelist_reverse(requested_merge, pool));
           SVN_ERR(svn_rangelist_intersect(remaining_ranges,
                                           target_rangelist,
-                                          requested_merge, pool));
+                                          requested_merge, FALSE, pool));
           SVN_ERR(svn_rangelist_reverse(*remaining_ranges, pool));
         }
       else
@@ -3445,10 +3445,10 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                       svn_mergeinfo_t mergeinfo;
                       SVN_ERR(svn_client__get_wc_mergeinfo
                               (&mergeinfo, &inherited, FALSE,
-                               svn_mergeinfo_nearest_ancestor,
-                               entry, child_of_noninheritable->path,
-                               merge_cmd_baton->target, NULL, adm_access,
-                               merge_cmd_baton->ctx, iterpool));
+                        svn_mergeinfo_nearest_ancestor,
+                        entry, child_of_noninheritable->path,
+                        merge_cmd_baton->target, NULL, adm_access,
+                        merge_cmd_baton->ctx, iterpool));
 
                       SVN_ERR(svn_client__record_wc_mergeinfo(
                         child_of_noninheritable->path, mergeinfo, adm_access,
