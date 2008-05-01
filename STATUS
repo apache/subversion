@@ -32,11 +32,6 @@ Approved changes (all releases):
    Votes:
      +1: lgo, kfogel, arfrever
 
- * r30844
-   Mark two tests as requiring server mergeinfo support.
-   Votes:
-     +1: glasser, hwright, kfogel, arfrever
-
  * r30852
    Fix test backported in r30838 but not adjusted to still use 1.5
    test suite API.
