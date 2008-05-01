@@ -3445,10 +3445,10 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                       svn_mergeinfo_t mergeinfo;
                       SVN_ERR(svn_client__get_wc_mergeinfo
                               (&mergeinfo, &inherited, FALSE,
-                        svn_mergeinfo_nearest_ancestor,
-                        entry, child_of_noninheritable->path,
-                        merge_cmd_baton->target, NULL, adm_access,
-                        merge_cmd_baton->ctx, iterpool));
+                               svn_mergeinfo_nearest_ancestor,
+                               entry, child_of_noninheritable->path,
+                               merge_cmd_baton->target, NULL, adm_access,
+                               merge_cmd_baton->ctx, iterpool));
 
                       SVN_ERR(svn_client__record_wc_mergeinfo(
                         child_of_noninheritable->path, mergeinfo, adm_access,
