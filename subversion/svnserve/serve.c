@@ -101,8 +101,12 @@ svn_error_t *load_configs(svn_config_t **cfg,
        * option.  TODO: Log a warning in this case, when we have a way
        * of doing logging. */
       err = svn_config_read(pwdb, pwdb_path, TRUE, pool);
-      if (err && err->apr_err == SVN_ERR_BAD_FILENAME)
-        svn_error_clear(err);
+      if (err
+          && (err->apr_err == SVN_ERR_BAD_FILENAME
+              || APR_STATUS_IS_EACCES(err->apr_err)))
+        {
+          svn_error_clear(err);
+        }
       else if (err)
         return err;
     }
