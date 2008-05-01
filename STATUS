@@ -50,17 +50,3 @@ Approved changes (all releases):
      (The previous broken backport was not in rc4, though.)
    Votes:
      +1: glasser, hwright, lgo
-
- * r30868, r30871
-   In svnserve, tolerate unreadable passwd files.
-   Justification:
-     Don't error over svn+ssh:// when the user can't read passwd.
-     One-line change.
-   Notes: epg points out that this may not apply cleanly due to
-     svnserve logging changes on trunk.  The necessary adjustments
-     should be trivial / non-controversial, but as epg's logging
-     changes involved some block rearrangement, the merge adjustments
-     will be textually larger than one might expect.  Caveat Codor.
-   Branch: 1.5.x-r30868
-   Votes:
-     +1: danielsh, kfogel, arfrever
