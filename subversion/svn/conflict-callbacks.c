@@ -421,7 +421,7 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
           if (strcmp(answer, "s") == 0)
             {
               SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
-              _("  (p)  postpone    - mark the conflict to be "
+              _("  (p)  postpone        - mark the conflict to be "
                 "resolved later\n"
                 "  (df) diff-full       - show all changes made to merged file\n"
                 "  (e)  edit            - change merged file in an editor\n"
@@ -434,9 +434,9 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                 "(ignore edited file)\n"
                 "  (tc) theirs-conflict - accept their version for conflicts "
                 "(ignore edited file)\n"
-                "  (l)  launch      - launch external tool to "
+                "  (l)  launch          - launch external tool to "
                 "resolve conflict\n"
-                "  (s)  show all    - show this list\n\n")));
+                "  (s)  show all        - show this list\n\n")));
             }
           else if (strcmp(answer, "p") == 0)
             {
