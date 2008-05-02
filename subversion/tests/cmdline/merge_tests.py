@@ -5576,6 +5576,7 @@ def merge_to_switched_path(sbox):
   wc_disk, wc_status = set_up_branch(sbox)
 
   # Some paths we'll care about
+  A_COPY_path = os.path.join(wc_dir, "A_COPY")
   A_COPY_D_path = os.path.join(wc_dir, "A_COPY", "D")
   G_COPY_path = os.path.join(wc_dir, "A", "D", "G_COPY")
   A_COPY_D_G_path = os.path.join(wc_dir, "A_COPY", "D", "G")
@@ -5633,10 +5634,23 @@ def merge_to_switched_path(sbox):
                                         expected_output, wc_disk, wc_status,
                                         None, None, None, None, None, 1)
 
+  # Update working copy to allow elision (if any).
+  svntest.actions.run_and_verify_svn(None, ["At revision 8.\n"], [],
+                                     'up', wc_dir)
+
+  # Set some mergeinfo on a working copy parent of our switched subtree
+  # A_COPY/D/G.  Because the subtree is switched it should *not* inherit
+  # this mergeinfo.
+  svntest.actions.run_and_verify_svn(None,
+                                     ["property '" + SVN_PROP_MERGEINFO +
+                                      "' set on '" + A_COPY_path + "'" +
+                                      "\n"], [], 'ps', SVN_PROP_MERGEINFO,
+                                     '/A:4', A_COPY_path)
+
   # Merge r8 from A/D/G_COPY into our switched target A_COPY/D/G.
   # A_COPY/D/G should get mergeinfo for r8 as a result of the merge,
   # but because it's switched should not inherit the mergeinfo from
-  # its nearest WC ancestor with mergeinfo (A_COPY: svn:mergeinfo : /A:1)
+  # its nearest WC ancestor with mergeinfo (A_COPY: svn:mergeinfo : /A:4)
   #
   # Search for the comment entitled "The Merge Kluge" elsewhere in
   # this file, to understand why we shorten and chdir() below.
@@ -5668,16 +5682,23 @@ def merge_to_switched_path(sbox):
                                        None, None, None, None, None, 1)
   os.chdir(saved_cwd)
 
-  # Check that the mergeinfo set on a target doesn't elide when that
-  # target is switched.
+  # Check that the mergeinfo set on a switched target can elide to the
+  # repository.
   #
-  # Revert the previous merge and manually set 'svn:mergeinfo : '
+  # Specifically this is testing the "switched target" portions of
+  # issue #3188 'Mergeinfo on switched targets/subtrees should
+  # elide to repos'.
+  #
+  # Revert the previous merge and manually set 'svn:mergeinfo : /A/D:4'
   # on 'merge_tests-1\A_COPY\D'.  Now merge -c-4 from /A/D/G into A_COPY/D/G.
-  # This should still set 'svn:mergeinfo : ' on
-  # 'merge_tests-1\A_COPY\D\G'.  This would normally elide to A_COPY/D,
-  # but since A_COPY/D/G is switched it should not.
+  # This should produce no mergeinfo on A_COPY/D/G'.  If the A_COPY/D/G was
+  # unswitched this merge would normally set empty mergeinfo on A_COPY/D/G,
+  # but as it is switched this empty mergeinfo just elides to the
+  # repository (empty mergeinfo on a path can elide if that path doesn't
+  # inherit *any* mergeinfo).
   svntest.actions.run_and_verify_svn(None,
-                                     ["Reverted '" + A_COPY_D_G_path+ "'\n",
+                                     ["Reverted '" + A_COPY_path+ "'\n",
+                                      "Reverted '" + A_COPY_D_G_path+ "'\n",
                                       "Reverted '" + A_COPY_D_G_rho_path +
                                       "'\n"],
                                      [], 'revert', '-R', wc_dir)
@@ -5685,7 +5706,7 @@ def merge_to_switched_path(sbox):
                                      ["property '" + SVN_PROP_MERGEINFO +
                                       "' set on '" + A_COPY_D_path+ "'" +
                                       "\n"], [], 'ps', SVN_PROP_MERGEINFO,
-                                     '', A_COPY_D_path)
+                                     '/A/D:4', A_COPY_D_path)
   svntest.actions.run_and_verify_svn(None,
                                      expected_merge_output([[-4]],
                                        'U    ' + A_COPY_D_G_rho_path + '\n'),
@@ -5693,20 +5714,12 @@ def merge_to_switched_path(sbox):
                                      sbox.repo_url + '/A/D/G_COPY',
                                      A_COPY_D_G_path)
   wc_status.tweak("A_COPY/D", status=' M')
-  wc_status.tweak("A_COPY/D/G", status=' M')
   wc_status.tweak("A_COPY/D/G/rho", status='M ')
+  wc_status.tweak(wc_rev=8)
   svntest.actions.run_and_verify_status(wc_dir, wc_status)
   expected = svntest.verify.UnorderedOutput(
-    ["A    " + os.path.join(G_COPY_path, "pi") + "\n",
-     "A    " + os.path.join(G_COPY_path, "rho") + "\n",
-     "A    " + os.path.join(G_COPY_path, "tau") + "\n",
-     "Checked out revision 6.\n",
-     "A         " + G_COPY_path + "\n"])
-  expected = svntest.verify.UnorderedOutput(
     ["Properties on '" + A_COPY_D_path + "':\n",
-     "  " + SVN_PROP_MERGEINFO + " : \n",
-     "Properties on '" + A_COPY_D_G_path + "':\n",
-     "  " + SVN_PROP_MERGEINFO +" : \n"])
+     "  " + SVN_PROP_MERGEINFO + " : /A/D:4\n"])
   svntest.actions.run_and_verify_svn(None,
                                      expected, [],
                                      'pl', '-vR', A_COPY_D_path)
@@ -5717,6 +5730,12 @@ def merge_to_switched_path(sbox):
 #         directories when gathering mergeinfo
 #
 #   2839: Support non-inheritable mergeinfo revision ranges
+#
+#   3187: Reverse merges don't work properly with
+#         non-inheritable ranges.
+#
+#   3188: Mergeinfo on switched targets/subtrees should
+#         elide to repos
 def merge_to_path_with_switched_children(sbox):
   "merge to path with switched children"
 
@@ -6159,6 +6178,81 @@ def merge_to_path_with_switched_children(sbox):
                                        None, None, None, None, None, 1)
   os.chdir(saved_cwd)
 
+  # Test issue #3187 'Reverse merges don't work properly with
+  # non-inheritable ranges'.
+  #
+  # Test the "switched subtrees" portion of issue #3188 'Mergeinfo on
+  # switched targets/subtrees should elide to repos'.
+  #
+  # Reverse merge r5-8 and r10 from A_COPY.
+
+  # Revert all local changes.  This leaves just the mergeinfo for r5-8
+  # on A_COPY and its various subtrees.
+  svntest.actions.run_and_verify_svn(None, None, [], 'revert', '-R', wc_dir)
+
+  # Update merge target so working revisions are uniform and all
+  # possible elision occurs.
+  svntest.actions.run_and_verify_svn(None, ["At revision 10.\n"], [],
+                                     'up', A_COPY_path)
+
+  #  Do the reverse merge.
+  expected_output = wc.State(short_A_COPY_path, {
+    'B/E/beta'  : Item(status='U '),
+    'D/G/rho'   : Item(status='U '),
+    'D/H/omega' : Item(status='U '),
+    'D/H/psi'   : Item(status='U ')
+    })
+  expected_status = wc.State(short_A_COPY_path, {
+    ''          : Item(status=' M', wc_rev=10),
+    'B'         : Item(status='  ', wc_rev=10),
+    'mu'        : Item(status='  ', wc_rev=10),
+    'B/E'       : Item(status='  ', wc_rev=10),
+    'B/E/alpha' : Item(status='  ', wc_rev=10),
+    'B/E/beta'  : Item(status='M ', wc_rev=10),
+    'B/lambda'  : Item(status='  ', wc_rev=10),
+    'B/F'       : Item(status='  ', wc_rev=10),
+    'C'         : Item(status='  ', wc_rev=10),
+    'D'         : Item(status=' M', wc_rev=10),
+    'D/G'       : Item(status=' M', wc_rev=10, switched='S'),
+    'D/G/pi'    : Item(status=' M', wc_rev=10),
+    'D/G/rho'   : Item(status='MM', wc_rev=10, switched='S'),
+    'D/G/tau'   : Item(status=' M', wc_rev=10),
+    'D/gamma'   : Item(status=' M', wc_rev=10),
+    'D/H'       : Item(status=' M', wc_rev=10),
+    'D/H/chi'   : Item(status='  ', wc_rev=10),
+    'D/H/psi'   : Item(status='M ', wc_rev=10),
+    'D/H/omega' : Item(status='M ', wc_rev=10),
+    })
+  expected_disk = wc.State('', {
+#    ''          : Item(),
+    'B'         : Item(),
+    'mu'        : Item("This is the file 'mu'.\n"),
+    'B/E'       : Item(),
+    'B/E/alpha' : Item("This is the file 'alpha'.\n"),
+    'B/E/beta'  : Item("This is the file 'beta'.\n"),
+    'B/lambda'  : Item("This is the file 'lambda'.\n"),
+    'B/F'       : Item(),
+    'C'         : Item(),
+    'D'         : Item(),
+    'D/G'       : Item(),
+    'D/G/pi'    : Item("This is the file 'pi'.\n"),
+    'D/G/rho'   : Item("This is the file 'rho'.\n"),
+    'D/G/tau'   : Item("This is the file 'tau'.\n"),
+    'D/gamma'   : Item("This is the file 'gamma'.\n"),
+    'D/H'       : Item(),
+    'D/H/chi'   : Item("This is the file 'chi'.\n"),
+    'D/H/psi'   : Item("This is the file 'psi'.\n"),
+    'D/H/omega' : Item("This is the file 'omega'.\n"),
+    })
+  expected_skip = wc.State(short_A_COPY_path, { })
+  os.chdir(svntest.main.work_dir)
+  svntest.actions.run_and_verify_merge(short_A_COPY_path, '8', '4',
+                                       sbox.repo_url + '/A',
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       None, None, None, None, None, 1)
+
+  os.chdir(saved_cwd)
 
 # Test for issue 2047: Merge from parent dir fails while it succeeds from
 # the direct dir
