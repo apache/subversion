@@ -3286,7 +3286,7 @@ insert_parent_and_sibs_of_sw_absent_del_entry(
 
      1) Path has working svn:mergeinfo from corresponding merge source.
      2) Path is switched.
-     3) Path has no mergeinfo of it's own but it's parent has mergeinfo with
+     3) Path has no mergeinfo of its own but its parent has mergeinfo with
         non-inheritable ranges (in this case the function will actually set
         override mergeinfo on the path if this isn't a dry-run and the merge
         is between differences in the same repository).
@@ -3371,7 +3371,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
 
       /* Case 3) Where merging to a path with a switched child the path gets
          non-inheritable mergeinfo for the merge range performed and the child
-         gets it's own set of mergeinfo.  If the switched child later
+         gets its own set of mergeinfo.  If the switched child later
          "returns", e.g. a switched path is unswitched, the child may not have
          any explicit mergeinfo.  If the initial merge is repeated we don't
          want to repeat the merge for the path, but we do want to repeat it
