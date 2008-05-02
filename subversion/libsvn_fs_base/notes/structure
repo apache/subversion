@@ -959,8 +959,11 @@ Representations:
                    KIND ::= "fulltext" | "delta" ;
              
                    SIZE ::= number ;
-               CHECKSUM ::= ("md5" MD5SUM) ;
+               CHECKSUM ::= MD5 | SHA1;
+                    MD5 ::= ("md5" MD5SUM) ;
+                   SHA1 ::= ("sha1" SHA1SUM) ;
                  MD5SUM ::= atom ;
+                SHA1SUM ::= atom ;
 
 
 Strings:
