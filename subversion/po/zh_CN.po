@@ -35,8 +35,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.5.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2008-04-30 10:13+0800\n"
-"PO-Revision-Date: 2008-04-30 10:14+0800\n"
+"POT-Creation-Date: 2008-05-02 20:20+0800\n"
+"PO-Revision-Date: 2008-05-02 20:22+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1412,7 +1412,7 @@ msgid "'%s' is not locked"
 msgstr "“%s” 没有被锁定"
 
 #: ../libsvn_client/locking_commands.c:407 ../libsvn_fs/fs-loader.c:1035
-#: ../libsvn_ra/ra_loader.c:1155
+#: ../libsvn_ra/ra_loader.c:1157
 msgid "Lock comment contains illegal characters"
 msgstr "锁定注释包含非法字符"
 
@@ -2507,8 +2507,8 @@ msgid "Invalid revision number '%ld'"
 msgstr "无效的版本号“%ld”"
 
 #: ../libsvn_fs_fs/fs_fs.c:1431 ../libsvn_fs_fs/fs_fs.c:2111
-#: ../libsvn_fs_fs/fs_fs.c:2204 ../libsvn_repos/log.c:1421
-#: ../libsvn_repos/log.c:1425
+#: ../libsvn_fs_fs/fs_fs.c:2204 ../libsvn_repos/log.c:1430
+#: ../libsvn_repos/log.c:1434
 #, c-format
 msgid "No such revision %ld"
 msgstr "没有版本 %ld"
@@ -2756,30 +2756,31 @@ msgid "Illegal repository URL '%s'"
 msgstr "非法版本库 URL “%s”"
 
 #: ../libsvn_ra/ra_loader.c:423
-msgid "Invalid config: unknown HTTP library"
-msgstr "无效配置: 未知的 http 库"
+#, c-format
+msgid "Invalid config: unknown HTTP library '%s'"
+msgstr "无效配置: 未知的 HTTP 库“%s”"
 
-#: ../libsvn_ra/ra_loader.c:460
+#: ../libsvn_ra/ra_loader.c:462
 #, c-format
 msgid "Unrecognized URL scheme for '%s'"
 msgstr "无法识别的URL方案(一般需要svn://，http://，file://等开头)“%s”"
 
-#: ../libsvn_ra/ra_loader.c:482
+#: ../libsvn_ra/ra_loader.c:484
 #, c-format
 msgid "Repository UUID '%s' doesn't match expected UUID '%s'"
 msgstr "版本库的 UUID“%s”与期望的 UUID“%s”不匹配"
 
-#: ../libsvn_ra/ra_loader.c:538
+#: ../libsvn_ra/ra_loader.c:540
 #, c-format
 msgid "'%s' isn't in the same repository as '%s'"
 msgstr "“%s”与“%s”并不在同一个版本库中"
 
-#: ../libsvn_ra/ra_loader.c:1314
+#: ../libsvn_ra/ra_loader.c:1316
 #, c-format
 msgid "  - handles '%s' scheme\n"
 msgstr "  - 处理“%s”方案\n"
 
-#: ../libsvn_ra/ra_loader.c:1400
+#: ../libsvn_ra/ra_loader.c:1402
 #, c-format
 msgid "Unrecognized URL scheme '%s'"
 msgstr "无法识别的URL方案(一般需要svn://，http://，file://等开头)“%s”"
@@ -2921,13 +2922,13 @@ msgstr "元素 resource 没有 path 属性"
 msgid "Missing rev attr in open-directory element"
 msgstr "元素 open-directory 没有 rev 属性"
 
-#: ../libsvn_ra_neon/fetch.c:1504 ../libsvn_ra_serf/replay.c:255
+#: ../libsvn_ra_neon/fetch.c:1504 ../libsvn_ra_serf/replay.c:258
 #: ../libsvn_ra_serf/update.c:1294
 #, c-format
 msgid "Missing name attr in open-directory element"
 msgstr "元素 open-directory 没有 name 属性"
 
-#: ../libsvn_ra_neon/fetch.c:1531 ../libsvn_ra_serf/replay.c:281
+#: ../libsvn_ra_neon/fetch.c:1531 ../libsvn_ra_serf/replay.c:284
 #: ../libsvn_ra_serf/update.c:1329
 #, c-format
 msgid "Missing name attr in add-directory element"
@@ -2943,13 +2944,13 @@ msgstr "元素 add-directory 没有 copyfrom-rev 属性"
 msgid "Missing rev attr in open-file element"
 msgstr "元素 open-file 没有 rev 属性"
 
-#: ../libsvn_ra_neon/fetch.c:1628 ../libsvn_ra_serf/replay.c:316
+#: ../libsvn_ra_neon/fetch.c:1628 ../libsvn_ra_serf/replay.c:319
 #: ../libsvn_ra_serf/update.c:1369
 #, c-format
 msgid "Missing name attr in open-file element"
 msgstr "元素 open-file 没有 name 属性"
 
-#: ../libsvn_ra_neon/fetch.c:1654 ../libsvn_ra_serf/replay.c:342
+#: ../libsvn_ra_neon/fetch.c:1654 ../libsvn_ra_serf/replay.c:345
 #: ../libsvn_ra_serf/update.c:1404
 #, c-format
 msgid "Missing name attr in add-file element"
@@ -2970,7 +2971,7 @@ msgstr "元素 set-pro 没有 name 属性"
 msgid "Missing name attr in remove-prop element"
 msgstr "元素 remove-prop 没有 name 属性"
 
-#: ../libsvn_ra_neon/fetch.c:1810 ../libsvn_ra_serf/replay.c:229
+#: ../libsvn_ra_neon/fetch.c:1810 ../libsvn_ra_serf/replay.c:232
 #: ../libsvn_ra_serf/update.c:1434
 #, c-format
 msgid "Missing name attr in delete-entry element"
@@ -3160,7 +3161,7 @@ msgstr "元素close-file之前没有add-file或者open-file元素"
 msgid "Got close-directory element without ever opening a directory"
 msgstr "在没有打开目录的情况下发现了close-directory元素"
 
-#: ../libsvn_ra_neon/replay.c:432 ../libsvn_ra_serf/replay.c:534
+#: ../libsvn_ra_neon/replay.c:432 ../libsvn_ra_serf/replay.c:537
 #, c-format
 msgid "Error writing stream: unexpected EOF"
 msgstr "写入流出错: 意外的 EOF"
@@ -3395,34 +3396,34 @@ msgstr "加锁请求失败"
 msgid "Unlock request failed: %d %s"
 msgstr "解锁请求失败: %d %s"
 
-#: ../libsvn_ra_serf/replay.c:192 ../libsvn_ra_serf/update.c:1232
+#: ../libsvn_ra_serf/replay.c:195 ../libsvn_ra_serf/update.c:1232
 msgid "Missing revision attr in target-revision element"
 msgstr "元素“target-revision没有revision属性"
 
-#: ../libsvn_ra_serf/replay.c:210
+#: ../libsvn_ra_serf/replay.c:213
 msgid "Missing revision attr in open-root element"
 msgstr "元素“open-root没有revisioin属性"
 
-#: ../libsvn_ra_serf/replay.c:235
+#: ../libsvn_ra_serf/replay.c:238
 msgid "Missing revision attr in delete-entry element"
 msgstr "delete-entry元素没有revision属性"
 
-#: ../libsvn_ra_serf/replay.c:261 ../libsvn_ra_serf/update.c:1250
+#: ../libsvn_ra_serf/replay.c:264 ../libsvn_ra_serf/update.c:1250
 #: ../libsvn_ra_serf/update.c:1285
 msgid "Missing revision attr in open-directory element"
 msgstr "open-directory元素没有revision属性"
 
-#: ../libsvn_ra_serf/replay.c:322 ../libsvn_ra_serf/update.c:1378
+#: ../libsvn_ra_serf/replay.c:325 ../libsvn_ra_serf/update.c:1378
 msgid "Missing revision attr in open-file element"
 msgstr "open-file元素没有revision属性"
 
-#: ../libsvn_ra_serf/replay.c:409 ../libsvn_ra_serf/update.c:1524
+#: ../libsvn_ra_serf/replay.c:412 ../libsvn_ra_serf/update.c:1524
 #: ../libsvn_ra_serf/update.c:1601
 #, c-format
 msgid "Missing name attr in %s element"
 msgstr "元素“%s”没有name属性"
 
-#: ../libsvn_ra_serf/replay.c:771
+#: ../libsvn_ra_serf/replay.c:800
 #, c-format
 msgid "Error retrieving replay REPORT (%d)"
 msgstr "获取重放报告出错(%d)"
@@ -9881,20 +9882,20 @@ msgstr "不能设置分离的状态"
 msgid "Can't create thread"
 msgstr "无法创建线程"
 
-#: ../svnserve/serve.c:1502
+#: ../svnserve/serve.c:1513
 msgid "Path is not a string"
 msgstr "路径不是字符串"
 
-#: ../svnserve/serve.c:1651
+#: ../svnserve/serve.c:1662
 msgid "Log revprop entry not a string"
 msgstr "日志 revprop 入口不是字符串"
 
-#: ../svnserve/serve.c:1658
+#: ../svnserve/serve.c:1669
 #, c-format
 msgid "Unknown revprop word '%s' in log command"
 msgstr "日志命令中有未知的 revprop 单词 “%s”"
 
-#: ../svnserve/serve.c:1674
+#: ../svnserve/serve.c:1685
 msgid "Log path entry not a string"
 msgstr "日志路径入口不是字符串"
 
