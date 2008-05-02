@@ -52,9 +52,3 @@ Candidate changes:
 
 Approved changes (all releases):
 ================================
-
- * r30931
-   Remove 'blind deletion of argument to mkdir --parents', delete
-   only if this invocation has created it.
-   Votes:
-     +1: kameshj, hwright, kfogel
