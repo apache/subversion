@@ -63,7 +63,7 @@ Candidate changes:
    Justification:
      Ambiguous APIs are bad.
    Votes:
-     +1: danielsh, kameshj
+     +1: danielsh, kameshj, kfogel
 
  * r30949, r30962
    Fix issue #3188.  Mergeinfo on switched targets/subtrees should elide
