@@ -1489,7 +1489,25 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
 
 /*** Determining What Remains To Be Merged ***/
 
-/* Calculate a rangelist of svn_merge_range_t *'s -- for use by
+/* Helper for calculate_remaining_ranges().
+
+   Calculate the ranges that remain to be merged from the merge
+   source MERGEINFO_PATH (relative to the repository root) to the working
+   copy path represented by ENTRY -- for use by drive_merge_report_editor()'s
+   application of the editor to the WC.
+
+   REVISION1 and REVISION2 describe the merge range requested from
+   MERGEINFO_PATH.
+
+   TARGET_MERGEINFO is the path's explicit or inherited mergeinfo.
+   May be NULL if there is not mergeinfo or an empty hash for
+   empty mergeinfo.
+   
+   IMPLICIT_MERGEINFO is the path's natural history described as
+   mergeinfo - see svn_client__get_history_as_mergeinfo().
+
+   Combine
+   Calculate a rangelist of svn_merge_range_t *'s -- for use by
    drive_merge_report_editor()'s application of the editor to the WC
    -- by subtracting revisions which have already been merged from
    MERGEINFO_PATH into the working copy from the requested range(s)
@@ -1503,15 +1521,33 @@ filter_merged_revisions(apr_array_header_t **remaining_ranges,
                         const char *mergeinfo_path,
                         svn_mergeinfo_t target_mergeinfo,
                         svn_mergeinfo_t implicit_mergeinfo,
-                        apr_array_header_t *requested_merge,
-                        svn_boolean_t is_rollback,
+                        svn_revnum_t revision1,
+                        svn_revnum_t revision2,
                         const svn_wc_entry_t *entry,
                         apr_pool_t *pool)
 {
   apr_array_header_t *target_rangelist = NULL;
   svn_mergeinfo_t mergeinfo;
+  apr_array_header_t *requested_merge;
+  svn_merge_range_t *range;
 
-  if (is_rollback)
+  /* Convert REVISION1 and REVISION2 to a rangelist. */
+  range = apr_pcalloc(pool, sizeof(*range));
+  requested_merge = apr_array_make(pool, 1, sizeof(range));
+  range->start = revision1;
+  range->end = revision2;
+  /* Talking about a requested merge range's inheritability doesn't
+     make much sense, but as we are using svn_merge_range_t to describe
+     it we need to pick *something*.  Since all the rangelist
+     manipulations in this function either don't consider inheritance
+     by default or we are requesting that they don't (i.e.
+     svn_rangelist_remove and svn_rangelist_intersect) then we could
+     set the inheritability as FALSE, it won't matter either way. */
+  range->inheritable = TRUE;
+
+  APR_ARRAY_PUSH(requested_merge, svn_merge_range_t *) = range;
+
+  if (revision1 > revision2) /* Is this a reverse merge? */
     {
       mergeinfo = svn_mergeinfo_dup(implicit_mergeinfo, pool);
       if (target_mergeinfo)
@@ -1525,11 +1561,27 @@ filter_merged_revisions(apr_array_header_t **remaining_ranges,
              revert.  The revert range and will need to be reversed
              for our APIs to work properly, as will the output for the
              revert to work properly. */
-          requested_merge = svn_rangelist_dup(requested_merge, pool);
           SVN_ERR(svn_rangelist_reverse(requested_merge, pool));
+
+          /* We don't consider inheritance we determining intersecting
+             ranges.  If we *did* consider inheritance, then our calculation
+             would be wrong.  For example, if the REQUESTED_MERGE is 5:3 and
+             TARGET_RANGELIST is r5* (non-inheritable) then the intersection
+             would be r4.  And that would be wrong as we clearly want to
+             reverse merge both r4 and r5 in this case.  Ignoring the ranges'
+             inheritance results in an intersection of r4-5.
+             
+             You might be wondering about ENTRY's children, doesn't the above
+             imply that we will reverse merge r4-5 from them?  Nope, this is
+             safe to do because any path whose parent has non-inheritable
+             ranges is always considered a subtree with differing mergeinfo
+             even if that path has no explicit mergeinfo prior to the
+             merge -- See condition 3 in the doc string for
+             merge.c:get_mergeinfo_paths(). */
           SVN_ERR(svn_rangelist_intersect(remaining_ranges,
                                           target_rangelist,
                                           requested_merge, FALSE, pool));
+
           SVN_ERR(svn_rangelist_reverse(*remaining_ranges, pool));
         }
       else
@@ -1572,7 +1624,8 @@ filter_merged_revisions(apr_array_header_t **remaining_ranges,
       target_rangelist = apr_hash_get(mergeinfo, 
                                       mergeinfo_path, APR_HASH_KEY_STRING);
 #endif
-
+      /* See earlier comment preceeding svn_rangelist_intersect() for
+         why we don't consider inheritance here. */
       if (target_rangelist)
         SVN_ERR(svn_rangelist_remove(remaining_ranges, target_rangelist,
                                      requested_merge, FALSE, pool));
@@ -1602,7 +1655,6 @@ calculate_remaining_ranges(apr_array_header_t **remaining_ranges,
                            svn_revnum_t revision1,
                            const char *url2,
                            svn_revnum_t revision2,
-                           svn_boolean_t inheritable,
                            svn_mergeinfo_t target_mergeinfo,
                            svn_mergeinfo_t implicit_mergeinfo,
                            svn_ra_session_t *ra_session,
@@ -1610,27 +1662,17 @@ calculate_remaining_ranges(apr_array_header_t **remaining_ranges,
                            svn_client_ctx_t *ctx,
                            apr_pool_t *pool)
 {
-  apr_array_header_t *requested_rangelist;
   const char *mergeinfo_path;
-  svn_merge_range_t *range = apr_pcalloc(pool, sizeof(*range));
   const char *primary_url = (revision1 < revision2) ? url2 : url1;
 
-  /* Determine which of the requested ranges to consider merging... */
-  requested_rangelist = apr_array_make(pool, 1, sizeof(range));
-  range->start = revision1;
-  range->end = revision2;
-  range->inheritable = inheritable;
-  APR_ARRAY_PUSH(requested_rangelist, svn_merge_range_t *) = range;
-  
-  /* ...and of those ranges, determine which ones actually still
+  /* Determine which portions of the requested merge range still
      need merging. */
   SVN_ERR(svn_client__path_relative_to_root(&mergeinfo_path, primary_url,
                                             source_root_url, TRUE,
                                             ra_session, NULL, pool));
   SVN_ERR(filter_merged_revisions(remaining_ranges, mergeinfo_path,
                                   target_mergeinfo, implicit_mergeinfo,
-                                  requested_rangelist,
-                                  (revision1 > revision2), entry, pool));
+                                  revision1, revision2, entry, pool));
 
   /* Issue #2973 -- from the continuing series of "Why, since the advent of
      merge tracking, allowing merges into mixed rev and locally modified
@@ -1803,7 +1845,7 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
 }
 
 
-/* For each child in CHILDREN_WITH_MERGEINFO, it populates that
+/* Helper for do_directory_merge().
    child's remaining_ranges list.  CHILDREN_WITH_MERGEINFO is expected
    to be sorted in depth first order.  All persistent allocations are
    from CHILDREN_WITH_MERGEINFO->pool.
@@ -1898,7 +1940,6 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
                                          source_root_url,
                                          child_url1, revision1,
                                          child_url2, revision2,
-                                         inheritable, 
                                          child->pre_merge_mergeinfo,
                                          implicit_mergeinfo,
                                          ra_session, child_entry, merge_b->ctx,
@@ -3964,7 +4005,7 @@ do_file_merge(const char *url1,
           SVN_ERR(calculate_remaining_ranges(&remaining_ranges,
                                              source_root_url,
                                              url1, revision1, url2, revision2,
-                                             TRUE, target_mergeinfo, 
+                                             target_mergeinfo, 
                                              implicit_mergeinfo,
                                              merge_b->ra_session1,
                                              entry, ctx, pool));
