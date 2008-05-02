@@ -4499,10 +4499,42 @@ do_directory_merge(const char *url1,
                                                    merge_b,
                                                    children_with_mergeinfo,
                                                    i, iterpool));
+
+          /* Elide explicit subtree mergeinfo. */
           if (i > 0)
-            SVN_ERR(svn_client__elide_mergeinfo(child->path, merge_b->target,
-                                                child_entry, adm_access,
-                                                merge_b->ctx, iterpool));
+            {
+              svn_boolean_t in_switched_subtree = FALSE;
+              
+              if (child->switched)
+                in_switched_subtree = TRUE;
+              else if (i > 1)
+                {
+                  /* Check if CHILD is part of a switched subtree */
+                  svn_client__merge_path_t *parent;
+                  int j = i - 1;
+                  for (; j > 0; j--)
+                    {
+                      parent = APR_ARRAY_IDX(children_with_mergeinfo, j,
+                                             svn_client__merge_path_t *);
+                      if (parent
+                          && parent->switched
+                          && svn_path_is_ancestor(parent->path, child->path))
+                        {
+                          in_switched_subtree = TRUE;
+                          break;
+                        }
+                    }
+                }
+
+              /* Allow mergeinfo on switched subtrees to elide to the
+                 repository. Otherwise limit elision to the merge target
+                 for now.  do_directory_merge() will eventually try to
+                 elide that when the merge is complete. */
+              SVN_ERR(svn_client__elide_mergeinfo(
+                child->path,
+                in_switched_subtree ? NULL : merge_b->target,
+                child_entry, adm_access, merge_b->ctx, iterpool));
+            }
         } /* (i = 0; i < children_with_mergeinfo->nelts; i++) */
       
       /* If a path has an immediate parent with non-inheritable mergeinfo at
