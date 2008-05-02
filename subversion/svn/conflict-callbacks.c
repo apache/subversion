@@ -455,22 +455,21 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
           if (strcmp(answer, "s") == 0)
             {
               SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
-              _("  (p)  postpone        - mark the conflict to be "
-                "resolved later\n"
-                "  (df) diff-full       - show all changes made to merged file\n"
-                "  (e)  edit            - change merged file in an editor\n"
-                "  (r)  resolved        - accept merged version of file\n"
-                "  (mf) mine-full       - accept my version of entire file "
-                "(ignore their changes)\n"
-                "  (tf) theirs-full     - accept their version of entire file "
-                "(lose my changes)\n"
-                "  (mc) mine-conflict   - accept my version for conflicts "
-                "(ignore edited file)\n"
-                "  (tc) theirs-conflict - accept their version for conflicts "
-                "(ignore edited file)\n"
-                "  (l)  launch          - launch external tool to "
-                "resolve conflict\n"
-                "  (s)  show all        - show this list\n\n")));
+              _("Edit the merged file:\n"
+                "  (e)  edit             - change merged file in an editor\n"
+                "  (df) diff-full        - show all changes made to merged file\n"
+                "  (r)  resolved         - accept merged version of file\n"
+                "Just deal with the conflicts (ignoring merged version):\n"
+                "  (dc) display-conflict - shows all conflicts\n"
+                "  (mc) mine-conflict    - accept my version for all conflicts\n"
+                "  (tc) theirs-conflict  - accept their version for all "
+                                          "conflicts\n"
+                "General:\n"
+                "  (p)  postpone         - mark the conflict to be "
+                                          "resolved later\n"
+                "  (l)  launch           - launch external tool to "
+                                          "resolve conflict\n"
+                "  (s)  show all         - show this list\n\n")));
             }
           else if (strcmp(answer, "p") == 0)
             {
