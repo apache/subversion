@@ -39,6 +39,7 @@
 #include <apr_lib.h>
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
+#include "server.h"
 
 /* copied from httpd-2.2.4/server/util.c */
 /* c2x takes an unsigned, and expects the caller has guaranteed that

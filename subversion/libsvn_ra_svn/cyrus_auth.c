@@ -457,6 +457,10 @@ static svn_error_t *try_auth(svn_ra_svn__session_baton_t *sess,
         return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                                 sasl_errdetail(sasl_ctx));
 
+      /* If the server thinks we're done, then don't send any response. */
+      if (strcmp(status, "success") == 0)
+        break;
+
       if (outlen > 0)
         {
           arg = svn_string_ncreate(out, outlen, pool);
