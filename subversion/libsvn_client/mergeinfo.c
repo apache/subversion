@@ -725,7 +725,7 @@ svn_client__elide_mergeinfo(const char *target_wcpath,
     {
       svn_mergeinfo_t target_mergeinfo;
       svn_mergeinfo_t mergeinfo = NULL;
-      svn_boolean_t inherited, switched;
+      svn_boolean_t inherited;
       const char *walk_path;
 
       /* Get the TARGET_WCPATH's explicit mergeinfo. */
