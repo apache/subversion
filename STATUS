@@ -47,7 +47,7 @@ Candidate changes:
    Fix an error leak introduced by the "make log -g not croak on missing
    paths and revisions" bugfix of r30762.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, kameshj
 
 Status of 1.5.1:
 ================
