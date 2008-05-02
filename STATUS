@@ -58,6 +58,13 @@ Candidate changes:
    Votes:
      +1: kameshj, hwright
    
+ * r30937
+   Rewrite svn_io_check_path's docstring and make it unambiguous.
+   Justification:
+     Ambiguous APIs are bad.
+   Votes:
+     +1: danielsh
+
 Status of 1.5.1:
 ================
 
