@@ -1074,7 +1074,7 @@ do_merged_logs(svn_fs_t *fs,
                svn_boolean_t strict_node_history,
                const apr_array_header_t *revprops,
                svn_boolean_t descending_order,
-               apr_hash_t *found_revisions,
+               apr_hash_t *rev_mergeinfo,
                svn_log_entry_receiver_t receiver,
                void *receiver_baton,
                svn_repos_authz_func_t authz_read_func,
@@ -1090,7 +1090,7 @@ handle_merged_revisions(svn_revnum_t rev,
                         svn_boolean_t discover_changed_paths,
                         svn_boolean_t strict_node_history,
                         const apr_array_header_t *revprops,
-                        apr_hash_t *found_revisions,
+                        apr_hash_t *rev_mergeinfo,
                         svn_log_entry_receiver_t receiver,
                         void *receiver_baton,
                         svn_repos_authz_func_t authz_read_func,
@@ -1124,7 +1124,7 @@ handle_merged_revisions(svn_revnum_t rev,
                            pl_range->range.end,
                            0, discover_changed_paths,
                            strict_node_history, revprops, TRUE,
-                           found_revisions, 
+                           rev_mergeinfo, 
                            receiver, receiver_baton,
                            authz_read_func, authz_read_baton,
                            permpool, iterpool);
@@ -1150,9 +1150,11 @@ handle_merged_revisions(svn_revnum_t rev,
    the logs back as we find them, else buffer the logs and send them back
    in youngest->oldest order.
 
-   FOUND_REVISIONS is a list of revisions that have already been located,
-   and which should not be sent again.  It should only be NULL on the 
-   initial invocation, not on subsequent recursive calls.
+   REV_MERGEINFO is a hash mapping svn_revnum_t revision numbers
+   to svn_mergeinfo_t mergeinfo differences recorded in and under
+   PATHS in that revision (versus the previous one).  It should only
+   be NULL on the initial invocation, but not on subsequent recursive
+   calls.
 
    Unlike do_logs(), below, this function includes merged revisions in the
    list of revisions sent back.  Other parameters are the same as
@@ -1178,7 +1180,7 @@ do_merged_logs(svn_fs_t *fs,
                svn_boolean_t strict_node_history,
                const apr_array_header_t *revprops,
                svn_boolean_t descending_order,
-               apr_hash_t *found_revisions,
+               apr_hash_t *rev_mergeinfo,
                svn_log_entry_receiver_t receiver,
                void *receiver_baton,
                svn_repos_authz_func_t authz_read_func,
@@ -1195,10 +1197,10 @@ do_merged_logs(svn_fs_t *fs,
   int send_count = 0;
   int i;
 
-  if (found_revisions == NULL)
+  if (rev_mergeinfo == NULL)
     {
       mainline_run = TRUE;
-      found_revisions = apr_hash_make(pool);
+      rev_mergeinfo = apr_hash_make(pool);
     }
 
   /* We have a list of paths and a revision range.  But we don't care
@@ -1225,7 +1227,7 @@ do_merged_logs(svn_fs_t *fs,
       /* ### TODO: Is this right?  What if a mainline revision pull
          revisions of itself via a merge line? */
       if ((! mainline_run) 
-          && apr_hash_get(found_revisions, &current, sizeof (svn_revnum_t)))
+          && apr_hash_get(rev_mergeinfo, &current, sizeof (svn_revnum_t)))
         break;
 
       for (i = 0; i < histories->nelts; i++)
@@ -1261,7 +1263,7 @@ do_merged_logs(svn_fs_t *fs,
             }
           SVN_ERR(get_merged_rev_mergeinfo(&mergeinfo, fs, cur_paths, 
                                            current, permpool));
-          apr_hash_set(found_revisions, cur_rev, sizeof(*cur_rev), mergeinfo);
+          apr_hash_set(rev_mergeinfo, cur_rev, sizeof(*cur_rev), mergeinfo);
 
           if (descending_order)
             {
@@ -1274,7 +1276,7 @@ do_merged_logs(svn_fs_t *fs,
                   SVN_ERR(handle_merged_revisions(current, fs, mergeinfo,
                                                   discover_changed_paths,
                                                   strict_node_history, 
-                                                  revprops, found_revisions,
+                                                  revprops, rev_mergeinfo,
                                                   receiver, receiver_baton,
                                                   authz_read_func, 
                                                   authz_read_baton,
@@ -1308,7 +1310,7 @@ do_merged_logs(svn_fs_t *fs,
 
           svn_pool_clear(iterpool);
           current = APR_ARRAY_IDX(revs, revs->nelts - i - 1, svn_revnum_t);
-          mergeinfo = apr_hash_get(found_revisions, &current, 
+          mergeinfo = apr_hash_get(rev_mergeinfo, &current, 
                                    sizeof(svn_revnum_t));          
           has_children = (apr_hash_count(mergeinfo) > 0);
           SVN_ERR(send_log(current, fs, 
@@ -1320,7 +1322,7 @@ do_merged_logs(svn_fs_t *fs,
               SVN_ERR(handle_merged_revisions(current, fs, mergeinfo,
                                               discover_changed_paths,
                                               strict_node_history, 
-                                              revprops, found_revisions,
+                                              revprops, rev_mergeinfo,
                                               receiver, receiver_baton,
                                               authz_read_func, 
                                               authz_read_baton,
