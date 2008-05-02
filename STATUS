@@ -76,10 +76,3 @@ Approved changes (all releases):
    only if this invocation has created it.
    Votes:
      +1: kameshj, hwright, kfogel
-   
- * r30937
-   Rewrite svn_io_check_path's docstring and make it unambiguous.
-   Justification:
-     Ambiguous APIs are bad.
-   Votes:
-     +1: danielsh, kameshj, kfogel
