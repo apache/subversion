@@ -73,20 +73,19 @@ typedef struct svn_io_dirent_t {
   svn_boolean_t special;
 } svn_io_dirent_t;
 
-/** Determine the @a kind of @a path.
+/** Determine the @a kind of @a path.  @a path should be UTF-8 encoded.
  *
- * If utf8-encoded @a path exists, set @a *kind to the appropriate kind,
- * else set it to @c svn_node_unknown.
+ * If @a path is a file, set @a *kind to @c svn_node_file.
  *
- * If @a path is a file, @a *kind is set to @c svn_node_file.
+ * If @a path is a directory, set @a *kind to @c svn_node_dir.
  *
- * If @a path is a directory, @a *kind is set to @c svn_node_dir.
- *
- * If @a path does not exist in its final component, @a *kind is set to
+ * If @a path does not exist in its final component, set @a *kind to
  * @c svn_node_none.
  *
- * If intermediate directories on the way to @a path don't exist, an
- * error is returned, and @a *kind's value is undefined.
+ * If intermediate directories on the way to @a path don't exist, return 
+ * an error, with @a *kind's value undefined.
+ *
+ * Otherwise, set @a *kind to @c svn_node_unknown.
  *
  * Use @a pool for temporary allocations.
  */
