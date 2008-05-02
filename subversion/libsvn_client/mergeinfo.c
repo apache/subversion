@@ -1062,7 +1062,7 @@ filter_log_entry_with_rangelist(void *baton,
   range->inheritable = TRUE;
   APR_ARRAY_PUSH(this_rangelist, svn_merge_range_t *) = range;
   SVN_ERR(svn_rangelist_intersect(&intersection, fleb->rangelist, 
-                                  this_rangelist, pool));
+                                  this_rangelist, TRUE, pool));
   if (! (intersection && intersection->nelts))
     return SVN_NO_ERROR;
 

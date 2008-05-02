@@ -27,7 +27,9 @@
 extern "C" {
 #endif /* __cplusplus */
 
+#include "svn_config.h"
 #include "svn_repos.h"
+#include "svn_ra_svn.h"
 
 typedef struct server_baton_t {
   svn_repos_t *repos;

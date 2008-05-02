@@ -2730,6 +2730,20 @@ concerns field, and include a url / message-id for the list discussion
 if any.  You can go back and add the link later if the thread isn't
 available at the time you commit the veto.</p>
 
+<p>If you add revisions to a group, note that the previous voters have
+not voted for those revisions, as follows:</p>
+
+<pre>
+   * r30643, r30653, r30785
+     Update bash completion script.
+     Votes:
+       +1: arfrever (r30785 only), stylesen
+</pre>
+
+<p>If in case votes have been communicated via IRC or other means,
+note that in the log message. <a href="#obvious-fix">Obvious fixes</a>
+do not require '(rX only)' to be mentioned.</p>
+
 <p>Voting +1 on a change doesn't just mean you approve of it in
 principle.  It means you have thoroughly reviewed the change, and find
 it correct and as nondisruptive as possible.  When it is committed to
