@@ -9,11 +9,6 @@ Status of 1.5.0:
 
 Candidate changes:
 
- * r30643, r30653, r30785
-   Update bash completion script.
-   Votes:
-     +1: arfrever, stylesen
-
  * r30746, r30747
    Fix a minor merge range notification header bug.
    Notes:
@@ -76,3 +71,8 @@ Approved changes (all releases):
    only if this invocation has created it.
    Votes:
      +1: kameshj, hwright, kfogel
+
+ * r30643, r30653, r30785
+   Update bash completion script.
+   Votes:
+     +1: arfrever, stylesen
