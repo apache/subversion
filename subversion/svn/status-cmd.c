@@ -254,10 +254,10 @@ svn_cl__status(apr_getopt_t *os,
                                              opt_state->ignore_externals,
                                              opt_state->changelists,
                                              ctx, subpool),
-                                             NULL, opt_state->quiet,
-                                             /* not versioned: */
-                                             SVN_ERR_WC_NOT_DIRECTORY,
-                                             SVN_NO_ERROR));
+                          NULL, opt_state->quiet,
+                          /* not versioned: */
+                          SVN_ERR_WC_NOT_DIRECTORY,
+                          SVN_NO_ERROR));
 
       if (opt_state->xml)
         SVN_ERR(print_finish_target_xml(repos_rev, subpool));
