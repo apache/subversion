@@ -789,7 +789,8 @@ svn_client__make_local_parents(const char *path,
                                apr_pool_t *pool)
 {
   svn_error_t *err;
-
+  svn_node_kind_t orig_kind;
+  SVN_ERR(svn_io_check_path(path, &orig_kind, pool));
   if (make_parents)
     SVN_ERR(svn_io_make_dir_recursively(path, pool));
   else
@@ -800,7 +801,7 @@ svn_client__make_local_parents(const char *path,
 
   /* We just created a new directory, but couldn't add it to
      version control. Don't leave unversioned directories behind. */
-  if (err)
+  if (err && (orig_kind == svn_node_none))
     {
       /* ### If this returns an error, should we link it onto
          err instead, so that the user is warned that we just
