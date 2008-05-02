@@ -1527,7 +1527,7 @@ filter_merged_revisions(apr_array_header_t **remaining_ranges,
                         apr_pool_t *pool)
 {
   apr_array_header_t *target_rangelist = NULL;
-  svn_mergeinfo_t mergeinfo;
+  svn_mergeinfo_t mergeinfo = implicit_mergeinfo;
   apr_array_header_t *requested_merge;
   svn_merge_range_t *range;
 
@@ -1549,9 +1549,12 @@ filter_merged_revisions(apr_array_header_t **remaining_ranges,
 
   if (revision1 > revision2) /* Is this a reverse merge? */
     {
-      mergeinfo = svn_mergeinfo_dup(implicit_mergeinfo, pool);
       if (target_mergeinfo)
-        SVN_ERR(svn_mergeinfo_merge(mergeinfo, target_mergeinfo, pool));
+        {
+          mergeinfo = svn_mergeinfo_dup(implicit_mergeinfo, pool);
+          SVN_ERR(svn_mergeinfo_merge(mergeinfo, target_mergeinfo, pool));
+        }
+
       target_rangelist = apr_hash_get(mergeinfo, 
                                       mergeinfo_path, APR_HASH_KEY_STRING);
       if (target_rangelist)
@@ -1618,9 +1621,12 @@ filter_merged_revisions(apr_array_header_t **remaining_ranges,
         target_rangelist = apr_hash_get(target_mergeinfo, 
                                         mergeinfo_path, APR_HASH_KEY_STRING);
 #else
-      mergeinfo = svn_mergeinfo_dup(implicit_mergeinfo, pool);
       if (target_mergeinfo)
-        SVN_ERR(svn_mergeinfo_merge(mergeinfo, target_mergeinfo, pool));
+        {
+          mergeinfo = svn_mergeinfo_dup(implicit_mergeinfo, pool);
+          SVN_ERR(svn_mergeinfo_merge(mergeinfo, target_mergeinfo, pool));
+        }
+
       target_rangelist = apr_hash_get(mergeinfo, 
                                       mergeinfo_path, APR_HASH_KEY_STRING);
 #endif
