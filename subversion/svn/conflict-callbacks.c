@@ -461,7 +461,7 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                 "  (r)  resolved         - accept merged version of file\n"
                 "\n"
                 "Just deal with the conflicts (ignoring merged version):\n"
-                "  (dc) display-conflict - shows all conflicts\n"
+                "  (dc) display-conflict - show all conflicts\n"
                 "  (mc) mine-conflict    - accept my version for all conflicts\n"
                 "  (tc) theirs-conflict  - accept their version for all "
                                           "conflicts\n"
