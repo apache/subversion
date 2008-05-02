@@ -558,10 +558,10 @@ get_combined_mergeinfo(svn_mergeinfo_t *combined_mergeinfo,
         APR_ARRAY_PUSH(query_paths, const char *) = path;
     }
 
-  /* We do not need to call svn_repos_fs_get_mergeinfo() (which performs authz)
-     because we are already doing authz on the changed paths and the log
-     messages when we go to fill the log entry.  See fill_log_entry() for
-     details. */
+  /* We do not need to call svn_repos_fs_get_mergeinfo() (which
+     performs authz) because we are already doing authz on the changed
+     paths and the log messages when we go to fill the log entry.  See
+     fill_log_entry() for details. */
   SVN_ERR(svn_fs_get_mergeinfo(&tree_mergeinfo, root, query_paths,
                                svn_mergeinfo_inherited, TRUE,
                                subpool));
@@ -569,7 +569,8 @@ get_combined_mergeinfo(svn_mergeinfo_t *combined_mergeinfo,
   *combined_mergeinfo = apr_hash_make(subpool);
 
   /* Merge all the mergeinfos into one mergeinfo */
-  for (hi = apr_hash_first(subpool, tree_mergeinfo); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(subpool, tree_mergeinfo); 
+       hi; hi = apr_hash_next(hi))
     {
       svn_mergeinfo_t mergeinfo;
 
@@ -605,10 +606,10 @@ get_merged_rev_mergeinfo(svn_mergeinfo_t *mergeinfo,
     }
 
   subpool = svn_pool_create(pool);
-
-  SVN_ERR(get_combined_mergeinfo(&curr_mergeinfo, fs, rev, paths, subpool));
-  SVN_ERR(get_combined_mergeinfo(&prev_mergeinfo, fs, rev - 1, paths, subpool));
-
+  SVN_ERR(get_combined_mergeinfo(&curr_mergeinfo, fs, rev, 
+                                 paths, subpool));
+  SVN_ERR(get_combined_mergeinfo(&prev_mergeinfo, fs, rev - 1, 
+                                 paths, subpool));
   SVN_ERR(svn_mergeinfo_diff(&deleted, &changed, prev_mergeinfo,
                              curr_mergeinfo, FALSE,
                              subpool));
@@ -796,7 +797,7 @@ get_path_histories(apr_array_header_t **histories,
      get the next history.
   */
   *histories = apr_array_make(pool, paths->nelts,
-                             sizeof(struct path_info *));
+                              sizeof(struct path_info *));
 
   SVN_ERR(svn_fs_revision_root(&root, fs, hist_end, pool));
 
@@ -945,8 +946,9 @@ combine_mergeinfo_path_lists(apr_array_header_t **combined_list,
         APR_ARRAY_IDX(rp->rangelist, i, svn_merge_range_t *)->start += 1;
     }
 
-  /* Loop over the (revision range, path) tuples, chopping them into 
-     (revision range, paths) tuples, and appending those to the output list. */
+  /* Loop over the (revision range, path) tuples, chopping them into
+     (revision range, paths) tuples, and appending those to the output
+     list. */
   *combined_list = apr_array_make(pool, 0, sizeof(struct path_list_range *));
   while (rangelist_paths->nelts > 1)
     {
@@ -976,17 +978,18 @@ combine_mergeinfo_path_lists(apr_array_header_t **combined_list,
             }
           rp = APR_ARRAY_IDX(rangelist_paths, num_revs,
                              struct rangelist_path *);
-          next_youngest =
-            APR_ARRAY_IDX(rp->rangelist, 0, struct svn_merge_range_t *)->start;
+          next_youngest = APR_ARRAY_IDX(rp->rangelist, 0, 
+                                        struct svn_merge_range_t *)->start;
         }
       num_revs -= 1;
 
       /* The start of the new range will be YOUNGEST, and we now find the end
          of the new range, which should be either one less than the next 
          earliest start of a rangelist, or the end of the first rangelist. */
-      youngest_end = APR_ARRAY_IDX(APR_ARRAY_IDX(rangelist_paths, 0,
-                                          struct rangelist_path *)->rangelist,
-                                   0, svn_merge_range_t *)->end;
+      youngest_end = 
+        APR_ARRAY_IDX(APR_ARRAY_IDX(rangelist_paths, 0,
+                                    struct rangelist_path *)->rangelist,
+                      0, svn_merge_range_t *)->end;
       if ( (next_youngest == youngest) || (youngest_end < next_youngest) )
         tail = youngest_end;
       else
@@ -1040,8 +1043,8 @@ combine_mergeinfo_path_lists(apr_array_header_t **combined_list,
      list. */
   if (rangelist_paths->nelts > 0)
     {
-      struct rangelist_path *first_rp = APR_ARRAY_IDX(rangelist_paths, 0,
-                                                      struct rangelist_path *);
+      struct rangelist_path *first_rp = 
+        APR_ARRAY_IDX(rangelist_paths, 0, struct rangelist_path *);
       while (first_rp->rangelist->nelts > 0)
         {
           struct path_list_range *plr = apr_palloc(pool, sizeof(*plr));
@@ -1119,31 +1122,37 @@ do_merged_logs(svn_fs_t *fs,
   if (limit == 0)
     use_limit = FALSE;
 
-  /* Find the our oldest revision is using strict node history */
+  /* If using strict node history, find the oldest revision since
+     which the histories of all of our requested paths contain no
+     copies/moves.  This becomes the new lower bound to our revision
+     history search.  */
   iterpool = svn_pool_create(pool);
   if (strict_node_history)
-    for (i = 0; i < paths->nelts; i++)
-      {
-        const char *path = APR_ARRAY_IDX(paths, i, const char *);
-        svn_revnum_t oldest;
-        svn_fs_root_t *copy_root, *rev_root;
-        const char *copy_path;
+    {
+      for (i = 0; i < paths->nelts; i++)
+        {
+          const char *path = APR_ARRAY_IDX(paths, i, const char *);
+          svn_revnum_t oldest;
+          svn_fs_root_t *copy_root, *rev_root;
+          const char *copy_path;
+          
+          svn_pool_clear(iterpool);
+          SVN_ERR(svn_fs_revision_root(&rev_root, fs, hist_end, iterpool));
+          SVN_ERR(svn_fs_closest_copy(&copy_root, &copy_path, rev_root, path,
+                                      iterpool));
+          
+          if (copy_root != NULL)
+            {
+              oldest = svn_fs_revision_root_revision(copy_root) + 1;
+              hist_start = MAX(oldest, hist_start);
+            }
+        }
+    }
 
-        svn_pool_clear(iterpool);
-        SVN_ERR(svn_fs_revision_root(&rev_root, fs, hist_end, iterpool));
-        SVN_ERR(svn_fs_closest_copy(&copy_root, &copy_path, rev_root, path,
-                                    iterpool));
-
-        if (copy_root != NULL)
-          {
-            oldest = svn_fs_revision_root_revision(copy_root) + 1;
-            hist_start = (oldest > hist_start ? oldest : hist_start);
-          }
-      }
-
-  /* We only really care about revisions in which those paths were changed.
-     So we ask the filesystem for all the revisions in which any of the
-     paths was changed.  */
+  /* We have a list of paths and a revision range.  But we don't care
+     about all the revisions in the range -- only the ones in which
+     one of our paths was changed.  So let's go figure out which
+     revisions contain real changes to at least one of our paths.  */
   SVN_ERR(get_path_histories(&histories, fs, paths,
                              (mainline_run ? 0 : hist_start), hist_end,
                              (mainline_run ? FALSE : strict_node_history),
@@ -1226,8 +1235,8 @@ do_merged_logs(svn_fs_t *fs,
         }
 
       SVN_ERR(send_log(rev, fs, discover_changed_paths, revprops,
-                       has_children, receiver, receiver_baton, authz_read_func,
-                       authz_read_baton, iterpool));
+                       has_children, receiver, receiver_baton, 
+                       authz_read_func, authz_read_baton, iterpool));
 
       if (has_children)
         {
@@ -1243,18 +1252,27 @@ do_merged_logs(svn_fs_t *fs,
              iterate over them in reverse. */
           for (j = combined_list->nelts - 1; j >= 0; j--)
             {
+              svn_error_t *err;
               struct path_list_range *pl_range 
                 = APR_ARRAY_IDX(combined_list, j, struct path_list_range *);
 
               svn_pool_clear(iterpool2);
-              SVN_ERR(do_merged_logs(fs, pl_range->paths,
-                                     pl_range->range.start, 
-                                     pl_range->range.end,
-                                     0, discover_changed_paths,
-                                     strict_node_history, revprops, TRUE,
-                                     found_revisions, receiver, receiver_baton,
-                                     authz_read_func, authz_read_baton,
-                                     permpool, iterpool2));
+              err = do_merged_logs(fs, pl_range->paths,
+                                   pl_range->range.start, 
+                                   pl_range->range.end,
+                                   0, discover_changed_paths,
+                                   strict_node_history, revprops, TRUE,
+                                   found_revisions, 
+                                   receiver, receiver_baton,
+                                   authz_read_func, authz_read_baton,
+                                   permpool, iterpool2);
+              if (err && (err->apr_err == SVN_ERR_FS_NOT_FOUND ||
+                          err->apr_err == SVN_ERR_FS_NO_SUCH_REVISION))
+                {
+                  svn_error_clear(err);
+                  continue;
+                }
+              SVN_ERR(err);
             }
           svn_pool_destroy(iterpool2);
 

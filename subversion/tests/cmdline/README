@@ -290,3 +290,24 @@ there.  Don't forget to add your test to the 'test_list' variable at
 the bottom of the file.
 
 
+Testing Compatability With Previous Release
+===========================================
+
+You can run the Python test suite against older installed versions of
+the Subversion servers.  This mail fragment introduces the ability:
+
+   Message-ID: <1ea387f60804091828q48c9d18ah7bf8d89ef7d39461@mail.gmail.com>
+   Date: Wed, 9 Apr 2008 18:28:40 -0700
+   From: "David Glasser" <glasser@davidglasser.net>
+   To: "Subversion Developers" <dev@subversion.tigris.org>
+   Subject:  backwards-compatibility testing!
+   
+   I've updated the expectations on trunk so that you can cleanly run the
+   test suite against 1.4.x svnserve or DAV.  You do this by adding
+   SERVER_MINOR_VERSION=4 with make check, or --server-minor-version 4 to
+   run_tests.py or a specific Python test.
+   
+   [...]
+
+We expect that post-1.5, this support will expand in the obvious ways
+(allowing "--server-minor-version 5" and SERVER_MINOR_VERSION=5).

@@ -291,6 +291,7 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
 {
   svn_ra_callbacks2_t *cbtable = apr_pcalloc(pool, sizeof(*cbtable));
   svn_client__callback_baton_t *cb = apr_pcalloc(pool, sizeof(*cb));
+  const char *uuid = NULL;
 
   cbtable->open_tmp_file = use_admin ? open_admin_tmp_file : open_tmp_file;
   cbtable->get_wc_prop = use_admin ? get_wc_prop : NULL;
@@ -310,7 +311,17 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
   cb->commit_items = commit_items;
   cb->ctx = ctx;
 
-  SVN_ERR(svn_ra_open2(ra_session, base_url, cbtable, cb,
+  if (base_access)
+    {
+      const svn_wc_entry_t *entry;
+      
+      SVN_ERR(svn_wc_entry(&entry, base_dir, base_access, FALSE, pool));
+
+      if (entry && entry->uuid)
+        uuid = entry->uuid;
+    }
+
+  SVN_ERR(svn_ra_open3(ra_session, base_url, uuid, cbtable, cb,
                        ctx->config, pool));
 
   return SVN_NO_ERROR;
@@ -776,7 +787,8 @@ svn_client__get_youngest_common_ancestor(const char **ancestor_path,
         {
           /* We have a path match.  Now, did our two histories share
              any revisions at that path? */
-          SVN_ERR(svn_rangelist_intersect(&common, ranges1, ranges2, pool));
+          SVN_ERR(svn_rangelist_intersect(&common, ranges1, ranges2,
+                                          TRUE, pool));
           if (common->nelts)
             {
               svn_merge_range_t *yc_range =

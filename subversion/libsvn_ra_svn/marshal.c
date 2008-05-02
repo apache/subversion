@@ -62,9 +62,18 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn(apr_socket_t *sock,
   conn->pool = pool;
 
   if (sock != NULL)
-    conn->stream = svn_ra_svn__stream_from_sock(sock, pool);
+    {
+      apr_sockaddr_t *sa;
+      conn->stream = svn_ra_svn__stream_from_sock(sock, pool);
+      if (!(apr_socket_addr_get(&sa, APR_REMOTE, sock) == APR_SUCCESS
+            && apr_sockaddr_ip_get(&conn->remote_ip, sa) == APR_SUCCESS))
+        conn->remote_ip = NULL;
+    }
   else
-    conn->stream = svn_ra_svn__stream_from_files(in_file, out_file, pool);
+    {
+      conn->stream = svn_ra_svn__stream_from_files(in_file, out_file, pool);
+      conn->remote_ip = NULL;
+    }
 
   return conn;
 }
@@ -93,6 +102,11 @@ svn_boolean_t svn_ra_svn_has_capability(svn_ra_svn_conn_t *conn,
 {
   return (apr_hash_get(conn->capabilities, capability,
                        APR_HASH_KEY_STRING) != NULL);
+}
+
+const char *svn_ra_svn_conn_remote_host(svn_ra_svn_conn_t *conn)
+{
+  return conn->remote_ip;
 }
 
 void
@@ -247,8 +261,7 @@ static svn_error_t *readbuf_input(svn_ra_svn_conn_t *conn, char *data,
 
   SVN_ERR(svn_ra_svn__stream_read(conn->stream, data, len));
   if (*len == 0)
-    return svn_error_create(SVN_ERR_RA_SVN_CONNECTION_CLOSED, NULL,
-                            _("Connection closed unexpectedly"));
+    return svn_error_create(SVN_ERR_RA_SVN_CONNECTION_CLOSED, NULL, NULL);
 
   if (session)
     {
@@ -877,28 +890,42 @@ svn_error_t *svn_ra_svn_read_cmd_response(svn_ra_svn_conn_t *conn,
                            status);
 }
 
-svn_error_t *svn_ra_svn_handle_commands(svn_ra_svn_conn_t *conn,
-                                        apr_pool_t *pool,
-                                        const svn_ra_svn_cmd_entry_t *commands,
-                                        void *baton)
+svn_error_t *svn_ra_svn_handle_commands2(svn_ra_svn_conn_t *conn,
+                                         apr_pool_t *pool,
+                                         const svn_ra_svn_cmd_entry_t *commands,
+                                         void *baton,
+                                         svn_boolean_t error_on_disconnect)
 {
   apr_pool_t *subpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(subpool);
   const char *cmdname;
-  int i;
+  const svn_ra_svn_cmd_entry_t *command;
   svn_error_t *err, *write_err;
   apr_array_header_t *params;
+  apr_hash_t *cmd_hash = apr_hash_make(subpool);
+
+  for (command = commands; command->cmdname; command++)
+    apr_hash_set(cmd_hash, command->cmdname, APR_HASH_KEY_STRING, command);
 
   while (1)
     {
-      svn_pool_clear(subpool);
-      SVN_ERR(svn_ra_svn_read_tuple(conn, subpool, "wl", &cmdname, &params));
-      for (i = 0; commands[i].cmdname; i++)
+      svn_pool_clear(iterpool);
+      err = svn_ra_svn_read_tuple(conn, iterpool, "wl", &cmdname, &params);
+      if (err)
         {
-          if (strcmp(cmdname, commands[i].cmdname) == 0)
-            break;
+          if (!error_on_disconnect
+              && err->apr_err == SVN_ERR_RA_SVN_CONNECTION_CLOSED)
+            {
+              svn_error_clear(err);
+              svn_pool_destroy(subpool);
+              return SVN_NO_ERROR;
+            }
+          return err;
         }
-      if (commands[i].cmdname)
-        err = (*commands[i].handler)(conn, subpool, params, baton);
+      command = apr_hash_get(cmd_hash, cmdname, APR_HASH_KEY_STRING);
+
+      if (command)
+        err = (*command->handler)(conn, iterpool, params, baton);
       else
         {
           err = svn_error_createf(SVN_ERR_RA_SVN_UNKNOWN_CMD, NULL,
@@ -908,7 +935,7 @@ svn_error_t *svn_ra_svn_handle_commands(svn_ra_svn_conn_t *conn,
 
       if (err && err->apr_err == SVN_ERR_RA_SVN_CMD_ERR)
         {
-          write_err = svn_ra_svn_write_cmd_failure(conn, subpool, err->child);
+          write_err = svn_ra_svn_write_cmd_failure(conn, iterpool, err->child);
           svn_error_clear(err);
           if (write_err)
             return write_err;
@@ -916,11 +943,20 @@ svn_error_t *svn_ra_svn_handle_commands(svn_ra_svn_conn_t *conn,
       else if (err)
         return err;
 
-      if (commands[i].terminate)
+      if (command && command->terminate)
         break;
     }
+  svn_pool_destroy(iterpool);
   svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
+}
+
+svn_error_t *svn_ra_svn_handle_commands(svn_ra_svn_conn_t *conn,
+                                        apr_pool_t *pool,
+                                        const svn_ra_svn_cmd_entry_t *commands,
+                                        void *baton)
+{
+  return svn_ra_svn_handle_commands2(conn, pool, commands, baton, TRUE);
 }
 
 svn_error_t *svn_ra_svn_write_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,

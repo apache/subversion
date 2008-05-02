@@ -1306,8 +1306,7 @@ typedef struct svn_diff3__file_output_baton_t
   const char *conflict_separator;
   const char *conflict_latest;
 
-  svn_boolean_t display_original_in_conflict;
-  svn_boolean_t display_resolved_conflicts;
+  svn_diff_conflict_display_style_t conflict_style;
 
   apr_pool_t *pool;
 } svn_diff3__file_output_baton_t;
@@ -1387,6 +1386,10 @@ output_common(void *baton, apr_off_t original_start, apr_off_t original_length,
               apr_off_t modified_start, apr_off_t modified_length,
               apr_off_t latest_start, apr_off_t latest_length)
 {
+  svn_diff3__file_output_baton_t *file_baton = baton;
+  if (file_baton->conflict_style == svn_diff_conflict_display_only_conflicts)
+    return SVN_NO_ERROR;
+
   return output_hunk(baton, 1, modified_start, modified_length);
 }
 
@@ -1396,6 +1399,10 @@ output_diff_modified(void *baton,
                      apr_off_t modified_start, apr_off_t modified_length,
                      apr_off_t latest_start, apr_off_t latest_length)
 {
+  svn_diff3__file_output_baton_t *file_baton = baton;
+  if (file_baton->conflict_style == svn_diff_conflict_display_only_conflicts)
+    return SVN_NO_ERROR;
+
   return output_hunk(baton, 1, modified_start, modified_length);
 }
 
@@ -1405,6 +1412,10 @@ output_diff_latest(void *baton,
                    apr_off_t modified_start, apr_off_t modified_length,
                    apr_off_t latest_start, apr_off_t latest_length)
 {
+  svn_diff3__file_output_baton_t *file_baton = baton;
+  if (file_baton->conflict_style == svn_diff_conflict_display_only_conflicts)
+    return SVN_NO_ERROR;
+
   return output_hunk(baton, 2, latest_start, latest_length);
 }
 
@@ -1434,37 +1445,56 @@ output_conflict(void *baton,
   svn_diff3__file_output_baton_t *file_baton = baton;
   apr_size_t len;
 
-  if (diff && file_baton->display_resolved_conflicts)
+  svn_diff_conflict_display_style_t style = file_baton->conflict_style;
+
+  /* ### Should show some context for this style as well. */
+  if (style == svn_diff_conflict_display_only_conflicts)
+    style = svn_diff_conflict_display_modified_original_latest;
+
+  if (style == svn_diff_conflict_display_resolved_modified_latest)
     {
-      return svn_diff_output(diff, baton,
-                             &svn_diff3__file_output_vtable);
+      if (diff)
+        return svn_diff_output(diff, baton,
+                               &svn_diff3__file_output_vtable);
+      else
+        style = svn_diff_conflict_display_modified_latest;
     }
 
-  len = strlen(file_baton->conflict_modified);
-  SVN_ERR(svn_stream_write(file_baton->output_stream,
-                           file_baton->conflict_modified,
-                           &len));
-
-  SVN_ERR(output_hunk(baton, 1, modified_start, modified_length));
-
-  if (file_baton->display_original_in_conflict)
+  if (style == svn_diff_conflict_display_modified_latest ||
+      style == svn_diff_conflict_display_modified_original_latest)
     {
-      len = strlen(file_baton->conflict_original);
+      len = strlen(file_baton->conflict_modified);
       SVN_ERR(svn_stream_write(file_baton->output_stream,
-                               file_baton->conflict_original, &len));
+                               file_baton->conflict_modified,
+                               &len));
 
-      SVN_ERR(output_hunk(baton, 0, original_start, original_length));
+      SVN_ERR(output_hunk(baton, 1, modified_start, modified_length));
+
+      if (style == svn_diff_conflict_display_modified_original_latest)
+        {
+          len = strlen(file_baton->conflict_original);
+          SVN_ERR(svn_stream_write(file_baton->output_stream,
+                                   file_baton->conflict_original, &len));
+
+          SVN_ERR(output_hunk(baton, 0, original_start, original_length));
+        }
+
+      len = strlen(file_baton->conflict_separator);
+      SVN_ERR(svn_stream_write(file_baton->output_stream,
+                               file_baton->conflict_separator, &len));
+
+      SVN_ERR(output_hunk(baton, 2, latest_start, latest_length));
+
+      len = strlen(file_baton->conflict_latest);
+      SVN_ERR(svn_stream_write(file_baton->output_stream,
+                               file_baton->conflict_latest, &len));
     }
-
-  len = strlen(file_baton->conflict_separator);
-  SVN_ERR(svn_stream_write(file_baton->output_stream,
-                           file_baton->conflict_separator, &len));
-
-  SVN_ERR(output_hunk(baton, 2, latest_start, latest_length));
-
-  len = strlen(file_baton->conflict_latest);
-  SVN_ERR(svn_stream_write(file_baton->output_stream,
-                           file_baton->conflict_latest, &len));
+  else if (style == svn_diff_conflict_display_modified)
+    SVN_ERR(output_hunk(baton, 1, modified_start, modified_length));
+  else if (style == svn_diff_conflict_display_latest)
+    SVN_ERR(output_hunk(baton, 2, latest_start, latest_length));
+  else /* unknown style */
+    abort();
 
   return SVN_NO_ERROR;
 }
@@ -1498,18 +1528,17 @@ detect_eol(char *buf, char *endp)
 }
 
 svn_error_t *
-svn_diff_file_output_merge(svn_stream_t *output_stream,
-                           svn_diff_t *diff,
-                           const char *original_path,
-                           const char *modified_path,
-                           const char *latest_path,
-                           const char *conflict_original,
-                           const char *conflict_modified,
-                           const char *conflict_latest,
-                           const char *conflict_separator,
-                           svn_boolean_t display_original_in_conflict,
-                           svn_boolean_t display_resolved_conflicts,
-                           apr_pool_t *pool)
+svn_diff_file_output_merge2(svn_stream_t *output_stream,
+                            svn_diff_t *diff,
+                            const char *original_path,
+                            const char *modified_path,
+                            const char *latest_path,
+                            const char *conflict_original,
+                            const char *conflict_modified,
+                            const char *conflict_latest,
+                            const char *conflict_separator,
+                            svn_diff_conflict_display_style_t style,
+                            apr_pool_t *pool)
 {
   svn_diff3__file_output_baton_t baton;
   apr_file_t *file[3];
@@ -1545,9 +1574,7 @@ svn_diff_file_output_merge(svn_stream_t *output_stream,
                                                    latest_path),
                                     pool));
 
-  baton.display_original_in_conflict = display_original_in_conflict;
-  baton.display_resolved_conflicts = display_resolved_conflicts &&
-                                     !display_original_in_conflict;
+  baton.conflict_style = style;
 
   for (idx = 0; idx < 3; idx++)
     {
@@ -1604,4 +1631,41 @@ svn_diff_file_output_merge(svn_stream_t *output_stream,
     }
 
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_diff_file_output_merge(svn_stream_t *output_stream,
+                           svn_diff_t *diff,
+                           const char *original_path,
+                           const char *modified_path,
+                           const char *latest_path,
+                           const char *conflict_original,
+                           const char *conflict_modified,
+                           const char *conflict_latest,
+                           const char *conflict_separator,
+                           svn_boolean_t display_original_in_conflict,
+                           svn_boolean_t display_resolved_conflicts,
+                           apr_pool_t *pool)
+{
+  svn_diff_conflict_display_style_t style =
+    svn_diff_conflict_display_modified_latest;
+
+  if (display_resolved_conflicts)
+    style = svn_diff_conflict_display_resolved_modified_latest;
+
+  if (display_original_in_conflict)
+    style = svn_diff_conflict_display_modified_original_latest;
+
+  return svn_diff_file_output_merge2(output_stream,
+                                     diff,
+                                     original_path,
+                                     modified_path,
+                                     latest_path,
+                                     conflict_original,
+                                     conflict_modified,
+                                     conflict_latest,
+                                     conflict_separator,
+                                     style,
+                                     pool);
 }

@@ -173,6 +173,10 @@ svn_error_t *svn_ra_svn_set_capabilities(svn_ra_svn_conn_t *conn,
 svn_boolean_t svn_ra_svn_has_capability(svn_ra_svn_conn_t *conn,
                                         const char *capability);
 
+/** Returns the remote address of the connection as a string, if known,
+ *  or NULL if inapplicable. */
+const char *svn_ra_svn_conn_remote_host(svn_ra_svn_conn_t *conn);
+
 /** Write a number over the net.
  *
  * Writes will be buffered until the next read or flush.
@@ -347,6 +351,20 @@ svn_error_t *svn_ra_svn_read_cmd_response(svn_ra_svn_conn_t *conn,
  * will be reported to the other side of the connection and the
  * command loop will continue; any other kind of error (typically a
  * network or protocol error) is passed through to the caller.
+ *
+ * @since New in 1.6.
+ *
+ */
+svn_error_t *svn_ra_svn_handle_commands2(svn_ra_svn_conn_t *conn,
+                                         apr_pool_t *pool,
+                                         const svn_ra_svn_cmd_entry_t *commands,
+                                         void *baton,
+                                         svn_boolean_t error_on_disconnect);
+
+/** Similar to svn_ra_svn_handle_commands2 but @a error_on_disconnect
+ * is always @c FALSE.
+ *
+ * @deprecated Provided for backward compatibility with the 1.5 API.
  */
 svn_error_t *svn_ra_svn_handle_commands(svn_ra_svn_conn_t *conn,
                                         apr_pool_t *pool,
