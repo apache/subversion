@@ -48,6 +48,10 @@ is_valid_checksum_skel(skel_t *skel)
       && skel->children->next->is_atom)
     return TRUE;
 
+  if (svn_fs_base__matches_atom(skel->children, "sha1")
+      && skel->children->next->is_atom)
+    return TRUE;
+
   return FALSE;
 }
 
@@ -527,6 +531,12 @@ svn_fs_base__parse_representation_skel(representation_t **rep_p,
           rep->checksum = svn_checksum_create(svn_checksum_md5, pool);
           memcpy(rep->checksum->digest, checksum_skel->children->next->data,
                  APR_MD5_DIGESTSIZE);
+        }
+      else if (svn_fs_base__matches_atom(checksum_skel->children, "sha1"))
+        {
+          rep->checksum = svn_checksum_create(svn_checksum_sha1, pool);
+          memcpy(rep->checksum->digest, checksum_skel->children->next->data,
+                 APR_SHA1_DIGESTSIZE);
         }
       else
         return skel_err("checksum type");
@@ -1071,6 +1081,15 @@ svn_fs_base__unparse_representation_skel(skel_t **skel_p,
                                   pool),
                                  checksum_skel);
             svn_fs_base__prepend(svn_fs_base__str_atom("md5", pool),
+                                 checksum_skel);
+            break;
+
+          case svn_checksum_sha1:
+            svn_fs_base__prepend(svn_fs_base__mem_atom
+                                 (rep->checksum->digest, APR_SHA1_DIGESTSIZE,
+                                  pool),
+                                 checksum_skel);
+            svn_fs_base__prepend(svn_fs_base__str_atom("sha1", pool),
                                  checksum_skel);
             break;
 
