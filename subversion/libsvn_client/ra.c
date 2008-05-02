@@ -787,7 +787,8 @@ svn_client__get_youngest_common_ancestor(const char **ancestor_path,
         {
           /* We have a path match.  Now, did our two histories share
              any revisions at that path? */
-          SVN_ERR(svn_rangelist_intersect(&common, ranges1, ranges2, pool));
+          SVN_ERR(svn_rangelist_intersect(&common, ranges1, ranges2,
+                                          TRUE, pool));
           if (common->nelts)
             {
               svn_merge_range_t *yc_range =
