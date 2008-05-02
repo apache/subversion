@@ -1142,6 +1142,7 @@ def merge_sensitive_log_single_revision(sbox):
     13 : [14],
     12 : [14],
     11 : [14, 12],
+    10 : [14],
     9 : [14],
     8 : [14],
     7 : [14, 8],
