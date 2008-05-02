@@ -10948,9 +10948,24 @@ def dont_merge_revs_into_subtree_that_predate_it(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, wc_dir)
 
-  # Copy 'A/D/H' to 'H_COPY' in r4.
+  # Delete 'A/D/H/nu' and commit it as r4.
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', nu_path)
+  expected_output = wc.State(wc_dir, {'A/D/H/nu' : Item(verb='Deleting')})
+  expected_status.remove('A/D/H/nu')
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  # Copy 'A/D/H/nu' from r3 and commit it as r5.
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp', 
+                                     sbox.repo_url + '/A/D/H/nu@3', nu_path)
+  expected_output = wc.State(wc_dir, {'A/D/H/nu' : Item(verb='Adding')})
+  expected_status.add({'A/D/H/nu' : Item(status='  ', wc_rev=5)})
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  # Copy 'A/D/H' to 'H_COPY' in r6.
   svntest.actions.run_and_verify_svn(None,
-                                     ['\n', 'Committed revision 4.\n'],
+                                     ['\n', 'Committed revision 6.\n'],
                                      [], 'copy',
                                      sbox.repo_url + "/A/D/H",
                                      sbox.repo_url + "/H_COPY",
@@ -10964,37 +10979,37 @@ def dont_merge_revs_into_subtree_that_predate_it(sbox):
 
   # Update to pull the previous copy into the WC
   svntest.main.run_svn(None, 'up', wc_dir)
-  expected_status.tweak(status='  ', wc_rev=4)
+  expected_status.tweak(status='  ', wc_rev=6)
 
-  # Make a text mod to 'A/D/H/nu' and commit it as r5.
+  # Make a text mod to 'A/D/H/nu' and commit it as r7.
   svntest.main.file_write(nu_path, "New content")
   expected_output = wc.State(wc_dir, {'A/D/H/nu' : Item(verb='Sending')})
-  expected_status.tweak('A/D/H/nu', wc_rev=5)
+  expected_status.tweak('A/D/H/nu', wc_rev=7)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, wc_dir)
 
   # Make another text mod to 'A/D/H/psi' that can be merged to 'H_COPY'
-  # during a cherry harvest and commit it as r6.
+  # during a cherry harvest and commit it as r8.
   svntest.main.file_write(psi_path, "Even *newer* content")
   expected_output = wc.State(wc_dir, {'A/D/H/psi' : Item(verb='Sending')})
-  expected_status.tweak('A/D/H/psi', wc_rev=6)
+  expected_status.tweak('A/D/H/psi', wc_rev=8)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, wc_dir)
   expected_disk.tweak('A/D/H/psi', contents="Even *newer* content")
 
   # Update WC so elision occurs smoothly.
   svntest.main.run_svn(None, 'up', wc_dir)
-  expected_status.tweak(status='  ', wc_rev=6)
+  expected_status.tweak(status='  ', wc_rev=8)
 
-  # Merge r5 from 'A/D/H/nu' to 'H_COPY/nu'.
+  # Merge r7 from 'A/D/H/nu' to 'H_COPY/nu'.
   saved_cwd = os.getcwd()
   os.chdir(svntest.main.work_dir)
   short_nu_COPY_path = shorten_path_kludge(nu_COPY_path)
   svntest.actions.run_and_verify_svn(None,
-                                     expected_merge_output([[5]], 'U    ' +
+                                     expected_merge_output([[7]], 'U    ' +
                                                            short_nu_COPY_path +
                                                            '\n'),
-                                     [], 'merge', '-c5',
+                                     [], 'merge', '-c7',
                                      sbox.repo_url + '/A/D/H/nu',
                                      short_nu_COPY_path)
   os.chdir(saved_cwd)
@@ -11020,14 +11035,14 @@ def dont_merge_revs_into_subtree_that_predate_it(sbox):
   os.chdir(saved_cwd)
 
   os.chdir(svntest.main.work_dir)
-  # H_COPY needs r4-6 applied while H_COPY/nu needs only 4,6.
-  # This means r4 will be done as a separate editor drive targeted
-  # on H_COPY.  But r4 was only the copy of A/D/H to H_COPY and
-  # so is a no-op and there will no notification for r4.
+  # H_COPY needs r6-8 applied while H_COPY/nu needs only 6,8.
+  # This means r6 will be done as a separate editor drive targeted
+  # on H_COPY.  But r6 was only the copy of A/D/H to H_COPY and
+  # so is a no-op and there will no notification for r6.
   svntest.actions.run_and_verify_svn(
     None,
     expected_merge_output(
-      [[5,6]], 'U    ' + os.path.join(short_H_COPY_path, "psi") + '\n'),
+      [[7,8]], 'U    ' + os.path.join(short_H_COPY_path, "psi") + '\n'),
     [], 'merge', sbox.repo_url + '/A/D/H', short_H_COPY_path)
   os.chdir(saved_cwd)
 
@@ -11038,7 +11053,7 @@ def dont_merge_revs_into_subtree_that_predate_it(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
   expected_props = svntest.verify.UnorderedOutput(
     ["Properties on '" + H_COPY_path + "':\n",
-     "  " + SVN_PROP_MERGEINFO + " : /A/D/H:2,4-6\n"])
+     "  " + SVN_PROP_MERGEINFO + " : /A/D/H:2,6-8\n"])
   svntest.actions.run_and_verify_svn(None,
                                      expected_props, [],
                                      'pl', '-vR', wc_dir)
