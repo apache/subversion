@@ -365,6 +365,7 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
                              apr_pool_t *pool)
 {
   svn_boolean_t store_password_val = TRUE;
+  svn_boolean_t store_auth_creds_val = TRUE;
   svn_auth_provider_object_t *provider;
 
   /* The whole list of registered providers */
@@ -469,12 +470,12 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
   /* There are two different ways the user can disable disk caching
      of credentials:  either via --no-auth-cache, or in the config
      file ('store-auth-creds = no'). */
-  SVN_ERR(svn_config_get_bool(cfg, &store_password_val,
+  SVN_ERR(svn_config_get_bool(cfg, &store_auth_creds_val,
                               SVN_CONFIG_SECTION_AUTH,
                               SVN_CONFIG_OPTION_STORE_AUTH_CREDS,
                               TRUE));
 
-  if (no_auth_cache || ! store_password_val)
+  if (no_auth_cache || ! store_auth_creds_val)
     svn_auth_set_parameter(*ab, SVN_AUTH_PARAM_NO_AUTH_CACHE, "");
 
   return SVN_NO_ERROR;

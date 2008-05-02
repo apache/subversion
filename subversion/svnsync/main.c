@@ -619,7 +619,7 @@ do_initialize(svn_ra_session_t *to_session,
 
   /* Now fill in our bookkeeping info in the dest repository. */
 
-  SVN_ERR(svn_ra_open2(&from_session, baton->from_url,
+  SVN_ERR(svn_ra_open3(&from_session, baton->from_url, NULL,
                        &(baton->source_callbacks), baton,
                        baton->config, pool));
   SVN_ERR(svn_ra_get_repos_root2(from_session, &root_url, pool));
@@ -703,8 +703,8 @@ initialize_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
                              _("Path '%s' is not a URL"), from_url);
 
   baton = make_subcommand_baton(opt_baton, to_url, from_url, 0, 0, pool);
-  SVN_ERR(svn_ra_open2(&to_session, baton->to_url, &(baton->sync_callbacks),
-                       baton, baton->config, pool));
+  SVN_ERR(svn_ra_open3(&to_session, baton->to_url, NULL, 
+                       &(baton->sync_callbacks), baton, baton->config, pool));
   SVN_ERR(check_if_session_is_at_repos_root(to_session, baton->to_url, pool));
   SVN_ERR(with_locked(to_session, do_initialize, baton, pool));
 
@@ -1237,7 +1237,6 @@ open_source_session(svn_ra_session_t **from_session,
                     apr_pool_t *pool)
 {
   svn_string_t *from_url, *from_uuid;
-  const char *uuid;
 
   SVN_ERR(svn_ra_rev_prop(to_session, 0, SVNSYNC_PROP_FROM_URL,
                           &from_url, pool));
@@ -1252,19 +1251,8 @@ open_source_session(svn_ra_session_t **from_session,
        _("Destination repository has not been initialized"));
 
   /* Open the session to copy the revision data. */
-  SVN_ERR(svn_ra_open2(from_session, from_url->data, callbacks, baton,
-                       config, pool));
-
-  /* Ok, now sanity check the UUID of the source repository, it
-     wouldn't be a good thing to sync from a different repository. */
-
-  SVN_ERR(svn_ra_get_uuid2(*from_session, &uuid, pool));
-
-  if (strcmp(uuid, from_uuid->data) != 0)
-    return svn_error_createf(APR_EINVAL, NULL,
-                             _("UUID of source repository (%s) does not "
-                               "match expected UUID (%s)"),
-                             uuid, from_uuid->data);
+  SVN_ERR(svn_ra_open3(from_session, from_url->data, from_uuid->data,
+                       callbacks, baton, config, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1642,8 +1630,8 @@ synchronize_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
                              _("Path '%s' is not a URL"), to_url);
 
   baton = make_subcommand_baton(opt_baton, to_url, NULL, 0, 0, pool);
-  SVN_ERR(svn_ra_open2(&to_session, baton->to_url, &(baton->sync_callbacks),
-                       baton, baton->config, pool));
+  SVN_ERR(svn_ra_open3(&to_session, baton->to_url, NULL,
+                       &(baton->sync_callbacks), baton, baton->config, pool));
   SVN_ERR(check_if_session_is_at_repos_root(to_session, baton->to_url, pool));
   SVN_ERR(with_locked(to_session, do_synchronize, baton, pool));
 
@@ -1793,8 +1781,8 @@ copy_revprops_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
 
   baton = make_subcommand_baton(opt_baton, to_url, NULL,
                                 start_rev, end_rev, pool);
-  SVN_ERR(svn_ra_open2(&to_session, baton->to_url, &(baton->sync_callbacks),
-                       baton, baton->config, pool));
+  SVN_ERR(svn_ra_open3(&to_session, baton->to_url, NULL,
+                       &(baton->sync_callbacks), baton, baton->config, pool));
   SVN_ERR(check_if_session_is_at_repos_root(to_session, baton->to_url, pool));
   SVN_ERR(with_locked(to_session, do_copy_revprops, baton, pool));
 

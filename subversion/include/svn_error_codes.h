@@ -743,6 +743,11 @@ SVN_ERROR_START
              SVN_ERR_RA_CATEGORY_START + 8,
              "Server can only replay from the root of a repository")
 
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_RA_UUID_MISMATCH,
+             SVN_ERR_RA_CATEGORY_START + 9,
+             "Repository UUID does not match expected UUID")
+
   /* ra_dav errors */
 
   SVN_ERRDEF(SVN_ERR_RA_DAV_SOCK_INIT,

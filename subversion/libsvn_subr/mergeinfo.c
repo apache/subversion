@@ -341,9 +341,17 @@ range_to_string(svn_string_t **result, svn_merge_range_t *range,
     *result = svn_string_createf(pool, "%ld%s", range->end,
                                  range->inheritable
                                  ? "" : SVN_MERGEINFO_NONINHERITABLE_STR);
-  else
+  else if (range->start - 1 == range->end)
+    *result = svn_string_createf(pool, "-%ld%s", range->start,
+                                 range->inheritable
+                                 ? "" : SVN_MERGEINFO_NONINHERITABLE_STR);
+  else if (range->start < range->end)
     *result = svn_string_createf(pool, "%ld-%ld%s", range->start + 1,
                                  range->end, range->inheritable
+                                 ? "" : SVN_MERGEINFO_NONINHERITABLE_STR);
+  else 
+    *result = svn_string_createf(pool, "%ld-%ld%s", range->start,
+                                 range->end + 1, range->inheritable
                                  ? "" : SVN_MERGEINFO_NONINHERITABLE_STR);
   return SVN_NO_ERROR;
 }
@@ -890,10 +898,11 @@ svn_error_t *
 svn_rangelist_intersect(apr_array_header_t **output,
                         apr_array_header_t *rangelist1,
                         apr_array_header_t *rangelist2,
+                        svn_boolean_t consider_inheritance,
                         apr_pool_t *pool)
 {
   return rangelist_intersect_or_remove(output, rangelist1, rangelist2, FALSE,
-                                       TRUE, pool);
+                                       consider_inheritance, pool);
 }
 
 svn_error_t *
@@ -1162,7 +1171,7 @@ svn_mergeinfo_intersect(svn_mergeinfo_t *mergeinfo,
         {
           SVN_ERR(svn_rangelist_intersect(&rangelist,
                                           (apr_array_header_t *) val,
-                                          rangelist, pool));
+                                          rangelist, TRUE, pool));
           if (rangelist->nelts > 0)
             apr_hash_set(*mergeinfo, path, APR_HASH_KEY_STRING, rangelist);
         }

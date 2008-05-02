@@ -198,7 +198,7 @@ assigned within a transaction have the txn-id field of "t<txnid>".
 
 When a new node-id or copy-id is assigned in a transaction, the ID
 used is a "_" followed by a base36 number unique to the transaction.
-During the final phase of a comment, node-revision IDs are rewritten
+During the final phase of a commit, node-revision IDs are rewritten
 to have repository-wide unique node-ID and copy-ID fields, and to have
 "r<rev>/<offset>" txn-id fields.
 

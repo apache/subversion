@@ -889,6 +889,44 @@ typedef struct svn_client_ctx_t
 #define SVN_CLIENT_AUTH_PASSWORD            "password"
 /** @} group end: Authentication information file names */
 
+/** Client argument processing
+ *
+ * @defgroup clnt_cmdline Client command-line processing
+ *
+ * @{
+ */
+
+/**
+ * Pull remaining target arguments from @a os into @a *targets_p,
+ * converting them to UTF-8, followed by targets from @a known_targets
+ * (which might come from, for example, the "--targets" command line option).
+ *
+ * On each URL target, do some IRI-to-URI encoding and some auto-escaping.
+ * On each local path, canonicalize case and path separators.
+ *
+ * Allocate @a *targets_p and its elements in @a pool.
+ *
+ * @a ctx is required for possible repository authentication.
+ *
+ * If a path has the same name as a Subversion working copy
+ * administrative directory, return SVN_ERR_RESERVED_FILENAME_SPECIFIED;
+ * if multiple reserved paths are encountered, return a chain of
+ * errors, all of which are SVN_ERR_RESERVED_FILENAME_SPECIFIED.  Do
+ * not return this type of error in a chain with any other type of
+ * error, and if this is the only type of error encountered, complete
+ * the operation before returning the error(s).
+ *
+ * @since New in 1.6
+ */
+svn_error_t *
+svn_client_args_to_target_array(apr_array_header_t **targets_p,
+                                apr_getopt_t *os,
+                                apr_array_header_t *known_targets,
+                                svn_client_ctx_t *ctx,
+                                apr_pool_t *pool);
+
+/** @} group end: Client command-line processing */
+
 /** @} */
 
 /**
@@ -2863,12 +2901,9 @@ svn_client_resolved(const char *path,
  * @c svn_wc_conflict_choose_merged, don't change the contents at all,
  * just remove the conflict status, which is the pre-1.5 behavior.
  *
- * (@c svn_wc_conflict_choose_theirs_conflict and
- * @c svn_wc_conflict_choose_mine_conflict are not yet implemented;
- * the effect of passing one of those values as @a conflict_choice is
- * currently undefined, which may or may not be an underhanded way of
- * allowing real behaviors to be added for them later without revving
- * this interface.)
+ * @c svn_wc_conflict_choose_theirs_conflict and @c
+ * svn_wc_conflict_choose_mine_conflict are not legal for binary
+ * files or properties.
  *
  * If @a path is not in a state of conflict to begin with, do nothing.
  * If @a path's conflict state is removed and @a ctx->notify_func2 is non-NULL,
@@ -4319,7 +4354,7 @@ svn_client_uuid_from_path(const char **uuid,
  *
  * @since New in 1.3.
  *
- * @note This function is similar to svn_ra_open2(), but the caller avoids
+ * @note This function is similar to svn_ra_open3(), but the caller avoids
  * having to providing its own callback functions.
  */
 svn_error_t *

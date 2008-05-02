@@ -933,7 +933,7 @@ elide_mergeinfo_catalog_open_directory(const char *path,
   b->mergeinfo_catalog = pb->mergeinfo_catalog;
 
   if (apr_hash_get(b->mergeinfo_catalog, path, APR_HASH_KEY_STRING))
-    b->inherited_mergeinfo_path = path;
+    b->inherited_mergeinfo_path = apr_pstrdup(dir_pool, path);
   else
     b->inherited_mergeinfo_path = pb->inherited_mergeinfo_path;
   
@@ -945,6 +945,7 @@ elide_mergeinfo_catalog_open_directory(const char *path,
 struct elide_mergeinfo_catalog_cb_baton {
   apr_array_header_t *elidable_paths;
   svn_mergeinfo_t mergeinfo_catalog;
+  apr_pool_t *result_pool;
 };
 
 /* Implements svn_delta_path_driver_cb_func_t. */
@@ -989,7 +990,8 @@ elide_mergeinfo_catalog_cb(void **dir_baton,
                                  pool));
 
   if (elides)
-    APR_ARRAY_PUSH(cb->elidable_paths, const char *) = path;
+    APR_ARRAY_PUSH(cb->elidable_paths, const char *) =
+      apr_pstrdup(cb->result_pool, path);
 
   return SVN_NO_ERROR;
 }
@@ -1002,8 +1004,9 @@ svn_client__elide_mergeinfo_catalog(svn_mergeinfo_t mergeinfo_catalog,
   apr_array_header_t *elidable_paths = apr_array_make(pool, 1, 
                                                       sizeof(const char *));
   svn_delta_editor_t *editor = svn_delta_default_editor(pool);
-  struct elide_mergeinfo_catalog_cb_baton cb = {elidable_paths, 
-                                                mergeinfo_catalog};
+  struct elide_mergeinfo_catalog_cb_baton cb = {elidable_paths,
+                                                mergeinfo_catalog,
+                                                pool};
   int i;
 
   editor->open_root = elide_mergeinfo_catalog_open_root;
@@ -1059,7 +1062,7 @@ filter_log_entry_with_rangelist(void *baton,
   range->inheritable = TRUE;
   APR_ARRAY_PUSH(this_rangelist, svn_merge_range_t *) = range;
   SVN_ERR(svn_rangelist_intersect(&intersection, fleb->rangelist, 
-                                  this_rangelist, pool));
+                                  this_rangelist, TRUE, pool));
   if (! (intersection && intersection->nelts))
     return SVN_NO_ERROR;
 

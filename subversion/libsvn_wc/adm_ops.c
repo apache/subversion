@@ -44,6 +44,7 @@
 #include "svn_md5.h"
 #include "svn_xml.h"
 #include "svn_time.h"
+#include "svn_diff.h"
 
 #include "wc.h"
 #include "log.h"
@@ -2639,34 +2640,78 @@ resolve_conflict_on_entry(const char *path,
   svn_boolean_t was_present, need_feedback = FALSE;
   apr_uint64_t modify_flags = 0;
   svn_wc_entry_t *entry = svn_wc_entry_dup(orig_entry, pool);
-  const char *auto_resolve_src;
 
-  /* Handle automatic conflict resolution before the temporary files are
-   * deleted, if necessary. */
-  switch (conflict_choice)
+  if (resolve_text)
     {
-    case svn_wc_conflict_choose_base:
-      auto_resolve_src = entry->conflict_old;
-      break;
-    case svn_wc_conflict_choose_mine_full:
-      auto_resolve_src = entry->conflict_wrk;
-      break;
-    case svn_wc_conflict_choose_theirs_full:
-      auto_resolve_src = entry->conflict_new;
-      break;
-    case svn_wc_conflict_choose_merged:
-      auto_resolve_src = NULL;
-      break;
-    default:
-      return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
-                              _("Invalid 'conflict_result' argument"));
-    }
+      const char *auto_resolve_src;
 
-    if (auto_resolve_src)
-      SVN_ERR(svn_io_copy_file(
-        svn_path_join(svn_wc_adm_access_path(conflict_dir), auto_resolve_src,
-                      pool),
-        path, TRUE, pool));
+      /* Handle automatic conflict resolution before the temporary files are
+       * deleted, if necessary. */
+      switch (conflict_choice)
+        {
+        case svn_wc_conflict_choose_base:
+          auto_resolve_src = entry->conflict_old;
+          break;
+        case svn_wc_conflict_choose_mine_full:
+          auto_resolve_src = entry->conflict_wrk;
+          break;
+        case svn_wc_conflict_choose_theirs_full:
+          auto_resolve_src = entry->conflict_new;
+          break;
+        case svn_wc_conflict_choose_merged:
+          auto_resolve_src = NULL;
+          break;
+        case svn_wc_conflict_choose_theirs_conflict:
+        case svn_wc_conflict_choose_mine_conflict:
+          {
+            if (entry->conflict_old && entry->conflict_wrk &&
+                entry->conflict_new)
+              {
+                apr_file_t *tmp_f;
+                svn_stream_t *tmp_stream;
+                svn_diff_t *diff;
+                svn_diff_conflict_display_style_t style =
+                  conflict_choice == svn_wc_conflict_choose_theirs_conflict
+                  ? svn_diff_conflict_display_latest
+                  : svn_diff_conflict_display_modified;
+
+                SVN_ERR(svn_wc_create_tmp_file2(&tmp_f,
+                                                &auto_resolve_src,
+                                                svn_wc_adm_access_path(conflict_dir),
+                                                svn_io_file_del_none,
+                                                pool));
+                tmp_stream = svn_stream_from_aprfile2(tmp_f, FALSE, pool);
+                SVN_ERR(svn_diff_file_diff3_2(&diff,
+                                              entry->conflict_old,
+                                              entry->conflict_wrk,
+                                              entry->conflict_new,
+                                              svn_diff_file_options_create(pool),
+                                              pool));
+                SVN_ERR(svn_diff_file_output_merge2(tmp_stream, diff,
+                                                    entry->conflict_old,
+                                                    entry->conflict_wrk,
+                                                    entry->conflict_new,
+                                                    /* markers ignored */
+                                                    NULL, NULL, NULL, NULL,
+                                                    style,
+                                                    pool));
+                SVN_ERR(svn_stream_close(tmp_stream));
+              }
+            else
+              auto_resolve_src = NULL;
+            break;
+          }
+        default:
+          return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
+                                  _("Invalid 'conflict_result' argument"));
+        }
+
+      if (auto_resolve_src)
+        SVN_ERR(svn_io_copy_file(
+          svn_path_join(svn_wc_adm_access_path(conflict_dir), auto_resolve_src,
+                        pool),
+          path, TRUE, pool));
+    }
 
   /* Yes indeed, being able to map a function over a list would be nice. */
   if (resolve_text && entry->conflict_old)
