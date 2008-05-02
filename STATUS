@@ -43,12 +43,6 @@ Candidate changes:
    Votes:
      +1: glasser, markphip
 
- * r30922
-   Fix an error leak introduced by the "make log -g not croak on missing
-   paths and revisions" bugfix of r30762.
-   Votes:
-     +1: cmpilato, kameshj
-
  * Remove exit_code from the return tuple of the function call
    to svntest.actions.run_and_verify_svn which depends on r29753
    which has not been backported to 1.5.x and hence test
@@ -62,7 +56,7 @@ Candidate changes:
    Remove 'blind deletion of argument to mkdir --parents', delete
    only if this invocation has created it.
    Votes:
-     +1: kameshj
+     +1: kameshj, hwright
    
 Status of 1.5.1:
 ================
@@ -77,3 +71,9 @@ Approved changes (all releases):
    to ignore nested logs when in '-g' mode.  (Issue #3185.)
    Votes:
      +1: cmpilato, hwright, markphip
+
+ * r30922
+   Fix an error leak introduced by the "make log -g not croak on missing
+   paths and revisions" bugfix of r30762.
+   Votes:
+     +1: cmpilato, kameshj, hwright
