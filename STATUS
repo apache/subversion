@@ -25,7 +25,7 @@ Candidate changes:
      If this group isn't backported for 1.5.0 it needs to be
      reverted on trunk and svn_rangelist_intersect() revved.
    Votes:
-     +1: pburba, markphip
+     +1: pburba, markphip, kfogel
 
  * r30746, r30747
    Fix a minor merge range notification header bug.
