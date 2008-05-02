@@ -14,19 +14,6 @@ Candidate changes:
    Votes:
      +1: arfrever, stylesen
 
- * r30883, r30888
-   Fix issue #3187.  Fix reverse merges where merge target or subtree
-   has non-inheritable revision ranges intersecting with the merged
-   range.  Not a common use case, but completely broken without this
-   fix.
-   Notes:
-     r30888 is just a revert of some accidental whitespace changes
-     in r30883.  This group changes the svn_rangelist_intersect API.
-     If this group isn't backported for 1.5.0 it needs to be
-     reverted on trunk and svn_rangelist_intersect() revved.
-   Votes:
-     +1: pburba, markphip, kfogel
-
  * r30746, r30747
    Fix a minor merge range notification header bug.
    Notes:
@@ -52,19 +39,6 @@ Candidate changes:
    Votes:
      +1: kameshj, hwright
 
- * r30931
-   Remove 'blind deletion of argument to mkdir --parents', delete
-   only if this invocation has created it.
-   Votes:
-     +1: kameshj, hwright, kfogel
-   
- * r30937
-   Rewrite svn_io_check_path's docstring and make it unambiguous.
-   Justification:
-     Ambiguous APIs are bad.
-   Votes:
-     +1: danielsh, kameshj, kfogel
-
  * r30949, r30962
    Fix issue #3188.  Mergeinfo on switched targets/subtrees should elide
    to repos.
@@ -83,3 +57,29 @@ Candidate changes:
 
 Approved changes (all releases):
 ================================
+
+ * r30883, r30888
+   Fix issue #3187.  Fix reverse merges where merge target or subtree
+   has non-inheritable revision ranges intersecting with the merged
+   range.  Not a common use case, but completely broken without this
+   fix.
+   Notes:
+     r30888 is just a revert of some accidental whitespace changes
+     in r30883.  This group changes the svn_rangelist_intersect API.
+     If this group isn't backported for 1.5.0 it needs to be
+     reverted on trunk and svn_rangelist_intersect() revved.
+   Votes:
+     +1: pburba, markphip, kfogel
+
+ * r30931
+   Remove 'blind deletion of argument to mkdir --parents', delete
+   only if this invocation has created it.
+   Votes:
+     +1: kameshj, hwright, kfogel
+   
+ * r30937
+   Rewrite svn_io_check_path's docstring and make it unambiguous.
+   Justification:
+     Ambiguous APIs are bad.
+   Votes:
+     +1: danielsh, kameshj, kfogel
