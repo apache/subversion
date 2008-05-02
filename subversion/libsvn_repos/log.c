@@ -1064,23 +1064,31 @@ combine_mergeinfo_path_lists(apr_array_header_t **combined_list,
 }
 
 
-static svn_error_t *
-do_merged_logs(svn_fs_t *fs,
-               const apr_array_header_t *paths,
-               svn_revnum_t hist_start,
-               svn_revnum_t hist_end,
-               int limit,
-               svn_boolean_t discover_changed_paths,
-               svn_boolean_t strict_node_history,
-               const apr_array_header_t *revprops,
-               svn_boolean_t descending_order,
-               svn_log_entry_receiver_t receiver,
-               void *receiver_baton,
-               svn_repos_authz_func_t authz_read_func,
-               void *authz_read_baton,
-               apr_pool_t *pool);
+/* Pity that C is so ... linear. */
+static svn_error_t *do_logs(svn_fs_t *fs,
+                            const apr_array_header_t *paths,
+                            svn_revnum_t hist_start,
+                            svn_revnum_t hist_end,
+                            int limit,
+                            svn_boolean_t discover_changed_paths,
+                            svn_boolean_t strict_node_history,
+                            svn_boolean_t include_merged_revisions,
+                            const apr_array_header_t *revprops,
+                            svn_boolean_t descending_order,
+                            svn_log_entry_receiver_t receiver,
+                            void *receiver_baton,
+                            svn_repos_authz_func_t authz_read_func,
+                            void *authz_read_baton,
+                            apr_pool_t *pool);
 
 
+/* Examine the combined mergeinfo for revision REV in FS (as collected
+   by examining paths of interest to a log operation), and determine
+   which revisions to report as having been merged via the commit
+   resulting in REV.
+
+   Other parameters are as described by do_logs(), around which this
+   is a recursion wrapper. */
 static svn_error_t *
 handle_merged_revisions(svn_revnum_t rev,
                         svn_fs_t *fs,
@@ -1114,15 +1122,11 @@ handle_merged_revisions(svn_revnum_t rev,
         = APR_ARRAY_IDX(combined_list, i, struct path_list_range *);
 
       svn_pool_clear(iterpool);
-      err = do_merged_logs(fs, 
-                           pl_range->paths,
-                           pl_range->range.start, 
-                           pl_range->range.end,
-                           0, discover_changed_paths,
-                           strict_node_history, revprops, TRUE,
-                           receiver, receiver_baton,
-                           authz_read_func, authz_read_baton,
-                           iterpool);
+      err = do_logs(fs, pl_range->paths, pl_range->range.start, 
+                    pl_range->range.end, 0, discover_changed_paths,
+                    strict_node_history, TRUE, revprops, TRUE,
+                    receiver, receiver_baton, authz_read_func, 
+                    authz_read_baton, iterpool);
       if (err && (err->apr_err == SVN_ERR_FS_NOT_FOUND ||
                   err->apr_err == SVN_ERR_FS_NO_SUCH_REVISION))
         {
@@ -1145,35 +1149,24 @@ handle_merged_revisions(svn_revnum_t rev,
    the logs back as we find them, else buffer the logs and send them back
    in youngest->oldest order.
 
-   Unlike do_logs(), below, this function includes merged revisions in the
-   list of revisions sent back.  Other parameters are the same as
-   svn_repos_get_logs4().
-
-   In order to prevent log message overload, we always do merged logs in a 
-   non-streamy sort of way, using this algorithm:
-     1) Get all mainline revisions for PATHS (regardless of LIMIT), marking 
-        branching revisions as such.
-        - Stop if we encounter a revision which has already been retrieved,
-          such as when a branch hits the mainline of history.
-     2) Send the fetched revisions (up to LIMIT), in either forward or reverse
-        order.
-     3) When a merging revision is hit, recurse using the merged revisions.
+   Other parameters are the same as svn_repos_get_logs4().
  */
 static svn_error_t *
-do_merged_logs(svn_fs_t *fs,
-               const apr_array_header_t *paths,
-               svn_revnum_t hist_start,
-               svn_revnum_t hist_end,
-               int limit,
-               svn_boolean_t discover_changed_paths,
-               svn_boolean_t strict_node_history,
-               const apr_array_header_t *revprops,
-               svn_boolean_t descending_order,
-               svn_log_entry_receiver_t receiver,
-               void *receiver_baton,
-               svn_repos_authz_func_t authz_read_func,
-               void *authz_read_baton,
-               apr_pool_t *pool)
+do_logs(svn_fs_t *fs,
+        const apr_array_header_t *paths,
+        svn_revnum_t hist_start,
+        svn_revnum_t hist_end,
+        int limit,
+        svn_boolean_t discover_changed_paths,
+        svn_boolean_t strict_node_history,
+        svn_boolean_t include_merged_revisions,
+        const apr_array_header_t *revprops,
+        svn_boolean_t descending_order,
+        svn_log_entry_receiver_t receiver,
+        void *receiver_baton,
+        svn_repos_authz_func_t authz_read_func,
+        void *authz_read_baton,
+        apr_pool_t *pool)
 {
   apr_pool_t *iterpool;
   apr_array_header_t *revs = NULL;
@@ -1193,7 +1186,8 @@ do_merged_logs(svn_fs_t *fs,
                              authz_read_baton, pool));
 
   /* Loop through all the revisions in the range and add any
-     where a path was changed to the array.  */
+     where a path was changed to the array, or if they wanted
+     history in reverse order just send it to them right away. */
   iterpool = svn_pool_create(pool);
   for (current = hist_end; 
        any_histories_left;
@@ -1219,26 +1213,36 @@ do_merged_logs(svn_fs_t *fs,
       /* If any of the paths changed in this rev then add or send it. */
       if (changed)
         {
-          apr_array_header_t *cur_paths = 
-            apr_array_make(iterpool, paths->nelts, sizeof(const char *));
+          svn_mergeinfo_t mergeinfo = NULL;
+          svn_boolean_t has_children = FALSE;
 
-          /* Get the current paths of our history objects so we can
-             query mergeinfo. */
-          /* ### TODO: Should this be ignoring depleted history items? */
-          for (i = 0; i < histories->nelts; i++)
+          /* If we're including merged revisions, we need to calculate
+             the mergeinfo deltas committed in this revision to our
+             various paths. */
+          if (include_merged_revisions)
             {
-              struct path_info *info = APR_ARRAY_IDX(histories, i,
-                                                     struct path_info *);
-              APR_ARRAY_PUSH(cur_paths, const char *) = info->path->data;
-            }
-          if (descending_order)
-            {
-              svn_boolean_t has_children;
-              svn_mergeinfo_t mergeinfo;
+              apr_array_header_t *cur_paths = 
+                apr_array_make(iterpool, paths->nelts, sizeof(const char *));
 
+              /* Get the current paths of our history objects so we can
+                 query mergeinfo. */
+              /* ### TODO: Should this be ignoring depleted history items? */
+              for (i = 0; i < histories->nelts; i++)
+                {
+                  struct path_info *info = APR_ARRAY_IDX(histories, i,
+                                                         struct path_info *);
+                  APR_ARRAY_PUSH(cur_paths, const char *) = info->path->data;
+                }
               SVN_ERR(get_merged_rev_mergeinfo(&mergeinfo, fs, cur_paths, 
                                                current, iterpool));
               has_children = (apr_hash_count(mergeinfo) > 0);
+            }
+
+          /* If our caller wants logs in descending order, we can send
+             'em now (because that's the order we're crawling history
+             in anyway). */
+          if (descending_order)
+            {
               SVN_ERR(send_log(current, fs, discover_changed_paths,
                                revprops, has_children, receiver, receiver_baton,
                                authz_read_func, authz_read_baton, iterpool));
@@ -1255,23 +1259,25 @@ do_merged_logs(svn_fs_t *fs,
               if (limit && ++send_count >= limit)
                 break;
             }
+          /* Otherwise, the caller wanted logs in ascending order, so
+             we have to buffer up a list of revs and (if doing
+             mergeinfo) a hash of related mergeinfo deltas, and
+             process them later. */
           else
             {
-              /* They wanted it in forward order, so we have to buffer
-                 up a list of revs and a hash containing related
-                 mergeinfo deltas, and process them later. */
-              svn_revnum_t *cur_rev = apr_palloc(pool, sizeof(*cur_rev));
-              svn_mergeinfo_t mergeinfo;
-
               if (! revs)
                 revs = apr_array_make(pool, 64, sizeof(svn_revnum_t));
               APR_ARRAY_PUSH(revs, svn_revnum_t) = current;
-              *cur_rev = current;
-              if (! rev_mergeinfo)
-                rev_mergeinfo = apr_hash_make(pool);
-              SVN_ERR(get_merged_rev_mergeinfo(&mergeinfo, fs, cur_paths, 
-                                               current, pool));
-              apr_hash_set(rev_mergeinfo, cur_rev, sizeof(*cur_rev), mergeinfo);
+
+              if (mergeinfo)
+                {
+                  svn_revnum_t *cur_rev = apr_palloc(pool, sizeof(*cur_rev));
+                  *cur_rev = current;
+                  if (! rev_mergeinfo)
+                    rev_mergeinfo = apr_hash_make(pool);
+                  apr_hash_set(rev_mergeinfo, cur_rev, sizeof(*cur_rev), 
+                               svn_mergeinfo_dup(mergeinfo, pool));
+                }
             }
         }
     }
@@ -1285,13 +1291,22 @@ do_merged_logs(svn_fs_t *fs,
       for (i = 0; i < revs->nelts; ++i)
         {
           svn_mergeinfo_t mergeinfo;
-          svn_boolean_t has_children;
+          svn_boolean_t has_children = FALSE;
 
           svn_pool_clear(iterpool);
           current = APR_ARRAY_IDX(revs, revs->nelts - i - 1, svn_revnum_t);
-          mergeinfo = apr_hash_get(rev_mergeinfo, &current, 
-                                   sizeof(svn_revnum_t));          
-          has_children = (apr_hash_count(mergeinfo) > 0);
+
+          /* If we've got a hash of revision mergeinfo (which can only
+             happen if INCLUDE_MERGED_REVISIONS was set), we check to
+             see if this revision is one which merged in other
+             revisions we need to handle recursively. */
+          if (rev_mergeinfo)
+            {
+              mergeinfo = apr_hash_get(rev_mergeinfo, &current, 
+                                       sizeof(svn_revnum_t));          
+              has_children = (apr_hash_count(mergeinfo) > 0);
+            }
+
           SVN_ERR(send_log(current, fs, 
                            discover_changed_paths, revprops, has_children,
                            receiver, receiver_baton, authz_read_func,
@@ -1315,116 +1330,6 @@ do_merged_logs(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-/* Find logs for PATHS from HIST_START to HIST_END in FS, and invoke
-   RECEIVER with RECEIVER_BATON on them.  If DESCENDING_ORDER is TRUE, send
-   the logs back as we find them, else buffer the logs and send them back
-   in youngest->oldest order.
-
-   Other parameters are the same as svn_repos_get_logs4(). */
-static svn_error_t *
-do_logs(svn_fs_t *fs,
-        const apr_array_header_t *paths,
-        svn_revnum_t hist_start,
-        svn_revnum_t hist_end,
-        int limit,
-        svn_boolean_t discover_changed_paths,
-        svn_boolean_t strict_node_history,
-        const apr_array_header_t *revprops,
-        svn_boolean_t descending_order,
-        svn_log_entry_receiver_t receiver,
-        void *receiver_baton,
-        svn_repos_authz_func_t authz_read_func,
-        void *authz_read_baton,
-        apr_pool_t *pool)
-{
-  apr_pool_t *iterpool;
-  apr_array_header_t *revs = NULL;
-  svn_revnum_t current;
-  apr_array_header_t *histories;
-  svn_boolean_t any_histories_left = TRUE;
-  int send_count = 0;
-  int i;
-
-  /* We only really care about revisions in which those paths were changed.
-     So we ask the filesystem for all the revisions in which any of the
-     paths was changed.  */
-  SVN_ERR(get_path_histories(&histories, fs, paths, hist_start, hist_end,
-                             strict_node_history, authz_read_func,
-                             authz_read_baton, pool));
-
-  /* Loop through all the revisions in the range and add any
-     where a path was changed to the array, or if they wanted
-     history in reverse order just send it to them right away.
-  */
-  iterpool = svn_pool_create(pool);
-  for (current = hist_end;
-       current >= hist_start && any_histories_left;
-       current = next_history_rev(histories))
-    {
-      svn_boolean_t changed = FALSE;
-      any_histories_left = FALSE;
-      svn_pool_clear(iterpool);
-
-      for (i = 0; i < histories->nelts; i++)
-        {
-          struct path_info *info = APR_ARRAY_IDX(histories, i,
-                                                 struct path_info *);
-
-          /* Check history for this path in current rev. */
-          SVN_ERR(check_history(&changed, info, fs, current,
-                                strict_node_history, authz_read_func, 
-                                authz_read_baton, hist_start, pool));
-          if (! info->done)
-            any_histories_left = TRUE;
-        }
-
-      /* If any of the paths changed in this rev then add or send it. */
-      if (changed)
-        {
-          /* If they wanted it in reverse order we can send it completely
-             streamily right now. */
-          if (descending_order)
-            {
-              SVN_ERR(send_log(current, fs, discover_changed_paths,
-                               revprops, FALSE, receiver, receiver_baton,
-                               authz_read_func, authz_read_baton, iterpool));
-
-              if (limit && ++send_count >= limit)
-                break;
-            }
-          else
-            {
-              /* They wanted it in forward order, so we have to buffer up
-                 a list of revs and process it later. */
-              if (! revs)
-                revs = apr_array_make(pool, 64, sizeof(svn_revnum_t));
-              APR_ARRAY_PUSH(revs, svn_revnum_t) = current;
-            }
-        }
-    }
-
-  if (revs)
-    {
-      /* Work loop for processing the revisions we found since they wanted
-         history in forward order. */
-      for (i = 0; i < revs->nelts; ++i)
-        {
-          svn_pool_clear(iterpool);
-          current = APR_ARRAY_IDX(revs, revs->nelts - i - 1, svn_revnum_t);
-          SVN_ERR(send_log(current, fs, 
-                           discover_changed_paths, revprops, FALSE,
-                           receiver, receiver_baton, authz_read_func,
-                           authz_read_baton, iterpool));
-
-          if (limit && i + 1 >= limit)
-            break;
-        }
-    }
-
-  svn_pool_destroy(iterpool);
-
-  return SVN_NO_ERROR;
-}
 
 svn_error_t *
 svn_repos_get_logs4(svn_repos_t *repos,
@@ -1512,19 +1417,11 @@ svn_repos_get_logs4(svn_repos_t *repos,
       return SVN_NO_ERROR;
     }
 
-  if (include_merged_revisions)
-    SVN_ERR(do_merged_logs(repos->fs, paths, hist_start, hist_end, limit,
-                           discover_changed_paths, strict_node_history,
-                           revprops, descending_order, 
-                           receiver, receiver_baton,
-                           authz_read_func, authz_read_baton, pool));
-  else
-    SVN_ERR(do_logs(repos->fs, paths, hist_start, hist_end, limit,
-                    discover_changed_paths, strict_node_history,
-                    revprops, descending_order, receiver, receiver_baton,
-                    authz_read_func, authz_read_baton, pool));
-
-  return SVN_NO_ERROR;
+  return do_logs(repos->fs, paths, hist_start, hist_end, limit,
+                 discover_changed_paths, strict_node_history,
+                 include_merged_revisions, revprops, descending_order, 
+                 receiver, receiver_baton,
+                 authz_read_func, authz_read_baton, pool);
 }
 
 
