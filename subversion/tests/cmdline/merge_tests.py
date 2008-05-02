@@ -11012,6 +11012,13 @@ def dont_merge_revs_into_subtree_that_predate_it(sbox):
   short_H_COPY_path = shorten_path_kludge(H_COPY_path)
 
   expected_skip = wc.State(short_H_COPY_path, { })
+  #Cherry pick r2 prior to cherry harvest.
+  os.chdir(svntest.main.work_dir)
+  svntest.actions.run_and_verify_svn(None, [], [], 'merge', '-c2',
+                                     sbox.repo_url + '/A/D/H',
+                                     short_H_COPY_path)
+  os.chdir(saved_cwd)
+
   os.chdir(svntest.main.work_dir)
   # H_COPY needs r4-6 applied while H_COPY/nu needs only 4,6.
   # This means r4 will be done as a separate editor drive targeted
@@ -11031,7 +11038,7 @@ def dont_merge_revs_into_subtree_that_predate_it(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
   expected_props = svntest.verify.UnorderedOutput(
     ["Properties on '" + H_COPY_path + "':\n",
-     "  " + SVN_PROP_MERGEINFO + " : /A/D/H:4-6\n"])
+     "  " + SVN_PROP_MERGEINFO + " : /A/D/H:2,4-6\n"])
   svntest.actions.run_and_verify_svn(None,
                                      expected_props, [],
                                      'pl', '-vR', wc_dir)
