@@ -71,6 +71,11 @@ Candidate changes:
    Votes:
      +1: pburba (r30949 only)
 
+ * r30963, r30964
+   Improve the responsiveness and accuracy of 'svn log -g'.
+   Votes:
+     +1: cmpilato
+
 Status of 1.5.1:
 ================
 
