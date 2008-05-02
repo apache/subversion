@@ -25,20 +25,11 @@ Candidate changes:
    Votes:
      +1: glasser, markphip
 
- * Remove exit_code from the return tuple of the function call
-   to svntest.actions.run_and_verify_svn which depends on r29753
-   which has not been backported to 1.5.x and hence test
-   'merge_sensitive_log_target_with_bogus_mergeinfo' fails.
-
-   URL: http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=138071
-   Votes:
-     +1: kameshj, hwright
-
  * r30949, r30962
    Fix issue #3188.  Mergeinfo on switched targets/subtrees should elide
    to repos.
    Votes:
-     +1: pburba (r30949 only)
+     +1: pburba
 
  * r30963, r30964
    Improve the responsiveness and accuracy of 'svn log -g'.
@@ -52,3 +43,12 @@ Candidate changes:
 
 Approved changes (all releases):
 ================================
+
+ * Remove exit_code from the return tuple of the function call
+   to svntest.actions.run_and_verify_svn which depends on r29753
+   which has not been backported to 1.5.x and hence test
+   'merge_sensitive_log_target_with_bogus_mergeinfo' fails.
+
+   URL: http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=138071
+   Votes:
+     +1: kameshj, hwright, pburba
