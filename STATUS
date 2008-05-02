@@ -65,6 +65,12 @@ Candidate changes:
    Votes:
      +1: danielsh, kameshj
 
+ * r30949
+   Fix issue #3188.  Mergeinfo on switched targets/subtrees should elide
+   to repos.
+   Votes:
+     +1: pburba
+
 Status of 1.5.1:
 ================
 
