@@ -1386,6 +1386,10 @@ output_common(void *baton, apr_off_t original_start, apr_off_t original_length,
               apr_off_t modified_start, apr_off_t modified_length,
               apr_off_t latest_start, apr_off_t latest_length)
 {
+  svn_diff3__file_output_baton_t *file_baton = baton;
+  if (file_baton->conflict_style == svn_diff_conflict_display_only_conflicts)
+    return SVN_NO_ERROR;
+
   return output_hunk(baton, 1, modified_start, modified_length);
 }
 
@@ -1395,6 +1399,10 @@ output_diff_modified(void *baton,
                      apr_off_t modified_start, apr_off_t modified_length,
                      apr_off_t latest_start, apr_off_t latest_length)
 {
+  svn_diff3__file_output_baton_t *file_baton = baton;
+  if (file_baton->conflict_style == svn_diff_conflict_display_only_conflicts)
+    return SVN_NO_ERROR;
+
   return output_hunk(baton, 1, modified_start, modified_length);
 }
 
@@ -1404,6 +1412,10 @@ output_diff_latest(void *baton,
                    apr_off_t modified_start, apr_off_t modified_length,
                    apr_off_t latest_start, apr_off_t latest_length)
 {
+  svn_diff3__file_output_baton_t *file_baton = baton;
+  if (file_baton->conflict_style == svn_diff_conflict_display_only_conflicts)
+    return SVN_NO_ERROR;
+
   return output_hunk(baton, 2, latest_start, latest_length);
 }
 
@@ -1434,6 +1446,10 @@ output_conflict(void *baton,
   apr_size_t len;
 
   svn_diff_conflict_display_style_t style = file_baton->conflict_style;
+
+  /* ### Should show some context for this style as well. */
+  if (style == svn_diff_conflict_display_only_conflicts)
+    style = svn_diff_conflict_display_modified_original_latest;
 
   if (style == svn_diff_conflict_display_resolved_modified_latest)
     {

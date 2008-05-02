@@ -311,7 +311,11 @@ typedef enum svn_diff_conflict_display_style_t
   svn_diff_conflict_display_modified,
 
   /** Just display latest, with no markers. */
-  svn_diff_conflict_display_latest
+  svn_diff_conflict_display_latest,
+
+  /** Like svn_diff_conflict_display_modified_original_latest, but
+      *only* showing conflicts. */
+  svn_diff_conflict_display_only_conflicts
 } svn_diff_conflict_display_style_t;
 
 

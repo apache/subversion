@@ -634,6 +634,10 @@ output_common_modified(void *baton,
                        apr_off_t modified_start, apr_off_t modified_length,
                        apr_off_t latest_start, apr_off_t latest_length)
 {
+  merge_output_baton_t *btn = baton;
+  if (btn->conflict_style == svn_diff_conflict_display_only_conflicts)
+    return SVN_NO_ERROR;
+
   return output_merge_token_range(baton, 1/*modified*/,
                                   modified_start, modified_length);
 }
@@ -644,6 +648,10 @@ output_latest(void *baton,
               apr_off_t modified_start, apr_off_t modified_length,
               apr_off_t latest_start, apr_off_t latest_length)
 {
+  merge_output_baton_t *btn = baton;
+  if (btn->conflict_style == svn_diff_conflict_display_only_conflicts)
+    return SVN_NO_ERROR;
+
   return output_merge_token_range(baton, 2/*latest*/,
                                   latest_start, latest_length);
 }
@@ -674,6 +682,10 @@ output_conflict(void *baton,
   merge_output_baton_t *btn = baton;
 
   svn_diff_conflict_display_style_t style = btn->conflict_style;
+
+  /* ### Should show some context for this style as well. */
+  if (style == svn_diff_conflict_display_only_conflicts)
+    style = svn_diff_conflict_display_modified_original_latest;
 
   if (style == svn_diff_conflict_display_resolved_modified_latest)
     {
