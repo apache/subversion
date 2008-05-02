@@ -1099,7 +1099,7 @@ def check_merge_results(log_chain, expected_merges):
 
 
 def merge_sensitive_log_single_revision(sbox):
-  "test sensitive log on a single revision"
+  "test 'svn log -g' on a single revision"
 
   merge_history_repos(sbox)
 
@@ -1111,24 +1111,39 @@ def merge_sensitive_log_single_revision(sbox):
   # Run the merge sensitive log, and compare results
   saved_cwd = os.getcwd()
 
-  os.chdir(TRUNK_path)
-  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log',
-                                                   '-g', '-r14')
-
-  log_chain = parse_log_output(output)
   expected_merges = {
     14: [], 13 : [14], 12 : [14], 11 : [14, 12],
     }
-  check_merge_results(log_chain, expected_merges)
+  os.chdir(TRUNK_path)
+  # First try a single rev using -rN
+  output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                   'log', '-g', '-r14')
 
+  log_chain = parse_log_output(output)
+  check_merge_results(log_chain, expected_merges)
+  # Then try a single rev using --limit 1
+  output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                   'log', '-g', '--limit', '1',
+                                                   '-r14:1')
+
+
+  log_chain = parse_log_output(output)
+  check_merge_results(log_chain, expected_merges)
   os.chdir(saved_cwd)
 
-  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log',
-                                                   '-g', '-r12', BRANCH_B_path)
-  log_chain = parse_log_output(output)
   expected_merges = {
       12: [], 11 : [12],
     }
+  # First try a single rev using -rN
+  output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                   'log', '-g', '-r12',
+                                                    BRANCH_B_path)
+  log_chain = parse_log_output(output)
+  check_merge_results(log_chain, expected_merges)
+  output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                   'log', '-g', '--limit', '1',
+                                                   '-r12:1', BRANCH_B_path)
+  log_chain = parse_log_output(output)
   check_merge_results(log_chain, expected_merges)
 
 
@@ -1364,9 +1379,8 @@ def merge_sensitive_log_target_with_bogus_mergeinfo(sbox):
   svntest.main.run_svn(None, 'ps', SVN_PROP_MERGEINFO, '/A/B:0', D_path)
   #commit at r2
   svntest.main.run_svn(None, 'ci', '-m', 'setting bogus mergeinfo', D_path)
-  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, 
-                                                              [], 'log', 
-                                                              '-g', D_path)
+  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log', 
+                                                   '-g', D_path)
   if len(err):
     raise svntest.Failure("svn log -g target_with_bogus_mergeinfo fails")
 
