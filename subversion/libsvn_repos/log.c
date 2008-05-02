@@ -1263,6 +1263,7 @@ do_merged_logs(svn_fs_t *fs,
                   svn_error_clear(err);
                   continue;
                 }
+              SVN_ERR(err);
             }
           svn_pool_destroy(iterpool2);
 

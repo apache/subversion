@@ -78,9 +78,3 @@ Approved changes (all releases):
    to ignore nested logs when in '-g' mode.  (Issue #3185.)
    Votes:
      +1: cmpilato, hwright, markphip
-
- * r30922
-   Fix an error leak introduced by the "make log -g not croak on missing
-   paths and revisions" bugfix of r30762.
-   Votes:
-     +1: cmpilato, kameshj, hwright
