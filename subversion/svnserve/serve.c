@@ -226,17 +226,24 @@ svn_error_t *load_configs(svn_config_t **cfg,
     {
       pwdb_path = svn_path_join(base, pwdb_path, pool);
 
-      /* Because it may be possible to read the pwdb file with some
-       * access methods and not others, ignore errors reading the pwdb
-       * file and just don't present password authentication as an
-       * option. */
       err = svn_config_read(pwdb, pwdb_path, TRUE, pool);
       if (err)
         {
           if (server)
             /* Called by listening server; log error no matter what it is. */
             log_server_error(err, server, conn, pool);
-          if (err->apr_err != SVN_ERR_BAD_FILENAME)
+
+          /* Because it may be possible to read the pwdb file with some
+             access methods and not others, ignore errors reading the pwdb
+             file and just don't present password authentication as an
+             option.  Also, some authentications (e.g. --tunnel) can
+             proceed without it anyway.
+
+             ### Not entirely sure why SVN_ERR_BAD_FILENAME is checked
+             ### for here.  That seems to have been introduced in r16840,
+             ### and only in r30868 was the APR_EACCES check introduced. */
+          if (err->apr_err != SVN_ERR_BAD_FILENAME
+              && ! APR_STATUS_IS_EACCES(err->apr_err))
             {
               if (server)
                 {
@@ -252,7 +259,7 @@ svn_error_t *load_configs(svn_config_t **cfg,
               return err;
             }
           else
-            /* Ignore SVN_ERR_BAD_FILENAME and proceed. */
+            /* Ignore SVN_ERR_BAD_FILENAME and APR_EACCES and proceed. */
             svn_error_clear(err);
         }
     }
