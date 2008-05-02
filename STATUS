@@ -49,6 +49,15 @@ Candidate changes:
    Votes:
      +1: cmpilato, kameshj
 
+ * Remove exit_code from the return tuple of the function call
+   to svntest.actions.run_and_verify_svn which depends on r29753
+   which has not been backported to 1.5.x and hence test
+   'merge_sensitive_log_target_with_bogus_mergeinfo' fails.
+
+   URL: http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=138071
+   Votes:
+     +1: kameshj
+   
 Status of 1.5.1:
 ================
 
