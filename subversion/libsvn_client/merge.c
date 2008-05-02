@@ -1517,7 +1517,7 @@ filter_merged_revisions(apr_array_header_t **remaining_ranges,
           SVN_ERR(svn_rangelist_reverse(requested_merge, pool));
           SVN_ERR(svn_rangelist_intersect(remaining_ranges,
                                           target_rangelist,
-                                          requested_merge, pool));
+                                          requested_merge, FALSE, pool));
           SVN_ERR(svn_rangelist_reverse(*remaining_ranges, pool));
         }
       else

@@ -53,19 +53,6 @@ Candidate changes:
 Approved changes (all releases):
 ================================
 
- * r30883, r30888
-   Fix issue #3187.  Fix reverse merges where merge target or subtree
-   has non-inheritable revision ranges intersecting with the merged
-   range.  Not a common use case, but completely broken without this
-   fix.
-   Notes:
-     r30888 is just a revert of some accidental whitespace changes
-     in r30883.  This group changes the svn_rangelist_intersect API.
-     If this group isn't backported for 1.5.0 it needs to be
-     reverted on trunk and svn_rangelist_intersect() revved.
-   Votes:
-     +1: pburba, markphip, kfogel
-
  * r30931
    Remove 'blind deletion of argument to mkdir --parents', delete
    only if this invocation has created it.

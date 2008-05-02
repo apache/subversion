@@ -267,6 +267,10 @@ svn_mergeinfo_intersect(svn_mergeinfo_t *mergeinfo,
  * svn_merge_range_t * elements, @a rangelist1 and @a rangelist2, and
  * place the result in @a *rangelist (which is never @c NULL).
  *
+ * @a consider_inheritance determines how to account for the
+ * @c svn_merge_range_t inheritable field when comparing @a whiteboard's
+ * and @a *eraser's rangelists for equality.  @See svn_mergeinfo_diff().
+ *
  * Note: @a rangelist1 and @a rangelist2 must be sorted as said by @c
  * svn_sort_compare_ranges(). @a *rangelist is guaranteed to be in sorted
  * order.
@@ -276,6 +280,7 @@ svn_error_t *
 svn_rangelist_intersect(apr_array_header_t **rangelist,
                         apr_array_header_t *rangelist1,
                         apr_array_header_t *rangelist2,
+                        svn_boolean_t consider_inheritance,
                         apr_pool_t *pool);
 
 /** Reverse @a rangelist, and the @c start and @c end fields of each
