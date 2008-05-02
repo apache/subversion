@@ -122,6 +122,39 @@ show_diff(svn_boolean_t *performed_edit,
 
 
 static svn_error_t *
+show_conflicts(const svn_wc_conflict_description_t *desc,
+               apr_pool_t *pool)
+{
+  svn_diff_t *diff;
+  svn_stream_t *output;
+  svn_diff_file_options_t *options;
+
+  options = svn_diff_file_options_create(pool);
+  options->ignore_eol_style = TRUE;
+  SVN_ERR(svn_stream_for_stdout(&output, pool));
+  SVN_ERR(svn_diff_file_diff3_2(&diff,
+                                desc->base_file,
+                                desc->my_file,
+                                desc->their_file,
+                                options, pool));
+  /* ### Consider putting the markers/labels from
+     ### svn_wc__merge_internal in the conflict description. */
+  SVN_ERR(svn_diff_file_output_merge2(output, diff,
+                                      desc->base_file,
+                                      desc->my_file,
+                                      desc->their_file,
+                                      "||||||| ORIGINAL",
+                                      "<<<<<<< MINE (select with 'mc')",
+                                      ">>>>>>> THEIRS (select with 'tc')",
+                                      "=======",
+                                      svn_diff_conflict_display_only_conflicts,
+                                      pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
 open_editor(svn_boolean_t *performed_edit,
             const svn_wc_conflict_description_t *desc,
             svn_cl__conflict_baton_t *b,
@@ -500,12 +533,31 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
             }
           else if (strcmp(answer, "dc") == 0)
             {
-              SVN_ERR(svn_cmdline_fprintf
-                      (stderr, subpool,
-                       _("Sorry, '(dc) diff of conflicts' "
-                         "is not yet implemented; see\n"
-        "http://subversion.tigris.org/issues/show_bug.cgi?id=3048\n\n")));
-              continue;
+              if (desc->is_binary)
+                {
+                  SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
+                                              _("Invalid option; cannot "
+                                                "display conflicts for a "
+                                                "binary file.\n\n")));
+                  continue;
+                }
+              else if (desc->kind == svn_wc_conflict_kind_property)
+                {
+                  SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
+                                              _("Invalid option; cannot "
+                                                "display conflicts for "
+                                                "properties.\n\n")));
+                  continue;
+                }
+              else if (! (desc->my_file && desc->base_file && desc->their_file))
+                {
+                  SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
+                                              _("Invalid option; original "
+                                                "files not available.\n\n")));
+                  continue;
+                }
+              SVN_ERR(show_conflicts(desc, subpool));
+              performed_edit = TRUE;
             }
           else if (strcmp(answer, "df") == 0)
             {

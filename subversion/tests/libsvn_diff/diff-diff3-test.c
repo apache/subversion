@@ -1974,6 +1974,44 @@ test_three_way_merge_conflict_styles(const char **msg,
                           svn_diff_conflict_display_modified_original_latest,
                           pool));
 
+  /* ### Really should have some context. */
+  SVN_ERR(three_way_merge("style-only1", "style-only2", "style-only3",
+                          original, modified, latest,
+                          "<<<<<<< style-only2\n"
+                          "k\n"
+                          "l\n"
+                          "m\n"
+                          "N\n"
+                          "O\n"
+                          "hello\n"
+                          "world\n"
+                          "yay\n"
+                          "P\n"
+                          "Q\n"
+                          "||||||| style-only1\n"
+                          "k\n"
+                          "l\n"
+                          "m\n"
+                          "n\n"
+                          "o\n"
+                          "p\n"
+                          "q\n"
+                          "=======\n"
+                          "k1\n"
+                          "l2\n"
+                          "m3\n"
+                          "n4\n"
+                          "o5\n"
+                          "hello\n"
+                          "world\n"
+                          "yay\n"
+                          "p\n"
+                          "q\n"
+                          ">>>>>>> style-only3\n",
+                          NULL,
+                          svn_diff_conflict_display_only_conflicts,
+                          pool));
+
   SVN_ERR(three_way_merge("style-mod1", "style-mod2", "style-mod3",
                           original, modified, latest,
                           "A\n"
