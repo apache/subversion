@@ -799,8 +799,8 @@ svn_client__make_local_parents(const char *path,
   err = svn_client_add4(path, svn_depth_empty, FALSE, FALSE,
                         make_parents, ctx, pool);
 
-  /* If we have created a new directory (identified via orig_kind),
-     but couldn't add it to version control then delete them. */
+  /* If we created a new directory, but couldn't add it to version
+     control, then delete it. */
   if (err && (orig_kind == svn_node_none))
     {
       /* ### If this returns an error, should we link it onto
