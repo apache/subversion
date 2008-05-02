@@ -50,7 +50,7 @@ Candidate changes:
 
    URL: http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=138071
    Votes:
-     +1: kameshj
+     +1: kameshj, hwright
 
  * r30931
    Remove 'blind deletion of argument to mkdir --parents', delete
