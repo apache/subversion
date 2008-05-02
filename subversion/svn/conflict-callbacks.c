@@ -662,24 +662,6 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
               (*result)->choice = svn_wc_conflict_choose_theirs_full;
               break;
             }
-          if (strcmp(answer, "mc") == 0)
-            {
-              SVN_ERR(svn_cmdline_fprintf
-                      (stderr, subpool,
-                       _("Sorry, '(mc) mine for conflicts' "
-                         "is not yet implemented; see\n"
-        "http://subversion.tigris.org/issues/show_bug.cgi?id=3049\n\n")));
-              continue;
-            }
-          if (strcmp(answer, "tc") == 0)
-            {
-              SVN_ERR(svn_cmdline_fprintf
-                      (stderr, subpool,
-                       _("Sorry, '(tc) theirs for conflicts' "
-                         "is not yet implemented; see\n"
-        "http://subversion.tigris.org/issues/show_bug.cgi?id=3049\n\n")));
-              continue;
-            }
         }
     }
 
