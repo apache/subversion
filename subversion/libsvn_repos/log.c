@@ -1134,6 +1134,7 @@ handle_merged_revisions(svn_revnum_t rev,
           svn_error_clear(err);
           continue;
         }
+      SVN_ERR(err);
     }
   svn_pool_destroy(iterpool);
 
