@@ -28,11 +28,11 @@ Blanket commit access:
        striker   Sander Striker <striker@apache.org>
          naked   Nuutti Kotivuori <naked@iki.fi>
        dwhedon   David Kimdon <dwhedon@debian.org>
-           dlr   Daniel Rall <dlr@collab.net>
+           dlr   Daniel Rall <dlr@finemaltcoding.com>
            mbk   Mark Benedetto King <mbk@lowlatency.com>
            epg   Eric Gillespie <epg@pretzelnet.org>
            jaa   Jani Averbach <jaa@iki.fi>
-    julianfoad   Julian Foad <julianfoad@btopenworld.com>
+    julianfoad   Julian Foad <jfoad@collab.net>
      ringstrom   Tobias Ringström <tobias@ringstrom.mine.nu>
        jpieper   Josh Pieper <jjp@pobox.com>
   jszakmeister   John Szakmeister <john@szakmeister.net>
@@ -53,6 +53,10 @@ Blanket commit access:
     vgeorgescu   Vlad Georgescu <vgeorgescu@gmail.com>
        kameshj   Kamesh Jayachandran <kamesh@collab.net>
       markphip   Mark Phippard <mphippard@collab.net>
+      arfrever   Arfrever Frehtes Taifersar Arahesis <arfrever.fta@gmail.com>
+          stsp   Stefan Sperling <stsp@elego.de>
+           kou   Kouhei Sutou <kou@cozmixng.org>
+      danielsh   Daniel Shahaf <danielsh@tigris.org>
 
 Commit access for specific areas:
 
@@ -61,7 +65,6 @@ Commit access for specific areas:
        pmayweg   Patrick Mayweg <mayweg@qint.de>             (JavaHL bindings)
           rey4   Russell Yanofsky <rey4@columbia.edu>        (Swig bindings)
          clkao   Chia-liang Kao <clkao@clkao.org>            (Swig-Perl b.)
-           kou   Kouhei Sutou <kou@cozmixng.org>             (Swig-Ruby b.)
     joeswatosh   Joe Swatosh <joe.swatosh@gmail.com>         (Swig-Ruby b.)
     jrvernooij   Jelmer Vernooij <jelmer@samba.org>          (Python bindings)
         holden   Holden Karau <holden@pigscanfly.ca>         (Swig-Scheme bindings)
@@ -109,6 +112,7 @@ Commit access for specific areas:
         dustin   Dustin J. Mitchell <dustin@zmanda.com>      (svnmerge)
    rocketraman   Raman Gupta <rocketraman@fastmail.fm>       (svnmerge)
       stylesen   Senthil Kumaran S <senthil@collab.net>      (tests)
+       rhansen   Richard Hansen <rhansen@bbn.com>            (svnstsw)
 
   Translation of message files:
 
@@ -118,7 +122,6 @@ Commit access for specific areas:
       sunny256   Øyvind A. Holm <sunny@sunbase.org>          (po: nb)
         jzgoda   Jaroslaw Zgoda <jzgoda@o2.pl>               (po: pl)
       karolszk   Karol Szkudlarek <karol@mikronika.com.pl>   (po: pl)
-      arfrever   Arfrever Frehtes Taifersar Arahesis <arfrever.fta@gmail.com> (po: pl)
         plasma   Wei-Hon Chen <plasma@ms9.hinet.net>         (po: zh_TW)
        jihuang   June-Yen Huang <jihuang@iis.sinica.edu.tw>  (po: zh_TW)
        marcosc   Marcos Chaves <marcos.nospam@gmail.com>     (po: pt_BR)
@@ -145,8 +148,9 @@ giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
                                                               bindings br.)
        cacknin   Charles Acknin <charlesacknin@gmail.com>    (svnpatch-diff
                                                                 br.)
-          stsp   Stefan Sperling <stsp@elego.de>             (tree-conflicts
-                                                                br.)
+       sbutler   Stephen Butler <sbutler@elego.de>           (tree-conflicts
+                                                              br., diff-
+                                                              callbacks3 br.)
 
   Subprojects that are complete, abandoned or have moved elsewhere:
 
