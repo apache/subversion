@@ -14,6 +14,8 @@
 # history and logs, available at http://subversion.tigris.org/.
 # ====================================================================
 
+# TODO: Decode URI-encoded log items before calling the callback.
+
 """Parse mod-dav-svn operational logs.
 
 SVN-ACTION strings
@@ -94,11 +96,14 @@ pPATH = r'(/\S*)'
 pPATHS = r'\(([^)]*)\)'
 # r<N>
 pREVNUM = r'r(\d+)'
+# (<N> ...)
+pREVNUMS = r'\(((\d+\s*)*)\)'
 # r<N>:<M>
-pREVRANGE = r'r(\d+):(\d+)'
+pREVRANGE = r'r(-?\d+):(-?\d+)'
 # <PATH>@<N>
 pPATHREV = pPATH + r'@(\d+)'
 pWORD = r'(\S+)'
+pPROPERTY = pWORD
 # depth=<D>?
 pDEPTH = 'depth=' + pWORD
 
@@ -176,7 +181,7 @@ class Parser(object):
     example, "lock <PATH> steal?" => def handle_lock(self, path, steal)
     where steal will be True if "steal" was present.
 
-    See the end of test_svn_dav_log_parse.py for a complete example.
+    See the end of test_svn_server_log_parse.py for a complete example.
     """
     def parse(self, line):
         """Parse line and call appropriate handle_ method.
@@ -204,6 +209,36 @@ class Parser(object):
         self.handle_commit(int(m.group(1)))
         return line[m.end():]
 
+    def _parse_open(self, line):
+        pINT = r'(\d+)'
+        pCAP = r'cap=\(([^)]*)\)'
+        pCLIENT = pWORD
+        m = _match(line, pINT, pCAP, pPATH, pCLIENT, pCLIENT)
+        protocol = int(m.group(1))
+        if m.group(2) is None:
+            capabilities = []
+        else:
+            capabilities = m.group(2).split()
+        path = m.group(3)
+        ra_client = m.group(4)
+        client = m.group(5)
+        self.handle_open(protocol, capabilities, path, ra_client, client)
+        return line[m.end():]
+
+    def _parse_reparent(self, line):
+        m = _match(line, pPATH)
+        self.handle_reparent(m.group(1))
+        return line[m.end():]
+
+    def _parse_get_latest_rev(self, line):
+        self.handle_get_latest_rev()
+        return line
+
+    def _parse_get_dated_rev(self, line):
+        m = _match(line, pWORD)
+        self.handle_get_dated_rev(m.group(1))
+        return line[m.end():]
+
     def _parse_get_dir(self, line):
         m = _match(line, pPATH, pREVNUM, ['text', 'props'])
         self.handle_get_dir(m.group(1), int(m.group(2)),
@@ -225,8 +260,6 @@ class Parser(object):
         return line[m.end():]
 
     def _parse_change_rev_prop(self, line):
-        # <REVPROP>
-        pPROPERTY = pWORD
         m = _match(line, pREVNUM, pPROPERTY)
         self.handle_change_rev_prop(int(m.group(1)), m.group(2))
         return line[m.end():]
@@ -236,13 +269,42 @@ class Parser(object):
         self.handle_rev_proplist(int(m.group(1)))
         return line[m.end():]
 
+    def _parse_rev_prop(self, line):
+        m = _match(line, pREVNUM, pPROPERTY)
+        self.handle_rev_prop(int(m.group(1)), m.group(2))
+        return line[m.end():]
+
     def _parse_unlock(self, line):
         m = _match(line, pPATHS, ['break'])
         paths = m.group(1).split()
         self.handle_unlock(paths, m.group(2) is not None)
         return line[m.end():]
 
-    # reports
+    def _parse_get_lock(self, line):
+        m = _match(line, pPATH)
+        self.handle_get_lock(m.group(1))
+        return line[m.end():]
+
+    def _parse_get_locks(self, line):
+        m = _match(line, pPATH)
+        self.handle_get_locks(m.group(1))
+        return line[m.end():]
+
+    def _parse_get_locations(self, line):
+        m = _match(line, pPATH, pREVNUMS)
+        path = m.group(1)
+        revnums = [int(x) for x in m.group(2).split()]
+        self.handle_get_locations(path, revnums)
+        return line[m.end():]
+
+    def _parse_get_location_segments(self, line):
+        m = _match(line, pPATHREV, pREVRANGE)
+        path = m.group(1)
+        peg = int(m.group(2))
+        left = int(m.group(3))
+        right = int(m.group(4))
+        self.handle_get_location_segments(path, peg, left, right)
+        return line[m.end():]
 
     def _parse_get_file_revs(self, line):
         m = _match(line, pPATH, pREVRANGE, ['include-merged-revisions'])
@@ -292,6 +354,20 @@ class Parser(object):
                 revprops = m.group(11).split()
         self.handle_log(paths, left, right, limit, discover_changed_paths,
                         strict, include_merged_revisions, revprops)
+        return line[m.end():]
+
+    def _parse_check_path(self, line):
+        m = _match(line, pPATHREV)
+        path = m.group(1)
+        revnum = int(m.group(2))
+        self.handle_check_path(path, revnum)
+        return line[m.end():]
+
+    def _parse_stat(self, line):
+        m = _match(line, pPATHREV)
+        path = m.group(1)
+        revnum = int(m.group(2))
+        self.handle_stat(path, revnum)
         return line[m.end():]
 
     def _parse_replay(self, line):

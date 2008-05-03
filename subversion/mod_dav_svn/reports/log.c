@@ -29,6 +29,7 @@
 #include "svn_path.h"
 #include "svn_dav.h"
 #include "svn_pools.h"
+#include "private/svn_log.h"
 
 #include "../dav_svn.h"
 
@@ -272,10 +273,6 @@ dav_svn__log_report(const dav_resource *resource,
                                                 sizeof(const char *));
   apr_array_header_t *paths
     = apr_array_make(resource->pool, 1, sizeof(const char *));
-  svn_stringbuf_t *space_separated_paths =
-    svn_stringbuf_create("", resource->pool);
-  svn_stringbuf_t *space_separated_revprops =
-    svn_stringbuf_create("", resource->pool);
 
   /* Sanity check. */
   ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
@@ -330,11 +327,6 @@ dav_svn__log_report(const dav_resource *resource,
                   && strcmp(name, SVN_PROP_REVISION_DATE) != 0
                   && strcmp(name, SVN_PROP_REVISION_LOG) != 0)
                 lrb.requested_custom_revprops = TRUE;
-
-              /* Gather a formatted list of revprops for operational logging. */
-              if (space_separated_revprops->len > 1)
-                svn_stringbuf_appendcstr(space_separated_revprops, " ");
-              svn_stringbuf_appendcstr(space_separated_revprops, name);
             }
           seen_revprop_element = TRUE;
         }
@@ -346,14 +338,6 @@ dav_svn__log_report(const dav_resource *resource,
           target = svn_path_join(resource->info->repos_path, rel_path,
                                  resource->pool);
           APR_ARRAY_PUSH(paths, const char *) = target;
-
-          /* Gather a formatted list of paths to include in our
-             operational logging. */
-          if (space_separated_paths->len > 1)
-            svn_stringbuf_appendcstr(space_separated_paths, " ");
-          svn_stringbuf_appendcstr(space_separated_paths,
-                                   svn_path_uri_encode(target,
-                                                       resource->pool));
         }
       /* else unknown element; skip it */
     }
@@ -424,36 +408,12 @@ dav_svn__log_report(const dav_resource *resource,
 
  cleanup:
 
-  {
-    /* We've detected a 'high level' svn action to log. */
-    svn_stringbuf_t *options = svn_stringbuf_create("", resource->pool);
-    const char *action;
-
-    if (limit)
-      {
-        char *tmp = apr_psprintf(resource->pool, " limit=%d", limit);
-        svn_stringbuf_appendcstr(options, tmp);
-      }
-    if (discover_changed_paths)
-      svn_stringbuf_appendcstr(options, " discover-changed-paths");
-    if (strict_node_history)
-      svn_stringbuf_appendcstr(options, " strict");
-    if (include_merged_revisions)
-      svn_stringbuf_appendcstr(options, " include-merged-revisions");
-    if (revprops == NULL)
-      svn_stringbuf_appendcstr(options, " revprops=all");
-    else if (revprops->nelts > 0)
-      {
-        svn_stringbuf_appendcstr(options, " revprops=(");
-        svn_stringbuf_appendstr(options, space_separated_revprops);
-        svn_stringbuf_appendcstr(options, ")");
-      }
-
-    action = apr_psprintf(resource->pool, "log (%s) r%ld:%ld%s",
-                          space_separated_paths->data, start, end,
-                          options->data);
-    dav_svn__operational_log(resource->info, action);
-  }
+  dav_svn__operational_log(resource->info,
+                           svn_log__log(paths, start, end, limit,
+                                        discover_changed_paths,
+                                        strict_node_history,
+                                        include_merged_revisions, revprops,
+                                        resource->pool));
 
   /* Flush the contents of the brigade (returning an error only if we
      don't already have one). */

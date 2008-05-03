@@ -176,9 +176,9 @@ void svn_error_clear(svn_error_t *error);
 
 /**
  * Very basic default error handler: print out error stack @a error to the
- * stdio stream @a stream, with each error prefixed by @a prefix, and quit
- * iff the @a fatal flag is set.  Allocations are performed in the @a error's
- * pool.
+ * stdio stream @a stream, with each error prefixed by @a prefix; quit and
+ * clear @a error iff the @a fatal flag is set.  Allocations are performed
+ * in the @a error's pool.
  *
  * If you're not sure what prefix to pass, just pass "svn: ".  That's
  * what code that used to call svn_handle_error() and now calls
