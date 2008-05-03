@@ -876,13 +876,14 @@ svn_auth_get_keychain_simple_provider(svn_auth_provider_object_t **provider,
 #endif /* SVN_HAVE_KEYCHAIN_SERVICES */
 
 /*-----------------------------------------------------------------------*/
-/* gnome-keyring simple provider, puts passwords in Gnome Keyring        */
+/* gnome-keyring simple provider, puts passwords in GNOME Keyring        */
 /*-----------------------------------------------------------------------*/
-#ifdef SVN_HAVE_GNOME_KEYRING_SERVICES
+#ifdef SVN_HAVE_GNOME_KEYRING
 #include "gnome-keyring.h"
+#endif /* SVN_HAVE_GNOME_KEYRING */
 
 /* Implementation of password_get_t that retrieves the password
-   from the Gnome Keyring. */
+   from GNOME Keyring. */
 static svn_boolean_t
 gnome_keyring_password_get(const char **password,
                            apr_hash_t *creds,
@@ -891,6 +892,7 @@ gnome_keyring_password_get(const char **password,
                            svn_boolean_t non_interactive,
                            apr_pool_t *pool)
 {
+#ifdef SVN_HAVE_GNOME_KEYRING
   GnomeKeyringResult result;
   GList *items;
   svn_boolean_t ret = FALSE;
@@ -919,10 +921,13 @@ gnome_keyring_password_get(const char **password,
     }
 
   return ret;
+#else
+  return FALSE;
+#endif /* SVN_HAVE_GNOME_KEYRING */
 }
 
-/* Implementation of password_set_t that stores the password in the 
-   Gnome KeyRing. */
+/* Implementation of password_set_t that stores the password in
+   GNOME Keyring. */
 static svn_boolean_t
 gnome_keyring_password_set(apr_hash_t *creds,
                            const char *realmstring,
@@ -931,6 +936,7 @@ gnome_keyring_password_set(apr_hash_t *creds,
                            svn_boolean_t non_interactive,
                            apr_pool_t *pool)
 {
+#ifdef SVN_HAVE_GNOME_KEYRING
   GnomeKeyringResult result;
   guint32 item_id;
 
@@ -944,6 +950,9 @@ gnome_keyring_password_set(apr_hash_t *creds,
                                                    &item_id);
 
   return result == GNOME_KEYRING_RESULT_OK;
+#else
+  return FALSE;
+#endif /* SVN_HAVE_GNOME_KEYRING */
 }
 
 /* Get cached encrypted credentials from the simple provider's cache. */
@@ -979,11 +988,13 @@ gnome_keyring_simple_save_creds(svn_boolean_t *saved,
                                   pool);
 }
 
+#ifdef SVN_HAVE_GNOME_KEYRING
 static void
 gnome_keyring_init()
 {
-  g_set_application_name("svn");
+  g_set_application_name("Subversion");
 }
+#endif /* SVN_HAVE_GNOME_KEYRING */
 
 static const svn_auth_provider_t gnome_keyring_simple_provider = {
   SVN_AUTH_CRED_SIMPLE,
@@ -1005,4 +1016,3 @@ svn_auth_get_gnome_keyring_simple_provider
 
   gnome_keyring_init();
 }
-#endif /* SVN_HAVE_GNOME_KEYRING_SERVICES */
