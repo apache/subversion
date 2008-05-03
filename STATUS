@@ -23,6 +23,14 @@ Candidate changes:
    Votes:
      +1: pburba, markphip
 
+ * r31004
+   Fix the ruby bindings to account for the API change merged in r30975.
+   Notes:
+     Without this, a bindings test fails, so this should be considered a
+     blocker.
+   Votes:
+     +0: hwright
+
 Status of 1.5.1:
 ================
 
