@@ -40,7 +40,7 @@ Candidate changes:
  * r30986
    Fix potential segfault in svn_io_remove_dir2(path='.').
    Votes:
-     +1: danielsh
+     +1: danielsh, stsp
 
 Status of 1.5.1:
 ================
