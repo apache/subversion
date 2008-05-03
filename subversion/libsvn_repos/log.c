@@ -1065,21 +1065,22 @@ combine_mergeinfo_path_lists(apr_array_header_t **combined_list,
 
 
 /* Pity that C is so ... linear. */
-static svn_error_t *do_logs(svn_fs_t *fs,
-                            const apr_array_header_t *paths,
-                            svn_revnum_t hist_start,
-                            svn_revnum_t hist_end,
-                            int limit,
-                            svn_boolean_t discover_changed_paths,
-                            svn_boolean_t strict_node_history,
-                            svn_boolean_t include_merged_revisions,
-                            const apr_array_header_t *revprops,
-                            svn_boolean_t descending_order,
-                            svn_log_entry_receiver_t receiver,
-                            void *receiver_baton,
-                            svn_repos_authz_func_t authz_read_func,
-                            void *authz_read_baton,
-                            apr_pool_t *pool);
+static svn_error_t *
+do_logs(svn_fs_t *fs,
+        const apr_array_header_t *paths,
+        svn_revnum_t hist_start,
+        svn_revnum_t hist_end,
+        int limit,
+        svn_boolean_t discover_changed_paths,
+        svn_boolean_t strict_node_history,
+        svn_boolean_t include_merged_revisions,
+        const apr_array_header_t *revprops,
+        svn_boolean_t descending_order,
+        svn_log_entry_receiver_t receiver,
+        void *receiver_baton,
+        svn_repos_authz_func_t authz_read_func,
+        void *authz_read_baton,
+        apr_pool_t *pool);
 
 
 /* Examine the combined mergeinfo for revision REV in FS (as collected
