@@ -17,14 +17,6 @@ Candidate changes:
    Votes:
      +1: pburba, markphip
 
- * r30896, r30905
-   Make Cyrus SASL client support DIGEST-MD5 (at the very least).
-   Notes:
-     r30896 was a bad attempt, but required for r30905 to apply
-     cleanly.
-   Votes:
-     +1: glasser, markphip
-
  * r30949, r30962
    Fix issue #3188.  Mergeinfo on switched targets/subtrees should elide
    to repos.
