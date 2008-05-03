@@ -53,8 +53,3 @@ Approved changes (all releases):
    URL: http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=138071
    Votes:
      +1: kameshj, hwright, pburba
-
- * r30986
-   Fix potential segfault in svn_io_remove_dir2(path='.').
-   Votes:
-     +1: danielsh, stsp, hwright
