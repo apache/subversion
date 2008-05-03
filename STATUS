@@ -23,11 +23,19 @@ Candidate changes:
    Votes:
      +1: pburba, markphip
 
- * r30963, r30964
+ * r29191, r29398, r29833, r30663, r30963, r30964
    Improve the responsiveness and accuracy of 'svn log -g'.
+   Backport branch: 
+     r30963-1.5.x
+   Notes:
+     r29191, and r29398 are super-trivial "obvious" tweaks.
+     r29833 and r30663 are code formatting changes.
+     These aren't strictly required, but vastly improve the merge of
+     the workhorse commits.  (And bring subversion/libsvn_repos/log.c
+     completely up to date with trunk.)
    Votes:
      +1: cmpilato
-     +0: markphip (I reviewed branch and am +1, but these revisions do not merge cleanly)
+     +0: markphip (r30963-64 only; +1, but revs don't merge clean)
 
 Status of 1.5.1:
 ================
