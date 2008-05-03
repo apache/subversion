@@ -34,7 +34,7 @@ Candidate changes:
      the workhorse commits.  (And bring subversion/libsvn_repos/log.c
      completely up to date with trunk.)
    Votes:
-     +1: cmpilato
+     +1: cmpilato, hwright
      +0: markphip (r30963-64 only; +1, but revs don't merge clean)
 
 Status of 1.5.1:
