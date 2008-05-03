@@ -37,6 +37,11 @@ Candidate changes:
      +1: cmpilato
      +0: markphip (r30963-64 only; +1, but revs don't merge clean)
 
+ * r30986
+   Fix potential segfault in svn_io_remove_dir2(path='.').
+   Votes:
+     +1: danielsh
+
 Status of 1.5.1:
 ================
 
