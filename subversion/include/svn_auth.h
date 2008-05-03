@@ -710,7 +710,7 @@ svn_auth_get_keychain_simple_provider(svn_auth_provider_object_t **provider,
  * password is stored in KWallet.
  *
  * @since New in 1.6
- * @note This function is only implemented on systems with KWallet
+ * @note This function actually works only on systems with KWallet
  * installed.
  */
 void

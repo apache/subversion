@@ -70,17 +70,16 @@ kwallet_password_get(const char **password,
                      SVN_VER_NUMBER,
                      ki18n("Version control system"),
                      KCmdLineArgs::CmdLineArgKDE);
-  KApplication *application = new KApplication;
-  QWidget *widget = new QWidget;
-  WId *wid = new WId;
-  *wid = widget->winId();
+  KApplication application;
+  QWidget widget;
+  WId wid = widget.winId();
   svn_boolean_t ret = FALSE;
   QString wallet_name = KWallet::Wallet::NetworkWallet();
   QString folder = QString::fromUtf8("Subversion");
   QString key = QString::fromUtf8(username) + "@" + QString::fromUtf8(realmstring);
   if (! KWallet::Wallet::keyDoesNotExist(wallet_name, folder, key))
     {
-      KWallet::Wallet *wallet = KWallet::Wallet::openWallet(wallet_name, *wid, KWallet::Wallet::Synchronous);
+      KWallet::Wallet *wallet = KWallet::Wallet::openWallet(wallet_name, wid, KWallet::Wallet::Synchronous);
       if (wallet)
         {
           if (wallet->hasFolder(folder))
@@ -129,17 +128,16 @@ kwallet_password_set(apr_hash_t *creds,
                      SVN_VER_NUMBER,
                      ki18n("Version control system"),
                      KCmdLineArgs::CmdLineArgKDE);
-  KApplication *application = new KApplication;
-  QWidget *widget = new QWidget;
-  WId *wid = new WId;
-  *wid = widget->winId();
+  KApplication application;
+  QWidget widget;
+  WId wid = widget.winId();
   svn_boolean_t ret = FALSE;
   QString q_password = QString::fromUtf8(password);
   if (q_password.size() > 0)
     {
       QString wallet_name = KWallet::Wallet::NetworkWallet();
       QString folder = QString::fromUtf8("Subversion");
-      KWallet::Wallet *wallet = KWallet::Wallet::openWallet(wallet_name, *wid, KWallet::Wallet::Synchronous);
+      KWallet::Wallet *wallet = KWallet::Wallet::openWallet(wallet_name, wid, KWallet::Wallet::Synchronous);
       if (wallet)
         {
           if (! wallet->hasFolder(folder))
