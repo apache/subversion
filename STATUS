@@ -29,12 +29,13 @@ Candidate changes:
    Fix issue #3188.  Mergeinfo on switched targets/subtrees should elide
    to repos.
    Votes:
-     +1: pburba
+     +1: pburba, markphip
 
  * r30963, r30964
    Improve the responsiveness and accuracy of 'svn log -g'.
    Votes:
      +1: cmpilato
+     +0: markphip (I reviewed branch and am +1, but these revisions do not merge cleanly)
 
 Status of 1.5.1:
 ================
