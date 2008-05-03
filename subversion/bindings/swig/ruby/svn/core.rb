@@ -790,8 +790,9 @@ module Svn
         self.class.new(*Core.rangelist_remove(eraser, self, consider_inheritance))
       end
 
-      def intersect(other)
-        self.class.new(*Core.rangelist_intersect(self, other))
+      def intersect(other, consider_inheritance=nil)
+        self.class.new(*Core.rangelist_intersect(self, other,
+                                                 consider_inheritance))
       end
 
       def reverse
