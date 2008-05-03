@@ -31,6 +31,13 @@ Candidate changes:
    Votes:
      +0: hwright
 
+ * r31006
+   Fix svn_error_t leak in Perl bindings test.
+   Notes:
+     Probably falls under the same category as 31004
+   Votes:
+     +1: jpeacock(?)
+
 Status of 1.5.1:
 ================
 
