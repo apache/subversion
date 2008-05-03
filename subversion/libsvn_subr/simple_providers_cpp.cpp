@@ -87,8 +87,7 @@ kwallet_password_get(const char **password,
               if (wallet->setFolder(folder))
                 {
                   QString q_password;
-                  wallet->readPassword(key, q_password);
-                  if (q_password.size() > 0)
+                  if (! wallet->readPassword(key, q_password));
                     {
                       *password = apr_pstrmemdup(pool, q_password.toUtf8().data(), q_password.size());
                       ret = TRUE;
@@ -133,35 +132,28 @@ kwallet_password_set(apr_hash_t *creds,
   WId wid = widget.winId();
   svn_boolean_t ret = FALSE;
   QString q_password = QString::fromUtf8(password);
-  if (q_password.size() > 0)
+  QString wallet_name = KWallet::Wallet::NetworkWallet();
+  QString folder = QString::fromUtf8("Subversion");
+  KWallet::Wallet *wallet = KWallet::Wallet::openWallet(wallet_name, wid, KWallet::Wallet::Synchronous);
+  if (wallet)
     {
-      QString wallet_name = KWallet::Wallet::NetworkWallet();
-      QString folder = QString::fromUtf8("Subversion");
-      KWallet::Wallet *wallet = KWallet::Wallet::openWallet(wallet_name, wid, KWallet::Wallet::Synchronous);
-      if (wallet)
+      if (! wallet->hasFolder(folder))
         {
-          if (! wallet->hasFolder(folder))
+          wallet->createFolder(folder);
+        }
+      if (wallet->hasFolder(folder))
+        {
+          if (wallet->setFolder(folder))
             {
-              wallet->createFolder(folder);
-            }
-          if (wallet->hasFolder(folder))
-            {
-              if (wallet->setFolder(folder))
+              QString key = QString::fromUtf8(username) + "@" + QString::fromUtf8(realmstring);
+              if (wallet->writePassword(key, q_password))
                 {
-                  QString key = QString::fromUtf8(username) + "@" + QString::fromUtf8(realmstring);
-                  if (wallet->writePassword(key, q_password))
-                    {
-                      ret = TRUE;
-                    }
+                  ret = TRUE;
                 }
             }
         }
-      KWallet::Wallet::closeWallet(wallet_name, false);
     }
-  else
-    {
-      ret = TRUE;
-    }
+  KWallet::Wallet::closeWallet(wallet_name, false);
 #else
   svn_boolean_t ret = FALSE;
 #endif /* SVN_HAVE_KWALLET */
