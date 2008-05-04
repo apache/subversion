@@ -23,6 +23,14 @@ Candidate changes:
    Votes:
      +1: pburba, markphip
 
+Status of 1.5.1:
+================
+
+Candidate changes:
+
+Approved changes (all releases):
+================================
+
  * r31004
    Fix the ruby bindings to account for the API change merged in r30975.
    Notes:
@@ -38,11 +46,4 @@ Candidate changes:
      Probably falls under the same category as 31004
    Votes:
      +1: jpeacock(?)
-
-Status of 1.5.1:
-================
-
-Candidate changes:
-
-Approved changes (all releases):
-================================
+     +0: hwright
