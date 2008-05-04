@@ -30,6 +30,7 @@ Candidate changes:
      blocker.
    Votes:
      +0: hwright
+     +1: kou
 
  * r31006
    Fix svn_error_t leak in Perl bindings test.
