@@ -30,11 +30,3 @@ Candidate changes:
 
 Approved changes (all releases):
 ================================
-
- * r31006
-   Fix svn_error_t leak in Perl bindings test.
-   Notes:
-     Probably falls under the same category as 31004
-   Votes:
-     +1: jpeacock(?)
-     +0: hwright
