@@ -586,7 +586,7 @@ typedef struct svn_ra_session_t svn_ra_session_t;
  *
  * @see svn_client_open_ra_session().
  *
- * @since New in 1.6.
+ * @since New in 1.5.
  */
 svn_error_t *
 svn_ra_open3(svn_ra_session_t **session_p,
