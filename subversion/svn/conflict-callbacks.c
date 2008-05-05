@@ -426,24 +426,34 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
           svn_pool_clear(subpool);
 
           prompt = apr_pstrdup(subpool, _("Select: (p) postpone"));
+
           if (diff_allowed)
             {
               prompt = apr_pstrcat(subpool, prompt,
                                    _(", (df) diff-full, (e) edit"),
                                    NULL);
+
+              if (performed_edit)
+                prompt = apr_pstrcat(subpool, prompt, _(", (r) resolved"),
+                                     NULL);
+
               if (! desc->is_binary &&
                   desc->kind != svn_wc_conflict_kind_property)
                 prompt = apr_pstrcat(subpool, prompt,
-                                     _(", (mc) mine-conflict, "
+                                     _(",\n        (mc) mine-conflict, "
                                        "(tc) theirs-conflict"),
                                      NULL);
             }
           else
-            prompt = apr_pstrcat(subpool, prompt,
-                                 _(", (mf) mine-full, (tf) theirs-full"),
-                                 NULL);
-          if (performed_edit)
-            prompt = apr_pstrcat(subpool, prompt, _(", (r) resolved"), NULL);
+            {
+              if (performed_edit)
+                prompt = apr_pstrcat(subpool, prompt, _(", (r) resolved"),
+                                     NULL);
+              prompt = apr_pstrcat(subpool, prompt,
+                                   _(",\n        "
+                                     "(mf) mine-full, (tf) theirs-full"),
+                                   NULL);
+            }
 
           prompt = apr_pstrcat(subpool, prompt, ",\n        ", NULL);
           prompt = apr_pstrcat(subpool, prompt,
@@ -455,22 +465,24 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
           if (strcmp(answer, "s") == 0)
             {
               SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
-              _("Edit the merged file:\n"
+              _("\n"
                 "  (e)  edit             - change merged file in an editor\n"
-                "  (df) diff-full        - show all changes made to merged file\n"
+                "  (df) diff-full        - show all changes made to merged "
+                                          "file\n"
                 "  (r)  resolved         - accept merged version of file\n"
                 "\n"
-                "Just deal with the conflicts (ignoring merged version):\n"
-                "  (dc) display-conflict - show all conflicts\n"
-                "  (mc) mine-conflict    - accept my version for all conflicts\n"
+                "  (dc) display-conflict - show all conflicts "
+                                          "(ignoring merged version)\n"
+                "  (mc) mine-conflict    - accept my version for all "
+                                          "conflicts (same)\n"
                 "  (tc) theirs-conflict  - accept their version for all "
-                                          "conflicts\n"
+                                          "conflicts (same)\n"
                 "\n"
-                "Choose one of the original files, even for non-conflicting changes:\n"
-                "  (mf) mine-full        - accept my version of entire file\n"
-                "  (tf) theirs-full      - accept their version of entire file\n"
+                "  (mf) mine-full        - accept my version of entire file "
+                                          "(even non-conflicts)\n"
+                "  (tf) theirs-full      - accept their version of entire "
+                                          "file (same)\n"
                 "\n"
-                "General:\n"
                 "  (p)  postpone         - mark the conflict to be "
                                           "resolved later\n"
                 "  (l)  launch           - launch external tool to "
