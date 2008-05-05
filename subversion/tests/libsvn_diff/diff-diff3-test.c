@@ -1974,9 +1974,12 @@ test_three_way_merge_conflict_styles(const char **msg,
                           svn_diff_conflict_display_modified_original_latest,
                           pool));
 
-  /* ### Really should have some context. */
   SVN_ERR(three_way_merge("style-only1", "style-only2", "style-only3",
                           original, modified, latest,
+                          "@@ <8,16 |8,13 >8,16 @@\n"
+                          "h\n"
+                          "i\n"
+                          "j\n"
                           "<<<<<<< style-only2\n"
                           "k\n"
                           "l\n"
@@ -2007,7 +2010,10 @@ test_three_way_merge_conflict_styles(const char **msg,
                           "yay\n"
                           "p\n"
                           "q\n"
-                          ">>>>>>> style-only3\n",
+                          ">>>>>>> style-only3\n"
+                          "r\n"
+                          "s\n"
+                          "t\n",
                           NULL,
                           svn_diff_conflict_display_only_conflicts,
                           pool));
@@ -2348,6 +2354,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(random_three_way_merge),
     SVN_TEST_PASS(merge_with_part_already_present),
     SVN_TEST_PASS(merge_adjacent_changes),
-    SVN_TEST_PASS(test_three_way_merge_conflict_styles),
+    SVN_TEST_XFAIL(test_three_way_merge_conflict_styles),
     SVN_TEST_NULL
   };
