@@ -14,6 +14,9 @@
 # history and logs, available at http://subversion.tigris.org/.
 # ====================================================================
 
+# TODO: Teach parse_open about capabilities, rather than allowing any
+# words at all.
+
 """Parse mod-dav-svn operational logs.
 
 SVN-ACTION strings
