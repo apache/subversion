@@ -1199,6 +1199,11 @@ typedef struct svn_wc_conflict_result_t
       is set to @c svn_wc_conflict_choose_merged.*/
   const char *merged_file;
 
+  /** If true, save a backup copy of merged_file (or the original
+      merged_file from the conflict description, if merged_file is
+      NULL) in the user's working copy. */
+  svn_boolean_t save_merged;
+
 } svn_wc_conflict_result_t;
 
 
