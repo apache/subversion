@@ -81,8 +81,7 @@ svn_cl__accept_from_word(const char *word)
 
 
 static svn_error_t *
-show_diff(svn_boolean_t *performed_edit,
-          const svn_wc_conflict_description_t *desc,
+show_diff(const svn_wc_conflict_description_t *desc,
           apr_pool_t *pool)
 {
   const char *path1, *path2;
@@ -114,8 +113,6 @@ show_diff(svn_boolean_t *performed_edit,
                                         NULL, NULL,
                                         APR_LOCALE_CHARSET,
                                         pool));
-
-  *performed_edit = TRUE;
 
   return SVN_NO_ERROR;
 }
@@ -368,7 +365,12 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
       const char *answer;
       char *prompt;
       svn_boolean_t diff_allowed = FALSE;
+      /* Have they done something that might have affected the merged
+         file (so that we need to save a .edited copy)? */
       svn_boolean_t performed_edit = FALSE;
+      /* Have they done *something* (edit, look at diff, etc) to
+         give them a rational basis for choosing (r)esolved? */
+      svn_boolean_t knows_something = FALSE;
 
       if (desc->kind == svn_wc_conflict_kind_text)
         SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
@@ -433,7 +435,7 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                                    _(", (df) diff-full, (e) edit"),
                                    NULL);
 
-              if (performed_edit)
+              if (knows_something)
                 prompt = apr_pstrcat(subpool, prompt, _(", (r) resolved"),
                                      NULL);
 
@@ -446,7 +448,7 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
             }
           else
             {
-              if (performed_edit)
+              if (knows_something)
                 prompt = apr_pstrcat(subpool, prompt, _(", (r) resolved"),
                                      NULL);
               prompt = apr_pstrcat(subpool, prompt,
@@ -515,6 +517,8 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                 }
 
               (*result)->choice = svn_wc_conflict_choose_mine_conflict;
+              if (performed_edit)
+                (*result)->save_merged = TRUE;
               break;
             }
           else if (strcmp(answer, "tc") == 0)
@@ -536,16 +540,22 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                   continue;
                 }
               (*result)->choice = svn_wc_conflict_choose_theirs_conflict;
+              if (performed_edit)
+                (*result)->save_merged = TRUE;
               break;
             }
           else if (strcmp(answer, "mf") == 0)
             {
               (*result)->choice = svn_wc_conflict_choose_mine_full;
+              if (performed_edit)
+                (*result)->save_merged = TRUE;
               break;
             }
           else if (strcmp(answer, "tf") == 0)
             {
               (*result)->choice = svn_wc_conflict_choose_theirs_full;
+              if (performed_edit)
+                (*result)->save_merged = TRUE;
               break;
             }
           else if (strcmp(answer, "dc") == 0)
@@ -574,7 +584,7 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                   continue;
                 }
               SVN_ERR(show_conflicts(desc, subpool));
-              performed_edit = TRUE;
+              knows_something = TRUE;
             }
           else if (strcmp(answer, "df") == 0)
             {
@@ -586,17 +596,24 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                   continue;
                 }
 
-              SVN_ERR(show_diff(&performed_edit, desc, subpool));
+              SVN_ERR(show_diff(desc, subpool));
+              knows_something = TRUE;
             }
           else if (strcmp(answer, "e") == 0)
             {
               SVN_ERR(open_editor(&performed_edit, desc, b, subpool));
+              if (performed_edit)
+                knows_something = TRUE;
             }
           else if (strcmp(answer, "l") == 0)
             {
               if (desc->base_file && desc->their_file && desc->my_file
                     && desc->merged_file)
-                SVN_ERR(launch_resolver(&performed_edit, desc, b, subpool));
+                {
+                  SVN_ERR(launch_resolver(&performed_edit, desc, b, subpool));
+                  if (performed_edit)
+                    knows_something = TRUE;
+                }
               else
                 SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
                                             _("Invalid option.\n\n")));
@@ -606,7 +623,7 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
               /* We only allow the user accept the merged version of
                  the file if they've edited it, or at least looked at
                  the diff. */
-              if (performed_edit)
+              if (knows_something)
                 {
                   (*result)->choice = svn_wc_conflict_choose_merged;
                   break;
