@@ -633,10 +633,6 @@ output_common_modified(void *baton,
                        apr_off_t modified_start, apr_off_t modified_length,
                        apr_off_t latest_start, apr_off_t latest_length)
 {
-  merge_output_baton_t *btn = baton;
-  if (btn->conflict_style == svn_diff_conflict_display_only_conflicts)
-    return SVN_NO_ERROR;
-
   return output_merge_token_range(baton, 1/*modified*/,
                                   modified_start, modified_length);
 }
@@ -647,10 +643,6 @@ output_latest(void *baton,
               apr_off_t modified_start, apr_off_t modified_length,
               apr_off_t latest_start, apr_off_t latest_length)
 {
-  merge_output_baton_t *btn = baton;
-  if (btn->conflict_style == svn_diff_conflict_display_only_conflicts)
-    return SVN_NO_ERROR;
-
   return output_merge_token_range(baton, 2/*latest*/,
                                   latest_start, latest_length);
 }
@@ -681,10 +673,6 @@ output_conflict(void *baton,
   merge_output_baton_t *btn = baton;
 
   svn_diff_conflict_display_style_t style = btn->conflict_style;
-
-  /* ### Should show some context for this style as well. */
-  if (style == svn_diff_conflict_display_only_conflicts)
-    style = svn_diff_conflict_display_modified_original_latest;
 
   if (style == svn_diff_conflict_display_resolved_modified_latest)
     {
@@ -724,6 +712,46 @@ output_conflict(void *baton,
 
   return SVN_NO_ERROR;
 }
+
+
+static svn_error_t *
+output_conflict_with_context(void *baton,
+                             apr_off_t original_start,
+                             apr_off_t original_length,
+                             apr_off_t modified_start,
+                             apr_off_t modified_length,
+                             apr_off_t latest_start,
+                             apr_off_t latest_length,
+                             svn_diff_t *diff)
+{
+  merge_output_baton_t *btn = baton;
+
+  SVN_ERR(output_merge_marker(btn, 1/*modified*/));
+  SVN_ERR(output_merge_token_range(btn, 1/*modified*/,
+                                   modified_start, modified_length));
+
+  SVN_ERR(output_merge_marker(btn, 0/*original*/));
+  SVN_ERR(output_merge_token_range(btn, 0/*original*/,
+                                   original_start, original_length));
+
+  SVN_ERR(output_merge_marker(btn, 2/*separator*/));
+  SVN_ERR(output_merge_token_range(btn, 2/*latest*/,
+                                   latest_start, latest_length));
+  SVN_ERR(output_merge_marker(btn, 3/*latest (end)*/));
+
+  return SVN_NO_ERROR;
+}
+
+
+static const svn_diff_output_fns_t merge_only_conflicts_output_vtable =
+{
+  NULL, /* common */
+  NULL, /* modified */
+  NULL, /* latest */
+  NULL, /* output_diff_common */
+  output_conflict_with_context
+};
+
 
 /* TOKEN is the first token in the modified file.
    Return its line-ending, if any. */
@@ -765,6 +793,10 @@ svn_diff_mem_string_output_merge2(svn_stream_t *output_stream,
 {
   merge_output_baton_t btn;
   const char *eol;
+  svn_boolean_t conflicts_only =
+    (style == svn_diff_conflict_display_only_conflicts);
+  const svn_diff_output_fns_t *vtable = conflicts_only
+     ? &merge_only_conflicts_output_vtable : &merge_output_vtable;
 
   memset(&btn, 0, sizeof(btn));
   btn.output_stream = output_stream;
@@ -813,7 +845,7 @@ svn_diff_mem_string_output_merge2(svn_stream_t *output_stream,
                         eol),
            pool));
 
-  SVN_ERR(svn_diff_output(diff, &btn, &merge_output_vtable));
+  SVN_ERR(svn_diff_output(diff, &btn, vtable));
 
   return SVN_NO_ERROR;
 }
