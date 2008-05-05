@@ -623,6 +623,7 @@ typedef struct merge_output_baton_t
   /* Markers for marking conflicted sections */
   const char *markers[4]; /* 0 = original, 1 = modified,
                              2 = separator, 3 = latest (end) */
+  const char *marker_eol;
 
   svn_diff_conflict_display_style_t conflict_style;
 
@@ -740,10 +741,18 @@ output_merge_token_range(apr_size_t *lines_printed_p,
 }
 
 static svn_error_t *
+output_marker_eol(merge_output_baton_t *btn)
+{
+  apr_size_t len = strlen(btn->marker_eol);
+  return svn_stream_write(btn->output_stream, btn->marker_eol, &len);
+}
+
+static svn_error_t *
 output_merge_marker(merge_output_baton_t *btn, int idx)
 {
   apr_size_t len = strlen(btn->markers[idx]);
-  return svn_stream_write(btn->output_stream, btn->markers[idx], &len);
+  SVN_ERR(svn_stream_write(btn->output_stream, btn->markers[idx], &len));
+  return output_marker_eol(btn);
 }
 
 static svn_error_t *
@@ -857,18 +866,36 @@ output_conflict_with_context(void *baton,
   btn->output_stream = btn->real_output_stream;
 
   /* Output the conflict itself. */
-  SVN_ERR(output_merge_marker(btn, 1/*modified*/));
+  SVN_ERR(svn_stream_printf(btn->output_stream, btn->pool,
+                            (modified_length == 1
+                             ? "%s (%" APR_OFF_T_FMT ")"
+                             : "%s (%" APR_OFF_T_FMT ",%" APR_OFF_T_FMT ")"),
+                            btn->markers[1],
+                            modified_start + 1, modified_length));
+  SVN_ERR(output_marker_eol(btn));
   SVN_ERR(output_merge_token_range(NULL, btn, 1/*modified*/,
                                    modified_start, modified_length));
 
-  SVN_ERR(output_merge_marker(btn, 0/*original*/));
+  SVN_ERR(svn_stream_printf(btn->output_stream, btn->pool,
+                            (original_length == 1
+                             ? "%s (%" APR_OFF_T_FMT ")"
+                             : "%s (%" APR_OFF_T_FMT ",%" APR_OFF_T_FMT ")"),
+                            btn->markers[0],
+                            original_start + 1, original_length));
+  SVN_ERR(output_marker_eol(btn));
   SVN_ERR(output_merge_token_range(NULL, btn, 0/*original*/,
                                    original_start, original_length));
 
   SVN_ERR(output_merge_marker(btn, 2/*separator*/));
   SVN_ERR(output_merge_token_range(NULL, btn, 2/*latest*/,
                                    latest_start, latest_length));
-  SVN_ERR(output_merge_marker(btn, 3/*latest (end)*/));
+  SVN_ERR(svn_stream_printf(btn->output_stream, btn->pool,
+                            (latest_length == 1
+                             ? "%s (%" APR_OFF_T_FMT ")"
+                             : "%s (%" APR_OFF_T_FMT ",%" APR_OFF_T_FMT ")"),
+                            btn->markers[3],
+                            latest_start + 1, latest_length));
+  SVN_ERR(output_marker_eol(btn));
 
   /* Go into print-trailing-context mode instead. */
   make_trailing_context_printer(btn);
@@ -958,34 +985,28 @@ svn_diff_mem_string_output_merge2(svn_stream_t *output_stream,
   else
     eol = APR_EOL_STR;  /* use the platform default */
 
-  SVN_ERR(svn_utf_cstring_from_utf8
-          (&btn.markers[1],
-           apr_psprintf(pool, "%s%s",
-                        conflict_modified
-                        ? conflict_modified : "<<<<<<< (modified)",
-                        eol),
-           pool));
-  SVN_ERR(svn_utf_cstring_from_utf8
-          (&btn.markers[0],
-           apr_psprintf(pool, "%s%s",
-                        conflict_original
-                        ? conflict_original : "||||||| (original)",
-                        eol),
-           pool));
-  SVN_ERR(svn_utf_cstring_from_utf8
-          (&btn.markers[2],
-           apr_psprintf(pool, "%s%s",
-                        conflict_separator
-                        ? conflict_separator : "=======",
-                        eol),
-           pool));
-  SVN_ERR(svn_utf_cstring_from_utf8
-          (&btn.markers[3],
-           apr_psprintf(pool, "%s%s",
-                        conflict_latest
-                        ? conflict_latest : ">>>>>>> (latest)",
-                        eol),
-           pool));
+  btn.marker_eol = eol;
+
+  SVN_ERR(svn_utf_cstring_from_utf8(&btn.markers[1],
+                                    conflict_modified
+                                    ? conflict_modified
+                                    : "<<<<<<< (modified)",
+                                    pool));
+  SVN_ERR(svn_utf_cstring_from_utf8(&btn.markers[0],
+                                    conflict_original
+                                    ? conflict_original
+                                    : "||||||| (original)",
+                                    pool));
+  SVN_ERR(svn_utf_cstring_from_utf8(&btn.markers[2],
+                                    conflict_separator
+                                    ? conflict_separator
+                                    : "=======",
+                                    pool));
+  SVN_ERR(svn_utf_cstring_from_utf8(&btn.markers[3],
+                                    conflict_latest
+                                    ? conflict_latest
+                                    : ">>>>>>> (latest)",
+                                    pool));
 
   SVN_ERR(svn_diff_output(diff, &btn, vtable));
   if (conflicts_only)
