@@ -35,7 +35,6 @@ typedef struct source_tokens_t
   /* A token simply is an svn_string_t pointing to
      the data of the in-memory data source, containing
      the raw token text, with length stored in the string */
-  /*###TODO: Note we currently don't support normalization. */
   apr_array_header_t *tokens;
 
   /* Next token to be consumed */
