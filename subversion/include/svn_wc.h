@@ -1199,6 +1199,11 @@ typedef struct svn_wc_conflict_result_t
       is set to @c svn_wc_conflict_choose_merged.*/
   const char *merged_file;
 
+  /** If true, save a backup copy of merged_file (or the original
+      merged_file from the conflict description, if merged_file is
+      NULL) in the user's working copy. */
+  svn_boolean_t save_merged;
+
 } svn_wc_conflict_result_t;
 
 
@@ -1228,6 +1233,10 @@ svn_wc_create_conflict_result(svn_wc_conflict_choice_t choice,
  * the caller.  All allocations should be performed in @a pool.  When
  * finished, the callback signals its resolution by returning a
  * structure in @a *result.  (See @c svn_wc_conflict_result_t.)
+ *
+ * The values @c svn_wc_conflict_choose_mine_conflict and @c
+ * svn_wc_conflict_choose_theirs_conflict are not legal for conflicts
+ * in binary files or properties.
  *
  * Implementations of this callback are free to present the conflict
  * using any user interface.  This may include simple contextual
@@ -2944,12 +2953,9 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
  * @c svn_wc_conflict_choose_merged, don't change the contents at all,
  * just remove the conflict status, which is the pre-1.5 behavior.
  *
- * (@c svn_wc_conflict_choose_theirs_conflict and
- * @c svn_wc_conflict_choose_mine_conflict are not yet implemented;
- * the effect of passing one of those values as @a conflict_choice is
- * currently undefined, which may or may not be an underhanded way of
- * allowing real behaviors to be added for them later without revving
- * this interface.)
+ * @c svn_wc_conflict_choose_theirs_conflict and @c
+ * svn_wc_conflict_choose_mine_conflict are not legal for binary
+ * files or properties.
  *
  * @a adm_access is an access baton, with a write lock, for @a path.
  *

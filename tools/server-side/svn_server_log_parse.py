@@ -14,6 +14,9 @@
 # history and logs, available at http://subversion.tigris.org/.
 # ====================================================================
 
+# TODO: Teach parse_open about capabilities, rather than allowing any
+# words at all.
+
 """Parse mod-dav-svn operational logs.
 
 SVN-ACTION strings
@@ -71,6 +74,8 @@ The update report::
 
 
 import re
+import urllib
+
 import svn.core
 
 #
@@ -94,11 +99,14 @@ pPATH = r'(/\S*)'
 pPATHS = r'\(([^)]*)\)'
 # r<N>
 pREVNUM = r'r(\d+)'
+# (<N> ...)
+pREVNUMS = r'\(((\d+\s*)*)\)'
 # r<N>:<M>
-pREVRANGE = r'r(\d+):(\d+)'
+pREVRANGE = r'r(-?\d+):(-?\d+)'
 # <PATH>@<N>
 pPATHREV = pPATH + r'@(\d+)'
 pWORD = r'(\S+)'
+pPROPERTY = pWORD
 # depth=<D>?
 pDEPTH = 'depth=' + pWORD
 
@@ -176,7 +184,7 @@ class Parser(object):
     example, "lock <PATH> steal?" => def handle_lock(self, path, steal)
     where steal will be True if "steal" was present.
 
-    See the end of test_svn_dav_log_parse.py for a complete example.
+    See the end of test_svn_server_log_parse.py for a complete example.
     """
     def parse(self, line):
         """Parse line and call appropriate handle_ method.
@@ -204,31 +212,60 @@ class Parser(object):
         self.handle_commit(int(m.group(1)))
         return line[m.end():]
 
+    def _parse_open(self, line):
+        pINT = r'(\d+)'
+        pCAP = r'cap=\(([^)]*)\)'
+        pCLIENT = pWORD
+        m = _match(line, pINT, pCAP, pPATH, pCLIENT, pCLIENT)
+        protocol = int(m.group(1))
+        if m.group(2) is None:
+            capabilities = []
+        else:
+            capabilities = m.group(2).split()
+        path = m.group(3)
+        ra_client = urllib.unquote(m.group(4))
+        client = urllib.unquote(m.group(5))
+        self.handle_open(protocol, capabilities, path, ra_client, client)
+        return line[m.end():]
+
+    def _parse_reparent(self, line):
+        m = _match(line, pPATH)
+        self.handle_reparent(urllib.unquote(m.group(1)))
+        return line[m.end():]
+
+    def _parse_get_latest_rev(self, line):
+        self.handle_get_latest_rev()
+        return line
+
+    def _parse_get_dated_rev(self, line):
+        m = _match(line, pWORD)
+        self.handle_get_dated_rev(m.group(1))
+        return line[m.end():]
+
     def _parse_get_dir(self, line):
         m = _match(line, pPATH, pREVNUM, ['text', 'props'])
-        self.handle_get_dir(m.group(1), int(m.group(2)),
+        self.handle_get_dir(urllib.unquote(m.group(1)), int(m.group(2)),
                             m.group(3) is not None,
                             m.group(4) is not None)
         return line[m.end():]
 
     def _parse_get_file(self, line):
         m = _match(line, pPATH, pREVNUM, ['text', 'props'])
-        self.handle_get_file(m.group(1), int(m.group(2)),
+        self.handle_get_file(urllib.unquote(m.group(1)), int(m.group(2)),
                              m.group(3) is not None,
                              m.group(4) is not None)
         return line[m.end():]
 
     def _parse_lock(self, line):
         m = _match(line, pPATHS, ['steal'])
-        paths = m.group(1).split()
+        paths = [urllib.unquote(x) for x in m.group(1).split()]
         self.handle_lock(paths, m.group(2) is not None)
         return line[m.end():]
 
     def _parse_change_rev_prop(self, line):
-        # <REVPROP>
-        pPROPERTY = pWORD
         m = _match(line, pREVNUM, pPROPERTY)
-        self.handle_change_rev_prop(int(m.group(1)), m.group(2))
+        self.handle_change_rev_prop(int(m.group(1)),
+                                    urllib.unquote(m.group(2)))
         return line[m.end():]
 
     def _parse_rev_proplist(self, line):
@@ -236,17 +273,46 @@ class Parser(object):
         self.handle_rev_proplist(int(m.group(1)))
         return line[m.end():]
 
+    def _parse_rev_prop(self, line):
+        m = _match(line, pREVNUM, pPROPERTY)
+        self.handle_rev_prop(int(m.group(1)), urllib.unquote(m.group(2)))
+        return line[m.end():]
+
     def _parse_unlock(self, line):
         m = _match(line, pPATHS, ['break'])
-        paths = m.group(1).split()
+        paths = [urllib.unquote(x) for x in m.group(1).split()]
         self.handle_unlock(paths, m.group(2) is not None)
         return line[m.end():]
 
-    # reports
+    def _parse_get_lock(self, line):
+        m = _match(line, pPATH)
+        self.handle_get_lock(urllib.unquote(m.group(1)))
+        return line[m.end():]
+
+    def _parse_get_locks(self, line):
+        m = _match(line, pPATH)
+        self.handle_get_locks(urllib.unquote(m.group(1)))
+        return line[m.end():]
+
+    def _parse_get_locations(self, line):
+        m = _match(line, pPATH, pREVNUMS)
+        path = urllib.unquote(m.group(1))
+        revnums = [int(x) for x in m.group(2).split()]
+        self.handle_get_locations(path, revnums)
+        return line[m.end():]
+
+    def _parse_get_location_segments(self, line):
+        m = _match(line, pPATHREV, pREVRANGE)
+        path = urllib.unquote(m.group(1))
+        peg = int(m.group(2))
+        left = int(m.group(3))
+        right = int(m.group(4))
+        self.handle_get_location_segments(path, peg, left, right)
+        return line[m.end():]
 
     def _parse_get_file_revs(self, line):
         m = _match(line, pPATH, pREVRANGE, ['include-merged-revisions'])
-        path = m.group(1)
+        path = urllib.unquote(m.group(1))
         left = int(m.group(2))
         right = int(m.group(3))
         include_merged_revisions    = m.group(4) is not None
@@ -259,7 +325,7 @@ class Parser(object):
         pINCLUDE_DESCENDANTS = pWORD
         m = _match(line,
                    pPATHS, pMERGEINFO_INHERITANCE, ['include-descendants'])
-        paths = m.group(1).split()
+        paths = [urllib.unquote(x) for x in m.group(1).split()]
         inheritance = _parse_mergeinfo_inheritance(m.group(2))
         include_descendants         = m.group(3) is not None
         self.handle_get_mergeinfo(paths, inheritance, include_descendants)
@@ -273,7 +339,7 @@ class Parser(object):
         m = _match(line, pPATHS, pREVRANGE,
                 [pLIMIT, 'discover-changed-paths', 'strict',
                  'include-merged-revisions', pREVPROPS])
-        paths = m.group(1).split()
+        paths = [urllib.unquote(x) for x in m.group(1).split()]
         left = int(m.group(2))
         right = int(m.group(3))
         if m.group(5) is None:
@@ -289,14 +355,28 @@ class Parser(object):
             if m.group(11) is None:
                 revprops = []
             else:
-                revprops = m.group(11).split()
+                revprops = [urllib.unquote(x) for x in m.group(11).split()]
         self.handle_log(paths, left, right, limit, discover_changed_paths,
                         strict, include_merged_revisions, revprops)
         return line[m.end():]
 
+    def _parse_check_path(self, line):
+        m = _match(line, pPATHREV)
+        path = urllib.unquote(m.group(1))
+        revnum = int(m.group(2))
+        self.handle_check_path(path, revnum)
+        return line[m.end():]
+
+    def _parse_stat(self, line):
+        m = _match(line, pPATHREV)
+        path = urllib.unquote(m.group(1))
+        revnum = int(m.group(2))
+        self.handle_stat(path, revnum)
+        return line[m.end():]
+
     def _parse_replay(self, line):
         m = _match(line, pPATH, pREVNUM)
-        path = m.group(1)
+        path = urllib.unquote(m.group(1))
         revision = int(m.group(2))
         self.handle_replay(path, revision)
         return line[m.end():]
@@ -305,7 +385,7 @@ class Parser(object):
 
     def _parse_checkout_or_export(self, line):
         m = _match(line, pPATH, pREVNUM, [pDEPTH])
-        path = m.group(1)
+        path = urllib.unquote(m.group(1))
         revision = int(m.group(2))
         depth = _parse_depth(m.group(4))
         self.handle_checkout_or_export(path, revision, depth)
@@ -323,7 +403,7 @@ class Parser(object):
         return f(line, m)
 
     def _parse_diff_1path(self, line, m):
-        path = m.group(1)
+        path = urllib.unquote(m.group(1))
         left = int(m.group(2))
         right = int(m.group(3))
         depth = _parse_depth(m.group(5))
@@ -333,9 +413,9 @@ class Parser(object):
         return line[m.end():]
 
     def _parse_diff_2paths(self, line, m):
-        from_path = m.group(1)
+        from_path = urllib.unquote(m.group(1))
         from_rev = int(m.group(2))
-        to_path = m.group(3)
+        to_path = urllib.unquote(m.group(3))
         to_rev = int(m.group(4))
         depth = _parse_depth(m.group(6))
         ignore_ancestry = m.group(7) is not None
@@ -345,7 +425,7 @@ class Parser(object):
 
     def _parse_status(self, line):
         m = _match(line, pPATH, pREVNUM, [pDEPTH])
-        path = m.group(1)
+        path = urllib.unquote(m.group(1))
         revision = int(m.group(2))
         depth = _parse_depth(m.group(4))
         self.handle_status(path, revision, depth)
@@ -353,8 +433,8 @@ class Parser(object):
 
     def _parse_switch(self, line):
         m = _match(line, pPATH, pPATHREV, [pDEPTH])
-        from_path = m.group(1)
-        to_path = m.group(2)
+        from_path = urllib.unquote(m.group(1))
+        to_path = urllib.unquote(m.group(2))
         to_rev = int(m.group(3))
         depth = _parse_depth(m.group(5))
         self.handle_switch(from_path, to_path, to_rev, depth)
@@ -362,7 +442,7 @@ class Parser(object):
 
     def _parse_update(self, line):
         m = _match(line, pPATH, pREVNUM, [pDEPTH, 'send-copyfrom-args'])
-        path = m.group(1)
+        path = urllib.unquote(m.group(1))
         revision = int(m.group(2))
         depth = _parse_depth(m.group(4))
         send_copyfrom_args = m.group(5) is not None

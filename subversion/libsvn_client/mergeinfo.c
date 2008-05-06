@@ -164,13 +164,13 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
           SVN_ERR(svn_client__parse_mergeinfo(&wc_mergeinfo, entry, wcpath,
                                               pristine, adm_access, ctx,
                                               pool));
-
-          /* If WCPATH is switched, don't look any higher for inherited
-             mergeinfo. */
-          SVN_ERR(svn_wc__path_switched(wcpath, &switched, entry, pool));
-          if (switched)
-            break;
         }
+
+      /* If WCPATH is switched, don't look any higher for inherited
+         mergeinfo. */
+      SVN_ERR(svn_wc__path_switched(wcpath, &switched, entry, pool));
+      if (switched)
+        break;
 
       /* Subsequent svn_wc_adm_access_t need to be opened with
          an absolute path so we can walk up and out of the WC
@@ -725,57 +725,52 @@ svn_client__elide_mergeinfo(const char *target_wcpath,
     {
       svn_mergeinfo_t target_mergeinfo;
       svn_mergeinfo_t mergeinfo = NULL;
-      svn_boolean_t inherited, switched;
+      svn_boolean_t inherited;
       const char *walk_path;
 
-      /* Check for second easy out: TARGET_WCPATH is switched. */
-      SVN_ERR(svn_wc__path_switched(target_wcpath, &switched, entry, pool));
-      if (!switched)
+      /* Get the TARGET_WCPATH's explicit mergeinfo. */
+      SVN_ERR(svn_client__get_wc_mergeinfo(&target_mergeinfo, &inherited,
+                                           FALSE, svn_mergeinfo_inherited,
+                                           entry, target_wcpath,
+                                           wc_elision_limit_path
+                                             ? wc_elision_limit_path
+                                             : NULL,
+                                           &walk_path, adm_access,
+                                           ctx, pool));
+
+     /* If TARGET_WCPATH has no explicit mergeinfo, there's nothing to
+         elide, we're done. */
+      if (inherited || target_mergeinfo == NULL)
+        return SVN_NO_ERROR;
+
+      /* Get TARGET_WCPATH's inherited mergeinfo from the WC. */
+      SVN_ERR(svn_client__get_wc_mergeinfo(&mergeinfo, &inherited, FALSE,
+                                           svn_mergeinfo_nearest_ancestor,
+                                           entry, target_wcpath,
+                                           wc_elision_limit_path
+                                             ? wc_elision_limit_path
+                                             : NULL,
+                                           &walk_path, adm_access,
+                                           ctx, pool));
+
+      /* If TARGET_WCPATH inherited no mergeinfo from the WC and we are
+         not limiting our search to the working copy then check if it
+         inherits any from the repos. */
+      if (!mergeinfo && !wc_elision_limit_path)
         {
-          /* Get the TARGET_WCPATH's explicit mergeinfo. */
-          SVN_ERR(svn_client__get_wc_mergeinfo(&target_mergeinfo, &inherited,
-                                               FALSE, svn_mergeinfo_inherited,
-                                               entry, target_wcpath,
-                                               wc_elision_limit_path
-                                                 ? wc_elision_limit_path
-                                                 : NULL,
-                                               &walk_path, adm_access,
-                                               ctx, pool));
-
-         /* If TARGET_WCPATH has no explicit mergeinfo, there's nothing to
-             elide, we're done. */
-          if (inherited || target_mergeinfo == NULL)
-            return SVN_NO_ERROR;
-
-          /* Get TARGET_WCPATH's inherited mergeinfo from the WC. */
-          SVN_ERR(svn_client__get_wc_mergeinfo(&mergeinfo, &inherited, FALSE,
-                                               svn_mergeinfo_nearest_ancestor,
-                                               entry, target_wcpath,
-                                               wc_elision_limit_path
-                                                 ? wc_elision_limit_path
-                                                 : NULL,
-                                               &walk_path, adm_access,
-                                               ctx, pool));
-
-          /* If TARGET_WCPATH inherited no mergeinfo from the WC and we are
-             not limiting our search to the working copy then check if it
-             inherits any from the repos. */
-          if (!mergeinfo && !wc_elision_limit_path)
-            {
-              SVN_ERR(svn_client__get_wc_or_repos_mergeinfo
-                      (&mergeinfo, entry, &inherited, TRUE,
-                       svn_mergeinfo_nearest_ancestor,
-                       NULL, target_wcpath, adm_access, ctx, pool));
-            }
-
-          /* If there is nowhere to elide TARGET_WCPATH's mergeinfo to and
-             the elision is limited, then we are done.*/
-          if (!mergeinfo && wc_elision_limit_path)
-            return SVN_NO_ERROR;
-
-          SVN_ERR(elide_mergeinfo(mergeinfo, target_mergeinfo, target_wcpath,
-                                  NULL, adm_access, pool));
+          SVN_ERR(svn_client__get_wc_or_repos_mergeinfo
+                  (&mergeinfo, entry, &inherited, TRUE,
+                   svn_mergeinfo_nearest_ancestor,
+                   NULL, target_wcpath, adm_access, ctx, pool));
         }
+
+      /* If there is nowhere to elide TARGET_WCPATH's mergeinfo to and
+         the elision is limited, then we are done.*/
+      if (!mergeinfo && wc_elision_limit_path)
+        return SVN_NO_ERROR;
+
+      SVN_ERR(elide_mergeinfo(mergeinfo, target_mergeinfo, target_wcpath,
+                              NULL, adm_access, pool));
     }
   return SVN_NO_ERROR;
 }
@@ -933,7 +928,7 @@ elide_mergeinfo_catalog_open_directory(const char *path,
   b->mergeinfo_catalog = pb->mergeinfo_catalog;
 
   if (apr_hash_get(b->mergeinfo_catalog, path, APR_HASH_KEY_STRING))
-    b->inherited_mergeinfo_path = path;
+    b->inherited_mergeinfo_path = apr_pstrdup(dir_pool, path);
   else
     b->inherited_mergeinfo_path = pb->inherited_mergeinfo_path;
   
@@ -945,6 +940,7 @@ elide_mergeinfo_catalog_open_directory(const char *path,
 struct elide_mergeinfo_catalog_cb_baton {
   apr_array_header_t *elidable_paths;
   svn_mergeinfo_t mergeinfo_catalog;
+  apr_pool_t *result_pool;
 };
 
 /* Implements svn_delta_path_driver_cb_func_t. */
@@ -989,7 +985,8 @@ elide_mergeinfo_catalog_cb(void **dir_baton,
                                  pool));
 
   if (elides)
-    APR_ARRAY_PUSH(cb->elidable_paths, const char *) = path;
+    APR_ARRAY_PUSH(cb->elidable_paths, const char *) =
+      apr_pstrdup(cb->result_pool, path);
 
   return SVN_NO_ERROR;
 }
@@ -1002,8 +999,9 @@ svn_client__elide_mergeinfo_catalog(svn_mergeinfo_t mergeinfo_catalog,
   apr_array_header_t *elidable_paths = apr_array_make(pool, 1, 
                                                       sizeof(const char *));
   svn_delta_editor_t *editor = svn_delta_default_editor(pool);
-  struct elide_mergeinfo_catalog_cb_baton cb = {elidable_paths, 
-                                                mergeinfo_catalog};
+  struct elide_mergeinfo_catalog_cb_baton cb = {elidable_paths,
+                                                mergeinfo_catalog,
+                                                pool};
   int i;
 
   editor->open_root = elide_mergeinfo_catalog_open_root;
@@ -1059,7 +1057,7 @@ filter_log_entry_with_rangelist(void *baton,
   range->inheritable = TRUE;
   APR_ARRAY_PUSH(this_rangelist, svn_merge_range_t *) = range;
   SVN_ERR(svn_rangelist_intersect(&intersection, fleb->rangelist, 
-                                  this_rangelist, pool));
+                                  this_rangelist, TRUE, pool));
   if (! (intersection && intersection->nelts))
     return SVN_NO_ERROR;
 

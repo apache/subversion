@@ -283,6 +283,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
   const svn_wc_entry_t *entry;
   svn_boolean_t contains_conflicts;
   const svn_prop_t *mimeprop;
+  svn_diff_file_options_t *options;
 
   /* Sanity check:  the merge target must be under revision control (unless
      this is an add-with-history). */
@@ -318,6 +319,12 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                                       adm_path, svn_io_file_del_none,
                                       pool));
 
+      options = svn_diff_file_options_create(pool);
+
+      if (merge_options)
+        SVN_ERR(svn_diff_file_options_parse(options, merge_options, pool));
+
+
       /* Run an external merge if requested. */
       if (diff3_cmd)
         {
@@ -338,13 +345,8 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
           const char *left_marker;
           const char *right_marker;
           svn_stream_t *ostream;
-          svn_diff_file_options_t *options;
 
           ostream = svn_stream_from_aprfile(result_f, pool);
-          options = svn_diff_file_options_create(pool);
-
-          if (merge_options)
-            SVN_ERR(svn_diff_file_options_parse(options, merge_options, pool));
 
           SVN_ERR(svn_diff_file_diff3_2(&diff,
                                         left, tmp_target, right,
@@ -419,6 +421,26 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                                         NULL, _("Conflict callback violated API:"
                                                 " returned no results"));
 
+              if (result->save_merged)
+                {
+                  const char *edited_copy;
+                  /* ### Should use preserved-conflict-file-exts. */
+                  SVN_ERR(svn_io_open_unique_file2(NULL,
+                                                   &edited_copy,
+                                                   merge_target,
+                                                   ".edited",
+                                                   svn_io_file_del_none,
+                                                   pool));
+                  SVN_ERR(svn_wc__loggy_copy
+                          (log_accum, NULL, adm_access,
+                           svn_wc__copy_translate,
+                           /* Look for callback's own merged-file first: */
+                           result->merged_file
+                           ? result->merged_file : result_target,
+                           edited_copy,
+                           FALSE, pool));
+                }
+
               switch (result->choice)
                 {
                   /* If the callback wants to use one of the fulltexts
@@ -448,6 +470,48 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                   case svn_wc_conflict_choose_mine_full:
                     {
                       /* Do nothing to merge_target, let it live untouched! */
+                      *merge_outcome = svn_wc_merge_merged;
+                      contains_conflicts = FALSE;
+                      goto merge_complete;
+                    }
+                  case svn_wc_conflict_choose_theirs_conflict:
+                  case svn_wc_conflict_choose_mine_conflict:
+                    {
+                      apr_file_t *chosen_f;
+                      const char *chosen_path;
+                      svn_stream_t *chosen_stream;
+                      svn_diff_t *diff;
+                      svn_diff_conflict_display_style_t style =
+                        result->choice == svn_wc_conflict_choose_theirs_conflict
+                        ? svn_diff_conflict_display_latest
+                        : svn_diff_conflict_display_modified;
+
+                      SVN_ERR(svn_wc_create_tmp_file2(&chosen_f,
+                                                      &chosen_path,
+                                                      adm_path,
+                                                      svn_io_file_del_none,
+                                                      pool));
+                      chosen_stream = svn_stream_from_aprfile2(chosen_f, FALSE,
+                                                               pool);
+                      SVN_ERR(svn_diff_file_diff3_2(&diff,
+                                                    left, tmp_target, right,
+                                                    options, pool));
+                      SVN_ERR(svn_diff_file_output_merge2(chosen_stream, diff,
+                                                          left,
+                                                          tmp_target,
+                                                          right,
+                                                          /* markers ignored */
+                                                          NULL, NULL,
+                                                          NULL, NULL,
+                                                          style,
+                                                          pool));
+                      SVN_ERR(svn_stream_close(chosen_stream));
+                      SVN_ERR(svn_wc__loggy_copy
+                              (log_accum, NULL, adm_access,
+                               /* ### XXX: translation needed here? */
+                               svn_wc__copy_translate,
+                               chosen_path, merge_target,
+                               FALSE, pool));
                       *merge_outcome = svn_wc_merge_merged;
                       contains_conflicts = FALSE;
                       goto merge_complete;
@@ -910,6 +974,7 @@ svn_wc_create_conflict_result(svn_wc_conflict_choice_t choice,
   svn_wc_conflict_result_t *result = apr_pcalloc(pool, sizeof(*result));
   result->choice = choice;
   result->merged_file = merged_file;
+  result->save_merged = FALSE;
 
   /* If we add more fields to svn_wc_conflict_result_t, add them here. */
 

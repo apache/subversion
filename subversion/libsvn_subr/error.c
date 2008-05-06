@@ -375,6 +375,7 @@ svn_handle_error2(svn_error_t *err,
      use a subpool. */
   apr_pool_t *subpool;
   apr_array_header_t *empties;
+  svn_error_t *tmp_err;
 
   /* ### The rest of this file carefully avoids using svn_pool_*(),
      preferring apr_pool_*() instead.  I can't remember why -- it may
@@ -383,16 +384,17 @@ svn_handle_error2(svn_error_t *err,
   apr_pool_create(&subpool, err->pool);
   empties = apr_array_make(subpool, 0, sizeof(apr_status_t));
 
-  while (err)
+  tmp_err = err;
+  while (tmp_err)
     {
       int i;
       svn_boolean_t printed_already = FALSE;
 
-      if (! err->message)
+      if (! tmp_err->message)
         {
           for (i = 0; i < empties->nelts; i++)
             {
-              if (err->apr_err == APR_ARRAY_IDX(empties, i, apr_status_t) )
+              if (tmp_err->apr_err == APR_ARRAY_IDX(empties, i, apr_status_t) )
                 {
                   printed_already = TRUE;
                   break;
@@ -402,23 +404,28 @@ svn_handle_error2(svn_error_t *err,
 
       if (! printed_already)
         {
-          print_error(err, stream, prefix);
-          if (! err->message)
+          print_error(tmp_err, stream, prefix);
+          if (! tmp_err->message)
             {
-              APR_ARRAY_PUSH(empties, apr_status_t) = err->apr_err;
+              APR_ARRAY_PUSH(empties, apr_status_t) = tmp_err->apr_err;
             }
         }
 
-      err = err->child;
+      tmp_err = tmp_err->child;
     }
 
   svn_pool_destroy(subpool);
 
   fflush(stream);
   if (fatal)
-    /* XXX Shouldn't we exit(1) here instead, so that atexit handlers
-       get called?  --xbc */
-    abort();
+    {
+      /* Avoid abort()s in maintainer mode. */
+      svn_error_clear(err);
+
+      /* We exit(1) here instead of abort()ing so that atexit handlers
+         get called. */
+      exit(EXIT_FAILURE);
+    }
 }
 
 
