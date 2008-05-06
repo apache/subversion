@@ -2,7 +2,7 @@
  * cmdline.c:  command-line processing
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -56,6 +56,10 @@ arg_is_repos_relative_url(const char *arg)
  * REPOS_ROOT_URL is the absolute URL of the repository root.
  * All strings are in UTF-8 encoding.
  * Allocate *ABSOLUTE_URL in POOL.
+ *
+ * REPOS_ROOT_URL and RELATIVE_URL do not have to be properly URI-encoded,
+ * canonical, or valid in any other way.  The caller is expected to perform
+ * canonicalization on *ABSOLUTE_URL after the call to the function.
  */
 static svn_error_t *
 resolve_repos_relative_url(const char **absolute_url,
@@ -68,7 +72,11 @@ resolve_repos_relative_url(const char **absolute_url,
                              _("Improper relative URL '%s'"),
                              relative_url);
 
-  *absolute_url = svn_path_join(repos_root_url, relative_url + 2, pool);
+  /* No assumptions are made about the canonicalization of the input
+   * arguments, it is presumed that the output will be canonicalized after
+   * this function, which will remove any duplicate path seperator.
+   */
+  *absolute_url = apr_pstrcat(pool, repos_root_url, relative_url + 1, NULL);
 
   return SVN_NO_ERROR;
 }

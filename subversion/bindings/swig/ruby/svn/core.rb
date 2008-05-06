@@ -742,7 +742,7 @@ module Svn
         end
       end
 
-      def diff(to, consider_inheritance=nil)
+      def diff(to, consider_inheritance=false)
         Core.mergeinfo_diff(self, to, consider_inheritance).collect do |result|
           self.class.new(result)
         end
@@ -773,7 +773,7 @@ module Svn
         end
       end
 
-      def diff(to, consider_inheritance=nil)
+      def diff(to, consider_inheritance=false)
         result = Core.rangelist_diff(self, to, consider_inheritance)
         deleted = result.pop
         added = result
@@ -786,12 +786,14 @@ module Svn
         self.class.new(*Core.swig_rangelist_merge(self, changes))
       end
 
-      def remove(eraser, consider_inheritance=nil)
-        self.class.new(*Core.rangelist_remove(eraser, self, consider_inheritance))
+      def remove(eraser, consider_inheritance=false)
+        self.class.new(*Core.rangelist_remove(eraser, self,
+                                              consider_inheritance))
       end
 
-      def intersect(other)
-        self.class.new(*Core.rangelist_intersect(self, other))
+      def intersect(other, consider_inheritance=false)
+        self.class.new(*Core.rangelist_intersect(self, other,
+                                                 consider_inheritance))
       end
 
       def reverse

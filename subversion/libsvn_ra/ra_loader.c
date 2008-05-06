@@ -490,8 +490,10 @@ svn_error_t *svn_ra_open3(svn_ra_session_t **session_p,
 
           if (strcmp(http_library, "neon") != 0 &&
               strcmp(http_library, "serf") != 0)
-            return svn_error_create(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
-                                    _("Invalid config: unknown HTTP library"));
+            return svn_error_createf(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
+                                     _("Invalid config: unknown HTTP library "
+                                       "'%s'"),
+                                     http_library);
 #endif
         }
     }

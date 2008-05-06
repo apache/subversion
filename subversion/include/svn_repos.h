@@ -1297,6 +1297,9 @@ svn_repos_node_location_segments(svn_repos_t *repos,
  * If @a strict_node_history is set, copy history (if any exists) will
  * not be traversed while harvesting revision logs for each path.
  *
+ * If @a include_merged_revisions is set, log information for revisions
+ * which have been merged to @a targets will also be returned.
+ *
  * If @a revprops is NULL, retrieve all revprops; else, retrieve only the
  * revprops named in the array (i.e. retrieve none if the array is empty).
  *
