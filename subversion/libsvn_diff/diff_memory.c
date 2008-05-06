@@ -664,8 +664,10 @@ flush_context_saver(context_saver_t *cs,
 static void
 make_context_saver(merge_output_baton_t *mob)
 {
+  context_saver_t *cs;
+
   svn_pool_clear(mob->pool);
-  context_saver_t *cs = apr_pcalloc(mob->pool, sizeof(*cs));
+  cs = apr_pcalloc(mob->pool, sizeof(*cs));
   cs->stream = svn_stream_empty(mob->pool);
   svn_stream_set_baton(cs->stream, cs);
   svn_stream_set_write(cs->stream, context_saver_stream_write);
@@ -703,13 +705,14 @@ static void
 make_trailing_context_printer(merge_output_baton_t *btn)
 {
   struct trailing_context_printer *tcp;
+  svn_stream_t *s;
 
   svn_pool_clear(btn->pool);
 
   tcp = apr_pcalloc(btn->pool, sizeof(*tcp));
   tcp->lines_to_print = SVN_DIFF__UNIFIED_CONTEXT_SIZE;
   tcp->mob = btn;
-  svn_stream_t *s = svn_stream_empty(btn->pool);
+  s = svn_stream_empty(btn->pool);
   svn_stream_set_baton(s, tcp);
   svn_stream_set_write(s, trailing_context_printer_write);
   btn->output_stream = s;
