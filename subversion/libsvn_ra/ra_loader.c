@@ -471,18 +471,21 @@ svn_error_t *svn_ra_open3(svn_ra_session_t **session_p,
         }
     }
 
-  /* Save auth caching parameters in the auth parameter hash. */
-  if (! store_passwords)
-    svn_auth_set_parameter(callbacks->auth_baton,
-                           SVN_AUTH_PARAM_DONT_STORE_PASSWORDS, "");
+  if (callbacks->auth_baton)
+    {
+      /* Save auth caching parameters in the auth parameter hash. */
+      if (! store_passwords)
+        svn_auth_set_parameter(callbacks->auth_baton,
+                               SVN_AUTH_PARAM_DONT_STORE_PASSWORDS, "");
 
-  svn_auth_set_parameter(callbacks->auth_baton,
-                         SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS,
-                         store_plaintext_passwords);
+      svn_auth_set_parameter(callbacks->auth_baton,
+                             SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS,
+                             store_plaintext_passwords);
 
-  if (! store_auth_creds)
-    svn_auth_set_parameter(callbacks->auth_baton,
-                           SVN_AUTH_PARAM_NO_AUTH_CACHE, "");
+      if (! store_auth_creds)
+        svn_auth_set_parameter(callbacks->auth_baton,
+                               SVN_AUTH_PARAM_NO_AUTH_CACHE, "");
+    }
 
   /* Find the library. */
   for (defn = ra_libraries; defn->ra_name != NULL; ++defn)
