@@ -596,6 +596,7 @@ typedef struct {
   const char *data[SVN_DIFF__UNIFIED_CONTEXT_SIZE];
   apr_size_t len[SVN_DIFF__UNIFIED_CONTEXT_SIZE];
   apr_size_t next_slot;
+  apr_size_t total_written;
 } context_saver_t;
 
 
@@ -608,6 +609,7 @@ context_saver_stream_write(void *baton,
   cs->data[cs->next_slot] = data;
   cs->len[cs->next_slot] = *len;
   cs->next_slot = (cs->next_slot + 1) % SVN_DIFF__UNIFIED_CONTEXT_SIZE;
+  cs->total_written++;
   return SVN_NO_ERROR;
 }
 
@@ -858,7 +860,8 @@ output_conflict_with_context(void *baton,
      trailing context)?  If so, flush it. */
   if (btn->output_stream == btn->context_saver->stream)
     {
-      SVN_ERR(svn_stream_printf(btn->real_output_stream, btn->pool, "@@\n"));
+      if (btn->context_saver->total_written > SVN_DIFF__UNIFIED_CONTEXT_SIZE)
+        SVN_ERR(svn_stream_printf(btn->real_output_stream, btn->pool, "@@\n"));
       SVN_ERR(flush_context_saver(btn->context_saver, btn->real_output_stream));
     }
 
