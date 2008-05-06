@@ -2354,6 +2354,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(random_three_way_merge),
     SVN_TEST_PASS(merge_with_part_already_present),
     SVN_TEST_PASS(merge_adjacent_changes),
-    SVN_TEST_XFAIL(test_three_way_merge_conflict_styles),
+    SVN_TEST_PASS(test_three_way_merge_conflict_styles),
     SVN_TEST_NULL
   };
