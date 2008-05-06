@@ -398,9 +398,34 @@ svn_error_t *svn_ra_open3(svn_ra_session_t **session_p,
 #endif
   /* Auth caching parameters. */
   svn_boolean_t store_passwords = SVN_CONFIG_DEFAULT_OPTION_STORE_PASSWORDS;
+  svn_boolean_t store_auth_creds = SVN_CONFIG_DEFAULT_OPTION_STORE_AUTH_CREDS;
   const char *store_plaintext_passwords
     = SVN_CONFIG_DEFAULT_OPTION_STORE_PLAINTEXT_PASSWORDS;
-  svn_boolean_t store_auth_creds = SVN_CONFIG_DEFAULT_OPTION_STORE_AUTH_CREDS;
+
+  if (callbacks->auth_baton)
+    {
+      /* The 'store-passwords' and 'store-auth-creds' parameters used to
+       * live in SVN_CONFIG_CATEGORY_CONFIG. For backward compatibility,
+       * if values for these parameters have already been set by our
+       * callers, we use those values as defaults.
+       *
+       * Note that we can only catch the case where users explicitly set
+       * "store-passwords = no" or 'store-auth-creds = no".
+       *
+       * However, since the default value for both these options is
+       * currently (and has always been) "yes", users won't know
+       * the difference if they set "store-passwords = yes" or
+       * "store-auth-creds = yes" -- they'll get the expected behaviour.
+       */
+
+      if (svn_auth_get_parameter(callbacks->auth_baton,
+                                 SVN_AUTH_PARAM_DONT_STORE_PASSWORDS) != NULL)
+        store_passwords = FALSE;
+
+      if (svn_auth_get_parameter(callbacks->auth_baton,
+                                 SVN_AUTH_PARAM_NO_AUTH_CACHE) != NULL)
+        store_auth_creds = FALSE;
+    }
 
   if (config)
     {
@@ -414,7 +439,7 @@ svn_error_t *svn_ra_open3(svn_ra_session_t **session_p,
           SVN_ERR(svn_config_get_bool
             (servers, &store_passwords, SVN_CONFIG_SECTION_GLOBAL,
              SVN_CONFIG_OPTION_STORE_PASSWORDS,
-             SVN_CONFIG_DEFAULT_OPTION_STORE_PASSWORDS));
+             store_passwords));
 
           SVN_ERR(svn_config_get_yes_no_ask
             (servers, &store_plaintext_passwords, SVN_CONFIG_SECTION_GLOBAL,
@@ -424,7 +449,7 @@ svn_error_t *svn_ra_open3(svn_ra_session_t **session_p,
           SVN_ERR(svn_config_get_bool
             (servers, &store_auth_creds, SVN_CONFIG_SECTION_GLOBAL,
               SVN_CONFIG_OPTION_STORE_AUTH_CREDS,
-              SVN_CONFIG_DEFAULT_OPTION_STORE_AUTH_CREDS));
+              store_auth_creds));
 
           /* Find out where we're about to connect to, and
            * try to pick a server group based on the destination. */
