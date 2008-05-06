@@ -397,14 +397,17 @@ svn_cmdline_auth_plaintext_prompt(svn_boolean_t *may_save_plaintext,
 
   SVN_ERR(svn_cmdline_fprintf(stderr, pool,
   _("-----------------------------------------------------------------------\n"
-    "ATTENTION! Your password for authentication realm\n"
-    "'%s'\n"
-    "can only be stored to disk unencrypted! It is recommended to configure\n"
-    "your system so that Subversion can store passwords encrypted, "
-    "if possible.\n"
-    "See the documentation for details. You can get rid of this warning by\n"
-    "editing '%s'\n"
-    "and setting 'store-plaintext-passwords' to either 'yes' or 'no'.\n"
+    "ATTENTION!  Your password for authentication realm:\n"
+    "\n"
+    "   %s\n"
+    "\n"
+    "can only be stored to disk unencrypted!  You are advised to configure\n"
+    "your system so that Subversion can store passwords encrypted, if\n"
+    "possible.  See the documentation for details.\n"
+    "\n"
+    "You can avoid future appearances of this warning by setting the value\n"
+    "of the 'store-plaintext-passwords' option to either 'yes' or 'no' in\n"
+    "'%s'.\n"
     "-----------------------------------------------------------------------\n"
     ), realmstring, config_path));
 
