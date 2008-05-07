@@ -323,7 +323,10 @@ svn_auth_save_credentials(svn_auth_iterstate_t *state,
                                                provider->provider_baton,
                                                auth_baton->parameters,
                                                state->realmstring,
-                                               pool));
+                                               /* The pool passed here
+                                                * must survive across
+                                                * RA sessions. */
+                                               auth_baton->pool));
   if (save_succeeded)
     return SVN_NO_ERROR;
 
@@ -337,8 +340,11 @@ svn_auth_save_credentials(svn_auth_iterstate_t *state,
       if (provider->vtable->save_credentials)
         SVN_ERR(provider->vtable->save_credentials
                 (&save_succeeded, creds,
-                 provider->provider_baton, auth_baton->parameters,
-                 state->realmstring, pool));
+                 provider->provider_baton,
+                 auth_baton->parameters,
+                 state->realmstring,
+                 /* The pool passed here must survive across RA sessions. */
+                 auth_baton->pool));
 
       if (save_succeeded)
         break;

@@ -869,7 +869,7 @@ SVN_ERROR_START
 
   SVN_ERRDEF(SVN_ERR_AUTHN_CREDS_NOT_SAVED,
              SVN_ERR_AUTHN_CATEGORY_START + 3,
-             "All authentication providers exhausted")
+             "Credentials not saved")
 
   /** @since New in 1.5. */
   SVN_ERRDEF(SVN_ERR_AUTHN_FAILED,
