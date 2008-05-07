@@ -44,8 +44,3 @@ Candidate changes:
 
 Approved changes (all releases):
 ================================
-
- * r31049
-   s/lock-nodes/lock-tokens/ in a message.
-   Votes:
-     +1: arfrever, danielsh, hwright
