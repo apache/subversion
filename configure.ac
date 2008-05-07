@@ -297,65 +297,68 @@ AC_ARG_WITH(kwallet,
 AC_MSG_CHECKING([whether to look for KWallet])
 if test "$with_kwallet" != "no"; then
   AC_MSG_RESULT([yes])
-  if test "$HAVE_PKG_CONFIG" = "yes"; then
-    AC_MSG_CHECKING([for QtCore, QtDBus, QtGui])
-    if pkg-config --exists QtCore QtDBus QtGui; then
-      AC_MSG_RESULT([yes])
-      AC_LANG(C++)
-      AC_CHECK_PROG(HAVE_KDE4_CONFIG, kde4-config, yes)
-      if test "$HAVE_KDE4_CONFIG" = "yes"; then
-        old_CXXFLAGS="$CXXFLAGS"
-        old_LDFLAGS="$LDFLAGS"
-        old_LIBS="$LIBS"
-        for d in [`pkg-config --cflags QtCore QtDBus QtGui | $GREP -o -- -D[^[:space:]]*`]; do
-          CPPFLAGS="$CPPFLAGS $d"
-        done
-        qt_include_dirs=""
-        for i in [`pkg-config --cflags QtCore QtDBus QtGui | $GREP -o -- -I[^[:space:]]*`]; do
-          qt_include_dirs="$qt_include_dirs $i"
-        done
-        qt_include_dirs="${qt_include_dirs## }"
-        if test "$with_kwallet" != "yes"; then
-          kde_dir="$with_kwallet"
-        else
-          kde_dir="`kde4-config --prefix`"
-        fi
-        SVN_KWALLET_INCLUDES="$qt_include_dirs -I$kde_dir/include"
-        SVN_KWALLET_LIBS="-lQtCore -lQtDBus -lQtGui -lkdeui"
-        CXXFLAGS="$CXXFLAGS $SVN_KWALLET_INCLUDES"
-        LIBS="$LIBS $SVN_KWALLET_LIBS"
-        qt_lib_dirs=""
-        for l in [`pkg-config --libs QtCore QtDBus QtGui | $GREP -o -- -L[^[:space:]]*`]; do
-          qt_lib_dirs="$qt_lib_dirs $l"
-        done
-        qt_lib_dirs="${qt_lib_dirs## }"
-        LDFLAGS="$old_LDFLAGS $qt_lib_dirs -L$kde_dir/lib`kde4-config --libsuffix`"
-        AC_LINK_IFELSE([
+  if test "$enable_shared" = "yes"; then
+    if test "$HAVE_PKG_CONFIG" = "yes"; then
+      AC_MSG_CHECKING([for QtCore, QtDBus, QtGui])
+      if pkg-config --exists QtCore QtDBus QtGui; then
+        AC_MSG_RESULT([yes])
+        AC_LANG(C++)
+        AC_CHECK_PROG(HAVE_KDE4_CONFIG, kde4-config, yes)
+        if test "$HAVE_KDE4_CONFIG" = "yes"; then
+          old_CXXFLAGS="$CXXFLAGS"
+          old_LDFLAGS="$LDFLAGS"
+          old_LIBS="$LIBS"
+          for d in [`pkg-config --cflags QtCore QtDBus QtGui | $GREP -o -- -D[^[:space:]]*`]; do
+            CPPFLAGS="$CPPFLAGS $d"
+          done
+          qt_include_dirs=""
+          for i in [`pkg-config --cflags QtCore QtDBus QtGui | $GREP -o -- -I[^[:space:]]*`]; do
+            qt_include_dirs="$qt_include_dirs $i"
+          done
+          qt_include_dirs="${qt_include_dirs## }"
+          if test "$with_kwallet" != "yes"; then
+            kde_dir="$with_kwallet"
+          else
+            kde_dir="`kde4-config --prefix`"
+          fi
+          SVN_KWALLET_INCLUDES="$qt_include_dirs -I$kde_dir/include"
+          SVN_KWALLET_LIBS="-lQtCore -lQtDBus -lQtGui -lkdeui"
+          CXXFLAGS="$CXXFLAGS $SVN_KWALLET_INCLUDES"
+          LIBS="$LIBS $SVN_KWALLET_LIBS"
+          qt_lib_dirs=""
+          for l in [`pkg-config --libs QtCore QtDBus QtGui | $GREP -o -- -L[^[:space:]]*`]; do
+            qt_lib_dirs="$qt_lib_dirs $l"
+          done
+          qt_lib_dirs="${qt_lib_dirs## }"
+          LDFLAGS="$old_LDFLAGS $qt_lib_dirs -L$kde_dir/lib`kde4-config --libsuffix`"
+          AC_LINK_IFELSE([
 #include <kwallet.h>
 int main()
 {KWallet::Wallet::walletList();}], with_kwallet=yes, with_kwallet=no)
-        AC_LANG(C)
-        AC_MSG_CHECKING([for KWallet])
-        if test "$with_kwallet" = "yes"; then
-          AC_DEFINE([SVN_HAVE_KWALLET], [1],
-                    [Is KWallet support enabled?])
-          AC_MSG_RESULT([yes])
-          CXXFLAGS="$old_CXXFLAGS"
-          LIBS="$old_LIBS"
+          AC_LANG(C)
+          AC_MSG_CHECKING([for KWallet])
+          if test "$with_kwallet" = "yes"; then
+            AC_DEFINE([SVN_HAVE_KWALLET], [1],
+                      [Is KWallet support enabled?])
+            AC_MSG_RESULT([yes])
+            CXXFLAGS="$old_CXXFLAGS"
+            LIBS="$old_LIBS"
+          else
+            AC_MSG_RESULT([no])
+            AC_MSG_ERROR([cannot find KWallet])
+          fi
         else
-          AC_MSG_RESULT([no])
-          AC_MSG_ERROR([cannot find KWallet])
+          AC_MSG_ERROR([cannot find kde4-config])
         fi
       else
-        AC_MSG_ERROR([cannot find kde4-config])
+        AC_MSG_RESULT([no])
+        AC_MSG_ERROR([cannot find QtCore, QtDBus, QtGui])
       fi
     else
-      AC_MSG_RESULT([no])
-      AC_MSG_ERROR([cannot find QtCore, QtDBus, QtGui])
+      AC_MSG_ERROR([cannot find pkg-config])
     fi
   else
-    AC_MSG_ERROR([cannot find pkg-config])
-  fi
+    AC_MSG_ERROR([--with-kwallet conflicts with --disable-shared])
 else
   AC_MSG_RESULT([no])
 fi
