@@ -45,11 +45,6 @@ Candidate changes:
 Approved changes (all releases):
 ================================
 
- * r31025
-   Fix the SVN_ERR_AUTHN_CREDS_NOT_SAVED message.
-   Votes:
-     +1: arfrever, danielsh, hwright
-
  * r31031
    Match svn_io_check_path's docstring to its implementation.
    Votes:
