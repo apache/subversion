@@ -59,11 +59,3 @@ Candidate changes:
 
 Approved changes (all releases):
 ================================
-
- * r31018
-   Fix svn_ra_open3() doc string to say "@since 1.5" not "@since 1.6".
-   Notes: This falls into hacking.html's no-vote-necessary category.
-     Since I'm nominating it anyway, I'll record my vote, but I'm
-     just filing it directly in the Approved section.
-   Votes:
-     +1: kfogel, danielsh
