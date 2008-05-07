@@ -37,6 +37,11 @@ Candidate changes:
    Votes:
      +1: epg
 
+ * r31056
+   Enable svn.diff in swig-py on Windows.
+   Votes:
+     +1: epg
+
 Status of 1.5.1:
 ================
 
