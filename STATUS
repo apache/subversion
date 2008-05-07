@@ -38,7 +38,7 @@ Candidate changes:
    Votes:
      +1: arfrever
 
- * r31055 (subversion/bindings/swig)
+ * r31055 (subversion/bindings/swig), r31066
    Make svn_wc_diff_callbacks2_t work in Python (not a new interface,
    it was just broken for Python until r31055).
    Notes:
