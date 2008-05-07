@@ -3630,7 +3630,7 @@ wc_diff_callbacks2_file_changed_or_added(const char *callback,
   py_adm_access = svn_swig_NewPointerObjString(adm_access,
                                                "svn_wc_adm_access_t *",
                                                application_py_pool);
-  py_propchanges = svn_swig_py_array_to_list(propchanges);
+  py_propchanges = svn_swig_py_proparray_to_dict(propchanges);
   py_originalprops = svn_swig_py_prophash_to_dict(originalprops);
   result = PyObject_CallFunction(py_callback,
                                  (char *)"OsssllssOO",
