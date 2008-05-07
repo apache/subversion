@@ -359,6 +359,7 @@ int main()
     fi
   else
     AC_MSG_ERROR([--with-kwallet conflicts with --disable-shared])
+  fi
 else
   AC_MSG_RESULT([no])
 fi
