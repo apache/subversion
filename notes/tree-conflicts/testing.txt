@@ -1,0 +1,197 @@
+                               -*- text -*-
+
+                     TREE CONFLICT TESTING STRATEGY
+
+
+This document describes how we are testing the code that detects,
+reports and resolves tree conflicts.  We'd like to make the testing,
+and the tree conflicts feature itself, more transparent and open to
+contributions. 
+
+For tree conflicts, there already exist cmdline tests for the update,
+switch, merge, commit, status, info and revert commands.  We've added
+tree_conflicts_tests.py, not to replace the other tests, but rather to
+complement them by offering a generic way to create lots of
+tree-conflict detection test scenarios.  The generic framework is not
+yet finished, but we think it will be useful as we extend the
+tree-conflict feature beyond its original use cases.
+
+================
+The Declarations
+================
+
+The new tree-conflict testing framework offers a compact, declarative
+format for test definitions.  Elementary actions are combined into
+scenarios, scenarios are bundled into sets, and the sets are fed into
+a generic tree-conflict-maker.  A scenario can be committed to the
+test repository and then applied to the working copy by an update,
+switch or merge operation.  In another test, the same scenario can
+modify the working copy prior to an update or switch operation.
+
+An advantage of this abstraction is that it allows us to create
+additional tests easily through code reuse.  It also helps us to see
+beyond our 6 original use cases.  
+
+A disadvantage is that test failures are rather opaque, but that could
+probably be fixed with some Python wizardry.
+
+Julian has analyzed the causes of tree conflicts into a set of
+elementary actions, each named according to its function.  For
+instance, fD signifies running 'svn delete' on a file.
+
+The first character of an action name specifies the type of the item
+acted upon.  The names of the items are fixed.
+
+  f_  Item is the file 'F'
+  d_  Item is the directory 'D'
+
+The second character of an action name can specify an svn operation.
+
+  _D  'svn delete'
+  _P  'svn propset'
+  _C  'svn copy'
+  _M  'svn move'
+  _A  Create the item, then 'svn propset' and 'svn add'
+
+Alternately, the second character can specify a non-svn filesystem
+operation.
+
+  _T  Append text to the file
+  _a  Create the item
+  _d  Delete the item
+
+For safety, each action, except for _A and _a, first asserts that the
+item (F or D) exists.  
+
+Some actions operate on 2 items.  _C copies F1 to F (or D1 to D) and
+_M moves F to F2 (or D to D2).  The items F, F1, D and D1 are created,
+added and committed by a generic test-setup function, and that F2 and
+D2 do not exist at the start of a test.
+
+The arguments for copy and move are not symmetrical because we are
+interested only in the destination of a copy and the source of a move.
+The source of a copy is uninteresting, and the destination of a move
+is the same as that of a copy.
+
+The elementary actions are combined to form "scenarios".  A scenario
+is a literal Python tuple containing a path string and two lists of
+actions.  For example: "( 'f/add/new', ['fA'], [['fd']] )".
+
+The first value in a scenario tuple is a path string with the format
+'x/type/descr' in which each of the 3 parts is significant.
+
+  x      Item type; either f (file) or d (directory)
+
+  type   Scenario type; either add, del, rpl (replace), or mod (modify)
+
+  descr  One-word description of the scenario to make the path unique
+
+Note that the path could be used to isolate each test scenario when
+running many of them in parallel.  Currently, we run the scenarios
+one-by-one, each in a fresh working copy.
+
+The second value in a scenario tuple is the main list of actions for
+running the scenario.  
+
+The third value is a list of lists of actions that could cause the
+working copy to become obstructed if run after the main list.  This
+list may be empty.  (Not yet used by the tree-conflict-maker.)
+
+=================
+Behind the Scenes
+=================
+
+How are the scenarios actually used?
+
+The generic tree-conflict-maker is ensure_tree_conflict().  This
+function applies two sets of scenarios.  The "incoming" set is
+applied to the repository, and the "localmod" set is applied to the
+working copy.  Each possible combination of incoming and localmod
+scenarios is tested as an independent subtest.
+
+The incoming scenarios are prepared as follows.
+
+1. Run the usual Subversion test setup, sbox.build(), which creates a
+test repository containing the "greek tree" (as revision 1) and checks
+out a working copy of it.
+
+2. For each incoming scenario, create the scenario path via 'svn
+mkdir'.
+
+3. For each incoming scenario that deletes or edits items, create F or
+D as needed in the scenario path.
+
+4. Commit as revision 2.
+
+5. For each incoming scenario, execute its actions on the F or D in
+its scenario path.
+
+6. Commit as revision 3.
+
+Now the repository is loaded with all of the incoming scenarios.  To
+run the actual subtests, each incoming scenario must be applied to
+each localmod scenario.
+
+1. Check out a fresh working copy at revision 2.
+
+2. Execute the localmod scenario's actions on the F or D in its
+scenario path.
+
+3. For each incoming scenario, run the given svn command (e.g. update)
+on the incoming scenario's path, then run 'svn status' on the same
+path.  If the path is tree-conflicted, we're happy.
+
+The working copy is deleted and the steps are repeated for next
+localmod scenario.  If any failure occurs, the whole test is marked as
+a failure in the test output.
+
+==============
+Current Status
+==============
+
+The following tests fail because they expect a property change to
+cause a tree conflict.  We don't yet support that.
+
+  Test 5 "up/sw dir: modify onto del/rpl/mv"
+  Test 8 "up/sw dir: add onto add" (first two subtests)
+  Test 13 "merge dir: modify onto not-dir"
+  Test 14 "merge dir: del/rpl/mv onto not-same"
+
+There is a strange error ("Revision 3 doesn't match existing revision
+2") whenever we try to add a directory.
+
+  Test 7 "up/sw dir: del/rpl/mv onto del/rpl/mv"
+  Test 8 "up/sw dir: add onto add" (second 2 subtests)
+
+For consistency's sake, I suggest a few changes to the actions scheme:
+
+1. Rename _T to _t.
+
+2. Simplify _A.  It should just run 'svn add'.  If the item does not
+exist, it can be created by _a.  This would enable adding an existing
+file or directory.
+
+3. The propset done by _A doesn't seem useful, because the property
+name does not match the property edited by _P.  We could run _P before
+_A if we want to add an item with a property.
+
+These changes will require updating the scenario data, of course.
+
+The following features are sketched out in the scenario data, but not
+tested:
+
+  Obstructions
+
+  Replacement (file->file, dir->dir)
+
+  'svn switch'
+
+  'svn merge', where the merge diff is not the same as the working
+  copy's own history
+
+The current implementation of ensure_tree_conflict() works with only
+one base URL.  In other words, a command that takes a URL argument
+gets the URL of the target working copy.  This can't test 'svn
+switch', and can't test all of the merge scenarios we would like.  I
+guess its time for some Python hacking.
+

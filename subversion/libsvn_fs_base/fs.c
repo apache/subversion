@@ -606,8 +606,8 @@ open_databases(svn_fs_t *fs,
                                                 bfd->bdb->env,
                                                 create)));
   SVN_ERR(BDB_WRAP(fs, (create
-                        ? "creating 'lock-nodes' table"
-                        : "opening 'lock-nodes' table"),
+                        ? "creating 'lock-tokens' table"
+                        : "opening 'lock-tokens' table"),
                    svn_fs_bdb__open_lock_tokens_table(&bfd->lock_tokens,
                                                       bfd->bdb->env,
                                                       create)));
