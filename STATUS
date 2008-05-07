@@ -45,11 +45,6 @@ Candidate changes:
 Approved changes (all releases):
 ================================
 
- * r31031
-   Match svn_io_check_path's docstring to its implementation.
-   Votes:
-     +1: danielsh, arfrever, hwright
-
  * r31049
    s/lock-nodes/lock-tokens/ in a message.
    Votes:
