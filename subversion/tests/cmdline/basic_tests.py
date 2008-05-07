@@ -2291,6 +2291,28 @@ def basic_relative_url_multi_repo(sbox):
                                 svntest.verify.AnyOutput, 'blame',
                                 '^/A/mu', iota_url_repo1, iota_url_repo2)
 
+def basic_relative_url_non_canonical(sbox):
+  "basic relative url non-canonical targets"
+
+  sbox.build()
+
+  iota_url = sbox.repo_url + '/iota'
+
+  expected_output = [
+    "B/\n",
+    "C/\n",
+    "D/\n",
+    "mu\n",
+    "iota\n"
+    ]
+
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None,
+                                expected_output, [], 'ls',
+                                '^/A/', iota_url)
+
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None,
+                                expected_output, [], 'ls',
+                                '^//A/', iota_url)
 
 #----------------------------------------------------------------------
 
@@ -2342,6 +2364,7 @@ test_list = [ None,
               basic_relative_url_using_current_dir,
               basic_relative_url_using_other_targets,
               basic_relative_url_multi_repo,
+              basic_relative_url_non_canonical,
              ]
 
 if __name__ == '__main__':

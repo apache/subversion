@@ -38,6 +38,7 @@
 #include "svn_path.h"
 #include "svn_ctype.h"
 
+#include <assert.h>
 
 /* A token, i.e. a line read from a file. */
 typedef struct svn_diff__file_token_t
@@ -1288,6 +1289,31 @@ svn_diff_file_output_unified(svn_stream_t *output_stream,
 
 /** Display diff3 **/
 
+/* A stream to remember *leading* context.  Note that this stream does
+   *not* copy the data that it is remembering; it just saves
+   *pointers! */
+typedef struct {
+  svn_stream_t *stream;
+  const char *data[SVN_DIFF__UNIFIED_CONTEXT_SIZE];
+  apr_size_t len[SVN_DIFF__UNIFIED_CONTEXT_SIZE];
+  apr_size_t next_slot;
+  apr_size_t total_written;
+} context_saver_t;
+
+
+static svn_error_t *
+context_saver_stream_write(void *baton,
+                           const char *data,
+                           apr_size_t *len)
+{
+  context_saver_t *cs = baton;
+  cs->data[cs->next_slot] = data;
+  cs->len[cs->next_slot] = *len;
+  cs->next_slot = (cs->next_slot + 1) % SVN_DIFF__UNIFIED_CONTEXT_SIZE;
+  cs->total_written++;
+  return SVN_NO_ERROR;
+}
+
 typedef struct svn_diff3__file_output_baton_t
 {
   svn_stream_t *output_stream;
@@ -1306,10 +1332,99 @@ typedef struct svn_diff3__file_output_baton_t
   const char *conflict_separator;
   const char *conflict_latest;
 
+  const char *marker_eol;
+
   svn_diff_conflict_display_style_t conflict_style;
 
+  /* The rest of the fields are for
+     svn_diff_conflict_display_only_conflicts only.  Note that for
+     these batons, OUTPUT_STREAM is either CONTEXT_SAVER->STREAM or
+     (soon after a conflict) a "trailing context stream", never the
+     actual output stream.*/
+  /* The actual output stream. */
+  svn_stream_t *real_output_stream;
+  context_saver_t *context_saver;
+  /* Used to allocate context_saver and trailing context streams, and
+     for some printfs. */
   apr_pool_t *pool;
 } svn_diff3__file_output_baton_t;
+
+static svn_error_t *
+flush_context_saver(context_saver_t *cs,
+                    svn_stream_t *output_stream)
+{
+  int i;
+  for (i = 0; i < SVN_DIFF__UNIFIED_CONTEXT_SIZE; i++)
+    {
+      int slot = (i + cs->next_slot) % SVN_DIFF__UNIFIED_CONTEXT_SIZE;
+      if (cs->data[slot])
+        {
+          apr_size_t len = cs->len[slot];
+          SVN_ERR(svn_stream_write(output_stream, cs->data[slot], &len));
+        }
+    }
+  return SVN_NO_ERROR;
+}
+
+static void
+make_context_saver(svn_diff3__file_output_baton_t *fob)
+{
+  context_saver_t *cs;
+
+  svn_pool_clear(fob->pool);
+  cs = apr_pcalloc(fob->pool, sizeof(*cs));
+  cs->stream = svn_stream_empty(fob->pool);
+  svn_stream_set_baton(cs->stream, cs);
+  svn_stream_set_write(cs->stream, context_saver_stream_write);
+  fob->context_saver = cs;
+  fob->output_stream = cs->stream;
+}
+
+
+/* A stream which prints SVN_DIFF__UNIFIED_CONTEXT_SIZE lines to
+   BATON->REAL_OUTPUT_STREAM, and then changes BATON->OUTPUT_STREAM to
+   a context_saver; used for *trailing* context. */
+
+struct trailing_context_printer {
+  apr_size_t lines_to_print;
+  svn_diff3__file_output_baton_t *fob;
+};
+
+
+
+static svn_error_t *
+trailing_context_printer_write(void *baton,
+                               const char *data,
+                               apr_size_t *len)
+{
+  struct trailing_context_printer *tcp = baton;
+  assert(tcp->lines_to_print > 0);
+  SVN_ERR(svn_stream_write(tcp->fob->real_output_stream, data, len));
+  tcp->lines_to_print--;
+  if (tcp->lines_to_print == 0)
+    make_context_saver(tcp->fob);
+  return SVN_NO_ERROR;
+}
+
+
+static void
+make_trailing_context_printer(svn_diff3__file_output_baton_t *btn)
+{
+  struct trailing_context_printer *tcp;
+  svn_stream_t *s;
+
+  svn_pool_clear(btn->pool);
+
+  tcp = apr_pcalloc(btn->pool, sizeof(*tcp));
+  tcp->lines_to_print = SVN_DIFF__UNIFIED_CONTEXT_SIZE;
+  tcp->fob = btn;
+  s = svn_stream_empty(btn->pool);
+  svn_stream_set_baton(s, tcp);
+  svn_stream_set_write(s, trailing_context_printer_write);
+  btn->output_stream = s;
+}
+
+
 
 typedef enum svn_diff3__file_output_type_e
 {
@@ -1351,12 +1466,21 @@ output_line(svn_diff3__file_output_baton_t *baton,
   if (type != svn_diff3__file_output_skip)
     {
       len = eol - curp;
+      /* Note that the trailing context printer assumes that
+         svn_stream_write is called exactly once per line. */
       SVN_ERR(svn_stream_write(baton->output_stream, curp, &len));
     }
 
   baton->curp[idx] = eol;
 
   return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+output_marker_eol(svn_diff3__file_output_baton_t *btn)
+{
+  apr_size_t len = strlen(btn->marker_eol);
+  return svn_stream_write(btn->output_stream, btn->marker_eol, &len);
 }
 
 static svn_error_t *
@@ -1386,10 +1510,6 @@ output_common(void *baton, apr_off_t original_start, apr_off_t original_length,
               apr_off_t modified_start, apr_off_t modified_length,
               apr_off_t latest_start, apr_off_t latest_length)
 {
-  svn_diff3__file_output_baton_t *file_baton = baton;
-  if (file_baton->conflict_style == svn_diff_conflict_display_only_conflicts)
-    return SVN_NO_ERROR;
-
   return output_hunk(baton, 1, modified_start, modified_length);
 }
 
@@ -1399,10 +1519,6 @@ output_diff_modified(void *baton,
                      apr_off_t modified_start, apr_off_t modified_length,
                      apr_off_t latest_start, apr_off_t latest_length)
 {
-  svn_diff3__file_output_baton_t *file_baton = baton;
-  if (file_baton->conflict_style == svn_diff_conflict_display_only_conflicts)
-    return SVN_NO_ERROR;
-
   return output_hunk(baton, 1, modified_start, modified_length);
 }
 
@@ -1412,10 +1528,6 @@ output_diff_latest(void *baton,
                    apr_off_t modified_start, apr_off_t modified_length,
                    apr_off_t latest_start, apr_off_t latest_length)
 {
-  svn_diff3__file_output_baton_t *file_baton = baton;
-  if (file_baton->conflict_style == svn_diff_conflict_display_only_conflicts)
-    return SVN_NO_ERROR;
-
   return output_hunk(baton, 2, latest_start, latest_length);
 }
 
@@ -1435,6 +1547,66 @@ static const svn_diff_output_fns_t svn_diff3__file_output_vtable =
   output_conflict
 };
 
+
+
+static svn_error_t *
+output_conflict_with_context(svn_diff3__file_output_baton_t *btn,
+                             apr_off_t original_start,
+                             apr_off_t original_length,
+                             apr_off_t modified_start,
+                             apr_off_t modified_length,
+                             apr_off_t latest_start,
+                             apr_off_t latest_length)
+{
+  /* Are we currently saving starting context (as opposed to printing
+     trailing context)?  If so, flush it. */
+  if (btn->output_stream == btn->context_saver->stream)
+    {
+      if (btn->context_saver->total_written > SVN_DIFF__UNIFIED_CONTEXT_SIZE)
+        SVN_ERR(svn_stream_printf(btn->real_output_stream, btn->pool, "@@\n"));
+      SVN_ERR(flush_context_saver(btn->context_saver, btn->real_output_stream));
+    }
+
+  /* Print to the real output stream. */
+  btn->output_stream = btn->real_output_stream;
+
+  /* Output the conflict itself. */
+  SVN_ERR(svn_stream_printf(btn->output_stream, btn->pool,
+                            (modified_length == 1
+                             ? "%s (%" APR_OFF_T_FMT ")"
+                             : "%s (%" APR_OFF_T_FMT ",%" APR_OFF_T_FMT ")"),
+                            btn->conflict_modified,
+                            modified_start + 1, modified_length));
+  SVN_ERR(output_marker_eol(btn));
+  SVN_ERR(output_hunk(btn, 1/*modified*/, modified_start, modified_length));
+
+  SVN_ERR(svn_stream_printf(btn->output_stream, btn->pool,
+                            (original_length == 1
+                             ? "%s (%" APR_OFF_T_FMT ")"
+                             : "%s (%" APR_OFF_T_FMT ",%" APR_OFF_T_FMT ")"),
+                            btn->conflict_original,
+                            original_start + 1, original_length));
+  SVN_ERR(output_marker_eol(btn));
+  SVN_ERR(output_hunk(btn, 0/*original*/, original_start, original_length));
+
+  SVN_ERR(svn_stream_printf(btn->output_stream, btn->pool,
+                            "%s%s", btn->conflict_separator, btn->marker_eol));
+  SVN_ERR(output_hunk(btn, 2/*latest*/, latest_start, latest_length));
+  SVN_ERR(svn_stream_printf(btn->output_stream, btn->pool,
+                            (latest_length == 1
+                             ? "%s (%" APR_OFF_T_FMT ")"
+                             : "%s (%" APR_OFF_T_FMT ",%" APR_OFF_T_FMT ")"),
+                            btn->conflict_latest,
+                            latest_start + 1, latest_length));
+  SVN_ERR(output_marker_eol(btn));
+
+  /* Go into print-trailing-context mode instead. */
+  make_trailing_context_printer(btn);
+
+  return SVN_NO_ERROR;
+}
+
+
 static svn_error_t *
 output_conflict(void *baton,
                 apr_off_t original_start, apr_off_t original_length,
@@ -1447,9 +1619,11 @@ output_conflict(void *baton,
 
   svn_diff_conflict_display_style_t style = file_baton->conflict_style;
 
-  /* ### Should show some context for this style as well. */
   if (style == svn_diff_conflict_display_only_conflicts)
-    style = svn_diff_conflict_display_modified_original_latest;
+    return output_conflict_with_context(file_baton,
+                                        original_start, original_length,
+                                        modified_start, modified_length,
+                                        latest_start, latest_length);
 
   if (style == svn_diff_conflict_display_resolved_modified_latest)
     {
@@ -1467,6 +1641,7 @@ output_conflict(void *baton,
       SVN_ERR(svn_stream_write(file_baton->output_stream,
                                file_baton->conflict_modified,
                                &len));
+      SVN_ERR(output_marker_eol(file_baton));
 
       SVN_ERR(output_hunk(baton, 1, modified_start, modified_length));
 
@@ -1475,19 +1650,21 @@ output_conflict(void *baton,
           len = strlen(file_baton->conflict_original);
           SVN_ERR(svn_stream_write(file_baton->output_stream,
                                    file_baton->conflict_original, &len));
-
+          SVN_ERR(output_marker_eol(file_baton));
           SVN_ERR(output_hunk(baton, 0, original_start, original_length));
         }
 
       len = strlen(file_baton->conflict_separator);
       SVN_ERR(svn_stream_write(file_baton->output_stream,
                                file_baton->conflict_separator, &len));
+      SVN_ERR(output_marker_eol(file_baton));
 
       SVN_ERR(output_hunk(baton, 2, latest_start, latest_length));
 
       len = strlen(file_baton->conflict_latest);
       SVN_ERR(svn_stream_write(file_baton->output_stream,
                                file_baton->conflict_latest, &len));
+      SVN_ERR(output_marker_eol(file_baton));
     }
   else if (style == svn_diff_conflict_display_modified)
     SVN_ERR(output_hunk(baton, 1, modified_start, modified_length));
@@ -1498,6 +1675,7 @@ output_conflict(void *baton,
 
   return SVN_NO_ERROR;
 }
+
 
 /* Return the first eol marker found in [BUF, ENDP) as a
  * NUL-terminated string, or NULL if no eol marker is found.
@@ -1548,10 +1726,18 @@ svn_diff_file_output_merge2(svn_stream_t *output_stream,
   apr_mmap_t *mm[3] = { 0 };
 #endif /* APR_HAS_MMAP */
   const char *eol;
+  svn_boolean_t conflicts_only =
+    (style == svn_diff_conflict_display_only_conflicts);
 
   memset(&baton, 0, sizeof(baton));
-  baton.output_stream = output_stream;
-  baton.pool = pool;
+  if (conflicts_only)
+    {
+      baton.pool = svn_pool_create(pool);
+      make_context_saver(&baton);
+      baton.real_output_stream = output_stream;
+    }
+  else
+    baton.output_stream = output_stream;
   baton.path[0] = original_path;
   baton.path[1] = modified_path;
   baton.path[2] = latest_path;
@@ -1596,16 +1782,7 @@ svn_diff_file_output_merge2(svn_stream_t *output_stream,
   eol = detect_eol(baton.buffer[1], baton.endp[1]);
   if (! eol)
     eol = APR_EOL_STR;
-
-  /* Extend our conflict markers with the correct eol marker. */
-  baton.conflict_modified = apr_pstrcat(pool, baton.conflict_modified, eol,
-                                        NULL);
-  baton.conflict_original = apr_pstrcat(pool, baton.conflict_original, eol,
-                                        NULL);
-  baton.conflict_separator = apr_pstrcat(pool, baton.conflict_separator, eol,
-                                         NULL);
-  baton.conflict_latest = apr_pstrcat(pool, baton.conflict_latest, eol,
-                                      NULL);
+  baton.marker_eol = eol;
 
   SVN_ERR(svn_diff_output(diff, &baton,
                           &svn_diff3__file_output_vtable));
@@ -1629,6 +1806,9 @@ svn_diff_file_output_merge2(svn_stream_t *output_stream,
           SVN_ERR(svn_io_file_close(file[idx], pool));
         }
     }
+
+  if (conflicts_only)
+    svn_pool_destroy(baton.pool);
 
   return SVN_NO_ERROR;
 }

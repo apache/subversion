@@ -42,9 +42,24 @@
 #define SVN_AUTH__AUTHFILE_PASSWORD_KEY            "password"
 #define SVN_AUTH__AUTHFILE_PASSTYPE_KEY            "passtype"
 
+/* If you add a password type for a provider which stores
+ * passwords on disk in encrypted form, remember to update
+ * simple_save_creds_helper. Otherwise it will be assumed
+ * that your provider stores passwords in plaintext. */
 #define SVN_AUTH__SIMPLE_PASSWORD_TYPE             "simple"
 #define SVN_AUTH__WINCRYPT_PASSWORD_TYPE           "wincrypt"
 #define SVN_AUTH__KEYCHAIN_PASSWORD_TYPE           "keychain"
+
+/* Baton type for the simple provider. */
+typedef struct
+{
+  svn_auth_plaintext_prompt_func_t plaintext_prompt_func;
+  void *prompt_baton;
+  /* We cache the user's answer to the plaintext prompt, keyed
+   * by realm, in case we'll be called multiple times for the
+   * same realm. */
+  apr_hash_t *plaintext_answers;
+} simple_provider_baton_t;
 
 
 /* Implementation of svn_simple_providers__password_get_t that retrieves
@@ -115,7 +130,7 @@ svn_simple_providers__simple_first_creds_helper(void **credentials,
   svn_boolean_t may_save = username || password;
   svn_error_t *err;
 
-  /* If we don't have a usename and a password yet, we try the auth cache */
+  /* If we don't have a username and a password yet, we try the auth cache */
   if (! (username && password))
     {
       apr_hash_t *creds_hash = NULL;
@@ -214,16 +229,19 @@ svn_simple_providers__simple_save_creds_helper(svn_boolean_t *saved,
     apr_hash_get(parameters,
                  SVN_AUTH_PARAM_DONT_STORE_PASSWORDS,
                  APR_HASH_KEY_STRING) != NULL;
+  const char *store_plaintext_passwords =
+    apr_hash_get(parameters,
+                 SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS,
+                 APR_HASH_KEY_STRING);
   svn_boolean_t non_interactive = apr_hash_get(parameters,
                                                SVN_AUTH_PARAM_NON_INTERACTIVE,
                                                APR_HASH_KEY_STRING) != NULL;
+  simple_provider_baton_t *b = (simple_provider_baton_t *)provider_baton;
+
   svn_boolean_t no_auth_cache =
     (! creds->may_save) || (apr_hash_get(parameters,
                                          SVN_AUTH_PARAM_NO_AUTH_CACHE,
                                          APR_HASH_KEY_STRING) != NULL);
-
-  svn_boolean_t username_stored = FALSE;
-  svn_boolean_t password_stored = TRUE;
 
   *saved = FALSE;
 
@@ -234,46 +252,135 @@ svn_simple_providers__simple_save_creds_helper(svn_boolean_t *saved,
                             SVN_AUTH_PARAM_CONFIG_DIR,
                             APR_HASH_KEY_STRING);
 
-  /* Put the credentials in a hash and save it to disk */
+  /* Put the username into the credentials hash. */
   creds_hash = apr_hash_make(pool);
+  apr_hash_set(creds_hash, SVN_AUTH__AUTHFILE_USERNAME_KEY,
+               APR_HASH_KEY_STRING,
+               svn_string_create(creds->username, pool));
 
-  /* Maybe cache the username. */
-  if (! no_auth_cache)
-    {
-      apr_hash_set(creds_hash, SVN_AUTH__AUTHFILE_USERNAME_KEY,
-                   APR_HASH_KEY_STRING,
-                   svn_string_create(creds->username, pool));
-      username_stored = TRUE;
-    }
-
-  /* Maybe cache the password. */
+  /* Don't store passwords in any form if the user has told
+   * us not to do so. */
   if (! dont_store_passwords)
     {
-      password_stored = password_set(creds_hash, realmstring, creds->username,
-                                     creds->password, non_interactive, pool);
-      if (password_stored)
+      svn_boolean_t may_save_password = FALSE;
+
+      /* If the password is going to be stored encrypted, go right
+       * ahead and store it to disk. Else determine whether saving
+       * in plaintext is OK. */
+      if (strcmp(passtype, SVN_AUTH__WINCRYPT_PASSWORD_TYPE) == 0
+          || strcmp(passtype, SVN_AUTH__KEYCHAIN_PASSWORD_TYPE) == 0)
         {
-          /* Store the password type with the auth data, so that we
-             know which provider owns the password. */
-          if (passtype)
+          may_save_password = TRUE;
+        }
+      else
+        {
+          if (svn_cstring_casecmp(store_plaintext_passwords,
+                                  SVN_CONFIG_ASK) == 0)
             {
+              if (non_interactive)
+                /* In non-interactive mode, the default behaviour is
+                 * to not store the password, because it is usually
+                 * passed on the command line. */
+                may_save_password = FALSE;
+              else if (b->plaintext_prompt_func)
+                {
+                  /* We're interactive, and the client provided a
+                   * prompt callback. So we can ask the user.
+                   *
+                   * Check for a cached answer before prompting. */
+                  svn_boolean_t *cached_answer;
+                  cached_answer = apr_hash_get(b->plaintext_answers,
+                                               realmstring,
+                                               APR_HASH_KEY_STRING);
+                  if (cached_answer)
+                    may_save_password = *cached_answer;
+                  else
+                    {
+                      /* Nothing cached for this realm, prompt the user. */
+                      SVN_ERR((*b->plaintext_prompt_func)(&may_save_password,
+                                                          realmstring,
+                                                          b->prompt_baton,
+                                                          pool));
+
+                      /* Cache the user's answer in case we're called again
+                       * for the same realm.
+                       *
+                       * XXX: Hopefully, our caller has passed us
+                       * a pool that survives across RA sessions!
+                       * We use that pool to cache user answers, and
+                       * we may be called again for the same realm when the
+                       * current RA session is reparented, or when a different
+                       * RA session using the same realm is opened.
+                       * If the pool does not survive until then, caching
+                       * won't work, and for some reason the call to
+                       * apr_hash_set() below may even end up crashing in
+                       * apr_palloc().
+                       */
+                      cached_answer = apr_palloc(pool, sizeof(svn_boolean_t));
+                      *cached_answer = may_save_password;
+                      apr_hash_set(b->plaintext_answers, realmstring,
+                                   APR_HASH_KEY_STRING, cached_answer);
+                    }
+                }
+              else
+                {
+                  /* TODO: We might want to default to not storing if the
+                   * prompt callback is NULL, i.e. have may_save_password
+                   * default to FALSE here, in order to force clients to
+                   * implement the callback.
+                   *
+                   * This would change the semantics of old API though.
+                   *
+                   * So for now, clients that don't implement the callback
+                   * and provide no explicit value for
+                   * SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS
+                   * cause unencrypted passwords to be stored by default.
+                   * Needless to say, our own client is sane, but who knows
+                   * what other clients are doing.
+                   */
+                  may_save_password = TRUE;
+                }
+            }
+          else if (svn_cstring_casecmp(store_plaintext_passwords,
+                                       SVN_CONFIG_FALSE) == 0)
+            {
+              may_save_password = FALSE;
+            }
+          else if (svn_cstring_casecmp(store_plaintext_passwords,
+                                       SVN_CONFIG_TRUE) == 0)
+            {
+              may_save_password = TRUE;
+            }
+          else
+            {
+              return svn_error_createf
+                (SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
+                 _("Config error: invalid value '%s' for option '%s'"),
+                store_plaintext_passwords,
+                SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS);
+            }
+        }
+
+      if (may_save_password)
+        {
+          svn_boolean_t password_stored;
+          password_stored = password_set(creds_hash, realmstring,
+                                         creds->username, creds->password,
+                                         non_interactive, pool);
+          if (password_stored && passtype)
+              /* Store the password type with the auth data, so that we
+                 know which provider owns the password. */
               apr_hash_set(creds_hash, SVN_AUTH__AUTHFILE_PASSTYPE_KEY,
                            APR_HASH_KEY_STRING,
                            svn_string_create(passtype, pool));
-            }
         }
-      else
-        *saved = FALSE;
     }
 
-  /* If we cached anything, write it to disk. */
-  if (username_stored || password_stored)
-    {
-      err = svn_config_write_auth_data(creds_hash, SVN_AUTH_CRED_SIMPLE,
-                                       realmstring, config_dir, pool);
-      svn_error_clear(err);
-      *saved = ! err;
-    }
+  /* Save credentials to disk. */
+  err = svn_config_write_auth_data(creds_hash, SVN_AUTH_CRED_SIMPLE,
+                                   realmstring, config_dir, pool);
+  svn_error_clear(err);
+  *saved = ! err;
 
   return SVN_NO_ERROR;
 }
@@ -325,13 +432,29 @@ static const svn_auth_provider_t simple_provider = {
 
 /* Public API */
 void
+svn_auth_get_simple_provider2
+  (svn_auth_provider_object_t **provider,
+   svn_auth_plaintext_prompt_func_t plaintext_prompt_func,
+   void* prompt_baton,
+   apr_pool_t *pool)
+{
+  svn_auth_provider_object_t *po = apr_pcalloc(pool, sizeof(*po));
+  simple_provider_baton_t *pb = apr_pcalloc(pool, sizeof(*pb));
+
+  pb->plaintext_prompt_func = plaintext_prompt_func;
+  pb->prompt_baton = prompt_baton;
+  pb->plaintext_answers = apr_hash_make(pool);
+
+  po->vtable = &simple_provider;
+  po->provider_baton = pb;
+  *provider = po;
+}
+
+void
 svn_auth_get_simple_provider(svn_auth_provider_object_t **provider,
                              apr_pool_t *pool)
 {
-  svn_auth_provider_object_t *po = apr_pcalloc(pool, sizeof(*po));
-
-  po->vtable = &simple_provider;
-  *provider = po;
+  svn_auth_get_simple_provider2(provider, NULL, NULL, pool);
 }
 
 

@@ -1506,14 +1506,6 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
    IMPLICIT_MERGEINFO is the path's natural history described as
    mergeinfo - see svn_client__get_history_as_mergeinfo().
 
-   Combine
-   Calculate a rangelist of svn_merge_range_t *'s -- for use by
-   drive_merge_report_editor()'s application of the editor to the WC
-   -- by subtracting revisions which have already been merged from
-   MERGEINFO_PATH into the working copy from the requested range(s)
-   REQUESTED_MERGE, and storing what's left in REMAINING_RANGES.
-   TARGET_MERGEINFO may be NULL.
-
    NOTE: This should only be called when honoring mergeinfo.  
 */
 static svn_error_t *
