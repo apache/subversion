@@ -11503,8 +11503,8 @@ test_list = [ None,
                                server_has_mergeinfo)),
               XFail(SkipUnless(merge_chokes_on_renamed_subtrees,
                                server_has_mergeinfo)),
-              XFail(SkipUnless(dont_explicitly_record_implicit_mergeinfo,
-                               server_has_mergeinfo)),
+              SkipUnless(dont_explicitly_record_implicit_mergeinfo,
+                         server_has_mergeinfo),
              ]
 
 if __name__ == '__main__':
