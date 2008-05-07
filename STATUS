@@ -37,6 +37,18 @@ Candidate changes:
    Votes:
      +1: epg, arfrever
 
+ * r31059, 31060, 31061, 31075.
+   Fix issue #3157, Merging a change from a path's natural history
+   creates self-referential mergeinfo
+   Notes:
+     r31075 is the core fix for the issue, the other revisions are
+     a new test for it (and a few minor follow-ups to that test).
+     The addition of the new merge test in r31059 trivally conflicts
+     because several other new merge tests are not backported yet.
+   Votes:
+     +1: pburba
+
+
 Status of 1.5.1:
 ================
 
