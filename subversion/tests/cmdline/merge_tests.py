@@ -11278,11 +11278,11 @@ def dont_explicitly_record_implicit_mergeinfo(sbox):
 
   # r4 - copy A_copy to A_copy2
   svntest.main.run_svn(None, 'cp', A_copy_path, A_copy2_path)
-  _commit_and_update(2, "Copy A_copy to A_copy2.")
+  _commit_and_update(4, "Copy A_copy to A_copy2.")
 
   # r5 - tweak A_copy2/mu
   svntest.main.file_append(A_copy2_mu_path, "r5\n")
-  _commit_and_update(3, "Edit A_copy2/mu.")
+  _commit_and_update(5, "Edit A_copy2/mu.")
 
   # Now, merge A_copy2/mu (in full) back to A_copy.
   expected_output = wc.State(A_copy_path, {
