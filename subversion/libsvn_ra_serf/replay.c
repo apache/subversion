@@ -696,6 +696,9 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
       svn_ra_serf__list_t *done_list;
       svn_ra_serf__list_t *done_reports = NULL;
       replay_context_t *replay_ctx;
+      /* We're not really interested in the status code here in replay, but
+         the XML parsing code will abort on error if it doesn't have a place
+         to store the response status code. */
       int status_code;
 
       /* Send pending requests, if any. Limit the number of outstanding 

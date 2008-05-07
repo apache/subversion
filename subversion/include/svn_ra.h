@@ -586,7 +586,7 @@ typedef struct svn_ra_session_t svn_ra_session_t;
  *
  * @see svn_client_open_ra_session().
  *
- * @since New in 1.6.
+ * @since New in 1.5.
  */
 svn_error_t *
 svn_ra_open3(svn_ra_session_t **session_p,
@@ -997,8 +997,9 @@ svn_ra_do_update2(svn_ra_session_t *session,
 
 /**
  * Similar to svn_ra_do_update2(), but taking @c svn_ra_reporter2_t
- * instead of @c svn_ra_reporter3_t.  If @a recurse is TRUE, pass
- * @c svn_depth_infinity for @a depth, else pass @c svn_depth_files.
+ * instead of @c svn_ra_reporter3_t; if @a recurse is true, pass @c
+ * svn_depth_infinity for @a depth, else pass @c svn_depth_files; and
+ * with @a send_copyfrom_args always false.
  *
  * @deprecated Provided for compatibility with the 1.4 API.
  */

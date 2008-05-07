@@ -80,15 +80,17 @@ typedef struct svn_io_dirent_t {
  *
  * If @a path is a directory, set @a *kind to @c svn_node_dir.
  *
- * If @a path does not exist in its final component, set @a *kind to
- * @c svn_node_none.
+ * If @a path does not exist, set @a *kind to @c svn_node_none.
  *
- * If intermediate directories on the way to @a path don't exist, return 
- * an error, with @a *kind's value undefined.
+ * If @a path exists but is none of the above, set @a *kind to @c
+ * svn_node_unknown.
  *
- * Otherwise, set @a *kind to @c svn_node_unknown.
+ * If unable to determine @a path's kind, return an error, with @a *kind's
+ * value undefined.
  *
  * Use @a pool for temporary allocations.
+ *
+ * @see svn_node_kind_t
  */
 svn_error_t *svn_io_check_path(const char *path,
                                svn_node_kind_t *kind,

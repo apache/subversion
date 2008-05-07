@@ -3590,3 +3590,374 @@ const svn_ra_reporter2_t swig_py_ra_reporter2 = {
     reporter_finish_report,
     reporter_abort_report
 };
+
+/* svn_wc_diff_callbacks2_t */
+static svn_error_t *
+wc_diff_callbacks2_file_changed_or_added(const char *callback,
+                                         svn_wc_adm_access_t *adm_access,
+                                         svn_wc_notify_state_t *contentstate,
+                                         svn_wc_notify_state_t *propstate,
+                                         const char *path,
+                                         const char *tmpfile1,
+                                         const char *tmpfile2,
+                                         svn_revnum_t rev1,
+                                         svn_revnum_t rev2,
+                                         const char *mimetype1,
+                                         const char *mimetype2,
+                                         const apr_array_header_t *propchanges,
+                                         apr_hash_t *originalprops,
+                                         void *diff_baton)
+{
+  PyObject *callbacks = (PyObject *)diff_baton;
+  PyObject *py_callback, *py_adm_access, *py_propchanges, *py_originalprops;
+  PyObject *result = NULL;
+  int py_contentstate, py_propstate;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  svn_swig_py_acquire_py_lock();
+
+  py_callback = PyObject_GetAttrString(callbacks, (char *)callback);
+  if (py_callback == NULL)
+    {
+      err = callback_exception_error();
+      goto finished;
+    }
+  else if (py_callback == Py_None)
+    {
+      goto finished;
+    }
+
+  py_adm_access = svn_swig_NewPointerObjString(adm_access,
+                                               "svn_wc_adm_access_t *",
+                                               application_py_pool);
+  py_propchanges = svn_swig_py_array_to_list(propchanges);
+  py_originalprops = svn_swig_py_prophash_to_dict(originalprops);
+  result = PyObject_CallFunction(py_callback,
+                                 (char *)"OsssllssOO",
+                                 py_adm_access, path,
+                                 tmpfile1, tmpfile2,
+                                 rev1, rev2,
+                                 mimetype1, mimetype2,
+                                 py_propchanges, py_originalprops);
+  if (result == NULL)
+    {
+      err = callback_exception_error();
+      goto finished;
+    }
+  if (!PyArg_ParseTuple(result, (char *)"ii", &py_contentstate, &py_propstate))
+    {
+      err = callback_exception_error();
+      goto finished;
+    }
+  if (contentstate != NULL)
+    *contentstate = py_contentstate;
+  if (propstate != NULL)
+    *propstate = py_propstate;
+
+finished:
+  Py_XDECREF(result);
+  Py_XDECREF(py_callback);
+  svn_swig_py_release_py_lock();
+  return err;
+}
+
+/* svn_wc_diff_callbacks2_t */
+static svn_error_t *
+wc_diff_callbacks2_file_changed(svn_wc_adm_access_t *adm_access,
+                                svn_wc_notify_state_t *contentstate,
+                                svn_wc_notify_state_t *propstate,
+                                const char *path,
+                                const char *tmpfile1,
+                                const char *tmpfile2,
+                                svn_revnum_t rev1,
+                                svn_revnum_t rev2,
+                                const char *mimetype1,
+                                const char *mimetype2,
+                                const apr_array_header_t *propchanges,
+                                apr_hash_t *originalprops,
+                                void *diff_baton)
+{
+  return wc_diff_callbacks2_file_changed_or_added("file_changed",
+                                                  adm_access,
+                                                  contentstate,
+                                                  propstate,
+                                                  path,
+                                                  tmpfile1,
+                                                  tmpfile2,
+                                                  rev1, rev2,
+                                                  mimetype1,
+                                                  mimetype2,
+                                                  propchanges,
+                                                  originalprops,
+                                                  diff_baton);
+}
+
+/* svn_wc_diff_callbacks2_t */
+static svn_error_t *
+wc_diff_callbacks2_file_added(svn_wc_adm_access_t *adm_access,
+                              svn_wc_notify_state_t *contentstate,
+                              svn_wc_notify_state_t *propstate,
+                              const char *path,
+                              const char *tmpfile1,
+                              const char *tmpfile2,
+                              svn_revnum_t rev1,
+                              svn_revnum_t rev2,
+                              const char *mimetype1,
+                              const char *mimetype2,
+                              const apr_array_header_t *propchanges,
+                              apr_hash_t *originalprops,
+                              void *diff_baton)
+{
+  return wc_diff_callbacks2_file_changed_or_added("file_added",
+                                                  adm_access,
+                                                  contentstate,
+                                                  propstate,
+                                                  path,
+                                                  tmpfile1,
+                                                  tmpfile2,
+                                                  rev1, rev2,
+                                                  mimetype1,
+                                                  mimetype2,
+                                                  propchanges,
+                                                  originalprops,
+                                                  diff_baton);
+}
+
+/* svn_wc_diff_callbacks2_t */
+static svn_error_t *
+wc_diff_callbacks2_file_deleted(svn_wc_adm_access_t *adm_access,
+                                svn_wc_notify_state_t *state,
+                                const char *path,
+                                const char *tmpfile1,
+                                const char *tmpfile2,
+                                const char *mimetype1,
+                                const char *mimetype2,
+                                apr_hash_t *originalprops,
+                                void *diff_baton)
+{
+  PyObject *callbacks = (PyObject *)diff_baton;
+  PyObject *py_callback, *py_adm_access, *py_originalprops, *result = NULL;
+  long py_state;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  svn_swig_py_acquire_py_lock();
+
+  py_callback = PyObject_GetAttrString(callbacks, (char *)"file_deleted");
+  if (py_callback == NULL)
+    {
+      err = callback_exception_error();
+      goto finished;
+    }
+  else if (py_callback == Py_None)
+    {
+      goto finished;
+    }
+
+  py_adm_access = svn_swig_NewPointerObjString(adm_access,
+                                               "svn_wc_adm_access_t *",
+                                               application_py_pool);
+  py_originalprops = svn_swig_py_prophash_to_dict(originalprops);
+  result = PyObject_CallFunction(py_callback,
+                                 (char *)"OsssssO",
+                                 py_adm_access, path,
+                                 tmpfile1, tmpfile2,
+                                 mimetype1, mimetype2, py_originalprops);
+  if (result == NULL)
+    {
+      err = callback_exception_error();
+      goto finished;
+    }
+  py_state = PyInt_AsLong(result);
+  if (py_state == -1 && PyErr_Occurred())
+    {
+      err = callback_exception_error();
+      goto finished;
+    }
+  if (state != NULL)
+    *state = py_state;
+
+finished:
+  Py_XDECREF(result);
+  Py_XDECREF(py_callback);
+  svn_swig_py_release_py_lock();
+  return err;
+}
+
+/* svn_wc_diff_callbacks2_t */
+static svn_error_t *
+wc_diff_callbacks2_dir_added(svn_wc_adm_access_t *adm_access,
+                             svn_wc_notify_state_t *state,
+                             const char *path,
+                             svn_revnum_t rev,
+                             void *diff_baton)
+{
+  PyObject *callbacks = (PyObject *)diff_baton;
+  PyObject *py_callback, *py_adm_access, *result = NULL;
+  long py_state;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  svn_swig_py_acquire_py_lock();
+
+  py_callback = PyObject_GetAttrString(callbacks, (char *)"dir_added");
+  if (py_callback == NULL)
+    {
+      err = callback_exception_error();
+      goto finished;
+    }
+  else if (py_callback == Py_None)
+    {
+      goto finished;
+    }
+
+  py_adm_access = svn_swig_NewPointerObjString(adm_access,
+                                               "svn_wc_adm_access_t *",
+                                               application_py_pool);
+  result = PyObject_CallFunction(py_callback,
+                                 (char *)"Osl",
+                                 py_adm_access, path, rev);
+  if (result == NULL)
+    {
+      err = callback_exception_error();
+      goto finished;
+    }
+  py_state = PyInt_AsLong(result);
+  if (py_state == -1 && PyErr_Occurred())
+    {
+      err = callback_exception_error();
+      goto finished;
+    }
+  if (state != NULL)
+    *state = py_state;
+
+finished:
+  Py_XDECREF(result);
+  Py_XDECREF(py_callback);
+  svn_swig_py_release_py_lock();
+  return err;
+}
+
+/* svn_wc_diff_callbacks2_t */
+static svn_error_t *
+wc_diff_callbacks2_dir_deleted(svn_wc_adm_access_t *adm_access,
+                               svn_wc_notify_state_t *state,
+                               const char *path,
+                               void *diff_baton)
+{
+  PyObject *callbacks = (PyObject *)diff_baton;
+  PyObject *py_callback, *py_adm_access, *result = NULL;
+  long py_state;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  svn_swig_py_acquire_py_lock();
+
+  py_callback = PyObject_GetAttrString(callbacks, (char *)"dir_deleted");
+  if (py_callback == NULL)
+    {
+      err = callback_exception_error();
+      goto finished;
+    }
+  else if (py_callback == Py_None)
+    {
+      goto finished;
+    }
+
+  py_adm_access = svn_swig_NewPointerObjString(adm_access,
+                                               "svn_wc_adm_access_t *",
+                                               application_py_pool);
+  result = PyObject_CallFunction(py_callback,
+                                 (char *)"Os",
+                                 py_adm_access, path);
+  if (result == NULL)
+    {
+      err = callback_exception_error();
+      goto finished;
+    }
+  py_state = PyInt_AsLong(result);
+  if (py_state == -1 && PyErr_Occurred())
+    {
+      err = callback_exception_error();
+      goto finished;
+    }
+  if (state != NULL)
+    *state = py_state;
+
+finished:
+  Py_XDECREF(result);
+  Py_XDECREF(py_callback);
+  svn_swig_py_release_py_lock();
+  return err;
+}
+
+/* svn_wc_diff_callbacks2_t */
+static svn_error_t *
+wc_diff_callbacks2_dir_props_changed(svn_wc_adm_access_t *adm_access,
+                                     svn_wc_notify_state_t *state,
+                                     const char *path,
+                                     const apr_array_header_t *propchanges,
+                                     apr_hash_t *originalprops,
+                                     void *diff_baton)
+{
+  PyObject *callbacks = (PyObject *)diff_baton;
+  PyObject *py_callback, *py_adm_access;
+  PyObject *py_propchanges, *py_originalprops, *result = NULL;
+  long py_state;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  svn_swig_py_acquire_py_lock();
+
+  py_callback = PyObject_GetAttrString(callbacks, (char *)"dir_props_changed");
+  if (py_callback == NULL)
+    {
+      err = callback_exception_error();
+      goto finished;
+    }
+  else if (py_callback == Py_None)
+    {
+      goto finished;
+    }
+
+  py_adm_access = svn_swig_NewPointerObjString(adm_access,
+                                               "svn_wc_adm_access_t *",
+                                               application_py_pool);
+  py_propchanges = svn_swig_py_proparray_to_dict(propchanges);
+  py_originalprops = svn_swig_py_prophash_to_dict(originalprops);
+  result = PyObject_CallFunction(py_callback,
+                                 (char *)"OsOO",
+                                 py_adm_access, path,
+                                 py_propchanges, py_originalprops);
+  if (result == NULL)
+    {
+      err = callback_exception_error();
+      goto finished;
+    }
+  py_state = PyInt_AsLong(result);
+  if (py_state == -1 && PyErr_Occurred())
+    {
+      err = callback_exception_error();
+      goto finished;
+    }
+  if (state != NULL)
+    *state = py_state;
+
+finished:
+  Py_XDECREF(result);
+  Py_XDECREF(py_callback);
+  svn_swig_py_release_py_lock();
+  return err;
+}
+
+svn_wc_diff_callbacks2_t *
+svn_swig_py_setup_wc_diff_callbacks2(void **baton,
+                                     PyObject *py_callbacks,
+                                     apr_pool_t *pool)
+{
+  svn_wc_diff_callbacks2_t *callbacks = apr_palloc(pool, sizeof(*callbacks));
+  *baton = py_callbacks;
+  callbacks->file_changed       = wc_diff_callbacks2_file_changed;
+  callbacks->file_added         = wc_diff_callbacks2_file_added;
+  callbacks->file_deleted       = wc_diff_callbacks2_file_deleted;
+  callbacks->dir_added          = wc_diff_callbacks2_dir_added;
+  callbacks->dir_deleted        = wc_diff_callbacks2_dir_deleted;
+  callbacks->dir_props_changed  = wc_diff_callbacks2_dir_props_changed;
+  return callbacks;
+}

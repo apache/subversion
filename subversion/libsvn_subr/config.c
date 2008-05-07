@@ -215,8 +215,8 @@ get_category_config(svn_config_t **cfg,
   else
     sys_cfg_path = NULL;
 
-  SVN_ERR(svn_config__user_config_path(config_dir, &usr_cfg_path, category,
-                                       pool));
+  SVN_ERR(svn_config_get_user_config_path(&usr_cfg_path, config_dir, category,
+                                          pool));
   SVN_ERR(read_all(cfg,
                    sys_reg_path, usr_reg_path,
                    sys_cfg_path, usr_cfg_path,
@@ -647,6 +647,36 @@ svn_config_set_bool(svn_config_t *cfg,
                  (value ? SVN_CONFIG_TRUE : SVN_CONFIG_FALSE));
 }
 
+svn_error_t *
+svn_config_get_yes_no_ask(svn_config_t *cfg, const char **valuep,
+                          const char *section, const char *option,
+                          const char* default_value)
+{
+  const char *tmp_value;
+
+  svn_config_get(cfg, &tmp_value, section, option, NULL);
+  if (tmp_value == NULL)
+    *valuep = default_value;
+  else if (0 == svn_cstring_casecmp(tmp_value, SVN_CONFIG_TRUE)
+           || 0 == svn_cstring_casecmp(tmp_value, "yes")
+           || 0 == svn_cstring_casecmp(tmp_value, "on")
+           || 0 == strcmp(tmp_value, "1"))
+    *valuep = SVN_CONFIG_TRUE;
+  else if (0 == svn_cstring_casecmp(tmp_value, SVN_CONFIG_FALSE)
+           || 0 == svn_cstring_casecmp(tmp_value, "no")
+           || 0 == svn_cstring_casecmp(tmp_value, "off")
+           || 0 == strcmp(tmp_value, "0"))
+    *valuep = SVN_CONFIG_FALSE;
+  else if (0 == svn_cstring_casecmp(tmp_value, SVN_CONFIG_ASK))
+    *valuep = SVN_CONFIG_ASK;
+  else
+    return svn_error_createf
+      (SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
+       _("Config error: invalid value '%s' for option '%s'"),
+       tmp_value, option);
+
+  return SVN_NO_ERROR;
+}
 
 
 int
