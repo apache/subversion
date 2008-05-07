@@ -11286,8 +11286,7 @@ def dont_explicitly_record_implicit_mergeinfo(sbox):
 
   # Now, merge A_copy2/mu (in full) back to A_copy.
   expected_output = wc.State(A_copy_path, {
-    ''          : Item(status=' M'),
-    'mu'        : Item(status='M '),
+    'mu' : Item(status='U '),
     })
   expected_disk = wc.State('', {
     ''          : Item(props={SVN_PROP_MERGEINFO : '/A_copy2:4-5'}),
@@ -11333,11 +11332,6 @@ def dont_explicitly_record_implicit_mergeinfo(sbox):
     })
   expected_status.tweak(wc_rev=5)
   expected_skip = wc.State(A_copy_path, { })
-
-  ### Some of the above is not quite right.  I often find myself
-  ### unable to quite correctly craft those expected_* objects without
-  ### significant trial and error.  -- cmpilato
-  
   svntest.actions.run_and_verify_merge(A_copy_path, None, None,
                                        sbox.repo_url + '/A_copy2',
                                        expected_output, expected_disk,
