@@ -431,6 +431,13 @@ svn_swig_py_setup_ra_callbacks(svn_ra_callbacks2_t **callbacks,
                                void **baton,
                                PyObject *py_callbacks,
                                apr_pool_t *pool);
+
+SVN_SWIG_SWIGUTIL_EXPORT
+svn_wc_diff_callbacks2_t *
+svn_swig_py_setup_wc_diff_callbacks2(void **baton,
+                                     PyObject *py_callbacks,
+                                     apr_pool_t *pool);
+
 SVN_SWIG_SWIGUTIL_EXPORT
 svn_error_t *svn_swig_py_commit_callback2(const svn_commit_info_t *commit_info,
                                           void *baton,
