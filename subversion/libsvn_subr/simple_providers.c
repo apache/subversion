@@ -154,7 +154,7 @@ simple_first_creds_helper(void **credentials,
   svn_boolean_t may_save = username || password;
   svn_error_t *err;
 
-  /* If we don't have a usename and a password yet, we try the auth cache */
+  /* If we don't have a username and a password yet, we try the auth cache */
   if (! (username && password))
     {
       apr_hash_t *creds_hash = NULL;
