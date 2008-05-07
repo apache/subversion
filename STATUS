@@ -36,7 +36,7 @@ Candidate changes:
  * r31049
    s/lock-nodes/lock-tokens/ in a message.
    Votes:
-     +1: arfrever
+     +1: arfrever, danielsh
 
  * r31055 (subversion/bindings/swig), r31066
    Make svn_wc_diff_callbacks2_t work in Python (not a new interface,
