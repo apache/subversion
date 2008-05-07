@@ -23,21 +23,6 @@ Candidate changes:
    Votes:
      +1: pburba, markphip
 
- * r31025
-   Fix the SVN_ERR_AUTHN_CREDS_NOT_SAVED message.
-   Votes:
-     +1: arfrever, danielsh
-
- * r31031
-   Match svn_io_check_path's docstring to its implementation.
-   Votes:
-     +1: danielsh, arfrever
-
- * r31049
-   s/lock-nodes/lock-tokens/ in a message.
-   Votes:
-     +1: arfrever, danielsh
-
  * r31055 (subversion/bindings/swig), r31066
    Make svn_wc_diff_callbacks2_t work in Python (not a new interface,
    it was just broken for Python until r31055).
@@ -59,3 +44,18 @@ Candidate changes:
 
 Approved changes (all releases):
 ================================
+
+ * r31025
+   Fix the SVN_ERR_AUTHN_CREDS_NOT_SAVED message.
+   Votes:
+     +1: arfrever, danielsh, hwright
+
+ * r31031
+   Match svn_io_check_path's docstring to its implementation.
+   Votes:
+     +1: danielsh, arfrever, hwright
+
+ * r31049
+   s/lock-nodes/lock-tokens/ in a message.
+   Votes:
+     +1: arfrever, danielsh, hwright
