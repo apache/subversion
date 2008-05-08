@@ -305,6 +305,7 @@ if test "$with_kwallet" != "no"; then
         AC_LANG(C++)
         AC_CHECK_PROG(HAVE_KDE4_CONFIG, kde4-config, yes)
         if test "$HAVE_KDE4_CONFIG" = "yes"; then
+          AC_MSG_CHECKING([for KWallet])
           old_CXXFLAGS="$CXXFLAGS"
           old_LDFLAGS="$LDFLAGS"
           old_LIBS="$LIBS"
@@ -336,7 +337,6 @@ if test "$with_kwallet" != "no"; then
 int main()
 {KWallet::Wallet::walletList();}], with_kwallet=yes, with_kwallet=no)
           AC_LANG(C)
-          AC_MSG_CHECKING([for KWallet])
           if test "$with_kwallet" = "yes"; then
             AC_DEFINE([SVN_HAVE_KWALLET], [1],
                       [Is KWallet support enabled?])
