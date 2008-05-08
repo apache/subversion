@@ -11145,11 +11145,14 @@ def dont_merge_revs_into_subtree_that_predate_it(sbox):
   # Check the status after the merge.  The mergeinfo set on 'H_COPY/nu set
   # by the first merge should elide.
   expected_status.tweak('H_COPY', status=' M')
-  expected_status.tweak('H_COPY/nu', 'H_COPY/psi', status='M ')
+  expected_status.tweak('H_COPY/psi', status='M ')
+  expected_status.tweak('H_COPY/nu', status='MM')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
   expected_props = svntest.verify.UnorderedOutput(
     ["Properties on '" + H_COPY_path + "':\n",
-     "  " + SVN_PROP_MERGEINFO + " : /A/D/H:2,6-8\n"])
+     "  " + SVN_PROP_MERGEINFO + " : /A/D/H:6-8\n",
+     "Properties on '" + nu_COPY_path + "':\n",
+     "  " + SVN_PROP_MERGEINFO + " : /A/D/H/nu:2,6-8\n"])
   svntest.actions.run_and_verify_svn(None,
                                      expected_props, [],
                                      'pl', '-vR', wc_dir)
