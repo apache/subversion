@@ -680,8 +680,7 @@ rep_read_get_baton(struct rep_read_baton **rb_p,
   struct rep_read_baton *b;
 
   b = apr_pcalloc(pool, sizeof(*b));
-  b->checksum = svn_checksum_create(svn_checksum_md5, pool);
-  b->checksum_ctx = svn_checksum_ctx_create(b->checksum, pool);
+  b->checksum_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
 
   if (rep_key)
     SVN_ERR(svn_fs_base__rep_contents_size(&(b->size), fs, rep_key,
@@ -886,7 +885,8 @@ txn_body_read_rep(void *baton, trail_t *trail)
             {
               representation_t *rep;
 
-              svn_checksum_final(args->rb->checksum_ctx);
+              svn_checksum_final(args->rb->checksum_ctx, &args->rb->checksum,
+                                 trail->pool);
               args->rb->checksum_finalized = TRUE;
 
               SVN_ERR(svn_fs_bdb__read_rep(&rep, args->rb->fs,
@@ -992,8 +992,7 @@ rep_write_get_baton(svn_fs_t *fs,
   struct rep_write_baton *b;
 
   b = apr_pcalloc(pool, sizeof(*b));
-  b->checksum = svn_checksum_create(svn_checksum_md5, pool);
-  b->checksum_ctx = svn_checksum_ctx_create(b->checksum, pool);
+  b->checksum_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
   b->fs = fs;
   b->trail = trail;
   b->pool = pool;
@@ -1157,7 +1156,7 @@ rep_write_close_contents(void *baton)
 
   if (! wb->finalized)
     {
-      SVN_ERR(svn_checksum_final(wb->checksum_ctx));
+      SVN_ERR(svn_checksum_final(wb->checksum_ctx, &wb->checksum, wb->pool));
       wb->finalized = TRUE;
     }
 

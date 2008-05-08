@@ -646,11 +646,12 @@ svn_stream_t *svn_stream_compressed(svn_stream_t *stream,
  * and written.  The stream @a stream is used to read and write all data.
  * The stream and the resulting digests are allocated in @a pool.
  *
- * When the stream is closed, @a read_digest and @a write_digest
- * are set to point to the resulting digests.
+ * When the stream is closed, @a *read_checksum and @a *write_checksum
+ * are set to point to the resulting checksums, of type @a read_checksum_kind
+ * and @a write_checksum_kind, respectively..
  *
- * Both @a read_digest and @a write_digest
- * can be @c NULL, in which case the respective checksum isn't calculated.
+ * Both @a read_checksum and @a write_checksum can be @c NULL, in which case
+ * the respective checksum isn't calculated.
  *
  * If @a read_all is TRUE, make sure that all data available on @a
  * stream is read (and checksummed) when the stream is closed.
@@ -664,8 +665,10 @@ svn_stream_t *svn_stream_compressed(svn_stream_t *stream,
  */
 svn_stream_t *
 svn_stream_checksummed2(svn_stream_t *stream,
-                        svn_checksum_t *read_checksum,
-                        svn_checksum_t *write_checksum,
+                        svn_checksum_t **read_checksum,
+                        svn_checksum_kind_t read_checksum_kind,
+                        svn_checksum_t **write_checksum,
+                        svn_checksum_kind_t write_checksum_kind,
                         svn_boolean_t read_all,
                         apr_pool_t *pool);
 

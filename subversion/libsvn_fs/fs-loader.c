@@ -914,10 +914,10 @@ svn_fs_file_checksum(svn_checksum_t **checksum,
       /* TODO: We only need to do a content check if the checksum returned by
          the fs is empty. */
       svn_stream_t *contents, *checksum_contents;
-      *checksum = svn_checksum_create(kind, pool);
 
       SVN_ERR(svn_fs_file_contents(&contents, root, path, pool));
-      checksum_contents = svn_stream_checksummed2(contents, *checksum, NULL,
+      checksum_contents = svn_stream_checksummed2(contents, checksum, kind,
+                                                  NULL, svn_checksum_md5,
                                                   TRUE, pool);
 
       /* This will force a read of any remaining data (which is all of it in

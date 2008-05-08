@@ -152,14 +152,12 @@ svn_checksum_empty_checksum(svn_checksum_kind_t kind,
 
 /**
  * Create a new @c svn_checksum_ctx_t structure, allocated from @a pool for
- * calculating checksums of type @a checksum->kind.  When the checksum is
- * finalized with svn_checksum_final(), the result will be placed in
- * @a checksum->digest.
+ * calculating checksums of type @a kind.  @see svn_checksum_final()
  *
  * @since New in 1.6.
  */
 svn_checksum_ctx_t *
-svn_checksum_ctx_create(svn_checksum_t *checksum,
+svn_checksum_ctx_create(svn_checksum_kind_t kind,
                         apr_pool_t *pool);
 
 /**
@@ -175,14 +173,15 @@ svn_checksum_update(svn_checksum_ctx_t *ctx,
 
 
 /**
- * Finalize the checksum used when creating @a ctx.  The digest will be copied
- * into the digest field of the checksum used when svn_checksum_ctx_create()
- * was called.
+ * Finalize the checksum used when creating @a ctx, and put the resultant
+ * checksum in @a *checksum, allocated in @a pool.
  *
  * @since New in 1.6.
  */
 svn_error_t *
-svn_checksum_final(svn_checksum_ctx_t *ctx);
+svn_checksum_final(svn_checksum_ctx_t *ctx,
+                   svn_checksum_t **checksum,
+                   apr_pool_t *pool);
 
 
 #ifdef __cplusplus
