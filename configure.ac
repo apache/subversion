@@ -323,7 +323,7 @@ if test "$with_kwallet" != "no"; then
             kde_dir="`kde4-config --prefix`"
           fi
           SVN_KWALLET_INCLUDES="$qt_include_dirs -I$kde_dir/include"
-          SVN_KWALLET_LIBS="-lQtCore -lQtDBus -lQtGui -lkdeui"
+          SVN_KWALLET_LIBS="-lQtCore -lQtDBus -lQtGui -lkdecore -lkdeui"
           CXXFLAGS="$CXXFLAGS $SVN_KWALLET_INCLUDES"
           LIBS="$LIBS $SVN_KWALLET_LIBS"
           qt_lib_dirs=""
