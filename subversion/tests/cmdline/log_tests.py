@@ -1143,13 +1143,6 @@ def merge_sensitive_log_single_revision(sbox):
     12 : [14],
     11 : [14, 12],
     10 : [14],
-    9 : [14],
-    8 : [14],
-    7 : [14, 8],
-    6 : [14], 
-    4 : [14, 6],
-    3 : [14, 6],
-    2 : [14, 6],
     }
   os.chdir(TRUNK_path)
   # First try a single rev using -rN
@@ -1233,7 +1226,6 @@ def merge_sensitive_log_non_branching_revision(sbox):
     6 : [],
     4 : [6],
     3 : [6],
-    2 : [6],
   }
   check_merge_results(log_chain, expected_merges)
 
