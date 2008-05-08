@@ -238,17 +238,17 @@ svn_checksum_empty_checksum(svn_checksum_kind_t kind,
 struct svn_checksum_ctx_t
 {
   void *apr_ctx;
-  svn_checksum_t *checksum;
+  svn_checksum_kind_t kind;
 };
 
 svn_checksum_ctx_t *
-svn_checksum_ctx_create(svn_checksum_t *checksum,
+svn_checksum_ctx_create(svn_checksum_kind_t kind,
                         apr_pool_t *pool)
 {
   svn_checksum_ctx_t *ctx = apr_palloc(pool, sizeof(*ctx));
 
-  ctx->checksum = checksum;
-  switch (checksum->kind)
+  ctx->kind = kind;
+  switch (kind)
     {
       case svn_checksum_md5:
         ctx->apr_ctx = apr_palloc(pool, sizeof(apr_md5_ctx_t));
@@ -272,7 +272,7 @@ svn_checksum_update(svn_checksum_ctx_t *ctx,
                     const void *data,
                     apr_size_t len)
 {
-  switch (ctx->checksum->kind)
+  switch (ctx->kind)
     {
       case svn_checksum_md5:
         apr_md5_update(ctx->apr_ctx, data, len);
@@ -291,16 +291,20 @@ svn_checksum_update(svn_checksum_ctx_t *ctx,
 }
 
 svn_error_t *
-svn_checksum_final(svn_checksum_ctx_t *ctx)
+svn_checksum_final(svn_checksum_ctx_t *ctx,
+                   svn_checksum_t **checksum,
+                   apr_pool_t *pool)
 {
-  switch (ctx->checksum->kind)
+  *checksum = svn_checksum_create(ctx->kind, pool);
+
+  switch (ctx->kind)
     {
       case svn_checksum_md5:
-        apr_md5_final(ctx->checksum->digest, ctx->apr_ctx);
+        apr_md5_final((*checksum)->digest, ctx->apr_ctx);
         break;
 
       case svn_checksum_sha1:
-        apr_sha1_final(ctx->checksum->digest, ctx->apr_ctx);
+        apr_sha1_final((*checksum)->digest, ctx->apr_ctx);
         break;
 
       default:

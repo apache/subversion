@@ -3569,8 +3569,8 @@ get_file_checksum(svn_checksum_t **checksum,
 
   /* Get a checksummed stream for the contents. */
   *checksum = svn_checksum_create(checksum_kind, pool);
-  checksum_stream = svn_stream_checksummed2(stream, *checksum, NULL, TRUE,
-                                            pool);
+  checksum_stream = svn_stream_checksummed2(stream, checksum, checksum_kind,
+                                            NULL, svn_checksum_md5, TRUE, pool);
 
   /* Close the stream, forcing a complete read and copy the digest. */
   SVN_ERR(svn_stream_close(checksum_stream));
