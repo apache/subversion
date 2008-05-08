@@ -1139,7 +1139,7 @@ svn_fs_base__dag_file_length(svn_filesize_t *length,
 
 
 svn_error_t *
-svn_fs_base__dag_file_checksum(svn_checksum_t *checksum,
+svn_fs_base__dag_file_checksum(svn_checksum_t **checksum,
                                dag_node_t *file,
                                trail_t *trail,
                                apr_pool_t *pool)
@@ -1158,7 +1158,7 @@ svn_fs_base__dag_file_checksum(svn_checksum_t *checksum,
                                                noderev->data_key,
                                                trail, pool));
   else
-    SVN_ERR(svn_checksum_clear(checksum));
+    *checksum = NULL;
 
   return SVN_NO_ERROR;
 }
@@ -1253,8 +1253,7 @@ svn_fs_base__dag_finalize_edits(dag_node_t *file,
     return SVN_NO_ERROR;
 
   /* Get our representation's checksum. */
-  rep_checksum = svn_checksum_create(svn_checksum_md5, pool);
-  SVN_ERR(svn_fs_base__rep_contents_checksum(rep_checksum, fs,
+  SVN_ERR(svn_fs_base__rep_contents_checksum(&rep_checksum, fs,
                                              noderev->edit_key, trail, pool));
 
   /* If our caller provided a checksum to compare, do so. */
@@ -1473,9 +1472,9 @@ store_checksum_rep(const char *rep,
                    apr_pool_t *pool)
 {
   svn_fs_t *fs = trail->fs;
-  svn_checksum_t *checksum = svn_checksum_create(svn_checksum_md5, pool);
+  svn_checksum_t *checksum;
 
-  SVN_ERR(svn_fs_base__rep_contents_checksum(checksum, fs, rep, trail, pool));
+  SVN_ERR(svn_fs_base__rep_contents_checksum(&checksum, fs, rep, trail, pool));
   return svn_fs_bdb__set_checksum_rep(fs, checksum, rep, trail, pool);
 }
 

@@ -3277,7 +3277,7 @@ struct file_checksum_args
 {
   svn_fs_root_t *root;
   const char *path;
-  svn_checksum_t *checksum;  /* OUT parameter */
+  svn_checksum_t **checksum;  /* OUT parameter */
 };
 
 static svn_error_t *
@@ -3289,18 +3289,12 @@ txn_body_file_checksum(void *baton,
 
   SVN_ERR(get_dag(&file, args->root, args->path, trail, trail->pool));
 
-  if (args->checksum->kind == svn_checksum_md5
-      || args->checksum->kind == svn_checksum_sha1)
-    return svn_fs_base__dag_file_checksum(args->checksum, file,
-                                          trail, trail->pool);
-  else
-    return svn_error_create(SVN_ERR_BAD_CHECKSUM_KIND, NULL, NULL);
-
-  return SVN_NO_ERROR;  
+  return svn_fs_base__dag_file_checksum(args->checksum, file,
+                                        trail, trail->pool);
 }
 
 static svn_error_t *
-base_file_checksum(svn_checksum_t *checksum,
+base_file_checksum(svn_checksum_t **checksum,
                    svn_fs_root_t *root,
                    const char *path,
                    apr_pool_t *pool)
@@ -3535,12 +3529,11 @@ txn_body_apply_textdelta(void *baton, trail_t *trail)
 
   if (tb->base_checksum)
     {
-      svn_checksum_t *checksum = svn_checksum_create(svn_checksum_md5,
-                                                     trail->pool);
+      svn_checksum_t *checksum;
 
       /* Until we finalize the node, its data_key points to the old
          contents, in other words, the base text. */
-      SVN_ERR(svn_fs_base__dag_file_checksum(checksum, tb->node,
+      SVN_ERR(svn_fs_base__dag_file_checksum(&checksum, tb->node,
                                              trail, trail->pool));
       if (!svn_checksum_match(tb->base_checksum, checksum))
         return svn_error_createf

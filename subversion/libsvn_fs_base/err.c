@@ -166,6 +166,6 @@ svn_fs_base__err_no_such_checksum_rep(svn_fs_t *fs, svn_checksum_t *checksum)
     (SVN_ERR_FS_NO_SUCH_CHECKSUM_REP, 0,
      _("No record in 'checksum-reps' table for checksum '%s' in "
        "filesystem '%s'"), svn_checksum_to_cstring_display(checksum,
-                                                           checksum->pool),
+                                                           fs->pool),
                            fs->path);
 }

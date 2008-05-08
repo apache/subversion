@@ -56,10 +56,6 @@ typedef struct svn_checksum_t
   /** The type of the checksum.  This should never be changed by consumers
       of the APIs. */
   svn_checksum_kind_t kind;
-
-  /** The pool to use for new digest allocations.  It should match the
-      pool that this checksum was allocated from. */
-  apr_pool_t *pool;
 } svn_checksum_t;
 
 /**
@@ -96,13 +92,13 @@ svn_checksum_match(svn_checksum_t *d1,
 
 
 /**
- * Do a deep copy of @a src to @a dest.
+ * Return a deep copy of @a src, allocated in @a pool.
  *
  * @since New in 1.6.
  */
-svn_error_t *
-svn_checksum_dup(svn_checksum_t *dest,
-                 svn_checksum_t *src);
+svn_checksum_t *
+svn_checksum_dup(svn_checksum_t *src,
+                 apr_pool_t *pool);
 
 
 /** Return the hex representation of @a checksum, allocating the string
