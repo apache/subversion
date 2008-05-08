@@ -48,15 +48,15 @@ Candidate changes:
    Votes:
      +1: pburba
 
- * r31083
-   Add a C test for svn_path_is_canonical.
-   Votes:
-     +1: danielsh
-
 Status of 1.5.1:
 ================
 
 Candidate changes:
+
+ * r31083
+   Add a C test for svn_path_is_canonical.
+   Votes:
+     +1: danielsh
 
 Approved changes (all releases):
 ================================
