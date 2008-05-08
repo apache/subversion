@@ -44,11 +44,12 @@
 
 /* If you add a password type for a provider which stores
  * passwords on disk in encrypted form, remember to update
- * simple_save_creds_helper. Otherwise it will be assumed
- * that your provider stores passwords in plaintext. */
+ * svn_auth__simple_save_creds_helper. Otherwise it will be
+ * assumed that your provider stores passwords in plaintext. */
 #define SVN_AUTH__SIMPLE_PASSWORD_TYPE             "simple"
 #define SVN_AUTH__WINCRYPT_PASSWORD_TYPE           "wincrypt"
 #define SVN_AUTH__KEYCHAIN_PASSWORD_TYPE           "keychain"
+#define SVN_AUTH__KWALLET_PASSWORD_TYPE            "kwallet"
 
 /* Baton type for the simple provider. */
 typedef struct
@@ -268,7 +269,8 @@ svn_auth__simple_save_creds_helper(svn_boolean_t *saved,
        * ahead and store it to disk. Else determine whether saving
        * in plaintext is OK. */
       if (strcmp(passtype, SVN_AUTH__WINCRYPT_PASSWORD_TYPE) == 0
-          || strcmp(passtype, SVN_AUTH__KEYCHAIN_PASSWORD_TYPE) == 0)
+          || strcmp(passtype, SVN_AUTH__KEYCHAIN_PASSWORD_TYPE) == 0
+          || strcmp(passtype, SVN_AUTH__KWALLET_PASSWORD_TYPE) == 0)
         {
           may_save_password = TRUE;
         }
