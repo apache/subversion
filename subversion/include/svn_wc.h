@@ -2802,7 +2802,7 @@ svn_wc_delete(const char *path,
  * ### Update: see "###" comment in svn_wc_add_repos_file()'s doc
  * string about this.
  *
- * @since New in 1.5.
+ * @since New in 1.6.
  */
 svn_error_t *
 svn_wc_add3(const char *path,
