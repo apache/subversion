@@ -456,6 +456,12 @@ if test "$svn_lib_serf" = "yes"; then
   INSTALL_STATIC_RULES="$INSTALL_STATIC_RULES install-serf-lib"
 fi
 
+if test "$with_kwallet" = "yes"; then
+  BUILD_RULES="$BUILD_RULES kwallet-lib"
+  INSTALL_RULES="`echo $INSTALL_RULES | sed 's/install-lib/install-lib install-kwallet-lib/'`"
+  INSTALL_STATIC_RULES="$INSTALL_STATIC_RULES install-kwallet-lib"
+fi
+
 if test "$USE_NLS" = "yes"; then
   BUILD_RULES="$BUILD_RULES locale"
   INSTALL_RULES="$INSTALL_RULES install-locale"
