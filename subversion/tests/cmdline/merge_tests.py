@@ -11142,8 +11142,7 @@ def dont_merge_revs_into_subtree_that_predate_it(sbox):
     [], 'merge', sbox.repo_url + '/A/D/H', short_H_COPY_path)
   os.chdir(saved_cwd)
 
-  # Check the status after the merge.  The mergeinfo set on 'H_COPY/nu set
-  # by the first merge should elide.
+  # Check the status after the merge.
   expected_status.tweak('H_COPY', status=' M')
   expected_status.tweak('H_COPY/psi', status='M ')
   expected_status.tweak('H_COPY/nu', status='MM')
