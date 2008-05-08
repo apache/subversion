@@ -22,6 +22,9 @@
 # $LastChangedBy$
 # $LastChangedRevision$
 
+import warnings
+warnings.filterwarnings('ignore', '.*', DeprecationWarning)
+warnings.filterwarnings('ignore', category=DeprecationWarning)
 import sys
 import os
 import sre
@@ -62,7 +65,7 @@ def usage_and_exit(error_msg=None):
   stream = error_msg and sys.stderr or sys.stdout
   if error_msg:
     print >> stream, "ERROR: %s\n" % error_msg
-  print >> stream, """usage: %s REPOS_PATH [PATH_PREFIX...] [--verbose]
+  print >> stream, """usage: %s REPOS_PATH [PATH_PREFIX...] [--verbose] [--dry-run]
        %s --help
 
 Migrate merge history from svnmerge.py's format to Subversion 1.5's
@@ -79,11 +82,18 @@ Example: %s /path/to/repos trunk branches tags
 class Migrator:
   "Migrates merge history."
 
-  repos_path = None
-  path_prefixes = None
-  verbose = False
-  fs = None
+  def __init__(self):
+    self.repos_path = None
+    self.path_prefixes = None
+    self.verbose = False
+    self.dry_run = False
+    self.fs = None
 
+  def log(self, message, only_when_verbose=True):
+    if only_when_verbose and not self.verbose:
+      return
+    print message
+    
   def run(self):
     self.fs = svn.repos.fs(svn.repos.open(self.repos_path))
 
@@ -115,8 +125,7 @@ class Migrator:
           child_path = name
         else:
           child_path = "%s/%s" % (dir_path, name)
-        if self.verbose:
-          print "Examining path '%s' for conversion" % child_path
+        self.log("Examining path '%s' for conversion" % (child_path))
         if not self.convert_path_history(root, revnum, child_path):
           self.process_dir(root, revnum, child_path)
 
@@ -128,24 +137,24 @@ class Migrator:
     # Retrieve existing Subversion 1.5 mergeinfo.
     mergeinfo_prop_val = svn.fs.node_prop(root, path,
                                           svn.core.SVN_PROP_MERGEINFO)
-    if mergeinfo_prop_val is not None and self.verbose:
-      print "Discovered pre-existing Subversion mergeinfo of '%s'" \
-            % (mergeinfo_prop_val)
+    if mergeinfo_prop_val is not None:
+      self.log("Discovered pre-existing Subversion mergeinfo of '%s'" \
+               % (mergeinfo_prop_val))
       
     # Retrieve svnmerge.py's merge history meta data, and roll it into
     # Subversion 1.5 mergeinfo.
     integrated_prop_val = svn.fs.node_prop(root, path, "svnmerge-integrated")
-    if integrated_prop_val is not None and self.verbose:
-      print "Discovered svnmerge.py mergeinfo of '%s'" \
-            % (integrated_prop_val)
+    if integrated_prop_val is not None:
+      self.log("Discovered svnmerge.py mergeinfo of '%s'" \
+               % (integrated_prop_val))
       
     ### LATER: We handle svnmerge-blocked by converting it into
     ### svn:mergeinfo, until revision blocking becomes available in
     ### Subversion's core.
     blocked_prop_val = svn.fs.node_prop(root, path, "svnmerge-blocked")
-    if blocked_prop_val is not None and self.verbose:
-      print "Discovered svnmerge.py blocked revisions of '%s'" \
-            % (blocked_prop_val)
+    if blocked_prop_val is not None:
+      self.log("Discovered svnmerge.py blocked revisions of '%s'" \
+               % (blocked_prop_val))
 
     new_mergeinfo_prop_val = self.add_to_mergeinfo(integrated_prop_val,
                                                    mergeinfo_prop_val)
@@ -157,42 +166,44 @@ class Migrator:
     if (new_mergeinfo_prop_val != mergeinfo_prop_val) \
        or (integrated_prop_val is not None) \
        or (blocked_prop_val is not None):
-      # Begin a transaction in which we'll manipulate merge-related
-      # properties.  Open the transaction root.
-      txn = svn.fs.begin_txn2(self.fs, revnum, 0)
-      root = svn.fs.txn_root(txn)
+      # If this not a dry-run, begin a transaction in which we'll
+      # manipulate merge-related properties.  Open the transaction root.
+      if not self.dry_run:
+        txn = svn.fs.begin_txn2(self.fs, revnum, 0)
+        root = svn.fs.txn_root(txn)
 
       # Manipulate the merge history.
       if new_mergeinfo_prop_val != mergeinfo_prop_val:
-        if self.verbose:
-          print "Queuing change of %s to '%s'" % \
-                (svn.core.SVN_PROP_MERGEINFO, new_mergeinfo_prop_val)
-        svn.fs.change_node_prop(root, path, svn.core.SVN_PROP_MERGEINFO,
-                                new_mergeinfo_prop_val)
+        self.log("Queuing change of %s to '%s'"
+                 % (svn.core.SVN_PROP_MERGEINFO, new_mergeinfo_prop_val))
+        if not self.dry_run:
+          svn.fs.change_node_prop(root, path, svn.core.SVN_PROP_MERGEINFO,
+                                  new_mergeinfo_prop_val)
 
       # Remove old property values.
       if integrated_prop_val is not None:
-        if self.verbose:
-          print "Queuing removal of svnmerge-integrated"
-        svn.fs.change_node_prop(root, path, "svnmerge-integrated", None)
+        self.log("Queuing removal of svnmerge-integrated")
+        if not self.dry_run:
+          svn.fs.change_node_prop(root, path, "svnmerge-integrated", None)
       if blocked_prop_val is not None:
-        if self.verbose:
-          print "Queuing removal of svnmerge-blocked"
-        svn.fs.change_node_prop(root, path, "svnmerge-blocked", None)
+        self.log("Queuing removal of svnmerge-blocked")
+        if not self.dry_run:
+          svn.fs.change_node_prop(root, path, "svnmerge-blocked", None)
 
       # Commit the transaction containing our property manipulation.
-      if self.verbose:
-        print "Committing the transaction containing the above changes"
-      conflict, new_revnum = svn.fs.commit_txn(txn)
-      if conflict:
-        ### TODO: Do something more intelligent with the possible conflict.
-        raise Exception("Conflict encountered (%s)" % conflict)
-      print "Migrated merge history on '%s' in r%d" % (path, new_revnum)
+      self.log("Committing the transaction containing the above changes")
+      if not self.dry_run:
+        conflict, new_revnum = svn.fs.commit_txn(txn)
+        if conflict:
+          raise Exception("Conflict encountered (%s)" % conflict)
+        self.log("Migrated merge history on '%s' in r%d"
+                 % (path, new_revnum), False)
+      else:
+        self.log("Migrated merge history on '%s' in r???" % (path), False)
       return True
     else:
       # No merge history to manipulate.
-      if self.verbose:
-        print "No merge history on '%s'" % path
+      self.log("No merge history on '%s'" % (path))
       return False
 
   def add_to_mergeinfo(self, svnmerge_prop_val, mergeinfo_prop_val):
@@ -234,8 +245,7 @@ class Migrator:
 
 def main():
   try:
-    opts, args = my_getopt(sys.argv[1:], "vh?",
-                           ["from-paths=", "verbose", "help"])
+    opts, args = my_getopt(sys.argv[1:], "vh?", ["verbose", "dry-run", "help"])
   except:
     usage_and_exit("Unable to process arguments/options")
 
@@ -258,6 +268,8 @@ def main():
       usage_and_exit()
     elif opt == "--verbose" or opt == "-v":
       migrator.verbose = True
+    elif opt == "--dry-run":
+      migrator.dry_run = True
     else:
       usage_and_exit("Unknown option '%s'" % opt)
 
