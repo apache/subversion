@@ -530,17 +530,15 @@ svn_client_add4(const char *path,
       SVN_ERR(svn_wc_adm_close(adm_access));
       svn_pool_destroy(subpool);
 
-      SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, parent_dir,
-                               TRUE, 0, ctx->cancel_func, ctx->cancel_baton,
-                               pool));
     }
   else
     {
       parent_dir = svn_path_dirname(path, pool);
-      SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, parent_dir,
-                               TRUE, 0, ctx->cancel_func, ctx->cancel_baton,
-                               pool));
     }
+
+  SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, parent_dir,
+                           TRUE, 0, ctx->cancel_func, ctx->cancel_baton,
+                           pool));
 
   err = add(path, depth, force, no_ignore, adm_access, ctx, pool);
 
