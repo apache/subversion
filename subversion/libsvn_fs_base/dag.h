@@ -458,14 +458,14 @@ svn_error_t *svn_fs_base__dag_file_length(svn_filesize_t *length,
                                           trail_t *trail,
                                           apr_pool_t *pool);
 
-/* Put the recorded checksum of FILE into CHECKSUM->DIGEST, as part of
- * TRAIL.  CHECKSUM must be previously allocated.
+/* Put the recorded checksum of FILE into CHECKSUM, as part of
+ * TRAIL.
  *
  * If no stored checksum is available, do not calculate the checksum,
  * just put all 0's into DIGEST.
  */
 svn_error_t *
-svn_fs_base__dag_file_checksum(svn_checksum_t *checksum,
+svn_fs_base__dag_file_checksum(svn_checksum_t **checksum,
                                dag_node_t *file,
                                trail_t *trail,
                                apr_pool_t *pool);

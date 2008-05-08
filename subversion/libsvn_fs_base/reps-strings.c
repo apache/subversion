@@ -80,13 +80,7 @@ make_fulltext_rep(const char *str_key,
     rep->txn_id = apr_pstrdup(pool, txn_id);
   rep->kind = rep_kind_fulltext;
 
-  if (checksum)
-    {
-      rep->checksum = svn_checksum_create(svn_checksum_md5, pool);
-      svn_checksum_dup(rep->checksum, checksum);
-    }
-  else
-    rep->checksum = NULL;
+  rep->checksum = svn_checksum_dup(checksum, pool);
 
   rep->contents.fulltext.string_key
     = str_key ? apr_pstrdup(pool, str_key) : NULL;
@@ -752,7 +746,7 @@ svn_fs_base__rep_contents_size(svn_filesize_t *size_p,
 
 
 svn_error_t *
-svn_fs_base__rep_contents_checksum(svn_checksum_t *checksum,
+svn_fs_base__rep_contents_checksum(svn_checksum_t **checksum,
                                    svn_fs_t *fs,
                                    const char *rep_key,
                                    trail_t *trail,
@@ -761,10 +755,7 @@ svn_fs_base__rep_contents_checksum(svn_checksum_t *checksum,
   representation_t *rep;
 
   SVN_ERR(svn_fs_bdb__read_rep(&rep, fs, rep_key, trail, pool));
-  if (rep->checksum && rep->checksum->kind == checksum->kind)
-    SVN_ERR(svn_checksum_dup(checksum, rep->checksum));
-  else
-    SVN_ERR(svn_checksum_clear(checksum));
+  *checksum = svn_checksum_dup(rep->checksum, pool);
 
   return SVN_NO_ERROR;
 }
@@ -1138,7 +1129,7 @@ txn_body_write_close_rep(void *baton, trail_t *trail)
 
   SVN_ERR(svn_fs_bdb__read_rep(&rep, wb->fs, wb->rep_key,
                                trail, trail->pool));
-  SVN_ERR(svn_checksum_dup(rep->checksum, wb->checksum));
+  rep->checksum = svn_checksum_dup(wb->checksum, trail->pool);
   SVN_ERR(svn_fs_bdb__write_rep(wb->fs, wb->rep_key, rep,
                                 trail, trail->pool));
 
@@ -1408,7 +1399,7 @@ svn_fs_base__rep_deltify(svn_fs_t *fs,
   apr_array_header_t *orig_str_keys;
 
   /* The checksum for the representation's fulltext contents. */
-  svn_checksum_t *rep_checksum = svn_checksum_create(svn_checksum_md5, pool);
+  svn_checksum_t *rep_checksum;
 
   /* MD5 digest */
   const unsigned char *digest;
@@ -1536,7 +1527,7 @@ svn_fs_base__rep_deltify(svn_fs_t *fs,
       return UNKNOWN_NODE_KIND(target);
 
     /* Save the checksum, since the new rep needs it. */
-    SVN_ERR(svn_checksum_dup(rep_checksum, old_rep->checksum));
+    rep_checksum = svn_checksum_dup(old_rep->checksum, pool);
   }
 
   /* Hook the new strings we wrote into the rest of the filesystem by
@@ -1551,8 +1542,7 @@ svn_fs_base__rep_deltify(svn_fs_t *fs,
     new_rep.txn_id = NULL;
 
     /* Migrate the old rep's checksum to the new rep. */
-    new_rep.checksum = svn_checksum_create(svn_checksum_md5, pool);
-    SVN_ERR(svn_checksum_dup(new_rep.checksum, rep_checksum));
+    new_rep.checksum = svn_checksum_dup(rep_checksum, pool);
 
     chunks = apr_array_make(pool, windows->nelts, sizeof(chunk));
 

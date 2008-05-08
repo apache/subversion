@@ -2291,7 +2291,7 @@ fs_file_length(svn_filesize_t *length_p,
 /* Set DIGEST to the checksum of PATH under ROOT.  Temporary
    allocations are from POOL. */
 static svn_error_t *
-fs_file_checksum(svn_checksum_t *checksum,
+fs_file_checksum(svn_checksum_t **checksum,
                  svn_fs_root_t *root,
                  const char *path,
                  apr_pool_t *pool)
@@ -2300,12 +2300,8 @@ fs_file_checksum(svn_checksum_t *checksum,
 
   SVN_ERR(get_dag(&file, root, path, pool));
 
-  if (checksum->kind == svn_checksum_md5)
-    return svn_fs_fs__dag_file_checksum(checksum->digest, file, pool);
-  else if (checksum->kind == svn_checksum_sha1)
-    memset(checksum->digest, 0, APR_SHA1_DIGESTSIZE);
-  else
-    return svn_error_create(SVN_ERR_BAD_CHECKSUM_KIND, NULL, NULL);
+  *checksum = svn_checksum_create(svn_checksum_md5, pool);
+  return svn_fs_fs__dag_file_checksum((*checksum)->digest, file, pool);
 
   return SVN_NO_ERROR;
 }

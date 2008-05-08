@@ -47,7 +47,6 @@ svn_checksum_create(svn_checksum_kind_t kind,
     }
 
   checksum->kind = kind;
-  checksum->pool = pool;
 
   return checksum;
 }
@@ -149,25 +148,30 @@ svn_checksum_parse_hex(svn_checksum_t *checksum,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_checksum_dup(svn_checksum_t *dest,
-                 svn_checksum_t *src)
+svn_checksum_t *
+svn_checksum_dup(svn_checksum_t *src,
+                 apr_pool_t *pool)
 {
   apr_size_t size;
+  svn_checksum_t *dest;
+  
+  /* The duplicate of a NULL checksum is a NULL... */
+  if (src == NULL)
+    return NULL;
 
-  dest->kind = src->kind;
+  dest = svn_checksum_create(src->kind, pool);
 
   if (src->kind == svn_checksum_md5)
     size = APR_MD5_DIGESTSIZE;
   else if (src->kind == svn_checksum_sha1)
     size = APR_SHA1_DIGESTSIZE;
   else
-    return svn_error_create(SVN_ERR_BAD_CHECKSUM_KIND, NULL, NULL);
+    return NULL;
 
-  dest->digest = apr_palloc(dest->pool, size);
+  dest->digest = apr_palloc(pool, size);
   memcpy(dest->digest, src->digest, size);
 
-  return SVN_NO_ERROR;
+  return dest;
 }
 
 svn_error_t *
