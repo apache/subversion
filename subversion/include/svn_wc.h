@@ -2756,6 +2756,9 @@ svn_wc_delete(const char *path,
  *
  * If @a path does not exist, return @c SVN_ERR_WC_PATH_NOT_FOUND.
  *
+ * If @a path is a directory, add it at @a depth; otherwise, ignore
+ * @a depth.
+ *
  * If @a copyfrom_url is non-NULL, it and @a copyfrom_rev are used as
  * `copyfrom' args.  This is for copy operations, where one wants
  * to schedule @a path for addition with a particular history.
@@ -2799,7 +2802,25 @@ svn_wc_delete(const char *path,
  * ### Update: see "###" comment in svn_wc_add_repos_file()'s doc
  * string about this.
  *
- * @since New in 1.2.
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_wc_add3(const char *path,
+            svn_wc_adm_access_t *parent_access,
+            svn_depth_t depth,
+            const char *copyfrom_url,
+            svn_revnum_t copyfrom_rev,
+            svn_cancel_func_t cancel_func,
+            void *cancel_baton,
+            svn_wc_notify_func2_t notify_func,
+            void *notify_baton,
+            apr_pool_t *pool);
+
+/**
+ * Similar to svn_wc_add3(), but with the @a depth parameter always
+ * @c svn_depth_infinity.
+ *
+ * @deprecated Provided for backward compatibility with the 1.2 API.
  */
 svn_error_t *
 svn_wc_add2(const char *path,

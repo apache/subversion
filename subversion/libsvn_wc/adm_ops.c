@@ -1377,8 +1377,9 @@ svn_wc_get_ancestry(char **url,
 
 
 svn_error_t *
-svn_wc_add2(const char *path,
+svn_wc_add3(const char *path,
             svn_wc_adm_access_t *parent_access,
+            svn_depth_t depth,
             const char *copyfrom_url,
             svn_revnum_t copyfrom_rev,
             svn_cancel_func_t cancel_func,
@@ -1526,13 +1527,6 @@ svn_wc_add2(const char *path,
 
   if (kind == svn_node_dir) /* scheduling a directory for addition */
     {
-      /* Note that both calls to svn_wc_ensure_adm3() below pass
-         svn_depth_infinity.  Even if 'svn add' were invoked with some
-         other depth, we'd want to create the adm area with
-         svn_depth_infinity, because when the user passes add a depth,
-         that's just a way of telling Subversion what items to add,
-         not a way of telling Subversion what depth the resultant
-         newly-versioned directory should have. */
 
       if (! copyfrom_url)
         {
@@ -1550,7 +1544,7 @@ svn_wc_add2(const char *path,
           /* Make sure this new directory has an admistrative subdirectory
              created inside of it */
           SVN_ERR(svn_wc_ensure_adm3(path, NULL, new_url, p_entry->repos,
-                                     0, svn_depth_infinity, pool));
+                                     0, depth, pool));
         }
       else
         {
@@ -1560,7 +1554,7 @@ svn_wc_add2(const char *path,
              copyfrom arguments to the ensure call. */
           SVN_ERR(svn_wc_ensure_adm3(path, NULL, copyfrom_url,
                                      parent_entry->repos, copyfrom_rev,
-                                     svn_depth_infinity, pool));
+                                     depth, pool));
         }
 
       /* We want the locks to persist, so use the access baton's pool */
@@ -1604,7 +1598,7 @@ svn_wc_add2(const char *path,
 
           /* Change the entry urls recursively (but not the working rev). */
           SVN_ERR(svn_wc__do_update_cleanup(path, adm_access,
-                                            svn_depth_infinity, new_url,
+                                            depth, new_url,
                                             parent_entry->repos,
                                             SVN_INVALID_REVNUM, NULL,
                                             NULL, FALSE, apr_hash_make(pool),
@@ -1636,6 +1630,22 @@ svn_wc_add2(const char *path,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc_add2(const char *path,
+            svn_wc_adm_access_t *parent_access,
+            const char *copyfrom_url,
+            svn_revnum_t copyfrom_rev,
+            svn_cancel_func_t cancel_func,
+            void *cancel_baton,
+            svn_wc_notify_func2_t notify_func,
+            void *notify_baton,
+            apr_pool_t *pool)
+{
+  return svn_wc_add3(path, parent_access, svn_depth_infinity, 
+                     copyfrom_url, copyfrom_rev, 
+                     cancel_func, cancel_baton, 
+                     notify_func, notify_baton, pool);
+}
 
 svn_error_t *
 svn_wc_add(const char *path,
@@ -1657,7 +1667,6 @@ svn_wc_add(const char *path,
                      cancel_func, cancel_baton,
                      svn_wc__compat_call_notify_func, &nb, pool);
 }
-
 
 
 /* Thoughts on Reversion.
