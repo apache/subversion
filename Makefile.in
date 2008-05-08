@@ -30,6 +30,8 @@ SVN_FS_LIB_DEPS = @SVN_FS_LIB_DEPS@
 SVN_FS_LIB_INSTALL_DEPS = @SVN_FS_LIB_INSTALL_DEPS@
 SVN_FS_LIB_LINK = @SVN_FS_LIB_LINK@
 
+SVN_SUBR_KWALLET_INSTALL = @SVN_SUBR_KWALLET_INSTALL@
+
 SWIG_SRC_DIR = $(abs_srcdir)/subversion/bindings/swig
 SWIG_BUILD_DIR = $(abs_builddir)/subversion/bindings/swig
 
