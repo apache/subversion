@@ -157,6 +157,10 @@ typedef struct svn_auth_provider_object_t
 
 } svn_auth_provider_object_t;
 
+/** The type of function returning authentication provider. */
+typedef void (*svn_auth_simple_provider_func_t)
+  (svn_auth_provider_object_t **provider,
+   apr_pool_t *pool);
 
 
 /** Specific types of credentials **/
@@ -778,7 +782,7 @@ svn_auth_get_keychain_simple_provider(svn_auth_provider_object_t **provider,
  * @note This function actually works only on systems with KWallet
  * installed.
  */
-void
+svn_auth_simple_provider_func_t
 svn_auth_get_kwallet_simple_provider(svn_auth_provider_object_t **provider,
                                      apr_pool_t *pool);
 

@@ -41,6 +41,7 @@
 #include "svn_error.h"
 #include "svn_nls.h"
 #include "svn_auth.h"
+#include "svn_version.h"
 #include "utf_impl.h"
 #include "svn_config.h"
 
@@ -396,8 +397,25 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
   APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 #endif
 #ifdef SVN_HAVE_KWALLET
-  svn_auth_get_kwallet_simple_provider(&provider, pool);
-  APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+  apr_dso_handle_t *libsvn_subr_kwallet_dso;
+  apr_dso_handle_sym_t kwallet_provider_symbol;
+  const char *libsvn_subr_kwallet_libname;
+  const char *kwallet_provider_name;
+  libsvn_subr_kwallet_libname = apr_psprintf(pool,
+                                             "libsvn_subr_kwallet-%d.so.0",
+                                             SVN_VER_MAJOR);
+  kwallet_provider_name = "svn_auth_get_kwallet_simple_provider";
+  svn_dso_load(&libsvn_subr_kwallet_dso, libsvn_subr_kwallet_libname);
+  if (libsvn_subr_kwallet_dso)
+    {
+      if (! apr_dso_sym(&kwallet_provider_symbol, libsvn_subr_kwallet_dso, kwallet_provider_name))
+        {
+          svn_auth_simple_provider_func_t kwallet_provider_function;
+          kwallet_provider_function = (svn_auth_simple_provider_func_t) kwallet_provider_symbol;
+          kwallet_provider_function(&provider, pool);
+          APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+        }
+    }
 #endif
   if (non_interactive == FALSE)
     {
