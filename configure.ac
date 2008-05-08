@@ -343,7 +343,6 @@ int main()
             AC_MSG_RESULT([yes])
             CXXFLAGS="$old_CXXFLAGS"
             LIBS="$old_LIBS"
-            SVN_SUBR_KWALLET_INSTALL="lib"
           else
             AC_MSG_RESULT([no])
             AC_MSG_ERROR([cannot find KWallet])
@@ -366,7 +365,6 @@ else
 fi
 AC_SUBST(SVN_KWALLET_INCLUDES)
 AC_SUBST(SVN_KWALLET_LIBS)
-AC_SUBST(SVN_SUBR_KWALLET_INSTALL)
 
 
 dnl I18n -------------------
