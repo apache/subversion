@@ -26,7 +26,7 @@ echo 'Creating a branch, and initializing merge tracking data...'
 svn cp wc/trunk wc/branches/B
 svn ci -m 'Create branch B.' wc
 cd wc/branches/B
-$HOME/src/subversion/contrib/client-side/svnmerge/svnmerge.py init
+$SCRIPT_DIR/svnmerge.py init
 svn ci -m 'Initialize svnmerge.py merge tracking info on branch B.'
 #svn merge --record-only -r4:7 $REPOS_URL/trunk  ### Not working (?)
 svn ps svn:mergeinfo '/trunk:4-7' .
@@ -34,7 +34,7 @@ svn ci -m 'Mix in Subversion 1.5 merge tracking info on branch B.'
 cd -
 
 # Run the migration script, passing on any arguments.
-$SCRIPT_DIR/svnmerge-migrate-history.py $TMP_DIR/repos -v /branches
+$SCRIPT_DIR/svnmerge-migrate-history.py $TMP_DIR/repos -v /branches --naive-mode
 
 # Report the results.
 EXPECTED_MERGEINFO='/trunk:1,4-7'

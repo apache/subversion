@@ -1252,6 +1252,75 @@ test_compose(const char **msg,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_is_canonical(const char **msg,
+                  svn_boolean_t msg_only,
+                  svn_test_opts_t *opts,
+                  apr_pool_t *pool)
+{
+  struct {
+    const char *path;
+    svn_boolean_t canonical;
+  } tests[] = {
+    { "",                      TRUE },
+    { ".",                     FALSE },
+    { "/",                     TRUE },
+    { "/.",                    FALSE },
+    { "./",                    FALSE },
+    { "./.",                   FALSE },
+    { "//",                    FALSE },
+    { "/////",                 FALSE },
+    { "./././.",               FALSE },
+    { "////././.",             FALSE },
+    { "foo",                   TRUE },
+    { ".foo",                  TRUE },
+    { "foo.",                  TRUE },
+    { "/foo",                  TRUE },
+    { "foo/",                  FALSE },
+    { "foo./",                 FALSE },
+    { "foo./.",                FALSE },
+    { "foo././/.",             FALSE },
+    { "/foo/bar",              TRUE },
+    { "foo/..",                TRUE },
+    { "foo/../",               FALSE },
+    { "foo/../.",              FALSE },
+    { "foo//.//bar",           FALSE },
+    { "///foo",                FALSE },
+    { "/.//./.foo",            FALSE },
+    { ".///.foo",              FALSE },
+    { "../foo",                TRUE },
+    { "../../foo/",            FALSE },
+    { "../../foo/..",          TRUE },
+    { "/../../",               FALSE },
+    { "http://hst",            TRUE },
+    { "http://hst/foo/../bar", TRUE },
+    { "http://hst/",           FALSE },
+    { "foo/./bar",             FALSE },
+    { NULL, FALSE }
+  };
+  int i;
+
+  *msg = "test svn_path_is_canonical";
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  for (i = 0; tests[i].path; i++)
+    {
+      svn_boolean_t canonical;
+
+      canonical = svn_path_is_canonical(tests[i].path, pool);
+      if (tests[i].canonical != canonical)
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_path_is_canonical(\"%s\") returned "
+                                 "\"%s\" expected \"%s\"",
+                                 tests[i].path,
+                                 canonical ? "TRUE" : "FALSE",
+                                 tests[i].canonical ? "TRUE" : "FALSE");
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* local define to support XFail-ing tests on Windows/Cygwin only */
 #if defined(WIN32) || defined(__CYGWIN__)
 #define WINDOWS_OR_CYGWIN TRUE
@@ -1287,5 +1356,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(test_get_longest_ancestor),
     SVN_TEST_PASS(test_splitext),
     SVN_TEST_PASS(test_compose),
+    SVN_TEST_PASS(test_is_canonical),
     SVN_TEST_NULL
   };
