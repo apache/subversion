@@ -1,5 +1,5 @@
 /*
- * simple_providers_cpp.cpp: C++ providers for SVN_AUTH_CRED_SIMPLE
+ * kwallet.cpp: KWallet providers for SVN_AUTH_CRED_SIMPLE
  *
  * ====================================================================
  * Copyright (c) 2008 CollabNet.  All rights reserved.
@@ -63,7 +63,7 @@ kwallet_password_get(const char **password,
   }
 
   KCmdLineArgs::init(1,
-                     (char *[1]) { "svn\0" },
+                     (char *[1]) { "svn" },
                      "Subversion",
                      "subversion",
                      ki18n("Subversion"),
@@ -120,7 +120,7 @@ kwallet_password_set(apr_hash_t *creds,
   }
 
   KCmdLineArgs::init(1,
-                     (char *[1]) { "svn\0" },
+                     (char *[1]) { "svn" },
                      "Subversion",
                      "subversion",
                      ki18n("Subversion"),
@@ -146,7 +146,7 @@ kwallet_password_set(apr_hash_t *creds,
           if (wallet->setFolder(folder))
             {
               QString key = QString::fromUtf8(username) + "@" + QString::fromUtf8(realmstring);
-              if (wallet->writePassword(key, q_password))
+              if (! wallet->writePassword(key, q_password))
                 {
                   ret = TRUE;
                 }
