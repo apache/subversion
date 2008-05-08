@@ -1,5 +1,5 @@
 /*
- * kwallet.cpp: KWallet providers for SVN_AUTH_CRED_SIMPLE
+ * kwallet.cpp: KWallet provider for SVN_AUTH_CRED_SIMPLE
  *
  * ====================================================================
  * Copyright (c) 2008 CollabNet.  All rights reserved.
@@ -31,20 +31,18 @@
 
 #include "svn_private_config.h"
 
-#define SVN_AUTH__KWALLET_PASSWORD_TYPE            "kwallet"
-
-/*-----------------------------------------------------------------------*/
-/* KWallet simple provider, puts passwords in KWallet                    */
-/*-----------------------------------------------------------------------*/
-
-#ifdef SVN_HAVE_KWALLET
 #include <QtCore/QString>
 #include <QtGui/QWidget>
 
 #include <kapplication.h>
 #include <kcmdlineargs.h>
 #include <kwallet.h>
-#endif /* SVN_HAVE_KWALLET */
+
+#define SVN_AUTH__KWALLET_PASSWORD_TYPE            "kwallet"
+
+/*-----------------------------------------------------------------------*/
+/* KWallet simple provider, puts passwords in KWallet                    */
+/*-----------------------------------------------------------------------*/
 
 /* Implementation of svn_auth__password_get_t that retrieves
    the password from KWallet. */
@@ -56,7 +54,6 @@ kwallet_password_get(const char **password,
                      svn_boolean_t non_interactive,
                      apr_pool_t *pool)
 {
-#ifdef SVN_HAVE_KWALLET
   if (! KWallet::Wallet::isEnabled())
   {
     return FALSE;
@@ -97,9 +94,6 @@ kwallet_password_get(const char **password,
         }
     }
   KWallet::Wallet::closeWallet(wallet_name, false);
-#else
-  svn_boolean_t ret = FALSE;
-#endif /* SVN_HAVE_KWALLET */
   return ret;
 }
 
@@ -113,7 +107,6 @@ kwallet_password_set(apr_hash_t *creds,
                      svn_boolean_t non_interactive,
                      apr_pool_t *pool)
 {
-#ifdef SVN_HAVE_KWALLET
   if (! KWallet::Wallet::isEnabled())
   {
     return FALSE;
@@ -154,9 +147,6 @@ kwallet_password_set(apr_hash_t *creds,
         }
     }
   KWallet::Wallet::closeWallet(wallet_name, false);
-#else
-  svn_boolean_t ret = FALSE;
-#endif /* SVN_HAVE_KWALLET */
   return ret;
 }
 
