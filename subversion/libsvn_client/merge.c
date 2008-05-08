@@ -1100,7 +1100,7 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
       else
         {
           SVN_ERR(svn_io_make_dir_recursively(path, subpool));
-          SVN_ERR(svn_wc_add2(path, adm_access,
+          SVN_ERR(svn_wc_add3(path, adm_access, svn_depth_infinity,
                               copyfrom_url, copyfrom_rev,
                               merge_b->ctx->cancel_func,
                               merge_b->ctx->cancel_baton,
@@ -1117,7 +1117,7 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
       if (! entry || entry->schedule == svn_wc_schedule_delete)
         {
           if (!merge_b->dry_run)
-            SVN_ERR(svn_wc_add2(path, adm_access,
+            SVN_ERR(svn_wc_add3(path, adm_access, svn_depth_infinity,
                                 copyfrom_url, copyfrom_rev,
                                 merge_b->ctx->cancel_func,
                                 merge_b->ctx->cancel_baton,
