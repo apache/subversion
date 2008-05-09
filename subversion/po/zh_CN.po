@@ -35,8 +35,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.5.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2008-05-02 20:20+0800\n"
-"PO-Revision-Date: 2008-05-02 20:22+0800\n"
+"POT-Creation-Date: 2008-05-09 16:37+0800\n"
+"PO-Revision-Date: 2008-05-09 16:40+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -655,9 +655,13 @@ msgstr "无法取得凭证数据"
 msgid "No authentication provider available"
 msgstr "没有可用的认证提供者"
 
-#: ../include/svn_error_codes.h:868 ../include/svn_error_codes.h:872
+#: ../include/svn_error_codes.h:868
 msgid "All authentication providers exhausted"
 msgstr "所有的认证提供者都不可用"
+
+#: ../include/svn_error_codes.h:872
+msgid "Credentials not saved"
+msgstr "没有保存凭证数据"
 
 #: ../include/svn_error_codes.h:877
 msgid "Authentication failed"
@@ -2507,8 +2511,8 @@ msgid "Invalid revision number '%ld'"
 msgstr "无效的版本号“%ld”"
 
 #: ../libsvn_fs_fs/fs_fs.c:1431 ../libsvn_fs_fs/fs_fs.c:2111
-#: ../libsvn_fs_fs/fs_fs.c:2204 ../libsvn_repos/log.c:1430
-#: ../libsvn_repos/log.c:1434
+#: ../libsvn_fs_fs/fs_fs.c:2204 ../libsvn_repos/log.c:1369
+#: ../libsvn_repos/log.c:1373
 #, c-format
 msgid "No such revision %ld"
 msgstr "没有版本 %ld"
@@ -2806,7 +2810,7 @@ msgid "URL '%s' is not a child of the session's repository root URL '%s'"
 msgstr "URL “%s” 不是会话版本库根 URL “%s” 的子节点"
 
 #: ../libsvn_ra_local/ra_plugin.c:1373 ../libsvn_ra_neon/session.c:922
-#: ../libsvn_ra_serf/serf.c:300 ../libsvn_ra_svn/client.c:2258
+#: ../libsvn_ra_serf/serf.c:300 ../libsvn_ra_svn/client.c:2268
 #, c-format
 msgid "Don't know anything about capability '%s'"
 msgstr "不知道特性 “%s” 的任何信息"
@@ -3013,7 +3017,7 @@ msgid "Invalid server response to dated-rev request"
 msgstr "服务器请求 dated-rev 的响应无效"
 
 #: ../libsvn_ra_neon/get_location_segments.c:118
-#: ../libsvn_ra_serf/getlocationsegments.c:101 ../libsvn_ra_svn/client.c:1584
+#: ../libsvn_ra_serf/getlocationsegments.c:101 ../libsvn_ra_svn/client.c:1594
 msgid "Expected valid revision range"
 msgstr "期望合法的版本范围"
 
@@ -3066,13 +3070,13 @@ msgstr "版本库中的“%s”没有被锁定"
 msgid "Failed to fetch lock information"
 msgstr "获取锁信息失败"
 
-#: ../libsvn_ra_neon/log.c:164 ../libsvn_ra_serf/log.c:203
+#: ../libsvn_ra_neon/log.c:167 ../libsvn_ra_serf/log.c:200
 #, c-format
 msgid "Missing name attr in revprop element"
 msgstr "元素 revprop 没有 name 属性"
 
-#: ../libsvn_ra_neon/log.c:433 ../libsvn_ra_serf/log.c:533
-#: ../libsvn_ra_svn/client.c:1309
+#: ../libsvn_ra_neon/log.c:444 ../libsvn_ra_serf/log.c:547
+#: ../libsvn_ra_svn/client.c:1310
 msgid "Server does not support custom revprops via log"
 msgstr "服务器不支持通过日志自定义 revprops"
 
@@ -3565,110 +3569,110 @@ msgstr "目录列表元素不是列表"
 msgid "Mergeinfo element is not a list"
 msgstr "Mergeinfo 元素不是列表"
 
-#: ../libsvn_ra_svn/client.c:1298
+#: ../libsvn_ra_svn/client.c:1299
 msgid "Log entry not a list"
 msgstr "日志条目不是列表"
 
-#: ../libsvn_ra_svn/client.c:1333
+#: ../libsvn_ra_svn/client.c:1334
 msgid "Changed-path entry not a list"
 msgstr "已修改路径条目不是列表"
 
-#: ../libsvn_ra_svn/client.c:1449
+#: ../libsvn_ra_svn/client.c:1459
 msgid "'stat' not implemented"
 msgstr "未实现“stat”"
 
-#: ../libsvn_ra_svn/client.c:1506
+#: ../libsvn_ra_svn/client.c:1516
 msgid "'get-locations' not implemented"
 msgstr "未实现“get-locations”"
 
-#: ../libsvn_ra_svn/client.c:1518
+#: ../libsvn_ra_svn/client.c:1528
 msgid "Location entry not a list"
 msgstr "区域条目不是列表"
 
-#: ../libsvn_ra_svn/client.c:1563
+#: ../libsvn_ra_svn/client.c:1573
 msgid "'get-location-segments' not implemented"
 msgstr "未实现 “get-location-segments”"
 
-#: ../libsvn_ra_svn/client.c:1575
+#: ../libsvn_ra_svn/client.c:1585
 msgid "Location segment entry not a list"
 msgstr "位置分段入口不是列表"
 
-#: ../libsvn_ra_svn/client.c:1637
+#: ../libsvn_ra_svn/client.c:1647
 msgid "'get-file-revs' not implemented"
 msgstr "未实现“get-file-revs”"
 
-#: ../libsvn_ra_svn/client.c:1650
+#: ../libsvn_ra_svn/client.c:1660
 msgid "Revision entry not a list"
 msgstr "版本条目不是列表"
 
-#: ../libsvn_ra_svn/client.c:1667 ../libsvn_ra_svn/client.c:1692
+#: ../libsvn_ra_svn/client.c:1677 ../libsvn_ra_svn/client.c:1702
 msgid "Text delta chunk not a string"
 msgstr "文本差异块不是字符串"
 
-#: ../libsvn_ra_svn/client.c:1704
+#: ../libsvn_ra_svn/client.c:1714
 msgid "The get-file-revs command didn't return any revisions"
 msgstr "get-file-revs 命令没有返回任何版本"
 
-#: ../libsvn_ra_svn/client.c:1752
+#: ../libsvn_ra_svn/client.c:1762
 msgid "Server doesn't support the lock command"
 msgstr "服务器不支持加锁"
 
-#: ../libsvn_ra_svn/client.c:1816
+#: ../libsvn_ra_svn/client.c:1826
 msgid "Server doesn't support the unlock command"
 msgstr "服务器不支持解锁"
 
-#: ../libsvn_ra_svn/client.c:1913
+#: ../libsvn_ra_svn/client.c:1923
 msgid "Lock response not a list"
 msgstr "加锁响应不是列表"
 
-#: ../libsvn_ra_svn/client.c:1927
+#: ../libsvn_ra_svn/client.c:1937
 msgid "Unknown status for lock command"
 msgstr "加锁命令的状态未知"
 
-#: ../libsvn_ra_svn/client.c:1949
+#: ../libsvn_ra_svn/client.c:1959
 msgid "Didn't receive end marker for lock responses"
 msgstr "加锁响应没有结束标记"
 
-#: ../libsvn_ra_svn/client.c:2036
+#: ../libsvn_ra_svn/client.c:2046
 msgid "Unlock response not a list"
 msgstr "解锁响应不是列表"
 
-#: ../libsvn_ra_svn/client.c:2050
+#: ../libsvn_ra_svn/client.c:2060
 msgid "Unknown status for unlock command"
 msgstr "未知的解锁命令状态"
 
-#: ../libsvn_ra_svn/client.c:2071
+#: ../libsvn_ra_svn/client.c:2081
 msgid "Didn't receive end marker for unlock responses"
 msgstr "解锁响应没有结束标记"
 
-#: ../libsvn_ra_svn/client.c:2095 ../libsvn_ra_svn/client.c:2123
+#: ../libsvn_ra_svn/client.c:2105 ../libsvn_ra_svn/client.c:2133
 msgid "Server doesn't support the get-lock command"
 msgstr "服务器不支持命令 get-lock"
 
-#: ../libsvn_ra_svn/client.c:2136
+#: ../libsvn_ra_svn/client.c:2146
 msgid "Lock element not a list"
 msgstr "Lock元素不是列表"
 
-#: ../libsvn_ra_svn/client.c:2159
+#: ../libsvn_ra_svn/client.c:2169
 msgid "Server doesn't support the replay command"
 msgstr "服务器不支持重放命令"
 
-#: ../libsvn_ra_svn/client.c:2191
+#: ../libsvn_ra_svn/client.c:2201
 msgid "Server doesn't support the replay-range command"
 msgstr "服务器不支持重放范围命令"
 
-#: ../libsvn_ra_svn/client.c:2209
+#: ../libsvn_ra_svn/client.c:2219
 #, c-format
 msgid "Expected 'revprops', found '%s'"
 msgstr "期望“revprops”，发现“%s”"
 
-#: ../libsvn_ra_svn/client.c:2322
+#: ../libsvn_ra_svn/client.c:2332
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_svn"
 msgstr "不支持ra_svn RA加载器版本 %d"
 
 #: ../libsvn_ra_svn/cram.c:194 ../libsvn_ra_svn/cram.c:212
-#: ../libsvn_ra_svn/cyrus_auth.c:442 ../libsvn_ra_svn/cyrus_auth.c:493
+#: ../libsvn_ra_svn/cyrus_auth.c:442 ../libsvn_ra_svn/cyrus_auth.c:497
 #: ../libsvn_ra_svn/internal_auth.c:60
 msgid "Unexpected server response to authentication"
 msgstr "服务器意外响应认证请求"
@@ -3679,13 +3683,13 @@ msgstr "服务器意外响应认证请求"
 msgid "Could not initialize the SASL library"
 msgstr "不能初始化 SASL 库"
 
-#: ../libsvn_ra_svn/cyrus_auth.c:816 ../libsvn_ra_svn/internal_auth.c:57
+#: ../libsvn_ra_svn/cyrus_auth.c:820 ../libsvn_ra_svn/internal_auth.c:57
 #: ../libsvn_ra_svn/internal_auth.c:108
 #, c-format
 msgid "Authentication error from server: %s"
 msgstr "服务器报告认证错误: %s"
 
-#: ../libsvn_ra_svn/cyrus_auth.c:820
+#: ../libsvn_ra_svn/cyrus_auth.c:824
 msgid "Can't get username or password"
 msgstr "无法取得用户名称或密码"
 
