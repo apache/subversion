@@ -909,10 +909,10 @@ svn_fs_file_checksum(svn_checksum_t **checksum,
                      svn_boolean_t force,
                      apr_pool_t *pool)
 {
-  if (force)
+  SVN_ERR(root->vtable->file_checksum(checksum, root, path, pool));
+
+  if (force && (*checksum == NULL || (*checksum)->kind != kind))
     {
-      /* TODO: We only need to do a content check if the checksum returned by
-         the fs is empty. */
       svn_stream_t *contents, *checksum_contents;
 
       SVN_ERR(svn_fs_file_contents(&contents, root, path, pool));
@@ -922,10 +922,10 @@ svn_fs_file_checksum(svn_checksum_t **checksum,
 
       /* This will force a read of any remaining data (which is all of it in
          this case) and dump the checksum into checksum->digest. */
-      return svn_stream_close(checksum_contents);
+      SVN_ERR(svn_stream_close(checksum_contents));
     }
-  else
-    return root->vtable->file_checksum(checksum, root, path, pool);
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
