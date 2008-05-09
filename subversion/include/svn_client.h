@@ -1322,7 +1322,7 @@ svn_client_add4(const char *path,
  * FALSE and @a depth set according to @a recursive: if TRUE, then
  * @a depth is @c svn_depth_infinity, if FALSE, then @c svn_depth_files.
  *
- * @deprecated Provided for backward compatibility with the 1.3 API.
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *
 svn_client_add3(const char *path,
