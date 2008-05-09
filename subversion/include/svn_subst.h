@@ -203,7 +203,7 @@ svn_subst_keywords_differ(const svn_subst_keywords_t *a,
  * ignored (not contracted or expanded).  If the @a keywords hash
  * itself is @c NULL, keyword substitution will be altogether ignored.
  *
- * Detect only keywords that are no longer than @c SVN_IO_MAX_KEYWORD_LEN
+ * Detect only keywords that are no longer than @c SVN_KEYWORD_MAX_LEN
  * bytes, including the delimiters and the keyword itself.
  *
  * Note that a translation request is *required*:  one of @a eol_str or

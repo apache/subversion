@@ -365,11 +365,10 @@ svn_auth__simple_save_creds_helper(svn_boolean_t *saved,
 
       if (may_save_password)
         {
-          svn_boolean_t password_stored;
-          password_stored = password_set(creds_hash, realmstring,
-                                         creds->username, creds->password,
-                                         non_interactive, pool);
-          if (password_stored && passtype)
+          *saved = password_set(creds_hash, realmstring,
+                                creds->username, creds->password,
+                                non_interactive, pool);
+          if (*saved && passtype)
               /* Store the password type with the auth data, so that we
                  know which provider owns the password. */
               apr_hash_set(creds_hash, SVN_AUTH__AUTHFILE_PASSTYPE_KEY,
@@ -382,7 +381,6 @@ svn_auth__simple_save_creds_helper(svn_boolean_t *saved,
   err = svn_config_write_auth_data(creds_hash, SVN_AUTH_CRED_SIMPLE,
                                    realmstring, config_dir, pool);
   svn_error_clear(err);
-  *saved = ! err;
 
   return SVN_NO_ERROR;
 }
