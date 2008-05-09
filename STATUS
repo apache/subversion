@@ -55,8 +55,3 @@ Candidate changes:
 
 Approved changes (all releases):
 ================================
-
- * r31107
-   ra_serf: Fix API bug when fetched_rev is non-NULL and revision is invalid.
-   Votes:
-     +1: epg, jerenkrantz, kfogel
