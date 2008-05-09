@@ -48,6 +48,11 @@ Candidate changes:
    Votes:
      +1: pburba
 
+ * r31107
+   ra_serf: Fix API bug when fetched_rev is non-NULL and revision is invalid.
+   Votes:
+     +1: epg, jerenkrantz
+
 Status of 1.5.1:
 ================
 
