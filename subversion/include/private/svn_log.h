@@ -110,7 +110,7 @@ svn_log__checkout(const char *path, svn_revnum_t rev, svn_depth_t depth,
                   apr_pool_t *pool);
 
 /**
- * Return a log string for a update action.
+ * Return a log string for an update action.
  *
  * @since New in 1.6.
  */
@@ -220,7 +220,7 @@ svn_log__lock_one_path(const char *path, svn_boolean_t steal,
                        apr_pool_t *pool);
 
 /**
- * Return a log string for a unlock action on only one path; this is
+ * Return a log string for an unlock action on only one path; this is
  * just a convenience wrapper around svn_log__unlock().
  *
  * @since New in 1.6.
