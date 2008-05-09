@@ -2820,7 +2820,7 @@ svn_wc_add3(const char *path,
  * Similar to svn_wc_add3(), but with the @a depth parameter always
  * @c svn_depth_infinity.
  *
- * @deprecated Provided for backward compatibility with the 1.2 API.
+ * @deprecated Provided for backward compatibility with the 1.5 API.
  */
 svn_error_t *
 svn_wc_add2(const char *path,
