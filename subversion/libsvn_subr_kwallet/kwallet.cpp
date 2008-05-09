@@ -84,7 +84,7 @@ kwallet_password_get(const char **password,
               if (wallet->setFolder(folder))
                 {
                   QString q_password;
-                  if (! wallet->readPassword(key, q_password));
+                  if (wallet->readPassword(key, q_password) == 0);
                     {
                       *password = apr_pstrmemdup(pool, q_password.toUtf8().data(), q_password.size());
                       ret = TRUE;
@@ -139,7 +139,7 @@ kwallet_password_set(apr_hash_t *creds,
           if (wallet->setFolder(folder))
             {
               QString key = QString::fromUtf8(username) + "@" + QString::fromUtf8(realmstring);
-              if (! wallet->writePassword(key, q_password))
+              if (wallet->writePassword(key, q_password) == 0)
                 {
                   ret = TRUE;
                 }
