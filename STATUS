@@ -48,6 +48,13 @@ Candidate changes:
    Votes:
      +1: pburba
 
+  * r30629, r30787
+    mod_dontdothat: Allow opt-out of replay rejection.
+    Notes:
+      r30787 is a typo fix.
+    Votes:
+      +1: jerenkrantz
+
 Status of 1.5.1:
 ================
 
