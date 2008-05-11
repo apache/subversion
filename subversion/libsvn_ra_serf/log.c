@@ -540,8 +540,8 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
   if (want_custom_revprops)
     {
       svn_boolean_t has_log_revprops;
-      SVN_ERR(svn_ra_has_capability(ra_session, &has_log_revprops,
-                                    SVN_RA_CAPABILITY_LOG_REVPROPS, pool));
+      SVN_ERR(svn_ra_serf__has_capability(ra_session, &has_log_revprops,
+                                          SVN_RA_CAPABILITY_LOG_REVPROPS, pool));
       if (!has_log_revprops)
         return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL,
                                 _("Server does not support custom revprops"
