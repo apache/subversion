@@ -348,7 +348,7 @@ svn_path_add_component(svn_stringbuf_t *path,
 {
   apr_size_t len = strlen(component);
 
-  assert(is_canonical(path->data, strlen(path->data)));
+  assert(is_canonical(path->data, path->len));
   assert(is_canonical(component, strlen(component)));
 
   /* Append a dir separator, but only if this path is neither empty
@@ -367,7 +367,7 @@ svn_path_add_component(svn_stringbuf_t *path,
 void
 svn_path_remove_component(svn_stringbuf_t *path)
 {
-  assert(is_canonical(path->data, strlen(path->data)));
+  assert(is_canonical(path->data, path->len));
 
   path->len = previous_segment(path->data, path->len);
   path->data[path->len] = '\0';
