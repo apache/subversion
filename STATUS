@@ -15,7 +15,7 @@ Candidate changes:
      This fixes an API incompatibility.  But in practice it's a minor
      problem, and could probably wait until 1.5.1 if necessary.
    Votes:
-     +1: kfogel
+     +1: kfogel, epg
 
  * r30746, r30747
    Fix a minor merge range notification header bug.
