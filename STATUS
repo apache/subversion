@@ -69,15 +69,7 @@ Candidate changes:
     Justification:
       Trivial fix. Necessary for cygwin build.
     Votes:
-      +1: djames
-
-  * r31126
-    Use 'void *' to avoid compile warnings and eliminate casts.
-    Justification:
-      Trivial fix. Allows clean build with EXTRA_CFLAGS='-Wall
-      -Wno-uninitialized -Wdeclaration-after-statement -Werror'
-    Votes:
-      +1: djames, kfogel
+      +1: djames, lgo
 
 Status of 1.5.1:
 ================
@@ -86,3 +78,12 @@ Candidate changes:
 
 Approved changes (all releases):
 ================================
+
+  * r31126
+    Use 'void *' to avoid compile warnings and eliminate casts.
+    Justification:
+      Trivial fix. Allows clean build with EXTRA_CFLAGS='-Wall
+      -Wno-uninitialized -Wdeclaration-after-statement -Werror'
+    Votes:
+      +1: djames, kfogel, lgo
+
