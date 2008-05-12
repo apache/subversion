@@ -55,6 +55,23 @@ Candidate changes:
     Votes:
       +1: jerenkrantz
 
+  * r31125
+    Fix circular dependency between libsvn_ra and libsvn_ra_serf by teaching
+    libsvn_ra_serf to call svn_ra_serf__has_capability directly.
+    Justification:
+      Trivial fix. Necessary for cygwin build.
+    Votes:
+      +1: djames
+
+  * r31126
+    Fix circular dependency between libsvn_ra and libsvn_ra_serf by teaching
+    libsvn_ra_serf to call svn_ra_serf__has_capability directly.
+    Justification:
+      Trivial fix. Allows clean build with EXTRA_CFLAGS='-Wall
+      -Wno-uninitialized -Wdeclaration-after-statement -Werror'
+    Votes:
+      +1: djames
+
 Status of 1.5.1:
 ================
 
