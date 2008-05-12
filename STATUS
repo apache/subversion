@@ -31,15 +31,6 @@ Candidate changes:
    Votes:
      +1: pburba, markphip
 
- * r31055 (subversion/bindings/swig), r31066
-   Make svn_wc_diff_callbacks2_t work in Python (not a new interface,
-   it was just broken for Python until r31055).
-   Notes:
-     'svn merge -c 31055 ^/trunk/subversion/bindings/swig
-     subversion/bindings/swig' cleanly merges the Python change.
-   Votes:
-     +1: epg
-
  * r31056
    Enable svn.diff in swig-py on Windows.
    Votes:
@@ -78,6 +69,16 @@ Candidate changes:
 Approved changes (all releases):
 ================================
 
+  * r31055 (subversion/bindings/swig), r31066
+    Make svn_wc_diff_callbacks2_t work in Python (not a new interface,
+    it was just broken for Python until r31055).
+    Notes:
+      'svn merge -c 31055 ^/trunk/subversion/bindings/swig
+      subversion/bindings/swig' cleanly merges the Python change.
+    Votes:
+      +1: epg
+      +0: djames
+
   * r31125
     Fix circular dependency between libsvn_ra and libsvn_ra_serf by teaching
     libsvn_ra_serf to call svn_ra_serf__has_capability directly.
@@ -94,3 +95,12 @@ Approved changes (all releases):
     Votes:
       +1: djames, kfogel, lgo
 
+  * r31145
+    Fix memory leaks in Python bindings.
+    Justification:
+      Memory leaks are bad.
+    Notes:
+      Depends on r31055 and r31066 (see above)
+    Votes:
+      +1: djames
+      +0: epg
