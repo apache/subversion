@@ -64,13 +64,12 @@ Candidate changes:
       +1: djames
 
   * r31126
-    Fix circular dependency between libsvn_ra and libsvn_ra_serf by teaching
-    libsvn_ra_serf to call svn_ra_serf__has_capability directly.
+    Use 'void *' to avoid compile warnings and eliminate casts.
     Justification:
       Trivial fix. Allows clean build with EXTRA_CFLAGS='-Wall
       -Wno-uninitialized -Wdeclaration-after-statement -Werror'
     Votes:
-      +1: djames
+      +1: djames, kfogel
 
 Status of 1.5.1:
 ================
