@@ -63,8 +63,10 @@ Candidate changes:
     Votes:
       +1: jerenkrantz
 
-  * r31138
+  * r31138, r31141
     Validate svn:date property values in libsvn_repos.
+    Notes:
+      r31141 is a docstring change.
     Votes:
       +1: danielsh
 
