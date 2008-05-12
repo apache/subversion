@@ -1673,6 +1673,9 @@ svn_repos_fs_get_locks(apr_hash_t **locks,
  * rev.  If the revision contains any unreadable changed paths, then
  * return SVN_ERR_AUTHZ_UNREADABLE.
  *
+ * Validate @a name and @a new_value like the same way
+ * svn_repos_fs_change_node_prop() does.
+ *   
  * Use @a pool for temporary allocations.
  *
  * @since New in 1.5.
@@ -1789,6 +1792,14 @@ svn_repos_fs_revision_proplist(apr_hash_t **table_p,
 
 /** Validating wrapper for svn_fs_change_node_prop() (which see for
  * argument descriptions).
+ *
+ * If @a name's kind is not @c svn_prop_regular_kind, return @c
+ * SVN_ERR_REPOS_BAD_ARGS.  If @a name is an "svn:" property, validate its
+ * @a value and return SVN_ERR_BAD_PROPERTY_VALUE if it is invalid for the
+ * property.
+ *
+ * @note Currently, the only "svn:" property validated is @c
+ * SVN_PROP_REVISION_DATE.  This may change in a future release.
  */
 svn_error_t *
 svn_repos_fs_change_node_prop(svn_fs_root_t *root,
@@ -1798,7 +1809,8 @@ svn_repos_fs_change_node_prop(svn_fs_root_t *root,
                               apr_pool_t *pool);
 
 /** Validating wrapper for svn_fs_change_txn_prop() (which see for
- * argument descriptions).
+ * argument descriptions).  See svn_repos_fs_change_txn_props() for more
+ * information.
  */
 svn_error_t *
 svn_repos_fs_change_txn_prop(svn_fs_txn_t *txn,
@@ -1807,7 +1819,8 @@ svn_repos_fs_change_txn_prop(svn_fs_txn_t *txn,
                              apr_pool_t *pool);
 
 /** Validating wrapper for svn_fs_change_txn_props() (which see for
- * argument descriptions).
+ * argument descriptions).  Validate properties and their values the
+ * same way svn_repos_fs_change_node_prop() does.
  * 
  * @since New in 1.5.
  */
