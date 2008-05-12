@@ -1633,6 +1633,21 @@ def props_over_time(sbox):
           svntest.actions.run_and_verify_svn(None, plist_expected, [],
                                              'proplist', '-v', peg_path)
 
+def invalid_propvalues(sbox):
+  "test handling invalid svn:* property values"
+
+  sbox.build(create_wc = False)
+  repo_dir = sbox.repo_dir
+  repo_url = sbox.repo_url
+
+  svntest.actions.enable_revprop_changes(repo_dir)
+  
+  expected_stderr = '.*unexpected property value.*|.*Bogus date.*'
+  svntest.actions.run_and_verify_svn(None, [], expected_stderr,
+                                     'propset', '--revprop', '-r', '0',
+                                     'svn:date', 'Sat May 10 12:12:31 2008',
+                                     repo_url)
+
 ########################################################################
 # Run the tests
 
@@ -1670,6 +1685,7 @@ test_list = [ None,
               SkipUnless(perms_on_symlink, svntest.main.is_posix_os),
               remove_custom_ns_props,
               props_over_time,
+              invalid_propvalues,
              ]
 
 if __name__ == '__main__':

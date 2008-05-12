@@ -1658,10 +1658,10 @@ svn_repos_fs_get_locks(apr_hash_t **locks,
 /** @} */
 
 /**
- * Like svn_fs_change_rev_prop(), but invoke the @a repos's pre- and
- * post-revprop-change hooks around the change as specified by @a
- * use_pre_revprop_change_hook and @a use_post_revprop_change_hook
- * (respectively).  Use @a pool for temporary allocations.
+ * Like svn_fs_change_rev_prop(), but validate the name and value of the
+ * property and invoke the @a repos's pre- and post-revprop-change hooks
+ * around the change as specified by @a use_pre_revprop_change_hook and
+ * @a use_post_revprop_change_hook (respectively).
  *
  * @a rev is the revision whose property to change, @a name is the
  * name of the property, and @a new_value is the new value of the
@@ -1672,6 +1672,8 @@ svn_repos_fs_get_locks(apr_hash_t **locks,
  * authz_read_baton) to validate the changed-paths associated with @a
  * rev.  If the revision contains any unreadable changed paths, then
  * return SVN_ERR_AUTHZ_UNREADABLE.
+ *
+ * Use @a pool for temporary allocations.
  *
  * @since New in 1.5.
  */
