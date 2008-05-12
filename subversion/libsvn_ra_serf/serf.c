@@ -1024,9 +1024,10 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
                                          path, pool));
 
       /* If we don't have the latest revision, we have to fetch it. */
-      if (!SVN_IS_VALID_REVNUM(revision)) {
-        SVN_ERR(svn_ra_serf__get_latest_revnum(ra_session, &revision, pool));
-      }
+      if (!SVN_IS_VALID_REVNUM(revision))
+        {
+          SVN_ERR(svn_ra_serf__get_latest_revnum(ra_session, &revision, pool));
+        }
 
       SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
                                           vcc_url, revision,
