@@ -63,14 +63,6 @@ Candidate changes:
     Votes:
       +1: jerenkrantz
 
-  * r31125
-    Fix circular dependency between libsvn_ra and libsvn_ra_serf by teaching
-    libsvn_ra_serf to call svn_ra_serf__has_capability directly.
-    Justification:
-      Trivial fix. Necessary for cygwin build.
-    Votes:
-      +1: djames, lgo, danielsh
-
   * r31138
     Validate svn:date property values in libsvn_repos.
     Votes:
@@ -83,6 +75,14 @@ Candidate changes:
 
 Approved changes (all releases):
 ================================
+
+  * r31125
+    Fix circular dependency between libsvn_ra and libsvn_ra_serf by teaching
+    libsvn_ra_serf to call svn_ra_serf__has_capability directly.
+    Justification:
+      Trivial fix. Necessary for cygwin build.
+    Votes:
+      +1: djames, lgo, danielsh
 
   * r31126
     Use 'void *' to avoid compile warnings and eliminate casts.
