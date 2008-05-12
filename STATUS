@@ -69,7 +69,12 @@ Candidate changes:
     Justification:
       Trivial fix. Necessary for cygwin build.
     Votes:
-      +1: djames, lgo
+      +1: djames, lgo, danielsh
+
+  * r31138
+    Validate svn:date property values in libsvn_repos.
+    Votes:
+      +1: danielsh
 
 Status of 1.5.1:
 ================
