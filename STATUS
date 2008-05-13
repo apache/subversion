@@ -61,13 +61,6 @@ Candidate changes:
     Votes:
       +1: danielsh
 
- * r31081, r31082, r31153
-   Various improvements to svnmerge-migrate-history.py for dealing
-   with the kinds of problems caused by svnmerge.py's total ignorance
-   of object history.
-   Votes:
-     +1: cmpilato
-
 Status of 1.5.1:
 ================
 
@@ -75,3 +68,10 @@ Candidate changes:
 
 Approved changes (all releases):
 ================================
+
+ * r31081, r31082, r31153, r31155
+   Various improvements to svnmerge-migrate-history.py for dealing
+   with the kinds of problems caused by svnmerge.py's total ignorance
+   of object history.
+   Votes:
+     +1: cmpilato, dlr
