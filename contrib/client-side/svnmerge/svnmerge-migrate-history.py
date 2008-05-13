@@ -189,7 +189,7 @@ class Migrator:
                % (self.flatten_prop(mergeinfo2str(new_mergeinfo))))
       
     # Unless we're doing a naive migration (or we've no, or only
-    # empty, mergeinfo anyway, start trying to cleanup after
+    # empty, mergeinfo anyway), start trying to cleanup after
     # svnmerge.py's history-ignorant initialization.
     if not self.naive_mode and new_mergeinfo:
 
