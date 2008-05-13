@@ -47,19 +47,26 @@ Candidate changes:
    Votes:
      +1: pburba
 
-  * r30629, r30787
+ * r30629, r30787
     mod_dontdothat: Allow opt-out of replay rejection.
     Notes:
       r30787 is a typo fix.
     Votes:
       +1: jerenkrantz
 
-  * r31138, r31141
+ * r31138, r31141
     Validate svn:date property values in libsvn_repos.
     Notes:
       r31141 is a docstring change.
     Votes:
       +1: danielsh
+
+ * r31081, r31082, r31153
+   Various improvements to svnmerge-migrate-history.py for dealing
+   with the kinds of problems caused by svnmerge.py's total ignorance
+   of object history.
+   Votes:
+     +1: cmpilato
 
 Status of 1.5.1:
 ================
