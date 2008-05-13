@@ -84,13 +84,3 @@ Approved changes (all releases):
       -Wno-uninitialized -Wdeclaration-after-statement -Werror'
     Votes:
       +1: djames, kfogel, lgo
-
-  * r31145
-    Fix memory leaks in Python bindings.
-    Justification:
-      Memory leaks are bad.
-    Notes:
-      Depends on r31055 and r31066 (see above)
-    Votes:
-      +1: djames
-      +0: epg

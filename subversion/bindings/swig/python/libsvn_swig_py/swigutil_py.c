@@ -442,6 +442,14 @@ static PyObject *make_ob_fs_root(svn_fs_root_t *ptr, PyObject *py_pool)
 {
   return svn_swig_NewPointerObjString(ptr, "svn_fs_root_t *", py_pool);
 }
+static PyObject *make_ob_wc_adm_access(void *adm_access)
+{
+  return svn_swig_NewPointerObjString(adm_access,
+                                      "svn_wc_adm_access_t *",
+                                      NULL);
+}
+
+
 /***/
 
 /* Conversion from Python single objects (not hashes/lists/etc.) to
@@ -2099,18 +2107,23 @@ svn_error_t *svn_swig_py_delta_path_driver_cb_func(void **dir_baton,
                                                    apr_pool_t *pool)
 {
   PyObject *function = callback_baton;
-  PyObject *result;
+  PyObject *result, *py_parent_baton;
   svn_error_t *err = SVN_NO_ERROR;
 
   if (function == NULL || function == Py_None)
     return err;
 
   svn_swig_py_acquire_py_lock();
+
+  py_parent_baton = svn_swig_NewPointerObjString(parent_baton,
+                                                 "void *",
+                                                 NULL);
+
   result = PyObject_CallFunction(function, (char *)"OsO&",
-                                 svn_swig_NewPointerObjString(parent_baton,
-                                                              "void *",
-                                                              application_py_pool),
+                                 py_parent_baton,
                                  path, make_ob_pool, pool);
+
+
   if (result == NULL)
     {
       err = callback_exception_error();
@@ -2127,6 +2140,8 @@ svn_error_t *svn_swig_py_delta_path_driver_cb_func(void **dir_baton,
         }
     }
 
+  Py_XDECREF(result);
+  Py_XDECREF(py_parent_baton);
   svn_swig_py_release_py_lock();
   return err;
 }
@@ -3155,12 +3170,20 @@ ra_callbacks_cancel_func(void *baton)
 {
   PyObject *callbacks = (PyObject *)baton;
   PyObject *py_callback;
+  svn_error_t *err;
 
   svn_swig_py_acquire_py_lock();
   py_callback = PyObject_GetAttrString(callbacks,
                                        (char *)"cancel_func");
   svn_swig_py_release_py_lock();
-  return svn_swig_py_cancel_func(py_callback);
+
+  err = svn_swig_py_cancel_func(py_callback);
+
+  svn_swig_py_acquire_py_lock();
+  Py_XDECREF(py_callback);
+  svn_swig_py_release_py_lock();
+
+  return err;
 }
 
 /* svn_ra_callbacks_t */
@@ -3609,7 +3632,7 @@ wc_diff_callbacks2_file_changed_or_added(const char *callback,
                                          void *diff_baton)
 {
   PyObject *callbacks = (PyObject *)diff_baton;
-  PyObject *py_callback, *py_adm_access, *py_propchanges, *py_originalprops;
+  PyObject *py_callback;
   PyObject *result = NULL;
   int py_contentstate, py_propstate;
   svn_error_t *err = SVN_NO_ERROR;
@@ -3627,18 +3650,15 @@ wc_diff_callbacks2_file_changed_or_added(const char *callback,
       goto finished;
     }
 
-  py_adm_access = svn_swig_NewPointerObjString(adm_access,
-                                               "svn_wc_adm_access_t *",
-                                               application_py_pool);
-  py_propchanges = svn_swig_py_proparray_to_dict(propchanges);
-  py_originalprops = svn_swig_py_prophash_to_dict(originalprops);
   result = PyObject_CallFunction(py_callback,
-                                 (char *)"OsssllssOO",
-                                 py_adm_access, path,
+                                 (char *)"O&sssllssO&O&",
+                                 make_ob_wc_adm_access, adm_access,
+                                 path,
                                  tmpfile1, tmpfile2,
                                  rev1, rev2,
                                  mimetype1, mimetype2,
-                                 py_propchanges, py_originalprops);
+                                 svn_swig_py_proparray_to_dict, propchanges,
+                                 svn_swig_py_prophash_to_dict, originalprops);
   if (result == NULL)
     {
       err = callback_exception_error();
@@ -3736,7 +3756,7 @@ wc_diff_callbacks2_file_deleted(svn_wc_adm_access_t *adm_access,
                                 void *diff_baton)
 {
   PyObject *callbacks = (PyObject *)diff_baton;
-  PyObject *py_callback, *py_adm_access, *py_originalprops, *result = NULL;
+  PyObject *py_callback, *result = NULL;
   long py_state;
   svn_error_t *err = SVN_NO_ERROR;
 
@@ -3753,15 +3773,13 @@ wc_diff_callbacks2_file_deleted(svn_wc_adm_access_t *adm_access,
       goto finished;
     }
 
-  py_adm_access = svn_swig_NewPointerObjString(adm_access,
-                                               "svn_wc_adm_access_t *",
-                                               application_py_pool);
-  py_originalprops = svn_swig_py_prophash_to_dict(originalprops);
   result = PyObject_CallFunction(py_callback,
-                                 (char *)"OsssssO",
-                                 py_adm_access, path,
+                                 (char *)"O&sssssO&",
+                                 make_ob_wc_adm_access, adm_access,
+                                 path,
                                  tmpfile1, tmpfile2,
-                                 mimetype1, mimetype2, py_originalprops);
+                                 mimetype1, mimetype2,
+                                 svn_swig_py_prophash_to_dict, originalprops);
   if (result == NULL)
     {
       err = callback_exception_error();
@@ -3792,7 +3810,7 @@ wc_diff_callbacks2_dir_added(svn_wc_adm_access_t *adm_access,
                              void *diff_baton)
 {
   PyObject *callbacks = (PyObject *)diff_baton;
-  PyObject *py_callback, *py_adm_access, *result = NULL;
+  PyObject *py_callback, *result = NULL;
   long py_state;
   svn_error_t *err = SVN_NO_ERROR;
 
@@ -3809,12 +3827,10 @@ wc_diff_callbacks2_dir_added(svn_wc_adm_access_t *adm_access,
       goto finished;
     }
 
-  py_adm_access = svn_swig_NewPointerObjString(adm_access,
-                                               "svn_wc_adm_access_t *",
-                                               application_py_pool);
   result = PyObject_CallFunction(py_callback,
-                                 (char *)"Osl",
-                                 py_adm_access, path, rev);
+                                 (char *)"O&sl",
+                                 make_ob_wc_adm_access, adm_access,
+                                 path, rev);
   if (result == NULL)
     {
       err = callback_exception_error();
@@ -3844,7 +3860,7 @@ wc_diff_callbacks2_dir_deleted(svn_wc_adm_access_t *adm_access,
                                void *diff_baton)
 {
   PyObject *callbacks = (PyObject *)diff_baton;
-  PyObject *py_callback, *py_adm_access, *result = NULL;
+  PyObject *py_callback, *result = NULL;
   long py_state;
   svn_error_t *err = SVN_NO_ERROR;
 
@@ -3861,12 +3877,9 @@ wc_diff_callbacks2_dir_deleted(svn_wc_adm_access_t *adm_access,
       goto finished;
     }
 
-  py_adm_access = svn_swig_NewPointerObjString(adm_access,
-                                               "svn_wc_adm_access_t *",
-                                               application_py_pool);
   result = PyObject_CallFunction(py_callback,
-                                 (char *)"Os",
-                                 py_adm_access, path);
+                                 (char *)"O&s",
+                                 make_ob_wc_adm_access, adm_access, path);
   if (result == NULL)
     {
       err = callback_exception_error();
@@ -3898,8 +3911,8 @@ wc_diff_callbacks2_dir_props_changed(svn_wc_adm_access_t *adm_access,
                                      void *diff_baton)
 {
   PyObject *callbacks = (PyObject *)diff_baton;
-  PyObject *py_callback, *py_adm_access;
-  PyObject *py_propchanges, *py_originalprops, *result = NULL;
+  PyObject *py_callback;
+  PyObject *result = NULL;
   long py_state;
   svn_error_t *err = SVN_NO_ERROR;
 
@@ -3916,15 +3929,12 @@ wc_diff_callbacks2_dir_props_changed(svn_wc_adm_access_t *adm_access,
       goto finished;
     }
 
-  py_adm_access = svn_swig_NewPointerObjString(adm_access,
-                                               "svn_wc_adm_access_t *",
-                                               application_py_pool);
-  py_propchanges = svn_swig_py_proparray_to_dict(propchanges);
-  py_originalprops = svn_swig_py_prophash_to_dict(originalprops);
   result = PyObject_CallFunction(py_callback,
-                                 (char *)"OsOO",
-                                 py_adm_access, path,
-                                 py_propchanges, py_originalprops);
+                                 (char *)"O&sO&O&",
+                                 make_ob_wc_adm_access, adm_access,
+                                 path,
+                                 svn_swig_py_proparray_to_dict, propchanges,
+                                 svn_swig_py_prophash_to_dict, originalprops);
   if (result == NULL)
     {
       err = callback_exception_error();
