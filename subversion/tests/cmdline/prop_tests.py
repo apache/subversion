@@ -1685,7 +1685,8 @@ test_list = [ None,
               SkipUnless(perms_on_symlink, svntest.main.is_posix_os),
               remove_custom_ns_props,
               props_over_time,
-              invalid_propvalues,
+              # XFail the same reason revprop_change() is.
+              XFail(invalid_propvalues, svntest.main.is_ra_type_dav),
              ]
 
 if __name__ == '__main__':
