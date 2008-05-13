@@ -11258,6 +11258,7 @@ def merge_chokes_on_renamed_subtrees(sbox):
   expected_status.tweak('H_COPY/psi_moved', status='MM')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+
 #----------------------------------------------------------------------
 # Issue #3157
 def dont_explicitly_record_implicit_mergeinfo(sbox):
@@ -11374,6 +11375,32 @@ def dont_explicitly_record_implicit_mergeinfo(sbox):
                                        expected_status, expected_skip,
                                        None, None, None, None, None, 1)
   os.chdir(saved_cwd)
+
+# Test for issue where merging a change to a broken link fails
+def merge_broken_link(sbox):
+  "merge with broken symlinks in target"
+
+  # Create our good 'ole greek tree.
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  src_path = os.path.join(wc_dir, 'A', 'B', 'E')
+  copy_path = os.path.join(wc_dir, 'A', 'B', 'E_COPY')
+  link_path = os.path.join(src_path, 'beta_link')
+
+  os.symlink('beta_broken', link_path)
+  svntest.main.run_svn(None, 'add', link_path)
+  svntest.main.run_svn(None, 'commit', '-m', 'Create a broken link', link_path)
+  svntest.main.run_svn(None, 'copy', src_path, copy_path)
+  svntest.main.run_svn(None, 'commit', '-m', 'Copy the tree with the broken link', 
+                       copy_path)
+  os.unlink(link_path)
+  os.symlink('beta', link_path)
+  svntest.main.run_svn(None, 'commit', '-m', 'Fix a broken link', link_path)
+  svntest.actions.run_and_verify_svn(
+    None, 
+    expected_merge_output([[4]], 'U    ' + copy_path + '/beta_link\n'),
+    [], 'merge', '-c4', src_path, copy_path)
+
 
 ########################################################################
 # Run the tests
@@ -11541,6 +11568,7 @@ test_list = [ None,
                                server_has_mergeinfo)),
               SkipUnless(dont_explicitly_record_implicit_mergeinfo,
                          server_has_mergeinfo),
+              merge_broken_link,
              ]
 
 if __name__ == '__main__':
