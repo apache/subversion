@@ -76,11 +76,3 @@ Approved changes (all releases):
       Trivial fix. Necessary for cygwin build.
     Votes:
       +1: djames, lgo, danielsh
-
-  * r31126
-    Use 'void *' to avoid compile warnings and eliminate casts.
-    Justification:
-      Trivial fix. Allows clean build with EXTRA_CFLAGS='-Wall
-      -Wno-uninitialized -Wdeclaration-after-statement -Werror'
-    Votes:
-      +1: djames, kfogel, lgo
