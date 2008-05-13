@@ -54,10 +54,11 @@ Candidate changes:
     Votes:
       +1: jerenkrantz
 
- * r31138, r31141
+ * r31138, r31141, r31157
     Validate svn:date property values in libsvn_repos.
     Notes:
       r31141 is a docstring change.
+      r31157 marks the regression test XFail over DAV.
     Votes:
       +1: danielsh
 
