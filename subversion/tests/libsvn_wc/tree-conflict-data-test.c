@@ -348,7 +348,7 @@ test_write_invalid_tree_conflicts(const char **msg,
   conflict->victim_path  = "Foo.c";
   conflict->node_kind    = svn_node_file;
   conflict->operation    = svn_wc_operation_update;
-  conflict->action       = svn_wc_conflict_action_add;
+  conflict->action       = 99;
   conflict->reason       = svn_wc_conflict_reason_edited;
 
   APR_ARRAY_PUSH(conflicts, svn_wc_conflict_description_t *) = conflict;
@@ -366,7 +366,7 @@ test_write_invalid_tree_conflicts(const char **msg,
   conflict->node_kind    = svn_node_file;
   conflict->operation    = svn_wc_operation_update;
   conflict->action       = svn_wc_conflict_action_delete;
-  conflict->reason       = svn_wc_conflict_reason_unversioned;
+  conflict->reason       = 99;
 
   APR_ARRAY_PUSH(conflicts, svn_wc_conflict_description_t *) = conflict;
 
