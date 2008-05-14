@@ -67,6 +67,11 @@ Candidate changes:
    Votes:
      +1: cmpilato, kfogel
 
+ * r31159
+   Fix "file not found" error when a merge target is a broken symbolic link.
+   Votes:
+     +1: kfogel
+
 Status of 1.5.1:
 ================
 
