@@ -40,7 +40,7 @@ extern "C" {
  * password is stored in KWallet.
  *
  * @since New in 1.6
- * @note This function actually works only on systems with libsvn_subr_kwallet
+ * @note This function actually works only on systems with libsvn_auth_kwallet
  * and KWallet installed.
  */
 svn_auth_simple_provider_func_t
