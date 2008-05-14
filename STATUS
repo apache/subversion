@@ -62,11 +62,6 @@ Candidate changes:
     Votes:
       +1: danielsh, kfogel
 
- * r31162
-   Fix an OBOE in svn_path_splitext().
-   Votes:
-     +1: cmpilato, kfogel
-
  * r31159
    Fix "file not found" error when a merge target is a broken symbolic link.
    Votes:
@@ -79,3 +74,9 @@ Candidate changes:
 
 Approved changes (all releases):
 ================================
+
+ * r31162
+   Fix an OBOE in svn_path_splitext().
+   Votes:
+     +1: cmpilato, kfogel, danielsh
+
