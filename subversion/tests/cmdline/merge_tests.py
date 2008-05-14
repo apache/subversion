@@ -11568,7 +11568,7 @@ test_list = [ None,
                                server_has_mergeinfo)),
               SkipUnless(dont_explicitly_record_implicit_mergeinfo,
                          server_has_mergeinfo),
-              merge_broken_link,
+              SkipUnless(merge_broken_link, svntest.main.is_posix_os),
              ]
 
 if __name__ == '__main__':
