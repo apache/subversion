@@ -35,8 +35,10 @@ Candidate changes:
     Votes:
       +1: danielsh, kfogel
 
- * r31159
+ * r31159, r31179
    Fix "file not found" error when a merge target is a broken symbolic link.
+   Notes:
+     r31179 just makes sure the new test is skipped on Windows.
    Votes:
      +1: kfogel
 
