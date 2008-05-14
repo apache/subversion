@@ -1492,7 +1492,7 @@ svn_path_splitext(const char **path_root,
          isn't the first character of the last component. */
       last_slash = strrchr(path, '/');
       if ((last_slash && (last_dot > (last_slash + 1)))
-          || ((! last_slash) && (last_dot > path + 1)))
+          || ((! last_slash) && (last_dot > path)))
         {
           if (path_root)
             *path_root = apr_pstrmemdup(pool, path,

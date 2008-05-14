@@ -1161,6 +1161,8 @@ test_splitext(const char **msg,
     { "sub/.dot-file",             "sub/.dot-file",          "" },
     { ".dot-file.withext",         ".dot-file.",             "withext" },
     { "sub/.dot-file.withext",     "sub/.dot-file.",         "withext" },
+    { "sub/a.out",                 "sub/a.",                 "out" },
+    { "a.out",                     "a.",                     "out" },
     { "",                          "",                       "" },
   };
 
