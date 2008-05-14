@@ -9,14 +9,6 @@ Status of 1.5.0:
 
 Candidate changes:
 
- * r30746, r30747
-   Fix a minor merge range notification header bug.
-   Notes:
-     r30747 is just cleanup of some cruft that snuck in with r30746,
-     thus adhering to my "every commit should need a follow-up" ethos.
-   Votes:
-     +1: pburba, markphip
-
  * r31059, 31060, 31061, 31075, 31151.
    Fix issue #3157, Merging a change from a path's natural history
    creates self-referential mergeinfo
@@ -55,6 +47,18 @@ Candidate changes:
 
 Approved changes (all releases):
 ================================
+
+ * r30746, r30747
+   Fix a minor merge range notification header bug.
+   Notes:
+     r30747 is just cleanup of some cruft that snuck in with r30746,
+     thus adhering to my "every commit should need a follow-up" ethos.
+     r30746 contains, like, one tiny *real* change, then a whole bunch
+     of bogus indentation changes that were supposed to be part of
+     r30748.  Probably best to not fix that indentation during
+     backport, in case we later backport r30748.
+   Votes:
+     +1: pburba, markphip, cmpilato
 
  * r30949, r30962
    Fix issue #3188.  Mergeinfo on switched targets/subtrees should elide
