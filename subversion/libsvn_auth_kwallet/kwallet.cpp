@@ -55,6 +55,11 @@ kwallet_password_get(const char **password,
                      svn_boolean_t non_interactive,
                      apr_pool_t *pool)
 {
+  if (non_interactive)
+  {
+    return FALSE;
+  }
+
   if (! KWallet::Wallet::isEnabled())
   {
     return FALSE;
@@ -108,6 +113,11 @@ kwallet_password_set(apr_hash_t *creds,
                      svn_boolean_t non_interactive,
                      apr_pool_t *pool)
 {
+  if (non_interactive)
+  {
+    return FALSE;
+  }
+
   if (! KWallet::Wallet::isEnabled())
   {
     return FALSE;
