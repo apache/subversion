@@ -289,10 +289,10 @@ AC_CHECK_PROG(HAVE_PKG_CONFIG, pkg-config, yes)
 dnl KWallet -------------------
 
 AC_ARG_WITH(kwallet,
-  AS_HELP_STRING([--with-kwallet=PATH],
-                 [Enable use of KWallet (KDE 4) for auth credentials]),
-                 [with_kwallet="$withval"],
-                 [with_kwallet=no])
+  [AS_HELP_STRING([[--with-kwallet[=PATH]]],
+                  [Enable use of KWallet (KDE 4) for auth credentials])],
+                  [with_kwallet="$withval"],
+                  [with_kwallet=no])
 
 AC_MSG_CHECKING([whether to look for KWallet])
 if test "$with_kwallet" != "no"; then
@@ -318,10 +318,11 @@ if test "$with_kwallet" != "no"; then
           done
           qt_include_dirs="${qt_include_dirs## }"
           if test "$with_kwallet" != "yes"; then
-            kde_dir="$with_kwallet"
+            kde4_config="$with_kwallet/bin/kde4-config"
           else
-            kde_dir="`kde4-config --prefix`"
+            kde4_config="kde4-config"
           fi
+          kde_dir="`$kde4_config --prefix`"
           SVN_KWALLET_INCLUDES="$qt_include_dirs -I$kde_dir/include"
           SVN_KWALLET_LIBS="-lQtCore -lQtDBus -lQtGui -lkdecore -lkdeui"
           CXXFLAGS="$CXXFLAGS $SVN_KWALLET_INCLUDES"
@@ -331,7 +332,7 @@ if test "$with_kwallet" != "no"; then
             qt_lib_dirs="$qt_lib_dirs $l"
           done
           qt_lib_dirs="${qt_lib_dirs## }"
-          LDFLAGS="$old_LDFLAGS $qt_lib_dirs -L$kde_dir/lib`kde4-config --libsuffix`"
+          LDFLAGS="$old_LDFLAGS $qt_lib_dirs -L$kde_dir/lib`$kde4_config --libsuffix`"
           AC_LINK_IFELSE([
 #include <kwallet.h>
 int main()
