@@ -60,12 +60,12 @@ Candidate changes:
       r31141 is a docstring change.
       r31157 marks the regression test XFail over DAV.
     Votes:
-      +1: danielsh
+      +1: danielsh, kfogel
 
  * r31162
    Fix an OBOE in svn_path_splitext().
    Votes:
-     +1: cmpilato
+     +1: cmpilato, kfogel
 
 Status of 1.5.1:
 ================
