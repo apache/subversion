@@ -196,7 +196,8 @@ static const svn_auth_provider_t kwallet_simple_provider = {
 };
 
 /* Public API */
-extern "C" svn_auth_simple_provider_func_t
+extern "C" {
+void
 svn_auth_get_kwallet_simple_provider(svn_auth_provider_object_t **provider,
                                      apr_pool_t *pool)
 {
@@ -205,4 +206,5 @@ svn_auth_get_kwallet_simple_provider(svn_auth_provider_object_t **provider,
 
   po->vtable = &kwallet_simple_provider;
   *provider = po;
+}
 }
