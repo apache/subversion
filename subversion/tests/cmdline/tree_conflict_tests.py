@@ -89,7 +89,7 @@ def modify(modaction, wc_dir, P):
 
   # print "  Mod: '" + modaction + "' '" + P + "'"
 
-  if modaction == 'fT':    # file Text-mod
+  if modaction == 'ft':    # file text-mod
     assert os.path.exists(F)
     main.file_append(F, "This is a text-mod of file F.\n")
   elif modaction == 'fP':  # file Prop-mod
@@ -105,13 +105,12 @@ def modify(modaction, wc_dir, P):
     assert os.path.exists(D)
     main.run_svn(None, 'del', D)
   elif modaction == 'fA':  # file Add (new)
-    assert not os.path.exists(F)
-    main.file_write(F, "This is initially file F.\n")
+    assert os.path.exists(F)
     main.run_svn(None, 'add', F)
     main.run_svn(None, 'pset', 'fprop2', 'A prop of added file F.', F)
   elif modaction == 'dA':  # dir Add (new)
-    assert not os.path.exists(D)
-    main.run_svn(None, 'mkdir', D)
+    assert os.path.exists(D)
+    main.run_svn(None, 'add', D)
     main.run_svn(None, 'pset', 'dprop2', 'A prop of added dir D.', D)
   elif modaction == 'fC':  # file Copy (from F1)
     main.run_svn(None, 'copy', F1, F)
@@ -123,7 +122,7 @@ def modify(modaction, wc_dir, P):
     main.run_svn(None, 'rename', D, D2)
   elif modaction == 'fa':  # file add (new) on disk
     assert not os.path.exists(F)
-    main.file_write(F, "This is initially-unversioned file F.\n")
+    main.file_write(F, "This is file F.\n")
   elif modaction == 'da':  # dir add (new) on disk
     assert not os.path.exists(D)
     os.mkdir(D)
@@ -173,13 +172,13 @@ def modify(modaction, wc_dir, P):
 # dir-add(D)  = add-new(D)(deep?) or copy(D1,D)(and modify?)
 
 f_adds = [
-  ( 'f/add/new',    ['fA'],             [['fd']] ),
+  ( 'f/add/new',    ['fa','fA'],        [['fd']] ),
   ( 'f/add/copy',   ['fC'],             [['fd']] ),
-  ( 'f/add/cp_fT',  ['fC','fT'],        [] ),
+  ( 'f/add/cp_ft',  ['fC','ft'],        [] ),
   #( 'f/add/cp_fP',  ['fC','fP'],        [['df']] ),  # don't test all combinations, just because it's slow
 ]
 d_adds = [
-  ( 'd/add/new',    ['dA'],             [] ),
+  ( 'd/add/new',    ['da','dA'],        [] ),
   ( 'd/add/copy',   ['dC'],             [] ),
   #( 'd/add/cp_dP',  ['dC','dP'],        [] ),  # not yet
 ]
@@ -209,15 +208,14 @@ d_dels = [
 ]
 
 f_rpls = [
-  #( 'f/rpl/only',   ['fD','fA'],        [['fd']] ),  # replacement - not yet
-  #( 'f/rpl/move',   ['fM','fA'],        [['fd']] ),  # don't test all combinations, just because it's slow
+  #( 'f/rpl/only',   ['fD','fa','fA'],   [['fd']] ),  # replacement - not yet
+  #( 'f/rpl/move',   ['fM','fa','fA'],   [['fd']] ),  # don't test all combinations, just because it's slow
 ]
 d_rpls = [
-  #( 'd/rpl/only',   ['dD','dA'],        [] ),
-  #( 'd/rpl/move',   ['dM','dA'],        [] ),
-  # Replacement involves a complication: re-using a dir rather than strictly
-  # creating a new dir, as the old one still exists, so action 'dA' fails.
-  ### Need a "schedule this existing dir for re-addition" action to do this.
+  #( 'd/rpl/only',   ['dD','dA'],        [] ),  # replacement - not yet
+  #( 'd/rpl/move',   ['dM','dA'],        [] ),  # don't test all combinations, just because it's slow
+  # Note that directory replacement differs from file replacement: the
+  # schedule-delete dir is still on disk and is re-used for the re-addition.
 ]
 f_rpl_d = [
   # File replaced by directory: not yet testable
@@ -227,15 +225,15 @@ d_rpl_f = [
 ]
 
 f_mods = [
-  ( 'f/mod/text',   ['fT'],             [] ),
+  ( 'f/mod/text',   ['ft'],             [] ),
   #( 'f/mod/prop',   ['fP'],             [['fd']] ),  # property mods only - not yet
-  #( 'f/mod/both',   ['fT','fP'],        [] ),  # don't test all combinations, just because it's slow
+  #( 'f/mod/both',   ['ft','fP'],        [] ),  # don't test all combinations, just because it's slow
 ]
 d_mods = [
   ( 'd/mod/dP',     ['dP'],             [] ),
   # These test actions for operating on a child of the directory are not yet implemented:
   #( 'd/mod/f_fA',   [],                 [] ),
-  #( 'd/mod/f_fT',   [],                 [] ),
+  #( 'd/mod/f_ft',   [],                 [] ),
   #( 'd/mod/f_fP',   [],                 [] ),
   #( 'd/mod/f_fD',   [],                 [] ),
   #( 'd/mod/d_dP',   [],                 [] ),
@@ -261,8 +259,10 @@ def set_up(wc_dir, scenarios):
     # create each file or dir unless to-be-added
     if path[1:6] != '/add/':
       if path[0:1] == 'f':
+        modify('fa', wc_dir, P)
         modify('fA', wc_dir, P)
       if path[0:1] == 'd':
+        modify('da', wc_dir, P)
         modify('dA', wc_dir, P)
   main.run_svn(None, 'commit', '-m', 'Initial set-up.', wc_dir)
 
