@@ -16,7 +16,7 @@
  * @endcopyright
  *
  * @file svn_auth_kwallet.h
- * @brief Subversion's authentication system - KWallet
+ * @brief Subversion's authentication system - Support for KWallet
  */
 
 #ifndef SVN_AUTH_KWALLET_H
@@ -43,7 +43,7 @@ extern "C" {
  * @note This function actually works only on systems with libsvn_auth_kwallet
  * and KWallet installed.
  */
-svn_auth_simple_provider_func_t
+void
 svn_auth_get_kwallet_simple_provider(svn_auth_provider_object_t **provider,
                                      apr_pool_t *pool);
 
