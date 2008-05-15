@@ -51,6 +51,10 @@
 # TXN="$2"
 # svn-keyword-check.pl --repos $REPOS --transaction $TXT --text .java --text .txt
 #
+# $HeadURL$
+# $LastChangedRevision$
+# $LastChangedDate$
+# $LastChangedBy$
 
 BEGIN {
     if ( $] >= 5.006_000) {
