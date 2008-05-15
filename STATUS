@@ -4,10 +4,8 @@ See "Stabilizing and maintaining releases" in trunk/www/hacking.html for
 details on how release lines and voting work, what kinds of bugs can
 delay a release, etc.
 
-Status of 1.5.0:
-================
-
-Candidate changes:
+Candidate changes for 1.5.0:
+============================
 
  * r31059, 31060, 31061, 31075, 31151.
    Fix issue #3157, Merging a change from a path's natural history
@@ -44,10 +42,8 @@ Candidate changes:
    Votes:
      +1: kfogel(r31159, r31179), kameshj
 
-Status of 1.5.1:
-================
-
-Candidate changes:
+Candidate changes for 1.5.1:
+============================
 
  * r31196
    Don't commit an add of a missing item (issue #3198).
