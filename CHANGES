@@ -21,7 +21,6 @@ http://svn.collab.net/repos/svn/tags/1.5.0
     * 'svn copy', 'move' now support peg revisions (issue #2546; also r26484)
     * 'svn copy A B ; svn move B C' now the same as 'svn copy A C' (issue #756)
     * 'svn copy -rBASE' now works in a working copy (issue #1643)
-    * 'svn commit' now takes '--with-revprop' option (issue #1976)
     * 'svn import' now takes '--force' (issue #2806)
     * 'svn status -u' now shows of locally deleted directories (issue #2420)
     * 'svn switch' now takes '--force' (issue #2392)
