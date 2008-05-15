@@ -369,7 +369,9 @@ get_auth_simple_provider(svn_auth_provider_object_t **provider,
                          "libsvn_auth_%s-%d.so.0",
                          provider_name,
                          SVN_VER_MAJOR);
-  funcname = apr_psprintf(pool, "svn_auth_get_%s_simple_provider", provider_name);
+  funcname = apr_psprintf(pool,
+                          "svn_auth_get_%s_simple_provider",
+                          provider_name);
   svn_dso_load(&dso, libname);
   if (dso)
     {

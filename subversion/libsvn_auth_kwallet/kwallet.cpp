@@ -39,7 +39,6 @@
 #include <kcmdlineargs.h>
 #include <kwallet.h>
 
-#define SVN_AUTH__KWALLET_PASSWORD_TYPE            "kwallet"
 
 /*-----------------------------------------------------------------------*/
 /* KWallet simple provider, puts passwords in KWallet                    */
@@ -56,14 +55,14 @@ kwallet_password_get(const char **password,
                      apr_pool_t *pool)
 {
   if (non_interactive)
-  {
-    return FALSE;
-  }
+    {
+      return FALSE;
+    }
 
   if (! KWallet::Wallet::isEnabled())
-  {
-    return FALSE;
-  }
+    {
+      return FALSE;
+    }
 
   KCmdLineArgs::init(1,
                      (char *[1]) { "svn" },
@@ -79,10 +78,14 @@ kwallet_password_get(const char **password,
   svn_boolean_t ret = FALSE;
   QString wallet_name = KWallet::Wallet::NetworkWallet();
   QString folder = QString::fromUtf8("Subversion");
-  QString key = QString::fromUtf8(username) + "@" + QString::fromUtf8(realmstring);
+  QString key =
+    QString::fromUtf8(username) + "@" + QString::fromUtf8(realmstring);
   if (! KWallet::Wallet::keyDoesNotExist(wallet_name, folder, key))
     {
-      KWallet::Wallet *wallet = KWallet::Wallet::openWallet(wallet_name, wid, KWallet::Wallet::Synchronous);
+      KWallet::Wallet *wallet =
+        KWallet::Wallet::openWallet(wallet_name,
+                                    wid,
+                                    KWallet::Wallet::Synchronous);
       if (wallet)
         {
           if (wallet->hasFolder(folder))
@@ -92,7 +95,9 @@ kwallet_password_get(const char **password,
                   QString q_password;
                   if (wallet->readPassword(key, q_password) == 0);
                     {
-                      *password = apr_pstrmemdup(pool, q_password.toUtf8().data(), q_password.size());
+                      *password = apr_pstrmemdup(pool,
+                                                 q_password.toUtf8().data(),
+                                                 q_password.size());
                       ret = TRUE;
                     }
                 }
@@ -114,14 +119,14 @@ kwallet_password_set(apr_hash_t *creds,
                      apr_pool_t *pool)
 {
   if (non_interactive)
-  {
-    return FALSE;
-  }
+    {
+      return FALSE;
+    }
 
   if (! KWallet::Wallet::isEnabled())
-  {
-    return FALSE;
-  }
+    {
+      return FALSE;
+    }
 
   KCmdLineArgs::init(1,
                      (char *[1]) { "svn" },
@@ -138,7 +143,10 @@ kwallet_password_set(apr_hash_t *creds,
   QString q_password = QString::fromUtf8(password);
   QString wallet_name = KWallet::Wallet::NetworkWallet();
   QString folder = QString::fromUtf8("Subversion");
-  KWallet::Wallet *wallet = KWallet::Wallet::openWallet(wallet_name, wid, KWallet::Wallet::Synchronous);
+  KWallet::Wallet *wallet =
+    KWallet::Wallet::openWallet(wallet_name,
+                                wid,
+                                KWallet::Wallet::Synchronous);
   if (wallet)
     {
       if (! wallet->hasFolder(folder))
@@ -149,7 +157,8 @@ kwallet_password_set(apr_hash_t *creds,
         {
           if (wallet->setFolder(folder))
             {
-              QString key = QString::fromUtf8(username) + "@" + QString::fromUtf8(realmstring);
+              QString key = QString::fromUtf8(username) + "@"
+                + QString::fromUtf8(realmstring);
               if (wallet->writePassword(key, q_password) == 0)
                 {
                   ret = TRUE;
