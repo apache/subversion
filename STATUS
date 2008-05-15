@@ -49,5 +49,10 @@ Status of 1.5.1:
 
 Candidate changes:
 
+ * r31196
+   Don't commit an add of a missing item (issue #3198).
+   Votes:
+     +1: kfogel
+   
 Approved changes (all releases):
 ================================
