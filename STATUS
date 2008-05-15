@@ -72,11 +72,3 @@ Approved changes (all releases):
    Enable svn.diff in swig-py on Windows.
    Votes:
      +1: epg, arfrever, cmpilato
-
- * r31131
-   Restore compatibility of svn_client_add3()'s non-recursive behavior.
-   Notes:
-     This fixes an API incompatibility.  But in practice it's a minor
-     problem, and could probably wait until 1.5.1 if necessary.
-   Votes:
-     +1: kfogel, epg, cmpilato
