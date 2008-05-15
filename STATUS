@@ -67,8 +67,3 @@ Approved changes (all releases):
    to repos.
    Votes:
      +1: pburba, markphip, cmpilato
-
- * r31056
-   Enable svn.diff in swig-py on Windows.
-   Votes:
-     +1: epg, arfrever, cmpilato
