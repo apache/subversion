@@ -1778,14 +1778,17 @@ typedef struct svn_wc_entry_t
    * @since New in 1.2.
    */
   const char *lock_token;
+
   /** lock owner, or NULL if not locked in this WC
    * @since New in 1.2.
    */
   const char *lock_owner;
+
   /** lock comment or NULL if not locked in this WC or no comment
    * @since New in 1.2.
    */
   const char *lock_comment;
+
   /** Lock creation date or 0 if not locked in this WC
    * @since New in 1.2.
    */
@@ -1862,7 +1865,6 @@ typedef struct svn_wc_entry_t
    * read_entry()
    * write_entry()
    * fold_entry()
-   *
    */
 } svn_wc_entry_t;
 
