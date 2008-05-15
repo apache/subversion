@@ -39,15 +39,6 @@ Candidate changes for 1.5.1:
 Approved changes (all releases):
 ================================
 
- * r31138, r31141, r31157, r31209
-    Validate svn:date property values in libsvn_repos.
-    Notes:
-      r31141 is a docstring change.
-      r31157 marks the regression test XFail over DAV.
-      r31209 is a teeny typo (read: obvious) fix
-    Votes:
-      +1: danielsh, kfogel, cmpilato
-
  * (r31159, r31179) or r31193 from 1.5.x-r31159-r31179 branch.
    Fix "file not found" error when a merge target is a broken symbolic link.
    Notes:
