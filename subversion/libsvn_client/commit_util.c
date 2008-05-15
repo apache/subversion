@@ -443,7 +443,7 @@ harvest_committables(apr_hash_t *committables,
 
       /* First of all, the working file or directory must exist.
          See issue #3198. */  
-      svn_io_check_path(path, &working_kind, pool);
+      SVN_ERR(svn_io_check_path(path, &working_kind, pool));
       if (working_kind == svn_node_none)
         {
           return svn_error_createf
