@@ -45,8 +45,10 @@ Candidate changes for 1.5.0:
 Candidate changes for 1.5.1:
 ============================
 
- * r31196
+ * r31196, r31199
    Don't commit an add of a missing item (issue #3198).
+   Notes:
+     r31199 is a trivial followup that adds a missing SVN_ERR() wrap.
    Votes:
      +1: kfogel
    
