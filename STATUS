@@ -51,6 +51,7 @@ Candidate changes for 1.5.1:
      r31199 is a trivial followup that adds a missing SVN_ERR() wrap.
    Votes:
      +1: kfogel
+     +0: danielsh
    
 Approved changes (all releases):
 ================================
