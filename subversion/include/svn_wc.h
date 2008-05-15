@@ -909,6 +909,11 @@ typedef struct svn_wc_notify_t {
    * left and right sides of the merge are from the same URL.  In all
    * other cases, it is @c NULL.  @since New in 1.5 */
   svn_merge_range_t *merge_range;
+  /** If non-NULL, specifies an absolute path prefix that can be subtracted
+   * from the start of the absolute path in @c path.  Its purpose is to
+   * allow notification to remove a common prefix from all the paths
+   * displayed for an operation.  @since New in 1.6 */
+  const char *path_prefix;
   /* NOTE: Add new fields at the end to preserve binary compatibility.
      Also, if you add fields here, you have to update svn_wc_create_notify
      and svn_wc_dup_notify. */
