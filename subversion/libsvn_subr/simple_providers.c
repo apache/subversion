@@ -42,15 +42,6 @@
 #define SVN_AUTH__AUTHFILE_PASSWORD_KEY            "password"
 #define SVN_AUTH__AUTHFILE_PASSTYPE_KEY            "passtype"
 
-/* If you add a password type for a provider which stores
- * passwords on disk in encrypted form, remember to update
- * svn_auth__simple_save_creds_helper. Otherwise it will be
- * assumed that your provider stores passwords in plaintext. */
-#define SVN_AUTH__SIMPLE_PASSWORD_TYPE             "simple"
-#define SVN_AUTH__WINCRYPT_PASSWORD_TYPE           "wincrypt"
-#define SVN_AUTH__KEYCHAIN_PASSWORD_TYPE           "keychain"
-#define SVN_AUTH__KWALLET_PASSWORD_TYPE            "kwallet"
-
 /* Baton type for the simple provider. */
 typedef struct
 {

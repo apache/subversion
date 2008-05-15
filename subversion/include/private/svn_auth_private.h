@@ -26,6 +26,15 @@
 extern "C" {
 #endif /* __cplusplus */
 
+/* If you add a password type for a provider which stores
+ * passwords on disk in encrypted form, remember to update
+ * svn_auth__simple_save_creds_helper. Otherwise it will be
+ * assumed that your provider stores passwords in plaintext. */
+#define SVN_AUTH__SIMPLE_PASSWORD_TYPE             "simple"
+#define SVN_AUTH__WINCRYPT_PASSWORD_TYPE           "wincrypt"
+#define SVN_AUTH__KEYCHAIN_PASSWORD_TYPE           "keychain"
+#define SVN_AUTH__KWALLET_PASSWORD_TYPE            "kwallet"
+
 /* A function that stores in *PASSWORD (potentially after decrypting it)
    the user's password.  It might be obtained directly from CREDS, or
    from an external store, using REALMSTRING and USERNAME as keys.
