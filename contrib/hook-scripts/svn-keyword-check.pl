@@ -49,7 +49,7 @@
 #
 # REPOS="$1"
 # TXN="$2"
-# svnkeywordcheck.pl --repos $REPOS --transaction $TXT --text .java --text .txt
+# svn-keyword-check.pl --repos $REPOS --transaction $TXT --text .java --text .txt
 #
 
 BEGIN {
