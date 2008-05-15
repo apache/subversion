@@ -302,8 +302,19 @@ if test "$with_kwallet" != "no"; then
       AC_MSG_CHECKING([for QtCore, QtDBus, QtGui])
       if pkg-config --exists QtCore QtDBus QtGui; then
         AC_MSG_RESULT([yes])
-        AC_LANG(C++)
-        AC_CHECK_PROG(HAVE_KDE4_CONFIG, kde4-config, yes)
+        if test "$with_kwallet" != "yes"; then
+          AC_MSG_CHECKING([for kde4-config])
+          kde4_config="$with_kwallet/bin/kde4-config"
+          if test -f "$kde4_config" && test -x "$kde4_config"; then
+            HAVE_KDE4_CONFIG="yes"
+            AC_MSG_RESULT([yes])
+          else
+            AC_MSG_RESULT([no])
+          fi
+        else
+          AC_CHECK_PROG(HAVE_KDE4_CONFIG, kde4-config, yes)
+          kde4_config="kde4-config"
+        fi
         if test "$HAVE_KDE4_CONFIG" = "yes"; then
           AC_MSG_CHECKING([for KWallet])
           old_CXXFLAGS="$CXXFLAGS"
@@ -317,11 +328,6 @@ if test "$with_kwallet" != "no"; then
             qt_include_dirs="$qt_include_dirs $i"
           done
           qt_include_dirs="${qt_include_dirs## }"
-          if test "$with_kwallet" != "yes"; then
-            kde4_config="$with_kwallet/bin/kde4-config"
-          else
-            kde4_config="kde4-config"
-          fi
           kde_dir="`$kde4_config --prefix`"
           SVN_KWALLET_INCLUDES="$qt_include_dirs -I$kde_dir/include"
           SVN_KWALLET_LIBS="-lQtCore -lQtDBus -lQtGui -lkdecore -lkdeui"
@@ -333,6 +339,7 @@ if test "$with_kwallet" != "no"; then
           done
           qt_lib_dirs="${qt_lib_dirs## }"
           LDFLAGS="$old_LDFLAGS $qt_lib_dirs -L$kde_dir/lib`$kde4_config --libsuffix`"
+          AC_LANG(C++)
           AC_LINK_IFELSE([
 #include <kwallet.h>
 int main()
