@@ -16,7 +16,7 @@ Candidate changes for 1.5.0:
      The addition of the new merge test in r31059 trivally conflicts
      because several other new merge tests are not backported yet.
    Votes:
-     +1: pburba
+     +1: pburba, cmpilato
 
  * r30629, r30787
     mod_dontdothat: Allow opt-out of replay rejection.
@@ -24,15 +24,6 @@ Candidate changes for 1.5.0:
       r30787 is a typo fix.
     Votes:
       +1: jerenkrantz, cmpilato
-
- * (r31159, r31179) or r31193 from 1.5.x-r31159-r31179 branch.
-   Fix "file not found" error when a merge target is a broken symbolic link.
-   Notes:
-     r31179 just makes sure the new test is skipped on Windows.
-     r31193 from 1.5.x-r31159-r31179 branch has r31159 and r31179 
-     merged to it with a conflict resolution.
-   Votes:
-     +1: kfogel(r31159, r31179), kameshj
 
 Candidate changes for 1.5.1:
 ============================
@@ -56,3 +47,12 @@ Approved changes (all releases):
       r31209 is a teeny typo (read: obvious) fix
     Votes:
       +1: danielsh, kfogel, cmpilato
+
+ * (r31159, r31179) or r31193 from 1.5.x-r31159-r31179 branch.
+   Fix "file not found" error when a merge target is a broken symbolic link.
+   Notes:
+     r31179 just makes sure the new test is skipped on Windows.
+     r31193 from 1.5.x-r31159-r31179 branch has r31159 and r31179 
+     merged to it with a conflict resolution.
+   Votes:
+     +1: kfogel(r31159, r31179), kameshj, cmpilato (r31159, r31179)
