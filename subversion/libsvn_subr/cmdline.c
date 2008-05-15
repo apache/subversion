@@ -354,6 +354,36 @@ svn_cmdline_handle_exit_error(svn_error_t *err,
   return EXIT_FAILURE;
 }
 
+/* Return dynamically loaded authentication simple provider. */
+static svn_boolean_t
+get_auth_simple_provider(svn_auth_provider_object_t **provider,
+                         const char *provider_name,
+                         apr_pool_t *pool)
+{
+  apr_dso_handle_t *dso;
+  apr_dso_handle_sym_t provider_symbol;
+  const char *libname;
+  const char *funcname;
+  svn_boolean_t ret = FALSE;
+  libname = apr_psprintf(pool,
+                         "libsvn_auth_%s-%d.so.0",
+                         provider_name,
+                         SVN_VER_MAJOR);
+  funcname = apr_psprintf(pool, "svn_auth_get_%s_simple_provider", provider_name);
+  svn_dso_load(&dso, libname);
+  if (dso)
+    {
+      if (! apr_dso_sym(&provider_symbol, dso, funcname))
+        {
+          svn_auth_simple_provider_func_t func;
+          func = (svn_auth_simple_provider_func_t) provider_symbol;
+          func(provider, pool);
+          ret = TRUE;
+        }
+    }
+  return ret;
+}
+
 svn_error_t *
 svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
                              svn_boolean_t non_interactive,
@@ -397,25 +427,10 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
   APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 #endif
 #ifdef SVN_HAVE_KWALLET
-  apr_dso_handle_t *libsvn_auth_kwallet_dso;
-  apr_dso_handle_sym_t kwallet_provider_symbol;
-  const char *libsvn_auth_kwallet_libname;
-  const char *kwallet_provider_name;
-  libsvn_auth_kwallet_libname = apr_psprintf(pool,
-                                             "libsvn_auth_kwallet-%d.so.0",
-                                             SVN_VER_MAJOR);
-  kwallet_provider_name = "svn_auth_get_kwallet_simple_provider";
-  svn_dso_load(&libsvn_auth_kwallet_dso, libsvn_auth_kwallet_libname);
-  if (libsvn_auth_kwallet_dso)
-    {
-      if (! apr_dso_sym(&kwallet_provider_symbol, libsvn_auth_kwallet_dso, kwallet_provider_name))
-        {
-          svn_auth_simple_provider_func_t kwallet_provider_function;
-          kwallet_provider_function = (svn_auth_simple_provider_func_t) kwallet_provider_symbol;
-          kwallet_provider_function(&provider, pool);
-          APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-        }
-    }
+  if (get_auth_simple_provider(&provider, "kwallet", pool))
+  {
+    APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+  }
 #endif
   if (non_interactive == FALSE)
     {
