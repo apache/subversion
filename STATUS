@@ -7,7 +7,7 @@ delay a release, etc.
 Candidate changes for 1.5.0:
 ============================
 
- * r31059, 31060, 31061, 31075, 31151.
+ * r31059, 31060, 31061, 31075, 31151
    Fix issue #3157, Merging a change from a path's natural history
    creates self-referential mergeinfo
    Notes:
@@ -23,22 +23,14 @@ Candidate changes for 1.5.0:
     Notes:
       r30787 is a typo fix.
     Votes:
-      +1: jerenkrantz
-
- * r31138, r31141, r31157
-    Validate svn:date property values in libsvn_repos.
-    Notes:
-      r31141 is a docstring change.
-      r31157 marks the regression test XFail over DAV.
-    Votes:
-      +1: danielsh, kfogel
+      +1: jerenkrantz, cmpilato
 
  * (r31159, r31179) or r31193 from 1.5.x-r31159-r31179 branch.
    Fix "file not found" error when a merge target is a broken symbolic link.
    Notes:
      r31179 just makes sure the new test is skipped on Windows.
-   r31193 from 1.5.x-r31159-r31179 branch has r31159 and r31179 
-   merged to it with a conflict resolution.
+     r31193 from 1.5.x-r31159-r31179 branch has r31159 and r31179 
+     merged to it with a conflict resolution.
    Votes:
      +1: kfogel(r31159, r31179), kameshj
 
@@ -55,3 +47,12 @@ Candidate changes for 1.5.1:
    
 Approved changes (all releases):
 ================================
+
+ * r31138, r31141, r31157, r31209
+    Validate svn:date property values in libsvn_repos.
+    Notes:
+      r31141 is a docstring change.
+      r31157 marks the regression test XFail over DAV.
+      r31209 is a teeny typo (read: obvious) fix
+    Votes:
+      +1: danielsh, kfogel, cmpilato
