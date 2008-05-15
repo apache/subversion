@@ -1320,7 +1320,7 @@ svn_client_add4(const char *path,
 /**
  * Similar to svn_client_add4(), but with @a add_parents always set to
  * FALSE and @a depth set according to @a recursive: if TRUE, then
- * @a depth is @c svn_depth_infinity, if FALSE, then @c svn_depth_files.
+ * @a depth is @c svn_depth_infinity, if FALSE, then @c svn_depth_empty.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */

@@ -975,7 +975,9 @@ test_is_single_path_component(const char **msg,
 {
   apr_size_t i;
 
-  /* Paths to test and their expected results. */
+  /* Paths to test and their expected results.
+   * Note that these paths need to be canonical,
+   * else we might trigger an abort(). */
   struct {
     const char *path;
     svn_boolean_t result;
@@ -985,7 +987,6 @@ test_is_single_path_component(const char **msg,
     { "/",             FALSE },
     { "foo/bar",       FALSE },
     { "foo",           TRUE },
-    { ".",             TRUE },
     { "..",            FALSE },
     { "",              FALSE },
   };
@@ -1160,6 +1161,8 @@ test_splitext(const char **msg,
     { "sub/.dot-file",             "sub/.dot-file",          "" },
     { ".dot-file.withext",         ".dot-file.",             "withext" },
     { "sub/.dot-file.withext",     "sub/.dot-file.",         "withext" },
+    { "sub/a.out",                 "sub/a.",                 "out" },
+    { "a.out",                     "a.",                     "out" },
     { "",                          "",                       "" },
   };
 

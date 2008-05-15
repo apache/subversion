@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -903,11 +903,11 @@ typedef struct svn_wc_notify_t {
    * In all other cases, it is @c SVN_INVALID_REVNUM. */
   svn_revnum_t revision;
   /** When @c action is @c svn_wc_notify_changelist_add or name.  In all other
-   * cases, it is @c NULL. */
+   * cases, it is @c NULL.  @since New in 1.5 */
   const char *changelist_name;
   /** When @c action is @c svn_wc_notify_merge_begin, and both the
-      left and right sides of the merge are from the same URL.  In all
-      other cases, it is @c NULL.  */
+   * left and right sides of the merge are from the same URL.  In all
+   * other cases, it is @c NULL.  @since New in 1.5 */
   svn_merge_range_t *merge_range;
   /* NOTE: Add new fields at the end to preserve binary compatibility.
      Also, if you add fields here, you have to update svn_wc_create_notify
@@ -1778,14 +1778,17 @@ typedef struct svn_wc_entry_t
    * @since New in 1.2.
    */
   const char *lock_token;
+
   /** lock owner, or NULL if not locked in this WC
    * @since New in 1.2.
    */
   const char *lock_owner;
+
   /** lock comment or NULL if not locked in this WC or no comment
    * @since New in 1.2.
    */
   const char *lock_comment;
+
   /** Lock creation date or 0 if not locked in this WC
    * @since New in 1.2.
    */
@@ -1862,7 +1865,6 @@ typedef struct svn_wc_entry_t
    * read_entry()
    * write_entry()
    * fold_entry()
-   *
    */
 } svn_wc_entry_t;
 
