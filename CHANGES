@@ -66,6 +66,7 @@ http://svn.collab.net/repos/svn/tags/1.5.0
     * 'svnlook history' now takes '-l' / '--limit' option (r25843)
     * 'svnserve' now takes '--config-file' option (r24119)
     * 'mod_dav_svn' now uses Apache default mime-type for files (issue #2304)
+    * new '--with-revprop' option on all commands that commit (issue #1976)
     * now accept "peg dates" (URL@{DATE}), behaving like peg revs (issue #2602)
     * easier to try out experimental ra_serf http:// access module
     * select ra_neon vs ra_serf on a site-by-site basis in config (r25535)
