@@ -1068,7 +1068,8 @@ struct path_driver_cb_baton
   void *edit_baton;                    /* commit editor's baton */
   apr_hash_t *file_mods;               /* hash: path->file_mod_t */
   apr_hash_t *tempfiles;               /* hash of tempfiles created */
-  const char *notify_path_prefix;      /* notification path prefix */
+  const char *notify_path_prefix;      /* notification path prefix
+                                          (NULL is okay, else abs path) */
   svn_client_ctx_t *ctx;               /* client context baton */
   apr_hash_t *commit_items;            /* the committables */
 };
@@ -1092,7 +1093,6 @@ do_item_commit(void **dir_baton,
   svn_wc_adm_access_t *adm_access = cb_baton->adm_access;
   const svn_delta_editor_t *editor = cb_baton->editor;
   apr_hash_t *file_mods = cb_baton->file_mods;
-  const char *notify_path_prefix = cb_baton->notify_path_prefix;
   svn_client_ctx_t *ctx = cb_baton->ctx;
 
   /* Do some initializations. */
@@ -1133,19 +1133,8 @@ do_item_commit(void **dir_baton,
      describe what we're about to do to this item.  */
   if (ctx->notify_func2)
     {
-      /* Convert an absolute path into a relative one (if possible.) */
-      const char *npath = NULL;
+      const char *npath = item->path;
       svn_wc_notify_t *notify;
-
-      if (notify_path_prefix)
-        {
-          if (strcmp(notify_path_prefix, item->path))
-            npath = svn_path_is_child(notify_path_prefix, item->path, pool);
-          else
-            npath = ".";
-        }
-      if (! npath)
-        npath = item->path; /* Otherwise just use full path */
 
       if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
           && (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD))
@@ -1195,6 +1184,7 @@ do_item_commit(void **dir_baton,
       if (notify)
         {
           notify->kind = item->kind;
+          notify->path_prefix = cb_baton->notify_path_prefix;
           (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
         }
     }
@@ -1446,22 +1436,11 @@ svn_client__do_commit(const char *base_url,
       if (ctx->notify_func2)
         {
           svn_wc_notify_t *notify;
-          const char *npath = NULL;
-
-          if (notify_path_prefix)
-            {
-              if (strcmp(notify_path_prefix, item->path) != 0)
-                npath = svn_path_is_child(notify_path_prefix, item->path,
-                                          subpool);
-              else
-                npath = ".";
-            }
-          if (! npath)
-            npath = item->path;
-          notify = svn_wc_create_notify(npath,
+          notify = svn_wc_create_notify(item->path,
                                         svn_wc_notify_commit_postfix_txdelta,
                                         subpool);
           notify->kind = svn_node_file;
+          notify->path_prefix = notify_path_prefix;
           (*ctx->notify_func2)(ctx->notify_baton2, notify, subpool);
         }
 
