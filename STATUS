@@ -80,9 +80,3 @@ Approved changes (all releases):
      problem, and could probably wait until 1.5.1 if necessary.
    Votes:
      +1: kfogel, epg, cmpilato
-
- * r31162
-   Fix an OBOE in svn_path_splitext().
-   Votes:
-     +1: cmpilato, kfogel, danielsh
-
