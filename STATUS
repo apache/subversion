@@ -61,9 +61,3 @@ Approved changes (all releases):
      backport, in case we later backport r30748.
    Votes:
      +1: pburba, markphip, cmpilato
-
- * r30949, r30962
-   Fix issue #3188.  Mergeinfo on switched targets/subtrees should elide
-   to repos.
-   Votes:
-     +1: pburba, markphip, cmpilato
