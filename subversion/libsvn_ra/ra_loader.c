@@ -454,7 +454,11 @@ svn_error_t *svn_ra_open3(svn_ra_session_t **session_p,
           /* Find out where we're about to connect to, and
            * try to pick a server group based on the destination. */
           apr_err = apr_uri_parse(pool, repos_URL, &repos_URI);
-          if (apr_err != APR_SUCCESS)
+          /* ### Should apr_uri_parse leave hostname NULL?  It doesn't
+           * for "file:///" URLs, only for bogus URLs like "bogus".
+           * If this is the right behavior for apr_uri_parse, maybe we
+           * should have a svn_uri_parse wrapper. */
+          if (apr_err != APR_SUCCESS || repos_URI.hostname == NULL)
             return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
                                      _("Illegal repository URL '%s'"),
                                      repos_URL);
