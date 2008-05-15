@@ -11258,6 +11258,7 @@ def merge_chokes_on_renamed_subtrees(sbox):
   expected_status.tweak('H_COPY/psi_moved', status='MM')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+
 #----------------------------------------------------------------------
 # Issue #3157
 def dont_explicitly_record_implicit_mergeinfo(sbox):
@@ -11294,10 +11295,36 @@ def dont_explicitly_record_implicit_mergeinfo(sbox):
   svntest.main.file_append(A_copy2_mu_path, "r5\n")
   _commit_and_update(5, "Edit A_copy2/mu.")
 
-  # Now, merge A_copy2/mu (in full) back to A_copy.
-  expected_output = wc.State(A_copy_path, {
-    'mu' : Item(status='U '),
-    })
+  # Search for the comment entitled "The Merge Kluge" elsewhere in
+  # this file, to understand why we shorten and chdir() below.
+  saved_cwd = os.getcwd()
+  os.chdir(svntest.main.work_dir)
+  short_A_copy_mu_path = shorten_path_kludge(A_copy_mu_path)
+  short_A_copy_path = shorten_path_kludge(A_copy_path)
+
+  # Merge r5 from A_copy2/mu to A_copy/mu.
+  #
+  # run_and_verify_merge doesn't support merging to a file WCPATH
+  # so use run_and_verify_svn.  Check the resulting mergeinfo with
+  # a propget.
+  svntest.actions.run_and_verify_svn(None,
+                                     expected_merge_output([[5]], 'U    ' +
+                                                           short_A_copy_mu_path +
+                                                           '\n'),
+                                     [], 'merge', '-c5',
+                                     sbox.repo_url + '/A_copy2/mu',
+                                     short_A_copy_mu_path)
+  svntest.actions.run_and_verify_svn(
+    None,
+    ["Properties on '" + short_A_copy_mu_path + "':\n",
+     "  " + SVN_PROP_MERGEINFO + " : /A_copy2/mu:5\n"],
+    [],'pl', '-v', short_A_copy_mu_path)
+
+  # Now, merge A_copy2 (in full) back to A_copy.  This should result in
+  # mergeinfo of '/A_copy2:4-5' on A_copy and '/A_copy2/mu:4-5' on A_copy/mu
+  # and the latter should elide to the former.  Any revisions < 4 are part of
+  # A_copy's natural history and should not be explicitly recorded.
+  expected_output = wc.State(short_A_copy_path, {})
   expected_disk = wc.State('', {
     ''          : Item(props={SVN_PROP_MERGEINFO : '/A_copy2:4-5'}),
     'mu'        : Item("This is the file 'mu'.\nr3\nr5\n"),
@@ -11319,7 +11346,7 @@ def dont_explicitly_record_implicit_mergeinfo(sbox):
     'D/G/rho'   : Item("This is the file 'rho'.\n"),
     'D/G/tau'   : Item("This is the file 'tau'.\n"),
     })
-  expected_status = wc.State(A_copy_path, {
+  expected_status = wc.State(short_A_copy_path, {
     ''          : Item(status=' M'),
     'mu'        : Item(status='M '),
     'B'         : Item(status='  '),
@@ -11341,13 +11368,39 @@ def dont_explicitly_record_implicit_mergeinfo(sbox):
     'D/G/tau'   : Item(status='  '),
     })
   expected_status.tweak(wc_rev=5)
-  expected_skip = wc.State(A_copy_path, { })
-  svntest.actions.run_and_verify_merge(A_copy_path, None, None,
+  expected_skip = wc.State(short_A_copy_path, { })
+  svntest.actions.run_and_verify_merge(short_A_copy_path, None, None,
                                        sbox.repo_url + '/A_copy2',
                                        expected_output, expected_disk,
                                        expected_status, expected_skip,
                                        None, None, None, None, None, 1)
-  
+  os.chdir(saved_cwd)
+
+# Test for issue where merging a change to a broken link fails
+def merge_broken_link(sbox):
+  "merge with broken symlinks in target"
+
+  # Create our good 'ole greek tree.
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  src_path = os.path.join(wc_dir, 'A', 'B', 'E')
+  copy_path = os.path.join(wc_dir, 'A', 'B', 'E_COPY')
+  link_path = os.path.join(src_path, 'beta_link')
+
+  os.symlink('beta_broken', link_path)
+  svntest.main.run_svn(None, 'add', link_path)
+  svntest.main.run_svn(None, 'commit', '-m', 'Create a broken link', link_path)
+  svntest.main.run_svn(None, 'copy', src_path, copy_path)
+  svntest.main.run_svn(None, 'commit', '-m', 'Copy the tree with the broken link', 
+                       copy_path)
+  os.unlink(link_path)
+  os.symlink('beta', link_path)
+  svntest.main.run_svn(None, 'commit', '-m', 'Fix a broken link', link_path)
+  svntest.actions.run_and_verify_svn(
+    None, 
+    expected_merge_output([[4]], 'U    ' + copy_path + '/beta_link\n'),
+    [], 'merge', '-c4', src_path, copy_path)
+
 
 ########################################################################
 # Run the tests
@@ -11515,6 +11568,7 @@ test_list = [ None,
                                server_has_mergeinfo)),
               SkipUnless(dont_explicitly_record_implicit_mergeinfo,
                          server_has_mergeinfo),
+              SkipUnless(merge_broken_link, svntest.main.is_posix_os),
              ]
 
 if __name__ == '__main__':
