@@ -2,7 +2,7 @@
  * cmdline.c :  Helpers for command-line programs.
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -41,6 +41,7 @@
 #include "svn_error.h"
 #include "svn_nls.h"
 #include "svn_auth.h"
+#include "svn_version.h"
 #include "utf_impl.h"
 #include "svn_config.h"
 
@@ -353,6 +354,38 @@ svn_cmdline_handle_exit_error(svn_error_t *err,
   return EXIT_FAILURE;
 }
 
+/* Dynamically load authentication simple provider. */
+static svn_boolean_t
+get_auth_simple_provider(svn_auth_provider_object_t **provider,
+                         const char *provider_name,
+                         apr_pool_t *pool)
+{
+  apr_dso_handle_t *dso;
+  apr_dso_handle_sym_t provider_symbol;
+  const char *libname;
+  const char *funcname;
+  svn_boolean_t ret = FALSE;
+  libname = apr_psprintf(pool,
+                         "libsvn_auth_%s-%d.so.0",
+                         provider_name,
+                         SVN_VER_MAJOR);
+  funcname = apr_psprintf(pool,
+                          "svn_auth_get_%s_simple_provider",
+                          provider_name);
+  svn_error_clear(svn_dso_load(&dso, libname));
+  if (dso)
+    {
+      if (! apr_dso_sym(&provider_symbol, dso, funcname))
+        {
+          svn_auth_simple_provider_func_t func;
+          func = (svn_auth_simple_provider_func_t) provider_symbol;
+          func(provider, pool);
+          ret = TRUE;
+        }
+    }
+  return ret;
+}
+
 svn_error_t *
 svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
                              svn_boolean_t non_interactive,
@@ -394,6 +427,12 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
 #ifdef SVN_HAVE_KEYCHAIN_SERVICES
   svn_auth_get_keychain_simple_provider(&provider, pool);
   APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+#endif
+#ifdef SVN_HAVE_KWALLET
+  if (get_auth_simple_provider(&provider, "kwallet", pool))
+  {
+    APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+  }
 #endif
   if (non_interactive == FALSE)
     {
