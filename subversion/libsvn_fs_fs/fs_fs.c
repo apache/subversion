@@ -2450,6 +2450,12 @@ struct rep_read_baton
   svn_filesize_t len;
   svn_filesize_t off;
 
+  /* The key for the fulltext cache for this rep, if there is a
+     fulltext cache. */
+  const char *fulltext_cache_key;
+  /* The text we've been reading, if we're going to cache it. */
+  svn_stringbuf_t *current_fulltext;
+
   /* Used for temporary allocations during the read. */
   apr_pool_t *pool;
 
@@ -2459,12 +2465,15 @@ struct rep_read_baton
 };
 
 /* Create a rep_read_baton structure for node revision NODEREV in
-   filesystem FS and store it in *RB_P.  Perform all allocations in
+   filesystem FS and store it in *RB_P.  If FULLTEXT_CACHE_KEY is not
+   NULL, it is the rep's key in the fulltext cache, and a stringbuf
+   must be allocated to store the text.  Perform all allocations in
    POOL.  If rep is mutable, it must be for file contents. */
 static svn_error_t *
 rep_read_get_baton(struct rep_read_baton **rb_p,
                    svn_fs_t *fs,
                    representation_t *rep,
+                   const char *fulltext_cache_key,
                    apr_pool_t *pool)
 {
   struct rep_read_baton *b;
@@ -2478,8 +2487,14 @@ rep_read_get_baton(struct rep_read_baton **rb_p,
   memcpy(b->checksum, rep->checksum, sizeof(b->checksum));
   b->len = rep->expanded_size;
   b->off = 0;
+  b->fulltext_cache_key = fulltext_cache_key;
   b->pool = svn_pool_create(pool);
   b->filehandle_pool = svn_pool_create(pool);
+
+  if (fulltext_cache_key)
+    b->current_fulltext = svn_stringbuf_create("", b->filehandle_pool);
+  else
+    b->current_fulltext = NULL;
 
   SVN_ERR(build_rep_list(&b->rs_list, &b->src_state, fs, rep,
                          b->filehandle_pool));
@@ -2738,6 +2753,9 @@ rep_read_contents(void *baton,
   /* Get the next block of data. */
   SVN_ERR(get_contents(rb, buf, len));
 
+  if (rb->current_fulltext)
+    svn_stringbuf_appendbytes(rb->current_fulltext, buf, *len);
+
   /* Perform checksumming.  We want to check the checksum as soon as
      the last byte of data is read, in case the caller never performs
      a short read, but we don't want to finalize the MD5 context
@@ -2762,6 +2780,15 @@ rep_read_contents(void *baton,
                svn_md5_digest_to_cstring_display(checksum, rb->pool));
         }
     }
+
+  if (rb->off == rb->len && rb->current_fulltext)
+    {
+      fs_fs_data_t *ffd = rb->fs->fsap_data;
+      SVN_ERR(svn_cache_set(ffd->fulltext_cache, rb->fulltext_cache_key,
+                            rb->current_fulltext, rb->pool));
+      rb->current_fulltext = NULL;
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -2780,15 +2807,33 @@ read_representation(svn_stream_t **contents_p,
                     representation_t *rep,
                     apr_pool_t *pool)
 {
-  struct rep_read_baton *rb;
-
   if (! rep)
     {
       *contents_p = svn_stream_empty(pool);
     }
   else
     {
-      SVN_ERR(rep_read_get_baton(&rb, fs, rep, pool));
+      fs_fs_data_t *ffd = fs->fsap_data;
+      const char *fulltext_key = NULL;
+      struct rep_read_baton *rb;
+
+      if (ffd->fulltext_cache && SVN_IS_VALID_REVNUM(rep->revision))
+        {
+          svn_string_t *fulltext;
+          svn_boolean_t is_cached;
+          fulltext_key = apr_psprintf(pool, "%ld/%" APR_OFF_T_FMT,
+                                      rep->revision, rep->offset);
+          SVN_ERR(svn_cache_get((void **) &fulltext, &is_cached,
+                                ffd->fulltext_cache, fulltext_key, pool));
+          if (is_cached)
+            {
+              *contents_p = svn_stream_from_string(fulltext, pool);
+              return SVN_NO_ERROR;
+            }
+        }
+
+      SVN_ERR(rep_read_get_baton(&rb, fs, rep, fulltext_key, pool));
+
       *contents_p = svn_stream_create(rb, pool);
       svn_stream_set_read(*contents_p, rep_read_contents);
       svn_stream_set_close(*contents_p, rep_read_contents_close);

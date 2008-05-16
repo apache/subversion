@@ -196,6 +196,10 @@ typedef struct
      unparsed FS ID to ###x. */
   svn_cache_t *dir_cache;
 
+  /* Fulltext cache; currently only used with memcached.  Maps from
+     rep key to svn_string_t. */
+  svn_cache_t *fulltext_cache;
+
   /* Data shared between all svn_fs_t objects for a given filesystem. */
   fs_fs_shared_data_t *shared;
 } fs_fs_data_t;
