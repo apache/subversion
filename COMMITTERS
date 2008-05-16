@@ -113,6 +113,7 @@ Commit access for specific areas:
    rocketraman   Raman Gupta <rocketraman@fastmail.fm>       (svnmerge)
       stylesen   Senthil Kumaran S <senthil@collab.net>      (tests)
        rhansen   Richard Hansen <rhansen@bbn.com>            (svnstsw)
+        larrys   Larry Shatzer, Jr. <larrys@gmail.com>       (svn-keyword-check.pl)
 
   Translation of message files:
 
