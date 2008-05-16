@@ -354,7 +354,7 @@ svn_cmdline_handle_exit_error(svn_error_t *err,
   return EXIT_FAILURE;
 }
 
-/* Return dynamically loaded authentication simple provider. */
+/* Dynamically load authentication simple provider. */
 static svn_boolean_t
 get_auth_simple_provider(svn_auth_provider_object_t **provider,
                          const char *provider_name,
@@ -372,7 +372,7 @@ get_auth_simple_provider(svn_auth_provider_object_t **provider,
   funcname = apr_psprintf(pool,
                           "svn_auth_get_%s_simple_provider",
                           provider_name);
-  svn_dso_load(&dso, libname);
+  svn_error_clear(svn_dso_load(&dso, libname));
   if (dso)
     {
       if (! apr_dso_sym(&provider_symbol, dso, funcname))
