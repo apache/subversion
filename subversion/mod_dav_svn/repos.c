@@ -41,6 +41,7 @@
 #include "svn_props.h"
 #include "mod_dav_svn.h"
 #include "svn_ra.h"  /* for SVN_RA_CAPABILITY_* */
+#include "private/svn_log.h"
 
 #include "dav_svn.h"
 
@@ -3467,11 +3468,10 @@ do_walk(walker_ctx_t *ctx, int depth)
      header and distinguish an svn client ('svn ls') from a generic
      DAV client.  */
   dav_svn__operational_log(&ctx->info,
-                           apr_psprintf(params->pool,
-                             "get-dir %s r%ld text",
-                             svn_path_uri_encode(ctx->info.repos_path,
-                                                 params->pool),
-                             ctx->info.root.rev));
+                           svn_log__get_dir(ctx->info.repos_path,
+                                            ctx->info.root.rev,
+                                            TRUE, FALSE, SVN_DIRENT_ALL,
+                                            params->pool));
 
   /* fetch this collection's children */
   serr = svn_fs_dir_entries(&children, ctx->info.root.root,

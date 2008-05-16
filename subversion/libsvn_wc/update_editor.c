@@ -1517,7 +1517,26 @@ add_directory(const char *path,
          copyfrom args.  Someday it will interpet them as an update
          optimization, and actually copy one part of the wc to another.
          Then it will recursively "normalize" all the ancestry in the
-         copied tree.  Someday! */
+         copied tree.  Someday!
+
+         Note from the future: if someday it does, we'll probably want
+         to tweak libsvn_ra_neon/fetch.c:validate_element() to accept
+         that an add-dir element can contain a delete-entry element
+         (because the dir might be added with history).  Currently
+         that combination will not validate.  See r30161, and see the
+         thread in which this message appears:
+
+      http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=136879
+      From: "David Glasser" <glasser@davidglasser.net>
+      To: "Karl Fogel" <kfogel@red-bean.com>, dev@subversion.tigris.org
+      Cc: "Arfrever Frehtes Taifersar Arahesis" <arfrever.fta@gmail.com>, 
+          glasser@tigris.org
+      Subject: Re: svn commit: r30161 - in trunk/subversion: \
+               libsvn_ra_neon tests/cmdline
+      Date: Fri, 4 Apr 2008 14:47:06 -0700
+      Message-ID: <1ea387f60804041447q3aea0bbds10c2db3eacaf73e@mail.gmail.com>
+
+      */
       return svn_error_createf
         (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
          _("Failed to add directory '%s': "

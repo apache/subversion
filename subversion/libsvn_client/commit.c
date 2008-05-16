@@ -1368,7 +1368,8 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
   svn_error_t *cmt_err = SVN_NO_ERROR, *unlock_err = SVN_NO_ERROR;
   svn_error_t *bump_err = SVN_NO_ERROR, *cleanup_err = SVN_NO_ERROR;
   svn_boolean_t commit_in_progress = FALSE;
-  const char *display_dir = "";
+  const char *current_dir = "";
+  const char *notify_prefix;
   int i;
 
   /* Committing URLs doesn't make sense, so error if it's tried. */
@@ -1694,16 +1695,17 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
   /* Make a note that we have a commit-in-progress. */
   commit_in_progress = TRUE;
 
-  /* Determine prefix to strip from the commit notify messages */
-  if ((cmt_err = svn_path_get_absolute(&display_dir,
-                                       display_dir, pool)))
+  if ((cmt_err = svn_path_get_absolute(&current_dir,
+                                       current_dir, pool)))
     goto cleanup;
-  display_dir = svn_path_get_longest_ancestor(display_dir, base_dir, pool);
+
+  /* Determine prefix to strip from the commit notify messages */
+  notify_prefix = svn_path_get_longest_ancestor(current_dir, base_dir, pool);
 
   /* Perform the commit. */
   cmt_err = svn_client__do_commit(base_url, commit_items, base_dir_access,
                                   editor, edit_baton,
-                                  display_dir,
+                                  notify_prefix,
                                   &tempfiles, &digests, ctx, pool);
 
   /* Handle a successful commit. */

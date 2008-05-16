@@ -2119,11 +2119,11 @@ def automatic_conflict_resolution(sbox):
                                      None,
                                      ".*invalid 'accept' ARG",
                                      'resolve', '--accept=launch')
-  # Run 'svn resolved --accept=NOTVALID.  Using omega for the test.
+  # Run 'svn resolved --accept=NOPE.  Using omega for the test.
   svntest.actions.run_and_verify_svn("Resolve command", None,
-                                     ".*NOTVALID' is not a valid accept value",
+                                     ".*NOPE' is not a valid --accept value",
                                      'resolve',
-                                     '--accept=NOTVALID',
+                                     '--accept=NOPE',
                                      omega_path_backup)
 
   # Resolve lambda, mu, and rho with different --accept options.
@@ -2207,6 +2207,114 @@ def info_nonexisting_file(sbox):
 
 
 #----------------------------------------------------------------------
+# Relative urls
+#
+# Use blame to test three specific cases for relative url support.
+def basic_relative_url_using_current_dir(sbox):
+  "basic relative url target using current dir"
+
+  # We'll use blame to test relative url parsing
+  sbox.build()
+
+  # First, make a new revision of iota.
+  iota = os.path.join(sbox.wc_dir, 'iota')
+  svntest.main.file_append(iota, "New contents for iota\n")
+  svntest.main.run_svn(None, 'ci',
+                       '-m', '', iota)
+
+  expected_output = [
+    "     1    jrandom This is the file 'iota'.\n",
+    "     2    jrandom New contents for iota\n",
+    ]
+
+  orig_dir = os.getcwd()
+  os.chdir(sbox.wc_dir)
+
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None,
+                                expected_output, [],
+                                'blame', '^/iota')
+
+  os.chdir(orig_dir)
+
+def basic_relative_url_using_other_targets(sbox):
+  "basic relative url target using other targets"
+
+  sbox.build()
+
+  # First, make a new revision of iota.
+  iota = os.path.join(sbox.wc_dir, 'iota')
+  svntest.main.file_append(iota, "New contents for iota\n")
+  svntest.main.run_svn(None, 'ci',
+                       '-m', '', iota)
+
+  # Now, make a new revision of A/mu .
+  mu = os.path.join(sbox.wc_dir, 'A', 'mu')
+  mu_url = sbox.repo_url + '/A/mu'
+
+  svntest.main.file_append(mu, "New contents for mu\n")
+  svntest.main.run_svn(None, 'ci',
+                       '-m', '', mu)
+
+
+  expected_output = [
+    "     1    jrandom This is the file 'iota'.\n",
+    "     2    jrandom New contents for iota\n",
+    "     1    jrandom This is the file 'mu'.\n",
+    "     3    jrandom New contents for mu\n",
+    ]
+
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None,
+                                expected_output, [], 'blame',
+                                '^/iota', mu_url)
+
+def basic_relative_url_multi_repo(sbox):
+  "basic relative url target with multiple repos"
+
+  sbox.build()
+  repo_url1 = sbox.repo_url
+  repo_dir1 = sbox.repo_dir
+  wc_dir1 = sbox.wc_dir
+
+  repo_dir2, repo_url2 = sbox.add_repo_path("other")
+  svntest.main.copy_repos(repo_dir1, repo_dir2, 1, 1)
+  wc_dir2 = sbox.add_wc_path("other")
+  svntest.actions.run_and_verify_svn("Unexpected error during co",
+                                     svntest.verify.AnyOutput, [], "co",
+                                     repo_url2,
+                                     wc_dir2)
+
+  # Don't bother with making new revisions, the command should not work.
+  iota_url_repo1 = repo_url1 + '/iota'
+  iota_url_repo2 = repo_url2 + '/iota'
+
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None, [],
+                                svntest.verify.AnyOutput, 'blame',
+                                '^/A/mu', iota_url_repo1, iota_url_repo2)
+
+def basic_relative_url_non_canonical(sbox):
+  "basic relative url non-canonical targets"
+
+  sbox.build()
+
+  iota_url = sbox.repo_url + '/iota'
+
+  expected_output = [
+    "B/\n",
+    "C/\n",
+    "D/\n",
+    "mu\n",
+    "iota\n"
+    ]
+
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None,
+                                expected_output, [], 'ls',
+                                '^/A/', iota_url)
+
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None,
+                                expected_output, [], 'ls',
+                                '^//A/', iota_url)
+
+#----------------------------------------------------------------------
 
 ########################################################################
 # Run the tests
@@ -2253,6 +2361,10 @@ test_list = [ None,
               XFail(basic_rm_urls_multi_repos),
               automatic_conflict_resolution,
               info_nonexisting_file,
+              basic_relative_url_using_current_dir,
+              basic_relative_url_using_other_targets,
+              basic_relative_url_multi_repo,
+              basic_relative_url_non_canonical,
              ]
 
 if __name__ == '__main__':

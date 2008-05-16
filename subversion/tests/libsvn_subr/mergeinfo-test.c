@@ -494,7 +494,7 @@ test_rangelist_intersect(const char **msg,
   rangelist2 = apr_hash_get(info2, "/trunk", APR_HASH_KEY_STRING);
 
   SVN_ERR(svn_rangelist_intersect(&intersection, rangelist1, rangelist2,
-                                  pool));
+                                  TRUE, pool));
 
   return verify_ranges_match(intersection, expected_intersection, 5,
                              "svn_rangelist_intersect", "intersect", pool);
@@ -982,7 +982,7 @@ test_rangelist_intersect_randomly(const char **msg,
         }
 
       SVN_ERR(svn_rangelist_intersect(&actual_rangelist, first_rangelist,
-                                      second_rangelist, iterpool));
+                                      second_rangelist, TRUE, iterpool));
 
       SVN_ERR(verify_ranges_match(actual_rangelist,
                                   expected_range_array,

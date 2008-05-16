@@ -203,10 +203,18 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
                             apr_pool_t *pool)
 {
   svn_ra_serf__session_t *serf_sess = ra_session->priv;
+  const char *cap_result;
 
-  const char *cap_result = apr_hash_get(serf_sess->capabilities,
-                                        capability,
-                                        APR_HASH_KEY_STRING);
+  /* This capability doesn't rely on anything server side. */
+  if (strcmp(capability, SVN_RA_CAPABILITY_COMMIT_REVPROPS) == 0)
+    {
+      *has = TRUE;
+      return SVN_NO_ERROR;
+    }
+
+  cap_result = apr_hash_get(serf_sess->capabilities,
+                            capability,
+                            APR_HASH_KEY_STRING);
 
   /* If any capability is unknown, they're all unknown, so ask. */
   if (cap_result == NULL)
@@ -499,6 +507,10 @@ svn_ra_serf__open(svn_ra_session_t *session,
                                _("Illegal repository URL '%s'"),
                                repos_URL);
     }
+  /* Contrary to what the comment for apr_uri_t.path says in apr-util 1.2.12 and
+     older, for root paths url.path will be "", where serf requires "/". */
+  if (url.path == NULL || url.path[0] == '\0')
+    url.path = apr_pstrdup(serf_sess->pool, "/");
 
   serf_sess->repos_url = url;
   serf_sess->repos_url_str = apr_pstrdup(serf_sess->pool, repos_URL);
@@ -1010,6 +1022,12 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
       SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &relative_url,
                                          session, session->conns[0],
                                          path, pool));
+
+      /* If we don't have the latest revision, we have to fetch it. */
+      if (!SVN_IS_VALID_REVNUM(revision))
+        {
+          SVN_ERR(svn_ra_serf__get_latest_revnum(ra_session, &revision, pool));
+        }
 
       SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
                                           vcc_url, revision,

@@ -1210,16 +1210,37 @@ def depth_immediates_receive_new_dir(sbox):
   # Check that the new directory was added at depth=empty.
   verify_depth(None, "empty", other_I_path)
 
-def add_tree_with_depth_files(sbox):
-  "add multi-subdir tree with --depth=files"  # For issue #2931
+def add_tree_with_depth(sbox):
+  "add multi-subdir tree with --depth options"  # For issue #2931
   sbox.build()
   wc_dir = sbox.wc_dir
   new1_path = os.path.join(wc_dir, 'new1')
   new2_path = os.path.join(new1_path, 'new2')
+  new3_path = os.path.join(new2_path, 'new3')
+  new4_path = os.path.join(new3_path, 'new4')
   os.mkdir(new1_path)
   os.mkdir(new2_path)
+  os.mkdir(new3_path)
+  os.mkdir(new4_path)
+  # Simple case, add new1 only, set depth to files
   svntest.actions.run_and_verify_svn(None, None, [],
                                      "add", "--depth", "files", new1_path)
+  verify_depth(None, "files", new1_path)
+
+  # Force add new1 at new1 again, should include new2 at empty, the depth of
+  # new1 should not change 
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     "add", "--depth", "immediates", 
+                                     "--force", new1_path)
+  verify_depth(None, "files", new1_path)
+  verify_depth(None, "empty", new2_path)
+
+  # add new4 with intermediate path, the intermediate path is added at empty
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     "add", "--depth", "immediates",
+                                     "--parents", new4_path)
+  verify_depth(None, "infinity", new3_path)
+  verify_depth(None, "immediates", new4_path)
 
 def upgrade_from_above(sbox):
   "upgrade a depth=empty wc from above"
@@ -1428,6 +1449,571 @@ def depthy_update_above_dir_to_be_deleted(sbox):
 
 #----------------------------------------------------------------------
 
+# Tests for deselection interface (a.k.a folding subtrees).
+# XFail until issue #2843 is resolved.
+#----------------------------------------------------------------------
+def depth_folding_clean_trees_1(sbox):
+  "gradually fold wc from depth=infinity to empty"
+
+  # Covers the following situations:
+  #
+  #  infinity->immediates (metadata only)
+  #  immediates->files (metadata only)
+  #  mixed(infinity+files)=>immediates
+  #  infinity=>empty
+  #  immediates=>empty
+  #  mixed(infinity+empty)=>immediates
+  #  mixed(infinity+empty/immediates)=>immediates
+  #  immediates=>files
+  #  files=>empty
+  #  mixed(infinity+empty)=>files
+
+  ign_a, ign_b, ign_c, wc_dir = set_up_depthy_working_copies(sbox,
+                                                             infinity=True)
+
+  A_path = os.path.join(wc_dir, 'A')
+  C_path = os.path.join(A_path, 'C')
+  B_path = os.path.join(A_path, 'B')
+  E_path = os.path.join(B_path, 'E')
+  F_path = os.path.join(B_path, 'F')
+  D_path = os.path.join(A_path, 'D')
+  H_path = os.path.join(A_path, 'H')
+
+  # Run 'svn up --set-depth=immediates' to directory A/B/E.
+  # This is an infinity=>immediates folding, changes on metadata only
+  expected_output = svntest.wc.State(wc_dir, {})
+  expected_status = svntest.actions.get_virginal_state('', 1)
+  expected_disk = svntest.main.greek_state.copy()
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None,
+                                        None, None, None, None,
+                                        '--set-depth', 'immediates', E_path)
+  verify_depth(None, "immediates", E_path)
+
+  # Run 'svn up --set-depth=files' to directory A/B/E.
+  # This is an immediates=>files folding, changes on metadata only
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None,
+                                        None, None, None, None,
+                                        '--set-depth', 'files', E_path)
+  verify_depth(None, "files", E_path)
+
+  # Run 'svn up --set-depth=immediates' to directory A/B.
+  # This is an mixed(infinity+files)=>immediates folding
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E/alpha'    : Item(status='D '),
+    'A/B/E/beta'     : Item(status='D '),
+    })
+  expected_status.remove('A/B/E/alpha', 'A/B/E/beta')
+  expected_disk.remove('A/B/E/alpha', 'A/B/E/beta')
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None,
+                                        None, None, None, None,
+                                        '--set-depth', 'immediates', B_path)
+  verify_depth(None, "immediates", B_path)
+  verify_depth(None, "empty", E_path)
+  verify_depth(None, "empty", F_path)
+
+  # Run 'svn up --set-depth=empty' to directory A/D/H
+  # This is an infinity=>empty folding.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/H/chi'      : Item(status='D '),
+    'A/D/H/psi'      : Item(status='D '),
+    'A/D/H/omega'    : Item(status='D ')
+    })
+  expected_status.remove( 'A/D/H/chi', 'A/D/H/psi', 'A/D/H/omega')
+  expected_disk.remove( 'A/D/H/chi', 'A/D/H/psi', 'A/D/H/omega')
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None,
+                                        None, None, None, None,
+                                        '--set-depth', 'empty', H_path)
+  verify_depth(None, "empty", H_path)
+
+  # Run 'svn up --set-depth=immediates' to directory A/D
+  # This is an mixed(infinity+empty)=>immediates folding.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G/pi'       : Item(status='D '),
+    'A/D/G/rho'      : Item(status='D '),
+    'A/D/G/tau'      : Item(status='D '),
+    })
+  expected_status.remove('A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau')
+  expected_disk.remove('A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau')
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None,
+                                        None, None, None, None,
+                                        '--set-depth', 'immediates', D_path)
+  verify_depth(None, "immediates", D_path)
+  verify_depth(None, "empty", G_path)
+
+  # Run 'svn up --set-depth=empty' to directory A/D
+  # This is an immediates=>empty folding.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G'          : Item(status='D '),
+    'A/D/H'          : Item(status='D '),
+    'A/D/gamma'      : Item(status='D ')
+    })
+  expected_status.remove('A/D/gamma', 'A/D/G', 'A/D/H')
+  expected_disk.remove('A/D/gamma', 'A/D/G', 'A/D/H')
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None,
+                                        None, None, None, None,
+                                        '--set-depth', 'empty', D_path)
+  verify_depth(None, "empty", D_path)
+
+  # Run 'svn up --set-depth=immediates' to directory A
+  # This is an mixed(infinity+empty/immediates)=>immediates folding.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E'          : Item(status='D '),
+    'A/B/F'          : Item(status='D '),
+    'A/B/lambda'     : Item(status='D ')
+    })
+  expected_status.remove('A/B/lambda', 'A/B/E', 'A/B/F')
+  expected_disk.remove('A/B/lambda', 'A/B/E', 'A/B/F')
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None,
+                                        None, None, None, None,
+                                        '--set-depth', 'immediates', A_path)
+  verify_depth(None, "immediates", A_path)
+  verify_depth(None, "empty", C_path)
+  verify_depth(None, "empty", B_path)
+
+  # Run 'svn up --set-depth=files' to directory A
+  # This is an immediates=>files folding.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B'            : Item(status='D '),
+    'A/C'            : Item(status='D '),
+    'A/D'            : Item(status='D ')
+    })
+  expected_status.remove('A/B', 'A/C', 'A/D')
+  expected_disk.remove('A/B', 'A/C', 'A/D')
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None,
+                                        None, None, None, None,
+                                        '--set-depth', 'files', A_path)
+  verify_depth(None, "files", A_path)
+
+  # Run 'svn up --set-depth=empty' to directory A
+  # This is an files=>empty folding.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu'            : Item(status='D ')
+    })
+  expected_status.remove('A/mu')
+  expected_disk.remove('A/mu')
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None,
+                                        None, None, None, None,
+                                        '--set-depth', 'empty', A_path)
+  verify_depth(None, "empty", A_path)
+
+  # Run 'svn up --set-depth=files' to wc
+  # This is an mixed(infinity+empty)=>files folding.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A'            : Item(status='D ')
+    })
+  expected_status.remove('A')
+  expected_disk.remove('A')
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None,
+                                        None, None, None, None,
+                                        '--set-depth', 'files')
+  verify_depth(None, "files")
+
+
+#------------------------------------------------------------------------------
+def depth_folding_clean_trees_2(sbox):
+  "gradually fold wc, focusing on depth=immediates"
+
+  # Covers the following situations:
+  # 
+  #  infinity=>immediates
+  #  mixed(immediates+immediates)=>immediates
+  #  mixed(immediates+infinity)=>immediates
+  #  mixed(immediates+files)=>immediates
+  #  immediates=>empty(remove the target since the parent is at files/empty)
+
+  ign_a, wc_dir, ign_b, ign_c = set_up_depthy_working_copies(sbox, files=True)
+
+  A_path = os.path.join(wc_dir, 'A')
+  D_path = os.path.join(A_path, 'D')
+  H_path = os.path.join(D_path, 'H')
+  G_path = os.path.join(D_path, 'G')
+
+  # pull in directory A at immediates
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'up', '--depth', 'immediates', A_path)
+  # check to see if it's really at immediates
+  verify_depth(None, "immediates", A_path)
+  
+  # pull in directory D at infinity
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', D_path)
+
+  # Run 'svn up --set-depth=immediates' to directory A/D.
+  # This is an infinity=>immediates folding
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G/pi'       : Item(status='D '),
+    'A/D/G/rho'      : Item(status='D '),
+    'A/D/G/tau'      : Item(status='D '),
+    'A/D/H/chi'      : Item(status='D '),
+    'A/D/H/psi'      : Item(status='D '),
+    'A/D/H/omega'    : Item(status='D ')
+    })
+  expected_status = svntest.wc.State(wc_dir, {
+    ''               : Item(status='  ', wc_rev=1),
+    'iota'           : Item(status='  ', wc_rev=1),
+    'A'              : Item(status='  ', wc_rev=1),
+    'A/mu'           : Item(status='  ', wc_rev=1),
+    'A/B'            : Item(status='  ', wc_rev=1),
+    'A/C'            : Item(status='  ', wc_rev=1),
+    'A/D'            : Item(status='  ', wc_rev=1),
+    'A/D/gamma'      : Item(status='  ', wc_rev=1),
+    'A/D/G'          : Item(status='  ', wc_rev=1),
+    'A/D/H'          : Item(status='  ', wc_rev=1)
+    })
+  expected_disk = svntest.wc.State(wc_dir, {
+    'iota'        : Item(contents="This is the file 'iota'.\n"),
+    'A'           : Item(contents=None),
+    'A/mu'        : Item(contents="This is the file 'mu'.\n"),
+    'A/B'         : Item(contents=None),
+    'A/C'         : Item(contents=None),
+    'A/D'         : Item(contents=None),
+    'A/D/gamma'   : Item(contents="This is the file 'gamma'.\n"),
+    'A/D/G'       : Item(contents=None),
+    'A/D/H'       : Item(contents=None)
+    })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None,
+                                        None, None, None, None,
+                                        '--set-depth', 'immediates', D_path)
+  verify_depth(None, "immediates", D_path)
+  verify_depth(None, "empty", G_path)
+  verify_depth(None, "empty", H_path)
+
+  # Run 'svn up --set-depth=immediates' to directory A.
+  # This is an mixed(immediates+immediates)=>immediates folding
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G'      : Item(status='D '),
+    'A/D/H'      : Item(status='D '),
+    'A/D/gamma'  : Item(status='D ')
+    })
+  expected_status.remove( 'A/D/G', 'A/D/H', 'A/D/gamma')
+  expected_disk.remove( 'A/D/G', 'A/D/H', 'A/D/gamma')
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None,
+                                        None, None, None, None,
+                                        '--set-depth', 'immediates', A_path)
+  verify_depth(None, "immediates", A_path)
+  verify_depth(None, "empty", D_path)
+
+  # pull in directory D at infinity
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'up', D_path)
+
+  # Run 'svn up --set-depth=immediates' to directory A.
+  # This is an mixed(immediates+infinity)=>immediates folding
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/gamma'      : Item(status='D '),
+    'A/D/G'          : Item(status='D '),
+    'A/D/G/pi'       : Item(status='D '),
+    'A/D/G/rho'      : Item(status='D '),
+    'A/D/G/tau'      : Item(status='D '),
+    'A/D/H'          : Item(status='D '),
+    'A/D/H/chi'      : Item(status='D '),
+    'A/D/H/psi'      : Item(status='D '),
+    'A/D/H/omega'    : Item(status='D ')
+    })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None,
+                                        None, None, None, None,
+                                        '--set-depth', 'immediates', A_path)
+  verify_depth(None, "immediates", A_path)
+  verify_depth(None, "empty", D_path)
+
+  # pull in directory D at files
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'up', '--depth', 'files', D_path)
+
+  # Run 'svn up --set-depth=immediates' to directory A.
+  # This is an mixed(immediates+files)=>immediates folding
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/gamma'      : Item(status='D ')
+    })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None,
+                                        None, None, None, None,
+                                        '--set-depth', 'immediates', A_path)
+  verify_depth(None, "immediates", A_path)
+  verify_depth(None, "empty", D_path)
+
+  # Run 'svn up --set-depth=empty' to directory A.
+  # This is an immediates=>empty folding, the directory A should be deleted
+  # too since the parent directory is at files/empty
+  expected_output = svntest.wc.State(wc_dir, {
+    'A'              : Item(status='D '),
+    'A/mu'           : Item(status='D '),
+    'A/D'            : Item(status='D '),
+    'A/C'            : Item(status='D '),
+    'A/B'            : Item(status='D ')
+    })
+  expected_status = svntest.wc.State(wc_dir, {
+    ''               : Item(status='  ', wc_rev=1),
+    'iota'           : Item(status='  ', wc_rev=1)
+    })
+  expected_disk = svntest.wc.State(wc_dir, {
+    'iota'        : Item(contents="This is the file 'iota'.\n")
+    })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None,
+                                        None, None, None, None,
+                                        '--set-depth', 'empty', A_path)
+
+def depth_fold_expand_clean_trees(sbox):
+  "expand target while contracting subtree"
+  #  --set-depth=immediates/files to an empty target with infinity
+  #  sub-tree should both fold the subtree and expand the target
+  
+  wc_dir, ign_a, ign_b, ign_c = set_up_depthy_working_copies(sbox, empty=True)
+
+  A_path = os.path.join(wc_dir, 'A')
+  B_path = os.path.join(A_path, 'B')
+  C_path = os.path.join(A_path, 'C')
+  D_path = os.path.join(A_path, 'D')
+
+  # pull in directory A at empty
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'up', '--depth', 'empty', A_path)
+  verify_depth(None, "empty", A_path)
+
+  # pull in directory D at infinity
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'up', D_path)
+
+  # Make the other working copy.
+  other_wc = sbox.add_wc_path('other')
+  svntest.actions.duplicate_dir(wc_dir, other_wc)
+
+  # Run 'svn up --set-depth=immediates' to directory A. This both folds
+  # directory D to empty and expands directory A to immediates
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu'           : Item(status='A '),
+    'A/B'            : Item(status='A '),
+    'A/C'            : Item(status='A '),
+    'A/D/gamma'      : Item(status='D '),
+    'A/D/G'          : Item(status='D '),
+    'A/D/G/pi'       : Item(status='D '),
+    'A/D/G/rho'      : Item(status='D '),
+    'A/D/G/tau'      : Item(status='D '),
+    'A/D/H'          : Item(status='D '),
+    'A/D/H/chi'      : Item(status='D '),
+    'A/D/H/psi'      : Item(status='D '),
+    'A/D/H/omega'    : Item(status='D ')
+    })
+  expected_status = svntest.wc.State(wc_dir, {
+    ''               : Item(status='  ', wc_rev=1),
+    'A'              : Item(status='  ', wc_rev=1),
+    'A/mu'           : Item(status='  ', wc_rev=1),
+    'A/B'            : Item(status='  ', wc_rev=1),
+    'A/C'            : Item(status='  ', wc_rev=1),
+    'A/D'            : Item(status='  ', wc_rev=1)
+    })
+  expected_disk = svntest.wc.State(wc_dir, {
+    'A'           : Item(contents=None),
+    'A/mu'        : Item(contents="This is the file 'mu'.\n"),
+    'A/B'         : Item(contents=None),
+    'A/C'         : Item(contents=None),
+    'A/D'         : Item(contents=None)
+    })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None,
+                                        None, None, None, None,
+                                        '--set-depth', 'immediates', A_path)
+  verify_depth(None, "immediates", A_path)
+  verify_depth(None, "empty", B_path)
+  verify_depth(None, "empty", C_path)
+  verify_depth(None, "empty", D_path)
+
+  # Run 'svn up --set-depth=files' to directory A in other_wc. This both
+  # removes directory D and expands directory A to files
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu'           : Item(status='A '),
+    'A/D'            : Item(status='D '),
+    'A/D/gamma'      : Item(status='D '),
+    'A/D/G'          : Item(status='D '),
+    'A/D/G/pi'       : Item(status='D '),
+    'A/D/G/rho'      : Item(status='D '),
+    'A/D/G/tau'      : Item(status='D '),
+    'A/D/H'          : Item(status='D '),
+    'A/D/H/chi'      : Item(status='D '),
+    'A/D/H/psi'      : Item(status='D '),
+    'A/D/H/omega'    : Item(status='D ')
+    })
+  expected_status = svntest.wc.State(wc_dir, {
+    ''               : Item(status='  ', wc_rev=1),
+    'A'              : Item(status='  ', wc_rev=1),
+    'A/mu'           : Item(status='  ', wc_rev=1),
+    })
+  expected_disk = svntest.wc.State(wc_dir, {
+    'A'           : Item(contents=None),
+    'A/mu'        : Item(contents="This is the file 'mu'.\n")
+    })
+  Other_A_path = os.path.join(other_wc, 'A')
+  svntest.actions.run_and_verify_update(other_wc,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None,
+                                        None, None, None, None,
+                                        '--set-depth', 'files', Other_A_path)
+  verify_depth(None, "files", Other_A_path)
+
+
+def pull_in_tree_with_depth_option(sbox):
+  """checkout and verify subtree with depth immediates"""
+
+  wc_empty,ign_a, ign_b, ign_c = set_up_depthy_working_copies(sbox,
+                                                              empty=True)
+  A_path = os.path.join(wc_empty, 'A')
+  expected_output = svntest.wc.State(wc_empty, {
+    'A'      : Item(status='A '),
+    'A/mu'   : Item(status='A '),
+    'A/B'    : Item(status='A '),
+    'A/C'    : Item(status='A '),
+    'A/D'    : Item(status='A ')
+    })
+  expected_disk = svntest.wc.State('', {
+    'A'      : Item(),
+    'A/mu'   : Item("This is the file 'mu'.\n"),
+    'A/B'    : Item(),
+    'A/C'    : Item(),
+    'A/D'    : Item(),
+    })
+  expected_status = svntest.wc.State(wc_empty, {
+    ''       : Item(status='  ', wc_rev=1),
+    'A'      : Item(status='  ', wc_rev=1),
+    'A/mu'   : Item(status='  ', wc_rev=1),
+    'A/B'    : Item(status='  ', wc_rev=1),
+    'A/C'    : Item(status='  ', wc_rev=1),
+    'A/D'    : Item(status='  ', wc_rev=1),
+    })
+  svntest.actions.run_and_verify_update(wc_empty,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None, False,
+                                        "--depth=immediates", A_path)
+
+  # Check that the A directory was pull ed in at depth=immediates.
+  verify_depth(None, "immediates", A_path)
+
+def fold_tree_with_unversioned_modified_items(sbox):
+  "unversioned & modified items left untouched"
+  ign_a, ign_b, ign_c, wc_dir = set_up_depthy_working_copies(sbox,
+                                                             infinity=True)
+
+  A_path = os.path.join(wc_dir, 'A')
+  pi_path = os.path.join(A_path, 'D', 'G', 'pi')
+  mu_path = os.path.join(A_path, 'mu')
+  unv_path = os.path.join(A_path, 'B', 'unv')
+
+  # Modify file pi
+  svntest.main.file_write(pi_path, "pi modified\n")
+  # Modify file mu
+  svntest.main.file_write(mu_path, "mu modified\n")
+  # Create an unversioned file
+  svntest.main.file_write(unv_path, "new unversioned\n")
+
+  # Fold the A dir to empty, expect the modified & unversioned ones left
+  # unversioned rather than removed, along with paths to those items.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/lambda'     : Item(status='D '),
+    'A/B/E'          : Item(status='D '),
+    'A/B/E/alpha'    : Item(status='D '),
+    'A/B/E/beta'     : Item(status='D '),
+    'A/B/F'          : Item(status='D '),
+    'A/C'            : Item(status='D '),
+    'A/D/gamma'      : Item(status='D '),
+    'A/D/G/rho'      : Item(status='D '),
+    'A/D/G/tau'      : Item(status='D '),
+    'A/D/H'          : Item(status='D '),
+    'A/D/H/chi'      : Item(status='D '),
+    'A/D/H/psi'      : Item(status='D '),
+    'A/D/H/omega'    : Item(status='D ')
+    })
+  # unversioned items will be ignored in in the status tree, since the
+  # run_and_verify_update() function uses a quiet version of svn status
+  # Dir A is still versioned, since the wc root is in depth-infinity
+  expected_status = svntest.wc.State(wc_dir, {
+    ''               : Item(status='  ', wc_rev=1),
+    'iota'           : Item(status='  ', wc_rev=1),
+    'A'              : Item(status='  ', wc_rev=1)
+    })
+  expected_disk = svntest.wc.State(wc_dir, {
+    'iota'           : Item(contents="this is iota\n"),
+    'A'              : Item(contents=None),
+    'A/mu'           : Item(contents="mu modified\n"),
+    'A/B'            : Item(contents=None),
+    'A/B/unv'        : Item(contents="new unversioned\n"),
+    'A/D'            : Item(contents=None),
+    'A/D/G'          : Item(contents=None),
+    'A/D/G/pi'       : Item(contents="pi modified\n")
+    })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None,
+                                        None, None, None, None,
+                                        '--set-depth', 'empty', A_path)
+  verify_depth(None, "empty", A_path)
+
+#----------------------------------------------------------------------
 # list all tests here, starting with None:
 test_list = [ None,
               depth_empty_checkout,
@@ -1451,10 +2037,15 @@ test_list = [ None,
               diff_in_depthy_wc,
               commit_depth_immediates,
               depth_immediates_receive_new_dir,
-              add_tree_with_depth_files,
+              add_tree_with_depth,
               upgrade_from_above,
               status_in_depthy_wc,
               depthy_update_above_dir_to_be_deleted,
+              XFail(depth_folding_clean_trees_1),
+              XFail(depth_folding_clean_trees_2),
+              XFail(depth_fold_expand_clean_trees),
+              pull_in_tree_with_depth_option,
+              XFail(fold_tree_with_unversioned_modified_items),
             ]
 
 if __name__ == "__main__":

@@ -99,8 +99,9 @@ make_and_open_local_repos(svn_ra_session_t **session,
 
   SVN_ERR(current_directory_url(&url, repos_name, pool));
 
-  SVN_ERR(svn_ra_open2(session,
+  SVN_ERR(svn_ra_open3(session,
                        url,
+                       NULL,
                        cbtable,
                        NULL,
                        NULL,

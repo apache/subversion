@@ -1297,6 +1297,9 @@ svn_repos_node_location_segments(svn_repos_t *repos,
  * If @a strict_node_history is set, copy history (if any exists) will
  * not be traversed while harvesting revision logs for each path.
  *
+ * If @a include_merged_revisions is set, log information for revisions
+ * which have been merged to @a targets will also be returned.
+ *
  * If @a revprops is NULL, retrieve all revprops; else, retrieve only the
  * revprops named in the array (i.e. retrieve none if the array is empty).
  *
@@ -1655,10 +1658,10 @@ svn_repos_fs_get_locks(apr_hash_t **locks,
 /** @} */
 
 /**
- * Like svn_fs_change_rev_prop(), but invoke the @a repos's pre- and
- * post-revprop-change hooks around the change as specified by @a
- * use_pre_revprop_change_hook and @a use_post_revprop_change_hook
- * (respectively).  Use @a pool for temporary allocations.
+ * Like svn_fs_change_rev_prop(), but validate the name and value of the
+ * property and invoke the @a repos's pre- and post-revprop-change hooks
+ * around the change as specified by @a use_pre_revprop_change_hook and
+ * @a use_post_revprop_change_hook (respectively).
  *
  * @a rev is the revision whose property to change, @a name is the
  * name of the property, and @a new_value is the new value of the
@@ -1669,6 +1672,11 @@ svn_repos_fs_get_locks(apr_hash_t **locks,
  * authz_read_baton) to validate the changed-paths associated with @a
  * rev.  If the revision contains any unreadable changed paths, then
  * return SVN_ERR_AUTHZ_UNREADABLE.
+ *
+ * Validate @a name and @a new_value like the same way
+ * svn_repos_fs_change_node_prop() does.
+ *   
+ * Use @a pool for temporary allocations.
  *
  * @since New in 1.5.
  */
@@ -1784,6 +1792,14 @@ svn_repos_fs_revision_proplist(apr_hash_t **table_p,
 
 /** Validating wrapper for svn_fs_change_node_prop() (which see for
  * argument descriptions).
+ *
+ * If @a name's kind is not @c svn_prop_regular_kind, return @c
+ * SVN_ERR_REPOS_BAD_ARGS.  If @a name is an "svn:" property, validate its
+ * @a value and return SVN_ERR_BAD_PROPERTY_VALUE if it is invalid for the
+ * property.
+ *
+ * @note Currently, the only "svn:" property validated is @c
+ * SVN_PROP_REVISION_DATE.  This may change in a future release.
  */
 svn_error_t *
 svn_repos_fs_change_node_prop(svn_fs_root_t *root,
@@ -1793,7 +1809,8 @@ svn_repos_fs_change_node_prop(svn_fs_root_t *root,
                               apr_pool_t *pool);
 
 /** Validating wrapper for svn_fs_change_txn_prop() (which see for
- * argument descriptions).
+ * argument descriptions).  See svn_repos_fs_change_txn_props() for more
+ * information.
  */
 svn_error_t *
 svn_repos_fs_change_txn_prop(svn_fs_txn_t *txn,
@@ -1802,7 +1819,8 @@ svn_repos_fs_change_txn_prop(svn_fs_txn_t *txn,
                              apr_pool_t *pool);
 
 /** Validating wrapper for svn_fs_change_txn_props() (which see for
- * argument descriptions).
+ * argument descriptions).  Validate properties and their values the
+ * same way svn_repos_fs_change_node_prop() does.
  * 
  * @since New in 1.5.
  */
@@ -1983,7 +2001,7 @@ enum svn_repos_load_uuid
  * cancel_baton as argument to see if the caller wishes to cancel the
  * verification.
  *
- * @since New in 1.6.
+ * @since New in 1.5.
  */
 svn_error_t *
 svn_repos_verify_fs(svn_repos_t *repos,

@@ -1,0 +1,192 @@
+.\" Process this file with
+.\" groff -man -Tascii <file>
+.\"
+.TH @PACKAGE@_exec_svnserve 3 "2008-04-18" "version @PACKAGE_VERSION@" Subversion
+.SH NAME
+@PACKAGE@_exec_svnserve \- execute svnserve in tunnel mode
+.SH SYNOPSIS
+.B #include <@PACKAGE@/exec_svnserve.h>
+
+.BI "int @PACKAGE@_exec_svnserve(const char* " svnserve_path ,
+.br
+.BI "                          const char* " svn_root ,
+.br
+.BI "                          const char* " tunnel_user ,
+.br
+.BI "                          const char* const* " argv ,
+.br
+.BI "                          const char* const* " envp );
+.SH DESCRIPTION
+Executes
+.B svnserve
+in tunnel mode with the tunnel user set to
+.I tunnel_user
+and the virtual repository root path set to
+.IR svn_root .
+
+Specifically, the executable named by
+.I svnserve_path
+is executed (see
+.BR exec (3))
+with the environment set to
+.I envp
+and with arguments
+.BI \-\-root= svn_root\c
+,
+.B \-\-tunnel\c
+, and
+.BI \-\-tunnel\-user= tunnel_user
+appended to the arguments given in
+.IR argv .
+
+This is thread-safe if the user's C POSIX library is thread-safe.
+.SH ARGUMENTS
+.TP
+.I svnserve_path
+Null-terminated string containing the path to the
+.B svnserve
+executable.  This must be an absolute path and must refer to an
+existing executable file.  This parameter must not be the null
+pointer.  Callers are encouraged to use
+.BR svnstsw_fso_is_changeable (3)
+to check the safety of using the path before calling this function.
+.TP
+.I svn_root
+Null-terminated string containing the repository virtual root path,
+passed to
+.B svnserve
+via its
+.B \-\-root
+command-line parameter.  If this parameter is the null pointer or an
+empty string, the root directory
+.RB (' / ')
+is used.  The path must be an absolute path, must exist, and must
+refer to a directory.  Callers are encouraged to use
+.BR svnstsw_fso_is_changeable (3)
+to check the safety of using the path before calling this function.
+.TP
+.I tunnel_user
+Null-terminated string containing the Subversion username, passed to
+.B svnserve
+via its
+.B --tunnel-user
+command-line parameter.  This parameter must not be the null pointer
+or an empty string.  Callers are encouraged to use the string returned
+by
+.BR svnstsw_get_tunnel_user_name (3)
+for this parameter.
+.TP
+.I argv
+Null-terminated array of null-terminated strings to use as the first
+arguments to the
+.B svnserve
+executable.  Note that convention dictates that
+.IR argv [0]
+must match
+.IR svnserve_path .
+If this parameter is the null pointer, it is the equivalent to passing
+in a two-element array consisting of
+.I svnserve_path
+and a null terminator.  The
+.BI \-\-root= svn_root\c
+\&,
+.B \-\-tunnel\c
+, and
+.BI \-\-tunnel\-user= user
+arguments will be appended to the arguments in
+.I argv
+before being passed to the executable named by
+.IR svnserve_path .
+.TP
+.I envp
+Null-terminated array of null-terminated strings containing the
+desired environment for the
+.B svnserve
+process.  If this parameter is the null pointer, it is the equivalent
+to passing in an array consisting of only a null terminator.  By
+convention, each string in this array should be in the form of 
+.IR name = value .
+For security reasons, the contents of
+.I envp
+might not be passed as-is to the executable named by
+.IR svnserve_path .
+.SH RETURN VALUE
+Does not return on success.
+
+On failure, returns a negative value and sets
+.I errno
+(see
+.BR errno (3)).
+.SH ERRORS
+Error conditions and
+.I errno
+(see
+.BR errno (3))
+values are described in the specifications for
+.BR stat "(3), " snprintf "(3), and " execve (3),
+with the addition that
+.B EINVAL
+may indicate an invalid parameter.
+.SH SECURITY CONSIDERATIONS
+Executables using this function are expected to be installed with
+either the setuid or the setgid bit set.  Because of this, there are a
+few recommendations:
+.RS 1
+.IP \- 3
+The executable named by the
+.I svnserve_path
+argument should not be a shell script because of numerous well-known
+attacks via specially-crafted environment variables and arguments.
+.IP \- 3
+The
+.I envp
+argument should be empty (either the null pointer or an array
+containing only a null terminator).  This is especially true if the
+executable named by the
+.I svnserve_path
+argument is a shell script.
+.IP \- 3
+.I svnserve_path
+and
+.I svn_root
+should be passed through
+.BR svnstsw_fso_is_changeable (3)
+to make sure that neither they nor their parent directories are
+writable by the user.
+.RE
+.SH SEE ALSO
+.BR lib@PACKAGE@ "(3), " @PACKAGE@_get_tunnel_user_name "(3), " @PACKAGE@_fso_is_changeable "(3), " @PACKAGE@ "(8), " svnserve "(8), " exec (3)
+.SH AUTHOR
+Richard Hansen <svnstsw@ir.bbn.com>
+.SH COPYING
+Copyright (c) 2008 BBN Technologies Corp.  All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+.RS 0
+.IP 1. 4
+Redistributions of source code must retain the above copyright notice,
+this list of conditions and the following disclaimer.
+.IP 2. 4
+Redistributions in binary form must reproduce the above copyright
+notice, this list of conditions and the following disclaimer in the
+documentation and/or other materials provided with the distribution.
+.IP 3. 4
+Neither the name of BBN Technologies nor the names of its contributors
+may be used to endorse or promote products derived from this software
+without specific prior written permission.
+.RE
+
+THIS SOFTWARE IS PROVIDED BY BBN TECHNOLOGIES AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL BBN TECHNOLOGIES OR
+CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+

@@ -68,7 +68,7 @@ SVN_LIB_APRUTIL($APU_VER_REGEXES)
 
 # Either a space-separated list of allowable Neon versions, or "any" to
 # mean allow anything.
-NEON_ALLOWED_LIST="0.25.0 0.25.1 0.25.2 0.25.3 0.25.4 0.25.5 0.26.0 0.26.1 0.26.2 0.26.3 0.26.4 0.27.2 0.28.0 0.28.1 0.29.0-dev"
+NEON_ALLOWED_LIST="0.25.0 0.25.1 0.25.2 0.25.3 0.25.4 0.25.5 0.26.0 0.26.1 0.26.2 0.26.3 0.26.4 0.27.2 0.28.0 0.28.1 0.28.2 0.29.0-dev"
 NEON_RECOMMENDED_VER=0.28.1
 NEON_URL="http://www.webdav.org/neon/neon-${NEON_RECOMMENDED_VER}.tar.gz"
 dnl You can skip the neon version check only if you know what you are doing 
@@ -457,6 +457,9 @@ else
   if test "$enable_debugging" = "no" ; then
     CFLAGS=["`echo $CFLAGS' ' | sed -e 's/-g[0-9] //g' | sed -e 's/-g//g'`"]
     CXXFLAGS=["`echo $CXXFLAGS' ' | sed -e 's/-g[0-9] //g' | sed -e 's/-g//g'`"]
+    dnl Compile with NDEBUG to get rid of assertions
+    CFLAGS="$CFLAGS -DNDEBUG"
+    CXXFLAGS="$CXXFLAGS -DNDEBUG"
   fi
 fi
 
@@ -708,9 +711,7 @@ AC_ARG_WITH(junit,
 AS_HELP_STRING([--with-junit=PATH],
                [Specify a path to the junit JAR file.]),
 [
-    if test "$withval" = "yes" ; then
-      AC_MSG_ERROR([--with-junit requires an argument.])
-    else
+    if test "$withval" != "no"; then
       if test -n "$JAVA_CLASSPATH"; then
         JAVA_CLASSPATH="$withval:$JAVA_CLASSPATH"
       else

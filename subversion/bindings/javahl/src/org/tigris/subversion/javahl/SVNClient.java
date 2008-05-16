@@ -778,10 +778,14 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.5
      */
-    public native RevisionRange[] getAvailableMerges(String path,
-                                                     Revision pegRevision,
-                                                     String mergeSource)
-        throws SubversionException;
+    public native void getMergeinfoLog(int kind, String pathOrUrl,
+                                       Revision pegRevision,
+                                       String mergeSourceUrl,
+                                       Revision srcPegRevision,
+                                       boolean discoverChangedPaths,
+                                       String[] revprops,
+                                       LogMessageCallback callback)
+        throws ClientException;
 
     /**
      * @deprecated Use {@link #diff(String, Revision, String, Revision,

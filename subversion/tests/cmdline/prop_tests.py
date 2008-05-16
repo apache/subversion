@@ -385,7 +385,7 @@ def commit_conflict_dirprops(sbox):
   svntest.main.run_svn(None, 'propset', 'foo', 'eek', wc_dir)
 
   svntest.actions.run_and_verify_commit(wc_dir, None, None,
-                                        "out[- ]of[- ]date",
+                                        "[oO]ut[- ]of[- ]date",
                                         wc_dir)
 
 #----------------------------------------------------------------------
@@ -1633,6 +1633,21 @@ def props_over_time(sbox):
           svntest.actions.run_and_verify_svn(None, plist_expected, [],
                                              'proplist', '-v', peg_path)
 
+def invalid_propvalues(sbox):
+  "test handling invalid svn:* property values"
+
+  sbox.build(create_wc = False)
+  repo_dir = sbox.repo_dir
+  repo_url = sbox.repo_url
+
+  svntest.actions.enable_revprop_changes(repo_dir)
+  
+  expected_stderr = '.*unexpected property value.*|.*Bogus date.*'
+  svntest.actions.run_and_verify_svn(None, [], expected_stderr,
+                                     'propset', '--revprop', '-r', '0',
+                                     'svn:date', 'Sat May 10 12:12:31 2008',
+                                     repo_url)
+
 ########################################################################
 # Run the tests
 
@@ -1670,6 +1685,8 @@ test_list = [ None,
               SkipUnless(perms_on_symlink, svntest.main.is_posix_os),
               remove_custom_ns_props,
               props_over_time,
+              # XFail the same reason revprop_change() is.
+              XFail(invalid_propvalues, svntest.main.is_ra_type_dav),
              ]
 
 if __name__ == '__main__':
