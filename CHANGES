@@ -21,7 +21,6 @@ http://svn.collab.net/repos/svn/tags/1.5.0
     * 'svn copy', 'move' now support peg revisions (issue #2546; also r26484)
     * 'svn copy A B ; svn move B C' now the same as 'svn copy A C' (issue #756)
     * 'svn copy -rBASE' now works in a working copy (issue #1643)
-    * 'svn commit' now takes '--with-revprop' option (issue #1976)
     * 'svn import' now takes '--force' (issue #2806)
     * 'svn status -u' now shows of locally deleted directories (issue #2420)
     * 'svn switch' now takes '--force' (issue #2392)
@@ -42,6 +41,7 @@ http://svn.collab.net/repos/svn/tags/1.5.0
     * 'svn merge FILE' now honors '--ignore-ancestry' (issue #2853, r25891)
     * 'svn merge' handles multiple notifications for single items (issue #2828)
     * 'svn merge' handles skipped path better (issue #2829)
+    * 'svn merge' handles merges from foreign repositories more completely
     * 'update', 'checkout', 'switch' now handle obstructions gracefully (r22257)
     * 'svn update' now takes '--force' (issue #2392)
     * 'svn update' now sometimes copies or moves local files, for efficiency
@@ -65,6 +65,7 @@ http://svn.collab.net/repos/svn/tags/1.5.0
     * 'svnlook history' now takes '-l' / '--limit' option (r25843)
     * 'svnserve' now takes '--config-file' option (r24119)
     * 'mod_dav_svn' now uses Apache default mime-type for files (issue #2304)
+    * new '--with-revprop' option on all commands that commit (issue #1976)
     * now accept "peg dates" (URL@{DATE}), behaving like peg revs (issue #2602)
     * easier to try out experimental ra_serf http:// access module
     * select ra_neon vs ra_serf on a site-by-site basis in config (r25535)

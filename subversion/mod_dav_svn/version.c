@@ -33,6 +33,7 @@
 #include "svn_dav.h"
 #include "svn_base64.h"
 #include "private/svn_dav_protocol.h"
+#include "private/svn_log.h"
 
 #include "dav_svn.h"
 
@@ -1340,9 +1341,7 @@ merge(dav_resource *target,
 
   /* We've detected a 'high level' svn action to log. */
   dav_svn__operational_log(target->info,
-                           apr_psprintf(target->info->r->pool,
-                                        "commit r%ld",
-                                        new_rev));
+                           svn_log__commit(new_rev, target->info->r->pool));
 
   /* Since the commit was successful, the txn ID is no longer valid.
      Store an empty txn ID in the activity database so that when the

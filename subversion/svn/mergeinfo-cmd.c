@@ -43,7 +43,7 @@ print_log_rev(void *baton,
               svn_log_entry_t *log_entry,
               apr_pool_t *pool)
 {
-  svn_cmdline_printf(pool, "%ld\n", log_entry->revision);
+  svn_cmdline_printf(pool, "r%ld\n", log_entry->revision);
   return SVN_NO_ERROR;
 }
  
@@ -62,7 +62,7 @@ svn_cl__mergeinfo(apr_getopt_t *os,
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets, 
-                                                      pool));
+                                                      ctx, pool));
 
   /* We expect a single source URL followed by a single target --
      nothing more, nothing less. */
@@ -112,15 +112,15 @@ svn_cl__mergeinfo(apr_getopt_t *os,
     {
       SVN_ERR(svn_client_mergeinfo_log_merged(target, &tgt_peg_revision, 
                                               source_url, &src_peg_revision,
-                                              print_log_rev,
-                                              NULL, FALSE, ctx, pool));
+                                              print_log_rev, NULL, 
+                                              FALSE, NULL, ctx, pool));
     }
   else if (opt_state->show_revs == svn_cl__show_revs_eligible)
     {
       SVN_ERR(svn_client_mergeinfo_log_eligible(target, &tgt_peg_revision,
                                                 source_url, &src_peg_revision,
-                                                print_log_rev,
-                                                NULL, FALSE, ctx, pool));
+                                                print_log_rev, NULL, 
+                                                FALSE, NULL, ctx, pool));
     }
   return SVN_NO_ERROR;
 }

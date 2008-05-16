@@ -806,34 +806,61 @@ SVNClient::getMergeinfo(const char *target, Revision &pegRevision)
     return jmergeinfo;
 }
 
-jobjectArray
-SVNClient::getAvailableMerges(const char *target, Revision &pegRevision,
-                              const char *mergeSource)
+void SVNClient::getMergeinfoLog(int type, const char *pathOrURL,
+                                Revision &pegRevision,
+                                const char *mergeSourceURL,
+                                Revision &srcPegRevision,
+                                bool discoverChangedPaths,
+                                StringArray &revProps,
+                                LogMessageCallback *callback)
 {
     Pool requestPool;
     JNIEnv *env = JNIUtil::getEnv();
 
     svn_client_ctx_t *ctx = getContext(NULL);
     if (ctx == NULL)
-        return NULL;
+        return;
 
-    Path intLocalTarget(target);
-    SVN_JNI_ERR(intLocalTarget.error_occured(), NULL);
-    Path intMergeSource(mergeSource);
-    SVN_JNI_ERR(intMergeSource.error_occured(), NULL);
+    SVN_JNI_NULL_PTR_EX(pathOrURL, "path or url", );
+    Path urlPath(pathOrURL);
+    SVN_JNI_ERR(urlPath.error_occured(), );
 
-    apr_array_header_t *ranges;
-    SVN_JNI_ERR(svn_client_mergeinfo_get_available(&ranges,
-                                                   intLocalTarget.c_str(),
-                                                   pegRevision.revision(),
-                                                   intMergeSource.c_str(),
-                                                   ctx, requestPool.pool()),
-                NULL);
-    if (ranges == NULL)
-        return NULL;
+    SVN_JNI_NULL_PTR_EX(mergeSourceURL, "merge source url", );
+    Path srcURL(mergeSourceURL);
+    SVN_JNI_ERR(srcURL.error_occured(), );
 
-    // Transform ranges into a Java array of RevisionRange objects.
-    return makeJRevisionRangeArray(ranges);
+    switch (type)
+      {
+        case 0:
+            SVN_JNI_ERR(
+                svn_client_mergeinfo_log_eligible(urlPath.c_str(),
+                                                  pegRevision.revision(),
+                                                  srcURL.c_str(),
+                                                  srcPegRevision.revision(),
+                                                  LogMessageCallback::callback,
+                                                  callback,
+                                                  discoverChangedPaths,
+                                                  revProps.array(requestPool),
+                                                  ctx,
+                                                  requestPool.pool()), );
+            return;
+
+        case 1:
+            SVN_JNI_ERR(
+                svn_client_mergeinfo_log_merged(urlPath.c_str(),
+                                                pegRevision.revision(),
+                                                srcURL.c_str(),
+                                                srcPegRevision.revision(),
+                                                LogMessageCallback::callback,
+                                                callback,
+                                                discoverChangedPaths,
+                                                revProps.array(requestPool),
+                                                ctx,
+                                                requestPool.pool()), );
+            return;
+      }
+
+    return;
 }
 
 /**

@@ -1,13 +1,13 @@
 #!/bin/sh
 set -e
 
-AUTOCONF=autoconf-2.61
+AUTOCONF=autoconf-2.62
 LIBTOOL=libtool-1.5.26
 SWIG=swig-1.3.31
 
 APR=apr-1.2.12
 APR_UTIL=apr-util-1.2.12
-NEON=neon-0.28.1
+NEON=neon-0.28.2
 SERF=serf-0.1.2
 ZLIB=zlib-1.2.3
 

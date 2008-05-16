@@ -351,6 +351,8 @@ end_merge(svn_ra_serf__xml_parser_t *parser,
         }
       info->prop_val = apr_pstrmemdup(info->pool, info->prop_val,
                                       info->prop_val_len);
+      if (strcmp(info->prop_name, "href") == 0)
+        info->prop_val = svn_path_canonicalize(info->prop_val, info->pool);
 
       /* Set our property. */
       apr_hash_set(info->props, info->prop_name, APR_HASH_KEY_STRING,

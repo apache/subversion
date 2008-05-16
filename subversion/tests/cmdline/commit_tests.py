@@ -29,7 +29,8 @@ SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
-from svntest.main import server_has_revprop_commit
+from svntest.main import server_has_revprop_commit, \
+    server_gets_client_capabilities
 from svntest.actions import inject_conflict_into_wc
 
 ######################################################################
@@ -2626,7 +2627,8 @@ test_list = [ None,
               versioned_log_message,
               changelist_near_conflict,
               commit_out_of_date_file,
-              start_commit_detect_capabilities,
+              SkipUnless(start_commit_detect_capabilities,
+                         server_gets_client_capabilities),
               commit_url,
               tree_conflicts_block_commit,
               tree_conflicts_resolved,

@@ -119,12 +119,16 @@ print_line_info(svn_stream_t *out,
           time_utf8 = svn_time_to_human_cstring(atime, pool);
           SVN_ERR(svn_cmdline_cstring_from_utf8(&time_stdout, time_utf8,
                                                 pool));
-        } else
+        }
+      else
+        {
           /* ### This is a 44 characters long string. It assumes the current
              format of svn_time_to_human_cstring and also 3 letter
              abbreviations for the month and weekday names.  Else, the
              line contents will be misaligned. */
           time_stdout = "                                           -";
+        }
+
       SVN_ERR(svn_stream_printf(out, pool, "%s %10s %s ", rev_str,
                                 author ? author : "         -",
                                 time_stdout));
@@ -204,7 +208,7 @@ svn_cl__blame(apr_getopt_t *os,
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets, 
-                                                      pool));
+                                                      ctx, pool));
 
   /* Blame needs a file on which to operate. */
   if (! targets->nelts)

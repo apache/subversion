@@ -150,13 +150,16 @@
                   svn_swig_rb_wc_status_func)
 #endif
 
-#ifdef SWIGRUBY
+#ifndef SWIGPERL
 %callback_typemap(const svn_wc_diff_callbacks2_t *callbacks,
                   void *callback_baton,
-                  ,
+                  svn_swig_py_setup_wc_diff_callbacks2(&$2, $input,
+                                                       _global_pool),
                   ,
                   svn_swig_rb_wc_diff_callbacks2())
+#endif
 
+#ifdef SWIGRUBY
 %callback_typemap(svn_wc_relocation_validator3_t validator,
                   void *validator_baton,
                   ,

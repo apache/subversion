@@ -29,7 +29,8 @@ SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
-from svntest.main import SVN_PROP_MERGEINFO, server_sends_copyfrom_on_update
+from svntest.main import SVN_PROP_MERGEINFO, server_sends_copyfrom_on_update, \
+  server_has_mergeinfo
 
 ######################################################################
 # Tests
@@ -2942,10 +2943,9 @@ def mergeinfo_update_elision(sbox):
     # Construct a properly escaped regex when dealing with
     # '\' riddled paths on Windows.
     update_line = update_line.replace("\\", "\\\\")
+  notify_line = svntest.main.merge_notify_line(3, 5, True, False)
   svntest.actions.run_and_verify_svn(None,
-                                     '|'.join(
-                                        [svntest.main.merge_notify_line(3, 5),
-                                         update_line]),
+                                     '|'.join([notify_line, update_line]),
                                      [], 'merge', '-r2:5',
                                      sbox.repo_url + '/A/B/E/alpha',
                                      short_alpha_COPY_path)
@@ -3820,6 +3820,46 @@ interactive-conflicts = true
                                         None, None, 1,
                                         '-r1', wc_dir)
 
+
+#----------------------------------------------------------------------
+
+
+def update_uuid_changed(sbox):
+  "update fails when repos uuid changed"
+  
+  def wc_uuid(wc_dir):
+    "Return the UUID of the working copy at WC_DIR."
+
+    exit_code, output, errput = svntest.main.run_svn(None, 'info', wc_dir)
+    if errput:
+      raise svntest.verify.SVNUnexpectedStderr(errput)
+
+    for line in output:
+      if line.startswith('Repository UUID:'):
+        return line[17:].rstrip()
+
+    # No 'Repository UUID' line in 'svn info'?
+    raise svntest.verify.SVNUnexpectedStdout(output)
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+  repo_dir = sbox.repo_dir
+  
+  uuid_before = wc_uuid(wc_dir)
+
+  # Change repository's uuid.
+  svntest.actions.run_and_verify_svnadmin(None, None, [],
+                                          'setuuid', repo_dir)
+  
+  # 'update' detected the new uuid...
+  svntest.actions.run_and_verify_svn(None, None, '.*UUID.*',
+                                     'update', wc_dir)
+  
+  # ...and didn't overwrite the old uuid.
+  uuid_after = wc_uuid(wc_dir)
+  if uuid_before != uuid_after:
+    raise svntest.Failure
+
 #----------------------------------------------------------------------
 
 def tree_conflicts_in_updated_files(sbox):
@@ -3907,7 +3947,8 @@ test_list = [ None,
               update_wc_with_replaced_file,
               update_with_obstructing_additions,
               update_conflicted,
-              mergeinfo_update_elision,
+              SkipUnless(mergeinfo_update_elision,
+                         server_has_mergeinfo),
               SkipUnless(update_handles_copyfrom,
                          server_sends_copyfrom_on_update),
               copyfrom_degrades_gracefully,
@@ -3917,6 +3958,7 @@ test_list = [ None,
               update_copied_and_deleted_prop,
               update_accept_conflicts,
               eof_in_interactive_conflict_resolver,
+              update_uuid_changed,
               tree_conflicts_in_updated_files,
              ]
 

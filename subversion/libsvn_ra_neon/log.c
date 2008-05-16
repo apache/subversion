@@ -18,6 +18,8 @@
 
 
 
+#include <assert.h>
+
 #define APR_WANT_STRFUNC
 #include <apr_want.h> /* for strcmp() */
 
@@ -72,7 +74,8 @@ struct log_baton
   void *receiver_baton;
 
   int limit;
-  int count;
+  int nest_level; /* used to track mergeinfo nesting levels */
+  int count; /* only incremented when nest_level == 0 */
 
   /* If we're in backwards compatibility mode for the svn log --limit
      stuff, we need to be able to bail out while parsing log messages.
@@ -291,15 +294,23 @@ log_end_element(void *baton, int state,
            error out of the XML parser so we can avoid having to parse the
            remaining XML, but set lb->err to SVN_NO_ERROR so no error will
            end up being shown to the user. */
-        if (lb->limit && (++lb->count > lb->limit))
+        if (lb->limit && (lb->nest_level == 0) && (++lb->count > lb->limit))
           {
             lb->limit_compat_bailout = TRUE;
             return svn_error_create(APR_EGENERAL, NULL, NULL);
           }
-
         SVN_ERR((*(lb->receiver))(lb->receiver_baton,
                                   lb->log_entry,
                                   lb->subpool));
+        if (lb->log_entry->has_children)
+          {
+            lb->nest_level++;
+          }
+        if (! SVN_IS_VALID_REVNUM(lb->log_entry->revision))
+          {
+            assert(lb->nest_level);
+            lb->nest_level--;
+          }
         reset_log_item(lb);
       }
       break;
@@ -426,8 +437,8 @@ svn_error_t * svn_ra_neon__get_log(svn_ra_session_t *session,
   if (want_custom_revprops)
     {
       svn_boolean_t has_log_revprops;
-      SVN_ERR(svn_ra_has_capability(session, &has_log_revprops,
-                                    SVN_RA_CAPABILITY_LOG_REVPROPS, pool));
+      SVN_ERR(svn_ra_neon__has_capability(session, &has_log_revprops,
+                                          SVN_RA_CAPABILITY_LOG_REVPROPS, pool));
       if (!has_log_revprops)
         return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL,
                                 _("Server does not support custom revprops"
@@ -456,6 +467,7 @@ svn_error_t * svn_ra_neon__get_log(svn_ra_session_t *session,
   lb.subpool = svn_pool_create(pool);
   lb.limit = limit;
   lb.count = 0;
+  lb.nest_level = 0;
   lb.limit_compat_bailout = FALSE;
   lb.cdata = svn_stringbuf_create("", pool);
   lb.log_entry = svn_log_entry_create(pool);

@@ -1056,7 +1056,7 @@ subcommand_setuuid(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR(svn_opt_parse_all_args(&args, os, pool));
 
   if (args->nelts > 1)
-    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL, NULL);
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL, NULL);
   if (args->nelts == 1)
     uuid = APR_ARRAY_IDX(args, 0, const char *);
 

@@ -197,8 +197,8 @@ svn_mergeinfo_remove(svn_mergeinfo_t *mergeinfo, svn_mergeinfo_t eraser,
 
 /** Calculate the delta between two rangelists consisting of @c
  * svn_merge_range_t * elements (sorted in ascending order), @a from
- * and @a to, and place the result in @a deleted and @a added (neither
- * output argument will ever be @c NULL).
+ * and @a to, and place the result in @a *deleted and @a *added
+ * (neither output argument will ever be @c NULL).
  *
  * @a consider_inheritance determines how to account for the inheritability
  * of the two rangelist's ranges when calculating the diff,
@@ -267,6 +267,10 @@ svn_mergeinfo_intersect(svn_mergeinfo_t *mergeinfo,
  * svn_merge_range_t * elements, @a rangelist1 and @a rangelist2, and
  * place the result in @a *rangelist (which is never @c NULL).
  *
+ * @a consider_inheritance determines how to account for the inheritability
+ * of the two rangelist's ranges when calculating the intersection,
+ * @see svn_mergeinfo_diff().
+ *
  * Note: @a rangelist1 and @a rangelist2 must be sorted as said by @c
  * svn_sort_compare_ranges(). @a *rangelist is guaranteed to be in sorted
  * order.
@@ -276,6 +280,7 @@ svn_error_t *
 svn_rangelist_intersect(apr_array_header_t **rangelist,
                         apr_array_header_t *rangelist1,
                         apr_array_header_t *rangelist2,
+                        svn_boolean_t consider_inheritance,
                         apr_pool_t *pool);
 
 /** Reverse @a rangelist, and the @c start and @c end fields of each

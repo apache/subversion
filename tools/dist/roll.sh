@@ -8,7 +8,7 @@ BRANCH=${VERSION%.*}.x
 
 rs=http://svn.collab.net/repos/svn
 
-if [ -n "`svn diff $rs/branches/$BRANCH/CHANGES $rs/trunk/CHANGES`" ]; then
+if [ -n "`svn diff --summarize $rs/branches/$BRANCH/CHANGES $rs/trunk/CHANGES | grep ^M`" ]; then
   echo "CHANGES not synced between trunk and branch, aborting!" >&2
   exit 1
 fi

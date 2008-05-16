@@ -864,7 +864,7 @@ def run_and_verify_mergeinfo(error_re_string = None,
     verify.verify_outputs(None, None, err, None, expected_err)
     return
 
-  out = filter(None, map(lambda x: int(x.rstrip()), out))
+  out = filter(None, map(lambda x: int(x.rstrip()[1:]), out))
   out.sort()
   expected_output.sort()
 

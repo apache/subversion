@@ -9,6 +9,7 @@ class SubversionCoreTestCase(unittest.TestCase):
     self.assertEqual(svn.core.SubversionException().args, ())
     self.assertEqual(svn.core.SubversionException('error message').args,
                      ('error message',))
+    self.assertEqual(svn.core.SubversionException(None, 1).args, (None, 1))
     self.assertEqual(svn.core.SubversionException('error message', 1).args,
                      ('error message', 1))
     self.assertEqual(svn.core.SubversionException('error message', 1).apr_err,

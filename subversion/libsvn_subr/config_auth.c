@@ -46,8 +46,8 @@ auth_file_path(const char **path,
   /* Construct the path to the directory containing the creds files,
      e.g. "~/.subversion/auth/svn.simple".  The last component is
      simply the cred_kind.  */
-  SVN_ERR(svn_config__user_config_path(config_dir, &authdir_path,
-                                       SVN_CONFIG__AUTH_SUBDIR, pool));
+  SVN_ERR(svn_config_get_user_config_path(&authdir_path, config_dir,
+                                          SVN_CONFIG__AUTH_SUBDIR, pool));
   if (authdir_path)
     {
       authdir_path = svn_path_join(authdir_path, cred_kind, pool);

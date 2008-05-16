@@ -889,6 +889,44 @@ typedef struct svn_client_ctx_t
 #define SVN_CLIENT_AUTH_PASSWORD            "password"
 /** @} group end: Authentication information file names */
 
+/** Client argument processing
+ *
+ * @defgroup clnt_cmdline Client command-line processing
+ *
+ * @{
+ */
+
+/**
+ * Pull remaining target arguments from @a os into @a *targets_p,
+ * converting them to UTF-8, followed by targets from @a known_targets
+ * (which might come from, for example, the "--targets" command line option).
+ *
+ * On each URL target, do some IRI-to-URI encoding and some auto-escaping.
+ * On each local path, canonicalize case and path separators.
+ *
+ * Allocate @a *targets_p and its elements in @a pool.
+ *
+ * @a ctx is required for possible repository authentication.
+ *
+ * If a path has the same name as a Subversion working copy
+ * administrative directory, return SVN_ERR_RESERVED_FILENAME_SPECIFIED;
+ * if multiple reserved paths are encountered, return a chain of
+ * errors, all of which are SVN_ERR_RESERVED_FILENAME_SPECIFIED.  Do
+ * not return this type of error in a chain with any other type of
+ * error, and if this is the only type of error encountered, complete
+ * the operation before returning the error(s).
+ *
+ * @since New in 1.6
+ */
+svn_error_t *
+svn_client_args_to_target_array(apr_array_header_t **targets_p,
+                                apr_getopt_t *os,
+                                apr_array_header_t *known_targets,
+                                svn_client_ctx_t *ctx,
+                                apr_pool_t *pool);
+
+/** @} group end: Client command-line processing */
+
 /** @} */
 
 /**
@@ -1282,9 +1320,9 @@ svn_client_add4(const char *path,
 /**
  * Similar to svn_client_add4(), but with @a add_parents always set to
  * FALSE and @a depth set according to @a recursive: if TRUE, then
- * @a depth is @c svn_depth_infinity, if FALSE, then @c svn_depth_files.
+ * @a depth is @c svn_depth_infinity, if FALSE, then @c svn_depth_empty.
  *
- * @deprecated Provided for backward compatibility with the 1.3 API.
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *
 svn_client_add3(const char *path,
@@ -2637,13 +2675,14 @@ svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
 /**
  * Set @a *mergeinfo to a hash mapping <tt>const char *</tt> merge
  * source URLs to <tt>apr_array_header_t *</tt> rangelists (arrays of
- * <tt>svn_merge_range_t *</tt> ranges)o describing the ranges which
+ * <tt>svn_merge_range_t *</tt> ranges) describing the ranges which
  * have been merged into @a path_or_url as of @a peg_revision, or @c
  * NULL if there is no mergeinfo.
  *
  * Use @a pool for all necessary allocations.
  *
- * If the server doesn't support retrieval of mergeinfo, return an @c
+ * If the server doesn't support retrieval of mergeinfo (which will
+ * never happen for file:// URLs), return an @c
  * SVN_ERR_UNSUPPORTED_FEATURE error.
  *
  * @note Unlike most APIs which deal with mergeinfo, this one returns
@@ -2661,17 +2700,18 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
 
 
 /**
- * Drive log entry callbacks @c receiver / @c receiver_baton with the
+ * Drive log entry callbacks @a receiver / @a receiver_baton with the
  * revisions merged from @a merge_source_url (as of @a
  * src_peg_revision) into @a path_or_url (as of @a peg_revision).  @a
- * ctx is a context used for authentication.  @c
- * discover_changed_paths is the same as for svn_client_log4().  Use
- * @a pool for all necessary allocations.
+ * ctx is a context used for authentication.
+ * 
+ * @a discover_changed_paths and @a revprops are the same as for
+ * svn_client_log4().  Use @a pool for all necessary allocations.
  *
  * If the server doesn't support retrieval of mergeinfo, return an @c
  * SVN_ERR_UNSUPPORTED_FEATURE error.
  *
- * @since New in 1.6.
+ * @since New in 1.5.
  */
 svn_error_t *
 svn_client_mergeinfo_log_merged(const char *path_or_url,
@@ -2681,43 +2721,23 @@ svn_client_mergeinfo_log_merged(const char *path_or_url,
                                 svn_log_entry_receiver_t receiver,
                                 void *receiver_baton,
                                 svn_boolean_t discover_changed_paths,
+                                const apr_array_header_t *revprops,
                                 svn_client_ctx_t *ctx,
                                 apr_pool_t *pool);
 
 /**
- * Set @a *rangelist to a list of <tt>svn_merge_range_t *</tt>
- * items representing ranges of revisions which have not yet been
- * merged from @a merge_source_url into @a path_or_url as of @a
- * peg_revision, or @c NULL if all candidate revisions of @a
- * merge_source have already been merged.
+ * Drive log entry callbacks @a receiver / @a receiver_baton with the
+ * revisions eligible for merge from @a merge_source_url (as of @a
+ * src_peg_revision) into @a path_or_url (as of @a peg_revision).  @a
+ * ctx is a context used for authentication.
  *
- * Use @a pool for all necessary allocations.
+ * @a discover_changed_paths and @a revprops are the same as for
+ * svn_client_log4().  Use @a pool for all necessary allocations.
  *
  * If the server doesn't support retrieval of mergeinfo, return an @c
  * SVN_ERR_UNSUPPORTED_FEATURE error.
  *
  * @since New in 1.5.
- */
-svn_error_t *
-svn_client_mergeinfo_get_available(apr_array_header_t **rangelist,
-                                   const char *path_or_url,
-                                   const svn_opt_revision_t *peg_revision,
-                                   const char *merge_source_url,
-                                   svn_client_ctx_t *ctx,
-                                   apr_pool_t *pool);
-
-/**
- * Drive log entry callbacks @c receiver / @c receiver_baton with the
- * revisions eligible for merge from @a merge_source_url (as of @a
- * src_peg_revision) into @a path_or_url (as of @a peg_revision).  @a
- * ctx is a context used for authentication.  @c
- * discover_changed_paths is the same as for svn_client_log4().  Use
- * @a pool for all necessary allocations.
- *
- * If the server doesn't support retrieval of mergeinfo, return an @c
- * SVN_ERR_UNSUPPORTED_FEATURE error.
- *
- * @since New in 1.6.
  */
 svn_error_t *
 svn_client_mergeinfo_log_eligible(const char *path_or_url,
@@ -2727,6 +2747,7 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
                                   svn_log_entry_receiver_t receiver,
                                   void *receiver_baton,
                                   svn_boolean_t discover_changed_paths,
+                                  const apr_array_header_t *revprops,
                                   svn_client_ctx_t *ctx,
                                   apr_pool_t *pool);
 
@@ -2880,12 +2901,9 @@ svn_client_resolved(const char *path,
  * @c svn_wc_conflict_choose_merged, don't change the contents at all,
  * just remove the conflict status, which is the pre-1.5 behavior.
  *
- * (@c svn_wc_conflict_choose_theirs_conflict and
- * @c svn_wc_conflict_choose_mine_conflict are not yet implemented;
- * the effect of passing one of those values as @a conflict_choice is
- * currently undefined, which may or may not be an underhanded way of
- * allowing real behaviors to be added for them later without revving
- * this interface.)
+ * @c svn_wc_conflict_choose_theirs_conflict and @c
+ * svn_wc_conflict_choose_mine_conflict are not legal for binary
+ * files or properties.
  *
  * If @a path is not in a state of conflict to begin with, do nothing.
  * If @a path's conflict state is removed and @a ctx->notify_func2 is non-NULL,
@@ -4344,7 +4362,7 @@ svn_client_uuid_from_path(const char **uuid,
  *
  * @since New in 1.3.
  *
- * @note This function is similar to svn_ra_open2(), but the caller avoids
+ * @note This function is similar to svn_ra_open3(), but the caller avoids
  * having to providing its own callback functions.
  */
 svn_error_t *

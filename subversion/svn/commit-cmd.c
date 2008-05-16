@@ -54,7 +54,7 @@ svn_cl__commit(apr_getopt_t *os,
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets, 
-                                                      pool));
+                                                      ctx, pool));
 
   /* Check that no targets are URLs */
   for (i = 0; i < targets->nelts; i++)

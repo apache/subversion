@@ -850,14 +850,19 @@ class SvnClientTest < Test::Unit::TestCase
     assert_equal([[false, true, false, false]], node_kinds)
   end
 
-  def test_merge
+  def assert_merge
     log = "sample log"
     file = "sample.txt"
     src = "sample\n"
     trunk = File.join(@wc_path, "trunk")
     branch = File.join(@wc_path, "branch")
+    branch_relative_uri = "/branch"
+    branch_uri = "#{@repos_uri}#{branch_relative_uri}"
     trunk_path = File.join(trunk, file)
+    trunk_path_uri = "#{@repos_uri}/trunk/#{file}"
     branch_path = File.join(branch, file)
+    branch_path_relative_uri = "#{branch_relative_uri}/#{file}"
+    branch_path_uri = "#{@repos_uri}#{branch_path_relative_uri}"
 
     ctx = make_context(log)
     ctx.mkdir(trunk, branch)
@@ -870,13 +875,36 @@ class SvnClientTest < Test::Unit::TestCase
     File.open(branch_path, "w") {|f| f.print(src)}
     rev2 = ctx.commit(@wc_path).revision
 
-    assert_nil(ctx.mergeinfo(trunk))
-    ctx.merge(branch, rev1, branch, rev2, trunk)
-    mergeinfo = ctx.mergeinfo(trunk)
-    expected_key = ctx.url_from_path(branch)
-    assert_equal([expected_key], mergeinfo.keys)
-    assert_equal([[1, 2, true]],
-                 mergeinfo[expected_key].collect {|range| range.to_a})
+    merged_entries = []
+    ctx.log_merged(trunk, nil, branch_uri, nil) do |entry|
+      merged_entries << entry
+    end
+    assert_equal_log_entries([], merged_entries)
+    assert_nil(ctx.merged(trunk))
+
+    merged_entries = []
+    yield(ctx, branch, rev1, rev2, trunk)
+    ctx.log_merged(trunk, nil, branch_uri, nil) do |entry|
+      merged_entries << entry
+    end
+    assert_equal_log_entries([
+                              [
+                               {branch_path_relative_uri => ["M", nil, -1]},
+                               rev2,
+                               {
+                                 "svn:author" => @author,
+                                 "svn:log" => log,
+                               },
+                               false,
+                              ]
+                             ],
+                             merged_entries)
+    mergeinfo = ctx.merged(trunk)
+    assert_not_nil(mergeinfo)
+    assert_equal([branch_uri], mergeinfo.keys)
+    ranges = mergeinfo[branch_uri].collect {|range| range.to_a}
+    assert_equal([[1, 2, true]], ranges)
+
     rev3 = ctx.commit(@wc_path).revision
 
     assert_equal(normalize_line_break(src), ctx.cat(trunk_path, rev3))
@@ -884,90 +912,64 @@ class SvnClientTest < Test::Unit::TestCase
     ctx.rm(branch_path)
     rev4 = ctx.commit(@wc_path).revision
 
-    ctx.merge(branch, rev3, branch, rev4, trunk)
+    yield(ctx, branch, rev3, rev4, trunk)
     assert(!File.exist?(trunk_path))
 
-    mergeinfo = ctx.mergeinfo(trunk, rev4)
-    assert_equal([expected_key], mergeinfo.keys)
-    assert_equal([[1, 2, true], [3, 4, true]],
-                 mergeinfo[expected_key].collect {|range| range.to_a })
-    ctx.propdel("svn:mergeinfo", trunk)
-    assert_nil ctx.mergeinfo(trunk)
+    merged_entries = []
+    ctx.log_merged(trunk, rev4, branch_uri, rev4) do |entry|
+      merged_entries << entry
+    end
+    assert_equal_log_entries([
+                              [
+                               {branch_path_relative_uri => ["D", nil, -1]},
+                               rev4,
+                               {
+                                 "svn:author" => @author,
+                                 "svn:log" => log,
+                               },
+                               false,
+                              ]
+                             ] * 2, merged_entries)
 
+    ctx.propdel("svn:mergeinfo", trunk)
+    merged_entries = []
+    ctx.log_merged(trunk, rev4, branch_uri, rev4) do |entry|
+      merged_entries << entry
+    end
+    assert_equal_log_entries([], merged_entries)
+
+    ctx.revert(trunk)
     ctx.revert(trunk_path)
     File.open(trunk_path, "a") {|f| f.print(src)}
-    ctx.merge(branch, rev3, branch, rev4, trunk)
-    assert(File.exist?(trunk_path))
+    yield(ctx, branch, rev3, rev4, trunk)
     rev5 = ctx.commit(@wc_path).revision
-
-    File.open(trunk_path, "a") {|f| f.print(src)}
-    ctx.merge(branch, rev3, branch, rev4, trunk, true, false, true, true)
     assert(File.exist?(trunk_path))
 
-    ctx.merge(branch, rev3, branch, rev4, trunk, true, false, true)
-    rev6 = ctx.commit(@wc_path).revision
+    yield(ctx, branch, rev3, rev4, trunk, nil, false, true, true)
+    statuses = []
+    ctx.status(trunk) do |path, status|
+      statuses << status
+    end
+    assert_equal([], statuses)
 
-    assert(!File.exist?(trunk_path))
+    yield(ctx, branch, rev3, rev4, trunk, nil, false, true)
+    statuses = []
+    ctx.status(trunk) do |path, status|
+      statuses << status
+    end
+    assert_not_equal([], statuses)
+  end
+
+  def test_merge
+    assert_merge do |ctx, from, from_rev1, from_rev2, to, *rest|
+      ctx.merge(from, from_rev1, from, from_rev2, to, *rest)
+    end
   end
 
   def test_merge_peg
-    log = "sample log"
-    file = "sample.txt"
-    src = "sample\n"
-    trunk = File.join(@wc_path, "trunk")
-    branch = File.join(@wc_path, "branch")
-    trunk_path = File.join(trunk, file)
-    branch_path = File.join(branch, file)
-
-    ctx = make_context(log)
-    ctx.mkdir(trunk, branch)
-    File.open(trunk_path, "w") {}
-    File.open(branch_path, "w") {}
-    ctx.add(trunk_path)
-    ctx.add(branch_path)
-    rev1 = ctx.commit(@wc_path).revision
-
-    File.open(branch_path, "w") {|f| f.print(src)}
-    rev2 = ctx.commit(@wc_path).revision
-
-    assert_nil(ctx.mergeinfo(trunk))
-    ctx.merge_peg(branch, rev1, rev2, trunk)
-    mergeinfo = ctx.mergeinfo(trunk)
-    expected_key = ctx.url_from_path(branch)
-    assert_equal([expected_key], mergeinfo.keys)
-    assert_equal([[1, 2, true]],
-                 mergeinfo[expected_key].collect {|range| range.to_a})
-    rev3 = ctx.commit(@wc_path).revision
-
-    assert_equal(normalize_line_break(src), ctx.cat(trunk_path, rev3))
-
-    ctx.rm(branch_path)
-    rev4 = ctx.commit(@wc_path).revision
-
-    ctx.merge_peg(branch, rev3, rev4, trunk)
-    assert(!File.exist?(trunk_path))
-
-    mergeinfo = ctx.mergeinfo(trunk, rev4)
-    assert_equal([expected_key], mergeinfo.keys)
-    assert_equal([[1, 2, true], [3, 4, true]],
-                 mergeinfo[expected_key].collect {|range| range.to_a })
-    ctx.propdel("svn:mergeinfo", trunk)
-    assert_nil(ctx.mergeinfo(trunk))
-
-    ctx.revert(trunk_path)
-    File.open(trunk_path, "a") {|f| f.print(src)}
-    ctx.merge_peg(branch, rev3, rev4, trunk)
-    assert(File.exist?(trunk_path))
-    rev5 = ctx.commit(@wc_path).revision
-
-    File.open(trunk_path, "a") {|f| f.print(src)}
-    ctx.merge_peg(branch, rev3, rev4, trunk, nil, true, false, true, true)
-    assert(File.exist?(trunk_path))
-
-    ctx.merge_peg(branch, rev3, rev4, trunk, nil, true, false, true)
-    rev6 = ctx.commit(@wc_path).revision
-
-    assert(!File.exist?(trunk_path))
+    assert_merge do |ctx, from, from_rev1, from_rev2, to, *rest|
+      ctx.merge_peg(from, from_rev1, from_rev2, to, nil, *rest)
+    end
   end
 
   def test_cleanup
