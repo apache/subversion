@@ -389,31 +389,106 @@ svn_error_t *svn_ra_open3(svn_ra_session_t **session_p,
   svn_ra_session_t *session;
   const struct ra_lib_defn *defn;
   const svn_ra__vtable_t *vtable = NULL;
-#ifdef MUST_CHOOSE_DAV
   svn_config_t *servers = NULL;
+  const char *server_group;
+  apr_uri_t repos_URI;
+  apr_status_t apr_err;
+#ifdef MUST_CHOOSE_DAV
   const char *http_library = "neon";
+#endif
+  /* Auth caching parameters. */
+  svn_boolean_t store_passwords = SVN_CONFIG_DEFAULT_OPTION_STORE_PASSWORDS;
+  svn_boolean_t store_auth_creds = SVN_CONFIG_DEFAULT_OPTION_STORE_AUTH_CREDS;
+  const char *store_plaintext_passwords
+    = SVN_CONFIG_DEFAULT_OPTION_STORE_PLAINTEXT_PASSWORDS;
+
+  if (callbacks->auth_baton)
+    {
+      /* The 'store-passwords' and 'store-auth-creds' parameters used to
+       * live in SVN_CONFIG_CATEGORY_CONFIG. For backward compatibility,
+       * if values for these parameters have already been set by our
+       * callers, we use those values as defaults.
+       *
+       * Note that we can only catch the case where users explicitly set
+       * "store-passwords = no" or 'store-auth-creds = no".
+       *
+       * However, since the default value for both these options is
+       * currently (and has always been) "yes", users won't know
+       * the difference if they set "store-passwords = yes" or
+       * "store-auth-creds = yes" -- they'll get the expected behaviour.
+       */
+
+      if (svn_auth_get_parameter(callbacks->auth_baton,
+                                 SVN_AUTH_PARAM_DONT_STORE_PASSWORDS) != NULL)
+        store_passwords = FALSE;
+
+      if (svn_auth_get_parameter(callbacks->auth_baton,
+                                 SVN_AUTH_PARAM_NO_AUTH_CACHE) != NULL)
+        store_auth_creds = FALSE;
+    }
 
   if (config)
     {
+      /* Grab the 'servers' config. */
       servers = apr_hash_get(config, SVN_CONFIG_CATEGORY_SERVERS,
                              APR_HASH_KEY_STRING);
       if (servers)
         {
-          apr_uri_t repos_URI;
-          apr_status_t apr_err;
-          const char *server_group;
+          /* First, look in the global section. */
 
+          SVN_ERR(svn_config_get_bool
+            (servers, &store_passwords, SVN_CONFIG_SECTION_GLOBAL,
+             SVN_CONFIG_OPTION_STORE_PASSWORDS,
+             store_passwords));
+
+          SVN_ERR(svn_config_get_yes_no_ask
+            (servers, &store_plaintext_passwords, SVN_CONFIG_SECTION_GLOBAL,
+             SVN_CONFIG_OPTION_STORE_PLAINTEXT_PASSWORDS,
+             SVN_CONFIG_DEFAULT_OPTION_STORE_PLAINTEXT_PASSWORDS));
+
+          SVN_ERR(svn_config_get_bool
+            (servers, &store_auth_creds, SVN_CONFIG_SECTION_GLOBAL,
+              SVN_CONFIG_OPTION_STORE_AUTH_CREDS,
+              store_auth_creds));
+
+          /* Find out where we're about to connect to, and
+           * try to pick a server group based on the destination. */
           apr_err = apr_uri_parse(pool, repos_URL, &repos_URI);
-          if (apr_err != APR_SUCCESS)
+          /* ### Should apr_uri_parse leave hostname NULL?  It doesn't
+           * for "file:///" URLs, only for bogus URLs like "bogus".
+           * If this is the right behavior for apr_uri_parse, maybe we
+           * should have a svn_uri_parse wrapper. */
+          if (apr_err != APR_SUCCESS || repos_URI.hostname == NULL)
             return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
                                      _("Illegal repository URL '%s'"),
                                      repos_URL);
           server_group = svn_config_find_group(servers, repos_URI.hostname,
                                                SVN_CONFIG_SECTION_GROUPS, pool);
 
+          if (server_group)
+            {
+              /* Override global auth caching parameters with the ones
+               * for the server group, if any. */
+              SVN_ERR(svn_config_get_bool(servers, &store_auth_creds,
+                                          server_group,
+                                          SVN_CONFIG_OPTION_STORE_AUTH_CREDS,
+                                          store_auth_creds));
+
+              SVN_ERR(svn_config_get_bool(servers, &store_passwords,
+                                          server_group,
+                                          SVN_CONFIG_OPTION_STORE_PASSWORDS,
+                                          store_passwords));
+
+              SVN_ERR(svn_config_get_yes_no_ask
+                (servers, &store_plaintext_passwords, server_group,
+                 SVN_CONFIG_OPTION_STORE_PLAINTEXT_PASSWORDS,
+                 store_plaintext_passwords));
+            }
+#ifdef MUST_CHOOSE_DAV
+          /* Now, which DAV-based RA method do we want to use today? */
           http_library
             = svn_config_get_server_setting(servers,
-                                            server_group,
+                                            server_group, /* NULL is OK */
                                             SVN_CONFIG_OPTION_HTTP_LIBRARY,
                                             "neon");
 
@@ -423,9 +498,25 @@ svn_error_t *svn_ra_open3(svn_ra_session_t **session_p,
                                      _("Invalid config: unknown HTTP library "
                                        "'%s'"),
                                      http_library);
+#endif
         }
     }
-#endif
+
+  if (callbacks->auth_baton)
+    {
+      /* Save auth caching parameters in the auth parameter hash. */
+      if (! store_passwords)
+        svn_auth_set_parameter(callbacks->auth_baton,
+                               SVN_AUTH_PARAM_DONT_STORE_PASSWORDS, "");
+
+      svn_auth_set_parameter(callbacks->auth_baton,
+                             SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS,
+                             store_plaintext_passwords);
+
+      if (! store_auth_creds)
+        svn_auth_set_parameter(callbacks->auth_baton,
+                               SVN_AUTH_PARAM_NO_AUTH_CACHE, "");
+    }
 
   /* Find the library. */
   for (defn = ra_libraries; defn->ra_name != NULL; ++defn)

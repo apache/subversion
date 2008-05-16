@@ -465,6 +465,9 @@ else
   if test "$enable_debugging" = "no" ; then
     CFLAGS=["`echo $CFLAGS' ' | sed -e 's/-g[0-9] //g' | sed -e 's/-g//g'`"]
     CXXFLAGS=["`echo $CXXFLAGS' ' | sed -e 's/-g[0-9] //g' | sed -e 's/-g//g'`"]
+    dnl Compile with NDEBUG to get rid of assertions
+    CFLAGS="$CFLAGS -DNDEBUG"
+    CXXFLAGS="$CXXFLAGS -DNDEBUG"
   fi
 fi
 

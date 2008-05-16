@@ -915,9 +915,8 @@ svn_client__condense_commit_items(const char **base_url,
    CTX->NOTIFY_FUNC/CTX->BATON will be called as the commit progresses, as
    a way of describing actions to the application layer (if non NULL).
 
-   NOTIFY_PATH_PREFIX is used to send shorter, relative paths to the
-   notify_func (it's a prefix that will be subtracted from the front
-   of the paths.)
+   NOTIFY_PATH_PREFIX will be passed to CTX->notify_func2() as the
+   common absolute path prefix of the committed paths.  It can be NULL.
 
    If the caller wants to keep track of any outstanding temporary
    files left after the transmission of text and property mods,

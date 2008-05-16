@@ -72,8 +72,6 @@ class GeneratorBase:
         _collect_paths(parser.get('options', 'private-includes'))
     self.private_built_includes = \
         string.split(parser.get('options', 'private-built-includes'))
-    self.apache_files = \
-        _collect_paths(parser.get('options', 'static-apache-files'))
     self.scripts = \
         _collect_paths(parser.get('options', 'test-scripts'))
     self.bdb_scripts = \

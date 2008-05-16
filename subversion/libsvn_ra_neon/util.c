@@ -510,8 +510,10 @@ svn_ra_neon__copy_href(svn_stringbuf_t *dst, const char *src,
   */
 
   apr_uri_t uri;
-  apr_status_t apr_status
-    = apr_uri_parse(pool, src, &uri);
+  apr_status_t apr_status;
+  /* SRC can have trailing '/' */
+  src = svn_path_canonicalize(src, pool);
+  apr_status = apr_uri_parse(pool, src, &uri);
 
   if (apr_status != APR_SUCCESS)
     return svn_error_wrap_apr(apr_status,

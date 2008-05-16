@@ -21,6 +21,7 @@ import os
 import re
 import sys
 import tempfile
+import urllib
 import unittest
 
 import svn.core
@@ -52,7 +53,7 @@ class TestCase(unittest.TestCase):
         # TODO: Teach it about the capabilities, rather than allowing
         # any words at all.
         self.assertEqual(self.parse('open 2 cap=(foo) / SVN foo%20client'), '')
-        self.assertEqual(self.result, (2, ['foo'], '/', 'SVN', 'foo%20client'))
+        self.assertEqual(self.result, (2, ['foo'], '/', 'SVN', 'foo client'))
 
     def test_reparent(self):
         self.assertRaises(svn_server_log_parse.Error, self.parse, 'reparent')
@@ -352,6 +353,10 @@ if __name__ == '__main__':
 
     # Use the argument as the path to a log file to test against.
 
+    def uri_encode(s):
+        # urllib.quote encodes :&@ characters, svn does not.
+        return urllib.quote(s, safe='/:&@')
+
     # Define a class to reconstruct the SVN-ACTION string.
     class Test(svn_server_log_parse.Parser):
         def handle_unknown(self, line):
@@ -365,10 +370,12 @@ if __name__ == '__main__':
                 ra_client = '-'
             if client is None:
                 client = '-'
+            path = uri_encode(path)
             self.action = ('open %d cap=(%s) %s %s %s'
                            % (protocol, capabilities, path, ra_client, client))
 
         def handle_reparent(self, path):
+            path = uri_encode(path)
             self.action = 'reparent ' + path
 
         def handle_get_latest_rev(self):
@@ -381,6 +388,7 @@ if __name__ == '__main__':
             self.action = 'commit r%d' % (revision,)
 
         def handle_get_dir(self, path, revision, text, props):
+            path = uri_encode(path)
             self.action = 'get-dir %s r%d' % (path, revision)
             if text:
                 self.action += ' text'
@@ -388,6 +396,7 @@ if __name__ == '__main__':
                 self.action += ' props'
 
         def handle_get_file(self, path, revision, text, props):
+            path = uri_encode(path)
             self.action = 'get-file %s r%d' % (path, revision)
             if text:
                 self.action += ' text'
@@ -395,44 +404,55 @@ if __name__ == '__main__':
                 self.action += ' props'
 
         def handle_lock(self, paths, steal):
+            paths = [uri_encode(x) for x in paths]
             self.action = 'lock (%s)' % (' '.join(paths),)
             if steal:
                 self.action += ' steal'
 
         def handle_change_rev_prop(self, revision, revprop):
+            revprop = uri_encode(revprop)
             self.action = 'change-rev-prop r%d %s' % (revision, revprop)
 
         def handle_rev_prop(self, revision, revprop):
+            revprop = uri_encode(revprop)
             self.action = 'rev-prop r%d %s' % (revision, revprop)
 
         def handle_rev_proplist(self, revision):
             self.action = 'rev-proplist r%d' % (revision,)
 
         def handle_unlock(self, paths, break_lock):
+            paths = [uri_encode(x) for x in paths]
             self.action = 'unlock (%s)' % (' '.join(paths),)
             if break_lock:
                 self.action += ' break'
 
         def handle_get_lock(self, path):
+            path = uri_encode(path)
             self.action = 'get-lock ' + path
 
         def handle_get_locks(self, path):
             self.action = 'get-locks ' + path
+            path = uri_encode(path)
 
         def handle_get_locations(self, path, revisions):
+            path = uri_encode(path)
             self.action = ('get-locations %s (%s)'
                            % (path, ' '.join([str(x) for x in revisions])))
 
         def handle_get_location_segments(self, path, peg, left, right):
+            path = uri_encode(path)
             self.action = 'get-location-segments %s@%d r%d:%d' % (path, peg,
                                                                   left, right)
 
-        def handle_get_file_revs(self, path, left, right, include_merged_revisions):
+        def handle_get_file_revs(self, path, left, right,
+                                 include_merged_revisions):
+            path = uri_encode(path)
             self.action = 'get-file-revs %s r%d:%d' % (path, left, right)
             if include_merged_revisions:
                 self.action += ' include-merged-revisions'
 
         def handle_get_mergeinfo(self, paths, inheritance, include_descendants):
+            paths = [uri_encode(x) for x in paths]
             self.action = ('get-mergeinfo (%s) %s'
                            % (' '.join(paths),
                               svn.core.svn_inheritance_to_word(inheritance)))
@@ -441,6 +461,7 @@ if __name__ == '__main__':
 
         def handle_log(self, paths, left, right, limit, discover_changed_paths,
                        strict, include_merged_revisions, revprops):
+            paths = [uri_encode(x) for x in paths]
             self.action = 'log (%s) r%d:%d' % (' '.join(paths),
                                                left, right)
             if limit != 0:
@@ -454,15 +475,19 @@ if __name__ == '__main__':
             if revprops is None:
                 self.action += ' revprops=all'
             elif len(revprops) > 0:
+                revprops = [uri_encode(x) for x in revprops]
                 self.action += ' revprops=(%s)' % (' '.join(revprops),)
 
         def handle_check_path(self, path, revision):
+            path = uri_encode(path)
             self.action = 'check-path %s@%d' % (path, revision)
 
         def handle_stat(self, path, revision):
+            path = uri_encode(path)
             self.action = 'stat %s@%d' % (path, revision)
 
         def handle_replay(self, path, revision):
+            path = uri_encode(path)
             self.action = 'replay %s r%d' % (path, revision)
 
         def maybe_depth(self, depth):
@@ -471,11 +496,13 @@ if __name__ == '__main__':
                     svn.core.svn_depth_to_word(depth),)
 
         def handle_checkout_or_export(self, path, revision, depth):
+            path = uri_encode(path)
             self.action = 'checkout-or-export %s r%d' % (path, revision)
             self.maybe_depth(depth)
 
         def handle_diff_1path(self, path, left, right,
                                        depth, ignore_ancestry):
+            path = uri_encode(path)
             self.action = 'diff %s r%d:%d' % (path, left, right)
             self.maybe_depth(depth)
             if ignore_ancestry:
@@ -484,6 +511,8 @@ if __name__ == '__main__':
         def handle_diff_2paths(self, from_path, from_rev,
                                         to_path, to_rev,
                                         depth, ignore_ancestry):
+            from_path = uri_encode(from_path)
+            to_path = uri_encode(to_path)
             self.action = ('diff %s@%d %s@%d'
                            % (from_path, from_rev, to_path, to_rev))
             self.maybe_depth(depth)
@@ -491,15 +520,19 @@ if __name__ == '__main__':
                 self.action += ' ignore-ancestry'
 
         def handle_status(self, path, revision, depth):
+            path = uri_encode(path)
             self.action = 'status %s r%d' % (path, revision)
             self.maybe_depth(depth)
 
         def handle_switch(self, from_path, to_path, to_rev, depth):
+            from_path = uri_encode(from_path)
+            to_path = uri_encode(to_path)
             self.action = ('switch %s %s@%d'
                            % (from_path, to_path, to_rev))
             self.maybe_depth(depth)
 
         def handle_update(self, path, revision, depth, send_copyfrom_args):
+            path = uri_encode(path)
             self.action = 'update %s r%d' % (path, revision)
             self.maybe_depth(depth)
             if send_copyfrom_args:

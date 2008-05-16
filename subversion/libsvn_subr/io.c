@@ -1790,15 +1790,15 @@ svn_io_remove_dir2(const char *path, svn_boolean_t ignore_enoent,
   if (cancel_func)
     SVN_ERR((*cancel_func)(cancel_baton));
 
-  /* APR doesn't like "" directories */
-  if (path[0] == '\0')
-    path = ".";
-
   /* Convert path to native here and call apr_dir_open directly,
      instead of just using svn_io_dir_open, because we're going to
      need path_apr later anyway when we remove the dir itself. */
 
-  SVN_ERR(svn_path_cstring_from_utf8(&path_apr, path, pool));
+  if (path[0] == '\0')
+    /* APR doesn't like "" directories; use "." instead. */
+    SVN_ERR(svn_path_cstring_from_utf8(&path_apr, ".", pool));
+  else
+    SVN_ERR(svn_path_cstring_from_utf8(&path_apr, path, pool));
 
   status = apr_dir_open(&this_dir, path_apr, pool);
   if (status)
