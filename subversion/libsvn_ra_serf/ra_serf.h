@@ -801,27 +801,6 @@ svn_ra_serf__wait_for_props(svn_ra_serf__propfind_context_t *prop_ctx,
                             svn_ra_serf__session_t *sess,
                             apr_pool_t *pool);
 
-/* Shared helper func: given a public URL which may not exist in HEAD,
-   use SESSION to search up parent directories until we can retrieve a
-   *PROPS (allocated in POOL) containing a standard set of base props:
-   {VCC, resourcetype, baseline-relative-path}.
-
-   Also return:
-   *MISSING_PATH (allocated in POOL), which is the trailing portion of
-     the URL that did not exist.  If an error occurs, *MISSING_PATH isn't
-     changed.
-   *REMAINING_PATH (allocated in POOL), which is the parent path on which
-     we found the PROPS.
-   */
-svn_error_t *
-svn_ra_serf__search_for_base_props(apr_hash_t *props,
-                                   const char **remaining_path,
-                                   const char **missing_path,
-                                   svn_ra_serf__session_t *session,
-                                   svn_ra_serf__connection_t *conn,
-                                   const char *url,
-                                   apr_pool_t *pool);
-
 /*
  * This is a blocking version of deliver_props.
  */
