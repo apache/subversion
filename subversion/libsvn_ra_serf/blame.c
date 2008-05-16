@@ -482,9 +482,9 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
 
   if (end == SVN_INVALID_REVNUM)
     {
-     /* Use the "checked-in" property to determine the baseline url of the HEAD
-        revision. */
-     SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
+      /* Use the "checked-in" property to determine the baseline url of the HEAD
+         revision. */
+      SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
                                           vcc_url, SVN_INVALID_REVNUM, "0",
                                           checked_in_props, pool));
 
