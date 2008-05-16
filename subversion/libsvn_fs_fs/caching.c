@@ -217,6 +217,18 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
     SVN_ERR(svn_cache_create_inprocess(&(ffd->dir_cache),
                                        dup_dir_listing, APR_HASH_KEY_STRING,
                                        1024, 8, FALSE, fs->pool));
+
+  if (memcache)
+    SVN_ERR(svn_cache_create_memcache(&(ffd->fulltext_cache),
+                                      memcache,
+                                      NULL, NULL, /* Values are svn_string_t */
+                                      APR_HASH_KEY_STRING,
+                                      apr_pstrcat(pool, prefix, "TEXT",
+                                                  NULL),
+                                      fs->pool));
+  else
+    ffd->fulltext_cache = NULL;
+
   if (! no_handler)
     SVN_ERR(svn_cache_set_error_handler(ffd->dir_cache,
                                         warn_on_cache_errors, fs, pool));

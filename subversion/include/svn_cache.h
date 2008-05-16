@@ -147,7 +147,7 @@ svn_cache_create_inprocess(svn_cache_t **cache_p,
  *
  * If @a deserialize_func is NULL, then the data is returned as an
  * svn_string_t; if @a serialize_func is NULL, then the data is
- * assumed to be an svn_string_t.
+ * assumed to be an svn_stringbuf_t.
  *
  * These caches are always thread safe.
  *

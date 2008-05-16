@@ -190,7 +190,7 @@ memcache_set(void *cache_void,
     }
   else
     {
-      svn_string_t *value_str = value;
+      svn_stringbuf_t *value_str = value;
       data = value_str->data;
       data_len = value_str->len;
     }
