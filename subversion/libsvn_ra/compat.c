@@ -624,10 +624,10 @@ fr_log_message_receiver(void *baton,
   for (hi = apr_hash_first(pool, log_entry->revprops); hi;
        hi = apr_hash_next(hi))
     {
-      svn_string_t *val;
-      const char *key;
+      void *val;
+      const void *key;
 
-      apr_hash_this(hi, (const void **)&key, NULL, (void **)&val);
+      apr_hash_this(hi, &key, NULL, &val);
       apr_hash_set(rev->props, apr_pstrdup(lmb->pool, key), APR_HASH_KEY_STRING,
                    svn_string_dup(val, lmb->pool));
     }

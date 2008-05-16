@@ -1,7 +1,9 @@
+import cStringIO
 import unittest, os, tempfile, shutil, types, setup_path, binascii
+import svn.diff
 from svn import core, repos, wc, client
 from svn import delta, ra
-from svn.core import SubversionException
+from svn.core import SubversionException, SVN_INVALID_REVNUM
 
 from trac.versioncontrol.tests.svn_fs import SubversionRepositoryTestSetup, \
   REPOS_PATH, REPOS_URL
@@ -255,6 +257,155 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
     self.assertEquals(entry.cmt_rev, commit_info.revision)
     self.assertEquals(entry.cmt_date,
                       core.svn_time_from_cstring(commit_info.date))
+
+  def test_diff_editor4(self):
+    pool = None
+    depth = core.svn_depth_infinity
+    url = REPOS_URL
+
+    # cause file_changed: Replace README.txt's contents.
+    readme_path = '%s/trunk/README.txt' % self.path
+    fp = open(readme_path, 'w')
+    fp.write('hello\n')
+    fp.close()
+    # cause file_added: Create readme3.
+    readme3_path = '%s/trunk/readme3' % self.path
+    fp = open(readme3_path, 'w')
+    fp.write('hello\n')
+    fp.close()
+    wc.add2(readme3_path,
+            wc.adm_probe_retrieve(self.wc,
+                                  os.path.dirname(readme3_path), pool),
+            None, SVN_INVALID_REVNUM, # copyfrom
+            None,                     # cancel_func
+            None,                     # notify_func
+            pool)
+    # cause file_deleted: Delete README2.txt.
+    readme2_path = '%s/trunk/README2.txt' % self.path
+    wc.delete3(readme2_path,
+               wc.adm_probe_retrieve(self.wc,
+                                     os.path.dirname(readme2_path), pool),
+               None,                  # cancel_func
+               None,                  # notify_func
+               False,                 # keep_local
+               pool)
+    # cause dir_props_changed: ps testprop testval dir1/dir2
+    dir2_path = '%s/trunk/dir1/dir2' % self.path
+    wc.prop_set2('testprop', 'testval', dir2_path,
+                 wc.adm_probe_retrieve(self.wc,
+                                       os.path.dirname(dir2_path), pool),
+                 False,               # skip_checks
+                 pool)
+    # TODO: cause dir_added/deleted
+
+    # Save prop changes.
+    got_prop_changes = []
+    def props_changed(path, propchanges):
+      for (name, value) in propchanges.iteritems():
+        (kind, unused_prefix_len) = core.svn_property_kind(name)
+        if kind != core.svn_prop_regular_kind:
+          continue
+        got_prop_changes.append((path[len(self.path) + 1:], name, value))
+
+    # Save diffs.
+    got_diffs = {}
+    def write_diff(path, left, right):
+      options = svn.diff.file_options_create()
+      diff = svn.diff.file_diff_2(left, right, options, pool)
+      original_header = modified_header = ''
+      encoding = 'utf8'
+      relative_to_dir = None
+      sio = cStringIO.StringIO()
+      svn.diff.file_output_unified3(sio, diff,
+                                    left, right,
+                                    original_header, modified_header,
+                                    encoding, relative_to_dir,
+                                    options.show_c_function, pool)
+      got_diffs[path[len(self.path) + 1:]] = sio.getvalue().splitlines()
+
+    # Diff callbacks that call props_changed and write_diff.
+    contentstate = propstate = state = wc.notify_state_unknown
+    class Callbacks(wc.DiffCallbacks2):
+      def file_changed(self, adm_access, path,
+                       tmpfile1, tmpfile2, rev1, rev2,
+                       mimetype1, mimetype2,
+                       propchanges, originalprops):
+        write_diff(path, tmpfile1, tmpfile2)
+        return (contentstate, propstate)
+
+      def file_added(self, adm_access, path,
+                     tmpfile1, tmpfile2, rev1, rev2,
+                     mimetype1, mimetype2,
+                     propchanges, originalprops):
+        write_diff(path, tmpfile1, tmpfile2)
+        return (contentstate, propstate)
+
+      def file_deleted(self, adm_access, path, tmpfile1, tmpfile2,
+                       mimetype1, mimetype2, originalprops):
+        write_diff(path, tmpfile1, tmpfile2)
+        return state
+
+      def dir_props_changed(self, adm_access, path,
+                            propchanges, original_props):
+        props_changed(path, propchanges)
+        return state
+    diff_callbacks = Callbacks()
+
+    # Setup wc diff editor.
+    (editor, edit_baton) = wc.get_diff_editor4(
+      self.wc, '', diff_callbacks, depth,
+      False,                    # ignore_ancestry
+      False,                    # use_text_base
+      False,                    # reverse_order
+      None,                     # cancel_func
+      None,                     # changelists
+      pool)
+    # Setup ra_ctx.
+    ra.initialize()
+    ra_callbacks = ra.Callbacks()
+    ra_ctx = ra.open2(url, ra_callbacks, None, None)
+    # Use head rev for do_diff3 and set_path.
+    head = ra.get_latest_revnum(ra_ctx)
+    # Get diff reporter.
+    (reporter, report_baton) = ra.do_diff3(
+      ra_ctx,
+      head,                     # versus_url revision
+      '',                       # diff_target
+      depth,
+      False,                    # ignore_ancestry
+      True,                     # text_deltas
+      url,                      # versus_url
+      editor, edit_baton, pool)
+    # Report wc state (pretty plain).
+    reporter.set_path(report_baton, '', head, depth,
+                      False,    # start_empty
+                      None,     # lock_token
+                      pool)
+    reporter.finish_report(report_baton, pool)
+
+    # Assert we got the right diff.
+    expected_prop_changes = [('trunk/dir1/dir2',
+                              'testprop', 'testval')]
+    expected_diffs = {
+      'trunk/readme3':
+        ['--- ',
+         '+++ ',
+         '@@ -0,0 +1 @@',
+         '+hello'],
+      'trunk/README.txt':
+        ['--- ',
+         '+++ ',
+         '@@ -1 +1 @@',
+         '-A test.',
+         '+hello'],
+      'trunk/README2.txt':
+        ['--- ',
+         '+++ ',
+         '@@ -1 +0,0 @@',
+         '-A test.'],
+      }
+    self.assertEqual(got_prop_changes, expected_prop_changes)
+    self.assertEqual(got_diffs, expected_diffs)
 
   def tearDown(self):
       wc.adm_close(self.wc)

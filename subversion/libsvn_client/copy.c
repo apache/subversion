@@ -1389,8 +1389,8 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
           /* Schedule dst_path for addition in parent, with copy history.
              (This function also recursively puts a 'copied' flag on every
              entry). */
-          SVN_ERR(svn_wc_add2(pair->dst, adm_access, pair->src,
-                              src_revnum,
+          SVN_ERR(svn_wc_add3(pair->dst, adm_access, svn_depth_infinity, 
+                              pair->src, src_revnum,
                               ctx->cancel_func, ctx->cancel_baton,
                               ctx->notify_func2, ctx->notify_baton2, pool));
 
