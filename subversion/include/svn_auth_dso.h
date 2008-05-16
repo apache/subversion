@@ -15,8 +15,8 @@
  * ====================================================================
  * @endcopyright
  *
- * @file svn_auth_kwallet.h
- * @brief Subversion's authentication system - Support for KWallet
+ * @file svn_auth_dso.h
+ * @brief Subversion's authentication system - Support for DSOs
  */
 
 #ifndef SVN_AUTH_KWALLET_H
