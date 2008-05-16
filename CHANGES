@@ -29,7 +29,7 @@ http://svn.collab.net/repos/svn/tags/1.5.0
     * 'svn checkout' now takes '--force' option (issue #1328)
     * 'svn proplist' and 'svn propget' now support peg revisions (issue #3070)
     * 'svn propget' now takes '--xml' option (issue #2696)
-    * 'propedit', 'propset' now support URLs (issue #2238, but see issue #2923)
+    * 'svn propedit' now support URLs (issue #2238, but see issue #2923)
     * 'svn proplist --quiet' no longer prints extra info (issue #1547)
     * 'svn diff --summarize' now takes '--xml' option (issue #2967)
     * 'svn diff -x' now takes '-p' extension option (issue #2995)
