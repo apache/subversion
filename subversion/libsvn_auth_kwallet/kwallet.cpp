@@ -104,7 +104,7 @@ kwallet_password_get(const char **password,
             }
         }
     }
-  KWallet::Wallet::closeWallet(wallet_name, false);
+  KWallet::Wallet::disconnectApplication(wallet_name, "Subversion");
   return ret;
 }
 
@@ -166,7 +166,7 @@ kwallet_password_set(apr_hash_t *creds,
             }
         }
     }
-  KWallet::Wallet::closeWallet(wallet_name, false);
+  KWallet::Wallet::disconnectApplication(wallet_name, "Subversion");
   return ret;
 }
 
