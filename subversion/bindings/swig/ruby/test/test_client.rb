@@ -2122,13 +2122,6 @@ class SvnClientTest < Test::Unit::TestCase
     assert_equal({"txt" => "text/plain"}, context.mimetypes_map)
   end
 
-  def test_context_revprop_table
-    context = Svn::Client::Context.new
-    assert_nil(context.revprop_table)
-    context.revprop_table = {"my-prop" => "XXX"}
-    assert_equal({"my-prop" => "XXX"}, context.revprop_table)
-  end
-
   def assert_changelists
     log = "sample log"
     file1 = "hello1.txt"

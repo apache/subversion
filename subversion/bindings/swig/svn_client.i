@@ -42,7 +42,12 @@
     const char *native_eol,
     const char *comment,
     const char *relative_to_dir,
+    apr_hash_t *revprop_table,
     apr_array_header_t *changelists
+};
+
+%apply apr_hash_t *PROPHASH {
+    apr_hash_t *revprop_table
 };
 
 #ifdef SWIGRUBY

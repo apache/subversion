@@ -126,7 +126,7 @@ module Svn
                  keep_changelist=false, changelist_name=nil)
         targets = [targets] unless targets.is_a?(Array)
         Client.commit4(targets, recurse, keep_locks, keep_changelist,
-                       changelist_name, self)
+                       changelist_name, nil, self)
       end
       alias ci commit
 
@@ -147,7 +147,7 @@ module Svn
 
       def delete(paths, force=false, keep_local=false)
         paths = [paths] unless paths.is_a?(Array)
-        Client.delete3(paths, force, keep_local, self)
+        Client.delete3(paths, force, keep_local, nil, self)
       end
       alias del delete
       alias remove delete
@@ -197,7 +197,7 @@ module Svn
         depth = Core::Depth.infinity_or_empty_from_recurse(depth_or_recurse)
         changelists_names = [changelists_names] unless changelists_names.is_a?(Array) or changelists_names.nil?
         Client.propset3(name, value, target, depth, force,
-                        base_revision_for_url, changelists_names, self)
+                        base_revision_for_url, changelists_names, nil, self)
       end
       alias prop_set propset
       alias pset propset
@@ -269,7 +269,8 @@ module Svn
           end
           src_paths = [src_paths]
         end
-        Client.copy4(src_paths, dst_path, copy_as_child, make_parents, self)
+        Client.copy4(src_paths, dst_path, copy_as_child, make_parents, 
+                     nil, self)
       end
       alias cp copy
 
@@ -278,7 +279,7 @@ module Svn
         src_paths = [src_paths] unless src_paths.is_a?(Array)
         move_as_child = src_paths.size == 1 ? false : true if move_as_child.nil?
         Client.move5(src_paths, dst_path, force, move_as_child, make_parents,
-                     self)
+                     nil, self)
       end
       alias mv move
 
