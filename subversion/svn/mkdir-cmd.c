@@ -73,10 +73,8 @@ svn_cl__mkdir(apr_getopt_t *os,
                                          NULL, ctx->config, pool));
     }
 
-  ctx->revprop_table = opt_state->revprop_table;
-
   err = svn_client_mkdir3(&commit_info, targets, opt_state->parents,
-                          ctx, pool);
+                          opt_state->revprop_table, ctx, pool);
 
   if (ctx->log_msg_func3)
     err = svn_cl__cleanup_log_msg(ctx->log_msg_baton3, err);

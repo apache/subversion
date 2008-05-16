@@ -631,6 +631,7 @@ static svn_error_t *
 mkdir_urls(svn_commit_info_t **commit_info_p,
            const apr_array_header_t *urls,
            svn_boolean_t make_parents,
+           apr_hash_t *revprop_table,
            svn_client_ctx_t *ctx,
            apr_pool_t *pool)
 {
@@ -639,7 +640,6 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
   void *edit_baton;
   void *commit_baton;
   const char *log_msg;
-  apr_hash_t *revprop_table;
   apr_array_header_t *targets;
   apr_hash_t *targets_hash;
   svn_error_t *err;
@@ -740,7 +740,8 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
   else
     log_msg = "";
 
-  SVN_ERR(svn_client__get_revprop_table(&revprop_table, log_msg, ctx, pool));
+  SVN_ERR(svn_client__ensure_revprop_table(&revprop_table, revprop_table,
+                                           log_msg, ctx, pool));
 
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files. */
@@ -825,6 +826,7 @@ svn_error_t *
 svn_client_mkdir3(svn_commit_info_t **commit_info_p,
                   const apr_array_header_t *paths,
                   svn_boolean_t make_parents,
+                  apr_hash_t *revprop_table,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
 {
@@ -833,7 +835,8 @@ svn_client_mkdir3(svn_commit_info_t **commit_info_p,
 
   if (svn_path_is_url(APR_ARRAY_IDX(paths, 0, const char *)))
     {
-      SVN_ERR(mkdir_urls(commit_info_p, paths, make_parents, ctx, pool));
+      SVN_ERR(mkdir_urls(commit_info_p, paths, make_parents, 
+                         revprop_table, ctx, pool));
     }
   else
     {
@@ -867,7 +870,7 @@ svn_client_mkdir2(svn_commit_info_t **commit_info_p,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
 {
-  return svn_client_mkdir3(commit_info_p, paths, FALSE, ctx, pool);
+  return svn_client_mkdir3(commit_info_p, paths, FALSE, NULL, ctx, pool);
 }
 
 
