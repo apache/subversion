@@ -75,6 +75,7 @@ svn_cl__propedit(apr_getopt_t *os,
       svn_revnum_t rev;
       const char *URL;
       svn_string_t *propval;
+      svn_string_t original_propval;
       const char *temp_dir;
 
       /* Implicit "." is okay for revision properties; it just helps
@@ -88,8 +89,19 @@ svn_cl__propedit(apr_getopt_t *os,
       SVN_ERR(svn_client_revprop_get(pname_utf8, &propval,
                                      URL, &(opt_state->start_revision),
                                      &rev, ctx, pool));
+
       if (! propval)
-        propval = svn_string_create("", pool);
+        {
+          propval = svn_string_create("", pool);
+          /* This is how we signify to svn_client_revprop_set2() that
+             we want it to check that the original value hasn't
+             changed, but that that original value was non-existent: */
+          original_propval.data = NULL;  /* and .len is ignored */
+        }
+      else
+        {
+          original_propval = *propval;
+        }
 
       /* Run the editor on a temporary file which contains the
          original property value... */
@@ -105,9 +117,10 @@ svn_cl__propedit(apr_getopt_t *os,
       /* ...and re-set the property's value accordingly. */
       if (propval)
         {
-          SVN_ERR(svn_client_revprop_set(pname_utf8, propval,
-                                         URL, &(opt_state->start_revision),
-                                         &rev, opt_state->force, ctx, pool));
+          SVN_ERR(svn_client_revprop_set2(pname_utf8,
+                                          propval, &original_propval,
+                                          URL, &(opt_state->start_revision),
+                                          &rev, opt_state->force, ctx, pool));
 
           SVN_ERR
             (svn_cmdline_printf

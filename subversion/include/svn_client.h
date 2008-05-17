@@ -3374,6 +3374,18 @@ svn_client_propset(const char *propname,
  * rev affected in @a *set_rev.  A @a propval of @c NULL will delete the
  * property.
  *
+ * If @a original_propval is non-NULL, then just before setting the
+ * new value, check that the old value matches @a original_propval;
+ * if they do not match, return the error @c SVN_ERR_RA_OUT_OF_DATE.
+ * This is to help clients support interactive editing of revprops:
+ * without this check, the window during which the property may change
+ * underneath the user is as wide as the amount of time the user
+ * spends editing the property.  With this check, the window is
+ * reduced to a small, constant amount of time right before we set the
+ * new value.  (To check that an old value is still non-existent, set
+ * @a original_propval->data to NULL, and @a original_propval->len is
+ * ignored.)
+ *
  * If @a force is TRUE, allow newlines in the author property.
  *
  * If @a propname is an svn-controlled property (i.e. prefixed with
@@ -3388,6 +3400,25 @@ svn_client_propset(const char *propname,
  *
  * Also note that unless the administrator creates a
  * pre-revprop-change hook in the repository, this feature will fail.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_client_revprop_set2(const char *propname,
+                        const svn_string_t *propval,
+                        const svn_string_t *original_propval,
+                        const char *URL,
+                        const svn_opt_revision_t *revision,
+                        svn_revnum_t *set_rev,
+                        svn_boolean_t force,
+                        svn_client_ctx_t *ctx,
+                        apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_revprop_set2(), but with @a original_propval
+ * always @c NULL.
+ *
+ * @deprecated Provided for backward compatibility with the 1.0 API.
  */
 svn_error_t *
 svn_client_revprop_set(const char *propname,

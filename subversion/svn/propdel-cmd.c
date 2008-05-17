@@ -73,9 +73,9 @@ svn_cl__propdel(apr_getopt_t *os,
                                       &URL, pool));
 
       /* Let libsvn_client do the real work. */
-      SVN_ERR(svn_client_revprop_set(pname_utf8, NULL,
-                                     URL, &(opt_state->start_revision),
-                                     &rev, FALSE, ctx, pool));
+      SVN_ERR(svn_client_revprop_set2(pname_utf8, NULL, NULL,
+                                      URL, &(opt_state->start_revision),
+                                      &rev, FALSE, ctx, pool));
       if (! opt_state->quiet)
         {
           SVN_ERR(svn_cmdline_printf(pool,
