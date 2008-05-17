@@ -333,6 +333,18 @@ svn_error_t *svn_cl__print_commit_info(svn_commit_info_t *commit_info,
                                        apr_pool_t *pool);
 
 
+/* Convert the date in DATA to a human-readable UTF-8-encoded string
+ * *HUMAN_CSTRING, or set the latter to "(invalid date)" if DATA is not
+ * a valid date.  DATA should be as expected by svn_time_from_cstring().
+ *
+ * Do all allocations in POOL.
+ */
+svn_error_t *
+svn_cl__time_cstring_to_human_cstring(const char **human_cstring,
+                                      const char *data,
+                                      apr_pool_t *pool);
+
+
 /* Print STATUS for PATH to stdout for human consumption.  Prints in
    abbreviated format by default, or DETAILED format if flag is set.
 
@@ -606,6 +618,7 @@ svn_error_t *
 svn_cl__args_to_target_array_print_reserved(apr_array_header_t **targets_p,
                                             apr_getopt_t *os,
                                             apr_array_header_t *known_targets,
+                                            svn_client_ctx_t *ctx,
                                             apr_pool_t *pool);
 
 #ifdef __cplusplus

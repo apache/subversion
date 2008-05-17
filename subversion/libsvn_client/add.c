@@ -232,8 +232,8 @@ add_file(const char *path,
                                        pool));
 
   /* Add the file */
-  SVN_ERR(svn_wc_add2(path, adm_access, NULL, SVN_INVALID_REVNUM,
-                      ctx->cancel_func, ctx->cancel_baton,
+  SVN_ERR(svn_wc_add3(path, adm_access, svn_depth_infinity, NULL,
+                      SVN_INVALID_REVNUM, ctx->cancel_func, ctx->cancel_baton,
                       NULL, NULL, pool));
 
   if (is_special)
@@ -308,9 +308,8 @@ add_dir_recursive(const char *dirname,
     SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
   /* Add this directory to revision control. */
-  err = svn_wc_add2(dirname, adm_access,
-                    NULL, SVN_INVALID_REVNUM,
-                    ctx->cancel_func, ctx->cancel_baton,
+  err = svn_wc_add3(dirname, adm_access, depth, NULL, SVN_INVALID_REVNUM,
+                    ctx->cancel_func, ctx->cancel_baton, 
                     ctx->notify_func2, ctx->notify_baton2, pool);
   if (err && err->apr_err == SVN_ERR_ENTRY_EXISTS && force)
     svn_error_clear(err);
@@ -430,13 +429,18 @@ add(const char *path,
   svn_error_t *err;
 
   SVN_ERR(svn_io_check_path(path, &kind, pool));
-  if (kind == svn_node_dir && depth >= svn_depth_files)
-    err = add_dir_recursive(path, adm_access, depth,
-                            force, no_ignore, ctx, pool);
+  if (kind == svn_node_dir)
+    {
+      /* We use add_dir_recursive for all directory targets
+         and pass depth along no matter what it is, so that the
+         target's depth will be set correctly. */
+      err = add_dir_recursive(path, adm_access, depth,
+                              force, no_ignore, ctx, pool);
+    }
   else if (kind == svn_node_file)
     err = add_file(path, ctx, adm_access, pool);
   else
-    err = svn_wc_add2(path, adm_access, NULL, SVN_INVALID_REVNUM,
+    err = svn_wc_add3(path, adm_access, depth, NULL, SVN_INVALID_REVNUM,
                       ctx->cancel_func, ctx->cancel_baton,
                       ctx->notify_func2, ctx->notify_baton2, pool);
 
@@ -482,7 +486,8 @@ add_parent_dirs(const char *path,
           SVN_ERR(add_parent_dirs(parent_path, &adm_access, ctx, pool));
           SVN_ERR(svn_wc_adm_retrieve(&adm_access, adm_access, parent_path,
                                       pool));
-          SVN_ERR(svn_wc_add2(path, adm_access, NULL, SVN_INVALID_REVNUM,
+          SVN_ERR(svn_wc_add3(path, adm_access, svn_depth_infinity, 
+                              NULL, SVN_INVALID_REVNUM,
                               ctx->cancel_func, ctx->cancel_baton,
                               ctx->notify_func2, ctx->notify_baton2, pool));
         }
@@ -525,17 +530,15 @@ svn_client_add4(const char *path,
       SVN_ERR(svn_wc_adm_close(adm_access));
       svn_pool_destroy(subpool);
 
-      SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, parent_dir,
-                               TRUE, 0, ctx->cancel_func, ctx->cancel_baton,
-                               pool));
     }
   else
     {
       parent_dir = svn_path_dirname(path, pool);
-      SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, parent_dir,
-                               TRUE, 0, ctx->cancel_func, ctx->cancel_baton,
-                               pool));
     }
+
+  SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, parent_dir,
+                           TRUE, 0, ctx->cancel_func, ctx->cancel_baton,
+                           pool));
 
   err = add(path, depth, force, no_ignore, adm_access, ctx, pool);
 
@@ -559,7 +562,7 @@ svn_client_add3(const char *path,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool)
 {
-  return svn_client_add4(path, SVN_DEPTH_INFINITY_OR_FILES(recursive),
+  return svn_client_add4(path, SVN_DEPTH_INFINITY_OR_EMPTY(recursive),
                          force, no_ignore, FALSE, ctx,
                          pool);
 }
@@ -628,6 +631,7 @@ static svn_error_t *
 mkdir_urls(svn_commit_info_t **commit_info_p,
            const apr_array_header_t *urls,
            svn_boolean_t make_parents,
+           apr_hash_t *revprop_table,
            svn_client_ctx_t *ctx,
            apr_pool_t *pool)
 {
@@ -636,7 +640,6 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
   void *edit_baton;
   void *commit_baton;
   const char *log_msg;
-  apr_hash_t *revprop_table;
   apr_array_header_t *targets;
   apr_hash_t *targets_hash;
   svn_error_t *err;
@@ -737,7 +740,8 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
   else
     log_msg = "";
 
-  SVN_ERR(svn_client__get_revprop_table(&revprop_table, log_msg, ctx, pool));
+  SVN_ERR(svn_client__ensure_revprop_table(&revprop_table, revprop_table,
+                                           log_msg, ctx, pool));
 
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files. */
@@ -789,18 +793,23 @@ svn_client__make_local_parents(const char *path,
                                apr_pool_t *pool)
 {
   svn_error_t *err;
-
+  svn_node_kind_t orig_kind;
+  SVN_ERR(svn_io_check_path(path, &orig_kind, pool));
   if (make_parents)
     SVN_ERR(svn_io_make_dir_recursively(path, pool));
   else
     SVN_ERR(svn_io_dir_make(path, APR_OS_DEFAULT, pool));
 
-  err = svn_client_add4(path, svn_depth_empty, FALSE, FALSE,
+  /* Should no longer use svn_depth_empty to indicate that only the directory
+     itself is added, since it not only constraints the operation depth, but
+     also defines the depth of the target directory now. Moreover, the new
+     directory will have no children at all.*/
+  err = svn_client_add4(path, svn_depth_infinity, FALSE, FALSE,
                         make_parents, ctx, pool);
 
-  /* We just created a new directory, but couldn't add it to
-     version control. Don't leave unversioned directories behind. */
-  if (err)
+  /* If we created a new directory, but couldn't add it to version
+     control, then delete it. */
+  if (err && (orig_kind == svn_node_none))
     {
       /* ### If this returns an error, should we link it onto
          err instead, so that the user is warned that we just
@@ -817,6 +826,7 @@ svn_error_t *
 svn_client_mkdir3(svn_commit_info_t **commit_info_p,
                   const apr_array_header_t *paths,
                   svn_boolean_t make_parents,
+                  apr_hash_t *revprop_table,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
 {
@@ -825,7 +835,8 @@ svn_client_mkdir3(svn_commit_info_t **commit_info_p,
 
   if (svn_path_is_url(APR_ARRAY_IDX(paths, 0, const char *)))
     {
-      SVN_ERR(mkdir_urls(commit_info_p, paths, make_parents, ctx, pool));
+      SVN_ERR(mkdir_urls(commit_info_p, paths, make_parents, 
+                         revprop_table, ctx, pool));
     }
   else
     {
@@ -859,7 +870,7 @@ svn_client_mkdir2(svn_commit_info_t **commit_info_p,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
 {
-  return svn_client_mkdir3(commit_info_p, paths, FALSE, ctx, pool);
+  return svn_client_mkdir3(commit_info_p, paths, FALSE, NULL, ctx, pool);
 }
 
 

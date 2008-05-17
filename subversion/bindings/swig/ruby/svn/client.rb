@@ -123,10 +123,11 @@ module Svn
       end
 
       def commit(targets, recurse=true, keep_locks=false,
-                 keep_changelist=false, changelist_name=nil)
+                 keep_changelist=false, changelist_name=nil,
+                 revprop_table=nil)
         targets = [targets] unless targets.is_a?(Array)
         Client.commit4(targets, recurse, keep_locks, keep_changelist,
-                       changelist_name, self)
+                       changelist_name, revprop_table, self)
       end
       alias ci commit
 
@@ -145,9 +146,9 @@ module Svn
         Client.add3(path, recurse, force, no_ignore, self)
       end
 
-      def delete(paths, force=false, keep_local=false)
+      def delete(paths, force=false, keep_local=false, revprop_table=nil)
         paths = [paths] unless paths.is_a?(Array)
-        Client.delete3(paths, force, keep_local, self)
+        Client.delete3(paths, force, keep_local, revprop_table, self)
       end
       alias del delete
       alias remove delete
@@ -170,8 +171,9 @@ module Svn
       end
       alias up update
 
-      def import(path, uri, recurse=true, no_ignore=false)
-        Client.import2(path, uri, !recurse, no_ignore, self)
+      def import(path, uri, depth_or_recurse=true, no_ignore=false, revprop_table=nil)
+        depth = Core::Depth.infinity_or_immediates_from_recurse(depth_or_recurse)
+        Client.import3(path, uri, depth, no_ignore, false, revprop_table, self)
       end
 
       def cleanup(dir)
@@ -192,12 +194,14 @@ module Svn
       end
 
       def propset(name, value, target, depth_or_recurse=nil, force=false,
-                  base_revision_for_url=nil, changelists_names=nil)
+                  base_revision_for_url=nil, changelists_names=nil,
+                  revprop_table=nil)
         base_revision_for_url ||= Svn::Core::INVALID_REVNUM
         depth = Core::Depth.infinity_or_empty_from_recurse(depth_or_recurse)
         changelists_names = [changelists_names] unless changelists_names.is_a?(Array) or changelists_names.nil?
         Client.propset3(name, value, target, depth, force,
-                        base_revision_for_url, changelists_names, self)
+                        base_revision_for_url, changelists_names, 
+                        revprop_table, self)
       end
       alias prop_set propset
       alias pset propset
@@ -249,7 +253,7 @@ module Svn
       alias pl proplist
 
       def copy(src_paths, dst_path, rev_or_copy_as_child=nil,
-               make_parents=nil)
+               make_parents=nil, revprop_table=nil)
         if src_paths.is_a?(Array)
           copy_as_child = rev_or_copy_as_child
           if copy_as_child.nil?
@@ -269,16 +273,17 @@ module Svn
           end
           src_paths = [src_paths]
         end
-        Client.copy4(src_paths, dst_path, copy_as_child, make_parents, self)
+        Client.copy4(src_paths, dst_path, copy_as_child, make_parents, 
+                     revprop_table, self)
       end
       alias cp copy
 
       def move(src_paths, dst_path, force=false, move_as_child=nil,
-               make_parents=nil)
+               make_parents=nil, revprop_table=nil)
         src_paths = [src_paths] unless src_paths.is_a?(Array)
         move_as_child = src_paths.size == 1 ? false : true if move_as_child.nil?
         Client.move5(src_paths, dst_path, force, move_as_child, make_parents,
-                     self)
+                     revprop_table, self)
       end
       alias mv move
 

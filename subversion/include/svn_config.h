@@ -74,11 +74,14 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_SSL_CLIENT_CERT_PASSWORD  "ssl-client-cert-password"
 #define SVN_CONFIG_OPTION_SSL_PKCS11_PROVIDER       "ssl-pkcs11-provider"
 #define SVN_CONFIG_OPTION_HTTP_LIBRARY              "http-library"
+#define SVN_CONFIG_OPTION_STORE_PASSWORDS           "store-passwords"
+#define SVN_CONFIG_OPTION_STORE_PLAINTEXT_PASSWORDS "store-plaintext-passwords"
+#define SVN_CONFIG_OPTION_STORE_AUTH_CREDS          "store-auth-creds"
 
 #define SVN_CONFIG_CATEGORY_CONFIG          "config"
 #define SVN_CONFIG_SECTION_AUTH                 "auth"
-#define SVN_CONFIG_OPTION_STORE_PASSWORDS           "store-passwords"
-#define SVN_CONFIG_OPTION_STORE_AUTH_CREDS          "store-auth-creds"
+/* The "auth" section has been deprecated.
+ * Its options have been moved to SVN_CONFIG_CATEGORY_SERVERS. */
 #define SVN_CONFIG_SECTION_HELPERS              "helpers"
 #define SVN_CONFIG_OPTION_EDITOR_CMD                "editor-cmd"
 #define SVN_CONFIG_OPTION_DIFF_CMD                  "diff-cmd"
@@ -137,7 +140,14 @@ typedef struct svn_config_t svn_config_t;
 
 #define SVN_CONFIG_TRUE  "TRUE"
 #define SVN_CONFIG_FALSE "FALSE"
+#define SVN_CONFIG_ASK   "ASK"
 
+/* Default values for some options. Should be passed as default values
+ * to svn_config_get and friends, instead of hard-coding the defaults in
+ * multiple places. */
+#define SVN_CONFIG_DEFAULT_OPTION_STORE_PASSWORDS           TRUE
+#define SVN_CONFIG_DEFAULT_OPTION_STORE_PLAINTEXT_PASSWORDS SVN_CONFIG_ASK
+#define SVN_CONFIG_DEFAULT_OPTION_STORE_AUTH_CREDS          TRUE
 
 /** Read configuration information from the standard sources and merge it
  * into the hash @a *cfg_hash.  If @a config_dir is not NULL it specifies a
@@ -225,6 +235,23 @@ svn_error_t *svn_config_get_bool(svn_config_t *cfg, svn_boolean_t *valuep,
 void svn_config_set_bool(svn_config_t *cfg,
                          const char *section, const char *option,
                          svn_boolean_t value);
+
+/** Like svn_config_get(), but for values which can be either
+ * 'yes', 'no', or 'ask'.
+ *
+ * Parses the option, and sets *valuep to either SVN_CONFIG_TRUE,
+ * SVN_CONFIG_FALSE, or SVN_CONFIG_ASK. The recognized representations
+ * are 'TRUE'/'FALSE', 'yes'/'no', 'on'/'off', '1'/'0', and 'ASK';
+ * case does not matter.
+ *
+ * Returns an error if the option doesn't contain a known string.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_config_get_yes_no_ask(svn_config_t *cfg, const char **valuep,
+                          const char *section, const char *option,
+                          const char* default_value);
 
 /** Similar to @c svn_config_section_enumerator2_t, but is not
  * provided with a memory pool argument.
@@ -338,11 +365,13 @@ const char *svn_config_find_group(svn_config_t *cfg, const char *key,
                                   const char *master_section,
                                   apr_pool_t *pool);
 
-/** Retrieve value corresponding to @a option_name for a given
- *  @a server_group in @a cfg , or return @a default_value if none is found.
+/** Retrieve value corresponding to @a option_name in @a cfg ,
+ *  or return @a default_value if none is found.
  *
- *  The config will first be checked for a default, then will be checked for
- *  an override in a server group.
+ *  The config will first be checked for a default.
+ *  If @a server_group is not @c NULL, the config will also be checked
+ *  for an override in a server group,
+ *
  */
 const char *svn_config_get_server_setting(svn_config_t *cfg,
                                           const char* server_group,
@@ -434,6 +463,30 @@ svn_error_t * svn_config_write_auth_data(apr_hash_t *hash,
                                          const char *realmstring,
                                          const char *config_dir,
                                          apr_pool_t *pool);
+
+/** Put the absolute path to the user's configuration directory,
+ * or to a file within that directory, into @a *path.
+ *
+ * If @a config_dir is not NULL, it must point to an alternative
+ * config directory location. If it is NULL, the default location
+ * is used.  If @a fname is not NULL, it must specify the last
+ * component of the path to be returned. This can be used to create
+ * a path to any file in the configuration directory.
+ *
+ * Do all allocations in @a pool.
+ *
+ * Hint:
+ * To get the user configuration file, pass @c SVN_CONFIG_CATEGORY_CONFIG
+ * for @a fname. To get the servers configuration file, pass
+ * @c SVN_CONFIG_CATEGORY_SERVERS for @a fname.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_config_get_user_config_path(const char **path,
+                                const char *config_dir,
+                                const char *fname,
+                                apr_pool_t *pool);
 
 /** @} */
 

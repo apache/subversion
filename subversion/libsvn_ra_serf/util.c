@@ -1369,30 +1369,40 @@ svn_ra_serf__discover_root(const char **vcc_url,
 
   do
     {
-      SVN_ERR(svn_ra_serf__retrieve_props(props, session, conn,
-                                          path, SVN_INVALID_REVNUM,
-                                          "0", base_props, pool));
-      *vcc_url =
-          svn_ra_serf__get_ver_prop(props, path,
-                                    SVN_INVALID_REVNUM,
-                                    "DAV:",
-                                    "version-controlled-configuration");
-
-      if (*vcc_url)
+      svn_error_t *err = svn_ra_serf__retrieve_props(props, session, conn,
+                                                     path, SVN_INVALID_REVNUM,
+                                                     "0", base_props, pool);
+      if (! err)
         {
+          *vcc_url =
+              svn_ra_serf__get_ver_prop(props, path,
+                                        SVN_INVALID_REVNUM,
+                                        "DAV:",
+                                        "version-controlled-configuration");
+
           relative_path = svn_ra_serf__get_ver_prop(props, path,
                                                     SVN_INVALID_REVNUM,
                                                     SVN_DAV_PROP_NS_DAV,
                                                     "baseline-relative-path");
           break;
         }
+      else
+        {
+          if (err->apr_err != SVN_ERR_RA_DAV_PATH_NOT_FOUND)
+            {
+              return err;  /* found a _real_ error */
+            }
+          else
+            {
+              /* This happens when the file is missing in HEAD. */
+              svn_error_clear(err);
 
-      /* This happens when the file is missing in HEAD. */
-
-      /* Okay, strip off. */
-      present_path = svn_path_join(svn_path_basename(path, pool),
-                                   present_path, pool);
-      path = svn_path_dirname(path, pool);
+              /* Okay, strip off. */
+              present_path = svn_path_join(svn_path_basename(path, pool),
+                                           present_path, pool);
+              path = svn_path_dirname(path, pool);
+            }
+        }
     }
   while (!svn_path_is_empty(path));
 

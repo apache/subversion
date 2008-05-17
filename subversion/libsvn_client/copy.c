@@ -178,7 +178,7 @@ propagate_mergeinfo_within_wc(svn_client__copy_pair_t *pair,
   SVN_ERR(svn_wc__entry_versioned(&entry, pair->src, src_access, FALSE, pool));
 
   /* Don't attempt to figure out implied mergeinfo for a locally
-     added/replaced PAIR->src without histroy (if its deleted we
+     added/replaced PAIR->src without history (if its deleted we
      should never even get this far). */
   if (entry->schedule == svn_wc_schedule_normal
       || (entry->schedule == svn_wc_schedule_add && entry->copied))
@@ -262,7 +262,7 @@ get_copy_pair_ancestors(const apr_array_header_t *copy_pairs,
      1)  If we do, we can't use it to allocate the initial versions of
          top_src and top_dst (above).
      2)  We don't return any errors in the following loop, so we are guanteed
-         to destory the subpool at the end of this function.
+         to destroy the subpool at the end of this function.
      3)  The number of iterations is likely to be few, and the loop will be
          through quickly, so memory leakage will not be significant, in time or
          space.  */
@@ -681,6 +681,7 @@ static svn_error_t *
 repos_to_repos_copy(svn_commit_info_t **commit_info_p,
                     const apr_array_header_t *copy_pairs,
                     svn_boolean_t make_parents,
+                    apr_hash_t *revprop_table,
                     svn_client_ctx_t *ctx,
                     svn_boolean_t is_move,
                     apr_pool_t *pool)
@@ -690,7 +691,6 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
   apr_hash_t *action_hash = apr_hash_make(pool);
   apr_array_header_t *path_infos;
   const char *top_url, *message, *repos_root;
-  apr_hash_t *revprop_table;
   svn_revnum_t youngest;
   svn_ra_session_t *ra_session;
   const svn_delta_editor_t *editor;
@@ -749,7 +749,7 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
                                              ctx, pool);
 
   /* If the two URLs appear not to be in the same repository, then
-     top_url will be empty and the call to svn_ra_open2()
+     top_url will be empty and the call to svn_ra_open3()
      above will have failed.  Below we check for that, and propagate a
      descriptive error back to the user.
 
@@ -1009,7 +1009,8 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
         APR_ARRAY_PUSH(paths, const char *) = info->src_path;
     }
 
-  SVN_ERR(svn_client__get_revprop_table(&revprop_table, message, ctx, pool));
+  SVN_ERR(svn_client__ensure_revprop_table(&revprop_table, revprop_table,
+                                           message, ctx, pool));
 
   /* Fetch RA commit editor. */
   SVN_ERR(svn_client__commit_get_baton(&commit_baton, commit_info_p, pool));
@@ -1048,11 +1049,11 @@ static svn_error_t *
 wc_to_repos_copy(svn_commit_info_t **commit_info_p,
                  const apr_array_header_t *copy_pairs,
                  svn_boolean_t make_parents,
+                 apr_hash_t *revprop_table,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
   const char *message;
-  apr_hash_t *revprop_table;
   const char *top_src_path, *top_dst_url, *repos_root;
   svn_ra_session_t *ra_session;
   const svn_delta_editor_t *editor;
@@ -1204,7 +1205,8 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
   else
     message = "";
 
-  SVN_ERR(svn_client__get_revprop_table(&revprop_table, message, ctx, pool));
+  SVN_ERR(svn_client__ensure_revprop_table(&revprop_table, revprop_table,
+                                           message, ctx, pool));
 
   /* Crawl the working copy for commit items. */
   SVN_ERR(svn_io_check_path(top_src_path, &base_kind, pool));
@@ -1220,7 +1222,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
   /* ### todo: There should be only one hash entry, which currently
      has a hacked name until we have the entries files storing
      canonical repository URLs.  Then, the hacked name can go away and
-     be replaced with a entry->repos (or whereever the entry's
+     be replaced with a entry->repos (or wherever the entry's
      canonical repos URL is stored). */
   if (! (commit_items = apr_hash_get(committables,
                                      SVN_CLIENT__SINGLE_REPOS_NAME,
@@ -1389,8 +1391,8 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
           /* Schedule dst_path for addition in parent, with copy history.
              (This function also recursively puts a 'copied' flag on every
              entry). */
-          SVN_ERR(svn_wc_add2(pair->dst, adm_access, pair->src,
-                              src_revnum,
+          SVN_ERR(svn_wc_add3(pair->dst, adm_access, svn_depth_infinity, 
+                              pair->src, src_revnum,
                               ctx->cancel_func, ctx->cancel_baton,
                               ctx->notify_func2, ctx->notify_baton2, pool));
 
@@ -1691,6 +1693,7 @@ setup_copy(svn_commit_info_t **commit_info_p,
            svn_boolean_t is_move,
            svn_boolean_t force,
            svn_boolean_t make_parents,
+           apr_hash_t *revprop_table,
            svn_client_ctx_t *ctx,
            apr_pool_t *pool)
 {
@@ -1714,7 +1717,7 @@ setup_copy(svn_commit_info_t **commit_info_p,
 
   /* Are either of our paths URLs?
    * Just check the first src_path.  If there are more than one, we'll check
-   * for homogeneity amoung them down below. */
+   * for homogeneity among them down below. */
   srcs_are_urls = svn_path_is_url(APR_ARRAY_IDX(sources, 0,
                                   svn_client_copy_source_t *)->path);
   dst_is_url = svn_path_is_url(dst_path_in);
@@ -1928,7 +1931,7 @@ setup_copy(svn_commit_info_t **commit_info_p,
   else if ((! srcs_are_urls) && (dst_is_url))
     {
       SVN_ERR(wc_to_repos_copy(commit_info_p, copy_pairs, make_parents,
-                               ctx, pool));
+                               revprop_table, ctx, pool));
     }
   else if ((srcs_are_urls) && (! dst_is_url))
     {
@@ -1938,7 +1941,7 @@ setup_copy(svn_commit_info_t **commit_info_p,
   else
     {
       SVN_ERR(repos_to_repos_copy(commit_info_p, copy_pairs, make_parents,
-                                  ctx, is_move, pool));
+                                  revprop_table, ctx, is_move, pool));
     }
 
   return SVN_NO_ERROR;
@@ -1953,6 +1956,7 @@ svn_client_copy4(svn_commit_info_t **commit_info_p,
                  const char *dst_path,
                  svn_boolean_t copy_as_child,
                  svn_boolean_t make_parents,
+                 apr_hash_t *revprop_table,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
@@ -1969,6 +1973,7 @@ svn_client_copy4(svn_commit_info_t **commit_info_p,
                    FALSE /* is_move */,
                    TRUE /* force, set to avoid deletion check */,
                    make_parents,
+                   revprop_table,
                    ctx,
                    subpool);
 
@@ -1995,6 +2000,7 @@ svn_client_copy4(svn_commit_info_t **commit_info_p,
                        FALSE /* is_move */,
                        TRUE /* force, set to avoid deletion check */,
                        make_parents,
+                       revprop_table,
                        ctx,
                        subpool);
     }
@@ -2030,12 +2036,8 @@ svn_client_copy3(svn_commit_info_t **commit_info_p,
 
   APR_ARRAY_PUSH(sources, const svn_client_copy_source_t *) = &copy_source;
 
-  return svn_client_copy4(commit_info_p,
-                          sources,
-                          dst_path,
-                          FALSE, FALSE,
-                          ctx,
-                          pool);
+  return svn_client_copy4(commit_info_p, sources, dst_path, FALSE, FALSE,
+                          NULL, ctx, pool);
 }
 
 
@@ -2096,6 +2098,7 @@ svn_client_move5(svn_commit_info_t **commit_info_p,
                  svn_boolean_t force,
                  svn_boolean_t move_as_child,
                  svn_boolean_t make_parents,
+                 apr_hash_t *revprop_table,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
@@ -2129,6 +2132,7 @@ svn_client_move5(svn_commit_info_t **commit_info_p,
                    TRUE /* is_move */,
                    force,
                    make_parents,
+                   revprop_table,
                    ctx,
                    subpool);
 
@@ -2151,6 +2155,7 @@ svn_client_move5(svn_commit_info_t **commit_info_p,
                        TRUE /* is_move */,
                        force,
                        make_parents,
+                       revprop_table,
                        ctx,
                        subpool);
     }
@@ -2179,9 +2184,8 @@ svn_client_move4(svn_commit_info_t **commit_info_p,
     apr_array_make(pool, 1, sizeof(const char *));
   APR_ARRAY_PUSH(src_paths, const char *) = src_path;
 
-  return svn_client_move5(commit_info_p,
-                          src_paths, dst_path, force, FALSE,
-                          FALSE, ctx, pool);
+  return svn_client_move5(commit_info_p, src_paths, dst_path, force, FALSE,
+                          FALSE, NULL, ctx, pool);
 }
 
 svn_error_t *
@@ -2273,6 +2277,7 @@ svn_client_move(svn_client_commit_info_t **commit_info_p,
                    TRUE /* is_move */,
                    force,
                    FALSE /* make_parents */,
+                   NULL,
                    ctx,
                    pool);
   /* These structs have the same layout for the common fields. */

@@ -261,10 +261,9 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                            "
                        "('" SVN_CL__ACCEPT_POSTPONE "',"
                        " '" SVN_CL__ACCEPT_BASE "',"
-                       /* These two are not implemented yet, so don't
-                          waste the user's time with them. */
-                       /* " '" SVN_CL__ACCEPT_MINE_CONFLICT "'," */
-                       /* " '" SVN_CL__ACCEPT_THEIRS_CONFLICT "'," */
+                       " '" SVN_CL__ACCEPT_MINE_CONFLICT "',"
+                       "\n                            "
+                       " '" SVN_CL__ACCEPT_THEIRS_CONFLICT "',"
                        " '" SVN_CL__ACCEPT_MINE_FULL "',"
                        " '" SVN_CL__ACCEPT_THEIRS_FULL "',"
                        "\n                            "
@@ -626,14 +625,14 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      opt_record_only, 'x', opt_ignore_ancestry, opt_accept, opt_reintegrate} },
 
   { "mergeinfo", svn_cl__mergeinfo, {0}, N_
-    ("Query merge-related information.\n"
+    ("Display merge-related information.\n"
      "usage: mergeinfo SOURCE-URL[@REV] [TARGET[@REV]]\n"
      "\n"
-     "  Query information related to merges (or potential merges) between\n"
-     "  SOURCE-URL and TARGET.  If the --show-revs option is not provided,\n"
-     "  display revisions which have been merged from SOURCE-URL to TARGET.\n"
-     "  Otherwise, display the type of information specified by the\n"
-     "  --show-revs option.\n"),
+     "  Display information related to merges (or potential merges) between\n"
+     "  SOURCE-URL and TARGET (default: '.').  If the --show-revs option\n"
+     "  is not provided, display revisions which have been merged from\n"
+     "  SOURCE-URL to TARGET; otherwise, display the type of information\n"
+     "  specified by the --show-revs option.\n"),
     {'r', opt_show_revs} },
 
   { "mkdir", svn_cl__mkdir, {0}, N_
@@ -795,10 +794,9 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
                              "                            "
                              "('" SVN_CL__ACCEPT_BASE "',"
                              " '" SVN_CL__ACCEPT_WORKING "',"
-                             /* These two are not implemented yet, so
-                                don't waste the user's time with them. */
-                             /* " '" SVN_CL__ACCEPT_MINE_CONFLICT "'," */
-                             /* " '" SVN_CL__ACCEPT_THEIRS_CONFLICT "'," */
+                             " '" SVN_CL__ACCEPT_MINE_CONFLICT "',"
+                             "\n                            "
+                             " '" SVN_CL__ACCEPT_THEIRS_CONFLICT "',"
                              " '" SVN_CL__ACCEPT_MINE_FULL "',"
                              " '" SVN_CL__ACCEPT_THEIRS_FULL "')")}} },
 
@@ -1769,8 +1767,9 @@ main(int argc, const char *argv[])
                || subcommand->cmd_func == svn_cl__add)
         {
           /* In pre-1.5 Subversion, some commands treated -N like
-             --depth=empty, so .  Also, with revert it makes sense to be
-             especially conservative, since revert can lose data. */
+             --depth=empty, so force that mapping here.  Anyway, with
+             revert it makes sense to be especially conservative,
+             since revert can lose data. */
           opt_state.depth = svn_depth_empty;
         }
       else

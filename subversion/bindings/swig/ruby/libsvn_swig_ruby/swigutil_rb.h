@@ -53,6 +53,12 @@ SVN_RB_SWIG_SWIGUTIL_EXPORT
 void svn_swig_rb_initialize(void);
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT
+apr_pool_t *svn_swig_rb_pool(void);
+
+SVN_RB_SWIG_SWIGUTIL_EXPORT
+apr_allocator_t *svn_swig_rb_allocator(void);
+
+SVN_RB_SWIG_SWIGUTIL_EXPORT
 VALUE svn_swig_rb_svn_delta_editor(void);
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 VALUE svn_swig_rb_svn_delta_text_delta_window_handler(void);

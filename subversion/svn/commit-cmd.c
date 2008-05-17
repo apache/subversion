@@ -54,7 +54,7 @@ svn_cl__commit(apr_getopt_t *os,
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets, 
-                                                      pool));
+                                                      ctx, pool));
 
   /* Check that no targets are URLs */
   for (i = 0; i < targets->nelts; i++)
@@ -108,8 +108,6 @@ svn_cl__commit(apr_getopt_t *os,
                                      opt_state, base_dir,
                                      ctx->config, pool));
 
-  ctx->revprop_table = opt_state->revprop_table;
-
   /* Commit. */
   err = svn_client_commit4(&commit_info,
                            targets,
@@ -117,6 +115,7 @@ svn_cl__commit(apr_getopt_t *os,
                            no_unlock,
                            opt_state->keep_changelists,
                            opt_state->changelists,
+                           opt_state->revprop_table,
                            ctx,
                            pool);
   if (err)

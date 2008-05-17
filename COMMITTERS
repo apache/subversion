@@ -56,6 +56,7 @@ Blanket commit access:
       arfrever   Arfrever Frehtes Taifersar Arahesis <arfrever.fta@gmail.com>
           stsp   Stefan Sperling <stsp@elego.de>
            kou   Kouhei Sutou <kou@cozmixng.org>
+      danielsh   Daniel Shahaf <danielsh@tigris.org>
 
 Commit access for specific areas:
 
@@ -111,11 +112,14 @@ Commit access for specific areas:
         dustin   Dustin J. Mitchell <dustin@zmanda.com>      (svnmerge)
    rocketraman   Raman Gupta <rocketraman@fastmail.fm>       (svnmerge)
       stylesen   Senthil Kumaran S <senthil@collab.net>      (tests)
+       rhansen   Richard Hansen <rhansen@bbn.com>            (svnstsw)
+        larrys   Larry Shatzer, Jr. <larrys@gmail.com>       (svn-keyword-check.pl)
 
   Translation of message files:
 
        niqueco   Nicolás Lichtmaier <nick@reloco.com.ar>     (po: es)
         luebbe   Lübbe Onken <luebbe@tigris.org>             (po: de)
+    jensseidel   Jens Seidel <jensseidel@users.sf.net>       (po: de)
       oyvindmo   Øyvind Møll <svn@moll.no>                   (po: nb)
       sunny256   Øyvind A. Holm <sunny@sunbase.org>          (po: nb)
         jzgoda   Jaroslaw Zgoda <jzgoda@o2.pl>               (po: pl)
@@ -125,7 +129,7 @@ Commit access for specific areas:
        marcosc   Marcos Chaves <marcos.nospam@gmail.com>     (po: pt_BR)
         pynoos   Hojin Choi <hojin.choi@gmail.com>           (po: ko)
        blueboh   Jeong Seolin <blueboh@ahnlab.com>           (po: ko)
-        cauchy   Dongsheng Song <dongsheng.song@gmail.com>   (po: zh_CN)
+        cauchy   Dongsheng Song <songdongsheng@live.cn>      (po: zh_CN)
         hynnet   YingNing Huang <hyn@bao.hynnet.com>         (po: zh_CN)
           lark   Wang Jian <lark@linux.net.cn>               (po: zh_CN)
 giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)

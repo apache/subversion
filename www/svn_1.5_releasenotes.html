@@ -89,6 +89,92 @@ program written to the 1.0, 1.1, 1.2, 1.3, or 1.4 API can both compile
 and run using 1.5 libraries.  However, a program written for 1.5
 cannot necessarily compile or run against older libraries.</p>
 
+<div class="h3" id="new-feature-compatibility-table"
+             title="new-feature-compatibility-table">
+<h3>New Feature Compatibility Table</h3>
+<table border="1">
+  <tr>
+    <th>New Feature</th>
+    <th>Minimum Client</th>
+    <th>Minimum Server</th>
+    <th>Minimum Repository</th>
+    <th>Notes</th></tr>
+  <tr>
+    <td><a href="#merge-tracking">Merge tracking</a></td>
+    <td>1.5</td>
+    <td>1.5</td>
+    <td>1.5</td>
+    <td></td></tr>
+  <tr>
+    <td><a href="#sparse-checkouts">Sparse checkouts</a></td>
+    <td>1.5</td>
+    <td>any</td>
+    <td>any</td>
+    <td></td></tr>
+  <tr>
+    <td><a href="#interactive-conflict-resolution">Interactive conflict resolution</a></td>
+    <td>1.5</td>
+    <td>any</td>
+    <td>any</td>
+    <td></td></tr>
+  <tr>
+    <td><a href="#changelists">Changelist support</a></td>
+    <td>1.5</td>
+    <td>any</td>
+    <td>any</td>
+    <td></td></tr>
+  <tr>
+    <td><a href="#externals">Relative URLs, peg revisions in <tt>svn:externals</tt></a></td>
+    <td>1.5</td>
+    <td>any</td>
+    <td>any</td>
+    <td></td></tr>
+  <tr>
+    <td><a href="#cyrus-sasl"> Cyrus SASL support for ra_svn and <tt>svnserve</tt></a></td>
+    <td>any<sup>*</sup>, 1.5</td>
+    <td>any<sup>*</sup>, 1.5</td>
+    <td>any</td>
+    <td><sup>*</sup>Limited, see <a href="#sasl-compatibility">SASL&nbsp;and&nbsp;<code>svn://</code>&nbsp;compatibility</a></td></tr>
+  <tr>
+    <td><a href="#fsfs-sharding"> Improved support for large deployments on FSFS, via sharding</a></td>
+    <td>any<sup>*</sup>, 1.5</td>
+    <td>1.5</td>
+    <td>1.5</td>
+    <td><sup>*</sup>1.5 required for <code>file://</code> compatibility</td></tr>
+  <tr>
+    <td><a href="#fsfs-isolate-immutable">Improved FSFS optimizability, via immutable file isolation</a></td>
+    <td>any<sup>*</sup>, 1.5</td>
+    <td>1.5</td>
+    <td>1.5</td>
+    <td><sup>*</sup>1.5 required for <code>file://</code> compatibility</td></tr>
+  <tr>
+    <td><a href="#webdav-proxy">WebDAV transparent write-through proxy</a></td>
+    <td>any</td>
+    <td>1.5<sup>*</sup></td>
+    <td>any</td>
+    <td><sup>*</sup>Apache 2.2 server also required</td></tr>
+  <tr>
+    <td><a href="#copy-move-improvements">Improvements to <tt>copy</tt> and <tt>move</tt></a></td>
+    <td>1.5</td>
+    <td>any<sup>*</sup>, 1.5</td>
+    <td>any</td>
+    <td><sup>*</sup>Limited, see <a href="#copy-move-improvements">Copy/move<tt>-</tt>related&nbsp;improvements</a></td></tr>
+  <tr>
+    <td><a href="#cancellation-improvements">Speed improvements, cancellation response improvements</a></td>
+    <td>1.5</td>
+    <td>any</td>
+    <td>any</td>
+    <td></td></tr>
+  <tr>
+    <td><a href="#dav-modules">Easier to try experimental <tt>ra_serf</tt> DAV access module</a></td>
+    <td>1.5</td>
+    <td>any</td>
+    <td>any</td>
+    <td></td></tr>
+</table>
+
+</div>  <!-- new-feature-compatibility-table -->
+
 <div class="h3" id="wc-and-repos-format-change"
              title="wc-and-repos-format-change">
 <h3>Working Copy and Repository Format Changes</h3>
@@ -196,6 +282,41 @@ supported by the server is also supported by the client.</p>
 using Cyrus SASL with Subversion.</p>
 
 </div>  <!-- sasl-compatibility -->
+
+<div class="h3" id="revprops-compatibility" title="revprops-compatibility">
+<h3>Custom revprops may now need to be examined by <tt>pre-commit</tt>
+  hooks</h3>
+
+<p>Each revision in Subversion has a set of <q>revision properties</q>
+associated with it; in addition to the standard log message, author,
+and date, arbitrary user-defined properties can be set.  These
+properties are not themselves versioned, so there is no way to revert
+changes to them.  Because of this, you cannot modify revprops on a
+committed revision without setting up a <tt>pre-revprop-change</tt>
+hook on the server.  Before Subversion 1.5, only the three standard
+revprops could be set at commit time; administrators using hooks to
+control the contents of the three standard revprops needed to check
+during <tt>pre-commit</tt> and <tt>pre-revprop-change</tt>, but for
+custom revprops, only <tt>pre-revprop-change</tt> appeared
+relevant.</p>
+
+<p>Subversion 1.5 adds
+a <a href="#commit-revprops"><tt>--with-revprop</tt> option to <tt>svn
+commit</tt></a> which allows users to specify revprops for revisions
+as they commit them.  Thus, in Subversion 1.5, it is possible for
+revproperties to be set on revisions without
+any <tt>pre-revprop-change</tt>.  The <tt>pre-commit</tt> hook can
+examine the transaction's revision properties before it is committed
+(just like many servers already use <tt>pre-commit</tt> to check for
+properly formatted log messages, e.g.).</p>
+
+<p>This means that if you previously relied
+on <tt>pre-revprop-change</tt> to control the ability to write to
+revprops (as opposed to just keeping track of their history), you may
+want to add similar controls to <tt>pre-commit</tt>.</p>
+
+</div>  <!-- revprops-compatibility -->
+
 
 </div>  <!-- compatibility -->
 
@@ -352,6 +473,9 @@ itself now uses.</p>
 <li><a href="http://svnbook.red-bean.com/nightly/en/svn.branchmerge.html"
     >Chapter 4: Branching and Merging</a> in the Subversion book
 </li>
+<li><a href="http://blog.red-bean.com/sussman/?p=92" >Subversion 1.5
+    merge-tracking in a nutshell</a> (blog post by Ben Collins-Sussman)
+</li>
 <li><a href="http://subversion.tigris.org/merge-tracking/" >The merge
     tracking design documents</a>
     (requirements, use cases, functional spec, design)
@@ -481,8 +605,6 @@ ignores, but the final result on the client side will be the same.
 (Note that older servers understand a <tt>recurse</tt> flag in the
 network protocols, and 1.5+ clients send that flag based on the depth;
 this alleviates some of the extra network traffic penalty.)</p>
-
-</div>  <!-- sc-compat-dac -->
 
 </div>  <!-- sc-compat -->
 
@@ -731,7 +853,7 @@ depending upon network location; i.e. clients in the intranet use
 <tt>common/project2/trunk</tt>.  If the working copy was checked out
 from <tt>svn+ssh://example.com/svn/repos-1/project1/trunk</tt> then
 this URL would be
-<tt>http://example.com/svn/repos-1/project1/trunk</tt>.</p>
+<tt>svn+ssh://example.com/svn/repos-1/project1/trunk</tt>.</p>
 </dd>
 
 <dt><strong>/</strong></dt>
@@ -749,7 +871,7 @@ URL.</p>
 <tt>common/project2/trunk</tt>.  If the working copy was checked out
 from <tt>svn+ssh://example.com/svn/repos-1/project1/trunk</tt> then
 this URL would be
-<tt>http://example.com/svn/repos-1/project1/trunk</tt>.</p>
+<tt>svn+ssh://example.com/svn/repos-1/project1/trunk</tt>.</p>
 </dd>
 
 </dl>
@@ -1101,12 +1223,11 @@ href="http://subversion.tigris.org/issues/show_bug.cgi?id=1643" >issue
 
 </div>  <!-- cp-takes-base -->
 
-</div>  <!-- cp-mv-intermediate-dirs -->
 <div class="h4" id="cp-mv-intermediate-dirs" title="cp-mv-intermediate-dirs">
 <h4>Creation of intermediate directories with copy/move
     (<em>client and server</em>)</h4>
 
-<p>See the section on the new <a href="#>intermediate-directories</a>"
+<p>See the section on the new <a href="#intermediate-directories"
 >--parents option</a> for more about this.</p>
 
 </div>  <!-- cp-mv-intermediate-dirs -->

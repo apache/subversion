@@ -419,17 +419,6 @@ Test one or both of the tarballs:
     gpg -ba subversion-deps-X.Y.Z.zip
 </pre>
 
-</div> <!-- rolling-release -->
-
-
-<div class="h2" id="blessing-release" title="blessing-release">
-<h2>Blessing a release</h2>
-</div> <!-- blessing-release -->
-
-
-<div class="h2" id="releasing-release" title="releasing-release">
-<h2>The actual releasing</h2>
-
 <p><b>Subversion Operations</b></p>
 <p>Create the tag with the svn_version.h that reflects the final
 release.  You do this by updating your working copy to the release
@@ -453,6 +442,17 @@ and copy from the working copy to the tag URL.  For example:</p>
 <p>Bump the svn_version.h for the original branch.  If you just did
 1.0.2 then svn_version.h should have the proper values for 1.0.3 and
 so on.</p>
+
+</div> <!-- rolling-release -->
+
+
+<div class="h2" id="blessing-release" title="blessing-release">
+<h2>Blessing a release</h2>
+</div> <!-- blessing-release -->
+
+
+<div class="h2" id="releasing-release" title="releasing-release">
+<h2>The actual releasing</h2>
 
 <p><b>Upload the tarballs to
   http://subversion.tigris.org/downloads/.</b></p>

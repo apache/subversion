@@ -24,6 +24,7 @@ import svntest
 from svntest import wc
 
 from svntest.main import server_has_mergeinfo
+from svntest.main import SVN_PROP_MERGEINFO
 
 ######################################################################
 #
@@ -261,6 +262,10 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
                        '--username', svntest.main.wc_author2)
 
   # Do some mergeing - r6
+  #
+  # Mergeinfo changes on /trunk:
+  #    Merged /trunk:r2
+  #    Merged /branches/a:r3-5
   os.chdir('trunk')
   svntest.main.run_svn(None, 'merge', os.path.join('..', branch_a) + '@HEAD')
   svntest.main.run_svn(None, 'ci', '-m',
@@ -279,6 +284,9 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
                        "It will be blocked from merging in r8.")
 
   # Block r7 from being merged to trunk - r8
+  #
+  # Mergeinfo changes on /trunk:
+  #    Merged /branches/a:r7
   os.chdir('trunk')
   svntest.main.run_svn(None, 'merge', '--record-only', '-r6:7',
                        os.path.join('..', branch_a))
@@ -318,6 +326,9 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
                        "Added 'xi' to branches/a, made a few other changes.")
 
   # Merge branches/a to branches/b - r12
+  #
+  # Mergeinfo changes on /branches/b:
+  #    Merged /branches/a:r6,8-11
   os.chdir(branch_b)
   svntest.main.run_svn(None, 'merge', os.path.join('..', 'a') + '@HEAD')
   svntest.main.run_svn(None, 'ci', '-m',
@@ -332,6 +343,12 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
                        "Modify 'gamma' on branches/b.")
 
   # More merging - r14
+  #
+  # Mergeinfo changes on /trunk:
+  #    Reverse-merged /trunk:r2
+  #    Merged /trunk:r3-9
+  #    Merged /branches/a:r6,8-11
+  #    Merged /branches/b:r10-13
   os.chdir('trunk')
   svntest.main.run_svn(None, 'merge', os.path.join('..', branch_b) + '@HEAD')
   svntest.main.run_svn(None, 'ci', '-m',
@@ -340,6 +357,11 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
   os.chdir('..')
 
   # Even more merging - r15
+  #
+  # Mergeinfo changes on /branches/c:
+  #    Merged /trunk:r3-14
+  #    Merged /branches/a:r3-11
+  #    Merged /branches/b:r10-13
   os.chdir(branch_c)
   svntest.main.run_svn(None, 'merge',
                        os.path.join('..', '..', 'trunk') + '@HEAD')
@@ -355,6 +377,10 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
                        "Modify 'mu' on branches/c.")
 
   # Merge branches/c to trunk, which produces a conflict - r17
+  #
+  # Mergeinfo changes on /trunk:
+  #    Merged /trunk:r2
+  #    Merged /branches/c:r3-16
   os.chdir('trunk')
   svntest.main.run_svn(None, 'merge', os.path.join('..', branch_c) + '@HEAD')
   svntest.main.file_write(os.path.join('A', 'mu'),
@@ -1099,7 +1125,7 @@ def check_merge_results(log_chain, expected_merges):
 
 
 def merge_sensitive_log_single_revision(sbox):
-  "test sensitive log on a single revision"
+  "test 'svn log -g' on a single revision"
 
   merge_history_repos(sbox)
 
@@ -1111,28 +1137,50 @@ def merge_sensitive_log_single_revision(sbox):
   # Run the merge sensitive log, and compare results
   saved_cwd = os.getcwd()
 
+  expected_merges = {
+    14 : [],
+    13 : [14],
+    12 : [14],
+    11 : [14, 12],
+    10 : [14],
+    }
   os.chdir(TRUNK_path)
+  # First try a single rev using -rN
   exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                               'log', '-g',
                                                               '-r14')
 
 
   log_chain = parse_log_output(output)
-  expected_merges = {
-    14: [], 13 : [14], 12 : [14], 11 : [14, 12],
-    }
   check_merge_results(log_chain, expected_merges)
+  # Then try a single rev using --limit 1
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'log', '-g',
+                                                              '--limit', '1',
+                                                              '-r14:1')
 
+
+  log_chain = parse_log_output(output)
+  check_merge_results(log_chain, expected_merges)
   os.chdir(saved_cwd)
 
+  expected_merges = {
+      12 : [],
+      11 : [12],
+    }
+  # First try a single rev using -rN
   exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                               'log', '-g',
                                                               '-r12',
                                                               BRANCH_B_path)
   log_chain = parse_log_output(output)
-  expected_merges = {
-      12: [], 11 : [12],
-    }
+  check_merge_results(log_chain, expected_merges)
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'log', '-g',
+                                                              '--limit', '1',
+                                                              '-r12:1',
+                                                              BRANCH_B_path)
+  log_chain = parse_log_output(output)
   check_merge_results(log_chain, expected_merges)
 
 
@@ -1154,7 +1202,7 @@ def merge_sensitive_log_branching_revision(sbox):
   # Parse and check output.  There should be no extra revisions.
   log_chain = parse_log_output(output)
   expected_merges = {
-    10: [],
+    10 : [],
   }
   check_merge_results(log_chain, expected_merges)
 
@@ -1175,7 +1223,9 @@ def merge_sensitive_log_non_branching_revision(sbox):
   # Parse and check output.  There should be one extra revision.
   log_chain = parse_log_output(output)
   expected_merges = {
-    6: [], 4 : [6], 3: [6],
+    6 : [],
+    4 : [6],
+    3 : [6],
   }
   check_merge_results(log_chain, expected_merges)
 
@@ -1195,7 +1245,9 @@ def merge_sensitive_log_added_path(sbox):
   # Parse and check output.  There should be one extra revision.
   log_chain = parse_log_output(output)
   expected_merges = {
-    14: [], 12 : [], 11 : [],
+    14 : [],
+    12 : [],
+    11 : [],
   }
   check_merge_results(log_chain, expected_merges)
 
@@ -1364,6 +1416,24 @@ def log_xml_with_bad_data(sbox):
   svntest.actions.run_and_verify_log_xml(
     expected_revprops=(r0_props,), args=[sbox.repo_url])
 
+def merge_sensitive_log_target_with_bogus_mergeinfo(sbox):
+  "'svn log -g target_with_bogus_mergeinfo'"
+  #Refer issue 3172 for details.
+  #Create greek tree
+  #svn ps 'svn:mergeinfo' '/A/B:0' A/D
+  #svn ci -m 'setting bogus mergeinfo'
+  #svn log -g -r2
+  sbox.build()
+  wc_path = sbox.wc_dir
+  D_path = os.path.join(wc_path, 'A', 'D')
+  svntest.main.run_svn(None, 'ps', SVN_PROP_MERGEINFO, '/A/B:0', D_path)
+  #commit at r2
+  svntest.main.run_svn(None, 'ci', '-m', 'setting bogus mergeinfo', D_path)
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, 
+                                                              [], 'log', 
+                                                              '-g', D_path)
+  if len(err):
+    raise svntest.Failure("svn log -g target_with_bogus_mergeinfo fails")
 
 ########################################################################
 # Run the tests
@@ -1400,6 +1470,8 @@ test_list = [ None,
               only_one_wc_path,
               retrieve_revprops,
               log_xml_with_bad_data,
+              SkipUnless(merge_sensitive_log_target_with_bogus_mergeinfo,
+                         server_has_mergeinfo),
              ]
 
 if __name__ == '__main__':

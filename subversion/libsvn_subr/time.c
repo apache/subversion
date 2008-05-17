@@ -232,7 +232,9 @@ svn_time_to_human_cstring(apr_time_t when, apr_pool_t *pool)
   char *datestr, *curptr, human_datestr[SVN_TIME__MAX_LENGTH];
 
   /* Get the time into parts */
-  apr_time_exp_lt(&exploded_time, when);
+  ret = apr_time_exp_lt(&exploded_time, when);
+  if (ret)
+    return NULL;
 
   /* Make room for datestring */
   datestr = apr_palloc(pool, SVN_TIME__MAX_LENGTH);
