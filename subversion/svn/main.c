@@ -1767,8 +1767,9 @@ main(int argc, const char *argv[])
                || subcommand->cmd_func == svn_cl__add)
         {
           /* In pre-1.5 Subversion, some commands treated -N like
-             --depth=empty, so .  Also, with revert it makes sense to be
-             especially conservative, since revert can lose data. */
+             --depth=empty, so force that mapping here.  Anyway, with
+             revert it makes sense to be especially conservative,
+             since revert can lose data. */
           opt_state.depth = svn_depth_empty;
         }
       else

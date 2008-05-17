@@ -840,16 +840,21 @@ svn_ra_serf__check_path(svn_ra_session_t *ra_session,
   const char *path, *res_type;
   svn_revnum_t fetched_rev;
 
-  SVN_ERR(fetch_path_props(&prop_ctx, &props, &path, &fetched_rev,
-                           session, rel_path,
-                           revision, check_path_props, pool));
+  svn_error_t *err = fetch_path_props(&prop_ctx, &props, &path, &fetched_rev,
+                                      session, rel_path,
+                                      revision, check_path_props, pool);
 
-  if (prop_ctx && (svn_ra_serf__propfind_status_code(prop_ctx) == 404))
+  if (err && err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND)
     {
+      svn_error_clear(err);
       *kind = svn_node_none;
     }
   else
     {
+      /* Any other error, raise to caller. */
+      if (err)
+        return err;
+
       res_type = svn_ra_serf__get_ver_prop(props, path, fetched_rev,
                                            "DAV:", "resourcetype");
       if (!res_type)
@@ -977,9 +982,21 @@ svn_ra_serf__stat(svn_ra_session_t *ra_session,
   const char *path;
   svn_revnum_t fetched_rev;
   svn_dirent_t *entry;
+  svn_error_t *err;
 
-  SVN_ERR(fetch_path_props(&prop_ctx, &props, &path, &fetched_rev,
-                           session, rel_path, revision, all_props, pool));
+  err = fetch_path_props(&prop_ctx, &props, &path, &fetched_rev,
+                         session, rel_path, revision, all_props, pool);
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND)
+        {
+          svn_error_clear(err);
+          *dirent = NULL;
+          return SVN_NO_ERROR;
+        }
+      else
+        return err;
+    }
 
   entry = apr_pcalloc(pool, sizeof(*entry));
 
@@ -1022,6 +1039,12 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
       SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &relative_url,
                                          session, session->conns[0],
                                          path, pool));
+
+      /* If we don't have the latest revision, we have to fetch it. */
+      if (!SVN_IS_VALID_REVNUM(revision))
+        {
+          SVN_ERR(svn_ra_serf__get_latest_revnum(ra_session, &revision, pool));
+        }
 
       SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
                                           vcc_url, revision,

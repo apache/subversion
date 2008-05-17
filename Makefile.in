@@ -41,6 +41,7 @@ NEON_LIBS = @NEON_LIBS@
 SVN_APR_LIBS = @SVN_APR_LIBS@
 SVN_APRUTIL_LIBS = @SVN_APRUTIL_LIBS@
 SVN_DB_LIBS =
+SVN_KWALLET_LIBS = @SVN_KWALLET_LIBS@
 SVN_SERF_LIBS = @SVN_SERF_LIBS@
 SVN_SASL_LIBS = @SVN_SASL_LIBS@
 SVN_ZLIB_LIBS = @SVN_ZLIB_LIBS@
@@ -52,8 +53,9 @@ exec_prefix = @exec_prefix@
 libdir = @libdir@
 fsmod_libdir = @libdir@
 ramod_libdir = @libdir@
-neon_libdir = @libdir@
 bdb_libdir = @libdir@
+kwallet_libdir = @libdir@
+neon_libdir = @libdir@
 serf_libdir = @libdir@
 bindir = @bindir@
 includedir = @includedir@
@@ -102,9 +104,9 @@ LT_NO_UNDEFINED = @LT_NO_UNDEFINED@
 LT_CXX_LIBADD = @LT_CXX_LIBADD@
 
 INCLUDES = -I$(top_srcdir)/subversion/include -I$(top_builddir)/subversion \
-           @SVN_NEON_INCLUDES@ \
-           @SVN_APR_INCLUDES@ @SVN_APRUTIL_INCLUDES@ @SVN_SERF_INCLUDES@ \
-           @SVN_SASL_INCLUDES@ @SVN_ZLIB_INCLUDES@
+           @SVN_APR_INCLUDES@ @SVN_APRUTIL_INCLUDES@ \
+           @SVN_KWALLET_INCLUDES@ @SVN_NEON_INCLUDES@ @SVN_SASL_INCLUDES@ \
+           @SVN_SERF_INCLUDES@ @SVN_ZLIB_INCLUDES@
 
 APACHE_INCLUDES = @APACHE_INCLUDES@
 APACHE_LIBEXECDIR = $(DESTDIR)@APACHE_LIBEXECDIR@
@@ -152,6 +154,7 @@ LDFLAGS = @LDFLAGS@ $(EXTRA_LDFLAGS)
 COMPILE = $(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES)
 COMPILE_CXX = $(CXX) $(CPPFLAGS) $(CXXFLAGS) $(INCLUDES)
 LT_COMPILE = $(LIBTOOL) $(LTFLAGS) --mode=compile $(COMPILE)
+LT_COMPILE_CXX = $(LIBTOOL) $(LTCXXFLAGS) --mode=compile $(COMPILE_CXX)
 
 # special compilation for files destined for mod_dav_svn
 COMPILE_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS) $(APACHE_INCLUDES) $(INCLUDES) -o $@ -c
@@ -167,6 +170,7 @@ COMPILE_JAVAHL_JAVAC = $(JAVAC) $(JAVAC_FLAGS)
 COMPILE_JAVAHL_JAVAH = $(JAVAH)
 
 LINK = $(LIBTOOL) $(LTFLAGS) --mode=link $(CC) $(LT_LDFLAGS) $(CFLAGS) $(LDFLAGS) -rpath $(libdir)
+LINK_CXX = $(LIBTOOL) $(LTCXXFLAGS) --mode=link $(CXX) $(LT_LDFLAGS) $(CXXFLAGS) $(LDFLAGS) -rpath $(libdir)
 
 # special link rule for mod_dav_svn
 LINK_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=link $(CC) $(LT_LDFLAGS) $(CFLAGS) $(LDFLAGS) -rpath $(APACHE_LIBEXECDIR) -avoid-version -module $(APACHE_LDFLAGS)
@@ -186,6 +190,7 @@ INSTALL_LIB = $(LIBTOOL) --mode=install $(INSTALL)
 INSTALL_FSMOD_LIB = $(INSTALL_LIB)
 INSTALL_RAMOD_LIB = $(INSTALL_LIB)
 INSTALL_BDB_LIB = $(INSTALL_LIB)
+INSTALL_KWALLET_LIB = $(INSTALL_LIB)
 INSTALL_NEON_LIB = $(INSTALL_LIB)
 INSTALL_SERF_LIB = $(INSTALL_LIB)
 INSTALL_BIN = $(LIBTOOL) --mode=install $(INSTALL)
@@ -313,8 +318,8 @@ fast-clean: doc-clean
 # clean all but bulky test output, returning to before './configure' was run.
 SVN_CONFIG_SCRIPT_FILES = @SVN_CONFIG_SCRIPT_FILES@
 fast-distclean: fast-clean
-	rm -f Makefile config.cache config.log config.status libtool mkmf.log \
-              subversion/svn_private_config.h \
+	rm -f Makefile config.cache config.log config.nice config.status \
+	libtool mkmf.log subversion/svn_private_config.h \
               $(SVN_CONFIG_SCRIPT_FILES)
 
 # clean everything out, returning to before './autogen.sh' was run.
@@ -560,14 +565,20 @@ schema-clean:
 # Implicit rules for creating outputs from input files
 #
 .SUFFIXES:
-.SUFFIXES: .c .lo .o .la-a .la \
+.SUFFIXES: .c .cpp .lo .o .la-a .la \
            .po .spo .mo .rnc .rng .dtd .xsd
 
 .c.o:
 	$(COMPILE) -o $@ -c $<
 
+.cpp.o:
+	$(COMPILE_CXX) -o $@ -c $<
+
 .c.lo:
 	$(LT_COMPILE) -o $@ -c $<
+
+.cpp.lo:
+	$(LT_COMPILE_CXX) -o $@ -c $<
 
 .la.la-a:
 	sed "/library_names/s/'.*'/''/" $< > $@
