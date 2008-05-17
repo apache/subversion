@@ -500,21 +500,29 @@ svn_client_revprop_set2(const char *propname,
       svn_string_t *current;
       SVN_ERR(svn_ra_rev_prop(ra_session, *set_rev, propname, &current, pool));
 
-      if (original_propval->data
-          && (! svn_string_compare(original_propval, current)))
+      if (original_propval->data && (! current))
         {
           return svn_error_createf(
                   SVN_ERR_RA_OUT_OF_DATE, NULL,
-                  _("revprop '%s' in r%ld has unexpected value in repository"
-                    " (maybe someone else changed it?)"),
+                  _("revprop '%s' in r%ld is unexpectedly absent "
+                    "in repository (maybe someone else deleted it?)"),
+                  propname, *set_rev);
+        }
+      else if (original_propval->data
+               && (! svn_string_compare(original_propval, current)))
+        {
+          return svn_error_createf(
+                  SVN_ERR_RA_OUT_OF_DATE, NULL,
+                  _("revprop '%s' in r%ld has unexpected value "
+                    "in repository (maybe someone else changed it?)"),
                   propname, *set_rev);
         }
       else if ((! original_propval->data) && current)
         {
           return svn_error_createf(
                   SVN_ERR_RA_OUT_OF_DATE, NULL,
-                  _("revprop '%s' in r%ld is unexpectedly absent in repository"
-                    " (maybe someone else deleted it?)"),
+                  _("revprop '%s' in r%ld is unexpectedly present "
+                    "in repository (maybe someone else set it?)"),
                   propname, *set_rev);
         }
     }
