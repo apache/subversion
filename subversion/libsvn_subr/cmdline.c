@@ -354,6 +354,7 @@ svn_cmdline_handle_exit_error(svn_error_t *err,
   return EXIT_FAILURE;
 }
 
+#if defined(SVN_HAVE_KWALLET) || defined(SVN_HAVE_GNOME_KEYRING)
 /* Dynamically load authentication simple provider. */
 static svn_boolean_t
 get_auth_simple_provider(svn_auth_provider_object_t **provider,
@@ -385,6 +386,7 @@ get_auth_simple_provider(svn_auth_provider_object_t **provider,
     }
   return ret;
 }
+#endif
 
 svn_error_t *
 svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
