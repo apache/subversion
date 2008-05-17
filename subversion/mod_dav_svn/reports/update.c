@@ -34,6 +34,7 @@
 #include "svn_path.h"
 #include "svn_dav.h"
 #include "svn_props.h"
+#include "private/svn_log.h"
 
 #include "../dav_svn.h"
 
@@ -92,6 +93,7 @@ typedef struct item_baton_t {
 
   svn_boolean_t text_changed;        /* Did the file's contents change? */
   svn_boolean_t added;               /* File added? (Implies text_changed.) */
+  svn_boolean_t copyfrom;            /* File copied? */
   apr_array_header_t *changed_props; /* array of const char * prop names */
   apr_array_header_t *removed_props; /* array of const char * prop names */
 
@@ -352,6 +354,8 @@ add_helper(svn_boolean_t is_dir,
                                " copyfrom-rev=\"%ld\">" DEBUG_CR,
                                DIR_OR_FILE(is_dir),
                                qname, qcopy, copyfrom_revision);
+
+          child->copyfrom = TRUE;
         }
 
       /* Resist the temptation to pass 'elt' as the format string.
@@ -404,7 +408,8 @@ close_helper(svn_boolean_t is_dir, item_baton_t *baton)
     return SVN_NO_ERROR;
 
   /* ### ack!  binary names won't float here! */
-  if (baton->removed_props && (! baton->added))
+  /* If this is a copied file/dir, we can have removed props. */
+  if (baton->removed_props && (! baton->added || baton->copyfrom))
     {
       const char *qname;
 
@@ -761,7 +766,7 @@ upd_open_file(const char *path,
 
 
 /* We have our own window handler and baton as a simple wrapper around
-   the real handler (which converts vdelta windows to base64-encoded
+   the real handler (which converts txdelta windows to base64-encoded
    svndiff data).  The wrapper is responsible for sending the opening
    and closing XML tags around the svndiff data. */
 struct window_handler_baton
@@ -910,6 +915,7 @@ dav_svn__update_report(const dav_resource *resource,
   svn_revnum_t revnum = SVN_INVALID_REVNUM;
   svn_revnum_t from_revnum = SVN_INVALID_REVNUM;
   int ns;
+  /* entry_counter and entry_is_empty are for operational logging. */
   int entry_counter = 0;
   svn_boolean_t entry_is_empty = FALSE;
   svn_error_t *serr;
@@ -1330,26 +1336,13 @@ dav_svn__update_report(const dav_resource *resource,
     if (dst_path)
       {
         /* diff/merge don't ask for inline text-deltas. */
-        if (!uc.send_all && strcmp(spath, dst_path) == 0)
-          action = apr_psprintf(resource->pool,
-                                "diff %s r%ld:%ld%s%s",
-                                svn_path_uri_encode(spath, resource->pool),
-                                from_revnum,
-                                revnum, log_depth,
-                                ignore_ancestry ? " ignore-ancestry" : "");
+        if (uc.send_all)
+          action = svn_log__switch(spath, dst_path, revnum,
+                                   requested_depth, resource->pool);
         else
-          action = apr_psprintf(resource->pool,
-                                "%s %s@%ld %s@%ld%s%s",
-                                (uc.send_all ? "switch" : "diff"),
-                                svn_path_uri_encode(spath, resource->pool),
-                                from_revnum,
-                                svn_path_uri_encode(dst_path, resource->pool),
-                                revnum, log_depth,
-                                /* ignore-ancestry only applies to merge, and
-                                   we use uc.send_all to know if this is a
-                                   diff/merge or not. */
-                                (!uc.send_all && ignore_ancestry
-                                 ? " ignore-ancestry" : ""));
+          action = svn_log__diff(spath, from_revnum, dst_path, revnum,
+                                 requested_depth, ignore_ancestry,
+                                 resource->pool);
       }
 
     /* Otherwise, it must be checkout, export, update, or status -u. */
@@ -1358,29 +1351,17 @@ dav_svn__update_report(const dav_resource *resource,
         /* svn_client_checkout() creates a single root directory, then
            reports it (and it alone) to the server as being empty. */
         if (entry_counter == 1 && entry_is_empty)
-          action = apr_psprintf(resource->pool,
-                                "checkout-or-export %s r%ld%s",
-                                svn_path_uri_encode(spath, resource->pool),
-                                revnum,
-                                log_depth);
+          action = svn_log__checkout(spath, revnum, requested_depth,
+                                     resource->pool);
         else
           {
             if (text_deltas)
-              action = apr_psprintf(resource->pool,
-                                    "update %s r%ld%s%s",
-                                    svn_path_uri_encode(spath,
-                                                        resource->pool),
-                                    revnum,
-                                    log_depth,
-                                    (send_copyfrom_args
-                                     ? " send-copyfrom-args" : ""));
+              action = svn_log__update(spath, revnum, requested_depth,
+                                       send_copyfrom_args,
+                                       resource->pool);
             else
-              action = apr_psprintf(resource->pool,
-                                    "status %s r%ld%s",
-                                    svn_path_uri_encode(spath,
-                                                        resource->pool),
-                                    revnum,
-                                    log_depth);
+              action = svn_log__status(spath, revnum, requested_depth,
+                                       resource->pool);
           }
       }
 

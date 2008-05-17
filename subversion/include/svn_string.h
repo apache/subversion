@@ -356,6 +356,10 @@ svn_cstring_join(apr_array_header_t *strings,
  * Compare two strings @a atr1 and @a atr2, treating case-equivalent
  * unaccented Latin (ASCII subset) letters as equal.
  *
+ * Returns in integer greater than, equal to, or less than 0,
+ * according to whether @a str1 is considered greater than, equal to,
+ * or less than @a str2.
+ *
  * @since New in 1.5.
  */
 int svn_cstring_casecmp(const char *str1, const char *str2);

@@ -41,6 +41,8 @@ svn_mime_type_validate(const char *mime_type, apr_pool_t *pool)
      only looking at the media type here. */
   const apr_size_t len = strcspn(mime_type, "; ");
   const char *const slash_pos = strchr(mime_type, '/');
+  int i;
+  const char *tspecials = "()<>@,;:\\\"/[]?=";
 
   if (len == 0)
     return svn_error_createf
@@ -52,10 +54,19 @@ svn_mime_type_validate(const char *mime_type, apr_pool_t *pool)
       (SVN_ERR_BAD_MIME_TYPE, NULL,
        _("MIME type '%s' does not contain '/'"), mime_type);
 
-  if (! apr_isalnum(mime_type[len - 1]))
-    return svn_error_createf
-      (SVN_ERR_BAD_MIME_TYPE, NULL,
-       _("MIME type '%s' ends with non-alphanumeric character"), mime_type);
+  /* Check the mime type for illegal characters. See RFC 1521. */
+  for (i = 0; i < len; i++)
+    {
+      if (&mime_type[i] != slash_pos
+        && (! apr_isascii(mime_type[i])
+            || apr_iscntrl(mime_type[i])
+            || apr_isspace(mime_type[i])
+            || (strchr(tspecials, mime_type[i]) != NULL)))
+        return svn_error_createf
+          (SVN_ERR_BAD_MIME_TYPE, NULL,
+           _("MIME type '%s' contains invalid character '%c'"),
+           mime_type, mime_type[i]);
+    }
 
   return SVN_NO_ERROR;
 }

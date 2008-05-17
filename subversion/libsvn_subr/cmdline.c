@@ -2,7 +2,7 @@
  * cmdline.c :  Helpers for command-line programs.
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -41,7 +41,9 @@
 #include "svn_error.h"
 #include "svn_nls.h"
 #include "svn_auth.h"
+#include "svn_version.h"
 #include "utf_impl.h"
+#include "svn_config.h"
 
 #include "svn_private_config.h"
 
@@ -352,6 +354,40 @@ svn_cmdline_handle_exit_error(svn_error_t *err,
   return EXIT_FAILURE;
 }
 
+#if defined(SVN_HAVE_KWALLET) || defined(SVN_HAVE_GNOME_KEYRING)
+/* Dynamically load authentication simple provider. */
+static svn_boolean_t
+get_auth_simple_provider(svn_auth_provider_object_t **provider,
+                         const char *provider_name,
+                         apr_pool_t *pool)
+{
+  apr_dso_handle_t *dso;
+  apr_dso_handle_sym_t provider_symbol;
+  const char *libname;
+  const char *funcname;
+  svn_boolean_t ret = FALSE;
+  libname = apr_psprintf(pool,
+                         "libsvn_auth_%s-%d.so.0",
+                         provider_name,
+                         SVN_VER_MAJOR);
+  funcname = apr_psprintf(pool,
+                          "svn_auth_get_%s_simple_provider",
+                          provider_name);
+  svn_error_clear(svn_dso_load(&dso, libname));
+  if (dso)
+    {
+      if (! apr_dso_sym(&provider_symbol, dso, funcname))
+        {
+          svn_auth_simple_provider_func_t func;
+          func = (svn_auth_simple_provider_func_t) provider_symbol;
+          func(provider, pool);
+          ret = TRUE;
+        }
+    }
+  return ret;
+}
+#endif
+
 svn_error_t *
 svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
                              svn_boolean_t non_interactive,
@@ -365,14 +401,27 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
                              apr_pool_t *pool)
 {
   svn_boolean_t store_password_val = TRUE;
+  svn_boolean_t store_auth_creds_val = TRUE;
   svn_auth_provider_object_t *provider;
+  svn_cmdline_prompt_baton2_t *pb = NULL;
 
   /* The whole list of registered providers */
   apr_array_header_t *providers
     = apr_array_make(pool, 12, sizeof(svn_auth_provider_object_t *));
 
-  /* The main disk-caching auth providers, for both
-     'username/password' creds and 'username' creds.  */
+  /* If we have a cancellation function, cram it and the stuff it
+     needs into the prompt baton. */
+  if (cancel_func)
+    {
+      pb = apr_palloc(pool, sizeof(*pb));
+      pb->cancel_func = cancel_func;
+      pb->cancel_baton = cancel_baton;
+      pb->config_dir = config_dir;
+    }
+
+  /* Disk-caching auth providers, for both
+     'username/password' creds and 'username' creds,
+     which store passwords encrypted.  */
 #if defined(WIN32) && !defined(__MINGW32__)
   svn_auth_get_windows_simple_provider(&provider, pool);
   APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
@@ -381,11 +430,30 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
   svn_auth_get_keychain_simple_provider(&provider, pool);
   APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 #endif
+#ifdef SVN_HAVE_KWALLET
+  if (get_auth_simple_provider(&provider, "kwallet", pool))
+  {
+    APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+  }
+#endif
 #ifdef SVN_HAVE_GNOME_KEYRING
   svn_auth_get_gnome_keyring_simple_provider(&provider, pool);
   APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 #endif
-  svn_auth_get_simple_provider(&provider, pool);
+  if (non_interactive == FALSE)
+    {
+      /* This provider is odd in that it isn't a prompting provider in
+         the classic sense.  That is, it doesn't need to prompt in
+         order to get creds, but it *does* need to prompt the user
+         regarding the *cache storage* of creds. */
+      svn_auth_get_simple_provider2(&provider,
+                                    svn_cmdline_auth_plaintext_prompt,
+                                    pb, pool);
+    }
+  else
+    {
+      svn_auth_get_simple_provider2(&provider, NULL, NULL, pool);
+    }
   APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
   svn_auth_get_username_provider(&provider, pool);
   APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
@@ -404,16 +472,6 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
 
   if (non_interactive == FALSE)
     {
-      svn_cmdline_prompt_baton_t *pb = NULL;
-
-      if (cancel_func)
-        {
-          pb = apr_palloc(pool, sizeof(*pb));
-
-          pb->cancel_func = cancel_func;
-          pb->cancel_baton = cancel_baton;
-        }
-
       /* Two basic prompt providers: username/password, and just username. */
       svn_auth_get_simple_prompt_provider(&provider,
                                           svn_cmdline_auth_simple_prompt,
@@ -462,23 +520,28 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
     svn_auth_set_parameter(*ab, SVN_AUTH_PARAM_CONFIG_DIR,
                            config_dir);
 
+  /* Determine whether storing passwords in any form is allowed.
+   * This is the deprecated location for this option, the new
+   * location is SVN_CONFIG_CATEGORY_SERVERS. The RA layer may
+   * override the value we set here. */
   SVN_ERR(svn_config_get_bool(cfg, &store_password_val,
                               SVN_CONFIG_SECTION_AUTH,
                               SVN_CONFIG_OPTION_STORE_PASSWORDS,
-                              TRUE));
+                              SVN_CONFIG_DEFAULT_OPTION_STORE_PASSWORDS));
 
   if (! store_password_val)
     svn_auth_set_parameter(*ab, SVN_AUTH_PARAM_DONT_STORE_PASSWORDS, "");
 
-  /* There are two different ways the user can disable disk caching
-     of credentials:  either via --no-auth-cache, or in the config
-     file ('store-auth-creds = no'). */
-  SVN_ERR(svn_config_get_bool(cfg, &store_password_val,
+  /* Determine whether we are allowed to write to the auth/ area.
+   * This is the deprecated location for this option, the new
+   * location is SVN_CONFIG_CATEGORY_SERVERS. The RA layer may
+   * override the value we set here. */
+  SVN_ERR(svn_config_get_bool(cfg, &store_auth_creds_val,
                               SVN_CONFIG_SECTION_AUTH,
                               SVN_CONFIG_OPTION_STORE_AUTH_CREDS,
-                              TRUE));
+                              SVN_CONFIG_DEFAULT_OPTION_STORE_AUTH_CREDS));
 
-  if (no_auth_cache || ! store_password_val)
+  if (no_auth_cache || ! store_auth_creds_val)
     svn_auth_set_parameter(*ab, SVN_AUTH_PARAM_NO_AUTH_CACHE, "");
 
   return SVN_NO_ERROR;

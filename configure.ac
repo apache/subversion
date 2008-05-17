@@ -25,6 +25,9 @@ SVN_CONFIG_NICE(config.nice)
 # Look for a C compiler (before anything can set CFLAGS)
 AC_PROG_CC
 
+# Look for a C++ compiler
+AC_PROG_CXX
+
 # Look for a C pre-processor
 AC_PROG_CPP
 
@@ -278,9 +281,29 @@ else
 fi
 
 
-dnl GNOME Keyring -------------------
+dnl APR_HAS_DSO -------------------
+
+AC_MSG_CHECKING([whether APR has support for DSOs])
+old_CPPFLAGS="$CPPFLAGS"
+CPPFLAGS="$CPPFLAGS $SVN_APR_INCLUDES"
+AC_PREPROC_IFELSE([
+#include <apr.h>
+#if !APR_HAS_DSO
+#error
+#endif],
+  APR_HAS_DSO="yes"
+  AC_MSG_RESULT([yes]),
+  APR_HAS_DSO="no"
+  AC_MSG_RESULT([no]))
+CPPFLAGS="$old_CPPFLAGS"
+
+
+dnl pkg-config (required for support for KWallet and GNOME Keyring) -------------------
 
 AC_CHECK_PROG(HAVE_PKG_CONFIG, pkg-config, yes)
+
+
+dnl GNOME Keyring -------------------
 
 AC_ARG_WITH(gnome_keyring,
   AS_HELP_STRING([--with-gnome-keyring], 
@@ -388,6 +411,106 @@ if test $USE_NLS = "yes"; then
 fi
 AC_SUBST(MSGFMTFLAGS)
 
+
+dnl KWallet -------------------
+
+AC_ARG_WITH(kwallet,
+  [AS_HELP_STRING([[--with-kwallet[=PATH]]],
+                  [Enable use of KWallet (KDE 4) for auth credentials])],
+                  [with_kwallet="$withval"],
+                  [with_kwallet=no])
+
+AC_MSG_CHECKING([whether to look for KWallet])
+if test "$with_kwallet" != "no"; then
+  AC_MSG_RESULT([yes])
+  if test "$enable_shared" = "yes"; then
+    if test "$APR_HAS_DSO" = "yes"; then
+      if test "$USE_NLS" = "yes"; then
+        if test "$HAVE_PKG_CONFIG" = "yes"; then
+          AC_MSG_CHECKING([for QtCore, QtDBus, QtGui])
+          if pkg-config --exists QtCore QtDBus QtGui; then
+            AC_MSG_RESULT([yes])
+            if test "$with_kwallet" != "yes"; then
+              AC_MSG_CHECKING([for kde4-config])
+              kde4_config="$with_kwallet/bin/kde4-config"
+              if test -f "$kde4_config" && test -x "$kde4_config"; then
+                HAVE_KDE4_CONFIG="yes"
+                AC_MSG_RESULT([yes])
+              else
+                AC_MSG_RESULT([no])
+              fi
+            else
+              AC_CHECK_PROG(HAVE_KDE4_CONFIG, kde4-config, yes)
+              kde4_config="kde4-config"
+            fi
+            if test "$HAVE_KDE4_CONFIG" = "yes"; then
+              AC_MSG_CHECKING([for KWallet])
+              old_CXXFLAGS="$CXXFLAGS"
+              old_LDFLAGS="$LDFLAGS"
+              old_LIBS="$LIBS"
+              for d in [`pkg-config --cflags QtCore QtDBus QtGui | $GREP -o -- -D[^[:space:]]*`]; do
+                CPPFLAGS="$CPPFLAGS $d"
+              done
+              qt_include_dirs=""
+              for i in [`pkg-config --cflags QtCore QtDBus QtGui | $GREP -o -- -I[^[:space:]]*`]; do
+                qt_include_dirs="$qt_include_dirs $i"
+              done
+              qt_include_dirs="${qt_include_dirs## }"
+              kde_dir="`$kde4_config --prefix`"
+              SVN_KWALLET_INCLUDES="$qt_include_dirs -I$kde_dir/include"
+              SVN_KWALLET_LIBS="-lQtCore -lQtDBus -lQtGui -lkdecore -lkdeui"
+              CXXFLAGS="$CXXFLAGS $SVN_KWALLET_INCLUDES"
+              LIBS="$LIBS $SVN_KWALLET_LIBS"
+              qt_lib_dirs=""
+              for l in [`pkg-config --libs QtCore QtDBus QtGui | $GREP -o -- -L[^[:space:]]*`]; do
+                qt_lib_dirs="$qt_lib_dirs $l"
+              done
+              qt_lib_dirs="${qt_lib_dirs## }"
+              LDFLAGS="$old_LDFLAGS $qt_lib_dirs -L$kde_dir/lib`$kde4_config --libsuffix`"
+              AC_LANG(C++)
+              AC_LINK_IFELSE([
+#include <kwallet.h>
+int main()
+{KWallet::Wallet::walletList();}], with_kwallet="yes", with_kwallet="no")
+              AC_LANG(C)
+              if test "$with_kwallet" = "yes"; then
+                AC_DEFINE([SVN_HAVE_KWALLET], [1],
+                          [Is KWallet support enabled?])
+                AC_MSG_RESULT([yes])
+                CXXFLAGS="$old_CXXFLAGS"
+                LIBS="$old_LIBS"
+              else
+                AC_MSG_RESULT([no])
+                AC_MSG_ERROR([cannot find KWallet])
+              fi
+            else
+              AC_MSG_ERROR([cannot find kde4-config])
+            fi
+          else
+            AC_MSG_RESULT([no])
+            AC_MSG_ERROR([cannot find QtCore, QtDBus, QtGui])
+          fi
+        else
+          AC_MSG_ERROR([cannot find pkg-config])
+        fi
+      else
+        AC_MSG_ERROR([missing support for internationalization])
+      fi
+    else
+      AC_MSG_ERROR([APR does not have support for DSOs])
+    fi
+  else
+    AC_MSG_ERROR([--with-kwallet conflicts with --disable-shared])
+  fi
+else
+  AC_MSG_RESULT([no])
+fi
+AC_SUBST(SVN_KWALLET_INCLUDES)
+AC_SUBST(SVN_KWALLET_LIBS)
+
+
+dnl Build and install rules -------------------
+
 INSTALL_STATIC_RULES="install-bin install-docs"
 INSTALL_RULES="install-fsmod-lib install-ramod-lib install-lib install-include install-static"
 INSTALL_RULES="$INSTALL_RULES $INSTALL_APACHE_RULE"
@@ -411,6 +534,12 @@ if test "$svn_lib_serf" = "yes"; then
   BUILD_RULES="$BUILD_RULES serf-lib"
   INSTALL_RULES="`echo $INSTALL_RULES | sed 's/install-ramod-lib/install-ramod-lib install-serf-lib/'`"
   INSTALL_STATIC_RULES="$INSTALL_STATIC_RULES install-serf-lib"
+fi
+
+if test "$with_kwallet" = "yes"; then
+  BUILD_RULES="$BUILD_RULES kwallet-lib"
+  INSTALL_RULES="`echo $INSTALL_RULES | sed 's/install-lib/install-lib install-kwallet-lib/'`"
+  INSTALL_STATIC_RULES="$INSTALL_STATIC_RULES install-kwallet-lib"
 fi
 
 if test "$USE_NLS" = "yes"; then
@@ -503,6 +632,9 @@ else
   if test "$enable_debugging" = "no" ; then
     CFLAGS=["`echo $CFLAGS' ' | sed -e 's/-g[0-9] //g' | sed -e 's/-g//g'`"]
     CXXFLAGS=["`echo $CXXFLAGS' ' | sed -e 's/-g[0-9] //g' | sed -e 's/-g//g'`"]
+    dnl Compile with NDEBUG to get rid of assertions
+    CFLAGS="$CFLAGS -DNDEBUG"
+    CXXFLAGS="$CXXFLAGS -DNDEBUG"
   fi
 fi
 
@@ -719,8 +851,6 @@ if test "$do_javahl_build" = "yes"; then
                   Please specify a suitable JDK using the --with-jdk option.])
   fi
   
-  AC_PROG_CXX
-  
   dnl The temporary directory where libtool compiles libsvnjavahl.
   dnl N.B. objdir is "the name of the directory that contains temporary
   dnl libtool files" and it is set by libtool.m4
@@ -754,9 +884,7 @@ AC_ARG_WITH(junit,
 AS_HELP_STRING([--with-junit=PATH],
                [Specify a path to the junit JAR file.]),
 [
-    if test "$withval" = "yes" ; then
-      AC_MSG_ERROR([--with-junit requires an argument.])
-    else
+    if test "$withval" != "no"; then
       if test -n "$JAVA_CLASSPATH"; then
         JAVA_CLASSPATH="$withval:$JAVA_CLASSPATH"
       else

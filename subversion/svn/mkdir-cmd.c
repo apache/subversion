@@ -47,7 +47,7 @@ svn_cl__mkdir(apr_getopt_t *os,
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets, 
-                                                      pool));
+                                                      ctx, pool));
 
   if (! targets->nelts)
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
@@ -73,10 +73,8 @@ svn_cl__mkdir(apr_getopt_t *os,
                                          NULL, ctx->config, pool));
     }
 
-  ctx->revprop_table = opt_state->revprop_table;
-
   err = svn_client_mkdir3(&commit_info, targets, opt_state->parents,
-                          ctx, pool);
+                          opt_state->revprop_table, ctx, pool);
 
   if (ctx->log_msg_func3)
     err = svn_cl__cleanup_log_msg(ctx->log_msg_baton3, err);

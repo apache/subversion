@@ -369,11 +369,11 @@ svn_client__default_walker_error_handler(const char *path,
 #define SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx) \
         ((ctx)->log_msg_func3 || (ctx)->log_msg_func2 || (ctx)->log_msg_func)
 
-/* This is the baton that we pass svn_ra_open2(), and is associated with
+/* This is the baton that we pass svn_ra_open3(), and is associated with
    the callback table we provide to RA. */
 typedef struct
 {
-  /* Holds the directory that corresponds to the REPOS_URL at svn_ra_open2()
+  /* Holds the directory that corresponds to the REPOS_URL at svn_ra_open3()
      time. When callbacks specify a relative path, they are joined with
      this base directory. */
   const char *base_dir;
@@ -668,7 +668,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
 svn_error_t *
 svn_client__get_diff_editor(const char *target,
                             svn_wc_adm_access_t *adm_access,
-                            const svn_wc_diff_callbacks2_t *diff_cmd,
+                            const svn_wc_diff_callbacks3_t *diff_cmd,
                             void *diff_cmd_baton,
                             svn_depth_t depth,
                             svn_boolean_t dry_run,
@@ -915,9 +915,8 @@ svn_client__condense_commit_items(const char **base_url,
    CTX->NOTIFY_FUNC/CTX->BATON will be called as the commit progresses, as
    a way of describing actions to the application layer (if non NULL).
 
-   NOTIFY_PATH_PREFIX is used to send shorter, relative paths to the
-   notify_func (it's a prefix that will be subtracted from the front
-   of the paths.)
+   NOTIFY_PATH_PREFIX will be passed to CTX->notify_func2() as the
+   common absolute path prefix of the committed paths.  It can be NULL.
 
    If the caller wants to keep track of any outstanding temporary
    files left after the transmission of text and property mods,
@@ -1048,16 +1047,18 @@ svn_client__get_log_msg(const char **log_msg,
                         svn_client_ctx_t *ctx,
                         apr_pool_t *pool);
 
-/* Return the revision properties stored in CTX (if any), adding LOG_MSG
-   as SVN_PROP_REVISION_LOG in *REVPROP_TABLE, allocated in POOL.
-   *REVPROP_TABLE will map const char * property names to svn_string_t values.
-   If CTX->REVPROP_TABLE is non-NULL, check that it doesn't contain
-   any of the standard Subversion properties.  In that case, return
-   SVN_ERR_CLIENT_PROPERTY_NAME. */
-svn_error_t *svn_client__get_revprop_table(apr_hash_t **revprop_table,
-                                           const char *log_msg,
-                                           svn_client_ctx_t *ctx,
-                                           apr_pool_t *pool);
+/* Return the revision properties stored in REVPROP_TABLE_IN, adding
+   LOG_MSG as SVN_PROP_REVISION_LOG in *REVPROP_TABLE_OUT, allocated in
+   POOL.  *REVPROP_TABLE_OUT will map const char * property names to
+   svn_string_t values.  If REVPROP_TABLE_IN is non-NULL, check that
+   it doesn't contain any of the standard Subversion properties.  In
+   that case, return SVN_ERR_CLIENT_PROPERTY_NAME. */
+svn_error_t *
+svn_client__ensure_revprop_table(apr_hash_t **revprop_table_out,
+                                 apr_hash_t *revprop_table_in,
+                                 const char *log_msg,
+                                 svn_client_ctx_t *ctx,
+                                 apr_pool_t *pool);
 
 
 /** Return TRUE iff revision kind is dependent on the working copy.

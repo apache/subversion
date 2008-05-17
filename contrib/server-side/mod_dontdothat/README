@@ -20,6 +20,7 @@ It is enabled via single httpd.conf directive, DontDoThatConfigFile:
   DAV svn
   SVNParentPath /path/to/repositories
   DontDoThatConfigFile /path/to/config.file
+  DontDoThatDisallowReplay off
 </Location>
 
 The file you give to DontDoThatConfigFile is a Subversion configuration file
@@ -47,3 +48,6 @@ a directory segment, so /foo* or /* are valid, but /*foo is not.
 These rules are applied to any recursive action, which basically means any
 Subversion command that goes through the update-report, like update, diff,
 checkout, merge, etc.
+
+The DontDoThatDisallowReplay option makes mod_dontdothat disallow
+replay requests, which is on by default.

@@ -458,14 +458,16 @@ interactive-conflicts = false
 
   # define default server file contents if none provided
   if server_contents is None:
+    http_library_str = ""
     if http_library:
-      server_contents = """
+      http_library_str = "http-library=%s" % (http_library)
+    server_contents = """
 #
 [global]
-http-library=%s
-""" % (http_library)
-    else:
-      server_contents = "#\n"
+%s
+store-plaintext-passwords=yes
+store-passwords=yes
+""" % (http_library_str)
 
   file_write(cfgfile_cfg, config_contents)
   file_write(cfgfile_srv, server_contents)
@@ -776,27 +778,34 @@ def use_editor(func):
   os.environ['SVNTEST_EDITOR_FUNC'] = func
 
 
-def merge_notify_line(revstart=None, revend=None, same_URL=True):
+def merge_notify_line(revstart=None, revend=None, same_URL=True,
+                      foreign=False):
   """Return an expected output line that describes the beginning of a
   merge operation on revisions REVSTART through REVEND.  Omit both
   REVSTART and REVEND for the case where the left and right sides of
   the merge are from different URLs."""
+  from_foreign_phrase = foreign and "\(from foreign repository\) " or ""
   if not same_URL:
-    return "--- Merging differences between repository URLs into '.+':\n"
+    return "--- Merging differences between %srepository URLs into '.+':\n" \
+           % (foreign and "foreign " or "")
   if revend is None:
     if revstart is None:
       # The left and right sides of the merge are from different URLs.
-      return "--- Merging differences between repository URLs into '.+':\n"
+      return "--- Merging differences between %srepository URLs into '.+':\n" \
+             % (foreign and "foreign " or "")
     elif revstart < 0:
-      return "--- Reverse-merging r%ld into '.+':\n" % abs(revstart)
+      return "--- Reverse-merging %sr%ld into '.+':\n" \
+             % (from_foreign_phrase, abs(revstart))
     else:
-      return "--- Merging r%ld into '.+':\n" % revstart
+      return "--- Merging %sr%ld into '.+':\n" \
+             % (from_foreign_phrase, revstart)
   else:
     if revstart > revend:
-      return "--- Reverse-merging r%ld through r%ld into '.+':\n" % (revstart,
-                                                                     revend)
+      return "--- Reverse-merging %sr%ld through r%ld into '.+':\n" \
+             % (from_foreign_phrase, revstart, revend)
     else:
-      return "--- Merging r%ld through r%ld into '.+':\n" % (revstart, revend)
+      return "--- Merging %sr%ld through r%ld into '.+':\n" \
+             % (from_foreign_phrase, revstart, revend)
 
 
 ######################################################################

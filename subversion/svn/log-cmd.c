@@ -176,13 +176,8 @@ log_entry_receiver(void *baton,
     author = _("(no author)");
 
   if (date && date[0])
-    {
-      /* Convert date to a format for humans. */
-      apr_time_t time_temp;
-
-      SVN_ERR(svn_time_from_cstring(&time_temp, date, pool));
-      date = svn_time_to_human_cstring(time_temp, pool);
-    }
+    /* Convert date to a format for humans. */
+    SVN_ERR(svn_cl__time_cstring_to_human_cstring(&date, date, pool));
   else
     date = _("(no date)");
 
@@ -468,7 +463,7 @@ svn_cl__log(apr_getopt_t *os,
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets, 
-                                                      pool));
+                                                      ctx, pool));
 
   /* Add "." if user passed 0 arguments */
   svn_opt_push_implicit_dot_target(targets, pool);

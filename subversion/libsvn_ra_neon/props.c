@@ -638,8 +638,32 @@ svn_error_t * svn_ra_neon__get_starting_props(svn_ra_neon__resource_t **rsrc,
                                               const char *label,
                                               apr_pool_t *pool)
 {
-  return svn_ra_neon__get_props_resource(rsrc, sess, url, label, starting_props,
-                                         pool);
+  svn_string_t *propval;
+
+  SVN_ERR(svn_ra_neon__get_props_resource(rsrc, sess, url, label,
+                                          starting_props, pool));
+
+  /* Cache some of the resource information. */
+
+  if (! sess->vcc)
+    {
+      propval = apr_hash_get((*rsrc)->propset,
+                             SVN_RA_NEON__PROP_VCC,
+                             APR_HASH_KEY_STRING);
+      if (propval)
+        sess->vcc = apr_pstrdup(sess->pool, propval->data);
+    }
+
+  if (! sess->uuid)
+    {
+      propval = apr_hash_get((*rsrc)->propset,
+                             SVN_RA_NEON__PROP_REPOSITORY_UUID,
+                             APR_HASH_KEY_STRING);
+      if (propval)
+        sess->uuid = apr_pstrdup(sess->pool, propval->data);
+    }
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -747,9 +771,13 @@ svn_error_t *svn_ra_neon__get_vcc(const char **vcc,
 {
   svn_ra_neon__resource_t *rsrc;
   const char *lopped_path;
-  const svn_string_t *vcc_s;
 
-  /* ### Someday, possibly look for memory-cached VCC in the RA session. */
+  /* Look for memory-cached VCC in the RA session. */
+  if (sess->vcc)
+    {
+      *vcc = sess->vcc;
+      return SVN_NO_ERROR;
+    }
 
   /* ### Someday, possibly look for disk-cached VCC via get_wcprop callback. */
 
@@ -757,14 +785,15 @@ svn_error_t *svn_ra_neon__get_vcc(const char **vcc,
   SVN_ERR(svn_ra_neon__search_for_starting_props(&rsrc, &lopped_path,
                                                  sess, url, pool));
 
-  vcc_s = apr_hash_get(rsrc->propset,
-                       SVN_RA_NEON__PROP_VCC, APR_HASH_KEY_STRING);
-  if (! vcc_s)
-    return svn_error_create(APR_EGENERAL, NULL,
-                             _("The VCC property was not found on the "
-                               "resource"));
+  if (! sess->vcc)
+    {
+      /* ### better error reporting... */
+      return svn_error_create(APR_EGENERAL, NULL,
+                              _("The VCC property was not found on the "
+                                "resource"));
+    }
 
-  *vcc = vcc_s->data;
+  *vcc = sess->vcc;
   return SVN_NO_ERROR;
 }
 
@@ -778,7 +807,7 @@ svn_error_t *svn_ra_neon__get_baseline_props(svn_string_t *bc_relative,
                                              apr_pool_t *pool)
 {
   svn_ra_neon__resource_t *rsrc;
-  const svn_string_t *vcc;
+  const char *vcc;
   const svn_string_t *relative_path;
   const char *my_bc_relative;
   const char *lopped_path;
@@ -809,7 +838,7 @@ svn_error_t *svn_ra_neon__get_baseline_props(svn_string_t *bc_relative,
   SVN_ERR(svn_ra_neon__search_for_starting_props(&rsrc, &lopped_path,
                                                  sess, url, pool));
 
-  vcc = apr_hash_get(rsrc->propset, SVN_RA_NEON__PROP_VCC, APR_HASH_KEY_STRING);
+  SVN_ERR(svn_ra_neon__get_vcc(&vcc, sess, url, pool));
   if (vcc == NULL)
     {
       /* ### better error reporting... */
@@ -881,7 +910,7 @@ svn_error_t *svn_ra_neon__get_baseline_props(svn_string_t *bc_relative,
       /* Get the Baseline from the DAV:checked-in value, then fetch its
          DAV:baseline-collection property. */
       /* ### should wrap this with info about rsrc==VCC */
-      SVN_ERR(svn_ra_neon__get_one_prop(&baseline, sess, vcc->data, NULL,
+      SVN_ERR(svn_ra_neon__get_one_prop(&baseline, sess, vcc, NULL,
                                         &svn_ra_neon__checked_in_prop, pool));
 
       /* ### do we want to optimize the props we fetch, based on what the
@@ -902,7 +931,7 @@ svn_error_t *svn_ra_neon__get_baseline_props(svn_string_t *bc_relative,
 
       /* ### do we want to optimize the props we fetch, based on what the
          ### user asked for? i.e. omit version-name if latest_rev is NULL */
-      SVN_ERR(svn_ra_neon__get_props_resource(&rsrc, sess, vcc->data, label,
+      SVN_ERR(svn_ra_neon__get_props_resource(&rsrc, sess, vcc, label,
                                               which_props, pool));
     }
 
@@ -982,8 +1011,8 @@ svn_error_t *svn_ra_neon__get_baseline_info(svn_boolean_t *is_dir,
       const char *full_bc_url = svn_path_url_add_component(my_bc_url->data,
                                                            my_bc_rel.data,
                                                            pool);
-      SVN_ERR(svn_ra_neon__get_props_resource(&rsrc, sess, full_bc_url,
-                                              NULL, starting_props, pool));
+      SVN_ERR(svn_ra_neon__get_starting_props(&rsrc, sess, full_bc_url,
+                                              NULL, pool));
       *is_dir = rsrc->is_collection;
     }
 
