@@ -11084,18 +11084,27 @@ def dont_merge_revs_into_subtree_that_predate_it(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, wc_dir)
 
+  # Remove A/D/H/nu and commit it as r8.
+  # We do this deletion so that following cherry harvest has a *tough*
+  # time to identify the line of history of /A/D/H/nu@HEAD.
+  svntest.main.run_svn(None, 'rm', nu_path)
+  expected_output = wc.State(wc_dir, {'A/D/H/nu' : Item(verb='Deleting')})
+  expected_status.remove('A/D/H/nu')
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
   # Make another text mod to 'A/D/H/psi' that can be merged to 'H_COPY'
-  # during a cherry harvest and commit it as r8.
+  # during a cherry harvest and commit it as r9.
   svntest.main.file_write(psi_path, "Even *newer* content")
   expected_output = wc.State(wc_dir, {'A/D/H/psi' : Item(verb='Sending')})
-  expected_status.tweak('A/D/H/psi', wc_rev=8)
+  expected_status.tweak('A/D/H/psi', wc_rev=9)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, wc_dir)
   expected_disk.tweak('A/D/H/psi', contents="Even *newer* content")
 
   # Update WC so elision occurs smoothly.
   svntest.main.run_svn(None, 'up', wc_dir)
-  expected_status.tweak(status='  ', wc_rev=8)
+  expected_status.tweak(status='  ', wc_rev=9)
 
   # Merge r7 from 'A/D/H/nu' to 'H_COPY/nu'.
   saved_cwd = os.getcwd()
@@ -11106,7 +11115,7 @@ def dont_merge_revs_into_subtree_that_predate_it(sbox):
                                                            short_nu_COPY_path +
                                                            '\n'),
                                      [], 'merge', '-c7',
-                                     sbox.repo_url + '/A/D/H/nu',
+                                     sbox.repo_url + '/A/D/H/nu@7',
                                      short_nu_COPY_path)
   os.chdir(saved_cwd)
 
@@ -11131,25 +11140,26 @@ def dont_merge_revs_into_subtree_that_predate_it(sbox):
   os.chdir(saved_cwd)
 
   os.chdir(svntest.main.work_dir)
-  # H_COPY needs r6-8 applied while H_COPY/nu needs only 6,8.
+  # H_COPY needs r6-9 applied while H_COPY/nu needs only 6,8-9.
   # This means r6 will be done as a separate editor drive targeted
   # on H_COPY.  But r6 was only the copy of A/D/H to H_COPY and
   # so is a no-op and there will no notification for r6.
   svntest.actions.run_and_verify_svn(
     None,
     expected_merge_output(
-      [[7,8]], 'U    ' + os.path.join(short_H_COPY_path, "psi") + '\n'),
-    [], 'merge', sbox.repo_url + '/A/D/H', short_H_COPY_path)
+      [[7,9]], ['U    ' + os.path.join(short_H_COPY_path, "psi") + '\n',
+                'D    ' + os.path.join(short_H_COPY_path, "nu") + '\n']),
+    [], 'merge', sbox.repo_url + '/A/D/H', short_H_COPY_path, '--force')
   os.chdir(saved_cwd)
 
-  # Check the status after the merge.  The mergeinfo set on 'H_COPY/nu set
-  # by the first merge should elide.
+  # Check the status after the merge.
   expected_status.tweak('H_COPY', status=' M')
-  expected_status.tweak('H_COPY/nu', 'H_COPY/psi', status='M ')
+  expected_status.tweak('H_COPY/psi', status='M ')
+  expected_status.tweak('H_COPY/nu', status='D ')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
   expected_props = svntest.verify.UnorderedOutput(
     ["Properties on '" + H_COPY_path + "':\n",
-     "  " + SVN_PROP_MERGEINFO + " : /A/D/H:2,6-8\n"])
+     "  " + SVN_PROP_MERGEINFO + " : /A/D/H:6-9\n"])
   svntest.actions.run_and_verify_svn(None,
                                      expected_props, [],
                                      'pl', '-vR', wc_dir)
@@ -11248,6 +11258,7 @@ def merge_chokes_on_renamed_subtrees(sbox):
   expected_status.tweak('H_COPY/psi_moved', status='MM')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+
 #----------------------------------------------------------------------
 # Issue #3157
 def dont_explicitly_record_implicit_mergeinfo(sbox):
@@ -11284,10 +11295,36 @@ def dont_explicitly_record_implicit_mergeinfo(sbox):
   svntest.main.file_append(A_copy2_mu_path, "r5\n")
   _commit_and_update(5, "Edit A_copy2/mu.")
 
-  # Now, merge A_copy2/mu (in full) back to A_copy.
-  expected_output = wc.State(A_copy_path, {
-    'mu' : Item(status='U '),
-    })
+  # Search for the comment entitled "The Merge Kluge" elsewhere in
+  # this file, to understand why we shorten and chdir() below.
+  saved_cwd = os.getcwd()
+  os.chdir(svntest.main.work_dir)
+  short_A_copy_mu_path = shorten_path_kludge(A_copy_mu_path)
+  short_A_copy_path = shorten_path_kludge(A_copy_path)
+
+  # Merge r5 from A_copy2/mu to A_copy/mu.
+  #
+  # run_and_verify_merge doesn't support merging to a file WCPATH
+  # so use run_and_verify_svn.  Check the resulting mergeinfo with
+  # a propget.
+  svntest.actions.run_and_verify_svn(None,
+                                     expected_merge_output([[5]], 'U    ' +
+                                                           short_A_copy_mu_path +
+                                                           '\n'),
+                                     [], 'merge', '-c5',
+                                     sbox.repo_url + '/A_copy2/mu',
+                                     short_A_copy_mu_path)
+  svntest.actions.run_and_verify_svn(
+    None,
+    ["Properties on '" + short_A_copy_mu_path + "':\n",
+     "  " + SVN_PROP_MERGEINFO + " : /A_copy2/mu:5\n"],
+    [],'pl', '-v', short_A_copy_mu_path)
+
+  # Now, merge A_copy2 (in full) back to A_copy.  This should result in
+  # mergeinfo of '/A_copy2:4-5' on A_copy and '/A_copy2/mu:4-5' on A_copy/mu
+  # and the latter should elide to the former.  Any revisions < 4 are part of
+  # A_copy's natural history and should not be explicitly recorded.
+  expected_output = wc.State(short_A_copy_path, {})
   expected_disk = wc.State('', {
     ''          : Item(props={SVN_PROP_MERGEINFO : '/A_copy2:4-5'}),
     'mu'        : Item("This is the file 'mu'.\nr3\nr5\n"),
@@ -11309,7 +11346,7 @@ def dont_explicitly_record_implicit_mergeinfo(sbox):
     'D/G/rho'   : Item("This is the file 'rho'.\n"),
     'D/G/tau'   : Item("This is the file 'tau'.\n"),
     })
-  expected_status = wc.State(A_copy_path, {
+  expected_status = wc.State(short_A_copy_path, {
     ''          : Item(status=' M'),
     'mu'        : Item(status='M '),
     'B'         : Item(status='  '),
@@ -11331,13 +11368,39 @@ def dont_explicitly_record_implicit_mergeinfo(sbox):
     'D/G/tau'   : Item(status='  '),
     })
   expected_status.tweak(wc_rev=5)
-  expected_skip = wc.State(A_copy_path, { })
-  svntest.actions.run_and_verify_merge(A_copy_path, None, None,
+  expected_skip = wc.State(short_A_copy_path, { })
+  svntest.actions.run_and_verify_merge(short_A_copy_path, None, None,
                                        sbox.repo_url + '/A_copy2',
                                        expected_output, expected_disk,
                                        expected_status, expected_skip,
                                        None, None, None, None, None, 1)
-  
+  os.chdir(saved_cwd)
+
+# Test for issue where merging a change to a broken link fails
+def merge_broken_link(sbox):
+  "merge with broken symlinks in target"
+
+  # Create our good 'ole greek tree.
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  src_path = os.path.join(wc_dir, 'A', 'B', 'E')
+  copy_path = os.path.join(wc_dir, 'A', 'B', 'E_COPY')
+  link_path = os.path.join(src_path, 'beta_link')
+
+  os.symlink('beta_broken', link_path)
+  svntest.main.run_svn(None, 'add', link_path)
+  svntest.main.run_svn(None, 'commit', '-m', 'Create a broken link', link_path)
+  svntest.main.run_svn(None, 'copy', src_path, copy_path)
+  svntest.main.run_svn(None, 'commit', '-m', 'Copy the tree with the broken link', 
+                       copy_path)
+  os.unlink(link_path)
+  os.symlink('beta', link_path)
+  svntest.main.run_svn(None, 'commit', '-m', 'Fix a broken link', link_path)
+  svntest.actions.run_and_verify_svn(
+    None, 
+    expected_merge_output([[4]], 'U    ' + copy_path + '/beta_link\n'),
+    [], 'merge', '-c4', src_path, copy_path)
+
 
 ########################################################################
 # Run the tests
@@ -11503,8 +11566,9 @@ test_list = [ None,
                                server_has_mergeinfo)),
               XFail(SkipUnless(merge_chokes_on_renamed_subtrees,
                                server_has_mergeinfo)),
-              XFail(SkipUnless(dont_explicitly_record_implicit_mergeinfo,
-                               server_has_mergeinfo)),
+              SkipUnless(dont_explicitly_record_implicit_mergeinfo,
+                         server_has_mergeinfo),
+              SkipUnless(merge_broken_link, svntest.main.is_posix_os),
              ]
 
 if __name__ == '__main__':

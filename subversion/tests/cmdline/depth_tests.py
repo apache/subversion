@@ -1210,16 +1210,37 @@ def depth_immediates_receive_new_dir(sbox):
   # Check that the new directory was added at depth=empty.
   verify_depth(None, "empty", other_I_path)
 
-def add_tree_with_depth_files(sbox):
-  "add multi-subdir tree with --depth=files"  # For issue #2931
+def add_tree_with_depth(sbox):
+  "add multi-subdir tree with --depth options"  # For issue #2931
   sbox.build()
   wc_dir = sbox.wc_dir
   new1_path = os.path.join(wc_dir, 'new1')
   new2_path = os.path.join(new1_path, 'new2')
+  new3_path = os.path.join(new2_path, 'new3')
+  new4_path = os.path.join(new3_path, 'new4')
   os.mkdir(new1_path)
   os.mkdir(new2_path)
+  os.mkdir(new3_path)
+  os.mkdir(new4_path)
+  # Simple case, add new1 only, set depth to files
   svntest.actions.run_and_verify_svn(None, None, [],
                                      "add", "--depth", "files", new1_path)
+  verify_depth(None, "files", new1_path)
+
+  # Force add new1 at new1 again, should include new2 at empty, the depth of
+  # new1 should not change 
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     "add", "--depth", "immediates", 
+                                     "--force", new1_path)
+  verify_depth(None, "files", new1_path)
+  verify_depth(None, "empty", new2_path)
+
+  # add new4 with intermediate path, the intermediate path is added at empty
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     "add", "--depth", "immediates",
+                                     "--parents", new4_path)
+  verify_depth(None, "infinity", new3_path)
+  verify_depth(None, "immediates", new4_path)
 
 def upgrade_from_above(sbox):
   "upgrade a depth=empty wc from above"
@@ -2016,7 +2037,7 @@ test_list = [ None,
               diff_in_depthy_wc,
               commit_depth_immediates,
               depth_immediates_receive_new_dir,
-              add_tree_with_depth_files,
+              add_tree_with_depth,
               upgrade_from_above,
               status_in_depthy_wc,
               depthy_update_above_dir_to_be_deleted,

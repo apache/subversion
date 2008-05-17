@@ -391,8 +391,6 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
   serf_bucket_t *buckets, *tmp;
-  apr_hash_t *props;
-  const char *lopped_path, *remaining_path;
   const char *vcc_url, *relative_url, *baseline_url, *basecoll_url, *req_url;
   int status_code;
   svn_error_t *err;
@@ -447,44 +445,20 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
                                       session->bkt_alloc);
   serf_bucket_aggregate_append(buckets, tmp);
 
-  props = apr_hash_make(pool);
-
   /* Get the VCC from file url, or if the file doesn't exist in HEAD, from
      its closest existing parent.  */
-  SVN_ERR(svn_ra_serf__search_for_base_props(props, &remaining_path,
-                                             &lopped_path,
-                                             session, session->conns[0],
-                                             session->repos_url.path, pool));
-  vcc_url = svn_ra_serf__get_prop(props, remaining_path,
-                                  "DAV:", "version-controlled-configuration");
-
-  if (!vcc_url)
-    {
-      return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
-                              _("The OPTIONS response did not include the "
-                                "requested version-controlled-configuration "
-                                "value"));
-    }
-
-  /* Send the request to the baseline URL */
-  relative_url = svn_ra_serf__get_prop(props, remaining_path,
-                                       SVN_DAV_PROP_NS_DAV,
-                                       "baseline-relative-path");
-  if (!relative_url)
-    {
-      return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
-                              _("The OPTIONS response did not include the "
-                                "requested baseline-relative-path value"));
-    }
-  relative_url = svn_path_join(relative_url,
-                               svn_path_uri_decode(lopped_path, pool),
-                               pool);
+  SVN_ERR(svn_ra_serf__discover_root(&vcc_url,
+                                     &relative_url,
+                                     session, session->conns[0],
+                                     session->repos_url.path, pool));
 
   if (end == SVN_INVALID_REVNUM)
     {
-     /* Use the "checked-in" property to determine the baseline url of the HEAD
-        revision. */
-     SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
+      apr_hash_t *props = apr_hash_make(pool);
+
+      /* Use the "checked-in" property to determine the baseline url of the HEAD
+         revision. */
+      SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
                                           vcc_url, SVN_INVALID_REVNUM, "0",
                                           checked_in_props, pool));
 
@@ -506,6 +480,8 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
     }
   else
     {
+      apr_hash_t *props = apr_hash_make(pool);
+
       /* We're asking for a specific revision. No need to use "checked-in"
          here, request the baseline-collection property with the specified
          revision in the 'Label' header (added in svn_ra_serf__retrieve_props).

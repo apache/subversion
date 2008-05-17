@@ -372,7 +372,7 @@ svn_client_uuid_from_path(const char **uuid,
   const svn_wc_entry_t *entry;
 
   SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access,
-                                 TRUE,  /* show deleted */ pool));
+                                  TRUE,  /* show deleted */ pool));
 
   if (entry->uuid)
     {

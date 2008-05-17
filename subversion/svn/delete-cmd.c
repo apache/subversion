@@ -72,10 +72,9 @@ svn_cl__delete(apr_getopt_t *os,
                                          NULL, ctx->config, pool));
     }
 
-  ctx->revprop_table = opt_state->revprop_table;
-
   err = svn_client_delete3(&commit_info, targets, opt_state->force,
-                           opt_state->keep_local, ctx, pool);
+                           opt_state->keep_local, opt_state->revprop_table,
+                           ctx, pool);
   if (err)
     err = svn_cl__may_need_force(err);
 

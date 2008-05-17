@@ -911,7 +911,7 @@ svn_fs_base__clean_logs(const char *live_path,
                                                  backup_log_path,
                                                  sub_pool));
 
-          /* If log files do not match, go to the next log filr. */
+          /* If log files do not match, go to the next log file. */
           if (files_match == FALSE)
             continue;
         }

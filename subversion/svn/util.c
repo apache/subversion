@@ -49,6 +49,7 @@
 #include "svn_subst.h"
 #include "svn_config.h"
 #include "svn_xml.h"
+#include "svn_time.h"
 #include "svn_private_config.h"
 #include "cl.h"
 
@@ -1092,4 +1093,29 @@ svn_cl__show_revs_from_word(const char *word)
     return svn_cl__show_revs_eligible;
   /* word is an invalid flavor. */
   return svn_cl__show_revs_invalid;
+}
+
+
+svn_error_t *
+svn_cl__time_cstring_to_human_cstring(const char **human_cstring,
+                                      const char *data,
+                                      apr_pool_t *pool)
+{
+  svn_error_t *err;
+  apr_time_t when;
+
+  err = svn_time_from_cstring(&when, data, pool);
+  if (err && err->apr_err == SVN_ERR_BAD_DATE)
+    {
+      svn_error_clear(err);
+
+      *human_cstring = _("(invalid date)");
+      return SVN_NO_ERROR;
+    }
+  else if (err)
+    return err;
+
+  *human_cstring = svn_time_to_human_cstring(when, pool);
+
+  return SVN_NO_ERROR;
 }
