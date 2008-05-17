@@ -281,6 +281,23 @@ else
 fi
 
 
+dnl APR_HAS_DSO -------------------
+
+AC_MSG_CHECKING([whether APR has support for DSOs])
+old_CPPFLAGS="$CPPFLAGS"
+CPPFLAGS="$CPPFLAGS $SVN_APR_INCLUDES"
+AC_PREPROC_IFELSE([
+#include <apr.h>
+#if !APR_HAS_DSO
+#error
+#endif],
+  APR_HAS_DSO="yes"
+  AC_MSG_RESULT([yes]),
+  APR_HAS_DSO="no"
+  AC_MSG_RESULT([no]))
+CPPFLAGS="$old_CPPFLAGS"
+
+
 dnl pkg-config (required for support for KWallet and GNOME Keyring) -------------------
 
 AC_CHECK_PROG(HAVE_PKG_CONFIG, pkg-config, yes)
@@ -349,23 +366,6 @@ if test $USE_NLS = "yes"; then
    AC_MSG_RESULT($GNU_GETTEXT)
 fi
 AC_SUBST(MSGFMTFLAGS)
-
-
-dnl APR_HAS_DSO -------------------
-
-AC_MSG_CHECKING([whether APR has support for DSOs])
-old_CPPFLAGS="$CPPFLAGS"
-CPPFLAGS="$CPPFLAGS $SVN_APR_INCLUDES"
-AC_PREPROC_IFELSE([
-#include <apr.h>
-#if !APR_HAS_DSO
-#error
-#endif],
-  APR_HAS_DSO="yes"
-  AC_MSG_RESULT([yes]),
-  APR_HAS_DSO="no"
-  AC_MSG_RESULT([no]))
-CPPFLAGS="$old_CPPFLAGS"
 
 
 dnl KWallet -------------------
