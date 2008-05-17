@@ -31,6 +31,7 @@
 
 #include "svn_private_config.h"
 
+#include <dbus/dbus.h>
 #include <gnome-keyring.h>
 
 
@@ -48,12 +49,24 @@ gnome_keyring_password_get(const char **password,
                            svn_boolean_t non_interactive,
                            apr_pool_t *pool)
 {
+  if (non_interactive)
+    {
+      return FALSE;
+    }
+
+  if (! dbus_bus_get(DBUS_BUS_SESSION, NULL))
+    {
+      return FALSE;
+    }
+
+  if (! gnome_keyring_is_available())
+    {
+      return FALSE;
+    }
+
   GnomeKeyringResult result;
   GList *items;
   svn_boolean_t ret = FALSE;
-
-  if (! gnome_keyring_is_available())
-    return FALSE;
 
   result = gnome_keyring_find_network_password_sync(username, realmstring,
                                                     NULL, NULL, NULL, NULL, 0,
@@ -88,11 +101,23 @@ gnome_keyring_password_set(apr_hash_t *creds,
                            svn_boolean_t non_interactive,
                            apr_pool_t *pool)
 {
-  GnomeKeyringResult result;
-  guint32 item_id;
+  if (non_interactive)
+    {
+      return FALSE;
+    }
+
+  if (! dbus_bus_get(DBUS_BUS_SESSION, NULL))
+    {
+      return FALSE;
+    }
 
   if (! gnome_keyring_is_available())
-    return FALSE;
+    {
+      return FALSE;
+    }
+
+  GnomeKeyringResult result;
+  guint32 item_id;
 
   result = gnome_keyring_set_network_password_sync(NULL, /* default keyring */
                                                    username, realmstring,
