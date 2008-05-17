@@ -28,8 +28,6 @@ Candidate changes for 1.5.0:
  * r31243, r31246, r31249, r31250, r31251
    Fix issue #3200, API Ickiness:  svn_client_ctx_t shouldn't carry
    "extra revprops"; the svn_client APIs should
-   Backport branch:
-     TBC (to be created)
    Notes:
      If we *don't* backport this in 1.5.0, we need to undo the changes
      or otherwise rework them to use newly-revved svn_client APIs.
