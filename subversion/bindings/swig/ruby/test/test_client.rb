@@ -316,6 +316,30 @@ class SvnClientTest < Test::Unit::TestCase
     assert_equal(src, File.open(path){|f| f.read})
   end
 
+  def test_import_custom_revprops
+    src = "source\n"
+    log = "sample log"
+    deep_dir = File.join(%w(a b c d e))
+    file = "sample.txt"
+    deep_dir_path = File.join(@wc_path, deep_dir)
+    path = File.join(deep_dir_path, file)
+    tmp_deep_dir_path = File.join(@tmp_path, deep_dir)
+    tmp_path = File.join(tmp_deep_dir_path, file)
+
+    ctx = make_context(log)
+
+    FileUtils.mkdir_p(tmp_deep_dir_path)
+    File.open(tmp_path, "w") {|f| f.print(src)}
+
+    new_rev = ctx.import(@tmp_path, @repos_uri, true, false, 
+                         {"custom-prop" => "some-value"}).revision
+    assert_equal(["some-value", new_rev],
+                 ctx.revprop_get("custom-prop", @repos_uri, new_rev))
+
+    ctx.up(@wc_path)
+    assert_equal(src, File.open(path){|f| f.read})
+  end
+
   def test_commit
     log = "sample log"
     dir1 = "dir1"
