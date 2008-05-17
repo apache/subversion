@@ -52,7 +52,6 @@ typedef struct
    * same realm. */
   apr_hash_t *plaintext_answers;
 } simple_provider_baton_t;
-#define SVN_AUTH__GNOME_KEYRING_PASSWORD_TYPE      "gnome-keyring"
 
 
 /* Implementation of svn_auth__password_get_t that retrieves
@@ -262,7 +261,8 @@ svn_auth__simple_save_creds_helper(svn_boolean_t *saved,
        * in plaintext is OK. */
       if (strcmp(passtype, SVN_AUTH__WINCRYPT_PASSWORD_TYPE) == 0
           || strcmp(passtype, SVN_AUTH__KEYCHAIN_PASSWORD_TYPE) == 0
-          || strcmp(passtype, SVN_AUTH__KWALLET_PASSWORD_TYPE) == 0)
+          || strcmp(passtype, SVN_AUTH__KWALLET_PASSWORD_TYPE) == 0
+          || strcmp(passtype, SVN_AUTH__GNOME_KEYRING_PASSWORD_TYPE) == 0)
         {
           may_save_password = TRUE;
         }
@@ -1082,12 +1082,12 @@ gnome_keyring_simple_first_creds(void **credentials,
                                  const char *realmstring,
                                  apr_pool_t *pool)
 {
-  return simple_first_creds_helper(credentials,
-                                   iter_baton, provider_baton,
-                                   parameters, realmstring,
-                                   gnome_keyring_password_get,
-                                   SVN_AUTH__GNOME_KEYRING_PASSWORD_TYPE,
-                                   pool);
+  return svn_auth__simple_first_creds_helper(credentials,
+                                             iter_baton, provider_baton,
+                                             parameters, realmstring,
+                                             gnome_keyring_password_get,
+                                             SVN_AUTH__GNOME_KEYRING_PASSWORD_TYPE,
+                                             pool);
 }
 
 /* Save encrypted credentials to the simple provider's cache. */
@@ -1099,11 +1099,12 @@ gnome_keyring_simple_save_creds(svn_boolean_t *saved,
                                 const char *realmstring,
                                 apr_pool_t *pool)
 {
-  return simple_save_creds_helper(saved, credentials, provider_baton,
-                                  parameters, realmstring,
-                                  gnome_keyring_password_set,
-                                  SVN_AUTH__GNOME_KEYRING_PASSWORD_TYPE,
-                                  pool);
+  return svn_auth__simple_save_creds_helper(saved, credentials,
+                                            provider_baton, parameters,
+                                            realmstring,
+                                            gnome_keyring_password_set,
+                                            SVN_AUTH__GNOME_KEYRING_PASSWORD_TYPE,
+                                            pool);
 }
 
 #ifdef SVN_HAVE_GNOME_KEYRING
