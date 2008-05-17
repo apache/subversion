@@ -25,7 +25,7 @@ Candidate changes for 1.5.0:
     Votes:
       +1: jerenkrantz, cmpilato
 
- * r31243, r31246, r31249, r31250, r31251
+ * r31243, r31246, r31249, r31250, r31251, r31271
    Fix issue #3200, API Ickiness:  svn_client_ctx_t shouldn't carry
    "extra revprops"; the svn_client APIs should
    Notes:
