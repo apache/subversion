@@ -1856,11 +1856,12 @@ svn_client__get_log_msg(const char **log_msg,
     }
 }
 
-svn_error_t *svn_client__ensure_revprop_table(apr_hash_t **revprop_table_out,
-                                              apr_hash_t *revprop_table_in,
-                                              const char *log_msg,
-                                              svn_client_ctx_t *ctx,
-                                              apr_pool_t *pool)
+svn_error_t *
+svn_client__ensure_revprop_table(apr_hash_t **revprop_table_out,
+                                 const apr_hash_t *revprop_table_in,
+                                 const char *log_msg,
+                                 svn_client_ctx_t *ctx,
+                                 apr_pool_t *pool)
 {
   apr_hash_t *new_revprop_table;
   if (revprop_table_in)
