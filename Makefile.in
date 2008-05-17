@@ -318,8 +318,8 @@ fast-clean: doc-clean
 # clean all but bulky test output, returning to before './configure' was run.
 SVN_CONFIG_SCRIPT_FILES = @SVN_CONFIG_SCRIPT_FILES@
 fast-distclean: fast-clean
-	rm -f Makefile config.cache config.log config.status libtool mkmf.log \
-              subversion/svn_private_config.h \
+	rm -f Makefile config.cache config.log config.nice config.status \
+	libtool mkmf.log subversion/svn_private_config.h \
               $(SVN_CONFIG_SCRIPT_FILES)
 
 # clean everything out, returning to before './autogen.sh' was run.
