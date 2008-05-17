@@ -55,6 +55,7 @@ libdir = @libdir@
 fsmod_libdir = @libdir@
 ramod_libdir = @libdir@
 bdb_libdir = @libdir@
+gnome_keyring_libdir = @libdir@
 kwallet_libdir = @libdir@
 neon_libdir = @libdir@
 serf_libdir = @libdir@
@@ -191,6 +192,7 @@ INSTALL_LIB = $(LIBTOOL) --mode=install $(INSTALL)
 INSTALL_FSMOD_LIB = $(INSTALL_LIB)
 INSTALL_RAMOD_LIB = $(INSTALL_LIB)
 INSTALL_BDB_LIB = $(INSTALL_LIB)
+INSTALL_GNOME_KEYRING_LIB = $(INSTALL_LIB)
 INSTALL_KWALLET_LIB = $(INSTALL_LIB)
 INSTALL_NEON_LIB = $(INSTALL_LIB)
 INSTALL_SERF_LIB = $(INSTALL_LIB)
