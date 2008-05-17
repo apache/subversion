@@ -460,14 +460,15 @@ svn_client_propset(const char *propname,
 
 
 svn_error_t *
-svn_client_revprop_set(const char *propname,
-                       const svn_string_t *propval,
-                       const char *URL,
-                       const svn_opt_revision_t *revision,
-                       svn_revnum_t *set_rev,
-                       svn_boolean_t force,
-                       svn_client_ctx_t *ctx,
-                       apr_pool_t *pool)
+svn_client_revprop_set2(const char *propname,
+                        const svn_string_t *propval,
+                        const svn_string_t *original_propval,
+                        const char *URL,
+                        const svn_opt_revision_t *revision,
+                        svn_revnum_t *set_rev,
+                        svn_boolean_t force,
+                        svn_client_ctx_t *ctx,
+                        apr_pool_t *pool)
 {
   svn_ra_session_t *ra_session;
 
@@ -493,11 +494,52 @@ svn_client_revprop_set(const char *propname,
   SVN_ERR(svn_client__get_revision_number
           (set_rev, NULL, ra_session, revision, NULL, pool));
 
+  if (original_propval)
+    {
+      /* Ensure old value hasn't changed behind our back. */
+      svn_string_t *current;
+      SVN_ERR(svn_ra_rev_prop(ra_session, *set_rev, propname, &current, pool));
+
+      if (original_propval->data
+          && (! svn_string_compare(original_propval, current)))
+        {
+          return svn_error_createf(
+                  SVN_ERR_RA_OUT_OF_DATE, NULL,
+                  _("revprop '%s' in r%ld has unexpected value in repository"
+                    " (maybe someone else changed it?)"),
+                  propname, *set_rev);
+        }
+      else if ((! original_propval->data) && current)
+        {
+          return svn_error_createf(
+                  SVN_ERR_RA_OUT_OF_DATE, NULL,
+                  _("revprop '%s' in r%ld is unexpectedly absent in repository"
+                    " (maybe someone else deleted it?)"),
+                  propname, *set_rev);
+        }
+    }
+
   /* The actual RA call. */
   SVN_ERR(svn_ra_change_rev_prop(ra_session, *set_rev, propname, propval,
                                  pool));
 
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_client_revprop_set(const char *propname,
+                       const svn_string_t *propval,
+                       const char *URL,
+                       const svn_opt_revision_t *revision,
+                       svn_revnum_t *set_rev,
+                       svn_boolean_t force,
+                       svn_client_ctx_t *ctx,
+                       apr_pool_t *pool)
+{
+  return svn_client_revprop_set2(propname, propval, NULL, URL,
+                                 revision, set_rev, force, ctx, pool);
+
 }
 
 
