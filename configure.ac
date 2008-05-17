@@ -320,16 +320,16 @@ if test "$with_gnome_keyring" != "no"; then
         AC_MSG_CHECKING([for GLib and GNOME Keyring .pc files])
         if pkg-config --exists glib-2.0 gnome-keyring-1; then
           AC_MSG_RESULT([yes])
-          old_CFLAGS="$CFLAGS"
+          old_CPPFLAGS="$CPPFLAGS"
           SVN_GNOME_KEYRING_INCLUDES="`pkg-config --cflags glib-2.0 gnome-keyring-1`"
-          CFLAGS="$CFLAGS $SVN_GNOME_KEYRING_INCLUDES"
+          CPPFLAGS="$CPPFLAGS $SVN_GNOME_KEYRING_INCLUDES"
           AC_CHECK_HEADER(gnome-keyring.h, with_gnome_keyring=yes, with_gnome_keyring=no)
           AC_MSG_CHECKING([for GNOME Keyring])
           if test "$with_gnome_keyring" = "yes"; then
             AC_MSG_RESULT([yes])
             AC_DEFINE([SVN_HAVE_GNOME_KEYRING], [1], 
                       [Is GNOME Keyring support enabled?])
-            CFLAGS="$old_CFLAGS"
+            CPPFLAGS="$old_CPPFLAGS"
             SVN_GNOME_KEYRING_LIBS="`pkg-config --libs glib-2.0 gnome-keyring-1`"
           else
             AC_MSG_RESULT([no])
