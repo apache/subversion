@@ -314,31 +314,39 @@ AC_ARG_WITH(gnome_keyring,
 AC_MSG_CHECKING([whether to look for GNOME Keyring])
 if test "$with_gnome_keyring" != "no"; then
   AC_MSG_RESULT([yes])
-  if test "$HAVE_PKG_CONFIG" = "yes"; then
-    AC_MSG_CHECKING([for GLib and GNOME Keyring .pc files])
-    if pkg-config --exists glib-2.0 gnome-keyring-1; then
-      AC_MSG_RESULT([yes])
-      old_CFLAGS="$CFLAGS"
-      SVN_GNOME_KEYRING_INCLUDES="`pkg-config --cflags glib-2.0 gnome-keyring-1`"
-      CFLAGS="$CFLAGS $SVN_GNOME_KEYRING_INCLUDES"
-      AC_CHECK_HEADER(gnome-keyring.h, with_gnome_keyring=yes, with_gnome_keyring=no)
-      AC_MSG_CHECKING([for GNOME Keyring])
-      if test "$with_gnome_keyring" = "yes"; then
-        AC_MSG_RESULT([yes])
-        AC_DEFINE([SVN_HAVE_GNOME_KEYRING], [1], 
-                  [Is GNOME Keyring support enabled?])
-        CFLAGS="$old_CFLAGS"
-        SVN_GNOME_KEYRING_LIBS="`pkg-config --libs glib-2.0 gnome-keyring-1`"
+  if test "$enable_shared" = "yes"; then
+    if test "$APR_HAS_DSO" = "yes"; then
+      if test "$HAVE_PKG_CONFIG" = "yes"; then
+        AC_MSG_CHECKING([for GLib and GNOME Keyring .pc files])
+        if pkg-config --exists glib-2.0 gnome-keyring-1; then
+          AC_MSG_RESULT([yes])
+          old_CFLAGS="$CFLAGS"
+          SVN_GNOME_KEYRING_INCLUDES="`pkg-config --cflags glib-2.0 gnome-keyring-1`"
+          CFLAGS="$CFLAGS $SVN_GNOME_KEYRING_INCLUDES"
+          AC_CHECK_HEADER(gnome-keyring.h, with_gnome_keyring=yes, with_gnome_keyring=no)
+          AC_MSG_CHECKING([for GNOME Keyring])
+          if test "$with_gnome_keyring" = "yes"; then
+            AC_MSG_RESULT([yes])
+            AC_DEFINE([SVN_HAVE_GNOME_KEYRING], [1], 
+                      [Is GNOME Keyring support enabled?])
+            CFLAGS="$old_CFLAGS"
+            SVN_GNOME_KEYRING_LIBS="`pkg-config --libs glib-2.0 gnome-keyring-1`"
+          else
+            AC_MSG_RESULT([no])
+            AC_MSG_ERROR([cannot find GNOME Keyring])
+          fi
+        else
+          AC_MSG_RESULT([no])
+          AC_MSG_ERROR([cannot find GLib and GNOME Keyring .pc files])
+        fi
       else
-        AC_MSG_RESULT([no])
-        AC_MSG_ERROR([cannot find GNOME Keyring])
+        AC_MSG_ERROR([cannot find pkg-config])
       fi
     else
-      AC_MSG_RESULT([no])
-      AC_MSG_ERROR([cannot find GLib and GNOME Keyring .pc files])
+      AC_MSG_ERROR([APR does not have support for DSOs])
     fi
   else
-    AC_MSG_ERROR([cannot find pkg-config])
+    AC_MSG_ERROR([--with-gnome-keyring conflicts with --disable-shared])
   fi
 else
   AC_MSG_RESULT([no])
@@ -540,6 +548,12 @@ if test "$with_kwallet" = "yes"; then
   BUILD_RULES="$BUILD_RULES kwallet-lib"
   INSTALL_RULES="`echo $INSTALL_RULES | sed 's/install-lib/install-lib install-kwallet-lib/'`"
   INSTALL_STATIC_RULES="$INSTALL_STATIC_RULES install-kwallet-lib"
+fi
+
+if test "$with_gnome_keyring" = "yes"; then
+  BUILD_RULES="$BUILD_RULES gnome-keyring-lib"
+  INSTALL_RULES="`echo $INSTALL_RULES | sed 's/install-lib/install-lib install-gnome-keyring-lib/'`"
+  INSTALL_STATIC_RULES="$INSTALL_STATIC_RULES install-gnome-keyring-lib"
 fi
 
 if test "$USE_NLS" = "yes"; then
