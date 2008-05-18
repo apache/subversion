@@ -118,7 +118,7 @@ path_driver_cb_func(void **dir_baton,
 static svn_error_t *
 delete_urls(svn_commit_info_t **commit_info_p,
             const apr_array_header_t *paths,
-            apr_hash_t *revprop_table,
+            const apr_hash_t *revprop_table,
             svn_client_ctx_t *ctx,
             apr_pool_t *pool)
 {
@@ -129,6 +129,7 @@ delete_urls(svn_commit_info_t **commit_info_p,
   const char *log_msg;
   svn_node_kind_t kind;
   apr_array_header_t *targets;
+  apr_hash_t *commit_revprops;
   svn_error_t *err;
   const char *common;
   int i;
@@ -171,7 +172,7 @@ delete_urls(svn_commit_info_t **commit_info_p,
   else
     log_msg = "";
 
-  SVN_ERR(svn_client__ensure_revprop_table(&revprop_table, revprop_table,
+  SVN_ERR(svn_client__ensure_revprop_table(&commit_revprops, revprop_table,
                                            log_msg, ctx, pool));
 
   /* Open an RA session for the URL. Note that we don't have a local
@@ -201,7 +202,7 @@ delete_urls(svn_commit_info_t **commit_info_p,
   /* Fetch RA commit editor */
   SVN_ERR(svn_client__commit_get_baton(&commit_baton, commit_info_p, pool));
   SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
-                                    revprop_table,
+                                    commit_revprops,
                                     svn_client__commit_callback,
                                     commit_baton,
                                     NULL, TRUE, /* No lock tokens */
@@ -254,7 +255,7 @@ svn_client_delete3(svn_commit_info_t **commit_info_p,
                    const apr_array_header_t *paths,
                    svn_boolean_t force,
                    svn_boolean_t keep_local,
-                   apr_hash_t *revprop_table,
+                   const apr_hash_t *revprop_table,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {

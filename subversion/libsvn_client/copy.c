@@ -681,7 +681,7 @@ static svn_error_t *
 repos_to_repos_copy(svn_commit_info_t **commit_info_p,
                     const apr_array_header_t *copy_pairs,
                     svn_boolean_t make_parents,
-                    apr_hash_t *revprop_table,
+                    const apr_hash_t *revprop_table,
                     svn_client_ctx_t *ctx,
                     svn_boolean_t is_move,
                     apr_pool_t *pool)
@@ -698,6 +698,7 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
   void *commit_baton;
   struct path_driver_cb_baton cb_baton;
   apr_array_header_t *new_dirs = NULL;
+  apr_hash_t *commit_revprops;
   apr_pool_t *iterpool;
   int i;
   svn_error_t *err;
@@ -1009,13 +1010,13 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
         APR_ARRAY_PUSH(paths, const char *) = info->src_path;
     }
 
-  SVN_ERR(svn_client__ensure_revprop_table(&revprop_table, revprop_table,
+  SVN_ERR(svn_client__ensure_revprop_table(&commit_revprops, revprop_table,
                                            message, ctx, pool));
 
   /* Fetch RA commit editor. */
   SVN_ERR(svn_client__commit_get_baton(&commit_baton, commit_info_p, pool));
   SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
-                                    revprop_table,
+                                    commit_revprops,
                                     svn_client__commit_callback,
                                     commit_baton,
                                     NULL, TRUE, /* No lock tokens */
@@ -1049,7 +1050,7 @@ static svn_error_t *
 wc_to_repos_copy(svn_commit_info_t **commit_info_p,
                  const apr_array_header_t *copy_pairs,
                  svn_boolean_t make_parents,
-                 apr_hash_t *revprop_table,
+                 const apr_hash_t *revprop_table,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
@@ -1066,6 +1067,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
   const svn_wc_entry_t *entry;
   apr_pool_t *iterpool;
   apr_array_header_t *new_dirs = NULL;
+  apr_hash_t *commit_revprops;
   int i;
 
   /* The commit process uses absolute paths, so we need to open the access
@@ -1205,7 +1207,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
   else
     message = "";
 
-  SVN_ERR(svn_client__ensure_revprop_table(&revprop_table, revprop_table,
+  SVN_ERR(svn_client__ensure_revprop_table(&commit_revprops, revprop_table,
                                            message, ctx, pool));
 
   /* Crawl the working copy for commit items. */
@@ -1309,7 +1311,8 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
   /* Fetch RA commit editor. */
   SVN_ERR(svn_client__commit_get_baton(&commit_baton, commit_info_p, pool));
   SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
-                                    revprop_table, svn_client__commit_callback,
+                                    commit_revprops,
+                                    svn_client__commit_callback,
                                     commit_baton, NULL,
                                     TRUE, /* No lock tokens */
                                     pool));
@@ -1693,7 +1696,7 @@ setup_copy(svn_commit_info_t **commit_info_p,
            svn_boolean_t is_move,
            svn_boolean_t force,
            svn_boolean_t make_parents,
-           apr_hash_t *revprop_table,
+           const apr_hash_t *revprop_table,
            svn_client_ctx_t *ctx,
            apr_pool_t *pool)
 {
@@ -1956,7 +1959,7 @@ svn_client_copy4(svn_commit_info_t **commit_info_p,
                  const char *dst_path,
                  svn_boolean_t copy_as_child,
                  svn_boolean_t make_parents,
-                 apr_hash_t *revprop_table,
+                 const apr_hash_t *revprop_table,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
@@ -2098,7 +2101,7 @@ svn_client_move5(svn_commit_info_t **commit_info_p,
                  svn_boolean_t force,
                  svn_boolean_t move_as_child,
                  svn_boolean_t make_parents,
-                 apr_hash_t *revprop_table,
+                 const apr_hash_t *revprop_table,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {

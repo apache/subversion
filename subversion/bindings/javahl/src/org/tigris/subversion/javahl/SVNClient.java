@@ -25,6 +25,10 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Date;
+import java.util.Calendar;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.text.ParseException;
 
 /**
  * This is the main client class.  All Subversion client APIs are
@@ -374,14 +378,14 @@ public class SVNClient implements SVNClientInterface
     public void remove(String[] path, String message, boolean force)
             throws ClientException
     {
-        remove(path, message, force, false);
+        remove(path, message, force, false, null);
     }
 
     /**
      * @since 1.5
      */
     public native void remove(String[] path, String message, boolean force,
-                              boolean keepLocal)
+                              boolean keepLocal, Map revpropTable)
             throws ClientException;
 
     /**
@@ -495,7 +499,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         return commit(path, message, Depth.infinityOrEmpty(recurse), noUnlock,
-                      false, null);
+                      false, null, null);
     }
 
     /**
@@ -503,7 +507,7 @@ public class SVNClient implements SVNClientInterface
      */
     public native long commit(String[] path, String message, int depth,
                               boolean noUnlock, boolean keepChangelist,
-                              String[] changelists)
+                              String[] changelists, Map revpropTable)
             throws ClientException;
 
     /**
@@ -511,7 +515,7 @@ public class SVNClient implements SVNClientInterface
      */
     public native void copy(CopySource[] sources, String destPath,
                             String message, boolean copyAsChild,
-                            boolean makeParents)
+                            boolean makeParents, Map revpropTable)
             throws ClientException;
 
     /**
@@ -525,7 +529,7 @@ public class SVNClient implements SVNClientInterface
     {
         copy(new CopySource[] { new CopySource(srcPath, revision,
                                                Revision.HEAD) },
-             destPath, message, true, false);
+             destPath, message, true, false, null);
     }
 
     /**
@@ -533,7 +537,7 @@ public class SVNClient implements SVNClientInterface
      */
     public native void move(String[] srcPaths, String destPath, String message,
                             boolean force, boolean moveAsChild,
-                            boolean makeParents)
+                            boolean makeParents, Map revpropTable)
             throws ClientException;
 
     /**
@@ -545,7 +549,8 @@ public class SVNClient implements SVNClientInterface
                      Revision ignored, boolean force)
             throws ClientException
     {
-        move(new String[] { srcPath }, destPath, message, force, true, false);
+        move(new String[] { srcPath }, destPath, message, force, true, false,
+             null);
     }
 
     /**
@@ -557,14 +562,15 @@ public class SVNClient implements SVNClientInterface
                      boolean force)
             throws ClientException
     {
-        move(new String[] { srcPath }, destPath, message, force, true, false);
+        move(new String[] { srcPath }, destPath, message, force, true, false,
+             null);
     }
 
     /**
      * @since 1.5
      */
     public native void mkdir(String[] path, String message,
-                             boolean makeParents)
+                             boolean makeParents, Map revpropTable)
             throws ClientException;
 
     /**
@@ -574,7 +580,7 @@ public class SVNClient implements SVNClientInterface
     public void mkdir(String[] path, String message)
             throws ClientException
     {
-        mkdir(path, message, false);
+        mkdir(path, message, false, null);
     }
 
     /**
@@ -677,7 +683,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         doImport(path, url, message, Depth.infinityOrFiles(recurse),
-                 false, false);
+                 false, false, null);
     }
 
     /**
@@ -685,7 +691,8 @@ public class SVNClient implements SVNClientInterface
      */
     public native void doImport(String path, String url, String message,
                                 int depth, boolean noIgnore,
-                                boolean ignoreUnknownNodeTypes)
+                                boolean ignoreUnknownNodeTypes,
+                                Map revpropTable)
             throws ClientException;
 
     /**
@@ -961,7 +968,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         propertySet(path, name, value, Depth.infinityOrEmpty(recurse), null,
-                    force);
+                    force, null);
     }
 
     /**
@@ -993,7 +1000,7 @@ public class SVNClient implements SVNClientInterface
      */
     public native void propertySet(String path, String name, String value,
                                    int depth, String[] changelists,
-                                   boolean force)
+                                   boolean force, Map revpropTable)
             throws ClientException;
 
     /**
@@ -1013,7 +1020,7 @@ public class SVNClient implements SVNClientInterface
                                String[] changelists)
             throws ClientException
     {
-        propertySet(path, name, null, depth, changelists, false);
+        propertySet(path, name, null, depth, changelists, false, null);
     }
 
     /**
@@ -1071,7 +1078,7 @@ public class SVNClient implements SVNClientInterface
                                int depth, String[] changelists, boolean force)
             throws ClientException
     {
-        propertySet(path, name, value, depth, changelists, force);
+        propertySet(path, name, value, depth, changelists, force, null);
     }
 
     /**
@@ -1362,11 +1369,30 @@ public class SVNClient implements SVNClientInterface
 
         public void singleMessage(ChangePath[] changedPaths,
                                   long revision,
-                                  String author,
-                                  long timeMicros,
-                                  String message,
+                                  Map revprops,
                                   boolean hasChildren)
         {
+            String author = (String) revprops.get("svn:author");
+            String message = (String) revprops.get("svn:log");
+            long timeMicros;
+
+            // Really hacky date parser, because Java doesn't support
+            // microseconds natively.
+            try {
+                DateFormat formatter = new SimpleDateFormat(
+                    "yyyy-MM-dd'T'HH:mm:ss.SSS");
+                String datestr = ((String) revprops.get("svn:date"));
+                Date date = formatter.parse(datestr.substring(0, 23));
+                Calendar cal = Calendar.getInstance();
+                cal.setTime(date);
+                timeMicros = cal.getTimeInMillis();
+
+                timeMicros = timeMicros * 1000 
+                                 + Integer.parseInt(datestr.substring(23, 26));
+            } catch (ParseException ex) {
+                timeMicros = 0;
+            }
+
             LogMessage msg = new LogMessage(changedPaths,
                                             revision,
                                             author,

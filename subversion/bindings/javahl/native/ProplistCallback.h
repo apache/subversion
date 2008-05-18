@@ -40,6 +40,8 @@ class ProplistCallback
                                apr_hash_t *prop_hash,
                                apr_pool_t *pool);
 
+  static jobject makeMapFromHash(apr_hash_t *prop_hash, apr_pool_t *pool);
+
  protected:
   svn_error_t *singlePath(const char *path,
                           apr_hash_t *prop_hash,
@@ -50,8 +52,6 @@ class ProplistCallback
    * This a local reference to the Java object.
    */
   jobject m_callback;
-
-  jobject makeMapFromHash(apr_hash_t *prop_hash, apr_pool_t *pool);
 };
 
 #endif  // PROPLISTCALLBACK_H

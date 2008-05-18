@@ -18,6 +18,8 @@
 
 package org.tigris.subversion.javahl;
 
+import java.util.Map;
+
 /**
  * This interface is used to receive every log message for the log
  * messages found by a SVNClientInterface.logMessages call.
@@ -42,18 +44,14 @@ public interface LogMessageCallback
      *
      * @param changedPaths   the paths that were changed
      * @param revision       the revision of the commit
-     * @param author         the author of the commit
-     * @param timeMicros     the time of the commit measured in the
-     *                       number of microseconds since 00:00:00
-     *                       January 1, 1970 UTC
-     * @param message        the log message for the commit
+     * @param revprops       All of the requested revision properties,
+     *                       possibly including svn:date, svn:author,
+     *                       and svn:log.
      * @param hasChildren    when merge sensitive option was requested,
      *                       whether or not this entry has child entries.
      */
     public void singleMessage(ChangePath[] changedPaths,
                               long revision,
-                              String author,
-                              long timeMicros,
-                              String message,
+                              Map revprops,
                               boolean hasChildren);
 }
