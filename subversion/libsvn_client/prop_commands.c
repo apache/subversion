@@ -218,7 +218,7 @@ propset_on_url(svn_commit_info_t **commit_info_p,
                const char *target,
                svn_boolean_t skip_checks,
                svn_revnum_t base_revision_for_url,
-               apr_hash_t *revprop_table,
+               const apr_hash_t *revprop_table,
                svn_client_ctx_t *ctx,
                apr_pool_t *pool)
 {
@@ -228,6 +228,7 @@ propset_on_url(svn_commit_info_t **commit_info_p,
   const char *message;
   const svn_delta_editor_t *editor;
   void *commit_baton, *edit_baton;
+  apr_hash_t *commit_revprops;
   svn_error_t *err;
 
   if (prop_kind != svn_prop_regular_kind)
@@ -288,13 +289,13 @@ propset_on_url(svn_commit_info_t **commit_info_p,
   else
     message = "";
 
-  SVN_ERR(svn_client__ensure_revprop_table(&revprop_table, revprop_table,
+  SVN_ERR(svn_client__ensure_revprop_table(&commit_revprops, revprop_table,
                                            message, ctx, pool));
 
   /* Fetch RA commit editor. */
   SVN_ERR(svn_client__commit_get_baton(&commit_baton, commit_info_p, pool));
   SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
-                                    revprop_table,
+                                    commit_revprops,
                                     svn_client__commit_callback,
                                     commit_baton,
                                     NULL, TRUE, /* No lock tokens */
@@ -326,7 +327,7 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
                     svn_boolean_t skip_checks,
                     svn_revnum_t base_revision_for_url,
                     const apr_array_header_t *changelists,
-                    apr_hash_t *revprop_table,
+                    const apr_hash_t *revprop_table,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool)
 {

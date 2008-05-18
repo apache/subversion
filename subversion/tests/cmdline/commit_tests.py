@@ -2489,6 +2489,27 @@ def commit_url(sbox):
                                         "Must give local path",
                                         repos_url)
 
+# Test for issue #3198
+def commit_added_missing(sbox):
+  "commit a missing to-be-added file should fail"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  a_path = os.path.join(wc_dir, 'A', 'a')
+  b_path = os.path.join(wc_dir, 'A', 'b')
+
+  # Make two copies of mu: a and b
+  svntest.main.run_svn(None, 'cp', mu_path, a_path)
+  svntest.main.run_svn(None, 'cp', mu_path, b_path)
+
+  # remove b, make it missing
+  os.remove(b_path)
+
+  # Commit, hoping to see an error
+  svntest.actions.run_and_verify_svn("Commit should have failed",
+                                     [], ".* is scheduled for addition, but is missing",
+                                     'commit', '-m', 'logmsg', wc_dir)
 
 ########################################################################
 # Run the tests
@@ -2553,6 +2574,7 @@ test_list = [ None,
               SkipUnless(start_commit_detect_capabilities,
                          server_gets_client_capabilities),
               commit_url,
+              commit_added_missing,
              ]
 
 if __name__ == '__main__':

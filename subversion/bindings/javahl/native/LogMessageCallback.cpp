@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2007-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -20,6 +20,7 @@
  */
 
 #include "LogMessageCallback.h"
+#include "ProplistCallback.h"
 #include "JNIUtil.h"
 #include "svn_time.h"
 #include "svn_sorts.h"
@@ -75,8 +76,7 @@ LogMessageCallback::singleMessage(svn_log_entry_t *log_entry, apr_pool_t *pool)
       sm_mid = env->GetMethodID(clazz,
                                 "singleMessage",
                                 "([L"JAVA_PACKAGE"/ChangePath;"
-                                "JLjava/lang/String;"
-                                "JLjava/lang/String;Z)V");
+                                "JLjava/util/Map;Z)V");
       if (JNIUtil::isJavaExceptionThrown())
         return SVN_NO_ERROR;
 
@@ -98,19 +98,6 @@ LogMessageCallback::singleMessage(svn_log_entry_t *log_entry, apr_pool_t *pool)
       if (JNIUtil::isJavaExceptionThrown())
         return SVN_NO_ERROR;
     }
-
-  const char *author;
-  const char *date;
-  const char *message;
-  svn_compat_log_revprops_out(&author, &date, &message, log_entry->revprops);
-
-  apr_time_t commit_time = -1;
-  if (date != NULL && *date != '\0')
-    SVN_ERR(svn_time_from_cstring(&commit_time, date, pool));
-
-  jstring jauthor = JNIUtil::makeJString(author);
-  if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
 
   jobjectArray jChangedPaths = NULL;
   if (log_entry->changed_paths)
@@ -171,26 +158,24 @@ LogMessageCallback::singleMessage(svn_log_entry_t *log_entry, apr_pool_t *pool)
         }
     }
 
-  jstring jmessage = JNIUtil::makeJString(message);
-  if (JNIUtil::isJavaExceptionThrown())
-    return SVN_NO_ERROR;
+  jobject jrevprops = NULL;
+  if (log_entry->revprops != NULL && apr_hash_count(log_entry->revprops) > 0)
+    jrevprops = ProplistCallback::makeMapFromHash(log_entry->revprops, pool);
 
   env->CallVoidMethod(m_callback,
                       sm_mid,
                       jChangedPaths,
                       (jlong)log_entry->revision,
-                      jauthor,
-                      (jlong)commit_time,
-                      jmessage,
+                      jrevprops,
                       (jboolean)log_entry->has_children);
   if (JNIUtil::isJavaExceptionThrown())
     return SVN_NO_ERROR;
 
-  env->DeleteLocalRef(jauthor);
+  env->DeleteLocalRef(jChangedPaths);
   if (JNIUtil::isJavaExceptionThrown())
     return SVN_NO_ERROR;
 
-  env->DeleteLocalRef(jmessage);
+  env->DeleteLocalRef(jrevprops);
   // No need to check for an exception here, because we return anyway.
 
   return SVN_NO_ERROR;
