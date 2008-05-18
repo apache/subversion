@@ -25,6 +25,10 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Date;
+import java.util.Calendar;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.text.ParseException;
 
 /**
  * This is the main client class.  All Subversion client APIs are
@@ -1362,11 +1366,30 @@ public class SVNClient implements SVNClientInterface
 
         public void singleMessage(ChangePath[] changedPaths,
                                   long revision,
-                                  String author,
-                                  long timeMicros,
-                                  String message,
+                                  Map revprops,
                                   boolean hasChildren)
         {
+            String author = (String) revprops.get("svn:author");
+            String message = (String) revprops.get("svn:log");
+            long timeMicros;
+
+            // Really hacky date parser, because Java doesn't support
+            // microseconds natively.
+            try {
+                DateFormat formatter = new SimpleDateFormat(
+                    "yyyy-MM-dd'T'HH:mm:ss.SSS");
+                String datestr = ((String) revprops.get("svn:date"));
+                Date date = formatter.parse(datestr.substring(0, 23));
+                Calendar cal = Calendar.getInstance();
+                cal.setTime(date);
+                timeMicros = cal.getTimeInMillis();
+
+                timeMicros = timeMicros * 1000 
+                                 + Integer.parseInt(datestr.substring(23, 26));
+            } catch (ParseException ex) {
+                timeMicros = 0;
+            }
+
             LogMessage msg = new LogMessage(changedPaths,
                                             revision,
                                             author,
