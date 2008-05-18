@@ -54,12 +54,11 @@ Candidate changes for 1.5.0:
 Candidate changes for 1.5.1:
 ============================
 
- * r31196, r31199, r31280, r31283
+ * r31196, r31199, r31280, r31283, r31287
    Don't commit an add of a missing item (issue #3198).
    Notes:
      r31199 is a trivial followup that adds a missing SVN_ERR() wrap.
-     r31280 adds a regression test.
-     r31283 is a trivial comment fix.
+     r31280, r31283 and r31287 add a regression test.
    Votes:
      +1: kfogel (r31196 and r31199 only)
      +0: danielsh
