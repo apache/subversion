@@ -2506,7 +2506,7 @@ def commit_added_missing(sbox):
   # remove b, make it missing
   os.remove(b_path)
 
-  # Commit, hoping to see no errors
+  # Commit, hoping to see an error
   svntest.actions.run_and_verify_svn("Commit should have failed",
                                      [], ".* is scheduled for addition, but is missing",
                                      'commit', '-m', 'logmsg', wc_dir)
