@@ -43,6 +43,7 @@
 #include "CommitMessage.h"
 #include "EnumMapper.h"
 #include "StringArray.h"
+#include "RevpropTable.h"
 #include "svn_types.h"
 #include "svn_client.h"
 #include "svn_sorts.h"
@@ -384,7 +385,7 @@ jlongArray SVNClient::update(Targets &targets, Revision &revision,
 
 jlong SVNClient::commit(Targets &targets, const char *message,
                         svn_depth_t depth, bool noUnlock, bool keepChangelist,
-                        StringArray &changelists)
+                        StringArray &changelists, RevpropTable &revprops)
 {
     Pool requestPool;
     svn_commit_info_t *commit_info = NULL;
@@ -397,7 +398,8 @@ jlong SVNClient::commit(Targets &targets, const char *message,
     SVN_JNI_ERR(svn_client_commit4(&commit_info, targets2, depth,
                                    noUnlock, keepChangelist,
                                    changelists.array(requestPool),
-                                   NULL, ctx, requestPool.pool()),
+                                   revprops.hash(requestPool), ctx,
+                                   requestPool.pool()),
                 SVN_INVALID_REVNUM);
 
     if (commit_info && SVN_IS_VALID_REVNUM(commit_info->revision))

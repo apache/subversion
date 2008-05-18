@@ -34,6 +34,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.Map;
 
 /**
@@ -3145,6 +3146,80 @@ public class BasicTests extends SVNTests
             assertEquals(1, line.getRevision());
             assertEquals("jrandom", line.getAuthor());
         }
+    }
+
+    /**
+     * Test commit of arbitrary revprops.
+     * @throws Throwable
+     * @since 1.5
+     */
+    public void testCommitRevprops() throws Throwable
+    {
+
+        class RevpropLogCallback implements LogMessageCallback
+        {
+            Map revprops;
+
+            public void singleMessage(ChangePath[] changedPaths,
+                                      long revision,
+                                      Map revprops,
+                                      boolean hasChildren)
+            {
+                this.revprops = revprops;
+            }
+
+            public Map getRevprops()
+            {
+                return revprops;
+            }
+        }
+
+        // build the test setup
+        OneTest thisTest = new OneTest();
+
+        // modify file A/mu
+        File mu = new File(thisTest.getWorkingCopy(), "A/mu");
+        PrintWriter muWriter = new PrintWriter(new FileOutputStream(mu, true));
+        muWriter.print("appended mu text");
+        muWriter.close();
+        thisTest.getWc().setItemWorkingCopyRevision("A/mu", 2);
+        thisTest.getWc().setItemContent("A/mu",
+                thisTest.getWc().getItemContent("A/mu") + "appended mu text");
+        addExpectedCommitItem(thisTest.getWCPath(),
+                thisTest.getUrl(), "A/mu",NodeKind.file,
+                CommitItemStateFlags.TextMods);
+
+        // commit the changes, with some extra revprops
+        Map revprops = new HashMap();
+        revprops.put("kfogel", "rockstar");
+        revprops.put("cmpilato", "theman");
+        assertEquals("wrong revision number from commit",
+                     client.commit(new String[]{thisTest.getWCPath()},
+                                   "log msg", Depth.infinity, true, true,
+                                   null, revprops),
+                     2);
+
+        // check the status of the working copy
+        thisTest.checkStatus();
+
+        // Fetch our revprops from the server
+        RevpropLogCallback callback = new RevpropLogCallback();
+        client.logMessages(thisTest.getWCPath(), Revision.getInstance(2),
+                           Revision.getInstance(2),
+                           Revision.getInstance(2), false, false, false,
+                           new String[] {"kfogel", "cmpilato"}, 0,
+                           callback);
+        Map fetchedProps = callback.getRevprops();
+
+        assertEquals("wrong number of fetched revprops", revprops.size(),
+                     fetchedProps.size());
+        Set keys = fetchedProps.keySet();
+        for (Iterator it = keys.iterator(); it.hasNext(); )
+          {
+            String key = (String) it.next();
+            assertEquals("revprops check", revprops.get(key),
+                         fetchedProps.get(key));
+          }
     }
 
     /**

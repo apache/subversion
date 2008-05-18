@@ -47,6 +47,7 @@ class StatusCallback;
 class ChangelistCallback;
 class CommitMessage;
 class StringArray;
+class RevpropTable;
 #include "svn_types.h"
 #include "svn_client.h"
 #include "SVNBase.h"
@@ -125,7 +126,7 @@ class SVNClient :public SVNBase
             const char *message, bool copyAsChild, bool makeParents);
   jlong commit(Targets &targets, const char *message, svn_depth_t depth,
                bool noUnlock, bool keepChangelist,
-               StringArray &changelists);
+               StringArray &changelists, RevpropTable &revprops);
   jlongArray update(Targets &targets, Revision &revision, svn_depth_t depth,
                     bool depthIsSticky, bool ignoreExternals,
                     bool allowUnverObstructions);
