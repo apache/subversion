@@ -106,7 +106,8 @@ class SVNClient :public SVNBase
   void mergeReintegrate(const char *path, Revision &pegRevision,
                         const char *localPath, bool dryRun);
   void doImport(const char *path, const char *url, const char *message,
-                svn_depth_t depth, bool noIgnore, bool ignoreUnknownNodeTypes);
+                svn_depth_t depth, bool noIgnore, bool ignoreUnknownNodeTypes,
+                RevpropTable &revprops);
   jlong doSwitch(const char *path, const char *url, Revision &revision,
                  Revision &pegRevision, svn_depth_t depth,
                  bool depthIsSticky, bool ignoreExternals,
@@ -118,12 +119,14 @@ class SVNClient :public SVNBase
   void resolve(const char *path, svn_depth_t depth,
                svn_wc_conflict_choice_t choice);
   void cleanup(const char *path);
-  void mkdir(Targets &targets, const char *message, bool makeParents);
+  void mkdir(Targets &targets, const char *message, bool makeParents,
+             RevpropTable &revprops);
   void move(Targets &srcPaths, const char *destPath,
             const char *message, bool force, bool moveAsChild,
-            bool makeParents);
+            bool makeParents, RevpropTable &revprops);
   void copy(CopySources &copySources, const char *destPath,
-            const char *message, bool copyAsChild, bool makeParents);
+            const char *message, bool copyAsChild, bool makeParents,
+            RevpropTable &revprops);
   jlong commit(Targets &targets, const char *message, svn_depth_t depth,
                bool noUnlock, bool keepChangelist,
                StringArray &changelists, RevpropTable &revprops);
@@ -134,7 +137,7 @@ class SVNClient :public SVNBase
            bool add_parents);
   void revert(const char *path, svn_depth_t depth, StringArray &changelists);
   void remove(Targets &targets, const char *message, bool force,
-              bool keep_local);
+              bool keep_local, RevpropTable &revprops);
   void notification(Notify *notify);
   void notification2(Notify2 *notify2);
   void setConflictResolver(ConflictResolverCallback *conflictResolver);

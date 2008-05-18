@@ -430,11 +430,14 @@ public interface SVNClientInterface
      * @param message   if path is a url, this will be the commit message.
      * @param force     delete even when there are local modifications.
      * @param keepLocal only remove the paths from the repository.
+     * @param revpropTable A string-to-string mapping of revision properties
+     *                     to values which will be set if this operation
+     *                     results in a commit.
      * @throws ClientException
      * @since 1.5
      */
     void remove(String[] path, String message, boolean force,
-                boolean keepLocal)
+                boolean keepLocal, Map revpropTable)
             throws ClientException;
 
     /**
@@ -631,11 +634,14 @@ public interface SVNClientInterface
      * @param copyAsChild Whether to copy <code>srcPaths</code> as
      * children of <code>destPath</code>.
      * @param makeParents Whether to create intermediate parents
+     * @param revpropTable A string-to-string mapping of revision properties
+     *                     to values which will be set if this operation
+     *                     results in a commit.
      * @throws ClientException If the copy operation fails.
      * @since 1.5
      */
     void copy(CopySource[] sources, String destPath, String message,
-              boolean copyAsChild, boolean makeParents)
+              boolean copyAsChild, boolean makeParents, Map revpropTable)
         throws ClientException;
 
     /**
@@ -665,11 +671,15 @@ public interface SVNClientInterface
      * @param moveAsChild Whether to move <code>srcPaths</code> as
      * children of <code>destPath</code>.
      * @param makeParents Whether to create intermediate parents.
+     * @param revpropTable A string-to-string mapping of revision properties
+     *                     to values which will be set if this operation
+     *                     results in a commit.
      * @throws ClientException If the move operation fails.
      * @since 1.5
      */
     void move(String[] srcPaths, String destPath, String message,
-              boolean force, boolean moveAsChild, boolean makeParents)
+              boolean force, boolean moveAsChild, boolean makeParents,
+              Map revpropTable)
         throws ClientException;
 
     /**
@@ -703,10 +713,14 @@ public interface SVNClientInterface
      * @param path      directories to be created
      * @param message   commit message to used if path contains urls
      * @param makeParents Whether to create intermediate parents
+     * @param revpropTable A string-to-string mapping of revision properties
+     *                     to values which will be set if this operation
+     *                     results in a commit.
      * @throws ClientException
      * @since 1.5
      */
-    void mkdir(String[] path, String message, boolean makeParents)
+    void mkdir(String[] path, String message, boolean makeParents,
+               Map revpropTable)
             throws ClientException;
 
     /**
@@ -861,12 +875,16 @@ public interface SVNClientInterface
      * @param noIgnore  whether to add files matched by ignore patterns
      * @param ignoreUnknownNodeTypes whether to ignore files which
      *                  the node type is not konwn, just as pipes
+     * @param revpropTable A string-to-string mapping of revision properties
+     *                     to values which will be set if this operation
+     *                     results in a commit.
      * @throws ClientException
      *
      * @since 1.5
      */
     void doImport(String path, String url, String message, int depth,
-                  boolean noIgnore, boolean ignoreUnknownNodeTypes)
+                  boolean noIgnore, boolean ignoreUnknownNodeTypes,
+                  Map revpropTable)
             throws ClientException;
 
     /**

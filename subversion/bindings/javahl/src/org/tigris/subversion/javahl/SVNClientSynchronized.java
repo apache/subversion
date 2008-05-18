@@ -471,19 +471,22 @@ public class SVNClientSynchronized implements SVNClientInterface
     public void remove(String[] path, String message, boolean force)
             throws ClientException
     {
-        remove(path, message, force, false);
+        synchronized (clazz)
+        {
+            worker.remove(path, message, force);
+        }
     }
 
     /**
      * @since 1.5
      */
     public void remove(String[] path, String message, boolean force,
-                       boolean keepLocal)
+                       boolean keepLocal, Map revpropTable)
             throws ClientException
     {
         synchronized (clazz)
         {
-            worker.remove(path, message, force, keepLocal);
+            worker.remove(path, message, force, keepLocal, revpropTable);
         }
     }
 
@@ -658,13 +661,14 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @since 1.5
      */
     public void copy(CopySource[] sources, String destPath, String message,
-                     boolean copyAsChild, boolean makeParents)
+                     boolean copyAsChild, boolean makeParents,
+                     Map revpropTable)
         throws ClientException
     {
         synchronized (clazz)
         {
             worker.copy(sources, destPath, message, copyAsChild,
-                        makeParents);
+                        makeParents, revpropTable);
         }
     }
 
@@ -687,13 +691,13 @@ public class SVNClientSynchronized implements SVNClientInterface
      */
     public void move(String[] srcPaths, String destPath, String message,
                      boolean force, boolean moveAsChild,
-                     boolean makeParents)
+                     boolean makeParents, Map revpropTable)
         throws ClientException
     {
         synchronized (clazz)
         {
             worker.move(srcPaths, destPath, message, force, moveAsChild,
-                        makeParents);
+                        makeParents, revpropTable);
         }
     }
 
@@ -730,12 +734,13 @@ public class SVNClientSynchronized implements SVNClientInterface
     /**
      * @since 1.5
      */
-    public void mkdir(String[] path, String message, boolean makeParents)
+    public void mkdir(String[] path, String message, boolean makeParents,
+                      Map revpropTable)
             throws ClientException
     {
         synchronized (clazz)
         {
-            worker.mkdir(path, message, makeParents);
+            worker.mkdir(path, message, makeParents, revpropTable);
         }
     }
 
@@ -885,13 +890,14 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @since 1.5
      */
     public void doImport(String path, String url, String message, int depth,
-                         boolean noIgnore, boolean ignoreUnknownNodeTypes)
+                         boolean noIgnore, boolean ignoreUnknownNodeTypes,
+                         Map revpropTable)
             throws ClientException
     {
         synchronized(clazz)
         {
             worker.doImport(path, url, message, depth, noIgnore,
-                            ignoreUnknownNodeTypes);
+                            ignoreUnknownNodeTypes, revpropTable);
         }
     }
 
