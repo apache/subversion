@@ -19,6 +19,7 @@
 package org.tigris.subversion.javahl;
 
 import java.io.OutputStream;
+import java.util.Map;
 
 /**
  * This interface is the commom interface for all subversion
@@ -606,6 +607,9 @@ public interface SVNClientInterface
      * @param noUnlock        do remove any locks
      * @param keepChangelist  keep changelist associations after the commit.
      * @param changelists  if non-null, filter paths using changelists
+     * @param revpropTable A string-to-string mapping of revision properties
+     *                     to values which will be set if this operation
+     *                     results in a commit.
      * @return The new revision number created by the commit, or
      * {@link Revision#SVN_INVALID_REVNUM} if the revision number is
      * invalid.
@@ -614,7 +618,7 @@ public interface SVNClientInterface
      */
     long commit(String[] path, String message, int depth,
                 boolean noUnlock, boolean keepChangelist,
-                String[] changelists)
+                String[] changelists, Map revpropTable)
             throws ClientException;
 
     /**

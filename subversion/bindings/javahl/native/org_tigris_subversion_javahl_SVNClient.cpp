@@ -45,6 +45,7 @@
 #include "ListCallback.h"
 #include "ChangelistCallback.h"
 #include "StringArray.h"
+#include "RevpropTable.h"
 #include "svn_version.h"
 #include "svn_private_config.h"
 #include "version.h"
@@ -517,7 +518,7 @@ JNIEXPORT jlong JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_commit
 (JNIEnv *env, jobject jthis, jobjectArray jtargets, jstring jmessage,
  jint jdepth, jboolean jnoUnlock, jboolean jkeepChangelist,
- jobjectArray jchangelists)
+ jobjectArray jchangelists, jobject jrevpropTable)
 {
   JNIEntry(SVNClient, commit);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -536,9 +537,13 @@ Java_org_tigris_subversion_javahl_SVNClient_commit
   if (JNIUtil::isExceptionThrown())
     return -1;
 
+  RevpropTable revprops(jrevpropTable);
+  if (JNIUtil::isExceptionThrown())
+    return -1;
+
   return cl->commit(targets, message, (svn_depth_t)jdepth,
                     jnoUnlock ? true : false, jkeepChangelist ? true : false,
-                    changelists);
+                    changelists, revprops);
 }
 
 JNIEXPORT void JNICALL

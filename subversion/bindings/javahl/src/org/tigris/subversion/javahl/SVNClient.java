@@ -499,7 +499,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         return commit(path, message, Depth.infinityOrEmpty(recurse), noUnlock,
-                      false, null);
+                      false, null, null);
     }
 
     /**
@@ -507,7 +507,7 @@ public class SVNClient implements SVNClientInterface
      */
     public native long commit(String[] path, String message, int depth,
                               boolean noUnlock, boolean keepChangelist,
-                              String[] changelists)
+                              String[] changelists, Map revpropTable)
             throws ClientException;
 
     /**

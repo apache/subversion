@@ -19,6 +19,7 @@
 package org.tigris.subversion.javahl;
 
 import java.io.OutputStream;
+import java.util.Map;
 
 /**
  * This class provides a threadsafe wrapped for SVNClient
@@ -643,13 +644,13 @@ public class SVNClientSynchronized implements SVNClientInterface
      */
     public long commit(String[] path, String message, int depth,
                        boolean noUnlock, boolean keepChangelist,
-                       String[] changelists)
+                       String[] changelists, Map revpropTable)
             throws ClientException
     {
         synchronized (clazz)
         {
             return worker.commit(path, message, depth, noUnlock,
-                                 keepChangelist, changelists);
+                                 keepChangelist, changelists, revpropTable);
         }
     }
 
