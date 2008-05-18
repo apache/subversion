@@ -936,7 +936,8 @@ void SVNClient::properties(const char *path, Revision &revision,
 
 void SVNClient::propertySet(const char *path, const char *name,
                             const char *value, svn_depth_t depth,
-                            StringArray &changelists, bool force)
+                            StringArray &changelists, bool force,
+                            RevpropTable &revprops)
 {
     Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path, "path", );
@@ -958,7 +959,8 @@ void SVNClient::propertySet(const char *path, const char *name,
 
     SVN_JNI_ERR(svn_client_propset3(&commit_info, name, val, intPath.c_str(),
                                     depth, force, SVN_INVALID_REVNUM,
-                                    changelists.array(requestPool), NULL,
+                                    changelists.array(requestPool),
+                                    revprops.hash(requestPool),
                                     ctx, requestPool.pool()), );
 }
 

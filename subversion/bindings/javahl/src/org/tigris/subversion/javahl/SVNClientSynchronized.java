@@ -1290,12 +1290,14 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @since 1.5
      */
     public void propertySet(String path, String name, String value, int depth,
-                            String[] changelists, boolean force)
+                            String[] changelists, boolean force,
+                            Map revpropTable)
             throws ClientException
     {
         synchronized(clazz)
         {
-            worker.propertySet(path, name, value, depth, changelists, force);
+            worker.propertySet(path, name, value, depth, changelists, force,
+                               revpropTable);
         }
     }
 

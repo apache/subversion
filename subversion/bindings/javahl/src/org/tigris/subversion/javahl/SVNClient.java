@@ -968,7 +968,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         propertySet(path, name, value, Depth.infinityOrEmpty(recurse), null,
-                    force);
+                    force, null);
     }
 
     /**
@@ -1000,7 +1000,7 @@ public class SVNClient implements SVNClientInterface
      */
     public native void propertySet(String path, String name, String value,
                                    int depth, String[] changelists,
-                                   boolean force)
+                                   boolean force, Map revpropTable)
             throws ClientException;
 
     /**
@@ -1020,7 +1020,7 @@ public class SVNClient implements SVNClientInterface
                                String[] changelists)
             throws ClientException
     {
-        propertySet(path, name, null, depth, changelists, false);
+        propertySet(path, name, null, depth, changelists, false, null);
     }
 
     /**
@@ -1078,7 +1078,7 @@ public class SVNClient implements SVNClientInterface
                                int depth, String[] changelists, boolean force)
             throws ClientException
     {
-        propertySet(path, name, value, depth, changelists, force);
+        propertySet(path, name, value, depth, changelists, force, null);
     }
 
     /**
