@@ -2496,8 +2496,8 @@ def commit_added_missing(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
   mu_path = os.path.join(wc_dir, 'A', 'mu')
-  a_path = os.path.join(wc_dir, 'A', 'a')
-  b_path = os.path.join(wc_dir, 'A', 'b')
+  a_path = os.path.join(wc_dir, 'A', 'a.txt')
+  b_path = os.path.join(wc_dir, 'A', 'b.txt')
 
   # Make two copies of mu: a and b
   svntest.main.run_svn(None, 'cp', mu_path, a_path)
