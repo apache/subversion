@@ -24,7 +24,10 @@
 #include "JNIUtil.h"
 #include "JNIStringHolder.h"
 #include "../include/org_tigris_subversion_javahl_PromptUserPassword2.h"
-#include "svn_client.h"
+#include <apr_strings.h>
+#include "svn_auth.h"
+#include "svn_error.h"
+#include "svn_error_codes.h"
 #include "svn_private_config.h"
 
 /**
@@ -535,11 +538,11 @@ svn_auth_provider_object_t *Prompter::getProviderSimple()
 {
   apr_pool_t *pool = JNIUtil::getRequestPool()->pool();
   svn_auth_provider_object_t *provider;
-  svn_client_get_simple_prompt_provider(&provider,
-                                        simple_prompt,
-                                        this,
-                                        2, /* retry limit */
-                                        pool);
+  svn_auth_get_simple_prompt_provider(&provider,
+                                      simple_prompt,
+                                      this,
+                                      2, /* retry limit */
+                                      pool);
 
   return provider;
 }
@@ -548,11 +551,11 @@ svn_auth_provider_object_t *Prompter::getProviderUsername()
 {
   apr_pool_t *pool = JNIUtil::getRequestPool()->pool();
   svn_auth_provider_object_t *provider;
-  svn_client_get_username_prompt_provider(&provider,
-                                          username_prompt,
-                                          this,
-                                          2, /* retry limit */
-                                          pool);
+  svn_auth_get_username_prompt_provider(&provider,
+                                        username_prompt,
+                                        this,
+                                        2, /* retry limit */
+                                        pool);
 
   return provider;
 }
@@ -561,7 +564,7 @@ svn_auth_provider_object_t *Prompter::getProviderServerSSLTrust()
 {
   apr_pool_t *pool = JNIUtil::getRequestPool()->pool();
   svn_auth_provider_object_t *provider;
-  svn_client_get_ssl_server_trust_prompt_provider
+  svn_auth_get_ssl_server_trust_prompt_provider
     (&provider, ssl_server_trust_prompt, this, pool);
 
   return provider;
@@ -571,11 +574,11 @@ svn_auth_provider_object_t *Prompter::getProviderClientSSL()
 {
   apr_pool_t *pool = JNIUtil::getRequestPool()->pool();
   svn_auth_provider_object_t *provider;
-  svn_client_get_ssl_client_cert_prompt_provider(&provider,
-                                                 ssl_client_cert_prompt,
-                                                 this,
-                                                 2 /* retry limit */,
-                                                 pool);
+  svn_auth_get_ssl_client_cert_prompt_provider(&provider,
+                                               ssl_client_cert_prompt,
+                                               this,
+                                               2 /* retry limit */,
+                                               pool);
 
   return provider;
 }
@@ -584,7 +587,7 @@ svn_auth_provider_object_t *Prompter::getProviderClientSSLPassword()
 {
   apr_pool_t *pool = JNIUtil::getRequestPool()->pool();
   svn_auth_provider_object_t *provider;
-  svn_client_get_ssl_client_cert_pw_prompt_provider
+  svn_auth_get_ssl_client_cert_pw_prompt_provider
     (&provider, ssl_client_cert_pw_prompt, this, 2 /* retry limit */,
      pool);
 
