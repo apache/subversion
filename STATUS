@@ -54,16 +54,15 @@ Candidate changes for 1.5.0:
 Candidate changes for 1.5.1:
 ============================
 
- * r31196, r31199
+ * r31196, r31199, r31280
    Don't commit an add of a missing item (issue #3198).
    Notes:
      r31199 is a trivial followup that adds a missing SVN_ERR() wrap.
+     r31280 adds a regression test.
    Votes:
-     +1: kfogel
-     +0: danielsh
-     -0: lgo (the issue leaves a wc in a bad state, so it's important enough
-              to have a regression test, even more so if we want to backport
-              it to a fix release. Note: I'll write one.)
+     +1: kfogel (r31196 and r31199 only)
+     +0: danielsh (r31196 and r31199 only)
+     +1: lgo
 
 Approved changes (all releases):
 ================================
