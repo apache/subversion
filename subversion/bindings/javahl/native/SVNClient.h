@@ -85,7 +85,8 @@ class SVNClient :public SVNBase
                          Revision &pegRevision, jobject outputStream,
                          size_t bufSize);
   void propertySet(const char *path, const char *name, const char *value,
-                   svn_depth_t depth, StringArray &changelists, bool force);
+                   svn_depth_t depth, StringArray &changelists, bool force,
+                   RevpropTable &revprops);
   void properties(const char *path, Revision &revision,
                   Revision &pegRevision, svn_depth_t depth,
                   StringArray &changelists, ProplistCallback *callback);

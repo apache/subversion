@@ -966,7 +966,8 @@ Java_org_tigris_subversion_javahl_SVNClient_properties
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_propertySet
 (JNIEnv *env, jobject jthis, jstring jpath, jstring jname, jstring jvalue,
- jint jdepth, jobjectArray jchangelists, jboolean jforce)
+ jint jdepth, jobjectArray jchangelists, jboolean jforce,
+ jobject jrevpropTable)
 {
   JNIEntry(SVNClient, propertySet);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -991,8 +992,12 @@ Java_org_tigris_subversion_javahl_SVNClient_propertySet
   if (JNIUtil::isExceptionThrown())
     return;
 
+  RevpropTable revprops(jrevpropTable);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
   cl->propertySet(path, name, value, (svn_depth_t)jdepth, changelists, 
-                  jforce ? true:false);
+                  jforce ? true:false, revprops);
 }
 
 JNIEXPORT jobject JNICALL

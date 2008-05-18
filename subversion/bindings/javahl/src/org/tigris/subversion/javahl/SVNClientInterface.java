@@ -1342,11 +1342,15 @@ public interface SVNClientInterface
      * @param depth   the depth to recurse into subdirectories
      * @param changelists changelists to filter by
      * @param force   do not check if the value is valid
+     * @param revpropTable A string-to-string mapping of revision properties
+     *                     to values which will be set if this operation
+     *                     results in a commit.
      * @throws ClientException
      * @since 1.5
      */
     void propertySet(String path, String name, String value, int depth,
-                     String[] changelists, boolean force)
+                     String[] changelists, boolean force,
+                     Map revpropTable)
             throws ClientException;
 
     /**
