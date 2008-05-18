@@ -426,7 +426,7 @@ Java_org_tigris_subversion_javahl_SVNClient_commitMessageHandler
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_remove
 (JNIEnv *env, jobject jthis, jobjectArray jtargets, jstring jmessage,
- jboolean jforce, jboolean keepLocal)
+ jboolean jforce, jboolean keepLocal, jobject jrevpropTable)
 {
   JNIEntry(SVNClient, remove);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -440,8 +440,12 @@ Java_org_tigris_subversion_javahl_SVNClient_remove
   if (JNIUtil::isExceptionThrown())
     return;
 
+  RevpropTable revprops(jrevpropTable);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
   cl->remove(targets, message, jforce ? true : false,
-             keepLocal ? true : false);
+             keepLocal ? true : false, revprops);
 }
 
 JNIEXPORT void JNICALL
@@ -549,7 +553,8 @@ Java_org_tigris_subversion_javahl_SVNClient_commit
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_copy
 (JNIEnv *env, jobject jthis, jobjectArray jcopySources, jstring jdestPath,
- jstring jmessage, jboolean jcopyAsChild, jboolean jmakeParents)
+ jstring jmessage, jboolean jcopyAsChild, jboolean jmakeParents,
+ jobject jrevpropTable)
 {
   JNIEntry(SVNClient, copy);
 
@@ -569,15 +574,19 @@ Java_org_tigris_subversion_javahl_SVNClient_copy
   if (JNIUtil::isExceptionThrown())
     return;
 
+  RevpropTable revprops(jrevpropTable);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
   cl->copy(copySources, destPath, message, jcopyAsChild ? true : false,
-           jmakeParents ? true : false);
+           jmakeParents ? true : false, revprops);
 }
 
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_move
 (JNIEnv *env, jobject jthis, jobjectArray jsrcPaths, jstring jdestPath,
  jstring jmessage, jboolean jforce, jboolean jmoveAsChild,
- jboolean jmakeParents)
+ jboolean jmakeParents, jobject jrevpropTable)
 {
   JNIEntry(SVNClient, move);
 
@@ -596,14 +605,20 @@ Java_org_tigris_subversion_javahl_SVNClient_move
   JNIStringHolder message(jmessage);
   if (JNIUtil::isExceptionThrown())
     return;
+
+  RevpropTable revprops(jrevpropTable);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
   cl->move(srcPaths, destPath, message, jforce ? true : false,
-           jmoveAsChild ? true : false, jmakeParents ? true : false);
+           jmoveAsChild ? true : false, jmakeParents ? true : false,
+           revprops);
 }
 
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_mkdir
 (JNIEnv *env, jobject jthis, jobjectArray jtargets, jstring jmessage,
- jboolean jmakeParents)
+ jboolean jmakeParents, jobject jrevpropTable)
 {
   JNIEntry(SVNClient, mkdir);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -617,7 +632,11 @@ Java_org_tigris_subversion_javahl_SVNClient_mkdir
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->mkdir(targets, message, jmakeParents ? true : false);
+  RevpropTable revprops(jrevpropTable);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  cl->mkdir(targets, message, jmakeParents ? true : false, revprops);
 }
 
 JNIEXPORT void JNICALL
@@ -732,7 +751,8 @@ Java_org_tigris_subversion_javahl_SVNClient_doSwitch
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_doImport
 (JNIEnv *env, jobject jthis, jstring jpath, jstring jurl, jstring jmessage,
- jint jdepth, jboolean jnoIgnore, jboolean jignoreUnknownNodeTypes)
+ jint jdepth, jboolean jnoIgnore, jboolean jignoreUnknownNodeTypes,
+ jobject jrevpropTable)
 {
   JNIEntry(SVNClient, doImport);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -753,9 +773,13 @@ Java_org_tigris_subversion_javahl_SVNClient_doImport
   if (JNIUtil::isExceptionThrown())
     return;
 
+  RevpropTable revprops(jrevpropTable);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
   cl->doImport(path, url, message, (svn_depth_t)jdepth,
                jnoIgnore ? true : false,
-               jignoreUnknownNodeTypes ? true : false);
+               jignoreUnknownNodeTypes ? true : false, revprops);
 }
 
 JNIEXPORT jobjectArray JNICALL

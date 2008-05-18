@@ -378,14 +378,14 @@ public class SVNClient implements SVNClientInterface
     public void remove(String[] path, String message, boolean force)
             throws ClientException
     {
-        remove(path, message, force, false);
+        remove(path, message, force, false, null);
     }
 
     /**
      * @since 1.5
      */
     public native void remove(String[] path, String message, boolean force,
-                              boolean keepLocal)
+                              boolean keepLocal, Map revpropTable)
             throws ClientException;
 
     /**
@@ -515,7 +515,7 @@ public class SVNClient implements SVNClientInterface
      */
     public native void copy(CopySource[] sources, String destPath,
                             String message, boolean copyAsChild,
-                            boolean makeParents)
+                            boolean makeParents, Map revpropTable)
             throws ClientException;
 
     /**
@@ -529,7 +529,7 @@ public class SVNClient implements SVNClientInterface
     {
         copy(new CopySource[] { new CopySource(srcPath, revision,
                                                Revision.HEAD) },
-             destPath, message, true, false);
+             destPath, message, true, false, null);
     }
 
     /**
@@ -537,7 +537,7 @@ public class SVNClient implements SVNClientInterface
      */
     public native void move(String[] srcPaths, String destPath, String message,
                             boolean force, boolean moveAsChild,
-                            boolean makeParents)
+                            boolean makeParents, Map revpropTable)
             throws ClientException;
 
     /**
@@ -549,7 +549,8 @@ public class SVNClient implements SVNClientInterface
                      Revision ignored, boolean force)
             throws ClientException
     {
-        move(new String[] { srcPath }, destPath, message, force, true, false);
+        move(new String[] { srcPath }, destPath, message, force, true, false,
+             null);
     }
 
     /**
@@ -561,14 +562,15 @@ public class SVNClient implements SVNClientInterface
                      boolean force)
             throws ClientException
     {
-        move(new String[] { srcPath }, destPath, message, force, true, false);
+        move(new String[] { srcPath }, destPath, message, force, true, false,
+             null);
     }
 
     /**
      * @since 1.5
      */
     public native void mkdir(String[] path, String message,
-                             boolean makeParents)
+                             boolean makeParents, Map revpropTable)
             throws ClientException;
 
     /**
@@ -578,7 +580,7 @@ public class SVNClient implements SVNClientInterface
     public void mkdir(String[] path, String message)
             throws ClientException
     {
-        mkdir(path, message, false);
+        mkdir(path, message, false, null);
     }
 
     /**
@@ -681,7 +683,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         doImport(path, url, message, Depth.infinityOrFiles(recurse),
-                 false, false);
+                 false, false, null);
     }
 
     /**
@@ -689,7 +691,8 @@ public class SVNClient implements SVNClientInterface
      */
     public native void doImport(String path, String url, String message,
                                 int depth, boolean noIgnore,
-                                boolean ignoreUnknownNodeTypes)
+                                boolean ignoreUnknownNodeTypes,
+                                Map revpropTable)
             throws ClientException;
 
     /**
