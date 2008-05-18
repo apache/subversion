@@ -59,7 +59,7 @@ Candidate changes for 1.5.1:
    Notes:
      r31199 is a trivial followup that adds a missing SVN_ERR() wrap.
      r31280 adds a regression test.
-     r31283 is trivial comment fix.
+     r31283 is a trivial comment fix.
    Votes:
      +1: kfogel (r31196 and r31199 only)
      +0: danielsh
