@@ -58,6 +58,13 @@ Candidate changes for 1.5.0:
    Votes:
      +1: markphip
 
+ * r31303
+   Skip a recently backported test when doing backwards-compatibility testing.
+   Notes:
+     Makes the backwards-compatibility test suite pass again.
+   Votes:
+     +1: glasser
+
 Candidate changes for 1.5.1:
 ============================
 
