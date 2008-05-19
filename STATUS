@@ -51,6 +51,13 @@ Candidate changes for 1.5.0:
    Votes:
      +1: hwright (pending merge of issue #3200 fixes)
 
+ * r31292
+   JavaHL: add support for Windows SSL certs as was done for CLI.
+   Notes:
+     This was added to the CLI in r23812 but was never added in JavaHL.
+   Votes:
+     +1: markphip
+
 Candidate changes for 1.5.1:
 ============================
 
