@@ -1284,7 +1284,7 @@ add_directory(const char *path,
 
       if (err && err->apr_err != SVN_ERR_WC_NOT_DIRECTORY)
         {
-          /* Something quite unexepected has happened. */
+          /* Something quite unexpected has happened. */
           return err;
         }
       else if (err) /* Not a versioned dir. */
