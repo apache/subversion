@@ -1578,3 +1578,112 @@ def set_up_tree_conflicts_for_merge(sbox):
   main.run_svn(None, 'ci', '-m', 'Changes in wc 1.', A)
   main.run_svn(None, 'ci', '-m', 'Changes in wc 2.', A2)
   return None
+
+def make_tc_test_trees(base):
+  """Helper function for deep tree conflicts.  Create a set of trees,
+  each in its own "container" dir.  After tree conflicts are created,
+  the tree-conflict status in each container can be tested separately.
+  """
+  j = os.path.join
+  # Create the container dirs.
+  F   = j(base, 'F')
+  D   = j(base, 'D')
+  DF  = j(base, 'DF')
+  DD  = j(base, 'DD')
+  DDF = j(base, 'DDF')
+  DDD = j(base, 'DDD')
+  os.makedirs(F)
+  os.makedirs(j(D, 'D1'))
+  os.makedirs(j(DF, 'D1'))
+  os.makedirs(j(DD, 'D1', 'D2'))
+  os.makedirs(j(DDF, 'D1', 'D2'))
+  os.makedirs(j(DDD, 'D1', 'D2', 'D3'))
+
+  # Create their files.
+  alpha = j(F, 'alpha')
+  beta  = j(DF, 'D1', 'beta')
+  gamma = j(DDF, 'D1', 'D2', 'gamma')
+  main.file_append(alpha, "This is the file alpha.\n")
+  main.file_append(beta, "This is the file beta.\n")
+  main.file_append(gamma, "This is the file gamma\n")
+
+  main.run_svn(None, 'add', base)
+
+def tc_leaf_del(base):
+  """Helper function for deep tree conflicts.  Delete files and empty dirs."""
+  j = os.path.join
+  F   = j(base, 'F', 'alpha')
+  D   = j(base, 'D', 'D1')
+  DF  = j(base, 'DF', 'D1', 'beta')
+  DD  = j(base, 'DD', 'D1', 'D2')
+  DDF = j(base, 'DDF', 'D1', 'D2', 'gamma')
+  DDD = j(base, 'DDD', 'D1', 'D2', 'D3')
+  main.run_svn(None, 'rm', F, D, DF, DD, DDF, DDD)
+
+def tc_tree_del(base):
+  """Helper function for deep tree conflicts.  Delete top-level dirs."""
+  j = os.path.join
+  D   = j(base, 'D', 'D1')
+  DF  = j(base, 'DF', 'D1')
+  DD  = j(base, 'DD', 'D1')
+  DDF = j(base, 'DDF', 'D1')
+  DDD = j(base, 'DDD', 'D1')
+  main.run_svn(None, 'rm', D, DF, DD, DDF, DDD)
+  
+def tc_text_append(base):
+  """Helper function for deep tree conflicts.  Append text to files."""
+  j = os.path.join
+  alpha = j(F, 'alpha')
+  beta  = j(DF, 'D1', 'beta')
+  gamma = j(DDF, 'D1', 'D2', 'gamma')
+  main.file_append(alpha, "More text for file alpha.\n")
+  main.file_append(beta, "More text for file beta.\n")
+  main.file_append(gamma, "More text for file gamma\n")
+  
+def set_up_deep_tree_conflicts_up(sbox, local_actions, incoming_actions):
+  """Run functions local_actions and incoming_actions on a working copy
+  directory so that tree conflicts will appear.  These may includes
+  conflicts between a dir and its descendants.
+
+  After this setup, reveal the tree conflicts by updating the 'local' dir.
+  """
+
+  wc_dir = sbox.wc_dir
+  j = os.path.join
+  local = j(wc_dir, 'local')
+  make_tc_test_trees(local)
+  main.run_svn(None, 'ci', '-m', 'Set up deep test dirs.', wc_dir) # -r2
+
+  # Apply the incoming actions.
+  incoming_actions(local)
+  main.run_svn(None, 'ci', '-m', 'Commit incoming actions.', wc_dir) # -r3
+
+  # Roll back the WC so that the local actions will conflict.
+  main.run_svn(None, 'up', wc_dir, '-r2')
+  local_actions(local)  
+
+def set_up_deep_tree_conflicts_sw(sbox, local_actions, incoming_actions):
+  """Run functions local_actions and incoming_actions on working copy
+  directories so that tree conflicts will appear.  These may includes
+  conflicts between a dir and its descendants.
+
+  After this setup, reveal the tree conflicts by switching the 'local'
+  dir to the 'incoming' URL, or by merging the 'incoming' URL (r2:3)
+  into the 'local' dir.
+  """
+
+  wc_dir = sbox.wc_dir
+  j = os.path.join
+  local = j(wc_dir, 'local')
+  incoming = j(wc_dir, 'incoming')
+  make_tc_test_trees(local)
+  make_tc_test_trees(incoming)
+  main.run_svn(None, 'ci', '-m', 'Set up deep test dirs.', wc_dir) # -r2
+
+  incoming_actions(incoming)
+  main.run_svn(None, 'ci', '-m', 'Commit incoming actions.', incoming) # -r3
+
+  local_actions(local)
+  main.run_svn(None, 'ci', '-m', 'Commit local actions.', local) # -r4
+
+  main.run_svn(None, 'up', wc_dir)
