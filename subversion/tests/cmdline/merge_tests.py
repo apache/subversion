@@ -11404,8 +11404,6 @@ def merge_broken_link(sbox):
 
 # Test for issue #3199 'Subtree merges broken when required ranges
 # don't intersect with merge target'
-#
-# Marked as XFail until issue #3199 is fixed
 def subtree_merges_dont_intersect_with_targets(sbox):
   "subtree ranges might not intersect with target"
 
@@ -11845,8 +11843,8 @@ test_list = [ None,
               SkipUnless(dont_explicitly_record_implicit_mergeinfo,
                          server_has_mergeinfo),
               SkipUnless(merge_broken_link, svntest.main.is_posix_os),
-              XFail(SkipUnless(subtree_merges_dont_intersect_with_targets,
-                               server_has_mergeinfo)),
+              SkipUnless(subtree_merges_dont_intersect_with_targets,
+                         server_has_mergeinfo),
              ]
 
 if __name__ == '__main__':

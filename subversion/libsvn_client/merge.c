@@ -2563,16 +2563,24 @@ slice_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
     }
 }
 
-/* For each child of CHILDREN_WITH_MERGEINFO create a new remaining_ranges
-   by removing the first item from the original range list and overwrite the
-   original remaining_ranges with this new list.
-   All the allocations are persistent from a POOL.
-   TODO, we should have remaining_ranges in reverse order to avoid recreating
-   the remaining_ranges every time instead of one 'pop' operation.  */
+/* Helper for do_directory_merge().
+
+   Remove the first remaining revision range for each child in
+   CHILDREN_WITH_MERGEINFO *iff* that child was already merged.  END_REV is the
+   ending revision of the most recently merged range, i.e. the same end_rev
+   passed to drive_merge_report_editor() by do_directory_merge().  If a
+   range is removed from a child's remaining_ranges array, allocate the new
+   remaining_ranges array in POOL.
+
+   ### TODO: We should have remaining_ranges in reverse order to avoid
+   ### recreating and reallocationg the remaining_ranges every time we want
+   ### to remove the first range.  If the ranges were reversed we could simply
+   ### pop the last element in the array. */
 static void
-remove_first_range_from_remaining_ranges(
-                                apr_array_header_t *children_with_mergeinfo,
-                                apr_pool_t *pool)
+remove_first_range_from_remaining_ranges(svn_revnum_t end_rev,
+                                         apr_array_header_t
+                                           *children_with_mergeinfo,
+                                         apr_pool_t *pool)
 {
   int i, j;
   for (i = 0; i < children_with_mergeinfo->nelts; i++)
@@ -2584,17 +2592,24 @@ remove_first_range_from_remaining_ranges(
         continue;
       if (child->remaining_ranges->nelts > 0)
         {
-          apr_array_header_t *orig_remaining_ranges = child->remaining_ranges;
-          child->remaining_ranges =
-            apr_array_make(pool, (child->remaining_ranges->nelts - 1),
-                           sizeof(svn_merge_range_t *));
-          for (j = 1; j < orig_remaining_ranges->nelts; j++)
+          svn_merge_range_t *first_range =
+            APR_ARRAY_IDX(child->remaining_ranges, 0, svn_merge_range_t *);
+          if (first_range->end == end_rev)
             {
-              svn_merge_range_t *range = APR_ARRAY_IDX(orig_remaining_ranges,
-                                                       j,
-                                                       svn_merge_range_t *);
-              APR_ARRAY_PUSH(child->remaining_ranges, svn_merge_range_t *)
-                                                                  = range;
+              apr_array_header_t *orig_remaining_ranges =
+                child->remaining_ranges;
+              child->remaining_ranges =
+                apr_array_make(pool, (child->remaining_ranges->nelts - 1),
+                               sizeof(svn_merge_range_t *));
+              for (j = 1; j < orig_remaining_ranges->nelts; j++)
+                {
+                  svn_merge_range_t *range =
+                    APR_ARRAY_IDX(orig_remaining_ranges,
+                                  j,
+                                  svn_merge_range_t *);
+                  APR_ARRAY_PUSH(child->remaining_ranges,
+                                 svn_merge_range_t *) = range;
+                }          
             }
         }
     }
@@ -4474,7 +4489,7 @@ do_directory_merge(const char *url1,
 
               /* Prepare for the next iteration (if any). */
               remove_first_range_from_remaining_ranges(
-                children_with_mergeinfo, pool);
+                end_rev, children_with_mergeinfo, pool);
               next_end_rev = get_youngest_end_rev(children_with_mergeinfo,
                                                   is_rollback);
               if ((next_end_rev != SVN_INVALID_REVNUM)
