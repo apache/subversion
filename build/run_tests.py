@@ -117,6 +117,8 @@ class TestHarness:
         cmdline.append('--enable-sasl')
       if self.parallel is not None:
         cmdline.append('--parallel')
+      if self.config_file is not None:
+        cmdline.append(quote('--config-file=' + self.config_file))
     elif os.access(prog, os.X_OK):
       progname = './' + progbase
       cmdline = [quote(progname),
