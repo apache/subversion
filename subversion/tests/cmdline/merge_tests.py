@@ -11421,7 +11421,9 @@ def subtree_merges_dont_intersect_with_targets(sbox):
   psi_path        = os.path.join(wc_dir, "A", "D", "H", "psi")
   psi_COPY_path   = os.path.join(wc_dir, "A_COPY", "D", "H", "psi")
   gamma_COPY_path = os.path.join(wc_dir, "A_COPY", "D", "gamma")
+  psi_COPY_path   = os.path.join(wc_dir, "A_COPY", "D", "H", "psi")
   psi_COPY_2_path = os.path.join(wc_dir, "A_COPY_2", "D", "H", "psi")
+  rho_COPY_2_path = os.path.join(wc_dir, "A_COPY_2", "D", "G", "rho")
 
   # Make a tweak to A/D/gamma and A/D/H/psi in r8.
   svntest.main.file_write(gamma_path, "New content")
@@ -11674,6 +11676,48 @@ def subtree_merges_dont_intersect_with_targets(sbox):
                                        expected_skip,
                                        None, None, None, None,
                                        None, 1)
+  os.chdir(saved_cwd)
+
+  # Test the notification portion of issue #3199.
+  #
+  # run_and_verify_merge() doesn't check the notification headers
+  # so we need to repeat the previous two merges using
+  # run_and_verify_svn(...'merge'...) and expected_merge_output().
+  #
+  ### TODO: Things are fairly ugly when it comes to testing the
+  ###       merge notification headers.  run_and_verify_merge*()
+  ###       just ignores the notifications and in the few places
+  ###       we use expected_merge_output() the order of notifications
+  ###       and paths are not considered.  In a perfect world we'd
+  ###       have run_and_verify_merge3() that addressed these
+  ###       shortcomings (and allowed merges to file targets).
+  #
+  # Revert the previous merges.
+  svntest.actions.run_and_verify_svn(None, None, [], 'revert', '-R', wc_dir)
+
+  # Repeat the forward merge
+  short_rho_copy2_path = shorten_path_kludge(rho_COPY_2_path)
+  short_psi_copy2_path = shorten_path_kludge(psi_COPY_2_path)
+  expected_output = expected_merge_output(
+    [[5],[8,9]],
+    ['U    %s\n' % (short_rho_copy2_path),
+     'U    %s\n' % (short_psi_copy2_path)])
+  os.chdir(svntest.main.work_dir)
+  svntest.actions.run_and_verify_svn(None, expected_output,
+                                     [], 'merge', '-r', '3:9',
+                                     sbox.repo_url + '/A',
+                                     short_A_copy_2_path)
+  # Repeat the reverse merge
+  short_gamma_COPY_path = shorten_path_kludge(gamma_COPY_path)
+  short_psi_COPY_path = shorten_path_kludge(psi_COPY_path)
+  expected_output = expected_merge_output(
+    [[-4],[-8]],
+    ['U    %s\n' % (short_gamma_COPY_path),
+     'U    %s\n' % (short_psi_COPY_path)])
+  svntest.actions.run_and_verify_svn(None, expected_output,
+                                     [], 'merge', '-r', '9:3',
+                                     sbox.repo_url + '/A',
+                                     short_A_copy_path)
   os.chdir(saved_cwd)
 
 ########################################################################
