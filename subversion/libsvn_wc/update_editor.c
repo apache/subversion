@@ -1692,7 +1692,7 @@ open_directory(const char *path,
     }
 
   /* Raise a tree conflict if scheduled for deletion or similar. */
-  SVN_ERR(check_tree_conflict(db->log_accum, db->path, entry,
+  SVN_ERR(check_tree_conflict(pb->log_accum, db->path, entry,
                               parent_adm_access, svn_wc_conflict_action_edit,
                               pool));
 
