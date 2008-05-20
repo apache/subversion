@@ -22,10 +22,10 @@
 #include "wc.h"
 
 /*
- * See the notes/treeconflicts/ directory for more information.
+ * See the notes/tree-conflicts/ directory for more information.
  *
  * Currently, we only concern ourselves with the signaling of tree
- * conflicts as described in notes/treeconflicts/use-cases.txt.
+ * conflicts as described in notes/tree-conflicts/use-cases.txt.
  *
  * There is no automatic resolution, the "desired behaviour" in
  * the use case descriptions is far from being implemented here.

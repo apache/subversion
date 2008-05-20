@@ -1177,7 +1177,7 @@ typedef struct svn_wc_conflict_description_t
 
   /** The path to the victim of a tree conflict.
    *
-   * See the notes at the top of subversion/libsvn_wc/treeconflicts.h
+   * See the notes at the top of subversion/libsvn_wc/tree_conflicts.h
    * for the definition of a tree conflict victim.
    *
    * @since New in 1.6.
@@ -4964,7 +4964,7 @@ svn_wc_append_human_readable_tree_conflict_description(
                                        apr_pool_t *pool);
 
 /**
- * Append to @a stringbuf an XML representation of the tree conflict data
+ * Append to @a str an XML representation of the tree conflict data
  * for @a conflict, in a format suitable for 'svn info --xml'.
  *
  * @since New in 1.6.
