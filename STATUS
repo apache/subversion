@@ -18,13 +18,6 @@ Candidate changes for 1.5.0:
    Votes:
      +1: pburba, cmpilato
 
- * r30629, r30787
-    mod_dontdothat: Allow opt-out of replay rejection.
-    Notes:
-      r30787 is a typo fix.
-    Votes:
-      +1: jerenkrantz, cmpilato
-
  * r31243, r31246, r31249, r31250, r31251, r31271
    Fix issue #3200, API Ickiness:  svn_client_ctx_t shouldn't carry
    "extra revprops"; the svn_client APIs should
@@ -61,6 +54,14 @@ Candidate changes for 1.5.0:
    Votes:
      +1: glasser, danielsh
 
+ * r31313
+   Make all ra layers return a consistent error when a path is not found in the
+   repository.
+   Notes:
+    Small change, but API consistency is always a good thing.
+   Votes:
+    +1: lgo
+
 Candidate changes for 1.5.1:
 ============================
 
@@ -83,6 +84,14 @@ Candidate changes for 1.5.1:
 
 Approved changes (all releases):
 ================================
+
+ * r30629, r30787
+    mod_dontdothat: Allow opt-out of replay rejection.
+    Notes:
+      r30787 is a typo fix.
+    Votes:
+      +1: jerenkrantz, cmpilato
+      +0: lgo
 
  * r31292
    JavaHL: add support for Windows SSL certs as was done for CLI.
