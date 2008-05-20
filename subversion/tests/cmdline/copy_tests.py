@@ -3819,6 +3819,65 @@ def replaced_local_source_for_incoming_copy(sbox):
     svntest.main.safe_rmtree(other_wc_dir)
 
 
+def unneeded_parents(sbox):
+  "svn cp --parents FILE_URL DIR_URL"
+
+  # In this message...
+  #
+  #    http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=138738
+  #    From: Alexander Kitaev <Alexander.Kitaev@svnkit.com>
+  #    To: dev@subversion.tigris.org
+  #    Subject: 1.5.x segmentation fault on Repos to Repos copy
+  #    Message-ID: <4830332A.6060301@svnkit.com>
+  #    Date: Sun, 18 May 2008 15:46:18 +0200
+  #
+  # ...Alexander Kitaev describes the bug:
+  #
+  #    svn cp --parents SRC_FILE_URL DST_DIR_URL -m "message"
+  #
+  #    SRC_FILE_URL - existing file
+  #    DST_DIR_URL - existing directory
+  # 
+  #    Omitting "--parents" option makes above copy operation work as
+  #    expected.
+  # 
+  #    Bug is in libsvn_client/copy.c:801, where "dir" should be
+  #    checked for null before using it in svn_ra_check_path call.
+  #
+  # At first we couldn't reproduce it, but later he added this:
+  #
+  #   Looks like there is one more condition to reproduce the problem -
+  #   dst URL should has no more segments count than source one.
+  #
+  # In other words, if we had "/A/B" below instead of "/A" (adjusting
+  # expected_* accordingly, of course), the bug wouldn't reproduce.
+  
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  iota_url = sbox.repo_url + '/iota'
+  A_url = sbox.repo_url + '/A'
+
+  # The --parents is unnecessary, but should still work (not segfault).
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp', '--parents',
+                                     '-m', 'log msg', iota_url, A_url)
+
+  # Verify that it worked.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/iota' : Item(status='A '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'A/iota'  : Item(contents="This is the file 'iota'.\n"),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+    'A/iota'  : Item(status='  ', wc_rev=2),
+    })
+  svntest.actions.run_and_verify_update(
+    wc_dir, expected_output, expected_disk, expected_status)
+
+
 ########################################################################
 # Run the tests
 
@@ -3895,6 +3954,7 @@ test_list = [ None,
               URI_encoded_repos_to_wc,
               allow_unversioned_parent_for_copy_src,
               replaced_local_source_for_incoming_copy,
+              XFail(unneeded_parents),
              ]
 
 if __name__ == '__main__':
