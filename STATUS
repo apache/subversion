@@ -75,16 +75,6 @@ Candidate changes for 1.5.1:
      +0: danielsh
      +1: lgo
 
- * r31317
-   Fix a test so that it doesn't break tests that are run after it.
-   Notes:
-     Unless you go out of your way to run tests in the suite out of
-     order (and we don't have a --random-order), this doesn't actually
-     hurt until we try to backport another test to this file, so not a
-     1.5.0 release blocker.
-   Votes:
-     +1: glasser
-
  * r31228
    Fix issue #2721: don't croak on invalid dates in 'log' and 'blame'.
    Justification:
@@ -109,3 +99,13 @@ Approved changes (all releases):
      This was added to the CLI in r23812 but was never added in JavaHL.
    Votes:
      +1: markphip, cmpilato
+
+ * r31317
+   Fix a test so that it doesn't break tests that are run after it.
+   Notes:
+     Unless you go out of your way to run tests in the suite out of
+     order (and we don't have a --random-order), this doesn't actually
+     hurt until we try to backport another test to this file, so not a
+     1.5.0 release blocker.
+   Votes:
+     +1: glasser, lgo
