@@ -3954,7 +3954,7 @@ test_list = [ None,
               URI_encoded_repos_to_wc,
               allow_unversioned_parent_for_copy_src,
               replaced_local_source_for_incoming_copy,
-              XFail(unneeded_parents),
+              unneeded_parents,
              ]
 
 if __name__ == '__main__':
