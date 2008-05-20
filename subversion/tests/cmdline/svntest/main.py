@@ -879,6 +879,10 @@ def server_has_partial_replay():
   _check_command_line_parsed()
   return server_minor_version >= 5
 
+def server_enforces_date_syntax():
+  _check_command_line_parsed()
+  return server_minor_version >= 5
+
 
 ######################################################################
 # Sandbox handling
