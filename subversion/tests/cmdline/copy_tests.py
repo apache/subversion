@@ -3724,7 +3724,7 @@ def allow_unversioned_parent_for_copy_src(sbox):
 # Issue #2986
 def replaced_local_source_for_incoming_copy(sbox):
   "update receives copy, but local source is replaced"
-  sbox.build(read_only = True)
+  sbox.build()
   wc_dir = sbox.wc_dir
   other_wc_dir = wc_dir + '-other'
 
