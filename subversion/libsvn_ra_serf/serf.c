@@ -257,8 +257,7 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
                   svn_error_clear(err);
                   cap_result = capability_no;
                 }
-              else if (err->apr_err == SVN_ERR_FS_NOT_FOUND
-                       || err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND)
+              else if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
                 {
                   /* Mergeinfo requests use relative paths, and
                      anyway we're in r0, so this is a likely error,
@@ -844,7 +843,7 @@ svn_ra_serf__check_path(svn_ra_session_t *ra_session,
                                       session, rel_path,
                                       revision, check_path_props, pool);
 
-  if (err && err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND)
+  if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
     {
       svn_error_clear(err);
       *kind = svn_node_none;
@@ -988,7 +987,7 @@ svn_ra_serf__stat(svn_ra_session_t *ra_session,
                          session, rel_path, revision, all_props, pool);
   if (err)
     {
-      if (err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND)
+      if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
         {
           svn_error_clear(err);
           *dirent = NULL;
