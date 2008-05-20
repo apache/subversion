@@ -63,7 +63,7 @@ Candidate changes for 1.5.0:
    Notes:
      Makes the backwards-compatibility test suite pass again.
    Votes:
-     +1: glasser
+     +1: glasser, danielsh
 
 Candidate changes for 1.5.1:
 ============================
