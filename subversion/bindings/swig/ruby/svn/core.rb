@@ -84,6 +84,9 @@ module Svn
     Pool = Svn::Ext::Core::Apr_pool_wrapper_t
 
     class Pool
+      RECOMMENDED_MAX_FREE_SIZE = ALLOCATOR_RECOMMENDED_MAX_FREE
+      MAX_FREE_UNLIMITED = ALLOCATOR_MAX_FREE_UNLIMITED
+
       class << self
         def number_of_pools
           ObjectSpace.each_object(Pool) {}

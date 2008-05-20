@@ -224,13 +224,7 @@ svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
       SVN_ERR(parser_ctx->error);
     }
 
-
-  if (gls_ctx->status_code == 404)
-    {
-      return svn_error_create(SVN_ERR_RA_DAV_PATH_NOT_FOUND, NULL,
-                              apr_psprintf(pool, _("'%s' path not found"),
-                                           req_url));
-    }
+  SVN_ERR(svn_ra_serf__error_on_status(gls_ctx->status_code, handler->path));
 
   svn_pool_destroy(gls_ctx->subpool);
 

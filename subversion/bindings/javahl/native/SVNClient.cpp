@@ -43,6 +43,9 @@
 #include "CommitMessage.h"
 #include "EnumMapper.h"
 #include "StringArray.h"
+#include "RevpropTable.h"
+#include "svn_auth.h"
+#include "svn_dso.h"
 #include "svn_types.h"
 #include "svn_client.h"
 #include "svn_sorts.h"
@@ -289,7 +292,7 @@ void SVNClient::setProgressListener(ProgressListener *listener)
 }
 
 void SVNClient::remove(Targets &targets, const char *message, bool force,
-                       bool keep_local)
+                       bool keep_local, RevpropTable &revprops)
 {
     svn_commit_info_t *commit_info = NULL;
     Pool requestPool;
@@ -301,7 +304,8 @@ void SVNClient::remove(Targets &targets, const char *message, bool force,
     SVN_JNI_ERR(targets.error_occured(), );
 
     SVN_JNI_ERR(svn_client_delete3(&commit_info, targets2, force, keep_local,
-                                   ctx, requestPool.pool()), );
+                                   revprops.hash(requestPool), ctx,
+                                   requestPool.pool()), );
 }
 
 void SVNClient::revert(const char *path, svn_depth_t depth,
@@ -384,7 +388,7 @@ jlongArray SVNClient::update(Targets &targets, Revision &revision,
 
 jlong SVNClient::commit(Targets &targets, const char *message,
                         svn_depth_t depth, bool noUnlock, bool keepChangelist,
-                        StringArray &changelists)
+                        StringArray &changelists, RevpropTable &revprops)
 {
     Pool requestPool;
     svn_commit_info_t *commit_info = NULL;
@@ -397,7 +401,8 @@ jlong SVNClient::commit(Targets &targets, const char *message,
     SVN_JNI_ERR(svn_client_commit4(&commit_info, targets2, depth,
                                    noUnlock, keepChangelist,
                                    changelists.array(requestPool),
-                                   ctx, requestPool.pool()),
+                                   revprops.hash(requestPool), ctx,
+                                   requestPool.pool()),
                 SVN_INVALID_REVNUM);
 
     if (commit_info && SVN_IS_VALID_REVNUM(commit_info->revision))
@@ -407,7 +412,8 @@ jlong SVNClient::commit(Targets &targets, const char *message,
 }
 
 void SVNClient::copy(CopySources &copySources, const char *destPath,
-                     const char *message, bool copyAsChild, bool makeParents)
+                     const char *message, bool copyAsChild, bool makeParents,
+                     RevpropTable &revprops)
 {
     Pool requestPool;
 
@@ -428,13 +434,14 @@ void SVNClient::copy(CopySources &copySources, const char *destPath,
 
     svn_commit_info_t *commit_info;
     SVN_JNI_ERR(svn_client_copy4(&commit_info, srcs, destinationPath.c_str(),
-                                 copyAsChild, makeParents, ctx,
+                                 copyAsChild, makeParents,
+                                 revprops.hash(requestPool), ctx,
                                  requestPool.pool()), );
 }
 
 void SVNClient::move(Targets &srcPaths, const char *destPath,
                      const char *message, bool force, bool moveAsChild,
-                     bool makeParents)
+                     bool makeParents, RevpropTable &revprops)
 {
     Pool requestPool;
 
@@ -451,10 +458,12 @@ void SVNClient::move(Targets &srcPaths, const char *destPath,
     svn_commit_info_t *commit_info;
     SVN_JNI_ERR(svn_client_move5(&commit_info, (apr_array_header_t *) srcs,
                                  destinationPath.c_str(), force, moveAsChild,
-                                 makeParents, ctx, requestPool.pool()), );
+                                 makeParents, revprops.hash(requestPool), ctx,
+                                 requestPool.pool()), );
 }
 
-void SVNClient::mkdir(Targets &targets, const char *message, bool makeParents)
+void SVNClient::mkdir(Targets &targets, const char *message, bool makeParents,
+                      RevpropTable &revprops)
 {
     Pool requestPool;
     svn_commit_info_t *commit_info = NULL;
@@ -465,7 +474,8 @@ void SVNClient::mkdir(Targets &targets, const char *message, bool makeParents)
     const apr_array_header_t *targets2 = targets.array(requestPool);
     SVN_JNI_ERR(targets.error_occured(), );
 
-    SVN_JNI_ERR(svn_client_mkdir3(&commit_info, targets2, makeParents, ctx,
+    SVN_JNI_ERR(svn_client_mkdir3(&commit_info, targets2, makeParents,
+                                  revprops.hash(requestPool), ctx,
                                   requestPool.pool()), );
 }
 
@@ -565,7 +575,8 @@ jlong SVNClient::doSwitch(const char *path, const char *url,
 
 void SVNClient::doImport(const char *path, const char *url,
                          const char *message, svn_depth_t depth,
-                         bool noIgnore, bool ignoreUnknownNodeTypes)
+                         bool noIgnore, bool ignoreUnknownNodeTypes,
+                         RevpropTable &revprops)
 {
     Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path, "path", );
@@ -582,7 +593,8 @@ void SVNClient::doImport(const char *path, const char *url,
 
     SVN_JNI_ERR(svn_client_import3(&commit_info, intPath.c_str(),
                                    intUrl.c_str(), depth, noIgnore,
-                                   ignoreUnknownNodeTypes, ctx,
+                                   ignoreUnknownNodeTypes,
+                                   revprops.hash(requestPool), ctx,
                                    requestPool.pool()), );
 }
 
@@ -926,7 +938,8 @@ void SVNClient::properties(const char *path, Revision &revision,
 
 void SVNClient::propertySet(const char *path, const char *name,
                             const char *value, svn_depth_t depth,
-                            StringArray &changelists, bool force)
+                            StringArray &changelists, bool force,
+                            RevpropTable &revprops)
 {
     Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path, "path", );
@@ -949,6 +962,7 @@ void SVNClient::propertySet(const char *path, const char *name,
     SVN_JNI_ERR(svn_client_propset3(&commit_info, name, val, intPath.c_str(),
                                     depth, force, SVN_INVALID_REVNUM,
                                     changelists.array(requestPool),
+                                    revprops.hash(requestPool),
                                     ctx, requestPool.pool()), );
 }
 
@@ -1138,6 +1152,40 @@ SVNClient::diffSummarize(const char *target, Revision &pegRevision,
                                                requestPool.pool()), );
 }
 
+#if defined(SVN_HAVE_KWALLET) || defined(SVN_HAVE_GNOME_KEYRING)
+/* Dynamically load authentication simple provider. */
+static svn_boolean_t
+get_auth_simple_provider(svn_auth_provider_object_t **provider,
+                         const char *provider_name,
+                         apr_pool_t *pool)
+{
+  apr_dso_handle_t *dso;
+  apr_dso_handle_sym_t provider_symbol;
+  const char *libname;
+  const char *funcname;
+  svn_boolean_t ret = FALSE;
+  libname = apr_psprintf(pool,
+                         "libsvn_auth_%s-%d.so.0",
+                         provider_name,
+                         SVN_VER_MAJOR);
+  funcname = apr_psprintf(pool,
+                          "svn_auth_get_%s_simple_provider",
+                          provider_name);
+  svn_error_clear(svn_dso_load(&dso, libname));
+  if (dso)
+    {
+      if (! apr_dso_sym(&provider_symbol, dso, funcname))
+        {
+          svn_auth_simple_provider_func_t func;
+          func = (svn_auth_simple_provider_func_t) provider_symbol;
+          func(provider, pool);
+          ret = TRUE;
+        }
+    }
+  return ret;
+}
+#endif
+
 svn_client_ctx_t *SVNClient::getContext(const char *message)
 {
     apr_pool_t *pool = JNIUtil::getRequestPool()->pool();
@@ -1151,21 +1199,35 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
     /* The main disk-caching auth providers, for both
      * 'username/password' creds and 'username' creds.  */
     svn_auth_provider_object_t *provider;
-#ifdef WIN32
-    svn_client_get_windows_simple_provider(&provider, pool);
+#if defined(WIN32) && !defined(__MINGW32__)
+    svn_auth_get_windows_simple_provider(&provider, pool);
     APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 #endif
-    svn_client_get_simple_provider(&provider, pool);
+#ifdef SVN_HAVE_KEYCHAIN_SERVICES
+    svn_auth_get_keychain_simple_provider(&provider, pool);
     APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-    svn_client_get_username_provider(&provider, pool);
+#endif
+#ifdef SVN_HAVE_KWALLET
+    if (get_auth_simple_provider(&provider, "kwallet", pool))
+      {
+        APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+      }
+#endif
+    svn_auth_get_simple_provider(&provider, pool);
+    APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+    svn_auth_get_username_provider(&provider, pool);
     APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
     /* The server-cert, client-cert, and client-cert-password providers. */
-    svn_client_get_ssl_server_trust_file_provider(&provider, pool);
+#if defined(WIN32) && !defined(__MINGW32__)
+    svn_auth_get_windows_ssl_server_trust_provider(&provider, pool);
     APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-    svn_client_get_ssl_client_cert_file_provider(&provider, pool);
+#endif
+    svn_auth_get_ssl_server_trust_file_provider(&provider, pool);
     APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-    svn_client_get_ssl_client_cert_pw_file_provider(&provider, pool);
+    svn_auth_get_ssl_client_cert_file_provider(&provider, pool);
+    APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+    svn_auth_get_ssl_client_cert_pw_file_provider(&provider, pool);
     APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
     if (m_prompter != NULL)
