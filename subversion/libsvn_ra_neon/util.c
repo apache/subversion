@@ -542,7 +542,7 @@ generate_error(svn_ra_neon__request_t *req, apr_pool_t *pool)
       switch (req->code)
         {
         case 404:
-          return svn_error_create(SVN_ERR_RA_DAV_PATH_NOT_FOUND, NULL,
+          return svn_error_create(SVN_ERR_FS_NOT_FOUND, NULL,
                                   apr_psprintf(pool, _("'%s' path not found"),
                                                req->url));
 
