@@ -1322,12 +1322,17 @@ typedef struct
 } notification_receiver_baton_t;
 
 
-/* Finds a nearest ancestor in CHILDREN_WITH_MERGEINFO for PATH.
+/* Finds a nearest ancestor in CHILDREN_WITH_MERGEINFO for PATH. If
+   PATH_IS_OWN_ANCESTOR is TRUE then a child in CHILDREN_WITH_MERGEINFO
+   where child->path == PATH is considered PATH's ancestor.  If FALSE,
+   then child->path must be a proper ancestor of PATH.
+
    CHILDREN_WITH_MERGEINFO is expected to be sorted in Depth first
    order of path. Nearest ancestor's index from
    CHILDREN_WITH_MERGEINFO is returned. */
 static int
 find_nearest_ancestor(apr_array_header_t *children_with_mergeinfo,
+                      svn_boolean_t path_is_own_ancestor,
                       const char *path)
 {
   int i;
@@ -1344,8 +1349,9 @@ find_nearest_ancestor(apr_array_header_t *children_with_mergeinfo,
       svn_client__merge_path_t *child =
         APR_ARRAY_IDX(children_with_mergeinfo, i, svn_client__merge_path_t *);
       if (svn_path_is_ancestor(child->path, path)
-          && svn_path_compare_paths(child->path, path) != 0)
-        ancestor_index = i;
+          && (svn_path_compare_paths(child->path, path) != 0
+              || path_is_own_ancestor))
+        ancestor_index = i;      
     }
   return ancestor_index;
 }
@@ -1383,9 +1389,27 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
       /* See if this is an operative directory merge. */
       if (!(notify_b->is_single_file_merge) && is_operative_notification)
         {
+          /* Find NOTIFY->PATH's nearest ancestor in
+             NOTIFY->CHILDREN_WITH_MERGEINFO.  Normally we consider a child in
+             NOTIFY->CHILDREN_WITH_MERGEINFO representing PATH to be an
+             ancestor of PATH, but if this is a deletion of PATH then the
+             notification must be for a proper ancestor of PATH.  This ensures
+             we don't get notifications like:
+             
+               --- Merging rX into 'PARENT/CHILD'
+               D    PARENT/CHILD
+
+             But rather:
+
+               --- Merging rX into 'PARENT'
+               D    PARENT/CHILD
+          */
           int new_nearest_ancestor_index =
-            find_nearest_ancestor(notify_b->children_with_mergeinfo,
-                                  notify->path);
+            find_nearest_ancestor(
+              notify_b->children_with_mergeinfo,
+              notify->action == svn_wc_notify_update_delete ? FALSE : TRUE,
+              notify->path);
+
           if (new_nearest_ancestor_index != notify_b->cur_ancestor_index)
             {
               svn_client__merge_path_t *child =
