@@ -18,42 +18,6 @@ Candidate changes for 1.5.0:
    Votes:
      +1: pburba, cmpilato
 
- * r31243, r31246, r31249, r31250, r31251, r31271
-   Fix issue #3200, API Ickiness:  svn_client_ctx_t shouldn't carry
-   "extra revprops"; the svn_client APIs should
-   Notes:
-     If we *don't* backport this in 1.5.0, we need to undo the changes
-     or otherwise rework them to use newly-revved svn_client APIs.
-     This is not quite finished -- need feedback from Ruby, Perl, and
-     JavaHL bindings maintainers.
-   Votes:
-     +1: cmpilato, hwright, epg (but worried about Ruby)
-
- * r31273
-   Let JavaHL return arbitrary revprops through the logMessages() method.
-   Notes:
-     Although not directly part of issue #3200, it is complimentary to it.
-     The r31274 group depends on this change to test (and to merge cleanly).
-   Votes:
-     +1: hwright (pending merge of issue #3200 fixes)
-     +0: cmpilato
-
- * r31274, r31275, r31276
-   Extend issue #3200 API fixes to the JavaHL bindings.
-   Notes:
-     This depends on r31273 and the issue #3200 group.
-     As it touches 1.5 APIs, This should be merged, or fixed up on trunk.
-   Votes:
-     +1: hwright (pending merge of issue #3200 fixes)
-     +0: cmpilato
-
- * r31303
-   Skip a recently backported test when doing backwards-compatibility testing.
-   Notes:
-     Makes the backwards-compatibility test suite pass again.
-   Votes:
-     +1: glasser, danielsh
-
  * r31313
    Make all ra layers return a consistent error when a path is not found in the
    repository.
@@ -97,3 +61,40 @@ Candidate changes for 1.5.1:
 
 Approved changes (all releases):
 ================================
+
+ * r31303
+   Skip a recently backported test when doing backwards-compatibility testing.
+   Notes:
+     Makes the backwards-compatibility test suite pass again.
+   Votes:
+     +1: glasser, danielsh, cmpilato
+
+ * r31243, r31246, r31249, r31250, r31251, r31271
+   Fix issue #3200, API Ickiness:  svn_client_ctx_t shouldn't carry
+   "extra revprops"; the svn_client APIs should
+   Notes:
+     If we *don't* backport this in 1.5.0, we need to undo the changes
+     or otherwise rework them to use newly-revved svn_client APIs.
+     This is not quite finished -- need feedback from Ruby, Perl, and
+     JavaHL bindings maintainers.
+   Votes:
+     +1: cmpilato, hwright, epg (but worried about Ruby)
+
+ * r31273
+   Let JavaHL return arbitrary revprops through the logMessages() method.
+   Notes:
+     Although not directly part of issue #3200, it is complimentary to it.
+     The r31274 group depends on this change to test (and to merge cleanly).
+   Votes:
+     +1: hwright (pending merge of issue #3200 fixes)
+     +0: cmpilato
+
+ * r31274, r31275, r31276
+   Extend issue #3200 API fixes to the JavaHL bindings.
+   Notes:
+     This depends on r31273 and the issue #3200 group.
+     As it touches 1.5 APIs, This should be merged, or fixed up on trunk.
+   Votes:
+     +1: hwright (pending merge of issue #3200 fixes)
+     +0: cmpilato
+
