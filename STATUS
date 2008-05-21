@@ -85,14 +85,6 @@ Candidate changes for 1.5.1:
 Approved changes (all releases):
 ================================
 
- * r30629, r30787
-    mod_dontdothat: Allow opt-out of replay rejection.
-    Notes:
-      r30787 is a typo fix.
-    Votes:
-      +1: jerenkrantz, cmpilato
-      +0: lgo
-
  * r31292
    JavaHL: add support for Windows SSL certs as was done for CLI.
    Notes:
