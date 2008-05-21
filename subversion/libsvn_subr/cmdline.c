@@ -436,6 +436,12 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
       APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
     }
 #endif
+#ifdef SVN_HAVE_GNOME_KEYRING
+  if (get_auth_simple_provider(&provider, "gnome_keyring", pool))
+  {
+    APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+  }
+#endif
   if (non_interactive == FALSE)
     {
       /* This provider is odd in that it isn't a prompting provider in
