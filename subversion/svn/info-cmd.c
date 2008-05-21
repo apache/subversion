@@ -446,7 +446,8 @@ svn_cl__info(apr_getopt_t *os,
   apr_array_header_t *targets = NULL;
   apr_pool_t *subpool = svn_pool_create(pool);
   int i;
-  svn_error_t *err;
+  svn_error_t *err = NULL;
+  svn_error_t *prev_err = NULL; /* save last error, if multiple targets */
   svn_opt_revision_t peg_revision;
   svn_info_receiver_t receiver;
 
@@ -485,6 +486,16 @@ svn_cl__info(apr_getopt_t *os,
       const char *truepath;
       const char *target = APR_ARRAY_IDX(targets, i, const char *);
 
+      /* We loop over multiple targets, so save previous error (if any).
+         Do this at loop top because some failures 'continue'. */
+      if (err)
+        {
+          if (prev_err)
+            svn_error_clear(prev_err);
+          prev_err = err;
+          err = NULL;  /* not strictly necessary, but good form */
+        }
+
       svn_pool_clear(subpool);
       SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
 
@@ -501,34 +512,40 @@ svn_cl__info(apr_getopt_t *os,
                              receiver, NULL, opt_state->depth,
                              opt_state->changelists, ctx, subpool);
 
-      /* If one of the targets is a non-existent URL or wc-entry,
-         don't bail out.  Just warn and move on to the next target. */
-      if (err && err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE)
+      if (err)
         {
-          svn_error_clear(err);
-          SVN_ERR(svn_cmdline_fprintf
-                  (stderr, subpool,
-                   _("%s:  (Not a versioned resource)\n\n"),
-                   svn_path_local_style(target, pool)));
-          continue;
+          /* If one of the targets is a non-existent URL or wc-entry,
+             don't bail out.  Just warn and move on to the next target. */
+          if (err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE
+              || err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
+            {
+              SVN_ERR(svn_cmdline_fprintf
+                      (stderr, subpool,
+                       _("%s:  (Not a versioned resource)\n\n"),
+                       svn_path_local_style(target, pool)));
+              continue;
+            }
+          else if (err->apr_err == SVN_ERR_RA_ILLEGAL_URL)
+            {
+              SVN_ERR(svn_cmdline_fprintf
+                      (stderr, subpool,
+                       _("%s:  (Not a valid URL)\n\n"),
+                       svn_path_local_style(target, pool)));
+              continue;
+            }
+          else
+            {
+              return err;
+            }
         }
-      else if (err && err->apr_err == SVN_ERR_RA_ILLEGAL_URL)
-        {
-          svn_error_clear(err);
-          SVN_ERR(svn_cmdline_fprintf
-                  (stderr, subpool,
-                   _("%s:  (Not a valid URL)\n\n"),
-                   svn_path_local_style(target, pool)));
-          continue;
-        }
-      else if (err)
-        return err;
-
     }
   svn_pool_destroy(subpool);
 
   if (opt_state->xml && (! opt_state->incremental))
     SVN_ERR(svn_cl__xml_print_footer("info", pool));
 
-  return SVN_NO_ERROR;
+  if (err)
+    return err;
+  else
+    return prev_err;
 }
