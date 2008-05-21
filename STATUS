@@ -69,15 +69,6 @@ Approved changes (all releases):
    Votes:
      +1: glasser, danielsh, cmpilato
 
- * r31274, r31275, r31276
-   Extend issue #3200 API fixes to the JavaHL bindings.
-   Notes:
-     This depends on r31273 and the issue #3200 group.
-     As it touches 1.5 APIs, This should be merged, or fixed up on trunk.
-   Votes:
-     +1: hwright (pending merge of issue #3200 fixes)
-     +0: cmpilato
-
  * r31313
    Make all ra layers return a consistent error when a path is not found in the
    repository.
