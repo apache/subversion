@@ -1537,8 +1537,8 @@ def set_up_tree_conflicts_for_merge(sbox):
   D = j(wc_dir, 'A', 'D')
   G = j(wc_dir, 'A', 'D', 'G')
 
-  main.file_write(j(D, 'sigma'), "This is the file 'sigma'\n")
-  main.file_write(j(D, 'theta'), "This is the file 'theta'\n")
+  main.file_write(j(D, 'sigma'), "This is the file 'sigma'.\n")
+  main.file_write(j(D, 'theta'), "This is the file 'theta'.\n")
   main.run_svn(None, 'add', j(D, 'sigma'), j(D, 'theta'))
   main.run_svn(None, 'ci', '-m', 'Create extra test files.', wc_dir)
   
@@ -1603,9 +1603,9 @@ def make_tc_test_trees(base):
   alpha = j(F, 'alpha')
   beta  = j(DF, 'D1', 'beta')
   gamma = j(DDF, 'D1', 'D2', 'gamma')
-  main.file_append(alpha, "This is the file alpha.\n")
-  main.file_append(beta, "This is the file beta.\n")
-  main.file_append(gamma, "This is the file gamma\n")
+  main.file_append(alpha, "This is the file 'alpha'.\n")
+  main.file_append(beta, "This is the file 'beta'.\n")
+  main.file_append(gamma, "This is the file 'gamma'.\n")
 
   main.run_svn(None, 'add', base)
 

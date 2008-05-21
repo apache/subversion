@@ -524,6 +524,7 @@ def add_with_history(sbox):
 
 #----------------------------------------------------------------------
 
+# This test involves tree conflicts.
 def delete_file_and_dir(sbox):
   "merge that deletes items"
 
@@ -597,7 +598,9 @@ def delete_file_and_dir(sbox):
   # target of the merge 'B2' gets mergeinfo for r3 and B2's two skipped
   # children, 'E' and 'lambda', get override mergeinfo reflecting their
   # mergeinfo prior to the merge (in this case empty mergeinfo).
-  expected_output = wc.State(B2_path, { })
+  expected_output = wc.State(B2_path, {
+    ''        : Item(status='C ')
+    })
   expected_disk = wc.State('', {
     ''        : Item(props={SVN_PROP_MERGEINFO : '/A/B:3'}),
     'E'       : Item(props={SVN_PROP_MERGEINFO : '',
@@ -610,7 +613,7 @@ def delete_file_and_dir(sbox):
                             'foo' : 'foo_val'}),
     })
   expected_status2 = wc.State(B2_path, {
-    ''        : Item(status=' M'),
+    ''        : Item(status='CM'),
     'E'       : Item(status=' M'),
     'E/alpha' : Item(status='  '),
     'E/beta'  : Item(status='  '),
@@ -867,6 +870,7 @@ def simple_property_merges(sbox):
 #----------------------------------------------------------------------
 # This is a regression for issue #1176.
 
+# This test involves tree conflicts.
 def merge_catches_nonexistent_target(sbox):
   "merge should not die if a target file is absent"
 
@@ -953,6 +957,7 @@ def merge_catches_nonexistent_target(sbox):
 
 #----------------------------------------------------------------------
 
+# This test involves tree conflicts.
 def merge_tree_deleted_in_target(sbox):
   "merge on deleted directory in target"
 
@@ -988,6 +993,7 @@ def merge_tree_deleted_in_target(sbox):
                                      'up', os.path.join(wc_dir,'A'))
 
   expected_output = wc.State(I_path, {
+    ''        : Item(status='C '),
     'lambda'  : Item(status='U '),
     })
   expected_disk = wc.State('', {
@@ -996,7 +1002,7 @@ def merge_tree_deleted_in_target(sbox):
     'lambda'  : Item("This is the file 'lambda'.\nchange lambda.\n"),
     })
   expected_status = wc.State(I_path, {
-    ''        : Item(status=' M'),
+    ''        : Item(status='CM'),
     'F'       : Item(status='  '),
     'lambda'  : Item(status='M '),
     })
@@ -1016,6 +1022,7 @@ def merge_tree_deleted_in_target(sbox):
 #----------------------------------------------------------------------
 # Issue #2515
 
+# This test involves tree conflicts.
 def merge_added_dir_to_deleted_in_target(sbox):
   "merge an added dir on a deleted dir in target"
 
@@ -1046,7 +1053,9 @@ def merge_added_dir_to_deleted_in_target(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                       'up', os.path.join(wc_dir,'A'))
 
-  expected_output = wc.State(I_path, {})
+  expected_output = wc.State(I_path, {
+    ''        : Item(status='C '),
+    })
   expected_disk = wc.State('', {
     'E'       : Item(),
     'E/alpha' : Item("This is the file 'alpha'.\n"),
@@ -1575,6 +1584,7 @@ def merge_binary_file (sbox):
 # Regression test for issue #2403: Incorrect 3-way merge of "added"
 # binary file which already exists (unmodified) in the WC
 
+# This test involves tree conflicts.
 def three_way_merge_add_of_existing_binary_file(sbox):
   "3-way merge of 'file add' into existing binary"
 
@@ -1619,6 +1629,7 @@ def three_way_merge_add_of_existing_binary_file(sbox):
   # And after the merge, the status should not report any differences.
 
   expected_output = wc.State(short_wc, {
+    "A"       : Item(status="C "),
     "A/theta" : Item(status="A "),
     })
 
@@ -1634,7 +1645,7 @@ def three_way_merge_add_of_existing_binary_file(sbox):
   expected_status.add({
     "A/theta" : Item(status="  ", wc_rev=3),
     })
-  expected_status.tweak("A", status=" M")
+  expected_status.tweak("A", status="CM")
   expected_status.remove("")  # top-level of the WC
   expected_status.remove("iota")
   expected_skip = wc.State("", { })
@@ -1733,6 +1744,7 @@ def merge_in_new_file_and_diff(sbox):
 
 # Issue #1425:  'svn merge' should skip over any unversioned obstructions.
 
+# This test involves tree conflicts. - but attempting to test for pre-tree-conflict behaviour
 def merge_skips_obstructions(sbox):
   "merge should skip over unversioned obstructions"
 
@@ -1781,6 +1793,7 @@ def merge_skips_obstructions(sbox):
   short_C_path = shorten_path_kludge(C_path)
 
   expected_output = wc.State(short_C_path, {
+    ''       : Item(status='C '),
     'Q'      : Item(status='A '),
     'Q/bar'  : Item(status='A '),
     })
@@ -1791,7 +1804,7 @@ def merge_skips_obstructions(sbox):
     'foo'    : Item("foo"),
     })
   expected_status = wc.State(short_C_path, {
-    ''       : Item(status=' M', wc_rev=1),
+    ''       : Item(status='CM', wc_rev=1),
     'Q'      : Item(status='A ', wc_rev='-', copied='+'),
     'Q/bar'  : Item(status='A ', wc_rev='-', copied='+'),
     })
@@ -1828,7 +1841,8 @@ def merge_skips_obstructions(sbox):
   # Search for the comment entitled "The Merge Kluge" elsewhere in
   # this file, to understand why we use short_C_path and chdir() below.
   expected_output = wc.State(short_C_path, {
-    'foo'  : Item(status='A '),
+    ''       : Item(status='C '),
+    'foo'    : Item(status='A '),
     })
   expected_disk = wc.State('', {
     ''       : Item(props={SVN_PROP_MERGEINFO : '/A/B/F:2'}),
@@ -1836,7 +1850,7 @@ def merge_skips_obstructions(sbox):
     'foo'    : Item("foo"),
     })
   expected_status = wc.State(short_C_path, {
-    ''     : Item(status=' M', wc_rev=1),
+    ''     : Item(status='CM', wc_rev=1),
     'foo'  : Item(status='A ', wc_rev='-', copied='+'),
     })
   expected_skip = wc.State(short_C_path, {
@@ -1888,22 +1902,23 @@ def merge_skips_obstructions(sbox):
   svntest.main.file_append(iota_path, "foo") # unversioned
   os.mkdir(G_path) # unversioned
 
-  expected_output = wc.State(short_wc_dir, { })
+  expected_output = wc.State(short_wc_dir, {
+    'iota'   : Item(status='D '),
+    ''       : Item(status='C '),
+    })
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.remove('A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau')
+  expected_disk.remove('A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau', 'iota')
   expected_disk.add({
     ''             : Item(props={SVN_PROP_MERGEINFO : '/:3'}),
     'A/B/F/Q'      : Item(),
     'A/B/F/Q/bar'  : Item("bar"),
     'A/B/F/foo'    : Item("foo"),
-    'iota'         : Item("foo"),
     'A/C/Q'        : Item("foo"),
     })
   # No-op merge still sets mergeinfo
-  expected_status.tweak('', status=' M')
+  expected_status.tweak('', status='CM')
   expected_skip = wc.State(short_wc_dir, {
     'A/D/G'  : Item(),
-    'iota'   : Item(),
     })
 
   saved_cwd = os.getcwd()
@@ -1922,7 +1937,6 @@ def merge_skips_obstructions(sbox):
 
   # Revert the local mods, and commit a change to A/B/lambda (r4), and then
   # commit the deletion of the same file. (r5)
-  os.unlink(iota_path)
   svntest.main.safe_rmtree(G_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'revert', '-R', wc_dir)
   expected_status.tweak('', status='  ')
@@ -1958,11 +1972,13 @@ def merge_skips_obstructions(sbox):
 
   # Search for the comment entitled "The Merge Kluge" elsewhere in
   # this file, to understand why we use short_wc_dir and chdir() below.
-  expected_output = wc.State(short_wc_dir, { })
+  expected_output = wc.State(short_wc_dir, {
+    'A/B'         : Item(status='C ')
+    })
   expected_disk.add({
     'A/B/lambda'      : Item("foo"),
     })
-  expected_disk.remove('A/D/G', 'iota')
+  expected_disk.remove('A/D/G')
   expected_disk.tweak('', props={SVN_PROP_MERGEINFO : '/:4'})
   expected_skip = wc.State(short_wc_dir, {
     'A/B/lambda'  : Item(),
@@ -1970,6 +1986,7 @@ def merge_skips_obstructions(sbox):
   # No-op merge still sets mergeinfo.
   expected_status_short = expected_status.copy(short_wc_dir)
   expected_status_short.tweak('', status=' M')
+  expected_status_short.tweak('A/B', status='C ')
 
   saved_cwd = os.getcwd()
 
@@ -2035,6 +2052,7 @@ def merge_skips_obstructions(sbox):
 # items would attempt to add the items and fail, leaving the working
 # copy locked and broken.
 
+# This test involves tree conflicts.
 def merge_into_missing(sbox):
   "merge into missing must not break working copy"
 
@@ -2092,11 +2110,12 @@ def merge_into_missing(sbox):
   svntest.main.safe_rmtree(Q_path)
 
   expected_output = wc.State(F_path, {
+    ''      : Item(status='C ')
     })
   expected_disk = wc.State('', {
     })
   expected_status = wc.State(F_path, {
-    ''      : Item(status='  ', wc_rev=1),
+    ''      : Item(status='C ', wc_rev=1),
     'foo'   : Item(status='! ', wc_rev=2),
     'Q'     : Item(status='! ', wc_rev='?'),
     })
@@ -2115,8 +2134,9 @@ def merge_into_missing(sbox):
                                        None, None, None, None, None,
                                        0, 0, '--dry-run')
 
+  expected_status.tweak('', status='C ')
   expected_status.tweak('foo', status='!M')
-  expected_status.tweak('', status=' M')
+  expected_status.tweak('', status='CM')
   svntest.actions.run_and_verify_merge(F_path, '1', '2', F_url,
                                        expected_output,
                                        expected_disk,
@@ -3772,6 +3792,7 @@ def merge_ignore_eolstyle(sbox):
 
 #----------------------------------------------------------------------
 # Issue 2584
+# This test involves tree conflicts.
 def merge_add_over_versioned_file_conflicts(sbox):
   "conflict from merge of add over versioned file"
 
@@ -3807,15 +3828,16 @@ def merge_add_over_versioned_file_conflicts(sbox):
   # Merge changes from r1:2 into our pre-existing "alpha" file,
   # causing a conflict.
   expected_output = wc.State(short_E_path, {
-    'alpha'   : Item(status='C '),
+    ''        : Item(status='C '),
+    'alpha'   : Item(status='A '),
     })
   expected_disk = wc.State('', {
     'alpha'    : Item(""),  # state filled in below
     'beta'    : Item("This is the file 'beta'.\n"),
     })
   expected_status = wc.State(short_E_path, {
-    ''       : Item(status=' M', wc_rev=1),
-    'alpha'  : Item(status='C ', wc_rev=1),
+    ''       : Item(status='CM', wc_rev=1),
+    'alpha'  : Item(status='  ', wc_rev=1),
     'beta'   : Item(status='  ', wc_rev=1),
     })
 
@@ -6572,6 +6594,7 @@ def foreign_repos_does_not_update_mergeinfo(sbox):
   expected_status.tweak('A_COPY/D/G/rho', 'A_COPY/B/E/beta', status='M ')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+# This test involves tree conflicts.
 def avoid_reflected_revs(sbox):
   "avoid repeated merges for cyclic merging"
 
@@ -6746,11 +6769,12 @@ def avoid_reflected_revs(sbox):
   # Merge 2:8 from A_COPY(feature branch) to A(trunk).
   short_A_path = shorten_path_kludge(A_path)
   expected_output = wc.State(short_A_path, {
+    ''       : Item(status='C '),
     'bfile2' : Item(status='A '),
     'bfile1' : Item(status='A '),
     })
   expected_status = wc.State(short_A_path, {
-    ''          : Item(status=' M', wc_rev=6),
+    ''          : Item(status='CM', wc_rev=6),
     'bfile2'    : Item(status='A ', wc_rev='-', copied='+'),
     'bfile1'    : Item(status='A ', wc_rev='-', copied='+'),
     'tfile2'    : Item(status='  ', wc_rev=6),
@@ -8270,6 +8294,7 @@ def merge_with_auto_rev_range_detection(sbox):
                                        1, 1)
   os.chdir(saved_cwd)
 
+# This test involves tree conflicts.
 def mergeinfo_recording_in_skipped_merge(sbox):
   "mergeinfo recording in skipped merge"
 
@@ -8314,11 +8339,12 @@ def mergeinfo_recording_in_skipped_merge(sbox):
   # Merge /A to /A_COPY ie., r1 to r4
   expected_output = wc.State(short_A_COPY, {
     'mu' : Item(status='U '),
+    'B'        : Item(status='C ', wc_rev=2),
     })
   expected_status = wc.State(short_A_COPY, {
     ''         : Item(status=' M', wc_rev=2),
     'mu'       : Item(status='M ', wc_rev=2),
-    'B'        : Item(status='  ', wc_rev=2),
+    'B'        : Item(status='C ', wc_rev=2),
     'B/lambda' : Item(status='  ', wc_rev=2),
     'B/F'      : Item(status='  ', wc_rev=2),
     'B/E'      : Item(status='D ', wc_rev=2),
@@ -11422,14 +11448,36 @@ def merge_broken_link(sbox):
 def verify_lines(lines, regexes):
   """Return True if each of the given regular expressions matches
      exactly one line in the list of lines."""
-  num_patterns_found = 0
   for regex in regexes:
+    num_patterns_found = 0
     for line in lines:
       if re.search(regex, line):
         num_patterns_found += 1
-  #print "found %i patterns, expected %i" % (num_patterns_found, len(regexes))
-  return num_patterns_found == len(regexes)
+    if num_patterns_found != 1:
+      print("UNEXPECTED OUTPUT: " + str(num_patterns_found) +
+        " occurrences of '" + regex + "'")
+      if svntest.main.verbose_mode:
+        print " Actual output:"
+        map(lambda x: sys.stdout.write("  " + x), lines)
+        print " Expected regexes:"
+        map(lambda x: sys.stdout.write("  " + x + "\n"), regexes)
+      return False
+  return True
 
+def verify_tree_conflict_info(path, actions_and_victims):
+  """Raise an exception if the output of "svn info PATH"
+     does not report tree conflicts for exactly the victims
+     listed in ACTIONS_AND_VICTIMS, each element of which is
+     (action, victim) where ACTION is "add" or "edit" or "delete"
+     and VICTIM is a regex that matches the victim path."""
+  exit_code, output, error = svntest.main.run_svn(None, 'info', path)
+  if not verify_lines(output,
+                      map(lambda (action, victim):
+                          "attempted to " + action + ".*" + victim,
+                          actions_and_victims)):
+    raise svntest.Failure("Wrong tree-conflict result")
+
+# This test involves tree conflicts.
 def tree_conflicts_in_merged_files(sbox):
   "tree conflicts in merged files"
 
@@ -11470,7 +11518,9 @@ def tree_conflicts_in_merged_files(sbox):
     'B/F'       : Item(),
     'C'         : Item(),
     'D'         : Item(),
+    'D/sigma'   : Item("This is the file 'sigma'.\nEdited in wc 2.\n"),
     'D/G'       : Item(),
+    'D/G/rho'   : Item("This is the file 'rho'.\nEdited in wc 2.\n"),
     'D/H'       : Item(),
     'D/H/chi'   : Item("This is the file 'chi'.\n"),
     'D/H/psi'   : Item("This is the file 'psi'.\n"),
@@ -11516,24 +11566,19 @@ def tree_conflicts_in_merged_files(sbox):
                                        expected_skip)
 
   # Make sure all victims have been found.
-  exit_code, output, error = svntest.main.run_svn(None, 'info', D2)
-  if not verify_lines(output,
-               ["Tree conflicts:",
-                "The merge attempted to edit the file 'gamma'",   # use case 4
-                "The merge attempted to delete the file 'sigma'", # use case 5
-                "The merge attempted to delete the file 'theta'", # use case 6
-                ]):
-                 raise SVNTreeUnequal
-  exit_code, output, error = svntest.main.run_svn(None, 'info', G2)
-  if not verify_lines(output,
-               ["Tree conflicts:",
-                "The merge attempted to edit the file 'pi'",    # use case 4
-                "The merge attempted to delete the file 'rho'", # use case 5
-                "The merge attempted to delete the file 'tau'", # use case 6
-                ]):
-                 raise SVNTreeUnequal
+  verify_tree_conflict_info(D2,
+                            [('edit',   'gamma'),  # use case 4
+                             ('delete', 'sigma'),  # use case 5
+                             ('delete', 'theta'),  # use case 6
+                             ])
+  verify_tree_conflict_info(G2,
+                            [('edit',   'pi'),   # use case 4
+                             ('delete', 'rho'),  # use case 5
+                             ('delete', 'tau'),  # use case 6
+                             ])
 
 
+# This test involves tree conflicts.
 def tree_conflicts_and_obstructions(sbox):
   "tree conflicts and obstructions"
 
@@ -11598,13 +11643,9 @@ def tree_conflicts_and_obstructions(sbox):
 
   os.chdir(saved_cwd)
 
-  # Indentify the tree conflict.
-  exit_code, output, error = svntest.main.run_svn(None, 'info', branch_path)
-  if not verify_lines(output,
-               ["Tree conflicts:",
-                "The merge attempted to delete the file 'alpha-moved'",
-                ]):
-                 raise SVNTreeUnequal
+  # Make sure all victims have been found.
+  verify_tree_conflict_info(branch_path,
+                            [('add', 'alpha-moved')])
 
 
 ########################################################################
@@ -11644,10 +11685,10 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(merge_in_new_file_and_diff,
                          server_has_mergeinfo),
-              SkipUnless(merge_skips_obstructions,
-                         server_has_mergeinfo),
-              SkipUnless(merge_into_missing,
-                         server_has_mergeinfo),
+              XFail(SkipUnless(merge_skips_obstructions,
+                               server_has_mergeinfo)),
+              XFail(SkipUnless(merge_into_missing,
+                               server_has_mergeinfo)),
               SkipUnless(dry_run_adds_file_with_prop,
                          server_has_mergeinfo),
               merge_binary_with_common_ancestry,
@@ -11674,8 +11715,8 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(merge_ignore_eolstyle,
                          server_has_mergeinfo),
-              SkipUnless(merge_add_over_versioned_file_conflicts,
-                         server_has_mergeinfo),
+              XFail(SkipUnless(merge_add_over_versioned_file_conflicts,
+                               server_has_mergeinfo)),
               SkipUnless(merge_conflict_markers_matching_eol,
                          server_has_mergeinfo),
               SkipUnless(merge_eolstyle_handling,
@@ -11728,8 +11769,8 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(merge_with_auto_rev_range_detection,
                          server_has_mergeinfo),
-              SkipUnless(mergeinfo_recording_in_skipped_merge,
-                         server_has_mergeinfo),
+              XFail(SkipUnless(mergeinfo_recording_in_skipped_merge,
+                               server_has_mergeinfo)),
               SkipUnless(cherry_picking,
                          server_has_mergeinfo),
               SkipUnless(propchange_of_subdir_raises_conflict,
@@ -11775,7 +11816,7 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(merge_broken_link, svntest.main.is_posix_os),
               tree_conflicts_in_merged_files,
-              XFail(tree_conflicts_and_obstructions),
+              tree_conflicts_and_obstructions,
              ]
 
 if __name__ == '__main__':
