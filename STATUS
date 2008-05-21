@@ -7,6 +7,16 @@ delay a release, etc.
 Candidate changes for 1.5.0:
 ============================
 
+ * r30748
+   Don't try to drive the merge editor when there is nothing to be merged.
+   Justification:
+     I didn't originally nominate this for backport as I couldn't
+     demonstrate any problem with it on trunk.  But the new merge test in
+     the r31059 group ("don't explicitly record implicit mergeinfo") does fail
+     without it and thus neatly demonstrates why this change is needed.
+   Votes:
+     +1: pburba
+
  * r31059, 31060, 31061, 31075, 31151
    Fix issue #3157, Merging a change from a path's natural history
    creates self-referential mergeinfo
@@ -15,6 +25,7 @@ Candidate changes for 1.5.0:
      are a new test for it (and a few minor follow-ups to that test).
      The addition of the new merge test in r31059 trivally conflicts
      because several other new merge tests are not backported yet.
+     The new test fails if r30748 isn't backported first.
    Votes:
      +1: pburba, cmpilato
 
