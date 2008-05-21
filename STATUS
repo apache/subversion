@@ -62,13 +62,6 @@ Candidate changes for 1.5.1:
 Approved changes (all releases):
 ================================
 
- * r31303
-   Skip a recently backported test when doing backwards-compatibility testing.
-   Notes:
-     Makes the backwards-compatibility test suite pass again.
-   Votes:
-     +1: glasser, danielsh, cmpilato
-
  * r31313
    Make all ra layers return a consistent error when a path is not found in the
    repository.

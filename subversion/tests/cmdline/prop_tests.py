@@ -1658,7 +1658,8 @@ test_list = [ None,
               remove_custom_ns_props,
               props_over_time,
               # XFail the same reason revprop_change() is.
-              XFail(invalid_propvalues, svntest.main.is_ra_type_dav),
+              SkipUnless(XFail(invalid_propvalues, svntest.main.is_ra_type_dav),
+                    svntest.main.server_enforces_date_syntax),
              ]
 
 if __name__ == '__main__':
