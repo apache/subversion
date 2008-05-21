@@ -24,7 +24,7 @@ Candidate changes for 1.5.0:
    Notes:
     Small change, but API consistency is always a good thing.
    Votes:
-    +1: lgo
+    +1: lgo, epg
 
  * r31300, r31301, r31312
    Fix issue #3199, subtree merges broken when required ranges don't
@@ -45,7 +45,7 @@ Candidate changes for 1.5.0:
      Because this is a relaxation of existing rules, this could
      probably be deferred to 1.5.1.  But it's a simple change.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, epg
 
 Candidate changes for 1.5.1:
 ============================
