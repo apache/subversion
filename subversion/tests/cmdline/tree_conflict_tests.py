@@ -28,6 +28,8 @@ Skip = svntest.testcase.Skip
 SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
+run_and_verify_svn = svntest.actions.run_and_verify_svn
+AnyOutput = svntest.verify.AnyOutput
 
 # If verbose mode is enabled, print the LINE and a newline.
 def verbose_print(line):
@@ -79,13 +81,37 @@ def verbose_printlines(lines):
 
 #----------------------------------------------------------------------
 
-def modify(modaction, wc_dir, P):
-  F1 = os.path.join(wc_dir, "F1")  # "existing" file
-  F  = os.path.join(P,      "F")   # "target" file
-  F2 = os.path.join(P,      "F2")  # "non-existing" file
-  D1 = os.path.join(wc_dir, "D1")  # "existing" dir
-  D  = os.path.join(P,      "D")   # "target" dir
-  D2 = os.path.join(P,      "D2")  # "non-existing" dir
+# Two sets of paths. The paths to be used for the destination of a copy
+# or move must differ between the incoming change and the local mods,
+# otherwise scenarios involving a move onto a move would conflict on the
+# destination node as well as on the source, and we only want to be testing
+# one thing at a time in most tests.
+def incoming_paths(wc_dir, P):
+  return {
+    'F1' : os.path.join(wc_dir, "F1"),
+    'F'  : os.path.join(P,      "F"),
+    'F2' : os.path.join(P,      "F2-in"),
+    'D1' : os.path.join(wc_dir, "D1"),
+    'D'  : os.path.join(P,      "D"),
+    'D2' : os.path.join(P,      "D2-in"),
+  }
+def localmod_paths(wc_dir, P):
+  return {
+    'F1' : os.path.join(wc_dir, "F1"),
+    'F'  : os.path.join(P,      "F"),
+    'F2' : os.path.join(P,      "F2-local"),
+    'D1' : os.path.join(wc_dir, "D1"),
+    'D'  : os.path.join(P,      "D"),
+    'D2' : os.path.join(P,      "D2-local"),
+  }
+
+def modify(modaction, paths):
+  F1 = paths['F1']  # existing file to copy from
+  F  = paths['F']   # target file
+  F2 = paths['F2']  # non-existing file to copy/move to
+  D1 = paths['D1']  # existing dir to copy from
+  D  = paths['D']   # target dir
+  D2 = paths['D2']  # non-existing dir to copy/move to
 
   # print "  Mod: '" + modaction + "' '" + P + "'"
 
@@ -259,18 +285,18 @@ def set_up(wc_dir, scenarios):
     # create each file or dir unless to-be-added
     if path[1:6] != '/add/':
       if path[0:1] == 'f':
-        modify('fa', wc_dir, P)
-        modify('fA', wc_dir, P)
+        modify('fa', incoming_paths(wc_dir, P))
+        modify('fA', incoming_paths(wc_dir, P))
       if path[0:1] == 'd':
-        modify('da', wc_dir, P)
-        modify('dA', wc_dir, P)
+        modify('da', incoming_paths(wc_dir, P))
+        modify('dA', incoming_paths(wc_dir, P))
   main.run_svn(None, 'commit', '-m', 'Initial set-up.', wc_dir)
 
   # modify all files and dirs in their various ways
   for path, action_mods, obstr_mods in scenarios:
     P = os.path.join(wc_dir, path)  # parent
     for modaction in action_mods:
-      modify(modaction, wc_dir, P)
+      modify(modaction, incoming_paths(wc_dir, P))
 
   # commit all the modifications
   main.run_svn(None, 'commit', '-m', 'Action.', wc_dir)
@@ -319,15 +345,15 @@ def ensure_tree_conflict(sbox, operation, incoming_scenarios, localmod_scenarios
       ### TODO: make target branch modifications
       # verbose_print("--- Making target branch mods")
       # for modaction in br_action:
-      #   modify(modaction, wc_dir, P)
+      #   modify(modaction, localmod_paths(wc_dir, P))
       # main.run_svn(None, 'commit', wc_dir)
 
       # make local modifications
       verbose_print("--- Making local mods")
       for modaction in loc_action:
-        modify(modaction, wc_dir, P)
+        modify(modaction, localmod_paths(wc_dir, P))
 
-      verbose_print("---  Trying to commit (expecting 'out-of-date' error)")
+      #verbose_print("---  Trying to commit (expecting 'out-of-date' error)")
       #svntest.actions.run_and_verify_commit(wc_dir,
       #                                      None,
       #                                      None,
@@ -336,14 +362,17 @@ def ensure_tree_conflict(sbox, operation, incoming_scenarios, localmod_scenarios
 
       # perform the operation that tries to apply the changes to the WC
       try:
+        # The command is expected to do something (and give some output),
+        # and it should raise a conflict but not an error.
         if operation == 'update':
           verbose_print("--- Updating")
-          exitcode, stdout, stderr = main.run_svn(None, 'update', P)
+          run_and_verify_svn(None, AnyOutput, [],
+                             'update', P)
         elif operation == 'merge':
           verbose_print("--- Merging")
-          exitcode, stdout, stderr = main.run_svn(None, 'merge',
-                                                  '--ignore-ancestry',
-                                                  '-r2:3', P_url, P)
+          run_and_verify_svn(None, AnyOutput, [],
+                             'merge', '--ignore-ancestry',
+                             '-r2:3', P_url, P)
         else:
           raise "unknown operation: '" + operation + "'"
       except svntest.Failure, msg:
@@ -351,10 +380,8 @@ def ensure_tree_conflict(sbox, operation, incoming_scenarios, localmod_scenarios
         print("EXCEPTION for '" + in_path + "' onto " + str(loc_action) + ": " + str(msg))
         failures += 1
         continue
-      else:
-        verbose_printlines(stdout)
 
-      verbose_print("---  Trying to commit (expecting 'conflict' error)")
+      #verbose_print("---  Trying to commit (expecting 'conflict' error)")
       #svntest.actions.run_and_verify_commit(wc_dir,
       #                                      None,
       #                                      None,
@@ -364,7 +391,6 @@ def ensure_tree_conflict(sbox, operation, incoming_scenarios, localmod_scenarios
       # ensure F has a conflict and nothing else is changed
       verbose_print("--- Status")
       exitcode, stdout, stderr = main.run_svn(None, 'status', P)
-      verbose_printlines(stdout)
       try:
         ensure_status_c_on_parent(stdout, in_path)
       except svntest.Failure, msg:
