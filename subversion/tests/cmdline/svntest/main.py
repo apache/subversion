@@ -434,6 +434,8 @@ def run_command_stdin(command, error_expected, binary_mode=0,
     map(sys.stdout.write, stderr_lines)
 
   if (not error_expected) and (stderr_lines):
+    if not verbose_mode:
+      map(sys.stdout.write, stderr_lines)
     raise Failure
 
   return exit_code, stdout_lines, stderr_lines
