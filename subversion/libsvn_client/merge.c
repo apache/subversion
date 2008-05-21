@@ -1499,8 +1499,26 @@ merge_dir_opened(svn_wc_adm_access_t *adm_access,
                  svn_revnum_t rev,
                  void *baton)
 {
-  /* merge_cmd_baton_t *merge_b = baton; */
-      
+  merge_cmd_baton_t *merge_b = baton;
+  apr_pool_t *subpool = svn_pool_create(merge_b->pool);
+  svn_node_kind_t kind;
+  const svn_wc_entry_t *entry;
+
+  /* Find the version-control and on-disk states of this path */
+  SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, subpool));
+  SVN_ERR(svn_io_check_path(path, &kind, subpool));
+
+  /* If we're trying to open a directory that's not a directory,
+   * raise a tree conflict. */
+  if (!entry || entry->schedule == svn_wc_schedule_delete
+      || kind != svn_node_dir)
+    {
+      SVN_ERR(tree_conflict(merge_b, adm_access, path,
+                            svn_node_dir,
+                            svn_wc_conflict_action_edit,
+                            svn_wc_conflict_reason_deleted));
+    }
+
   return SVN_NO_ERROR;
 }
 

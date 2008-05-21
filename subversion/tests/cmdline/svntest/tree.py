@@ -205,7 +205,7 @@ class SVNTreeNode:
     if self.children is not None:
       print >> stream, "    Children:  ", len(self.children)
     else:
-      print >> stream, "    Children:   N/A (node is a file)"
+      print >> stream, "    Children:  None (node is probably a file)"
 
   def __str__(self):
     import StringIO
