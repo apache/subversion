@@ -1519,6 +1519,7 @@ merge_dir_opened(svn_wc_adm_access_t *adm_access,
                             svn_wc_conflict_reason_deleted));
     }
 
+  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
