@@ -1162,6 +1162,8 @@ main(int argc, const char *argv[])
           char *end;
           svn_revnum_t changeno;
           svn_opt_revision_range_t *range;
+          apr_array_header_t *change_revs = 
+            svn_cstring_split(opt_arg, ", \n\r\t\v", TRUE, pool);
 
           if (opt_state.old_target)
             {
@@ -1171,21 +1173,23 @@ main(int argc, const char *argv[])
               return svn_cmdline_handle_exit_error(err, pool, "svn: ");
             }
 
-          do
+          for (i = 0; i < change_revs->nelts; i++)
             {
+              const char *change_str = 
+                APR_ARRAY_IDX(change_revs, i, const char *);
+
               /* Allow any number of 'r's to prefix a revision number.
                  ### TODO: Any reason we're not just using opt.c's
                  ### revision-parsing code here?  Then -c could take
                  ### "{DATE}" and the special words. */ 
-              while (*opt_arg == 'r')
-                opt_arg++;
-              
-              changeno = strtol(opt_arg, &end, 10);
-              if (end == opt_arg || !(*end == '\0' || *end == ',') )
+              while (*change_str == 'r')
+                change_str++;
+              changeno = strtol(change_str, &end, 10);
+              if (end == change_str || *end != '\0')
                 {
-                  err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                         _("Non-numeric change argument "
-                                           "given to -c"));
+                  err = svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                          _("Non-numeric change argument (%s) "
+                                            "given to -c"), change_str);
                   return svn_cmdline_handle_exit_error(err, pool, "svn: ");
                 }
 
@@ -1195,7 +1199,6 @@ main(int argc, const char *argv[])
                                          _("There is no change 0"));
                   return svn_cmdline_handle_exit_error(err, pool, "svn: ");
                 }
-              opt_arg = end + 1;
 
               /* Figure out the range:
                     -c N  -> -r N-1:N
@@ -1217,7 +1220,7 @@ main(int argc, const char *argv[])
               range->end.kind = svn_opt_revision_number;
               APR_ARRAY_PUSH(opt_state.revision_ranges,
                              svn_opt_revision_range_t *) = range;
-            } while (*end != '\0');
+            }
         }
         break;
       case 'r':
