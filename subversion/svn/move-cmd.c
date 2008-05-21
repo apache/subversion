@@ -82,10 +82,9 @@ svn_cl__move(apr_getopt_t *os,
     SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton3), opt_state,
                                        NULL, ctx->config, pool));
 
-  ctx->revprop_table = opt_state->revprop_table;
-
   err = svn_client_move5(&commit_info, targets, dst_path, opt_state->force,
-                         TRUE, opt_state->parents, ctx, pool);
+                         TRUE, opt_state->parents, opt_state->revprop_table,
+                         ctx, pool);
 
   if (err)
     err = svn_cl__may_need_force(err);

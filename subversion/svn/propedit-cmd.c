@@ -246,12 +246,10 @@ svn_cl__propedit(apr_getopt_t *os,
                                                    opt_state, NULL, ctx->config,
                                                    subpool));
 
-              ctx->revprop_table = opt_state->revprop_table;
-
               err = svn_client_propset3(&commit_info,
                                         pname_utf8, edited_propval, target,
                                         svn_depth_empty, opt_state->force,
-                                        base_rev, NULL,
+                                        base_rev, NULL, opt_state->revprop_table,
                                         ctx, subpool);
               if (ctx->log_msg_func3)
                 SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton2, err));

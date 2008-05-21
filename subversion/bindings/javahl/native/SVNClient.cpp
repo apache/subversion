@@ -301,7 +301,7 @@ void SVNClient::remove(Targets &targets, const char *message, bool force,
     SVN_JNI_ERR(targets.error_occured(), );
 
     SVN_JNI_ERR(svn_client_delete3(&commit_info, targets2, force, keep_local,
-                                   ctx, requestPool.pool()), );
+                                   NULL, ctx, requestPool.pool()), );
 }
 
 void SVNClient::revert(const char *path, svn_depth_t depth,
@@ -397,7 +397,7 @@ jlong SVNClient::commit(Targets &targets, const char *message,
     SVN_JNI_ERR(svn_client_commit4(&commit_info, targets2, depth,
                                    noUnlock, keepChangelist,
                                    changelists.array(requestPool),
-                                   ctx, requestPool.pool()),
+                                   NULL, ctx, requestPool.pool()),
                 SVN_INVALID_REVNUM);
 
     if (commit_info && SVN_IS_VALID_REVNUM(commit_info->revision))
@@ -428,7 +428,7 @@ void SVNClient::copy(CopySources &copySources, const char *destPath,
 
     svn_commit_info_t *commit_info;
     SVN_JNI_ERR(svn_client_copy4(&commit_info, srcs, destinationPath.c_str(),
-                                 copyAsChild, makeParents, ctx,
+                                 copyAsChild, makeParents, NULL, ctx,
                                  requestPool.pool()), );
 }
 
@@ -451,7 +451,7 @@ void SVNClient::move(Targets &srcPaths, const char *destPath,
     svn_commit_info_t *commit_info;
     SVN_JNI_ERR(svn_client_move5(&commit_info, (apr_array_header_t *) srcs,
                                  destinationPath.c_str(), force, moveAsChild,
-                                 makeParents, ctx, requestPool.pool()), );
+                                 makeParents, NULL, ctx, requestPool.pool()), );
 }
 
 void SVNClient::mkdir(Targets &targets, const char *message, bool makeParents)
@@ -465,8 +465,8 @@ void SVNClient::mkdir(Targets &targets, const char *message, bool makeParents)
     const apr_array_header_t *targets2 = targets.array(requestPool);
     SVN_JNI_ERR(targets.error_occured(), );
 
-    SVN_JNI_ERR(svn_client_mkdir3(&commit_info, targets2, makeParents, ctx,
-                                  requestPool.pool()), );
+    SVN_JNI_ERR(svn_client_mkdir3(&commit_info, targets2, makeParents, NULL,
+                                  ctx, requestPool.pool()), );
 }
 
 void SVNClient::cleanup(const char *path)
@@ -582,7 +582,7 @@ void SVNClient::doImport(const char *path, const char *url,
 
     SVN_JNI_ERR(svn_client_import3(&commit_info, intPath.c_str(),
                                    intUrl.c_str(), depth, noIgnore,
-                                   ignoreUnknownNodeTypes, ctx,
+                                   ignoreUnknownNodeTypes, NULL, ctx,
                                    requestPool.pool()), );
 }
 
@@ -948,7 +948,7 @@ void SVNClient::propertySet(const char *path, const char *name,
 
     SVN_JNI_ERR(svn_client_propset3(&commit_info, name, val, intPath.c_str(),
                                     depth, force, SVN_INVALID_REVNUM,
-                                    changelists.array(requestPool),
+                                    changelists.array(requestPool), NULL,
                                     ctx, requestPool.pool()), );
 }
 

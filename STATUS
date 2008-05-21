@@ -69,17 +69,6 @@ Approved changes (all releases):
    Votes:
      +1: glasser, danielsh, cmpilato
 
- * r31243, r31246, r31249, r31250, r31251, r31271
-   Fix issue #3200, API Ickiness:  svn_client_ctx_t shouldn't carry
-   "extra revprops"; the svn_client APIs should
-   Notes:
-     If we *don't* backport this in 1.5.0, we need to undo the changes
-     or otherwise rework them to use newly-revved svn_client APIs.
-     This is not quite finished -- need feedback from Ruby, Perl, and
-     JavaHL bindings maintainers.
-   Votes:
-     +1: cmpilato, hwright, epg (but worried about Ruby)
-
  * r31273
    Let JavaHL return arbitrary revprops through the logMessages() method.
    Notes:

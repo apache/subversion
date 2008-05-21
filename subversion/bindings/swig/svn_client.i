@@ -42,13 +42,17 @@
     const char *native_eol,
     const char *comment,
     const char *relative_to_dir,
+    apr_hash_t *revprop_table,
     apr_array_header_t *changelists
+};
+
+%apply apr_hash_t *PROPHASH {
+    apr_hash_t *revprop_table
 };
 
 #ifdef SWIGRUBY
 %apply apr_hash_t *HASH_CSTRING_MAYBENULL {
-  apr_hash_t *mimetypes_map,
-  apr_hash_t *revprop_table
+  apr_hash_t *mimetypes_map
 }
 #endif
 
@@ -337,30 +341,9 @@
 %ignore svn_client_copy_source_t::revision;
 %ignore svn_client_copy_source_t::peg_revision;
 
-%ignore svn_client_commit4;
 #endif
 
 %include svn_client_h.swg
-
-#ifdef SWIGRUBY
-%header %{
-#define _svn_client_commit4 svn_client_commit4
-%}
-%rename(svn_client_commit4) _svn_client_commit4;
-%apply const char *MAY_BE_NULL {
-  const char *removed_changelist,
-  const char *changelist_name_may_be_null
-}
-svn_error_t *
-_svn_client_commit4(svn_commit_info_t **commit_info_p,
-                    const apr_array_header_t *targets,
-                    svn_depth_t depth,
-                    svn_boolean_t keep_locks,
-                    svn_boolean_t keep_changelist,
-                    const char *changelist_name_may_be_null,
-                    svn_client_ctx_t *ctx,
-                    apr_pool_t *pool);
-#endif
 
 /* Ugliness because the constant is typedefed and SWIG ignores it
    as a result. */

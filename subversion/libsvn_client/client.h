@@ -1048,16 +1048,18 @@ svn_client__get_log_msg(const char **log_msg,
                         svn_client_ctx_t *ctx,
                         apr_pool_t *pool);
 
-/* Return the revision properties stored in CTX (if any), adding LOG_MSG
-   as SVN_PROP_REVISION_LOG in *REVPROP_TABLE, allocated in POOL.
-   *REVPROP_TABLE will map const char * property names to svn_string_t values.
-   If CTX->REVPROP_TABLE is non-NULL, check that it doesn't contain
-   any of the standard Subversion properties.  In that case, return
-   SVN_ERR_CLIENT_PROPERTY_NAME. */
-svn_error_t *svn_client__get_revprop_table(apr_hash_t **revprop_table,
-                                           const char *log_msg,
-                                           svn_client_ctx_t *ctx,
-                                           apr_pool_t *pool);
+/* Return the revision properties stored in REVPROP_TABLE_IN, adding
+   LOG_MSG as SVN_PROP_REVISION_LOG in *REVPROP_TABLE_OUT, allocated in
+   POOL.  *REVPROP_TABLE_OUT will map const char * property names to
+   svn_string_t values.  If REVPROP_TABLE_IN is non-NULL, check that
+   it doesn't contain any of the standard Subversion properties.  In
+   that case, return SVN_ERR_CLIENT_PROPERTY_NAME. */
+svn_error_t *
+svn_client__ensure_revprop_table(apr_hash_t **revprop_table_out,
+                                 const apr_hash_t *revprop_table_in,
+                                 const char *log_msg,
+                                 svn_client_ctx_t *ctx,
+                                 apr_pool_t *pool);
 
 
 #ifdef __cplusplus
