@@ -2195,8 +2195,7 @@ public class BasicTests extends SVNTests
             List revList = new ArrayList();
 
             public void singleMessage(ChangePath[] changedPaths, long revision,
-                    String author, long timeMicros, String message,
-                    boolean hasChildren) {
+                    Map revprops, boolean hasChildren) {
                 revList.add(new Long(revision));
             }
             
