@@ -18,14 +18,6 @@ Candidate changes for 1.5.0:
    Votes:
      +1: pburba, cmpilato
 
- * r31313
-   Make all ra layers return a consistent error when a path is not found in the
-   repository.
-   Notes:
-    Small change, but API consistency is always a good thing.
-   Votes:
-    +1: lgo, epg
-
  * r31300, r31301, r31312
    Fix issue #3199, subtree merges broken when required ranges don't
    intersect with merge target.
@@ -105,4 +97,12 @@ Approved changes (all releases):
    Votes:
      +1: hwright (pending merge of issue #3200 fixes)
      +0: cmpilato
+
+ * r31313
+   Make all ra layers return a consistent error when a path is not found in the
+   repository.
+   Notes:
+    Small change, but API consistency is always a good thing.
+   Votes:
+    +1: lgo, epg, cmpilato
 
