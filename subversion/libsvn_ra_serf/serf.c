@@ -1007,6 +1007,35 @@ svn_ra_serf__stat(svn_ra_session_t *ra_session,
   return SVN_NO_ERROR;
 }
 
+/* Reads the 'resourcetype' property from the list PROPS and checks if the
+ * resource at PATH@REVISION really is a directory. Returns 
+ * SVN_ERR_FS_NOT_DIRECTORY if not.
+ */
+static svn_error_t *
+resource_is_directory(apr_hash_t *props,
+                      const char *path,
+                      svn_revnum_t revision)
+{
+  const char *res_type;
+
+  res_type = svn_ra_serf__get_ver_prop(props, path, revision,
+                                       "DAV:", "resourcetype");
+  if (!res_type)
+    {
+      /* How did this happen? */
+      return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+                              _("The PROPFIND response did not include the "
+                                "requested resourcetype value"));
+    }
+  else if (strcmp(res_type, "collection") != 0)
+    {
+    return svn_error_create(SVN_ERR_FS_NOT_DIRECTORY, NULL,
+                            _("Can't get entries of non-directory"));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
                      apr_hash_t **dirents,
@@ -1071,18 +1100,14 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
   /* If we're asked for children, fetch them now. */
   if (dirents)
     {
-      svn_ra_serf__propfind_context_t *prop_ctx;
       struct path_dirent_visitor_t dirent_walk;
 
-      prop_ctx = NULL;
-      svn_ra_serf__deliver_props(&prop_ctx, props, session, session->conns[0],
-                                 path, revision, "1", all_props, TRUE,
-                                 NULL, session->pool);
+      SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
+                                          path, revision, "0", all_props,
+                                          session->pool));
 
-      if (prop_ctx)
-        {
-          SVN_ERR(svn_ra_serf__wait_for_props(prop_ctx, session, pool));
-        }
+      /* Check if the path is really a directory. */
+      SVN_ERR(resource_is_directory (props, path, revision));
 
       /* We're going to create two hashes to help the walker along.
        * We're going to return the 2nd one back to the caller as it
@@ -1107,6 +1132,9 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
       SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
                                           path, revision, "0", all_props,
                                           pool));
+      /* Check if the path is really a directory. */
+      SVN_ERR(resource_is_directory (props, path, revision));
+
       svn_ra_serf__walk_all_props(props, path, revision,
                                   svn_ra_serf__set_flat_props,
                                   *ret_props, pool);
