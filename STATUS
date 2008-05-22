@@ -50,6 +50,12 @@ Candidate changes for 1.5.0:
    Votes:
      +1: cmpilato, epg
 
+ * r31348
+   Support revprop_table in Svn::Client::Context#mkdir family.
+   (follow-up r31249)
+   Votes:
+     +1: kou
+
 Candidate changes for 1.5.1:
 ============================
 
