@@ -1749,13 +1749,7 @@ def depth_folding_clean_trees_2(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/gamma'      : Item(status='D '),
     'A/D/G'          : Item(status='D '),
-    'A/D/G/pi'       : Item(status='D '),
-    'A/D/G/rho'      : Item(status='D '),
-    'A/D/G/tau'      : Item(status='D '),
     'A/D/H'          : Item(status='D '),
-    'A/D/H/chi'      : Item(status='D '),
-    'A/D/H/psi'      : Item(status='D '),
-    'A/D/H/omega'    : Item(status='D ')
     })
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
@@ -1791,10 +1785,6 @@ def depth_folding_clean_trees_2(sbox):
   # too since the parent directory is at files/empty
   expected_output = svntest.wc.State(wc_dir, {
     'A'              : Item(status='D '),
-    'A/mu'           : Item(status='D '),
-    'A/D'            : Item(status='D '),
-    'A/C'            : Item(status='D '),
-    'A/B'            : Item(status='D ')
     })
   expected_status = svntest.wc.State(wc_dir, {
     ''               : Item(status='  ', wc_rev=1),
@@ -1844,13 +1834,7 @@ def depth_fold_expand_clean_trees(sbox):
     'A/C'            : Item(status='A '),
     'A/D/gamma'      : Item(status='D '),
     'A/D/G'          : Item(status='D '),
-    'A/D/G/pi'       : Item(status='D '),
-    'A/D/G/rho'      : Item(status='D '),
-    'A/D/G/tau'      : Item(status='D '),
     'A/D/H'          : Item(status='D '),
-    'A/D/H/chi'      : Item(status='D '),
-    'A/D/H/psi'      : Item(status='D '),
-    'A/D/H/omega'    : Item(status='D ')
     })
   expected_status = svntest.wc.State(wc_dir, {
     ''               : Item(status='  ', wc_rev=1),
@@ -1884,15 +1868,6 @@ def depth_fold_expand_clean_trees(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'A/mu'           : Item(status='A '),
     'A/D'            : Item(status='D '),
-    'A/D/gamma'      : Item(status='D '),
-    'A/D/G'          : Item(status='D '),
-    'A/D/G/pi'       : Item(status='D '),
-    'A/D/G/rho'      : Item(status='D '),
-    'A/D/G/tau'      : Item(status='D '),
-    'A/D/H'          : Item(status='D '),
-    'A/D/H/chi'      : Item(status='D '),
-    'A/D/H/psi'      : Item(status='D '),
-    'A/D/H/omega'    : Item(status='D ')
     })
   expected_status = svntest.wc.State(wc_dir, {
     ''               : Item(status='  ', wc_rev=1),
@@ -1974,17 +1949,12 @@ def fold_tree_with_unversioned_modified_items(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'A/B/lambda'     : Item(status='D '),
     'A/B/E'          : Item(status='D '),
-    'A/B/E/alpha'    : Item(status='D '),
-    'A/B/E/beta'     : Item(status='D '),
     'A/B/F'          : Item(status='D '),
     'A/C'            : Item(status='D '),
     'A/D/gamma'      : Item(status='D '),
     'A/D/G/rho'      : Item(status='D '),
     'A/D/G/tau'      : Item(status='D '),
     'A/D/H'          : Item(status='D '),
-    'A/D/H/chi'      : Item(status='D '),
-    'A/D/H/psi'      : Item(status='D '),
-    'A/D/H/omega'    : Item(status='D ')
     })
   # unversioned items will be ignored in in the status tree, since the
   # run_and_verify_update() function uses a quiet version of svn status
