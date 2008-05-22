@@ -22,13 +22,14 @@ import sys, re, os
 # Our testing module
 import svntest
 from svntest import main,wc
+from svntest.actions import run_and_verify_svn
+from svntest.actions import run_and_verify_commit
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
 SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
-run_and_verify_svn = svntest.actions.run_and_verify_svn
 AnyOutput = svntest.verify.AnyOutput
 
 # If verbose mode is enabled, print the LINE and a newline.
@@ -105,6 +106,8 @@ def localmod_paths(wc_dir, P):
     'D2' : os.path.join(P,      "D2-local"),
   }
 
+# Perform the action MODACTION on the WC items given by PATHS. The
+# available actions can be seen within this function.
 def modify(modaction, paths):
   F1 = paths['F1']  # existing file to copy from
   F  = paths['F']   # target file
@@ -186,10 +189,17 @@ def modify(modaction, paths):
 
 # Format of a change scenario:
 # (
-#   path in which to make the change (name describes nature of change),
-#   list of commands needed to make the change,
-#   list of lists of additional commands that can make the WC obstructed
+#   list of actions to create the file/directory to be changed later,
+#   list of actions to make the change
 # )
+
+# Action lists to initialise the repository with a file or directory absent
+# or present, to provide the starting point from which we perform the changes
+# that are to be tested.
+absent_f = []
+absent_d = []
+create_f = ['fa','fA']
+create_d = ['da','dA']
 
 # Scenarios that start with no existing versioned item
 #
@@ -198,15 +208,15 @@ def modify(modaction, paths):
 # dir-add(D)  = add-new(D)(deep?) or copy(D1,D)(and modify?)
 
 f_adds = [
-  ( 'f/add/new',    ['fa','fA'],        [['fd']] ),
-  ( 'f/add/copy',   ['fC'],             [['fd']] ),
-  ( 'f/add/cp_ft',  ['fC','ft'],        [] ),
-  #( 'f/add/cp_fP',  ['fC','fP'],        [['df']] ),  # don't test all combinations, just because it's slow
+  ( absent_f, ['fa','fA'] ),
+  ( absent_f, ['fC'] ),
+  ( absent_f, ['fC','ft'] ),
+  #( absent_f, ['fC','fP'] ),  # don't test all combinations, just because it's slow
 ]
 d_adds = [
-  ( 'd/add/new',    ['da','dA'],        [] ),
-  ( 'd/add/copy',   ['dC'],             [] ),
-  #( 'd/add/cp_dP',  ['dC','dP'],        [] ),  # not yet
+  ( absent_d, ['da','dA'] ),
+  ( absent_d, ['dC'] ),
+  #( absent_d, ['dC','dP'] ),  # not yet
 ]
 
 # Scenarios that start with an existing versioned item
@@ -225,21 +235,21 @@ d_adds = [
 # dir-mod(D)  = prop-mod(D) and/or file-mod(child-F) and/or dir-mod(child-D)
 
 f_dels = [
-  ( 'f/del/only',   ['fD'],             [['fa']] ),
-  ( 'f/del/move',   ['fM'],             [['fa']] ),
+  ( create_f, ['fD'] ),
+  ( create_f, ['fM'] ),
 ]
 d_dels = [
-  ( 'd/del/only',   ['dD'],             [] ),
-  ( 'd/del/move',   ['dM'],             [] ),
+  ( create_d, ['dD'] ),
+  ( create_d, ['dM'] ),
 ]
 
 f_rpls = [
-  #( 'f/rpl/only',   ['fD','fa','fA'],   [['fd']] ),  # replacement - not yet
-  #( 'f/rpl/move',   ['fM','fa','fA'],   [['fd']] ),  # don't test all combinations, just because it's slow
+  #( create_f, ['fD','fa','fA'] ),  # replacement - not yet
+  #( create_f, ['fM','fa','fC'] ),  # don't test all combinations, just because it's slow
 ]
 d_rpls = [
-  #( 'd/rpl/only',   ['dD','dA'],        [] ),  # replacement - not yet
-  #( 'd/rpl/move',   ['dM','dA'],        [] ),  # don't test all combinations, just because it's slow
+  #( create_d, ['dD','dA'] ),  # replacement - not yet
+  #( create_d, ['dM','dC'] ),  # don't test all combinations, just because it's slow
   # Note that directory replacement differs from file replacement: the
   # schedule-delete dir is still on disk and is re-used for the re-addition.
 ]
@@ -251,19 +261,19 @@ d_rpl_f = [
 ]
 
 f_mods = [
-  ( 'f/mod/text',   ['ft'],             [] ),
-  #( 'f/mod/prop',   ['fP'],             [['fd']] ),  # property mods only - not yet
-  #( 'f/mod/both',   ['ft','fP'],        [] ),  # don't test all combinations, just because it's slow
+  ( create_f, ['ft'] ),
+  ( create_f, ['fP'] ),
+  #( create_f, ['ft','fP'] ),  # don't test all combinations, just because it's slow
 ]
 d_mods = [
-  ( 'd/mod/dP',     ['dP'],             [] ),
+  ( create_d, ['dP'] ),
   # These test actions for operating on a child of the directory are not yet implemented:
-  #( 'd/mod/f_fA',   [],                 [] ),
-  #( 'd/mod/f_ft',   [],                 [] ),
-  #( 'd/mod/f_fP',   [],                 [] ),
-  #( 'd/mod/f_fD',   [],                 [] ),
-  #( 'd/mod/d_dP',   [],                 [] ),
-  #( 'd/mod/d_f_fA', [],                 [] ),
+  #( create_d, ['f_fA'] ),
+  #( create_d, ['f_ft'] ),
+  #( create_d, ['f_fP'] ),
+  #( create_d, ['f_fD'] ),
+  #( create_d, ['d_dP'] ),
+  #( create_d, ['d_f_fA'] ),
 ]
 
 #----------------------------------------------------------------------
@@ -279,21 +289,17 @@ def set_up(wc_dir, scenarios):
   D1 = os.path.join(wc_dir, "D1")  # "existing" dir
   main.run_svn(None, 'mkdir', D1)
   # create the initial parent dirs, and each file or dir unless to-be-added
-  for path, action_mods, obstr_mods in scenarios:
+  for init_mods, action_mods in scenarios:
+    path = "_".join(action_mods)
     P = os.path.join(wc_dir, path)  # parent
     main.run_svn(None, 'mkdir', '--parents', P)
-    # create each file or dir unless to-be-added
-    if path[1:6] != '/add/':
-      if path[0:1] == 'f':
-        modify('fa', incoming_paths(wc_dir, P))
-        modify('fA', incoming_paths(wc_dir, P))
-      if path[0:1] == 'd':
-        modify('da', incoming_paths(wc_dir, P))
-        modify('dA', incoming_paths(wc_dir, P))
+    for modaction in init_mods:
+      modify(modaction, incoming_paths(wc_dir, P))
   main.run_svn(None, 'commit', '-m', 'Initial set-up.', wc_dir)
 
   # modify all files and dirs in their various ways
-  for path, action_mods, obstr_mods in scenarios:
+  for _path, action_mods in scenarios:
+    path = "_".join(action_mods)
     P = os.path.join(wc_dir, path)  # parent
     for modaction in action_mods:
       modify(modaction, incoming_paths(wc_dir, P))
@@ -303,13 +309,20 @@ def set_up(wc_dir, scenarios):
 
 #----------------------------------------------------------------------
 
-# Ensure one of the status output lines LINES is a Conflict on PATH.
-def ensure_status_c_on_parent(lines, path):
-  for line in lines:
-    if line[0] == 'C' and line.endswith(path + '\n'):
-      break
-  else:
-    raise svntest.Failure("no status C on path '" + path + "'")
+# Ensure "svn status" on path PARENT shows a Conflict on PARENT.
+def ensure_status_c_on_parent(parent):
+  expected_stdout = svntest.verify.RegexOutput("^C.* " + parent + "$",
+                                               match_all=False)
+  run_and_verify_svn(None, expected_stdout, [],
+                     'status', parent)
+
+# Ensure "svn status" on path PARENT shows no Conflicts.
+def ensure_no_status_c_on_parent(parent):
+  exitcode, stdout, stderr = run_and_verify_svn(None, None, [],
+                                                'status', parent)
+  for line in stdout:
+    if line[0] == 'C': # and line.endswith(victim + '\n'):
+      raise svntest.Failure("unexpected status C") # on path '" + victim + "'")
 
 #----------------------------------------------------------------------
 
@@ -331,12 +344,13 @@ def ensure_tree_conflict(sbox, operation, incoming_scenarios, localmod_scenarios
 
   # Local mods are the outer loop because cleaning up the WC is slow
   # ('svn revert' isn't sufficient because it leaves unversioned files)
-  for _loc_path, loc_action, _loc_obstrs in localmod_scenarios:
+  for _loc_init_mods, loc_action in localmod_scenarios:
     # get a clean WC
     main.safe_rmtree(wc_dir)
     main.run_svn(None, 'checkout', '-r', '2', sbox.repo_url, wc_dir)
 
-    for in_path, _in_action, _in_obstrs in incoming_scenarios:
+    for _inc_init_mods, inc_action in incoming_scenarios:
+      in_path = "_".join(inc_action)
       P = os.path.join(wc_dir, in_path)  # parent
       P_url = sbox.repo_url + '/' + in_path  # parent
 
@@ -348,20 +362,16 @@ def ensure_tree_conflict(sbox, operation, incoming_scenarios, localmod_scenarios
       #   modify(modaction, localmod_paths(wc_dir, P))
       # main.run_svn(None, 'commit', wc_dir)
 
-      # make local modifications
       verbose_print("--- Making local mods")
       for modaction in loc_action:
         modify(modaction, localmod_paths(wc_dir, P))
 
-      #verbose_print("---  Trying to commit (expecting 'out-of-date' error)")
-      #svntest.actions.run_and_verify_commit(wc_dir,
-      #                                      None,
-      #                                      None,
-      #                                      "Commit failed",
-      #                                      P)
-
-      # perform the operation that tries to apply the changes to the WC
       try:
+        #verbose_print("--- Trying to commit (expecting 'out-of-date' error)")
+        #run_and_verify_commit(wc_dir, None, None, "Commit failed",
+        #                      P)
+
+        # Perform the operation that tries to apply the changes to the WC.
         # The command is expected to do something (and give some output),
         # and it should raise a conflict but not an error.
         if operation == 'update':
@@ -375,27 +385,40 @@ def ensure_tree_conflict(sbox, operation, incoming_scenarios, localmod_scenarios
                              '-r2:3', P_url, P)
         else:
           raise "unknown operation: '" + operation + "'"
+
+        verbose_print("--- Trying to commit (expecting 'conflict' error)")
+        ### run_and_verify_commit() requires an "output_tree" argument, but
+        # here we get away with passing None because we know an implementation
+        # detail: namely that it's not going to look at that argument if it
+        # gets the stderr that we're expecting.
+        run_and_verify_commit(wc_dir, None, None, ".*conflict.*",
+                              P)
+
+        verbose_print("--- Checking that 'status' reports the conflict")
+        ensure_status_c_on_parent(P)
+
+        verbose_print("--- Resolving the conflict")
+        run_and_verify_svn(None, "Resolved .* '" + P + "'", [],
+                           'resolved', P)
+
+        #verbose_print("--- Checking that 'status' does not report a conflict")
+        #ensure_no_status_c_on_parent(P)
+
+        #verbose_print("--- Committing (should now succeed)")
+        #run_and_verify_svn(None, None, [],
+        #                   'commit', '-m', '', P)
+
       except svntest.Failure, msg:
+        # Reason for catching exceptions here is to be able to see progress
+        # during early development when a large number of sub-tests often
+        # fail. When the feature is stable, the "try" and "except" can go away.
         print
+        ### Need to print the type of exception that was caught, such as
+        # "SVNUnexpectedOutput"; presently such exceptions have no "msg" and
+        # just show this unhelpful "EXCEPTION in 'path' onto 'action': \n".
         print("EXCEPTION for '" + in_path + "' onto " + str(loc_action) + ": " + str(msg))
         failures += 1
         continue
-
-      #verbose_print("---  Trying to commit (expecting 'conflict' error)")
-      #svntest.actions.run_and_verify_commit(wc_dir,
-      #                                      None,
-      #                                      None,
-      #                                      ".*conflict.*",
-      #                                      P)
-
-      # ensure F has a conflict and nothing else is changed
-      verbose_print("--- Status")
-      exitcode, stdout, stderr = main.run_svn(None, 'status', P)
-      try:
-        ensure_status_c_on_parent(stdout, in_path)
-      except svntest.Failure, msg:
-        print("EXCEPTION for '" + in_path + "' onto " + str(loc_action) + ": " + str(msg))
-        failures += 1
 
       verbose_print("")
 
@@ -608,13 +631,13 @@ test_list = [ None,
               up_sw_dir_mod_onto_del,
               up_sw_dir_del_onto_mod,
               up_sw_dir_del_onto_del,
-              up_sw_dir_add_onto_add,
+              Skip(up_sw_dir_add_onto_add),  # not an important case
               merge_file_mod_onto_not_file,
               merge_file_del_onto_not_same,
               merge_file_del_onto_not_file,
               merge_file_add_onto_not_none,
               merge_dir_mod_onto_not_dir,
-              merge_dir_del_onto_not_same,
+              XFail(merge_dir_del_onto_not_same),
               merge_dir_del_onto_not_dir,
               merge_dir_add_onto_not_none,
               up_sw_file_mod_onto_obstr,

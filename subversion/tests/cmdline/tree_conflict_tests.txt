@@ -85,28 +85,12 @@ The source of a copy is uninteresting, and the destination of a move
 is the same as that of a copy.
 
 The elementary actions are combined to form "scenarios".  A scenario
-is a literal Python tuple containing a path string and two lists of
-actions.  For example: "( 'f/add/new', ['fa','fA'], [['fd']] )".
+is a literal Python tuple containing two lists of actions: the first
+list creates the starting point for the change to be tested, and the
+second being the actual change to be tested.  For example, this
+scenario represents a simple deletion of a file:
 
-The first value in a scenario tuple is a path string with the format
-'x/type/descr' in which each of the 3 parts is significant.
-
-  x      Item type; either f (file) or d (directory)
-
-  type   Scenario type; either add, del, rpl (replace), or mod (modify)
-
-  descr  One-word description of the scenario to make the path unique
-
-Note that the path could be used to isolate each test scenario when
-running many of them in parallel.  Currently, we run the scenarios
-one-by-one, each in a fresh working copy.
-
-The second value in a scenario tuple is the main list of actions for
-running the scenario.
-
-The third value is a list of lists of actions that could cause the
-working copy to become obstructed if run after the main list.  This
-list may be empty.  (Not yet used by the tree-conflict-maker.)
+  ( ['fa','fA'], ['fD'] )
 
 =================
 Behind the Scenes
@@ -129,8 +113,8 @@ out a working copy of it.
 2. For each incoming scenario, create the scenario path via 'svn
 mkdir'.
 
-3. For each incoming scenario that deletes or edits items, create F or
-D as needed in the scenario path.
+3. For each incoming scenario, execute its initialisation actions which
+will typically create the file or directory that will be acted on later.
 
 4. Commit as revision 2.
 
@@ -155,6 +139,12 @@ path.  If the path is tree-conflicted, we're happy.
 The working copy is deleted and the steps are repeated for next
 localmod scenario.  If any failure occurs, the whole test is marked as
 a failure in the test output.
+
+Each test scenario is executed in a unique path created from the actions
+in the action list, concatenated with "_" between them.  For the above
+example, that path would be simply "fD".  The use of a unique path could
+allow running many of them in parallel.  Currently, we run the scenarios
+one-by-one, each in a fresh working copy.
 
 ==============
 Current Status
