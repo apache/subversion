@@ -27,7 +27,9 @@ Candidate changes for 1.5.0:
      because several other new merge tests are not backported yet.
      The new test fails if r30748 isn't backported first.
    Votes:
-     +1: pburba, cmpilato, markphip
+     +1: cmpilato, markphip
+     -1: pburba (looks like there are problems with subtrees, vetoing
+         until I can look into these further).
 
  * r31300, r31301, r31312
    Fix issue #3199, subtree merges broken when required ranges don't
