@@ -430,17 +430,17 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
   svn_auth_get_keychain_simple_provider(&provider, pool);
   APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 #endif
-#ifdef SVN_HAVE_KWALLET
-  if (get_auth_simple_provider(&provider, "kwallet", pool))
-    {
-      APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-    }
-#endif
 #ifdef SVN_HAVE_GNOME_KEYRING
   if (get_auth_simple_provider(&provider, "gnome_keyring", pool))
   {
     APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
   }
+#endif
+#ifdef SVN_HAVE_KWALLET
+  if (get_auth_simple_provider(&provider, "kwallet", pool))
+    {
+      APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+    }
 #endif
   if (non_interactive == FALSE)
     {
