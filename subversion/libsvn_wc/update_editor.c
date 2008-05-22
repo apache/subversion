@@ -1482,6 +1482,20 @@ add_directory(const char *path,
           else
             {
               svn_wc_adm_access_t *parent_adm_access;
+              const char *repos;
+              /* Use the repository root of the anchor, but only if it 
+                 actually is an ancestor of the URL of this directory. */
+              if (eb->repos && svn_path_is_ancestor(eb->repos, db->new_URL))
+                repos = eb->repos;
+              else
+                repos = NULL;
+
+              /* Make sure it's the right working copy. */
+              SVN_ERR(svn_wc_ensure_adm3(db->path,
+                                         NULL /* TODO check uuid too.*/,
+                                         db->new_URL, repos,
+                                         *(eb->target_revision),
+                                         db->ambient_depth, pool));
 
               SVN_ERR(svn_wc_adm_retrieve(&parent_adm_access, eb->adm_access,
                                           pb->path, pool));
