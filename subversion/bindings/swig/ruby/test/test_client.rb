@@ -1123,16 +1123,17 @@ class SvnClientTest < Test::Unit::TestCase
     src = "source\n"
     file1 = "sample1.txt"
     file2 = "sample2.txt"
-    path1 = File.join(@wc_path, file1)
-    path2 = File.join(@wc_path, file2)
+    path1 = Pathname(@wc_path) + file1
+    path2 = Pathname(@wc_path) + file2
+    full_path2 = path2.expand_path
 
     ctx = make_context(log)
     File.open(path1, "w") {|f| f.print(src)}
-    ctx.add(path1)
+    ctx.add(path1.to_s)
 
     ctx.ci(@wc_path)
 
-    ctx.cp(path1, path2)
+    ctx.cp(path1.to_s, path2.to_s)
 
     infos = []
     ctx.set_notify_func do |notify|
@@ -1140,9 +1141,9 @@ class SvnClientTest < Test::Unit::TestCase
     end
     ctx.ci(@wc_path)
 
-    assert_equal([path2].sort,
+    assert_equal([full_path2.to_s].sort,
                  infos.collect{|path, notify| path}.sort)
-    path2_notify = infos.assoc(path2)[1]
+    path2_notify = infos.assoc(full_path2.to_s)[1]
     assert(path2_notify.commit_added?)
     assert_equal(File.open(path1) {|f| f.read},
                  File.open(path2) {|f| f.read})

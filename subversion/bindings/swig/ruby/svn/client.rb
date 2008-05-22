@@ -300,7 +300,7 @@ module Svn
           end
           src_paths = [src_paths]
         end
-        Client.copy4(src_paths, dst_path, copy_as_child, make_parents, 
+        Client.copy4(src_paths, dst_path, copy_as_child, make_parents,
                      revprop_table, self)
       end
       alias cp copy
