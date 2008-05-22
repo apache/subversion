@@ -213,6 +213,37 @@ class SvnClientTest < Test::Unit::TestCase
                  infos.collect{|path, notify| notify.commit_added?})
   end
 
+  def test_mkdir_p
+    log = "sample log"
+    dir = "parent"
+    child_dir = "parent/child"
+    dir_path = Pathname(@wc_path) + dir
+    child_dir_path = dir_path + "child"
+    full_paths = [dir_path, child_dir_path].collect {|path| path.expand_path}
+
+    ctx = make_context(log)
+
+    infos = []
+    ctx.set_notify_func do |notify|
+      infos << [notify.path, notify]
+    end
+
+    assert_equal([false, false], [dir_path.exist?, child_dir_path.exist?])
+    ctx.mkdir_p(child_dir_path.to_s)
+    assert_equal(full_paths.collect {|path| path.to_s}.sort,
+                 infos.collect{|path, notify| path}.sort)
+    assert_equal([true, true],
+                 infos.collect{|path, notify| notify.add?})
+    assert_equal([true, true], [dir_path.exist?, child_dir_path.exist?])
+
+    infos.clear
+    ctx.commit(@wc_path)
+    assert_equal(full_paths.collect {|path| path.to_s}.sort,
+                 infos.collect{|path, notify| path}.sort)
+    assert_equal([true, true],
+                 infos.collect{|path, notify| notify.commit_added?})
+  end
+
   def test_delete
     log = "sample log"
     src = "sample source\n"

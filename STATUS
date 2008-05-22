@@ -81,9 +81,3 @@ Approved changes (all releases):
      Does not merge cleanly!
    Votes:
      +1: lgo, epg, cmpilato
-
- * r31348
-   Support revprop_table in Svn::Client::Context#mkdir family.
-   (follow-up r31249)
-   Votes:
-     +1: kou, cmpilato
