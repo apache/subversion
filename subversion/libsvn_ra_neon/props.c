@@ -623,7 +623,7 @@ svn_error_t * svn_ra_neon__get_one_prop(const svn_string_t **propval,
   if (value == NULL)
     {
       /* ### need an SVN_ERR here */
-      return svn_error_createf(SVN_ERR_RA_DAV_PROPS_NOT_FOUND, NULL,
+      return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
                                _("'%s' was not present on the resource"),
                                name);
     }
@@ -710,7 +710,7 @@ svn_ra_neon__search_for_starting_props(svn_ra_neon__resource_t **rsrc,
       if (! err)
         break;   /* found an existing parent! */
 
-      if (err->apr_err != SVN_ERR_RA_DAV_PATH_NOT_FOUND)
+      if (err->apr_err != SVN_ERR_FS_NOT_FOUND)
         return err;  /* found a _real_ error */
 
       /* else... lop off the basename and try again. */
@@ -1211,7 +1211,7 @@ svn_ra_neon__do_check_path(svn_ra_session_t *session,
       else
         *kind = svn_node_file;
     }
-  else if (err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND)
+  else if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
     {
 
       svn_error_clear(err);
@@ -1256,7 +1256,7 @@ svn_ra_neon__do_stat(svn_ra_session_t *session,
                                            url, revision, pool);
       if (err)
         {
-          if (err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND)
+          if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
             {
               /* easy out: */
               svn_error_clear(err);
@@ -1277,7 +1277,7 @@ svn_ra_neon__do_stat(svn_ra_session_t *session,
                                NULL, NULL /* all props */, pool);
   if (err)
     {
-      if (err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND)
+      if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
         {
           /* easy out: */
           svn_error_clear(err);

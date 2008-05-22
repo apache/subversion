@@ -73,11 +73,3 @@ Candidate changes for 1.5.1:
 Approved changes (all releases):
 ================================
 
- * r31313
-   Make all ra layers return a consistent error when a path is not found in the
-   repository.
-   Notes:
-     Small change, but API consistency is always a good thing.
-     Does not merge cleanly!
-   Votes:
-     +1: lgo, epg, cmpilato

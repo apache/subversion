@@ -971,12 +971,11 @@ handle_stream(serf_request_t *request,
   serf_bucket_response_status(response, &sl);
 
   /* Woo-hoo.  Nothing here to see.  */
-  if (sl.code == 404)
+  fetch_ctx->err = svn_ra_serf__error_on_status(sl.code, fetch_ctx->info->name);
+  if (fetch_ctx->err)
     {
       fetch_ctx->done = TRUE;
-      fetch_ctx->err = svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND, NULL,
-                                         "'%s' path not found",
-                                         fetch_ctx->info->name);
+
       return svn_ra_serf__handle_discard_body(request, response, NULL, pool);
     }
 
