@@ -119,7 +119,34 @@ module Svn
 
       def mkdir(*paths)
         paths = paths.first if paths.size == 1 and paths.first.is_a?(Array)
-        Client.mkdir2(normalize_path(paths), self)
+        mkdir2(:paths => paths)
+      end
+
+      MKDIR_REQUIRED_ARGUMENTS_KEYS = [:paths]
+      def mkdir2(arguments)
+        optional_arguments_defaults = {
+          :make_parents => false,
+          :revprop_table => {},
+        }
+
+        arguments = optional_arguments_defaults.merge(arguments)
+        Util.validate_options(arguments,
+                              optional_arguments_defaults.keys,
+                              MKDIR_REQUIRED_ARGUMENTS_KEYS)
+        Client.mkdir3(normalize_path(arguments[:paths]),
+                      arguments[:make_parents],
+                      arguments[:revprop_table],
+                      self)
+      end
+
+      def mkdir_p(*paths)
+        revprop_table = paths.pop if paths.last.is_a?(Hash)
+        paths = paths.first if paths.size == 1 and paths.first.is_a?(Array)
+        mkdir_p2(:paths => paths, :revprop_table => revprop_table || {})
+      end
+
+      def mkdir_p2(arguments)
+        mkdir2(arguments.update(:make_parents => true))
       end
 
       def commit(targets, recurse=true, keep_locks=false,
@@ -273,7 +300,7 @@ module Svn
           end
           src_paths = [src_paths]
         end
-        Client.copy4(src_paths, dst_path, copy_as_child, make_parents, 
+        Client.copy4(src_paths, dst_path, copy_as_child, make_parents,
                      revprop_table, self)
       end
       alias cp copy
