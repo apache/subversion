@@ -15,7 +15,7 @@ Candidate changes for 1.5.0:
      the r31059 group ("don't explicitly record implicit mergeinfo") does fail
      without it and thus neatly demonstrates why this change is needed.
    Votes:
-     +1: pburba
+     +1: pburba, markphip
 
  * r31059, 31060, 31061, 31075, 31151
    Fix issue #3157, Merging a change from a path's natural history
@@ -27,7 +27,7 @@ Candidate changes for 1.5.0:
      because several other new merge tests are not backported yet.
      The new test fails if r30748 isn't backported first.
    Votes:
-     +1: pburba, cmpilato
+     +1: pburba, cmpilato, markphip
 
  * r31300, r31301, r31312
    Fix issue #3199, subtree merges broken when required ranges don't
