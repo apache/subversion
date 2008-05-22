@@ -618,7 +618,7 @@ svn_ra_serf__wait_for_props(svn_ra_serf__propfind_context_t *prop_ctx,
   if (err2)
     {
       svn_error_clear(err);
-      SVN_ERR(err2);
+      return err2;
     }
 
   return err;
