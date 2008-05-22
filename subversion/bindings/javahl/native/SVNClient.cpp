@@ -1219,10 +1219,12 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
       }
 #endif
 #ifdef SVN_HAVE_KWALLET
+#ifdef SVN_USE_KWALLET_IN_JAVAHL
     if (get_auth_simple_provider(&provider, "kwallet", pool))
       {
         APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
       }
+#endif
 #endif
     svn_auth_get_simple_provider(&provider, pool);
     APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
