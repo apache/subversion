@@ -2798,15 +2798,6 @@ repos_path_valid(const char *path)
   return TRUE;
 }
 
-static void
-handle_fs_warnings(void *baton,
-                   svn_error_t *err)
-{
-  /* ### TODO: After implementing svnserve logging, make this use
-     ### that.  For now, just don't abort. */
-  return;
-}
-
 /* Look for the repository given by URL, using ROOT as the virtual
  * repository root.  If we find one, fill in the repos, fs, cfg,
  * repos_url, and fs_path fields of B.  Set B->repos's client
@@ -2898,8 +2889,6 @@ static svn_error_t *find_repos(const char *url, const char *root,
     return error_create_and_log(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                                  "No access allowed to this repository",
                                  b, conn, pool);
-
-  svn_fs_set_warning_func(b->fs, handle_fs_warnings, b);
 
   return SVN_NO_ERROR;
 }
