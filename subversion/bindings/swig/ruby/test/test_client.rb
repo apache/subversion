@@ -143,13 +143,13 @@ class SvnClientTest < Test::Unit::TestCase
     end
   end
 
-  def test_mkdir_multiple
+  def assert_mkdir_with_multiple_paths
     log = "sample log"
     dir = "dir"
     dir2 = "dir2"
     dirs = [dir, dir2]
-    dirs_path = dirs.collect{|d| File.join(@wc_path, d)}
-    dirs_uri = dirs.collect{|d| "#{@repos_uri}/#{d}"}
+    dirs_path = dirs.collect {|d| Pathname(@wc_path) + d}
+    dirs_full_path = dirs_path.collect {|path| path.expand_path}
 
     ctx = make_context(log)
 
@@ -158,59 +158,32 @@ class SvnClientTest < Test::Unit::TestCase
       infos << [notify.path, notify]
     end
 
-    dirs_path.each do |path|
-      assert(!File.exist?(path))
-    end
-    ctx.mkdir(dirs_path)
-    assert_equal(dirs_path.sort,
+    assert_equal([false, false], dirs_path.collect {|path| path.exist?})
+    yield(ctx, dirs_path.collect {|path| path.to_s})
+    assert_equal(dirs_path.collect {|path| path.to_s}.sort,
                  infos.collect{|path, notify| path}.sort)
-    assert_equal(dirs_path.collect{true},
+    assert_equal([true] * dirs_path.size,
                  infos.collect{|path, notify| notify.add?})
-    dirs_path.each do |path|
-      assert(File.exist?(path))
-    end
+    assert_equal([true, true], dirs_path.collect {|path| path.exist?})
 
     infos.clear
     ctx.commit(@wc_path)
-    assert_equal(dirs_path.sort,
+    assert_equal(dirs_full_path.collect {|path| path.to_s}.sort,
                  infos.collect{|path, notify| path}.sort)
-    assert_equal(dirs_path.collect{true},
+    assert_equal([true] * dirs_path.size,
                  infos.collect{|path, notify| notify.commit_added?})
   end
 
-  def test_mkdir_multiple2
-    log = "sample log"
-    dir = "dir"
-    dir2 = "dir2"
-    dirs = [dir, dir2]
-    dirs_path = dirs.collect{|d| File.join(@wc_path, d)}
-    dirs_uri = dirs.collect{|d| "#{@repos_uri}/#{d}"}
-
-    ctx = make_context(log)
-
-    infos = []
-    ctx.set_notify_func do |notify|
-      infos << [notify.path, notify]
+  def test_mkdir_with_multiple_paths
+    assert_mkdir_with_multiple_paths do |ctx, dirs|
+      ctx.mkdir(*dirs)
     end
+  end
 
-    dirs_path.each do |path|
-      assert(!File.exist?(path))
+  def test_mkdir_with_multiple_paths_as_array
+    assert_mkdir_with_multiple_paths do |ctx, dirs|
+      ctx.mkdir(dirs)
     end
-    ctx.mkdir(*dirs_path)
-    assert_equal(dirs_path.sort,
-                 infos.collect{|path, notify| path}.sort)
-    assert_equal(dirs_path.collect{true},
-                 infos.collect{|path, notify| notify.add?})
-    dirs_path.each do |path|
-      assert(File.exist?(path))
-    end
-
-    infos.clear
-    ctx.commit(@wc_path)
-    assert_equal(dirs_path.sort,
-                 infos.collect{|path, notify| path}.sort)
-    assert_equal(dirs_path.collect{true},
-                 infos.collect{|path, notify| notify.commit_added?})
   end
 
   def test_mkdir_p
