@@ -1171,11 +1171,11 @@ class SvnClientTest < Test::Unit::TestCase
     end
     ctx.ci(@wc_path)
 
-    assert_equal([path1, path2].sort,
+    assert_equal([path1, path2].sort.collect{|p|File.expand_path(p)},
                  infos.collect{|path, notify| path}.sort)
-    path1_notify = infos.assoc(path1)[1]
+    path1_notify = infos.assoc(File.expand_path(path1))[1]
     assert(path1_notify.commit_deleted?)
-    path2_notify = infos.assoc(path2)[1]
+    path2_notify = infos.assoc(File.expand_path(path2))[1]
     assert(path2_notify.commit_added?)
     assert_equal(src, File.open(path2) {|f| f.read})
   end
@@ -1215,28 +1215,32 @@ class SvnClientTest < Test::Unit::TestCase
     paths = notifies.collect do |notify|
       notify.path
     end
-    assert_equal([path1, path2, path2].sort, paths.sort)
+    assert_equal([path1, path2, path2].sort.collect{|p|File.expand_path(p)}, 
+                 paths.sort)
 
     deleted_paths = notifies.find_all do |notify|
       notify.commit_deleted?
     end.collect do |notify|
       notify.path
     end
-    assert_equal([path1].sort, deleted_paths.sort)
+    assert_equal([path1].sort.collect{|p|File.expand_path(p)}, 
+                 deleted_paths.sort)
 
     added_paths = notifies.find_all do |notify|
       notify.commit_added?
     end.collect do |notify|
       notify.path
     end
-    assert_equal([path2].sort, added_paths.sort)
+    assert_equal([path2].sort.collect{|p|File.expand_path(p)}, 
+                 added_paths.sort)
 
     postfix_txdelta_paths = notifies.find_all do |notify|
       notify.commit_postfix_txdelta?
     end.collect do |notify|
       notify.path
     end
-    assert_equal([path2].sort, postfix_txdelta_paths.sort)
+    assert_equal([path2].sort.collect{|p|File.expand_path(p)}, 
+                 postfix_txdelta_paths.sort)
 
     assert_equal(src2, File.open(path2) {|f| f.read})
   end
