@@ -29,6 +29,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.ByteArrayOutputStream;
+import java.text.ParseException;
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -36,6 +37,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.Map;
+
+import junit.framework.Assert;
 
 /**
  * Tests the basic functionality of javahl binding (inspired by the
@@ -69,6 +72,32 @@ public class BasicTests extends SVNTests
         {
             testCounter = 0;
             testBaseName = testName;
+        }
+    }
+
+    /**
+     * Test LogDate().
+     * @throws Throwable
+     */
+    public void testLogDate() throws Throwable
+    {
+        String goodDate = "2007-10-04T03:00:52.134992Z";
+        String badDate = "2008-01-14";
+        LogDate logDate;
+        
+        try 
+        {
+            logDate = new LogDate(goodDate);
+            Assert.assertEquals(1191481252134992L, logDate.getTimeMicros());
+        } catch (ParseException e) {
+            Assert.fail("Failed to parse date " + goodDate);
+        }
+        
+        try 
+        {
+            logDate = new LogDate(badDate);
+            Assert.fail("Failed to throw exception on bad date " + badDate);
+        } catch (ParseException e) {
         }
     }
 
