@@ -223,19 +223,21 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                                         warn_on_cache_errors, fs, pool));
 
   if (memcache)
-    SVN_ERR(svn_cache_create_memcache(&(ffd->fulltext_cache),
-                                      memcache,
-                                      NULL, NULL, /* Values are svn_string_t */
-                                      APR_HASH_KEY_STRING,
-                                      apr_pstrcat(pool, prefix, "TEXT",
-                                                  NULL),
-                                      fs->pool));
+    {
+      SVN_ERR(svn_cache_create_memcache(&(ffd->fulltext_cache),
+                                        memcache,
+                                        /* Values are svn_string_t */
+                                        NULL, NULL,
+                                        APR_HASH_KEY_STRING,
+                                        apr_pstrcat(pool, prefix, "TEXT",
+                                                    NULL),
+                                        fs->pool));
+      if (! no_handler)
+        SVN_ERR(svn_cache_set_error_handler(ffd->fulltext_cache,
+                                            warn_on_cache_errors, fs, pool));
+    }
   else
     ffd->fulltext_cache = NULL;
-
-  if (! no_handler)
-    SVN_ERR(svn_cache_set_error_handler(ffd->fulltext_cache,
-                                        warn_on_cache_errors, fs, pool));
 
   return SVN_NO_ERROR;
 }
