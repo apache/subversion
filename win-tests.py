@@ -86,7 +86,7 @@ opts, args = my_getopt(sys.argv[1:], 'hrdvcpu:f:',
                         'svnserve-args=', 'fs-type=', 'asp.net-hack',
                         'httpd-dir=', 'httpd-port=', 'http-library=', 'help',
                         'list', 'enable-sasl', 'bin=', 'parallel',
-                        'config-file='])
+                        'config-file=', 'server-minor-version='])
 if len(args) > 1:
   print 'Warning: non-option arguments after the first one will be ignored'
 
