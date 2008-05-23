@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import sys, re, os
+import sys, re, os, traceback
 
 # Our testing module
 import svntest
@@ -87,23 +87,31 @@ def verbose_printlines(lines):
 # otherwise scenarios involving a move onto a move would conflict on the
 # destination node as well as on the source, and we only want to be testing
 # one thing at a time in most tests.
-def incoming_paths(wc_dir, P):
+def incoming_paths(root_dir, parent_dir):
+  """Create a set of paths in which the victims of tree conflicts are
+     children of PARENT_DIR. ROOT_DIR should be a shallower directory
+     in which items "F1" and "D1" can pre-exist and be shared across
+     multiple parent dirs."""
   return {
-    'F1' : os.path.join(wc_dir, "F1"),
-    'F'  : os.path.join(P,      "F"),
-    'F2' : os.path.join(P,      "F2-in"),
-    'D1' : os.path.join(wc_dir, "D1"),
-    'D'  : os.path.join(P,      "D"),
-    'D2' : os.path.join(P,      "D2-in"),
+    'F1' : os.path.join(root_dir,   "F1"),
+    'F'  : os.path.join(parent_dir, "F"),
+    'F2' : os.path.join(parent_dir, "F2-in"),
+    'D1' : os.path.join(root_dir,   "D1"),
+    'D'  : os.path.join(parent_dir, "D"),
+    'D2' : os.path.join(parent_dir, "D2-in"),
   }
-def localmod_paths(wc_dir, P):
+def localmod_paths(root_dir, parent_dir):
+  """Create a set of paths in which the victims of tree conflicts are
+     children of PARENT_DIR. ROOT_DIR should be a shallower directory
+     in which items "F1" and "D1" can pre-exist and be shared across
+     multiple parent dirs."""
   return {
-    'F1' : os.path.join(wc_dir, "F1"),
-    'F'  : os.path.join(P,      "F"),
-    'F2' : os.path.join(P,      "F2-local"),
-    'D1' : os.path.join(wc_dir, "D1"),
-    'D'  : os.path.join(P,      "D"),
-    'D2' : os.path.join(P,      "D2-local"),
+    'F1' : os.path.join(root_dir,   "F1"),
+    'F'  : os.path.join(parent_dir, "F"),
+    'F2' : os.path.join(parent_dir, "F2-local"),
+    'D1' : os.path.join(root_dir,   "D1"),
+    'D'  : os.path.join(parent_dir, "D"),
+    'D2' : os.path.join(parent_dir, "D2-local"),
   }
 
 # Perform the action MODACTION on the WC items given by PATHS. The
@@ -280,7 +288,7 @@ d_mods = [
 
 # Set up the given change scenarios in their respective paths in the repos.
 # (See also the somewhat related svntest.actions.set_up_tree_conflicts().)
-def set_up(wc_dir, scenarios):
+def set_up_repos(wc_dir, scenarios):
 
   # create the pre-existing file and dir F1 and D1
   F1 = os.path.join(wc_dir, "F1")  # "existing" file
@@ -340,7 +348,7 @@ def ensure_tree_conflict(sbox, operation, incoming_scenarios, localmod_scenarios
   verbose_print("=== Starting a set of '" + operation + "' tests.")
 
   verbose_print("--- Creating changes in repos")
-  set_up(wc_dir, incoming_scenarios)
+  set_up_repos(wc_dir, incoming_scenarios)
 
   # Local mods are the outer loop because cleaning up the WC is slow
   # ('svn revert' isn't sufficient because it leaves unversioned files)
@@ -349,27 +357,29 @@ def ensure_tree_conflict(sbox, operation, incoming_scenarios, localmod_scenarios
     main.safe_rmtree(wc_dir)
     main.run_svn(None, 'checkout', '-r', '2', sbox.repo_url, wc_dir)
 
-    for _inc_init_mods, inc_action in incoming_scenarios:
-      in_path = "_".join(inc_action)
-      P = os.path.join(wc_dir, in_path)  # parent
-      P_url = sbox.repo_url + '/' + in_path  # parent
+    saved_cwd = os.getcwd()
+    os.chdir(wc_dir)
 
-      verbose_print("=== '" + in_path + "' onto local mod " + str(loc_action))
+    for _inc_init_mods, inc_action in incoming_scenarios:
+      parent_path = "_".join(inc_action)
+      parent_url = sbox.repo_url + '/' + parent_path
+
+      verbose_print("=== '" + parent_path + "' onto local mod " + str(loc_action))
 
       ### TODO: make target branch modifications
       # verbose_print("--- Making target branch mods")
       # for modaction in br_action:
-      #   modify(modaction, localmod_paths(wc_dir, P))
-      # main.run_svn(None, 'commit', wc_dir)
+      #   modify(modaction, localmod_paths(".", parent_path))
+      # main.run_svn(None, 'commit', ".")
 
       verbose_print("--- Making local mods")
       for modaction in loc_action:
-        modify(modaction, localmod_paths(wc_dir, P))
+        modify(modaction, localmod_paths(".", parent_path))
 
       try:
         #verbose_print("--- Trying to commit (expecting 'out-of-date' error)")
-        #run_and_verify_commit(wc_dir, None, None, "Commit failed",
-        #                      P)
+        #run_and_verify_commit(".", None, None, "Commit failed",
+        #                      parent_path)
 
         # Perform the operation that tries to apply the changes to the WC.
         # The command is expected to do something (and give some output),
@@ -377,12 +387,12 @@ def ensure_tree_conflict(sbox, operation, incoming_scenarios, localmod_scenarios
         if operation == 'update':
           verbose_print("--- Updating")
           run_and_verify_svn(None, AnyOutput, [],
-                             'update', P)
+                             'update', parent_path)
         elif operation == 'merge':
           verbose_print("--- Merging")
           run_and_verify_svn(None, AnyOutput, [],
                              'merge', '--ignore-ancestry',
-                             '-r2:3', P_url, P)
+                             '-r2:3', parent_url, parent_path)
         else:
           raise "unknown operation: '" + operation + "'"
 
@@ -391,36 +401,38 @@ def ensure_tree_conflict(sbox, operation, incoming_scenarios, localmod_scenarios
         # here we get away with passing None because we know an implementation
         # detail: namely that it's not going to look at that argument if it
         # gets the stderr that we're expecting.
-        run_and_verify_commit(wc_dir, None, None, ".*conflict.*",
-                              P)
+        run_and_verify_commit(".", None, None, ".*conflict.*",
+                              parent_path)
 
         verbose_print("--- Checking that 'status' reports the conflict")
-        ensure_status_c_on_parent(P)
+        ensure_status_c_on_parent(parent_path)
 
         verbose_print("--- Resolving the conflict")
-        run_and_verify_svn(None, "Resolved .* '" + P + "'", [],
-                           'resolved', P)
+        run_and_verify_svn(None, "Resolved .* '" + parent_path + "'", [],
+                           'resolved', parent_path)
 
         #verbose_print("--- Checking that 'status' does not report a conflict")
-        #ensure_no_status_c_on_parent(P)
+        #ensure_no_status_c_on_parent(parent_path)
 
         #verbose_print("--- Committing (should now succeed)")
         #run_and_verify_svn(None, None, [],
-        #                   'commit', '-m', '', P)
+        #                   'commit', '-m', '', parent_path)
 
-      except svntest.Failure, msg:
+      except svntest.Failure:
         # Reason for catching exceptions here is to be able to see progress
         # during early development when a large number of sub-tests often
         # fail. When the feature is stable, the "try" and "except" can go away.
+        (exc_type, exc_val) = sys.exc_info()[:2]
+        print "EXCEPTION for", str(inc_action), "onto", str(loc_action) + ": ",
+        map(sys.stdout.write, traceback.format_exception_only(exc_type, exc_val))
         print
-        ### Need to print the type of exception that was caught, such as
-        # "SVNUnexpectedOutput"; presently such exceptions have no "msg" and
-        # just show this unhelpful "EXCEPTION in 'path' onto 'action': \n".
-        print("EXCEPTION for '" + in_path + "' onto " + str(loc_action) + ": " + str(msg))
+
         failures += 1
         continue
 
       verbose_print("")
+
+    os.chdir(saved_cwd)
 
     # clean up WC
     main.run_svn(None, 'revert', '-R', wc_dir)
@@ -631,7 +643,7 @@ test_list = [ None,
               up_sw_dir_mod_onto_del,
               up_sw_dir_del_onto_mod,
               up_sw_dir_del_onto_del,
-              Skip(up_sw_dir_add_onto_add),  # not an important case
+              XFail(up_sw_dir_add_onto_add),  # not a primary use case
               merge_file_mod_onto_not_file,
               merge_file_del_onto_not_same,
               merge_file_del_onto_not_file,
