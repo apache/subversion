@@ -6510,11 +6510,11 @@ msgstr "サブコマンドに関するヘルプを表示します"
 msgid "specify log message ARG"
 msgstr "ログメッセージを <ARG> と指定します"
 
-# * Description for 'svn --verbose'.
+# * Description for 'svn --quiet'.
 # * 29 half-size characters are displayed on the left.
 #: svn/main.c:66
 msgid "print nothing, or only summary information"
-msgstr "何も表示しないか、要約だけ表示します"
+msgstr "何も表示しないか、要約情報のみを表示します"
 
 # * Description for 'svn --recursive'.
 # * 29 half-size characters are displayed on the left.
@@ -6888,11 +6888,11 @@ msgstr "コミット後に変更リストを削除しません"
 msgid "keep path in working copy"
 msgstr "作業コピー内にパスを残します"
 
-# * Description for 'svndumpfilter --preserve-revprops'.
+# * Description for 'svn --with-all-revprops'.
 # * 29 half-size characters are displayed on the left.
 #: svn/main.c:202
 msgid "retrieve all revision properties"
-msgstr "すべてのリビジョン属性を検索する"
+msgstr "すべてのリビジョン属性を取得します"
 
 # * Description for 'svn --with-revprop'.
 # * 29 half-size characters are displayed on the left.
@@ -6904,24 +6904,29 @@ msgstr ""
 "「名前=値」の形式で指定されたリビジョン属性 <ARG>\n"
 "                             を新しいリビジョンに設定します"
 
+# * Description for 'svn --parents'.
+# * 29 half-size characters are displayed on the left.
 #: svn/main.c:208
 msgid "make intermediate directories"
-msgstr "中間ディレクトリを作れません"
+msgstr "途中のディレクトリを作成します"
 
+# * Description for 'svn --use-merge-history'.
+# * 29 half-size characters are displayed on the left.
 #: svn/main.c:210
 msgid ""
 "use/display additional information from merge\n"
 "                             history"
-msgstr "マージ履歴からの追加情報を利用/表示する"
+msgstr "マージ履歴由来の付加的な情報を使用・表示します"
 
-# # * Description for 'svnadmin --pre-1.4-compatible'
-# # * 29 half-size characters are displayed on the left.
+# * Description for 'svn --accept'
+# * 29 half-size characters are displayed on the left.
+# TRANSLATION-FIXME: The original message should be corrected...
 #: svn/main.c:214
 msgid ""
 "specify automatic conflict resolution action\n"
 "                            ('"
 msgstr ""
-"自動競合解決操作を指定する\n"
+"自動競合解決の操作を指定します\n"
 "                            ('"
 
 # * Description for 'svn add'.
@@ -6936,9 +6941,11 @@ msgstr ""
 "予定の状態とします。次回のコミットでそれらは追加されます。\n"
 "使用方法: add <パス>...\n"
 
+# * Description for 'svn add --parents'.
+# * 29 half-size characters are displayed on the left.
 #: svn/main.c:268
 msgid "add intermediate parents"
-msgstr "中間の親ディレクトリを追加する"
+msgstr "途中の親ディレクトリを追加します"
 
 # * Description for 'svn blame'.
 # * "blame (praise, annotate, ann): " is displayed at the head of the first line.
@@ -7325,18 +7332,19 @@ msgid ""
 "  Unversionable items such as device files and pipes are ignored\n"
 "  if --force is specified.\n"
 msgstr ""
-"バージョン管理されていないファイルやツリーをリポジトリへコミッ\n"
+"バージョン管理されていないファイルやツリーをリポジトリに入れてコミッ\n"
 "トします。\n"
 "使用方法: import [<パス>] <URL>\n"
 "\n"
 "  <パス> のコピーを再帰的に <URL> にコミットします。\n"
-"  <パス> が、省略された場合は '.' だと仮定されます。\n"
-"  必要に応じてリポジトリに、親ディレクトリが作成されます。\n"
+"  <パス> は、省略された場合は '.' だと仮定されます。\n"
+"  リポジトリには、必要に応じて親ディレクトリが作成されます。\n"
 "  <パス> がディレクトリの場合、そのディレクトリの内容が <URL> の下に直接追"
 "加\n"
 "  されます。\n"
-"  --force が指定されていたとしても、例えばデバイスファイルやパイプ等の\n"
-"  バージョン管理できない要素は無視されます。\n"
+"  --force が指定されている場合でも、デバイスファイルやパイプのようなバー"
+"ジョ\n"
+"  ン管理できない項目は無視されます。\n"
 
 # * Description for 'svn info'.
 # * "info: " is displayed at the head of the first line.
@@ -7498,11 +7506,11 @@ msgstr ""
 "    svn log http://www.example.com/repo/project/foo.c\n"
 "    svn log http://www.example.com/repo/project foo.c bar.c\n"
 
-# * Description for 'svndumpfilter --preserve-revprops'.
+# * Description for 'svn --with-revprop'.
 # * 29 half-size characters are displayed on the left.
 #: svn/main.c:535
 msgid "retrieve revision property ARG"
-msgstr "リビジョン属性 ARG を検索する"
+msgstr "リビジョン属性 <ARG> を取得します"
 
 # * Description for 'svn merge'.
 # * "merge: " is displayed at the head of the first line.
@@ -7541,37 +7549,36 @@ msgstr ""
 "                   [<作業コピーパス>]\n"
 "          2. merge <マージ元作業コピーパス 1>@<N> \\\n"
 "                   <マージ元作業コピーパス 2>@<M> [<作業コピーパス>]\n"
-"          3. merge [-c <M> | -r <N>:<M> | -g] [<マージ元>[@<REV>] [<作業コ"
-"ピーパス>]]\n"
+"          3. merge [-c <M> | -r <N>:<M> | -g] \\\n"
+"                   [<マージ元>[@<REV>] [<作業コピーパス>]]\n"
 "\n"
 "  1. 最初の形では、2 つの <マージ元 URL> は、それぞれリビジョンを <N> およ"
 "び\n"
-"     <M> に指定されています。これらは、比較される 2 つのマージ元です。\n"
-"     リビジョンが省略された場合のデフォルトは HEAD です。\n"
+"     <M> に指定されています。これらは、比較される 2 つのマージ元です。リビ"
+"ジョ\n"
+"     ンが省略された場合のデフォルトは HEAD です。\n"
 "\n"
 "  2. 2 番目の形では、2 つの <マージ元作業コピーパス> に対応する URL が、比"
 "較\n"
 "     されるマージ元です。リビジョンは指定されなければなりません。\n"
 "\n"
-"  3. 3 番目の形では、<マージ元> は URL または作業コピー内の項目です。後者の場"
-"合\n"
-"     は対応する URL が比較に利用されます。もしマージ元URL も作業コピーのパス"
-"も\n"
-"     指定されない場合、コピー元 URL が利用されます。\n"
-"     <マージ元作業コピーパス> を自動的に検出できない場合、明示的にマージ元"
-"を\n"
-"     指定するように求めるエラーメッセージが表示されます。\n"
-"     リビジョン <REV> でこの URL にあった項目が、リビジョン <N> から <M> ま"
-"で\n"
-"     存在したとして比較されます。<REV> が指定されない場合、HEAD であると見な"
+"  3. 3 番目の形では、<マージ元> は URL または作業コピー内の項目です。後者の"
+"場\n"
+"     合は対応する URL が比較に利用されます。どちらも指定されていない場合"
+"は、\n"
+"     <マージ元> のコピー元 URL が使用されます。<作業コピーパス> を自動的に"
+"決\n"
+"     定できない場合は、<マージ元> を明示的に指定するよう求めるエラーが表示"
 "さ\n"
-"     れます。\n"
-"     '-c <M>' オプションは、'-r <M-1>:<M>' に相当し、'-c -<M>' はその逆、つま"
-"り\n"
-"     '-r <M>:<M-1>' に相当します。\n"
-"     '-g' は、'-r <マージ元URLでもっとも古いリビジョン>:HEAD' のリビジョン範"
-"囲\n"
-"     の省略です。\n"
+"     れます。リビジョン <REV> でこの URL にあった項目が、リビジョン <N> か"
+"ら\n"
+"     <M> まで存在したとして比較されます。<REV> が指定されない場合、HEAD で"
+"あ\n"
+"     ると見なされます。'-c <M>' は '-r <M-1>:<M>' に相当し、'-c -<M>' はそ"
+"の\n"
+"     逆、つまり '-r <M>:<M-1>' に相当します。'-g' は、'-r <マージ元 URL に"
+"お\n"
+"     ける最も古いリビジョン>:HEAD' というリビジョン範囲の省略です。\n"
 "\n"
 "  <作業コピーパス> は、変更を受け取る作業コピーのパスです。<作業コピーパス>\n"
 "  が省かれた場合はデフォルトの値 '.' であると見なされます。ただし、2 つの"
@@ -7580,12 +7587,14 @@ msgstr ""
 "ファ\n"
 "  イルに適用されます。\n"
 
+# * Description for 'svn mergeinfo'.
+# * "mergeinfo: " is displayed at the head of the first line.
 #: svn/main.c:571
 msgid ""
 "Query merge-related information.\n"
 "usage: mergeinfo [TARGET[@REV]...]\n"
 msgstr ""
-"マージに関連した情報を問い合わせる。\n"
+"マージに関連した情報をクエリします。\n"
 "使用方法: mergeinfo [<対象>[@<REV>]...]\n"
 
 # * Description for 'svn mkdir'.
@@ -7621,9 +7630,9 @@ msgstr ""
 "作\n"
 "    られます。\n"
 "\n"
-"  どちらの場合でも途中のディレクトリはすべて存在していなくてはなりません。\n"
-"  ただし --parents オプションを指定した場合は途中のディレクトリを自動的に\n"
-"  作成します。\n"
+"  どちらの場合でも、--parents オプションが指定されていない場合は、途中のディ"
+"レ\n"
+"  クトリはすべて存在していなくてはなりません。\n"
 
 # * Description for 'svn move'.
 # * "move (mv, rename, ren): " is displayed at the head of the first line.
@@ -7707,7 +7716,7 @@ msgstr ""
 "     集します。\n"
 "     <対象> には、アクセスするリポジトリを決める意味しかありません。\n"
 "\n"
-"属性の設定に関しては 'svn help propset' を見てください\n"
+"属性の設定に関しては 'svn help propset' を参照してください。\n"
 
 # * Description for 'svn propget'.
 # * "propget (pget, pg): " is displayed at the head of the first line.
@@ -7850,8 +7859,10 @@ msgstr ""
 "      Rev, Revision,           - オブジェクトが最後に変更されたリビジョン。\n"
 "      LastChangedRevision\n"
 "      Id                       - 上の 4 つのキーワードをまとめた要約。\n"
-"    svn:executable - 設定されている場合、ファイルを実行可能にします。\n"
-"      クリアするには 'svn propdel svn:executable PATH...' を使ってください\n"
+"    svn:executable - 設定されている場合、ファイルを実行可能にします。設定を"
+"解\n"
+"      除するには 'svn propdel svn:executable <パス>...' を使用してくださ"
+"い。\n"
 "    svn:eol-style  - 'native', 'LF', 'CR', 'CRLF' のうちいずれか一つです。\n"
 "    svn:mime-type  - ファイルの MIME タイプです。ファイルをマージするべきか"
 "す\n"
@@ -7871,10 +7882,12 @@ msgstr ""
 "        foo/bar -r 1234 http://example.com/repos/zag\n"
 "    svn:needs-lock - 存在する場合、そのファイルは変更前にロックをかけるべき"
 "で\n"
-"      あることを意味します。ロックされていない場合は作業コピーのファイルを"
-"読\n"
-"      み込み専用にします。\n"
-"      クリアするには 'svn propdel needs-lock PATH...' を使ってください\n"
+"      あるという意味です。ロックされていない場合は作業コピーのファイルを読"
+"み\n"
+"      込み専用にします。設定を解除するには 'svn propdel needs-lock <パス"
+">...'\n"
+"      を使用してください。\n"
+"\n"
 "  svn:keywords、svn:executable、svn:eol-style、svn:mime-type、svn:needs-"
 "lock\n"
 "  の各属性はディレクトリには設定できません。ディレクトリへの非再帰的な設定"
@@ -7909,14 +7922,15 @@ msgstr ""
 "を\n"
 "  削除し、<パス> を再びコミットできるようにするだけです。\n"
 
-# # * Description for 'svnadmin --pre-1.4-compatible'
-# # * 29 half-size characters are displayed on the left.
+# * Description for 'svn resolve --accept'
+# * 29 half-size characters are displayed on the left.
+# TRANSLATION-FIXME: The original message should be corrected...
 #: svn/main.c:726
 msgid ""
 "specify automatic conflict resolution source\n"
 "                             '"
 msgstr ""
-"自動競合解決のソースを指定してください\n"
+"自動競合解決のソースを指定します\n"
 "                             '"
 
 # * Description for 'svn revert'.
@@ -8020,8 +8034,9 @@ msgstr ""
 "  引数がない場合、ローカルで変更された項目のみを表示します (ネットワークに"
 "は\n"
 "  アクセスしません)。\n"
-"  -q が指定されている場合、作業コピーで変更された項目に関する要約情報のみ\n"
-"  を表示します。\n"
+"  -q が指定されている場合、作業コピーで変更された項目に関する要約情報のみを"
+"表\n"
+"  示します。\n"
 "  -u が指定されている場合、作業中のリビジョンの情報、および作業コピー内の項"
 "目\n"
 "  がサーバのリポジトリ側と比べて古くなっていないかに関する情報も表示しま"
@@ -8323,8 +8338,8 @@ msgstr "深さをロケールから UTF-8 に変換する際にエラーが発�
 msgid ""
 "'%s' is not a valid depth; try 'empty', 'files', 'immediates', or 'infinity'"
 msgstr ""
-"'%s' は深さとして有効ではありません。empty、files、immediates、infinity のい"
-"ずれかを試してみてください"
+"'%s' は深さとして有効ではありませ"
+"ん。'empty'、'files'、'immediates'、'infinity' のいずれかを試してみてください"
 
 #: svn/main.c:1354
 #, c-format
@@ -8334,7 +8349,7 @@ msgstr "native-eol の引数 '%s' 中で構文エラーが生じました"
 #: svn/main.c:1398
 #, c-format
 msgid "'%s' is not a valid accept value"
-msgstr "'%s' は accept 値として不正です"
+msgstr "'%s' は accept に指定する値として不正です"
 
 #: svn/main.c:1451 svndumpfilter/main.c:1207 svnlook/main.c:2105
 #, c-format
@@ -8403,7 +8418,7 @@ msgstr "--auto-props と --no-auto-props は互いに排他的です"
 #: svn/main.c:1784 svn/main.c:1790
 #, c-format
 msgid "--accept=%s incompatible with --non-interactive"
-msgstr "--accept=%s は --non-interactive とは互換性がありません"
+msgstr "--accept=%s は --non-interactive とともに使用することはできません"
 
 #: svn/main.c:1817
 msgid "Try 'svn help' for more info"
@@ -8441,12 +8456,12 @@ msgstr ""
 #: svn/mergeinfo-cmd.c:133
 #, c-format
 msgid "  Source path: %s\n"
-msgstr "ソースパス : %s\n"
+msgstr "  マージ元のパス: %s\n"
 
 #: svn/mergeinfo-cmd.c:135
 #, c-format
 msgid "    Merged ranges: "
-msgstr "   マージした範囲: "
+msgstr "    マージされた範囲: "
 
 #. Now fetch the available merges for this source.
 #. ### FIXME: There's no reason why this API should fail to
@@ -8465,7 +8480,7 @@ msgstr "    適切な範囲: "
 #: svn/mergeinfo-cmd.c:162
 #, c-format
 msgid "(source no longer available in HEAD)\n"
-msgstr "(ソースはもはや HEAD では利用できません)\n"
+msgstr "(マージ元は HEAD ではもう利用できません)\n"
 
 #: svn/mkdir-cmd.c:87
 msgid "Try 'svn add' or 'svn add --non-recursive' instead?"
@@ -8652,27 +8667,27 @@ msgstr "パス '%s' はもう変更リストに属していません。\n"
 #: svn/notify.c:421
 #, c-format
 msgid "--- Merging differences between repository URLs into '%s':\n"
-msgstr "--- リポジトリ URL 間の違いを '%s' にマージしています:\n"
+msgstr "--- リポジトリ URL 間の差分を '%s' にマージしています:\n"
 
 #: svn/notify.c:426
 #, c-format
 msgid "--- Merging r%ld into '%s':\n"
-msgstr "--- リビジョン %ld を '%s' にマージしています:\n"
+msgstr "--- r%ld を '%s' にマージしています:\n"
 
 #: svn/notify.c:430
 #, c-format
 msgid "--- Reverse-merging r%ld into '%s':\n"
-msgstr "--- リビジョン %ld を '%s' に逆マージしています:\n"
+msgstr "--- r%ld を '%s' に逆マージしています:\n"
 
 #: svn/notify.c:434
 #, c-format
 msgid "--- Merging r%ld through r%ld into '%s':\n"
-msgstr "--- r%ld から r%ld を '%s'にマージ中:\n"
+msgstr "--- r%ld から r%ld までを '%s' にマージしています:\n"
 
 #: svn/notify.c:440
 #, c-format
 msgid "--- Reverse-merging r%ld through r%ld into '%s':\n"
-msgstr "--- r%ld から r%ld を'%s'に逆マージ中:\n"
+msgstr "--- r%ld から r%ld までを '%s' に逆マージしています:\n"
 
 #: svn/propdel-cmd.c:105
 #, c-format
@@ -8766,8 +8781,8 @@ msgid ""
 "To turn off the %s property, use 'svn propdel';\n"
 "setting the property to '%s' will not turn it off."
 msgstr ""
-"属性 %s を無効にするには、'svn propdel' を使ってください\n"
-"属性 を '%s' に設定しても無効になりません。"
+"属性 %s を無効にするには、'svn propdel' を使用してください。\n"
+"属性の値を '%s' に設定しても無効にはなりません。"
 
 #: svn/propset-cmd.c:141
 #, c-format
@@ -8796,7 +8811,7 @@ msgstr "属性 '%s' を '%s' に設定しました\n"
 
 #: svn/resolved-cmd.c:68
 msgid "invalid 'accept' ARG"
-msgstr "不正な 'accept' 引数です"
+msgstr "'accept' の引数が不正です"
 
 #: svn/revert-cmd.c:93
 msgid "Try 'svn revert --recursive' instead?"
@@ -8890,8 +8905,8 @@ msgid ""
 "The environment variable SVN_MERGE and the merge-tool-cmd run-time "
 "configuration option were not set.\n"
 msgstr ""
-"環境変数 SVN_MERGE も、実行時の設定オプション 'merge-tool-cmd' も設定されてい"
-"ません。\n"
+"環境変数 SVN_MERGE も、実行時の設定オプション merge-tool-cmd も設定されていま"
+"せん。\n"
 
 #: svn/util.c:364
 #, c-format
@@ -9276,10 +9291,11 @@ msgid ""
 "Print descriptions of all locks on or under PATH-IN-REPOS (which,\n"
 "if not provided, is the root of the repository).\n"
 msgstr ""
-"使用方法: svnadmin lslocks <リポジトリパス> [<リポジトリ内のパス>]\n"
+"使用方法: svnadmin lslocks <リポジトリパス> [<リポジトリ内パス>]\n"
 "\n"
-"<リポジトリ内のパス> あるいはそれ以下のすべてのロックの説明を表示する\n"
-"もし、指定されていなければ、リポジトリルートを使う。\n"
+"<リポジトリ内パス> (指定がない場合はリポジトリルート) またはその下のすべて"
+"の\n"
+"ロックの説明を表示します。\n"
 
 # * Description for 'svnadmin lstxns'.
 # * "lstxns: " is displayed at the head of the first line.
@@ -9796,11 +9812,11 @@ msgstr ""
 "インデントを使った表現を用いずにフルパスを表示し\n"
 "                             ます"
 
-# * Description for 'svn --limit'.
+# * Description for 'svnlook --limit'.
 # * 29 half-size characters are displayed on the left.
 #: svnlook/main.c:107
 msgid "maximum number of history entries"
-msgstr "表示するログエントリの数の最大値"
+msgstr "表示する履歴エントリの数の最大値"
 
 # * Description for 'svnlook --no-diff-added'.
 # * 29 half-size characters are displayed on the left.
@@ -10442,16 +10458,16 @@ msgstr "パスが文字列でありません"
 
 #: svnserve/serve.c:1624
 msgid "Log revprop entry not a string"
-msgstr "ログのリビジョン属性が文字列ではありません"
+msgstr "ログのリビジョン属性エントリが文字列ではありません"
 
 #: svnserve/serve.c:1631
 #, c-format
 msgid "Unknown revprop word '%s' in log command"
-msgstr "'%s' はログコマンドで不明なリビジョン属性オプションです"
+msgstr "ログコマンドに未知のリビジョン属性の単語 '%s' があります"
 
 #: svnserve/serve.c:1647
 msgid "Log path entry not a string"
-msgstr "log パスエントリが文字列ではありません"
+msgstr "ログパスエントリが文字列ではありません"
 
 #: svnserve/winservice.c:341
 #, c-format
@@ -10572,7 +10588,7 @@ msgstr ""
 "\n"
 "このプログラムやそのサブコマンドの使用方法を説明します。\n"
 
-# * Description for 'svn --quiet'.
+# * Description for 'svnsync --quiet'.
 # * 29 half-size characters are displayed on the left.
 #: svnsync/main.c:112
 msgid "print as little as possible"
@@ -10866,9 +10882,8 @@ msgstr "エクスポートされたものです%s"
 msgid "'%s' not versioned, and not exported\n"
 msgstr "'%s' はバージョン管理下になく、エクスポートされたものでもありません\n"
 
-#, fuzzy
 #~ msgid "Path '%s' is missing"
-#~ msgstr "ディレクトリ '%s' がありません"
+#~ msgstr "パス '%s' がありません"
 
 #~ msgid ""
 #~ "Path '%s' is in conflict, and must be resolved before the remainder of "
