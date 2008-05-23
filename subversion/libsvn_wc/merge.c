@@ -624,18 +624,9 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
         }
       else
         {
-          svn_boolean_t same, special;
-          /* If 'special', then use the detranslated form of the
-             target file.  This is so we don't try to follow symlinks,
-             but the same treatment is probably also appropriate for
-             whatever special file types we may invent in the future. */
-          SVN_ERR(svn_wc__get_special(&special, merge_target,
-                                      adm_access, pool));
+          svn_boolean_t same;
           SVN_ERR(svn_io_files_contents_same_p(&same, result_target,
-                                               (special ?
-                                                  tmp_target : 
-                                                  merge_target),
-                                               pool));
+                                               merge_target, pool));
 
           *merge_outcome = same ? svn_wc_merge_unchanged : svn_wc_merge_merged;
         }
