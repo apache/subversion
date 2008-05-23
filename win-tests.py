@@ -54,6 +54,7 @@ def _usage_exit():
   print "  -p, --parallel         : run multiple tests in parallel"
   print "  --server-minor-version : the minor version of the server being"
   print "                           tested"
+  print " --config-file           : Configuration file for tests"
 
   sys.exit(0)
 
@@ -84,7 +85,8 @@ opts, args = my_getopt(sys.argv[1:], 'hrdvcpu:f:',
                        ['release', 'debug', 'verbose', 'cleanup', 'url=',
                         'svnserve-args=', 'fs-type=', 'asp.net-hack',
                         'httpd-dir=', 'httpd-port=', 'http-library=', 'help',
-                        'list', 'enable-sasl', 'bin=', 'parallel'])
+                        'list', 'enable-sasl', 'bin=', 'parallel',
+                        'config-file='])
 if len(args) > 1:
   print 'Warning: non-option arguments after the first one will be ignored'
 
@@ -103,6 +105,7 @@ enable_sasl = None
 svn_bin = None
 parallel = None
 server_minor_version = None
+config_file = None
 
 for opt, val in opts:
   if opt in ('-h', '--help'):
@@ -142,6 +145,8 @@ for opt, val in opts:
     svn_bin = val
   elif opt in ('-p', '--parallel'):
     parallel = 1
+  elif opt in ('--config-file'):
+    config_file = val
 
 # Calculate the source and test directory names
 abs_srcdir = os.path.abspath("")
@@ -514,7 +519,7 @@ th = run_tests.TestHarness(abs_srcdir, abs_builddir,
                            os.path.join(abs_builddir, log),
                            base_url, fs_type, http_library,
                            server_minor_version, 1, cleanup,
-                           enable_sasl, parallel, list_tests,
+                           enable_sasl, parallel, config_file, list_tests,
                            svn_bin)
 old_cwd = os.getcwd()
 try:
