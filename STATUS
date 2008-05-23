@@ -86,9 +86,6 @@ Candidate changes for 1.5.1:
    Votes:
      +1: danielsh
 
-Approved changes (all releases):
-================================
-
  * (r31159, r31179) or r31193 from 1.5.x-r31159-r31179 branch.
    Fix "file not found" error when a merge target is a broken symbolic link.
    Notes:
@@ -124,3 +121,6 @@ Approved changes (all releases):
      it will be a 1.5.1 candidate and not part of 1.5.0
    Votes:
      +1: pburba, markphip, cmpilato
+
+Approved changes (all releases):
+================================
