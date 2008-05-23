@@ -90,7 +90,8 @@ http://svn.collab.net/repos/svn/tags/1.5.0
     * display repository basename in XML and HTML index views (r25837, r25838)
     * config 'http-auth-type' can be overridden to force BASIC auth (r23900)
     * translation updates for all languages, as usual
-    * Revamp mod_dav_svn logging; see tools/server-side/svn_dav_log_parse.py .
+    * Revamp mod_dav_svn logging; see tools/server-side/svn_dav_log_parse.py
+    * misleading configure arg --enable-dso now --enable-runtime-module-search
 
   - Client-side bugfixes:
     * 'svn revert' of missing scheduled addition broke wc (issue #2425)
