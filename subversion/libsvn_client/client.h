@@ -1055,7 +1055,7 @@ svn_client__get_log_msg(const char **log_msg,
    that case, return SVN_ERR_CLIENT_PROPERTY_NAME. */
 svn_error_t *
 svn_client__ensure_revprop_table(apr_hash_t **revprop_table_out,
-                                 apr_hash_t *revprop_table_in,
+                                 const apr_hash_t *revprop_table_in,
                                  const char *log_msg,
                                  svn_client_ctx_t *ctx,
                                  apr_pool_t *pool);

@@ -605,7 +605,7 @@ get_ra_editor(svn_ra_session_t **ra_session,
               svn_wc_adm_access_t *base_access,
               const char *log_msg,
               apr_array_header_t *commit_items,
-              apr_hash_t *revprop_table,
+              const apr_hash_t *revprop_table,
               svn_commit_info_t **commit_info_p,
               svn_boolean_t is_commit,
               apr_hash_t *lock_tokens,
@@ -613,6 +613,7 @@ get_ra_editor(svn_ra_session_t **ra_session,
               apr_pool_t *pool)
 {
   void *commit_baton;
+  apr_hash_t *commit_revprops;
 
   /* Open an RA session to URL. */
   SVN_ERR(svn_client__open_ra_session_internal(ra_session,
@@ -639,13 +640,13 @@ get_ra_editor(svn_ra_session_t **ra_session,
   if (latest_rev)
     SVN_ERR(svn_ra_get_latest_revnum(*ra_session, latest_rev, pool));
 
-  SVN_ERR(svn_client__ensure_revprop_table(&revprop_table, revprop_table,
+  SVN_ERR(svn_client__ensure_revprop_table(&commit_revprops, revprop_table,
                                            log_msg, ctx, pool));
 
   /* Fetch RA commit editor. */
   SVN_ERR(svn_client__commit_get_baton(&commit_baton, commit_info_p, pool));
   return svn_ra_get_commit_editor3(*ra_session, editor, edit_baton,
-                                   revprop_table,
+                                   commit_revprops,
                                    svn_client__commit_callback,
                                    commit_baton, lock_tokens, keep_locks,
                                    pool);
@@ -661,7 +662,7 @@ svn_client_import3(svn_commit_info_t **commit_info_p,
                    svn_depth_t depth,
                    svn_boolean_t no_ignore,
                    svn_boolean_t ignore_unknown_node_types,
-                   apr_hash_t *revprop_table,
+                   const apr_hash_t *revprop_table,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
@@ -1350,7 +1351,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
                    svn_boolean_t keep_locks,
                    svn_boolean_t keep_changelists,
                    const apr_array_header_t *changelists,
-                   apr_hash_t *revprop_table,
+                   const apr_hash_t *revprop_table,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {

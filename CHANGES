@@ -90,7 +90,8 @@ http://svn.collab.net/repos/svn/tags/1.5.0
     * display repository basename in XML and HTML index views (r25837, r25838)
     * config 'http-auth-type' can be overridden to force BASIC auth (r23900)
     * translation updates for all languages, as usual
-    * Revamp mod_dav_svn logging; see tools/server-side/svn_dav_log_parse.py .
+    * Revamp mod_dav_svn logging; see tools/server-side/svn_dav_log_parse.py
+    * misleading configure arg --enable-dso now --enable-runtime-module-search
 
   - Client-side bugfixes:
     * 'svn revert' of missing scheduled addition broke wc (issue #2425)
@@ -210,6 +211,7 @@ http://svn.collab.net/repos/svn/tags/1.5.0
    - new API svn_fs_txn_root_base_revision() (r22610)
    - pass individual arguments rather than config objects (r25182, r25190)
    - clients can now extend HTTP User-Agent header (r28613)
+   - SVN_ERR_RA_DAV_PATH_NOT_FOUND is deprecated and no longer raised
  * Bindings:
    - Many improvements to all bindings (Java, Perl, Python, and Ruby)
 

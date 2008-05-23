@@ -41,10 +41,12 @@ NEON_LIBS = @NEON_LIBS@
 SVN_APR_LIBS = @SVN_APR_LIBS@
 SVN_APRUTIL_LIBS = @SVN_APRUTIL_LIBS@
 SVN_DB_LIBS =
+SVN_GNOME_KEYRING_LIBS = @SVN_GNOME_KEYRING_LIBS@
 SVN_KWALLET_LIBS = @SVN_KWALLET_LIBS@
 SVN_SERF_LIBS = @SVN_SERF_LIBS@
 SVN_SASL_LIBS = @SVN_SASL_LIBS@
 SVN_ZLIB_LIBS = @SVN_ZLIB_LIBS@
+SVN_APR_MEMCACHE_LIBS = @SVN_APR_MEMCACHE_LIBS@
 
 LIBS = @LIBS@
 
@@ -54,6 +56,7 @@ libdir = @libdir@
 fsmod_libdir = @libdir@
 ramod_libdir = @libdir@
 bdb_libdir = @libdir@
+gnome_keyring_libdir = @libdir@
 kwallet_libdir = @libdir@
 neon_libdir = @libdir@
 serf_libdir = @libdir@
@@ -104,9 +107,9 @@ LT_NO_UNDEFINED = @LT_NO_UNDEFINED@
 LT_CXX_LIBADD = @LT_CXX_LIBADD@
 
 INCLUDES = -I$(top_srcdir)/subversion/include -I$(top_builddir)/subversion \
-           @SVN_APR_INCLUDES@ @SVN_APRUTIL_INCLUDES@ \
+           @SVN_APR_INCLUDES@ @SVN_APRUTIL_INCLUDES@ @SVN_GNOME_KEYRING_INCLUDES@ \
            @SVN_KWALLET_INCLUDES@ @SVN_NEON_INCLUDES@ @SVN_SASL_INCLUDES@ \
-           @SVN_SERF_INCLUDES@ @SVN_ZLIB_INCLUDES@
+           @SVN_SERF_INCLUDES@ @SVN_ZLIB_INCLUDES@ @SVN_APR_MEMCACHE_INCLUDES@
 
 APACHE_INCLUDES = @APACHE_INCLUDES@
 APACHE_LIBEXECDIR = $(DESTDIR)@APACHE_LIBEXECDIR@
@@ -139,6 +142,9 @@ SVN_SERF_PREFIX = @SVN_SERF_PREFIX@
 
 SVN_ZLIB_PREFIX = @SVN_ZLIB_PREFIX@
 SVN_ZLIB_INCLUDES = @SVN_ZLIB_INCLUDES@
+
+SVN_APR_MEMCACHE_PREFIX = @SVN_APR_MEMCACHE_PREFIX@
+SVN_APR_MEMCACHE_INCLUDES = @SVN_APR_MEMCACHE_INCLUDES@
 
 MKDIR = @MKDIR@
 
@@ -190,9 +196,11 @@ INSTALL_LIB = $(LIBTOOL) --mode=install $(INSTALL)
 INSTALL_FSMOD_LIB = $(INSTALL_LIB)
 INSTALL_RAMOD_LIB = $(INSTALL_LIB)
 INSTALL_BDB_LIB = $(INSTALL_LIB)
+INSTALL_GNOME_KEYRING_LIB = $(INSTALL_LIB)
 INSTALL_KWALLET_LIB = $(INSTALL_LIB)
 INSTALL_NEON_LIB = $(INSTALL_LIB)
 INSTALL_SERF_LIB = $(INSTALL_LIB)
+INSTALL_APR_MEMCACHE_LIB = $(INSTALL_LIB)
 INSTALL_BIN = $(LIBTOOL) --mode=install $(INSTALL)
 INSTALL_CONTRIB = $(LIBTOOL) --mode=install $(INSTALL)
 INSTALL_TOOLS = $(LIBTOOL) --mode=install $(INSTALL)
@@ -392,7 +400,9 @@ check: $(TEST_DEPS) @BDB_TEST_DEPS@
 	  if test "$(PARALLEL)" != ""; then                                  \
 	    flags="--parallel $$flags";                                      \
 	  fi;                                                                \
-	  $(PYTHON) $(top_srcdir)/build/run_tests.py $$flags                 \
+	  $(PYTHON) $(top_srcdir)/build/run_tests.py			     \
+	            --config-file $(top_srcdir)/subversion/tests/tests.conf  \
+	            $$flags                 				     \
 		    '$(abs_srcdir)' '$(abs_builddir)' $(TESTS);              \
 	else                                                                 \
 	  echo "make check: Python 2.2 or greater is required,";             \

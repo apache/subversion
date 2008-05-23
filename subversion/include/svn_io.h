@@ -629,6 +629,12 @@ svn_error_t *svn_stream_for_stdout(svn_stream_t **out, apr_pool_t *pool);
 svn_stream_t *svn_stream_from_stringbuf(svn_stringbuf_t *str,
                                         apr_pool_t *pool);
 
+/** Return a generic read-only stream connected to string @a str.
+ *  Allocate the stream in @a pool.
+ */
+svn_stream_t *svn_stream_from_string(svn_string_t *str,
+                                     apr_pool_t *pool);
+
 /** Return a stream that decompresses all data read and compresses all
  * data written. The stream @a stream is used to read and write all
  * compressed data. All compression data structures are allocated on

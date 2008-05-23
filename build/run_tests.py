@@ -6,13 +6,13 @@
 '''usage: python run_tests.py [--url=<base-url>] [--fs-type=<fs-type>]
                     [--verbose] [--cleanup] [--enable-sasl] [--parallel]
                     [--http-library=<http-library>]
+                    [--config-file=<file>]
                     [--server-minor-version=<version>] <abs_srcdir> <abs_builddir>
                     <prog ...>
 
-The optional base-url, fs-type, http-library, server-minor-version,
-verbose, parallel, enable-sasl, and cleanup options, and the first two
-parameters are passed unchanged to the TestHarness constructor.  All
-other parameters are names of test programs.
+The optional flags and the first two parameters are passed unchanged
+to the TestHarness constructor.  All other parameters are names of
+test programs.
 '''
 
 import os, sys
@@ -30,8 +30,8 @@ class TestHarness:
   def __init__(self, abs_srcdir, abs_builddir, logfile,
                base_url=None, fs_type=None, http_library=None,
                server_minor_version=None, verbose=None,
-               cleanup=None, enable_sasl=None, parallel=None, list_tests=None,
-               svn_bin=None):
+               cleanup=None, enable_sasl=None, parallel=None, config_file=None,
+               list_tests=None, svn_bin=None):
     '''Construct a TestHarness instance.
 
     ABS_SRCDIR and ABS_BUILDDIR are the source and build directories.
@@ -53,6 +53,9 @@ class TestHarness:
     self.cleanup = cleanup
     self.enable_sasl = enable_sasl
     self.parallel = parallel
+    self.config_file = None
+    if config_file is not None:
+      self.config_file = os.path.abspath(config_file)
     self.list_tests = list_tests
     self.svn_bin = svn_bin
     self.log = None
@@ -114,10 +117,14 @@ class TestHarness:
         cmdline.append('--enable-sasl')
       if self.parallel is not None:
         cmdline.append('--parallel')
+      if self.config_file is not None:
+        cmdline.append(quote('--config-file=' + self.config_file))
     elif os.access(prog, os.X_OK):
       progname = './' + progbase
       cmdline = [quote(progname),
                  quote('--srcdir=' + os.path.join(self.srcdir, progdir))]
+      if self.config_file is not None:
+        cmdline.append(quote('--config-file=' + self.config_file))
     else:
       print 'Don\'t know what to do about ' + progbase
       sys.exit(1)
@@ -190,7 +197,7 @@ def main():
     opts, args = my_getopt(sys.argv[1:], 'u:f:vc',
                            ['url=', 'fs-type=', 'verbose', 'cleanup',
                             'http-library=', 'server-minor-version=',
-                            'enable-sasl', 'parallel'])
+                            'enable-sasl', 'parallel', 'config-file='])
   except getopt.GetoptError:
     args = []
 
@@ -199,8 +206,8 @@ def main():
     sys.exit(2)
 
   base_url, fs_type, verbose, cleanup, enable_sasl, http_library, \
-    server_minor_version, parallel = \
-            None, None, None, None, None, None, None, None
+    server_minor_version, parallel, config_file = \
+            None, None, None, None, None, None, None, None, None
   for opt, val in opts:
     if opt in ['-u', '--url']:
       base_url = val
@@ -218,13 +225,15 @@ def main():
       enable_sasl = 1
     elif opt in ['--parallel']:
       parallel = 1
+    elif opt in ['--config-file']:
+      config_file = val
     else:
       raise getopt.GetoptError
 
   th = TestHarness(args[0], args[1],
                    os.path.abspath('tests.log'),
                    base_url, fs_type, http_library, server_minor_version,
-                   verbose, cleanup, enable_sasl, parallel)
+                   verbose, cleanup, enable_sasl, parallel, config_file)
 
   failed = th.run(args[2:])
   if failed:

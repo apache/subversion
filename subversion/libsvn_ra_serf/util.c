@@ -1388,7 +1388,7 @@ svn_ra_serf__discover_root(const char **vcc_url,
         }
       else
         {
-          if (err->apr_err != SVN_ERR_RA_DAV_PATH_NOT_FOUND)
+          if (err->apr_err != SVN_ERR_FS_NOT_FOUND)
             {
               return err;  /* found a _real_ error */
             }
@@ -1450,6 +1450,27 @@ svn_ra_serf__discover_root(const char **vcc_url,
         {
           *rel_path = relative_path;
         }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_serf__error_on_status(int status_code, const char *path)
+{
+  switch(status_code) 
+    {
+      case 301:
+      case 302:
+        return svn_error_createf(SVN_ERR_RA_DAV_RELOCATED, NULL,
+                        (status_code == 301)
+                        ? _("Repository moved permanently to '%s';"
+                            " please relocate")
+                        : _("Repository moved temporarily to '%s';"
+                            " please relocate"), path);
+      case 404:
+        return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
+                                 _("'%s' path not found"), path);
     }
 
   return SVN_NO_ERROR;
