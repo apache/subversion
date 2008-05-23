@@ -178,6 +178,9 @@ def _usage_exit():
   print "  --vsnet-version=VER"
   print "           generate for VS.NET version VER (2002, 2003, 2005 or 2008)"
   print "           [only valid in combination with '-t vcproj']"
+  print
+  print "  --with-apr_memcache=DIR"
+  print "           the apr_memcache sources are in DIR"
   sys.exit(0)
 
 
@@ -214,6 +217,7 @@ if __name__ == '__main__':
                             'with-junit=',
                             'with-swig=',
                             'with-sasl=',
+                            'with-apr_memcache=',
                             'enable-pool-debug',
                             'enable-purify',
                             'enable-quantify',

@@ -60,6 +60,23 @@ svn_error_t *svn_fs_fs__put_node_revision(svn_fs_t *fs,
                                           svn_boolean_t fresh_txn_root,
                                           apr_pool_t *pool);
 
+/* Write the node-revision NODEREV into the stream OUTFILE.  Only write
+   mergeinfo-related metadata if INCLUDE_MERGEINFO is true.  Temporary
+   allocations are from POOL. */
+svn_error_t *
+svn_fs_fs__write_noderev(svn_stream_t *outfile,
+                         node_revision_t *noderev,
+                         svn_boolean_t include_mergeinfo,
+                         apr_pool_t *pool);
+
+/* Reads the node-revision *NODEREV from the stream STREAM.  Temporary
+   allocations are from POOL. */
+svn_error_t *
+svn_fs_fs__read_noderev(node_revision_t **noderev,
+                        svn_stream_t *stream,
+                        apr_pool_t *pool);
+
+
 /* Set *YOUNGEST to the youngest revision in filesystem FS.  Do any
    temporary allocation in POOL. */
 svn_error_t *svn_fs_fs__youngest_rev(svn_revnum_t *youngest,
@@ -72,6 +89,12 @@ svn_error_t *svn_fs_fs__rev_get_root(svn_fs_id_t **root_id,
                                      svn_fs_t *fs,
                                      svn_revnum_t rev,
                                      apr_pool_t *pool);
+
+/* Serialize a directory contents hash. */
+svn_cache_serialize_func_t svn_fs_fs__dir_entries_serialize;
+
+/* Deserialize a directory contents hash. */
+svn_cache_deserialize_func_t svn_fs_fs__dir_entries_deserialize;
 
 /* Set *ENTRIES to an apr_hash_t of dirent structs that contain the
    directory entries of node-revision NODEREV in filesystem FS.  The
@@ -179,6 +202,14 @@ svn_error_t *svn_fs_fs__change_txn_props(svn_fs_txn_t *txn,
 
 /* Return whether or not the given FS supports mergeinfo metadata. */
 svn_boolean_t svn_fs_fs__fs_supports_mergeinfo(svn_fs_t *fs);
+
+/* Sets *CONFIG to the parsed version of FS's fsfs.conf, allocated
+   in FS->pool.  POOL is used for temporary allocations. */
+svn_error_t *
+svn_fs_fs__get_config(svn_config_t **config,
+                      svn_fs_t *fs,
+                      apr_pool_t *pool);
+
 
 /* Store a transaction record in *TXN_P for the transaction identified
    by TXN_ID in filesystem FS.  Allocate everything from POOL. */
@@ -467,6 +498,12 @@ svn_fs_fs__get_node_origin(const svn_fs_id_t **origin_id,
                            svn_fs_t *fs,
                            const char *node_id,
                            apr_pool_t *pool);
+
+
+/* Sets up the svn_cache_t structures in FS.  POOL is used for
+   temporary allocations. */
+svn_error_t *
+svn_fs_fs__initialize_caches(svn_fs_t *fs, apr_pool_t *pool);
 
 
 #endif
