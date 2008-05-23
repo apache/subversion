@@ -48,6 +48,7 @@
 # conflict marker         競合マーカー
 # contents                内容
 # copyfrom                コピー元
+# credential              クレデンシャル
 # creating ...            〜を作成しています
 # datestamp               タイムスタンプ
 # delete-entry element    delete-entry 要素
@@ -77,7 +78,7 @@
 # grab                    奪う
 # HEAD                    HEAD
 # help                    ヘルプ
-# immutable               変更できない
+# immutable               変更不可 / 変更不可な
 # import                  インポート
 # in the way              妨害して
 # insn                    インストラクション
@@ -85,6 +86,7 @@
 # last changed            最終変更
 # last updated            最終更新
 # length line             長さの行
+# line ending style       改行文字形式
 # local                   ローカル
 # lock/entries hashfile   lock/entries ハッシュファイル
 # lock comment            ロックについてのコメント
@@ -128,6 +130,7 @@
 # RA loader               リポジトリアクセスローダ
 # RA plugin ABI version   RA プラグイン ABI バージョン
 # read-only               読み取り専用
+# record                  レコード
 # recode                  再エンコードする
 # recovery                復旧
 # reintegrate             再統合
@@ -193,23 +196,23 @@ msgstr "svn_make_pool() に渡された親メモリプールが不正です"
 
 #: include/svn_error_codes.h:158
 msgid "Bogus filename"
-msgstr "不正なファイル名です"
+msgstr "ファイル名が不正です"
 
 #: include/svn_error_codes.h:162
 msgid "Bogus URL"
-msgstr "不正な URL です"
+msgstr "URL が不正です"
 
 #: include/svn_error_codes.h:166
 msgid "Bogus date"
-msgstr "不正な日時です"
+msgstr "日時が不正です"
 
 #: include/svn_error_codes.h:170
 msgid "Bogus mime-type"
-msgstr "不正な MIME タイプです"
+msgstr "MIME タイプが不正です"
 
 #: include/svn_error_codes.h:180
 msgid "Wrong or unexpected property value"
-msgstr "不正な、あるいは予想外の属性値です"
+msgstr "属性値が不正か、あるいは予想外の値です"
 
 #: include/svn_error_codes.h:184
 msgid "Version file format not correct"
@@ -237,7 +240,7 @@ msgstr "データは安全に XML エスケープされていません"
 
 #: include/svn_error_codes.h:212
 msgid "Inconsistent line ending style"
-msgstr "改行文字スタイルが一貫していません"
+msgstr "改行文字形式が一貫していません"
 
 #: include/svn_error_codes.h:216
 msgid "Unrecognized line ending style"
@@ -385,7 +388,7 @@ msgstr "ノード種別を変更できません"
 
 #: include/svn_error_codes.h:373
 msgid "Invalid operation on the current working directory"
-msgstr "現在の作業ディレクトリに対する不正な操作です"
+msgstr "現在の作業ディレクトリに対する操作が不正です"
 
 #: include/svn_error_codes.h:377
 msgid "Problem on first log entry in a working copy"
@@ -507,7 +510,7 @@ msgstr "名前は一階層のパス成分ではありません"
 
 #: include/svn_error_codes.h:502
 msgid "Attempt to change immutable filesystem node"
-msgstr "ファイルシステムの、変更できないノードを変更しようとしました"
+msgstr "ファイルシステムの変更不可ノードを変更しようとしました"
 
 #: include/svn_error_codes.h:506
 msgid "Item already exists in filesystem"
@@ -536,11 +539,11 @@ msgstr "読んでいる際に表現が消えたか変更されたかしていま
 
 #: include/svn_error_codes.h:530
 msgid "Tried to change an immutable representation"
-msgstr "変更できない表現を変更しようとしました"
+msgstr "変更不可な表現を変更しようとしました"
 
 #: include/svn_error_codes.h:534
 msgid "Malformed skeleton data"
-msgstr "不正なスケルトンデータです"
+msgstr "スケルトンデータが不正です"
 
 #: include/svn_error_codes.h:538
 msgid "Transaction is out of date"
@@ -636,7 +639,7 @@ msgstr "データが入力されなかったので報告を作成できません
 
 #: include/svn_error_codes.h:653
 msgid "Bogus revision report"
-msgstr "不正なリビジョン報告です"
+msgstr "リビジョン報告が不正です"
 
 #: include/svn_error_codes.h:662
 msgid "Unsupported repository version"
@@ -716,7 +719,7 @@ msgstr "RA 層のファイルは既にあります"
 
 #: include/svn_error_codes.h:751
 msgid "Invalid configuration value"
-msgstr "不正な設定値です"
+msgstr "設定値が不正です"
 
 #: include/svn_error_codes.h:755
 msgid "HTTP Path Not Found"
@@ -730,7 +733,7 @@ msgstr "WebDAV PROPPATCH を実行できませんでした"
 #: libsvn_ra_svn/marshal.c:640 libsvn_ra_svn/marshal.c:758
 #: libsvn_ra_svn/marshal.c:785
 msgid "Malformed network data"
-msgstr "不正なネットワークデータです"
+msgstr "ネットワークデータが不正です"
 
 #: include/svn_error_codes.h:769
 msgid "Unable to extract data from response header"
@@ -774,7 +777,7 @@ msgstr "認証機構と交渉できません"
 
 #: include/svn_error_codes.h:827
 msgid "Credential data unavailable"
-msgstr "利用できる信任データがありません"
+msgstr "利用できるクレデンシャがありません"
 
 #: include/svn_error_codes.h:831
 msgid "No authentication provider available"
@@ -802,7 +805,7 @@ msgstr "項目の一部だけが読み込み可能です"
 
 #: include/svn_error_codes.h:864
 msgid "Invalid authz configuration"
-msgstr "不正な認証設定です"
+msgstr "認証設定が不正です"
 
 #: include/svn_error_codes.h:869
 msgid "Item is not writable"
@@ -903,7 +906,7 @@ msgstr "変更者の名前に改行文字を入れてはいけません"
 
 #: include/svn_error_codes.h:975
 msgid "Bad property name"
-msgstr "不正な属性名です"
+msgstr "属性名が不正です"
 
 #: include/svn_error_codes.h:980
 msgid "Two versioned resources are unrelated"
@@ -931,7 +934,7 @@ msgstr "プラグインをロードできませんでした"
 
 #: include/svn_error_codes.h:1009
 msgid "Malformed file"
-msgstr "不正なファイルです"
+msgstr "ファイルが不正です"
 
 #: include/svn_error_codes.h:1013
 msgid "Incomplete data"
@@ -939,7 +942,7 @@ msgstr "不完全なデータです"
 
 #: include/svn_error_codes.h:1017
 msgid "Incorrect parameters given"
-msgstr "不正なパラメータを指定しました"
+msgstr "不正なパラメータが指定されました"
 
 #: include/svn_error_codes.h:1021
 msgid "Tried a versioning operation on an unversioned resource"
@@ -960,7 +963,7 @@ msgstr "予想外または未知の属性種別です"
 
 #: include/svn_error_codes.h:1037
 msgid "Illegal target for the requested operation"
-msgstr "要求された操作の対象としては不正です"
+msgstr "要求された操作の対象が不正です"
 
 #: include/svn_error_codes.h:1041
 msgid "MD5 checksum is missing"
@@ -1171,7 +1174,7 @@ msgstr "パス '%s' は既に存在しています"
 #: libsvn_client/commit.c:784
 #, c-format
 msgid "'%s' is a reserved name and cannot be imported"
-msgstr "'%s' は予約された名称です。インポートはできません"
+msgstr "'%s' は予約されたパス名です。インポートはできません"
 
 #: libsvn_client/commit.c:917 libsvn_client/copy.c:1342
 msgid "Commit failed (details follow):"
@@ -1314,7 +1317,7 @@ msgstr ""
 #: libsvn_client/copy.c:919
 #, c-format
 msgid "Cannot move URL '%s' into itself"
-msgstr "URL '%s' は自身には移動できません"
+msgstr "URL '%s' はそれ自体には移動できません"
 
 #: libsvn_client/copy.c:928 libsvn_client/prop_commands.c:228
 #, c-format
@@ -1354,12 +1357,12 @@ msgstr "コピー元 (または移動元) にリポジトリと作業コピー�
 #: libsvn_client/copy.c:1825
 #, c-format
 msgid "Cannot copy path '%s' into its own child '%s'"
-msgstr "パス '%s' は自身の子ノード '%s' にはコピーできません"
+msgstr "パス '%s' はそれ自体の子ノード '%s' にはコピーできません"
 
 #: libsvn_client/copy.c:1845
 #, c-format
 msgid "Cannot move path '%s' into itself"
-msgstr "パス '%s' は自身には移動できません"
+msgstr "パス '%s' はそれ自体には移動できません"
 
 #: libsvn_client/copy.c:1854
 msgid "Moves between the working copy and the repository are not supported"
@@ -1633,7 +1636,7 @@ msgstr "この操作ではリビジョン属性 '%s' を使ってはなりませ
 #: libsvn_client/prop_commands.c:331 libsvn_client/prop_commands.c:462
 #, c-format
 msgid "Bad property name: '%s'"
-msgstr "不正な属性名: '%s'"
+msgstr "属性名が不正です: '%s'"
 
 #: libsvn_client/prop_commands.c:342
 #, c-format
@@ -1893,11 +1896,12 @@ msgstr "必要なノードリビジョン識別番号がありません"
 
 #: libsvn_fs_base/bdb/changes-table.c:156 libsvn_fs_fs/fs_fs.c:2739
 msgid "Invalid change ordering: new node revision ID without delete"
-msgstr "不正な変更順序: ノードリビジョン識別番号を削除せず新しく追加しています"
+msgstr ""
+"変更順序が不正です: ノードリビジョン識別番号を削除せず新しく追加しています"
 
 #: libsvn_fs_base/bdb/changes-table.c:166 libsvn_fs_fs/fs_fs.c:2750
 msgid "Invalid change ordering: non-add change on deleted path"
-msgstr "不正な変更順序: 削除したパスに対して、追加ではない変更をしています"
+msgstr "変更順序が不正です: 削除したパスに対して、追加ではない変更をしています"
 
 #: libsvn_fs_base/bdb/changes-table.c:256
 #: libsvn_fs_base/bdb/changes-table.c:380
@@ -1922,7 +1926,7 @@ msgstr "変更のカーソルを閉じています"
 
 #: libsvn_fs_base/bdb/copies-table.c:85
 msgid "storing copy record"
-msgstr "コピー記録を保存しています"
+msgstr "コピーレコードを保存しています"
 
 #: libsvn_fs_base/bdb/copies-table.c:110
 msgid "allocating new copy ID (getting 'next-key')"
@@ -2006,7 +2010,7 @@ msgstr "文字列を読み込むためのカーソルを作成しています"
 
 #: libsvn_fs_base/bdb/txn-table.c:92
 msgid "storing transaction record"
-msgstr "トランザクションの記録を保存しています"
+msgstr "トランザクションレコードを保存しています"
 
 #: libsvn_fs_base/bdb/uuids-table.c:114
 msgid "get repository uuid"
@@ -2062,12 +2066,12 @@ msgstr "ディレクトリでないノードにエントリを設定しようと
 
 #: libsvn_fs_base/dag.c:532 libsvn_fs_fs/dag.c:398
 msgid "Attempted to set entry in immutable node"
-msgstr "変更できないノードにエントリを設定しようとしました"
+msgstr "変更不可ノードにエントリを設定しようとしました"
 
 #: libsvn_fs_base/dag.c:596
 #, c-format
 msgid "Can't set proplist on *immutable* node-revision %s"
-msgstr "変更できない ノードリビジョン %s には属性リストを設定できません"
+msgstr "変更不可なノードリビジョン %s には属性リストを設定できません"
 
 #: libsvn_fs_base/dag.c:708
 #, c-format
@@ -2082,7 +2086,7 @@ msgstr "ディレクトリでないノードからエントリ '%s' を削除し
 #: libsvn_fs_base/dag.c:840
 #, c-format
 msgid "Attempted to delete entry '%s' from immutable directory node"
-msgstr "変更できないディレクトリノードからエントリ '%s' を削除しようとしました"
+msgstr "変更不可なディレクトリノードからエントリ '%s' を削除しようとしました"
 
 #: libsvn_fs_base/dag.c:847
 #, c-format
@@ -2097,7 +2101,7 @@ msgstr "削除が失敗しました: ディレクトリにエントリ '%s' が�
 #: libsvn_fs_base/dag.c:944
 #, c-format
 msgid "Attempted removal of immutable node"
-msgstr "変更できないノードを削除しようとしました"
+msgstr "変更不可ノードを削除しようとしました"
 
 #: libsvn_fs_base/dag.c:1064
 #, c-format
@@ -2122,7 +2126,7 @@ msgstr "ファイルでないノードにテキストを設定しようとしま
 #: libsvn_fs_base/dag.c:1162 libsvn_fs_base/dag.c:1216
 #, c-format
 msgid "Attempted to set textual contents of an immutable node"
-msgstr "変更できないノードにはテキストを設定できません"
+msgstr "変更不可ノードにはテキストを設定できません"
 
 #: libsvn_fs_base/dag.c:1239
 #, c-format
@@ -2148,7 +2152,7 @@ msgstr "不正な名前 '%s' をもつノードを開こうとしました"
 #: libsvn_fs_base/err.c:41
 #, c-format
 msgid "Corrupt filesystem revision %ld in filesystem '%s'"
-msgstr "壊れたリビジョン '%ld' がファイルシステム '%s' にあります"
+msgstr "壊れたリビジョン %ld がファイルシステム '%s' にあります"
 
 #: libsvn_fs_base/err.c:52 libsvn_fs_fs/err.c:42
 #, c-format
@@ -2197,11 +2201,13 @@ msgstr ""
 "トークン '%s' はファイルシステム '%s' 内に存在するどのロックも指し示していま"
 "せん"
 
+# TRANSLATION-FIXME: If APR supported reordering of format indicators...
 #: libsvn_fs_base/err.c:138
 #, c-format
 msgid "No token given for path '%s' in filesystem '%s'"
 msgstr "パス '%s' (ファイルシステム '%s') にトークンは指定されていません"
 
+# TRANSLATION-FIXME: If APR supported reordering of format indicators...
 #: libsvn_fs_base/err.c:147
 #, c-format
 msgid "Corrupt lock in 'locks' table for '%s' in filesystem '%s'"
@@ -2374,7 +2380,7 @@ msgstr "新しい文字列キーを取得できませんでした"
 #: libsvn_fs_base/reps-strings.c:1415
 #, c-format
 msgid "Attempt to deltify '%s' against itself"
-msgstr "'%s' と自身とを差分化しようとしました"
+msgstr "'%s' とそれ自体とを差分化しようとしました"
 
 #: libsvn_fs_base/reps-strings.c:1486
 #, c-format
@@ -2411,7 +2417,7 @@ msgstr "DB が壊れています: 祖先の番号が不正です"
 #: libsvn_fs_base/tree.c:1760 libsvn_fs_fs/tree.c:1171
 #, c-format
 msgid "Unexpected immutable node at '%s'"
-msgstr "'%s' に予想外の変更できないノードがあります"
+msgstr "'%s' に予想外の変更不可ノードがあります"
 
 #: libsvn_fs_base/tree.c:1781 libsvn_fs_fs/tree.c:1194
 #, c-format
@@ -2422,13 +2428,13 @@ msgstr "'%s' で競合が生じています"
 #: libsvn_fs_fs/tree.c:1243 libsvn_fs_fs/tree.c:1735
 msgid "Bad merge; ancestor, source, and target not all in same fs"
 msgstr ""
-"不正なマージです。祖先・マージ元・対象のどれかが同じファイルシステムにありま"
+"マージが不正です。祖先・マージ元・対象のどれかが同じファイルシステムにありま"
 "せん"
 
 #: libsvn_fs_base/tree.c:1847 libsvn_fs_fs/tree.c:1259
 #, c-format
 msgid "Bad merge; target '%s' has id '%s', same as ancestor"
-msgstr "不正なマージです。対象 '%s' が祖先と同じ ID '%s' をもっています"
+msgstr "マージが不正です。対象 '%s' が祖先と同じ ID '%s' をもっています"
 
 #: libsvn_fs_base/tree.c:2350
 #, c-format
@@ -2632,7 +2638,7 @@ msgstr "トランザクションでないものに書き込もうとしました
 
 #: libsvn_fs_fs/fs_fs.c:1626
 msgid "Malformed representation header"
-msgstr "不正な表現ヘッダです"
+msgstr "表現ヘッダが不正です"
 
 #: libsvn_fs_fs/fs_fs.c:1650
 msgid "Missing node-id in node-rev"
@@ -2738,7 +2744,7 @@ msgstr "トランザクションの掃除が失敗しました"
 
 #: libsvn_fs_fs/fs_fs.c:3841
 msgid "Invalid change type"
-msgstr "不正な変更形式です"
+msgstr "変更形式が不正です"
 
 #: libsvn_fs_fs/fs_fs.c:4166
 msgid "Can't set text contents of a directory"
@@ -3153,11 +3159,12 @@ msgstr "リソースには VCC 属性が見つかりませんでした"
 
 #: libsvn_ra_neon/props.c:832
 msgid "The relative-path property was not found on the resource"
-msgstr "relative-path 属性はリソースには存在しません"
+msgstr "relative-path 属性はリソースには見つかりませんでした"
 
 #: libsvn_ra_neon/props.c:953
 msgid "'DAV:baseline-collection' was not present on the baseline resource"
-msgstr "'DAV:baseline-collection' はベースラインのリソースには存在しません"
+msgstr ""
+"'DAV:baseline-collection' はベースラインのリソースには存在しませんでした"
 
 # FIXME: Original message should be fixed.
 #: libsvn_ra_neon/props.c:972
@@ -3197,35 +3204,35 @@ msgstr "属性削除用の cdata の内容があります"
 
 #: libsvn_ra_neon/session.c:454
 msgid "Invalid URL: illegal character in proxy port number"
-msgstr "不正な URL です: プロキシのポート番号の値が不正な文字です"
+msgstr "URL が不正です: プロキシのポート番号の値が不正な文字です"
 
 #: libsvn_ra_neon/session.c:458
 msgid "Invalid URL: negative proxy port number"
-msgstr "不正な URL です: プロキシのポート番号が負です"
+msgstr "URL が不正です: プロキシのポート番号が負です"
 
 #: libsvn_ra_neon/session.c:461
 msgid ""
 "Invalid URL: proxy port number greater than maximum TCP port number 65535"
 msgstr ""
-"不正な URL です: プロキシのポート番号が TCP のポート番号の最大値 65535 以上で"
+"URL が不正です: プロキシのポート番号が TCP のポート番号の最大値 65535 以上で"
 "す"
 
 #: libsvn_ra_neon/session.c:475
 msgid "Invalid config: illegal character in timeout value"
-msgstr "不正な設定です: タイムアウトの値が不正な文字です"
+msgstr "設定が不正です: タイムアウトの値が不正な文字です"
 
 #: libsvn_ra_neon/session.c:479
 msgid "Invalid config: negative timeout value"
-msgstr "不正な設定です: タイムアウトの値が負です"
+msgstr "設定が不正です: タイムアウトの値が負です"
 
 #: libsvn_ra_neon/session.c:492
 msgid "Invalid config: illegal character in debug mask value"
-msgstr "不正な設定です: デバッグマスクの値が不正な文字です"
+msgstr "設定が不正です: デバッグマスクの値が不正な文字です"
 
 #: libsvn_ra_neon/session.c:517
 #, c-format
 msgid "Invalid config: unknown http authtype '%s'"
-msgstr "不正な設定です: 未知の HTTP 認証形式です: '%s'"
+msgstr "設定が不正です: 未知の HTTP 認証形式です: '%s'"
 
 #: libsvn_ra_neon/session.c:578
 msgid "Module for accessing a repository via WebDAV protocol using Neon."
@@ -3556,13 +3563,13 @@ msgstr "サーバから送られてきたノード種別 '%s' を認識できま
 #: libsvn_ra_svn/client.c:374
 #, c-format
 msgid "Undefined tunnel scheme '%s'"
-msgstr "トンネルスキーマ '%s' は未定義です"
+msgstr "トンネルスキーム '%s' は未定義です"
 
 #: libsvn_ra_svn/client.c:391
 #, c-format
 msgid "Tunnel scheme %s requires environment variable %s to be defined"
 msgstr ""
-"トンネルスキーマ %s を使うには環境変数 %s が定義されている必要があります"
+"トンネルスキーム %s を使うには環境変数 %s が定義されている必要があります"
 
 #: libsvn_ra_svn/client.c:402
 #, c-format
@@ -4065,7 +4072,7 @@ msgstr "ダンプファイルのバージョン %d はサポートされてい�
 
 #: libsvn_repos/load.c:591
 msgid "Unrecognized record type in stream"
-msgstr "ストリーム中の記録形式を認識できません"
+msgstr "ストリーム中のレコード形式を認識できません"
 
 #: libsvn_repos/load.c:703
 msgid "Sum of subblock sizes larger than total block content length"
@@ -4086,8 +4093,8 @@ msgstr "現在のリポジトリでは、相対ソースリビジョン %ld は�
 #: libsvn_repos/load.c:978
 msgid "Malformed dumpstream: Revision 0 must not contain node records"
 msgstr ""
-"ダンプストリームが不正です。リビジョン 0 にはノードの記録が含まれていてはいけ"
-"ません"
+"ダンプストリームが不正です。リビジョン 0 にはノードのレコードが含まれていては"
+"いけません"
 
 #: libsvn_repos/load.c:988
 #, c-format
@@ -5941,7 +5948,7 @@ msgstr ""
 #: libsvn_wc/update_editor.c:2189
 #, c-format
 msgid "Checksum mismatch for '%s'; recorded: '%s', actual: '%s'"
-msgstr "'%s' のチェックサムが一致しませんでした。記録: '%s', 実際: '%s'"
+msgstr "'%s' のチェックサムが一致しませんでした。レコード: '%s', 実際: '%s'"
 
 #: libsvn_wc/update_editor.c:2864
 msgid "Destination directory of add-with-history is missing a URL."
@@ -6869,7 +6876,7 @@ msgstr "結果を要約したものを表示します"
 # * 29 half-size characters are displayed on the left.
 #: svn/main.c:194
 msgid "remove changelist association"
-msgstr "変更リストの関連づけを削除します"
+msgstr "変更リストとの関連づけをなくします"
 
 # * Description for 'svn --changelist'.
 # * 29 half-size characters are displayed on the left.
@@ -7340,7 +7347,7 @@ msgstr ""
 "使用方法: import [<パス>] <URL>\n"
 "\n"
 "  <パス> のコピーを再帰的に <URL> にコミットします。\n"
-"  <パス> は、省略された場合は '.' だと仮定されます。\n"
+"  <パス> が省略された場合は、<パス> は '.' だと仮定します。\n"
 "  リポジトリには、必要に応じて親ディレクトリが作成されます。\n"
 "  <パス> がディレクトリの場合、そのディレクトリの内容が <URL> の下に直接追"
 "加\n"
@@ -9938,9 +9945,9 @@ msgid ""
 msgstr ""
 "使用方法: svnlook dirs-changed <リポジトリパス>\n"
 "\n"
-"(属性の編集で) 自身に変更が加えられたか、子ノードのファイルに変更が加えられ"
-"た\n"
-"ディレクトリを表示します。\n"
+"(属性の編集で) ディレクトリ自体に変更が加えられたか、子ノードのファイルに変"
+"更\n"
+"が加えられたディレクトリを表示します。\n"
 
 # * Description for 'svnlook help'.
 # * "help: " is displayed at the head of the first line.
@@ -9965,9 +9972,9 @@ msgid ""
 msgstr ""
 "使用方法: svnlook history <リポジトリパス> [<リポジトリ内パス>]\n"
 "\n"
-"<リポジトリ内パス> (あるいは、パスが与えられなかった場合はルートディレクト"
-"リ)\n"
-"の履歴に関する情報を表示します。\n"
+"<リポジトリ内パス> (あるいは、パスの指定がない場合はルートディレクトリ) の"
+"履\n"
+"歴に関する情報を表示します。\n"
 
 # * Description for 'svnlook info'.
 # * "info: " is displayed at the head of the first line.
@@ -10889,7 +10896,7 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ msgstr "パスが、指定されたディレクトリの直接の子ノードではありません"
 
 #~ msgid "Bogus UUID"
-#~ msgstr "不正な UUID です"
+#~ msgstr "UUID が不正です"
 
 #~ msgid "Failed to locate 'copyfrom' path in working copy"
 #~ msgstr "作業コピー内に 'copyfrom' パスが見つかりませんでした"
@@ -10916,7 +10923,7 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ msgstr "サーバの SSL 証明書が信頼できません"
 
 #~ msgid "Credentials not saved"
-#~ msgstr "信任データが保存されていません"
+#~ msgstr "クレデンシャルが保存されていません"
 
 #~ msgid "Working copy and merge source not ready for reintegration"
 #~ msgstr "作業コピーやマージ元に再統合するための仕組みがありません"
@@ -11064,10 +11071,10 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ msgstr "基点ノードレコードを保存しています"
 
 #~ msgid "Attempted merge tracking info change on immutable node"
-#~ msgstr "変更できないノードでマージ追跡情報を変更しようとしました"
+#~ msgstr "変更不可ノードでマージ追跡情報を変更しようとしました"
 
 #~ msgid "Attempted mergeinfo count change on immutable node"
-#~ msgstr "変更できないノードでマージ情報数を変更しようとしました"
+#~ msgstr "変更不可ノードでマージ情報数を変更しようとしました"
 
 #~ msgid "Invalid value (%%%s) for node revision mergeinfo count"
 #~ msgstr "ノードのリビジョンマージ情報数が不正な値 (%%%s) です"
@@ -11171,7 +11178,7 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ "となります。ファイルシステム '%s' で使用されているのはバージョン %d です"
 
 #~ msgid "Invalid config: unknown HTTP library '%s'"
-#~ msgstr "不正な設定です: '%s' は未知の HTTP ライブラリです"
+#~ msgstr "設定が不正です: '%s' は未知の HTTP ライブラリです"
 
 #~ msgid "Repository UUID '%s' doesn't match expected UUID '%s'"
 #~ msgstr "リポジトリの UUID '%s' が、期待される UUID '%s' と一致しません"
@@ -11214,7 +11221,7 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ msgstr "remove-prop 要素に name 属性がありません"
 
 #~ msgid "'%s' was not present on the baseline resource"
-#~ msgstr "'%s' はベースラインのリソースには存在しません"
+#~ msgstr "'%s' はベースラインのリソースには存在しませんでした"
 
 #~ msgid "PIN for token \"%s\" in slot \"%s\""
 #~ msgstr "トークン \"%s\" 用の PIN がスロット \"%s\" にあります"
@@ -11462,7 +11469,7 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ msgstr "MIME タイプ '%s' に不正な文字 '%c' が含まれています"
 
 #~ msgid "Malformed XML: %s at line %ld"
-#~ msgstr "異常な XML です: %s (行 %ld)"
+#~ msgstr "XML が不正です: %s (行 %ld)"
 
 #~ msgid "Cannot revert"
 #~ msgstr "元に戻せません"
@@ -11788,9 +11795,9 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ "usage: 1. changelist CLNAME TARGET...\n"
 #~ "       2. changelist --remove TARGET...\n"
 #~ msgstr ""
-#~ "指定したファイルを変更リスト <CLNAME> に入れます (または\n"
-#~ "<CLNAME> から外します)。\n"
-#~ "使用方法: 1. changelist <CLNAME> <対象>...\n"
+#~ "指定したファイルを <変更リスト> に入れます (または <変更リス\n"
+#~ "ト> から外します)。\n"
+#~ "使用方法: 1. changelist <変更リスト> <対象>...\n"
 #~ "          2. changelist --remove <対象>...\n"
 
 # * Description for 'svn copy'.
@@ -12844,9 +12851,9 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ "usage: 1. changelist CLNAME TARGET...\n"
 #~ "       2. changelist --clear TARGET...\n"
 #~ msgstr ""
-#~ "ローカルパスを変更リスト <CLNAME> と関連づけます (または関連\n"
-#~ "づけを削除します)。\n"
-#~ "使用方法: 1. changelist <CLNAME> <対象>...\n"
+#~ "ローカルパスを <変更リスト> に入れます (または <変更リスト>\n"
+#~ "から外します)。\n"
+#~ "使用方法: 1. changelist <変更リスト> <対象>...\n"
 #~ "          2. changelist --clear <対象>...\n"
 
 #~ msgid "Path '%s' is now part of changelist '%s'.\n"
