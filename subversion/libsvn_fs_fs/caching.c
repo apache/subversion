@@ -109,7 +109,7 @@ dup_dir_listing(void **out,
    indicating whether cache errors should be returned to the caller or
    just passed to the FS warning handler.  Use FS->pool for allocating
    the memcache, and POOL for temporary allocations. */
-svn_error_t *
+static svn_error_t *
 read_config(svn_memcache_t **memcache_p,
             svn_boolean_t *fail_stop,
             svn_fs_t *fs,
