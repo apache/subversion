@@ -878,6 +878,22 @@ class SvnClientTest < Test::Unit::TestCase
     assert_equal([[false, true, false, false]], node_kinds)
   end
 
+  def assert_changed(ctx, path)
+    statuses = []
+    ctx.status(path) do |_, status|
+      statuses << status
+    end
+    assert_not_equal([], statuses)
+  end
+
+  def assert_not_changed(ctx, path)
+    statuses = []
+    ctx.status(path) do |_, status|
+      statuses << status
+    end
+    assert_equal([], statuses)
+  end
+
   def assert_merge
     log = "sample log"
     file = "sample.txt"
@@ -973,19 +989,18 @@ class SvnClientTest < Test::Unit::TestCase
     rev5 = ctx.commit(@wc_path).revision
     assert(File.exist?(trunk_path))
 
+    yield(ctx, branch, rev3, rev4, trunk, nil, false, true)
+    assert_not_changed(ctx, trunk)
+
+
+    ctx.propdel("svn:mergeinfo", trunk)
+    rev6 = ctx.commit(@wc_path).revision
+
     yield(ctx, branch, rev3, rev4, trunk, nil, false, true, true)
-    statuses = []
-    ctx.status(trunk) do |path, status|
-      statuses << status
-    end
-    assert_equal([], statuses)
+    assert_not_changed(ctx, trunk)
 
     yield(ctx, branch, rev3, rev4, trunk, nil, false, true)
-    statuses = []
-    ctx.status(trunk) do |path, status|
-      statuses << status
-    end
-    assert_not_equal([], statuses)
+    assert_changed(ctx, trunk)
   end
 
   def test_merge
