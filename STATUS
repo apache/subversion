@@ -60,6 +60,12 @@ Candidate changes for 1.5.0:
    Votes:
      +1: glasser
 
+ * r31402
+   JavaHL: Follow-up to r31273.  Create a LogDate convenience class that
+   parses our dates into microseconds.
+   Votes:
+     +1: markphip
+
 Candidate changes for 1.5.1:
 ============================
 
