@@ -39,7 +39,7 @@ class SubversionMergeinfoTestCase(unittest.TestCase):
     self.tearDown()
     self.repos = repos.svn_repos_create(REPOS_PATH, '', '', None, None)
     repos.svn_repos_load_fs2(self.repos, dumpfile, StringIO(),
-                             repos.svn_repos_load_uuid_default, '',
+                             repos.svn_repos_load_uuid_ignore, '',
                              0, 0, None)
     self.fs = repos.fs(self.repos)
     self.rev = fs.youngest_rev(self.fs)

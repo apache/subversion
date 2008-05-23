@@ -2889,6 +2889,7 @@ static svn_error_t *find_repos(const char *url, const char *root,
     return error_create_and_log(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                                  "No access allowed to this repository",
                                  b, conn, pool);
+
   return SVN_NO_ERROR;
 }
 

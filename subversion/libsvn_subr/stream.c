@@ -820,9 +820,55 @@ svn_stream_checksummed(svn_stream_t *stream,
 
 
 /* Miscellaneous stream functions. */
-struct string_stream_baton
+struct stringbuf_stream_baton
 {
   svn_stringbuf_t *str;
+  apr_size_t amt_read;
+};
+
+static svn_error_t *
+read_handler_stringbuf(void *baton, char *buffer, apr_size_t *len)
+{
+  struct stringbuf_stream_baton *btn = baton;
+  apr_size_t left_to_read = btn->str->len - btn->amt_read;
+
+  *len = (*len > left_to_read) ? left_to_read : *len;
+  memcpy(buffer, btn->str->data + btn->amt_read, *len);
+  btn->amt_read += *len;
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+write_handler_stringbuf(void *baton, const char *data, apr_size_t *len)
+{
+  struct stringbuf_stream_baton *btn = baton;
+
+  svn_stringbuf_appendbytes(btn->str, data, *len);
+  return SVN_NO_ERROR;
+}
+
+svn_stream_t *
+svn_stream_from_stringbuf(svn_stringbuf_t *str,
+                          apr_pool_t *pool)
+{
+  svn_stream_t *stream;
+  struct stringbuf_stream_baton *baton;
+
+  if (! str)
+    return svn_stream_empty(pool);
+
+  baton = apr_palloc(pool, sizeof(*baton));
+  baton->str = str;
+  baton->amt_read = 0;
+  stream = svn_stream_create(baton, pool);
+  svn_stream_set_read(stream, read_handler_stringbuf);
+  svn_stream_set_write(stream, write_handler_stringbuf);
+  return stream;
+}
+
+struct string_stream_baton
+{
+  svn_string_t *str;
   apr_size_t amt_read;
 };
 
@@ -838,18 +884,9 @@ read_handler_string(void *baton, char *buffer, apr_size_t *len)
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-write_handler_string(void *baton, const char *data, apr_size_t *len)
-{
-  struct string_stream_baton *btn = baton;
-
-  svn_stringbuf_appendbytes(btn->str, data, *len);
-  return SVN_NO_ERROR;
-}
-
 svn_stream_t *
-svn_stream_from_stringbuf(svn_stringbuf_t *str,
-                          apr_pool_t *pool)
+svn_stream_from_string(svn_string_t *str,
+                       apr_pool_t *pool)
 {
   svn_stream_t *stream;
   struct string_stream_baton *baton;
@@ -862,7 +899,6 @@ svn_stream_from_stringbuf(svn_stringbuf_t *str,
   baton->amt_read = 0;
   stream = svn_stream_create(baton, pool);
   svn_stream_set_read(stream, read_handler_string);
-  svn_stream_set_write(stream, write_handler_string);
   return stream;
 }
 

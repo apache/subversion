@@ -89,6 +89,14 @@ SVN_LIB_NEON($NEON_ALLOWED_LIST, $NEON_RECOMMENDED_VER, $NEON_URL)
 dnl Search for serf as an alternative to neon
 SVN_LIB_SERF
 
+dnl Search for apr_memcache (only affects fs_fs)
+SVN_LIB_APR_MEMCACHE
+
+if test "$svn_lib_apr_memcache" = "yes"; then
+  AC_DEFINE(SVN_HAVE_MEMCACHE, 1,
+            [Defined if apr_memcache (standalone or in apr-util) is present])
+fi
+
 dnl Set up a number of directories ---------------------
 
 dnl Create SVN_BINDIR for proper substitution
