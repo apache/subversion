@@ -70,6 +70,7 @@
 # ... failed              〜に失敗しました / 〜が失敗しました
 # for reading             読み込み用に
 # for writing             書き込み用に
+# foreign repository      別のリポジトリ
 # FS loader               ファイルシステムローダ
 # force ...               強制的に〜します
 # fulltext                フルテキスト
@@ -101,6 +102,7 @@
 # native encoding         ネイティブのエンコーディング
 # no ... available        利用できる〜がありません
 # node kind               ノード種別
+# node origin             基点ノード
 # node revision id        ノードリビジョン識別番号
 # non-directory           ディレクトリでない
 # non-file                ファイルでない
@@ -128,6 +130,7 @@
 # read-only               読み取り専用
 # recode                  再エンコードする
 # recovery                復旧
+# reintegrate             再統合
 # relocation              参照リポジトリの変更
 # remote                  リモート
 # remove lock             ロックを解除する
@@ -10881,6 +10884,1768 @@ msgstr "エクスポートされたものです%s"
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "'%s' はバージョン管理下になく、エクスポートされたものでもありません\n"
+
+#~ msgid "Path is not an immediate child of the specified directory"
+#~ msgstr "パスが、指定されたディレクトリの直接の子ノードではありません"
+
+#~ msgid "Bogus UUID"
+#~ msgstr "不正な UUID です"
+
+#~ msgid "Failed to locate 'copyfrom' path in working copy"
+#~ msgstr "作業コピー内に 'copyfrom' パスが見つかりませんでした"
+
+#~ msgid "Filesystem has no such node origin record"
+#~ msgstr "ファイルシステムにそのような基点ノードレコードはありません"
+
+#~ msgid "Filesystem upgrade is not supported"
+#~ msgstr "ファイルシステムのアップグレードはサポートされていません"
+
+#~ msgid "Repository upgrade is not supported"
+#~ msgstr "リポジトリのアップグレードはサポートされていません"
+
+#~ msgid "Server can only replay from the root of a repository"
+#~ msgstr "サーバが再生 (replay) できるのはリポジトリルートからだけです"
+
+#~ msgid "Repository UUID does not match expected UUID"
+#~ msgstr "リポジトリの UUID が期待される UUID と一致しません"
+
+#~ msgid "Initialization of SSPI library failed"
+#~ msgstr "SSPI ライブラリの初期化に失敗しました"
+
+#~ msgid "Server SSL certificate untrusted"
+#~ msgstr "サーバの SSL 証明書が信頼できません"
+
+#~ msgid "Credentials not saved"
+#~ msgstr "信任データが保存されていません"
+
+#~ msgid "Working copy and merge source not ready for reintegration"
+#~ msgstr "作業コピーやマージ元に再統合するための仕組みがありません"
+
+#~ msgid "Mergeinfo parse error"
+#~ msgstr "マージ情報のパースエラーです"
+
+#~ msgid "Reserved directory name in command line arguments"
+#~ msgstr "コマンドライン引数に予約されたディレクトリ名が含まれています"
+
+#~ msgid "Improper relative URL '%s'"
+#~ msgstr "相対 URL '%s' は不適切です"
+
+#~ msgid "All non-relative targets must have the same root URL"
+#~ msgstr "非相対的な対象のルート URL はすべて同一でなければなりません"
+
+#~ msgid "'%s' ends in a reserved name"
+#~ msgstr "'%s' は末尾に予約されたパス名がついています"
+
+#~ msgid "'%s' is scheduled for addition, but is missing"
+#~ msgstr "'%s' は追加準備状態となっていますが、存在しません"
+
+#~ msgid "   Reverse-merged %s:r%s%s"
+#~ msgstr "   逆マージされた %s:r%s%s"
+
+#~ msgid "Path '%s' must be an immediate child of the directory '%s'"
+#~ msgstr "パス '%s' はディレクトリ '%s' の直接の子ノードでなければなりません"
+
+# * This message replaces 'Index' in the header of each diff in the output from
+#   'svn diff'.
+#~ msgid "Added: %s%s"
+#~ msgstr "追加: %s%s"
+
+# * This message replaces 'Index' in the header of each diff in the output from
+#   'svn diff'.
+#~ msgid "Deleted: %s%s"
+#~ msgstr "削除: %s%s"
+
+# * This message replaces 'Index' in the header of each diff in the output from
+#   'svn diff'.
+#~ msgid "Modified: %s%s"
+#~ msgstr "変更: %s%s"
+
+#~ msgid "URL '%s' does not begin with a scheme"
+#~ msgstr "URL '%s' は頭にスキームがありません"
+
+# FIXME: trailing period '.' should be removed.
+#~ msgid "Illegal parent directory URL '%s'."
+#~ msgstr "親ディレクトリの URL '%s' が不正です"
+
+# FIXME: trailing period '.' should be removed.
+#~ msgid "Illegal repository root URL '%s'."
+#~ msgstr "リポジトリルートの URL '%s' が不正です"
+
+# FIXME: trailing period '.' should be removed.
+#~ msgid "The external relative URL '%s' cannot have backpaths, i.e. '..'."
+#~ msgstr "外部の相対 URL '%s' にはバックパス ('..') をつけることができません"
+
+# FIXME: trailing period '.' should be removed.
+#~ msgid "Unrecognized format for the relative external URL '%s'."
+#~ msgstr "外部の相対 URL '%s' が認識できない形式です"
+
+#~ msgid "'%s' is not a URL"
+#~ msgstr "'%s' は URL ではありません"
+
+#~ msgid ""
+#~ "Cannot reverse-merge a range from a path's own future history; try "
+#~ "updating first"
+#~ msgstr ""
+#~ "パスがそれ自体の将来の履歴からリビジョン範囲を逆マージすることはできませ"
+#~ "ん。最初に update を実行してみてください"
+
+#~ msgid ""
+#~ "Merge from foreign repository is not compatible with mergeinfo "
+#~ "modification"
+#~ msgstr ""
+#~ "マージ情報の修正とともに別のリポジトリからのマージをすることはできません"
+
+#~ msgid "Cannot reintegrate into a working copy with a switched subtree"
+#~ msgstr "子孫ツリーが switch されている作業コピーへの再統合はできません"
+
+#~ msgid ""
+#~ "Cannot reintegrate into a working copy not entirely at infinite depth"
+#~ msgstr ""
+#~ "深さが無限 (infinity) でないノードが存在する作業コピーへの再統合はできませ"
+#~ "ん"
+
+#~ msgid "Cannot reintegrate into a working copy that has local modifications"
+#~ msgstr "ローカルで修正が加えられた作業コピーへの再統合はできません"
+
+#~ msgid "Cannot determine revision of working copy"
+#~ msgstr "作業コピーのリビジョンを決定できません"
+
+#~ msgid ""
+#~ "Cannot reintegrate into mixed-revision working copy; try updating first"
+#~ msgstr ""
+#~ "複数のリビジョンが混在している作業コピーへの再統合はできません。最初に "
+#~ "update を実行してみてください"
+
+#~ msgid "At least one revision (r%ld) not yet merged from '%s'"
+#~ msgstr "少なくとも 1 つのリビジョン (r%ld) が '%s' からマージされていません"
+
+#~ msgid "'%s@%ld' must be ancestrally related to '%s@%ld'"
+#~ msgstr "'%s@%ld' と '%s@%ld' は祖先が関連していなければなりません"
+
+#~ msgid "'%s' must be from the same repository as '%s'"
+#~ msgstr "'%s' は '%s' と同じリポジトリになければなりません"
+
+# TRANSLATION-FIXME: If APR supported reordering of format indicators...
+#~ msgid ""
+#~ "revprop '%s' in r%ld is unexpectedly absent in repository (maybe someone "
+#~ "else deleted it?)"
+#~ msgstr ""
+#~ "リビジョン属性 '%s' は、予想外にも、リポジトリの r%ld には存在しません (お"
+#~ "そらく誰か他の人が削除したのではないでしょうか?)"
+
+# TRANSLATION-FIXME: If APR supported reordering of format indicators...
+#~ msgid ""
+#~ "revprop '%s' in r%ld has unexpected value in repository (maybe someone "
+#~ "else changed it?)"
+#~ msgstr ""
+#~ "リビジョン属性 '%s' は、リポジトリの r%ld では予想外の値です (おそらく誰か"
+#~ "他の人が変更したのではないでしょうか?)"
+
+# TRANSLATION-FIXME: If APR supported reordering of format indicators...
+#~ msgid ""
+#~ "revprop '%s' in r%ld is unexpectedly present in repository (maybe someone "
+#~ "else set it?)"
+#~ msgstr ""
+#~ "リビジョン属性 '%s' は、予想外にも、リポジトリの r%ld には存在します (おそ"
+#~ "らく誰か他の人が変更したのではないでしょうか?)"
+
+#~ msgid "Malformed UUID '%s'"
+#~ msgstr "UUID '%s' が不正です"
+
+# TRANSLATION-FIXME: If APR supported reordering of format indicators...
+#~ msgid ""
+#~ "Node origin for '%s' exists in filesystem '%s' with a different value (%"
+#~ "s) than what we were about to store (%s)"
+#~ msgstr ""
+#~ "'%s' の基点ノードはファイルシステム '%s' に存在していますが、値 (%s) が、"
+#~ "保存しようとしていた値 (%s) と異なります"
+
+#~ msgid "storing node-origins record"
+#~ msgstr "基点ノードレコードを保存しています"
+
+#~ msgid "Attempted merge tracking info change on immutable node"
+#~ msgstr "変更できないノードでマージ追跡情報を変更しようとしました"
+
+#~ msgid "Attempted mergeinfo count change on immutable node"
+#~ msgstr "変更できないノードでマージ情報数を変更しようとしました"
+
+#~ msgid "Invalid value (%%%s) for node revision mergeinfo count"
+#~ msgstr "ノードのリビジョンマージ情報数が不正な値 (%%%s) です"
+
+#~ msgid "No such revision %ld in filesystem '%s'"
+#~ msgstr "リビジョン %ld はファイルシステム '%s' にはありません"
+
+# TRANSLATION-FIXME: If APR supported reordering of format indicators...
+#~ msgid ""
+#~ "No record in 'node-origins' table for node id '%s' in filesystem '%s'"
+#~ msgstr ""
+#~ "ノード ID '%s' (ファイルシステム '%s') の 'node-origins' テーブルにはレ"
+#~ "コードがありません"
+
+# TRANSLATION-FIXME: schema -> scheme? Confirmation needed.
+#~ msgid ""
+#~ "The '%s' feature requires version %d of the filesystem schema; filesystem "
+#~ "'%s' uses only version %d"
+#~ msgstr ""
+#~ "'%s' 機能にはファイルシステムスキーマのバージョン %d が必要となります。"
+#~ "ファイルシステム '%s' で使用されているのはバージョン %d です"
+
+#~ msgid "Transaction '%s' out-of-date with respect to revision '%s'"
+#~ msgstr "トランザクション '%s' はリビジョン '%s' に対して古くなっています"
+
+#~ msgid "Node-revision '%s' claims to have mergeinfo but doesn't"
+#~ msgstr ""
+#~ "ノードリビジョン '%s' にはマージ情報があることになっていますが、ありません"
+
+#~ msgid ""
+#~ "Node-revision '%s' claims to sit atop a tree containing mergeinfo but is "
+#~ "not a directory"
+#~ msgstr ""
+#~ "ノードリビジョン '%s' の下にはマージ情報を持つツリーがあることになっていま"
+#~ "すが、このノードリビジョンはディレクトリではありません"
+
+#~ msgid ""
+#~ "Can't increment mergeinfo count on node-revision %%s to negative value %%%"
+#~ "s"
+#~ msgstr "ノードリビジョン %%s のマージ情報数を負の値 %%%s に増加できません"
+
+#~ msgid ""
+#~ "Can't increment mergeinfo count on *file* node-revision %%s to %%%s (> 1)"
+#~ msgstr ""
+#~ "ファイルノードリビジョン %%s のマージ情報数を %%%s (> 1) に増加できません"
+
+#~ msgid "Can't create FSFS txn-current mutex"
+#~ msgstr "FSFS txn-current 相互排他ロックを作成できません"
+
+#~ msgid "Can't grab FSFS mutex for '%s'"
+#~ msgstr "'%s' の FSFS 相互排他ロックを奪えません"
+
+#~ msgid "Can't ungrab FSFS mutex for '%s'"
+#~ msgstr "'%s' の FSFS 相互排他ロックを手放せません"
+
+#~ msgid "Invalid revision number '%ld'"
+#~ msgstr "'%ld' というリビジョン番号は不正です"
+
+#~ msgid "Missing id field in node-rev"
+#~ msgstr "node-rev に ID 情報がありません"
+
+#~ msgid "Expected current rev to be <= %ld but found %ld"
+#~ msgstr ""
+#~ "現在のリビジョンは %ld 以下であることが期待されましたが、実際に見つかった"
+#~ "のは %ld です"
+
+#~ msgid "Revision %ld has a revs file but no revprops file"
+#~ msgstr ""
+#~ "リビジョン %ld には revs ファイルはありますが revprops ファイルがありませ"
+#~ "ん"
+
+#~ msgid "Revision %ld has a non-file where its revprops file should be"
+#~ msgstr ""
+#~ "リビジョン %ld において、revprops ファイルがあるべき場所にファイル以外のも"
+#~ "のがあります"
+
+# TRANSLATION-FIXME: If APR supported reordering of format indicators...
+#~ msgid ""
+#~ "Node origin for '%s' exists with a different value (%s) than what we were "
+#~ "about to store (%s)"
+#~ msgstr ""
+#~ "'%s' の基点ノードは存在していますが、値 (%s) が、保存しようとしていた値 (%"
+#~ "s) と異なります"
+
+#~ msgid "Node-revision #'%s' claims to have mergeinfo but doesn't"
+#~ msgstr ""
+#~ "ノードリビジョン #'%s' にはマージ情報があることになっていますが、ありませ"
+#~ "ん"
+
+#~ msgid "Node-revision '%s@%ld' claims to have mergeinfo but doesn't"
+#~ msgstr ""
+#~ "ノードリビジョン '%s@%ld' にはマージ情報があることになっていますが、ありま"
+#~ "せん"
+
+# TRANSLATION-FIXME: schema -> scheme? Confirmation needed.
+#~ msgid ""
+#~ "Querying mergeinfo requires version %d of the FSFS filesystem schema; "
+#~ "filesystem '%s' uses only version %d"
+#~ msgstr ""
+#~ "マージ情報のクエリには FSFS ファイルシステムスキーマのバージョン %d が必要"
+#~ "となります。ファイルシステム '%s' で使用されているのはバージョン %d です"
+
+#~ msgid "Invalid config: unknown HTTP library '%s'"
+#~ msgstr "不正な設定です: '%s' は未知の HTTP ライブラリです"
+
+#~ msgid "Repository UUID '%s' doesn't match expected UUID '%s'"
+#~ msgstr "リポジトリの UUID '%s' が、期待される UUID '%s' と一致しません"
+
+#~ msgid "Retrieval of mergeinfo unsupported by '%s'"
+#~ msgstr "'%s' ではマージ情報の取得はサポートされていません"
+
+#~ msgid "URL '%s' is not a child of the session's repository root URL '%s'"
+#~ msgstr ""
+#~ "URL '%s' は、セッションのリポジトリルート URL '%s' の子ノードではありませ"
+#~ "ん"
+
+#~ msgid "File or directory '%s' is out of date; try updating"
+#~ msgstr ""
+#~ "ファイルまたはディレクトリ '%s' はリポジトリ側と比べて古くなっています。"
+#~ "update を実行してみてください"
+
+#~ msgid "Missing rev attr in target-revision element"
+#~ msgstr "target-revision 要素に rev 属性がありません"
+
+#~ msgid "Missing path attr in resource element"
+#~ msgstr "resource 要素に path 属性がありません"
+
+#~ msgid "Missing rev attr in open-directory element"
+#~ msgstr "open-directory 要素に rev 属性がありません"
+
+#~ msgid "Missing copyfrom-rev attr in add-directory element"
+#~ msgstr "add-directory 要素に copyfrom-rev 属性がありません"
+
+#~ msgid "Missing rev attr in open-file element"
+#~ msgstr "open-file 要素に rev 属性がありません"
+
+#~ msgid "Missing copyfrom-rev attr in add-file element"
+#~ msgstr "add-file 要素に copyfrom-rev 属性がありません"
+
+#~ msgid "Missing name attr in set-prop element"
+#~ msgstr "set-prop 要素に name 属性がありません"
+
+#~ msgid "Missing name attr in remove-prop element"
+#~ msgstr "remove-prop 要素に name 属性がありません"
+
+#~ msgid "'%s' was not present on the baseline resource"
+#~ msgstr "'%s' はベースラインのリソースには存在しません"
+
+#~ msgid "PIN for token \"%s\" in slot \"%s\""
+#~ msgstr "トークン \"%s\" 用の PIN がスロット \"%s\" にあります"
+
+# TRANSLATION-FIXME: If APR supported reordering of format indicators...
+#~ msgid "Don't know how to handle '%s' for capability '%s'"
+#~ msgstr "'%s' (機能 '%s' 用) の扱い方に関する情報がありません"
+
+#~ msgid "Attempt to fetch capability '%s' resulted in '%s'"
+#~ msgstr "機能 '%s' を取得しようとしましたが、返ってきたのは '%s' でした"
+
+#~ msgid "Invalid config: unable to load PKCS#11 provider '%s'"
+#~ msgstr "不正な設定です: PKCS#11 プロバイダ '%s' をロードできません"
+
+#~ msgid "authorization failed: %s"
+#~ msgstr "認証が失敗しました: %s"
+
+# FIXME: Remove a trailing period.
+#~ msgid "Missing 'realm' attribute in Authorization header."
+#~ msgstr "Authorization ヘッダに 'realm' 属性がありません。"
+
+#~ msgid "The OPTIONS response did not include the requested checked-in value"
+#~ msgstr ""
+#~ "OPTIONS レスポンスに、リクエストした checked-in の値が含まれていません"
+
+#~ msgid ""
+#~ "The OPTIONS response did not include the requested baseline-collection "
+#~ "value"
+#~ msgstr ""
+#~ "OPTIONS レスポンスに、リクエストした baseline-collection の値が含まれてい"
+#~ "ません"
+
+#~ msgid "Directory '%s' is out of date; try updating"
+#~ msgstr ""
+#~ "ディレクトリ '%s' はリポジトリ側と比べて古くなっています。update を実行し"
+#~ "てみてください"
+
+#~ msgid "File '%s' is out of date; try updating"
+#~ msgstr ""
+#~ "ファイル '%s' はリポジトリ側と比べて古くなっています。update を実行してみ"
+#~ "てください"
+
+#~ msgid ""
+#~ "The OPTIONS response did not include the requested activity-collection-"
+#~ "set value"
+#~ msgstr ""
+#~ "OPTIONS レスポンスに、リクエストした activity-collection-set の値が含まれ"
+#~ "ていません"
+
+#~ msgid "Error retrieving replay REPORT (%d)"
+#~ msgstr "replay REPORT の取得中にエラー (%d) が発生しました"
+
+#~ msgid ""
+#~ "The OPTIONS response did not include the requested version-controlled-"
+#~ "configuration value"
+#~ msgstr ""
+#~ "OPTIONS レスポンスに、リクエストした version-controlled-configuration の値"
+#~ "が含まれていません"
+
+#~ msgid ""
+#~ "The OPTIONS response did not include the requested version-name value"
+#~ msgstr ""
+#~ "OPTIONS レスポンスに、リクエストした version-name の値が含まれていません"
+
+#~ msgid ""
+#~ "The OPTIONS response did not include the requested resourcetype value"
+#~ msgstr ""
+#~ "OPTIONS レスポンスに、リクエストした resourcetype の値が含まれていません"
+
+#~ msgid "GET request failed: %d %s"
+#~ msgstr "GET リクエストが失敗しました: %d %s"
+
+#~ msgid ""
+#~ "Module for accessing a repository using the svn network protocol.\n"
+#~ "  - with Cyrus SASL authentication"
+#~ msgstr ""
+#~ "svn ネットワークプロトコルを使ってリポジトリにアクセスするモジュール。\n"
+#~ "  - Cyrus SASL 認証を併用"
+
+#~ msgid "Mergeinfo element is not a list"
+#~ msgstr "mergeinfo 要素がリストではありません"
+
+#~ msgid "Server doesn't support the replay-range command"
+#~ msgstr "範囲再生 (replay-range) コマンドをサーバがサポートしていません"
+
+#~ msgid "Expected 'revprops', found '%s'"
+#~ msgstr "'revprops' を期待しましたが、'%s' が見つかりました"
+
+#~ msgid "Directory '%s' is out of date"
+#~ msgstr "ディレクトリ '%s' はリポジトリ側と比べて古くなっています"
+
+#~ msgid "File '%s' is out of date"
+#~ msgstr "ファイル '%s' はリポジトリ側と比べて古くなっています"
+
+#~ msgid "Delta depth 'exclude' not supported"
+#~ msgstr "差分指定の深さ 'exclude' はサポートされていません"
+
+#~ msgid "Unexpected node kind %d for '%s'"
+#~ msgstr "予想外のノード種別 %d がパス '%s' にあります"
+
+#~ msgid "Commit"
+#~ msgstr "コミット"
+
+#~ msgid "Revprop change"
+#~ msgstr "リビジョン変更"
+
+#~ msgid "Lock"
+#~ msgstr "ロック"
+
+#~ msgid "Unlock"
+#~ msgstr "ロック解除"
+
+#~ msgid "%s hook failed (exit code %d)"
+#~ msgstr "%sフックが失敗しました (終了コード: %d)"
+
+#~ msgid "%s blocked by %s hook (exit code %d)"
+#~ msgstr "%sが %s フックによって妨げられました (終了コード: %d)"
+
+#~ msgid " with output:\n"
+#~ msgstr "。出力:\n"
+
+#~ msgid " with no output."
+#~ msgstr "。出力はありません。"
+
+#~ msgid ""
+#~ "Copy source checksum mismatch on copy from '%s'@%ld\n"
+#~ " to '%s' in rev based on r%ld:\n"
+#~ "   expected:  %s\n"
+#~ "     actual:  %s\n"
+#~ msgstr ""
+#~ "'%s'@%ld から '%s' への、r%ld をベースとするリビジョンでのコピーにおいて、"
+#~ "コ\n"
+#~ "ピー元のチェックサムが一致しませんでした:\n"
+#~ "   期待:  %s\n"
+#~ "   実際:  %s\n"
+
+#~ msgid "Invalid length (%%%s) when about to read a string"
+#~ msgstr "文字列を読み込もうとしましたが、長さ (%%%s) が不正です"
+
+#~ msgid "Invalid depth (%c) for path '%s'"
+#~ msgstr "深さの指定 (%c) が不正です (パス: '%s')"
+
+#~ msgid "Depth 'exclude' not supported for link"
+#~ msgstr "深さ 'exclude' は、リンクではサポートされていません"
+
+#~ msgid "Request depth 'exclude' not supported"
+#~ msgstr "要求された深さ 'exclude' はサポートされていません"
+
+#~ msgid "unknown capability '%s'"
+#~ msgstr "未知の機能です: '%s'"
+
+#~ msgid "Config error: invalid value '%s' for option '%s'"
+#~ msgstr "設定エラー: 不正な値 '%s' がオプション '%s' に指定されています"
+
+# FIXME: typo: preceeding -> preceding
+#~ msgid "No pathname preceeding ':'"
+#~ msgstr "':' の前にパス名がありません"
+
+#~ msgid ""
+#~ "Parsing of overlapping revision ranges '%s' and '%s' is not supported"
+#~ msgstr ""
+#~ "重複したリビジョン範囲 '%s' と '%s' のパースはサポートされていません"
+
+#~ msgid "Unable to parse unordered revision ranges '%s' and '%s'"
+#~ msgstr "整列していないリビジョン範囲 '%s' と '%s' をパースできません"
+
+#~ msgid "Mergeinfo for '%s' maps to an empty revision range"
+#~ msgstr "'%s' のマージ情報が空のリビジョン範囲にマップされています"
+
+#~ msgid "Unable to parse reversed revision range '%ld-%ld'"
+#~ msgstr "逆転したリビジョン範囲 '%ld-%ld' をパースできません"
+
+#~ msgid ""
+#~ "Unable to parse revision range '%ld-%ld' with same start and end revisions"
+#~ msgstr ""
+#~ "開始リビジョンと終了リビジョンが同一のリビジョン範囲 '%ld-%ld' をパースで"
+#~ "きません"
+
+#~ msgid "Could not parse mergeinfo string '%s'"
+#~ msgstr "マージ情報文字列 '%s' をパースできませんでした"
+
+#~ msgid ""
+#~ "\n"
+#~ "Global options:\n"
+#~ msgstr ""
+#~ "\n"
+#~ "グローバルオプション:\n"
+
+#~ msgid ""
+#~ "Copyright (C) 2000-2008 CollabNet.\n"
+#~ "Subversion is open source software, see http://subversion.tigris.org/\n"
+#~ "This product includes software developed by CollabNet (http://www.Collab."
+#~ "Net/).\n"
+#~ "\n"
+#~ msgstr ""
+#~ "Copyright (C) 2000-2008 CollabNet.\n"
+#~ "Subversion はオープンソースソフトウェアです。\n"
+#~ "http://subversion.tigris.org/ を参照してください。\n"
+#~ "この製品には、CollabNet (http://www.Collab.Net/) によって開発されたソフト"
+#~ "ウェア\n"
+#~ "が含まれています。\n"
+#~ "\n"
+
+#~ msgid "Store password unencrypted (yes/no)? "
+#~ msgstr "暗号化されていないパスワードを保存しますか (yes/no)? "
+
+#~ msgid ""
+#~ "-----------------------------------------------------------------------\n"
+#~ "ATTENTION!  Your password for authentication realm:\n"
+#~ "\n"
+#~ "   %s\n"
+#~ "\n"
+#~ "can only be stored to disk unencrypted!  You are advised to configure\n"
+#~ "your system so that Subversion can store passwords encrypted, if\n"
+#~ "possible.  See the documentation for details.\n"
+#~ "\n"
+#~ "You can avoid future appearances of this warning by setting the value\n"
+#~ "of the 'store-plaintext-passwords' option to either 'yes' or 'no' in\n"
+#~ "'%s'.\n"
+#~ "-----------------------------------------------------------------------\n"
+#~ msgstr ""
+#~ "-----------------------------------------------------------------------\n"
+#~ "**注意**  認証領域\n"
+#~ "\n"
+#~ "   %s\n"
+#~ "\n"
+#~ "のパスワードは暗号化されていないディスクに保存されるだけです! 可能なら、\n"
+#~ "Subversion がパスワードを暗号化して保存できるよう、システムを設定するこ\n"
+#~ "とをお勧めします。詳しくはドキュメントを参照してください。\n"
+#~ "\n"
+#~ "'%s' の 'store-plaintext-passwords' オプションの値を 'yes' または 'no'\n"
+#~ "に設定すると、この警告がこれ以上現れないようにすることができます。\n"
+#~ "-----------------------------------------------------------------------\n"
+
+#~ msgid "yes"
+#~ msgstr "yes"
+
+#~ msgid "no"
+#~ msgstr "no"
+
+#~ msgid "Please type 'yes' or 'no': "
+#~ msgstr "'yes' または 'no' を入力してください: "
+
+#~ msgid "MIME type '%s' contains invalid character '%c'"
+#~ msgstr "MIME タイプ '%s' に不正な文字 '%c' が含まれています"
+
+#~ msgid "Malformed XML: %s at line %ld"
+#~ msgstr "異常な XML です: %s (行 %ld)"
+
+#~ msgid "Cannot revert"
+#~ msgstr "元に戻せません"
+
+#~ msgid "'%s' is a directory, and thus cannot be a member of a changelist"
+#~ msgstr "'%s' はディレクトリです。そのため変更リストに含めることはできません"
+
+#~ msgid "Conflict callback violated API: returned no results"
+#~ msgstr "衝突コールバックが API を侵犯しました: 結果は返しませんでした"
+
+#~ msgid "Conflict callback violated API: returned no merged file"
+#~ msgstr ""
+#~ "衝突コールバックが API を侵犯しました: マージされたファイルは返しませんで"
+#~ "した"
+
+# FIXME: Remove a trailing period.
+#~ msgid "Conflict callback violated API: returned no results."
+#~ msgstr "衝突コールバックが API を侵犯しました: 結果は返しませんでした"
+
+# FIXME: Remove a trailing period.
+#~ msgid "Conflict callback violated API: returned no merged file."
+#~ msgstr ""
+#~ "衝突コールバックが API を侵犯しました: マージされたファイルは返しませんで"
+#~ "した"
+
+#~ msgid "Unrecognized line ending style for '%s'"
+#~ msgstr "'%s' の改行文字形式を認識できません"
+
+#~ msgid "Bad copyfrom arguments received"
+#~ msgstr "受け取った copyfrom の引数が不正です"
+
+#~ msgid "Destination directory of add-with-history is missing a URL"
+#~ msgstr ""
+#~ "add-with-history のコピー先 (もしくは移動先) のディレクトリに URL がありま"
+#~ "せん"
+
+#~ msgid "Destination URLs are broken"
+#~ msgstr "コピー先 (もしくは移動先) の URL が壊れています"
+
+#~ msgid "No fetch_func supplied to update_editor"
+#~ msgstr "fetch_func が update_editor に与えられていません"
+
+#~ msgid "Shallowing of working copy depths is not yet supported"
+#~ msgstr "作業コピーの深さを浅くする操作はまだサポートされていません"
+
+# FIXME: Remove a trailing period and a trailing newline.
+#~ msgid ""
+#~ "Invalid option; there's no merged version to edit.\n"
+#~ "\n"
+#~ msgstr ""
+#~ "オプションが不正です。編集対象となる、マージされたバージョンはありませ"
+#~ "ん。\n"
+
+#~ msgid "No merge tool found, leaving all conflicts."
+#~ msgstr "マージツールが見つかりません。すべての競合をそのままにします。"
+
+#~ msgid "Error running merge tool leaving all conflicts."
+#~ msgstr ""
+#~ "マージツールの実行中にエラーが発生しました。すべての競合をそのままにしま"
+#~ "す。"
+
+#~ msgid "Conflict for property '%s' discovered on '%s'.\n"
+#~ msgstr "属性 '%s' に関する競合が '%s' で見つかりました。\n"
+
+#~ msgid ""
+#~ "They want to delete the property, you want to change the value to '%s'.\n"
+#~ msgstr ""
+#~ "他の人はこの属性を削除しようとしていますが、あなたは属性の値を '%s' に変更"
+#~ "しようとしています。\n"
+
+#~ msgid ""
+#~ "They want to change the property value to '%s', you want to delete the "
+#~ "property.\n"
+#~ msgstr ""
+#~ "他の人はこの属性の値を '%s' に変更しようとしていますが、あなたは属性を削除"
+#~ "しようとしています。\n"
+
+#~ msgid "Select: (p) postpone"
+#~ msgstr "選択: 延期 (p)"
+
+#~ msgid ", (df) diff-full, (e) edit"
+#~ msgstr ", 全差分 (df), 編集 (e)"
+
+#~ msgid ", (r) resolved"
+#~ msgstr ", 解決版 (r)"
+
+#~ msgid ""
+#~ ",\n"
+#~ "        (mc) mine-conflict, (tc) theirs-conflict"
+#~ msgstr ""
+#~ ",\n"
+#~ "        衝突自分 (mc), 衝突他人 (tc)"
+
+#~ msgid ""
+#~ ",\n"
+#~ "        (mf) mine-full, (tf) theirs-full"
+#~ msgstr ""
+#~ ",\n"
+#~ "        完全自分 (mf), 完全他人 (tf)"
+
+#~ msgid "(s) show all options: "
+#~ msgstr ", すべてのオプションを表示 (s): "
+
+#~ msgid ""
+#~ "\n"
+#~ "  (e)  edit             - change merged file in an editor\n"
+#~ "  (df) diff-full        - show all changes made to merged file\n"
+#~ "  (r)  resolved         - accept merged version of file\n"
+#~ "\n"
+#~ "  (dc) display-conflict - show all conflicts (ignoring merged version)\n"
+#~ "  (mc) mine-conflict    - accept my version for all conflicts (same)\n"
+#~ "  (tc) theirs-conflict  - accept their version for all conflicts (same)\n"
+#~ "\n"
+#~ "  (mf) mine-full        - accept my version of entire file (even non-"
+#~ "conflicts)\n"
+#~ "  (tf) theirs-full      - accept their version of entire file (same)\n"
+#~ "\n"
+#~ "  (p)  postpone         - mark the conflict to be resolved later\n"
+#~ "  (l)  launch           - launch external tool to resolve conflict\n"
+#~ "  (s)  show all         - show this list\n"
+#~ "\n"
+#~ msgstr ""
+#~ "\n"
+#~ "  編集 (e)      - マージされたファイルをエディタで編集します\n"
+#~ "  全差分 (df)   - マージによってファイルに加えられた変更をすべて表示しま"
+#~ "す\n"
+#~ "  解決版 (r)    - マージされたバージョンのファイルを採用します\n"
+#~ "  衝突表示 (dc) - (マージされたバージョンを無視して) 衝突をすべて表示しま"
+#~ "す\n"
+#~ "  衝突自分 (mc) - (同上) すべての衝突に関して自分のバージョンを採用しま"
+#~ "す\n"
+#~ "  衝突他人 (tc) - (同上) すべての衝突に関して他人のバージョンを採用しま"
+#~ "す\n"
+#~ "  完全自分 (mf) - (衝突がなくても) ファイル全体で自分のバージョンを採用し"
+#~ "ます\n"
+#~ "  完全他人 (tf) - (同上) ファイル全体で他人のバージョンを採用します\n"
+#~ "  延期 (p)      - 競合に、後で解決する予定であるという印をつけます\n"
+#~ "  起動 (l)      - 競合を解決するために外部ツールを起動します\n"
+#~ "  全表示 (s)    - この選択肢一覧を表示します\n"
+
+#~ msgid ""
+#~ "Invalid option; cannot choose based on conflicts in a binary file.\n"
+#~ "\n"
+#~ msgstr ""
+#~ "オプションが不正です。バイナリファイルの衝突に基づいた選択ができません。\n"
+#~ "\n"
+
+#~ msgid ""
+#~ "Invalid option; cannot choose based on conflicts for properties.\n"
+#~ "\n"
+#~ msgstr ""
+#~ "オプションが不正です。属性の衝突に基づいた選択ができません。\n"
+#~ "\n"
+
+#~ msgid ""
+#~ "Invalid option; cannot display conflicts for a binary file.\n"
+#~ "\n"
+#~ msgstr ""
+#~ "オプションが不正です。バイナリファイルの衝突は表示できません。\n"
+#~ "\n"
+
+#~ msgid ""
+#~ "Invalid option; cannot display conflicts for properties.\n"
+#~ "\n"
+#~ msgstr ""
+#~ "オプションが不正です。属性の衝突は表示できません。\n"
+#~ "\n"
+
+#~ msgid ""
+#~ "Invalid option; original files not available.\n"
+#~ "\n"
+#~ msgstr ""
+#~ "オプションが不正です。元々のファイルが利用できません。\n"
+#~ "\n"
+
+#~ msgid ""
+#~ "Invalid option; there's no merged version to diff.\n"
+#~ "\n"
+#~ msgstr ""
+#~ "オプションが不正です。差分をとる対象となる、マージされたバージョンがありま"
+#~ "せん。\n"
+#~ "\n"
+
+#~ msgid "Select: (p) postpone, (mf) mine-full, (tf) theirs-full, (h) help:"
+#~ msgstr "選択: 延期 (p), 完全自分 (mf), 完全他人 (tf), ヘルプ (h) :"
+
+#~ msgid ""
+#~ "  (p)  postpone    - resolve the conflict later\n"
+#~ "  (mf) mine-full   - accept pre-existing item (ignore upstream addition)\n"
+#~ "  (tf) theirs-full - accept incoming item (overwrite pre-existing item)\n"
+#~ "  (h)  help        - show this help\n"
+#~ "\n"
+#~ msgstr ""
+#~ "  延期 (p)      - 競合に、後で解決する予定であるという印をつけます\n"
+#~ "  完全自分 (mf) - (入ってくる項目の追加は無視して) 既存の項目を採用しま"
+#~ "す\n"
+#~ "  完全他人 (tf) - (既存の項目を上書きして) 入ってくる項目を採用します\n"
+#~ "  ヘルプ (h)    - このヘルプを表示します\n"
+#~ "\n"
+
+#~ msgid "'--xml' option only valid with '--summarize' option"
+#~ msgstr ""
+#~ "'--xml' オプションは '--summarize' オプションとともに使われた場合のみ有効"
+#~ "です"
+
+#~ msgid "Merged via:"
+#~ msgstr "マージ経路:"
+
+# * Description for 'svn --extensions'.
+# * 29 half-size characters are displayed on the left.
+#~ msgid ""
+#~ "Default: '-u'. When Subversion is invoking an\n"
+#~ "                             external diff program, ARG is simply passed "
+#~ "along\n"
+#~ "                             to the program. But when Subversion is using "
+#~ "its\n"
+#~ "                             default internal diff implementation, or "
+#~ "when\n"
+#~ "                             Subversion is displaying blame annotations, "
+#~ "ARG\n"
+#~ "                             could be any of the following:\n"
+#~ "                                -u (--unified):\n"
+#~ "                                   Output 3 lines of unified context.\n"
+#~ "                                -b (--ignore-space-change):\n"
+#~ "                                   Ignore changes in the amount of white "
+#~ "space.\n"
+#~ "                                -w (--ignore-all-space):\n"
+#~ "                                   Ignore all white space.\n"
+#~ "                                --ignore-eol-style:\n"
+#~ "                                   Ignore changes in EOL style\n"
+#~ "                                -p (--show-c-function):\n"
+#~ "                                   Show C function name in diff output."
+#~ msgstr ""
+#~ "デフォルト: '-u'。Subversion が外部の diff プロ\n"
+#~ "                             グラムを呼び出すとき、<ARG> は単純にそのプロ"
+#~ "グラ\n"
+#~ "                             ムに渡されます。しかし、Subversion がデフォル"
+#~ "ト\n"
+#~ "                             の内部の diff の実装を呼び出す場合や blame の"
+#~ "注\n"
+#~ "                             釈情報を表示する場合、<ARG> には以下のいずれ"
+#~ "かを\n"
+#~ "                             使ってください。\n"
+#~ "                                -u (--unified):\n"
+#~ "                                   3 行の unified context を出力します。\n"
+#~ "                                -b (--ignore-space-change):\n"
+#~ "                                   空白文字の数に関する変更を無視しま"
+#~ "す。\n"
+#~ "                                -w (--ignore-all-space):\n"
+#~ "                                   すべての空白文字を無視します。\n"
+#~ "                                --ignore-eol-style:\n"
+#~ "                                   行末 (EOL) スタイルの変更を無視しま"
+#~ "す。\n"
+#~ "                                -p (--show-c-function):\\n\"\n"
+#~ "                                   差分の出力で C の関数名を表示します。"
+
+# * Description for 'svn --depth'.
+# * 29 half-size characters are displayed on the left.
+#~ msgid ""
+#~ "limit operation by depth ARG ('empty', 'files',\n"
+#~ "                            'immediates', or 'infinity')"
+#~ msgstr ""
+#~ "操作の対象を深さ <ARG> ('empty'、'files'、\n"
+#~ "                             'immediates'、'infinity' のいずれか) に限定し"
+#~ "ま\n"
+#~ "                             す"
+
+# * Description for 'svn --set-depth'.
+# * 29 half-size characters are displayed on the left.
+#~ msgid ""
+#~ "set new working copy depth to ARG ('empty',\n"
+#~ "                            'files', 'immediates', or 'infinity')"
+#~ msgstr ""
+#~ "作業コピーの新たな深さとして <ARG> ('empty'、\n"
+#~ "                             'files'、'immediates'、'infinity' のいずれ"
+#~ "か) に\n"
+#~ "                             設定します"
+
+# * Description for 'svn --changelist'.
+# * 29 half-size characters are displayed on the left.
+#~ msgid ""
+#~ "operate only on members of changelist ARG\n"
+#~ "                             [aliases: --cl]"
+#~ msgstr ""
+#~ "変更リスト <ARG> に含まれている項目のみに対して\n"
+#~ "                             操作を実行します [エイリアス: --cl]"
+
+# * Description for 'svn --keep-changelists'.
+# * 29 half-size characters are displayed on the left.
+#~ msgid "don't delete changelists after commit"
+#~ msgstr "コミット後に変更リストを削除しません"
+
+# * Description for 'svn --with-revprop'.
+# * 29 half-size characters are displayed on the left.
+#~ msgid ""
+#~ "set revision property ARG in new revision\n"
+#~ "                             using the name[=value] format"
+#~ msgstr ""
+#~ "「名前[=値]」の形式で指定されたリビジョン属性\n"
+#~ "                             <ARG> を新しいリビジョンに設定します"
+
+# * Description for 'svn --show-revs'
+# * 29 half-size characters are displayed on the left.
+# TRANSLATION-FIXME: The original message should be corrected...
+#~ msgid ""
+#~ "specify which collection of revisions to display\n"
+#~ "                             ('"
+#~ msgstr ""
+#~ "表示する一連のリビジョンを指定します\n"
+#~ "                             ('"
+
+# * Description for 'svn add --reintegrate'.
+# * 29 half-size characters are displayed on the left.
+#~ msgid "lump-merge all of source URL's unmerged changes"
+#~ msgstr ""
+#~ "ソース URL からマージされていない変更すべてを、\n"
+#~ "                             一まとめにしてマージする"
+
+# * Description for 'svn changelist'.
+# * "changelist (cl): " is displayed at the head of the first line.
+#~ msgid ""
+#~ "Associate (or dissociate) changelist CLNAME with the named files.\n"
+#~ "usage: 1. changelist CLNAME TARGET...\n"
+#~ "       2. changelist --remove TARGET...\n"
+#~ msgstr ""
+#~ "指定したファイルを変更リスト <CLNAME> に入れます (または\n"
+#~ "<CLNAME> から外します)。\n"
+#~ "使用方法: 1. changelist <CLNAME> <対象>...\n"
+#~ "          2. changelist --remove <対象>...\n"
+
+# * Description for 'svn copy'.
+# * "copy (cp): " is displayed at the head of the first line.
+#~ msgid ""
+#~ "Duplicate something in working copy or repository, remembering\n"
+#~ "history.\n"
+#~ "usage: copy SRC[@REV]... DST\n"
+#~ "\n"
+#~ "When copying multiple sources, they will be added as children of DST,\n"
+#~ "which must be a directory.\n"
+#~ "\n"
+#~ "  SRC and DST can each be either a working copy (WC) path or URL:\n"
+#~ "    WC  -> WC:   copy and schedule for addition (with history)\n"
+#~ "    WC  -> URL:  immediately commit a copy of WC to URL\n"
+#~ "    URL -> WC:   check out URL into WC, schedule for addition\n"
+#~ "    URL -> URL:  complete server-side copy;  used to branch and tag\n"
+#~ "  All the SRCs must be of the same type.\n"
+#~ "\n"
+#~ "WARNING: For compatibility with previous versions of Subversion,\n"
+#~ "copies performed using two working copy paths (WC -> WC) will not\n"
+#~ "contact the repository.  As such, they may not, by default, be able\n"
+#~ "to propagate merge tracking information from the source of the copy\n"
+#~ "to the destination.\n"
+#~ msgstr ""
+#~ "作業コピーまたはリポジトリ中の何かを、履歴をもたせたまま複製します。\n"
+#~ "使用方法: copy <コピー元>[@<REV>]... <コピー先>\n"
+#~ "\n"
+#~ "複数の <コピー元> をコピーする場合、それらは <コピー先> の子ノードとして追"
+#~ "加\n"
+#~ "されるので、<コピー先> はディレクトリでなければなりません。\n"
+#~ "\n"
+#~ "  <コピー元> と <コピー先> は作業コピー (WC) のパスと URL のどちらかで指定"
+#~ "で\n"
+#~ "  きます:\n"
+#~ "    WC  -> WC:   (履歴をもたせたまま) コピーして追加準備状態にします\n"
+#~ "    WC  -> URL:  WC のコピーを直接 URL にコミットします\n"
+#~ "    URL -> WC:   URL をチェックアウトして WC に入れ、追加準備状態にしま"
+#~ "す\n"
+#~ "    URL -> URL:  完全なサーバサイドのコピーです。ブランチとタグに用いられ"
+#~ "ます\n"
+#~ "  <コピー元> はすべて同じ種別でなければなりません。\n"
+#~ "\n"
+#~ "警告: Subversion の以前のバージョンとの互換性のため、2 つの作業コピーパス"
+#~ "の間\n"
+#~ "で行うコピー (WC -> WC) では、リポジトリにアクセスしません。そのため、この"
+#~ "よ\n"
+#~ "うなコピーでは、デフォルトではコピー元からコピー先へのマージ追跡情報の伝播"
+#~ "が\n"
+#~ "なされない可能性があります。\n"
+
+# * Description for 'svn --force-log'.
+# * 29 half-size characters are displayed on the left.
+#~ msgid "force validity of lock comment source"
+#~ msgstr ""
+#~ "ロックコメントを含むファイルを強制的に有効にしま\n"
+#~ "                             す"
+
+# * Description for 'svn log'.
+# * "log: " is displayed at the head of the first line.
+#~ msgid ""
+#~ "Show the log messages for a set of revision(s) and/or file(s).\n"
+#~ "usage: 1. log [PATH]\n"
+#~ "       2. log URL[@REV] [PATH...]\n"
+#~ "\n"
+#~ "  1. Print the log messages for a local PATH (default: '.').\n"
+#~ "     The default revision range is BASE:1.\n"
+#~ "\n"
+#~ "  2. Print the log messages for the PATHs (default: '.') under URL.\n"
+#~ "     If specified, REV determines in which revision the URL is first\n"
+#~ "     looked up, and the default revision range is REV:1; otherwise,\n"
+#~ "     the URL is looked up in HEAD, and the default revision range is\n"
+#~ "     HEAD:1.\n"
+#~ "\n"
+#~ "  With -v, also print all affected paths with each log message.\n"
+#~ "  With -q, don't print the log message body itself (note that this is\n"
+#~ "  compatible with -v).\n"
+#~ "\n"
+#~ "  Each log message is printed just once, even if more than one of the\n"
+#~ "  affected paths for that revision were explicitly requested.  Logs\n"
+#~ "  follow copy history by default.  Use --stop-on-copy to disable this\n"
+#~ "  behavior, which can be useful for determining branchpoints.\n"
+#~ "\n"
+#~ "  Examples:\n"
+#~ "    svn log\n"
+#~ "    svn log foo.c\n"
+#~ "    svn log http://www.example.com/repo/project/foo.c\n"
+#~ "    svn log http://www.example.com/repo/project foo.c bar.c\n"
+#~ msgstr ""
+#~ "一連のリビジョンとファイルの一方または両方のログメッセージを表示します。\n"
+#~ "使用方法: 1. log [<パス>]\n"
+#~ "          2. log <URL>[@<REV>] [<パス>...]\n"
+#~ "\n"
+#~ "  1. ローカルの <パス> (デフォルト: '.') に関するログメッセージを表示しま"
+#~ "す。\n"
+#~ "     デフォルトで表示するリビジョンの範囲は BASE:1 です。\n"
+#~ "\n"
+#~ "  2. <URL> の下の <パス> (デフォルト: '.') に関するログメッセージを表示し"
+#~ "ます。\n"
+#~ "     <REV> を指定すると、リビジョン <REV> での <URL> をまず調べ、デフォル"
+#~ "トで\n"
+#~ "     表示するリビジョンの範囲は <REV>:1 となります。<REV> を指定しない場合"
+#~ "は、\n"
+#~ "     HEAD での <URL> をまず調べ、デフォルトで表示するリビジョン範囲は "
+#~ "HEAD:1\n"
+#~ "     となります。\n"
+#~ "\n"
+#~ "  -v をつけると、各ログメッセージと共に、影響を受けたパスもすべて表示され"
+#~ "ます。\n"
+#~ "  -q をつけるとログメッセージ自体は表示されません (これは -v と共存できる"
+#~ "こと\n"
+#~ "  に注意してください)。\n"
+#~ "\n"
+#~ "  特定のリビジョンで影響を受けた複数のパスを引数として明示的に指定しない限"
+#~ "り、\n"
+#~ "  そのリビジョンに関するログメッセージは一度だけしか表示されません。デフォ"
+#~ "ル\n"
+#~ "  トではログはコピーの履歴も追います。この動作を無効にするには --stop-on-"
+#~ "copy\n"
+#~ "  を用いてください。このオプションはブランチポイントを見つけるのに便利で"
+#~ "す。\n"
+#~ "\n"
+#~ "  例:\n"
+#~ "    svn log\n"
+#~ "    svn log foo.c\n"
+#~ "    svn log http://www.example.com/repo/project/foo.c\n"
+#~ "    svn log http://www.example.com/repo/project foo.c bar.c\n"
+
+# * Description for 'svn --change'.
+# * 29 half-size characters are displayed on the left.
+#~ msgid "the change made by ARG"
+#~ msgstr "リビジョン <ARG> における変更"
+
+# * Description for 'svn mergeinfo'.
+# * "mergeinfo: " is displayed at the head of the first line.
+#~ msgid ""
+#~ "Display merge-related information.\n"
+#~ "usage: mergeinfo SOURCE-URL[@REV] [TARGET[@REV]]\n"
+#~ "\n"
+#~ "  Display information related to merges (or potential merges) between\n"
+#~ "  SOURCE-URL and TARGET (default: '.').  If the --show-revs option\n"
+#~ "  is not provided, display revisions which have been merged from\n"
+#~ "  SOURCE-URL to TARGET; otherwise, display the type of information\n"
+#~ "  specified by the --show-revs option.\n"
+#~ msgstr ""
+#~ "マージ関連の情報を表示します。\n"
+#~ "使用方法: mergeinfo <マージ元 URL>[@<REV>] [<対象>[@<REV>]]\n"
+#~ "\n"
+#~ "  <マージ元 URL> と <対象> (デフォルト: '.') の間のマージ (または潜在的な"
+#~ "マー\n"
+#~ "  ジ) に関連する情報を表示します。--show-revs オプションが指定されていない"
+#~ "場\n"
+#~ "  合は、<マージ元 URL> から <対象> へマージされたリビジョンの一覧を表示し"
+#~ "ます。\n"
+#~ "  --show-revs オプションが指定されている場合は、オプションで指定された種類"
+#~ "の\n"
+#~ "  情報を表示します。\n"
+
+# * Description for 'svn propset'.
+# * "propset (pset, ps): " is displayed at the head of the first line.
+#~ msgid ""
+#~ "Set the value of a property on files, dirs, or revisions.\n"
+#~ "usage: 1. propset PROPNAME PROPVAL PATH...\n"
+#~ "       2. propset PROPNAME --revprop -r REV PROPVAL [TARGET]\n"
+#~ "\n"
+#~ "  1. Creates a versioned, local propchange in working copy.\n"
+#~ "  2. Creates an unversioned, remote propchange on repos revision.\n"
+#~ "     TARGET only determines which repository to access.\n"
+#~ "\n"
+#~ "  The value may be provided with the --file option instead of PROPVAL.\n"
+#~ "\n"
+#~ "  Note: svn recognizes the following special versioned properties\n"
+#~ "  but will store any arbitrary properties set:\n"
+#~ "    svn:ignore     - A newline separated list of file glob patterns to "
+#~ "ignore.\n"
+#~ "    svn:keywords   - Keywords to be expanded.  Valid keywords are:\n"
+#~ "      URL, HeadURL             - The URL for the head version of the "
+#~ "object.\n"
+#~ "      Author, LastChangedBy    - The last person to modify the file.\n"
+#~ "      Date, LastChangedDate    - The date/time the object was last "
+#~ "modified.\n"
+#~ "      Rev, Revision,           - The last revision the object changed.\n"
+#~ "      LastChangedRevision\n"
+#~ "      Id                       - A compressed summary of the previous\n"
+#~ "                                   4 keywords.\n"
+#~ "    svn:executable - If present, make the file executable.  Use\n"
+#~ "      'svn propdel svn:executable PATH...' to clear.\n"
+#~ "    svn:eol-style  - One of 'native', 'LF', 'CR', 'CRLF'.\n"
+#~ "    svn:mime-type  - The mimetype of the file.  Used to determine\n"
+#~ "      whether to merge the file, and how to serve it from Apache.\n"
+#~ "      A mimetype beginning with 'text/' (or an absent mimetype) is\n"
+#~ "      treated as text.  Anything else is treated as binary.\n"
+#~ "    svn:externals  - A newline separated list of module specifiers,\n"
+#~ "      each of which consists of a relative directory path, optional\n"
+#~ "      revision flags and an URL.  The ordering of the three elements\n"
+#~ "      implements different behavior.  Subversion 1.4 and earlier only\n"
+#~ "      support the following formats and the URLs cannot have peg\n"
+#~ "      revisions:\n"
+#~ "        foo             http://example.com/repos/zig\n"
+#~ "        foo/bar -r 1234 http://example.com/repos/zag\n"
+#~ "      Subversion 1.5 and greater support the above formats and the\n"
+#~ "      following formats where the URLs may have peg revisions:\n"
+#~ "                http://example.com/repos/zig foo\n"
+#~ "        -r 1234 http://example.com/repos/zig foo/bar\n"
+#~ "      Relative URLs are supported in Subversion 1.5 and greater for\n"
+#~ "      all above formats and are indicated by starting the URL with one\n"
+#~ "      of the following strings\n"
+#~ "        ../  to the parent directory of the extracted external\n"
+#~ "        ^/   to the repository root\n"
+#~ "        //   to the scheme\n"
+#~ "        /    to the server root\n"
+#~ "      The ambiguous format 'relative_path relative_path' is taken as\n"
+#~ "      'relative_url relative_path' with peg revision support.\n"
+#~ "    svn:needs-lock - If present, indicates that the file should be "
+#~ "locked\n"
+#~ "      before it is modified.  Makes the working copy file read-only\n"
+#~ "      when it is not locked.  Use 'svn propdel svn:needs-lock PATH...'\n"
+#~ "      to clear.\n"
+#~ "\n"
+#~ "  The svn:keywords, svn:executable, svn:eol-style, svn:mime-type and\n"
+#~ "  svn:needs-lock properties cannot be set on a directory.  A non-"
+#~ "recursive\n"
+#~ "  attempt will fail, and a recursive attempt will set the property\n"
+#~ "  only on the file children of the directory.\n"
+#~ msgstr ""
+#~ "ファイル・ディレクトリ・リビジョンの属性の値を設定します。\n"
+#~ "使用方法: 1. propset <属性名> <属性値> <パス>...\n"
+#~ "          2. propset <属性名> --revprop -r <リビジョン> <属性値> [<対象"
+#~ ">]\n"
+#~ "\n"
+#~ "  1. 作業コピー内にあるバージョン管理下の属性をローカルで変更します。\n"
+#~ "  2. リポジトリのリビジョンに関する、バージョン管理下にないリモートの属性"
+#~ "を変\n"
+#~ "     更します。\n"
+#~ "     <対象> には、アクセスするリポジトリを決める意味しかありません。\n"
+#~ "\n"
+#~ "  値は、<属性値> の代わりに --file オプションで与えてもかまいません。\n"
+#~ "\n"
+#~ "  注意: svn は、バージョン管理された以下の特殊な属性を認識しますが、それ以"
+#~ "外\n"
+#~ "  でも任意の属性のセットを格納します:\n"
+#~ "    svn:ignore     - 改行で区切られた、無視するファイルグロブパターンのリ"
+#~ "ス\n"
+#~ "      トです。\n"
+#~ "    svn:keywords   - 展開されるキーワードです。以下のものが有効です:\n"
+#~ "      URL, HeadURL             - オブジェクトの HEAD バージョンの URL。\n"
+#~ "      Author, LastChangedBy    - ファイルを最後に変更した人。\n"
+#~ "      Date, LastChangedDate    - オブジェクトが最後の変更された日時。\n"
+#~ "      Rev, Revision,           - オブジェクトが最後に変更されたリビジョ"
+#~ "ン。\n"
+#~ "      LastChangedRevision\n"
+#~ "      Id                       - 上の 4 つのキーワードをまとめた要約。\n"
+#~ "    svn:executable - 設定されている場合、ファイルを実行可能にします。設定"
+#~ "を解\n"
+#~ "      除するには 'svn propdel svn:executable <パス>...' を使用してくださ"
+#~ "い。\n"
+#~ "    svn:eol-style  - 'native', 'LF', 'CR', 'CRLF' のうちいずれか一つで"
+#~ "す。\n"
+#~ "    svn:mime-type  - ファイルの MIME タイプです。ファイルをマージするべき"
+#~ "かす\n"
+#~ "      るべきでないか、そして Apache のサービスでどのように扱うかを決めるの"
+#~ "に\n"
+#~ "      用いられます。'text/' で始まる MIME タイプの場合 (あるいは MIME タイ"
+#~ "プ\n"
+#~ "      が設定されていない場合) はテキストとして扱われます。それ以外はすべて"
+#~ "バ\n"
+#~ "      イナリとして扱われます。\n"
+#~ "    svn:externals  - 改行で区切られた、モジュール指示子のリストです。各指"
+#~ "示子\n"
+#~ "      には、ディレクトリの相対パス・リビジョンフラグ (オプショナル)・URL "
+#~ "を指\n"
+#~ "      定します。これら 3 つの要素の順序を変えると動作も変わります。"
+#~ "Subversion\n"
+#~ "      1.4 以前では次の形式しかサポートされておらず、URL に peg リビジョン"
+#~ "をつ\n"
+#~ "      けることもできませんでした。\n"
+#~ "        foo             http://example.com/repos/zig\n"
+#~ "        foo/bar -r 1234 http://example.com/repos/zag\n"
+#~ "      Subversion 1.5 以降では、この形式だけでなく次の形式もサポートしてい"
+#~ "ます。\n"
+#~ "      こちらでは URL に peg リビジョンをつけてもかまいません。\n"
+#~ "                http://example.com/repos/zig foo\n"
+#~ "        -r 1234 http://example.com/repos/zig foo/bar\n"
+#~ "      Subversion 1.5 以降では、前述のすべての形式で相対 URL もサポートされ"
+#~ "て\n"
+#~ "      います。相対 URL は、以下の文字列のいずれかを URL の先頭につけること"
+#~ "で\n"
+#~ "      指定します。\n"
+#~ "        ../  - 抽出された外部項目の親ディレクトリ\n"
+#~ "        ^/   - リポジトリルート\n"
+#~ "        //   - スキーム\n"
+#~ "        /    - サーバルート\n"
+#~ "      '<相対パス> <相対パス>' という曖昧な形式は、peg リビジョンをサポート"
+#~ "し\n"
+#~ "      た形式の '<相対 URL> <相対パス>' であると見なされます。\n"
+#~ "    svn:needs-lock - 存在する場合、そのファイルは変更前にロックをかけるべ"
+#~ "きで\n"
+#~ "      あるという意味です。ロックされていない場合は作業コピーのファイルを読"
+#~ "み\n"
+#~ "      込み専用にします。設定を解除するには 'svn propdel needs-lock <パス"
+#~ ">...'\n"
+#~ "      を使用してください。\n"
+#~ "\n"
+#~ "  svn:keywords、svn:executable、svn:eol-style、svn:mime-type、svn:needs-"
+#~ "lock\n"
+#~ "  の各属性はディレクトリには設定できません。ディレクトリへの非再帰的な設定"
+#~ "は、\n"
+#~ "  試みても失敗します。再帰的な設定をすると、ディレクトリの子ファイルに属性"
+#~ "が\n"
+#~ "  設定されます。\n"
+
+# * Description for 'svn resolve'.
+# * "resolve: " is displayed at the head of the first line.
+#~ msgid ""
+#~ "Resolve conflicts on working copy files or directories.\n"
+#~ "usage: resolve [PATH...]\n"
+#~ "\n"
+#~ "  Note:  the --accept option is currently required.\n"
+#~ msgstr ""
+#~ "作業コピー内のファイルやディレクトリにおける競合を解決します。\n"
+#~ "使用方法: resolve [<パス>...]\n"
+#~ "\n"
+#~ "  注意:  現在のところ --accept オプションが必須です。\n"
+
+# * Description for 'svn resolve --accept'
+# * 29 half-size characters are displayed on the left.
+# TRANSLATION-FIXME: The original message should be corrected...
+#~ msgid ""
+#~ "specify automatic conflict resolution source\n"
+#~ "                            ('"
+#~ msgstr ""
+#~ "自動競合解決のソースを指定します\n"
+#~ "                            ('"
+
+# * Description for 'svn resolved'.
+# * "resolved: " is displayed at the head of the first line.
+#~ msgid ""
+#~ "Remove 'conflicted' state on working copy files or directories.\n"
+#~ "usage: resolved PATH...\n"
+#~ "\n"
+#~ "  Note:  this subcommand does not semantically resolve conflicts or\n"
+#~ "  remove conflict markers; it merely removes the conflict-related\n"
+#~ "  artifact files and allows PATH to be committed again.  It has been\n"
+#~ "  deprecated in favor of running 'svn resolve --accept working'.\n"
+#~ msgstr ""
+#~ "作業コピー内やディレクトリ内の「競合」状態を取り除きます。\n"
+#~ "使用方法: resolved <パス>...\n"
+#~ "\n"
+#~ "  注意:  このサブコマンドは、意味的に競合を解消したり競合マーカーを取り除"
+#~ "いた\n"
+#~ "  りするわけではありません。単に、競合に際して機械的に作り出されたファイル"
+#~ "を\n"
+#~ "  削除し、<パス> を再びコミットできるようにするだけです。現在ではこのコマ"
+#~ "ンド\n"
+#~ "  は非推奨となり、代わりに 'svn resolve --accept working' を実行することが"
+#~ "推\n"
+#~ "  奨されています。\n"
+
+# * Description for 'svn update'.
+# * "update (up): " is displayed at the head of the first line.
+#~ msgid ""
+#~ "Bring changes from the repository into the working copy.\n"
+#~ "usage: update [PATH...]\n"
+#~ "\n"
+#~ "  If no revision given, bring working copy up-to-date with HEAD rev.\n"
+#~ "  Else synchronize working copy to revision given by -r.\n"
+#~ "\n"
+#~ "  For each updated item a line will start with a character reporting the\n"
+#~ "  action taken.  These characters have the following meaning:\n"
+#~ "\n"
+#~ "    A  Added\n"
+#~ "    D  Deleted\n"
+#~ "    U  Updated\n"
+#~ "    C  Conflict\n"
+#~ "    G  Merged\n"
+#~ "    E  Existed\n"
+#~ "\n"
+#~ "  A character in the first column signifies an update to the actual "
+#~ "file,\n"
+#~ "  while updates to the file's properties are shown in the second column.\n"
+#~ "  A 'B' in the third column signifies that the lock for the file has\n"
+#~ "  been broken or stolen.\n"
+#~ "\n"
+#~ "  If --force is used, unversioned obstructing paths in the working\n"
+#~ "  copy do not automatically cause a failure if the update attempts to\n"
+#~ "  add the same path.  If the obstructing path is the same type (file\n"
+#~ "  or directory) as the corresponding path in the repository it becomes\n"
+#~ "  versioned but its contents are left 'as-is' in the working copy.\n"
+#~ "  This means that an obstructing directory's unversioned children may\n"
+#~ "  also obstruct and become versioned.  For files, any content "
+#~ "differences\n"
+#~ "  between the obstruction and the repository are treated like a local\n"
+#~ "  modification to the working copy.  All properties from the repository\n"
+#~ "  are applied to the obstructing path.  Obstructing paths are reported\n"
+#~ "  in the first column with code 'E'.\n"
+#~ "\n"
+#~ "  Use the --set-depth option to set a new working copy depth on the\n"
+#~ "  targets of this operation.  Currently, the depth of a working copy\n"
+#~ "  directory can only be increased (telescoped more deeply); you cannot\n"
+#~ "  make a directory more shallow.\n"
+#~ msgstr ""
+#~ "リポジトリの変更点を作業コピーに取り入れます。\n"
+#~ "使用方法: update [<パス>...]\n"
+#~ "\n"
+#~ "  リビジョンが指定されなかった場合は HEAD リビジョンを取り入れ、作業コピー"
+#~ "を\n"
+#~ "  最新の状態にします。そうでない場合、-r で指定されたリビジョンで作業コ"
+#~ "ピーを\n"
+#~ "  同期します。\n"
+#~ "\n"
+#~ "  更新された各項目に関しては、行われた操作を報告する文字が行頭につけられま"
+#~ "す。\n"
+#~ "  これらの文字は次のような意味をもっています:\n"
+#~ "\n"
+#~ "    A  追加されました\n"
+#~ "    D  削除されました\n"
+#~ "    U  更新されました\n"
+#~ "    C  競合しています\n"
+#~ "    G  マージされました\n"
+#~ "    E  存在していました\n"
+#~ "\n"
+#~ "  1 列目の文字は、実際のファイルに対する更新を意味します。これに対し、ファ"
+#~ "イ\n"
+#~ "  ルの属性に対する更新は 2 列目で示されます。3 列目に 'B' がある場合、それ"
+#~ "は、\n"
+#~ "  そのファイルに関するロックが破壊されたか奪われたことを意味します。\n"
+#~ "\n"
+#~ "  --force が指定されている場合、更新によって作業コピー内にパスを追加しよう"
+#~ "と\n"
+#~ "  したときに、バージョン管理下にない同名のパスが障害となっても、それだけで"
+#~ "更\n"
+#~ "  新が自動的に失敗することはありません。障害となっているパスがリポジトリ内"
+#~ "の\n"
+#~ "  対応するパスと同じ種別 (ファイルかディレクトリか) である場合、そのパスは"
+#~ "バ\n"
+#~ "  ージョン管理下に置かれますが、その内容は作業コピー内に「そのまま」残され"
+#~ "ま\n"
+#~ "  す。つまり、障害となっているディレクトリの中で、バージョン管理下にない子"
+#~ "ノー\n"
+#~ "  ドがまた障害となっていると、それもまたバージョン管理下に置かれるかもしれ"
+#~ "ま\n"
+#~ "  せん。ファイルに関しては、障害となっているものとリポジトリ内のものの内容"
+#~ "の\n"
+#~ "  違いはすべて、作業コピーへのローカルの修正のように扱われます。リポジトリ"
+#~ "で\n"
+#~ "  与えられている属性はすべて、障害となっているパスに適用されます。障害と"
+#~ "なっ\n"
+#~ "  たパスは 1 列目でコード 'E' を用いて報告されます。\n"
+#~ "\n"
+#~ "  --set-depth オプションを用いると、この操作の対象に対して、作業コピーの深"
+#~ "さ\n"
+#~ "  を新たに設定できます。現在のところ、作業コピーディレクトリの深さは増やす"
+#~ "こ\n"
+#~ "  と (より深いところを望遠鏡で覗くこと) しかできません。つまり、ディレクト"
+#~ "リ\n"
+#~ "  を浅くすることはできません。\n"
+
+#~ msgid "'%s' is not a valid --accept value"
+#~ msgstr "'%s' は --accept に指定する値として不正です"
+
+#~ msgid "'%s' is not a valid --show-revs value"
+#~ msgstr "'%s' は --show-revs に指定する値として不正です"
+
+#~ msgid "-r and -c can't be used with --reintegrate"
+#~ msgstr "-r は --reintegrate とともに使用することはできません"
+
+#~ msgid "--depth and --set-depth are mutually exclusive"
+#~ msgstr "--depth と --set-depth は互いに排他的です"
+
+#~ msgid "--reintegrate cannot be used with --ignore-ancestry or --record-only"
+#~ msgstr ""
+#~ "--reintegrate は --ignore-ancestry や --record-only とともに使用することは"
+#~ "できません"
+
+#~ msgid "--reintegrate cannot be used with --ignore-ancestry"
+#~ msgstr "--reintegrate は --ignore-ancestry とともに使用することはできません"
+
+#~ msgid "--reintegrate cannot be used with --record-only"
+#~ msgstr "--reintegrate は --record-only とともに使用することはできません"
+
+#~ msgid "Merge source required"
+#~ msgstr "マージ元が必要です"
+
+#~ msgid "Cannot specify a revision range with two URLs"
+#~ msgstr "リビジョン範囲は、2 つの URL とともに指定することはできません"
+
+#~ msgid "--depth cannot be used with --reintegrate"
+#~ msgstr "--depth は --reintegrate とともに使用することはできません"
+
+#~ msgid "--force cannot be used with --reintegrate"
+#~ msgstr "--force は --reintegrate とともに使用することはできません"
+
+#~ msgid "Not enough arguments given"
+#~ msgstr "十分な引数が与えられていません"
+
+#~ msgid "--- Merging differences between foreign repository URLs into '%s':\n"
+#~ msgstr "--- 異なるリポジトリ URL の間の差分を '%s' にマージしています:\n"
+
+#~ msgid "--- Merging (from foreign repository) r%ld into '%s':\n"
+#~ msgstr "--- (別のリポジトリから) r%ld を '%s' にマージしています:\n"
+
+#~ msgid "--- Reverse-merging (from foreign repository) r%ld into '%s':\n"
+#~ msgstr "--- (別のリポジトリから) r%ld を '%s' に逆マージしています:\n"
+
+#~ msgid "--- Merging (from foreign repository) r%ld through r%ld into '%s':\n"
+#~ msgstr ""
+#~ "--- (別のリポジトリから) r%ld から r%ld までを '%s' にマージしています:\n"
+
+#~ msgid ""
+#~ "--- Reverse-merging (from foreign repository) r%ld through r%ld into '%"
+#~ "s':\n"
+#~ msgstr ""
+#~ "--- (別のリポジトリから) r%ld から r%ld までを '%s' に逆マージしていま"
+#~ "す:\n"
+
+#~ msgid ""
+#~ "--encoding option applies only to textual Subversion-controlled properties"
+#~ msgstr ""
+#~ "--encoding オプションは、Subversion の管理下に置かれているテキストの属性の"
+#~ "みに適用できます"
+
+#~ msgid "missing --accept option"
+#~ msgstr "--accept オプションがありません"
+
+#~ msgid "Try 'svn revert --depth infinity' instead?"
+#~ msgstr "代わりに 'svn revert --depth infinity' を試してみてください"
+
+#~ msgid "(invalid date)"
+#~ msgstr "(不正な日時)"
+
+# * Description for 'svnadmin setuuid'.
+# * "setuuid: " is displayed at the head of the first line.
+#~ msgid ""
+#~ "usage: svnadmin setuuid REPOS_PATH [NEW_UUID]\n"
+#~ "\n"
+#~ "Reset the repository UUID for the repository located at REPOS_PATH.  If\n"
+#~ "NEW_UUID is provided, use that as the new repository UUID; otherwise,\n"
+#~ "generate a brand new UUID for the repository.\n"
+#~ msgstr ""
+#~ "使用方法: svnadmin setuuid <リポジトリパス> [<新 UUID>]\n"
+#~ "\n"
+#~ "<リポジトリパス> にあるリポジトリのリポジトリ UUID をリセットします。<新\n"
+#~ "UUID> が与えられている場合は、それを新たなリポジトリ UUID に使用します。与"
+#~ "え\n"
+#~ "られていない場合は、リポジトリに全く新しい UUID を生成します。\n"
+
+# * Description for 'svnadmin upgrade'.
+# * "upgrade: " is displayed at the head of the first line.
+#~ msgid ""
+#~ "usage: svnadmin upgrade REPOS_PATH\n"
+#~ "\n"
+#~ "Upgrade the repository located at REPOS_PATH to the latest supported\n"
+#~ "schema version.\n"
+#~ "\n"
+#~ "This functionality is provided as a convenience for repository\n"
+#~ "administrators who wish to make use of new Subversion functionality\n"
+#~ "without having to undertake a potentially costly full repository dump\n"
+#~ "and load operation.  As such, the upgrade performs only the minimum\n"
+#~ "amount of work needed to accomplish this while still maintaining the\n"
+#~ "integrity of the repository.  It does not guarantee the most optimized\n"
+#~ "repository state as a dump and subsequent load would.\n"
+#~ msgstr ""
+#~ "使用方法: svnadmin upgrade <リポジトリパス>\n"
+#~ "\n"
+#~ "<リポジトリパス> にあるリポジトリを、サポートされている最新のスキーマバー"
+#~ "ジョ\n"
+#~ "ンにアップグレードします。\n"
+#~ "\n"
+#~ "この機能は、リポジトリ全体のダンプやロードという、高負荷になる可能性がある"
+#~ "操\n"
+#~ "作を行わずに、新しい Subversion の機能を利用できるようにするもので、そのよ"
+#~ "う\n"
+#~ "なことを望むリポジトリ管理者の利便性のために提供されています。そのため、"
+#~ "アッ\n"
+#~ "プグレードでは、リポジトリの完全性を維持しながら目的を実現するのに必要とな"
+#~ "る\n"
+#~ "最小量の作業しか行われません。ダンプしたデータをロードすることで達成される"
+#~ "よ\n"
+#~ "うな、最も最適化されたリポジトリ状態になることは、保証されてはいません。\n"
+
+#~ msgid "No paths to unlock provided"
+#~ msgstr "ロックを解除するパスが指定されていません"
+
+#~ msgid ""
+#~ "Repository lock acquired.\n"
+#~ "Please wait; upgrading the repository may take some time...\n"
+#~ msgstr ""
+#~ "リポジトリのロックを取得しました。\n"
+#~ "お待ちください。リポジトリのアップグレードにはいくらか時間がかかりま"
+#~ "す...\n"
+
+#~ msgid ""
+#~ "Upgrade of this repository's underlying versioned filesystem is not "
+#~ "supported; consider dumping and loading the data elsewhere"
+#~ msgstr ""
+#~ "このリポジトリの下で使われている、バージョン管理されたファイルシステムの"
+#~ "アップグレードはサポートされていません。データを他の場所へダンプした上で"
+#~ "ロードしてください"
+
+#~ msgid ""
+#~ "Upgrade of this repository is not supported; consider dumping and loading "
+#~ "the data elsewhere"
+#~ msgstr ""
+#~ "このリポジトリのアップグレードはサポートされていません。データを他の場所へ"
+#~ "ダンプした上でロードしてください"
+
+#~ msgid ""
+#~ "\n"
+#~ "Upgrade completed.\n"
+#~ msgstr ""
+#~ "\n"
+#~ "アップグレードが終わりました。\n"
+
+#~ msgid ""
+#~ "Missing merge source path '%s'; try with --skip-missing-merge-sources"
+#~ msgstr ""
+#~ "マージ元のパス '%s' がありません; --skip-missing-merge-sources をつけて実"
+#~ "行してみてください"
+
+#~ msgid "No valid revision range 'start' in filtered stream"
+#~ msgstr ""
+#~ "フィルタ通過後のストリーム中に適切なリビジョン範囲 'start' がありません"
+
+#~ msgid "No valid revision range 'end' in filtered stream"
+#~ msgstr ""
+#~ "フィルタ通過後のストリーム中に適切なリビジョン範囲 'end' がありません"
+
+# * Description for 'svndumpfilter --skip-missing-merge-sources'.
+# * 29 half-size characters are displayed on the left.
+#~ msgid "Skip missing merge sources."
+#~ msgstr "行方不明のマージ元は飛ばします。"
+
+# * This message replaces 'Index' in the header of each prop diff in the output
+#   from 'svnlook diff'.
+#~ msgid "Added: %s\n"
+#~ msgstr "追加: %s\n"
+
+# * This message replaces 'Index' in the header of each prop diff in the output
+#   from 'svnlook diff'.
+#~ msgid "Deleted: %s\n"
+#~ msgstr "削除: %s\n"
+
+# * This message replaces 'Index' in the header of each prop diff in the output
+#   from 'svnlook diff'.
+#~ msgid "Modified: %s\n"
+#~ msgstr "変更: %s\n"
+
+#~ msgid ""
+#~ "(Binary files differ)\n"
+#~ "\n"
+#~ msgstr ""
+#~ "(バイナリファイルが異なっています)\n"
+#~ "\n"
+
+# * Description for 'svnserve --listen-once'.
+# * 29 half-size characters are displayed on the left.
+#~ msgid "listen-once mode (useful for debugging)"
+#~ msgstr ""
+#~ "一度だけ待ち受ける (listen-once) モード (デバッ\n"
+#~ "                             グに便利です)"
+
+# * Description for 'svnserve --service'.
+# * 29 half-size characters are displayed on the left.
+#~ msgid "Windows service mode (Service Control Manager)"
+#~ msgstr ""
+#~ "Windows サービスモード (Service Control\n"
+#~ "                             Manager)"
+
+# * Description for 'svnserve --listen-port'.
+# * 29 half-size characters are displayed on the left.
+#~ msgid ""
+#~ "listen port\n"
+#~ "                             [mode: daemon, service, listen-once]"
+#~ msgstr ""
+#~ "指定されたポートで待ち受けます\n"
+#~ "                             [モード: daemon, service, listen-once]"
+
+# * Description for 'svnserve --listen-port'.
+# * 29 half-size characters are displayed on the left.
+#~ msgid ""
+#~ "listen port\n"
+#~ "                             [mode: daemon, listen-once]"
+#~ msgstr ""
+#~ "指定されたポートで待ち受けます\n"
+#~ "                             [モード: daemon, listen-once]"
+
+# * Description for 'svnserve --listen-host'.
+# * 29 half-size characters are displayed on the left.
+#~ msgid ""
+#~ "listen hostname or IP address\n"
+#~ "                             [mode: daemon, service, listen-once]"
+#~ msgstr ""
+#~ "指定されたホスト名または IP アドレスで待ち受けま\n"
+#~ "                             す [モード: daemon, service, listen-once]"
+
+# * Description for 'svnserve --listen-host'.
+# * 29 half-size characters are displayed on the left.
+#~ msgid ""
+#~ "listen hostname or IP address\n"
+#~ "                             [mode: daemon, listen-once]"
+#~ msgstr ""
+#~ "指定されたホスト名または IP アドレスで待ち受けま\n"
+#~ "                             す [モード: daemon, listen-once]"
+
+# * Description for 'svnserve --threads'.
+# * 29 half-size characters are displayed on the left.
+#~ msgid "use threads instead of fork [mode: daemon]"
+#~ msgstr ""
+#~ "fork の代わりにスレッドを用います\n"
+#~ "                             [モード: daemon]"
+
+# * Description for 'svnserve --foreground'.
+# * 29 half-size characters are displayed on the left.
+#~ msgid ""
+#~ "run in foreground (useful for debugging)\n"
+#~ "                             [mode: daemon]"
+#~ msgstr ""
+#~ "フォアグラウンドで実行します (デバッグに便利です)\n"
+#~ "                             [モード: daemon]"
+
+# * Description for 'svnserve --log-file'.
+# * 29 half-size characters are displayed on the left.
+#~ msgid "svnserve log file"
+#~ msgstr "svnserve のログファイル"
+
+# * Description for 'svnserve --pid-file'.
+# * 29 half-size characters are displayed on the left.
+#~ msgid ""
+#~ "write server process ID to file ARG\n"
+#~ "                             [mode: daemon, listen-once, service]"
+#~ msgstr ""
+#~ "サーバのプロセス ID をファイル <ARG> に書き込みま\n"
+#~ "                             す [モード: daemon, listen-once, service]"
+
+# * Description for 'svnserve --pid-file'.
+# * 29 half-size characters are displayed on the left.
+#~ msgid ""
+#~ "write server process ID to file ARG\n"
+#~ "                             [mode: daemon, listen-once]"
+#~ msgstr ""
+#~ "サーバのプロセス ID をファイル <ARG> に書き込みま\n"
+#~ "                             す [モード: daemon, listen-once]"
+
+# * Description for 'svnserve --tunnel-user'.
+# * 29 half-size characters are displayed on the left.
+#~ msgid ""
+#~ "tunnel username (default is current uid's name)\n"
+#~ "                             [mode: tunnel]"
+#~ msgstr ""
+#~ "トンネルのユーザ名 (デフォルトは現在の uid の名\n"
+#~ "                             前です) [モード: tunnel]"
+
+# * Description for svnserve.
+#~ msgid ""
+#~ "usage: svnserve [-d | -i | -t | -X | --service] [options]\n"
+#~ "\n"
+#~ "Valid options:\n"
+#~ msgstr ""
+#~ "使用方法: svnserve [-d | -i | -t | -X | --service] [オプション]\n"
+#~ "\n"
+#~ "有効なオプション:\n"
+
+# * Description for svnserve.
+#~ msgid ""
+#~ "usage: svnserve [-d | -i | -t | -X] [options]\n"
+#~ "\n"
+#~ "Valid options:\n"
+#~ msgstr ""
+#~ "使用方法: svnserve [-d | -i | -t | -X] [オプション]\n"
+#~ "\n"
+#~ "有効なオプション:\n"
+
+#~ msgid ""
+#~ "\n"
+#~ "Cyrus SASL authentication is available.\n"
+#~ msgstr ""
+#~ "\n"
+#~ "Cyrus SASL 認証が利用可能です。\n"
+
+#~ msgid "You must specify exactly one of -d, -i, -t, --service or -X.\n"
+#~ msgstr ""
+#~ "-d, -i, -t, --service, -X のいずれかを一つだけ指定しなければいけません。\n"
+
+# * Description for svnversion.
+#~ msgid ""
+#~ "usage: svnversion [OPTIONS] [WC_PATH [TRAIL_URL]]\n"
+#~ "\n"
+#~ "  Produce a compact 'version number' for the working copy path\n"
+#~ "  WC_PATH.  TRAIL_URL is the trailing portion of the URL used to\n"
+#~ "  determine if WC_PATH itself is switched (detection of switches\n"
+#~ "  within WC_PATH does not rely on TRAIL_URL).  The version number\n"
+#~ "  is written to standard output.  For example:\n"
+#~ "\n"
+#~ "    $ svnversion . /repos/svn/trunk\n"
+#~ "    4168\n"
+#~ "\n"
+#~ "  The version number will be a single number if the working\n"
+#~ "  copy is single revision, unmodified, not switched and with\n"
+#~ "  an URL that matches the TRAIL_URL argument.  If the working\n"
+#~ "  copy is unusual the version number will be more complex:\n"
+#~ "\n"
+#~ "   4123:4168     mixed revision working copy\n"
+#~ "   4168M         modified working copy\n"
+#~ "   4123S         switched working copy\n"
+#~ "   4123P         partial working copy, from a sparse checkout\n"
+#~ "   4123:4168MS   mixed revision, modified, switched working copy\n"
+#~ "\n"
+#~ "  If invoked on a directory that is not a working copy, an\n"
+#~ "  exported directory say, the program will output 'exported'.\n"
+#~ "\n"
+#~ "  If invoked without arguments WC_PATH will be the current directory.\n"
+#~ "\n"
+#~ "Valid options:\n"
+#~ msgstr ""
+#~ "使用方法: svnversion [<オプション>] [<作業コピーパス> [<TRAIL_URL>]]\n"
+#~ "\n"
+#~ "  <作業コピーパス> にある作業コピーの簡潔な「バージョン番号」を生成しま"
+#~ "す。\n"
+#~ "  <TRAIL_URL> は、<作業コピーパス> 自体が switch で切り替えられたかどうか"
+#~ "を決\n"
+#~ "  めるのに用いられる、URL の末尾の部分です (<作業コピーパス> 内の一部が切"
+#~ "り替\n"
+#~ "  えられている場合、その切り替えは <TRAIL_URL> に依存せず検出できます)。"
+#~ "バー\n"
+#~ "  ジョン番号は標準出力に書き込まれます。以下に例を示します:\n"
+#~ "\n"
+#~ "    $ svnversion . /repos/svn/trunk\n"
+#~ "    4168\n"
+#~ "\n"
+#~ "  作業コピーが単一のリビジョンをもち、変更を受けていなく、switch による切"
+#~ "り替\n"
+#~ "  えもされていなく、引数 <TRAIL_URL> にマッチする URL であった場合、バー"
+#~ "ジョ\n"
+#~ "  ン番号は単一の数字となります。そうでない場合は、バージョン番号は以下のよ"
+#~ "う\n"
+#~ "  により複雑になります:\n"
+#~ "\n"
+#~ "   4123:4168     複数のリビジョンが混在している作業コピー\n"
+#~ "   4168M         変更が加えられた作業コピー\n"
+#~ "   4123S         switch を使って切り替えられている作業コピー\n"
+#~ "   4123P         まばらチェックアウト機能を用いて作られた部分的な作業コ"
+#~ "ピー\n"
+#~ "   4123:4168MS   複数のリビジョンが混在しており、変更が加えられている、\n"
+#~ "                 switch を使って切り替えられている作業コピー\n"
+#~ "\n"
+#~ "  例えばエクスポートされたディレクトリのような、作業コピー以外のディレクト"
+#~ "リ\n"
+#~ "  に対して実行すると、プログラムは「エクスポートされたものです」と出力しま"
+#~ "す。\n"
+#~ "\n"
+#~ "  引数なしで呼び出された場合は、<作業コピーパス> はカレントディレクトリと"
+#~ "なり\n"
+#~ "  ます。\n"
+#~ "\n"
+#~ "有効なオプション:\n"
 
 #~ msgid "Path '%s' is missing"
 #~ msgstr "パス '%s' がありません"
