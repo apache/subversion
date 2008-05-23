@@ -427,7 +427,6 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
                   if (err)
                     {
                       if (err->apr_err == SVN_ERR_CLIENT_UNRELATED_RESOURCES
-                          || err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND
                           || err->apr_err == SVN_ERR_FS_NOT_FOUND)
                         {
                           /* PATH@TARGET_ENTRY->REVISION didn't exist at
@@ -1322,12 +1321,17 @@ typedef struct
 } notification_receiver_baton_t;
 
 
-/* Finds a nearest ancestor in CHILDREN_WITH_MERGEINFO for PATH.
+/* Finds a nearest ancestor in CHILDREN_WITH_MERGEINFO for PATH. If
+   PATH_IS_OWN_ANCESTOR is TRUE then a child in CHILDREN_WITH_MERGEINFO
+   where child->path == PATH is considered PATH's ancestor.  If FALSE,
+   then child->path must be a proper ancestor of PATH.
+
    CHILDREN_WITH_MERGEINFO is expected to be sorted in Depth first
    order of path. Nearest ancestor's index from
    CHILDREN_WITH_MERGEINFO is returned. */
 static int
 find_nearest_ancestor(apr_array_header_t *children_with_mergeinfo,
+                      svn_boolean_t path_is_own_ancestor,
                       const char *path)
 {
   int i;
@@ -1344,8 +1348,9 @@ find_nearest_ancestor(apr_array_header_t *children_with_mergeinfo,
       svn_client__merge_path_t *child =
         APR_ARRAY_IDX(children_with_mergeinfo, i, svn_client__merge_path_t *);
       if (svn_path_is_ancestor(child->path, path)
-          && svn_path_compare_paths(child->path, path) != 0)
-        ancestor_index = i;
+          && (svn_path_compare_paths(child->path, path) != 0
+              || path_is_own_ancestor))
+        ancestor_index = i;      
     }
   return ancestor_index;
 }
@@ -1383,9 +1388,27 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
       /* See if this is an operative directory merge. */
       if (!(notify_b->is_single_file_merge) && is_operative_notification)
         {
+          /* Find NOTIFY->PATH's nearest ancestor in
+             NOTIFY->CHILDREN_WITH_MERGEINFO.  Normally we consider a child in
+             NOTIFY->CHILDREN_WITH_MERGEINFO representing PATH to be an
+             ancestor of PATH, but if this is a deletion of PATH then the
+             notification must be for a proper ancestor of PATH.  This ensures
+             we don't get notifications like:
+             
+               --- Merging rX into 'PARENT/CHILD'
+               D    PARENT/CHILD
+
+             But rather:
+
+               --- Merging rX into 'PARENT'
+               D    PARENT/CHILD
+          */
           int new_nearest_ancestor_index =
-            find_nearest_ancestor(notify_b->children_with_mergeinfo,
-                                  notify->path);
+            find_nearest_ancestor(
+              notify_b->children_with_mergeinfo,
+              notify->action == svn_wc_notify_update_delete ? FALSE : TRUE,
+              notify->path);
+
           if (new_nearest_ancestor_index != notify_b->cur_ancestor_index)
             {
               svn_client__merge_path_t *child =
@@ -1720,7 +1743,6 @@ calculate_remaining_ranges(apr_array_header_t **remaining_ranges,
       if (err)
         {
           if (err->apr_err == SVN_ERR_FS_NOT_FOUND
-              || err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND
               || err->apr_err == SVN_ERR_CLIENT_UNRELATED_RESOURCES)
             svn_error_clear(err);
           else
@@ -2563,16 +2585,24 @@ slice_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
     }
 }
 
-/* For each child of CHILDREN_WITH_MERGEINFO create a new remaining_ranges
-   by removing the first item from the original range list and overwrite the
-   original remaining_ranges with this new list.
-   All the allocations are persistent from a POOL.
-   TODO, we should have remaining_ranges in reverse order to avoid recreating
-   the remaining_ranges every time instead of one 'pop' operation.  */
+/* Helper for do_directory_merge().
+
+   Remove the first remaining revision range for each child in
+   CHILDREN_WITH_MERGEINFO *iff* that child was already merged.  END_REV is the
+   ending revision of the most recently merged range, i.e. the same end_rev
+   passed to drive_merge_report_editor() by do_directory_merge().  If a
+   range is removed from a child's remaining_ranges array, allocate the new
+   remaining_ranges array in POOL.
+
+   ### TODO: We should have remaining_ranges in reverse order to avoid
+   ### recreating and reallocationg the remaining_ranges every time we want
+   ### to remove the first range.  If the ranges were reversed we could simply
+   ### pop the last element in the array. */
 static void
-remove_first_range_from_remaining_ranges(
-                                apr_array_header_t *children_with_mergeinfo,
-                                apr_pool_t *pool)
+remove_first_range_from_remaining_ranges(svn_revnum_t end_rev,
+                                         apr_array_header_t
+                                           *children_with_mergeinfo,
+                                         apr_pool_t *pool)
 {
   int i, j;
   for (i = 0; i < children_with_mergeinfo->nelts; i++)
@@ -2584,17 +2614,24 @@ remove_first_range_from_remaining_ranges(
         continue;
       if (child->remaining_ranges->nelts > 0)
         {
-          apr_array_header_t *orig_remaining_ranges = child->remaining_ranges;
-          child->remaining_ranges =
-            apr_array_make(pool, (child->remaining_ranges->nelts - 1),
-                           sizeof(svn_merge_range_t *));
-          for (j = 1; j < orig_remaining_ranges->nelts; j++)
+          svn_merge_range_t *first_range =
+            APR_ARRAY_IDX(child->remaining_ranges, 0, svn_merge_range_t *);
+          if (first_range->end == end_rev)
             {
-              svn_merge_range_t *range = APR_ARRAY_IDX(orig_remaining_ranges,
-                                                       j,
-                                                       svn_merge_range_t *);
-              APR_ARRAY_PUSH(child->remaining_ranges, svn_merge_range_t *)
-                                                                  = range;
+              apr_array_header_t *orig_remaining_ranges =
+                child->remaining_ranges;
+              child->remaining_ranges =
+                apr_array_make(pool, (child->remaining_ranges->nelts - 1),
+                               sizeof(svn_merge_range_t *));
+              for (j = 1; j < orig_remaining_ranges->nelts; j++)
+                {
+                  svn_merge_range_t *range =
+                    APR_ARRAY_IDX(orig_remaining_ranges,
+                                  j,
+                                  svn_merge_range_t *);
+                  APR_ARRAY_PUSH(child->remaining_ranges,
+                                 svn_merge_range_t *) = range;
+                }          
             }
         }
     }
@@ -2944,7 +2981,6 @@ get_mergeinfo_walk_cb(const char *path,
                      ###       consistent in the error it returns(?)
                      */
                   if (err->apr_err == SVN_ERR_FS_NOT_FOUND
-                      || err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND
                       || err->apr_err == SVN_ERR_CLIENT_UNRELATED_RESOURCES)
                     svn_error_clear(err);
                   else
@@ -3921,7 +3957,7 @@ normalize_merge_sources(apr_array_header_t **merge_sources_p,
    portion of REQUESTED_RANGE which is already described in
    IMPLICIT_MERGEINFO.  Store the result in *FILTERED_RANGE.
 
-   If SOURCE_REL_PATH is not found in IMPLICIT_MERGEINFO then not filtering
+   If SOURCE_REL_PATH is not found in IMPLICIT_MERGEINFO then no filtering
    is done and *FILTERED_RANGE is simply set to REQUESTED_RANGE.  If all
    ranges are filtered than *FILTERED_RANGE is set to NULL.  If only some
    ranges are filtered then *FILTERED_RANGE is allocated in POOL. */
@@ -4474,7 +4510,7 @@ do_directory_merge(const char *url1,
 
               /* Prepare for the next iteration (if any). */
               remove_first_range_from_remaining_ranges(
-                children_with_mergeinfo, pool);
+                end_rev, children_with_mergeinfo, pool);
               next_end_rev = get_youngest_end_rev(children_with_mergeinfo,
                                                   is_rollback);
               if ((next_end_rev != SVN_INVALID_REVNUM)

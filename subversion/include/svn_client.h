@@ -1394,7 +1394,7 @@ svn_error_t *
 svn_client_mkdir3(svn_commit_info_t **commit_info_p,
                   const apr_array_header_t *paths,
                   svn_boolean_t make_parents,
-                  apr_hash_t *revprop_table,
+                  const apr_hash_t *revprop_table,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool);
 
@@ -1479,7 +1479,7 @@ svn_client_delete3(svn_commit_info_t **commit_info_p,
                    const apr_array_header_t *paths,
                    svn_boolean_t force,
                    svn_boolean_t keep_local,
-                   apr_hash_t *revprop_table,
+                   const apr_hash_t *revprop_table,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
 
@@ -1572,7 +1572,7 @@ svn_client_import3(svn_commit_info_t **commit_info_p,
                    svn_depth_t depth,
                    svn_boolean_t no_ignore,
                    svn_boolean_t ignore_unknown_node_types,
-                   apr_hash_t *revprop_table,
+                   const apr_hash_t *revprop_table,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
 
@@ -1676,7 +1676,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
                    svn_boolean_t keep_locks,
                    svn_boolean_t keep_changelists,
                    const apr_array_header_t *changelists,
-                   apr_hash_t *revprop_table,
+                   const apr_hash_t *revprop_table,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
 
@@ -3037,7 +3037,7 @@ svn_client_copy4(svn_commit_info_t **commit_info_p,
                  const char *dst_path,
                  svn_boolean_t copy_as_child,
                  svn_boolean_t make_parents,
-                 apr_hash_t *revprop_table,
+                 const apr_hash_t *revprop_table,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool);
 
@@ -3184,7 +3184,7 @@ svn_client_move5(svn_commit_info_t **commit_info_p,
                  svn_boolean_t force,
                  svn_boolean_t move_as_child,
                  svn_boolean_t make_parents,
-                 apr_hash_t *revprop_table,
+                 const apr_hash_t *revprop_table,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool);
 
@@ -3333,7 +3333,7 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
                     svn_boolean_t skip_checks,
                     svn_revnum_t base_revision_for_url,
                     const apr_array_header_t *changelists,
-                    apr_hash_t *revprop_table,
+                    const apr_hash_t *revprop_table,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool);
 

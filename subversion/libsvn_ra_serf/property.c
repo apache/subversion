@@ -604,19 +604,21 @@ svn_ra_serf__wait_for_props(svn_ra_serf__propfind_context_t *prop_ctx,
                             svn_ra_serf__session_t *sess,
                             apr_pool_t *pool)
 {
-  svn_error_t *err;
+  svn_error_t *err, *err2;
 
   err = svn_ra_serf__context_run_wait(&prop_ctx->done, sess, pool);
+
   if (prop_ctx->parser_ctx->error)
     {
       svn_error_clear(err);
       SVN_ERR(prop_ctx->parser_ctx->error);
     }
-  if (svn_ra_serf__propfind_status_code(prop_ctx) == 404)
+
+  err2 = svn_ra_serf__error_on_status(prop_ctx->status_code, prop_ctx->path);
+  if (err2)
     {
-      return svn_error_create(SVN_ERR_RA_DAV_PATH_NOT_FOUND, NULL,
-                              apr_psprintf(pool, _("'%s' path not found"),
-                                           prop_ctx->path));
+      svn_error_clear(err);
+      return err2;
     }
 
   return err;

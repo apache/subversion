@@ -34,6 +34,7 @@ extern "C" {
 #define SVN_AUTH__WINCRYPT_PASSWORD_TYPE           "wincrypt"
 #define SVN_AUTH__KEYCHAIN_PASSWORD_TYPE           "keychain"
 #define SVN_AUTH__KWALLET_PASSWORD_TYPE            "kwallet"
+#define SVN_AUTH__GNOME_KEYRING_PASSWORD_TYPE      "gnome-keyring"
 
 /* A function that stores in *PASSWORD (potentially after decrypting it)
    the user's password.  It might be obtained directly from CREDS, or
