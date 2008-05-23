@@ -189,6 +189,7 @@ class Skip(TestCase):
     self.get_description = self.test_case.get_description
     self.get_sandbox_name = self.test_case.get_sandbox_name
     self.convert_result = self.test_case.convert_result
+    self.run_text = self.test_case.run_text
 
   def need_sandbox(self):
     if self.conditional():

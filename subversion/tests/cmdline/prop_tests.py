@@ -1666,12 +1666,8 @@ test_list = [ None,
               copy_inherits_special_props,
               # If we learn how to write a pre-revprop-change hook for
               # non-Posix platforms, we won't have to skip here:
-              # TODO(epg): Removed Skip as long as we have this XFail
-              # because I couldn't get Skip and XFail to interact
-              # properly (it kept showing the failure and then
-              # printing PASS instead of XFAIL).
-              #Skip(revprop_change, is_non_posix_and_non_windows_os),
-              XFail(revprop_change, svntest.main.is_ra_type_dav),
+              Skip(XFail(revprop_change, svntest.main.is_ra_type_dav),
+                   is_non_posix_and_non_windows_os),
               prop_value_conversions,
               binary_props,
               recursive_base_wc_ops,
