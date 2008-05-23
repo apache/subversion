@@ -238,7 +238,7 @@ class SvnClientTest < Test::Unit::TestCase
 
     infos.clear
     ctx.commit(@wc_path)
-    assert_equal(full_paths.collect {|path| path.to_s}.sort,
+    assert_equal([dir_path, child_dir_path].collect {|path| path.to_s}.sort,
                  infos.collect{|path, notify| path}.sort)
     assert_equal([true, true],
                  infos.collect{|path, notify| notify.commit_added?})
