@@ -374,7 +374,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  obstruction and the repository are treated like a local modification\n"
      "  to the working copy.  All properties from the repository are applied\n"
      "  to the obstructing path.\n"),
-    {'r', 'q', 'N', opt_depth, opt_force, opt_ignore_externals, opt_accept} },
+    {'r', 'q', 'N', opt_depth, opt_force, opt_ignore_externals} },
 
   { "cleanup", svn_cl__cleanup, {0}, N_
     ("Recursively clean up the working copy, removing locks, resuming\n"
