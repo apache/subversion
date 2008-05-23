@@ -200,7 +200,7 @@ unlock_cache(inprocess_cache_t *cache,
   return err;
 }
 
-svn_error_t *
+static svn_error_t *
 inprocess_cache_get(void **value_p,
                     svn_boolean_t *found,
                     void *cache_void,
@@ -258,11 +258,11 @@ erase_page(inprocess_cache_t *cache,
 }
 
 
-svn_error_t *
+static svn_error_t *
 inprocess_cache_set(void *cache_void,
-                     const void *key,
-                     void *value,
-                     apr_pool_t *pool)
+                    const void *key,
+                    void *value,
+                    apr_pool_t *pool)
 {
   inprocess_cache_t *cache = cache_void;
   struct cache_entry *existing_entry;
@@ -385,7 +385,7 @@ iter_cb(void *baton,
   return (b->user_cb)(b->user_baton, key, klen, entry->value, pool);
 }
 
-svn_error_t *
+static svn_error_t *
 inprocess_cache_iter(svn_boolean_t *completed,
                      void *cache_void,
                      svn_iter_apr_hash_cb_t user_cb,
