@@ -7,43 +7,6 @@ delay a release, etc.
 Candidate changes for 1.5.0:
 ============================
 
- * r30748
-   Don't try to drive the merge editor when there is nothing to be merged.
-   Justification:
-     I didn't originally nominate this for backport as I couldn't
-     demonstrate any problem with it on trunk.  But the new merge test in
-     the r31059 group ("don't explicitly record implicit mergeinfo") does fail
-     without it and thus neatly demonstrates why this change is needed.
-   Votes:
-     +1: pburba, markphip
-
- * r31059, 31060, 31061, 31075, 31151
-   Fix issue #3157, Merging a change from a path's natural history
-   creates self-referential mergeinfo
-   Notes:
-     r31075 and 31151 are the core fixes for the issue, the other revisions
-     are a new test for it (and a few minor follow-ups to that test).
-     The addition of the new merge test in r31059 trivally conflicts
-     because several other new merge tests are not backported yet.
-     The new test fails if r30748 isn't backported first.
-   Votes:
-     +1: cmpilato, markphip
-     -1: pburba (looks like there are problems with subtrees, vetoing
-         until I can look into these further).
-
- * r31300, r31301, r31312
-   Fix issue #3199, subtree merges broken when required ranges don't
-   intersect with merge target.
-   Justification:
-     A bit of an edge case, but when it is encountered merge silently
-     fails to do the correct merge but sets mergeinfo as if it did.
-   Notes:
-     r31300 is a test for this issue, r31301 fixes the core problem where
-     the part of the merge was skipped, and r31312 fixes a problem with
-     merge notification.
-   Votes:
-     +1: pburba
-
  * r31334
    Allow commas and whitespace to delimit revisions in -c arguments.
    Notes:
@@ -85,6 +48,43 @@ Candidate changes for 1.5.1:
      Let the commands be useful even when some revisions' dates are corrupt.
    Votes:
      +1: danielsh
+
+ * r30748
+   Don't try to drive the merge editor when there is nothing to be merged.
+   Justification:
+     I didn't originally nominate this for backport as I couldn't
+     demonstrate any problem with it on trunk.  But the new merge test in
+     the r31059 group ("don't explicitly record implicit mergeinfo") does fail
+     without it and thus neatly demonstrates why this change is needed.
+   Votes:
+     +1: pburba, markphip
+
+ * r31059, 31060, 31061, 31075, 31151
+   Fix issue #3157, Merging a change from a path's natural history
+   creates self-referential mergeinfo
+   Notes:
+     r31075 and 31151 are the core fixes for the issue, the other revisions
+     are a new test for it (and a few minor follow-ups to that test).
+     The addition of the new merge test in r31059 trivally conflicts
+     because several other new merge tests are not backported yet.
+     The new test fails if r30748 isn't backported first.
+   Votes:
+     +1: cmpilato, markphip
+     -1: pburba (looks like there are problems with subtrees, vetoing
+         until I can look into these further).
+
+ * r31300, r31301, r31312
+   Fix issue #3199, subtree merges broken when required ranges don't
+   intersect with merge target.
+   Justification:
+     A bit of an edge case, but when it is encountered merge silently
+     fails to do the correct merge but sets mergeinfo as if it did.
+   Notes:
+     r31300 is a test for this issue, r31301 fixes the core problem where
+     the part of the merge was skipped, and r31312 fixes a problem with
+     merge notification.
+   Votes:
+     +1: pburba
 
  * (r31159, r31179) or r31193 from 1.5.x-r31159-r31179 branch.
    Fix "file not found" error when a merge target is a broken symbolic link.
