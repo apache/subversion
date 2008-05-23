@@ -36,13 +36,12 @@ public class LogDate implements java.io.Serializable
     private static final DateFormat formatter = new SimpleDateFormat(
             "yyyy-MM-dd'T'HH:mm:ss.SSS");
 
-    private long timeMicros;
-    private String cachedString;
-    private Calendar cachedDate;
+    private final long timeMicros;
+    private final String cachedString;
+    private final Calendar cachedDate;
     
     public LogDate(String datestr) throws ParseException
     {
-        super();
         if (datestr == null || datestr.length() < 27) {
         	throw new ParseException("String is not a valid Subversion date", 0);
         }
