@@ -13,7 +13,7 @@ Candidate changes for 1.5.0:
      This new option is meaningless for 'checkout'.  Technically we
      may have to keep supporting it if it goes in 1.5.0.
    Votes:
-     +1: glasser, hwright
+     +1: glasser, hwright, markphip
 
  * r31415
    Note that the SVN_ERR_CEASE_INVOCATION semantics of svn_repos_history2
