@@ -15,6 +15,12 @@ Candidate changes for 1.5.0:
    Votes:
      +1: glasser, hwright
 
+ * r31415
+   Note that the SVN_ERR_CEASE_INVOCATION semantics of svn_repos_history2
+   and svn_repos_history_func_t are new in 1.5.
+   Votes:
+     +1: danielsh
+
 Candidate changes for 1.5.1:
 ============================
 
