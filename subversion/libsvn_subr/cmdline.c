@@ -435,17 +435,45 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
   svn_auth_get_keychain_simple_provider(&provider, pool);
   APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 #endif
+#if defined(SVN_HAVE_GNOME_KEYRING) || defined(SVN_HAVE_KWALLET)
+  const char *password_stores_config_option;
+  svn_config_get(cfg,
+                 &password_stores_config_option,
+                 SVN_CONFIG_SECTION_AUTH,
+                 SVN_CONFIG_OPTION_PASSWORD_STORES,
+                 "gnome-keyring,kwallet");
+
+  apr_array_header_t *password_stores
+    = svn_cstring_split(password_stores_config_option, " ,", TRUE, pool);
+
+  int i;
+  for (i = 0; i < password_stores->nelts; i++)
+    {
+      const char *password_store = APR_ARRAY_IDX(password_stores, i,
+                                                 const char *);
 #ifdef SVN_HAVE_GNOME_KEYRING
-  if (get_auth_simple_provider(&provider, "gnome_keyring", pool))
-  {
-    APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-  }
+      if (apr_strnatcmp(password_store, "gnome-keyring") == 0)
+        {
+          if (get_auth_simple_provider(&provider, "gnome_keyring", pool))
+            {
+              APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+            }
+          continue;
+        }
 #endif
 #ifdef SVN_HAVE_KWALLET
-  if (get_auth_simple_provider(&provider, "kwallet", pool))
-    {
-      APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+      if (apr_strnatcmp(password_store, "kwallet") == 0)
+        {
+          if (get_auth_simple_provider(&provider, "kwallet", pool))
+            {
+              APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+            }
+          continue;
+        }
+#endif
+      /* TODO: Error. */
     }
+//  SVN_ERR(add_dynamically_loaded_auth_simple_providers_to_array(&providers, cfg, pool));
 #endif
   if (non_interactive == FALSE)
     {
