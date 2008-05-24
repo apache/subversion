@@ -438,6 +438,7 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
                   if (err)
                     {
                       if (err->apr_err == SVN_ERR_CLIENT_UNRELATED_RESOURCES
+                          || err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND
                           || err->apr_err == SVN_ERR_FS_NOT_FOUND)
                         {
                           /* PATH@TARGET_ENTRY->REVISION didn't exist at
@@ -1667,6 +1668,7 @@ calculate_remaining_ranges(apr_array_header_t **remaining_ranges,
       if (err)
         {
           if (err->apr_err == SVN_ERR_FS_NOT_FOUND
+              || err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND
               || err->apr_err == SVN_ERR_CLIENT_UNRELATED_RESOURCES)
             svn_error_clear(err);
           else
@@ -2889,6 +2891,7 @@ get_mergeinfo_walk_cb(const char *path,
                      ###       consistent in the error it returns(?)
                      */
                   if (err->apr_err == SVN_ERR_FS_NOT_FOUND
+                      || err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND
                       || err->apr_err == SVN_ERR_CLIENT_UNRELATED_RESOURCES)
                     svn_error_clear(err);
                   else

@@ -1045,7 +1045,7 @@ static svn_error_t * commit_add_file(const char *path,
                                    _("File '%s' already exists"),
                                    file->rsrc->url);
         }
-      else if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
+      else if (err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND)
         {
           svn_error_clear(err);
         }

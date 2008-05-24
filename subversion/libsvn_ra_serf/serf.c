@@ -257,7 +257,8 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
                   svn_error_clear(err);
                   cap_result = capability_no;
                 }
-              else if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
+              else if (err->apr_err == SVN_ERR_FS_NOT_FOUND
+                       || err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND)
                 {
                   /* Mergeinfo requests use relative paths, and
                      anyway we're in r0, so this is a likely error,

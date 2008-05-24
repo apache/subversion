@@ -1436,16 +1436,3 @@ svn_ra_serf__discover_root(const char **vcc_url,
 
   return SVN_NO_ERROR;
 }
-
-svn_error_t *
-svn_ra_serf__error_on_status(int status_code, const char *path)
-{
-  switch(status_code) 
-    {
-      case 404:
-        return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
-                                 _("'%s' path not found"), path);
-    }
-
-  return SVN_NO_ERROR;
-}

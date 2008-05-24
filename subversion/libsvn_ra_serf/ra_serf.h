@@ -1207,6 +1207,7 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
                             const char *capability,
                             apr_pool_t *pool);
 
+
 /*** Authentication handler declarations ***/
 
 /**
@@ -1291,16 +1292,5 @@ svn_ra_serf__encode_auth_header(const char * protocol,
                                 const char * data,
                                 apr_size_t data_len,
                                 apr_pool_t *pool);
-
-
-/*** General utility functions ***/
-
-/**
- * Convert an HTTP status code resulting from a WebDAV request to the relevant
- * error code. 
- */
-svn_error_t *
-svn_ra_serf__error_on_status(int status_code, const char *path);
-
 
 #endif /* SVN_LIBSVN_RA_SERF_RA_SERF_H */

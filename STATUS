@@ -6,6 +6,15 @@ delay a release, etc.
 
 Candidate changes for 1.5.1:
 ============================
+ * r31313
+   Make all ra layers return a consistent error when a path is not found in the
+   repository.
+   Notes:
+     Small change, but API consistency is always a good thing.
+     Does not merge cleanly!
+   Votes:
+     +1: lgo, epg, cmpilato
+     -0: markphip (serf tests fail on OSX)
 
  * r31196, r31199, r31280, r31283, r31287
    Don't commit an add of a missing item (issue #3198).
@@ -104,4 +113,4 @@ Candidate changes for 1.5.1:
      +1: arfrever
 
 Approved changes (all releases):
-================================
+

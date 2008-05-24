@@ -370,7 +370,7 @@ svn_ra_neon__get_locks(svn_ra_session_t *session,
 
   svn_pool_destroy(baton.scratchpool);
 
-  if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
+  if (err && err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND)
     {
       svn_error_clear(err);
       *locks = baton.lock_hash;

@@ -87,7 +87,8 @@ svn_cl__mkdir(apr_getopt_t *os,
       else if (!(opt_state->parents) &&
                (APR_STATUS_IS_ENOENT(err->apr_err) || /* in wc */
                 err->apr_err == SVN_ERR_FS_NOT_DIRECTORY ||
-                err->apr_err == SVN_ERR_FS_NOT_FOUND /* all ra layers */))
+                err->apr_err == SVN_ERR_FS_NOT_FOUND || /* ra_local and ra_svn */
+                err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND /* ra_neon */))
         return svn_error_quick_wrap
           (err, _("Try 'svn mkdir --parents' instead?"));
       else

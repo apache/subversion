@@ -274,7 +274,12 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
       SVN_ERR(parser_ctx->error);
     }
 
-  SVN_ERR(svn_ra_serf__error_on_status(loc_ctx->status_code, req_url));
+  if (loc_ctx->status_code == 404)
+    {
+      return svn_error_create(SVN_ERR_RA_DAV_PATH_NOT_FOUND, NULL,
+                              apr_psprintf(pool, _("'%s' path not found"),
+                                           req_url));
+    }
 
   return err;
 }

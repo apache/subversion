@@ -232,7 +232,7 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
                            svn_boolean_t include_descendants,
                            apr_pool_t *pool)
 {
-  svn_error_t *err, *err2;
+  svn_error_t *err;
   int status_code;
 
   mergeinfo_context_t *mergeinfo_ctx;
@@ -285,13 +285,12 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
 
   err = svn_ra_serf__context_run_wait(&mergeinfo_ctx->done, session, pool);
 
-  err2 = svn_ra_serf__error_on_status(status_code, handler->path);
-
-  if (err2)
+  if (status_code == 404)
     {
       svn_error_clear(err);
-      SVN_ERR(err2);
-    }
+      return svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND, NULL,
+                               _("'%s' path not found"), handler->path);
+     }
 
   if (parser_ctx->error)
     {
@@ -300,6 +299,12 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
     }
   else
     SVN_ERR(err);
+
+  if (status_code == 404)
+    {
+      return svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND, NULL,
+                               _("'%s' path not found"), handler->path);
+    }
 
   if (mergeinfo_ctx->done)
     *catalog = mergeinfo_ctx->result_catalog;
