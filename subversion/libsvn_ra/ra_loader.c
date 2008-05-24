@@ -59,7 +59,7 @@
    ### any code which uses the pre-1.2 API svn_ra_get_ra_library
    ### instead of svn_ra_open. */
 
-#if defined(SVN_LIBSVN_CLIENT_LINKS_RA_NEON) && defined (SVN_LIBSVN_CLIENT_LINKS_RA_SERF)
+#if defined(SVN_HAVE_NEON) && defined(SVN_HAVE_SERF)
 #define MUST_CHOOSE_DAV
 #endif
 
