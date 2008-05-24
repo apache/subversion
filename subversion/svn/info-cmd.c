@@ -446,8 +446,8 @@ svn_cl__info(apr_getopt_t *os,
   apr_array_header_t *targets = NULL;
   apr_pool_t *subpool = svn_pool_create(pool);
   int i;
-  svn_error_t *err = NULL;
-  svn_error_t *prev_err = NULL; /* save last error, if multiple targets */
+  svn_error_t *err;
+  svn_boolean_t saw_a_problem = FALSE;
   svn_opt_revision_t peg_revision;
   svn_info_receiver_t receiver;
 
@@ -486,16 +486,6 @@ svn_cl__info(apr_getopt_t *os,
       const char *truepath;
       const char *target = APR_ARRAY_IDX(targets, i, const char *);
 
-      /* We loop over multiple targets, so save previous error (if any).
-         Do this at loop top because some failures 'continue'. */
-      if (err)
-        {
-          if (prev_err)
-            svn_error_clear(prev_err);
-          prev_err = err;
-          err = NULL;  /* not strictly necessary, but good form */
-        }
-
       svn_pool_clear(subpool);
       SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
 
@@ -523,7 +513,6 @@ svn_cl__info(apr_getopt_t *os,
                       (stderr, subpool,
                        _("%s:  (Not a versioned resource)\n\n"),
                        svn_path_local_style(target, pool)));
-              continue;
             }
           else if (err->apr_err == SVN_ERR_RA_ILLEGAL_URL)
             {
@@ -531,12 +520,15 @@ svn_cl__info(apr_getopt_t *os,
                       (stderr, subpool,
                        _("%s:  (Not a valid URL)\n\n"),
                        svn_path_local_style(target, pool)));
-              continue;
             }
           else
             {
               return err;
             }
+
+          svn_error_clear(err);
+          err = NULL;
+          saw_a_problem = TRUE;
         }
     }
   svn_pool_destroy(subpool);
@@ -544,8 +536,8 @@ svn_cl__info(apr_getopt_t *os,
   if (opt_state->xml && (! opt_state->incremental))
     SVN_ERR(svn_cl__xml_print_footer("info", pool));
 
-  if (err)
-    return err;
+  if (saw_a_problem)
+    return svn_error_create(SVN_ERR_BASE, NULL, NULL);
   else
-    return prev_err;
+    return SVN_NO_ERROR;
 }

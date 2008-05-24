@@ -1043,7 +1043,7 @@ SVN_ERROR_START
 
   SVN_ERRDEF(SVN_ERR_BASE,
              SVN_ERR_MISC_CATEGORY_START + 0,
-             "A problem occurred; see later errors for details")
+             "A problem occurred; see other errors for details")
 
   SVN_ERRDEF(SVN_ERR_PLUGIN_LOAD_FAILURE,
              SVN_ERR_MISC_CATEGORY_START + 1,
