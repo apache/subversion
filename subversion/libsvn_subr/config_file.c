@@ -902,8 +902,10 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         ""                                                                   NL
         "### Section for authentication and authorization customizations."   NL
         "[auth]"                                                             NL
+        "### Password stores used by Subversion:"                            NL
+        "# password-stores = gnome-keyring,kwallet"                          NL
         "###"                                                                NL
-        "### NOTE: The auth section in this file has been deprecated."       NL
+        "### The rest of this section in this file has been deprecated."     NL
         "### Both 'store-passwords' and 'store-auth-creds' can now be"       NL
         "### specified in the 'servers' file in your config directory."      NL
         "### Anything specified in this section is overridden by settings"   NL
