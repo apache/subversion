@@ -97,5 +97,11 @@ Candidate changes for 1.5.1:
    Votes:
      +1: pburba, markphip, cmpilato
 
+ * r31425
+   Support the 'http-library' option when Subversion was configured
+   with the '--enable-runtime-module-search' option.
+   Votes:
+     +1: arfrever
+
 Approved changes (all releases):
 ================================
