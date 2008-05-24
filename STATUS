@@ -7,21 +7,13 @@ delay a release, etc.
 Candidate changes for 1.5.0:
 ============================
 
- * r31334
-   Allow commas and whitespace to delimit revisions in -c arguments.
-   Notes:
-     Because this is a relaxation of existing rules, this could
-     probably be deferred to 1.5.1.  But it's a simple change.
-   Votes:
-     +1: cmpilato, epg
-
  * r31396
    Don't allow 'svn checkout --accept=...'.
    Notes:
      This new option is meaningless for 'checkout'.  Technically we
      may have to keep supporting it if it goes in 1.5.0.
    Votes:
-     +1: glasser
+     +1: glasser, hwright
 
 Candidate changes for 1.5.1:
 ============================
@@ -126,3 +118,11 @@ Approved changes (all releases):
      r31407 just contains some trivial Java technique improvements.
    Votes:
      +1: markphip, hwright
+
+ * r31334
+   Allow commas and whitespace to delimit revisions in -c arguments.
+   Notes:
+     Because this is a relaxation of existing rules, this could
+     probably be deferred to 1.5.1.  But it's a simple change.
+   Votes:
+     +1: cmpilato, epg, hwright
