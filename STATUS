@@ -4,15 +4,6 @@ See "Stabilizing and maintaining releases" in trunk/www/hacking.html for
 details on how release lines and voting work, what kinds of bugs can
 delay a release, etc.
 
-Candidate changes for 1.5.0:
-============================
-
- * r31415
-   Note that the SVN_ERR_CEASE_INVOCATION semantics of svn_repos_history2
-   and svn_repos_history_func_t are new in 1.5.
-   Votes:
-     +1: danielsh, markphip
-
 Candidate changes for 1.5.1:
 ============================
 
@@ -108,3 +99,9 @@ Candidate changes for 1.5.1:
 
 Approved changes (all releases):
 ================================
+
+ * r31415
+   Note that the SVN_ERR_CEASE_INVOCATION semantics of svn_repos_history2
+   and svn_repos_history_func_t are new in 1.5.
+   Votes:
+     +1: danielsh, markphip, hwright
