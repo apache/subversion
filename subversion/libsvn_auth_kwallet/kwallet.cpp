@@ -104,8 +104,8 @@ kwallet_password_get(const char **password,
             }
         }
     }
-  KWallet::Wallet::disconnectApplication(wallet_name,
-                                         QString::fromUtf8("Subversion"));
+//  KWallet::Wallet::disconnectApplication(wallet_name,
+//                                         QString::fromUtf8("Subversion"));
   return ret;
 }
 
@@ -167,8 +167,8 @@ kwallet_password_set(apr_hash_t *creds,
             }
         }
     }
-  KWallet::Wallet::disconnectApplication(wallet_name,
-                                         QString::fromUtf8("Subversion"));
+//  KWallet::Wallet::disconnectApplication(wallet_name,
+//                                         QString::fromUtf8("Subversion"));
   return ret;
 }
 
