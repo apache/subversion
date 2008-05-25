@@ -473,7 +473,6 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
 #endif
       /* TODO: Error. */
     }
-//  SVN_ERR(add_dynamically_loaded_auth_simple_providers_to_array(&providers, cfg, pool));
 #endif
   if (non_interactive == FALSE)
     {
