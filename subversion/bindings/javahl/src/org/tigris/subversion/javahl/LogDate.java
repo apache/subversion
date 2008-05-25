@@ -44,8 +44,9 @@ public class LogDate implements java.io.Serializable
     
     public LogDate(String datestr) throws ParseException
     {
-        if (datestr == null || datestr.length() < 27) {
-        	throw new ParseException("String is not a valid Subversion date", 0);
+        if (datestr == null || datestr.length() != 27 || datestr.charAt(26) != 'Z') 
+        {
+            throw new ParseException("String is not a valid Subversion date", 0);
         }
         Date date = formatter.parse(datestr.substring(0, 23) + " UTC");
         this.cachedString = datestr;
