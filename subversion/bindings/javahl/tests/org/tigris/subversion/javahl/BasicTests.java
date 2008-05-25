@@ -88,15 +88,15 @@ public class BasicTests extends SVNTests
         try 
         {
             logDate = new LogDate(goodDate);
-            Assert.assertEquals(1191481252134992L, logDate.getTimeMicros());
+            assertEquals(1191466852134992L, logDate.getTimeMicros());
         } catch (ParseException e) {
-            Assert.fail("Failed to parse date " + goodDate);
+            fail("Failed to parse date " + goodDate);
         }
         
         try 
         {
             logDate = new LogDate(badDate);
-            Assert.fail("Failed to throw exception on bad date " + badDate);
+            fail("Failed to throw exception on bad date " + badDate);
         } catch (ParseException e) {
         }
     }

@@ -23,6 +23,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.TimeZone;
 
 /**
  * Holds date for a log message.  This class maintains
@@ -34,7 +35,8 @@ public class LogDate implements java.io.Serializable
 {
     private static final long serialVersionUID = 1L;
     private static final DateFormat formatter = new SimpleDateFormat(
-            "yyyy-MM-dd'T'HH:mm:ss.SSS");
+            "yyyy-MM-dd'T'HH:mm:ss.SSS z");
+    private static final TimeZone UTC = TimeZone.getTimeZone("UTC");
 
     private final long timeMicros;
     private final String cachedString;
@@ -45,9 +47,9 @@ public class LogDate implements java.io.Serializable
         if (datestr == null || datestr.length() < 27) {
         	throw new ParseException("String is not a valid Subversion date", 0);
         }
-        Date date = formatter.parse(datestr.substring(0, 23));
+        Date date = formatter.parse(datestr.substring(0, 23) + " UTC");
         this.cachedString = datestr;
-        cachedDate = Calendar.getInstance();
+        cachedDate = Calendar.getInstance(UTC);
         cachedDate.setTime(date);
         timeMicros = cachedDate.getTimeInMillis() * 1000 
                         + Integer.parseInt(datestr.substring(23, 26));
