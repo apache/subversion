@@ -4,14 +4,6 @@ See "Stabilizing and maintaining releases" in trunk/www/hacking.html for
 details on how release lines and voting work, what kinds of bugs can
 delay a release, etc.
 
-Candidate changes for 1.5.1:
-============================
- * r31431, r31434
-   JavaHL: Fix date parsing bug introduced in r31402.  Dates were
-   being treated as if they were in local timezone instead of UTC.
-   Votes:
-     +1: markphip
-
 
 Candidate changes for 1.5.1:
 ============================
@@ -123,3 +115,8 @@ Candidate changes for 1.5.1:
 
 Approved changes (all releases):
 
+ * r31431, r31434
+   JavaHL: Fix date parsing bug introduced in r31402.  Dates were
+   being treated as if they were in local timezone instead of UTC.
+   Votes:
+     +1: markphip, hwright
