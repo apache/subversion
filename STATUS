@@ -6,7 +6,7 @@ delay a release, etc.
 
 Candidate changes for 1.5.1:
 ============================
- * r31431
+ * r31431, r31434
    JavaHL: Fix date parsing bug introduced in r31402.  Dates were
    being treated as if they were in local timezone instead of UTC.
    Votes:
