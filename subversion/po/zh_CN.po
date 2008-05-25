@@ -33,7 +33,7 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: subversion 1.5.0\n"
+"Project-Id-Version: subversion 1.5\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2008-05-09 16:37+0800\n"
 "PO-Revision-Date: 2008-05-09 16:40+0800\n"

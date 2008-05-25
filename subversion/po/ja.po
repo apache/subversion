@@ -174,11 +174,11 @@
 # zero byte               ゼロバイト文字
 msgid ""
 msgstr ""
-"Project-Id-Version: subversion trunk\n"
+"Project-Id-Version: subversion 1.5\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2007-10-17 08:53+0900\n"
 "PO-Revision-Date: 2007-10-28 01:23+0900\n"
-"Last-Translator: Subversion <dev@subversion.tigris.org>\n"
+"Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
