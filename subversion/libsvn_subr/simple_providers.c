@@ -361,11 +361,11 @@ svn_auth__simple_save_creds_helper(svn_boolean_t *saved,
                                 creds->username, creds->password,
                                 non_interactive, pool);
           if (*saved && passtype)
-              /* Store the password type with the auth data, so that we
-                 know which provider owns the password. */
-              apr_hash_set(creds_hash, SVN_AUTH__AUTHFILE_PASSTYPE_KEY,
-                           APR_HASH_KEY_STRING,
-                           svn_string_create(passtype, pool));
+            /* Store the password type with the auth data, so that we
+               know which provider owns the password. */
+            apr_hash_set(creds_hash, SVN_AUTH__AUTHFILE_PASSTYPE_KEY,
+                         APR_HASH_KEY_STRING,
+                         svn_string_create(passtype, pool));
         }
     }
 
