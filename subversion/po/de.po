@@ -10,7 +10,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.5\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2008-05-19 09:01+0200\n"
-"PO-Revision-Date: 2008-05-26 00:07+0200\n"
+"PO-Revision-Date: 2008-05-26 16:40+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: German <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -3077,7 +3077,6 @@ msgstr ""
 "oder, falls sie in den lokalen, zwischengespeicherten Eigenschaften fehlt, "
 "benötigt)"
 
-# FIXME: imperative?
 #: ../libsvn_ra_neon/commit.c:497
 #, c-format
 msgid "File or directory '%s' is out of date; try updating"
@@ -5926,7 +5925,7 @@ msgstr "Fehlendes »timestamp« Attribut für »%s«"
 msgid "Error getting 'affected time' on '%s'"
 msgstr "Fehler beim Ermitteln der »letzten Änderungszeit« von »%s«"
 
-# FIXME: s/on/off/?
+# FIXME: s/on/of/?
 #: ../libsvn_wc/log.c:844
 #, c-format
 msgid "Error getting file size on '%s'"
@@ -6507,11 +6506,11 @@ msgid ""
 msgstr ""
 "  (p)  zurückstellen      - den Konflikt erst später auflösen\n"
 "  (df) voller Diff        - alle Änderungen in der zusammengeführten Datei anzeigen\n"
-"  (e)  editieren          - zusammengeführten Datei in einem Editor ändern\n"
+"  (e)  editieren          - zusammengeführte Datei in einem Editor ändern\n"
 "  (r)  aufgelöst          - akzeptieren der zusammengeführten Version der Datei\n"
-"  (mf) volle eigene Datei - die eigene Version des kompletten Datei akzeptieren\n"
+"  (mf) volle eigene Datei - die eigene Version der kompletten Datei akzeptieren\n"
 "                            (ignorieren fremder Änderungen)\n"
-"  (tf) volle fremde Datei - die fremde Version des kompletten Datei akzeptieren\n"
+"  (tf) volle fremde Datei - die fremde Version der kompletten Datei akzeptieren\n"
 "                            (verlieren eigener Änderungen)\n"
 "  (l)  starten            - Starten eines externen Programms zur Konfliktauflösung\n"
 "  (h)  Hilfe              - diese Liste anzeigen\n"
@@ -6781,8 +6780,6 @@ msgstr "Tiefe: leer\n"
 msgid "Depth: files\n"
 msgstr "Tiefe: Dateien\n"
 
-# FIXME: immediateS?
-# FIXME: not translatable, used as fixed string!!!
 #: ../svn/info-cmd.c:323
 #, c-format
 msgid "Depth: immediates\n"
@@ -6994,16 +6991,17 @@ msgstr "rekursiv absteigen, das gleiche wie --depth=infinity"
 
 #: ../svn/main.c:121
 msgid "obsolete; try --depth=files or --depth=immediates"
-msgstr "veraltet; versuchen Sie --depth=files oder --depth=immediates"
+msgstr "veraltet; versuchen Sie --depth=files oder\n"
+"                             --depth=immediates"
 
 #: ../svn/main.c:123
 msgid ""
 "the change made by revision ARG (like -r ARG-1:ARG)\n"
 "                             If ARG is negative this is like -r ARG:ARG-1"
 msgstr ""
-"Die Änderung stammt von Revision PAR (wie -r PAR-1:PAR)\n"
-"                             Falls PAR negativ ist, gleichbedeutend zu -r "
-"PAR:PAR-1"
+"Die Änderung stammt von Revision PAR (wie\n"
+"                             -r PAR-1:PAR). Falls PAR negativ ist,\n"
+"                             gleichbedeutend zu -r PAR:PAR-1" 
 
 #: ../svn/main.c:127
 msgid ""
@@ -7017,15 +7015,16 @@ msgid ""
 "                                'COMMITTED'  last commit at or before BASE\n"
 "                                'PREV'       revision just before COMMITTED"
 msgstr ""
-"PAR (manche Befehle akzeptieren auch einen Wertebereich PAR1:PAR2)\n"
+"PAR (manche Befehle akzeptieren auch einen\n"
+"                             Wertebereich PAR1:PAR2)\n"
 "                             Ein Revisionsparameter kann sein:\n"
 "                                NUMMER       Revisionsnummer\n"
 "                                »{«DATUM»}«  Revision zum Startdatum\n"
 "                                »HEAD«       Neueste Revision im "
 "Projektarchiv\n"
 "                                »BASE«       Basisrevision der Arbeitskopie\n"
-"                                »COMMITTED«  Letzte übertragene Revision zu "
-"oder vor BASE\n"
+"                                »COMMITTED«  Letzte übertragene Revision zu\n"
+"                                             oder vor BASE\n"
 "                                »PREV«       Letzte Revision vor COMMITTED"
 
 #: ../svn/main.c:137
@@ -7097,9 +7096,8 @@ msgstr ""
 "                                -u (--unified):\n"
 "                                   Gibt 3 Zeilen Standardkontext aus.\n"
 "                                -b (--ignore-space-change):\n"
-"                                   Ignoriert Änderungen in der Anzahl von "
-"Leer-\n"
-"                                   zeichen.\n"
+"                                   Ignoriert Änderungen in der Anzahl von\n"
+"                                   Leerzeichen.\n"
 "                                -w (--ignore-all-space):\n"
 "                                   Ignoriert sämtliche Leerzeichen.\n"
 "                                --ignore-eol-style:\n"
@@ -7109,15 +7107,16 @@ msgstr ""
 
 #: ../svn/main.c:184
 msgid "pass contents of file ARG as additional args"
-msgstr "Inhalt der Datei PAR als zusätzliche Parameter übergeben"
+msgstr "Inhalt der Datei PAR als zusätzliche Parameter\n"
+"                             übergeben"
 
 #: ../svn/main.c:186
 msgid ""
 "limit operation by depth ARG ('empty', 'files',\n"
 "                            'immediates', or 'infinity')"
 msgstr ""
-"begrenzt Operation durch Tiefe PAR (»empty«, »files«,\n"
-"                            »immediates« oder »infinity«)"
+"begrenzt Operation durch Tiefe PAR (»empty«,\n"
+"                            »files«, »immediates« oder »infinity«)"
 
 #: ../svn/main.c:190
 msgid ""
@@ -7185,7 +7184,8 @@ msgstr "Verwende PAR als externen Editor"
 
 #: ../svn/main.c:219
 msgid "mark revisions as merged (use with -r)"
-msgstr "Revisionen als zusammengeführt markieren (mit -r verwenden)"
+msgstr "Revisionen als zusammengeführt markieren (mit -r\n"
+"                             verwenden)"
 
 #: ../svn/main.c:220
 msgid "use ARG as the older target"
@@ -7203,10 +7203,10 @@ msgstr "Arbeite auf einer Revisionseigenschaft (mit -r verwenden)"
 msgid "relocate via URL-rewriting"
 msgstr "durch Umschreiben der URL umplatzieren"
 
-# FIXME: svn --help help gibt "--config-dir par" aus (par statt PAR)!
 #: ../svn/main.c:226 ../svnadmin/main.c:275 ../svnsync/main.c:134
 msgid "read user configuration files from directory ARG"
-msgstr "Benutzerkonfigurationsdateien aus dem Verzeichnis PAR lesen"
+msgstr "Benutzerkonfigurationsdateien aus dem Verzeichnis\n"
+"                             PAR lesen"
 
 #: ../svn/main.c:227
 msgid "enable automatic properties"
@@ -7250,7 +7250,7 @@ msgid ""
 "operate only on members of changelist ARG\n"
 "                             [aliases: --cl]"
 msgstr "nur auf Elementen der Änderungsliste PAR operieren\n"
-"                             [äquvivalent: --cl]"
+"                             [äquivalent: --cl]"
 
 #: ../svn/main.c:246
 msgid "don't delete changelists after commit"
@@ -7283,12 +7283,30 @@ msgid ""
 msgstr "verwende/zeige zusätzliche Informationen aus\n"
 "                             Zusammenführungsgeschichte an"
 
+#: ../svn/main.c:120
+msgid ""
+"specify automatic conflict resolution action\n"
+"                            ('postpone', 'base', 'mine-full', 'theirs-full',\n"
+"                             'edit', 'launch')"
+msgstr ""
+"automatische Konfliktauflösungsaktion angeben\n"
+"                            (»postpone«, »base«, »mine-full«, »theirs-full«,\n"
+"                             »edit«, »launch«)"
+
 #: ../svn/main.c:260
 msgid ""
 "specify automatic conflict resolution action\n"
 "                            ('"
 msgstr "automatische Konfliktauflösungsaktion angeben\n"
 "                            (»"
+
+#: ../svn/main.c:116
+msgid ""
+"specify which collection of revisions to display\n"
+"                             ('merged', 'eligible')"
+msgstr ""
+"anzuzeigende Revisionen angeben\n"
+"                             (»merged«, »eligible«)"
 
 #: ../svn/main.c:274
 msgid ""
@@ -7299,7 +7317,8 @@ msgstr "anzuzeigende Revisionen angeben\n"
 
 #: ../svn/main.c:279
 msgid "lump-merge all of source URL's unmerged changes"
-msgstr "Komplettes Rückführen aller nicht zusammengeführten Änderungen der Quell-URL"
+msgstr "Komplettes Rückführen aller nicht zusammengeführten\n"
+"                             Änderungen der Quell-URL"
 
 #: ../svn/main.c:326
 msgid ""
@@ -7999,7 +8018,6 @@ msgstr ""
 
 # FIXME: s/prop/properties/
 # "on repos revision"?
-# s/on property setting./on property settingS./
 #: ../svn/main.c:684
 msgid ""
 "Edit a property with an external editor.\n"
@@ -8079,7 +8097,6 @@ msgstr ""
 "     ZIEL legt nur das Projektarchiv fest, auf das zugegriffen wird.\n"
 
 # FIXME: propchange?
-# any arbitrary propert(ies) set?
 # supportS the following formats
 #: ../svn/main.c:726
 msgid ""
@@ -8158,7 +8175,7 @@ msgstr ""
 "\n"
 "  Hinweis: svn erkennt die folgenden speziellen, versionierten "
 "Eigenschaften,\n"
-"  wird aber jede gewünschte Eigenschaft speichern:\n"
+"  wird aber jede gesetzte Eigenschaft speichern:\n"
 "    svn:ignore    - Eine durch Zeilenumbruch getrennte Liste von zu\n"
 "                    ignorierenden Dateimustern.\n"
 "    svn:keywords  - Schlüsselworte, die expandiert werden sollen.\n"
@@ -8496,8 +8513,8 @@ msgstr ""
 "\n"
 "     Verwenden Sie die Option --set-depth, um eine neue Arbeitskopietiefe für\n"
 "     die Ziele dieser Operation zu setzen. Zurzeit kann die Tiefe eines\n"
-"     Arbeitskopieverzeichnisses nur erhöht werden (tiefer ineinander geschachtelt);\n"
-"     eine Verzeichnistiefe kann nicht reduziert werden.\n"
+"     Arbeitskopieverzeichnisses nur erhöht werden (tiefer ineinander\n"
+"     geschachtelt); eine Verzeichnistiefe kann nicht reduziert werden.\n"
 "\n"
 "  2. Schreibt die Metadaten der Arbeitskopie so um, dass sie einer Änderung\n"
 "     der URL folgen. Dies wird verwendet, wenn sich die Basis-URL eines\n"
@@ -8636,8 +8653,9 @@ msgid "Can't specify -c with --old"
 msgstr "-c kann nicht mit --old verwendet werden"
 
 #: ../svn/main.c:1231
-msgid "Non-numeric change argument given to -c"
-msgstr "Nicht-numerischer Parameter an -c übergeben"
+#, c-format
+msgid "Non-numeric change argument (%s) given to -c"
+msgstr "Nicht-numerischer Parameter (%s) an -c übergeben"
 
 #: ../svn/main.c:1239
 msgid "There is no change 0"
@@ -10214,9 +10232,8 @@ msgstr ""
 "                                -u (--unified):\n"
 "                                   Gibt 3 Zeilen Standardkontext aus.\n"
 "                                -b (--ignore-space-change):\n"
-"                                   Ignoriert Änderungen in der Anzahl von "
-"Leer-\n"
-"                                   zeichen.\n"
+"                                   Ignoriert Änderungen in der Anzahl von\n"
+"                                   Leerzeichen.\n"
 "                                -w (--ignore-all-space):\n"
 "                                   Ignoriert sämtliche Leerzeichen.\n"
 "                                --ignore-eol-style:\n"
@@ -10655,7 +10672,6 @@ msgstr "Verwende »Threads« anstelle »Fork«"
 msgid "listen once (useful for debugging)"
 msgstr "Einmal zuhören (nützlich zum Debuggen)"
 
-# FIXME: svn --help help gibt "--config-dir par" aus (par statt PAR)!
 #: ../svnserve/main.c:164
 msgid "read configuration from file ARG"
 msgstr "Konfiguration aus Datei PAR lesen"
@@ -10900,7 +10916,7 @@ msgstr "verbindet mit dem Quellprojektarchiv mit dem Benutzernamen PAR"
 msgid "connect to source repository with password ARG"
 msgstr "verbindet mit dem Quellprojektarchiv mit dem Passwort PAR"
 
-# FIXME: s/sync/synced/
+# FIXME: s/sync/synced/, option sync-username
 #: ../svnsync/main.c:130
 msgid "connect to sync repository with username ARG"
 msgstr "verbindet mit synchronisiertem Projektarchiv mit Benutzernamen PAR"
@@ -11115,11 +11131,10 @@ msgstr "gibt den anhängenden Zeilenumbruch nicht aus"
 msgid "last changed rather than current revisions"
 msgstr "gibt letzte geänderte statt aktueller Revisionen aus"
 
-# FIXME: check spaces!
 #: ../svnversion/main.c:223
 #, c-format
 msgid "exported%s"
-msgstr "exportiert %s"
+msgstr "exportiert%s"
 
 #: ../svnversion/main.c:232
 #, c-format
