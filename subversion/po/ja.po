@@ -926,7 +926,7 @@ msgstr "バージョン管理された親ディレクトリがありません"
 
 #: include/svn_error_codes.h:1001
 msgid "A problem occurred; see later errors for details"
-msgstr "エラーが発生しました。詳しくは次のエラーメッセージを参照してください"
+msgstr "問題が発生しました。詳しくは次のエラーを参照してください"
 
 #: include/svn_error_codes.h:1005
 msgid "Failure loading plugin"
@@ -6067,9 +6067,9 @@ msgid ""
 "  (h)elp     - show this list\n"
 "\n"
 msgstr ""
-"  延期 (p)     - 競合を後で解決する予定であるという印をつけます\n"
+"  延期 (p)     - 競合に、後で解決する予定であるという印をつけます\n"
 "  差分 (d)     - マージによってファイルに加えられた変更をすべて表示します\n"
-"  編集 (e)     - マージされたファイルをエディタで編集します\n"
+"  編集 (e)     - マージされたファイルにエディタで変更を加えます\n"
 "  解決版 (r)   - マージされたバージョンのファイルを採用します\n"
 "  自分の版 (m) - 自分のバージョンのファイルを採用します\n"
 "  他人の版 (t) - リポジトリに含まれている他人のバージョンを採用します\n"
@@ -7604,7 +7604,7 @@ msgid ""
 "Query merge-related information.\n"
 "usage: mergeinfo [TARGET[@REV]...]\n"
 msgstr ""
-"マージに関連した情報をクエリします。\n"
+"マージ関連の情報をクエリします。\n"
 "使用方法: mergeinfo [<対象>[@<REV>]...]\n"
 
 # * Description for 'svn mkdir'.
@@ -8327,7 +8327,7 @@ msgstr "-c は、--old と同時には指定できません"
 
 #: svn/main.c:1126
 msgid "Non-numeric change argument given to -c"
-msgstr "-c の引数に数値以外が指定されています"
+msgstr "-c の引数に変更として数値以外が指定されています"
 
 #: svn/main.c:1132
 msgid "There is no change 0"
@@ -12122,7 +12122,7 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ "\n"
 #~ msgstr ""
 #~ "\n"
-#~ "  編集 (e)      - マージされたファイルをエディタで編集します\n"
+#~ "  編集 (e)      - マージされたファイルにエディタで変更を加えます\n"
 #~ "  全差分 (df)   - マージによってファイルに加えられた変更をすべて表示しま"
 #~ "す\n"
 #~ "  解決版 (r)    - マージされたバージョンのファイルを採用します\n"
