@@ -174,7 +174,7 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                            "
                        "    --ignore-eol-style:\n"
                        "                            "
-                       "       Ignore changes in EOL style\n"
+                       "       Ignore changes in EOL style.\n"
                        "                            "
                        "    -p (--show-c-function):\n"
                        "                            "
@@ -515,7 +515,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     ("Display information about a local or remote item.\n"
      "usage: info [TARGET[@REV]...]\n"
      "\n"
-     "  Print information about each TARGET (default: '.')\n"
+     "  Print information about each TARGET (default: '.').\n"
      "  TARGET may be either a working-copy path or URL.  If specified, REV\n"
      "  determines in which revision the target is first looked up.\n"),
     {'r', 'R', opt_depth, opt_targets, opt_incremental, opt_xml, opt_changelist}
@@ -688,7 +688,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  2. Edits unversioned remote prop on repos revision.\n"
      "     TARGET only determines which repository to access.\n"
      "\n"
-     "See 'svn help propset' for more on property setting.\n"),
+     "See 'svn help propset' for more on setting properties.\n"),
     {'r', opt_revprop, SVN_CL__LOG_MSG_OPTIONS, opt_force} },
 #endif
 
@@ -726,9 +726,9 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "usage: 1. propset PROPNAME PROPVAL PATH...\n"
      "       2. propset PROPNAME --revprop -r REV PROPVAL [TARGET]\n"
      "\n"
-     "  1. Creates a versioned, local propchange in working copy.\n"
-     "  2. Creates an unversioned, remote propchange on repos revision.\n"
-     "     TARGET only determines which repository to access.\n"
+     "  1. Changes a versioned file or directory property in a working copy.\n"
+     "  2. Changes an unversioned property on a repository revision.\n"
+     "     (TARGET only determines which repository to access.)\n"
      "\n"
      "  The value may be provided with the --file option instead of PROPVAL.\n"
      "\n"
@@ -900,7 +900,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "       2. switch --relocate FROM TO [PATH...]\n"
      "\n"
      "  1. Update the working copy to mirror a new URL within the repository.\n"
-     "     This behaviour is similar to 'svn update', and is the way to\n"
+     "     This behavior is similar to 'svn update', and is the way to\n"
      "     move a working copy to a branch or tag within the same repository.\n"
      "     If specified, PEGREV determines in which revision the target is first\n"
      "     looked up.\n"
@@ -939,7 +939,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     ("Bring changes from the repository into the working copy.\n"
      "usage: update [PATH...]\n"
      "\n"
-     "  If no revision given, bring working copy up-to-date with HEAD rev.\n"
+     "  If no revision is given, bring working copy up-to-date with HEAD rev.\n"
      "  Else synchronize working copy to revision given by -r.\n"
      "\n"
      "  For each updated item a line will start with a character reporting the\n"
