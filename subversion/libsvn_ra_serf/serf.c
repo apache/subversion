@@ -1076,7 +1076,7 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
 
       SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
                                           vcc_url, revision,
-                                          "0", baseline_props, pool));
+                                          "1", baseline_props, pool));
 
       basecoll_url = svn_ra_serf__get_ver_prop(props, vcc_url, revision,
                                                "DAV:", "baseline-collection");
