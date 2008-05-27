@@ -1022,11 +1022,14 @@ svn_error_t *svn_ra_get_log2(svn_ra_session_t *session,
                              void *receiver_baton,
                              apr_pool_t *pool)
 {
-  int i;
-  for (i = 0; i < paths->nelts; i++)
+  if (paths)
     {
-      const char *path = APR_ARRAY_IDX(paths, i, const char *);
-      assert(*path != '/');
+      int i;
+      for (i = 0; i < paths->nelts; i++)
+        {
+          const char *path = APR_ARRAY_IDX(paths, i, const char *);
+          assert(*path != '/');
+        }
     }
 
   if (include_merged_revisions)
