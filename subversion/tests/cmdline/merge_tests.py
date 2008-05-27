@@ -11551,11 +11551,10 @@ def dont_explicitly_record_implicit_mergeinfo(sbox):
   # 'A_copy/D/H/nu' should have get the equivalent mergeinfo to 'A_copy'
   # which should elide to the latter, leaving no explicit mergeinfo...
   #
-  # ...or should it?  Right now this test is marked as XFail since
-  # ' A_copy/D/H/nu' ends up with r10 merged to it, but with explicit
-  # mergeinfo of '/A/D/H/nu:2-7'!  Regardless of what the mergeinfo
-  # on ' A_copy/D/H/nu' should be prior to elision, if we have the following
-  # conditions:
+  # ...or should it?  For the mergeinfo on ' A_copy/D/H/nu' to elide, it
+  # needs mergeinfo '/A/D/H/nu:2-10', but 'A/D/H/nu' doesn't exist prior to
+  # r6...Anyhow, regardless of what the mergeinfo on ' A_copy/D/H/nu' should
+  # be prior to elision, if we have the following conditions:
   #
   #   1) A uniform working revision merge target.
   #
@@ -12133,8 +12132,8 @@ test_list = [ None,
                                server_has_mergeinfo)),
               XFail(SkipUnless(merge_chokes_on_renamed_subtrees,
                                server_has_mergeinfo)),
-              XFail(SkipUnless(dont_explicitly_record_implicit_mergeinfo,
-                               server_has_mergeinfo)),
+              SkipUnless(dont_explicitly_record_implicit_mergeinfo,
+                         server_has_mergeinfo),
               SkipUnless(merge_broken_link, svntest.main.is_posix_os),
               SkipUnless(subtree_merges_dont_intersect_with_targets,
                          server_has_mergeinfo),
