@@ -82,7 +82,7 @@ parse_pathname(const char **input, const char *end,
 
   if ((*pathname)->len == 0)
     return svn_error_create(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
-                            _("No pathname preceeding ':'"));
+                            _("No pathname preceding ':'"));
   *input = curr;
 
   return SVN_NO_ERROR;
