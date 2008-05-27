@@ -8972,7 +8972,7 @@ msgid ""
 "(a)bort, (c)ontinue, (e)dit :\n"
 msgstr ""
 "\n"
-"ログメッセージの変更または指定がなされていません\n"
+"ログメッセージの変更や指定がなされていません\n"
 "中断 (a), 続行 (c), 編集 (e) :\n"
 
 #: svn/util.c:863
@@ -11355,7 +11355,7 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ "(a)bort, (c)ontinue, (e)dit:\n"
 #~ msgstr ""
 #~ "\n"
-#~ "ログメッセージの変更または指定がなされていません\n"
+#~ "ログメッセージの変更や指定がなされていません\n"
 #~ "中断 (a), 続行 (c), 編集 (e):\n"
 
 #~ msgid "Error during recursive add of '%s'"
@@ -11388,7 +11388,7 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ "hotcopy algorithm.  If the problem persists, try deactivating \n"
 #~ "this feature in DB_CONFIG"
 #~ msgstr ""
-#~ "hotcopy の catastrophic recovery 実行中にエラーが起きました。\n"
+#~ "hotcopy の catastrophic recovery 実行中にエラーが発生しました。\n"
 #~ "DB_LOG_AUTOREMOVE 機能が hotcopy アルゴリズムを妨害しているかもしれませ"
 #~ "ん。\n"
 #~ "問題が起き続けるようであれば、DB_CONFIG でこの機能を無効にしてみてください"
@@ -11514,7 +11514,7 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ "使用方法: import [<パス>] <URL>\n"
 #~ "\n"
 #~ "  <パス> のコピーを再帰的に <URL> にコミットします。\n"
-#~ "  <パス> は、省略された場合は '.' だと仮定されます。\n"
+#~ "  <パス> が省略された場合は、<パス> は '.' だと仮定します。\n"
 #~ "  リポジトリには、必要に応じて親ディレクトリが作成されます。\n"
 #~ "  <パス> がディレクトリの場合、そのディレクトリの内容が <URL> の下に直接追"
 #~ "加\n"
@@ -11912,7 +11912,7 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ "a)bort, c)ontinue, e)dit\n"
 #~ msgstr ""
 #~ "\n"
-#~ "ログメッセージの変更または指定がなされていません\n"
+#~ "ログメッセージの変更や指定がなされていません\n"
 #~ "中断 (a), 続行 (c), 編集 (e)\n"
 
 # * Description for svnversion.
