@@ -5,6 +5,19 @@ details on how release lines and voting work, what kinds of bugs can
 delay a release, etc.
 
 
+Candidate changes for 1.5.0:
+============================
+
+ * r31468
+   Don't attempt to iterate over NULL array (which is explicitly
+   allowed per the docstring).
+   Notes:
+     Obvious fix?  Can probably wait for 1.5.1, but is known to effect
+     some third-party API consumers.
+   Votes:
+     +1: cmpilato
+
+
 Candidate changes for 1.5.1:
 ============================
  * r31313
