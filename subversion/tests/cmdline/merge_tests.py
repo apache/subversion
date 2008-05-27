@@ -4031,7 +4031,7 @@ def merge_eolstyle_handling(sbox):
   expected_backup_disk.add({
     'A/mu.prej' : Item("Trying to change property 'svn:eol-style' from 'CRLF'"
                        + " to 'CR',\nbut property has been locally added with"
-                       + " value 'CRLF'\n")})
+                       + " value 'CRLF'.\n")})
   expected_backup_output = svntest.wc.State(wc_backup, {
     'A/mu' : Item(status='GC'),
     })
