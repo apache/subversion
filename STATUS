@@ -18,8 +18,8 @@ Candidate changes for 1.5.1:
      Small change, but API consistency is always a good thing.
      Does not merge cleanly!
    Votes:
-     +1: lgo, epg, cmpilato
-     -0: markphip (serf tests fail on OSX)
+     +1: lgo, cmpilato
+     -0: markphip (serf tests fail on OSX), epg (failure confirmed)
 
  * r31196, r31199, r31280, r31283, r31287
    Don't commit an add of a missing item (issue #3198).
