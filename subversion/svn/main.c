@@ -104,6 +104,30 @@ typedef enum {
   opt_reintegrate
 } svn_cl__longopt_t;
 
+/* The following strings occur in svn_cl__options using macros such as
+ * SVN_CL__SHOW_REVS_MERGED. xgettext fails to look up these macros so
+ * that these messages are not put into PO files and that's why
+ * untranslated without the following.
+ *
+ * xgettext claims bogusly: "This implementation of xgettext is able to process
+ * a few awkward cases, like strings in preprocessor macros, ANSI concatenation
+ * of adjacent strings, and escaped end of lines for continued strings."
+ */
+
+ GETTEXT_NOOP("specify which collection of revisions to display\n"
+    "                             "
+    "('" "merged" "',"
+    " '" "eligible" "')");
+ GETTEXT_NOOP("specify automatic conflict resolution action\n"
+    "                            "
+    "('" "postpone" "',"
+    " '" "base" "',"
+    " '" "mine-full" "',"
+    " '" "theirs-full" "',"
+    "\n                            "
+    " '" "edit" "',"
+    " '" "launch" "')");
+
 /* Option codes and descriptions for the command line client.
  *
  * The entire list must be terminated with an entry of nulls.
@@ -257,6 +281,9 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                             "
                        "history")},
   {"accept",        opt_accept, 1,
+                    /** once you change this string adapt the duplicate
+                      * above as well!
+                      */
                     N_("specify automatic conflict resolution action\n"
                        "                            "
                        "('" SVN_CL__ACCEPT_POSTPONE "',"
@@ -270,6 +297,9 @@ const apr_getopt_option_t svn_cl__options[] =
                        " '" SVN_CL__ACCEPT_EDIT "',"
                        " '" SVN_CL__ACCEPT_LAUNCH "')")},
   {"show-revs",     opt_show_revs, 1,
+                    /** once you change this string adapt the duplicate
+                      * above as well!
+                      */
                     N_("specify which collection of revisions to display\n"
                        "                             "
                        "('" SVN_CL__SHOW_REVS_MERGED "',"
