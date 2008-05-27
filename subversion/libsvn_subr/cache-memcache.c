@@ -215,7 +215,7 @@ memcache_iter(svn_boolean_t *completed,
               apr_pool_t *pool)
 {
   return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                          _("Can't iterate a memcached cache."));
+                          _("Can't iterate a memcached cache"));
 }
 
 static svn_cache__vtable_t memcache_vtable = {
