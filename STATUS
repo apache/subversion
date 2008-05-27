@@ -118,12 +118,3 @@ Candidate changes for 1.5.1:
      +1: arfrever
 
 Approved changes (all releases):
-
- * r31468, r31470
-   Don't attempt to iterate over NULL arrays (which are explicitly
-   allowed per the docstrings of the affected functions).
-   Notes:
-     Obvious fix?  Can probably wait for 1.5.1, but is known to effect
-     some third-party API consumers.
-   Votes:
-     +1: cmpilato, glasser, epg
