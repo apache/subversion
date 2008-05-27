@@ -15,7 +15,7 @@ Candidate changes for 1.5.0:
      Obvious fix?  Can probably wait for 1.5.1, but is known to effect
      some third-party API consumers.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, glasser
 
 
 Candidate changes for 1.5.1:
