@@ -144,7 +144,7 @@ IV. Detailed functional requirements
           modifications. [#TODO: this needs a clearer keyword]
 
        4. HIDE the selected modifications.
-       5. If needed, UNHIDE selected MODIFICATIONS.
+       5. If needed, UNHIDE selected modifications.
        6. OBLITERATE the selected modifications from the repository.
 
        While in the final solution step 4 HIDE and step 5 OBLITERATE may be
@@ -367,22 +367,9 @@ IV. Detailed functional requirements
        C. Priority
           M - MUST have this.
 
-    9. DEFINE: Include all descendants in the obliteration of a file
+    9. DEFINE: Include all descendants in the obliteration of a directory
 
        A. Description
-       This is basically a greedy obliteration, where all places in the
-       repository where a file or a modification to a file has propagated
-       through copies or later modifications is also obliterated.
-
-       When obliterating a file, the impact of this obliteration should be
-       checked in the selected revision range in the repository. Depending on
-       the type of modification, actions should be taken. When the file is:
-
-       + Deleted: Remove the Delete operation.
-       + Copied to TARGET (or resurected):
-
-       + Modified: Remove the Modify operation and the delta.
-       + Moved to TARGET:
 
        B. Main use case
           security
