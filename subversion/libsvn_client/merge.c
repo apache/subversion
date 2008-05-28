@@ -3543,6 +3543,89 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
 }
 
 
+/* Implements the svn_log_entry_receiver_t interface. */
+static svn_error_t *
+log_changed_revs(void *baton,
+                  svn_log_entry_t *log_entry,
+                  apr_pool_t *pool)
+{
+  apr_array_header_t *revs = baton;
+  svn_revnum_t *revision = apr_palloc(revs->pool, sizeof(*revision));
+  *revision = log_entry->revision;
+  APR_ARRAY_PUSH(revs, svn_revnum_t *) = revision;
+  return SVN_NO_ERROR;
+}
+
+
+/* Set *OPERATIVE_RANGES_P to an array of svn_merge_range_t * merge
+   range objects copied wholesale from RANGES which have the property
+   that in some revision within that range the object identified by
+   RA_SESSION was modified (if by "modified" we mean "'svn log' would
+   return that revision).  *OPERATIVE_RANGES_P is allocated from the
+   same pool as RANGES, and the ranges within it are shared with
+   RANGES, too.  Use POOL for temporary allocations.  */
+static svn_error_t *
+remove_noop_merge_ranges(apr_array_header_t **operative_ranges_p,
+                         svn_ra_session_t *ra_session,
+                         apr_array_header_t *ranges,
+                         apr_pool_t *pool)
+{
+  int i;
+  svn_revnum_t oldest_rev = SVN_INVALID_REVNUM;
+  svn_revnum_t youngest_rev = SVN_INVALID_REVNUM;
+  apr_array_header_t *changed_revs =
+    apr_array_make(pool, ranges->nelts, sizeof(svn_revnum_t *));
+  apr_array_header_t *operative_ranges =
+    apr_array_make(ranges->pool, ranges->nelts, ranges->elt_size);
+  apr_array_header_t *log_targets = 
+    apr_array_make(pool, 1, sizeof(const char *));
+  APR_ARRAY_PUSH(log_targets, const char *) = "";
+
+  /* Find the revision extremes of the RANGES we have. */
+  for (i = 0; i < ranges->nelts; i++)
+    {
+      svn_merge_range_t *r = APR_ARRAY_IDX(ranges, i, svn_merge_range_t *);
+      svn_revnum_t max_rev = MAX(r->start, r->end);
+      svn_revnum_t min_rev = MIN(r->start, r->end) + 1;
+
+      if ((! SVN_IS_VALID_REVNUM(youngest_rev)) || (max_rev > youngest_rev))
+        youngest_rev = max_rev;
+      if ((! SVN_IS_VALID_REVNUM(oldest_rev)) || (min_rev < oldest_rev))
+        oldest_rev = min_rev;
+    }
+
+  /* Get logs across those ranges, recording which revisions hold
+     changes to our object's history. */
+  SVN_ERR(svn_ra_get_log2(ra_session, log_targets, youngest_rev, 
+                          oldest_rev, 0, FALSE, FALSE, FALSE, 
+                          apr_array_make(pool, 0, sizeof(const char *)),
+                          log_changed_revs, changed_revs, pool));
+
+  /* Now, copy from RANGES to *OPERATIVE_RANGES, filtering out ranges
+     that aren't operative (by virtue of not having any revisions
+     represented in the CHANGED_REVS array). */
+  for (i = 0; i < ranges->nelts; i++)
+    {
+      svn_merge_range_t *range = APR_ARRAY_IDX(ranges, i, svn_merge_range_t *);
+      int j;
+
+      for (j = 0; j < changed_revs->nelts; j++)
+        {
+          svn_revnum_t *changed_rev = 
+            APR_ARRAY_IDX(changed_revs, j, svn_revnum_t *);
+          if ((*changed_rev > MIN(range->start, range->end))
+              && (*changed_rev <= MAX(range->start, range->end)))
+            {
+              APR_ARRAY_PUSH(operative_ranges, svn_merge_range_t *) = range;
+              break;
+            }
+        }
+    }
+  *operative_ranges_p = operative_ranges;
+  return SVN_NO_ERROR;
+}
+  
+
 /*-----------------------------------------------------------------------*/
 
 /*** Merge Source Normalization ***/
@@ -4104,7 +4187,28 @@ do_file_merge(const char *url1,
 
   if (!merge_b->record_only)
     {
-      for (i = 0; i < remaining_ranges->nelts; i++)
+      apr_array_header_t *ranges_to_merge = remaining_ranges;
+      
+      /* If we have ancestrally related sources and more than one
+         range to merge, eliminate no-op ranges before going through
+         the effort of downloading the many copies of the file
+         required to do these merges (two copies per range). */
+      if (merge_b->sources_ancestral && (remaining_ranges->nelts > 1))
+        {
+          const char *old_sess_url = NULL;
+          SVN_ERR(svn_client__ensure_ra_session_url(&old_sess_url, 
+                                                    merge_b->ra_session1,
+                                                    primary_url, subpool));
+          SVN_ERR(remove_noop_merge_ranges(&ranges_to_merge, 
+                                           merge_b->ra_session1, 
+                                           remaining_ranges, subpool));
+          if (old_sess_url)
+            SVN_ERR(svn_ra_reparent(merge_b->ra_session1, old_sess_url, 
+                                    subpool));
+          svn_pool_clear(subpool);
+        }
+
+      for (i = 0; i < ranges_to_merge->nelts; i++)
         {
           svn_wc_notify_t *n;
           svn_boolean_t header_sent = FALSE;
@@ -4113,7 +4217,7 @@ do_file_merge(const char *url1,
           /* When using this merge range, account for the exclusivity of
              its low value (which is indicated by this operation being a
              merge vs. revert). */
-          svn_merge_range_t *r = APR_ARRAY_IDX(remaining_ranges, i,
+          svn_merge_range_t *r = APR_ARRAY_IDX(ranges_to_merge, i,
                                                svn_merge_range_t *);
 
           svn_pool_clear(subpool);
@@ -4213,7 +4317,7 @@ do_file_merge(const char *url1,
             return err;
           svn_error_clear(err);
 
-          if ((i < (remaining_ranges->nelts - 1))
+          if ((i < (ranges_to_merge->nelts - 1))
               && is_path_conflicted_by_merge(merge_b))
             {
               conflicted_range = r;
@@ -4223,7 +4327,10 @@ do_file_merge(const char *url1,
     } /* !merge_b->record_only */
 
   /* Record updated WC mergeinfo to account for our new merges, minus
-     any unresolved conflicts and skips. */
+     any unresolved conflicts and skips.  We use the original
+     REMAINING_RANGES here instead of the possibly-pared-down
+     RANGES_TO_MERGE because we want to record all the requested
+     merge ranges, include the noop ones.  */
   if (record_mergeinfo && remaining_ranges->nelts)
     {
       apr_hash_t *merges;
