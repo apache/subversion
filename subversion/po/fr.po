@@ -7133,6 +7133,16 @@ msgstr ""
 "précise l'action de la résolution de conflit\n"
 "    ('"
 
+#: ../svn/main.c:260
+msgid ""
+"specify automatic conflict resolution action\n"
+"                            ('postpone', 'base', 'mine-full', 'theirs-full',\n"
+"                             'edit', 'launch')"
+msgstr ""
+"précise l'action de la résolution de conflit\n"
+"    ('postpone', 'base', 'mine-full', 'theirs-full',\n"
+"     'edit', 'launch')"
+
 #: ../svn/main.c:273
 msgid ""
 "specify which collection of revisions to display\n"
@@ -7140,6 +7150,14 @@ msgid ""
 msgstr ""
 "précise quelle collection de révisions afficher\n"
 "                              ('"
+
+#: ../svn/main.c:273
+msgid ""
+"specify which collection of revisions to display\n"
+"                             ('merged', 'eligible')"
+msgstr ""
+"précise l'ensemble de révisions à afficher\n"
+"                              ('merged', 'eligible')"
 
 #: ../svn/main.c:278
 msgid "lump-merge all of source URL's unmerged changes"
