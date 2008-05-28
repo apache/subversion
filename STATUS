@@ -8,6 +8,15 @@ delay a release, etc.
 Candidate changes for 1.5.0:
 ============================
 
+ * r31485
+   Don't allow 'svn cl --cl old-changelist new-changelist' to spam the
+   screen with "Skipped" notifications for directories that (by virtue of
+   being directories) aren't part of the old changelist.
+   Notes:
+     Trivial fix, but makes a *world* of difference in terms of output
+     sanity.
+   Votes:
+     +1: cmpilato
 
 Candidate changes for 1.5.1:
 ============================
