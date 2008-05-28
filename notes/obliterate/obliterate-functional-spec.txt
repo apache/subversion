@@ -117,7 +117,8 @@ III. Current solution
 
     3. Disadvantages of current solution
 
-       + svndumpfilter has a series of issues,
+       + svndumpfilter has a series of issues (8 right now, see the issue 
+         tracker).
        + Its filtering options are limited to include or exclude paths, no
          wildcard support...
        + Filtering is based on pathnames, not node based
@@ -320,10 +321,25 @@ IV. Detailed functional requirements
           on the type of modification, actions should be taken. When the file
           is:
 
+          + Added: This is the creation point of the file. Remove the Add
+            operation and the content and properties delta. 
           + Deleted: Remove the Delete operation.
-          + Copied to TARGET (or resurected):
-          + Moved to TARGET:
-          + Modified:
+          + Replaced by TARGET: see Deleted. Will become Copy operation of the
+            TARGET.
+          + Copied to TARGET (or resurected): delete the Copied operation and
+            drop copy-from path and rev.
+            Add the TARGET file  in the selection of to be obliterated files,
+            using the same limit (revision range) and impact-on-descendants
+            option.
+          + Moved to TARGET: delete the Copy+Delete operations and drop
+            copy-from path and rev.
+            Add the TARGET file in the selection of to be obliterated files,
+            using the same limit (revision range) and impact-on-descendants
+            option.
+          + Modified: delete the Modified operation and the delta.
+            Add the modification (file-revision) in the selection of to be
+            obliterated modifications, using the same limit (revision range)
+            and impact-on-descendants option.
 
        B. Main use case
           security
@@ -335,7 +351,7 @@ IV. Detailed functional requirements
 
        A. Description
           If the obliterated information is still needed in a later revision in
-          the repository, the information will be made available in that
+          the repository, the information will be restored in that later
           revision.
 
           When obliterating a file, the impact of this obliteration should be
@@ -343,23 +359,52 @@ IV. Detailed functional requirements
           on the type of modification, actions should be taken. When the file
           is:
 
+          + Added: This is the creation point of the file. Remove the Add
+            operation and the content and properties delta. 
           + Deleted: when the file is obliterated earlier, there's nothing to
             Delete anymore. Remove the Delete operation.
+          + Replaced by TARGET: see Deleted. Will become Copy operation of the
+            replacing file.
           + Copied to TARGET (or resurected): replace the Copy operation with
             Add (drop copy-from path and rev), find the original contents and
             properties of the file at the copy-from revision and use these for
             the new TARGET.
-          + Modified: replace the Copy operation with Add, find the original
-            content and properties of the ancestor, apply the delta to that
-            content and properties and use the result to recreate the file.
-          + Replaced: see Deleted. Will become Copy operation of the replacing
-            file.
+            #TODO: what to do when the Copy was modified in the working copy
+                   before committing. #END-TODO
           + Moved to TARGET: is combination of Deleted and Copied. Will become
             Add of the TARGET with the original content and properties.
+          + Modified: replace the Modified operation with Add, find the
+            original content and properties of the ancestor, apply the delta to
+            that content and properties and use the result to recreate the
+            file.
+
+          Note: only the first change after the obliterated revision of the 
+          file should be handled, except for copies of the now obliterated 
+          revision.
+
+          Example: 
+            r1: A  iota   "original content\n"
+            r2: M  iota   "original content\nextra line\n"
+            r3: D  iota
+            r4: A  cp-iota (copy from iota@1)    "original content\n"
+
+            Here we obliterate iota, range -r 1:1, exclude descendants.
+
+            Result:
+            So, r1 will be obliterated, r2 will be rewritten, r3 should be 
+            ignored. Since r4 is based on the now obliterated r1, it should be 
+            rewritten as 'A  cp-iota' with the content and properties of iota@1.
+
+            r1: [obliterated]
+            r2: A  iota   "original content\nextra line\n"
+            r3: D  iota
+            r4: A  cp-iota    "original content\n"
 
           Note for implementation: if at all possible, this should be
           implemented so that we don't need more copies of the information than
           before the obliteration, to avoid increasing the repository size.
+          If not possible, this requirement will only make sense for files that
+          have never changed or copied.
 
        B. Main use case
           disc space
