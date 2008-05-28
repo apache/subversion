@@ -171,6 +171,10 @@ SVN_ERROR_START
              SVN_ERR_BAD_CATEGORY_START + 4,
              "Bogus mime-type")
 
+  SVN_ERRDEF(SVN_ERR_BAD_SERVER_SPECIFICATION,
+             SVN_ERR_BAD_CATEGORY_START + 5,
+             "Bogus server specification")
+
   /** @since New in 1.5.
    *
    * Note that there was an unused slot sitting here at
@@ -774,6 +778,9 @@ SVN_ERROR_START
              SVN_ERR_RA_DAV_CATEGORY_START + 6,
              "Invalid configuration value")
 
+  /** @deprecated To improve consistency between ra layers, this error code
+      is replaced in ra_{neon|serf} by SVN_ERR_FS_NOT_FOUND.
+      Slated for removal in the next major release. */
   SVN_ERRDEF(SVN_ERR_RA_DAV_PATH_NOT_FOUND,
              SVN_ERR_RA_DAV_CATEGORY_START + 7,
              "HTTP Path Not Found")
@@ -1036,7 +1043,7 @@ SVN_ERROR_START
 
   SVN_ERRDEF(SVN_ERR_BASE,
              SVN_ERR_MISC_CATEGORY_START + 0,
-             "A problem occurred; see later errors for details")
+             "A problem occurred; see other errors for details")
 
   SVN_ERRDEF(SVN_ERR_PLUGIN_LOAD_FAILURE,
              SVN_ERR_MISC_CATEGORY_START + 1,
@@ -1149,6 +1156,16 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_UNKNOWN_CAPABILITY,
              SVN_ERR_MISC_CATEGORY_START + 26,
              "Inquiry about unknown capability")
+
+  /** @since New in 1.6. */
+  SVN_ERRDEF(SVN_ERR_TEST_SKIPPED,
+             SVN_ERR_MISC_CATEGORY_START + 27,
+             "Test skipped")
+
+  /** @since New in 1.6. */
+  SVN_ERRDEF(SVN_ERR_NO_APR_MEMCACHE,
+             SVN_ERR_MISC_CATEGORY_START + 28,
+             "apr memcache library not available")
 
   /* command-line client errors */
 

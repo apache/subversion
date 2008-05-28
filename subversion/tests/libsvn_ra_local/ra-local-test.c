@@ -85,7 +85,7 @@ current_directory_url(const char **url,
 static svn_error_t *
 make_and_open_local_repos(svn_ra_session_t **session,
                           const char *repos_name,
-                          const char *fs_type,
+                          svn_test_opts_t *opts,
                           apr_pool_t *pool)
 {
   svn_repos_t *repos;
@@ -94,7 +94,7 @@ make_and_open_local_repos(svn_ra_session_t **session,
 
   SVN_ERR(svn_ra_create_callbacks(&cbtable, pool));
 
-  SVN_ERR(svn_test__create_repos(&repos, repos_name, fs_type, pool));
+  SVN_ERR(svn_test__create_repos(&repos, repos_name, opts, pool));
   SVN_ERR(svn_ra_initialize(pool));
 
   SVN_ERR(current_directory_url(&url, repos_name, pool));
@@ -130,7 +130,7 @@ open_ra_session(const char **msg,
     return SVN_NO_ERROR;
 
   SVN_ERR(make_and_open_local_repos(&session,
-                                    "test-repo-open", opts->fs_type, pool));
+                                    "test-repo-open", opts, pool));
 
   return SVN_NO_ERROR;
 }
@@ -152,7 +152,7 @@ get_youngest_rev(const char **msg,
     return SVN_NO_ERROR;
 
   SVN_ERR(make_and_open_local_repos(&session,
-                                    "test-repo-getrev", opts->fs_type,
+                                    "test-repo-getrev", opts,
                                     pool));
 
   /* Get the youngest revision and make sure it's 0. */
@@ -294,14 +294,14 @@ split_url_host(const char **msg,
 static svn_error_t *
 check_split_url(const char *repos_path,
                 const char *in_repos_path,
-                const char *fs_type,
+                svn_test_opts_t *opts,
                 apr_pool_t *pool)
 {
   svn_repos_t *repos;
   const char *url, *root_url, *repos_part, *in_repos_part;
 
   /* Create a filesystem and repository */
-  SVN_ERR(svn_test__create_repos(&repos, repos_path, fs_type, pool));
+  SVN_ERR(svn_test__create_repos(&repos, repos_path, opts, pool));
 
   SVN_ERR(current_directory_url(&root_url, repos_path, pool));
   if (in_repos_path)
@@ -347,15 +347,15 @@ split_url_test(const char **msg,
      in-repository path begins.  */
   SVN_ERR(check_split_url("test-repo-split-fs1",
                           "/trunk/foobar/quux.c",
-                          opts->fs_type,
+                          opts,
                           pool));
   SVN_ERR(check_split_url("test-repo-split-fs2",
                           "/alpha/beta/gamma/delta/epsilon/zeta/eta/theta",
-                          opts->fs_type,
+                          opts,
                           pool));
   SVN_ERR(check_split_url("test-repo-split-fs3",
                           NULL,
-                          opts->fs_type,
+                          opts,
                           pool));
 
   return SVN_NO_ERROR;

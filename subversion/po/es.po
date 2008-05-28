@@ -38,7 +38,7 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: subversion 1.5\n"
+"Project-Id-Version: subversion 1.6\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2008-03-28 22:50-0300\n"
 "PO-Revision-Date: 2008-03-27 22:16-0300\n"
@@ -6827,6 +6827,17 @@ msgstr ""
 "especifica la acción para la resolución\n"
 "                            automática de los conflictos\n"
 "                            ('"
+
+#: ../svn/main.c:260
+msgid ""
+"specify automatic conflict resolution action\n"
+"                            ('postpone', 'base', 'mine-full', 'theirs-full',\n"
+"                             'edit', 'launch')"
+msgstr ""
+"especifica la acción para la resolución\n"
+"                            automática de los conflictos\n"
+"                            ('postpone', 'base', 'mine-full', 'theirs-full',\n"
+"                             'edit', 'launch')"
 
 #: ../svn/main.c:274
 msgid "query a particular merge source URL"

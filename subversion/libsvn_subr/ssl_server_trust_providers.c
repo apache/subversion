@@ -38,7 +38,7 @@
 #define SVN_AUTH__AUTHFILE_FAILURES_KEY              "failures"
 
 
-/* retieve ssl server CA failure overrides (if any) from servers
+/* retrieve ssl server CA failure overrides (if any) from servers
    config */
 static svn_error_t *
 ssl_server_trust_file_first_credentials(void **credentials,

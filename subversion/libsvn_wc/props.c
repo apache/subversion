@@ -1732,7 +1732,7 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
                         (pool,
                          _("Trying to change property '%s' from '%s' to '%s',\n"
                            "but property has been locally added with "
-                           "value '%s'"),
+                           "value '%s'."),
                          propname, old_val->data, new_val->data,
                          working_val->data);
                       }

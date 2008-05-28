@@ -57,13 +57,16 @@ enum {
   fstype_opt,
   list_opt,
   verbose_opt,
-  quiet_opt
+  quiet_opt,
+  config_opt
 };
 
 static const apr_getopt_option_t cl_options[] =
 {
   {"cleanup",       cleanup_opt, 0,
                     N_("remove test directories after success")},
+  {"config-file",   config_opt, 1,
+                    N_("specify test config file ARG")},
   {"fs-type",       fstype_opt, 1,
                     N_("specify a filesystem backend type ARG")},
   {"list",          list_opt, 0,
@@ -185,6 +188,13 @@ do_test_num(const char *progname,
   /* Do test */
   err = func(&msg, msg_only || skip, opts, pool);
 
+  if (err && err->apr_err == SVN_ERR_TEST_SKIPPED)
+    {
+      svn_error_clear(err);
+      err = SVN_NO_ERROR;
+      skip = TRUE;
+    }
+
   /* Failure means unexpected results -- FAIL or XPASS. */
   test_failed = ((err != SVN_NO_ERROR) != (xfail != 0));
 
@@ -305,6 +315,9 @@ main(int argc, const char *argv[])
       switch (opt_id) {
         case cleanup_opt:
           cleanup_mode = 1;
+          break;
+        case config_opt:
+          opts.config_file = apr_pstrdup(pool, opt_arg);
           break;
         case fstype_opt:
           opts.fs_type = apr_pstrdup(pool, opt_arg);

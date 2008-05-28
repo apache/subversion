@@ -1,5 +1,5 @@
 Version 1.5.0
-(?? ??? 2008, from /branches/1.5.x)
+(06 Jun 2008, from /branches/1.5.x)
 http://svn.collab.net/repos/svn/tags/1.5.0
 
  User-visible changes:
@@ -29,7 +29,7 @@ http://svn.collab.net/repos/svn/tags/1.5.0
     * 'svn checkout' now takes '--force' option (issue #1328)
     * 'svn proplist' and 'svn propget' now support peg revisions (issue #3070)
     * 'svn propget' now takes '--xml' option (issue #2696)
-    * 'propedit', 'propset' now support URLs (issue #2238, but see issue #2923)
+    * 'svn propedit' now support URLs (issue #2238, but see issue #2923)
     * 'svn proplist --quiet' no longer prints extra info (issue #1547)
     * 'svn diff --summarize' now takes '--xml' option (issue #2967)
     * 'svn diff -x' now takes '-p' extension option (issue #2995)
@@ -90,7 +90,8 @@ http://svn.collab.net/repos/svn/tags/1.5.0
     * display repository basename in XML and HTML index views (r25837, r25838)
     * config 'http-auth-type' can be overridden to force BASIC auth (r23900)
     * translation updates for all languages, as usual
-    * Revamp mod_dav_svn logging; see tools/server-side/svn_dav_log_parse.py .
+    * Revamp mod_dav_svn logging; see tools/server-side/svn_dav_log_parse.py
+    * misleading configure arg --enable-dso now --enable-runtime-module-search
 
   - Client-side bugfixes:
     * 'svn revert' of missing scheduled addition broke wc (issue #2425)
@@ -210,6 +211,7 @@ http://svn.collab.net/repos/svn/tags/1.5.0
    - new API svn_fs_txn_root_base_revision() (r22610)
    - pass individual arguments rather than config objects (r25182, r25190)
    - clients can now extend HTTP User-Agent header (r28613)
+   - SVN_ERR_RA_DAV_PATH_NOT_FOUND is deprecated and no longer raised
  * Bindings:
    - Many improvements to all bindings (Java, Perl, Python, and Ruby)
 

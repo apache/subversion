@@ -63,6 +63,7 @@
 
 /* Setup gettext macros */
 #define N_(x) x
+#define GETTEXT_NOOP(x)
 #define PACKAGE_NAME "subversion"
 
 #ifdef ENABLE_NLS

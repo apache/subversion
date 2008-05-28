@@ -1132,6 +1132,8 @@ svn_repos_deleted_rev(svn_fs_t *fs,
  *
  * Signal to callback driver to stop processing/invoking this callback
  * by returning the @c SVN_ERR_CEASE_INVOCATION error code.
+ *
+ * @note SVN_ERR_CEASE_INVOCATION is new in 1.5.
  */
 typedef svn_error_t *(*svn_repos_history_func_t)(void *baton,
                                                  const char *path,
@@ -1155,6 +1157,8 @@ typedef svn_error_t *(*svn_repos_history_func_t)(void *baton,
  * SVN_NO_ERROR.
  *
  * @since New in 1.1.
+ *
+ * @note SVN_ERR_CEASE_INVOCATION is new in 1.5.
  */
 svn_error_t *
 svn_repos_history2(svn_fs_t *fs,

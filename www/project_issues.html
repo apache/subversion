@@ -53,17 +53,20 @@ Before filing a new issue, please:
       online <a href="http://svnbook.red-bean.com/"
       >Subversion book</a>).</span></p></li>
 
+  <!-- Both the link and the search box below will generate results
+       that include resolved/closed issues.  The issue a user is
+       searching for may have been resolved in a subsequent release or
+       on trunk, but we still want them to find that issue, so they
+       don't file a dup. -->
+
   <li><p>Look through <a
-      href="http://subversion.tigris.org/issues/buglist.cgi?component=subversion&amp;issue_status=UNCONFIRMED&amp;issue_status=NEW&amp;issue_status=STARTED&amp;issue_status=REOPENED"
+      href="http://subversion.tigris.org/issues/buglist.cgi?resort=1&component=subversion;issue_status=UNCONFIRMED;issue_status=NEW;issue_status=STARTED;issue_status=REOPENED;issue_status=RESOLVED;issue_status=VERIFIED;issue_status=CLOSED;email1=;emailtype1=substring;emailassigned_to1=1;email2=;emailtype2=substring;emailreporter2=1;issueidtype=include;issue_id=;changedin=;votes=;chfieldfrom=;chfieldto=Now;chfieldvalue=;short_desc=;short_desc_type=substring;long_desc=;long_desc_type=substring;issue_file_loc=;issue_file_loc_type=substring;status_whiteboard=;status_whiteboard_type=substring;keywords=;keywords_type=anytokens;field0-0-0=noop;type0-0-0=noop;value0-0-0=;newqueryname=;Submit%20query=Submit%20query&order=issues.issue_status%2C%20issues.issue_id"
       >all existing issues</a>, or search their summaries:</p>
       <form method="get"
         action="http://subversion.tigris.org/issues/buglist.cgi"><div>
       <input name="short_desc" />
       <input type="submit" value="Search!" />
       <input type="hidden" name="component" value="subversion" />
-      <input type="hidden" name="issue_status" value="NEW" />
-      <input type="hidden" name="issue_status" value="STARTED" />
-      <input type="hidden" name="issue_status" value="REOPENED" />
       <input type="hidden" name="short_desc_type" value="substring" />
       <input type="hidden" name="cmdtype" value="doit" />
       </div></form>

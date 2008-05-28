@@ -59,7 +59,7 @@
    ### any code which uses the pre-1.2 API svn_ra_get_ra_library
    ### instead of svn_ra_open. */
 
-#if defined(SVN_LIBSVN_CLIENT_LINKS_RA_NEON) && defined (SVN_LIBSVN_CLIENT_LINKS_RA_SERF)
+#if defined(SVN_HAVE_NEON) && defined(SVN_HAVE_SERF)
 #define MUST_CHOOSE_DAV
 #endif
 
@@ -1022,11 +1022,14 @@ svn_error_t *svn_ra_get_log2(svn_ra_session_t *session,
                              void *receiver_baton,
                              apr_pool_t *pool)
 {
-  int i;
-  for (i = 0; i < paths->nelts; i++)
+  if (paths)
     {
-      const char *path = APR_ARRAY_IDX(paths, i, const char *);
-      assert(*path != '/');
+      int i;
+      for (i = 0; i < paths->nelts; i++)
+        {
+          const char *path = APR_ARRAY_IDX(paths, i, const char *);
+          assert(*path != '/');
+        }
     }
 
   if (include_merged_revisions)
@@ -1051,12 +1054,15 @@ svn_error_t *svn_ra_get_log(svn_ra_session_t *session,
 {
   svn_log_entry_receiver_t receiver2;
   void *receiver2_baton;
-  int i;
 
-  for (i = 0; i < paths->nelts; i++)
+  if (paths)
     {
-      const char *path = APR_ARRAY_IDX(paths, i, const char *);
-      assert(*path != '/');
+      int i;
+      for (i = 0; i < paths->nelts; i++)
+        {
+          const char *path = APR_ARRAY_IDX(paths, i, const char *);
+          assert(*path != '/');
+        }
     }
 
   svn_compat_wrap_log_receiver(&receiver2, &receiver2_baton,

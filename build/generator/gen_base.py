@@ -353,7 +353,7 @@ class TargetLinked(Target):
     Target.__init__(self, name, options, gen_obj)
     self.install = options.get('install')
     self.compile_cmd = options.get('compile-cmd')
-    self.sources = options.get('sources', '*.c')
+    self.sources = options.get('sources', '*.c *.cpp')
     self.link_cmd = options.get('link-cmd', '$(LINK)')
 
     self.external_lib = options.get('external-lib')
@@ -369,24 +369,26 @@ class TargetLinked(Target):
     # the specified install area depends upon this target
     self.gen_obj.graph.add(DT_INSTALL, self.install, self)
 
-    sources = _collect_paths(self.sources or '*.c', self.path)
+    sources = _collect_paths(self.sources or '*.c' or '*.cpp', self.path)
     sources.sort()
 
-    for src, reldir in sources:
-      if src[-2:] == '.c':
-        objname = src[:-2] + self.objext
-      elif src[-4:] == '.cpp':
-        objname = src[:-4] + self.objext
-      else:
-        raise GenError('ERROR: unknown file extension on ' + src)
+    for srcs, reldir in sources:
+      for src in srcs.split(" "):
+        if glob.glob(src):
+          if src[-2:] == '.c':
+            objname = src[:-2] + self.objext
+          elif src[-4:] == '.cpp':
+            objname = src[:-4] + self.objext
+          else:
+            raise GenError('ERROR: unknown file extension on ' + src)
 
-      ofile = ObjectFile(objname, self.compile_cmd)
+          ofile = ObjectFile(objname, self.compile_cmd)
 
-      # object depends upon source
-      self.gen_obj.graph.add(DT_OBJECT, ofile, SourceFile(src, reldir))
+          # object depends upon source
+          self.gen_obj.graph.add(DT_OBJECT, ofile, SourceFile(src, reldir))
 
-      # target (a linked item) depends upon object
-      self.gen_obj.graph.add(DT_LINK, self.name, ofile)
+          # target (a linked item) depends upon object
+          self.gen_obj.graph.add(DT_LINK, self.name, ofile)
 
     # collect all the paths where stuff might get built
     ### we should collect this from the dependency nodes rather than
