@@ -259,7 +259,7 @@ const apr_getopt_option_t svn_cl__options[] =
   {"accept",        opt_accept, 1,
                     N_("specify automatic conflict resolution action\n"
                        "                            "
-                       "('postpone', 'base', 'mine-full', 'theirs-full'\n"
+                       "('postpone', 'base', 'mine-full', 'theirs-full',\n"
                        "                            "
                        " 'edit', 'launch')")},
                        /* 'mine-conflict' and 'theirs-conflict' are not
