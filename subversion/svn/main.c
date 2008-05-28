@@ -789,13 +789,9 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     {opt_targets, 'R', opt_depth, 'q', opt_accept},
     {{opt_accept, N_("specify automatic conflict resolution source\n"
                              "                            "
-                             "('" SVN_CL__ACCEPT_BASE "',"
-                             " '" SVN_CL__ACCEPT_WORKING "',"
-                             " '" SVN_CL__ACCEPT_MINE_CONFLICT "',"
-                             "\n                            "
-                             " '" SVN_CL__ACCEPT_THEIRS_CONFLICT "',"
-                             " '" SVN_CL__ACCEPT_MINE_FULL "',"
-                             " '" SVN_CL__ACCEPT_THEIRS_FULL "')")}} },
+                             "('base', 'working', 'mine-conflict',\n"
+                             "                            "
+                             " 'theirs-conflict', 'mine-full', 'theirs-full')")}} },
 
   { "resolved", svn_cl__resolved, {0}, N_
     ("Remove 'conflicted' state on working copy files or directories.\n"
