@@ -259,22 +259,16 @@ const apr_getopt_option_t svn_cl__options[] =
   {"accept",        opt_accept, 1,
                     N_("specify automatic conflict resolution action\n"
                        "                            "
-                       "('" SVN_CL__ACCEPT_POSTPONE "',"
-                       " '" SVN_CL__ACCEPT_BASE "',"
-                       /* These two are not implemented yet, so don't
-                          waste the user's time with them. */
-                       /* " '" SVN_CL__ACCEPT_MINE_CONFLICT "'," */
-                       /* " '" SVN_CL__ACCEPT_THEIRS_CONFLICT "'," */
-                       " '" SVN_CL__ACCEPT_MINE_FULL "',"
-                       " '" SVN_CL__ACCEPT_THEIRS_FULL "',"
-                       "\n                            "
-                       " '" SVN_CL__ACCEPT_EDIT "',"
-                       " '" SVN_CL__ACCEPT_LAUNCH "')")},
+                       "('postpone', 'base', 'mine-full', 'theirs-full'\n"
+                       "                            "
+                       " 'edit', 'launch')")},
+                       /* 'mine-conflict' and 'theirs-conflict' are not
+                          implemented yet, so don't waste the user's time
+                          with them. */
   {"show-revs",     opt_show_revs, 1,
                     N_("specify which collection of revisions to display\n"
                        "                             "
-                       "('" SVN_CL__SHOW_REVS_MERGED "',"
-                       " '" SVN_CL__SHOW_REVS_ELIGIBLE "')")},
+                       "('merged', 'eligible')")},
   {"reintegrate",   opt_reintegrate, 0,
                     N_("lump-merge all of source URL's unmerged changes")},
 
