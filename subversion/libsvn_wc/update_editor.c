@@ -3314,12 +3314,8 @@ make_editor(svn_revnum_t *target_revision,
   inner_editor = tree_editor;
   inner_baton = eb;
 
-  /* If our requested depth is sticky, we'll raise an error if asked
-     to make our target more shallow, which is currently unsupported.
-
-     Otherwise, if our requested depth is *not* sticky, then we need
-     to limit the scope of our operation to the ambient depths present
-     in the working copy already.  If a depth was explicitly
+  /* We need to limit the scope of our operation to the ambient depths
+     present in the working copy already.  If a depth was explicitly
      requested, libsvn_delta/depth_filter_editor.c will ensure that we
      never see editor calls that extend beyond the scope of the
      requested depth.  But even what we do so might extend beyond the
@@ -3328,27 +3324,14 @@ make_editor(svn_revnum_t *target_revision,
      to do so.  (This can also be skipped if the server understands
      consider letting the depth RA capability percolate down to this
      level.) */
-  if (depth_is_sticky)
-    {
-      const svn_wc_entry_t *target_entry;
-      SVN_ERR(svn_wc_entry(&target_entry, svn_path_join(anchor, target, pool), 
-                           adm_access, FALSE, pool));
-      if (target_entry && (target_entry->depth > depth))
-        return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                 _("Shallowing of working copy depths is not "
-                                   "yet supported"));
-    }
-  else
-    {
-      SVN_ERR(svn_wc__ambient_depth_filter_editor(&inner_editor,
-                                                  &inner_baton,
-                                                  inner_editor,
-                                                  inner_baton,
-                                                  anchor,
-                                                  target,
-                                                  adm_access,
-                                                  pool));
-    }
+  SVN_ERR(svn_wc__ambient_depth_filter_editor(&inner_editor,
+                                              &inner_baton,
+                                              inner_editor,
+                                              inner_baton,
+                                              anchor,
+                                              target,
+                                              adm_access,
+                                              pool));
 
   SVN_ERR(svn_delta_get_cancellation_editor(cancel_func,
                                             cancel_baton,
