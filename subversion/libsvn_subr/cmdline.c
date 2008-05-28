@@ -2,7 +2,7 @@
  * cmdline.c :  Helpers for command-line programs.
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -41,6 +41,7 @@
 #include "svn_error.h"
 #include "svn_nls.h"
 #include "svn_auth.h"
+#include "svn_version.h"
 #include "utf_impl.h"
 #include "svn_config.h"
 
@@ -353,6 +354,45 @@ svn_cmdline_handle_exit_error(svn_error_t *err,
   return EXIT_FAILURE;
 }
 
+#if defined(SVN_HAVE_KWALLET) || defined(SVN_HAVE_GNOME_KEYRING)
+/* Dynamically load authentication simple provider. */
+static svn_boolean_t
+get_auth_simple_provider(svn_auth_provider_object_t **provider,
+                         const char *provider_name,
+                         apr_pool_t *pool)
+{
+  apr_dso_handle_t *dso;
+  apr_dso_handle_sym_t symbol;
+  const char *libname;
+  const char *funcname;
+  svn_error_t *err;
+  svn_boolean_t ret = FALSE;
+  libname = apr_psprintf(pool,
+                         "libsvn_auth_%s-%d.so.0",
+                         provider_name,
+                         SVN_VER_MAJOR);
+  funcname = apr_psprintf(pool,
+                          "svn_auth_get_%s_simple_provider",
+                          provider_name);
+  err = svn_dso_load(&dso, libname);
+  if (err == SVN_NO_ERROR)
+    {
+      if (dso)
+        {
+          if (! apr_dso_sym(&symbol, dso, funcname))
+            {
+              svn_auth_simple_provider_func_t func;
+              func = (svn_auth_simple_provider_func_t) symbol;
+              func(provider, pool);
+              ret = TRUE;
+            }
+        }
+    }
+  svn_error_clear(err);
+  return ret;
+}
+#endif
+
 svn_error_t *
 svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
                              svn_boolean_t non_interactive,
@@ -394,6 +434,45 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
 #ifdef SVN_HAVE_KEYCHAIN_SERVICES
   svn_auth_get_keychain_simple_provider(&provider, pool);
   APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+#endif
+#if defined(SVN_HAVE_GNOME_KEYRING) || defined(SVN_HAVE_KWALLET)
+  const char *password_stores_config_option;
+  svn_config_get(cfg,
+                 &password_stores_config_option,
+                 SVN_CONFIG_SECTION_AUTH,
+                 SVN_CONFIG_OPTION_PASSWORD_STORES,
+                 "gnome-keyring,kwallet");
+
+  apr_array_header_t *password_stores
+    = svn_cstring_split(password_stores_config_option, " ,", TRUE, pool);
+
+  int i;
+  for (i = 0; i < password_stores->nelts; i++)
+    {
+      const char *password_store = APR_ARRAY_IDX(password_stores, i,
+                                                 const char *);
+#ifdef SVN_HAVE_GNOME_KEYRING
+      if (apr_strnatcmp(password_store, "gnome-keyring") == 0)
+        {
+          if (get_auth_simple_provider(&provider, "gnome_keyring", pool))
+            {
+              APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+            }
+          continue;
+        }
+#endif
+#ifdef SVN_HAVE_KWALLET
+      if (apr_strnatcmp(password_store, "kwallet") == 0)
+        {
+          if (get_auth_simple_provider(&provider, "kwallet", pool))
+            {
+              APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+            }
+          continue;
+        }
+#endif
+      /* TODO: Error. */
+    }
 #endif
   if (non_interactive == FALSE)
     {

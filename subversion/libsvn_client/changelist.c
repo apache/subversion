@@ -53,6 +53,10 @@ set_entry_changelist(const char *path,
   struct set_cl_fe_baton *b = (struct set_cl_fe_baton *)baton;
   svn_wc_adm_access_t *adm_access;
 
+  /* See if this entry passes our changelist filtering. */
+  if (! SVN_WC__CL_MATCH(b->changelist_hash, entry))
+    return SVN_NO_ERROR;
+
   /* We only care about files right now. */
   if (entry->kind != svn_node_file)
     {
@@ -65,10 +69,6 @@ set_entry_changelist(const char *path,
                              pool);
       return SVN_NO_ERROR;
     }
-
-  /* See if this entry passes our changelist filtering. */
-  if (! SVN_WC__CL_MATCH(b->changelist_hash, entry))
-    return SVN_NO_ERROR;
 
   /* Get the ADM_ACCESS for our file's parent directory,
      specifically. */

@@ -104,7 +104,6 @@ print_line_info(svn_stream_t *out,
                 svn_boolean_t verbose,
                 apr_pool_t *pool)
 {
-  apr_time_t atime;
   const char *time_utf8;
   const char *time_stdout;
   const char *rev_str = SVN_IS_VALID_REVNUM(revision)
@@ -115,8 +114,8 @@ print_line_info(svn_stream_t *out,
     {
       if (date)
         {
-          SVN_ERR(svn_time_from_cstring(&atime, date, pool));
-          time_utf8 = svn_time_to_human_cstring(atime, pool);
+          SVN_ERR(svn_cl__time_cstring_to_human_cstring(&time_utf8,
+                                                        date, pool));
           SVN_ERR(svn_cmdline_cstring_from_utf8(&time_stdout, time_utf8,
                                                 pool));
         }

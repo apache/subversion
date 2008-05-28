@@ -39,7 +39,7 @@ svn_prop_is_svn_prop(const char *prop_name)
 
 
 svn_boolean_t
-svn_prop_has_svn_prop(apr_hash_t *props, apr_pool_t *pool)
+svn_prop_has_svn_prop(const apr_hash_t *props, apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
   const void *prop_name;
@@ -47,7 +47,8 @@ svn_prop_has_svn_prop(apr_hash_t *props, apr_pool_t *pool)
   if (! props)
     return FALSE;
 
-  for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(pool, (apr_hash_t *)props); hi;
+       hi = apr_hash_next(hi))
     {
       apr_hash_this(hi, &prop_name, NULL, NULL);
       if (svn_prop_is_svn_prop((const char *) prop_name))

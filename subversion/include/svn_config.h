@@ -80,8 +80,9 @@ typedef struct svn_config_t svn_config_t;
 
 #define SVN_CONFIG_CATEGORY_CONFIG          "config"
 #define SVN_CONFIG_SECTION_AUTH                 "auth"
-/* The "auth" section has been deprecated.
- * Its options have been moved to SVN_CONFIG_CATEGORY_SERVERS. */
+#define SVN_CONFIG_OPTION_PASSWORD_STORES           "password-stores"
+/* The majority of options of the "auth" section
+ * has been moved to SVN_CONFIG_CATEGORY_SERVERS. */
 #define SVN_CONFIG_SECTION_HELPERS              "helpers"
 #define SVN_CONFIG_OPTION_EDITOR_CMD                "editor-cmd"
 #define SVN_CONFIG_OPTION_DIFF_CMD                  "diff-cmd"

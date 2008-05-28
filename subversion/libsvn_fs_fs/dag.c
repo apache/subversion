@@ -98,6 +98,12 @@ svn_fs_fs__dag_get_fs(dag_node_t *node)
   return node->fs;
 }
 
+void
+svn_fs_fs__dag_set_fs(dag_node_t *node, svn_fs_t *fs)
+{
+  node->fs = fs;
+}
+
 
 /* Dup NODEREV and all associated data into POOL.
    Leaves the id and is_fresh_txn_root fields as zero bytes. */
@@ -1073,6 +1079,137 @@ svn_fs_fs__dag_dup(dag_node_t *node,
   return new_node;
 }
 
+svn_error_t *
+svn_fs_fs__dag_dup_for_cache(void **out,
+                             void *in,
+                             apr_pool_t *pool)
+{
+  dag_node_t *in_node = in, *out_node;
+  out_node = svn_fs_fs__dag_dup(in_node, pool);
+  out_node->fs = NULL;
+  *out = out_node;
+  return SVN_NO_ERROR;
+}
+
+/* The cache serialization format is:
+ *
+ * - For mutable nodes: the character 'M', then 'F' for files or 'D'
+ *   for directories, then the ID, then '\n', then the created path.
+ *
+ * - For immutable nodes: the character 'I' followed by the noderev
+ *   hash dump (the other fields can be reconstructed from this).  (We
+ *   assume that, once constructed, immutable nodes always contain
+ *   their noderev.)
+ */
+
+svn_error_t *
+svn_fs_fs__dag_serialize(char **data,
+                         apr_size_t *data_len,
+                         void *in,
+                         apr_pool_t *pool)
+{
+  dag_node_t *node = in;
+  svn_stringbuf_t *buf = svn_stringbuf_create("", pool);
+
+  if (svn_fs_fs__dag_check_mutable(node))
+    {
+      svn_stringbuf_appendcstr(buf, "M");
+      svn_stringbuf_appendcstr(buf, (node->kind == svn_node_file ? "F" : "D"));
+      svn_stringbuf_appendcstr(buf, svn_fs_fs__id_unparse(node->id,
+                                                          pool)->data);
+      svn_stringbuf_appendcstr(buf, "\n");
+      svn_stringbuf_appendcstr(buf, node->created_path);
+    }
+  else
+    {
+      svn_stringbuf_appendcstr(buf, "I");
+      SVN_ERR(svn_fs_fs__write_noderev(svn_stream_from_stringbuf(buf, pool),
+                                       node->node_revision, TRUE, pool));
+    }
+
+  *data = buf->data;
+  *data_len = buf->len;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__dag_deserialize(void **out,
+                           const char *data,
+                           apr_size_t data_len,
+                           apr_pool_t *pool)
+{
+  dag_node_t *node = apr_pcalloc(pool, sizeof(*node));
+
+  if (data_len == 0)
+    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                            _("Empty noderev in cache"));
+
+  if (*data == 'M')
+    {
+      const char *newline;
+      int id_len;
+
+      data++; data_len--;
+      if (data_len == 0)
+        return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                                _("Kindless noderev in cache"));
+      if (*data == 'F')
+        node->kind = svn_node_file;
+      else if (*data == 'D')
+        node->kind = svn_node_dir;
+      else
+        return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                                 _("Unknown kind for noderev in cache: '%c'"),
+                                 *data);
+
+      data++; data_len--;
+      newline = memchr(data, '\n', data_len);
+      if (!newline)
+        return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                                _("Unterminated ID in cache"));
+      id_len = newline - 1 - data;
+      node->id = svn_fs_fs__id_parse(data, id_len, pool);
+      if (! node->id)
+        return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                                 _("Bogus ID '%s' in cache"),
+                                 apr_pstrndup(pool, data, id_len));
+
+      data += id_len; data_len -= id_len;
+      data++; data_len--;
+      if (data_len == 0)
+        return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                                _("No created path"));
+      node->created_path = apr_pstrndup(pool, data, data_len);
+    }
+  else if (*data == 'I')
+    {
+      node_revision_t *noderev;
+      apr_pool_t *subpool = svn_pool_create(pool);
+      svn_stream_t *stream =
+        svn_stream_from_stringbuf(svn_stringbuf_ncreate(data + 1,
+                                                        data_len - 1,
+                                                        subpool),
+                                  subpool);
+      SVN_ERR(svn_fs_fs__read_noderev(&noderev, stream, pool));
+      node->kind = noderev->kind;
+      node->id = svn_fs_fs__id_copy(noderev->id, pool);
+      node->created_path = apr_pstrdup(pool, noderev->created_path);
+
+      if (noderev->is_fresh_txn_root)
+        node->fresh_root_predecessor_id = noderev->predecessor_id;
+
+      node->node_revision = noderev;
+
+      svn_pool_destroy(subpool);
+    }
+  else
+    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                             _("Unknown node type in cache: '%c'"), *data);
+
+  *out = node;
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_fs_fs__dag_open(dag_node_t **child_p,

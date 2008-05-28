@@ -257,8 +257,7 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
                   svn_error_clear(err);
                   cap_result = capability_no;
                 }
-              else if (err->apr_err == SVN_ERR_FS_NOT_FOUND
-                       || err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND)
+              else if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
                 {
                   /* Mergeinfo requests use relative paths, and
                      anyway we're in r0, so this is a likely error,
@@ -840,16 +839,21 @@ svn_ra_serf__check_path(svn_ra_session_t *ra_session,
   const char *path, *res_type;
   svn_revnum_t fetched_rev;
 
-  SVN_ERR(fetch_path_props(&prop_ctx, &props, &path, &fetched_rev,
-                           session, rel_path,
-                           revision, check_path_props, pool));
+  svn_error_t *err = fetch_path_props(&prop_ctx, &props, &path, &fetched_rev,
+                                      session, rel_path,
+                                      revision, check_path_props, pool);
 
-  if (prop_ctx && (svn_ra_serf__propfind_status_code(prop_ctx) == 404))
+  if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
     {
+      svn_error_clear(err);
       *kind = svn_node_none;
     }
   else
     {
+      /* Any other error, raise to caller. */
+      if (err)
+        return err;
+
       res_type = svn_ra_serf__get_ver_prop(props, path, fetched_rev,
                                            "DAV:", "resourcetype");
       if (!res_type)
@@ -977,9 +981,21 @@ svn_ra_serf__stat(svn_ra_session_t *ra_session,
   const char *path;
   svn_revnum_t fetched_rev;
   svn_dirent_t *entry;
+  svn_error_t *err;
 
-  SVN_ERR(fetch_path_props(&prop_ctx, &props, &path, &fetched_rev,
-                           session, rel_path, revision, all_props, pool));
+  err = fetch_path_props(&prop_ctx, &props, &path, &fetched_rev,
+                         session, rel_path, revision, all_props, pool);
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
+        {
+          svn_error_clear(err);
+          *dirent = NULL;
+          return SVN_NO_ERROR;
+        }
+      else
+        return err;
+    }
 
   entry = apr_pcalloc(pool, sizeof(*entry));
 
@@ -987,6 +1003,35 @@ svn_ra_serf__stat(svn_ra_session_t *ra_session,
                               pool);
 
   *dirent = entry;
+
+  return SVN_NO_ERROR;
+}
+
+/* Reads the 'resourcetype' property from the list PROPS and checks if the
+ * resource at PATH@REVISION really is a directory. Returns 
+ * SVN_ERR_FS_NOT_DIRECTORY if not.
+ */
+static svn_error_t *
+resource_is_directory(apr_hash_t *props,
+                      const char *path,
+                      svn_revnum_t revision)
+{
+  const char *res_type;
+
+  res_type = svn_ra_serf__get_ver_prop(props, path, revision,
+                                       "DAV:", "resourcetype");
+  if (!res_type)
+    {
+      /* How did this happen? */
+      return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+                              _("The PROPFIND response did not include the "
+                                "requested resourcetype value"));
+    }
+  else if (strcmp(res_type, "collection") != 0)
+    {
+    return svn_error_create(SVN_ERR_FS_NOT_DIRECTORY, NULL,
+                            _("Can't get entries of non-directory"));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -1031,7 +1076,7 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
 
       SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
                                           vcc_url, revision,
-                                          "0", baseline_props, pool));
+                                          "1", baseline_props, pool));
 
       basecoll_url = svn_ra_serf__get_ver_prop(props, vcc_url, revision,
                                                "DAV:", "baseline-collection");
@@ -1055,18 +1100,14 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
   /* If we're asked for children, fetch them now. */
   if (dirents)
     {
-      svn_ra_serf__propfind_context_t *prop_ctx;
       struct path_dirent_visitor_t dirent_walk;
 
-      prop_ctx = NULL;
-      svn_ra_serf__deliver_props(&prop_ctx, props, session, session->conns[0],
-                                 path, revision, "1", all_props, TRUE,
-                                 NULL, session->pool);
+      SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
+                                          path, revision, "0", all_props,
+                                          session->pool));
 
-      if (prop_ctx)
-        {
-          SVN_ERR(svn_ra_serf__wait_for_props(prop_ctx, session, pool));
-        }
+      /* Check if the path is really a directory. */
+      SVN_ERR(resource_is_directory (props, path, revision));
 
       /* We're going to create two hashes to help the walker along.
        * We're going to return the 2nd one back to the caller as it
@@ -1091,6 +1132,9 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
       SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
                                           path, revision, "0", all_props,
                                           pool));
+      /* Check if the path is really a directory. */
+      SVN_ERR(resource_is_directory (props, path, revision));
+
       svn_ra_serf__walk_all_props(props, path, revision,
                                   svn_ra_serf__set_flat_props,
                                   *ret_props, pool);
@@ -1126,15 +1170,14 @@ svn_ra_serf__get_uuid(svn_ra_session_t *ra_session,
 {
   svn_ra_serf__session_t *session = ra_session->priv;
   apr_hash_t *props;
-  const char *root_url;
 
   props = apr_hash_make(pool);
 
-  SVN_ERR(svn_ra_serf__get_repos_root(ra_session, &root_url, pool));
   SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
-                                      root_url, SVN_INVALID_REVNUM, "0",
-                                      uuid_props, pool));
-  *uuid = svn_ra_serf__get_prop(props, root_url,
+                                      session->repos_url_str,
+                                      SVN_INVALID_REVNUM, "0", uuid_props,
+                                      pool));
+  *uuid = svn_ra_serf__get_prop(props, session->repos_url_str,
                                 SVN_DAV_PROP_NS_DAV, "repository-uuid");
 
   if (!*uuid)

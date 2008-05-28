@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2002-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -157,6 +157,10 @@ typedef struct svn_auth_provider_object_t
 
 } svn_auth_provider_object_t;
 
+/** The type of function returning authentication provider. */
+typedef void (*svn_auth_simple_provider_func_t)
+  (svn_auth_provider_object_t **provider,
+   apr_pool_t *pool);
 
 
 /** Specific types of credentials **/
@@ -747,7 +751,6 @@ svn_auth_get_windows_simple_provider(svn_auth_provider_object_t **provider,
 #endif /* WIN32 || DOXYGEN */
 
 #if defined(DARWIN) || defined(DOXYGEN)
-
 /**
  * Create and return @a *provider, an authentication provider of type @c
  * svn_auth_cred_simple_t that gets/sets information from the user's
@@ -763,8 +766,8 @@ svn_auth_get_windows_simple_provider(svn_auth_provider_object_t **provider,
 void
 svn_auth_get_keychain_simple_provider(svn_auth_provider_object_t **provider,
                                       apr_pool_t *pool);
-
 #endif /* DARWIN || DOXYGEN */
+
 
 /** Create and return @a *provider, an authentication provider of type @c
  * svn_auth_cred_username_t that gets/sets information from a user's

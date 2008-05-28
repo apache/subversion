@@ -60,7 +60,7 @@ usage: 1. switch URL[@PEGREV] [PATH]
        2. switch --relocate FROM TO [PATH...]
 
   1. Update the working copy to mirror a new URL within the repository.
-     This behaviour is similar to 'svn update', and is the way to
+     This behavior is similar to 'svn update', and is the way to
      move a working copy to a branch or tag within the same repository.
      If specified, PEGREV determines in which revision the target is first
      looked up.
@@ -85,6 +85,9 @@ usage: 1. switch URL[@PEGREV] [PATH]
      This is used when repository's root URL changes (such as a scheme
      or hostname change) but your working copy still reflects the same
      directory within the same repository.
+
+  See also 'svn help update' for a list of possible characters
+  reporting the action taken.
 
 Valid options:
   -r [--revision] ARG      : ARG (some commands also take ARG1:ARG2 range)
