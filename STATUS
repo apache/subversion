@@ -137,4 +137,12 @@ Candidate changes for 1.5.1:
    Votes:
      +1: stsp
 
+ * r31504
+   Optimize file merges performed with ancestrally related sources by
+   using the svn_ra_get_log2() interface to figure out in which revisions
+   the source really changed, and using that information to filter out
+   no-op revision ranges prior to merging.
+   Votes:
+     +1: cmpilato
+
 Approved changes (all releases):
