@@ -7669,6 +7669,15 @@ msgstr ""
 "                             automática de los conflictos\n"
 "                             ('"
 
+#: ../svn/main.c:783
+msgid ""
+"specify automatic conflict resolution source\n"
+"                            ('base', 'working', 'mine-full', 'theirs-full')"
+msgstr ""
+"especifica la fuente para la resolución\n"
+"                             automática de los conflictos\n"
+"                             ('base', 'working', 'mine-full', 'theirs-full')"
+
 #: ../svn/main.c:795
 msgid ""
 "Remove 'conflicted' state on working copy files or directories.\n"

@@ -7929,6 +7929,14 @@ msgstr ""
 "自動競合解決のソースを指定してください\n"
 "                             '"
 
+#: svn/main.c:726
+msgid ""
+"specify automatic conflict resolution source\n"
+"                            ('base', 'working', 'mine-full', 'theirs-full')"
+msgstr ""
+"自動競合解決のソースを指定してください\n"
+"                            ('base', 'working', 'mine-full', 'theirs-full')"
+
 # * Description for 'svn revert'.
 # * "revert: " is displayed at the head of the first line.
 #: svn/main.c:733

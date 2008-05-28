@@ -7610,6 +7610,14 @@ msgstr ""
 "指定自动解决冲突源\n"
 "                            ('"
 
+#: ../svn/main.c:794
+msgid ""
+"specify automatic conflict resolution source\n"
+"                            ('base', 'working', 'mine-full', 'theirs-full')"
+msgstr ""
+"指定自动解决冲突源\n"
+"                            ('base', 'working', 'mine-full', 'theirs-full')"
+
 #: ../svn/main.c:806
 msgid ""
 "Remove 'conflicted' state on working copy files or directories.\n"
