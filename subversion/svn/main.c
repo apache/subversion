@@ -104,39 +104,6 @@ typedef enum {
   opt_reintegrate
 } svn_cl__longopt_t;
 
-/* The following strings occur in svn_cl__options using macros such as
- * SVN_CL__SHOW_REVS_MERGED. xgettext fails to look up these macros so
- * that these messages are not put into PO files and that's why
- * untranslated without the following.
- *
- * xgettext claims bogusly: "This implementation of xgettext is able to process
- * a few awkward cases, like strings in preprocessor macros, ANSI concatenation
- * of adjacent strings, and escaped end of lines for continued strings."
- */
-
- GETTEXT_NOOP("specify which collection of revisions to display\n"
-    "                             "
-    "('" "merged" "',"
-    " '" "eligible" "')")
- GETTEXT_NOOP("specify automatic conflict resolution action\n"
-    "                            "
-    "('" "postpone" "',"
-    " '" "base" "',"
-    " '" "mine-full" "',"
-    " '" "theirs-full" "',"
-    "\n                            "
-    " '" "edit" "',"
-    " '" "launch" "')")
- GETTEXT_NOOP("specify automatic conflict resolution source\n"
-    "                            "
-    "('" "base" "',"
-    " '" "working" "',"
-    " '" "mine-conflict" "',"
-    "\n                            "
-    " '" "theirs-conflict" "',"
-    " '" "mine-full" "',"
-    " '" "theirs-full" "')")
-
 /* Option codes and descriptions for the command line client.
  *
  * The entire list must be terminated with an entry of nulls.
@@ -290,29 +257,17 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                             "
                        "history")},
   {"accept",        opt_accept, 1,
-                    /* once you change this string adapt the duplicate
-                     * above as well!
-                     */
                     N_("specify automatic conflict resolution action\n"
                        "                            "
-                       "('" SVN_CL__ACCEPT_POSTPONE "',"
-                       " '" SVN_CL__ACCEPT_BASE "',"
-                       " '" SVN_CL__ACCEPT_MINE_CONFLICT "',"
-                       "\n                            "
-                       " '" SVN_CL__ACCEPT_THEIRS_CONFLICT "',"
-                       " '" SVN_CL__ACCEPT_MINE_FULL "',"
-                       " '" SVN_CL__ACCEPT_THEIRS_FULL "',"
-                       "\n                            "
-                       " '" SVN_CL__ACCEPT_EDIT "',"
-                       " '" SVN_CL__ACCEPT_LAUNCH "')")},
+                       "('postpone', 'base', 'mine-conflict',\n"
+                       "                            "
+                       " 'theirs-conflict', 'mine-full', 'theirs-full',\n"
+                       "                            "
+                       " 'edit', 'launch')")},
   {"show-revs",     opt_show_revs, 1,
-                    /* once you change this string adapt the duplicate
-                     * above as well!
-                     */
                     N_("specify which collection of revisions to display\n"
                        "                             "
-                       "('" SVN_CL__SHOW_REVS_MERGED "',"
-                       " '" SVN_CL__SHOW_REVS_ELIGIBLE "')")},
+                       "('merged', 'eligible')")},
   {"reintegrate",   opt_reintegrate, 0,
                     N_("lump-merge all of source URL's unmerged changes")},
 
@@ -832,9 +787,6 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  Note:  the --accept option is currently required.\n"),
     {opt_targets, 'R', opt_depth, 'q', opt_accept},
-    /* once you change this string adapt the duplicate
-     * above as well!
-     */
     {{opt_accept, N_("specify automatic conflict resolution source\n"
                              "                            "
                              "('" SVN_CL__ACCEPT_BASE "',"
