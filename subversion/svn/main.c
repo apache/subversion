@@ -117,7 +117,7 @@ typedef enum {
  GETTEXT_NOOP("specify which collection of revisions to display\n"
     "                             "
     "('" "merged" "',"
-    " '" "eligible" "')");
+    " '" "eligible" "')")
  GETTEXT_NOOP("specify automatic conflict resolution action\n"
     "                            "
     "('" "postpone" "',"
@@ -126,7 +126,16 @@ typedef enum {
     " '" "theirs-full" "',"
     "\n                            "
     " '" "edit" "',"
-    " '" "launch" "')");
+    " '" "launch" "')")
+ GETTEXT_NOOP("specify automatic conflict resolution source\n"
+    "                            "
+    "('" "base" "',"
+    " '" "working" "',"
+    " '" "mine-conflict" "',"
+    "\n                            "
+    " '" "theirs-conflict" "',"
+    " '" "mine-full" "',"
+    " '" "theirs-full" "')")
 
 /* Option codes and descriptions for the command line client.
  *
@@ -281,9 +290,9 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                             "
                        "history")},
   {"accept",        opt_accept, 1,
-                    /** once you change this string adapt the duplicate
-                      * above as well!
-                      */
+                    /* once you change this string adapt the duplicate
+                     * above as well!
+                     */
                     N_("specify automatic conflict resolution action\n"
                        "                            "
                        "('" SVN_CL__ACCEPT_POSTPONE "',"
@@ -297,9 +306,9 @@ const apr_getopt_option_t svn_cl__options[] =
                        " '" SVN_CL__ACCEPT_EDIT "',"
                        " '" SVN_CL__ACCEPT_LAUNCH "')")},
   {"show-revs",     opt_show_revs, 1,
-                    /** once you change this string adapt the duplicate
-                      * above as well!
-                      */
+                    /* once you change this string adapt the duplicate
+                     * above as well!
+                     */
                     N_("specify which collection of revisions to display\n"
                        "                             "
                        "('" SVN_CL__SHOW_REVS_MERGED "',"
@@ -823,6 +832,9 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  Note:  the --accept option is currently required.\n"),
     {opt_targets, 'R', opt_depth, 'q', opt_accept},
+    /* once you change this string adapt the duplicate
+     * above as well!
+     */
     {{opt_accept, N_("specify automatic conflict resolution source\n"
                              "                            "
                              "('" SVN_CL__ACCEPT_BASE "',"
