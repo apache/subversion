@@ -86,6 +86,9 @@ usage: 1. switch URL[@PEGREV] [PATH]
      or hostname change) but your working copy still reflects the same
      directory within the same repository.
 
+  See also 'svn help update' for a list of possible characters
+  reporting the action taken.
+
 Valid options:
   -r [--revision] ARG      : ARG (some commands also take ARG1:ARG2 range)
                              A revision argument can be one of:

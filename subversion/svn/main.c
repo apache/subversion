@@ -403,7 +403,10 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  become versioned.  For files, any content differences between the\n"
      "  obstruction and the repository are treated like a local modification\n"
      "  to the working copy.  All properties from the repository are applied\n"
-     "  to the obstructing path.\n"),
+     "  to the obstructing path.\n"
+     "\n"
+     "  See also 'svn help update' for a list of possible characters\n"
+     "  reporting the action taken.\n"),
     {'r', 'q', 'N', opt_depth, opt_force, opt_ignore_externals} },
 
   { "cleanup", svn_cl__cleanup, {0}, N_
@@ -954,7 +957,10 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  2. Rewrite working copy URL metadata to reflect a syntactic change only.\n"
      "     This is used when repository's root URL changes (such as a scheme\n"
      "     or hostname change) but your working copy still reflects the same\n"
-    "     directory within the same repository.\n"),
+     "     directory within the same repository.\n"
+     "\n"
+     "  See also 'svn help update' for a list of possible characters\n"
+     "  reporting the action taken.\n"),
     { 'r', 'N', opt_depth, opt_set_depth, 'q', opt_merge_cmd, opt_relocate, 
       opt_ignore_externals, opt_force, opt_accept} },
 
