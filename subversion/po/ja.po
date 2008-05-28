@@ -6924,6 +6924,16 @@ msgstr ""
 "自動競合解決操作を指定する\n"
 "                            ('"
 
+#: svn/main.c:214
+msgid ""
+"specify automatic conflict resolution action\n"
+"                            ('postpone', 'base', 'mine-full', 'theirs-full',\n"
+"                             'edit', 'launch')"
+msgstr ""
+"自動競合解決操作を指定する\n"
+"                            ('postpone', 'base', 'mine-full', 'theirs-full',\n"
+"                             'edit', 'launch')"
+
 # * Description for 'svn add'.
 # * "add: " is displayed at the head of the first line.
 #: svn/main.c:262
