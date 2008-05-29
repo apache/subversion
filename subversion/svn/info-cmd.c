@@ -234,7 +234,7 @@ print_info_xml(void *baton,
         {
           conflict = APR_ARRAY_IDX(info->tree_conflicts, i, 
                                    svn_wc_conflict_description_t *);
-          SVN_ERR(svn_wc_append_tree_conflict_info_xml(sb, conflict, pool));
+          SVN_ERR(svn_cl__append_tree_conflict_info_xml(sb, conflict, pool));
         }
 
       /* "</tree-conflicts>" */
@@ -458,7 +458,7 @@ print_info(void *baton,
           svn_stringbuf_appendcstr(tree_conflict_descs, "\n");
           tree_conflict = APR_ARRAY_IDX(info->tree_conflicts, i,
                                         svn_wc_conflict_description_t *);
-          SVN_ERR(svn_wc_append_human_readable_tree_conflict_description(
+          SVN_ERR(svn_cl__append_human_readable_tree_conflict_description(
                                                            tree_conflict_descs,
                                                            tree_conflict,
                                                            pool));
