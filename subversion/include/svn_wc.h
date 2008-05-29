@@ -1992,14 +1992,17 @@ svn_wc_entry_dup(const svn_wc_entry_t *entry,
 /** Given a @a dir_path under version control, decide if one of its
  * entries (@a entry) is in state of conflict; return the answers in
  * @a text_conflicted_p, @a prop_conflicted_p and @a tree_conflicted_p.
+ * @a tree_conflicted_p refers to @a entry being the victim of a conflict.
  *
  * Only files can be text conflicted.
  * Only directories can be tree conflicted.
  * Property conflicts apply to both.
  *
  * If the entry mentions that a text conflict file, property conflicts
- * file, or a tree conflict report file exist, but they are all
- * removed, assume the conflict has been resolved by the user.
+ * file, or a tree conflict report file (### obsolete) exist, but they are all
+ * removed, assume the conflict has been resolved by the user. ### and adjust the entry?
+ * ### Shouldn't this WC function just report what the entry says, and let the client
+ * clear the conflict if files are gone (etc.) if that's what it wants to do?
  *
  * @since New in 1.6.
  */
@@ -4950,29 +4953,6 @@ svn_error_t *
 svn_wc_read_tree_conflicts_from_entry(apr_array_header_t *conflicts,
                                       const svn_wc_entry_t *dir_entry,
                                       apr_pool_t *pool);
-
-/**
- * Append to @a descriptions a possibly localized human readable
- * description of a tree conflict described by @a conflict.
- *
- * @since New in 1.6.
- */
-svn_error_t *
-svn_wc_append_human_readable_tree_conflict_description(
-                                       svn_stringbuf_t *descriptions,
-                                       svn_wc_conflict_description_t *conflict,
-                                       apr_pool_t *pool);
-
-/**
- * Append to @a str an XML representation of the tree conflict data
- * for @a conflict, in a format suitable for 'svn info --xml'.
- *
- * @since New in 1.6.
- */
-svn_error_t *
-svn_wc_append_tree_conflict_info_xml(svn_stringbuf_t *str,
-                                     svn_wc_conflict_description_t *conflict,
-                                     apr_pool_t *pool);
 
 /**
  * Add a tree conflict to the directory entry belonging to @a adm_access.
