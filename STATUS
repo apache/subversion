@@ -18,18 +18,6 @@ Candidate changes for 1.5.0:
    Votes:
      +1: cmpilato
 
-* r31516
-  Fix bug in "svn up --depth=empty FILE" against pre-1.5 servers.
-  Notes:
-    Technically not a regression since it requires using a new option,
-    but causes potentially-undetectable working copy corruption.
-    Has a test.  Mild conflict in the test file (context), so
-    see branch.
-  Branch:
-    1.5.x-r31516
-  Votes:
-    +1: glasser
-
 Candidate changes for 1.5.1:
 ============================
  * r31313
