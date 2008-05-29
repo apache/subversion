@@ -10902,6 +10902,15 @@ msgstr "エクスポートされたものです%s"
 msgid "'%s' not versioned, and not exported\n"
 msgstr "'%s' はバージョン管理下になく、エクスポートされたものでもありません\n"
 
+# * Description for 'svn --show-revs'
+# * 29 half-size characters are displayed on the left.
+#~ msgid ""
+#~ "specify which collection of revisions to display\n"
+#~ "                             ('merged', 'eligible')"
+#~ msgstr ""
+#~ "表示する一連のリビジョンを指定します\n"
+#~ "                             ('merged', 'eligible')"
+
 #~ msgid ""
 #~ "Trying to change property '%s' from '%s' to '%s',\n"
 #~ "but property has been locally added with value '%s'."
