@@ -903,7 +903,13 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### Section for authentication and authorization customizations."   NL
         "[auth]"                                                             NL
         "### Password stores used by Subversion:"                            NL
+#ifdef SVN_HAVE_KEYCHAIN_SERVICES
+        "# password-stores = keychain"                                       NL
+#elif defined(WIN32) && !defined(__MINGW32__)
+        "# password-stores = windows-cryptoapi"                              NL
+#else
         "# password-stores = gnome-keyring,kwallet"                          NL
+#endif
         "###"                                                                NL
         "### The rest of this section in this file has been deprecated."     NL
         "### Both 'store-passwords' and 'store-auth-creds' can now be"       NL
