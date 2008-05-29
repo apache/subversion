@@ -80,7 +80,7 @@ Content-length: L
    except that they end with "PROPS-END\n" for better readability.
 
 Node-path: absolute/path/to/node/in/filesystem
-HNode-kind: file | dir  (1)
+Node-kind: file | dir  (1)
 Node-action: change | add | delete | replace
 [Node-copyfrom-rev: X]
 [Node-copyfrom-path: path ]
