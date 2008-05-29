@@ -2312,7 +2312,7 @@ svn_wc_revert2(const char *path,
                apr_pool_t *pool)
 {
   return svn_wc_revert3(path, parent_access, 
-                        recursive ? svn_depth_infinity : svn_depth_empty,
+                        SVN_DEPTH_INFINITY_OR_EMPTY(recursive),
                         use_commit_times, NULL, cancel_func, cancel_baton,
                         notify_func, notify_baton, pool);
 }
@@ -2880,7 +2880,8 @@ svn_wc_resolved_conflict2(const char *path,
                           apr_pool_t *pool)
 {
   return svn_wc_resolved_conflict3(path, adm_access, resolve_text,
-                                   resolve_props, recurse,
+                                   resolve_props,
+                                   SVN_DEPTH_INFINITY_OR_EMPTY(recurse),
                                    svn_wc_conflict_choose_merged,
                                    notify_func, notify_baton, cancel_func,
                                    cancel_baton, pool);
