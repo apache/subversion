@@ -6945,7 +6945,7 @@ msgid ""
 "                            ('postpone', 'base', 'mine-full', 'theirs-full',\n"
 "                             'edit', 'launch')"
 msgstr ""
-"自動競合解決操作を指定する\n"
+"自動競合解決の操作を指定します\n"
 "                            ('postpone', 'base', 'mine-full', 'theirs-full',\n"
 "                             'edit', 'launch')"
 
@@ -7958,7 +7958,7 @@ msgid ""
 "specify automatic conflict resolution source\n"
 "                            ('base', 'working', 'mine-full', 'theirs-full')"
 msgstr ""
-"自動競合解決のソースを指定してください\n"
+"自動競合解決のソースを指定します\n"
 "                            ('base', 'working', 'mine-full', 'theirs-full')"
 
 # * Description for 'svn revert'.
