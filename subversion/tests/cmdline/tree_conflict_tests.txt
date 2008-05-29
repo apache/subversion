@@ -150,22 +150,6 @@ one-by-one, each in a fresh working copy.
 Current Status
 ==============
 
-The following tests fail because they expect a property change to
-cause a tree conflict.  We don't yet support that.
-
-  Test 5 "up/sw dir: modify onto del/rpl/mv"
-  Test 8 "up/sw dir: add onto add" (first two subtests)
-  Test 13 "merge dir: modify onto not-dir"
-  Test 14 "merge dir: del/rpl/mv onto not-same"
-
-There is a strange error ("Revision 3 doesn't match existing revision
-2") whenever we try to add a directory.
-
-  Test 7 "up/sw dir: del/rpl/mv onto del/rpl/mv"
-  Test 8 "up/sw dir: add onto add" (second 2 subtests)
-
-These changes will require updating the scenario data, of course.
-
 The following features are sketched out in the scenario data, but not
 tested:
 
@@ -174,13 +158,4 @@ tested:
   Replacement (file->file, dir->dir)
 
   'svn switch'
-
-  'svn merge', where the merge diff is not the same as the working
-  copy's own history
-
-The current implementation of ensure_tree_conflict() works with only
-one base URL.  In other words, a command that takes a URL argument
-gets the URL of the target working copy.  This can't test 'svn
-switch', and can't test all of the merge scenarios we would like.  I
-guess its time for some Python hacking.
 

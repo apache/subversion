@@ -286,34 +286,54 @@ d_mods = [
 
 #----------------------------------------------------------------------
 
-# Set up the given change scenarios in their respective paths in the repos.
+# Set up all of the given SCENARIOS in their respective unique paths.
+# This means committing their initialisation actions in r2, and then
+# committing their change actions in r3 (assuming the repos was at r1).
 # (See also the somewhat related svntest.actions.set_up_tree_conflicts().)
-def set_up_repos(wc_dir, scenarios):
+# SCENARIOS is a list of scenario tuples: (init_actions, change_actions).
+# WC_DIR is a local path of an existing WC.
+# BR_DIR is a nonexistent path within WC_DIR.
+# BR_DIR and any necessary parent directories will be created, and then the
+# scenario will be set up within it, and committed to the repository.
+def set_up_repos(wc_dir, br_dir, scenarios):
 
-  # create the pre-existing file and dir F1 and D1
-  F1 = os.path.join(wc_dir, "F1")  # "existing" file
+  if not os.path.exists(br_dir):
+    main.run_svn(None, "mkdir", "--parents", br_dir)
+
+  # create the file F1 and dir D1 which the tests regard as pre-existing
+  paths = incoming_paths(wc_dir, wc_dir)  # second arg is bogus but unimportant
+  F1 = paths['F1']  # existing file to copy from
   main.file_write(F1, "This is initially file F1.\n")
   main.run_svn(None, 'add', F1)
-  D1 = os.path.join(wc_dir, "D1")  # "existing" dir
+  D1 = paths['D1']  # existing dir to copy from
   main.run_svn(None, 'mkdir', D1)
+
   # create the initial parent dirs, and each file or dir unless to-be-added
   for init_mods, action_mods in scenarios:
     path = "_".join(action_mods)
-    P = os.path.join(wc_dir, path)  # parent
+    P = os.path.join(br_dir, path)  # parent of items to be tested
     main.run_svn(None, 'mkdir', '--parents', P)
     for modaction in init_mods:
       modify(modaction, incoming_paths(wc_dir, P))
-  main.run_svn(None, 'commit', '-m', 'Initial set-up.', wc_dir)
+  run_and_verify_svn(None, AnyOutput, [],
+                     'commit', '-m', 'Initial set-up.', wc_dir)
+  # Capture the revision number
+  init_rev = 2  ### hard-coded
 
   # modify all files and dirs in their various ways
   for _path, action_mods in scenarios:
     path = "_".join(action_mods)
-    P = os.path.join(wc_dir, path)  # parent
+    P = os.path.join(br_dir, path)  # parent
     for modaction in action_mods:
       modify(modaction, incoming_paths(wc_dir, P))
 
   # commit all the modifications
-  main.run_svn(None, 'commit', '-m', 'Action.', wc_dir)
+  run_and_verify_svn(None, AnyOutput, [],
+                     'commit', '-m', 'Action.', wc_dir)
+  # Capture the revision number
+  changed_rev = 3  ### hard-coded
+
+  return (init_rev, changed_rev)
 
 #----------------------------------------------------------------------
 
@@ -338,48 +358,74 @@ def ensure_no_status_c_on_parent(parent):
 # modifications in LOCALMOD_SCENARIOS.
 # Ensure that the result in each case includes a tree conflict on the parent.
 # OPERATION = 'update' or 'switch' or 'merge'
-def ensure_tree_conflict(sbox, operation, incoming_scenarios, localmod_scenarios):
+# If COMMIT_LOCAL_MODS is true, the LOCALMOD_SCENARIOS will be committed to
+# the target branch before applying the INCOMING_SCENARIOS.
+def ensure_tree_conflict(sbox, operation,
+                         incoming_scenarios, localmod_scenarios,
+                         commit_local_mods):
   failures = 0
 
   sbox.build()
   wc_dir = sbox.wc_dir
 
+  def url_of(repo_relative_path):
+    return sbox.repo_url + '/' + repo_relative_path
+
   verbose_print("")
   verbose_print("=== Starting a set of '" + operation + "' tests.")
 
+  # Path to source branch, relative to wc_dir.
+  # Source is where the "incoming" mods are made.
+  source_br = "branch1"
+
   verbose_print("--- Creating changes in repos")
-  set_up_repos(wc_dir, incoming_scenarios)
+  source_wc_dir = os.path.join(wc_dir, source_br)
+  source_left_rev, source_right_rev = set_up_repos(wc_dir, source_wc_dir,
+                                                   incoming_scenarios)
+  head_rev = source_right_rev  ### assumption
 
   # Local mods are the outer loop because cleaning up the WC is slow
   # ('svn revert' isn't sufficient because it leaves unversioned files)
   for _loc_init_mods, loc_action in localmod_scenarios:
-    # get a clean WC
-    main.safe_rmtree(wc_dir)
-    main.run_svn(None, 'checkout', '-r', '2', sbox.repo_url, wc_dir)
+    if operation == 'update':
+      # Path to target branch (where conflicts are raised), relative to wc_dir.
+      target_br = source_br
+      target_start_rev = source_left_rev
+    else:
+      target_br = "branch2"
+      run_and_verify_svn(None, AnyOutput, [],
+                         'copy', '-r', str(source_left_rev), url_of(source_br),
+                         url_of(target_br),
+                         '-m', 'Create target branch.')
+      head_rev += 1
+      target_start_rev = head_rev
+
+    main.run_svn(None, 'checkout', '-r', str(target_start_rev), sbox.repo_url,
+                 wc_dir)
 
     saved_cwd = os.getcwd()
     os.chdir(wc_dir)
 
     for _inc_init_mods, inc_action in incoming_scenarios:
-      parent_path = "_".join(inc_action)
-      parent_url = sbox.repo_url + '/' + parent_path
+      scen_name = "_".join(inc_action)
+      source_url = url_of(source_br + '/' + scen_name)
+      target_path = os.path.join(target_br, scen_name)
 
-      verbose_print("=== '" + parent_path + "' onto local mod " + str(loc_action))
-
-      ### TODO: make target branch modifications
-      # verbose_print("--- Making target branch mods")
-      # for modaction in br_action:
-      #   modify(modaction, localmod_paths(".", parent_path))
-      # main.run_svn(None, 'commit', ".")
+      verbose_print("=== " + str(inc_action) + " onto " + str(loc_action))
 
       verbose_print("--- Making local mods")
       for modaction in loc_action:
-        modify(modaction, localmod_paths(".", parent_path))
+        modify(modaction, localmod_paths(".", target_path))
+      if commit_local_mods:
+        run_and_verify_svn(None, AnyOutput, [],
+                           'commit', target_path,
+                           '-m', 'Mods in target branch.')
+        head_rev += 1
 
       try:
         #verbose_print("--- Trying to commit (expecting 'out-of-date' error)")
         #run_and_verify_commit(".", None, None, "Commit failed",
-        #                      parent_path)
+        #                      target_path)
 
         # Perform the operation that tries to apply the changes to the WC.
         # The command is expected to do something (and give some output),
@@ -387,12 +433,13 @@ def ensure_tree_conflict(sbox, operation, incoming_scenarios, localmod_scenarios
         if operation == 'update':
           verbose_print("--- Updating")
           run_and_verify_svn(None, AnyOutput, [],
-                             'update', parent_path)
+                             'update', target_path)
         elif operation == 'merge':
           verbose_print("--- Merging")
           run_and_verify_svn(None, AnyOutput, [],
                              'merge', '--ignore-ancestry',
-                             '-r2:3', parent_url, parent_path)
+                             '-r', str(source_left_rev) + ':' + str(source_right_rev),
+                             source_url, target_path)
         else:
           raise "unknown operation: '" + operation + "'"
 
@@ -402,21 +449,22 @@ def ensure_tree_conflict(sbox, operation, incoming_scenarios, localmod_scenarios
         # detail: namely that it's not going to look at that argument if it
         # gets the stderr that we're expecting.
         run_and_verify_commit(".", None, None, ".*conflict.*",
-                              parent_path)
+                              target_path)
 
         verbose_print("--- Checking that 'status' reports the conflict")
-        ensure_status_c_on_parent(parent_path)
+        ensure_status_c_on_parent(target_path)
 
         verbose_print("--- Resolving the conflict")
-        run_and_verify_svn(None, "Resolved .* '" + parent_path + "'", [],
-                           'resolved', parent_path)
+        run_and_verify_svn(None, "Resolved .* '" + target_path + "'", [],
+                           'resolved', target_path)
 
         #verbose_print("--- Checking that 'status' does not report a conflict")
-        #ensure_no_status_c_on_parent(parent_path)
+        #ensure_no_status_c_on_parent(target_path)
 
         #verbose_print("--- Committing (should now succeed)")
         #run_and_verify_svn(None, None, [],
-        #                   'commit', '-m', '', parent_path)
+        #                   'commit', '-m', '', target_path)
+        #target_start_rev += 1
 
       except svntest.Failure:
         # Reason for catching exceptions here is to be able to see progress
@@ -434,8 +482,14 @@ def ensure_tree_conflict(sbox, operation, incoming_scenarios, localmod_scenarios
 
     os.chdir(saved_cwd)
 
-    # clean up WC
+    # Clean up the target branch and WC
     main.run_svn(None, 'revert', '-R', wc_dir)
+    main.safe_rmtree(wc_dir)
+    if operation != 'update':
+      run_and_verify_svn(None, AnyOutput, [],
+                         'delete', url_of(target_br),
+                         '-m', 'Delete target branch.')
+      head_rev += 1
 
   if failures > 0:
     raise svntest.Failure(str(failures) + " '" + operation + "' sub-tests failed")
@@ -443,26 +497,24 @@ def ensure_tree_conflict(sbox, operation, incoming_scenarios, localmod_scenarios
 #----------------------------------------------------------------------
 
 # The main entry points for testing a set of scenarios.
-#
+
+# Test 'update' and/or 'switch'
+# See test_wc_merge() for arguments.
+def test_tc_up_sw(sbox, incoming_scen, wc_scen):
+  ensure_tree_conflict(sbox, 'update', incoming_scen, wc_scen, False)
+  #ensure_tree_conflict(sbox, 'switch', incoming_scen, wc_scen, False)  ###
+
+# Test 'merge'
 # INCOMING_SCEN is a list of scenarios describing the incoming changes to apply.
 # BR_SCEN  is a list of scenarios describing how the local branch has
 #   been modified relative to the merge-left source.
 # WC_SCEN is a list of scenarios describing the local WC mods.
-#
-# Expected results:
-#   A tree conflict marked on the Parent, with F or D as the victim.
-
-# Test 'update' and/or 'switch'
-def test_tc_up_sw(sbox, incoming_scen, wc_scen):
-  ensure_tree_conflict(sbox, 'update', incoming_scen, wc_scen)
-  #ensure_tree_conflict(sbox, 'switch', incoming_scen, wc_scen)  ###
-
-# Test 'merge'
+# One of BR_SCEN or WC_SCEN must be given but not both.
 def test_tc_merge(sbox, incoming_scen, br_scen=None, wc_scen=None):
-  if br_scen == None:
-    ensure_tree_conflict(sbox, 'merge', incoming_scen, wc_scen)
+  if br_scen:
+    ensure_tree_conflict(sbox, 'merge', incoming_scen, br_scen, True)
   else:
-    return  ###
+    ensure_tree_conflict(sbox, 'merge', incoming_scen, wc_scen, False)
 
 #----------------------------------------------------------------------
 
@@ -645,7 +697,7 @@ test_list = [ None,
               up_sw_dir_del_onto_del,
               XFail(up_sw_dir_add_onto_add),  # not a primary use case
               merge_file_mod_onto_not_file,
-              merge_file_del_onto_not_same,
+              XFail(merge_file_del_onto_not_same),
               merge_file_del_onto_not_file,
               merge_file_add_onto_not_none,
               merge_dir_mod_onto_not_dir,
