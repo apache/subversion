@@ -409,6 +409,9 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
   svn_boolean_t store_auth_creds_val = TRUE;
   svn_auth_provider_object_t *provider;
   svn_cmdline_prompt_baton2_t *pb = NULL;
+  const char *password_stores_config_option;
+  apr_array_header_t *password_stores;
+  int i;
 
   /* The whole list of registered providers */
   apr_array_header_t *providers
@@ -427,17 +430,15 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
   /* Disk-caching auth providers, for both
      'username/password' creds and 'username' creds,
      which store passwords encrypted.  */
-  const char *password_stores_config_option;
   svn_config_get(cfg,
                  &password_stores_config_option,
                  SVN_CONFIG_SECTION_AUTH,
                  SVN_CONFIG_OPTION_PASSWORD_STORES,
                  "gnome-keyring,kwallet,keychain,windows-cryptoapi");
 
-  apr_array_header_t *password_stores
+  password_stores
     = svn_cstring_split(password_stores_config_option, " ,", TRUE, pool);
 
-  int i;
   for (i = 0; i < password_stores->nelts; i++)
     {
       const char *password_store = APR_ARRAY_IDX(password_stores, i,
