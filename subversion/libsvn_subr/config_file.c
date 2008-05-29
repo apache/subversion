@@ -906,10 +906,10 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### delimited by spaces or commas. The order of values determines"  NL
         "### the order in which password stores are used."                   NL
         "### Valid password stores:"                                         NL
-        "###   gnome-keyring (Unix-like systems)"                            NL
-        "###   kwallet (Unix-like systems)"                                  NL
-        "###   keychain (Mac OS X)"                                          NL
-        "###   windows-cryptoapi (Windows)"                                  NL
+        "###   gnome-keyring        (Unix-like systems)"                     NL
+        "###   kwallet              (Unix-like systems)"                     NL
+        "###   keychain             (Mac OS X)"                              NL
+        "###   windows-cryptoapi    (Windows)"                               NL
 #ifdef SVN_HAVE_KEYCHAIN_SERVICES
         "# password-stores = keychain"                                       NL
 #elif defined(WIN32) && !defined(__MINGW32__)
