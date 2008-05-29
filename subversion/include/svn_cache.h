@@ -44,7 +44,7 @@ extern "C" {
  */
 
 /**
- * A function type for copying an object @a in into a different pool @pool
+ * A function type for copying an object @a in into a different pool @a pool
  *  and returning the result in @a *out.
  *
  * @since New in 1.6.
@@ -55,7 +55,7 @@ typedef svn_error_t *(svn_cache_dup_func_t)(void **out,
 
 /**
  * A function type for deserializing an object @a *out from the string
- * @a data of length @a data_len in the pool @pool.
+ * @a data of length @a data_len in the pool @a pool.
  *
  * @since New in 1.6.
 */
@@ -220,7 +220,7 @@ svn_cache_get(void **value,
               apr_pool_t *pool);
 
 /**
- * Stores the value @value under the key @a key in @a cache.  @a pool
+ * Stores the value @a value under the key @a key in @a cache.  @a pool
  * is used only for temporary allocations.  The cache makes copies of
  * @a key and @a value if necessary (that is, @a key and @a value may
  * have shorter lifetimes than the cache).
