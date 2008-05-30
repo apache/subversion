@@ -2203,7 +2203,7 @@ finish_report(void *report_baton,
   apr_hash_t *props;
   apr_status_t status;
   svn_boolean_t closed_root;
-  int i;
+  int status_code, i;
 
   tmp = SERF_BUCKET_SIMPLE_STRING_LEN("</S:update-report>",
                                       sizeof("</S:update-report>")-1,
@@ -2243,6 +2243,9 @@ finish_report(void *report_baton,
   parser_ctx->end = end_report;
   parser_ctx->cdata = cdata_report;
   parser_ctx->done = &report->done;
+  /* While we provide a location here to store the status code, we don't
+     do anything with it. The error in parser_ctx->error is sufficient. */
+  parser_ctx->status_code = &status_code;
 
   handler->response_handler = svn_ra_serf__handle_xml_parser;
   handler->response_baton = parser_ctx;
