@@ -39,7 +39,7 @@ Valid options:
   -v [--verbose]           : print extra information
   -g [--use-merge-history] : use/display additional information from merge
                              history
-  -c [--change] ARG        : the change made by ARG
+  -c [--change] ARG        : the change made in revision ARG
   --targets ARG            : pass contents of file ARG as additional args
   --stop-on-copy           : do not cross copies while traversing history
   --incremental            : give output suitable for concatenation
