@@ -5,7 +5,7 @@
 
 #TODO
 + add the missing functional requirements
-+ add more details - where needed - on the functional requirements
++ add more details and examples - where needed - on the functional requirements
 + add the missing non-functional requirements
 + probably need to split up some of the requirements to make them smaller
   (and SMARTer).
@@ -175,8 +175,32 @@ IV. Detailed functional requirements
          + C - COULD have this if it does not affect anything else.
          + W - WON'T have this time but WOULD like in the future.
 
+    1. SELECT a modification to obliterate.
 
-    1. SELECT a file to obliterate.
+       A. Description
+
+          Allow the user to obliterate a single modification from the
+          repository. The lowest level of modification we should consider is
+          the change to a file or directory committed in a specific revision.
+          (Read: no need to support obliterating a single line in a document)
+
+          A modification can be selected by:
+
+          + A path name
+          + A PEG revision, default is HEAD.
+          + A revision
+
+          This requirement can be seen as a combination of:
+          - SELECT a file or directory.
+          - LIMIT the range to the selected revision.
+
+       B. Main use case
+          all
+
+       C. Priority
+          M - MUST have this.
+
+    2. SELECT a file to obliterate.
 
        A. Description
           Allow the user to obliterate a file from the repository. The file
@@ -198,7 +222,7 @@ IV. Detailed functional requirements
        C. Priority
           M - MUST have this.
 
-    2. SELECT a directory to obliterate
+    3. SELECT a directory to obliterate
 
        A. Description
           Allow the user to obliterate a directory, including all its children,
@@ -224,7 +248,7 @@ IV. Detailed functional requirements
        C. Priority
           M - MUST have this.
 
-    3. SELECT a revision to obliterate
+    4. SELECT a revision to obliterate
 
        A. Description
           Allows the user to delete all modifications made in:
@@ -251,7 +275,7 @@ IV. Detailed functional requirements
        C. Priority
           SHOULD have this if at all possible.
 
-    4. LIMIT revisions from FROM revision to TO rev
+    5. LIMIT revisions from FROM revision to TO rev
 
        A. Description
           This is the most general case, where both FROM revision and TO
@@ -263,7 +287,7 @@ IV. Detailed functional requirements
        C. Priority
           M - MUST have this.
 
-    5. LIMIT revisions from path creation revision to TO rev
+    6. LIMIT revisions from path creation revision to TO rev
 
        A. Description
           This is a special case of requirement IV.4., where the FROM revision
@@ -288,7 +312,7 @@ IV. Detailed functional requirements
           times after it was copied, we might need to use a PEG revision to
           indicate where the real directory copy revision can be found.
 
-    6. LIMIT: Default FROM and TO revisions per selection
+    7. LIMIT: Default FROM and TO revisions per selection
 
        A. Description
           Depending on which SELECT option was chosen, the default LIMITs will
@@ -309,7 +333,7 @@ IV. Detailed functional requirements
        C. Priority
           M - MUST have this.
 
-    7. DEFINE: Include all descendants in the obliteration of a file
+    8. DEFINE: Include all descendants in the obliteration of a file
 
        A. Description
           This is basically a greedy obliteration, where all places in the
@@ -347,7 +371,7 @@ IV. Detailed functional requirements
        C. Priority
           M - MUST have this
 
-    8. DEFINE: Exclude all descendants from the obliteration of a file
+    9. DEFINE: Exclude all descendants from the obliteration of a file
 
        A. Description
           If the obliterated information is still needed in a later revision in
@@ -360,7 +384,7 @@ IV. Detailed functional requirements
           is:
 
           + Added: This is the creation point of the file. Remove the Add
-            operation and the content and properties delta. 
+            operation and the content and properties delta.
           + Deleted: when the file is obliterated earlier, there's nothing to
             Delete anymore. Remove the Delete operation.
           + Replaced by TARGET: see Deleted. Will become Copy operation of the
@@ -412,7 +436,7 @@ IV. Detailed functional requirements
        C. Priority
           M - MUST have this.
 
-    9. DEFINE: Include all descendants in the obliteration of a directory
+    10. DEFINE: Include all descendants in the obliteration of a directory
 
        A. Description
 
@@ -422,15 +446,14 @@ IV. Detailed functional requirements
        C. Priority
           M - MUST have this
 
-    10. DEFINE: Exclude all descendants from the obliteration of a directory
+    11. DEFINE: Exclude all descendants from the obliteration of a directory
 
-        A. Description
-
-        When obliterating a directory, the impact of this obliteration should
-        be checked in the selected revision range in the repository. Depending
-        on the type of modification, actions should be taken. When the file is:
-
-        #TODO: add effects of directory operations
+       A. Description
+          When obliterating a directory, the impact of this obliteration should
+          be checked in the selected revision range in the repository.
+          Depending on the type of modification, actions should be taken. When
+          the file is:
+          #TODO: add effects of directory operations
 
        B. Main use case
           disc space
@@ -438,13 +461,30 @@ IV. Detailed functional requirements
        C. Priority
           M - MUST have this.
 
-    11. DEFINE: Include all descendants in the obliteration of a modification
+    12. DEFINE: Include all descendants in the obliteration of a modification
 
        A. Description
-       Now that Subversion 1.5 includes merge tracking we have the option to
-       find out how modifications cascade through the repository with merging
-       operations.
+          Now that Subversion 1.5 includes merge tracking we have the option to
+          find out how modifications cascade through the repository with
+          merge operations.
 
+#IMPL-DETAIL
+          A merge operation is identified by a change of type Modification
+          that includes a change to the svn:mergeinfo property.
+#END-OF-IMPL-DETAIL
+
+          When obliterating a modification, the impact of this obliteration
+          should be checked in the selected revision range in the repository.
+          Depending on the type of modification, actions should be taken.
+
+          When the modification is:
+          + Deleted:
+          + Replaced by TARGET:
+          + Copied to TARGET:
+          + Moved to TARGET:
+          + Merged to TARGET:
+          + Modified:
+          + Merged to TARGET:
        #TODO: define how to select descendants.
 
        B. Main use case
@@ -453,22 +493,88 @@ IV. Detailed functional requirements
        C. Priority
           C - COULD have this if it does not affect anything else.
 
-    12. DEFINE: Exclude all descendants from the obliteration of a modification
+    13. DEFINE: Exclude all descendants from the obliteration of a modification
 
        A. Description
-          Now that Subversion 1.5 includes merge tracking we have the option to
-          find out how modifications cascade through the repository with
-          merging operations.
+          If the obliterated modification is still needed in a later revision
+          in the repository, that modification will be made available in that
+          later revision.
 
+          When obliterating a modification, the impact of this obliteration
+          should be checked in the selected revision range in the repository.
+          Depending on the type of modification, actions should be taken.
+
+          + Deleted: Can be ignored.
+          + Replaced by TARGET: Can be ignored.
+          + Copied to TARGET:
+          + Moved to TARGET:
+          + Merged to TARGET: the modification is merged to another file. This
+            action can be ignored because when merging a delta to another path,
+            that delta is copied and reapplied to the new path, not relying on
+            the content of the original delta.
+            #TODO: is that true for both FSFS and BDB? Are we not relying on an
+            implementation detail that can change in the future?
+          + Modified: If the modification contains lines that were modified or
+            added in the now obliterated delta, find the original content and
+            properties of the ancestor, apply the delta to that content and
+            properties and use the result to recreate the file.
           #TODO: define how to select descendants.
 
        B. Main use case
           disc space
 
        C. Priority
-          C - COULD have this if it does not affect anything else.
+          M - MUST have this.
 
-    13. HIDE selected files, directories and revisions
+    14. LOG selected modifications, files, directories and revisions
+
+       A. Description
+          This is essentially a dry run of the obliterate action. In order to
+          assess the impact of the selected filters, the user wants to see the
+          list of to-be obliterated paths first.
+
+          The result should be printed to the console and contain the info as
+          shown in this example:
+
+          +-----------------------------------------------+-------------------+
+          | Revision | Current action | Path              | New action        |
+          |          |                |                   | after obliteration|
+          +----------+----------------+-------------------+-------------------+
+          | r100     | A              | /trunk/SECRET     | [obliterated]     |
+          | r101     | M              | /trunk/SECRET     | [obliterated]     |
+          | r105     | A+             | /branch/1.0/SECRET| A                 |
+          +----------+----------------+-------------------+-------------------+
+
+       B. Main use case
+          all
+
+       C. Priority
+          M - MUST have this.
+
+
+    15. HIDE selected files, directories and revisions
+
+       A. Description
+          #TODO
+
+       B. Main use case
+          all
+
+       C. Priority
+          S - SHOULD have this if at all possible.
+
+    16. UNHIDE selected files, directories and revisions
+
+       A. Description
+          #TODO
+
+       B. Main use case
+          all
+
+       C. Priority
+          S - SHOULD have this if at all possible.
+
+    17. OBLITERATE selected modifications, files, directories and revisions
 
        A. Description
           #TODO
@@ -479,29 +585,7 @@ IV. Detailed functional requirements
        C. Priority
           M - MUST have this.
 
-    14. UNHIDE selected files, directories and revisions
-
-       A. Description
-          #TODO
-
-       B. Main use case
-          all
-
-       C. Priority
-          M - MUST have this.
-
-    15. OBLITERATE selected files, directories and revisions
-
-       A. Description
-          #TODO
-
-       B. Main use case
-          all
-
-       C. Priority
-          M - MUST have this.
-
-    16. Keep audit trail of obliterated information
+    18. Keep audit trail of obliterated information
 
        A. Description
           #TODO
@@ -512,7 +596,7 @@ IV. Detailed functional requirements
        C. Priority
           M - MUST have this.
 
-    17. Propagating obliteration info to working copies
+    19. Propagating obliteration info to working copies
 
        A. Description
           #TODO
@@ -525,7 +609,7 @@ IV. Detailed functional requirements
 
        D. Workaround
 
-    18. Propagating obliteration info to mirrors
+    20. Propagating obliteration info to mirrors
 
        A. Description
           #TODO
