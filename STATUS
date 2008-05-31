@@ -16,7 +16,7 @@ Candidate changes for 1.5.0:
      Trivial fix, but makes a *world* of difference in terms of output
      sanity.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, danielsh
 
  * r31516
    Fix bug in "svn up --depth=empty FILE" against pre-1.5 servers.
@@ -32,6 +32,7 @@ Candidate changes for 1.5.0:
 
 Candidate changes for 1.5.1:
 ============================
+
  * r31313
    Make all ra layers return a consistent error when a path is not found in the
    repository.
@@ -147,7 +148,7 @@ Candidate changes for 1.5.1:
      later by a user on the dev list:
      http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=139158
    Votes:
-     +1: stsp
+     +1: stsp, danielsh
 
  * r31504
    Optimize file merges performed with ancestrally related sources by
