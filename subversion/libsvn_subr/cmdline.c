@@ -356,7 +356,7 @@ svn_cmdline_handle_exit_error(svn_error_t *err,
 
 #if defined(SVN_HAVE_KWALLET) || defined(SVN_HAVE_GNOME_KEYRING)
 /* Dynamically load authentication simple provider. */
-static svn_boolean_t
+static svn_error_t *
 get_auth_simple_provider(svn_auth_provider_object_t **provider,
                          const char *provider_name,
                          apr_pool_t *pool)
@@ -365,8 +365,7 @@ get_auth_simple_provider(svn_auth_provider_object_t **provider,
   apr_dso_handle_sym_t symbol;
   const char *libname;
   const char *funcname;
-  svn_error_t *err;
-  svn_boolean_t ret = FALSE;
+  *provider = NULL;
   libname = apr_psprintf(pool,
                          "libsvn_auth_%s-%d.so.0",
                          provider_name,
@@ -374,22 +373,17 @@ get_auth_simple_provider(svn_auth_provider_object_t **provider,
   funcname = apr_psprintf(pool,
                           "svn_auth_get_%s_simple_provider",
                           provider_name);
-  err = svn_dso_load(&dso, libname);
-  if (err == SVN_NO_ERROR)
+  SVN_ERR(svn_dso_load(&dso, libname));
+  if (dso)
     {
-      if (dso)
+      if (! apr_dso_sym(&symbol, dso, funcname))
         {
-          if (! apr_dso_sym(&symbol, dso, funcname))
-            {
-              svn_auth_simple_provider_func_t func;
-              func = (svn_auth_simple_provider_func_t) symbol;
-              func(provider, pool);
-              ret = TRUE;
-            }
+          svn_auth_simple_provider_func_t func;
+          func = (svn_auth_simple_provider_func_t) symbol;
+          func(provider, pool);
         }
     }
-  svn_error_clear(err);
-  return ret;
+  return SVN_NO_ERROR;
 }
 #endif
 
@@ -464,7 +458,8 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
       if (apr_strnatcmp(password_store, "gnome-keyring") == 0)
         {
 #ifdef SVN_HAVE_GNOME_KEYRING
-          if (get_auth_simple_provider(&provider, "gnome_keyring", pool))
+          SVN_ERR(get_auth_simple_provider(&provider, "gnome_keyring", pool));
+          if (provider)
             {
               APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
             }
@@ -475,7 +470,8 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
       if (apr_strnatcmp(password_store, "kwallet") == 0)
         {
 #ifdef SVN_HAVE_KWALLET
-          if (get_auth_simple_provider(&provider, "kwallet", pool))
+          SVN_ERR(get_auth_simple_provider(&provider, "kwallet", pool));
+          if (provider)
             {
               APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
             }
