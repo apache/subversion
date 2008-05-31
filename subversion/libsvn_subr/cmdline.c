@@ -461,7 +461,8 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
           SVN_ERR(get_auth_simple_provider(&provider, "gnome_keyring", pool));
           if (provider)
             {
-              APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+              APR_ARRAY_PUSH(providers,
+                             svn_auth_provider_object_t *) = provider;
             }
 #endif
           continue;
@@ -473,7 +474,8 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
           SVN_ERR(get_auth_simple_provider(&provider, "kwallet", pool));
           if (provider)
             {
-              APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+              APR_ARRAY_PUSH(providers,
+                             svn_auth_provider_object_t *) = provider;
             }
 #endif
           continue;
