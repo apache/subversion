@@ -97,6 +97,37 @@ Candidate changes for 1.5.1:
    Votes:
      +1: pburba
 
+ * r31425
+   Support the 'http-library' option when Subversion was configured
+   with the '--enable-runtime-module-search' option.
+   Votes:
+     +1: arfrever
+
+ * r30915
+   Fix issue #2887. 'svn status --xml' was generating invalid XML
+   when reporting the status of a file which resides in an untracked
+   directory.
+   Notes:
+     Fixed a while back in trunk. The problem was brought up again
+     later by a user on the dev list:
+     http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=139158
+   Votes:
+     +1: stsp, danielsh
+
+ * r31504
+   Optimize file merges performed with ancestrally related sources by
+   using the svn_ra_get_log2() interface to figure out in which revisions
+   the source really changed, and using that information to filter out
+   no-op revision ranges prior to merging.
+   Votes:
+     +1: cmpilato
+
+Approved changes (all releases):
+================================
+
+Approved changes (1.5.1 and later):
+===================================
+
  * (r31159, r31179) or r31193 from 1.5.x-r31159-r31179 branch.
    Fix "file not found" error when a merge target is a broken symbolic link.
    Notes:
@@ -133,29 +164,3 @@ Candidate changes for 1.5.1:
    Votes:
      +1: pburba, markphip, cmpilato
 
- * r31425
-   Support the 'http-library' option when Subversion was configured
-   with the '--enable-runtime-module-search' option.
-   Votes:
-     +1: arfrever
-
- * r30915
-   Fix issue #2887. 'svn status --xml' was generating invalid XML
-   when reporting the status of a file which resides in an untracked
-   directory.
-   Notes:
-     Fixed a while back in trunk. The problem was brought up again
-     later by a user on the dev list:
-     http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=139158
-   Votes:
-     +1: stsp, danielsh
-
- * r31504
-   Optimize file merges performed with ancestrally related sources by
-   using the svn_ra_get_log2() interface to figure out in which revisions
-   the source really changed, and using that information to filter out
-   no-op revision ranges prior to merging.
-   Votes:
-     +1: cmpilato
-
-Approved changes (all releases):
