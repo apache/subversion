@@ -101,6 +101,9 @@ kwallet_password_get(const char **password,
             }
         }
     }
+// This function currently closes the wallet if no other application
+// is connected to the wallet. We're waiting for this to be fixed
+// upstream, see https://bugs.kde.org/show_bug.cgi?id=162570
 //  KWallet::Wallet::disconnectApplication(wallet_name,
 //                                         QString::fromUtf8("Subversion"));
   return ret;
@@ -162,6 +165,9 @@ kwallet_password_set(apr_hash_t *creds,
             }
         }
     }
+// This function currently closes the wallet if no other application
+// is connected to the wallet. We're waiting for this to be fixed
+// upstream, see https://bugs.kde.org/show_bug.cgi?id=162570
 //  KWallet::Wallet::disconnectApplication(wallet_name,
 //                                         QString::fromUtf8("Subversion"));
   return ret;
