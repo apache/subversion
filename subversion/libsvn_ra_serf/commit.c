@@ -413,8 +413,17 @@ checkout_dir(dir_context_t *dir)
 
   if (checkout_ctx->progress.status != 201)
     {
-      SVN_ERR(svn_ra_serf__error_on_status(checkout_ctx->progress.status, 
-                                           dir->name));
+      err = svn_ra_serf__error_on_status(checkout_ctx->progress.status,
+                                         dir->name);
+      if (err)
+        {
+          svn_error_clear(checkout_ctx->progress.server_error.error);
+          return err;
+        }
+
+      /* In the normal cases where this error might occur we already handled
+         it based on the status code. */
+      SVN_ERR(checkout_ctx->progress.server_error.error);
 
       return svn_error_createf(SVN_ERR_FS_CONFLICT,
                     return_response_err(handler,
