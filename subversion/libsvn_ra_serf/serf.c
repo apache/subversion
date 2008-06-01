@@ -1076,7 +1076,7 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
 
       SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
                                           vcc_url, revision,
-                                          "1", baseline_props, pool));
+                                          "0", baseline_props, pool));
 
       basecoll_url = svn_ra_serf__get_ver_prop(props, vcc_url, revision,
                                                "DAV:", "baseline-collection");
@@ -1103,7 +1103,7 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
       struct path_dirent_visitor_t dirent_walk;
 
       SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
-                                          path, revision, "0", all_props,
+                                          path, revision, "1", all_props,
                                           session->pool));
 
       /* Check if the path is really a directory. */
