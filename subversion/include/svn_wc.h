@@ -4857,6 +4857,45 @@ svn_wc_set_changelist(const char *path,
                       void *notify_baton,
                       apr_pool_t *pool);
 
+/** Crop the @a target according to @a depth. Any item that exceed the
+ * boundary of @a depth (relative to @a target) will be removed from revision
+ * control. Modified items will be left unversioned. And the clean ones will
+ * be removed from the disk. 
+ *
+ * If the @a target has a shallower depth at the beginning, it will not be
+ * upgraded to the requested one, since that will not be a cropping at all.
+ * However, the children will be checked an cropped properly according to the
+ * requested @a depth.
+ *
+ * The function returns immediately with no error if @a target is not a
+ * directory, or if the @a depth is not restrictive at all (e.g.
+ * svn_depth_infinity).
+ *
+ * @a anchor is an access baton, with a tree lock, for the local path to the
+ * working copy which will be used as the root of this operation.  If @a
+ * target is not empty, it represents an entry in the @a anchor path
+ * (otherwise, the @a anchor is the subject).
+ *
+ * If @a cancel_func is not @c NULL, call it with @a cancel_baton to determine
+ * if the client has cancelled the operation.
+ *
+ * If @a notify_func is not @c NULL, call it with @a notify_baton to report
+ * the change.
+ *
+ * @note: svn_depth_exclude is currently not supported.
+ *
+ * @since New in 1.6
+ */
+svn_error_t *
+svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
+                 const char *target,
+                 svn_depth_t depth,
+                 svn_wc_notify_func2_t notify_func,
+                 void *notify_baton,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
+                 apr_pool_t *pool);
+
 /** @} */
 
 
