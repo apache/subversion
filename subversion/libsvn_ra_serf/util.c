@@ -1354,7 +1354,7 @@ svn_ra_serf__discover_root(const char **vcc_url,
                            apr_pool_t *pool)
 {
   apr_hash_t *props;
-  const char *path, *relative_path, *present_path = "";
+  const char *path, *relative_path, *present_path = "", *uuid;
 
   /* If we're only interested in our VCC, just return it. */
   if (session->vcc_url && !rel_path)
@@ -1366,6 +1366,7 @@ svn_ra_serf__discover_root(const char **vcc_url,
   props = apr_hash_make(pool);
   path = orig_path;
   *vcc_url = NULL;
+  uuid = NULL;
 
   do
     {
@@ -1384,6 +1385,11 @@ svn_ra_serf__discover_root(const char **vcc_url,
                                                     SVN_INVALID_REVNUM,
                                                     SVN_DAV_PROP_NS_DAV,
                                                     "baseline-relative-path");
+
+          uuid = svn_ra_serf__get_ver_prop(props, path,
+                                           SVN_INVALID_REVNUM,
+                                           SVN_DAV_PROP_NS_DAV,
+                                           "repository-uuid");
           break;
         }
       else
@@ -1437,6 +1443,12 @@ svn_ra_serf__discover_root(const char **vcc_url,
         svn_path_canonicalize(apr_uri_unparse(session->pool,
                                               &session->repos_root, 0),
                               session->pool);
+    }
+
+  /* Store the repository UUID in the cache. */
+  if (!session->uuid)
+    {
+      session->uuid = apr_pstrdup(session->pool, uuid);
     }
 
   if (rel_path)
