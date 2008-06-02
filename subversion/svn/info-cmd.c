@@ -34,6 +34,7 @@
 #include "cl.h"
 
 #include "svn_private_config.h"
+#include "tree-conflicts.h"
 
 
 /*** Code. ***/
