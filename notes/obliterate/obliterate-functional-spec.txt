@@ -34,68 +34,68 @@ II. Use Cases
        [security]
 
        A. Description
-       This is the case where a user has added information to the repository
-       that should not have been made public. The distribution of this
-       information must be halted, and where it has been distributed, it must
-       be removed.
+          This is the case where a user has added information to the repository
+          that should not have been made public. The distribution of this
+          information must be halted, and where it has been distributed, it must
+          be removed.
 
-       This use case typically requires removal of any trace of that
-       information from the whole history of the repository. In short, if a
-       confidential file was copied, also obliterate the copy.
+          This use case typically requires removal of any trace of that
+          information from the whole history of the repository. In short, if a
+          confidential file was copied, also obliterate the copy.
 
        B. Examples
-       + User adding documents with confidential information to the repository.
-         Needs to stop distribution to working copies and mirrors ASAP.
-       + User adding source code to the repository, finds out later that it's
-         infringing certain intellectual rights. Need to remove all traces of
-         the infringing source code, including all derivatives, from the
-         repository.
+          + User adding documents with confidential information to the repository.
+            Needs to stop distribution to working copies and mirrors ASAP.
+          + User adding source code to the repository, finds out later that it's
+            infringing certain intellectual rights. Need to remove all traces of
+            the infringing source code, including all derivatives, from the
+            repository.
 
-       C. Role triggering this use case
-       A key user of the repository that knows what confidential information
-       should be removed, and who can estimate the impact of obliteration
-       (which paths, which revision range(s) etc.
+       C. Primary actor triggering this use case
+          A key user of the repository that knows what confidential information
+          should be removed, and who can estimate the impact of obliteration
+          (which paths, which revision range(s) etc.
 
-       Normal users should not be able to obliterate. For those users we
-       already have 'svn rm'.
+          Normal users should not be able to obliterate. For those users we
+          already have 'svn rm'.
 
     2. Remove obsolete information from a repository and free the associated
        disc space.
        [disc space]
 
        A. Description
-       This is the case where unneeded or obsolete information is stored in the
-       repository, taking up lots of disc space. In order to free up disc
-       space, this information may be obliterated.
+          This is the case where unneeded or obsolete information is stored in the
+          repository, taking up lots of disc space. In order to free up disc
+          space, this information may be obliterated.
 
-       This use case typically requires removal of certain subsets of the
-       repository while leaving later revisions intact. In short, if an
-       obsolete file was copied, leave the copy intact.
+          This use case typically requires removal of certain subsets of the
+          repository while leaving later revisions intact. In short, if an
+          obsolete file was copied, leave the copy intact.
 
-       This use case is often combined with archiving of the obsolete
-       information: archive first, then obliterate.
+          This use case is often combined with archiving of the obsolete
+          information: archive first, then obliterate.
 
        B. Examples
-       + User adding a whole set of development tools, huge binaries or
-         external libraries to the product by mistake.
-       + Users managing huge files (MB/GB's) as part of their normal workflow.
-         These files can be removed when work on newer versions has started.
-       + Users adding source code, assets and build deliverables in the same
-         repository. Certain assets or build deliverables can be removed
+          + User adding a whole set of development tools, huge binaries or
+            external libraries to the product by mistake.
+          + Users managing huge files (MB/GB's) as part of their normal workflow.
+            These files can be removed when work on newer versions has started.
+          + Users adding source code, assets and build deliverables in the same
+            repository. Certain assets or build deliverables can be removed
 
-       + When a project is moved to its own repository, the project's files may
-         be obliterated from the original repository. This includes moving old
-         projects to an archive repository.
-       + Repositories setup to store product deliverables. Those deliverables
-         for old unmaintained versions, like everything older than a revision
-         or date, may be obliterated from the repository.
-       + Removal of dead branches which changes have and will not be included
-         in the main development line.
+          + When a project is moved to its own repository, the project's files may
+            be obliterated from the original repository. This includes moving old
+            projects to an archive repository.
+          + Repositories setup to store product deliverables. Those deliverables
+            for old unmaintained versions, like everything older than a revision
+            or date, may be obliterated from the repository.
+          + Removal of dead branches which changes have and will not be included
+            in the main development line.
 
-       C. Role triggering this use case
-       A repository administrator that's concerned about disc space usage.
-       However, only a key user can decide which information may be
-       obliterated.
+       C. Primary actor triggering this use case
+          A repository administrator that's concerned about disc space usage.
+          However, only a key user can decide which information may be
+          obliterated.
 
 III. Current solution
 
@@ -117,7 +117,7 @@ III. Current solution
 
     3. Disadvantages of current solution
 
-       + svndumpfilter has a series of issues (8 right now, see the issue 
+       + svndumpfilter has a series of issues (8 right now, see the issue
          tracker).
        + Its filtering options are limited to include or exclude paths, no
          wildcard support...
@@ -197,7 +197,10 @@ IV. Detailed functional requirements
        B. Main use case
           all
 
-       C. Priority
+       C. Primary actor
+          key user
+
+       D. Priority
           M - MUST have this.
 
     2. SELECT a file to obliterate.
@@ -219,7 +222,10 @@ IV. Detailed functional requirements
        B. Main use case
           all
 
-       C. Priority
+       C. Primary actor
+          key user
+
+       D. Priority
           M - MUST have this.
 
     3. SELECT a directory to obliterate
@@ -245,7 +251,10 @@ IV. Detailed functional requirements
        B. Main use case
           all
 
-       C. Priority
+       C. Primary actor
+          key user
+
+       D. Priority
           M - MUST have this.
 
     4. SELECT a revision to obliterate
@@ -272,7 +281,10 @@ IV. Detailed functional requirements
        B. Main use case
           all
 
-       C. Priority
+       C. Primary actor
+          key user
+
+       D. Priority
           SHOULD have this if at all possible.
 
     5. LIMIT revisions from FROM revision to TO rev
@@ -284,7 +296,10 @@ IV. Detailed functional requirements
        B. Main use case
           all
 
-       C. Priority
+       C. Primary actor
+          key user
+
+       D. Priority
           M - MUST have this.
 
     6. LIMIT revisions from path creation revision to TO rev
@@ -303,10 +318,13 @@ IV. Detailed functional requirements
        B. Main use case
           all
 
-       C. Priority
+       C. Primary actor
+          key user
+
+       D. Priority
           M - MUST have this.
 
-       D. Workaround
+       E. Workaround
           As it's difficult right now to make the distinction between a copy
           of a directory and a rename, and a directory might be renamed a few
           times after it was copied, we might need to use a PEG revision to
@@ -330,7 +348,10 @@ IV. Detailed functional requirements
        B. Main use case
           all
 
-       C. Priority
+       C. Primary actor
+          key user
+
+       D. Priority
           M - MUST have this.
 
     8. DEFINE: Include all descendants in the obliteration of a file
@@ -346,7 +367,7 @@ IV. Detailed functional requirements
           is:
 
           + Added: This is the creation point of the file. Remove the Add
-            operation and the content and properties delta. 
+            operation and the content and properties delta.
           + Deleted: Remove the Delete operation.
           + Replaced by TARGET: see Deleted. Will become Copy operation of the
             TARGET.
@@ -368,7 +389,10 @@ IV. Detailed functional requirements
        B. Main use case
           security
 
-       C. Priority
+       C. Primary actor
+          key user
+
+       D. Priority
           M - MUST have this
 
     9. DEFINE: Exclude all descendants from the obliteration of a file
@@ -402,11 +426,11 @@ IV. Detailed functional requirements
             that content and properties and use the result to recreate the
             file.
 
-          Note: only the first change after the obliterated revision of the 
-          file should be handled, except for copies of the now obliterated 
+          Note: only the first change after the obliterated revision of the
+          file should be handled, except for copies of the now obliterated
           revision.
 
-          Example: 
+          Example:
             r1: A  iota   "original content\n"
             r2: M  iota   "original content\nextra line\n"
             r3: D  iota
@@ -415,8 +439,8 @@ IV. Detailed functional requirements
             Here we obliterate iota, range -r 1:1, exclude descendants.
 
             Result:
-            So, r1 will be obliterated, r2 will be rewritten, r3 should be 
-            ignored. Since r4 is based on the now obliterated r1, it should be 
+            So, r1 will be obliterated, r2 will be rewritten, r3 should be
+            ignored. Since r4 is based on the now obliterated r1, it should be
             rewritten as 'A  cp-iota' with the content and properties of iota@1.
 
             r1: [obliterated]
@@ -433,7 +457,10 @@ IV. Detailed functional requirements
        B. Main use case
           disc space
 
-       C. Priority
+       C. Primary actor
+          key user
+
+       D. Priority
           M - MUST have this.
 
     10. DEFINE: Include all descendants in the obliteration of a directory
@@ -443,7 +470,10 @@ IV. Detailed functional requirements
        B. Main use case
           security
 
-       C. Priority
+       C. Primary actor
+          key user
+
+       D. Priority
           M - MUST have this
 
     11. DEFINE: Exclude all descendants from the obliteration of a directory
@@ -458,7 +488,10 @@ IV. Detailed functional requirements
        B. Main use case
           disc space
 
-       C. Priority
+       C. Primary actor
+          key user
+
+       D. Priority
           M - MUST have this.
 
     12. DEFINE: Include all descendants in the obliteration of a modification
@@ -490,7 +523,10 @@ IV. Detailed functional requirements
        B. Main use case
           security
 
-       C. Priority
+       C. Primary actor
+          key user
+
+       D. Priority
           C - COULD have this if it does not affect anything else.
 
     13. DEFINE: Exclude all descendants from the obliteration of a modification
@@ -523,7 +559,10 @@ IV. Detailed functional requirements
        B. Main use case
           disc space
 
-       C. Priority
+       C. Primary actor
+          key user
+
+       D. Priority
           M - MUST have this.
 
     14. LOG selected modifications, files, directories and revisions
@@ -548,7 +587,10 @@ IV. Detailed functional requirements
        B. Main use case
           all
 
-       C. Priority
+       C. Primary actor
+          key user
+
+       D. Priority
           M - MUST have this.
 
 
@@ -560,7 +602,10 @@ IV. Detailed functional requirements
        B. Main use case
           all
 
-       C. Priority
+       C. Primary actor
+          key user
+
+       D. Priority
           S - SHOULD have this if at all possible.
 
     16. UNHIDE selected files, directories and revisions
@@ -571,7 +616,10 @@ IV. Detailed functional requirements
        B. Main use case
           all
 
-       C. Priority
+       C. Primary actor
+          key user
+
+       D. Priority
           S - SHOULD have this if at all possible.
 
     17. OBLITERATE selected modifications, files, directories and revisions
@@ -582,7 +630,10 @@ IV. Detailed functional requirements
        B. Main use case
           all
 
-       C. Priority
+       C. Primary actor
+          administrator
+
+       D. Priority
           M - MUST have this.
 
     18. Keep audit trail of obliterated information
@@ -593,7 +644,10 @@ IV. Detailed functional requirements
        B. Main use case
           security
 
-       C. Priority
+       C. Primary actor
+          administrator
+
+       D. Priority
           M - MUST have this.
 
     19. Propagating obliteration info to working copies
@@ -604,10 +658,13 @@ IV. Detailed functional requirements
        B. Main use case
           all
 
-       C. Priority
+       C. Primary actor
+          administrator
+
+       D. Priority
           C - COULD have this if it does not affect anything else.
 
-       D. Workaround
+       E. Workaround
 
     20. Propagating obliteration info to mirrors
 
@@ -617,10 +674,13 @@ IV. Detailed functional requirements
        B. Main use case
           security
 
-       C. Priority
+       C. Primary actor
+          administrator
+
+       D. Priority
           C - COULD have this if it does not affect anything else.
 
-       D. Workaround
+       E. Workaround
 
 [..]
 
