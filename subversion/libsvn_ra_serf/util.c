@@ -1354,7 +1354,7 @@ svn_ra_serf__discover_root(const char **vcc_url,
                            apr_pool_t *pool)
 {
   apr_hash_t *props;
-  const char *path, *relative_path, *present_path = "";
+  const char *path, *relative_path, *present_path = "", *uuid;
 
   /* If we're only interested in our VCC, just return it. */
   if (session->vcc_url && !rel_path)
@@ -1366,33 +1366,49 @@ svn_ra_serf__discover_root(const char **vcc_url,
   props = apr_hash_make(pool);
   path = orig_path;
   *vcc_url = NULL;
+  uuid = NULL;
 
   do
     {
-      SVN_ERR(svn_ra_serf__retrieve_props(props, session, conn,
-                                          path, SVN_INVALID_REVNUM,
-                                          "0", base_props, pool));
-      *vcc_url =
-          svn_ra_serf__get_ver_prop(props, path,
-                                    SVN_INVALID_REVNUM,
-                                    "DAV:",
-                                    "version-controlled-configuration");
-
-      if (*vcc_url)
+      svn_error_t *err = svn_ra_serf__retrieve_props(props, session, conn,
+                                                     path, SVN_INVALID_REVNUM,
+                                                     "0", base_props, pool);
+      if (! err)
         {
+          *vcc_url =
+              svn_ra_serf__get_ver_prop(props, path,
+                                        SVN_INVALID_REVNUM,
+                                        "DAV:",
+                                        "version-controlled-configuration");
+
           relative_path = svn_ra_serf__get_ver_prop(props, path,
                                                     SVN_INVALID_REVNUM,
                                                     SVN_DAV_PROP_NS_DAV,
                                                     "baseline-relative-path");
+
+          uuid = svn_ra_serf__get_ver_prop(props, path,
+                                           SVN_INVALID_REVNUM,
+                                           SVN_DAV_PROP_NS_DAV,
+                                           "repository-uuid");
           break;
         }
+      else
+        {
+          if (err->apr_err != SVN_ERR_FS_NOT_FOUND)
+            {
+              return err;  /* found a _real_ error */
+            }
+          else
+            {
+              /* This happens when the file is missing in HEAD. */
+              svn_error_clear(err);
 
-      /* This happens when the file is missing in HEAD. */
-
-      /* Okay, strip off. */
-      present_path = svn_path_join(svn_path_basename(path, pool),
-                                   present_path, pool);
-      path = svn_path_dirname(path, pool);
+              /* Okay, strip off. */
+              present_path = svn_path_join(svn_path_basename(path, pool),
+                                           present_path, pool);
+              path = svn_path_dirname(path, pool);
+            }
+        }
     }
   while (!svn_path_is_empty(path));
 
@@ -1429,6 +1445,12 @@ svn_ra_serf__discover_root(const char **vcc_url,
                               session->pool);
     }
 
+  /* Store the repository UUID in the cache. */
+  if (!session->uuid)
+    {
+      session->uuid = apr_pstrdup(session->pool, uuid);
+    }
+
   if (rel_path)
     {
       if (present_path[0] != '\0')
@@ -1440,6 +1462,27 @@ svn_ra_serf__discover_root(const char **vcc_url,
         {
           *rel_path = relative_path;
         }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_serf__error_on_status(int status_code, const char *path)
+{
+  switch(status_code) 
+    {
+      case 301:
+      case 302:
+        return svn_error_createf(SVN_ERR_RA_DAV_RELOCATED, NULL,
+                        (status_code == 301)
+                        ? _("Repository moved permanently to '%s';"
+                            " please relocate")
+                        : _("Repository moved temporarily to '%s';"
+                            " please relocate"), path);
+      case 404:
+        return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
+                                 _("'%s' path not found"), path);
     }
 
   return SVN_NO_ERROR;

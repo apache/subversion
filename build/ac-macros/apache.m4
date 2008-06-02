@@ -71,10 +71,26 @@ else
     AC_MSG_RESULT(no)
 fi
 
+AC_ARG_WITH(apache-libexecdir,
+            [AS_HELP_STRING([[--with-apache-libexecdir[=PATH]]],
+                            [Install Apache modules to PATH instead of Apache's
+                             configured modules directory; PATH "no"
+                             or --without-apache-libexecdir means install
+                             to LIBEXECDIR.])],
+[
+    APACHE_LIBEXECDIR="$withval"
+])
+
 if test -n "$APXS" && test "$APXS" != "no"; then
     APXS_CC="`$APXS -q CC`"
     APACHE_INCLUDES="$APACHE_INCLUDES -I$APXS_INCLUDE"
-    APACHE_LIBEXECDIR="`$APXS -q libexecdir`"
+
+    if test -z "$APACHE_LIBEXECDIR"; then
+        APACHE_LIBEXECDIR="`$APXS -q libexecdir`"
+    elif test "$APACHE_LIBEXECDIR" = 'no'; then
+        APACHE_LIBEXECDIR="$libexecdir"
+    fi
+
     BUILD_APACHE_RULE=apache-mod
     INSTALL_APACHE_RULE=install-mods-shared
 

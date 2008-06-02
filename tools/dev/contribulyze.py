@@ -95,9 +95,11 @@ def spam_guard_in_html_block(str):
   return _spam_guard_in_html_block_re.subn(_spam_guard_in_html_block_func,
                                            str)[0]
 
-def html_header(title, page_heading=None):
+def html_header(title, page_heading=None, highlight_targets=False):
   """Write HTML file header.  TITLE and PAGE_HEADING parameters are
-  expected to already by HTML-escaped if needed."""
+  expected to already by HTML-escaped if needed.  If HIGHLIGHT_TARGETS
+is true, then write out a style header that causes anchor targets to be
+surrounded by a red border when they are jumped to."""
   if not page_heading:
     page_heading = title
   s  = '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"\n'
@@ -105,6 +107,10 @@ def html_header(title, page_heading=None):
   s += '<html><head>\n'
   s += '<meta http-equiv="Content-Type"'
   s += ' content="text/html; charset=UTF-8" />\n'
+  if highlight_targets:
+    s += '<style type="text/css">\n'
+    s += ':target { border: 2px solid red; }\n'
+    s += '</style>\n'
   s += '<title>%s</title>\n' % title
   s += '</head>\n\n'
   s += '<body style="text-color: black; background-color: white">\n\n'
@@ -355,7 +361,7 @@ class Contributor:
     this contributor was active."""
     out = open(filename, 'w')
     out.write(html_header(self.big_name(html_eo=True),
-                          self.big_name(html=True)))
+                          self.big_name(html=True), True))
     unique_logs = { }
 
     sorted_activities = self.activities.keys()

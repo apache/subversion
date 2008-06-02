@@ -198,6 +198,9 @@ struct svn_ra_serf__session_t {
   /* SSL server certificates */
   svn_boolean_t trust_default_ca;
   const char *ssl_authorities;
+
+  /* Repository UUID */
+  const char *uuid;
 };
 
 /*
@@ -801,27 +804,6 @@ svn_ra_serf__wait_for_props(svn_ra_serf__propfind_context_t *prop_ctx,
                             svn_ra_serf__session_t *sess,
                             apr_pool_t *pool);
 
-/* Shared helper func: given a public URL which may not exist in HEAD,
-   use SESSION to search up parent directories until we can retrieve a
-   *PROPS (allocated in POOL) containing a standard set of base props:
-   {VCC, resourcetype, baseline-relative-path}.
-
-   Also return:
-   *MISSING_PATH (allocated in POOL), which is the trailing portion of
-     the URL that did not exist.  If an error occurs, *MISSING_PATH isn't
-     changed.
-   *REMAINING_PATH (allocated in POOL), which is the parent path on which
-     we found the PROPS.
-   */
-svn_error_t *
-svn_ra_serf__search_for_base_props(apr_hash_t *props,
-                                   const char **remaining_path,
-                                   const char **missing_path,
-                                   svn_ra_serf__session_t *session,
-                                   svn_ra_serf__connection_t *conn,
-                                   const char *url,
-                                   apr_pool_t *pool);
-
 /*
  * This is a blocking version of deliver_props.
  */
@@ -1210,7 +1192,6 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
                             const char *capability,
                             apr_pool_t *pool);
 
-
 /*** Authentication handler declarations ***/
 
 /**
@@ -1295,5 +1276,16 @@ svn_ra_serf__encode_auth_header(const char * protocol,
                                 const char * data,
                                 apr_size_t data_len,
                                 apr_pool_t *pool);
+
+
+/*** General utility functions ***/
+
+/**
+ * Convert an HTTP status code resulting from a WebDAV request to the relevant
+ * error code. 
+ */
+svn_error_t *
+svn_ra_serf__error_on_status(int status_code, const char *path);
+
 
 #endif /* SVN_LIBSVN_RA_SERF_RA_SERF_H */

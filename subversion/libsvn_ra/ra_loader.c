@@ -59,7 +59,7 @@
    ### any code which uses the pre-1.2 API svn_ra_get_ra_library
    ### instead of svn_ra_open. */
 
-#if defined(SVN_LIBSVN_CLIENT_LINKS_RA_NEON) && defined (SVN_LIBSVN_CLIENT_LINKS_RA_SERF)
+#if defined(SVN_HAVE_NEON) && defined(SVN_HAVE_SERF)
 #define MUST_CHOOSE_DAV
 #endif
 
@@ -454,7 +454,11 @@ svn_error_t *svn_ra_open3(svn_ra_session_t **session_p,
           /* Find out where we're about to connect to, and
            * try to pick a server group based on the destination. */
           apr_err = apr_uri_parse(pool, repos_URL, &repos_URI);
-          if (apr_err != APR_SUCCESS)
+          /* ### Should apr_uri_parse leave hostname NULL?  It doesn't
+           * for "file:///" URLs, only for bogus URLs like "bogus".
+           * If this is the right behavior for apr_uri_parse, maybe we
+           * should have a svn_uri_parse wrapper. */
+          if (apr_err != APR_SUCCESS || repos_URI.hostname == NULL)
             return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
                                      _("Illegal repository URL '%s'"),
                                      repos_URL);
@@ -1018,11 +1022,14 @@ svn_error_t *svn_ra_get_log2(svn_ra_session_t *session,
                              void *receiver_baton,
                              apr_pool_t *pool)
 {
-  int i;
-  for (i = 0; i < paths->nelts; i++)
+  if (paths)
     {
-      const char *path = APR_ARRAY_IDX(paths, i, const char *);
-      assert(*path != '/');
+      int i;
+      for (i = 0; i < paths->nelts; i++)
+        {
+          const char *path = APR_ARRAY_IDX(paths, i, const char *);
+          assert(*path != '/');
+        }
     }
 
   if (include_merged_revisions)
@@ -1047,12 +1054,15 @@ svn_error_t *svn_ra_get_log(svn_ra_session_t *session,
 {
   svn_log_entry_receiver_t receiver2;
   void *receiver2_baton;
-  int i;
 
-  for (i = 0; i < paths->nelts; i++)
+  if (paths)
     {
-      const char *path = APR_ARRAY_IDX(paths, i, const char *);
-      assert(*path != '/');
+      int i;
+      for (i = 0; i < paths->nelts; i++)
+        {
+          const char *path = APR_ARRAY_IDX(paths, i, const char *);
+          assert(*path != '/');
+        }
     }
 
   svn_compat_wrap_log_receiver(&receiver2, &receiver2_baton,

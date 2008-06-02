@@ -103,9 +103,9 @@ write_new_rep(const char **msg,
     return SVN_NO_ERROR;
 
   /* Create a new fs and repos */
-  SVN_ERR(svn_test__create_fs
+  SVN_ERR(svn_test__create_bdb_fs
           (&fs, "test-repo-write-new-rep",
-           "bdb", pool));
+           pool));
 
   /* Set up transaction baton */
   args.fs = fs;
@@ -142,9 +142,9 @@ write_rep(const char **msg,
     return SVN_NO_ERROR;
 
   /* Create a new fs and repos */
-  SVN_ERR(svn_test__create_fs
+  SVN_ERR(svn_test__create_bdb_fs
           (&fs, "test-repo-write-rep",
-           "bdb", pool));
+           pool));
 
   /* Set up transaction baton */
   new_args.fs = fs;
@@ -220,9 +220,9 @@ read_rep(const char **msg,
     return SVN_NO_ERROR;
 
   /* Create a new fs and repos */
-  SVN_ERR(svn_test__create_fs
+  SVN_ERR(svn_test__create_bdb_fs
           (&fs, "test-repo-read-rep",
-           "bdb", pool));
+           pool));
 
   /* Set up transaction baton */
   new_args.fs = fs;
@@ -305,9 +305,9 @@ delete_rep(const char **msg,
     return SVN_NO_ERROR;
 
   /* Create a new fs and repos */
-  SVN_ERR(svn_test__create_fs
+  SVN_ERR(svn_test__create_bdb_fs
           (&fs, "test-repo-delete-rep",
-           "bdb", pool));
+           pool));
 
   /* Set up transaction baton */
   new_args.fs = fs;
@@ -540,9 +540,9 @@ test_strings(const char **msg,
     return SVN_NO_ERROR;
 
   /* Create a new fs and repos */
-  SVN_ERR(svn_test__create_fs
+  SVN_ERR(svn_test__create_bdb_fs
           (&fs, "test-repo-test-strings",
-           "bdb", pool));
+           pool));
 
   /* The plan (after each step below, verify the size and contents of
      the string):
@@ -645,9 +645,9 @@ write_null_string(const char **msg,
     return SVN_NO_ERROR;
 
   /* Create a new fs and repos */
-  SVN_ERR(svn_test__create_fs
+  SVN_ERR(svn_test__create_bdb_fs
           (&fs, "test-repo-test-strings",
-           "bdb", pool));
+           pool));
 
   args.fs = fs;
   args.key = NULL;
@@ -675,9 +675,9 @@ abort_string(const char **msg,
     return SVN_NO_ERROR;
 
   /* Create a new fs and repos */
-  SVN_ERR(svn_test__create_fs
+  SVN_ERR(svn_test__create_bdb_fs
           (&fs, "test-repo-abort-string",
-           "bdb", pool));
+           pool));
 
   /* The plan:
 
@@ -743,9 +743,9 @@ copy_string(const char **msg,
     return SVN_NO_ERROR;
 
   /* Create a new fs and repos */
-  SVN_ERR(svn_test__create_fs
+  SVN_ERR(svn_test__create_bdb_fs
           (&fs, "test-repo-copy-string",
-           "bdb", pool));
+           pool));
 
   /*  Write a new string (string1). */
   args.fs = fs;

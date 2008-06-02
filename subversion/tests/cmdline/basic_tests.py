@@ -2314,6 +2314,47 @@ def basic_relative_url_non_canonical(sbox):
                                 expected_output, [], 'ls',
                                 '^//A/', iota_url)
 
+def basic_relative_url_with_peg_revisions(sbox):
+  "basic relative url targets with peg revisions"
+
+  sbox.build()
+
+  # First, make a new revision of iota.
+  iota = os.path.join(sbox.wc_dir, 'iota')
+  svntest.main.file_append(iota, "New contents for iota\n")
+  svntest.main.run_svn(None, 'ci',
+                       '-m', '', iota)
+
+  iota_url = sbox.repo_url + '/iota'
+
+  # Now, make a new revision of A/mu .
+  mu = os.path.join(sbox.wc_dir, 'A', 'mu')
+  mu_url = sbox.repo_url + '/A/mu'
+
+  svntest.main.file_append(mu, "New contents for mu\n")
+  svntest.main.run_svn(None, 'ci', '-m', '', mu)
+
+  # Delete the file from the current revision
+  svntest.main.run_svn(None, 'rm', '-m', '', mu_url)
+
+  expected_output = [
+    "B/\n",
+    "C/\n",
+    "D/\n",
+    "mu\n",
+    "iota\n"
+    ]
+
+  # Canonical version with peg revision
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None,
+                                expected_output, [], 'ls', '-r3',
+                                '^/A/@3', iota_url)
+
+  # Non-canonical version with peg revision
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None,
+                                expected_output, [], 'ls', '-r3',
+                                '^//A/@3', iota_url)
+
 #----------------------------------------------------------------------
 
 ########################################################################
@@ -2365,6 +2406,7 @@ test_list = [ None,
               basic_relative_url_using_other_targets,
               basic_relative_url_multi_repo,
               basic_relative_url_non_canonical,
+              basic_relative_url_with_peg_revisions,
              ]
 
 if __name__ == '__main__':

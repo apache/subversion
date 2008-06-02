@@ -153,6 +153,15 @@ class SubversionClientTestCase(unittest.TestCase):
     self.assertEqual(commit_info.revision, 13)
     self.assertEqual(self.log_message_func_calls, 1)
 
+  def test_mkdir_url_with_revprops(self):
+    """Test svn_client_mkdir3 on a file:// URL, with added revprops"""
+    dir = urljoin(REPOS_URL+"/", "some/deep/subdir")
+
+    commit_info = client.mkdir3((dir,), 1, {'customprop':'value'},
+                                self.client_ctx)
+    self.assertEqual(commit_info.revision, 14)
+    self.assertEqual(self.log_message_func_calls, 1)
+
   def test_log3_url(self):
     """Test svn_client_log3 on a file:// URL"""
     dir = urljoin(REPOS_URL+"/", "trunk/dir1")

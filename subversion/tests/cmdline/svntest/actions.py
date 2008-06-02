@@ -92,6 +92,12 @@ def setup_pristine_repository():
                            "OUTPUT TREE", expected_output_tree, output_tree)
       sys.exit(1)
 
+    # Finally, disallow any changes to the "pristine" repos.
+    error_msg = "Don't modify the pristine repository"
+    create_failing_hook(main.pristine_dir, 'start-commit', error_msg)
+    create_failing_hook(main.pristine_dir, 'pre-lock', error_msg)
+    create_failing_hook(main.pristine_dir, 'pre-revprop-change', error_msg)
+
 
 ######################################################################
 # Used by every test, so that they can run independently of  one
@@ -1317,6 +1323,15 @@ def lock_admin_dir(wc_dir):
 
   path = os.path.join(wc_dir, main.get_admin_name(), 'lock')
   main.file_append(path, "stop looking!")
+
+def create_failing_hook(repo_dir, hook_name, text):
+  """Create a HOOK_NAME hook in REPO_DIR that prints TEXT to stderr and exits
+  with an error."""
+
+  hook_path = os.path.join(repo_dir, 'hooks', hook_name)
+  main.create_python_hook_script(hook_path, 'import sys;\n'
+    'sys.stderr.write("""%%s hook failed: %%s""" %% (%s, %s));\n'
+    'sys.exit(1);\n' % (repr(hook_name), repr(text)))
 
 def enable_revprop_changes(repo_dir):
   """Enable revprop changes in a repository REPOS_DIR by creating a

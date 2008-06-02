@@ -169,7 +169,7 @@ validate_prop(const char *name, const svn_string_t *value, apr_pool_t *pool)
   /* Validate "svn:" properties. */
   if (svn_prop_is_svn_prop(name) && value != NULL)
     {
-      /* "svn:date" should a valid date. */
+      /* "svn:date" should be a valid date. */
       if (strcmp(name, SVN_PROP_REVISION_DATE) == 0)
         {
           apr_time_t temp;

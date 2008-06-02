@@ -778,6 +778,9 @@ svn_swig_py_initialize();
   rb_define_const(mCore, "SVN_VER_NUM", rb_str_new2(SVN_VER_NUM));
   rb_define_const(mCore, "SVN_VER_NUMBER", rb_str_new2(SVN_VER_NUMBER));
   rb_define_const(mCore, "SVN_VERSION", rb_str_new2(SVN_VERSION));
+
+  rb_define_const(mCore, "SVN_ALLOCATOR_MAX_FREE_UNLIMITED",
+                  UINT2NUM(APR_ALLOCATOR_MAX_FREE_UNLIMITED));
 %}
 
 %header %{
@@ -798,6 +801,10 @@ struct apr_pool_wrapper_t
     svn_swig_rb_destroy_internal_pool(object);
   }
 
+  static void set_default_max_free_size(apr_size_t size) {
+    apr_allocator_max_free_set(svn_swig_rb_allocator(), size);
+  }
+
   apr_pool_wrapper_t(apr_pool_wrapper_t *parent) {
     apr_pool_wrapper_t *self;
     apr_pool_t *parent_pool;
@@ -807,7 +814,7 @@ struct apr_pool_wrapper_t
       parent_pool = parent->pool;
       APR_ARRAY_PUSH(parent->children, apr_pool_wrapper_t *) = self;
     } else {
-      parent_pool = NULL;
+      parent_pool = svn_swig_rb_pool();
     }
     self->pool = svn_pool_create_ex(parent_pool, NULL);
     self->destroyed = FALSE;
@@ -820,6 +827,13 @@ struct apr_pool_wrapper_t
   ~apr_pool_wrapper_t() {
     apr_pool_wrapper_destroy(self);
     xfree(self);
+  }
+
+  void set_max_free_size(apr_size_t size) {
+    apr_allocator_t *allocator;
+
+    allocator = apr_pool_allocator_get(self->pool);
+    apr_allocator_max_free_set(allocator, size);
   }
 
   void _destroy(void) {

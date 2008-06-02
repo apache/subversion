@@ -1,5 +1,7 @@
 Status of this file: In progress.
 
+Purpose of the file: To record the requirements and principles that guide the design of tree-conflict handling. ("Policy" is not a good name for it.)
+
 
 BACKGROUND AND TERMINOLOGY
 ==========================
@@ -7,10 +9,12 @@ BACKGROUND AND TERMINOLOGY
 MERGE TRACKING
 --------------
 
-The merge tracking feature helps the client to determine which changes
-(revisions) to apply to the specified target tree. After that has been
-determined, the application of one change to one target is where conflict
-detection becomes involved. At this level, merge tracking is irrelevant.
+The merge tracking feature helps the client software to determine which changes
+(revisions) from the source branch to apply to the specified target tree. After
+that has been determined, the application of one change to one target is where
+conflict detection becomes involved.
+
+At this level of applying changes to the target, merge tracking is irrelevant.
 
 MERGE IS DIFF-AND-APPLY
 -----------------------
