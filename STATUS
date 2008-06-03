@@ -16,7 +16,7 @@ Candidate changes for 1.5.0:
      Trivial fix, but makes a *world* of difference in terms of output
      sanity.
    Votes:
-     +1: cmpilato, danielsh
+     +1: cmpilato, danielsh, kfogel
 
  * r31516
    Fix bug in "svn up --depth=empty FILE" against pre-1.5 servers.
@@ -28,7 +28,7 @@ Candidate changes for 1.5.0:
    Branch:
      1.5.x-r31516
    Votes:
-     +1: glasser, cmpilato
+     +1: glasser, cmpilato, kfogel
 
 Candidate changes for 1.5.1:
 ============================
