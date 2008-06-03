@@ -3315,23 +3315,24 @@ make_editor(svn_revnum_t *target_revision,
   inner_baton = eb;
 
   /* We need to limit the scope of our operation to the ambient depths
-     present in the working copy already.  If a depth was explicitly
-     requested, libsvn_delta/depth_filter_editor.c will ensure that we
-     never see editor calls that extend beyond the scope of the
-     requested depth.  But even what we do so might extend beyond the
-     scope of our ambient depth.  So we use another filtering editor
-     to avoid modifying the ambient working copy depth when not asked
-     to do so.  (This can also be skipped if the server understands
-     consider letting the depth RA capability percolate down to this
-     level.) */
-  SVN_ERR(svn_wc__ambient_depth_filter_editor(&inner_editor,
-                                              &inner_baton,
-                                              inner_editor,
-                                              inner_baton,
-                                              anchor,
-                                              target,
-                                              adm_access,
-                                              pool));
+     present in the working copy already, if and only if the requested
+     depth is not sticky. If a depth was explicitly requested, 
+     libsvn_delta/depth_filter_editor.c will ensure that we never see 
+     editor calls that extend beyond the scope of the requested depth.
+     But even what we do so might extend beyond the scope of our 
+     ambient depth.  So we use another filtering editor to avoid 
+     modifying the ambient working copy depth when not asked to do so.
+     (This can also be skipped if the server understands consider 
+     letting the depth RA capability percolate down to this level.) */
+  if (!depth_is_sticky)
+    SVN_ERR(svn_wc__ambient_depth_filter_editor(&inner_editor,
+                                                &inner_baton,
+                                                inner_editor,
+                                                inner_baton,
+                                                anchor,
+                                                target,
+                                                adm_access,
+                                                pool));
 
   SVN_ERR(svn_delta_get_cancellation_editor(cancel_func,
                                             cancel_baton,
