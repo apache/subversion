@@ -188,7 +188,7 @@ IV. Detailed functional requirements
 
           + A path name
           + A PEG revision, default is HEAD.
-          + A revision
+          + A revision (FROM revision equals TO revision)
 
           This requirement can be seen as a combination of:
           - SELECT a file or directory.
@@ -211,8 +211,6 @@ IV. Detailed functional requirements
 
           + A path name
           + A PEG revision, default is HEAD.
-          + A list of path@PEGREV's.
-          + Wildcards: '*.jpg'
 
           If the file was copied from another file, we should have the option
           to select either:
@@ -236,8 +234,6 @@ IV. Detailed functional requirements
 
           + A path name
           + A PEG revision, default is HEAD.
-          + A list of path@PEGREV's.
-          + Wildcards: 'build_*'
 
           If the directory was copied from another directory, we should have
           the option to select either:
@@ -257,26 +253,25 @@ IV. Detailed functional requirements
        D. Priority
           M - MUST have this.
 
-    4. SELECT a revision to obliterate
+    4. SELECT all modifications in a revision to obliterate
 
        A. Description
-          Allows the user to delete all modifications made in:
+          Allows the user to obliterate all modifications made in:
 
-          + A revision
-          + A range of revisions
+          + A revision (FROM revision equals TO revision)
 
-          While at first sight this doesn't seem to fit in one of the six
-          steps, this requirement can be seen as a combination of:
-          - SELECT all files and directories modified in the selected
-            revision(s).
-          - LIMIT the range to the selected FROM and TO revision(s).
-
-          Obliterating the HEAD revision can be seen as a special case of this
-          requirement.
+          This is equal to:
+          - SELECT the root of the repository.
+          - LIMIT the range to the selected revision.
 
           It should be possible to choose whether or not to obliterate:
           + the log message, author and date properties
           + all other revision properties.
+
+          Obliterating the HEAD revision can be seen as a special case of this
+          requirement.
+
+          Note: the revision number itself does not need to removed.
 
        B. Main use case
           all
@@ -287,11 +282,48 @@ IV. Detailed functional requirements
        D. Priority
           SHOULD have this if at all possible.
 
-    5. LIMIT revisions from FROM revision to TO rev
+    5. SELECT multiple modifications, files or directories to obliterate
 
        A. Description
+          Allows the user to obliterate multiple modifications, files or
+          directories.
+
+          Modifications can be selected by:
+          + A list of PATH@PEGREV's + revisions
+
+          Paths can be selected by:
+          + A list of path@PEGREV's.
+          + Wildcards: '*.jpg', 'build_*'
+
+       B. Main use case
+          all
+
+       C. Primary actor
+          key user
+
+       D. Priority
+          SHOULD have this if at all possible.
+
+    6. LIMIT the range between FROM and TO revisions or dates.
+
+       A. Description
+          Both FROM and TO may be specified in the form of revisions,
+          dates or keywords like HEAD.
+
           This is the most general case, where both FROM revision and TO
-          revision can be specified. The TO revision defaults to HEAD.
+          revision can be specified.
+
+          Depending on which SELECT option was chosen, the default LIMITs will
+          be different, as detailed in this table:
+
+          +--------------+---------------------------+---------------+
+          | SELECT       | LIMIT FROM rev            | LIMIT TO rev  |
+          +--------------+---------------------------+---------------+
+          | modification | HEAD                      | HEAD          |
+          | file         | creation rev              | HEAD          |
+          | directory    | creation rev              | HEAD          |
+          | \ children   | creation rev of directory | HEAD          |
+          +--------------+---------------------------+---------------+
 
        B. Main use case
           all
@@ -302,18 +334,21 @@ IV. Detailed functional requirements
        D. Priority
           M - MUST have this.
 
-    6. LIMIT revisions from path creation revision to TO rev
+    7. LIMIT the range between PATH CREATION and TO revisions or dates.
 
        A. Description
-          This is a special case of requirement IV.4., where the FROM revision
+          This LIMIT can only be used when SELECTing files or directories, not
+          with modifications.
+
+          This is a special case of requirement IV.6., where the FROM revision
           is defined as the revision in which the selected file or directory
           was either:
           - created
           - copied from another file or directory
 
-          The TO revision can be specified, defaults to HEAD.
-
-          An alias for the 'creation revision' would be handy!
+          Implementation Note: Can this be implemented through a new keyword
+          PATH-CREATION and PATH-LAST-COPY revision? This doesn't need to be
+          obliterate specific.
 
        B. Main use case
           all
@@ -330,31 +365,7 @@ IV. Detailed functional requirements
           times after it was copied, we might need to use a PEG revision to
           indicate where the real directory copy revision can be found.
 
-    7. LIMIT: Default FROM and TO revisions per selection
-
-       A. Description
-          Depending on which SELECT option was chosen, the default LIMITs will
-          be different, as detailed in this table:
-
-          +------------+---------------------------+---------------+
-          | SELECT     | LIMIT FROM rev            | LIMIT TO rev  |
-          +------------+---------------------------+---------------+
-          | file       | creation rev              | HEAD          |
-          | directory  | creation rev              | HEAD          |
-          | \ children | creation rev of directory | HEAD          |
-          | revision   | revision                  | revision      |
-          +------------+---------------------------+---------------+
-
-       B. Main use case
-          all
-
-       C. Primary actor
-          key user
-
-       D. Priority
-          M - MUST have this.
-
-    8. DEFINE: Include all descendants in the obliteration of a file
+    9. DEFINE: Include all descendants in the obliteration of a file
 
        A. Description
           This is basically a greedy obliteration, where all places in the
@@ -385,6 +396,8 @@ IV. Detailed functional requirements
             Add the modification (file-revision) in the selection of to be
             obliterated modifications, using the same limit (revision range)
             and impact-on-descendants option.
+
+          #TODO: what to do when the TO revision is older than HEAD.
 
        B. Main use case
           security
