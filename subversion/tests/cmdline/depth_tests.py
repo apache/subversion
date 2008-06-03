@@ -1474,15 +1474,16 @@ def depth_folding_clean_trees_1(sbox):
   A_path = os.path.join(wc_dir, 'A')
   C_path = os.path.join(A_path, 'C')
   B_path = os.path.join(A_path, 'B')
+  D_path = os.path.join(A_path, 'D')
   E_path = os.path.join(B_path, 'E')
   F_path = os.path.join(B_path, 'F')
-  D_path = os.path.join(A_path, 'D')
-  H_path = os.path.join(A_path, 'H')
+  G_path = os.path.join(D_path, 'G')
+  H_path = os.path.join(D_path, 'H')
 
   # Run 'svn up --set-depth=immediates' to directory A/B/E.
   # This is an infinity=>immediates folding, changes on metadata only
   expected_output = svntest.wc.State(wc_dir, {})
-  expected_status = svntest.actions.get_virginal_state('', 1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_disk = svntest.main.greek_state.copy()
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
@@ -1645,8 +1646,8 @@ def depth_folding_clean_trees_1(sbox):
                                         expected_status,
                                         None, None,
                                         None, None, None, None,
-                                        '--set-depth', 'files')
-  verify_depth(None, "files")
+                                        '--set-depth', 'files', wc_dir)
+  verify_depth(None, "files", wc_dir)
 
 
 #------------------------------------------------------------------------------
@@ -1675,7 +1676,8 @@ def depth_folding_clean_trees_2(sbox):
   verify_depth(None, "immediates", A_path)
   
   # pull in directory D at infinity
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', D_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 
+                                     'up', '--set-depth', 'infinity', D_path)
 
   # Run 'svn up --set-depth=immediates' to directory A/D.
   # This is an infinity=>immediates folding
@@ -1699,7 +1701,7 @@ def depth_folding_clean_trees_2(sbox):
     'A/D/G'          : Item(status='  ', wc_rev=1),
     'A/D/H'          : Item(status='  ', wc_rev=1)
     })
-  expected_disk = svntest.wc.State(wc_dir, {
+  expected_disk = svntest.wc.State('', {
     'iota'        : Item(contents="This is the file 'iota'.\n"),
     'A'           : Item(contents=None),
     'A/mu'        : Item(contents="This is the file 'mu'.\n"),
@@ -1708,7 +1710,7 @@ def depth_folding_clean_trees_2(sbox):
     'A/D'         : Item(contents=None),
     'A/D/gamma'   : Item(contents="This is the file 'gamma'.\n"),
     'A/D/G'       : Item(contents=None),
-    'A/D/H'       : Item(contents=None)
+    'A/D/H'       : Item(contents=None),
     })
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
@@ -1742,7 +1744,7 @@ def depth_folding_clean_trees_2(sbox):
 
   # pull in directory D at infinity
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     'up', D_path)
+                                     'up', '--set-depth', 'infinity', D_path)
 
   # Run 'svn up --set-depth=immediates' to directory A.
   # This is an mixed(immediates+infinity)=>immediates folding
@@ -1763,7 +1765,7 @@ def depth_folding_clean_trees_2(sbox):
 
   # pull in directory D at files
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     'up', '--depth', 'files', D_path)
+                                     'up', '--set-depth', 'files', D_path)
 
   # Run 'svn up --set-depth=immediates' to directory A.
   # This is an mixed(immediates+files)=>immediates folding
@@ -1790,7 +1792,7 @@ def depth_folding_clean_trees_2(sbox):
     ''               : Item(status='  ', wc_rev=1),
     'iota'           : Item(status='  ', wc_rev=1)
     })
-  expected_disk = svntest.wc.State(wc_dir, {
+  expected_disk = svntest.wc.State('', {
     'iota'        : Item(contents="This is the file 'iota'.\n")
     })
   svntest.actions.run_and_verify_update(wc_dir,
@@ -1844,7 +1846,7 @@ def depth_fold_expand_clean_trees(sbox):
     'A/C'            : Item(status='  ', wc_rev=1),
     'A/D'            : Item(status='  ', wc_rev=1)
     })
-  expected_disk = svntest.wc.State(wc_dir, {
+  expected_disk = svntest.wc.State('', {
     'A'           : Item(contents=None),
     'A/mu'        : Item(contents="This is the file 'mu'.\n"),
     'A/B'         : Item(contents=None),
@@ -1865,16 +1867,16 @@ def depth_fold_expand_clean_trees(sbox):
 
   # Run 'svn up --set-depth=files' to directory A in other_wc. This both
   # removes directory D and expands directory A to files
-  expected_output = svntest.wc.State(wc_dir, {
+  expected_output = svntest.wc.State(other_wc, {
     'A/mu'           : Item(status='A '),
     'A/D'            : Item(status='D '),
     })
-  expected_status = svntest.wc.State(wc_dir, {
+  expected_status = svntest.wc.State(other_wc, {
     ''               : Item(status='  ', wc_rev=1),
     'A'              : Item(status='  ', wc_rev=1),
     'A/mu'           : Item(status='  ', wc_rev=1),
     })
-  expected_disk = svntest.wc.State(wc_dir, {
+  expected_disk = svntest.wc.State('', {
     'A'           : Item(contents=None),
     'A/mu'        : Item(contents="This is the file 'mu'.\n")
     })
@@ -1946,15 +1948,15 @@ def fold_tree_with_unversioned_modified_items(sbox):
 
   # Fold the A dir to empty, expect the modified & unversioned ones left
   # unversioned rather than removed, along with paths to those items.
+
+  # XXX:Even though the directory B and D is not deleted because of local
+  # modificatoin or unversioned items, there will be only one notification at
+  # B and D. Is this Okay? XXX Check this XXX
   expected_output = svntest.wc.State(wc_dir, {
-    'A/B/lambda'     : Item(status='D '),
-    'A/B/E'          : Item(status='D '),
-    'A/B/F'          : Item(status='D '),
+    'A/B'            : Item(status='D '),
     'A/C'            : Item(status='D '),
-    'A/D/gamma'      : Item(status='D '),
-    'A/D/G/rho'      : Item(status='D '),
-    'A/D/G/tau'      : Item(status='D '),
-    'A/D/H'          : Item(status='D '),
+    'A/D'            : Item(status='D '),
+    'A/mu'           : Item(status='D '),
     })
   # unversioned items will be ignored in in the status tree, since the
   # run_and_verify_update() function uses a quiet version of svn status
@@ -1964,8 +1966,8 @@ def fold_tree_with_unversioned_modified_items(sbox):
     'iota'           : Item(status='  ', wc_rev=1),
     'A'              : Item(status='  ', wc_rev=1)
     })
-  expected_disk = svntest.wc.State(wc_dir, {
-    'iota'           : Item(contents="this is iota\n"),
+  expected_disk = svntest.wc.State('', {
+    'iota'           : Item(contents="This is the file 'iota'.\n"),
     'A'              : Item(contents=None),
     'A/mu'           : Item(contents="mu modified\n"),
     'A/B'            : Item(contents=None),
@@ -2011,9 +2013,9 @@ test_list = [ None,
               upgrade_from_above,
               status_in_depthy_wc,
               depthy_update_above_dir_to_be_deleted,
-              XFail(depth_folding_clean_trees_1),
+              depth_folding_clean_trees_1,
               XFail(depth_folding_clean_trees_2),
-              XFail(depth_fold_expand_clean_trees),
+              depth_fold_expand_clean_trees,
               pull_in_tree_with_depth_option,
               XFail(fold_tree_with_unversioned_modified_items),
             ]
