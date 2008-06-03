@@ -410,11 +410,13 @@ href="http://svnbook.red-bean.com/nightly/en/svn.branchmerge.advanced.html#svn.b
 >Blocking Changes</a> in the Subversion book, for more details.)</p>
 </div>  <!-- mt-record-only -->
 
+<div id="mt-reintegrate" title="mt-reintegrate">
 <p>The --reintegrate option is used when merging a branch back to
 trunk; it checks for some common safeguard conditions and then does
 the merge in a fast and efficient way.  See <a
 href="http://svnbook.red-bean.com/nightly/en/svn.branchmerge.basicmerging.html#svn.branchemerge.basicmerging.stayinsync"
 >Keeping a branch in sync</a> in the Subversion book for more.</p>
+</div>  <!-- mt-reintegrate -->
 
 <p>The new <strong><code>svn&nbsp;mergeinfo</code></strong> command can
 show which changesets a directory has absorbed and which changesets
@@ -463,6 +465,44 @@ properties to the <tt>svn:mergeinfo</tt> properties that Subversion
 itself now uses.</p>
 
 </div>  <!-- mt-compatibility -->
+
+<div class="h4" id="mt-known-limitations" title="mt-known-limitations">
+<h4>Known Limitations</h4>
+
+<p>[This section describes a problem that is being fixed in
+development versions of Subversion, and releases in the near future
+will contain those fixes.  See <a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=3157" >Issue
+#3157</a> for more details.]</p>
+
+<p>Merge tracking information currently can include the "natural
+history" of a path.  One situation where this happens is when creating
+a <tt>branch</tt> from <tt>trunk</tt> at a certain revision <tt>X</tt>
+and later merging all changes from <tt>branch</tt> back to
+<tt>trunk</tt>, without explicitly limiting the merge range and
+without using the recommended <a href="#mt-reintegrate"
+><code>--reintegrate</code> option</a>.  Afterwards, the merge
+tracking information on <tt>trunk</tt> will list revisions before
+<tt>X</tt>.  This does no harm to future merge operations, but
+thereafter <code>svn log -g</code> on <tt>trunk</tt> will report these
+revisions from the "natural history", which is typically not expected.
+This is because <code>svn log -g</code> uses the merge tracking
+information from previous revisions (not only from HEAD).</p>
+
+<p>One workaround is to correct the merge tracking information before
+committing the merged revision, by reverse merging the "natural
+history" information: <code>svn merge --record-only -rX:1</code>.
+Another solution is to avoid this situation entirely, by explicitly
+specifying merge ranges in the first place, e.g.: <tt>-rX:HEAD</tt>.
+See <a
+href="http://subversion.tigris.org/servlets/ReadMsg?listName=dev&msgNo=139379"
+>this mail</a> for more information.</p>
+
+<p>The best solution is to to <a href="#mt-reintegrate" >use the
+<code>--reintegrate</code> option</a>.  If you do, the above problem
+won't happen.</p>
+
+</div>  <!-- mt-known-limitations -->
 
 <div class="h4" id="mt-further-reading" title="mt-further-reading">
 <h4>Further reading</h4>
