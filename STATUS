@@ -8,27 +8,6 @@ delay a release, etc.
 Candidate changes for 1.5.0:
 ============================
 
- * r31485
-   Don't allow 'svn cl --cl old-changelist new-changelist' to spam the
-   screen with "Skipped" notifications for directories that (by virtue of
-   being directories) aren't part of the old changelist.
-   Notes:
-     Trivial fix, but makes a *world* of difference in terms of output
-     sanity.
-   Votes:
-     +1: cmpilato, danielsh, kfogel
-
- * r31516
-   Fix bug in "svn up --depth=empty FILE" against pre-1.5 servers.
-   Notes:
-     Technically not a regression since it requires using a new option,
-     but causes potentially-undetectable working copy corruption.
-     Has a test.  Mild conflict in the test file (context), so
-     see branch.
-   Branch:
-     1.5.x-r31516
-   Votes:
-     +1: glasser, cmpilato, kfogel
 
 Candidate changes for 1.5.1:
 ============================
@@ -124,6 +103,28 @@ Candidate changes for 1.5.1:
 
 Approved changes (all releases):
 ================================
+
+ * r31485
+   Don't allow 'svn cl --cl old-changelist new-changelist' to spam the
+   screen with "Skipped" notifications for directories that (by virtue of
+   being directories) aren't part of the old changelist.
+   Notes:
+     Trivial fix, but makes a *world* of difference in terms of output
+     sanity.
+   Votes:
+     +1: cmpilato, danielsh, kfogel
+
+ * r31516
+   Fix bug in "svn up --depth=empty FILE" against pre-1.5 servers.
+   Notes:
+     Technically not a regression since it requires using a new option,
+     but causes potentially-undetectable working copy corruption.
+     Has a test.  Mild conflict in the test file (context), so
+     see branch.
+   Branch:
+     1.5.x-r31516
+   Votes:
+     +1: glasser, cmpilato, kfogel
 
 Approved changes (1.5.1 and later):
 ===================================
