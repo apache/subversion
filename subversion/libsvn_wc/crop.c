@@ -138,14 +138,14 @@ crop_children(svn_wc_adm_access_t *adm_access,
                 }
             }
           else
-            return crop_children(dir_access,
-                                 this_path, 
-                                 svn_depth_empty, 
-                                 notify_func,
-                                 notify_baton,
-                                 cancel_func, 
-                                 cancel_baton, 
-                                 iterpool);
+            SVN_ERR(crop_children(dir_access,
+                                  this_path, 
+                                  svn_depth_empty, 
+                                  notify_func,
+                                  notify_baton,
+                                  cancel_func, 
+                                  cancel_baton, 
+                                  iterpool));
         }
       /* XXX: What about svn_node_none & svn_node_unkown? Currently assume
          svn_node_dir*/
