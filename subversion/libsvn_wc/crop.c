@@ -38,9 +38,13 @@
       }                                                          \
   } while (0)
 
-/* Helper function that crops the children of the TARGET, under the constraint
- * of DEPTH. The TARGET itself should have a proper depth and will never be
- * cropped.
+/* Helper function that crops the children of the DIR_PATH, under the constraint
+ * of DEPTH. The DIR_PATH itself will never be cropped. The ADM_ACCESS is the
+ * access baton that contains DIR_PATH. And the whole subtree should have been
+ * locked.
+ *
+ * If NOTIFY_FUNC is not null, each file and ROOT of subtree will be reported
+ * upon remove.
  */
 svn_error_t *
 crop_children(svn_wc_adm_access_t *adm_access,
