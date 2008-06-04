@@ -469,18 +469,18 @@ itself now uses.</p>
 <div class="h4" id="mt-known-limitations" title="mt-known-limitations">
 <h4>Known Limitations</h4>
 
-<p>[This section describes a problem that is being fixed in
+<p>This section describes a problem that is being fixed in
 development versions of Subversion, and releases in the near future
 will contain those fixes.  See <a
 href="http://subversion.tigris.org/issues/show_bug.cgi?id=3157" >Issue
-#3157</a> for more details.]</p>
+#3157</a> for more details.</p>
 
 <p>Merge tracking information currently can include the "natural
 history" of a path.  One situation where this happens is when creating
 a <tt>branch</tt> from <tt>trunk</tt> at a certain revision <tt>X</tt>
 and later merging all changes from <tt>branch</tt> back to
 <tt>trunk</tt>, without explicitly limiting the merge range and
-without using the recommended <a href="#mt-reintegrate"
+without using the <a href="#mt-reintegrate"
 ><code>--reintegrate</code> option</a>.  Afterwards, the merge
 tracking information on <tt>trunk</tt> will list revisions before
 <tt>X</tt>.  This does no harm to future merge operations, but
@@ -488,6 +488,14 @@ thereafter <code>svn log -g</code> on <tt>trunk</tt> will report these
 revisions from the "natural history", which is typically not expected.
 This is because <code>svn log -g</code> uses the merge tracking
 information from previous revisions (not only from HEAD).</p>
+
+<p>Note that this should not be a problem with release branches (also
+called "maintenance branches"), because one typically does not merge
+them back to trunk.  Instead, recommended practice is for new changes
+to enter on trunk and be ported outward to the branches that need the
+changes.  However, you could run into this problem with a feature
+branch, which would be merged back to trunk once, at the end of the
+branch's lifetime.</p>
 
 <p>One workaround is to correct the merge tracking information before
 committing the merged revision, by reverse merging the "natural
@@ -498,9 +506,9 @@ See <a
 href="http://subversion.tigris.org/servlets/ReadMsg?listName=dev&msgNo=139379"
 >this mail</a> for more information.</p>
 
-<p>The best solution is to to <a href="#mt-reintegrate" >use the
-<code>--reintegrate</code> option</a>.  If you do, the above problem
-won't happen.</p>
+<p>When merging a feature branch, the best solution is to <a
+href="#mt-reintegrate" >use the <code>--reintegrate</code> option</a>;
+then this problem won't happen in the first place.</p>
 
 </div>  <!-- mt-known-limitations -->
 
