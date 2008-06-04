@@ -11050,7 +11050,8 @@ def merge_added_subtree(sbox):
                                      "cp", A_COPY_url + '/D2',
                                      os.path.join(A_path, "D2"))
   actual_tree = svntest.tree.build_tree_from_wc (A_path, 0)
-  svntest.tree.compare_trees (actual_tree, expected_disk.old_tree(),
+  svntest.tree.compare_trees ("expected disk",
+                              actual_tree, expected_disk.old_tree(),
                               None, None, None, None)
   svntest.actions.run_and_verify_status(A_path, expected_status)
 
