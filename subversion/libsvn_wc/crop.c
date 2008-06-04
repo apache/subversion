@@ -67,11 +67,11 @@ crop_children(svn_wc_adm_access_t *adm_access,
   dot_entry = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR,
                            APR_HASH_KEY_STRING);
 
-  /* Update the depth of target first, if needed*/
+  /* Update the depth of target first, if needed. */
   if (dot_entry->depth > depth)
     {
       /* XXX: Do we need to restore the modified depth if the user cancel this
-         operation?*/
+         operation? */
       dot_entry->depth = depth;
       SVN_ERR(svn_wc__entries_write(entries, dir_access, subpool));
     }
@@ -142,14 +142,16 @@ crop_children(svn_wc_adm_access_t *adm_access,
                 }
             }
           else
-            SVN_ERR(crop_children(dir_access,
-                                  this_path, 
-                                  svn_depth_empty, 
-                                  notify_func,
-                                  notify_baton,
-                                  cancel_func, 
-                                  cancel_baton, 
-                                  iterpool));
+            {
+              SVN_ERR(crop_children(dir_access,
+                                    this_path, 
+                                    svn_depth_empty, 
+                                    notify_func,
+                                    notify_baton,
+                                    cancel_func, 
+                                    cancel_baton, 
+                                    iterpool));
+            }
         }
       /* XXX: What about svn_node_none & svn_node_unkown? Currently assume
          svn_node_dir*/
@@ -174,18 +176,18 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
   const char *full_path;
   svn_wc_adm_access_t *dir_access;
 
-  /* Only make sense to when the depth is restrictive. 
-     Currently does not support svn_depth_exclude*/
+  /* Only makes sense when the depth is restrictive. 
+     Currently does not support svn_depth_exclude. */
   if (!(depth > svn_depth_exclude && depth < svn_depth_infinity))
     return SVN_NO_ERROR;
 
-  /* Only make sense to crop a dir target*/
+  /* Only makes sense to crop a dir target. */
   full_path = svn_path_join(svn_wc_adm_access_path(anchor), target, pool);
   SVN_ERR(svn_wc_entry(&entry, full_path, anchor, FALSE, pool));
   if (!entry || entry->kind != svn_node_dir)
     return SVN_NO_ERROR;
 
-  /* Check to see if the target itself should be cropped */
+  /* Check to see if the target itself should be cropped. */
   if (depth == svn_depth_empty)
     {
       const svn_wc_entry_t *parent_entry;
@@ -195,8 +197,8 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
 
       if (parent_entry && parent_entry->depth <= svn_depth_files)
         {
-          /* Crop the target with the subtree alltogher if the parent does
-             not want sub-directories */
+          /* Crop the target with the subtree altogether if the parent
+             does not want sub-directories. */
           SVN_ERR(svn_wc_adm_retrieve(&dir_access, anchor, full_path, pool));
           SVN_ERR_IGNORE_LOCAL_MOD
             (svn_wc_remove_from_revision_control(dir_access,
