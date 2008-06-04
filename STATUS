@@ -103,14 +103,6 @@ Candidate changes for 1.5.1:
 Approved changes (all releases):
 ================================
 
- * r29432
-   Update INSTALL to mention support for Neon-0.28.
-   Notes:
-     This was apparently overlooked while merging Neon-0.28 support to 1.5.x
-     in r29469. One-line change, merges cleanly, no need for resoak.
-   Votes:
-     +1: stsp, danielsh
-
 Approved changes (1.5.1 and later):
 ===================================
 
