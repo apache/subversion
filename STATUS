@@ -8,6 +8,13 @@ delay a release, etc.
 Candidate changes for 1.5.0:
 ============================
 
+ * r29432
+   Update INSTALL to mention support for Neon-0.28.
+   Notes:
+     This was apparently overlooked while merging Neon-0.28 to 1.5.x
+     in r29469. One-line change, merges cleanly, no need for resoak.
+   Votes:
+     +1: stsp
 
 Candidate changes for 1.5.1:
 ============================
