@@ -593,7 +593,7 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
         if (strcmp(schedulestr, SVN_WC__ENTRY_VALUE_ADD) == 0)
           entry->schedule = svn_wc_schedule_add;
         else if (strcmp(schedulestr, SVN_WC__ENTRY_VALUE_DELETE) == 0)
-              entry->schedule = svn_wc_schedule_delete;
+          entry->schedule = svn_wc_schedule_delete;
         else if (strcmp(schedulestr, SVN_WC__ENTRY_VALUE_REPLACE) == 0)
           entry->schedule = svn_wc_schedule_replace;
         else if (strcmp(schedulestr, "") == 0)
