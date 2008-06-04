@@ -68,7 +68,7 @@ okay_to_edit(struct edit_baton *eb,
   switch (eb->requested_depth)
     {
     case svn_depth_empty:
-      return (kind == svn_node_dir && effective_depth <= 0);
+      return (effective_depth <= 0);
     case svn_depth_files:
       return ((effective_depth <= 0)
               || (kind == svn_node_file && effective_depth == 1));
