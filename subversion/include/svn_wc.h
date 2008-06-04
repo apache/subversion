@@ -4857,32 +4857,33 @@ svn_wc_set_changelist(const char *path,
                       void *notify_baton,
                       apr_pool_t *pool);
 
-/** Crop the @a target according to @a depth. Any item that exceed the
- * boundary of @a depth (relative to @a target) will be removed from revision
- * control. Modified items will be left unversioned. And the clean ones will
- * be removed from the disk. 
+/** Crop @a target according to @a depth. 
  *
- * If the @a target has a shallower depth at the beginning, it will not be
- * upgraded to the requested one, since that will not be a cropping at all.
- * However, the children will be checked an cropped properly according to the
- * requested @a depth.
+ * Remove any item that exceeds the boundary of @a depth (relative to
+ * @a target) from revision control.  Leave modified items behind
+ * (unversioned), while removing unmodified ones completely.
  *
- * The function returns immediately with no error if @a target is not a
- * directory, or if the @a depth is not restrictive at all (e.g.
- * svn_depth_infinity).
+ * If @a target starts out with a shallower depth than @a depth, do not
+ * upgrade it to @a depth (that would not be cropping); however, do
+ * check children and crop them appropriately according to @a depth.
+ *
+ * Returns immediately with no error if @a target is not a directory,
+ * or if @a depth is not restrictive (e.g., @c svn_depth_infinity).
  *
  * @a anchor is an access baton, with a tree lock, for the local path to the
- * working copy which will be used as the root of this operation.  If @a
- * target is not empty, it represents an entry in the @a anchor path
- * (otherwise, the @a anchor is the subject).
+ * working copy which will be used as the root of this operation.  If
+ * @a target is not empty, it represents an entry in the @a anchor path;
+ * otherwise, the @a anchor path is the target.  @a target may not be
+ * @c NULL.
  *
- * If @a cancel_func is not @c NULL, call it with @a cancel_baton to determine
- * if the client has cancelled the operation.
+ * If @a cancel_func is not @c NULL, call it with @a cancel_baton at
+ * various points to determine if the client has cancelled the operation.
  *
- * If @a notify_func is not @c NULL, call it with @a notify_baton to report
- * the change.
+ * If @a notify_func is not @c NULL, call it with @a notify_baton to
+ * report changes as they are made.
  *
- * @note: svn_depth_exclude is currently not supported.
+ * @note: svn_depth_exclude currently does nothing; passing it results
+ * in immediate success with no side effects.
  *
  * @since New in 1.6
  */
