@@ -1288,7 +1288,9 @@ svn_repos_node_location_segments(svn_repos_t *repos,
  * revisions in which at least one of @a paths was changed (i.e., if
  * file, text or props changed; if dir, props or entries changed or any node
  * changed below it).  Each path is a <tt>const char *</tt> representing
- * an absolute path in the repository.
+ * an absolute path in the repository.  If @a paths is NULL or empty,
+ * show all revisions regardless of what paths were changed in those
+ * revisions.
  *
  * If @a limit is non-zero then only invoke @a receiver on the first
  * @a limit logs.
@@ -1349,7 +1351,8 @@ svn_repos_get_logs4(svn_repos_t *repos,
  * Same as svn_repos_get_logs4(), but with @a receiver being @c
  * svn_log_message_receiver_t instead of @c svn_log_entry_receiver_t.
  * Also, @a include_merged_revisions is set to @c FALSE and @a revprops is
- * svn:author, svn:date, and svn:log.
+ * svn:author, svn:date, and svn:log.  If @a paths is empty, nothing
+ * is returned.
  *
  * @since New in 1.2.
  * @deprecated Provided for backward compatibility with the 1.4 API.
