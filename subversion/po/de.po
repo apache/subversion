@@ -10,7 +10,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.5\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2008-05-19 09:01+0200\n"
-"PO-Revision-Date: 2008-05-26 16:40+0200\n"
+"PO-Revision-Date: 2008-06-05 16:40+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: German <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -6499,9 +6499,18 @@ msgstr ", (mf) volle eigene Datei, (tf) volle fremde Datei"
 msgid ", (r) resolved"
 msgstr ", (r) aufgelöst"
 
+# Addional space in translation is required because of the following output
+# (the number of spaces is hardcoded!):
+#
+# "Select: (p) postpone"
+# ",\n        "
+# "(h) help for more options: "
+#
+# The translation is longer:
+# "Auswahl: (p) zurückstellen"
 #: ../svn/conflict-callbacks.c:411
 msgid "(h) help for more options: "
-msgstr "(h) Hilfe für weitere Optionen: "
+msgstr " (h) Hilfe für weitere Optionen: "
 
 #: ../svn/conflict-callbacks.c:419
 #, c-format
