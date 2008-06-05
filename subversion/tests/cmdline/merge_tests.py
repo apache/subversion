@@ -12131,8 +12131,6 @@ def subtree_merges_dont_intersect_with_targets(sbox):
 
 # Some more tests for issue #3067 'subtrees that don't exist at the start
 # or end of a merge range shouldn't break the merge'
-#
-# Marked as XFail until issue #3067 is fixed.
 def subtree_source_missing_in_requested_range(sbox):
   "subtree merge source might not exist"
 
@@ -12608,8 +12606,8 @@ test_list = [ None,
               SkipUnless(merge_broken_link, svntest.main.is_posix_os),
               SkipUnless(subtree_merges_dont_intersect_with_targets,
                          server_has_mergeinfo),
-              XFail(SkipUnless(subtree_source_missing_in_requested_range,
-                               server_has_mergeinfo)),
+              SkipUnless(subtree_source_missing_in_requested_range,
+                         server_has_mergeinfo),
              ]
 
 if __name__ == '__main__':
