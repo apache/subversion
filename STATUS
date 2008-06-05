@@ -111,7 +111,7 @@ Candidate changes for 1.5.1:
  * r31603
    Export svn_path_is_url to the bindings.
    Votes:
-     +1: epg
+     +1: epg, blair
 
 Approved changes (all releases):
 ================================
