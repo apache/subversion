@@ -667,7 +667,7 @@ close_edit(void *edit_baton,
              (to be reported back to the client, who will probably
              display it as a warning) and clear the error. */
           if (err->child && err->child->message)
-            post_commit_err = apr_pstrdup(pool, err->child->message) ;
+            post_commit_err = apr_pstrdup(pool, err->child->message);
           
           svn_error_clear(err);
           err = SVN_NO_ERROR;
@@ -710,9 +710,9 @@ close_edit(void *edit_baton,
                                 pool);
     if (! err)
       {
-        err =  svn_fs_revision_prop(&author, svn_repos_fs(eb->repos),
-                                    new_revision, SVN_PROP_REVISION_AUTHOR,
-                                    pool);
+        err = svn_fs_revision_prop(&author, svn_repos_fs(eb->repos),
+                                   new_revision, SVN_PROP_REVISION_AUTHOR,
+                                   pool);
       }
 
     if ((! err) && eb->commit_callback)
