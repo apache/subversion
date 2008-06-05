@@ -9226,8 +9226,6 @@ def merge_source_normalization_and_subtree_merges(sbox):
 
 # Tests for issue #3067: 'subtrees with intersecting mergeinfo, that don't
 # exist at the start of a merge range shouldn't break the merge'
-#
-# Marked as XFail until issue #3067 is fixed.
 def new_subtrees_should_not_break_merge(sbox):
   "subtrees added after start of merge range are ok"
 
@@ -12579,8 +12577,8 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(merge_source_normalization_and_subtree_merges,
                          server_has_mergeinfo),
-              XFail(SkipUnless(new_subtrees_should_not_break_merge,
-                               server_has_mergeinfo)),
+              SkipUnless(new_subtrees_should_not_break_merge,
+                         server_has_mergeinfo),
               SkipUnless(basic_reintegrate,
                          server_has_mergeinfo),
               XFail(reintegrate_with_rename),
