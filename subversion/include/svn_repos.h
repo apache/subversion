@@ -938,14 +938,15 @@ svn_repos_replay(svn_fs_root_t *root,
  * due to authz will return SVN_ERR_AUTHZ_UNREADABLE or
  * SVN_ERR_AUTHZ_UNWRITABLE.
  *
- * Calling @a (*editor)->close_edit completes the commit.  Before
- * @c close_edit returns, but after the commit has succeeded, it will
- * invoke @a callback with the new revision number, the commit date (as a
- * <tt>const char *</tt>), commit author (as a <tt>const char *</tt>), and
- * @a callback_baton as arguments.  If @a callback returns an error, that
- * error will be returned from @c close_edit, otherwise if there was a
- * post-commit hook failure, then that error will be returned and will
- * have code SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED.
+ * Calling @a (*editor)->close_edit completes the commit.
+ *
+ * If @a callback is non-NULL, then before @c close_edit returns (but
+ * after the commit has succeeded) @c close_edit will invoke
+ * @a callback with a filled-in @c svn_commit_info_t *, @a callback_baton,
+ * and @a pool or some subpool thereof as arguments.  If @a callback
+ * returns an error, that error will be returned from @c close_edit,
+ * otherwise if there was a post-commit hook failure, then that error
+ * will be returned with code SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED.
  *
  * Calling @a (*editor)->abort_edit aborts the commit, and will also
  * abort the commit transaction unless @a txn was supplied (not @c
