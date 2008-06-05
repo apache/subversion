@@ -11,6 +11,13 @@ Candidate changes for 1.5.0:
 Candidate changes for 1.5.1:
 ============================
 
+ * r31223
+   Fix segfault when svn_ra_open3 is passed a bogus URL such as 'bogusURL'.
+   Notes:
+     Not possible to make svn(1) segfault with this, so can wait for 1.5.1.
+   Votes:
+     +1: epg
+
  * r31313
    Make all ra layers return a consistent error when a path is not found in the
    repository.
