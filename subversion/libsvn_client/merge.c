@@ -4064,6 +4064,12 @@ normalize_merge_sources(apr_array_header_t **merge_sources_p,
    requested merge range REQUESTED_RANGE from SOURCE_REL_PATH, remove any
    portion of REQUESTED_RANGE which is already described in
    IMPLICIT_MERGEINFO.  Store the result in *FILTERED_RANGELIST.
+   
+   This function only filters natural history for mergeinfo that will be
+   *added* during a forward merge.  Removing natural history from explicit
+   mergeinfo is harmless.  If REQUESTED_RANGE describes a reverse merge,
+   then *FILTERED_RANGELIST is simply populated with one range described
+   by REQUESTED_RANGE.
 
    *FILTERED_RANGELIST is allocated in POOL. */
 static svn_error_t *
@@ -4081,9 +4087,10 @@ filter_natural_history_from_mergeinfo(apr_array_header_t **filtered_rangelist,
 
   *filtered_rangelist = NULL;
 
-  /* If the IMPLICIT_MERGEINFO already describes ranges associated
-     with SOURCE_REL_PATH then filter those ranges out. */
-  if (implicit_mergeinfo)
+  /* For forward merges: If the IMPLICIT_MERGEINFO already describes ranges
+     associated with SOURCE_REL_PATH then filter those ranges out. */
+  if (implicit_mergeinfo
+      && (requested_range->start < requested_range->end))
     {
       apr_array_header_t *implied_rangelist =
         apr_hash_get(implicit_mergeinfo, source_rel_path,
