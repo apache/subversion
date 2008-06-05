@@ -715,7 +715,7 @@ close_edit(void *edit_baton,
                                     pool);
       }
 
-    if (! err)
+    if ((! err) && eb->commit_callback)
       {
         commit_info = svn_create_commit_info(pool);
 
