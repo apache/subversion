@@ -6,7 +6,7 @@
 #
 # To use just run it in the directory with the signatures and tarballs and
 # pass the version of subversion you want to check.  It assumes gpg is on
-# you path, if it isn't you should fix that. :D
+# your path, if it isn't you should fix that. :D
 #
 # Script will die if any gpg process returns an error.
 #
