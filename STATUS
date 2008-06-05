@@ -108,6 +108,11 @@ Candidate changes for 1.5.1:
    Votes:
      +1: cmpilato
 
+ * r31603
+   Export svn_path_is_url to the bindings.
+   Votes:
+     +1: epg
+
 Approved changes (all releases):
 ================================
 
