@@ -44,7 +44,7 @@ Candidate changes for 1.5.1:
    Justification:
      Let the commands be useful even when some revisions' dates are corrupt.
    Votes:
-     +1: danielsh
+     +1: danielsh, epg
 
  * r30748
    Don't try to drive the merge editor when there is nothing to be merged.
