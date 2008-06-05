@@ -837,18 +837,6 @@ conventions:</p>
       their editors' sentence-motion and -manipulation commands.</p>
 </li>
 
-<li><p>Write strcmp() tests like this:</p>
-      <pre>
-         if (strcmp(foo, bar) == 0)
-      </pre>
-      <p>instead of</p>
-      <pre>
-         if (! strcmp(foo, bar))
-      </pre>
-      <p>That way, equality of strings is signified with "==" instead
-         of with "!".</p>
-</li>
-
 <li><p>There are many other unspoken conventions maintained throughout
       the code, that are only noticed when someone unintentionally
       fails to follow them.  Just try to have a sensitive eye for the
