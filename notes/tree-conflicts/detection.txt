@@ -47,7 +47,7 @@ USE CASE 4
 ==========
 
 We skip tree conflict detection if the record_only field of the
-merge-command baton is FALSE. A record-only merge operation updates
+merge-command baton is TRUE. A record-only merge operation updates
 mergeinfo without touching files.
 
 If 'svn merge' tries to modify a file that does not exist in the
@@ -88,7 +88,7 @@ USE CASE 5
 ==========
 
 We skip tree conflict detection if the record_only field of the
-merge-command baton is FALSE. A record-only merge operation updates
+merge-command baton is TRUE. A record-only merge operation updates
 mergeinfo without touching files.
 
 If 'svn merge' deletes an existing file, the file is a tree conflict
@@ -115,7 +115,7 @@ USE CASE 6
 ==========
 
 We skip tree conflict detection if the record_only field of the
-merge-command baton is FALSE. A record-only merge operation updates
+merge-command baton is TRUE. A record-only merge operation updates
 mergeinfo without touching files.
 
 If 'svn merge' tries to delete a file that does not exist in the
