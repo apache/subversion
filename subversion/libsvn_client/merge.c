@@ -2298,7 +2298,9 @@ remove_absent_children(const char *target_wcpath,
     }
 }
 
-/* Sets up the diff editor report and drives it by properly negating
+/* Helper for do_directory_merge().
+
+   Sets up the diff editor report and drives it by properly negating
    subtree that could have a conflicting merge history.
 
    MERGE_B->ra_session1 reflects URL1; MERGE_B->ra_session2 reflects URL2.
@@ -2327,19 +2329,27 @@ drive_merge_report_editor(const char *target_wcpath,
   const svn_delta_editor_t *diff_editor;
   void *diff_edit_baton;
   void *report_baton;
-  svn_revnum_t default_start;
+  svn_revnum_t default_start, target_start;
   svn_boolean_t honor_mergeinfo;
   const char *old_sess2_url;
 
   mergeinfo_behavior(&honor_mergeinfo, NULL, merge_b);
 
-  /* Calculate the default starting revision. */
-  default_start = revision1;
+  /* Start with a safe default starting revision for the editor and the
+     merge target. */
+  default_start = target_start = revision1;
+
+  /* If we are honoring mergeinfo the starting revision for the merge target
+     might not be REVISION1, in fact the merge target might not need *any*
+     part of REVISION1:REVISION2 merged -- Instead some subtree of the target
+     needs REVISION1:REVISION2 -- So get the right starting revision for the
+     target. */
   if (honor_mergeinfo)
     {
       if (merge_b->target_has_dummy_merge_range)
         {
-          default_start = revision2;
+          /* The merge target doesn't need anything merged. */
+          target_start = revision2;
         }
       else if (children_with_mergeinfo && children_with_mergeinfo->nelts)
         {
@@ -2348,10 +2358,12 @@ drive_merge_report_editor(const char *target_wcpath,
                           svn_client__merge_path_t *);
           if (child->remaining_ranges->nelts)
             {
+              /* The merge target needs something merged, but it might
+                 not be the entire REVISION1:REVISION2 range. */
               svn_merge_range_t *range =
                 APR_ARRAY_IDX(child->remaining_ranges, 0, 
                               svn_merge_range_t *);
-              default_start = range->start;
+              target_start = range->start;
             }
         }
     }
@@ -2379,7 +2391,7 @@ drive_merge_report_editor(const char *target_wcpath,
                           url2, diff_editor, diff_edit_baton, pool));
 
   /* Drive the reporter. */
-  SVN_ERR(reporter->set_path(report_baton, "", default_start, depth,
+  SVN_ERR(reporter->set_path(report_baton, "", target_start, depth,
                              FALSE, NULL, pool));
   if (honor_mergeinfo && children_with_mergeinfo)
     {
@@ -2389,64 +2401,66 @@ drive_merge_report_editor(const char *target_wcpath,
       apr_size_t target_wcpath_len = strlen(target_wcpath);
       int i;
 
+      /* Start with CHILDREN_WITH_MERGEINFO[1], CHILDREN_WITH_MERGEINFO[0]
+         is always the merge target (TARGET_WCPATH). */
       for (i = 1; i < children_with_mergeinfo->nelts; i++)
         {
           svn_merge_range_t *range;
           const char *child_repos_path;
+          svn_client__merge_path_t *parent;
           svn_client__merge_path_t *child =
             APR_ARRAY_IDX(children_with_mergeinfo, i, 
                           svn_client__merge_path_t *);
+          int parent_index;
+          svn_boolean_t nearest_parent_is_target;
 
           if (!child || child->absent)
             continue;
+          
+          /* Find this child's nearest wc ancestor with mergeinfo. */
+          parent_index = find_nearest_ancestor(children_with_mergeinfo,
+                                               FALSE, child->path);
+          parent = APR_ARRAY_IDX(children_with_mergeinfo, parent_index,
+                                 svn_client__merge_path_t *);
+          
+          /* Note if the child's parent is the merge target. */
+          nearest_parent_is_target =
+            (strcmp(parent->path, target_wcpath) == 0) ? TRUE : FALSE;
 
+          /* If a subtree needs the same range applied as it's nearest parent
+             with mergeinfo, then we don't need to describe the subtree
+             separately. */
           if (child->remaining_ranges->nelts)
             {
-              int j;
-              svn_client__merge_path_t *parent = NULL;
-
-              /* While we need to describe subtrees requiring
-                 different merge ranges than TARGET_WCPATH will have
-                 applied, we don't need to describe a subtree's
-                 subtree if that latter has the same range applied as
-                 the former. */
-                  
               range = APR_ARRAY_IDX(child->remaining_ranges, 0,
                                     svn_merge_range_t *);
-              if (range->start == default_start)
-                continue;
-
-              /* Does CHILD have a parent with mergeinfo other than
-                 TARGET_WCPATH? */
-              for (j = i - 1; j > 0; j--)
+              if (parent->remaining_ranges->nelts)
                 {
-                  svn_client__merge_path_t *potential_parent =
-                    APR_ARRAY_IDX(children_with_mergeinfo, j,
-                                  svn_client__merge_path_t *);
-                  if (svn_path_is_ancestor(potential_parent->path,
-                                           child->path))
-                    {
-                      parent = potential_parent;
-                      break;
-                    }
-                }
-
-              /* CHILD does have a parent with mergeinfo, if CHILD's
-                 first remaining range is the same as its parent there
-                 is no need to describe it separately. */
-              if (parent && parent->remaining_ranges->nelts != 0)
-                {
-                  svn_merge_range_t *parent_range =
+                   svn_merge_range_t *parent_range =
                     APR_ARRAY_IDX(parent->remaining_ranges, 0,
                                   svn_merge_range_t *);
-                  svn_merge_range_t *child_range =
+                   svn_merge_range_t *child_range =
                     APR_ARRAY_IDX(child->remaining_ranges, 0,
                                   svn_merge_range_t *);
                   if (parent_range->start == child_range->start)
-                    continue;
+                    continue; /* Same as parent. */
                 }
             }
+          else /* child->remaining_ranges->nelts == 0*/
+            {
+              /* If both the subtree and its parent need no ranges applied
+                 consider that as the "same ranges" and don't describe
+                 the subtree.  If the subtree's parent is the merge target,
+                 then the parent can have a dummy range; this is still
+                 the same as no remaining ranges. */
+              if (parent->remaining_ranges->nelts == 0
+                  || (nearest_parent_is_target
+                      && merge_b->target_has_dummy_merge_range))
+                continue; /* Same as parent. */
+            }
 
+          /* Ok, we really need to describe this subtree as it needs different
+             ranges applied than its nearest working copy parent. */
           child_repos_path = child->path +
             (target_wcpath_len ? target_wcpath_len + 1 : 0);
 
@@ -4050,6 +4064,12 @@ normalize_merge_sources(apr_array_header_t **merge_sources_p,
    requested merge range REQUESTED_RANGE from SOURCE_REL_PATH, remove any
    portion of REQUESTED_RANGE which is already described in
    IMPLICIT_MERGEINFO.  Store the result in *FILTERED_RANGELIST.
+   
+   This function only filters natural history for mergeinfo that will be
+   *added* during a forward merge.  Removing natural history from explicit
+   mergeinfo is harmless.  If REQUESTED_RANGE describes a reverse merge,
+   then *FILTERED_RANGELIST is simply populated with one range described
+   by REQUESTED_RANGE.
 
    *FILTERED_RANGELIST is allocated in POOL. */
 static svn_error_t *
@@ -4067,9 +4087,10 @@ filter_natural_history_from_mergeinfo(apr_array_header_t **filtered_rangelist,
 
   *filtered_rangelist = NULL;
 
-  /* If the IMPLICIT_MERGEINFO already describes ranges associated
-     with SOURCE_REL_PATH then filter those ranges out. */
-  if (implicit_mergeinfo)
+  /* For forward merges: If the IMPLICIT_MERGEINFO already describes ranges
+     associated with SOURCE_REL_PATH then filter those ranges out. */
+  if (implicit_mergeinfo
+      && (requested_range->start < requested_range->end))
     {
       apr_array_header_t *implied_rangelist =
         apr_hash_get(implicit_mergeinfo, source_rel_path,

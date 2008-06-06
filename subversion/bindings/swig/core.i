@@ -207,7 +207,7 @@
 %ignore svn_path_is_child;
 %ignore svn_path_is_ancestor;
 %ignore svn_path_check_valid;
-%ignore svn_path_is_url;
+// svn_path_is_url;
 // svn_path_is_uri_safe;
 %ignore svn_path_uri_encode;
 %ignore svn_path_uri_decode;
