@@ -1806,8 +1806,9 @@ svn_repos_fs_revision_proplist(apr_hash_t **table_p,
  * @a value and return SVN_ERR_BAD_PROPERTY_VALUE if it is invalid for the
  * property.
  *
- * @note Currently, the only "svn:" property validated is @c
- * SVN_PROP_REVISION_DATE.  This may change in a future release.
+ * @note Currently, the only properties validated are the "svn:" properties
+ * @c SVN_PROP_REVISION_LOG and @c SVN_PROP_REVISION_DATE. This may change
+ * in future releases.
  */
 svn_error_t *
 svn_repos_fs_change_node_prop(svn_fs_root_t *root,
