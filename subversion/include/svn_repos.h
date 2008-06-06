@@ -947,6 +947,8 @@ svn_repos_replay(svn_fs_root_t *root,
  * returns an error, that error will be returned from @c close_edit,
  * otherwise if there was a post-commit hook failure, then that error
  * will be returned with code SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED.
+ * (Note that prior to Subversion 1.6, @a callback cannot be NULL; if
+ * you don't need a callback, pass a dummy function.)
  *
  * Calling @a (*editor)->abort_edit aborts the commit, and will also
  * abort the commit transaction unless @a txn was supplied (not @c
