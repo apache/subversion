@@ -181,6 +181,6 @@ A: A simple way to relocate a svnsync-ed repository is to change the
 
 $ svn propset svn:sync-from-url --revprop -r 0 NEW_SOURCE_URL MIRROR_URL
 
-  NOTE: Don't not use `svn propedit`, because editors may append an EOL
+  NOTE: Don't use `svn propedit`, because editors may append an EOL
   character to NEW_SOURCE_URL that will lead svnsync complaining
   "svnsync: Malformed URL for repository".
