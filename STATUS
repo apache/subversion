@@ -107,13 +107,13 @@ Candidate changes for 1.5.1:
    Votes:
      +1: cmpilato
 
- * r31620
+ * r31620, r31622
    Don't blindly assume that the client will always report capabilities.
    Fixes a segfault in svn_repos__hooks_start_commit(). svn(1) won't
    trigger it, but other clients could. This can wait for 1.5.1 on the
    same grounds as r31223.
    Votes:
-     +1: stsp
+     +1: stsp, danielsh
 
 Approved changes (all releases):
 ================================
