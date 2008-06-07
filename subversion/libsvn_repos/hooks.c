@@ -564,10 +564,12 @@ svn_repos__hooks_start_commit(svn_repos_t *repos,
   else if (hook)
     {
       const char *args[5];
-      char *capabilities_string = svn_cstring_join(capabilities, ":", pool);
+      char *capabilities_string = capabilities
+        ? svn_cstring_join(capabilities, ":", pool)
+        : NULL;
 
       /* Get rid of that annoying final colon. */
-      if (capabilities_string[0])
+      if (capabilities_string && capabilities_string[0])
         capabilities_string[strlen(capabilities_string) - 1] = '\0';
 
       args[0] = hook;
