@@ -947,6 +947,8 @@ svn_repos_replay(svn_fs_root_t *root,
  * returns an error, that error will be returned from @c close_edit,
  * otherwise if there was a post-commit hook failure, then that error
  * will be returned with code SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED.
+ * (Note that prior to Subversion 1.6, @a callback cannot be NULL; if
+ * you don't need a callback, pass a dummy function.)
  *
  * Calling @a (*editor)->abort_edit aborts the commit, and will also
  * abort the commit transaction unless @a txn was supplied (not @c
@@ -1806,8 +1808,9 @@ svn_repos_fs_revision_proplist(apr_hash_t **table_p,
  * @a value and return SVN_ERR_BAD_PROPERTY_VALUE if it is invalid for the
  * property.
  *
- * @note Currently, the only "svn:" property validated is @c
- * SVN_PROP_REVISION_DATE.  This may change in a future release.
+ * @note Currently, the only properties validated are the "svn:" properties
+ * @c SVN_PROP_REVISION_LOG and @c SVN_PROP_REVISION_DATE. This may change
+ * in future releases.
  */
 svn_error_t *
 svn_repos_fs_change_node_prop(svn_fs_root_t *root,

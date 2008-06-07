@@ -24,6 +24,7 @@
 
 #include <apr_pools.h>
 #include "svn_types.h"
+#include "private/svn_utf_private.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -44,14 +45,10 @@ const char *svn_utf__cstring_from_utf8_fuzzy(const char *src,
  * it will point to the start of the first invalid multi-byte character.
  * In either case all the characters between SRC and the return pointer are
  * valid UTF-8.
+ *
+ * See also svn_utf__is_valid().
  */
 const char *svn_utf__last_valid(const char *src, apr_size_t len);
-
-/* Return TRUE if the string SRC of length LEN is a valid UTF-8 encoding
- * according to the rules laid down by the Unicode 4.0 standard, FALSE
- * otherwise.  This function is faster than svn_utf__last_valid.
- */
-svn_boolean_t svn_utf__is_valid(const char *src, apr_size_t len);
 
 /* As for svn_utf__is_valid but SRC is NULL terminated. */
 svn_boolean_t svn_utf__cstring_is_valid(const char *src);
