@@ -1455,8 +1455,11 @@ svn_ra_serf__discover_root(const char **vcc_url,
     {
       if (present_path[0] != '\0')
         {
-          *rel_path = svn_path_url_add_component(relative_path,
-                                                 present_path, pool);
+          /* The relative path is supposed to be URI decoded, so decode
+             present_path before joining both together. */
+          *rel_path = svn_path_join(relative_path,
+                                    svn_path_uri_decode(present_path, pool),
+                                    pool);
         }
       else
         {
