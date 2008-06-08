@@ -645,57 +645,13 @@ svn_ra_serf__get_latest_revnum(svn_ra_session_t *ra_session,
                                svn_revnum_t *latest_revnum,
                                apr_pool_t *pool)
 {
-  apr_hash_t *props;
+  const char *relative_url, *basecoll_url;
   svn_ra_serf__session_t *session = ra_session->priv;
-  const char *vcc_url, *baseline_url, *version_name;
 
-  props = apr_hash_make(pool);
-
-  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL,
-                                     session, session->conns[0],
-                                     session->repos_url.path, pool));
-
-  if (!vcc_url)
-    {
-      return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
-                              _("The OPTIONS response did not include the "
-                                "requested version-controlled-configuration "
-                                "value"));
-    }
-
-  /* Using the version-controlled-configuration, fetch the checked-in prop. */
-  SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
-                                      vcc_url, SVN_INVALID_REVNUM, "0",
-                                      checked_in_props, pool));
-
-  baseline_url = svn_ra_serf__get_prop(props, vcc_url,
-                                       "DAV:", "checked-in");
-
-  if (!baseline_url)
-    {
-      return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
-                              _("The OPTIONS response did not include the "
-                                "requested checked-in value"));
-    }
-
-  /* Using the checked-in property, fetch:
-   *    baseline-connection *and* version-name
-   */
-  SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
-                                      baseline_url, SVN_INVALID_REVNUM,
-                                      "0", baseline_props, pool));
-
-  version_name = svn_ra_serf__get_prop(props, baseline_url,
-                                       "DAV:", SVN_DAV__VERSION_NAME);
-
-  if (!version_name)
-    {
-      return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
-                              _("The OPTIONS response did not include the "
-                                "requested version-name value"));
-    }
-
-  *latest_revnum = SVN_STR_TO_REV(version_name);
+  SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url,
+                                         session, session->repos_url.path,
+                                         SVN_INVALID_REVNUM, latest_revnum,
+                                         pool));
 
   return SVN_NO_ERROR;
 }
@@ -780,25 +736,11 @@ fetch_path_props(svn_ra_serf__propfind_context_t **ret_prop_ctx,
     }
   else
     {
-      const char *vcc_url, *relative_url, *basecoll_url;
+      const char *relative_url, *basecoll_url;
 
-      SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &relative_url,
-                                         session, session->conns[0],
-                                         path, pool));
-
-      SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
-                                          vcc_url, revision,
-                                          "0", baseline_props, pool));
-
-      basecoll_url = svn_ra_serf__get_ver_prop(props, vcc_url, revision,
-                                               "DAV:", "baseline-collection");
-
-      if (!basecoll_url)
-        {
-          return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
-                                  _("The OPTIONS response did not include the "
-                                    "requested baseline-collection value"));
-        }
+      SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url,
+                                             session, path,
+                                             revision, NULL, pool));
 
       /* We will try again with our new path; however, we're now
        * technically an unversioned resource because we are accessing
@@ -1060,38 +1002,16 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
 
   props = apr_hash_make(pool);
 
+  /* If the user specified a peg revision other than HEAD, we have to fetch
+     the baseline collection url for that revision. If not, we can use the 
+     public url. */
   if (SVN_IS_VALID_REVNUM(revision) || fetched_rev)
     {
-      const char *vcc_url, *relative_url, *basecoll_url;
+      const char *relative_url, *basecoll_url;
 
-      SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &relative_url,
-                                         session, session->conns[0],
-                                         path, pool));
-
-      /* If we don't have the latest revision, we have to fetch it. */
-      if (!SVN_IS_VALID_REVNUM(revision))
-        {
-          SVN_ERR(svn_ra_serf__get_latest_revnum(ra_session, &revision, pool));
-        }
-
-      SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
-                                          vcc_url, revision,
-                                          "0", baseline_props, pool));
-
-      basecoll_url = svn_ra_serf__get_ver_prop(props, vcc_url, revision,
-                                               "DAV:", "baseline-collection");
-
-      if (!basecoll_url)
-        {
-          return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
-                                  _("The OPTIONS response did not include the "
-                                    "requested baseline-collection value"));
-        }
-
-      if (fetched_rev)
-       {
-         *fetched_rev = revision;
-       }
+      SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url,
+                                             session, path, revision,
+                                             fetched_rev, pool));
 
       path = svn_path_url_add_component(basecoll_url, relative_url, pool);
       revision = SVN_INVALID_REVNUM;
