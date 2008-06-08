@@ -73,7 +73,7 @@ dir_deltas(const char **msg,
 
   /* Create a filesystem and repository. */
   SVN_ERR(svn_test__create_repos(&repos, "test-repo-dir-deltas",
-                                 opts->fs_type, pool));
+                                 opts, pool));
   fs = svn_repos_fs(repos);
   expected_trees[revision_count].num_entries = 0;
   expected_trees[revision_count++].entries = 0;
@@ -380,7 +380,7 @@ node_tree_delete_under_copy(const char **msg,
 
   /* Create a filesystem and repository. */
   SVN_ERR(svn_test__create_repos(&repos, "test-repo-del-under-copy",
-                                 opts->fs_type, pool));
+                                 opts, pool));
   fs = svn_repos_fs(repos);
 
   /* Prepare a txn to receive the greek tree. */
@@ -520,7 +520,7 @@ revisions_changed(const char **msg,
 
   /* Create a filesystem and repository. */
   SVN_ERR(svn_test__create_repos(&repos, "test-repo-revisions-changed",
-                                 opts->fs_type, pool));
+                                 opts, pool));
   fs = svn_repos_fs(repos);
 
   /*** Testing Algorithm ***
@@ -779,7 +779,7 @@ node_locations(const char **msg,
 
   /* Create the repository with a Greek tree. */
   SVN_ERR(svn_test__create_repos(&repos, "test-repo-node-locations",
-                                 opts->fs_type, pool));
+                                 opts, pool));
   fs = svn_repos_fs(repos);
   SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, subpool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
@@ -832,7 +832,7 @@ node_locations2(const char **msg,
 
   /* Create the repository. */
   SVN_ERR(svn_test__create_repos(&repos, "test-repo-node-locations2",
-                                 opts->fs_type, pool));
+                                 opts, pool));
   fs = svn_repos_fs(repos);
 
   /* Revision 1:  Add a directory /foo  */
@@ -1045,7 +1045,7 @@ rmlocks(const char **msg,
 
   /* Create a filesystem and repository. */
   SVN_ERR(svn_test__create_repos(&repos, "test-repo-rmlocks",
-                                 opts->fs_type, pool));
+                                 opts, pool));
   fs = svn_repos_fs(repos);
 
   /* Prepare a txn to receive the greek tree. */
@@ -1419,7 +1419,7 @@ commit_editor_authz(const char **msg,
 
   /* Create a filesystem and repository. */
   SVN_ERR(svn_test__create_repos(&repos, "test-repo-commit-authz",
-                                 opts->fs_type, subpool));
+                                 opts, subpool));
   fs = svn_repos_fs(repos);
 
   /* Prepare a txn to receive the greek tree. */
@@ -1637,7 +1637,7 @@ commit_continue_txn(const char **msg,
 
   /* Create a filesystem and repository. */
   SVN_ERR(svn_test__create_repos(&repos, "test-repo-commit-continue",
-                                 opts->fs_type, subpool));
+                                 opts, subpool));
   fs = svn_repos_fs(repos);
 
   /* Prepare a txn to receive the greek tree. */
@@ -1818,7 +1818,7 @@ node_location_segments(const char **msg,
 
   /* Create the repository. */
   SVN_ERR(svn_test__create_repos(&repos, "test-repo-node-location-segments",
-                                 opts->fs_type, pool));
+                                 opts, pool));
   fs = svn_repos_fs(repos);
 
   /* Revision 1: Create the Greek tree.  */
@@ -2011,7 +2011,7 @@ reporter_depth_exclude(const char **msg,
     return SVN_NO_ERROR;
 
   SVN_ERR(svn_test__create_repos(&repos, "test-repo-reporter-depth-exclude",
-                                 opts->fs_type, pool));
+                                 opts, pool));
   fs = svn_repos_fs(repos);
 
   /* Prepare a txn to receive the greek tree. */
@@ -2187,6 +2187,155 @@ reporter_depth_exclude(const char **msg,
 
 
 
+/* Test if prop values received by the server are validated.
+ * These tests "send" property values to the server and diagnose the
+ * behaviour.
+ */
+
+/* Helper function that makes an arbitrary change to a given repository
+ * REPOS and runs a commit with a specific revision property set to a
+ * certain value. The property name, type and value are given in PROP_KEY,
+ * PROP_KLEN and PROP_VAL, as in apr_hash_set(), using a const char* key.
+ *
+ * The FILENAME argument names a file in the test repository to add in
+ * this commit, e.g. "/A/should_fail_1".
+ *
+ * On success, the given file is added to the repository. So, using
+ * the same name multiple times on the same repository might fail. Thus,
+ * use different FILENAME arguments for every call to this function
+ * (e.g. "/A/f1", "/A/f2", "/A/f3" etc).
+ */
+static svn_error_t *
+prop_validation_commit_with_revprop(const char *filename,
+                                    const char *prop_key,
+                                    apr_ssize_t prop_klen,
+                                    const svn_string_t *prop_val,
+                                    svn_repos_t *repos,
+                                    apr_pool_t *pool)
+{
+  const svn_delta_editor_t *editor;
+  void *edit_baton;
+  void *root_baton;
+  void *file_baton;
+
+  /* Prepare revision properties */
+  apr_hash_t *revprop_table = apr_hash_make(pool);
+
+  /* Add the requested property */
+  apr_hash_set(revprop_table, prop_key, prop_klen, prop_val);
+
+  /* Set usual author and log props, if not set already */
+  if (strcmp(prop_key, SVN_PROP_REVISION_AUTHOR) != 0)
+    {
+      apr_hash_set(revprop_table, SVN_PROP_REVISION_AUTHOR,
+                   APR_HASH_KEY_STRING,
+                   svn_string_create("plato", pool));
+    }
+  else
+    if (strcmp(prop_key, SVN_PROP_REVISION_LOG) != 0)
+      {
+        apr_hash_set(revprop_table, SVN_PROP_REVISION_LOG,
+                     APR_HASH_KEY_STRING,
+                     svn_string_create("revision log", pool));
+      }
+
+  /* Make an arbitrary change and commit using above values... */
+
+  SVN_ERR(svn_repos_get_commit_editor5(&editor, &edit_baton, repos,
+                                       NULL, "file://test", "/",
+                                       revprop_table,
+                                       NULL, NULL, NULL, NULL, pool));
+
+  SVN_ERR(editor->open_root(edit_baton, 0, pool, &root_baton));
+
+  SVN_ERR(editor->add_file(filename, root_baton, NULL,
+                           SVN_INVALID_REVNUM, pool,
+                           &file_baton));
+
+  SVN_ERR(editor->close_file(file_baton, NULL, pool));
+
+  SVN_ERR(editor->close_directory(root_baton, pool));
+
+  SVN_ERR(editor->close_edit(edit_baton, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Expect failure of invalid commit in these cases:
+ *  - log message contains invalid UTF-8 octet (issue 1796)
+ *  - log message contains invalid linefeed style (non-LF) (issue 1796)
+ */
+static svn_error_t *
+prop_validation(const char **msg,
+                svn_boolean_t msg_only,
+                svn_test_opts_t *opts,
+                apr_pool_t *pool)
+{
+  svn_error_t *err;
+  svn_repos_t *repos;
+  const char non_utf8_string[5] = { 'a', 0xff, 'b', '\n', 0 };
+  const char *non_lf_string = "a\r\nb\n\rc\rd\n";
+  apr_pool_t *subpool = svn_pool_create(pool);
+
+  *msg = "test if revprops are validated by repos";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Create a filesystem and repository. */
+  SVN_ERR(svn_test__create_repos(&repos, "test-repo-prop-validation",
+                                 opts, subpool));
+
+
+  /* Test an invalid commit log message: UTF-8 */
+  err = prop_validation_commit_with_revprop
+            ("/non_utf8_log_msg",
+             SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING,
+             svn_string_create(non_utf8_string, subpool),
+             repos, subpool);
+
+  if (err == SVN_NO_ERROR)
+    return svn_error_create(SVN_ERR_TEST_FAILED, err,
+                            "Failed to reject a log with invalid "
+                            "UTF-8");
+  else
+    if (err->apr_err != SVN_ERR_BAD_PROPERTY_VALUE)
+      return svn_error_create(SVN_ERR_TEST_FAILED, err,
+                              "Expected SVN_ERR_BAD_PROPERTY_VALUE for "
+                              "a log with invalid UTF-8, "
+                              "got another error.");
+  svn_error_clear(err);
+
+
+  /* Test an invalid commit log message: LF */
+  err = prop_validation_commit_with_revprop
+            ("/non_lf_log_msg",
+             SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING,
+             svn_string_create(non_lf_string, subpool),
+             repos, subpool);
+
+  if (err == SVN_NO_ERROR)
+    return svn_error_create(SVN_ERR_TEST_FAILED, err,
+                            "Failed to reject a log with inconsistent "
+                            "line ending style");
+  else
+    if (err->apr_err != SVN_ERR_BAD_PROPERTY_VALUE)
+      return svn_error_create(SVN_ERR_TEST_FAILED, err,
+                              "Expected SVN_ERR_BAD_PROPERTY_VALUE for "
+                              "a log with inconsistent line ending style, "
+                              "got another error.");
+  svn_error_clear(err);
+
+
+  /* Done. */
+  svn_pool_destroy(subpool);
+
+  return SVN_NO_ERROR;
+}
+
+
+
 /* The test table.  */
 
 struct svn_test_descriptor_t test_funcs[] =
@@ -2203,5 +2352,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(commit_continue_txn),
     SVN_TEST_PASS(node_location_segments),
     SVN_TEST_PASS(reporter_depth_exclude),
+    SVN_TEST_PASS(prop_validation),
     SVN_TEST_NULL
   };

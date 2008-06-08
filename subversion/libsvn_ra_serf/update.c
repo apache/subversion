@@ -971,12 +971,11 @@ handle_stream(serf_request_t *request,
   serf_bucket_response_status(response, &sl);
 
   /* Woo-hoo.  Nothing here to see.  */
-  if (sl.code == 404)
+  fetch_ctx->err = svn_ra_serf__error_on_status(sl.code, fetch_ctx->info->name);
+  if (fetch_ctx->err)
     {
       fetch_ctx->done = TRUE;
-      fetch_ctx->err = svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND, NULL,
-                                         "'%s' path not found",
-                                         fetch_ctx->info->name);
+
       return svn_ra_serf__handle_discard_body(request, response, NULL, pool);
     }
 
@@ -2204,7 +2203,7 @@ finish_report(void *report_baton,
   apr_hash_t *props;
   apr_status_t status;
   svn_boolean_t closed_root;
-  int i;
+  int status_code, i;
 
   tmp = SERF_BUCKET_SIMPLE_STRING_LEN("</S:update-report>",
                                       sizeof("</S:update-report>")-1,
@@ -2244,6 +2243,9 @@ finish_report(void *report_baton,
   parser_ctx->end = end_report;
   parser_ctx->cdata = cdata_report;
   parser_ctx->done = &report->done;
+  /* While we provide a location here to store the status code, we don't
+     do anything with it. The error in parser_ctx->error is sufficient. */
+  parser_ctx->status_code = &status_code;
 
   handler->response_handler = svn_ra_serf__handle_xml_parser;
   handler->response_baton = parser_ctx;

@@ -283,7 +283,7 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
             {
               SVN_ERR(svn_cmdline_fprintf(stderr, pool, "%s\n",
                                           err->message ? err->message :
-                                          _("No editor found,"
+                                          _("No editor found;"
                                             " leaving all conflicts.")));
               svn_error_clear(err);
               b->external_failed = TRUE;
@@ -292,7 +292,7 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
             {
               SVN_ERR(svn_cmdline_fprintf(stderr, pool, "%s\n",
                                           err->message ? err->message :
-                                          _("Error running editor,"
+                                          _("Error running editor;"
                                             " leaving all conflicts.")));
               svn_error_clear(err);
               b->external_failed = TRUE;
@@ -324,7 +324,7 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
             {
               SVN_ERR(svn_cmdline_fprintf(stderr, pool, "%s\n",
                                           err->message ? err->message :
-                                          _("No merge tool found,"
+                                          _("No merge tool found;"
                                             " leaving all conflicts.")));
               svn_error_clear(err);
               b->external_failed = TRUE;
@@ -333,7 +333,7 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
             {
               SVN_ERR(svn_cmdline_fprintf(stderr, pool, "%s\n",
                                           err->message ? err->message :
-                                          _("Error running merge tool"
+                                          _("Error running merge tool;"
                                             " leaving all conflicts.")));
               svn_error_clear(err);
               b->external_failed = TRUE;

@@ -149,9 +149,15 @@ cleanup_mode = False
 # Global variable indicating if svnserve should use Cyrus SASL
 enable_sasl = False
 
+# Global variable indicating that SVNKit binaries should be used
+use_jsvn = False
+
 # Global variable indicating which DAV library, if any, is in use
 # ('neon', 'serf')
 http_library = None
+
+# Configuration file (copied into FSFS fsfs.conf).
+config_file = None
 
 # Global variable indicating what the minor version of the server
 # tested against is (4 for 1.4.x, for example).
@@ -303,6 +309,11 @@ def get_svnserve_conf_file_path(repo_dir):
   "Return the path of the svnserve.conf file in REPO_DIR."
 
   return os.path.join(repo_dir, "conf", "svnserve.conf")
+
+def get_fsfs_conf_file_path(repo_dir):
+  "Return the path of the fsfs.conf file in REPO_DIR."
+
+  return os.path.join(repo_dir, "db", "fsfs.conf")
 
 # Run any binary, logging the command line and return code
 def run_command(command, error_expected, binary_mode=0, *varargs):
@@ -625,6 +636,10 @@ def create_repos(path):
     file_append(get_svnserve_conf_file_path(path), "password-db = passwd\n")
     file_append(os.path.join(path, "conf", "passwd"),
                 "[users]\njrandom = rayjandom\njconstant = rayjandom\n");
+
+  if config_file is not None and (fs_type is None or fs_type == 'fsfs'):
+    shutil.copy(config_file, get_fsfs_conf_file_path(path))
+
   # make the repos world-writeable, for mod_dav_svn's sake.
   chmod_tree(path, 0666, 0666)
 
@@ -647,6 +662,7 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
 
   dump_in, dump_out, dump_err, dump_kid = \
            open_pipe(svnadmin_binary + dump_args, 'b')
+  dump_in.close()
   load_in, load_out, load_err, load_kid = \
            open_pipe(svnadmin_binary + load_args, 'b')
   stop = time.time()
@@ -662,7 +678,6 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
 
   dump_lines = dump_err.readlines()
   load_lines = load_out.readlines()
-  dump_in.close()
   dump_out.close()
   dump_err.close()
   load_out.close()
@@ -864,6 +879,10 @@ def server_gets_client_capabilities():
   return server_minor_version >= 5
 
 def server_has_partial_replay():
+  _check_command_line_parsed()
+  return server_minor_version >= 5
+
+def server_enforces_date_syntax():
   _check_command_line_parsed()
   return server_minor_version >= 5
 
@@ -1076,6 +1095,14 @@ class TestRunner:
     # Tests that want to use an editor should invoke svntest.main.use_editor.
     os.environ['SVN_EDITOR'] = ''
     os.environ['SVNTEST_EDITOR_FUNC'] = ''
+    
+    if use_jsvn:
+      # Set this SVNKit specific variable to the current test (test name plus 
+      # its index) being run so that SVNKit daemon could use this test name 
+      # for its separate log file
+     os.environ['SVN_CURRENT_TEST'] = os.path.basename(sys.argv[0]) + "_" + \
+                                      str(self.index)
+    
     actions.no_sleep_for_timestamps()
 
     saved_dir = os.getcwd()
@@ -1237,6 +1264,7 @@ def usage():
         "                 useful during test development!"
   print " --server-minor-version  Set the minor version for the server.\n" \
         "                 Supports version 4 or 5."
+  print " --config-file   Configuration file for tests."
   print " --help          This information"
 
 
@@ -1263,10 +1291,13 @@ def run_tests(test_list, serial_only = False):
   global svnadmin_binary
   global svnlook_binary
   global svnsync_binary
+  global svndumpfilter_binary
   global svnversion_binary
   global command_line_parsed
   global http_library
+  global config_file
   global server_minor_version
+  global use_jsvn
 
   testnums = []
   # Should the tests be listed (as opposed to executed)?
@@ -1275,13 +1306,14 @@ def run_tests(test_list, serial_only = False):
   parallel = 0
   svn_bin = None
   use_jsvn = False
+  config_file = None
 
   try:
     opts, args = my_getopt(sys.argv[1:], 'vqhpc',
                            ['url=', 'fs-type=', 'verbose', 'quiet', 'cleanup',
                             'list', 'enable-sasl', 'help', 'parallel',
-                            'bin=', 'http-library=', 'server-minor-version=', 
-                            'use-jsvn', 'development'])
+                            'bin=', 'http-library=', 'server-minor-version=',
+                            'use-jsvn', 'development', 'config-file='])
   except getopt.GetoptError, e:
     print "ERROR: %s\n" % e
     usage()
@@ -1351,6 +1383,9 @@ def run_tests(test_list, serial_only = False):
     elif opt == '--development':
       setup_development_mode()
 
+    elif opt == '--config-file':
+      config_file = val
+
   if test_area_url[-1:] == '/': # Normalize url to have no trailing slash
     test_area_url = test_area_url[:-1]
 
@@ -1370,14 +1405,15 @@ def run_tests(test_list, serial_only = False):
     svnadmin_binary = os.path.join(svn_bin, 'jsvnadmin' + _bat)
     svnlook_binary = os.path.join(svn_bin, 'jsvnlook' + _bat)
     svnsync_binary = os.path.join(svn_bin, 'jsvnsync' + _bat)
+    svndumpfilter_binary = os.path.join(svn_bin, 'jsvndumpfilter' + _bat)
     svnversion_binary = os.path.join(svn_bin, 'jsvnversion' + _bat)
-    use_jsvn = False
   else:
     if svn_bin:
       svn_binary = os.path.join(svn_bin, 'svn' + _exe)
       svnadmin_binary = os.path.join(svn_bin, 'svnadmin' + _exe)
       svnlook_binary = os.path.join(svn_bin, 'svnlook' + _exe)
       svnsync_binary = os.path.join(svn_bin, 'svnsync' + _exe)
+      svndumpfilter_binary = os.path.join(svn_bin, 'svndumpfilter' + _exe)
       svnversion_binary = os.path.join(svn_bin, 'svnversion' + _exe)
 
   command_line_parsed = True

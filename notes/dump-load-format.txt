@@ -79,11 +79,11 @@ Content-length: L
    human-readable hashdump format used by working copy property files,
    except that they end with "PROPS-END\n" for better readability.
 
-Node-path: /absolute/path/to/node/in/filesystem
+Node-path: absolute/path/to/node/in/filesystem
 Node-kind: file | dir  (1)
 Node-action: change | add | delete | replace
 [Node-copyfrom-rev: X]
-[Node-copyfrom-path: /path ]
+[Node-copyfrom-path: path ]
 [Text-copy-source-md5: blob] (2)
 [Text-content-md5: blob]
 [Text-content-length: T]

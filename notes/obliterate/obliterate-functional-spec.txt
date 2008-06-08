@@ -1,0 +1,745 @@
+
+
+            * Functional specification for issue #516: Obliterate *
+
+
+#TODO
++ add the missing functional requirements
++ add more details and examples - where needed - on the functional requirements
++ add the missing non-functional requirements
++ probably need to split up some of the requirements to make them smaller
+  (and SMARTer).
++ add a clear description of the cascading effect:
+  revisions contain directories, directory contains files and property
+  changes, files contains content changes and property changes, content and
+  property changes can be merged.
++ verify that with the documented requirements (functional and non-functional)
+  the use cases and examples can be 'solved'.
++ fill in use case vs requirements table.
++ let a native English speaker review for clarity and propose better keywords
++ review on mailing list(s).
++ finalize
+#END-TODO
+
+
+
+I. Overview
+
+This document serves as the functional specification for what's commonly
+called the 'svn obliterate' feature.
+
+II. Use Cases
+
+    1. Disable all access to confidential information in a repository.
+       [security]
+
+       A. Description
+          This is the case where a user has added information to the repository
+          that should not have been made public. The distribution of this
+          information must be halted, and where it has been distributed, it must
+          be removed.
+
+          This use case typically requires removal of any trace of that
+          information from the whole history of the repository. In short, if a
+          confidential file was copied, also obliterate the copy.
+
+       B. Examples
+          + User adding documents with confidential information to the repository.
+            Needs to stop distribution to working copies and mirrors ASAP.
+          + User adding source code to the repository, finds out later that it's
+            infringing certain intellectual rights. Need to remove all traces of
+            the infringing source code, including all derivatives, from the
+            repository.
+
+       C. Primary actor triggering this use case
+          A key user of the repository that knows what confidential information
+          should be removed, and who can estimate the impact of obliteration
+          (which paths, which revision range(s) etc.
+
+          Normal users should not be able to obliterate. For those users we
+          already have 'svn rm'.
+
+    2. Remove obsolete information from a repository and free the associated
+       disc space.
+       [disc space]
+
+       A. Description
+          This is the case where unneeded or obsolete information is stored in the
+          repository, taking up lots of disc space. In order to free up disc
+          space, this information may be obliterated.
+
+          This use case typically requires removal of certain subsets of the
+          repository while leaving later revisions intact. In short, if an
+          obsolete file was copied, leave the copy intact.
+
+          This use case is often combined with archiving of the obsolete
+          information: archive first, then obliterate.
+
+       B. Examples
+          + User adding a whole set of development tools, huge binaries or
+            external libraries to the product by mistake.
+          + Users managing huge files (MB/GB's) as part of their normal workflow.
+            These files can be removed when work on newer versions has started.
+          + Users adding source code, assets and build deliverables in the same
+            repository. Certain assets or build deliverables can be removed
+
+          + When a project is moved to its own repository, the project's files may
+            be obliterated from the original repository. This includes moving old
+            projects to an archive repository.
+          + Repositories setup to store product deliverables. Those deliverables
+            for old unmaintained versions, like everything older than a revision
+            or date, may be obliterated from the repository.
+          + Removal of dead branches which changes have and will not be included
+            in the main development line.
+
+       C. Primary actor triggering this use case
+          A repository administrator that's concerned about disc space usage.
+          However, only a key user can decide which information may be
+          obliterated.
+
+III. Current solution
+
+    1. Dump -> Filter -> Load
+       Subversion already has a solution in place to completely remove
+       information from a repository. It's a combination of dumping a
+       repository to text format (svnadmin dump), using filters to remove some
+       nodes or revisions from the text (svndumpfilter) and then loading it
+       back into a new repository (svnadmin load).
+
+       Where svndumpfilter is used to remove information from a repository,
+       obliterate should cover at least all of its features.
+
+    2. Advantages of current solution
+
+       + svndumpfilter exists today.
+       + It has the most basic include and exclude filters built-in.
+       + Its functionality is reasonably well understood.
+
+    3. Disadvantages of current solution
+
+       + svndumpfilter has a series of issues (8 right now, see the issue
+         tracker).
+       + Its filtering options are limited to include or exclude paths, no
+         wildcard support...
+       + Filtering is based on pathnames, not node based
+       + Due to its streamy way of working it has no random access to the
+         source nor target repository, hence it can't rewrite copies or later
+         modifications on filtered files.
+       + Uses an intermediate text format and requires filtering the whole
+         repository, not only the relevant revisions -> Slow.
+       + Requires the extra disc space for the output repository.
+       + The svndumpfiler code is not actively maintained.
+       + Slow.
+       + Requires shell access on repository server or at least access to
+         dump files.
+
+IV. Detailed functional requirements
+
+    0. Overview
+
+       The workflow of the obliterate solution can be defined in six steps:
+
+       1. SELECT the lines of history to obliterate.
+       2. LIMIT the range of obliteration to a revision or revision range.
+       3. DEFINE how to handle the consequences of obliteration on derivative
+          modifications. [#TODO: this needs a clearer keyword]
+
+       4. HIDE the selected modifications.
+       5. If needed, UNHIDE selected modifications.
+       6. OBLITERATE the selected modifications from the repository.
+
+       While in the final solution step 4 HIDE and step 5 OBLITERATE may be
+       combined into one - as it's probably much easier to implement, there are
+       some clear advantages to keeping the HIDE step separate:
+
+       + In the security use case, hiding confidential information is much more
+         time-critical than the final obliteration.
+       + Hiding information can be done by a key user, whereas obliteration
+         should be done by an administrator with direct repository access.
+         Note: while there's certainly a need to have repository administration
+         control without requiring shell access to a server, this need is not
+         obliterate specific and as such doesn't have to be solved in the scope
+         of this solution.
+       + Hiding information can be seen as a dry run for final obliteration. It
+         allows the key user to analyse the impact of the selected filters,
+         hide extra information or recover where needed before committing to
+         removing it from the repository.
+
+       Each of these steps are detailed in the following list of functional
+       requirements. We'll probably find that the differences in requirements
+       needed for each use cases are mainly in step 3 and 4.
+
+       Priorities are one of:      ( MoSCoW )
+         + M - MUST have this.
+         + S - SHOULD have this if at all possible.
+         + C - COULD have this if it does not affect anything else.
+         + W - WON'T have this time but WOULD like in the future.
+
+    1. SELECT a modification to obliterate.
+
+       A. Description
+
+          Allow the user to obliterate a single modification from the
+          repository. The lowest level of modification we should consider is
+          the change to a file or directory committed in a specific revision.
+          (Read: no need to support obliterating a single line in a document)
+
+          A modification can be selected by:
+
+          + A path name
+          + A PEG revision, default is HEAD.
+          + A revision (FROM revision equals TO revision)
+
+          This requirement can be seen as a combination of:
+          - SELECT a file or directory.
+          - LIMIT the range to the selected revision.
+
+       B. Main use case
+          all
+
+       C. Primary actor
+          key user
+
+       D. Priority
+          M - MUST have this.
+
+    2. SELECT a file to obliterate.
+
+       A. Description
+          Allow the user to obliterate a file from the repository. The file
+          can be selected by:
+
+          + A path name
+          + A PEG revision, default is HEAD.
+
+          If the file was copied from another file, we should have the option
+          to select either:
+          + the copy
+          + the file's ancestor
+
+       B. Main use case
+          all
+
+       C. Primary actor
+          key user
+
+       D. Priority
+          M - MUST have this.
+
+    3. SELECT a directory to obliterate
+
+       A. Description
+          Allow the user to obliterate a directory, including all its children,
+          the whole tree. The directory can be selected by:
+
+          + A path name
+          + A PEG revision, default is HEAD.
+
+          If the directory was copied from another directory, we should have
+          the option to select either:
+          + the copy
+          + the directory's ancestor
+
+          Some of the children of the directory might be 'older' than the
+          directory itself. This normally happens when the directory was copied
+          from another directory (branched, tagged).
+
+       B. Main use case
+          all
+
+       C. Primary actor
+          key user
+
+       D. Priority
+          M - MUST have this.
+
+    4. SELECT all modifications in a revision to obliterate
+
+       A. Description
+          Allows the user to obliterate all modifications made in:
+
+          + A revision (FROM revision equals TO revision)
+
+          This is equal to:
+          - SELECT the root of the repository.
+          - LIMIT the range to the selected revision.
+
+          It should be possible to choose whether or not to obliterate:
+          + the log message, author and date properties
+          + all other revision properties.
+
+          Obliterating the HEAD revision can be seen as a special case of this
+          requirement.
+
+          Note: the revision number itself does not need to removed.
+
+       B. Main use case
+          all
+
+       C. Primary actor
+          key user
+
+       D. Priority
+          SHOULD have this if at all possible.
+
+    5. SELECT multiple modifications, files or directories to obliterate
+
+       A. Description
+          Allows the user to obliterate multiple modifications, files or
+          directories.
+
+          Modifications can be selected by:
+          + A list of PATH@PEGREV's + revisions
+
+          Paths can be selected by:
+          + A list of path@PEGREV's.
+          + Wildcards: '*.jpg', 'build_*'
+
+       B. Main use case
+          all
+
+       C. Primary actor
+          key user
+
+       D. Priority
+          SHOULD have this if at all possible.
+
+    6. LIMIT the range between FROM and TO revisions or dates.
+
+       A. Description
+          Both FROM and TO may be specified in the form of revisions,
+          dates or keywords like HEAD.
+
+          This is the most general case, where both FROM revision and TO
+          revision can be specified.
+
+          Depending on which SELECT option was chosen, the default LIMITs will
+          be different, as detailed in this table:
+
+          +--------------+---------------------------+---------------+
+          | SELECT       | LIMIT FROM rev            | LIMIT TO rev  |
+          +--------------+---------------------------+---------------+
+          | modification | HEAD                      | HEAD          |
+          | file         | creation rev              | HEAD          |
+          | directory    | creation rev              | HEAD          |
+          | \ children   | creation rev of directory | HEAD          |
+          +--------------+---------------------------+---------------+
+
+       B. Main use case
+          all
+
+       C. Primary actor
+          key user
+
+       D. Priority
+          M - MUST have this.
+
+    7. LIMIT the range between PATH CREATION and TO revisions or dates.
+
+       A. Description
+          This LIMIT can only be used when SELECTing files or directories, not
+          with modifications.
+
+          This is a special case of requirement IV.6., where the FROM revision
+          is defined as the revision in which the selected file or directory
+          was either:
+          - created
+          - copied from another file or directory
+
+          Implementation Note: Can this be implemented through a new keyword
+          PATH-CREATION and PATH-LAST-COPY revision? This doesn't need to be
+          obliterate specific.
+
+       B. Main use case
+          all
+
+       C. Primary actor
+          key user
+
+       D. Priority
+          M - MUST have this.
+
+       E. Workaround
+          As it's difficult right now to make the distinction between a copy
+          of a directory and a rename, and a directory might be renamed a few
+          times after it was copied, we might need to use a PEG revision to
+          indicate where the real directory copy revision can be found.
+
+    9. DEFINE: Include all descendants in the obliteration of a file
+
+       A. Description
+          This is basically a greedy obliteration, where all places in the
+          repository where a file or a modification to a file has propagated
+          through copies or later modifications is also obliterated.
+
+          When obliterating a file, the impact of this obliteration should be
+          checked in the selected revision range in the repository. Depending
+          on the type of modification, actions should be taken. When the file
+          is:
+
+          + Added: This is the creation point of the file. Remove the Add
+            operation and the content and properties delta.
+          + Deleted: Remove the Delete operation.
+          + Replaced by TARGET: see Deleted. Will become Copy operation of the
+            TARGET.
+          + Copied to TARGET (or resurected): delete the Copied operation and
+            drop copy-from path and rev.
+            Add the TARGET file  in the selection of to be obliterated files,
+            using the same limit (revision range) and impact-on-descendants
+            option.
+          + Moved to TARGET: delete the Copy+Delete operations and drop
+            copy-from path and rev.
+            Add the TARGET file in the selection of to be obliterated files,
+            using the same limit (revision range) and impact-on-descendants
+            option.
+          + Modified: delete the Modified operation and the delta.
+            Add the modification (file-revision) in the selection of to be
+            obliterated modifications, using the same limit (revision range)
+            and impact-on-descendants option.
+
+          #TODO: what to do when the TO revision is older than HEAD.
+
+       B. Main use case
+          security
+
+       C. Primary actor
+          key user
+
+       D. Priority
+          M - MUST have this
+
+    9. DEFINE: Exclude all descendants from the obliteration of a file
+
+       A. Description
+          If the obliterated information is still needed in a later revision in
+          the repository, the information will be restored in that later
+          revision.
+
+          When obliterating a file, the impact of this obliteration should be
+          checked in the selected revision range in the repository. Depending
+          on the type of modification, actions should be taken. When the file
+          is:
+
+          + Added: This is the creation point of the file. Remove the Add
+            operation and the content and properties delta.
+          + Deleted: when the file is obliterated earlier, there's nothing to
+            Delete anymore. Remove the Delete operation.
+          + Replaced by TARGET: see Deleted. Will become Copy operation of the
+            replacing file.
+          + Copied to TARGET (or resurected): replace the Copy operation with
+            Add (drop copy-from path and rev), find the original contents and
+            properties of the file at the copy-from revision and use these for
+            the new TARGET.
+            #TODO: what to do when the Copy was modified in the working copy
+                   before committing. #END-TODO
+          + Moved to TARGET: is combination of Deleted and Copied. Will become
+            Add of the TARGET with the original content and properties.
+          + Modified: replace the Modified operation with Add, find the
+            original content and properties of the ancestor, apply the delta to
+            that content and properties and use the result to recreate the
+            file.
+
+          Note: only the first change after the obliterated revision of the
+          file should be handled, except for copies of the now obliterated
+          revision.
+
+          Example:
+            r1: A  iota   "original content\n"
+            r2: M  iota   "original content\nextra line\n"
+            r3: D  iota
+            r4: A  cp-iota (copy from iota@1)    "original content\n"
+
+            Here we obliterate iota, range -r 1:1, exclude descendants.
+
+            Result:
+            So, r1 will be obliterated, r2 will be rewritten, r3 should be
+            ignored. Since r4 is based on the now obliterated r1, it should be
+            rewritten as 'A  cp-iota' with the content and properties of iota@1.
+
+            r1: [obliterated]
+            r2: A  iota   "original content\nextra line\n"
+            r3: D  iota
+            r4: A  cp-iota    "original content\n"
+
+          Note for implementation: if at all possible, this should be
+          implemented so that we don't need more copies of the information than
+          before the obliteration, to avoid increasing the repository size.
+          If not possible, this requirement will only make sense for files that
+          have never changed or copied.
+
+       B. Main use case
+          disc space
+
+       C. Primary actor
+          key user
+
+       D. Priority
+          M - MUST have this.
+
+    10. DEFINE: Include all descendants in the obliteration of a directory
+
+       A. Description
+
+       B. Main use case
+          security
+
+       C. Primary actor
+          key user
+
+       D. Priority
+          M - MUST have this
+
+    11. DEFINE: Exclude all descendants from the obliteration of a directory
+
+       A. Description
+          When obliterating a directory, the impact of this obliteration should
+          be checked in the selected revision range in the repository.
+          Depending on the type of modification, actions should be taken. When
+          the file is:
+          #TODO: add effects of directory operations
+
+       B. Main use case
+          disc space
+
+       C. Primary actor
+          key user
+
+       D. Priority
+          M - MUST have this.
+
+    12. DEFINE: Include all descendants in the obliteration of a modification
+
+       A. Description
+          Now that Subversion 1.5 includes merge tracking we have the option to
+          find out how modifications cascade through the repository with
+          merge operations.
+
+#IMPL-DETAIL
+          A merge operation is identified by a change of type Modification
+          that includes a change to the svn:mergeinfo property.
+#END-OF-IMPL-DETAIL
+
+          When obliterating a modification, the impact of this obliteration
+          should be checked in the selected revision range in the repository.
+          Depending on the type of modification, actions should be taken.
+
+          When the modification is:
+          + Deleted:
+          + Replaced by TARGET:
+          + Copied to TARGET:
+          + Moved to TARGET:
+          + Merged to TARGET:
+          + Modified:
+          + Merged to TARGET:
+       #TODO: define how to select descendants.
+
+       B. Main use case
+          security
+
+       C. Primary actor
+          key user
+
+       D. Priority
+          C - COULD have this if it does not affect anything else.
+
+    13. DEFINE: Exclude all descendants from the obliteration of a modification
+
+       A. Description
+          If the obliterated modification is still needed in a later revision
+          in the repository, that modification will be made available in that
+          later revision.
+
+          When obliterating a modification, the impact of this obliteration
+          should be checked in the selected revision range in the repository.
+          Depending on the type of modification, actions should be taken.
+
+          + Deleted: Can be ignored.
+          + Replaced by TARGET: Can be ignored.
+          + Copied to TARGET:
+          + Moved to TARGET:
+          + Merged to TARGET: the modification is merged to another file. This
+            action can be ignored because when merging a delta to another path,
+            that delta is copied and reapplied to the new path, not relying on
+            the content of the original delta.
+            #TODO: is that true for both FSFS and BDB? Are we not relying on an
+            implementation detail that can change in the future?
+          + Modified: If the modification contains lines that were modified or
+            added in the now obliterated delta, find the original content and
+            properties of the ancestor, apply the delta to that content and
+            properties and use the result to recreate the file.
+          #TODO: define how to select descendants.
+
+       B. Main use case
+          disc space
+
+       C. Primary actor
+          key user
+
+       D. Priority
+          M - MUST have this.
+
+    14. LOG selected modifications, files, directories and revisions
+
+       A. Description
+          This is essentially a dry run of the obliterate action. In order to
+          assess the impact of the selected filters, the user wants to see the
+          list of to-be obliterated paths first.
+
+          The result should be printed to the console and contain the info as
+          shown in this example:
+
+          +-----------------------------------------------+-------------------+
+          | Revision | Current action | Path              | New action        |
+          |          |                |                   | after obliteration|
+          +----------+----------------+-------------------+-------------------+
+          | r100     | A              | /trunk/SECRET     | [obliterated]     |
+          | r101     | M              | /trunk/SECRET     | [obliterated]     |
+          | r105     | A+             | /branch/1.0/SECRET| A                 |
+          +----------+----------------+-------------------+-------------------+
+
+       B. Main use case
+          all
+
+       C. Primary actor
+          key user
+
+       D. Priority
+          M - MUST have this.
+
+
+    15. HIDE selected files, directories and revisions
+
+       A. Description
+          #TODO
+
+       B. Main use case
+          all
+
+       C. Primary actor
+          key user
+
+       D. Priority
+          S - SHOULD have this if at all possible.
+
+    16. UNHIDE selected files, directories and revisions
+
+       A. Description
+          #TODO
+
+       B. Main use case
+          all
+
+       C. Primary actor
+          key user
+
+       D. Priority
+          S - SHOULD have this if at all possible.
+
+    17. OBLITERATE selected modifications, files, directories and revisions
+
+       A. Description
+          #TODO
+
+       B. Main use case
+          all
+
+       C. Primary actor
+          administrator
+
+       D. Priority
+          M - MUST have this.
+
+    18. Keep audit trail of obliterated information
+
+       A. Description
+          #TODO
+
+       B. Main use case
+          security
+
+       C. Primary actor
+          administrator
+
+       D. Priority
+          M - MUST have this.
+
+    19. Propagating obliteration info to working copies
+
+       A. Description
+          #TODO
+
+       B. Main use case
+          all
+
+       C. Primary actor
+          administrator
+
+       D. Priority
+          C - COULD have this if it does not affect anything else.
+
+       E. Workaround
+
+    20. Propagating obliteration info to mirrors
+
+       A. Description
+          #TODO
+
+       B. Main use case
+          security
+
+       C. Primary actor
+          administrator
+
+       D. Priority
+          C - COULD have this if it does not affect anything else.
+
+       E. Workaround
+
+[..]
+
+V. Detailed non-functional requirements
+
+    1. Authorization for hiding the information
+    2. Authorization for restoring the information
+    3. Authorization for obliterating information from the repository
+    4. Limit repository downtime
+    5. Maintain integrity of the repository
+    6. Limit temporary disc space
+    7. Compatibility with older Subversion clients
+
+
+[..]
+
+VI. Requirements vs Use Cases
+
+    This table matches the requirements with the use cases. It tries to answer
+    two specific questions:
+
+    1. What's the value of a requirement in terms of the use cases?
+    2. Which requirements do we need to implement to really solve a specific
+       use case.
+
+    +-------------------------------------------------------------------------+
+    | Disable all access to confidential information in a repository  ---     |
+    | Remove obsolete information from a repository            |      |   \   |
+    +----------------------------------------------------------+------+-------+
+    +    [ #TODO: fill in when all reqs are defined ]          |   x  |   x   |
+    +                                                          |      |   x   |
+    +-------------------------------------------------------------------------+
+
+
+VII. Appendix
+
+    1. Link to external documentation
+
+    [1] Issue 516: http://subversion.tigris.org/issues/show_bug.cgi?id=516
+    [2] Karl Fogel's proposal to use the replay API and filters:
+        http://svn.haxx.se/dev/archive-2008-04/0687.shtml
+    [3] Bob Jenkins's thread about "Auditability": keep log of what has been
+        obliterated:
+        http://svn.haxx.se/dev/archive-2008-04/0816.shtml
+    [4] Users discussing some examples of the need for obliterate:
+        http://svn.haxx.se/users/archive-2005-04/0715.shtml
+
+
+[The corresponding technical specification will be put in another document]

@@ -315,14 +315,15 @@ static svn_ra_reporter3_t ra_svn_reporter = {
   ra_svn_abort_report
 };
 
-static void ra_svn_get_reporter(svn_ra_svn__session_baton_t *sess_baton,
-                                apr_pool_t *pool,
-                                const svn_delta_editor_t *editor,
-                                void *edit_baton,
-                                const char *target,
-                                svn_depth_t depth,
-                                const svn_ra_reporter3_t **reporter,
-                                void **report_baton)
+static svn_error_t *
+ra_svn_get_reporter(svn_ra_svn__session_baton_t *sess_baton,
+                    apr_pool_t *pool,
+                    const svn_delta_editor_t *editor,
+                    void *edit_baton,
+                    const char *target,
+                    svn_depth_t depth,
+                    const svn_ra_reporter3_t **reporter,
+                    void **report_baton)
 {
   ra_svn_reporter_baton_t *b;
   const svn_delta_editor_t *filter_editor;
@@ -334,11 +335,11 @@ static void ra_svn_get_reporter(svn_ra_svn__session_baton_t *sess_baton,
   if ((depth != svn_depth_files) && (depth != svn_depth_infinity)
       && ! svn_ra_svn_has_capability(sess_baton->conn, SVN_RA_SVN_CAP_DEPTH))
     {
-      svn_error_clear(svn_delta_depth_filter_editor(&filter_editor,
-                                                    &filter_baton,
-                                                    editor, edit_baton, depth,
-                                                    *target ? TRUE : FALSE,
-                                                    pool));
+      SVN_ERR(svn_delta_depth_filter_editor(&filter_editor,
+                                            &filter_baton,
+                                            editor, edit_baton, depth,
+                                            *target ? TRUE : FALSE,
+                                            pool));
       editor = filter_editor;
       edit_baton = filter_baton;
     }
@@ -352,6 +353,8 @@ static void ra_svn_get_reporter(svn_ra_svn__session_baton_t *sess_baton,
 
   *reporter = &ra_svn_reporter;
   *report_baton = b;
+
+  return SVN_NO_ERROR;
 }
 
 /* --- RA LAYER IMPLEMENTATION --- */
@@ -1141,8 +1144,8 @@ static svn_error_t *ra_svn_update(svn_ra_session_t *session,
 
   /* Fetch a reporter for the caller to drive.  The reporter will drive
    * update_editor upon finish_report(). */
-  ra_svn_get_reporter(sess_baton, pool, update_editor, update_baton,
-                      target, depth, reporter, report_baton);
+  SVN_ERR(ra_svn_get_reporter(sess_baton, pool, update_editor, update_baton,
+                              target, depth, reporter, report_baton));
   return SVN_NO_ERROR;
 }
 
@@ -1166,8 +1169,8 @@ static svn_error_t *ra_svn_switch(svn_ra_session_t *session,
 
   /* Fetch a reporter for the caller to drive.  The reporter will drive
    * update_editor upon finish_report(). */
-  ra_svn_get_reporter(sess_baton, pool, update_editor, update_baton,
-                      target, depth, reporter, report_baton);
+  SVN_ERR(ra_svn_get_reporter(sess_baton, pool, update_editor, update_baton,
+                              target, depth, reporter, report_baton));
   return SVN_NO_ERROR;
 }
 
@@ -1191,8 +1194,8 @@ static svn_error_t *ra_svn_status(svn_ra_session_t *session,
 
   /* Fetch a reporter for the caller to drive.  The reporter will drive
    * status_editor upon finish_report(). */
-  ra_svn_get_reporter(sess_baton, pool, status_editor, status_baton,
-                      target, depth, reporter, report_baton);
+  SVN_ERR(ra_svn_get_reporter(sess_baton, pool, status_editor, status_baton,
+                              target, depth, reporter, report_baton));
   return SVN_NO_ERROR;
 }
 
@@ -1220,8 +1223,8 @@ static svn_error_t *ra_svn_diff(svn_ra_session_t *session,
 
   /* Fetch a reporter for the caller to drive.  The reporter will drive
    * diff_editor upon finish_report(). */
-  ra_svn_get_reporter(sess_baton, pool, diff_editor, diff_baton,
-                      target, depth, reporter, report_baton);
+  SVN_ERR(ra_svn_get_reporter(sess_baton, pool, diff_editor, diff_baton,
+                              target, depth, reporter, report_baton));
   return SVN_NO_ERROR;
 }
 

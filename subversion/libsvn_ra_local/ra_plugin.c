@@ -408,6 +408,28 @@ svn_ra_local__get_schemes(apr_pool_t *pool)
   return schemes;
 }
 
+/* Do nothing.
+ *
+ * Why is this acceptable?  As of now, FS warnings are used for only
+ * two things: failures to close BDB repositories and failures to
+ * interact with memcached in FSFS (new in 1.6).  In 1.5 and earlier,
+ * we did not call svn_fs_set_warning_func in ra_local, which means
+ * that any BDB-closing failure would have led to abort()s; the fact
+ * that this hasn't led to huge hues and cries makes it seem likely
+ * that this just doesn't happen that often, at least not through
+ * ra_local.  And as far as memcached goes, it seems unlikely that
+ * somebody is going to go through the trouble of setting up and
+ * running memcached servers but then use ra_local access.  So we
+ * ignore errors here, so that memcached can use the FS warnings API
+ * without crashing ra_local.
+ */
+static void
+ignore_warnings(void *baton,
+                svn_error_t *err)
+{
+  return;
+}
+
 static svn_error_t *
 svn_ra_local__open(svn_ra_session_t *session,
                    const char *repos_URL,
@@ -438,6 +460,9 @@ svn_ra_local__open(svn_ra_session_t *session,
   /* Cache the filesystem object from the repos here for
      convenience. */
   sess->fs = svn_repos_fs(sess->repos);
+
+  /* Ignore FS warnings. */
+  svn_fs_set_warning_func(sess->fs, ignore_warnings, NULL);
 
   /* Cache the repository UUID as well */
   SVN_ERR(svn_fs_get_uuid(sess->fs, &sess->uuid, session->pool));

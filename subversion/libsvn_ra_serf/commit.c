@@ -413,16 +413,19 @@ checkout_dir(dir_context_t *dir)
 
   if (checkout_ctx->progress.status != 201)
     {
-      if (checkout_ctx->progress.status == 404)
+      err = svn_ra_serf__error_on_status(checkout_ctx->progress.status,
+                                         dir->name);
+      if (err)
         {
-          return svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND,
-                                  return_response_err(handler,
-                                                      &checkout_ctx->progress),
-                                  _("Path '%s' not present"),
-                                  dir->name);
+          svn_error_clear(checkout_ctx->progress.server_error.error);
+          return err;
         }
 
-      return svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND,
+      /* In the normal cases where this error might occur we already handled
+         it based on the status code. */
+      SVN_ERR(checkout_ctx->progress.server_error.error);
+
+      return svn_error_createf(SVN_ERR_FS_CONFLICT,
                     return_response_err(handler,
                                         &checkout_ctx->progress),
                     _("Directory '%s' is out of date; try updating"),
@@ -495,12 +498,14 @@ get_version_url(const char **checked_in_url,
 
       SVN_ERR(svn_ra_serf__wait_for_props(propfind_ctx, session, pool));
 
+      /* We wouldn't get here if the url wasn't found (404), so the checked-in
+         property should have been set. */
       root_checkout =
           svn_ra_serf__get_ver_prop(props, session->repos_url.path,
                                     base_revision, "DAV:", "checked-in");
 
       if (!root_checkout)
-        return svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND, NULL,
+        return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                                  _("Path '%s' not present"),
                                  session->repos_url.path);
     }
@@ -594,16 +599,10 @@ checkout_file(file_context_t *file)
 
   if (file->checkout->progress.status != 201)
     {
-      if (file->checkout->progress.status == 404)
-        {
-          return svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND,
-                              return_response_err(handler,
-                                                  &file->checkout->progress),
-                              _("Path '%s' not present"),
-                              file->name);
-        }
+      SVN_ERR(svn_ra_serf__error_on_status(file->checkout->progress.status,
+                                           file->name));
 
-      return svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND,
+      return svn_error_createf(SVN_ERR_FS_CONFLICT,
                     return_response_err(handler,
                                         &file->checkout->progress),
                     _("File '%s' is out of date; try updating"),

@@ -604,14 +604,23 @@ svn_ra_serf__wait_for_props(svn_ra_serf__propfind_context_t *prop_ctx,
                             svn_ra_serf__session_t *sess,
                             apr_pool_t *pool)
 {
-  svn_error_t *err;
+  svn_error_t *err, *err2;
 
   err = svn_ra_serf__context_run_wait(&prop_ctx->done, sess, pool);
+
   if (prop_ctx->parser_ctx->error)
     {
       svn_error_clear(err);
       SVN_ERR(prop_ctx->parser_ctx->error);
     }
+
+  err2 = svn_ra_serf__error_on_status(prop_ctx->status_code, prop_ctx->path);
+  if (err2)
+    {
+      svn_error_clear(err);
+      return err2;
+    }
+
   return err;
 }
 
@@ -636,53 +645,6 @@ svn_ra_serf__retrieve_props(apr_hash_t *prop_vals,
     {
       SVN_ERR(svn_ra_serf__wait_for_props(prop_ctx, sess, pool));
     }
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_ra_serf__search_for_base_props(apr_hash_t *props,
-                                   const char **remaining_path,
-                                   const char **missing_path,
-                                   svn_ra_serf__session_t *session,
-                                   svn_ra_serf__connection_t *conn,
-                                   const char *url,
-                                   apr_pool_t *pool)
-{
-  const char *path = url, *present_path = "";
-  const char *vcc_url;
-
-  do
-    {
-      SVN_ERR(svn_ra_serf__retrieve_props(props, session, conn,
-                                          path, SVN_INVALID_REVNUM,
-                                          "0", base_props, pool));
-      vcc_url =
-          svn_ra_serf__get_ver_prop(props, path,
-                                    SVN_INVALID_REVNUM,
-                                    "DAV:",
-                                    "version-controlled-configuration");
-      if (vcc_url)
-        break;
-
-      /* This happens when the file is missing in HEAD. */
-
-      /* Okay, strip off. */
-      present_path = svn_path_join(svn_path_basename(path, pool),
-                                   present_path, pool);
-      path = svn_path_dirname(path, pool);
-    }
-  while (!svn_path_is_empty(path));
-
-  /* Error out if entire URL was bogus (not a single part of it exists
-     in the repository!)  */
-  if (svn_path_is_empty(path))
-    return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                             _("No part of path '%s' was found in "
-                               "repository HEAD"), url);
-
-  *missing_path = present_path;
-  *remaining_path = path;
 
   return SVN_NO_ERROR;
 }
@@ -897,6 +859,7 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
                                svn_ra_serf__session_t *session,
                                const char *url,
                                svn_revnum_t revision,
+                               svn_revnum_t *latest_revnum,
                                apr_pool_t *pool)
 {
   const char *vcc_url, *relative_url, *basecoll_url, *baseline_url;
@@ -944,6 +907,24 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
                               _("The OPTIONS response did not include the "
                                 "requested baseline-collection value"));
     }
+
+  if (latest_revnum)
+    {
+      const char *version_name;
+
+      version_name = svn_ra_serf__get_prop(props, baseline_url,
+                                           "DAV:", SVN_DAV__VERSION_NAME);
+
+      if (!version_name)
+        {
+          return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+                                  _("The OPTIONS response did not include the "
+                                    "requested version-name value"));
+        }
+
+      *latest_revnum = SVN_STR_TO_REV(version_name);
+    }
+
   *bc_url = basecoll_url;
   *bc_relative = relative_url;
   return SVN_NO_ERROR;

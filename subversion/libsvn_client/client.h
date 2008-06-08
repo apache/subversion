@@ -184,7 +184,8 @@ svn_client__repos_locations(const char **start_url,
    representing a reposition location segment for the history of PATH
    (which is relative to RA_SESSION's session URL) in PEG_REVISION
    between END_REVISION and START_REVISION, ordered from oldest
-   segment to youngest.
+   segment to youngest.  *SEGMENTS may be empty but it will never
+   be NULL.
 
    This is basically a thin de-stream-ifying wrapper around the
    svn_ra_get_location_segments() interface, which see for the rules
@@ -1047,16 +1048,18 @@ svn_client__get_log_msg(const char **log_msg,
                         svn_client_ctx_t *ctx,
                         apr_pool_t *pool);
 
-/* Return the revision properties stored in CTX (if any), adding LOG_MSG
-   as SVN_PROP_REVISION_LOG in *REVPROP_TABLE, allocated in POOL.
-   *REVPROP_TABLE will map const char * property names to svn_string_t values.
-   If CTX->REVPROP_TABLE is non-NULL, check that it doesn't contain
-   any of the standard Subversion properties.  In that case, return
-   SVN_ERR_CLIENT_PROPERTY_NAME. */
-svn_error_t *svn_client__get_revprop_table(apr_hash_t **revprop_table,
-                                           const char *log_msg,
-                                           svn_client_ctx_t *ctx,
-                                           apr_pool_t *pool);
+/* Return the revision properties stored in REVPROP_TABLE_IN, adding
+   LOG_MSG as SVN_PROP_REVISION_LOG in *REVPROP_TABLE_OUT, allocated in
+   POOL.  *REVPROP_TABLE_OUT will map const char * property names to
+   svn_string_t values.  If REVPROP_TABLE_IN is non-NULL, check that
+   it doesn't contain any of the standard Subversion properties.  In
+   that case, return SVN_ERR_CLIENT_PROPERTY_NAME. */
+svn_error_t *
+svn_client__ensure_revprop_table(apr_hash_t **revprop_table_out,
+                                 const apr_hash_t *revprop_table_in,
+                                 const char *log_msg,
+                                 svn_client_ctx_t *ctx,
+                                 apr_pool_t *pool);
 
 
 /** Return TRUE iff revision kind is dependent on the working copy.

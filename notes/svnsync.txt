@@ -172,3 +172,15 @@ A: That depends, did you change it on a revision that had already been
    post-revprop-change script, or to have the post-revprop-change script
    record the fact that a change occurred, and then later on have some
    job look through the list of changes and copy them over for you.
+
+Q: How can I relocate the source repository for svnsync?
+
+A: A simple way to relocate a svnsync-ed repository is to change the
+   revision property (of the mirror) that stores the source repository's
+   URL.  Just use this command:
+
+$ svn propset svn:sync-from-url --revprop -r 0 NEW_SOURCE_URL MIRROR_URL
+
+  NOTE: Don't use `svn propedit`, because editors may append an EOL
+  character to NEW_SOURCE_URL that will lead svnsync complaining
+  "svnsync: Malformed URL for repository".

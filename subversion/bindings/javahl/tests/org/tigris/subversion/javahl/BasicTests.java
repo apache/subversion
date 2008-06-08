@@ -29,12 +29,16 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.ByteArrayOutputStream;
+import java.text.ParseException;
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.Map;
+
+import junit.framework.Assert;
 
 /**
  * Tests the basic functionality of javahl binding (inspired by the
@@ -68,6 +72,32 @@ public class BasicTests extends SVNTests
         {
             testCounter = 0;
             testBaseName = testName;
+        }
+    }
+
+    /**
+     * Test LogDate().
+     * @throws Throwable
+     */
+    public void testLogDate() throws Throwable
+    {
+        String goodDate = "2007-10-04T03:00:52.134992Z";
+        String badDate = "2008-01-14";
+        LogDate logDate;
+        
+        try 
+        {
+            logDate = new LogDate(goodDate);
+            assertEquals(1191466852134992L, logDate.getTimeMicros());
+        } catch (ParseException e) {
+            fail("Failed to parse date " + goodDate);
+        }
+        
+        try 
+        {
+            logDate = new LogDate(badDate);
+            fail("Failed to throw exception on bad date " + badDate);
+        } catch (ParseException e) {
         }
     }
 
@@ -791,7 +821,7 @@ public class BasicTests extends SVNTests
         }
         client.copy(sources,
                     new File(thisTest.getWorkingCopy(), "A/B/F").getPath(),
-                    null, true, false);
+                    null, true, false, null);
 
         // Commit the changes, and check the state of the WC.
         assertEquals("Unexpected WC revision number after commit",
@@ -838,7 +868,7 @@ public class BasicTests extends SVNTests
         }
         client.move(srcPaths,
                     new File(thisTest.getWorkingCopy(), "A/B/F").getPath(),
-                    null, false, true, false);
+                    null, false, true, false, null);
 
         // Commit the changes, and check the state of the WC.
         assertEquals("Unexpected WC revision number after commit",
@@ -2195,8 +2225,7 @@ public class BasicTests extends SVNTests
             List revList = new ArrayList();
 
             public void singleMessage(ChangePath[] changedPaths, long revision,
-                    String author, long timeMicros, String message,
-                    boolean hasChildren) {
+                    Map revprops, boolean hasChildren) {
                 revList.add(new Long(revision));
             }
             
@@ -3146,6 +3175,80 @@ public class BasicTests extends SVNTests
             assertEquals(1, line.getRevision());
             assertEquals("jrandom", line.getAuthor());
         }
+    }
+
+    /**
+     * Test commit of arbitrary revprops.
+     * @throws Throwable
+     * @since 1.5
+     */
+    public void testCommitRevprops() throws Throwable
+    {
+
+        class RevpropLogCallback implements LogMessageCallback
+        {
+            Map revprops;
+
+            public void singleMessage(ChangePath[] changedPaths,
+                                      long revision,
+                                      Map revprops,
+                                      boolean hasChildren)
+            {
+                this.revprops = revprops;
+            }
+
+            public Map getRevprops()
+            {
+                return revprops;
+            }
+        }
+
+        // build the test setup
+        OneTest thisTest = new OneTest();
+
+        // modify file A/mu
+        File mu = new File(thisTest.getWorkingCopy(), "A/mu");
+        PrintWriter muWriter = new PrintWriter(new FileOutputStream(mu, true));
+        muWriter.print("appended mu text");
+        muWriter.close();
+        thisTest.getWc().setItemWorkingCopyRevision("A/mu", 2);
+        thisTest.getWc().setItemContent("A/mu",
+                thisTest.getWc().getItemContent("A/mu") + "appended mu text");
+        addExpectedCommitItem(thisTest.getWCPath(),
+                thisTest.getUrl(), "A/mu",NodeKind.file,
+                CommitItemStateFlags.TextMods);
+
+        // commit the changes, with some extra revprops
+        Map revprops = new HashMap();
+        revprops.put("kfogel", "rockstar");
+        revprops.put("cmpilato", "theman");
+        assertEquals("wrong revision number from commit",
+                     client.commit(new String[]{thisTest.getWCPath()},
+                                   "log msg", Depth.infinity, true, true,
+                                   null, revprops),
+                     2);
+
+        // check the status of the working copy
+        thisTest.checkStatus();
+
+        // Fetch our revprops from the server
+        RevpropLogCallback callback = new RevpropLogCallback();
+        client.logMessages(thisTest.getWCPath(), Revision.getInstance(2),
+                           Revision.getInstance(2),
+                           Revision.getInstance(2), false, false, false,
+                           new String[] {"kfogel", "cmpilato"}, 0,
+                           callback);
+        Map fetchedProps = callback.getRevprops();
+
+        assertEquals("wrong number of fetched revprops", revprops.size(),
+                     fetchedProps.size());
+        Set keys = fetchedProps.keySet();
+        for (Iterator it = keys.iterator(); it.hasNext(); )
+          {
+            String key = (String) it.next();
+            assertEquals("revprops check", revprops.get(key),
+                         fetchedProps.get(key));
+          }
     }
 
     /**

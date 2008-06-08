@@ -2013,6 +2013,46 @@ def fold_tree_with_unversioned_modified_items(sbox):
                                         '--set-depth', 'empty', A_path)
   verify_depth(None, "empty", A_path)
 
+
+def depth_empty_update_on_file(sbox):
+  "depth-empty update on a file doesn't break it"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  iota_path = os.path.join(wc_dir, 'iota')
+
+  # Change iota and commit it in r2.
+  svntest.main.file_write(iota_path, 'Modified iota\n')
+  expected_output = svntest.wc.State(wc_dir, { 'iota' : Item(verb='Sending'), })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', wc_rev=2, status='  ')
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, wc_dir)
+
+  # Update iota with depth=empty.
+  expected_output = svntest.wc.State(wc_dir,
+                                     {'iota': Item(status='U ') })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None, False,
+                                        '--depth=empty', '-r1', iota_path)
+
+  # Check the revision and created rev.
+  svntest.actions.run_and_verify_svn_match_any('rev is right',
+                                               r'^Revision: 1\n$',
+                                               [], 'info', iota_path)
+  svntest.actions.run_and_verify_svn_match_any('created rev is right',
+                                               r'^Last Changed Rev: 1\n$',
+                                               [], 'info', iota_path)
+
+
+
 #----------------------------------------------------------------------
 # list all tests here, starting with None:
 test_list = [ None,
@@ -2046,6 +2086,7 @@ test_list = [ None,
               XFail(depth_fold_expand_clean_trees),
               pull_in_tree_with_depth_option,
               XFail(fold_tree_with_unversioned_modified_items),
+              depth_empty_update_on_file,
             ]
 
 if __name__ == "__main__":

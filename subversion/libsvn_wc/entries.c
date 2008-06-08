@@ -316,9 +316,9 @@ read_entry(svn_wc_entry_t **new_entry,
     SVN_ERR(read_val(&kindstr, buf, end));
     if (kindstr)
       {
-        if (! strcmp(kindstr, SVN_WC__ENTRIES_ATTR_FILE_STR))
+        if (strcmp(kindstr, SVN_WC__ENTRIES_ATTR_FILE_STR) == 0)
           entry->kind = svn_node_file;
-        else if (! strcmp(kindstr, SVN_WC__ENTRIES_ATTR_DIR_STR))
+        else if (strcmp(kindstr, SVN_WC__ENTRIES_ATTR_DIR_STR) == 0)
           entry->kind = svn_node_dir;
         else
           return svn_error_createf
@@ -356,11 +356,11 @@ read_entry(svn_wc_entry_t **new_entry,
     entry->schedule = svn_wc_schedule_normal;
     if (schedulestr)
       {
-        if (! strcmp(schedulestr, SVN_WC__ENTRY_VALUE_ADD))
+        if (strcmp(schedulestr, SVN_WC__ENTRY_VALUE_ADD) == 0)
           entry->schedule = svn_wc_schedule_add;
-        else if (! strcmp(schedulestr, SVN_WC__ENTRY_VALUE_DELETE))
+        else if (strcmp(schedulestr, SVN_WC__ENTRY_VALUE_DELETE) == 0)
           entry->schedule = svn_wc_schedule_delete;
-        else if (! strcmp(schedulestr, SVN_WC__ENTRY_VALUE_REPLACE))
+        else if (strcmp(schedulestr, SVN_WC__ENTRY_VALUE_REPLACE) == 0)
           entry->schedule = svn_wc_schedule_replace;
         else
           return svn_error_createf
@@ -569,9 +569,9 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
     entry->kind = svn_node_none;
     if (kindstr)
       {
-        if (! strcmp(kindstr, SVN_WC__ENTRIES_ATTR_FILE_STR))
+        if (strcmp(kindstr, SVN_WC__ENTRIES_ATTR_FILE_STR) == 0)
           entry->kind = svn_node_file;
-        else if (! strcmp(kindstr, SVN_WC__ENTRIES_ATTR_DIR_STR))
+        else if (strcmp(kindstr, SVN_WC__ENTRIES_ATTR_DIR_STR) == 0)
           entry->kind = svn_node_dir;
         else
           return svn_error_createf
@@ -590,13 +590,13 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
     entry->schedule = svn_wc_schedule_normal;
     if (schedulestr)
       {
-        if (! strcmp(schedulestr, SVN_WC__ENTRY_VALUE_ADD))
+        if (strcmp(schedulestr, SVN_WC__ENTRY_VALUE_ADD) == 0)
           entry->schedule = svn_wc_schedule_add;
-        else if (! strcmp(schedulestr, SVN_WC__ENTRY_VALUE_DELETE))
-              entry->schedule = svn_wc_schedule_delete;
-        else if (! strcmp(schedulestr, SVN_WC__ENTRY_VALUE_REPLACE))
+        else if (strcmp(schedulestr, SVN_WC__ENTRY_VALUE_DELETE) == 0)
+          entry->schedule = svn_wc_schedule_delete;
+        else if (strcmp(schedulestr, SVN_WC__ENTRY_VALUE_REPLACE) == 0)
           entry->schedule = svn_wc_schedule_replace;
-        else if (! strcmp(schedulestr, ""))
+        else if (strcmp(schedulestr, "") == 0)
           entry->schedule = svn_wc_schedule_normal;
         else
           return svn_error_createf
@@ -707,7 +707,7 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
                                 APR_HASH_KEY_STRING);
     if (text_timestr)
       {
-        if (! strcmp(text_timestr, SVN_WC__TIMESTAMP_WC))
+        if (strcmp(text_timestr, SVN_WC__TIMESTAMP_WC) == 0)
           {
             /* Special case:  a magic string that means 'get this value
                from the working copy' -- we ignore it here, trusting
@@ -725,7 +725,7 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
                                 APR_HASH_KEY_STRING);
     if (prop_timestr)
       {
-        if (! strcmp(prop_timestr, SVN_WC__TIMESTAMP_WC))
+        if (strcmp(prop_timestr, SVN_WC__TIMESTAMP_WC) == 0)
           {
             /* Special case:  a magic string that means 'get this value
                from the working copy' -- we ignore it here, trusting
@@ -898,7 +898,7 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
                      APR_HASH_KEY_STRING);
     if (val)
       {
-        if (! strcmp(val, SVN_WC__WORKING_SIZE_WC))
+        if (strcmp(val, SVN_WC__WORKING_SIZE_WC) == 0)
           {
             /* Special case (same as the timestamps); ignore here
                these will be handled elsewhere */
@@ -1334,7 +1334,7 @@ check_entries(apr_hash_t *entries,
       name = key;
 
       /* We've already checked the "this dir" entry */
-      if (! strcmp(name, SVN_WC_ENTRY_THIS_DIR ))
+      if (strcmp(name, SVN_WC_ENTRY_THIS_DIR) == 0)
         continue;
 
       /* Validate THIS_ENTRY's current schedule. */
@@ -1882,7 +1882,7 @@ write_entry_xml(svn_stringbuf_t **output,
   if (strcmp(name, SVN_WC_ENTRY_THIS_DIR))
     {
       /* This is NOT the "this dir" entry */
-      if (! strcmp(name, "."))
+      if (strcmp(name, ".") == 0)
         {
           /* By golly, if this isn't recognized as the "this dir"
              entry, and it looks like '.', we're just asking for an
@@ -1991,7 +1991,7 @@ write_entries_xml(svn_stringbuf_t **output,
       this_entry = val;
 
       /* Don't rewrite the "this dir" entry! */
-      if (! strcmp(key, SVN_WC_ENTRY_THIS_DIR ))
+      if (strcmp(key, SVN_WC_ENTRY_THIS_DIR) == 0)
         continue;
 
       /* Append the entry to output */
@@ -2062,7 +2062,7 @@ svn_wc__entries_write(apr_hash_t *entries,
           this_entry = val;
 
           /* Don't rewrite the "this dir" entry! */
-          if (! strcmp(key, SVN_WC_ENTRY_THIS_DIR ))
+          if (strcmp(key, SVN_WC_ENTRY_THIS_DIR) == 0)
             continue;
 
           /* Append the entry to BIGSTR */
