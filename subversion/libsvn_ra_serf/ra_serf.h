@@ -972,13 +972,14 @@ svn_ra_serf__create_options_req(svn_ra_serf__options_context_t **opt_ctx,
                                 const char *path,
                                 apr_pool_t *pool);
 
-/* Try to discover our current root @a vcc_url and the resultant @a rel_path
- * based on @a orig_path for the @a session on @a conn.
+/* Try to discover our current root @a VCC_URL and the resultant @a REL_PATH
+ * based on @a ORIG_PATH for the @a SESSION on @a CONN.
+ * REL_PATH will be URI decoded.
  *
- * @a rel_path may be NULL if the caller is not interested in the relative
+ * @a REL_PATH may be NULL if the caller is not interested in the relative
  * path.
  *
- * All temporary allocations will be made in @a pool.
+ * All temporary allocations will be made in @a POOL.
  */
 svn_error_t *
 svn_ra_serf__discover_root(const char **vcc_url,
@@ -990,6 +991,8 @@ svn_ra_serf__discover_root(const char **vcc_url,
 
 /* Set *BC_URL to the baseline collection url, and set *BC_RELATIVE to
  * the path relative to that url for URL in REVISION using SESSION.
+ * BC_RELATIVE will be URI decoded.
+ *
  * REVISION may be SVN_INVALID_REVNUM (to mean "the current HEAD
  * revision").  If URL is NULL, use SESSION's session url.
  *
