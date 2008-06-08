@@ -628,20 +628,30 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
 
       svn_ra_serf__request_create(handler);
       err = svn_ra_serf__context_run_wait(&lock_ctx->done, session, subpool);
-      if (lock_ctx->error || parser_ctx->error)
+
+      if (!lock_ctx->error)
         {
-          svn_error_clear(err);
-          SVN_ERR(lock_ctx->error);
-          SVN_ERR(parser_ctx->error);
-        }
-      if (err)
-        {
-          return svn_error_create(SVN_ERR_RA_DAV_REQUEST_FAILED, err,
-                                  _("Lock request failed"));
+          if (parser_ctx->error)
+            {
+              svn_error_clear(err);
+              return parser_ctx->error;
+            }
+          if (err)
+            {
+              return svn_error_create(SVN_ERR_RA_DAV_REQUEST_FAILED, err,
+                                      _("Lock request failed"));
+            }
         }
 
-      SVN_ERR(lock_func(lock_baton, lock_ctx->path, TRUE, lock_ctx->lock, NULL,
-                        subpool));
+      svn_error_clear(err);
+      svn_error_clear(parser_ctx->error);
+
+      if (lock_func)
+        err = lock_func(lock_baton, lock_ctx->path, TRUE, lock_ctx->lock,
+                        lock_ctx->error, subpool);
+      svn_error_clear(lock_ctx->error);
+
+      SVN_ERR(err);
     }
 
   return SVN_NO_ERROR;
