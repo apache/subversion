@@ -10,7 +10,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.5\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2008-05-19 09:01+0200\n"
-"PO-Revision-Date: 2008-06-05 16:40+0200\n"
+"PO-Revision-Date: 2008-06-08 22:41+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: German <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -9429,7 +9429,6 @@ msgstr ""
 "message (-m) oder --file (-F) Optionen"
 
 #: ../svn/util.c:809
-# CHECKME: " :"?
 msgid ""
 "\n"
 "Log message unchanged or not specified\n"
@@ -9437,7 +9436,7 @@ msgid ""
 msgstr ""
 "\n"
 "Logmeldung unverändert oder nicht angegeben\n"
-"A)bbrechen, Weitermac)hen, E)ditieren :\n"
+"A)bbrechen, Weitermac)hen, E)ditieren:\n"
 
 #: ../svn/util.c:862
 msgid "Use --force to override this restriction"
