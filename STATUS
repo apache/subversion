@@ -110,10 +110,15 @@ Candidate changes for 1.5.1:
  * r31620, r31622
    Don't blindly assume that the client will always report capabilities.
    Fixes a segfault in svn_repos__hooks_start_commit(). svn(1) won't
-   trigger it, but other clients could. This can wait for 1.5.1 on the
-   same grounds as r31223.
+   trigger it, but other clients could.
+   Notes:
+     stsp: This can wait for 1.5.1 on the same grounds as r31223.
+     glasser: Um, doesn't not applying this segfault *every single
+       program* written against the pre-1.5 svn_repos API if
+       the repository has a start-commit hook?  As much as I
+       hate to drag out this process...
    Votes:
-     +1: stsp, danielsh
+     +1: stsp, danielsh, glasser
 
 Approved changes (all releases):
 ================================
