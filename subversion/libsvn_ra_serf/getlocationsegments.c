@@ -187,7 +187,8 @@ svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
   serf_bucket_aggregate_append(buckets, tmp);
 
   SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url,
-                                         session, NULL, peg_revision, pool));
+                                         session, NULL, peg_revision, NULL,
+                                         pool));
 
   req_url = svn_path_url_add_component(basecoll_url, relative_url, pool);
 

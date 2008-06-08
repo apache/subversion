@@ -992,6 +992,11 @@ svn_ra_serf__discover_root(const char **vcc_url,
  * the path relative to that url for URL in REVISION using SESSION.
  * REVISION may be SVN_INVALID_REVNUM (to mean "the current HEAD
  * revision").  If URL is NULL, use SESSION's session url.
+ *
+ * If LATEST_REVNUM is not NULL, set it to the baseline revision. If
+ * REVISION was set to SVN_INVALID_REVNUM, this will return the current
+ * HEAD revision.
+ *
  * Use POOL for all allocations.
  */
 svn_error_t *
@@ -1000,6 +1005,7 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
                                svn_ra_serf__session_t *session,
                                const char *url,
                                svn_revnum_t revision,
+                               svn_revnum_t *latest_revnum,
                                apr_pool_t *pool);
 
 /** RA functions **/
