@@ -16,7 +16,7 @@ Candidate changes for 1.5.1:
    Notes:
      Not possible to make svn(1) segfault with this, so can wait for 1.5.1.
    Votes:
-     +1: epg, stsp
+     +1: epg, stsp, danielsh
 
  * r31313
    Make all ra layers return a consistent error when a path is not found in the
