@@ -34,171 +34,181 @@
   <img src="images/subversion_logo_hor-468x64.png" alt="Subversion" />
 </div>
 
-<p>The goal of the Subversion project is to build a <strong>version
-   control system</strong> that is a compelling replacement for CVS in
-   the open source community.  The software is released under an <a
-   href="license-1.html">Apache/BSD-style</a> open source
-   license.</p>
+<div style="text-align: center; font-size: 150%;">
+<p>Subversion is an open source <a
+   href="http://en.wikipedia.org/wiki/Revision_control">version
+   control system</a>, released under an Apache/BSD-style <a
+   href="license-1.html">license</a>.<br/>
+   See <a href="features.html" >here</a> for a detailed feature list.</p>
+</div>
 
-<div id="latest">
-<h2>Latest Release</h2>
+<div style="text-align: center;">
 
-<p>Subversion 1.4.6 is <a
-   href="http://subversion.tigris.org/servlets/NewsItemView?newsItemID=2007"
-   >now available</a>.  It is a bugfix release for the 1.4.x line.  See
-   the <a href="svn_1.4_releasenotes.html" >1.4.x release notes</a> for
-   what's new in the 1.4 series generally.</p>
-</div>  <!-- latest -->
+<table width="90%" border="0" style="margin-right: 5%; margin-left: 5%;">
 
-<div id="questions">
-<h2>Got Questions?</h2>
+<tr align="center">
 
-<p style="background: #dd9;">The <a
-   href="http://svnbook.red-bean.com/">Subversion Book</a> and <a
-   href="faq.html">FAQ</a> can usually answer most questions.  You can
-   also ask on the <a
-   href="/servlets/ProjectMailingListList">users@subversion.tigris.org</a>
-   mailing list, or in IRC at <tt><a href="irc://irc.freenode.net/"
-   >irc.freenode.net</a></tt>, channel <tt><a
-   href="irc://irc.freenode.net/svn" >#svn</a></tt>.  (Note that the
-   mailing lists are <a href="faq.html#moderation">moderated</a>, so
-   there may be a delay before your post shows up.)</p>
-</div>  <!-- questions -->
+<!-- ========================= WANT ==================================== -->
+<td style="width: 50%">
+<div id="want" title="want">
+<h2 style="text-align: center;">Get Subversion</h2>
 
-<div id="features">
-<h2>Subversion's Features</h2>
+<p>The latest release of Subversion is 1.4.6.  See the <a
+   href="svn_1.4_releasenotes.html" >release notes</a> for what's new
+   in the 1.4.x series generally.</p>
 
-<ul>  <!-- list of features -->
+<table border="0" style="margin-right: auto; margin-left: auto;">
+<tr align="center">
+<th style="text-align: center; width: 50%"><strong>Subversion</strong></th>
+<th style="text-align: center; width: 50%">Third-Party Clients</th>
+</tr>
+<tr align="center">
+<td style="width: 50%">
+   <ul style="text-align: left">
+   <li><a href="getting.html#source-release"
+       >Source code</a> (all platforms)</li>
+   </ul>
+   <ul style="text-align: left">
+   <li><a href="getting.html#windows"
+       >Windows binaries</a></li>
+   <li><a href="getting.html#osx"
+       >Mac OS&nbsp;X binaries</a></li>
+   <li><a href="getting.html#redhat-fedora"
+       >Fedora / Red Hat binaries</a></li>
+   <li><a href="getting.html#debian"
+       >Debian / Ubuntu binaries</a></li>
+   <li><a href="getting.html#freebsd"
+       >FreeBSD (ports)</a></li>
+   <li><a href="getting.html#solaris"
+       >Solaris binaries</a></li>
+   <li><a href="getting.html"
+       >...more downloads...</a></li>
+   </ul>
+</td>
+<td style="width: 50%">
+   <ul style="text-align: left">
+   <li><a href="http://tortoisesvn.tigris.org/"
+       >TortoiseSVN</a> (Windows)</li>
+   <li><a href="http://subclipse.tigris.org/"
+       >Subclipse</a> (Eclipse)</li>
+   <li><a
+   href="http://www.polarion.org/index.php?page=overview&amp;project=subversive"
+       >Subversive</a> (Eclipse)</li>
+   <li><a href="http://scplugin.tigris.org/"
+       >SCPlugin</a> (Mac OS&nbsp;X)</li>
+   <li><a href="http://rapidsvn.tigris.org/"
+       >RapidSVN</a> (cross-platform)</li>
+   <li><a href="http://www.visualsvn.com/"
+       >VisualSVN</a> (VS.NET)</li>
+   <li><a href="links.html#clients"
+       >...more clients...</a></li>
+   </ul>
+</td>
+</tr>
+</table>
 
-<li><strong>Most current CVS features.</strong>
-    <p>Subversion is meant to be a better CVS, so it has most of
-    CVS's features.  Generally, Subversion's interface to a particular
-    feature is similar to CVS's, except where there's a compelling
-    reason to do otherwise.</p>
-</li>
+</div> <!-- want -->
 
-<li><strong>Directories, renames, and file meta-data are versioned.</strong>
-    <p>Lack of these features is one of the most common complaints
-    against CVS.  Subversion versions not only file contents and file
-    existence, but also directories, copies, and renames.  It also
-    allows arbitrary metadata ("properties") to be versioned along
-    with any file or directory, and provides a mechanism for
-    versioning the `execute' permission flag on files.
- </p>
-</li>
+</td>
 
-<li><strong>Commits are truly atomic.</strong>
-    <p>No part of a commit takes effect until the entire commit has
-    succeeded.  Revision numbers are per-commit, not per-file; log
-    messages are attached to the revision, not stored redundantly as
-    in CVS.</p>
-</li>
+<!-- ========================= HELP ==================================== -->
+<td style="width: 50%">
+<div id="help" title="help">
+<h2 style="text-align: center;">Help</h2>
 
-<li><strong>Apache network server option, with WebDAV/DeltaV
-    protocol.</strong>
-    <p>Subversion can use the HTTP-based WebDAV/DeltaV protocol for network
-    communications, and the Apache web server to provide
-    repository-side network service.  This gives Subversion an
-    advantage over CVS in interoperability, and provides various key
-    features for free: authentication, wire compression, and
-    basic repository browsing. </p>
-</li>
+<p>In addition to the resources below, you can use an Internet search
+engine to find answers to Subversion questions.  For example, if you
+got an error message, try entering part of the error into a search
+engine&nbsp;&mdash;&nbsp;often, the first few results will often
+contain the answer you're looking for.</p>
 
-<li><strong>Standalone server option.</strong> 
-    <p>Subversion also offers a standalone server option using a
-    custom protocol (not everyone wants to run Apache 2.x).  The
-    standalone server can run as an inetd service, or in daemon mode,
-    and offers basic authentication and authorization.  It can also be
-    tunnelled over ssh.</p>
-</li>
+<div style="width: 70%">
+   <ul style="text-align: left">
+   <li><a href="mailing-lists.html"
+       >Mailing Lists</a> (non-subscribers can post)</li>
+   <li><a href="faq.html"
+       >FAQ</a> (answers to Frequently Asked Questions)</li>
+   <li><a href="http://svnbook.red-bean.com/"
+       >Subversion Book</a> (complete online)</li>
+   <li>Chat room: <a href="irc://irc.freenode.net/svn"
+       ><tt>irc.freenode.net</tt> (channel <tt>#svn</tt>)</a></li>
+   <li>Various <a href="links.html"
+       >Subversion-related links</a></li>
+   <li><a href="http://cvs2svn.tigris.org/"
+       >Converting from CVS to Subversion</a></li>
+   <li><a href="links.html#converters"
+       >Converting from other version control systems to Subversion</a></li>
+   <li><a href="commercial-support.html"
+       >Commercial Support</a></li>
+   </ul>
+</div>
 
-<li><strong>Branching and tagging are cheap (constant time) operations</strong>
-    <p>There is no reason for these operations to be expensive, so
-    they aren't.</p>
+</div> <!-- help -->
+</td>
 
-    <p>Branches and tags are both implemented in terms of an
-    underlying "copy" operation.  A copy takes up a small, constant
-    amount of space.  Any copy is a tag; and if you start committing
-    on a copy, then it's a branch as well.  (This does away with CVS's
-    "branch-point tagging", by removing the distinction that made
-    branch-point tags necessary in the first place.)</p>
-</li>
+</tr>
 
-<li><strong>Natively client/server, layered library design</strong>
-    <p> Subversion is designed to be client/server from the beginning;
-    thus avoiding some of the maintenance problems which have plagued
-    CVS.  The code is structured as a set of modules with well-defined
-    interfaces, designed to be called by other applications.</p>
-</li>
+<tr align="center">
 
-<li><strong>Client/server protocol sends diffs in both directions</strong>
-    <p>The network protocol uses bandwidth efficiently by transmitting
-    diffs in both directions whenever possible (CVS sends diffs from
-    server to client, but not client to server).</p>
-</li>
+<!-- ========================= COMPLAIN ================================ -->
+<td style="width: 50%">
+<div id="complain" title="complain">
+<h2 style="text-align: center;">Report a Problem</h2>
 
-<li><strong>Costs are proportional to change size, not data size</strong>
-    <p>In general, the time required for a Subversion operation is
-    proportional to the size of the <i>changes</i> resulting from that
-    operation, not to the absolute size of the project in which the
-    changes are taking place.  This is a property of the Subversion
-    repository model.</p>
-</li>
+<p><strong>To report a bug:</strong></p>
 
+<p>First, please read the <a href="bugs.html" >bug report instructions</a>.</p>
 
-<li><strong>Choice of database or plain-file repository implementations</strong> 
-  <p>Repositories can be created with either an embedded database
-     back-end (BerkeleyDB) or with normal flat-file back-end, which
-     uses a custom format.</p>
-</li>
+<p>Then, please read the <a href="bugs.html" >bug report instructions</a>.</p>
 
-<li><strong>Versioning of symbolic links</strong>
-  <p>Unix users can place symbolic links under version control.  The
-     links are recreated in Unix working copies, but not in win32
-     working copies.</p>
-</li>
+<p>Finally, please read the <a href="bugs.html" >bug report instructions</a>.</p>
 
-<li><strong>Efficient handling of binary files</strong>
-    <p>Subversion is equally efficient on binary as on text files,
-    because it uses a binary diffing algorithm to transmit and store
-    successive revisions.</p>
-</li>
+<p><strong>We really mean that&nbsp;&mdash;&nbsp;please read the
+instructions all the way through.</strong> The vast majority of bug
+reports are insufficiently detailed, or are duplicates of existing
+reports, or are not bugs, or are already fixed.  You can save the
+maintainers a lot of time by following the instructions carefully.
+Thank you.</p>
 
-<li><strong>Parseable output</strong>
-    <p>All output of the Subversion command-line client is carefully
-    designed to be both human readable and automatically parseable;
-    scriptability is a high priority.
-</p>
-</li>
+</div> <!-- complain -->
 
-<li><strong>Localized messages</strong>
-  <p>Subversion uses gettext() to display translated error,
-     informational, and help messages, based on current locale
-     settings.</p>
-</li>
+</td>
 
-<li><strong>Repository mirroring</strong>
-  <p>Subversion supplies a utility, <tt>svnsync</tt> for synchronizing
-     (via either push or pull) a read-only slave repository with a
-     master repository.</p>
+<!-- ========================= DEVELOPMENT ============================= -->
+<td style="width: 50%">
+<div id="development" title="development">
+<h2 style="text-align: center;">Development</h2>
 
-<!-- ### Language bindings/API? -->
+<p>Subversion is an open source project; we welcome <a
+href="hacking.html#patches" >patches</a>, and we'll help you get more
+<a href="http://www.red-bean.com/svnproject/contribulyzer/"
+>involved</a> if you want to be.</p>
 
-<!-- TODO: Mention 1.5.0's merge tracking support -->
+     <ul>
+     <li><p>Read the <a href="development.html">Introduction to Subversion
+      Development</a>.</p></li>
+     <li><p>Read the <a href="hacking.html">Hacker's Guide to
+      Subversion</a>.</p></li>
+     <li><p>Maybe browse the <a href="http://svn.collab.net/svn-doxygen/"
+      >API documentation</a>.</p></li>
+     <li><p><a href="http://svn.collab.net/viewvc/svn/trunk/"
+      >Browse the source tree</a> with ViewVC.</p></li>
+     <li><p>Check out the source tree:<br/>
+      <tt>svn&nbsp;checkout&nbsp;<a
+      href="http://svn.collab.net/repos/svn/trunk/"
+      >http://svn.collab.net/repos/svn/trunk/</a></tt></p></li>
+     <li><p>Hack!</p></li>
+     </ul>
 
-<!-- TODO: Mention 1.5.0's write-through DAV proxy -->
+</div> <!-- development -->
 
-</li>
+</td>
 
-</ul>
-</div>  <!-- features -->
+</tr>
 
-<div id="roadmap">
-<h2>Future Subversion Features</h2>
+</table>
 
-<p>See the <a href="roadmap.html">Roadmap</a> page.</p>
-</div>  <!-- roadmap -->
-
+</div>
 </div>
 </body>
 </html>
