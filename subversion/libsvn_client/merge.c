@@ -126,7 +126,7 @@
  *
  * CHILDREN_WITH_MERGEINFO is intially created by get_mergeinfo_paths()
  * and outside of that function and its helpers should always meet the
- * seven criteria dictated in get_mergeinfo_paths()'s doc string.
+ * criteria dictated in get_mergeinfo_paths()'s doc string.
  */
 
 /*-----------------------------------------------------------------------*/
@@ -3091,8 +3091,9 @@ get_mergeinfo_walk_cb(const char *path,
 
   /* Store PATHs with explict mergeinfo, which are switched, are missing
      children due to a sparse checkout, are scheduled for deletion are absent
-     from the WC, and/or are first level sub directories relative to merge
-     target if depth is immediates. */
+     from the WC, are first level sub directories relative to merge target if
+     depth is immediates, and/or are file children of the merge target if
+     depth is files. */
   if (path_is_merge_target
       || has_mergeinfo_from_merge_src
       || entry->schedule == svn_wc_schedule_delete
@@ -3102,8 +3103,11 @@ get_mergeinfo_walk_cb(const char *path,
       || entry->absent
       || ((wb->depth == svn_depth_immediates) &&
           (entry->kind == svn_node_dir) &&
-          (strcmp(parent_path, path) != 0) &&
-          (strcmp(parent_path, wb->merge_target_path) == 0)))
+          (strcmp(parent_path, wb->merge_target_path) == 0))
+      || ((wb->depth == svn_depth_files) &&
+          (entry->kind == svn_node_file) &&
+          (strcmp(parent_path, wb->merge_target_path) == 0))
+          )
     {
       svn_client__merge_path_t *child =
         apr_pcalloc(wb->children_with_mergeinfo->pool, sizeof(*child));
@@ -3399,6 +3403,10 @@ insert_parent_and_sibs_of_sw_absent_del_entry(
         a sparse checkout.
      6) Path is absent from disk due to an authz restriction.
      7) Path is equal to MERGE_CMD_BATON->TARGET.
+     8) Path is an immediate *directory* child of MERGE_CMD_BATON->TARGET and
+        DEPTH is svn_depth_immediates.
+     9) Path is an immediate *file* child of MERGE_CMD_BATON->TARGET and
+        DEPTH is svn_depth_files.
 
    Store the svn_client__merge_path_t *'s in *CHILDREN_WITH_MERGEINFO in
    depth-first order based on the svn_client__merge_path_t *s path member as
