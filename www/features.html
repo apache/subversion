@@ -1,0 +1,241 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<style type="text/css"> /* <![CDATA[ */
+  @import "branding/css/tigris.css";
+  @import "branding/css/inst.css";
+  /* ]]> */</style>
+<link rel="stylesheet" type="text/css" media="print"
+  href="branding/css/print.css"/>
+<script type="text/javascript" src="branding/scripts/tigris.js"></script>
+<title>Subversion Features</title>
+<!-- Custom stylations to hide the obnoxious project info -->
+<style type="text/css">
+#projecthome .axial { display: none; }
+#apphead h1 { display: none; }
+#longdescription { border: none; }
+#longdescription h2 { display: none; }
+#customcontent h2 { display: block; }
+</style>
+<!-- End custom stylations -->
+</head>
+
+<body>
+
+<div id="features">
+<h2>Subversion's Features</h2>
+
+<p></p>
+
+
+<ul>
+
+<li id="cvs-features" title="cvs-features">
+    <strong>Most CVS features.</strong> <p>Subversion was originally
+    designed to be a better <a
+    href="http://en.wikipedia.org/wiki/Concurrent_Versions_System"
+    >CVS</a>, so it has most of CVS's features.  Generally,
+    Subversion's interface to a particular feature is similar to
+    CVS's, except where there's a compelling reason to do
+    otherwise.</p>
+
+    <p>Subversion has since expanded beyond its original goal of
+    replacing CVS, but its history influenced its feature and
+    interface choices; Subversion today should still feel very
+    familiar to CVS users.</em></p>
+</li>
+
+<li id="directory-versioning" title="directory-versioning">
+    <strong>Directories are versioned.</strong>
+    <p>Subversion versions directories as first-class objects, just
+    like files.</p>
+</li>
+
+<li id="action-versioning" title="action-versioning">
+    <strong>Copying, deleting, and renaming are versioned.</strong>
+    <p>Copying and deleting are versioned operations.  Renaming is
+    also a versioned operation, albeit with some <a
+    href="http://subversion.tigris.org/issues/show_bug.cgi?id=898"
+    >quirks</a>.</p> 
+</li>
+
+<li id="properties" title="properties">
+    <strong>Free-form versioned metadata ("properties").</strong>
+    <p>Subversion allows arbitrary metadata ("properties") to be
+    attached to any file or directory.  These properties are key/value
+    pairs, and are versioned just like the objects they are attached
+    to.  Subversion also provides a way to attach arbitrary key/value
+    properties to a revision (that is, to a committed changeset).
+    These properties are not versioned, since they attach metadata to
+    the version-space itself, but they can be changed at any time.</p>
+</li>
+
+<li id="atomic-commits" title="atomic-commits">
+    <strong>Atomic commits.</strong> <p>No part of a commit takes
+    effect until the entire commit has succeeded.  Revision numbers
+    are per-commit, not per-file, and commit's log message is attached
+    to its revision, not stored redundantly in all the files affected
+    by that commit.</p> </li>
+
+<li id="cheap-copies" title="cheap-copies">
+    <strong>Branching and tagging are cheap
+            (constant time) operations.</strong>
+    <p>There is no reason for these operations to be expensive, so
+    they aren't.</p>
+
+    <p>Branches and tags are both implemented in terms of an
+    underlying "copy" operation.  A copy takes up a small, constant
+    amount of space.  Any copy is a tag; and if you start committing
+    on a copy, then it's a branch as well.  (This does away with CVS's
+    "branch-point tagging", by removing the distinction that made
+    branch-point tags necessary in the first place.)</p>
+</li>
+
+<li id="merge-tracking" title="merge-tracking">
+    <strong>Merge tracking.</strong>
+    <p>Subversion 1.5 introduces merge tracking: automated assistance
+    with managing the flow of changes between lines of development,
+    and with the merging of branches back into their sources.  The 1.5
+    release of merge tracking has basic support for common scenarios;
+    we will be extending the feature in upcoming releases.</p>
+</li>
+
+<li id="file-locking" title="file-locking">
+    <strong>File locking.</strong>
+  <p>Subversion supports (but does not require) locking files so that
+    users can be warned when multiple people try to edit the same
+    file.  A file can be marked as requiring a lock before being
+    edited, in which case Subversion will present the file in
+    read-only mode until a lock is acquired.</p>
+</li>
+
+<li id="symbolic-links" title="symbolic-links">
+    <strong>Symbolic links can be versioned.</strong>
+  <p>Unix users can place symbolic links under version control.  The
+     links are recreated in Unix working copies, but not in win32
+     working copies.</p>
+</li>
+
+<li id="execute-flag" title="execute-flag">
+    <strong>Executable flag is preserved.</strong>
+  <p>Subversion notices when a file is executable, and if that file is
+     placed into version control, its executability will be preserved
+     when it it checked out to other locations.  (The mechanism
+     Subversion uses to remember this is simply <a href="#properties"
+     >versioned properties</a>, so executability can be manually
+     edited when necessary, even from a client that does not
+     acknowledge the file's executability, e.g., when having the wrong
+     extension under Microsoft Windows).</p>
+</li>
+
+<li id="apache-httpd-server" title="apache-httpd-server" title="apache-httpd-server">
+    <strong>Apache network server option, with WebDAV/DeltaV
+    protocol.</strong> <p>Subversion can use the HTTP-based
+    WebDAV/DeltaV protocol for network communications, and the Apache
+    web server to provide repository-side network service.  This gives
+    Subversion an advantage over CVS in interoperability, and allows
+    certain features (such as authentication, wire compression) to be
+    provided in a way that is already familiar to administrators</p>
+</li>
+
+<li id="svnserve" title="svnserve">
+    <strong>Standalone server option (<tt>svnserve</tt>).</strong>
+    <p>Subversion offers a standalone server option using a custom
+    protocol, since not everyone wants to run an Apache HTTPD server.
+    The standalone server can run as an inetd service or in daemon
+    mode, and offers the same level of authentication and
+    authorization functionality as the HTTPD-based server.  The
+    standalone server can also be tunnelled over ssh.</p> </li>
+
+<li id="parseable-output" title="parseable-output">
+    <strong>Parseable output.</strong>
+    <p>All output of the Subversion command-line client is carefully
+    designed to be both human readable and automatically parseable;
+    scriptability is a high priority.</p>
+</li>
+
+<li id="localization" title="localization">
+    <strong>Localized messages.</strong>
+  <p>Subversion uses gettext() to display translated error,
+     informational, and help messages, based on current locale
+     settings.</p>
+</li>
+
+<li id="interactive-conflict-resolution" title="interactive-conflict-resolution">
+    <strong>Interactive conflict resolution.</strong>
+    <p>The Subversion command-line client (<tt>svn</tt>) offers
+    various ways to resolve conflicting changes, include interactive
+    resolution prompting.  This mechanism is also made available via
+    APIs, so that other clients (such as graphical clients) can offer
+    interactive conflict resolution appropriate to their interfaces.</p>
+</li>
+
+<li id="read-only-mirroring" title="read-only-mirroring">
+    <strong>Repository read-only mirroring.</strong>
+  <p>Subversion supplies a utility, <tt>svnsync</tt> for synchronizing
+     (via either push or pull) a read-only slave repository with a
+     master repository.</p>
+
+<li id="write-through-proxy" title="write-through-proxy">
+    <strong>Write-through proxy over WebDAV.</strong>
+  <p>Subversion 1.5 introduces a write-through proxy feature that
+     allows slave repositories (see <a href="#read-only-mirroring"
+     >read-only mirroring</a>) to handle all read operations
+     themselves while passing write operations through to the master.
+     This feature is only available with the Apache HTTPD (WebDAV)
+     server option.</p>
+
+<li id="modular-design" title="modular-design">
+    <strong>Natively client/server, layered library design with
+            clean APIs.</strong>
+    <p> Subversion is designed to be client/server from the beginning;
+    thus avoiding some of the maintenance problems which have plagued
+    CVS.  The code is structured as a set of modules with well-defined
+    interfaces, designed to be called by other applications.</p>
+</li>
+
+<li id="binary-files" title="binary-files">
+    <strong>Binary files handled efficiently.</strong>
+    <p>Subversion is equally efficient on binary as on text files,
+    because it uses a binary diffing algorithm to transmit and store
+    successive revisions.</p>
+</li>
+
+<li id="proportionality" title="proportionality">
+    <strong>Costs are proportional to change size, not data size.</strong>
+    <p>In general, the time required for a Subversion operation is
+    proportional to the size of the <i>changes</i> resulting from that
+    operation, not to the absolute size of the project in which the
+    changes are taking place.</p>
+</li>
+
+<li id="bindings" title="bindings">
+    <strong>Bindings to programming languages.</strong>
+    <p>The Subversion APIs come with bindings for many programming
+    languages, such as Python, Perl, Java, and Ruby.  (Subversion
+    itself is written in C.)</p>
+</li>
+
+<li id="changelists" title="changelists">
+    <strong>Changelists.</strong>
+    <p>Subversion 1.5 introduces changelists, which allows a user to
+    put modified files into named groups on the client side, and then
+    commit by specifying a particular group.  For those who work on
+    logically separate changesets simultaneously in the same directory
+    tree, changelists can help keep things organized.</p>
+</li>
+
+<li id="more" title="more">
+    <strong>And more...</strong>
+    <p>...even when we manage to keep this list up-to-date, it isn't
+    possible to list every little feature.  See the <a
+    href="index.html#help" >documentation</a> for more information.</p>
+</li>
+
+</ul>
+</div>  <!-- features -->
+
+</div>
+</body>
+</html>

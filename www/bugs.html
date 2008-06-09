@@ -20,54 +20,7 @@
 
 <p>This document tells how and where to report bugs.  (It is not a
 list of all outstanding bugs&nbsp;&mdash;&nbsp;you can get that
-<a
-href="http://subversion.tigris.org/issues/buglist.cgi?component=subversion&amp;issue_status=UNCONFIRMED&amp;issue_status=NEW&amp;issue_status=STARTED&amp;issue_status=REOPENED&amp;order=issues.target_milestone%2C%20issues.priority%2C%20issues.issue_type">here</a> instead.)</p>
-
-
-<div class="h2" id="where" title="where">
-<h2>Where To Report A Bug</h2>
-
-<ul>
-
-<li><p>If the bug is in Subversion itself, send mail to
-    <a href="mailto:users@subversion.tigris.org"
-                   >users@subversion.tigris.org</a>.
-    Once it's confirmed as a bug, someone, possibly you, can enter it
-    into the <a href="project_issues.html">issue tracker</a>.  (Or if
-    you're pretty sure about the bug, go ahead and post directly to 
-    our development list, <a href="mailto:dev@subversion.tigris.org"
-    >dev@subversion.tigris.org</a>.  But if you're not sure, it's
-    better to post to <a href="mailto:users@subversion.tigris.org"
-    >users@</a> first; someone there can tell you whether the behavior
-    you encountered is expected or not.)</p></li>
-
-<li><p>If the bug is in the APR library, please report it to both of
-    these mailing lists:
-    <a href="mailto:dev@apr.apache.org">dev@apr.apache.org</a>,
-    <a href="mailto:dev@subversion.tigris.org"
-                   >dev@subversion.tigris.org</a>.</p></li>
-
-<li><p>If the bug is in the Neon HTTP library, please report it to:
-     <a href="mailto:neon@webdav.org">neon@webdav.org</a>,
-     <a href="mailto:dev@subversion.tigris.org"
-                    >dev@subversion.tigris.org</a>.</p></li>
-
-<li><p>If the bug is in Apache HTTPD 2.0, please report it to both of
-     these mailing lists: <a href="mailto:dev@httpd.apache.org"
-     >dev@httpd.apache.org</a>,
-     <a href="mailto:dev@subversion.tigris.org"
-     >dev@subversion.tigris.org</a>.
-     The Apache httpd developer mailing list is high-traffic, so your
-     bug report post has the possibility to be overlooked.  You may also 
-     file a bug report at <a href="http://httpd.apache.org/bug_report.html"
-     >http://httpd.apache.org/bug_report.html</a>.</p></li>
-
-<li><p>If the bug is in your rug, please give it a hug and keep it
-    snug.</p></li>
-
-</ul>
-
-</div>
+<a href="issue-tracker.html#find">here</a> instead.)</p>
 
 <div class="h2" id="how" title="how">
 <h2>How To Report A Bug</h2>
@@ -82,12 +35,16 @@ mailing list first, <a href="mailto:users@subversion.tigris.org"
 >users@subversion.tigris.org</a>, or ask in IRC, <a
 href="irc://irc.freenode.net/#svn">irc.freenode.net, channel #svn</a>.</p>
 
-<p>Once you've established that it's a bug, the most important thing
-you can do is come up with a simple description and reproduction
-recipe.  For example, if the bug, as you initially found it, involves
-five files over ten commits, try to make it happen with just one file
-and one commit.  The simpler the reproduction recipe, the more likely
-a developer is to successfully reproduce the bug and fix it.</p>
+<p>You should also <a href="issue-tracker.html#find" >look in the bug
+tracker</a> to see if anyone has already reported this bug.  </p>
+
+<p>Once you've established that it's a bug, and that we don't know
+about it already, the most important thing you can do is come up with
+a simple description and reproduction recipe.  For example, if the
+bug, as you initially found it, involves five files over ten commits,
+try to make it happen with just one file and one commit.  The simpler
+the reproduction recipe, the more likely a developer is to
+successfully reproduce the bug and fix it.</p>
 
 <p>When you write up the reproduction recipe, don't just write a prose
 description of what you did to make the bug happen.  Instead, give a
@@ -131,14 +88,60 @@ on sending patches.</p>
 href="mailto:dev@subversion.tigris.org"
 >dev@subversion.tigris.org</a>, or if you have already been there and
 been asked to file an issue, then go to the <a
-href="project_issues.html">Issue Tracker</a> and follow the
+href="issue-tracker.html">Issue Tracker</a> and follow the
 instructions there.</p>
 
 <p>Thanks.  We know it's a lot of work to file an effective bug
 report, but a good report can save hours of a developer's time, and
 make the bug much more likely to get fixed.</p>
 
-</div>
+</div>  <!-- how -->
+
+<div class="h2" id="where" title="where">
+<h2>Where To Report A Bug</h2>
+
+<ul>
+
+<li><p>If the bug is in Subversion itself, send mail to
+    <a href="mailto:users@subversion.tigris.org"
+                   >users@subversion.tigris.org</a>.
+    Once it's confirmed as a bug, someone, possibly you, can enter it
+    into the <a href="issue-tracker.html">issue tracker</a>.  (Or if
+    you're pretty sure about the bug, go ahead and post directly to 
+    our development list, <a href="mailto:dev@subversion.tigris.org"
+    >dev@subversion.tigris.org</a>.  But if you're not sure, it's
+    better to post to <a href="mailto:users@subversion.tigris.org"
+    >users@</a> first; someone there can tell you whether the behavior
+    you encountered is expected or not.)</p></li>
+
+<li><p>If the bug is in the APR library, please report it to both of
+    these mailing lists:
+    <a href="mailto:dev@apr.apache.org">dev@apr.apache.org</a>,
+    <a href="mailto:dev@subversion.tigris.org"
+                   >dev@subversion.tigris.org</a>.</p></li>
+
+<li><p>If the bug is in the Neon HTTP library, please report it to:
+     <a href="mailto:neon@webdav.org">neon@webdav.org</a>,
+     <a href="mailto:dev@subversion.tigris.org"
+                    >dev@subversion.tigris.org</a>.</p></li>
+
+<li><p>If the bug is in Apache HTTPD 2.0, please report it to both of
+     these mailing lists: <a href="mailto:dev@httpd.apache.org"
+     >dev@httpd.apache.org</a>,
+     <a href="mailto:dev@subversion.tigris.org"
+     >dev@subversion.tigris.org</a>.
+     The Apache httpd developer mailing list is high-traffic, so your
+     bug report post has the possibility to be overlooked.  You may also 
+     file a bug report at <a href="http://httpd.apache.org/bug_report.html"
+     >http://httpd.apache.org/bug_report.html</a>.</p></li>
+
+<li><p>If the bug is in your rug, please give it a hug and keep it
+    snug.</p></li>
+
+</ul>
+
+</div>  <!-- where -->
+
 </div>
 </body>
 </html>

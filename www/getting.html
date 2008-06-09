@@ -1,0 +1,389 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<style type="text/css"> /* <![CDATA[ */
+  @import "branding/css/tigris.css";
+  @import "branding/css/inst.css";
+  /* ]]> */</style>
+<link rel="stylesheet" type="text/css" media="print"
+  href="branding/css/print.css"/>
+<script type="text/javascript" src="branding/scripts/tigris.js"></script>
+<title>Subversion Packages</title>
+</head>
+
+<body>
+<div class="app">
+
+<h1 style="text-align: center;">Getting Subversion</h1>
+
+<p>The best available version of Subversion is:&nbsp;<a
+href="svn_1.4_releasenotes.html">1.4.6</a></p>
+
+<p>You can install Subversion by compiling its <a
+href="#source-release">source code release</a> directly, or you can
+install one of the <a href="#binary-packages">prepackaged binaries</a>
+if there is one for your operating system.  Unless a release has
+"<tt>alpha</tt>", "<tt>beta</tt>", or "<tt>rc</tt>" in its name, it is
+tested and considered stable for production use.  Once you have
+Subversion installed, most of your questions can be answered at our <a
+href="index.html#help" >help section</a>.</p>
+
+<p>When upgrading, just install "on top of" the older release.
+Subversion 1.x is forward-compatible with any newer 1.y.  No
+repository upgrade is required.  As long as client and server both
+have the same major release number (1), olders clients will work with
+newer servers and newer clients will work with older servers.  The
+only caveat is that if the client and server minor release numbers
+don't match (e.g., 1.0 and 1.1), then some of the features of the
+newer release may not be activated.</p>
+
+</div>
+
+<div class="h2" id="source-release" title="source-release">
+<h2>Source Code</h2>
+
+<p>To build Subversion from a source code release:</p>
+
+<ol>
+   <li><p>Download the latest distribution from the <a
+   href="http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=260&amp;expandFolder=74"
+   >Source Releases Area</a>.<br />
+   Windows users should download <tt>.zip</tt> files.  For all other operating
+   systems, download <tt>.tar.gz</tt> or <tt>.tar.bz2</tt> files.</p></li>
+
+   <li><p>Build and install it according to the instructions in the
+   <a href="http://svn.collab.net/repos/svn/trunk/INSTALL">INSTALL</a>
+   file in the top level of the distribution.  You will end up with a
+   'svn' binary in the <tt>subversion/clients/cmdline/</tt> subdirectory
+   (or installed in <tt>/usr/local/bin/</tt>, if you ran
+   'make install'.)</p></li>
+</ol>
+
+</div>   
+
+<div class="h2" id="binary-packages" title="binary-packages">
+<h2>Binary Packages</h2>
+
+<p>The Subversion project <b>does <i>not</i> officially endorse or
+maintain</b> any binary packages of the Subversion software.  However,
+volunteers have created binary packages for different distributions
+and platforms, and as a convenience, we maintain a list of links to
+them here.  If there are any problems with or questions about the
+different binary packages please send email to the <a
+href="mailto:users@subversion.tigris.org">Subversion users mailing
+list</a>.</p>
+
+<div style="background-color: yellow; color: red;">
+<p><b>NOTE: Binary packages usually come out about a week after the
+corresponding source release.  Please don't post to the mailing lists
+asking when a binary package for a given platform will be ready.  The
+packagers already know when new source releases come out, and work as
+fast as they can to make binaries available.</b></p>
+</div>
+
+
+<div class="h3" id="redhat-fedora" title="redhat-fedora">
+<h3><img alt="" src="images/redhat.png" width="32" height="32"
+    />Red Hat Linux and Fedora Core</h3>
+
+<ul>
+<li><p><b>Red Hat 8.0, 9, Red Hat Enterprise Linux 3, 4, 5</b></p>
+<p><em>Maintainer:
+<a href="mailto:david@summersoft.fay.ar.us">David Summers</a></em></p>
+
+<p><a
+href="http://the.earth.li/pub/subversion/summersoft.fay.ar.us/pub/subversion/latest/"
+><em>UK Mirror</em></a> (fastest) or <a
+href="http://summersoft.fay.ar.us/pub/subversion/"
+     >http://summersoft.fay.ar.us/pub/subversion/</a>
+(slowest).</p>
+
+<div style="background-color: yellow; color: red;"><p><b>WARNING:</b>
+The Red Hat Enterprise Linux 3 Subversion 1.2 and later RPMs above
+(from David Summers) are <em>not</em> compiled with Berkeley DB
+support (All other versions are compiled with Berkeley BDB support).
+If you need to access Berkeley DB repositories, these RHEL3 RPMs will not
+work for you.  (See <a
+href="http://subversion.tigris.org/servlets/BrowseList?listName=dev&amp;from=317936&amp;to=317936&amp;count=21&amp;by=thread&amp;first=1&amp;windowSize=20&amp;selectedPage=1"
+>this thread</a> for details.)  You may want to try different RPMs
+instead.</p></div>
+
+</li>
+
+<li><p><b>Red Hat Enterprise Linux 4</b></p>
+<p><em>Maintainer:
+<a href="http://www.collab.net">CollabNet, Inc.</a></em></p>
+<p><a
+href="http://downloads.open.collab.net/collabnet-subversion.html">CollabNet
+Subversion</a> is Subversion compiled and tested by
+CollabNet, and deployed with CollabNet's recommended configuration for
+the enterprise.</p>
+</li>
+
+<li><p><b>Fedora Core 3 and later</b></p> <p>Binary RPM packages of
+Subversion are already available in these distributions.  If you do
+not already have them installed then you may install them from the
+installation CD/DVD or use "<tt>yum install subversion</tt>" to
+install them from the internet distribution mirrors.</p></li>
+
+</ul>
+</div>
+
+
+<div class="h3" id="debian" title="debian">
+<h3><img alt="" src="images/debian.jpg" width="25" height="30"
+    />Debian GNU/Linux and Ubuntu</h3>
+
+<p>Just run '<tt>apt-get install subversion</tt>'.  Information on the
+latest official packages can be found here: <a
+href="http://packages.debian.org/subversion"
+>http://packages.debian.org/subversion</a>.  We're told this
+information works for Ubuntu as well; please <a href="bugs.html" >let
+us know</a> if that's wrong.</p> </div>
+
+
+<div class="h3" id="freebsd" title="freebsd">
+<h3><img alt="" src="images/bsddaemon.png" width="40" height="40"
+    />FreeBSD</h3>
+
+<p><em>Maintainer:
+<a href="mailto:lev@freebsd.org">Lev Serebryakov</a></em></p>
+
+<p>Information about the latest port can be found here: <a
+href="http://www.freebsd.org/cgi/cvsweb.cgi/ports/devel/subversion/"
+     >http://www.freebsd.org/cgi/cvsweb.cgi/ports/devel/subversion/</a>
+.</p>
+
+<p>Assuming your ports tree is up-to-date, just do '<tt>cd
+/usr/ports/devel/subversion; make install</tt>'.</p>
+
+</div>
+
+
+<div class="h3" id="openbsd" title="openbsd">
+<h3><img alt="" src="images/openbsd-puffy.gif" width="50" height="46"
+    />OpenBSD</h3>
+
+<p><em>Maintainer: Aleksander Piotrowski</em></p>
+
+<p>Information about the latest port can be found here: <a
+href="http://www.openbsd.org/cgi-bin/cvsweb.cgi/ports/devel/subversion/"
+     >http://www.openbsd.org/cgi-bin/cvsweb.cgi/ports/devel/subversion/</a>
+.</p>
+
+<p>Assuming your ports tree is up-to-date, just do '<tt>cd
+/usr/ports/devel/subversion; make install</tt>'.</p>
+
+</div>
+
+
+<div class="h3" id="pkgsrc" title="pkgsrc">
+<h3><img alt="" src="images/bsddaemon.png" width="40" height="40"
+    />pkgsrc ({Net,Open,Free}BSD, Linux, Solaris, etc.)</h3>
+
+<p><em>Maintainer:
+<a href="mailto:epg@NetBSD.org">Eric Gillespie</a></em></p>
+
+<p><a
+href="http://www.NetBSD.org/Documentation/software/packages.html"
+>pkgsrc</a> is the cross-platform package system used by the NetBSD
+project, originally derived from FreeBSD ports.</p>
+
+<p>Information about the latest package can be found here: <a
+href="http://cvsweb.netbsd.org/bsdweb.cgi/pkgsrc/devel/subversion/"
+     >http://cvsweb.netbsd.org/bsdweb.cgi/pkgsrc/devel/subversion/</a>
+.</p>
+
+<p>Assuming your pkgsrc tree is up-to-date, just do '<tt>cd
+/usr/pkgsrc/devel/subversion; make install clean</tt>'.</p>
+
+</div>
+
+
+<div class="h3" id="solaris" title="solaris">
+<h3><img alt="" src="images/sol7logo.gif" width="98" height="76"
+    />Solaris</h3>
+
+<p><em>Maintainer:
+<a href="mailto:steve@smc.vnet.net">Steven M. Christensen</a></em></p>
+
+<p>Binary builds of Subversion for <em>SPARC/Solaris 2.5 &ndash;
+10</em> and <em>x86/Solaris 8 &ndash; 10</em> are available at: <a
+href="http://www.sunfreeware.com">http://www.sunfreeware.com/</a>
+.</p>
+
+<p><em>Maintainer:
+<a href="http://www.collab.net">CollabNet, Inc.</a></em></p>
+
+<p><a
+href="http://downloads.open.collab.net/collabnet-subversion.html">CollabNet
+Subversion</a> is Subversion compiled and tested by
+CollabNet, and deployed with CollabNet's recommended configuration for
+the enterprise.</p>
+
+</div>
+
+
+<div class="h3" id="osx" title="osx">
+<h3><img alt="" src="images/osx.gif" width="40" height="40"/>Mac OS X</h3>
+
+<ul>
+<li><p><b>Universal Subversion Installer</b></p>
+<p><em>Maintainer:
+<a href="mailto:jwhitlock@collab.net">Jeremy Whitlock</a></em></p>
+<p>Universal Subversion binary containing standard repository access
+layers, file system backends, Apache Subversion modules, and all
+Subversion language bindings maintained by the Subversion project.
+The latest release can be found here: <a
+href="http://downloads.open.collab.net/binaries.html"
+>http://downloads.open.collab.net/binaries.html</a>.</p>
+</li>
+
+<li><p><b>Installation using Fink</b></p>
+<p><em>Maintainer:
+<a href="mailto:chris01@users.sourceforge.net">Christian Schaffner</a></em></p>
+
+<p>Information about the latest <a
+href="http://fink.sourceforge.net/">Fink</a> packages can be found
+here: <a
+href="http://pdb.finkproject.org/pdb/package.php/svn"
+     >http://pdb.finkproject.org/pdb/package.php/svn</a>
+.</p>
+
+<p>Be sure to read the documentation of the different packages.</p>
+
+</li>
+
+<li><p><b>Installation from a <tt>.dmg</tt></b></p>
+<p><em>Maintainer:
+<a href="mailto:matthew.porter@metissian.com">Matthew E. Porter</a></em></p>
+
+<p>Pre-built binaries that do not require Fink can be found here: <a
+href="http://metissian.com/projects/macosx/subversion/"
+     >http://metissian.com/projects/macosx/subversion/</a>
+.</p>
+
+</li>
+</ul>
+</div>
+
+
+<div class="h3" id="windows" title="windows">
+<h3><img alt="" src="images/win32.png" width="40" height="36"
+    />Windows NT, 2000, XP and 2003</h3>
+
+<p>The client runs on Win9x/Me but the server does not, see <a
+href="http://subversion.tigris.org/faq.html#portability">the
+FAQ</a>.</p>
+
+<p>If you plan to install the <tt>mod_dav_svn</tt> Apache module, note
+that Apache 2.0 and Apache 2.2 are not binary-compatible.  Thus there
+are two types of Subversion command-line binary/library packages for
+Windows -- ones built to use with Apache 2.0, and ones built to use
+Apache 2.2.  If you're using Apache as your Subversion server, be sure
+to download the correct package.</p>
+
+<p><strong>WARNING:</strong> Subversion 1.2 (and later) win32 binaries
+use BerkeleyDB 4.3.  If you already have BDB 4.2 repositories running
+on Windows, then installing these particular binaries will force you
+to upgrade your repositories to BDB 4.3.  It's not difficult, just be
+ready to do so.  Read the <a
+href="http://subversion.tigris.org/faq.html#bdb43-upgrade">FAQ</a>.</p>
+
+<p><em>Maintainers: <a
+href="mailto:users@subversion.tigris.org?bcc=brane@xbc.nu" >Branko
+&#268;ibej</a> and <a href="djheap@gmail.com">D.J. Heap</a></em></p>
+
+<ol>
+  <li><a
+  href="http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=91">Win32
+  packages built against Apache 2.0</a></li>
+
+  <li><a
+href="http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=8100&amp;expandFolder=8100&amp;folderID=8100">Win32
+packages built against Apache 2.2</a></li>
+</ol>
+
+<p><em>Maintainer:
+<a href="mailto:troy@ebswift.com">Troy Simpson</a></em></p>
+
+<p>The same command-line binaries and libraries, but packaged within a
+friendly Installer program, are in <a
+href="http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=91"
+>the same directory</a> of the file-sharing area, but end with
+"-setup.exe".</p>
+
+<p><em>Maintainer:
+<a href="mailto:steveking@tigris.org">Steve King</a></em></p>
+
+<p>If you want a pretty Win32 GUI, <a
+href="http://tortoisesvn.tigris.org">TortoiseSVN</a> integrates nicely
+with the Windows Explorer.  <strong>Note:</strong> TortoiseSVN is a
+separate project.  Please post questions and problems to the <a
+href="http://tortoisesvn.tigris.org/servlets/ProjectMailingListList"
+>TortoiseSVN project's own mailing lists.</a>, not Subversion's
+mailing lists.</p>
+
+<p><em>Maintainer:
+<a href="http://www.collab.net">CollabNet, Inc.</a></em></p>
+<p><a
+href="http://downloads.open.collab.net/collabnet-subversion.html">CollabNet
+Subversion</a> is Subversion compiled and tested by
+CollabNet, and deployed with CollabNet's recommended configuration for
+the enterprise.  Compatible with Apache 2.0.</p>
+
+<p><em>Maintainer:
+<a href="http://www.visualsvn.com">VisualSVN Team</a></em></p>
+<p><a href="http://www.visualsvn.com/server/">VisualSVN Server</a> is a
+standard Windows Installer package that contains everything necessary to
+install, configure and manage Subversion server on Windows platform. It
+includes latest stable releases of Subversion, Apache plus a management
+console to perform most common Subversion administration tasks such as
+repository creation and access rights management.</p>
+
+</div>
+
+<div class="h3" id="hpux" title="hpux">
+<h3><img alt="" src="images/hp.jpg" width="51" height="36"
+    />HP-UX</h3>
+
+<p><em>Maintainer:
+HP-UX Porting Centre</em></p>
+<p>Binary depot packages of Subversion for HP-UX are available via
+this search:
+<a href="http://hpux.connect.org.uk/hppd/cgi-bin/search?term=subversion"
+        >http://hpux.connect.org.uk/hppd/cgi-bin/search?term=subversion</a>.</p>
+
+</div>
+
+<div class="h3" id="aix" title="AIX">
+<h3><img alt=""
+     src="images/aix.gif"
+     width="75" height="78" />AIX</h3>
+<p><em>Maintainer:
+<a href="mailto:jwhitlock@collab.net">Jeremy Whitlock</a></em></p>
+<p>Subversion binary containing standard repository access
+layers, file system backends, Apache Subversion modules, and Python
+Subversion language bindings maintained by the Subversion project.
+The latest release can be found here: <a
+href="http://downloads.open.collab.net/binaries.html"
+     >http://downloads.open.collab.net/binaries.html</a>.</p>
+</div>
+
+<div class="h3" id="os400" title="os400">
+<h3><img alt="" src="images/i5os.png" width="68" height="34"
+    />IBM i5/OS (OS/400)</h3>
+
+<p><em>Maintainer:
+No active maintainer</em></p>
+<p>Binary builds of Subversion for OS/400 V5R1 or higher, as well as
+documentation for installing and configuring Subversion are available at:
+<a href="http://www.softlanding.com/subversion/"
+        >http://www.softlanding.com/subversion/</a> .</p>
+</div>
+
+</body>
+</html>
+
+
