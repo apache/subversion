@@ -646,7 +646,7 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
       svn_error_clear(err);
       svn_error_clear(parser_ctx->error);
 
-      if (!SVN_ERR_IS_LOCK_ERROR(lock_ctx->error))
+      if (lock_ctx->error && !SVN_ERR_IS_LOCK_ERROR(lock_ctx->error))
         {
           return lock_ctx->error;
         }
