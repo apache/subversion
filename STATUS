@@ -8,28 +8,16 @@ delay a release, etc.
 Candidate changes for 1.5.0:
 ============================
 
+
+Candidate changes for 1.5.1:
+============================
+
  * r31223
    Fix segfault when svn_ra_open3 is passed a bogus URL such as 'bogusURL'.
    Notes:
      Not possible to make svn(1) segfault with this, so can wait for 1.5.1.
    Votes:
      +1: epg, stsp, danielsh
-
- * r31620, r31622
-   Don't blindly assume that the client will always report capabilities.
-   Fixes a segfault in svn_repos__hooks_start_commit(). svn(1) won't
-   trigger it, but other clients could.
-   Notes:
-     stsp: This can wait for 1.5.1 on the same grounds as r31223.
-     glasser: Um, doesn't not applying this segfault *every single
-       program* written against the pre-1.5 svn_repos API if
-       the repository has a start-commit hook?  As much as I
-       hate to drag out this process...
-   Votes:
-     +1: stsp, danielsh, glasser
-
-Candidate changes for 1.5.1:
-============================
 
  * r31313
    Make all ra layers return a consistent error when a path is not found in the
