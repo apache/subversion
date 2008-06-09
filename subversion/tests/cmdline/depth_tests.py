@@ -1949,9 +1949,9 @@ def fold_tree_with_unversioned_modified_items(sbox):
   # Fold the A dir to empty, expect the modified & unversioned ones left
   # unversioned rather than removed, along with paths to those items.
 
-  # XXX:Even though the directory B and D is not deleted because of local
+  # Even though the directory B and D is not deleted because of local
   # modificatoin or unversioned items, there will be only one notification at
-  # B and D. Is this Okay? XXX Check this XXX
+  # B and D. 
   expected_output = svntest.wc.State(wc_dir, {
     'A/B'            : Item(status='D '),
     'A/C'            : Item(status='D '),
@@ -2017,7 +2017,7 @@ test_list = [ None,
               XFail(depth_folding_clean_trees_2),
               depth_fold_expand_clean_trees,
               pull_in_tree_with_depth_option,
-              XFail(fold_tree_with_unversioned_modified_items),
+              fold_tree_with_unversioned_modified_items,
             ]
 
 if __name__ == "__main__":

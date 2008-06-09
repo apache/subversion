@@ -187,38 +187,42 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
   if (!entry || entry->kind != svn_node_dir)
     return SVN_NO_ERROR;
 
-  /* Check to see if the target itself should be cropped. */
-  if (depth == svn_depth_empty)
+  /* Crop the target itself if we are requested to. */
+
+  /* XXX: As you can see, this is currently a dead branch, since we are not
+     yet ready for svn_depth_exclude as other parts of the code in libsv_wc.
+   */
+  if (depth == svn_depth_exclude)
     {
       const svn_wc_entry_t *parent_entry;
       SVN_ERR(svn_wc_entry(&parent_entry,
                            svn_path_dirname(full_path, pool),
                            anchor, FALSE, pool));
 
-      if (parent_entry && parent_entry->depth <= svn_depth_files)
+      if (parent_entry && parent_entry->depth > svn_depth_files)
         {
-          /* Crop the target with the subtree altogether if the parent
-             does not want sub-directories. */
-          SVN_ERR(svn_wc_adm_retrieve(&dir_access, anchor, full_path, pool));
-          SVN_ERR_IGNORE_LOCAL_MOD
-            (svn_wc_remove_from_revision_control(dir_access,
-                                                 SVN_WC_ENTRY_THIS_DIR,
-                                                 TRUE, /* destroy */
-                                                 FALSE, /* instant error */
-                                                 cancel_func,
-                                                 cancel_baton,
-                                                 pool));
-
-          if (notify_func)
-            {
-              svn_wc_notify_t *notify;
-              notify = svn_wc_create_notify(full_path,
-                                            svn_wc_notify_delete,
-                                            pool);
-              (*notify_func)(notify_baton, notify, pool);
-            }
-          return SVN_NO_ERROR;
+          /* TODO: mark the target as excluded, since the parent require it by
+             default. */
         }
+      SVN_ERR(svn_wc_adm_retrieve(&dir_access, anchor, full_path, pool));
+      SVN_ERR_IGNORE_LOCAL_MOD
+        (svn_wc_remove_from_revision_control(dir_access,
+                                             SVN_WC_ENTRY_THIS_DIR,
+                                             TRUE, /* destroy */
+                                             FALSE, /* instant error */
+                                             cancel_func,
+                                             cancel_baton,
+                                             pool));
+
+      if (notify_func)
+        {
+          svn_wc_notify_t *notify;
+          notify = svn_wc_create_notify(full_path,
+                                        svn_wc_notify_delete,
+                                        pool);
+          (*notify_func)(notify_baton, notify, pool);
+        }
+      return SVN_NO_ERROR;
     }
 
   return crop_children(anchor, full_path, depth,
