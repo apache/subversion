@@ -114,6 +114,17 @@ Candidate changes for 1.5.1:
    Votes:
      +1: lgo
 
+ * r31673
+   Fix a compiler warning, 'assignment discards qualifiers from pointer
+   target type' in subversion/libsvn_repos/hooks.c.
+   Notes:
+     This is just the compiler complaining about having to implicitly
+     cast away 'const'. We don't write to what the pointer is pointing
+     to though (empty string "" in data segment), so it's just a cosmetic
+     build issue.
+   Votes:
+     +1: stsp
+
 Approved changes (all releases):
 ================================
 
