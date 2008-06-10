@@ -390,10 +390,11 @@ svn_cmdline_auth_plaintext_prompt(svn_boolean_t *may_save_plaintext,
   svn_boolean_t answered = FALSE;
   const char *prompt_string = _("Store password unencrypted (yes/no)? ");
   svn_cmdline_prompt_baton2_t *pb = baton;
-  const char *config_path;
-  
-  SVN_ERR(svn_config_get_user_config_path(&config_path, pb->config_dir,
-                                          SVN_CONFIG_CATEGORY_SERVERS, pool));
+  const char *config_path = NULL;
+
+  if (pb)
+    SVN_ERR(svn_config_get_user_config_path(&config_path, pb->config_dir,
+                                            SVN_CONFIG_CATEGORY_SERVERS, pool));
 
   SVN_ERR(svn_cmdline_fprintf(stderr, pool,
   _("-----------------------------------------------------------------------\n"
@@ -404,12 +405,18 @@ svn_cmdline_auth_plaintext_prompt(svn_boolean_t *may_save_plaintext,
     "can only be stored to disk unencrypted!  You are advised to configure\n"
     "your system so that Subversion can store passwords encrypted, if\n"
     "possible.  See the documentation for details.\n"
-    "\n"
-    "You can avoid future appearances of this warning by setting the value\n"
-    "of the 'store-plaintext-passwords' option to either 'yes' or 'no' in\n"
-    "'%s'.\n"
-    "-----------------------------------------------------------------------\n"
-    ), realmstring, config_path));
+    ), realmstring));
+
+  if (config_path)
+    SVN_ERR(svn_cmdline_fprintf(stderr, pool,
+     _("\n"
+       "You can avoid future appearances of this warning by setting the value\n"
+       "of the 'store-plaintext-passwords' option to either 'yes' or 'no' in\n"
+       "'%s'.\n"
+    ), config_path));
+
+  SVN_ERR(svn_cmdline_fprintf(stderr, pool,
+  "-----------------------------------------------------------------------\n"));
 
   do
     {
