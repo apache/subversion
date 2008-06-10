@@ -8,6 +8,10 @@ delay a release, etc.
 Candidate changes for 1.5.0:
 ============================
 
+ * r31685
+   Fix an API compatibility violation caused by an uninitialized variable.
+   Votes:
+     +1: cmpilato
 
 Candidate changes for 1.5.1:
 ============================
