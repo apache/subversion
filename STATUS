@@ -123,7 +123,7 @@ Candidate changes for 1.5.1:
      to though (empty string "" in data segment), so it's just a cosmetic
      build issue.
    Votes:
-     +1: stsp, kameshj
+     +1: stsp, kameshj, danielsh
 
 Approved changes (all releases):
 ================================
