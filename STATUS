@@ -11,7 +11,7 @@ Candidate changes for 1.5.0:
  * r31685
    Fix an API compatibility violation caused by an uninitialized variable.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, julianfoad
 
 Candidate changes for 1.5.1:
 ============================
