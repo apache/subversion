@@ -196,7 +196,7 @@ read_path(const char **result,
 
 /* Read a field from [*BUF, END), terminated by a newline character.
    The field may not contain escape sequences.  The field is not
-   copyed and the buffer is modified in place, by replacing the
+   copied and the buffer is modified in place, by replacing the
    terminator with a NUL byte.  Make *BUF point after the original
    terminator. */
 static svn_error_t *
