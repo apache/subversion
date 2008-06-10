@@ -576,7 +576,7 @@ svn_repos__hooks_start_commit(svn_repos_t *repos,
         }
       else
         {
-          capabilities_string = "";
+          capabilities_string = apr_pstrdup(pool, "");
         }
 
       args[0] = hook;
