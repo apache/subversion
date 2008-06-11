@@ -503,10 +503,18 @@ depth:
    entries and pulls new entries with depth infinity as well.
    Default is infinite (`').
 
+   Apart from above normal values, there is still a special `exclude',
+   which means the directory is excluded from wc even if the depth of
+   parent directory is infinity or immediates. The directory in
+   question will not physically exist on the disk. In other words, we
+   can only store the `exclude' value in the corresponding entry of
+   the entries file in parent directory. 
+
 The only fields allowed in an entry for a directory (other than the
 this_dir entry) are name, absent, deleted, schedule, copied,
-copyfrom-url, copyfrom-rev and kind.  The other fields are only stored
-in the this_dir entry for the directory in question.
+copyfrom-url, copyfrom-rev, kind and depth (only when the value says
+exclude).  The other fields are only stored in the this_dir entry for
+the directory in question.
 
 
 XML-based entries format

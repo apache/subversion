@@ -160,10 +160,18 @@ svn_client__update_internal(svn_revnum_t *result_rev,
 
   /* We may need to crop the tree if the depth is sticky */
   if (depth_is_sticky && depth < svn_depth_infinity)
-    SVN_ERR(svn_wc_crop_tree(adm_access, target, depth, 
-                             ctx->notify_func2, ctx->notify_baton2,
-                             ctx->cancel_func, ctx->cancel_baton,
-                             pool));
+    {
+      SVN_ERR(svn_wc_crop_tree(adm_access, target, depth, 
+                               ctx->notify_func2, ctx->notify_baton2,
+                               ctx->cancel_func, ctx->cancel_baton,
+                               pool));
+      /* If we are asked to exclude a target, we can just stop now. */
+      if (depth == svn_depth_exclude)
+        {
+          SVN_ERR(svn_wc_adm_close(adm_access));
+          return SVN_NO_ERROR;
+        }
+    }
 
   /* Get revnum set to something meaningful, so we can fetch the
      update editor. */
