@@ -16,7 +16,7 @@ my %good_sigs;
 foreach my $filename (glob("subversion-*.asc")) {
     `cp $filename $filename.bak`;
 
-    while (int(`wc -l $filename`) > 6)
+    while (int(`wc -l $filename`) > 0)
     {
         my $gpg_output = `gpg --logger-fd 1 --verify $filename`;
         if ($? >> 8 ) {
