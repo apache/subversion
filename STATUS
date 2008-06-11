@@ -106,11 +106,6 @@ Candidate changes for 1.5.1:
    Votes:
      +1: lgo
 
- * r31688
-   Regression test for - the already approved - r31685.
-   Votes:
-     +1: lgo, epg
-
  * r31692, r31695
    Fix issue #2939 over ra_neon/serf:  bogus existence check.
    Votes:
@@ -123,6 +118,11 @@ Approved changes (all releases):
    Fix an API compatibility violation caused by an uninitialized variable.
    Votes:
      +1: cmpilato, julianfoad, epg
+
+ * r31688
+   Regression test for - the already approved - r31685.
+   Votes:
+     +1: lgo, epg
 
 Approved changes (1.5.1 and later):
 ===================================
