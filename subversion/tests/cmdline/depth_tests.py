@@ -1782,26 +1782,30 @@ def depth_folding_clean_trees_2(sbox):
   verify_depth(None, "immediates", A_path)
   verify_depth(None, "empty", D_path)
 
-  # Run 'svn up --set-depth=empty' to directory A.
-  # This is an immediates=>empty folding, the directory A should be deleted
-  # too since the parent directory is at files/empty
-  expected_output = svntest.wc.State(wc_dir, {
-    'A'              : Item(status='D '),
-    })
-  expected_status = svntest.wc.State(wc_dir, {
-    ''               : Item(status='  ', wc_rev=1),
-    'iota'           : Item(status='  ', wc_rev=1)
-    })
-  expected_disk = svntest.wc.State('', {
-    'iota'        : Item(contents="This is the file 'iota'.\n")
-    })
-  svntest.actions.run_and_verify_update(wc_dir,
-                                        expected_output,
-                                        expected_disk,
-                                        expected_status,
-                                        None, None,
-                                        None, None, None, None,
-                                        '--set-depth', 'empty', A_path)
+#  Comment the following out, since cropping out the root of tree is now
+#  handled by svn_depth_exclude and should have a separate test case for all
+#  influenced commands.
+#
+#  # Run 'svn up --set-depth=empty' to directory A.
+#  # This is an immediates=>empty folding, the directory A should be deleted
+#  # too since the parent directory is at files/empty
+#  expected_output = svntest.wc.State(wc_dir, {
+#    'A'              : Item(status='D '),
+#    })
+#  expected_status = svntest.wc.State(wc_dir, {
+#    ''               : Item(status='  ', wc_rev=1),
+#    'iota'           : Item(status='  ', wc_rev=1)
+#    })
+#  expected_disk = svntest.wc.State('', {
+#    'iota'        : Item(contents="This is the file 'iota'.\n")
+#    })
+#  svntest.actions.run_and_verify_update(wc_dir,
+#                                        expected_output,
+#                                        expected_disk,
+#                                        expected_status,
+#                                        None, None,
+#                                        None, None, None, None,
+#                                        '--set-depth', 'empty', A_path)
 
 def depth_fold_expand_clean_trees(sbox):
   "expand target while contracting subtree"
@@ -2014,7 +2018,7 @@ test_list = [ None,
               status_in_depthy_wc,
               depthy_update_above_dir_to_be_deleted,
               depth_folding_clean_trees_1,
-              XFail(depth_folding_clean_trees_2),
+              depth_folding_clean_trees_2,
               depth_fold_expand_clean_trees,
               pull_in_tree_with_depth_option,
               fold_tree_with_unversioned_modified_items,
