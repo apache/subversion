@@ -109,7 +109,7 @@ Candidate changes for 1.5.1:
  * r31692, r31695
    Fix issue #2939 over ra_neon/serf:  bogus existence check.
    Votes:
-     +1: epg
+     +1: epg, lgo
 
 Approved changes (all releases):
 ================================
