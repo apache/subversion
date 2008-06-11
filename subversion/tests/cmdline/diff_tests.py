@@ -2945,6 +2945,41 @@ def diff_wrong_extension_type(sbox):
   svntest.actions.run_and_verify_svn(None, [], expected_error, 
                                      'diff', '-x', sbox.wc_dir, '-r', '1')
 
+# Check the order of the arguments for an external diff tool
+def diff_external_diffcmd(sbox):
+  "svn diff --diff-cmd provides the correct arguments"
+
+  sbox.build(read_only = True)
+
+  iota_path = os.path.join(sbox.wc_dir, 'iota')
+  svntest.main.file_append(iota_path, "new text in iota")
+
+  # Create a small diff mock object that prints its arguments to stdout.
+  diff_script_path = os.path.join(sbox.wc_dir, 'diff')
+  # TODO: make the create function return the actual script name, and rename
+  # it to something more generic.
+  svntest.main.create_python_hook_script(diff_script_path, 'import sys\n'
+    'for arg in sys.argv[1:]:\n  print arg\n')
+  if sys.platform == 'win32':
+    diff_script_path = "%s.bat" % diff_script_path
+
+  expected_output = svntest.verify.ExpectedOutput([
+"Index: svn-test-work/working_copies/diff_tests-48/iota\n",
+"===================================================================\n",
+"-u\n",
+"-L\n",
+"svn-test-work/working_copies/diff_tests-48/iota\t(revision 1)\n",
+"-L\n",
+"svn-test-work/working_copies/diff_tests-48/iota\t(working copy)\n",
+"%s\n" % os.path.join(sbox.wc_dir, '.svn', 'text-base', 'iota.svn-base'),
+"%s\n" % os.path.join(sbox.wc_dir, 'iota')])
+
+  # Check that the output of diff corresponds with the expected arguments, 
+  # in the correct order.  
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', '--diff-cmd', diff_script_path,
+                                     iota_path)
+
 ########################################################################
 #Run the tests
 
@@ -2997,7 +3032,8 @@ test_list = [ None,
               diff_backward_repos_wc_copy,
               diff_summarize_xml,
               diff_file_depth_empty,
-              diff_wrong_extension_type
+              diff_wrong_extension_type,
+              diff_external_diffcmd,
               ]
 
 if __name__ == '__main__':

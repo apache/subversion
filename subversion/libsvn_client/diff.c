@@ -1528,7 +1528,7 @@ set_up_diff_cmd_and_options(struct diff_cmd_baton *diff_cmd_baton,
   /* If there was a command, arrange options to pass to it. */
   if (diff_cmd_baton->diff_cmd)
     {
-      const char **argv;
+      const char **argv = NULL;
       int argc = options->nelts;
       if (argc)
         {
