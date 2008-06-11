@@ -2500,11 +2500,12 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
                                 current_entry_name,
                                 subpool);
 
-              if (svn_wc__adm_missing(adm_access, entrypath))
+              if (svn_wc__adm_missing(adm_access, entrypath)
+                  || current_entry->depth == svn_depth_exclude)
                 {
-                  /* The directory is already missing, so don't try to
-                     recurse, just delete the entry in the parent
-                     directory. */
+                  /* The directory is either missing or excluded, 
+                     so don't try to recurse, just delete the 
+                     entry in the parent directory. */
                   svn_wc__entry_remove(entries, current_entry_name);
                 }
               else
@@ -2550,6 +2551,7 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
            full_path.  We need to remove that entry: */
         if (! is_root)
           {
+            svn_wc_entry_t *dir_entry;
             svn_wc_adm_access_t *parent_access;
 
             svn_path_split(full_path, &parent_dir, &base_name, pool);
@@ -2558,8 +2560,19 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
                                         parent_dir, pool));
             SVN_ERR(svn_wc_entries_read(&entries, parent_access, TRUE,
                                         pool));
-            svn_wc__entry_remove(entries, base_name);
-            SVN_ERR(svn_wc__entries_write(entries, parent_access, pool));
+
+            /* An exception: When the path is at svn_depth_exclude,
+               the entry in the parent directory should be preserved
+               for bookkeeping purpose. This only happens when the 
+               function is called by svn_wc_crop_tree(). */
+            dir_entry = apr_hash_get(entries, base_name, 
+                                     APR_HASH_KEY_STRING);
+            if (dir_entry->depth != svn_depth_exclude)
+              {
+                svn_wc__entry_remove(entries, base_name);
+                SVN_ERR(svn_wc__entries_write(entries, parent_access, pool));
+
+              }
           }
       }
 

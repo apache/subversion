@@ -673,6 +673,11 @@ do_open(svn_wc_adm_access_t **adm_access,
           if (entry->kind != svn_node_dir
               || ! strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR))
             continue;
+
+          /* Also skip the excluded subdir. */
+          if (entry->depth == svn_depth_exclude)
+            continue;
+
           entry_path = svn_path_join(lock->path, entry->name, subpool);
 
           /* Don't use the subpool pool here, the lock needs to persist */

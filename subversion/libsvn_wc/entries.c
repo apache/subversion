@@ -1654,7 +1654,9 @@ write_entry(svn_stringbuf_t *buf,
   }
 
   /* Depth. */
-  if (is_subdir || entry->depth == svn_depth_infinity)
+  /* Accept `exclude' for subdir entry. */
+  if ((is_subdir && entry->depth != svn_depth_exclude)
+      || entry->depth == svn_depth_infinity)
     {
       write_val(buf, NULL, 0);
     }
