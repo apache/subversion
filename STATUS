@@ -114,11 +114,6 @@ Candidate changes for 1.5.1:
 Approved changes (all releases):
 ================================
 
- * r31688
-   Regression test for - the already approved - r31685.
-   Votes:
-     +1: lgo, epg
-
 Approved changes (1.5.1 and later):
 ===================================
 
