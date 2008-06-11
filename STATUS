@@ -114,11 +114,6 @@ Candidate changes for 1.5.1:
 Approved changes (all releases):
 ================================
 
- * r31685
-   Fix an API compatibility violation caused by an uninitialized variable.
-   Votes:
-     +1: cmpilato, julianfoad, epg
-
  * r31688
    Regression test for - the already approved - r31685.
    Votes:
