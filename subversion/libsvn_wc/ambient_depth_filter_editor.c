@@ -133,19 +133,32 @@ make_dir_baton(struct dir_baton **d_p,
   if (path)
     d->path = svn_path_join(d->path, path, pool);
 
-  if (pb
-      && (pb->ambient_depth == svn_depth_empty
-          || pb->ambient_depth == svn_depth_files))
+  if (pb)
     {
-      /* This is not a depth upgrade, and the parent directory is
-         depth==empty or depth==files.  So if the parent doesn't
-         already have an entry for the new dir, then the parent
-         doesn't want the new dir at all, thus we should initialize
-         it with ambiently_excluded=TRUE. */
       const svn_wc_entry_t *entry;
+      svn_boolean_t exclude;
 
-      SVN_ERR(svn_wc_entry(&entry, d->path, eb->adm_access, FALSE, pool));
-      if (! entry)
+      SVN_ERR(svn_wc_entry(&entry, d->path, eb->adm_access, TRUE, pool));
+      if (pb->ambient_depth == svn_depth_empty
+          || pb->ambient_depth == svn_depth_files)
+        {
+          /* This is not a depth upgrade, and the parent directory is
+             depth==empty or depth==files.  So if the parent doesn't
+             already have an entry for the new dir, then the parent
+             doesn't want the new dir at all, thus we should initialize
+             it with ambiently_excluded=TRUE. */
+          exclude = entry == NULL;
+        }
+      else
+        {
+          /* If the parent expect all children by default, only exclude
+             it whenever it is explicitly marked as exclude.  The
+             svn_depth_unknown means that: 1) pb is the anchor; 2) there
+             is an non-null target, for which we are preparing the baton.
+             This enables explicitly pull in the target. */
+          exclude = entry && entry->depth == svn_depth_exclude;
+        }
+      if (exclude)
         {
           d->ambiently_excluded = TRUE;
           *d_p = d;

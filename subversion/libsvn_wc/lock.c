@@ -1527,7 +1527,7 @@ prune_deleted(svn_wc_adm_access_t *adm_access,
           if ((entry->deleted
                && (entry->schedule != svn_wc_schedule_add)
                && (entry->schedule != svn_wc_schedule_replace))
-              || entry->absent)
+              || entry->absent || (entry->depth == svn_depth_exclude))
             break;
         }
 
@@ -1550,7 +1550,8 @@ prune_deleted(svn_wc_adm_access_t *adm_access,
 
           apr_hash_this(hi, &key, NULL, &val);
           entry = val;
-          if (((entry->deleted == FALSE) && (entry->absent == FALSE))
+          if (((entry->deleted == FALSE) && (entry->absent == FALSE)
+               && (entry->depth != svn_depth_exclude))
               || (entry->schedule == svn_wc_schedule_add)
               || (entry->schedule == svn_wc_schedule_replace))
             {

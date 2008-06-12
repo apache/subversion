@@ -1183,7 +1183,8 @@ read_entries(svn_wc_adm_access_t *adm_access,
 
           ++curp;
           ++entryno;
-          if ((entry->deleted || entry->absent)
+          if ((entry->deleted || entry->absent 
+               || (entry->depth == svn_depth_exclude))
               && (entry->schedule != svn_wc_schedule_add)
               && (entry->schedule != svn_wc_schedule_replace)
               && (! show_hidden))

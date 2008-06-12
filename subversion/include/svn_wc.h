@@ -1878,11 +1878,12 @@ typedef struct svn_wc_entry_t
 #define SVN_WC_ENTRY_THIS_DIR  ""
 
 
-/** Set @a *entry to an entry for @a path, allocated in the access baton
- * pool.  If @a show_hidden is TRUE, return the entry even if it's in
- * 'deleted' or 'absent' state.  If @a path is not under revision
- * control, or if entry is hidden, not scheduled for re-addition,
- * and @a show_hidden is @c FALSE, then set @a *entry to @c NULL.
+/** Set @a *entry to an entry for @a path, allocated in the access baton pool.
+ * If @a show_hidden is TRUE, return the entry even if it's in 'excluded',
+ * 'deleted' or 'absent' state. Excluded entries are those with their depth
+ * set to @c svn_depth_exclude. If @a path is not under revision control, or
+ * if entry is hidden, not scheduled for re-addition, and @a show_hidden is @c
+ * FALSE, then set @a *entry to @c NULL.
  *
  * @a *entry should not be modified, since doing so modifies the entries
  * cache in @a adm_access without changing the entries file on disk.
@@ -1917,9 +1918,10 @@ svn_wc_entry(const svn_wc_entry_t **entry,
  * baton (that's how the entries caching works).  @a pool is used for
  * transient allocations.
  *
- * Entries that are in a 'deleted' or 'absent' state (and not
+ * Entries that are in a 'excluded', 'deleted' or 'absent' state (and not
  * scheduled for re-addition) are not returned in the hash, unless
- * @a show_hidden is TRUE.
+ * @a show_hidden is TRUE. Excluded entries are those with their depth set to
+ * @c svn_depth_exclude.
  *
  * @par Important:
  * The @a entries hash is the entries cache in @a adm_access
@@ -2035,9 +2037,10 @@ typedef struct svn_wc_entry_callbacks_t
  * If @a cancel_func is non-NULL, call it with @a cancel_baton to determine
  * if the client has cancelled the operation.
  *
- * Like our other entries interfaces, entries that are in a 'deleted'
- * or 'absent' state (and not scheduled for re-addition) are not
- * discovered, unless @a show_hidden is TRUE.
+ * Like our other entries interfaces, entries that are in a 'excluded',
+ * 'deleted' or 'absent' state (and not scheduled for re-addition) are not
+ * discovered, unless @a show_hidden is TRUE. Excluded entries are those with
+ * their depth set to @c svn_depth_exclude.
  *
  * When a new directory is entered, @c SVN_WC_ENTRY_THIS_DIR will always
  * be returned first.

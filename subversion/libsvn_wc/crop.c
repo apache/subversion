@@ -198,11 +198,6 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
   if (!entry || entry->kind != svn_node_dir)
     return SVN_NO_ERROR;
 
-  /* Defensive test against excluded target. We may need this until we filter
-     them out in svn_wc_entry(). */
-  if (entry->depth == svn_depth_exclude)
-    return SVN_NO_ERROR;
-
   /* Crop the target itself if we are requested to. */
   if (depth == svn_depth_exclude)
     {
