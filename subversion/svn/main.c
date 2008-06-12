@@ -783,7 +783,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 
   { "resolve", svn_cl__resolve, {0}, N_
     ("Resolve conflicts on working copy files or directories.\n"
-     "usage: resolve [PATH...]\n"
+     "usage: resolve --accept=ARG [PATH...]\n"
      "\n"
      "  Note:  the --accept option is currently required.\n"),
     {opt_targets, 'R', opt_depth, 'q', opt_accept},
