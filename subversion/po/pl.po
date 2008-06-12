@@ -35,8 +35,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.6\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2008-06-01 20:00+0200\n"
-"PO-Revision-Date: 2008-06-01 20:00+0200\n"
+"POT-Creation-Date: 2008-06-13 00:00+0200\n"
+"PO-Revision-Date: 2008-06-13 00:00+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Polish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1258,7 +1258,7 @@ msgstr "Nie można określić wersji (z wyjątkiem HEAD) dla operacji przeniesie
 msgid "'%s' is in the way of the resource actually under version control"
 msgstr "'%s' leży w miejscu pliku podlegającego zarządzaniu wersjami"
 
-#: ../libsvn_client/delete.c:67 ../libsvn_wc/adm_ops.c:3010
+#: ../libsvn_client/delete.c:67 ../libsvn_wc/adm_ops.c:2999
 #: ../libsvn_wc/entries.c:1272 ../libsvn_wc/entries.c:2383
 #: ../libsvn_wc/entries.c:3005 ../libsvn_wc/update_editor.c:2394
 #, c-format
@@ -1321,8 +1321,8 @@ msgstr "%s\t(kopia robocza)"
 msgid "Cannot display: file marked as a binary type.%s"
 msgstr "Nie można wyświetlić: plik binarny.%s"
 
-#: ../libsvn_client/diff.c:904 ../libsvn_client/merge.c:3853
-#: ../libsvn_client/merge.c:5268
+#: ../libsvn_client/diff.c:904 ../libsvn_client/merge.c:3816
+#: ../libsvn_client/merge.c:5234
 msgid "Not all required revisions are specified"
 msgstr "Nie wszystkie wymagane wersje zostały podane"
 
@@ -1412,13 +1412,13 @@ msgstr "Przejście '%s' nie znalazło otaczającej głębokości"
 msgid "'%s' is not a URL"
 msgstr "'%s' nie jest URL-em"
 
-#: ../libsvn_client/info.c:420
+#: ../libsvn_client/info.c:405
 #, c-format
 msgid "Server does not support retrieving information about the repository root"
 msgstr "Serwer nie obsługuje uzyskiwania informacji o katalogu głównym repozytorium"
 
-#: ../libsvn_client/info.c:427 ../libsvn_client/info.c:442
-#: ../libsvn_client/info.c:452
+#: ../libsvn_client/info.c:412 ../libsvn_client/info.c:427
+#: ../libsvn_client/info.c:437
 #, c-format
 msgid "URL '%s' non-existent in revision %ld"
 msgstr "URL '%s' nie istnieje w wersji %ld"
@@ -1432,9 +1432,9 @@ msgstr "URL '%s' nie istnieje w tej wersji"
 msgid "No common parent found, unable to operate on disjoint arguments"
 msgstr "Nie znaleziono wspólnego rodzica, nie można użyć rozłącznych argumentów"
 
-#: ../libsvn_client/locking_commands.c:261 ../libsvn_client/merge.c:5285
-#: ../libsvn_client/merge.c:5291 ../libsvn_client/merge.c:5862
-#: ../libsvn_client/merge.c:6018 ../libsvn_client/ra.c:397
+#: ../libsvn_client/locking_commands.c:261 ../libsvn_client/merge.c:5251
+#: ../libsvn_client/merge.c:5257 ../libsvn_client/merge.c:5828
+#: ../libsvn_client/merge.c:5984 ../libsvn_client/ra.c:397
 #: ../libsvn_client/ra.c:434 ../libsvn_client/ra.c:637
 #, c-format
 msgid "'%s' has no URL"
@@ -1526,45 +1526,45 @@ msgstr ""
 "rozwiąż wszystkie konflikty i uruchom merge ponownie, by zastosować\n"
 "pozostałe wersje"
 
-#: ../libsvn_client/merge.c:4983
+#: ../libsvn_client/merge.c:4949
 msgid "Use of two URLs is not compatible with mergeinfo modification"
 msgstr "Użycie dwu URL-i jest niekompatybilne z modyfikacją informacji o połączeniach zmian"
 
-#: ../libsvn_client/merge.c:4990 ../libsvn_client/merge.c:5206
+#: ../libsvn_client/merge.c:4956 ../libsvn_client/merge.c:5172
 msgid "Merge from foreign repository is not compatible with mergeinfo modification"
 msgstr "Łączenie zmian z zewnętrznego repozytorium jest niekompatybilne z modyfikacją informacji o połączeniach zmian"
 
-#: ../libsvn_client/merge.c:5512
+#: ../libsvn_client/merge.c:5478
 msgid "Cannot reintegrate into a working copy with a switched subtree"
 msgstr "Nie można reintegrować do kopii roboczej z przełączonym poddrzewem"
 
-#: ../libsvn_client/merge.c:5517
+#: ../libsvn_client/merge.c:5483
 msgid "Cannot reintegrate into a working copy not entirely at infinite depth"
 msgstr "Nie można reintegrować do kopii roboczej z niecałkowicie nieskończoną głębokością"
 
-#: ../libsvn_client/merge.c:5522
+#: ../libsvn_client/merge.c:5488
 msgid "Cannot reintegrate into a working copy that has local modifications"
 msgstr "Nie można reintegrować do kopii roboczej posiadającej lokalne modyfikacje"
 
-#: ../libsvn_client/merge.c:5528
+#: ../libsvn_client/merge.c:5494
 msgid "Cannot determine revision of working copy"
 msgstr "Nie można określić wersji kopii roboczej"
 
-#: ../libsvn_client/merge.c:5532
+#: ../libsvn_client/merge.c:5498
 msgid "Cannot reintegrate into mixed-revision working copy; try updating first"
 msgstr "Nie można reintegrować do kopii roboczej z mieszanymi wersjami. Spróbuj najpierw zaktualizować kopię roboczą"
 
-#: ../libsvn_client/merge.c:5599
+#: ../libsvn_client/merge.c:5565
 #, c-format
 msgid "At least one revision (r%ld) not yet merged from '%s'"
 msgstr "Przynajmniej jedna wersja (r%ld) niepołączona jeszcze z '%s'"
 
-#: ../libsvn_client/merge.c:5757 ../libsvn_client/merge.c:5921
+#: ../libsvn_client/merge.c:5723 ../libsvn_client/merge.c:5887
 #, c-format
 msgid "'%s@%ld' must be ancestrally related to '%s@%ld'"
 msgstr "'%s@%ld' musi być spokrewnione z '%s@%ld'"
 
-#: ../libsvn_client/merge.c:5880
+#: ../libsvn_client/merge.c:5846
 #, c-format
 msgid "'%s' must be from the same repository as '%s'"
 msgstr "'%s' musi być z tego samego repozytorium co '%s'"
@@ -2429,7 +2429,7 @@ msgstr "Node-revision '%s' twierdzi, że znajduje się na szczycie drzewa zawier
 msgid "Bad ID in cache"
 msgstr "Niepoprawny ID w schowku pamięciowym"
 
-#: ../libsvn_fs_fs/dag.c:432 ../libsvn_ra_serf/serf.c:1033
+#: ../libsvn_fs_fs/dag.c:432 ../libsvn_ra_serf/serf.c:975
 msgid "Can't get entries of non-directory"
 msgstr "Nie można pobrać składowych obiektu niebędącego katalogiem"
 
@@ -2968,12 +2968,12 @@ msgstr "Odpowiedź CHECKOUT nie zawierała nagłówka 'Location:'"
 
 #: ../libsvn_ra_neon/commit.c:515 ../libsvn_ra_neon/props.c:210
 #: ../libsvn_ra_neon/util.c:520 ../libsvn_ra_serf/commit.c:1368
-#: ../libsvn_ra_serf/commit.c:1758 ../libsvn_ra_serf/update.c:2162
+#: ../libsvn_ra_serf/commit.c:1769 ../libsvn_ra_serf/update.c:2162
 #, c-format
 msgid "Unable to parse URL '%s'"
 msgstr "Nie można parsować URL-u: '%s'"
 
-#: ../libsvn_ra_neon/commit.c:1045 ../libsvn_ra_serf/commit.c:1608
+#: ../libsvn_ra_neon/commit.c:1045 ../libsvn_ra_serf/commit.c:1619
 #, c-format
 msgid "File '%s' already exists"
 msgstr "Plik '%s' już istnieje"
@@ -3010,7 +3010,7 @@ msgstr ""
 msgid "Server response missing the expected deadprop-count property"
 msgstr "Brak oczekiwanego atrybutu deadprop-count w odpowiedzi serwera"
 
-#: ../libsvn_ra_neon/fetch.c:1177 ../libsvn_ra_serf/commit.c:2134
+#: ../libsvn_ra_neon/fetch.c:1177 ../libsvn_ra_serf/commit.c:2145
 msgid "DAV request failed; it's possible that the repository's pre-revprop-change hook either failed or is non-existent"
 msgstr "Żądanie DAV nie powiodło się; prawdopodobnie skrypt pre-revprop-change nie istnieje lub zgłosił błąd w trakcie działania"
 
@@ -3174,7 +3174,7 @@ msgstr "Niepoprawna wartość dozwolonego czasu"
 msgid "Failed to parse URI '%s'"
 msgstr "Nie udało się parsować URI '%s'"
 
-#: ../libsvn_ra_neon/lock.c:400 ../libsvn_ra_serf/locks.c:714
+#: ../libsvn_ra_neon/lock.c:400 ../libsvn_ra_serf/locks.c:729
 #, c-format
 msgid "'%s' is not locked in the repository"
 msgstr "'%s' nie jest zablokowane w repozytorium"
@@ -3363,7 +3363,7 @@ msgstr "Błąd konfiguracji: ładowanie certyfikatu '%s' nie powiodło się"
 msgid "Invalid config: unable to load PKCS#11 provider '%s'"
 msgstr "Błąd konfiguracji: nie można załadować dostawcy '%s' PKCS#11"
 
-#: ../libsvn_ra_neon/session.c:1337 ../libsvn_ra_serf/serf.c:1198
+#: ../libsvn_ra_neon/session.c:1337 ../libsvn_ra_serf/serf.c:1118
 msgid "The UUID property was not found on the resource or any of its parents"
 msgstr ""
 "Atrybut UUID nie został znaleziony ani w podanym obiekcie, ani też w\n"
@@ -3392,17 +3392,17 @@ msgstr "Błąd podczas ustawiania atrybutu '%s': "
 msgid "%s of '%s'"
 msgstr "%s z '%s'"
 
-#: ../libsvn_ra_neon/util.c:546 ../libsvn_ra_serf/util.c:1485
+#: ../libsvn_ra_neon/util.c:546 ../libsvn_ra_serf/util.c:1488
 #, c-format
 msgid "'%s' path not found"
 msgstr "Nie znaleziono ścieżki '%s'"
 
-#: ../libsvn_ra_neon/util.c:555 ../libsvn_ra_serf/util.c:1479
+#: ../libsvn_ra_neon/util.c:555 ../libsvn_ra_serf/util.c:1482
 #, c-format
 msgid "Repository moved permanently to '%s'; please relocate"
 msgstr "Repozytorium trwale przeniesione do '%s'; proszę relokować"
 
-#: ../libsvn_ra_neon/util.c:557 ../libsvn_ra_serf/util.c:1481
+#: ../libsvn_ra_neon/util.c:557 ../libsvn_ra_serf/util.c:1484
 #, c-format
 msgid "Repository moved temporarily to '%s'; please relocate"
 msgstr "Repozytorium tymczasowo przeniesione do '%s'; proszę relokować"
@@ -3444,21 +3444,9 @@ msgstr "Błąd podczas czytania zgromadzonych danych żądania %s"
 msgid "The %s request returned invalid XML in the response: %s (%s)"
 msgstr "Dla żądania '%s' otrzymano niepoprawny wynikowy XML: %s (%s)"
 
-#: ../libsvn_ra_serf/auth.c:275 ../libsvn_ra_serf/auth.c:281
+#: ../libsvn_ra_serf/auth.c:284 ../libsvn_ra_serf/auth.c:290
 msgid "Missing 'realm' attribute in Authorization header"
 msgstr "Brak atrybutu 'realm' w nagłówku Authorization"
-
-#: ../libsvn_ra_serf/blame.c:470 ../libsvn_ra_serf/commit.c:1159
-#: ../libsvn_ra_serf/property.c:892 ../libsvn_ra_serf/serf.c:677
-#: ../libsvn_ra_serf/update.c:1134 ../libsvn_ra_serf/update.c:1679
-msgid "The OPTIONS response did not include the requested checked-in value"
-msgstr "Odpowiedź OPTIONS nie zawiera wymaganej wartości checked-in"
-
-#: ../libsvn_ra_serf/blame.c:499 ../libsvn_ra_serf/commit.c:1388
-#: ../libsvn_ra_serf/commit.c:1778 ../libsvn_ra_serf/property.c:906
-#: ../libsvn_ra_serf/serf.c:799 ../libsvn_ra_serf/serf.c:1087
-msgid "The OPTIONS response did not include the requested baseline-collection value"
-msgstr "Odpowiedź OPTIONS nie zawiera wymaganej wartości baseline-collection"
 
 #: ../libsvn_ra_serf/commit.c:408 ../libsvn_ra_serf/commit.c:431
 #, c-format
@@ -3489,6 +3477,16 @@ msgstr "Odpowiedź OPTIONS nie zawiera wymaganej wartości activity-collection-s
 msgid "%s of '%s': %d %s (%s://%s)"
 msgstr "%s z '%s': %d %s (%s://%s)"
 
+#: ../libsvn_ra_serf/commit.c:1159 ../libsvn_ra_serf/property.c:893
+#: ../libsvn_ra_serf/update.c:1134 ../libsvn_ra_serf/update.c:1679
+msgid "The OPTIONS response did not include the requested checked-in value"
+msgstr "Odpowiedź OPTIONS nie zawiera wymaganej wartości checked-in"
+
+#: ../libsvn_ra_serf/commit.c:1388 ../libsvn_ra_serf/commit.c:1789
+#: ../libsvn_ra_serf/property.c:907
+msgid "The OPTIONS response did not include the requested baseline-collection value"
+msgstr "Odpowiedź OPTIONS nie zawiera wymaganej wartości baseline-collection"
+
 #: ../libsvn_ra_serf/commit.c:1414
 #, c-format
 msgid "Adding a directory failed: %s on %s (%d)"
@@ -3499,14 +3497,18 @@ msgstr "Dodawanie katalogu nie powiodło się: %s na %s (%d)"
 msgid "Lock request failed: %d %s"
 msgstr "Próba założenia blokady nie powiodła się: %d %s"
 
-#: ../libsvn_ra_serf/locks.c:640
+#: ../libsvn_ra_serf/locks.c:642
 msgid "Lock request failed"
 msgstr "Próba założenia blokady nie powiodła się"
 
-#: ../libsvn_ra_serf/locks.c:754
+#: ../libsvn_ra_serf/locks.c:769
 #, c-format
 msgid "Unlock request failed: %d %s"
 msgstr "Żądanie zdjęcia blokady nie powiodło się: %d %s"
+
+#: ../libsvn_ra_serf/property.c:921
+msgid "The OPTIONS response did not include the requested version-name value"
+msgstr "Odpowiedź OPTIONS nie zawiera wymaganej wartości version-name"
 
 #: ../libsvn_ra_serf/replay.c:195 ../libsvn_ra_serf/update.c:1231
 msgid "Missing revision attr in target-revision element"
@@ -3549,24 +3551,15 @@ msgstr "Moduł umożliwiający dostęp do repozytorium przy pomocy protokołu We
 msgid "Could not lookup hostname `%s'"
 msgstr "Nie można odszukać hosta: `%s'"
 
-#: ../libsvn_ra_serf/serf.c:661 ../libsvn_ra_serf/update.c:2221
-#: ../libsvn_ra_serf/util.c:1418
-msgid "The OPTIONS response did not include the requested version-controlled-configuration value"
-msgstr "Odpowiedź OPTIONS nie zawiera wymaganej wartości version-controlled-configuration"
-
-#: ../libsvn_ra_serf/serf.c:694
-msgid "The OPTIONS response did not include the requested version-name value"
-msgstr "Odpowiedź OPTIONS nie zawiera wymaganej wartości version-name"
-
-#: ../libsvn_ra_serf/serf.c:863
+#: ../libsvn_ra_serf/serf.c:805
 msgid "The OPTIONS response did not include the requested resourcetype value"
 msgstr "Odpowiedź OPTIONS nie zawiera wymaganej wartości resourcetype"
 
-#: ../libsvn_ra_serf/serf.c:1027
+#: ../libsvn_ra_serf/serf.c:969
 msgid "The PROPFIND response did not include the requested resourcetype value"
 msgstr "Odpowiedź PROPFIND nie zawiera wymaganej wartości resourcetype"
 
-#: ../libsvn_ra_serf/serf.c:1266
+#: ../libsvn_ra_serf/serf.c:1186
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_serf"
 msgstr "Nieobsługiwana wersja loadera RA (%d) dla ra_serf"
@@ -3575,6 +3568,10 @@ msgstr "Nieobsługiwana wersja loadera RA (%d) dla ra_serf"
 #, c-format
 msgid "GET request failed: %d %s"
 msgstr "Żądanie GET nie powiodło się: %d %s"
+
+#: ../libsvn_ra_serf/update.c:2221 ../libsvn_ra_serf/util.c:1418
+msgid "The OPTIONS response did not include the requested version-controlled-configuration value"
+msgstr "Odpowiedź OPTIONS nie zawiera wymaganej wartości version-controlled-configuration"
 
 #: ../libsvn_ra_serf/update.c:2304
 #, c-format
@@ -3976,26 +3973,34 @@ msgstr "* Zweryfikowano wersję %ld.\n"
 msgid "Unexpected node kind %d for '%s'"
 msgstr "Nieoczekiwany rodzaj obiektu %d dla '%s'"
 
-#: ../libsvn_repos/fs-wrap.c:58 ../libsvn_repos/load.c:1351
+#: ../libsvn_repos/fs-wrap.c:59 ../libsvn_repos/load.c:1351
 msgid "Commit succeeded, but post-commit hook failed"
 msgstr "Zatwierdzenie powiodło się, lecz nie powiodło się wykonanie skryptu post-commit"
 
-#: ../libsvn_repos/fs-wrap.c:165
+#: ../libsvn_repos/fs-wrap.c:166
 #, c-format
 msgid "Storage of non-regular property '%s' is disallowed through the repository interface, and could indicate a bug in your client"
 msgstr "Przechowywanie nieregularnego atrybutu '%s' przez repozytorium jest niedozwolone, może to oznaczać występowanie błędu w Twoim kliencie svn"
 
-#: ../libsvn_repos/fs-wrap.c:282
+#: ../libsvn_repos/fs-wrap.c:180
+msgid "Cannot accept log message because it is not encoded in UTF-8"
+msgstr "Nie można zaakceptować opisu zmian, ponieważ nie jest on zakodowany w UTF-8"
+
+#: ../libsvn_repos/fs-wrap.c:190
+msgid "Cannot accept non-LF line endings in log message"
+msgstr "Nie można zaakceptować innych niż LF zakończeń linii w opisie zmian"
+
+#: ../libsvn_repos/fs-wrap.c:305
 #, c-format
 msgid "Write denied:  not authorized to read all of revision %ld"
 msgstr "Zapis zabroniony: nieautoryzowana próba odczytu wersji %ld."
 
-#: ../libsvn_repos/fs-wrap.c:486
+#: ../libsvn_repos/fs-wrap.c:509
 #, c-format
 msgid "Cannot unlock path '%s', no authenticated username available"
 msgstr "Nie można zdjąć blokady ścieżki '%s', brak uwierzytelnionego użytkownika"
 
-#: ../libsvn_repos/fs-wrap.c:500
+#: ../libsvn_repos/fs-wrap.c:523
 msgid "Unlock succeeded, but post-unlock hook failed"
 msgstr "Zdjęcie blokady powiodło się, lecz nie powiodło się wykonanie skryptu post-unlock"
 
@@ -4096,7 +4101,7 @@ msgstr "Błąd podczas zamykania pliku null"
 msgid "Failed to run '%s' hook; broken symlink"
 msgstr "Niepowiodło się uruchomienie skryptu hook '%s'; uszkodzone dowiązanie symboliczne"
 
-#: ../libsvn_repos/hooks.c:699
+#: ../libsvn_repos/hooks.c:708
 msgid ""
 "Repository has not been enabled to accept revision propchanges;\n"
 "ask the administrator to create a pre-revprop-change hook"
@@ -5176,7 +5181,7 @@ msgstr "Hasło dla '%s': "
 msgid "Store password unencrypted (yes/no)? "
 msgstr "Zapisać hasła bez szyfrowania (tak/nie)? "
 
-#: ../libsvn_subr/prompt.c:399
+#: ../libsvn_subr/prompt.c:400
 #, c-format
 msgid ""
 "-----------------------------------------------------------------------\n"
@@ -5187,11 +5192,6 @@ msgid ""
 "can only be stored to disk unencrypted!  You are advised to configure\n"
 "your system so that Subversion can store passwords encrypted, if\n"
 "possible.  See the documentation for details.\n"
-"\n"
-"You can avoid future appearances of this warning by setting the value\n"
-"of the 'store-plaintext-passwords' option to either 'yes' or 'no' in\n"
-"'%s'.\n"
-"-----------------------------------------------------------------------\n"
 msgstr ""
 "-----------------------------------------------------------------------\n"
 "UWAGA! Twoje hasło dla obszaru uwierzytelniania:\n"
@@ -5201,21 +5201,29 @@ msgstr ""
 "może być tylko zapisane na dysk bez szyfrowania! Doradza się skonfigurować\n"
 "twój system tak, by Subversion mógł zapisywać hasła w postaci zaszyfrowanej,\n"
 "jeśli to możliwe. Zobacz szczegóły w dokumentacji.\n"
+
+#: ../libsvn_subr/prompt.c:412
+#, c-format
+msgid ""
+"\n"
+"You can avoid future appearances of this warning by setting the value\n"
+"of the 'store-plaintext-passwords' option to either 'yes' or 'no' in\n"
+"'%s'.\n"
+msgstr ""
 "\n"
 "Możesz uniknąć przyszłego wyświetlania tego ostrzeżenia, ustawiając wartość\n"
 "opcji 'store-plaintext-passwords' na 'yes' lub 'no' w\n"
 "'%s'.\n"
-"-----------------------------------------------------------------------\n"
 
-#: ../libsvn_subr/prompt.c:428
+#: ../libsvn_subr/prompt.c:435
 msgid "yes"
 msgstr "tak"
 
-#: ../libsvn_subr/prompt.c:433
+#: ../libsvn_subr/prompt.c:440
 msgid "no"
 msgstr "nie"
 
-#: ../libsvn_subr/prompt.c:439
+#: ../libsvn_subr/prompt.c:446
 msgid "Please type 'yes' or 'no': "
 msgstr "Proszę wpisać 'tak' lub 'nie': "
 
@@ -5450,12 +5458,12 @@ msgstr "Plik '%s' zawiera lokalne zmiany"
 msgid "Invalid 'conflict_result' argument"
 msgstr "Błądny argument 'conflict_result'"
 
-#: ../libsvn_wc/adm_ops.c:3015
+#: ../libsvn_wc/adm_ops.c:3004
 #, c-format
 msgid "'%s' is a directory, and thus cannot be a member of a changelist"
 msgstr "%s' jest katalogiem i dlatego nie może być członkiem listy zmian"
 
-#: ../libsvn_wc/adm_ops.c:3035
+#: ../libsvn_wc/adm_ops.c:3024
 #, c-format
 msgid "Removing '%s' from changelist '%s'."
 msgstr "Usuwanie '%s' z listy zmian '%s'."
@@ -7987,12 +7995,12 @@ msgstr "odczytaj wartość atrybutu z pliku ARG"
 #: ../svn/main.c:785
 msgid ""
 "Resolve conflicts on working copy files or directories.\n"
-"usage: resolve [PATH...]\n"
+"usage: resolve --accept=ARG [PATH...]\n"
 "\n"
 "  Note:  the --accept option is currently required.\n"
 msgstr ""
 "Rozwiąż konflikty w plikach i katalogach kopii roboczej.\n"
-"Użycie: resolve [ŚCIEŻKA...]\n"
+"Użycie: resolve --accept=ARG [ŚCIEŻKA...]\n"
 "\n"
 "  Uwaga: opcja --accept jest obecnie wymagana.\n"
 
