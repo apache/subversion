@@ -1326,13 +1326,13 @@ main(int argc, const char *argv[])
                                _("Error converting depth "
                                  "from locale to UTF8")), pool, "svn: ");
         opt_state.set_depth = svn_depth_from_word(utf8_opt_arg);
-        if (opt_state.set_depth == svn_depth_unknown
-            || opt_state.set_depth == svn_depth_exclude)
+        /* svn_depth_exclude is okay for --set-depth. */
+        if (opt_state.set_depth == svn_depth_unknown)
           {
             return svn_cmdline_handle_exit_error
               (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                  _("'%s' is not a valid depth; try "
-                                   "'empty', 'files', 'immediates', "
+                                   "'exclude', 'empty', 'files', 'immediates', "
                                    "or 'infinity'"),
                                  utf8_opt_arg), pool, "svn: ");
           }

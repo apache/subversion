@@ -473,7 +473,23 @@ complete_directory(struct edit_baton *eb,
   /* If this is the root directory and there is a target, we can't
      mark this directory complete. */
   if (is_root_dir && *eb->target)
-    return SVN_NO_ERROR;
+    {
+      if (eb->depth_is_sticky)
+        {
+          /* Before we can finish, we may need to clear the exclude flag for
+             target */
+          SVN_ERR(svn_wc_adm_retrieve(&adm_access, 
+                                      eb->adm_access, path, pool));
+          SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, pool));
+          entry = apr_hash_get(entries, eb->target, APR_HASH_KEY_STRING);
+          if (entry && entry->depth == svn_depth_exclude)
+            {
+              entry->depth = svn_depth_infinity;
+              SVN_ERR(svn_wc__entries_write(entries, adm_access, pool));
+            }
+        }
+      return SVN_NO_ERROR;
+    }
 
   /* All operations are on the in-memory entries hash. */
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access, path, pool));
@@ -541,21 +557,27 @@ complete_directory(struct edit_baton *eb,
         {
           const char *child_path = svn_path_join(path, name, subpool);
 
-          if ((svn_wc__adm_missing(adm_access, child_path))
-              && (! current_entry->absent)
-              && (current_entry->schedule != svn_wc_schedule_add))
+          if (current_entry->depth == svn_depth_exclude)
             {
-              svn_wc__entry_remove(entries, name);
-              if (eb->notify_func)
-                {
-                  svn_wc_notify_t *notify
-                    = svn_wc_create_notify(child_path,
-                                           svn_wc_notify_update_delete,
-                                           subpool);
-                  notify->kind = current_entry->kind;
-                  (* eb->notify_func)(eb->notify_baton, notify, subpool);
-                }
-            }
+              /* Clear the exclude flag if it is pulled in again. */
+              if (eb->depth_is_sticky 
+                  && eb->requested_depth >= svn_depth_immediates)
+                current_entry->depth = svn_depth_infinity;
+            } else if ((svn_wc__adm_missing(adm_access, child_path))
+                       && (! current_entry->absent)
+                       && (current_entry->schedule != svn_wc_schedule_add))
+              {
+                svn_wc__entry_remove(entries, name);
+                if (eb->notify_func)
+                  {
+                    svn_wc_notify_t *notify
+                      = svn_wc_create_notify(child_path,
+                                             svn_wc_notify_update_delete,
+                                             subpool);
+                    notify->kind = current_entry->kind;
+                    (* eb->notify_func)(eb->notify_baton, notify, subpool);
+                  }
+              }
         }
     }
 

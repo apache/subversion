@@ -129,7 +129,8 @@ tweak_entries(svn_wc_adm_access_t *dirpath,
           /* If a file, or deleted or absent dir, then tweak the entry
              but don't recurse. */
           if ((current_entry->kind == svn_node_file)
-              || (current_entry->deleted || current_entry->absent))
+              || (current_entry->deleted || current_entry->absent
+                  || current_entry->depth == svn_depth_exclude))
             {
               if (! excluded)
                 SVN_ERR(svn_wc__tweak_entry(entries, name,
@@ -244,7 +245,9 @@ svn_wc__do_update_cleanup(const char *path,
     return SVN_NO_ERROR;
 
   if (entry->kind == svn_node_file
-      || (entry->kind == svn_node_dir && (entry->deleted || entry->absent)))
+      || (entry->kind == svn_node_dir 
+          && (entry->deleted || entry->absent 
+              || entry->depth == svn_depth_exclude)))
     {
       const char *parent, *base_name;
       svn_wc_adm_access_t *dir_access;
