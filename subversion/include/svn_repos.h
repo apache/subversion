@@ -938,14 +938,17 @@ svn_repos_replay(svn_fs_root_t *root,
  * due to authz will return SVN_ERR_AUTHZ_UNREADABLE or
  * SVN_ERR_AUTHZ_UNWRITABLE.
  *
- * Calling @a (*editor)->close_edit completes the commit.  Before
- * @c close_edit returns, but after the commit has succeeded, it will
- * invoke @a callback with the new revision number, the commit date (as a
- * <tt>const char *</tt>), commit author (as a <tt>const char *</tt>), and
- * @a callback_baton as arguments.  If @a callback returns an error, that
- * error will be returned from @c close_edit, otherwise if there was a
- * post-commit hook failure, then that error will be returned and will
- * have code SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED.
+ * Calling @a (*editor)->close_edit completes the commit.
+ *
+ * If @a callback is non-NULL, then before @c close_edit returns (but
+ * after the commit has succeeded) @c close_edit will invoke
+ * @a callback with a filled-in @c svn_commit_info_t *, @a callback_baton,
+ * and @a pool or some subpool thereof as arguments.  If @a callback
+ * returns an error, that error will be returned from @c close_edit,
+ * otherwise if there was a post-commit hook failure, then that error
+ * will be returned with code SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED.
+ * (Note that prior to Subversion 1.6, @a callback cannot be NULL; if
+ * you don't need a callback, pass a dummy function.)
  *
  * Calling @a (*editor)->abort_edit aborts the commit, and will also
  * abort the commit transaction unless @a txn was supplied (not @c
@@ -1288,7 +1291,9 @@ svn_repos_node_location_segments(svn_repos_t *repos,
  * revisions in which at least one of @a paths was changed (i.e., if
  * file, text or props changed; if dir, props or entries changed or any node
  * changed below it).  Each path is a <tt>const char *</tt> representing
- * an absolute path in the repository.
+ * an absolute path in the repository.  If @a paths is NULL or empty,
+ * show all revisions regardless of what paths were changed in those
+ * revisions.
  *
  * If @a limit is non-zero then only invoke @a receiver on the first
  * @a limit logs.
@@ -1349,7 +1354,8 @@ svn_repos_get_logs4(svn_repos_t *repos,
  * Same as svn_repos_get_logs4(), but with @a receiver being @c
  * svn_log_message_receiver_t instead of @c svn_log_entry_receiver_t.
  * Also, @a include_merged_revisions is set to @c FALSE and @a revprops is
- * svn:author, svn:date, and svn:log.
+ * svn:author, svn:date, and svn:log.  If @a paths is empty, nothing
+ * is returned.
  *
  * @since New in 1.2.
  * @deprecated Provided for backward compatibility with the 1.4 API.
@@ -1802,8 +1808,9 @@ svn_repos_fs_revision_proplist(apr_hash_t **table_p,
  * @a value and return SVN_ERR_BAD_PROPERTY_VALUE if it is invalid for the
  * property.
  *
- * @note Currently, the only "svn:" property validated is @c
- * SVN_PROP_REVISION_DATE.  This may change in a future release.
+ * @note Currently, the only properties validated are the "svn:" properties
+ * @c SVN_PROP_REVISION_LOG and @c SVN_PROP_REVISION_DATE. This may change
+ * in future releases.
  */
 svn_error_t *
 svn_repos_fs_change_node_prop(svn_fs_root_t *root,

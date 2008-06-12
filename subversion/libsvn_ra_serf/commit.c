@@ -413,8 +413,17 @@ checkout_dir(dir_context_t *dir)
 
   if (checkout_ctx->progress.status != 201)
     {
-      SVN_ERR(svn_ra_serf__error_on_status(checkout_ctx->progress.status, 
-                                           dir->name));
+      err = svn_ra_serf__error_on_status(checkout_ctx->progress.status,
+                                         dir->name);
+      if (err)
+        {
+          svn_error_clear(checkout_ctx->progress.server_error.error);
+          return err;
+        }
+
+      /* In the normal cases where this error might occur we already handled
+         it based on the status code. */
+      SVN_ERR(checkout_ctx->progress.server_error.error);
 
       return svn_error_createf(SVN_ERR_FS_CONFLICT,
                     return_response_err(handler,
@@ -1537,6 +1546,7 @@ add_file(const char *path,
 {
   dir_context_t *dir = parent_baton;
   file_context_t *new_file;
+  const char *deleted_parent = path;
 
   /* Ensure our directory has been checked out */
   SVN_ERR(checkout_dir(dir));
@@ -1560,14 +1570,24 @@ add_file(const char *path,
   new_file->changed_props = apr_hash_make(new_file->pool);
   new_file->removed_props = apr_hash_make(new_file->pool);
 
-  /* Ensure that the file doesn't exist by doing a HEAD on the
+  /* Ensure that the file doesn't exist by doing a HEAD on the 
    * resource, but only if we haven't deleted it in this commit
-   * already, or if the parent directory was also added (without
-   * history) in this commit.
+   * already - directly, or indirectly through its parent directories -
+   * or if the parent directory was also added (without history)
+   * in this commit.
    */
+  while (deleted_parent && deleted_parent[0] != '\0')
+    {
+      if (apr_hash_get(dir->commit->deleted_entries,
+                       deleted_parent, APR_HASH_KEY_STRING))
+        {
+          break;
+        }
+      deleted_parent = svn_path_dirname(deleted_parent, file_pool);
+    };
+
   if (! ((dir->added && !dir->copy_path) ||
-         apr_hash_get(dir->commit->deleted_entries,
-                      new_file->name, APR_HASH_KEY_STRING)))
+         deleted_parent && deleted_parent[0] != '\0'))
     {
       svn_ra_serf__simple_request_context_t *head_ctx;
       svn_ra_serf__handler_t *handler;

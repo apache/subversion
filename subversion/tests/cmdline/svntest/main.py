@@ -149,6 +149,9 @@ cleanup_mode = False
 # Global variable indicating if svnserve should use Cyrus SASL
 enable_sasl = False
 
+# Global variable indicating that SVNKit binaries should be used
+use_jsvn = False
+
 # Global variable indicating which DAV library, if any, is in use
 # ('neon', 'serf')
 http_library = None
@@ -662,6 +665,7 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
 
   dump_in, dump_out, dump_err, dump_kid = \
            open_pipe(svnadmin_binary + dump_args, 'b')
+  dump_in.close()
   load_in, load_out, load_err, load_kid = \
            open_pipe(svnadmin_binary + load_args, 'b')
   stop = time.time()
@@ -677,7 +681,6 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
 
   dump_lines = dump_err.readlines()
   load_lines = load_out.readlines()
-  dump_in.close()
   dump_out.close()
   dump_err.close()
   load_out.close()
@@ -1095,6 +1098,14 @@ class TestRunner:
     # Tests that want to use an editor should invoke svntest.main.use_editor.
     os.environ['SVN_EDITOR'] = ''
     os.environ['SVNTEST_EDITOR_FUNC'] = ''
+    
+    if use_jsvn:
+      # Set this SVNKit specific variable to the current test (test name plus 
+      # its index) being run so that SVNKit daemon could use this test name 
+      # for its separate log file
+     os.environ['SVN_CURRENT_TEST'] = os.path.basename(sys.argv[0]) + "_" + \
+                                      str(self.index)
+    
     actions.no_sleep_for_timestamps()
 
     saved_dir = os.getcwd()
@@ -1283,11 +1294,13 @@ def run_tests(test_list, serial_only = False):
   global svnadmin_binary
   global svnlook_binary
   global svnsync_binary
+  global svndumpfilter_binary
   global svnversion_binary
   global command_line_parsed
   global http_library
   global config_file
   global server_minor_version
+  global use_jsvn
 
   testnums = []
   # Should the tests be listed (as opposed to executed)?
@@ -1395,14 +1408,15 @@ def run_tests(test_list, serial_only = False):
     svnadmin_binary = os.path.join(svn_bin, 'jsvnadmin' + _bat)
     svnlook_binary = os.path.join(svn_bin, 'jsvnlook' + _bat)
     svnsync_binary = os.path.join(svn_bin, 'jsvnsync' + _bat)
+    svndumpfilter_binary = os.path.join(svn_bin, 'jsvndumpfilter' + _bat)
     svnversion_binary = os.path.join(svn_bin, 'jsvnversion' + _bat)
-    use_jsvn = False
   else:
     if svn_bin:
       svn_binary = os.path.join(svn_bin, 'svn' + _exe)
       svnadmin_binary = os.path.join(svn_bin, 'svnadmin' + _exe)
       svnlook_binary = os.path.join(svn_bin, 'svnlook' + _exe)
       svnsync_binary = os.path.join(svn_bin, 'svnsync' + _exe)
+      svndumpfilter_binary = os.path.join(svn_bin, 'svndumpfilter' + _exe)
       svnversion_binary = os.path.join(svn_bin, 'svnversion' + _exe)
 
   command_line_parsed = True

@@ -33,7 +33,6 @@
 #include "svn_private_config.h"
 
 #include <QtCore/QString>
-#include <QtGui/QWidget>
 
 #include <kapplication.h>
 #include <kcmdlineargs.h>
@@ -73,8 +72,6 @@ kwallet_password_get(const char **password,
                      ki18n("Version control system"),
                      KCmdLineArgs::CmdLineArgKDE);
   KApplication application;
-  QWidget widget;
-  WId wid = widget.winId();
   svn_boolean_t ret = FALSE;
   QString wallet_name = KWallet::Wallet::NetworkWallet();
   QString folder = QString::fromUtf8("Subversion");
@@ -84,7 +81,7 @@ kwallet_password_get(const char **password,
     {
       KWallet::Wallet *wallet =
         KWallet::Wallet::openWallet(wallet_name,
-                                    wid,
+                                    -1,
                                     KWallet::Wallet::Synchronous);
       if (wallet)
         {
@@ -104,6 +101,9 @@ kwallet_password_get(const char **password,
             }
         }
     }
+// This function currently closes the wallet if no other application
+// is connected to the wallet. We're waiting for this to be fixed
+// upstream, see https://bugs.kde.org/show_bug.cgi?id=162570
 //  KWallet::Wallet::disconnectApplication(wallet_name,
 //                                         QString::fromUtf8("Subversion"));
   return ret;
@@ -138,15 +138,13 @@ kwallet_password_set(apr_hash_t *creds,
                      ki18n("Version control system"),
                      KCmdLineArgs::CmdLineArgKDE);
   KApplication application;
-  QWidget widget;
-  WId wid = widget.winId();
   svn_boolean_t ret = FALSE;
   QString q_password = QString::fromUtf8(password);
   QString wallet_name = KWallet::Wallet::NetworkWallet();
   QString folder = QString::fromUtf8("Subversion");
   KWallet::Wallet *wallet =
     KWallet::Wallet::openWallet(wallet_name,
-                                wid,
+                                -1,
                                 KWallet::Wallet::Synchronous);
   if (wallet)
     {
@@ -167,6 +165,9 @@ kwallet_password_set(apr_hash_t *creds,
             }
         }
     }
+// This function currently closes the wallet if no other application
+// is connected to the wallet. We're waiting for this to be fixed
+// upstream, see https://bugs.kde.org/show_bug.cgi?id=162570
 //  KWallet::Wallet::disconnectApplication(wallet_name,
 //                                         QString::fromUtf8("Subversion"));
   return ret;

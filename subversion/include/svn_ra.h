@@ -1317,6 +1317,12 @@ svn_ra_do_diff(svn_ra_session_t *session,
  *
  * Use @a pool for memory allocation.
  *
+ * @note If @a paths is NULL or empty, the result depends on the
+ * server.  Pre-1.5 servers will send nothing; 1.5 servers will
+ * effectively perform the log operation on the root of the
+ * repository.  This behavior may be changed in the future to ensure
+ * consistency across all pedigrees of server.
+ *
  * @note Pre-1.5 servers do not support custom revprop retrieval; if @a
  * revprops is NULL or contains a revprop other than svn:author, svn:date,
  * or svn:log, an @c SVN_ERR_RA_NOT_IMPLEMENTED error is returned.

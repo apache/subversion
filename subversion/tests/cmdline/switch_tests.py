@@ -1222,7 +1222,7 @@ def forced_switch(sbox):
 #----------------------------------------------------------------------
 
 def forced_switch_failures(sbox):
-  "forced switch fails with some types of obstuctions"
+  "forced switch fails with some types of obstruction"
   sbox.build()
 
   # Add a directory to obstruct a file.
