@@ -3392,15 +3392,11 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
   /* Cover cases 1), 2), 6), and 7) by walking the WC to get all paths which
      have mergeinfo and/or are switched or are absent from disk or is the
      target of the merge. */
-  if (entry->kind == svn_node_file)
-    SVN_ERR(walk_callbacks.found_entry(merge_cmd_baton->target, entry, &wb,
-                                       pool));
-  else
-    SVN_ERR(svn_wc_walk_entries3(merge_cmd_baton->target, adm_access,
-                                 &walk_callbacks, &wb, depth, TRUE,
-                                 merge_cmd_baton->ctx->cancel_func,
-                                 merge_cmd_baton->ctx->cancel_baton,
-                                 pool));
+  SVN_ERR(svn_wc_walk_entries3(merge_cmd_baton->target, adm_access,
+                               &walk_callbacks, &wb, depth, TRUE,
+                               merge_cmd_baton->ctx->cancel_func,
+                               merge_cmd_baton->ctx->cancel_baton,
+                               pool));
 
   /* CHILDREN_WITH_MERGEINFO must be in depth first order, but
      svn_wc_walk_entries3() relies on svn_wc_entries_read() which means the
