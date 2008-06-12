@@ -44,6 +44,10 @@ struct set_cl_fe_baton
 };
 
 
+/* This function -- which implements the 'found_entry' vtable member
+   of svn_wc_entry_callbacks2_t -- associates PATH (via its ENTRY)
+   with a new changelist (passed along in BATON->changelist), so long
+   as ENTRY is deemed a valid target of that association.  */
 static svn_error_t *
 set_entry_changelist(const char *path,
                      const svn_wc_entry_t *entry,

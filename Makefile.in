@@ -376,7 +376,7 @@ check-javahl: javahl
 # "make check CLEANUP=true" will clean up directories for successful tests.
 # "make check TESTS=subversion/tests/cmdline/basic_tests.py"
 #  will perform only basic tests (likewise for other tests).
-check: $(TEST_DEPS) @BDB_TEST_DEPS@
+check: bin $(TEST_DEPS) @BDB_TEST_DEPS@
 	@if test "$(PYTHON)" != "none"; then                                 \
 	  flags="--verbose";                                                 \
 	  if test "$(CLEANUP)" != ""; then                                   \

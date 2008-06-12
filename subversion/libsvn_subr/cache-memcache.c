@@ -28,7 +28,7 @@
 
 #include "cache.h"
 
-#if SVN_HAVE_MEMCACHE
+#ifdef SVN_HAVE_MEMCACHE
 
 #include <apr_memcache.h>
 
@@ -381,7 +381,7 @@ svn_cache_make_memcache_from_config(svn_memcache_t **memcache_p,
       return SVN_NO_ERROR;
     }
 
-#if SVN_HAVE_MEMCACHE
+#ifdef SVN_HAVE_MEMCACHE
   {
     struct ams_baton b;
     svn_memcache_t *memcache = apr_pcalloc(pool, sizeof(*memcache));

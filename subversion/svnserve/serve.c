@@ -1648,7 +1648,7 @@ static svn_error_t *status(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   if (depth_word)
     depth = svn_depth_from_word(depth_word);
   else
-    depth = recurse ? svn_depth_infinity : svn_depth_empty;
+    depth = SVN_DEPTH_INFINITY_OR_EMPTY(recurse);
 
   SVN_ERR(trivial_auth_request(conn, pool, b));
   if (!SVN_IS_VALID_REVNUM(rev))

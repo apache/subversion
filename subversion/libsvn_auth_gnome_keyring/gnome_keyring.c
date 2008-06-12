@@ -166,7 +166,10 @@ gnome_keyring_simple_save_creds(svn_boolean_t *saved,
 static void
 gnome_keyring_init()
 {
-  g_set_application_name("Subversion");
+  const char *application_name = NULL;
+  application_name = g_get_application_name();
+  if (!application_name)
+    g_set_application_name("Subversion");
 }
 
 static const svn_auth_provider_t gnome_keyring_simple_provider = {

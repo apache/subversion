@@ -2322,7 +2322,7 @@ svn_wc_revert2(const char *path,
                apr_pool_t *pool)
 {
   return svn_wc_revert3(path, parent_access, 
-                        recursive ? svn_depth_infinity : svn_depth_empty,
+                        SVN_DEPTH_INFINITY_OR_EMPTY(recursive),
                         use_commit_times, NULL, cancel_func, cancel_baton,
                         notify_func, notify_baton, pool);
 }
@@ -2905,7 +2905,8 @@ svn_wc_resolved_conflict2(const char *path,
                           apr_pool_t *pool)
 {
   return svn_wc_resolved_conflict3(path, adm_access, resolve_text,
-                                   resolve_props, recurse,
+                                   resolve_props,
+                                   SVN_DEPTH_INFINITY_OR_EMPTY(recurse),
                                    svn_wc_conflict_choose_merged,
                                    notify_func, notify_baton, cancel_func,
                                    cancel_baton, pool);
@@ -2955,20 +2956,9 @@ svn_wc_resolved_conflict4(const char *path,
   baton->notify_baton = notify_baton;
   baton->conflict_choice = conflict_choice;
 
-  if (depth == svn_depth_empty)
-    {
-      const svn_wc_entry_t *entry;
-      SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
-
-      SVN_ERR(resolve_found_entry_callback(path, entry, baton, pool));
-    }
-  else
-    {
-      SVN_ERR(svn_wc_walk_entries3(path, adm_access,
-                                   &resolve_walk_callbacks, baton, depth,
-                                   FALSE, cancel_func, cancel_baton, pool));
-
-    }
+  SVN_ERR(svn_wc_walk_entries3(path, adm_access,
+                               &resolve_walk_callbacks, baton, depth,
+                               FALSE, cancel_func, cancel_baton, pool));
 
   return SVN_NO_ERROR;
 }

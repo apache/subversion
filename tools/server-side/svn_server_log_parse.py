@@ -17,7 +17,7 @@
 # TODO: Teach parse_open about capabilities, rather than allowing any
 # words at all.
 
-"""Parse mod-dav-svn operational logs.
+"""Parse subversion server operational logs.
 
 SVN-ACTION strings
 ------------------

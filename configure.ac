@@ -402,7 +402,6 @@ fi
 
 AH_BOTTOM(
 #define N_(x) x
-#define GETTEXT_NOOP(x)
 #ifdef ENABLE_NLS
 #include <locale.h>
 #include <libintl.h>

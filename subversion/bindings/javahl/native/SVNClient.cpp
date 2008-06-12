@@ -1154,7 +1154,7 @@ SVNClient::diffSummarize(const char *target, Revision &pegRevision,
 
 #if defined(SVN_HAVE_KWALLET) || defined(SVN_HAVE_GNOME_KEYRING)
 /* Dynamically load authentication simple provider. */
-static svn_boolean_t
+static svn_error_t *
 get_auth_simple_provider(svn_auth_provider_object_t **provider,
                          const char *provider_name,
                          apr_pool_t *pool)
@@ -1163,8 +1163,7 @@ get_auth_simple_provider(svn_auth_provider_object_t **provider,
   apr_dso_handle_sym_t symbol;
   const char *libname;
   const char *funcname;
-  svn_error_t *err;
-  svn_boolean_t ret = FALSE;
+  *provider = NULL;
   libname = apr_psprintf(pool,
                          "libsvn_auth_%s-%d.so.0",
                          provider_name,
@@ -1172,22 +1171,17 @@ get_auth_simple_provider(svn_auth_provider_object_t **provider,
   funcname = apr_psprintf(pool,
                           "svn_auth_get_%s_simple_provider",
                           provider_name);
-  err = svn_dso_load(&dso, libname);
-  if (err == SVN_NO_ERROR)
+  SVN_ERR(svn_dso_load(&dso, libname));
+  if (dso)
     {
-      if (dso)
+      if (! apr_dso_sym(&symbol, dso, funcname))
         {
-          if (! apr_dso_sym(&symbol, dso, funcname))
-            {
-              svn_auth_simple_provider_func_t func;
-              func = (svn_auth_simple_provider_func_t) symbol;
-              func(provider, pool);
-              ret = TRUE;
-            }
+          svn_auth_simple_provider_func_t func;
+          func = (svn_auth_simple_provider_func_t) symbol;
+          func(provider, pool);
         }
     }
-  svn_error_clear(err);
-  return ret;
+  return SVN_NO_ERROR;
 }
 #endif
 
@@ -1213,18 +1207,18 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
     APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 #endif
 #ifdef SVN_HAVE_GNOME_KEYRING
-    if (get_auth_simple_provider(&provider, "gnome_keyring", pool))
+    SVN_JNI_ERR(get_auth_simple_provider(&provider, "gnome_keyring", pool), NULL);
+    if (provider)
       {
         APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
       }
 #endif
-#ifdef SVN_HAVE_KWALLET
-#ifdef SVN_USE_KWALLET_IN_JAVAHL
-    if (get_auth_simple_provider(&provider, "kwallet", pool))
+#if defined(SVN_HAVE_KWALLET) && defined(SVN_USE_KWALLET_IN_JAVAHL)
+    SVN_JNI_ERR(get_auth_simple_provider(&provider, "kwallet", pool), NULL);
+    if (provider)
       {
         APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
       }
-#endif
 #endif
     svn_auth_get_simple_provider(&provider, pool);
     APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
