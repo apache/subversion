@@ -2909,20 +2909,9 @@ svn_wc_resolved_conflict3(const char *path,
   baton->notify_baton = notify_baton;
   baton->conflict_choice = conflict_choice;
 
-  if (depth == svn_depth_empty)
-    {
-      const svn_wc_entry_t *entry;
-      SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
-
-      SVN_ERR(resolve_found_entry_callback(path, entry, baton, pool));
-    }
-  else
-    {
-      SVN_ERR(svn_wc_walk_entries3(path, adm_access,
-                                   &resolve_walk_callbacks, baton, depth,
-                                   FALSE, cancel_func, cancel_baton, pool));
-
-    }
+  SVN_ERR(svn_wc_walk_entries3(path, adm_access,
+                               &resolve_walk_callbacks, baton, depth,
+                               FALSE, cancel_func, cancel_baton, pool));
 
   return SVN_NO_ERROR;
 }
