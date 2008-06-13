@@ -26,7 +26,10 @@
 #include "svn_path.h"
 #include "entries.h"
 
-#define SVN_ERR_IGNORE_LOCAL_MOD(expr)                           \
+/* Evaluate EXPR.  If it returns an error, return that error, unless
+   the error's code is SVN_ERR_WC_LEFT_LOCAL_MOD, in which case clear
+   the error and do not return. */
+#define IGNORE_LOCAL_MOD(expr)                                   \
   do {                                                           \
     svn_error_t *__temp = (expr);                                \
     if (__temp)                                                  \
@@ -99,7 +102,7 @@ crop_children(svn_wc_adm_access_t *adm_access,
       if (current_entry->kind == svn_node_file)
         {
           if (depth == svn_depth_empty)
-            SVN_ERR_IGNORE_LOCAL_MOD
+            IGNORE_LOCAL_MOD
               (svn_wc_remove_from_revision_control(dir_access,
                                                    current_entry->name,
                                                    TRUE, /* destroy */
@@ -131,7 +134,7 @@ crop_children(svn_wc_adm_access_t *adm_access,
               SVN_ERR(svn_wc_adm_retrieve(&child_access, dir_access,
                                           this_path, iterpool));
 
-              SVN_ERR_IGNORE_LOCAL_MOD
+              IGNORE_LOCAL_MOD
                 (svn_wc_remove_from_revision_control(child_access,
                                                      SVN_WC_ENTRY_THIS_DIR,
                                                      TRUE, /* destroy */
@@ -228,7 +231,7 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
         }
 
       SVN_ERR(svn_wc_adm_retrieve(&dir_access, anchor, full_path, pool));
-      SVN_ERR_IGNORE_LOCAL_MOD
+      IGNORE_LOCAL_MOD
         (svn_wc_remove_from_revision_control(dir_access,
                                              SVN_WC_ENTRY_THIS_DIR,
                                              TRUE, /* destroy */
