@@ -1478,7 +1478,7 @@ write_time(svn_stringbuf_t *buf, apr_time_t val, apr_pool_t *pool)
 /* Append a single entry ENTRY to the string OUTPUT, using the
    entry for "this dir" THIS_DIR for comparison/optimization.
    Allocations are done in POOL.  */
-static void
+static svn_error_t *
 write_entry(svn_stringbuf_t *buf,
             svn_wc_entry_t *entry,
             const char *name,
@@ -1669,6 +1669,8 @@ write_entry(svn_stringbuf_t *buf,
     buf->len--;
 
   svn_stringbuf_appendbytes(buf, "\f\n", 2);
+
+  return SVN_NO_ERROR;
 }
 
 /* Append a single entry ENTRY as an XML element to the string OUTPUT,
@@ -2047,7 +2049,8 @@ svn_wc__entries_write(apr_hash_t *entries,
       bigstr = svn_stringbuf_createf(pool, "%d\n",
                                      svn_wc__adm_wc_format(adm_access));
       /* Write out "this dir" */
-      write_entry(bigstr, this_dir, SVN_WC_ENTRY_THIS_DIR, this_dir, pool);
+      SVN_ERR(write_entry(bigstr, this_dir, SVN_WC_ENTRY_THIS_DIR,
+                          this_dir, pool));
 
       for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
         {
@@ -2066,7 +2069,7 @@ svn_wc__entries_write(apr_hash_t *entries,
             continue;
 
           /* Append the entry to BIGSTR */
-          write_entry(bigstr, this_entry, key, this_dir, subpool);
+          SVN_ERR(write_entry(bigstr, this_entry, key, this_dir, subpool));
         }
 
       svn_pool_destroy(subpool);
@@ -2824,7 +2827,7 @@ svn_wc__entries_init(const char *path,
    */
   entry->cachable_props = SVN_WC__CACHABLE_PROPS;
 
-  write_entry(accum, entry, SVN_WC_ENTRY_THIS_DIR, entry, pool);
+  SVN_ERR(write_entry(accum, entry, SVN_WC_ENTRY_THIS_DIR, entry, pool));
 
   SVN_ERR_W(svn_io_file_write_full(f, accum->data, accum->len, NULL, pool),
             apr_psprintf(pool,
