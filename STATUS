@@ -31,13 +31,6 @@ Candidate changes for 1.5.1:
      +0: danielsh
      +1: lgo
 
- * r31228
-   Fix issue #2721: don't croak on invalid dates in 'log' and 'blame'.
-   Justification:
-     Let the commands be useful even when some revisions' dates are corrupt.
-   Votes:
-     +1: danielsh, epg
-
  * r30748
    Don't try to drive the merge editor when there is nothing to be merged.
    Justification:
@@ -75,22 +68,11 @@ Candidate changes for 1.5.1:
    Votes:
      +1: pburba
 
- * r31425
+ * r31425, r31722
    Support the 'http-library' option when Subversion was configured
    with the '--enable-runtime-module-search' option.
    Votes:
      +1: arfrever
-
- * r30915
-   Fix issue #2887. 'svn status --xml' was generating invalid XML
-   when reporting the status of a file which resides in an untracked
-   directory.
-   Notes:
-     Fixed a while back in trunk. The problem was brought up again
-     later by a user on the dev list:
-     http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=139158
-   Votes:
-     +1: stsp, danielsh
 
  * r31504
    Optimize file merges performed with ancestrally related sources by
@@ -104,12 +86,7 @@ Candidate changes for 1.5.1:
    ra_serf: Fixes an endless loop when a user provides incorrect credentials
    3 times and a segfault when a user cancels the TSVN credentials prompt.
    Votes:
-     +1: lgo
-
- * r31692, r31695
-   Fix issue #2939 over ra_neon/serf:  bogus existence check.
-   Votes:
-     +1: epg, lgo
+     +1: lgo, arfrever
 
  * r31719
    JavaHL: Fix a potential ArrayIndexOutOfBoundsException in
@@ -150,6 +127,17 @@ Approved changes (1.5.1 and later):
    Votes:
      +1: pburba, markphip, cmpilato
 
+ * r30915
+   Fix issue #2887. 'svn status --xml' was generating invalid XML
+   when reporting the status of a file which resides in an untracked
+   directory.
+   Notes:
+     Fixed a while back in trunk. The problem was brought up again
+     later by a user on the dev list:
+     http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=139158
+   Votes:
+     +1: stsp, danielsh, arfrever
+
  * r30949, r30962
    Fix issue #3188.  Mergeinfo on switched targets/subtrees should elide
    to repos.
@@ -170,3 +158,15 @@ Approved changes (1.5.1 and later):
      Not possible to make svn(1) segfault with this, so can wait for 1.5.1.
    Votes:
      +1: epg, stsp, danielsh
+
+ * r31228
+   Fix issue #2721: don't croak on invalid dates in 'log' and 'blame'.
+   Justification:
+     Let the commands be useful even when some revisions' dates are corrupt.
+   Votes:
+     +1: danielsh, epg, arfrever
+
+ * r31692, r31695
+   Fix issue #2939 over ra_neon/serf:  bogus existence check.
+   Votes:
+     +1: epg, lgo, arfrever
