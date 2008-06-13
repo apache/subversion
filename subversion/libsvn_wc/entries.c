@@ -1490,7 +1490,10 @@ write_entry(svn_stringbuf_t *buf,
   svn_boolean_t is_this_dir = strcmp(name, SVN_WC_ENTRY_THIS_DIR) == 0;
   svn_boolean_t is_subdir = ! is_this_dir && (entry->kind == svn_node_dir);
 
-  assert(name);
+  if (! name)
+    return svn_error_createf
+      (SVN_ERR_INCORRECT_PARAMS, NULL,
+       _("write_entry() cannot be called with a NULL name argument"));
 
   /* Name. */
   write_str(buf, name, pool);
