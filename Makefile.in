@@ -360,7 +360,7 @@ install-static: @INSTALL_STATIC_RULES@
 
 # JavaHL target aliases
 javahl: mkdir-init javahl-java javahl-javah javahl-lib @JAVAHL_TESTS_TARGET@
-install-javahl: install-javahl-java install-javahl-javah install-javahl-lib
+install-javahl: javahl install-javahl-java install-javahl-javah install-javahl-lib
 
 clean-javahl:
 	rm -rf $(javahl_java_PATH) $(javahl_javah_PATH) @JAVAHL_OBJDIR@
