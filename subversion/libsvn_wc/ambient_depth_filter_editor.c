@@ -133,7 +133,10 @@ make_dir_baton(struct dir_baton **d_p,
   if (path)
     d->path = svn_path_join(d->path, path, pool);
 
-  if (pb)
+  /* The svn_depth_unknown means that: 1) pb is the anchor; 2) there
+     is an non-null target, for which we are preparing the baton.
+     This enables explicitly pull in the target. */
+  if (pb && pb->ambient_depth != svn_depth_unknown)
     {
       const svn_wc_entry_t *entry;
       svn_boolean_t exclude;
@@ -152,10 +155,7 @@ make_dir_baton(struct dir_baton **d_p,
       else
         {
           /* If the parent expect all children by default, only exclude
-             it whenever it is explicitly marked as exclude.  The
-             svn_depth_unknown means that: 1) pb is the anchor; 2) there
-             is an non-null target, for which we are preparing the baton.
-             This enables explicitly pull in the target. */
+             it whenever it is explicitly marked as exclude. */
           exclude = entry && entry->depth == svn_depth_exclude;
         }
       if (exclude)
