@@ -474,10 +474,11 @@ complete_directory(struct edit_baton *eb,
      mark this directory complete. */
   if (is_root_dir && *eb->target)
     {
-      if (eb->depth_is_sticky)
+      /* Before we can finish, we may need to clear the exclude flag for
+         target. Also give a chance to the target that is explicitly pulled
+         in. */
+      if (eb->depth_is_sticky || *eb->target)
         {
-          /* Before we can finish, we may need to clear the exclude flag for
-             target */
           SVN_ERR(svn_wc_adm_retrieve(&adm_access, 
                                       eb->adm_access, path, pool));
           SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, pool));

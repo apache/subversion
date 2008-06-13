@@ -278,6 +278,19 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
           continue;
         }
 
+      /* Report the excluded path, no matter whether report_everything. */
+      if (current_entry->depth == svn_depth_exclude)
+        {
+          SVN_ERR(reporter->set_path(report_baton,
+                                     this_path,
+                                     SVN_INVALID_REVNUM,
+                                     svn_depth_exclude,
+                                     FALSE,
+                                     NULL,
+                                     iterpool));
+          continue;
+        }
+
       /* Is the entry on disk?  Set a flag if not. */
       dirent = apr_hash_get(dirents, key, klen);
       if (! dirent)
@@ -507,6 +520,9 @@ svn_wc_crawl_revisions3(const char *path,
   if ((! entry) || ((entry->schedule == svn_wc_schedule_add)
                     && (entry->kind == svn_node_dir)))
     {
+      /* Don't even check the exclude flag for target.
+         Remember that we permit explicitly pull in target. */
+
       /* There aren't any versioned paths to crawl which are known to
          the repository. */
       SVN_ERR(svn_wc__entry_versioned(&parent_entry,
