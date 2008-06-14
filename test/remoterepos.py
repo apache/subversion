@@ -1,3 +1,4 @@
+import setup_path
 import unittest
 import os
 import shutil

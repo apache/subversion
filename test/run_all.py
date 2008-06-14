@@ -1,5 +1,6 @@
 import sys, os
 
+import setup_path
 import unittest
 import localrepos
 import remoterepos

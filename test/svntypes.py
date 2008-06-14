@@ -1,3 +1,4 @@
+import setup_path
 import unittest
 from csvn.core import *
 import csvn.types as _types
