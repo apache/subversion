@@ -98,6 +98,7 @@ class WC(object):
         paths -- list of paths to marked for deletion
         force -- if True, operation will be forced (default False)"""
 
+        self.iterpool.clear()
         svn_client_delete2(NULL, self._build_path_list(paths),
                            force, self.client, self.iterpool)
         self.iterpool.clear()
@@ -422,6 +423,7 @@ class WC(object):
                     self._build_path(target), byref(peg_revision),
                     byref(revision), recurse, self.client, self.pool)
 
+        self.iterpool.clear()
         return props
 
     # Internal method to wrap status callback.
@@ -503,12 +505,15 @@ class WC(object):
         recurse -- if True, directories will be recursed
         info_func -- callback function to use (defaults to previously
             registered callback)"""
+
         if info_func:
             self.set_info_func(info_func)
 
         svn_client_info(self._build_path(path), NULL, NULL, self._info_func,
                 c_void_p(), recurse, self.client,
                 self.iterpool)
+
+        self.iterpool.clear()
 
     def checkout(self, url, revnum=None, path=None, recurse=True,
                  ignore_externals=False):
@@ -540,6 +545,7 @@ class WC(object):
         svn_client_checkout2(byref(result_rev), URL, canon_path,
                              byref(peg_rev), byref(rev), recurse,
                              ignore_externals, self.client, self.iterpool)
+        self.iterpool.clear()
 
     def set_log_func(self, log_func):
         """Register a callback to get a log message for commit and commit-like
@@ -584,6 +590,7 @@ class WC(object):
         svn_client_commit3(byref(commit_info), self._build_path_list(paths),
                             recurse, keep_locks, self.client, self.iterpool)
 
+        self.iterpool.clear()
         return commit_info.value
 
     def update(self, paths=[""], revnum=None, recurse=True,
@@ -614,6 +621,7 @@ class WC(object):
                 self._build_path_list(paths), byref(rev), recurse,
                 ignore_externals, self.client, self.iterpool)
 
+        self.iterpool.clear()
         return result_revs
 
     #internal method to wrap ls callbacks
@@ -652,21 +660,24 @@ class WC(object):
             recurse, SVN_DIRENT_ALL, fetch_locks, self._list_func,
             c_void_p(), self.client, self.iterpool)
 
+        self.iterpool.clear()
+
     def relocate(self, from_url, to_url, dir="", recurse=True):
-         """Modify a working copy directory, changing repository URLs. that begin with FROM_URL to begin with
-         TO_URL instead, recursing into subdirectories if RECURSE is True
-         (True by default).
+        """Modify a working copy directory, changing repository URLs. that begin with FROM_URL to begin with
+        TO_URL instead, recursing into subdirectories if RECURSE is True
+        (True by default).
          
-         Keyword arguments:
+        Keyword arguments:
         from_url -- url to be replaced, if this url is matched at the beginning
             of a url it will be replaced with to_url
         to_url -- url to replace from_url
         dir -- directory to relocate (defaults to WC root)
         recurse -- if True, directories will be recursed (default True)"""
-         svn_client_relocate(self._build_path(dir), from_url, to_url, recurse,
-                    self.client, self.iterpool)
 
-         self.iterpool.clear()
+        svn_client_relocate(self._build_path(dir), from_url, to_url, recurse,
+                            self.client, self.iterpool)
+
+        self.iterpool.clear()
 
     def switch(self, path, url, revnum=None, recurse=True):
         """Switch part of a working copy to a new url.
@@ -688,6 +699,7 @@ class WC(object):
         svn_client_switch(byref(result_rev),
                   self._build_path(path), url, byref(revision),
                   recurse, self.client, self.pool)
+        self.iterpool.clear()
 
     def lock(self, paths, comment=NULL, steal_lock=False):
         """Lock items.
@@ -701,6 +713,7 @@ class WC(object):
             already locked (default False)"""
         targets = self._build_path_list(paths)
         svn_client_lock(targets, comment, steal_lock, self.client, self.pool)
+        self.iterpool.clear()
 
     def unlock(self, paths, break_lock=False):
         """Unlock items.
@@ -712,6 +725,7 @@ class WC(object):
         break_lock -- if True, locks will be broken (default False)"""
         targets = self._build_path_list(paths)
         svn_client_unlock(targets, break_lock, self.client, self.pool)
+        self.iterpool.clear()
 
     def merge(self, source1, revnum1, source2, revnum2, target_wcpath,
                 recurse=True, ignore_ancestry=False, force=False,
@@ -749,3 +763,5 @@ class WC(object):
         svn_client_merge2(source1, byref(revision1), source2, byref(revision2),
             target_wcpath, recurse, ignore_ancestry, force, dry_run,
             merge_options.header, self.client, self.iterpool)
+
+        self.iterpool.clear()
