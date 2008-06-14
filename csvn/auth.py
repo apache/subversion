@@ -58,6 +58,6 @@ class User(object):
         # Setup the auth baton using the default options from the
         # command-line client
         svn_cmdline_setup_auth_baton(auth_baton, TRUE,
-            self._username, self._password, NULL, TRUE, NULL,
+            self._username, self._password, NULL, TRUE, POINTER(svn_config_t)(),
             svn_cancel_func_t(), NULL, self.pool)
 
