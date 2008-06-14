@@ -749,6 +749,8 @@ class WinGeneratorBase(GeneratorBase):
 
     if cfg == 'Debug':
       fakedefines.extend(["_DEBUG","SVN_DEBUG"])
+    elif cfg == 'Release':
+      fakedefines.append("NDEBUG")
 
     # XXX: Check if db is present, and if so, let apr-util know
     # XXX: This is a hack until the apr build system is improved to
