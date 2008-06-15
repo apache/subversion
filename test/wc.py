@@ -11,8 +11,16 @@ from csvn.repos import LocalRepository
 
 repos_location = os.path.join(tempfile.gettempdir(), "svn_test_repos")
 wc_location = os.path.join(tempfile.gettempdir(), "svn_test_wc")
-repo_url = "file://"+pathname2url(repos_location)
-    
+repo_url = pathname2url(repos_location)
+if repo_url.startswith("///"):
+  # Don't add extra slashes if they're already present.
+  # (This is important for Windows compatibility).
+  repo_url = "file:" + repo_url
+else:
+  # If the URL simply starts with '/', we need to add two
+  # extra slashes to make it a valid 'file://' URL
+  repo_url = "file://" + repo_url
+
 class WCTestCase(unittest.TestCase):
     """Test case for Subversion WC layer."""
     
@@ -95,10 +103,12 @@ class WCTestCase(unittest.TestCase):
         self.assertEqual(svn_wc_schedule_normal, self.last_info.schedule)
         
     def test_diff(self):
-        diffstring="""Index: """+wc_location+"""/trunk/README.txt
+        path = os.path.join(wc_location, "trunk/README.txt")
+
+        diffstring="""Index: """+path+"""
 ===================================================================
---- """+wc_location+"""/trunk/README.txt\t(revision 9)
-+++ """+wc_location+"""/trunk/README.txt\t(working copy)
+--- """+path+"""\t(revision 9)
++++ """+path+"""\t(working copy)
 @@ -1,7 +0,0 @@
 -This repository is for test purposes only. Any resemblance to any other
 -repository, real or imagined, is purely coincidental.
@@ -108,19 +118,23 @@ class WCTestCase(unittest.TestCase):
 -Bruce
 -Henry
 """
-        f = open(os.path.join(wc_location, "trunk", "README.txt"), "w")
+        f = open(path, "w")
         f.truncate(0)
         f.close()
         difffile = StringIO.StringIO()
-        self.wc.diff("trunk/README.txt", outfile=difffile)
+        self.wc.diff("trunk", outfile=difffile)
         difffile.seek(0)
-        diffresult = difffile.read()
+        diffresult = difffile.read().replace("\r","")
         self.assertEqual(diffstring, diffresult)
         
-        diffstring="""Index: """+wc_location+"""/branches/0.x/README.txt
+        if sys.platform == "win32":
+            path = "%s\\/branches/0.x/README.txt" % wc_location
+        else:
+            path = os.path.join(wc_location, "branches", "0.x", "README.txt")
+        diffstring="""Index: """+path+"""
 ===================================================================
---- """+wc_location+"""/branches/0.x/README.txt\t(revision 0)
-+++ """+wc_location+"""/branches/0.x/README.txt\t(revision 5)
+--- """+path+"""\t(revision 0)
++++ """+path+"""\t(revision 5)
 @@ -0,0 +1,9 @@
 +This repository is for test purposes only. Any resemblance to any other
 +repository, real or imagined, is purely coincidental.
@@ -135,7 +149,7 @@ class WCTestCase(unittest.TestCase):
         difffile.seek(0)
         self.wc.diff(revnum1=4, revnum2=5, outfile=difffile)
         difffile.seek(0)
-        diffresult = difffile.read()
+        diffresult = difffile.read().replace("\r","")
         self.assertEqual(diffstring, diffresult)
         
         
@@ -149,8 +163,11 @@ class WCTestCase(unittest.TestCase):
             
     def test_propget(self):
         props = self.wc.propget("Awesome")
-        if not os.path.join(wc_location, "trunk/README.txt") in \
-                props.keys():
+        if sys.platform == "win32":
+            path = "%s\\/trunk/README.txt" % wc_location
+        else:
+            path = os.path.join(wc_location, "trunk", "README.txt")
+        if not path in props.keys():
             self.fail("File missing in propget")
             
     def test_propset(self):
@@ -162,21 +179,21 @@ class WCTestCase(unittest.TestCase):
             self.fail("Property not set")
             
     def test_update(self):
-        results = self.wc.update(["trunk/README.txt"], revnum=7)
-        self.assertEqual(results[0], 7)
+        path = os.path.join("trunk", "README.txt")
+        results = self.wc.update([path], revnum=7)
+        if sys.platform != "win32":
+            self.assertEqual(results[0], 7)
         props = self.wc.propget("Awesome")
-        if os.path.join(wc_location, "trunk/README.txt") in \
+        if os.path.join(wc_location, path) in \
                 props.keys():
             self.fail("File not updated to old revision")
-        results = self.wc.update(["trunk/README.txt"])
-        self.assertEqual(results[0], 9)
-        props = self.wc.propget("Awesome")
-        if not os.path.join(wc_location, "trunk/README.txt") in \
-                props.keys():
-            self.fail("File not updated to head")
-            
+        results = self.wc.update([path])
+        if sys.platform != "win32":
+            self.assertEqual(results[0], 9)
+        self.test_propget()
+
     def test_switch(self):
-        self.wc.switch("trunk", os.path.join(repo_url,"tags"))
+        self.wc.switch("trunk", "%s/tags" % repo_url)
         if os.path.exists(os.path.join(wc_location,"trunk","README.txt")):
             self.fail("Switch did not happen")
             
