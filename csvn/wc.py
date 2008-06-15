@@ -320,12 +320,12 @@ class WC(object):
             True)
         eol -- End of line character to use (defaults to standard eol marker)"""
 
-        svn_client_export3(pointer(svn_revnum_t()),
-                            self._build_path(from_path),
-                            self._build_path(to_path), NULL,
-                            svn_opt_revision_t(), overwrite,
-                            ignore_externals, recurse, eol, self.client,
-                            self.iterpool)
+        svn_client_export3(POINTER(svn_revnum_t)(),
+                           self._build_path(from_path),
+                           self._build_path(to_path), NULL,
+                           svn_opt_revision_t(), overwrite,
+                           ignore_externals, recurse, eol, self.client,
+                           self.iterpool)
 
         self.iterpool.clear()
 
@@ -348,7 +348,7 @@ class WC(object):
 
         # The commit info shouldn't matter, this is a method of the WC
         # class, so it isn't intended for remote operations.
-        info = pointer(svn_commit_info_t())
+        info = POINTER(svn_commit_info_t)()
 
         svn_client_mkdir2(byref(info), paths, self.client, self.iterpool)
 
@@ -392,8 +392,8 @@ class WC(object):
         props = _types.Array(svn_client_proplist_item_t)
 
         svn_client_proplist2(byref(props.header), self._build_path(target),
-                     byref(peg_revision), byref(revision), recurse,
-                     self.client, self.iterpool)
+                             byref(peg_revision), byref(revision), recurse,
+                             self.client, props.pool)
 
         self.iterpool.clear()
 
@@ -421,7 +421,7 @@ class WC(object):
 
         svn_client_propget2(byref(props.hash), propname,
                     self._build_path(target), byref(peg_revision),
-                    byref(revision), recurse, self.client, self.pool)
+                    byref(revision), recurse, self.client, props.pool)
 
         self.iterpool.clear()
         return props
@@ -471,10 +471,10 @@ class WC(object):
 
         result_rev = svn_revnum_t()
         svn_client_status2(byref(result_rev), self._build_path(path),
-                            byref(rev), self._status_func,
-                            c_void_p(), recurse, get_all,
-                            update, no_ignore, ignore_externals, self.client,
-                            self.iterpool)
+                           byref(rev), self._status_func,
+                           c_void_p(), recurse, get_all,
+                           update, no_ignore, ignore_externals, self.client,
+                           self.iterpool)
 
         self.iterpool.clear()
 
@@ -510,8 +510,8 @@ class WC(object):
             self.set_info_func(info_func)
 
         svn_client_info(self._build_path(path), NULL, NULL, self._info_func,
-                c_void_p(), recurse, self.client,
-                self.iterpool)
+                        c_void_p(), recurse, self.client,
+                        self.iterpool)
 
         self.iterpool.clear()
 
@@ -586,12 +586,13 @@ class WC(object):
             also be commited (default True)
         keep_locks -- if True, locks will not be released during commit
             (default False)"""
-        commit_info = pointer(svn_commit_info_t())
-        svn_client_commit3(byref(commit_info), self._build_path_list(paths),
-                            recurse, keep_locks, self.client, self.iterpool)
-
-        self.iterpool.clear()
-        return commit_info.value
+        try:
+            commit_info = POINTER(svn_commit_info_t)()
+            svn_client_commit3(byref(commit_info), self._build_path_list(paths),
+                               recurse, keep_locks, self.client, self.iterpool)
+            return commit_info.value
+        finally:
+            self.iterpool.clear()
 
     def update(self, paths=[""], revnum=None, recurse=True,
                 ignore_externals=True):
@@ -603,10 +604,10 @@ class WC(object):
         Keyword arguments:
         paths -- list of path to be updated (defaults to WC root)
         revnum -- revision number to update to (defaults to head revision)
-        recurse -- if True, the contents of directories will also be update
-            (default True)
+        recurse -- if True, the contents of directories will also be updated
+                   (default True)
         ignore_externals -- if True, externals will not be updated (default
-            True)"""
+                            True)"""
 
         rev = svn_opt_revision_t()
         if revnum is not None:
@@ -698,21 +699,21 @@ class WC(object):
 
         svn_client_switch(byref(result_rev),
                   self._build_path(path), url, byref(revision),
-                  recurse, self.client, self.pool)
+                  recurse, self.client, self.iterpool)
         self.iterpool.clear()
 
     def lock(self, paths, comment=NULL, steal_lock=False):
         """Lock items.
         
         Keyword arguments:
-        pahts -- list of paths to be locked, may be WC paths (in which
+        paths -- list of paths to be locked, may be WC paths (in which
             case this is a local operation) or urls (in which case this is a
             network operation)
         comment -- comment for the lock (default no comment)
         steal_lock -- if True, the lock will be created even if the file is
             already locked (default False)"""
         targets = self._build_path_list(paths)
-        svn_client_lock(targets, comment, steal_lock, self.client, self.pool)
+        svn_client_lock(targets, comment, steal_lock, self.client, self.iterpool)
         self.iterpool.clear()
 
     def unlock(self, paths, break_lock=False):
@@ -724,7 +725,7 @@ class WC(object):
             network operation)
         break_lock -- if True, locks will be broken (default False)"""
         targets = self._build_path_list(paths)
-        svn_client_unlock(targets, break_lock, self.client, self.pool)
+        svn_client_unlock(targets, break_lock, self.client, self.iterpool)
         self.iterpool.clear()
 
     def merge(self, source1, revnum1, source2, revnum2, target_wcpath,

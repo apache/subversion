@@ -124,6 +124,7 @@ class RemoteRepository(object):
         dirents = _types.Hash(POINTER(svn_dirent_t), None)
         svn_ra_get_dir2(self, dirents.byref(), NULL, NULL, path,
                         rev, fields, dirents.pool)
+        self.iterpool.clear()
         return dirents
 
     def cat(self, buffer, path, rev = SVN_INVALID_REVNUM):
@@ -134,6 +135,7 @@ class RemoteRepository(object):
            repository."""
         stream = _types.Stream(buffer)
         svn_ra_get_file(self, path, rev, stream, NULL, NULL, stream.pool)
+        self.iterpool.clear()
 
     def info(self, path, rev = None):
         """Get a pointer to a svn_dirent_t object associated with PATH@REV.
@@ -146,6 +148,7 @@ class RemoteRepository(object):
         if rev is None:
             rev = self.latest_revnum()
         svn_ra_stat(self, path, rev, byref(dirent), dirent.pool)
+        self.iterpool.clear()
         return dirent
 
     def proplist(self, path, rev = SVN_INVALID_REVNUM):
@@ -163,6 +166,7 @@ class RemoteRepository(object):
         else:
             svn_ra_get_file(self, path, rev, NULL, NULL, props.byref(),
                             props.pool)
+        self.iterpool.clear()
         return props
 
     def propget(self, name, path, rev = SVN_INVALID_REVNUM):
@@ -170,6 +174,7 @@ class RemoteRepository(object):
 
            If REV is not specified, we look at the latest revision of the
            repository."""
+
         return self.proplist(path, rev)[name]
 
     def log(self, start_rev, end_rev, paths=None, limit=0, 
@@ -253,7 +258,9 @@ class RemoteRepository(object):
                         byref(rev),
                         byref(set_rev),
                         self.client,
-                        self.iterpool)
+                        props.pool)
+
+        self.iterpool.clear()
 
         return props
 
@@ -287,9 +294,11 @@ class RemoteRepository(object):
                 byref(rev), byref(set_rev), force, self.client,
                 self.iterpool)
 
-        self.iterpool.clear()
+        try:
+            return set_rev.value
+        finally:
+            self.iterpool.clear()
 
-        return set_rev.value
 
     def set_log_func(self, log_func):
         """Register a callback to get a log message for commit and
@@ -321,11 +330,14 @@ class RemoteRepository(object):
         if log_func:
             self.set_log_func(log_func)
 
-        commit_info = pointer(svn_commit_info_t())
+        commit_info = POINTER(svn_commit_info_t)()
         svn_client_import2(byref(commit_info), path, url, nonrecursive,
                             no_ignore, self.client, self.iterpool)
 
-        return commit_info.contents
+        try:
+            return commit_info.contents
+        finally:
+            self.iterpool.clear()
 
 class LocalRepository(object):
     """A client which accesses the repository directly. This class
@@ -377,7 +389,10 @@ class LocalRepository(object):
         """
         assert(not encoded)
         root = self.fs.root(rev=rev, pool=self.iterpool)
-        return root.check_path(path)
+        try:
+            return root.check_path(path)
+        finally:
+            self.iterpool.clear()
 
     def uuid(self):
         """Return a universally-unique ID for this repository"""
@@ -396,16 +411,19 @@ class LocalRepository(object):
         """Returns the value of NAME in REV. If NAME does not exist in REV,
         returns None."""
         rev = svn_revnum_t(rev)
-        value = pointer(svn_string_t())
+        value = POINTER(svn_string_t)()
 
         svn_repos_fs_revision_prop(byref(value), self, rev, name,
-                                    svn_repos_authz_func_t(), None,
-                                    self.iterpool)
+                                   svn_repos_authz_func_t(), None,
+                                   self.iterpool)
 
-        if value:
-            return _types.SvnStringPtr.from_param(value)
-        else:
-            return None
+        try:
+            if value:
+                return _types.SvnStringPtr.from_param(value)
+            else:
+                return None
+        finally:
+            self.iterpool.clear()
 
     def txn(self):
         """Open up a new transaction, so that you can commit a change
@@ -463,24 +481,26 @@ class LocalRepository(object):
 
         apr_dump = _types.APRFile(dumpfile)
         stream_dump = svn_stream_from_aprfile2(apr_dump._as_parameter_,
-                                        False, self.pool)
+                                               False, self.iterpool)
 
         if feedbackfile:
             apr_feedback = _types.APRFile(feedbackfile)
             stream_feedback = svn_stream_from_aprfile2(
                                 apr_feedback._as_parameter_, False,
-                                self.pool)
+                                self.iterpool)
         else:
             stream_feedback = NULL
 
         svn_repos_load_fs2(self._as_parameter_, stream_dump, stream_feedback,
-                                uuid_action, parent_dir, use_pre_commit_hook,
-                                use_post_commit_hook, cancel_func,
-                                c_void_p(), self.pool)
+                           uuid_action, parent_dir, use_pre_commit_hook,
+                           use_post_commit_hook, cancel_func,
+                           c_void_p(), self.iterpool)
 
         apr_dump.close()
         if feedbackfile:
             apr_feedback.close()
+
+        self.iterpool.clear()
 
 class _fs(object):
     """NOTE: This is a private class. Don't use it outside of
