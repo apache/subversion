@@ -480,7 +480,7 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
 #endif
           continue;
         }
-      return svn_error_createf(SVN_ERR_AUTHN_NO_PROVIDER, NULL,
+      return svn_error_createf(SVN_ERR_BAD_CONFIG_VALUE, NULL,
                                _("Invalid config: unknown password store "
                                  "'%s'"),
                                password_store);
