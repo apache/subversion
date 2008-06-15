@@ -278,7 +278,10 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
           continue;
         }
 
-      /* Report the excluded path, no matter whether report_everything. */
+      /* Report the excluded path, no matter whether report_everything flag is
+         set.  Because the report_everything flag indicates that the server
+         will treate the wc as empty and thus push full content of the
+         files/subdirs. We just want to say no to this. */
       if (current_entry->depth == svn_depth_exclude)
         {
           SVN_ERR(reporter->set_path(report_baton,
