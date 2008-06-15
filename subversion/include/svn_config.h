@@ -394,6 +394,24 @@ svn_error_t *svn_config_get_server_setting_int(svn_config_t *cfg,
                                                apr_int64_t *result_value,
                                                apr_pool_t *pool);
 
+
+/** Set @a *valuep according to @a option_name for a given
+ * @a  server_group in @a cfg, or set to @a default_value if no value is
+ * specified.
+ *
+ * Check first a default, then for an override in a server group.  If
+ * a value is found but is not a valid boolean, return an
+ * SVN_ERR_BAD_CONFIG_VALUE error.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *svn_config_get_server_setting_bool(svn_config_t *cfg,
+                                                svn_boolean_t *valuep,
+                                                const char *server_group,
+                                                const char *option_name,
+                                                svn_boolean_t default_value);
+
+
 
 /** Try to ensure that the user's ~/.subversion/ area exists, and create
  * no-op template files for any absent config files.  Use @a pool for any
