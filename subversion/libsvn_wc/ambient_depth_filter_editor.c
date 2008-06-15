@@ -150,13 +150,13 @@ make_dir_baton(struct dir_baton **d_p,
              already have an entry for the new dir, then the parent
              doesn't want the new dir at all, thus we should initialize
              it with ambiently_excluded=TRUE. */
-          exclude = entry == NULL;
+          exclude = (entry == NULL);
         }
       else
         {
           /* If the parent expect all children by default, only exclude
              it whenever it is explicitly marked as exclude. */
-          exclude = entry && entry->depth == svn_depth_exclude;
+          exclude = (entry && (entry->depth == svn_depth_exclude));
         }
       if (exclude)
         {

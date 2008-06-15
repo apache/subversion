@@ -73,7 +73,7 @@ crop_children(svn_wc_adm_access_t *adm_access,
   /* Update the depth of target first, if needed. */
   if (dot_entry->depth > depth)
     {
-      /* XXX: Do we need to restore the modified depth if the user cancel this
+      /* TODO(2843): Do we need to restore the modified depth if the user cancel this
          operation? */
       dot_entry->depth = depth;
       SVN_ERR(svn_wc__entries_write(entries, dir_access, subpool));
@@ -101,6 +101,11 @@ crop_children(svn_wc_adm_access_t *adm_access,
 
       if (current_entry->kind == svn_node_file)
         {
+          /* We currently crop on a directory basis. So don't worry about
+             svn_depth_exclude here. And even we permit excluding a single
+             file in the future, svn_wc_remove_from_revision_control() can
+             also handle it. We only need to skip the notification in that
+             case. */
           if (depth == svn_depth_empty)
             IGNORE_LOCAL_MOD
               (svn_wc_remove_from_revision_control(dir_access,
@@ -158,8 +163,7 @@ crop_children(svn_wc_adm_access_t *adm_access,
         }
       else
         {
-          /* XXX: What about svn_node_none & svn_node_unkown? Currently assume
-             svn_node_dir*/
+          /* TODO(2843): What about svn_node_none & svn_node_unkown? */
         }
 
       if (notify_func)

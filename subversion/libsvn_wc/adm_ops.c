@@ -126,8 +126,8 @@ tweak_entries(svn_wc_adm_access_t *dirpath,
           excluded = (apr_hash_get(exclude_paths, child_path,
                                    APR_HASH_KEY_STRING) != NULL);
 
-          /* If a file, or deleted or absent dir, then tweak the entry
-             but don't recurse. */
+          /* If a file, or deleted, excluded or absent dir, then tweak the
+             entry but don't recurse. */
           if ((current_entry->kind == svn_node_file)
               || (current_entry->deleted || current_entry->absent
                   || current_entry->depth == svn_depth_exclude))
@@ -2554,26 +2554,26 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
            full_path.  We need to remove that entry: */
         if (! is_root)
           {
-            svn_wc_entry_t *dir_entry;
+            svn_wc_entry_t *dir_entry, *parent_entries;
             svn_wc_adm_access_t *parent_access;
 
             svn_path_split(full_path, &parent_dir, &base_name, pool);
 
             SVN_ERR(svn_wc_adm_retrieve(&parent_access, adm_access,
                                         parent_dir, pool));
-            SVN_ERR(svn_wc_entries_read(&entries, parent_access, TRUE,
+            SVN_ERR(svn_wc_entries_read(&parent_entries, parent_access, TRUE,
                                         pool));
 
             /* An exception: When the path is at svn_depth_exclude,
                the entry in the parent directory should be preserved
                for bookkeeping purpose. This only happens when the 
                function is called by svn_wc_crop_tree(). */
-            dir_entry = apr_hash_get(entries, base_name, 
+            dir_entry = apr_hash_get(parent_entries, base_name, 
                                      APR_HASH_KEY_STRING);
             if (dir_entry->depth != svn_depth_exclude)
               {
-                svn_wc__entry_remove(entries, base_name);
-                SVN_ERR(svn_wc__entries_write(entries, parent_access, pool));
+                svn_wc__entry_remove(parent_entries, base_name);
+                SVN_ERR(svn_wc__entries_write(parent_entries, parent_access, pool));
 
               }
           }
