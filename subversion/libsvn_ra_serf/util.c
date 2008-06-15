@@ -207,7 +207,7 @@ load_authorities(svn_ra_serf__connection_t *conn, const char *authorities,
       if (status != APR_SUCCESS)
         {
           return svn_error_createf
-            (SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
+            (SVN_ERR_BAD_CONFIG_VALUE, NULL,
              _("Invalid config: unable to load certificate file '%s'"),
              svn_path_local_style(file, pool));
         }

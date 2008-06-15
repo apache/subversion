@@ -629,7 +629,7 @@ svn_config_get_bool(svn_config_t *cfg, svn_boolean_t *valuep,
            || 0 == strcmp(tmp_value, "0"))
     *valuep = FALSE;
   else
-    return svn_error_createf(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
+    return svn_error_createf(SVN_ERR_BAD_CONFIG_VALUE, NULL,
                              _("Config error: invalid boolean value '%s'"),
                              tmp_value);
 
@@ -671,7 +671,7 @@ svn_config_get_yes_no_ask(svn_config_t *cfg, const char **valuep,
     *valuep = SVN_CONFIG_ASK;
   else
     return svn_error_createf
-      (SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
+      (SVN_ERR_BAD_CONFIG_VALUE, NULL,
        _("Config error: invalid value '%s' for option '%s'"),
        tmp_value, option);
 
@@ -909,7 +909,7 @@ svn_config_get_server_setting_int(svn_config_t *cfg,
       if (*end_pos != 0)
         {
           return svn_error_createf
-            (SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
+            (SVN_ERR_BAD_CONFIG_VALUE, NULL,
              _("Config error: invalid integer value '%s'"),
              tmp_value);
         }
