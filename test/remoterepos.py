@@ -75,12 +75,19 @@ class RemoteRepositoryTestCase(unittest.TestCase):
             "2007-08-02T17:38:08.361367Z")
             
     def test_revprop_set(self):
+
         # For revprops to be changeable, we need to have a hook.
         # We'll make a hook that accepts anything
-        hook = os.path.join(repos_location, "hooks", "pre-revprop-change")
-        f = open(hook, "w")
-        f.write("#!/bin/sh\nexit 0;")
-        f.close()
+        if sys.platform == "win32":
+            hook = os.path.join(repos_location, "hooks", "pre-revprop-change.bat")
+            f = open(hook, "w")
+            f.write("@exit")
+            f.close()
+        else:
+            hook = os.path.join(repos_location, "hooks", "pre-revprop-change")
+            f = open(hook, "w")
+            f.write("#!/bin/sh\nexit 0;")
+            f.close()
         os.chmod(hook, S_IRWXU)
 
         if sys.platform == "cygwin":
