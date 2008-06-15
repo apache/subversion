@@ -1,5 +1,5 @@
 from ctypes import *
-from tempfile import TemporaryFile
+from tempfile import NamedTemporaryFile
 import weakref, sys
 
 class FILE(Structure):
@@ -19,8 +19,8 @@ class SubversionException(Exception):
         self._as_parameter_ = err
 
         # Get a nice error message with line numbers and everything 
-        f = TemporaryFile()
-        svn_handle_error2(err, PyFile_AsFile(f), 0, "")
+        f = NamedTemporaryFile()
+        svn_handle_error2(err, PyFile_AsFile(f.file), 0, "")
         f.seek(0)
         self.value = f.read()
         f.close()
