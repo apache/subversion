@@ -171,10 +171,6 @@ SVN_ERROR_START
              SVN_ERR_BAD_CATEGORY_START + 4,
              "Bogus mime-type")
 
-  SVN_ERRDEF(SVN_ERR_BAD_SERVER_SPECIFICATION,
-             SVN_ERR_BAD_CATEGORY_START + 5,
-             "Bogus server specification")
-
   /** @since New in 1.5.
    *
    * Note that there was an unused slot sitting here at
@@ -201,6 +197,10 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_BAD_CONFIG_VALUE,
              SVN_ERR_BAD_CATEGORY_START + 9,
              "Invalid configuration value")
+
+  SVN_ERRDEF(SVN_ERR_BAD_SERVER_SPECIFICATION,
+             SVN_ERR_BAD_CATEGORY_START + 10,
+             "Bogus server specification")
 
   /* xml errors */
 
