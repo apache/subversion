@@ -348,7 +348,7 @@ svn_auth__simple_save_creds_helper(svn_boolean_t *saved,
           else
             {
               return svn_error_createf
-                (SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
+                (SVN_ERR_BAD_CONFIG_VALUE, NULL,
                  _("Config error: invalid value '%s' for option '%s'"),
                 store_plaintext_passwords,
                 SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS);
