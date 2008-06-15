@@ -29,10 +29,11 @@ class WCTestCase(unittest.TestCase):
         self.wc.checkout(repo_url)
         
     def tearDown(self):
+        pool = Pool()
         if os.path.exists(wc_location):
-            shutil.rmtree(wc_location)
+            svn_io_remove_dir(wc_location, pool)
         if os.path.exists(repos_location):
-            shutil.rmtree(repos_location)
+            svn_repos_delete(repos_location, pool)
         self.wc = None
         
     def _info_reciever(self, path, info):

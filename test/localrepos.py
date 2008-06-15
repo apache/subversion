@@ -8,8 +8,7 @@ from urllib import pathname2url
 from csvn.repos import LocalRepository, RemoteRepository
 
 repos_location = os.path.join(tempfile.gettempdir(), "svn_test_repos")
-repos_url = "file://"+pathname2url(repos_location)
-            
+
 class LocalRepositoryTestCase(unittest.TestCase):
     
     def setUp(self):
@@ -23,7 +22,7 @@ class LocalRepositoryTestCase(unittest.TestCase):
         
     def tearDown(self):
         if os.path.exists(repos_location):
-            shutil.rmtree(repos_location)
+            svn_repos_delete(repos_location, Pool())
         self.repos = None
         
     def test_local_latest_revnum(self):

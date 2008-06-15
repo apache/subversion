@@ -10,7 +10,16 @@ from csvn.repos import LocalRepository, RemoteRepository
 from stat import *
 
 repos_location = os.path.join(tempfile.gettempdir(), "svn_test_repos")
-repos_url = "file://"+pathname2url(repos_location)
+repos_url = pathname2url(repos_location)
+if repos_url.startswith("///"):
+  # Don't add extra slashes if they're already present.
+  # (This is important for Windows compatibility).
+  repos_url = "file:" + repos_url
+else:
+  # If the URL simply starts with '/', we need to add two
+  # extra slashes to make it a valid 'file://' URL
+  repos_url = "file://" + repos_url
+ 
             
 class RemoteRepositoryTestCase(unittest.TestCase):
     
@@ -27,7 +36,7 @@ class RemoteRepositoryTestCase(unittest.TestCase):
         
     def tearDown(self):
         if os.path.exists(repos_location):
-            shutil.rmtree(repos_location)
+            svn_repos_delete(repos_location, Pool())
         self.repos = None
         
     def test_remote_latest_revnum(self):
