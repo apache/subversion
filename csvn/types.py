@@ -46,10 +46,7 @@ class Hash(DictMixin):
                 self.hash = items.hash
         else:
             self.hash = apr_hash_make(self.pool)
-            if hasattr(items, "iteritems"):
-                self.update(items.iteritems())
-            else:
-                self.update(items)
+            self.update(items)
 
         if dup:
             # Copy items into our pool
