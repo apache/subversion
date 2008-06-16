@@ -1,6 +1,14 @@
 #!/usr/bin/env perl
 
 # ====================================================================
+# This script is deprecated.  The Subversion developers recommend
+# using mailer.py for post-commit and post-revprop change
+# notifications.  If you wish to improve or add features to a
+# post-commit notification script, please do that work on mailer.py.
+# See http://svn.collab.net/repos/svn/trunk/tools/hook-scripts/mailer .
+# ====================================================================
+
+# ====================================================================
 # commit-email.pl: send a notification email describing either a
 # commit or a revprop-change action on a Subversion repository.
 #
