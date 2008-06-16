@@ -726,7 +726,7 @@ PREWRITTEN_HOOKS_TEXT
 "REPOS=\"$1\""                                                               NL
 "REV=\"$2\""                                                                 NL
                                                                              NL
-"commit-email.pl \"$REPOS\" \"$REV\" commit-watchers@example.org"            NL
+"mailer.py commit \"$REPOS\" \"$REV\" /path/to/mailer.conf"                  NL
 "log-commit.py --repository \"$REPOS\" --revision \"$REV\""                  NL;
 
 #undef SCRIPT_NAME
@@ -912,8 +912,8 @@ PREWRITTEN_HOOKS_TEXT
 "PROPNAME=\"$4\""                                                            NL
 "ACTION=\"$5\""                                                              NL
 ""                                                                           NL
-"commit-email.pl --revprop-change \"$REPOS\" \"$REV\" \"$USER\" \"$PROPNAME\" "
-"watchers@example.org"                                                       NL;
+"mailer.py propchange2 \"$REPOS\" \"$REV\" \"$USER\" \"$PROPNAME\" "
+"\"$ACTION\" /path/to/mailer.conf"                                           NL;
 
 #undef SCRIPT_NAME
 
