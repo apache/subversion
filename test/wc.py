@@ -21,6 +21,10 @@ else:
   # extra slashes to make it a valid 'file://' URL
   repo_url = "file://" + repo_url
 
+if os.sep != "/":
+    repos_location = repos_location.replace(os.sep, "/")
+    wc_location = wc_location.replace(os.sep, "/")
+
 class WCTestCase(unittest.TestCase):
     """Test case for Subversion WC layer."""
     
@@ -87,7 +91,7 @@ class WCTestCase(unittest.TestCase):
         self.assertEqual(svn_wc_schedule_add, self.last_info.schedule)
         
     def test_add(self):
-        f = open(os.path.join(wc_location, "trunk", "ADDED.txt"), "w")
+        f = open("%s/trunk/ADDED.txt" % wc_location, "w")
         f.write("Something")
         f.close()
         
@@ -103,7 +107,7 @@ class WCTestCase(unittest.TestCase):
         self.assertEqual(svn_wc_schedule_normal, self.last_info.schedule)
         
     def test_diff(self):
-        path = os.path.join(wc_location, "trunk/README.txt")
+        path = "%s/trunk/README.txt" % wc_location
 
         diffstring="""Index: """+path+"""
 ===================================================================
@@ -127,10 +131,7 @@ class WCTestCase(unittest.TestCase):
         diffresult = difffile.read().replace("\r","")
         self.assertEqual(diffstring, diffresult)
         
-        if sys.platform == "win32":
-            path = "%s\\/branches/0.x/README.txt" % wc_location
-        else:
-            path = os.path.join(wc_location, "branches", "0.x", "README.txt")
+        path = "%s/branches/0.x/README.txt" % wc_location
         diffstring="""Index: """+path+"""
 ===================================================================
 --- """+path+"""\t(revision 0)
@@ -163,42 +164,37 @@ class WCTestCase(unittest.TestCase):
             
     def test_propget(self):
         props = self.wc.propget("Awesome")
-        if sys.platform == "win32":
-            path = "%s\\/trunk/README.txt" % wc_location
-        else:
-            path = os.path.join(wc_location, "trunk", "README.txt")
+        path = "%s/trunk/README.txt" % wc_location
         if not path in props.keys():
             self.fail("File missing in propget")
             
     def test_propset(self):
         self.wc.propset("testprop", "testval", "branches/0.x/README.txt")
         props = self.wc.propget("testprop", "branches/0.x/README.txt")
-        if not os.path.join(wc_location, "branches/0.x/README.txt") in \
+        if not "%s/branches/0.x/README.txt" % wc_location in \
                 props.keys():
                     
             self.fail("Property not set")
             
     def test_update(self):
-        path = os.path.join("trunk", "README.txt")
+        path = "trunk/README.txt"
         results = self.wc.update([path], revnum=7)
-        if sys.platform != "win32":
-            self.assertEqual(results[0], 7)
+        self.assertEqual(results[0], 7)
         props = self.wc.propget("Awesome")
-        if os.path.join(wc_location, path) in \
+        if "%s/%s" % (wc_location, path) in \
                 props.keys():
             self.fail("File not updated to old revision")
         results = self.wc.update([path])
-        if sys.platform != "win32":
-            self.assertEqual(results[0], 9)
+        self.assertEqual(results[0], 9)
         self.test_propget()
 
     def test_switch(self):
         self.wc.switch("trunk", "%s/tags" % repo_url)
-        if os.path.exists(os.path.join(wc_location,"trunk","README.txt")):
+        if os.path.exists("%s/trunk/README.txt" % wc_location):
             self.fail("Switch did not happen")
             
     def test_lock(self):
-        self.wc.lock([os.path.join(wc_location,"trunk","README.txt")],
+        self.wc.lock(["%s/trunk/README.txt" % wc_location],
                         "Test lock")
         self.wc.info(path="trunk/README.txt",
             info_func=self._info_reciever)
@@ -206,13 +202,13 @@ class WCTestCase(unittest.TestCase):
             self.fail("Lock not aquired")
             
     def test_unlock(self):
-        self.wc.lock([os.path.join(wc_location,"trunk","README.txt")],
-                        "Test lock")
-        self.wc.info(path="trunk/README.txt",
+        path = "%s/trunk/README.txt" % wc_location
+        self.wc.lock([path], "Test lock")
+        self.wc.info(path=path,
             info_func=self._info_reciever)
         if not self.last_info.lock:
             self.fail("Lock not aquired")
-        self.wc.unlock([os.path.join(wc_location,"trunk","README.txt")])
+        self.wc.unlock([path])
         
         self.wc.info(path="trunk/README.txt",
             info_func=self._info_reciever)

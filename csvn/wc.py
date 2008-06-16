@@ -17,7 +17,7 @@ class WC(object):
         """
         self.pool = Pool()
         self.iterpool = Pool()
-        self.path = path
+        self.path = path.replace(os.sep, "/")
         self.user = user
 
         self.client = POINTER(svn_client_ctx_t)()
@@ -170,8 +170,8 @@ class WC(object):
         
         Keyword arguments:
         path -- path to be canonicalized"""
-        return svn_path_canonicalize(os.path.join(self.path, path),
-                                     self.iterpool)
+        joined_path = os.path.join(self.path.replace("/", os.sep), path.replace("/", os.sep))
+        return svn_path_canonicalize(joined_path.replace(os.sep, "/"), self.iterpool)
 
     def set_notify_func(self, notify_func):
         """Setup a callback so that you can be notified when paths are
