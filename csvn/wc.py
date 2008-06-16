@@ -98,7 +98,6 @@ class WC(object):
         paths -- list of paths to marked for deletion
         force -- if True, operation will be forced (default False)"""
 
-        self.iterpool.clear()
         svn_client_delete2(NULL, self._build_path_list(paths),
                            force, self.client, self.iterpool)
         self.iterpool.clear()
