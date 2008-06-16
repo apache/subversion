@@ -726,8 +726,7 @@ PREWRITTEN_HOOKS_TEXT
 "REPOS=\"$1\""                                                               NL
 "REV=\"$2\""                                                                 NL
                                                                              NL
-"mailer.py commit \"$REPOS\" \"$REV\" /path/to/mailer.conf"                  NL
-"log-commit.py --repository \"$REPOS\" --revision \"$REV\""                  NL;
+"mailer.py commit \"$REPOS\" \"$REV\" /path/to/mailer.conf"                  NL;
 
 #undef SCRIPT_NAME
 
