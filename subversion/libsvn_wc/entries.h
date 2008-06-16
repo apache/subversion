@@ -77,6 +77,7 @@ extern "C" {
 #define SVN_WC__ENTRY_ATTR_CHANGELIST         "changelist"
 #define SVN_WC__ENTRY_ATTR_KEEP_LOCAL         "keep-local"
 #define SVN_WC__ENTRY_ATTR_WORKING_SIZE       "working-size"
+#define SVN_WC__ENTRY_ATTR_FILE_EXTERNAL      "file-external"
 
 /* Attribute values for 'schedule' */
 #define SVN_WC__ENTRY_VALUE_ADD        "add"
@@ -159,6 +160,7 @@ svn_error_t *svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
 #define SVN_WC__ENTRY_MODIFY_CHANGELIST         APR_INT64_C(0x0000000040000000)
 #define SVN_WC__ENTRY_MODIFY_KEEP_LOCAL         APR_INT64_C(0x0000000080000000)
 #define SVN_WC__ENTRY_MODIFY_WORKING_SIZE       APR_INT64_C(0x0000000100000000)
+#define SVN_WC__ENTRY_MODIFY_FILE_EXTERNAL      APR_INT64_C(0x0000000200000000)
 /* No #define for DEPTH, because it's only meaningful on this-dir anyway. */
 
 /* ...ORed together with this to mean "I really mean this, don't be

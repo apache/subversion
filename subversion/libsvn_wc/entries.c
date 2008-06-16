@@ -66,6 +66,8 @@ alloc_entry(apr_pool_t *pool)
   entry->kind = svn_node_none;
   entry->working_size = SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN;
   entry->depth = svn_depth_infinity;
+  entry->file_external_path = NULL;
+  entry->file_external_rev.kind = svn_opt_revision_unspecified;
   return entry;
 }
 
@@ -292,6 +294,74 @@ read_time(apr_time_t *result,
   return SVN_NO_ERROR;
 }
 
+/* Parse a file external specification in the NULL terminated STR and
+   place the path in PATH_RESULT and revision number in REV_RESULT.
+   STR may be NULL, in which case PATH_RESULT will be set to NULL and
+   REV_RESULT set to svn_opt_revision_unspecified.
+
+   The format that is read is the same as a working-copy path with a
+   peg revision; see svn_opt_parse_path(). */
+static svn_error_t *
+unserialize_file_external(const char **path_result,
+                          svn_opt_revision_t *rev_result,
+                          const char *str,
+                          apr_pool_t *pool)
+{
+  if (str)
+    {
+      const char *path;
+      svn_opt_revision_t rev;
+      SVN_ERR(svn_opt_parse_path(&rev, &path, str, pool));
+      *path_result = path;
+      *rev_result = rev;
+    }
+  else
+    {
+      *path_result = NULL;
+      rev_result->kind = svn_opt_revision_unspecified;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Serialize into STR the file external path and revision number into
+   a format that unserialize_file_external() can parse.  If PATH is
+   NULL then STR will be set to NULL.  This method writes to a string
+   instead of a svn_stringbuf_t so that the string can be protected by
+   write_str(). */
+static svn_error_t *
+serialize_file_external(const char **str, const char *path,
+                        svn_opt_revision_t rev, apr_pool_t *pool)
+{
+  const char *s;
+
+  if (path)
+    {
+      switch (rev.kind)
+        {
+        case svn_opt_revision_head:
+          s = apr_pstrcat(pool, path, "@HEAD", NULL);
+          break;
+        case svn_opt_revision_number:
+          s = apr_pstrcat(pool, path, "@", apr_itoa(pool, rev.value.number),
+                          NULL);
+          break;
+        default:
+          return svn_error_createf
+            (SVN_ERR_INCORRECT_PARAMS, NULL,
+             _("Illegal file external revision kind %d for path '%s'"),
+             rev.kind, path);
+          break;
+        }
+    }
+  else
+    s = NULL;
+
+  *str = s;
+
+  return SVN_NO_ERROR;
+}
+
 /* Allocate an entry from POOL and read it from [*BUF, END).  The
    buffer may be modified in place while parsing.  Return the new
    entry in *NEW_ENTRY.  Advance *BUF to point at the end of the entry
@@ -495,6 +565,17 @@ read_entry(svn_wc_entry_t **new_entry,
       entry->depth = svn_depth_from_word(result);
     else
       entry->depth = svn_depth_infinity;
+  }
+  MAYBE_DONE;
+
+  /* File external URL and revision. */
+  {
+    const char *str;
+    SVN_ERR(read_str(&str, buf, end, pool));
+    SVN_ERR(unserialize_file_external(&entry->file_external_path,
+                                      &entry->file_external_rev,
+                                      str,
+                                      pool));
   }
   MAYBE_DONE;
 
@@ -908,6 +989,25 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
           entry->working_size = (apr_off_t)apr_strtoi64(val, NULL, 0);
 
         *modify_flags |= SVN_WC__ENTRY_MODIFY_WORKING_SIZE;
+      }
+  }
+
+  /* File externals */
+  {
+    const char *val
+      = apr_hash_get(atts,
+                     SVN_WC__ENTRY_ATTR_FILE_EXTERNAL,
+                     APR_HASH_KEY_STRING);
+
+    if (val)
+      {
+        SVN_ERR(unserialize_file_external(&(entry->file_external_path),
+                                          &(entry->file_external_rev),
+                                          val,
+                                          pool));
+        entry->file_external_path = apr_pstrdup(pool,
+                                                entry->file_external_path);
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_FILE_EXTERNAL;
       }
   }
 
@@ -1667,6 +1767,14 @@ write_entry(svn_stringbuf_t *buf,
       write_val(buf, val, strlen(val));
     }
 
+  /* File externals. */
+  {
+    const char *s;
+    SVN_ERR(serialize_file_external(&s, entry->file_external_path,
+                                    entry->file_external_rev, pool));
+    write_str(buf, s, pool);
+  }
+
   /* Remove redundant separators at the end of the entry. */
   while (buf->len > 1 && buf->data[buf->len - 2] == '\n')
     buf->len--;
@@ -2317,6 +2425,16 @@ fold_entry(apr_hash_t *entries,
       cur_entry->keep_local = FALSE;
     }
 
+  /* File externals. */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_FILE_EXTERNAL)
+    {
+      cur_entry->file_external_path = (entry->file_external_path
+                                       ? apr_pstrdup(pool,
+                                                     entry->file_external_path)
+                                       : NULL);
+      cur_entry->file_external_rev = entry->file_external_rev;
+    }
+
   /* Make sure the entry exists in the entries hash.  Possibly it
      already did, in which case this could have been skipped, but what
      the heck. */
@@ -2681,6 +2799,9 @@ svn_wc_entry_dup(const svn_wc_entry_t *entry, apr_pool_t *pool)
     dupentry->cachable_props = apr_pstrdup(pool, entry->cachable_props);
   if (entry->present_props)
     dupentry->present_props = apr_pstrdup(pool, entry->present_props);
+  if (entry->file_external_path)
+    dupentry->file_external_path = apr_pstrdup(pool,
+                                               entry->file_external_path);
   return dupentry;
 }
 
