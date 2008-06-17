@@ -166,7 +166,7 @@ test_svn_opt_args_to_target_array2(const char **msg,
                                      "'%s' is not.",
                                      input,
                                      actual_output);
-            
+
           if (strcmp(expected_output, actual_output) != 0)
             return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                      "Input '%s' to "

@@ -752,7 +752,7 @@ set_node_property(void *node_baton,
 
   if (strcmp(name, SVN_PROP_MERGEINFO) == 0)
     {
-      svn_string_t *filtered_mergeinfo;  /* Avoid compiler warning. */ 
+      svn_string_t *filtered_mergeinfo;  /* Avoid compiler warning. */
       apr_pool_t *pool = apr_hash_pool_get(rb->props);
       SVN_ERR(adjust_mergeinfo(&filtered_mergeinfo, value, rb, pool));
       value = filtered_mergeinfo;

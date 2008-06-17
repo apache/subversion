@@ -1318,9 +1318,9 @@ svn_ra_replay_range(svn_ra_session_t *session,
                     void *replay_baton,
                     apr_pool_t *pool)
 {
-  svn_error_t *err = 
-    session->vtable->replay_range(session, start_revision, end_revision, 
-                                  low_water_mark, text_deltas, 
+  svn_error_t *err =
+    session->vtable->replay_range(session, start_revision, end_revision,
+                                  low_water_mark, text_deltas,
                                   revstart_func, revfinish_func,
                                   replay_baton, pool);
 
@@ -1342,14 +1342,14 @@ svn_ra_replay_range(svn_ra_session_t *session,
 
           SVN_ERR(svn_ra_rev_proplist(session, rev, &rev_props, subpool));
 
-          SVN_ERR(revstart_func(rev, replay_baton, 
-                                &editor, &edit_baton, 
+          SVN_ERR(revstart_func(rev, replay_baton,
+                                &editor, &edit_baton,
                                 rev_props,
                                 subpool));
           SVN_ERR(svn_ra_replay(session, rev, low_water_mark,
-                                text_deltas, editor, edit_baton, 
+                                text_deltas, editor, edit_baton,
                                 subpool));
-          SVN_ERR(revfinish_func(rev, replay_baton, 
+          SVN_ERR(revfinish_func(rev, replay_baton,
                                  editor, edit_baton,
                                  rev_props,
                                  subpool));

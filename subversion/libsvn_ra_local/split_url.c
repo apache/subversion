@@ -163,7 +163,7 @@ svn_ra_local__split_URL(svn_repos_t **repos,
   /* Ensure that *FS_PATH has its leading slash. */
   if (**fs_path != '/')
     *fs_path = apr_pstrcat(pool, "/", *fs_path, NULL);
-  
+
   /* Remove the path components in *fs_path from the original URL, to get
      the URL to the repository root. */
   urlbuf = svn_stringbuf_create(URL, pool);

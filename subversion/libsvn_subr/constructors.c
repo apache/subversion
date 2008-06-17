@@ -110,7 +110,7 @@ apr_array_header_t *
 svn_prop_hash_to_array(apr_hash_t *hash, apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
-  apr_array_header_t *array = apr_array_make(pool, apr_hash_count(hash), 
+  apr_array_header_t *array = apr_array_make(pool, apr_hash_count(hash),
                                              sizeof(svn_prop_t));
 
   for (hi = apr_hash_first(pool, hash); hi; hi = apr_hash_next(hi))

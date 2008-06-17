@@ -57,7 +57,7 @@ def add_items(opener, folderId, release_name):
     folder_add_url = 'http://subversion.tigris.org/servlets/ProjectDocumentAdd?folderID=%d&action=Add%%20document' % folderId
 
     md5sums = get_md5sums()
-    
+
     for ext in ['.zip', '.tar.gz', '.tar.bz2']:
         for deps in ['', '-deps']:
             filename = 'subversion%s-%s%s' % (deps, release_name, ext)

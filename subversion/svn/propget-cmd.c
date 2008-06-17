@@ -181,7 +181,7 @@ svn_cl__propget(apr_getopt_t *os,
                              pname_utf8);
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
-                                                      opt_state->targets, 
+                                                      opt_state->targets,
                                                       ctx, pool));
 
   /* Add "." if user passed 0 file arguments */
@@ -270,7 +270,7 @@ svn_cl__propget(apr_getopt_t *os,
           SVN_ERR(svn_client_propget3(&props, pname_utf8, truepath,
                                       &peg_revision,
                                       &(opt_state->start_revision),
-                                      NULL, opt_state->depth, 
+                                      NULL, opt_state->depth,
                                       opt_state->changelists, ctx, subpool));
 
           /* Any time there is more than one thing to print, or where

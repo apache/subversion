@@ -441,7 +441,7 @@ svn_hash_keys(apr_array_header_t **array,
               apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
-  
+
   *array = apr_array_make(pool, apr_hash_count(hash), sizeof(const char *));
 
   for (hi = apr_hash_first(pool, hash); hi; hi = apr_hash_next(hi))
@@ -451,7 +451,7 @@ svn_hash_keys(apr_array_header_t **array,
 
       apr_hash_this(hi, &key, NULL, NULL);
       path = key;
-      
+
       APR_ARRAY_PUSH(*array, const char *) = path;
     }
 
@@ -468,7 +468,7 @@ svn_hash_from_cstring_keys(apr_hash_t **hash_p,
   apr_hash_t *hash = apr_hash_make(pool);
   for (i = 0; i < keys->nelts; i++)
     {
-      const char *key = 
+      const char *key =
         apr_pstrdup(pool, APR_ARRAY_IDX(keys, i, const char *));
       apr_hash_set(hash, key, APR_HASH_KEY_STRING, key);
     }

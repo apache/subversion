@@ -143,7 +143,7 @@ struct svn_repos_t
 /* Run the start-commit hook for REPOS.  Use POOL for any temporary
    allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.
 
-   USER is the authenticated name of the user starting the commit.  
+   USER is the authenticated name of the user starting the commit.
    CAPABILITIES is a list of 'const char *' capability names (using
    SVN_RA_CAPABILITY_*) that the client has self-reported.  Note that
    there is no guarantee the client is telling the truth: the hook

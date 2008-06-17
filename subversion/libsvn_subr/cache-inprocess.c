@@ -297,7 +297,7 @@ inprocess_cache_set(void *cache_void,
       struct cache_page *page = existing_entry->page;
 
       move_page_to_front(cache, page);
-      err = duplicate_value(&(existing_entry->value), cache, 
+      err = duplicate_value(&(existing_entry->value), cache,
                             value, page->page_pool);
       goto cleanup;
     }

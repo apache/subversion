@@ -2942,7 +2942,7 @@ def diff_wrong_extension_type(sbox):
   sbox.build(read_only = True)
   expected_error = "(.*svn: Invalid argument .* in diff options.*)|" \
                    "(svn: '.' is not a working copy)"
-  svntest.actions.run_and_verify_svn(None, [], expected_error, 
+  svntest.actions.run_and_verify_svn(None, [], expected_error,
                                      'diff', '-x', sbox.wc_dir, '-r', '1')
 
 # Check the order of the arguments for an external diff tool
@@ -2974,8 +2974,8 @@ def diff_external_diffcmd(sbox):
 "%s\n" % os.path.join(sbox.wc_dir, '.svn', 'text-base', 'iota.svn-base'),
 "%s\n" % os.path.join(sbox.wc_dir, 'iota')])
 
-  # Check that the output of diff corresponds with the expected arguments, 
-  # in the correct order.  
+  # Check that the output of diff corresponds with the expected arguments,
+  # in the correct order.
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', '--diff-cmd', diff_script_path,
                                      iota_path)

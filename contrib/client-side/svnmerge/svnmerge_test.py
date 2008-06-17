@@ -53,7 +53,7 @@ class StringIOWithEncoding(StringIO):
     def __init__(self):
         StringIO.__init__(self)
         self.encoding = sys.stdout.encoding
-    
+
 class TestCase_kwextract(unittest.TestCase):
     def test_basic(self):
         self.assertEqual(svnmerge.kwextract("$Rev: 134 rasky $"), "134 rasky")

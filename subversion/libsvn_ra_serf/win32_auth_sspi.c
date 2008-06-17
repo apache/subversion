@@ -16,7 +16,7 @@
  * ====================================================================
  */
 
-/* TODO: 
+/* TODO:
    - remove NTLM dependency so we can reuse SSPI for Kerberos later. */
 
 /*
@@ -48,7 +48,7 @@
  *
  * Note: Step 1 of the handshake will only happen on the first connection, once
  * we know the server requires NTLM authentication, the initial requests on the
- * other connections will include the NTLM Type 1 message, so we start at 
+ * other connections will include the NTLM Type 1 message, so we start at
  * step 2 in the handshake.
  */
 
@@ -80,8 +80,8 @@ static unsigned int ntlm_maxtokensize = 0;
 
 #define SECURITY_DLL "security.dll"
 
-/* Loads security.dll in memory on the first call. Afterwards the 
-   function table SSPI is loaded which we can use it to call SSPI's 
+/* Loads security.dll in memory on the first call. Afterwards the
+   function table SSPI is loaded which we can use it to call SSPI's
    public functions. */
 static svn_error_t *
 load_security_dll()
@@ -93,8 +93,8 @@ load_security_dll()
   if (security_dll != INVALID_HANDLE_VALUE)
     {
       /* Load the function(s) */
-      InitSecurityInterface_ = 
-        (INIT_SECURITY_INTERFACE)GetProcAddress(security_dll, 
+      InitSecurityInterface_ =
+        (INIT_SECURITY_INTERFACE)GetProcAddress(security_dll,
                                                 "InitSecurityInterfaceA");
       sspi = InitSecurityInterface_();
 
@@ -118,9 +118,9 @@ sspi_maxtokensize(char *auth_pkg, unsigned int *maxtokensize)
   SECURITY_STATUS status;
   SecPkgInfo *sec_pkg_info = NULL;
 
-  status = sspi->QuerySecurityPackageInfo(auth_pkg, 
+  status = sspi->QuerySecurityPackageInfo(auth_pkg,
                                           &sec_pkg_info);
-  if (status == SEC_E_OK) 
+  if (status == SEC_E_OK)
     {
       *maxtokensize = sec_pkg_info->cbMaxToken;
       sspi->FreeContextBuffer(sec_pkg_info);
@@ -220,7 +220,7 @@ setup_request_sspi_auth(svn_ra_serf__connection_t *conn,
 }
 
 svn_error_t *
-sspi_get_credentials(char *token, apr_size_t token_len, const char **buf, 
+sspi_get_credentials(char *token, apr_size_t token_len, const char **buf,
                      apr_size_t *buf_len, serf_sspi_context_t *sspi_ctx)
 {
   SecBuffer in_buf, out_buf;
@@ -265,8 +265,8 @@ sspi_get_credentials(char *token, apr_size_t token_len, const char **buf,
              "SSPI Initialization failed.");
 
   status = sspi->InitializeSecurityContext(&creds,
-                                           ctx != NULL && ctx->dwLower != 0 
-                                             ? ctx 
+                                           ctx != NULL && ctx->dwLower != 0
+                                             ? ctx
                                              : NULL,
                                            target,
                                            ISC_REQ_REPLAY_DETECT |
