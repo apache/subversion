@@ -2550,16 +2550,17 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
            full_path.  We need to remove that entry: */
         if (! is_root)
           {
+            apr_hash_t *parent_entries;
             svn_wc_adm_access_t *parent_access;
 
             svn_path_split(full_path, &parent_dir, &base_name, pool);
 
             SVN_ERR(svn_wc_adm_retrieve(&parent_access, adm_access,
                                         parent_dir, pool));
-            SVN_ERR(svn_wc_entries_read(&entries, parent_access, TRUE,
+            SVN_ERR(svn_wc_entries_read(&parent_entries, parent_access, TRUE,
                                         pool));
-            svn_wc__entry_remove(entries, base_name);
-            SVN_ERR(svn_wc__entries_write(entries, parent_access, pool));
+            svn_wc__entry_remove(parent_entries, base_name);
+            SVN_ERR(svn_wc__entries_write(parent_entries, parent_access, pool));
           }
       }
 
