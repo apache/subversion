@@ -69,7 +69,7 @@ class SubversionMergeinfoTestCase(unittest.TestCase):
     mergeinfo3 = core.svn_mergeinfo_merge(mergeinfo1, mergeinfo2)
     self.inspect_mergeinfo_dict(mergeinfo3, self.MERGEINFO_SRC,
                                 self.MERGEINFO_NBR_REV_RANGES)
-    
+
   def test_rangelist_reverse(self):
     mergeinfo = core.svn_mergeinfo_parse(self.TEXT_MERGEINFO1)
     rangelist = mergeinfo.get(self.MERGEINFO_SRC)

@@ -445,7 +445,7 @@ svn_cmdline_auth_plaintext_prompt(svn_boolean_t *may_save_plaintext,
       else
           prompt_string = _("Please type 'yes' or 'no': ");
     }
-  while (! answered); 
+  while (! answered);
 
   return SVN_NO_ERROR;
 }

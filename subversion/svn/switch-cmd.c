@@ -100,7 +100,7 @@ svn_cl__switch(apr_getopt_t *os,
      arguments: a local path to update ("target"), and a new url to
      switch to ("switch_url"). */
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
-                                                      opt_state->targets, 
+                                                      opt_state->targets,
                                                       ctx, pool));
 
   /* handle only-rewrite case specially */
@@ -174,7 +174,7 @@ svn_cl__switch(apr_getopt_t *os,
 
   /* Do the 'switch' update. */
   SVN_ERR(svn_client_switch2(NULL, target, switch_url, &peg_revision,
-                             &(opt_state->start_revision), depth, 
+                             &(opt_state->start_revision), depth,
                              depth_is_sticky, opt_state->ignore_externals,
                              opt_state->force, ctx, pool));
 

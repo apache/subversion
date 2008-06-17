@@ -258,7 +258,7 @@ class WinGeneratorBase(GeneratorBase):
 
     #Here we can add additional platforms to compile for
     self.platforms = ['Win32']
-    
+
     # VS2002 and VS2003 only allow a single platform per project file
     if subdir == 'vcnet-vcproj':
       if self.vsnet_version != '7.00' and self.vsnet_version != '8.00':
@@ -1075,7 +1075,7 @@ class WinGeneratorBase(GeneratorBase):
     data = {
       'version' : self.vsnet_proj_ver,
       'configs' : self.configs,
-      'platforms' : self.platforms      
+      'platforms' : self.platforms
       }
     for key, val in params:
       data[key] = val

@@ -219,7 +219,7 @@ svn_client__path_relative_to_root(const char **rel_path,
           goto cleanup;
         }
       rel_url = svn_path_uri_decode(rel_url, pool);
-      *rel_path = include_leading_slash 
+      *rel_path = include_leading_slash
                     ? apr_pstrcat(pool, "/", rel_url, NULL) : rel_url;
     }
 
@@ -293,7 +293,7 @@ svn_client__get_repos_root(const char **repos_root,
  cleanup:
   if (sesspool)
     svn_pool_destroy(sesspool);
-    
+
   if (need_wc_cleanup)
     {
       svn_error_t *err2 = svn_wc_adm_close(adm_access);

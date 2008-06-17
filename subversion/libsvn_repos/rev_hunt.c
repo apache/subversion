@@ -1009,7 +1009,7 @@ get_path_mergeinfo(apr_hash_t **mergeinfo,
 
   SVN_ERR(svn_fs_revision_root(&root, fs, revnum, subpool));
   /* We do not need to call svn_repos_fs_get_mergeinfo() (which performs authz)
-     because we will filter out unreadable revisions in 
+     because we will filter out unreadable revisions in
      find_interesting_revision(), above */
   SVN_ERR(svn_fs_get_mergeinfo(&tmp_catalog, root, paths,
                                svn_mergeinfo_inherited, FALSE, subpool));
@@ -1400,7 +1400,7 @@ send_path_revision(struct path_revision *path_rev,
  *     merged revisions, including them in the MERGED_PATH_REVISIONS, and using
  *     DUPLICATE_PATH_REVS to avoid tracing the same paths of history multiple
  *     times.
- *  3) Send both MAINLINE_PATH_REVISIONS and MERGED_PATH_REVISIONS from 
+ *  3) Send both MAINLINE_PATH_REVISIONS and MERGED_PATH_REVISIONS from
  *     youngest to oldest, interleaving as appropriate.  This is implemented
  *     similar to an insertion sort, but instead of inserting into another
  *     array, we just call the appropriate handler.
@@ -1468,7 +1468,7 @@ svn_repos_get_file_revs2(svn_repos_t *repos,
       struct path_revision *merged_pr = APR_ARRAY_IDX(merged_path_revisions,
                                                       merged_pos,
                                                       struct path_revision *);
-    
+
       if (main_pr->revnum <= merged_pr->revnum)
         {
           SVN_ERR(send_path_revision(main_pr, repos, &sb, handler,

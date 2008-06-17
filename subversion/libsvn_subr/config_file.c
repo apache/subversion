@@ -857,7 +857,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "# No http-timeout, so just use the builtin default."                NL
         "# No neon-debug-mask, so neon debugging is disabled."               NL
         "# ssl-authority-files = /path/to/CAcert.pem;/path/to/CAcert2.pem"   NL
-        "#"                                                                  NL 
+        "#"                                                                  NL
         "# Password caching parameters:"                                     NL
         "# store-passwords = no"                                             NL
         "# store-plaintext-passwords = no"                                   NL;

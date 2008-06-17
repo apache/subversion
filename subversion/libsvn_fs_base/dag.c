@@ -591,7 +591,7 @@ svn_fs_base__dag_set_proplist(dag_node_t *node,
       svn_string_t *idstr = svn_fs_base__id_unparse(node->id, pool);
       return svn_error_createf
         (SVN_ERR_FS_NOT_MUTABLE, NULL,
-         _("Can't set proplist on *immutable* node-revision %s"), 
+         _("Can't set proplist on *immutable* node-revision %s"),
          idstr->data);
     }
 
@@ -961,8 +961,8 @@ svn_fs_base__dag_remove_node(svn_fs_t *fs,
                                                txn_id, trail, pool));
 
   /* Delete the node revision itself. */
-  SVN_ERR(svn_fs_base__delete_node_revision(fs, id, 
-                                            noderev->predecessor_id 
+  SVN_ERR(svn_fs_base__delete_node_revision(fs, id,
+                                            noderev->predecessor_id
                                               ? FALSE : TRUE,
                                             trail, pool));
 
@@ -1445,7 +1445,7 @@ svn_fs_base__dag_commit_txn(svn_revnum_t *new_rev,
     SVN_ERR(svn_fs_base__set_txn_prop
             (fs, txn_id, SVN_FS__PROP_TXN_CHECK_OOD, NULL, trail, pool));
 
-  if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_LOCKS, 
+  if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_LOCKS,
                    APR_HASH_KEY_STRING))
     SVN_ERR(svn_fs_base__set_txn_prop
             (fs, txn_id, SVN_FS__PROP_TXN_CHECK_LOCKS, NULL, trail, pool));
@@ -1591,7 +1591,7 @@ svn_fs_base__dag_adjust_mergeinfo_count(dag_node_t *node,
 
   SVN_ERR(svn_fs_bdb__get_node_revision(&node_rev, fs, id, trail, pool));
   node_rev->mergeinfo_count = node_rev->mergeinfo_count + count_delta;
-  if ((node_rev->mergeinfo_count < 0) 
+  if ((node_rev->mergeinfo_count < 0)
       || ((node->kind == svn_node_file) && (node_rev->mergeinfo_count > 1)))
     return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                              apr_psprintf(pool,

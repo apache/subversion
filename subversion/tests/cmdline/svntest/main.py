@@ -270,7 +270,7 @@ def setup_development_mode():
         'run_and_verify_diff_summarize',
         'run_and_verify_diff_summarize_xml',
         'run_and_validate_lock']
-  
+
   for func in l:
     setattr(actions, func, wrap_ex(getattr(actions, func)))
 
@@ -912,7 +912,7 @@ class Sandbox:
     else:
       self.repo_dir = pristine_dir
       self.repo_url = pristine_url
-      
+
     ### TODO: Move this into to the build() method
     # For dav tests we need a single authz file which must be present,
     # so we recreate it each time a sandbox is created with some default
@@ -1095,14 +1095,14 @@ class TestRunner:
     # Tests that want to use an editor should invoke svntest.main.use_editor.
     os.environ['SVN_EDITOR'] = ''
     os.environ['SVNTEST_EDITOR_FUNC'] = ''
-    
+
     if use_jsvn:
-      # Set this SVNKit specific variable to the current test (test name plus 
-      # its index) being run so that SVNKit daemon could use this test name 
+      # Set this SVNKit specific variable to the current test (test name plus
+      # its index) being run so that SVNKit daemon could use this test name
       # for its separate log file
      os.environ['SVN_CURRENT_TEST'] = os.path.basename(sys.argv[0]) + "_" + \
                                       str(self.index)
-    
+
     actions.no_sleep_for_timestamps()
 
     saved_dir = os.getcwd()
@@ -1399,7 +1399,7 @@ def run_tests(test_list, serial_only = False):
     pristine_url = pristine_url.replace('\\', '/')
 
   if use_jsvn:
-    if svn_bin is None: 
+    if svn_bin is None:
       svn_bin = ''
     svn_binary = os.path.join(svn_bin, 'jsvn' + _bat)
     svnadmin_binary = os.path.join(svn_bin, 'jsvnadmin' + _bat)
