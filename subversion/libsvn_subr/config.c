@@ -680,25 +680,23 @@ svn_config_get_yes_no_ask(svn_config_t *cfg, const char **valuep,
   const char *tmp_value;
 
   svn_config_get(cfg, &tmp_value, section, option, NULL);
-  if (tmp_value == NULL)
-    *valuep = default_value;
-  else if (0 == svn_cstring_casecmp(tmp_value, SVN_CONFIG_TRUE)
-           || 0 == svn_cstring_casecmp(tmp_value, "yes")
-           || 0 == svn_cstring_casecmp(tmp_value, "on")
-           || 0 == strcmp(tmp_value, "1"))
-    *valuep = SVN_CONFIG_TRUE;
-  else if (0 == svn_cstring_casecmp(tmp_value, SVN_CONFIG_FALSE)
-           || 0 == svn_cstring_casecmp(tmp_value, "no")
-           || 0 == svn_cstring_casecmp(tmp_value, "off")
-           || 0 == strcmp(tmp_value, "0"))
-    *valuep = SVN_CONFIG_FALSE;
-  else if (0 == svn_cstring_casecmp(tmp_value, SVN_CONFIG_ASK))
-    *valuep = SVN_CONFIG_ASK;
+
+  if (! tmp_value)
+    tmp_value = default_value;
+
+  if (tmp_value && (0 == svn_cstring_casecmp(tmp_value, SVN_CONFIG_ASK)))
+    {
+      *valuep = SVN_CONFIG_ASK;
+    }
   else
-    return svn_error_createf
-      (SVN_ERR_BAD_CONFIG_VALUE, NULL,
-       _("Config error: invalid value '%s' for option '%s'"),
-       tmp_value, option);
+    {
+      svn_boolean_t bool_val;
+      /* We already incorporated default_value into tmp_value if
+         necessary, so the FALSE below will be ignored unless the
+         caller is doing something it shouldn't be doing. */
+      SVN_ERR(get_bool(&bool_val, tmp_value, FALSE, section, option));
+      *valuep = bool_val ? SVN_CONFIG_TRUE : SVN_CONFIG_FALSE;
+    }
 
   return SVN_NO_ERROR;
 }

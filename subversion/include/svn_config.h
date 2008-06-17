@@ -237,15 +237,19 @@ void svn_config_set_bool(svn_config_t *cfg,
                          const char *section, const char *option,
                          svn_boolean_t value);
 
-/** Like svn_config_get(), but for values which can be either
- * 'yes', 'no', or 'ask'.
+/** Like svn_config_get(), but only for yes/no/ask values.
  *
- * Parses the option, and sets *valuep to either SVN_CONFIG_TRUE,
- * SVN_CONFIG_FALSE, or SVN_CONFIG_ASK. The recognized representations
- * are 'TRUE'/'FALSE', 'yes'/'no', 'on'/'off', '1'/'0', and 'ASK';
- * case does not matter.
+ * Parse @a option in @a section and set @a *valuep to one of
+ * SVN_CONFIG_TRUE, SVN_CONFIG_FALSE, or SVN_CONFIG_ASK.  If there is
+ * no setting for @a option, then parse @a default_value and set
+ * @a *valuep accordingly.  If @a default_value is NULL, the result is
+ * undefined, and may be an error; we recommend that you pass one of
+ * SVN_CONFIG_TRUE, SVN_CONFIG_FALSE, or SVN_CONFIG_ASK for @a default value.
  *
- * Returns an error if the option doesn't contain a known string.
+ * Valid representations are (at least) "true"/"false", "yes"/"no",
+ * "on"/"off", "1"/"0", and "ask"; they are case-insensitive.  Return
+ * an SVN_ERR_BAD_CONFIG_VALUE error if either @a default_value or
+ * @a option's value is not a valid representation.
  *
  * @since New in 1.6.
  */
