@@ -185,6 +185,7 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
                             void *notify_baton,
                             svn_boolean_t restore_files,
                             svn_depth_t depth,
+                            svn_boolean_t honor_depth_exclude,
                             svn_boolean_t depth_compatibility_trick,
                             svn_boolean_t report_everything,
                             svn_boolean_t use_commit_times,
@@ -278,19 +279,32 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
           continue;
         }
 
-      /* Report the excluded path, no matter whether report_everything flag is
-         set.  Because the report_everything flag indicates that the server
-         will treate the wc as empty and thus push full content of the
-         files/subdirs. We just want to say no to this. */
       if (current_entry->depth == svn_depth_exclude)
         {
-          SVN_ERR(reporter->set_path(report_baton,
-                                     this_path,
-                                     SVN_INVALID_REVNUM,
-                                     svn_depth_exclude,
-                                     FALSE,
-                                     NULL,
-                                     iterpool));
+          if (honor_depth_exclude)
+            {
+              /* Report the excluded path, no matter whether report_everything
+                 flag is set.  Because the report_everything flag indicates
+                 that the server will treate the wc as empty and thus push
+                 full content of the files/subdirs. We just want to say no to
+                 this. */
+              SVN_ERR(reporter->set_path(report_baton,
+                                         this_path,
+                                         SVN_INVALID_REVNUM,
+                                         svn_depth_exclude,
+                                         FALSE,
+                                         NULL,
+                                         iterpool));
+            }
+          else
+            {
+              /* We want to pull in the excluded target, report it as deleted
+                 when needed, and server will response properly. */
+              if (! report_everything)
+                SVN_ERR(reporter->delete_path(report_baton, 
+                                              this_path, iterpool));
+            }
+
           continue;
         }
 
@@ -474,6 +488,7 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
                                                 reporter, report_baton,
                                                 notify_func, notify_baton,
                                                 restore_files, depth,
+                                                honor_depth_exclude,
                                                 depth_compatibility_trick,
                                                 start_empty,
                                                 use_commit_times,
@@ -494,12 +509,13 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
 
 
 svn_error_t *
-svn_wc_crawl_revisions3(const char *path,
+svn_wc_crawl_revisions4(const char *path,
                         svn_wc_adm_access_t *adm_access,
                         const svn_ra_reporter3_t *reporter,
                         void *report_baton,
                         svn_boolean_t restore_files,
                         svn_depth_t depth,
+                        svn_boolean_t honor_depth_exclude,
                         svn_boolean_t depth_compatibility_trick,
                         svn_boolean_t use_commit_times,
                         svn_wc_notify_func2_t notify_func,
@@ -609,6 +625,7 @@ svn_wc_crawl_revisions3(const char *path,
                                             reporter, report_baton,
                                             notify_func, notify_baton,
                                             restore_files, depth,
+                                            honor_depth_exclude,
                                             depth_compatibility_trick,
                                             start_empty,
                                             use_commit_times,
@@ -700,6 +717,33 @@ svn_wc_crawl_revisions3(const char *path,
   return err;
 }
 
+svn_error_t *
+svn_wc_crawl_revisions3(const char *path,
+                        svn_wc_adm_access_t *adm_access,
+                        const svn_ra_reporter3_t *reporter,
+                        void *report_baton,
+                        svn_boolean_t restore_files,
+                        svn_depth_t depth,
+                        svn_boolean_t depth_compatibility_trick,
+                        svn_boolean_t use_commit_times,
+                        svn_wc_notify_func2_t notify_func,
+                        void *notify_baton,
+                        svn_wc_traversal_info_t *traversal_info,
+                        apr_pool_t *pool)
+{
+  return svn_wc_crawl_revisions4(path,
+                                 adm_access,
+                                 reporter, report_baton,
+                                 restore_files,
+                                 depth,
+                                 FALSE,
+                                 depth_compatibility_trick,
+                                 use_commit_times,
+                                 notify_func,
+                                 notify_baton,
+                                 traversal_info,
+                                 pool);
+}
 
 /*** Compatibility wrapper: turns an svn_ra_reporter2_t into an
      svn_ra_reporter3_t.

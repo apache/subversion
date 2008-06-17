@@ -175,8 +175,9 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
      We pass NULL for traversal_info because this is a switch, not an
      update, and therefore we don't want to handle any externals
      except the ones directly affected by the switch. */
-  err = svn_wc_crawl_revisions3(path, dir_access, reporter, report_baton,
-                                TRUE, depth, (! server_supports_depth),
+  err = svn_wc_crawl_revisions4(path, dir_access, reporter, report_baton,
+                                TRUE, depth, (! depth_is_sticky),
+                                (! server_supports_depth),
                                 use_commit_times,
                                 ctx->notify_func2, ctx->notify_baton2,
                                 NULL, /* no traversal info */
