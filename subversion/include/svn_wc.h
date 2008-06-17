@@ -3256,6 +3256,11 @@ svn_wc_process_committed(const char *path,
  * course.  If @a depth is @c svn_depth_unknown, then just use
  * @c svn_depth_infinity, which in practice means depth of @a path.
  *
+ * Iff @a honor_depth_exclude is TRUE, the crawler will report the excluded
+ * path and thus prevent the server from pushing update on it. Don't set this
+ * flag if you wish to pull in excluded path. @c svn_depth_exclude flag on 
+ * the @a path will never be honored. This enable explicitly pull in target.
+ *
  * Iff @a depth_compatibility_trick is TRUE, then set the @c start_empty
  * flag on @a reporter->set_path() and @a reporter->link_path() calls
  * as necessary to trick a pre-1.5 (i.e., depth-unaware) server into
@@ -3274,7 +3279,28 @@ svn_wc_process_committed(const char *path,
  * state in it.  (Caller should obtain @a traversal_info from
  * svn_wc_init_traversal_info().)
  *
- * @since New in 1.5.
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_wc_crawl_revisions4(const char *path,
+                        svn_wc_adm_access_t *adm_access,
+                        const svn_ra_reporter3_t *reporter,
+                        void *report_baton,
+                        svn_boolean_t restore_files,
+                        svn_depth_t depth,
+                        svn_boolean_t honor_depth_exclude,
+                        svn_boolean_t depth_compatibility_trick,
+                        svn_boolean_t use_commit_times,
+                        svn_wc_notify_func2_t notify_func,
+                        void *notify_baton,
+                        svn_wc_traversal_info_t *traversal_info,
+                        apr_pool_t *pool);
+
+/**
+ * Similar to svn_wc_crawl_revisions4, but with @a honor_depth_exclude always
+ * set to false.
+ *
+ * @deprecated Provided for compatibility with the 1.5 API.
  */
 svn_error_t *
 svn_wc_crawl_revisions3(const char *path,

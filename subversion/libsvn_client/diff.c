@@ -1358,9 +1358,9 @@ diff_repos_wc(const char *path1,
 
   /* Create a txn mirror of path2;  the diff editor will print
      diffs in reverse.  :-)  */
-  SVN_ERR(svn_wc_crawl_revisions3(path2, dir_access,
+  SVN_ERR(svn_wc_crawl_revisions4(path2, dir_access,
                                   reporter, report_baton,
-                                  FALSE, depth, (! server_supports_depth),
+                                  FALSE, depth, TRUE, (! server_supports_depth),
                                   FALSE, NULL, NULL, /* notification is N/A */
                                   NULL, pool));
 

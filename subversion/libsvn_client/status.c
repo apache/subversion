@@ -358,9 +358,9 @@ svn_client_status3(svn_revnum_t *result_rev,
              within PATH.  When we call reporter->finish_report,
              EDITOR will be driven to describe differences between our
              working copy and HEAD. */
-          SVN_ERR(svn_wc_crawl_revisions3(path, target_access,
+          SVN_ERR(svn_wc_crawl_revisions4(path, target_access,
                                           &lock_fetch_reporter, &rb, FALSE,
-                                          depth, (! server_supports_depth),
+                                          depth, TRUE, (! server_supports_depth),
                                           FALSE, NULL, NULL, NULL, pool));
         }
     }
