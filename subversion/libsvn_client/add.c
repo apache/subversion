@@ -529,7 +529,6 @@ svn_client_add4(const char *path,
       SVN_ERR(add_parent_dirs(parent_dir, &adm_access, ctx, subpool));
       SVN_ERR(svn_wc_adm_close(adm_access));
       svn_pool_destroy(subpool);
-
     }
   else
     {
