@@ -26,6 +26,8 @@
 #include "svn_path.h"
 #include "entries.h"
 
+#include "svn_private_config.h"
+
 /* Evaluate EXPR.  If it returns an error, return that error, unless
    the error's code is SVN_ERR_WC_LEFT_LOCAL_MOD, in which case clear
    the error and do not return. */
@@ -163,7 +165,9 @@ crop_children(svn_wc_adm_access_t *adm_access,
         }
       else
         {
-          /* TODO(2843): What about svn_node_none & svn_node_unkown? */
+          return svn_error_createf
+            (SVN_ERR_NODE_UNKNOWN_KIND, NULL, _("Unknown entry kind for '%s'"),
+             svn_path_local_style(this_path, pool));
         }
 
       if (notify_func)
