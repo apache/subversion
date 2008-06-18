@@ -202,7 +202,7 @@ test2(const char **msg,
 }
 
 static svn_error_t *
-has_section_test(const char **msg,
+test_has_section(const char **msg,
                  svn_boolean_t msg_only,
                  svn_test_opts_t *opts,
                  apr_pool_t *pool)
@@ -243,6 +243,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_NULL,
     SVN_TEST_PASS(test1),
     SVN_TEST_PASS(test2),
-    SVN_TEST_PASS(has_section_test),
+    SVN_TEST_PASS(test_has_section),
     SVN_TEST_NULL
   };
