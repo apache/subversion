@@ -523,6 +523,14 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         self.svnmerge2(["init", self.test_repo_url + "/branches/test-branch"],
                        error=True, match=r"cannot init integration source")
 
+    def testAvailURL(self):
+        # Initialize svnmerge
+        self.svnmerge("init")
+        self.launch("svn commit -F svnmerge-commit-message.txt",
+                    match=r"Committed revision")
+
+        self.svnmerge("avail %s/branches/test-branch" % self.test_repo_url, match=r"\A9-10$")
+
     def testBlocked(self):
 
         # Initialize svnmerge
