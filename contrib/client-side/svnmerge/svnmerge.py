@@ -2085,7 +2085,23 @@ def main(args):
 
     # Validate branch_dir
     if not is_wc(branch_dir):
-        error('"%s" is not a subversion working directory' % branch_dir)
+        if str(cmd) == "avail":
+            info = None
+            # it should be noted here that svn info does not error exit
+            # if an invalid target is specified to it (as is
+            # intuitive). so the try, except code is not absolutely
+            # necessary. but, I retain it to indicate the intuitive
+            # handling.
+            try:
+                info = get_svninfo(branch_dir)
+            except LaunchError:
+                pass
+            # test that we definitely targeted a subversion directory,
+            # mirroring the purpose of the earlier is_wc() call
+            if info is None or not info.has_key("Node Kind") or info["Node Kind"] != "directory":
+                error('"%s" is neither a valid URL, nor a working directory' % branch_dir)
+        else:
+            error('"%s" is not a subversion working directory' % branch_dir)
 
     # Extract the integration info for the branch_dir
     branch_props = get_merge_props(branch_dir)
