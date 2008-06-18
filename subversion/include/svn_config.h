@@ -370,8 +370,8 @@ const char *svn_config_find_group(svn_config_t *cfg, const char *key,
                                   const char *master_section,
                                   apr_pool_t *pool);
 
-/** Retrieve value corresponding to @a option_name in @a cfg ,
- *  or return @a default_value if none is found.
+/** Retrieve value corresponding to @a option_name in @a cfg, or
+ *  return @a default_value if none is found.
  *
  *  The config will first be checked for a default.
  *  If @a server_group is not @c NULL, the config will also be checked
