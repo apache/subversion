@@ -2120,7 +2120,7 @@ def main(args):
             # within the branch properties.
             found = []
             for pathid in branch_props.keys():
-                if pathid.find(source) > 0:
+                if pathid.find(source) >= 0:
                     found.append(pathid)
             if len(found) == 1:
                 # (assumes pathid is a repository-relative-path)
