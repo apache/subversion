@@ -12,6 +12,7 @@ http://svn.collab.net/repos/svn/tags/1.6.0
   - Server-side bugfixes:
 
   - Contributed tools improvements and bugfixes:
+    * commit-email.pl: Deprecated; use mailer.py instead (r31755,r31767)
 
  Developer-visible changes:
  * General:
