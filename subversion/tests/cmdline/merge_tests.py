@@ -11405,8 +11405,6 @@ def set_up_renamed_subtree(sbox):
 #----------------------------------------------------------------------
 # Test for issue #3174: 'Merge algorithm chokes on subtrees needing
 # special attention that have been renamed'
-#
-# Set as XFail until that issue is resolved.
 def merge_chokes_on_renamed_subtrees(sbox):
   "merge fails with renamed subtrees with mergeinfo"
 
@@ -12670,8 +12668,8 @@ test_list = [ None,
                          server_has_mergeinfo),
               XFail(SkipUnless(dont_merge_revs_into_subtree_that_predate_it,
                                server_has_mergeinfo)),
-              XFail(SkipUnless(merge_chokes_on_renamed_subtrees,
-                               server_has_mergeinfo)),
+              SkipUnless(merge_chokes_on_renamed_subtrees,
+                         server_has_mergeinfo),
               SkipUnless(dont_explicitly_record_implicit_mergeinfo,
                          server_has_mergeinfo),
               SkipUnless(merge_broken_link, svntest.main.is_posix_os),
