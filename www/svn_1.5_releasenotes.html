@@ -977,8 +977,7 @@ the target directory.</p>
 
 <p>See The <a
 href="http://svnbook.red-bean.com/nightly/en/svn.advanced.externals.html"
->svn:externals</a> section of the Subversion Book.  (XXX TODO: which
-needs to be updated to cover the new features!)</p>
+>svn:externals</a> section of the Subversion Book.</p>
 
 </div>  <!-- externals-further-reading -->
 
@@ -1153,14 +1152,16 @@ without ever having to relay them to the master backend.</p>
 <p>The master MUST have a post-commit hook that updates all of the slaves.  An
 example that does this using <code>svnadmin dump</code>/<code>svnadmin
 load</code> and ssh is provided below.  <tt>svnsync</tt> can probably do the
-same thing (XXX: we should probably answer this question more confidently).</p>
+same thing.</p>
 
-<p>Additionally, if locks are permitted on the master repository, lock databases
-need to kept in sync via post-lock and post-unlock hooks on the master pushing
-the lock state to the slaves.  (Username preservation is left as an exercise to
-the reader.)(XXX: Same as above.)  If the lock database is not propogated, users 
-will not be able to accurately determine whether a lock is held - but locking
-will still work.</p>
+<p>Additionally, if locks are permitted on the master repository, lock
+databases need to kept in sync via post-lock and post-unlock hooks on
+the master pushing the lock state to the slaves.  (Username
+preservation is left as an exercise to the reader.  Translation: <a
+href="hacking.html#patches">patches to these notes are most
+welcome</a>.)  If the lock database is not propogated, users will not
+be able to accurately determine whether a lock is
+held&nbsp;&mdash;&nbsp;but locking will still work.</p>
 
 <p>A sample synchronization script may look like this:</p>
 <pre><code>
