@@ -126,17 +126,6 @@ Approved changes:
    Votes:
      +1: pburba, markphip, cmpilato
 
- * r30915
-   Fix issue #2887. 'svn status --xml' was generating invalid XML
-   when reporting the status of a file which resides in an untracked
-   directory.
-   Notes:
-     Fixed a while back in trunk. The problem was brought up again
-     later by a user on the dev list:
-     http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=139158
-   Votes:
-     +1: stsp, danielsh, arfrever
-
  * r31692, r31695
    Fix issue #2939 over ra_neon/serf:  bogus existence check.
    Votes:
