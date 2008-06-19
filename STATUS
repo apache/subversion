@@ -79,5 +79,18 @@ Candidate changes for 1.5.1:
    Votes:
      +1: cmpilato
 
+ * r30632, r30749, r31757, r31769, r31817
+   Fix issue #3174, 'Merge algorithm chokes on subtrees needing special
+   attention that have been renamed'
+   Justification:
+     File merges that encounter this problem break, the fix is fairly simple,
+     and directory merges already have the equivalent fix in 1.5.0.
+   Notes:
+     r31817 is the core fix for the issue, the other revision relate to
+     a new test and some subsequent tweaks for to it.  r30749 conflicts
+     trivally in the merge_tests.py test list.
+   Votes:
+     +1: pburba
+
 Approved changes:
 =================
