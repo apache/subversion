@@ -1582,22 +1582,30 @@ txn_body_pred_id(void *baton, trail_t *trail)
 }
 
 
-/* Deltify ID's predecessor iff ID is mutable under TXN_ID in FS.  If
-   ID is a mutable directory, recurse.  Do this as part of TRAIL. */
+/* Deltify PATH in ROOT's predecessor iff PATH is mutable under TXN_ID
+   in FS.  If PATH is a mutable directory, recurse.
+
+   NODE_ID is the node revision ID for PATH in ROOT, or NULL if that
+   value isn't known.  KIND is the node kind for PATH in ROOT, or
+   svn_node_unknown is the kind isn't known.
+
+   Use POOL for necessary allocations.  */
 static svn_error_t *
 deltify_mutable(svn_fs_t *fs,
                 svn_fs_root_t *root,
                 const char *path,
+                const svn_fs_id_t *node_id,
+                svn_node_kind_t kind,
                 const char *txn_id,
                 apr_pool_t *pool)
 {
-  const svn_fs_id_t *id;
+  const svn_fs_id_t *id = node_id;
   apr_hash_t *entries = NULL;
-  svn_node_kind_t kind;
   struct txn_deltify_args td_args;
 
-  /* Get the ID for PATH under ROOT. */
-  SVN_ERR(base_node_id(&id, root, path, pool));
+  /* Get the ID for PATH under ROOT if it wasn't provided. */
+  if (! node_id)
+    SVN_ERR(base_node_id(&id, root, path, pool));
 
   /* Check for mutability.  Not mutable?  Go no further.  This is safe
      to do because for items in the tree to be mutable, their parent
@@ -1607,7 +1615,8 @@ deltify_mutable(svn_fs_t *fs,
     return SVN_NO_ERROR;
 
   /* Is this a directory?  */
-  SVN_ERR(base_check_path(&kind, root, path, pool));
+  if (kind == svn_node_unknown)
+    SVN_ERR(base_check_path(&kind, root, path, pool));
 
   /* If this is a directory, read its entries.  */
   if (kind == svn_node_dir)
@@ -1624,11 +1633,14 @@ deltify_mutable(svn_fs_t *fs,
           /* KEY will be the entry name, VAL the dirent (about
              which we really don't care) */
           const void *key;
+          void *val;
+          svn_fs_dirent_t *entry;
           svn_pool_clear(subpool);
-          apr_hash_this(hi, &key, NULL, NULL);
+          apr_hash_this(hi, &key, NULL, &val);
+          entry = val;
           SVN_ERR(deltify_mutable(fs, root,
                                   svn_path_join(path, key, subpool),
-                                  txn_id, subpool));
+                                  entry->id, entry->kind, txn_id, subpool));
         }
 
       svn_pool_destroy(subpool);
@@ -2686,7 +2698,7 @@ svn_fs_base__deltify(svn_fs_t *fs,
   args.revision = revision;
   SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_rev_get_txn_id, &args, pool));
 
-  return deltify_mutable(fs, root, "/", txn_id, pool);
+  return deltify_mutable(fs, root, "/", NULL, svn_node_unknown, txn_id, pool);
 }
 
 
