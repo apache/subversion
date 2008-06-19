@@ -151,13 +151,6 @@ Approved changes:
    Votes:
      +1: epg, blair
 
- * r31223
-   Fix segfault when svn_ra_open3 is passed a bogus URL such as 'bogusURL'.
-   Notes:
-     Not possible to make svn(1) segfault with this, so can wait for 1.5.1.
-   Votes:
-     +1: epg, stsp, danielsh
-
  * r31228
    Fix issue #2721: don't croak on invalid dates in 'log' and 'blame'.
    Justification:
