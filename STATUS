@@ -137,15 +137,6 @@ Approved changes:
    Votes:
      +1: stsp, danielsh, arfrever
 
- * r30949, r30962
-   Fix issue #3188.  Mergeinfo on switched targets/subtrees should elide
-   to repos.
-   Notes:
-     This was merged to branch in r31185 and later reverse-merged so that
-     it will be a 1.5.1 candidate and not part of 1.5.0
-   Votes:
-     +1: pburba, markphip, cmpilato
-
  * r31603
    Export svn_path_is_url to the bindings.
    Votes:
