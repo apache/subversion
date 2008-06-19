@@ -92,5 +92,11 @@ Candidate changes for 1.5.1:
    Votes:
      +1: pburba
 
+ * r31820
+   Performance improvements for BDB-backed repository post-commit
+   deltification.
+   Votes:
+     +1: cmpilato
+
 Approved changes:
 =================
