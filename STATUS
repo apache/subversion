@@ -79,11 +79,11 @@ Candidate changes for 1.5.1:
    Votes:
      +1: cmpilato
 
+Approved changes:
+=================
+
  * r31719, r31806
    JavaHL: Fix a potential ArrayIndexOutOfBoundsException in
    the singleStatus() method.
    Votes:
-     +1: markphip (r31719 only), blair, dlr
-
-Approved changes:
-=================
+     +1: markphip, blair, dlr
