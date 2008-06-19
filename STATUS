@@ -151,13 +151,6 @@ Approved changes:
    Votes:
      +1: epg, blair
 
- * r31228
-   Fix issue #2721: don't croak on invalid dates in 'log' and 'blame'.
-   Justification:
-     Let the commands be useful even when some revisions' dates are corrupt.
-   Votes:
-     +1: danielsh, epg, arfrever
-
  * r31692, r31695
    Fix issue #2939 over ra_neon/serf:  bogus existence check.
    Votes:
