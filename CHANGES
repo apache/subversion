@@ -17,11 +17,16 @@ http://svn.collab.net/repos/svn/tags/1.6.0
  Developer-visible changes:
  * General:
  * API changes:
- * Bindings:
+ * Bindings
+
+
+Version 1.5.1
+(?? ??? 2008, from /branches/1.5.x)
+http://svn.collab.net/repos/svn/tags/1.5.1
 
 
 Version 1.5.0
-(17 Jun 2008, from /branches/1.5.x)
+(19 Jun 2008, from /branches/1.5.x)
 http://svn.collab.net/repos/svn/tags/1.5.0
 
  User-visible changes:
