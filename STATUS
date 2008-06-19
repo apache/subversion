@@ -87,8 +87,3 @@ Candidate changes for 1.5.1:
 
 Approved changes:
 =================
-
- * r31727
-   svnmerge.py: Add support for --config-dir.
-   Votes:
-     +1: blair, dlr

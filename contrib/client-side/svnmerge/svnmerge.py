@@ -303,17 +303,15 @@ except ImportError:
 
 def launchsvn(s, show=False, pretend=False, **kwargs):
     """Launch SVN and grab its output."""
-    username = opts.get("username", None)
-    password = opts.get("password", None)
-    if username:
-        username = " --username=" + username
-    else:
-        username = ""
-    if password:
-        password = " --password=" + password
-    else:
-        password = ""
-    cmd = opts["svn"] + " --non-interactive" + username + password + " " + s
+    username = password = configdir = ""
+    if opts.get("username", None):
+        username = "--username=" + opts["username"]
+    if opts.get("password", None):
+        password = "--password=" + opts["password"]
+    if opts.get("config-dir", None):
+        configdir = "--config-dir=" + opts["config-dir"]
+    cmd = ' '.join(filter(None, [opts["svn"], "--non-interactive",
+                                 username, password, configdir, s]))
     if show or opts["verbose"] >= 2:
         print cmd
     if pretend:
@@ -1868,6 +1866,9 @@ global_opts = [
     OptionArg("-p", "--password",
               default=None,
               help="invoke subversion commands with the supplied password"),
+    OptionArg("-c", "--config-dir", metavar="DIR",
+              default=None,
+              help="cause subversion commands to consult runtime config directory DIR"),
 ]
 
 common_opts = [
