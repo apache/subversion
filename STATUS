@@ -88,12 +88,6 @@ Candidate changes for 1.5.1:
 Approved changes:
 =================
 
- * r31619
-   ra_serf: Fixes an endless loop when a user provides incorrect credentials
-   3 times and a segfault when a user cancels the TSVN credentials prompt.
-   Votes:
-     +1: lgo, arfrever, dlr
-
  * r31727
    svnmerge.py: Add support for --config-dir.
    Votes:
