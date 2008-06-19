@@ -4069,6 +4069,9 @@ filter_natural_history_from_mergeinfo(apr_array_header_t **filtered_rangelist,
    merge source are historically related (ancestors, uncles, second
    cousins thrice removed, etc...).  (This is used to simulate the
    history checks that the repository logic does in the directory case.)
+
+   Note: MERGE_B->RA_SESSION1 must be associated with URL1 and
+   MERGE_B->RA_SESSION2 with URL2.
 */
 static svn_error_t *
 do_file_merge(const char *url1,
@@ -4195,6 +4198,7 @@ do_file_merge(const char *url1,
           svn_wc_notify_t *n;
           svn_boolean_t header_sent = FALSE;
           svn_error_t *err = SVN_NO_ERROR;
+          svn_ra_session_t *ra_session1, *ra_session2;
 
           /* When using this merge range, account for the exclusivity of
              its low value (which is indicated by this operation being a
@@ -4212,12 +4216,31 @@ do_file_merge(const char *url1,
           if (merge_b->sources_ancestral)
             n->merge_range = r;
 
+          /* Issue #3174: If we are honoring mergeinfo, then URL1, URL2,
+             REVISION1, and REVISION2 meet the conditions described in
+             'MERGEINFO MERGE SOURCE NORMALIZATION'.  This means that
+             URL1@REVISION1 may be the copy source of URL2@REVISION2.
+             If this is the case, then URL1 != URL2.  Since
+             MERGE_B->RA_SESSION1 is always opened with URL1, the only time
+             we can safely call single_file_merge_get_file() with that RA
+             session is for REVISION1 (or REVISION2 if this is a reverse
+             merge). */
+          ra_session1 = merge_b->ra_session1;
+          ra_session2 = merge_b->ra_session2;
+          if (honor_mergeinfo && strcmp(url1, url2) != 0)
+            {
+              if (!is_rollback && r->start != revision1)
+                ra_session1 = ra_session2; /* Use URL2's RA session. */
+              else if (is_rollback && r->end != revision2)
+                ra_session2 = ra_session1; /* Use URL1's RA session. */
+            }
+ 
           /* While we currently don't allow it, in theory we could be
              fetching two fulltexts from two different repositories here. */
-          SVN_ERR(single_file_merge_get_file(&tmpfile1, merge_b->ra_session1,
+          SVN_ERR(single_file_merge_get_file(&tmpfile1, ra_session1,
                                              &props1, r->start, target_wcpath,
                                              subpool));
-          SVN_ERR(single_file_merge_get_file(&tmpfile2, merge_b->ra_session2,
+          SVN_ERR(single_file_merge_get_file(&tmpfile2, ra_session2,
                                              &props2, r->end, target_wcpath,
                                              subpool));
 
