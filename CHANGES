@@ -31,6 +31,9 @@ http://svn.collab.net/repos/svn/tags/1.5.1
   * fixed: 'svn merge' range notification bug (r30746, -47)
   * fixed: can not replace branch with neon/serf (issue #2939)
   * fixed: 'file not found' error when merging to a broken symlink (r31159, -79)
+  * fix a crash and endless loop for credentials in ra_serf (r31619)
+  * Add support for --config-dir to svnmerge.py (r31727)
+  * fixed: ArrayIndexOutOfBoundsException in JavaHL bindings (r31719, -806)
 
  Developer-visible changes:
   * fixed: crash when when svn_ra_open3() is passed a bogus URL (r31223)
