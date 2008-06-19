@@ -1,3 +1,24 @@
+Version 1.6.0
+(?? ??? 2008, from /branches/1.6.x)
+http://svn.collab.net/repos/svn/tags/1.6.0
+
+ User-visible changes:
+  - Major new features:
+
+  - Minor new features and improvements:
+
+  - Client-side bugfixes:
+
+  - Server-side bugfixes:
+
+  - Contributed tools improvements and bugfixes:
+
+ Developer-visible changes:
+ * General:
+ * API changes:
+ * Bindings:
+
+
 Version 1.5.0
 (17 Jun 2008, from /branches/1.5.x)
 http://svn.collab.net/repos/svn/tags/1.5.0
