@@ -55,7 +55,7 @@ Candidate changes for 1.5.1:
  * r31300, r31301, r31312
    Fix issue #3199, subtree merges broken when required ranges don't
    intersect with merge target.
-   Justificatiaon:
+   Justification:
      A bit of an edge case, but when it is encountered merge silently
      fails to do the correct merge but sets mergeinfo as if it did.
    Notes:
