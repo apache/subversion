@@ -137,11 +137,6 @@ Approved changes:
    Votes:
      +1: stsp, danielsh, arfrever
 
- * r31603
-   Export svn_path_is_url to the bindings.
-   Votes:
-     +1: epg, blair
-
  * r31692, r31695
    Fix issue #2939 over ra_neon/serf:  bogus existence check.
    Votes:
