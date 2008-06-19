@@ -5,9 +5,6 @@ details on how release lines and voting work, what kinds of bugs can
 delay a release, etc.
 
 
-Candidate changes for 1.5.0:
-============================
-
 Candidate changes for 1.5.1:
 ============================
 
@@ -99,11 +96,8 @@ Candidate changes for 1.5.1:
    Votes:
      +1: blair
 
-Approved changes (all releases):
-================================
-
-Approved changes (1.5.1 and later):
-===================================
+Approved changes:
+=================
 
  * (r31159, r31179) or r31193 from 1.5.x-r31159-r31179 branch.
    Fix "file not found" error when a merge target is a broken symbolic link.
