@@ -70,7 +70,8 @@ public interface SVNClientInterface
      *
      * @param path      File to gather status.
      * @param onServer  Request status information from the server.
-     * @return  the subversion status of the file.
+     * @return The Subversion status of the file, or <code>null</code>
+     * if no status is available.
      * @deprecated Use {@link #status(String, int, boolean, boolean,
      *                                boolean, boolean, StatusCallback)}
      *             instead.

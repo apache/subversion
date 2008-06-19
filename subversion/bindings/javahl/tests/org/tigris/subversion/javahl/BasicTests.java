@@ -176,6 +176,14 @@ public class BasicTests extends SVNTests
 
         // check the status of the working copy
         thisTest.checkStatus();
+
+        // Test status of non-existent file
+        File fileC = new File(thisTest.getWorkingCopy() + "/A", "foo.c");
+
+        Status s = client.singleStatus(fileToSVNPath(fileC, false), false);
+        if (s != null)
+            fail("File foo.c should not return a status.");
+
     }
 
     /**
