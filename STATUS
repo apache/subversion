@@ -111,21 +111,6 @@ Approved changes:
    Votes:
      +1: kfogel(r31159, r31179), kameshj, cmpilato (r31159, r31179)
 
- * r30746, r30747
-   Fix a minor merge range notification header bug.
-   Notes:
-     r30747 is just cleanup of some cruft that snuck in with r30746,
-     thus adhering to my "every commit should need a follow-up" ethos.
-     r30746 contains, like, one tiny *real* change, then a whole bunch
-     of bogus indentation changes that were supposed to be part of
-     r30748.  Probably best to not fix that indentation during
-     backport, in case we later backport r30748.
-   Notes:
-     This was merged to branch in r31186 and later reverse-merged so that
-     it will be a 1.5.1 candidate and not part of 1.5.0
-   Votes:
-     +1: pburba, markphip, cmpilato
-
  * r31692, r31695
    Fix issue #2939 over ra_neon/serf:  bogus existence check.
    Votes:
