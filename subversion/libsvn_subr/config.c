@@ -608,32 +608,57 @@ svn_config_set(svn_config_t *cfg,
 
 
 
+/* Set *BOOLP to true or false depending (case-insensitively) on INPUT.
+   If INPUT is null, set *BOOLP to DEFAULT_VALUE.
+
+   INPUT is a string indicating truth or falsehood in any of the usual
+   ways: "true"/"yes"/"on"/etc, "false"/"no"/"off"/etc.
+
+   If INPUT is neither NULL nor a recognized string, return an error
+   with code SVN_ERR_BAD_CONFIG_VALUE; use SECTION and OPTION in
+   constructing the error string. */
+static svn_error_t *
+get_bool(svn_boolean_t *boolp, const char *input, svn_boolean_t default_value,
+         const char *section, const char *option)
+{
+  if (input == NULL)
+    {
+      *boolp = default_value;
+    }
+  else if (0 == svn_cstring_casecmp(input, SVN_CONFIG_TRUE)
+           || 0 == svn_cstring_casecmp(input, "yes")
+           || 0 == svn_cstring_casecmp(input, "on")
+           || 0 == strcmp(input, "1"))
+    {
+      *boolp = TRUE;
+    }
+  else if (0 == svn_cstring_casecmp(input, SVN_CONFIG_FALSE)
+           || 0 == svn_cstring_casecmp(input, "no")
+           || 0 == svn_cstring_casecmp(input, "off")
+           || 0 == strcmp(input, "0"))
+    {
+      *boolp = FALSE;
+    }
+  else
+    {
+      return svn_error_createf(SVN_ERR_BAD_CONFIG_VALUE, NULL,
+                               _("Config error: invalid boolean value '%s' "
+                                 "in '[%s] %s'"),
+                               input, section, option);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_config_get_bool(svn_config_t *cfg, svn_boolean_t *valuep,
                     const char *section, const char *option,
                     svn_boolean_t default_value)
 {
   const char *tmp_value;
-
   svn_config_get(cfg, &tmp_value, section, option, NULL);
-  if (tmp_value == NULL)
-    *valuep = default_value;
-  else if (0 == svn_cstring_casecmp(tmp_value, SVN_CONFIG_TRUE)
-           || 0 == svn_cstring_casecmp(tmp_value, "yes")
-           || 0 == svn_cstring_casecmp(tmp_value, "on")
-           || 0 == strcmp(tmp_value, "1"))
-    *valuep = TRUE;
-  else if (0 == svn_cstring_casecmp(tmp_value, SVN_CONFIG_FALSE)
-           || 0 == svn_cstring_casecmp(tmp_value, "no")
-           || 0 == svn_cstring_casecmp(tmp_value, "off")
-           || 0 == strcmp(tmp_value, "0"))
-    *valuep = FALSE;
-  else
-    return svn_error_createf(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
-                             _("Config error: invalid boolean value '%s'"),
-                             tmp_value);
-
-  return SVN_NO_ERROR;
+  return get_bool(valuep, tmp_value, default_value, section, option);
 }
 
 
@@ -655,25 +680,23 @@ svn_config_get_yes_no_ask(svn_config_t *cfg, const char **valuep,
   const char *tmp_value;
 
   svn_config_get(cfg, &tmp_value, section, option, NULL);
-  if (tmp_value == NULL)
-    *valuep = default_value;
-  else if (0 == svn_cstring_casecmp(tmp_value, SVN_CONFIG_TRUE)
-           || 0 == svn_cstring_casecmp(tmp_value, "yes")
-           || 0 == svn_cstring_casecmp(tmp_value, "on")
-           || 0 == strcmp(tmp_value, "1"))
-    *valuep = SVN_CONFIG_TRUE;
-  else if (0 == svn_cstring_casecmp(tmp_value, SVN_CONFIG_FALSE)
-           || 0 == svn_cstring_casecmp(tmp_value, "no")
-           || 0 == svn_cstring_casecmp(tmp_value, "off")
-           || 0 == strcmp(tmp_value, "0"))
-    *valuep = SVN_CONFIG_FALSE;
-  else if (0 == svn_cstring_casecmp(tmp_value, SVN_CONFIG_ASK))
-    *valuep = SVN_CONFIG_ASK;
+
+  if (! tmp_value)
+    tmp_value = default_value;
+
+  if (tmp_value && (0 == svn_cstring_casecmp(tmp_value, SVN_CONFIG_ASK)))
+    {
+      *valuep = SVN_CONFIG_ASK;
+    }
   else
-    return svn_error_createf
-      (SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
-       _("Config error: invalid value '%s' for option '%s'"),
-       tmp_value, option);
+    {
+      svn_boolean_t bool_val;
+      /* We already incorporated default_value into tmp_value if
+         necessary, so the FALSE below will be ignored unless the
+         caller is doing something it shouldn't be doing. */
+      SVN_ERR(get_bool(&bool_val, tmp_value, FALSE, section, option));
+      *valuep = bool_val ? SVN_CONFIG_TRUE : SVN_CONFIG_FALSE;
+    }
 
   return SVN_NO_ERROR;
 }
@@ -909,7 +932,7 @@ svn_config_get_server_setting_int(svn_config_t *cfg,
       if (*end_pos != 0)
         {
           return svn_error_createf
-            (SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
+            (SVN_ERR_BAD_CONFIG_VALUE, NULL,
              _("Config error: invalid integer value '%s'"),
              tmp_value);
         }
@@ -917,6 +940,21 @@ svn_config_get_server_setting_int(svn_config_t *cfg,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_config_get_server_setting_bool(svn_config_t *cfg,
+                                   svn_boolean_t *valuep,
+                                   const char *server_group,
+                                   const char *option_name,
+                                   svn_boolean_t default_value)
+{
+  const char* tmp_value;
+  tmp_value = svn_config_get_server_setting(cfg, server_group,
+                                            option_name, NULL);
+  return get_bool(valuep, tmp_value, default_value,
+                  server_group, option_name);
+}
+
 
 svn_boolean_t
 svn_config_has_section(svn_config_t *cfg, const char *section)

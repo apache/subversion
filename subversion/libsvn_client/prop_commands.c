@@ -390,13 +390,13 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
       apr_hash_t *changelist_hash = NULL;
 
       if (changelists && changelists->nelts)
-        SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, 
+        SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash,
                                            changelists, pool));
-      
+
       SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target, TRUE,
                                      adm_lock_level, ctx->cancel_func,
                                      ctx->cancel_baton, pool));
-      SVN_ERR(svn_wc__entry_versioned(&entry, target, adm_access, 
+      SVN_ERR(svn_wc__entry_versioned(&entry, target, adm_access,
                                       FALSE, pool));
 
       if (depth >= svn_depth_files && entry->kind == svn_node_dir)
@@ -412,8 +412,8 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
           wb.changelist_hash = changelist_hash;
           wb.notify_func = ctx->notify_func2;
           wb.notify_baton = ctx->notify_baton2;
-          SVN_ERR(svn_wc_walk_entries3(target, adm_access, &walk_callbacks, 
-                                       &wb, depth, FALSE, ctx->cancel_func, 
+          SVN_ERR(svn_wc_walk_entries3(target, adm_access, &walk_callbacks,
+                                       &wb, depth, FALSE, ctx->cancel_func,
                                        ctx->cancel_baton, pool));
         }
       else if (SVN_WC__CL_MATCH(changelist_hash, entry))
@@ -808,15 +808,15 @@ wc_walker_error_handler(const char *path,
 }
 
 svn_error_t *
-svn_client__get_prop_from_wc(apr_hash_t *props, 
+svn_client__get_prop_from_wc(apr_hash_t *props,
                              const char *propname,
-                             const char *target, 
+                             const char *target,
                              svn_boolean_t pristine,
                              const svn_wc_entry_t *entry,
                              svn_wc_adm_access_t *adm_access,
-                             svn_depth_t depth, 
+                             svn_depth_t depth,
                              const apr_array_header_t *changelists,
-                             svn_client_ctx_t *ctx, 
+                             svn_client_ctx_t *ctx,
                              apr_pool_t *pool)
 {
   apr_hash_t *changelist_hash = NULL;
@@ -895,7 +895,7 @@ svn_client_propget3(apr_hash_t **props,
                                      FALSE, adm_lock_level,
                                      ctx->cancel_func, ctx->cancel_baton,
                                      pool));
-      SVN_ERR(svn_wc__entry_versioned(&node, path_or_url, adm_access, 
+      SVN_ERR(svn_wc__entry_versioned(&node, path_or_url, adm_access,
                                       FALSE, pool));
 
       SVN_ERR(svn_client__get_revision_number
@@ -905,8 +905,8 @@ svn_client_propget3(apr_hash_t **props,
       pristine = (revision->kind == svn_opt_revision_committed
                   || revision->kind == svn_opt_revision_base);
 
-      SVN_ERR(svn_client__get_prop_from_wc(*props, propname, path_or_url, 
-                                           pristine, node, adm_access, 
+      SVN_ERR(svn_client__get_prop_from_wc(*props, propname, path_or_url,
+                                           pristine, node, adm_access,
                                            depth, changelists, ctx, pool));
 
       SVN_ERR(svn_wc_adm_close(adm_access));
@@ -1243,7 +1243,7 @@ svn_client_proplist3(const char *path_or_url,
                                      FALSE, levels_to_lock,
                                      ctx->cancel_func, ctx->cancel_baton,
                                      pool));
-      SVN_ERR(svn_wc__entry_versioned(&entry, path_or_url, adm_access, 
+      SVN_ERR(svn_wc__entry_versioned(&entry, path_or_url, adm_access,
                                       FALSE, pool));
 
       if ((revision->kind == svn_opt_revision_committed)
@@ -1257,7 +1257,7 @@ svn_client_proplist3(const char *path_or_url,
         }
 
       if (changelists && changelists->nelts)
-        SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, 
+        SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash,
                                            changelists, pool));
 
       /* Fetch, recursively or not. */
@@ -1284,7 +1284,7 @@ svn_client_proplist3(const char *path_or_url,
 
           SVN_ERR(pristine_or_working_props(&hash, path_or_url, adm_access,
                                             pristine, pool));
-          SVN_ERR(call_receiver(path_or_url, hash, 
+          SVN_ERR(call_receiver(path_or_url, hash,
                                 receiver, receiver_baton, pool));
 
         }
@@ -1306,7 +1306,7 @@ svn_client_proplist3(const char *path_or_url,
 
       SVN_ERR(svn_ra_check_path(ra_session, "", revnum, &kind, pool));
 
-      SVN_ERR(remote_proplist(url, "", kind, revnum, ra_session, depth, 
+      SVN_ERR(remote_proplist(url, "", kind, revnum, ra_session, depth,
                               receiver, receiver_baton, pool, subpool));
       svn_pool_destroy(subpool);
     }

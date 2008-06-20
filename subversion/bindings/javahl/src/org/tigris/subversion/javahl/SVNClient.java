@@ -115,6 +115,9 @@ public class SVNClient implements SVNClientInterface
     public Status singleStatus(String path, boolean onServer)
             throws ClientException
     {
+        Status[] statusArray = status(path, false, onServer, true, false, false);
+        if (statusArray == null || statusArray.length == 0)
+            return null;
         return status(path, false, onServer, true, false, false)[0];
     }
 

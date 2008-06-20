@@ -65,7 +65,7 @@ typedef struct svn_client__merge_path_t
 /* Find explicit or inherited WC mergeinfo for WCPATH, and return it
    in *MERGEINFO (NULL if no mergeinfo is set).  Set *INHERITED to
    whether the mergeinfo was inherited (TRUE or FALSE).
-   
+
    This function will search for inherited mergeinfo in the parents of
    WCPATH only if the working revision of WCPATH falls within the range
    of the parent's last committed revision to the parent's working

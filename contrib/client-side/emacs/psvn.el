@@ -4017,7 +4017,7 @@ When called with a negative prefix argument, only update the selected files."
       (message "Running svn-update for %s" default-directory)
       (svn-run t t 'update "update"
                (when rev (list "-r" rev))
-               (list "--non-interactive")))))
+               (list "--non-interactive") default-directory))))
 
 (defun svn-status-commit ()
   "Commit selected files.

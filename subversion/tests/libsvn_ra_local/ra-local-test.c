@@ -286,7 +286,7 @@ split_url_host(const char **msg,
    FS, plus additional cruft (IN_REPOS_PATH) that theoretically refers to a
    versioned resource in that repository.  Finally, it runs this URL
    through svn_ra_local__split_URL to verify that it accurately
-   separates the filesystem path and the repository path cruft. 
+   separates the filesystem path and the repository path cruft.
 
    If IN_REPOS_PATH is NULL, we'll split the root URL and verify our
    parts that way (noting that that in-repos-path that results should
@@ -326,7 +326,7 @@ check_split_url(const char *repos_path,
     (SVN_ERR_TEST_FAILED, NULL,
      "svn_ra_local__split_URL failed to properly split the URL\n"
      "%s\n%s\n%s\n%s",
-     repos_part, root_url, in_repos_part, 
+     repos_part, root_url, in_repos_part,
      in_repos_path ? in_repos_path : "(null)");
 }
 

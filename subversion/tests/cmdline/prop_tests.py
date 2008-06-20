@@ -1566,7 +1566,7 @@ def props_over_time(sbox):
   # Convenience variables
   iota_path = os.path.join(wc_dir, 'iota')
   iota_url = sbox.repo_url + '/iota'
-    
+
   # Add/tweak a property 'revision' with value revision-committed to a
   # file, commit, and then repeat this a few times.
   for rev in range(2, 4):
@@ -1576,7 +1576,7 @@ def props_over_time(sbox):
   # Backdate to r2 so the defaults for URL- vs. WC-style queries are
   # different.
   svntest.main.run_svn(None, 'up', '-r2', wc_dir)
-  
+
   # Now, test propget of the property across many combinations of
   # pegrevs, operative revs, and wc-path vs. url style input specs.
   # NOTE: We're using 0 in these loops to mean "unspecified".
@@ -1641,7 +1641,7 @@ def invalid_propvalues(sbox):
   repo_url = sbox.repo_url
 
   svntest.actions.enable_revprop_changes(repo_dir)
-  
+
   expected_stderr = '.*unexpected property value.*|.*Bogus date.*'
   svntest.actions.run_and_verify_svn(None, [], expected_stderr,
                                      'propset', '--revprop', '-r', '0',

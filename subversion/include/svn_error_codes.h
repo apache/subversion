@@ -171,10 +171,6 @@ SVN_ERROR_START
              SVN_ERR_BAD_CATEGORY_START + 4,
              "Bogus mime-type")
 
-  SVN_ERRDEF(SVN_ERR_BAD_SERVER_SPECIFICATION,
-             SVN_ERR_BAD_CATEGORY_START + 5,
-             "Bogus server specification")
-
   /** @since New in 1.5.
    *
    * Note that there was an unused slot sitting here at
@@ -196,6 +192,15 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_BAD_UUID,
              SVN_ERR_BAD_CATEGORY_START + 8,
              "Bogus UUID")
+
+  /** @since New in 1.6. */
+  SVN_ERRDEF(SVN_ERR_BAD_CONFIG_VALUE,
+             SVN_ERR_BAD_CATEGORY_START + 9,
+             "Invalid configuration value")
+
+  SVN_ERRDEF(SVN_ERR_BAD_SERVER_SPECIFICATION,
+             SVN_ERR_BAD_CATEGORY_START + 10,
+             "Bogus server specification")
 
   /* xml errors */
 
@@ -774,6 +779,9 @@ SVN_ERROR_START
              SVN_ERR_RA_DAV_CATEGORY_START + 5,
              "RA layer file already exists")
 
+  /** @deprecated To improve consistency between ra layers, this error code
+      is replaced by SVN_ERR_BAD_CONFIG_VALUE.
+      Slated for removal in the next major release. */
   SVN_ERRDEF(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE,
              SVN_ERR_RA_DAV_CATEGORY_START + 6,
              "Invalid configuration value")
@@ -1146,7 +1154,7 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_UNKNOWN_CHANGELIST,
              SVN_ERR_MISC_CATEGORY_START + 24,
              "Unknown changelist")
-  
+
   /** @since New in 1.5. */
   SVN_ERRDEF(SVN_ERR_RESERVED_FILENAME_SPECIFIED,
              SVN_ERR_MISC_CATEGORY_START + 25,

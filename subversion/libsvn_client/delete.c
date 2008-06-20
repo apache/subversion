@@ -308,7 +308,7 @@ svn_client_delete2(svn_commit_info_t **commit_info_p,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
-  return svn_client_delete3(commit_info_p, paths, force, FALSE, NULL, 
+  return svn_client_delete3(commit_info_p, paths, force, FALSE, NULL,
                             ctx, pool);
 }
 

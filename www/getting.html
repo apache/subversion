@@ -18,7 +18,7 @@
 <h1 style="text-align: center;">Getting Subversion</h1>
 
 <p>The best available version of Subversion is:&nbsp;<a
-href="svn_1.4_releasenotes.html">1.4.6</a></p>
+href="svn_1.5_releasenotes.html">1.5.0</a></p>
 
 <p>You can install Subversion by compiling its <a
 href="#source-release">source code release</a> directly, or you can
@@ -91,16 +91,22 @@ fast as they can to make binaries available.</b></p>
       <td style="text-align: center;"><strong>AIX</strong><br/>
         <img alt="logo" src="images/aix.png"/>
       </td>
-      <td><a
+      
+      <td>
+      <div id="aix" title="aix">
+        <a
         href="http://downloads.open.collab.net/binaries.html">openCollabNet</a>
+      </div>  <!-- aix -->
       </td>
 
       <td style="text-align: center;"><strong>Debian</strong><br/>
         <img alt="logo" src="images/debian.png"/>
       </td>
-      <td><a
+      <td><div id="debian" title="debian">
+        <a
         href="http://packages.debian.org/subversion">Debian Project</a><br/>
           <tt>apt-get install subversion</tt>
+      </div>  <!-- debian -->
       </td>
     </tr>
 
@@ -108,18 +114,24 @@ fast as they can to make binaries available.</b></p>
       <td style="text-align: center;"><strong>HP-UX</strong><br/>
         <img alt="logo" src="images/hp.png"/>
       </td>
-      <td><a
+      <td>
+      <div id="hpux" title="hpux">
+        <a
         href="http://hpux.connect.org.uk/hppd/cgi-bin/search?term=subversion.">
         HP Porting Centre</a>
+      </div>  <!-- hpux -->
       </td>
 
       <td style="text-align: center;"><strong>Fedora</strong><br/>
         <img alt="logo" src="images/fedora.png"/>
       </td>
-      <td><a
+      <td>
+      <div id="fedora" title="fedora">
+        <a
         href="https://admin.fedoraproject.org/pkgdb/packages/name/subversion">
         Fedora Project</a><br/>
           <tt>yum install subversion</tt>
+      </div>  <!-- fedora -->
       </td>
     </tr>
 
@@ -127,7 +139,9 @@ fast as they can to make binaries available.</b></p>
       <td style="text-align: center;"><strong>Mac OS X</strong><br/>
         <img alt="logo" src="images/mac.png"/>
       </td>
-      <td><a
+      <td>
+      <div id="osx" title="osx">
+        <a
         href="http://pdb.finkproject.org/pdb/package.php/svn">Fink package</a>
         (Requires Fink)<br/>
         <a
@@ -135,16 +149,20 @@ fast as they can to make binaries available.</b></p>
         MacPorts</a> (Requires MacPorts)<br/>
         <a href="http://downloads.open.collab.net/binaries.html">openCollabNet
         </a> (Universal)
+      </div>  <!-- osx -->
       </td>
 
       <td style="text-align: center;"><strong>FreeBSD</strong><br/>
         <img alt="logo" src="images/freebsd.png"/>
       </td>
-      <td><a
+      <td>
+      <div id="freebsd" title="freebsd">
+        <a
         href="http://www.freebsd.org/cgi/cvsweb.cgi/ports/devel/subversion">
         FreeBSD Project</a><br/>
         <tt>cd /usr/ports/devel/subversion;<br/>
             make install</tt>
+      </div>  <!-- freebsd -->
       </td>
     </tr>
 
@@ -152,20 +170,26 @@ fast as they can to make binaries available.</b></p>
       <td style="text-align: center;"><strong>Red Hat</strong><br/>
         <img alt="logo" src="images/redhat.png"/>
       </td>
-      <td><a href="http://www.collab.net/downloads/subversion/redhat.html">
+      <td>
+      <div id="redhat" title="redhat">
+        <a href="http://www.collab.net/downloads/subversion/redhat.html">
         CollabNet</a> (Certified binaries)<br/>
         <a href="http://the.earth.li/pub/subversion/summersoft.fay.ar.us/pub/subversion/latest/">
         SummerSoft</a> (Red Hat 8,9 +)
+      </div>  <!-- redhat -->
       </td>
 
       <td style="text-align: center"><strong>NetBSD</strong><br/>
         <img alt="logo" src="images/netbsd.png"/>
       </td>
-      <td><a
+      <td>
+      <div id="netbsd" title="netbsd">
+        <a
         href="http://cvsweb.netbsd.org/bsdweb.cgi/pkgsrc/devel/subversion/">
         pkgsrc</a><br/>
           <tt>cd /usr/pkgsrc/devel/subversion;<br/>
               make install clean</tt>
+      </div>  <!-- netbsd -->
       </td>
     </tr>
 
@@ -173,39 +197,53 @@ fast as they can to make binaries available.</b></p>
       <td style="text-align: center;"><strong>Solaris</strong><br/>
         <img alt="logo" src="images/solaris.png"/>
       </td>
-      <td><a href="http://www.collab.net/downloads/subversion/solaris.html">
+      <td>
+      <div id="solaris" title="solaris">
+        <a href="http://www.collab.net/downloads/subversion/solaris.html">
         CollabNet</a> (Certified binaries, SPARC)<br/>
         <a href="http://www.sunfreeware.com/">Sunfreeware</a> (SPARC &amp; i386)
+      </div>  <!-- solaris -->
       </td>
 
       <td style="text-align: center;"><strong>OpenBSD</strong><br/>
         <img alt="logo" src="images/openbsd.png"/>
       </td>
-      <td><a
+      <td>
+      <div id="openbsd" title="openbsd">
+        <a
         href="http://www.openbsd.org/cgi-bin/cvsweb.cgi/ports/devel/subversion/">
         OpenBSD Project</a><br/>
         <tt>cd /usr/ports/devel/subversion;<br/>
-            make install</tt></td>
+            make install</tt>
+      </div>  <!-- openbsd -->
+      </td>
     </tr>
 
     <tr align="left" valign="top">
       <td style="text-align: center;"><strong>Windows</strong><br/>
         <img alt="logo" src="images/windows.png"/>
       </td>
-      <td><a
+      <td>
+      <div id="windows" title="windows">
+        <a
         href="http://www.collab.net/downloads/subversion/">
         CollabNet</a> (Certified binaries)<br/>
-        Tigris.org: <a href="http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=91">Apache 2.0</a> or <a href="http://subversion.tigris.org/servlets/ProjectDocumentList?">Apache 2.2</a><br/>
+        Tigris.org: <a href="http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=91">Apache 2.0</a> or <a href="http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=8100">Apache 2.2</a><br/>
         <a href="http://www.visualsvn.com/server">VisualSVN</a>
         (VisualSVN Server)
+      </div>  <!-- windows -->
       </td>
 
       <td style="text-align: center;"><strong>Ubuntu</strong><br/>
         <img alt="logo" src="images/ubuntu.png"/>
       </td>
-      <td><a href="http://packages.ubuntu.com/hardy/devel/subversion">Ubuntu
+      <td>
+      <div id="ubuntu" title="ubuntu">
+        <a href="http://packages.ubuntu.com/hardy/devel/subversion">Ubuntu
         Packages</a><br/>
-        <tt>apt-get install subversion</tt></td>
+        <tt>apt-get install subversion</tt>
+      </div>  <!-- ubuntu -->
+      </td>
     </tr>
   </table>
 
