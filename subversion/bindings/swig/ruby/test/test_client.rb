@@ -335,7 +335,7 @@ class SvnClientTest < Test::Unit::TestCase
     FileUtils.mkdir_p(tmp_deep_dir_path)
     File.open(tmp_path, "w") {|f| f.print(src)}
 
-    new_rev = ctx.import(@tmp_path, @repos_uri, true, false, 
+    new_rev = ctx.import(@tmp_path, @repos_uri, true, false,
                          {"custom-prop" => "some-value"}).revision
     assert_equal(["some-value", new_rev],
                  ctx.revprop_get("custom-prop", @repos_uri, new_rev))
@@ -1230,7 +1230,7 @@ class SvnClientTest < Test::Unit::TestCase
     paths = notifies.collect do |notify|
       notify.path
     end
-    assert_equal([path1, path2, path2].sort.collect{|p|File.expand_path(p)}, 
+    assert_equal([path1, path2, path2].sort.collect{|p|File.expand_path(p)},
                  paths.sort)
 
     deleted_paths = notifies.find_all do |notify|
@@ -1238,7 +1238,7 @@ class SvnClientTest < Test::Unit::TestCase
     end.collect do |notify|
       notify.path
     end
-    assert_equal([path1].sort.collect{|p|File.expand_path(p)}, 
+    assert_equal([path1].sort.collect{|p|File.expand_path(p)},
                  deleted_paths.sort)
 
     added_paths = notifies.find_all do |notify|
@@ -1246,7 +1246,7 @@ class SvnClientTest < Test::Unit::TestCase
     end.collect do |notify|
       notify.path
     end
-    assert_equal([path2].sort.collect{|p|File.expand_path(p)}, 
+    assert_equal([path2].sort.collect{|p|File.expand_path(p)},
                  added_paths.sort)
 
     postfix_txdelta_paths = notifies.find_all do |notify|
@@ -1254,7 +1254,7 @@ class SvnClientTest < Test::Unit::TestCase
     end.collect do |notify|
       notify.path
     end
-    assert_equal([path2].sort.collect{|p|File.expand_path(p)}, 
+    assert_equal([path2].sort.collect{|p|File.expand_path(p)},
                  postfix_txdelta_paths.sort)
 
     assert_equal(src2, File.open(path2) {|f| f.read})

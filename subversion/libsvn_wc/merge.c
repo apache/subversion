@@ -683,7 +683,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                                       adm_access, pool));
           SVN_ERR(svn_io_files_contents_same_p(&same, result_target,
                                                (special ?
-                                                  tmp_target : 
+                                                  tmp_target :
                                                   merge_target),
                                                pool));
 

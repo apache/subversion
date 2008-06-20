@@ -490,12 +490,12 @@ typedef svn_error_t *(*svn_auth_ssl_client_cert_pw_prompt_func_t)
  *
  * Clients can however set the callback to NULL and set
  * SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS to SVN_CONFIG_FALSE or
- * SVN_CONFIG_TRUE to enforce a certain behaviour. 
+ * SVN_CONFIG_TRUE to enforce a certain behaviour.
  *
  * @since New in 1.6
  */
 typedef svn_error_t *(*svn_auth_plaintext_prompt_func_t)
-  (svn_boolean_t *may_save_plaintext, 
+  (svn_boolean_t *may_save_plaintext,
    const char *realmstring,
    void *baton,
    apr_pool_t *pool);

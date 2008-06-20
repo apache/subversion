@@ -24,7 +24,7 @@ import tempfile
 
 def do_hgmerge(base, repo, local, merged):
   '''Runs an interactive three-way merge using Mercurial's hgmerge script.
-  
+
   This function is designed to convert Subversion's four-file interactive merges
   into Mercurial's three-file interactive merges so that hgmerge can be used for
   interactive merging in subversion.

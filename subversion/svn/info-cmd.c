@@ -495,8 +495,8 @@ svn_cl__info(apr_getopt_t *os,
   svn_opt_revision_t peg_revision;
   svn_info_receiver_t receiver;
 
-  SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os, 
-                                                      opt_state->targets, 
+  SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
+                                                      opt_state->targets,
                                                       ctx, pool));
 
   /* Add "." if user passed 0 arguments. */
@@ -541,7 +541,7 @@ svn_cl__info(apr_getopt_t *os,
           && (peg_revision.kind == svn_opt_revision_unspecified))
         peg_revision.kind = svn_opt_revision_head;
 
-      err = svn_client_info2(truepath, 
+      err = svn_client_info2(truepath,
                              &peg_revision, &(opt_state->start_revision),
                              receiver, NULL, opt_state->depth,
                              opt_state->changelists, ctx, subpool);

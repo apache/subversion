@@ -45,7 +45,7 @@ svn_cl__delete(apr_getopt_t *os,
   svn_error_t *err;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
-                                                      opt_state->targets, 
+                                                      opt_state->targets,
                                                       ctx, pool));
 
   if (! targets->nelts)

@@ -804,7 +804,7 @@ svn_ra_serf__set_baton_props(svn_ra_serf__prop_set_t setprop, void *baton,
   else if (strcmp(ns, "DAV:") == 0 ||
            strcmp(ns, SVN_DAV_PROP_NS_DAV) == 0)
     {
-      /* Here DAV: properties not yet converted to svn: properties should be 
+      /* Here DAV: properties not yet converted to svn: properties should be
          ignored. */
       return SVN_NO_ERROR;
     }

@@ -71,6 +71,29 @@ else
     AC_MSG_RESULT(no)
 fi
 
+if test -n "$APXS" && test "$APXS" != "no"; then
+  AC_MSG_CHECKING([whether Apache version is compatible with APR version])
+  apr_major_version="${apr_version%%.*}"
+  case "$apr_major_version" in
+    0)
+      apache_minor_version_wanted_regex="0"
+      ;;
+    1)
+      apache_minor_version_wanted_regex=["[1-4]"]
+      ;;
+    *)
+      AC_MSG_ERROR([unknown APR version])
+      ;;
+  esac
+  AC_EGREP_CPP([apache_minor_version="$apache_minor_version_wanted_regex"],
+               [
+#include "$APXS_INCLUDE/ap_release.h"
+apache_minor_version=AP_SERVER_MINORVERSION_NUMBER],
+               [AC_MSG_RESULT([yes])],
+               [AC_MSG_RESULT([no])
+                AC_MSG_ERROR([Apache version incompatible with APR version])])
+fi
+
 AC_ARG_WITH(apache-libexecdir,
             [AS_HELP_STRING([[--with-apache-libexecdir[=PATH]]],
                             [Install Apache modules to PATH instead of Apache's

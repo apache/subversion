@@ -309,7 +309,7 @@ add_dir_recursive(const char *dirname,
 
   /* Add this directory to revision control. */
   err = svn_wc_add3(dirname, adm_access, depth, NULL, SVN_INVALID_REVNUM,
-                    ctx->cancel_func, ctx->cancel_baton, 
+                    ctx->cancel_func, ctx->cancel_baton,
                     ctx->notify_func2, ctx->notify_baton2, pool);
   if (err && err->apr_err == SVN_ERR_ENTRY_EXISTS && force)
     svn_error_clear(err);
@@ -486,7 +486,7 @@ add_parent_dirs(const char *path,
           SVN_ERR(add_parent_dirs(parent_path, &adm_access, ctx, pool));
           SVN_ERR(svn_wc_adm_retrieve(&adm_access, adm_access, parent_path,
                                       pool));
-          SVN_ERR(svn_wc_add3(path, adm_access, svn_depth_infinity, 
+          SVN_ERR(svn_wc_add3(path, adm_access, svn_depth_infinity,
                               NULL, SVN_INVALID_REVNUM,
                               ctx->cancel_func, ctx->cancel_baton,
                               ctx->notify_func2, ctx->notify_baton2, pool));
@@ -529,7 +529,6 @@ svn_client_add4(const char *path,
       SVN_ERR(add_parent_dirs(parent_dir, &adm_access, ctx, subpool));
       SVN_ERR(svn_wc_adm_close(adm_access));
       svn_pool_destroy(subpool);
-
     }
   else
     {
@@ -711,7 +710,7 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
             }
         }
     }
-  qsort(targets->elts, targets->nelts, targets->elt_size, 
+  qsort(targets->elts, targets->nelts, targets->elt_size,
         svn_sort_compare_paths);
 
   /* Create new commit items and add them to the array. */
@@ -836,7 +835,7 @@ svn_client_mkdir3(svn_commit_info_t **commit_info_p,
 
   if (svn_path_is_url(APR_ARRAY_IDX(paths, 0, const char *)))
     {
-      SVN_ERR(mkdir_urls(commit_info_p, paths, make_parents, 
+      SVN_ERR(mkdir_urls(commit_info_p, paths, make_parents,
                          revprop_table, ctx, pool));
     }
   else

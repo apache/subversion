@@ -574,7 +574,7 @@ svn_repos_begin_report(void **report_baton,
  *
  * @a revision may be SVN_INVALID_REVNUM if (for example) @a path
  * represents a locally-added path with no revision number, or @a
- * depth is @c svn_depth_exclude.  
+ * depth is @c svn_depth_exclude.
  *
  * @a path may not be underneath a path on which svn_repos_set_path3()
  * was previously called with @c svn_depth_exclude in this report.
@@ -1685,7 +1685,7 @@ svn_repos_fs_get_locks(apr_hash_t **locks,
  *
  * Validate @a name and @a new_value like the same way
  * svn_repos_fs_change_node_prop() does.
- *   
+ *
  * Use @a pool for temporary allocations.
  *
  * @since New in 1.5.
@@ -1832,7 +1832,7 @@ svn_repos_fs_change_txn_prop(svn_fs_txn_t *txn,
 /** Validating wrapper for svn_fs_change_txn_props() (which see for
  * argument descriptions).  Validate properties and their values the
  * same way svn_repos_fs_change_node_prop() does.
- * 
+ *
  * @since New in 1.5.
  */
 svn_error_t *

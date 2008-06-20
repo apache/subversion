@@ -2618,9 +2618,9 @@ svn_error_t *svn_swig_py_changelist_receiver_func(void *baton,
 
   svn_swig_py_acquire_py_lock();
 
-  if ((result = PyObject_CallFunction(receiver, 
+  if ((result = PyObject_CallFunction(receiver,
                                       (char *)"ssO&",
-                                      path, changelist, 
+                                      path, changelist,
                                       make_ob_pool, pool)) == NULL)
     {
       err = callback_exception_error();

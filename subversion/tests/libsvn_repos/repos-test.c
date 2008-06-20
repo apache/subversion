@@ -2004,7 +2004,7 @@ reporter_depth_exclude(const char **msg,
   const svn_delta_editor_t *editor;
   void *edit_baton, *report_baton;
   svn_error_t *err;
-  
+
   *msg = "test reporter and svn_depth_exclude";
 
   if (msg_only)

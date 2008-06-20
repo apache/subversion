@@ -237,15 +237,19 @@ void svn_config_set_bool(svn_config_t *cfg,
                          const char *section, const char *option,
                          svn_boolean_t value);
 
-/** Like svn_config_get(), but for values which can be either
- * 'yes', 'no', or 'ask'.
+/** Like svn_config_get(), but only for yes/no/ask values.
  *
- * Parses the option, and sets *valuep to either SVN_CONFIG_TRUE,
- * SVN_CONFIG_FALSE, or SVN_CONFIG_ASK. The recognized representations
- * are 'TRUE'/'FALSE', 'yes'/'no', 'on'/'off', '1'/'0', and 'ASK';
- * case does not matter.
+ * Parse @a option in @a section and set @a *valuep to one of
+ * SVN_CONFIG_TRUE, SVN_CONFIG_FALSE, or SVN_CONFIG_ASK.  If there is
+ * no setting for @a option, then parse @a default_value and set
+ * @a *valuep accordingly.  If @a default_value is NULL, the result is
+ * undefined, and may be an error; we recommend that you pass one of
+ * SVN_CONFIG_TRUE, SVN_CONFIG_FALSE, or SVN_CONFIG_ASK for @a default value.
  *
- * Returns an error if the option doesn't contain a known string.
+ * Valid representations are (at least) "true"/"false", "yes"/"no",
+ * "on"/"off", "1"/"0", and "ask"; they are case-insensitive.  Return
+ * an SVN_ERR_BAD_CONFIG_VALUE error if either @a default_value or
+ * @a option's value is not a valid representation.
  *
  * @since New in 1.6.
  */
@@ -366,8 +370,8 @@ const char *svn_config_find_group(svn_config_t *cfg, const char *key,
                                   const char *master_section,
                                   apr_pool_t *pool);
 
-/** Retrieve value corresponding to @a option_name in @a cfg ,
- *  or return @a default_value if none is found.
+/** Retrieve value corresponding to @a option_name in @a cfg, or
+ *  return @a default_value if none is found.
  *
  *  The config will first be checked for a default.
  *  If @a server_group is not @c NULL, the config will also be checked
@@ -393,6 +397,24 @@ svn_error_t *svn_config_get_server_setting_int(svn_config_t *cfg,
                                                apr_int64_t default_value,
                                                apr_int64_t *result_value,
                                                apr_pool_t *pool);
+
+
+/** Set @a *valuep according to @a option_name for a given
+ * @a  server_group in @a cfg, or set to @a default_value if no value is
+ * specified.
+ *
+ * Check first a default, then for an override in a server group.  If
+ * a value is found but is not a valid boolean, return an
+ * SVN_ERR_BAD_CONFIG_VALUE error.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *svn_config_get_server_setting_bool(svn_config_t *cfg,
+                                                svn_boolean_t *valuep,
+                                                const char *server_group,
+                                                const char *option_name,
+                                                svn_boolean_t default_value);
+
 
 
 /** Try to ensure that the user's ~/.subversion/ area exists, and create
