@@ -99,5 +99,10 @@ Candidate changes for 1.5.1:
    Votes:
      +1: cmpilato
 
+ * r31825
+   Don't reset LDFLAGS when the '--with-zlib' option was passed to configure.
+   Votes:
+     +1: arfrever
+
 Approved changes:
 =================
