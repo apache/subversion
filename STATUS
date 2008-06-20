@@ -38,19 +38,20 @@ Candidate changes for 1.5.1:
    Votes:
      +1: pburba, markphip
 
- * r31059, 31060, 31061, 31075, 31151
+ * r31059, r31060, r31061, r31075, r31151, r31398, and r31482
    Fix issue #3157, Merging a change from a path's natural history
    creates self-referential mergeinfo
    Notes:
-     r31075 and 31151 are the core fixes for the issue, the other revisions
-     are a new test for it (and a few minor follow-ups to that test).
-     The addition of the new merge test in r31059 trivally conflicts
-     because several other new merge tests are not backported yet.
-     The new test fails if r30748 isn't backported first.
+     r31075, r31151, and r31482 are the core fixes for the issue, the other
+     revisions are a new test for it (and a few minor follow-ups to that
+     test).  The addition of the new merge test in r31059 and the removal of
+     an XFail in the test list in r31075 trivally conflicts because several
+     other new merge tests are not backported yet.  r31482 conflicts in the
+     comment for merge.c's filter_natural_history_from_mergeinfo, again this
+     is fairly trivial to resolve.  This fix is dependent on r30748.
    Votes:
-     +1: cmpilato, markphip
-     -1: pburba (looks like there are problems with subtrees, vetoing
-         until I can look into these further).
+     +1: pburba
+     +1: cmpilato, markphip (all except r31398 and 31482)
 
  * r31300, r31301, r31312
    Fix issue #3199, subtree merges broken when required ranges don't
