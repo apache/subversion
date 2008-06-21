@@ -104,9 +104,12 @@ Candidate changes for 1.5.1:
    Votes:
      +1: arfrever, blair
 
- * r31831
+ * r31833
    svndumpfilter: Don't match prefixes to partial path components. Fixes #desc4
    of issue #1853.
+   Notes:
+	 Was originally committed to the svnpatch-diff branch in r31831, and
+	 then merged to trunk as r31833.
    Votes:
      +1: danielsh
 
