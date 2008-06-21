@@ -102,7 +102,13 @@ Candidate changes for 1.5.1:
  * r31825
    Don't reset LDFLAGS when the '--with-zlib' option was passed to configure.
    Votes:
-     +1: arfrever, +blair
+     +1: arfrever, blair
+
+ * r31831
+   svndumpfilter: Don't match prefixes to partial path components. Fixes #desc4
+   of issue #1853.
+   Votes:
+     +1: danielsh
 
 Approved changes:
 =================
