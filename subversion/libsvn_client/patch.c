@@ -1642,8 +1642,8 @@ extract_svnpatch(const char *original_patch_path,
 
   while (1)
     {
-      svn_pool_clear(subpool);
       svn_boolean_t eof;
+      svn_pool_clear(subpool);
       SVN_ERR(svn_stream_readline(original_patch_stream, &patch_line, "\n",
                                   &eof, subpool));
       /* No need to go deeper down the stack when the first char isn't
