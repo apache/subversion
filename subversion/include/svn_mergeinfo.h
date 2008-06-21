@@ -39,16 +39,19 @@ extern "C" {
  * Merge history is stored in the @c SVN_PROP_MERGEINFO property of files
  * and directories.  The @c SVN_PROP_MERGEINFO property on a path stores the
  * complete list of changes merged to that path, either directly or via the
- * path's parent, grand-parent, etc..
+ * path's parent, grand-parent, etc..  A path may have empty mergeinfo which
+ * means that nothing has been merged to that path or all previous merges
+ * to the path were reversed.  Note that a path may have no mergeinfo, this
+ * is not the same as empty mergeinfo.
  *
  * Every path in a tree may have @c SVN_PROP_MERGEINFO set, but if the
  * @c SVN_PROP_MERGEINFO for a path is equivalent to the
  * @c SVN_PROP_MERGEINFO for its parent, then the @c SVN_PROP_MERGEINFO on
  * the path will 'elide' (be removed) from the path as a post step to any
- * merge, switch, or update.  If a path's parent does not have any
- * @c SVN_PROP_MERGEINFO set, the path's mergeinfo can elide to its nearest
- * grand-parent, great-grand-parent, etc. that has equivalent
- * @c SVN_PROP_MERGEINFO set on it.  
+ * merge.  If a path's parent does not have any @c SVN_PROP_MERGEINFO set,
+ * the path's mergeinfo can elide to its nearest grand-parent,
+ * great-grand-parent, etc. that has equivalent @c SVN_PROP_MERGEINFO set
+ * on it.
  *
  * If a path has no @c SVN_PROP_MERGEINFO of its own, it inherits mergeinfo
  * from its nearest parent that has @c SVN_PROP_MERGEINFO set.  The
@@ -62,7 +65,8 @@ extern "C" {
  * working revision.  If this is not the case then neither inheritance nor
  * elision can occur.
  *
- * The value of the @c SVN_PROP_MERGEINFO property is a string consisting of
+ * The value of the @c SVN_PROP_MERGEINFO property is either an empty string
+ * (representing empty mergeinfo) or a non-empty string consisting of
  * a path, a colon, and comma separated revision list, containing one or more
  * revision or revision ranges. Revision range start and end points are
  * separated by "-".  Revisions and revision ranges may have the optional
@@ -77,19 +81,19 @@ extern "C" {
  *   revisioneelement  (revisionrange | REVISION)"*"?
  *   rangelist         revisioneelement (COMMA revisioneelement)*
  *   revisionline      PATHNAME COLON rangelist
- *   top               revisionline (NEWLINE revisionline)*
+ *   top               "" | (revisionline (NEWLINE revisionline))*
  *
  * The PATHNAME is the source of a merge and the rangelist the revision(s)
  * merged to the path @c SVN_PROP_MERGEINFO is set on directly or indirectly
  * via inheritance.  PATHNAME must always exist at the specified rangelist
- * and thus multiple revisionlines are required to account for renames of
- * the source pathname.
+ * and thus a single merge may result in multiple revisionlines if the source
+ * was renamed.
  *
  * Rangelists must be sorted from lowest to highest revision and cannot
  * contain overlapping revisionlistelements.  REVISION1 must be less than
  * REVISION2.  Consecutive single revisions that can be represented by a
- * revisionrange are allowed (e.g. '5,6,7,8,9-12' or '5-12' are both
- * acceptable).
+ * revisionrange are allowed however (e.g. '5,6,7,8,9-12' or '5-12' are
+ * both acceptable).
  */
 
 /* Suffix for SVN_PROP_MERGEINFO revision ranges indicating a given
@@ -108,7 +112,9 @@ extern "C" {
  *     merge ranges (@c svn_merge_range_t *), ordered from smallest
  *     revision range to largest.  These hashes are called "mergeinfo"
  *     and are represented by @c svn_mergeinfo_t.  The sorted arrays
- *     are called "rangelists".
+ *     are called "rangelists".  A @c NULL hash is used to represent
+ *     no mergeinfo and an empty hash is used to represent empty
+ *     mergeinfo.
  *
  * (c) Hashes mapping paths (@c const char *, starting with slashes)
  *     to @c svn_mergeinfo_t.  These hashes are called "mergeinfo
@@ -150,7 +156,7 @@ svn_mergeinfo_parse(svn_mergeinfo_t *mergeinfo, const char *input,
  * hashes are compared for equality.  If @a consider_inheritance is FALSE,
  * then the start and end revisions of the @c svn_merge_range_t's being
  * compared are the only factors considered when determining equality.
- * 
+ *
  *  e.g. '/trunk: 1,3-4*,5' == '/trunk: 1,3-5'
  *
  * If @a consider_inheritance is TRUE, then the inheritability of the
@@ -197,8 +203,8 @@ svn_mergeinfo_remove(svn_mergeinfo_t *mergeinfo, svn_mergeinfo_t eraser,
 
 /** Calculate the delta between two rangelists consisting of @c
  * svn_merge_range_t * elements (sorted in ascending order), @a from
- * and @a to, and place the result in @a deleted and @a added (neither
- * output argument will ever be @c NULL).
+ * and @a to, and place the result in @a *deleted and @a *added
+ * (neither output argument will ever be @c NULL).
  *
  * @a consider_inheritance determines how to account for the inheritability
  * of the two rangelist's ranges when calculating the diff,
@@ -214,7 +220,7 @@ svn_rangelist_diff(apr_array_header_t **deleted, apr_array_header_t **added,
 
 /** Merge two rangelists consisting of @c svn_merge_range_t *
  * elements, @a *rangelist and @a changes, placing the results in
- * @a *rangelist.
+ * @a *rangelist.  Either rangelist may be empty.
  *
  * When intersecting rangelists are merged, the inheritability of
  * the resulting svn_merge_range_t depends on the inheritability of the
@@ -222,7 +228,8 @@ svn_rangelist_diff(apr_array_header_t **deleted, apr_array_header_t **added,
  *
  * Note: @a *rangelist and @a changes must be sorted as said by @c
  * svn_sort_compare_ranges().  @a *rangelist is guaranteed to remain
- * in sorted order.
+ * in sorted order and be compacted to the minimal number of ranges
+ * needed to represent the merged result.
  *
  * @since New in 1.5.
  */
@@ -266,6 +273,10 @@ svn_mergeinfo_intersect(svn_mergeinfo_t *mergeinfo,
  * svn_merge_range_t * elements, @a rangelist1 and @a rangelist2, and
  * place the result in @a *rangelist (which is never @c NULL).
  *
+ * @a consider_inheritance determines how to account for the inheritability
+ * of the two rangelist's ranges when calculating the intersection,
+ * @see svn_mergeinfo_diff().
+ *
  * Note: @a rangelist1 and @a rangelist2 must be sorted as said by @c
  * svn_sort_compare_ranges(). @a *rangelist is guaranteed to be in sorted
  * order.
@@ -275,6 +286,7 @@ svn_error_t *
 svn_rangelist_intersect(apr_array_header_t **rangelist,
                         apr_array_header_t *rangelist1,
                         apr_array_header_t *rangelist2,
+                        svn_boolean_t consider_inheritance,
                         apr_pool_t *pool);
 
 /** Reverse @a rangelist, and the @c start and @c end fields of each
@@ -384,7 +396,7 @@ typedef enum
 
   /** Explicit mergeinfo, or if that doesn't exist, the inherited
       mergeinfo from a target's nearest (path-wise, not history-wise)
-      ancestor. */ 
+      ancestor. */
   svn_mergeinfo_inherited,
 
   /** Mergeinfo on target's nearest (path-wise, not history-wise)

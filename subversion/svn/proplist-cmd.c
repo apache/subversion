@@ -113,8 +113,8 @@ svn_cl__proplist(apr_getopt_t *os,
   int i;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
-                                                      opt_state->targets, 
-                                                      pool));
+                                                      opt_state->targets,
+                                                      ctx, pool));
 
   /* Add "." if user passed 0 file arguments */
   svn_opt_push_implicit_dot_target(targets, pool);
@@ -200,7 +200,7 @@ svn_cl__proplist(apr_getopt_t *os,
           SVN_ERR(svn_cl__try
                   (svn_client_proplist3(truepath, &peg_revision,
                                         &(opt_state->start_revision),
-                                        opt_state->depth, 
+                                        opt_state->depth,
                                         opt_state->changelists,
                                         pl_receiver, &pl_baton,
                                         ctx, subpool),

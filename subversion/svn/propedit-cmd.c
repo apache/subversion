@@ -67,14 +67,15 @@ svn_cl__propedit(apr_getopt_t *os,
 
   /* Suck up all the remaining arguments into a targets array */
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
-                                                      opt_state->targets, 
-                                                      pool));
+                                                      opt_state->targets,
+                                                      ctx, pool));
 
   if (opt_state->revprop)  /* operate on a revprop */
     {
       svn_revnum_t rev;
       const char *URL;
       svn_string_t *propval;
+      svn_string_t original_propval;
       const char *temp_dir;
 
       /* Implicit "." is okay for revision properties; it just helps
@@ -88,8 +89,19 @@ svn_cl__propedit(apr_getopt_t *os,
       SVN_ERR(svn_client_revprop_get(pname_utf8, &propval,
                                      URL, &(opt_state->start_revision),
                                      &rev, ctx, pool));
+
       if (! propval)
-        propval = svn_string_create("", pool);
+        {
+          propval = svn_string_create("", pool);
+          /* This is how we signify to svn_client_revprop_set2() that
+             we want it to check that the original value hasn't
+             changed, but that that original value was non-existent: */
+          original_propval.data = NULL;  /* and .len is ignored */
+        }
+      else
+        {
+          original_propval = *propval;
+        }
 
       /* Run the editor on a temporary file which contains the
          original property value... */
@@ -105,9 +117,10 @@ svn_cl__propedit(apr_getopt_t *os,
       /* ...and re-set the property's value accordingly. */
       if (propval)
         {
-          SVN_ERR(svn_client_revprop_set(pname_utf8, propval,
-                                         URL, &(opt_state->start_revision),
-                                         &rev, opt_state->force, ctx, pool));
+          SVN_ERR(svn_client_revprop_set2(pname_utf8,
+                                          propval, &original_propval,
+                                          URL, &(opt_state->start_revision),
+                                          &rev, opt_state->force, ctx, pool));
 
           SVN_ERR
             (svn_cmdline_printf
@@ -179,7 +192,7 @@ svn_cl__propedit(apr_getopt_t *os,
           SVN_ERR(svn_client_propget3(&props, pname_utf8, target,
                                       &peg_revision,
                                       &(opt_state->start_revision),
-                                      &base_rev, svn_depth_empty, 
+                                      &base_rev, svn_depth_empty,
                                       NULL, ctx, subpool));
 
           /* Get the property value. */
@@ -246,12 +259,10 @@ svn_cl__propedit(apr_getopt_t *os,
                                                    opt_state, NULL, ctx->config,
                                                    subpool));
 
-              ctx->revprop_table = opt_state->revprop_table;
-
               err = svn_client_propset3(&commit_info,
                                         pname_utf8, edited_propval, target,
                                         svn_depth_empty, opt_state->force,
-                                        base_rev, NULL,
+                                        base_rev, NULL, opt_state->revprop_table,
                                         ctx, subpool);
               if (ctx->log_msg_func3)
                 SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton3, err));

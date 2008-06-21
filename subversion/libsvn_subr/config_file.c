@@ -339,49 +339,6 @@ svn_config__sys_config_path(const char **path_p,
   return SVN_NO_ERROR;
 }
 
-
-svn_error_t *
-svn_config__user_config_path(const char *config_dir,
-                             const char **path_p,
-                             const char *fname,
-                             apr_pool_t *pool)
-{
-  /* ### This never actually returns error in practice.  Perhaps the
-     prototype should change? */
-
-  *path_p = NULL;
-
-  /* Note that even if fname is null, svn_path_join_many will DTRT. */
-
-  if (config_dir)
-    {
-      *path_p = svn_path_join_many(pool, config_dir, fname, NULL);
-      return SVN_NO_ERROR;
-    }
-
-#ifdef WIN32
-  {
-    const char *folder;
-    SVN_ERR(svn_config__win_config_path(&folder, FALSE, pool));
-    *path_p = svn_path_join_many(pool, folder,
-                                 SVN_CONFIG__SUBDIRECTORY, fname, NULL);
-  }
-
-#else  /* ! WIN32 */
-  {
-    const char *homedir = svn_user_get_homedir(pool);
-    if (! homedir)
-      return SVN_NO_ERROR;
-    *path_p = svn_path_join_many(pool,
-                                 svn_path_canonicalize(homedir, pool),
-                                 SVN_CONFIG__USR_DIRECTORY, fname, NULL);
-  }
-#endif /* WIN32 */
-
-  return SVN_NO_ERROR;
-}
-
-
 
 /*** Exported interfaces. ***/
 
@@ -551,7 +508,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
   svn_error_t *err;
 
   /* Ensure that the user-specific config directory exists.  */
-  SVN_ERR(svn_config__user_config_path(config_dir, &path, NULL, pool));
+  SVN_ERR(svn_config_get_user_config_path(&path, config_dir, NULL, pool));
 
   if (! path)
     return SVN_NO_ERROR;
@@ -591,8 +548,8 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
   ensure_auth_dirs(path, pool);
 
   /** Ensure that the `README.txt' file exists. **/
-  SVN_ERR(svn_config__user_config_path
-          (config_dir, &path, SVN_CONFIG__USR_README_FILE, pool));
+  SVN_ERR(svn_config_get_user_config_path
+          (&path, config_dir, SVN_CONFIG__USR_README_FILE, pool));
 
   if (! path)  /* highly unlikely, since a previous call succeeded */
     return SVN_NO_ERROR;
@@ -749,8 +706,8 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
     }
 
   /** Ensure that the `servers' file exists. **/
-  SVN_ERR(svn_config__user_config_path
-          (config_dir, &path, SVN_CONFIG_CATEGORY_SERVERS, pool));
+  SVN_ERR(svn_config_get_user_config_path
+          (&path, config_dir, SVN_CONFIG_CATEGORY_SERVERS, pool));
 
   if (! path)  /* highly unlikely, since a previous call succeeded */
     return SVN_NO_ERROR;
@@ -766,8 +723,9 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
     {
       apr_file_t *f;
       const char *contents =
-        "### This file specifies server-specific protocol parameters,"       NL
-        "### including HTTP proxy information, and HTTP timeout settings."   NL
+        "### This file specifies server-specific parameters,"                NL
+        "### including HTTP proxy information, HTTP timeout settings,"       NL
+        "### and authentication settings."                                   NL
         "###"                                                                NL
         "### The currently defined server options are:"                      NL
         "###   http-proxy-host            Proxy host for HTTP connection"    NL
@@ -793,6 +751,41 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###   http-library               Which library to use for http/https"
                                                                              NL
         "###                              connections (neon or serf)"        NL
+        "###   store-passwords            Specifies whether passwords used"  NL
+        "###                              to authenticate against a"         NL
+        "###                              Subversion server may be cached"   NL
+        "###                              to disk in any way."               NL
+        "###   store-plaintext-passwords  Specifies whether passwords may"   NL
+        "###                              be cached on disk unencrypted."    NL
+        "###"                                                                NL
+        "###   store-auth-creds           Specifies whether any auth info"   NL
+        "###                              (passwords as well as server certs)"
+                                                                             NL
+        "###                              may be cached to disk."            NL
+        "###"                                                                NL
+        "### Set store-passwords to 'no' to avoid storing passwords in the"  NL
+        "### auth/ area of your config directory.  It defaults to 'yes',"    NL
+        "### but Subversion will never save your password to disk in"        NL
+        "### plaintext unless you tell it to."                               NL
+        "### Note that this option only prevents saving of *new* passwords;" NL
+        "### it doesn't invalidate existing passwords.  (To do that, remove" NL
+        "### the cache files by hand as described in the Subversion book.)"  NL
+        "###"                                                                NL
+        "### Set store-plaintext-passwords to 'no' to avoid storing"         NL
+        "### passwords in unencrypted form in the auth/ area of your config" NL
+        "### directory. Set it to 'yes' to allow Subversion to store"        NL
+        "### unencrypted passwords in the auth/ area.  The default is"       NL
+        "### 'ask', which means that Subversion will ask you before"         NL
+        "### saving a password to disk in unencrypted form.  Note that"      NL
+        "### this option has no effect if either 'store-passwords' or "      NL
+        "### 'store-auth-creds' is set to 'no'."                             NL
+        "###"                                                                NL
+        "### Set store-auth-creds to 'no' to avoid storing any Subversion"   NL
+        "### credentials in the auth/ area of your config directory."        NL
+        "### Note that this includes SSL server certificates."               NL
+        "### It defaults to 'yes'.  Note that this option only prevents"     NL
+        "### saving of *new* credentials;  it doesn't invalidate existing"   NL
+        "### caches.  (To do that, remove the cache files by hand.)"         NL
         "###"                                                                NL
         "### HTTP timeouts, if given, are specified in seconds.  A timeout"  NL
         "### of 0, i.e. zero, causes a builtin default to be used."          NL
@@ -801,10 +794,10 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### demonstrate how to use this file; any resemblance to actual"    NL
         "### servers, living or dead, is entirely coincidental."             NL
         ""                                                                   NL
-        "### In this section, the URL of the repository you're trying to"    NL
-        "### access is matched against the patterns on the right.  If a"     NL
-        "### match is found, the server info is from the section with the"   NL
-        "### corresponding name."                                            NL
+        "### In the 'groups' section, the URL of the repository you're"      NL
+        "### trying to access is matched against the patterns on the right." NL
+        "### If a match is found, the server options are taken from the"     NL
+        "### section with the corresponding name on the left."               NL
         ""                                                                   NL
         "[groups]"                                                           NL
         "# group1 = *.collab.net"                                            NL
@@ -822,12 +815,14 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "# http-auth-types = basic;digest;negotiate"                         NL
 #endif
         "# neon-debug-mask = 130"                                            NL
+        "# store-plaintext-passwords = no"                                   NL
         ""                                                                   NL
         "### Information for the second group:"                              NL
         "# [othergroup]"                                                     NL
         "# http-proxy-host = proxy2.some-domain-name.com"                    NL
         "# http-proxy-port = 9000"                                           NL
-        "# No username and password, so use the defaults below."             NL
+        "# No username and password for the proxy, so use the defaults below."
+                                                                             NL
         ""                                                                   NL
         "### You can set default parameters in the 'global' section."        NL
         "### These parameters apply if no corresponding parameter is set in" NL
@@ -836,6 +831,10 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### Internet, you probably just want to put that server's"          NL
         "### information in the 'global' section and not bother with"        NL
         "### 'groups' or any other sections."                                NL
+        "###"                                                                NL
+        "### Most people might want to configure password caching"           NL
+        "### parameters here, but you can also configure them per server"    NL
+        "### group (per-group settings override global settings)."           NL
         "###"                                                                NL
         "### If you go through a proxy for all but a few sites, you can"     NL
         "### list those exceptions under 'http-proxy-exceptions'.  This only"NL
@@ -857,7 +856,11 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
 #endif
         "# No http-timeout, so just use the builtin default."                NL
         "# No neon-debug-mask, so neon debugging is disabled."               NL
-        "# ssl-authority-files = /path/to/CAcert.pem;/path/to/CAcert2.pem"   NL;
+        "# ssl-authority-files = /path/to/CAcert.pem;/path/to/CAcert2.pem"   NL
+        "#"                                                                  NL
+        "# Password caching parameters:"                                     NL
+        "# store-passwords = no"                                             NL
+        "# store-plaintext-passwords = no"                                   NL;
 
       err = svn_io_file_open(&f, path,
                              (APR_WRITE | APR_CREATE | APR_EXCL),
@@ -875,8 +878,8 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
     }
 
   /** Ensure that the `config' file exists. **/
-  SVN_ERR(svn_config__user_config_path
-          (config_dir, &path, SVN_CONFIG_CATEGORY_CONFIG, pool));
+  SVN_ERR(svn_config_get_user_config_path
+          (&path, config_dir, SVN_CONFIG_CATEGORY_CONFIG, pool));
 
   if (! path)  /* highly unlikely, since a previous call succeeded */
     return SVN_NO_ERROR;
@@ -899,8 +902,32 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         ""                                                                   NL
         "### Section for authentication and authorization customizations."   NL
         "[auth]"                                                             NL
+        "### Set password stores used by Subversion. They should be"         NL
+        "### delimited by spaces or commas. The order of values determines"  NL
+        "### the order in which password stores are used."                   NL
+        "### Valid password stores:"                                         NL
+        "###   gnome-keyring        (Unix-like systems)"                     NL
+        "###   kwallet              (Unix-like systems)"                     NL
+        "###   keychain             (Mac OS X)"                              NL
+        "###   windows-cryptoapi    (Windows)"                               NL
+#ifdef SVN_HAVE_KEYCHAIN_SERVICES
+        "# password-stores = keychain"                                       NL
+#elif defined(WIN32) && !defined(__MINGW32__)
+        "# password-stores = windows-cryptoapi"                              NL
+#else
+        "# password-stores = gnome-keyring,kwallet"                          NL
+#endif
+        "###"                                                                NL
+        "### The rest of this section in this file has been deprecated."     NL
+        "### Both 'store-passwords' and 'store-auth-creds' can now be"       NL
+        "### specified in the 'servers' file in your config directory."      NL
+        "### Anything specified in this section is overridden by settings"   NL
+        "### specified in the 'servers' file."                               NL
+        "###"                                                                NL
         "### Set store-passwords to 'no' to avoid storing passwords in the"  NL
-        "### auth/ area of your config directory.  It defaults to 'yes'."    NL
+        "### auth/ area of your config directory.  It defaults to 'yes',"    NL
+        "### but Subversion will never save your password to disk in"        NL
+        "### plaintext unless you tell it to (see the 'servers' file)."      NL
         "### Note that this option only prevents saving of *new* passwords;" NL
         "### it doesn't invalidate existing passwords.  (To do that, remove" NL
         "### the cache files by hand as described in the Subversion book.)"  NL
@@ -927,9 +954,9 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###   This will override the compile-time default, which is to use" NL
         "###   Subversion's internal diff3 implementation."                  NL
         "# diff3-cmd = diff3_program (diff3, gdiff3, etc.)"                  NL
-        "### Set diff3-has-program-arg to 'true' or 'yes' if your 'diff3'"   NL
-        "###   program accepts the '--diff-program' option."                 NL
-        "# diff3-has-program-arg = [true | false]"                           NL
+        "### Set diff3-has-program-arg to 'yes' if your 'diff3' program"     NL
+        "###   accepts the '--diff-program' option."                         NL
+        "# diff3-has-program-arg = [yes | no]"                               NL
         "### Set merge-tool-cmd to the command used to invoke your external" NL
         "### merging tool of choice. Subversion will pass 4 arguments to"    NL
         "### the specified command: base theirs mine merged"                 NL
@@ -1034,3 +1061,42 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_config_get_user_config_path(const char **path,
+                                const char *config_dir,
+                                const char *fname,
+                                apr_pool_t *pool)
+{
+  *path= NULL;
+
+  /* Note that even if fname is null, svn_path_join_many will DTRT. */
+
+  if (config_dir)
+    {
+      *path = svn_path_join_many(pool, config_dir, fname, NULL);
+      return SVN_NO_ERROR;
+    }
+
+#ifdef WIN32
+  {
+    const char *folder;
+    SVN_ERR(svn_config__win_config_path(&folder, FALSE, pool));
+    *path = svn_path_join_many(pool, folder,
+                               SVN_CONFIG__SUBDIRECTORY, fname, NULL);
+  }
+
+#else  /* ! WIN32 */
+  {
+    const char *homedir = svn_user_get_homedir(pool);
+    if (! homedir)
+      return SVN_NO_ERROR;
+    *path = svn_path_join_many(pool,
+                               svn_path_canonicalize(homedir, pool),
+                               SVN_CONFIG__USR_DIRECTORY, fname, NULL);
+  }
+#endif /* WIN32 */
+
+  return SVN_NO_ERROR;
+}
+

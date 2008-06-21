@@ -413,16 +413,19 @@ checkout_dir(dir_context_t *dir)
 
   if (checkout_ctx->progress.status != 201)
     {
-      if (checkout_ctx->progress.status == 404)
+      err = svn_ra_serf__error_on_status(checkout_ctx->progress.status,
+                                         dir->name);
+      if (err)
         {
-          return svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND,
-                                  return_response_err(handler,
-                                                      &checkout_ctx->progress),
-                                  _("Path '%s' not present"),
-                                  dir->name);
+          svn_error_clear(checkout_ctx->progress.server_error.error);
+          return err;
         }
 
-      return svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND,
+      /* In the normal cases where this error might occur we already handled
+         it based on the status code. */
+      SVN_ERR(checkout_ctx->progress.server_error.error);
+
+      return svn_error_createf(SVN_ERR_FS_CONFLICT,
                     return_response_err(handler,
                                         &checkout_ctx->progress),
                     _("Directory '%s' is out of date; try updating"),
@@ -495,12 +498,14 @@ get_version_url(const char **checked_in_url,
 
       SVN_ERR(svn_ra_serf__wait_for_props(propfind_ctx, session, pool));
 
+      /* We wouldn't get here if the url wasn't found (404), so the checked-in
+         property should have been set. */
       root_checkout =
           svn_ra_serf__get_ver_prop(props, session->repos_url.path,
                                     base_revision, "DAV:", "checked-in");
 
       if (!root_checkout)
-        return svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND, NULL,
+        return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                                  _("Path '%s' not present"),
                                  session->repos_url.path);
     }
@@ -526,7 +531,7 @@ checkout_file(file_context_t *file)
         {
           dir = dir->parent_dir;
         }
-          
+
 
       /* Is our parent a copy?  If so, we're already implicitly checked out. */
       if (dir)
@@ -594,16 +599,10 @@ checkout_file(file_context_t *file)
 
   if (file->checkout->progress.status != 201)
     {
-      if (file->checkout->progress.status == 404)
-        {
-          return svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND,
-                              return_response_err(handler,
-                                                  &file->checkout->progress),
-                              _("Path '%s' not present"),
-                              file->name);
-        }
+      SVN_ERR(svn_ra_serf__error_on_status(file->checkout->progress.status,
+                                           file->name));
 
-      return svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND,
+      return svn_error_createf(SVN_ERR_FS_CONFLICT,
                     return_response_err(handler,
                                         &file->checkout->progress),
                     _("File '%s' is out of date; try updating"),
@@ -1547,6 +1546,7 @@ add_file(const char *path,
 {
   dir_context_t *dir = parent_baton;
   file_context_t *new_file;
+  const char *deleted_parent = path;
 
   /* Ensure our directory has been checked out */
   SVN_ERR(checkout_dir(dir));
@@ -1572,12 +1572,22 @@ add_file(const char *path,
 
   /* Ensure that the file doesn't exist by doing a HEAD on the
    * resource, but only if we haven't deleted it in this commit
-   * already, or if the parent directory was also added (without
-   * history) in this commit.
+   * already - directly, or indirectly through its parent directories -
+   * or if the parent directory was also added (without history)
+   * in this commit.
    */
+  while (deleted_parent && deleted_parent[0] != '\0')
+    {
+      if (apr_hash_get(dir->commit->deleted_entries,
+                       deleted_parent, APR_HASH_KEY_STRING))
+        {
+          break;
+        }
+      deleted_parent = svn_path_dirname(deleted_parent, file_pool);
+    };
+
   if (! ((dir->added && !dir->copy_path) ||
-         apr_hash_get(dir->commit->deleted_entries,
-                      new_file->name, APR_HASH_KEY_STRING)))
+         (deleted_parent && deleted_parent[0] != '\0')))
     {
       svn_ra_serf__simple_request_context_t *head_ctx;
       svn_ra_serf__handler_t *handler;

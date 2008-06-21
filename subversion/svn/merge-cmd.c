@@ -51,11 +51,60 @@ svn_cl__merge(apr_getopt_t *os,
   apr_array_header_t *options, *ranges_to_merge = opt_state->revision_ranges;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
-                                                      opt_state->targets, 
-                                                      pool));
+                                                      opt_state->targets,
+                                                      ctx, pool));
 
-  /* Parse at least one, and possible two, sources. */
-  if (targets->nelts >= 1)
+  /* For now, we require at least one source.  That may change in
+     future versions of Subversion, for example if we have support for
+     negated mergeinfo.  See this IRC conversation:
+
+       <bhuvan>   kfogel: yeah, i think you are correct; we should
+                  specify the source url
+
+       <kfogel>   bhuvan: I'll change the help output and propose for
+                  backport.  Thanks.
+
+       <bhuvan>   kfogel: np; while we are at it, 'svn merge' simply
+                  returns nothing; i think we should say: """svn: Not
+                  enough arguments provided; try 'svn help' for more
+                  info"""
+
+       <kfogel>   good idea
+
+       <kfogel>   (in the future, 'svn merge' might actually do
+                  something, but that's all the more reason to make
+                  sure it errors now)
+
+       <cmpilato> actually, i'm pretty sure 'svn merge' does something
+
+       <cmpilato> it says "please merge any unmerged changes from
+                  myself to myself."
+
+       <cmpilato> :-)
+
+       <kfogel>   har har
+
+       <cmpilato> kfogel: i was serious.
+
+       <kfogel>   cmpilato: urrr, uh.  Is that meaningful?  Is there
+                  ever a reason for a user to run it?
+
+       <cmpilato> kfogel: not while we don't have support for negated
+                  mergeinfo.
+
+       <kfogel>   cmpilato: do you concur that until it does something
+                  useful it should error?
+
+       <cmpilato> kfogel: yup.
+
+       <kfogel>   cool
+  */
+  if (targets->nelts < 1)
+    {
+      return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0,
+                              _("Merge source required"));
+    }
+  else  /* Parse at least one, and possible two, sources. */
     {
       SVN_ERR(svn_opt_parse_path(&peg_revision1, &sourcepath1,
                                  APR_ARRAY_IDX(targets, 0, const char *),
@@ -66,8 +115,8 @@ svn_cl__merge(apr_getopt_t *os,
                                    pool));
     }
 
-  /* If nothing (ie, "."), a single source, or a source URL plus WC path is
-     provided, then we don't have two distinct sources. */
+  /* We could have one or two sources.  Deliberately written to stay
+     correct even if we someday permit implied merge source. */
   if (targets->nelts <= 1)
     {
       two_sources_specified = FALSE;
@@ -92,7 +141,7 @@ svn_cl__merge(apr_getopt_t *os,
     }
 
   /* If revision_ranges has at least one real range at this point, then
-     we know the user must have used the '-r' and/or '-c' switch(es). 
+     we know the user must have used the '-r' and/or '-c' switch(es).
      This means we're *not* doing two distinct sources. */
   if (first_range_start.kind != svn_opt_revision_unspecified)
     {
@@ -232,12 +281,17 @@ svn_cl__merge(apr_getopt_t *os,
           ranges_to_merge = apr_array_make(pool, 1, sizeof(range));
           range->start.kind = svn_opt_revision_number;
           range->start.value.number = 1;
-          range->end.kind = svn_opt_revision_head;
+          range->end = peg_revision1;
           APR_ARRAY_PUSH(ranges_to_merge, svn_opt_revision_range_t *) = range;
         }
 
       if (opt_state->reintegrate)
         {
+          if (opt_state->depth != svn_depth_unknown)
+            return svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                                    _("--depth cannot be used with "
+                                      "--reintegrate"));
+
           if (opt_state->force)
             return svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
                                     _("--force cannot be used with "
@@ -279,8 +333,9 @@ svn_cl__merge(apr_getopt_t *os,
                               ctx,
                               pool);
     }
-  if (err)
+
+  if (err && (! opt_state->reintegrate))
     return svn_cl__may_need_force(err);
 
-  return SVN_NO_ERROR;
+  return err;
 }

@@ -41,17 +41,9 @@ For this release, the following people have provided PGP signatures:
 
 @SIGINFO@
 
-The Windows binary packages are also available:
+Release notes for the @MAJOR_MINOR@.x release series may be found at:
 
-    http://subversion.tigris.org/downloads/svn-win32-@VERSION@.zip
-    http://subversion.tigris.org/downloads/svn-win32-@VERSION@_dev.zip
-    http://subversion.tigris.org/downloads/svn-win32-@VERSION@_javahl.zip
-    http://subversion.tigris.org/downloads/svn-win32-@VERSION@_pdb.zip
-    http://subversion.tigris.org/downloads/svn-win32-@VERSION@_pl.zip
-
-Release notes for the 1.4.x release series may be found at:
-
-    http://subversion.tigris.org/svn_1.4_releasenotes.html
+    http://subversion.tigris.org/svn_@MAJOR_MINOR@_releasenotes.html
 
 You can find list of changes between @VERSION@ and earlier versions at:
 
@@ -67,12 +59,12 @@ ann_html = """\
 <p>I'm happy to announce Subversion @VERSION@, available from:</p>
 
 <dl>
-<dd>http://subversion.tigris.org/downloads/subversion-@VERSION@.tar.bz2</dd>
-<dd>http://subversion.tigris.org/downloads/subversion-@VERSION@.tar.gz</dd>
-<dd>http://subversion.tigris.org/downloads/subversion-@VERSION@.zip</dd>
-<dd>http://subversion.tigris.org/downloads/subversion-deps-@VERSION@.tar.bz2</dd>
-<dd>http://subversion.tigris.org/downloads/subversion-deps-@VERSION@.tar.gz</dd>
-<dd>http://subversion.tigris.org/downloads/subversion-deps-@VERSION@.zip</dd>
+<dd><a href="http://subversion.tigris.org/downloads/subversion-@VERSION@.tar.bz2">http://subversion.tigris.org/downloads/subversion-@VERSION@.tar.bz2</a></dd>
+<dd><a href="http://subversion.tigris.org/downloads/subversion-@VERSION@.tar.gz">http://subversion.tigris.org/downloads/subversion-@VERSION@.tar.gz</a></dd>
+<dd><a href="http://subversion.tigris.org/downloads/subversion-@VERSION@.zip">http://subversion.tigris.org/downloads/subversion-@VERSION@.zip</a></dd>
+<dd><a href="http://subversion.tigris.org/downloads/subversion-deps-@VERSION@.tar.bz2">http://subversion.tigris.org/downloads/subversion-deps-@VERSION@.tar.bz2</a></dd>
+<dd><a href="http://subversion.tigris.org/downloads/subversion-deps-@VERSION@.tar.gz">http://subversion.tigris.org/downloads/subversion-deps-@VERSION@.tar.gz</a></dd>
+<dd><a href="http://subversion.tigris.org/downloads/subversion-deps-@VERSION@.zip">http://subversion.tigris.org/downloads/subversion-deps-@VERSION@.zip</a></dd>
 </dl>
 
 <p>The MD5 checksums are:</p>
@@ -89,12 +81,12 @@ ann_html = """\
 <p>PGP Signatures are available at:</p>
 
 <dl>
-<dd>http://subversion.tigris.org/downloads/subversion-@VERSION@.tar.bz2.asc</dd>
-<dd>http://subversion.tigris.org/downloads/subversion-@VERSION@.tar.gz.asc</dd>
-<dd>http://subversion.tigris.org/downloads/subversion-@VERSION@.zip.asc</dd>
-<dd>http://subversion.tigris.org/downloads/subversion-deps-@VERSION@.tar.bz2.asc</dd>
-<dd>http://subversion.tigris.org/downloads/subversion-deps-@VERSION@.tar.gz.asc</dd>
-<dd>http://subversion.tigris.org/downloads/subversion-deps-@VERSION@.zip.asc</dd>
+<dd><a href="http://subversion.tigris.org/downloads/subversion-@VERSION@.tar.bz2.asc">http://subversion.tigris.org/downloads/subversion-@VERSION@.tar.bz2.asc</a></dd>
+<dd><a href="http://subversion.tigris.org/downloads/subversion-@VERSION@.tar.gz.asc">http://subversion.tigris.org/downloads/subversion-@VERSION@.tar.gz.asc</a></dd>
+<dd><a href="http://subversion.tigris.org/downloads/subversion-@VERSION@.zip.asc">http://subversion.tigris.org/downloads/subversion-@VERSION@.zip.asc</a></dd>
+<dd><a href="http://subversion.tigris.org/downloads/subversion-deps-@VERSION@.tar.bz2.asc">http://subversion.tigris.org/downloads/subversion-deps-@VERSION@.tar.bz2.asc</a></dd>
+<dd><a href="http://subversion.tigris.org/downloads/subversion-deps-@VERSION@.tar.gz.asc">http://subversion.tigris.org/downloads/subversion-deps-@VERSION@.tar.gz.asc</a></dd>
+<dd><a href="http://subversion.tigris.org/downloads/subversion-deps-@VERSION@.zip.asc">http://subversion.tigris.org/downloads/subversion-deps-@VERSION@.zip.asc</a></dd>
 </dl>
 
 <p>For this release, the following people have provided PGP signatures:</p>
@@ -103,26 +95,16 @@ ann_html = """\
 @SIGINFO@
 </dl>
 
-<p>The Windows binary packages are also available:</p>
+<p>Release notes for the @MAJOR_MINOR@.x release series may be found at:</p>
 
-<dl>
-<dd>http://subversion.tigris.org/downloads/svn-win32-@VERSION@.zip</dd>
-<dd>http://subversion.tigris.org/downloads/svn-win32-@VERSION@_dev.zip</dd>
-<dd>http://subversion.tigris.org/downloads/svn-win32-@VERSION@_javahl.zip</dd>
-<dd>http://subversion.tigris.org/downloads/svn-win32-@VERSION@_pdb.zip</dd>
-<dd>http://subversion.tigris.org/downloads/svn-win32-@VERSION@_pl.zip</dd>
-</dl>
-
-<p>Release notes for the 1.4.x release series may be found at:</p>
-
-<dl><dd>http://subversion.tigris.org/svn_1.4_releasenotes.html</dd></dl>
+<dl><dd><a href="http://subversion.tigris.org/svn_@MAJOR_MINOR@_releasenotes.html">http://subversion.tigris.org/svn_@MAJOR_MINOR@_releasenotes.html</a></dd></dl>
 
 <p>You can find list of changes between @VERSION@ and earlier versions at:</p>
 
-<dl><dd>http://svn.collab.net/repos/svn/tags/@VERSION@/CHANGES</dd></dl>
+<dl><dd><a href="http://svn.collab.net/repos/svn/tags/@VERSION@/CHANGES">http://svn.collab.net/repos/svn/tags/@VERSION@/CHANGES</a></dd></dl>
 """
 
-import sys
+import sys, re
 
 def fmtsums_text(sumlist):
     return "\n".join(map(lambda x: "    " + x, sumlist))
@@ -134,6 +116,10 @@ def main():
     global ann_text
     global ann_html
     version = sys.argv[1]
+    if not re.compile(r'^\d+\.\d+\.\d+(-(alpha|beta|rc)\d+)?$').match(version):
+        print "Did you really mean to use version '%s'?" % version
+        return
+
     md5sums = []
     sha1sums = []
     siginfo = []
@@ -150,6 +136,8 @@ def main():
 
     ann_text = ann_text.replace('@VERSION@', version)
     ann_html = ann_html.replace('@VERSION@', version)
+    ann_text = ann_text.replace('@MAJOR_MINOR@', version[0:3])
+    ann_html = ann_html.replace('@MAJOR_MINOR@', version[0:3])
     ann_text = ann_text.replace('@MD5SUMS@', fmtsums_text(md5sums))
     ann_text = ann_text.replace('@SHA1SUMS@', fmtsums_text(sha1sums))
     ann_html = ann_html.replace('@MD5SUMS@', fmtsums_html(md5sums))

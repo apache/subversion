@@ -1,61 +1,16 @@
 dnl
 dnl Macros to find an Apache installation
 dnl
-dnl This will find either an installed Apache, or an Apache source directory.
+dnl This will find an installed Apache.
 dnl
 dnl Note: If we don't have an installed Apache, then we can't install the
-dnl       (dynamic) mod_dav_svn.so module. Similarly, without an Apache
-dnl       source dir, we cannot create static builds of the system.
+dnl       (dynamic) mod_dav_svn.so module.
 dnl
 
 AC_DEFUN(SVN_FIND_APACHE,[
 AC_REQUIRE([AC_CANONICAL_HOST])
 
 HTTPD_WANTED_MMN="$1"
-
-AC_MSG_CHECKING(for static Apache module support)
-AC_ARG_WITH(apache,
-AS_HELP_STRING([--with-apache=DIR],
-               [Build static Apache modules.  DIR is the path to the top-level
-                Apache source directory. IMPORTANT: Unless you are *absolutely*
-                certain that you want to build the modules *statically*, you
-                probably want --with-apxs, and not this option.]),
-[
-        if test "$withval" = "yes"; then
-                AC_MSG_ERROR(You need to specify a directory with --with-apache)
-        fi
-
-        if test "$withval" = "no"; then
-                BINNAME=""
-        elif test -r $withval/modules/dav/main/mod_dav.h; then
-                APACHE_INCLUDES="$APACHE_INCLUDES -I$withval/include -I$withval/os/unix -I$withval/modules/dav/main -I$withval/srclib/apr/include -I$withval/srclib/apr-util/include"
-                APACHE_TARGET=$withval/modules/dav/svn
-                INSTALL_APACHE_RULE=install-mods-static
-                BINNAME=mod_dav_svn.a
-
-                AC_MSG_RESULT(yes - Apache 2.0.x)
-
-                AC_MSG_CHECKING([httpd version])
-                AC_EGREP_CPP(VERSION_OKAY,
-                [
-#include "$withval/include/ap_mmn.h"
-#if AP_MODULE_MAGIC_AT_LEAST($HTTPD_WANTED_MMN,0)
-VERSION_OKAY
-#endif],
-                [AC_MSG_RESULT([recent enough])],
-                [AC_MSG_ERROR([apache too old:  mmn must be at least $HTTPD_WANTED_MMN])])
-
-                if test ! -r $withval/srclib/apr/include/apr.h; then
-                        AC_MSG_WARN(Apache 2.0.x is not configured)
-                fi
-        else
-                dnl if they pointed us at the wrong place, then just bail
-                AC_MSG_ERROR(no - Unable to locate $withval/modules/dav/main/mod_dav.h)
-        fi
-],[
-    AC_MSG_RESULT(no)
-])
-
 
 AC_MSG_CHECKING(for Apache module support via DSO through APXS)
 AC_ARG_WITH(apxs,
@@ -64,10 +19,6 @@ AC_ARG_WITH(apxs,
                              pathname to the Apache apxs tool; defaults to
                              "apxs".])],
 [
-    if test "$BINNAME" != ""; then
-      AC_MSG_ERROR(--with-apache and --with-apxs are mutually exclusive)
-    fi
-
     if test "$withval" = "yes"; then
       APXS=apxs
     else
@@ -76,7 +27,7 @@ AC_ARG_WITH(apxs,
     APXS_EXPLICIT=1
 ])
 
-if test -z "$BINNAME" && test -z "$APXS"; then
+if test -z "$APXS"; then
   for i in /usr/sbin /usr/local/apache/bin /usr/local/apache2/bin /usr/bin ; do
     if test -f "$i/apxs2"; then
       APXS="$i/apxs2"
@@ -121,41 +72,67 @@ else
 fi
 
 if test -n "$APXS" && test "$APXS" != "no"; then
-    BINNAME=mod_dav_svn.so
-    INSTALL_IT="\$(APXS) -i -a -n dav_svn $BINNAME"
+  AC_MSG_CHECKING([whether Apache version is compatible with APR version])
+  apr_major_version="${apr_version%%.*}"
+  case "$apr_major_version" in
+    0)
+      apache_minor_version_wanted_regex="0"
+      ;;
+    1)
+      apache_minor_version_wanted_regex=["[1-4]"]
+      ;;
+    *)
+      AC_MSG_ERROR([unknown APR version])
+      ;;
+  esac
+  AC_EGREP_CPP([apache_minor_version="$apache_minor_version_wanted_regex"],
+               [
+#include "$APXS_INCLUDE/ap_release.h"
+apache_minor_version=AP_SERVER_MINORVERSION_NUMBER],
+               [AC_MSG_RESULT([yes])],
+               [AC_MSG_RESULT([no])
+                AC_MSG_ERROR([Apache version incompatible with APR version])])
+fi
 
+AC_ARG_WITH(apache-libexecdir,
+            [AS_HELP_STRING([[--with-apache-libexecdir[=PATH]]],
+                            [Install Apache modules to PATH instead of Apache's
+                             configured modules directory; PATH "no"
+                             or --without-apache-libexecdir means install
+                             to LIBEXECDIR.])],
+[
+    APACHE_LIBEXECDIR="$withval"
+])
+
+if test -n "$APXS" && test "$APXS" != "no"; then
     APXS_CC="`$APXS -q CC`"
     APACHE_INCLUDES="$APACHE_INCLUDES -I$APXS_INCLUDE"
-    APACHE_LIBEXECDIR="`$APXS -q libexecdir`"
+
+    if test -z "$APACHE_LIBEXECDIR"; then
+        APACHE_LIBEXECDIR="`$APXS -q libexecdir`"
+    elif test "$APACHE_LIBEXECDIR" = 'no'; then
+        APACHE_LIBEXECDIR="$libexecdir"
+    fi
+
+    BUILD_APACHE_RULE=apache-mod
+    INSTALL_APACHE_RULE=install-mods-shared
 
     case $host in
       *-*-cygwin*)
         APACHE_LDFLAGS="-shrext .so"
         ;;
     esac
-
-    INSTALL_APACHE_RULE=install-mods-shared
-
-    AC_SUBST(APXS)
-    AC_SUBST(BINNAME)
-    AC_SUBST(INSTALL_IT)
-fi
-
-# If we did not find a way to build/install mod_dav, then bail out.
-if test "$BINNAME" = ""; then
+else
     echo "=================================================================="
     echo "WARNING: skipping the build of mod_dav_svn"
-    echo "         --with-apxs or --with-apache must be used"
+    echo "         try using --with-apxs"
     echo "=================================================================="
-else
-    BUILD_APACHE_RULE=apache-mod
 fi
+
+AC_SUBST(APXS)
 AC_SUBST(APACHE_LDFLAGS)
-AC_SUBST(APACHE_TARGET)
 AC_SUBST(APACHE_INCLUDES)
 AC_SUBST(APACHE_LIBEXECDIR)
-AC_SUBST(BUILD_APACHE_RULE)
-AC_SUBST(INSTALL_APACHE_RULE)
 
 # there aren't any flags that interest us ...
 #if test -n "$APXS" && test "$APXS" != "no"; then

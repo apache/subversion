@@ -82,7 +82,7 @@ parse_pathname(const char **input, const char *end,
 
   if ((*pathname)->len == 0)
     return svn_error_create(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
-                            _("No pathname preceeding ':'"));
+                            _("No pathname preceding ':'"));
   *input = curr;
 
   return SVN_NO_ERROR;
@@ -106,7 +106,7 @@ parse_pathname(const char **input, const char *end,
 
      e.g.  *LASTRANGE: '4-10*' merged with MRANGE: '6'________
                   |                           |               |
-             Update end field               Push       Account for trimmed 
+             Update end field               Push       Account for trimmed
                   |                           |        range from *LASTRANGE.
                   |                           |        Push it last to
                   |                           |        maintain sort order.
@@ -136,7 +136,7 @@ combine_with_lastrange(svn_merge_range_t** lastrange,
   svn_merge_range_t *pushed_mrange_2 = NULL;
   svn_boolean_t ranges_intersect = FALSE;
   svn_boolean_t ranges_have_same_inheritance = FALSE;
-  
+
   if (*lastrange)
     {
       if ((*lastrange)->start <= mrange->end
@@ -158,7 +158,7 @@ combine_with_lastrange(svn_merge_range_t** lastrange,
          LASTRANGE and MRANGE "intersect" but have different
          inheritability and we are considering inheritance so
          can't combined them...
-         
+
          ...In all these cases just push MRANGE onto *LASTRANGE. */
       if (dup_mrange)
         pushed_mrange_1 = svn_merge_range_dup(mrange, pool);
@@ -202,7 +202,7 @@ combine_with_lastrange(svn_merge_range_t** lastrange,
                       pushed_mrange_1->start = pushed_mrange_1->start;
                       pushed_mrange_1->end = tmp_revnum;
                       *lastrange = pushed_mrange_1;
-                    } 
+                    }
                 }
               else /* (*lastrange)->end < mrange->end) */
                 {
@@ -341,9 +341,17 @@ range_to_string(svn_string_t **result, svn_merge_range_t *range,
     *result = svn_string_createf(pool, "%ld%s", range->end,
                                  range->inheritable
                                  ? "" : SVN_MERGEINFO_NONINHERITABLE_STR);
-  else
+  else if (range->start - 1 == range->end)
+    *result = svn_string_createf(pool, "-%ld%s", range->start,
+                                 range->inheritable
+                                 ? "" : SVN_MERGEINFO_NONINHERITABLE_STR);
+  else if (range->start < range->end)
     *result = svn_string_createf(pool, "%ld-%ld%s", range->start + 1,
                                  range->end, range->inheritable
+                                 ? "" : SVN_MERGEINFO_NONINHERITABLE_STR);
+  else
+    *result = svn_string_createf(pool, "%ld-%ld%s", range->start,
+                                 range->end + 1, range->inheritable
                                  ? "" : SVN_MERGEINFO_NONINHERITABLE_STR);
   return SVN_NO_ERROR;
 }
@@ -583,7 +591,6 @@ parse_top(const char **input, const char *end, svn_mergeinfo_t hash,
   return SVN_NO_ERROR;
 }
 
-/* Parse mergeinfo.  */
 svn_error_t *
 svn_mergeinfo_parse(svn_mergeinfo_t *mergeinfo,
                     const char *input,
@@ -603,8 +610,6 @@ svn_mergeinfo_parse(svn_mergeinfo_t *mergeinfo,
 }
 
 
-/* Merge revision list RANGELIST into *MERGEINFO, doing some trivial
-   attempts to combine ranges as we go. */
 svn_error_t *
 svn_rangelist_merge(apr_array_header_t **rangelist,
                     apr_array_header_t *changes,
@@ -889,15 +894,15 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
 }
 
 
-/* Expected to handle all the range overlap cases: non, partial, full */
 svn_error_t *
 svn_rangelist_intersect(apr_array_header_t **output,
                         apr_array_header_t *rangelist1,
                         apr_array_header_t *rangelist2,
+                        svn_boolean_t consider_inheritance,
                         apr_pool_t *pool)
 {
   return rangelist_intersect_or_remove(output, rangelist1, rangelist2, FALSE,
-                                       TRUE, pool);
+                                       consider_inheritance, pool);
 }
 
 svn_error_t *
@@ -911,40 +916,39 @@ svn_rangelist_remove(apr_array_header_t **output,
                                        consider_inheritance, pool);
 }
 
-/* Output deltas via *DELETED and *ADDED, which will never be @c NULL.
-
-   The following diagrams illustrate some common range delta scenarios:
-
-    (from)           deleted
-    r0 <===========(=========)============[=========]===========> rHEAD
-    [to]                                    added
-
-    (from)           deleted                deleted
-    r0 <===========(=========[============]=========)===========> rHEAD
-    [to]
-
-    (from)           deleted
-    r0 <===========(=========[============)=========]===========> rHEAD
-    [to]                                    added
-
-    (from)                                  deleted
-    r0 <===========[=========(============]=========)===========> rHEAD
-    [to]             added
-
-    (from)
-    r0 <===========[=========(============)=========]===========> rHEAD
-    [to]             added                  added
-
-    (from)  d                                  d             d
-    r0 <===(=[=)=]=[==]=[=(=)=]=[=]=[=(===|===(=)==|=|==[=(=]=)=> rHEAD
-    [to]        a   a    a   a   a   a                   a
-*/
 svn_error_t *
 svn_rangelist_diff(apr_array_header_t **deleted, apr_array_header_t **added,
                    apr_array_header_t *from, apr_array_header_t *to,
                    svn_boolean_t consider_inheritance,
                    apr_pool_t *pool)
 {
+  /* The following diagrams illustrate some common range delta scenarios:
+
+     (from)           deleted
+     r0 <===========(=========)============[=========]===========> rHEAD
+     [to]                                    added
+
+     (from)           deleted                deleted
+     r0 <===========(=========[============]=========)===========> rHEAD
+     [to]
+
+     (from)           deleted
+     r0 <===========(=========[============)=========]===========> rHEAD
+     [to]                                    added
+
+     (from)                                  deleted
+     r0 <===========[=========(============]=========)===========> rHEAD
+     [to]             added
+
+     (from)
+     r0 <===========[=========(============)=========]===========> rHEAD
+     [to]             added                  added
+
+     (from)  d                                  d             d
+     r0 <===(=[=)=]=[==]=[=(=)=]=[=]=[=(===|===(=)==|=|==[=(=]=)=> rHEAD
+     [to]        a   a    a   a   a   a                   a
+  */
+
   /* The items that are present in from, but not in to, must have been
      deleted. */
   SVN_ERR(svn_rangelist_remove(deleted, to, from, consider_inheritance,
@@ -1167,7 +1171,7 @@ svn_mergeinfo_intersect(svn_mergeinfo_t *mergeinfo,
         {
           SVN_ERR(svn_rangelist_intersect(&rangelist,
                                           (apr_array_header_t *) val,
-                                          rangelist, pool));
+                                          rangelist, TRUE, pool));
           if (rangelist->nelts > 0)
             apr_hash_set(*mergeinfo, path, APR_HASH_KEY_STRING, rangelist);
         }
@@ -1268,8 +1272,7 @@ svn_mergeinfo_to_string(svn_string_t **output, svn_mergeinfo_t input,
   return SVN_NO_ERROR;
 }
 
-/* Perform an in-place sort of the rangelists in a mergeinfo hash.  */
-svn_error_t*
+svn_error_t *
 svn_mergeinfo_sort(svn_mergeinfo_t input, apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
@@ -1410,11 +1413,11 @@ svn_mergeinfo__remove_empty_rangelists(svn_mergeinfo_t mergeinfo,
           void *value;
           const char *path;
           apr_array_header_t *rangelist;
-          
+
           apr_hash_this(hi, &key, NULL, &value);
           path = key;
           rangelist = value;
-          
+
           if (rangelist->nelts == 0)
             {
               apr_hash_set(mergeinfo, path, APR_HASH_KEY_STRING, NULL);

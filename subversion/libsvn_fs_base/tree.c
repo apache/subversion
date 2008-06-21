@@ -305,7 +305,7 @@ txn_body_txn_root(void *baton,
   if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_OOD, APR_HASH_KEY_STRING))
     flags |= SVN_FS_TXN_CHECK_OOD;
 
-  if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_LOCKS, 
+  if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_LOCKS,
                    APR_HASH_KEY_STRING))
     flags |= SVN_FS_TXN_CHECK_LOCKS;
 
@@ -875,7 +875,7 @@ make_path_mutable(svn_fs_root_t *root,
 static svn_error_t *
 adjust_parent_mergeinfo_counts(parent_path_t *parent_path,
                                apr_int64_t count_delta,
-                               const char *txn_id, 
+                               const char *txn_id,
                                trail_t *trail,
                                apr_pool_t *pool)
 {
@@ -1145,7 +1145,7 @@ base_check_path(svn_node_kind_t *kind_p,
                 apr_pool_t *pool)
 {
   svn_error_t *err = node_kind(kind_p, root, path, pool);
-  if (err && 
+  if (err &&
       ((err->apr_err == SVN_ERR_FS_NOT_FOUND)
        || (err->apr_err == SVN_ERR_FS_NOT_DIRECTORY)))
     {
@@ -1300,7 +1300,7 @@ txn_body_change_node_prop(void *baton,
                                         txn_id, trail, trail->pool));
 
   /* If this was a change to the mergeinfo property, and our version
-     of the filesystem cares, we have some extra recording to do. 
+     of the filesystem cares, we have some extra recording to do.
 
      ### If the format *doesn't* support mergeinfo recording, should
      ### we fuss about attempts to change the svn:mergeinfo property
@@ -1309,13 +1309,13 @@ txn_body_change_node_prop(void *baton,
       && (strcmp(args->name, SVN_PROP_MERGEINFO) == 0))
     {
       svn_boolean_t had_mergeinfo, has_mergeinfo = args->value ? TRUE : FALSE;
-      
+
       /* First, note on our node that it has mergeinfo. */
       SVN_ERR(svn_fs_base__dag_set_has_mergeinfo(parent_path->node,
-                                                 has_mergeinfo, 
-                                                 &had_mergeinfo, txn_id, 
+                                                 has_mergeinfo,
+                                                 &had_mergeinfo, txn_id,
                                                  trail, trail->pool));
-      
+
       /* If this is a change from the old state, we need to update our
          node's parents' mergeinfo counts by a factor of 1. */
       if (parent_path->parent && ((! had_mergeinfo) != (! has_mergeinfo)))
@@ -1582,22 +1582,30 @@ txn_body_pred_id(void *baton, trail_t *trail)
 }
 
 
-/* Deltify ID's predecessor iff ID is mutable under TXN_ID in FS.  If
-   ID is a mutable directory, recurse.  Do this as part of TRAIL. */
+/* Deltify PATH in ROOT's predecessor iff PATH is mutable under TXN_ID
+   in FS.  If PATH is a mutable directory, recurse.
+
+   NODE_ID is the node revision ID for PATH in ROOT, or NULL if that
+   value isn't known.  KIND is the node kind for PATH in ROOT, or
+   svn_node_unknown is the kind isn't known.
+
+   Use POOL for necessary allocations.  */
 static svn_error_t *
 deltify_mutable(svn_fs_t *fs,
                 svn_fs_root_t *root,
                 const char *path,
+                const svn_fs_id_t *node_id,
+                svn_node_kind_t kind,
                 const char *txn_id,
                 apr_pool_t *pool)
 {
-  const svn_fs_id_t *id;
+  const svn_fs_id_t *id = node_id;
   apr_hash_t *entries = NULL;
-  svn_node_kind_t kind;
   struct txn_deltify_args td_args;
 
-  /* Get the ID for PATH under ROOT. */
-  SVN_ERR(base_node_id(&id, root, path, pool));
+  /* Get the ID for PATH under ROOT if it wasn't provided. */
+  if (! node_id)
+    SVN_ERR(base_node_id(&id, root, path, pool));
 
   /* Check for mutability.  Not mutable?  Go no further.  This is safe
      to do because for items in the tree to be mutable, their parent
@@ -1607,7 +1615,8 @@ deltify_mutable(svn_fs_t *fs,
     return SVN_NO_ERROR;
 
   /* Is this a directory?  */
-  SVN_ERR(base_check_path(&kind, root, path, pool));
+  if (kind == svn_node_unknown)
+    SVN_ERR(base_check_path(&kind, root, path, pool));
 
   /* If this is a directory, read its entries.  */
   if (kind == svn_node_dir)
@@ -1624,11 +1633,14 @@ deltify_mutable(svn_fs_t *fs,
           /* KEY will be the entry name, VAL the dirent (about
              which we really don't care) */
           const void *key;
+          void *val;
+          svn_fs_dirent_t *entry;
           svn_pool_clear(subpool);
-          apr_hash_this(hi, &key, NULL, NULL);
+          apr_hash_this(hi, &key, NULL, &val);
+          entry = val;
           SVN_ERR(deltify_mutable(fs, root,
                                   svn_path_join(path, key, subpool),
-                                  txn_id, subpool));
+                                  entry->id, entry->kind, txn_id, subpool));
         }
 
       svn_pool_destroy(subpool);
@@ -2051,9 +2063,9 @@ merge(svn_stringbuf_t *conflict_p,
               dag_node_t *s_ent_node;
               apr_int64_t mergeinfo_end;
               SVN_ERR(svn_fs_base__dag_get_node(&s_ent_node, fs,
-                                                s_entry->id, trail, 
+                                                s_entry->id, trail,
                                                 iterpool));
-              SVN_ERR(svn_fs_base__dag_get_mergeinfo_stats(NULL, 
+              SVN_ERR(svn_fs_base__dag_get_mergeinfo_stats(NULL,
                                                            &mergeinfo_end,
                                                            s_ent_node, trail,
                                                            iterpool));
@@ -2181,7 +2193,7 @@ merge(svn_stringbuf_t *conflict_p,
   /* Tweak mergeinfo data if our format supports it. */
   if (bfd->format >= SVN_FS_BASE__MIN_MERGEINFO_FORMAT)
     {
-      SVN_ERR(svn_fs_base__dag_adjust_mergeinfo_count(target, 
+      SVN_ERR(svn_fs_base__dag_adjust_mergeinfo_count(target,
                                                       mergeinfo_increment,
                                                       txn_id, trail, pool));
     }
@@ -2265,7 +2277,7 @@ txn_body_merge(void *baton, trail_t *trail)
     {
       int pred_count;
 
-      SVN_ERR(merge(args->conflict, "/", txn_root_node, source_node, 
+      SVN_ERR(merge(args->conflict, "/", txn_root_node, source_node,
                     ancestor_node, txn_id, NULL, trail, trail->pool));
 
       SVN_ERR(svn_fs_base__dag_get_predecessor_count(&pred_count,
@@ -2686,7 +2698,7 @@ svn_fs_base__deltify(svn_fs_t *fs,
   args.revision = revision;
   SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_rev_get_txn_id, &args, pool));
 
-  return deltify_mutable(fs, root, "/", txn_id, pool);
+  return deltify_mutable(fs, root, "/", NULL, svn_node_unknown, txn_id, pool);
 }
 
 
@@ -2743,7 +2755,7 @@ txn_body_make_dir(void *baton,
   /* Make a record of this modification in the changes table. */
   SVN_ERR(add_change(root->fs, txn_id, path,
                      svn_fs_base__dag_get_id(sub_dir),
-                     svn_fs_path_change_add, FALSE, FALSE, 
+                     svn_fs_path_change_add, FALSE, FALSE,
                      trail, trail->pool));
 
   return SVN_NO_ERROR;
@@ -2819,7 +2831,7 @@ txn_body_delete(void *baton,
                                                    parent_path->node,
                                                    trail, trail->pool));
       SVN_ERR(adjust_parent_mergeinfo_counts(parent_path->parent,
-                                             -mergeinfo_count, txn_id, 
+                                             -mergeinfo_count, txn_id,
                                              trail, trail->pool));
     }
 
@@ -2924,7 +2936,7 @@ txn_body_copy(void *baton,
       /* If this is a replacement operation, we need to know the old
          node's mergeinfo count. */
       if (to_parent_path->node)
-        SVN_ERR(svn_fs_base__dag_get_mergeinfo_stats(NULL, 
+        SVN_ERR(svn_fs_base__dag_get_mergeinfo_stats(NULL,
                                                      &old_mergeinfo_count,
                                                      to_parent_path->node,
                                                      trail, trail->pool));
@@ -2940,12 +2952,12 @@ txn_body_copy(void *baton,
          our format supports it. */
       if (bfd->format >= SVN_FS_BASE__MIN_MERGEINFO_FORMAT)
         {
-          SVN_ERR(svn_fs_base__dag_get_mergeinfo_stats(NULL, 
-                                                       &mergeinfo_count, 
-                                                       from_node, trail, 
+          SVN_ERR(svn_fs_base__dag_get_mergeinfo_stats(NULL,
+                                                       &mergeinfo_count,
+                                                       from_node, trail,
                                                        trail->pool));
           SVN_ERR(adjust_parent_mergeinfo_counts
-                  (to_parent_path->parent, 
+                  (to_parent_path->parent,
                    mergeinfo_count - old_mergeinfo_count,
                    txn_id, trail, trail->pool));
         }
@@ -3191,9 +3203,9 @@ txn_body_make_file(void *baton,
                                      trail, trail->pool));
 
   /* Make a record of this modification in the changes table. */
-  SVN_ERR(add_change(root->fs, txn_id, path, 
+  SVN_ERR(add_change(root->fs, txn_id, path,
                      svn_fs_base__dag_get_id(child),
-                     svn_fs_path_change_add, TRUE, FALSE, 
+                     svn_fs_path_change_add, TRUE, FALSE,
                      trail, trail->pool));
 
   return SVN_NO_ERROR;
@@ -4582,9 +4594,9 @@ txn_body_id_created_rev(void *baton, trail_t *trail)
   struct id_created_rev_args *args = baton;
   dag_node_t *node;
 
-  SVN_ERR(svn_fs_base__dag_get_node(&node, trail->fs, args->id, 
+  SVN_ERR(svn_fs_base__dag_get_node(&node, trail->fs, args->id,
                                     trail, trail->pool));
-  SVN_ERR(svn_fs_base__dag_get_revision(&(args->revision), node, 
+  SVN_ERR(svn_fs_base__dag_get_revision(&(args->revision), node,
                                         trail, trail->pool));
   return SVN_NO_ERROR;
 }
@@ -4600,7 +4612,7 @@ static svn_error_t *
 txn_body_get_node_origin(void *baton, trail_t *trail)
 {
   struct get_set_node_origin_args *args = baton;
-  return svn_fs_bdb__get_node_origin(&(args->origin_id), trail->fs, 
+  return svn_fs_bdb__get_node_origin(&(args->origin_id), trail->fs,
                                      args->node_id, trail, trail->pool);
 }
 
@@ -4608,7 +4620,7 @@ static svn_error_t *
 txn_body_set_node_origin(void *baton, trail_t *trail)
 {
   struct get_set_node_origin_args *args = baton;
-  return svn_fs_bdb__set_node_origin(trail->fs, args->node_id, 
+  return svn_fs_bdb__set_node_origin(trail->fs, args->node_id,
                                      args->origin_id, trail, trail->pool);
 }
 
@@ -4618,7 +4630,7 @@ base_node_origin_rev(svn_revnum_t *revision,
                      const char *path,
                      apr_pool_t *pool)
 {
-  svn_fs_t *fs = svn_fs_root_fs(root);
+  svn_fs_t *fs = root->fs;
   svn_error_t *err;
   struct get_set_node_origin_args args;
   const svn_fs_id_t *id, *origin_id;
@@ -4630,7 +4642,7 @@ base_node_origin_rev(svn_revnum_t *revision,
 
   SVN_ERR(base_node_id(&id, root, path, pool));
   args.node_id = svn_fs_base__id_node_id(id);
-  err = svn_fs_base__retry_txn(root->fs, txn_body_get_node_origin, 
+  err = svn_fs_base__retry_txn(root->fs, txn_body_get_node_origin,
                                &args, pool);
 
   /* If we got a value for the origin node-revision-ID, that's great.
@@ -4645,16 +4657,16 @@ base_node_origin_rev(svn_revnum_t *revision,
     {
       svn_fs_root_t *curroot = root;
       apr_pool_t *subpool = svn_pool_create(pool);
-      svn_stringbuf_t *lastpath = 
+      svn_stringbuf_t *lastpath =
         svn_stringbuf_create(path, pool);
       svn_revnum_t lastrev = SVN_INVALID_REVNUM;
       const svn_fs_id_t *pred_id;
-      
+
       svn_error_clear(err);
       err = SVN_NO_ERROR;
 
       /* Walk the closest-copy chain back to the first copy in our history.
-         
+
          NOTE: We merely *assume* that this is faster than walking the
          predecessor chain, because we *assume* that copies of parent
          directories happen less often than modifications to a given item. */
@@ -4662,21 +4674,21 @@ base_node_origin_rev(svn_revnum_t *revision,
         {
           svn_revnum_t currev;
           const char *curpath = lastpath->data;
-          
+
           /* Get a root pointing to LASTREV.  (The first time around,
              LASTREV is invalid, but that's cool because CURROOT is
              already initialized.)  */
           if (SVN_IS_VALID_REVNUM(lastrev))
-            SVN_ERR(svn_fs_base__revision_root(&curroot, fs, 
+            SVN_ERR(svn_fs_base__revision_root(&curroot, fs,
                                                lastrev, subpool));
 
           /* Find the previous location using the closest-copy shortcut. */
-          SVN_ERR(prev_location(&curpath, &currev, fs, curroot, 
+          SVN_ERR(prev_location(&curpath, &currev, fs, curroot,
                                 curpath, subpool));
           if (! curpath)
             break;
 
-          /* Update our LASTPATH and LASTREV variables (which survive 
+          /* Update our LASTPATH and LASTREV variables (which survive
              SUBPOOL). */
           svn_stringbuf_set(lastpath, curpath);
         }
@@ -4689,17 +4701,17 @@ base_node_origin_rev(svn_revnum_t *revision,
           svn_pool_clear(subpool);
           pid_args.id = pred_id;
           pid_args.pool = subpool;
-          SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_pred_id, 
+          SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_pred_id,
                                          &pid_args, subpool));
           if (! pid_args.pred_id)
             break;
           pred_id = pid_args.pred_id;
         }
-      
+
       /* Okay.  PRED_ID should hold our origin ID now.  Let's remember
          this value from now on, shall we?  */
       args.origin_id = origin_id = svn_fs_base__id_copy(pred_id, pool);
-      SVN_ERR(svn_fs_base__retry_txn(root->fs, txn_body_set_node_origin, 
+      SVN_ERR(svn_fs_base__retry_txn(root->fs, txn_body_set_node_origin,
                                       &args, subpool));
       svn_pool_destroy(subpool);
     }
@@ -4711,7 +4723,7 @@ base_node_origin_rev(svn_revnum_t *revision,
   /* Okay.  We have an origin node-revision-ID.  Let's get a created
      revision from it. */
   icr_args.id = origin_id;
-  SVN_ERR(svn_fs_base__retry_txn(root->fs, txn_body_id_created_rev, 
+  SVN_ERR(svn_fs_base__retry_txn(root->fs, txn_body_id_created_rev,
                                  &icr_args, pool));
   *revision = icr_args.revision;
   return SVN_NO_ERROR;
@@ -4721,10 +4733,10 @@ base_node_origin_rev(svn_revnum_t *revision,
 
 /* Mergeinfo Queries */
 
-/* Examine directory NODE's immediately children for mergeinfo.  
+/* Examine directory NODE's immediately children for mergeinfo.
 
    For those which have explicit mergeinfo, add their mergeinfo to
-   RESULT_CATALOG (allocated in RESULT_CATALOG's pool).  
+   RESULT_CATALOG (allocated in RESULT_CATALOG's pool).
 
    For those which don't, but sit atop trees which contain mergeinfo
    somewhere deeper, add them to *CHILDREN_ATOP_MERGEINFO_TREES, a
@@ -4753,7 +4765,7 @@ txn_body_get_mergeinfo_data_and_entries(void *baton, trail_t *trail)
   apr_hash_index_t *hi;
   apr_pool_t *iterpool = svn_pool_create(trail->pool);
   apr_pool_t *result_pool = apr_hash_pool_get(args->result_catalog);
-  apr_pool_t *children_pool = 
+  apr_pool_t *children_pool =
     apr_hash_pool_get(args->children_atop_mergeinfo_trees);
 
   assert(svn_fs_base__dag_node_kind(node) == svn_node_dir);
@@ -4774,12 +4786,12 @@ txn_body_get_mergeinfo_data_and_entries(void *baton, trail_t *trail)
       child_id = dirent->id;
 
       /* Get the node for this child. */
-      SVN_ERR(svn_fs_base__dag_get_node(&child_node, trail->fs, child_id, 
+      SVN_ERR(svn_fs_base__dag_get_node(&child_node, trail->fs, child_id,
                                         trail, iterpool));
 
       /* Query the child node's mergeinfo stats. */
       SVN_ERR(svn_fs_base__dag_get_mergeinfo_stats(&has_mergeinfo, &kid_count,
-                                                   child_node, trail, 
+                                                   child_node, trail,
                                                    iterpool));
 
       /* If the child has mergeinfo, add it to the result catalog. */
@@ -4789,22 +4801,22 @@ txn_body_get_mergeinfo_data_and_entries(void *baton, trail_t *trail)
           svn_mergeinfo_t child_mergeinfo;
           svn_string_t *pval;
 
-          SVN_ERR(svn_fs_base__dag_get_proplist(&plist, child_node, 
+          SVN_ERR(svn_fs_base__dag_get_proplist(&plist, child_node,
                                                 trail, iterpool));
           pval = apr_hash_get(plist, SVN_PROP_MERGEINFO, APR_HASH_KEY_STRING);
           if (! pval)
             {
-              svn_string_t *id_str = svn_fs_base__id_unparse(child_id, 
+              svn_string_t *id_str = svn_fs_base__id_unparse(child_id,
                                                              iterpool);
               return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                        _("Node-revision '%s' claims to have "
-                                         "mergeinfo but doesn't"), 
+                                         "mergeinfo but doesn't"),
                                        id_str->data);
             }
-          SVN_ERR(svn_mergeinfo_parse(&child_mergeinfo, pval->data, 
+          SVN_ERR(svn_mergeinfo_parse(&child_mergeinfo, pval->data,
                                       result_pool));
-          apr_hash_set(args->result_catalog, 
-                       svn_path_join(args->node_path, dirent->name, 
+          apr_hash_set(args->result_catalog,
+                       svn_path_join(args->node_path, dirent->name,
                                      result_pool),
                        APR_HASH_KEY_STRING,
                        child_mergeinfo);
@@ -4818,17 +4830,17 @@ txn_body_get_mergeinfo_data_and_entries(void *baton, trail_t *trail)
         {
           if (svn_fs_base__dag_node_kind(child_node) != svn_node_dir)
             {
-              svn_string_t *id_str = svn_fs_base__id_unparse(child_id, 
+              svn_string_t *id_str = svn_fs_base__id_unparse(child_id,
                                                              iterpool);
               return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                        _("Node-revision '%s' claims to sit "
                                          "atop a tree containing mergeinfo "
-                                         "but is not a directory"), 
+                                         "but is not a directory"),
                                        id_str->data);
             }
-          apr_hash_set(args->children_atop_mergeinfo_trees, 
+          apr_hash_set(args->children_atop_mergeinfo_trees,
                        apr_pstrdup(children_pool, dirent->name),
-                       APR_HASH_KEY_STRING, 
+                       APR_HASH_KEY_STRING,
                        svn_fs_base__dag_dup(child_node, children_pool));
         }
     }
@@ -4865,15 +4877,15 @@ crawl_directory_for_mergeinfo(svn_fs_t *fs,
     return SVN_NO_ERROR;
 
   iterpool = svn_pool_create(pool);
-  for (hi = apr_hash_first(NULL, children_atop_mergeinfo_trees); 
-       hi; 
+  for (hi = apr_hash_first(NULL, children_atop_mergeinfo_trees);
+       hi;
        hi = apr_hash_next(hi))
     {
       const void *key;
       void *val;
       svn_pool_clear(iterpool);
       apr_hash_this(hi, &key, NULL, &val);
-      crawl_directory_for_mergeinfo(fs, val, 
+      crawl_directory_for_mergeinfo(fs, val,
                                     svn_path_join(node_path, key, iterpool),
                                     result_catalog, iterpool);
     }
@@ -4900,7 +4912,7 @@ append_to_merged_froms(svn_mergeinfo_t *output,
       const void *key;
       void *val;
       apr_hash_this(hi, &key, NULL, &val);
-      apr_hash_set(*output, svn_path_join(key, rel_path, pool), 
+      apr_hash_set(*output, svn_path_join(key, rel_path, pool),
                    APR_HASH_KEY_STRING, svn_rangelist_dup(val, pool));
     }
   return SVN_NO_ERROR;
@@ -4932,8 +4944,8 @@ txn_body_get_mergeinfo_for_path(void *baton, trail_t *trail)
   dag_node_t *node = NULL;
 
   *(args->mergeinfo) = NULL;
-  
-  SVN_ERR(open_path(&parent_path, args->root, args->path, 0, 
+
+  SVN_ERR(open_path(&parent_path, args->root, args->path, 0,
                     NULL, trail, trail->pool));
 
   /* Init the nearest ancestor. */
@@ -4965,7 +4977,7 @@ txn_body_get_mergeinfo_for_path(void *baton, trail_t *trail)
           svn_pool_destroy(iterpool);
           return SVN_NO_ERROR;
         }
-      
+
       nearest_ancestor = nearest_ancestor->parent;
 
       /* Run out?  There's no mergeinfo. */
@@ -4982,7 +4994,7 @@ txn_body_get_mergeinfo_for_path(void *baton, trail_t *trail)
                                   APR_HASH_KEY_STRING);
   if (! mergeinfo_string)
     {
-      svn_string_t *id_str = 
+      svn_string_t *id_str =
         svn_fs_base__id_unparse(svn_fs_base__dag_get_id(node), trail->pool);
       return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                _("Node-revision '%s' claims to have "
@@ -4995,7 +5007,7 @@ txn_body_get_mergeinfo_for_path(void *baton, trail_t *trail)
      ranges and b) telescope the merged-from paths.  */
   if (nearest_ancestor == parent_path)
     {
-      SVN_ERR(svn_mergeinfo_parse(args->mergeinfo, 
+      SVN_ERR(svn_mergeinfo_parse(args->mergeinfo,
                                   mergeinfo_string->data, args->pool));
     }
   else
@@ -5035,11 +5047,11 @@ txn_body_get_node_mergeinfo_stats(void *baton, trail_t *trail)
 {
   struct get_node_mergeinfo_stats_baton *args = baton;
 
-  SVN_ERR(get_dag(&(args->node), args->root, args->path, 
+  SVN_ERR(get_dag(&(args->node), args->root, args->path,
                   trail, trail->pool));
-  SVN_ERR(svn_fs_base__dag_get_mergeinfo_stats(&(args->has_mergeinfo), 
+  SVN_ERR(svn_fs_base__dag_get_mergeinfo_stats(&(args->has_mergeinfo),
                                                &(args->child_mergeinfo_count),
-                                               args->node, trail, 
+                                               args->node, trail,
                                                trail->pool));
   return SVN_NO_ERROR;
 }
@@ -5065,7 +5077,7 @@ get_mergeinfos_for_paths(svn_fs_root_t *root,
       svn_mergeinfo_t path_mergeinfo;
       struct get_mergeinfo_for_path_baton gmfp_args;
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
-      
+
       svn_pool_clear(iterpool);
 
       path = svn_fs__canonicalize_abspath(path, iterpool);
@@ -5076,7 +5088,7 @@ get_mergeinfos_for_paths(svn_fs_root_t *root,
       gmfp_args.path = path;
       gmfp_args.inherit = inherit;
       gmfp_args.pool = pool;
-      SVN_ERR(svn_fs_base__retry_txn(root->fs, 
+      SVN_ERR(svn_fs_base__retry_txn(root->fs,
                                      txn_body_get_mergeinfo_for_path,
                                      &gmfp_args, iterpool));
       if (path_mergeinfo)
@@ -5093,7 +5105,7 @@ get_mergeinfos_for_paths(svn_fs_root_t *root,
           /* Query the node and its mergeinfo stats. */
           gnms_args.root = root;
           gnms_args.path = path;
-          SVN_ERR(svn_fs_base__retry_txn(root->fs, 
+          SVN_ERR(svn_fs_base__retry_txn(root->fs,
                                          txn_body_get_node_mergeinfo_stats,
                                          &gnms_args, iterpool));
 
@@ -5108,7 +5120,7 @@ get_mergeinfos_for_paths(svn_fs_root_t *root,
           /* If it's worth crawling, crawl. */
           if (do_crawl)
             SVN_ERR(crawl_directory_for_mergeinfo(root->fs, gnms_args.node,
-                                                  path, result_catalog, 
+                                                  path, result_catalog,
                                                   iterpool));
         }
     }

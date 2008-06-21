@@ -706,9 +706,9 @@ adjust_mergeinfo(svn_string_t **final_val, const svn_string_t *initial_val,
               range->start = revmap_start->rev;
               range->end = revmap_end->rev;
             }
-          apr_hash_set(final_mergeinfo, merge_source,
-                       APR_HASH_KEY_STRING, rangelist);
         }
+      apr_hash_set(final_mergeinfo, merge_source,
+                   APR_HASH_KEY_STRING, rangelist);
     }
 
   SVN_ERR(svn_mergeinfo_sort(final_mergeinfo, subpool));
@@ -752,7 +752,7 @@ set_node_property(void *node_baton,
 
   if (strcmp(name, SVN_PROP_MERGEINFO) == 0)
     {
-      svn_string_t *filtered_mergeinfo;  /* Avoid compiler warning. */ 
+      svn_string_t *filtered_mergeinfo;  /* Avoid compiler warning. */
       apr_pool_t *pool = apr_hash_pool_get(rb->props);
       SVN_ERR(adjust_mergeinfo(&filtered_mergeinfo, value, rb, pool));
       value = filtered_mergeinfo;

@@ -24,10 +24,11 @@ import svntest
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
+SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
-from svntest.main import SVN_PROP_MERGEINFO
+from svntest.main import SVN_PROP_MERGEINFO, server_has_mergeinfo
 
 ### Bummer.  It would be really nice to have easy access to the URL
 ### member of our entries files so that switches could be testing by
@@ -1066,7 +1067,7 @@ def switch_change_repos_root(sbox):
 
   svntest.main.create_repos(other_repo_dir)
   svntest.actions.run_and_verify_svn(None, None,
-                                     ".*not the same repository.*",
+                                     ".*UUID.*",
                                      'switch',
                                      other_A_url, A_wc_dir)
 
@@ -1220,7 +1221,7 @@ def forced_switch(sbox):
 #----------------------------------------------------------------------
 
 def forced_switch_failures(sbox):
-  "forced switch fails with some types of obstuctions"
+  "forced switch fails with some types of obstruction"
   sbox.build()
 
   # Add a directory to obstruct a file.
@@ -2099,7 +2100,7 @@ def switch_to_root(sbox):
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau')
-  expected_status.add_state('A/D/G', 
+  expected_status.add_state('A/D/G',
                             svntest.actions.get_virginal_state(wc_dir, 1))
   expected_status.tweak('A/D/G', switched = 'S')
   svntest.actions.run_and_verify_switch(wc_dir, ADG_path, sbox.repo_url,
@@ -2134,7 +2135,7 @@ test_list = [ None,
               forced_switch,
               forced_switch_failures,
               switch_scheduled_add,
-              mergeinfo_switch_elision,
+              SkipUnless(mergeinfo_switch_elision, server_has_mergeinfo),
               switch_with_obstructing_local_adds,
               switch_with_depth,
               switch_to_dir_with_peg_rev,

@@ -185,7 +185,10 @@
 ;; Trac ticket links can be enabled in the *svn-log* buffers when using the following:
 ;; (setq svn-log-link-handlers '(trac-ticket-short))
 
+;; ---------------------------
 ;; Frequently asked questions:
+;; ---------------------------
+
 ;; Q1: I need support for user names with blanks/spaces
 ;; A1: Add the user names to svn-user-names-including-blanks and set the
 ;;     svn-pre-parse-status-hook.
@@ -193,6 +196,23 @@
 ;;     output can both contain blanks. Blanks in file names are supported.
 ;;     the svn-user-names-including-blanks list is used to replace the spaces
 ;;     in the user names with - to overcome this problem
+
+;; Q2: My svn-update command it taking a really long time. How can I
+;;     see what's going on?
+;; A2: In the *svn-status* buffer press "s".
+
+;; Q3: How do I enter a username and password?
+;; A3: In the *svn-status* buffer press "s", switch to the
+;;     *svn-process* buffer and press enter. You will be prompted for
+;;     username and password.
+
+;; Q4: What does "?", "M", and "C" in the first column of the
+;;     *svn-status* buffer mean?
+;; A4: "?" means the file(s) is not under Subversion control
+;;     "M" means you have a locally modified file
+;;     "C" means there is a conflict
+;;     "@$&#!" means someone is saying nasty things to you
+
 
 ;; Comments / suggestions and bug reports are welcome!
 
@@ -318,6 +338,11 @@ Possible values are: commit, revert."
 
 (defcustom svn-status-auto-revert-buffers t
   "*Auto revert buffers that have changed on disk."
+  :type 'boolean
+  :group 'psvn)
+
+(defcustom svn-status-fancy-file-state-in-modeline t
+  "*Show a color dot in the modeline that describes the state of the current file."
   :type 'boolean
   :group 'psvn)
 
@@ -1366,6 +1391,7 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
                  ((eq svn-process-cmd 'revert)
                   (when (member 'revert svn-status-unmark-files-after-list)
                     (svn-status-unset-all-usermarks))
+                  (svn-revert-some-buffers)
                   (svn-status-update)
                   (message "svn revert finished"))
                  ((eq svn-process-cmd 'resolved)
@@ -1458,6 +1484,8 @@ To be run after a commit, an update or a merge."
                            (string= root tree)
                            ;; buffer is modified and in the tree TREE.
                            svn-status-auto-revert-buffers)
+                  (when svn-status-fancy-file-state-in-modeline
+                    (svn-status-update-modeline))
                   ;; (message "svn-revert-some-buffers: %s %s" (buffer-file-name) (verify-visited-file-modtime (current-buffer)))
                   ;; Keep the buffer if the file doesn't exist
                   (when (and (file-exists-p file) (not (verify-visited-file-modtime (current-buffer))))
@@ -3989,7 +4017,7 @@ When called with a negative prefix argument, only update the selected files."
       (message "Running svn-update for %s" default-directory)
       (svn-run t t 'update "update"
                (when rev (list "-r" rev))
-               (list "--non-interactive")))))
+               (list "--non-interactive") default-directory))))
 
 (defun svn-status-commit ()
   "Commit selected files.
@@ -4151,6 +4179,91 @@ Recommended values are ?m or ?M.")
   nil)
 
 (add-hook 'after-save-hook 'svn-status-after-save-hook)
+
+;; --------------------------------------------------------------------------------
+;; vc-svn integration
+;; --------------------------------------------------------------------------------
+(defvar svn-status-state-mark-modeline t) ; modeline mark display or not
+(defvar svn-status-state-mark-tooltip nil) ; modeline tooltip display
+
+(defun svn-status-state-mark-modeline-dot (color)
+  (propertize "    "
+              'help-echo 'svn-status-state-mark-tooltip
+              'display
+              `(image :type xpm
+                      :data ,(format "/* XPM */
+static char * data[] = {
+\"18 13 3 1\",
+\"  c None\",
+\"+ c #000000\",
+\". c %s\",
+\"                  \",
+\"       +++++      \",
+\"      +.....+     \",
+\"     +.......+    \",
+\"    +.........+   \",
+\"    +.........+   \",
+\"    +.........+   \",
+\"    +.........+   \",
+\"    +.........+   \",
+\"     +.......+    \",
+\"      +.....+     \",
+\"       +++++      \",
+\"                  \"};"
+                                     color)
+                      :ascent center)))
+
+(defun svn-status-install-state-mark-modeline (color)
+  (push `(svn-status-state-mark-modeline
+          ,(svn-status-state-mark-modeline-dot color))
+        mode-line-format)
+  (force-mode-line-update t))
+
+(defun svn-status-uninstall-state-mark-modeline ()
+  (setq mode-line-format
+        (remove-if #'(lambda (mode) (eq (car-safe mode)
+                                        'svn-status-state-mark-modeline))
+                   mode-line-format))
+  (force-mode-line-update t))
+
+(defun svn-status-update-state-mark-tooltip (tooltip)
+  (setq svn-status-state-mark-tooltip tooltip))
+
+(defun svn-status-update-state-mark (color)
+  (svn-status-uninstall-state-mark-modeline)
+  (svn-status-install-state-mark-modeline color))
+
+(defsubst svn-status-in-vc-mode? ()
+  "Is vc-svn active?"
+  (and vc-mode (string-match "^ SVN" (substring-no-properties vc-mode))))
+
+(when svn-status-fancy-file-state-in-modeline
+  (defadvice vc-find-file-hook (after svn-status-vc-svn-find-file-hook activate)
+    "vc-find-file-hook advice for synchronizing psvn with vc-svn interface"
+    (when (svn-status-in-vc-mode?) (svn-status-update-modeline)))
+
+  (defadvice vc-after-save (after svn-status-vc-svn-after-save activate)
+    "vc-after-save advice for synchronizing psvn when saving buffer"
+    (when (svn-status-in-vc-mode?) (svn-status-update-modeline))))
+
+(defun svn-status-update-modeline ()
+  "Update modeline state dot mark properly"
+  (when (and buffer-file-name (svn-status-in-vc-mode?))
+    (svn-status-update-state-mark
+     (svn-status-interprete-state-mode-color
+      (vc-svn-state buffer-file-name)))))
+
+(defsubst svn-status-interprete-state-mode-color (stat)
+  "Interpret vc-svn-state symbol to mode line color"
+  (case stat
+    ('edited "tomato"      )
+    ('up-to-date "GreenYellow" )
+    ;; what is missing here??
+    ;; ('unknown  "gray"        )
+    ;; ('added    "blue"        )
+    ;; ('deleted  "red"         )
+    ;; ('unmerged "purple"      )
+    (t "red")))
 
 ;; --------------------------------------------------------------------------------
 ;; Getting older revisions
@@ -5313,6 +5426,8 @@ Currently is the output from the svn update command known."
                            (progn (beginning-of-line) (re-search-forward ".. +") (point))
                            (line-end-position)))
                (pos))
+           (when (eq system-type 'windows-nt)
+             (setq file-name (replace-regexp-in-string "\\\\" "/" file-name)))
            (goto-char cur-pos)
            (with-current-buffer svn-status-buffer-name
              (setq pos (svn-status-get-file-name-buffer-position file-name)))

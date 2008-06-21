@@ -971,12 +971,11 @@ handle_stream(serf_request_t *request,
   serf_bucket_response_status(response, &sl);
 
   /* Woo-hoo.  Nothing here to see.  */
-  if (sl.code == 404)
+  fetch_ctx->err = svn_ra_serf__error_on_status(sl.code, fetch_ctx->info->name);
+  if (fetch_ctx->err)
     {
       fetch_ctx->done = TRUE;
-      fetch_ctx->err = svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND, NULL,
-                                         "'%s' path not found",
-                                         fetch_ctx->info->name);
+
       return svn_ra_serf__handle_discard_body(request, response, NULL, pool);
     }
 
@@ -1766,9 +1765,9 @@ end_report(svn_ra_serf__xml_parser_t *parser,
            * version resource root path.
            *
            * Example:
-           * path: 
+           * path:
            *  /repositories/log_tests-17/!svn/ver/4/branches/a
-           * repos_root: 
+           * repos_root:
            *  http://localhost/repositories/log_tests-17
            * destination:
            *  http://localhost/repositories/log_tests-17/branches/a
@@ -1776,7 +1775,7 @@ end_report(svn_ra_serf__xml_parser_t *parser,
            * So, find 'branches/a' as the difference. Cut it of path, gives us:
            *  /repositories/log_tests-17/!svn/ver/4
            */
-          if (ctx->destination && 
+          if (ctx->destination &&
               strcmp(ctx->destination, ctx->sess->repos_root_str) != 0)
             {
               apr_size_t root_count, src_count;
@@ -1795,13 +1794,13 @@ end_report(svn_ra_serf__xml_parser_t *parser,
 
           svn_path_add_component(path, apr_ltoa(info->pool, info->base_rev));
 
-          /* Similar as above, we now have to add the relative path between 
-           * source and root path. 
+          /* Similar as above, we now have to add the relative path between
+           * source and root path.
            *
            * Example:
-           * path: 
+           * path:
            *  /repositories/log_tests-17/!svn/ver/2
-           * repos_root path: 
+           * repos_root path:
            *  /repositories/log_tests-17
            * source:
            *  /repositories/log_tests-17/trunk
@@ -2204,7 +2203,7 @@ finish_report(void *report_baton,
   apr_hash_t *props;
   apr_status_t status;
   svn_boolean_t closed_root;
-  int i;
+  int status_code, i;
 
   tmp = SERF_BUCKET_SIMPLE_STRING_LEN("</S:update-report>",
                                       sizeof("</S:update-report>")-1,
@@ -2244,6 +2243,9 @@ finish_report(void *report_baton,
   parser_ctx->end = end_report;
   parser_ctx->cdata = cdata_report;
   parser_ctx->done = &report->done;
+  /* While we provide a location here to store the status code, we don't
+     do anything with it. The error in parser_ctx->error is sufficient. */
+  parser_ctx->status_code = &status_code;
 
   handler->response_handler = svn_ra_serf__handle_xml_parser;
   handler->response_baton = parser_ctx;
@@ -2293,9 +2295,7 @@ finish_report(void *report_baton,
         }
       if (status)
         {
-          svn_error_t *err = parser_ctx->error;
-
-          if (err)
+          if (parser_ctx->error)
             svn_error_clear(sess->pending_error);
 
           SVN_ERR(parser_ctx->error);

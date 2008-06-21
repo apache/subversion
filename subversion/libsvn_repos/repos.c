@@ -726,8 +726,7 @@ PREWRITTEN_HOOKS_TEXT
 "REPOS=\"$1\""                                                               NL
 "REV=\"$2\""                                                                 NL
                                                                              NL
-"commit-email.pl \"$REPOS\" \"$REV\" commit-watchers@example.org"            NL
-"log-commit.py --repository \"$REPOS\" --revision \"$REV\""                  NL;
+"mailer.py commit \"$REPOS\" \"$REV\" /path/to/mailer.conf"                  NL;
 
 #undef SCRIPT_NAME
 
@@ -912,8 +911,8 @@ PREWRITTEN_HOOKS_TEXT
 "PROPNAME=\"$4\""                                                            NL
 "ACTION=\"$5\""                                                              NL
 ""                                                                           NL
-"commit-email.pl --revprop-change \"$REPOS\" \"$REV\" \"$USER\" \"$PROPNAME\" "
-"watchers@example.org"                                                       NL;
+"mailer.py propchange2 \"$REPOS\" \"$REV\" \"$USER\" \"$PROPNAME\" "
+"\"$ACTION\" /path/to/mailer.conf"                                           NL;
 
 #undef SCRIPT_NAME
 
@@ -950,9 +949,7 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
 "### database file.  Unless you specify a path starting with a /,"           NL
 "### the file's location is relative to the directory containing"            NL
 "### this configuration file."                                               NL
-#ifdef SVN_HAVE_SASL
-"### If use-sasl is set to \"true\" below, this file will NOT be used."      NL
-#endif
+"### If SASL is enabled (see below), this file will NOT be used."            NL
 "### Uncomment the line below to use the default password file."             NL
 "# password-db = passwd"                                                     NL
 "### The authz-db option controls the location of the authorization"         NL
@@ -966,14 +963,14 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
 "### If two repositories have the same authentication realm, they should"    NL
 "### have the same password database, and vice versa.  The default realm"    NL
 "### is repository's uuid."                                                  NL
-#ifndef SVN_HAVE_SASL
-"# realm = My First Repository"                                              NL;
-#else
 "# realm = My First Repository"                                              NL
 ""                                                                           NL
 "[sasl]"                                                                     NL
 "### This option specifies whether you want to use the Cyrus SASL"           NL
 "### library for authentication. Default is false."                          NL
+"### This section will be ignored if svnserve is not built with Cyrus"       NL
+"### SASL support; to check, run 'svnserve --version' and look for a line"   NL
+"### reading 'Cyrus SASL authentication is available.'"                      NL
 "# use-sasl = true"                                                          NL
 "### These options specify the desired strength of the security layer"       NL
 "### that you want SASL to provide. 0 means no encryption, 1 means"          NL
@@ -982,7 +979,6 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
 "### encryption). The values below are the defaults."                        NL
 "# min-encryption = 0"                                                       NL
 "# max-encryption = 256"                                                     NL;
-#endif
 
     SVN_ERR_W(svn_io_file_create(svn_repos_svnserve_conf(repos, pool),
                                  svnserve_conf_contents, pool),
@@ -1384,7 +1380,7 @@ svn_repos_upgrade(const char *path,
   const char *format_path;
   int format;
   apr_pool_t *subpool = svn_pool_create(pool);
-  
+
   /* Fetch a repository object; for the Berkeley DB backend, it is
      initialized with an EXCLUSIVE lock on the database.  This will at
      least prevent others from trying to read or write to it while we
@@ -1402,12 +1398,12 @@ svn_repos_upgrade(const char *path,
   format_path = svn_path_join(repos->path, SVN_REPOS__FORMAT, subpool);
   SVN_ERR(svn_io_read_version_file(&format, format_path, subpool));
   SVN_ERR(svn_io_write_version_file(format_path, format, subpool));
-  
+
   /* Try to upgrade the filesystem. */
   SVN_ERR(svn_fs_upgrade(repos->db_path, subpool));
 
   /* Now overwrite our format file with the latest version. */
-  SVN_ERR(svn_io_write_version_file(format_path, SVN_REPOS__FORMAT_NUMBER, 
+  SVN_ERR(svn_io_write_version_file(format_path, SVN_REPOS__FORMAT_NUMBER,
                                     subpool));
 
   /* Close shop and free the subpool, to release the exclusive lock. */
@@ -1463,7 +1459,7 @@ svn_repos_has_capability(svn_repos_t *repos,
       svn_mergeinfo_catalog_t ignored;
       apr_array_header_t *paths = apr_array_make(pool, 1,
                                                  sizeof(char *));
-      
+
       SVN_ERR(svn_fs_revision_root(&root, repos->fs, 0, pool));
       APR_ARRAY_PUSH(paths, const char *) = "";
       err = svn_fs_get_mergeinfo(&ignored, root, paths, FALSE, FALSE, pool);

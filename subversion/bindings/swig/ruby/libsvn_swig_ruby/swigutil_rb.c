@@ -1,4 +1,4 @@
-
+/* -*- c-file-style: "ruby" -*- */
 /* Tell swigutil_rb.h that we're inside the implementation */
 #define SVN_SWIG_SWIGUTIL_RB_C
 
@@ -71,6 +71,9 @@ static VALUE cSvnFs = Qnil;
 static VALUE cSvnFsFileSystem = Qnil;
 static VALUE cSvnRa = Qnil;
 static VALUE cSvnRaReporter3 = Qnil;
+
+static apr_pool_t *swig_rb_pool;
+static apr_allocator_t *swig_rb_allocator;
 
 #define DECLARE_ID(key) static ID id_ ## key
 #define DEFINE_ID(key) DEFINE_ID_WITH_NAME(key, #key)
@@ -443,26 +446,48 @@ svn_swig_rb_initialize_ids(void)
   DEFINE_ID(upcase);
 }
 
+static void
+check_apr_status(apr_status_t status, VALUE exception_class, const char *format)
+{
+    if (status != APR_SUCCESS) {
+	char buffer[1024];
+	apr_strerror(status, buffer, sizeof(buffer) - 1);
+	rb_raise(exception_class, format, buffer);
+    }
+}
+
 void
 svn_swig_rb_initialize(void)
 {
-  apr_status_t status;
   apr_pool_t *pool;
   VALUE mSvnConverter, mSvnLocale, mSvnGetText;
 
-  status = apr_initialize();
-  if (status) {
-    char buf[1024];
-    apr_strerror(status, buf, sizeof(buf) - 1);
-    rb_raise(rb_eLoadError, "cannot initialize APR: %s", buf);
-  }
+  check_apr_status(apr_initialize(), rb_eLoadError, "cannot initialize APR: %s");
 
   if (atexit(apr_terminate)) {
     rb_raise(rb_eLoadError, "atexit registration failed");
   }
 
-  pool = svn_pool_create(NULL);
-  svn_utf_initialize(pool);
+  check_apr_status(apr_allocator_create(&swig_rb_allocator),
+		   rb_eLoadError, "failed to create allocator: %s");
+  apr_allocator_max_free_set(swig_rb_allocator,
+			     SVN_ALLOCATOR_RECOMMENDED_MAX_FREE);
+
+  swig_rb_pool = svn_pool_create_ex(NULL, swig_rb_allocator);
+  apr_pool_tag(swig_rb_pool, "svn-ruby-pool");
+#if APR_HAS_THREADS
+  {
+    apr_thread_mutex_t *mutex;
+
+    check_apr_status(apr_thread_mutex_create(&mutex, APR_THREAD_MUTEX_DEFAULT,
+					     swig_rb_pool),
+		     rb_eLoadError, "failed to create allocator: %s");
+    apr_allocator_mutex_set(swig_rb_allocator, mutex);
+  }
+#endif
+  apr_allocator_owner_set(swig_rb_allocator, swig_rb_pool);
+
+  svn_utf_initialize(swig_rb_pool);
 
   svn_swig_rb_initialize_ids();
 
@@ -485,8 +510,19 @@ svn_swig_rb_initialize(void)
   mSvnGetText = rb_define_module_under(rb_svn(), "GetText");
   rb_define_module_function(mSvnGetText, "bindtextdomain",
                             svn_swig_rb_gettext_bindtextdomain, 1);
-  rb_define_module_function(mSvnGetText, "_",
-                            svn_swig_rb_gettext__, 1);
+  rb_define_module_function(mSvnGetText, "_", svn_swig_rb_gettext__, 1);
+}
+
+apr_pool_t *
+svn_swig_rb_pool(void)
+{
+    return swig_rb_pool;
+}
+
+apr_allocator_t *
+svn_swig_rb_allocator(void)
+{
+    return swig_rb_allocator;
 }
 
 
@@ -2056,6 +2092,29 @@ svn_swig_rb_log_receiver(void *baton,
   return err;
 }
 
+svn_error_t *
+svn_swig_rb_log_entry_receiver(void *baton,
+                               svn_log_entry_t *entry,
+                               apr_pool_t *pool)
+{
+    svn_error_t *err = SVN_NO_ERROR;
+    VALUE proc, rb_pool;
+
+    svn_swig_rb_from_baton((VALUE)baton, &proc, &rb_pool);
+
+    if (!NIL_P(proc)) {
+        callback_baton_t cbb;
+
+        cbb.receiver = proc;
+        cbb.message = id_call;
+        cbb.args = rb_ary_new3(1,
+                               c2r_swig_type((void *)entry,
+                                             (void *)"svn_log_entry_t *"));
+        invoke_callback_handle_error((VALUE)(&cbb), rb_pool, &err);
+    }
+    return err;
+}
+
 
 svn_error_t *
 svn_swig_rb_repos_authz_func(svn_boolean_t *allowed,
@@ -2187,9 +2246,6 @@ svn_swig_rb_notify_func2(void *baton,
     cbb.message = id_call;
     cbb.args = rb_ary_new3(1, c2r_wc_notify__dup(notify));
   }
-
-  if (notify->err)
-    svn_error_clear(notify->err);
 
   if (!NIL_P(proc))
     invoke_callback((VALUE)(&cbb), rb_pool);
@@ -2628,6 +2684,7 @@ svn_swig_rb_setup_ra_callbacks(svn_ra_callbacks2_t **callbacks,
   }
 
   *callbacks = apr_pcalloc(pool, sizeof(**callbacks));
+  *baton = (void *)rb_callbacks;
 
   (*callbacks)->open_tmp_file = ra_callbacks_open_tmp_file;
   (*callbacks)->auth_baton = auth_baton;

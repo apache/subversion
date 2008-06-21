@@ -489,7 +489,8 @@ svn_opt_resolve_revisions(svn_opt_revision_t *peg_rev,
  * error, and if this is the only type of error encountered, complete
  * the operation before returning the error(s).
  *
- * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.5 API.
+ * @see svn_client_args_to_target_array()
  */
 svn_error_t *
 svn_opt_args_to_target_array3(apr_array_header_t **targets_p,
@@ -610,10 +611,10 @@ svn_opt_parse_all_args(apr_array_header_t **args_p,
  *
  * If a trailing revision specifier is found, parse it into @a *rev and
  * put the rest of the path into @a *truepath, allocating from @a pool;
- * or return an @c SVN_ERR_CL_ARG_PARSING_ERROR if the revision
- * specifier is invalid.  If no trailing revision specifier is found,
- * set @a *truepath to @a path and @a rev->kind to @c
- * svn_opt_revision_unspecified.
+ * or return an @c SVN_ERR_CL_ARG_PARSING_ERROR (with the effect on
+ * @a *truepath undefined) if the revision specifier is invalid.
+ * If no trailing revision specifier is found, set @a *truepath to
+ * @a path and @a rev->kind to @c svn_opt_revision_unspecified.
  *
  * This function does not require that @a path be in canonical form.
  * No canonicalization is done and @a *truepath will only be in

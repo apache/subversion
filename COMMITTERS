@@ -54,6 +54,9 @@ Blanket commit access:
        kameshj   Kamesh Jayachandran <kamesh@collab.net>
       markphip   Mark Phippard <mphippard@collab.net>
       arfrever   Arfrever Frehtes Taifersar Arahesis <arfrever.fta@gmail.com>
+          stsp   Stefan Sperling <stsp@elego.de>
+           kou   Kouhei Sutou <kou@cozmixng.org>
+      danielsh   Daniel Shahaf <danielsh@tigris.org>
 
 Commit access for specific areas:
 
@@ -62,7 +65,6 @@ Commit access for specific areas:
        pmayweg   Patrick Mayweg <mayweg@qint.de>             (JavaHL bindings)
           rey4   Russell Yanofsky <rey4@columbia.edu>        (Swig bindings)
          clkao   Chia-liang Kao <clkao@clkao.org>            (Swig-Perl b.)
-           kou   Kouhei Sutou <kou@cozmixng.org>             (Swig-Ruby b.)
     joeswatosh   Joe Swatosh <joe.swatosh@gmail.com>         (Swig-Ruby b.)
     jrvernooij   Jelmer Vernooij <jelmer@samba.org>          (Python bindings)
         holden   Holden Karau <holden@pigscanfly.ca>         (Swig-Scheme bindings)
@@ -82,7 +84,6 @@ Commit access for specific areas:
         zbrown   Zack Brown <zbrown@tumblerings.org>         (doc)
         mprice   Michael Price <ectospheno@gmail.com>        (releases)
            pll   Paul lussier <p.lussier@comcast.net>        (releases)
-           kon   Kalle Olavi Niemitalo <kon@iki.fi>          (psvn.el)
     jrepenning   Jack Repenning <jrepenning@collab.net>      (tools/dev)
       lonestar   Martin Maurer <martin.maurer@email.de>      (svnshow)
        shlomif   Shlomi Fish <shlomif@vipe.technion.ac.il>   (svn-push)
@@ -110,11 +111,14 @@ Commit access for specific areas:
         dustin   Dustin J. Mitchell <dustin@zmanda.com>      (svnmerge)
    rocketraman   Raman Gupta <rocketraman@fastmail.fm>       (svnmerge)
       stylesen   Senthil Kumaran S <senthil@collab.net>      (tests)
+       rhansen   Richard Hansen <rhansen@bbn.com>            (svnstsw)
+        larrys   Larry Shatzer, Jr. <larrys@gmail.com>       (svn-keyword-check.pl)
 
   Translation of message files:
 
        niqueco   Nicolás Lichtmaier <nick@reloco.com.ar>     (po: es)
         luebbe   Lübbe Onken <luebbe@tigris.org>             (po: de)
+    jensseidel   Jens Seidel <jensseidel@users.sf.net>       (po: de)
       oyvindmo   Øyvind Møll <svn@moll.no>                   (po: nb)
       sunny256   Øyvind A. Holm <sunny@sunbase.org>          (po: nb)
         jzgoda   Jaroslaw Zgoda <jzgoda@o2.pl>               (po: pl)
@@ -124,7 +128,7 @@ Commit access for specific areas:
        marcosc   Marcos Chaves <marcos.nospam@gmail.com>     (po: pt_BR)
         pynoos   Hojin Choi <hojin.choi@gmail.com>           (po: ko)
        blueboh   Jeong Seolin <blueboh@ahnlab.com>           (po: ko)
-        cauchy   Dongsheng Song <dongsheng.song@gmail.com>   (po: zh_CN)
+        cauchy   Dongsheng Song <songdongsheng@live.cn>      (po: zh_CN)
         hynnet   YingNing Huang <hyn@bao.hynnet.com>         (po: zh_CN)
           lark   Wang Jian <lark@linux.net.cn>               (po: zh_CN)
 giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
@@ -145,7 +149,10 @@ giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
                                                               bindings br.)
        cacknin   Charles Acknin <charlesacknin@gmail.com>    (svnpatch-diff
                                                                 br.)
-          stsp   Stefan Sperling <stsp@elego.de>             (tree-conflicts
+       sbutler   Stephen Butler <sbutler@elego.de>           (tree-conflicts
+                                                              br., diff-
+                                                              callbacks3 br.)
+    firemeteor   Guo Rui <timmyguo@mail.ustc.edu.cn>          (issue-2843-dev
                                                                 br.)
 
   Subprojects that are complete, abandoned or have moved elsewhere:
@@ -173,6 +180,7 @@ Committers who have asked to be listed as dormant:
         bdenny   Brian Estlin <brian@implementality.com>
       rassilon   Bill Tutt <bill@tutts.org> (Win32, COM, issue-1003-dev br.)
          kraai   Matt Kraai <kraai@alumni.cmu.edu>
+           kon   Kalle Olavi Niemitalo <kon@iki.fi>          (psvn.el)
 
 ## Local Variables:
 ## coding:utf-8

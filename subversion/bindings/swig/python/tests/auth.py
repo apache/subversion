@@ -12,10 +12,14 @@ class SubversionAuthTestCase(unittest.TestCase):
   def test_set_parameter(self):
     baton = core.svn_auth_open([])
     core.svn_auth_set_parameter(baton, "name", "somedata")
+    core.svn_auth_set_parameter(baton, "name", None)
+    core.svn_auth_set_parameter(baton, "name", 2)
+    core.svn_auth_set_parameter(baton, "name",
+                                core.svn_auth_ssl_server_cert_info_t())
 
   def test_invalid_cred_kind(self):
     baton = core.svn_auth_open([])
-    self.assertRaises(core.SubversionException, 
+    self.assertRaises(core.SubversionException,
             lambda: core.svn_auth_first_credentials(
                 "unknown", "somerealm", baton))
 
@@ -66,6 +70,23 @@ class SubversionAuthTestCase(unittest.TestCase):
     baton = core.svn_auth_open([core.svn_auth_get_ssl_client_cert_pw_prompt_provider(myfunc, 1)])
     creds = core.svn_auth_first_credentials(
                 core.SVN_AUTH_CRED_SSL_CLIENT_CERT_PW, "somerealm", baton)
+    self.assert_(creds is not None)
+
+  def test_credentials_get_ssl_server_trust(self):
+    def myfunc(realm, failures, cert_info, may_save, pool):
+      self.assertEquals("somerealm", realm)
+      ssl_trust = core.svn_auth_cred_ssl_server_trust_t()
+      ssl_trust.accepted_failures = 0
+      ssl_trust.may_save = False
+      return ssl_trust
+    baton = core.svn_auth_open([core.svn_auth_get_ssl_server_trust_prompt_provider(myfunc)])
+    core.svn_auth_set_parameter(baton, core.SVN_AUTH_PARAM_SSL_SERVER_FAILURES,
+                                "2")
+    cert_info = core.svn_auth_ssl_server_cert_info_t()
+    core.svn_auth_set_parameter(baton, core.SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO,
+                cert_info)
+    creds = core.svn_auth_first_credentials(
+                core.SVN_AUTH_CRED_SSL_SERVER_TRUST, "somerealm", baton)
     self.assert_(creds is not None)
 
 def suite():

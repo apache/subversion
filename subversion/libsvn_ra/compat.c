@@ -105,7 +105,7 @@ prev_log_path(const char **prev_path_p,
                 prev_path = apr_pstrdup(pool, change->copyfrom_path);
               else
                 prev_path = NULL;
-              
+
               *prev_path_p = prev_path;
               if (action_p)
                 *action_p = change->action;
@@ -114,7 +114,7 @@ prev_log_path(const char **prev_path_p,
               return SVN_NO_ERROR;
             }
         }
-      
+
       if (apr_hash_count(changed_paths))
         {
           /* The path was not explicitly changed in this revision.  The
@@ -124,11 +124,11 @@ prev_log_path(const char **prev_path_p,
              that directory's copyfrom_path. */
           int i;
           apr_array_header_t *paths;
-          
+
           /* Build a sorted list of the changed paths. */
           paths = svn_sort__hash(changed_paths,
                                  svn_sort_compare_items_as_paths, pool);
-          
+
           /* Now, walk the list of paths backwards, looking a parent of
              our path that has copyfrom information. */
           for (i = paths->nelts; i > 0; i--)
@@ -137,12 +137,12 @@ prev_log_path(const char **prev_path_p,
                                                     i - 1, svn_sort__item_t);
               const char *ch_path = item.key;
               int len = strlen(ch_path);
-              
+
               /* See if our path is the child of this change path.  If
                  not, keep looking.  */
               if (! ((strncmp(ch_path, path, len) == 0) && (path[len] == '/')))
                 continue;
-              
+
               /* Okay, our path *is* a child of this change path.  If
                  this change was copied, we just need to apply the
                  portion of our path that is relative to this change's
@@ -624,10 +624,10 @@ fr_log_message_receiver(void *baton,
   for (hi = apr_hash_first(pool, log_entry->revprops); hi;
        hi = apr_hash_next(hi))
     {
-      svn_string_t *val;
-      const char *key;
+      void *val;
+      const void *key;
 
-      apr_hash_this(hi, (const void **)&key, NULL, (void **)&val);
+      apr_hash_this(hi, &key, NULL, &val);
       apr_hash_set(rev->props, apr_pstrdup(lmb->pool, key), APR_HASH_KEY_STRING,
                    svn_string_dup(val, lmb->pool));
     }

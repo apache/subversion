@@ -46,8 +46,8 @@ svn_cl__mkdir(apr_getopt_t *os,
   svn_error_t *err;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
-                                                      opt_state->targets, 
-                                                      pool));
+                                                      opt_state->targets,
+                                                      ctx, pool));
 
   if (! targets->nelts)
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
@@ -73,10 +73,8 @@ svn_cl__mkdir(apr_getopt_t *os,
                                          NULL, ctx->config, pool));
     }
 
-  ctx->revprop_table = opt_state->revprop_table;
-
   err = svn_client_mkdir3(&commit_info, targets, opt_state->parents,
-                          ctx, pool);
+                          opt_state->revprop_table, ctx, pool);
 
   if (ctx->log_msg_func3)
     err = svn_cl__cleanup_log_msg(ctx->log_msg_baton3, err);
@@ -88,8 +86,8 @@ svn_cl__mkdir(apr_getopt_t *os,
           (err, _("Try 'svn add' or 'svn add --non-recursive' instead?"));
       else if (!(opt_state->parents) &&
                (APR_STATUS_IS_ENOENT(err->apr_err) || /* in wc */
-                err->apr_err == SVN_ERR_FS_NOT_FOUND || /* ra_local and ra_svn */
-                err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND /* ra_neon */))
+                err->apr_err == SVN_ERR_FS_NOT_DIRECTORY ||
+                err->apr_err == SVN_ERR_FS_NOT_FOUND /* all ra layers */))
         return svn_error_quick_wrap
           (err, _("Try 'svn mkdir --parents' instead?"));
       else

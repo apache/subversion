@@ -186,7 +186,8 @@ svn_client__repos_locations(const char **start_url,
    representing a reposition location segment for the history of PATH
    (which is relative to RA_SESSION's session URL) in PEG_REVISION
    between END_REVISION and START_REVISION, ordered from oldest
-   segment to youngest.
+   segment to youngest.  *SEGMENTS may be empty but it will never
+   be NULL.
 
    This is basically a thin de-stream-ifying wrapper around the
    svn_ra_get_location_segments() interface, which see for the rules
@@ -260,7 +261,7 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
 svn_error_t *
 svn_client__path_relative_to_session(const char **rel_path,
                                      svn_ra_session_t *ra_session,
-                                     const char *url, 
+                                     const char *url,
                                      apr_pool_t *pool);
 
 /* Ensure that RA_SESSION's session URL matches SESSION_URL,
@@ -269,7 +270,7 @@ svn_client__path_relative_to_session(const char **rel_path,
    reparenting is meant to be temporary, the caller can reparent the
    session back to where it was); otherwise set *OLD_SESSION_URL to
    NULL.
- 
+
    If SESSION_URL is NULL, treat this as a magic value meaning "point
    the RA session to the root of the repository".  */
 svn_error_t *
@@ -302,7 +303,7 @@ svn_client__get_repos_root(const char **repos_root,
    The remaining parameters are used to procure the repository root.
    Either REPOS_ROOT or RA_SESSION -- but not both -- may be NULL.
    REPOS_ROOT or ADM_ACCESS (which may also be NULL) should be passed
-   when available as an optimization (in that order of preference). 
+   when available as an optimization (in that order of preference).
 
    CAUTION:  While having a leading slash on a so-called relative path
    might work out well for functionality that interacts with
@@ -331,13 +332,13 @@ svn_client__path_relative_to_root(const char **rel_path,
    Treat DEPTH as in svn_client_propget3().
 */
 svn_error_t *
-svn_client__get_prop_from_wc(apr_hash_t *props, 
+svn_client__get_prop_from_wc(apr_hash_t *props,
                              const char *propname,
-                             const char *target, 
+                             const char *target,
                              svn_boolean_t pristine,
                              const svn_wc_entry_t *entry,
                              svn_wc_adm_access_t *adm_access,
-                             svn_depth_t depth, 
+                             svn_depth_t depth,
                              const apr_array_header_t *changelists,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *pool);
@@ -371,11 +372,11 @@ svn_client__default_walker_error_handler(const char *path,
 #define SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx) \
         ((ctx)->log_msg_func3 || (ctx)->log_msg_func2 || (ctx)->log_msg_func)
 
-/* This is the baton that we pass svn_ra_open2(), and is associated with
+/* This is the baton that we pass svn_ra_open3(), and is associated with
    the callback table we provide to RA. */
 typedef struct
 {
-  /* Holds the directory that corresponds to the REPOS_URL at svn_ra_open2()
+  /* Holds the directory that corresponds to the REPOS_URL at svn_ra_open3()
      time. When callbacks specify a relative path, they are joined with
      this base directory. */
   const char *base_dir;
@@ -619,7 +620,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
    *TIMESTAMP_SLEEP if no sleep is required.  If IGNORE_EXTERNALS is true,
    don't process externals.  If ALLOW_UNVER_OBSTRUCTIONS is TRUE, unversioned
    children of PATH that obstruct items added from the repos are tolerated;
-   if FALSE, these obstructions cause the switch to fail. 
+   if FALSE, these obstructions cause the switch to fail.
 
    DEPTH and DEPTH_IS_STICKY behave as for svn_client__update_internal(). */
 svn_error_t *
@@ -676,7 +677,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
 svn_error_t *
 svn_client__get_diff_editor(const char *target,
                             svn_wc_adm_access_t *adm_access,
-                            const svn_wc_diff_callbacks2_t *diff_cmd,
+                            const svn_wc_diff_callbacks3_t *diff_cmd,
                             void *diff_cmd_baton,
                             svn_depth_t depth,
                             svn_boolean_t dry_run,
@@ -924,9 +925,8 @@ svn_client__condense_commit_items(const char **base_url,
    CTX->NOTIFY_FUNC/CTX->BATON will be called as the commit progresses, as
    a way of describing actions to the application layer (if non NULL).
 
-   NOTIFY_PATH_PREFIX is used to send shorter, relative paths to the
-   notify_func (it's a prefix that will be subtracted from the front
-   of the paths.)
+   NOTIFY_PATH_PREFIX will be passed to CTX->notify_func2() as the
+   common absolute path prefix of the committed paths.  It can be NULL.
 
    If the caller wants to keep track of any outstanding temporary
    files left after the transmission of text and property mods,
@@ -1057,16 +1057,29 @@ svn_client__get_log_msg(const char **log_msg,
                         svn_client_ctx_t *ctx,
                         apr_pool_t *pool);
 
-/* Return the revision properties stored in CTX (if any), adding LOG_MSG
-   as SVN_PROP_REVISION_LOG in *REVPROP_TABLE, allocated in POOL.
-   *REVPROP_TABLE will map const char * property names to svn_string_t values.
-   If CTX->REVPROP_TABLE is non-NULL, check that it doesn't contain
-   any of the standard Subversion properties.  In that case, return
-   SVN_ERR_CLIENT_PROPERTY_NAME. */
-svn_error_t *svn_client__get_revprop_table(apr_hash_t **revprop_table,
-                                           const char *log_msg,
-                                           svn_client_ctx_t *ctx,
-                                           apr_pool_t *pool);
+/* Return the revision properties stored in REVPROP_TABLE_IN, adding
+   LOG_MSG as SVN_PROP_REVISION_LOG in *REVPROP_TABLE_OUT, allocated in
+   POOL.  *REVPROP_TABLE_OUT will map const char * property names to
+   svn_string_t values.  If REVPROP_TABLE_IN is non-NULL, check that
+   it doesn't contain any of the standard Subversion properties.  In
+   that case, return SVN_ERR_CLIENT_PROPERTY_NAME. */
+svn_error_t *
+svn_client__ensure_revprop_table(apr_hash_t **revprop_table_out,
+                                 const apr_hash_t *revprop_table_in,
+                                 const char *log_msg,
+                                 svn_client_ctx_t *ctx,
+                                 apr_pool_t *pool);
+
+
+/** Return TRUE iff revision kind is dependent on the working copy.
+ * Otherwise, return FALSE.
+ */
+#define SVN_CLIENT__REVKIND_NEEDS_WC(kind)                                 \
+  (((kind) == svn_opt_revision_base ||                                     \
+   (kind) == svn_opt_revision_previous ||                                  \
+   (kind) == svn_opt_revision_working ||                                   \
+   (kind) == svn_opt_revision_committed)                                   \
+   ? TRUE : FALSE)
 
 
 #ifdef __cplusplus

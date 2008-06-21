@@ -271,7 +271,7 @@ static const char * const broken_mergeinfo_vals[NBR_BROKEN_MERGEINFO_VALS] =
     "/trunk:3-7,4-23*",
     /* Overlapping revs same inheritability */
     "/trunk:5-9*,9*",
-    "/trunk:5*,5-9*", 
+    "/trunk:5*,5-9*",
     "/trunk:5-9,9",
     "/trunk:5,5-9",
     "/trunk:4,4",
@@ -488,13 +488,13 @@ test_rangelist_intersect(const char **msg,
     return SVN_NO_ERROR;
 
   SVN_ERR(svn_mergeinfo_parse(&info1, "/trunk: 1-6,12-16,30-32,40-42", pool));
-  SVN_ERR(svn_mergeinfo_parse(&info2, "/trunk: 1,3-4,7,9,11-12,31-34,38-44", 
+  SVN_ERR(svn_mergeinfo_parse(&info2, "/trunk: 1,3-4,7,9,11-12,31-34,38-44",
                               pool));
   rangelist1 = apr_hash_get(info1, "/trunk", APR_HASH_KEY_STRING);
   rangelist2 = apr_hash_get(info2, "/trunk", APR_HASH_KEY_STRING);
 
   SVN_ERR(svn_rangelist_intersect(&intersection, rangelist1, rangelist2,
-                                  pool));
+                                  TRUE, pool));
 
   return verify_ranges_match(intersection, expected_intersection, 5,
                              "svn_rangelist_intersect", "intersect", pool);
@@ -685,7 +685,7 @@ test_merge_mergeinfo(const char **msg,
                   mergeinfo[i].path_rngs->expected_rngs[k].start,
                   mergeinfo[i].path_rngs->expected_rngs[k].end,
                   mergeinfo[i].path_rngs->expected_rngs[k].inheritable
-                  ? "" : "*");             
+                  ? "" : "*");
             }
           /* Were more ranges expected? */
           if (k < MAX_NBR_MERGEINFO_RANGES
@@ -711,7 +711,7 @@ test_remove_rangelist(const char **msg,
   /* Struct for svn_rangelist_remove test data.
      Parse WHITEBOARD and ERASER to hashes and then get the rangelist for
      path 'A' from both.
-     
+
      Remove ERASER's rangelist from WHITEBOARD's twice, once while
      considering inheritance and once while not.  In the first case the
      resulting rangelist should have EXPECTED_RANGES_CONSIDER_INHERITANCE
@@ -778,7 +778,7 @@ test_remove_rangelist(const char **msg,
         {
           int expected_nbr_ranges;
           svn_merge_range_t *expected_ranges;
-            
+
           SVN_ERR(svn_mergeinfo_parse(&info1, (test_data[i]).eraser, pool));
           SVN_ERR(svn_mergeinfo_parse(&info2, (test_data[i]).whiteboard, pool));
           eraser = apr_hash_get(info1, "/A", APR_HASH_KEY_STRING);
@@ -796,13 +796,13 @@ test_remove_rangelist(const char **msg,
             {
               expected_nbr_ranges = (test_data[i]).expected_ranges_consider_inheritance;
               expected_ranges = (test_data[i]).expected_removed_consider_inheritance;
-       
+
             }
           else
             {
               expected_nbr_ranges = (test_data[i]).expected_ranges_ignore_inheritance;
               expected_ranges = (test_data[i]).expected_removed_ignore_inheritance;
-          
+
             }
           SVN_ERR(svn_rangelist_remove(&output, eraser, whiteboard,
                                        j == 0 ? TRUE : FALSE,
@@ -896,7 +896,7 @@ test_rangelist_remove_randomly(const char **msg,
         expected_revs[RANDOM_REV_ARRAY_LENGTH];
       apr_array_header_t *first_rangelist, *second_rangelist,
         *expected_rangelist, *actual_rangelist;
-      /* There will be at most RANDOM_REV_ARRAY_LENGTH ranges in 
+      /* There will be at most RANDOM_REV_ARRAY_LENGTH ranges in
          expected_rangelist. */
       svn_merge_range_t expected_range_array[RANDOM_REV_ARRAY_LENGTH];
       int j;
@@ -958,7 +958,7 @@ test_rangelist_intersect_randomly(const char **msg,
         expected_revs[RANDOM_REV_ARRAY_LENGTH];
       apr_array_header_t *first_rangelist, *second_rangelist,
         *expected_rangelist, *actual_rangelist;
-      /* There will be at most RANDOM_REV_ARRAY_LENGTH ranges in 
+      /* There will be at most RANDOM_REV_ARRAY_LENGTH ranges in
          expected_rangelist. */
       svn_merge_range_t expected_range_array[RANDOM_REV_ARRAY_LENGTH];
       int j;
@@ -982,7 +982,7 @@ test_rangelist_intersect_randomly(const char **msg,
         }
 
       SVN_ERR(svn_rangelist_intersect(&actual_rangelist, first_rangelist,
-                                      second_rangelist, iterpool));
+                                      second_rangelist, TRUE, iterpool));
 
       SVN_ERR(verify_ranges_match(actual_rangelist,
                                   expected_range_array,
@@ -1088,7 +1088,7 @@ test_rangelist_merge(const char **msg,
   int i;
   svn_error_t *err, *child_err;
   apr_array_header_t *rangelist1, *rangelist2;
-  
+
   /* Struct for svn_rangelist_merge test data.  Similar to
      mergeinfo_merge_test_data struct in svn_mergeinfo_merge() test. */
   struct rangelist_merge_test_data
@@ -1099,7 +1099,7 @@ test_rangelist_merge(const char **msg,
     svn_merge_range_t expected_merge[6];
   };
 
-  #define SIZE_OF_RANGE_MERGE_TEST_ARRAY 52
+  #define SIZE_OF_RANGE_MERGE_TEST_ARRAY 59
   /* The actual test data. */
   struct rangelist_merge_test_data test_data[SIZE_OF_RANGE_MERGE_TEST_ARRAY] =
     {
@@ -1183,6 +1183,21 @@ test_rangelist_merge(const char **msg,
 
       {"/A: 2-17", "/A: 1-5*,7*,12-13*", 2,
        {{0, 1, FALSE}, {1, 17, TRUE}}},
+
+      /* A rangelist merged with an empty rangelist should equal the
+         non-empty rangelist but in compacted form. */
+      {"/A: 1-44,45,46,47-50",       "",  1, {{ 0, 50, TRUE }}},
+      {"/A: 1,2,3,4,5,6,7,8",        "",  1, {{ 0, 8,  TRUE }}},
+      {"/A: 6-10,12-13,14,15,16-22", "",  2,
+       {{ 5, 10, TRUE }, { 11, 22, TRUE }}},
+      {"", "/A: 1-44,45,46,47-50",        1, {{ 0, 50, TRUE }}},
+      {"", "/A: 1,2,3,4,5,6,7,8",         1, {{ 0, 8,  TRUE }}},
+      {"", "/A: 6-10,12-13,14,15,16-22",  2,
+       {{ 5, 10, TRUE }, { 11, 22, TRUE }}},
+
+      /* An empty rangelist merged with an empty rangelist is, drum-roll
+         please, an empty rangelist. */
+      {"", "", 0, {{0, 0, FALSE}}}
     };
   *msg = "merge of rangelists";
   if (msg_only)
@@ -1195,6 +1210,13 @@ test_rangelist_merge(const char **msg,
       SVN_ERR(svn_mergeinfo_parse(&info2, (test_data[i]).mergeinfo2, pool));
       rangelist1 = apr_hash_get(info1, "/A", APR_HASH_KEY_STRING);
       rangelist2 = apr_hash_get(info2, "/A", APR_HASH_KEY_STRING);
+
+      /* Create empty rangelists if necessary. */
+      if (rangelist1 == NULL)
+        rangelist1 = apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
+      if (rangelist2 == NULL)
+        rangelist2 = apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
+
       SVN_ERR(svn_rangelist_merge(&rangelist1, rangelist2, pool));
       child_err = verify_ranges_match(rangelist1,
                                      (test_data[i]).expected_merge,
@@ -1233,7 +1255,7 @@ test_rangelist_diff(const char **msg,
     /* svn:mergeinfo string representations */
     const char *from;
     const char *to;
-    
+
     /* Expected results for performing svn_rangelist_diff
        while considering differences in inheritability to be real
        differences. */
@@ -1253,7 +1275,7 @@ test_rangelist_diff(const char **msg,
   #define SIZE_OF_RANGE_DIFF_TEST_ARRAY 16
   /* The actual test data array.
 
-                    'from' --> {"/A: 1,5-8",  "/A: 1,6,10-12", <-- 'to' 
+                    'from' --> {"/A: 1,5-8",  "/A: 1,6,10-12", <-- 'to'
       Number of adds when  -->  1, { { 9, 12, TRUE } },
       considering inheritance
 

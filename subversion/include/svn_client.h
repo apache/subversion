@@ -855,11 +855,6 @@ typedef struct svn_client_ctx_t
    * @since New in 1.5. */
   apr_hash_t *mimetypes_map;
 
-  /** Table holding the extra revision properties to be set.  This table
-   * cannot contain any standard Subversion properties.
-   * @since New in 1.5. */
-  apr_hash_t *revprop_table;
-
   /** Conflict resolution callback and baton, if available.
    * @since New in 1.5. */
   svn_wc_conflict_resolver_func_t conflict_func;
@@ -888,6 +883,44 @@ typedef struct svn_client_ctx_t
 #define SVN_CLIENT_AUTH_USERNAME            "username"
 #define SVN_CLIENT_AUTH_PASSWORD            "password"
 /** @} group end: Authentication information file names */
+
+/** Client argument processing
+ *
+ * @defgroup clnt_cmdline Client command-line processing
+ *
+ * @{
+ */
+
+/**
+ * Pull remaining target arguments from @a os into @a *targets_p,
+ * converting them to UTF-8, followed by targets from @a known_targets
+ * (which might come from, for example, the "--targets" command line option).
+ *
+ * On each URL target, do some IRI-to-URI encoding and some auto-escaping.
+ * On each local path, canonicalize case and path separators.
+ *
+ * Allocate @a *targets_p and its elements in @a pool.
+ *
+ * @a ctx is required for possible repository authentication.
+ *
+ * If a path has the same name as a Subversion working copy
+ * administrative directory, return SVN_ERR_RESERVED_FILENAME_SPECIFIED;
+ * if multiple reserved paths are encountered, return a chain of
+ * errors, all of which are SVN_ERR_RESERVED_FILENAME_SPECIFIED.  Do
+ * not return this type of error in a chain with any other type of
+ * error, and if this is the only type of error encountered, complete
+ * the operation before returning the error(s).
+ *
+ * @since New in 1.6
+ */
+svn_error_t *
+svn_client_args_to_target_array(apr_array_header_t **targets_p,
+                                apr_getopt_t *os,
+                                apr_array_header_t *known_targets,
+                                svn_client_ctx_t *ctx,
+                                apr_pool_t *pool);
+
+/** @} group end: Client command-line processing */
 
 /** @} */
 
@@ -1205,7 +1238,7 @@ svn_client_switch2(svn_revnum_t *result_rev,
 
 
 /**
- * Similar to svn_client_switch2() but with @a allow_unver_obstructions, 
+ * Similar to svn_client_switch2() but with @a allow_unver_obstructions,
  * @a ignore_externals, and @a depth_is_sticky always set to FALSE,
  * and @a depth set according to @a recurse: if @a recurse is TRUE,
  * set @a depth to @c svn_depth_infinity, if @a recurse is FALSE, set
@@ -1282,9 +1315,9 @@ svn_client_add4(const char *path,
 /**
  * Similar to svn_client_add4(), but with @a add_parents always set to
  * FALSE and @a depth set according to @a recursive: if TRUE, then
- * @a depth is @c svn_depth_infinity, if FALSE, then @c svn_depth_files.
+ * @a depth is @c svn_depth_infinity, if FALSE, then @c svn_depth_empty.
  *
- * @deprecated Provided for backward compatibility with the 1.3 API.
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *
 svn_client_add3(const char *path,
@@ -1340,6 +1373,12 @@ svn_client_add(const char *path,
  * If @a make_parents is TRUE, create any non-existent parent directories
  * also.
  *
+ * If non-NULL, @a revprop_table is a hash table holding additional,
+ * custom revision properties (<tt>const char *</tt> names mapped to
+ * <tt>svn_string_t *</tt> values) to be set on the new revision in
+ * the event that this is a committing operation.  This table cannot
+ * contain any standard Subversion properties.
+ *
  * @a ctx->log_msg_func3/@a ctx->log_msg_baton3 are a callback/baton
  * combo that this function can use to query for a commit log message
  * when one is needed.
@@ -1355,12 +1394,14 @@ svn_error_t *
 svn_client_mkdir3(svn_commit_info_t **commit_info_p,
                   const apr_array_header_t *paths,
                   svn_boolean_t make_parents,
+                  const apr_hash_t *revprop_table,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool);
 
 
 /**
- * Same as svn_client_mkdir3(), but with @a make_parents always FALSE.
+ * Same as svn_client_mkdir3(), but with @a make_parents always FALSE,
+ * and @a revprop_table always NULL.
  *
  * @since New in 1.3.
  * @deprecated Provided for backward compatibility with the 1.4 API.
@@ -1417,6 +1458,12 @@ svn_client_mkdir(svn_client_commit_info_t **commit_info_p,
  * for removal from the repository.  Once the scheduled deletion is
  * committed, they will appear as unversioned paths in the working copy.
  *
+ * If non-NULL, @a revprop_table is a hash table holding additional,
+ * custom revision properties (<tt>const char *</tt> names mapped to
+ * <tt>svn_string_t *</tt> values) to be set on the new revision in
+ * the event that this is a committing operation.  This table cannot
+ * contain any standard Subversion properties.
+ *
  * @a ctx->log_msg_func3/@a ctx->log_msg_baton3 are a callback/baton
  * combo that this function can use to query for a commit log message
  * when one is needed.
@@ -1432,12 +1479,13 @@ svn_client_delete3(svn_commit_info_t **commit_info_p,
                    const apr_array_header_t *paths,
                    svn_boolean_t force,
                    svn_boolean_t keep_local,
+                   const apr_hash_t *revprop_table,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
 
 /**
  * Similar to svn_client_delete3(), but with @a keep_local always set
- * to FALSE.
+ * to FALSE, and @a revprop_table passed as NULL.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
@@ -1493,6 +1541,11 @@ svn_client_delete(svn_client_commit_info_t **commit_info_p,
  *
  * Use @a pool for any temporary allocation.
  *
+ * If non-NULL, @a revprop_table is a hash table holding additional,
+ * custom revision properties (<tt>const char *</tt> names mapped to
+ * <tt>svn_string_t *</tt> values) to be set on the new revision.
+ * This table cannot contain any standard Subversion properties.
+ *
  * @a ctx->log_msg_func3/@a ctx->log_msg_baton3 are a callback/baton
  * combo that this function can use to query for a commit log message
  * when one is needed.
@@ -1519,13 +1572,15 @@ svn_client_import3(svn_commit_info_t **commit_info_p,
                    svn_depth_t depth,
                    svn_boolean_t no_ignore,
                    svn_boolean_t ignore_unknown_node_types,
+                   const apr_hash_t *revprop_table,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
 
 /**
  * Similar to svn_client_import3(), but with @a ignore_unknown_node_types
- * always set to @c FALSE, and @a depth set according to @a nonrecursive:
- * if TRUE, then @a depth is @c svn_depth_files, else @c svn_depth_infinity.
+ * always set to @c FALSE, @a revprop_table passed as NULL, and @a
+ * depth set according to @a nonrecursive: if TRUE, then @a depth is
+ * @c svn_depth_files, else @c svn_depth_infinity.
  *
  * @since New in 1.3.
  *
@@ -1574,6 +1629,11 @@ svn_client_import(svn_client_commit_info_t **commit_info_p,
  * that.  If @a targets has zero elements, then do nothing and return
  * immediately without error.
  *
+ * If non-NULL, @a revprop_table is a hash table holding additional,
+ * custom revision properties (<tt>const char *</tt> names mapped to
+ * <tt>svn_string_t *</tt> values) to be set on the new revision.
+ * This table cannot contain any standard Subversion properties.
+ *
  * If @a ctx->notify_func2 is non-NULL, then call @a ctx->notify_func2 with
  * @a ctx->notify_baton2 as the commit progresses, with any of the following
  * actions: @c svn_wc_notify_commit_modified, @c svn_wc_notify_commit_added,
@@ -1616,14 +1676,16 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
                    svn_boolean_t keep_locks,
                    svn_boolean_t keep_changelists,
                    const apr_array_header_t *changelists,
+                   const apr_hash_t *revprop_table,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
 
 /**
  * Similar to svn_client_commit4(), but always with NULL for
- * @a changelist_name, FALSE for @a keep_changelist, and @a depth
- * set according to @a recurse: if @a recurse is TRUE, use
- * @c svn_depth_infinity, else @c svn_depth_files.
+ * @a changelist_name, FALSE for @a keep_changelist, NULL for @a
+ * revprop_table, and @a depth set according to @a recurse: if @a
+ * recurse is TRUE, use @c svn_depth_infinity, else @c
+ * svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  *
@@ -2641,9 +2703,11 @@ svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
 
 
 /**
- * Set @a *mergeinfo to the mergeinfo describing the ranges which have
- * been merged into @a path_or_url as of @a peg_revision, or @c NULL
- * if there is no mergeinfo.
+ * Set @a *mergeinfo to a hash mapping <tt>const char *</tt> merge
+ * source URLs to <tt>apr_array_header_t *</tt> rangelists (arrays of
+ * <tt>svn_merge_range_t *</tt> ranges) describing the ranges which
+ * have been merged into @a path_or_url as of @a peg_revision, or @c
+ * NULL if there is no mergeinfo.
  *
  * Use @a pool for all necessary allocations.
  *
@@ -2651,10 +2715,14 @@ svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
  * never happen for file:// URLs), return an @c
  * SVN_ERR_UNSUPPORTED_FEATURE error.
  *
+ * @note Unlike most APIs which deal with mergeinfo, this one returns
+ * data where the keys of the hash are absolute repository URLs rather
+ * than repository filesystem paths.
+ *
  * @since New in 1.5.
  */
 svn_error_t *
-svn_client_mergeinfo_get_merged(svn_mergeinfo_t *mergeinfo,
+svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
                                 const char *path_or_url,
                                 const svn_opt_revision_t *peg_revision,
                                 svn_client_ctx_t *ctx,
@@ -2662,29 +2730,56 @@ svn_client_mergeinfo_get_merged(svn_mergeinfo_t *mergeinfo,
 
 
 /**
- * Set @a *rangelist to a list of <tt>svn_merge_range_t *</tt>
- * items representing ranges of revisions which have not yet been
- * merged from @a merge_source_url into @a path_or_url as of @a
- * peg_revision, or @c NULL if all candidate revisions of @a
- * merge_source have already been merged.
+ * Drive log entry callbacks @a receiver / @a receiver_baton with the
+ * revisions merged from @a merge_source_url (as of @a
+ * src_peg_revision) into @a path_or_url (as of @a peg_revision).  @a
+ * ctx is a context used for authentication.
  *
- * Use @a pool for all necessary allocations.
+ * @a discover_changed_paths and @a revprops are the same as for
+ * svn_client_log4().  Use @a pool for all necessary allocations.
  *
- * If the server doesn't support retrieval of mergeinfo (which will
- * never happen for file:// URLs), return an @c
+ * If the server doesn't support retrieval of mergeinfo, return an @c
  * SVN_ERR_UNSUPPORTED_FEATURE error.
  *
  * @since New in 1.5.
  */
 svn_error_t *
-svn_client_mergeinfo_get_available(apr_array_header_t **rangelist,
-                                   const char *path_or_url,
-                                   const svn_opt_revision_t *peg_revision,
-                                   const char *merge_source_url,
-                                   svn_client_ctx_t *ctx,
-                                   apr_pool_t *pool);
+svn_client_mergeinfo_log_merged(const char *path_or_url,
+                                const svn_opt_revision_t *peg_revision,
+                                const char *merge_source_url,
+                                const svn_opt_revision_t *src_peg_revision,
+                                svn_log_entry_receiver_t receiver,
+                                void *receiver_baton,
+                                svn_boolean_t discover_changed_paths,
+                                const apr_array_header_t *revprops,
+                                svn_client_ctx_t *ctx,
+                                apr_pool_t *pool);
 
-
+/**
+ * Drive log entry callbacks @a receiver / @a receiver_baton with the
+ * revisions eligible for merge from @a merge_source_url (as of @a
+ * src_peg_revision) into @a path_or_url (as of @a peg_revision).  @a
+ * ctx is a context used for authentication.
+ *
+ * @a discover_changed_paths and @a revprops are the same as for
+ * svn_client_log4().  Use @a pool for all necessary allocations.
+ *
+ * If the server doesn't support retrieval of mergeinfo, return an @c
+ * SVN_ERR_UNSUPPORTED_FEATURE error.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_mergeinfo_log_eligible(const char *path_or_url,
+                                  const svn_opt_revision_t *peg_revision,
+                                  const char *merge_source_url,
+                                  const svn_opt_revision_t *src_peg_revision,
+                                  svn_log_entry_receiver_t receiver,
+                                  void *receiver_baton,
+                                  svn_boolean_t discover_changed_paths,
+                                  const apr_array_header_t *revprops,
+                                  svn_client_ctx_t *ctx,
+                                  apr_pool_t *pool);
 
 /** @} */
 
@@ -2809,7 +2904,7 @@ svn_client_revert(const apr_array_header_t *paths,
  */
 
 /**
- * Similar to svn_client_resolved2(), but without automatic conflict
+ * Similar to svn_client_resolve(), but without automatic conflict
  * resolution support.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
@@ -2820,9 +2915,7 @@ svn_client_resolved(const char *path,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool);
 
-/** Remove the 'conflicted' state on a working copy @a path.  This will
- * not semantically resolve conflicts;  it just allows @a path to be
- * committed in the future.  The implementation details are opaque.
+/** Perform automatic conflict resolution on a working copy @a path.
  *
  * If @a depth is @c svn_depth_empty, act only on @a path; if
  * @c svn_depth_files, resolve @a path and its conflicted file
@@ -2838,12 +2931,9 @@ svn_client_resolved(const char *path,
  * @c svn_wc_conflict_choose_merged, don't change the contents at all,
  * just remove the conflict status, which is the pre-1.5 behavior.
  *
- * (@c svn_wc_conflict_choose_theirs_conflict and
- * @c svn_wc_conflict_choose_mine_conflict are not yet implemented;
- * the effect of passing one of those values as @a conflict_choice is
- * currently undefined, which may or may not be an underhanded way of
- * allowing real behaviors to be added for them later without revving
- * this interface.)
+ * @c svn_wc_conflict_choose_theirs_conflict and @c
+ * svn_wc_conflict_choose_mine_conflict are not legal for binary
+ * files or properties.
  *
  * If @a path is not in a state of conflict to begin with, do nothing.
  * If @a path's conflict state is removed and @a ctx->notify_func2 is non-NULL,
@@ -2852,11 +2942,11 @@ svn_client_resolved(const char *path,
  * @since New in 1.5.
  */
 svn_error_t *
-svn_client_resolved2(const char *path,
-                     svn_depth_t depth,
-                     svn_wc_conflict_choice_t conflict_choice,
-                     svn_client_ctx_t *ctx,
-                     apr_pool_t *pool);
+svn_client_resolve(const char *path,
+                   svn_depth_t depth,
+                   svn_wc_conflict_choice_t conflict_choice,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool);
 
 
 /** @} */
@@ -2931,6 +3021,12 @@ typedef struct svn_client_copy_source_t
  * If @a make_parents is TRUE, create any non-existent parent directories
  * also.
  *
+ * If non-NULL, @a revprop_table is a hash table holding additional,
+ * custom revision properties (<tt>const char *</tt> names mapped to
+ * <tt>svn_string_t *</tt> values) to be set on the new revision in
+ * the event that this is a committing operation.  This table cannot
+ * contain any standard Subversion properties.
+ *
  * @a ctx->log_msg_func3/@a ctx->log_msg_baton3 are a callback/baton combo
  * that this function can use to query for a commit log message when one is
  * needed.
@@ -2947,13 +3043,15 @@ svn_client_copy4(svn_commit_info_t **commit_info_p,
                  const char *dst_path,
                  svn_boolean_t copy_as_child,
                  svn_boolean_t make_parents,
+                 const apr_hash_t *revprop_table,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool);
 
 /**
  * Similar to svn_client_copy4(), with only one @a src_path, @a
- * copy_as_child set to @c FALSE, and @a make_parents set to @c FALSE.
- * Also, use @a src_revision as both the operational and peg revision.
+ * copy_as_child set to @c FALSE, @a revprop_table passed as NULL, and
+ * @a make_parents set to @c FALSE.  Also, use @a src_revision as both
+ * the operational and peg revision.
  *
  * @since New in 1.4.
  *
@@ -3067,6 +3165,12 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
  * If @a make_parents is TRUE, create any non-existent parent directories
  * also.
  *
+ * If non-NULL, @a revprop_table is a hash table holding additional,
+ * custom revision properties (<tt>const char *</tt> names mapped to
+ * <tt>svn_string_t *</tt> values) to be set on the new revision in
+ * the event that this is a committing operation.  This table cannot
+ * contain any standard Subversion properties.
+ *
  * @a ctx->log_msg_func3/@a ctx->log_msg_baton3 are a callback/baton combo that
  * this function can use to query for a commit log message when one is needed.
  *
@@ -3086,12 +3190,14 @@ svn_client_move5(svn_commit_info_t **commit_info_p,
                  svn_boolean_t force,
                  svn_boolean_t move_as_child,
                  svn_boolean_t make_parents,
+                 const apr_hash_t *revprop_table,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool);
 
 /**
  * Similar to svn_client_move5(), with only one @a src_path, @a
- * move_as_child set to @c FALSE, and @a make_parents set to @c FALSE.
+ * move_as_child set to @c FALSE, @a revprop_table passed as NULL, and
+ * @a make_parents set to @c FALSE.
  *
  * @since New in 1.4.
  *
@@ -3211,6 +3317,12 @@ svn_client_move(svn_client_commit_info_t **commit_info_p,
  * of one of those changelists.  If @a changelists is empty (or
  * altogether @c NULL), no changelist filtering occurs.
  *
+ * If non-NULL, @a revprop_table is a hash table holding additional,
+ * custom revision properties (<tt>const char *</tt> names mapped to
+ * <tt>svn_string_t *</tt> values) to be set on the new revision in
+ * the event that this is a committing operation.  This table cannot
+ * contain any standard Subversion properties.
+ *
  * If @a ctx->cancel_func is non-NULL, invoke it passing @a
  * ctx->cancel_baton at various places during the operation.
  *
@@ -3227,15 +3339,16 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
                     svn_boolean_t skip_checks,
                     svn_revnum_t base_revision_for_url,
                     const apr_array_header_t *changelists,
+                    const apr_hash_t *revprop_table,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool);
 
 /**
  * Like svn_client_propset3(), but with @a base_revision_for_url
  * always @c SVN_INVALID_REVNUM; @a commit_info_p always @c NULL; @a
- * changelists always @c NULL; and @a depth set according to @a
- * recurse: if @a recurse is TRUE, @a depth is @c svn_depth_infinity,
- * else @c svn_depth_empty.
+ * changelists always @c NULL; @a revprop_table always @c NULL; and @a
+ * depth set according to @a recurse: if @a recurse is TRUE, @a depth
+ * is @c svn_depth_infinity, else @c svn_depth_empty.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
@@ -3267,6 +3380,18 @@ svn_client_propset(const char *propname,
  * rev affected in @a *set_rev.  A @a propval of @c NULL will delete the
  * property.
  *
+ * If @a original_propval is non-NULL, then just before setting the
+ * new value, check that the old value matches @a original_propval;
+ * if they do not match, return the error @c SVN_ERR_RA_OUT_OF_DATE.
+ * This is to help clients support interactive editing of revprops:
+ * without this check, the window during which the property may change
+ * underneath the user is as wide as the amount of time the user
+ * spends editing the property.  With this check, the window is
+ * reduced to a small, constant amount of time right before we set the
+ * new value.  (To check that an old value is still non-existent, set
+ * @a original_propval->data to NULL, and @a original_propval->len is
+ * ignored.)
+ *
  * If @a force is TRUE, allow newlines in the author property.
  *
  * If @a propname is an svn-controlled property (i.e. prefixed with
@@ -3281,6 +3406,25 @@ svn_client_propset(const char *propname,
  *
  * Also note that unless the administrator creates a
  * pre-revprop-change hook in the repository, this feature will fail.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_client_revprop_set2(const char *propname,
+                        const svn_string_t *propval,
+                        const svn_string_t *original_propval,
+                        const char *URL,
+                        const svn_opt_revision_t *revision,
+                        svn_revnum_t *set_rev,
+                        svn_boolean_t force,
+                        svn_client_ctx_t *ctx,
+                        apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_revprop_set2(), but with @a original_propval
+ * always @c NULL.
+ *
+ * @deprecated Provided for backward compatibility with the 1.0 API.
  */
 svn_error_t *
 svn_client_revprop_set(const char *propname,
@@ -4021,8 +4165,7 @@ svn_client_unlock(const apr_array_header_t *targets,
  * @{
  */
 
-/** The value of the size in the repository is unknown (because the info
- * was fetched for a local path, not an URL).
+/** The size of the file is unknown.
  *
  * @since New in 1.5
  */
@@ -4088,14 +4231,14 @@ typedef struct svn_info_t
   const char *conflict_new;
   const char *conflict_wrk;
   const char *prejfile;
-
-  /* @since New in 1.5. */
+  /** @since New in 1.5. */
   const char *changelist;
+  /** @since New in 1.5. */
   svn_depth_t depth;
 
   /**
    * The size of the file after being translated into its local
-   * representation, or @c SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN if
+   * representation, or @c SVN_INFO_SIZE_UNKNOWN if
    * unknown.  Not applicable for directories.
    * @since New in 1.5.
    */
@@ -4330,7 +4473,7 @@ svn_client_uuid_from_path(const char **uuid,
  *
  * @since New in 1.3.
  *
- * @note This function is similar to svn_ra_open2(), but the caller avoids
+ * @note This function is similar to svn_ra_open3(), but the caller avoids
  * having to providing its own callback functions.
  */
 svn_error_t *

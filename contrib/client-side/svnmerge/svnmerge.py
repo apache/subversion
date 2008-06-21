@@ -217,8 +217,9 @@ def prefix_lines(prefix, lines):
     return prefix + lines[:-1].replace("\n", "\n"+prefix) + "\n"
 
 def recode_stdout_to_file(s):
-    if locale.getdefaultlocale()[1] is None or sys.stdout.encoding is None:
-      return s
+    if locale.getdefaultlocale()[1] is None or not hasattr(sys.stdout, "encoding") \
+            or sys.stdout.encoding is None:
+        return s
     u = s.decode(sys.stdout.encoding)
     return u.encode(locale.getdefaultlocale()[1])
 
@@ -302,17 +303,15 @@ except ImportError:
 
 def launchsvn(s, show=False, pretend=False, **kwargs):
     """Launch SVN and grab its output."""
-    username = opts.get("username", None)
-    password = opts.get("password", None)
-    if username:
-        username = " --username=" + username
-    else:
-        username = ""
-    if password:
-        password = " --password=" + password
-    else:
-        password = ""
-    cmd = opts["svn"] + " --non-interactive" + username + password + " " + s
+    username = password = configdir = ""
+    if opts.get("username", None):
+        username = "--username=" + opts["username"]
+    if opts.get("password", None):
+        password = "--password=" + opts["password"]
+    if opts.get("config-dir", None):
+        configdir = "--config-dir=" + opts["config-dir"]
+    cmd = ' '.join(filter(None, [opts["svn"], "--non-interactive",
+                                 username, password, configdir, s]))
     if show or opts["verbose"] >= 2:
         print cmd
     if pretend:
@@ -869,7 +868,7 @@ class SvnLogParser:
         def __init__(self, xmlnode):
             self.n = xmlnode
         def revision(self):
-            return self.n.getAttribute("revision")
+            return int(self.n.getAttribute("revision"))
         def author(self):
             return self.n.getElementsByTagName("author")[0].firstChild.data
         def paths(self):
@@ -1195,7 +1194,7 @@ def action_init(target_dir, target_props):
             # which created the merge source:
             report('the source "%s" is a branch of "%s"' %
                    (opts["source-url"], target_dir))
-            revision_range = "1-" + copy_committed_in_rev
+            revision_range = "1-" + str(copy_committed_in_rev)
         else:
             # If the copy source is the merge source, and
             # the copy target is the merge target, then we want to
@@ -1867,6 +1866,9 @@ global_opts = [
     OptionArg("-p", "--password",
               default=None,
               help="invoke subversion commands with the supplied password"),
+    OptionArg("-c", "--config-dir", metavar="DIR",
+              default=None,
+              help="cause subversion commands to consult runtime config directory DIR"),
 ]
 
 common_opts = [
@@ -2083,7 +2085,23 @@ def main(args):
 
     # Validate branch_dir
     if not is_wc(branch_dir):
-        error('"%s" is not a subversion working directory' % branch_dir)
+        if str(cmd) == "avail":
+            info = None
+            # it should be noted here that svn info does not error exit
+            # if an invalid target is specified to it (as is
+            # intuitive). so the try, except code is not absolutely
+            # necessary. but, I retain it to indicate the intuitive
+            # handling.
+            try:
+                info = get_svninfo(branch_dir)
+            except LaunchError:
+                pass
+            # test that we definitely targeted a subversion directory,
+            # mirroring the purpose of the earlier is_wc() call
+            if info is None or not info.has_key("Node Kind") or info["Node Kind"] != "directory":
+                error('"%s" is neither a valid URL, nor a working directory' % branch_dir)
+        else:
+            error('"%s" is not a subversion working directory' % branch_dir)
 
     # Extract the integration info for the branch_dir
     branch_props = get_merge_props(branch_dir)
@@ -2118,7 +2136,7 @@ def main(args):
             # within the branch properties.
             found = []
             for pathid in branch_props.keys():
-                if pathid.find(source) > 0:
+                if pathid.find(source) >= 0:
                     found.append(pathid)
             if len(found) == 1:
                 # (assumes pathid is a repository-relative-path)

@@ -931,7 +931,15 @@ svn_error_t *svn_ra_svn_drive_editor2(svn_ra_svn_conn_t *conn,
   while (!state.done)
     {
       svn_pool_clear(subpool);
-      SVN_ERR(svn_ra_svn_read_tuple(conn, subpool, "wl", &cmd, &params));
+      err = svn_ra_svn_read_tuple(conn, subpool, "wl", &cmd, &params);
+      if (err && err->apr_err == SVN_ERR_RA_SVN_CONNECTION_CLOSED)
+        {
+          /* Other side disconnected; that's no error. */
+          svn_error_clear(err);
+          svn_pool_destroy(subpool);
+          return SVN_NO_ERROR;
+        }
+      svn_error_clear(err);
       if (strcmp(cmd, "abort-edit") == 0
           || strcmp(cmd, "success") == 0)
         state.done = TRUE;

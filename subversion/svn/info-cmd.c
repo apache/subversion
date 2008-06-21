@@ -447,12 +447,13 @@ svn_cl__info(apr_getopt_t *os,
   apr_pool_t *subpool = svn_pool_create(pool);
   int i;
   svn_error_t *err;
+  svn_boolean_t saw_a_problem = FALSE;
   svn_opt_revision_t peg_revision;
   svn_info_receiver_t receiver;
 
-  SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os, 
-                                                      opt_state->targets, 
-                                                      pool));
+  SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
+                                                      opt_state->targets,
+                                                      ctx, pool));
 
   /* Add "." if user passed 0 arguments. */
   svn_opt_push_implicit_dot_target(targets, pool);
@@ -496,39 +497,47 @@ svn_cl__info(apr_getopt_t *os,
           && (peg_revision.kind == svn_opt_revision_unspecified))
         peg_revision.kind = svn_opt_revision_head;
 
-      err = svn_client_info2(truepath, 
+      err = svn_client_info2(truepath,
                              &peg_revision, &(opt_state->start_revision),
                              receiver, NULL, opt_state->depth,
                              opt_state->changelists, ctx, subpool);
 
-      /* If one of the targets is a non-existent URL or wc-entry,
-         don't bail out.  Just warn and move on to the next target. */
-      if (err && err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE)
+      if (err)
         {
-          svn_error_clear(err);
-          SVN_ERR(svn_cmdline_fprintf
-                  (stderr, subpool,
-                   _("%s:  (Not a versioned resource)\n\n"),
-                   svn_path_local_style(target, pool)));
-          continue;
-        }
-      else if (err && err->apr_err == SVN_ERR_RA_ILLEGAL_URL)
-        {
-          svn_error_clear(err);
-          SVN_ERR(svn_cmdline_fprintf
-                  (stderr, subpool,
-                   _("%s:  (Not a valid URL)\n\n"),
-                   svn_path_local_style(target, pool)));
-          continue;
-        }
-      else if (err)
-        return err;
+          /* If one of the targets is a non-existent URL or wc-entry,
+             don't bail out.  Just warn and move on to the next target. */
+          if (err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE
+              || err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
+            {
+              SVN_ERR(svn_cmdline_fprintf
+                      (stderr, subpool,
+                       _("%s:  (Not a versioned resource)\n\n"),
+                       svn_path_local_style(target, pool)));
+            }
+          else if (err->apr_err == SVN_ERR_RA_ILLEGAL_URL)
+            {
+              SVN_ERR(svn_cmdline_fprintf
+                      (stderr, subpool,
+                       _("%s:  (Not a valid URL)\n\n"),
+                       svn_path_local_style(target, pool)));
+            }
+          else
+            {
+              return err;
+            }
 
+          svn_error_clear(err);
+          err = NULL;
+          saw_a_problem = TRUE;
+        }
     }
   svn_pool_destroy(subpool);
 
   if (opt_state->xml && (! opt_state->incremental))
     SVN_ERR(svn_cl__xml_print_footer("info", pool));
 
-  return SVN_NO_ERROR;
+  if (saw_a_problem)
+    return svn_error_create(SVN_ERR_BASE, NULL, NULL);
+  else
+    return SVN_NO_ERROR;
 }

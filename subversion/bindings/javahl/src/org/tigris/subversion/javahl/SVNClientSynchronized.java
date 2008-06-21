@@ -19,6 +19,7 @@
 package org.tigris.subversion.javahl;
 
 import java.io.OutputStream;
+import java.util.Map;
 
 /**
  * This class provides a threadsafe wrapped for SVNClient
@@ -470,19 +471,22 @@ public class SVNClientSynchronized implements SVNClientInterface
     public void remove(String[] path, String message, boolean force)
             throws ClientException
     {
-        remove(path, message, force, false);
+        synchronized (clazz)
+        {
+            worker.remove(path, message, force);
+        }
     }
 
     /**
      * @since 1.5
      */
     public void remove(String[] path, String message, boolean force,
-                       boolean keepLocal)
+                       boolean keepLocal, Map revpropTable)
             throws ClientException
     {
         synchronized (clazz)
         {
-            worker.remove(path, message, force, keepLocal);
+            worker.remove(path, message, force, keepLocal, revpropTable);
         }
     }
 
@@ -643,13 +647,13 @@ public class SVNClientSynchronized implements SVNClientInterface
      */
     public long commit(String[] path, String message, int depth,
                        boolean noUnlock, boolean keepChangelist,
-                       String[] changelists)
+                       String[] changelists, Map revpropTable)
             throws ClientException
     {
         synchronized (clazz)
         {
             return worker.commit(path, message, depth, noUnlock,
-                                 keepChangelist, changelists);
+                                 keepChangelist, changelists, revpropTable);
         }
     }
 
@@ -657,13 +661,14 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @since 1.5
      */
     public void copy(CopySource[] sources, String destPath, String message,
-                     boolean copyAsChild, boolean makeParents)
+                     boolean copyAsChild, boolean makeParents,
+                     Map revpropTable)
         throws ClientException
     {
         synchronized (clazz)
         {
             worker.copy(sources, destPath, message, copyAsChild,
-                        makeParents);
+                        makeParents, revpropTable);
         }
     }
 
@@ -686,13 +691,13 @@ public class SVNClientSynchronized implements SVNClientInterface
      */
     public void move(String[] srcPaths, String destPath, String message,
                      boolean force, boolean moveAsChild,
-                     boolean makeParents)
+                     boolean makeParents, Map revpropTable)
         throws ClientException
     {
         synchronized (clazz)
         {
             worker.move(srcPaths, destPath, message, force, moveAsChild,
-                        makeParents);
+                        makeParents, revpropTable);
         }
     }
 
@@ -729,12 +734,13 @@ public class SVNClientSynchronized implements SVNClientInterface
     /**
      * @since 1.5
      */
-    public void mkdir(String[] path, String message, boolean makeParents)
+    public void mkdir(String[] path, String message, boolean makeParents,
+                      Map revpropTable)
             throws ClientException
     {
         synchronized (clazz)
         {
-            worker.mkdir(path, message, makeParents);
+            worker.mkdir(path, message, makeParents, revpropTable);
         }
     }
 
@@ -764,17 +770,17 @@ public class SVNClientSynchronized implements SVNClientInterface
     /**
      * @since 1.5
      */
-    public void resolved(String path, int depth, int conflictResult)
+    public void resolve(String path, int depth, int conflictResult)
         throws SubversionException
     {
         synchronized (clazz)
         {
-            worker.resolved(path, depth, conflictResult);
+            worker.resolve(path, depth, conflictResult);
         }
     }
 
     /**
-     * @deprecated Use {@link #resolved(String, int, int)} instead.
+     * @deprecated Use {@link #resolve(String, int, int)} instead.
      * @since 1.0
      */
     public void resolved(String path, boolean recurse) throws ClientException
@@ -884,13 +890,14 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @since 1.5
      */
     public void doImport(String path, String url, String message, int depth,
-                         boolean noIgnore, boolean ignoreUnknownNodeTypes)
+                         boolean noIgnore, boolean ignoreUnknownNodeTypes,
+                         Map revpropTable)
             throws ClientException
     {
         synchronized(clazz)
         {
             worker.doImport(path, url, message, depth, noIgnore,
-                            ignoreUnknownNodeTypes);
+                            ignoreUnknownNodeTypes, revpropTable);
         }
     }
 
@@ -981,7 +988,7 @@ public class SVNClientSynchronized implements SVNClientInterface
     public void merge(String path, Revision pegRevision,
                       RevisionRange[] revisions, String localPath,
                       boolean force, int depth, boolean ignoreAncestry,
-                      boolean dryRun, boolean recordOnly) 
+                      boolean dryRun, boolean recordOnly)
             throws ClientException
     {
         synchronized(clazz)
@@ -1019,15 +1026,18 @@ public class SVNClientSynchronized implements SVNClientInterface
     /**
      * @since 1.5
      */
-    public RevisionRange[] getAvailableMerges(String path,
-                                              Revision pegRevision,
-                                              String mergeSource)
-        throws SubversionException
+    public void getMergeinfoLog(int kind, String pathOrUrl,
+                                Revision pegRevision, String mergeSourceUrl,
+                                Revision srcPegRevision,
+                                boolean discoverChangedPaths,
+                                String[] revprops, LogMessageCallback callback)
+        throws ClientException
     {
         synchronized (clazz)
         {
-            return worker.getAvailableMerges(path, pegRevision,
-                                             mergeSource);
+            worker.getMergeinfoLog(kind, pathOrUrl, pegRevision, mergeSourceUrl,
+                                   srcPegRevision, discoverChangedPaths,
+                                   revprops, callback);
         }
     }
 
@@ -1280,12 +1290,14 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @since 1.5
      */
     public void propertySet(String path, String name, String value, int depth,
-                            String[] changelists, boolean force)
+                            String[] changelists, boolean force,
+                            Map revpropTable)
             throws ClientException
     {
         synchronized(clazz)
         {
-            worker.propertySet(path, name, value, depth, changelists, force);
+            worker.propertySet(path, name, value, depth, changelists, force,
+                               revpropTable);
         }
     }
 

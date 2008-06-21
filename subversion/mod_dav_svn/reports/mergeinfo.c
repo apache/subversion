@@ -31,6 +31,7 @@
 #include "svn_path.h"
 #include "svn_dav.h"
 #include "private/svn_dav_protocol.h"
+#include "private/svn_log.h"
 #include "private/svn_mergeinfo_private.h"
 
 #include "../dav_svn.h"
@@ -49,7 +50,6 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
   svn_boolean_t include_descendants = FALSE;
   dav_svn__authz_read_baton arb;
   const dav_svn_repos *repos = resource->info->repos;
-  const char *action;
   int ns;
   apr_bucket_brigade *bb;
   apr_hash_index_t *hi;
@@ -61,9 +61,6 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
   svn_mergeinfo_inheritance_t inherit = svn_mergeinfo_explicit;
   apr_array_header_t *paths
     = apr_array_make(resource->pool, 0, sizeof(const char *));
-  /* for high-level logging */
-  svn_stringbuf_t *space_separated_paths =
-    svn_stringbuf_create("", resource->pool);
 
   /* Sanity check. */
   ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
@@ -99,13 +96,6 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
           target = svn_path_join(resource->info->repos_path, rel_path,
                                  resource->pool);
           (*((const char **)(apr_array_push(paths)))) = target;
-          /* Gather a formatted list of paths to include in our
-             operational logging. */
-          if (space_separated_paths->len > 1)
-            svn_stringbuf_appendcstr(space_separated_paths, " ");
-          svn_stringbuf_appendcstr(space_separated_paths,
-                                   svn_path_uri_encode(target,
-                                                       resource->pool));
         }
       else if (strcmp(child->name, SVN_DAV__INCLUDE_DESCENDANTS) == 0)
         {
@@ -184,7 +174,7 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
       apr_hash_this(hi, &key, NULL, &value);
       path = key;
       mergeinfo = value;
-      serr = svn_mergeinfo_to_string(&mergeinfo_string, mergeinfo, 
+      serr = svn_mergeinfo_to_string(&mergeinfo_string, mergeinfo,
                                      resource->pool);
       if (serr)
         {
@@ -220,10 +210,10 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
  cleanup:
 
   /* We've detected a 'high level' svn action to log. */
-  action = apr_psprintf(resource->pool, "get-mergeinfo (%s) %s",
-                        space_separated_paths->data,
-                        svn_inheritance_to_word(inherit));
-  dav_svn__operational_log(resource->info, action);
+  dav_svn__operational_log(resource->info,
+                           svn_log__get_mergeinfo(paths, inherit,
+                                                  include_descendants,
+                                                  resource->pool));
 
   /* We don't flush the brigade unless there's something in it to
      flush; that way, if we jumped to 'cleanup' before sending
@@ -250,7 +240,7 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
   apr_err = 0;
   if (sent_anything)
     apr_err = ap_fflush(output, bb);
-      
+
   if (apr_err && !derr)
     derr = dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
                                 HTTP_INTERNAL_SERVER_ERROR,

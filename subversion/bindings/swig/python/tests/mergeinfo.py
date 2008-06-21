@@ -39,7 +39,7 @@ class SubversionMergeinfoTestCase(unittest.TestCase):
     self.tearDown()
     self.repos = repos.svn_repos_create(REPOS_PATH, '', '', None, None)
     repos.svn_repos_load_fs2(self.repos, dumpfile, StringIO(),
-                             repos.svn_repos_load_uuid_default, '',
+                             repos.svn_repos_load_uuid_ignore, '',
                              0, 0, None)
     self.fs = repos.fs(self.repos)
     self.rev = fs.youngest_rev(self.fs)
@@ -69,7 +69,7 @@ class SubversionMergeinfoTestCase(unittest.TestCase):
     mergeinfo3 = core.svn_mergeinfo_merge(mergeinfo1, mergeinfo2)
     self.inspect_mergeinfo_dict(mergeinfo3, self.MERGEINFO_SRC,
                                 self.MERGEINFO_NBR_REV_RANGES)
-    
+
   def test_rangelist_reverse(self):
     mergeinfo = core.svn_mergeinfo_parse(self.TEXT_MERGEINFO1)
     rangelist = mergeinfo.get(self.MERGEINFO_SRC)

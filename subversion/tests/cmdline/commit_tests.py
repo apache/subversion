@@ -28,7 +28,8 @@ SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
-from svntest.main import server_has_revprop_commit
+from svntest.main import server_has_revprop_commit, \
+    server_gets_client_capabilities
 from svntest.actions import inject_conflict_into_wc
 
 ######################################################################
@@ -2475,6 +2476,40 @@ def start_commit_detect_capabilities(sbox):
   if data != 'yes':
     raise svntest.Failure
 
+def commit_url(sbox):
+  "'svn commit SOME_URL' should error"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repos_url = sbox.repo_url
+
+  # Commit directly to a URL
+  svntest.actions.run_and_verify_commit(None,
+                                        None,
+                                        None,
+                                        "Must give local path",
+                                        repos_url)
+
+# Test for issue #3198
+def commit_added_missing(sbox):
+  "commit a missing to-be-added file should fail"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  a_path = os.path.join(wc_dir, 'A', 'a.txt')
+  b_path = os.path.join(wc_dir, 'A', 'b.txt')
+
+  # Make two copies of mu: a and b
+  svntest.main.run_svn(None, 'cp', mu_path, a_path)
+  svntest.main.run_svn(None, 'cp', mu_path, b_path)
+
+  # remove b, make it missing
+  os.remove(b_path)
+
+  # Commit, hoping to see an error
+  svntest.actions.run_and_verify_svn("Commit should have failed",
+                                     [], ".* is scheduled for addition, but is missing",
+                                     'commit', '-m', 'logmsg', wc_dir)
 
 ########################################################################
 # Run the tests
@@ -2536,7 +2571,10 @@ test_list = [ None,
               versioned_log_message,
               changelist_near_conflict,
               commit_out_of_date_file,
-              start_commit_detect_capabilities,
+              SkipUnless(start_commit_detect_capabilities,
+                         server_gets_client_capabilities),
+              commit_url,
+              commit_added_missing,
              ]
 
 if __name__ == '__main__':

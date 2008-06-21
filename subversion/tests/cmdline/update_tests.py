@@ -29,7 +29,8 @@ SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
-from svntest.main import SVN_PROP_MERGEINFO, server_sends_copyfrom_on_update
+from svntest.main import SVN_PROP_MERGEINFO, server_sends_copyfrom_on_update, \
+  server_has_mergeinfo
 
 ######################################################################
 # Tests
@@ -2938,10 +2939,9 @@ def mergeinfo_update_elision(sbox):
     # Construct a properly escaped regex when dealing with
     # '\' riddled paths on Windows.
     update_line = update_line.replace("\\", "\\\\")
+  notify_line = svntest.main.merge_notify_line(3, 5, True, False)
   svntest.actions.run_and_verify_svn(None,
-                                     '|'.join(
-                                        [svntest.main.merge_notify_line(3, 5),
-                                         update_line]),
+                                     '|'.join([notify_line, update_line]),
                                      [], 'merge', '-r2:5',
                                      sbox.repo_url + '/A/B/E/alpha',
                                      short_alpha_COPY_path)
@@ -3453,6 +3453,83 @@ def update_copied_from_replaced_and_changed(sbox):
                                         None, None, None, None, 0,
                                         wc_dir)
 
+#----------------------------------------------------------------------
+# Regression test: ra_neon assumes that you never delete a property on
+# a newly-added file, which is wrong if it's add-with-history.
+def update_copied_and_deleted_prop(sbox):
+  "updating a copied file with a deleted property"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  iota_path = os.path.join(wc_dir, 'iota')
+  iota2_path = os.path.join(wc_dir, 'iota2')
+
+  # Add a property on iota
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'foo', 'bar', iota_path)
+  # Commit that change, creating r2.
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(verb='Sending'),
+    })
+  expected_status_mixed = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status_mixed.tweak('iota', wc_rev=2)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status_mixed, None, wc_dir)
+
+  # Copy iota to iota2 and delete the property on it.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'copy', iota_path, iota2_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propdel', 'foo', iota2_path)
+
+  # Commit that change, creating r3.
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota2' : Item(verb='Adding'),
+    })
+  expected_status_mixed.add({
+    'iota2' : Item(status='  ', wc_rev=3),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status_mixed, None, wc_dir)
+
+  # Update the whole wc, verifying disk as well.
+  expected_output = svntest.wc.State(wc_dir, { })
+  expected_disk_r3 = svntest.main.greek_state.copy()
+  expected_disk_r3.add({
+    'iota2' : Item("This is the file 'iota'.\n",
+                   props={SVN_PROP_MERGEINFO: ''}),
+    })
+  expected_disk_r3.tweak('iota', props={'foo':'bar'})
+  expected_status_r3 = expected_status_mixed.copy()
+  expected_status_r3.tweak(wc_rev=3)
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk_r3,
+                                        expected_status_r3,
+                                        check_props=True)
+
+  # Now go back to r2.
+  expected_output = svntest.wc.State(wc_dir, {'iota2': Item(status='D ')})
+  expected_disk_r2 = expected_disk_r3.copy()
+  expected_disk_r2.remove('iota2')
+  expected_status_r2 = expected_status_r3.copy()
+  expected_status_r2.tweak(wc_rev=2)
+  expected_status_r2.remove('iota2')
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk_r2,
+                                        expected_status_r2,
+                                        None, None, None, None, None,
+                                        True,
+                                        "-r2", wc_dir)
+
+  # And finally, back to r3, getting an add-with-history-and-property-deleted
+  expected_output = svntest.wc.State(wc_dir, {'iota2': Item(status='A ')})
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk_r3,
+                                        expected_status_r3,
+                                        check_props=True)
 
 #----------------------------------------------------------------------
 
@@ -3740,6 +3817,45 @@ interactive-conflicts = true
                                         '-r1', wc_dir)
 
 
+#----------------------------------------------------------------------
+
+
+def update_uuid_changed(sbox):
+  "update fails when repos uuid changed"
+
+  def wc_uuid(wc_dir):
+    "Return the UUID of the working copy at WC_DIR."
+
+    exit_code, output, errput = svntest.main.run_svn(None, 'info', wc_dir)
+    if errput:
+      raise svntest.verify.SVNUnexpectedStderr(errput)
+
+    for line in output:
+      if line.startswith('Repository UUID:'):
+        return line[17:].rstrip()
+
+    # No 'Repository UUID' line in 'svn info'?
+    raise svntest.verify.SVNUnexpectedStdout(output)
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+  repo_dir = sbox.repo_dir
+
+  uuid_before = wc_uuid(wc_dir)
+
+  # Change repository's uuid.
+  svntest.actions.run_and_verify_svnadmin(None, None, [],
+                                          'setuuid', repo_dir)
+
+  # 'update' detected the new uuid...
+  svntest.actions.run_and_verify_svn(None, None, '.*UUID.*',
+                                     'update', wc_dir)
+
+  # ...and didn't overwrite the old uuid.
+  uuid_after = wc_uuid(wc_dir)
+  if uuid_before != uuid_after:
+    raise svntest.Failure
+
 
 #######################################################################
 # Run the tests
@@ -3782,15 +3898,18 @@ test_list = [ None,
               update_wc_with_replaced_file,
               update_with_obstructing_additions,
               update_conflicted,
-              mergeinfo_update_elision,
+              SkipUnless(mergeinfo_update_elision,
+                         server_has_mergeinfo),
               SkipUnless(update_handles_copyfrom,
                          server_sends_copyfrom_on_update),
               copyfrom_degrades_gracefully,
               SkipUnless(update_handles_copyfrom_with_txdeltas,
                          server_sends_copyfrom_on_update),
               update_copied_from_replaced_and_changed,
+              update_copied_and_deleted_prop,
               update_accept_conflicts,
               eof_in_interactive_conflict_resolver,
+              update_uuid_changed,
              ]
 
 if __name__ == '__main__':

@@ -42,13 +42,17 @@
     const char *native_eol,
     const char *comment,
     const char *relative_to_dir,
+    apr_hash_t *revprop_table,
     apr_array_header_t *changelists
+};
+
+%apply apr_hash_t *PROPHASH {
+    apr_hash_t *revprop_table
 };
 
 #ifdef SWIGRUBY
 %apply apr_hash_t *HASH_CSTRING_MAYBENULL {
-  apr_hash_t *mimetypes_map,
-  apr_hash_t *revprop_table
+  apr_hash_t *mimetypes_map
 }
 #endif
 

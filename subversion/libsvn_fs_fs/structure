@@ -54,6 +54,7 @@ repository) is:
   txn-current-lock    Empty file, locked to serialise 'txn-current'
   uuid                File containing the UUID of the repository
   format              File containing the format number of this filesystem
+  fsfs.conf           Configuration file
 
 Files in the revprops directory are in the hash dump format used by
 svn_hash_write.
@@ -85,6 +86,10 @@ not reused, even if the transaction is aborted and a new transaction
 based on the same revision is begun.  The only operation that FSFS
 performs on this file is "get and increment"; the "txn-current-lock"
 file is locked during this operation.
+
+"fsfs.conf" is a configuration file in the standard Subversion/Python
+config format.  It is automatically generated when you create a new
+repository; read the generated file for details on what it controls.
 
 Filesystem formats
 ------------------
@@ -193,7 +198,7 @@ assigned within a transaction have the txn-id field of "t<txnid>".
 
 When a new node-id or copy-id is assigned in a transaction, the ID
 used is a "_" followed by a base36 number unique to the transaction.
-During the final phase of a comment, node-revision IDs are rewritten
+During the final phase of a commit, node-revision IDs are rewritten
 to have repository-wide unique node-ID and copy-ID fields, and to have
 "r<rev>/<offset>" txn-id fields.
 

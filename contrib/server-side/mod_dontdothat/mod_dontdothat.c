@@ -37,6 +37,7 @@ module AP_MODULE_DECLARE_DATA dontdothat_module;
 typedef struct {
   const char *config_file;
   const char *base_path;
+  int no_replay;
 } dontdothat_config_rec;
 
 static void *create_dontdothat_dir_config(apr_pool_t *pool, char *dir)
@@ -44,6 +45,7 @@ static void *create_dontdothat_dir_config(apr_pool_t *pool, char *dir)
   dontdothat_config_rec *cfg = apr_pcalloc(pool, sizeof(*cfg));
 
   cfg->base_path = dir;
+  cfg->no_replay = 1;
 
   return cfg;
 }
@@ -54,6 +56,9 @@ static const command_rec dontdothat_cmds[] =
                 (void *) APR_OFFSETOF(dontdothat_config_rec, config_file),
                 OR_ALL,
                 "Text file containing actions to take for specific requests"),
+  AP_INIT_FLAG("DontDoThatDisallowReplay",  ap_set_flag_slot,
+                (void *) APR_OFFSETOF(dontdothat_config_rec, no_replay),
+                OR_ALL, "Disallow replay requests as if they are other recursive requests."),
   { NULL }
 };
 
@@ -365,7 +370,7 @@ start_element(void *baton, const char *name, const char **attrs)
       case STATE_BEGINNING:
         if (strcmp(name, "update-report") == 0)
           ctx->state = STATE_IN_UPDATE;
-        else if (strcmp(name, "replay-report") == 0)
+        else if (strcmp(name, "replay-report") == 0 && ctx->cfg->no_replay)
           {
             /* XXX it would be useful if there was a way to override this
              *     on a per-user basis... */

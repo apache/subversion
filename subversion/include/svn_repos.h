@@ -574,7 +574,7 @@ svn_repos_begin_report(void **report_baton,
  *
  * @a revision may be SVN_INVALID_REVNUM if (for example) @a path
  * represents a locally-added path with no revision number, or @a
- * depth is @c svn_depth_exclude.  
+ * depth is @c svn_depth_exclude.
  *
  * @a path may not be underneath a path on which svn_repos_set_path3()
  * was previously called with @c svn_depth_exclude in this report.
@@ -938,14 +938,17 @@ svn_repos_replay(svn_fs_root_t *root,
  * due to authz will return SVN_ERR_AUTHZ_UNREADABLE or
  * SVN_ERR_AUTHZ_UNWRITABLE.
  *
- * Calling @a (*editor)->close_edit completes the commit.  Before
- * @c close_edit returns, but after the commit has succeeded, it will
- * invoke @a callback with the new revision number, the commit date (as a
- * <tt>const char *</tt>), commit author (as a <tt>const char *</tt>), and
- * @a callback_baton as arguments.  If @a callback returns an error, that
- * error will be returned from @c close_edit, otherwise if there was a
- * post-commit hook failure, then that error will be returned and will
- * have code SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED.
+ * Calling @a (*editor)->close_edit completes the commit.
+ *
+ * If @a callback is non-NULL, then before @c close_edit returns (but
+ * after the commit has succeeded) @c close_edit will invoke
+ * @a callback with a filled-in @c svn_commit_info_t *, @a callback_baton,
+ * and @a pool or some subpool thereof as arguments.  If @a callback
+ * returns an error, that error will be returned from @c close_edit,
+ * otherwise if there was a post-commit hook failure, then that error
+ * will be returned with code SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED.
+ * (Note that prior to Subversion 1.6, @a callback cannot be NULL; if
+ * you don't need a callback, pass a dummy function.)
  *
  * Calling @a (*editor)->abort_edit aborts the commit, and will also
  * abort the commit transaction unless @a txn was supplied (not @c
@@ -1132,6 +1135,8 @@ svn_repos_deleted_rev(svn_fs_t *fs,
  *
  * Signal to callback driver to stop processing/invoking this callback
  * by returning the @c SVN_ERR_CEASE_INVOCATION error code.
+ *
+ * @note SVN_ERR_CEASE_INVOCATION is new in 1.5.
  */
 typedef svn_error_t *(*svn_repos_history_func_t)(void *baton,
                                                  const char *path,
@@ -1155,6 +1160,8 @@ typedef svn_error_t *(*svn_repos_history_func_t)(void *baton,
  * SVN_NO_ERROR.
  *
  * @since New in 1.1.
+ *
+ * @note SVN_ERR_CEASE_INVOCATION is new in 1.5.
  */
 svn_error_t *
 svn_repos_history2(svn_fs_t *fs,
@@ -1284,7 +1291,9 @@ svn_repos_node_location_segments(svn_repos_t *repos,
  * revisions in which at least one of @a paths was changed (i.e., if
  * file, text or props changed; if dir, props or entries changed or any node
  * changed below it).  Each path is a <tt>const char *</tt> representing
- * an absolute path in the repository.
+ * an absolute path in the repository.  If @a paths is NULL or empty,
+ * show all revisions regardless of what paths were changed in those
+ * revisions.
  *
  * If @a limit is non-zero then only invoke @a receiver on the first
  * @a limit logs.
@@ -1296,6 +1305,9 @@ svn_repos_node_location_segments(svn_repos_t *repos,
  *
  * If @a strict_node_history is set, copy history (if any exists) will
  * not be traversed while harvesting revision logs for each path.
+ *
+ * If @a include_merged_revisions is set, log information for revisions
+ * which have been merged to @a targets will also be returned.
  *
  * If @a revprops is NULL, retrieve all revprops; else, retrieve only the
  * revprops named in the array (i.e. retrieve none if the array is empty).
@@ -1342,7 +1354,8 @@ svn_repos_get_logs4(svn_repos_t *repos,
  * Same as svn_repos_get_logs4(), but with @a receiver being @c
  * svn_log_message_receiver_t instead of @c svn_log_entry_receiver_t.
  * Also, @a include_merged_revisions is set to @c FALSE and @a revprops is
- * svn:author, svn:date, and svn:log.
+ * svn:author, svn:date, and svn:log.  If @a paths is empty, nothing
+ * is returned.
  *
  * @since New in 1.2.
  * @deprecated Provided for backward compatibility with the 1.4 API.
@@ -1655,10 +1668,10 @@ svn_repos_fs_get_locks(apr_hash_t **locks,
 /** @} */
 
 /**
- * Like svn_fs_change_rev_prop(), but invoke the @a repos's pre- and
- * post-revprop-change hooks around the change as specified by @a
- * use_pre_revprop_change_hook and @a use_post_revprop_change_hook
- * (respectively).  Use @a pool for temporary allocations.
+ * Like svn_fs_change_rev_prop(), but validate the name and value of the
+ * property and invoke the @a repos's pre- and post-revprop-change hooks
+ * around the change as specified by @a use_pre_revprop_change_hook and
+ * @a use_post_revprop_change_hook (respectively).
  *
  * @a rev is the revision whose property to change, @a name is the
  * name of the property, and @a new_value is the new value of the
@@ -1669,6 +1682,11 @@ svn_repos_fs_get_locks(apr_hash_t **locks,
  * authz_read_baton) to validate the changed-paths associated with @a
  * rev.  If the revision contains any unreadable changed paths, then
  * return SVN_ERR_AUTHZ_UNREADABLE.
+ *
+ * Validate @a name and @a new_value like the same way
+ * svn_repos_fs_change_node_prop() does.
+ *
+ * Use @a pool for temporary allocations.
  *
  * @since New in 1.5.
  */
@@ -1784,6 +1802,15 @@ svn_repos_fs_revision_proplist(apr_hash_t **table_p,
 
 /** Validating wrapper for svn_fs_change_node_prop() (which see for
  * argument descriptions).
+ *
+ * If @a name's kind is not @c svn_prop_regular_kind, return @c
+ * SVN_ERR_REPOS_BAD_ARGS.  If @a name is an "svn:" property, validate its
+ * @a value and return SVN_ERR_BAD_PROPERTY_VALUE if it is invalid for the
+ * property.
+ *
+ * @note Currently, the only properties validated are the "svn:" properties
+ * @c SVN_PROP_REVISION_LOG and @c SVN_PROP_REVISION_DATE. This may change
+ * in future releases.
  */
 svn_error_t *
 svn_repos_fs_change_node_prop(svn_fs_root_t *root,
@@ -1793,7 +1820,8 @@ svn_repos_fs_change_node_prop(svn_fs_root_t *root,
                               apr_pool_t *pool);
 
 /** Validating wrapper for svn_fs_change_txn_prop() (which see for
- * argument descriptions).
+ * argument descriptions).  See svn_repos_fs_change_txn_props() for more
+ * information.
  */
 svn_error_t *
 svn_repos_fs_change_txn_prop(svn_fs_txn_t *txn,
@@ -1802,8 +1830,9 @@ svn_repos_fs_change_txn_prop(svn_fs_txn_t *txn,
                              apr_pool_t *pool);
 
 /** Validating wrapper for svn_fs_change_txn_props() (which see for
- * argument descriptions).
- * 
+ * argument descriptions).  Validate properties and their values the
+ * same way svn_repos_fs_change_node_prop() does.
+ *
  * @since New in 1.5.
  */
 svn_error_t *
@@ -1983,7 +2012,7 @@ enum svn_repos_load_uuid
  * cancel_baton as argument to see if the caller wishes to cancel the
  * verification.
  *
- * @since New in 1.6.
+ * @since New in 1.5.
  */
 svn_error_t *
 svn_repos_verify_fs(svn_repos_t *repos,

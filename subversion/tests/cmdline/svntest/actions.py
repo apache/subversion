@@ -20,7 +20,7 @@ import difflib, pprint
 import xml.parsers.expat
 from xml.dom.minidom import parseString
 
-import main, verify, tree, wc, parsers
+import main, verify, tree, wc
 from svntest import Failure
 
 def no_sleep_for_timestamps():
@@ -91,6 +91,12 @@ def setup_pristine_repository():
       verify.display_trees("ERROR:  output of import command is unexpected.",
                            "OUTPUT TREE", expected_output_tree, output_tree)
       sys.exit(1)
+
+    # Finally, disallow any changes to the "pristine" repos.
+    error_msg = "Don't modify the pristine repository"
+    create_failing_hook(main.pristine_dir, 'start-commit', error_msg)
+    create_failing_hook(main.pristine_dir, 'pre-lock', error_msg)
+    create_failing_hook(main.pristine_dir, 'pre-revprop-change', error_msg)
 
 
 ######################################################################
@@ -635,8 +641,8 @@ def verify_disk(wc_dir_name,
                  singleton_handler_a, a_baton,
                  singleton_handler_b, b_baton,
                  check_props)
-                 
-  
+
+
 
 def run_and_verify_update(wc_dir_name,
                           output_tree, disk_tree, status_tree,
@@ -965,11 +971,10 @@ def run_and_verify_patch(dir, patch_path,
 
 
 def run_and_verify_mergeinfo(error_re_string = None,
-                             expected_output = {},
+                             expected_output = [],
                              *args):
   """Run 'svn mergeinfo ARGS', and compare the result against
-  EXPECTED_OUTPUT, a dict of dict of tuples:
-    { path : { source path : (merged ranges, eligible ranges) } }
+  EXPECTED_OUTPUT, a list of revisions expected in the output.
   Raise an exception if an unexpected output is encountered."""
 
   mergeinfo_command = ["mergeinfo"]
@@ -983,34 +988,24 @@ def run_and_verify_mergeinfo(error_re_string = None,
     verify.verify_outputs(None, None, err, None, expected_err)
     return
 
-  parser = parsers.MergeinfoReportParser()
-  parser.parse(out)
+  out = filter(None, map(lambda x: int(x.rstrip()[1:]), out))
+  out.sort()
+  expected_output.sort()
 
-  if len(expected_output.keys()) != len(parser.report.keys()):
-    raise verify.SVNUnexpectedStdout("Unexpected number of target paths")
-
-  for actual_path in parser.report.keys():
-    actual_src_paths = parser.report[actual_path]
-    expected_src_paths = expected_output[actual_path]
-
-    if len(actual_src_paths.keys()) != len(expected_src_paths.keys()):
-      raise verify.SVNUnexpectedStdout("Unexpected number of source paths "
-                                       "for target path '%s'" % actual_path)
-
-    for src_path in actual_src_paths.keys():
-      (actual_merged, actual_eligible) = actual_src_paths[src_path]
-      (expected_merged, expected_eligible) = expected_src_paths[src_path]
-      
-      if actual_merged != expected_merged:
-        raise Exception("Unexpected merged ranges for target path '%s' and "
-                        "source path '%s': Expected '%s', got '%s'" %
-                        (actual_path, src_path, expected_merged,
-                         actual_merged))
-      if actual_eligible != expected_eligible:
-        raise Exception("Unexpected eligible ranges for target path '%s' and "
-                        "source path '%s': Expected '%s', got '%s'" %
-                        (actual_path, src_path, expected_eligible,
-                         actual_eligible))
+  extra_out = []
+  if out != expected_output:
+    exp_hash = dict.fromkeys(expected_output)
+    for rev in out:
+      if exp_hash.has_key(rev):
+        del(exp_hash[rev])
+      else:
+        extra_out.append(rev)
+    extra_exp = exp_hash.keys()
+    raise Exception("Unexpected 'svn mergeinfo' output:\n"
+                    "  expected but not found: %s\n"
+                    "  found but not expected: %s"
+                    % (', '.join(map(lambda x: str(x), extra_exp)),
+                       ', '.join(map(lambda x: str(x), extra_out))))
 
 
 def run_and_verify_switch(wc_dir_name,
@@ -1042,7 +1037,7 @@ def run_and_verify_switch(wc_dir_name,
   SINGLETON_HANDLER_B will be passed to tree.compare_trees -- see that
   function's doc string for more details.
 
-  If CHECK_PROPS is set, then disk comparison will examine props. 
+  If CHECK_PROPS is set, then disk comparison will examine props.
 
   Return if successful, raise on failure."""
 
@@ -1276,7 +1271,7 @@ def run_and_verify_diff_summarize_xml(error_re_string = [],
     actual_item = path.getAttribute('item')
     actual_kind = path.getAttribute('kind')
     actual_prop = path.getAttribute('props')
-  
+
     if expected_item != actual_item:
       print "ERROR: expected:", expected_item, "actual:", actual_item
       raise Failure
@@ -1369,7 +1364,7 @@ def run_and_validate_lock(path, username):
 def make_repo_and_wc(sbox, create_wc = True, read_only = False):
   """Create a fresh repository and checkout a wc from it.
 
-  If read_only is False, a dedicated repository will be created, named 
+  If read_only is False, a dedicated repository will be created, named
   TEST_NAME. The repository will live in the global dir 'general_repo_dir'.
   If read_only is True the pristine repository will be used.
 
@@ -1377,7 +1372,7 @@ def make_repo_and_wc(sbox, create_wc = True, read_only = False):
   the repository, named TEST_NAME. The wc directory will live in the global
   dir 'general_wc_dir'.
 
-  Both variables 'general_repo_dir' and 'general_wc_dir' are defined at the 
+  Both variables 'general_repo_dir' and 'general_wc_dir' are defined at the
   top of this test suite.)  Returns on success, raises on failure."""
 
   # Create (or copy afresh) a new repos with a greek tree in it.
@@ -1446,6 +1441,15 @@ def lock_admin_dir(wc_dir):
 
   path = os.path.join(wc_dir, main.get_admin_name(), 'lock')
   main.file_append(path, "stop looking!")
+
+def create_failing_hook(repo_dir, hook_name, text):
+  """Create a HOOK_NAME hook in REPO_DIR that prints TEXT to stderr and exits
+  with an error."""
+
+  hook_path = os.path.join(repo_dir, 'hooks', hook_name)
+  main.create_python_hook_script(hook_path, 'import sys;\n'
+    'sys.stderr.write("""%%s hook failed: %%s""" %% (%s, %s));\n'
+    'sys.exit(1);\n' % (repr(hook_name), repr(text)))
 
 def enable_revprop_changes(repo_dir):
   """Enable revprop changes in a repository REPOS_DIR by creating a

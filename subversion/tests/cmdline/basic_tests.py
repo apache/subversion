@@ -243,33 +243,53 @@ def basic_mkdir_url_with_parents(sbox):
 
   sbox.build()
 
-  Y_Z_url = sbox.repo_url + '/Y/Z'
-  svntest.actions.run_and_verify_svn("erroneous mkdir URL URL/subdir",
+  X_Y_Z_url = sbox.repo_url + '/X/Y/Z'
+  X_Y_Z2_url = sbox.repo_url + '/X/Y/Z2'
+  X_T_C_url = sbox.repo_url + '/X/T/C'
+  U_V_url = sbox.repo_url + '/U/V'
+  svntest.actions.run_and_verify_svn("erroneous mkdir sans --parents",
                                      [],
                                      ".*Try 'svn mkdir --parents' instead.*",
                                      'mkdir', '-m', 'log_msg',
-                                     Y_Z_url)
+                                     X_Y_Z_url, X_Y_Z2_url, X_T_C_url, U_V_url)
 
-  svntest.actions.run_and_verify_svn("mkdir URL URL/subdir",
+  svntest.actions.run_and_verify_svn("mkdir --parents",
                                      ["\n", "Committed revision 2.\n"], [],
-                                     'mkdir', '-m', 'log_msg',
-                                     '--parents', Y_Z_url)
+                                     'mkdir', '-m', 'log_msg', '--parents',
+                                     X_Y_Z_url, X_Y_Z2_url, X_T_C_url, U_V_url)
 
   expected_output = wc.State(sbox.wc_dir, {
-    'Y'   : Item(status='A '),
-    'Y/Z' : Item(status='A '),
+    'X'      : Item(status='A '),
+    'X/Y'    : Item(status='A '),
+    'X/Y/Z'  : Item(status='A '),
+    'X/Y/Z2' : Item(status='A '),
+    'X/T'    : Item(status='A '),
+    'X/T/C'  : Item(status='A '),
+    'U'      : Item(status='A '),
+    'U/V'    : Item(status='A '),
     })
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
-    'Y'   : Item(),
-    'Y/Z' : Item()
+    'X'      : Item(),
+    'X/Y'    : Item(),
+    'X/Y/Z'  : Item(),
+    'X/Y/Z2' : Item(),
+    'X/T'    : Item(),
+    'X/T/C'  : Item(),
+    'U'      : Item(),
+    'U/V'    : Item(),
     })
   expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 2)
   expected_status.add({
-    'Y'   : Item(status='  ', wc_rev=2),
-    'Y/Z' : Item(status='  ', wc_rev=2)
+    'X'      : Item(status='  ', wc_rev=2),
+    'X/Y'    : Item(status='  ', wc_rev=2),
+    'X/Y/Z'  : Item(status='  ', wc_rev=2),
+    'X/Y/Z2' : Item(status='  ', wc_rev=2),
+    'X/T'    : Item(status='  ', wc_rev=2),
+    'X/T/C'  : Item(status='  ', wc_rev=2),
+    'U'      : Item(status='  ', wc_rev=2),
+    'U/V'    : Item(status='  ', wc_rev=2),
     })
-
   svntest.actions.run_and_verify_update(sbox.wc_dir,
                                         expected_output,
                                         expected_disk,
@@ -1948,16 +1968,19 @@ def automatic_conflict_resolution(sbox):
   mu_path = os.path.join(wc_dir, 'A', 'mu')
   lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
   rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  tau_path = os.path.join(wc_dir, 'A', 'D', 'G', 'tau')
   omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega')
   svntest.main.file_append(mu_path, 'Original appended text for mu\n')
   svntest.main.file_append(lambda_path, 'Original appended text for lambda\n')
   svntest.main.file_append(rho_path, 'Original appended text for rho\n')
+  svntest.main.file_append(tau_path, 'Original appended text for tau\n')
   svntest.main.file_append(omega_path, 'Original appended text for omega\n')
 
   # Make a couple of local mods to files which will be conflicted
   mu_path_backup = os.path.join(wc_backup, 'A', 'mu')
   lambda_path_backup = os.path.join(wc_backup, 'A', 'B', 'lambda')
   rho_path_backup = os.path.join(wc_backup, 'A', 'D', 'G', 'rho')
+  tau_path_backup = os.path.join(wc_backup, 'A', 'D', 'G', 'tau')
   omega_path_backup = os.path.join(wc_backup, 'A', 'D', 'H', 'omega')
   svntest.main.file_append(mu_path_backup,
                              'Conflicting appended text for mu\n')
@@ -1965,6 +1988,8 @@ def automatic_conflict_resolution(sbox):
                              'Conflicting appended text for lambda\n')
   svntest.main.file_append(rho_path_backup,
                              'Conflicting appended text for rho\n')
+  svntest.main.file_append(tau_path_backup,
+                             'Conflicting appended text for tau\n')
   svntest.main.file_append(omega_path_backup,
                              'Conflicting appended text for omega\n')
 
@@ -1973,14 +1998,15 @@ def automatic_conflict_resolution(sbox):
     'A/mu' : Item(verb='Sending'),
     'A/B/lambda' : Item(verb='Sending'),
     'A/D/G/rho' : Item(verb='Sending'),
+    'A/D/G/tau' : Item(verb='Sending'),
     'A/D/H/omega' : Item(verb='Sending'),
     })
 
   # Create expected status tree; all local revisions should be at 1,
   # but lambda, mu and rho should be at revision 2.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak('A/mu', 'A/B/lambda', 'A/D/G/rho', 'A/D/H/omega',
-                        wc_rev=2)
+  expected_status.tweak('A/mu', 'A/B/lambda', 'A/D/G/rho', 'A/D/G/tau',
+                        'A/D/H/omega', wc_rev=2)
 
   # Commit.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
@@ -1991,20 +2017,20 @@ def automatic_conflict_resolution(sbox):
     'A/mu' : Item(status='C '),
     'A/B/lambda' : Item(status='C '),
     'A/D/G/rho' : Item(status='C '),
+    'A/D/G/tau' : Item(status='C '),
     'A/D/H/omega' : Item(status='C '),
     })
 
   # Create expected disk tree for the update.
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/B/lambda',
-                      contents="\n".join([
-    "This is the file 'lambda'.",
-    "<<<<<<< .mine",
-    "Conflicting appended text for lambda",
-    "=======",
-    "Original appended text for lambda",
-    ">>>>>>> .r2",
-    ""]))
+                      contents="\n".join(["This is the file 'lambda'.",
+                                          "<<<<<<< .mine",
+                                          "Conflicting appended text for lambda",
+                                          "=======",
+                                          "Original appended text for lambda",
+                                          ">>>>>>> .r2",
+                                          ""]))
   expected_disk.tweak('A/mu',
                       contents="\n".join(["This is the file 'mu'.",
                                           "<<<<<<< .mine",
@@ -2021,6 +2047,14 @@ def automatic_conflict_resolution(sbox):
                                           "Original appended text for rho",
                                           ">>>>>>> .r2",
                                           ""]))
+  expected_disk.tweak('A/D/G/tau',
+                      contents="\n".join(["This is the file 'tau'.",
+                                          "<<<<<<< .mine",
+                                          "Conflicting appended text for tau",
+                                          "=======",
+                                          "Original appended text for tau",
+                                          ">>>>>>> .r2",
+                                          ""]))
   expected_disk.tweak('A/D/H/omega',
                       contents="\n".join(["This is the file 'omega'.",
                                           "<<<<<<< .mine",
@@ -2032,15 +2066,17 @@ def automatic_conflict_resolution(sbox):
 
   # Create expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(wc_backup, '2')
-  expected_status.tweak('A/mu', 'A/B/lambda', 'A/D/G/rho', 'A/D/H/omega',
-                        status='C ')
+  expected_status.tweak('A/mu', 'A/B/lambda', 'A/D/G/rho', 'A/D/G/tau',
+                        'A/D/H/omega', status='C ')
 
   # "Extra" files that we expect to result from the conflicts.
   # These are expressed as list of regexps.  What a cool system!  :-)
   extra_files = ['mu.*\.r1', 'mu.*\.r2', 'mu.*\.mine',
                  'lambda.*\.r1', 'lambda.*\.r2', 'lambda.*\.mine',
                  'omega.*\.r1', 'omega.*\.r2', 'omega.*\.mine',
-                 'rho.*\.r1', 'rho.*\.r2', 'rho.*\.mine',]
+                 'rho.*\.r1', 'rho.*\.r2', 'rho.*\.mine',
+                 'tau.*\.r1', 'tau.*\.r2', 'tau.*\.mine',
+                 ]
 
   # Do the update and check the results in three ways.
   # All "extra" files are passed to detect_conflict_files().
@@ -2065,43 +2101,50 @@ def automatic_conflict_resolution(sbox):
     raise svntest.Failure
 
   # So now lambda, mu and rho are all in a "conflicted" state.  Run 'svn
-  # resolved' with the respective "--accept[mine|orig|repo]" flag.
+  # resolve' with the respective "--accept[mine|orig|repo]" flag.
 
   # But first, check --accept actions resolved does not accept.
   svntest.actions.run_and_verify_svn(None,
                                      # stdout, stderr
                                      None,
                                      ".*invalid 'accept' ARG",
-                                     'resolved', '--accept=postpone')
+                                     'resolve', '--accept=postpone')
   svntest.actions.run_and_verify_svn(None,
                                      # stdout, stderr
                                      None,
                                      ".*invalid 'accept' ARG",
-                                     'resolved', '--accept=edit')
+                                     'resolve', '--accept=edit')
   svntest.actions.run_and_verify_svn(None,
                                      # stdout, stderr
                                      None,
                                      ".*invalid 'accept' ARG",
-                                     'resolved', '--accept=launch')
-  # Run 'svn resolved --accept=NOTVALID.  Using omega for the test.
-  svntest.actions.run_and_verify_svn("Resolved command", None,
-                                     ".*NOTVALID' is not a valid accept value",
-                                     'resolved',
-                                     '--accept=NOTVALID',
+                                     'resolve', '--accept=launch')
+  # Run 'svn resolved --accept=NOPE.  Using omega for the test.
+  svntest.actions.run_and_verify_svn("Resolve command", None,
+                                     ".*NOPE' is not a valid --accept value",
+                                     'resolve',
+                                     '--accept=NOPE',
                                      omega_path_backup)
 
   # Resolve lambda, mu, and rho with different --accept options.
-  svntest.actions.run_and_verify_svn("Resolved command", None, [],
-                                     'resolved', '--accept=base',
+  svntest.actions.run_and_verify_svn("Resolve command", None, [],
+                                     'resolve', '--accept=base',
                                      lambda_path_backup)
-  svntest.actions.run_and_verify_svn("Resolved command", None, [],
-                                     'resolved',
+  svntest.actions.run_and_verify_svn("Resolve command", None, [],
+                                     'resolve',
                                      '--accept=mine-full',
                                      mu_path_backup)
-  svntest.actions.run_and_verify_svn("Resolved command", None, [],
-                                     'resolved',
+  svntest.actions.run_and_verify_svn("Resolve command", None, [],
+                                     'resolve',
                                      '--accept=theirs-full',
                                      rho_path_backup)
+  fp = open(tau_path_backup, 'w')
+  fp.write("Resolution text for 'tau'.\n")
+  fp.close()
+  svntest.actions.run_and_verify_svn("Resolve command", None, [],
+                                     'resolve',
+                                     '--accept=working',
+                                     tau_path_backup)
 
   # Set the expected disk contents for the test
   expected_disk = svntest.main.greek_state.copy()
@@ -2111,6 +2154,7 @@ def automatic_conflict_resolution(sbox):
                       "Conflicting appended text for mu\n")
   expected_disk.tweak('A/D/G/rho', contents="This is the file 'rho'.\n"
                       "Original appended text for rho\n")
+  expected_disk.tweak('A/D/G/tau', contents="Resolution text for 'tau'.\n")
   expected_disk.tweak('A/D/H/omega',
                       contents="\n".join(["This is the file 'omega'.",
                                           "<<<<<<< .mine",
@@ -2125,12 +2169,13 @@ def automatic_conflict_resolution(sbox):
 
   # Set the expected status for the test
   expected_status = svntest.actions.get_virginal_state(wc_backup, 2)
-  expected_status.tweak('A/mu', 'A/B/lambda', 'A/D/G/rho', 'A/D/H/omega',
-                        wc_rev=2)
+  expected_status.tweak('A/mu', 'A/B/lambda', 'A/D/G/rho', 'A/D/G/tau',
+                        'A/D/H/omega', wc_rev=2)
 
   expected_status.tweak('A/mu', status='M ')
   expected_status.tweak('A/B/lambda', status='M ')
   expected_status.tweak('A/D/G/rho', status='  ')
+  expected_status.tweak('A/D/G/tau', status='M ')
   expected_status.tweak('A/D/H/omega', status='C ')
 
   # Set the expected output for the test
@@ -2160,6 +2205,155 @@ def info_nonexisting_file(sbox):
   # Else never matched the expected error output, so the test failed.
   raise svntest.main.SVNUnmatchedError
 
+
+#----------------------------------------------------------------------
+# Relative urls
+#
+# Use blame to test three specific cases for relative url support.
+def basic_relative_url_using_current_dir(sbox):
+  "basic relative url target using current dir"
+
+  # We'll use blame to test relative url parsing
+  sbox.build()
+
+  # First, make a new revision of iota.
+  iota = os.path.join(sbox.wc_dir, 'iota')
+  svntest.main.file_append(iota, "New contents for iota\n")
+  svntest.main.run_svn(None, 'ci',
+                       '-m', '', iota)
+
+  expected_output = [
+    "     1    jrandom This is the file 'iota'.\n",
+    "     2    jrandom New contents for iota\n",
+    ]
+
+  orig_dir = os.getcwd()
+  os.chdir(sbox.wc_dir)
+
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None,
+                                expected_output, [],
+                                'blame', '^/iota')
+
+  os.chdir(orig_dir)
+
+def basic_relative_url_using_other_targets(sbox):
+  "basic relative url target using other targets"
+
+  sbox.build()
+
+  # First, make a new revision of iota.
+  iota = os.path.join(sbox.wc_dir, 'iota')
+  svntest.main.file_append(iota, "New contents for iota\n")
+  svntest.main.run_svn(None, 'ci',
+                       '-m', '', iota)
+
+  # Now, make a new revision of A/mu .
+  mu = os.path.join(sbox.wc_dir, 'A', 'mu')
+  mu_url = sbox.repo_url + '/A/mu'
+
+  svntest.main.file_append(mu, "New contents for mu\n")
+  svntest.main.run_svn(None, 'ci',
+                       '-m', '', mu)
+
+
+  expected_output = [
+    "     1    jrandom This is the file 'iota'.\n",
+    "     2    jrandom New contents for iota\n",
+    "     1    jrandom This is the file 'mu'.\n",
+    "     3    jrandom New contents for mu\n",
+    ]
+
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None,
+                                expected_output, [], 'blame',
+                                '^/iota', mu_url)
+
+def basic_relative_url_multi_repo(sbox):
+  "basic relative url target with multiple repos"
+
+  sbox.build()
+  repo_url1 = sbox.repo_url
+  repo_dir1 = sbox.repo_dir
+  wc_dir1 = sbox.wc_dir
+
+  repo_dir2, repo_url2 = sbox.add_repo_path("other")
+  svntest.main.copy_repos(repo_dir1, repo_dir2, 1, 1)
+  wc_dir2 = sbox.add_wc_path("other")
+  svntest.actions.run_and_verify_svn("Unexpected error during co",
+                                     svntest.verify.AnyOutput, [], "co",
+                                     repo_url2,
+                                     wc_dir2)
+
+  # Don't bother with making new revisions, the command should not work.
+  iota_url_repo1 = repo_url1 + '/iota'
+  iota_url_repo2 = repo_url2 + '/iota'
+
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None, [],
+                                svntest.verify.AnyOutput, 'blame',
+                                '^/A/mu', iota_url_repo1, iota_url_repo2)
+
+def basic_relative_url_non_canonical(sbox):
+  "basic relative url non-canonical targets"
+
+  sbox.build()
+
+  iota_url = sbox.repo_url + '/iota'
+
+  expected_output = [
+    "B/\n",
+    "C/\n",
+    "D/\n",
+    "mu\n",
+    "iota\n"
+    ]
+
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None,
+                                expected_output, [], 'ls',
+                                '^/A/', iota_url)
+
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None,
+                                expected_output, [], 'ls',
+                                '^//A/', iota_url)
+
+def basic_relative_url_with_peg_revisions(sbox):
+  "basic relative url targets with peg revisions"
+
+  sbox.build()
+
+  # First, make a new revision of iota.
+  iota = os.path.join(sbox.wc_dir, 'iota')
+  svntest.main.file_append(iota, "New contents for iota\n")
+  svntest.main.run_svn(None, 'ci',
+                       '-m', '', iota)
+
+  iota_url = sbox.repo_url + '/iota'
+
+  # Now, make a new revision of A/mu .
+  mu = os.path.join(sbox.wc_dir, 'A', 'mu')
+  mu_url = sbox.repo_url + '/A/mu'
+
+  svntest.main.file_append(mu, "New contents for mu\n")
+  svntest.main.run_svn(None, 'ci', '-m', '', mu)
+
+  # Delete the file from the current revision
+  svntest.main.run_svn(None, 'rm', '-m', '', mu_url)
+
+  expected_output = [
+    "B/\n",
+    "C/\n",
+    "D/\n",
+    "mu\n",
+    "iota\n"
+    ]
+
+  # Canonical version with peg revision
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None,
+                                expected_output, [], 'ls', '-r3',
+                                '^/A/@3', iota_url)
+
+  # Non-canonical version with peg revision
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None,
+                                expected_output, [], 'ls', '-r3',
+                                '^//A/@3', iota_url)
 
 #----------------------------------------------------------------------
 
@@ -2208,6 +2402,11 @@ test_list = [ None,
               XFail(basic_rm_urls_multi_repos),
               automatic_conflict_resolution,
               info_nonexisting_file,
+              basic_relative_url_using_current_dir,
+              basic_relative_url_using_other_targets,
+              basic_relative_url_multi_repo,
+              basic_relative_url_non_canonical,
+              basic_relative_url_with_peg_revisions,
              ]
 
 if __name__ == '__main__':
