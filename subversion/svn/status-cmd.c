@@ -171,36 +171,6 @@ print_status(void *baton,
   print_status_normal_or_xml(baton, path, status);
 }
 
-/* Simpler helper to allow use of svn_cl__try. */
-static svn_error_t *
-do_status(svn_cl__opt_state_t *opt_state,
-          const char *target,
-          const svn_opt_revision_t *rev,
-          void *status_baton,
-          svn_client_ctx_t *ctx,
-          apr_pool_t *pool)
-{
-  svn_revnum_t repos_rev = SVN_INVALID_REVNUM;
-
-  if (opt_state->xml)
-    SVN_ERR(print_start_target_xml(svn_path_local_style(target, pool), pool));
-
-  SVN_ERR(svn_client_status3(&repos_rev, target, rev,
-                             print_status, status_baton,
-                             opt_state->depth,
-                             opt_state->verbose,
-                             opt_state->update,
-                             opt_state->no_ignore,
-                             opt_state->ignore_externals,
-                             opt_state->changelists,
-                             ctx, pool));
-
-  if (opt_state->xml)
-    SVN_ERR(print_finish_target_xml(repos_rev, pool));
-
-  return SVN_NO_ERROR;
-}
-
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
 svn_cl__status(apr_getopt_t *os,
@@ -217,8 +187,8 @@ svn_cl__status(apr_getopt_t *os,
   struct status_baton sb;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
-                                                      opt_state->targets, 
-                                                      pool));
+                                                      opt_state->targets,
+                                                      ctx, pool));
 
   /* Add "." if user passed 0 arguments */
   svn_opt_push_implicit_dot_target(targets, pool);
@@ -263,18 +233,34 @@ svn_cl__status(apr_getopt_t *os,
   for (i = 0; i < targets->nelts; i++)
     {
       const char *target = APR_ARRAY_IDX(targets, i, const char *);
+      svn_revnum_t repos_rev = SVN_INVALID_REVNUM;
 
       svn_pool_clear(subpool);
 
       SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
 
+      if (opt_state->xml)
+        SVN_ERR(print_start_target_xml(svn_path_local_style(target, subpool),
+                                       subpool));
+
       /* Retrieve a hash of status structures with the information
          requested by the user. */
-      SVN_ERR(svn_cl__try(do_status(opt_state, target, &rev, &sb, ctx,
-                                    subpool),
+      SVN_ERR(svn_cl__try(svn_client_status3(&repos_rev, target, &rev,
+                                             print_status, &sb,
+                                             opt_state->depth,
+                                             opt_state->verbose,
+                                             opt_state->update,
+                                             opt_state->no_ignore,
+                                             opt_state->ignore_externals,
+                                             opt_state->changelists,
+                                             ctx, subpool),
                           NULL, opt_state->quiet,
-                          SVN_ERR_WC_NOT_DIRECTORY, /* not versioned */
+                          /* not versioned: */
+                          SVN_ERR_WC_NOT_DIRECTORY,
                           SVN_NO_ERROR));
+
+      if (opt_state->xml)
+        SVN_ERR(print_finish_target_xml(repos_rev, subpool));
     }
 
   /* If any paths were cached because they were associatied with

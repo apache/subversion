@@ -18,6 +18,8 @@
 
 
 
+#include <assert.h>
+
 #include <apr_uri.h>
 
 #include <expat.h>
@@ -81,7 +83,8 @@ typedef struct {
 
   /* parameters set by our caller */
   int limit;
-  int count;
+  int nest_level; /* used to track mergeinfo nesting levels */
+  int count; /* only incremented when nest_level == 0 */
   svn_boolean_t changed_paths;
 
   /* are we done? */
@@ -166,12 +169,6 @@ start_log(svn_ra_serf__xml_parser_t *parser,
   else if (state == REPORT &&
            strcmp(name.name, "log-item") == 0)
     {
-      log_ctx->count++;
-      if (log_ctx->limit && log_ctx->count > log_ctx->limit)
-        {
-          return SVN_NO_ERROR;
-        }
-
       push_state(parser, log_ctx, ITEM);
     }
   else if (state == ITEM)
@@ -285,10 +282,26 @@ end_log(svn_ra_serf__xml_parser_t *parser,
   else if (state == ITEM &&
            strcmp(name.name, "log-item") == 0)
     {
+      if (log_ctx->limit && (log_ctx->nest_level == 0)
+          && (++log_ctx->count > log_ctx->limit))
+        {
+          return SVN_NO_ERROR;
+        }
+
       /* Give the info to the reporter */
       SVN_ERR(log_ctx->receiver(log_ctx->receiver_baton,
                                 info->log_entry,
                                 info->pool));
+
+      if (info->log_entry->has_children)
+        {
+          log_ctx->nest_level++;
+        }
+      if (! SVN_IS_VALID_REVNUM(info->log_entry->revision))
+        {
+          assert(log_ctx->nest_level);
+          log_ctx->nest_level--;
+        }
 
       svn_ra_serf__xml_pop_state(parser);
     }
@@ -439,6 +452,7 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
   log_ctx->receiver = receiver;
   log_ctx->receiver_baton = receiver_baton;
   log_ctx->limit = limit;
+  log_ctx->nest_level = 0;
   log_ctx->changed_paths = discover_changed_paths;
   log_ctx->done = FALSE;
 
@@ -526,8 +540,8 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
   if (want_custom_revprops)
     {
       svn_boolean_t has_log_revprops;
-      SVN_ERR(svn_ra_has_capability(ra_session, &has_log_revprops,
-                                    SVN_RA_CAPABILITY_LOG_REVPROPS, pool));
+      SVN_ERR(svn_ra_serf__has_capability(ra_session, &has_log_revprops,
+                                          SVN_RA_CAPABILITY_LOG_REVPROPS, pool));
       if (!has_log_revprops)
         return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL,
                                 _("Server does not support custom revprops"
@@ -557,7 +571,8 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
   peg_rev = (start > end) ? start : end;
 
   SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url,
-                                         session, NULL, peg_rev, pool));
+                                         session, NULL, peg_rev, NULL,
+                                         pool));
 
   req_url = svn_path_url_add_component(basecoll_url, relative_url, pool);
 

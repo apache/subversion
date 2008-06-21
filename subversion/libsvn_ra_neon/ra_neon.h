@@ -98,6 +98,10 @@ typedef struct {
   svn_auth_iterstate_t *p11pin_iterstate; /* state of PKCS#11 pin retries */
 
   svn_boolean_t compression;            /* should we use http compression? */
+
+  /* Both of these function as caches, and are NULL when uninitialized
+     or cleared: */
+  const char *vcc;                      /* version-controlled-configuration */
   const char *uuid;                     /* repository UUID */
 
   svn_ra_progress_notify_func_t progress_func;
@@ -423,7 +427,10 @@ svn_error_t * svn_ra_neon__get_props_resource(svn_ra_neon__resource_t **rsrc,
                                               const ne_propname *which_props,
                                               apr_pool_t *pool);
 
-/* fetch a single resource's starting props from the server. */
+/* fetch a single resource's starting props from the server.
+
+   Cache the version-controlled-configuration in SESS->vcc, and the
+   repository uuid in SESS->uuid. */
 svn_error_t * svn_ra_neon__get_starting_props(svn_ra_neon__resource_t **rsrc,
                                               svn_ra_neon__session_t *sess,
                                               const char *url,
@@ -437,7 +444,10 @@ svn_error_t * svn_ra_neon__get_starting_props(svn_ra_neon__resource_t **rsrc,
 
    Also return *MISSING_PATH (allocated in POOL), which is the
    trailing portion of the URL that did not exist.  If an error
-   occurs, *MISSING_PATH isn't changed. */
+   occurs, *MISSING_PATH isn't changed.
+
+   Cache the version-controlled-configuration in SESS->vcc, and the
+   repository uuid in SESS->uuid. */
 svn_error_t *
 svn_ra_neon__search_for_starting_props(svn_ra_neon__resource_t **rsrc,
                                        const char **missing_path,

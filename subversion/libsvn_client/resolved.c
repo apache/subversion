@@ -38,17 +38,17 @@ svn_client_resolved(const char *path,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool)
 {
-  svn_depth_t depth = (recursive ? svn_depth_infinity : svn_depth_empty);
-  return svn_client_resolved2(path, depth,
-                              svn_wc_conflict_choose_merged, ctx, pool);
+  svn_depth_t depth = SVN_DEPTH_INFINITY_OR_EMPTY(recursive);
+  return svn_client_resolve(path, depth,
+                            svn_wc_conflict_choose_merged, ctx, pool);
 }
 
 svn_error_t *
-svn_client_resolved2(const char *path,
-                     svn_depth_t depth,
-                     svn_wc_conflict_choice_t conflict_choice,
-                     svn_client_ctx_t *ctx,
-                     apr_pool_t *pool)
+svn_client_resolve(const char *path,
+                   svn_depth_t depth,
+                   svn_wc_conflict_choice_t conflict_choice,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
   int adm_lock_level = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);

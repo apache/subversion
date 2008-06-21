@@ -37,6 +37,8 @@
 #include "svn_utf.h"
 #include "svn_time.h"
 
+#include "private/svn_opt_private.h"
+
 #include "svn_private_config.h"
 
 
@@ -260,13 +262,13 @@ print_command_info2(const svn_opt_subcommand_desc2_t *cmd,
 
           for (i = 0; global_options[i]; i++)
             {
-              
+
               /* convert each option code into an option */
               option =
                 svn_opt_get_option_from_code2(global_options[i],
                                               options_table,
                                               cmd, pool);
-              
+
               /* print the option's docstring */
               if (option && option->description)
                 {
@@ -277,7 +279,7 @@ print_command_info2(const svn_opt_subcommand_desc2_t *cmd,
                 }
             }
         }
-          
+
       if (have_options)
         SVN_ERR(svn_cmdline_fprintf(stream, pool, "\n"));
     }
@@ -585,6 +587,20 @@ static char *parse_one_rev(svn_opt_revision_t *revision, char *str,
 {
   char *end, save;
 
+  /* Allow any number of 'r's to prefix a revision number, because
+     that way if a script pastes svn output into another svn command
+     (like "svn log -r${REV_COPIED_FROM_OUTPUT}"), it'll Just Work,
+     even when compounded.
+
+     As it happens, none of our special revision words begins with
+     "r".  If any ever do, then this code will have to get smarter.
+
+     Incidentally, this allows "r{DATE}".  We could avoid that with
+     some trivial code rearrangement, but it's not clear what would
+     be gained by doing so. */
+  while (*str == 'r')
+    str++;
+
   if (*str == '{')
     {
       svn_boolean_t matched;
@@ -794,77 +810,67 @@ svn_opt_parse_path(svn_opt_revision_t *rev,
                    const char *path /* UTF-8! */,
                    apr_pool_t *pool)
 {
-  int i;
+  const char *peg_rev;
 
-  /* scanning from right to left, just to be friendly to any
-     screwed-up filenames that might *actually* contain @-signs.  :-) */
-  for (i = (strlen(path) - 1); i >= 0; i--)
+  SVN_ERR(svn_opt__split_arg_at_peg_revision(truepath, &peg_rev, path, pool));
+
+  /* Parse the peg revision, if one was found */
+  if (strlen(peg_rev))
     {
-      /* If we hit a path separator, stop looking. */
-      /* This is OK only because our revision specifiers can't contain '/'. */
-      if (path[i] == '/')
-        break;
+      int ret;
+      svn_opt_revision_t start_revision, end_revision;
 
-      if (path[i] == '@')
+      end_revision.kind = svn_opt_revision_unspecified;
+
+      if (peg_rev[1] == '\0')  /* looking at empty peg revision */
         {
-          int ret;
-          svn_opt_revision_t start_revision, end_revision;
-
-          end_revision.kind = svn_opt_revision_unspecified;
-
-          if (path[i + 1] == '\0')  /* looking at empty peg revision */
-            {
-              ret = 0;
-              start_revision.kind = svn_opt_revision_unspecified;
-            }
-          else  /* looking at non-empty peg revision */
-            {
-              const char *rev_str = path + i + 1;
-
-              /* URLs get treated differently from wc paths. */
-              if (svn_path_is_url(path))
-                {
-                  /* URLs are URI-encoded, so we look for dates with
-                     URI-encoded delimeters.  */
-                  int rev_len = strlen(rev_str);
-                  if (rev_len > 6
-                      && rev_str[0] == '%'
-                      && rev_str[1] == '7'
-                      && (rev_str[2] == 'B'
-                          || rev_str[2] == 'b')
-                      && rev_str[rev_len-3] == '%'
-                      && rev_str[rev_len-2] == '7'
-                      && (rev_str[rev_len-1] == 'D'
-                          || rev_str[rev_len-1] == 'd'))
-                    {
-                      rev_str = svn_path_uri_decode(rev_str, pool);
-                    }
-                }
-              ret = svn_opt_parse_revision(&start_revision,
-                                           &end_revision,
-                                           rev_str, pool);
-            }
-
-          if (ret || end_revision.kind != svn_opt_revision_unspecified)
-            return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                     _("Syntax error parsing revision '%s'"),
-                                     path + i + 1);
-
-          *truepath = apr_pstrmemdup(pool, path, i);
-          rev->kind = start_revision.kind;
-          rev->value = start_revision.value;
-
-          return SVN_NO_ERROR;
+          ret = 0;
+          start_revision.kind = svn_opt_revision_unspecified;
         }
-    }
+      else  /* looking at non-empty peg revision */
+        {
+          const char *rev_str = &peg_rev[1];
 
-  /* Didn't find an @-sign. */
-  *truepath = path;
-  rev->kind = svn_opt_revision_unspecified;
+          /* URLs get treated differently from wc paths. */
+          if (svn_path_is_url(path))
+            {
+              /* URLs are URI-encoded, so we look for dates with
+                 URI-encoded delimeters.  */
+              int rev_len = strlen(rev_str);
+              if (rev_len > 6
+                  && rev_str[0] == '%'
+                  && rev_str[1] == '7'
+                  && (rev_str[2] == 'B'
+                      || rev_str[2] == 'b')
+                  && rev_str[rev_len-3] == '%'
+                  && rev_str[rev_len-2] == '7'
+                  && (rev_str[rev_len-1] == 'D'
+                      || rev_str[rev_len-1] == 'd'))
+                {
+                  rev_str = svn_path_uri_decode(rev_str, pool);
+                }
+            }
+          ret = svn_opt_parse_revision(&start_revision,
+                                       &end_revision,
+                                       rev_str, pool);
+        }
+
+      if (ret || end_revision.kind != svn_opt_revision_unspecified)
+        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("Syntax error parsing revision '%s'"),
+                                 &peg_rev[1]);
+
+      rev->kind = start_revision.kind;
+      rev->value = start_revision.value;
+    }
+  else
+    {
+      /* Didn't find a peg revision. */
+      rev->kind = svn_opt_revision_unspecified;
+    }
 
   return SVN_NO_ERROR;
 }
-
 
 svn_error_t *
 svn_opt_args_to_target_array2(apr_array_header_t **targets_p,
@@ -872,7 +878,7 @@ svn_opt_args_to_target_array2(apr_array_header_t **targets_p,
                               apr_array_header_t *known_targets,
                               apr_pool_t *pool)
 {
-  svn_error_t *err = svn_opt_args_to_target_array3(targets_p, os, 
+  svn_error_t *err = svn_opt_args_to_target_array3(targets_p, os,
                                                    known_targets, pool);
 
   if (err && err->apr_err == SVN_ERR_RESERVED_FILENAME_SPECIFIED)
@@ -885,6 +891,8 @@ svn_opt_args_to_target_array2(apr_array_header_t **targets_p,
 }
 
 
+/* Note: This is substantially copied into svn_client_args_to_target_array() in
+ * order to move to libsvn_client while maintaining backward compatibility. */
 svn_error_t *
 svn_opt_args_to_target_array3(apr_array_header_t **targets_p,
                               apr_getopt_t *os,
@@ -928,99 +936,42 @@ svn_opt_args_to_target_array3(apr_array_header_t **targets_p,
   for (i = 0; i < input_targets->nelts; i++)
     {
       const char *utf8_target = APR_ARRAY_IDX(input_targets, i, const char *);
-      const char *peg_start = NULL; /* pointer to the peg revision, if any */
+      const char *true_target;
       const char *target;      /* after all processing is finished */
-      int j;
+      const char *peg_rev;
 
-      /* Remove a peg revision, if any, in the target so that it can
-         be properly canonicalized, otherwise the canonicalization
-         does not treat a ".@BASE" as a "." with a BASE peg revision,
-         and it is not canonicalized to "@BASE".  If any peg revision
-         exists, it is appended to the final canonicalized path or
-         URL.  Do not use svn_opt_parse_path() because the resulting
-         peg revision is a structure that would have to be converted
-         back into a string.  Converting from a string date to the
-         apr_time_t field in the svn_opt_revision_value_t and back to
-         a string would not necessarily preserve the exact bytes of
-         the input date, so its easier just to keep it in string
-         form. */
-      for (j = (strlen(utf8_target) - 1); j >= 0; --j)
-        {
-          /* If we hit a path separator, stop looking.  This is OK
-              only because our revision specifiers can't contain
-              '/'. */
-          if (utf8_target[j] == '/')
-            break;
-          if (utf8_target[j] == '@')
-            {
-              peg_start = utf8_target + j;
-              break;
-            }
-        }
-      if (peg_start)
-        utf8_target = apr_pstrmemdup(pool,
-                                     utf8_target,
-                                     peg_start - utf8_target);
+      /*
+       * This is needed so that the target can be properly canonicalized,
+       * otherwise the canonicalization does not treat a ".@BASE" as a "."
+       * with a BASE peg revision, and it is not canonicalized to "@BASE".
+       * If any peg revision exists, it is appended to the final
+       * canonicalized path or URL.  Do not use svn_opt_parse_path()
+       * because the resulting peg revision is a structure that would have
+       * to be converted back into a string.  Converting from a string date
+       * to the apr_time_t field in the svn_opt_revision_value_t and back to
+       * a string would not necessarily preserve the exact bytes of the
+       * input date, so its easier just to keep it in string form.
+       */
+      SVN_ERR(svn_opt__split_arg_at_peg_revision(&true_target, &peg_rev,
+                                                 utf8_target, pool));
 
       /* URLs and wc-paths get treated differently. */
-      if (svn_path_is_url(utf8_target))
+      if (svn_path_is_url(true_target))
         {
-          /* No need to canonicalize a URL's case or path separators. */
-
-          /* Convert to URI. */
-          target = svn_path_uri_from_iri(utf8_target, pool);
-          /* Auto-escape some ASCII characters. */
-          target = svn_path_uri_autoescape(target, pool);
-
-          /* The above doesn't guarantee a valid URI. */
-          if (! svn_path_is_uri_safe(target))
-            return svn_error_createf(SVN_ERR_BAD_URL, 0,
-                                     _("URL '%s' is not properly URI-encoded"),
-                                     utf8_target);
-
-          /* Verify that no backpaths are present in the URL. */
-          if (svn_path_is_backpath_present(target))
-            return svn_error_createf(SVN_ERR_BAD_URL, 0,
-                                     _("URL '%s' contains a '..' element"),
-                                     utf8_target);
-
-          /* strip any trailing '/' */
-          target = svn_path_canonicalize(target, pool);
+          SVN_ERR(svn_opt__arg_canonicalize_url(&true_target, true_target,
+                                                 pool));
         }
       else  /* not a url, so treat as a path */
         {
-          const char *apr_target;
           const char *base_name;
-          char *truenamed_target; /* APR-encoded */
-          apr_status_t apr_err;
 
-          /* canonicalize case, and change all separators to '/'. */
-          SVN_ERR(svn_path_cstring_from_utf8(&apr_target, utf8_target,
-                                             pool));
-          apr_err = apr_filepath_merge(&truenamed_target, "", apr_target,
-                                       APR_FILEPATH_TRUENAME, pool);
-
-          if (!apr_err)
-            /* We have a canonicalized APR-encoded target now. */
-            apr_target = truenamed_target;
-          else if (APR_STATUS_IS_ENOENT(apr_err))
-            /* It's okay for the file to not exist, that just means we
-               have to accept the case given to the client. We'll use
-               the original APR-encoded target. */
-            ;
-          else
-            return svn_error_createf(apr_err, NULL,
-                                     _("Error resolving case of '%s'"),
-                                     svn_path_local_style(utf8_target,
-                                                          pool));
-
-          /* convert back to UTF-8. */
-          SVN_ERR(svn_path_cstring_to_utf8(&target, apr_target, pool));
-          target = svn_path_canonicalize(target, pool);
+          SVN_ERR(svn_opt__arg_canonicalize_path(&true_target, true_target,
+                                                 pool));
 
           /* If the target has the same name as a Subversion
              working copy administrative dir, skip it. */
-          base_name = svn_path_basename(target, pool);
+          base_name = svn_path_basename(true_target, pool);
+
           /* FIXME:
              The canonical list of administrative directory names is
              maintained in libsvn_wc/adm_files.c:svn_wc_set_adm_dir().
@@ -1033,15 +984,12 @@ svn_opt_args_to_target_array3(apr_array_header_t **targets_p,
             {
               err = svn_error_createf(SVN_ERR_RESERVED_FILENAME_SPECIFIED,
                                       err, _("'%s' ends in a reserved name"),
-                                      target);
+                                      utf8_target);
               continue;
             }
         }
 
-      /* Append the peg revision back to the canonicalized target if
-         there was a peg revision. */
-      if (peg_start)
-        target = apr_pstrcat(pool, target, peg_start, NULL);
+      target = apr_pstrcat(pool, true_target, peg_rev, NULL);
 
       APR_ARRAY_PUSH(output_targets, const char *) = target;
     }
@@ -1141,6 +1089,105 @@ svn_opt_parse_revprop(apr_hash_t **revprop_table_p, const char *revprop_spec,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_opt__split_arg_at_peg_revision(const char **true_target,
+                                   const char **peg_revision,
+                                   const char *utf8_target,
+                                   apr_pool_t *pool)
+{
+  const char *peg_start = NULL; /* pointer to the peg revision, if any */
+  int j;
+
+  for (j = (strlen(utf8_target) - 1); j >= 0; --j)
+    {
+      /* If we hit a path separator, stop looking.  This is OK
+          only because our revision specifiers can't contain '/'. */
+      if (utf8_target[j] == '/')
+        break;
+
+      if (utf8_target[j] == '@')
+        {
+          peg_start = &utf8_target[j];
+          break;
+        }
+    }
+
+  if (peg_start)
+    {
+      *true_target = apr_pstrmemdup(pool, utf8_target, j);
+      *peg_revision = apr_pstrdup(pool, peg_start);
+    }
+  else
+    {
+      *true_target = utf8_target;
+      *peg_revision = "";
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_opt__arg_canonicalize_url(const char **url_out, const char *url_in,
+                              apr_pool_t *pool)
+{
+  const char *target;
+
+  /* Convert to URI. */
+  target = svn_path_uri_from_iri(url_in, pool);
+  /* Auto-escape some ASCII characters. */
+  target = svn_path_uri_autoescape(target, pool);
+
+  /* The above doesn't guarantee a valid URI. */
+  if (! svn_path_is_uri_safe(target))
+    return svn_error_createf(SVN_ERR_BAD_URL, 0,
+                             _("URL '%s' is not properly URI-encoded"),
+                             target);
+
+  /* Verify that no backpaths are present in the URL. */
+  if (svn_path_is_backpath_present(target))
+    return svn_error_createf(SVN_ERR_BAD_URL, 0,
+                             _("URL '%s' contains a '..' element"),
+                             target);
+
+  /* strip any trailing '/' and collapse other redundant elements */
+  target = svn_path_canonicalize(target, pool);
+
+  *url_out = target;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_opt__arg_canonicalize_path(const char **path_out, const char *path_in,
+                               apr_pool_t *pool)
+{
+  const char *apr_target;
+  char *truenamed_target; /* APR-encoded */
+  apr_status_t apr_err;
+
+  /* canonicalize case, and change all separators to '/'. */
+  SVN_ERR(svn_path_cstring_from_utf8(&apr_target, path_in, pool));
+  apr_err = apr_filepath_merge(&truenamed_target, "", apr_target,
+                               APR_FILEPATH_TRUENAME, pool);
+
+  if (!apr_err)
+    /* We have a canonicalized APR-encoded target now. */
+    apr_target = truenamed_target;
+  else if (APR_STATUS_IS_ENOENT(apr_err))
+    /* It's okay for the file to not exist, that just means we
+       have to accept the case given to the client. We'll use
+       the original APR-encoded target. */
+    ;
+  else
+    return svn_error_createf(apr_err, NULL,
+                             _("Error resolving case of '%s'"),
+                             svn_path_local_style(path_in, pool));
+
+  /* convert back to UTF-8. */
+  SVN_ERR(svn_path_cstring_to_utf8(path_out, apr_target, pool));
+  *path_out = svn_path_canonicalize(*path_out, pool);
+
+  return SVN_NO_ERROR;
+}
 
 /* Print version info for PGM_NAME.  If QUIET is  true, print in
  * brief.  Else if QUIET is not true, print the version more

@@ -21,49 +21,6 @@ Subversion has been taught about true renames tree conflict detection
 can be changed to make use of this and become extremely precise.  See
 below for further explanation.
 
-======================
-MERGE REQUIRES HISTORY
-======================
-
-A note on why tree conflict detection during 'svn merge' is so
-complicated:
-
-During 'svn update', the local state is easy to check. If any files
-are out of date (edited or scheduled for deletion in the working
-copy), we mark them as tree conflict victims if the update causes a
-delete-vs-update situation (use cases 1 & 2) or a double-delete (use
-case 3).
-
-During 'svn merge', the local state is not easy to check.  For use
-cases 4 & 6, where the file has been deleted in the working copy's
-branch, there's no victim at all in the working copy.  We need to
-explore the repository history, seeking the deletion of a file that
-corresponds to the file that was edited or deleted in the merge
-source.
-
-If we presume the existence of tree conflicts without checking the
-history, it's likely that the user will be spammed with "false
-positive" tree conflict warnings about files that never existed in the
-current branch.  Nobody likes a spammer. :-)
-
-If the user chooses the --ignore-ancestry option for 'svn merge', then
-we skip the tricky false-positive elimination and simply mark all of the
-potential tree conflicts.  [Is this reasonable?]
-
-Before investigating, we had assumed that it was possible to ask the
-repository a vague question such as "When was the URL '/Foo' most
-recently deleted?"  But there's no such API.  It's now clear that we
-must ask a more specific question: "Given a revision range in which
-the URL '/Foo' exists at the start, when was '/Foo' first deleted?"
-
-Determining a valid "start" revision is tricky because we don't know
-whether the file ever existed.  File deletions are part of the history
-of a directory, so I think it's reasonable to require that the target
-directory and the source-left directory have a youngest common ancestor
-(YCA).
-
---------------------------------------------------------------------------
-
 ==========
 USE CASE 1
 ==========
@@ -89,185 +46,114 @@ the working copy, the file is a tree conflict victim.
 USE CASE 4
 ==========
 
+We skip tree conflict detection if the record_only field of the
+merge-command baton is TRUE. A record-only merge operation updates
+mergeinfo without touching files.
+
 If 'svn merge' tries to modify a file that does not exist in the
-target working copy, and the history of the target directory includes
-a file of the same name, and this target file is related to the source
-file, then the target file is a tree conflict victim.
+target working copy, then the target file is a tree conflict victim.
 
-A tree conflict exists if all of the following predicates are true:
 
-1. The merge operation is compatible with tree conflict detection.
+Notes on Resolution
+-------------------
 
-   Implementation:
+A likely cause of this case is that the source diff doesn't cover as
+many revisions as it should. The file should either be brought in by
+adding the revision that created the file to the list of revisions
+to be merged, or changes made to it on the source branch should be
+omitted from the merge range entirely.
 
-   We check specific fields of the merge-command baton (of type
-   merge_cmd_baton_t), returning TRUE if all of the following boolean
-   fields have the given values.
+If the user does not wish to choose a source diff that avoids this
+conflict, then the user must resolve the conflict manually.
 
-   a. (same_repos == TRUE) The sources (the URLs of the left and right
-       sides of the diff) and the target (the URL of the working copy)
-       must be in the same repository.
+If a modification to the nonexistent file is part of a larger diff
+with changes to other files that should be merged, the user will
+need to be able to manually resolve the tree-conflict while keeping
+the desired changes.
 
-   b. (sources_ancestral == TRUE)  The merge-left URL given to the
-       merge command must be an ancestor of the merge-right URL.
+Users must be able to run a second merge command to resolve the
+tree-conflict, or repeat a previous merge operation, but with
+additional revisions, without harm.
 
-   c. (record_only == FALSE)  A record-only merge operation updates
-       mergeinfo without touching files.
-
-   Rationale:
-
-   These are conditions under which merge tracking is done.  We check
-   them first because it's cheap to do so (no repository access
-   required).  It's not yet clear how to handle --ignore-ancestry, so
-   its field is not in the list.
-
-2. The source-left file and the source-right file have a common
-   ancestor.
-
-   Implementation:
-
-   Call svn_client__get_youngest_common_ancestor().  If the youngest
-   common ancestor (YCA) is the source-left file, the predicate is
-   TRUE.
-
-   Rationale:
-
-   This is more specific than #1b above.  This predicate applies to a
-   single file, while #1b applies to the full merge sources, which are
-   usually directory trees.
-
-3. The target directory and the corresponding source-left directory
-   have a common ancestor.
-
-   Implementation:
-
-   Call svn_client__get_youngest_common_ancestor(), passing the two
-   dirs as arguments.  If a YCA exists, the predicate is TRUE.
-
-   Rationale:
-
-   The deletion of a file is not part of the history of the file
-   itself.  Rather it is part of the history of its parent directory.
-   If the parent (target) directory has no history in common with the
-   corresponding merge source directory, then no tree conflict is
-   possible.
-
-4. The file existed in the YCA directory.
-
-   Implementation:
-
-   Call svn_ra_check_path(), passing the filename and the revision of
-   the YCA directory.  If the function says there was a file there,
-   the predicate is TRUE.
-
-5. In the history of the target directory, a file by this name has
-   been deleted.
-
-   Implementation:
-
-   In the repository, call svn_repos_deleted_rev().  The "start"
-   revision arg is the revision of the YCA directory.  The "end"
-   revision arg is the HEAD revision.  If the function sets a valid
-   "deleted" revision, then the predicate is TRUE.
-
-   Rationale:
-
-   We already know that the file doesn't exist, so we know it was
-   deleted.  The specific revision is useful in other predicates.
-
-   At first I thought the "end" revision should be the BASE of the
-   target directory.  But that could lead to undetected tree
-   conflicts.  Suppose the user has committed a file deletion and then
-   merged without updating first.  The target directory is out of
-   date, and a search limited to the target directory's BASE would not
-   find the file deletion.
-
-   Note that the client library can't call svn_repos_deleted_rev()
-   directly.  We'll have to add the corresponding function
-   svn_ra_get_deleted_revnum() to each of the remote-access layers.
-
-6. The file at source-left and the file deleted in the target
-   directory's history have a common ancestor.
-
-   Implementation:
-
-   Call svn_client__get_youngest_common_ancestor(), passing the
-   source-left file and the "last surviving revision" of the target
-   file, derived from #5 above.  If they have a common ancestor, the
-   predicate is TRUE.  We can finally declare that we have found a
-   tree conflict!
-
-   Rationale:
-
-   I suppose it would be equivalent to pass the revision at
-   source-left and the revision of the YCA directory.
+However, the current plan is to disallow merges into tree-conflicted
+directories. This means that users will first have to mark the
+tree-conflict around the missing victim as resolved before attempting
+to merge the file again, this time including the revision that created
+the file. This may be a bit of an awkward work flow but is required to
+solve the problem this use case has in the current implementation,
+namely that missing files may accidentally be overlooked during merging.
 
 ==========
 USE CASE 5
 ==========
 
+We skip tree conflict detection if the record_only field of the
+merge-command baton is TRUE. A record-only merge operation updates
+mergeinfo without touching files.
+
 If 'svn merge' deletes an existing file, the file is a tree conflict
-victim if its text is different from the file deleted in the merge
-source.  We don't want to forget any text changes that are unique to
-the file at the current URL.
+victim if its text is different from the corresponding file on the left
+side of the merge source.
 
-A tree conflict exists if all of the following predicates are true:
+To account for uncommitted text modifications in the working copy,
+we should do any text comparisons against the WORKING revision.
 
-1. The merge operation is compatible with tree conflict detection.
-   Same as #1 in use case 4.
+Rationale:
 
-2. The target file and the source-left file have a common ancestor.
+We don't want to flag every file deletion as a tree conflict.  We
+want to warn the user if the file to be deleted locally is different
+from the file deleted in the merge source.  The user then has a chance
+to merge these unique changes.
 
-   Implementation:
+Implementation:
 
-   Call svn_client__get_youngest_common_ancestor().  If the ancestor
-   exists, the predicate is TRUE.
-
-   Rationale:
-
-   Thankfully, the job here is a lot simpler than in use case 4,
-   because we don't have to search the history to find a possible
-   target file to serve as the tree conflict victim.
-
-3. The text of the target file does not match the text of the
-   "last surviving revision" of the file after merge-left.
-
-   Implementation:
-
-   Call svn_ra_get_deleted_revnum(), as discussed in #5 in use case 4.
-   The "start" revision is the source-left revision, and the "end"
-   revision is the source-right revision.  If the function returns a
-   valid "deleted" revision, decrement it by 1 to derive the "last
-   survivor" revision.
-
-   Call svn_client_diff_summarize2() to compare the target file to the
-   "last survivor" from the merge source.  If there is a text
-   difference, the predicate is TRUE.
-
-   Rationale:
-
-   We don't want to flag every file deletion as a tree conflict.  We
-   want to warn the user if the file to be deleted locally is
-   different from the file deleted in the merge source.  The user then
-   has a chance to merge these unique changes.
+Call svn_client_diff_summarize2() to compare the target file to the
+file at the left side of the merge source.
 
 ==========
 USE CASE 6
 ==========
 
+We skip tree conflict detection if the record_only field of the
+merge-command baton is TRUE. A record-only merge operation updates
+mergeinfo without touching files.
+
 If 'svn merge' tries to delete a file that does not exist in the
-target working copy, and the history of the target directory includes
-a file of the same name, and this target file is related to the
-deleted source file, then the target file is a tree conflict victim.
+target working copy, then the target file is a tree conflict victim.
 
-The same predicates are applied as in use case 4, except that #2 is
-skipped because the file in question does not exist at source-right.
+This is similar to UC4.
 
-It would be nice to skip the tree conflict if the double-delete is
-caused by two rename operations that have the same destination.
-But we have to mark this as a tree conflict due to the current lack
-of "true rename" support.
+Rationale:
 
+Semantically, a tree conflict occurs if 'svn merge' either tries to apply
+the "delete" half of a "move" onto a file that was simply deleted in the
+target branch's history, or tries to apply a simple "delete" onto a file
+that has been moved in the target branch, or tries to move a file that
+has already been moved to a different name in the target branch. 
+
+Notes on Resolution
+-------------------
+Some users may want to skip the tree conflict and have the result automatically
+resolved if two rename operations have the same destination, or if a file is
+simply deleted on both branches. But we have to mark these as tree conflicts
+due to the current lack of "true rename" support. It does not appear to be
+feasible to detect more than the double-delete aspect of the move operation.
+
+=========================
+OBSTRUCTIONS DURING MERGE
+=========================
+
+If 'svn merge' fails to apply an operation to a file because the
+file is obstructed (i.e. an unversioned item of the same name is
+in the file's place), the obstructed file is a tree conflict victim.
+
+Rationale:
+
+We want to make sure that a merge either completes successfully
+or any problems found during a merge are flagged as conflicts.
+Skipping obstructed items during merge is no longer acceptable
+behaviour, since users might not be aware of obstructions that were
+skipped when they commit the result of a merge.
 
 =========================================
 TREE CONFLICT DETECTION WITH TRUE RENAMES

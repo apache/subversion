@@ -15,13 +15,6 @@
 <body>
 <div class="app">
 
-<div class="warningmessage">
-<p><strong>Note:</strong> Subversion 1.5 is <em>not released yet</em>.
-When it is released, this warning message will disappear, and the rest
-of this page will become the release notes.  Until then, this page
-describes what is planned for the release.</p>
-</div>
-
 <h1 style="text-align: center">Subversion 1.5 Release Notes</h1>
 
 <div class="h2" id="news" title="news">
@@ -46,16 +39,16 @@ describes what is planned for the release.</p>
       >Improved FSFS optimizability, via immutable file isolation</a></li>
   <li><a href="#webdav-proxy"
       >WebDAV transparent write-through proxy</a></li>
-  <li><a href="#XXXtodoXXX"
+  <li><a href="#copy-move-improvements"
       >Improvements to <tt>copy</tt> and <tt>move</tt></a></li>
-  <li><a href="#XXXtodoXXX"
+  <li><a href="#cancellation-improvements"
       >Speed improvements, cancellation response improvements</a></li>
-  <li><a href="#XXXtodoXXX"
+  <li><a href="#dav-modules"
       >Easier to try experimental <tt>ra_serf</tt> DAV access module</a></li>
-  <li><a href="#XXXtodoXXX"
-      >More than 150 new bug fixes, enhancements</a></li>
-  <li><a href="#XXXtodoXXX"
+  <li><a href="#apis"
       >API changes, improvements, and much language bindings work</a></li>
+  <li><a href="#bug-fixes"
+      >More than 150 new bug fixes, enhancements</a></li>
 </ul>
 
 <p>Subversion 1.5 is a superset of all previous Subversion releases,
@@ -87,9 +80,93 @@ newest libraries and binaries on top of the older ones.</p>
 releases, by only adding new functions, never removing old ones.  A
 program written to the 1.0, 1.1, 1.2, 1.3, or 1.4 API can both compile
 and run using 1.5 libraries.  However, a program written for 1.5
-cannot necessarily compile or run against older libraries.  See the <a
-href="#apis" >API</a> section on some clarifications on existing
-APIs.</p>
+cannot necessarily compile or run against older libraries.</p>
+
+<div class="h3" id="new-feature-compatibility-table"
+             title="new-feature-compatibility-table">
+<h3>New Feature Compatibility Table</h3>
+<table border="1">
+  <tr>
+    <th>New Feature</th>
+    <th>Minimum Client</th>
+    <th>Minimum Server</th>
+    <th>Minimum Repository</th>
+    <th>Notes</th></tr>
+  <tr>
+    <td><a href="#merge-tracking">Merge tracking</a></td>
+    <td>1.5</td>
+    <td>1.5</td>
+    <td>1.5</td>
+    <td></td></tr>
+  <tr>
+    <td><a href="#sparse-checkouts">Sparse checkouts</a></td>
+    <td>1.5</td>
+    <td>any</td>
+    <td>any</td>
+    <td></td></tr>
+  <tr>
+    <td><a href="#interactive-conflict-resolution">Interactive conflict resolution</a></td>
+    <td>1.5</td>
+    <td>any</td>
+    <td>any</td>
+    <td></td></tr>
+  <tr>
+    <td><a href="#changelists">Changelist support</a></td>
+    <td>1.5</td>
+    <td>any</td>
+    <td>any</td>
+    <td></td></tr>
+  <tr>
+    <td><a href="#externals">Relative URLs, peg revisions in <tt>svn:externals</tt></a></td>
+    <td>1.5</td>
+    <td>any</td>
+    <td>any</td>
+    <td></td></tr>
+  <tr>
+    <td><a href="#cyrus-sasl"> Cyrus SASL support for ra_svn and <tt>svnserve</tt></a></td>
+    <td>any<sup>*</sup>, 1.5</td>
+    <td>any<sup>*</sup>, 1.5</td>
+    <td>any</td>
+    <td><sup>*</sup>Limited, see <a href="#sasl-compatibility">SASL&nbsp;and&nbsp;<code>svn://</code>&nbsp;compatibility</a></td></tr>
+  <tr>
+    <td><a href="#fsfs-sharding"> Improved support for large deployments on FSFS, via sharding</a></td>
+    <td>any<sup>*</sup>, 1.5</td>
+    <td>1.5</td>
+    <td>1.5</td>
+    <td><sup>*</sup>1.5 required for <code>file://</code> compatibility</td></tr>
+  <tr>
+    <td><a href="#fsfs-isolate-immutable">Improved FSFS optimizability, via immutable file isolation</a></td>
+    <td>any<sup>*</sup>, 1.5</td>
+    <td>1.5</td>
+    <td>1.5</td>
+    <td><sup>*</sup>1.5 required for <code>file://</code> compatibility</td></tr>
+  <tr>
+    <td><a href="#webdav-proxy">WebDAV transparent write-through proxy</a></td>
+    <td>any</td>
+    <td>1.5<sup>*</sup></td>
+    <td>any</td>
+    <td><sup>*</sup>Apache 2.2 server also required</td></tr>
+  <tr>
+    <td><a href="#copy-move-improvements">Improvements to <tt>copy</tt> and <tt>move</tt></a></td>
+    <td>1.5</td>
+    <td>any<sup>*</sup>, 1.5</td>
+    <td>any</td>
+    <td><sup>*</sup>Limited, see <a href="#copy-move-improvements">Copy/move<tt>-</tt>related&nbsp;improvements</a></td></tr>
+  <tr>
+    <td><a href="#cancellation-improvements">Speed improvements, cancellation response improvements</a></td>
+    <td>1.5</td>
+    <td>any</td>
+    <td>any</td>
+    <td></td></tr>
+  <tr>
+    <td><a href="#dav-modules">Easier to try experimental <tt>ra_serf</tt> DAV access module</a></td>
+    <td>1.5</td>
+    <td>any</td>
+    <td>any</td>
+    <td></td></tr>
+</table>
+
+</div>  <!-- new-feature-compatibility-table -->
 
 <div class="h3" id="wc-and-repos-format-change"
              title="wc-and-repos-format-change">
@@ -136,7 +213,7 @@ href="http://subversion.tigris.org/faq.html#working-copy-format-change"
 <p>The Subversion 1.5 server works with 1.4 and older repositories,
 and it will <em>not</em> upgrade such repositories to 1.5 unless
 specifically requested to via the
-<strong><tt>svnadmin&nbsp;upgrade</tt></strong> command.  This means
+<strong><code>svnadmin&nbsp;upgrade</code></strong> command.  This means
 that some of the new 1.5 features will not become available simply by
 upgrading your server: you will also have to upgrade your
 repositories.  (We decided not to auto-upgrade repositories because we
@@ -144,14 +221,15 @@ didn't want 1.5 to silently make repositories unusable by
 1.4&nbsp;&mdash;&nbsp;that step should be a conscious decision on the
 part of the repository admin.)</p>
 
-<p>After upgrading a repository, you may wish to run the <a
+<p>After running <strong><code>svnadmin&nbsp;upgrade</code></strong>,
+you may wish to also run the <a
 href="http://svn.collab.net/repos/svn/trunk/tools/server-side/svn-populate-node-origins-index.c"
->svn-populate-node-origins-index</a> program on it.  Subversion 1.5
-maintains a node-origins index for each repository, and builds the
-index lazily as the information is needed.  For old repositories with
-lots of revisions, it's better to run that tool once to create the
-index, than to have live queries be slower until the index has built
-itself.  See <a
+>svn-populate-node-origins-index</a> program on the repository.
+Subversion 1.5 maintains a node-origins index for each repository, and
+builds the index lazily as the information is needed.  But for old
+repositories with lots of revisions, it's better to create the index
+in one step, using the aforementioned tool, than to have live queries
+be slower until the index has built itself.  See <a
 href="http://subversion.tigris.org/issues/show_bug.cgi?id=3024" >issue
 #3024</a> for details.</p>
 
@@ -165,24 +243,19 @@ href="http://subversion.tigris.org/issues/show_bug.cgi?id=3024" >issue
 <p>Although we try hard to keep output from the command line programs
 compatible between releases, new information sometimes has to be
 added.  This can break scripts that rely on the exact format of the
-output.  1.5 contains the following output changes:</p>
-
-<p>XXX: Enumerate changes to output (e.g. for changelists).</p>
-
-<ul>
-  <li><p>Conflict markers in files now match the file's defined
-    eol-style.</p></li>
-</ul>
+output.  Unfortunately, we are not able to enumerate all of the output
+changes in 1.5, but one of them is that conflict markers in files now
+match the file's defined eol-style.</p>
 
 </div>  <!-- output-changes -->
 
 <div class="h3" id="sasl-compatibility" title="sasl-compatibility">
-<h3>SASL and <code>svn://</code> access</h3>
+<h3>SASL and <code>svn://</code> compatibility</h3>
 
 <p>All 1.x clients, with or without Cyrus SASL support, will be able to
 authenticate against all 1.x servers that do not have Cyrus SASL enabled.
 Note that the <tt>CRAM-MD5</tt> and <tt>ANONYMOUS</tt> mechanisms are
-actually built into Subversion, so you'll be able to use them even if the
+built into Subversion, so you'll be able to use them even if the
 corresponding Cyrus SASL plugins are missing.</p>
   
 <p>1.x clients without Cyrus SASL support will be able to authenticate
@@ -198,33 +271,73 @@ using Cyrus SASL with Subversion.</p>
 
 </div>  <!-- sasl-compatibility -->
 
+<div class="h3" id="revprops-compatibility" title="revprops-compatibility">
+<h3>Custom revprops may now need to be examined by <tt>pre-commit</tt>
+  hooks</h3>
+
+<p>Each revision in Subversion has a set of <q>revision properties</q>
+associated with it; in addition to the standard log message, author,
+and date, arbitrary user-defined properties can be set.  These
+properties are not themselves versioned, so there is no way to revert
+changes to them.  Because of this, you cannot modify revprops on a
+committed revision without setting up a <tt>pre-revprop-change</tt>
+hook on the server.  Before Subversion 1.5, only the three standard
+revprops could be set at commit time; administrators using hooks to
+control the contents of the three standard revprops needed to check
+during <tt>pre-commit</tt> and <tt>pre-revprop-change</tt>, but for
+custom revprops, only <tt>pre-revprop-change</tt> appeared
+relevant.</p>
+
+<p>Subversion 1.5 adds
+a <a href="#commit-revprops"><tt>--with-revprop</tt> option to <tt>svn
+commit</tt></a> which allows users to specify revprops for revisions
+as they commit them.  Thus, in Subversion 1.5, it is possible for
+revproperties to be set on revisions without
+any <tt>pre-revprop-change</tt>.  The <tt>pre-commit</tt> hook can
+examine the transaction's revision properties before it is committed
+(just like many servers already use <tt>pre-commit</tt> to check for
+properly formatted log messages, e.g.).</p>
+
+<p>This means that if you previously relied
+on <tt>pre-revprop-change</tt> to control the ability to write to
+revprops (as opposed to just keeping track of their history), you may
+want to add similar controls to <tt>pre-commit</tt>.</p>
+
+</div>  <!-- revprops-compatibility -->
+
+
 </div>  <!-- compatibility -->
 
 <div class="h2" id="new-features" title="new-features">
 <h2>New Features</h2>
 
-<p>XXX: Describe each new feature.  See the 1.4 RNs for a
-"template".</p>
-
 <div class="h3" id="merge-tracking" title="merge-tracking">
 <h3>Merge tracking (foundational) (<em>client and server</em>)</h3>
 
-<p>Subversion 1.5 is the first release of Subversion with <em>merge
-tracking</em> support.  Merge tracking is a way for keeping track of
-what changes have been merged where, thereby reducing the need for
-manual bookkeeping when maintaining branches.</p>
+<p><em>Merge tracking</em> means Subversion keeps track of what
+changes have been merged where.  This reduces the overhead involved in
+maintaining branches, and gives users a way to inquire what changes
+are merged&nbsp;&mdash;&nbsp;or are available to be
+merged&nbsp;&mdash;&nbsp;on different lines of development.</p>
 
-<p>We're calling the 1.5 merge tracking support "foundational"
-because, although the most important parts are working, and much
-groundwork has been laid for the future, there are still some parts of
-our <a href="http://subversion.tigris.org/merge-tracking/" >original
-spec</a> remaining to be done (in particular, proper support for <a
-href="http://subversion.tigris.org/issues/show_bug.cgi?id=2897"
->reflective merges</a>, and better merge tracking of renamed files).
-There were other major features waiting to ship in 1.5, and we didn't
-want to delay their release because of rigid adherence to one
-feature's specifications.  So, look for further merge tracking
-improvements in Subversion 1.6 and afterwards.</p>
+<p>The merge tracking support in Subversion 1.5 is "foundational": its
+basic functionality is implemented, but there are still parts of our
+<a href="http://subversion.tigris.org/merge-tracking/" >original
+spec</a> that remain to be done, and merging is sometimes too slow.
+There will be merge tracking improvements in Subversion 1.5.1 and
+afterwards.  In the meantime:</p>
+
+<ul>
+<li><p>Take a look at <a href="#mt-known-issues"
+    >the list of known issues</a></p></li>
+<li><p>Read <a
+    href="http://svnbook.red-bean.com/nightly/en/svn.branchmerge.advanced.html#svn.branchmerge.advanced.finalword"
+    >"The Final Word on Merge Tracking"</a> in the Subversion Book</p></li> 
+<li><p>Read <a
+    href="http://www.collab.net/community/subversion/articles/merge-info.html"
+    >"Understanding the internals of Subversion's merge tracking feature"</a>
+    by Paul Burba</p></li>
+</ul>
 
 <div class="h4" id="mt-overview" title="mt-overview">
 <h4>Overview</h4>
@@ -239,7 +352,7 @@ improvements in Subversion 1.6 and afterwards.</p>
 
 <p>Each changeset is identified by its revision number, and merged
 changesets are recorded in the new
-<strong><tt>svn:mergeinfo</tt></strong> property (known colloquially
+<strong><code>svn:mergeinfo</code></strong> property (known colloquially
 as "mergeinfo") set on the destination of the merge.  Subversion keeps
 mergeinfo up-to-date automatically, but there is also a way to <a
 href="#mt-record-only" >record/unrecord merges manually</a>, since
@@ -251,34 +364,26 @@ Subversion doesn't.</p>
 <div class="h4" id="mt-ui" title="mt-ui">
 <h4>User interface</h4>
 
-<p>Mostly, mergeinfo is taken into account automatically, and you
-don't need to do anything special.</p>
+<p>Merging changes from (say) trunk to a branch no longer requires
+that you specify the revision range.  Instead, each time you want to
+sync up with trunk, you can just do:</p>
 
-<p>However, the <strong><tt>svn&nbsp;log</tt></strong> and
-<strong><tt>svn&nbsp;blame</tt></strong> commands take a new
-<strong><tt>-g</tt></strong>
-(<strong><tt>--use-merge-history</tt></strong>) option, which tells
-them tells them to take mergeinfo into account.  Without this option,
-they won't.</p>
+<pre>   $ cd BRANCH_WORKING_COPY
+   $ svn merge URL_TO_TRUNK</pre>
 
-<p>The reason for the -g option is that it is sometimes useful to
-ignore merge history.  In blame output you sometimes want to see the
-person B who merged a change, though other times you want to see the
-person A who originally wrote the change that B later merged; use -g
-to get the latter information.  In log output, you sometimes want to
-see exactly the revisions that were committed on a given line of
-development, though other times you want to see, as part of the same
-output, the original changes that were later ported as merge
-revisions; again, -g includes the latter information (tagged with
-lines that say "<tt>Merged via: </tt>" followed by the revision number
-in which the merge took place).  See <a
-href="http://svnbook.red-bean.com/nightly/en/svn.branchmerge.advanced.html#svn.branchmerge.advanced.logblame"
->Merge-Sensitive Logs and Annotations</a> in the Subversion book for
-more details.</p>
+<p>Subversion will figure out what changes from URL_TO_TRUNK have not
+yet been merged and pull in just those changes.  When it's time to
+merge the branch back to trunk, do this:</p>
 
-<p>The <strong><tt>svn&nbsp;merge</tt></strong> command takes two new
-options: <strong><tt>--record-only</tt></strong> and
-<strong><tt>--reintegrate</tt></strong>.</p>
+<pre>   $ cd TRUNK_WORKING_COPY
+   $ svn merge --reintegrate URL_TO_BRANCH</pre>
+
+<p>Below is a more formal description of all the
+merge-tracking-related interface changes.</p>
+
+<p>The <strong><code>svn&nbsp;merge</code></strong> command takes two new
+options: <strong><code>--record-only</code></strong> and
+<strong><code>--reintegrate</code></strong>.</p>
 
 <div id="mt-record-only" title="mt-record-only">
 <p>The --record-only option works with -r and does exactly what you
@@ -297,40 +402,143 @@ href="http://svnbook.red-bean.com/nightly/en/svn.branchmerge.advanced.html#svn.b
 >Blocking Changes</a> in the Subversion book, for more details.)</p>
 </div>  <!-- mt-record-only -->
 
+<div id="mt-reintegrate" title="mt-reintegrate">
 <p>The --reintegrate option is used when merging a branch back to
 trunk; it checks for some common safeguard conditions and then does
 the merge in a fast and efficient way.  See <a
 href="http://svnbook.red-bean.com/nightly/en/svn.branchmerge.basicmerging.html#svn.branchemerge.basicmerging.stayinsync"
 >Keeping a branch in sync</a> in the Subversion book for more.</p>
+</div>  <!-- mt-reintegrate -->
 
-<p>The new <strong><tt>svn&nbsp;mergeinfo</tt></strong> command can
+<p>The new <strong><code>svn&nbsp;mergeinfo</code></strong> command can
 show which changesets a directory has absorbed and which changesets
 it's still eligible to receive.  See <a
 href="http://svnbook.red-bean.com/nightly/en/svn.branchmerge.basicmerging.html#svn.branchmerge.basicmerging.mergeinfo"
 >Mergeinfo and Previews</a> in the Subversion book for more information.</p>
+
+<p>The <strong><code>svn&nbsp;log</code></strong> and
+<strong><code>svn&nbsp;blame</code></strong> commands take a new
+<strong><code>-g</code></strong>
+(<strong><code>--use-merge-history</code></strong>) option, which tells
+them to take mergeinfo into account.  Without this option, they won't.</p>
+
+<p>The reason for the -g option is that it is sometimes useful to
+ignore merge history.  In blame output you sometimes want to see the
+person B who merged a change, though other times you want to see the
+person A who originally wrote the change that B later merged; use -g
+to get the latter information.  In log output, you sometimes want to
+see exactly the revisions that were committed on a given line of
+development, though other times you want to see, as part of the same
+output, the original changes that were later ported as merge
+revisions; again, -g includes the latter information (tagged with
+lines that say "<tt>Merged via: </tt>" followed by the revision number
+in which the merge took place).  See <a
+href="http://svnbook.red-bean.com/nightly/en/svn.branchmerge.advanced.html#svn.branchmerge.advanced.logblame"
+>Merge-Sensitive Logs and Annotations</a> in the Subversion book for
+more details.</p>
 
 </div>  <!-- mt-ui -->
 
 <div class="h4" id="mt-compatibility" title="mt-compatibility">
 <h4>Merge tracking and compatibility</h4>
 
-<p>As described <a href="#repos-uprgades" >earlier</a>, merge-tracking
-is not supported unless you upgrade the repository as well as the
-server.  Run
-<strong><tt>svnadmin&nbsp;upgrade&nbsp;PATH_TO_REPOS</tt></strong> to
-upgrade.</p>
+<p>As described earlier, merge-tracking is not supported unless you <a
+href="#repos-upgrades" >upgrade the repository</a> as well as the
+server.</p>
 
 <p>If you were using the <a
-href="https://svn.collab.net/repos/svn/trunk/contrib/client-side/svnmerge/"
+href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/svnmerge/"
 >svnmerge</a> wrapper program to do merging, and now want to switch to
 using Subversion 1.5's native merge-tracking, then you should use the
 <a
-href="https://svn.collab.net/repos/svn/trunk/contrib/client-side/svnmerge/svnmerge-migrate-history.py"
+href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/svnmerge/svnmerge-migrate-history.py"
 >svnmerge-migrate-history.py</a> script to convert svnmerge's custom
 properties to the <tt>svn:mergeinfo</tt> properties that Subversion
 itself now uses.</p>
 
 </div>  <!-- mt-compatibility -->
+
+<div class="h4" id="mt-known-issues" title="mt-known-issues">
+<h4>Known Issues</h4>
+
+<p>There are still known issues with merge tracking in 1.5.0.  We're
+working on the most important ones first, which are:</p>
+
+<ul>
+<li><a href="http://subversion.tigris.org/issues/show_bug.cgi?id=3128"
+    >issue #3128</a>: <code>merge --reintegrate</code> should handle
+    renames better</li>
+<li><a href="http://subversion.tigris.org/issues/show_bug.cgi?id=2897"
+    >issue #2897</a>: proper support for reflective merges</li>
+<li><a href="http://subversion.tigris.org/issues/show_bug.cgi?id=3126"
+    >issue #3126</a>: better change-availability reporting
+    (<code>svn&nbsp;mergeinfo</code> shows too few or too many eligible
+    revisions)</li>
+<li><a href="http://subversion.tigris.org/issues/show_bug.cgi?id=2837"
+    >issue #2837</a>: allow merge tracking to be useful when performing
+    cyclic merging</li>
+<li><a href="http://subversion.tigris.org/issues/show_bug.cgi?id=3056"
+    >issue #3056</a>: avoid repeat merge in an intelligent way</li>
+<li><a href="http://subversion.tigris.org/issues/show_bug.cgi?id=2898"
+    >issue #2898</a>: handle mergeinfo when deleting/adding children
+    you don't have access to</li>
+<li><a href="http://subversion.tigris.org/issues/show_bug.cgi?id=3067"
+    >issue #3067</a>: subtrees that don't exist at the start or end of
+    a merge range shouldn't break the merge</li>
+<li><a href="http://subversion.tigris.org/issues/show_bug.cgi?id=3157"
+    >issue #3157</a>: merging a change from a path's natural history
+    creates self-referential mergeinfo</li>
+<li><a href="http://subversion.tigris.org/issues/show_bug.cgi?id=3174"
+    >issue #3174</a>: merge algorithm chokes on subtrees needing
+    special attention that have been renamed</li>
+</ul>
+
+<p>(See also the <a
+href="http://subversion.tigris.org/issues/buglist.cgi?component=subversion&amp;issue_status=UNCONFIRMED&amp;issue_status=NEW&amp;issue_status=STARTED&amp;issue_status=REOPENED&amp;short_desc=merg&amp;short_desc_type=substring&amp;field0-0-0=noop&amp;type0-0-0=noop&amp;value0-0-0=&amp;cmdtype=doit&amp;newqueryname=&amp;order=Issue+Number&amp;Submit+query=Submit+query"
+>list of all merge-related open issues</a>, though note that not all
+of them are about merge-tracking and many predate it.)</p>
+
+<p><a href="http://subversion.tigris.org/issues/show_bug.cgi?id=3157"
+>Issue #3157</a> is particularly easy to run into, so here's a more
+detailed explanation of what the issue is and how to work around
+it:</p>
+
+<p>Merge tracking information currently can include the "natural
+history" of a path.  One situation where this happens is when creating
+a <tt>branch</tt> from <tt>trunk</tt> at a certain revision <tt>X</tt>
+and later merging all changes from <tt>branch</tt> back to
+<tt>trunk</tt>, without explicitly limiting the merge range and
+without using the <a href="#mt-reintegrate"
+><code>--reintegrate</code> option</a>.  Afterwards, the merge
+tracking information on <tt>trunk</tt> will list revisions before
+<tt>X</tt>.  This does no harm to future merge operations, but
+thereafter <code>svn log -g</code> on <tt>trunk</tt> will report these
+revisions from the "natural history", which is typically not expected.
+This is because <code>svn log -g</code> uses the merge tracking
+information from previous revisions (not only from HEAD).</p>
+
+<p>Note that this should not be a problem with release branches (also
+called "maintenance branches"), because one typically does not merge
+them back to trunk.  Instead, recommended practice is for new changes
+to enter on trunk and be ported outward to the branches that need the
+changes.  However, you could run into this problem with a feature
+branch, which would be merged back to trunk once, at the end of the
+branch's lifetime.</p>
+
+<p>One workaround is to correct the merge tracking information before
+committing the merged revision, by reverse merging the "natural
+history" information: <code>svn merge --record-only -rX:1</code>.
+Another solution is to avoid this situation entirely, by explicitly
+specifying merge ranges in the first place, e.g.: <tt>-rX:HEAD</tt>.
+See <a
+href="http://subversion.tigris.org/servlets/ReadMsg?listName=dev&amp;msgNo=139379"
+>this mail</a> for more information.</p>
+
+<p>When merging a feature branch, the best solution is to <a
+href="#mt-reintegrate" >use the <code>--reintegrate</code> option</a>;
+then this problem won't happen in the first place.</p>
+
+</div>  <!-- mt-known-issues -->
 
 <div class="h4" id="mt-further-reading" title="mt-further-reading">
 <h4>Further reading</h4>
@@ -340,6 +548,9 @@ itself now uses.</p>
 <ul>
 <li><a href="http://svnbook.red-bean.com/nightly/en/svn.branchmerge.html"
     >Chapter 4: Branching and Merging</a> in the Subversion book
+</li>
+<li><a href="http://blog.red-bean.com/sussman/?p=92" >Subversion 1.5
+    merge-tracking in a nutshell</a> (blog post by Ben Collins-Sussman)
 </li>
 <li><a href="http://subversion.tigris.org/merge-tracking/" >The merge
     tracking design documents</a>
@@ -354,46 +565,48 @@ itself now uses.</p>
 <div class="h3" id="sparse-checkouts" title="sparse-checkouts">
 <h3>Sparse checkouts  (<em>client and server</em>)</h3>
 
-<p>Many users have very large trees of which they only want to checkout
-certain parts.  In previous versions of Subversion, <code>checkout -N</code>
-was not today up to this task.  Subversion 1.5 introduces the
-<code>--depth</code> option to the <code>checkout</code>, <code>switch</code>,
-and <code>update</code> subcommands as a replacement for <code>-N</code>, which
-allows working copies to have very specific contents, leaving out everything
-the user does not want.</p>
+<p>Many users have very large trees of which they only want to
+checkout certain parts.  In previous versions of Subversion,
+<code>checkout -N</code> was not really up to this task.  Subversion
+1.5 introduces the <strong><code>--depth</code></strong> option to the
+<strong><code>checkout</code></strong>,
+<strong><code>switch</code></strong>, and
+<strong><code>update</code></strong> subcommands.  This option
+replaces <code>-N</code>, and allows users to construct working
+copies containing just what's needed, leaving out everything else.</p>
 
 <div class="h4" id="sc-depth" title="sc-depth">
-<h4>Depth</h4>
+<h4>Depth overview</h4>
 <p>Each directory now understands the notion of <em>depth</em>, which has
 four possible values: <tt>empty</tt>, <tt>files</tt>, <tt>immediates</tt>,
 <tt>infinity</tt>.  The values are defined as follows:</p>
 
-<table>
+<table border="1">
 <tr>
-  <td>empty</td>
+  <td><tt>empty</tt></td>
   <td>Updates will not pull in any files or subdirectories not already
     present.</td>
 </tr>
 <tr>
-  <td>files</td>
+  <td><tt>files</tt></td>
   <td>Updates will pull in any files not already present, but not
     subdirectories.</td>
 </tr>
 <tr>
-  <td>immediates</td>
+  <td><tt>immediates</tt></td>
   <td>Updates will pull in any files or subdirectories not already present;
-    those subdirectories' will have depth-empty.</td>
+    the new subdirectories will have depth-empty.</td>
 </tr>
 <tr>
-  <td>infinity</td>
+  <td><tt>infinity</tt></td>
   <td>Updates will pull in any files or subdirectories not already present;
-    those subdirectories' will have depth-infinity.  Equivalent to today's
+    the new subdirectories will have depth-infinity.  Equivalent to today's
     default update behavior.</td>
 </tr>
 </table>
 
 <p>The <code>--depth</code> option sets depth values as it updates the working
-copy, setting any new subdirectories' depth values as described above.</p>
+copy, tweaking new subdirectories' depth values as described above.</p>
 
 </div>  <!-- sc-depth -->
 
@@ -412,13 +625,15 @@ copy, setting any new subdirectories' depth values as described above.</p>
 for these commands.  This changes the existing <code>-N</code> behavior for
 these commands, but in a trivial way (see below).</p>
 
-<p><code>checkout</code> without <code>--depth</code> or <code>-N</code>
-behaves the same as it does today.  <code>switch</code> and <code>update</code>
-without <code>--depth</code> or <code>-N</code> behave the same way as today
-IFF the working copy is fully depth-infinity.  <code>switch</code> and
-<code>update</code> without <code>--depth</code> or <code>-N</code> will
-<strong>not</strong> change depth values (exception: a missing directory
-specified on the command line will be pulled in).</p>
+<p><code>checkout</code> without <code>--depth</code> or
+<code>-N</code> behaves the same as it does today.
+<code>switch</code> and <code>update</code> without
+<code>--depth</code> or <code>-N</code> behave the same way as today
+if and only if the working copy is fully depth-infinity.
+<code>switch</code> and <code>update</code> without
+<code>--depth</code> or <code>-N</code> will <em>not</em> change depth
+values (exception: a missing directory specified on the command line
+will be pulled in).</p>
    
 <p>Thus, <code>checkout</code> is identical to <code>checkout
 --depth=infinity</code>, but <code>switch</code> and <code>update</code> are
@@ -426,86 +641,63 @@ not the same as <code>switch --depth=infinity</code> and <code>update
 --depth=infinity</code>.  The former update entries according to existing depth
 values, while the latter pull in everything.</p>
    
-<p>To get started, run <code>checkout</code> with <code>--depth=empty</code>
-or <code>--depth=files</code>.  If additional files or directories are desired,
-pull them in with <code>update</code> commands using appropriate
-<code>--depth</code> options.</p>
-   
-<p>The <code>svn status</code> should list the depth status of the directories,
-in addition to whatever statuses are being currently listed.</p>
-   
-<p>The <code>svn info</code> command should list the depth, iff invoked on a
-directory whose depth is not the default (depth-infinity)</p>
+<p>To get started, run <code>checkout</code> with
+<code>--depth=empty</code> or <code>--depth=files</code>.  If
+additional files or directories are desired, pull them in with
+<code>update</code> commands using appropriate <code>--depth</code>
+options.  The <code>svn status</code> command should list the ambient
+depths of directories, in addition to whatever other statuses are
+listed.  The <code>svn info</code> command also lists ambient depth,
+when invoked on a directory whose depth is not the default
+(depth-infinity)</p>
+
+<p><strong>Note:</strong> There is currently no <em>deselection</em>
+interface for sparse checkouts&nbsp;&mdash;&nbsp;that is, there is no
+command to unselect or "fold up" a subdirectory after you've brought
+it into a sparse working copy (although there are some fairly easy
+workarounds to achieve the same effect).  See <a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=2843" >issue
+#2843</a> for details.</p>
 
 </div>  <!-- sc-ui -->
 
 <div class="h4" id="sc-compat" title="sc-compat">
 <h4>Compatibility with older servers</h4>
-<p>This feature introduces two new concepts into the repository access
-protocol which will not be understood by older servers:</p>
-<ul>
-  <li>Reported Depths &mdash; the depths associated with individual paths
-    included by the client in the description of its working copy state.</li>
-  <li>Requested Depth &mdash; the single depth value used to limit the
-    scope of the server's response to the client.</li>
-</ul>
 
-<p>As such, it's useful to understand how these concepts will be handled
-across the compatibility matrix of depth-aware and non-depth-aware clients and
-servers.</p>
+<p>The new <tt>--depth</tt> feature naturally requires the client to
+be 1.5+, and will work most efficiently if the server is also 1.5+.
+However, the client will still behave correctly if the server is 1.4.x
+or lower; things will just be less efficient.</p>
 
-<div class="h5" id="sc-compat-dac" title="sc-compat-dac">
-<h5>Depth-aware Clients (DACs)</h5>
-<p>DACs will transmit reported depths (with "infinity" as the default) and will 
-transmit a requested depth (with "unknown" as the default).  They will also
-&mdash; for the sake of older, non-depth-aware servers (NDASs) -- transmit a
-requested recurse value derived from the requested depth:</p>
-<table>
-<tr><th>depth</th><th>recurse</th></tr>
-<tr><td>empty</td><td>no</td></tr>
-<tr><td>files</td><td>no</td></tr>
-<tr><td>unknown</td><td>yes</td></tr>
-<tr><td>immediates</td><td>yes</td></tr>
-<tr><td>infinity</td><td>yes</td></tr>
-</table>
-
-<p>When speaking to an NDAS, the requested recurse value is the only thing
-the server understands , but is obviously more "grainy" than the requested
-depth concept.  The DAC, therefore, must filter out any additional, unwanted
-data that the server transmits in its response.  (This filtering happens in
-the repository access implementation itself so the repository access APIs
-behave as expected regardless of the server's pedigree.)</p>
-
-<p>When speaking to a depth-aware server (DAS), the requested recurse value
-is ignored.  A requested depth of "unknown" means "only send information about
-the stuff in my report, depth-aware-ily".  Other requested depth values are
-honored by the server properly, and the DAC must handle the transformation of
-any working copy depths from their pre-update to their post-update depths and
-content.</p>
-
-</div>  <!-- sc-compat-dac -->
-
-<div class="h5" id="sc-compat-ndac" title="sc-compat-ndac">
-<h5>Non-depth-aware Clients (NDACs)</h5>
-
-<p>NDACs will never transmit reported depths and never transmit a requested
-depth.  But they will transmit a requested recurse value (either "yes" or "no",
-with "yes" being the default).</p>
-
-<p>When speaking to an NDAS, what happens happens.  It's the past, man &mdash;
-you don't get to define the interaction this late in the game!</p>
-
-<p>When speaking to a DAS, the not-reported depths are treated like reported
-depths of "infinity", and the reported recurse values "yes" and "no" map to
-depths of "infinity" and "files", respectively.</p>
-
-</div>  <!-- sc-compat-dac -->
+<p>This is because older servers do not
+understand&nbsp;&mdash;&nbsp;and therefore
+ignore&nbsp;&mdash;&nbsp;what the client tells them about "depth".  So
+when a client requests a depth shallower than depth-infinity, older
+servers will send back more data than the client wants.  However, a
+1.5+ client will know it's talking to an older server and filter out
+this extra data.  Thus, operations may take a while, because the
+server sends a lot of data over the network that the client then
+ignores, but the final result on the client side will be the same.
+(Note that older servers understand a <tt>recurse</tt> flag in the
+network protocols, and 1.5+ clients send that flag based on the depth;
+this alleviates some of the extra network traffic penalty.)</p>
 
 </div>  <!-- sc-compat -->
 
-<p>Sparse checkouts are further described <a
-href="http://svn.collab.net/repos/svn/trunk/notes/sparse-directories.txt"
->in the repository</a>.</p>
+<div class="h4" id="sc-further-reading" title="sc-further-reading">
+<h4>Further reading</h4>
+
+<ul>
+<li>The <a
+    href="http://svnbook.red-bean.com/nightly/en/svn.advanced.sparsedirs.html"
+    >Sparse Directories</a> section in the Subversion book.
+</li>
+<li>The <a
+    href="http://svn.collab.net/repos/svn/trunk/notes/sparse-directories.txt" 
+    >design/implementation document</a> in the repository.</li>
+</ul>
+
+</div> <!-- sc-further-reading -->
 
 </div> <!-- sparse-checkouts -->
 
@@ -513,30 +705,36 @@ href="http://svn.collab.net/repos/svn/trunk/notes/sparse-directories.txt"
              title="interactive-conflict-resolution">
 <h3>Interactive Conflict Resolution (<em>client</em>)</h3>
 
-<p>Added support for interactive conflict resolution in the command
-line client, and a corresponding callback function in the client
-library.  GUI clients can use the callback function to hook in a
-graphical conflict resolution program to the
+<p>Conflict resolution is now done interactively by the command-line
+client for the
 <code>update</code>/<code>switch</code>/<code>merge</code>
-sub-commands.  Example command line output:</p>
-<pre>
-    $ svn up
-    U    contrib/client-side/svnmerge/svnmerge_test.py
-    Conflict discovered in 'contrib/client-side/svnmerge/svnmerge.py'.
-    Select: (p)ostpone, (d)iff, (e)dit, (h)elp : h
-      (p)ostpone - mark the conflict to be resolved later
-      (d)iff     - show all changes made to merged file
-      (e)dit     - change merged file in an editor
-      (r)esolved - accept merged version of file
-      (m)ine     - accept my version of file
-      (t)heirs   - accept repository's version of file
-      (l)aunch   - use third-party tool to resolve conflict
-      (h)elp     - show this list
+subcommands, and the client library offers a callback function so
+other clients can do similarly.</p>
 
-    Select: (p)ostpone, (d)iff, (e)dit, (h)elp : t
-    G    contrib/client-side/svnmerge/svnmerge.py
-    Updated to revision 25685.
+<p>Here's an example using the command-line client:</p>
+
+<pre>
+   $ svn up
+   U    contrib/client-side/svnmerge/svnmerge_test.py
+   Conflict discovered in 'contrib/client-side/svnmerge/svnmerge.py'.
+   Select: (p) postpone, (df) diff-full, (e) edit,
+           (s) show all options: s
+     (p)  postpone    - mark the conflict to be resolved later
+     (df) diff-full   - show all changes made to merged file
+     (e)  edit        - change merged file in an editor
+     (r)  resolved    - accept merged version of file
+     (mf) mine-full   - accept my version of entire file (ignore their changes)
+     (tf) theirs-full - accept their version of entire file (lose my changes)
+     (l)  launch      - launch external tool to resolve conflict
+     (s)  show all    - show this list
+
+   Select: (p) postpone, (df) diff-full, (e) edit,
+           (s) show all options: tf
+   G    contrib/client-side/svnmerge/svnmerge.py
+   Updated to revision 25685.
+   $ 
 </pre>
+
 <p>This feature can be selectively disabled by using the --non-interactive
 option, or disabled permanently by setting '[miscellany] interactive-conflicts
  = no' in your run-time config file.</p>
@@ -555,6 +753,8 @@ callback function and the following new data types:</p>
     description indicating the type of conflict</li>
   <li><code>svn_wc_conflict_result_t</code>, returned by the callback
     as the result of any conflict resolution attempt</li>
+  <li><code>svn_wc_conflict_choice_t</code>, an enum indicating what
+    course of action the user chose</li>
 </ul>
 
 <p>Clients provide their callback function to Subversion's libraries
@@ -564,22 +764,23 @@ callback via the corresponding <code>conflict_baton</code> field.</p>
 
 </div>  <!-- interactive-conflict-resolution -->
 
-<div class="h3" id="changelists" title="changelists">
-<h3>Changelist support (<em>client</em>)</h3>
-<p>The Subversion client now contains the notion of a <em>changelist</em>:
-a group of files which are associated with a chosen name.  This becomes
-especially useful when working on several different set of files within the
-same working copy.  Instead of having to remember each file in each set,
-Subversion 1.5 will allow you to associate a changelist with each set of
-files.  Most commands which take a set of files as targets will now also
-accept the <code>--changelist</code> option, which filters those targets
-based upon the members of the changelist.  Changelist membership can be
-edited using the new <code>changelist</code> subcommand.</p>
+<div class="h3" id="changelists" title="changelists"> <h3>Changelist
+support (<em>client</em>)</h3> <p>The Subversion client now contains
+the notion of a <em>changelist</em>: a group of files which are
+associated with a chosen name.  This becomes especially useful when
+working on several different set of files within the same working
+copy.  Instead of having to remember each file in each set, Subversion
+1.5 will allow you to associate a changelist with each set of files.
+Most commands which take a set of files as targets will now also
+accept the <strong><code>--changelist</code></strong> option, which
+filters those targets based upon the members of the changelist.
+Changelist membership can be edited using the new
+<strong><code>changelist</code></strong> subcommand.</p>
 
 <p>Changelists are handled entirely by the client.  They are never sent
 to the server, and aren't visible to other users of the same repository.
 Also, the <code>--changelist</code> option is never additive; if a file
-wouldn't have been included in the list of targets with out
+wouldn't have been included in the list of targets without
 <code>--changelist</code>, it will not be added to it, regardless of membership
 in the changelist.  Currently, a file may only be in one changelist at a
 time, and directories can not be members of a changelist.</p>
@@ -597,12 +798,23 @@ subcommands:</p>
   <li><code>propdel</code></li>
   <li><code>revert</code></li>
   <li><code>status</code></li>
-  <li><code>update</code><li>
+  <li><code>update</code></li>
 </ul>
 
-<p>More information about changelists can be found <a
-href="http://svn.collab.net/repos/svn/trunk/notes/changelist-design.txt"
->here</a>.</p>
+<div class="h4" id="cl-further-reading" title="cl-further-reading">
+<h4>Further reading</h4>
+
+<ul>
+<li>The <a
+    href="http://svnbook.red-bean.com/nightly/en/svn.advanced.changelists.html"
+    >Changelists</a> section in the Subversion book.
+</li>
+<li>The <a
+    href="http://svn.collab.net/repos/svn/trunk/notes/changelist-design.txt" 
+    >design/implementation document</a> in the repository.</li>
+</ul>
+
+</div>  <!-- cl-further-reading -->
 
 </div>  <!-- changelists -->
 
@@ -611,140 +823,153 @@ href="http://svn.collab.net/repos/svn/trunk/notes/changelist-design.txt"
     (<em>client</em>)</h3>
 
 <p>Two additions to the <tt>svn:externals</tt> feature</p>
-  <ul>
-    <li>
-      <p>
-        The URLs may include peg specifications.  Because the
-        directory a URL refers to with and without a peg revision uses
-        a different lookup and result in different contents, the
-        current format from older versions of Subversion continues to
-        not understand peg revisions.  A new format is introduced to
-        allow peg revisions in URLs.
-      </p>
-      <p>So the old format of</p>
-        <pre>
-          foo             http://example.com/repos/zig
-          foo/bar -r 1234 http://example.com/repos/zag
-        </pre>
-        <p>does not support peg revisions.  In fact, these following
-        externals will not work unless there are directories named
-        <tt>zig@HEAD</tt> and <tt>zag@HEAD</tt>:</p>
-        <pre>
-          foo             http://example.com/repos/zig@HEAD
-          foo/bar -r 1234 http://example.com/repos/zag@HEAD
-        </pre>
-      <p>
-        The new format moves the URL first followed by the directory
-        the external is checked out or exported into</p>
-        <pre>
-          http://example.com/repos/zig foo1
-          -r 1234 http://example.com/repos/zag foo/bar1
-          http://example.com/repos/zig@HEAD foo2
-          -r 1234 http://example.com/repos/zag@HEAD foo/bar2
-        </pre>
-        <p>peg specifications are allowed but not necessary.
-      </p>
-    </li>
-    <li>
-      <p>
-        Up to Subversion 1.4, the URLs in an <tt>svn:externals</tt>
-        specification must be absolute.  Now they can be relative.
-        Four different relative externals are supported.
-      </p>
-      <p>
-        For the following example, assume we have two repositories at
-        <tt>http://example.com/svn/repos-1</tt> and
-        <tt>http://example.com/svn/repos-2</tt>.  We have a checkout
-        of <tt>http://example.com/svn/repos-1/project1/trunk</tt> and
-        the <tt>svn:external</tt> property is set on <tt>trunk</tt>.</p>
-        <ul>
-          <li>
-            <tt>../</tt>
-            <br/>
-            Relative to the directory with the <tt>svn:external</tt>
-            property.  These URLs always begin with the string
-            <tt>../</tt>.
-            <pre>
-              ../../project2/trunk common/project2/trunk
-            </pre>
-            This will extract
-            <tt>http://example.com/svn/repos-1/project2/trunk</tt>
-            into <tt>common/project2/trunk</tt>.  The URL is relative
-            to the directory with the <tt>svn:external</tt>, not the
-            directory where the external is written to disk.
-          </li>
-          <li>
-            <tt>^/</tt>
-            <br/>
-            Relative to the repository root.
-            <pre>
-              ^/project2/trunk common/project2/trunk
-            </pre>
-            This will extract
-            <tt>http://example.com/svn/repos-1/project2/trunk</tt>
-            into <tt>common/project2/trunk</tt>.
-            <br/>
 
-            You can also refer to other repositories easily using
-            repository root relative URLs:
-            <pre>
-              ^/../repos-2/foo/trunk common/foo/trunk
-            </pre>
-            This will extract
-            <tt>http://example.com/svn/repos-2/foo/trunk</tt> into
-            <tt>common/foo/trunk</tt>
-          </li>
-          <li>
-            <tt>//</tt>
-            <br/>
-            Relative to the scheme.  This copies the scheme of the
-            checkout or export URL into the URL in the
-            <tt>svn:external</tt>.  It is useful when the same
-            hostname must the accessed with different scheme's
-            depending upon network location; i.e. clients in the
-            intranet use <tt>http://</tt> while external clients use
-            <tt>svn+ssh://</tt>.
-            <pre>
-              //example.com/svn/repos-1/project2/trunk common/project2/trunk
-            </pre>
-            This will extract
-            <tt>http://example.com/svn/repos-1/project2/trunk</tt>
-            into <tt>common/project2/trunk</tt>.  If the working copy
-            was checked out from
-            <tt>svn+ssh://example.com/svn/repos-1/project1/trunk</tt>
-            then this URL would be
-            <tt>http://example.com/svn/repos-1/project1/trunk</tt>.
-          </li>
-          <li>
-            <tt>/</tt>
-            <br/>
+<div class="h4" id="externals-peg-revs" title="externals-peg-revs">
+<h4>Peg revision syntax for URLs</h4>
 
-            Server root relative URLs.  This copies the scheme and
-            hostname from the checkout or export URL into the
-            <tt>svn:external</tt> URL.
-            <pre>
-              /svn/repos-1/project2/trunk common/project2/trunk
-            </pre>
-            This will extract
-            <tt>http://example.com/svn/repos-1/project2/trunk</tt>
-            into <tt>common/project2/trunk</tt>.  If the working copy
-            was checked out from
-            <tt>svn+ssh://example.com/svn/repos-1/project1/trunk</tt>
-            then this URL would be
-            <tt>http://example.com/svn/repos-1/project1/trunk</tt>.
-          </li>
-        </ul>
-      <p>
-        Relative URLs are supported in the old <tt>svn:externals</tt>
-        format that do not support peg revisions.
-      </p>
-      <p>
-        When Subversion sees an <tt>svn:externals</tt> without an
-        absolute URL it takes the first argument as a relative URL and
-        the second as the target directory.
-      </p>
-    </li>
-  </ul>
+<p><em>Compatibility and the new syntax:</em> For compatibility
+reasons, the pre-1.5 svn:externals syntax continues to not understand
+peg revisions.  A new format has been introduced to allow peg
+revisions in URLs.</p>
+
+<p>The old format of</p>
+<pre>
+   foo             http://example.com/repos/zig
+   foo/bar -r 1234 http://example.com/repos/zag
+</pre>
+
+<p>does not support peg revisions, and the following externals will
+not work (unless there are directories named <tt>zig@HEAD</tt> and
+<tt>zag@HEAD</tt>):</p>
+
+<pre>
+   foo             http://example.com/repos/zig@HEAD
+   foo/bar -r 1234 http://example.com/repos/zag@HEAD
+</pre>
+
+<p>The new format moves the URL first followed by the directory the
+external is checked out or exported into; if there is an operative
+(-r) revision, it precedes the URL.  Here are four externals lines:</p>
+
+<pre>
+   http://example.com/repos/zig foo1
+   -r 1234 http://example.com/repos/zag foo/bar1
+   http://example.com/repos/zig@HEAD foo2
+   -r 1234 http://example.com/repos/zag@HEAD foo/bar2
+</pre>
+
+<p>In other words, both operative ("-r") and peg ("@") revisions are
+allowed, but neither is required.</p>
+
+</div>  <!-- externals-peg-revisions -->
+
+<div class="h4" id="externals-relative-urls" title="externals-relative-urls">
+<h4>Support for relative URLs</h4>
+
+<p>Prior to Subversion 1.5, the URLs in an <tt>svn:externals</tt>
+specification must be absolute.  Now they can be relative.  Four
+different relative externals specifications are supported.  (In the
+following examples, assume we have two repositories: one at
+<tt>http://example.com/svn/repos-1</tt> and another at
+<tt>http://example.com/svn/repos-2</tt>.  We have a checkout of
+<tt>http://example.com/svn/repos-1/project1/trunk</tt> and the
+<tt>svn:externals</tt> property is set on <tt>trunk</tt>.)</p>
+
+<dl><dt><strong>../</strong></dt>
+<dd><p>Relative to the directory with the <tt>svn:externals</tt>
+property.  These URLs always begin with the string <tt>../</tt>, for
+example:</p>
+<pre>
+   ../../project2/trunk common/project2/trunk
+</pre>
+
+<p>This will extract
+<tt>http://example.com/svn/repos-1/project2/trunk</tt> into
+<tt>common/project2/trunk</tt>.  The external's URL is relative to the
+URL of the directory with the <tt>svn:externals</tt> property, not the
+directory where the external is written to disk.</p></dd>
+
+<dt><strong>^/</strong></dt>
+
+<dd><p>Relative to the repository root.</p>
+
+<pre>
+   ^/project2/trunk common/project2/trunk
+</pre>
+
+<p>This will extract
+<tt>http://example.com/svn/repos-1/project2/trunk</tt> into
+<tt>common/project2/trunk</tt>.</p>
+
+<p>You can also refer to other repositories easily using repository
+root relative URLs:</p>
+
+<pre>
+   ^/../repos-2/foo/trunk common/foo/trunk
+</pre>
+
+<p>This will extract <tt>http://example.com/svn/repos-2/foo/trunk</tt>
+into <tt>common/foo/trunk</tt>.</p>
+</dd>
+
+<dt><strong>//</strong></dt>
+
+<dd><p>Relative to the scheme.  This copies the scheme of the checkout
+or export URL into the URL in <tt>svn:externals</tt>.  It is useful
+when the same hostname must the accessed with different schemes
+depending upon network location; i.e. clients in the intranet use
+<tt>http://</tt> while external clients use <tt>svn+ssh://</tt>.</p>
+
+<pre>
+   //example.com/svn/repos-1/project2/trunk common/project2/trunk
+</pre>
+
+<p>This will extract
+<tt>http://example.com/svn/repos-1/project2/trunk</tt> into
+<tt>common/project2/trunk</tt>.  If the working copy was checked out
+from <tt>svn+ssh://example.com/svn/repos-1/project1/trunk</tt> then
+this URL would be
+<tt>svn+ssh://example.com/svn/repos-1/project1/trunk</tt>.</p>
+</dd>
+
+<dt><strong>/</strong></dt>
+
+<dd><p>Server root relative URLs.  This copies the scheme and hostname
+from the checkout or export URL into the <tt>svn:externals</tt>
+URL.</p>
+
+<pre>
+   /svn/repos-1/project2/trunk common/project2/trunk
+</pre>
+
+<p>This will extract
+<tt>http://example.com/svn/repos-1/project2/trunk</tt> into
+<tt>common/project2/trunk</tt>.  If the working copy was checked out
+from <tt>svn+ssh://example.com/svn/repos-1/project1/trunk</tt> then
+this URL would be
+<tt>svn+ssh://example.com/svn/repos-1/project1/trunk</tt>.</p>
+</dd>
+
+</dl>
+
+<p>Relative URLs are still supported in the old <tt>svn:externals</tt>
+format (that does not support peg revisions).</p>
+
+<p>When Subversion sees an <tt>svn:externals</tt> without an absolute
+URL, it takes the first argument as a relative URL and the second as
+the target directory.</p>
+
+</div>  <!-- externals-relative-urls -->
+
+<div class="h4" id="externals-further-reading"
+             title="externals-further-reading">
+<h4>Further reading</h4>
+
+<p>See The <a
+href="http://svnbook.red-bean.com/nightly/en/svn.advanced.externals.html"
+>svn:externals</a> section of the Subversion Book.</p>
+
+</div>  <!-- externals-further-reading -->
 
 </div>  <!-- externals -->
 
@@ -754,7 +979,7 @@ and server</em>)</h3>
 
 <p>From <a
 href="http://en.wikipedia.org/wiki/Simple_Authentication_and_Security_Layer">
-Wikipedia</a>: SASL is a framework for authentication and data security in
+Wikipedia</a>: "SASL is a framework for authentication and data security in
 Internet protocols.  It decouples authentication mechanisms from application
 protocols, in theory allowing any authentication mechanism supported by SASL to
 be used in any application protocol that uses SASL."</p>
@@ -828,13 +1053,13 @@ repository.</p>
     (<em>server</em>)</h3>
 
 <p>The FSFS repositories never change a revision after it is written
-to the disk.  This should allow the operating system to cache these
-files forever, but certain filesystems (e.g. NFS) prohibit such
-caching by default.  The FSFS repository layout has been changed such
-that the immutable files are confined to the directories "db/revs" and
-"db/txn-protorevs".  This allows these directories to be on a mount
-point where caching is enabled (on Linux look at the "nocto" option to
-nfs(5)).</p>
+to the disk.  Although this should allow the operating system to cache
+these files forever, certain filesystems (e.g. NFS) prohibit such
+caching by default.  Now the FSFS repository layout has been changed
+such that the immutable files are confined to the subdirectories
+"db/revs" and "db/txn-protorevs".  This allows these directories to be
+on a mount point where caching is enabled (on Linux look at the
+"nocto" option to nfs(5)).</p>
 
 <p>Since commit transactions are now built up in "db/txn-protorevs"
 instead of "db/transactions", the latter directory no longer needs to
@@ -853,11 +1078,12 @@ server for the duration of the transaction.  This is typically called
 
 <p>Subversion 1.4 <a
 href="http://subversion.tigris.org/svn_1.4_releasenotes.html#svnsync">
-introduced <tt>svnsync</tt></a>&mdash;a tool which provided the ability to
-replicate repository history from one repository to another.  Though useful,
-<tt>svnsync</tt> could only pull revision history from a repository, not push
-additional commits back to the master.  Subversion 1.5 adds WebDAV proxy
-support to <tt>mod_dav_svn</tt>, effectly allowing bidirectional revision
+introduced <tt>svnsync</tt></a>&nbsp;&mdash;&nbsp;a tool which
+provided the ability to replicate repository history from one
+repository to another.  Though useful, <tt>svnsync</tt> could only
+pull revision history from a repository, not push additional commits
+back to the master.  Subversion 1.5 adds WebDAV proxy support to
+<tt>mod_dav_svn</tt>, effectively allowing bidirectional revision
 history replication between master servers and slave servers using
 <tt>mod_dav_svn</tt>.</p>
 
@@ -909,43 +1135,51 @@ without ever having to relay them to the master backend.</p>
     &lt;Location /repos/slave&gt;
       DAV svn
       SVNPath /my/local/copy/of/repos
-      SVNMasterURI http://master.example.com/repos/master
+      SVNMasterURI http://master.example.com/repos/master/
     &lt;/Location&gt;
 </code></pre>
 
 <p>The master MUST have a post-commit hook that updates all of the slaves.  An
 example that does this using <code>svnadmin dump</code>/<code>svnadmin
 load</code> and ssh is provided below.  <tt>svnsync</tt> can probably do the
-same thing (XXX: we should probably answer this question more confidently).</p>
+same thing.</p>
 
-<p>Additionally, if locks are permitted on the master repository, lock databases
-need to kept in sync via post-lock and post-unlock hooks on the master pushing
-the lock state to the slaves.  (Username preservation is left as an exercise to
-the reader.)(XXX: Same as above.)  If the lock database is not propogated, users 
-will not be able to accurately determine whether a lock is held - but locking
-will still work.</p>
+<p>Additionally, if locks are permitted on the master repository, lock
+databases need to kept in sync via post-lock and post-unlock hooks on
+the master pushing the lock state to the slaves.  (Username
+preservation is left as an exercise to the reader.  Translation: <a
+href="hacking.html#patches">patches to these notes are most
+welcome</a>.)  If the lock database is not propogated, users will not
+be able to accurately determine whether a lock is
+held&nbsp;&mdash;&nbsp;but locking will still work.</p>
 
 <p>A sample synchronization script may look like this:</p>
 <pre><code>
-    #!/bin/sh
-    REPOS="$1"
-    REV="$2"
-    SLAVE_HOST=slave.example.com
-    SLAVE_PATH=/my/local/copy/of/repos
+   #!/bin/sh
+   REPOS="$1"
+   REV="$2"
+   SLAVE_HOST=slave.example.com
+   SLAVE_PATH=/my/local/copy/of/repos
 
-    # Ensure svnadmin is in your PATH on both this machine and the remote server!
-    svnadmin dump --incremental -r$2 $1 &gt; /tmp/$2.dump
-    scp /tmp/$2.dump $SLAVE_HOST:$SLAVE_PATH
-    ssh $SLAVE_HOST "svnadmin load $SLAVE_PATH &lt; $SLAVE_PATH/$2.dump"
-    ssh $SLAVE_HOST "rm $SLAVE_PATH/$2.dump"
-    rm /tmp/$2.dump
+   # Ensure svnadmin is in $PATH on both this machine and the remote server!
+   svnadmin dump --incremental -r$2 $1 &gt; /tmp/$2.dump
+   scp /tmp/$2.dump $SLAVE_HOST:$SLAVE_PATH
+   ssh $SLAVE_HOST "svnadmin load $SLAVE_PATH &lt; $SLAVE_PATH/$2.dump"
+   ssh $SLAVE_HOST "rm $SLAVE_PATH/$2.dump"
+   rm /tmp/$2.dump
 </code></pre>
 
 </div>  <!-- webdav-proxy-example -->
 
+<div class="h4" id="webdav-proxy-further-reading"
+             title="webdav-proxy-further-reading">
+<h4>Further reading</h4>
+
 <p>Additional information about WebDAV proxy support is available <a
 href="http://svn.collab.net/repos/svn/trunk/notes/webdav-proxy">in the
 repository</a>.</p>
+
+</div>  <!-- webdav-proxy-further-reading -->
 
 </div>  <!-- webdav-proxy -->
 
@@ -959,8 +1193,7 @@ repository</a>.</p>
 <h3>Copy/move-related improvements (<em>client and server</em>)</h3>
 
 <p>The abilities and behavior of <code>copy</code> and
-<code>move</code> operations has improved significantly.</p>
-
+<code>move</code> operations are significantly improved in 1.5+.</p>
 
 <div class="h4" id="leverage-copyfrom" title="leverage-copyfrom">
 <h4>Improved copy-handling during updates (<em>client and server</em>)</h4>
@@ -968,18 +1201,20 @@ repository</a>.</p>
 <p>A common problem in older versions of Subversion was the way in
 which <code>svn update</code> handled incoming copies and moves.</p>
 
-<p>For example, suppose Harry runs <code>svn move foo bar; svn
+<p>Consider this scenario: Harry runs <code>svn move foo bar; svn
 commit</code>, and meanwhile Sally makes local changes to 'foo', and
 then runs <code>svn update</code>.  In earlier versions of Subversion,
-the server would send down a completely new file 'bar', and remove the
-file 'foo' (or rather, make it unversioned, since it has uncommitted
-changes.)  From Sally's point of view, her changes seem to be lost;
-the newly added 'bar' file has the older content.  In Subversion 1.5,
-the client and server both attempt to be smarter about this.  The
-server doesn't send a whole new file during the update, but rather
-instructions to copy something that may likely already exists in the
-working copy.  So Sally's 'foo' file is copied to 'bar' (with local
-edits intact!).</p>
+the server would send down a completely new file 'bar', and unversion
+the file 'foo' (if it had no uncommitted changes, Subversion would
+remove it entirely.)  From Sally's point of view, her changes seem to
+be lost; the newly added 'bar' file has the older content, and the
+file 'foo' has been taken out of version control.</p>
+
+<p>In Subversion 1.5, the client and server both attempt to be smarter
+about this.  The server doesn't send a whole new file during the
+update, but rather instructions to copy something that likely already
+exists in the working copy.  So Sally's 'foo' file is copied to 'bar'
+(with local edits intact!).</p>
 
 <p>In theory, this is the best-case scenario.  There are a few
 caveats: this "proper copying" of existing working-copy resources only
@@ -987,28 +1222,40 @@ works on files, not (yet) on directories.  Also, if an incoming
 move-operation deletes 'foo' before it attempts to copy it to 'bar',
 then the copy will fail, and the client reverts to the old behavior of
 fetching a pristine copy of the file from the repository.  We hope to
-address this in svn 1.6.  For details on the this issue see <a
-href="http://subversion.tigris.org/issues/show_bug.cgi?id=503">issue
-#503</a>.</p>
+address this in svn 1.6.</p>
+
+<p>See <a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=503" >issue
+#503</a> for more.</p>
 
 </div> <!-- leverage-copyfrom -->
 
 <div class="h4" id="copy-peg-revs" title="copy-peg-revs">
 <h4>Peg revisions (<em>client</em>)</h4>
 
-<p>Copy operations now accept sources with peg revisions.</p>
+<p>Copy and move operations now accept sources with peg ("@")
+revisions.</p>
+
+<p>See <a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=2546" >issue
+#2546</a> for more.</p>
 
 </div>  <!-- copy-peg-revs -->
 
 <div class="h4" id="multi-op-copy-move" title="multi-op-copy-move">
 <h4>Multiple working copy copy/move operations (<em>client</em>)</h4>
 
-<p>Clients may now perform multiple local copy/move operations on a
+<p>Clients may now perform chained copy/move operations locally on a
 single object in a working copy:</p>
-<blockquote><pre><code>
-svn mv path1 path2
-svn mv path2 path3
-</code></pre></blockquote>
+
+<pre>
+   svn mv path1 path2
+   svn mv path2 path3
+</pre>
+
+<p>See <a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=756" >issue
+#756</a> for more.</p>
 
 </div>  <!-- multi-op-copy-move -->
 
@@ -1018,19 +1265,49 @@ svn mv path2 path3
 <p>Clients now accept multiple sources for copy and move operations, with 
 the ability to copy/move each of the sources to the specified directory.
 This mirrors the behavior of standard command-line copy and move tools,
-such as <code>cp</code> and <code>mv</code>.  In practice, this means
-users can take advantage of shell globbing when doing a local copy
-or move:</p>
-<blockquote><pre><code>
-svn cp *.c dir
-</code></pre></blockquote>
+such as <code>cp</code> and <code>mv</code>.  For example:</p>
+
+<pre>
+   svn mkdir new_subdir
+   svn mv foo.txt bar.txt baz.txt new_subdir
+</pre>
+
+<p>In practice, this means users can take advantage of shell globbing
+when doing a local copy or move:</p>
+
+<pre>
+   svn cp *.c dir
+</pre>
 
 <p>Multiple source copy/move also works for all previously defined
-copy/move working copy and repository combinations.  This was
-<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=747">issue
-#747</a>.</p>
+copy/move working copy and repository combinations.</p>
+
+<p>See <a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=747" >issue
+#747</a> for more.</p>
 
 </div>  <!-- multi-src-copy -->
+
+<div class="h4" id="cp-takes-base" title="cp-takes-base">
+<h4>Copy takes -rBASE (<em>client</em>)</h4>
+
+<p>Copy now understands the special revision "BASE" in a working copy
+(as in: "<tt>-rBASE</tt>").</p>
+
+<p>See <a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=1643" >issue
+#1643</a> for more.</p>
+
+</div>  <!-- cp-takes-base -->
+
+<div class="h4" id="cp-mv-intermediate-dirs" title="cp-mv-intermediate-dirs">
+<h4>Creation of intermediate directories with copy/move
+    (<em>client and server</em>)</h4>
+
+<p>See the section on the new <a href="#intermediate-directories"
+>--parents option</a> for more about this.</p>
+
+</div>  <!-- cp-mv-intermediate-dirs -->
 
 </div>  <!-- copy-move-improvements -->
 
@@ -1049,123 +1326,65 @@ actually stop.</p>
 <div class="h3" id="cmdline" title="cmdline">
 <h3>Command-line client improvements (<em>client</em>)</h3>
 
-<ul>
-  <li>A <code>--use-merge-history</code> option to adhere to Merge
-    Tracking meta data has been added to the following sub-commands:
-    <ul>
-      <!-- li>blame</li -->
-      <li>log</li>
-      <li>merge</li>
-    </ul>
-  </li>
+<p>There are far too many enhancements and new options to the
+command-line client to list them all here.  Aside from all the ones
+mentioned already in these release notes, below are a few more that we
+consider important, but please see the 1.5.0 section in the <a
+href="http://svn.collab.net/repos/svn/trunk/CHANGES">CHANGES</a> file
+for a complete list.</p>
 
-  <li>A <code>--parents</code> option to create intermediate
-    directories has been added to the following sub-commands:
-    <ul>
-      <li>add</li>
-      <li>copy</li>
-      <li>move</li>
-      <li>mkdir</li>
-    </ul>
-  </li>
+<div class="h4" id="resolve" title="resolve">
+<h4>New "resolve" subcommand replaces "resolved"</h4>
 
-  <!-- ### Anticipated addition(s):
-       ### double-dash sequences inside comment changed to '++' to
-       ### avoid breaking XML rules.
-  <li><code>++merged-from</code> and <code>++merged-to</code> options
-    to report on merge info have been added to the <code>info</code>
-    sub-command.</li>
+<p>A new <strong><tt>resolve</tt></strong> subcommand replaces the
+"<tt>resolved</tt>" subcommand (the latter is deprecated, but still
+present for compatibility).  The new subcommand takes a
+<strong><tt>--accept=orig|mine|repo</tt></strong> option to select
+which version of a file to retain (which means Subversion now supports
+batch-style conflict resolution).</p>
 
-  <li>An <code>++accept=orig|mine|repo</code> option to select which
-    version of a path to retain has been added to the
-    <code>resolved</code> sub-command.</li>
-  -->
+<p>See <a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=2784" >issue
+#2784</a> for more.</p>
 
-  <li>A <code>--keep-local</code> option to retain paths locally has
-    been added to the <code>delete</code> sub-command.</li>
+</div>  <!-- resolve -->
 
-  <li>A <code>--depth</code> option has been added to support <a
-    href="#sparse-checkouts">sparse checkouts</a>.  <code>-N</code> is now
-    maps to one of the arguments for <code>--depth</code>, depending on
-    context.</li>
+<div class="h4" id="intermediate-directories"
+             title="intermediate-directories">
+<h4>Create intermediate directories if asked</h4>
 
-  <li>As part of the <a href="#sparse-checkouts">sparse checkouts</a> work,
-    <code>-R</code> is now just a synonym for <code>--depth=infinity</code>.
-    </li>
-</ul>
+<p>Add, mkdir, copy, and move take a new
+<strong><tt>--parents</tt></strong> option, which makes intermediate
+directories as necessary to create the destination path.</p>
 
-<p>XXX: More...</p>
+<p>See <a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=1776" >issue
+#1776</a> for more</p>
+
+</div>  <!-- intermediate-directories -->
+
+<div class="h4" id="keep-local" title="keep-local">
+<h4>New --keep-local option retains path after delete.</h4>
+
+<p>Delete (remove) now takes a
+<strong><code>--keep-local</code></strong> option to retain its
+targets locally, so paths will not be removed even if unmodified.</p>
+
+</div>  <!-- keep-local -->
+
+<div class="h4" id="commit-revprops" title="commit-revprops">
+<h4>Commit now takes a --with-revprop option.</h4>
+
+Commit now takes a <strong><tt>--with-revprop</tt></strong> option
+allowing one to set revision properties
+
+<p>See <a
+href="http://subversion.tigris.org/issues/show_bug.cgi?id=1976" >issue
+#1976</a> for more.</p>
+
+</div>  <!-- commit-revprops -->
 
 </div>  <!-- cmdline -->
-
-<div class="h3" id="apis" title="apis">
-<h3>API changes, improvements and language bindings
-    (<em>client and server</em>)</h3>
-
-<p>If you develop a 3rd-party client application that uses Subversion
-  APIs, you may want to take notice of the following changes and new
-  APIs:</p>
-
-<ul>
-  <li><tt>svn_opt_parse_path()</tt> changes
-    <ul>
-      <li>
-        Since Subversion 1.3, if a path or URL ends in an empty
-        revision suffix '@', then the returned revision type would be
-        different than an unprotected path or URL:
-        <ul>
-          <li>
-            <tt>some/path/to/foo</tt> returns
-            <tt>svn_opt_revision_unspecified</tt>
-          </li>
-          <li>
-            <tt>some/path/to/foo<b>@</b></tt> returns
-            <tt>svn_opt_revision_base</tt>
-          </li>
-          <li>
-            <tt>http://example.com/some/path/to/foo</tt> returns
-            <tt>svn_opt_revision_unspecified</tt>
-          </li>
-          <li>
-            <tt>http://example.com/some/path/to/foo@</tt> returns
-            <tt>svn_opt_revision_head</tt>
-          </li>
-        </ul>
-        Subversion 1.5 fixes this inconsistency, all the above paths
-        and URLs return <tt>svn_opt_revision_unspecified</tt>.
-      </li>
-      <li>
-        Since Subversion 1.2, <tt>svn_opt_parse_path</tt> would always
-        canonicalize the returned path or URL with
-        <tt>svn_path_canonicalize</tt>, even though this is not
-        documented in <tt>subversion/include/svn_opt.h</tt>.  For the
-        relative externals support, uncanonicalized paths need to be
-        returned, otherwise scheme relative URLs,
-        i.e. <tt>//example.com/some/path</tt> would be canonicalized
-        to server root relative URLs <tt>/example.com/some/path</tt>.
-        Users of this function now must ensure that they canonicalize
-        the result of this function if they pass it to any other
-        Subversion functions that expect a canonicalized path or URL.
-      </li>
-    </ul>
-  </li>
-
-  <li>XXX: Enumerate specific new API additions (e.g. merge info
-    retrieval?)</li>
-
-  <li>APIs backing the new <a href="#cmdline">Command-line client
-    improvements</a> section have been added.</li>
-
-  <li>Many APIs have been revised to newer versions.</li>
-
-  <li>Most APIs which formerly took a <tt>recurse</tt> parameter have been
-    updated to accept a <tt>depth</tt> parameter, to be used with the new
-    <a href="#sparse-checkouts">sparse checkouts</a> feature.</li>
-
-  <li>Language bindings expanded and improved.</li>
-</ul>
-
-</div>  <!-- apis -->
 
 <div class="h3" id="dav-modules" title="dav-modules">
 <h3>Easier to try out experimental <tt>ra_serf</tt> DAV access module
@@ -1190,13 +1409,34 @@ renamed <tt>ra_dav</tt> to <tt>ra_neon</tt>.</p>
 
 </div>  <!-- dav-modules -->
 
-<div class="h3" id="bug-fixes" title="bug-fixes">
-<h3>Other bug fixes (<em>client and server</em>)</h3>
+<div class="h3" id="apis" title="apis">
+<h3>API changes, improvements and language bindings
+    (<em>client and server</em>)</h3>
 
-<p>The usual slew of heretofore-unreleased bug fixes, more than XXX
-overall. See the
-<a href="http://svn.collab.net/repos/svn/trunk/CHANGES">CHANGES</a>
-file for full details.</p>
+<p>There are too many new and revised APIs in Subversion 1.5.0 to even
+begin to list them all here.  See the <a
+href="http://svn.collab.net/svn-doxygen/" >Subversion API
+Documentation</a> page for general API information.  If you develop a
+3rd-party client application that uses Subversion APIs, you should
+probably look at the header files for the interfaces you use and see
+what's changed.</p>
+
+<p>One general change is that most APIs that formerly took a
+<tt>recurse</tt> parameter have been upgraded to accept a
+<tt>depth</tt> parameter instead, to enable the new <a
+href="#sparse-checkouts">sparse checkouts</a> feature.</p>
+
+<p>Language bindings have mostly been updated for the new APIs, though
+some may lag more than others.</p>
+
+</div>  <!-- apis -->
+
+<div class="h3" id="bug-fixes" title="bug-fixes">
+<h3>Bug fixes (<em>client and server</em>)</h3>
+
+<p>A great many bugs have been fixed.  See the 1.5.0 section in the <a
+href="http://svn.collab.net/repos/svn/trunk/CHANGES">CHANGES</a> file
+for details.</p>
 
 </div>  <!-- bug-fixes -->
 
@@ -1213,6 +1453,56 @@ more 1.3.x bugfix releases, except perhaps for absolutely critical
 security or data-loss bugs.</p>
 
 </div>  <!-- svn-1.3-deprecation -->
+
+<div class="h2" id="deps" title="deps">
+<h2>Subversion Dependencies Distribution: Binary Compatibility Issues</h2>
+
+<div class="h3" id="deps-background" title="deps-background">
+<h3>Background</h3>
+
+<p>APR 0.9.x and 1.x are binary-incompatible.  This means if you are
+already using Subversion with APR 0.9.x, and then upgrade your libapr
+to 1.X <em>without rebuilding Subversion</em>, things will break.
+Things will also break if your Subversion server libraries are linked
+to one version of APR but your Apache HTTPD server is linked to a
+different version.</p>
+
+<p>For a long time, Subversion's main source distribution included APR
+0.9.x, which was the latest available at the time, along with a few
+other things (e.g., Neon, zlib) that weren't yet widespread on
+installation systems.</p>
+
+</div> <!-- deps-background -->
+
+<div class="h3" id="deps-now" title="deps-now">
+<h3>Subversion 1.5.0 Dependencies Distribution</h3>
+
+<p>Today, these dependencies are no longer exotic, so our source
+distribution contains just Subversion itself.  Those building
+Subversion are expected to have the necessary libraries already
+installed, or to be able to fetch them easily.  But for convenience,
+we still offer a "deps" distribution: it doesn't contain Subversion,
+it just has source code for those third-party libraries.</p>
+
+<p>Until Subversion 1.5.0, the deps distribution contained APR 0.9.x,
+but as of 1.5.0, we're finally upgrading it to APR 1.x.  This is
+because by now there are very few systems that will have binary
+compatibility issues, and of those, few are likely to build using the
+"deps" dist.</p>
+
+<p>If you already have a Subversion installation using APR 0.9.x, it's
+still possible to move to APR 1.x safely (although you are not
+required to, unless you use the deps dist).  Just be sure to recompile
+Subversion, and Apache httpd if necessary, after upgrading APR.</p>
+
+<p>Note that it's perfectly safe to use APR 1.x from the beginning.
+In fact, we recommend it.  If you're building Subversion for the first
+time, there's no compatibility issue to worry about, so just grab the
+latest version of APR (or use our deps dist).</p>
+
+</div> <!-- deps-now -->
+
+</div>  <!-- deps -->
 
 </div>  <!-- app -->
 </body>

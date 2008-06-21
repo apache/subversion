@@ -47,6 +47,7 @@ class StatusCallback;
 class ChangelistCallback;
 class CommitMessage;
 class StringArray;
+class RevpropTable;
 #include "svn_types.h"
 #include "svn_client.h"
 #include "SVNBase.h"
@@ -84,13 +85,16 @@ class SVNClient :public SVNBase
                          Revision &pegRevision, jobject outputStream,
                          size_t bufSize);
   void propertySet(const char *path, const char *name, const char *value,
-                   svn_depth_t depth, StringArray &changelists, bool force);
+                   svn_depth_t depth, StringArray &changelists, bool force,
+                   RevpropTable &revprops);
   void properties(const char *path, Revision &revision,
                   Revision &pegRevision, svn_depth_t depth,
                   StringArray &changelists, ProplistCallback *callback);
   jobject getMergeinfo(const char *target, Revision &pegRevision);
-  jobjectArray getAvailableMerges(const char *target, Revision &pegRevision,
-                                  const char *mergeSource);
+  void getMergeinfoLog(int type, const char *pathOrURL,
+                       Revision &pegRevision, const char *mergeSourceURL,
+                       Revision &srcPegREvision, bool discoverChangedPaths,
+                       StringArray &revProps, LogMessageCallback *callback);
   jobjectArray suggestMergeSources(const char *path, Revision &pegRevision);
   void merge(const char *path1, Revision &revision1, const char *path2,
              Revision &revision2, const char *localPath, bool force,
@@ -103,7 +107,8 @@ class SVNClient :public SVNBase
   void mergeReintegrate(const char *path, Revision &pegRevision,
                         const char *localPath, bool dryRun);
   void doImport(const char *path, const char *url, const char *message,
-                svn_depth_t depth, bool noIgnore, bool ignoreUnknownNodeTypes);
+                svn_depth_t depth, bool noIgnore, bool ignoreUnknownNodeTypes,
+                RevpropTable &revprops);
   jlong doSwitch(const char *path, const char *url, Revision &revision,
                  Revision &pegRevision, svn_depth_t depth,
                  bool depthIsSticky, bool ignoreExternals,
@@ -112,18 +117,20 @@ class SVNClient :public SVNBase
                  Revision &revision, Revision &pegRevision, bool force,
                  bool ignoreExternals, svn_depth_t depth,
                  const char *nativeEOL);
-  void resolved(const char *path, svn_depth_t depth,
-                svn_wc_conflict_choice_t choice);
+  void resolve(const char *path, svn_depth_t depth,
+               svn_wc_conflict_choice_t choice);
   void cleanup(const char *path);
-  void mkdir(Targets &targets, const char *message, bool makeParents);
+  void mkdir(Targets &targets, const char *message, bool makeParents,
+             RevpropTable &revprops);
   void move(Targets &srcPaths, const char *destPath,
             const char *message, bool force, bool moveAsChild,
-            bool makeParents);
+            bool makeParents, RevpropTable &revprops);
   void copy(CopySources &copySources, const char *destPath,
-            const char *message, bool copyAsChild, bool makeParents);
+            const char *message, bool copyAsChild, bool makeParents,
+            RevpropTable &revprops);
   jlong commit(Targets &targets, const char *message, svn_depth_t depth,
                bool noUnlock, bool keepChangelist,
-               StringArray &changelists);
+               StringArray &changelists, RevpropTable &revprops);
   jlongArray update(Targets &targets, Revision &revision, svn_depth_t depth,
                     bool depthIsSticky, bool ignoreExternals,
                     bool allowUnverObstructions);
@@ -131,7 +138,7 @@ class SVNClient :public SVNBase
            bool add_parents);
   void revert(const char *path, svn_depth_t depth, StringArray &changelists);
   void remove(Targets &targets, const char *message, bool force,
-              bool keep_local);
+              bool keep_local, RevpropTable &revprops);
   void notification(Notify *notify);
   void notification2(Notify2 *notify2);
   void setConflictResolver(ConflictResolverCallback *conflictResolver);

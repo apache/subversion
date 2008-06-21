@@ -75,7 +75,7 @@ In the context of the 'svn update' command:
      these trees generally represent "in transition" or "intermediary"
      state with the intent to become the final tree.
 
-Additionaly, three more trees may be related to the working copy
+Additionally, three more trees may be related to the working copy
 when considering the 'svn merge' command:
 
  * START: The tree used as the base state for the 'merge' command
@@ -92,6 +92,13 @@ which will place text bases in the WORKING-TARGET tree.  Also note
 that -since merge is by definition an 'edit' operation- the BASE and
 BASE-TARGET trees are not concerned with a merge.
 
+###EHU: To which trees do BASE and TARGET refer when we're in a subdir
+of a replaced tree? And which trees do they refer to in a subdir of
+a replaced tree which itself is replaced? (Preliminary answer: the
+base in a replaced subdir should probably be the base as defined by
+the parent which got copied in, not the base as was deleted, because
+otherwise it won't be possible to delete files from the replaced subdir:
+there would be no way to express a deletion against the new dir.)
 
 
 
@@ -113,7 +120,7 @@ Requirements
      - .svn-less working copy subtrees
      - different file-changed detection schemes
         (e.g. full tree scan as in wc-1.0 as well as 'p4 edit')
- * Gracefull (defined) fallback for non-supported operations
+ * Graceful (defined) fallback for non-supported operations
    When a checkout tries to create a symlink on an OS which supports
    them, on a filesystem which doesn't, we should cope without
    canceling the complete checkout.  Same for marking metadata read-only.
@@ -139,7 +146,9 @@ Requirements
  * Last-modified recording as a preparation for solving issue #1256 and
    as defined in this mail, also linked from the issue:
    http://svn.haxx.se/dev/archive-2006-10/0193.shtml
- * 
+ * Representing "this node is part of a replaced-with-history tree and
+   I'm *not* in the replacement tree" as well as "... and I'm deleted
+   from the replacement tree" [issues #1962 and #2690]
 
 
 Would-be-very-nice-to-have's
@@ -147,6 +156,9 @@ Would-be-very-nice-to-have's
 
  * Multiple users with a single working copy (aka shared working copy)
  * Ending up with an implementation which can use current WCs
+   (without conversion)
+ * Working copies/ metadata storages without local storage of text-bases
+   (other than a few cached ones)
 
 
 Non-goals
@@ -178,7 +190,7 @@ Problems in wc-1.0
    to access different parts of the working copy (incl. admin areas)
  * The code is littered with direct accesses to both wc files and
    admin area files
- * It's not always clear at which time log files are being proccessed
+ * It's not always clear at which time log files are being processed
    (ie transactions are being committed), meaning it's not always
    clear at which version of a tree one is looking at: the pre or post
    transformation versions...
@@ -188,9 +200,9 @@ Problems in wc-1.0
  * It's very hard to determine when an action needs to be written
    to a transaction or needs to be executed directly
  * All code assumes local access to admin (meta)data
- * The transaction system contains non-rerunable commands
+ * The transaction system contains non-runnable commands
  * It's possible to generate combinations of commands, each of which
-   is rerunable, but the series isn't
+   is runnable, but the series isn't
  * Long if() blocks to sort through all possible states of
    WORKING, ACTUAL and BASE, without calling it that.
  * Large if() blocks dealing with the difference between file and
@@ -227,10 +239,8 @@ Problems in wc-1.0
 Possible solutions
 ==================
 
-
 Developer sanity
 ----------------
-
 Strict separation between modules should help keep code focused at one
 task.  Probably some of the required user-specific behaviours can (and
 should) be hidden behind vtables; for example: setting the file stamp
@@ -257,11 +267,13 @@ One way to prevent the lengthy 'if()' blocks currently in wc-1.0, would be
 to design a dispatch mechanism based on the path-state in WORKING/BASE and the
 required transformation, dispatching to (small) functions which perform
 solely that specific task.
+#####XBC Do please note that this suggests yet another instance of
+         pure polymorphism coded in C. This runs contrary to the
+         developer sanity requirement.
 
 
 Speed
 -----
-
 wc-1.0 assumes the WORKING tree and the ACTUAL tree match, but then
 goes out of its way to assure they actually do when deemed important.
 The result is a library which calls stat() a lot more often than need be.
@@ -286,12 +298,10 @@ rewritten on most wc-transformations anyway.
 
 Cross node type change representation
 -------------------------------------
-
 ####EHU To be done
 
 Flexibility of metadata storage
 -------------------------------
-
 There are 3 known models for storing metadata as requested by different
 groups of users:
 
@@ -311,7 +321,6 @@ releases).
 
 Transaction duration / memory management
 ----------------------------------------
-
 The current pool-based memory management system is very good at managing
 memory in a transaction-based processing model.  In the wc library, a
 'transaction' often spans more than one call into the library.  We either
@@ -320,7 +329,6 @@ need a different memory management strategy in wc-ng.
 
 Working copy stability
 ----------------------
-
 In light of obstructed updates it may not always be desirable to be able
 to resume the current operation (as currently is the case): in some cases
 the user may want to abort the operation, in other cases the user may
@@ -331,9 +339,7 @@ full working copy transformation, verifying prerequisites, creating
 replacement files and directories and when all that succeeds, update
 the working copy.
 
-Full workin' copy unit tests
-----------------------------
-
+Full workin' copy unit tests:
 Exactly because the working copy is such an important part of the
 Subversion experience *and* because of the 'reputation' of wc-1.0,
 we need a way to ensure wc-ng completely performs according to our
@@ -358,6 +364,8 @@ When applied to files, this can be summarized as:
 Prerequisites for a good wc implementation
 ==========================================
 
+These prerequisites are to be addressed, either as definitions
+in this document, or elsewhere in the subversion (source) tree:
  * Well defined behaviour for cross-node type updates/merges/..
    (tree conflicts in particular)
  * Well defined behaviour for special file handling
@@ -367,7 +375,8 @@ Prerequisites for a good wc implementation
      last-modified handling strategies
  * No special handling of symlinks: they are first class versioned objects
  * Well defined behaviour for property changes on updates/merges/...
-   (this is a problem which may resemble tree conflicts!)
+   (this is a problem which may resemble tree conflicts!),
+   including 'svn:' special properties
  * File name manipulation routines (availability)
  * File name comparison routines (!) (availability; which compensate
      for the different ways Unicode characters can be represented
@@ -378,6 +387,8 @@ Prerequisites for a good wc implementation
  * Modularization
  * Agree on a UI to pull in other parts of the same repository
    (NOT svn:externals) [relates to issue #1167]
+#####XBC I submit this is a server-side feature that the client
+         (i.e. the WC library) should not know about.
  * Agree on behaviour for update on moved items (relates to issue #1736)
  * Case-sensitivity detection code to probe working copy filesystem
 
@@ -394,6 +405,7 @@ For now, these APIs can be separated:
 
  - the public API (presumably not to be used by any internal
      processing, but presents functionality to working copy users)
+#####XBC This is really required of all our module public APIs.
  - tree administration API (required for BASE, TARGET and WORKING)
      Admins which files are part of the tree, which ones map to
      which repositories and which textbase / propbase files belong
@@ -433,6 +445,8 @@ These APIs will be implemented by these (currently known) modules:
      * tree spread ('inspired' by wc-1.0)
      * tree root (storing all metadata in the tree root (think darcs))
      * central depot (storing 'somewhere' locally, possibly $HOME)
+        this central store would open up the possibility to share
+        text bases/prop bases across checkouts
      * non-local (retrieving all text and prop-bases from the server,
         except for a number of cached ones) ###EHU: maybe this is
         orthogonal to the question where metadata is stored: in all
@@ -469,6 +483,11 @@ there's at least an active interest.  In order to prevent locking out
 some of the current use cases adding support for the open issues, we
 need a flexible modularized model.  This model will also prevent that
 we'll end up duplicating lots of code to support the different use cases.
+#####XBC Such flexibility will bring the WC to the kind of
+         purgatory the RA layers are in. We promise feature and semantics
+         parity between them, and the result is that even a small change
+         in that layer requires knowledge of three different protocols
+         and four different implementations.
 
 Given the assumption of 'little code duplication', the choice for
 having several modules which implement the same API (vtable) is

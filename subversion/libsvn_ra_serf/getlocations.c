@@ -237,7 +237,8 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
   serf_bucket_aggregate_append(buckets, tmp);
 
   SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url,
-                                         session, NULL, peg_revision, pool));
+                                         session, NULL, peg_revision, NULL,
+                                         pool));
 
   req_url = svn_path_url_add_component(basecoll_url, relative_url, pool);
 
@@ -273,6 +274,8 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
       SVN_ERR(loc_ctx->error);
       SVN_ERR(parser_ctx->error);
     }
+
+  SVN_ERR(svn_ra_serf__error_on_status(loc_ctx->status_code, req_url));
 
   return err;
 }

@@ -73,22 +73,23 @@ typedef struct svn_io_dirent_t {
   svn_boolean_t special;
 } svn_io_dirent_t;
 
-/** Determine the @a kind of @a path.
+/** Determine the @a kind of @a path.  @a path should be UTF-8 encoded.
  *
- * If utf8-encoded @a path exists, set @a *kind to the appropriate kind,
- * else set it to @c svn_node_unknown.
+ * If @a path is a file, set @a *kind to @c svn_node_file.
  *
- * If @a path is a file, @a *kind is set to @c svn_node_file.
+ * If @a path is a directory, set @a *kind to @c svn_node_dir.
  *
- * If @a path is a directory, @a *kind is set to @c svn_node_dir.
+ * If @a path does not exist, set @a *kind to @c svn_node_none.
  *
- * If @a path does not exist in its final component, @a *kind is set to
- * @c svn_node_none.
+ * If @a path exists but is none of the above, set @a *kind to @c
+ * svn_node_unknown.
  *
- * If intermediate directories on the way to @a path don't exist, an
- * error is returned, and @a *kind's value is undefined.
+ * If unable to determine @a path's kind, return an error, with @a *kind's
+ * value undefined.
  *
  * Use @a pool for temporary allocations.
+ *
+ * @see svn_node_kind_t
  */
 svn_error_t *svn_io_check_path(const char *path,
                                svn_node_kind_t *kind,
@@ -627,6 +628,12 @@ svn_error_t *svn_stream_for_stdout(svn_stream_t **out, apr_pool_t *pool);
 svn_stream_t *svn_stream_from_stringbuf(svn_stringbuf_t *str,
                                         apr_pool_t *pool);
 
+/** Return a generic read-only stream connected to string @a str.
+ *  Allocate the stream in @a pool.
+ */
+svn_stream_t *svn_stream_from_string(svn_string_t *str,
+                                     apr_pool_t *pool);
+
 /** Return a stream that decompresses all data read and compresses all
  * data written. The stream @a stream is used to read and write all
  * compressed data. All compression data structures are allocated on
@@ -945,8 +952,9 @@ svn_error_t *svn_io_run_cmd(const char *path,
                             apr_pool_t *pool);
 
 /** Invoke @c the configured diff program, with @a user_args (an array
- * of utf8-encoded @a num_user_args arguments), if they are specified,
- * or "-u" if they are not.
+ * of utf8-encoded @a num_user_args arguments) if they are specified
+ * (that is, if @a user_args is non-NULL), or "-u" if they are not.
+ * If @a user_args is NULL, the value of @a num_user_args is ignored.
  *
  * Diff runs in utf8-encoded @a dir, and its exit status is stored in
  * @a exitcode, if it is not @c NULL.

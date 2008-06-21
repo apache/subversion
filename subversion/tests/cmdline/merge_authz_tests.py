@@ -434,7 +434,9 @@ def mergeinfo_and_skipped_paths(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              Skip(mergeinfo_and_skipped_paths, svntest.main.is_ra_type_file),
+              SkipUnless(Skip(mergeinfo_and_skipped_paths,
+                              svntest.main.is_ra_type_file),
+                         svntest.main.server_has_mergeinfo),
              ]
 
 if __name__ == '__main__':

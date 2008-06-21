@@ -9,7 +9,7 @@ SET LEFT=%6
 SET RIGHT=%7
 
 REM Call the diff command (change the following line to make sense for
-REM your merge program).
+REM your diff program).
 %DIFF% --left %LEFT% --right %RIGHT%
 
 REM Return an errorcode of 0 if no differences were detected, 1 if some were.

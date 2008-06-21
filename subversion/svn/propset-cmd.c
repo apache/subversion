@@ -92,8 +92,8 @@ svn_cl__propset(apr_getopt_t *os,
   /* Suck up all the remaining arguments into a targets array */
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
-                                                      opt_state->targets, 
-                                                      pool));
+                                                      opt_state->targets,
+                                                      ctx, pool));
 
   /* Implicit "." is okay for revision properties; it just helps
      us find the right repository. */
@@ -109,9 +109,9 @@ svn_cl__propset(apr_getopt_t *os,
                                       &URL, pool));
 
       /* Let libsvn_client do the real work. */
-      SVN_ERR(svn_client_revprop_set(pname_utf8, propval,
-                                     URL, &(opt_state->start_revision),
-                                     &rev, opt_state->force, ctx, pool));
+      SVN_ERR(svn_client_revprop_set2(pname_utf8, propval, NULL,
+                                      URL, &(opt_state->start_revision),
+                                      &rev, opt_state->force, ctx, pool));
       if (! opt_state->quiet)
         {
           SVN_ERR
@@ -182,7 +182,7 @@ svn_cl__propset(apr_getopt_t *os,
                               (&commit_info, pname_utf8, propval, target,
                                opt_state->depth, opt_state->force,
                                SVN_INVALID_REVNUM, opt_state->changelists,
-                               ctx, subpool),
+                               NULL, ctx, subpool),
                               &success, opt_state->quiet,
                               SVN_ERR_UNVERSIONED_RESOURCE,
                               SVN_ERR_ENTRY_NOT_FOUND,

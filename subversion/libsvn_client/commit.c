@@ -605,6 +605,7 @@ get_ra_editor(svn_ra_session_t **ra_session,
               svn_wc_adm_access_t *base_access,
               const char *log_msg,
               apr_array_header_t *commit_items,
+              const apr_hash_t *revprop_table,
               svn_commit_info_t **commit_info_p,
               svn_boolean_t is_commit,
               apr_hash_t *lock_tokens,
@@ -612,7 +613,7 @@ get_ra_editor(svn_ra_session_t **ra_session,
               apr_pool_t *pool)
 {
   void *commit_baton;
-  apr_hash_t *revprop_table;
+  apr_hash_t *commit_revprops;
 
   /* Open an RA session to URL. */
   SVN_ERR(svn_client__open_ra_session_internal(ra_session,
@@ -639,12 +640,13 @@ get_ra_editor(svn_ra_session_t **ra_session,
   if (latest_rev)
     SVN_ERR(svn_ra_get_latest_revnum(*ra_session, latest_rev, pool));
 
-  SVN_ERR(svn_client__get_revprop_table(&revprop_table, log_msg, ctx, pool));
+  SVN_ERR(svn_client__ensure_revprop_table(&commit_revprops, revprop_table,
+                                           log_msg, ctx, pool));
 
   /* Fetch RA commit editor. */
   SVN_ERR(svn_client__commit_get_baton(&commit_baton, commit_info_p, pool));
   return svn_ra_get_commit_editor3(*ra_session, editor, edit_baton,
-                                   revprop_table,
+                                   commit_revprops,
                                    svn_client__commit_callback,
                                    commit_baton, lock_tokens, keep_locks,
                                    pool);
@@ -660,6 +662,7 @@ svn_client_import3(svn_commit_info_t **commit_info_p,
                    svn_depth_t depth,
                    svn_boolean_t no_ignore,
                    svn_boolean_t ignore_unknown_node_types,
+                   const apr_hash_t *revprop_table,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
@@ -740,8 +743,8 @@ svn_client_import3(svn_commit_info_t **commit_info_p,
     }
   while ((err = get_ra_editor(&ra_session, NULL,
                               &editor, &edit_baton, ctx, url, base_dir,
-                              NULL, log_msg, NULL, commit_info_p,
-                              FALSE, NULL, TRUE, subpool)));
+                              NULL, log_msg, NULL, revprop_table,
+                              commit_info_p, FALSE, NULL, TRUE, subpool)));
 
   /* Reverse the order of the components we added to our NEW_ENTRIES array. */
   if (new_entries->nelts)
@@ -831,7 +834,7 @@ svn_client_import2(svn_commit_info_t **commit_info_p,
   return svn_client_import3(commit_info_p,
                             path, url,
                             SVN_DEPTH_INFINITY_OR_FILES(! nonrecursive),
-                            no_ignore, FALSE, ctx, pool);
+                            no_ignore, FALSE, NULL, ctx, pool);
 }
 
 svn_error_t *
@@ -1348,6 +1351,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
                    svn_boolean_t keep_locks,
                    svn_boolean_t keep_changelists,
                    const apr_array_header_t *changelists,
+                   const apr_hash_t *revprop_table,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
@@ -1368,7 +1372,8 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
   svn_error_t *cmt_err = SVN_NO_ERROR, *unlock_err = SVN_NO_ERROR;
   svn_error_t *bump_err = SVN_NO_ERROR, *cleanup_err = SVN_NO_ERROR;
   svn_boolean_t commit_in_progress = FALSE;
-  const char *display_dir = "";
+  const char *current_dir = "";
+  const char *notify_prefix;
   int i;
 
   /* Committing URLs doesn't make sense, so error if it's tried. */
@@ -1686,24 +1691,25 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
 
   if ((cmt_err = get_ra_editor(&ra_session, NULL,
                                &editor, &edit_baton, ctx,
-                               base_url, base_dir, base_dir_access,
-                               log_msg, commit_items, commit_info_p,
+                               base_url, base_dir, base_dir_access, log_msg,
+                               commit_items, revprop_table, commit_info_p,
                                TRUE, lock_tokens, keep_locks, pool)))
     goto cleanup;
 
   /* Make a note that we have a commit-in-progress. */
   commit_in_progress = TRUE;
 
-  /* Determine prefix to strip from the commit notify messages */
-  if ((cmt_err = svn_path_get_absolute(&display_dir,
-                                       display_dir, pool)))
+  if ((cmt_err = svn_path_get_absolute(&current_dir,
+                                       current_dir, pool)))
     goto cleanup;
-  display_dir = svn_path_get_longest_ancestor(display_dir, base_dir, pool);
+
+  /* Determine prefix to strip from the commit notify messages */
+  notify_prefix = svn_path_get_longest_ancestor(current_dir, base_dir, pool);
 
   /* Perform the commit. */
   cmt_err = svn_client__do_commit(base_url, commit_items, base_dir_access,
                                   editor, edit_baton,
-                                  display_dir,
+                                  notify_prefix,
                                   &tempfiles, &digests, ctx, pool);
 
   /* Handle a successful commit. */
@@ -1759,7 +1765,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
         cleanup_err = remove_tmpfiles(tempfiles, pool);
     }
 
-  /* As per our promise, if *commit_info_p isn't set, provide a default where 
+  /* As per our promise, if *commit_info_p isn't set, provide a default where
      rev = SVN_INVALID_REVNUM. */
   if (! *commit_info_p)
     *commit_info_p = svn_create_commit_info(pool);
@@ -1778,7 +1784,7 @@ svn_client_commit3(svn_commit_info_t **commit_info_p,
   svn_depth_t depth = SVN_DEPTH_INFINITY_OR_FILES(recurse);
 
   return svn_client_commit4(commit_info_p, targets, depth, keep_locks,
-                            FALSE, NULL, ctx, pool);
+                            FALSE, NULL, NULL, ctx, pool);
 }
 
 svn_error_t *

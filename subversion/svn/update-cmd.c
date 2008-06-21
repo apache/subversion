@@ -46,8 +46,9 @@ svn_cl__update(apr_getopt_t *os,
   svn_depth_t depth;
   svn_boolean_t depth_is_sticky;
 
-  SVN_ERR(svn_opt_args_to_target_array3(&targets, os,
-                                        opt_state->targets, pool));
+  SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
+                                                      opt_state->targets,
+                                                      ctx, pool));
 
   /* Add "." if user passed 0 arguments */
   svn_opt_push_implicit_dot_target(targets, pool);
@@ -59,7 +60,7 @@ svn_cl__update(apr_getopt_t *os,
       svn_depth_t cl_depth = opt_state->depth;
       if (cl_depth == svn_depth_unknown)
         cl_depth = svn_depth_infinity;
-      SVN_ERR(svn_cl__changelist_paths(&targets, 
+      SVN_ERR(svn_cl__changelist_paths(&targets,
                                        opt_state->changelists, targets,
                                        cl_depth, ctx, pool));
     }

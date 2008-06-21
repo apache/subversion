@@ -56,7 +56,7 @@ build_info_from_dirent(svn_info_t **info,
   tmpinfo->last_changed_author  = dirent->last_author;
   tmpinfo->lock                 = lock;
   tmpinfo->depth                = svn_depth_unknown;
-  tmpinfo->working_size         = SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN;
+  tmpinfo->working_size         = SVN_INFO_SIZE_UNKNOWN;
   tmpinfo->size                 = dirent->size;
 
   *info = tmpinfo;
@@ -257,35 +257,20 @@ crawl_entries(const char *wcpath,
               apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
-  const svn_wc_entry_t *entry;
   int adm_lock_level = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
+  struct found_entry_baton fe_baton;
 
-  SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, wcpath, FALSE, 
-                                 adm_lock_level, ctx->cancel_func, 
+  SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, wcpath, FALSE,
+                                 adm_lock_level, ctx->cancel_func,
                                  ctx->cancel_baton, pool));
-  SVN_ERR(svn_wc__entry_versioned(&entry, wcpath, adm_access, FALSE, pool));
 
-
-  if (entry->kind == svn_node_file)
-    {
-      if (SVN_WC__CL_MATCH(changelist_hash, entry))
-        {
-          svn_info_t *info;
-          SVN_ERR(build_info_from_entry(&info, entry, pool));
-          return receiver(receiver_baton, wcpath, info, pool);
-        }
-    }
-  else if (entry->kind == svn_node_dir)
-    {
-      struct found_entry_baton fe_baton;
-      fe_baton.changelist_hash = changelist_hash;
-      fe_baton.receiver = receiver;
-      fe_baton.receiver_baton = receiver_baton;
-      SVN_ERR(svn_wc_walk_entries3(wcpath, adm_access,
-                                   &entry_walk_callbacks, &fe_baton,
-                                   depth, FALSE, ctx->cancel_func,
-                                   ctx->cancel_baton, pool));
-    }
+  fe_baton.changelist_hash = changelist_hash;
+  fe_baton.receiver = receiver;
+  fe_baton.receiver_baton = receiver_baton;
+  SVN_ERR(svn_wc_walk_entries3(wcpath, adm_access,
+                               &entry_walk_callbacks, &fe_baton,
+                               depth, FALSE, ctx->cancel_func,
+                               ctx->cancel_baton, pool));
 
   return SVN_NO_ERROR;
 }
@@ -371,7 +356,7 @@ svn_client_info2(const char *path_or_url,
       /* Do all digging in the working copy. */
       apr_hash_t *changelist_hash = NULL;
       if (changelists && changelists->nelts)
-        SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, 
+        SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash,
                                            changelists, pool));
       return crawl_entries(path_or_url, receiver, receiver_baton,
                            depth, changelist_hash, ctx, pool);
@@ -530,7 +515,7 @@ svn_client_info(const char *path_or_url,
 {
   return svn_client_info2(path_or_url, peg_revision, revision,
                           receiver, receiver_baton,
-                          SVN_DEPTH_INFINITY_OR_EMPTY(recurse), 
+                          SVN_DEPTH_INFINITY_OR_EMPTY(recurse),
                           NULL, ctx, pool);
 }
 

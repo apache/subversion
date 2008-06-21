@@ -85,9 +85,9 @@ svn_cl__lock(apr_getopt_t *os,
   apr_array_header_t *targets;
   const char *comment;
 
-  SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os, 
-                                                      opt_state->targets, 
-                                                      pool));
+  SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
+                                                      opt_state->targets,
+                                                      ctx, pool));
 
   /* We only support locking files, so '.' is not valid. */
   if (! targets->nelts)

@@ -75,8 +75,8 @@ copy_added_file_administratively(const char *src_path,
 
   if (src_is_added)
     {
-      SVN_ERR(svn_wc_add2(dst_path, dst_parent_access, NULL,
-                          SVN_INVALID_REVNUM, cancel_func,
+      SVN_ERR(svn_wc_add3(dst_path, dst_parent_access, svn_depth_infinity,
+                          NULL, SVN_INVALID_REVNUM, cancel_func,
                           cancel_baton, notify_func,
                           notify_baton, pool));
     }
@@ -150,7 +150,7 @@ copy_added_dir_administratively(const char *src_path,
 
       /* Add the directory, adding locking access for dst_path
          to dst_parent_access at the same time. */
-      SVN_ERR(svn_wc_add2(dst_path, dst_parent_access, NULL,
+      SVN_ERR(svn_wc_add3(dst_path, dst_parent_access, svn_depth_infinity, NULL,
                           SVN_INVALID_REVNUM, cancel_func, cancel_baton,
                           notify_func, notify_baton, pool));
 
@@ -775,7 +775,7 @@ copy_dir_administratively(const char *src_path,
 
     SVN_ERR(svn_wc_adm_close(adm_access));
 
-    SVN_ERR(svn_wc_add2(dst_path, dst_parent,
+    SVN_ERR(svn_wc_add3(dst_path, dst_parent, svn_depth_infinity,
                         copyfrom_url, copyfrom_rev,
                         cancel_func, cancel_baton,
                         notify_copied, notify_baton, pool));

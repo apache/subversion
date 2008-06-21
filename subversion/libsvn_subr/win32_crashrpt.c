@@ -36,7 +36,7 @@
 /*** Global variables ***/
 HANDLE dbghelp_dll = INVALID_HANDLE_VALUE;
 
-/* email address where the crash reports should be sent too. */
+/* Email address where the crash reports should be sent too. */
 #define CRASHREPORT_EMAIL "svn-breakage@subversion.tigris.org"
 
 #define DBGHELP_DLL "dbghelp.dll"
@@ -243,7 +243,7 @@ write_process_info(EXCEPTION_RECORD *exception, CONTEXT *context,
 #endif
 }
 
-/* formats the value at address based on the specified basic type
+/* Formats the value at address based on the specified basic type
  * (char, int, long ...). */
 static void
 format_basic_type(char *buf, DWORD basic_type, DWORD64 length, void *address)
@@ -286,7 +286,7 @@ format_basic_type(char *buf, DWORD basic_type, DWORD64 length, void *address)
     }
 }
 
-/* formats the value at address based on the type (pointer, user defined,
+/* Formats the value at address based on the type (pointer, user defined,
  * basic type). */
 static void
 format_value(char *value_str, DWORD64 mod_base, DWORD type, void *value_addr)
@@ -376,7 +376,7 @@ typedef struct {
   BOOL log_params;
 } symbols_baton_t;
 
-/* write the details of one parameter or local variable to the log file */
+/* Write the details of one parameter or local variable to the log file */
 static BOOL WINAPI
 write_var_values(PSYMBOL_INFO sym_info, ULONG sym_size, void *baton)
 {
@@ -418,7 +418,7 @@ write_var_values(PSYMBOL_INFO sym_info, ULONG sym_size, void *baton)
   return TRUE;
 }
 
-/* write the details of one function to the log file */
+/* Write the details of one function to the log file */
 static void
 write_function_detail(STACKFRAME64 stack_frame, void *data)
 {
@@ -431,7 +431,7 @@ write_function_detail(STACKFRAME64 stack_frame, void *data)
 
   IMAGEHLP_STACK_FRAME ih_stack_frame;
   IMAGEHLP_LINE64 ih_line;
-	DWORD line_disp=0;
+  DWORD line_disp=0;
 
   HANDLE proc = GetCurrentProcess();
   FILE *log_file = (FILE *)data;
@@ -490,7 +490,7 @@ write_function_detail(STACKFRAME64 stack_frame, void *data)
   SymEnumSymbols_(proc, 0, 0, write_var_values, &ensym);
 }
 
-/* walk over the stack and log all relevant information to the log file */
+/* Walk over the stack and log all relevant information to the log file */
 static void
 write_stacktrace(CONTEXT *context, FILE *log_file)
 {
@@ -502,17 +502,17 @@ write_stacktrace(CONTEXT *context, FILE *log_file)
   int skip = 0, i = 0;
 
   /* The thread information - if not supplied. */
-	if (context == NULL)
+  if (context == NULL)
     {
       /* If no context is supplied, skip 1 frame */
       skip = 1;
 
-  		ctx.ContextFlags = CONTEXT_FULL;
-  		if (GetThreadContext(GetCurrentThread(), &ctx))
-		    context = &ctx;
-	  }
+      ctx.ContextFlags = CONTEXT_FULL;
+      if (GetThreadContext(GetCurrentThread(), &ctx))
+        context = &ctx;
+    }
 
-	if (context == NULL)
+  if (context == NULL)
     return;
 
   /* Write the stack trace */
@@ -671,7 +671,7 @@ load_dbghelp_dll()
       SymSetContext_ =
            (SYMSETCONTEXT)GetProcAddress(dbghelp_dll, "SymSetContext");
       SymFromAddr_ = (SYMFROMADDR)GetProcAddress(dbghelp_dll, "SymFromAddr");
-	  StackWalk64_ = (STACKWALK64)GetProcAddress(dbghelp_dll, "StackWalk64");
+      StackWalk64_ = (STACKWALK64)GetProcAddress(dbghelp_dll, "StackWalk64");
       SymFunctionTableAccess64_ =
            (SYMFUNCTIONTABLEACCESS64)GetProcAddress(dbghelp_dll,
                                                   "SymFunctionTableAccess64");
@@ -752,7 +752,7 @@ get_temp_filename(char *filename, const char *prefix, const char *ext)
    return FALSE;
 }
 
-/* unhandled exception callback set with SetUnhandledExceptionFilter() */
+/* Unhandled exception callback set with SetUnhandledExceptionFilter() */
 LONG WINAPI
 svn__unhandled_exception_filter(PEXCEPTION_POINTERS ptrs)
 {

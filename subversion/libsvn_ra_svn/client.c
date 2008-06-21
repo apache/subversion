@@ -132,19 +132,28 @@ static svn_error_t *make_connection(const char *hostname, unsigned short port,
   if (status)
     return svn_error_createf(status, NULL, _("Unknown hostname '%s'"),
                              hostname);
-
-  /* Create the socket. */
+  /* Iterate through the returned list of addresses attempting to
+   * connect to each in turn. */
+  do
+    {
+      /* Create the socket. */
 #ifdef MAX_SECS_TO_LINGER
-  /* ### old APR interface */
-  status = apr_socket_create(sock, sa->family, SOCK_STREAM, pool);
+      /* ### old APR interface */
+      status = apr_socket_create(sock, sa->family, SOCK_STREAM, pool);
 #else
-  status = apr_socket_create(sock, sa->family, SOCK_STREAM, APR_PROTO_TCP,
-                             pool);
+      status = apr_socket_create(sock, sa->family, SOCK_STREAM, APR_PROTO_TCP,
+                                 pool);
 #endif
-  if (status)
-    return svn_error_wrap_apr(status, _("Can't create socket"));
+      if (status == APR_SUCCESS)
+        {
+          status = apr_socket_connect(*sock, sa);
+          if (status != APR_SUCCESS)
+            apr_socket_close(*sock);
+        }
+      sa = sa->next;
+    }
+  while (status != APR_SUCCESS && sa);
 
-  status = apr_socket_connect(*sock, sa);
   if (status)
     return svn_error_wrap_apr(status, _("Can't connect to host '%s'"),
                               hostname);
@@ -306,14 +315,15 @@ static svn_ra_reporter3_t ra_svn_reporter = {
   ra_svn_abort_report
 };
 
-static void ra_svn_get_reporter(svn_ra_svn__session_baton_t *sess_baton,
-                                apr_pool_t *pool,
-                                const svn_delta_editor_t *editor,
-                                void *edit_baton,
-                                const char *target,
-                                svn_depth_t depth,
-                                const svn_ra_reporter3_t **reporter,
-                                void **report_baton)
+static svn_error_t *
+ra_svn_get_reporter(svn_ra_svn__session_baton_t *sess_baton,
+                    apr_pool_t *pool,
+                    const svn_delta_editor_t *editor,
+                    void *edit_baton,
+                    const char *target,
+                    svn_depth_t depth,
+                    const svn_ra_reporter3_t **reporter,
+                    void **report_baton)
 {
   ra_svn_reporter_baton_t *b;
   const svn_delta_editor_t *filter_editor;
@@ -325,11 +335,11 @@ static void ra_svn_get_reporter(svn_ra_svn__session_baton_t *sess_baton,
   if ((depth != svn_depth_files) && (depth != svn_depth_infinity)
       && ! svn_ra_svn_has_capability(sess_baton->conn, SVN_RA_SVN_CAP_DEPTH))
     {
-      svn_error_clear(svn_delta_depth_filter_editor(&filter_editor,
-                                                    &filter_baton,
-                                                    editor, edit_baton, depth,
-                                                    *target ? TRUE : FALSE,
-                                                    pool));
+      SVN_ERR(svn_delta_depth_filter_editor(&filter_editor,
+                                            &filter_baton,
+                                            editor, edit_baton, depth,
+                                            *target ? TRUE : FALSE,
+                                            pool));
       editor = filter_editor;
       edit_baton = filter_baton;
     }
@@ -343,6 +353,8 @@ static void ra_svn_get_reporter(svn_ra_svn__session_baton_t *sess_baton,
 
   *reporter = &ra_svn_reporter;
   *report_baton = b;
+
+  return SVN_NO_ERROR;
 }
 
 /* --- RA LAYER IMPLEMENTATION --- */
@@ -518,6 +530,7 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
   apr_socket_t *sock;
   apr_uint64_t minver, maxver;
   apr_array_header_t *mechlist, *server_caplist, *repos_caplist;
+  const char *client_string = NULL;
 
   sess = apr_palloc(pool, sizeof(*sess));
   sess->pool = pool;
@@ -566,17 +579,22 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
     return svn_error_create(SVN_ERR_RA_SVN_BAD_VERSION, NULL,
                             _("Server does not support edit pipelining"));
 
+  if (sess->callbacks->get_client_string != NULL)
+    SVN_ERR(sess->callbacks->get_client_string(sess->callbacks_baton,
+                                               &client_string, pool));
+
   /* In protocol version 2, we send back our protocol version, our
    * capability list, and the URL, and subsequently there is an auth
    * request. */
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "n(wwwwww)c", (apr_uint64_t) 2,
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "n(wwwwww)cc(?c)",
+                                 (apr_uint64_t) 2,
                                  SVN_RA_SVN_CAP_EDIT_PIPELINE,
                                  SVN_RA_SVN_CAP_SVNDIFF1,
                                  SVN_RA_SVN_CAP_ABSENT_ENTRIES,
                                  SVN_RA_SVN_CAP_DEPTH,
                                  SVN_RA_SVN_CAP_MERGEINFO,
                                  SVN_RA_SVN_CAP_LOG_REVPROPS,
-                                 url));
+                                 url, "SVN/" SVN_VERSION, client_string));
   SVN_ERR(handle_auth_request(sess, pool));
 
   /* This is where the security layer would go into effect if we
@@ -1126,8 +1144,8 @@ static svn_error_t *ra_svn_update(svn_ra_session_t *session,
 
   /* Fetch a reporter for the caller to drive.  The reporter will drive
    * update_editor upon finish_report(). */
-  ra_svn_get_reporter(sess_baton, pool, update_editor, update_baton,
-                      target, depth, reporter, report_baton);
+  SVN_ERR(ra_svn_get_reporter(sess_baton, pool, update_editor, update_baton,
+                              target, depth, reporter, report_baton));
   return SVN_NO_ERROR;
 }
 
@@ -1151,8 +1169,8 @@ static svn_error_t *ra_svn_switch(svn_ra_session_t *session,
 
   /* Fetch a reporter for the caller to drive.  The reporter will drive
    * update_editor upon finish_report(). */
-  ra_svn_get_reporter(sess_baton, pool, update_editor, update_baton,
-                      target, depth, reporter, report_baton);
+  SVN_ERR(ra_svn_get_reporter(sess_baton, pool, update_editor, update_baton,
+                              target, depth, reporter, report_baton));
   return SVN_NO_ERROR;
 }
 
@@ -1176,8 +1194,8 @@ static svn_error_t *ra_svn_status(svn_ra_session_t *session,
 
   /* Fetch a reporter for the caller to drive.  The reporter will drive
    * status_editor upon finish_report(). */
-  ra_svn_get_reporter(sess_baton, pool, status_editor, status_baton,
-                      target, depth, reporter, report_baton);
+  SVN_ERR(ra_svn_get_reporter(sess_baton, pool, status_editor, status_baton,
+                              target, depth, reporter, report_baton));
   return SVN_NO_ERROR;
 }
 
@@ -1205,8 +1223,8 @@ static svn_error_t *ra_svn_diff(svn_ra_session_t *session,
 
   /* Fetch a reporter for the caller to drive.  The reporter will drive
    * diff_editor upon finish_report(). */
-  ra_svn_get_reporter(sess_baton, pool, diff_editor, diff_baton,
-                      target, depth, reporter, report_baton);
+  SVN_ERR(ra_svn_get_reporter(sess_baton, pool, diff_editor, diff_baton,
+                              target, depth, reporter, report_baton));
   return SVN_NO_ERROR;
 }
 
@@ -1225,6 +1243,7 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
   svn_ra_svn_conn_t *conn = sess_baton->conn;
   apr_pool_t *subpool;
   int i;
+  int nest_level = 0;
   const char *path, *cpath, *action, *copy_path;
   svn_string_t *author, *date, *message;
   svn_ra_svn_item_t *item, *elt;
@@ -1338,7 +1357,7 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
       else
         cphash = NULL;
 
-      if (! (limit && ++nreceived > limit))
+      if (! (limit && (nest_level == 0) && (++nreceived > limit)))
         {
           log_entry = svn_log_entry_create(subpool);
 
@@ -1381,6 +1400,15 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
                 }
             }
           SVN_ERR(receiver(receiver_baton, log_entry, subpool));
+          if (log_entry->has_children)
+            {
+              nest_level++;
+            }
+          if (! SVN_IS_VALID_REVNUM(log_entry->revision))
+            {
+              assert(nest_level);
+              nest_level--;
+            }
         }
       svn_pool_clear(subpool);
     }
@@ -2173,7 +2201,7 @@ ra_svn_replay_range(svn_ra_session_t *session,
   svn_ra_svn__session_baton_t *sess = session->priv;
   apr_pool_t *iterpool;
   svn_revnum_t rev;
-  
+
   SVN_ERR(svn_ra_svn_write_cmd(sess->conn, pool, "replay-range", "rrrb",
                                start_revision, end_revision,
                                low_water_mark, send_deltas));
@@ -2239,6 +2267,9 @@ static svn_error_t *ra_svn_has_capability(svn_ra_session_t *session,
     *has = svn_ra_svn_has_capability(sess->conn, SVN_RA_SVN_CAP_LOG_REVPROPS);
   else if (strcmp(capability, SVN_RA_CAPABILITY_PARTIAL_REPLAY) == 0)
     *has = svn_ra_svn_has_capability(sess->conn, SVN_RA_SVN_CAP_PARTIAL_REPLAY);
+  else if (strcmp(capability, SVN_RA_CAPABILITY_COMMIT_REVPROPS) == 0)
+    *has = svn_ra_svn_has_capability(sess->conn,
+                                     SVN_RA_SVN_CAP_COMMIT_REVPROPS);
   else  /* Don't know any other capabilities, so error. */
     {
       return svn_error_createf

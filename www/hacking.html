@@ -108,8 +108,8 @@ to contribute, then look at:</p>
 
 <ul>
 <li><p>The bugs/issues database
-       <a href="http://subversion.tigris.org/project_issues.html"
-               >http://subversion.tigris.org/project_issues.html</a></p></li>
+       <a href="http://subversion.tigris.org/issue-tracker.html"
+               >http://subversion.tigris.org/issue-tracker.html</a></p></li>
 
 <li><p>The bite-sized tasks page
        <a href="http://subversion.tigris.org/project_tasks.html"
@@ -548,7 +548,7 @@ comments should help understanding of the code, not hinder it.</p>
 
 <p>Instead, document decent sized chunks of code, like this:</p>
 <pre>
-      /* Trasmit the segment (if its within the scope of our concern). */
+      /* Transmit the segment (if its within the scope of our concern). */
       SVN_ERR(maybe_crop_and_send_segment(segment, start_rev, end_rev,
                                           receiver, receiver_baton, subpool));
 
@@ -594,10 +594,10 @@ commands</a> to markup our source.  When writing doxygen documentation, the
 following conventions apply:</p>
 <ul>
   <li>Use complete sentences and prose descriptions of the function, preceding
-  paramater names with <code>@a</code>, and type and macro names with
+  parameter names with <code>@a</code>, and type and macro names with
   <code>@c</code>.</li>
 
-  <li>Use <code>&lt;tt&gt;...&lt;tt&gt;</code> to display multiple words
+  <li>Use <code>&lt;tt&gt;...&lt;/tt&gt;</code> to display multiple words
   and <code>@p</code> to display only one word in typewriter font.</li>
 
   <li>Constant values, such as <code>TRUE</code>, <code>FALSE</code> and 
@@ -1599,8 +1599,10 @@ r20946 for an example.</p>
 <p>In general, there is a tension between making entries easy to find
 by searching for identifiers, and wasting time or producing unreadable
 entries by being exhaustive.  Use the above guidelines and your best
-judgment, and be considerate of your fellow developers.  (Also, run
-"svn log" to see how others have been writing their log entries.)</p>
+judgment, and be considerate of your fellow developers.  (Also, <a
+href="http://subversion.tigris.org/servlets/BrowseList?listName=svn">
+run "svn log"</a> to see how others have been writing their log
+entries.)</p>
 
 <p>Log messages for documentation or translation have somewhat looser
 guidelines.  The requirement to name every symbol obviously does not
@@ -1642,8 +1644,8 @@ author:</p>
 <p>If multiple individuals wrote the patch, list them each on a
 separate line&nbsp;&mdash;&nbsp;making sure to start each continuation
 line with whitespace.  Non-committers should be listed by name, if
-known, and e-mail.  Committers may be listed similarly, or by their
-canonical usernames from <a
+known, and e-mail.  Full and partial committers should be listed by
+their canonical usernames from <a
 href="http://svn.collab.net/repos/svn/trunk/COMMITTERS"
 >COMMITTERS</a> (the leftmost column in that file).  Additionally,
 "me" is an acceptable shorthand for the person actually committing the
@@ -1887,8 +1889,8 @@ what kind.  It does <em>not</em> require actual Subversion development
 experience or commit access.  Expertise in using one's mail reading
 software is optional, but recommended :-).</p>
 
-<p>The current patch manager is Hyrum Wright
-&lt;hyrum_wright@mail.utexas.edu&gt;.</p>
+<p>The current patch manager is Daniel Shahaf 
+&lt;danielsh@tigris.org&gt;.</p>
 
 </div>
 
@@ -1974,7 +1976,7 @@ release, so urgent issues would go there):</p>
         close_as_dup(i)
       elif issue_is_invalid(i):
         # A frequent reason for invalidity is that the reporter
-        # did not follow the <a href="http://subversion.tigris.org/project_issues.html#buddy-system">"buddy system"</a> for filing.
+        # did not follow the <a href="http://subversion.tigris.org/issue-tracker.html#buddy-system">"buddy system"</a> for filing.
         close_as_invalid(i)
       elif issue_already_fixed(i):
         close_as_fixed(i)
@@ -2087,7 +2089,7 @@ log message, like so:</p>
 experimental branch at any time.  It is not necessary that the
 experimental branch have a high likelihood of being merged to trunk
 (although that's always a good goal to aim for).  It's just as
-imporant that the full committer&nbsp;&mdash;&nbsp;all the full
+important that the full committer&nbsp;&mdash;&nbsp;all the full
 committers, actually&nbsp;&mdash;&nbsp;view such branches as training
 grounds for new developers, by giving feedback on the commits.  The
 goal of these branches is both to get new code into Subversion and to
@@ -2131,6 +2133,15 @@ obvious typos, grammar mistakes, and formatting problems wherever they
 may be&nbsp;&mdash;&nbsp;in the web pages, API documentation, code
 comments, commit messages, etc.  We rely on the committer's judgement
 to determine what is "obvious"; if you're not sure, just ask.</p>
+
+<p>Whenever you invoke the "obvious fix" rule, please say so in
+the <a href="#log-messages">log message</a> of your commit. For example:</p>
+
+<pre>
+   Obvious fix.
+
+   * www/hacking.html: Kill some typos.
+</pre>
 
 </div>
 
@@ -2661,8 +2672,7 @@ schedule or release date:</p>
 <li><p>Without voting:</p>
     <ul>
     <li><p>Changes to the STATUS file.</p></li>
-    <li><p>Documentation file changes, including to the book, README,
-           INSTALL, www/, etc.</p></li>
+    <li><p>Documentation fixes.</p></li>
     <li><p>Changes that are a normal part of release bookkeeping, for
            example, the steps listed in notes/releases.txt.</p></li>
     <li><p>Changes to dist.sh by, or approved by, the release manager.</p></li>
@@ -2674,7 +2684,6 @@ schedule or release date:</p>
 <li><p>With voting:</p>
     <ul>
     <li><p>Anything affecting only tools/, packages/, or bindings/.</p></li>
-    <li><p>Doc fixes in core code header or source files.</p></li>
     <li><p>Changes to printed output, such as error and usage messages, as
            long as format string "%" codes and their args are not
            touched.</p></li>
@@ -2729,6 +2738,20 @@ A.B.x.</p>
 concerns field, and include a url / message-id for the list discussion
 if any.  You can go back and add the link later if the thread isn't
 available at the time you commit the veto.</p>
+
+<p>If you add revisions to a group, note that the previous voters have
+not voted for those revisions, as follows:</p>
+
+<pre>
+   * r30643, r30653, r30785
+     Update bash completion script.
+     Votes:
+       +1: arfrever (r30785 only), stylesen
+</pre>
+
+<p>If in case votes have been communicated via IRC or other means,
+note that in the log message. <a href="#obvious-fix">Obvious fixes</a>
+do not require '(rX only)' to be mentioned.</p>
 
 <p>Voting +1 on a change doesn't just mean you approve of it in
 principle.  It means you have thoroughly reviewed the change, and find
@@ -2802,9 +2825,9 @@ The RM should request that signers include a description of any errors
 along with their signatures, so the problems can be published when the
 alpha or beta release is announced.</p>
 
-<p>When the alpha or beta is publicly announced, distribtion packagers
+<p>When the alpha or beta is publicly announced, distribution packagers
 should be firmly warned off packaging it.  See <a
-href="http://subversion.tigris.org/servlets/ReadMsg?list=announce&msgNo=264"
+href="http://subversion.tigris.org/servlets/ReadMsg?list=announce&amp;msgNo=264"
 >this mail from Hyrum K. Wright</a> for a good model.</p>
 
 </div>
@@ -2846,7 +2869,7 @@ to download and test it separately.  The trick is to extract the
 
 <pre>
     bzip2 -cd subversion-1.3.0-rc4.tar.bz2 \
-    | gzip -9n > subversion-1.3.0-rc4.tar.gz
+    | gzip -9n &gt; subversion-1.3.0-rc4.tar.gz
 </pre>
 
 <p>The resulting file should be identical to the file generated by the
@@ -2905,6 +2928,19 @@ href="http://www.gnu.org/software/gettext/manual/html_node/gettext_toc.html"
 provides additional information on writing translatable programs in
 its section "Preparing Program Sources".  Its hints mainly apply to
 string composition.</p>
+
+<p>Currently available translations can be found in <a
+href="http://svn.collab.net/repos/svn/trunk/subversion/po/" >the po
+section of the repository</a>.  Please contact
+dev@subversion.tigris.org when you want to start a translation not
+available yet.  Translation discussion takes place both on that list
+and on dedicated native language mailing lists (<a
+href="http://subversion.tigris.org/servlets/ProjectMailingListList"
+><em>l10n-??@subversion.tigris.org</em></a>).</p>
+
+<p>See <a href="http://svn.collab.net/repos/svn/trunk/TRANSLATING"
+>http://svn.collab.net/repos/svn/trunk/TRANSLATING</a> for more
+information about translating.</p>
 
 </div>
 

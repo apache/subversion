@@ -57,7 +57,7 @@ const svn_version_t *svn_ra_version(void);
  * @a close_baton as appropriate.
  *
  * @a path is relative to the "root" of the session, defined by the
- * @a repos_url passed to svn_ra_open2() vtable call.
+ * @a repos_URL passed to svn_ra_open3() vtable call.
  *
  * @a name is the name of the property to fetch. If the property is present,
  * then it is returned in @a value. Otherwise, @a *value is set to @c NULL.
@@ -196,12 +196,12 @@ typedef void (*svn_ra_progress_notify_func_t)(apr_off_t progress,
 
 /**
  * Callback function type for replay_range actions.
- * 
- * This callback function should provide replay_range with an editor which 
+ *
+ * This callback function should provide replay_range with an editor which
  * will be driven with the received replay reports from the master repository.
  *
  * @a revision is the target revision number of the received replay report.
- * 
+ *
  * @a editor and @a edit_baton should provided by the callback implementation.
  *
  * @a replay_baton is the baton as originally passed to replay_range.
@@ -221,11 +221,11 @@ typedef svn_error_t *(*svn_ra_replay_revstart_callback_t)
 
 /**
  * Callback function type for replay_range actions.
- * 
+ *
  * This callback function should close the editor.
- * 
+ *
  * @a revision is the target revision number of the received replay report.
- * 
+ *
  * @a editor and @a edit_baton should provided by the callback implementation.
  *
  * @a replay_baton is the baton as originally passed to replay_range.
@@ -275,7 +275,7 @@ typedef struct svn_ra_reporter3_t
    *
    * @a revision may be SVN_INVALID_REVNUM if (for example) @a path
    * represents a locally-added path with no revision number, or @a
-   * depth is @c svn_depth_exclude.  
+   * depth is @c svn_depth_exclude.
    *
    * @a path may not be underneath a path on which set_path() was
    * previously called with @c svn_depth_exclude in this report.
@@ -284,7 +284,7 @@ typedef struct svn_ra_reporter3_t
    * implementor should assume the directory has no entries or props.
    *
    * This will *override* any previous set_path() calls made on parent
-   * paths.  @a path is relative to the URL specified in svn_ra_open2().
+   * paths.  @a path is relative to the URL specified in svn_ra_open3().
    *
    * If @a lock_token is non-NULL, it is the lock token for @a path in the WC.
    *
@@ -435,7 +435,7 @@ typedef struct svn_ra_reporter_t
 /** A collection of callbacks implemented by libsvn_client which allows
  * an RA layer to "pull" information from the client application, or
  * possibly store information.  libsvn_client passes this vtable to
- * svn_ra_open2().
+ * svn_ra_open3().
  *
  * Each routine takes a @a callback_baton originally provided with the
  * vtable.
@@ -571,6 +571,9 @@ typedef struct svn_ra_session_t svn_ra_session_t;
  * Open a repository session to @a repos_URL.  Return an opaque object
  * representing this session in @a *session_p, allocated in @a pool.
  *
+ * Return @c SVN_ERR_RA_UUID_MISMATCH if @a uuid is non-NULL and not equal
+ * to the UUID of the repository at @c repos_URL.
+ *
  * @a callbacks/@a callback_baton is a table of callbacks provided by the
  * client; see @c svn_ra_callbacks2_t.
  *
@@ -583,7 +586,22 @@ typedef struct svn_ra_session_t svn_ra_session_t;
  *
  * @see svn_client_open_ra_session().
  *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_ra_open3(svn_ra_session_t **session_p,
+             const char *repos_URL,
+             const char *uuid,
+             const svn_ra_callbacks2_t *callbacks,
+             void *callback_baton,
+             apr_hash_t *config,
+             apr_pool_t *pool);
+
+/**
+ * Similiar to svn_ra_open3(), but with @a uuid set to @c NULL.
+ *
  * @since New in 1.3.
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *
 svn_ra_open2(svn_ra_session_t **session_p,
@@ -979,8 +997,9 @@ svn_ra_do_update2(svn_ra_session_t *session,
 
 /**
  * Similar to svn_ra_do_update2(), but taking @c svn_ra_reporter2_t
- * instead of @c svn_ra_reporter3_t.  If @a recurse is TRUE, pass
- * @c svn_depth_infinity for @a depth, else pass @c svn_depth_files.
+ * instead of @c svn_ra_reporter3_t; if @a recurse is true, pass @c
+ * svn_depth_infinity for @a depth, else pass @c svn_depth_files; and
+ * with @a send_copyfrom_args always false.
  *
  * @deprecated Provided for compatibility with the 1.4 API.
  */
@@ -1298,6 +1317,12 @@ svn_ra_do_diff(svn_ra_session_t *session,
  *
  * Use @a pool for memory allocation.
  *
+ * @note If @a paths is NULL or empty, the result depends on the
+ * server.  Pre-1.5 servers will send nothing; 1.5 servers will
+ * effectively perform the log operation on the root of the
+ * repository.  This behavior may be changed in the future to ensure
+ * consistency across all pedigrees of server.
+ *
  * @note Pre-1.5 servers do not support custom revprop retrieval; if @a
  * revprops is NULL or contains a revprop other than svn:author, svn:date,
  * or svn:log, an @c SVN_ERR_RA_NOT_IMPLEMENTED error is returned.
@@ -1376,7 +1401,7 @@ svn_ra_stat(svn_ra_session_t *session,
 /**
  * Set @a *uuid to the repository's UUID, allocated in @a pool.
  *
- * @since New in 1.6.
+ * @since New in 1.5.
  */
 svn_error_t *
 svn_ra_get_uuid2(svn_ra_session_t *session,
@@ -1387,7 +1412,7 @@ svn_ra_get_uuid2(svn_ra_session_t *session,
  * Similar to svn_ra_get_uuid2(), but returns the value allocated in
  * @a session's pool.
  *
- * @deprecated Provided for backward compatibility with the 1.5 API.
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  * @since New in 1.2.
  */
 svn_error_t *
@@ -1400,7 +1425,7 @@ svn_ra_get_uuid(svn_ra_session_t *session,
  * The value will not include a trailing '/'.  The returned URL is
  * guaranteed to be a prefix of the @a session's URL.
  *
- * @since New in 1.6.
+ * @since New in 1.5.
  */
 svn_error_t *
 svn_ra_get_repos_root2(svn_ra_session_t *session,
@@ -1412,7 +1437,7 @@ svn_ra_get_repos_root2(svn_ra_session_t *session,
  * Similar to svn_ra_get_repos_root2(), but returns the value
  * allocated in @a session's pool.
  *
- * @deprecated Provided for backward compatibility with the 1.5 API.
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  * @since New in 1.2.
  */
 svn_error_t *
@@ -1634,15 +1659,15 @@ svn_ra_get_locks(svn_ra_session_t *session,
 
 
 /**
- * Replay the changes from a range of revisions between @a start_revision 
+ * Replay the changes from a range of revisions between @a start_revision
  * and @a end_revision.
  *
  * When receiving information for one revision, a callback @a revstart_func is
  * called; this callback will provide an editor and baton through which the
  * revision will be replayed.
- * When replaying the revision is finished, callback @a fevfinish_func will be 
+ * When replaying the revision is finished, callback @a fevfinish_func will be
  * called so the editor can be closed.
- * 
+ *
  * Changes will be limited to those that occur under @a session's URL, and
  * the server will assume that the client has no knowledge of revisions
  * prior to @a low_water_mark.  These two limiting factors define the portion
@@ -1748,6 +1773,13 @@ svn_ra_has_capability(svn_ra_session_t *session,
  * @since New in 1.5.
  */
 #define SVN_RA_CAPABILITY_PARTIAL_REPLAY "partial-replay"
+
+/**
+ * The capability of including revision properties in a commit.
+ *
+ * @since New in 1.5.
+ */
+#define SVN_RA_CAPABILITY_COMMIT_REVPROPS "commit-revprops"
 
 /*       *** PLEASE READ THIS IF YOU ADD A NEW CAPABILITY ***
  *

@@ -50,10 +50,21 @@ svn_cl__commit(apr_getopt_t *os,
   svn_config_t *cfg;
   svn_boolean_t no_unlock = FALSE;
   svn_commit_info_t *commit_info = NULL;
+  int i;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
-                                                      opt_state->targets, 
-                                                      pool));
+                                                      opt_state->targets,
+                                                      ctx, pool));
+
+  /* Check that no targets are URLs */
+  for (i = 0; i < targets->nelts; i++)
+    {
+      const char *target = APR_ARRAY_IDX(targets, i, const char *);
+      if (svn_path_is_url(target))
+        return svn_error_create(SVN_ERR_WC_BAD_PATH, NULL,
+                                "Must give local path (not URL) as the "
+                                "target of a commit");
+    }
 
   /* Add "." if user passed 0 arguments. */
   svn_opt_push_implicit_dot_target(targets, pool);
@@ -97,8 +108,6 @@ svn_cl__commit(apr_getopt_t *os,
                                      opt_state, base_dir,
                                      ctx->config, pool));
 
-  ctx->revprop_table = opt_state->revprop_table;
-
   /* Commit. */
   err = svn_client_commit4(&commit_info,
                            targets,
@@ -106,6 +115,7 @@ svn_cl__commit(apr_getopt_t *os,
                            no_unlock,
                            opt_state->keep_changelists,
                            opt_state->changelists,
+                           opt_state->revprop_table,
                            ctx,
                            pool);
   if (err)

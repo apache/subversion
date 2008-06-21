@@ -361,7 +361,7 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
   status = apr_uri_parse(pool, parent_dir_url, &parent_dir_parsed_uri);
   if (status)
     return svn_error_createf(SVN_ERR_BAD_URL, 0,
-                             _("Illegal parent directory URL '%s'."),
+                             _("Illegal parent directory URL '%s'"),
                              parent_dir_url);
 
   /* Handle URLs relative to the current directory or to the
@@ -391,7 +391,7 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
           status = apr_uri_parse(pool, repos_root_url, &repos_root_parsed_uri);
           if (status)
             return svn_error_createf(SVN_ERR_BAD_URL, 0,
-                                     _("Illegal repository root URL '%s'."),
+                                     _("Illegal repository root URL '%s'"),
                                      repos_root_url);
 
           base_components = svn_path_decompose(repos_root_parsed_uri.path,
@@ -434,7 +434,7 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
   if (svn_path_is_backpath_present(canonicalized_url + 2))
     return svn_error_createf(SVN_ERR_BAD_URL, 0,
                              _("The external relative URL '%s' cannot have "
-                               "backpaths, i.e. '..'."),
+                               "backpaths, i.e. '..'"),
                              uncanonicalized_url);
 
   /* Relative to the scheme. */
@@ -466,7 +466,7 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
 
   return svn_error_createf(SVN_ERR_BAD_URL, 0,
                            _("Unrecognized format for the relative external "
-                             "URL '%s'."),
+                             "URL '%s'"),
                            uncanonicalized_url);
 }
 
@@ -814,6 +814,11 @@ svn_client__handle_externals(svn_wc_traversal_info_t *traversal_info,
 
   svn_wc_edited_externals(&externals_old, &externals_new, traversal_info);
   svn_wc_traversed_depths(&ambient_depths, traversal_info);
+
+  /* Sanity check; see r30124. */
+  if (! svn_path_is_url(from_url))
+    return svn_error_createf
+      (SVN_ERR_BAD_URL, NULL, _("'%s' is not a URL"), from_url);
 
   cb.externals_new     = externals_new;
   cb.externals_old     = externals_old;

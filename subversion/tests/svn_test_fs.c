@@ -73,11 +73,11 @@ make_fs_config(const char *fs_type,
 }
 
 
-svn_error_t *
-svn_test__create_fs(svn_fs_t **fs_p,
-                    const char *name,
-                    const char *fs_type,
-                    apr_pool_t *pool)
+static svn_error_t *
+create_fs(svn_fs_t **fs_p,
+          const char *name,
+          const char *fs_type,
+          apr_pool_t *pool)
 {
   apr_finfo_t finfo;
   apr_hash_t *fs_config = make_fs_config(fs_type, pool);
@@ -110,15 +110,63 @@ svn_test__create_fs(svn_fs_t **fs_p,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+maybe_install_fsfs_conf(svn_fs_t *fs,
+                        svn_test_opts_t *opts,
+                        svn_boolean_t *must_reopen,
+                        apr_pool_t *pool)
+{
+  *must_reopen = FALSE;
+  if (strcmp(opts->fs_type, "fsfs") != 0 || ! opts->config_file)
+    return SVN_NO_ERROR;
+
+  *must_reopen = TRUE;
+  return svn_io_copy_file(opts->config_file,
+                          svn_path_join(svn_fs_path(fs, pool), "fsfs.conf", pool),
+                          FALSE,
+                          pool);
+}
+
+
+svn_error_t *
+svn_test__create_bdb_fs(svn_fs_t **fs_p,
+                        const char *name,
+                        apr_pool_t *pool)
+{
+  return create_fs(fs_p, name, "bdb", pool);
+}
+
+svn_error_t *
+svn_test__create_fs(svn_fs_t **fs_p,
+                    const char *name,
+                    svn_test_opts_t *opts,
+                    apr_pool_t *pool)
+{
+  svn_boolean_t must_reopen;
+
+  SVN_ERR(create_fs(fs_p, name, opts->fs_type, pool));
+
+  SVN_ERR(maybe_install_fsfs_conf(*fs_p, opts, &must_reopen, pool));
+  if (must_reopen)
+    {
+      SVN_ERR(svn_fs_open(fs_p, name, NULL, pool));
+      svn_fs_set_warning_func(*fs_p, fs_warning_handler, NULL);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 svn_error_t *
 svn_test__create_repos(svn_repos_t **repos_p,
                        const char *name,
-                       const char *fs_type,
+                       svn_test_opts_t *opts,
                        apr_pool_t *pool)
 {
   apr_finfo_t finfo;
-  apr_hash_t *fs_config = make_fs_config(fs_type, pool);
+  svn_repos_t *repos;
+  svn_boolean_t must_reopen;
+  apr_hash_t *fs_config = make_fs_config(opts->fs_type, pool);
 
   /* If there's already a repository named NAME, delete it.  Doing
      things this way means that repositories stick around after a
@@ -134,12 +182,21 @@ svn_test__create_repos(svn_repos_t **repos_p,
                                  "there is already a file named '%s'", name);
     }
 
-  SVN_ERR(svn_repos_create(repos_p, name, NULL, NULL, NULL,
+  SVN_ERR(svn_repos_create(&repos, name, NULL, NULL, NULL,
                            fs_config, pool));
 
   /* Register this repo for cleanup. */
   svn_test_add_dir_cleanup(name);
 
+  SVN_ERR(maybe_install_fsfs_conf(svn_repos_fs(repos), opts, &must_reopen,
+                                  pool));
+  if (must_reopen)
+    {
+      SVN_ERR(svn_repos_open(&repos, name, pool));
+      svn_fs_set_warning_func(svn_repos_fs(repos), fs_warning_handler, NULL);
+    }
+
+  *repos_p = repos;
   return SVN_NO_ERROR;
 }
 

@@ -1036,8 +1036,8 @@ static svn_error_t * commit_add_file(const char *path,
       svn_ra_neon__resource_t *res;
       svn_error_t *err = svn_ra_neon__get_starting_props(&res,
                                                          file->cc->ras,
-                                                         file->rsrc->url, NULL,
-                                                         workpool);
+                                                         file->rsrc->wr_url,
+                                                         NULL, workpool);
       if (!err)
         {
           /* If the PROPFIND succeeds the file already exists */
@@ -1045,7 +1045,7 @@ static svn_error_t * commit_add_file(const char *path,
                                    _("File '%s' already exists"),
                                    file->rsrc->url);
         }
-      else if (err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND)
+      else if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
         {
           svn_error_clear(err);
         }
@@ -1371,7 +1371,7 @@ static svn_error_t * apply_revprops(commit_ctx_t *cc,
                                     apr_hash_t *revprop_table,
                                     apr_pool_t *pool)
 {
-  const svn_string_t *vcc;
+  const char *vcc;
   const svn_string_t *baseline_url;
   version_rsrc_t baseline_rsrc = { SVN_INVALID_REVNUM };
   svn_error_t *err = NULL;
@@ -1381,8 +1381,7 @@ static svn_error_t * apply_revprops(commit_ctx_t *cc,
      ### REPORT when that is available on the server. */
 
   /* fetch the DAV:version-controlled-configuration from the session's URL */
-  SVN_ERR(svn_ra_neon__get_one_prop(&vcc, cc->ras, cc->ras->root.path,
-                                    NULL, &svn_ra_neon__vcc_prop, pool));
+  SVN_ERR(svn_ra_neon__get_vcc(&vcc, cc->ras, cc->ras->root.path, pool));
 
   /* ### we should use DAV:apply-to-version on the CHECKOUT so we can skip
      ### retrieval of the baseline */
@@ -1394,7 +1393,7 @@ static svn_error_t * apply_revprops(commit_ctx_t *cc,
     /* Get the latest baseline from VCC's DAV:checked-in property.
        This should give us the HEAD revision of the moment. */
     SVN_ERR(svn_ra_neon__get_one_prop(&baseline_url, cc->ras,
-                                      vcc->data, NULL,
+                                      vcc, NULL,
                                       &svn_ra_neon__checked_in_prop, pool));
     baseline_rsrc.pool = pool;
     baseline_rsrc.vsn_url = baseline_url->data;

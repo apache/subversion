@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2002-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -133,6 +133,10 @@ typedef struct svn_auth_provider_t
    * reasons, return FALSE.  If the provider never saves data, then
    * this function pointer should simply be NULL. @a realmstring comes
    * from the svn_auth_first_credentials() call.
+   *
+   * All allocations should be done in @a pool, which can be assumed
+   * to survive across RA sessions; auth providers that store passwords
+   * in plaintext rely on this.
    */
   svn_error_t * (*save_credentials)(svn_boolean_t *saved,
                                     void *credentials,
@@ -153,6 +157,10 @@ typedef struct svn_auth_provider_object_t
 
 } svn_auth_provider_object_t;
 
+/** The type of function returning authentication provider. */
+typedef void (*svn_auth_simple_provider_func_t)
+  (svn_auth_provider_object_t **provider,
+   apr_pool_t *pool);
 
 
 /** Specific types of credentials **/
@@ -457,6 +465,40 @@ typedef svn_error_t *(*svn_auth_ssl_client_cert_pw_prompt_func_t)
    svn_boolean_t may_save,
    apr_pool_t *pool);
 
+/** Called only by providers which save passwords unencrypted.
+ * In this callback, clients should ask the user whether storing
+ * a password for the realm identified by @a realmstring to disk
+ * in plaintext is allowed.
+ *
+ * The answer is returned in @a *may_save_plaintext.
+ * @a baton is an implementation-specific closure.
+ * All allocations should be done in @a pool.
+ *
+ * This callback is called only once per authentication realm,
+ * not once per RA session. This means that clients implementing
+ * this callback must make sure that the pool passed to any
+ * implementation of save_credentials (part of svn_auth_provider_t)
+ * survives across RA sessions.
+ *
+ * If this callback is NULL it is not called. This matches the
+ * deprecated behaviour of storing unencrypted passwords by default,
+ * and is only done this way for backward compatibility reasons.
+ * Client developers are highly encouraged to provide this callback
+ * to ensure their users are made aware of the fact that their password
+ * is going to be stored unencrypted. In the future, providers may
+ * default to not storing the password unencrypted if this callback is NULL.
+ *
+ * Clients can however set the callback to NULL and set
+ * SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS to SVN_CONFIG_FALSE or
+ * SVN_CONFIG_TRUE to enforce a certain behaviour.
+ *
+ * @since New in 1.6
+ */
+typedef svn_error_t *(*svn_auth_plaintext_prompt_func_t)
+  (svn_boolean_t *may_save_plaintext,
+   const char *realmstring,
+   void *baton,
+   apr_pool_t *pool);
 
 
 /** Initialize an authentication system.
@@ -524,6 +566,12 @@ const void * svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
 #define SVN_AUTH_PARAM_DONT_STORE_PASSWORDS  SVN_AUTH_PARAM_PREFIX \
                                                  "dont-store-passwords"
 
+/** @brief Indicates whether providers may save passwords to disk in
+ * plaintext. Property value can be either SVN_CONFIG_TRUE,
+ * SVN_CONFIG_FALSE, or SVN_CONFIG_ASK. */
+#define SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS  SVN_AUTH_PARAM_PREFIX \
+                                                  "store-plaintext-passwords"
+
 /** @brief The application doesn't want any providers to save credentials
  * to disk. Property value is irrelevant; only property's existence
  * matters. */
@@ -549,7 +597,6 @@ const void * svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
 /** @brief A configuration directory that overrides the default
  * ~/.subversion. */
 #define SVN_AUTH_PARAM_CONFIG_DIR SVN_AUTH_PARAM_PREFIX "config-dir"
-
 
 /** Get an initial set of credentials.
  *
@@ -587,9 +634,12 @@ svn_error_t * svn_auth_next_credentials(void **credentials,
 /** Save a set of credentials.
  *
  * Ask @a state to store the most recently returned credentials,
- * presumably because they successfully authenticated.  Use @a pool
- * for temporary allocation.  If no credentials were ever returned, do
- * nothing.
+ * presumably because they successfully authenticated.
+ * All allocations should be done in @a pool, which is
+ * assumed to survive across RA sessions; auth providers that store
+ * passwords in plaintext rely on this.
+ *
+ * If no credentials were ever returned, do nothing.
  */
 svn_error_t * svn_auth_save_credentials(svn_auth_iterstate_t *state,
                                         apr_pool_t *pool);
@@ -641,8 +691,15 @@ void svn_auth_get_username_prompt_provider
 
 /** Create and return @a *provider, an authentication provider of type @c
  * svn_auth_cred_simple_t that gets/sets information from the user's
- * ~/.subversion configuration directory.  Allocate @a *provider in
- * @a pool.
+ * ~/.subversion configuration directory.
+ *
+ * If the provider is going to save the password unencrypted,
+ * it calls @a plaintext_prompt_func before saving the
+ * password.
+ *
+ * @a prompt_baton is passed to @a plaintext_prompt_func.
+ *
+ * Allocate @a *provider in @a pool.
  *
  * If a default username or password is available, @a *provider will
  * honor them as well, and return them when
@@ -650,6 +707,18 @@ void svn_auth_get_username_prompt_provider
  * SVN_AUTH_PARAM_DEFAULT_USERNAME and @c
  * SVN_AUTH_PARAM_DEFAULT_PASSWORD).
  *
+ * @since New in 1.6.
+ */
+void svn_auth_get_simple_provider2
+  (svn_auth_provider_object_t **provider,
+   svn_auth_plaintext_prompt_func_t plaintext_prompt_func,
+   void* prompt_baton,
+   apr_pool_t *pool);
+
+/** Like svn_auth_get_simple_provider2, but without the ability to
+ * call the svn_auth_plaintext_prompt_func_t callback.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.5 API.
  * @since New in 1.4.
  */
 void svn_auth_get_simple_provider(svn_auth_provider_object_t **provider,
@@ -682,7 +751,6 @@ svn_auth_get_windows_simple_provider(svn_auth_provider_object_t **provider,
 #endif /* WIN32 || DOXYGEN */
 
 #if defined(DARWIN) || defined(DOXYGEN)
-
 /**
  * Create and return @a *provider, an authentication provider of type @c
  * svn_auth_cred_simple_t that gets/sets information from the user's
@@ -698,8 +766,8 @@ svn_auth_get_windows_simple_provider(svn_auth_provider_object_t **provider,
 void
 svn_auth_get_keychain_simple_provider(svn_auth_provider_object_t **provider,
                                       apr_pool_t *pool);
-
 #endif /* DARWIN || DOXYGEN */
+
 
 /** Create and return @a *provider, an authentication provider of type @c
  * svn_auth_cred_username_t that gets/sets information from a user's

@@ -49,7 +49,7 @@ struct edit_baton {
 
   /* The callback and calback argument that implement the file comparison
      function */
-  const svn_wc_diff_callbacks2_t *diff_callbacks;
+  const svn_wc_diff_callbacks3_t *diff_callbacks;
   void *diff_cmd_baton;
 
   /* DRY_RUN is TRUE if this is a dry-run diff, false otherwise. */
@@ -889,6 +889,7 @@ add_directory(const char *path,
 
   SVN_ERR(eb->diff_callbacks->dir_added
           (adm_access, &state, b->wcpath, eb->target_revision,
+           copyfrom_path, copyfrom_revision,
            eb->diff_cmd_baton));
 
   if ((state == svn_wc_notify_state_missing)
@@ -956,14 +957,22 @@ open_directory(const char *path,
                void **child_baton)
 {
   struct dir_baton *pb = parent_baton;
-  struct dir_baton *b;
   struct edit_baton *eb = pb->edit_baton;
+  struct dir_baton *b;
   const char *token = make_token('d', eb, pool);
+  svn_wc_adm_access_t *adm_access;
 
   b = make_dir_baton(path, pb, pb->edit_baton, FALSE, token, pool);
   *child_baton = b;
 
   SVN_ERR(get_dirprops_from_ra(b, base_revision));
+
+  SVN_ERR(get_path_access(&adm_access, eb->adm_access, pb->wcpath, TRUE,
+                          pool));
+
+  SVN_ERR(eb->diff_callbacks->dir_opened
+          (adm_access, b->wcpath, base_revision,
+           b->edit_baton->diff_cmd_baton));
 
   if (eb->svnpatch_stream)
     {
@@ -1173,6 +1182,7 @@ close_file(void *file_baton,
                  0,
                  b->edit_baton->target_revision,
                  mimetype1, mimetype2,
+                 NULL, SVN_INVALID_REVNUM, /* XXX make use of new 1.6 API */
                  b->propchanges, b->pristine_props,
                  b->edit_baton->diff_cmd_baton));
       else
@@ -1258,47 +1268,49 @@ close_directory(void *dir_baton,
 {
   struct dir_baton *b = dir_baton;
   struct edit_baton *eb = b->edit_baton;
+  svn_wc_notify_state_t content_state = svn_wc_notify_state_unknown;
   svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
   svn_error_t *err;
+  svn_wc_adm_access_t *adm_access;
 
   if (eb->dry_run)
     svn_hash__clear(svn_client__dry_run_deletions(eb->diff_cmd_baton));
 
-  if (b->propchanges->nelts > 0)
+  err = get_path_access(&adm_access, eb->adm_access, b->wcpath,
+                        eb->dry_run, b->pool);
+
+  if (err && err->apr_err == SVN_ERR_WC_NOT_LOCKED)
     {
-      svn_wc_adm_access_t *adm_access;
-      err = get_path_access(&adm_access, eb->adm_access, b->wcpath,
-                            eb->dry_run, b->pool);
-
-      if (err && err->apr_err == SVN_ERR_WC_NOT_LOCKED)
+      /* ### maybe try to stat the local b->wcpath? */
+      /* If the path doesn't exist, then send a 'skipped' notification. */
+      if (eb->notify_func)
         {
-          /* ### maybe try to stat the local b->wcpath? */
-          /* If the path doesn't exist, then send a 'skipped' notification. */
-          if (eb->notify_func)
-            {
-              svn_wc_notify_t *notify
-                = svn_wc_create_notify(b->wcpath, svn_wc_notify_skip, pool);
-              notify->kind = svn_node_dir;
-              notify->content_state = notify->prop_state
-                = svn_wc_notify_state_missing;
-              (*eb->notify_func)(eb->notify_baton, notify, pool);
-            }
-          svn_error_clear(err);
-          return SVN_NO_ERROR;
+          svn_wc_notify_t *notify
+            = svn_wc_create_notify(b->wcpath, svn_wc_notify_skip, pool);
+          notify->kind = svn_node_dir;
+          notify->content_state = notify->prop_state
+            = svn_wc_notify_state_missing;
+          (*eb->notify_func)(eb->notify_baton, notify, pool);
         }
-      else if (err)
-        return err;
-
-      /* Don't do the props_changed stuff if this is a dry_run and we don't
-         have an access baton, since in that case the directory will already
-         have been recognised as added, in which case they cannot conflict. */
-      if (! eb->dry_run || adm_access)
-        SVN_ERR(eb->diff_callbacks->dir_props_changed
-                (adm_access, &prop_state,
-                 b->wcpath,
-                 b->propchanges, b->pristine_props,
-                 b->edit_baton->diff_cmd_baton));
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
     }
+  else if (err)
+    return err;
+
+  /* Don't do the props_changed stuff if this is a dry_run and we don't
+     have an access baton, since in that case the directory will already
+     have been recognised as added, in which case they cannot conflict. */
+  if ((b->propchanges->nelts > 0) && (! eb->dry_run || adm_access))
+    SVN_ERR(eb->diff_callbacks->dir_props_changed
+            (adm_access, &prop_state,
+             b->wcpath,
+             b->propchanges, b->pristine_props,
+             b->edit_baton->diff_cmd_baton));
+
+  SVN_ERR(eb->diff_callbacks->dir_closed
+          (adm_access, &content_state,
+           b->wcpath, b->edit_baton->diff_cmd_baton));
 
   /* ### Don't notify added directories as they triggered notification
      in add_directory.  Does this mean that directory notification
@@ -1487,7 +1499,7 @@ get_svnpatch_diff_editor(svn_delta_editor_t **editor,
 svn_error_t *
 svn_client__get_diff_editor(const char *target,
                             svn_wc_adm_access_t *adm_access,
-                            const svn_wc_diff_callbacks2_t *diff_callbacks,
+                            const svn_wc_diff_callbacks3_t *diff_callbacks,
                             void *diff_cmd_baton,
                             svn_depth_t depth,
                             svn_boolean_t dry_run,

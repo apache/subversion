@@ -53,6 +53,12 @@ SVN_RB_SWIG_SWIGUTIL_EXPORT
 void svn_swig_rb_initialize(void);
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT
+apr_pool_t *svn_swig_rb_pool(void);
+
+SVN_RB_SWIG_SWIGUTIL_EXPORT
+apr_allocator_t *svn_swig_rb_allocator(void);
+
+SVN_RB_SWIG_SWIGUTIL_EXPORT
 VALUE svn_swig_rb_svn_delta_editor(void);
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 VALUE svn_swig_rb_svn_delta_text_delta_window_handler(void);
@@ -194,6 +200,11 @@ svn_error_t *svn_swig_rb_log_receiver(void *baton,
                                       const char *date,
                                       const char *message,
                                       apr_pool_t *pool);
+
+SVN_RB_SWIG_SWIGUTIL_EXPORT
+svn_error_t *svn_swig_rb_log_entry_receiver(void *baton,
+                                            svn_log_entry_t *entry,
+                                            apr_pool_t *pool);
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 svn_error_t *svn_swig_rb_repos_authz_func(svn_boolean_t *allowed,

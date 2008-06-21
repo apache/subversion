@@ -141,6 +141,7 @@ svn_ra_serf__handle_auth(int code,
   serf_bucket_t *hdrs;
   const svn_ra_serf__auth_protocol_t *prot;
   char *auth_name, *auth_attr, *auth_hdr, *header, *header_attr;
+  svn_error_t *cached_err;
 
   hdrs = serf_bucket_response_get_headers(response);
   if (code == 401)
@@ -166,6 +167,8 @@ svn_ra_serf__handle_auth(int code,
     {
       svn_boolean_t proto_found = FALSE;
       auth_name = apr_strtok(header, " ", &auth_attr);
+
+      cached_err = SVN_NO_ERROR;
 
       /* Find the matching authentication handler.
          Note that we don't reuse the auth protocol stored in the session,
@@ -205,10 +208,13 @@ svn_ra_serf__handle_auth(int code,
                 }
               if (err)
                 {
-                  /* If authentication fails, just try the next available 
-                     scheme. */
-                  svn_error_clear(err);
+                  /* If authentication fails, cache the error for now. Try the
+                     next available scheme. If there's none raise the error. */
                   proto_found = FALSE;
+                  prot = NULL;
+                  if (cached_err)
+                    svn_error_clear(cached_err);
+                  cached_err = err;
                 }
 
               break;
@@ -217,10 +223,13 @@ svn_ra_serf__handle_auth(int code,
       if (proto_found)
         break;
 
-      header = apr_strtok(auth_hdr, ",", &header_attr);
+      /* Try the next Authentication header. */
+      header = apr_strtok(NULL, ",", &header_attr);
     }
 
-  if (prot->auth_name == NULL)
+  SVN_ERR(cached_err);
+
+  if (!prot || prot->auth_name == NULL)
     {
       /* Support more authentication mechanisms. */
       return svn_error_createf(SVN_ERR_AUTHN_FAILED, NULL,
@@ -272,13 +281,13 @@ handle_basic_auth(svn_ra_serf__session_t *session,
         {
           return svn_error_create
             (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-             _("Missing 'realm' attribute in Authorization header."));
+             _("Missing 'realm' attribute in Authorization header"));
         }
       if (!realm_name)
         {
           return svn_error_create
             (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-             _("Missing 'realm' attribute in Authorization header."));
+             _("Missing 'realm' attribute in Authorization header"));
         }
 
       if (session->repos_url.port_str)
@@ -295,7 +304,10 @@ handle_basic_auth(svn_ra_serf__session_t *session,
                                     session->repos_url.hostname,
                                     port,
                                     realm_name);
+    }
 
+  if (!session->auth_state)
+    {
       SVN_ERR(svn_auth_first_credentials(&creds,
                                          &session->auth_state,
                                          SVN_AUTH_CRED_SIMPLE,
@@ -378,7 +390,7 @@ handle_proxy_basic_auth(svn_ra_serf__session_t *session,
   int i;
 
   tmp = apr_pstrcat(session->pool,
-                    session->proxy_username, ":", 
+                    session->proxy_username, ":",
                     session->proxy_password, NULL);
   tmp_len = strlen(tmp);
 
@@ -391,7 +403,7 @@ handle_proxy_basic_auth(svn_ra_serf__session_t *session,
                 "Proxy authentication failed");
     }
 
-  svn_ra_serf__encode_auth_header(session->proxy_auth_protocol->auth_name, 
+  svn_ra_serf__encode_auth_header(session->proxy_auth_protocol->auth_name,
                                   &session->proxy_auth_value,
                                   tmp, tmp_len, pool);
   session->proxy_auth_header = "Proxy-Authorization";
@@ -424,7 +436,7 @@ setup_request_proxy_basic_auth(svn_ra_serf__connection_t *conn,
   /* Take the default authentication header for this connection, if any. */
   if (conn->proxy_auth_header && conn->proxy_auth_value)
     {
-      serf_bucket_headers_setn(hdrs_bkt, conn->proxy_auth_header, 
+      serf_bucket_headers_setn(hdrs_bkt, conn->proxy_auth_header,
                                conn->proxy_auth_value);
     }
 
