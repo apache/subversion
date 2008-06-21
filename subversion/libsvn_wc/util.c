@@ -315,12 +315,12 @@ svn_wc_write_string(svn_stream_t *target,
                     apr_pool_t *pool,
                     const svn_string_t *str)
 {
+  apr_size_t len;
   /* @c svn_stream_printf() doesn't support binary bytes.  Since
    * str->data might contain binary stuff, let's use svn_stream_write()
    * instead. */
   SVN_ERR(svn_stream_printf(target, pool, "%" APR_SIZE_T_FMT ":",
                             str->len));
-  apr_size_t len;
   len = str->len;
   SVN_ERR(svn_stream_write(target, str->data, &len));
   SVN_ERR(svn_stream_printf(target, pool, "%s", " "));

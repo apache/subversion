@@ -571,13 +571,14 @@ file_diff(struct dir_baton *dir_baton,
      vs. text-base comparision. */
   if (copied)
     {
+      const svn_wc_entry_t *parent_entry;
+
       schedule = svn_wc_schedule_normal;
 
       /* Regarding svnpatch, when this file is only copied we only want
        * to consider it when its parent was *not* copied as well.  This
        * allows loose fuzzing and prevent adding the file to diffables
        * when it doesn't need to.  This is also true for move ops. */
-      const svn_wc_entry_t *parent_entry;
       SVN_ERR(svn_wc_entry(&parent_entry, dir_baton->path,
                            adm_access, TRUE, dir_baton->pool));
 
@@ -685,6 +686,8 @@ file_diff(struct dir_baton *dir_baton,
 
       if (modified || propchanges->nelts > 0)
         {
+          svn_boolean_t mt_binary, mt1_binary, mt2_binary;
+
           /* Get svn:mime-type for both base and working file. */
           SVN_ERR(get_base_mimetype(&base_mimetype, &baseprops,
                                     adm_access, path, pool));
@@ -707,8 +710,7 @@ file_diff(struct dir_baton *dir_baton,
            * and prop changes here.  In other words, no grab if this is
            * a non-binary file that carries text changes only as this
            * is left to the unidiff part. */
-          svn_boolean_t mt_binary = FALSE;
-          svn_boolean_t mt1_binary = FALSE, mt2_binary = FALSE;
+          mt1_binary = mt2_binary = FALSE;
           if (base_mimetype)
             mt1_binary = svn_mime_type_is_binary(base_mimetype);
           if (working_mimetype)
@@ -2941,9 +2943,10 @@ svn_wc_diff5(svn_wc_adm_access_t *anchor,
   /* Time to dump some serialiazed Editor Commands. */
   if (svnpatch_file && eb->diff_targets->nelts > 0)
     {
+      struct path_driver_cb_baton cb_baton;
+      apr_hash_t *diffable_entries;
       int i = 0;
       eb->next_token = 0;
-      struct path_driver_cb_baton cb_baton;
 
       /* Set up @c diff_editor with the set of svnpatch editor
        * functions defined in this same file. */
@@ -2953,7 +2956,7 @@ svn_wc_diff5(svn_wc_adm_access_t *anchor,
        * of diff_targets, i.e. the list of *diffable* entries, keyed on
        * their path.  This hash is looked up from path_driver_cb_func().
        */
-      apr_hash_t *diffable_entries = apr_hash_make(pool);
+      diffable_entries = apr_hash_make(pool);
 
       for (i = 0; i < eb->diff_targets->nelts; ++i)
         {
