@@ -1248,6 +1248,11 @@ svn_path_canonicalize(const char *path, apr_pool_t *pool)
   apr_size_t canon_segments = 0;
   svn_boolean_t uri;
 
+  /* "" is already canonical, so just return it; note that later code
+     depends on path not being zero-length.  */
+  if (! *path)
+    return path;
+
   dst = canon = apr_pcalloc(pool, strlen(path) + 1);
 
   /* Copy over the URI scheme if present. */
