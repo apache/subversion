@@ -46,8 +46,8 @@ struct serf_sspi_context_t
   sspi_auth_state state;
 };
 
-/* SSPI implementation of an ra_serf authentication protocol providor. 
-   handle_sspi_auth prepares the authentication headers for a new request 
+/* SSPI implementation of an ra_serf authentication protocol providor.
+   handle_sspi_auth prepares the authentication headers for a new request
    based on the response of the server. */
 svn_error_t *
 handle_sspi_auth(svn_ra_serf__session_t *session,
@@ -58,9 +58,9 @@ handle_sspi_auth(svn_ra_serf__session_t *session,
                  char *auth_attr,
                  apr_pool_t *pool);
 
-/* Initializes a new connection based on the info stored in the session 
+/* Initializes a new connection based on the info stored in the session
    object. For SSPI we will not reuse any of the authentication related data
-   in the session, as SSPI provides per connection authentication protocols. 
+   in the session, as SSPI provides per connection authentication protocols.
  */
 svn_error_t *
 init_sspi_connection(svn_ra_serf__session_t *session,
@@ -90,12 +90,12 @@ svn_error_t *
 setup_request_proxy_sspi_auth(svn_ra_serf__connection_t *conn,
                               serf_bucket_t *hdrs_bkt);
 
-/* Provides the necessary information for the http authentication headers 
-   for both the initial request to open an authentication connection, as 
-   the response to the server's authentication challenge. 
+/* Provides the necessary information for the http authentication headers
+   for both the initial request to open an authentication connection, as
+   the response to the server's authentication challenge.
  */
 svn_error_t *
-sspi_get_credentials(char *token, apr_size_t token_len, const char **buf, 
+sspi_get_credentials(char *token, apr_size_t token_len, const char **buf,
                      apr_size_t *buf_len, serf_sspi_context_t *sspi_ctx);
 
 #endif /* SVN_RA_SERF_SSPI_ENABLED */

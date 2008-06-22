@@ -996,7 +996,7 @@ Java_org_tigris_subversion_javahl_SVNClient_propertySet
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->propertySet(path, name, value, (svn_depth_t)jdepth, changelists, 
+  cl->propertySet(path, name, value, (svn_depth_t)jdepth, changelists,
                   jforce ? true:false, revprops);
 }
 

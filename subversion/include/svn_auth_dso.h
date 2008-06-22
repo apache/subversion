@@ -19,8 +19,8 @@
  * @brief Subversion's authentication system - Support for DSOs
  */
 
-#ifndef SVN_AUTH_KWALLET_H
-#define SVN_AUTH_KWALLET_H
+#ifndef SVN_AUTH_DSO_H
+#define SVN_AUTH_DSO_H
 
 #include <apr_pools.h>
 
@@ -70,4 +70,4 @@ svn_auth_get_kwallet_simple_provider(svn_auth_provider_object_t **provider,
 }
 #endif /* __cplusplus */
 
-#endif /* SVN_AUTH_KWALLET_H */
+#endif /* SVN_AUTH_DSO_H */

@@ -1,5 +1,46 @@
-Version 1.5.0
+Version 1.6.0
+(?? ??? 2008, from /branches/1.6.x)
+http://svn.collab.net/repos/svn/tags/1.6.0
+
+ User-visible changes:
+  - Major new features:
+
+  - Minor new features and improvements:
+
+  - Client-side bugfixes:
+
+  - Server-side bugfixes:
+
+  - Contributed tools improvements and bugfixes:
+    * commit-email.pl: Deprecated; use mailer.py instead (r31755,r31767)
+
+ Developer-visible changes:
+ * General:
+ * API changes:
+ * Bindings
+
+
+Version 1.5.1
 (?? ??? 2008, from /branches/1.5.x)
+http://svn.collab.net/repos/svn/tags/1.5.1
+
+ User-visible changes:
+  * fixed: crash on invalid dates in 'log' and 'blame' (issue #2721)
+  * mergeinfo on switched subtrees should elide in repos (issue #3188)
+  * fixed: 'svn status --xml' reporting invalid XML (issue #2887)
+  * fixed: 'svn merge' range notification bug (r30746, -47)
+  * fixed: can not replace branch with neon/serf (issue #2939)
+  * fixed: 'file not found' error when merging to a broken symlink (r31159, -79)
+  * fix a crash and endless loop for credentials in ra_serf (r31619)
+  * Add support for --config-dir to svnmerge.py (r31727)
+  * fixed: ArrayIndexOutOfBoundsException in JavaHL bindings (r31719, -806)
+
+ Developer-visible changes:
+  * fixed: crash when when svn_ra_open3() is passed a bogus URL (r31223)
+  * export svn_path_is_url() to the bindings (r31603)
+
+Version 1.5.0
+(19 Jun 2008, from /branches/1.5.x)
 http://svn.collab.net/repos/svn/tags/1.5.0
 
  User-visible changes:

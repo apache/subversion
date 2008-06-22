@@ -501,10 +501,10 @@ static fs_vtable_t fs_vtable = {
 /* Depending on CREATE, create or open the environment and databases
    for filesystem FS in PATH. Use POOL for temporary allocations. */
 static svn_error_t *
-open_databases(svn_fs_t *fs, 
+open_databases(svn_fs_t *fs,
                svn_boolean_t create,
                int format,
-               const char *path, 
+               const char *path,
                apr_pool_t *pool)
 {
   base_fs_data_t *bfd;
@@ -675,8 +675,8 @@ error:
 /* Gaining access to an existing Berkeley DB-based filesystem.  */
 
 svn_error_t *
-svn_fs_base__test_required_feature_format(svn_fs_t *fs, 
-                                          const char *feature, 
+svn_fs_base__test_required_feature_format(svn_fs_t *fs,
+                                          const char *feature,
                                           int requires)
 {
   base_fs_data_t *bfd = fs->fsap_data;
@@ -684,7 +684,7 @@ svn_fs_base__test_required_feature_format(svn_fs_t *fs,
     return svn_error_createf
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
        _("The '%s' feature requires version %d of the filesystem schema; "
-         "filesystem '%s' uses only version %d"), 
+         "filesystem '%s' uses only version %d"),
        feature, requires, fs->path, bfd->format);
   return SVN_NO_ERROR;
 }
@@ -721,8 +721,8 @@ base_open(svn_fs_t *fs, const char *path, apr_pool_t *pool,
   svn_boolean_t write_format_file = FALSE;
 
   /* Read the FS format number. */
-  svn_err = svn_io_read_version_file(&format, 
-                                     svn_path_join(path, FORMAT_FILE, pool), 
+  svn_err = svn_io_read_version_file(&format,
+                                     svn_path_join(path, FORMAT_FILE, pool),
                                      pool);
   if (svn_err && APR_STATUS_IS_ENOENT(svn_err->apr_err))
     {
@@ -737,7 +737,7 @@ base_open(svn_fs_t *fs, const char *path, apr_pool_t *pool,
     goto error;
 
   /* Create the environment and databases. */
-  svn_err = open_databases(fs, FALSE, format, path, pool);  
+  svn_err = open_databases(fs, FALSE, format, path, pool);
   if (svn_err) goto error;
 
   ((base_fs_data_t *) fs->fsap_data)->format = format;
@@ -746,7 +746,7 @@ base_open(svn_fs_t *fs, const char *path, apr_pool_t *pool,
   /* If we lack a format file, write one. */
   if (write_format_file)
     {
-      svn_err = svn_io_write_version_file(svn_path_join(path, FORMAT_FILE, 
+      svn_err = svn_io_write_version_file(svn_path_join(path, FORMAT_FILE,
                                                         pool), format, pool);
       if (svn_err) goto error;
     }
@@ -809,7 +809,7 @@ base_upgrade(svn_fs_t *fs, const char *path, apr_pool_t *pool,
 {
   /* Currently, upgrading just means bumping the format file's stored
      version number. */
-  return svn_io_write_version_file(svn_path_join(path, FORMAT_FILE, pool), 
+  return svn_io_write_version_file(svn_path_join(path, FORMAT_FILE, pool),
                                    SVN_FS_BASE__FORMAT_NUMBER, pool);
 }
 

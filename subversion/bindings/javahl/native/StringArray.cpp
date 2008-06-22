@@ -36,7 +36,7 @@ StringArray::~StringArray()
 
 const apr_array_header_t *StringArray::array(const Pool &pool)
 {
-  apr_array_header_t *strings 
+  apr_array_header_t *strings
     = apr_array_make(pool.pool(), m_strings.size(), sizeof(char *));
 
   std::vector<std::string>::const_iterator it;

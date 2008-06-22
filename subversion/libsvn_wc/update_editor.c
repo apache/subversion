@@ -642,7 +642,7 @@ struct file_baton
 
   /* The path to the incoming text base (that is, to a text-base-file-
      in-progress in the tmp area).  This gets set if there are file
-     content changes. */ 
+     content changes. */
   const char *new_text_base_path;
 
   /* If this file was added with history, this is the path to a copy
@@ -1356,7 +1356,7 @@ add_directory(const char *path,
       http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=136879
       From: "David Glasser" <glasser@davidglasser.net>
       To: "Karl Fogel" <kfogel@red-bean.com>, dev@subversion.tigris.org
-      Cc: "Arfrever Frehtes Taifersar Arahesis" <arfrever.fta@gmail.com>, 
+      Cc: "Arfrever Frehtes Taifersar Arahesis" <arfrever.fta@gmail.com>,
           glasser@tigris.org
       Subject: Re: svn commit: r30161 - in trunk/subversion: \
                libsvn_ra_neon tests/cmdline
@@ -3253,7 +3253,7 @@ make_editor(svn_revnum_t *target_revision,
   /* An unknown depth can't be sticky. */
   if (depth == svn_depth_unknown)
     depth_is_sticky = FALSE;
-  
+
   /* Get the anchor entry, so we can fetch the repository root. */
   SVN_ERR(svn_wc_entry(&entry, anchor, adm_access, FALSE, pool));
 
@@ -3331,7 +3331,7 @@ make_editor(svn_revnum_t *target_revision,
   if (depth_is_sticky)
     {
       const svn_wc_entry_t *target_entry;
-      SVN_ERR(svn_wc_entry(&target_entry, svn_path_join(anchor, target, pool), 
+      SVN_ERR(svn_wc_entry(&target_entry, svn_path_join(anchor, target, pool),
                            adm_access, FALSE, pool));
       if (target_entry && (target_entry->depth > depth))
         return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
@@ -3476,8 +3476,8 @@ svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
   assert(switch_url);
 
   return make_editor(target_revision, anchor, svn_wc_adm_access_path(anchor),
-                     target, use_commit_times, switch_url, 
-                     depth, depth_is_sticky, allow_unver_obstructions, 
+                     target, use_commit_times, switch_url,
+                     depth, depth_is_sticky, allow_unver_obstructions,
                      notify_func, notify_baton, cancel_func, cancel_baton,
                      conflict_func, conflict_baton,
                      NULL, NULL, /* TODO(sussman): add fetch callback here  */

@@ -156,7 +156,7 @@ struct driver_state {
   void *baton;
   svn_error_t* err;
 };
-  
+
 
 /* An iterator (for use via apr_table_do) which sets node properties.
    REC is a pointer to a struct driver_state. */
@@ -164,7 +164,7 @@ static int
 set_props(void *rec, const char *key, const char *value)
 {
   struct driver_state *d_state = (struct driver_state*)rec;
-  svn_string_t *value_svnstring 
+  svn_string_t *value_svnstring
     = value ? svn_string_create(value, d_state->pool) : NULL;
 
   if (d_state->kind == svn_node_dir)
@@ -261,7 +261,7 @@ drive(struct operation *operation,
          then close it. */
       if (file_baton)
         {
-          if ((child->kind == svn_node_file) 
+          if ((child->kind == svn_node_file)
               && (! apr_is_empty_table(child->props)))
             {
               state.baton = file_baton;
@@ -281,7 +281,7 @@ drive(struct operation *operation,
               || child->operation == OP_REPLACE))
         {
           SVN_ERR(drive(child, head, editor, subpool));
-          if ((child->kind == svn_node_dir) 
+          if ((child->kind == svn_node_dir)
               && (! apr_is_empty_table(child->props)))
             {
               state.baton = child->baton;
@@ -412,7 +412,7 @@ build(action_code_t action,
                                 copy_src ? copy_rev : head,
                                 &operation->kind, pool));
       if (operation->kind == svn_node_none)
-        return svn_error_createf(SVN_ERR_BAD_URL, NULL, 
+        return svn_error_createf(SVN_ERR_BAD_URL, NULL,
                                  "propset: '%s' not found", path);
       else if ((operation->kind == svn_node_file)
                && (operation->operation == OP_OPEN))
@@ -618,15 +618,15 @@ execute(const apr_array_header_t *actions,
         case ACTION_PUT:
           path1 = subtract_anchor(anchor, action->path[0], pool);
           SVN_ERR(build(ACTION_PUT, path1, action->path[0],
-                        SVN_INVALID_REVNUM, NULL, NULL, action->path[1], 
+                        SVN_INVALID_REVNUM, NULL, NULL, action->path[1],
                         head, anchor, session, &root, pool));
           break;
         case ACTION_PROPSET:
         case ACTION_PROPDEL:
           path1 = subtract_anchor(anchor, action->path[0], pool);
-          SVN_ERR(build(action->action, path1, action->path[0], 
-                        SVN_INVALID_REVNUM, 
-                        action->prop_name, action->prop_value, 
+          SVN_ERR(build(action->action, path1, action->path[0],
+                        SVN_INVALID_REVNUM,
+                        action->prop_name, action->prop_value,
                         NULL, head, anchor, session, &root, pool));
           break;
         }
@@ -903,7 +903,7 @@ main(int argc, const char **argv)
 
       /* For propset and propdel, a property name (and maybe value)
          comes next. */
-      if ((action->action == ACTION_PROPSET) 
+      if ((action->action == ACTION_PROPSET)
           || (action->action == ACTION_PROPDEL))
         {
           action->prop_name = APR_ARRAY_IDX(action_args, i, const char *);

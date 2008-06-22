@@ -115,7 +115,8 @@ ary_prefix_match(apr_array_header_t *pfxlist, const char *path)
       pfx_len = strlen(pfx);
       if (path_len < pfx_len)
         continue;
-      if (strncmp(path, pfx, pfx_len) == 0)
+      if (strncmp(path, pfx, pfx_len) == 0
+          && (path[pfx_len] == '\0' || path[pfx_len] == '/'))
         return TRUE;
     }
 
@@ -752,7 +753,7 @@ set_node_property(void *node_baton,
 
   if (strcmp(name, SVN_PROP_MERGEINFO) == 0)
     {
-      svn_string_t *filtered_mergeinfo;  /* Avoid compiler warning. */ 
+      svn_string_t *filtered_mergeinfo;  /* Avoid compiler warning. */
       apr_pool_t *pool = apr_hash_pool_get(rb->props);
       SVN_ERR(adjust_mergeinfo(&filtered_mergeinfo, value, rb, pool));
       value = filtered_mergeinfo;

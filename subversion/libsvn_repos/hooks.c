@@ -564,11 +564,20 @@ svn_repos__hooks_start_commit(svn_repos_t *repos,
   else if (hook)
     {
       const char *args[5];
-      char *capabilities_string = svn_cstring_join(capabilities, ":", pool);
+      char *capabilities_string;
 
-      /* Get rid of that annoying final colon. */
-      if (capabilities_string[0])
-        capabilities_string[strlen(capabilities_string) - 1] = '\0';
+      if (capabilities)
+        {
+          capabilities_string = svn_cstring_join(capabilities, ":", pool);
+
+          /* Get rid of that annoying final colon. */
+          if (capabilities_string[0])
+            capabilities_string[strlen(capabilities_string) - 1] = '\0';
+        }
+      else
+        {
+          capabilities_string = apr_pstrdup(pool, "");
+        }
 
       args[0] = hook;
       args[1] = svn_path_local_style(svn_repos_path(repos, pool), pool);

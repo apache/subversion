@@ -808,7 +808,7 @@ svn_cl__get_log_message(const char **log_msg,
           SVN_ERR(svn_cmdline_prompt_user
                   (&reply,
                    _("\nLog message unchanged or not specified\n"
-                     "(a)bort, (c)ontinue, (e)dit :\n"), pool));
+                     "(a)bort, (c)ontinue, (e)dit:\n"), pool));
           if (reply)
             {
               char letter = apr_tolower(reply[0]);
