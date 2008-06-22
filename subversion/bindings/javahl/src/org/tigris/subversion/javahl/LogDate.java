@@ -23,6 +23,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.TimeZone;
 
 /**
  * Holds date for a log message.  This class maintains
@@ -34,23 +35,24 @@ public class LogDate implements java.io.Serializable
 {
     private static final long serialVersionUID = 1L;
     private static final DateFormat formatter = new SimpleDateFormat(
-            "yyyy-MM-dd'T'HH:mm:ss.SSS");
+            "yyyy-MM-dd'T'HH:mm:ss.SSS z");
+    private static final TimeZone UTC = TimeZone.getTimeZone("UTC");
 
-    private long timeMicros;
-    private String cachedString;
-    private Calendar cachedDate;
-    
+    private final long timeMicros;
+    private final String cachedString;
+    private final Calendar cachedDate;
+
     public LogDate(String datestr) throws ParseException
     {
-        super();
-        if (datestr == null || datestr.length() < 27) {
-        	throw new ParseException("String is not a valid Subversion date", 0);
+        if (datestr == null || datestr.length() != 27 || datestr.charAt(26) != 'Z')
+        {
+            throw new ParseException("String is not a valid Subversion date", 0);
         }
-        Date date = formatter.parse(datestr.substring(0, 23));
+        Date date = formatter.parse(datestr.substring(0, 23) + " UTC");
         this.cachedString = datestr;
-        cachedDate = Calendar.getInstance();
+        cachedDate = Calendar.getInstance(UTC);
         cachedDate.setTime(date);
-        timeMicros = cachedDate.getTimeInMillis() * 1000 
+        timeMicros = cachedDate.getTimeInMillis() * 1000
                         + Integer.parseInt(datestr.substring(23, 26));
     }
 
@@ -92,12 +94,12 @@ public class LogDate implements java.io.Serializable
         return cachedDate.getTime();
     }
 
-    public String toString() 
+    public String toString()
     {
          return cachedString;
     }
 
-    public int hashCode() 
+    public int hashCode()
     {
         final int prime = 31;
         int result = 1;
@@ -105,7 +107,7 @@ public class LogDate implements java.io.Serializable
         return result;
     }
 
-    public boolean equals(Object obj) 
+    public boolean equals(Object obj)
     {
         if (this == obj)
             return true;

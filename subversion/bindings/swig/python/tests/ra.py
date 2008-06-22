@@ -230,7 +230,7 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
         reporter.finish_report(reporter_baton)
     finally:
         ra.reparent(self.ra_ctx, sess_url)
-      
+
     self.assertEqual("A test.\n", editor.textdeltas[0].new_data)
     self.assertEqual(1, len(editor.textdeltas))
 

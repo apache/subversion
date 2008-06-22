@@ -282,12 +282,12 @@ end_log(svn_ra_serf__xml_parser_t *parser,
   else if (state == ITEM &&
            strcmp(name.name, "log-item") == 0)
     {
-      if (log_ctx->limit && (log_ctx->nest_level == 0) 
+      if (log_ctx->limit && (log_ctx->nest_level == 0)
           && (++log_ctx->count > log_ctx->limit))
         {
           return SVN_NO_ERROR;
         }
-       
+
       /* Give the info to the reporter */
       SVN_ERR(log_ctx->receiver(log_ctx->receiver_baton,
                                 info->log_entry,
@@ -571,7 +571,8 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
   peg_rev = (start > end) ? start : end;
 
   SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url,
-                                         session, NULL, peg_rev, pool));
+                                         session, NULL, peg_rev, NULL,
+                                         pool));
 
   req_url = svn_path_url_add_component(basecoll_url, relative_url, pool);
 

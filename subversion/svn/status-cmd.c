@@ -187,7 +187,7 @@ svn_cl__status(apr_getopt_t *os,
   struct status_baton sb;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
-                                                      opt_state->targets, 
+                                                      opt_state->targets,
                                                       ctx, pool));
 
   /* Add "." if user passed 0 arguments */

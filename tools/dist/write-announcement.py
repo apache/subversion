@@ -104,7 +104,7 @@ ann_html = """\
 <dl><dd><a href="http://svn.collab.net/repos/svn/tags/@VERSION@/CHANGES">http://svn.collab.net/repos/svn/tags/@VERSION@/CHANGES</a></dd></dl>
 """
 
-import sys
+import sys, re
 
 def fmtsums_text(sumlist):
     return "\n".join(map(lambda x: "    " + x, sumlist))
@@ -116,6 +116,10 @@ def main():
     global ann_text
     global ann_html
     version = sys.argv[1]
+    if not re.compile(r'^\d+\.\d+\.\d+(-(alpha|beta|rc)\d+)?$').match(version):
+        print "Did you really mean to use version '%s'?" % version
+        return
+
     md5sums = []
     sha1sums = []
     siginfo = []

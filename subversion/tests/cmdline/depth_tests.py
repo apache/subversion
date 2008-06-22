@@ -1228,9 +1228,9 @@ def add_tree_with_depth(sbox):
   verify_depth(None, "files", new1_path)
 
   # Force add new1 at new1 again, should include new2 at empty, the depth of
-  # new1 should not change 
+  # new1 should not change
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     "add", "--depth", "immediates", 
+                                     "add", "--depth", "immediates",
                                      "--force", new1_path)
   verify_depth(None, "files", new1_path)
   verify_depth(None, "empty", new2_path)
@@ -1432,7 +1432,7 @@ def depthy_update_above_dir_to_be_deleted(sbox):
     "immediates" : (output_with_A, disk_with_only_iota, status_with_only_iota),
     "empty"      : (empty_output, initial_disk, status_with_dot),
     }
-    
+
   for depth in sbox_for_depth.keys():
     wc_dir = sbox_for_depth[depth].wc_dir
     (expected_output_func, expected_disk, expected_status_func) = \
@@ -1654,7 +1654,7 @@ def depth_folding_clean_trees_2(sbox):
   "gradually fold wc, focusing on depth=immediates"
 
   # Covers the following situations:
-  # 
+  #
   #  infinity=>immediates
   #  mixed(immediates+immediates)=>immediates
   #  mixed(immediates+infinity)=>immediates
@@ -1673,7 +1673,7 @@ def depth_folding_clean_trees_2(sbox):
                                      'up', '--depth', 'immediates', A_path)
   # check to see if it's really at immediates
   verify_depth(None, "immediates", A_path)
-  
+
   # pull in directory D at infinity
   svntest.actions.run_and_verify_svn(None, None, [], 'up', D_path)
 
@@ -1815,7 +1815,7 @@ def depth_fold_expand_clean_trees(sbox):
   "expand target while contracting subtree"
   #  --set-depth=immediates/files to an empty target with infinity
   #  sub-tree should both fold the subtree and expand the target
-  
+
   wc_dir, ign_a, ign_b, ign_c = set_up_depthy_working_copies(sbox, empty=True)
 
   A_path = os.path.join(wc_dir, 'A')
@@ -2013,6 +2013,46 @@ def fold_tree_with_unversioned_modified_items(sbox):
                                         '--set-depth', 'empty', A_path)
   verify_depth(None, "empty", A_path)
 
+
+def depth_empty_update_on_file(sbox):
+  "depth-empty update on a file doesn't break it"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  iota_path = os.path.join(wc_dir, 'iota')
+
+  # Change iota and commit it in r2.
+  svntest.main.file_write(iota_path, 'Modified iota\n')
+  expected_output = svntest.wc.State(wc_dir, { 'iota' : Item(verb='Sending'), })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', wc_rev=2, status='  ')
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, wc_dir)
+
+  # Update iota with depth=empty.
+  expected_output = svntest.wc.State(wc_dir,
+                                     {'iota': Item(status='U ') })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None, False,
+                                        '--depth=empty', '-r1', iota_path)
+
+  # Check the revision and created rev.
+  svntest.actions.run_and_verify_svn_match_any('rev is right',
+                                               r'^Revision: 1\n$',
+                                               [], 'info', iota_path)
+  svntest.actions.run_and_verify_svn_match_any('created rev is right',
+                                               r'^Last Changed Rev: 1\n$',
+                                               [], 'info', iota_path)
+
+
+
 #----------------------------------------------------------------------
 # list all tests here, starting with None:
 test_list = [ None,
@@ -2046,6 +2086,7 @@ test_list = [ None,
               XFail(depth_fold_expand_clean_trees),
               pull_in_tree_with_depth_option,
               XFail(fold_tree_with_unversioned_modified_items),
+              depth_empty_update_on_file,
             ]
 
 if __name__ == "__main__":

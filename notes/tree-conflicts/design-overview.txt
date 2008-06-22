@@ -127,8 +127,13 @@ Primary APIs:
 
 To do:
 
-  * APIs for getting a human-readable description are here in libsvn_wc,
-    but should be moved to a higher (client) layer.
+  (Nothing)
+
+Notes:
+
+  Special case: The root of the WC is the victim of a tree conflict. (This can only happen with a merge, as there can be no tree change scheduled locally for an update to conflict with.)
+  Problem: There is no parent directory in which to store the conflict info.
+  Solution: Abort with an error, and don't change the WC.
 
 
 [DISPLAY]
@@ -161,9 +166,6 @@ To do:
     don't feel that's right. See also [RESOLVED].
 
   * Clean up the "svn info" text: make it much less verbose.
-
-  * Move the human-readable data up from libsvn_wc to libsvn_client or so
-    - see [RECORD].
 
   * Consider whether "svn st ITEM" should show conflict on victim ITEM.
 
@@ -208,28 +210,41 @@ To do:
 
 Purpose:
 
-  Provide the user with tools and information and to resolve the conflicts.
+  1. Provide metadata about what happened.
+     - See [DISPLAY].
 
-Notes:
+  2. Provide access to all data involved in the conflict.
+     - Incomplete.
 
-  * Not sure what's needed here.
+  3. Enable the user to resolve the conflict by creating a desired working
+     version (including the desired scheduling).
+     - Is possible. No assistance is provided. Needs evaluation.
+     - Not sure what's needed here.
 
+  4. Enable the user to mark the conflict as resolved.
+     - Incomplete.
 
-[RESOLVED]
-==========
+Design:
 
-Purpose:
-
-  Enable the user to mark the conflict as Resolved, either with a command or
-  interactively.
+  * Keep all of the merge-left + merge-right + working data locally. (Ideally,
+    by analogy with text conflicts. May not be necessary for a first pass.)
+  * Ensure user has suitable and obvious commands for resolving.
+    - may include merge, delete, copy, etc.
+    - may require hints or documentation on what commands should be used.
+  * Interactive resolution should recognise tree conflicts and provide
+    basic and common resolutions.
+  * Ability to use "svn resolved" to say "the conflict on victim V is
+    resolved".
+  * Ability to use "svn resolve --accept=..." to say "resolve the conflict on
+    victim V by choosing ...".
 
 Status: incomplete
 
-  By command: the basic "svn resolved PARENT" works to some extent, but needs
-    attention.
+  * Mark as resolved, by command: the basic "svn resolved PARENT" works to some
+    extent, but needs attention.
     Issue #3145 <http://subversion.tigris.org/issues/show_bug.cgi?id=3145>
 
-  Interactively: not started.
+  * Mark as resolved, interactively: not started.
     Issue #3144 <http://subversion.tigris.org/issues/show_bug.cgi?id=3144>
 
 To do:

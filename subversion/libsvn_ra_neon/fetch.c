@@ -1868,11 +1868,11 @@ add_node_props(report_baton_t *rb, apr_pool_t *pool)
       if (lock_token)
         {
           svn_lock_t *lock;
-          SVN_ERR(svn_ra_neon__get_lock_internal(rb->ras, &lock, 
-                                                 TOP_DIR(rb).pathbuf->data, 
+          SVN_ERR(svn_ra_neon__get_lock_internal(rb->ras, &lock,
+                                                 TOP_DIR(rb).pathbuf->data,
                                                  pool));
           if (! (lock
-                 && lock->token 
+                 && lock->token
                  && (strcmp(lock->token, lock_token) == 0)))
             SVN_ERR(rb->editor->change_file_prop(rb->file_baton,
                                                  SVN_PROP_ENTRY_LOCK_TOKEN,
@@ -2253,8 +2253,8 @@ static svn_error_t * reporter_set_path(void *report_baton,
   if (lock_token)
     {
       tokenstring = apr_psprintf(pool, "lock-token=\"%s\"", lock_token);
-      apr_hash_set(rb->lock_tokens, 
-                   apr_pstrdup(apr_hash_pool_get(rb->lock_tokens), path), 
+      apr_hash_set(rb->lock_tokens,
+                   apr_pstrdup(apr_hash_pool_get(rb->lock_tokens), path),
                    APR_HASH_KEY_STRING,
                    apr_pstrdup(apr_hash_pool_get(rb->lock_tokens), lock_token));
     }
@@ -2295,8 +2295,8 @@ static svn_error_t * reporter_link_path(void *report_baton,
   if (lock_token)
     {
       tokenstring = apr_psprintf(pool, "lock-token=\"%s\"", lock_token);
-      apr_hash_set(rb->lock_tokens, 
-                   apr_pstrdup(apr_hash_pool_get(rb->lock_tokens), path), 
+      apr_hash_set(rb->lock_tokens,
+                   apr_pstrdup(apr_hash_pool_get(rb->lock_tokens), path),
                    APR_HASH_KEY_STRING,
                    apr_pstrdup(apr_hash_pool_get(rb->lock_tokens), lock_token));
     }

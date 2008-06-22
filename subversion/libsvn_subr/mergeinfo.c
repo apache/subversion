@@ -82,7 +82,7 @@ parse_pathname(const char **input, const char *end,
 
   if ((*pathname)->len == 0)
     return svn_error_create(SVN_ERR_MERGEINFO_PARSE_ERROR, NULL,
-                            _("No pathname preceeding ':'"));
+                            _("No pathname preceding ':'"));
   *input = curr;
 
   return SVN_NO_ERROR;
@@ -106,7 +106,7 @@ parse_pathname(const char **input, const char *end,
 
      e.g.  *LASTRANGE: '4-10*' merged with MRANGE: '6'________
                   |                           |               |
-             Update end field               Push       Account for trimmed 
+             Update end field               Push       Account for trimmed
                   |                           |        range from *LASTRANGE.
                   |                           |        Push it last to
                   |                           |        maintain sort order.
@@ -136,7 +136,7 @@ combine_with_lastrange(svn_merge_range_t** lastrange,
   svn_merge_range_t *pushed_mrange_2 = NULL;
   svn_boolean_t ranges_intersect = FALSE;
   svn_boolean_t ranges_have_same_inheritance = FALSE;
-  
+
   if (*lastrange)
     {
       if ((*lastrange)->start <= mrange->end
@@ -158,7 +158,7 @@ combine_with_lastrange(svn_merge_range_t** lastrange,
          LASTRANGE and MRANGE "intersect" but have different
          inheritability and we are considering inheritance so
          can't combined them...
-         
+
          ...In all these cases just push MRANGE onto *LASTRANGE. */
       if (dup_mrange)
         pushed_mrange_1 = svn_merge_range_dup(mrange, pool);
@@ -202,7 +202,7 @@ combine_with_lastrange(svn_merge_range_t** lastrange,
                       pushed_mrange_1->start = pushed_mrange_1->start;
                       pushed_mrange_1->end = tmp_revnum;
                       *lastrange = pushed_mrange_1;
-                    } 
+                    }
                 }
               else /* (*lastrange)->end < mrange->end) */
                 {
@@ -349,7 +349,7 @@ range_to_string(svn_string_t **result, svn_merge_range_t *range,
     *result = svn_string_createf(pool, "%ld-%ld%s", range->start + 1,
                                  range->end, range->inheritable
                                  ? "" : SVN_MERGEINFO_NONINHERITABLE_STR);
-  else 
+  else
     *result = svn_string_createf(pool, "%ld-%ld%s", range->start,
                                  range->end + 1, range->inheritable
                                  ? "" : SVN_MERGEINFO_NONINHERITABLE_STR);
@@ -1414,11 +1414,11 @@ svn_mergeinfo__remove_empty_rangelists(svn_mergeinfo_t mergeinfo,
           void *value;
           const char *path;
           apr_array_header_t *rangelist;
-          
+
           apr_hash_this(hi, &key, NULL, &value);
           path = key;
           rangelist = value;
-          
+
           if (rangelist->nelts == 0)
             {
               apr_hash_set(mergeinfo, path, APR_HASH_KEY_STRING, NULL);

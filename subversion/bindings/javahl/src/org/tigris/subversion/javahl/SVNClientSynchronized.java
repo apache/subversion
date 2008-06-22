@@ -988,7 +988,7 @@ public class SVNClientSynchronized implements SVNClientInterface
     public void merge(String path, Revision pegRevision,
                       RevisionRange[] revisions, String localPath,
                       boolean force, int depth, boolean ignoreAncestry,
-                      boolean dryRun, boolean recordOnly) 
+                      boolean dryRun, boolean recordOnly)
             throws ClientException
     {
         synchronized(clazz)

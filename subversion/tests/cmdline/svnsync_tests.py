@@ -148,7 +148,7 @@ or another dump file."""
   # Create a dump file from the mirror repository.
   dest_dump = svntest.actions.run_and_verify_dump(dest_sbox.repo_dir)
 
-  # Compare the dump produced by the mirror repository with either the original 
+  # Compare the dump produced by the mirror repository with either the original
   # dump file (used to create the master repository) or another specified dump
   # file.
   if exp_dump_file_name:
@@ -667,12 +667,12 @@ def copy_revprops(sbox):
 
 def only_trunk(sbox):
   "test syncing subdirectories"
-  run_test(sbox, "svnsync-trunk-only.dump", "/trunk", 
+  run_test(sbox, "svnsync-trunk-only.dump", "/trunk",
            "svnsync-trunk-only.expected.dump")
 
 def only_trunk_A_with_changes(sbox):
   "test syncing subdirectories with changes on root"
-  run_test(sbox, "svnsync-trunk-A-changes.dump", "/trunk/A", 
+  run_test(sbox, "svnsync-trunk-A-changes.dump", "/trunk/A",
            "svnsync-trunk-A-changes.expected.dump")
 
 # test for issue #2904

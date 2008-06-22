@@ -67,7 +67,7 @@ typedef enum
 
   /* Resolve the conflicted hunks by choosing the corresponding text
      from the post-conflict base copy file.
-     
+
      Note: this is a placeholder, not actually implemented in 1.5. */
   svn_cl__accept_theirs_conflict,
 
@@ -326,8 +326,8 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
 /*** Command-line output functions -- printing to the user. ***/
 
 /* Print out commit information found in COMMIT_INFO to the console.
- * POOL is used for temporay allocations. 
- * COMMIT_INFO should not be NULL. 
+ * POOL is used for temporay allocations.
+ * COMMIT_INFO should not be NULL.
  */
 svn_error_t *svn_cl__print_commit_info(svn_commit_info_t *commit_info,
                                        apr_pool_t *pool);

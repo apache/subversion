@@ -84,7 +84,6 @@ Commit access for specific areas:
         zbrown   Zack Brown <zbrown@tumblerings.org>         (doc)
         mprice   Michael Price <ectospheno@gmail.com>        (releases)
            pll   Paul lussier <p.lussier@comcast.net>        (releases)
-           kon   Kalle Olavi Niemitalo <kon@iki.fi>          (psvn.el)
     jrepenning   Jack Repenning <jrepenning@collab.net>      (tools/dev)
       lonestar   Martin Maurer <martin.maurer@email.de>      (svnshow)
        shlomif   Shlomi Fish <shlomif@vipe.technion.ac.il>   (svn-push)
@@ -181,6 +180,7 @@ Committers who have asked to be listed as dormant:
         bdenny   Brian Estlin <brian@implementality.com>
       rassilon   Bill Tutt <bill@tutts.org> (Win32, COM, issue-1003-dev br.)
          kraai   Matt Kraai <kraai@alumni.cmu.edu>
+           kon   Kalle Olavi Niemitalo <kon@iki.fi>          (psvn.el)
 
 ## Local Variables:
 ## coding:utf-8

@@ -49,10 +49,6 @@ fi
 
 AC_SUBST([MKDIR], ["$INSTALL -d"])
 
-
-dnl find Apache with a recent-enough magic module number.
-SVN_FIND_APACHE(20020903)
-
 # ==== Libraries, for which we may have source to build ======================
 
 dnl verify apr version and set apr flags
@@ -86,8 +82,18 @@ AC_ARG_ENABLE(neon-version-check,
   [])
 SVN_LIB_NEON($NEON_ALLOWED_LIST, $NEON_RECOMMENDED_VER, $NEON_URL)
 
+if test "$svn_lib_neon" = "yes"; then
+  AC_DEFINE([SVN_HAVE_NEON], 1,
+            [Defined if support for Neon is enabled])
+fi
+
 dnl Search for serf as an alternative to neon
 SVN_LIB_SERF
+
+if test "$svn_lib_serf" = "yes"; then
+  AC_DEFINE([SVN_HAVE_SERF], 1,
+            [Defined if support for Serf is enabled])
+fi
 
 dnl Search for apr_memcache (only affects fs_fs)
 SVN_LIB_APR_MEMCACHE
@@ -96,6 +102,10 @@ if test "$svn_lib_apr_memcache" = "yes"; then
   AC_DEFINE(SVN_HAVE_MEMCACHE, 1,
             [Defined if apr_memcache (standalone or in apr-util) is present])
 fi
+
+
+dnl Find Apache with a recent-enough magic module number
+SVN_FIND_APACHE(20020903)
 
 dnl Set up a number of directories ---------------------
 
@@ -954,8 +964,8 @@ SVN_CONFIG_SCRIPT(tools/backup/hot-backup.py)
 SVN_CONFIG_SCRIPT(contrib/client-side/svn_load_dirs/svn_load_dirs.pl)
 SVN_CONFIG_SCRIPT(contrib/client-side/svncopy/svncopy.pl)
 SVN_CONFIG_SCRIPT(contrib/client-side/svncopy/testsvncopy.pl)
+SVN_CONFIG_SCRIPT(contrib/hook-scripts/commit-email.pl)
 SVN_CONFIG_SCRIPT(tools/hook-scripts/commit-access-control.pl)
-SVN_CONFIG_SCRIPT(tools/hook-scripts/commit-email.pl)
 SVN_CONFIG_SCRIPT(subversion/bindings/swig/perl/native/Makefile.PL)
 SVN_CONFIG_SCRIPT(packages/solaris/pkginfo)
 AC_SUBST(SVN_CONFIG_SCRIPT_FILES)
