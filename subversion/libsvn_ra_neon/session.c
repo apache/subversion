@@ -1164,11 +1164,11 @@ svn_ra_neon__open(svn_ra_session_t *session,
 
   if (is_ssl_session)
     {
-      const char *authorities, *trust_default_ca;
-      authorities = svn_config_get_server_setting(
-            cfg, server_group,
-            SVN_CONFIG_OPTION_SSL_AUTHORITY_FILES,
-            NULL);
+      svn_boolean_t trust_default_ca;
+      const char *authorities
+        = svn_config_get_server_setting(cfg, server_group,
+                                        SVN_CONFIG_OPTION_SSL_AUTHORITY_FILES,
+                                        NULL);
 
       if (authorities != NULL)
         {
@@ -1237,12 +1237,11 @@ svn_ra_neon__open(svn_ra_session_t *session,
         }
 
       /* See if the user wants us to trust "default" openssl CAs. */
-      trust_default_ca = svn_config_get_server_setting(
-               cfg, server_group,
-               SVN_CONFIG_OPTION_SSL_TRUST_DEFAULT_CA,
-               "true");
+      SVN_ERR(svn_config_get_server_setting_bool(
+               cfg, &trust_default_ca, server_group,
+               SVN_CONFIG_OPTION_SSL_TRUST_DEFAULT_CA, TRUE));
 
-      if (svn_cstring_casecmp(trust_default_ca, "true") == 0)
+      if (trust_default_ca)
         {
           ne_ssl_trust_default_ca(sess);
           ne_ssl_trust_default_ca(sess2);
