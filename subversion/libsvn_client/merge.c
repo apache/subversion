@@ -3518,7 +3518,13 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
 }
 
 
-/* Implements the svn_log_entry_receiver_t interface. */
+/* Implements the svn_log_entry_receiver_t interface.
+ *
+ * BATON is an 'apr_array_header_t *'.  Copy LOG_ENTRY->revision (in
+ * BATON's pool, not POOL) and push the copy onto BATON.  Thus, a
+ * series of invocations of this callback accumulates the
+ * corresponding set of revisions into BATON.
+ */
 static svn_error_t *
 log_changed_revs(void *baton,
                   svn_log_entry_t *log_entry,
@@ -3538,7 +3544,12 @@ log_changed_revs(void *baton,
    RA_SESSION was modified (if by "modified" we mean "'svn log' would
    return that revision).  *OPERATIVE_RANGES_P is allocated from the
    same pool as RANGES, and the ranges within it are shared with
-   RANGES, too.  Use POOL for temporary allocations.  */
+   RANGES, too.
+
+   *OPERATIVE_RANGES_P may be the same as RANGES (that is, the output
+   parameter is set only after the input is no longer used).
+
+   Use POOL for temporary allocations.  */
 static svn_error_t *
 remove_noop_merge_ranges(apr_array_header_t **operative_ranges_p,
                          svn_ra_session_t *ra_session,
