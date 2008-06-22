@@ -99,6 +99,13 @@ Candidate changes for 1.5.1:
    Votes:
      +1: cmpilato
 
+ * r31737
+   Fix compilation error in JavaHL on Windows x64.
+   Justification:
+     Small fix, user-report error.
+   Votes:
+     +1: hwright
+
  * r31825
    Don't reset LDFLAGS when the '--with-zlib' option was passed to configure.
    Votes:
