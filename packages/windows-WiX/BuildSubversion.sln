@@ -1,0 +1,18 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+# SharpDevelop 3.0.0.3107
+Project("{CFEE4113-1246-4D54-95CB-156813CB8593}") = "BuildSubversion", "BuildSubversion\BuildSubversion.wixproj", "{B7895E09-F3EE-4CD0-B5AB-36611B25752E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B7895E09-F3EE-4CD0-B5AB-36611B25752E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B7895E09-F3EE-4CD0-B5AB-36611B25752E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B7895E09-F3EE-4CD0-B5AB-36611B25752E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B7895E09-F3EE-4CD0-B5AB-36611B25752E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+	EndGlobalSection
+EndGlobal
