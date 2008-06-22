@@ -77,8 +77,11 @@ Candidate changes for 1.5.1:
    using the svn_ra_get_log2() interface to figure out in which revisions
    the source really changed, and using that information to filter out
    no-op revision ranges prior to merging.
+   Notes:
+     See http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=140423
+     regarding a possible optimization, but this is still good as-is.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, kfogel
 
  * r30632, r30749, r31757, r31769, r31817
    Fix issue #3174, 'Merge algorithm chokes on subtrees needing special
