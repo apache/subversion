@@ -1446,7 +1446,11 @@ merge_dir_deleted(svn_wc_adm_access_t *adm_access,
         if (entry && (entry->schedule != svn_wc_schedule_delete))
           {
             /* ### TODO: Before deleting, we should ensure that this dir
-               tree is equal to the one we're being asked to delete. */
+               tree is equal to the one we're being asked to delete.
+               If not, mark this directory as a tree conflict victim,
+               because this could be use case 5 as described in
+               notes/tree-conflicts/detection.txt.
+             */
 
             svn_path_split(path, &parent_path, NULL, subpool);
             SVN_ERR(svn_wc_adm_retrieve(&parent_access, adm_access, parent_path,
@@ -1485,7 +1489,9 @@ merge_dir_deleted(svn_wc_adm_access_t *adm_access,
         *state = svn_wc_notify_state_obstructed;
       break;
     case svn_node_none:
-      /* Dir is already non-existent. Conflict. (Formerly treated as no-op.) */
+      /* Dir is already non-existent. This is use case 6 as described in
+       * notes/tree-conflicts/detection.txt.
+       * This case was formerly treated as no-op. */
       SVN_ERR(tree_conflict(merge_b, adm_access, path,
                             svn_node_dir,
                             svn_wc_conflict_action_delete,
