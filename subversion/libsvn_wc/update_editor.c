@@ -1108,7 +1108,8 @@ leftmod_error_chain(svn_error_t *err,
 /* Set *MODIFIED to true iff the item described by ENTRY has local
  * modifications.
  * For a file, this means text mods or property mods.
- * For a directory, this means property mods.
+ * For a directory, this means property mods, adds and deletes of
+ * items in the directory, or modifications to the items in the directory.
  * PARENT_ADM_ACCESS is the admin access baton of FULL_PATH's parent dir.
  */
 static svn_error_t *
@@ -1122,13 +1123,6 @@ entry_has_local_mods(svn_boolean_t *modified,
   svn_boolean_t props_modified;
   svn_wc_adm_access_t *adm_access;
 
-  /* one way */
-  /*  if (entry && (entry->schedule != svn_wc_schedule_normal
-                    || entry->has_prop_mods
-                    || (entry-kind == svn_node_file && ...modified...)))
-  */
-
-  /* another way */
   if (entry->kind == svn_node_file)
     {
       SVN_ERR(svn_wc_text_modified_p(&text_modified, full_path, FALSE,
@@ -1138,7 +1132,9 @@ entry_has_local_mods(svn_boolean_t *modified,
   else
     {
       text_modified = FALSE;
-      SVN_ERR(svn_wc_adm_retrieve(&adm_access, parent_adm_access, full_path, pool));
+      SVN_ERR(svn_wc_adm_retrieve(&adm_access, parent_adm_access,
+                                  full_path, pool));
+      /* TODO: Check for added/deleted files or directories. */
     }
   SVN_ERR(svn_wc_props_modified_p(&props_modified, full_path,
                                   adm_access, pool));
@@ -1146,7 +1142,6 @@ entry_has_local_mods(svn_boolean_t *modified,
   *modified = (text_modified || props_modified);
   return SVN_NO_ERROR;
 }
-
 
 /* Raise a tree conflict on the parent directory if the ACTION on FULL_PATH
  * would conflict with FULL_PATH's scheduled change. ENTRY must be the wc-entry
@@ -1212,10 +1207,22 @@ check_tree_conflict(svn_stringbuf_t *log_accum,
            * paper attached to issue #2282
            * See also notes/tree-conflicts/detection.txt
            */
-          /* ### TODO: also detect deep modifications in a directory tree */
           SVN_ERR(entry_has_local_mods(&modified, parent_adm_access, entry,
                                        full_path, pool));
-          if (modified)
+
+          /* ### TODO: Also detect deep modifications in a directory tree.
+           *     The update editor will not visit subdirectories of a
+           *     directory it wants to delete. Therefore, we need to start
+           *     a separate crawl here to make sure the directory tree we
+           *     are about to delete hasn't been locally modified anywhere.
+           */
+#if 0
+          SVN_ERR(subtrees_have_local_mods(&modified, parent_adm_access, entry,
+                                           full_path, pool));
+          /* Alternatively, have entry_has_local_mods() do the recursion. */
+#endif
+
+           if (modified)
             {
               reason = svn_wc_conflict_reason_edited;
             }
