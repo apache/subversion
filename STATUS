@@ -64,7 +64,7 @@ Candidate changes for 1.5.1:
      the part of the merge was skipped, and r31312 fixes a problem with
      merge notification.
    Votes:
-     +1: pburba
+     +1: pburba, kfogel
 
  * r31425, r31722
    Support the 'http-library' option when Subversion was configured
