@@ -1360,8 +1360,8 @@ find_nearest_ancestor(apr_array_header_t *children_with_mergeinfo,
       svn_client__merge_path_t *child =
         APR_ARRAY_IDX(children_with_mergeinfo, i, svn_client__merge_path_t *);
       if (svn_path_is_ancestor(child->path, path)
-          && (svn_path_compare_paths(child->path, path) != 0
-              || path_is_own_ancestor))
+          && (path_is_own_ancestor
+              || svn_path_compare_paths(child->path, path) != 0))
         ancestor_index = i;
     }
   return ancestor_index;
