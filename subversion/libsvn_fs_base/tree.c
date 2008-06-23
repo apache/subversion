@@ -1630,8 +1630,7 @@ deltify_mutable(svn_fs_t *fs,
 
       for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
         {
-          /* KEY will be the entry name, VAL the dirent (about
-             which we really don't care) */
+          /* KEY will be the entry name, VAL the dirent */
           const void *key;
           void *val;
           svn_fs_dirent_t *entry;
@@ -2698,7 +2697,7 @@ svn_fs_base__deltify(svn_fs_t *fs,
   args.revision = revision;
   SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_rev_get_txn_id, &args, pool));
 
-  return deltify_mutable(fs, root, "/", NULL, svn_node_unknown, txn_id, pool);
+  return deltify_mutable(fs, root, "/", NULL, svn_node_dir, txn_id, pool);
 }
 
 
