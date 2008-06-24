@@ -371,7 +371,7 @@ do_wc_to_wc_copies(const apr_array_header_t *copy_pairs,
       if (src_access)
         {
           err = propagate_mergeinfo_within_wc(pair, src_access, dst_access,
-                                              ctx, pool);
+                                              ctx, iterpool);
           if (err)
             break;
 
@@ -463,7 +463,7 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
         break;
 
       err = propagate_mergeinfo_within_wc(pair, src_access, dst_access,
-                                          ctx, pool);
+                                          ctx, iterpool);
       if (err)
         break;
 
@@ -1773,7 +1773,7 @@ setup_copy(svn_commit_info_t **commit_info_p,
                                             iterpool));
           src_basename = svn_path_basename(pair->src, iterpool);
           if (srcs_are_urls && ! dst_is_url)
-            src_basename = svn_path_uri_decode(src_basename, pool);
+            src_basename = svn_path_uri_decode(src_basename, iterpool);
 
           /* Check to see if all the sources are urls or all working copy
            * paths. */
@@ -2015,11 +2015,11 @@ svn_client_copy4(svn_commit_info_t **commit_info_p,
 
       src_basename = svn_path_basename(src_path, subpool);
       if (svn_path_is_url(src_path) && ! svn_path_is_url(dst_path))
-        src_basename = svn_path_uri_decode(src_basename, pool);
+        src_basename = svn_path_uri_decode(src_basename, subpool);
 
       err = setup_copy(&commit_info,
                        sources,
-                       svn_path_join(dst_path, src_basename, pool),
+                       svn_path_join(dst_path, src_basename, subpool),
                        FALSE /* is_move */,
                        TRUE /* force, set to avoid deletion check */,
                        make_parents,
@@ -2033,7 +2033,7 @@ svn_client_copy4(svn_commit_info_t **commit_info_p,
       if (commit_info)
         *commit_info_p = svn_commit_info_dup(commit_info, pool);
       else
-        *commit_info_p = commit_info;
+        *commit_info_p = NULL;
     }
 
   svn_pool_destroy(subpool);
