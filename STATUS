@@ -125,5 +125,11 @@ Candidate changes for 1.5.1:
    Votes:
      +1: stsp
 
+ * r31868
+   Fix unbounded memory usage in wc-to-wc multi-file copy and move (which
+   can make large "svn mv foo/* bar/" impossible).
+   Votes:
+     +1: glasser
+
 Approved changes:
 =================
