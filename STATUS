@@ -96,11 +96,12 @@ Candidate changes for 1.5.1:
    Votes:
      +1: pburba
 
- * r31820
+ * r31820, r31859
    Performance improvements for BDB-backed repository post-commit
    deltification.
    Votes:
-     +1: cmpilato, kfogel
+     +1 (r31820): cmpilato, kfogel
+     +1: brane
 
  * r31737
    Fix compilation error in JavaHL on Windows x64.
