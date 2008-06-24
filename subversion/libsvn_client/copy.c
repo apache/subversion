@@ -325,7 +325,7 @@ do_wc_to_wc_copies(const apr_array_header_t *copy_pairs,
       if (ctx->cancel_func)
         SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
-      svn_path_split(pair->src, &src_parent, NULL, pool);
+      svn_path_split(pair->src, &src_parent, NULL, iterpool);
 
       /* Need to avoid attempting to open the same dir twice when source
          and destination overlap. */
@@ -379,12 +379,12 @@ do_wc_to_wc_copies(const apr_array_header_t *copy_pairs,
             SVN_ERR(svn_wc_adm_close(src_access));
         }
     }
+  svn_pool_destroy(iterpool);
 
   svn_sleep_for_timestamps();
   SVN_ERR(err);
 
   SVN_ERR(svn_wc_adm_close(dst_access));
-  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
@@ -477,11 +477,10 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
         SVN_ERR(svn_wc_adm_close(dst_access));
       SVN_ERR(svn_wc_adm_close(src_access));
     }
+  svn_pool_destroy(iterpool);
 
   svn_sleep_for_timestamps();
   SVN_ERR(err);
-
-  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
