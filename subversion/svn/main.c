@@ -623,12 +623,12 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 
   { "mergeinfo", svn_cl__mergeinfo, {0}, N_
     ("Display merge-related information.\n"
-     "usage: mergeinfo SOURCE-URL[@REV] [TARGET[@REV]]\n"
+     "usage: mergeinfo SOURCE[@REV] [TARGET[@REV]]\n"
      "\n"
      "  Display information related to merges (or potential merges) between\n"
-     "  SOURCE-URL and TARGET (default: '.').  If the --show-revs option\n"
+     "  SOURCE and TARGET (default: '.').  If the --show-revs option\n"
      "  is not provided, display revisions which have been merged from\n"
-     "  SOURCE-URL to TARGET; otherwise, display the type of information\n"
+     "  SOURCE to TARGET; otherwise, display the type of information\n"
      "  specified by the --show-revs option.\n"),
     {'r', opt_show_revs} },
 
