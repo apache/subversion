@@ -125,5 +125,10 @@ Candidate changes for 1.5.1:
    Votes:
      +1: glasser, hwright
 
+ * r31875
+   Fix 'svn log --xml' against pre-1.2 servers.
+   Votes:
+     +1: hwright
+
 Approved changes:
 =================
