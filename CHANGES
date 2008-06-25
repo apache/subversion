@@ -34,6 +34,8 @@ http://svn.collab.net/repos/svn/tags/1.5.1
   * fix a crash and endless loop for credentials in ra_serf (r31619)
   * Add support for --config-dir to svnmerge.py (r31727)
   * fixed: ArrayIndexOutOfBoundsException in JavaHL bindings (r31719, -806)
+  * improve performance of bdb post-commit deltification (r31820 -59)
+  * don't clobber LDFLAGS in configure when given '--with-zlib' (r31825)
 
  Developer-visible changes:
   * fixed: crash when when svn_ra_open3() is passed a bogus URL (r31223)
