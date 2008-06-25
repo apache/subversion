@@ -128,5 +128,10 @@ Candidate changes for 1.5.1:
    Votes:
      +1: hwright
 
+ * r31786
+   Fix the Ruby bindings test failures: Normalize compared value.
+   Votes:
+     +1: kou
+
 Approved changes:
 =================
