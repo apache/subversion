@@ -4,10 +4,29 @@ subcommands.
 I HISTORY
   -------
 
-[remind the reasons behind the design of such a new format]
+Subversion's diff facility by default generates an unidiff format output.  The
+unidiff format is famous with tools like diff(1) and has been used for decades
+to produce contextual differences between files.  We also often associate it
+with patch(1) to apply those contextual differences.  When it comes to
+non-contextual changes like moving a directory, adding a property to a file, or
+modifying an image, unidiff is helpless.  Enters the svnpatch format.  It
+enables capturing all non-contextual changes into a WC-portable output so that
+it is possible to create rich patches to apply across working copies.  Another
+way to look at it is as an "offline merge", in which one dumps the diffs,
+passes them as a patch on to her peer who then applies it, without ever
+interacting with the repository.
 
-(We want something that supports any change and suitable enough for code
-review.)
+The svnpatch format is in fact a simplified version of the Subversion protocol
+-- see subversion/libsvn_ra_svn/protocol -- that meets our needs.  The
+advantage here is that changes are serialized into a language that Subversion
+already speaks and only a few minor tweaks were needed to accommodate.  As an
+example, revisions have been stripped from the protocol to allow fuzzing.
+
+The implementation with the command line client uses `svn diff --svnpatch' to
+generate the rich diffs and `svn patch' to apply the diffs against a working
+copy.  Other frontends can also take advantage of svnpatch in the same way
+through the usual API's svn_client_diff4 and svn_client_patch that use files to
+communicate.
 
 
 II SVNPATCH FORMAT IN A NUTSHELL
@@ -93,13 +112,12 @@ FubVdHJ64wAHuXp5eEQ7h0gy3uDuS80cTFc1qzQ9fXqQejYXzoLUGCHRu4ERtuHl4/5rq8ZQtHlm
 /jajOzZHXqhZGp3i4Qe3df931IwwrBVePlyTX//3AAAA
 ]]]
 
-Let's uncompress and decode the above block:
+Let's uncompress and decode the above base64 block (lines are wrapped):
 
 ( open-root ( ( ) 2:d0 ) ) ( add-file ( 3:bar 2:d0 2:c1 ( ) ) ) (
 change-file-prop ( 2:c1 7:newprop ( 7:propval ) ) ) ( add-dir ( 3:foo 2:d0 2:d2
 ( ) ) ) ( close-dir ( 2:d2 ) ) ( close-dir ( 2:d0 ) ) ( close-file ( 2:c1 ( ) )
 ) ( close-edit ( ) )
-
 
 Further examples can be found in subversion/tests/cmdline/diff_tests.py
 test-suite.
@@ -113,7 +131,8 @@ editable.  Should it be in cleartext, the user would still have to go through
 svn protocol writing manually -- calculate checksums and strings length, and
 place tokens, assumed to be not so friendly for the end-user.  However, there's
 a much easier workaround: apply the patch, and then start editing the working
-copy with regular svn subcommands.
+copy with regular svn subcommands.  There's also the `--dry-run' option that
+can help see what the patch will do.
 
 
 V PATCHING
