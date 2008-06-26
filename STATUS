@@ -36,7 +36,7 @@ Candidate changes for 1.5.1:
      the r31059 group ("don't explicitly record implicit mergeinfo") does fail
      without it and thus neatly demonstrates why this change is needed.
    Votes:
-     +1: pburba, markphip
+     +1: pburba, markphip, kfogel
 
  * r31059, r31060, r31061, r31075, r31151, r31398, and r31482
    Fix issue #3157, Merging a change from a path's natural history
@@ -50,7 +50,7 @@ Candidate changes for 1.5.1:
      comment for merge.c's filter_natural_history_from_mergeinfo, again this
      is fairly trivial to resolve.  This fix is dependent on r30748.
    Votes:
-     +1: pburba
+     +1: pburba, kfogel
      +1: cmpilato, markphip (all except r31398 and 31482)
 
  * r31300, r31301, r31312
