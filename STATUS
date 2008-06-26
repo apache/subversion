@@ -130,13 +130,3 @@ Candidate changes for 1.5.1:
 
 Approved changes:
 =================
-
- * r30748
-   Don't try to drive the merge editor when there is nothing to be merged.
-   Justification:
-     I didn't originally nominate this for backport as I couldn't
-     demonstrate any problem with it on trunk.  But the new merge test in
-     the r31059 group ("don't explicitly record implicit mergeinfo") does fail
-     without it and thus neatly demonstrates why this change is needed.
-   Votes:
-     +1: pburba, markphip, kfogel

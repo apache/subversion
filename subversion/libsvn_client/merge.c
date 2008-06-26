@@ -4366,6 +4366,11 @@ do_directory_merge(const char *url1,
                                     ra_session, mergeinfo_path,
                                     adm_access, merge_b));
 
+  /* Always start with a range which describes our most inclusive merge. */
+  range.start = revision1;
+  range.end = revision2;
+  range.inheritable = inheritable;
+
   if (honor_mergeinfo && !merge_b->record_only)
     {
       svn_revnum_t start_rev, end_rev;
@@ -4375,15 +4380,15 @@ do_directory_merge(const char *url1,
          end revisions. */
       start_rev = get_most_inclusive_start_rev(children_with_mergeinfo,
                                                is_rollback);
-      if (start_rev == SVN_INVALID_REVNUM)
-        start_rev = revision1;
-
+    
+      /* Is there anything to merge? */
+      if (SVN_IS_VALID_REVNUM(start_rev))
+        {
+          range.start = start_rev;
           end_rev = get_youngest_end_rev(children_with_mergeinfo, is_rollback);
 
           /* Build a range which describes our most inclusive merge. */
           range.start = start_rev;
-      range.end = revision2;
-      range.inheritable = inheritable;
 
           /* While END_REV is valid, do the following:
 
@@ -4447,8 +4452,9 @@ do_directory_merge(const char *url1,
                     }
                 }
               SVN_ERR(drive_merge_report_editor(merge_b->target,
-                                            real_url1, start_rev, real_url2, 
-                                            end_rev, children_with_mergeinfo,
+                                                real_url1, start_rev,
+                                                real_url2, end_rev,
+                                                children_with_mergeinfo,
                                                 is_rollback,
                                                 depth, notify_b, adm_access,
                                                 &merge_callbacks, merge_b,
@@ -4461,9 +4467,9 @@ do_directory_merge(const char *url1,
                                         old_sess2_url, iterpool));
 
               /* Prepare for the next iteration (if any). */
-          remove_first_range_from_remaining_ranges(children_with_mergeinfo, 
-                                                   pool);
-          next_end_rev = get_youngest_end_rev(children_with_mergeinfo, 
+              remove_first_range_from_remaining_ranges(
+                children_with_mergeinfo, pool);
+              next_end_rev = get_youngest_end_rev(children_with_mergeinfo,
                                                   is_rollback);
               if ((next_end_rev != SVN_INVALID_REVNUM)
                   && is_path_conflicted_by_merge(merge_b))
@@ -4481,13 +4487,9 @@ do_directory_merge(const char *url1,
             }
           svn_pool_destroy(iterpool);
         }
+    }
   else
     {
-      /* Build a range which describes our most inclusive merge. */
-      range.start = revision1;
-      range.end = revision2;
-      range.inheritable = inheritable;
-
       if (!merge_b->record_only)
         {
           /* Reset cur_ancestor_index to -1 so that subsequent cherry
