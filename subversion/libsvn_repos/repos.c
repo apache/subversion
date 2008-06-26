@@ -726,8 +726,7 @@ PREWRITTEN_HOOKS_TEXT
 "REPOS=\"$1\""                                                               NL
 "REV=\"$2\""                                                                 NL
                                                                              NL
-"commit-email.pl \"$REPOS\" \"$REV\" commit-watchers@example.org"            NL
-"log-commit.py --repository \"$REPOS\" --revision \"$REV\""                  NL;
+"mailer.py commit \"$REPOS\" \"$REV\" /path/to/mailer.conf"                  NL;
 
 #undef SCRIPT_NAME
 
@@ -912,8 +911,8 @@ PREWRITTEN_HOOKS_TEXT
 "PROPNAME=\"$4\""                                                            NL
 "ACTION=\"$5\""                                                              NL
 ""                                                                           NL
-"commit-email.pl --revprop-change \"$REPOS\" \"$REV\" \"$USER\" \"$PROPNAME\" "
-"watchers@example.org"                                                       NL;
+"mailer.py propchange2 \"$REPOS\" \"$REV\" \"$USER\" \"$PROPNAME\" "
+"\"$ACTION\" /path/to/mailer.conf"                                           NL;
 
 #undef SCRIPT_NAME
 
@@ -1381,7 +1380,7 @@ svn_repos_upgrade(const char *path,
   const char *format_path;
   int format;
   apr_pool_t *subpool = svn_pool_create(pool);
-  
+
   /* Fetch a repository object; for the Berkeley DB backend, it is
      initialized with an EXCLUSIVE lock on the database.  This will at
      least prevent others from trying to read or write to it while we
@@ -1399,12 +1398,12 @@ svn_repos_upgrade(const char *path,
   format_path = svn_path_join(repos->path, SVN_REPOS__FORMAT, subpool);
   SVN_ERR(svn_io_read_version_file(&format, format_path, subpool));
   SVN_ERR(svn_io_write_version_file(format_path, format, subpool));
-  
+
   /* Try to upgrade the filesystem. */
   SVN_ERR(svn_fs_upgrade(repos->db_path, subpool));
 
   /* Now overwrite our format file with the latest version. */
-  SVN_ERR(svn_io_write_version_file(format_path, SVN_REPOS__FORMAT_NUMBER, 
+  SVN_ERR(svn_io_write_version_file(format_path, SVN_REPOS__FORMAT_NUMBER,
                                     subpool));
 
   /* Close shop and free the subpool, to release the exclusive lock. */
@@ -1460,7 +1459,7 @@ svn_repos_has_capability(svn_repos_t *repos,
       svn_mergeinfo_catalog_t ignored;
       apr_array_header_t *paths = apr_array_make(pool, 1,
                                                  sizeof(char *));
-      
+
       SVN_ERR(svn_fs_revision_root(&root, repos->fs, 0, pool));
       APR_ARRAY_PUSH(paths, const char *) = "";
       err = svn_fs_get_mergeinfo(&ignored, root, paths, FALSE, FALSE, pool);

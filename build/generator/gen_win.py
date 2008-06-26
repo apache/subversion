@@ -258,7 +258,7 @@ class WinGeneratorBase(GeneratorBase):
 
     #Here we can add additional platforms to compile for
     self.platforms = ['Win32']
-    
+
     # VS2002 and VS2003 only allow a single platform per project file
     if subdir == 'vcnet-vcproj':
       if self.vsnet_version != '7.00' and self.vsnet_version != '8.00':
@@ -749,6 +749,8 @@ class WinGeneratorBase(GeneratorBase):
 
     if cfg == 'Debug':
       fakedefines.extend(["_DEBUG","SVN_DEBUG"])
+    elif cfg == 'Release':
+      fakedefines.append("NDEBUG")
 
     # XXX: Check if db is present, and if so, let apr-util know
     # XXX: This is a hack until the apr build system is improved to
@@ -774,9 +776,11 @@ class WinGeneratorBase(GeneratorBase):
       fakedefines.append("SVN_NEON_0_28=1")
 
     if self.serf_lib:
+      fakedefines.append("SVN_HAVE_SERF")
       fakedefines.append("SVN_LIBSVN_CLIENT_LINKS_RA_SERF")
 
     if self.neon_lib:
+      fakedefines.append("SVN_HAVE_NEON")
       fakedefines.append("SVN_LIBSVN_CLIENT_LINKS_RA_NEON")
 
     # check we have sasl
@@ -1071,7 +1075,7 @@ class WinGeneratorBase(GeneratorBase):
     data = {
       'version' : self.vsnet_proj_ver,
       'configs' : self.configs,
-      'platforms' : self.platforms      
+      'platforms' : self.platforms
       }
     for key, val in params:
       data[key] = val

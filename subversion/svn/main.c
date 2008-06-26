@@ -464,7 +464,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  Use just 'svn diff' to display local modifications in a working copy.\n"),
     {'r', 'c', opt_old_cmd, opt_new_cmd, 'N', opt_depth, opt_diff_cmd, 'x',
-     opt_no_diff_deleted, opt_notice_ancestry, opt_summarize, opt_changelist, 
+     opt_no_diff_deleted, opt_notice_ancestry, opt_summarize, opt_changelist,
      opt_force, opt_xml} },
 
   { "export", svn_cl__export, {0}, N_
@@ -623,12 +623,12 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 
   { "mergeinfo", svn_cl__mergeinfo, {0}, N_
     ("Display merge-related information.\n"
-     "usage: mergeinfo SOURCE-URL[@REV] [TARGET[@REV]]\n"
+     "usage: mergeinfo SOURCE[@REV] [TARGET[@REV]]\n"
      "\n"
      "  Display information related to merges (or potential merges) between\n"
-     "  SOURCE-URL and TARGET (default: '.').  If the --show-revs option\n"
+     "  SOURCE and TARGET (default: '.').  If the --show-revs option\n"
      "  is not provided, display revisions which have been merged from\n"
-     "  SOURCE-URL to TARGET; otherwise, display the type of information\n"
+     "  SOURCE to TARGET; otherwise, display the type of information\n"
      "  specified by the --show-revs option.\n"),
     {'r', opt_show_revs} },
 
@@ -777,13 +777,13 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  svn:needs-lock properties cannot be set on a directory.  A non-recursive\n"
      "  attempt will fail, and a recursive attempt will set the property\n"
      "  only on the file children of the directory.\n"),
-    {'F', opt_encoding, 'q', 'r', opt_targets, 'R', opt_depth, opt_revprop, 
+    {'F', opt_encoding, 'q', 'r', opt_targets, 'R', opt_depth, opt_revprop,
      opt_force, opt_changelist },
     {{'F', N_("read property value from file ARG")}} },
 
   { "resolve", svn_cl__resolve, {0}, N_
     ("Resolve conflicts on working copy files or directories.\n"
-     "usage: resolve [PATH...]\n"
+     "usage: resolve --accept=ARG [PATH...]\n"
      "\n"
      "  Note:  the --accept option is currently required.\n"),
     {opt_targets, 'R', opt_depth, 'q', opt_accept},
@@ -921,7 +921,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  See also 'svn help update' for a list of possible characters\n"
      "  reporting the action taken.\n"),
-    { 'r', 'N', opt_depth, opt_set_depth, 'q', opt_merge_cmd, opt_relocate, 
+    { 'r', 'N', opt_depth, opt_set_depth, 'q', opt_merge_cmd, opt_relocate,
       opt_ignore_externals, opt_force, opt_accept} },
 
   { "unlock", svn_cl__unlock, {0}, N_
@@ -969,7 +969,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  targets of this operation.  Currently, the depth of a working copy\n"
      "  directory can only be increased (telescoped more deeply); you cannot\n"
      "  make a directory more shallow.\n"),
-    {'r', 'N', opt_depth, opt_set_depth, 'q', opt_merge_cmd, opt_force, 
+    {'r', 'N', opt_depth, opt_set_depth, 'q', opt_merge_cmd, opt_force,
      opt_ignore_externals, opt_changelist, opt_editor_cmd, opt_accept} },
 
   { NULL, NULL, {0}, NULL, {0} }
@@ -1158,7 +1158,7 @@ main(int argc, const char *argv[])
           char *end;
           svn_revnum_t changeno;
           svn_opt_revision_range_t *range;
-          apr_array_header_t *change_revs = 
+          apr_array_header_t *change_revs =
             svn_cstring_split(opt_arg, ", \n\r\t\v", TRUE, pool);
 
           if (opt_state.old_target)
@@ -1171,13 +1171,13 @@ main(int argc, const char *argv[])
 
           for (i = 0; i < change_revs->nelts; i++)
             {
-              const char *change_str = 
+              const char *change_str =
                 APR_ARRAY_IDX(change_revs, i, const char *);
 
               /* Allow any number of 'r's to prefix a revision number.
                  ### TODO: Any reason we're not just using opt.c's
                  ### revision-parsing code here?  Then -c could take
-                 ### "{DATE}" and the special words. */ 
+                 ### "{DATE}" and the special words. */
               while (*change_str == 'r')
                 change_str++;
               changeno = strtol(change_str, &end, 10);
@@ -1489,7 +1489,7 @@ main(int argc, const char *argv[])
         if (opt_state.show_revs == svn_cl__show_revs_invalid)
           return svn_cmdline_handle_exit_error
             (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                               _("'%s' is not a valid --show-revs value"), 
+                               _("'%s' is not a valid --show-revs value"),
                                opt_arg),
              pool, "svn: ");
         break;

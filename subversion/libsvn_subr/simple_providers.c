@@ -65,12 +65,17 @@ simple_password_get(const char **password,
                     apr_pool_t *pool)
 {
   svn_string_t *str;
-  str = apr_hash_get(creds, SVN_AUTH__AUTHFILE_PASSWORD_KEY,
+  str = apr_hash_get(creds, SVN_AUTH__AUTHFILE_USERNAME_KEY,
                      APR_HASH_KEY_STRING);
-  if (str && str->data)
+  if (str && strcmp(str->data, username) == 0)
     {
-      *password = str->data;
-      return TRUE;
+      str = apr_hash_get(creds, SVN_AUTH__AUTHFILE_PASSWORD_KEY,
+                         APR_HASH_KEY_STRING);
+      if (str && str->data)
+        {
+          *password = str->data;
+          return TRUE;
+        }
     }
   return FALSE;
 }
@@ -348,7 +353,7 @@ svn_auth__simple_save_creds_helper(svn_boolean_t *saved,
           else
             {
               return svn_error_createf
-                (SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
+                (SVN_ERR_BAD_CONFIG_VALUE, NULL,
                  _("Config error: invalid value '%s' for option '%s'"),
                 store_plaintext_passwords,
                 SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS);

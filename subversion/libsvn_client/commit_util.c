@@ -442,7 +442,7 @@ harvest_committables(apr_hash_t *committables,
       svn_boolean_t eol_prop_changed;
 
       /* First of all, the working file or directory must exist.
-         See issue #3198. */  
+         See issue #3198. */
       SVN_ERR(svn_io_check_path(path, &working_kind, pool));
       if (working_kind == svn_node_none)
         {

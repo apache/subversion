@@ -710,7 +710,7 @@ svn_repos_replay2(svn_fs_root_t *root,
               APR_ARRAY_PUSH(paths, const char *) = path;
               apr_hash_set(changed_paths, path, keylen, change);
             }
-          /* ...unless this was a change to one of the parent directories of 
+          /* ...unless this was a change to one of the parent directories of
              base_path. */
           else if (is_within_base_path(base_path, path, keylen))
             {

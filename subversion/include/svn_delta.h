@@ -52,7 +52,7 @@ const svn_version_t *svn_delta_version(void);
  * @defgroup delta_support Delta generation and handling
  *
  * @{
- */ 
+ */
 
 /**  Text deltas.
  *

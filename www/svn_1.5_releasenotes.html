@@ -15,13 +15,6 @@
 <body>
 <div class="app">
 
-<div class="warningmessage">
-<p><strong>Note:</strong> Subversion 1.5 is <em>not released yet</em>.
-When it is released, this warning message will disappear, and the rest
-of this page will become the release notes.  Until then, this page
-describes what is planned for the release.</p>
-</div>
-
 <h1 style="text-align: center">Subversion 1.5 Release Notes</h1>
 
 <div class="h2" id="news" title="news">
@@ -250,14 +243,9 @@ href="http://subversion.tigris.org/issues/show_bug.cgi?id=3024" >issue
 <p>Although we try hard to keep output from the command line programs
 compatible between releases, new information sometimes has to be
 added.  This can break scripts that rely on the exact format of the
-output.  1.5 contains the following output changes:</p>
-
-<p>XXX: Enumerate changes to output (e.g. for changelists).</p>
-
-<ul>
-  <li><p>Conflict markers in files now match the file's defined
-    eol-style.</p></li>
-</ul>
+output.  Unfortunately, we are not able to enumerate all of the output
+changes in 1.5, but one of them is that conflict markers in files now
+match the file's defined eol-style.</p>
 
 </div>  <!-- output-changes -->
 
@@ -332,20 +320,24 @@ maintaining branches, and gives users a way to inquire what changes
 are merged&nbsp;&mdash;&nbsp;or are available to be
 merged&nbsp;&mdash;&nbsp;on different lines of development.</p>
 
-<p>The merge tracking support in Subversion 1.5 is "foundational": the
-most important parts are implemented, but there are still some parts
-of our <a href="http://subversion.tigris.org/merge-tracking/"
->original spec</a> that remain to be done (in particular, proper
-support for <a
-href="http://subversion.tigris.org/issues/show_bug.cgi?id=2897"
->reflective merges</a>, better <a
-href="http://subversion.tigris.org/issues/show_bug.cgi?id=3126"
->change-availability reporting</a>, and better <a
-href="http://subversion.tigris.org/issues/show_bug.cgi?id=3128" >
-tracking of renamed files</a>).  As there were many major features
-waiting to ship in 1.5, we didn't want to delay their release by rigid
-adherence to one feature's specifications.  Look for further merge
-tracking improvements in Subversion 1.6 and afterwards.</p>
+<p>The merge tracking support in Subversion 1.5 is "foundational": its
+basic functionality is implemented, but there are still parts of our
+<a href="http://subversion.tigris.org/merge-tracking/" >original
+spec</a> that remain to be done, and merging is sometimes too slow.
+There will be merge tracking improvements in Subversion 1.5.1 and
+afterwards.  In the meantime:</p>
+
+<ul>
+<li><p>Take a look at <a href="#mt-known-issues"
+    >the list of known issues</a></p></li>
+<li><p>Read <a
+    href="http://svnbook.red-bean.com/nightly/en/svn.branchmerge.advanced.html#svn.branchmerge.advanced.finalword"
+    >"The Final Word on Merge Tracking"</a> in the Subversion Book</p></li> 
+<li><p>Read <a
+    href="http://www.collab.net/community/subversion/articles/merge-info.html"
+    >"Understanding the internals of Subversion's merge tracking feature"</a>
+    by Paul Burba</p></li>
+</ul>
 
 <div class="h4" id="mt-overview" title="mt-overview">
 <h4>Overview</h4>
@@ -466,14 +458,52 @@ itself now uses.</p>
 
 </div>  <!-- mt-compatibility -->
 
-<div class="h4" id="mt-known-limitations" title="mt-known-limitations">
-<h4>Known Limitations</h4>
+<div class="h4" id="mt-known-issues" title="mt-known-issues">
+<h4>Known Issues</h4>
 
-<p>This section describes a problem that is being fixed in
-development versions of Subversion, and releases in the near future
-will contain those fixes.  See <a
-href="http://subversion.tigris.org/issues/show_bug.cgi?id=3157" >Issue
-#3157</a> for more details.</p>
+<p>There are still known issues with merge tracking in 1.5.0.  We're
+working on the most important ones first, which are:</p>
+
+<ul>
+<li><a href="http://subversion.tigris.org/issues/show_bug.cgi?id=3128"
+    >issue #3128</a>: <code>merge --reintegrate</code> should handle
+    renames better</li>
+<li><a href="http://subversion.tigris.org/issues/show_bug.cgi?id=2897"
+    >issue #2897</a>: proper support for reflective merges</li>
+<li><a href="http://subversion.tigris.org/issues/show_bug.cgi?id=3126"
+    >issue #3126</a>: better change-availability reporting
+    (<code>svn&nbsp;mergeinfo</code> shows too few or too many eligible
+    revisions)</li>
+<li><a href="http://subversion.tigris.org/issues/show_bug.cgi?id=2837"
+    >issue #2837</a>: allow merge tracking to be useful when performing
+    cyclic merging</li>
+<li><a href="http://subversion.tigris.org/issues/show_bug.cgi?id=3056"
+    >issue #3056</a>: avoid repeat merge in an intelligent way</li>
+<li><a href="http://subversion.tigris.org/issues/show_bug.cgi?id=2898"
+    >issue #2898</a>: handle mergeinfo when deleting/adding children
+    you don't have access to</li>
+<li><a href="http://subversion.tigris.org/issues/show_bug.cgi?id=3067"
+    >issue #3067</a>: subtrees that don't exist at the start or end of
+    a merge range shouldn't break the merge</li>
+<li><a href="http://subversion.tigris.org/issues/show_bug.cgi?id=3157"
+    >issue #3157</a>: merging a change from a path's natural history
+    creates self-referential mergeinfo</li>
+<li><a href="http://subversion.tigris.org/issues/show_bug.cgi?id=3174"
+    >issue #3174</a>: merge algorithm chokes on subtrees needing
+    special attention that have been renamed</li>
+</ul>
+
+<p>(See also the <a
+href="http://subversion.tigris.org/issues/buglist.cgi?issue_status=UNCONFIRMED&amp;issue_status=NEW&amp;issue_status=STARTED&amp;issue_status=REOPENED&amp;keywords=merge-tracking&amp;keywords_type=anytokens"
+>list of merge-tracking-related open issues</a> and the <a
+href="http://subversion.tigris.org/issues/buglist.cgi?issue_status=UNCONFIRMED&amp;issue_status=NEW&amp;issue_status=STARTED&amp;issue_status=REOPENED&amp;short_desc=merg&amp;short_desc_type=substring"
+>list of all merge-related open issues</a>, though note that not all
+of merge-related issues are about merge-tracking and many predate it.)</p>
+
+<p><a href="http://subversion.tigris.org/issues/show_bug.cgi?id=3157"
+>Issue #3157</a> is particularly easy to run into, so here's a more
+detailed explanation of what the issue is and how to work around
+it:</p>
 
 <p>Merge tracking information currently can include the "natural
 history" of a path.  One situation where this happens is when creating
@@ -510,7 +540,7 @@ href="http://subversion.tigris.org/servlets/ReadMsg?listName=dev&amp;msgNo=13937
 href="#mt-reintegrate" >use the <code>--reintegrate</code> option</a>;
 then this problem won't happen in the first place.</p>
 
-</div>  <!-- mt-known-limitations -->
+</div>  <!-- mt-known-issues -->
 
 <div class="h4" id="mt-further-reading" title="mt-further-reading">
 <h4>Further reading</h4>
@@ -939,8 +969,7 @@ the target directory.</p>
 
 <p>See The <a
 href="http://svnbook.red-bean.com/nightly/en/svn.advanced.externals.html"
->svn:externals</a> section of the Subversion Book.  (XXX TODO: which
-needs to be updated to cover the new features!)</p>
+>svn:externals</a> section of the Subversion Book.</p>
 
 </div>  <!-- externals-further-reading -->
 
@@ -1115,14 +1144,16 @@ without ever having to relay them to the master backend.</p>
 <p>The master MUST have a post-commit hook that updates all of the slaves.  An
 example that does this using <code>svnadmin dump</code>/<code>svnadmin
 load</code> and ssh is provided below.  <tt>svnsync</tt> can probably do the
-same thing (XXX: we should probably answer this question more confidently).</p>
+same thing.</p>
 
-<p>Additionally, if locks are permitted on the master repository, lock databases
-need to kept in sync via post-lock and post-unlock hooks on the master pushing
-the lock state to the slaves.  (Username preservation is left as an exercise to
-the reader.)(XXX: Same as above.)  If the lock database is not propogated, users 
-will not be able to accurately determine whether a lock is held - but locking
-will still work.</p>
+<p>Additionally, if locks are permitted on the master repository, lock
+databases need to kept in sync via post-lock and post-unlock hooks on
+the master pushing the lock state to the slaves.  (Username
+preservation is left as an exercise to the reader.  Translation: <a
+href="hacking.html#patches">patches to these notes are most
+welcome</a>.)  If the lock database is not propogated, users will not
+be able to accurately determine whether a lock is
+held&nbsp;&mdash;&nbsp;but locking will still work.</p>
 
 <p>A sample synchronization script may look like this:</p>
 <pre><code>

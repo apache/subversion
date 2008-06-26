@@ -390,7 +390,7 @@ handle_proxy_basic_auth(svn_ra_serf__session_t *session,
   int i;
 
   tmp = apr_pstrcat(session->pool,
-                    session->proxy_username, ":", 
+                    session->proxy_username, ":",
                     session->proxy_password, NULL);
   tmp_len = strlen(tmp);
 
@@ -403,7 +403,7 @@ handle_proxy_basic_auth(svn_ra_serf__session_t *session,
                 "Proxy authentication failed");
     }
 
-  svn_ra_serf__encode_auth_header(session->proxy_auth_protocol->auth_name, 
+  svn_ra_serf__encode_auth_header(session->proxy_auth_protocol->auth_name,
                                   &session->proxy_auth_value,
                                   tmp, tmp_len, pool);
   session->proxy_auth_header = "Proxy-Authorization";
@@ -436,7 +436,7 @@ setup_request_proxy_basic_auth(svn_ra_serf__connection_t *conn,
   /* Take the default authentication header for this connection, if any. */
   if (conn->proxy_auth_header && conn->proxy_auth_value)
     {
-      serf_bucket_headers_setn(hdrs_bkt, conn->proxy_auth_header, 
+      serf_bucket_headers_setn(hdrs_bkt, conn->proxy_auth_header,
                                conn->proxy_auth_value);
     }
 

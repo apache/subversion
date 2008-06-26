@@ -910,6 +910,11 @@ If POS is nil, use current buffer location."
         (forward-line 0)
         (1+ (count-lines start (point)))))))
 
+(defun svn-substring-no-properties (string)
+  (if (fboundp 'substring-no-properties)
+      (substring-no-properties string)
+    string))
+
 ; xemacs
 ;; Evaluate the defsubst at compile time, so that the byte compiler
 ;; knows the definition and can inline calls.  It cannot detect the
@@ -4017,7 +4022,7 @@ When called with a negative prefix argument, only update the selected files."
       (message "Running svn-update for %s" default-directory)
       (svn-run t t 'update "update"
                (when rev (list "-r" rev))
-               (list "--non-interactive")))))
+               (list "--non-interactive") default-directory))))
 
 (defun svn-status-commit ()
   "Commit selected files.
@@ -4235,7 +4240,7 @@ static char * data[] = {
 
 (defsubst svn-status-in-vc-mode? ()
   "Is vc-svn active?"
-  (and vc-mode (string-match "^ SVN" (substring-no-properties vc-mode))))
+  (and vc-mode (string-match "^ SVN" (svn-substring-no-properties vc-mode))))
 
 (when svn-status-fancy-file-state-in-modeline
   (defadvice vc-find-file-hook (after svn-status-vc-svn-find-file-hook activate)
@@ -5379,7 +5384,7 @@ HANDLER-FUNCTION is called with the match of LINK-REGEXP when the user clicks at
 (defun svn-log-resolve-trac-ticket-short (link-name)
   "Show the trac ticket specified by LINK-NAME via `svn-trac-browse-ticket'."
   (interactive)
-  (let ((ticket-nr (string-to-number (substring-no-properties link-name 1))))
+  (let ((ticket-nr (string-to-number (svn-substring-no-properties link-name 1))))
     (svn-trac-browse-ticket ticket-nr)))
 
 ;; register the out of the box provided link handlers

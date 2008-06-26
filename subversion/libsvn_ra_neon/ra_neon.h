@@ -444,7 +444,7 @@ svn_error_t * svn_ra_neon__get_starting_props(svn_ra_neon__resource_t **rsrc,
 
    Also return *MISSING_PATH (allocated in POOL), which is the
    trailing portion of the URL that did not exist.  If an error
-   occurs, *MISSING_PATH isn't changed. 
+   occurs, *MISSING_PATH isn't changed.
 
    Cache the version-controlled-configuration in SESS->vcc, and the
    repository uuid in SESS->uuid. */

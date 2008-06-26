@@ -1429,8 +1429,8 @@ def merge_sensitive_log_target_with_bogus_mergeinfo(sbox):
   svntest.main.run_svn(None, 'ps', SVN_PROP_MERGEINFO, '/A/B:0', D_path)
   #commit at r2
   svntest.main.run_svn(None, 'ci', '-m', 'setting bogus mergeinfo', D_path)
-  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, 
-                                                              [], 'log', 
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None,
+                                                              [], 'log',
                                                               '-g', D_path)
   if len(err):
     raise svntest.Failure("svn log -g target_with_bogus_mergeinfo fails")
