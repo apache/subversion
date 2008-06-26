@@ -22,7 +22,6 @@
 
 /*** Includes. ***/
 
-#include <assert.h>
 #include "svn_pools.h"
 #include "svn_wc.h"
 #include "svn_client.h"
@@ -61,8 +60,14 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
   const char *session_url;
 
   /* Sanity check.  Without these, the checkout is meaningless. */
-  assert(path != NULL);
-  assert(url != NULL);
+  if (! path)
+    return svn_error_createf
+      (SVN_ERR_INCORRECT_PARAMS, NULL,
+       _("svn_client__checkout_internal() must be passed a non-NULL path"));
+  if (! url)
+    return svn_error_createf
+      (SVN_ERR_INCORRECT_PARAMS, NULL,
+       _("svn_client__checkout_internal() must be passed a non-NULL url"));
 
   /* Fulfill the docstring promise of svn_client_checkout: */
   if ((revision->kind != svn_opt_revision_number)
