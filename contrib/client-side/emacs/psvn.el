@@ -239,6 +239,7 @@
 
 (eval-when-compile (require 'dired))
 (eval-when-compile (require 'ediff-util))
+(eval-when-compile (require 'ediff-wind))
 (eval-when-compile (require 'elp))
 (eval-when-compile (require 'pp))
 
@@ -910,10 +911,10 @@ If POS is nil, use current buffer location."
         (forward-line 0)
         (1+ (count-lines start (point)))))))
 
-(defun svn-substring-no-properties (string)
+(defun svn-substring-no-properties (string &optional from to)
   (if (fboundp 'substring-no-properties)
-      (substring-no-properties string)
-    string))
+      (substring-no-properties string from to)
+    (substring string from to)))
 
 ; xemacs
 ;; Evaluate the defsubst at compile time, so that the byte compiler
@@ -4249,7 +4250,20 @@ static char * data[] = {
 
   (defadvice vc-after-save (after svn-status-vc-svn-after-save activate)
     "vc-after-save advice for synchronizing psvn when saving buffer"
-    (when (svn-status-in-vc-mode?) (svn-status-update-modeline))))
+    (when (svn-status-in-vc-mode?) (svn-status-update-modeline)))
+
+  (defadvice ediff-refresh-mode-lines
+    (around svn-modeline-ediff-fixup activate compile)
+    "Fixup svn file status in the modeline when using ediff"
+    (ediff-with-current-buffer ediff-buffer-A
+                               (svn-status-uninstall-state-mark-modeline))
+    (ediff-with-current-buffer ediff-buffer-B
+                               (svn-status-uninstall-state-mark-modeline))
+    ad-do-it
+    (ediff-with-current-buffer ediff-buffer-A
+                               (svn-status-update-modeline))
+    (ediff-with-current-buffer ediff-buffer-B
+                               (svn-status-update-modeline))))
 
 (defun svn-status-update-modeline ()
   "Update modeline state dot mark properly"
