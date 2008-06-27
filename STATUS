@@ -24,9 +24,9 @@ Candidate changes for 1.5.1:
      r31199 is a trivial followup that adds a missing SVN_ERR() wrap.
      r31280, r31283 and r31287 add a regression test.
    Votes:
+     +1: lgo, hwright
      +1: kfogel (r31196 and r31199 only)
      +0: danielsh
-     +1: lgo
 
  * r31059, r31060, r31061, r31075, r31151, r31398, and r31482
    Fix issue #3157, Merging a change from a path's natural history
@@ -64,7 +64,7 @@ Candidate changes for 1.5.1:
 
  * r30632, r30749, r31757, r31769, r31817
    Fix issue #3174, 'Merge algorithm chokes on subtrees needing special
-   attention that have been renamed'
+   attention that have been renamed'.
    Justification:
      File merges that encounter this problem break, the fix is fairly simple,
      and directory merges already have the equivalent fix in 1.5.0.
@@ -89,7 +89,7 @@ Candidate changes for 1.5.1:
      Was originally committed to the svnpatch-diff branch in r31831, and
      then merged to trunk as r31833.
    Votes:
-     +1: danielsh
+     +1: danielsh, hwright
 
  * r31852
    Make libsvn_ra depend on libsvn_delta unconditionally.
@@ -128,11 +128,11 @@ Candidate changes for 1.5.1:
    range shouldn't break the merge.
    Votes:
      +1: kameshj
+
+Approved changes:
+=================
    
  * r31884
    Fix issue #2242: auth cache picking up password from wrong username entry.
    Votes:
      +1: arfrever, danielsh, stylesen
-
-Approved changes:
-=================
