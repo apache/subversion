@@ -82,12 +82,17 @@ simple_password_get(const char **password,
                     apr_pool_t *pool)
 {
   svn_string_t *str;
-  str = apr_hash_get(creds, SVN_AUTH__AUTHFILE_PASSWORD_KEY,
+  str = apr_hash_get(creds, SVN_AUTH__AUTHFILE_USERNAME_KEY,
                      APR_HASH_KEY_STRING);
-  if (str && str->data)
+  if (str && strcmp(str->data, username) == 0)
     {
-      *password = str->data;
-      return TRUE;
+      str = apr_hash_get(creds, SVN_AUTH__AUTHFILE_PASSWORD_KEY,
+                         APR_HASH_KEY_STRING);
+      if (str && str->data)
+        {
+          *password = str->data;
+          return TRUE;
+        }
     }
   return FALSE;
 }
