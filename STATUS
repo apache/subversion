@@ -126,7 +126,7 @@ Candidate changes for 1.5.1:
  * r31884
    Fix issue #2242: auth cache picking up password from wrong username entry.
    Votes:
-     +1: arfrever, danielsh
+     +1: arfrever, danielsh, stylesen
 
 Approved changes:
 =================
