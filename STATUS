@@ -123,6 +123,12 @@ Candidate changes for 1.5.1:
    Votes:
      +1: kou
 
+ * r31900
+   Fix issue #3067: subtrees that don't exist at the start or end of a merge
+   range shouldn't break the merge.
+   Votes:
+     +1: kameshj
+   
  * r31884
    Fix issue #2242: auth cache picking up password from wrong username entry.
    Votes:
