@@ -3434,23 +3434,30 @@ solution described here was not mentioned in that thread.</p>
 <div class="h3" id="already-under-version-control" title="already-under-version-control">
 <h3>I can't add a directory
     because Subversion says it's "already under version control".</h3>
-<p>The directory you're trying to add already contains
-  a <tt>.svn</tt> subdirectory, but it's from a different repository
-  than the directory to which you're trying to add it.  This probably
-  happened because you used your operating system's "copy" command to
-  copy one working copy into the current one.</p>
+<p>The directory you're trying to add already contains a <tt>.svn</tt>
+  subdirectory&nbsp;&mdash;&nbsp;it is a working
+  copy&nbsp;&mdash;&nbsp;but it's from a different repository location
+  than the directory to which you're trying to add it. This probably
+  happened because you used your operating system's "copy" command
+  (instead of <tt>svn copy</tt>) to copy a subdirectory in this working
+  copy, or to copy some other working copy into this one.</p>
 <p>
   The quick and dirty solution is to delete all <tt>.svn</tt>
   directories contained in the directory you're trying to add; this
-  will let the "add" command complete.  If you're using Unix, this
-  command will delete <tt>.svn</tt> directories
-  under <tt>dir</tt>:</p>
+  will let the "add" command complete. If you're using Unix, this
+  command will delete <tt>.svn</tt> directories under
+  <tt>dir</tt>:</p>
 <pre>
   find dir -type d -name .svn -exec rm -rf {} \;
 </pre>
-<p>However, you should ask yourself <em>why</em> you made this copy;
-  and you should ensure that by adding this directory, you won't be
-  making an unwanted copy of it in your repository.
+<p>However, if the copy was from the same repository, you should
+  ideally delete or move aside the copy, and use <tt>svn copy</tt> to
+  make a proper copy, which will know its history and save space in the
+  repository.</p>
+<p>If it was from a different repository, you should ask yourself
+  <em>why</em> you made this copy; and you should ensure that by
+  adding this directory, you won't be making an unwanted copy of it in
+  your repository.
 </p>
 
 </div>
