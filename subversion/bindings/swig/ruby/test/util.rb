@@ -13,8 +13,6 @@ require 'greek_tree'
 
 module SvnTestUtil
   def setup_default_variables
-    test_dir = Pathname.new(File.dirname(__FILE__))
-    pwd = Pathname.new(Dir.pwd)
     @author = ENV["USER"] || "sample-user"
     @password = "sample-password"
     @realm = "sample realm"
