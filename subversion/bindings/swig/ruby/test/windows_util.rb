@@ -53,7 +53,7 @@ module SvnTestUtil
           service_control('stop') unless service_stopped?
           service_control('delete') if service_exists?
 
-          svnserve_dir = File.expand_path(File.join(@base_dir, "svnserve"))
+          svnserve_dir = File.expand_path("svnserve")
           FileUtils.mkdir_p(svnserve_dir)
           at_exit do
             service_control('stop') unless service_stopped?

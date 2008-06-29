@@ -700,7 +700,10 @@ $(SWIG_PY_DIR)/libsvn:
 	mkdir $(SWIG_PY_DIR)/libsvn
 
 copy-swig-py: autogen-swig-py $(SWIG_PY_DIR)/libsvn
-	@cp -pf $(SWIG_PY_SRC_DIR)/*.py $(SWIG_PY_DIR)/libsvn
+	@for f in $(SWIG_PY_SRC_DIR)/*.py $(SWIG_PY_DIR)/*.py; do \
+	  ! [ -f "$$f" ] || cp -pf $$f $(SWIG_PY_DIR)/libsvn; \
+	done
+	@touch $(SWIG_PY_DIR)/libsvn/__init__.py
 
 swig-py: autogen-swig-py copy-swig-py
 
