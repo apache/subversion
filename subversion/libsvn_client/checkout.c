@@ -82,13 +82,13 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
   url = svn_path_canonicalize(url, pool);
 
   {
-    svn_boolean_t have_repos_root;
+    svn_boolean_t have_repos_root_url;
     svn_boolean_t have_repos_uuid;
     svn_boolean_t have_session_url;
     svn_boolean_t have_revnum;
     svn_boolean_t have_kind;
 
-    if ((have_repos_root = (ra_cache && ra_cache->repos_root_url)))
+    if ((have_repos_root_url = (ra_cache && ra_cache->repos_root_url)))
       repos_root = ra_cache->repos_root_url;
 
     if ((have_repos_uuid = (ra_cache && ra_cache->repos_uuid)))
@@ -103,7 +103,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
     if ((have_kind = (ra_cache && ra_cache->kind_opt)))
       kind = *(ra_cache->kind_opt);
 
-    if (! have_repos_root || ! have_repos_uuid || ! have_session_url ||
+    if (! have_repos_root_url || ! have_repos_uuid || ! have_session_url ||
         ! have_revnum || ! have_kind)
       {
         apr_pool_t *session_pool = svn_pool_create(pool);
@@ -117,7 +117,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
                                                  peg_revision, revision, ctx,
                                                  session_pool));
 
-        if (! have_repos_root)
+        if (! have_repos_root_url)
           SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root, pool));
 
         if (! have_repos_uuid)
