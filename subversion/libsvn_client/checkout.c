@@ -46,6 +46,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
                               const char *path,
                               const svn_opt_revision_t *peg_revision,
                               const svn_opt_revision_t *revision,
+                              const svn_client__ra_session_from_path_results *ra_cache,
                               svn_depth_t depth,
                               svn_boolean_t ignore_externals,
                               svn_boolean_t allow_unver_obstructions,
@@ -58,6 +59,8 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
   svn_boolean_t sleep_here = FALSE;
   svn_boolean_t *use_sleep = timestamp_sleep ? timestamp_sleep : &sleep_here;
   const char *session_url;
+  svn_node_kind_t kind;
+  const char *uuid, *repos_root;
 
   /* Sanity check.  Without these, the checkout is meaningless. */
   if (! path)
@@ -79,18 +82,59 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
   url = svn_path_canonicalize(url, pool);
 
   {
-    svn_ra_session_t *ra_session;
-    svn_node_kind_t kind;
-    const char *uuid, *repos_root;
-    apr_pool_t *session_pool = svn_pool_create(pool);
+    svn_boolean_t have_repos_root;
+    svn_boolean_t have_repos_uuid;
+    svn_boolean_t have_session_url;
+    svn_boolean_t have_revnum;
+    svn_boolean_t have_kind;
 
-    /* Get the RA connection. */
-    SVN_ERR(svn_client__ra_session_from_path(&ra_session, &revnum,
-                                             &session_url, url, NULL,
-                                             peg_revision, revision, ctx,
-                                             session_pool));
+    if ((have_repos_root = (ra_cache && ra_cache->repos_root_url)))
+      repos_root = ra_cache->repos_root_url;
 
-    SVN_ERR(svn_ra_check_path(ra_session, "", revnum, &kind, pool));
+    if ((have_repos_uuid = (ra_cache && ra_cache->repos_root_url)))
+      uuid = ra_cache->repos_root_url;
+
+    if ((have_session_url = (ra_cache && ra_cache->ra_session_url)))
+      session_url = ra_cache->ra_session_url;
+
+    if ((have_revnum = (ra_cache && SVN_IS_VALID_REVNUM(ra_cache->ra_revnum))))
+      revnum = ra_cache->ra_revnum;
+
+    if ((have_kind = (ra_cache && ra_cache->kind_opt)))
+      kind = *(ra_cache->kind_opt);
+
+    if (! have_repos_root || ! have_repos_uuid || ! have_session_url ||
+        ! have_revnum || ! have_kind)
+      {
+        apr_pool_t *session_pool = svn_pool_create(pool);
+        svn_ra_session_t *ra_session;
+        svn_revnum_t tmp_revnum;
+        const char *tmp_session_url;
+
+        /* Get the RA connection. */
+        SVN_ERR(svn_client__ra_session_from_path(&ra_session, &tmp_revnum,
+                                                 &tmp_session_url, url, NULL,
+                                                 peg_revision, revision, ctx,
+                                                 session_pool));
+
+        if (! have_repos_root)
+          SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root, pool));
+
+        if (! have_repos_uuid)
+          SVN_ERR(svn_ra_get_uuid2(ra_session, &uuid, pool));
+
+        if (! have_session_url)
+          session_url = apr_pstrdup(pool, tmp_session_url);
+
+        if (! have_revnum)
+          revnum = tmp_revnum;
+
+        if (! have_kind)
+          SVN_ERR(svn_ra_check_path(ra_session, "", revnum, &kind, pool));
+
+        svn_pool_destroy(session_pool);
+      }
+
     if (kind == svn_node_none)
       return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
                                _("URL '%s' doesn't exist"), session_url);
@@ -99,18 +143,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
         (SVN_ERR_UNSUPPORTED_FEATURE , NULL,
          _("URL '%s' refers to a file, not a directory"), session_url);
 
-    /* Get the repos UUID and root URL. */
-    SVN_ERR(svn_ra_get_uuid2(ra_session, &uuid, session_pool));
-    SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root, session_pool));
-
     SVN_ERR(svn_io_check_path(path, &kind, pool));
-
-    /* Finished with the RA session -- close up, but not without
-       copying out useful information that needs to survive.  */
-    session_url = apr_pstrdup(pool, session_url);
-    uuid = (uuid ? apr_pstrdup(pool, uuid) : NULL);
-    repos_root = (repos_root ? apr_pstrdup(pool, repos_root) : NULL);
-    svn_pool_destroy(session_pool);
 
     if (kind == svn_node_none)
       {
@@ -217,7 +250,7 @@ svn_client_checkout3(svn_revnum_t *result_rev,
                      apr_pool_t *pool)
 {
   return svn_client__checkout_internal(result_rev, URL, path, peg_revision,
-                                       revision, depth, ignore_externals,
+                                       revision, NULL, depth, ignore_externals,
                                        allow_unver_obstructions, NULL, ctx,
                                        pool);
 }
@@ -234,7 +267,7 @@ svn_client_checkout2(svn_revnum_t *result_rev,
                      apr_pool_t *pool)
 {
   return svn_client__checkout_internal(result_rev, URL, path, peg_revision,
-                                       revision,
+                                       revision, NULL,
                                        SVN_DEPTH_INFINITY_OR_FILES(recurse),
                                        ignore_externals, FALSE, NULL, ctx,
                                        pool);
@@ -254,7 +287,7 @@ svn_client_checkout(svn_revnum_t *result_rev,
   peg_revision.kind = svn_opt_revision_unspecified;
 
   return svn_client__checkout_internal(result_rev, URL, path, &peg_revision,
-                                       revision,
+                                       revision, NULL,
                                        SVN_DEPTH_INFINITY_OR_FILES(recurse),
                                        FALSE, FALSE, NULL, ctx, pool);
 }
