@@ -299,8 +299,8 @@ void svn_handle_warning(FILE *stream, svn_error_t *error);
  * the program.
  *
  * Act as determined by the current "malfunction handler" which may have
- * been specified by a call to svn_error_set_malfunction_handler() and which
- * has a default behaviour as specified in that function's documentation. If
+ * been specified by a call to svn_error_set_malfunction_handler() or else
+ * is the default handler as specified in that function's documentation. If
  * the malfunction handler returns, then cause the function using this macro
  * to return the error object that it generated.
  *
@@ -317,8 +317,8 @@ void svn_handle_warning(FILE *stream, svn_error_t *error);
  *
  * If the Boolean expression @a expr is true, do nothing. Otherwise,
  * act as determined by the current "malfunction handler" which may have
- * been specified by a call to svn_error_set_malfunction_handler() and which
- * has a default behaviour as specified in that function's documentation. If
+ * been specified by a call to svn_error_set_malfunction_handler() or else
+ * is the default handler as specified in that function's documentation. If
  * the malfunction handler returns, then cause the function using this macro
  * to return the error object that it generated.
  *
@@ -337,7 +337,20 @@ void svn_handle_warning(FILE *stream, svn_error_t *error);
       SVN_ERR(svn_error__malfunction(__FILE__, __LINE__, #expr)); \
   } while (0)
 
-/** Helper function for the macros that report malfunctions. */
+/** A helper function for the macros that report malfunctions. Handle a
+ * malfunction by calling the current "malfunction handler" which may have
+ * been specified by a call to svn_error_set_malfunction_handler() or else
+ * is the default handler as specified in that function's documentation.
+ *
+ * Pass all of the parameters to the handler. The error occurred in the
+ * source file @a file at line @a line, and was an assertion failure of the
+ * expression @a expr, or, if @a expr is null, an unconditional error.
+ *
+ * If the malfunction handler returns, then return the error object that it
+ * generated.
+ *
+ * @since New in 1.6.
+ */
 svn_error_t *
 svn_error__malfunction(const char *file, int line, const char *expr);
 
