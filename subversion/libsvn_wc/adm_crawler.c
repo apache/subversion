@@ -539,8 +539,15 @@ svn_wc_crawl_revisions4(const char *path,
   if ((! entry) || ((entry->schedule == svn_wc_schedule_add)
                     && (entry->kind == svn_node_dir)))
     {
-      /* Don't even check the exclude flag for target.
-         Remember that we permit explicitly pull in target. */
+      /* Don't check the exclude flag for the target.
+
+         If we report the target itself as excluded, the server will
+         send us nothing about the target -- but we want to permit
+         targets to be explicitly pulled in.  For example, 'svn up A'
+         should always work, even if its parent is svn_depth_empty or
+         svn_depth_files, or even if A was explicitly excluded from a
+         parent at svn_depth_immediates or svn_depth_infinity.
+         Whatever the case, we want A back now. */
 
       /* There aren't any versioned paths to crawl which are known to
          the repository. */
