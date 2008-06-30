@@ -2046,7 +2046,7 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * Test the baisc SVNClient locking functionality.
+     * Test the basic SVNClient locking functionality.
      * @throws Throwable
      * @since 1.2
      */
@@ -2095,7 +2095,7 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * Test the baisc SVNClient.info2 functionality.
+     * Test the basic SVNClient.info2 functionality.
      * @throws Throwable
      * @since 1.2
      */
