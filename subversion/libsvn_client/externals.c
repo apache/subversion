@@ -536,6 +536,28 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
 
   if (! old_item)
     {
+      /* Determine if the external being added is a file or
+         directory. */
+      svn_ra_session_t *ra_session;
+      svn_client__ra_session_from_path_results ra_cache;
+      svn_node_kind_t kind;
+
+      /* Get the RA connection. */
+      SVN_ERR(svn_client__ra_session_from_path(&ra_session,
+                                               &ra_cache.ra_revnum,
+                                               &ra_cache.ra_session_url,
+                                               new_item->url, NULL,
+                                               &(new_item->peg_revision),
+                                               &(new_item->revision), ib->ctx,
+                                               ib->pool));
+
+      SVN_ERR(svn_ra_get_uuid2(ra_session, &ra_cache.repos_uuid, ib->pool));
+      SVN_ERR(svn_ra_get_repos_root2(ra_session, &ra_cache.repos_root_url,
+                                     ib->pool));
+      SVN_ERR(svn_ra_check_path(ra_session, "", ra_cache.ra_revnum,
+                                &kind, ib->pool));
+      ra_cache.kind_opt = &kind;
+
       /* The target dir might have multiple components.  Guarantee
          the path leading down to the last component. */
       svn_path_split(path, &parent, NULL, ib->pool);
@@ -570,7 +592,7 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
       else
         SVN_ERR(svn_client__checkout_internal
                 (NULL, new_item->url, path,
-                 &(new_item->peg_revision), &(new_item->revision), NULL,
+                 &(new_item->peg_revision), &(new_item->revision), &ra_cache,
                  SVN_DEPTH_INFINITY_OR_FILES(TRUE),
                  FALSE, FALSE, ib->timestamp_sleep, ib->ctx, ib->pool));
     }
