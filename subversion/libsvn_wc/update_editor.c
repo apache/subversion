@@ -71,8 +71,10 @@ struct edit_baton
 {
   /* For updates, the "destination" of the edit is the ANCHOR (the
      directory at which the edit is rooted) plus the TARGET (the
-     actual thing we wish to update).  For checkouts, ANCHOR holds the
-     whole path, and TARGET is unused. */
+     actual thing we wish to update).  Target may be the empty string,
+     but it is never NULL; for example, for checkouts and for updates
+     that do not specify a target path, ANCHOR holds the whole path,
+     and TARGET is empty. */
   const char *anchor;
   const char *target;
 

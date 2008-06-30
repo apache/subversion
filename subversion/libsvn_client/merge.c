@@ -1522,8 +1522,9 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
 /* Helper for the numerous times we need to allocate and initialize
    a rangelist with one element.
    
-   Return a rangelist allocated in POOL with one svn_merge_range_t
-   element defined by START, END, and INHERITABLE. */
+   Return a rangelist allocated in POOL with one svn_merge_range_t *
+   element, also allocated in POOL and defined by START, END, and
+   INHERITABLE. */
 static apr_array_header_t *
 init_rangelist(svn_revnum_t start,
                svn_revnum_t end,
@@ -1544,8 +1545,8 @@ init_rangelist(svn_revnum_t start,
 /* Helper for the numerous times we need to allocate a svn_merge_range_t
    and push it onto a rangelist.
 
-   Allocated a svn_merge_range_t element defined by START, END, and
-   INHERITABLE and push it onto RANGELIST. */
+   Push onto RANGELIST an svn_merge_range_t * element allocated in
+   POOL and defined by START, END, and INHERITABLE. */
 static void
 push_range(apr_array_header_t *rangelist,
            svn_revnum_t start,
