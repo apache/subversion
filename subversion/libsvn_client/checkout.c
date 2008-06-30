@@ -91,8 +91,8 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
     if ((have_repos_root = (ra_cache && ra_cache->repos_root_url)))
       repos_root = ra_cache->repos_root_url;
 
-    if ((have_repos_uuid = (ra_cache && ra_cache->repos_root_url)))
-      uuid = ra_cache->repos_root_url;
+    if ((have_repos_uuid = (ra_cache && ra_cache->repos_uuid)))
+      uuid = ra_cache->repos_uuid;
 
     if ((have_session_url = (ra_cache && ra_cache->ra_session_url)))
       session_url = ra_cache->ra_session_url;
