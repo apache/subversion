@@ -2016,8 +2016,16 @@ def excluded_path_operation(sbox):
                                         '--set-depth', 'exclude', E_path)
   # verify_depth exclude? not implemented yet
 
-  # crop path B to immediates, 
-  expected_output = svntest.wc.State(wc_dir, {})
+  # crop path B to immediates, this just pull in A/B/E again
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E'            : Item(status='A '),
+    })
+  expected_status.add({
+    'A/B/E'            : Item(status='  ', wc_rev=1)
+    })
+  expected_disk.add({
+    'A/B/E'          : Item(contents=None),
+    })
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,
@@ -2027,12 +2035,16 @@ def excluded_path_operation(sbox):
                                         '--set-depth', 'immediates', B_path)
   verify_depth(None, "immediates", B_path)
 
+  # Exclude A/B/E again
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'up', '--set-depth', 'exclude', E_path)
+
   # Exclude path B totally, in which contains an excluded subtree.
   expected_output = svntest.wc.State(wc_dir, {
     'A/B'            : Item(status='D '),
     })
-  expected_status.remove('A/B/F', 'A/B/lambda', 'A/B');
-  expected_disk.remove('A/B/F', 'A/B/lambda', 'A/B');
+  expected_status.remove('A/B/F', 'A/B/E', 'A/B/lambda', 'A/B');
+  expected_disk.remove('A/B/F', 'A/B/E', 'A/B/lambda', 'A/B');
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,
@@ -2094,7 +2106,7 @@ test_list = [ None,
               depth_fold_expand_clean_trees,
               pull_in_tree_with_depth_option,
               fold_tree_with_unversioned_modified_items,
-	      XFail(excluded_path_operation),
+              XFail(excluded_path_operation),
             ]
 
 if __name__ == "__main__":
