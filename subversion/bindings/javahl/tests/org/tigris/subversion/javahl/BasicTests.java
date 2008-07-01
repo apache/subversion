@@ -2128,6 +2128,21 @@ public class BasicTests extends SVNTests
         Revision rev = new Revision.Number(1);
         infos = client.info2(thisTest.getWCPath(), rev, rev, true);
         assertEquals(failureMsg, 21, infos.length);
+        
+        // Examine default
+        assertEquals(Depth.unknown, infos[0].getDepth());
+        
+        // Create wc with a depth of Depth.empty
+        String secondWC = thisTest.getWCPath() + ".empty";
+        removeDirOrFile(new File(secondWC));
+        
+        client.checkout(thisTest.getUrl(), secondWC, null, null, Depth.empty,
+        		false, true);
+        
+        infos = client.info2(secondWC, null, null, false);
+        
+        // Examine that depth is Depth.empty
+        assertEquals(Depth.empty, infos[0].getDepth());
     }
 
     /**

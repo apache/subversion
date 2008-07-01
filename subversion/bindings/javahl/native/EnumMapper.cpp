@@ -34,6 +34,7 @@
 #include "../include/org_tigris_subversion_javahl_ConflictDescriptor_Kind.h"
 #include "../include/org_tigris_subversion_javahl_ConflictDescriptor_Action.h"
 #include "../include/org_tigris_subversion_javahl_ConflictDescriptor_Reason.h"
+#include "../include/org_tigris_subversion_javahl_Depth.h";
 
 /**
  * Map a C commit state flag constant to the Java constant.
@@ -428,4 +429,29 @@ jint EnumMapper::mapConflictReason(svn_wc_conflict_reason_t reason)
     case svn_wc_conflict_reason_unversioned:
       return org_tigris_subversion_javahl_ConflictDescriptor_Reason_unversioned;
     }
+}
+
+jint EnumMapper::mapDepth(svn_depth_t depth)
+{
+  switch (depth)
+	{
+	case svn_depth_unknown:
+	default:
+	  return org_tigris_subversion_javahl_Depth_unknown;
+	
+	case svn_depth_exclude:
+	  return org_tigris_subversion_javahl_Depth_exclude;
+	
+	case svn_depth_empty:
+	  return org_tigris_subversion_javahl_Depth_empty;
+	
+	case svn_depth_files:
+	  return org_tigris_subversion_javahl_Depth_files;
+	
+	case svn_depth_immediates:
+	  return org_tigris_subversion_javahl_Depth_immediates;
+	
+	case svn_depth_infinity:
+	  return org_tigris_subversion_javahl_Depth_infinity;
+	}
 }
