@@ -107,7 +107,7 @@ Candidate changes for 1.5.1:
    Fix unbounded memory usage in wc-to-wc multi-file copy and move (which
    can make large "svn mv foo/* bar/" impossible).
    Votes:
-     +1: glasser, hwright
+     +1: glasser, hwright, danielsh
 
  * r31873, 31874
    Teach 'svn mergeinfo' and underlying APIs to handle working copy path
