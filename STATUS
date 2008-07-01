@@ -11,7 +11,7 @@ Candidate changes for 1.5.1:
  * r31944
    Fix two bugs in pre-1.5 log message compatibility code.
    Votes:
-     +1: kfogel
+     +1: kfogel, hwright
 
  * r31313
    Make all ra layers return a consistent error when a path is not found in the
@@ -101,7 +101,7 @@ Candidate changes for 1.5.1:
    Fixes unresolved symbol errors when loading libsvn_ra in
    the --enable-runtime-module-search case.
    Votes:
-     +1: stsp
+     +1: stsp, hwright
 
  * r31868
    Fix unbounded memory usage in wc-to-wc multi-file copy and move (which
@@ -116,7 +116,7 @@ Candidate changes for 1.5.1:
      r31873 is just a test reorg.  If it isn't approved, just ignore the
      test changes portion of r31874.   
    Votes:
-     +1: cmpilato
+     +1: cmpilato, hwright
 
  * r31875
    Fix 'svn log --xml' against pre-1.2 servers.
@@ -137,7 +137,7 @@ Candidate changes for 1.5.1:
  * r31948
    Minor performance optimization to the single-file merge scenario.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, hwright
 
 Approved changes:
 =================
