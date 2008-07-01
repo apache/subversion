@@ -3257,10 +3257,22 @@ svn_wc_process_committed(const char *path,
  * course.  If @a depth is @c svn_depth_unknown, then just use
  * @c svn_depth_infinity, which in practice means depth of @a path.
  *
- * Iff @a honor_depth_exclude is TRUE, the crawler will report the excluded
- * path and thus prevent the server from pushing update on it. Don't set this
- * flag if you wish to pull in excluded path. @c svn_depth_exclude flag on 
- * the @a path will never be honored. This enable explicitly pull in target.
+ * Iff @a honor_depth_exclude is TRUE, the crawler will report paths
+ * whose ambient depth is @c svn_depth_exclude as being excluded, and
+ * thus prevent the server from pushing update data for those paths;
+ * therefore, don't set this flag if you wish to pull in excluded paths.
+ * Note that @c svn_depth_exclude on the target @a path is never
+ * honored, even if @a honor_depth_exclude is TRUE, because we need to
+ * be able to explicitly pull in a target.  For example, if this is
+ * the working copy...
+ *
+ *    svn co greek_tree_repos wc_dir
+ *    svn up --set-depth exclude wc_dir/A/B/E  # now A/B/E is excluded
+ *
+ * ...then 'svn up wc_dir/A/B' would report E as excluded (assuming
+ * @a honor_depth_exclude is TRUE), but 'svn up wc_dir/A/B/E' would
+ * not, because the latter is trying to explicitly pull in E.  In
+ * general, we never report the update target as excluded.
  *
  * Iff @a depth_compatibility_trick is TRUE, then set the @c start_empty
  * flag on @a reporter->set_path() and @a reporter->link_path() calls
