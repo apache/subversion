@@ -286,8 +286,8 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
               /* Report the excluded path, no matter whether report_everything
                  flag is set.  Because the report_everything flag indicates
                  that the server will treate the wc as empty and thus push
-                 full content of the files/subdirs. We just want to say no to
-                 this. */
+                 full content of the files/subdirs. But we want to prevent the
+                 server from pushing the full content of this_path at us. */
               SVN_ERR(reporter->set_path(report_baton,
                                          this_path,
                                          SVN_INVALID_REVNUM,
@@ -298,8 +298,8 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
             }
           else
             {
-              /* We want to pull in the excluded target, report it as deleted
-                 when needed, and server will response properly. */
+              /* We want to pull in the excluded target. So, report it as deleted,
+                 and server will respond properly. */
               if (! report_everything)
                 SVN_ERR(reporter->delete_path(report_baton, 
                                               this_path, iterpool));
