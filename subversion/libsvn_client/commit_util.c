@@ -1790,11 +1790,9 @@ svn_client__get_log_msg(const char **log_msg,
       svn_error_t *err;
       apr_pool_t *subpool = svn_pool_create(pool);
       apr_array_header_t *old_commit_items =
-        apr_array_make(subpool, commit_items->nelts,
-                       ctx->log_msg_func2 ? sizeof(svn_client_commit_item2_t) :
-                       sizeof(svn_client_commit_item_t));
-      int i;
+        apr_array_make(subpool, commit_items->nelts, sizeof(void*));
 
+      int i;
       for (i = 0; i < commit_items->nelts; i++)
         {
           svn_client_commit_item3_t *item =
@@ -1839,7 +1837,7 @@ svn_client__get_log_msg(const char **log_msg,
         }
 
       if (ctx->log_msg_func2)
-        err = (*ctx->log_msg_func2)(log_msg, tmp_file, commit_items,
+        err = (*ctx->log_msg_func2)(log_msg, tmp_file, old_commit_items,
                                     ctx->log_msg_baton2, pool);
       else
         err = (*ctx->log_msg_func)(log_msg, tmp_file, old_commit_items,
