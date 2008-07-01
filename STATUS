@@ -130,9 +130,3 @@ Approved changes:
    the --enable-runtime-module-search case.
    Votes:
      +1: stsp, hwright, arfrever
-
- * r31868
-   Fix unbounded memory usage in wc-to-wc multi-file copy and move (which
-   can make large "svn mv foo/* bar/" impossible).
-   Votes:
-     +1: glasser, hwright, danielsh, arfrever
