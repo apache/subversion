@@ -157,7 +157,16 @@ def run_cmd(cmd):
 # Build csvn/core/functions.py
 ########################################################################
 
-if not os.path.exists("ctypesgen"):
+ctypesgen_basename = "wrap.py"
+ctypesgen = ""
+if os.path.exists("ctypesgen/" + ctypesgen_basename):
+    ctypesgen = os.getcwd() + "/ctypesgen/" + ctypesgen_basename
+else:
+    for path in os.environ["PATH"].split(":"):
+        if os.path.exists(path + "/" + ctypesgen_basename):
+            ctypesgen = path + "/" + ctypesgen_basename
+            break
+if ctypesgen == "":
     raise Exception(
         "Cannot find ctypesgen. Please download the ctypesgen package by\n"
         "following the instructions provided in README.")
@@ -167,8 +176,8 @@ tempdir = mkdtemp()
 includes = ('%s/include/subversion-1/svn_*.h '
             '%s/ap[ru]_*.h' % (svn_prefix, apr_include_dir))
 
-cmd = ["cd %s && %s %s/ctypesgen/wrap.py --cpp '%s %s' %s "
-       "%s -o svn_all.py" % (tempdir, sys.executable, os.getcwd(),
+cmd = ["cd %s && %s %s --cpp '%s %s' %s "
+       "%s -o svn_all.py" % (tempdir, sys.executable, ctypesgen,
                              cpp, flags, ldflags, includes)]
 cmd.extend('-R ' + x for x in options.libdirs)
 cmd = ' '.join(cmd)
