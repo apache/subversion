@@ -162,7 +162,7 @@ ctypesgen = ""
 if os.path.exists(os.path.join("ctypesgen", ctypesgen_basename)):
     ctypesgen = os.path.join(os.getcwd(), "ctypesgen", ctypesgen_basename)
 else:
-    for path in os.environ["PATH"].split(":"):
+    for path in os.environ["PATH"].split(os.pathsep):
         if os.path.exists(os.path.join(path, ctypesgen_basename)):
             ctypesgen = os.path.join(path, ctypesgen_basename)
             break
