@@ -8,6 +8,11 @@ delay a release, etc.
 Candidate changes for 1.5.1:
 ============================
 
+ * r31944
+   Fix two bugs in pre-1.5 log message compatibility code.
+   Votes:
+     +1: kfogel
+
  * r31313
    Make all ra layers return a consistent error when a path is not found in the
    repository.
