@@ -335,7 +335,7 @@ class SvnClientTest < Test::Unit::TestCase
     FileUtils.mkdir_p(tmp_deep_dir_path)
     File.open(tmp_path, "w") {|f| f.print(src)}
 
-    new_rev = ctx.import(@tmp_path, @repos_uri, true, false, 
+    new_rev = ctx.import(@tmp_path, @repos_uri, true, false,
                          {"custom-prop" => "some-value"}).revision
     assert_equal(["some-value", new_rev],
                  ctx.revprop_get("custom-prop", @repos_uri, new_rev))
@@ -878,6 +878,22 @@ class SvnClientTest < Test::Unit::TestCase
     assert_equal([[false, true, false, false]], node_kinds)
   end
 
+  def assert_changed(ctx, path)
+    statuses = []
+    ctx.status(path) do |_, status|
+      statuses << status
+    end
+    assert_not_equal([], statuses)
+  end
+
+  def assert_not_changed(ctx, path)
+    statuses = []
+    ctx.status(path) do |_, status|
+      statuses << status
+    end
+    assert_equal([], statuses)
+  end
+
   def assert_merge
     log = "sample log"
     file = "sample.txt"
@@ -973,19 +989,18 @@ class SvnClientTest < Test::Unit::TestCase
     rev5 = ctx.commit(@wc_path).revision
     assert(File.exist?(trunk_path))
 
+    yield(ctx, branch, rev3, rev4, trunk, nil, false, true)
+    assert_not_changed(ctx, trunk)
+
+
+    ctx.propdel("svn:mergeinfo", trunk)
+    rev6 = ctx.commit(@wc_path).revision
+
     yield(ctx, branch, rev3, rev4, trunk, nil, false, true, true)
-    statuses = []
-    ctx.status(trunk) do |path, status|
-      statuses << status
-    end
-    assert_equal([], statuses)
+    assert_not_changed(ctx, trunk)
 
     yield(ctx, branch, rev3, rev4, trunk, nil, false, true)
-    statuses = []
-    ctx.status(trunk) do |path, status|
-      statuses << status
-    end
-    assert_not_equal([], statuses)
+    assert_changed(ctx, trunk)
   end
 
   def test_merge
@@ -1215,7 +1230,7 @@ class SvnClientTest < Test::Unit::TestCase
     paths = notifies.collect do |notify|
       notify.path
     end
-    assert_equal([path1, path2, path2].sort.collect{|p|File.expand_path(p)}, 
+    assert_equal([path1, path2, path2].sort.collect{|p|File.expand_path(p)},
                  paths.sort)
 
     deleted_paths = notifies.find_all do |notify|
@@ -1223,7 +1238,7 @@ class SvnClientTest < Test::Unit::TestCase
     end.collect do |notify|
       notify.path
     end
-    assert_equal([path1].sort.collect{|p|File.expand_path(p)}, 
+    assert_equal([path1].sort.collect{|p|File.expand_path(p)},
                  deleted_paths.sort)
 
     added_paths = notifies.find_all do |notify|
@@ -1231,7 +1246,7 @@ class SvnClientTest < Test::Unit::TestCase
     end.collect do |notify|
       notify.path
     end
-    assert_equal([path2].sort.collect{|p|File.expand_path(p)}, 
+    assert_equal([path2].sort.collect{|p|File.expand_path(p)},
                  added_paths.sort)
 
     postfix_txdelta_paths = notifies.find_all do |notify|
@@ -1239,7 +1254,7 @@ class SvnClientTest < Test::Unit::TestCase
     end.collect do |notify|
       notify.path
     end
-    assert_equal([path2].sort.collect{|p|File.expand_path(p)}, 
+    assert_equal([path2].sort.collect{|p|File.expand_path(p)},
                  postfix_txdelta_paths.sort)
 
     assert_equal(src2, File.open(path2) {|f| f.read})
@@ -1533,6 +1548,7 @@ class SvnClientTest < Test::Unit::TestCase
     src = "source\n"
     file = "sample.txt"
     path = File.join(@wc_path, file)
+    absolute_path = File.expand_path(path)
 
     File.open(path, "w") {|f| f.print(src)}
 
@@ -1546,8 +1562,8 @@ class SvnClientTest < Test::Unit::TestCase
     end
     ctx.lock(path)
 
-    assert_equal([file], infos.collect{|path, notify| path})
-    file_notify = infos.assoc(file)[1]
+    assert_equal([absolute_path], infos.collect{|_path, notify| _path})
+    file_notify = infos.assoc(absolute_path)[1]
     assert(file_notify.locked?)
   end
 
@@ -1556,6 +1572,7 @@ class SvnClientTest < Test::Unit::TestCase
     src = "source\n"
     file = "sample.txt"
     path = File.join(@wc_path, file)
+    absolute_path = File.expand_path(path)
 
     File.open(path, "w") {|f| f.print(src)}
 
@@ -1570,8 +1587,9 @@ class SvnClientTest < Test::Unit::TestCase
       infos << [notify.path, notify]
     end
     ctx.unlock(path)
-    assert_equal([file], infos.collect{|path, notify| path})
-    file_notify = infos.assoc(file)[1]
+
+    assert_equal([absolute_path], infos.collect{|_path, notify| _path})
+    file_notify = infos.assoc(absolute_path)[1]
     assert(file_notify.unlocked?)
   end
 

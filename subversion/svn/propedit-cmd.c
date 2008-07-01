@@ -67,7 +67,7 @@ svn_cl__propedit(apr_getopt_t *os,
 
   /* Suck up all the remaining arguments into a targets array */
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
-                                                      opt_state->targets, 
+                                                      opt_state->targets,
                                                       ctx, pool));
 
   if (opt_state->revprop)  /* operate on a revprop */
@@ -192,7 +192,7 @@ svn_cl__propedit(apr_getopt_t *os,
           SVN_ERR(svn_client_propget3(&props, pname_utf8, target,
                                       &peg_revision,
                                       &(opt_state->start_revision),
-                                      &base_rev, svn_depth_empty, 
+                                      &base_rev, svn_depth_empty,
                                       NULL, ctx, subpool));
 
           /* Get the property value. */

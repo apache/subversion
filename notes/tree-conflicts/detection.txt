@@ -12,47 +12,61 @@ can be detected. It documents how detection currently works in the
 actual code, and also explains the limits of tree conflict detection
 imposed by Subversion's current design.
 
-Note that at the time of writing tree conflict detection has been
-implemented only for use cases 1 to 3. The current implementation has
-imperfect tree conflict detection, but it is still better than not
-handling tree conflicts at all. It provides a good safety net that
-helps users avoid running into tree conflict use cases 1 to 3. Once
-Subversion has been taught about true renames tree conflict detection
-can be changed to make use of this and become extremely precise.  See
-below for further explanation.
+The current implementation has imperfect tree conflict detection,
+but it is still better than not handling tree conflicts at all.
+Once Subversion has been taught about true renames, tree conflict
+detection can be changed to make use of this and become extremely
+precise.  See below for further explanation.
 
 ==========
 USE CASE 1
 ==========
 
+Files:
 If 'svn update' modifies a file that has been scheduled for deletion
 in the working copy, the file is a tree conflict victim.
+
+Directories:
+If 'svn update' modifies a directory that has been scheduled for
+deletion in the working copy, the directory is a tree conflict victim.
 
 ==========
 USE CASE 2
 ==========
 
+Files:
 If 'svn update' deletes a file that has local modifications, the file
 is a tree conflict victim.
+
+Directories:
+If 'svn update' deletes a directory that has local modifications,
+the directory is a tree conflict victim.
+See the "NOTES ON DIRECTORIES" section for details on what it means
+for a directory to be "modified".
 
 ==========
 USE CASE 3
 ==========
 
+Files:
 If 'svn update' deletes a file that has been scheduled for deletion in
 the working copy, the file is a tree conflict victim.
+
+Directories:
+If 'svn update' deletes a directory that has been scheduled for deletion in
+the working copy, the directory is a tree conflict victim.
 
 ==========
 USE CASE 4
 ==========
 
 We skip tree conflict detection if the record_only field of the
-merge-command baton is FALSE. A record-only merge operation updates
+merge-command baton is TRUE. A record-only merge operation updates
 mergeinfo without touching files.
 
+Files:
 If 'svn merge' tries to modify a file that does not exist in the
 target working copy, then the target file is a tree conflict victim.
-
 
 Notes on Resolution
 -------------------
@@ -83,14 +97,20 @@ the file. This may be a bit of an awkward work flow but is required to
 solve the problem this use case has in the current implementation,
 namely that missing files may accidentally be overlooked during merging.
 
+
+Directories:
+If 'svn merge' tries to modify a directory that does not exist in the
+target working copy, then the target directory is a tree conflict victim.
+
 ==========
 USE CASE 5
 ==========
 
 We skip tree conflict detection if the record_only field of the
-merge-command baton is FALSE. A record-only merge operation updates
+merge-command baton is TRUE. A record-only merge operation updates
 mergeinfo without touching files.
 
+Files:
 If 'svn merge' deletes an existing file, the file is a tree conflict
 victim if its text is different from the corresponding file on the left
 side of the merge source.
@@ -110,14 +130,24 @@ Implementation:
 Call svn_client_diff_summarize2() to compare the target file to the
 file at the left side of the merge source.
 
+
+Directories:
+If 'svn merge' deletes an existing directory, the directory is a tree
+conflict victim if its content is different from the corresponding
+directory on the left side of the merge source.
+
+See the "NOTES ON DIRECTORIES" section for details on what it means
+for a directory to be "different".
+
 ==========
 USE CASE 6
 ==========
 
 We skip tree conflict detection if the record_only field of the
-merge-command baton is FALSE. A record-only merge operation updates
+merge-command baton is TRUE. A record-only merge operation updates
 mergeinfo without touching files.
 
+Files:
 If 'svn merge' tries to delete a file that does not exist in the
 target working copy, then the target file is a tree conflict victim.
 
@@ -139,21 +169,82 @@ simply deleted on both branches. But we have to mark these as tree conflicts
 due to the current lack of "true rename" support. It does not appear to be
 feasible to detect more than the double-delete aspect of the move operation.
 
+Directories:
+If 'svn merge' tries to delete a directory that does not exist in the
+target working copy, then the target directory is a tree conflict victim.
+
 =========================
 OBSTRUCTIONS DURING MERGE
 =========================
 
+Files:
 If 'svn merge' fails to apply an operation to a file because the
 file is obstructed (i.e. an unversioned item of the same name is
 in the file's place), the obstructed file is a tree conflict victim.
 
-Rationale:
+Directories:
+If 'svn merge' fails to apply an operation to a directory because the
+directory is obstructed (i.e. an unversioned item of the same name is
+in the directory's place), the obstructed directory is a tree conflict
+victim.
+
+Rationale for both files and directories:
 
 We want to make sure that a merge either completes successfully
 or any problems found during a merge are flagged as conflicts.
 Skipping obstructed items during merge is no longer acceptable
 behaviour, since users might not be aware of obstructions that were
 skipped when they commit the result of a merge.
+
+====================
+NOTES ON DIRECTORIES
+====================
+
+===========================
+Modification of directories
+===========================
+
+How do we define a modification of a directory?
+
+A directory with no subdirectories has been modified if any changes
+were made to files and properties inside the directory, or if any
+files or directories were added or deleted inside it.
+
+A directory with subdirectories has been modified if any changes
+were made to files and properties inside the directory, or if any
+files or directories were added or deleted inside it, of if any
+subdirectories were modified.
+
+=======================
+Equality of directories
+=======================
+
+How do we define equality between directories?
+
+Two directories with no subdirectories are equal if they
+contain the same files with the same content, and the
+same properties with the same content.
+
+Two directories with subdirectories are equal if they
+contain the same files with the same content, and the
+same properties with the same content, and all their
+subdirectories are equal.
+
+How can this be implemented?
+
+For each directory, it could retrieve the corresponding dir entry from
+the repository as it existed in the merge-left source of the merge,
+and compare the two for equality, i.e. check whether all fields in
+the svn_dirent_t returned by the repo match their corresponding
+attributes of the directory as found in the working copy.
+
+The left-merge revision shall be a new additional parameter to
+merge_dir_deleted(). The ra session needed to contact the repository
+via the get_dir() method is already contained in the merge baton which
+is passed to merge_dir_deleted().
+
+The last two paragraphs were taken from:
+http://subversion.tigris.org/servlets/ReadMsg?listName=dev&msgNo=136794
 
 =========================================
 TREE CONFLICT DETECTION WITH TRUE RENAMES

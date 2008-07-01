@@ -232,13 +232,17 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
    {'r', 't'} },
 
   {"propget", subcommand_pget, {"pget", "pg"},
-   N_("usage: svnlook propget REPOS_PATH PROPNAME [PATH_IN_REPOS]\n\n"
+   N_("usage: 1. svnlook propget REPOS_PATH PROPNAME PATH_IN_REPOS\n"
+      "                    "
+      "       2. svnlook propget --revprop REPOS_PATH PROPNAME\n\n"
       "Print the raw value of a property on a path in the repository.\n"
-      "With --revprop, prints the raw value of a revision property.\n"),
+      "With --revprop, print the raw value of a revision property.\n"),
    {'r', 't', svnlook__revprop_opt} },
 
   {"proplist", subcommand_plist, {"plist", "pl"},
-   N_("usage: svnlook proplist REPOS_PATH [PATH_IN_REPOS]\n\n"
+   N_("usage: 1. svnlook proplist REPOS_PATH PATH_IN_REPOS\n"
+      "                      "
+      "       2. svnlook proplist --revprop REPOS_PATH\n\n"
       "List the properties of a path in the repository, or\n"
       "with the --revprop option, revision properties.\n"
       "With -v, show the property values too.\n"),

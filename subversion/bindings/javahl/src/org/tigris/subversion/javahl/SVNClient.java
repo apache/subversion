@@ -25,9 +25,6 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Date;
-import java.util.Calendar;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.text.ParseException;
 
 /**
@@ -118,6 +115,9 @@ public class SVNClient implements SVNClientInterface
     public Status singleStatus(String path, boolean onServer)
             throws ClientException
     {
+        Status[] statusArray = status(path, false, onServer, true, false, false);
+        if (statusArray == null || statusArray.length == 0)
+            return null;
         return status(path, false, onServer, true, false, false)[0];
     }
 
@@ -1376,19 +1376,9 @@ public class SVNClient implements SVNClientInterface
             String message = (String) revprops.get("svn:log");
             long timeMicros;
 
-            // Really hacky date parser, because Java doesn't support
-            // microseconds natively.
             try {
-                DateFormat formatter = new SimpleDateFormat(
-                    "yyyy-MM-dd'T'HH:mm:ss.SSS");
-                String datestr = ((String) revprops.get("svn:date"));
-                Date date = formatter.parse(datestr.substring(0, 23));
-                Calendar cal = Calendar.getInstance();
-                cal.setTime(date);
-                timeMicros = cal.getTimeInMillis();
-
-                timeMicros = timeMicros * 1000 
-                                 + Integer.parseInt(datestr.substring(23, 26));
+                LogDate date = new LogDate((String) revprops.get("svn:date"));
+                timeMicros = date.getTimeMicros();
             } catch (ParseException ex) {
                 timeMicros = 0;
             }

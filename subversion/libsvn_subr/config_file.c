@@ -857,7 +857,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "# No http-timeout, so just use the builtin default."                NL
         "# No neon-debug-mask, so neon debugging is disabled."               NL
         "# ssl-authority-files = /path/to/CAcert.pem;/path/to/CAcert2.pem"   NL
-        "#"                                                                  NL 
+        "#"                                                                  NL
         "# Password caching parameters:"                                     NL
         "# store-passwords = no"                                             NL
         "# store-plaintext-passwords = no"                                   NL;
@@ -902,8 +902,23 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         ""                                                                   NL
         "### Section for authentication and authorization customizations."   NL
         "[auth]"                                                             NL
+        "### Set password stores used by Subversion. They should be"         NL
+        "### delimited by spaces or commas. The order of values determines"  NL
+        "### the order in which password stores are used."                   NL
+        "### Valid password stores:"                                         NL
+        "###   gnome-keyring        (Unix-like systems)"                     NL
+        "###   kwallet              (Unix-like systems)"                     NL
+        "###   keychain             (Mac OS X)"                              NL
+        "###   windows-cryptoapi    (Windows)"                               NL
+#ifdef SVN_HAVE_KEYCHAIN_SERVICES
+        "# password-stores = keychain"                                       NL
+#elif defined(WIN32) && !defined(__MINGW32__)
+        "# password-stores = windows-cryptoapi"                              NL
+#else
+        "# password-stores = gnome-keyring,kwallet"                          NL
+#endif
         "###"                                                                NL
-        "### NOTE: The auth section in this file has been deprecated."       NL
+        "### The rest of this section in this file has been deprecated."     NL
         "### Both 'store-passwords' and 'store-auth-creds' can now be"       NL
         "### specified in the 'servers' file in your config directory."      NL
         "### Anything specified in this section is overridden by settings"   NL
@@ -939,9 +954,9 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###   This will override the compile-time default, which is to use" NL
         "###   Subversion's internal diff3 implementation."                  NL
         "# diff3-cmd = diff3_program (diff3, gdiff3, etc.)"                  NL
-        "### Set diff3-has-program-arg to 'true' or 'yes' if your 'diff3'"   NL
-        "###   program accepts the '--diff-program' option."                 NL
-        "# diff3-has-program-arg = [true | false]"                           NL
+        "### Set diff3-has-program-arg to 'yes' if your 'diff3' program"     NL
+        "###   accepts the '--diff-program' option."                         NL
+        "# diff3-has-program-arg = [yes | no]"                               NL
         "### Set merge-tool-cmd to the command used to invoke your external" NL
         "### merging tool of choice. Subversion will pass 4 arguments to"    NL
         "### the specified command: base theirs mine merged"                 NL

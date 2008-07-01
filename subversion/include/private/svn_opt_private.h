@@ -28,6 +28,24 @@
 extern "C" {
 #endif /* __cplusplus */
 
+/* Extract the peg revision, if any, from UTF8_TARGET. Return the peg
+ * revision in *PEG_REVISION and the true target portion in *TRUE_TARGET.
+ * *PEG_REVISION will be an empty string if no peg revision is found.
+ *
+ * UTF8_TARGET need not be canonical. *TRUE_TARGET will not be canonical
+ * unless UTF8_TARGET is.
+ *
+ * Note that *PEG_REVISION will still contain the '@' symbol as the first
+ * character if a peg revision was found.
+ *
+ * All allocations are done in POOL.
+ */
+svn_error_t *
+svn_opt__split_arg_at_peg_revision(const char **true_target,
+                                   const char **peg_revision,
+                                   const char *utf8_target,
+                                   apr_pool_t *pool);
+
 /* Attempt to transform URL_IN, which is a URL-like user input, into a
  * valid URL:
  *   - escape IRI characters and some other non-URI characters

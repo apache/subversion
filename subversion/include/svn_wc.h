@@ -264,7 +264,8 @@ svn_wc_adm_probe_open(svn_wc_adm_access_t **adm_access,
  * Open access batons for @a path and return in @a *anchor_access and
  * @a *target the anchor and target required to drive an editor.  Return
  * in @a *target_access the access baton for the target, which may be the
- * same as @a *anchor_access.  All the access batons will be in the
+ * same as @a *anchor_access (in which case @a *target is the empty
+ * string, never NULL).  All the access batons will be in the
  * @a *anchor_access set.
  *
  * @a levels_to_lock determines the levels_to_lock used when opening
@@ -3409,7 +3410,7 @@ svn_wc_get_actual_target(const char *path,
  * when the editor driver calls @c close_edit.
  *
  * @a target is the entry in @a anchor that will actually be updated, or
- * empty if all of @a anchor should be updated.
+ * the empty string if all of @a anchor should be updated.
  *
  * The editor invokes @a notify_func with @a notify_baton as the update
  * progresses, if @a notify_func is non-NULL.

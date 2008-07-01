@@ -710,7 +710,7 @@ EOE
       reporter = session.diff(rev1, "", @repos_uri, editor)
       adm.crawl_revisions(dir_path, reporter)
 
-      args = {
+      property_info = {
         :dir_changed_prop_names => [
                                     "svn:entry:committed-date",
                                     "svn:entry:uuid",
@@ -720,7 +720,8 @@ EOE
         :file_changed_prop_name => prop_name,
         :file_changed_prop_value => prop_value,
       }
-      dir_changed_props, file_changed_props, empty_changed_props = yield(args)
+      expected_props, actual_result = yield(property_info, callbacks.result)
+      dir_changed_props, file_changed_props, empty_changed_props = expected_props
       assert_equal([
                     [:dir_props_changed, @wc_path, dir_changed_props],
                     [:file_changed, path1, file_changed_props],
@@ -731,29 +732,37 @@ EOE
   end
 
   def test_diff_callbacks_for_backward_compatibility
-    assert_diff_callbacks(:diff_editor) do |args|
-      dir_changed_props = args[:dir_changed_prop_names].collect do |name|
+    assert_diff_callbacks(:diff_editor) do |property_info, result|
+      dir_changed_prop_names = property_info[:dir_changed_prop_names]
+      dir_changed_props = dir_changed_prop_names.sort.collect do |name|
         Svn::Core::Prop.new(name, nil)
       end
-      prop_name = args[:file_changed_prop_name]
-      prop_value = args[:file_changed_prop_value]
+      prop_name = property_info[:file_changed_prop_name]
+      prop_value = property_info[:file_changed_prop_value]
       file_changed_props = [Svn::Core::Prop.new(prop_name, prop_value)]
       empty_changed_props = []
-      [dir_changed_props, file_changed_props, empty_changed_props]
+
+      sorted_result = result.dup
+      dir_prop_changed = sorted_result.assoc(:dir_props_changed)
+      dir_prop_changed[2] = dir_prop_changed[2].sort_by {|prop| prop.name}
+
+      [[dir_changed_props, file_changed_props, empty_changed_props],
+       sorted_result]
     end
   end
 
   def test_diff_callbacks
-    assert_diff_callbacks(:diff_editor2) do |args|
+    assert_diff_callbacks(:diff_editor2) do |property_info, result|
       dir_changed_props = {}
-      args[:dir_changed_prop_names].each do |name|
+      property_info[:dir_changed_prop_names].each do |name|
         dir_changed_props[name] = nil
       end
-      prop_name = args[:file_changed_prop_name]
-      prop_value = args[:file_changed_prop_value]
+      prop_name = property_info[:file_changed_prop_name]
+      prop_value = property_info[:file_changed_prop_value]
       file_changed_props = {prop_name => prop_value}
       empty_changed_props = {}
-      [dir_changed_props, file_changed_props, empty_changed_props]
+      [[dir_changed_props, file_changed_props, empty_changed_props],
+       result]
     end
   end
 

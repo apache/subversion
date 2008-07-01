@@ -71,8 +71,10 @@ struct edit_baton
 {
   /* For updates, the "destination" of the edit is the ANCHOR (the
      directory at which the edit is rooted) plus the TARGET (the
-     actual thing we wish to update).  For checkouts, ANCHOR holds the
-     whole path, and TARGET is unused. */
+     actual thing we wish to update).  Target may be the empty string,
+     but it is never NULL; for example, for checkouts and for updates
+     that do not specify a target path, ANCHOR holds the whole path,
+     and TARGET is empty. */
   const char *anchor;
   const char *target;
 
@@ -665,7 +667,7 @@ struct file_baton
 
   /* The path to the incoming text base (that is, to a text-base-file-
      in-progress in the tmp area).  This gets set if there are file
-     content changes. */ 
+     content changes. */
   const char *new_text_base_path;
 
   /* If this file was added with history, this is the path to a copy
@@ -1379,7 +1381,7 @@ add_directory(const char *path,
       http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=136879
       From: "David Glasser" <glasser@davidglasser.net>
       To: "Karl Fogel" <kfogel@red-bean.com>, dev@subversion.tigris.org
-      Cc: "Arfrever Frehtes Taifersar Arahesis" <arfrever.fta@gmail.com>, 
+      Cc: "Arfrever Frehtes Taifersar Arahesis" <arfrever.fta@gmail.com>,
           glasser@tigris.org
       Subject: Re: svn commit: r30161 - in trunk/subversion: \
                libsvn_ra_neon tests/cmdline
@@ -3276,7 +3278,7 @@ make_editor(svn_revnum_t *target_revision,
   /* An unknown depth can't be sticky. */
   if (depth == svn_depth_unknown)
     depth_is_sticky = FALSE;
-  
+
   /* Get the anchor entry, so we can fetch the repository root. */
   SVN_ERR(svn_wc_entry(&entry, anchor, adm_access, FALSE, pool));
 
@@ -3483,8 +3485,8 @@ svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
   assert(switch_url);
 
   return make_editor(target_revision, anchor, svn_wc_adm_access_path(anchor),
-                     target, use_commit_times, switch_url, 
-                     depth, depth_is_sticky, allow_unver_obstructions, 
+                     target, use_commit_times, switch_url,
+                     depth, depth_is_sticky, allow_unver_obstructions,
                      notify_func, notify_baton, cancel_func, cancel_baton,
                      conflict_func, conflict_baton,
                      NULL, NULL, /* TODO(sussman): add fetch callback here  */

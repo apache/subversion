@@ -53,7 +53,7 @@ class StringIOWithEncoding(StringIO):
     def __init__(self):
         StringIO.__init__(self)
         self.encoding = sys.stdout.encoding
-    
+
 class TestCase_kwextract(unittest.TestCase):
     def test_basic(self):
         self.assertEqual(svnmerge.kwextract("$Rev: 134 rasky $"), "134 rasky")
@@ -522,6 +522,14 @@ class TestCase_TestRepo(TestCase_SvnMerge):
     def testSelfReferentialInit(self):
         self.svnmerge2(["init", self.test_repo_url + "/branches/test-branch"],
                        error=True, match=r"cannot init integration source")
+
+    def testAvailURL(self):
+        # Initialize svnmerge
+        self.svnmerge("init")
+        self.launch("svn commit -F svnmerge-commit-message.txt",
+                    match=r"Committed revision")
+
+        self.svnmerge("avail %s/branches/test-branch" % self.test_repo_url, match=r"\A9-10$")
 
     def testBlocked(self):
 

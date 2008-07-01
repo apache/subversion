@@ -1,5 +1,7 @@
 /*
- * target-test.c -- test the target condensing function
+ * target-test.c:
+ * Utility used by target-test.py to test svn_path_condense_targets().
+ * Note that this file by itself is not a complete C test.
  *
  * ====================================================================
  * Copyright (c) 2000-2007 CollabNet.  All rights reserved.

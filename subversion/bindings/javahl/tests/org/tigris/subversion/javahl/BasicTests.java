@@ -29,6 +29,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.ByteArrayOutputStream;
+import java.text.ParseException;
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -36,6 +37,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.Map;
+
+import junit.framework.Assert;
 
 /**
  * Tests the basic functionality of javahl binding (inspired by the
@@ -69,6 +72,32 @@ public class BasicTests extends SVNTests
         {
             testCounter = 0;
             testBaseName = testName;
+        }
+    }
+
+    /**
+     * Test LogDate().
+     * @throws Throwable
+     */
+    public void testLogDate() throws Throwable
+    {
+        String goodDate = "2007-10-04T03:00:52.134992Z";
+        String badDate = "2008-01-14";
+        LogDate logDate;
+
+        try
+        {
+            logDate = new LogDate(goodDate);
+            assertEquals(1191466852134992L, logDate.getTimeMicros());
+        } catch (ParseException e) {
+            fail("Failed to parse date " + goodDate);
+        }
+
+        try
+        {
+            logDate = new LogDate(badDate);
+            fail("Failed to throw exception on bad date " + badDate);
+        } catch (ParseException e) {
         }
     }
 
@@ -147,6 +176,14 @@ public class BasicTests extends SVNTests
 
         // check the status of the working copy
         thisTest.checkStatus();
+
+        // Test status of non-existent file
+        File fileC = new File(thisTest.getWorkingCopy() + "/A", "foo.c");
+
+        Status s = client.singleStatus(fileToSVNPath(fileC, false), false);
+        if (s != null)
+            fail("File foo.c should not return a status.");
+
     }
 
     /**
@@ -885,7 +922,7 @@ public class BasicTests extends SVNTests
                    suggestions[0].endsWith(new File(wcPath).getName()));
 
     }
-   
+
     /**
      * Tests that the passed start and end revision are contained
      * within the array of revisions.
@@ -2009,7 +2046,7 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * Test the baisc SVNClient locking functionality.
+     * Test the basic SVNClient locking functionality.
      * @throws Throwable
      * @since 1.2
      */
@@ -2058,7 +2095,7 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * Test the baisc SVNClient.info2 functionality.
+     * Test the basic SVNClient.info2 functionality.
      * @throws Throwable
      * @since 1.2
      */
@@ -2091,6 +2128,21 @@ public class BasicTests extends SVNTests
         Revision rev = new Revision.Number(1);
         infos = client.info2(thisTest.getWCPath(), rev, rev, true);
         assertEquals(failureMsg, 21, infos.length);
+
+        // Examine default
+        assertEquals(Depth.unknown, infos[0].getDepth());
+
+        // Create wc with a depth of Depth.empty
+        String secondWC = thisTest.getWCPath() + ".empty";
+        removeDirOrFile(new File(secondWC));
+
+        client.checkout(thisTest.getUrl(), secondWC, null, null, Depth.empty,
+                        false, true);
+
+        infos = client.info2(secondWC, null, null, false);
+
+        // Examine that depth is Depth.empty
+        assertEquals(Depth.empty, infos[0].getDepth());
     }
 
     /**
@@ -2180,7 +2232,7 @@ public class BasicTests extends SVNTests
                                      expectedAvailableEnd, availableRevs);
             }
     }
-    
+
     /**
      * Calls the API to get mergeinfo revisions and returns
      * the revision numbers in a sorted array, or null if there
@@ -2192,14 +2244,14 @@ public class BasicTests extends SVNTests
                                          String mergeSourceUrl,
                                          Revision srcPegRevision) {
         class Callback implements LogMessageCallback {
-            
+
             List revList = new ArrayList();
 
             public void singleMessage(ChangePath[] changedPaths, long revision,
                     Map revprops, boolean hasChildren) {
                 revList.add(new Long(revision));
             }
-            
+
             public long[] getRevisions() {
                 long[] revisions = new long[revList.size()];
                 int i = 0;
@@ -2219,7 +2271,7 @@ public class BasicTests extends SVNTests
         } catch (ClientException e) {
             return null;
         }
-        
+
     }
 
     /**
@@ -2620,7 +2672,7 @@ public class BasicTests extends SVNTests
             "\\ No newline at end of file" + NL +
             "+This is the file 'mu'." + NL +
             "\\ No newline at end of file" + NL;
-        
+
         final String iotaPath = thisTest.getWCPath().replace('\\', '/') + "/iota";
         final String wcPath = fileToSVNPath(new File(thisTest.getWCPath()),
                 false);
@@ -2630,7 +2682,7 @@ public class BasicTests extends SVNTests
         writer.print("This is the file 'mu'.");
         writer.flush();
         writer.close();
-        
+
         /*
          * This test does tests with and without svn:eol-style set to native
          * We will first run all of the tests where this does not matter so
@@ -2710,8 +2762,8 @@ public class BasicTests extends SVNTests
         assertFileContentsEquals("Unexpected diff output in file '" +
                                  diffOutput.getPath() + '\'',
                                  expectedDiffOutput, diffOutput);
-        
-        
+
+
         /*
          * The rest of these tests are run twice.  The first time
          * without svn:eol-style set and the second time with the
@@ -2720,14 +2772,14 @@ public class BasicTests extends SVNTests
          * commit which sets the property
          */
 
-        for (int operativeRevision = 1; operativeRevision < 3; operativeRevision++) 
+        for (int operativeRevision = 1; operativeRevision < 3; operativeRevision++)
          {
                 String revisionPrefix = "While processing operativeRevison=" + operativeRevision + ". ";
                 String assertPrefix = revisionPrefix + "Unexpected diff output in file '";
-                
+
                 // Undo previous edits to working copy
                 client.revert(wcPath, true);
-                
+
                 if (operativeRevision == 2) {
                     // Set svn:eol-style=native on iota
                     client.propertyCreate(iotaPath, "svn:eol-style", "native", false);
@@ -2748,7 +2800,7 @@ public class BasicTests extends SVNTests
                     "+++ " + iotaPath + "\t(working copy)" + NL +
                     expectedDiffBody;
 
-                try 
+                try
                 {
                     // Two-path diff of WC paths.
                     client.diff(iotaPath, Revision.BASE,
@@ -2758,13 +2810,13 @@ public class BasicTests extends SVNTests
                                              diffOutput.getPath() + '\'',
                                              expectedDiffOutput, diffOutput);
                     diffOutput.delete();
-                } 
-                catch (ClientException e) 
+                }
+                catch (ClientException e)
                 {
                     fail(revisionPrefix + e.getMessage());
                 }
-                
-                try 
+
+                try
                 {
                     // Peg revision diff of a single file.
                     client.diff(thisTest.getUrl() + "/iota", Revision.HEAD,
@@ -2773,20 +2825,20 @@ public class BasicTests extends SVNTests
                     assertFileContentsEquals(assertPrefix +
                                              diffOutput.getPath() + '\'',
                                              "", diffOutput);
-    
+
                     diffOutput.delete();
-                } 
-                catch (ClientException e) 
+                }
+                catch (ClientException e)
                 {
                     fail(revisionPrefix + e.getMessage());
                 }
-    
+
                // Test svn diff with a relative path.
                 expectedDiffOutput = "Index: iota" + NL + sepLine +
                     "--- iota\t(revision " + operativeRevision + ")" + NL +
                     "+++ iota\t(working copy)" + NL +
                     expectedDiffBody;
-                try 
+                try
                 {
                     client.diff(iotaPath, Revision.BASE, iotaPath,
                                 Revision.WORKING, wcPath, diffOutput.getPath(),
@@ -2795,13 +2847,13 @@ public class BasicTests extends SVNTests
                                              diffOutput.getPath() + '\'',
                                              expectedDiffOutput, diffOutput);
                     diffOutput.delete();
-                } 
-                catch (ClientException e) 
+                }
+                catch (ClientException e)
                 {
                     fail(revisionPrefix + e.getMessage());
                 }
-    
-                try 
+
+                try
                 {
                     // Test svn diff with a relative path and trailing slash.
                     client.diff(iotaPath, Revision.BASE, iotaPath,
@@ -2812,12 +2864,12 @@ public class BasicTests extends SVNTests
                                              diffOutput.getPath() + '\'',
                                              expectedDiffOutput, diffOutput);
                     diffOutput.delete();
-                } 
-                catch (ClientException e) 
+                }
+                catch (ClientException e)
                 {
                     fail(revisionPrefix + e.getMessage());
                 }
-                
+
             }
 
     }

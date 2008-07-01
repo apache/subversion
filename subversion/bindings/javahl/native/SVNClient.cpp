@@ -1154,16 +1154,16 @@ SVNClient::diffSummarize(const char *target, Revision &pegRevision,
 
 #if defined(SVN_HAVE_KWALLET) || defined(SVN_HAVE_GNOME_KEYRING)
 /* Dynamically load authentication simple provider. */
-static svn_boolean_t
+static svn_error_t *
 get_auth_simple_provider(svn_auth_provider_object_t **provider,
                          const char *provider_name,
                          apr_pool_t *pool)
 {
   apr_dso_handle_t *dso;
-  apr_dso_handle_sym_t provider_symbol;
+  apr_dso_handle_sym_t symbol;
   const char *libname;
   const char *funcname;
-  svn_boolean_t ret = FALSE;
+  *provider = NULL;
   libname = apr_psprintf(pool,
                          "libsvn_auth_%s-%d.so.0",
                          provider_name,
@@ -1171,18 +1171,17 @@ get_auth_simple_provider(svn_auth_provider_object_t **provider,
   funcname = apr_psprintf(pool,
                           "svn_auth_get_%s_simple_provider",
                           provider_name);
-  svn_error_clear(svn_dso_load(&dso, libname));
+  SVN_ERR(svn_dso_load(&dso, libname));
   if (dso)
     {
-      if (! apr_dso_sym(&provider_symbol, dso, funcname))
+      if (! apr_dso_sym(&symbol, dso, funcname))
         {
           svn_auth_simple_provider_func_t func;
-          func = (svn_auth_simple_provider_func_t) provider_symbol;
+          func = (svn_auth_simple_provider_func_t) symbol;
           func(provider, pool);
-          ret = TRUE;
         }
     }
-  return ret;
+  return SVN_NO_ERROR;
 }
 #endif
 
@@ -1207,14 +1206,16 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
     svn_auth_get_keychain_simple_provider(&provider, pool);
     APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 #endif
-#ifdef SVN_HAVE_KWALLET
-    if (get_auth_simple_provider(&provider, "kwallet", pool))
+#ifdef SVN_HAVE_GNOME_KEYRING
+    SVN_JNI_ERR(get_auth_simple_provider(&provider, "gnome_keyring", pool), NULL);
+    if (provider)
       {
         APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
       }
 #endif
-#ifdef SVN_HAVE_GNOME_KEYRING
-    if (get_auth_simple_provider(&provider, "gnome_keyring", pool))
+#ifdef SVN_HAVE_KWALLET
+    SVN_JNI_ERR(get_auth_simple_provider(&provider, "kwallet", pool), NULL);
+    if (provider)
       {
         APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
       }

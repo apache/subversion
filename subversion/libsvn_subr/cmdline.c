@@ -356,16 +356,16 @@ svn_cmdline_handle_exit_error(svn_error_t *err,
 
 #if defined(SVN_HAVE_KWALLET) || defined(SVN_HAVE_GNOME_KEYRING)
 /* Dynamically load authentication simple provider. */
-static svn_boolean_t
+static svn_error_t *
 get_auth_simple_provider(svn_auth_provider_object_t **provider,
                          const char *provider_name,
                          apr_pool_t *pool)
 {
   apr_dso_handle_t *dso;
-  apr_dso_handle_sym_t provider_symbol;
+  apr_dso_handle_sym_t symbol;
   const char *libname;
   const char *funcname;
-  svn_boolean_t ret = FALSE;
+  *provider = NULL;
   libname = apr_psprintf(pool,
                          "libsvn_auth_%s-%d.so.0",
                          provider_name,
@@ -373,18 +373,17 @@ get_auth_simple_provider(svn_auth_provider_object_t **provider,
   funcname = apr_psprintf(pool,
                           "svn_auth_get_%s_simple_provider",
                           provider_name);
-  svn_error_clear(svn_dso_load(&dso, libname));
+  SVN_ERR(svn_dso_load(&dso, libname));
   if (dso)
     {
-      if (! apr_dso_sym(&provider_symbol, dso, funcname))
+      if (! apr_dso_sym(&symbol, dso, funcname))
         {
           svn_auth_simple_provider_func_t func;
-          func = (svn_auth_simple_provider_func_t) provider_symbol;
+          func = (svn_auth_simple_provider_func_t) symbol;
           func(provider, pool);
-          ret = TRUE;
         }
     }
-  return ret;
+  return SVN_NO_ERROR;
 }
 #endif
 
@@ -404,6 +403,9 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
   svn_boolean_t store_auth_creds_val = TRUE;
   svn_auth_provider_object_t *provider;
   svn_cmdline_prompt_baton2_t *pb = NULL;
+  const char *password_stores_config_option;
+  apr_array_header_t *password_stores;
+  int i;
 
   /* The whole list of registered providers */
   apr_array_header_t *providers
@@ -422,26 +424,68 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
   /* Disk-caching auth providers, for both
      'username/password' creds and 'username' creds,
      which store passwords encrypted.  */
-#if defined(WIN32) && !defined(__MINGW32__)
-  svn_auth_get_windows_simple_provider(&provider, pool);
-  APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-#endif
-#ifdef SVN_HAVE_KEYCHAIN_SERVICES
-  svn_auth_get_keychain_simple_provider(&provider, pool);
-  APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-#endif
-#ifdef SVN_HAVE_KWALLET
-  if (get_auth_simple_provider(&provider, "kwallet", pool))
+  svn_config_get(cfg,
+                 &password_stores_config_option,
+                 SVN_CONFIG_SECTION_AUTH,
+                 SVN_CONFIG_OPTION_PASSWORD_STORES,
+                 "gnome-keyring,kwallet,keychain,windows-cryptoapi");
+
+  password_stores
+    = svn_cstring_split(password_stores_config_option, " ,", TRUE, pool);
+
+  for (i = 0; i < password_stores->nelts; i++)
     {
-      APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-    }
+      const char *password_store = APR_ARRAY_IDX(password_stores, i,
+                                                 const char *);
+      if (apr_strnatcmp(password_store, "keychain") == 0)
+        {
+#ifdef SVN_HAVE_KEYCHAIN_SERVICES
+          svn_auth_get_keychain_simple_provider(&provider, pool);
+          APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 #endif
+          continue;
+        }
+
+      if (apr_strnatcmp(password_store, "windows-cryptoapi") == 0)
+        {
+#if defined(WIN32) && !defined(__MINGW32__)
+          svn_auth_get_windows_simple_provider(&provider, pool);
+          APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+#endif
+          continue;
+        }
+
+      if (apr_strnatcmp(password_store, "gnome-keyring") == 0)
+        {
 #ifdef SVN_HAVE_GNOME_KEYRING
-  if (get_auth_simple_provider(&provider, "gnome_keyring", pool))
-  {
-    APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-  }
+          SVN_ERR(get_auth_simple_provider(&provider, "gnome_keyring", pool));
+          if (provider)
+            {
+              APR_ARRAY_PUSH(providers,
+                             svn_auth_provider_object_t *) = provider;
+            }
 #endif
+          continue;
+        }
+
+      if (apr_strnatcmp(password_store, "kwallet") == 0)
+        {
+#ifdef SVN_HAVE_KWALLET
+          SVN_ERR(get_auth_simple_provider(&provider, "kwallet", pool));
+          if (provider)
+            {
+              APR_ARRAY_PUSH(providers,
+                             svn_auth_provider_object_t *) = provider;
+            }
+#endif
+          continue;
+        }
+      return svn_error_createf(SVN_ERR_BAD_CONFIG_VALUE, NULL,
+                               _("Invalid config: unknown password store "
+                                 "'%s'"),
+                               password_store);
+    }
+
   if (non_interactive == FALSE)
     {
       /* This provider is odd in that it isn't a prompting provider in

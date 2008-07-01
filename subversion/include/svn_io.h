@@ -628,6 +628,12 @@ svn_error_t *svn_stream_for_stdout(svn_stream_t **out, apr_pool_t *pool);
 svn_stream_t *svn_stream_from_stringbuf(svn_stringbuf_t *str,
                                         apr_pool_t *pool);
 
+/** Return a generic read-only stream connected to string @a str.
+ *  Allocate the stream in @a pool.
+ */
+svn_stream_t *svn_stream_from_string(svn_string_t *str,
+                                     apr_pool_t *pool);
+
 /** Return a stream that decompresses all data read and compresses all
  * data written. The stream @a stream is used to read and write all
  * compressed data. All compression data structures are allocated on
@@ -946,8 +952,9 @@ svn_error_t *svn_io_run_cmd(const char *path,
                             apr_pool_t *pool);
 
 /** Invoke @c the configured diff program, with @a user_args (an array
- * of utf8-encoded @a num_user_args arguments), if they are specified,
- * or "-u" if they are not.
+ * of utf8-encoded @a num_user_args arguments) if they are specified
+ * (that is, if @a user_args is non-NULL), or "-u" if they are not.
+ * If @a user_args is NULL, the value of @a num_user_args is ignored.
  *
  * Diff runs in utf8-encoded @a dir, and its exit status is stored in
  * @a exitcode, if it is not @c NULL.

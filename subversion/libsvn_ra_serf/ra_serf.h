@@ -107,7 +107,7 @@ typedef struct {
 
   /* Current authorization value used for the proxy server; may be NULL */
   char *proxy_auth_value;
-  
+
   /* user agent string */
   const char *useragent;
 
@@ -198,6 +198,9 @@ struct svn_ra_serf__session_t {
   /* SSL server certificates */
   svn_boolean_t trust_default_ca;
   const char *ssl_authorities;
+
+  /* Repository UUID */
+  const char *uuid;
 };
 
 /*
@@ -969,13 +972,14 @@ svn_ra_serf__create_options_req(svn_ra_serf__options_context_t **opt_ctx,
                                 const char *path,
                                 apr_pool_t *pool);
 
-/* Try to discover our current root @a vcc_url and the resultant @a rel_path
- * based on @a orig_path for the @a session on @a conn.
+/* Try to discover our current root @a VCC_URL and the resultant @a REL_PATH
+ * based on @a ORIG_PATH for the @a SESSION on @a CONN.
+ * REL_PATH will be URI decoded.
  *
- * @a rel_path may be NULL if the caller is not interested in the relative
+ * @a REL_PATH may be NULL if the caller is not interested in the relative
  * path.
  *
- * All temporary allocations will be made in @a pool.
+ * All temporary allocations will be made in @a POOL.
  */
 svn_error_t *
 svn_ra_serf__discover_root(const char **vcc_url,
@@ -987,8 +991,15 @@ svn_ra_serf__discover_root(const char **vcc_url,
 
 /* Set *BC_URL to the baseline collection url, and set *BC_RELATIVE to
  * the path relative to that url for URL in REVISION using SESSION.
+ * BC_RELATIVE will be URI decoded.
+ *
  * REVISION may be SVN_INVALID_REVNUM (to mean "the current HEAD
  * revision").  If URL is NULL, use SESSION's session url.
+ *
+ * If LATEST_REVNUM is not NULL, set it to the baseline revision. If
+ * REVISION was set to SVN_INVALID_REVNUM, this will return the current
+ * HEAD revision.
+ *
  * Use POOL for all allocations.
  */
 svn_error_t *
@@ -997,6 +1008,7 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
                                svn_ra_serf__session_t *session,
                                const char *url,
                                svn_revnum_t revision,
+                               svn_revnum_t *latest_revnum,
                                apr_pool_t *pool);
 
 /** RA functions **/
@@ -1227,7 +1239,7 @@ typedef svn_error_t *
 
 /**
  * svn_ra_serf__auth_protocol_t: vtable for an authn protocol provider.
- * 
+ *
  */
 struct svn_ra_serf__auth_protocol_t {
   /* The http status code that's handled by this authentication protocol.
@@ -1263,7 +1275,7 @@ svn_ra_serf__handle_auth(int code,
                          apr_pool_t *pool);
 
 /**
- * encode_auth_header: base64 encodes the authentication data and builds an 
+ * encode_auth_header: base64 encodes the authentication data and builds an
  * authentication header in this format:
  * [PROTOCOL] [BASE64 AUTH DATA]
  */
@@ -1279,7 +1291,7 @@ svn_ra_serf__encode_auth_header(const char * protocol,
 
 /**
  * Convert an HTTP status code resulting from a WebDAV request to the relevant
- * error code. 
+ * error code.
  */
 svn_error_t *
 svn_ra_serf__error_on_status(int status_code, const char *path);

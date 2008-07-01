@@ -66,10 +66,11 @@ encode_group(const unsigned char *in, char *out)
    data from call to call, and *LINELEN carries the length of the
    current output line.  Make INBUF have room for three characters and
    initialize *INBUFLEN and *LINELEN to 0.  Output will be appended to
-   STR.  */
+   STR.  Include newlines every so often if BREAK_LINES is true. */
 static void
 encode_bytes(svn_stringbuf_t *str, const char *data, apr_size_t len,
-             unsigned char *inbuf, int *inbuflen, int *linelen)
+             unsigned char *inbuf, int *inbuflen, int *linelen,
+             svn_boolean_t break_lines)
 {
   char group[4];
   const char *p = data, *end = data + len;
@@ -83,7 +84,7 @@ encode_bytes(svn_stringbuf_t *str, const char *data, apr_size_t len,
       svn_stringbuf_appendbytes(str, group, 4);
       *inbuflen = 0;
       *linelen += 4;
-      if (*linelen == BASE64_LINELEN)
+      if (break_lines && *linelen == BASE64_LINELEN)
         {
           svn_stringbuf_appendcstr(str, "\n");
           *linelen = 0;
@@ -96,11 +97,12 @@ encode_bytes(svn_stringbuf_t *str, const char *data, apr_size_t len,
 }
 
 
-/* Encode leftover data, if any, and possibly a final newline,
-   appending to STR.  LEN must be in the range 0..2.  */
+/* Encode leftover data, if any, and possibly a final newline (if
+   there has been any data and BREAK_LINES is set), appending to STR.
+   LEN must be in the range 0..2.  */
 static void
 encode_partial_group(svn_stringbuf_t *str, const unsigned char *extra,
-                     int len, int linelen)
+                     int len, int linelen, svn_boolean_t break_lines)
 {
   unsigned char ingroup[3];
   char outgroup[4];
@@ -114,7 +116,7 @@ encode_partial_group(svn_stringbuf_t *str, const unsigned char *extra,
       svn_stringbuf_appendbytes(str, outgroup, 4);
       linelen += 4;
     }
-  if (linelen > 0)
+  if (break_lines && linelen > 0)
     svn_stringbuf_appendcstr(str, "\n");
 }
 
@@ -130,7 +132,7 @@ encode_data(void *baton, const char *data, apr_size_t *len)
   svn_error_t *err = SVN_NO_ERROR;
 
   /* Encode this block of data and write it out.  */
-  encode_bytes(encoded, data, *len, eb->buf, &eb->buflen, &eb->linelen);
+  encode_bytes(encoded, data, *len, eb->buf, &eb->buflen, &eb->linelen, TRUE);
   enclen = encoded->len;
   if (enclen != 0)
     err = svn_stream_write(eb->output, encoded->data, &enclen);
@@ -149,7 +151,7 @@ finish_encoding_data(void *baton)
   svn_error_t *err = SVN_NO_ERROR;
 
   /* Encode a partial group at the end if necessary, and write it out.  */
-  encode_partial_group(encoded, eb->buf, eb->buflen, eb->linelen);
+  encode_partial_group(encoded, eb->buf, eb->buflen, eb->linelen, TRUE);
   enclen = encoded->len;
   if (enclen != 0)
     err = svn_stream_write(eb->output, encoded->data, &enclen);
@@ -181,18 +183,28 @@ svn_base64_encode(svn_stream_t *output, apr_pool_t *pool)
 
 
 const svn_string_t *
-svn_base64_encode_string(const svn_string_t *str, apr_pool_t *pool)
+svn_base64_encode_string2(const svn_string_t *str,
+                          svn_boolean_t break_lines,
+                          apr_pool_t *pool)
 {
   svn_stringbuf_t *encoded = svn_stringbuf_create("", pool);
   svn_string_t *retval = apr_pcalloc(pool, sizeof(*retval));
   unsigned char ingroup[3];
   int ingrouplen = 0, linelen = 0;
 
-  encode_bytes(encoded, str->data, str->len, ingroup, &ingrouplen, &linelen);
-  encode_partial_group(encoded, ingroup, ingrouplen, linelen);
+  encode_bytes(encoded, str->data, str->len, ingroup, &ingrouplen, &linelen,
+               break_lines);
+  encode_partial_group(encoded, ingroup, ingrouplen, linelen,
+                       break_lines);
   retval->data = encoded->data;
   retval->len = encoded->len;
   return retval;
+}
+
+const svn_string_t *
+svn_base64_encode_string(const svn_string_t *str, apr_pool_t *pool)
+{
+  return svn_base64_encode_string2(str, TRUE, pool);
 }
 
 
@@ -224,21 +236,21 @@ decode_group(const unsigned char *in, char *out)
    negative value if ch is not a valid base64 character, or otherwise
    the value of the byte represented; 'A' => 0 etc. */
 static const signed char reverse_base64[256] = {
--1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 
--1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 
--1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 62, -1, -1, -1, 63, 
-52, 53, 54, 55, 56, 57, 58, 59, 60, 61, -1, -1, -1, -1, -1, -1, 
--1,  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 
-15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, -1, -1, -1, -1, -1, 
--1, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 
-41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, -1, -1, -1, -1, -1, 
--1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 
--1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 
--1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 
--1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 
--1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 
--1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 
--1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 
+-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 62, -1, -1, -1, 63,
+52, 53, 54, 55, 56, 57, 58, 59, 60, 61, -1, -1, -1, -1, -1, -1,
+-1,  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14,
+15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, -1, -1, -1, -1, -1,
+-1, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
+41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, -1, -1, -1, -1, -1,
+-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
 };
 
@@ -255,7 +267,7 @@ decode_bytes(svn_stringbuf_t *str, const char *data, apr_size_t len,
   const char *p;
   char group[3];
   signed char find;
-  
+
   /* Resize the stringbuf to make room for the (approximate) size of
      output, to avoid repeated resizes later. */
   svn_stringbuf_ensure(str, (len / 4) * 3 + 3);
@@ -373,8 +385,8 @@ svn_base64_from_md5(unsigned char digest[], apr_pool_t *pool)
    * does an implicit unsigned char * cast.
    */
   encode_bytes(md5str, (char*)digest, APR_MD5_DIGESTSIZE, ingroup,
-               &ingrouplen, &linelen);
-  encode_partial_group(md5str, ingroup, ingrouplen, linelen);
+               &ingrouplen, &linelen, TRUE);
+  encode_partial_group(md5str, ingroup, ingrouplen, linelen, TRUE);
 
   /* Our base64-encoding routines append a final newline if any data
      was created at all, so let's hack that off. */

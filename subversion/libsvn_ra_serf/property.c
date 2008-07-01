@@ -604,16 +604,22 @@ svn_ra_serf__wait_for_props(svn_ra_serf__propfind_context_t *prop_ctx,
                             svn_ra_serf__session_t *sess,
                             apr_pool_t *pool)
 {
-  svn_error_t *err;
+  svn_error_t *err, *err2;
 
   err = svn_ra_serf__context_run_wait(&prop_ctx->done, sess, pool);
+
   if (prop_ctx->parser_ctx->error)
     {
       svn_error_clear(err);
       SVN_ERR(prop_ctx->parser_ctx->error);
     }
 
-  SVN_ERR(svn_ra_serf__error_on_status(prop_ctx->status_code, prop_ctx->path));
+  err2 = svn_ra_serf__error_on_status(prop_ctx->status_code, prop_ctx->path);
+  if (err2)
+    {
+      svn_error_clear(err);
+      return err2;
+    }
 
   return err;
 }
@@ -798,7 +804,7 @@ svn_ra_serf__set_baton_props(svn_ra_serf__prop_set_t setprop, void *baton,
   else if (strcmp(ns, "DAV:") == 0 ||
            strcmp(ns, SVN_DAV_PROP_NS_DAV) == 0)
     {
-      /* Here DAV: properties not yet converted to svn: properties should be 
+      /* Here DAV: properties not yet converted to svn: properties should be
          ignored. */
       return SVN_NO_ERROR;
     }
@@ -853,6 +859,7 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
                                svn_ra_serf__session_t *session,
                                const char *url,
                                svn_revnum_t revision,
+                               svn_revnum_t *latest_revnum,
                                apr_pool_t *pool)
 {
   const char *vcc_url, *relative_url, *basecoll_url, *baseline_url;
@@ -900,6 +907,24 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
                               _("The OPTIONS response did not include the "
                                 "requested baseline-collection value"));
     }
+
+  if (latest_revnum)
+    {
+      const char *version_name;
+
+      version_name = svn_ra_serf__get_prop(props, baseline_url,
+                                           "DAV:", SVN_DAV__VERSION_NAME);
+
+      if (!version_name)
+        {
+          return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+                                  _("The OPTIONS response did not include the "
+                                    "requested version-name value"));
+        }
+
+      *latest_revnum = SVN_STR_TO_REV(version_name);
+    }
+
   *bc_url = basecoll_url;
   *bc_relative = relative_url;
   return SVN_NO_ERROR;

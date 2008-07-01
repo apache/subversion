@@ -243,7 +243,8 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
   const char *path;
 
   SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url,
-                                         session, NULL, revision, pool));
+                                         session, NULL, revision,
+                                         NULL, pool));
 
   path = svn_path_url_add_component(basecoll_url, relative_url, pool);
 
