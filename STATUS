@@ -121,5 +121,11 @@ Candidate changes for 1.5.1:
    Votes:
      +1: cmpilato, hwright
 
+ * r31964
+   Fix broken links to the Berkeley DB 'Configuring logging' web page in
+   the DB_CONFIG file when creating a new repository.
+   Votes:
+     +1: blair
+
 Approved changes:
 =================
