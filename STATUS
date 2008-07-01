@@ -8,11 +8,6 @@ delay a release, etc.
 Candidate changes for 1.5.1:
 ============================
 
- * r31944
-   Fix two bugs in pre-1.5 log message compatibility code.
-   Votes:
-     +1: kfogel, hwright
-
  * r31313
    Make all ra layers return a consistent error when a path is not found in the
    repository.
@@ -85,7 +80,7 @@ Candidate changes for 1.5.1:
    Justification:
      Small fix, user-report error.
    Votes:
-     +1: hwright
+     +1: hwright, arfrever
 
  * r31833
    svndumpfilter: Don't match prefixes to partial path components. Fixes #desc4
@@ -95,19 +90,6 @@ Candidate changes for 1.5.1:
      then merged to trunk as r31833.
    Votes:
      +1: danielsh, hwright
-
- * r31852
-   Make libsvn_ra depend on libsvn_delta unconditionally.
-   Fixes unresolved symbol errors when loading libsvn_ra in
-   the --enable-runtime-module-search case.
-   Votes:
-     +1: stsp, hwright
-
- * r31868
-   Fix unbounded memory usage in wc-to-wc multi-file copy and move (which
-   can make large "svn mv foo/* bar/" impossible).
-   Votes:
-     +1: glasser, hwright, danielsh
 
  * r31873, 31874
    Teach 'svn mergeinfo' and underlying APIs to handle working copy path
@@ -141,3 +123,21 @@ Candidate changes for 1.5.1:
 
 Approved changes:
 =================
+
+ * r31852
+   Make libsvn_ra depend on libsvn_delta unconditionally.
+   Fixes unresolved symbol errors when loading libsvn_ra in
+   the --enable-runtime-module-search case.
+   Votes:
+     +1: stsp, hwright, arfrever
+
+ * r31868
+   Fix unbounded memory usage in wc-to-wc multi-file copy and move (which
+   can make large "svn mv foo/* bar/" impossible).
+   Votes:
+     +1: glasser, hwright, danielsh, arfrever
+
+ * r31944
+   Fix two bugs in pre-1.5 log message compatibility code.
+   Votes:
+     +1: kfogel, hwright, arfrever
