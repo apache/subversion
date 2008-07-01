@@ -123,10 +123,3 @@ Candidate changes for 1.5.1:
 
 Approved changes:
 =================
-
- * r31852
-   Make libsvn_ra depend on libsvn_delta unconditionally.
-   Fixes unresolved symbol errors when loading libsvn_ra in
-   the --enable-runtime-module-search case.
-   Votes:
-     +1: stsp, hwright, arfrever
