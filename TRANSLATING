@@ -105,11 +105,6 @@ Please replace those with these two lines:
 
   See issue #1977 in the subversion issue tracker
 
-For the time being, hourly updated subversion.pot files are posted at:
-
-http://hix.nu/subversion/trunk/subversion.pot (for trunk)
-http://hix.nu/subversion/1.1.x/subversion.pot (for 1.1.x)
-
 
 
 Verifying your po file

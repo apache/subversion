@@ -46,7 +46,7 @@ print_log_rev(void *baton,
   svn_cmdline_printf(pool, "r%ld\n", log_entry->revision);
   return SVN_NO_ERROR;
 }
- 
+
 
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
@@ -57,11 +57,11 @@ svn_cl__mergeinfo(apr_getopt_t *os,
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
-  const char *source_url, *target;
+  const char *source, *target;
   svn_opt_revision_t src_peg_revision, tgt_peg_revision;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
-                                                      opt_state->targets, 
+                                                      opt_state->targets,
                                                       ctx, pool));
 
   /* We expect a single source URL followed by a single target --
@@ -74,17 +74,14 @@ svn_cl__mergeinfo(apr_getopt_t *os,
                             _("Too many arguments given"));
 
   /* Parse the SOURCE-URL[@REV] argument. */
-  SVN_ERR(svn_opt_parse_path(&src_peg_revision, &source_url, 
+  SVN_ERR(svn_opt_parse_path(&src_peg_revision, &source,
                              APR_ARRAY_IDX(targets, 0, const char *), pool));
-  if (! svn_path_is_url(source_url))
-    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                             _("Path '%s' is not a URL"), source_url);
 
   /* Parse the TARGET[@REV] argument (if provided). */
   if (targets->nelts == 2)
     {
-      SVN_ERR(svn_opt_parse_path(&tgt_peg_revision, &target, 
-                                 APR_ARRAY_IDX(targets, 1, const char *), 
+      SVN_ERR(svn_opt_parse_path(&tgt_peg_revision, &target,
+                                 APR_ARRAY_IDX(targets, 1, const char *),
                                  pool));
     }
   else
@@ -110,16 +107,16 @@ svn_cl__mergeinfo(apr_getopt_t *os,
   /* Do the real work, depending on the requested data flavor. */
   if (opt_state->show_revs == svn_cl__show_revs_merged)
     {
-      SVN_ERR(svn_client_mergeinfo_log_merged(target, &tgt_peg_revision, 
-                                              source_url, &src_peg_revision,
-                                              print_log_rev, NULL, 
+      SVN_ERR(svn_client_mergeinfo_log_merged(target, &tgt_peg_revision,
+                                              source, &src_peg_revision,
+                                              print_log_rev, NULL,
                                               FALSE, NULL, ctx, pool));
     }
   else if (opt_state->show_revs == svn_cl__show_revs_eligible)
     {
       SVN_ERR(svn_client_mergeinfo_log_eligible(target, &tgt_peg_revision,
-                                                source_url, &src_peg_revision,
-                                                print_log_rev, NULL, 
+                                                source, &src_peg_revision,
+                                                print_log_rev, NULL,
                                                 FALSE, NULL, ctx, pool));
     }
   return SVN_NO_ERROR;

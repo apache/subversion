@@ -1,5 +1,48 @@
-Version 1.5.0
+Version 1.6.0
+(?? ??? 2008, from /branches/1.6.x)
+http://svn.collab.net/repos/svn/tags/1.6.0
+
+ User-visible changes:
+  - Major new features:
+
+  - Minor new features and improvements:
+
+  - Client-side bugfixes:
+
+  - Server-side bugfixes:
+
+  - Contributed tools improvements and bugfixes:
+    * commit-email.pl: Deprecated; use mailer.py instead (r31755,r31767)
+
+ Developer-visible changes:
+ * General:
+ * API changes:
+ * Bindings
+
+
+Version 1.5.1
 (?? ??? 2008, from /branches/1.5.x)
+http://svn.collab.net/repos/svn/tags/1.5.1
+
+ User-visible changes:
+  * fixed: crash on invalid dates in 'log' and 'blame' (issue #2721)
+  * mergeinfo on switched subtrees should elide in repos (issue #3188)
+  * fixed: 'svn status --xml' reporting invalid XML (issue #2887)
+  * fixed: 'svn merge' range notification bug (r30746, -47)
+  * fixed: can not replace branch with neon/serf (issue #2939)
+  * fixed: 'file not found' error when merging to a broken symlink (r31159, -79)
+  * fix a crash and endless loop for credentials in ra_serf (r31619)
+  * Add support for --config-dir to svnmerge.py (r31727)
+  * fixed: ArrayIndexOutOfBoundsException in JavaHL bindings (r31719, -806)
+  * improve performance of bdb post-commit deltification (r31820 -59)
+  * don't clobber LDFLAGS in configure when given '--with-zlib' (r31825)
+
+ Developer-visible changes:
+  * fixed: crash when when svn_ra_open3() is passed a bogus URL (r31223)
+  * export svn_path_is_url() to the bindings (r31603)
+
+Version 1.5.0
+(19 Jun 2008, from /branches/1.5.x)
 http://svn.collab.net/repos/svn/tags/1.5.0
 
  User-visible changes:
@@ -90,7 +133,8 @@ http://svn.collab.net/repos/svn/tags/1.5.0
     * display repository basename in XML and HTML index views (r25837, r25838)
     * config 'http-auth-type' can be overridden to force BASIC auth (r23900)
     * translation updates for all languages, as usual
-    * Revamp mod_dav_svn logging; see tools/server-side/svn_dav_log_parse.py .
+    * Revamp mod_dav_svn logging; see tools/server-side/svn_dav_log_parse.py
+    * misleading configure arg --enable-dso now --enable-runtime-module-search
 
   - Client-side bugfixes:
     * 'svn revert' of missing scheduled addition broke wc (issue #2425)
@@ -210,6 +254,7 @@ http://svn.collab.net/repos/svn/tags/1.5.0
    - new API svn_fs_txn_root_base_revision() (r22610)
    - pass individual arguments rather than config objects (r25182, r25190)
    - clients can now extend HTTP User-Agent header (r28613)
+   - SVN_ERR_RA_DAV_PATH_NOT_FOUND is deprecated and no longer raised
  * Bindings:
    - Many improvements to all bindings (Java, Perl, Python, and Ruby)
 

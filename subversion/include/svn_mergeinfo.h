@@ -39,7 +39,10 @@ extern "C" {
  * Merge history is stored in the @c SVN_PROP_MERGEINFO property of files
  * and directories.  The @c SVN_PROP_MERGEINFO property on a path stores the
  * complete list of changes merged to that path, either directly or via the
- * path's parent, grand-parent, etc..
+ * path's parent, grand-parent, etc..  A path may have empty mergeinfo which
+ * means that nothing has been merged to that path or all previous merges
+ * to the path were reversed.  Note that a path may have no mergeinfo, this
+ * is not the same as empty mergeinfo.
  *
  * Every path in a tree may have @c SVN_PROP_MERGEINFO set, but if the
  * @c SVN_PROP_MERGEINFO for a path is equivalent to the
@@ -48,7 +51,7 @@ extern "C" {
  * merge.  If a path's parent does not have any @c SVN_PROP_MERGEINFO set,
  * the path's mergeinfo can elide to its nearest grand-parent,
  * great-grand-parent, etc. that has equivalent @c SVN_PROP_MERGEINFO set
- * on it.  
+ * on it.
  *
  * If a path has no @c SVN_PROP_MERGEINFO of its own, it inherits mergeinfo
  * from its nearest parent that has @c SVN_PROP_MERGEINFO set.  The
@@ -62,7 +65,8 @@ extern "C" {
  * working revision.  If this is not the case then neither inheritance nor
  * elision can occur.
  *
- * The value of the @c SVN_PROP_MERGEINFO property is a string consisting of
+ * The value of the @c SVN_PROP_MERGEINFO property is either an empty string
+ * (representing empty mergeinfo) or a non-empty string consisting of
  * a path, a colon, and comma separated revision list, containing one or more
  * revision or revision ranges. Revision range start and end points are
  * separated by "-".  Revisions and revision ranges may have the optional
@@ -77,7 +81,7 @@ extern "C" {
  *   revisioneelement  (revisionrange | REVISION)"*"?
  *   rangelist         revisioneelement (COMMA revisioneelement)*
  *   revisionline      PATHNAME COLON rangelist
- *   top               revisionline (NEWLINE revisionline)*
+ *   top               "" | (revisionline (NEWLINE revisionline))*
  *
  * The PATHNAME is the source of a merge and the rangelist the revision(s)
  * merged to the path @c SVN_PROP_MERGEINFO is set on directly or indirectly
@@ -108,7 +112,9 @@ extern "C" {
  *     merge ranges (@c svn_merge_range_t *), ordered from smallest
  *     revision range to largest.  These hashes are called "mergeinfo"
  *     and are represented by @c svn_mergeinfo_t.  The sorted arrays
- *     are called "rangelists".
+ *     are called "rangelists".  A @c NULL hash is used to represent
+ *     no mergeinfo and an empty hash is used to represent empty
+ *     mergeinfo.
  *
  * (c) Hashes mapping paths (@c const char *, starting with slashes)
  *     to @c svn_mergeinfo_t.  These hashes are called "mergeinfo
@@ -150,7 +156,7 @@ svn_mergeinfo_parse(svn_mergeinfo_t *mergeinfo, const char *input,
  * hashes are compared for equality.  If @a consider_inheritance is FALSE,
  * then the start and end revisions of the @c svn_merge_range_t's being
  * compared are the only factors considered when determining equality.
- * 
+ *
  *  e.g. '/trunk: 1,3-4*,5' == '/trunk: 1,3-5'
  *
  * If @a consider_inheritance is TRUE, then the inheritability of the
@@ -390,7 +396,7 @@ typedef enum
 
   /** Explicit mergeinfo, or if that doesn't exist, the inherited
       mergeinfo from a target's nearest (path-wise, not history-wise)
-      ancestor. */ 
+      ancestor. */
   svn_mergeinfo_inherited,
 
   /** Mergeinfo on target's nearest (path-wise, not history-wise)

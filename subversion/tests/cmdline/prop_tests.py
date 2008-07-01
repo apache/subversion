@@ -1566,7 +1566,7 @@ def props_over_time(sbox):
   # Convenience variables
   iota_path = os.path.join(wc_dir, 'iota')
   iota_url = sbox.repo_url + '/iota'
-    
+
   # Add/tweak a property 'revision' with value revision-committed to a
   # file, commit, and then repeat this a few times.
   for rev in range(2, 4):
@@ -1576,7 +1576,7 @@ def props_over_time(sbox):
   # Backdate to r2 so the defaults for URL- vs. WC-style queries are
   # different.
   svntest.main.run_svn(None, 'up', '-r2', wc_dir)
-  
+
   # Now, test propget of the property across many combinations of
   # pegrevs, operative revs, and wc-path vs. url style input specs.
   # NOTE: We're using 0 in these loops to mean "unspecified".
@@ -1641,7 +1641,7 @@ def invalid_propvalues(sbox):
   repo_url = sbox.repo_url
 
   svntest.actions.enable_revprop_changes(repo_dir)
-  
+
   expected_stderr = '.*unexpected property value.*|.*Bogus date.*'
   svntest.actions.run_and_verify_svn(None, [], expected_stderr,
                                      'propset', '--revprop', '-r', '0',
@@ -1666,12 +1666,8 @@ test_list = [ None,
               copy_inherits_special_props,
               # If we learn how to write a pre-revprop-change hook for
               # non-Posix platforms, we won't have to skip here:
-              # TODO(epg): Removed Skip as long as we have this XFail
-              # because I couldn't get Skip and XFail to interact
-              # properly (it kept showing the failure and then
-              # printing PASS instead of XFAIL).
-              #Skip(revprop_change, is_non_posix_and_non_windows_os),
-              XFail(revprop_change, svntest.main.is_ra_type_dav),
+              Skip(XFail(revprop_change, svntest.main.is_ra_type_dav),
+                   is_non_posix_and_non_windows_os),
               prop_value_conversions,
               binary_props,
               recursive_base_wc_ops,

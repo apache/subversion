@@ -1246,7 +1246,7 @@ subcommand_rmlocks(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   /* Our usage requires at least one FS path. */
   if (args->nelts == 0)
-    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0, 
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0,
                             _("No paths to unlock provided"));
 
   /* All the rest of the arguments are paths from which to remove locks. */

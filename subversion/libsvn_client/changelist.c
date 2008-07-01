@@ -44,6 +44,10 @@ struct set_cl_fe_baton
 };
 
 
+/* This function -- which implements the 'found_entry' vtable member
+   of svn_wc_entry_callbacks2_t -- associates PATH (via its ENTRY)
+   with a new changelist (passed along in BATON->changelist), so long
+   as ENTRY is deemed a valid target of that association.  */
 static svn_error_t *
 set_entry_changelist(const char *path,
                      const svn_wc_entry_t *entry,
@@ -53,26 +57,26 @@ set_entry_changelist(const char *path,
   struct set_cl_fe_baton *b = (struct set_cl_fe_baton *)baton;
   svn_wc_adm_access_t *adm_access;
 
+  /* See if this entry passes our changelist filtering. */
+  if (! SVN_WC__CL_MATCH(b->changelist_hash, entry))
+    return SVN_NO_ERROR;
+
   /* We only care about files right now. */
   if (entry->kind != svn_node_file)
     {
       if ((strcmp(SVN_WC_ENTRY_THIS_DIR, entry->name) == 0)
           && (b->ctx->notify_func2))
         b->ctx->notify_func2(b->ctx->notify_baton2,
-                             svn_wc_create_notify(path, 
-                                                  svn_wc_notify_skip, 
+                             svn_wc_create_notify(path,
+                                                  svn_wc_notify_skip,
                                                   pool),
                              pool);
       return SVN_NO_ERROR;
     }
 
-  /* See if this entry passes our changelist filtering. */
-  if (! SVN_WC__CL_MATCH(b->changelist_hash, entry))
-    return SVN_NO_ERROR;
-
   /* Get the ADM_ACCESS for our file's parent directory,
      specifically. */
-  SVN_ERR(svn_wc_adm_retrieve(&adm_access, b->adm_access, 
+  SVN_ERR(svn_wc_adm_retrieve(&adm_access, b->adm_access,
                               svn_path_dirname(path, pool), pool));
   return svn_wc_set_changelist(path, b->changelist, adm_access,
                                b->ctx->cancel_func, b->ctx->cancel_baton,
@@ -95,7 +99,7 @@ svn_client_add_to_changelist(const apr_array_header_t *paths,
 {
   /* ### Someday this routine might use a different underlying API to
      ### to make the associations in a centralized database. */
-  
+
   apr_pool_t *subpool = svn_pool_create(pool);
   apr_hash_t *changelist_hash = NULL;
   int i;
@@ -112,7 +116,7 @@ svn_client_add_to_changelist(const apr_array_header_t *paths,
       svn_pool_clear(subpool);
       SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path,
                                      TRUE, /* write lock */ -1, /* infinity */
-                                     ctx->cancel_func, ctx->cancel_baton, 
+                                     ctx->cancel_func, ctx->cancel_baton,
                                      subpool));
 
       seb.adm_access = adm_access;
@@ -120,10 +124,10 @@ svn_client_add_to_changelist(const apr_array_header_t *paths,
       seb.changelist_hash = changelist_hash;
       seb.ctx = ctx;
       seb.pool = subpool;
-      SVN_ERR(svn_wc_walk_entries3(path, adm_access, 
+      SVN_ERR(svn_wc_walk_entries3(path, adm_access,
                                    &set_cl_entry_callbacks, &seb,
                                    depth, FALSE, /* no hidden entries */
-                                   ctx->cancel_func, ctx->cancel_baton, 
+                                   ctx->cancel_func, ctx->cancel_baton,
                                    subpool));
 
       SVN_ERR(svn_wc_adm_close(adm_access));
@@ -160,7 +164,7 @@ svn_client_remove_from_changelists(const apr_array_header_t *paths,
       svn_pool_clear(subpool);
       SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path,
                                      TRUE, /* write lock */ -1, /* infinity */
-                                     ctx->cancel_func, ctx->cancel_baton, 
+                                     ctx->cancel_func, ctx->cancel_baton,
                                      subpool));
 
       seb.adm_access = adm_access;
@@ -168,10 +172,10 @@ svn_client_remove_from_changelists(const apr_array_header_t *paths,
       seb.changelist_hash = changelist_hash;
       seb.ctx = ctx;
       seb.pool = subpool;
-      SVN_ERR(svn_wc_walk_entries3(path, adm_access, 
+      SVN_ERR(svn_wc_walk_entries3(path, adm_access,
                                    &set_cl_entry_callbacks, &seb,
                                    depth, FALSE, /* no hidden entries */
-                                   ctx->cancel_func, ctx->cancel_baton, 
+                                   ctx->cancel_func, ctx->cancel_baton,
                                    subpool));
 
       SVN_ERR(svn_wc_adm_close(adm_access));
@@ -210,7 +214,7 @@ get_entry_changelist(const char *path,
               && (strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) == 0))))
     {
       /* ...then call the callback function. */
-      SVN_ERR(b->callback_func(b->callback_baton, path, 
+      SVN_ERR(b->callback_func(b->callback_baton, path,
                                entry->changelist, pool));
     }
 

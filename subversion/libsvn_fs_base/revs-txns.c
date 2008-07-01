@@ -605,7 +605,7 @@ svn_fs_base__change_txn_props(svn_fs_txn_t *txn,
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(svn_fs_base__change_txn_prop(txn, prop->name, 
+      SVN_ERR(svn_fs_base__change_txn_prop(txn, prop->name,
                                            prop->value, iterpool));
     }
   svn_pool_destroy(iterpool);

@@ -560,7 +560,7 @@ clean_path(char* buf, size_t bufsize, const char* path)
             if (snprintf(found, pathbuflen - offset, "%s%s", sr[i].replace,
                          fixed + offset + matchlen) < 0)
                 return -1;
-            
+
             // update the fixed buffer
             if (snprintf(fixed, pathbuflen, "%s", working) < 0)
                 return -1;

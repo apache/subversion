@@ -239,6 +239,7 @@
 
 (eval-when-compile (require 'dired))
 (eval-when-compile (require 'ediff-util))
+(eval-when-compile (require 'ediff-wind))
 (eval-when-compile (require 'elp))
 (eval-when-compile (require 'pp))
 
@@ -909,6 +910,11 @@ If POS is nil, use current buffer location."
         (goto-char opoint)
         (forward-line 0)
         (1+ (count-lines start (point)))))))
+
+(defun svn-substring-no-properties (string &optional from to)
+  (if (fboundp 'substring-no-properties)
+      (substring-no-properties string from to)
+    (substring string from to)))
 
 ; xemacs
 ;; Evaluate the defsubst at compile time, so that the byte compiler
@@ -4017,7 +4023,7 @@ When called with a negative prefix argument, only update the selected files."
       (message "Running svn-update for %s" default-directory)
       (svn-run t t 'update "update"
                (when rev (list "-r" rev))
-               (list "--non-interactive")))))
+               (list "--non-interactive") default-directory))))
 
 (defun svn-status-commit ()
   "Commit selected files.
@@ -4235,7 +4241,7 @@ static char * data[] = {
 
 (defsubst svn-status-in-vc-mode? ()
   "Is vc-svn active?"
-  (and vc-mode (string-match "^ SVN" (substring-no-properties vc-mode))))
+  (and vc-mode (string-match "^ SVN" (svn-substring-no-properties vc-mode))))
 
 (when svn-status-fancy-file-state-in-modeline
   (defadvice vc-find-file-hook (after svn-status-vc-svn-find-file-hook activate)
@@ -4244,7 +4250,20 @@ static char * data[] = {
 
   (defadvice vc-after-save (after svn-status-vc-svn-after-save activate)
     "vc-after-save advice for synchronizing psvn when saving buffer"
-    (when (svn-status-in-vc-mode?) (svn-status-update-modeline))))
+    (when (svn-status-in-vc-mode?) (svn-status-update-modeline)))
+
+  (defadvice ediff-refresh-mode-lines
+    (around svn-modeline-ediff-fixup activate compile)
+    "Fixup svn file status in the modeline when using ediff"
+    (ediff-with-current-buffer ediff-buffer-A
+                               (svn-status-uninstall-state-mark-modeline))
+    (ediff-with-current-buffer ediff-buffer-B
+                               (svn-status-uninstall-state-mark-modeline))
+    ad-do-it
+    (ediff-with-current-buffer ediff-buffer-A
+                               (svn-status-update-modeline))
+    (ediff-with-current-buffer ediff-buffer-B
+                               (svn-status-update-modeline))))
 
 (defun svn-status-update-modeline ()
   "Update modeline state dot mark properly"
@@ -5379,7 +5398,7 @@ HANDLER-FUNCTION is called with the match of LINK-REGEXP when the user clicks at
 (defun svn-log-resolve-trac-ticket-short (link-name)
   "Show the trac ticket specified by LINK-NAME via `svn-trac-browse-ticket'."
   (interactive)
-  (let ((ticket-nr (string-to-number (substring-no-properties link-name 1))))
+  (let ((ticket-nr (string-to-number (svn-substring-no-properties link-name 1))))
     (svn-trac-browse-ticket ticket-nr)))
 
 ;; register the out of the box provided link handlers

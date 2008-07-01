@@ -34,7 +34,7 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: subversion 1.5.0\n"
+"Project-Id-Version: subversion 1.6\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2008-05-09 16:39+0800\n"
 "PO-Revision-Date: 2008-05-09 16:52+0800\n"
@@ -7163,6 +7163,16 @@ msgstr ""
 "指定自动解决冲突动作\n"
 "                            ('"
 
+#: ../svn/main.c:260
+msgid ""
+"specify automatic conflict resolution action\n"
+"                            ('postpone', 'base', 'mine-full', 'theirs-full',\n"
+"                             'edit', 'launch')"
+msgstr ""
+"指定自动解决冲突动作\n"
+"                            ('postpone', 'base', 'mine-full', 'theirs-full',\n"
+"                             'edit', 'launch')"
+
 #: ../svn/main.c:273
 msgid ""
 "specify which collection of revisions to display\n"
@@ -7170,6 +7180,14 @@ msgid ""
 msgstr ""
 "指定显示哪个版本集合\n"
 "                             ('"
+
+#: ../svn/main.c:273
+msgid ""
+"specify which collection of revisions to display\n"
+"                             ('merged', 'eligible')"
+msgstr ""
+"指定显示哪个版本集合\n"
+"                             ('merged', 'eligible')"
 
 #: ../svn/main.c:278
 msgid "lump-merge all of source URL's unmerged changes"

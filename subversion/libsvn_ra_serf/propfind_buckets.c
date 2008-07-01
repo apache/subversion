@@ -149,7 +149,7 @@ static void become_request(serf_bucket_t *bucket)
   if (ctx->conn->session->using_proxy)
     {
       char *url = apr_uri_unparse(ctx->conn->session->pool,
-                                  &ctx->conn->session->repos_url, 
+                                  &ctx->conn->session->repos_url,
                                   APR_URI_UNP_OMITPATHINFO);
       serf_bucket_request_set_root(bucket, url);
     }
@@ -178,7 +178,7 @@ static void become_request(serf_bucket_t *bucket)
 
   /* Setup proxy authorization headers */
   if (ctx->conn->session->proxy_auth_protocol)
-    ctx->conn->session->proxy_auth_protocol->setup_request_func(ctx->conn, 
+    ctx->conn->session->proxy_auth_protocol->setup_request_func(ctx->conn,
                                                                 hdrs_bkt);
 
   serf_bucket_mem_free(bucket->allocator, ctx);

@@ -40,11 +40,12 @@ SCHEMA_DIR = subversion/svn/schema
 NEON_LIBS = @NEON_LIBS@
 SVN_APR_LIBS = @SVN_APR_LIBS@
 SVN_APRUTIL_LIBS = @SVN_APRUTIL_LIBS@
+SVN_APR_MEMCACHE_LIBS = @SVN_APR_MEMCACHE_LIBS@
 SVN_DB_LIBS =
 SVN_GNOME_KEYRING_LIBS = @SVN_GNOME_KEYRING_LIBS@
 SVN_KWALLET_LIBS = @SVN_KWALLET_LIBS@
-SVN_SERF_LIBS = @SVN_SERF_LIBS@
 SVN_SASL_LIBS = @SVN_SASL_LIBS@
+SVN_SERF_LIBS = @SVN_SERF_LIBS@
 SVN_ZLIB_LIBS = @SVN_ZLIB_LIBS@
 
 LIBS = @LIBS@
@@ -106,9 +107,9 @@ LT_NO_UNDEFINED = @LT_NO_UNDEFINED@
 LT_CXX_LIBADD = @LT_CXX_LIBADD@
 
 INCLUDES = -I$(top_srcdir)/subversion/include -I$(top_builddir)/subversion \
-           @SVN_APR_INCLUDES@ @SVN_APRUTIL_INCLUDES@ @SVN_GNOME_KEYRING_INCLUDES@ \
-           @SVN_KWALLET_INCLUDES@ @SVN_NEON_INCLUDES@ @SVN_SASL_INCLUDES@ \
-           @SVN_SERF_INCLUDES@ @SVN_ZLIB_INCLUDES@
+           @SVN_APR_INCLUDES@ @SVN_APRUTIL_INCLUDES@ @SVN_APR_MEMCACHE_INCLUDES@ \
+           @SVN_GNOME_KEYRING_INCLUDES@ @SVN_KWALLET_INCLUDES@ @SVN_NEON_INCLUDES@ \
+           @SVN_SASL_INCLUDES@ @SVN_SERF_INCLUDES@ @SVN_ZLIB_INCLUDES@
 
 APACHE_INCLUDES = @APACHE_INCLUDES@
 APACHE_LIBEXECDIR = $(DESTDIR)@APACHE_LIBEXECDIR@
@@ -129,12 +130,16 @@ SWIG_RB_SITE_ARCH_DIR = @SWIG_RB_SITE_ARCH_DIR@
 SWIG_RB_TEST_VERBOSE = @SWIG_RB_TEST_VERBOSE@
 SWIG_RB_RI_DATADIR = $(DESTDIR)$(datadir)/ri/$(RUBY_MAJOR).$(RUBY_MINOR)/site
 
+JAVAHL_JAR=subversion/bindings/javahl/svn-javahl.jar
 JAVAHL_INCLUDES= @JNI_INCLUDES@ -I$(abs_builddir)/subversion/bindings/javahl/include
 
 SVN_APR_INCLUDES = @SVN_APR_INCLUDES@
 SVN_APR_PREFIX = @SVN_APR_PREFIX@
 SVN_APRUTIL_INCLUDES = @SVN_APRUTIL_INCLUDES@
 SVN_APRUTIL_PREFIX = @SVN_APRUTIL_PREFIX@
+
+SVN_APR_MEMCACHE_PREFIX = @SVN_APR_MEMCACHE_PREFIX@
+SVN_APR_MEMCACHE_INCLUDES = @SVN_APR_MEMCACHE_INCLUDES@
 
 SVN_SERF_INCLUDES = @SVN_SERF_INCLUDES@
 SVN_SERF_PREFIX = @SVN_SERF_PREFIX@
@@ -191,6 +196,7 @@ INSTALL = @INSTALL@
 INSTALL_LIB = $(LIBTOOL) --mode=install $(INSTALL)
 INSTALL_FSMOD_LIB = $(INSTALL_LIB)
 INSTALL_RAMOD_LIB = $(INSTALL_LIB)
+INSTALL_APR_MEMCACHE_LIB = $(INSTALL_LIB)
 INSTALL_BDB_LIB = $(INSTALL_LIB)
 INSTALL_GNOME_KEYRING_LIB = $(INSTALL_LIB)
 INSTALL_KWALLET_LIB = $(INSTALL_LIB)
@@ -247,8 +253,8 @@ SWIG_RB_SRC_DIR = $(abs_srcdir)/subversion/bindings/swig/ruby
 ### Automate JAR creation using Makefile generator's javahl-java.jar
 ### property.  Enhance generator to support JAR installation.
 INSTALL_EXTRA_JAVAHL_JAVA=\
-	$(JAR) cf subversion/bindings/javahl/svn-javahl.jar -C subversion/bindings/javahl/classes org; \
-	$(INSTALL_DATA) subversion/bindings/javahl/svn-javahl.jar $(DESTDIR)$(javahl_javadir);
+	$(JAR) cf $(JAVAHL_JAR) -C subversion/bindings/javahl/classes org; \
+	$(INSTALL_DATA) $(JAVAHL_JAR) $(DESTDIR)$(javahl_javadir);
 
 INSTALL_EXTRA_JAVAHL_LIB=@INSTALL_EXTRA_JAVAHL_LIB@
 
@@ -355,12 +361,12 @@ install-static: @INSTALL_STATIC_RULES@
 
 # JavaHL target aliases
 javahl: mkdir-init javahl-java javahl-javah javahl-lib @JAVAHL_TESTS_TARGET@
-install-javahl: install-javahl-java install-javahl-javah install-javahl-lib
+install-javahl: javahl install-javahl-java install-javahl-javah install-javahl-lib
 
 clean-javahl:
 	rm -rf $(javahl_java_PATH) $(javahl_javah_PATH) @JAVAHL_OBJDIR@
 	rm -fr $(javahl_test_rootdir)
-	rm -f $(libsvnjavahl_PATH)/*.la
+	rm -f $(libsvnjavahl_PATH)/*.la $(JAVAHL_JAR)
 	rm -f $(libsvnjavahl_PATH)/*.lo
 	rm -f $(libsvnjavahl_PATH)/*.o
 
@@ -371,7 +377,7 @@ check-javahl: javahl
 # "make check CLEANUP=true" will clean up directories for successful tests.
 # "make check TESTS=subversion/tests/cmdline/basic_tests.py"
 #  will perform only basic tests (likewise for other tests).
-check: $(TEST_DEPS) @BDB_TEST_DEPS@
+check: bin $(TEST_DEPS) @BDB_TEST_DEPS@
 	@if test "$(PYTHON)" != "none"; then                                 \
 	  flags="--verbose";                                                 \
 	  if test "$(CLEANUP)" != ""; then                                   \
@@ -395,7 +401,9 @@ check: $(TEST_DEPS) @BDB_TEST_DEPS@
 	  if test "$(PARALLEL)" != ""; then                                  \
 	    flags="--parallel $$flags";                                      \
 	  fi;                                                                \
-	  $(PYTHON) $(top_srcdir)/build/run_tests.py $$flags                 \
+	  $(PYTHON) $(top_srcdir)/build/run_tests.py			     \
+	            --config-file $(top_srcdir)/subversion/tests/tests.conf  \
+	            $$flags                 				     \
 		    '$(abs_srcdir)' '$(abs_builddir)' $(TESTS);              \
 	else                                                                 \
 	  echo "make check: Python 2.2 or greater is required,";             \
@@ -692,7 +700,10 @@ $(SWIG_PY_DIR)/libsvn:
 	mkdir $(SWIG_PY_DIR)/libsvn
 
 copy-swig-py: autogen-swig-py $(SWIG_PY_DIR)/libsvn
-	@cp -pf $(SWIG_PY_SRC_DIR)/*.py $(SWIG_PY_DIR)/libsvn
+	@for f in $(SWIG_PY_SRC_DIR)/*.py $(SWIG_PY_DIR)/*.py; do \
+	  ! [ -f "$$f" ] || cp -pf $$f $(SWIG_PY_DIR)/libsvn; \
+	done
+	@touch $(SWIG_PY_DIR)/libsvn/__init__.py
 
 swig-py: autogen-swig-py copy-swig-py
 

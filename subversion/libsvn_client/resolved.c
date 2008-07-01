@@ -38,7 +38,7 @@ svn_client_resolved(const char *path,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool)
 {
-  svn_depth_t depth = (recursive ? svn_depth_infinity : svn_depth_empty);
+  svn_depth_t depth = SVN_DEPTH_INFINITY_OR_EMPTY(recursive);
   return svn_client_resolve(path, depth,
                             svn_wc_conflict_choose_merged, ctx, pool);
 }

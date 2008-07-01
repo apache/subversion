@@ -59,7 +59,7 @@
    ### any code which uses the pre-1.2 API svn_ra_get_ra_library
    ### instead of svn_ra_open. */
 
-#if defined(SVN_LIBSVN_CLIENT_LINKS_RA_NEON) && defined (SVN_LIBSVN_CLIENT_LINKS_RA_SERF)
+#if defined(SVN_HAVE_NEON) && defined(SVN_HAVE_SERF)
 #define MUST_CHOOSE_DAV
 #endif
 
@@ -494,7 +494,7 @@ svn_error_t *svn_ra_open3(svn_ra_session_t **session_p,
 
           if (strcmp(http_library, "neon") != 0 &&
               strcmp(http_library, "serf") != 0)
-            return svn_error_createf(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
+            return svn_error_createf(SVN_ERR_BAD_CONFIG_VALUE, NULL,
                                      _("Invalid config: unknown HTTP library "
                                        "'%s'"),
                                      http_library);
@@ -1022,11 +1022,14 @@ svn_error_t *svn_ra_get_log2(svn_ra_session_t *session,
                              void *receiver_baton,
                              apr_pool_t *pool)
 {
-  int i;
-  for (i = 0; i < paths->nelts; i++)
+  if (paths)
     {
-      const char *path = APR_ARRAY_IDX(paths, i, const char *);
-      assert(*path != '/');
+      int i;
+      for (i = 0; i < paths->nelts; i++)
+        {
+          const char *path = APR_ARRAY_IDX(paths, i, const char *);
+          assert(*path != '/');
+        }
     }
 
   if (include_merged_revisions)
@@ -1051,12 +1054,15 @@ svn_error_t *svn_ra_get_log(svn_ra_session_t *session,
 {
   svn_log_entry_receiver_t receiver2;
   void *receiver2_baton;
-  int i;
 
-  for (i = 0; i < paths->nelts; i++)
+  if (paths)
     {
-      const char *path = APR_ARRAY_IDX(paths, i, const char *);
-      assert(*path != '/');
+      int i;
+      for (i = 0; i < paths->nelts; i++)
+        {
+          const char *path = APR_ARRAY_IDX(paths, i, const char *);
+          assert(*path != '/');
+        }
     }
 
   svn_compat_wrap_log_receiver(&receiver2, &receiver2_baton,
@@ -1312,9 +1318,9 @@ svn_ra_replay_range(svn_ra_session_t *session,
                     void *replay_baton,
                     apr_pool_t *pool)
 {
-  svn_error_t *err = 
-    session->vtable->replay_range(session, start_revision, end_revision, 
-                                  low_water_mark, text_deltas, 
+  svn_error_t *err =
+    session->vtable->replay_range(session, start_revision, end_revision,
+                                  low_water_mark, text_deltas,
                                   revstart_func, revfinish_func,
                                   replay_baton, pool);
 
@@ -1336,14 +1342,14 @@ svn_ra_replay_range(svn_ra_session_t *session,
 
           SVN_ERR(svn_ra_rev_proplist(session, rev, &rev_props, subpool));
 
-          SVN_ERR(revstart_func(rev, replay_baton, 
-                                &editor, &edit_baton, 
+          SVN_ERR(revstart_func(rev, replay_baton,
+                                &editor, &edit_baton,
                                 rev_props,
                                 subpool));
           SVN_ERR(svn_ra_replay(session, rev, low_water_mark,
-                                text_deltas, editor, edit_baton, 
+                                text_deltas, editor, edit_baton,
                                 subpool));
-          SVN_ERR(revfinish_func(rev, replay_baton, 
+          SVN_ERR(revfinish_func(rev, replay_baton,
                                  editor, edit_baton,
                                  rev_props,
                                  subpool));
