@@ -492,9 +492,28 @@ read_entry(svn_wc_entry_t **new_entry,
     const char *result;
     SVN_ERR(read_val(&result, buf, end));
     if (result)
-      entry->depth = svn_depth_from_word(result);
+      {
+        svn_boolean_t invalid;
+        svn_boolean_t is_this_dir;
+
+        entry->depth = svn_depth_from_word(result);
+
+        /* Verify the depth value: 
+           THIS_DIR should not have an excluded value and SUB_DIR should only
+           have excluded value. Remember that infinity value is not stored and
+           should not show up here. Otherwise, something bad may have
+           happened. However, infinity value itself will always be okay. */
+        is_this_dir = !name;
+        invalid = is_this_dir ^ (entry->depth != svn_depth_exclude);
+        if (entry->depth != svn_depth_infinity && invalid)
+          return svn_error_createf
+            (SVN_ERR_ENTRY_ATTRIBUTE_INVALID, NULL,
+             _("Entry '%s' has invalid depth"),
+             (name ? name : SVN_WC_ENTRY_THIS_DIR));
+      }
     else
       entry->depth = svn_depth_infinity;
+
   }
   MAYBE_DONE;
 

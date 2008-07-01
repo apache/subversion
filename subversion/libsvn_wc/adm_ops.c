@@ -2569,7 +2569,7 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
                the entry in the parent directory should be preserved
                for bookkeeping purpose. This only happens when the 
                function is called by svn_wc_crop_tree(). */
-            dir_entry = apr_hash_get(entries, base_name, 
+            dir_entry = apr_hash_get(parent_entries, base_name, 
                                      APR_HASH_KEY_STRING);
             if (dir_entry->depth != svn_depth_exclude)
               {
