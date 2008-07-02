@@ -2572,7 +2572,7 @@ get_combined_window(svn_txdelta_window_t **result,
 
       SVN_ERR(read_window(&nwin, rb->chunk_index, rs, pool));
 
-      /* Combine this window with the current one.  Cycles pools so that we
+      /* Combine this window with the current one.  Cycle pools so that we
          only need to hold three windows at a time. */
       new_pool = svn_pool_create(rb->pool);
       window = svn_txdelta_compose_windows(nwin, window, new_pool);
