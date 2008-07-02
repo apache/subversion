@@ -2282,7 +2282,7 @@ svn_wc_prop_get(const svn_string_t **value,
       if (svn_prop_is_boolean(name))
         {
           *value = svn_string_create(SVN_PROP_BOOLEAN_TRUE, pool);
-          assert(*value != NULL);
+          SVN_ERR_ASSERT(*value != NULL);
           return SVN_NO_ERROR;
         }
     }

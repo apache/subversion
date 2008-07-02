@@ -590,7 +590,7 @@ check_ancestry_of_peg_path(svn_boolean_t *is_ancestor,
   /* We must have had at least one iteration above where we
      reassigned fs_path. Else, the path wouldn't have existed at
      future_revision and svn_fs_history would have thrown. */
-  assert(fs_path != NULL);
+  SVN_ERR_ASSERT(fs_path != NULL);
 
   *is_ancestor = (history && strcmp(path, fs_path) == 0);
 
@@ -675,8 +675,7 @@ svn_repos_trace_node_locations(svn_fs_t *fs,
   apr_pool_t *lastpool, *currpool;
   const svn_fs_id_t *id;
 
-  /* Sanity check. */
-  assert(location_revisions_orig->elt_size == sizeof(svn_revnum_t));
+  SVN_ERR_ASSERT(location_revisions_orig->elt_size == sizeof(svn_revnum_t));
 
   /* Ensure that FS_PATH is absolute, because our path-math below will
      depend on that being the case.  */
@@ -889,8 +888,8 @@ svn_repos_node_location_segments(svn_repos_t *repos,
 
   /* Are the revision properly ordered?  They better be -- the API
      demands it. */
-  assert(end_rev <= start_rev);
-  assert(start_rev <= peg_revision);
+  SVN_ERR_ASSERT(end_rev <= start_rev);
+  SVN_ERR_ASSERT(start_rev <= peg_revision);
 
   /* Ensure that PATH is absolute, because our path-math will depend
      on that being the case.  */
@@ -1442,7 +1441,7 @@ svn_repos_get_file_revs2(svn_repos_t *repos,
                                            sizeof(struct path_revision *));
 
   /* We must have at least one revision to get. */
-  assert(mainline_path_revisions->nelts > 0);
+  SVN_ERR_ASSERT(mainline_path_revisions->nelts > 0);
 
   /* We switch betwwen two pools while looping, since we need information from
      the last iteration to be available. */

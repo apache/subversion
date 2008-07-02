@@ -958,7 +958,7 @@ elide_mergeinfo_catalog_cb(void **dir_baton,
 
   /* pb == NULL would imply that there was an *empty* path in the
      paths given to the driver (which is different from "/"). */
-  assert(pb != NULL);
+  SVN_ERR_ASSERT(pb != NULL);
 
   /* We'll just act like everything is a file. */
   *dir_baton = NULL;
@@ -972,7 +972,7 @@ elide_mergeinfo_catalog_cb(void **dir_baton,
 
   path_suffix = svn_path_is_child(pb->inherited_mergeinfo_path,
                                   path, NULL);
-  assert(path_suffix != NULL);
+  SVN_ERR_ASSERT(path_suffix != NULL);
 
   SVN_ERR(should_elide_mergeinfo(&elides,
                                  apr_hash_get(cb->mergeinfo_catalog,
@@ -1061,7 +1061,7 @@ filter_log_entry_with_rangelist(void *baton,
   if (! (intersection && intersection->nelts))
     return SVN_NO_ERROR;
 
-  assert (intersection->nelts == 1);
+  SVN_ERR_ASSERT(intersection->nelts == 1);
   return fleb->log_receiver(fleb->log_receiver_baton, log_entry, pool);
 }
 
