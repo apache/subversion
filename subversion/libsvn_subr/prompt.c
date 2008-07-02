@@ -140,7 +140,7 @@ prompt(const char **result,
               else
                 /* ### APR_EOL_STR holds more than two chars?  Who
                    ever heard of such a thing? */
-                abort();
+                SVN_ERR_MALFUNCTION();
             }
 
           svn_stringbuf_appendbytes(strbuf, &c, 1);
