@@ -1584,6 +1584,7 @@ print_xml_prop(svn_stringbuf_t **outstr,
 
 /* Print the property names of all properties on PATH in the repository.
    If VERBOSE, print their values too.
+   If XML, print as XML rather than as plain text.
    Error with SVN_ERR_FS_NOT_FOUND if PATH does not exist, or with
    SVN_ERR_PROPERTY_NOT_FOUND if no such property on PATH.
    If PATH is NULL, operate on a revision properties. */
