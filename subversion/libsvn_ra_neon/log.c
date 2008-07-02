@@ -308,7 +308,7 @@ log_end_element(void *baton, int state,
           }
         if (! SVN_IS_VALID_REVNUM(lb->log_entry->revision))
           {
-            assert(lb->nest_level);
+            SVN_ERR_ASSERT(lb->nest_level);
             lb->nest_level--;
           }
         reset_log_item(lb);

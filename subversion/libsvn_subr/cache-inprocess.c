@@ -284,8 +284,8 @@ inprocess_cache_set(void *cache_void,
       /* This can't be the partial page: items_per_page == 1
        * *never* has a partial page (except for in the temporary state
        * that we're about to fake). */
-      assert(page->next != NULL);
-      assert(cache->partial_page == NULL);
+      SVN_ERR_ASSERT(page->next != NULL);
+      SVN_ERR_ASSERT(cache->partial_page == NULL);
 
       erase_page(cache, page);
       existing_entry = NULL;
@@ -320,13 +320,13 @@ inprocess_cache_set(void *cache_void,
     {
       struct cache_page *oldest_page = cache->sentinel->prev;
 
-      assert(oldest_page != cache->sentinel);
+      SVN_ERR_ASSERT(oldest_page != cache->sentinel);
 
       /* Erase the page and put it in cache->partial_page. */
       erase_page(cache, oldest_page);
     }
 
-  assert(cache->partial_page != NULL);
+  SVN_ERR_ASSERT(cache->partial_page != NULL);
 
   {
     struct cache_page *page = cache->partial_page;
@@ -427,9 +427,9 @@ svn_cache_create_inprocess(svn_cache_t **cache_p,
 
   cache->dup_func = dup_func;
 
-  assert(pages >= 1);
+  SVN_ERR_ASSERT(pages >= 1);
   cache->unallocated_pages = pages;
-  assert(items_per_page >= 1);
+  SVN_ERR_ASSERT(items_per_page >= 1);
   cache->items_per_page = items_per_page;
 
   cache->sentinel = apr_pcalloc(pool, sizeof(*(cache->sentinel)));

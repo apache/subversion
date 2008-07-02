@@ -1075,7 +1075,7 @@ svn_wc_create_tmp_file2(apr_file_t **fp,
 {
   apr_file_t *file;
 
-  assert(fp || new_name);
+  SVN_ERR_ASSERT(fp || new_name);
 
   /* Use a self-explanatory name for the file :-) . */
   path = svn_wc__adm_path(path, TRUE, pool, "tempfile", NULL);

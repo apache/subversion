@@ -2601,7 +2601,7 @@ fold_scheduling(apr_hash_t *entries,
              the "deleted" flag.  Check that we are not trying to
              remove the SVN_WC_ENTRY_THIS_DIR entry as that would
              leave the entries file in an invalid state. */
-          assert(entry != this_dir_entry);
+          SVN_ERR_ASSERT(entry != this_dir_entry);
           if (! entry->deleted)
             apr_hash_set(entries, name, APR_HASH_KEY_STRING, NULL);
           else
@@ -2690,8 +2690,7 @@ svn_wc__entry_modify(svn_wc_adm_access_t *adm_access,
   apr_hash_t *entries, *entries_nohidden;
   svn_boolean_t entry_was_deleted_p = FALSE;
 
-  /* ENTRY is rather necessary! */
-  assert(entry);
+  SVN_ERR_ASSERT(entry);
 
   /* Load ADM_ACCESS's whole entries file. */
   SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, pool));
@@ -2722,8 +2721,8 @@ svn_wc__entry_modify(svn_wc_adm_access_t *adm_access,
 
           /* Make certain that both folding operations had the same
              result. */
-          assert(orig_modify_flags == modify_flags);
-          assert(orig_schedule == entry->schedule);
+          SVN_ERR_ASSERT(orig_modify_flags == modify_flags);
+          SVN_ERR_ASSERT(orig_schedule == entry->schedule);
         }
 
       /* Special case:  fold_state_changes() may have actually REMOVED
@@ -2923,12 +2922,11 @@ svn_wc__entries_init(const char *path,
                                                  SVN_WC__VERSION);
   svn_wc_entry_t *entry = alloc_entry(pool);
 
-  /* Sanity checks. */
-  assert(! repos || svn_path_is_ancestor(repos, url));
-  assert(depth == svn_depth_empty
-         || depth == svn_depth_files
-         || depth == svn_depth_immediates
-         || depth == svn_depth_infinity);
+  SVN_ERR_ASSERT(! repos || svn_path_is_ancestor(repos, url));
+  SVN_ERR_ASSERT(depth == svn_depth_empty
+                 || depth == svn_depth_files
+                 || depth == svn_depth_immediates
+                 || depth == svn_depth_infinity);
 
   /* Create the entries file, which must not exist prior to this. */
   SVN_ERR(svn_wc__open_adm_file(&f, path, SVN_WC__ADM_ENTRIES,

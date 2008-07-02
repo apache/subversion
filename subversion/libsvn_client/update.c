@@ -133,7 +133,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   levels_to_lock = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
 
   /* Sanity check.  Without this, the update is meaningless. */
-  assert(path);
+  SVN_ERR_ASSERT(path);
 
   if (svn_path_is_url(path))
     return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,

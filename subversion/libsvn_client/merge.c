@@ -1081,7 +1081,7 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
     }
 
   child = svn_path_is_child(merge_b->target, path, subpool);
-  assert(child != NULL);
+  SVN_ERR_ASSERT(child != NULL);
 
   /* If this is a merge from the same repository as our working copy,
      we handle adds as add-with-history.  Otherwise, we'll use a pure
@@ -1752,7 +1752,8 @@ prepare_subtree_ranges(apr_array_header_t **requested_rangelist,
       if (segments->nelts)
         {
           svn_location_segment_t *segment =
-            APR_ARRAY_IDX(segments, 0, svn_location_segment_t *);
+            APR_ARRAY_IDX(segments, (segments->nelts - 1),
+                          svn_location_segment_t *);
           if (is_rollback)
             {
               if (segment->range_start == revision2
@@ -1823,11 +1824,7 @@ prepare_subtree_ranges(apr_array_header_t **requested_rangelist,
                      rename between REVISION1:REVISION2 - see 'MERGE FAILS' in
                      http://subversion.tigris.org/issues/show_bug.cgi?id=3067#desc34.
                      */
-                  if (segment->path /* Is NULL if a gap in history. */
-                      && strcmp(segment->path, mergeinfo_path + 1) != 0)
-                    push_range(different_name_rangelist, segment->range_start,
-                               segment->range_end, TRUE, pool);
-                  for (i = 1; i < segments->nelts; i++)
+                  for (i = 0; i < segments->nelts; i++)
                     {
                       segment =
                         APR_ARRAY_IDX(segments, i, svn_location_segment_t *);
@@ -2194,9 +2191,9 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
   apr_pool_t *sesspool = NULL;
 
   /* Assert that we have sane input. */
-  assert(SVN_IS_VALID_REVNUM(start)
-         && SVN_IS_VALID_REVNUM(end)
-         && (start > end));
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(start)
+                 && SVN_IS_VALID_REVNUM(end)
+                 && (start > end));
 
   /* First, we get the real mergeinfo. */
   SVN_ERR(svn_client__get_wc_or_repos_mergeinfo(recorded_mergeinfo, entry,
@@ -2378,13 +2375,10 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
                                                    FALSE, child->path);
           parent = APR_ARRAY_IDX(children_with_mergeinfo, parent_index,
                                  svn_client__merge_path_t *);
-          if (!parent)
-            {
-              /* If CHILD is a subtree then its parent must be in
-                 CHILDREN_WITH_MERGEINFO, see the global comment
-                 'THE CHILDREN_WITH_MERGEINFO ARRAY'. */
-              abort();
-            }
+          /* If CHILD is a subtree then its parent must be in
+             CHILDREN_WITH_MERGEINFO, see the global comment
+             'THE CHILDREN_WITH_MERGEINFO ARRAY'. */
+          SVN_ERR_ASSERT(parent);
         }
 
       SVN_ERR(calculate_remaining_ranges(parent, child,
@@ -3923,6 +3917,7 @@ remove_noop_merge_ranges(apr_array_header_t **operative_ranges_p,
   int i;
   svn_revnum_t oldest_rev = SVN_INVALID_REVNUM;
   svn_revnum_t youngest_rev = SVN_INVALID_REVNUM;
+  svn_revnum_t oldest_changed_rev, youngest_changed_rev;
   apr_array_header_t *changed_revs =
     apr_array_make(pool, ranges->nelts, sizeof(svn_revnum_t *));
   apr_array_header_t *operative_ranges =
@@ -3951,20 +3946,36 @@ remove_noop_merge_ranges(apr_array_header_t **operative_ranges_p,
                           apr_array_make(pool, 0, sizeof(const char *)),
                           log_changed_revs, changed_revs, pool));
 
+  /* Our list of changed revisions should be in youngest-to-oldest order. */
+  youngest_changed_rev = *(APR_ARRAY_IDX(changed_revs, 
+                                         0, svn_revnum_t *));
+  oldest_changed_rev = *(APR_ARRAY_IDX(changed_revs, 
+                                       changed_revs->nelts - 1, 
+                                       svn_revnum_t *));
+
   /* Now, copy from RANGES to *OPERATIVE_RANGES, filtering out ranges
      that aren't operative (by virtue of not having any revisions
      represented in the CHANGED_REVS array). */
   for (i = 0; i < ranges->nelts; i++)
     {
       svn_merge_range_t *range = APR_ARRAY_IDX(ranges, i, svn_merge_range_t *);
+      svn_revnum_t range_min = MIN(range->start, range->end) + 1;
+      svn_revnum_t range_max = MAX(range->start, range->end);
       int j;
 
+      /* If the merge range is entirely outside the range of changed
+         revisions, we've no use for it. */
+      if ((range_min > youngest_changed_rev) 
+          || (range_max < oldest_changed_rev))
+        continue;
+
+      /* Walk through the changed_revs to see if any of them fall
+         inside our current range. */
       for (j = 0; j < changed_revs->nelts; j++)
         {
           svn_revnum_t *changed_rev =
             APR_ARRAY_IDX(changed_revs, j, svn_revnum_t *);
-          if ((*changed_rev > MIN(range->start, range->end))
-              && (*changed_rev <= MAX(range->start, range->end)))
+          if ((*changed_rev >= range_min) && (*changed_rev <= range_max))
             {
               APR_ARRAY_PUSH(operative_ranges, svn_merge_range_t *) = range;
               break;
@@ -5933,7 +5944,7 @@ ensure_all_missing_ranges_are_phantoms(svn_ra_session_t *ra_session,
 
       /* mergeinfo hashes contain paths that start with slashes;
          ra APIs take paths without slashes. */
-      assert(*path);
+      SVN_ERR_ASSERT(*path);
       path++;
 
       for (i = 0; i < rangelist->nelts; i++)
@@ -5944,7 +5955,7 @@ ensure_all_missing_ranges_are_phantoms(svn_ra_session_t *ra_session,
 
           /* This function should not receive any "rollback"
              ranges. */
-          assert(range->start < range->end);
+          SVN_ERR_ASSERT(range->start < range->end);
 
           svn_pool_clear(iterpool);
 
@@ -6170,7 +6181,7 @@ calculate_left_hand_side(const char **url_left,
         }
       /* We only got here because we had mergeinfo for the source; if
          there were no segments, then our logic was wrong. */
-      abort();
+      SVN_ERR_MALFUNCTION();
     }
   else
     {

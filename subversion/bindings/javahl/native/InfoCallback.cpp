@@ -118,7 +118,7 @@ InfoCallback::createJavaInfo2(const char *path, const svn_info_t *info,
                              "ZILjava/lang/String;JJJ"
                              "Ljava/lang/String;Ljava/lang/String;"
                              "Ljava/lang/String;Ljava/lang/String;"
-                             "Ljava/lang/String;Ljava/lang/String;JJ)V");
+                             "Ljava/lang/String;Ljava/lang/String;JJI)V");
       if (mid == 0 || JNIUtil::isJavaExceptionThrown())
         return NULL;
     }
@@ -194,7 +194,8 @@ InfoCallback::createJavaInfo2(const char *path, const svn_info_t *info,
                                   (jlong) info->prop_time, jchecksum,
                                   jconflictOld, jconflictNew, jconflictWrk,
                                   jprejfile, jchangelist,
-                                  jworkingSize, jreposSize);
+                                  jworkingSize, jreposSize,
+                                  EnumMapper::mapDepth(info->depth));
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
