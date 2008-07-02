@@ -1502,41 +1502,6 @@ struct deltify_committed_args
 };
 
 
-struct txn_deltify_args
-{
-  /* The target is what we're deltifying. */
-  const svn_fs_id_t *tgt_id;
-
-  /* The base is what we're deltifying against.  It's not necessarily
-     the "next" revision of the node; skip deltas mean we sometimes
-     deltify against a successor many generations away. */
-  const svn_fs_id_t *base_id;
-
-  /* We only deltify props for directories.
-     ### Didn't we try removing this horrid little optimization once?
-     ### What was the result?  I would have thought that skip deltas
-     ### mean directory undeltification is cheap enough now. */
-  svn_boolean_t is_dir;
-};
-
-
-static svn_error_t *
-txn_body_txn_deltify(void *baton, trail_t *trail)
-{
-  struct txn_deltify_args *args = baton;
-  dag_node_t *tgt_node, *base_node;
-
-  SVN_ERR(svn_fs_base__dag_get_node(&tgt_node, trail->fs, args->tgt_id,
-                                    trail, trail->pool));
-  SVN_ERR(svn_fs_base__dag_get_node(&base_node, trail->fs, args->base_id,
-                                    trail, trail->pool));
-  SVN_ERR(svn_fs_base__dag_deltify(tgt_node, base_node, args->is_dir,
-                                   trail, trail->pool));
-
-  return SVN_NO_ERROR;
-}
-
-
 struct txn_pred_count_args
 {
   const svn_fs_id_t *id;
@@ -1577,73 +1542,6 @@ txn_body_pred_id(void *baton, trail_t *trail)
     args->pred_id = svn_fs_base__id_copy(nr->predecessor_id, args->pool);
   else
     args->pred_id = NULL;
-
-  return SVN_NO_ERROR;
-}
-
-
-/* Deltify PATH in ROOT's predecessor iff PATH is mutable under TXN_ID
-   in FS.  If PATH is a mutable directory, recurse.
-
-   NODE_ID is the node revision ID for PATH in ROOT, or NULL if that
-   value isn't known.  KIND is the node kind for PATH in ROOT, or
-   svn_node_unknown is the kind isn't known.
-
-   Use POOL for necessary allocations.  */
-static svn_error_t *
-deltify_mutable(svn_fs_t *fs,
-                svn_fs_root_t *root,
-                const char *path,
-                const svn_fs_id_t *node_id,
-                svn_node_kind_t kind,
-                const char *txn_id,
-                apr_pool_t *pool)
-{
-  const svn_fs_id_t *id = node_id;
-  apr_hash_t *entries = NULL;
-  struct txn_deltify_args td_args;
-
-  /* Get the ID for PATH under ROOT if it wasn't provided. */
-  if (! node_id)
-    SVN_ERR(base_node_id(&id, root, path, pool));
-
-  /* Check for mutability.  Not mutable?  Go no further.  This is safe
-     to do because for items in the tree to be mutable, their parent
-     dirs must also be mutable.  Therefore, if a directory is not
-     mutable under TXN_ID, its children cannot be.  */
-  if (strcmp(svn_fs_base__id_txn_id(id), txn_id))
-    return SVN_NO_ERROR;
-
-  /* Is this a directory?  */
-  if (kind == svn_node_unknown)
-    SVN_ERR(base_check_path(&kind, root, path, pool));
-
-  /* If this is a directory, read its entries.  */
-  if (kind == svn_node_dir)
-    SVN_ERR(base_dir_entries(&entries, root, path, pool));
-
-  /* If there are entries, recurse on 'em.  */
-  if (entries)
-    {
-      apr_pool_t *subpool = svn_pool_create(pool);
-      apr_hash_index_t *hi;
-
-      for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
-        {
-          /* KEY will be the entry name, VAL the dirent */
-          const void *key;
-          void *val;
-          svn_fs_dirent_t *entry;
-          svn_pool_clear(subpool);
-          apr_hash_this(hi, &key, NULL, &val);
-          entry = val;
-          SVN_ERR(deltify_mutable(fs, root,
-                                  svn_path_join(path, key, subpool),
-                                  entry->id, entry->kind, txn_id, subpool));
-        }
-
-      svn_pool_destroy(subpool);
-    }
 
   return SVN_NO_ERROR;
 }
@@ -2553,38 +2451,14 @@ base_merge(const char **conflict_p,
 }
 
 
-struct rev_get_txn_id_args
-{
-  const char **txn_id;
-  svn_revnum_t revision;
-};
-
-
-static svn_error_t *
-txn_body_rev_get_txn_id(void *baton, trail_t *trail)
-{
-  struct rev_get_txn_id_args *args = baton;
-  return svn_fs_base__rev_get_txn_id(args->txn_id, trail->fs,
-                                     args->revision, trail, trail->pool);
-}
-
-
 svn_error_t *
 svn_fs_base__deltify(svn_fs_t *fs,
                      svn_revnum_t revision,
                      apr_pool_t *pool)
 {
-  svn_fs_root_t *root;
-  const char *txn_id;
-  struct rev_get_txn_id_args args;
+  /* Deltify is now a no-op for fs_base. */
 
-  SVN_ERR(svn_fs_base__revision_root(&root, fs, revision, pool));
-
-  args.txn_id = &txn_id;
-  args.revision = revision;
-  SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_rev_get_txn_id, &args, pool));
-
-  return deltify_mutable(fs, root, "/", NULL, svn_node_dir, txn_id, pool);
+  return SVN_NO_ERROR;
 }
 
 
