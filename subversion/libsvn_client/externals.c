@@ -506,11 +506,7 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
     new_item = NULL;
 
   /* We couldn't possibly be here if both values were null, right? */
-  if (! old_item && ! new_item)
-    return svn_error_createf
-      (SVN_ERR_INCORRECT_PARAMS, NULL,
-       _("handle_external_item_change() must be passed at least one non-NULL "
-         "old or new external item"));
+  SVN_ERR_ASSERT(old_item || new_item);
 
   /* There's one potential ugliness.  If a target subdir changed, but
      its URL did not, then ideally we'd just rename the subdir, rather
