@@ -504,7 +504,8 @@ read_entry(svn_wc_entry_t **new_entry,
            should not show up here. Otherwise, something bad may have
            happened. However, infinity value itself will always be okay. */
         is_this_dir = !name;
-        invalid = is_this_dir ^ (entry->depth != svn_depth_exclude);
+        /* '!=': XOR */
+        invalid = is_this_dir != (entry->depth != svn_depth_exclude);
         if (entry->depth != svn_depth_infinity && invalid)
           return svn_error_createf
             (SVN_ERR_ENTRY_ATTRIBUTE_INVALID, NULL,
