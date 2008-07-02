@@ -1356,6 +1356,9 @@ close_revision(void *baton)
      correct repository revision to copy from. */
   apr_hash_set(pb->rev_map, old_rev, sizeof(svn_revnum_t), new_rev);
 
+  /* Deltify the predecessors of paths changed in this revision. */
+  SVN_ERR(svn_fs_deltify_revision(pb->fs, *new_rev, rb->pool));
+
   /* Grrr, svn_fs_commit_txn rewrites the datestamp property to the
      current clock-time.  We don't want that, we want to preserve
      history exactly.  Good thing revision props aren't versioned!

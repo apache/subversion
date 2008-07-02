@@ -1081,7 +1081,7 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
     }
 
   child = svn_path_is_child(merge_b->target, path, subpool);
-  assert(child != NULL);
+  SVN_ERR_ASSERT(child != NULL);
 
   /* If this is a merge from the same repository as our working copy,
      we handle adds as add-with-history.  Otherwise, we'll use a pure
@@ -2191,9 +2191,9 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
   apr_pool_t *sesspool = NULL;
 
   /* Assert that we have sane input. */
-  assert(SVN_IS_VALID_REVNUM(start)
-         && SVN_IS_VALID_REVNUM(end)
-         && (start > end));
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(start)
+                 && SVN_IS_VALID_REVNUM(end)
+                 && (start > end));
 
   /* First, we get the real mergeinfo. */
   SVN_ERR(svn_client__get_wc_or_repos_mergeinfo(recorded_mergeinfo, entry,
@@ -2375,13 +2375,10 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
                                                    FALSE, child->path);
           parent = APR_ARRAY_IDX(children_with_mergeinfo, parent_index,
                                  svn_client__merge_path_t *);
-          if (!parent)
-            {
-              /* If CHILD is a subtree then its parent must be in
-                 CHILDREN_WITH_MERGEINFO, see the global comment
-                 'THE CHILDREN_WITH_MERGEINFO ARRAY'. */
-              abort();
-            }
+          /* If CHILD is a subtree then its parent must be in
+             CHILDREN_WITH_MERGEINFO, see the global comment
+             'THE CHILDREN_WITH_MERGEINFO ARRAY'. */
+          SVN_ERR_ASSERT(parent);
         }
 
       SVN_ERR(calculate_remaining_ranges(parent, child,
@@ -5947,7 +5944,7 @@ ensure_all_missing_ranges_are_phantoms(svn_ra_session_t *ra_session,
 
       /* mergeinfo hashes contain paths that start with slashes;
          ra APIs take paths without slashes. */
-      assert(*path);
+      SVN_ERR_ASSERT(*path);
       path++;
 
       for (i = 0; i < rangelist->nelts; i++)
@@ -5958,7 +5955,7 @@ ensure_all_missing_ranges_are_phantoms(svn_ra_session_t *ra_session,
 
           /* This function should not receive any "rollback"
              ranges. */
-          assert(range->start < range->end);
+          SVN_ERR_ASSERT(range->start < range->end);
 
           svn_pool_clear(iterpool);
 
@@ -6184,7 +6181,7 @@ calculate_left_hand_side(const char **url_left,
         }
       /* We only got here because we had mergeinfo for the source; if
          there were no segments, then our logic was wrong. */
-      abort();
+      SVN_ERR_MALFUNCTION();
     }
   else
     {

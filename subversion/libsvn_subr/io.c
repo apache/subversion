@@ -325,7 +325,7 @@ svn_io_open_unique_file2(apr_file_t **f,
   const char *unique_name_apr;
   struct temp_file_cleanup_s *baton = NULL;
 
-  assert(f || unique_name_p);
+  SVN_ERR_ASSERT(f || unique_name_p);
 
   if (delete_when == svn_io_file_del_on_pool_cleanup)
     {
@@ -1545,8 +1545,7 @@ svn_error_t *svn_io_file_lock2(const char *lock_file,
             (apr_err, _("Can't get exclusive lock on file '%s'"),
              svn_path_local_style(lock_file, pool));
         default:
-          /* Cannot happen. */
-          abort();
+          SVN_ERR_MALFUNCTION();
         }
     }
 
@@ -2267,7 +2266,7 @@ svn_io_run_diff(const char *dir,
   args[i++] = svn_path_local_style(to, subpool);
   args[i++] = NULL;
 
-  assert(i == nargs);
+  SVN_ERR_ASSERT(i == nargs);
 
   SVN_ERR(svn_io_run_cmd(dir, diff_utf8, args, pexitcode, NULL, TRUE,
                          NULL, outfile, errfile, subpool));
@@ -2393,7 +2392,7 @@ svn_io_run_diff3_2(int *exitcode,
   args[i++] = svn_path_local_style(older, pool);
   args[i++] = svn_path_local_style(yours, pool);
   args[i++] = NULL;
-  assert(i == nargs);
+  SVN_ERR_ASSERT(i == nargs);
 
   /* Run diff3, output the merged text into the scratch file. */
   SVN_ERR(svn_io_run_cmd(dir, diff3_utf8, args,

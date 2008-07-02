@@ -522,8 +522,7 @@ get_copy_inheritance(copy_id_inherit_t *inherit_p,
   const char *child_copy_id, *parent_copy_id;
   const char *id_path = NULL;
 
-  /* Make some assertions about the function input. */
-  assert(child && child->parent && txn_id);
+  SVN_ERR_ASSERT(child && child->parent && txn_id);
 
   /* Initialize our return variables (default: self-inheritance). */
   *inherit_p = copy_id_inherit_self;
@@ -827,7 +826,7 @@ make_path_mutable(svn_fs_root_t *root,
 
         case copy_id_inherit_unknown:
         default:
-          abort(); /* uh-oh -- somebody didn't calculate copy-ID
+          SVN_ERR_MALFUNCTION(); /* uh-oh -- somebody didn't calculate copy-ID
                       inheritance data. */
         }
 
@@ -1502,6 +1501,41 @@ struct deltify_committed_args
 };
 
 
+struct txn_deltify_args
+{
+  /* The target is what we're deltifying. */
+  const svn_fs_id_t *tgt_id;
+
+  /* The base is what we're deltifying against.  It's not necessarily
+     the "next" revision of the node; skip deltas mean we sometimes
+     deltify against a successor many generations away. */
+  const svn_fs_id_t *base_id;
+
+  /* We only deltify props for directories.
+     ### Didn't we try removing this horrid little optimization once?
+     ### What was the result?  I would have thought that skip deltas
+     ### mean directory undeltification is cheap enough now. */
+  svn_boolean_t is_dir;
+};
+
+
+static svn_error_t *
+txn_body_txn_deltify(void *baton, trail_t *trail)
+{
+  struct txn_deltify_args *args = baton;
+  dag_node_t *tgt_node, *base_node;
+
+  SVN_ERR(svn_fs_base__dag_get_node(&tgt_node, trail->fs, args->tgt_id,
+                                    trail, trail->pool));
+  SVN_ERR(svn_fs_base__dag_get_node(&base_node, trail->fs, args->base_id,
+                                    trail, trail->pool));
+  SVN_ERR(svn_fs_base__dag_deltify(tgt_node, base_node, args->is_dir,
+                                   trail, trail->pool));
+
+  return SVN_NO_ERROR;
+}
+
+
 struct txn_pred_count_args
 {
   const svn_fs_id_t *id;
@@ -1542,6 +1576,186 @@ txn_body_pred_id(void *baton, trail_t *trail)
     args->pred_id = svn_fs_base__id_copy(nr->predecessor_id, args->pool);
   else
     args->pred_id = NULL;
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Deltify PATH in ROOT's predecessor iff PATH is mutable under TXN_ID
+   in FS.  If PATH is a mutable directory, recurse.
+
+   NODE_ID is the node revision ID for PATH in ROOT, or NULL if that
+   value isn't known.  KIND is the node kind for PATH in ROOT, or
+   svn_node_unknown is the kind isn't known.
+
+   Use POOL for necessary allocations.  */
+static svn_error_t *
+deltify_mutable(svn_fs_t *fs,
+                svn_fs_root_t *root,
+                const char *path,
+                const svn_fs_id_t *node_id,
+                svn_node_kind_t kind,
+                const char *txn_id,
+                apr_pool_t *pool)
+{
+  const svn_fs_id_t *id = node_id;
+  apr_hash_t *entries = NULL;
+  struct txn_deltify_args td_args;
+
+  /* Get the ID for PATH under ROOT if it wasn't provided. */
+  if (! node_id)
+    SVN_ERR(base_node_id(&id, root, path, pool));
+
+  /* Check for mutability.  Not mutable?  Go no further.  This is safe
+     to do because for items in the tree to be mutable, their parent
+     dirs must also be mutable.  Therefore, if a directory is not
+     mutable under TXN_ID, its children cannot be.  */
+  if (strcmp(svn_fs_base__id_txn_id(id), txn_id))
+    return SVN_NO_ERROR;
+
+  /* Is this a directory?  */
+  if (kind == svn_node_unknown)
+    SVN_ERR(base_check_path(&kind, root, path, pool));
+
+  /* If this is a directory, read its entries.  */
+  if (kind == svn_node_dir)
+    SVN_ERR(base_dir_entries(&entries, root, path, pool));
+
+  /* If there are entries, recurse on 'em.  */
+  if (entries)
+    {
+      apr_pool_t *subpool = svn_pool_create(pool);
+      apr_hash_index_t *hi;
+
+      for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+        {
+          /* KEY will be the entry name, VAL the dirent */
+          const void *key;
+          void *val;
+          svn_fs_dirent_t *entry;
+          svn_pool_clear(subpool);
+          apr_hash_this(hi, &key, NULL, &val);
+          entry = val;
+          SVN_ERR(deltify_mutable(fs, root,
+                                  svn_path_join(path, key, subpool),
+                                  entry->id, entry->kind, txn_id, subpool));
+        }
+
+      svn_pool_destroy(subpool);
+    }
+
+  /* Finally, deltify old data against this node. */
+  {
+    /* Redeltify predecessor node-revisions of the one we added.  The
+       idea is to require at most 2*lg(N) deltas to be applied to get
+       to any node-revision in a chain of N predecessors.  We do this
+       using a technique derived from skip lists:
+
+          - Always redeltify the immediate parent
+
+          - If the number of predecessors is divisible by 2,
+              redeltify the revision two predecessors back
+
+          - If the number of predecessors is divisible by 4,
+              redeltify the revision four predecessors back
+
+       ... and so on.
+
+       That's the theory, anyway.  Unfortunately, if we strictly
+       follow that theory we get a bunch of overhead up front and no
+       great benefit until the number of predecessors gets large.  So,
+       stop at redeltifying the parent if the number of predecessors
+       is less than 32, and also skip the second level (redeltifying
+       two predecessors back), since that doesn't help much.  Also,
+       don't redeltify the oldest node-revision; it's potentially
+       expensive and doesn't help retrieve any other revision.
+       (Retrieving the oldest node-revision will still be fast, just
+       not as blindingly so.)  */
+
+    int pred_count, nlevels, lev, count;
+    const svn_fs_id_t *pred_id;
+    struct txn_pred_count_args tpc_args;
+    apr_pool_t *subpools[2];
+    int active_subpool = 0;
+
+    tpc_args.id = id;
+    SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_pred_count, &tpc_args,
+                                   pool));
+    pred_count = tpc_args.pred_count;
+
+    /* If nothing to deltify, then we're done. */
+    if (pred_count == 0)
+      return SVN_NO_ERROR;
+
+    /* Decide how many predecessors to redeltify.  To save overhead,
+       don't redeltify anything but the immediate predecessor if there
+       are less than 32 predecessors. */
+    nlevels = 1;
+    if (pred_count >= 32)
+      {
+        while (pred_count % 2 == 0)
+          {
+            pred_count /= 2;
+            nlevels++;
+          }
+
+        /* Don't redeltify the oldest revision. */
+        if (1 << (nlevels - 1) == pred_count)
+          nlevels--;
+      }
+
+    /* Redeltify the desired number of predecessors. */
+    count = 0;
+    pred_id = id;
+
+    /* We need to use two alternating pools because the id used in the
+       call to txn_body_pred_id is allocated by the previous inner
+       loop iteration.  If we would clear the pool each iteration we
+       would free the previous result.  */
+    subpools[0] = svn_pool_create(pool);
+    subpools[1] = svn_pool_create(pool);
+    for (lev = 0; lev < nlevels; lev++)
+      {
+        /* To save overhead, skip the second level (that is, never
+           redeltify the node-revision two predecessors back). */
+        if (lev == 1)
+          continue;
+
+        /* Note that COUNT is not reset between levels, and neither is
+           PREDNODE; we just keep counting from where we were up to
+           where we're supposed to get. */
+        while (count < (1 << lev))
+          {
+            struct txn_pred_id_args tpi_args;
+
+            active_subpool = !active_subpool;
+            svn_pool_clear(subpools[active_subpool]);
+
+            tpi_args.id = pred_id;
+            tpi_args.pool = subpools[active_subpool];
+            SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_pred_id, &tpi_args,
+                                           subpools[active_subpool]));
+            pred_id = tpi_args.pred_id;
+
+            if (pred_id == NULL)
+              return svn_error_create
+                (SVN_ERR_FS_CORRUPT, 0,
+                 _("Corrupt DB: faulty predecessor count"));
+
+            count++;
+          }
+
+        /* Finally, do the deltification. */
+        td_args.tgt_id = pred_id;
+        td_args.base_id = id;
+        td_args.is_dir = (kind == svn_node_dir);
+        SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_txn_deltify, &td_args,
+                                       subpools[active_subpool]));
+
+      }
+    svn_pool_destroy(subpools[0]);
+    svn_pool_destroy(subpools[1]);
+  }
 
   return SVN_NO_ERROR;
 }
@@ -2451,14 +2665,38 @@ base_merge(const char **conflict_p,
 }
 
 
+struct rev_get_txn_id_args
+{
+  const char **txn_id;
+  svn_revnum_t revision;
+};
+
+
+static svn_error_t *
+txn_body_rev_get_txn_id(void *baton, trail_t *trail)
+{
+  struct rev_get_txn_id_args *args = baton;
+  return svn_fs_base__rev_get_txn_id(args->txn_id, trail->fs,
+                                     args->revision, trail, trail->pool);
+}
+
+
 svn_error_t *
 svn_fs_base__deltify(svn_fs_t *fs,
                      svn_revnum_t revision,
                      apr_pool_t *pool)
 {
-  /* Deltify is now a no-op for fs_base. */
+  svn_fs_root_t *root;
+  const char *txn_id;
+  struct rev_get_txn_id_args args;
 
-  return SVN_NO_ERROR;
+  SVN_ERR(svn_fs_base__revision_root(&root, fs, revision, pool));
+
+  args.txn_id = &txn_id;
+  args.revision = revision;
+  SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_rev_get_txn_id, &args, pool));
+
+  return deltify_mutable(fs, root, "/", NULL, svn_node_dir, txn_id, pool);
 }
 
 
@@ -2742,7 +2980,7 @@ txn_body_copy(void *baton,
          stated that this requirement need not be necessary in the
          future. */
 
-      abort();
+      SVN_ERR_MALFUNCTION();
     }
 
   return SVN_NO_ERROR;
@@ -4528,7 +4766,7 @@ txn_body_get_mergeinfo_data_and_entries(void *baton, trail_t *trail)
   apr_pool_t *children_pool =
     apr_hash_pool_get(args->children_atop_mergeinfo_trees);
 
-  assert(svn_fs_base__dag_node_kind(node) == svn_node_dir);
+  SVN_ERR_ASSERT(svn_fs_base__dag_node_kind(node) == svn_node_dir);
 
   SVN_ERR(svn_fs_base__dag_dir_entries(&entries, node, trail, trail->pool));
   for (hi = apr_hash_first(NULL, entries); hi; hi = apr_hash_next(hi))
