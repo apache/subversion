@@ -223,6 +223,7 @@ copy_added_dir_administratively(const char *src_path,
           SVN_ERR(svn_wc_entry(&entry, src_fullpath, src_child_dir_access,
                                TRUE, subpool));
 
+          /* TODO(#2843) Should we skip the excluded src? */
           /* Recurse on directories; add files; ignore the rest. */
           if (this_entry.filetype == APR_DIR)
             {
@@ -558,6 +559,7 @@ post_copy_cleanup(svn_wc_adm_access_t *adm_access,
 
       svn_pool_clear(subpool);
 
+      /* TODO(#2843) Check if we need to handle exclude here. Possibly not. */
       apr_hash_this(hi, &key, NULL, &val);
       entry = val;
       kind = entry->kind;

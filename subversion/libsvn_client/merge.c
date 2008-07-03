@@ -3260,6 +3260,8 @@ get_mergeinfo_walk_cb(const char *path,
     !svn_path_compare_paths(path, wb->merge_target_path);
   const char *parent_path = svn_path_dirname(path, pool);
 
+  /* TODO(#2843) How to deal with a excluded item on merge? */
+
   /* We're going to receive dirents twice;  we want to ignore the
      first one (where it's a child of a parent dir), and only use
      the second one (where we're looking at THIS_DIR).  The exception

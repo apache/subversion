@@ -136,6 +136,7 @@ svn_wc_relocate3(const char *path,
       return SVN_NO_ERROR;
     }
 
+  /* TODO(#2843) Check the case of excluded path. */
   /* Relocate THIS_DIR first, in order to pre-validate the relocated URL
      of all of the other entries.  This is technically cheating because
      it relies on knowledge of the libsvn_client implementation, but it
@@ -163,7 +164,8 @@ svn_wc_relocate3(const char *path,
 
       if (recurse && (entry->kind == svn_node_dir)
           && (! entry->deleted || (entry->schedule == svn_wc_schedule_add))
-          && ! entry->absent)
+          && ! entry->absent
+          && (entry->depth != svn_depth_exclude))
         {
           svn_wc_adm_access_t *subdir_access;
           const char *subdir = svn_path_join(path, key, subpool);

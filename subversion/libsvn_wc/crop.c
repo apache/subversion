@@ -209,6 +209,10 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
   if (!entry || entry->kind != svn_node_dir)
     return SVN_NO_ERROR;
 
+  /* TODO(#2843): Re-consider the behavior of cropping items with scheduled
+     add/delete. Maybe we don't need to setup the exclude flag when the taget
+     is just added without history. */
+
   /* Crop the target itself if we are requested to. */
   if (depth == svn_depth_exclude)
     {
