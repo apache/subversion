@@ -2212,8 +2212,9 @@ svn_wc_prop_list(apr_hash_t **props,
   SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, pool));
 
   /* if there is no entry, 'path' is not under version control and
-     therefore has no props */
-  if (! entry)
+     therefore has no props. And if the path is excluded, the props
+     are also gone. */
+  if (! entry || entry->depth == svn_depth_exclude)
     {
       *props = apr_hash_make(pool);
       return SVN_NO_ERROR;
@@ -2262,7 +2263,7 @@ svn_wc_prop_get(const svn_string_t **value,
 
   SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, pool));
 
-  if (entry == NULL)
+  if (entry == NULL || entry->depth == svn_depth_exclude)
     {
       *value = NULL;
       return SVN_NO_ERROR;
@@ -2824,8 +2825,8 @@ modified_props(svn_boolean_t *modified_p,
 
   SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, subpool));
 
-  /* If we have no entry, we can't have any prop mods. */
-  if (! entry)
+  /* If we have no entry or excluded entry, we can't have any prop mods. */
+  if (! entry || entry->depth == svn_depth_exclude)
     {
       *modified_p = FALSE;
       goto cleanup;

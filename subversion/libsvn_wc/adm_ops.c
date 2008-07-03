@@ -538,6 +538,14 @@ process_committed_internal(int *log_number,
           if (! strcmp(name, SVN_WC_ENTRY_THIS_DIR))
             continue;
 
+          /* TODO(#2843)
+             We come to this branch since we are commiting an added tree.
+             Check this again after the behavior of croping an newly added
+             tree is definined. Anyway, it will be safer to check for excluded
+             items here. */
+          if (current_entry->depth == svn_depth_exclude)
+            continue;
+
           /* Create child path by telescoping the main path. */
           this_path = svn_path_join(path, name, subpool);
 
@@ -1212,6 +1220,8 @@ svn_wc_delete3(const char *path,
       /* The deleted state is only available in the entry in parent's
          entries file */
       SVN_ERR(svn_wc_adm_retrieve(&parent_access, adm_access, parent, pool));
+      /* We don't need to check for excluded item, since we won't fall into
+         this path in that case. */
       SVN_ERR(svn_wc_entries_read(&entries, parent_access, TRUE, pool));
       entry_in_parent = apr_hash_get(entries, base_name, APR_HASH_KEY_STRING);
       was_deleted = entry_in_parent ? entry_in_parent->deleted : FALSE;
@@ -2034,6 +2044,8 @@ revert_entry(svn_depth_t *depth,
                                       "directory; please try again from the "
                                       "parent directory"));
 
+          /* We don't need to check for excluded item, since we won't fall
+             into this path in that case. */
           SVN_ERR(svn_wc_entries_read(&entries, parent_access, TRUE, pool));
           parents_entry = apr_hash_get(entries, basey, APR_HASH_KEY_STRING);
           if (parents_entry)

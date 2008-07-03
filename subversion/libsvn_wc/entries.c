@@ -3029,7 +3029,7 @@ svn_wc_walk_entries3(const char *path,
                                svn_path_local_style(path, pool)),
        walk_baton, pool);
 
-  if (entry->kind == svn_node_file)
+  if (entry->kind == svn_node_file || entry->depth == svn_depth_exclude)
     return walk_callbacks->handle_error
       (path, walk_callbacks->found_entry(path, entry, walk_baton, pool),
        walk_baton, pool);

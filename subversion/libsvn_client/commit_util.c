@@ -566,6 +566,11 @@ harvest_committables(apr_hash_t *committables,
             continue;
 
           this_entry = val;
+
+          /* Skip the excluded item. */
+          if (this_entry->depth == svn_depth_exclude)
+            continue;
+
           name_uri = svn_path_uri_encode(name, loop_pool);
 
           full_path = svn_path_join(path, name, loop_pool);
