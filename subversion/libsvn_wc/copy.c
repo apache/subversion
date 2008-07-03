@@ -559,11 +559,13 @@ post_copy_cleanup(svn_wc_adm_access_t *adm_access,
 
       svn_pool_clear(subpool);
 
-      /* TODO(#2843) Check if we need to handle exclude here. Possibly not. */
       apr_hash_this(hi, &key, NULL, &val);
       entry = val;
       kind = entry->kind;
       deleted = entry->deleted;
+
+      if (entry->depth == svn_depth_exclude)
+        continue;
 
       /* Convert deleted="true" into schedule="delete" for all
          children (and grandchildren, if RECURSE is set) of the path
