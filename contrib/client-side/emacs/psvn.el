@@ -66,6 +66,8 @@
 ;; ~     - svn-status-get-specific-revision
 ;; E     - svn-status-ediff-with-revision
 ;; X X   - svn-status-resolve-conflicts
+;; S g   - svn-status-grep-files
+;; S s   - svn-status-search-files
 ;; s     - svn-status-show-process-buffer
 ;; h     - svn-status-pop-to-partner-buffer
 ;; e     - svn-status-toggle-edit-cmd-flag
@@ -1884,6 +1886,9 @@ A and B must be line-info's."
   (define-key svn-status-mode-map (kbd "~") 'svn-status-get-specific-revision)
   (define-key svn-status-mode-map (kbd "E") 'svn-status-ediff-with-revision)
 
+  (define-key svn-status-mode-map (kbd "S g") 'svn-status-grep-files)
+  (define-key svn-status-mode-map (kbd "S s") 'svn-status-search-files)
+
   (define-key svn-status-mode-map (kbd "n") 'svn-status-next-line)
   (define-key svn-status-mode-map (kbd "p") 'svn-status-previous-line)
   (define-key svn-status-mode-map (kbd "<down>") 'svn-status-next-line)
@@ -1971,6 +1976,10 @@ A and B must be line-info's."
      ["svn diff marked files" svn-status-show-svn-diff-for-marked-files t]
      ["svn ediff current file" svn-status-ediff-with-revision t]
      ["svn resolve conflicts" svn-status-resolve-conflicts]
+     )
+    ("Search"
+     ["Grep marked files" svn-status-grep-files t]
+     ["Search marked files" svn-status-search-files t]
      )
     ["svn cat ..." svn-status-get-specific-revision t]
     ["svn add" svn-status-add-file t]
@@ -4496,6 +4505,26 @@ When called with a prefix argument, read the data from user as password."
                            (read-string "Send line to svn process: "))))
                  (list s use-passwd)))
   (svn-process-send-string (concat string "\n") send-passwd))
+
+;; --------------------------------------------------------------------------------
+;; Search interface
+;; --------------------------------------------------------------------------------
+
+(defun svn-status-grep-files (regexp)
+  "Run grep on selected file(s).
+See `svn-status-marked-files' for what counts as selected."
+  (interactive "sGrep files for: ")
+  (unless grep-command
+    (grep-compute-defaults))
+  (let ((default-directory (svn-status-base-dir)))
+    (grep (format "%s %s %s" grep-command (shell-quote-argument regexp)
+                  (mapconcat 'identity (svn-status-marked-file-names) " ")))))
+
+(defun svn-status-search-files (search-string)
+  "Search selected file(s) for a fixed SEARCH-STRING.
+See `svn-status-marked-files' for what counts as selected."
+  (interactive "sSearch files for: ")
+  (svn-status-grep-files (regexp-quote search-string)))
 
 ;; --------------------------------------------------------------------------------
 ;; Property List stuff
