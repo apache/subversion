@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2006, 2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -17,6 +17,9 @@
  */
 
 package org.tigris.subversion.javahl;
+
+import java.net.MalformedURLException;
+import java.net.URL;
 
 /**
  * Subversion path validation and manipulation.
@@ -39,4 +42,31 @@ public class Path
      * @return Whether Subversion can store the path in a repository.
      */
     public static native boolean isValid(String path);
+
+    /**
+     * Whether a URL is valid, according to
+     * <code>java.net.URL</code>. This may be a slightly different
+     * idea than according to <code>svn_path_is_url()</code>.
+     *
+     * @param path The Subversion "path" to inspect.
+     * @return Whether <code>path</code> is a URL.
+     * @throws NullPointerException If <code>path</code> is <code>null</code>.
+     */
+    public static boolean isURL(String path)
+    {
+        if (path == null)
+        {
+            throw new NullPointerException();
+        }
+
+        try
+        {
+            new URL(path);
+        }
+        catch (MalformedURLException e)
+        {
+            return false;
+        }
+        return true;
+    }
 }
