@@ -387,17 +387,54 @@ get_auth_simple_provider(svn_auth_provider_object_t **provider,
 }
 #endif
 
+
+/* This implements 'svn_auth_ssl_server_trust_prompt_func_t'.
+
+   Don't actually prompt.  Instead, set *CRED_P to valid credentials
+   iff FAILURES is empty or is exactly SVN_AUTH_SSL_UNKNOWNCA.  If
+   there are any other failure bits, then set *CRED_P to null (that
+   is, reject the cert).
+
+   Ignore MAY_SAVE; we don't save certs we never prompted for.
+
+   Ignore BATON, REALM, and CERT_INFO, 
+
+   Ignore any further films by George Lucas. */
+static svn_error_t *
+ssl_trust_unknown_server_cert
+  (svn_auth_cred_ssl_server_trust_t **cred_p,
+   void *baton,
+   const char *realm,
+   apr_uint32_t failures,
+   const svn_auth_ssl_server_cert_info_t *cert_info,
+   svn_boolean_t may_save,
+   apr_pool_t *pool)
+{
+  *cred_p = NULL;
+
+  if (failures == 0 || failures == SVN_AUTH_SSL_UNKNOWNCA)
+    {
+      *cred_p = apr_pcalloc(pool, sizeof(**cred_p));
+      (*cred_p)->may_save = FALSE;
+      (*cred_p)->accepted_failures = failures;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
-svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
-                             svn_boolean_t non_interactive,
-                             const char *auth_username,
-                             const char *auth_password,
-                             const char *config_dir,
-                             svn_boolean_t no_auth_cache,
-                             svn_config_t *cfg,
-                             svn_cancel_func_t cancel_func,
-                             void *cancel_baton,
-                             apr_pool_t *pool)
+svn_cmdline_set_up_auth_baton(svn_auth_baton_t **ab,
+                              svn_boolean_t non_interactive,
+                              const char *auth_username,
+                              const char *auth_password,
+                              const char *config_dir,
+                              svn_boolean_t no_auth_cache,
+                              svn_boolean_t trust_server_cert,
+                              svn_config_t *cfg,
+                              svn_cancel_func_t cancel_func,
+                              void *cancel_baton,
+                              apr_pool_t *pool)
 {
   svn_boolean_t store_password_val = TRUE;
   svn_boolean_t store_auth_creds_val = TRUE;
@@ -545,6 +582,13 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
         (&provider, svn_cmdline_auth_ssl_client_cert_pw_prompt, pb, 2, pool);
       APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
     }
+  else if (trust_server_cert)
+    {
+      /* Remember, only register this provider if non_interactive. */
+      svn_auth_get_ssl_server_trust_prompt_provider
+        (&provider, ssl_trust_unknown_server_cert, NULL, pool);
+      APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+    }
 
   /* Build an authentication baton to give to libsvn_client. */
   svn_auth_open(ab, providers, pool);
@@ -592,6 +636,26 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
 
   return SVN_NO_ERROR;
 }
+
+
+svn_error_t *
+svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
+                             svn_boolean_t non_interactive,
+                             const char *auth_username,
+                             const char *auth_password,
+                             const char *config_dir,
+                             svn_boolean_t no_auth_cache,
+                             svn_config_t *cfg,
+                             svn_cancel_func_t cancel_func,
+                             void *cancel_baton,
+                             apr_pool_t *pool)
+{
+  return svn_cmdline_set_up_auth_baton(ab, non_interactive,
+                                       auth_username, auth_password,
+                                       config_dir, no_auth_cache, FALSE,
+                                       cfg, cancel_func, cancel_baton, pool);
+}
+
 
 svn_error_t *
 svn_cmdline__getopt_init(apr_getopt_t **os,
