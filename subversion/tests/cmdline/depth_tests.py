@@ -2034,6 +2034,7 @@ def excluded_path_operation(sbox):
                                                              infinity=True)
   A_path = os.path.join(wc_dir, 'A')
   B_path = os.path.join(A_path, 'B')
+  L_path = os.path.join(A_path, 'L')
   E_path = os.path.join(B_path, 'E')
 
   # Simply exclude a subtree
@@ -2076,6 +2077,19 @@ def excluded_path_operation(sbox):
   # Exclude A/B/E again
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'up', '--set-depth', 'exclude', E_path)
+
+  # copy A/B to A/L
+  expected_output = ['A         '+L_path+'\n']
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'cp', B_path, L_path)
+
+  # revert A/L
+  expected_output = ["Reverted '"+L_path+"'\n"]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'revert', '--depth=infinity', L_path)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'rm', '--force', L_path)
 
   # Exclude path B totally, in which contains an excluded subtree.
   expected_output = svntest.wc.State(wc_dir, {
