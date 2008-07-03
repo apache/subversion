@@ -1751,6 +1751,12 @@ prepare_subtree_ranges(apr_array_header_t **requested_rangelist,
     {
       if (segments->nelts)
         {
+          /* This algorithm needs the youngest location segment inside the
+             requested merge range.
+             svn_client__repos_location_segments gives the segments ordered
+             from oldest to youngest.
+             So consider the last segment as it is the youngest.
+           */
           svn_location_segment_t *segment =
             APR_ARRAY_IDX(segments, (segments->nelts - 1),
                           svn_location_segment_t *);
