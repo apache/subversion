@@ -2392,7 +2392,9 @@ svn_io_run_diff3_2(int *exitcode,
   args[i++] = svn_path_local_style(older, pool);
   args[i++] = svn_path_local_style(yours, pool);
   args[i++] = NULL;
+#ifndef NDEBUG
   SVN_ERR_ASSERT(i == nargs);
+#endif
 
   /* Run diff3, output the merged text into the scratch file. */
   SVN_ERR(svn_io_run_cmd(dir, diff3_utf8, args,
