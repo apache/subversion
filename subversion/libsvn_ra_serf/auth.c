@@ -311,7 +311,7 @@ handle_basic_auth(svn_ra_serf__session_t *session,
 
   /* Use svn_auth_first_credentials if this is the first time we ask for
      credentials during this session OR if the last time we asked
-     session->auth_state wasn't set (eg. if the credentials provider was 
+     session->auth_state wasn't set (eg. if the credentials provider was
      cancelled by the user). */
   if (!session->auth_state)
     {
