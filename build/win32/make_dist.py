@@ -245,9 +245,13 @@ _disttree = {'': OptFile('%(readme)s', 'README.txt'),
                           OptFile('%(@zlib)s/zlibstat.lib'),
                           ),
 
+             'lib/serf': (File('%(@serf)s/Release/serf.lib'),
+                          ),
+
              'licenses': None,
              'licenses/bdb': File('%(@berkeley-db)s/LICENSE'),
              'licenses/neon': File('%(@neon)s/src/COPYING.LIB'),
+             'licenses/serf': File('%(@serf)s/LICENSE'),
              'licenses/zlib': File('%(@zlib)s/README'),
              'licenses/apr-util': (File('%(@apr-util)s/LICENSE'),
                                    File('%(@apr-util)s/NOTICE'),
