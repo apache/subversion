@@ -153,7 +153,7 @@ public class BasicTests extends SVNTests
             Path.isURL(null);
             fail("A null path should raise an exception");
         }
-        catch (NullPointerException expected)
+        catch (IllegalArgumentException expected)
         {
         }
 

@@ -46,13 +46,14 @@ public class Path
      *
      * @param path The Subversion "path" to inspect.
      * @return Whether <code>path</code> is a URL.
-     * @throws NullPointerException If <code>path</code> is <code>null</code>.
+     * @throws IllegalArgumentException If <code>path</code> is
+     * <code>null</code>.
      */
     public static boolean isURL(String path)
     {
         if (path == null)
         {
-            throw new NullPointerException();
+            throw new IllegalArgumentException();
         }
         // Require at least "s://".
         return (path.indexOf("://") > 0);
