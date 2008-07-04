@@ -166,7 +166,8 @@ public class BasicTests extends SVNTests
         }
 
         // Subversion "paths" which are URLs.
-        paths = new String[] { "http://svn.collab.net", "file:///src/svn/" };
+        paths = new String[] { "http://example.com", "svn://example.com",
+                               "svn+ssh://example.com", "file:///src/svn/" };
         for (int i = 0; i < paths.length; i++)
         {
             assertTrue("'" + paths[i] + "' should be considered a URL",

@@ -18,9 +18,6 @@
 
 package org.tigris.subversion.javahl;
 
-import java.net.MalformedURLException;
-import java.net.URL;
-
 /**
  * Subversion path validation and manipulation.
  *
@@ -44,9 +41,8 @@ public class Path
     public static native boolean isValid(String path);
 
     /**
-     * Whether a URL is valid, according to
-     * <code>java.net.URL</code>. This may be a slightly different
-     * idea than according to <code>svn_path_is_url()</code>.
+     * Whether a URL is valid. Implementation may behave differently
+     * than <code>svn_path_is_url()</code>.
      *
      * @param path The Subversion "path" to inspect.
      * @return Whether <code>path</code> is a URL.
@@ -58,15 +54,7 @@ public class Path
         {
             throw new NullPointerException();
         }
-
-        try
-        {
-            new URL(path);
-        }
-        catch (MalformedURLException e)
-        {
-            return false;
-        }
-        return true;
+        // Require at least "s://".
+        return (path.indexOf("://") > 0);
     }
 }
