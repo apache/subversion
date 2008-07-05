@@ -29,11 +29,6 @@ def svn_pool_destroy(pool):
 def svn_pool_clear(pool):
     return apr_pool_clear(pool)
 
-# Initialize everything
-svn_cmdline_init("", stderr)
-
-application_pool = None
-
 def _mark_weakpool_invalid(weakpool):
   if weakpool and weakpool() and hasattr(weakpool(), "_is_valid"):
     del weakpool()._is_valid
@@ -41,7 +36,7 @@ def _mark_weakpool_invalid(weakpool):
 class Pool(object):
   def __init__(self, parent_pool=None):
     """Create a new memory pool"""
-    self._parent_pool = parent_pool or application_pool
+    self._parent_pool = parent_pool
     self._as_parameter_ = svn_pool_create(self._parent_pool)
     self._mark_valid()
 
@@ -70,15 +65,8 @@ class Pool(object):
 
     self.assert_valid()
 
-    is_application_pool = not self._parent_pool
-
     # Destroy pool
     self._svn_pool_destroy(self)
-
-    # Clear application pool if necessary
-    if is_application_pool:
-      global application_pool
-      application_pool = None
 
     # Mark self as invalid
     if hasattr(self, "_parent_pool"):
@@ -113,5 +101,4 @@ class Pool(object):
 
     # Mark pool as valid
     self._is_valid = lambda: 1
-application_pool = Pool()
 
