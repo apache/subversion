@@ -219,7 +219,7 @@ class RemoteRepository(object):
 
         paths = _types.Array(c_char_p, paths is None and [""] or paths)
         return iter(_LogMessageReceiver(self, start_rev, end_rev, paths,
-                                        limit, verbose, stop_on_copy))
+                                        limit, discover_changed_paths, stop_on_copy))
 
 
     # Private. Produces a delta editor for the commit, so that the Txn
@@ -622,7 +622,7 @@ class _LogMessageReceiver(CallbackReceiver):
         entry.date = _types.SvnDate(date)
         entry.message = str(message)
 
-        if self.verbose:
+        if self.discover_changed_paths:
             entry.changed_paths = _types.Hash(POINTER(svn_log_changed_path_t),
               changed_paths, dup = svn_log_changed_path_dup)
         else:
