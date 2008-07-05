@@ -45,6 +45,7 @@ elif options.file:
 else:
     commit_message = "Move project into new directory '%s'." % new_dir_name
 
+svn_cmdline_init("", stderr)
 s = RemoteRepository(repos_url, user=User(username=options.username))
 
 txn = s.txn()
