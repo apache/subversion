@@ -1,5 +1,6 @@
 from csvn.repos import *
 from csvn.auth import User
+import csvn.core
 import time, sys, gc
 from optparse import OptionParser
 import textwrap
@@ -28,6 +29,7 @@ if len(args) != 1:
     parser.print_help()
     sys.exit(1)
 
+csvn.core.svn_cmdline_init("", csvn.core.stderr)
 repos_url = args[0]
 revs = options.rev
 if revs and ":" in revs:
@@ -57,7 +59,7 @@ def count_lines(message):
     return num_lines
 
 for entry in \
-     session.log(start_rev, end_rev, verbose=options.verbose,
+     session.log(start_rev, end_rev, discover_changed_paths=options.verbose,
                  stop_on_copy=options.stop_on_copy):
 
     num_lines = count_lines(entry.message)
