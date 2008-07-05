@@ -7,7 +7,7 @@ import os, sys
 class WC(object):
     """A SVN working copy."""
 
-    def __init__(self, path="", user=User()):
+    def __init__(self, path="", user=None):
         """Open a working copy directory relative to path.
 
         Keyword arguments:
@@ -15,6 +15,9 @@ class WC(object):
         user -- object implementingthe user interface representing the user
             performing the operatio (defaults to an instance of the User class)
         """
+        if user is None:
+            user = User()
+
         self.pool = Pool()
         self.iterpool = Pool()
         self.path = path.replace(os.sep, "/")
@@ -278,7 +281,7 @@ class WC(object):
         apr_outfile = _types.APRFile(outfile)
         apr_errfile = _types.APRFile(errfile)
 
-        svn_client_diff3(diff_options, path1, rev1, path2, rev2, recurse,
+        svn_client_diff3(diff_options, path1, byref(rev1), path2, byref(rev2), recurse,
             ignore_ancestry, no_diff_deleted, ignore_content_type,
             header_encoding, apr_outfile, apr_errfile, self.client,
             self.iterpool)
@@ -319,10 +322,10 @@ class WC(object):
             True)
         eol -- End of line character to use (defaults to standard eol marker)"""
 
+        rev = svn_opt_revision_t()
         svn_client_export3(POINTER(svn_revnum_t)(),
                            self._build_path(from_path),
-                           self._build_path(to_path), NULL,
-                           svn_opt_revision_t(), overwrite,
+                           self._build_path(to_path), NULL, byref(rev), overwrite,
                            ignore_externals, recurse, eol, self.client,
                            self.iterpool)
 
