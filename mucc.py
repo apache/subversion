@@ -20,7 +20,10 @@ Actions:
   mv URL1 URL2          move URL1 to URL2
   rm URL                delete URL
   put SRC-FILE URL      add or modify file URL with contents copied
-                        from SRC-FILE"""
+                        from SRC-FILE
+  propset NAME VAL URL  Set property NAME on URL to value VAL
+  propdel NAME URL      Delete property NAME from URL
+"""
 
 # Read and parse options
 parser = OptionParser(usage=usage)
@@ -30,6 +33,8 @@ parser.add_option("-F", "--file", dest="file",
                   help="read log message from FILE")
 parser.add_option("-u", "--username", dest="username",
                   help="commit the changes as USERNAME")
+parser.add_option("-p", "--password", dest="password",
+                  help="use password PASSWORD")
 parser.add_option("-U", "--root-url", dest="root_url",
                   help="Interpret all action URLs as relative to ROOT_URL")
 parser.add_option("-r", "--revision", dest="rev",
@@ -53,6 +58,7 @@ if not args:
 # Initialize variables
 root_url = options.root_url
 actions = []
+svn_cmdline_init("", stderr)
 pool = Pool()
 action = None
 if root_url:
@@ -69,6 +75,8 @@ cmds = {
     "mv": [ "url", "url" ],
     "rm": [ "url" ],
     "put": [ "file", "url" ],
+    "propset": [ "name", "val", "url" ],
+    "propdel": [ "name", "url" ],
 }
 
 # Build up a list of the actions we want to perform
@@ -82,8 +90,6 @@ for arg in args:
         state = states.pop()
         if state == "rev":
             action.append(arg.upper() != "HEAD" and int(arg) or None)
-        elif state == "file":
-            action.append(arg)
         elif state == "url":
             arg = RepositoryURI(arg)
             if anchor:
@@ -102,6 +108,8 @@ for arg in args:
                 ancestor = ancestor.longest_ancestor(arg)
             else:
                 ancestor = arg
+        else:
+            action.append(arg)
 
 session = RemoteRepository(ancestor, user=User(username=options.username))
 txn = session.txn()
@@ -119,6 +127,11 @@ for action, args in actions:
         txn.mkdir(args[1])
     elif action == "put":
         txn.upload(local_path=args[1], remote_path=args[2])
+    elif action == "propset":
+        txn.propset(key=args[1], value=args[2], path=args[3])
+    elif action == "propdel":
+        txn.propdel(key=args[1], path=args[2])
+
 
 # Get the log message
 message = options.message
