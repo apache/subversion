@@ -1,6 +1,9 @@
+import csvn.core
 from csvn.repos import *
 from csvn.auth import User
 import os
+
+csvn.core.svn_cmdline_init("", csvn.core.stderr)
 
 if os.path.exists("/tmp/test-repos"):
     svn_repos_delete("/tmp/test-repos", Pool())
