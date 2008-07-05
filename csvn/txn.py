@@ -119,6 +119,22 @@ class Txn(object):
         node = parent.open(path, "OPEN", kind)
         node.propset(key, value)
 
+    def propdel(self, path, key):
+        """Delete the property named KEY on the specified PATH"""
+
+        path = self.session._relative_path(path)
+
+        kind, parent = self._check_path(path)
+
+        if kind == svn_node_none:
+            message = ("Can't delete property on '%s': "
+                       "No such file or directory" % path)
+            raise SubversionException(SVN_ERR_BAD_URL, message)
+
+        node = parent.open(path, "OPEN", kind)
+        node.propdel(key)
+
+
     def copy(self, src_path, dest_path, src_rev=None, local_path=None):
         """Copy a file or directory from SRC_PATH@SRC_REV to DEST_PATH.
            If SRC_REV is not supplied, use the latest revision of SRC_PATH.
@@ -315,6 +331,10 @@ class _txn_operation(object):
         """Set the property named KEY to VALUE on this file/dir"""
         self.properties[key] = value
 
+    def propdel(self, key):
+        """Delete the property named KEY on this file/dir"""
+        self.properties[key] = None
+
     def open(self, path, action="OPEN", kind=svn_node_dir,
              copyfrom_path = None, copyfrom_rev = -1, local_path = None):
         if self.ops.has_key(path):
@@ -380,8 +400,11 @@ class _txn_operation(object):
 
             # Write out changes to properties
             for (name, value) in self.properties.items():
-                svn_value = svn_string_ncreate(value, len(value),
-                                               subpool)
+                if value is None:
+                    svn_value = POINTER(svn_string_t)()
+                else:
+                    svn_value = svn_string_ncreate(value, len(value),
+                                                   subpool)
                 if file_baton:
                     SVN_ERR(editor.change_file_prop(file_baton, name,
                             svn_value, subpool))
