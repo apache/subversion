@@ -438,7 +438,19 @@ harvest_committables(apr_hash_t *committables,
      information about it. */
   if (state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
     {
+      svn_node_kind_t working_kind;
       svn_boolean_t eol_prop_changed;
+
+      /* First of all, the working file or directory must exist.
+         See issue #3198. */  
+      SVN_ERR(svn_io_check_path(path, &working_kind, pool));
+      if (working_kind == svn_node_none)
+        {
+          return svn_error_createf
+            (SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+             _("'%s' is scheduled for addition, but is missing"),
+             svn_path_local_style(path, pool));
+        }
 
       /* See if there are property modifications to send. */
       SVN_ERR(check_prop_mods(&prop_mod, &eol_prop_changed, path,
