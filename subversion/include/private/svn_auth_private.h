@@ -39,6 +39,7 @@ extern "C" {
 /* A function that stores in *PASSWORD (potentially after decrypting it)
    the user's password.  It might be obtained directly from CREDS, or
    from an external store, using REALMSTRING and USERNAME as keys.
+   (The behavior is undefined if REALMSTRING or USERNAME are NULL.)
    If NON_INTERACTIVE is set, the user must not be involved in the
    retrieval process.  POOL is used for any necessary allocation. */
 typedef svn_boolean_t (*svn_auth__password_get_t)
