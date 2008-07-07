@@ -35,8 +35,6 @@ extern "C" {
  * will be encoded it if contains unsafe bytes.
  *
  * @since New in 1.6.
- *
- * This is a private API for Subversion's own use.
  */
 void
 svn_client__print_xml_prop(svn_stringbuf_t **outstr,
