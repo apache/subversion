@@ -18,16 +18,6 @@ Candidate changes for 1.5.1:
      +1: lgo, cmpilato
      -0: markphip (serf tests fail on OSX), epg (failure confirmed)
 
- * r31196, r31199, r31280, r31283, r31287
-   Don't commit an add of a missing item (issue #3198).
-   Notes:
-     r31199 is a trivial followup that adds a missing SVN_ERR() wrap.
-     r31280, r31283 and r31287 add a regression test.
-   Votes:
-     +1: lgo, hwright
-     +1: kfogel (r31196 and r31199 only)
-     +0: danielsh
-
  * r31059, r31060, r31061, r31075, r31151, r31398, and r31482
    Fix issue #3157, Merging a change from a path's natural history
    creates self-referential mergeinfo
@@ -140,3 +130,13 @@ Candidate changes for 1.5.1:
 
 Approved changes:
 =================
+
+ * r31196, r31199, r31280, r31283, r31287
+   Don't commit an add of a missing item (issue #3198).
+   Notes:
+     r31199 is a trivial followup that adds a missing SVN_ERR() wrap.
+     r31280, r31283 and r31287 add a regression test.
+   Votes:
+     +1: lgo, hwright, pburba
+     +1: kfogel (r31196 and r31199 only)
+     +0: danielsh
