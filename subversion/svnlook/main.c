@@ -979,6 +979,32 @@ print_diff_tree(svn_fs_root_t *root,
 
               /* Print diff header. */
               SVN_ERR(svn_cmdline_printf(pool, header->data));
+
+              /* This fflush() might seem odd, but it was added to deal
+                 with this bug report:
+
+                   http://subversion.tigris.org/servlets/ReadMsg?\
+                   list=dev&msgNo=140782
+
+                   From: "Steve Hay" <SteveHay{_AT_}planit.com>
+                   To: <dev@subversion.tigris.org>
+                   Subject: svnlook diff output in wrong order when redirected
+                   Date: Fri, 4 Jul 2008 16:34:15 +0100
+                   Message-ID: <1B32FF956ABF414C9BCE5E487A1497E702014F62@\
+                                ukmail02.planit.group>
+
+                 Adding the fflush() fixed the bug (not everyone could
+                 reproduce it, but those who could confirmed the fix).
+                 Later in the thread, Daniel Shahaf speculated as to
+                 why the fix works:
+
+                   "Because svn_cmdline_printf() uses the standard
+                    'FILE *stdout' to write to stdout, while
+                    svn_stream_for_stdout() uses (through
+                    apr_file_open_stdout()) Windows API's to get a
+                    handle for stdout?" */
+              SVN_ERR(svn_cmdline_fflush(stdout));
+
               SVN_ERR(svn_stream_for_stdout(&ostream, pool));
 
               if (orig_empty)
