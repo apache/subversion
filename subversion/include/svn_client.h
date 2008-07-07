@@ -3636,6 +3636,24 @@ svn_client_revprop_list(apr_hash_t **props,
                         svn_revnum_t *set_rev,
                         svn_client_ctx_t *ctx,
                         apr_pool_t *pool);
+
+/** Write a property as an XML element into @a *outstr.
+ *
+ * If @a outstr is NULL, allocate @a *outstr in @a pool; else append to
+ * @a *outstr, allocating in @a outstr's pool
+ *
+ * @a propname is the property name. @a propval is the property value, which
+ * will be encoded it if contains unsafe bytes.
+ *
+ * @since New in 1.6.
+ *
+ * This is a private API for Subversion's own use.
+ */
+void
+svn_client__print_xml_prop(svn_stringbuf_t **outstr,
+                           const char *propname,
+                           svn_string_t *propval,
+                           apr_pool_t *pool);
 /** @} */
 
 
