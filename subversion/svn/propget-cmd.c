@@ -35,6 +35,8 @@
 #include "svn_xml.h"
 #include "cl.h"
 
+#include "private/svn_client_private.h"
+
 #include "svn_private_config.h"
 
 

@@ -44,7 +44,8 @@
 #include "svn_props.h"
 #include "svn_diff.h"
 #include "svn_xml.h"
-#include "svn_client.h"
+
+#include "private/svn_client_private.h"
 
 #include "svn_private_config.h"
 
