@@ -65,13 +65,6 @@ Candidate changes for 1.5.1:
    Votes:
      +1: pburba
 
- * r31737
-   Fix compilation error in JavaHL on Windows x64.
-   Justification:
-     Small fix, user-report error.
-   Votes:
-     +1: hwright, arfrever
-
  * r31833
    svndumpfilter: Don't match prefixes to partial path components. Fixes #desc4
    of issue #1853.
@@ -140,3 +133,10 @@ Approved changes:
      +1: lgo, hwright, pburba
      +1: kfogel (r31196 and r31199 only)
      +0: danielsh
+
+ * r31737
+   Fix compilation error in JavaHL on Windows x64.
+   Justification:
+     Small fix, user-report error.
+   Votes:
+     +1: hwright, arfrever
