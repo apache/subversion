@@ -20,10 +20,11 @@
 
 
 /*** Includes. ***/
-#include "svn_client.h"
 #include "svn_string.h"
 #include "svn_xml.h"
 #include "svn_base64.h"
+
+#include "private/svn_client_private.h"
 
 #include "svn_private_config.h"
 
