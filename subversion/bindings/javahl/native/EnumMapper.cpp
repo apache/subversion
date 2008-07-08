@@ -34,7 +34,7 @@
 #include "../include/org_tigris_subversion_javahl_ConflictDescriptor_Kind.h"
 #include "../include/org_tigris_subversion_javahl_ConflictDescriptor_Action.h"
 #include "../include/org_tigris_subversion_javahl_ConflictDescriptor_Reason.h"
-#include "../include/org_tigris_subversion_javahl_Depth.h";
+#include "../include/org_tigris_subversion_javahl_Depth.h"
 
 /**
  * Map a C commit state flag constant to the Java constant.
