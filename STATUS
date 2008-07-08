@@ -8,6 +8,11 @@ delay a release, etc.
 Candidate changes for 1.5.1:
 ============================
 
+ * r32023
+   Follow up (r31884) to fix issue #2242 which checks for a NULL username.
+   Votes:
+    +1: stylesen 
+
  * r31313
    Make all ra layers return a consistent error when a path is not found in the
    repository.
