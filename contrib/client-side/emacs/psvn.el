@@ -1137,9 +1137,7 @@ If there is no .svn directory, examine if there is CVS and run
                             (if svn-status-verbose "-v" "")
                           (if svn-status-verbose
                               (if arg "-uv" "-v")
-                            (if arg "-u" ""))))
-         (svn-status-edit-svn-command
-          (or want-edit svn-status-edit-svn-command)))
+                            (if arg "-u" "")))))
     (save-excursion
       (set-buffer status-buf)
       (setq default-directory dir)
@@ -1147,7 +1145,10 @@ If there is no .svn directory, examine if there is CVS and run
       (setq default-directory dir
             svn-status-remote (when arg t))
       (set-buffer cur-buf)
-      (svn-run t t 'status "status" svn-status-default-status-arguments status-option))))
+      (if want-edit
+          (let (svn-status-edit-svn-command t)
+            (svn-run t t 'status "status" svn-status-default-status-arguments status-option))
+        (svn-run t t 'status "status" svn-status-default-status-arguments status-option)))))
 
 (defun svn-status-this-directory (arg)
   "Run `svn-status' for the `default-directory'"
