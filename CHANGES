@@ -38,10 +38,15 @@ http://svn.collab.net/repos/svn/tags/1.5.1
   * don't clobber LDFLAGS in configure when given '--with-zlib' (r31825)
   * don't drive the merge editor when there is nothing to be merged (r30748)
   * fixed: auth cache reading password from wrong username entry (issue #2242)
+  * fixed: commit log message compatibility wrapper (r31944)
+  * fixed: unbounded memory usage in wc-to-wc copy and move (r31868)
+  * don't commit an add of a missing item (issue #3198)
 
  Developer-visible changes:
   * fixed: crash when when svn_ra_open3() is passed a bogus URL (r31223)
   * export svn_path_is_url() to the bindings (r31603)
+  * make libsvn_ra depend on libsvn_delta unconditionally (r31852)
+  * fixed: JavaHL compilation on Windows (r31737)
 
 Version 1.5.0
 (19 Jun 2008, from /branches/1.5.x)
