@@ -32,7 +32,7 @@ extern "C" {
  * @a *outstr, allocating in @a outstr's pool
  *
  * @a propname is the property name. @a propval is the property value, which
- * will be encoded it if contains unsafe bytes.
+ * will be encoded if it contains unsafe bytes.
  *
  * @since New in 1.6.
  */
