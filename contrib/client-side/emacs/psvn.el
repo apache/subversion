@@ -82,6 +82,7 @@
 ;; * ?   - svn-status-mark-unknown
 ;; * A   - svn-status-mark-added
 ;; * M   - svn-status-mark-modified
+;; * P   - svn-status-mark-modified-properties
 ;; * D   - svn-status-mark-deleted
 ;; * *   - svn-status-mark-changed
 ;; * .   - svn-status-mark-by-file-ext
@@ -1902,6 +1903,7 @@ A and B must be line-info's."
   (define-key svn-status-mode-mark-map (kbd "?") 'svn-status-mark-unknown)
   (define-key svn-status-mode-mark-map (kbd "A") 'svn-status-mark-added)
   (define-key svn-status-mode-mark-map (kbd "M") 'svn-status-mark-modified)
+  (define-key svn-status-mode-mark-map (kbd "P") 'svn-status-mark-modified-properties)
   (define-key svn-status-mode-mark-map (kbd "D") 'svn-status-mark-deleted)
   (define-key svn-status-mode-mark-map (kbd "*") 'svn-status-mark-changed)
   (define-key svn-status-mode-mark-map (kbd ".") 'svn-status-mark-by-file-ext)
@@ -2053,8 +2055,9 @@ A and B must be line-info's."
      ["Unmark all" svn-status-unset-all-usermarks t]
      "---"
      ["Mark/Unmark unknown" svn-status-mark-unknown t]
-     ["Mark/Unmark added" svn-status-mark-added t]
      ["Mark/Unmark modified" svn-status-mark-modified t]
+     ["Mark/Unmark modified properties" svn-status-mark-modified-properties t]
+     ["Mark/Unmark added" svn-status-mark-added t]
      ["Mark/Unmark deleted" svn-status-mark-deleted t]
      ["Mark/Unmark modified/added/deleted" svn-status-mark-changed t]
      ["Mark/Unmark filename by extension" svn-status-mark-by-file-ext t]
@@ -3322,12 +3325,22 @@ If the function is called with a prefix ARG, unmark all these files."
 (defun svn-status-mark-modified (arg)
   "Mark all modified files.
 These are the files marked with 'M' in the `svn-status-buffer-name' buffer.
+Changed properties are considered.
 If the function is called with a prefix ARG, unmark all these files."
   (interactive "P")
   (svn-status-apply-usermark-checked
    '(lambda (info) (or (eq (svn-status-line-info->filemark info) ?M)
                        (eq (svn-status-line-info->filemark info)
-                           svn-status-file-modified-after-save-flag)))
+                           svn-status-file-modified-after-save-flag)
+                       (eq (svn-status-line-info->propmark info) ?M)))
+   (not arg)))
+
+(defun svn-status-mark-modified-properties (arg)
+  "Mark all files and directories with modified properties.
+If the function is called with a prefix ARG, unmark all these entries."
+  (interactive "P")
+  (svn-status-apply-usermark-checked
+   '(lambda (info) (or (eq (svn-status-line-info->propmark info) ?M)))
    (not arg)))
 
 (defun svn-status-mark-deleted (arg)
