@@ -123,8 +123,3 @@ Candidate changes for 1.5.1:
 
 Approved changes:
 =================
-
- * r31948
-   Minor performance optimization to the single-file merge scenario.
-   Votes:
-     +1: cmpilato, hwright, pburba
