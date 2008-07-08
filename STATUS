@@ -104,11 +104,6 @@ Candidate changes for 1.5.1:
    Votes:
      +1: kameshj
 
- * r31948
-   Minor performance optimization to the single-file merge scenario.
-   Votes:
-     +1: cmpilato, hwright
-
  * r31964
    Fix broken links to the Berkeley DB 'Configuring logging' web page in
    the DB_CONFIG file when creating a new repository.
@@ -128,3 +123,8 @@ Candidate changes for 1.5.1:
 
 Approved changes:
 =================
+
+ * r31948
+   Minor performance optimization to the single-file merge scenario.
+   Votes:
+     +1: cmpilato, hwright, pburba
