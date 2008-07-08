@@ -1100,15 +1100,16 @@ base_hotcopy(const char *src_path,
      of copying all the logfiles.  (This is not a huge deal; at worst,
      the hotcopy fails with a file-not-found error.) */
 #if SVN_BDB_VERSION_AT_LEAST(4, 2)
-  SVN_ERR(check_env_flags(&log_autoremove,
+  err = check_env_flags(&log_autoremove,
 #if SVN_BDB_VERSION_AT_LEAST(4, 7)
                           DB_LOG_AUTO_REMOVE,
  /* DB_LOG_AUTO_REMOVE was named DB_LOG_AUTOREMOVE before Berkeley DB 4.7. */
 #else
                           DB_LOG_AUTOREMOVE,
 #endif
-                          src_path, pool));
+                          src_path, pool);
 #endif
+  SVN_ERR(err);
 
   /* Copy the DB_CONFIG file. */
   SVN_ERR(svn_io_dir_file_copy(src_path, dest_path, "DB_CONFIG", pool));
