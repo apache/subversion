@@ -123,10 +123,3 @@ Candidate changes for 1.5.1:
 
 Approved changes:
 =================
-
- * r31737
-   Fix compilation error in JavaHL on Windows x64.
-   Justification:
-     Small fix, user-report error.
-   Votes:
-     +1: hwright, arfrever
