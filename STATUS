@@ -87,7 +87,6 @@ Candidate changes for 1.5.1:
      test changes portion of r31874.
      r31023 is minor tweak to the svn mergeinfo help text, r31874 causes a
      minor conflict in svn/main.c without this.
-     svn/mergeinfo-cmd.c.
      r32038 fixes a memory allocation bug in r31874.
      r31929 adds a docstring for a new private fuction in r31874.
    Votes:
@@ -114,7 +113,7 @@ Candidate changes for 1.5.1:
    Fix broken links to the Berkeley DB 'Configuring logging' web page in
    the DB_CONFIG file when creating a new repository.
    Votes:
-     +1: blair
+     +1: blair, arfrever
 
  * r31994
    Fix bug in the CopySources::array() JNI method, where the peg
@@ -126,6 +125,11 @@ Candidate changes for 1.5.1:
      and likely Subclipse.
    Votes:
      +1: dlr
+
+ * r32017, r32029
+   Support Berkeley DB 4.7.
+   Votes:
+     +1: arfrever
 
 Approved changes:
 =================
