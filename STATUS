@@ -79,14 +79,20 @@ Candidate changes for 1.5.1:
    Votes:
      +1: danielsh, hwright
 
- * r31873, 31874
+ * r31023, 31873, 31874, 32038, 31929
    Teach 'svn mergeinfo' and underlying APIs to handle working copy path
    merge sources, too (instead of only URLs).
    Notes:
      r31873 is just a test reorg.  If it isn't approved, just ignore the
-     test changes portion of r31874.   
+     test changes portion of r31874.
+     r31023 is minor tweak to the svn mergeinfo help text, r31874 causes a
+     minor conflict in svn/main.c without this.
+     svn/mergeinfo-cmd.c.
+     r32038 fixes a memory allocation bug in r31874.
+     r31929 adds a docstring for a new private fuction in r31874.
    Votes:
-     +1: cmpilato, hwright
+     +1: cmpilato, hwright (r31873, r31874)
+     +1: pburba
 
  * r31875
    Fix 'svn log --xml' against pre-1.2 servers.
