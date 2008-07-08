@@ -1166,7 +1166,7 @@ location_from_path_and_rev(const char **url,
                                            peg_revision, peg_revision,
                                            ctx, subpool));
   *url = apr_pstrdup(pool, *url);
-  *revision = apr_pcalloc(pool, sizeof(*revision));
+  *revision = apr_pcalloc(pool, sizeof(**revision));
   (*revision)->kind = svn_opt_revision_number;
   (*revision)->value.number = rev;
 
