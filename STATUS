@@ -128,8 +128,13 @@ Candidate changes for 1.5.1:
 
  * r32017, r32029
    Support Berkeley DB 4.7.
+   Justification:
+     Failure to provide this patch will not prevent folks from compiling
+     against Berkeley DB 4.7.  It just means that when they do, they will
+     silently lose support for Berkeley DB's rather important logging
+     subsystem.
    Votes:
-     +1: arfrever
+     +1: arfrever, cmpilato
 
 Approved changes:
 =================
