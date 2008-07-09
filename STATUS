@@ -33,7 +33,7 @@ Candidate changes for 1.5.1:
      an XFail in the test list in r31075 trivally conflicts because several
      other new merge tests are not backported yet.  r31482 conflicts in the
      comment for merge.c's filter_natural_history_from_mergeinfo, again this
-     is fairly trivial to resolve.  This fix is dependent on r30748.
+     is fairly trivial to resolve.
    Votes:
      +1: pburba, kfogel
      +1: cmpilato, markphip (all except r31398 and 31482)
