@@ -72,7 +72,7 @@ Candidate changes for 1.5.1:
      Was originally committed to the svnpatch-diff branch in r31831, and
      then merged to trunk as r31833.
    Votes:
-     +1: danielsh, hwright
+     +1: danielsh, hwright, stylesen
 
  * r31023, 31873, 31874, 32038, 31929
    Teach 'svn mergeinfo' and underlying APIs to handle working copy path
