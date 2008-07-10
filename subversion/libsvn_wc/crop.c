@@ -75,8 +75,8 @@ crop_children(svn_wc_adm_access_t *adm_access,
   /* Update the depth of target first, if needed. */
   if (dot_entry->depth > depth)
     {
-      /* TODO(2843): Do we need to restore the modified depth if the user cancel this
-         operation? */
+      /* TODO(#2843): Do we need to restore the modified depth if the user
+         cancel this operation? */
       dot_entry->depth = depth;
       SVN_ERR(svn_wc__entries_write(entries, dir_access, subpool));
     }
@@ -209,9 +209,13 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
   if (!entry || entry->kind != svn_node_dir)
     return SVN_NO_ERROR;
 
-  /* TODO(#2843): Re-consider the behavior of cropping items with scheduled
-     add/delete. Maybe we don't need to setup the exclude flag when the taget
-     is just added without history. */
+  /* Don't bother to crop if the target is scheduled delete. */
+  if (entry->schedule == svn_wc_schedule_delete)
+    return svn_error_createf
+      (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+       _("Cannot crop '%s': it is going to be removed from repository."
+         " Try commit instead."),
+       svn_path_local_style(full_path, pool));
 
   /* Crop the target itself if we are requested to. */
   if (depth == svn_depth_exclude)
