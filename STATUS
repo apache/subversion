@@ -133,6 +133,13 @@ Candidate changes for 1.5.1:
      +1: arfrever, cmpilato
      +0: blair
 
+ * r32056
+   Fix ra_serf bug that has a potential to cause vague errors when
+   location-segments report is run against non-existent node, exhibited
+   at trunk@31900 via merge_tests failures.
+   Votes:
+     +1: kameshj
+
 Approved changes:
 =================
 
