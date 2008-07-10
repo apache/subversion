@@ -540,8 +540,8 @@ process_committed_internal(int *log_number,
 
           /* TODO(#2843)
              We come to this branch since we are commiting an added tree.
-             Check this again after the behavior of croping an newly added
-             tree is definined. Anyway, it will be safer to check for excluded
+             Check this again after the behavior of cropping an newly added
+             tree is defined. Anyway, it will be safer to check for excluded
              items here. */
           if (current_entry->depth == svn_depth_exclude)
             continue;
@@ -1221,7 +1221,7 @@ svn_wc_delete3(const char *path,
          entries file */
       SVN_ERR(svn_wc_adm_retrieve(&parent_access, adm_access, parent, pool));
       /* We don't need to check for excluded item, since we won't fall into
-         this path in that case. */
+         this code path in that case. */
       SVN_ERR(svn_wc_entries_read(&entries, parent_access, TRUE, pool));
       entry_in_parent = apr_hash_get(entries, base_name, APR_HASH_KEY_STRING);
       was_deleted = entry_in_parent ? entry_in_parent->deleted : FALSE;
@@ -1440,12 +1440,15 @@ svn_wc_add3(const char *path,
      that is slated for deletion from revision control, or has been
      previously 'deleted', unless, of course, you're specifying an
      addition with -history-; then it's okay for the object to be
-     under version control already; it's not really new.  */
+     under version control already; it's not really new.
+     Also, if the target is recorded as excluded from wc, it really 
+     exists in repos. Report error on this situation too. */
   if (orig_entry)
     {
-      if ((! copyfrom_url)
+      if (((! copyfrom_url)
           && (orig_entry->schedule != svn_wc_schedule_delete)
           && (! orig_entry->deleted))
+          || (orig_entry->depth == svn_depth_exclude))
         {
           return svn_error_createf
             (SVN_ERR_ENTRY_EXISTS, NULL,
@@ -2045,7 +2048,7 @@ revert_entry(svn_depth_t *depth,
                                       "parent directory"));
 
           /* We don't need to check for excluded item, since we won't fall
-             into this path in that case. */
+             into this code path in that case. */
           SVN_ERR(svn_wc_entries_read(&entries, parent_access, TRUE, pool));
           parents_entry = apr_hash_get(entries, basey, APR_HASH_KEY_STRING);
           if (parents_entry)
