@@ -44,7 +44,8 @@
 #include "svn_props.h"
 #include "svn_diff.h"
 #include "svn_xml.h"
-#include "svn_base64.h"
+
+#include "private/svn_cmdline_private.h"
 
 #include "svn_private_config.h"
 
@@ -1566,48 +1567,6 @@ do_pget(svnlook_ctxt_t *c,
 }
 
 
-/* A copy of svn_cl__print_xml_prop(). */
-static void
-print_xml_prop(svn_stringbuf_t **outstr,
-               const char* propname,
-               svn_string_t *propval,
-               apr_pool_t *pool)
-{
-  const char *xml_safe;
-  const char *encoding = NULL;
-
-  if (*outstr == NULL)
-    *outstr = svn_stringbuf_create("", pool);
-
-  if (svn_xml_is_xml_safe(propval->data, propval->len))
-    {
-      svn_stringbuf_t *xml_esc = NULL;
-      svn_xml_escape_cdata_string(&xml_esc, propval, pool);
-      xml_safe = xml_esc->data;
-    }
-  else
-    {
-      const svn_string_t *base64ed = svn_base64_encode_string(propval, pool);
-      encoding = "base64";
-      xml_safe = base64ed->data;
-    }
-
-  if (encoding)
-    svn_xml_make_open_tag(outstr, pool, svn_xml_protect_pcdata,
-                          "property", "name", propname,
-                          "encoding", encoding, NULL);
-  else
-    svn_xml_make_open_tag(outstr, pool, svn_xml_protect_pcdata,
-                          "property", "name", propname, NULL);
-
-  svn_stringbuf_appendcstr(*outstr, xml_safe);
-
-  svn_xml_make_close_tag(outstr, pool, "property");
-
-  return;
-}
-
-
 /* Print the property names of all properties on PATH in the repository.
    If VERBOSE, print their values too.
    If XML, print as XML rather than as plain text.
@@ -1692,7 +1651,7 @@ do_plist(svnlook_ctxt_t *c,
           const char *pname_stdout;
           SVN_ERR(svn_cmdline_cstring_from_utf8(&pname_stdout, pname, pool));
           if (xml)
-            print_xml_prop(&sb, pname_stdout, propval, pool);
+            svn_cmdline__print_xml_prop(&sb, pname_stdout, propval, pool);
           else
             printf("  %s : %s\n", pname_stdout, propval->data);
         }
