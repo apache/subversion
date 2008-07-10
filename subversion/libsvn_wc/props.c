@@ -198,7 +198,7 @@ append_prop_conflict(apr_file_t *fp,
 }
 
 
-/* Look up the entry NAME within ADM_ACCESS and see if it has a `current'
+/* Look up the entry for PATH within ADM_ACCESS and see if it has a `current'
    reject file describing a state of conflict.  Set *REJECT_FILE to the
    name of that file, or to NULL if no such file exists. */
 static svn_error_t *
