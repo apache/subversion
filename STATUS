@@ -140,6 +140,21 @@ Candidate changes for 1.5.1:
    Votes:
      +1: kameshj
 
+ * r31658, r31659
+   Fix a remaining bug with issue #2825, Handle --depth option for 'merge'
+   operations in terms of both content and mergeinfo.
+   Justification:
+     An inoperative merge to a directory at --depth files should set
+     non-inheritable mergeinfo on the merge target and 'normal' mergeinfo
+     on any of the target's file children.  Without this fix the file
+     children get no mergeinfo set/updated.  This is a fairly minor bug, but
+     it is inconsistent with the way we currently handle inoperative merges
+     in every other situation (i.e. we still set mergeinfo - see issue #2883).
+   Notes:
+     r31659 is dependent on the r31059 (issue #3157) group.
+   Votes:
+     +1: pburba
+
 Approved changes:
 =================
 
