@@ -116,6 +116,18 @@
  *
  */
 
+/* THE CHILDREN_WITH_MERGEINFO ARRAY
+ *
+ * Many of the helper functions in this file pass around an
+ * apr_array_header_t *CHILDREN_WITH_MERGEINFO.  This is a depth first
+ * sorted array filled with svn_client__merge_path_t * describing the
+ * merge target and any of its subtrees which have explicit mergeinfo
+ * or otherwise need special attention during a merge.
+ *
+ * CHILDREN_WITH_MERGEINFO is intially created by get_mergeinfo_paths()
+ * and outside of that function and its helpers should always meet the
+ * seven criteria dictated in get_mergeinfo_paths()'s doc string.
+ */
 
 /*-----------------------------------------------------------------------*/
 
