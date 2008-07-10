@@ -14,6 +14,8 @@ Candidate changes for 1.5.1:
    Notes:
      Small change, but API consistency is always a good thing.
      Does not merge cleanly!
+   Question:
+     Does r32056, nominated below, fix these test failures?
    Votes:
      +1: lgo, cmpilato
      -0: markphip (serf tests fail on OSX), epg (failure confirmed)
@@ -75,7 +77,7 @@ Candidate changes for 1.5.1:
      +1: danielsh, hwright
      +1 (non-binding): stylesen
 
- * r31023, 31873, 31874, 32038, 31929
+ * r31023, 31873, 31874, 31929, 32038
    Teach 'svn mergeinfo' and underlying APIs to handle working copy path
    merge sources, too (instead of only URLs).
    Notes:
@@ -86,8 +88,8 @@ Candidate changes for 1.5.1:
      r32038 fixes a memory allocation bug in r31874.
      r31929 adds a docstring for a new private fuction in r31874.
    Votes:
-     +1: cmpilato, hwright (r31873, r31874)
-     +1: pburba
+     +1: cmpilato (r31873, r31874)
+     +1: pburba, hwright
 
  * r31875
    Fix 'svn log --xml' against pre-1.2 servers.
@@ -104,23 +106,6 @@ Candidate changes for 1.5.1:
    range shouldn't break the merge.
    Votes:
      +1: kameshj
-
- * r31964
-   Fix broken links to the Berkeley DB 'Configuring logging' web page in
-   the DB_CONFIG file when creating a new repository.
-   Votes:
-     +1: blair, arfrever
-
- * r31994
-   Fix bug in the CopySources::array() JNI method, where the peg
-   revision was set incorrectly, and in the Java SVNClient.copy()
-   method, where the HEAD revision was used as the peg revision for a
-   WC path.
-   Justification:
-     User reported bug (from Alexander Kitaev) affecting SVNKit,
-     and likely Subclipse.
-   Votes:
-     +1: dlr
 
  * r32017, r32029
    Support Berkeley DB 4.7.
@@ -158,3 +143,19 @@ Candidate changes for 1.5.1:
 Approved changes:
 =================
 
+ * r31994
+   Fix bug in the CopySources::array() JNI method, where the peg
+   revision was set incorrectly, and in the Java SVNClient.copy()
+   method, where the HEAD revision was used as the peg revision for a
+   WC path.
+   Justification:
+     User reported bug (from Alexander Kitaev) affecting SVNKit,
+     and likely Subclipse.
+   Votes:
+     +1: dlr, hwright
+
+ * r31964
+   Fix broken links to the Berkeley DB 'Configuring logging' web page in
+   the DB_CONFIG file when creating a new repository.
+   Votes:
+     +1: blair, arfrever, hwright
