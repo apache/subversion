@@ -184,7 +184,8 @@ svn_client__repos_locations(const char **start_url,
    representing a reposition location segment for the history of PATH
    (which is relative to RA_SESSION's session URL) in PEG_REVISION
    between END_REVISION and START_REVISION, ordered from oldest
-   segment to youngest.
+   segment to youngest.  *SEGMENTS may be empty but it will never
+   be NULL.
 
    This is basically a thin de-stream-ifying wrapper around the
    svn_ra_get_location_segments() interface, which see for the rules

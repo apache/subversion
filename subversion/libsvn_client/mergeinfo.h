@@ -36,6 +36,7 @@
         missing from the WC.
      4) Path has a sibling which is switched or otherwise missing
         from the WC.
+     5) Path is the target of a merge.
 */
 typedef struct svn_client__merge_path_t
 {
@@ -150,7 +151,8 @@ svn_client__get_wc_or_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
    be used to fetch information about PATH_OR_URL (if PATH_OR_URL is a
    working copy path), or NULL.  If RANGE_YOUNGEST and RANGE_OLDEST
    are valid, use them to bound the revision ranges of returned
-   mergeinfo.  */
+   mergeinfo.  See svn_ra_get_location_segments() for the rules
+   governing PEG_REVISION, START_REVISION, and END_REVISION.*/
 svn_error_t *
 svn_client__get_history_as_mergeinfo(svn_mergeinfo_t *mergeinfo_p,
                                      const char *path_or_url,
