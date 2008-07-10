@@ -20,20 +20,21 @@ Candidate changes for 1.5.1:
      +1: lgo, cmpilato
      -0: markphip (serf tests fail on OSX), epg (failure confirmed)
 
- * r31059, r31060, r31061, r31075, r31151, r31398, and r31482
+ * r31059, r31060, r31061, r31075, r31151, r31391, r31398, and r31482
    Fix issue #3157, Merging a change from a path's natural history
    creates self-referential mergeinfo
    Notes:
-     r31075, r31151, and r31482 are the core fixes for the issue, the other
-     revisions are a new test for it (and a few minor follow-ups to that
-     test).  The addition of the new merge test in r31059 and the removal of
+     r31075, r31151, and r31482 are the core fixes for the issue, r31391 is a
+     follow-up to r31075 that fixes a comment typo, the other revisions are a
+     new test for the issue and a few minor follow-ups to that test.  The
+     addition of the new merge test in r31059 and the removal of
      an XFail in the test list in r31075 trivally conflicts because several
      other new merge tests are not backported yet.  r31482 conflicts in the
      comment for merge.c's filter_natural_history_from_mergeinfo, again this
      is fairly trivial to resolve.
    Votes:
      +1: pburba, kfogel
-     +1: cmpilato, markphip (all except r31398 and 31482)
+     +1: cmpilato, markphip (all except r31391, r31398, and r31482)
 
  * r31300, r31301, r31312
    Fix issue #3199, subtree merges broken when required ranges don't
@@ -54,7 +55,7 @@ Candidate changes for 1.5.1:
    Votes:
      +1: arfrever
 
- * r30632, r30749, r31757, r31769, r31817
+ * r30632, r30749, r30750, r31757, r31769, r31817
    Fix issue #3174, 'Merge algorithm chokes on subtrees needing special
    attention that have been renamed'.
    Justification:
@@ -63,7 +64,8 @@ Candidate changes for 1.5.1:
    Notes:
      r31817 is the core fix for the issue, the other revision relate to
      a new test and some subsequent tweaks for to it.  r30749 conflicts
-     trivally in the merge_tests.py test list.
+     trivally in the merge_tests.py test list. r30750 reverts an accidental
+     change in r30749.
    Votes:
      +1: pburba
 
@@ -101,11 +103,30 @@ Candidate changes for 1.5.1:
    Votes:
      +1: kou
 
- * r31900, r31926, r31927
+ * r30607, r30628, r30812, r30929, r30935, r30961, r30961, r31033,
+   r31137, r31575, r31594, r31601, r31769, r31900, r31926, r31927
    Fix issue #3067: subtrees that don't exist at the start or end of a merge
    range shouldn't break the merge.
+   Justification:
+     This fixes a serious bug in which common merge use cases fail with an
+     error.  We have already encountered this in our own repository.
+     See http://subversion.tigris.org/issues/show_bug.cgi?id=3067#desc5
+     onward for the tortured history and explanation of this problem.
+   Notes:
+     r31594, r31601, r31900, r31927 are the core fixes for this issue.
+
+     r30628 some format only changes that are needed to avoid conflicts.
+
+     r30607, r30812, r30929, r30935, r31575, r31769, r31926 add/tweak/expand
+     merge_tests.py coverage of this issue.  Note that r31769 is also
+     nominated in the issue #3174 group as it applies to both issues (and may
+     already be backported).
+
+     r30961, r30967, r31033, and r31137 are code and documentation improvements
+     to some merge.c helper functions, needed to avoid conflicts.
    Votes:
-     +1: kameshj
+     +1: kameshj (r31900, r31926, r31927)
+     +1: pburba
 
  * r32017, r32029
    Support Berkeley DB 4.7.
@@ -116,6 +137,8 @@ Candidate changes for 1.5.1:
      subsystem.
    Votes:
      +1: arfrever, cmpilato
+     +1: pburba (32029)
+     +0: pburba (32017)
      +0: blair
 
  * r32056
