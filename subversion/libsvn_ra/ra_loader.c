@@ -60,7 +60,7 @@
    ### instead of svn_ra_open. */
 
 #if defined(SVN_HAVE_NEON) && defined(SVN_HAVE_SERF)
-#define MUST_CHOOSE_DAV
+#define CHOOSABLE_DAV_MODULE
 #endif
 
 
@@ -393,7 +393,7 @@ svn_error_t *svn_ra_open3(svn_ra_session_t **session_p,
   const char *server_group;
   apr_uri_t repos_URI;
   apr_status_t apr_err;
-#ifdef MUST_CHOOSE_DAV
+#ifdef CHOOSABLE_DAV_MODULE
   const char *http_library = "neon";
 #endif
   /* Auth caching parameters. */
@@ -484,7 +484,7 @@ svn_error_t *svn_ra_open3(svn_ra_session_t **session_p,
                  SVN_CONFIG_OPTION_STORE_PLAINTEXT_PASSWORDS,
                  store_plaintext_passwords));
             }
-#ifdef MUST_CHOOSE_DAV
+#ifdef CHOOSABLE_DAV_MODULE
           /* Now, which DAV-based RA method do we want to use today? */
           http_library
             = svn_config_get_server_setting(servers,
@@ -527,7 +527,7 @@ svn_error_t *svn_ra_open3(svn_ra_session_t **session_p,
         {
           svn_ra__init_func_t initfunc = defn->initfunc;
 
-#ifdef MUST_CHOOSE_DAV
+#ifdef CHOOSABLE_DAV_MODULE
           if (defn->schemes == dav_schemes
               && strcmp(defn->ra_name, http_library) != 0)
             continue;
