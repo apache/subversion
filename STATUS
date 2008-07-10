@@ -143,17 +143,6 @@ Candidate changes for 1.5.1:
 Approved changes:
 =================
 
- * r31994
-   Fix bug in the CopySources::array() JNI method, where the peg
-   revision was set incorrectly, and in the Java SVNClient.copy()
-   method, where the HEAD revision was used as the peg revision for a
-   WC path.
-   Justification:
-     User reported bug (from Alexander Kitaev) affecting SVNKit,
-     and likely Subclipse.
-   Votes:
-     +1: dlr, hwright
-
  * r31964
    Fix broken links to the Berkeley DB 'Configuring logging' web page in
    the DB_CONFIG file when creating a new repository.
