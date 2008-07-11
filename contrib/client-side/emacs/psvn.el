@@ -1814,6 +1814,9 @@ A and B must be line-info's."
 (defvar svn-status-mode-branch-map ()
   "Subkeymap used in `svn-status-mode' for branching commands.")
 (put 'svn-status-mode-extension-map 'risky-local-variable t) ;for Emacs 20.7
+(defvar svn-status-mode-search-map ()
+  "Subkeymap used in `svn-status-mode' for search commands.")
+(put 'svn-status-mode-search-map      'risky-local-variable t) ;for Emacs 20.7
 
 (when (not svn-status-mode-map)
   (setq svn-status-mode-map (make-sparse-keymap))
@@ -1888,15 +1891,14 @@ A and B must be line-info's."
   (define-key svn-status-mode-map (kbd "~") 'svn-status-get-specific-revision)
   (define-key svn-status-mode-map (kbd "E") 'svn-status-ediff-with-revision)
 
-  (define-key svn-status-mode-map (kbd "S g") 'svn-status-grep-files)
-  (define-key svn-status-mode-map (kbd "S s") 'svn-status-search-files)
-
   (define-key svn-status-mode-map (kbd "n") 'svn-status-next-line)
   (define-key svn-status-mode-map (kbd "p") 'svn-status-previous-line)
   (define-key svn-status-mode-map (kbd "<down>") 'svn-status-next-line)
   (define-key svn-status-mode-map (kbd "<up>") 'svn-status-previous-line)
   (define-key svn-status-mode-map (kbd "C-x C-j") 'svn-status-dired-jump)
-  (define-key svn-status-mode-map [down-mouse-3] 'svn-status-popup-menu)
+  (define-key svn-status-mode-map [down-mouse-3] 'svn-status-popup-menu))
+
+(when (not svn-status-mode-mark-map)
   (setq svn-status-mode-mark-map (make-sparse-keymap))
   (define-key svn-status-mode-map (kbd "*") svn-status-mode-mark-map)
   (define-key svn-status-mode-mark-map (kbd "!") 'svn-status-unset-all-usermarks)
@@ -1909,6 +1911,13 @@ A and B must be line-info's."
   (define-key svn-status-mode-mark-map (kbd ".") 'svn-status-mark-by-file-ext)
   (define-key svn-status-mode-mark-map (kbd "%") 'svn-status-mark-filename-regexp)
   (define-key svn-status-mode-mark-map (kbd "u") 'svn-status-show-svn-diff-for-marked-files))
+
+(when (not svn-status-mode-search-map)
+  (setq svn-status-mode-search-map (make-sparse-keymap))
+  (define-key svn-status-mode-search-map (kbd "g") 'svn-status-grep-files)
+  (define-key svn-status-mode-search-map (kbd "s") 'svn-status-search-files)
+  (define-key svn-status-mode-map (kbd "S") svn-status-mode-search-map))
+
 (when (not svn-status-mode-property-map)
   (setq svn-status-mode-property-map (make-sparse-keymap))
   (define-key svn-status-mode-property-map (kbd "l") 'svn-status-property-list)
@@ -4530,9 +4539,8 @@ See `svn-status-marked-files' for what counts as selected."
   (interactive "sGrep files for: ")
   (unless grep-command
     (grep-compute-defaults))
-  (let ((default-directory (svn-status-base-dir)))
-    (grep (format "%s %s %s" grep-command (shell-quote-argument regexp)
-                  (mapconcat 'identity (svn-status-marked-file-names) " ")))))
+  (grep (format "%s %s %s" grep-command (shell-quote-argument regexp)
+                (mapconcat 'identity (svn-status-marked-file-names) " "))))
 
 (defun svn-status-search-files (search-string)
   "Search selected file(s) for a fixed SEARCH-STRING.
