@@ -1187,7 +1187,7 @@ set_prop_merge_state(svn_wc_notify_state_t *state,
 
 
 /* Create a temporary file in the same directory as PATH. Fill it with
- * the data in VAL. Set *NEW_FILE to its handle and *NEW_PATH to its path.
+ * the data in VAL. Set *NEW_PATH to its path.
  * Allocate the file metadata in POOL in such a way that the file will be
  * deleted when the pool is cleared. */
 static svn_error_t *
