@@ -145,7 +145,7 @@ Candidate changes for 1.5.1:
    Add missing sentinel to call to apr_pstrcat(). Fixes crashes seen
    by TortoiseSVN users.
    Votes:
-     +1: stsp, arfrever
+     +1: stsp, arfrever, blair
 
 Approved changes:
 =================
