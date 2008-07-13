@@ -291,7 +291,7 @@ svn_auth__simple_save_creds_helper(svn_boolean_t *saved,
                   cached_answer = apr_hash_get(b->plaintext_answers,
                                                realmstring,
                                                APR_HASH_KEY_STRING);
-                  if (cached_answer)
+                  if (cached_answer != NULL)
                     may_save_password = *cached_answer;
                   else
                     {
