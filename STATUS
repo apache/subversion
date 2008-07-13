@@ -49,9 +49,11 @@ Candidate changes for 1.5.1:
    Votes:
      +1: pburba, kfogel
 
- * r31425, r31722
+ * r31425, r31722, r32071
    Support the 'http-library' option when Subversion was configured
    with the '--enable-runtime-module-search' option.
+   Notes:
+     r32071 isn't required, but minimizes the difference against trunk.
    Votes:
      +1: arfrever
 
@@ -69,34 +71,10 @@ Candidate changes for 1.5.1:
    Votes:
      +1: pburba
 
- * r31833
-   svndumpfilter: Don't match prefixes to partial path components. Fixes 
-   #desc4 of issue #1853.
-   Notes:
-     Was originally committed to the svnpatch-diff branch in r31831, and
-     then merged to trunk as r31833.
-   Votes:
-     +1: danielsh, hwright
-     +1 (non-binding): stylesen
-
- * r31023, 31873, 31874, 31929, 32038
-   Teach 'svn mergeinfo' and underlying APIs to handle working copy path
-   merge sources, too (instead of only URLs).
-   Notes:
-     r31873 is just a test reorg.  If it isn't approved, just ignore the
-     test changes portion of r31874.
-     r31023 is minor tweak to the svn mergeinfo help text, r31874 causes a
-     minor conflict in svn/main.c without this.
-     r32038 fixes a memory allocation bug in r31874.
-     r31929 adds a docstring for a new private fuction in r31874.
-   Votes:
-     +1: cmpilato (r31873, r31874)
-     +1: pburba, hwright
-
  * r31875
    Fix 'svn log --xml' against pre-1.2 servers.
    Votes:
-     +1: hwright
+     +1: hwright, arfrever
 
  * r31786
    Fix the Ruby bindings test failures: Normalize compared value.
@@ -163,11 +141,38 @@ Candidate changes for 1.5.1:
    Votes:
      +1: pburba
 
-  * r32080
-    Add missing sentinel to call to apr_pstrcat(). Fixes crashes seen
-    by TortoiseSVN users.
-    Votes:
-     +1: stsp
+ * r32080
+   Add missing sentinel to call to apr_pstrcat(). Fixes crashes seen
+   by TortoiseSVN users.
+   Votes:
+     +1: stsp, arfrever
+
+Approved changes:
+=================
+
+ * r31023, r31873, r31874, r31929, r31930, r32038
+   Teach 'svn mergeinfo' and underlying APIs to handle working copy path
+   merge sources, too (instead of only URLs).
+   Notes:
+     r31873 is just a test reorg.  If it isn't approved, just ignore the
+     test changes portion of r31874.
+     r31023 is minor tweak to the svn mergeinfo help text, r31874 causes a
+     minor conflict in svn/main.c without this.
+     r32038 fixes a memory allocation bug in r31874.
+     r31929 adds a docstring for a new private fuction in r31874.
+   Votes:
+     +1: cmpilato (r31873, r31874)
+     +1: pburba, hwright, arfrever
+
+ * r31833
+   svndumpfilter: Don't match prefixes to partial path components. Fixes 
+   #desc4 of issue #1853.
+   Notes:
+     Was originally committed to the svnpatch-diff branch in r31831, and
+     then merged to trunk as r31833.
+   Votes:
+     +1: danielsh, hwright, arfrever
+     +1 (non-binding): stylesen
 
  * r32023
    Follow up (r31884) to fix issue #2242 which checks for a NULL username.
@@ -176,8 +181,5 @@ Candidate changes for 1.5.1:
      hadn't had sufficient votes and because the merge in r32050 was incomplete;
      see <http://svn.haxx.se/dev/archive-2008-07/0274.shtml>.
    Votes:
-     +1: danielsh, dlr
+     +1: danielsh, dlr, arfrever
      +1 (non-binding): stylesen
-
-Approved changes:
-=================
