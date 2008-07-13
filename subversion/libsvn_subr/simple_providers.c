@@ -84,7 +84,7 @@ simple_password_get(const char **password,
   svn_string_t *str;
   str = apr_hash_get(creds, SVN_AUTH__AUTHFILE_USERNAME_KEY,
                      APR_HASH_KEY_STRING);
-  if (str && username && strcmp(str->data, username) == 0)
+  if (str && strcmp(str->data, username) == 0)
     {
       str = apr_hash_get(creds, SVN_AUTH__AUTHFILE_PASSWORD_KEY,
                          APR_HASH_KEY_STRING);
@@ -169,7 +169,7 @@ simple_first_creds_helper(void **credentials,
                 username = str->data;
             }
 
-          if (username && ! password)
+          if (! password)
             {
               svn_boolean_t have_passtype;
               /* The password type in the auth data must match the
