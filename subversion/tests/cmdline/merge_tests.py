@@ -11223,6 +11223,83 @@ def dont_merge_revs_into_subtree_that_predate_it(sbox):
                                      'pl', '-vR', wc_dir)
 
 #----------------------------------------------------------------------
+# Helper for merge_chokes_on_renamed_subtrees and
+# subtrees_with_empty_mergeinfo.
+def set_up_renamed_subtree(sbox):
+  '''Starting with standard greek tree, make a text mod to A/D/H/psi
+  as r2.  Move A/D/H/psi to A/D/H/psi_moved as r3.  Copy A/D/H to H_COPY
+  as r4.  Make a text mod to A/D/H/psi_moved.  Update the working copy
+  and return the expected disk and status representing it'''
+
+  # Create our good 'ole greek tree.
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Some paths we'll care about
+  psi_path            = os.path.join(wc_dir, "A", "D", "H", "psi")
+  psi_moved_path      = os.path.join(wc_dir, "A", "D", "H", "psi_moved")
+  psi_COPY_moved_path = os.path.join(wc_dir, "H_COPY", "psi_moved")
+  H_COPY_path    = os.path.join(wc_dir, "H_COPY")
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_disk = svntest.main.greek_state.copy()
+
+  # Make a text mod to 'A/D/H/psi' and commit it as r2
+  svntest.main.file_write(psi_path, "New content")
+  expected_output = wc.State(wc_dir, {'A/D/H/psi' : Item(verb='Sending')})
+  expected_status.tweak('A/D/H/psi', wc_rev=2)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+  expected_disk.tweak('A/D/H/psi', contents="New content")
+
+  # Move 'A/D/H/psi' to 'A/D/H/psi_moved' and commit it as r3.
+  svntest.actions.run_and_verify_svn(None, None, [], 'move',
+                                     psi_path, psi_moved_path)
+  expected_output = wc.State(wc_dir, {
+    'A/D/H/psi'       : Item(verb='Deleting'),
+    'A/D/H/psi_moved' : Item(verb='Adding')
+    })
+  expected_status.add({'A/D/H/psi_moved' : Item(status='  ', wc_rev=3)})
+  expected_status.remove('A/D/H/psi')
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  # Copy 'A/D/H' to 'H_COPY' in r4.
+  svntest.actions.run_and_verify_svn(None,
+                                     ['\n', 'Committed revision 4.\n'],
+                                     [], 'copy',
+                                     sbox.repo_url + "/A/D/H",
+                                     sbox.repo_url + "/H_COPY",
+                                     "-m", "Copy A/D/H to H_COPY")
+  expected_status.add({
+    "H_COPY"       : Item(),
+    "H_COPY/chi"   : Item(),
+    "H_COPY/omega" : Item(),
+    "H_COPY/psi_moved"   : Item()})
+
+  # Update to pull the previous copy into the WC
+  svntest.main.run_svn(None, 'up', wc_dir)
+  expected_status.tweak(status='  ', wc_rev=4)
+
+  # Make a text mod to 'A/D/H/psi_moved' and commit it as r5
+  svntest.main.file_write(psi_moved_path, "Even *Newer* content")
+  expected_output = wc.State(wc_dir,
+                             {'A/D/H/psi_moved' : Item(verb='Sending')})
+  expected_status.tweak('A/D/H/psi_moved', wc_rev=5)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+  expected_disk.remove('A/D/H/psi')
+  expected_disk.add({
+    'A/D/H/psi_moved' : Item("Even *Newer* content"),
+    })
+
+  # Update for a uniform working copy before merging.
+  svntest.main.run_svn(None, 'up', wc_dir)
+  expected_status.tweak(status='  ', wc_rev=5)
+
+  return wc_dir, expected_disk, expected_status
+
+#----------------------------------------------------------------------
 # Issue #3157
 def dont_explicitly_record_implicit_mergeinfo(sbox):
   "don't explicitly record implicit mergeinfo"
@@ -12240,6 +12317,59 @@ def subtree_source_missing_in_requested_range(sbox):
                                        None, True, False)
   os.chdir(saved_cwd)
 
+#----------------------------------------------------------------------
+# Another test for issue #3067: 'subtrees that don't exist at the start
+# or end of a merge range shouldn't break the merge'
+#
+# See http://subversion.tigris.org/issues/show_bug.cgi?id=3067#desc34
+#
+# Set as XFail until that issue is resolved.
+def subtrees_with_empty_mergeinfo(sbox):
+  "mergeinfo not set on subtree with empty mergeinfo"
+
+  # Use helper to setup a renamed subtree.
+  wc_dir, expected_disk, expected_status = set_up_renamed_subtree(sbox)
+
+  # Some paths we'll care about
+  H_COPY_path = os.path.join(wc_dir, "H_COPY")
+
+  # Cherry harvest all available revsions from 'A/D/H' to 'H_COPY'.
+  #
+  # This should merge r3:5 from 'A/D/H' setting mergeinfo for r4-5
+  # on both 'H_COPY' and 'H_COPY/psi_moved'.  But since the working copy
+  # is at a uniform working revision, the latter's mergeinfo should
+  # elide, leaving explicit mergeinfo only on the merge target.
+  #
+  # Search for the comment entitled "The Merge Kluge" elsewhere in
+  # this file, to understand why we shorten and chdir() below.
+  short_H_COPY_path = shorten_path_kludge(H_COPY_path)
+  expected_output = wc.State(short_H_COPY_path, {
+    'psi_moved' : Item(status='U ')
+    })
+  expected_status = wc.State(short_H_COPY_path, {
+    ''          : Item(status=' M', wc_rev=5), # mergeinfo set on target
+    'psi_moved' : Item(status='MM', wc_rev=5), # mergeinfo elides
+    'omega'     : Item(status='  ', wc_rev=5),
+    'chi'       : Item(status='  ', wc_rev=5),
+    })
+  expected_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGEINFO : '/A/D/H:4-5'}),
+    'psi_moved' : Item("Even *Newer* content"), # mergeinfo elides
+    'omega'     : Item("This is the file 'omega'.\n"),
+    'chi'       : Item("This is the file 'chi'.\n"),
+    })
+  expected_skip = wc.State(short_H_COPY_path, { })
+  saved_cwd = os.getcwd()
+
+  os.chdir(svntest.main.work_dir)
+
+  svntest.actions.run_and_verify_merge(short_H_COPY_path, None, None,
+                                       sbox.repo_url + '/A/D/H',
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       None, None, None, None, None, 1)
+  os.chdir(saved_cwd)
+
 ########################################################################
 # Run the tests
 
@@ -12408,6 +12538,8 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(subtree_source_missing_in_requested_range,
                          server_has_mergeinfo),
+              XFail(SkipUnless(subtrees_with_empty_mergeinfo,
+                               server_has_mergeinfo)),
              ]
 
 if __name__ == '__main__':
