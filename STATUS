@@ -109,8 +109,6 @@ Candidate changes for 1.5.1:
      children get no mergeinfo set/updated.  This is a fairly minor bug, but
      it is inconsistent with the way we currently handle inoperative merges
      in every other situation (i.e. we still set mergeinfo - see issue #2883).
-   Notes:
-     r31659 is dependent on the r31059 (issue #3157) group.
    Votes:
      +1: pburba
 
