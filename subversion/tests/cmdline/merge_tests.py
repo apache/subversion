@@ -11075,8 +11075,10 @@ def reverse_merge_away_all_mergeinfo(sbox):
   os.chdir(saved_cwd)
 
 
-# Another test for issue #3067: 'subtrees with intersecting mergeinfo, that don't
-# exist at the start of a merge range shouldn't break the merge'.  Specifically see
+#----------------------------------------------------------------------
+# Another test for issue #3067: 'subtrees with intersecting mergeinfo,
+# that don't exist at the start of a merge range shouldn't break the
+# merge'.  Specifically see
 # http://subversion.tigris.org/issues/show_bug.cgi?id=3067#desc5
 #
 # Set as XFail until that issue is resolved.
