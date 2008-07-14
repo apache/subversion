@@ -11626,12 +11626,13 @@ def subtree_merges_dont_intersect_with_targets(sbox):
   os.chdir(saved_cwd)
 
 #----------------------------------------------------------------------
-# Test for issue #3174: 'Merge algorithm chokes on subtrees needing
-# special attention that have been renamed'
-#
-# Set as XFail until that issue is resolved.
-def merge_chokes_on_renamed_subtrees(sbox):
-  "merge fails with renamed subtrees with mergeinfo"
+# Helper for merge_chokes_on_renamed_subtrees and
+# subtrees_with_empty_mergeinfo.
+def set_up_renamed_subtree(sbox):
+  '''Starting with standard greek tree, make a text mod to A/D/H/psi
+  as r2.  Move A/D/H/psi to A/D/H/psi_moved as r3.  Copy A/D/H to H_COPY
+  as r4.  Make a text mod to A/D/H/psi_moved.  Update the working copy
+  and return the expected disk and status representing it'''
 
   # Create our good 'ole greek tree.
   sbox.build()
@@ -11699,51 +11700,30 @@ def merge_chokes_on_renamed_subtrees(sbox):
   svntest.main.run_svn(None, 'up', wc_dir)
   expected_status.tweak(status='  ', wc_rev=5)
 
-  # Cherry harvest all available revsions from 'A/D/H' to 'H_COPY'.
-  #
-  # This should merge r3:5 from 'A/D/H' setting mergeinfo for r4-5
-  # on both 'H_COPY' and 'H_COPY/psi_moved'.  But since the working copy
-  # is at a uniform working revision, the latter's mergeinfo should
-  # elide, leaving explicit mergeinfo only on the merge target.
+  return wc_dir, expected_disk, expected_status
+
+#----------------------------------------------------------------------
+# Test for issue #3174: 'Merge algorithm chokes on subtrees needing
+# special attention that have been renamed'
+#
+# Set as XFail until that issue is resolved.
+def merge_chokes_on_renamed_subtrees(sbox):
+  "merge fails with renamed subtrees with mergeinfo"
+
+  # Use helper to setup a renamed subtree.
+  wc_dir, expected_disk, expected_status = set_up_renamed_subtree(sbox)
+
+  # Some paths we'll care about
+  psi_COPY_moved_path = os.path.join(wc_dir, "H_COPY", "psi_moved")
+
+  # Cherry harvest all available revsions from 'A/D/H/psi' to 'H_COPY/psi'.
   #
   # Search for the comment entitled "The Merge Kluge" elsewhere in
   # this file, to understand why we shorten and chdir() below.
-  short_H_COPY_path = shorten_path_kludge(H_COPY_path)
-  expected_output = wc.State(short_H_COPY_path, {
-    'psi_moved' : Item(status='U ')
-    })
-  expected_status = wc.State(short_H_COPY_path, {
-    ''          : Item(status=' M', wc_rev=5), # mergeinfo set on target
-    'psi_moved' : Item(status='MM', wc_rev=5), # mergeinfo elides
-    'omega'     : Item(status='  ', wc_rev=5),
-    'chi'       : Item(status='  ', wc_rev=5),
-    })
-  expected_disk = wc.State('', {
-    ''          : Item(props={SVN_PROP_MERGEINFO : '/A/D/H:4-5'}),
-    'psi_moved' : Item("Even *Newer* content"), # mergeinfo elides
-    'omega'     : Item("This is the file 'omega'.\n"),
-    'chi'       : Item("This is the file 'chi'.\n"),
-    })
-  expected_skip = wc.State(short_H_COPY_path, { })
-  saved_cwd = os.getcwd()
-
-  os.chdir(svntest.main.work_dir)
-
-  svntest.actions.run_and_verify_merge(short_H_COPY_path, None, None,
-                                       sbox.repo_url + '/A/D/H',
-                                       expected_output, expected_disk,
-                                       expected_status, expected_skip,
-                                       None, None, None, None, None, 1)
-  os.chdir(saved_cwd)
-
-  # Revert the previous merge and repeat it, but targeting H_COPY/psi
-  # this time.
-  svntest.actions.run_and_verify_svn(None, None, [], 'revert', '-R', wc_dir)
-  
-  # Cherry harvest all available revsions from 'A/D/H/psi' to 'H_COPY/psi'.
   #
   # Here is where issue #3174 appears, the merge fails with:
   # svn: svn: File not found: revision 3, path '/A/D/H/psi'
+  saved_cwd = os.getcwd()
   os.chdir(svntest.main.work_dir)
   short_psi_COPY_moved_path = shorten_path_kludge(psi_COPY_moved_path)
   svntest.actions.run_and_verify_svn(
