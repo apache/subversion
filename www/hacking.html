@@ -2732,7 +2732,18 @@ get:</p>
 
 <p>A change needs three +1 votes from full committers (or partial
 committers for the involved areas), and no vetoes, to go into
-A.B.x.</p>
+A.B.x. If partial committers would like to vote for a different area,
+which does not fall within their privilege, it must be made clear in
+the STATUS file that their vote is 'non-binding' as follows:</p>
+
+<pre>
+ * r31833
+   svndumpfilter: Don't match prefixes to partial path components.
+   Fixes #desc4 of issue #1853.
+   Votes:
+     +1: danielsh, hwright
+     +1 (non-binding): stylesen
+</pre>
 
 <p>If you cast a veto (i.e. -1), please state the reason in the
 concerns field, and include a url / message-id for the list discussion
