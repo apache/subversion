@@ -137,19 +137,6 @@ Approved changes:
      +1: pburba, kfogel, cmpilato
      +1: markphip (all except r31391, r31398, and r31482)
 
- * r31300, r31301, r31312
-   Fix issue #3199, subtree merges broken when required ranges don't
-   intersect with merge target.
-   Justification:
-     A bit of an edge case, but when it is encountered merge silently
-     fails to do the correct merge but sets mergeinfo as if it did.
-   Notes:
-     r31300 is a test for this issue, r31301 fixes the core problem where
-     the part of the merge was skipped, and r31312 fixes a problem with
-     merge notification.
-   Votes:
-     +1: pburba, kfogel, cmpilato
-
  * r32023
    Follow up (r31884) to fix issue #2242 which checks for a NULL username.
    Notes:
