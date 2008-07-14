@@ -212,7 +212,8 @@ get_existing_prop_reject_file(const char **reject_file,
   SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
 
   *reject_file = entry->prejfile
-    ? apr_pstrcat(pool, svn_wc_adm_access_path(adm_access), entry->prejfile)
+    ? apr_pstrcat(pool, svn_wc_adm_access_path(adm_access), 
+                  entry->prejfile, NULL)
     : NULL;
   return SVN_NO_ERROR;
 }

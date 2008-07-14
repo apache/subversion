@@ -115,7 +115,8 @@ ary_prefix_match(apr_array_header_t *pfxlist, const char *path)
       pfx_len = strlen(pfx);
       if (path_len < pfx_len)
         continue;
-      if (strncmp(path, pfx, pfx_len) == 0)
+      if (strncmp(path, pfx, pfx_len) == 0
+          && (path[pfx_len] == '\0' || path[pfx_len] == '/'))
         return TRUE;
     }
 
