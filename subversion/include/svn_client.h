@@ -2687,7 +2687,7 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
 
 /**
  * Drive log entry callbacks @a receiver / @a receiver_baton with the
- * revisions merged from @a merge_source_url (as of @a
+ * revisions merged from @a merge_source_path_or_url (as of @a
  * src_peg_revision) into @a path_or_url (as of @a peg_revision).  @a
  * ctx is a context used for authentication.
  * 
@@ -2702,7 +2702,7 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
 svn_error_t *
 svn_client_mergeinfo_log_merged(const char *path_or_url,
                                 const svn_opt_revision_t *peg_revision,
-                                const char *merge_source_url,
+                                const char *merge_source_path_or_url,
                                 const svn_opt_revision_t *src_peg_revision,
                                 svn_log_entry_receiver_t receiver,
                                 void *receiver_baton,
@@ -2713,9 +2713,9 @@ svn_client_mergeinfo_log_merged(const char *path_or_url,
 
 /**
  * Drive log entry callbacks @a receiver / @a receiver_baton with the
- * revisions eligible for merge from @a merge_source_url (as of @a
- * src_peg_revision) into @a path_or_url (as of @a peg_revision).  @a
- * ctx is a context used for authentication.
+ * revisions eligible for merge from @a merge_source_path_or_url (as
+ * of @a src_peg_revision) into @a path_or_url (as of @a
+ * peg_revision).  @a ctx is a context used for authentication.
  *
  * @a discover_changed_paths and @a revprops are the same as for
  * svn_client_log4().  Use @a pool for all necessary allocations.
@@ -2728,7 +2728,7 @@ svn_client_mergeinfo_log_merged(const char *path_or_url,
 svn_error_t *
 svn_client_mergeinfo_log_eligible(const char *path_or_url,
                                   const svn_opt_revision_t *peg_revision,
-                                  const char *merge_source_url,
+                                  const char *merge_source_path_or_url,
                                   const svn_opt_revision_t *src_peg_revision,
                                   svn_log_entry_receiver_t receiver,
                                   void *receiver_baton,

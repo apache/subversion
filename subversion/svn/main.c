@@ -620,14 +620,14 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      opt_record_only, 'x', opt_ignore_ancestry, opt_accept, opt_reintegrate} },
 
   { "mergeinfo", svn_cl__mergeinfo, {0}, N_
-    ("Query merge-related information.\n"
-     "usage: mergeinfo SOURCE-URL[@REV] [TARGET[@REV]]\n"
+    ("Display merge-related information.\n"
+     "usage: mergeinfo SOURCE[@REV] [TARGET[@REV]]\n"
      "\n"
-     "  Query information related to merges (or potential merges) between\n"
-     "  SOURCE-URL and TARGET.  If the --show-revs option is not provided,\n"
-     "  display revisions which have been merged from SOURCE-URL to TARGET.\n"
-     "  Otherwise, display the type of information specified by the\n"
-     "  --show-revs option.\n"),
+     "  Display information related to merges (or potential merges) between\n"
+     "  SOURCE and TARGET (default: '.').  If the --show-revs option\n"
+     "  is not provided, display revisions which have been merged from\n"
+     "  SOURCE to TARGET; otherwise, display the type of information\n"
+     "  specified by the --show-revs option.\n"),
     {'r', opt_show_revs} },
 
   { "mkdir", svn_cl__mkdir, {0}, N_

@@ -150,20 +150,6 @@ Candidate changes for 1.5.1:
 Approved changes:
 =================
 
- * r31023, r31873, r31874, r31929, r31930, r32038
-   Teach 'svn mergeinfo' and underlying APIs to handle working copy path
-   merge sources, too (instead of only URLs).
-   Notes:
-     r31873 is just a test reorg.  If it isn't approved, just ignore the
-     test changes portion of r31874.
-     r31023 is minor tweak to the svn mergeinfo help text, r31874 causes a
-     minor conflict in svn/main.c without this.
-     r32038 fixes a memory allocation bug in r31874.
-     r31929 adds a docstring for a new private fuction in r31874.
-   Votes:
-     +1: cmpilato (r31873, r31874)
-     +1: pburba, hwright, arfrever
-
  * r31833
    svndumpfilter: Don't match prefixes to partial path components. Fixes 
    #desc4 of issue #1853.

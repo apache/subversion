@@ -1118,13 +1118,73 @@ logs_for_mergeinfo_rangelist(const char *source_url,
   return SVN_NO_ERROR;
 }
 
+
+/* Set URL and REVISION to the url and revision (of kind
+   svn_opt_revision_number) which is associated with PATH_OR_URL at
+   PEG_REVISION.  Use POOL for allocations.
+
+   Implementation Note: sometimes this information can be found
+   locally via the information in the 'entries' files, such as when
+   PATH_OR_URL is a working copy path and PEG_REVISION is of kind
+   svn_opt_revision_base.  At other times, this function needs to
+   contact the repository, resolving revision keywords into real
+   revision numbers and tracing node history to find the correct
+   location.
+
+   ### Can this be used elsewhere?  I was *sure* I'd find this same
+   ### functionality elsewhere before writing this helper, but I
+   ### didn't.  Seems like an operation that we'd be likely to do
+   ### often, though.  -- cmpilato
+*/
+static svn_error_t *
+location_from_path_and_rev(const char **url,
+                           svn_opt_revision_t **revision,
+                           const char *path_or_url,
+                           const svn_opt_revision_t *peg_revision,
+                           svn_client_ctx_t *ctx,
+                           apr_pool_t *pool)
+{
+  svn_wc_adm_access_t *adm_access = NULL;
+  svn_ra_session_t *ra_session;
+  apr_pool_t *subpool = svn_pool_create(pool);
+  svn_revnum_t rev;
+
+  if (! svn_path_is_url(path_or_url)
+      && (peg_revision->kind == svn_opt_revision_base
+          || peg_revision->kind == svn_opt_revision_working
+          || peg_revision->kind == svn_opt_revision_committed
+          || peg_revision->kind == svn_opt_revision_unspecified))
+    {
+      int adm_lock_level = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(svn_depth_empty);
+      SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path_or_url,
+                                     FALSE, adm_lock_level,
+                                     ctx->cancel_func, ctx->cancel_baton,
+                                     subpool));
+    }
+  SVN_ERR(svn_client__ra_session_from_path(&ra_session, &rev, url, 
+                                           path_or_url, adm_access,
+                                           peg_revision, peg_revision, 
+                                           ctx, subpool));
+  *url = apr_pstrdup(pool, *url);
+  *revision = apr_pcalloc(pool, sizeof(**revision));
+  (*revision)->kind = svn_opt_revision_number;
+  (*revision)->value.number = rev;
+
+  svn_pool_destroy(subpool);
+  
+  if (adm_access)
+    SVN_ERR(svn_wc_adm_close(adm_access));
+
+  return SVN_NO_ERROR;
+}
+
 
 /*** Public APIs ***/
 
 svn_error_t *
 svn_client_mergeinfo_log_merged(const char *path_or_url,
                                 const svn_opt_revision_t *peg_revision,
-                                const char *merge_source_url,
+                                const char *merge_source_path_or_url,
                                 const svn_opt_revision_t *src_peg_revision,
                                 svn_log_entry_receiver_t log_receiver,
                                 void *log_receiver_baton,
@@ -1133,15 +1193,19 @@ svn_client_mergeinfo_log_merged(const char *path_or_url,
                                 svn_client_ctx_t *ctx,
                                 apr_pool_t *pool)
 {
-  const char *repos_root, *log_target = NULL;
+  const char *repos_root, *log_target = NULL, *merge_source_url;
   svn_mergeinfo_t tgt_mergeinfo, source_history, mergeinfo;
   apr_array_header_t *rangelist;
+  svn_opt_revision_t *real_src_peg_revision;
   apr_hash_index_t *hi;
   svn_revnum_t youngest_rev = SVN_INVALID_REVNUM;
 
-  assert(svn_path_is_url(merge_source_url));
+  /* Step 1: Ensure that we have a merge source URL to work with. */
+  SVN_ERR(location_from_path_and_rev(&merge_source_url, &real_src_peg_revision,
+                                     merge_source_path_or_url,
+                                     src_peg_revision, ctx, pool));
     
-  /* Step 1: We need the union of PATH_OR_URL@PEG_REVISION's mergeinfo
+  /* Step 2: We need the union of PATH_OR_URL@PEG_REVISION's mergeinfo
      and MERGE_SOURCE_URL's history.  It's not enough to do path
      matching, because renames in the history of MERGE_SOURCE_URL
      throw that all in a tizzy.  Of course, if there's no mergeinfo on
@@ -1154,14 +1218,14 @@ svn_client_mergeinfo_log_merged(const char *path_or_url,
     return SVN_NO_ERROR;
   SVN_ERR(svn_client__get_history_as_mergeinfo(&source_history, 
                                                merge_source_url,
-                                               src_peg_revision,
+                                               real_src_peg_revision,
                                                SVN_INVALID_REVNUM,
                                                SVN_INVALID_REVNUM,
                                                NULL, NULL, ctx, pool));
   SVN_ERR(svn_mergeinfo_intersect(&mergeinfo, tgt_mergeinfo, 
                                   source_history, pool));
 
-  /* Step 2: Now, we iterate over the eligible paths/rangelists to
+  /* Step 3: Now, we iterate over the eligible paths/rangelists to
      find the youngest revision (and its associated path).  Because
      SOURCE_HISTORY had the property that a revision could appear in
      at most one mergeinfo path, that same property is true of
@@ -1193,7 +1257,7 @@ svn_client_mergeinfo_log_merged(const char *path_or_url,
   if (! rangelist->nelts)
     return SVN_NO_ERROR;
 
-  /* Step 3: Finally, we run 'svn log' to drive our log receiver, but
+  /* Step 4: Finally, we run 'svn log' to drive our log receiver, but
      using a receiver filter to only allow revisions to pass through
      that are in our rangelist. */
   log_target = svn_path_url_add_component(repos_root, log_target + 1, pool);
@@ -1248,7 +1312,7 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo_p,
 svn_error_t *
 svn_client_mergeinfo_log_eligible(const char *path_or_url,
                                   const svn_opt_revision_t *peg_revision,
-                                  const char *merge_source_url,
+                                  const char *merge_source_path_or_url,
                                   const svn_opt_revision_t *src_peg_revision,
                                   svn_log_entry_receiver_t log_receiver,
                                   void *log_receiver_baton,
@@ -1260,15 +1324,19 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
   svn_mergeinfo_t mergeinfo, history, source_history, available;
   apr_hash_index_t *hi;
   svn_ra_session_t *ra_session;
-  const char *repos_root;
+  svn_opt_revision_t *real_src_peg_revision;
+  const char *repos_root, *merge_source_url;
   apr_pool_t *sesspool;
   svn_revnum_t youngest_rev = SVN_INVALID_REVNUM;
   apr_array_header_t *rangelist;
   const char *log_target = NULL;
 
-  assert(svn_path_is_url(merge_source_url));
+  /* Step 1: Ensure that we have a merge source URL to work with. */
+  SVN_ERR(location_from_path_and_rev(&merge_source_url, &real_src_peg_revision,
+                                     merge_source_path_or_url,
+                                     src_peg_revision, ctx, pool));
   
-  /* Step 1: Across the set of possible merges, see what's already
+  /* Step 2: Across the set of possible merges, see what's already
      been merged into PATH_OR_URL@PEG_REVISION (or what's already part
      of the history it shares with that of MERGE_SOURCE_URL.  */
   /* This get_mergeinfo() call doubles as a mergeinfo capabilities check. */
@@ -1285,7 +1353,7 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
   else
     svn_mergeinfo_merge(mergeinfo, history, pool);
 
-  /* Step 2: See what merge sources can be derived from the history of
+  /* Step 3: See what merge sources can be derived from the history of
      MERGE_SOURCE_URL. */
   sesspool = svn_pool_create(pool);
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, merge_source_url,
@@ -1293,7 +1361,7 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
                                                TRUE, ctx, sesspool));
   SVN_ERR(svn_client__get_history_as_mergeinfo(&source_history, 
                                                merge_source_url,
-                                               src_peg_revision,
+                                               real_src_peg_revision,
                                                SVN_INVALID_REVNUM,
                                                SVN_INVALID_REVNUM,
                                                ra_session, NULL, ctx, pool));
@@ -1303,7 +1371,7 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
      (SOURCE_HISTORY) the merges already present in our PATH_OR_URL. */
   SVN_ERR(svn_mergeinfo_remove(&available, mergeinfo, source_history, pool));
 
-  /* Step 3: Now, we iterate over the eligible paths/rangelists to
+  /* Step 4: Now, we iterate over the eligible paths/rangelists to
      find the youngest revision (and its associated path).  Because
      SOURCE_HISTORY had the property that a revision could appear in
      at most one mergeinfo path, that same property is true of
@@ -1335,7 +1403,7 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
   if (! rangelist->nelts)
     return SVN_NO_ERROR;
 
-  /* Step 4: Finally, we run 'svn log' to drive our log receiver, but
+  /* Step 5: Finally, we run 'svn log' to drive our log receiver, but
      using a receiver filter to only allow revisions to pass through
      that are in our rangelist. */
   log_target = svn_path_url_add_component(repos_root, log_target + 1, pool);
