@@ -150,16 +150,6 @@ Approved changes:
    Votes:
      +1: pburba, kfogel, cmpilato
 
- * r31833
-   svndumpfilter: Don't match prefixes to partial path components. Fixes 
-   #desc4 of issue #1853.
-   Notes:
-     Was originally committed to the svnpatch-diff branch in r31831, and
-     then merged to trunk as r31833.
-   Votes:
-     +1: danielsh, hwright, arfrever
-     +1 (non-binding): stylesen
-
  * r32023
    Follow up (r31884) to fix issue #2242 which checks for a NULL username.
    Notes:
