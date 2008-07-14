@@ -10915,6 +10915,127 @@ def reverse_merge_away_all_mergeinfo(sbox):
   os.chdir(saved_cwd)
 
 
+# Another test for issue #3067: 'subtrees with intersecting mergeinfo, that don't
+# exist at the start of a merge range shouldn't break the merge'.  Specifically see
+# http://subversion.tigris.org/issues/show_bug.cgi?id=3067#desc5
+#
+# Set as XFail until that issue is resolved.
+def dont_merge_revs_into_subtree_that_predate_it(sbox):
+  "dont merge revs into a subtree that predate it"
+
+  # Create our good 'ole greek tree.
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Some paths we'll care about
+  psi_path     = os.path.join(wc_dir, "A", "D", "H", "psi")
+  nu_path      = os.path.join(wc_dir, "A", "D", "H", "nu")
+  H_COPY_path  = os.path.join(wc_dir, "H_COPY")
+  nu_COPY_path = os.path.join(wc_dir, "H_COPY", "nu")
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_disk = svntest.main.greek_state.copy()
+
+  # Make a text mod to 'A/D/H/psi' and commit it as r2
+  svntest.main.file_write(psi_path, "New content")
+  expected_output = wc.State(wc_dir, {'A/D/H/psi' : Item(verb='Sending')})
+  expected_status.tweak('A/D/H/psi', wc_rev=2)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+  expected_disk.tweak('A/D/H/psi', contents="New content")
+
+  # Create 'A/D/H/nu' and commit it as r3.
+  svntest.main.file_write(nu_path, "This is the file 'nu'.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', nu_path)
+  expected_output = wc.State(wc_dir, {'A/D/H/nu' : Item(verb='Adding')})
+  expected_status.add({'A/D/H/nu' : Item(status='  ', wc_rev=3)})
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  # Copy 'A/D/H' to 'H_COPY' in r4.
+  svntest.actions.run_and_verify_svn(None,
+                                     ['\n', 'Committed revision 4.\n'],
+                                     [], 'copy',
+                                     sbox.repo_url + "/A/D/H",
+                                     sbox.repo_url + "/H_COPY",
+                                     "-m", "Copy A/D/H to H_COPY")
+  expected_status.add({
+    "H_COPY"       : Item(),
+    "H_COPY/chi"   : Item(),
+    "H_COPY/omega" : Item(),
+    "H_COPY/psi"   : Item(),
+    "H_COPY/nu"    : Item()})
+
+  # Update to pull the previous copy into the WC
+  svntest.main.run_svn(None, 'up', wc_dir)
+  expected_status.tweak(status='  ', wc_rev=4)
+
+  # Make a text mod to 'A/D/H/nu' and commit it as r5.
+  svntest.main.file_write(nu_path, "New content")
+  expected_output = wc.State(wc_dir, {'A/D/H/nu' : Item(verb='Sending')})
+  expected_status.tweak('A/D/H/nu', wc_rev=5)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  # Make another text mod to 'A/D/H/psi' that can be merged to 'H_COPY'
+  # during a cherry harvest and commit it as r6.
+  svntest.main.file_write(psi_path, "Even *newer* content")
+  expected_output = wc.State(wc_dir, {'A/D/H/psi' : Item(verb='Sending')})
+  expected_status.tweak('A/D/H/psi', wc_rev=6)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+  expected_disk.tweak('A/D/H/psi', contents="Even *newer* content")
+
+  # Update WC so elision occurs smoothly.
+  svntest.main.run_svn(None, 'up', wc_dir)
+  expected_status.tweak(status='  ', wc_rev=6)
+
+  # Merge r5 from 'A/D/H/nu' to 'H_COPY/nu'.
+  saved_cwd = os.getcwd()
+  os.chdir(svntest.main.work_dir)
+  short_nu_COPY_path = shorten_path_kludge(nu_COPY_path)
+  svntest.actions.run_and_verify_svn(None,
+                                     expected_merge_output([[5]], 'U    ' +
+                                                           short_nu_COPY_path +
+                                                           '\n'),
+                                     [], 'merge', '-c5',
+                                     sbox.repo_url + '/A/D/H/nu',
+                                     short_nu_COPY_path)
+  os.chdir(saved_cwd)
+
+  # Cherry harvest all eligible revisions from 'A/D/H' to 'H_COPY'.
+  #
+  # This is where we see the problem described in
+  # http://subversion.tigris.org/issues/show_bug.cgi?id=3067#desc5. 
+  #
+  # Search for the comment entitled "The Merge Kluge" elsewhere in
+  # this file, to understand why we shorten and chdir() below.
+  #
+  # Use run_and_verify_svn() because run_and_verify_merge*() require
+  # explicit revision ranges.
+  short_H_COPY_path = shorten_path_kludge(H_COPY_path)
+
+  expected_skip = wc.State(short_H_COPY_path, { })
+  os.chdir(svntest.main.work_dir)
+  svntest.actions.run_and_verify_svn(
+    None,
+    expected_merge_output(
+      [[4,6]], 'U    ' + os.path.join(short_H_COPY_path, "psi") + '\n'),
+    [], 'merge', sbox.repo_url + '/A/D/H', short_H_COPY_path)
+  os.chdir(saved_cwd)
+
+  # Check the status after the merge.  The mergeinfo set on 'H_COPY/nu set
+  # by the first merge should elide.
+  expected_status.tweak('H_COPY', status=' M')
+  expected_status.tweak('H_COPY/nu', 'H_COPY/psi', status='M ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  expected_props = svntest.verify.UnorderedOutput(
+    ["Properties on '" + H_COPY_path + "':\n",
+     "  " + SVN_PROP_MERGEINFO + " : /A/D/H:4-6\n"])
+  svntest.actions.run_and_verify_svn(None,
+                                     expected_props, [],
+                                     'pl', '-vR', wc_dir)
+
 #----------------------------------------------------------------------
 # Issue #3157
 def dont_explicitly_record_implicit_mergeinfo(sbox):
@@ -11784,6 +11905,8 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(reverse_merge_away_all_mergeinfo,
                          server_has_mergeinfo),
+              XFail(SkipUnless(dont_merge_revs_into_subtree_that_predate_it,
+                               server_has_mergeinfo)),
               SkipUnless(dont_explicitly_record_implicit_mergeinfo,
                          server_has_mergeinfo),
               SkipUnless(merge_broken_link, svntest.main.is_posix_os),
