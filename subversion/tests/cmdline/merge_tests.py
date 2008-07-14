@@ -10835,10 +10835,9 @@ def merge_unknown_url(sbox):
   svntest.actions.run_and_verify_svn("", None, expected_err,
                                      "merge", url, wc_dir)
 
+#----------------------------------------------------------------------
 def reverse_merge_away_all_mergeinfo(sbox):
   "merges that remove all mergeinfo work"
-
-  # 
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -10940,6 +10939,102 @@ def merge_broken_link(sbox):
     expected_merge_output([[4]], 'U    ' + copy_path + '/beta_link\n'),
     [], 'merge', '-c4', src_path, copy_path)
 
+#----------------------------------------------------------------------
+# Issue #3157
+def dont_explicitly_record_implicit_mergeinfo(sbox):
+  "don't explicitly record implicit mergeinfo"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  A_path = os.path.join(sbox.wc_dir, 'A')
+  A_copy_path = os.path.join(sbox.wc_dir, 'A_copy')
+  A_copy2_path = os.path.join(sbox.wc_dir, 'A_copy2')
+  A_copy_mu_path = os.path.join(sbox.wc_dir, 'A_copy', 'mu')
+  A_copy2_mu_path = os.path.join(sbox.wc_dir, 'A_copy2', 'mu')
+
+  def _commit_and_update(rev, action):
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'ci', '-m', 'r%d - %s' % (rev, action),
+                                       sbox.wc_dir)
+    svntest.main.run_svn(None, 'up', wc_dir)
+    
+  # r2 - copy A to A_copy
+  svntest.main.run_svn(None, 'cp', A_path, A_copy_path)
+  _commit_and_update(2, "Copy A to A_copy.")
+
+  # r3 - tweak A_copy/mu
+  svntest.main.file_append(A_copy_mu_path, "r3\n")
+  _commit_and_update(3, "Edit A_copy/mu.")
+
+  # r4 - copy A_copy to A_copy2
+  svntest.main.run_svn(None, 'cp', A_copy_path, A_copy2_path)
+  _commit_and_update(2, "Copy A_copy to A_copy2.")
+
+  # r5 - tweak A_copy2/mu
+  svntest.main.file_append(A_copy2_mu_path, "r5\n")
+  _commit_and_update(3, "Edit A_copy2/mu.")
+
+  # Now, merge A_copy2/mu (in full) back to A_copy.
+  expected_output = wc.State(A_copy_path, {
+    ''          : Item(status=' M'),
+    'mu'        : Item(status='M '),
+    })
+  expected_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGEINFO : '/A_copy2:4-5'}),
+    'mu'        : Item("This is the file 'mu'.\nr3\nr5\n"),
+    'B'         : Item(),
+    'B/lambda'  : Item("This is the file 'lambda'.\n"),
+    'B/E'       : Item(),
+    'B/E/alpha' : Item("This is the file 'alpha'.\n"),
+    'B/E/beta'  : Item("This is the file 'beta'.\n"),
+    'B/F'       : Item(),
+    'C'         : Item(),
+    'D'         : Item(),
+    'D/gamma'   : Item("This is the file 'gamma'.\n"),
+    'D/H'       : Item(),
+    'D/H/chi'   : Item("This is the file 'chi'.\n"),
+    'D/H/psi'   : Item("This is the file 'psi'.\n"),
+    'D/H/omega' : Item("This is the file 'omega'.\n"),
+    'D/G'       : Item(),
+    'D/G/pi'    : Item("This is the file 'pi'.\n"),
+    'D/G/rho'   : Item("This is the file 'rho'.\n"),
+    'D/G/tau'   : Item("This is the file 'tau'.\n"),
+    })
+  expected_status = wc.State(A_copy_path, {
+    ''          : Item(status=' M'),
+    'mu'        : Item(status='M '),
+    'B'         : Item(status='  '),
+    'B/lambda'  : Item(status='  '),
+    'B/E'       : Item(status='  '),
+    'B/E/alpha' : Item(status='  '),
+    'B/E/beta'  : Item(status='  '),
+    'B/F'       : Item(status='  '),
+    'C'         : Item(status='  '),
+    'D'         : Item(status='  '),
+    'D/gamma'   : Item(status='  '),
+    'D/H'       : Item(status='  '),
+    'D/H/chi'   : Item(status='  '),
+    'D/H/psi'   : Item(status='  '),
+    'D/H/omega' : Item(status='  '),
+    'D/G'       : Item(status='  '),
+    'D/G/pi'    : Item(status='  '),
+    'D/G/rho'   : Item(status='  '),
+    'D/G/tau'   : Item(status='  '),
+    })
+  expected_status.tweak(wc_rev=5)
+  expected_skip = wc.State(A_copy_path, { })
+
+  ### Some of the above is not quite right.  I often find myself
+  ### unable to quite correctly craft those expected_* objects without
+  ### significant trial and error.  -- cmpilato
+  
+  svntest.actions.run_and_verify_merge(A_copy_path, None, None,
+                                       sbox.repo_url + '/A_copy2',
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       None, None, None, None, None, 1)
+  
 
 ########################################################################
 # Run the tests
@@ -11101,6 +11196,8 @@ test_list = [ None,
               SkipUnless(reverse_merge_away_all_mergeinfo,
                          server_has_mergeinfo),
               SkipUnless(merge_broken_link, svntest.main.is_posix_os),
+              XFail(SkipUnless(dont_explicitly_record_implicit_mergeinfo,
+                               server_has_mergeinfo)),
              ]
 
 if __name__ == '__main__':
