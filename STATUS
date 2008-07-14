@@ -36,9 +36,11 @@ Candidate changes for 1.5.1:
      and directory merges already have the equivalent fix in 1.5.0.
    Notes:
      r31817 is the core fix for the issue, the other revision relate to
-     a new test and some subsequent tweaks for to it.  r30749 conflicts
-     trivally in the merge_tests.py test list. r30750 reverts an accidental
-     change in r30749.
+     a new test and some subsequent tweaks for to it.  Note that r31769 is
+     nominated in the issue #3067 group too as it touches both issues.
+     There are several minor conflicts when backporting this group to 1.5.x.
+     To facilitate review a backport branch was created at
+     http://svn.collab.net/repos/svn/branches/1.5.x-issue3174.
    Votes:
      +1: pburba
 
