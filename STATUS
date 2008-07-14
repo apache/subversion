@@ -55,7 +55,8 @@ Candidate changes for 1.5.1:
      +1: kou
 
  * r30607, r30628, r30812, r30929, r30935, r30961, r30967, r31033,
-   r31137, r31575, r31594, r31601, r31769, r31900, r31926, r31927
+   r31059, r31086, r31088, r31090, r31137, r31575, r31594, r31601,
+   r31769, r31900, r31926, r31927
    Fix issue #3067: subtrees that don't exist at the start or end of a merge
    range shouldn't break the merge.
    Justification:
