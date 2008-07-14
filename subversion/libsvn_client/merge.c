@@ -3980,7 +3980,7 @@ normalize_merge_sources(apr_array_header_t **merge_sources_p,
    portion of REQUESTED_RANGE which is already described in
    IMPLICIT_MERGEINFO.  Store the result in *FILTERED_RANGE.
 
-   If SOURCE_REL_PATH is not found in IMPLICIT_MERGEINFO then not filtering
+   If SOURCE_REL_PATH is not found in IMPLICIT_MERGEINFO then no filtering
    is done and *FILTERED_RANGE is simply set to REQUESTED_RANGE.  If all
    ranges are filtered than *FILTERED_RANGE is set to NULL.  If only some
    ranges are filtered then *FILTERED_RANGE is allocated in POOL. */
@@ -4671,8 +4671,8 @@ do_directory_merge(const char *url1,
           /* As we did above for the merge target, filter any ranges from
              each child's natural history before setting mergeinfo. */
           SVN_ERR(filter_natural_history_from_mergeinfo(
-            &filtered_range, mergeinfo_path, child->implicit_mergeinfo,
-            &range, iterpool));
+            &filtered_range, child_merge_src_canon_path,
+            child->implicit_mergeinfo, &range, iterpool));
           if (!filtered_range)
             continue;
 
