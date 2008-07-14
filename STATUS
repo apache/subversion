@@ -115,22 +115,6 @@ Candidate changes for 1.5.1:
 Approved changes:
 =================
 
- * r31059, r31060, r31061, r31075, r31151, r31391, r31398, and r31482
-   Fix issue #3157, Merging a change from a path's natural history
-   creates self-referential mergeinfo
-   Notes:
-     r31075, r31151, and r31482 are the core fixes for the issue, r31391 is a
-     follow-up to r31075 that fixes a comment typo, the other revisions are a
-     new test for the issue and a few minor follow-ups to that test.  The
-     addition of the new merge test in r31059 and the removal of
-     an XFail in the test list in r31075 trivally conflicts because several
-     other new merge tests are not backported yet.  r31482 conflicts in the
-     comment for merge.c's filter_natural_history_from_mergeinfo, again this
-     is fairly trivial to resolve.
-   Votes:
-     +1: pburba, kfogel, cmpilato
-     +1: markphip (all except r31391, r31398, and r31482)
-
  * r32023
    Follow up (r31884) to fix issue #2242 which checks for a NULL username.
    Notes:
