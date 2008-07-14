@@ -10969,16 +10969,15 @@ def dont_explicitly_record_implicit_mergeinfo(sbox):
 
   # r4 - copy A_copy to A_copy2
   svntest.main.run_svn(None, 'cp', A_copy_path, A_copy2_path)
-  _commit_and_update(2, "Copy A_copy to A_copy2.")
+  _commit_and_update(4, "Copy A_copy to A_copy2.")
 
   # r5 - tweak A_copy2/mu
   svntest.main.file_append(A_copy2_mu_path, "r5\n")
-  _commit_and_update(3, "Edit A_copy2/mu.")
+  _commit_and_update(5, "Edit A_copy2/mu.")
 
   # Now, merge A_copy2/mu (in full) back to A_copy.
   expected_output = wc.State(A_copy_path, {
-    ''          : Item(status=' M'),
-    'mu'        : Item(status='M '),
+    'mu' : Item(status='U '),
     })
   expected_disk = wc.State('', {
     ''          : Item(props={SVN_PROP_MERGEINFO : '/A_copy2:4-5'}),
@@ -11024,11 +11023,6 @@ def dont_explicitly_record_implicit_mergeinfo(sbox):
     })
   expected_status.tweak(wc_rev=5)
   expected_skip = wc.State(A_copy_path, { })
-
-  ### Some of the above is not quite right.  I often find myself
-  ### unable to quite correctly craft those expected_* objects without
-  ### significant trial and error.  -- cmpilato
-  
   svntest.actions.run_and_verify_merge(A_copy_path, None, None,
                                        sbox.repo_url + '/A_copy2',
                                        expected_output, expected_disk,
@@ -11196,8 +11190,8 @@ test_list = [ None,
               SkipUnless(reverse_merge_away_all_mergeinfo,
                          server_has_mergeinfo),
               SkipUnless(merge_broken_link, svntest.main.is_posix_os),
-              XFail(SkipUnless(dont_explicitly_record_implicit_mergeinfo,
-                               server_has_mergeinfo)),
+              SkipUnless(dont_explicitly_record_implicit_mergeinfo,
+                         server_has_mergeinfo),
              ]
 
 if __name__ == '__main__':
