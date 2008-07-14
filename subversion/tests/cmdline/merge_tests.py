@@ -10952,6 +10952,8 @@ def dont_explicitly_record_implicit_mergeinfo(sbox):
   A_copy2_path = os.path.join(sbox.wc_dir, 'A_copy2')
   A_copy_mu_path = os.path.join(sbox.wc_dir, 'A_copy', 'mu')
   A_copy2_mu_path = os.path.join(sbox.wc_dir, 'A_copy2', 'mu')
+  nu_path = os.path.join(sbox.wc_dir, 'A', 'D', 'H', 'nu')
+  nu_copy_path = os.path.join(sbox.wc_dir, 'A_copy', 'D', 'H', 'nu')
 
   def _commit_and_update(rev, action):
     svntest.actions.run_and_verify_svn(None, None, [],
@@ -11054,6 +11056,253 @@ def dont_explicitly_record_implicit_mergeinfo(sbox):
                                        expected_output, expected_disk,
                                        expected_status, expected_skip,
                                        None, None, None, None, None, 1)
+  os.chdir(saved_cwd)
+
+  # Revert the previous merges and try a cherry harvest merge where
+  # the subtree's natural history is a proper subset of the merge.
+  svntest.actions.run_and_verify_svn(None, None, [], 'revert', '-R', wc_dir)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  wc_status = svntest.actions.get_virginal_state(wc_dir, 5)
+  wc_status.add({
+    'A_copy'            : Item(),
+    'A_copy/B'          : Item(),
+    'A_copy/B/lambda'   : Item(),
+    'A_copy/B/E'        : Item(),
+    'A_copy/B/E/alpha'  : Item(),
+    'A_copy/B/E/beta'   : Item(),
+    'A_copy/B/F'        : Item(),
+    'A_copy/mu'         : Item(),
+    'A_copy/C'          : Item(),
+    'A_copy/D'          : Item(),
+    'A_copy/D/gamma'    : Item(),
+    'A_copy/D/G'        : Item(),
+    'A_copy/D/G/pi'     : Item(),
+    'A_copy/D/G/rho'    : Item(),
+    'A_copy/D/G/tau'    : Item(),
+    'A_copy/D/H'        : Item(),
+    'A_copy/D/H/chi'    : Item(),
+    'A_copy/D/H/omega'  : Item(),
+    'A_copy/D/H/psi'    : Item(),
+    'A_copy2'           : Item(),
+    'A_copy2/B'         : Item(),
+    'A_copy2/B/lambda'  : Item(),
+    'A_copy2/B/E'       : Item(),
+    'A_copy2/B/E/alpha' : Item(),
+    'A_copy2/B/E/beta'  : Item(),
+    'A_copy2/B/F'       : Item(),
+    'A_copy2/mu'        : Item(),
+    'A_copy2/C'         : Item(),
+    'A_copy2/D'         : Item(),
+    'A_copy2/D/gamma'   : Item(),
+    'A_copy2/D/G'       : Item(),
+    'A_copy2/D/G/pi'    : Item(),
+    'A_copy2/D/G/rho'   : Item(),
+    'A_copy2/D/G/tau'   : Item(),
+    'A_copy2/D/H'       : Item(),
+    'A_copy2/D/H/chi'   : Item(),
+    'A_copy2/D/H/omega' : Item(),
+    'A_copy2/D/H/psi'   : Item(),
+    })
+  wc_status.tweak(status='  ', wc_rev=5)
+
+  # r6 - Add the file 'A/D/H/nu'.
+  svntest.main.file_write(nu_path, "This is the file 'nu'.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', nu_path)
+  expected_output = wc.State(wc_dir, {'A/D/H/nu' : Item(verb='Adding')})
+  wc_status.add({'A/D/H/nu' : Item(status='  ', wc_rev=6)})
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        wc_status, None, wc_dir)
+
+  # r7 - Make a change to 'A/D/H/nu'.
+  svntest.main.file_write(nu_path, "Nu content")
+  expected_output = wc.State(wc_dir, {'A/D/H/nu' : Item(verb='Sending')})
+  wc_status.tweak('A/D/H/nu', wc_rev=7)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        wc_status, None, wc_dir)
+
+  # r8 - Merge r6 to 'A_copy'.
+  short_A_copy_path = shorten_path_kludge(A_copy_path)
+  expected_output = wc.State(short_A_copy_path, {
+    'D/H/nu' : Item(status='A '),
+    })
+  expected_A_copy_status = wc.State(short_A_copy_path, {
+    ''          : Item(status=' M', wc_rev=5),
+    'B'         : Item(status='  ', wc_rev=5),
+    'mu'        : Item(status='  ', wc_rev=5),
+    'B/E'       : Item(status='  ', wc_rev=5),
+    'B/E/alpha' : Item(status='  ', wc_rev=5),
+    'B/E/beta'  : Item(status='  ', wc_rev=5),
+    'B/lambda'  : Item(status='  ', wc_rev=5),
+    'B/F'       : Item(status='  ', wc_rev=5),
+    'C'         : Item(status='  ', wc_rev=5),
+    'D'         : Item(status='  ', wc_rev=5),
+    'D/G'       : Item(status='  ', wc_rev=5),
+    'D/G/pi'    : Item(status='  ', wc_rev=5),
+    'D/G/rho'   : Item(status='  ', wc_rev=5),
+    'D/G/tau'   : Item(status='  ', wc_rev=5),
+    'D/gamma'   : Item(status='  ', wc_rev=5),
+    'D/H'       : Item(status='  ', wc_rev=5),
+    'D/H/chi'   : Item(status='  ', wc_rev=5),
+    'D/H/psi'   : Item(status='  ', wc_rev=5),
+    'D/H/omega' : Item(status='  ', wc_rev=5),
+    'D/H/nu'    : Item(status='A ', wc_rev='-', copied='+'),
+    })
+  expected_A_copy_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGEINFO : '/A:6'}),
+    'B'         : Item(),
+    'mu'        : Item("This is the file 'mu'.\nr3\n"),
+    'B/E'       : Item(),
+    'B/E/alpha' : Item("This is the file 'alpha'.\n"),
+    'B/E/beta'  : Item("This is the file 'beta'.\n"),
+    'B/lambda'  : Item("This is the file 'lambda'.\n"),
+    'B/F'       : Item(),
+    'C'         : Item(),
+    'D'         : Item(),
+    'D/G'       : Item(),
+    'D/G/pi'    : Item("This is the file 'pi'.\n"),
+    'D/G/rho'   : Item("This is the file 'rho'.\n"),
+    'D/G/tau'   : Item("This is the file 'tau'.\n"),
+    'D/gamma'   : Item("This is the file 'gamma'.\n"),
+    'D/H'       : Item(),
+    'D/H/chi'   : Item("This is the file 'chi'.\n"),
+    'D/H/psi'   : Item("This is the file 'psi'.\n"),
+    'D/H/omega' : Item("This is the file 'omega'.\n"),
+    'D/H/nu'    : Item("This is the file 'nu'.\n"),
+    })
+  expected_A_copy_skip = wc.State(short_A_copy_path, {})
+  saved_cwd = os.getcwd()
+  os.chdir(svntest.main.work_dir)
+  svntest.actions.run_and_verify_merge(short_A_copy_path, '5', '6',
+                                       sbox.repo_url + \
+                                       '/A',
+                                       expected_output,
+                                       expected_A_copy_disk,
+                                       expected_A_copy_status,
+                                       expected_A_copy_skip,
+                                       None, None, None, None,
+                                       None, 1)
+  os.chdir(saved_cwd)
+  wc_status.add({'A_copy/D/H/nu' : Item(status='  ', wc_rev=8)})
+  wc_status.tweak('A_copy', wc_rev=8)
+  expected_output = wc.State(wc_dir, {
+    'A_copy/D/H/nu' : Item(verb='Adding'),
+    'A_copy'        : Item(verb='Sending'),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        wc_status, None, wc_dir)
+
+  # r9 - Merge r7 to 'A_copy/D/H/nu'.
+  short_nu_copy_path = shorten_path_kludge(nu_copy_path)
+  expected_skip = wc.State(short_nu_copy_path, { })
+  os.chdir(svntest.main.work_dir)
+  # run_and_verify_merge doesn't support merging to a file WCPATH
+  # so use run_and_verify_svn.
+  svntest.actions.run_and_verify_svn(None,
+                                     expected_merge_output([[7]],
+                                       'U    ' + short_nu_copy_path + '\n'),
+                                     [], 'merge', '-c7',
+                                     sbox.repo_url + '/A/D/H/nu',
+                                     short_nu_copy_path)
+  os.chdir(saved_cwd)
+  expected_output = wc.State(wc_dir, {'A_copy/D/H/nu' : Item(verb='Sending')})
+  wc_status.tweak('A_copy/D/H/nu', wc_rev=9)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        wc_status, None, wc_dir)
+
+  # Update WC
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  wc_status.tweak(wc_rev=9)
+
+  # r10 - Make another change to 'A/D/H/nu'.
+  svntest.main.file_write(nu_path, "Even nuer content")
+  expected_output = wc.State(wc_dir, {'A/D/H/nu' : Item(verb='Sending')})
+  wc_status.tweak('A/D/H/nu', wc_rev=10)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        wc_status, None, wc_dir)
+
+  # Update WC
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  wc_status.tweak(wc_rev=10)
+
+  # Now do a cherry harvest merge to 'A_copy'.  We should pick up the
+  # change to 'A_copy/D/H/nu' from r10, the mergeinfo on 'A_copy' should
+  # reflect the entire eligible revision range from 'A', r2-10.
+  # 'A_copy/D/H/nu' should have get the equivalent mergeinfo to 'A_copy'
+  # which should elide to the latter, leaving no explicit mergeinfo...
+  #
+  # ...or should it?  Right now this test is marked as XFail since
+  # ' A_copy/D/H/nu' ends up with r10 merged to it, but with explicit
+  # mergeinfo of '/A/D/H/nu:2-7'!  Regardless of what the mergeinfo
+  # on ' A_copy/D/H/nu' should be prior to elision, if we have the following
+  # conditions:
+  #
+  #   1) A uniform working revision merge target.
+  #
+  #   2) Explicit mergeinfo on the target/subtrees from the same
+  #      source ('A' in this case).
+  #
+  # Then a cherry harvest from the same source should leave explicit
+  # mergeinfo *only* on the merge target no?
+  expected_output = wc.State(short_A_copy_path, {
+    'D/H/nu' : Item(status='U '),
+    })
+  expected_A_copy_status = wc.State(short_A_copy_path, {
+    ''          : Item(status=' M', wc_rev=10),
+    'B'         : Item(status='  ', wc_rev=10),
+    'mu'        : Item(status='  ', wc_rev=10),
+    'B/E'       : Item(status='  ', wc_rev=10),
+    'B/E/alpha' : Item(status='  ', wc_rev=10),
+    'B/E/beta'  : Item(status='  ', wc_rev=10),
+    'B/lambda'  : Item(status='  ', wc_rev=10),
+    'B/F'       : Item(status='  ', wc_rev=10),
+    'C'         : Item(status='  ', wc_rev=10),
+    'D'         : Item(status='  ', wc_rev=10),
+    'D/G'       : Item(status='  ', wc_rev=10),
+    'D/G/pi'    : Item(status='  ', wc_rev=10),
+    'D/G/rho'   : Item(status='  ', wc_rev=10),
+    'D/G/tau'   : Item(status='  ', wc_rev=10),
+    'D/gamma'   : Item(status='  ', wc_rev=10),
+    'D/H'       : Item(status='  ', wc_rev=10),
+    'D/H/chi'   : Item(status='  ', wc_rev=10),
+    'D/H/psi'   : Item(status='  ', wc_rev=10),
+    'D/H/omega' : Item(status='  ', wc_rev=10),
+    'D/H/nu'    : Item(status='MM', wc_rev=10),
+    })
+  expected_A_copy_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGEINFO : '/A:2-10'}),
+    'B'         : Item(),
+    'mu'        : Item("This is the file 'mu'.\nr3\n"),
+    'B/E'       : Item(),
+    'B/E/alpha' : Item("This is the file 'alpha'.\n"),
+    'B/E/beta'  : Item("This is the file 'beta'.\n"),
+    'B/lambda'  : Item("This is the file 'lambda'.\n"),
+    'B/F'       : Item(),
+    'C'         : Item(),
+    'D'         : Item(),
+    'D/G'       : Item(),
+    'D/G/pi'    : Item("This is the file 'pi'.\n"),
+    'D/G/rho'   : Item("This is the file 'rho'.\n"),
+    'D/G/tau'   : Item("This is the file 'tau'.\n"),
+    'D/gamma'   : Item("This is the file 'gamma'.\n"),
+    'D/H'       : Item(),
+    'D/H/chi'   : Item("This is the file 'chi'.\n"),
+    'D/H/psi'   : Item("This is the file 'psi'.\n"),
+    'D/H/omega' : Item("This is the file 'omega'.\n"),
+    'D/H/nu'    : Item("Even nuer content"),
+    })
+  expected_A_copy_skip = wc.State(short_A_copy_path, {})
+  saved_cwd = os.getcwd()
+  os.chdir(svntest.main.work_dir)
+  svntest.actions.run_and_verify_merge(short_A_copy_path, None, None,
+                                       sbox.repo_url + \
+                                       '/A',
+                                       expected_output,
+                                       expected_A_copy_disk,
+                                       expected_A_copy_status,
+                                       expected_A_copy_skip,
+                                       None, None, None, None,
+                                       None, 1)
   os.chdir(saved_cwd)
 
 ########################################################################
@@ -11216,8 +11465,8 @@ test_list = [ None,
               SkipUnless(reverse_merge_away_all_mergeinfo,
                          server_has_mergeinfo),
               SkipUnless(merge_broken_link, svntest.main.is_posix_os),
-              SkipUnless(dont_explicitly_record_implicit_mergeinfo,
-                         server_has_mergeinfo),
+              XFail(SkipUnless(dont_explicitly_record_implicit_mergeinfo,
+                               server_has_mergeinfo)),
              ]
 
 if __name__ == '__main__':
