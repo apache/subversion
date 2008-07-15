@@ -1741,7 +1741,8 @@ prepare_subtree_ranges(apr_array_header_t **requested_rangelist,
       if (segments->nelts)
         {
           svn_location_segment_t *segment =
-            APR_ARRAY_IDX(segments, 0, svn_location_segment_t *);
+            APR_ARRAY_IDX(segments, (segments->nelts - 1),
+                          svn_location_segment_t *);
           if (is_rollback)
             {
               if (segment->range_start == revision2
@@ -1812,11 +1813,7 @@ prepare_subtree_ranges(apr_array_header_t **requested_rangelist,
                      rename between REVISION1:REVISION2 - see 'MERGE FAILS' in
                      http://subversion.tigris.org/issues/show_bug.cgi?id=3067#desc34.
                      */
-                  if (segment->path /* Is NULL if a gap in history. */
-                      && strcmp(segment->path, mergeinfo_path + 1) != 0)
-                    push_range(different_name_rangelist, segment->range_start,
-                               segment->range_end, TRUE, pool);
-                  for (i = 1; i < segments->nelts; i++)
+                  for (i = 0; i < segments->nelts; i++)
                     {
                       segment =
                         APR_ARRAY_IDX(segments, i, svn_location_segment_t *);

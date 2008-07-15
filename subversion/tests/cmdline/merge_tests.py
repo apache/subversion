@@ -12559,8 +12559,7 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(subtree_source_missing_in_requested_range,
                          server_has_mergeinfo),
-              SkipUnless(XFail(subtrees_with_empty_mergeinfo),
-                         server_has_mergeinfo),
+              SkipUnless(subtrees_with_empty_mergeinfo, server_has_mergeinfo),
              ]
 
 if __name__ == '__main__':
