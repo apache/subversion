@@ -11080,8 +11080,6 @@ def reverse_merge_away_all_mergeinfo(sbox):
 # that don't exist at the start of a merge range shouldn't break the
 # merge'.  Specifically see
 # http://subversion.tigris.org/issues/show_bug.cgi?id=3067#desc5
-#
-# Set as XFail until that issue is resolved.
 def dont_merge_revs_into_subtree_that_predate_it(sbox):
   "dont merge revs into a subtree that predate it"
 
@@ -11217,7 +11215,7 @@ def dont_merge_revs_into_subtree_that_predate_it(sbox):
   svntest.actions.run_and_verify_svn(
     None,
     expected_merge_output(
-      [[7,9]], ['U    ' + os.path.join(short_H_COPY_path, "psi") + '\n',
+      [[6,9]], ['U    ' + os.path.join(short_H_COPY_path, "psi") + '\n',
                 'D    ' + os.path.join(short_H_COPY_path, "nu") + '\n']),
     [], 'merge', sbox.repo_url + '/A/D/H', short_H_COPY_path, '--force')
   os.chdir(saved_cwd)
@@ -12334,8 +12332,6 @@ def subtree_source_missing_in_requested_range(sbox):
 # or end of a merge range shouldn't break the merge'
 #
 # See http://subversion.tigris.org/issues/show_bug.cgi?id=3067#desc34
-#
-# Set as XFail until that issue is resolved.
 def subtrees_with_empty_mergeinfo(sbox):
   "mergeinfo not set on subtree with empty mergeinfo"
 
@@ -12541,8 +12537,8 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(reverse_merge_away_all_mergeinfo,
                          server_has_mergeinfo),
-              XFail(SkipUnless(dont_merge_revs_into_subtree_that_predate_it,
-                               server_has_mergeinfo)),
+              SkipUnless(dont_merge_revs_into_subtree_that_predate_it,
+                         server_has_mergeinfo),
               SkipUnless(dont_explicitly_record_implicit_mergeinfo,
                          server_has_mergeinfo),
               SkipUnless(merge_broken_link, svntest.main.is_posix_os),
@@ -12550,8 +12546,8 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(subtree_source_missing_in_requested_range,
                          server_has_mergeinfo),
-              XFail(SkipUnless(subtrees_with_empty_mergeinfo,
-                               server_has_mergeinfo)),
+              SkipUnless(subtrees_with_empty_mergeinfo,
+                         server_has_mergeinfo),
              ]
 
 if __name__ == '__main__':
