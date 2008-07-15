@@ -4806,10 +4806,16 @@ When called with the prefix arg -, remove Date from the svn:keywords property."
                     (mapcar 'list '("native" "CRLF" "LF" "CR"))
                     nil t)))
 
-(defun svn-status-property-set-executable ()
-  "Set the svn:executable property on the marked files."
-  (interactive)
-  (svn-status-property-set-property (svn-status-marked-files) "svn:executable" "*"))
+(defun svn-status-property-set-executable (&optional unset)
+  "Set the svn:executable property on the marked files.
+When called with a prefix argument: unset the svn:executable property."
+  (interactive "P")
+  (if unset
+      (progn
+        (svn-run nil t 'propdel (append (list "propdel" "svn:executable") (svn-status-marked-file-names)))
+        (message "Unset the svn:executable property for %s" (svn-status-marked-file-names))
+        (svn-status-update))
+    (svn-status-property-set-property (svn-status-marked-files) "svn:executable" "*")))
 
 (defun svn-status-property-set-mime-type ()
   "Set the svn:mime-type property on the marked files."
