@@ -104,6 +104,11 @@ Candidate changes for 1.5.1:
    Votes:
      +1: kameshj
 
+ * r31749
+   Fix compiler warning, regression since r31799.
+   Votes:
+     +1: kameshj
+
  * r31658, r31659
    Fix a remaining bug with issue #2825, Handle --depth option for 'merge'
    operations in terms of both content and mergeinfo.
