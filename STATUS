@@ -69,13 +69,17 @@ Candidate changes for 1.5.1:
 
      r30628 some format only changes that are needed to avoid conflicts.
 
-     r30607, r30812, r30929, r30935, r31575, r31769, r31926 add/tweak/expand
+     r31059, r31086, r31088, r31090, r30607, r30812, r30929, r30935,
+     r31575, r31769, r31926 add/tweak/expand
      merge_tests.py coverage of this issue.  Note that r31769 is also
      nominated in the issue #3174 group as it applies to both issues (and may
      already be backported).
 
      r30961, r30967, r31033, and r31137 are code and documentation improvements
      to some merge.c helper functions, needed to avoid conflicts.
+
+     There is a backport branch with all these changes applied at
+     http://svn.collab.net/repos/svn/branches/1.5.x-issue3067
    Votes:
      +1: kameshj (r31900, r31926, r31927)
      +1: pburba
