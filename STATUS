@@ -108,6 +108,7 @@ Candidate changes for 1.5.1:
    Fix compiler warning, regression since r31799.
    Votes:
      +1: kameshj
+     +1 (non-binding): stylesen
 
  * r31658, r31659
    Fix a remaining bug with issue #2825, Handle --depth option for 'merge'
