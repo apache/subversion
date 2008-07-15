@@ -81,7 +81,7 @@ Candidate changes for 1.5.1:
      There is a backport branch with all these changes applied at
      http://svn.collab.net/repos/svn/branches/1.5.x-issue3067
    Votes:
-     +1: kameshj (r31900, r31926, r31927)
+     +1: kameshj (r30607, r30628, r31900, r31926, r31927)
      +1: pburba
 
  * r32017, r32029
