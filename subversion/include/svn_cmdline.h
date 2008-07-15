@@ -277,6 +277,17 @@ svn_cmdline_auth_plaintext_prompt(svn_boolean_t *may_save_plaintext,
                                   void *baton,
                                   apr_pool_t *pool);
 
+/** An implementation of @c svn_auth_plaintext_passphrase_prompt_func_t that
+ * prompts the user whether storing unencypted passphrase to disk is OK.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_cmdline_auth_plaintext_passphrase_prompt(svn_boolean_t *may_save_plaintext,
+                                             const char *realmstring,
+                                             void *baton,
+                                             apr_pool_t *pool);
+
 /** Initialize auth baton @a ab with the standard set of authentication
  * providers used by the command line client.
  *

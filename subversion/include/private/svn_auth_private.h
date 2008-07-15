@@ -94,6 +94,38 @@ svn_auth__simple_save_creds_helper(svn_boolean_t *saved,
                                    const char *passtype,
                                    apr_pool_t *pool);
 
+/* Common implementation for ssl_client_cert_pw_file_first_credentials.
+   Uses PARAMETERS, REALMSTRING and the ssl client passphrase auth provider's
+   passphrase cache to fill the CREDENTIALS. PASSPHRASE_GET is used to obtain
+   the passphrase value. PASSTYPE identifies the type of the cached passphrase.
+   CREDENTIALS are allocated from POOL. */
+svn_error_t *
+svn_auth__ssl_client_cert_pw_file_first_creds_helper
+  (void **credentials,
+   void **iter_baton,
+   void *provider_baton,
+   apr_hash_t *parameters,
+   const char *realmstring,
+   svn_auth__password_get_t passphrase_get,
+   const char *passtype,
+   apr_pool_t *pool);
+
+/* Common implementation for ssl_client_cert_pw_file_save_credentials and
+   Uses PARAMETERS and REALMSTRING to save a set of CREDENTIALS to the ssl
+   client cert auth provider's passphrase cache. PASSPHRASE_SET is used to
+   store the passphrase. PASSTYPE identifies the type of the cached passphrase.
+   Allocates from POOL. */
+svn_error_t *
+svn_auth__ssl_client_cert_pw_file_save_creds_helper
+  (svn_boolean_t *saved,
+   void *credentials,
+   void *provider_baton,
+   apr_hash_t *parameters,
+   const char *realmstring,
+   svn_auth__password_set_t passphrase_set,
+   const char *passtype,
+   apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
