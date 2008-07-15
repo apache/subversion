@@ -5533,6 +5533,7 @@ Currently is the output from the svn update command known."
   (define-key svn-blame-mode-map (kbd "r") 'svn-blame-highlight-revision)
   (define-key svn-blame-mode-map (kbd "=") 'svn-blame-show-changeset)
   (define-key svn-blame-mode-map (kbd "l") 'svn-blame-show-log)
+  (define-key svn-blame-mode-map (kbd "s") 'svn-blame-show-statistics)
   (define-key svn-blame-mode-map [?q] 'bury-buffer))
 
 (easy-menu-define svn-blame-mode-menu svn-blame-mode-map
@@ -5541,6 +5542,7 @@ Currently is the output from the svn update command known."
                     ["Jump to source location" svn-blame-open-source-file t]
                     ["Show changeset" svn-blame-show-changeset t]
                     ["Show log" svn-blame-show-log t]
+                    ["Show statistics" svn-blame-show-statistics t]
                     ["Highlight by author" svn-blame-highlight-author t]
                     ["Highlight by revision" svn-blame-highlight-revision t]))
 
@@ -5668,6 +5670,29 @@ The optional prefix argument ARG determines which switches are passed to `svn lo
               (overlay-put hl-ov 'svn-blame-highlighted t)
               (overlay-put hl-ov 'face 'svn-status-blame-highlight-face))))
         (forward-line)))))
+
+(defun svn-blame-show-statistics ()
+  "Show statistics for the current blame buffer."
+  (interactive)
+  (let ((author-map (make-hash-table :test 'equal))
+        (author-list)
+        (author))
+    (save-excursion
+      (goto-char (point-min))
+      (while (not (eobp))
+        (dolist (ov (overlays-in (svn-point-at-bol) (line-end-position)))
+          (when (overlay-get ov 'svn-blame-line-info)
+            (setq author (cadr (overlay-get ov 'rev-info)))
+            (svn-puthash author
+                         (+ (gethash author author-map 0) 1)
+                         author-map)))
+        (forward-line))
+      (maphash '(lambda (key value) (add-to-list 'author-list (list key value))) author-map)
+      (pop-to-buffer (get-buffer-create (replace-regexp-in-string "svn-blame:" "svn-blame-statistics:" (buffer-name))))
+      (erase-buffer)
+      (dolist (line (sort author-list '(lambda (v1 v2) (> (cadr v1) (cadr v2)))))
+        (insert (format "%s: %s line%s\n" (car line) (cadr line) (if (eq (cadr line) 1) "" "s"))))
+      (goto-char (point-min)))))
 
 (defun svn-blame-highlight-author-field (ov)
   (cadr (overlay-get ov 'rev-info)))
