@@ -359,11 +359,33 @@ svn_cmdline_handle_exit_error(svn_error_t *err,
 }
 
 #if defined(SVN_HAVE_KWALLET) || defined(SVN_HAVE_GNOME_KEYRING)
-/* Dynamically load authentication simple provider. */
+
+/* Set *PROVIDER according to PROVIDER_NAME and PROVIDER_TYPE,
+ * allocating it in POOL.
+ *
+ * Valid PROVIDER_NAME values are: "gnome_keyring" and "kwallet"
+ * (they correspond to the loadable libraries named, e.g.,
+ * "libsvn_auth_gnome_keyring-1.so.0", etc.)
+ *
+ * Valid PROVIDER_TYPE values are: "simple" and "ssl_client_cert_pw"
+ * (they correspond to function names found in the loaded library,
+ * such as "svn_auth_get_gnome_keyring_simple_provider", etc).
+ *
+ * What actually happens is we load the library and invoke the
+ * appropriate provider function to supply *PROVIDER, like so:
+ *
+ *    svn_auth_get_<name>_<type>_provider(PROVIDER, POOL);
+ *
+ * If the library load fails, return an error (with the effect on
+ * *PROVIDER undefined).  But if the symbol is simply not found in the
+ * library, or if the PROVIDER_TYPE is unrecognized, set *PROVIDER to
+ * NULL and return success.
+ */
 static svn_error_t *
-get_auth_simple_provider(svn_auth_provider_object_t **provider,
-                         const char *provider_name,
-                         apr_pool_t *pool)
+get_auth_provider(svn_auth_provider_object_t **provider,
+                  const char *provider_name,
+                  const char *provider_type,
+                  apr_pool_t *pool)
 {
   apr_dso_handle_t *dso;
   apr_dso_handle_sym_t symbol;
@@ -375,16 +397,25 @@ get_auth_simple_provider(svn_auth_provider_object_t **provider,
                          provider_name,
                          SVN_VER_MAJOR);
   funcname = apr_psprintf(pool,
-                          "svn_auth_get_%s_simple_provider",
-                          provider_name);
+                          "svn_auth_get_%s_%s_provider",
+                          provider_name, provider_type);
   SVN_ERR(svn_dso_load(&dso, libname));
   if (dso)
     {
       if (! apr_dso_sym(&symbol, dso, funcname))
         {
-          svn_auth_simple_provider_func_t func;
-          func = (svn_auth_simple_provider_func_t) symbol;
-          func(provider, pool);
+          if (strcmp(provider_type, "simple") == 0)
+            {
+              svn_auth_simple_provider_func_t func;
+              func = (svn_auth_simple_provider_func_t) symbol;
+              func(provider, pool);
+            }
+          else if (strcmp(provider_type, "ssl_client_cert_pw") == 0)
+            {
+              svn_auth_ssl_client_cert_pw_provider_func_t func;
+              func = (svn_auth_ssl_client_cert_pw_provider_func_t) symbol;
+              func(provider, pool);
+            }
         }
     }
   return SVN_NO_ERROR;
@@ -499,11 +530,19 @@ svn_cmdline_set_up_auth_baton(svn_auth_baton_t **ab,
       if (apr_strnatcmp(password_store, "gnome-keyring") == 0)
         {
 #ifdef SVN_HAVE_GNOME_KEYRING
-          SVN_ERR(get_auth_simple_provider(&provider, "gnome_keyring", pool));
+          SVN_ERR(get_auth_provider(&provider, "gnome_keyring", "simple", 
+                                    pool));
           if (provider)
             {
               APR_ARRAY_PUSH(providers,
                              svn_auth_provider_object_t *) = provider;
+            }
+          SVN_ERR(get_auth_provider(&provider, "gnome_keyring",
+                                    "ssl_client_cert_pw", pool));
+          if (provider)
+            {
+              APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *)
+                = provider;
             }
 #endif
           continue;
@@ -512,7 +551,7 @@ svn_cmdline_set_up_auth_baton(svn_auth_baton_t **ab,
       if (apr_strnatcmp(password_store, "kwallet") == 0)
         {
 #ifdef SVN_HAVE_KWALLET
-          SVN_ERR(get_auth_simple_provider(&provider, "kwallet", pool));
+          SVN_ERR(get_auth_provider(&provider, "kwallet", "simple",  pool));
           if (provider)
             {
               APR_ARRAY_PUSH(providers,
@@ -529,10 +568,8 @@ svn_cmdline_set_up_auth_baton(svn_auth_baton_t **ab,
 
   if (non_interactive == FALSE)
     {
-      /* This provider is odd in that it isn't a prompting provider in
-         the classic sense.  That is, it doesn't need to prompt in
-         order to get creds, but it *does* need to prompt the user
-         regarding the *cache storage* of creds. */
+      /* This provider doesn't prompt the user in order to get creds;
+         it prompts the user regarding the caching of creds. */
       svn_auth_get_simple_provider2(&provider,
                                     svn_cmdline_auth_plaintext_prompt,
                                     pb, pool);
@@ -554,7 +591,20 @@ svn_cmdline_set_up_auth_baton(svn_auth_baton_t **ab,
   APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
   svn_auth_get_ssl_client_cert_file_provider(&provider, pool);
   APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-  svn_auth_get_ssl_client_cert_pw_file_provider(&provider, pool);
+
+  if (non_interactive == FALSE)
+    {
+      /* This provider doesn't prompt the user in order to get creds;
+         it prompts the user regarding the caching of creds. */
+      svn_auth_get_ssl_client_cert_pw_file_provider2
+        (&provider, svn_cmdline_auth_plaintext_passphrase_prompt,
+         pb, pool);
+    }
+  else
+    {
+      svn_auth_get_ssl_client_cert_pw_file_provider2(&provider, NULL, NULL,
+                                                     pool);
+    }
   APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
   if (non_interactive == FALSE)

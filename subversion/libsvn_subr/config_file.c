@@ -497,6 +497,15 @@ ensure_auth_dirs(const char *path,
       svn_error_clear(err);
       svn_error_clear(svn_io_dir_make(auth_subdir, APR_OS_DEFAULT, pool));
     }
+
+  auth_subdir = svn_path_join_many(pool, auth_dir,
+                                   SVN_AUTH_CRED_SSL_CLIENT_CERT_PW, NULL);
+  err = svn_io_check_path(auth_subdir, &kind, pool);
+  if (err || kind == svn_node_none)
+    {
+      svn_error_clear(err);
+      svn_error_clear(svn_io_dir_make(auth_subdir, APR_OS_DEFAULT, pool));
+    }
 }
 
 
@@ -757,7 +766,14 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###                              to disk in any way."               NL
         "###   store-plaintext-passwords  Specifies whether passwords may"   NL
         "###                              be cached on disk unencrypted."    NL
-        "###"                                                                NL
+        "###   store-ssl-client-cert-pp   Specifies whether passphrase used" NL
+        "###                              to authenticate against a client"  NL
+        "###                              certificate may be cached to disk" NL
+        "###                              in any way"                        NL
+        "###   store-ssl-client-cert-pp-plaintext"                           NL
+        "###                              Specifies whether client cert"     NL
+        "###                              passphrases may be cached on disk" NL
+        "###                              unencrypted (i.e., as plaintext)." NL
         "###   store-auth-creds           Specifies whether any auth info"   NL
         "###                              (passwords as well as server certs)"
                                                                              NL
@@ -779,6 +795,28 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### saving a password to disk in unencrypted form.  Note that"      NL
         "### this option has no effect if either 'store-passwords' or "      NL
         "### 'store-auth-creds' is set to 'no'."                             NL
+        "###"                                                                NL
+        "### Set store-ssl-client-cert-pp to 'no' to avoid storing ssl"      NL
+        "### client certificate passphrases in the auth/ area of your"       NL
+        "### config directory.  It defaults to 'yes', but Subversion will"   NL
+        "### never save your passphrase to disk in plaintext unless you tell"NL
+        "### it to via 'store-ssl-client-cert-pp-plaintext' (see below)."    NL
+        "###"                                                                NL
+        "### Note store-ssl-client-cert-pp only prevents the saving of *new*"NL
+        "### passphrases; it doesn't invalidate existing passphrases.  To do"NL
+        "### that, remove the cache files by hand as described in the"       NL 
+        "### Subversion book at http://svnbook.red-bean.com/nightly/en/\\"   NL
+        "###                    svn.serverconfig.netmodel.html\\"            NL
+        "###                    #svn.serverconfig.netmodel.credcache"        NL
+        "###"                                                                NL
+        "### Set store-ssl-client-cert-pp-plaintext to 'no' to avoid storing"NL
+        "### passphrases in unencrypted form in the auth/ area of your"      NL
+        "### config directory.  Set it to 'yes' to allow Subversion to"      NL
+        "### store unencrypted passphrases in the auth/ area.  The default"  NL
+        "### is 'ask', which means that Subversion will prompt before"       NL
+        "### saving a passphrase to disk in unencrypted form.  Note that"    NL
+        "### this option has no effect if either 'store-auth-creds' or "     NL
+        "### 'store-ssl-client-cert-pp' is set to 'no'."                     NL
         "###"                                                                NL
         "### Set store-auth-creds to 'no' to avoid storing any Subversion"   NL
         "### credentials in the auth/ area of your config directory."        NL
@@ -858,9 +896,11 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "# No neon-debug-mask, so neon debugging is disabled."               NL
         "# ssl-authority-files = /path/to/CAcert.pem;/path/to/CAcert2.pem"   NL
         "#"                                                                  NL
-        "# Password caching parameters:"                                     NL
+        "# Password / passphrase caching parameters:"                        NL
         "# store-passwords = no"                                             NL
-        "# store-plaintext-passwords = no"                                   NL;
+        "# store-plaintext-passwords = no"                                   NL
+        "# store-ssl-client-cert-pp = no"                                    NL
+        "# store-ssl-client-cert-pp-plaintext = no"                          NL;
 
       err = svn_io_file_open(&f, path,
                              (APR_WRITE | APR_CREATE | APR_EXCL),
