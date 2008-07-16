@@ -647,7 +647,8 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
               && (! svn_string_compare(mergeinfo_value, 
                                        prev_mergeinfo_value))))
         {
-          svn_mergeinfo_t prev_mergeinfo, mergeinfo, deleted, added;
+          svn_mergeinfo_t prev_mergeinfo = NULL, mergeinfo = NULL;
+          svn_mergeinfo_t deleted, added;
           const char *hash_path;
 
           if (mergeinfo_value)
