@@ -438,6 +438,27 @@ svn_config__parse_file(svn_config_t *cfg, const char *file,
 }
 
 
+/* Helper for ensure_auth_dirs: create SUBDIR under AUTH_DIR, iff
+   SUBDIR does not already exist, but ignore any errors.  Use POOL for
+   temporary allocation. */
+static void
+ensure_auth_subdir(const char *auth_dir,
+                   const char *subdir,
+                   apr_pool_t *pool)
+{
+  svn_error_t *err;
+  const char *subdir_full_path;
+  svn_node_kind_t kind;
+
+  subdir_full_path = svn_path_join_many(pool, auth_dir, subdir, NULL);
+  err = svn_io_check_path(subdir_full_path, &kind, pool);
+  if (err || kind == svn_node_none)
+    {
+      svn_error_clear(err);
+      svn_error_clear(svn_io_dir_make(subdir_full_path, APR_OS_DEFAULT, pool));
+    }
+}
+
 /* Helper for svn_config_ensure:  see if ~/.subversion/auth/ and its
    subdirs exist, try to create them, but don't throw errors on
    failure.  PATH is assumed to be a path to the user's private config
@@ -447,7 +468,7 @@ ensure_auth_dirs(const char *path,
                  apr_pool_t *pool)
 {
   svn_node_kind_t kind;
-  const char *auth_dir, *auth_subdir;
+  const char *auth_dir;
   svn_error_t *err;
 
   /* Ensure ~/.subversion/auth/ */
@@ -470,42 +491,10 @@ ensure_auth_dirs(const char *path,
 
   /* If a provider exists that wants to store credentials in
      ~/.subversion, a subdirectory for the cred_kind must exist. */
-
-  auth_subdir = svn_path_join_many(pool, auth_dir,
-                                   SVN_AUTH_CRED_SIMPLE, NULL);
-  err = svn_io_check_path(auth_subdir, &kind, pool);
-  if (err || kind == svn_node_none)
-    {
-      svn_error_clear(err);
-      svn_error_clear(svn_io_dir_make(auth_subdir, APR_OS_DEFAULT, pool));
-    }
-
-  auth_subdir = svn_path_join_many(pool, auth_dir,
-                                   SVN_AUTH_CRED_USERNAME, NULL);
-  err = svn_io_check_path(auth_subdir, &kind, pool);
-  if (err || kind == svn_node_none)
-    {
-      svn_error_clear(err);
-      svn_error_clear(svn_io_dir_make(auth_subdir, APR_OS_DEFAULT, pool));
-    }
-
-  auth_subdir = svn_path_join_many(pool, auth_dir,
-                                   SVN_AUTH_CRED_SSL_SERVER_TRUST, NULL);
-  err = svn_io_check_path(auth_subdir, &kind, pool);
-  if (err || kind == svn_node_none)
-    {
-      svn_error_clear(err);
-      svn_error_clear(svn_io_dir_make(auth_subdir, APR_OS_DEFAULT, pool));
-    }
-
-  auth_subdir = svn_path_join_many(pool, auth_dir,
-                                   SVN_AUTH_CRED_SSL_CLIENT_CERT_PW, NULL);
-  err = svn_io_check_path(auth_subdir, &kind, pool);
-  if (err || kind == svn_node_none)
-    {
-      svn_error_clear(err);
-      svn_error_clear(svn_io_dir_make(auth_subdir, APR_OS_DEFAULT, pool));
-    }
+  ensure_auth_subdir(auth_dir, SVN_AUTH_CRED_SIMPLE, pool);
+  ensure_auth_subdir(auth_dir, SVN_AUTH_CRED_USERNAME, pool);
+  ensure_auth_subdir(auth_dir, SVN_AUTH_CRED_SSL_SERVER_TRUST, pool);
+  ensure_auth_subdir(auth_dir, SVN_AUTH_CRED_SSL_CLIENT_CERT_PW, pool);
 }
 
 
