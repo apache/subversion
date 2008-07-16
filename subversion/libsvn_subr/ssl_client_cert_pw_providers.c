@@ -36,22 +36,12 @@
 /* File provider                                                         */
 /*-----------------------------------------------------------------------*/
 
-/* The keys that will be stored on disk.  These are analogous to
- *
- *   SVN_AUTH__AUTHFILE_ASCII_CERT_KEY
- *   SVN_AUTH__AUTHFILE_FAILURES_KEY
- *
- * in ssl_server_trust_providers.c.
+/* The keys that will be stored on disk; analogous to similar
+ * constants in ssl_server_trust_providers.c and simple_providers.c.
  *
  * AUTHN_PASSTYPE_KEY just records the passphrase type next to the
  * passphrase, so that anyone who is manually editing their authn
  * files can know which provider owns the password.
- *
- * ### TODO(2489) As recently discussed with stylsen in IRC, the
- * ### SVN_AUTH__ prefix for those should go away.  In the meantime, I
- * ### renamed the variables here from what they were in the original
- * ### patch.  After fixing the other variables, I'll update this
- * ### comment accordingly.
  */
 #define AUTHN_PASSPHRASE_KEY            "passphrase"
 #define AUTHN_PASSTYPE_KEY              "passtype"
