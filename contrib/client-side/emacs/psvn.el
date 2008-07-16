@@ -5362,21 +5362,30 @@ When called with a prefix argument, ask the user for the revision."
      (svn-log-revision-at-point)
      nil)))
 
-(defun svn-log-ediff-specific-revision ()
-  "Call ediff for the file at point to view a changeset"
-  (interactive)
+(defun svn-log-ediff-specific-revision (&optional user-confirmation)
+  "Call ediff for the file at point to view a changeset.
+When called with a prefix argument, ask the user for the revision."
+  (interactive "P")
   ;; (message "svn-log-ediff-specific-revision: %s" (svn-log-file-name-at-point t))
   (let* ((cur-buf (current-buffer))
          (upper-rev (svn-log-revision-at-point))
          (lower-rev (number-to-string (- (string-to-number upper-rev) 1)))
          (file-name (svn-log-file-name-at-point t))
          (default-directory (svn-status-base-dir))
-         (upper-rev-file-name (when file-name
+         (upper-rev-file-name)
+         (lower-rev-file-name)
+         (rev-arg))
+    (when user-confirmation
+      (setq rev-arg (read-string "Revision for changeset: " (concat lower-rev ":" upper-rev)))
+      (setq lower-rev (car (split-string rev-arg ":")))
+      (setq upper-rev (cadr (split-string rev-arg ":"))))
+    ;;(message "lower-rev: %s, upper-rev: %s" lower-rev upper-rev)
+    (setq upper-rev-file-name (when file-name
                                 (cdar (svn-status-get-specific-revision-internal
                                        (list (svn-status-make-line-info file-name)) upper-rev nil))))
-         (lower-rev-file-name (when file-name
+    (setq lower-rev-file-name (when file-name
                                 (cdar (svn-status-get-specific-revision-internal
-                                       (list (svn-status-make-line-info file-name)) lower-rev nil)))))
+                                       (list (svn-status-make-line-info file-name)) lower-rev nil))))
     ;;(message "%S %S" upper-rev-file-name lower-rev-file-name)
     (if file-name
         (let* ((ediff-after-quit-destination-buffer cur-buf)
