@@ -598,32 +598,26 @@ check_ancestry_of_peg_path(svn_boolean_t *is_ancestor,
 }
 
 
-/* Set *PREV_PATH and *PREV_REV to the path and revision which
-   represent the location at which PATH in FS was located immediately
-   prior to REVISION iff there was a copy operation (to PATH or one of
-   its parent directories) between that previous location and
-   PATH@REVISION, and set *APPEARED_REV to the first revision in which
-   PATH@REVISION appeared at PATH as a result of that copy operation.
-
-   If there was no such copy operation in that portion
-   of PATH's history, set *PREV_PATH to NULL, and set *PREV_REV and
-   *APPEARED_REV to SVN_INVALID_REVNUM.  */
-static svn_error_t *
-prev_location(svn_revnum_t *appeared_rev,
-              const char **prev_path,
-              svn_revnum_t *prev_rev,
-              svn_fs_t *fs,
-              svn_revnum_t revision,
-              const char *path,
-              apr_pool_t *pool)
+svn_error_t *
+svn_repos__prev_location(svn_revnum_t *appeared_rev,
+                         const char **prev_path,
+                         svn_revnum_t *prev_rev,
+                         svn_fs_t *fs,
+                         svn_revnum_t revision,
+                         const char *path,
+                         apr_pool_t *pool)
 {
   svn_fs_root_t *root, *copy_root;
   const char *copy_path, *copy_src_path, *remainder = "";
   svn_revnum_t copy_src_rev;
 
   /* Initialize return variables. */
-  *appeared_rev = *prev_rev = SVN_INVALID_REVNUM;
-  *prev_path = NULL;
+  if (appeared_rev)
+    *appeared_rev = SVN_INVALID_REVNUM;
+  if (prev_rev)
+    *prev_rev = SVN_INVALID_REVNUM;
+  if (prev_path)
+    *prev_path = NULL;
 
   /* Ask about the most recent copy which affected PATH@REVISION.  If
      there was no such copy, we're done.  */
@@ -649,9 +643,12 @@ prev_location(svn_revnum_t *appeared_rev,
                              copy_root, copy_path, pool));
   if (! strcmp(copy_path, path) == 0)
     remainder = svn_path_is_child(copy_path, path, pool);
-  *prev_path = svn_path_join(copy_src_path, remainder, pool);
-  *appeared_rev = svn_fs_revision_root_revision(copy_root);
-  *prev_rev = copy_src_rev;
+  if (prev_path)
+    *prev_path = svn_path_join(copy_src_path, remainder, pool);
+  if (appeared_rev)
+    *appeared_rev = svn_fs_revision_root_revision(copy_root);
+  if (prev_rev)
+    *prev_rev = copy_src_rev;
   return SVN_NO_ERROR;
 }
 
@@ -737,8 +734,8 @@ svn_repos_trace_node_locations(svn_fs_t *fs,
 
       /* Find the target of the innermost copy relevant to path@revision.
          The copy may be of path itself, or of a parent directory. */
-      SVN_ERR(prev_location(&appeared_rev, &prev_path, &prev_rev, fs,
-                            revision, path, currpool));
+      SVN_ERR(svn_repos__prev_location(&appeared_rev, &prev_path, &prev_rev,
+                                       fs, revision, path, currpool));
       if (! prev_path)
         break;
 
@@ -924,8 +921,8 @@ svn_repos_node_location_segments(svn_repos_t *repos,
       segment->range_start = end_rev;
       segment->path = cur_path + 1;
 
-      SVN_ERR(prev_location(&appeared_rev, &prev_path, &prev_rev, fs,
-                            current_rev, cur_path, subpool));
+      SVN_ERR(svn_repos__prev_location(&appeared_rev, &prev_path, &prev_rev,
+                                       fs, current_rev, cur_path, subpool));
 
       /* If there are no previous locations for this thing (meaning,
          it originated at the current path), then we simply need to
