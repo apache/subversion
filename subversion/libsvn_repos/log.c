@@ -731,13 +731,13 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *combined_mergeinfo,
   fprintf(stderr, "################################################\n");
 #endif
 
-  /* ### TODO: Do something about mergeinfo changes on or *above* our
-     ### paths of interest, since those might affect the mergeinfo on
-     ### the path, too.  -- cmpilato  */
+  /* ### TODO: Do something about mergeinfo changes *above* our paths
+     ### of interest, since those might affect the mergeinfo on the
+     ### path, too.  -- cmpilato  */
 
-  /* Merge all the mergeinfos which are children of one or our paths
-     of interest into one giant delta mergeinfo.  */
-  for (hi = apr_hash_first(pool, added_mergeinfo_catalog);
+  /* Merge all the mergeinfos which are, or are children of, one or
+     our paths of interest into one giant delta mergeinfo.  */
+  for (hi = apr_hash_first(NULL, added_mergeinfo_catalog);
        hi; hi = apr_hash_next(hi))
     {
       const void *key;
@@ -755,8 +755,6 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *combined_mergeinfo,
       for (i = 0; i < paths->nelts; i++)
         {
           const char *path = APR_ARRAY_IDX(paths, i, const char *);
-          if (strcmp(path, changed_path) == 0)
-            continue;
           if (! svn_path_is_ancestor(path, changed_path))
             continue;
           deleted_mergeinfo = 
