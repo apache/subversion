@@ -704,38 +704,6 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *combined_mergeinfo,
                                &added_mergeinfo_catalog,
                                fs, rev, subpool));
 
-#if 0
-  fprintf(stderr, "################################################\n");
-  fprintf(stderr, "###   Mergeinfo deltas for revision %ld\n", rev);
-  fprintf(stderr, "DELETED MERGEINFO:\n");
-  for (hi = apr_hash_first(pool, deleted_mergeinfo_catalog);
-       hi; hi = apr_hash_next(hi))
-    {
-      const void *key;
-      void *val;
-      svn_string_t *value;
-
-      /* The path is the key, the mergeinfo delta is the value. */
-      apr_hash_this(hi, &key, NULL, &val);
-      SVN_ERR(svn_mergeinfo_to_string(&value, val, pool));
-      fprintf(stderr, "%s ::: %s\n", (const char *)key, value->data);
-    }
-  fprintf(stderr, "ADDED MERGEINFO:\n");
-  for (hi = apr_hash_first(pool, added_mergeinfo_catalog);
-       hi; hi = apr_hash_next(hi))
-    {
-      const void *key;
-      void *val;
-      svn_string_t *value;
-
-      /* The path is the key, the mergeinfo delta is the value. */
-      apr_hash_this(hi, &key, NULL, &val);
-      SVN_ERR(svn_mergeinfo_to_string(&value, val, pool));
-      fprintf(stderr, "%s ::: %s\n", (const char *)key, value->data);
-    }
-  fprintf(stderr, "################################################\n");
-#endif
-
   /* Check our PATHS for any changes to their inherited mergeinfo.
      (We deal with changes to mergeinfo directly *on* the paths in the
      following loop.)  */
