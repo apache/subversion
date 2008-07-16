@@ -128,7 +128,8 @@ svn_wc_relocate3(const char *path,
   if (! entry)
     return svn_error_create(SVN_ERR_ENTRY_NOT_FOUND, NULL, NULL);
 
-  if (entry->kind == svn_node_file)
+  if (entry->kind == svn_node_file
+      || entry->depth == svn_depth_exclude)
     {
       SVN_ERR(relocate_entry(adm_access, entry, from, to,
                              validator, validator_baton, TRUE /* sync */,
@@ -136,7 +137,6 @@ svn_wc_relocate3(const char *path,
       return SVN_NO_ERROR;
     }
 
-  /* TODO(#2843) Check the case of excluded path. */
   /* Relocate THIS_DIR first, in order to pre-validate the relocated URL
      of all of the other entries.  This is technically cheating because
      it relies on knowledge of the libsvn_client implementation, but it
