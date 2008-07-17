@@ -71,7 +71,7 @@ opposed to choosing just one and ignoring the other), we need:
   * Recipes for the user to follow
     - see the "Tree Conflict Resolution Recipes" section.
 
-  * Enhanced facilites for merging changes from conflicting partial results
+  * Enhanced facilities for merging changes from conflicting partial results
     into the desired result.
     - see the "Arbitrary Merge Facility Required" section.
 
@@ -129,7 +129,7 @@ An incoming rename is treated here as its two constituent actions - an
 incoming delete and an incoming add - separately.
 
 In an incoming replacement, the delete is assumed to come before the add.
-(Currently, they may sometimes come the wrong way around. I have not analysed
+(Currently, they may sometimes come the wrong way around. I have not analyzed
 the cases in which this can happen, nor the consequences.)
 
 Where the ability to schedule a replacement of one node kind with another is

@@ -1213,7 +1213,7 @@ svn_client_ctx_t *SVNClient::getContext(const char *message)
         APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
       }
 #endif
-#if defined(SVN_HAVE_KWALLET) && defined(SVN_USE_KWALLET_IN_JAVAHL)
+#ifdef SVN_HAVE_KWALLET
     SVN_JNI_ERR(get_auth_simple_provider(&provider, "kwallet", pool), NULL);
     if (provider)
       {

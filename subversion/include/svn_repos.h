@@ -1453,6 +1453,26 @@ svn_repos_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
                            apr_pool_t *pool);
 
 
+/* Set @a *deleted_mergeinfo_catalog and @a *added_mergeinfo_catalog
+ * to mergeinfo catalogs describing how mergeinfo values on paths
+ * (which are the keys of those catalogs) were changed via the commit
+ * of @a rev in @a repos.  Allocate returned data from @a pool.
+ *
+ * Every path whose mergeinfo was created or modified in @a rev in
+ * such a way that it differs from its value in @a rev - 1 is
+ * represented in both returned catalog hashes, and only those paths
+ * are represented therein.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_repos_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
+                            svn_mergeinfo_catalog_t *added_mergeinfo_catalog,
+                            svn_repos_t *repos,
+                            svn_revnum_t rev,
+                            apr_pool_t *pool);
+
+
 /* ---------------------------------------------------------------*/
 
 /* Retrieving multiple revisions of a file. */

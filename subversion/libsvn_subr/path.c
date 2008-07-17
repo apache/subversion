@@ -1212,7 +1212,7 @@ svn_path_split_if_file(const char *path,
   apr_finfo_t finfo;
   svn_error_t *err;
 
-  assert(svn_path_is_canonical(path, pool));
+  SVN_ERR_ASSERT(svn_path_is_canonical(path, pool));
 
   err = svn_io_stat(&finfo, path, APR_FINFO_TYPE, pool);
   if (err && ! APR_STATUS_IS_ENOENT(err->apr_err))
@@ -1247,6 +1247,11 @@ svn_path_canonicalize(const char *path, apr_pool_t *pool)
   apr_size_t seglen;
   apr_size_t canon_segments = 0;
   svn_boolean_t uri;
+
+  /* "" is already canonical, so just return it; note that later code
+     depends on path not being zero-length.  */
+  if (! *path)
+    return path;
 
   dst = canon = apr_pcalloc(pool, strlen(path) + 1);
 

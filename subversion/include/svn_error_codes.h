@@ -142,6 +142,8 @@ extern "C" {
                                          + (21 * SVN_ERR_CATEGORY_SIZE))
 #define SVN_ERR_RA_SERF_CATEGORY_START  (APR_OS_START_USERERR \
                                          + (22 * SVN_ERR_CATEGORY_SIZE))
+#define SVN_ERR_MALFUNC_CATEGORY_START  (APR_OS_START_USERERR \
+                                         + (23 * SVN_ERR_CATEGORY_SIZE))
 
 #endif /* DOXYGEN_SHOULD_SKIP_THIS */
 
@@ -1225,6 +1227,12 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_CL_NO_EXTERNAL_MERGE_TOOL,
              SVN_ERR_CL_CATEGORY_START + 10,
              "No external merge tool available")
+
+  /* malfunctions such as assertion failures */
+
+  SVN_ERRDEF(SVN_ERR_ASSERTION_FAIL,
+             SVN_ERR_MALFUNC_CATEGORY_START + 0,
+             "Assertion failure")
 
 SVN_ERROR_END
 
