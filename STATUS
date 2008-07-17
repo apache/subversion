@@ -45,6 +45,7 @@ Candidate changes for 1.5.1:
      http://svn.collab.net/repos/svn/branches/1.5.x-issue3174.
    Votes:
      +1: pburba
+     +0: markphip (ran all tests, including all bindings and serf)
 
 
  * r31875
