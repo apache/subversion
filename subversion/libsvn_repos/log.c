@@ -502,19 +502,15 @@ next_history_rev(apr_array_header_t *histories)
   return next_rev;
 }
 
-/* Set *DELETED_MERGEINFO_CATALOG and *ADDED_MERGEINFO_CATALOG to
-   catalogs describing how mergeinfo values on paths (which are the
-   keys of those catalogs) were changed in REV. */
-/* ### TODO: This would make a *great*, useful public function,
-   ### svn_repos_fs_mergeinfo_changed()!  -- cmpilato  */
-static svn_error_t *
-fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
-                     svn_mergeinfo_catalog_t *added_mergeinfo_catalog,
-                     svn_fs_t *fs,
-                     svn_revnum_t rev,
-                     apr_pool_t *pool)
 
+svn_error_t *
+svn_repos_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
+                            svn_mergeinfo_catalog_t *added_mergeinfo_catalog,
+                            svn_repos_t *repos,
+                            svn_revnum_t rev,
+                            apr_pool_t *pool)
 {
+  svn_fs_t *fs = svn_repos_fs(repos);
   apr_hash_t *changes;
   svn_fs_root_t *root;
   apr_pool_t *subpool = NULL, *iterpool;
@@ -677,12 +673,13 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
    *COMBINED_MERGEINFO.  Use POOL for all allocations. */
 static svn_error_t *
 get_combined_mergeinfo_changes(svn_mergeinfo_t *combined_mergeinfo,
-                               svn_fs_t *fs,
+                               svn_repos_t *repos,
                                const apr_array_header_t *paths,
                                svn_revnum_t rev,
                                apr_pool_t *pool)
 {
   svn_mergeinfo_catalog_t added_mergeinfo_catalog, deleted_mergeinfo_catalog;
+  svn_fs_t *fs = svn_repos_fs(repos);
   apr_hash_index_t *hi;
   svn_fs_root_t *root;
   apr_pool_t *subpool, *iterpool;
@@ -700,9 +697,9 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *combined_mergeinfo,
   SVN_ERR(svn_fs_revision_root(&root, fs, rev, subpool));
 
   /* Fetch the mergeinfo changes for REV. */
-  SVN_ERR(fs_mergeinfo_changed(&deleted_mergeinfo_catalog, 
-                               &added_mergeinfo_catalog,
-                               fs, rev, subpool));
+  SVN_ERR(svn_repos_mergeinfo_changed(&deleted_mergeinfo_catalog, 
+                                      &added_mergeinfo_catalog,
+                                      repos, rev, subpool));
 
   /* Check our PATHS for any changes to their inherited mergeinfo.
      (We deal with changes to mergeinfo directly *on* the paths in the
@@ -1267,7 +1264,7 @@ combine_mergeinfo_path_lists(apr_array_header_t **combined_list,
 
 /* Pity that C is so ... linear. */
 static svn_error_t *
-do_logs(svn_fs_t *fs,
+do_logs(svn_repos_t *repos,
         const apr_array_header_t *paths,
         svn_revnum_t hist_start,
         svn_revnum_t hist_end,
@@ -1293,7 +1290,7 @@ do_logs(svn_fs_t *fs,
    is a recursion wrapper. */
 static svn_error_t *
 handle_merged_revisions(svn_revnum_t rev,
-                        svn_fs_t *fs,
+                        svn_repos_t *repos,
                         svn_mergeinfo_t mergeinfo,
                         svn_boolean_t discover_changed_paths,
                         svn_boolean_t strict_node_history,
@@ -1324,7 +1321,7 @@ handle_merged_revisions(svn_revnum_t rev,
         = APR_ARRAY_IDX(combined_list, i, struct path_list_range *);
 
       svn_pool_clear(iterpool);
-      err = do_logs(fs, pl_range->paths, pl_range->range.start,
+      err = do_logs(repos, pl_range->paths, pl_range->range.start,
                     pl_range->range.end, 0, discover_changed_paths,
                     strict_node_history, TRUE, revprops, TRUE,
                     receiver, receiver_baton, authz_read_func,
@@ -1354,7 +1351,7 @@ handle_merged_revisions(svn_revnum_t rev,
    Other parameters are the same as svn_repos_get_logs4().
  */
 static svn_error_t *
-do_logs(svn_fs_t *fs,
+do_logs(svn_repos_t *repos,
         const apr_array_header_t *paths,
         svn_revnum_t hist_start,
         svn_revnum_t hist_end,
@@ -1370,6 +1367,7 @@ do_logs(svn_fs_t *fs,
         void *authz_read_baton,
         apr_pool_t *pool)
 {
+  svn_fs_t *fs = svn_repos_fs(repos);
   apr_pool_t *iterpool;
   apr_array_header_t *revs = NULL;
   apr_hash_t *rev_mergeinfo = NULL;
@@ -1435,7 +1433,7 @@ do_logs(svn_fs_t *fs,
                                                          struct path_info *);
                   APR_ARRAY_PUSH(cur_paths, const char *) = info->path->data;
                 }
-              SVN_ERR(get_combined_mergeinfo_changes(&mergeinfo, fs, cur_paths,
+              SVN_ERR(get_combined_mergeinfo_changes(&mergeinfo, repos, cur_paths,
                                                      current, iterpool));
               has_children = (apr_hash_count(mergeinfo) > 0);
             }
@@ -1450,7 +1448,7 @@ do_logs(svn_fs_t *fs,
                                authz_read_func, authz_read_baton, iterpool));
               if (has_children)
                 {
-                  SVN_ERR(handle_merged_revisions(current, fs, mergeinfo,
+                  SVN_ERR(handle_merged_revisions(current, repos, mergeinfo,
                                                   discover_changed_paths,
                                                   strict_node_history, revprops,
                                                   receiver, receiver_baton,
@@ -1515,7 +1513,7 @@ do_logs(svn_fs_t *fs,
                            authz_read_baton, iterpool));
           if (has_children)
             {
-              SVN_ERR(handle_merged_revisions(current, fs, mergeinfo,
+              SVN_ERR(handle_merged_revisions(current, repos, mergeinfo,
                                               discover_changed_paths,
                                               strict_node_history, revprops,
                                               receiver, receiver_baton,
@@ -1619,7 +1617,7 @@ svn_repos_get_logs4(svn_repos_t *repos,
       return SVN_NO_ERROR;
     }
 
-  return do_logs(repos->fs, paths, hist_start, hist_end, limit,
+  return do_logs(repos, paths, hist_start, hist_end, limit,
                  discover_changed_paths, strict_node_history,
                  include_merged_revisions, revprops, descending_order,
                  receiver, receiver_baton,
