@@ -688,6 +688,10 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *combined_mergeinfo,
   /* Initialize return value. */
   *combined_mergeinfo = apr_hash_make(pool);
 
+  /* If we're asking about revision 0, there's no mergeinfo to be found. */
+  if (rev == 0) 
+    return SVN_NO_ERROR;
+
   /* No paths?  No mergeinfo. */
   if (! paths->nelts)
     return SVN_NO_ERROR;
