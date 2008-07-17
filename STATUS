@@ -133,7 +133,7 @@ Candidate changes for 1.5.1:
      +1: pburba
 
 
- * r32153
+ * r32153, r32160
    Fix issues #3220 (log -g is slow) and #3235 (log -g is wrong).
    Justification:
      Slowness is bad -- in some tests, this fix decreased the cost of a log -g
