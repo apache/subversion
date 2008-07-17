@@ -73,7 +73,7 @@ struct svn_memcache_t {
 
 /* Returns a memcache key for the given key KEY for CACHE, allocated
    in POOL. */
-const char *
+static const char *
 build_key(memcache_t *cache,
           const void *raw_key,
           apr_pool_t *pool)
@@ -120,7 +120,7 @@ build_key(memcache_t *cache,
 }
 
 
-svn_error_t *
+static svn_error_t *
 memcache_get(void **value_p,
              svn_boolean_t *found,
              void *cache_void,
@@ -171,7 +171,7 @@ memcache_get(void **value_p,
 }
 
 
-svn_error_t *
+static svn_error_t *
 memcache_set(void *cache_void,
              const void *key,
              void *value,
@@ -207,7 +207,7 @@ memcache_set(void *cache_void,
 }
 
 
-svn_error_t *
+static svn_error_t *
 memcache_iter(svn_boolean_t *completed,
               void *cache_void,
               svn_iter_apr_hash_cb_t user_cb,

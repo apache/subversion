@@ -140,7 +140,7 @@ prompt(const char **result,
               else
                 /* ### APR_EOL_STR holds more than two chars?  Who
                    ever heard of such a thing? */
-                abort();
+                SVN_ERR_MALFUNCTION();
             }
 
           svn_stringbuf_appendbytes(strbuf, &c, 1);
@@ -379,16 +379,17 @@ svn_cmdline_auth_ssl_client_cert_pw_prompt
   return SVN_NO_ERROR;
 }
 
-/* This implements 'svn_auth_plaintext_prompt_func_t'. */
-svn_error_t *
-svn_cmdline_auth_plaintext_prompt(svn_boolean_t *may_save_plaintext,
-                                  const char *realmstring,
-                                  void *baton,
-                                  apr_pool_t *pool)
+/* This is a helper for plaintext prompt functions. */
+static svn_error_t *
+plaintext_prompt_helper(svn_boolean_t *may_save_plaintext,
+                        const char *realmstring,
+                        const char *prompt_string,
+                        const char *prompt_text,
+                        void *baton,
+                        apr_pool_t *pool)
 {
   const char *answer = NULL;
   svn_boolean_t answered = FALSE;
-  const char *prompt_string = _("Store password unencrypted (yes/no)? ");
   svn_cmdline_prompt_baton2_t *pb = baton;
   const char *config_path = NULL;
 
@@ -396,27 +397,8 @@ svn_cmdline_auth_plaintext_prompt(svn_boolean_t *may_save_plaintext,
     SVN_ERR(svn_config_get_user_config_path(&config_path, pb->config_dir,
                                             SVN_CONFIG_CATEGORY_SERVERS, pool));
 
-  SVN_ERR(svn_cmdline_fprintf(stderr, pool,
-  _("-----------------------------------------------------------------------\n"
-    "ATTENTION!  Your password for authentication realm:\n"
-    "\n"
-    "   %s\n"
-    "\n"
-    "can only be stored to disk unencrypted!  You are advised to configure\n"
-    "your system so that Subversion can store passwords encrypted, if\n"
-    "possible.  See the documentation for details.\n"
-    ), realmstring));
-
-  if (config_path)
-    SVN_ERR(svn_cmdline_fprintf(stderr, pool,
-     _("\n"
-       "You can avoid future appearances of this warning by setting the value\n"
-       "of the 'store-plaintext-passwords' option to either 'yes' or 'no' in\n"
-       "'%s'.\n"
-    ), config_path));
-
-  SVN_ERR(svn_cmdline_fprintf(stderr, pool,
-  "-----------------------------------------------------------------------\n"));
+  SVN_ERR(svn_cmdline_fprintf(stderr, pool, prompt_text, realmstring,
+                              config_path));
 
   do
     {
@@ -447,6 +429,66 @@ svn_cmdline_auth_plaintext_prompt(svn_boolean_t *may_save_plaintext,
     }
   while (! answered);
 
+  return SVN_NO_ERROR;
+}
+
+/* This implements 'svn_auth_plaintext_prompt_func_t'. */
+svn_error_t *
+svn_cmdline_auth_plaintext_prompt(svn_boolean_t *may_save_plaintext,
+                                  const char *realmstring,
+                                  void *baton,
+                                  apr_pool_t *pool)
+{
+  const char *prompt_string = _("Store password unencrypted (yes/no)? ");
+  const char *prompt_text =
+  _("-----------------------------------------------------------------------\n"
+    "ATTENTION!  Your password for authentication realm:\n"
+    "\n"
+    "   %s\n"
+    "\n"
+    "can only be stored to disk unencrypted!  You are advised to configure\n"
+    "your system so that Subversion can store passwords encrypted, if\n"
+    "possible.  See the documentation for details.\n"
+    "\n"
+    "You can avoid future appearances of this warning by setting the value\n"
+    "of the 'store-plaintext-passwords' option to either 'yes' or 'no' in\n"
+    "'%s'.\n"
+    "-----------------------------------------------------------------------\n"
+    );
+
+  SVN_ERR(plaintext_prompt_helper(may_save_plaintext, realmstring,
+                                  prompt_string, prompt_text, baton,
+                                  pool));
+  return SVN_NO_ERROR;
+}
+
+/* This implements 'svn_auth_plaintext_passphrase_prompt_func_t'. */
+svn_error_t *
+svn_cmdline_auth_plaintext_passphrase_prompt(svn_boolean_t *may_save_plaintext,
+                                             const char *realmstring,
+                                             void *baton,
+                                             apr_pool_t *pool)
+{
+  const char *prompt_string = _("Store passphrase unencrypted (yes/no)? ");
+  const char *prompt_text =
+  _("-----------------------------------------------------------------------\n"
+    "ATTENTION!  Your passphrase for client certificate:\n"
+    "\n"
+    "   %s\n"
+    "\n"
+    "can only be stored to disk unencrypted!  You are advised to configure\n"
+    "your system so that Subversion can store passphrase encrypted, if\n"
+    "possible.  See the documentation for details.\n"
+    "\n"
+    "You can avoid future appearances of this warning by setting the value\n"
+    "of the 'store-ssl-client-cert-pp-plaintext' option to either 'yes' or\n"
+    "'no' in '%s'.\n"
+    "-----------------------------------------------------------------------\n"
+    );
+
+  SVN_ERR(plaintext_prompt_helper(may_save_plaintext, realmstring,
+                                  prompt_string, prompt_text, baton,
+                                  pool));
   return SVN_NO_ERROR;
 }
 

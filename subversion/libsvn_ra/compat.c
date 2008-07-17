@@ -74,7 +74,7 @@ prev_log_path(const char **prev_path_p,
   const char *prev_path = NULL;
 
   /* It's impossible to find the predecessor path of a NULL path. */
-  assert(path);
+  SVN_ERR_ASSERT(path);
 
   /* Initialize our return values for the action and copyfrom_rev in
      case we have an unhandled case later on. */
@@ -541,7 +541,7 @@ svn_ra__location_segments_from_log(svn_ra_session_t *session,
     }
 
   /* The API demands a certain ordering of our revision inputs. Enforce it. */
-  assert((peg_revision >= start_rev) && (start_rev >= end_rev));
+  SVN_ERR_ASSERT((peg_revision >= start_rev) && (start_rev >= end_rev));
 
   /* Sanity check: verify that the peg-object exists in repos. */
   SVN_ERR(svn_ra_check_path(session, path, peg_revision, &kind, pool));
