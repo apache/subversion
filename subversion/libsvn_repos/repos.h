@@ -273,6 +273,28 @@ svn_repos__compare_files(svn_boolean_t *changed_p,
                          const char *path2,
                          apr_pool_t *pool);
 
+/* Set *PREV_PATH and *PREV_REV to the path and revision which
+   represent the location at which PATH in FS was located immediately
+   prior to REVISION iff there was a copy operation (to PATH or one of
+   its parent directories) between that previous location and
+   PATH@REVISION, and set *APPEARED_REV to the first revision in which
+   PATH@REVISION appeared at PATH as a result of that copy operation.
+
+   If there was no such copy operation in that portion
+   of PATH's history, set *PREV_PATH to NULL, and set *PREV_REV and
+   *APPEARED_REV to SVN_INVALID_REVNUM.  
+
+   NOTE: Any of PREV_PATH, PREV_REV, and APPEARED_REV may be NULL to
+   if that information is of no interest to the caller.  */
+svn_error_t *
+svn_repos__prev_location(svn_revnum_t *appeared_rev,
+                         const char **prev_path,
+                         svn_revnum_t *prev_rev,
+                         svn_fs_t *fs,
+                         svn_revnum_t revision,
+                         const char *path,
+                         apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
