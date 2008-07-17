@@ -841,6 +841,21 @@ the target of the link gets either `svn-status-filename-face' or
     "Default face for highlighting a line in svn status blame mode."
     :group 'psvn-faces))
 
+(if svn-xemacsp
+    (defface svn-log-partner-highlight-face
+      '((((type tty) (class color)) (:foreground "yellow" :weight light))
+        (((class color) (background light)) (:foreground "gold"))
+        (((class color) (background dark)) (:foreground "gold"))
+        (t (:weight bold)))
+      "Default face for highlighting the partner in svn log mode."
+      :group 'psvn-faces)
+  (defface svn-log-partner-highlight-face
+  '((((class color) (background light))
+     (:background "light goldenrod" :weight bold))
+    (t (:weight bold)))
+    "Default face for highlighting the partner in svn log mode."
+    :group 'psvn-faces))
+
 (defface svn-status-blame-rev-number-face
   '((((class color) (background light)) (:foreground "DarkGoldenrod"))
     (((class color) (background dark)) (:foreground "LightGoldenrod"))
@@ -3681,11 +3696,11 @@ If ARG then prompt for revision to diff against, else compare working copy with 
                                      (not (svn-status-some-files-marked-p))
                                      (if arg :ask "BASE")))
 
-(defun svn-status-diff-show-changeset (rev &optional user-confirmation)
+(defun svn-status-diff-show-changeset (rev &optional user-confirmation rev-against)
   "Show the changeset for a given log entry.
 When called with a prefix argument, ask the user for the revision."
-  (let* ((upper-rev rev)
-         (lower-rev (number-to-string (- (string-to-number upper-rev) 1)))
+  (let* ((upper-rev (if rev-against rev-against rev))
+         (lower-rev (if rev-against rev (number-to-string (- (string-to-number upper-rev) 1))))
          (rev-arg (concat lower-rev ":" upper-rev)))
     (when user-confirmation
       (setq rev-arg (read-string "Revision for changeset: " rev-arg)))
@@ -5226,6 +5241,8 @@ entry for file with defun.
   (define-key svn-log-view-mode-map (kbd "~") 'svn-log-get-specific-revision)
   (define-key svn-log-view-mode-map (kbd "E") 'svn-log-ediff-specific-revision)
   (define-key svn-log-view-mode-map (kbd "=") 'svn-log-view-diff)
+  (define-key svn-log-view-mode-map (kbd "#") 'svn-log-mark-partner-revision)
+  (define-key svn-log-view-mode-map (kbd "x") 'svn-log-exchange-partner-mark-with-point)
   (define-key svn-log-view-mode-map (kbd "TAB") 'svn-log-next-link)
   (define-key svn-log-view-mode-map [backtab] 'svn-log-prev-link)
   (define-key svn-log-view-mode-map (kbd "RET") 'svn-log-find-file-at-point)
@@ -5246,6 +5263,7 @@ entry for file with defun.
                     ["Show Changeset" svn-log-view-diff t]
                     ["Ediff file at point" svn-log-ediff-specific-revision t]
                     ["Find file at point" svn-log-find-file-at-point t]
+                    ["Mark as diff against revision" svn-log-mark-partner-revision t]
                     ["Get older revision for file at point" svn-log-get-specific-revision t]
                     ["Edit log message" svn-log-edit-log-entry t]))
 
@@ -5291,6 +5309,50 @@ Commands:
     (beginning-of-line 2)
     (unless (looking-at "Changed paths:")
       (beginning-of-line 1))))
+
+(defun svn-log-mark-partner-revision ()
+  "Mark the revision at point to be used as diff against revision."
+  (interactive)
+  (let ((start-pos)
+        (point-at-partner-rev))
+    (dolist (ov (overlays-in (point-min) (point-max)))
+      (when (overlay-get ov 'svn-log-partner-revision)
+        (setq point-at-partner-rev (and (>= (point) (overlay-start ov))
+                                        (<= (point) (overlay-end ov))))
+        (delete-overlay ov)))
+    (unless point-at-partner-rev
+      (save-excursion
+        (when (re-search-backward "^r[0-9]+" nil t 1)
+          (setq start-pos (point))
+          (re-search-forward "^---------------")
+          (setq overlay (make-overlay start-pos (line-beginning-position 0)))
+          (overlay-put overlay 'face 'svn-log-partner-highlight-face)
+          (overlay-put overlay 'svn-log-partner-revision t))))))
+
+(defun svn-log-exchange-partner-mark-with-point ()
+  (interactive)
+  (let ((cur-pos (point))
+        (dest-pos))
+    (dolist (ov (overlays-in (point-min) (point-max)))
+      (when (overlay-get ov 'svn-log-partner-revision)
+        (setq dest-pos (overlay-start ov))))
+    (when dest-pos
+      (svn-log-mark-partner-revision)
+      (goto-char dest-pos)
+      (forward-line 3)
+      (svn-log-view-prev)
+      (svn-log-view-next))))
+
+(defun svn-log-revision-for-diff ()
+  (let ((rev))
+    (dolist (ov (overlays-in (point-min) (point-max)))
+      (when (overlay-get ov 'svn-log-partner-revision)
+        (save-excursion
+          (unless (and (>= (point) (overlay-start ov))
+                       (<= (point) (overlay-end ov)))
+            (goto-char (overlay-start ov))
+            (setq rev (svn-log-revision-at-point))))))
+    rev))
 
 (defun svn-log-revision-at-point ()
   (save-excursion
@@ -5350,7 +5412,7 @@ Commands:
   "Show the changeset for a given log entry.
 When called with a prefix argument, ask the user for the revision."
   (interactive "P")
-  (svn-status-diff-show-changeset (svn-log-revision-at-point) arg))
+  (svn-status-diff-show-changeset (svn-log-revision-at-point) arg (svn-log-revision-for-diff)))
 
 (defun svn-log-get-specific-revision ()
   "Get an older revision of the file at point via svn cat."
@@ -5368,8 +5430,13 @@ When called with a prefix argument, ask the user for the revision."
   (interactive "P")
   ;; (message "svn-log-ediff-specific-revision: %s" (svn-log-file-name-at-point t))
   (let* ((cur-buf (current-buffer))
-         (upper-rev (svn-log-revision-at-point))
-         (lower-rev (number-to-string (- (string-to-number upper-rev) 1)))
+         (diff-rev (svn-log-revision-for-diff))
+         (upper-rev (if diff-rev
+                        diff-rev
+                      (svn-log-revision-at-point)))
+         (lower-rev (if diff-rev
+                        (svn-log-revision-at-point)
+                      (number-to-string (- (string-to-number upper-rev) 1))))
          (file-name (svn-log-file-name-at-point t))
          (default-directory (svn-status-base-dir))
          (upper-rev-file-name)
