@@ -134,6 +134,17 @@ Candidate changes for 1.5.1:
      +1: pburba
 
 
+ * r32153
+   Fix issues #3220 (log -g is slow) and #3235 (log -g is wrong).
+   Justification:
+     Slowness is bad -- in some tests, this fix decreased the cost of a log -g
+     run from about 6 minutes to around 12 seconds.  And the old code only
+     gets slower as more instances of mergeinfo appear in the repository.
+     Wrongness is bad -- and I don't even need to explain this.
+   Votes:
+     +1: cmpilato
+
+
 Approved changes:
 =================
 
