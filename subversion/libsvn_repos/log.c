@@ -502,124 +502,325 @@ next_history_rev(apr_array_header_t *histories)
   return next_rev;
 }
 
-/* Return the combined rangelists for everyone's mergeinfo for the
-   PATHS tree at REV in *RANGELIST.  Perform all allocations in POOL. */
+/* Set *DELETED_MERGEINFO_CATALOG and *ADDED_MERGEINFO_CATALOG to
+   catalogs describing how mergeinfo values on paths (which are the
+   keys of those catalogs) were changed in REV. */
+/* ### TODO: This would make a *great*, useful public function,
+   ### svn_repos_fs_mergeinfo_changed()!  -- cmpilato  */
 static svn_error_t *
-get_combined_mergeinfo(svn_mergeinfo_t *combined_mergeinfo,
-                       svn_fs_t *fs,
-                       svn_revnum_t rev,
-                       const apr_array_header_t *paths,
-                       apr_pool_t *pool)
-{
-  svn_fs_root_t *root;
-  apr_hash_index_t *hi;
-  svn_mergeinfo_catalog_t tree_mergeinfo;
-  apr_pool_t *subpool, *iterpool;
-  apr_array_header_t *query_paths;
-  int i;
+fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
+                     svn_mergeinfo_catalog_t *added_mergeinfo_catalog,
+                     svn_fs_t *fs,
+                     svn_revnum_t rev,
+                     apr_pool_t *pool)
 
-  /* Revision 0 doesn't have any mergeinfo. */
-  if (rev == 0)
+{
+  apr_hash_t *changes;
+  svn_fs_root_t *root;
+  apr_pool_t *subpool = NULL, *iterpool;
+  apr_hash_index_t *hi;
+
+  /* Initialize return variables. */
+  *deleted_mergeinfo_catalog = apr_hash_make(pool);
+  *added_mergeinfo_catalog = apr_hash_make(pool);
+
+  /* Revision 0 has no mergeinfo and no mergeinfo changes. */
+  if (rev == 0) 
+    return SVN_NO_ERROR;
+
+  subpool = svn_pool_create(pool);
+
+  /* We're going to use the changed-paths information for REV to
+     narrow down our search. */
+  SVN_ERR(svn_fs_revision_root(&root, fs, rev, subpool));
+  SVN_ERR(svn_fs_paths_changed(&changes, root, subpool));
+
+  /* No changed paths?  We're done. */
+  if (apr_hash_count(changes) == 0)
     {
-      *combined_mergeinfo = apr_hash_make(pool);
+      svn_pool_destroy(subpool);
       return SVN_NO_ERROR;
     }
 
-  subpool = svn_pool_create(pool);
+  /* Loop over changes, looking for anything that might carry an
+     svn:mergeinfo change and is one of our paths of interest, or a
+     child or [grand]parent directory thereof. */
   iterpool = svn_pool_create(subpool);
+  for (hi = apr_hash_first(pool, changes); hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      void *val;
+      svn_fs_path_change_t *change;
+      const char *changed_path, *base_path = NULL;
+      svn_revnum_t base_rev = SVN_INVALID_REVNUM;
+      svn_string_t *prev_mergeinfo_value = NULL, *mergeinfo_value;
 
-  /* Get the mergeinfo for each tree roots in PATHS. */
+      svn_pool_clear(iterpool);
+
+      /* KEY will be the path, VAL the change. */
+      apr_hash_this(hi, &key, NULL, &val);
+      changed_path = key;
+      change = val;
+
+      /* If there was no property change on this item, ignore it. */
+      if (! change->prop_mod)
+        continue;
+
+      switch (change->change_kind)
+        {
+
+        /* ### TODO: Can the add, replace, and modify cases be joined
+           ### together to all use svn_repos__prev_location()?  The
+           ### difference would be the fallback case (path/rev-1 for
+           ### modifies, NULL otherwise).  -- cmpilato  */
+
+        /* If the path was added or replaced, see if it was created via
+           copy.  If so, that will tell us where its previous location
+           was.  If not, there's no previous location to examine.  */
+        case svn_fs_path_change_add:
+        case svn_fs_path_change_replace:
+          {
+            const char *copyfrom_path;
+            svn_revnum_t copyfrom_rev;
+            
+            SVN_ERR(svn_fs_copied_from(&copyfrom_rev, &copyfrom_path,
+                                       root, changed_path, iterpool));
+            if (copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_rev))
+              {
+                base_path = apr_pstrdup(subpool, copyfrom_path);
+                base_rev = copyfrom_rev;
+              }
+            break;
+          }
+
+        /* If the path was merely modified, see if its previous
+           location was affected by a copy which happened in this
+           revision before assuming it holds the same path it did the
+           previous revision. */
+        case svn_fs_path_change_modify:
+          {
+            svn_revnum_t appeared_rev;
+
+            SVN_ERR(svn_repos__prev_location(&appeared_rev, &base_path, 
+                                             &base_rev, fs, rev, 
+                                             changed_path, iterpool));
+
+            /* If this path isn't the result of a copy that occurred
+               in this revision, we can find the previous version of
+               it in REV - 1 at the same path. */
+            if (! (base_path && SVN_IS_VALID_REVNUM(base_rev) 
+                   && (appeared_rev == rev)))
+              {
+                base_path = changed_path;
+                base_rev = rev - 1;
+              }
+            break;
+          }
+
+        /* We don't care about any of the other cases. */
+        case svn_fs_path_change_delete:
+        case svn_fs_path_change_reset:
+        default:
+          continue;
+        }
+
+      /* If there was a base location, fetch its mergeinfo property value. */
+      if (base_path && SVN_IS_VALID_REVNUM(base_rev))
+        {
+          svn_fs_root_t *base_root;
+          SVN_ERR(svn_fs_revision_root(&base_root, fs, base_rev, iterpool));
+          SVN_ERR(svn_fs_node_prop(&prev_mergeinfo_value, base_root, base_path,
+                                   SVN_PROP_MERGEINFO, iterpool));
+        }
+
+      /* Now fetch the current (as of REV) mergeinfo property value. */
+      SVN_ERR(svn_fs_node_prop(&mergeinfo_value, root, changed_path,
+                               SVN_PROP_MERGEINFO, iterpool));
+
+      /* If the old and new mergeinfo differ in any way, store and
+         befor and after mergeinfo values in our return hashes. */
+      if ((prev_mergeinfo_value && (! mergeinfo_value))
+          || ((! prev_mergeinfo_value) && mergeinfo_value)
+          || (prev_mergeinfo_value && mergeinfo_value 
+              && (! svn_string_compare(mergeinfo_value, 
+                                       prev_mergeinfo_value))))
+        {
+          svn_mergeinfo_t prev_mergeinfo = NULL, mergeinfo = NULL;
+          svn_mergeinfo_t deleted, added;
+          const char *hash_path;
+
+          if (mergeinfo_value)
+            SVN_ERR(svn_mergeinfo_parse(&mergeinfo, 
+                                        mergeinfo_value->data, iterpool));
+          if (prev_mergeinfo_value)
+            SVN_ERR(svn_mergeinfo_parse(&prev_mergeinfo, 
+                                        prev_mergeinfo_value->data, iterpool));
+          SVN_ERR(svn_mergeinfo_diff(&deleted, &added, prev_mergeinfo,
+                                     mergeinfo, FALSE, iterpool));
+
+          /* Toss interesting stuff into our return catalogs. */
+          hash_path = apr_pstrdup(pool, changed_path);
+          apr_hash_set(*deleted_mergeinfo_catalog, hash_path,
+                       APR_HASH_KEY_STRING, svn_mergeinfo_dup(deleted, pool));
+          apr_hash_set(*added_mergeinfo_catalog, hash_path,
+                       APR_HASH_KEY_STRING, svn_mergeinfo_dup(added, pool));
+        }
+    }
+  /* ### UNNECESSARY ###: svn_pool_destroy(iterpool); */
+  svn_pool_destroy(subpool);
+  return SVN_NO_ERROR;
+}
+
+
+/* Determine what (if any) mergeinfo for PATHS was modified in
+   revision REV, returning the diffs as a single combined rangelist in
+   *COMBINED_MERGEINFO.  Use POOL for all allocations. */
+static svn_error_t *
+get_combined_mergeinfo_changes(svn_mergeinfo_t *combined_mergeinfo,
+                               svn_fs_t *fs,
+                               const apr_array_header_t *paths,
+                               svn_revnum_t rev,
+                               apr_pool_t *pool)
+{
+  svn_mergeinfo_catalog_t added_mergeinfo_catalog, deleted_mergeinfo_catalog;
+  apr_hash_index_t *hi;
+  svn_fs_root_t *root;
+  apr_pool_t *subpool, *iterpool;
+  int i;
+
+  /* Initialize return value. */
+  *combined_mergeinfo = apr_hash_make(pool);
+
+  /* No paths?  No mergeinfo. */
+  if (! paths->nelts)
+    return SVN_NO_ERROR;
+
+  /* Create a work subpool and get a root for REV. */
+  subpool = svn_pool_create(pool);
   SVN_ERR(svn_fs_revision_root(&root, fs, rev, subpool));
 
-  /* If we're looking at a previous revision, some of the paths
-     might not exist, and svn_fs_get_mergeinfo expects them to! */
-  query_paths = apr_array_make(pool, paths->nelts, sizeof(const char *));
+  /* Fetch the mergeinfo changes for REV. */
+  SVN_ERR(fs_mergeinfo_changed(&deleted_mergeinfo_catalog, 
+                               &added_mergeinfo_catalog,
+                               fs, rev, subpool));
+
+  /* Check our PATHS for any changes to their inherited mergeinfo.
+     (We deal with changes to mergeinfo directly *on* the paths in the
+     following loop.)  */
+  iterpool = svn_pool_create(subpool);
   for (i = 0; i < paths->nelts; i++)
     {
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
-      svn_node_kind_t kind;
+      const char *prev_path;
+      svn_revnum_t appeared_rev, prev_rev;
+      svn_fs_root_t *prev_root;
+      svn_mergeinfo_catalog_t catalog;
+      svn_mergeinfo_t prev_mergeinfo, mergeinfo, deleted, added;
+      apr_array_header_t *query_paths;
+      svn_error_t *err;
 
       svn_pool_clear(iterpool);
-      SVN_ERR(svn_fs_check_path(&kind, root, path, iterpool));
-      if (kind == svn_node_none)
+
+      /* If this path is represented in the changed-mergeinfo hashes,
+         we'll deal with it in the loop below. */
+      if (apr_hash_get(deleted_mergeinfo_catalog, path, APR_HASH_KEY_STRING))
+        continue;
+
+      /* Figure out what path/rev to compare against.  Ignore
+         not-found errors returned by the filesystem.  */
+      err = svn_repos__prev_location(&appeared_rev, &prev_path, &prev_rev,
+                                     fs, rev, path, iterpool);
+      if (err && (err->apr_err == SVN_ERR_FS_NOT_FOUND))
         {
-          svn_revnum_t copy_rev;
-          const char *copy_path;
-          svn_fs_root_t *rev_root;
-
-          /* Check to see if the node was copied, and if so, use the previous
-             path to check for mergeinfo. */
-          SVN_ERR(svn_fs_revision_root(&rev_root, fs, rev + 1, iterpool));
-          SVN_ERR(svn_fs_copied_from(&copy_rev, &copy_path, rev_root, path,
-                                     subpool));
-          if (copy_path != NULL)
-            APR_ARRAY_PUSH(query_paths, const char *) = copy_path;
+          svn_error_clear(err);
+          err = SVN_NO_ERROR;
+          continue;
         }
-      else
-        APR_ARRAY_PUSH(query_paths, const char *) = path;
+      SVN_ERR(err);
+
+      /* If this path isn't the result of a copy that occurred in this
+         revision, we can find the previous version of it in REV - 1
+         at the same path. */
+      if (! (prev_path && SVN_IS_VALID_REVNUM(prev_rev) 
+             && (appeared_rev == rev)))
+        {
+          prev_path = path;
+          prev_rev = rev - 1;
+        }
+
+      /* Fetch the previous mergeinfo (including inherited stuff) for
+         this path.  Ignore not-found errors returned by the
+         filesystem.  */
+      SVN_ERR(svn_fs_revision_root(&prev_root, fs, prev_rev, iterpool));
+      query_paths = apr_array_make(iterpool, 1, sizeof(const char *));
+      APR_ARRAY_PUSH(query_paths, const char *) = prev_path;
+      err = svn_fs_get_mergeinfo(&catalog, prev_root, query_paths,
+                                 svn_mergeinfo_inherited, FALSE, iterpool);    
+      if (err && (err->apr_err == SVN_ERR_FS_NOT_FOUND))
+        {
+          svn_error_clear(err);
+          err = SVN_NO_ERROR;
+          continue;
+        }
+      SVN_ERR(err);
+      prev_mergeinfo = apr_hash_get(catalog, prev_path, APR_HASH_KEY_STRING);
+
+      /* Fetch the current mergeinfo (as of REV, and including
+         inherited stuff) for this path. */
+      APR_ARRAY_IDX(query_paths, 0, const char *) = path;
+      SVN_ERR(svn_fs_get_mergeinfo(&catalog, root, query_paths,
+                                   svn_mergeinfo_inherited, FALSE, iterpool));
+      mergeinfo = apr_hash_get(catalog, path, APR_HASH_KEY_STRING);
+
+      /* Compare, constrast, and combine the results. */
+      SVN_ERR(svn_mergeinfo_diff(&deleted, &added, prev_mergeinfo,
+                                 mergeinfo, FALSE, iterpool));
+      mergeinfo = deleted;
+      SVN_ERR(svn_mergeinfo_merge(mergeinfo, added, iterpool));
+      SVN_ERR(svn_mergeinfo_merge(*combined_mergeinfo, 
+                                  svn_mergeinfo_dup(mergeinfo, pool),
+                                  pool));
     }
+  svn_pool_destroy(iterpool);
 
-  /* We do not need to call svn_repos_fs_get_mergeinfo() (which
-     performs authz) because we are already doing authz on the changed
-     paths and the log messages when we go to fill the log entry.  See
-     fill_log_entry() for details. */
-  SVN_ERR(svn_fs_get_mergeinfo(&tree_mergeinfo, root, query_paths,
-                               svn_mergeinfo_inherited, TRUE, subpool));
-
-  *combined_mergeinfo = apr_hash_make(subpool);
-
-  /* Merge all the mergeinfos into one mergeinfo */
-  for (hi = apr_hash_first(subpool, tree_mergeinfo);
+  /* Merge all the mergeinfos which are, or are children of, one or
+     our paths of interest into one giant delta mergeinfo.  */
+  for (hi = apr_hash_first(NULL, added_mergeinfo_catalog);
        hi; hi = apr_hash_next(hi))
     {
-      svn_mergeinfo_t mergeinfo;
+      const void *key;
+      apr_ssize_t klen;
+      void *val;
+      const char *changed_path;
+      svn_mergeinfo_t added_mergeinfo, deleted_mergeinfo;
 
-      apr_hash_this(hi, NULL, NULL, (void *)&mergeinfo);
-      SVN_ERR(svn_mergeinfo_merge(*combined_mergeinfo, mergeinfo, subpool));
+      /* The path is the key, the mergeinfo delta is the value. */
+      apr_hash_this(hi, &key, &klen, &val);
+      changed_path = key;
+      added_mergeinfo = val;
+
+      for (i = 0; i < paths->nelts; i++)
+        {
+          const char *path = APR_ARRAY_IDX(paths, i, const char *);
+          if (! svn_path_is_ancestor(path, changed_path))
+            continue;
+          deleted_mergeinfo = 
+            apr_hash_get(deleted_mergeinfo_catalog, key, klen);
+          SVN_ERR(svn_mergeinfo_merge(*combined_mergeinfo,
+                                      svn_mergeinfo_dup(deleted_mergeinfo,
+                                                        pool),
+                                      pool));
+          SVN_ERR(svn_mergeinfo_merge(*combined_mergeinfo,
+                                      svn_mergeinfo_dup(added_mergeinfo, 
+                                                        pool),
+                                      pool));
+          break;
+        }
     }
-
-  *combined_mergeinfo = svn_mergeinfo_dup(*combined_mergeinfo, pool);
-
-  svn_pool_destroy(subpool);
-
+  svn_pool_clear(subpool);
   return SVN_NO_ERROR;
 }
 
-/* Determine all the revisions which were merged into PATHS in REV.  Return
-   them as a new MERGEINFO.  */
-static svn_error_t *
-get_merged_rev_mergeinfo(svn_mergeinfo_t *mergeinfo,
-                         svn_fs_t *fs,
-                         const apr_array_header_t *paths,
-                         svn_revnum_t rev,
-                         apr_pool_t *pool)
-{
-  apr_hash_t *curr_mergeinfo, *prev_mergeinfo;
-  apr_hash_t *deleted, *changed;
-  apr_pool_t *subpool;
-
-  /* Revision 0 is always empty. */
-  if (rev == 0)
-    {
-      *mergeinfo = apr_hash_make(pool);
-      return SVN_NO_ERROR;
-    }
-
-  subpool = svn_pool_create(pool);
-  SVN_ERR(get_combined_mergeinfo(&curr_mergeinfo, fs, rev,
-                                 paths, subpool));
-  SVN_ERR(get_combined_mergeinfo(&prev_mergeinfo, fs, rev - 1,
-                                 paths, subpool));
-  SVN_ERR(svn_mergeinfo_diff(&deleted, &changed, prev_mergeinfo,
-                             curr_mergeinfo, FALSE,
-                             subpool));
-  SVN_ERR(svn_mergeinfo_merge(changed, deleted, subpool));
-
-  *mergeinfo = svn_mergeinfo_dup(changed, pool);
-  svn_pool_destroy(subpool);
-
-  return SVN_NO_ERROR;
-}
 
 /* Fill LOG_ENTRY with history information in FS at REV. */
 static svn_error_t *
@@ -1234,8 +1435,8 @@ do_logs(svn_fs_t *fs,
                                                          struct path_info *);
                   APR_ARRAY_PUSH(cur_paths, const char *) = info->path->data;
                 }
-              SVN_ERR(get_merged_rev_mergeinfo(&mergeinfo, fs, cur_paths,
-                                               current, iterpool));
+              SVN_ERR(get_combined_mergeinfo_changes(&mergeinfo, fs, cur_paths,
+                                                     current, iterpool));
               has_children = (apr_hash_count(mergeinfo) > 0);
             }
 
