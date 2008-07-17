@@ -33,6 +33,22 @@
 
 /*** Hook drivers. ***/
 
+/* Helper function for run_hook_cmd().  Wait for a hook to finish
+   executing and return either SVN_NO_ERROR if the hook script completed
+   without error, or an error describing the reason for failure.
+
+   NAME and CMD are the name and path of the hook program, CMD_PROC
+   is a pointer to the structure representing the running process,
+   and READ_ERRHANDLE is an open handle to the hook's stderr.
+
+   Hooks are considered to have failed if we are unable to wait for the
+   process, if we are unable to read from the hook's stderr, if the
+   process has failed to exit cleanly (due to a coredump, for example),
+   or if the process returned a non-zero return code.
+
+   Any error output returned by the hook's stderr will be included in an
+   error message, though the presence of output on stderr is not itself
+   a reason to fail a hook. */
 static svn_error_t *
 check_hook_result(const char *name, const char *cmd, apr_proc_t *cmd_proc,
                   apr_file_t *read_errhandle, apr_pool_t *pool)
