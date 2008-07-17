@@ -140,6 +140,11 @@ Candidate changes for 1.5.1:
      run from about 6 minutes to around 12 seconds.  And the old code only
      gets slower as more instances of mergeinfo appear in the repository.
      Wrongness is bad -- and I don't even need to explain this.
+   Notes:
+     When merging r32153, use the "theirs" version of all conflicts which
+     appear to be in the new functions fs_mergeinfo_changed() and 
+     get_combined_mergeinfo_changes().  "--accept theirs-conflict" did the
+     right thing for me (cmpilato) as of r32155.
    Votes:
      +1: cmpilato
 
