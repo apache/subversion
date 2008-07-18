@@ -114,7 +114,7 @@ Candidate changes for 1.5.1:
  * r31749
    Fix compiler warning, regression since r31799(backport of r31695) in 1.5.x.
    Votes:
-     +1: kameshj
+     +1: kameshj, stsp
      +1 (non-binding): stylesen
 
 
