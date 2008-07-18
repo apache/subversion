@@ -1207,6 +1207,7 @@ proplist_walk_cb(const char *path,
 }
 
 
+/* Note: this implementation is very similar to svn_client_propget3(). */
 svn_error_t *
 svn_client_proplist3(const char *path_or_url,
                      const svn_opt_revision_t *peg_revision,
@@ -1345,7 +1346,6 @@ proplist_receiver_cb(void *baton,
   return SVN_NO_ERROR;
 }
 
-/* Note: this implementation is very similar to svn_client_propget. */
 svn_error_t *
 svn_client_proplist2(apr_array_header_t **props,
                      const char *target,
