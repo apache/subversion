@@ -101,6 +101,7 @@ Candidate changes for 1.5.1:
      +1: pburba (32029)
      +0: pburba (32017)
      +0: blair
+     +0: julianfoad (reviewed, not tested)
 
 
  * r32056
@@ -109,13 +110,6 @@ Candidate changes for 1.5.1:
    at trunk@31900 via merge_tests failures.
    Votes:
      +1: kameshj
-
-
- * r31749
-   Fix compiler warning, regression since r31799(backport of r31695) in 1.5.x.
-   Votes:
-     +1: kameshj, stsp
-     +1 (non-binding): stylesen
 
 
  * r31658, r31659
@@ -175,3 +169,10 @@ Approved changes:
    Fix 'svn log --xml' against pre-1.2 servers.
    Votes:
      +1: hwright, arfrever, julianfoad
+
+
+ * r31749
+   Fix compiler warning, regression since r31799(backport of r31695) in 1.5.x.
+   Votes:
+     +1: kameshj, stsp, julianfoad
+     +1 (non-binding): stylesen
