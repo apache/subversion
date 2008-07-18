@@ -89,6 +89,7 @@ Candidate changes for 1.5.1:
    Votes:
      +1: pburba, kameshj
      +0: markphip (ran all tests, including all bindings and serf)
+     +0: julianfoad (confirmed it fixes my real-world merge problems)
 
 
  * r32017, r32029
