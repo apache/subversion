@@ -78,7 +78,7 @@ class SubversionClientTestCase(unittest.TestCase):
     # nice if we could get log_msg_func3 function
     # to invoke the baton function, but, in order to do that,
     # we'd need to supply a value for the first parameter.
-    self.client_ctx.log_msg_func3(None, self.client_ctx.log_msg_baton2)
+    self.client_ctx.log_msg_func3(None, self.client_ctx.log_msg_baton3)
 
   def info_receiver(self, path, info, pool):
     """Squirrel away the output from 'svn info' so that the unit tests
