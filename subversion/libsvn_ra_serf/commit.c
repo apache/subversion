@@ -1588,7 +1588,7 @@ add_file(const char *path,
     };
 
   if (! ((dir->added && !dir->copy_path) ||
-         deleted_parent && deleted_parent[0] != '\0'))
+         (deleted_parent && deleted_parent[0] != '\0')))
     {
       svn_ra_serf__simple_request_context_t *head_ctx;
       svn_ra_serf__handler_t *handler;

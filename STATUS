@@ -181,10 +181,3 @@ Approved changes:
    Votes:
      +1: danielsh, dlr, arfrever
      +1 (non-binding): stylesen
-
-
- * r31749
-   Fix compiler warning, regression since r31799(backport of r31695) in 1.5.x.
-   Votes:
-     +1: kameshj, stsp, julianfoad
-     +1 (non-binding): stylesen
