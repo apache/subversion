@@ -126,7 +126,7 @@ Candidate changes for 1.5.1:
      +1: pburba
 
 
- * r32153, r32160
+ * r32153, r32160, r32185
    Fix issues #3220 (log -g is slow) and #3235 (log -g is wrong).
    Justification:
      Slowness is bad -- in some tests, this fix decreased the cost of a log -g
@@ -139,7 +139,7 @@ Candidate changes for 1.5.1:
      get_combined_mergeinfo_changes().  "--accept theirs-conflict" did the
      right thing for me (cmpilato) as of r32155.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, hwright
 
 
  * r32164, r32169
@@ -157,7 +157,7 @@ Candidate changes for 1.5.1:
    Justification:
      Regression.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, hwright
 
 
  * r32181
@@ -166,7 +166,7 @@ Candidate changes for 1.5.1:
    Justification:
      Regression
    Votes:
-     +1: cmpilato
+     +1: cmpilato, hwright
    
 
 Approved changes:
