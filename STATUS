@@ -164,9 +164,19 @@ Candidate changes for 1.5.1:
    Finish issue #3248: svnlook diff ignores --diff-copy-from for property
    differences (1.5.0 regression)
    Justification:
-     Regression
+     Regression.
    Votes:
      +1: cmpilato, hwright
+
+
+ * r32187
+   Finish issue #3240: commits to subtrees added by merge corrupt working
+   copy and repos.
+   Justification:
+     In the best case, this causes commits to fail.  In the worst one,
+     it can cause commits to modify the wrong files!
+   Votes:
+     +1: cmpilato
    
 
 Approved changes:
