@@ -150,7 +150,7 @@ Candidate changes for 1.5.1:
      +1: cmpilato
 
 
- * r32164
+ * r32164, r32169
    Fix a segfault in the python tests.
    Justification:
      Segfaulting tests are a Bad Thing.  This appears to be a regression
