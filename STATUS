@@ -151,6 +151,15 @@ Candidate changes for 1.5.1:
      +1: hwright
 
 
+ * r32179
+   Finish issue #3249: 'svnlook diff' fails to show "Binary files differ"
+   indication.  This was a regression introduced in 1.5.0.
+   Justification:
+     Regression.
+   Votes:
+     +1: cmpilato
+
+
 Approved changes:
 =================
 
