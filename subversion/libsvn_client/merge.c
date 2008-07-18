@@ -825,12 +825,12 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
     {
       const svn_prop_t *prop = &APR_ARRAY_IDX(prop_changes, i, svn_prop_t);
 
-      /* If we're merging from a foreign repository, we don't want any
-         DAV wcprops related to this file (because they'll point to
-         the wrong repository).  So we'll strip them.  (Is this a
-         layering violation?)  */
-      if ((! merge_b->same_repos)
-          && (svn_property_kind(NULL, prop->name) == svn_prop_wc_kind))
+      /* We don't want any DAV wcprops related to this file because
+         they'll point to the wrong repository (in the
+         merge-from-foreign-repository scenario) or wrong place in the
+         right repository (in the same-repos scenario).  So we'll
+         strip them.  (Is this a layering violation?)  */
+      if (svn_property_kind(NULL, prop->name) == svn_prop_wc_kind)
         continue;
 
       apr_hash_set(new_props, prop->name, APR_HASH_KEY_STRING, prop->value);
