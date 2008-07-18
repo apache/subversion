@@ -633,8 +633,8 @@ svn_repos_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
       SVN_ERR(svn_fs_node_prop(&mergeinfo_value, root, changed_path,
                                SVN_PROP_MERGEINFO, iterpool));
 
-      /* If the old and new mergeinfo differ in any way, store and
-         befor and after mergeinfo values in our return hashes. */
+      /* If the old and new mergeinfo differ in any way, store the
+         before and after mergeinfo values in our return hashes. */
       if ((prev_mergeinfo_value && (! mergeinfo_value))
           || ((! prev_mergeinfo_value) && mergeinfo_value)
           || (prev_mergeinfo_value && mergeinfo_value 
