@@ -48,12 +48,6 @@ Candidate changes for 1.5.1:
      +0: markphip (ran all tests, including all bindings and serf)
 
 
- * r31875
-   Fix 'svn log --xml' against pre-1.2 servers.
-   Votes:
-     +1: hwright, arfrever
-
-
  * r31786
    Fix the Ruby bindings test failures: Normalize compared value.
    Votes:
@@ -172,3 +166,9 @@ Approved changes:
    Votes:
      +1: danielsh, dlr, arfrever
      +1 (non-binding): stylesen
+
+
+ * r31875
+   Fix 'svn log --xml' against pre-1.2 servers.
+   Votes:
+     +1: hwright, arfrever, julianfoad
