@@ -183,12 +183,6 @@ Approved changes:
      +1 (non-binding): stylesen
 
 
- * r31875
-   Fix 'svn log --xml' against pre-1.2 servers.
-   Votes:
-     +1: hwright, arfrever, julianfoad
-
-
  * r31749
    Fix compiler warning, regression since r31799(backport of r31695) in 1.5.x.
    Votes:
