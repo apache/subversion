@@ -961,7 +961,10 @@ print_diff_tree(svn_fs_root_t *root,
       svn_stringbuf_appendcstr(header, "\n");
 
       if (binary)
-        svn_stringbuf_appendcstr(header, _("(Binary files differ)\n\n"));
+        {
+          svn_stringbuf_appendcstr(header, _("(Binary files differ)\n\n"));
+          SVN_ERR(svn_cmdline_printf(pool, header->data));
+        }          
       else
         {
           svn_diff_t *diff;
