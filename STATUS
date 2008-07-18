@@ -79,7 +79,10 @@ Candidate changes for 1.5.1:
      to some merge.c helper functions, needed to avoid conflicts.
 
      There is a backport branch with all these changes applied at
-     http://svn.collab.net/repos/svn/branches/1.5.x-issue3067
+     http://svn.collab.net/repos/svn/branches/1.5.x-issue3067.  Note that
+     you'll want to use a trunk (or 1.5.x-issue3067) build to merge
+     1.5.x-issue3067 to 1.5.x or you'll encounter some problems, see
+     http://subversion.tigris.org/servlets/ReadMsg?listName=dev&msgNo=141164.
    Votes:
      +1: pburba, kameshj
      +0: markphip (ran all tests, including all bindings and serf)
