@@ -160,6 +160,15 @@ Candidate changes for 1.5.1:
      +1: cmpilato
 
 
+ * r32181
+   Finish issue #3248: svnlook diff ignores --diff-copy-from for property
+   differences (1.5.0 regression)
+   Justification:
+     Regression
+   Votes:
+     +1: cmpilato
+   
+
 Approved changes:
 =================
 
