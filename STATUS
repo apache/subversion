@@ -176,7 +176,7 @@ Candidate changes for 1.5.1:
      In the best case, this causes commits to fail.  In the worst one,
      it can cause commits to modify the wrong files!
    Votes:
-     +1: cmpilato
+     +1: cmpilato, vgeorgescu
    
 
 Approved changes:
