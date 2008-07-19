@@ -1450,7 +1450,6 @@ def depthy_update_above_dir_to_be_deleted(sbox):
 #----------------------------------------------------------------------
 
 # Tests for deselection interface (a.k.a folding subtrees).
-# XFail until issue #2843 is resolved.
 #----------------------------------------------------------------------
 def depth_folding_clean_trees_1(sbox):
   "gradually fold wc from depth=infinity to empty"
@@ -2027,8 +2026,8 @@ def depth_empty_update_on_file(sbox):
                                                [], 'info', iota_path)
 
 
-def excluded_path_operation(sbox):
-  """ensure that svn handle svn_depth_exclude properly"""
+def excluded_path_update_operation(sbox):
+  """make sure update handle svn_depth_exclude properly"""
 
   ign_a, ign_b, ign_c, wc_dir = set_up_depthy_working_copies(sbox,
                                                              infinity=True)
@@ -2078,19 +2077,6 @@ def excluded_path_operation(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'up', '--set-depth', 'exclude', E_path)
 
-  # copy A/B to A/L
-  expected_output = ['A         '+L_path+'\n']
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
-                                     'cp', B_path, L_path)
-
-  # revert A/L
-  expected_output = ["Reverted '"+L_path+"'\n"]
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
-                                     'revert', '--depth=infinity', L_path)
-
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'rm', '--force', L_path)
-
   # Exclude path B totally, in which contains an excluded subtree.
   expected_output = svntest.wc.State(wc_dir, {
     'A/B'            : Item(status='D '),
@@ -2123,6 +2109,90 @@ def excluded_path_operation(sbox):
                                         None, None,
                                         None, None, None, None,
                                         B_path)
+
+def excluded_path_misc_operation(sbox):
+  """make sure other subcommands handle exclude"""
+
+  ign_a, ign_b, ign_c, wc_dir = set_up_depthy_working_copies(sbox,
+                                                             infinity=True)
+  A_path = os.path.join(wc_dir, 'A')
+  B_path = os.path.join(A_path, 'B')
+  L_path = os.path.join(A_path, 'L')
+  E_path = os.path.join(B_path, 'E')
+  LE_path = os.path.join(L_path, 'E')
+
+  # Simply exclude a subtree
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E'            : Item(status='D '),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.remove('A/B/E/alpha', 'A/B/E/beta', 'A/B/E');
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/B/E/alpha', 'A/B/E/beta', 'A/B/E');
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None,
+                                        None, None, None, None,
+                                        '--set-depth', 'exclude', E_path)
+
+  # copy A/B to A/L, excluded entry should be copied too
+  expected_output = ['A         '+L_path+'\n']
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'cp', B_path, L_path)
+  # verify_depth exclude? not implemented yet
+  #verify_depth(None, "empty", LE_path)
+
+  # revert A/L, with an excluded item in the tree
+  expected_output = ["Reverted '"+L_path+"'\n"]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'revert', '--depth=infinity', L_path)
+
+  # Get rid of A/L.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'rm', '--force', L_path)
+
+  # copy A/B to A/L again, excluded entry should be copied too
+  expected_output = ['A         '+L_path+'\n']
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'cp', B_path, L_path)
+
+  # commit this copy, with an excluded item.
+  expected_output = svntest.wc.State(wc_dir, { 'A/L' : Item(verb='Adding'), })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.remove('A/B/E/alpha', 'A/B/E/beta', 'A/B/E')
+  expected_status.add({
+    'A/L'        : Item(status='  ', wc_rev=2),
+    'A/L/lambda' : Item(status='  ', wc_rev=2),
+    'A/L/F'      : Item(status='  ', wc_rev=2),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir, 
+                                        expected_output,
+                                        expected_status,
+					None,
+					wc_dir)
+
+  # Relocate wc, with excluded items in it.
+  repo_dir = sbox.repo_dir
+  repo_url = sbox.repo_url
+  other_repo_dir, other_repo_url = sbox.add_repo_path('other')
+  svntest.main.copy_repos(repo_dir, other_repo_dir, 2, 0)
+  svntest.main.safe_rmtree(repo_dir, 1)
+  svntest.actions.run_and_verify_svn(None, None, [], 'switch', '--relocate',
+                                     repo_url, other_repo_url, wc_dir)
+
+  # remove the new directory A/L, with an excluded item.
+  # If successed, no error will be thrown
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'rm', L_path)
+
+  # revert the delete
+  # If successed, no error will be thrown
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'revert', '--depth=infinity', L_path)
+
 
 
 #----------------------------------------------------------------------
@@ -2159,7 +2229,8 @@ test_list = [ None,
               pull_in_tree_with_depth_option,
               fold_tree_with_unversioned_modified_items,
               depth_empty_update_on_file,
-              XFail(excluded_path_operation),
+              excluded_path_update_operation,
+              excluded_path_misc_operation,
             ]
 
 if __name__ == "__main__":
