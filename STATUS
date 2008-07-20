@@ -18,14 +18,21 @@ Candidate changes for 1.5.1:
      Does r32056, nominated below, fix these test failures?
    Votes:
      +1: lgo, cmpilato
+     +0: arfrever (serf tests fail)
      -0: markphip (serf tests fail on OSX), epg (failure confirmed)
 
 
- * r31425, r31722, r32071
+ * r31425, r31722
    Support the 'http-library' option when Subversion was configured
    with the '--enable-runtime-module-search' option.
    Notes:
-     r32071 isn't required, but minimizes the difference against trunk.
+     Trivial merge conflict in configure.ac.
+   Votes:
+     +1: arfrever
+
+
+ * r31464
+   ra_serf: Fix authz tests 1 and 12.
    Votes:
      +1: arfrever
 
@@ -151,24 +158,6 @@ Candidate changes for 1.5.1:
      +1: hwright
 
 
- * r32179
-   Finish issue #3249: 'svnlook diff' fails to show "Binary files differ"
-   indication.  This was a regression introduced in 1.5.0.
-   Justification:
-     Regression.
-   Votes:
-     +1: cmpilato, hwright
-
-
- * r32181
-   Finish issue #3248: svnlook diff ignores --diff-copy-from for property
-   differences (1.5.0 regression)
-   Justification:
-     Regression.
-   Votes:
-     +1: cmpilato, hwright
-
-
  * r32187
    Finish issue #3240: commits to subtrees added by merge corrupt working
    copy and repos.
@@ -191,3 +180,21 @@ Approved changes:
    Votes:
      +1: danielsh, dlr, arfrever
      +1 (non-binding): stylesen
+
+
+ * r32179
+   Finish issue #3249: 'svnlook diff' fails to show "Binary files differ"
+   indication.  This was a regression introduced in 1.5.0.
+   Justification:
+     Regression.
+   Votes:
+     +1: cmpilato, hwright, arfrever
+
+
+ * r32181
+   Finish issue #3248: svnlook diff ignores --diff-copy-from for property
+   differences (1.5.0 regression)
+   Justification:
+     Regression.
+   Votes:
+     +1: cmpilato, hwright, arfrever
