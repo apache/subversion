@@ -248,8 +248,8 @@ svn_repos__hooks_post_lock(svn_repos_t *repos,
    allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.
 
    PATH is the path being unlocked, USERNAME is the person doing it,
-   TOKEN is the lock token to be unlocked, and BREAK-LOCK is a flag if
-   the user is breaking the lock.  */
+   TOKEN is the lock token to be unlocked which should not be NULL,
+   and BREAK-LOCK is a flag if the user is breaking the lock.  */
 svn_error_t *
 svn_repos__hooks_pre_unlock(svn_repos_t *repos,
                             const char *path,
