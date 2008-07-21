@@ -220,11 +220,15 @@ svn_repos__hooks_post_revprop_change(svn_repos_t *repos,
 /* Run the pre-lock hook for REPOS.  Use POOL for any temporary
    allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.
 
-   PATH is the path being locked, USERNAME is the person doing it.  */
+   PATH is the path being locked, USERNAME is the person doing it,
+   COMMENT is the comment of the lock, and STEAL-LOCK is a flag if the
+   user is stealing the lock.  */
 svn_error_t *
 svn_repos__hooks_pre_lock(svn_repos_t *repos,
                           const char *path,
                           const char *username,
+                          const char *comment,
+                          svn_boolean_t steal_lock,
                           apr_pool_t *pool);
 
 /* Run the post-lock hook for REPOS.  Use POOL for any temporary
@@ -241,11 +245,15 @@ svn_repos__hooks_post_lock(svn_repos_t *repos,
 /* Run the pre-unlock hook for REPOS.  Use POOL for any temporary
    allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.
 
-   PATH is the path being unlocked, USERNAME is the person doing it.  */
+   PATH is the path being unlocked, USERNAME is the person doing it,
+   TOKEN is the lock token to be unlocked, and BREAK-LOCK is a flag if
+   the user is breaking the lock.  */
 svn_error_t *
 svn_repos__hooks_pre_unlock(svn_repos_t *repos,
                             const char *path,
                             const char *username,
+                            const char *token,
+                            svn_boolean_t break_lock,
                             apr_pool_t *pool);
 
 /* Run the post-unlock hook for REPOS.  Use POOL for any temporary

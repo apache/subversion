@@ -537,6 +537,8 @@ PREWRITTEN_HOOKS_TEXT
 "#   [1] REPOS-PATH   (the path to this repository)"                         NL
 "#   [2] PATH         (the path in the repository about to be locked)"       NL
 "#   [3] USER         (the user creating the lock)"                          NL
+"#   [4] COMMENT      (the comment of the lock)"                             NL
+"#   [5] STEAL-LOCK   (1 if the user is trying to steal the lock, else 0)"   NL
 "#"                                                                          NL
 "# The default working directory for the invocation is undefined, so"        NL
 "# the program should set one explicitly if it cares."                       NL
@@ -618,6 +620,8 @@ PREWRITTEN_HOOKS_TEXT
 "#   [1] REPOS-PATH   (the path to this repository)"                         NL
 "#   [2] PATH         (the path in the repository about to be unlocked)"     NL
 "#   [3] USER         (the user destroying the lock)"                        NL
+"#   [4] TOKEN        (the lock token to be destoryed)"                      NL
+"#   [5] BREAK-UNLOCK (1 if the user is breaking the lock, else 0)"          NL
 "#"                                                                          NL
 "# The default working directory for the invocation is undefined, so"        NL
 "# the program should set one explicitly if it cares."                       NL
