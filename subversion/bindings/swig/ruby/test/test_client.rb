@@ -1548,6 +1548,7 @@ class SvnClientTest < Test::Unit::TestCase
     src = "source\n"
     file = "sample.txt"
     path = File.join(@wc_path, file)
+    absolute_path = File.expand_path(path)
 
     File.open(path, "w") {|f| f.print(src)}
 
@@ -1561,8 +1562,8 @@ class SvnClientTest < Test::Unit::TestCase
     end
     ctx.lock(path)
 
-    assert_equal([file], infos.collect{|path, notify| path})
-    file_notify = infos.assoc(file)[1]
+    assert_equal([absolute_path], infos.collect{|_path, notify| _path})
+    file_notify = infos.assoc(absolute_path)[1]
     assert(file_notify.locked?)
   end
 
@@ -1571,6 +1572,7 @@ class SvnClientTest < Test::Unit::TestCase
     src = "source\n"
     file = "sample.txt"
     path = File.join(@wc_path, file)
+    absolute_path = File.expand_path(path)
 
     File.open(path, "w") {|f| f.print(src)}
 
@@ -1585,8 +1587,9 @@ class SvnClientTest < Test::Unit::TestCase
       infos << [notify.path, notify]
     end
     ctx.unlock(path)
-    assert_equal([file], infos.collect{|path, notify| path})
-    file_notify = infos.assoc(file)[1]
+
+    assert_equal([absolute_path], infos.collect{|_path, notify| _path})
+    file_notify = infos.assoc(absolute_path)[1]
     assert(file_notify.unlocked?)
   end
 

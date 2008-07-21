@@ -290,6 +290,10 @@ client_ssl_decrypt_cert(svn_ra_neon__session_t *ras,
 
           if (ne_ssl_clicert_decrypt(clicert, pw_creds->password) == 0)
             {
+              error = svn_auth_save_credentials(state, pool);
+              if (error)
+                svn_error_clear(error);
+
               /* Success */
               ok = TRUE;
               break;
@@ -947,8 +951,9 @@ parse_url(ne_uri *uri, const char *url)
       || uri->host == NULL || uri->path == NULL || uri->scheme == NULL)
     {
       ne_uri_free(uri);
-      return svn_error_create(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                              _("Malformed URL for repository"));
+      return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                               _("Malformed URL '%s': "
+                                 "scheme or host or path is missing"), url);
     }
   if (uri->port == 0)
     uri->port = ne_uri_defaultport(uri->scheme);

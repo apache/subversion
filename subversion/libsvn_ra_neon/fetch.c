@@ -925,7 +925,7 @@ svn_error_t *svn_ra_neon__get_dir(svn_ra_session_t *session,
               which_props[num_props--].name = "creator-displayname";
             }
 
-          assert(num_props == -1);
+          SVN_ERR_ASSERT(num_props == -1);
         }
       else
         {
@@ -2115,10 +2115,9 @@ end_element(void *userdata, int state,
           }
         else
           {
-            SVN_ERR(svn_error_createf(SVN_ERR_XML_UNKNOWN_ENCODING, NULL,
-                                      _("Unknown XML encoding: '%s'"),
-                                      rb->encoding->data));
-            abort(); /* Not reached. */
+            return svn_error_createf(SVN_ERR_XML_UNKNOWN_ENCODING, NULL,
+                                     _("Unknown XML encoding: '%s'"),
+                                     rb->encoding->data);
           }
 
         /* Set the prop. */

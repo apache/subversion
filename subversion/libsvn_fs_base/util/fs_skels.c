@@ -1208,7 +1208,7 @@ svn_fs_base__unparse_representation_skel(skel_t **skel_p,
       svn_fs_base__prepend(header_skel, skel);
     }
   else /* unknown kind */
-    abort();
+    SVN_ERR_MALFUNCTION();
 
   /* Validate and return the skel. */
   if (! is_valid_representation_skel(skel))
@@ -1287,7 +1287,7 @@ svn_fs_base__unparse_node_revision_skel(skel_t **skel_p,
   else if (noderev->kind == svn_node_dir)
     svn_fs_base__prepend(svn_fs_base__str_atom("dir", pool), header_skel);
   else
-    abort();
+    SVN_ERR_MALFUNCTION();
 
   /* ### do we really need to check *node->FOO_key ? if a key doesn't
      ### exist, then the field should be NULL ...  */

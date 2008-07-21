@@ -1417,8 +1417,9 @@ svn_repos_get_logs(svn_repos_t *repos,
 /* Retrieving mergeinfo. */
 
 /**
- * Fetch the mergeinfo for @a paths at @a rev, and save it to @a
- * *catalog.  It will never be @c NULL but may be empty.
+ * Fetch the mergeinfo for @a paths at @a revision in @a repos, and
+ * set @a *catalog to a catalog of this mergeinfo.  @a *catalog will
+ * never be @c NULL but may be empty.
  *
  * @a inherit indicates whether explicit, explicit or inherited, or
  * only inherited mergeinfo for @a paths is fetched.
@@ -1430,14 +1431,14 @@ svn_repos_get_logs(svn_repos_t *repos,
  * the @c SVN_PROP_MERGEINFO property explicitly set on it.  (Note
  * that inheritance is only taken into account for the elements in @a
  * paths; descendants of the elements in @a paths which get their
- * mergeinfo via inheritance are not included in @a *mergeoutput.)
+ * mergeinfo via inheritance are not included in @a *catalog.)
  *
  * If optional @a authz_read_func is non-NULL, then use this function
  * (along with optional @a authz_read_baton) to check the readability
  * of each path which mergeinfo was requested for (from @a paths).
  * Silently omit unreadable paths from the request for mergeinfo.
  *
- * Use @a pool for temporary allocations.
+ * Use @a pool for all allocations.
  *
  * @since New in 1.5.
  */
@@ -1451,6 +1452,26 @@ svn_repos_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
                            svn_repos_authz_func_t authz_read_func,
                            void *authz_read_baton,
                            apr_pool_t *pool);
+
+
+/* Set @a *deleted_mergeinfo_catalog and @a *added_mergeinfo_catalog
+ * to mergeinfo catalogs describing how mergeinfo values on paths
+ * (which are the keys of those catalogs) were changed via the commit
+ * of @a rev in @a repos.  Allocate returned data from @a pool.
+ *
+ * Every path whose mergeinfo was created or modified in @a rev in
+ * such a way that it differs from its value in @a rev - 1 is
+ * represented in both returned catalog hashes, and only those paths
+ * are represented therein.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_repos_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
+                            svn_mergeinfo_catalog_t *added_mergeinfo_catalog,
+                            svn_repos_t *repos,
+                            svn_revnum_t rev,
+                            apr_pool_t *pool);
 
 
 /* ---------------------------------------------------------------*/

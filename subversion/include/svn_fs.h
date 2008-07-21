@@ -971,7 +971,7 @@ svn_revnum_t svn_fs_revision_root_revision(svn_fs_root_t *root);
 /** The kind of change that occurred on the path. */
 typedef enum
 {
-  /** default value */
+  /** path modified in txn */
   svn_fs_path_change_modify = 0,
 
   /** path added in txn */

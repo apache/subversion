@@ -119,7 +119,8 @@ svn_boolean_t svn_wc__has_magic_property(const apr_array_header_t *properties);
 
 /* Extend LOG_ACCUM with log entries to install PROPS and, if WRITE_BASE_PROPS
    is true, BASE_PROPS for the PATH in ADM_ACCESS, updating the wc entry
-   to reflect the changes.  Use POOL for temporary allocations. */
+   to reflect the changes.  BASE_PROPS must be supplied even if
+   WRITE_BASE_PROPS is false.  Use POOL for temporary allocations. */
 svn_error_t *svn_wc__install_props(svn_stringbuf_t **log_accum,
                                    svn_wc_adm_access_t *adm_access,
                                    const char *path,

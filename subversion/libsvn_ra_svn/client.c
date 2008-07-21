@@ -1406,7 +1406,7 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
             }
           if (! SVN_IS_VALID_REVNUM(log_entry->revision))
             {
-              assert(nest_level);
+              SVN_ERR_ASSERT(nest_level);
               nest_level--;
             }
         }

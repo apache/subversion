@@ -88,8 +88,7 @@ svn_fs_bdb__new_node_id(svn_fs_id_t **id_p,
   int db_err;
   const char *next_node_id;
 
-  /* TXN_ID is required! */
-  assert(txn_id);
+  SVN_ERR_ASSERT(txn_id);
 
   /* Get the current value associated with the `next-key' key in the table.  */
   svn_fs_base__str_to_dbt(&query, NEXT_KEY_KEY);
@@ -132,8 +131,7 @@ svn_fs_bdb__new_successor_id(svn_fs_id_t **successor_p,
   svn_fs_id_t *new_id;
   svn_error_t *err;
 
-  /* TXN_ID is required! */
-  assert(txn_id);
+  SVN_ERR_ASSERT(txn_id);
 
   /* Create and return the new successor ID.  */
   new_id = svn_fs_base__id_create(svn_fs_base__id_node_id(id),

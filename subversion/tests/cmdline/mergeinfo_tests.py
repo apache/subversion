@@ -74,7 +74,9 @@ def explicit_mergeinfo_source(sbox):
   H_path = os.path.join(wc_dir, 'A', 'D', 'H')
   H2_path = os.path.join(wc_dir, 'A', 'D', 'H2')
   B_url = sbox.repo_url + '/A/B'
+  B_path = os.path.join(wc_dir, 'A', 'B')
   G_url = sbox.repo_url + '/A/D/G'
+  G_path = os.path.join(wc_dir, 'A', 'D', 'G')
   H2_url = sbox.repo_url + '/A/D/H2'
 
   # Make a copy, and dummy up some mergeinfo.
@@ -85,13 +87,38 @@ def explicit_mergeinfo_source(sbox):
   svntest.main.run_svn(None, "cp", H_path, H2_path)
   svntest.main.run_svn(None, "ci", "-m", "r2", wc_dir)
 
-  # Check using --from-source on each of our recorded merge sources.
+  # Check using each of our recorded merge sources (as paths and URLs).
   svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
                                            [1], B_url, H_path)
   svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
+                                           [1], B_path, H_path)
+  svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
                                            [1], G_url, H_path)
+  svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
+                                           [1], G_path, H_path)
 
-  # Now check on a source we haven't "merged" from.
+def mergeinfo_non_source(sbox):
+  "'mergeinfo' with uninteresting source selection"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  H_path = os.path.join(wc_dir, 'A', 'D', 'H')
+  H2_path = os.path.join(wc_dir, 'A', 'D', 'H2')
+  B_url = sbox.repo_url + '/A/B'
+  B_path = os.path.join(wc_dir, 'A', 'B')
+  G_url = sbox.repo_url + '/A/D/G'
+  G_path = os.path.join(wc_dir, 'A', 'D', 'G')
+  H2_url = sbox.repo_url + '/A/D/H2'
+
+  # Make a copy, and dummy up some mergeinfo.
+  mergeinfo = '/A/B:1\n/A/D/G:1\n'
+  propval_path = os.path.join(wc_dir, 'propval.tmp')
+  svntest.actions.set_prop(None, SVN_PROP_MERGEINFO, mergeinfo, H_path,
+                           propval_path)
+  svntest.main.run_svn(None, "cp", H_path, H2_path)
+  svntest.main.run_svn(None, "ci", "-m", "r2", wc_dir)
+
+  # Check on a source we haven't "merged" from.
   svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
                                            [2], H2_url, H_path)
 
@@ -124,7 +151,8 @@ def mergeinfo_on_unknown_url(sbox):
 test_list = [ None,
               no_mergeinfo,
               mergeinfo,
-              XFail(explicit_mergeinfo_source, server_has_mergeinfo),
+              SkipUnless(explicit_mergeinfo_source, server_has_mergeinfo),
+              XFail(mergeinfo_non_source, server_has_mergeinfo),
               mergeinfo_on_unknown_url,
              ]
 

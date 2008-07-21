@@ -144,6 +144,38 @@ public class BasicTests extends SVNTests
     }
 
     /**
+     * Tests Subversion path as URL predicate.
+     */
+    public void testPathIsURL() throws Throwable
+    {
+        try
+        {
+            Path.isURL(null);
+            fail("A null path should raise an exception");
+        }
+        catch (IllegalArgumentException expected)
+        {
+        }
+
+        // Subversion "paths" which aren't URLs.
+        String[] paths = { "/path", "c:\\path" };
+        for (int i = 0; i < paths.length; i++)
+        {
+            assertFalse("'" + paths[i] + "' should not be considered a URL",
+                        Path.isURL(paths[i]));
+        }
+
+        // Subversion "paths" which are URLs.
+        paths = new String[] { "http://example.com", "svn://example.com",
+                               "svn+ssh://example.com", "file:///src/svn/" };
+        for (int i = 0; i < paths.length; i++)
+        {
+            assertTrue("'" + paths[i] + "' should be considered a URL",
+                       Path.isURL(paths[i]));
+        }
+    }
+
+    /**
      * Tests Mergeinfo and RevisionRange classes.
      * @since 1.5
      */
@@ -2046,7 +2078,7 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * Test the baisc SVNClient locking functionality.
+     * Test the basic SVNClient locking functionality.
      * @throws Throwable
      * @since 1.2
      */
@@ -2095,7 +2127,7 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * Test the baisc SVNClient.info2 functionality.
+     * Test the basic SVNClient.info2 functionality.
      * @throws Throwable
      * @since 1.2
      */
@@ -2128,6 +2160,21 @@ public class BasicTests extends SVNTests
         Revision rev = new Revision.Number(1);
         infos = client.info2(thisTest.getWCPath(), rev, rev, true);
         assertEquals(failureMsg, 21, infos.length);
+
+        // Examine default
+        assertEquals(Depth.unknown, infos[0].getDepth());
+
+        // Create wc with a depth of Depth.empty
+        String secondWC = thisTest.getWCPath() + ".empty";
+        removeDirOrFile(new File(secondWC));
+
+        client.checkout(thisTest.getUrl(), secondWC, null, null, Depth.empty,
+                        false, true);
+
+        infos = client.info2(secondWC, null, null, false);
+
+        // Examine that depth is Depth.empty
+        assertEquals(Depth.empty, infos[0].getDepth());
     }
 
     /**
