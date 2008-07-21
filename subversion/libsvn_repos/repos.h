@@ -221,8 +221,10 @@ svn_repos__hooks_post_revprop_change(svn_repos_t *repos,
    allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.
 
    PATH is the path being locked, USERNAME is the person doing it,
-   COMMENT is the comment of the lock, and STEAL-LOCK is a flag if the
-   user is stealing the lock.  */
+   COMMENT is the comment of the lock, and is treated as an empty
+   string when NULL is given.  STEAL-LOCK is a flag if the user is
+   stealing the lock.  */
+
 svn_error_t *
 svn_repos__hooks_pre_lock(svn_repos_t *repos,
                           const char *path,
