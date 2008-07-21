@@ -970,7 +970,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         ""                                                                   NL
         "### Section for configuring external helper applications."          NL
         "[helpers]"                                                          NL
-        "### Set editor to the command used to invoke your text editor."     NL
+        "### Set editor-cmd to the command used to invoke your text editor." NL
         "###   This will override the environment variables that Subversion" NL
         "###   examines by default to find this information ($EDITOR, "      NL
         "###   et al)."                                                      NL
