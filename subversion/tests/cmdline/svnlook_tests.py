@@ -509,6 +509,27 @@ def diff_ignore_eolstyle(sbox):
     svntest.verify.compare_and_display_lines('', '', expected_output, output)
 
 
+#----------------------------------------------------------------------
+def diff_binary(sbox):
+  "test 'svnlook diff' on binary files"
+
+  sbox.build()
+  repo_dir = sbox.repo_dir
+  wc_dir = sbox.wc_dir
+
+  # Set A/mu to a binary mime-type, tweak its text, and commit.
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  svntest.main.file_append(mu_path, 'new appended text for mu')
+  svntest.main.run_svn(None, 'propset', 'svn:mime-type',
+                       'application/octet-stream', mu_path)
+  svntest.main.run_svn(None, 'ci', '-m', 'log msg', mu_path)
+
+  # Now run 'svnlook diff' and look for the "Binary files differ" message.
+  output = run_svnlook('diff', repo_dir, '/A/mu')
+  if not "(Binary files differ)\n" in output:
+    raise svntest.Failure("No 'Binary files differ' indication in "
+                          "'svnlook diff' output.")
+
 ########################################################################
 # Run the tests
 
@@ -524,6 +545,7 @@ test_list = [ None,
               limit_history,
               diff_ignore_whitespace,
               diff_ignore_eolstyle,
+              diff_binary,
              ]
 
 if __name__ == '__main__':

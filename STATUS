@@ -183,12 +183,3 @@ Approved changes:
    Votes:
      +1: danielsh, dlr, arfrever
      +1 (non-binding): stylesen
-
-
- * r32179
-   Finish issue #3249: 'svnlook diff' fails to show "Binary files differ"
-   indication.  This was a regression introduced in 1.5.0.
-   Justification:
-     Regression.
-   Votes:
-     +1: cmpilato, hwright, arfrever
