@@ -221,15 +221,16 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
   if (depth == svn_depth_exclude)
     {
       svn_boolean_t is_root;
-      svn_boolean_t entry_in_repos;
 
       /* If the target entry is just added without history, it does not exist
-         in the repos. Does not setup the exclude flag in this situation. */
-      entry_in_repos = ! ((entry->schedule == svn_wc_schedule_add 
-                           || entry->schedule == svn_wc_schedule_replace) 
-                          && !entry->copied);
+         in the repos (in which case we won't exclude it). */
+      svn_boolean_t entry_in_repos
+        = ! ((entry->schedule == svn_wc_schedule_add
+              || entry->schedule == svn_wc_schedule_replace)
+             && ! entry->copied);
+
       svn_wc_is_wc_root(&is_root, full_path, anchor, pool);
-      if (! is_root && entry_in_repos)
+      if ((! is_root) && entry_in_repos)
         {
           const svn_wc_entry_t *parent_entry;
           apr_hash_t * parent_entries;
@@ -239,8 +240,8 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
           parent_entry = apr_hash_get(parent_entries,
                                       SVN_WC_ENTRY_THIS_DIR,
                                       APR_HASH_KEY_STRING);
-          /* Mark the target as excluded, if the parent require it by default.
-          */
+          /* Mark the target as excluded, if the parent requires it by
+             default. */
           if (parent_entry && parent_entry->depth > svn_depth_files)
             {
               target_entry = apr_hash_get(parent_entries, 
