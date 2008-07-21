@@ -35,7 +35,7 @@ svn_fs_create_access(svn_fs_access_t **access_ctx,
 {
   svn_fs_access_t *ac;
 
-  assert(username != NULL);
+  SVN_ERR_ASSERT(username != NULL);
 
   ac = apr_pcalloc(pool, sizeof(*ac));
   ac->username = apr_pstrdup(pool, username);

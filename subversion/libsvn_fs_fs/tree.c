@@ -166,8 +166,7 @@ dag_node_cache_get(dag_node_t **node_p,
   svn_cache_t *cache;
   const char *key;
 
-  /* Assert valid input. */
-  assert(*path == '/');
+  SVN_ERR_ASSERT(*path == '/');
 
   locate_cache(&cache, &key, root, path, pool);
 
@@ -195,8 +194,7 @@ dag_node_cache_set(svn_fs_root_t *root,
   svn_cache_t *cache;
   const char *key;
 
-  /* Assert valid input and state. */
-  assert(*path == '/');
+  SVN_ERR_ASSERT(*path == '/');
 
   locate_cache(&cache, &key, root, path, pool);
 
@@ -246,7 +244,7 @@ dag_node_cache_invalidate(svn_fs_root_t *root,
   b.pool = svn_pool_create(pool);
   b.list = apr_array_make(b.pool, 1, sizeof(const char *));
 
-  assert(root->is_txn_root);
+  SVN_ERR_ASSERT(root->is_txn_root);
   locate_cache(&cache, NULL, root, NULL, b.pool);
 
 
@@ -457,8 +455,7 @@ get_copy_inheritance(copy_id_inherit_t *inherit_p,
   svn_revnum_t copyroot_rev;
   const char *copyroot_path;
 
-  /* Make some assertions about the function input. */
-  assert(child && child->parent && txn_id);
+  SVN_ERR_ASSERT(child && child->parent && txn_id);
 
   /* Initialize some convenience variables. */
   child_id = svn_fs_fs__dag_get_id(child->node);
@@ -756,7 +753,7 @@ make_path_mutable(svn_fs_root_t *root,
 
         case copy_id_inherit_unknown:
         default:
-          abort(); /* uh-oh -- somebody didn't calculate copy-ID
+          SVN_ERR_MALFUNCTION(); /* uh-oh -- somebody didn't calculate copy-ID
                       inheritance data. */
         }
 
@@ -1609,7 +1606,7 @@ merge_changes(dag_node_t *ancestor_node,
       /* ### kff todo: this would, of course, be a mighty silly thing
          for the caller to do, and we might want to consider whether
          this response is really appropriate. */
-      abort();
+      SVN_ERR_MALFUNCTION();
     }
   else
     SVN_ERR(merge(conflict, "/", txn_root_node,
@@ -2103,7 +2100,7 @@ copy_helper(svn_fs_root_t *from_root,
          stated that this requirement need not be necessary in the
          future. */
 
-      abort();
+      SVN_ERR_MALFUNCTION();
     }
 
   return SVN_NO_ERROR;

@@ -292,8 +292,8 @@ log_end_element(void *baton, int state,
 
            If we've seen as many log entries as we're going to show just
            error out of the XML parser so we can avoid having to parse the
-           remaining XML, but set lb->err to SVN_NO_ERROR so no error will
-           end up being shown to the user. */
+           remaining XML, but set a flag that we will later use to ensure
+           this error will not be shown to the user. */
         if (lb->limit && (lb->nest_level == 0) && (++lb->count > lb->limit))
           {
             lb->limit_compat_bailout = TRUE;
@@ -308,7 +308,7 @@ log_end_element(void *baton, int state,
           }
         if (! SVN_IS_VALID_REVNUM(lb->log_entry->revision))
           {
-            assert(lb->nest_level);
+            SVN_ERR_ASSERT(lb->nest_level);
             lb->nest_level--;
           }
         reset_log_item(lb);
@@ -505,13 +505,8 @@ svn_error_t * svn_ra_neon__get_log(svn_ra_session_t *session,
 
   if (err && lb.limit_compat_bailout)
     {
-      svn_log_entry_t *log_entry;
-
       svn_error_clear(err);
-
-      log_entry = svn_log_entry_create(pool);
-      log_entry->revision = SVN_INVALID_REVNUM;
-      return receiver(receiver_baton, log_entry, pool);
+      err = SVN_NO_ERROR;
     }
 
   return err;

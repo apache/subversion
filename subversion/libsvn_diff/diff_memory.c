@@ -692,7 +692,7 @@ trailing_context_printer_write(void *baton,
                                apr_size_t *len)
 {
   struct trailing_context_printer *tcp = baton;
-  assert(tcp->lines_to_print > 0);
+  SVN_ERR_ASSERT(tcp->lines_to_print > 0);
   SVN_ERR(svn_stream_write(tcp->mob->real_output_stream, data, len));
   tcp->lines_to_print--;
   if (tcp->lines_to_print == 0)
@@ -841,7 +841,7 @@ output_conflict(void *baton,
       SVN_ERR(output_merge_token_range(NULL, btn, 2/*latest*/,
                                        latest_start, latest_length));
   else /* unknown style */
-    abort();
+    SVN_ERR_MALFUNCTION();
 
   return SVN_NO_ERROR;
 }

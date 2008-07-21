@@ -658,7 +658,7 @@ svn_rangelist_merge(apr_array_header_t **rangelist,
   /* Copy back any remaining elements.
      Only one of these loops should end up running, if anything. */
 
-  assert (!(i < (*rangelist)->nelts && j < changes->nelts));
+  SVN_ERR_ASSERT(!(i < (*rangelist)->nelts && j < changes->nelts));
 
   for (; i < (*rangelist)->nelts; i++)
     {
@@ -1449,8 +1449,8 @@ svn_mergeinfo__remove_prefix_from_catalog(svn_mergeinfo_catalog_t *out_catalog,
 
       apr_hash_this(hi, &key, &klen, &value);
       original_path = key;
-      assert(klen >= prefix_len);
-      assert(strncmp(key, prefix, prefix_len) == 0);
+      SVN_ERR_ASSERT(klen >= prefix_len);
+      SVN_ERR_ASSERT(strncmp(key, prefix, prefix_len) == 0);
 
       apr_hash_set(*out_catalog, original_path + prefix_len, klen-prefix_len, value);
     }
