@@ -43,7 +43,11 @@
 #include "svn_auth.h"
 #include "svn_version.h"
 #include "utf_impl.h"
+#include "svn_xml.h"
+#include "svn_base64.h"
 #include "svn_config.h"
+
+#include "private/svn_cmdline_private.h"
 
 #include "svn_private_config.h"
 
@@ -355,11 +359,33 @@ svn_cmdline_handle_exit_error(svn_error_t *err,
 }
 
 #if defined(SVN_HAVE_KWALLET) || defined(SVN_HAVE_GNOME_KEYRING)
-/* Dynamically load authentication simple provider. */
+
+/* Set *PROVIDER according to PROVIDER_NAME and PROVIDER_TYPE,
+ * allocating it in POOL.
+ *
+ * Valid PROVIDER_NAME values are: "gnome_keyring" and "kwallet"
+ * (they correspond to the loadable libraries named, e.g.,
+ * "libsvn_auth_gnome_keyring-1.so.0", etc.)
+ *
+ * Valid PROVIDER_TYPE values are: "simple" and "ssl_client_cert_pw"
+ * (they correspond to function names found in the loaded library,
+ * such as "svn_auth_get_gnome_keyring_simple_provider", etc).
+ *
+ * What actually happens is we load the library and invoke the
+ * appropriate provider function to supply *PROVIDER, like so:
+ *
+ *    svn_auth_get_<name>_<type>_provider(PROVIDER, POOL);
+ *
+ * If the library load fails, return an error (with the effect on
+ * *PROVIDER undefined).  But if the symbol is simply not found in the
+ * library, or if the PROVIDER_TYPE is unrecognized, set *PROVIDER to
+ * NULL and return success.
+ */
 static svn_error_t *
-get_auth_simple_provider(svn_auth_provider_object_t **provider,
-                         const char *provider_name,
-                         apr_pool_t *pool)
+get_auth_provider(svn_auth_provider_object_t **provider,
+                  const char *provider_name,
+                  const char *provider_type,
+                  apr_pool_t *pool)
 {
   apr_dso_handle_t *dso;
   apr_dso_handle_sym_t symbol;
@@ -371,33 +397,79 @@ get_auth_simple_provider(svn_auth_provider_object_t **provider,
                          provider_name,
                          SVN_VER_MAJOR);
   funcname = apr_psprintf(pool,
-                          "svn_auth_get_%s_simple_provider",
-                          provider_name);
+                          "svn_auth_get_%s_%s_provider",
+                          provider_name, provider_type);
   SVN_ERR(svn_dso_load(&dso, libname));
   if (dso)
     {
       if (! apr_dso_sym(&symbol, dso, funcname))
         {
-          svn_auth_simple_provider_func_t func;
-          func = (svn_auth_simple_provider_func_t) symbol;
-          func(provider, pool);
+          if (strcmp(provider_type, "simple") == 0)
+            {
+              svn_auth_simple_provider_func_t func;
+              func = (svn_auth_simple_provider_func_t) symbol;
+              func(provider, pool);
+            }
+          else if (strcmp(provider_type, "ssl_client_cert_pw") == 0)
+            {
+              svn_auth_ssl_client_cert_pw_provider_func_t func;
+              func = (svn_auth_ssl_client_cert_pw_provider_func_t) symbol;
+              func(provider, pool);
+            }
         }
     }
   return SVN_NO_ERROR;
 }
 #endif
 
+
+/* This implements 'svn_auth_ssl_server_trust_prompt_func_t'.
+
+   Don't actually prompt.  Instead, set *CRED_P to valid credentials
+   iff FAILURES is empty or is exactly SVN_AUTH_SSL_UNKNOWNCA.  If
+   there are any other failure bits, then set *CRED_P to null (that
+   is, reject the cert).
+
+   Ignore MAY_SAVE; we don't save certs we never prompted for.
+
+   Ignore BATON, REALM, and CERT_INFO, 
+
+   Ignore any further films by George Lucas. */
+static svn_error_t *
+ssl_trust_unknown_server_cert
+  (svn_auth_cred_ssl_server_trust_t **cred_p,
+   void *baton,
+   const char *realm,
+   apr_uint32_t failures,
+   const svn_auth_ssl_server_cert_info_t *cert_info,
+   svn_boolean_t may_save,
+   apr_pool_t *pool)
+{
+  *cred_p = NULL;
+
+  if (failures == 0 || failures == SVN_AUTH_SSL_UNKNOWNCA)
+    {
+      *cred_p = apr_pcalloc(pool, sizeof(**cred_p));
+      (*cred_p)->may_save = FALSE;
+      (*cred_p)->accepted_failures = failures;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
-svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
-                             svn_boolean_t non_interactive,
-                             const char *auth_username,
-                             const char *auth_password,
-                             const char *config_dir,
-                             svn_boolean_t no_auth_cache,
-                             svn_config_t *cfg,
-                             svn_cancel_func_t cancel_func,
-                             void *cancel_baton,
-                             apr_pool_t *pool)
+svn_cmdline_set_up_auth_baton(svn_auth_baton_t **ab,
+                              svn_boolean_t non_interactive,
+                              const char *auth_username,
+                              const char *auth_password,
+                              const char *config_dir,
+                              svn_boolean_t no_auth_cache,
+                              svn_boolean_t trust_server_cert,
+                              svn_config_t *cfg,
+                              svn_cancel_func_t cancel_func,
+                              void *cancel_baton,
+                              apr_pool_t *pool)
 {
   svn_boolean_t store_password_val = TRUE;
   svn_boolean_t store_auth_creds_val = TRUE;
@@ -458,11 +530,19 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
       if (apr_strnatcmp(password_store, "gnome-keyring") == 0)
         {
 #ifdef SVN_HAVE_GNOME_KEYRING
-          SVN_ERR(get_auth_simple_provider(&provider, "gnome_keyring", pool));
+          SVN_ERR(get_auth_provider(&provider, "gnome_keyring", "simple", 
+                                    pool));
           if (provider)
             {
               APR_ARRAY_PUSH(providers,
                              svn_auth_provider_object_t *) = provider;
+            }
+          SVN_ERR(get_auth_provider(&provider, "gnome_keyring",
+                                    "ssl_client_cert_pw", pool));
+          if (provider)
+            {
+              APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *)
+                = provider;
             }
 #endif
           continue;
@@ -471,7 +551,7 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
       if (apr_strnatcmp(password_store, "kwallet") == 0)
         {
 #ifdef SVN_HAVE_KWALLET
-          SVN_ERR(get_auth_simple_provider(&provider, "kwallet", pool));
+          SVN_ERR(get_auth_provider(&provider, "kwallet", "simple",  pool));
           if (provider)
             {
               APR_ARRAY_PUSH(providers,
@@ -488,10 +568,8 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
 
   if (non_interactive == FALSE)
     {
-      /* This provider is odd in that it isn't a prompting provider in
-         the classic sense.  That is, it doesn't need to prompt in
-         order to get creds, but it *does* need to prompt the user
-         regarding the *cache storage* of creds. */
+      /* This provider doesn't prompt the user in order to get creds;
+         it prompts the user regarding the caching of creds. */
       svn_auth_get_simple_provider2(&provider,
                                     svn_cmdline_auth_plaintext_prompt,
                                     pb, pool);
@@ -513,7 +591,20 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
   APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
   svn_auth_get_ssl_client_cert_file_provider(&provider, pool);
   APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
-  svn_auth_get_ssl_client_cert_pw_file_provider(&provider, pool);
+
+  if (non_interactive == FALSE)
+    {
+      /* This provider doesn't prompt the user in order to get creds;
+         it prompts the user regarding the caching of creds. */
+      svn_auth_get_ssl_client_cert_pw_file_provider2
+        (&provider, svn_cmdline_auth_plaintext_passphrase_prompt,
+         pb, pool);
+    }
+  else
+    {
+      svn_auth_get_ssl_client_cert_pw_file_provider2(&provider, NULL, NULL,
+                                                     pool);
+    }
   APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
   if (non_interactive == FALSE)
@@ -543,6 +634,13 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
 
       svn_auth_get_ssl_client_cert_pw_prompt_provider
         (&provider, svn_cmdline_auth_ssl_client_cert_pw_prompt, pb, 2, pool);
+      APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+    }
+  else if (trust_server_cert)
+    {
+      /* Remember, only register this provider if non_interactive. */
+      svn_auth_get_ssl_server_trust_prompt_provider
+        (&provider, ssl_trust_unknown_server_cert, NULL, pool);
       APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
     }
 
@@ -593,6 +691,26 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
+                             svn_boolean_t non_interactive,
+                             const char *auth_username,
+                             const char *auth_password,
+                             const char *config_dir,
+                             svn_boolean_t no_auth_cache,
+                             svn_config_t *cfg,
+                             svn_cancel_func_t cancel_func,
+                             void *cancel_baton,
+                             apr_pool_t *pool)
+{
+  return svn_cmdline_set_up_auth_baton(ab, non_interactive,
+                                       auth_username, auth_password,
+                                       config_dir, no_auth_cache, FALSE,
+                                       cfg, cancel_func, cancel_baton, pool);
+}
+
+
 svn_error_t *
 svn_cmdline__getopt_init(apr_getopt_t **os,
                          int argc,
@@ -618,5 +736,45 @@ svn_cmdline__getopt_init(apr_getopt_t **os,
   return SVN_NO_ERROR;
 }
 
+
+void
+svn_cmdline__print_xml_prop(svn_stringbuf_t **outstr,
+                            const char* propname,
+                            svn_string_t *propval,
+                            apr_pool_t *pool)
+{
+  const char *xml_safe;
+  const char *encoding = NULL;
+
+  if (*outstr == NULL)
+    *outstr = svn_stringbuf_create("", pool);
+
+  if (svn_xml_is_xml_safe(propval->data, propval->len))
+    {
+      svn_stringbuf_t *xml_esc = NULL;
+      svn_xml_escape_cdata_string(&xml_esc, propval, pool);
+      xml_safe = xml_esc->data;
+    }
+  else
+    {
+      const svn_string_t *base64ed = svn_base64_encode_string(propval, pool);
+      encoding = "base64";
+      xml_safe = base64ed->data;
+    }
+
+  if (encoding)
+    svn_xml_make_open_tag(outstr, pool, svn_xml_protect_pcdata,
+                          "property", "name", propname,
+                          "encoding", encoding, NULL);
+  else
+    svn_xml_make_open_tag(outstr, pool, svn_xml_protect_pcdata,
+                          "property", "name", propname, NULL);
+
+  svn_stringbuf_appendcstr(*outstr, xml_safe);
+
+  svn_xml_make_close_tag(outstr, pool, "property");
+
+  return;
+}
 
 

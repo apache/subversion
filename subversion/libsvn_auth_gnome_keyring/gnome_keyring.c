@@ -192,3 +192,60 @@ svn_auth_get_gnome_keyring_simple_provider
 
   gnome_keyring_init();
 }
+
+/* Get cached encrypted credentials from the ssl client cert password
+   provider's cache. */
+static svn_error_t *
+gnome_keyring_ssl_client_cert_pw_first_creds(void **credentials,
+                                             void **iter_baton,
+                                             void *provider_baton,
+                                             apr_hash_t *parameters,
+                                             const char *realmstring,
+                                             apr_pool_t *pool)
+{
+  return svn_auth__ssl_client_cert_pw_file_first_creds_helper
+           (credentials,
+            iter_baton, provider_baton,
+            parameters, realmstring,
+            gnome_keyring_password_get,
+            SVN_AUTH__GNOME_KEYRING_PASSWORD_TYPE,
+            pool);
+}
+
+/* Save encrypted credentials to the ssl client cert password provider's
+   cache. */
+static svn_error_t *
+gnome_keyring_ssl_client_cert_pw_save_creds(svn_boolean_t *saved,
+                                            void *credentials,
+                                            void *provider_baton,
+                                            apr_hash_t *parameters,
+                                            const char *realmstring,
+                                            apr_pool_t *pool)
+{
+  return svn_auth__ssl_client_cert_pw_file_save_creds_helper
+           (saved, credentials,
+            provider_baton, parameters,
+            realmstring,
+            gnome_keyring_password_set,
+            SVN_AUTH__GNOME_KEYRING_PASSWORD_TYPE,
+            pool);
+}
+
+static const svn_auth_provider_t gnome_keyring_ssl_client_cert_pw_provider = {
+  SVN_AUTH_CRED_SSL_CLIENT_CERT_PW,
+  gnome_keyring_ssl_client_cert_pw_first_creds,
+  NULL,
+  gnome_keyring_ssl_client_cert_pw_save_creds
+};
+
+/* Public API */
+void
+svn_auth_get_gnome_keyring_ssl_client_cert_pw_provider
+    (svn_auth_provider_object_t **provider,
+     apr_pool_t *pool)
+{
+  svn_auth_provider_object_t *po = apr_pcalloc(pool, sizeof(*po));
+
+  po->vtable = &gnome_keyring_ssl_client_cert_pw_provider;
+  *provider = po;
+}

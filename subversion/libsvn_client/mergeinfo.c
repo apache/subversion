@@ -1161,17 +1161,17 @@ location_from_path_and_rev(const char **url,
                                      ctx->cancel_func, ctx->cancel_baton,
                                      subpool));
     }
-  SVN_ERR(svn_client__ra_session_from_path(&ra_session, &rev, url, 
+  SVN_ERR(svn_client__ra_session_from_path(&ra_session, &rev, url,
                                            path_or_url, adm_access,
-                                           peg_revision, peg_revision, 
+                                           peg_revision, peg_revision,
                                            ctx, subpool));
   *url = apr_pstrdup(pool, *url);
-  *revision = apr_pcalloc(pool, sizeof(*revision));
+  *revision = apr_pcalloc(pool, sizeof(**revision));
   (*revision)->kind = svn_opt_revision_number;
   (*revision)->value.number = rev;
 
   svn_pool_destroy(subpool);
-  
+
   if (adm_access)
     SVN_ERR(svn_wc_adm_close(adm_access));
 

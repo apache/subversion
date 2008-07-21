@@ -12515,6 +12515,108 @@ def subtrees_with_empty_mergeinfo(sbox):
                                        None, None, None, None, None, 1)
   os.chdir(saved_cwd)
 
+# Test for issue #3240 'commits to subtrees added by merge
+# corrupt working copy and repos'.
+def commit_to_subtree_added_by_merge(sbox):
+  "commits to subtrees added by merge wreak havoc"
+
+  # Setup a standard greek tree in r1.
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Some paths we'll care about
+  N_path        = os.path.join(wc_dir, "A", "D", "H", "N")
+  nu_path       = os.path.join(wc_dir, "A", "D", "H", "N", "nu")
+  nu_COPY_path  = os.path.join(wc_dir, "A_COPY", "D", "H", "N", "nu")
+  H_COPY_path   = os.path.join(wc_dir, "A_COPY", "D", "H")
+
+  # Copy 'A' to 'A_COPY' in r2.
+  wc_disk, wc_status = set_up_branch(sbox, True)
+
+  # Create a 'A/D/H/N' and 'A/D/H/N/nu', and commit this new
+  # subtree as r3.
+  os.mkdir(N_path)
+  svntest.main.file_write(nu_path, "This is the file 'nu'.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', N_path)
+  expected_output = wc.State(wc_dir,
+                             {'A/D/H/N'    : Item(verb='Adding'),
+                              'A/D/H/N/nu' : Item(verb='Adding')})
+  wc_status.add({'A/D/H/N'    : Item(status='  ', wc_rev=3),
+                 'A/D/H/N/nu' : Item(status='  ', wc_rev=3)})
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        wc_status, None, wc_dir)
+
+  # Merge r3 to 'A_COPY/D/H', creating A_COPY/D/H/N' and 'A_COPY/D/H/N/nu'.
+  # Commit the merge as r4.
+  #
+  # Search for the comment entitled "The Merge Kluge" elsewhere in
+  # this file, to understand why we shorten and chdir() below.
+  short_H_COPY_path = shorten_path_kludge(H_COPY_path)
+  expected_output = wc.State(short_H_COPY_path, {
+    'N'    : Item(status='A '),
+    'N/nu' : Item(status='A '),
+    })
+  expected_status = wc.State(short_H_COPY_path, {
+    ''      : Item(status=' M', wc_rev=2),
+    'psi'   : Item(status='  ', wc_rev=2),
+    'omega' : Item(status='  ', wc_rev=2),
+    'chi'   : Item(status='  ', wc_rev=2),
+    'N'     : Item(status='A ', copied='+', wc_rev='-'),
+    'N/nu'  : Item(status='A ', copied='+', wc_rev='-'),
+    })
+  expected_disk = wc.State('', {
+    ''      : Item(props={SVN_PROP_MERGEINFO : '/A/D/H:2-3'}),
+    'psi'   : Item("This is the file 'psi'.\n"),
+    'omega' : Item("This is the file 'omega'.\n"),
+    'chi'   : Item("This is the file 'chi'.\n"),
+    'N'     : Item(),
+    'N/nu'  : Item("This is the file 'nu'.\n"),
+    })
+  expected_skip = wc.State(short_H_COPY_path, {})
+  saved_cwd = os.getcwd()
+  os.chdir(svntest.main.work_dir)
+  svntest.actions.run_and_verify_merge(short_H_COPY_path,
+                                       None, None,
+                                       sbox.repo_url + '/A/D/H',
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       None, None, None, None, None, 1)
+  os.chdir(saved_cwd)
+  expected_output = wc.State(wc_dir,
+                             {'A_COPY/D/H'      : Item(verb='Sending'),
+                              'A_COPY/D/H/N'    : Item(verb='Adding'),
+                              'A_COPY/D/H/N/nu' : Item(verb='Adding')})
+  wc_status.add({'A_COPY/D/H/N'    : Item(status='  ', wc_rev=4),
+                 'A_COPY/D/H/N/nu' : Item(status='  ', wc_rev=4)})
+  wc_status.tweak('A_COPY/D/H', wc_rev=4)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        wc_status, None, wc_dir)
+
+  # Make a text change to 'A_COPY/D/H/N/nu' and commit it as r5.
+  # This is the first place issue #3240 appears, the commit fails with
+  # an error like this:
+  #   trunk>svn ci -m "" merge_tests-100
+  #   Sending        merge_tests-100\A_COPY\D\H\N\nu
+  #   Transmitting file data ...\..\..\subversion\libsvn_client\commit.c:919:
+  #     (apr_err=20014)
+  #   svn: Commit failed (details follow):
+  #   ..\..\..\subversion\libsvn_ra_neon\merge.c:260: (apr_err=20014)
+  #   svn: A MERGE response for '/svn-test-work/repositories/merge_tests-100/
+  #     A/D/H/N/nu' is not a child of the destination
+  #     ('/svn-test-work/repositories/merge_tests-100/A_COPY/D/H/N')
+  svntest.main.file_write(nu_COPY_path, "New content")
+  expected_output = wc.State(wc_dir,
+                             {'A_COPY/D/H/N/nu' : Item(verb='Sending')})
+  wc_status.tweak('A_COPY/D/H/N/nu', wc_rev=5)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        wc_status, None, wc_dir)
+  # The second place issue #3240 shows up is in the fact that the commit
+  # *did* succeed, but the wrong path ('A/D/H/nu' rather than 'A_COPY/D/H/nu')
+  # is affected.  We can see this by running an update; since we just
+  # committed there shouldn't be any incoming changes.
+  svntest.actions.run_and_verify_svn(None, ["At revision 5.\n"], [], 'up',
+                                     wc_dir)
+
 ########################################################################
 # Run the tests
 
@@ -12687,6 +12789,8 @@ test_list = [ None,
               SkipUnless(subtree_source_missing_in_requested_range,
                          server_has_mergeinfo),
               SkipUnless(subtrees_with_empty_mergeinfo, server_has_mergeinfo),
+              SkipUnless(commit_to_subtree_added_by_merge,
+                         svntest.main.is_ra_type_dav),
              ]
 
 if __name__ == '__main__':

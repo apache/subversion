@@ -825,12 +825,12 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
     {
       const svn_prop_t *prop = &APR_ARRAY_IDX(prop_changes, i, svn_prop_t);
 
-      /* If we're merging from a foreign repository, we don't want any
-         DAV wcprops related to this file (because they'll point to
-         the wrong repository).  So we'll strip them.  (Is this a
-         layering violation?)  */
-      if ((! merge_b->same_repos)
-          && (svn_property_kind(NULL, prop->name) == svn_prop_wc_kind))
+      /* We don't want any DAV wcprops related to this file because
+         they'll point to the wrong repository (in the
+         merge-from-foreign-repository scenario) or wrong place in the
+         right repository (in the same-repos scenario).  So we'll
+         strip them.  (Is this a layering violation?)  */
+      if (svn_property_kind(NULL, prop->name) == svn_prop_wc_kind)
         continue;
 
       apr_hash_set(new_props, prop->name, APR_HASH_KEY_STRING, prop->value);
@@ -1521,7 +1521,7 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
 
 /* Helper for the numerous times we need to allocate and initialize
    a rangelist with one element.
-   
+
    Return a rangelist allocated in POOL with one svn_merge_range_t *
    element, also allocated in POOL and defined by START, END, and
    INHERITABLE. */
@@ -1564,7 +1564,7 @@ push_range(apr_array_header_t *rangelist,
 
 /* Helper for filter_merged_revisions() when operating on a subtree.
    Like filter_merged_revisions(), this should only be called when
-   honoring mergeinfo. 
+   honoring mergeinfo.
 
    Filter the requested ranges being merged to a subtree so that we
    don't try to describe invalid subtrees to the merge report editor.
@@ -1628,7 +1628,7 @@ push_range(apr_array_header_t *rangelist,
         Set *CHILD_DELETED_OR_NONEXISTANT to FALSE.
 
   Reverse Merges, i.e. REVISION1 (PEG_REV) > REVISION2
-                        
+
      E) Part of requested range postdates subtree's existance.
 
         PRIMARY_URL@REVISION2 exists, but PRIMARY_URL@REVISION1 doesn't
@@ -1646,14 +1646,14 @@ push_range(apr_array_header_t *rangelist,
         ### describing ranges that postdate the subtree's existance, the
         ### subtree's nearest parent must also have that mergeinfo right?
         ### Put another way, how can all of the  following ever be true?
-        ### 
+        ###
         ###   i)   The subtree merge source doesn't exist anymore at
         ###        revsion X.
         ###   ii)  Mergeinfo for X is explicitly set on the subtree.
         ###   iii) The subtree's parent has no explicit mergeinfo for X.
-        ### 
+        ###
         ### This is where Kamesh utilized his recursive guess_live_ranges
-        ### function...But do we ever need to do this in practice? 
+        ### function...But do we ever need to do this in practice?
 
      F) Requested range deletes (or replaces) a subtree.
 
@@ -1751,6 +1751,12 @@ prepare_subtree_ranges(apr_array_header_t **requested_rangelist,
     {
       if (segments->nelts)
         {
+          /* This algorithm needs the youngest location segment inside the
+             requested merge range.
+             svn_client__repos_location_segments gives the segments ordered
+             from oldest to youngest.
+             So consider the last segment as it is the youngest.
+           */
           svn_location_segment_t *segment =
             APR_ARRAY_IDX(segments, (segments->nelts - 1),
                           svn_location_segment_t *);
@@ -1818,7 +1824,7 @@ prepare_subtree_ranges(apr_array_header_t **requested_rangelist,
                   SVN_ERR(svn_rangelist_merge(
                     requested_rangelist, predate_intersection_rangelist,
                     pool));
-                  
+
                   /* Remove ranges that predate PRIMARY_URL's existance
                      because the source exists under a different URL due to a
                      rename between REVISION1:REVISION2 - see 'MERGE FAILS' in
@@ -1927,7 +1933,7 @@ filter_merged_revisions(svn_client__merge_path_t *parent,
              then don't bother dealing with CHILD in a separate editor drive.
              Just make child's remaining ranges exactly the same as its
              nearest parent.
-             
+
              For deletions this will cause the editor drive to be rooted at
              the subtree CHILD's nearest parent in CHILDREN_WITH_MERGEINFO
              This will simply delete the subtree.  For the case where neither
@@ -1998,7 +2004,7 @@ filter_merged_revisions(svn_client__merge_path_t *parent,
         }
       else
         {
-          child->remaining_ranges = 
+          child->remaining_ranges =
             apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
         }
     }
@@ -3947,10 +3953,10 @@ remove_noop_merge_ranges(apr_array_header_t **operative_ranges_p,
                           log_changed_revs, changed_revs, pool));
 
   /* Our list of changed revisions should be in youngest-to-oldest order. */
-  youngest_changed_rev = *(APR_ARRAY_IDX(changed_revs, 
+  youngest_changed_rev = *(APR_ARRAY_IDX(changed_revs,
                                          0, svn_revnum_t *));
-  oldest_changed_rev = *(APR_ARRAY_IDX(changed_revs, 
-                                       changed_revs->nelts - 1, 
+  oldest_changed_rev = *(APR_ARRAY_IDX(changed_revs,
+                                       changed_revs->nelts - 1,
                                        svn_revnum_t *));
 
   /* Now, copy from RANGES to *OPERATIVE_RANGES, filtering out ranges
@@ -3965,7 +3971,7 @@ remove_noop_merge_ranges(apr_array_header_t **operative_ranges_p,
 
       /* If the merge range is entirely outside the range of changed
          revisions, we've no use for it. */
-      if ((range_min > youngest_changed_rev) 
+      if ((range_min > youngest_changed_rev)
           || (range_max < oldest_changed_rev))
         continue;
 
@@ -4623,7 +4629,7 @@ do_file_merge(const char *url1,
               else if (is_rollback && r->end != revision2)
                 ra_session2 = ra_session1; /* Use URL1's RA session. */
             }
- 
+
           /* While we currently don't allow it, in theory we could be
              fetching two fulltexts from two different repositories here. */
           SVN_ERR(single_file_merge_get_file(&tmpfile1, ra_session1,

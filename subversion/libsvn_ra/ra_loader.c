@@ -60,7 +60,7 @@
    ### instead of svn_ra_open. */
 
 #if defined(SVN_HAVE_NEON) && defined(SVN_HAVE_SERF)
-#define MUST_CHOOSE_DAV
+#define CHOOSABLE_DAV_MODULE
 #endif
 
 
@@ -393,7 +393,7 @@ svn_error_t *svn_ra_open3(svn_ra_session_t **session_p,
   const char *server_group;
   apr_uri_t repos_URI;
   apr_status_t apr_err;
-#ifdef MUST_CHOOSE_DAV
+#ifdef CHOOSABLE_DAV_MODULE
   const char *http_library = "neon";
 #endif
   /* Auth caching parameters. */
@@ -401,6 +401,9 @@ svn_error_t *svn_ra_open3(svn_ra_session_t **session_p,
   svn_boolean_t store_auth_creds = SVN_CONFIG_DEFAULT_OPTION_STORE_AUTH_CREDS;
   const char *store_plaintext_passwords
     = SVN_CONFIG_DEFAULT_OPTION_STORE_PLAINTEXT_PASSWORDS;
+  svn_boolean_t store_pp = SVN_CONFIG_DEFAULT_OPTION_STORE_SSL_CLIENT_CERT_PP;
+  const char *store_pp_plaintext
+    = SVN_CONFIG_DEFAULT_OPTION_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT;
 
   if (callbacks->auth_baton)
     {
@@ -447,6 +450,17 @@ svn_error_t *svn_ra_open3(svn_ra_session_t **session_p,
              SVN_CONFIG_DEFAULT_OPTION_STORE_PLAINTEXT_PASSWORDS));
 
           SVN_ERR(svn_config_get_bool
+            (servers, &store_pp, SVN_CONFIG_SECTION_GLOBAL,
+             SVN_CONFIG_OPTION_STORE_SSL_CLIENT_CERT_PP,
+             store_pp));
+
+          SVN_ERR(svn_config_get_yes_no_ask
+            (servers, &store_pp_plaintext,
+             SVN_CONFIG_SECTION_GLOBAL,
+             SVN_CONFIG_OPTION_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT,
+             SVN_CONFIG_DEFAULT_OPTION_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT));
+
+          SVN_ERR(svn_config_get_bool
             (servers, &store_auth_creds, SVN_CONFIG_SECTION_GLOBAL,
               SVN_CONFIG_OPTION_STORE_AUTH_CREDS,
               store_auth_creds));
@@ -483,8 +497,18 @@ svn_error_t *svn_ra_open3(svn_ra_session_t **session_p,
                 (servers, &store_plaintext_passwords, server_group,
                  SVN_CONFIG_OPTION_STORE_PLAINTEXT_PASSWORDS,
                  store_plaintext_passwords));
+
+              SVN_ERR(svn_config_get_bool
+                (servers, &store_pp,
+                 server_group, SVN_CONFIG_OPTION_STORE_SSL_CLIENT_CERT_PP,
+                 store_pp));
+
+              SVN_ERR(svn_config_get_yes_no_ask
+                (servers, &store_pp_plaintext, server_group,
+                 SVN_CONFIG_OPTION_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT,
+                 store_pp_plaintext));
             }
-#ifdef MUST_CHOOSE_DAV
+#ifdef CHOOSABLE_DAV_MODULE
           /* Now, which DAV-based RA method do we want to use today? */
           http_library
             = svn_config_get_server_setting(servers,
@@ -513,6 +537,15 @@ svn_error_t *svn_ra_open3(svn_ra_session_t **session_p,
                              SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS,
                              store_plaintext_passwords);
 
+      if (! store_pp)
+        svn_auth_set_parameter(callbacks->auth_baton,
+                               SVN_AUTH_PARAM_DONT_STORE_SSL_CLIENT_CERT_PP,
+                               "");
+
+      svn_auth_set_parameter(callbacks->auth_baton,
+                             SVN_AUTH_PARAM_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT,
+                             store_pp_plaintext);
+
       if (! store_auth_creds)
         svn_auth_set_parameter(callbacks->auth_baton,
                                SVN_AUTH_PARAM_NO_AUTH_CACHE, "");
@@ -527,7 +560,7 @@ svn_error_t *svn_ra_open3(svn_ra_session_t **session_p,
         {
           svn_ra__init_func_t initfunc = defn->initfunc;
 
-#ifdef MUST_CHOOSE_DAV
+#ifdef CHOOSABLE_DAV_MODULE
           if (defn->schemes == dav_schemes
               && strcmp(defn->ra_name, http_library) != 0)
             continue;
