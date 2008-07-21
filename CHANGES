@@ -45,7 +45,7 @@ http://svn.collab.net/repos/svn/tags/1.5.1
   * fixed: subtree merges broken for non-intersecting ranges (issue #3199)
   * fixed: crash in calling apr_pstrcat (r32080)
   * don't create unneeded self-referential mergeinfo (issue #3157)
-  * fixed: invalide xml from 'svn log --xml' against pre-1.2 servers (r31875)
+  * fixed: invalid xml from 'svn log --xml' against pre-1.2 servers (r31875)
   * fixed: 'svnlook diff' ignores --diff-copy-from for properties (issue #3248)
   * fixed: 'svnlook diff' report that binary files differ (issue #3249)
 
