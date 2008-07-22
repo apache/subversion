@@ -86,7 +86,7 @@ Candidate changes for 1.5.1:
    location-segments report is run against non-existent node, exhibited
    at trunk@31900 via merge_tests failures.
    Votes:
-     +1: kameshj
+     +1: kameshj, cmpilato
 
 
  * r31658, r31659
@@ -117,7 +117,7 @@ Candidate changes for 1.5.1:
      right thing for me (cmpilato) as of r32155.
    Votes:
      +1: hwright (all but r32237)
-     +1: cmpilato (r32237 via IRC), pburba
+     +1: cmpilato, pburba
 
 
  * r32164, r32169
@@ -126,7 +126,7 @@ Candidate changes for 1.5.1:
      Segfaulting tests are a Bad Thing.  This appears to be a regression
      from 1.5.0.
    Votes:
-     +1: hwright
+     +1: hwright, cmpilato
 
 
 Approved changes:
