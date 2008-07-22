@@ -160,7 +160,7 @@ Candidate changes for 1.5.1:
      +1: hwright
 
 
- * 32142, r32187
+ * r32142, r32187
    Finish issue #3240: commits to subtrees added by merge corrupt working
    copy and repos.
    Justification:
@@ -170,8 +170,8 @@ Candidate changes for 1.5.1:
      nor vgeorgescu voted explicitly for r32142 but it seems pretty clear they
      meant to since r32187 removes the XFail from the test r32142 added!?
    Votes:
-     +1: cmpilato, vgeorgescu (r32187)
-     +1: pburba
+     +1: cmpilato
+     +1: pburba, vgeorgescu
 
 Approved changes:
 =================
