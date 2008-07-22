@@ -48,6 +48,10 @@ http://svn.collab.net/repos/svn/tags/1.5.1
   * fixed: invalid xml from 'svn log --xml' against pre-1.2 servers (r31875)
   * fixed: 'svnlook diff' ignores --diff-copy-from for properties (issue #3248)
   * fixed: 'svnlook diff' report that binary files differ (issue #3249)
+  * support 'http-library' with --enable-runtime-module-search (r31425, -722)
+  * serf: fetch the repo UUID on the target url, not the root (r31464)
+  * support Berkeley DB 4.7 (r32017, -29)
+  * fixed: corruption by commits to subtrees added by merge (issue #3240)
 
  Developer-visible changes:
   * fixed: crash when when svn_ra_open3() is passed a bogus URL (r31223)
