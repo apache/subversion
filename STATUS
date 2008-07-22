@@ -17,7 +17,7 @@ Candidate changes for 1.5.1:
    Question:
      Does r32056, nominated below, fix these test failures?
    Votes:
-     +1: lgo, cmpilato
+     +1: lgo, cmpilato, jerenkrantz
      +0: arfrever (serf tests fail)
      -0: markphip (serf tests fail on OSX), epg (failure confirmed)
 
