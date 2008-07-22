@@ -22,21 +22,10 @@ Candidate changes for 1.5.1:
      -0: markphip (serf tests fail on OSX), epg (failure confirmed)
 
 
- * r31425, r31722
-   Support the 'http-library' option when Subversion was configured
-   with the '--enable-runtime-module-search' option.
-   Notes:
-     Trivial merge conflict in configure.ac.
-     When resolving remove the check for apr_memcache, and keep
-     the bits defining SVN_HAVE_NEON and SVN_HAVE_SERF.
-   Votes:
-     +1: arfrever, stsp
-
-
  * r31464
    ra_serf: Fix authz tests 1 and 12.
    Votes:
-     +1: arfrever
+     +1: arfrever, cmpilato
 
 
  * r30632, r30749, r30750, r31757, r31769, r31817
@@ -175,3 +164,13 @@ Candidate changes for 1.5.1:
 
 Approved changes:
 =================
+
+ * r31425, r31722
+   Support the 'http-library' option when Subversion was configured
+   with the '--enable-runtime-module-search' option.
+   Notes:
+     Trivial merge conflict in configure.ac.
+     When resolving remove the check for apr_memcache, and keep
+     the bits defining SVN_HAVE_NEON and SVN_HAVE_SERF.
+   Votes:
+     +1: arfrever, stsp, cmpilato
