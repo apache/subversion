@@ -8,20 +8,6 @@ delay a release, etc.
 Candidate changes for 1.5.1:
 ============================
 
- * r31313
-   Make all ra layers return a consistent error when a path is not
-   found in the repository.
-   Notes:
-     Small change, but API consistency is always a good thing.
-     Does not merge cleanly!
-   Question:
-     Does r32056, nominated below, fix these test failures?
-   Votes:
-     +1: lgo, cmpilato, jerenkrantz
-     +0: arfrever (serf tests fail)
-     -0: markphip (serf tests fail on OSX), epg (failure confirmed)
-
-
  * r30632, r30749, r30750, r31757, r31769, r31817
    Fix issue #3174, 'Merge algorithm chokes on subtrees needing special
    attention that have been renamed'.
@@ -38,20 +24,6 @@ Candidate changes for 1.5.1:
    Votes:
      +1: pburba, cmpilato
      +0: markphip (ran all tests, including all bindings and serf)
-
-
- * r31786
-   Fix the Ruby bindings test failures: Normalize compared value.
-   Votes:
-     +1: kou, cmpilato, jerenkrantz
-
-
- * r32056
-   Fix ra_serf bug that has a potential to cause vague errors when
-   location-segments report is run against non-existent node, exhibited
-   at trunk@31900 via merge_tests failures.
-   Votes:
-     +1: kameshj, cmpilato, kfogel, jerenkrantz
 
 
  * r31658, r31659
@@ -86,6 +58,38 @@ Candidate changes for 1.5.1:
      +1: jerenkrantz (r32237 only)
 
 
+Approved changes:
+=================
+
+
+ * r31313
+   Make all ra layers return a consistent error when a path is not
+   found in the repository.
+   Notes:
+     Small change, but API consistency is always a good thing.
+     Does not merge cleanly!
+   Question:
+     Does r32056, nominated below, fix these test failures?
+   Votes:
+     +1: lgo, cmpilato, jerenkrantz
+     +0: arfrever (serf tests fail)
+     -0: markphip (serf tests fail on OSX), epg (failure confirmed)
+
+
+ * r31786
+   Fix the Ruby bindings test failures: Normalize compared value.
+   Votes:
+     +1: kou, cmpilato, jerenkrantz
+
+
+ * r32056
+   Fix ra_serf bug that has a potential to cause vague errors when
+   location-segments report is run against non-existent node, exhibited
+   at trunk@31900 via merge_tests failures.
+   Votes:
+     +1: kameshj, cmpilato, kfogel, jerenkrantz
+
+
  * r32164, r32169
    Fix a segfault in the python tests.
    Justification:
@@ -93,8 +97,3 @@ Candidate changes for 1.5.1:
      from 1.5.0.
    Votes:
      +1: hwright, cmpilato, jerenkrantz
-
-
-Approved changes:
-=================
-
