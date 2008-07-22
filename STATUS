@@ -81,21 +81,6 @@ Candidate changes for 1.5.1:
      +0: julianfoad (confirmed it fixes my real-world merge problems)
 
 
- * r32017, r32029
-   Support Berkeley DB 4.7.
-   Justification:
-     Failure to provide this patch will not prevent folks from compiling
-     against Berkeley DB 4.7.  It just means that when they do, they will
-     silently lose support for Berkeley DB's rather important logging
-     subsystem.
-   Votes:
-     +1: arfrever, cmpilato
-     +1: pburba (32029)
-     +0: pburba (32017)
-     +0: blair
-     +0: julianfoad (reviewed, not tested)
-
-
  * r32056
    Fix ra_serf bug that has a potential to cause vague errors when
    location-segments report is run against non-existent node, exhibited
@@ -158,3 +143,17 @@ Candidate changes for 1.5.1:
 
 Approved changes:
 =================
+
+ * r32017, r32029
+   Support Berkeley DB 4.7.
+   Justification:
+     Failure to provide this patch will not prevent folks from compiling
+     against Berkeley DB 4.7.  It just means that when they do, they will
+     silently lose support for Berkeley DB's rather important logging
+     subsystem.
+   Votes:
+     +1: arfrever, cmpilato, hwright
+     +1: pburba (32029)
+     +0: pburba (32017)
+     +0: blair
+     +0: julianfoad (reviewed, not tested)
