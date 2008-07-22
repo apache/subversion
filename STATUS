@@ -22,12 +22,6 @@ Candidate changes for 1.5.1:
      -0: markphip (serf tests fail on OSX), epg (failure confirmed)
 
 
- * r31464
-   ra_serf: Fix authz tests 1 and 12.
-   Votes:
-     +1: arfrever, cmpilato
-
-
  * r30632, r30749, r30750, r31757, r31769, r31817
    Fix issue #3174, 'Merge algorithm chokes on subtrees needing special
    attention that have been renamed'.
@@ -164,3 +158,8 @@ Candidate changes for 1.5.1:
 
 Approved changes:
 =================
+
+ * r31464
+   ra_serf: Fix authz tests 1 and 12.
+   Votes:
+     +1: arfrever, cmpilato, hwright
