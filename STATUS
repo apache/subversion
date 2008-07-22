@@ -43,7 +43,7 @@ Candidate changes for 1.5.1:
  * r31786
    Fix the Ruby bindings test failures: Normalize compared value.
    Votes:
-     +1: kou
+     +1: kou, cmpilato
 
 
  * r30607, r30628, r30812, r30929, r30935, r30961, r30967, r31033,
@@ -128,19 +128,6 @@ Candidate changes for 1.5.1:
      +1: hwright
 
 
- * r32142, r32187
-   Finish issue #3240: commits to subtrees added by merge corrupt working
-   copy and repos.
-   Justification:
-     In the best case, this causes commits to fail.  In the worst one,
-     it can cause commits to modify the wrong files!
-   Notes: r32142 is a test for the issue, r32187 is the fix.  Neither cmpilato
-     nor vgeorgescu voted explicitly for r32142 but it seems pretty clear they
-     meant to since r32187 removes the XFail from the test r32142 added!?
-   Votes:
-     +1: cmpilato (r32187)
-     +1: pburba, vgeorgescu
-
 Approved changes:
 =================
 
@@ -157,3 +144,16 @@ Approved changes:
      +0: pburba (32017)
      +0: blair
      +0: julianfoad (reviewed, not tested)
+
+ * r32142, r32187
+   Finish issue #3240: commits to subtrees added by merge corrupt working
+   copy and repos.
+   Justification:
+     In the best case, this causes commits to fail.  In the worst one,
+     it can cause commits to modify the wrong files!
+   Notes: r32142 is a test for the issue, r32187 is the fix.  Neither cmpilato
+     nor vgeorgescu voted explicitly for r32142 but it seems pretty clear they
+     meant to since r32187 removes the XFail from the test r32142 added!?
+   Votes:
+     +1: pburba, vgeorgescu, cmpilato
+
