@@ -6695,6 +6695,7 @@ msgstr ""
 "Versuch, den Wert der Eigenschaft auf »%s« zu ändern, aber die Eigenschaft "
 "soll gelöscht werden.\n"
 
+# Once you change "Auswahl:" don't forget to adapt indentation of other strings!
 #: ../svn/conflict-callbacks.c:430
 msgid "Select: (p) postpone"
 msgstr "Auswahl: (p) zurückstellen"
@@ -6712,19 +6713,20 @@ msgid ""
 ",\n"
 "        (mc) mine-conflict, (tc) theirs-conflict"
 msgstr ""
+",\n"
+"         (mc) eigene konfliktbehaftete Datei, (tc) fremde konfliktbehaftete Datei"
 
 #: ../svn/conflict-callbacks.c:455
 msgid ""
 ",\n"
 "        (mf) mine-full, (tf) theirs-full"
 msgstr ""
+",\n"
+"         (mf) volle eigene Datei, (tf) volle fremde Datei"
 
 #: ../svn/conflict-callbacks.c:462
-#, fuzzy
 msgid "(s) show all options: "
-msgstr ""
-"\n"
-"Gültige Optionen:\n"
+msgstr " (s) alle Optionen anzeigen: "
 
 #: ../svn/conflict-callbacks.c:470
 #, c-format
@@ -6858,7 +6860,7 @@ msgstr "Option »--new« ist nur in Verbindung mit der Option »--old« zulässi
 #, c-format
 msgid "Target lists to diff may not contain both working copy paths and URLs"
 msgstr ""
-"Ziellisten für Vergleich dürfen nicht gleichzeitig Arbeitskopien und URLs "
+"Ziellisten für Vergleiche dürfen nicht gleichzeitig Arbeitskopien und URLs "
 "enthalten"
 
 #: ../svn/export-cmd.c:88
@@ -7523,7 +7525,7 @@ msgid ""
 "use/display additional information from merge\n"
 "                             history"
 msgstr ""
-"verwende/zeige zusätzliche Informationen aus\n"
+"verwende/zeige zusätzliche Informationen aus der\n"
 "                             Zusammenführungsgeschichte an"
 
 #: ../svn/main.c:260
@@ -9569,16 +9571,15 @@ msgstr ""
 "Sie entweder die $SVN_EDITOR Umgebungsvariable oder verwenden Sie die --"
 "message (-m) oder --file (-F) Optionen"
 
-# CHECKME: " :"?
 #: ../svn/util.c:810
 msgid ""
 "\n"
 "Log message unchanged or not specified\n"
-"(a)bort, (c)ontinue, (e)dit :\n"
+"(a)bort, (c)ontinue, (e)dit:\n"
 msgstr ""
 "\n"
 "Logmeldung unverändert oder nicht angegeben\n"
-"A)bbrechen, Weitermac)hen, E)ditieren :\n"
+"(A)bbrechen, Weiterma(c)hen, (E)ditieren:\n"
 
 #: ../svn/util.c:863
 msgid "Use --force to override this restriction"
