@@ -3552,8 +3552,8 @@ svn_client_revprop_get(const char *propname,
  * repository.
  *
  * If @a depth is @c svn_depth_empty, list only the properties of
- * @a path_or_url itself.  If @a depth is @c svn_depth_files, and
- * @a path_or_url is a directory, list the properties of @a path_or_url
+ * @a target itself.  If @a depth is @c svn_depth_files, and
+ * @a target is a directory, list the properties of @a target
  * and its file entries.  If @c svn_depth_immediates, list the properties
  * of its immediate file and directory entries.  If @c svn_depth_infinity,
  * list the properties of its file entries and recurse (with
