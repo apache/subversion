@@ -100,7 +100,7 @@ Candidate changes for 1.5.1:
      it is inconsistent with the way we currently handle inoperative merges
      in every other situation (i.e. we still set mergeinfo - see issue #2883).
    Votes:
-     +1: pburba
+     +1: pburba, cmpilato
 
 
  * r32153, r32160, r32185, r32237
