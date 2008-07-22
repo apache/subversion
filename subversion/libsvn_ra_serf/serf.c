@@ -1124,15 +1124,14 @@ svn_ra_serf__get_uuid(svn_ra_session_t *ra_session,
 {
   svn_ra_serf__session_t *session = ra_session->priv;
   apr_hash_t *props;
-  const char *root_url;
 
   props = apr_hash_make(pool);
 
-  SVN_ERR(svn_ra_serf__get_repos_root(ra_session, &root_url, pool));
   SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
-                                      root_url, SVN_INVALID_REVNUM, "0",
-                                      uuid_props, pool));
-  *uuid = svn_ra_serf__get_prop(props, root_url,
+                                      session->repos_url_str,
+                                      SVN_INVALID_REVNUM, "0", uuid_props,
+                                      pool));
+  *uuid = svn_ra_serf__get_prop(props, session->repos_url_str,
                                 SVN_DAV_PROP_NS_DAV, "repository-uuid");
 
   if (!*uuid)

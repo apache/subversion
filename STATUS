@@ -158,8 +158,3 @@ Candidate changes for 1.5.1:
 
 Approved changes:
 =================
-
- * r31464
-   ra_serf: Fix authz tests 1 and 12.
-   Votes:
-     +1: arfrever, cmpilato, hwright
