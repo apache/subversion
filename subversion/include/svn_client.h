@@ -1110,7 +1110,7 @@ svn_client_checkout(svn_revnum_t *result_rev,
  * their sticky ambient depth value to @a depth.
  *
  * If @a allow_unver_obstructions is TRUE then the update tolerates
- * existing unversioned items that obstruct added paths from @a URL.  Only
+ * existing unversioned items that obstruct added paths.  Only
  * obstructions of the same type (file or dir) as the added item are
  * tolerated.  The text of obstructing files is left as-is, effectively
  * treating it as a user modification after the update.  Working
@@ -1207,7 +1207,7 @@ svn_client_update(svn_revnum_t *result_rev,
  * as part of this operation.
  *
  * If @a allow_unver_obstructions is TRUE then the switch tolerates
- * existing unversioned items that obstruct added paths from @a URL.  Only
+ * existing unversioned items that obstruct added paths.  Only
  * obstructions of the same type (file or dir) as the added item are
  * tolerated.  The text of obstructing files is left as-is, effectively
  * treating it as a user modification after the switch.  Working
@@ -3690,12 +3690,6 @@ svn_client_revprop_list(apr_hash_t **props,
  * its immediate file children (if any) only.  If @a depth is @c
  * svn_depth_empty, then export exactly @a from and none of its children.
  *
- * If @a recurse is TRUE, export recursively.  Otherwise, export
- * just the directory represented by @a from and its immediate
- * non-directory children, but none of its child directories (if any).
- * Also, if @a recurse is FALSE, the export will behave as if
- * @a ignore_externals is TRUE.
- *
  * All allocations are done in @a pool.
  *
  * @since New in 1.5.
@@ -4042,7 +4036,7 @@ svn_client_remove_from_changelists(const apr_array_header_t *paths,
                                    apr_pool_t *pool);
 
 /**
- * The callback type used by @a svn_client_get_changelist
+ * The callback type used by svn_client_get_changelists().
  *
  * On each invocation, @a path is a newly discovered member of the
  * changelist, and @a baton is a private function closure.
