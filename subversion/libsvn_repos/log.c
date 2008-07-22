@@ -624,13 +624,27 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
           continue;
         }
 
-      /* If there was a base location, fetch its mergeinfo property value. */
+      /* If there was a base location, fetch its (possibly inherited)
+         mergeinfo property value. */
       if (base_path && SVN_IS_VALID_REVNUM(base_rev))
         {
           svn_fs_root_t *base_root;
+          apr_array_header_t *query_paths =
+            apr_array_make(iterpool, 1, sizeof(const char *));
+          svn_mergeinfo_t base_mergeinfo;
+          svn_mergeinfo_catalog_t base_catalog;
+
           SVN_ERR(svn_fs_revision_root(&base_root, fs, base_rev, iterpool));
-          SVN_ERR(svn_fs_node_prop(&prev_mergeinfo_value, base_root, base_path,
-                                   SVN_PROP_MERGEINFO, iterpool));
+          APR_ARRAY_PUSH(query_paths, const char *) = base_path;
+          SVN_ERR(svn_fs_get_mergeinfo(&base_catalog, base_root, query_paths,
+                                       svn_mergeinfo_inherited, FALSE,
+                                       iterpool));
+          base_mergeinfo = apr_hash_get(base_catalog, base_path,
+                                        APR_HASH_KEY_STRING);
+          if (base_mergeinfo)
+            SVN_ERR(svn_mergeinfo_to_string(&prev_mergeinfo_value,
+                                            base_mergeinfo,
+                                            iterpool));
         }
 
       /* Now fetch the current (as of REV) mergeinfo property value. */
