@@ -84,8 +84,18 @@ AC_ARG_ENABLE(neon-version-check,
   [])
 SVN_LIB_NEON($NEON_ALLOWED_LIST, $NEON_RECOMMENDED_VER, $NEON_URL)
 
+if test "$svn_lib_neon" = "yes"; then
+  AC_DEFINE([SVN_HAVE_NEON], 1,
+            [Defined if support for Neon is enabled])
+fi
+
 dnl Search for serf as an alternative to neon
 SVN_LIB_SERF
+
+if test "$svn_lib_serf" = "yes"; then
+  AC_DEFINE([SVN_HAVE_SERF], 1,
+            [Defined if support for Serf is enabled])
+fi
 
 dnl Set up a number of directories ---------------------
 

@@ -774,9 +774,11 @@ class WinGeneratorBase(GeneratorBase):
       fakedefines.append("SVN_NEON_0_28=1")
 
     if self.serf_lib:
+      fakedefines.append("SVN_HAVE_SERF")
       fakedefines.append("SVN_LIBSVN_CLIENT_LINKS_RA_SERF")
 
     if self.neon_lib:
+      fakedefines.append("SVN_HAVE_NEON")
       fakedefines.append("SVN_LIBSVN_CLIENT_LINKS_RA_NEON")
 
     # check we have sasl

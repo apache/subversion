@@ -164,13 +164,3 @@ Candidate changes for 1.5.1:
 
 Approved changes:
 =================
-
- * r31425, r31722
-   Support the 'http-library' option when Subversion was configured
-   with the '--enable-runtime-module-search' option.
-   Notes:
-     Trivial merge conflict in configure.ac.
-     When resolving remove the check for apr_memcache, and keep
-     the bits defining SVN_HAVE_NEON and SVN_HAVE_SERF.
-   Votes:
-     +1: arfrever, stsp, cmpilato
