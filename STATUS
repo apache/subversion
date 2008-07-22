@@ -46,41 +46,6 @@ Candidate changes for 1.5.1:
      +1: kou, cmpilato
 
 
- * r30607, r30628, r30812, r30929, r30935, r30961, r30967, r31033,
-   r31059, r31086, r31088, r31090, r31137, r31575, r31594, r31601,
-   r31769, r31900, r31926, r31927
-   Fix issue #3067: subtrees that don't exist at the start or end of a merge
-   range shouldn't break the merge.
-   Justification:
-     This fixes a serious bug in which common merge use cases fail with an
-     error.  We have already encountered this in our own repository.
-     See http://subversion.tigris.org/issues/show_bug.cgi?id=3067#desc5
-     onward for the tortured history and explanation of this problem.
-   Notes:
-     r31594, r31601, r31900, r31927 are the core fixes for this issue.
-
-     r30628 some format only changes that are needed to avoid conflicts.
-
-     r31059, r31086, r31088, r31090, r30607, r30812, r30929, r30935,
-     r31575, r31769, r31926 add/tweak/expand
-     merge_tests.py coverage of this issue.  Note that r31769 is also
-     nominated in the issue #3174 group as it applies to both issues (and may
-     already be backported).
-
-     r30961, r30967, r31033, and r31137 are code and documentation improvements
-     to some merge.c helper functions, needed to avoid conflicts.
-
-     There is a backport branch with all these changes applied at
-     http://svn.collab.net/repos/svn/branches/1.5.x-issue3067.  Note that
-     you'll want to use a trunk (or 1.5.x-issue3067) build to merge
-     1.5.x-issue3067 to 1.5.x or you'll encounter some problems, see
-     http://subversion.tigris.org/servlets/ReadMsg?listName=dev&msgNo=141164.
-   Votes:
-     +1: pburba, kameshj
-     +0: markphip (ran all tests, including all bindings and serf)
-     +0: julianfoad (confirmed it fixes my real-world merge problems)
-
-
  * r32056
    Fix ra_serf bug that has a potential to cause vague errors when
    location-segments report is run against non-existent node, exhibited
@@ -131,3 +96,38 @@ Candidate changes for 1.5.1:
 
 Approved changes:
 =================
+
+
+ * r30607, r30628, r30812, r30929, r30935, r30961, r30967, r31033,
+   r31059, r31086, r31088, r31090, r31137, r31575, r31594, r31601,
+   r31769, r31900, r31926, r31927
+   Fix issue #3067: subtrees that don't exist at the start or end of a merge
+   range shouldn't break the merge.
+   Justification:
+     This fixes a serious bug in which common merge use cases fail with an
+     error.  We have already encountered this in our own repository.
+     See http://subversion.tigris.org/issues/show_bug.cgi?id=3067#desc5
+     onward for the tortured history and explanation of this problem.
+   Notes:
+     r31594, r31601, r31900, r31927 are the core fixes for this issue.
+
+     r30628 some format only changes that are needed to avoid conflicts.
+
+     r31059, r31086, r31088, r31090, r30607, r30812, r30929, r30935,
+     r31575, r31769, r31926 add/tweak/expand
+     merge_tests.py coverage of this issue.  Note that r31769 is also
+     nominated in the issue #3174 group as it applies to both issues (and may
+     already be backported).
+
+     r30961, r30967, r31033, and r31137 are code and documentation improvements
+     to some merge.c helper functions, needed to avoid conflicts.
+
+     There is a backport branch with all these changes applied at
+     http://svn.collab.net/repos/svn/branches/1.5.x-issue3067.  Note that
+     you'll want to use a trunk (or 1.5.x-issue3067) build to merge
+     1.5.x-issue3067 to 1.5.x or you'll encounter some problems, see
+     http://subversion.tigris.org/servlets/ReadMsg?listName=dev&msgNo=141164.
+   Votes:
+     +1: pburba, kameshj, cmpilato
+     +0: markphip (ran all tests, including all bindings and serf)
+     +0: julianfoad (confirmed it fixes my real-world merge problems)
