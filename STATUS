@@ -36,7 +36,7 @@ Candidate changes for 1.5.1:
      To facilitate review a backport branch was created at
      http://svn.collab.net/repos/svn/branches/1.5.x-issue3174.
    Votes:
-     +1: pburba
+     +1: pburba, cmpilato
      +0: markphip (ran all tests, including all bindings and serf)
 
 
