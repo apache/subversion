@@ -60,6 +60,7 @@ typedef svn_boolean_t (*password_set_t)(apr_hash_t *creds,
 /* A function that stores in *PASSWORD (potentially after decrypting it)
    the user's password.  It might be obtained directly from CREDS, or
    from an external store, using REALMSTRING and USERNAME as keys.
+   (The behavior is undefined if REALMSTRING or USERNAME are NULL.)
    If NON_INTERACTIVE is set, the user must not be involved in the
    retrieval process.  POOL is used for any necessary allocation. */
 typedef svn_boolean_t (*password_get_t)(const char **password,
@@ -84,7 +85,7 @@ simple_password_get(const char **password,
   svn_string_t *str;
   str = apr_hash_get(creds, SVN_AUTH__AUTHFILE_USERNAME_KEY,
                      APR_HASH_KEY_STRING);
-  if (str && strcmp(str->data, username) == 0)
+  if (str && username && strcmp(str->data, username) == 0)
     {
       str = apr_hash_get(creds, SVN_AUTH__AUTHFILE_PASSWORD_KEY,
                          APR_HASH_KEY_STRING);
@@ -169,7 +170,7 @@ simple_first_creds_helper(void **credentials,
                 username = str->data;
             }
 
-          if (! password)
+          if (username && ! password)
             {
               svn_boolean_t have_passtype;
               /* The password type in the auth data must match the

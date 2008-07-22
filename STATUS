@@ -175,13 +175,3 @@ Candidate changes for 1.5.1:
 
 Approved changes:
 =================
-
- * r32023
-   Follow up (r31884) to fix issue #2242 which checks for a NULL username.
-   Notes:
-     Was merged in r32050, but was subsequently reverted in r32085 because it
-     hadn't had sufficient votes and because the merge in r32050 was incomplete;
-     see <http://svn.haxx.se/dev/archive-2008-07/0274.shtml>.
-   Votes:
-     +1: danielsh, dlr, arfrever
-     +1 (non-binding): stylesen
