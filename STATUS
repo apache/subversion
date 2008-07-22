@@ -51,7 +51,7 @@ Candidate changes for 1.5.1:
    location-segments report is run against non-existent node, exhibited
    at trunk@31900 via merge_tests failures.
    Votes:
-     +1: kameshj, cmpilato, kfogel
+     +1: kameshj, cmpilato, kfogel, jerenkrantz
 
 
  * r31658, r31659
