@@ -183,8 +183,7 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
     const char *internal_path;
     apr_pool_t *pool;
     apr_status_t apr_err;
-    apr_size_t inwords, outbytes;
-    unsigned int outlength;
+    unsigned int inwords, outbytes, outlength;
 
     apr_pool_create(&pool, 0);
     /* get dll name - our locale info will be in '../share/locale' */

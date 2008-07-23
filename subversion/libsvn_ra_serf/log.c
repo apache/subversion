@@ -282,12 +282,12 @@ end_log(svn_ra_serf__xml_parser_t *parser,
   else if (state == ITEM &&
            strcmp(name.name, "log-item") == 0)
     {
-      if (log_ctx->limit && (log_ctx->nest_level == 0)
+      if (log_ctx->limit && (log_ctx->nest_level == 0) 
           && (++log_ctx->count > log_ctx->limit))
         {
           return SVN_NO_ERROR;
         }
-
+       
       /* Give the info to the reporter */
       SVN_ERR(log_ctx->receiver(log_ctx->receiver_baton,
                                 info->log_entry,

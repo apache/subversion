@@ -51,7 +51,7 @@ svn_cl__merge(apr_getopt_t *os,
   apr_array_header_t *options, *ranges_to_merge = opt_state->revision_ranges;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
-                                                      opt_state->targets,
+                                                      opt_state->targets, 
                                                       ctx, pool));
 
   /* For now, we require at least one source.  That may change in
@@ -67,7 +67,7 @@ svn_cl__merge(apr_getopt_t *os,
        <bhuvan>   kfogel: np; while we are at it, 'svn merge' simply
                   returns nothing; i think we should say: """svn: Not
                   enough arguments provided; try 'svn help' for more
-                  info"""
+                  info""" 
 
        <kfogel>   good idea
 
@@ -141,7 +141,7 @@ svn_cl__merge(apr_getopt_t *os,
     }
 
   /* If revision_ranges has at least one real range at this point, then
-     we know the user must have used the '-r' and/or '-c' switch(es).
+     we know the user must have used the '-r' and/or '-c' switch(es). 
      This means we're *not* doing two distinct sources. */
   if (first_range_start.kind != svn_opt_revision_unspecified)
     {
@@ -291,7 +291,7 @@ svn_cl__merge(apr_getopt_t *os,
             return svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
                                     _("--depth cannot be used with "
                                       "--reintegrate"));
-
+          
           if (opt_state->force)
             return svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
                                     _("--force cannot be used with "

@@ -61,7 +61,7 @@ usage_maybe_with_err(const char *progname, const char *err_msg)
 /* Build the node-origins index any newly added items introduced in
    REVISION in FS.  Set *COUNT to the number of new items found.  */
 static svn_error_t *
-index_revision_adds(int *count, svn_fs_t *fs,
+index_revision_adds(int *count, svn_fs_t *fs, 
                     svn_revnum_t revision, apr_pool_t *pool)
 {
   svn_fs_root_t *root;
@@ -128,7 +128,7 @@ build_index(const char *repos_path, apr_pool_t *pool)
   /* Fetch the youngest revision of the repository. */
   SVN_ERR(svn_fs_youngest_rev(&youngest_rev, fs, pool));
   slotsize = strlen(apr_ltoa(pool, youngest_rev));
-  progress_fmt = apr_psprintf(pool,
+  progress_fmt = apr_psprintf(pool, 
                               "[%%%dd/%%%dd]  Found %%d new lines of history."
                               "\n", slotsize, slotsize);
 
@@ -180,7 +180,7 @@ main(int argc, const char **argv)
 
   if (err)
     {
-      svn_handle_error2(err, stderr, FALSE,
+      svn_handle_error2(err, stderr, FALSE, 
                         "svn-populate-node-origins-index: ");
       return EXIT_FAILURE;
     }

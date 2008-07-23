@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Copyright (c) Microsoft Corporation.  All rights reserved.
+-->
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+    <Fragment>
+        <UI>
+            <Dialog Id="PostDialog" Width="370" Height="270" Title="!(loc.PostDlg_Title)">
+                <Control Id="Finish" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Cancel="yes" Text="!(loc.WixUIFinish)" />
+                <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Disabled="yes" Text="!(loc.WixUICancel)" />
+            	<Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="!(loc.PostDlgBannerBitmap)" />
+                <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Disabled="yes" Text="!(loc.WixUIBack)" />
+            	<Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="2" />
+            	<Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="2" />
+            	<Control Id="Description" Type="Text" X="20" Y="21" Width="280" Height="15" Transparent="yes" NoPrefix="yes" Text="!(loc.PostDlgDescription)" />
+            	<Control Id="Title" Type="Text" X="15" Y="6" Width="300" Height="15" Transparent="yes" NoPrefix="yes" Text="!(loc.PostDlgTitle)" />
+            	
+            	<Control Id="PostText" Type="ScrollableText" X="20" Y="70" Width="330" Height="151" Sunken="yes" TabSkip="no" Hidden="yes">
+            		<Text SourceFile="!(wix.WixUIPostRtf=$(var.postRtf))">
+            		</Text>
+                    <Condition Action="show">Not WixUI_InstallMode = "Remove" AND Not WixUI_InstallMode = "Repair"</Condition>
+            	</Control>
+            	
+            	<Control Id="PostUninstText" Type="Text" X="20" Y="70" Width="330" Height="151" Transparent="yes" NoPrefix="yes" Hidden="yes" Text="!(loc.PostDlgUninstDescription)">
+                    <Condition Action="show">WixUI_InstallMode = "Remove"</Condition>
+            	</Control>
+
+            	<Control Id="PostUninstTextSubv" Type="Text" X="20" Y="70" Width="330" Height="151" Transparent="yes" NoPrefix="yes" Hidden="yes" Text="!(loc.PostDlgRepairDescription)">
+                    <Condition Action="show">WixUI_InstallMode = "Repair"</Condition>
+            	</Control>
+            	
+            	<Control Id="OptionalText" Type="Text" X="135" Y="100" Width="220" Height="80" Transparent="yes" NoPrefix="yes" Hidden="yes" Text="[WIXUI_PostDialogOPTIONALTEXT]">
+                    <Condition Action="show">WIXUI_EXITDIALOGOPTIONALTEXT AND NOT Installed</Condition>
+                </Control>
+                <Control Id="OptionalCheckBox" Type="CheckBox" X="135" Y="190" Width="220" Height="40" Hidden="yes" Property="WIXUI_PostDialogOPTIONALCHECKBOX" CheckBoxValue="1" Text="[WIXUI_PostDialogOPTIONALCHECKBOXTEXT]">
+                    <Condition Action="show">WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT AND NOT Installed</Condition>
+                </Control>
+            </Dialog>
+
+            <InstallUISequence>
+                <Show Dialog="PostDialog" OnExit="success" />
+            </InstallUISequence>
+
+    	    <AdminUISequence>
+                <Show Dialog="PostDialog" OnExit="success" />
+            </AdminUISequence>
+
+        </UI>
+    </Fragment>
+</Wix>

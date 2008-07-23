@@ -3826,7 +3826,7 @@ interactive-conflicts = true
 
 def update_uuid_changed(sbox):
   "update fails when repos uuid changed"
-
+  
   def wc_uuid(wc_dir):
     "Return the UUID of the working copy at WC_DIR."
 
@@ -3844,17 +3844,17 @@ def update_uuid_changed(sbox):
   sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
   repo_dir = sbox.repo_dir
-
+  
   uuid_before = wc_uuid(wc_dir)
 
   # Change repository's uuid.
   svntest.actions.run_and_verify_svnadmin(None, None, [],
                                           'setuuid', repo_dir)
-
+  
   # 'update' detected the new uuid...
   svntest.actions.run_and_verify_svn(None, None, '.*UUID.*',
                                      'update', wc_dir)
-
+  
   # ...and didn't overwrite the old uuid.
   uuid_after = wc_uuid(wc_dir)
   if uuid_before != uuid_after:

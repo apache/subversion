@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+	<Fragment>
+		<UI>
+			<Dialog Id="CreateIcons" Width="370" Height="270" Title="CreateIcons">
+				<Control Id="chkQuickLaunch" Type="CheckBox" Height="18" Width="276" X="30" Y="147" Text="Create &amp;Quick Launch icon for the Subversion documentation" Property="instQuickLaunch" />
+				<Control Id="label3" Type="Text" Height="17" Width="113" X="30" Y="128" Text="Quick Launch Icons:" />
+				<Control Id="chkDesktop" Type="CheckBox" Height="18" Width="260" X="30" Y="107" Text="Create &amp;Desktop icon for the Subversion documentation" Property="instDesktop" />
+				<Control Id="label2" Type="Text" Height="17" Width="75" X="30" Y="88" Text="Desktop icons:" />
+				<Control Id="label1" Type="Text" Height="23" Width="314" X="30" Y="54" Text="Select the additional tasks you would like Setup to perform while installing Subversion, then click Next." />
+			</Dialog>
+		</UI>
+	</Fragment>
+</Wix>

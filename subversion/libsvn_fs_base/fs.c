@@ -356,7 +356,7 @@ bdb_write_config(svn_fs_t *fs)
     "set_lg_max      1048576\n"
     "#\n"
     "# If you see \"log region out of memory\" errors, bump lg_regionmax.\n"
-    "# See http://www.oracle.com/technology/documentation/berkeley-db/ref/log/config.html\n"
+    "# See http://www.oracle.com/technology/documentation/berkeley-db/db/ref/log/config.html\n"
     "# and http://svn.haxx.se/users/archive-2004-10/1001.shtml for more.\n"
     "set_lg_regionmax 131072\n"
     "#\n"
@@ -390,7 +390,7 @@ bdb_write_config(svn_fs_t *fs)
       "# Disable fsync of log files on transaction commit. Read the\n"
       "# documentation about DB_TXN_NOSYNC at:\n"
       "#\n"
-      "#   http://www.oracle.com/technology/documentation/berkeley-db/ref/log/config.html\n"
+      "#   http://www.oracle.com/technology/documentation/berkeley-db/db/ref/log/config.html\n"
       "#\n"
       "# [requires Berkeley DB 4.0]\n",
       /* inactive */
@@ -404,7 +404,7 @@ bdb_write_config(svn_fs_t *fs)
       "# Enable automatic removal of unused transaction log files.\n"
       "# Read the documentation about DB_LOG_AUTOREMOVE at:\n"
       "#\n"
-      "#   http://www.oracle.com/technology/documentation/berkeley-db/ref/log/config.html\n"
+      "#   http://www.oracle.com/technology/documentation/berkeley-db/db/ref/log/config.html\n"
       "#\n"
       "# [requires Berkeley DB 4.2]\n",
       /* inactive */
@@ -499,10 +499,10 @@ static fs_vtable_t fs_vtable = {
 /* Depending on CREATE, create or open the environment and databases
    for filesystem FS in PATH. Use POOL for temporary allocations. */
 static svn_error_t *
-open_databases(svn_fs_t *fs,
+open_databases(svn_fs_t *fs, 
                svn_boolean_t create,
                int format,
-               const char *path,
+               const char *path, 
                apr_pool_t *pool)
 {
   base_fs_data_t *bfd;
@@ -666,8 +666,8 @@ error:
 /* Gaining access to an existing Berkeley DB-based filesystem.  */
 
 svn_error_t *
-svn_fs_base__test_required_feature_format(svn_fs_t *fs,
-                                          const char *feature,
+svn_fs_base__test_required_feature_format(svn_fs_t *fs, 
+                                          const char *feature, 
                                           int requires)
 {
   base_fs_data_t *bfd = fs->fsap_data;
@@ -675,7 +675,7 @@ svn_fs_base__test_required_feature_format(svn_fs_t *fs,
     return svn_error_createf
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
        _("The '%s' feature requires version %d of the filesystem schema; "
-         "filesystem '%s' uses only version %d"),
+         "filesystem '%s' uses only version %d"), 
        feature, requires, fs->path, bfd->format);
   return SVN_NO_ERROR;
 }
@@ -712,8 +712,8 @@ base_open(svn_fs_t *fs, const char *path, apr_pool_t *pool,
   svn_boolean_t write_format_file = FALSE;
 
   /* Read the FS format number. */
-  svn_err = svn_io_read_version_file(&format,
-                                     svn_path_join(path, FORMAT_FILE, pool),
+  svn_err = svn_io_read_version_file(&format, 
+                                     svn_path_join(path, FORMAT_FILE, pool), 
                                      pool);
   if (svn_err && APR_STATUS_IS_ENOENT(svn_err->apr_err))
     {
@@ -728,7 +728,7 @@ base_open(svn_fs_t *fs, const char *path, apr_pool_t *pool,
     goto error;
 
   /* Create the environment and databases. */
-  svn_err = open_databases(fs, FALSE, format, path, pool);
+  svn_err = open_databases(fs, FALSE, format, path, pool);  
   if (svn_err) goto error;
 
   ((base_fs_data_t *) fs->fsap_data)->format = format;
@@ -737,7 +737,7 @@ base_open(svn_fs_t *fs, const char *path, apr_pool_t *pool,
   /* If we lack a format file, write one. */
   if (write_format_file)
     {
-      svn_err = svn_io_write_version_file(svn_path_join(path, FORMAT_FILE,
+      svn_err = svn_io_write_version_file(svn_path_join(path, FORMAT_FILE, 
                                                         pool), format, pool);
       if (svn_err) goto error;
     }
@@ -800,7 +800,7 @@ base_upgrade(svn_fs_t *fs, const char *path, apr_pool_t *pool,
 {
   /* Currently, upgrading just means bumping the format file's stored
      version number. */
-  return svn_io_write_version_file(svn_path_join(path, FORMAT_FILE, pool),
+  return svn_io_write_version_file(svn_path_join(path, FORMAT_FILE, pool), 
                                    SVN_FS_BASE__FORMAT_NUMBER, pool);
 }
 
@@ -917,11 +917,9 @@ svn_fs_base__clean_logs(const char *live_path,
 }
 
 
-/* ### There -must- be a more elegant way to do a compile-time check
-       for BDB 4.2 or later.  We're doing this because apparently
-       env->get_flags() and DB->get_pagesize() don't exist in earlier
-       versions of BDB.  */
-#ifdef DB_LOG_AUTOREMOVE
+/* DB_ENV->get_flags() and DB->get_pagesize() don't exist prior to
+   Berkeley DB 4.2. */
+#if SVN_BDB_VERSION_AT_LEAST(4, 2)
 
 /* Open the BDB environment at PATH and compare its configuration
    flags with FLAGS.  If every flag in FLAGS is set in the
@@ -933,16 +931,28 @@ check_env_flags(svn_boolean_t *match,
                 apr_pool_t *pool)
 {
   bdb_env_baton_t *bdb;
+#if SVN_BDB_VERSION_AT_LEAST(4, 7)
+  int flag_state;
+#else
   u_int32_t envflags;
+#endif
 
   SVN_ERR(svn_fs_bdb__open(&bdb, path,
                            SVN_BDB_STANDARD_ENV_FLAGS,
                            0666, pool));
-
+#if SVN_BDB_VERSION_AT_LEAST(4, 7)
+  SVN_BDB_ERR(bdb, bdb->env->log_get_config(bdb->env, flags, &flag_state));
+#else
   SVN_BDB_ERR(bdb, bdb->env->get_flags(bdb->env, &envflags));
+#endif
+
   SVN_ERR(svn_fs_bdb__close(bdb));
 
+#if SVN_BDB_VERSION_AT_LEAST(4, 7)
+  if (flag_state == 0)
+#else
   if (flags & envflags)
+#endif
     *match = TRUE;
   else
     *match = FALSE;
@@ -977,7 +987,7 @@ get_db_pagesize(u_int32_t *pagesize,
 
   return svn_fs_bdb__close(bdb);
 }
-#endif /* DB_LOG_AUTOREMOVE */
+#endif /* SVN_BDB_VERSION_AT_LEAST(4, 2) */
 
 
 /* Copy FILENAME from SRC_DIR to DST_DIR in byte increments of size
@@ -1084,15 +1094,22 @@ base_hotcopy(const char *src_path,
           (&format, svn_path_join(src_path, FORMAT_FILE, pool), pool));
   SVN_ERR(check_format(format));
 
-  /* If using DB 4.2 or later, note whether the DB_LOG_AUTOREMOVE
+  /* If using Berkeley DB 4.2 or later, note whether the DB_LOG_AUTO_REMOVE
      feature is on.  If it is, we have a potential race condition:
      another process might delete a logfile while we're in the middle
      of copying all the logfiles.  (This is not a huge deal; at worst,
      the hotcopy fails with a file-not-found error.) */
-#ifdef DB_LOG_AUTOREMOVE
-  SVN_ERR(check_env_flags(&log_autoremove, DB_LOG_AUTOREMOVE,
-                          src_path, pool));
+#if SVN_BDB_VERSION_AT_LEAST(4, 2)
+  err = check_env_flags(&log_autoremove,
+#if SVN_BDB_VERSION_AT_LEAST(4, 7)
+                          DB_LOG_AUTO_REMOVE,
+ /* DB_LOG_AUTO_REMOVE was named DB_LOG_AUTOREMOVE before Berkeley DB 4.7. */
+#else
+                          DB_LOG_AUTOREMOVE,
 #endif
+                          src_path, pool);
+#endif
+  SVN_ERR(err);
 
   /* Copy the DB_CONFIG file. */
   SVN_ERR(svn_io_dir_file_copy(src_path, dest_path, "DB_CONFIG", pool));
@@ -1100,7 +1117,7 @@ base_hotcopy(const char *src_path,
   /* In order to copy the database files safely and atomically, we
      must copy them in chunks which are multiples of the page-size
      used by BDB.  See sleepycat docs for details, or svn issue #1818. */
-#ifdef DB_LOG_AUTOREMOVE
+#if SVN_BDB_VERSION_AT_LEAST(4, 2)
   SVN_ERR(get_db_pagesize(&pagesize, src_path, pool));
   if (pagesize < SVN__STREAM_CHUNK_SIZE)
     {

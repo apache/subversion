@@ -51,7 +51,7 @@
  *     ...
  * </S:get-locations-report>
  *
- * We extract what we want at the start of <S:location>.
+ * We extract what we want at the start of <S:location>. 
 */
 
 /* Elements used in a get-locations response */

@@ -74,7 +74,7 @@ svn_cl__import(apr_getopt_t *os,
    */
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
-                                                      opt_state->targets,
+                                                      opt_state->targets, 
                                                       ctx, pool));
 
   if (targets->nelts < 1)

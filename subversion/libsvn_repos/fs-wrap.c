@@ -180,7 +180,7 @@ validate_prop(const char *name, const svn_string_t *value, apr_pool_t *pool)
                  _("Cannot accept log message because it is not encoded in "
                    "UTF-8"));
             }
-
+        
           /* Disallow inconsistent line ending style, by simply looking for
            * carriage return characters ('\r'). */
           if (strchr(value->data, '\r') != NULL)

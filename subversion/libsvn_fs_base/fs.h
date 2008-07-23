@@ -54,8 +54,8 @@ extern "C" {
 /* Return SVN_ERR_UNSUPPORTED_FEATURE if the version of filesystem FS does
    not indicate support for FEATURE (which REQUIRES a newer version). */
 svn_error_t *
-svn_fs_base__test_required_feature_format(svn_fs_t *fs,
-                                          const char *feature,
+svn_fs_base__test_required_feature_format(svn_fs_t *fs, 
+                                          const char *feature, 
                                           int requires);
 
 

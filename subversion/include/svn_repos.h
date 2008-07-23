@@ -574,7 +574,7 @@ svn_repos_begin_report(void **report_baton,
  *
  * @a revision may be SVN_INVALID_REVNUM if (for example) @a path
  * represents a locally-added path with no revision number, or @a
- * depth is @c svn_depth_exclude.
+ * depth is @c svn_depth_exclude.  
  *
  * @a path may not be underneath a path on which svn_repos_set_path3()
  * was previously called with @c svn_depth_exclude in this report.
@@ -1453,6 +1453,26 @@ svn_repos_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
                            apr_pool_t *pool);
 
 
+/* Set @a *deleted_mergeinfo_catalog and @a *added_mergeinfo_catalog
+ * to mergeinfo catalogs describing how mergeinfo values on paths
+ * (which are the keys of those catalogs) were changed via the commit
+ * of @a rev in @a repos.  Allocate returned data from @a pool.
+ *
+ * Every path whose mergeinfo was created or modified in @a rev in
+ * such a way that it differs from its value in @a rev - 1 is
+ * represented in both returned catalog hashes, and only those paths
+ * are represented therein.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_repos_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
+                            svn_mergeinfo_catalog_t *added_mergeinfo_catalog,
+                            svn_repos_t *repos,
+                            svn_revnum_t rev,
+                            apr_pool_t *pool);
+
+
 /* ---------------------------------------------------------------*/
 
 /* Retrieving multiple revisions of a file. */
@@ -1685,7 +1705,7 @@ svn_repos_fs_get_locks(apr_hash_t **locks,
  *
  * Validate @a name and @a new_value like the same way
  * svn_repos_fs_change_node_prop() does.
- *
+ *   
  * Use @a pool for temporary allocations.
  *
  * @since New in 1.5.
@@ -1832,7 +1852,7 @@ svn_repos_fs_change_txn_prop(svn_fs_txn_t *txn,
 /** Validating wrapper for svn_fs_change_txn_props() (which see for
  * argument descriptions).  Validate properties and their values the
  * same way svn_repos_fs_change_node_prop() does.
- *
+ * 
  * @since New in 1.5.
  */
 svn_error_t *

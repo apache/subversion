@@ -35,6 +35,8 @@
 #include "svn_xml.h"
 #include "cl.h"
 
+#include "private/svn_cmdline_private.h"
+
 #include "svn_private_config.h"
 
 
@@ -81,7 +83,7 @@ print_properties_xml(const char *pname,
 
       svn_xml_make_open_tag(&sb, iterpool, svn_xml_normal, "target",
                         "path", filename, NULL);
-      svn_cl__print_xml_prop(&sb, pname, propval, iterpool);
+      svn_cmdline__print_xml_prop(&sb, pname, propval, iterpool);
       svn_xml_make_close_tag(&sb, iterpool, "target");
 
       SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
@@ -181,7 +183,7 @@ svn_cl__propget(apr_getopt_t *os,
                              pname_utf8);
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
-                                                      opt_state->targets,
+                                                      opt_state->targets, 
                                                       ctx, pool));
 
   /* Add "." if user passed 0 file arguments */
@@ -217,7 +219,7 @@ svn_cl__propget(apr_getopt_t *os,
                                     "revprops",
                                     "rev", revstr, NULL);
 
-              svn_cl__print_xml_prop(&sb, pname_utf8, propval, pool);
+              svn_cmdline__print_xml_prop(&sb, pname_utf8, propval, pool);
 
               svn_xml_make_close_tag(&sb, pool, "revprops");
 
@@ -270,7 +272,7 @@ svn_cl__propget(apr_getopt_t *os,
           SVN_ERR(svn_client_propget3(&props, pname_utf8, truepath,
                                       &peg_revision,
                                       &(opt_state->start_revision),
-                                      NULL, opt_state->depth,
+                                      NULL, opt_state->depth, 
                                       opt_state->changelists, ctx, subpool));
 
           /* Any time there is more than one thing to print, or where

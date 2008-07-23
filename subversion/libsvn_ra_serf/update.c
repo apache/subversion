@@ -1765,9 +1765,9 @@ end_report(svn_ra_serf__xml_parser_t *parser,
            * version resource root path.
            *
            * Example:
-           * path:
+           * path: 
            *  /repositories/log_tests-17/!svn/ver/4/branches/a
-           * repos_root:
+           * repos_root: 
            *  http://localhost/repositories/log_tests-17
            * destination:
            *  http://localhost/repositories/log_tests-17/branches/a
@@ -1775,7 +1775,7 @@ end_report(svn_ra_serf__xml_parser_t *parser,
            * So, find 'branches/a' as the difference. Cut it of path, gives us:
            *  /repositories/log_tests-17/!svn/ver/4
            */
-          if (ctx->destination &&
+          if (ctx->destination && 
               strcmp(ctx->destination, ctx->sess->repos_root_str) != 0)
             {
               apr_size_t root_count, src_count;
@@ -1794,13 +1794,13 @@ end_report(svn_ra_serf__xml_parser_t *parser,
 
           svn_path_add_component(path, apr_ltoa(info->pool, info->base_rev));
 
-          /* Similar as above, we now have to add the relative path between
-           * source and root path.
+          /* Similar as above, we now have to add the relative path between 
+           * source and root path. 
            *
            * Example:
-           * path:
+           * path: 
            *  /repositories/log_tests-17/!svn/ver/2
-           * repos_root path:
+           * repos_root path: 
            *  /repositories/log_tests-17
            * source:
            *  /repositories/log_tests-17/trunk

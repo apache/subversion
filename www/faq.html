@@ -431,8 +431,8 @@ standalone program similar to cvs pserver, or Apache <b>httpd-2.0</b>
 using a special <b>mod_dav_svn</b> module.  <b>svnserve</b> speaks a
 custom protocol, while <b>mod_dav_svn</b> uses WebDAV as its network
 protocol.  See <a
-href="http://svnbook.red-bean.com/html-chunk/ch06.html">chapter 6</a>
-in the Subversion book to learn more.</p>
+href="http://svnbook.red-bean.com/nightly/en/svn.serverconfig.html"
+>chapter 6</a> in the Subversion book to learn more.</p>
 
 </div>
 
@@ -451,8 +451,8 @@ use Subversion?</h3>
 
 <p>For more details about setting up a network accessible Subversion
 server, see <a
-href="http://svnbook.red-bean.com/html-chunk/ch06.html">chapter 6</a>
-in the Subversion book.</p>
+href="http://svnbook.red-bean.com/nightly/en/svn.serverconfig.html"
+>chapter 6</a> in the Subversion book.</p>
 
 </div>
 
@@ -783,8 +783,8 @@ scheme is supported by running <tt>svn --version</tt>.</p>
 
 <p>A simple option is to use the <b>svnserve</b> server instead of
 Apache.  See <a
-href="http://svnbook.red-bean.com/html-chunk/ch06.html">chapter 6</a>
-in the Subversion book for details.</p>
+href="http://svnbook.red-bean.com/nightly/en/svn.serverconfig.html"
+>chapter 6</a> in the Subversion book for details.</p>
 
 <p>However, if your admins don't want you to run Apache, it's very
 likely they don't want you to run a custom server process on port 3690
@@ -1056,8 +1056,8 @@ owns the repository.</p>
 <p>If your clients are accessing via <tt>file:///</tt> or
 <tt>svn+ssh://</tt>, then there's no way to avoid access by multiple
 users.  In that case, read <a
-href="http://svnbook.red-bean.com/html-chunk/ch06s05.html">the last
-section in chapter 6</a>, and pay particular attention to the
+href="http://svnbook.red-bean.com/nightly/en/svn.serverconfig.multimethod.html"
+>the last section in chapter 6</a>, and pay particular attention to the
 "checklist" sidebar at the bottom.  It outlines a number of steps to
 make this scenario safer.</p>
 
@@ -1104,8 +1104,8 @@ revision, and the other is often a temporary transaction-tree -- thus
 the need for write access.</p>
 
 <p>This limitation only applies to the Berkeley DB backend; the <a
-href="http://svnbook.red-bean.com/svnbook-1.1/ch05.html#svn-ch-5-sect-1.2.A">FSFS
-backend</a> does not exhibit this behaviour.</p>
+href="http://svnbook.red-bean.com/nightly/en/svn.reposadmin.planning.html#svn.reposadmin.basics.backends.fsfs"
+>FSFS backend</a> does not exhibit this behaviour.</p>
 
 </div>
 
@@ -1132,8 +1132,8 @@ href="http://subversion.tigris.org/issues/show_bug.cgi?id=516">issue
 <p>In the meantime, your only recourse is to <b>svnadmin dump</b> your
 repository, then pipe the dumpfile through <b>svndumpfilter</b>
 (excluding the bad path) into an <b>svnadmin load</b> command.  See <a
-href="http://svnbook.red-bean.com/html-chunk/ch05.html">chapter 5</a>
-of the Subversion book for details about this.</p>
+href="http://svnbook.red-bean.com/nightly/en/svn.reposadmin.html"
+>chapter 5</a> of the Subversion book for details about this.</p>
 
 </div>
 
@@ -1146,7 +1146,7 @@ How do I change the log message for a revision after it's been committed?
 <p>Log messages are kept in the repository as properties attached to each
 revision.  By default, the log message property (<em>svn:log</em>) cannot be
 edited once it is committed.  That is because changes to <a
-href="http://svnbook.red-bean.com/svnbook/ch05.html#svn-ch-5-sect-1.2">revision
+href="http://svnbook.red-bean.com/nightly/en/svn.advanced.props.html">revision
 properties</a> (of which <em>svn:log</em> is one) cause the property's
 previous value to be permanently discarded, and Subversion tries to prevent
 you from doing this accidentally.  However, there are a couple of ways to get
@@ -1155,13 +1155,13 @@ Subversion to change a revision property.</p>
 <p>The first way is for the repository administrator to enable revision
 property modifications.  This is done by creating a hook called
 "pre-revprop-change" (see <a
-href="http://svnbook.red-bean.com/svnbook/ch05s02.html#svn-ch-5-sect-2.1">this
-section</a> in the Subversion book for more details about how to do this).
-The "pre-revprop-change" hook has access to the old log message before it is
-changed, so it can preserve it in some way (for example, by sending an email).
-Once revision property modifications are enabled, you can change a revision's
-log message by passing the --revprop switch to <b>svn propedit</b> or <b>svn
-propset</b>, like either one of these:</p>
+href="http://svnbook.red-bean.com/nightly/en/svn.reposadmin.create.html#svn.reposadmin.create.hooks"
+>this section</a> in the Subversion book for more details about how to do
+this).  The "pre-revprop-change" hook has access to the old log message
+before it is changed, so it can preserve it in some way (for example, by
+sending an email).  Once revision property modifications are enabled, you
+can change a revision's log message by passing the --revprop switch to
+<b>svn propedit</b> or <b>svn propset</b>, like either one of these:</p>
 
 <pre>
 $ svn propedit -r N --revprop svn:log URL
@@ -1310,9 +1310,9 @@ do the following: </p>
 </ol>
 
 <p> See
-<a href="http://svnbook.red-bean.com/html-chunk/ch05s03.html#svn-ch-5-sect-3.4"
->http://svnbook.red-bean.com/html-chunk/ch05s03.html#svn-ch-5-sect-3.4</a>
-for more details on dumping and loading.</p>
+<a href="http://svnbook.red-bean.com/nightly/en/svn.reposadmin.maint.html#svn.reposadmin.maint.migrate"
+>this section of the Subversion book</a> for more details on dumping and
+loading.</p>
 
 <p> <b>Note</b>: Most upgrades of Subversion do <i>not</i> involve a
 dump and load.  When one is required, the release announcement and the
@@ -1757,8 +1757,8 @@ mechanism to automatically set properties on files being committed.
 This means that all of your users need to remember to set certain
 properties whenever they <tt>svn add</tt> a file.  Fortunately,
 there's a client-side tool to help with this.  Read about the <a
-href="http://svnbook.red-bean.com/svnbook-1.1/ch07s02.html#svn-ch-7-sect-2.4">
-auto-props</a> feature in the book.  You need to make sure all your
+href="http://svnbook.red-bean.com/nightly/en/svn.advanced.props.html#svn.advanced.props.auto"
+>auto-props</a> feature in the book.  You need to make sure all your
 users configure their clients' auto-props settings appropriately.</p>
 
 <p>You could write a pre-commit hook script to reject any commit which
@@ -1885,10 +1885,10 @@ every commit?</h3>
 <p>This is done all the time, and is easily accomplished by adding a
 post-commit hook script to your repository.  Read about hook scripts
 in <a
-href="http://svnbook.red-bean.com/en/1.1/ch05s02.html#svn-ch-5-sect-2.1">Chapter
-5</a> of the book.  The basic idea is to make the "live site" just an
-ordinary working copy, and then have your post-commit hook script run
-'svn update' on it.</p>
+href="http://svnbook.red-bean.com/nightly/en/svn.reposadmin.create.html#svn.reposadmin.create.hooks"
+>Chapter 5</a> of the book.  The basic idea is to make the "live site"
+just an ordinary working copy, and then have your post-commit hook
+script run 'svn update' on it.</p>
 
 <p>In practice, there are a couple of things to watch out for.  The
 server program performing the commit (svnserve or apache) is the same
@@ -2079,7 +2079,7 @@ the future, however.</p>
 <p>If Subversion determines that the file is binary, the file receives
 an svn:mime-type property set to "application/octet-stream".  (You can
 always override this by using the <a
-href="http://svnbook.red-bean.com/svnbook-1.1/ch07s02.html#svn-ch-7-sect-2.4"
+href="http://svnbook.red-bean.com/nightly/en/svn.advanced.props.html#svn.advanced.props.auto"
 >auto-props feature</a> or by setting the property manually with
 <tt>svn propset</tt>.)</p>
 
@@ -2200,8 +2200,8 @@ or later), that appears to solve this problem for you.
 </p>
 
 <p>
-<b>Note:</b> with release 1.5, Subversion in fact allows you to "cp" and "mv"
-multiple files at once.
+Rumor has it that with release 1.5, Subversion will in fact allow you
+to "cp" and "mv" multiple files at once.
 </p>
 </div>
 
@@ -2477,10 +2477,10 @@ working copy is out of date?</h3>
      (for example, directory property modifications), if the
      repository has a more recent version of the node, the commit will
      be rejected, to prevent data loss.  See <a
-     href="http://svnbook.red-bean.com/svnbook/ch02s03.html#svn-ch-2-sect-3.4">
-     The Limitations of Mixed Revisions</a> in the <a
+     href="http://svnbook.red-bean.com/nightly/en/svn.basic.in-action.html#svn.basic.in-action.mixedrevs.limits"
+     >Mixed revisions have limitations</a> in the <a
      href="http://svnbook.red-bean.com/">Version Control with
-     Subversion</a> for details.</p>
+     Subversion</a> book for details.</p>
 
      <p>You can fix the problem by running 'svn update' in the working
      copy.</p>
@@ -2594,8 +2594,9 @@ a <tt>file:</tt> URL?</h3>
 svn import file:///d:/some/path/to/repos/on/d/drive
 </pre>
 <p>See <a
-href="http://svnbook.red-bean.com/html-chunk/ch02s03.html#svn-ch-2-sidebar-1">
-Repository URLs</a> in the Subversion Book for more details.</p>
+href="http://svnbook.red-bean.com/nightly/en/svn.basic.in-action.html#svn.advanced.reposurls">
+Subversion Repository URLs</a> in the Subversion Book for more
+details.</p>
 
 </div>
 
@@ -2852,9 +2853,9 @@ $ svn log
 rev 24:&nbsp; (no author) | 2003-07-29 19:28:35 +0200 (Tue, 29 Jul 2003)
 </pre></blockquote>
 
-<p>See the Subversion Book (<a
-href="http://svnbook.red-bean.com/book.html#svn-ch-5-sect-4"
->"Networking a Repository"</a>)
+<p>See <a
+href="http://svnbook.red-bean.com/nightly/en/svn.serverconfig.httpd.html"
+>the Subversion book</a>
 to learn about configuring access restrictions in Apache.</p>
 
 </div>
@@ -3434,23 +3435,30 @@ solution described here was not mentioned in that thread.</p>
 <div class="h3" id="already-under-version-control" title="already-under-version-control">
 <h3>I can't add a directory
     because Subversion says it's "already under version control".</h3>
-<p>The directory you're trying to add already contains
-  a <tt>.svn</tt> subdirectory, but it's from a different repository
-  than the directory to which you're trying to add it.  This probably
-  happened because you used your operating system's "copy" command to
-  copy one working copy into the current one.</p>
+<p>The directory you're trying to add already contains a <tt>.svn</tt>
+  subdirectory&nbsp;&mdash;&nbsp;it is a working
+  copy&nbsp;&mdash;&nbsp;but it's from a different repository location
+  than the directory to which you're trying to add it. This probably
+  happened because you used your operating system's "copy" command
+  (instead of <tt>svn copy</tt>) to copy a subdirectory in this working
+  copy, or to copy some other working copy into this one.</p>
 <p>
   The quick and dirty solution is to delete all <tt>.svn</tt>
   directories contained in the directory you're trying to add; this
-  will let the "add" command complete.  If you're using Unix, this
-  command will delete <tt>.svn</tt> directories
-  under <tt>dir</tt>:</p>
+  will let the "add" command complete. If you're using Unix, this
+  command will delete <tt>.svn</tt> directories under
+  <tt>dir</tt>:</p>
 <pre>
   find dir -type d -name .svn -exec rm -rf {} \;
 </pre>
-<p>However, you should ask yourself <em>why</em> you made this copy;
-  and you should ensure that by adding this directory, you won't be
-  making an unwanted copy of it in your repository.
+<p>However, if the copy was from the same repository, you should
+  ideally delete or move aside the copy, and use <tt>svn copy</tt> to
+  make a proper copy, which will know its history and save space in the
+  repository.</p>
+<p>If it was from a different repository, you should ask yourself
+  <em>why</em> you made this copy; and you should ensure that by
+  adding this directory, you won't be making an unwanted copy of it in
+  your repository.
 </p>
 
 </div>

@@ -743,7 +743,7 @@ svn_client_import3(svn_commit_info_t **commit_info_p,
     }
   while ((err = get_ra_editor(&ra_session, NULL,
                               &editor, &edit_baton, ctx, url, base_dir,
-                              NULL, log_msg, NULL, revprop_table,
+                              NULL, log_msg, NULL, revprop_table, 
                               commit_info_p, FALSE, NULL, TRUE, subpool)));
 
   /* Reverse the order of the components we added to our NEW_ENTRIES array. */
@@ -1550,10 +1550,8 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
 
               while (strcmp(target, base_dir) != 0)
                 {
-                  if ((target[0] == '\0') ||
-                      svn_dirent_is_root(target, strlen(target))
-                     )
-                    abort();
+                  SVN_ERR_ASSERT((target[0] != '\0') &&
+                                 !svn_dirent_is_root(target, strlen(target)));
 
                   APR_ARRAY_PUSH(dirs_to_lock,
                                  const char *) = apr_pstrdup(pool, target);
@@ -1691,7 +1689,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
 
   if ((cmt_err = get_ra_editor(&ra_session, NULL,
                                &editor, &edit_baton, ctx,
-                               base_url, base_dir, base_dir_access, log_msg,
+                               base_url, base_dir, base_dir_access, log_msg, 
                                commit_items, revprop_table, commit_info_p,
                                TRUE, lock_tokens, keep_locks, pool)))
     goto cleanup;
@@ -1735,7 +1733,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
       if (bump_err)
         goto cleanup;
 
-      assert(*commit_info_p);
+      SVN_ERR_ASSERT(*commit_info_p);
       bump_err
         = svn_wc_process_committed_queue(queue, base_dir_access,
                                          (*commit_info_p)->revision,
@@ -1765,7 +1763,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
         cleanup_err = remove_tmpfiles(tempfiles, pool);
     }
 
-  /* As per our promise, if *commit_info_p isn't set, provide a default where
+  /* As per our promise, if *commit_info_p isn't set, provide a default where 
      rev = SVN_INVALID_REVNUM. */
   if (! *commit_info_p)
     *commit_info_p = svn_create_commit_info(pool);

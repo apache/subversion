@@ -531,7 +531,7 @@ checkout_file(file_context_t *file)
         {
           dir = dir->parent_dir;
         }
-
+          
 
       /* Is our parent a copy?  If so, we're already implicitly checked out. */
       if (dir)
@@ -1570,7 +1570,7 @@ add_file(const char *path,
   new_file->changed_props = apr_hash_make(new_file->pool);
   new_file->removed_props = apr_hash_make(new_file->pool);
 
-  /* Ensure that the file doesn't exist by doing a HEAD on the
+  /* Ensure that the file doesn't exist by doing a HEAD on the 
    * resource, but only if we haven't deleted it in this commit
    * already - directly, or indirectly through its parent directories -
    * or if the parent directory was also added (without history)
@@ -1587,7 +1587,7 @@ add_file(const char *path,
     };
 
   if (! ((dir->added && !dir->copy_path) ||
-         (deleted_parent && deleted_parent[0] != '\0')))
+         deleted_parent && deleted_parent[0] != '\0'))
     {
       svn_ra_serf__simple_request_context_t *head_ctx;
       svn_ra_serf__handler_t *handler;

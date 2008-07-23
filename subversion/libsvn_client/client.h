@@ -259,7 +259,7 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
 svn_error_t *
 svn_client__path_relative_to_session(const char **rel_path,
                                      svn_ra_session_t *ra_session,
-                                     const char *url,
+                                     const char *url, 
                                      apr_pool_t *pool);
 
 /* Ensure that RA_SESSION's session URL matches SESSION_URL,
@@ -268,7 +268,7 @@ svn_client__path_relative_to_session(const char **rel_path,
    reparenting is meant to be temporary, the caller can reparent the
    session back to where it was); otherwise set *OLD_SESSION_URL to
    NULL.
-
+ 
    If SESSION_URL is NULL, treat this as a magic value meaning "point
    the RA session to the root of the repository".  */
 svn_error_t *
@@ -301,7 +301,7 @@ svn_client__get_repos_root(const char **repos_root,
    The remaining parameters are used to procure the repository root.
    Either REPOS_ROOT or RA_SESSION -- but not both -- may be NULL.
    REPOS_ROOT or ADM_ACCESS (which may also be NULL) should be passed
-   when available as an optimization (in that order of preference).
+   when available as an optimization (in that order of preference). 
 
    CAUTION:  While having a leading slash on a so-called relative path
    might work out well for functionality that interacts with
@@ -330,13 +330,13 @@ svn_client__path_relative_to_root(const char **rel_path,
    Treat DEPTH as in svn_client_propget3().
 */
 svn_error_t *
-svn_client__get_prop_from_wc(apr_hash_t *props,
+svn_client__get_prop_from_wc(apr_hash_t *props, 
                              const char *propname,
-                             const char *target,
+                             const char *target, 
                              svn_boolean_t pristine,
                              const svn_wc_entry_t *entry,
                              svn_wc_adm_access_t *adm_access,
-                             svn_depth_t depth,
+                             svn_depth_t depth, 
                              const apr_array_header_t *changelists,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *pool);
@@ -618,7 +618,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
    *TIMESTAMP_SLEEP if no sleep is required.  If IGNORE_EXTERNALS is true,
    don't process externals.  If ALLOW_UNVER_OBSTRUCTIONS is TRUE, unversioned
    children of PATH that obstruct items added from the repos are tolerated;
-   if FALSE, these obstructions cause the switch to fail.
+   if FALSE, these obstructions cause the switch to fail. 
 
    DEPTH and DEPTH_IS_STICKY behave as for svn_client__update_internal(). */
 svn_error_t *

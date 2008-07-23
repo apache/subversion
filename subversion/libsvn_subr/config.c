@@ -639,12 +639,22 @@ get_bool(svn_boolean_t *boolp, const char *input, svn_boolean_t default_value,
     {
       *boolp = FALSE;
     }
-  else
+  else  /* unrecognized value */
     {
-      return svn_error_createf(SVN_ERR_BAD_CONFIG_VALUE, NULL,
-                               _("Config error: invalid boolean value '%s' "
-                                 "in '[%s] %s'"),
-                               input, section, option);
+      if (section)
+        {
+          return svn_error_createf(SVN_ERR_BAD_CONFIG_VALUE, NULL,
+                                   _("Config error: invalid boolean "
+                                     "value '%s' for '[%s] %s'"),
+                                   input, section, option);
+        }
+      else
+        {
+          return svn_error_createf(SVN_ERR_BAD_CONFIG_VALUE, NULL,
+                                   _("Config error: invalid boolean "
+                                     "value '%s' for '%s'"),
+                                   input, option);
+        }
     }
 
   return SVN_NO_ERROR;
