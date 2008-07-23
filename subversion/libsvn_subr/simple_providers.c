@@ -37,9 +37,8 @@
 /* File provider                                                         */
 /*-----------------------------------------------------------------------*/
 
-/* The keys that will be stored on disk; analogous to similar
-   constants in ssl_client_cert_pw_providers.c and
-   ssl_server_trust_providers.c. */
+/* The keys that will be stored on disk.  These serve the same role as
+   similar constants in other providers. */
 #define AUTHN_USERNAME_KEY            "username"
 #define AUTHN_PASSWORD_KEY            "password"
 #define AUTHN_PASSTYPE_KEY            "passtype"

@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -3878,6 +3878,41 @@ def unneeded_parents(sbox):
     wc_dir, expected_output, expected_disk, expected_status)
 
 
+def double_parents_with_url(sbox):
+  "svn cp --parents URL/src_dir URL/dst_dir"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  E_url = sbox.repo_url + '/A/B/E'
+  Z_url = sbox.repo_url + '/A/B/Z'
+
+  # --parents shouldn't result in a double commit of the same directory.
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp', '--parents',
+                                     '-m', 'log msg', E_url, Z_url)
+
+  # Verify that it worked.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/Z/alpha' : Item(status='A '),
+    'A/B/Z/beta'  : Item(status='A '),
+    'A/B/Z'       : Item(status='A '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'A/B/Z/alpha' : Item(contents="This is the file 'alpha'.\n"),
+    'A/B/Z/beta'  : Item(contents="This is the file 'beta'.\n"),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+    'A/B/Z/alpha' : Item(status='  ', wc_rev=2),
+    'A/B/Z/beta'  : Item(status='  ', wc_rev=2),
+    'A/B/Z'       : Item(status='  ', wc_rev=2),
+    })
+  svntest.actions.run_and_verify_update(
+    wc_dir, expected_output, expected_disk, expected_status)
+
+
+
 ########################################################################
 # Run the tests
 
@@ -3955,6 +3990,7 @@ test_list = [ None,
               allow_unversioned_parent_for_copy_src,
               replaced_local_source_for_incoming_copy,
               unneeded_parents,
+              double_parents_with_url,
              ]
 
 if __name__ == '__main__':

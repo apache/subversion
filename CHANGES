@@ -45,6 +45,13 @@ http://svn.collab.net/repos/svn/tags/1.5.1
   * fixed: subtree merges broken for non-intersecting ranges (issue #3199)
   * fixed: crash in calling apr_pstrcat (r32080)
   * don't create unneeded self-referential mergeinfo (issue #3157)
+  * fixed: invalid xml from 'svn log --xml' against pre-1.2 servers (r31875)
+  * fixed: 'svnlook diff' ignores --diff-copy-from for properties (issue #3248)
+  * fixed: 'svnlook diff' report that binary files differ (issue #3249)
+  * support 'http-library' with --enable-runtime-module-search (r31425, -722)
+  * serf: fetch the repo UUID on the target url, not the root (r31464)
+  * support Berkeley DB 4.7 (r32017, -29)
+  * fixed: corruption by commits to subtrees added by merge (issue #3240)
 
  Developer-visible changes:
   * fixed: crash when when svn_ra_open3() is passed a bogus URL (r31223)
@@ -53,6 +60,7 @@ http://svn.collab.net/repos/svn/tags/1.5.1
   * fixed: JavaHL compilation on Windows (r31737)
   * correctly set the peg revision for copy in JavaHL (r31994)
   * allow 'svn mergeinfo' to handle working copy paths (r31023, -873, -74, -929, -930, -038)
+
 
 Version 1.5.0
 (19 Jun 2008, from /branches/1.5.x)
