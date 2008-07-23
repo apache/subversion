@@ -46,7 +46,7 @@ Candidate changes for 1.5.1:
    This should have been part of #3220 & #3235 group, just got missed.
    Lack of this revision causes 'log_tests.py' and 'blame_tests-10' to fail.
    Votes:
-     +1: kameshj
+     +1: kameshj, markphip
 
 
 Approved changes:
