@@ -450,6 +450,13 @@ make_dir_baton(struct dir_baton **d_p,
 }
 
 
+/* Forward declaration. */
+static svn_error_t *
+do_entry_deletion(struct edit_baton *eb,
+                  const char *parent_path,
+                  const char *path,
+                  int *log_number,
+                  apr_pool_t *pool);
 
 /* Helper for maybe_bump_dir_info():
 
@@ -481,6 +488,7 @@ complete_directory(struct edit_baton *eb,
          in. */
       if (eb->depth_is_sticky || *eb->target)
         {
+          svn_wc_adm_access_t *target_access;
           SVN_ERR(svn_wc_adm_retrieve(&adm_access, 
                                       eb->adm_access, path, pool));
           SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, pool));
@@ -489,6 +497,16 @@ complete_directory(struct edit_baton *eb,
             {
               entry->depth = svn_depth_infinity;
               SVN_ERR(svn_wc__entries_write(entries, adm_access, pool));
+              /* There is a small chance that the target is gone in the
+                 repository. We'd better get rid of the exclude flag now. */
+              SVN_ERR(svn_wc__adm_retrieve_internal
+                      (&target_access, eb->adm_access, eb->target, pool));
+              if (!target_access)
+                {
+                  int log_number = 0;
+                  SVN_ERR(do_entry_deletion(eb, eb->anchor, eb->target,
+                                            &log_number, pool));
+                }
             }
         }
       return SVN_NO_ERROR;
