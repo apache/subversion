@@ -18,15 +18,9 @@ Candidate changes for 1.5.1:
      Does r32056, nominated below, fix these test failures?
    Votes:
      +1: lgo, cmpilato
+     +0: arfrever (serf tests fail)
      -0: markphip (serf tests fail on OSX), epg (failure confirmed)
 
- * r31425, r31722, r32071
-   Support the 'http-library' option when Subversion was configured
-   with the '--enable-runtime-module-search' option.
-   Notes:
-     r32071 isn't required, but minimizes the difference against trunk.
-   Votes:
-     +1: arfrever
 
  * r30632, r30749, r30750, r31757, r31769, r31817
    Fix issue #3174, 'Merge algorithm chokes on subtrees needing special
@@ -36,24 +30,25 @@ Candidate changes for 1.5.1:
      and directory merges already have the equivalent fix in 1.5.0.
    Notes:
      r31817 is the core fix for the issue, the other revision relate to
-     a new test and some subsequent tweaks for to it.  r30749 conflicts
-     trivally in the merge_tests.py test list. r30750 reverts an accidental
-     change in r30749.
+     a new test and some subsequent tweaks for to it.  Note that r31769 is
+     nominated in the issue #3067 group too as it touches both issues.
+     There are several minor conflicts when backporting this group to 1.5.x.
+     To facilitate review a backport branch was created at
+     http://svn.collab.net/repos/svn/branches/1.5.x-issue3174.
    Votes:
-     +1: pburba
+     +1: pburba, cmpilato
+     +0: markphip (ran all tests, including all bindings and serf)
 
- * r31875
-   Fix 'svn log --xml' against pre-1.2 servers.
-   Votes:
-     +1: hwright, arfrever
 
  * r31786
    Fix the Ruby bindings test failures: Normalize compared value.
    Votes:
-     +1: kou
+     +1: kou, cmpilato
 
- * r30607, r30628, r30812, r30929, r30935, r30961, r30961, r31033,
-   r31137, r31575, r31594, r31601, r31769, r31900, r31926, r31927
+
+ * r30607, r30628, r30812, r30929, r30935, r30961, r30967, r31033,
+   r31059, r31086, r31088, r31090, r31137, r31575, r31594, r31601,
+   r31769, r31900, r31926, r31927
    Fix issue #3067: subtrees that don't exist at the start or end of a merge
    range shouldn't break the merge.
    Justification:
@@ -66,29 +61,25 @@ Candidate changes for 1.5.1:
 
      r30628 some format only changes that are needed to avoid conflicts.
 
-     r30607, r30812, r30929, r30935, r31575, r31769, r31926 add/tweak/expand
+     r31059, r31086, r31088, r31090, r30607, r30812, r30929, r30935,
+     r31575, r31769, r31926 add/tweak/expand
      merge_tests.py coverage of this issue.  Note that r31769 is also
      nominated in the issue #3174 group as it applies to both issues (and may
      already be backported).
 
      r30961, r30967, r31033, and r31137 are code and documentation improvements
      to some merge.c helper functions, needed to avoid conflicts.
-   Votes:
-     +1: kameshj (r31900, r31926, r31927)
-     +1: pburba
 
- * r32017, r32029
-   Support Berkeley DB 4.7.
-   Justification:
-     Failure to provide this patch will not prevent folks from compiling
-     against Berkeley DB 4.7.  It just means that when they do, they will
-     silently lose support for Berkeley DB's rather important logging
-     subsystem.
+     There is a backport branch with all these changes applied at
+     http://svn.collab.net/repos/svn/branches/1.5.x-issue3067.  Note that
+     you'll want to use a trunk (or 1.5.x-issue3067) build to merge
+     1.5.x-issue3067 to 1.5.x or you'll encounter some problems, see
+     http://subversion.tigris.org/servlets/ReadMsg?listName=dev&msgNo=141164.
    Votes:
-     +1: arfrever, cmpilato
-     +1: pburba (32029)
-     +0: pburba (32017)
-     +0: blair
+     +1: pburba, kameshj
+     +0: markphip (ran all tests, including all bindings and serf)
+     +0: julianfoad (confirmed it fixes my real-world merge problems)
+
 
  * r32056
    Fix ra_serf bug that has a potential to cause vague errors when
@@ -96,6 +87,7 @@ Candidate changes for 1.5.1:
    at trunk@31900 via merge_tests failures.
    Votes:
      +1: kameshj
+
 
  * r31658, r31659
    Fix a remaining bug with issue #2825, Handle --depth option for 'merge'
@@ -107,20 +99,47 @@ Candidate changes for 1.5.1:
      children get no mergeinfo set/updated.  This is a fairly minor bug, but
      it is inconsistent with the way we currently handle inoperative merges
      in every other situation (i.e. we still set mergeinfo - see issue #2883).
-   Notes:
-     r31659 is dependent on the r31059 (issue #3157) group.
    Votes:
      +1: pburba
+
+
+ * r32153, r32160, r32185
+   Fix issues #3220 (log -g is slow) and #3235 (log -g is wrong).
+   Justification:
+     Slowness is bad -- in some tests, this fix decreased the cost of a log -g
+     run from about 6 minutes to around 12 seconds.  And the old code only
+     gets slower as more instances of mergeinfo appear in the repository.
+     Wrongness is bad -- and I don't even need to explain this.
+   Notes:
+     When merging r32153, use the "theirs" version of all conflicts which
+     appear to be in the new functions fs_mergeinfo_changed() and 
+     get_combined_mergeinfo_changes().  "--accept theirs-conflict" did the
+     right thing for me (cmpilato) as of r32155.
+   Votes:
+     +1: cmpilato, hwright
+
+
+ * r32164, r32169
+   Fix a segfault in the python tests.
+   Justification:
+     Segfaulting tests are a Bad Thing.  This appears to be a regression
+     from 1.5.0.
+   Votes:
+     +1: hwright
+
 
 Approved changes:
 =================
 
- * r32023
-   Follow up (r31884) to fix issue #2242 which checks for a NULL username.
-   Notes:
-     Was merged in r32050, but was subsequently reverted in r32085 because it
-     hadn't had sufficient votes and because the merge in r32050 was incomplete;
-     see <http://svn.haxx.se/dev/archive-2008-07/0274.shtml>.
+ * r32142, r32187
+   Finish issue #3240: commits to subtrees added by merge corrupt working
+   copy and repos.
+   Justification:
+     In the best case, this causes commits to fail.  In the worst one,
+     it can cause commits to modify the wrong files!
+   Notes: r32142 is a test for the issue, r32187 is the fix.  Neither cmpilato
+     nor vgeorgescu voted explicitly for r32142 but it seems pretty clear they
+     meant to since r32187 removes the XFail from the test r32142 added!?
    Votes:
-     +1: danielsh, dlr, arfrever
-     +1 (non-binding): stylesen
+     +1: pburba, vgeorgescu, cmpilato
+
