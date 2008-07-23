@@ -1455,6 +1455,8 @@ test_list = [ None,
               log_xml_with_bad_data,
               SkipUnless(merge_sensitive_log_target_with_bogus_mergeinfo,
                          server_has_mergeinfo),
+              SkipUnless(merge_sensitive_log_added_mergeinfo_replaces_inherited,
+                         server_has_mergeinfo),
              ]
 
 if __name__ == '__main__':
