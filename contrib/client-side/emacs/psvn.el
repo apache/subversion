@@ -1003,6 +1003,7 @@ To bind this to a different key, customize `svn-status-prefix-key'.")
   (define-key svn-global-keymap (kbd "f l") 'svn-status-show-svn-log)
   (define-key svn-global-keymap (kbd "f b") 'svn-status-blame)
   (define-key svn-global-keymap (kbd "f a") 'svn-file-add-to-changelog)
+  (define-key svn-global-keymap (kbd "f r") 'svn-file-revert)
   (define-key svn-global-keymap (kbd "c") 'svn-status-commit)
   (define-key svn-global-keymap (kbd "S") 'svn-status-switch-to-status-buffer)
   (define-key svn-global-keymap (kbd "o") 'svn-status-pop-to-status-buffer))
@@ -4022,6 +4023,12 @@ See `svn-status-marked-files' for what counts as selected."
       (message "reverting: %S" (svn-status-marked-file-names))
       (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
       (svn-run t t 'revert "revert" "--targets" svn-status-temp-arg-file))))
+
+(defun svn-file-revert ()
+  "Run `svn revert' on the current file."
+  (interactive)
+  (when (y-or-n-p (format "Revert %s? " buffer-file-name))
+    (svn-run t t 'revert "revert" buffer-file-name)))
 
 (defun svn-status-rm (force)
   "Run `svn rm' on all selected files.
