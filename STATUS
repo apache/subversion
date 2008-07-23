@@ -36,6 +36,9 @@ Candidate changes for 1.5.1:
      children get no mergeinfo set/updated.  This is a fairly minor bug, but
      it is inconsistent with the way we currently handle inoperative merges
      in every other situation (i.e. we still set mergeinfo - see issue #2883).
+   Notes:
+     kfogel reviewed this and had a question, posted in:
+     http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=141286
    Votes:
      +1: pburba, cmpilato
 
