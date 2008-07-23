@@ -559,11 +559,7 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
       SVN_ERR(parser_ctx->error);
     }
 
-  if (status_code == 404)
-    {
-      return svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND, NULL,
-                               "'%s' path not found",
-                               handler->path);
-    }
+  SVN_ERR(svn_ra_serf__error_on_status(status_code, handler->path));
+
   return err;
 }
