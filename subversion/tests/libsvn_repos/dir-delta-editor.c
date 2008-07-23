@@ -67,7 +67,7 @@ test_delete_entry(const char *path,
   struct dir_baton *pb = parent_baton;
 
   /* Construct the full path of this entry and delete it from the txn. */
-  return svn_fs_delete(pb->edit_baton->txn_root,
+  return svn_fs_delete(pb->edit_baton->txn_root, 
                        svn_path_join(pb->edit_baton->root_path, path, pool),
                        pool);
 }
@@ -107,7 +107,7 @@ test_open_directory(const char *path,
   db->edit_baton = eb;
 
   SVN_ERR(svn_fs_revision_root(&rev_root, eb->fs, base_revision, dir_pool));
-  SVN_ERR(svn_fs_revision_link(rev_root, eb->txn_root, db->full_path,
+  SVN_ERR(svn_fs_revision_link(rev_root, eb->txn_root, db->full_path, 
                                dir_pool));
 
   *child_baton = db;
@@ -257,7 +257,7 @@ test_change_dir_prop(void *parent_baton,
   struct edit_baton *eb = db->edit_baton;
 
   /* Construct the full path of this entry and change the property. */
-  return svn_fs_change_node_prop(eb->txn_root, db->full_path,
+  return svn_fs_change_node_prop(eb->txn_root, db->full_path, 
                                  name, value, pool);
 }
 

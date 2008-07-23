@@ -14,7 +14,7 @@ AC_DEFUN(SVN_LIB_APR,
 
   AC_MSG_NOTICE([Apache Portable Runtime (APR) library configuration])
 
-  APR_FIND_APR("$abs_srcdir/apr", "$abs_builddir/apr", 1, [1 0])
+  APR_FIND_APR("$abs_srcdir/apr", "$abs_builddir/apr", 1, [0 1])
 
   if test $apr_found = "no"; then
     AC_MSG_WARN([APR not found])

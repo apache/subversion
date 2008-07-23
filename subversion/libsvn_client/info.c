@@ -272,8 +272,8 @@ crawl_entries(const char *wcpath,
   int adm_lock_level = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
   struct found_entry_baton fe_baton;
 
-  SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, wcpath, FALSE,
-                                 adm_lock_level, ctx->cancel_func,
+  SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, wcpath, FALSE, 
+                                 adm_lock_level, ctx->cancel_func, 
                                  ctx->cancel_baton, pool));
 
   fe_baton.changelist_hash = changelist_hash;
@@ -368,7 +368,7 @@ svn_client_info2(const char *path_or_url,
       /* Do all digging in the working copy. */
       apr_hash_t *changelist_hash = NULL;
       if (changelists && changelists->nelts)
-        SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash,
+        SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, 
                                            changelists, pool));
       return crawl_entries(path_or_url, receiver, receiver_baton,
                            depth, changelist_hash, ctx, pool);
@@ -527,7 +527,7 @@ svn_client_info(const char *path_or_url,
 {
   return svn_client_info2(path_or_url, peg_revision, revision,
                           receiver, receiver_baton,
-                          SVN_DEPTH_INFINITY_OR_EMPTY(recurse),
+                          SVN_DEPTH_INFINITY_OR_EMPTY(recurse), 
                           NULL, ctx, pool);
 }
 

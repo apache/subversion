@@ -368,7 +368,7 @@ parse_args(svnstsw_args_t* args_p, int* argc_p, const char* const** argv_p,
                 // help
                 print_usage(argv[0], stdout);
                 exit(0);
-
+                
             case SVNSERVE_OPT_VERSION:
                 // version
                 printf(PACKAGE_NAME " version " PACKAGE_VERSION "\n");

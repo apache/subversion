@@ -717,7 +717,7 @@ static const command_rec cmds[] =
 
   /* per directory/location */
   AP_INIT_FLAG("SVNAllowBulkUpdates", SVNAllowBulkUpdates_cmd, NULL,
-               ACCESS_CONF|RSRC_CONF,
+               ACCESS_CONF|RSRC_CONF, 
                "enables support for bulk update-style requests (as opposed to "
                "only skeletal reports that require additional per-file "
                "downloads."),

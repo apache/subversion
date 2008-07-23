@@ -668,7 +668,7 @@ close_edit(void *edit_baton,
              display it as a warning) and clear the error. */
           if (err->child && err->child->message)
             post_commit_err = apr_pstrdup(pool, err->child->message);
-
+          
           svn_error_clear(err);
           err = SVN_NO_ERROR;
         }
@@ -676,19 +676,19 @@ close_edit(void *edit_baton,
         {
           /* ### todo: we should check whether it really was a conflict,
              and return the conflict info if so? */
-
+          
           /* If the commit failed, it's *probably* due to a conflict --
              that is, the txn being out-of-date.  The filesystem gives us
              the ability to continue diddling the transaction and try
              again; but let's face it: that's not how the cvs or svn works
              from a user interface standpoint.  Thus we don't make use of
              this fs feature (for now, at least.)
-
+             
              So, in a nutshell: svn commits are an all-or-nothing deal.
              Each commit creates a new fs txn which either succeeds or is
              aborted completely.  No second chances;  the user simply
              needs to update and commit again  :)
-
+             
              We ignore the possible error result from svn_fs_abort_txn();
              it's more important to return the original error. */
           svn_error_clear(svn_fs_abort_txn(eb->txn, pool));

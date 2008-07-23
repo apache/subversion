@@ -60,7 +60,7 @@ convert_wbcs_to_utf8(const wchar_t *str)
 
   if (len == -1)
     return NULL;
-
+  
   utf8_str[len] = '\0';
 
   return utf8_str;

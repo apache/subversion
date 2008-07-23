@@ -4673,7 +4673,7 @@ unordered_txn_dirprops(const char **msg,
      property just to make sure special handling logic for that
      property doesn't croak.) */
   SET_STR(&pval, "/A/C:1");
-  SVN_ERR(svn_fs_change_node_prop(txn_root2, "/A/B", "svn:mergeinfo",
+  SVN_ERR(svn_fs_change_node_prop(txn_root2, "/A/B", "svn:mergeinfo", 
                                   &pval, pool));
 
   /* Commit the second one first. */
@@ -4696,7 +4696,7 @@ unordered_txn_dirprops(const char **msg,
 
   /* Change dir props in the other. */
   SET_STR(&pval, "/A/C:1");
-  SVN_ERR(svn_fs_change_node_prop(txn_root2, "/A/B", "svn:mergeinfo",
+  SVN_ERR(svn_fs_change_node_prop(txn_root2, "/A/B", "svn:mergeinfo", 
                                   &pval, pool));
 
   /* Commit the first one first. */
@@ -4777,7 +4777,7 @@ node_origin_rev(const char **msg,
     return SVN_NO_ERROR;
 
   /* Create the repository. */
-  SVN_ERR(svn_test__create_fs(&fs, "test-repo-node-origin-rev",
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-node-origin-rev", 
                               opts, pool));
 
   /* Revision 1: Create the Greek tree.  */

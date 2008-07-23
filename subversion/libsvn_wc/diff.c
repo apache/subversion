@@ -246,7 +246,7 @@ struct callbacks_wrapper_baton {
  * calculating diffs.  USE_TEXT_BASE defines whether to compare
  * against working files or text-bases.  REVERSE_ORDER defines which
  * direction to perform the diff.
- *
+ * 
  * CHANGELISTS is a list of const char * changelist names, used to
  * filter diff output responses to only those items in one of the
  * specified changelists, empty (or NULL altogether) if no changelist
@@ -515,7 +515,7 @@ file_diff(struct dir_baton *dir_baton,
   apr_array_header_t *propchanges = NULL;
   apr_hash_t *baseprops = NULL;
 
-  assert(! eb->use_text_base);
+  SVN_ERR_ASSERT(! eb->use_text_base);
 
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, dir_baton->edit_baton->anchor,
                               dir_baton->path, pool));
@@ -668,7 +668,7 @@ directory_elements_diff(struct dir_baton *dir_baton)
   /* This directory should have been unchanged or replaced, not added,
      since an added directory can only contain added files and these will
      already have been compared. */
-  assert(!dir_baton->added);
+  SVN_ERR_ASSERT(!dir_baton->added);
 
   /* Everything we do below is useless if we are comparing to BASE. */
   if (dir_baton->edit_baton->use_text_base)
@@ -688,7 +688,7 @@ directory_elements_diff(struct dir_baton *dir_baton)
                               dir_baton->path, dir_baton->pool));
 
   SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, dir_baton->pool));
-  this_dir_entry = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR,
+  this_dir_entry = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR, 
                                 APR_HASH_KEY_STRING);
 
   /* Check for local property mods on this directory, if we haven't
@@ -698,7 +698,7 @@ directory_elements_diff(struct dir_baton *dir_baton)
       && (! apr_hash_get(dir_baton->compared, "", 0)))
     {
       svn_boolean_t modified;
-
+      
       SVN_ERR(svn_wc_props_modified_p(&modified,
                                       dir_baton->path, adm_access,
                                       dir_baton->pool));
@@ -836,7 +836,7 @@ report_wc_file_as_added(struct dir_baton *dir_baton,
   SVN_ERR(get_empty_file(eb, &empty_file));
 
   /* We can't show additions for files that don't exist. */
-  assert(!(entry->schedule == svn_wc_schedule_delete && !eb->use_text_base));
+  SVN_ERR_ASSERT(!(entry->schedule == svn_wc_schedule_delete && !eb->use_text_base));
 
   /* If the file was added *with history*, then we don't want to
      see a comparison to the empty file;  we want the usual working
@@ -914,7 +914,7 @@ report_wc_directory_as_added(struct dir_baton *dir_baton,
                               dir_baton->path, pool));
 
   SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, pool));
-  this_dir_entry = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR,
+  this_dir_entry = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR, 
                                 APR_HASH_KEY_STRING);
 
   /* If this directory passes changelist filtering, get its BASE or
@@ -928,10 +928,10 @@ report_wc_directory_as_added(struct dir_baton *dir_baton,
       else
         SVN_ERR(svn_wc_prop_list(&wcprops,
                                  dir_baton->path, adm_access, pool));
-
+      
       SVN_ERR(svn_prop_diffs(&propchanges,
                              wcprops, emptyprops, pool));
-
+      
       if (propchanges->nelts > 0)
         SVN_ERR(eb->callbacks->dir_props_changed
                 (adm_access, NULL,
@@ -1673,7 +1673,7 @@ file_deleted(svn_wc_adm_access_t *adm_access,
 {
   struct callbacks_wrapper_baton *b = diff_baton;
 
-  assert(originalprops);
+  SVN_ERR_ASSERT(originalprops);
 
   return b->callbacks->file_deleted(adm_access, state, path,
                                     tmpfile1, tmpfile2, mimetype1, mimetype2,
@@ -1965,8 +1965,8 @@ svn_wc_diff5(svn_wc_adm_access_t *anchor,
   const char *target_path;
   svn_wc_adm_access_t *adm_access;
 
-  SVN_ERR(make_editor_baton(&eb, anchor, target, callbacks, callback_baton,
-                            depth, ignore_ancestry, FALSE, FALSE,
+  SVN_ERR(make_editor_baton(&eb, anchor, target, callbacks, callback_baton, 
+                            depth, ignore_ancestry, FALSE, FALSE, 
                             changelists, pool));
 
   target_path = svn_path_join(svn_wc_adm_access_path(anchor), target,

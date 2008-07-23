@@ -641,8 +641,8 @@ def verify_disk(wc_dir_name,
                  singleton_handler_a, a_baton,
                  singleton_handler_b, b_baton,
                  check_props)
-
-
+                 
+  
 
 def run_and_verify_update(wc_dir_name,
                           output_tree, disk_tree, status_tree,
@@ -919,7 +919,7 @@ def run_and_verify_switch(wc_dir_name,
   SINGLETON_HANDLER_B will be passed to tree.compare_trees -- see that
   function's doc string for more details.
 
-  If CHECK_PROPS is set, then disk comparison will examine props.
+  If CHECK_PROPS is set, then disk comparison will examine props. 
 
   Return if successful, raise on failure."""
 
@@ -1153,7 +1153,7 @@ def run_and_verify_diff_summarize_xml(error_re_string = [],
     actual_item = path.getAttribute('item')
     actual_kind = path.getAttribute('kind')
     actual_prop = path.getAttribute('props')
-
+  
     if expected_item != actual_item:
       print "ERROR: expected:", expected_item, "actual:", actual_item
       raise Failure
@@ -1246,7 +1246,7 @@ def run_and_validate_lock(path, username):
 def make_repo_and_wc(sbox, create_wc = True, read_only = False):
   """Create a fresh repository and checkout a wc from it.
 
-  If read_only is False, a dedicated repository will be created, named
+  If read_only is False, a dedicated repository will be created, named 
   TEST_NAME. The repository will live in the global dir 'general_repo_dir'.
   If read_only is True the pristine repository will be used.
 
@@ -1254,7 +1254,7 @@ def make_repo_and_wc(sbox, create_wc = True, read_only = False):
   the repository, named TEST_NAME. The wc directory will live in the global
   dir 'general_wc_dir'.
 
-  Both variables 'general_repo_dir' and 'general_wc_dir' are defined at the
+  Both variables 'general_repo_dir' and 'general_wc_dir' are defined at the 
   top of this test suite.)  Returns on success, raises on failure."""
 
   # Create (or copy afresh) a new repos with a greek tree in it.

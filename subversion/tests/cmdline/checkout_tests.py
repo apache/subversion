@@ -685,7 +685,7 @@ def co_with_obstructing_local_adds(sbox):
   F_path = os.path.join(wc_dir, 'A', 'B', 'F')
   omicron_path = os.path.join(wc_dir, 'A', 'B', 'F', 'omicron')
   chi_path = os.path.join(wc_dir, 'A', 'D', 'H', 'chi')
-
+  
   svntest.actions.run_and_verify_svn("Copy error:", None, [],
                                      'cp', chi_path,
                                      omicron_path)

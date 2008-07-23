@@ -522,8 +522,7 @@ get_copy_inheritance(copy_id_inherit_t *inherit_p,
   const char *child_copy_id, *parent_copy_id;
   const char *id_path = NULL;
 
-  /* Make some assertions about the function input. */
-  assert(child && child->parent && txn_id);
+  SVN_ERR_ASSERT(child && child->parent && txn_id);
 
   /* Initialize our return variables (default: self-inheritance). */
   *inherit_p = copy_id_inherit_self;
@@ -827,7 +826,7 @@ make_path_mutable(svn_fs_root_t *root,
 
         case copy_id_inherit_unknown:
         default:
-          abort(); /* uh-oh -- somebody didn't calculate copy-ID
+          SVN_ERR_MALFUNCTION(); /* uh-oh -- somebody didn't calculate copy-ID
                       inheritance data. */
         }
 
@@ -1630,8 +1629,7 @@ deltify_mutable(svn_fs_t *fs,
 
       for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
         {
-          /* KEY will be the entry name, VAL the dirent (about
-             which we really don't care) */
+          /* KEY will be the entry name, VAL the dirent */
           const void *key;
           void *val;
           svn_fs_dirent_t *entry;
@@ -2698,7 +2696,7 @@ svn_fs_base__deltify(svn_fs_t *fs,
   args.revision = revision;
   SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_rev_get_txn_id, &args, pool));
 
-  return deltify_mutable(fs, root, "/", NULL, svn_node_unknown, txn_id, pool);
+  return deltify_mutable(fs, root, "/", NULL, svn_node_dir, txn_id, pool);
 }
 
 
@@ -2982,7 +2980,7 @@ txn_body_copy(void *baton,
          stated that this requirement need not be necessary in the
          future. */
 
-      abort();
+      SVN_ERR_MALFUNCTION();
     }
 
   return SVN_NO_ERROR;
@@ -4768,7 +4766,7 @@ txn_body_get_mergeinfo_data_and_entries(void *baton, trail_t *trail)
   apr_pool_t *children_pool =
     apr_hash_pool_get(args->children_atop_mergeinfo_trees);
 
-  assert(svn_fs_base__dag_node_kind(node) == svn_node_dir);
+  SVN_ERR_ASSERT(svn_fs_base__dag_node_kind(node) == svn_node_dir);
 
   SVN_ERR(svn_fs_base__dag_dir_entries(&entries, node, trail, trail->pool));
   for (hi = apr_hash_first(NULL, entries); hi; hi = apr_hash_next(hi))

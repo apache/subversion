@@ -1228,9 +1228,9 @@ def add_tree_with_depth(sbox):
   verify_depth(None, "files", new1_path)
 
   # Force add new1 at new1 again, should include new2 at empty, the depth of
-  # new1 should not change
+  # new1 should not change 
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     "add", "--depth", "immediates",
+                                     "add", "--depth", "immediates", 
                                      "--force", new1_path)
   verify_depth(None, "files", new1_path)
   verify_depth(None, "empty", new2_path)
@@ -1432,7 +1432,7 @@ def depthy_update_above_dir_to_be_deleted(sbox):
     "immediates" : (output_with_A, disk_with_only_iota, status_with_only_iota),
     "empty"      : (empty_output, initial_disk, status_with_dot),
     }
-
+    
   for depth in sbox_for_depth.keys():
     wc_dir = sbox_for_depth[depth].wc_dir
     (expected_output_func, expected_disk, expected_status_func) = \
@@ -1654,7 +1654,7 @@ def depth_folding_clean_trees_2(sbox):
   "gradually fold wc, focusing on depth=immediates"
 
   # Covers the following situations:
-  #
+  # 
   #  infinity=>immediates
   #  mixed(immediates+immediates)=>immediates
   #  mixed(immediates+infinity)=>immediates
@@ -1673,7 +1673,7 @@ def depth_folding_clean_trees_2(sbox):
                                      'up', '--depth', 'immediates', A_path)
   # check to see if it's really at immediates
   verify_depth(None, "immediates", A_path)
-
+  
   # pull in directory D at infinity
   svntest.actions.run_and_verify_svn(None, None, [], 'up', D_path)
 
@@ -1815,7 +1815,7 @@ def depth_fold_expand_clean_trees(sbox):
   "expand target while contracting subtree"
   #  --set-depth=immediates/files to an empty target with infinity
   #  sub-tree should both fold the subtree and expand the target
-
+  
   wc_dir, ign_a, ign_b, ign_c = set_up_depthy_working_copies(sbox, empty=True)
 
   A_path = os.path.join(wc_dir, 'A')

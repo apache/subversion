@@ -14,12 +14,12 @@ class SubversionAuthTestCase(unittest.TestCase):
     core.svn_auth_set_parameter(baton, "name", "somedata")
     core.svn_auth_set_parameter(baton, "name", None)
     core.svn_auth_set_parameter(baton, "name", 2)
-    core.svn_auth_set_parameter(baton, "name",
+    core.svn_auth_set_parameter(baton, "name", 
                                 core.svn_auth_ssl_server_cert_info_t())
 
   def test_invalid_cred_kind(self):
     baton = core.svn_auth_open([])
-    self.assertRaises(core.SubversionException,
+    self.assertRaises(core.SubversionException, 
             lambda: core.svn_auth_first_credentials(
                 "unknown", "somerealm", baton))
 

@@ -226,7 +226,7 @@ is_valid_node_revision_header_skel(skel_t *skel, skel_t **kind_p)
       && (! (skel->children->next->next->next->next->is_atom
              && skel->children->next->next->next->next->next->is_atom)))
     return FALSE;
-
+      
   /* got predecessor count? */
   if ((len > 3)
       && (! skel->children->next->next->next->is_atom))
@@ -631,7 +631,7 @@ svn_fs_base__parse_node_revision_skel(node_revision_t **noderev_p,
     {
       cur_skel = header_skel->children->next->next;
       if (cur_skel->len)
-        noderev->predecessor_id = svn_fs_base__id_parse(cur_skel->data,
+        noderev->predecessor_id = svn_fs_base__id_parse(cur_skel->data, 
                                                         cur_skel->len, pool);
 
       /* PREDECESSOR-COUNT */
@@ -650,9 +650,9 @@ svn_fs_base__parse_node_revision_skel(node_revision_t **noderev_p,
               cur_skel = cur_skel->next;
               noderev->has_mergeinfo = atoi(apr_pstrmemdup(pool,
                                                            cur_skel->data,
-                                                           cur_skel->len))
+                                                           cur_skel->len)) 
                                          ? TRUE : FALSE;
-              noderev->mergeinfo_count =
+              noderev->mergeinfo_count = 
                 apr_atoi64(apr_pstrmemdup(pool,
                                           cur_skel->next->data,
                                           cur_skel->next->len));
@@ -1156,7 +1156,7 @@ svn_fs_base__unparse_representation_skel(skel_t **skel_p,
       svn_fs_base__prepend(header_skel, skel);
     }
   else /* unknown kind */
-    abort();
+    SVN_ERR_MALFUNCTION();
 
   /* Validate and return the skel. */
   if (! is_valid_representation_skel(skel))
@@ -1184,20 +1184,20 @@ svn_fs_base__unparse_node_revision_skel(skel_t **skel_p,
   if (format >= SVN_FS_BASE__MIN_MERGEINFO_FORMAT)
     {
       /* MERGEINFO-COUNT */
-      num_str = apr_psprintf(pool, "%" APR_INT64_T_FMT,
+      num_str = apr_psprintf(pool, "%" APR_INT64_T_FMT, 
                              noderev->mergeinfo_count);
       svn_fs_base__prepend(svn_fs_base__str_atom(num_str, pool), header_skel);
-
+ 
       /* HAS-MERGEINFO */
-      svn_fs_base__prepend(svn_fs_base__mem_atom(noderev->has_mergeinfo
+      svn_fs_base__prepend(svn_fs_base__mem_atom(noderev->has_mergeinfo 
                                                  ? "1" : "0",
-                                                 1, pool), header_skel);
+                                                 1, pool), header_skel); 
 
       /* PREDECESSOR-COUNT padding (only if we *don't* have a valid
          value; if we do, we'll pick that up below) */
       if (noderev->predecessor_count == -1)
         {
-          svn_fs_base__prepend(svn_fs_base__mem_atom(NULL, 0, pool),
+          svn_fs_base__prepend(svn_fs_base__mem_atom(NULL, 0, pool), 
                                header_skel);
         }
     }
@@ -1235,7 +1235,7 @@ svn_fs_base__unparse_node_revision_skel(skel_t **skel_p,
   else if (noderev->kind == svn_node_dir)
     svn_fs_base__prepend(svn_fs_base__str_atom("dir", pool), header_skel);
   else
-    abort();
+    SVN_ERR_MALFUNCTION();
 
   /* ### do we really need to check *node->FOO_key ? if a key doesn't
      ### exist, then the field should be NULL ...  */

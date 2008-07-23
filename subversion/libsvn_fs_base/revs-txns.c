@@ -315,8 +315,7 @@ svn_fs_base__txn_make_committed(svn_fs_t *fs,
 {
   transaction_t *txn;
 
-  /* Don't you dare call this with an invalid REVISION. */
-  assert(SVN_IS_VALID_REVNUM(revision));
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision));
 
   /* Make sure the TXN is not committed already. */
   SVN_ERR(get_txn(&txn, fs, txn_name, FALSE, trail, pool));
@@ -605,7 +604,7 @@ svn_fs_base__change_txn_props(svn_fs_txn_t *txn,
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(svn_fs_base__change_txn_prop(txn, prop->name,
+      SVN_ERR(svn_fs_base__change_txn_prop(txn, prop->name, 
                                            prop->value, iterpool));
     }
   svn_pool_destroy(iterpool);

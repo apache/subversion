@@ -22,12 +22,6 @@
 #include <apr_pools.h>
 #include <apr_file_io.h>
 
-#ifdef AS400
-#include <apr_portable.h>
-#include <spawn.h>
-#include <fcntl.h>
-#endif
-
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_repos.h"
@@ -39,7 +33,6 @@
 
 /*** Hook drivers. ***/
 
-#ifndef AS400
 /* Helper function for run_hook_cmd().  Wait for a hook to finish
    executing and return either SVN_NO_ERROR if the hook script completed
    without error, or an error describing the reason for failure.
@@ -156,7 +149,6 @@ check_hook_result(const char *name, const char *cmd, apr_proc_t *cmd_proc,
   return svn_error_create(SVN_ERR_REPOS_HOOK_FAILURE, err,
                           failure_message->data);
 }
-#endif /* AS400 */
 
 /* NAME, CMD and ARGS are the name, path to and arguments for the hook
    program that is to be run.  The hook's exit status will be checked,
@@ -171,7 +163,6 @@ run_hook_cmd(const char *name,
              const char **args,
              apr_file_t *stdin_handle,
              apr_pool_t *pool)
-#ifndef AS400
 {
   apr_file_t *read_errhandle, *write_errhandle, *null_handle;
   apr_status_t apr_err;
@@ -247,222 +238,6 @@ run_hook_cmd(const char *name,
 
   return err;
 }
-#else /* Run hooks with spawn() on OS400. */
-#define AS400_BUFFER_SIZE 256
-{
-  const char **native_args;
-  int fd_map[3], stderr_pipe[2], exitcode;
-  svn_stringbuf_t *script_output;
-  pid_t child_pid, wait_rv;
-  apr_size_t args_arr_size = 0, i;
-  struct inheritance xmp_inherit = {0};
-#pragma convert(0)
-  /* Despite the UTF support in V5R4 a few functions still require
-   * EBCDIC args. */
-  char *xmp_envp[2] = {"QIBM_USE_DESCRIPTOR_STDIO=Y", NULL};
-  const char *dev_null_ebcdic = SVN_NULL_DEVICE_NAME;
-#pragma convert(1208)
-
-  /* Find number of elements in args array. */
-  while (args[args_arr_size] != NULL)
-    args_arr_size++;
-
-  /* Allocate memory for the native_args string array plus one for
-   * the ending null element. */
-  native_args = apr_palloc(pool, sizeof(char *) * args_arr_size + 1);
-
-  /* Convert UTF-8 args to EBCDIC for use by spawn(). */
-  for (i = 0; args[i] != NULL; i++)
-    {
-      SVN_ERR(svn_utf_cstring_from_utf8_ex2((const char**)(&(native_args[i])),
-                                            args[i], (const char *)0,
-                                            pool));
-    }
-
-  /* Make the last element in the array a NULL pointer as required
-   * by spawn. */
-  native_args[args_arr_size] = NULL;
-
-  /* Map stdin. */
-  if (stdin_handle)
-    {
-      /* Get OS400 file descriptor of APR stdin file and map it. */
-      if (apr_os_file_get(&fd_map[0], stdin_handle))
-        {
-          return svn_error_createf(SVN_ERR_REPOS_HOOK_FAILURE, NULL,
-                                   "Error converting APR file to OS400 "
-                                   "type for hook script '%s'", cmd);
-        }
-    }
-  else
-    {
-      fd_map[0] = open(dev_null_ebcdic, O_RDONLY);
-      if (fd_map[0] == -1)
-
-        return svn_error_createf(SVN_ERR_REPOS_HOOK_FAILURE, NULL,
-                                 "Error opening /dev/null for hook "
-                                 "script '%s'", cmd);
-    }
-
-
-  /* Map stdout. */
-  fd_map[1] = open(dev_null_ebcdic, O_WRONLY);
-  if (fd_map[1] == -1)
-    return svn_error_createf(SVN_ERR_REPOS_HOOK_FAILURE, NULL,
-                             "Error opening /dev/null for hook script '%s'",
-                             cmd);
-
-  /* Map stderr. */
-  /* Get pipe for hook's stderr. */
-  if (pipe(stderr_pipe) != 0)
-    {
-      return svn_error_createf(SVN_ERR_REPOS_HOOK_FAILURE, NULL,
-                               "Can't create stderr pipe for "
-                               "hook '%s'", cmd);
-    }
-  fd_map[2] = stderr_pipe[1];
-
-  /* Spawn the hook command. */
-  child_pid = spawn(native_args[0], 3, fd_map, &xmp_inherit, native_args,
-                    xmp_envp);
-  if (child_pid == -1)
-    {
-      return svn_error_createf(SVN_ERR_REPOS_HOOK_FAILURE, NULL,
-                               "Error spawning process for hook script '%s'",
-                               cmd);
-    }
-
-  /* Close the stdout file descriptor. */
-  if (close(fd_map[1]) == -1)
-    return svn_error_createf(SVN_ERR_REPOS_HOOK_FAILURE, NULL,
-                             "Error closing write end of stdout pipe to "
-                             "hook script '%s'", cmd);
-
-  /* Close the write end of the stderr pipe so any subsequent reads
-   * don't hang. */
-  if (close(fd_map[2]) == -1)
-    return svn_error_createf(SVN_ERR_REPOS_HOOK_FAILURE, NULL,
-                             "Error closing write end of stderr pipe to "
-                             "hook script '%s'", cmd);
-
-  script_output = svn_stringbuf_create("", pool);
-
-  while (1)
-    {
-      int rc;
-
-      svn_stringbuf_ensure(script_output,
-                           script_output->len + AS400_BUFFER_SIZE + 1);
-
-      rc = read(stderr_pipe[0],
-                &(script_output->data[script_output->len]),
-                AS400_BUFFER_SIZE);
-
-      if (rc == -1)
-        {
-          return svn_error_createf(SVN_ERR_REPOS_HOOK_FAILURE, NULL,
-                                   "Error reading stderr of hook "
-                                   "script '%s'", cmd);
-        }
-
-      script_output->len += rc;
-
-      /* If read() returned 0 then EOF was found and we are done reading
-       * stderr. */
-      if (rc == 0)
-        {
-          script_output->data[script_output->len] = '\0';
-          break;
-        }
-    }
-
-  /* Close the read end of the stderr pipe. */
-  if (close(stderr_pipe[0]) == -1)
-    return svn_error_createf(SVN_ERR_REPOS_HOOK_FAILURE, NULL,
-                             "Error closing read end of stderr "
-                             "pipe to hook script '%s'", cmd);
-
-  /* Wait for the child process to complete. */
-  wait_rv = waitpid(child_pid, &exitcode, 0);
-  if (wait_rv == -1)
-    {
-      return svn_error_createf(SVN_ERR_REPOS_HOOK_FAILURE, NULL,
-                               "Error waiting for process completion of "
-                               "hook script '%s'", cmd);
-    }
-
-
-  if (WIFEXITED(exitcode))
-    {
-      if (WEXITSTATUS(exitcode))
-        {
-          svn_error_t *err;
-          const char *utf8_stderr = NULL;
-          svn_stringbuf_t *failure_message = svn_stringbuf_createf(
-            pool, "'%s' hook failed (exited with a non-zero exitcode "
-            "of %d).  ", name, exitcode);
-
-          if (!svn_stringbuf_isempty(script_output))
-            {
-              /* OS400 scripts produce EBCDIC stderr, so convert it. */
-              err = svn_utf_cstring_to_utf8_ex2(&utf8_stderr,
-                                                script_output->data,
-                                                (const char*)0, pool);
-              if (err)
-                {
-                  utf8_stderr = "[Error output could not be translated from "
-                                "the native locale to UTF-8.]";
-                  svn_error_clear(err);
-
-                }
-            }
-
-          if (utf8_stderr)
-            {
-              svn_stringbuf_appendcstr(failure_message,
-                                       "The following error output was "
-                                       "produced by the hook:\n");
-              svn_stringbuf_appendcstr(failure_message, utf8_stderr);
-            }
-          else
-            {
-              svn_stringbuf_appendcstr(failure_message,
-                                       "No error output was produced by "
-                                       "the hook.");
-            }
-          return svn_error_create(SVN_ERR_REPOS_HOOK_FAILURE, NULL,
-                                  failure_message->data);
-        }
-      else
-        /* Success! */
-        return SVN_NO_ERROR;
-    }
-  else if (WIFSIGNALED(exitcode))
-    {
-      return svn_error_createf(SVN_ERR_REPOS_HOOK_FAILURE, NULL,
-                               "Process '%s' failed because of an "
-                               "uncaught terminating signal", cmd);
-    }
-  else if (WIFEXCEPTION(exitcode))
-    {
-      return svn_error_createf(SVN_ERR_REPOS_HOOK_FAILURE, NULL,
-                               "Process '%s' failed unexpectedly with "
-                               "OS400 exception %d", cmd,
-                               WEXCEPTNUMBER(exitcode));
-    }
-  else if (WIFSTOPPED(exitcode))
-    {
-      return svn_error_createf(SVN_ERR_REPOS_HOOK_FAILURE, NULL,
-                               "Process '%s' stopped unexpectedly by "
-                               "signal %d", cmd, WSTOPSIG(exitcode));
-    }
-  else
-    {
-      return svn_error_createf(SVN_ERR_REPOS_HOOK_FAILURE, NULL,
-                               "Process '%s' failed unexpectedly", cmd);
-    }
-}
-#endif /* AS400 */
 
 
 /* Create a temporary file F that will automatically be deleted when it is
@@ -516,7 +291,7 @@ check_hook_cmd(const char *hook, svn_boolean_t *broken_link, apr_pool_t *pool)
   for (extn = check_extns; *extn; ++extn)
     {
       const char *const hook_path =
-        (**extn ? apr_pstrcat(pool, hook, *extn, 0) : hook);
+        (**extn ? apr_pstrcat(pool, hook, *extn, NULL) : hook);
 
       svn_node_kind_t kind;
       if (!(err = svn_io_check_resolved_path(hook_path, &kind, pool))

@@ -598,7 +598,7 @@ decode_window(svn_txdelta_window_t *window, svn_filesize_t sview_offset,
           npos += op->length;
         }
     }
-  assert(data == insend);
+  SVN_ERR_ASSERT(data == insend);
 
   window->ops = ops;
   window->num_ops = ninst;

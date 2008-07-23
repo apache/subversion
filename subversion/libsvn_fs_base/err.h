@@ -79,7 +79,7 @@ svn_error_t *svn_fs_base__err_corrupt_lock(svn_fs_t *fs,
 
 /* SVN_ERR_FS_NO_SUCH_NODE_ORIGIN: no recorded node origin for NODE_ID
    in FS.  */
-svn_error_t *svn_fs_base__err_no_such_node_origin(svn_fs_t *fs,
+svn_error_t *svn_fs_base__err_no_such_node_origin(svn_fs_t *fs, 
                                                   const char *node_id);
 
 #ifdef __cplusplus

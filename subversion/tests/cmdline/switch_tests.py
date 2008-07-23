@@ -2101,7 +2101,7 @@ def switch_to_root(sbox):
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau')
-  expected_status.add_state('A/D/G',
+  expected_status.add_state('A/D/G', 
                             svntest.actions.get_virginal_state(wc_dir, 1))
   expected_status.tweak('A/D/G', switched = 'S')
   svntest.actions.run_and_verify_switch(wc_dir, ADG_path, sbox.repo_url,

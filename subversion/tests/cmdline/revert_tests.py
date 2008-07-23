@@ -660,7 +660,7 @@ def revert_replaced_with_history_file_1(sbox):
 
   # update the working copy
   svntest.main.run_svn(None, 'up', wc_dir)
-
+  
   # now revert back to the state in r1
   expected_output = svntest.wc.State(wc_dir, {
     'A/mu': Item(status='R '),

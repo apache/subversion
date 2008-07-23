@@ -34,10 +34,25 @@ http://svn.collab.net/repos/svn/tags/1.5.1
   * fix a crash and endless loop for credentials in ra_serf (r31619)
   * Add support for --config-dir to svnmerge.py (r31727)
   * fixed: ArrayIndexOutOfBoundsException in JavaHL bindings (r31719, -806)
+  * improve performance of bdb post-commit deltification (r31820 -59)
+  * don't clobber LDFLAGS in configure when given '--with-zlib' (r31825)
+  * don't drive the merge editor when there is nothing to be merged (r30748)
+  * fixed: auth cache reading password from wrong username entry (issue #2242)
+  * fixed: commit log message compatibility wrapper (r31944)
+  * fixed: unbounded memory usage in wc-to-wc copy and move (r31868)
+  * don't commit an add of a missing item (issue #3198)
+  * make 'svndumpfilter' not match partial path components (r31833)
+  * fixed: subtree merges broken for non-intersecting ranges (issue #3199)
+  * fixed: crash in calling apr_pstrcat (r32080)
+  * don't create unneeded self-referential mergeinfo (issue #3157)
 
  Developer-visible changes:
   * fixed: crash when when svn_ra_open3() is passed a bogus URL (r31223)
   * export svn_path_is_url() to the bindings (r31603)
+  * make libsvn_ra depend on libsvn_delta unconditionally (r31852)
+  * fixed: JavaHL compilation on Windows (r31737)
+  * correctly set the peg revision for copy in JavaHL (r31994)
+  * allow 'svn mergeinfo' to handle working copy paths (r31023, -873, -74, -929, -930, -038)
 
 Version 1.5.0
 (19 Jun 2008, from /branches/1.5.x)

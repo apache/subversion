@@ -147,13 +147,13 @@ static svn_error_t *make_connection(const char *hostname, unsigned short port,
       if (status == APR_SUCCESS)
         {
           status = apr_socket_connect(*sock, sa);
-          if (status != APR_SUCCESS)
+          if (status != APR_SUCCESS) 
             apr_socket_close(*sock);
         }
       sa = sa->next;
     }
   while (status != APR_SUCCESS && sa);
-
+ 
   if (status)
     return svn_error_wrap_apr(status, _("Can't connect to host '%s'"),
                               hostname);
@@ -1406,7 +1406,7 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
             }
           if (! SVN_IS_VALID_REVNUM(log_entry->revision))
             {
-              assert(nest_level);
+              SVN_ERR_ASSERT(nest_level);
               nest_level--;
             }
         }
@@ -2201,7 +2201,7 @@ ra_svn_replay_range(svn_ra_session_t *session,
   svn_ra_svn__session_baton_t *sess = session->priv;
   apr_pool_t *iterpool;
   svn_revnum_t rev;
-
+  
   SVN_ERR(svn_ra_svn_write_cmd(sess->conn, pool, "replay-range", "rrrb",
                                start_revision, end_revision,
                                low_water_mark, send_deltas));
@@ -2268,7 +2268,7 @@ static svn_error_t *ra_svn_has_capability(svn_ra_session_t *session,
   else if (strcmp(capability, SVN_RA_CAPABILITY_PARTIAL_REPLAY) == 0)
     *has = svn_ra_svn_has_capability(sess->conn, SVN_RA_SVN_CAP_PARTIAL_REPLAY);
   else if (strcmp(capability, SVN_RA_CAPABILITY_COMMIT_REVPROPS) == 0)
-    *has = svn_ra_svn_has_capability(sess->conn,
+    *has = svn_ra_svn_has_capability(sess->conn, 
                                      SVN_RA_SVN_CAP_COMMIT_REVPROPS);
   else  /* Don't know any other capabilities, so error. */
     {

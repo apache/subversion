@@ -92,7 +92,7 @@ svn_cl__propset(apr_getopt_t *os,
   /* Suck up all the remaining arguments into a targets array */
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
-                                                      opt_state->targets,
+                                                      opt_state->targets, 
                                                       ctx, pool));
 
   /* Implicit "." is okay for revision properties; it just helps
