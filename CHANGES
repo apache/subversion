@@ -1,5 +1,51 @@
+Version 1.5.1
+(24 Jul 2008, from /branches/1.5.x)
+http://svn.collab.net/repos/svn/tags/1.5.1
+
+ User-visible changes:
+  * fixed: crash on invalid dates in 'log' and 'blame' (issue #2721)
+  * mergeinfo on switched subtrees should elide in repos (issue #3188)
+  * Add support for --config-dir to svnmerge.py (r31727)
+  * improve performance of bdb post-commit deltification (r31820 -59)
+  * don't clobber LDFLAGS in configure when given '--with-zlib' (r31825)
+  * don't drive the merge editor when there is nothing to be merged (r30748)
+  * don't commit an add of a missing item (issue #3198)
+  * make 'svndumpfilter' not match partial path components (r31833)
+  * don't create unneeded self-referential mergeinfo (issue #3157)
+  * support 'http-library' with --enable-runtime-module-search (r31425, -722)
+  * serf: fetch the repo UUID on the target url, not the root (r31464)
+  * support Berkeley DB 4.7 (r32017, -29)
+  * fixed: 'svn status --xml' reporting invalid XML (issue #2887)
+  * fixed: 'svn merge' range notification bug (r30746, -47)
+  * fixed: can not replace branch with neon/serf (issue #2939)
+  * fixed: 'file not found' error when merging to a broken symlink (r31159, -79)
+  * fixed: crash and endless loop for credentials in ra_serf (r31619)
+  * fixed: ArrayIndexOutOfBoundsException in JavaHL bindings (r31719, -806)
+  * fixed: auth cache reading password from wrong username entry (issue #2242)
+  * fixed: commit log message compatibility wrapper (r31944)
+  * fixed: unbounded memory usage in wc-to-wc copy and move (r31868)
+  * fixed: subtree merges broken for non-intersecting ranges (issue #3199)
+  * fixed: crash in calling apr_pstrcat (r32080)
+  * fixed: invalid xml from 'svn log --xml' against pre-1.2 servers (r31875)
+  * fixed: 'svnlook diff' ignores --diff-copy-from for properties (issue #3248)
+  * fixed: 'svnlook diff' report that binary files differ (issue #3249)
+  * fixed: corruption by commits to subtrees added by merge (issue #3240)
+  * fixed: non-existent subtrees break the merge (issue #3067)
+  * fixed: ra_serf location-segments errors on non-existent nodes (r32056)
+  * fixed: 'svn log -g' correctness and speed (issue #3220, issue #3235)
+  * fixed: merge chokes on renamed subtrees (issue #3174)
+
+ Developer-visible changes:
+  * export svn_path_is_url() to the bindings (r31603)
+  * make libsvn_ra depend on libsvn_delta unconditionally (r31852)
+  * correctly set the peg revision for copy in JavaHL (r31994)
+  * allow 'svn mergeinfo' to handle working copy paths (r31023, -873, -74, -929, -930, -038)
+  * fixed: crash when when svn_ra_open3() is passed a bogus URL (r31223)
+  * fixed: JavaHL compilation on Windows (r31737)
+
+
 Version 1.5.0
-(17 Jun 2008, from /branches/1.5.x)
+(19 Jun 2008, from /branches/1.5.x)
 http://svn.collab.net/repos/svn/tags/1.5.0
 
  User-visible changes:
