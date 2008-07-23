@@ -130,16 +130,3 @@ Candidate changes for 1.5.1:
 
 Approved changes:
 =================
-
- * r32142, r32187
-   Finish issue #3240: commits to subtrees added by merge corrupt working
-   copy and repos.
-   Justification:
-     In the best case, this causes commits to fail.  In the worst one,
-     it can cause commits to modify the wrong files!
-   Notes: r32142 is a test for the issue, r32187 is the fix.  Neither cmpilato
-     nor vgeorgescu voted explicitly for r32142 but it seems pretty clear they
-     meant to since r32187 removes the XFail from the test r32142 added!?
-   Votes:
-     +1: pburba, vgeorgescu, cmpilato
-
