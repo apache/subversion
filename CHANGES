@@ -52,6 +52,10 @@ http://svn.collab.net/repos/svn/tags/1.5.1
   * serf: fetch the repo UUID on the target url, not the root (r31464)
   * support Berkeley DB 4.7 (r32017, -29)
   * fixed: corruption by commits to subtrees added by merge (issue #3240)
+  * fixed: non-existent subtrees break the merge (issue #3067)
+  * fixed: ra_serf location-segments errors on non-existent nodes (r32056)
+  * fixed: 'svn log -g' correctness and speed (issue #3220, issue #3235)
+  * fixed: merge chokes on renamed subtrees (issue #3174)
 
  Developer-visible changes:
   * fixed: crash when when svn_ra_open3() is passed a bogus URL (r31223)
