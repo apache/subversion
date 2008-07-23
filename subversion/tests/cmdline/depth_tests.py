@@ -2194,6 +2194,55 @@ def excluded_path_misc_operation(sbox):
                                      'revert', '--depth=infinity', L_path)
 
 
+def excluded_receive_remote_removal(sbox):
+  """exclude flag should be cleared upon remote removal"""
+  ign_a, ign_b, ign_c, wc \
+         = set_up_depthy_working_copies(sbox, infinity=True)
+
+  A_path = os.path.join(wc, 'A')
+  B_path = os.path.join(A_path, 'B')
+  C_path = os.path.join(A_path, 'C')
+
+  # Exclude path B from wc
+  expected_output = svntest.wc.State(wc, {
+    'A/B'            : Item(status='D '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/B/lambda', 'A/B/E/alpha', 'A/B/E/beta',
+                       'A/B/E', 'A/B/F', 'A/B')
+  expected_status = svntest.actions.get_virginal_state(wc, 1)
+  expected_status.remove('A/B/lambda', 'A/B/E/alpha', 'A/B/E/beta',
+                       'A/B/E', 'A/B/F', 'A/B')
+  svntest.actions.run_and_verify_update(wc,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None,
+                                        None, None, None, None,
+                                        "--set-depth", "exclude", B_path)
+
+  # Remove path B in the repos.
+  svntest.actions.run_and_verify_svn(None, None, [], "delete", "-m", 
+                                     "Delete B.", sbox.repo_url + "/A/B")
+
+  # Update wc, should receive the removal of excluded path B 
+  # and handle it silently.
+  expected_output = svntest.wc.State(wc, {})
+  svntest.actions.run_and_verify_update(wc,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None,
+                                        None, None, None, None,
+                                        "--set-depth", "exclude", B_path)
+
+  # Introduce a new path with the same name B.
+  # This should succeed if the exclude entry is gone with the update,
+  # otherwise a name conflict will rise up.
+  expected_output = ['A         '+B_path+'\n']
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'cp', C_path, B_path)
+
 
 #----------------------------------------------------------------------
 # list all tests here, starting with None:
@@ -2231,6 +2280,7 @@ test_list = [ None,
               depth_empty_update_on_file,
               excluded_path_update_operation,
               excluded_path_misc_operation,
+	      XFail(excluded_receive_remote_removal),
             ]
 
 if __name__ == "__main__":
