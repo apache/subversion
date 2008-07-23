@@ -32,8 +32,13 @@ Directories:
 If 'svn update' modifies any item (including adding or deleting a file
 or directory) in a directory that has been scheduled for deletion in
 the working copy, each item modified by the update is a tree conflict
-victim. The conflict data will be stored in the metadata of the parent
-of the directory scheduled for deletion.
+victim.  
+
+Our tree conflict detection will be part of the update's crawl of the
+working copy.
+
+The persistent conflict data will be stored in the metadata of the
+parent of the directory scheduled for deletion.
 
 ==========
 USE CASE 2
@@ -48,21 +53,29 @@ Directories:
 
 If 'svn update' deletes a directory that has local modifications
 (including items scheduled to be added or deleted), each locally
-modified item is a tree conflict victim. The conflict data will be
-stored in the metadata of the parent of the directory deleted by the
-update.
+modified item is a tree conflict victim. 
+
+The update crawls the to-be-deleted directory tree before actually
+deleting it.  Subversion metadata and unmodified files are deleted,
+and any locally-modified files are preserved.  We would like to
+piggyback our tree conflict detection code onto this existing crawl.
+
+The persistent conflict data will be stored in the metadata of the
+parent of the directory deleted by the update.
 
 ==========
 USE CASE 3
 ==========
 
 Files:
+
 If 'svn update' deletes a file that has been scheduled for deletion in
 the working copy, the file is a tree conflict victim.
 
 Directories:
-If 'svn update' deletes a directory that has been scheduled for deletion in
-the working copy, the directory is a tree conflict victim.
+
+If 'svn update' deletes a directory that has been scheduled for
+deletion in the working copy, the directory is a tree conflict victim.
 
 ==========
 USE CASE 4
@@ -304,9 +317,7 @@ metadata of directory A.  They are described by 'svn info'.
   The update has added 'A/B/G'
   You have deleted or renamed 'A/B' locally.
 
-(The wording of the warnings is not yet settled.  Also, it looks like
-we'll have to extend the conflict struct to include a 'target' field,
-since in this common case the target of the action is not the victim.)
+Note:  The wording of the warnings is not yet settled.
 
 What is the current state of the working copy?
 
@@ -326,6 +337,13 @@ What is the current state of the working copy?
 
 Except for the blocked commit (and the output of update, status, and
 info) the behavior is the same as Subversion 1.5.
+
+Technical note: In a deep tree conflict, the action target is not the
+tree conflict victim.  We'll have to populate the 'path' field in the
+conflict struct, which we haven't done before.  The functions that
+record tree conflict data must accept the extra path argument
+for the action.  The functions that create readable tree conflict
+descriptions must use the 'path' field when describing the action.
 
 =========================================
 TREE CONFLICT DETECTION WITH TRUE RENAMES

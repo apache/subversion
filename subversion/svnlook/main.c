@@ -240,7 +240,6 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
 
   {"propget", subcommand_pget, {"pget", "pg"},
    N_("usage: 1. svnlook propget REPOS_PATH PROPNAME PATH_IN_REPOS\n"
-      "                    "
       "       2. svnlook propget --revprop REPOS_PATH PROPNAME\n\n"
       "Print the raw value of a property on a path in the repository.\n"
       "With --revprop, print the raw value of a revision property.\n"),
@@ -248,7 +247,6 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
 
   {"proplist", subcommand_plist, {"plist", "pl"},
    N_("usage: 1. svnlook proplist REPOS_PATH PATH_IN_REPOS\n"
-      "                      "
       "       2. svnlook proplist --revprop REPOS_PATH\n\n"
       "List the properties of a path in the repository, or\n"
       "with the --revprop option, revision properties.\n"
@@ -961,7 +959,10 @@ print_diff_tree(svn_fs_root_t *root,
       svn_stringbuf_appendcstr(header, "\n");
 
       if (binary)
-        svn_stringbuf_appendcstr(header, _("(Binary files differ)\n\n"));
+        {
+          svn_stringbuf_appendcstr(header, _("(Binary files differ)\n\n"));
+          SVN_ERR(svn_cmdline_printf(pool, header->data));
+        }          
       else
         {
           svn_diff_t *diff;
@@ -1039,9 +1040,12 @@ print_diff_tree(svn_fs_root_t *root,
       apr_array_header_t *propchanges, *props;
 
       SVN_ERR(svn_fs_node_proplist(&local_proptable, root, path, pool));
-      if (node->action == 'A')
+      if (c->diff_copy_from && node->action == 'A' && is_copy)
+        SVN_ERR(svn_fs_node_proplist(&base_proptable, base_root,
+                                     base_path, pool));
+      else if (node->action == 'A')
         base_proptable = apr_hash_make(pool);
-      else
+      else  /* node->action == 'R' */
         SVN_ERR(svn_fs_node_proplist(&base_proptable, base_root,
                                      base_path, pool));
       SVN_ERR(svn_prop_diffs(&propchanges, local_proptable,
