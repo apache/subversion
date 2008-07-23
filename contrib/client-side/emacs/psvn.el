@@ -5239,6 +5239,7 @@ entry for file with defun.
   (define-key svn-log-view-mode-map (kbd "p") 'svn-log-view-prev)
   (define-key svn-log-view-mode-map (kbd "n") 'svn-log-view-next)
   (define-key svn-log-view-mode-map (kbd "~") 'svn-log-get-specific-revision)
+  (define-key svn-log-view-mode-map (kbd "f") 'svn-log-get-specific-revision)
   (define-key svn-log-view-mode-map (kbd "E") 'svn-log-ediff-specific-revision)
   (define-key svn-log-view-mode-map (kbd "=") 'svn-log-view-diff)
   (define-key svn-log-view-mode-map (kbd "#") 'svn-log-mark-partner-revision)
@@ -5418,11 +5419,14 @@ When called with a prefix argument, ask the user for the revision."
   "Get an older revision of the file at point via svn cat."
   (interactive)
   ;; (message "%S" (svn-status-make-line-info (svn-log-file-name-at-point t)))
-  (let ((default-directory (svn-status-base-dir)))
-    (svn-status-get-specific-revision-internal
-     (list (svn-status-make-line-info (svn-log-file-name-at-point t)))
-     (svn-log-revision-at-point)
-     nil)))
+  (let ((default-directory (svn-status-base-dir))
+        (file-name (svn-log-file-name-at-point t)))
+    (if file-name
+        (svn-status-get-specific-revision-internal
+         (list (svn-status-make-line-info file-name))
+         (svn-log-revision-at-point)
+         nil)
+      (message "No file at point"))))
 
 (defun svn-log-ediff-specific-revision (&optional user-confirmation)
   "Call ediff for the file at point to view a changeset.
