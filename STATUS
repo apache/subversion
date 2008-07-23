@@ -43,24 +43,6 @@ Candidate changes for 1.5.1:
      +1: pburba, cmpilato
 
 
- * r32153, r32160, r32185, r32237
-   Fix issues #3220 (log -g is slow) and #3235 (log -g is wrong).
-   Justification:
-     Slowness is bad -- in some tests, this fix decreased the cost of a log -g
-     run from about 6 minutes to around 12 seconds.  And the old code only
-     gets slower as more instances of mergeinfo appear in the repository.
-     Wrongness is bad -- and I don't even need to explain this.
-   Notes:
-     When merging r32153, use the "theirs" version of all conflicts which
-     appear to be in the new functions fs_mergeinfo_changed() and 
-     get_combined_mergeinfo_changes().  "--accept theirs-conflict" did the
-     right thing for me (cmpilato) as of r32155.
-   Votes:
-     +1: hwright (all but r32237)
-     +1: cmpilato, pburba
-     +1: jerenkrantz (r32237 only)
-
-
 Approved changes:
 =================
 
@@ -77,3 +59,20 @@ Approved changes:
      +1: lgo, cmpilato, jerenkrantz
      +0: arfrever (serf tests fail)
      -0: markphip (serf tests fail on OSX), epg (failure confirmed)
+
+
+ * r32153, r32160, r32185, r32237
+   Fix issues #3220 (log -g is slow) and #3235 (log -g is wrong).
+   Justification:
+     Slowness is bad -- in some tests, this fix decreased the cost of a log -g
+     run from about 6 minutes to around 12 seconds.  And the old code only
+     gets slower as more instances of mergeinfo appear in the repository.
+     Wrongness is bad -- and I don't even need to explain this.
+   Notes:
+     When merging r32153, use the "theirs" version of all conflicts which
+     appear to be in the new functions fs_mergeinfo_changed() and 
+     get_combined_mergeinfo_changes().  "--accept theirs-conflict" did the
+     right thing for me (cmpilato) as of r32155.
+   Votes:
+     +1: cmpilato, pburba, hwright
+     +1: jerenkrantz (r32237 only)
