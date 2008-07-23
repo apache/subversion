@@ -9,8 +9,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.5\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2008-07-17 15:09+0200\n"
-"PO-Revision-Date: 2008-07-17 15:13+0200\n"
+"POT-Creation-Date: 2008-07-23 13:25+0200\n"
+"PO-Revision-Date: 2008-07-23 13:27+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: French <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1126,7 +1126,7 @@ msgid "'%s' does not exist"
 msgstr "'%s' n'existe pas"
 
 #: ../libsvn_client/commit.c:635 ../libsvn_client/copy.c:513
-#: ../svnlook/main.c:1271
+#: ../svnlook/main.c:1277
 #, c-format
 msgid "Path '%s' does not exist"
 msgstr "Le chemin '%s' n'existe pas"
@@ -1387,8 +1387,8 @@ msgstr "%s\t(copie de travail)"
 msgid "Cannot display: file marked as a binary type.%s"
 msgstr "Impossible d'afficher : fichier considéré comme binaire.%s"
 
-#: ../libsvn_client/diff.c:881 ../libsvn_client/merge.c:3820
-#: ../libsvn_client/merge.c:5240
+#: ../libsvn_client/diff.c:881 ../libsvn_client/merge.c:4236
+#: ../libsvn_client/merge.c:5666
 msgid "Not all required revisions are specified"
 msgstr "Toutes les révisions requises ne sont pas précisées"
 
@@ -1493,9 +1493,9 @@ msgstr "L'URL '%s' n'existe pas à cette révision"
 msgid "No common parent found, unable to operate on disjoint arguments"
 msgstr "Aucun parent commun trouvé, impossible de travailler avec des arguments disjoints"
 
-#: ../libsvn_client/locking_commands.c:261 ../libsvn_client/merge.c:5257
-#: ../libsvn_client/merge.c:5263 ../libsvn_client/merge.c:5834
-#: ../libsvn_client/merge.c:5990 ../libsvn_client/ra.c:397
+#: ../libsvn_client/locking_commands.c:261 ../libsvn_client/merge.c:5683
+#: ../libsvn_client/merge.c:5689 ../libsvn_client/merge.c:6260
+#: ../libsvn_client/merge.c:6416 ../libsvn_client/ra.c:397
 #: ../libsvn_client/ra.c:434 ../libsvn_client/ra.c:637
 #, c-format
 msgid "'%s' has no URL"
@@ -1570,11 +1570,11 @@ msgstr ".fusion-gauche.r%ld"
 msgid ".merge-right.r%ld"
 msgstr ".fusion-droit.r%ld"
 
-#: ../libsvn_client/merge.c:1717
+#: ../libsvn_client/merge.c:2154
 msgid "Cannot reverse-merge a range from a path's own future history; try updating first"
 msgstr "Impossible de fusionner un intervalle inversé à partir du futur du chemin considéré ; essayer une mise à jour d'abord"
 
-#: ../libsvn_client/merge.c:2208
+#: ../libsvn_client/merge.c:2664
 #, c-format
 msgid ""
 "One or more conflicts were produced while merging r%ld:%ld into\n"
@@ -1587,45 +1587,45 @@ msgstr ""
 "résoudre tous les conflits et ré-exécuter la fusion (merge) pour \n"
 "appliquer les révisions non-fusionnées restantes"
 
-#: ../libsvn_client/merge.c:4955
+#: ../libsvn_client/merge.c:5381
 msgid "Use of two URLs is not compatible with mergeinfo modification"
 msgstr "L'utilisation de deux URLs n'est pas compatible avec la modification des informations de fusion 'mergeinfo'"
 
-#: ../libsvn_client/merge.c:4962 ../libsvn_client/merge.c:5178
+#: ../libsvn_client/merge.c:5388 ../libsvn_client/merge.c:5604
 msgid "Merge from foreign repository is not compatible with mergeinfo modification"
 msgstr "La fusion à partir d'un dépôt distant n'est pas compatible avec la modification des informations de fusion 'mergeinfo'"
 
-#: ../libsvn_client/merge.c:5484
+#: ../libsvn_client/merge.c:5910
 msgid "Cannot reintegrate into a working copy with a switched subtree"
 msgstr "Impossible de réintégrer dans une copie de travail avec un sous-arbre ré-aiguillé"
 
-#: ../libsvn_client/merge.c:5489
+#: ../libsvn_client/merge.c:5915
 msgid "Cannot reintegrate into a working copy not entirely at infinite depth"
 msgstr "Impossible de reintégrer dans une copie de travail de profondeur partielle"
 
-#: ../libsvn_client/merge.c:5494
+#: ../libsvn_client/merge.c:5920
 msgid "Cannot reintegrate into a working copy that has local modifications"
 msgstr "Impossible de réintégrer dans une copie de travail avec des modifications locales"
 
-#: ../libsvn_client/merge.c:5500
+#: ../libsvn_client/merge.c:5926
 msgid "Cannot determine revision of working copy"
 msgstr "Impossible de déterminer la révision de la copie de travail"
 
-#: ../libsvn_client/merge.c:5504
+#: ../libsvn_client/merge.c:5930
 msgid "Cannot reintegrate into mixed-revision working copy; try updating first"
 msgstr "Impossible de reintégrer dans un copie de travail avec des révisions multiples ; Faire une mise à jour (update) d'abord"
 
-#: ../libsvn_client/merge.c:5571
+#: ../libsvn_client/merge.c:5997
 #, c-format
 msgid "At least one revision (r%ld) not yet merged from '%s'"
 msgstr "Au moins une révision (r%ld) non encore fusionnée à partir de '%s'"
 
-#: ../libsvn_client/merge.c:5729 ../libsvn_client/merge.c:5893
+#: ../libsvn_client/merge.c:6155 ../libsvn_client/merge.c:6319
 #, c-format
 msgid "'%s@%ld' must be ancestrally related to '%s@%ld'"
 msgstr "'%s@%ld' doit un ancêtre de '%s@%ld'"
 
-#: ../libsvn_client/merge.c:5852
+#: ../libsvn_client/merge.c:6278
 #, c-format
 msgid "'%s' must be from the same repository as '%s'"
 msgstr "'%s' doit être dans le même dépôt que '%s'"
@@ -2248,7 +2248,7 @@ msgstr "Le module '%s' nécessite la version %d du schéma du système de fichie
 msgid "Expected FS format '%d'; found format '%d'"
 msgstr "Format de stockage attendu '%d' ; format trouvé '%d'"
 
-#: ../libsvn_fs_base/fs.c:1166
+#: ../libsvn_fs_base/fs.c:1183
 msgid ""
 "Error copying logfile;  the DB_LOG_AUTOREMOVE feature\n"
 "may be interfering with the hotcopy algorithm.  If\n"
@@ -2259,7 +2259,7 @@ msgstr ""
 "interfère peut-être avec la copie à chaud (hotcopy).\n"
 "Si le problème persiste, essayer de la désactiver dans DB_CONFIG"
 
-#: ../libsvn_fs_base/fs.c:1185
+#: ../libsvn_fs_base/fs.c:1202
 msgid ""
 "Error running catastrophic recovery on hotcopy;  the\n"
 "DB_LOG_AUTOREMOVE feature may be interfering with the\n"
@@ -2270,11 +2270,11 @@ msgstr ""
 "L'option DB_LOG_AUTOREMOVE interfère peut être avec la copie à chaud.\n"
 "Si le problème persiste, essayer de la désactiver dans DB_CONFIG"
 
-#: ../libsvn_fs_base/fs.c:1232
+#: ../libsvn_fs_base/fs.c:1249
 msgid "Module for working with a Berkeley DB repository."
 msgstr "Module destiné à travailler avec un dépôt Berkeley DB."
 
-#: ../libsvn_fs_base/fs.c:1267
+#: ../libsvn_fs_base/fs.c:1284
 #, c-format
 msgid "Unsupported FS loader version (%d) for bdb"
 msgstr "Version %d du chargeur FS non supportée pour bdb"
@@ -2614,8 +2614,8 @@ msgid "Invalid revision number '%ld'"
 msgstr "Numéro de révision invalide '%ld'"
 
 #: ../libsvn_fs_fs/fs_fs.c:1431 ../libsvn_fs_fs/fs_fs.c:2111
-#: ../libsvn_fs_fs/fs_fs.c:2204 ../libsvn_repos/log.c:1369
-#: ../libsvn_repos/log.c:1373
+#: ../libsvn_fs_fs/fs_fs.c:2204 ../libsvn_repos/log.c:1588
+#: ../libsvn_repos/log.c:1592
 #, c-format
 msgid "No such revision %ld"
 msgstr "Pas de révision %ld"
@@ -3353,7 +3353,7 @@ msgstr "Configuration invalide : impossible de charger le fichier de certificat 
 msgid "Invalid config: unable to load PKCS#11 provider '%s'"
 msgstr "Configuration invalide : impossible de charger le fournisseur de PKCS#11 '%s'"
 
-#: ../libsvn_ra_neon/session.c:1328 ../libsvn_ra_serf/serf.c:1141
+#: ../libsvn_ra_neon/session.c:1328 ../libsvn_ra_serf/serf.c:1140
 msgid "The UUID property was not found on the resource or any of its parents"
 msgstr "La propriété UUID n'a pas été trouvée sur la ressource ou sur un de ses parents"
 
@@ -3381,7 +3381,7 @@ msgid "%s of '%s'"
 msgstr "%s de '%s'"
 
 #: ../libsvn_ra_neon/util.c:544 ../libsvn_ra_serf/getlocations.c:280
-#: ../libsvn_ra_serf/getlocationsegments.c:231
+#: ../libsvn_ra_serf/getlocationsegments.c:235
 #: ../libsvn_ra_serf/mergeinfo.c:292 ../libsvn_ra_serf/mergeinfo.c:306
 #, c-format
 msgid "'%s' path not found"
@@ -3434,7 +3434,7 @@ msgid "Missing 'realm' attribute in Authorization header."
 msgstr "Attribut 'realm' manquant dans les entêtes d'authentification."
 
 #: ../libsvn_ra_serf/blame.c:464 ../libsvn_ra_serf/serf.c:661
-#: ../libsvn_ra_serf/update.c:2221 ../libsvn_ra_serf/util.c:1394
+#: ../libsvn_ra_serf/update.c:2221 ../libsvn_ra_serf/util.c:1392
 msgid "The OPTIONS response did not include the requested version-controlled-configuration value"
 msgstr "La réponse à OPTIONS n'inclut pas de valeur pour 'version-controlled-configuration'"
 
@@ -3488,6 +3488,11 @@ msgstr "%s de '%s': %d %s (%s://%s)"
 #, c-format
 msgid "Adding a directory failed: %s on %s (%d)"
 msgstr "Échec à l'ajout du répertoire : %s sur %s (%d)"
+
+#: ../libsvn_ra_serf/getlocationsegments.c:229
+#, c-format
+msgid "Location segment report failed on '%s'@'%ld'"
+msgstr "Écghec du rapport de localisation de segment sur '%s'@'%ld'"
 
 #: ../libsvn_ra_serf/locks.c:378 ../libsvn_ra_serf/locks.c:417
 #, c-format
@@ -3552,7 +3557,7 @@ msgstr "La réponse à OPTIONS n'inclut pas de valeur pour 'version-name'"
 msgid "The OPTIONS response did not include the requested resourcetype value"
 msgstr "La réponse à OPTIONS n'inclut pas de valeur pour 'resourcetype'"
 
-#: ../libsvn_ra_serf/serf.c:1206
+#: ../libsvn_ra_serf/serf.c:1205
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_serf"
 msgstr "Version %d du chargeur RA (accès dépôt) non supportée pour ra_serf"
@@ -3567,11 +3572,11 @@ msgstr "Échec de la requête GET : %d %s"
 msgid "Error retrieving REPORT (%d)"
 msgstr "Erreur à la récupération du REPORT (%d)"
 
-#: ../libsvn_ra_serf/util.c:1178
+#: ../libsvn_ra_serf/util.c:1176
 msgid "Premature EOF seen from server"
 msgstr "Fin de fichier (EOF) prématurée rencontrée sur le serveur"
 
-#: ../libsvn_ra_serf/util.c:1229
+#: ../libsvn_ra_serf/util.c:1227
 msgid "Unspecified error message"
 msgstr "Message d'erreur non spécifié"
 
@@ -4374,7 +4379,7 @@ msgstr "Révision de fin %ld invalide"
 msgid "Unreadable path encountered; access denied"
 msgstr "Chemin illisible rencontré, accès refusé"
 
-#: ../libsvn_repos/rev_hunt.c:1122
+#: ../libsvn_repos/rev_hunt.c:1119
 #, c-format
 msgid "'%s' is not a file in revision %ld"
 msgstr "'%s' n'est pas un fichier à la révision %ld"
@@ -8115,11 +8120,11 @@ msgstr "La paire de la propriété de révision est vide"
 msgid "'%s' is not a valid Subversion property name"
 msgstr "'%s' n'est pas un nom de propriété de Subversion valide"
 
-#: ../svn/main.c:1176 ../svnlook/main.c:2083
+#: ../svn/main.c:1176 ../svnlook/main.c:2089
 msgid "Non-numeric limit argument given"
 msgstr "L'argument de l'option limit doit être numérique"
 
-#: ../svn/main.c:1182 ../svnlook/main.c:2089
+#: ../svn/main.c:1182 ../svnlook/main.c:2095
 msgid "Argument to --limit must be positive"
 msgstr "L'argument de --limit doit être positif"
 
@@ -8166,13 +8171,13 @@ msgstr "'%s' n'est pas une valide pour --accept"
 msgid "'%s' is not a valid --show-revs value"
 msgstr "'%s' n'est pas une valeur valide pour --show-revs"
 
-#: ../svn/main.c:1592 ../svndumpfilter/main.c:1315 ../svnlook/main.c:2161
+#: ../svn/main.c:1592 ../svndumpfilter/main.c:1315 ../svnlook/main.c:2167
 #, c-format
 msgid "Subcommand argument required\n"
 msgstr "Argument de la sous-commande attendu\n"
 
 #: ../svn/main.c:1611 ../svnadmin/main.c:1605 ../svndumpfilter/main.c:1334
-#: ../svnlook/main.c:2180
+#: ../svnlook/main.c:2186
 #, c-format
 msgid "Unknown command: '%s'\n"
 msgstr "Commande inconnue : '%s'\n"
@@ -9186,7 +9191,7 @@ msgstr ""
 "\n"
 "Sous-commandes disponibles :\n"
 
-#: ../svnadmin/main.c:717 ../svnlook/main.c:1759 ../svnserve/main.c:207
+#: ../svnadmin/main.c:717 ../svnlook/main.c:1765 ../svnserve/main.c:207
 msgid ""
 "The following repository back-end (FS) modules are available:\n"
 "\n"
@@ -9255,22 +9260,22 @@ msgstr "Un seul nom de propriété et argument fichier attendu"
 msgid "Exactly one file argument required"
 msgstr "Un seul argument fichier attendu"
 
-#: ../svnadmin/main.c:1200 ../svnlook/main.c:1824
+#: ../svnadmin/main.c:1200 ../svnlook/main.c:1830
 #, c-format
 msgid "UUID Token: %s\n"
 msgstr "Chaîne UUID : %s\n"
 
-#: ../svnadmin/main.c:1201 ../svnlook/main.c:1825
+#: ../svnadmin/main.c:1201 ../svnlook/main.c:1831
 #, c-format
 msgid "Owner: %s\n"
 msgstr "Propriétaire : %s\n"
 
-#: ../svnadmin/main.c:1202 ../svnlook/main.c:1826
+#: ../svnadmin/main.c:1202 ../svnlook/main.c:1832
 #, c-format
 msgid "Created: %s\n"
 msgstr "Créé : %s\n"
 
-#: ../svnadmin/main.c:1203 ../svnlook/main.c:1827
+#: ../svnadmin/main.c:1203 ../svnlook/main.c:1833
 #, c-format
 msgid "Expires: %s\n"
 msgstr "Expire : %s\n"
@@ -9808,7 +9813,7 @@ msgstr "Modifié"
 msgid "Index"
 msgstr "Index"
 
-#: ../svnlook/main.c:952
+#: ../svnlook/main.c:953
 msgid ""
 "(Binary files differ)\n"
 "\n"
@@ -9816,26 +9821,26 @@ msgstr ""
 "(les fichiers binaires diffèrent)\n"
 "\n"
 
-#: ../svnlook/main.c:1091
+#: ../svnlook/main.c:1097
 msgid "unknown"
 msgstr "inconnu"
 
-#: ../svnlook/main.c:1238 ../svnlook/main.c:1331 ../svnlook/main.c:1360
+#: ../svnlook/main.c:1244 ../svnlook/main.c:1337 ../svnlook/main.c:1366
 #, c-format
 msgid "Transaction '%s' is not based on a revision; how odd"
 msgstr "La transaction '%s' n'est pas basée sur une révision ; bizarre"
 
-#: ../svnlook/main.c:1268
+#: ../svnlook/main.c:1274
 #, c-format
 msgid "'%s' is a URL, probably should be a path"
 msgstr "'%s' est une URL, ce devrait plutôt être un chemin local"
 
-#: ../svnlook/main.c:1295
+#: ../svnlook/main.c:1301
 #, c-format
 msgid "Path '%s' is not a file"
 msgstr "Le chemin '%s' n'est pas un fichier"
 
-#: ../svnlook/main.c:1444
+#: ../svnlook/main.c:1450
 #, c-format
 msgid ""
 "REVISION   PATH <ID>\n"
@@ -9844,7 +9849,7 @@ msgstr ""
 "RÉVISION   CHEMIN <ID>\n"
 "--------   -----------\n"
 
-#: ../svnlook/main.c:1449
+#: ../svnlook/main.c:1455
 #, c-format
 msgid ""
 "REVISION   PATH\n"
@@ -9853,27 +9858,27 @@ msgstr ""
 "RÉVISION   CHEMIN\n"
 "--------   ------\n"
 
-#: ../svnlook/main.c:1498
+#: ../svnlook/main.c:1504
 #, c-format
 msgid "Property '%s' not found on revision %ld"
 msgstr "Propriété '%s' absente à la révision %ld"
 
-#: ../svnlook/main.c:1505
+#: ../svnlook/main.c:1511
 #, c-format
 msgid "Property '%s' not found on path '%s' in revision %ld"
 msgstr "Propriété '%s' absente du chemin '%s' à la révision %ld"
 
-#: ../svnlook/main.c:1510
+#: ../svnlook/main.c:1516
 #, c-format
 msgid "Property '%s' not found on path '%s' in transaction %s"
 msgstr "Propriété '%s' absente du chemin '%s' dans la transaction %s"
 
-#: ../svnlook/main.c:1688 ../svnlook/main.c:1903
+#: ../svnlook/main.c:1694 ../svnlook/main.c:1909
 #, c-format
 msgid "Missing repository path argument"
 msgstr "Chemin du dépôt manquant"
 
-#: ../svnlook/main.c:1749
+#: ../svnlook/main.c:1755
 msgid ""
 "general usage: svnlook SUBCOMMAND REPOS_PATH [ARGS & OPTIONS ...]\n"
 "Note: any subcommand which takes the '--revision' and '--transaction'\n"
@@ -9892,11 +9897,11 @@ msgstr ""
 "\n"
 "Sous-commandes disponibles :\n"
 
-#: ../svnlook/main.c:1805
+#: ../svnlook/main.c:1811
 msgid "Missing path argument"
 msgstr "Chemin en argument manquant"
 
-#: ../svnlook/main.c:1830
+#: ../svnlook/main.c:1836
 #, c-format
 msgid ""
 "Comment (%i lines):\n"
@@ -9905,7 +9910,7 @@ msgstr ""
 "Commentaire (%i lignes) :\n"
 "%s\n"
 
-#: ../svnlook/main.c:1831
+#: ../svnlook/main.c:1837
 #, c-format
 msgid ""
 "Comment (%i line):\n"
@@ -9914,39 +9919,39 @@ msgstr ""
 "Commentaire (%i ligne) :\n"
 "%s\n"
 
-#: ../svnlook/main.c:1877
+#: ../svnlook/main.c:1883
 #, c-format
 msgid "Missing propname argument"
 msgstr "Le nom de la propriété manque"
 
-#: ../svnlook/main.c:1878
+#: ../svnlook/main.c:1884
 #, c-format
 msgid "Missing propname and repository path arguments"
 msgstr "Le nom de la propriété et le chemin du dépôt manquent"
 
-#: ../svnlook/main.c:1884
+#: ../svnlook/main.c:1890
 msgid "Missing propname or repository path argument"
 msgstr "Le nom de la propriété ou le chemin du dépôt manque"
 
-#: ../svnlook/main.c:2043
+#: ../svnlook/main.c:2049
 msgid "Invalid revision number supplied"
 msgstr "Numéro de révision invalide"
 
-#: ../svnlook/main.c:2131
+#: ../svnlook/main.c:2137
 msgid "The '--transaction' (-t) and '--revision' (-r) arguments can not co-exist"
 msgstr "'--transaction' (-t) et '--revision' (-r) sont mutuellement exclusifs"
 
-#: ../svnlook/main.c:2213
+#: ../svnlook/main.c:2219
 #, c-format
 msgid "Repository argument required\n"
 msgstr "Un dépôt est requis en argument\n"
 
-#: ../svnlook/main.c:2222
+#: ../svnlook/main.c:2228
 #, c-format
 msgid "'%s' is a URL when it should be a path\n"
 msgstr "'%s' est une URL au lieu d'un chemin local\n"
 
-#: ../svnlook/main.c:2273
+#: ../svnlook/main.c:2279
 #, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
@@ -9955,7 +9960,7 @@ msgstr ""
 "La sous-commande '%s' n'accepte pas l'option '%s'\n"
 "Entrer 'svnlook help %s' pour l'aide.\n"
 
-#: ../svnlook/main.c:2316
+#: ../svnlook/main.c:2322
 msgid "Try 'svnlook help' for more info"
 msgstr "Essayer 'svnlook help' pour plus d'information"
 

@@ -542,12 +542,12 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
         {
           continue;
         }
+      if (sess->pending_error)
+        {
+          return sess->pending_error;
+        }
       if (status)
         {
-          if (sess->pending_error)
-            {
-              return sess->pending_error;
-            }
           return svn_error_wrap_apr(status, "Error running context");
         }
       /* Debugging purposes only! */
@@ -1066,8 +1066,6 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
           XML_ParserFree(ctx->xmlp);
           if (xml_status == XML_STATUS_ERROR && ctx->ignore_errors == FALSE)
             {
-              status = SVN_ERR_RA_DAV_REQUEST_FAILED;
-
               svn_error_clear(ctx->error);
             }
 
@@ -1176,7 +1174,7 @@ handle_response(serf_request_t *request,
           ctx->session->pending_error =
               svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
                                _("Premature EOF seen from server"));
-          return ctx->session->pending_error->apr_err;
+          return status;
         }
     }
 
@@ -1228,7 +1226,7 @@ handle_response(serf_request_t *request,
               svn_error_create(APR_EGENERAL, NULL,
                                _("Unspecified error message"));
         }
-      return ctx->session->pending_error->apr_err;
+      return APR_EGENERAL;
     }
   else
     {
