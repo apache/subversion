@@ -195,6 +195,9 @@ struct svn_ra_serf__session_t {
   /* SSL server certificates */
   svn_boolean_t trust_default_ca;
   const char *ssl_authorities;
+
+  /* Repository UUID */
+  const char *uuid;
 };
 
 /*
