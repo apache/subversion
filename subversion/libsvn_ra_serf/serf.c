@@ -1022,7 +1022,7 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
 
   path = session->repos_url.path;
 
-  /* If we have a relative path, append it. */
+  /* If we have a relative path, URI encode and append it. */
   if (rel_path)
     {
       path = svn_path_url_add_component(path, rel_path, pool);
