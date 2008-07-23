@@ -2794,13 +2794,13 @@ rep_read_contents(void *baton,
 
 
 /* Returns whether or not the expanded fulltext of the file is
- * cacheable based on its size SIZE.  Specifically, if it will fit
+ * cachable based on its size SIZE.  Specifically, if it will fit
  * into a memcached value.  The memcached cutoff seems to be a bit
  * (header length?) under a megabyte; we round down a little to be
  * safe.
  */
 static svn_boolean_t
-fulltext_size_is_cacheable(svn_filesize_t size)
+fulltext_size_is_cachable(svn_filesize_t size)
 {
   return size < 1000000;
 }
@@ -2831,7 +2831,7 @@ read_representation(svn_stream_t **contents_p,
       struct rep_read_baton *rb;
 
       if (ffd->fulltext_cache && SVN_IS_VALID_REVNUM(rep->revision)
-          && fulltext_size_is_cacheable(rep->expanded_size))
+          && fulltext_size_is_cachable(rep->expanded_size))
         {
           svn_string_t *fulltext;
           svn_boolean_t is_cached;
