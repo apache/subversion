@@ -42,12 +42,6 @@ Candidate changes for 1.5.1:
    Votes:
      +1: pburba, cmpilato
 
- * r32236
-   This should have been part of #3220 & #3235 group, just got missed.
-   Lack of this revision causes 'log_tests.py' and 'blame_tests-10' to fail.
-   Votes:
-     +1: kameshj, markphip
-
 
 Approved changes:
 =================
@@ -65,3 +59,10 @@ Approved changes:
      +1: lgo, cmpilato, jerenkrantz
      +0: arfrever (serf tests fail)
      -0: markphip (serf tests fail on OSX), epg (failure confirmed)
+
+
+ * r32236
+   This should have been part of #3220 & #3235 group, just got missed.
+   Lack of this revision causes 'log_tests.py' and 'blame_tests-10' to fail.
+   Votes:
+     +1: kameshj, markphip, cmpilato
