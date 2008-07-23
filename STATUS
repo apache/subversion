@@ -91,12 +91,3 @@ Approved changes:
    at trunk@31900 via merge_tests failures.
    Votes:
      +1: kameshj, cmpilato, kfogel, jerenkrantz
-
-
- * r32164, r32169
-   Fix a segfault in the python tests.
-   Justification:
-     Segfaulting tests are a Bad Thing.  This appears to be a regression
-     from 1.5.0.
-   Votes:
-     +1: hwright, cmpilato, jerenkrantz
