@@ -11231,7 +11231,6 @@ def dont_merge_revs_into_subtree_that_predate_it(sbox):
   svntest.actions.run_and_verify_svn(None,
                                      expected_props, [],
                                      'pl', '-vR', wc_dir)
-
 #----------------------------------------------------------------------
 # Helper for merge_chokes_on_renamed_subtrees and
 # subtrees_with_empty_mergeinfo.
@@ -12031,6 +12030,37 @@ def subtree_merges_dont_intersect_with_targets(sbox):
                                      short_A_copy_path)
   os.chdir(saved_cwd)
 
+#----------------------------------------------------------------------
+# Test for issue #3174: 'Merge algorithm chokes on subtrees needing
+# special attention that have been renamed'
+def merge_chokes_on_renamed_subtrees(sbox):
+  "merge fails with renamed subtrees with mergeinfo"
+
+  # Use helper to setup a renamed subtree.
+  wc_dir, expected_disk, expected_status = set_up_renamed_subtree(sbox)
+
+  # Some paths we'll care about
+  psi_COPY_moved_path = os.path.join(wc_dir, "H_COPY", "psi_moved")
+
+  # Cherry harvest all available revsions from 'A/D/H/psi' to 'H_COPY/psi'.
+  #
+  # Search for the comment entitled "The Merge Kluge" elsewhere in
+  # this file, to understand why we shorten and chdir() below.
+  #
+  # Here is where issue #3174 appears, the merge fails with:
+  # svn: svn: File not found: revision 3, path '/A/D/H/psi'
+  saved_cwd = os.getcwd()
+  os.chdir(svntest.main.work_dir)
+  short_psi_COPY_moved_path = shorten_path_kludge(psi_COPY_moved_path)
+  svntest.actions.run_and_verify_svn(
+    None,
+    expected_merge_output([[5,6]], 'U    ' + short_psi_COPY_moved_path + '\n'),
+    [], 'merge', sbox.repo_url + '/A/D/H/psi_moved',
+    short_psi_COPY_moved_path)
+  os.chdir(saved_cwd)
+
+  expected_status.tweak('H_COPY/psi_moved', status='MM')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 # Some more tests for issue #3067 'subtrees that don't exist at the start
 # or end of a merge range shouldn't break the merge'
@@ -12658,6 +12688,8 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(merge_broken_link, svntest.main.is_posix_os),
               SkipUnless(subtree_merges_dont_intersect_with_targets,
+                         server_has_mergeinfo),
+              SkipUnless(merge_chokes_on_renamed_subtrees,
                          server_has_mergeinfo),
               SkipUnless(subtree_source_missing_in_requested_range,
                          server_has_mergeinfo),
