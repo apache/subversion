@@ -77,11 +77,3 @@ Approved changes:
      +1: lgo, cmpilato, jerenkrantz
      +0: arfrever (serf tests fail)
      -0: markphip (serf tests fail on OSX), epg (failure confirmed)
-
-
- * r32056
-   Fix ra_serf bug that has a potential to cause vague errors when
-   location-segments report is run against non-existent node, exhibited
-   at trunk@31900 via merge_tests failures.
-   Votes:
-     +1: kameshj, cmpilato, kfogel, jerenkrantz
