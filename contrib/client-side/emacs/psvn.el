@@ -711,6 +711,7 @@ This is nil if the log entry is for a new commit.")
 (defvar svn-ediff-result)
 (defvar svn-status-last-diff-options nil)
 (defvar svn-status-blame-file-name nil)
+(defvar svn-status-blame-revision nil)
 (defvar svn-admin-last-repository-dir nil "The last repository url for various operations.")
 (defvar svn-last-cmd-ring (make-ring 30) "Ring that holds the last executed svn commands (for debugging purposes)")
 (defvar svn-status-cached-version-string nil)
@@ -3651,7 +3652,7 @@ At the moment a list containing the last changed author is returned."
     (svn-status-message 7 "last-changed-author for '%s': %s" path last-changed-author)
     (list last-changed-author)))
 
-(defun svn-status-blame (revision)
+(defun svn-status-blame (revision &optional file-name)
   "Run `svn blame' on the current file.
 When called with a prefix argument, ask the user for the REVISION to use.
 When called from a file buffer, go to the current line in the resulting blame output."
@@ -3659,8 +3660,21 @@ When called from a file buffer, go to the current line in the resulting blame ou
   (when current-prefix-arg
     (setq revision (svn-status-read-revision-string "Blame for version: " "BASE")))
   (unless revision (setq revision "BASE"))
-  (setq svn-status-blame-file-name (svn-status-line-info->filename (svn-status-get-file-information)))
+  (setq svn-status-blame-revision revision)
+  (setq svn-status-blame-file-name (if file-name
+                                       file-name
+                                     (svn-status-line-info->filename (svn-status-get-file-information))))
   (svn-run t t 'blame "blame" svn-status-default-blame-arguments "-r" revision svn-status-blame-file-name))
+
+(defun svn-blame-blame-again (arg)
+  "Run svn blame again, using the revision before the change at point.
+When point is at revision 3472, run it with 3471."
+  (interactive "P")
+  (let ((rev (svn-blame-rev-at-point)))
+    (setq rev (number-to-string (- (string-to-number rev) 1)))
+    (when current-prefix-arg
+      (setq rev (svn-status-read-revision-string (format "Svn blame for rev#? ") rev)))
+    (svn-status-blame rev svn-status-blame-file-name)))
 
 (defun svn-status-show-svn-diff (arg)
   "Run `svn diff' on the current file.
@@ -5620,6 +5634,7 @@ Currently is the output from the svn update command known."
   (define-key svn-blame-mode-map (kbd "r") 'svn-blame-highlight-revision)
   (define-key svn-blame-mode-map (kbd "=") 'svn-blame-show-changeset)
   (define-key svn-blame-mode-map (kbd "l") 'svn-blame-show-log)
+  (define-key svn-blame-mode-map (kbd "b") 'svn-blame-blame-again)
   (define-key svn-blame-mode-map (kbd "s") 'svn-blame-show-statistics)
   (define-key svn-blame-mode-map [?q] 'bury-buffer))
 
@@ -5629,6 +5644,7 @@ Currently is the output from the svn update command known."
                     ["Jump to source location" svn-blame-open-source-file t]
                     ["Show changeset" svn-blame-show-changeset t]
                     ["Show log" svn-blame-show-log t]
+                    ["Show blame again" svn-blame-blame-again t]
                     ["Show statistics" svn-blame-show-statistics t]
                     ["Highlight by author" svn-blame-highlight-author t]
                     ["Highlight by revision" svn-blame-highlight-revision t]))
@@ -5683,7 +5699,9 @@ The current buffer must contain a valid output from svn blame"
         (delete-region (svn-point-at-bol) (+ (svn-point-at-bol) info-end-col))
         (forward-line)
         (setq line (1+ line)))))
-  (let* ((buf-name (format "*svn-blame: %s*" (file-relative-name svn-status-blame-file-name)))
+  (let* ((buf-name (format "*svn-blame: %s <%s>*"
+                           (file-relative-name svn-status-blame-file-name)
+                           svn-status-blame-revision))
          (buffer (get-buffer buf-name)))
     (when buffer
       (kill-buffer buffer))
