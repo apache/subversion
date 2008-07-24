@@ -495,12 +495,14 @@ complete_directory(struct edit_baton *eb,
           entry = apr_hash_get(entries, eb->target, APR_HASH_KEY_STRING);
           if (entry && entry->depth == svn_depth_exclude)
             {
+              char * full_target;
               entry->depth = svn_depth_infinity;
               SVN_ERR(svn_wc__entries_write(entries, adm_access, pool));
               /* There is a small chance that the target is gone in the
                  repository. We'd better get rid of the exclude flag now. */
+              full_target = svn_path_join(eb->anchor, eb->target, pool);
               SVN_ERR(svn_wc__adm_retrieve_internal
-                      (&target_access, eb->adm_access, eb->target, pool));
+                      (&target_access, eb->adm_access, full_target, pool));
               if (!target_access)
                 {
                   int log_number = 0;
