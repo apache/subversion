@@ -51,8 +51,13 @@ Approved changes:
    Notes:
      Small change, but API consistency is always a good thing.
      Does not merge cleanly!
+     
+     A backport branch 1.5.x-ra_serf-backports has been created to see which 
+     revisions are needed to fix the tests that fail after r31313 is
+     backported. The group r31234 as nominated above is needed so I propose
+     to merge r31313 from the branch iff the r31234 group is approved too.
    Question:
-     Does r32056, nominated below, fix these test failures?
+     Does r32056, nominated below, fix these test failures? No, unrelated.
    Votes:
      +1: lgo, cmpilato, jerenkrantz
      +0: arfrever (serf tests fail)
