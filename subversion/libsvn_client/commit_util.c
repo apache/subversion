@@ -1279,6 +1279,10 @@ do_item_commit(void **dir_baton,
             }
         }
 
+      /* TODO(#2843)
+         Ensured by harvest_commitables(), item->path will never be 
+         an excluded path. However, will it be deleted/absent items? 
+         In other words, do we really need show_hidden = TRUE here? */
       SVN_ERR(svn_wc_entry(&tmp_entry, item->path, adm_access, TRUE, pool));
       SVN_ERR(svn_wc_transmit_prop_deltas
               (item->path, adm_access, tmp_entry, editor,

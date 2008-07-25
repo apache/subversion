@@ -229,6 +229,10 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
               || entry->schedule == svn_wc_schedule_replace)
              && ! entry->copied);
 
+      /* TODO(#2843) Switched path will be treated as root and bypass the
+         exclude flag setup below. Beause the server simply do not accept
+         excluded link_path. But without the flag it is not an excluded path
+         at all, maybe just prohibit this situation? */
       svn_wc_is_wc_root(&is_root, full_path, anchor, pool);
       if ((! is_root) && entry_in_repos)
         {
