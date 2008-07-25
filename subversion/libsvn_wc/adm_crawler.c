@@ -288,6 +288,10 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
                  that the server will treate the wc as empty and thus push
                  full content of the files/subdirs. But we want to prevent the
                  server from pushing the full content of this_path at us. */
+
+              /* The server does not support link_path report on excluded
+                 path. We explicitly prohibit this situation in
+                 svn_wc_crop_tree(). */
               SVN_ERR(reporter->set_path(report_baton,
                                          this_path,
                                          SVN_INVALID_REVNUM,

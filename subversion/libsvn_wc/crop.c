@@ -19,6 +19,7 @@
 /* ==================================================================== */
 
 #include "svn_wc.h"
+#include "lock.h"
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_client.h"
@@ -75,8 +76,6 @@ crop_children(svn_wc_adm_access_t *adm_access,
   /* Update the depth of target first, if needed. */
   if (dot_entry->depth > depth)
     {
-      /* TODO(#2843): Do we need to restore the modified depth if the user
-         cancel this operation? */
       dot_entry->depth = depth;
       SVN_ERR(svn_wc__entries_write(entries, dir_access, subpool));
     }
@@ -220,43 +219,80 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
   /* Crop the target itself if we are requested to. */
   if (depth == svn_depth_exclude)
     {
-      svn_boolean_t is_root;
+      svn_boolean_t switched, entry_in_repos;
+      const svn_wc_entry_t *parent_entry = NULL;
+      svn_wc_adm_access_t *p_access;
+
+      /* Safeguard on bad target. */
+      if (*full_path == 0)
+        return svn_error_createf
+          (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+           _("Cannot exclude current directory."));
+
+      if (svn_dirent_is_root(full_path, strlen(full_path)))
+        return svn_error_createf
+          (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+           _("Cannot exclude root directory."));
+
+      /* This simulates the logic of svn_wc_is_wc_root(). */
+        {
+          const char *bname, *pname;
+          svn_error_t *err = NULL;
+          svn_path_split(full_path, &pname, &bname, pool);
+          SVN_ERR(svn_wc__adm_retrieve_internal(&p_access, anchor, pname,
+                                                pool));
+          if (! p_access)
+            err = svn_wc_adm_probe_open3(&p_access, NULL, pname, FALSE, 0,
+                                         NULL, NULL, pool);
+
+          if (! err)
+            err = svn_wc_entry(&parent_entry, pname, p_access, FALSE, pool);
+
+          if (err)
+            svn_error_clear(err);
+
+          switched 
+            = parent_entry && strcmp(entry->url, 
+                                     svn_path_url_add_component
+                                     (parent_entry->url, bname, pool));
+
+          /* The server simply do not accept excluded link_path and thus
+             switched path can not be excluede. Just completely prohibit this
+             situation. */
+          if (switched)
+            return svn_error_createf
+              (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+               _("Cannot crop '%s': it is a switched path."),
+               svn_path_local_style(full_path, pool));
+        }
 
       /* If the target entry is just added without history, it does not exist
          in the repos (in which case we won't exclude it). */
-      svn_boolean_t entry_in_repos
+      entry_in_repos
         = ! ((entry->schedule == svn_wc_schedule_add
               || entry->schedule == svn_wc_schedule_replace)
              && ! entry->copied);
 
-      /* TODO(#2843) Switched path will be treated as root and bypass the
-         exclude flag setup below. Beause the server simply do not accept
-         excluded link_path. But without the flag it is not an excluded path
-         at all, maybe just prohibit this situation? */
-      svn_wc_is_wc_root(&is_root, full_path, anchor, pool);
-      if ((! is_root) && entry_in_repos)
+      /* Mark the target as excluded, if the parent requires it by
+         default. */
+      if (parent_entry && entry_in_repos
+          && (parent_entry->depth > svn_depth_files))
         {
-          const svn_wc_entry_t *parent_entry;
-          apr_hash_t * parent_entries;
           svn_wc_entry_t *target_entry;
+          apr_hash_t *parent_entries;
+          SVN_ERR(svn_wc_entries_read(&parent_entries, p_access, 
+                                      FALSE, pool));
 
-          SVN_ERR(svn_wc_entries_read(&parent_entries, anchor, FALSE, pool));
-          parent_entry = apr_hash_get(parent_entries,
-                                      SVN_WC_ENTRY_THIS_DIR,
+          target_entry = apr_hash_get(parent_entries, 
+                                      svn_path_basename(full_path, pool),
                                       APR_HASH_KEY_STRING);
-          /* Mark the target as excluded, if the parent requires it by
-             default. */
-          if (parent_entry && parent_entry->depth > svn_depth_files)
-            {
-              target_entry = apr_hash_get(parent_entries, 
-                                          svn_path_basename(full_path, pool),
-                                          APR_HASH_KEY_STRING);
 
-              target_entry->depth = svn_depth_exclude;
-              SVN_ERR(svn_wc__entries_write(parent_entries, anchor, pool));
-            }
+          target_entry->depth = svn_depth_exclude;
+          SVN_ERR(svn_wc__entries_write(parent_entries, anchor, pool));
         }
 
+      /* TODO(#2843): Do we need to restore the modified depth if the user
+         cancel this operation? */
       SVN_ERR(svn_wc_adm_retrieve(&dir_access, anchor, full_path, pool));
       IGNORE_LOCAL_MOD
         (svn_wc_remove_from_revision_control(dir_access,
