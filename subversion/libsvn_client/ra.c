@@ -385,6 +385,10 @@ svn_client_uuid_from_path(const char **uuid,
     }
   else
     {
+      /* Excluded path will fall into this code branch, since the missed
+         fields in the entry for excluded path is not filled. But it is just
+         ok. */
+
       /* Try the parent if it's the same working copy.  It's not
          entirely clear how this happens (possibly an old wc?) but it
          has been triggered by TSVN, see

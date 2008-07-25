@@ -538,11 +538,9 @@ process_committed_internal(int *log_number,
           if (! strcmp(name, SVN_WC_ENTRY_THIS_DIR))
             continue;
 
-          /* TODO(#2843)
-             We come to this branch since we are commiting an added tree.
-             Check this again after the behavior of cropping an newly added
-             tree is defined. Anyway, it will be safer to check for excluded
-             items here. */
+          /* We come to this branch since we have committed a copied tree.
+             svn_depth_exclude is possible in this situation. So check and
+             skip */
           if (current_entry->depth == svn_depth_exclude)
             continue;
 
@@ -2134,6 +2132,8 @@ revert_entry(svn_depth_t *depth,
               svn_wc_entry_t *entry_in_parent;
               apr_hash_t *entries;
 
+              /* The entry to revert will not be an excluded item. Don't
+                 bother check for it. */
               SVN_ERR(svn_wc_entries_read(&entries, parent_access, TRUE,
                                           pool));
               entry_in_parent = apr_hash_get(entries, bname,

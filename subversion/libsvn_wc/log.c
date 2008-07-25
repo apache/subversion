@@ -1018,7 +1018,8 @@ remove_deleted_entry(void *baton, const void *key,
   const svn_wc_entry_t *cur_entry = val;
   svn_wc_adm_access_t *entry_access;
 
-  /* Skip each entry that isn't scheduled for deletion. */
+  /* Skip each entry that isn't scheduled for deletion. This gracefully
+     includes excluded item. */
   if (cur_entry->schedule != svn_wc_schedule_delete)
     return SVN_NO_ERROR;
 
@@ -1175,6 +1176,8 @@ log_do_committed(struct log_runner *loggy,
                                                       pool));
 
           /* If the parent entry's working rev 'lags' behind new_rev... */
+          /* TODO(#2843) The adm_access itself ensures the path will not be
+           * excluded/deleted. Why show_hidden? */
           SVN_ERR(svn_wc_entry(&parentry,
                                svn_wc_adm_access_path(loggy->adm_access),
                                loggy->adm_access,
