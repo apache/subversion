@@ -8957,7 +8957,7 @@ msgstr "저장소 인자가 팔요합니다"
 #: ../svnadmin/main.c:129
 #, c-format
 msgid "'%s' is an URL when it should be a path"
-msgstr "'%s'는 그것이 경로로 존재할 때만 URL 입니다"
+msgstr "'%s'는 경로여야 하는데 URL입니다"
 
 #: ../svnadmin/main.c:242
 msgid "specify revision number ARG (or X:Y range)"
