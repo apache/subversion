@@ -7,7 +7,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.5\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2008-07-26 14:30+0200\n"
-"PO-Revision-Date: 2007-03-22 15:24+0100\n"
+"PO-Revision-Date: 2008-07-26 14:41+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Korean <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -9139,7 +9139,7 @@ msgstr "저장소 인자가 팔요합니다"
 #: ../svnadmin/main.c:129
 #, c-format
 msgid "'%s' is an URL when it should be a path"
-msgstr "'%s'는 그것이 경로로 존재할 때만 URL 입니다"
+msgstr "'%s'는 경로여야 하는데 URL입니다"
 
 #: ../svnadmin/main.c:242
 msgid "specify revision number ARG (or X:Y range)"
