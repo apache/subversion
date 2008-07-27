@@ -94,7 +94,7 @@ static svn_error_t *
 copy_one_versioned_file(const char *from,
                         const char *to,
                         svn_wc_adm_access_t *adm_access,
-                        svn_opt_revision_t *revision,
+                        const svn_opt_revision_t *revision,
                         const char *native_eol,
                         apr_pool_t *pool)
 {
@@ -209,7 +209,7 @@ copy_one_versioned_file(const char *from,
 static svn_error_t *
 copy_versioned_files(const char *from,
                      const char *to,
-                     svn_opt_revision_t *revision,
+                     const svn_opt_revision_t *revision,
                      svn_boolean_t force,
                      svn_boolean_t ignore_externals,
                      svn_depth_t depth,
@@ -796,9 +796,11 @@ svn_client_export4(svn_revnum_t *result_rev,
   svn_revnum_t edit_revision = SVN_INVALID_REVNUM;
   const char *url;
 
+  peg_revision = svn_cl__rev_default_to_head_or_working(peg_revision, from);
+  revision = svn_cl__rev_default_to_peg(revision, peg_revision);
+
   if (svn_path_is_url(from) ||
-      ! (SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(revision->kind) ||
-         revision->kind == svn_opt_revision_unspecified))
+      ! SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(revision->kind))
     {
       svn_revnum_t revnum;
       svn_ra_session_t *ra_session;
@@ -942,17 +944,10 @@ svn_client_export4(svn_revnum_t *result_rev,
     }
   else
     {
-      svn_opt_revision_t working_revision = *revision;
       /* This is a working copy export. */
-      if (working_revision.kind == svn_opt_revision_unspecified)
-        {
-          /* Default to WORKING in the case that we have
-             been given a working copy path */
-          working_revision.kind = svn_opt_revision_working;
-        }
 
       /* just copy the contents of the working copy into the target path. */
-      SVN_ERR(copy_versioned_files(from, to, &working_revision, overwrite,
+      SVN_ERR(copy_versioned_files(from, to, revision, overwrite,
                                    ignore_externals, depth, native_eol,
                                    ctx, pool));
     }
