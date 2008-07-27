@@ -1066,6 +1066,26 @@ svn_client__ensure_revprop_table(apr_hash_t **revprop_table_out,
    (kind) == svn_opt_revision_working ||                                   \
    (kind) == svn_opt_revision_committed)
 
+/* Return REVISION unless its kind is 'unspecified' in which case return
+ * a pointer to a statically allocated revision structure of kind 'head'
+ * if PATH_OR_URL is a URL or 'base' if it is a WC path. */
+const svn_opt_revision_t *
+svn_cl__rev_default_to_head_or_base(const svn_opt_revision_t *revision,
+                                    const char *path_or_url);
+
+/* Return REVISION unless its kind is 'unspecified' in which case return
+ * a pointer to a statically allocated revision structure of kind 'head'
+ * if PATH_OR_URL is a URL or 'working' if it is a WC path. */
+const svn_opt_revision_t *
+svn_cl__rev_default_to_head_or_working(const svn_opt_revision_t *revision,
+                                       const char *path_or_url);
+
+/* Return REVISION unless its kind is 'unspecified' in which case return
+ * PEG_REVISION. */
+const svn_opt_revision_t *
+svn_cl__rev_default_to_peg(const svn_opt_revision_t *revision,
+                           const svn_opt_revision_t *peg_revision);
+
 
 #ifdef __cplusplus
 }
