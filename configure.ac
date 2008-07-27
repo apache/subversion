@@ -703,7 +703,7 @@ SVN_LIB_Z
 MOD_ACTIVATION="-a"
 AC_ARG_ENABLE(mod-activation,
 AS_HELP_STRING([--disable-mod-activation],
-vn               [Do not enable mod_dav_svn in httpd.conf]),
+               [Do not enable mod_dav_svn in httpd.conf]),
 [
     if test "$enableval" = "no" ; then
       MOD_ACTIVATION=""

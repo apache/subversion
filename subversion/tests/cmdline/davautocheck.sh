@@ -210,7 +210,7 @@ LOAD_MOD_AUTHZ_USER="$(get_loadmodule_config mod_authz_user)" \
 }
 
 HTTPD_PORT=$(($RANDOM+1024))
-HTTPD_ROOT="$ABS_BUILDDIR/subversion/tests/cmdline/httpd-$(date '+%Y%m%d-%H%M%S')"
+HTTPD_ROOT="$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/httpd-$(date '+%Y%m%d-%H%M%S')"
 HTTPD_CFG="$HTTPD_ROOT/cfg"
 HTTPD_PID="$HTTPD_ROOT/pid"
 HTTPD_ACCESS_LOG="$HTTPD_ROOT/access_log"
