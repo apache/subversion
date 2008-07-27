@@ -73,7 +73,7 @@ NEON_URL="http://www.webdav.org/neon/neon-${NEON_RECOMMENDED_VER}.tar.gz"
 dnl You can skip the neon version check only if you know what you are doing 
 AC_ARG_ENABLE(neon-version-check,
   AS_HELP_STRING([--disable-neon-version-check],
-		 [do not check the Neon version]),
+                 [do not check the Neon version]),
   [
     if test "$enableval" = "no" ; then
       NEON_ALLOWED_LIST="any"
@@ -211,7 +211,7 @@ dnl Check for trang.
 trang=yes
 AC_ARG_WITH(trang,
 AS_HELP_STRING([--with-trang=PATH],
-	       [Specify the command to run the trang schema converter]),
+               [Specify the command to run the trang schema converter]),
 [
     trang="$withval"
 ])
@@ -610,7 +610,7 @@ AC_FUNC_VPRINTF
 dnl check for functions needed in special file handling
 AC_CHECK_FUNCS(symlink readlink)
 
-	
+
 dnl Process some configuration options ----------
 
 AC_ARG_WITH(ssl,
@@ -626,7 +626,7 @@ AS_HELP_STRING([--with-ssl],
 
 AC_ARG_ENABLE(debug,
 AS_HELP_STRING([--enable-debug],
-	       [Turn on debugging]),
+               [Turn on debugging]),
 [
     if test "$enableval" = "yes" ; then
       enable_debugging="yes"
@@ -638,9 +638,9 @@ AS_HELP_STRING([--enable-debug],
     # Neither --enable-debug nor --disable-debug was passed.
     enable_debugging="maybe"
 
-	# We leave this as 'maybe' because setting it to 'no' would modify the
-	# CFLAGS/CXXFLAGS later (just after the --enable-maintainer-mode block),
-	# and we don't want to force that.
+        # We leave this as 'maybe' because setting it to 'no' would modify the
+        # CFLAGS/CXXFLAGS later (just after the --enable-maintainer-mode block),
+        # and we don't want to force that.
     #
     # TODO: set enable_debugging='no' here, and provide another way to disable
     #       the CFLAGS/CXXFLAGS munging.
@@ -648,7 +648,7 @@ AS_HELP_STRING([--enable-debug],
 
 AC_ARG_ENABLE(maintainer-mode,
 AS_HELP_STRING([--enable-maintainer-mode],
-	       [Turn on debugging and very strict compile-time warnings]),
+               [Turn on debugging and very strict compile-time warnings]),
 [
     if test "$enableval" = "yes" ; then
       if test "$enable_debugging" = "no" ; then
@@ -703,7 +703,7 @@ SVN_LIB_Z
 MOD_ACTIVATION="-a"
 AC_ARG_ENABLE(mod-activation,
 AS_HELP_STRING([--disable-mod-activation],
-	       [Do not enable mod_dav_svn in httpd.conf]),
+vn               [Do not enable mod_dav_svn in httpd.conf]),
 [
     if test "$enableval" = "no" ; then
       MOD_ACTIVATION=""
@@ -718,7 +718,7 @@ AC_SUBST(MOD_ACTIVATION)
 
 AC_ARG_ENABLE(gprof,
 AS_HELP_STRING([--enable-gprof],
-	       [Produce gprof profiling data in 'gmon.out' (GCC only).]),
+               [Produce gprof profiling data in 'gmon.out' (GCC only).]),
 [
     if test "$enableval" = "yes" ; then
       dnl Probably other compilers support -pg or something similar;
