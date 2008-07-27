@@ -103,7 +103,7 @@ copy_one_versioned_file(const char *from,
   svn_subst_eol_style_t style;
   apr_hash_t *props;
   const char *base;
-  svn_string_t *eol_style, *keywords, *executable, *externals, *special;
+  svn_string_t *eol_style, *keywords, *executable, *special;
   const char *eol = NULL;
   svn_boolean_t local_mod = FALSE;
   apr_time_t tm;
@@ -149,8 +149,6 @@ copy_one_versioned_file(const char *from,
                           APR_HASH_KEY_STRING);
   executable = apr_hash_get(props, SVN_PROP_EXECUTABLE,
                             APR_HASH_KEY_STRING);
-  externals = apr_hash_get(props, SVN_PROP_EXTERNALS,
-                           APR_HASH_KEY_STRING);
   special = apr_hash_get(props, SVN_PROP_SPECIAL,
                          APR_HASH_KEY_STRING);
 
