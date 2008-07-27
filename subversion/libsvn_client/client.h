@@ -115,17 +115,6 @@ svn_client__compare_revisions(svn_opt_revision_t *revision1,
                               svn_opt_revision_t *revision2);
 
 
-/* Return true if the revision number for REVISION can be determined
-   from just the working copy, or false if it can be determined from
-   just the repository.
-
-   NOTE: No other kinds of revisions should be possible; but if one
-   day there are, this will return true for those kinds.
- */
-svn_boolean_t
-svn_client__revision_is_local(const svn_opt_revision_t *revision);
-
-
 /* Set *COPYFROM_PATH and *COPYFROM_REV to the path and revision that
    served as the source of the copy from which PATH_OR_URL at REVISION
    was created, or NULL and SVN_INVALID_REVNUM (respectively) if
