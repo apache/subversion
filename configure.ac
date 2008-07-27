@@ -633,6 +633,17 @@ AS_HELP_STRING([--enable-debug],
     else
       enable_debugging="no"
     fi
+],
+[
+    # Neither --enable-debug nor --disable-debug was passed.
+    enable_debugging="maybe"
+
+	# We leave this as 'maybe' because setting it to 'no' would modify the
+	# CFLAGS/CXXFLAGS later (just after the --enable-maintainer-mode block),
+	# and we don't want to force that.
+    #
+    # TODO: set enable_debugging='no' here, and provide another way to disable
+    #       the CFLAGS/CXXFLAGS munging.
 ])
 
 AC_ARG_ENABLE(maintainer-mode,
@@ -660,13 +671,14 @@ if test "$enable_debugging" = "yes" ; then
   dnl AP_DEBUG enables specific (Apache) features for developer builds
   CFLAGS="$CFLAGS -DSVN_DEBUG -DAP_DEBUG"
   CXXFLAGS="$CXXFLAGS -DSVN_DEBUG -DAP_DEBUG"
-else
-  if test "$enable_debugging" = "no" ; then
+elif test "$enable_debugging" = "no" ; then
     CFLAGS=["`echo $CFLAGS' ' | sed -e 's/-g[0-9] //g' | sed -e 's/-g//g'`"]
     CXXFLAGS=["`echo $CXXFLAGS' ' | sed -e 's/-g[0-9] //g' | sed -e 's/-g//g'`"]
     dnl Compile with NDEBUG to get rid of assertions
     CFLAGS="$CFLAGS -DNDEBUG"
     CXXFLAGS="$CXXFLAGS -DNDEBUG"
+# elif test "$enable_debugging" = "maybe" ; then
+#   # do nothing
   fi
 fi
 
