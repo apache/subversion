@@ -797,9 +797,7 @@ svn_client_export4(svn_revnum_t *result_rev,
   const char *url;
 
   if (svn_path_is_url(from) ||
-      ! (revision->kind == svn_opt_revision_base ||
-         revision->kind == svn_opt_revision_committed ||
-         revision->kind == svn_opt_revision_working ||
+      ! (SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(revision->kind) ||
          revision->kind == svn_opt_revision_unspecified))
     {
       svn_revnum_t revnum;

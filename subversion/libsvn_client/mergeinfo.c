@@ -1150,9 +1150,7 @@ location_from_path_and_rev(const char **url,
   svn_revnum_t rev;
 
   if (! svn_path_is_url(path_or_url)
-      && (peg_revision->kind == svn_opt_revision_base
-          || peg_revision->kind == svn_opt_revision_working
-          || peg_revision->kind == svn_opt_revision_committed
+      && (SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(peg_revision->kind)
           || peg_revision->kind == svn_opt_revision_unspecified))
     {
       int adm_lock_level = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(svn_depth_empty);

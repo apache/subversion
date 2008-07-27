@@ -1062,15 +1062,20 @@ svn_client__ensure_revprop_table(apr_hash_t **revprop_table_out,
                                  apr_pool_t *pool);
 
 
-/** Return TRUE iff revision kind is dependent on the working copy.
- * Otherwise, return FALSE.
- */
+/* Return true if KIND is a revision kind that is dependent on the working
+ * copy. Otherwise, return false. */
 #define SVN_CLIENT__REVKIND_NEEDS_WC(kind)                                 \
-  (((kind) == svn_opt_revision_base ||                                     \
+  ((kind) == svn_opt_revision_base ||                                      \
    (kind) == svn_opt_revision_previous ||                                  \
    (kind) == svn_opt_revision_working ||                                   \
    (kind) == svn_opt_revision_committed)                                   \
-   ? TRUE : FALSE)
+
+/* Return true if KIND is a revision kind that the WC can supply without
+ * contacting the repository. Otherwise, return false. */
+#define SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(kind)                           \
+  ((kind) == svn_opt_revision_base ||                                      \
+   (kind) == svn_opt_revision_working ||                                   \
+   (kind) == svn_opt_revision_committed)
 
 
 #ifdef __cplusplus
