@@ -679,7 +679,6 @@ elif test "$enable_debugging" = "no" ; then
     CXXFLAGS="$CXXFLAGS -DNDEBUG"
 # elif test "$enable_debugging" = "maybe" ; then
 #   # do nothing
-  fi
 fi
 
 
