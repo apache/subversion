@@ -62,9 +62,7 @@ cat_local_file(const char *path,
   apr_file_t *input_file;
   svn_stream_t *input;
 
-  SVN_ERR_ASSERT(revision->kind == svn_opt_revision_working ||
-                 revision->kind == svn_opt_revision_base ||
-                 revision->kind == svn_opt_revision_committed ||
+  SVN_ERR_ASSERT(SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(revision->kind) ||
                  revision->kind == svn_opt_revision_unspecified);
 
   SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
@@ -170,13 +168,9 @@ svn_client_cat2(svn_stream_t *out,
   svn_stream_t *output = out;
 
   if (! svn_path_is_url(path_or_url)
-      && (peg_revision->kind == svn_opt_revision_base
-          || peg_revision->kind == svn_opt_revision_working
-          || peg_revision->kind == svn_opt_revision_committed
+      && (SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(peg_revision->kind)
           || peg_revision->kind == svn_opt_revision_unspecified)
-      && (revision->kind == svn_opt_revision_base
-          || revision->kind == svn_opt_revision_working
-          || revision->kind == svn_opt_revision_committed
+      && (SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(revision->kind)
           || revision->kind == svn_opt_revision_unspecified))
     {
       svn_wc_adm_access_t *adm_access;

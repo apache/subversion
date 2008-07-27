@@ -877,13 +877,9 @@ svn_client_propget3(apr_hash_t **props,
   *props = apr_hash_make(pool);
 
   if (! svn_path_is_url(path_or_url)
-      && (peg_revision->kind == svn_opt_revision_base
-          || peg_revision->kind == svn_opt_revision_working
-          || peg_revision->kind == svn_opt_revision_committed
+      && (SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(peg_revision->kind)
           || peg_revision->kind == svn_opt_revision_unspecified)
-      && (revision->kind == svn_opt_revision_base
-          || revision->kind == svn_opt_revision_working
-          || revision->kind == svn_opt_revision_committed
+      && (SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(revision->kind)
           || revision->kind == svn_opt_revision_unspecified))
     {
       svn_wc_adm_access_t *adm_access;
@@ -1226,13 +1222,9 @@ svn_client_proplist3(const char *path_or_url,
     depth = svn_depth_empty;
 
   if (! svn_path_is_url(path_or_url)
-      && (peg_revision->kind == svn_opt_revision_base
-          || peg_revision->kind == svn_opt_revision_working
-          || peg_revision->kind == svn_opt_revision_committed
+      && (SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(peg_revision->kind)
           || peg_revision->kind == svn_opt_revision_unspecified)
-      && (revision->kind == svn_opt_revision_base
-          || revision->kind == svn_opt_revision_working
-          || revision->kind == svn_opt_revision_committed
+      && (SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(revision->kind)
           || revision->kind == svn_opt_revision_unspecified))
     {
       svn_boolean_t pristine;
