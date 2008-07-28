@@ -338,6 +338,49 @@ svn_wc__load_props(apr_hash_t **base_props_p,
 /*---------------------------------------------------------------------*/
 
 /*** Installing new properties. ***/
+
+/* Extend LOG_ACCUM with log commands to write the properties PROPS into
+ * the admin file specified by WC_PROP_KIND. ADM_ACCESS and PATH specify
+ * the WC item with which this file should be associated. */
+static svn_error_t *
+install_props_file(svn_stringbuf_t **log_accum,
+                             svn_wc_adm_access_t *adm_access,
+                             const char *path,
+                             apr_hash_t *props,
+                             svn_wc__props_kind_t wc_prop_kind,
+                             apr_pool_t *pool)
+{
+  svn_node_kind_t node_kind;
+  const char *propfile_path;
+  const char *propfile_tmp_path;
+
+  if (! svn_path_is_child(svn_wc_adm_access_path(adm_access), path, NULL))
+    node_kind = svn_node_dir;
+  else
+    node_kind = svn_node_file;
+
+  SVN_ERR(svn_wc__prop_path(&propfile_path, path,
+                            node_kind, wc_prop_kind, FALSE, pool));
+
+  /* Write the property hash into a temporary file. */
+  SVN_ERR(svn_wc__prop_path(&propfile_tmp_path, path,
+                            node_kind, wc_prop_kind, TRUE, pool));
+  SVN_ERR(save_prop_file(propfile_tmp_path, props,
+                         FALSE, pool));
+
+  /* Write a log entry to move tmp file to real file. */
+  SVN_ERR(svn_wc__loggy_move(log_accum, NULL, adm_access,
+                             propfile_tmp_path,
+                             propfile_path,
+                             FALSE, pool));
+
+  /* Make the props file read-only */
+  SVN_ERR(svn_wc__loggy_set_readonly(log_accum, adm_access,
+                                     propfile_path, pool));
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_wc__install_props(svn_stringbuf_t **log_accum,
                       svn_wc_adm_access_t *adm_access,
@@ -347,7 +390,6 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
                       svn_boolean_t write_base_props,
                       apr_pool_t *pool)
 {
-  const char *working_propfile_path, *working_prop_tmp_path;
   apr_array_header_t *prop_diffs;
   const svn_wc_entry_t *entry;
   svn_wc_entry_t tmp_entry;
@@ -360,7 +402,7 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
   else
     kind = svn_node_file;
 
-  /* Check if the props are modified. */
+  /* Check if the props are modified, and update the entry. */
   SVN_ERR(svn_prop_diffs(&prop_diffs, working_props, base_props, pool));
   tmp_entry.has_prop_mods = (prop_diffs->nelts > 0);
   tmp_entry.has_props = (apr_hash_count(working_props) > 0);
@@ -380,35 +422,20 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
   else
     entry = NULL;
 
-  /* Write our property hashes into temporary files.  Notice that the
-     paths computed are ABSOLUTE pathnames, which is what our disk
-     routines require. */
-  SVN_ERR(svn_wc__prop_path(&working_propfile_path, path,
-                            kind, svn_wc__props_working, FALSE, pool));
+  /* Save the working properties file if it differs from base. */
   if (tmp_entry.has_prop_mods)
     {
-      SVN_ERR(svn_wc__prop_path(&working_prop_tmp_path, path,
-                                kind, svn_wc__props_working, TRUE, pool));
-
-      /* Write the working prop hash to path/.svn/tmp/props/name or
-         path/.svn/tmp/dir-props */
-      SVN_ERR(save_prop_file(working_prop_tmp_path, working_props,
-                             FALSE, pool));
-
-      /* Write log entry to move working tmp copy to real working area. */
-      SVN_ERR(svn_wc__loggy_move(log_accum, NULL,
-                                 adm_access,
-                                 working_prop_tmp_path,
-                                 working_propfile_path,
-                                 FALSE, pool));
-
-      /* Make props read-only */
-      SVN_ERR(svn_wc__loggy_set_readonly(log_accum, adm_access,
-                                         working_propfile_path, pool));
+      SVN_ERR(install_props_file(log_accum, adm_access, path, working_props,
+                                 svn_wc__props_working, pool));
     }
   else
     {
       /* No property modifications, remove the file instead. */
+      const char *working_propfile_path;
+
+      SVN_ERR(svn_wc__prop_path(&working_propfile_path, path,
+                                kind, svn_wc__props_working, FALSE, pool));
+
       if (! has_propcaching || (entry && entry->has_prop_mods))
         SVN_ERR(svn_wc__loggy_remove(log_accum, adm_access,
                                      working_propfile_path, pool));
@@ -417,28 +444,18 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
   /* Repeat the above steps for the base properties if required. */
   if (write_base_props)
     {
-      const char *base_propfile_path, *base_prop_tmp_path;
-
-      SVN_ERR(svn_wc__prop_path(&base_propfile_path, path,
-                                kind, svn_wc__props_base, FALSE, pool));
-
       if (apr_hash_count(base_props) > 0)
         {
-          SVN_ERR(svn_wc__prop_path(&base_prop_tmp_path, path,
-                                    kind, svn_wc__props_base, TRUE, pool));
-
-          SVN_ERR(save_prop_file(base_prop_tmp_path, base_props, FALSE, pool));
-
-          SVN_ERR(svn_wc__loggy_move(log_accum, NULL, adm_access,
-                                     base_prop_tmp_path,
-                                     base_propfile_path,
-                                     FALSE, pool));
-
-          SVN_ERR(svn_wc__loggy_set_readonly(log_accum, adm_access,
-                                             base_propfile_path, pool));
+          SVN_ERR(install_props_file(log_accum, adm_access, path, base_props,
+                                     svn_wc__props_base, pool));
         }
       else
         {
+          const char *base_propfile_path;
+
+          SVN_ERR(svn_wc__prop_path(&base_propfile_path, path,
+                                    kind, svn_wc__props_base, FALSE, pool));
+
           if (! has_propcaching || (entry && entry->has_props))
             SVN_ERR(svn_wc__loggy_remove(log_accum, adm_access,
                                          base_propfile_path, pool));
