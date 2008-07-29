@@ -1017,7 +1017,10 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
 
           /* Don't revisit this name in the target or source entries. */
           apr_hash_set(t_entries, name, APR_HASH_KEY_STRING, NULL);
-          if (s_entries)
+          if (s_entries
+              /* Keep the entry for later process if it is reported as
+                 excluded and got deleted in repos. */ 
+              && (! info || info->depth != svn_depth_exclude || t_entry))
             apr_hash_set(s_entries, name, APR_HASH_KEY_STRING, NULL);
 
           /* pathinfo entries live in their own subpools due to lookahead,
