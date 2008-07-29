@@ -92,6 +92,11 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   if (depth == svn_depth_unknown)
     depth_is_sticky = FALSE;
 
+  /* Do not support the situation of both exclude and switch a target. */
+  if (depth_is_sticky && depth == svn_depth_exclude)
+    return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                             _("Can not both exclude and switch a path"));
+
   /* Get the external diff3, if any. */
   svn_config_get(cfg, &diff3_cmd, SVN_CONFIG_SECTION_HELPERS,
                  SVN_CONFIG_OPTION_DIFF3_CMD, NULL);
@@ -144,6 +149,15 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
        _("'%s'\n"
          "is not the same repository as\n"
          "'%s'"), URL, source_root);
+
+  /* We may need to crop the tree if the depth is sticky */
+  if (depth_is_sticky && depth < svn_depth_infinity)
+    {
+      SVN_ERR(svn_wc_crop_tree(adm_access, target, depth, 
+                               ctx->notify_func2, ctx->notify_baton2,
+                               ctx->cancel_func, ctx->cancel_baton,
+                               pool));
+    }
 
   SVN_ERR(svn_ra_reparent(ra_session, URL, pool));
 
