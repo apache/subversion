@@ -237,6 +237,9 @@ svn_auth__simple_save_creds_helper(svn_boolean_t *saved,
                                          SVN_AUTH_PARAM_NO_AUTH_CACHE,
                                          APR_HASH_KEY_STRING) != NULL);
 
+  /* Make sure we've been passed a passtype. */
+  SVN_ERR_ASSERT(passtype != NULL);
+
   *saved = FALSE;
 
   if (no_auth_cache)
