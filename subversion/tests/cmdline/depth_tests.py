@@ -2212,7 +2212,7 @@ def excluded_receive_remote_removal(sbox):
                        'A/B/E', 'A/B/F', 'A/B')
   expected_status = svntest.actions.get_virginal_state(wc, 1)
   expected_status.remove('A/B/lambda', 'A/B/E/alpha', 'A/B/E/beta',
-                       'A/B/E', 'A/B/F', 'A/B')
+                         'A/B/E', 'A/B/F', 'A/B')
   svntest.actions.run_and_verify_update(wc,
                                         expected_output,
                                         expected_disk,
@@ -2227,14 +2227,15 @@ def excluded_receive_remote_removal(sbox):
 
   # Update wc, should receive the removal of excluded path B 
   # and handle it silently.
-  expected_output = svntest.wc.State(wc, {})
+  expected_status = svntest.actions.get_virginal_state(wc, 2)
+  expected_status.remove('A/B/lambda', 'A/B/E/alpha', 'A/B/E/beta',
+                         'A/B/E', 'A/B/F', 'A/B')
   svntest.actions.run_and_verify_update(wc,
-                                        expected_output,
+                                        None,
                                         expected_disk,
                                         expected_status,
                                         None, None,
-                                        None, None, None, None,
-                                        "--set-depth", "exclude", B_path)
+                                        None, None, None, None)
 
   # Introduce a new path with the same name B.
   # This should succeed if the exclude entry is gone with the update,
@@ -2280,7 +2281,7 @@ test_list = [ None,
               depth_empty_update_on_file,
               excluded_path_update_operation,
               excluded_path_misc_operation,
-	      XFail(excluded_receive_remote_removal),
+              XFail(excluded_receive_remote_removal),
             ]
 
 if __name__ == "__main__":
