@@ -496,18 +496,21 @@ complete_directory(struct edit_baton *eb,
           if (entry && entry->depth == svn_depth_exclude)
             {
               char * full_target;
-              entry->depth = svn_depth_infinity;
-              SVN_ERR(svn_wc__entries_write(entries, adm_access, pool));
               /* There is a small chance that the target is gone in the
                  repository. We'd better get rid of the exclude flag now. */
               full_target = svn_path_join(eb->anchor, eb->target, pool);
               SVN_ERR(svn_wc__adm_retrieve_internal
                       (&target_access, eb->adm_access, full_target, pool));
-              if (!target_access)
+              if (!target_access && entry->kind == svn_node_dir)
                 {
                   int log_number = 0;
                   SVN_ERR(do_entry_deletion(eb, eb->anchor, eb->target,
                                             &log_number, pool));
+                }
+              else
+                {
+                  entry->depth = svn_depth_infinity;
+                  SVN_ERR(svn_wc__entries_write(entries, adm_access, pool));
                 }
             }
         }
@@ -1165,7 +1168,20 @@ do_entry_deletion(struct edit_baton *eb,
 
   SVN_ERR(svn_wc__loggy_delete_entry(&log_item, adm_access, full_path, pool));
 
-  SVN_ERR(svn_wc__entry_versioned(&entry, full_path, adm_access, FALSE, pool));
+  SVN_ERR(svn_wc__entry_versioned(&entry, full_path, adm_access, TRUE, pool));
+
+  /* Receive the remote removal of excluded entry. Do not notify. */
+  if (entry->depth == svn_depth_exclude)
+    {
+      apr_hash_t *entries;
+      const char *base_name = svn_path_basename(full_path, pool);
+      SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, pool));
+      svn_wc__entry_remove(entries, base_name);
+      SVN_ERR(svn_wc__entries_write(entries, adm_access, pool));
+      if (strcmp(path, eb->target) == 0)
+        eb->target_deleted = TRUE;
+      return SVN_NO_ERROR;
+    }
 
   /* If the thing being deleted is the *target* of this update, then
      we need to recreate a 'deleted' entry, so that parent can give

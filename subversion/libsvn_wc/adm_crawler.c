@@ -294,7 +294,7 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
                  svn_wc_crop_tree(). */
               SVN_ERR(reporter->set_path(report_baton,
                                          this_path,
-                                         SVN_INVALID_REVNUM,
+                                         dir_rev,
                                          svn_depth_exclude,
                                          FALSE,
                                          NULL,
