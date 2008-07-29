@@ -863,6 +863,7 @@ enum
     svndumpfilter__renumber_revs,
     svndumpfilter__preserve_revprops,
     svndumpfilter__skip_missing_merge_sources,
+    svndumpfilter__targets,
     svndumpfilter__quiet,
     svndumpfilter__version
   };
@@ -892,6 +893,8 @@ static const apr_getopt_option_t options_table[] =
      N_("Skip missing merge sources.") },
     {"preserve-revprops",  svndumpfilter__preserve_revprops, 0,
      N_("Don't filter revision properties.") },
+    {"targets", svndumpfilter__targets, 1,
+     N_("pass contents of file ARG as additional args")},
     {NULL}
   };
 
@@ -905,14 +908,14 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
      N_("Filter out nodes with given prefixes from dumpstream.\n"
         "usage: svndumpfilter exclude PATH_PREFIX...\n"),
      {svndumpfilter__drop_empty_revs, svndumpfilter__renumber_revs,
-      svndumpfilter__skip_missing_merge_sources,
+      svndumpfilter__skip_missing_merge_sources, svndumpfilter__targets,
       svndumpfilter__preserve_revprops, svndumpfilter__quiet} },
 
     {"include", subcommand_include, {0},
      N_("Filter out nodes without given prefixes from dumpstream.\n"
         "usage: svndumpfilter include PATH_PREFIX...\n"),
      {svndumpfilter__drop_empty_revs, svndumpfilter__renumber_revs,
-      svndumpfilter__skip_missing_merge_sources,
+      svndumpfilter__skip_missing_merge_sources, svndumpfilter__targets,
       svndumpfilter__preserve_revprops, svndumpfilter__quiet} },
 
     {"help", subcommand_help, {"?", "h"},
@@ -937,6 +940,7 @@ struct svndumpfilter_opt_state
   svn_boolean_t preserve_revprops;       /* --preserve-revprops */
   svn_boolean_t skip_missing_merge_sources;
                                          /* --skip-missing-merge-sources */
+  const char *targets_file;              /* --targets-file       */
   apr_array_header_t *prefixes;          /* mainargs.           */
 };
 
@@ -1276,6 +1280,9 @@ main(int argc, const char *argv[])
         case svndumpfilter__skip_missing_merge_sources:
           opt_state.skip_missing_merge_sources = TRUE;
           break;
+        case svndumpfilter__targets:
+          opt_state.targets_file = opt_arg;
+          break;
         default:
           {
             subcommand_help(NULL, NULL, pool);
@@ -1346,15 +1353,7 @@ main(int argc, const char *argv[])
 
   if (subcommand->cmd_func != subcommand_help)
     {
-      if (os->ind >= os->argc)
-        {
-          svn_error_clear(svn_cmdline_fprintf
-                          (stderr, pool,
-                           _("\nError: no prefixes supplied.\n")));
-          svn_pool_destroy(pool);
-          return EXIT_FAILURE;
-        }
-
+      
       opt_state.prefixes = apr_array_make(pool, os->argc - os->ind,
                                           sizeof(const char *));
       for (i = os->ind ; i< os->argc; i++)
@@ -1367,6 +1366,37 @@ main(int argc, const char *argv[])
           prefix = svn_path_internal_style(prefix, pool);
           prefix = svn_path_join("/", prefix, pool);
           APR_ARRAY_PUSH(opt_state.prefixes, const char *) = prefix;
+        }
+
+      if (opt_state.targets_file)
+        {
+          svn_stringbuf_t *buffer, *buffer_utf8;
+          const char *utf8_targets_file;
+
+          /* We need to convert to UTF-8 now, even before we divide
+             the targets into an array, because otherwise we wouldn't
+             know what delimiter to use for svn_cstring_split().  */
+
+          SVN_INT_ERR(svn_utf_cstring_to_utf8(&utf8_targets_file,
+                                              opt_state.targets_file, pool));
+
+          SVN_INT_ERR(svn_stringbuf_from_file(&buffer, utf8_targets_file,
+                                              pool));
+          SVN_INT_ERR(svn_utf_stringbuf_to_utf8(&buffer_utf8, buffer, pool));
+
+          opt_state.prefixes = apr_array_append(pool,
+                                    svn_cstring_split(buffer_utf8->data, "\n\r",
+                                                      TRUE, pool),
+                                    opt_state.prefixes);
+        }
+      
+      if (apr_is_empty_array(opt_state.prefixes))
+        {
+          svn_error_clear(svn_cmdline_fprintf
+                          (stderr, pool,
+                           _("\nError: no prefixes supplied.\n")));
+          svn_pool_destroy(pool);
+          return EXIT_FAILURE;
         }
     }
 
