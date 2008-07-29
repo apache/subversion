@@ -260,10 +260,11 @@ svn_auth__simple_save_creds_helper(svn_boolean_t *saved,
       /* If the password is going to be stored encrypted, go right
        * ahead and store it to disk. Else determine whether saving
        * in plaintext is OK. */
-      if (strcmp(passtype, SVN_AUTH__WINCRYPT_PASSWORD_TYPE) == 0
-          || strcmp(passtype, SVN_AUTH__KEYCHAIN_PASSWORD_TYPE) == 0
-          || strcmp(passtype, SVN_AUTH__KWALLET_PASSWORD_TYPE) == 0
-          || strcmp(passtype, SVN_AUTH__GNOME_KEYRING_PASSWORD_TYPE) == 0)
+      if (passtype &&
+           (strcmp(passtype, SVN_AUTH__WINCRYPT_PASSWORD_TYPE) == 0
+            || strcmp(passtype, SVN_AUTH__KEYCHAIN_PASSWORD_TYPE) == 0
+            || strcmp(passtype, SVN_AUTH__KWALLET_PASSWORD_TYPE) == 0
+            || strcmp(passtype, SVN_AUTH__GNOME_KEYRING_PASSWORD_TYPE) == 0) )
         {
           may_save_password = TRUE;
         }
