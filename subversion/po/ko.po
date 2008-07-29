@@ -255,9 +255,8 @@ msgid "Invalid switch"
 msgstr "잘못된 전환(switch)"
 
 #: ../include/svn_error_codes.h:426
-#, fuzzy
 msgid "Changelist doesn't match"
-msgstr "변경목록: %s\n"
+msgstr "변경 목록이 일치하지 않습니다"
 
 #: ../include/svn_error_codes.h:431
 #, fuzzy
@@ -265,9 +264,8 @@ msgid "Conflict resolution failed"
 msgstr "저장소 생성 실패"
 
 #: ../include/svn_error_codes.h:435
-#, fuzzy
 msgid "Failed to locate 'copyfrom' path in working copy"
-msgstr "작업사본의 경로를 유지합니다"
+msgstr "작업사본에서 복사원본 경로를 찾을 수 없습니다"
 
 #: ../include/svn_error_codes.h:440
 msgid "Moving a path from one changelist to another"
@@ -454,19 +452,16 @@ msgid "Representation is being written"
 msgstr "표현식을 출력중입니다."
 
 #: ../include/svn_error_codes.h:647
-#, fuzzy
 msgid "The generated transaction name is too long"
-msgstr "본 명령이 수행되면 다시 되돌릴 수 없습니다."
+msgstr "생성된 트랜잭션이름이 너무 깁니다"
 
 #: ../include/svn_error_codes.h:652
-#, fuzzy
 msgid "Filesystem has no such node origin record"
-msgstr "파일 시스템에 그런 node-rev-id 가 없습니다."
+msgstr "파일 시스템에 노드의 원본 레코드가 없습니다."
 
 #: ../include/svn_error_codes.h:657
-#, fuzzy
 msgid "Filesystem upgrade is not supported"
-msgstr "파일 시스템이 열린 상태가 아닙니다."
+msgstr "파일 시스템 업그레이드가 지원되지 않습니다"
 
 #: ../include/svn_error_codes.h:663
 msgid "The repository is locked, perhaps for db recovery"
@@ -509,9 +504,8 @@ msgid "Error running post-unlock hook"
 msgstr "post-unlock 훅 실행중 오류"
 
 #: ../include/svn_error_codes.h:711
-#, fuzzy
 msgid "Repository upgrade is not supported"
-msgstr "저장소 인자가 팔요합니다"
+msgstr "저장소 업그레이드가 지원되지 않습니다"
 
 #: ../include/svn_error_codes.h:717
 msgid "Bad URL passed to RA layer"
@@ -538,14 +532,12 @@ msgid "Unsupported RA plugin ABI version"
 msgstr "지원하지 않는 RA 플러긴 ABI 버전입니다."
 
 #: ../include/svn_error_codes.h:751
-#, fuzzy
 msgid "Server can only replay from the root of a repository"
-msgstr "'%s'는 저장소의 루트가 아닙니다."
+msgstr "서버는 저장소의 루트에서만 재생가능합니다"
 
 #: ../include/svn_error_codes.h:756
-#, fuzzy
 msgid "Repository UUID does not match expected UUID"
-msgstr "대상 저장소의 UUID (%s)가 기대하는 UUID (%s)와 일치하지 않습니다."
+msgstr "저장소의 UUID가 기대하는 UUID와 일치하지 않습니다"
 
 #: ../include/svn_error_codes.h:762
 msgid "RA layer failed to init socket layer"
@@ -646,14 +638,12 @@ msgid "All authentication providers exhausted"
 msgstr "인증 정보를 얻기위한 장치를 모두 사용하였습니다."
 
 #: ../include/svn_error_codes.h:889
-#, fuzzy
 msgid "Credentials not saved"
-msgstr "인증 정보가 사용불가합니다."
+msgstr "인증 정보는 저장되지 않았습니다"
 
 #: ../include/svn_error_codes.h:894
-#, fuzzy
 msgid "Authentication failed"
-msgstr "인증 실패"
+msgstr "인증에 실패하였습니다"
 
 #: ../include/svn_error_codes.h:900
 msgid "Read access denied for root of edit"
@@ -788,12 +778,10 @@ msgid "No versioned parent directories"
 msgstr ""
 
 #: ../include/svn_error_codes.h:1050
-#, fuzzy
 msgid "Working copy and merge source not ready for reintegration"
-msgstr "작업사본에 대한 병합은 원본을 명시적으로 적어줘야 합니다."
+msgstr "작업사본의 복사와 병합이 준비되지 않았습니다"
 
 #: ../include/svn_error_codes.h:1056
-#, fuzzy
 msgid "A problem occurred; see other errors for details"
 msgstr "문제 발생함: 상세한 것은 다음 오류참고"
 
@@ -882,32 +870,28 @@ msgid "Cease invocation of this API"
 msgstr ""
 
 #: ../include/svn_error_codes.h:1148
-#, fuzzy
 msgid "Error parsing revision number"
-msgstr "구문 오류 분석 리비젼 '%s'"
+msgstr "리비전 번호 파싱 오류"
 
 #: ../include/svn_error_codes.h:1153
 msgid "Iteration terminated before completion"
 msgstr ""
 
 #: ../include/svn_error_codes.h:1158
-#, fuzzy
 msgid "Unknown changelist"
-msgstr "없는 변경 목록: '%s'"
+msgstr "알 수 없는 변경목록"
 
 #: ../include/svn_error_codes.h:1163
-#, fuzzy
 msgid "Reserved directory name in command line arguments"
-msgstr "명령행 인자 초기화 실패"
+msgstr "명령행 인자에 예약된 디렉토리 이름"
 
 #: ../include/svn_error_codes.h:1168
 msgid "Inquiry about unknown capability"
 msgstr ""
 
 #: ../include/svn_error_codes.h:1173
-#, fuzzy
 msgid "Test skipped"
-msgstr "테스트 실패"
+msgstr "테스트 하지 않음"
 
 #: ../include/svn_error_codes.h:1178
 msgid "apr memcache library not available"
@@ -954,14 +938,12 @@ msgid "A log message was given where none was necessary"
 msgstr "로그메시지가 필요없는 곳에 지정되었습니다."
 
 #: ../include/svn_error_codes.h:1224
-#, fuzzy
 msgid "No external merge tool available"
-msgstr "외부 편집기가 없습니다"
+msgstr "외부 병합 도구가 없습니다"
 
 #: ../include/svn_error_codes.h:1230
-#, fuzzy
 msgid "Assertion failure"
-msgstr "인증 실패"
+msgstr "확인 실패"
 
 #: ../libsvn_client/add.c:349 ../libsvn_wc/copy.c:188
 #, c-format
@@ -969,9 +951,9 @@ msgid "Can't close directory '%s'"
 msgstr "'%s' 디렉토리를 닫을 수 없습니다."
 
 #: ../libsvn_client/add.c:357
-#, fuzzy, c-format
+#, c-format
 msgid "Error during add of '%s'"
-msgstr "'%s'를 재귀적으로 추가하는 중에 오류 발생"
+msgstr "'%s'를 추가하는 중에 오류 발생"
 
 #: ../libsvn_client/blame.c:390
 #, c-format
@@ -1025,9 +1007,9 @@ msgid "'%s' already exists and is not a directory"
 msgstr "'%s'은(는) 존재하며, 디렉토리가 아닙니다"
 
 #: ../libsvn_client/cmdline.c:72
-#, fuzzy, c-format
+#, c-format
 msgid "Improper relative URL '%s'"
-msgstr "'%s'에 대한 속성:\n"
+msgstr "적절하지 않은 상대 URL '%s'"
 
 #: ../libsvn_client/cmdline.c:130
 #, c-format
@@ -1131,9 +1113,9 @@ msgid "Commit item '%s' has copy flag but no copyfrom URL"
 msgstr "커밋 아이템 '%s' 은(는) 복사표시가 되어있지만 원본 URL이 없습니다."
 
 #: ../libsvn_client/commit_util.c:451
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is scheduled for addition, but is missing"
-msgstr "'%s'의 추가 스케쥴은 있지만, 상위는 버전관리 대상이 아닙니다."
+msgstr "'%s'의 추가 스케쥴은 있지만, 존재하지 않습니다"
 
 #: ../libsvn_client/commit_util.c:706
 #, c-format
@@ -1240,9 +1222,9 @@ msgid "Moves between the working copy and the repository are not supported"
 msgstr "작업 사본과 저장소 간 이동은 지원하지 않습니다"
 
 #: ../libsvn_client/copy.c:1912
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' does not have a URL associated with it"
-msgstr "'%s'에는 URL이 관계되어 있지 않아 보입니다."
+msgstr "'%s'에 관계된 URL이 없습니다"
 
 #: ../libsvn_client/copy.c:2283 ../svn/move-cmd.c:61
 msgid "Cannot specify revisions (except HEAD) with move operations"
@@ -1266,50 +1248,50 @@ msgid "'%s' has local modifications"
 msgstr "'%s'은(는) 수정되었습니다."
 
 #: ../libsvn_client/diff.c:136
-#, fuzzy, c-format
+#, c-format
 msgid "   Reverse-merged %s:r%s%s"
-msgstr "다시 복원함 '%s'\n"
+msgstr "   역병합 %s:r%s%s"
 
 #: ../libsvn_client/diff.c:155
 #, c-format
 msgid "   Merged %s:r%s%s"
-msgstr ""
+msgstr "   병합 %s:r%s%s"
 
 #: ../libsvn_client/diff.c:165 ../libsvn_diff/diff_file.c:1204
 #: ../libsvn_diff/diff_file.c:1216
 #, c-format
 msgid "Path '%s' must be an immediate child of the directory '%s'"
-msgstr ""
+msgstr "경로 '%s'는 '%s' 디렉토리의 직계 하위에 있어야합니다"
 
 #: ../libsvn_client/diff.c:196
 #, c-format
 msgid "%sProperty changes on: %s%s"
-msgstr "%s속성 변경됨: %s%s"
+msgstr "%s속성 변경: %s%s"
 
 #: ../libsvn_client/diff.c:225
-#, fuzzy, c-format
+#, c-format
 msgid "Added: %s%s"
-msgstr "이름: %s%s"
+msgstr "추가: %s%s"
 
 #: ../libsvn_client/diff.c:227
-#, fuzzy, c-format
+#, c-format
 msgid "Deleted: %s%s"
-msgstr "삭제됨"
+msgstr "삭제: %s%s"
 
 #: ../libsvn_client/diff.c:229
-#, fuzzy, c-format
+#, c-format
 msgid "Modified: %s%s"
-msgstr "수정됨"
+msgstr "수정: %s%s"
 
 #: ../libsvn_client/diff.c:366
 #, c-format
 msgid "%s\t(revision %ld)"
-msgstr "%s\t(revision %ld)"
+msgstr "%s\t(리비전 %ld)"
 
 #: ../libsvn_client/diff.c:368
 #, c-format
 msgid "%s\t(working copy)"
-msgstr "%s\t(working copy)"
+msgstr "%s\t(작업 사본)"
 
 #: ../libsvn_client/diff.c:531
 #, c-format
@@ -1323,21 +1305,20 @@ msgstr "필요한 리비전이 빠져있습니다."
 
 #: ../libsvn_client/diff.c:919
 msgid "At least one revision must be non-local for a pegged diff"
-msgstr "고정된 리비전을 위한 diff에서 적어도 하나의 리비전이 로컬이 아닙니다."
+msgstr "고정된 리비전을 위한 diff에서 적어도 하나의 리비전이 로컬이 아닙니다"
 
 #: ../libsvn_client/diff.c:1031 ../libsvn_client/diff.c:1043
 #, c-format
 msgid "'%s' was not found in the repository at revision %ld"
-msgstr "'%s'가 저장소의 리비전 %ld에서 발견되지 않았습니다."
+msgstr "'%s'가 저장소의 리비전 %ld에서 발견되지 않았습니다"
 
 #: ../libsvn_client/diff.c:1102
-#, fuzzy
 msgid "Sorry, svn_client_diff4 was called in a way that is not yet supported"
-msgstr "죄송합니다. svn_client_diff3 가 지원하지 않는 방법으로 호출되었습니다."
+msgstr "죄송합니다. svn_client_diff4가 지원하지 않는 방법으로 호출되었습니다"
 
 #: ../libsvn_client/diff.c:1141
 msgid "Only diffs between a path's text-base and its working files are supported at this time"
-msgstr "현재는 경로의 마지막 업데이트 내용과 작업된 내용의 차이만 생성할 수 있습니다."
+msgstr "현재는 경로의 마지막 업데이트 내용과 작업된 내용의 차이만 생성할 수 있습니다"
 
 #: ../libsvn_client/diff.c:1285 ../libsvn_client/switch.c:126
 #, c-format
@@ -1374,19 +1355,19 @@ msgid "Checksum mismatch for '%s'; expected: '%s', actual: '%s'"
 msgstr "'%s'의 체크섬값이 일치하지 않습니다. 기대값:'%s', 실제값: '%s'"
 
 #: ../libsvn_client/externals.c:314
-#, fuzzy, c-format
+#, c-format
 msgid "URL '%s' does not begin with a scheme"
-msgstr "URL '%s'는 존재하지 않습니다."
+msgstr "URL '%s'는 프로토콜로 시작하지 않습니다"
 
 #: ../libsvn_client/externals.c:363
-#, fuzzy, c-format
+#, c-format
 msgid "Illegal parent directory URL '%s'"
-msgstr "잘못된 svn 저장소 URL '%s'"
+msgstr "잘못된 상위 디렉토리 URL '%s'"
 
 #: ../libsvn_client/externals.c:393
-#, fuzzy, c-format
+#, c-format
 msgid "Illegal repository root URL '%s'"
-msgstr "잘못된 svn 저장소 URL '%s'"
+msgstr "잘못된 저장소 루트 URL '%s'"
 
 #: ../libsvn_client/externals.c:435
 #, c-format
@@ -1394,9 +1375,9 @@ msgid "The external relative URL '%s' cannot have backpaths, i.e. '..'"
 msgstr ""
 
 #: ../libsvn_client/externals.c:467
-#, fuzzy, c-format
+#, c-format
 msgid "Unrecognized format for the relative external URL '%s'"
-msgstr "'%s'에 대한 인식 불가능한 리비전 종류의 요청을 받았습니다."
+msgstr "상대 외부 URL '%s'의 형식을 알 수가 없습니다"
 
 #: ../libsvn_client/externals.c:689
 #, c-format
@@ -1404,14 +1385,14 @@ msgid "Traversal of '%s' found no ambient depth"
 msgstr ""
 
 #: ../libsvn_client/externals.c:820
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is not a URL"
-msgstr "'%s' 경로는 URL이 아닙니다."
+msgstr "'%s'는 URL이 아닙니다."
 
 #: ../libsvn_client/info.c:405
-#, fuzzy, c-format
+#, c-format
 msgid "Server does not support retrieving information about the repository root"
-msgstr "서버가 잠금 기능을 지원하지 않습니다."
+msgstr "서버가 저장소 루트에 대한 정보를 제공하지 않습니다"
 
 #: ../libsvn_client/info.c:412 ../libsvn_client/info.c:427
 #: ../libsvn_client/info.c:437
@@ -1527,31 +1508,29 @@ msgid "Merge from foreign repository is not compatible with mergeinfo modificati
 msgstr ""
 
 #: ../libsvn_client/merge.c:5896
-#, fuzzy
 msgid "Cannot reintegrate into a working copy with a switched subtree"
-msgstr "저장소에 원본 리스트의 작업 사본 경로들을 넣을 수 없습니다"
+msgstr "바뀌는 서브트리의 내용을 병합할 수 없습니다"
 
 #: ../libsvn_client/merge.c:5901
 msgid "Cannot reintegrate into a working copy not entirely at infinite depth"
-msgstr ""
+msgstr "무한 깊이의 작업사본에 서브트리의 내용을 병합할 수 없습니다"
 
 #: ../libsvn_client/merge.c:5906
 msgid "Cannot reintegrate into a working copy that has local modifications"
-msgstr ""
+msgstr "작업사본이 수정되어 바뀌는 서브트리의 내용을 병합할 수 없습니다"
 
 #: ../libsvn_client/merge.c:5912
-#, fuzzy
 msgid "Cannot determine revision of working copy"
-msgstr "저장소에 원본 리스트의 작업 사본 경로들을 넣을 수 없습니다"
+msgstr "작업사본의 리비전을 결정할 수 없습니다"
 
 #: ../libsvn_client/merge.c:5916
 msgid "Cannot reintegrate into mixed-revision working copy; try updating first"
 msgstr ""
 
 #: ../libsvn_client/merge.c:5983
-#, fuzzy, c-format
+#, c-format
 msgid "At least one revision (r%ld) not yet merged from '%s'"
-msgstr "손상된 파일시스템 리비전 %ld (파일시스템 '%s')"
+msgstr "최소한 하나의 리비전(r%ld)이 '%s'(으)로부터 아직 병합되지 않았습니다"
 
 #: ../libsvn_client/merge.c:6141 ../libsvn_client/merge.c:6305
 #, c-format
@@ -1559,7 +1538,7 @@ msgid "'%s@%ld' must be ancestrally related to '%s@%ld'"
 msgstr ""
 
 #: ../libsvn_client/merge.c:6264
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' must be from the same repository as '%s'"
 msgstr "'%s'는 '%s'와 동일한 저장소에 있지 않습니다"
 
@@ -1594,9 +1573,9 @@ msgid "Setting property recursively on non-local target '%s' is not supported"
 msgstr "작업 사본이 아닌 대상 '%s'에 대한 재귀적 설정은 지원하지 않습니다."
 
 #: ../libsvn_client/prop_commands.c:378
-#, fuzzy, c-format
+#, c-format
 msgid "Setting property '%s' on non-local target '%s' is not supported"
-msgstr "작업 사본이 아닌 대상 '%s'에 대한 재귀적 설정은 지원하지 않습니다."
+msgstr "속성 '%s'를 작업 사본이 아닌 '%s'에 설정하는 것은 지원하지 않습니다"
 
 #: ../libsvn_client/prop_commands.c:481
 msgid "Value will not be set unless forced"
@@ -1675,9 +1654,9 @@ msgstr ""
 "'%s'"
 
 #: ../libsvn_client/util.c:216
-#, fuzzy, c-format
+#, c-format
 msgid "URL '%s' is not a child of repository root URL '%s'"
-msgstr "'%s'는 '%s'와 동일한 저장소에 있지 않습니다"
+msgstr "'%s'는 루트 URL '%s'의 하위에 있지 않습니다"
 
 #: ../libsvn_delta/svndiff.c:144
 msgid "Compression of svndiff data failed"
@@ -1803,9 +1782,9 @@ msgid "Can't allocate FS mutex"
 msgstr "FS 뮤텍스 할당 불가능"
 
 #: ../libsvn_fs/fs-loader.c:1017
-#, fuzzy, c-format
+#, c-format
 msgid "Malformed UUID '%s'"
-msgstr "잘못된 형식의 오류 리스트"
+msgstr "잘못된 UUID '%s'"
 
 #: ../libsvn_fs/fs-loader.c:1041
 msgid "Negative expiration date passed to svn_fs_lock"
@@ -1883,9 +1862,8 @@ msgid "Node origin for '%s' exists in filesystem '%s' with a different value (%s
 msgstr ""
 
 #: ../libsvn_fs_base/bdb/node-origins-table.c:121
-#, fuzzy
 msgid "storing node-origins record"
-msgstr "저장된 사본이 손상되었습니다."
+msgstr "노드 원본 레코드를 저장중"
 
 #: ../libsvn_fs_base/bdb/nodes-table.c:96
 msgid "allocating new node ID (getting 'next-key')"
@@ -2088,14 +2066,14 @@ msgid "Attempted to open node with an illegal name '%s'"
 msgstr "잘못된 이름의 노드 '%s'를 열려고 합니다."
 
 #: ../libsvn_fs_base/dag.c:1546
-#, fuzzy, c-format
+#, c-format
 msgid "Attempted merge tracking info change on immutable node"
-msgstr "변경할 수 없는 노드를 삭제하려합니다."
+msgstr "변경할 수 없는 노드의 병합추적정보를 변경하려 하였습니다"
 
 #: ../libsvn_fs_base/dag.c:1586
-#, fuzzy, c-format
+#, c-format
 msgid "Attempted mergeinfo count change on immutable node"
-msgstr "변경할 수 없는 노드를 삭제하려합니다."
+msgstr "변경할 수 없는 노드의 병합정보 개수를 변경하려 하였습니다"
 
 #: ../libsvn_fs_base/dag.c:1598
 #, c-format
@@ -2113,9 +2091,9 @@ msgid "Reference to non-existent node '%s' in filesystem '%s'"
 msgstr "존재하지 않는 노드 '%s'에 대한 참조, 파일시스템 '%s'"
 
 #: ../libsvn_fs_base/err.c:62
-#, fuzzy, c-format
+#, c-format
 msgid "No such revision %ld in filesystem '%s'"
-msgstr "손상된 파일시스템 리비전 %ld (파일시스템 '%s')"
+msgstr "리비전 %ld는 파일시스템 '%s'에 없습니다"
 
 #: ../libsvn_fs_base/err.c:74
 #, c-format
@@ -2158,9 +2136,9 @@ msgid "Corrupt lock in 'locks' table for '%s' in filesystem '%s'"
 msgstr "'%s'를 위한 'locks' 테이블에 손상된 잠금이 존재합니다. 파일 시스템 '%s'"
 
 #: ../libsvn_fs_base/err.c:157
-#, fuzzy, c-format
+#, c-format
 msgid "No record in 'node-origins' table for node id '%s' in filesystem '%s'"
-msgstr "손상된 등록정보가 '%s'를 위한 'copies' 테이블에 있습니다. 파일 시스템 '%s'"
+msgstr "노드 아이디 '%s'(파일시스템 '%s')이 노드 원본 테이블에 없습니다"
 
 #: ../libsvn_fs_base/fs.c:81
 #, c-format
@@ -2198,7 +2176,6 @@ msgid "Expected FS format '%d'; found format '%d'"
 msgstr "예상되는 파일시스템 포맷 '%d', 발견된 포맷 '%d'"
 
 #: ../libsvn_fs_base/fs.c:1183
-#, fuzzy
 msgid ""
 "Error copying logfile;  the DB_LOG_AUTOREMOVE feature\n"
 "may be interfering with the hotcopy algorithm.  If\n"
@@ -2211,14 +2188,13 @@ msgstr ""
 "끄십시오."
 
 #: ../libsvn_fs_base/fs.c:1202
-#, fuzzy
 msgid ""
 "Error running catastrophic recovery on hotcopy;  the\n"
 "DB_LOG_AUTOREMOVE feature may be interfering with the\n"
 "hotcopy algorithm.  If the problem persists, try deactivating\n"
 "this feature in DB_CONFIG"
 msgstr ""
-"hotcopy 도중 복원오류; DB_LOG_AUTOREMOVE 속성이 \n"
+"hotcopy 에 대한 대대적인 복원수행중 오류; DB_LOG_AUTOREMOVE 속성이 \n"
 "hotcopy 알고리즘과 간섭을 일으키는 것 같습니다.\n"
 "만약 문제가 지속되면, DB_CONFIG 내에서 본 속성을\n"
 "끄십시오."
@@ -2369,7 +2345,7 @@ msgid "Bad merge; target '%s' has id '%s', same as ancestor"
 msgstr "병합 실패; 차이를 반영할 대상 '%s'은 '%s' id를 가지고 있으며, 이는 diff 원본과 같습니다."
 
 #: ../libsvn_fs_base/tree.c:2431
-#, fuzzy, c-format
+#, c-format
 msgid "Transaction '%s' out-of-date with respect to revision '%s'"
 msgstr "트랜잭션 '%s' 는 리비전 '%s'의 관점에서 만료기간이 지났습니다."
 
