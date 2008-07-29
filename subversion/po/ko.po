@@ -45,23 +45,20 @@ msgid "Version file format not correct"
 msgstr "버전 파일의 포맷이 바르지 않습니다"
 
 #: ../include/svn_error_codes.h:192
-#, fuzzy
 msgid "Path is not an immediate child of the specified directory"
-msgstr "경로는 작업사본 디렉토리가 아닙니다."
+msgstr "경로는 작업사본의 직게 하위 디렉토리가 아닙니다."
 
 #: ../include/svn_error_codes.h:196
-#, fuzzy
 msgid "Bogus UUID"
-msgstr "수상한 URL"
+msgstr "이상한 UUID"
 
 #: ../include/svn_error_codes.h:201 ../include/svn_error_codes.h:789
 msgid "Invalid configuration value"
 msgstr "잘못된 설정 값"
 
 #: ../include/svn_error_codes.h:205
-#, fuzzy
 msgid "Bogus server specification"
-msgstr "필요한 리비전 지정이 생략됨"
+msgstr "잘못된 서버 사양"
 
 #: ../include/svn_error_codes.h:211
 msgid "No such XML tag attribute"
