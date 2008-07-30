@@ -165,17 +165,15 @@ svn_client_cat2(svn_stream_t *out,
   const char *url;
   svn_stream_t *output = out;
 
+  peg_revision = svn_cl__rev_default_to_head_or_working(peg_revision,
+                                                        path_or_url);
   /* ### Inconsistent default revision logic in this command. */
   if (peg_revision->kind == svn_opt_revision_unspecified)
     {
-      peg_revision = svn_cl__rev_default_to_head_or_working(peg_revision,
-                                                            path_or_url);
       revision = svn_cl__rev_default_to_head_or_base(revision, path_or_url);
     }
   else
     {
-      peg_revision = svn_cl__rev_default_to_head_or_working(peg_revision,
-                                                            path_or_url);
       revision = svn_cl__rev_default_to_peg(revision, peg_revision);
     }
 
