@@ -277,15 +277,55 @@ svn_cmdline_auth_plaintext_prompt(svn_boolean_t *may_save_plaintext,
                                   void *baton,
                                   apr_pool_t *pool);
 
-/** Initialize auth baton @a ab with the standard set of authentication
- * providers used by the command line client.  @a non_interactive,
- * @a username, @a password, @a config_dir, and @a no_auth_cache are the
- * values of the command line options of the same names.  @a cfg is the
- * @c SVN_CONFIG_CATEGORY_CONFIG configuration, and @a cancel_func and
- * @a cancel_baton control the cancellation of the prompting providers
- * that are initialized.  @a pool is used for all allocations.
+/** An implementation of @c svn_auth_plaintext_passphrase_prompt_func_t that
+ * prompts the user whether storing unencypted passphrase to disk is OK.
  *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_cmdline_auth_plaintext_passphrase_prompt(svn_boolean_t *may_save_plaintext,
+                                             const char *realmstring,
+                                             void *baton,
+                                             apr_pool_t *pool);
+
+/** Initialize auth baton @a ab with the standard set of authentication
+ * providers used by the command line client.
+ *
+ * @a non_interactive, @a username, @a password, @a config_dir,
+ * @a no_auth_cache, and @a trust_server_cert are the values of the
+ * command line options of the corresponding names.
+ *
+ * @a cfg is the @c SVN_CONFIG_CATEGORY_CONFIG configuration, and
+ * @a cancel_func and @a cancel_baton control the cancellation of the
+ * prompting providers that are initialized.
+ *
+ * Use @a pool for all allocations.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_cmdline_set_up_auth_baton(svn_auth_baton_t **ab,
+                              svn_boolean_t non_interactive,
+                              const char *username,
+                              const char *password,
+                              const char *config_dir,
+                              svn_boolean_t no_auth_cache,
+                              svn_boolean_t trust_server_cert,
+                              svn_config_t *cfg,
+                              svn_cancel_func_t cancel_func,
+                              void *cancel_baton,
+                              apr_pool_t *pool);
+
+/** Similar to svn_cmdline_set_up_auth_baton(), but with 
+ * @a trust_server_cert always set to false.
+ * 
  * @since New in 1.4.
+ * @deprecated Provided for backward compatibility with the 1.5 API.
+ *
+ * @note This deprecation does not follow the usual pattern of putting
+ * a new number on end of the function's name.  Instead, the new
+ * function name is distinguished from the old by a grammatical
+ * improvement: the verb "set_up" instead of the noun "setup".
  */
 svn_error_t *
 svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,

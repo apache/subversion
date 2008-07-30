@@ -114,6 +114,8 @@ Commit access for specific areas:
       stylesen   Senthil Kumaran S <senthil@collab.net>      (tests)
        rhansen   Richard Hansen <rhansen@bbn.com>            (svnstsw)
         larrys   Larry Shatzer, Jr. <larrys@gmail.com>       (svn-keyword-check.pl)
+         nmiyo   MIYOKAWA, Nobuyoshi <n-miyo@tempus.org>     (faq: ja)
+       kmradke   Kevin Radke <kmradke@gmail.com>             (add-needs-lock.py)
 
   Translation of message files:
 
@@ -128,7 +130,7 @@ Commit access for specific areas:
        jihuang   June-Yen Huang <jihuang@iis.sinica.edu.tw>  (po: zh_TW)
        marcosc   Marcos Chaves <marcos.nospam@gmail.com>     (po: pt_BR)
         pynoos   Hojin Choi <hojin.choi@gmail.com>           (po: ko)
-       blueboh   Jeong Seolin <blueboh@ahnlab.com>           (po: ko)
+       blueboh   Jeong Seolin <blueboh@gmail.com>            (po: ko)
         cauchy   Dongsheng Song <songdongsheng@live.cn>      (po: zh_CN)
         hynnet   YingNing Huang <hyn@bao.hynnet.com>         (po: zh_CN)
           lark   Wang Jian <lark@linux.net.cn>               (po: zh_CN)

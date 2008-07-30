@@ -354,6 +354,13 @@
 }
 #endif
 
+#ifdef SWIGPERL
+%typemap(in) apr_hash_t *path_revs
+{
+  $1 = svn_swig_pl_objs_to_hash_of_revnum_t($input, _global_pool);
+}
+#endif
+
 /* =======================================================================
    %typemap(argout) apr_array_header_t **
 */

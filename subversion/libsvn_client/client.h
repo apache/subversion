@@ -115,17 +115,6 @@ svn_client__compare_revisions(svn_opt_revision_t *revision1,
                               svn_opt_revision_t *revision2);
 
 
-/* Return true if the revision number for REVISION can be determined
-   from just the working copy, or false if it can be determined from
-   just the repository.
-
-   NOTE: No other kinds of revisions should be possible; but if one
-   day there are, this will return true for those kinds.
- */
-svn_boolean_t
-svn_client__revision_is_local(const svn_opt_revision_t *revision);
-
-
 /* Set *COPYFROM_PATH and *COPYFROM_REV to the path and revision that
    served as the source of the copy from which PATH_OR_URL at REVISION
    was created, or NULL and SVN_INVALID_REVNUM (respectively) if
@@ -1101,15 +1090,40 @@ svn_client__ensure_revprop_table(apr_hash_t **revprop_table_out,
                                  apr_pool_t *pool);
 
 
-/** Return TRUE iff revision kind is dependent on the working copy.
- * Otherwise, return FALSE.
- */
+/* Return true if KIND is a revision kind that is dependent on the working
+ * copy. Otherwise, return false. */
 #define SVN_CLIENT__REVKIND_NEEDS_WC(kind)                                 \
-  (((kind) == svn_opt_revision_base ||                                     \
+  ((kind) == svn_opt_revision_base ||                                      \
    (kind) == svn_opt_revision_previous ||                                  \
    (kind) == svn_opt_revision_working ||                                   \
    (kind) == svn_opt_revision_committed)                                   \
-   ? TRUE : FALSE)
+
+/* Return true if KIND is a revision kind that the WC can supply without
+ * contacting the repository. Otherwise, return false. */
+#define SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(kind)                           \
+  ((kind) == svn_opt_revision_base ||                                      \
+   (kind) == svn_opt_revision_working ||                                   \
+   (kind) == svn_opt_revision_committed)
+
+/* Return REVISION unless its kind is 'unspecified' in which case return
+ * a pointer to a statically allocated revision structure of kind 'head'
+ * if PATH_OR_URL is a URL or 'base' if it is a WC path. */
+const svn_opt_revision_t *
+svn_cl__rev_default_to_head_or_base(const svn_opt_revision_t *revision,
+                                    const char *path_or_url);
+
+/* Return REVISION unless its kind is 'unspecified' in which case return
+ * a pointer to a statically allocated revision structure of kind 'head'
+ * if PATH_OR_URL is a URL or 'working' if it is a WC path. */
+const svn_opt_revision_t *
+svn_cl__rev_default_to_head_or_working(const svn_opt_revision_t *revision,
+                                       const char *path_or_url);
+
+/* Return REVISION unless its kind is 'unspecified' in which case return
+ * PEG_REVISION. */
+const svn_opt_revision_t *
+svn_cl__rev_default_to_peg(const svn_opt_revision_t *revision,
+                           const svn_opt_revision_t *peg_revision);
 
 
 #ifdef __cplusplus
