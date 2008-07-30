@@ -344,11 +344,11 @@ svn_wc__load_props(apr_hash_t **base_props_p,
  * the WC item with which this file should be associated. */
 static svn_error_t *
 install_props_file(svn_stringbuf_t **log_accum,
-                             svn_wc_adm_access_t *adm_access,
-                             const char *path,
-                             apr_hash_t *props,
-                             svn_wc__props_kind_t wc_prop_kind,
-                             apr_pool_t *pool)
+                   svn_wc_adm_access_t *adm_access,
+                   const char *path,
+                   apr_hash_t *props,
+                   svn_wc__props_kind_t wc_prop_kind,
+                   apr_pool_t *pool)
 {
   svn_node_kind_t node_kind;
   const char *propfile_path;
