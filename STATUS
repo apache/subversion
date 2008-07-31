@@ -41,6 +41,14 @@ Candidate changes for 1.5.2:
    Votes:
      +1: lgo
 
+ * r32342, r32343
+   Fix #3246.  svn:externals with duplicate targets would fail on the
+     checkout/update of the later duplicates.
+   Justification:
+      Regression with 1.4.x behavior.  Pool lifetime issue.
+   Votes:
+     +1: blair
+
 Approved changes:
 =================
 
