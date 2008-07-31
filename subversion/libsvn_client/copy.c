@@ -814,18 +814,18 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
 
       if (dir) 
         {
-    	  SVN_ERR(svn_ra_check_path(ra_session, dir, SVN_INVALID_REVNUM, &kind,
-    			  iterpool));
+          SVN_ERR(svn_ra_check_path(ra_session, dir, SVN_INVALID_REVNUM, &kind,
+                                    iterpool));
 
-    	  while (kind == svn_node_none)
-    	  {
-    		  svn_pool_clear(iterpool);
-    		  APR_ARRAY_PUSH(new_dirs, const char *) = dir;
+          while (kind == svn_node_none)
+            {
+              svn_pool_clear(iterpool);
+              APR_ARRAY_PUSH(new_dirs, const char *) = dir;
 
-    		  svn_path_split(dir, &dir, NULL, pool);
-    		  SVN_ERR(svn_ra_check_path(ra_session, dir, SVN_INVALID_REVNUM,
+              svn_path_split(dir, &dir, NULL, pool);
+              SVN_ERR(svn_ra_check_path(ra_session, dir, SVN_INVALID_REVNUM,
                                         &kind, iterpool));
-    	  }
+            }
         }
     }
 
@@ -1497,7 +1497,7 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
       SVN_ERR(err);
     }
 
-    return SVN_NO_ERROR;
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
