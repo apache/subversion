@@ -59,6 +59,11 @@ struct handle_external_item_change_baton
   svn_boolean_t *timestamp_sleep;
   svn_boolean_t is_export;
 
+  /* A long lived pool.  Put anything in here that needs to outlive
+     the hash diffing callback, such as updates to the hash
+     entries. */
+  apr_pool_t *pool;
+
   /* A scratchwork pool -- do not put anything in here that needs to
      outlive the hash diffing callback! */
   apr_pool_t *iter_pool;
@@ -485,13 +490,16 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
   /* Don't bother to check status, since we'll get that for free by
      attempting to retrieve the hash values anyway.  */
 
+  /* When creating the absolute URL, use the pool and not the
+     iterpool, since the hash table values outlive the iterpool and
+     any pointers they have should also outlive the iterpool.  */
   if ((ib->old_desc) && (! ib->is_export))
     {
       old_item = apr_hash_get(ib->old_desc, key, klen);
       if (old_item)
         SVN_ERR(resolve_relative_external_url(old_item, ib->repos_root_url,
                                               ib->parent_dir_url,
-                                              ib->iter_pool));
+                                              ib->pool));
     }
   else
     old_item = NULL;
@@ -502,7 +510,7 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
       if (new_item)
         SVN_ERR(resolve_relative_external_url(new_item, ib->repos_root_url,
                                               ib->parent_dir_url,
-                                              ib->iter_pool));
+                                              ib->pool));
     }
   else
     new_item = NULL;
@@ -749,6 +757,7 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
   ib.update_unchanged  = cb->update_unchanged;
   ib.is_export         = cb->is_export;
   ib.timestamp_sleep   = cb->timestamp_sleep;
+  ib.pool              = cb->pool;
   ib.iter_pool         = svn_pool_create(cb->pool);
 
   /* Get the URL of the parent directory by appending a portion of
