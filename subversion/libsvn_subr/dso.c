@@ -44,13 +44,17 @@ static int not_there_sentinel;
 void
 svn_dso_initialize()
 {
+  apr_status_t status;
   if (dso_pool)
     return;
 
   dso_pool = svn_pool_create(NULL);
 
 #if APR_HAS_THREADS
-  apr_thread_mutex_create(&dso_mutex, APR_THREAD_MUTEX_DEFAULT, dso_pool);
+  status = apr_thread_mutex_create(&dso_mutex, 
+                                   APR_THREAD_MUTEX_DEFAULT, dso_pool);
+  if (status)
+    abort();
 #endif
 
   dso_cache = apr_hash_make(dso_pool);
