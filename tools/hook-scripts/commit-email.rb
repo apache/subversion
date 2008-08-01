@@ -44,6 +44,7 @@ end
 
 begin
   require 'svn/commit-mailer'
+  Svn::Locale.set
   Svn::CommitMailer.run(argv)
 rescue Exception => error
   require 'net/smtp'
