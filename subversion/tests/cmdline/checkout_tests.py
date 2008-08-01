@@ -38,6 +38,9 @@ def test_stderr(re_string, stderr):
   for line in stderr:
     if exp_err_re.search(line):
       return
+  if svntest.main.verbose_mode:
+    map(sys.stdout.write, stderr)
+    print "Expected stderr reg-ex: '" + re_string + "'"
   raise svntest.Failure("Checkout failed but not in the expected way")
 
 #----------------------------------------------------------------------
