@@ -1323,9 +1323,12 @@ svn_fs_fs__hotcopy(const char *src_path,
           src_subdir_shard = svn_path_join(src_subdir, shard, iterpool);
           dst_subdir_shard = svn_path_join(dst_subdir, shard, iterpool);
 
-          if (rev % max_files_per_dir == 0)
+          if (rev % max_files_per_dir == 0) {
             SVN_ERR(svn_io_dir_make(dst_subdir_shard, APR_OS_DEFAULT,
                                     iterpool));
+            SVN_ERR(svn_fs_fs__dup_perms(dst_subdir_shard, dst_subdir,
+                                         iterpool));
+          }
         }
 
       SVN_ERR(svn_io_dir_file_copy(src_subdir_shard, dst_subdir_shard,
@@ -1354,9 +1357,12 @@ svn_fs_fs__hotcopy(const char *src_path,
           src_subdir_shard = svn_path_join(src_subdir, shard, iterpool);
           dst_subdir_shard = svn_path_join(dst_subdir, shard, iterpool);
 
-          if (rev % max_files_per_dir == 0)
+          if (rev % max_files_per_dir == 0) {
             SVN_ERR(svn_io_dir_make(dst_subdir_shard, APR_OS_DEFAULT,
                                     iterpool));
+            SVN_ERR(svn_fs_fs__dup_perms(dst_subdir_shard, dst_subdir,
+                                         iterpool));
+          }
         }
 
       SVN_ERR(svn_io_dir_file_copy(src_subdir_shard, dst_subdir_shard,
@@ -5371,18 +5377,27 @@ commit_body(void *baton, apr_pool_t *pool)
   if (ffd->max_files_per_dir && new_rev % ffd->max_files_per_dir == 0)
     {
       svn_error_t *err;
-      err = svn_io_dir_make(path_rev_shard(cb->fs, new_rev, pool),
-                            APR_OS_DEFAULT, pool);
-      if (err && APR_STATUS_IS_EEXIST(err->apr_err))
-        svn_error_clear(err);
-      else
+      const char *new_dir = path_rev_shard(cb->fs, new_rev, pool);
+      err = svn_io_dir_make(new_dir, APR_OS_DEFAULT, pool);
+      if (err && !APR_STATUS_IS_EEXIST(err->apr_err))
         SVN_ERR(err);
-      err = svn_io_dir_make(path_revprops_shard(cb->fs, new_rev, pool),
-                            APR_OS_DEFAULT, pool);
-      if (err && APR_STATUS_IS_EEXIST(err->apr_err))
-        svn_error_clear(err);
-      else
+      svn_error_clear(err);
+      SVN_ERR(svn_fs_fs__dup_perms(new_dir,
+                                   svn_path_join(cb->fs->path,
+                                                 PATH_REVS_DIR,
+                                                 pool),
+                                   pool));
+
+      new_dir = path_revprops_shard(cb->fs, new_rev, pool);
+      err = svn_io_dir_make(new_dir, APR_OS_DEFAULT, pool);
+      if (err && !APR_STATUS_IS_EEXIST(err->apr_err))
         SVN_ERR(err);
+      svn_error_clear(err);
+      SVN_ERR(svn_fs_fs__dup_perms(new_dir,
+                                   svn_path_join(cb->fs->path,
+                                                 PATH_REVPROPS_DIR,
+                                                 pool),
+                                   pool));
     }
 
   /* Move the finished rev file into place. */
