@@ -49,8 +49,9 @@ Candidate changes for 1.5.2:
    Votes:
      +1: blair
 
- * r32355
-   Set permissions on new fsfs shard directories.
+ * r32355, r32357
+   Set permissions on new fsfs shard directories.  (r32357 is just a
+   formatting change.)
    Justification:
      Sharded repositories break multi-user access to repositories, if
      r1000, r2000, etc. are committed via file:/svn+ssh: without a
