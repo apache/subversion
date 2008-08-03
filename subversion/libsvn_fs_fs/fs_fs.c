@@ -1323,12 +1323,13 @@ svn_fs_fs__hotcopy(const char *src_path,
           src_subdir_shard = svn_path_join(src_subdir, shard, iterpool);
           dst_subdir_shard = svn_path_join(dst_subdir, shard, iterpool);
 
-          if (rev % max_files_per_dir == 0) {
-            SVN_ERR(svn_io_dir_make(dst_subdir_shard, APR_OS_DEFAULT,
-                                    iterpool));
-            SVN_ERR(svn_fs_fs__dup_perms(dst_subdir_shard, dst_subdir,
-                                         iterpool));
-          }
+          if (rev % max_files_per_dir == 0)
+            {
+              SVN_ERR(svn_io_dir_make(dst_subdir_shard, APR_OS_DEFAULT,
+                                      iterpool));
+              SVN_ERR(svn_fs_fs__dup_perms(dst_subdir_shard, dst_subdir,
+                                           iterpool));
+            }
         }
 
       SVN_ERR(svn_io_dir_file_copy(src_subdir_shard, dst_subdir_shard,
@@ -1357,12 +1358,13 @@ svn_fs_fs__hotcopy(const char *src_path,
           src_subdir_shard = svn_path_join(src_subdir, shard, iterpool);
           dst_subdir_shard = svn_path_join(dst_subdir, shard, iterpool);
 
-          if (rev % max_files_per_dir == 0) {
-            SVN_ERR(svn_io_dir_make(dst_subdir_shard, APR_OS_DEFAULT,
-                                    iterpool));
-            SVN_ERR(svn_fs_fs__dup_perms(dst_subdir_shard, dst_subdir,
-                                         iterpool));
-          }
+          if (rev % max_files_per_dir == 0)
+            {
+              SVN_ERR(svn_io_dir_make(dst_subdir_shard, APR_OS_DEFAULT,
+                                      iterpool));
+              SVN_ERR(svn_fs_fs__dup_perms(dst_subdir_shard, dst_subdir,
+                                           iterpool));
+            }
         }
 
       SVN_ERR(svn_io_dir_file_copy(src_subdir_shard, dst_subdir_shard,
