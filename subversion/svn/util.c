@@ -671,15 +671,6 @@ svn_cl__get_log_message(const char **log_msg,
       *log_msg = log_msg_str->data;
       return SVN_NO_ERROR;
     }
-#ifdef AS400
-  /* OS400 supports only -F and -m for specifying log messages. */
-  else
-    return svn_error_create
-      (SVN_ERR_CL_NO_EXTERNAL_EDITOR, NULL,
-       _("Use of an external editor to fetch log message is not supported "
-         "on OS400; consider using the --message (-m) or --file (-F) "
-         "options"));
-#endif
 
   if (! commit_items->nelts)
     {

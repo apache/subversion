@@ -33,16 +33,8 @@
 extern "C" {
 #endif /* __cplusplus */
 
-
-#ifndef AS400
 #define SVN_APR_LOCALE_CHARSET APR_LOCALE_CHARSET
 #define SVN_APR_DEFAULT_CHARSET APR_DEFAULT_CHARSET
-#else
-/* APR_LOCALE_CHARSET and APR_DEFAULT_CHARSET are defined as ints on
- * OS400. */
-#define SVN_APR_LOCALE_CHARSET (const char*)APR_LOCALE_CHARSET
-#define SVN_APR_DEFAULT_CHARSET (const char*)APR_DEFAULT_CHARSET
-#endif
 
 /**
  * Initialize the UTF-8 encoding/decoding routines.
