@@ -59,6 +59,15 @@ Candidate changes for 1.5.2:
    Votes:
      +1: psamuelson
 
+ * r32360
+   Fix a bug causing mod_dav_svn to eat all memory during a merge.
+   Justification:
+     99% CPU-spinning apache processes are not good.
+   Notes:
+     Bug is only triggered when SVNPathAuthz is set to 'short_circuit'.
+   Votes:
+     +1: stsp
+
 Approved changes:
 =================
 
