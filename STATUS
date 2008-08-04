@@ -57,7 +57,7 @@ Candidate changes for 1.5.2:
      r1000, r2000, etc. are committed via file:/svn+ssh: without a
      group-write umask.
    Votes:
-     +1: peters
+     +1: psamuelson
 
 Approved changes:
 =================
