@@ -245,7 +245,7 @@ enum svn_wc__xfer_action {
                                        or, if that's NULL, those of NAME.
 
       When SPECIAL_ONLY is TRUE, only translate special,
-      not keywords and eol-style.
+      not keywords and eol-style. ### Ignored: no effect.
 
 */
 static svn_error_t *
@@ -1872,15 +1872,17 @@ svn_wc__rerun_log(svn_wc_adm_access_t *adm_access,
 
 /*** Log file generation helpers ***/
 
-/* Extend log_accum with log operations to do MOVE_COPY_OP to SRC_PATH and
+/* Extend LOG_ACCUM with log operations to do MOVE_COPY_OP to SRC_PATH and
  * DST_PATH, removing DST_PATH if no SRC_PATH exists when
  * REMOVE_DST_IF_NO_SRC is true.
  *
- * Sets *DST_MODIFIED (if DST_MODIFIED isn't NULL) to indicate that the
+ * Set *DST_MODIFIED (if DST_MODIFIED isn't NULL) to indicate whether the
  * destination path has been modified after running the log:
  * either MOVE_COPY_OP has been executed, or DST_PATH was removed.
  *
  * SRC_PATH and DST_PATH are relative to ADM_ACCESS.
+ *
+ * For SPECIAL_ONLY, see that argument of file_xfer_under_path().
  */
 static svn_error_t *
 loggy_move_copy_internal(svn_stringbuf_t **log_accum,
@@ -1919,7 +1921,7 @@ loggy_move_copy_internal(svn_stringbuf_t **log_accum,
       if (dst_modified)
         *dst_modified = TRUE;
     }
-  /* File doesn't exists, the caller wants dst_path to be removed. */
+  /* File doesn't exist, and the caller wants dst_path to be removed. */
   else if (kind == svn_node_none && remove_dst_if_no_src)
     {
       SVN_ERR(svn_wc__loggy_remove(log_accum, adm_access, full_dst, pool));
@@ -1934,6 +1936,9 @@ loggy_move_copy_internal(svn_stringbuf_t **log_accum,
 
 
 
+/* Return the portion of PATH that is relative to the working copy directory
+ * to which ADM_ACCESS belongs, or SVN_WC_ENTRY_THIS_DIR if PATH is that
+ * directory. PATH must not be outside that directory. */
 static const char *
 loggy_path(const char *path,
            svn_wc_adm_access_t *adm_access)
