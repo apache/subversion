@@ -265,7 +265,7 @@ class DiffEditor(delta.Editor):
       print "Added: " + path
       label = path
     elif path is None:
-      print "Removed: " + path
+      print "Removed: " + base_path
       label = base_path
     else:
       print "Modified: " + path
