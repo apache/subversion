@@ -47,7 +47,7 @@ Candidate changes for 1.5.2:
    Justification:
       Regression with 1.4.x behavior.  Pool lifetime issue.
    Votes:
-     +1: blair
+     +1: blair, cmpilato
 
  * r32355, r32357
    Set permissions on new fsfs shard directories.  (r32357 is just a
@@ -57,7 +57,7 @@ Candidate changes for 1.5.2:
      r1000, r2000, etc. are committed via file:/svn+ssh: without a
      group-write umask.
    Votes:
-     +1: psamuelson
+     +1: psamuelson, cmpilato
 
  * r32360
    Fix a bug causing mod_dav_svn to eat all memory during a merge.
