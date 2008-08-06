@@ -60,11 +60,3 @@ Approved changes:
      +1: lgo, cmpilato, jerenkrantz
      +0: arfrever (serf tests fail)
      -0: markphip (serf tests fail on OSX), epg (failure confirmed)
-
- * r32342, r32343
-   Fix #3246.  svn:externals with duplicate targets would fail on the
-     checkout/update of the later duplicates.
-   Justification:
-      Regression with 1.4.x behavior.  Pool lifetime issue.
-   Votes:
-     +1: blair, cmpilato, hwright
