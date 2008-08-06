@@ -68,6 +68,14 @@ Candidate changes for 1.5.2:
    Votes:
      +1: stsp, cmpilato
 
+ * r32019
+   svnlook: Fix a bug in which "Modified:" headers would come after the file
+   diff to which they refer.
+   Justification:
+     Regression.  One-line fix.
+   Votes:
+     +1: danielsh
+
 Approved changes:
 =================
 
