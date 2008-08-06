@@ -74,7 +74,7 @@ Candidate changes for 1.5.2:
    Justification:
      Regression.  One-line fix.
    Votes:
-     +1: danielsh
+     +1: danielsh, kfogel
 
 Approved changes:
 =================
