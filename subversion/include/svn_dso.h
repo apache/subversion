@@ -45,13 +45,12 @@ extern "C" {
  *       into the previously mentioned problems with DSO unloading and
  *       pool cleanup callbacks.
  *
- * Calls svn_dso_initialize2(void) upon error aborts.
+ * Returns svn_error_t object with corresponding apr_err returned by
+ * underlying calls. In case of no error returns @c SVN_NO_ERROR.
  *
- * @deprecated Provided for backwards compatibility with the 1.4 API.
- *
- * @since New in 1.4.0.
+ * @since New in 1.6.0.
  */
-void svn_dso_initialize(void);
+svn_error_t *svn_dso_initialize2(void);
 
 /**
  * Initialize the DSO loading routines.
@@ -66,12 +65,13 @@ void svn_dso_initialize(void);
  *       into the previously mentioned problems with DSO unloading and
  *       pool cleanup callbacks.
  *
- * Returns svn_error_t object with corresponding apr_err returned by
- * underlying calls. In case of no error returns @c SVN_NO_ERROR.
+ * Calls svn_dso_initialize2(void) upon error aborts.
  *
- * @since New in 1.6.0.
+ * @deprecated Provided for backwards compatibility with the 1.4 API.
+ *
+ * @since New in 1.4.0.
  */
-svn_error_t *svn_dso_initialize2(void);
+void svn_dso_initialize(void);
 
 #if APR_HAS_DSO
 /**
