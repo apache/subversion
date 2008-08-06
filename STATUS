@@ -8,7 +8,6 @@ delay a release, etc.
 Candidate changes for 1.5.2:
 ============================
 
-
  * r31658, r31659
    Fix a remaining bug with issue #2825, Handle --depth option for 'merge'
    operations in terms of both content and mergeinfo.
@@ -41,36 +40,8 @@ Candidate changes for 1.5.2:
    Votes:
      +1: lgo
 
- * r32342, r32343
-   Fix #3246.  svn:externals with duplicate targets would fail on the
-     checkout/update of the later duplicates.
-   Justification:
-      Regression with 1.4.x behavior.  Pool lifetime issue.
-   Votes:
-     +1: blair, cmpilato
-
- * r32355, r32357
-   Set permissions on new fsfs shard directories.  (r32357 is just a
-   formatting change.)
-   Justification:
-     Sharded repositories break multi-user access to repositories, if
-     r1000, r2000, etc. are committed via file:/svn+ssh: without a
-     group-write umask.
-   Votes:
-     +1: psamuelson, cmpilato
-
- * r32360
-   Fix a bug causing mod_dav_svn to eat all memory during a merge.
-   Justification:
-     99% CPU-spinning apache processes are not good.
-   Notes:
-     Bug is only triggered when SVNPathAuthz is set to 'short_circuit'.
-   Votes:
-     +1: stsp, cmpilato
-
 Approved changes:
 =================
-
 
  * r31313
    Make all ra layers return a consistent error when a path is not
@@ -89,3 +60,30 @@ Approved changes:
      +1: lgo, cmpilato, jerenkrantz
      +0: arfrever (serf tests fail)
      -0: markphip (serf tests fail on OSX), epg (failure confirmed)
+
+ * r32342, r32343
+   Fix #3246.  svn:externals with duplicate targets would fail on the
+     checkout/update of the later duplicates.
+   Justification:
+      Regression with 1.4.x behavior.  Pool lifetime issue.
+   Votes:
+     +1: blair, cmpilato, hwright
+
+ * r32355, r32357
+   Set permissions on new fsfs shard directories.  (r32357 is just a
+   formatting change.)
+   Justification:
+     Sharded repositories break multi-user access to repositories, if
+     r1000, r2000, etc. are committed via file:/svn+ssh: without a
+     group-write umask.
+   Votes:
+     +1: psamuelson, cmpilato, hwright
+
+ * r32360
+   Fix a bug causing mod_dav_svn to eat all memory during a merge.
+   Justification:
+     99% CPU-spinning apache processes are not good.
+   Notes:
+     Bug is only triggered when SVNPathAuthz is set to 'short_circuit'.
+   Votes:
+     +1: stsp, cmpilato, hwright
