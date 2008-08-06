@@ -68,6 +68,14 @@ Candidate changes for 1.5.2:
    Votes:
      +1: stsp, cmpilato
 
+  * r32019
+    Fix a bug in which "Modified:" headers would come after the file diff
+    to which they refer.
+    Justification:
+      This bug makes svnlook unusable on Windows.
+    Votes:
+      +1: zhakov
+  
 Approved changes:
 =================
 
