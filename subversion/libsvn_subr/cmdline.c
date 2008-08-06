@@ -170,7 +170,7 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
     }
 
   /* This has to happen before any pools are created. */
-  svn_dso_initialize();
+  SVN_ERR(svn_dso_initialize2());
 
   if (0 > atexit(apr_terminate))
     {
