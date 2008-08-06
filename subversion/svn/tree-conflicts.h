@@ -42,9 +42,9 @@ extern "C" {
  */
 svn_error_t *
 svn_cl__append_human_readable_tree_conflict_description(
-                                      svn_stringbuf_t *descriptions,
-                                      svn_wc_conflict_description_t *conflict,
-                                      apr_pool_t *pool);
+  svn_stringbuf_t *descriptions,
+  const svn_wc_conflict_description_t *conflict,
+  apr_pool_t *pool);
 
 /**
  * Append to @a str an XML representation of the tree conflict data
@@ -53,9 +53,10 @@ svn_cl__append_human_readable_tree_conflict_description(
  * @since New in 1.6.
  */
 svn_error_t *
-svn_cl__append_tree_conflict_info_xml(svn_stringbuf_t *str,
-                                      svn_wc_conflict_description_t *conflict,
-                                      apr_pool_t *pool);
+svn_cl__append_tree_conflict_info_xml(
+  svn_stringbuf_t *str,
+  const svn_wc_conflict_description_t *conflict,
+  apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

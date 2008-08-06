@@ -4963,7 +4963,7 @@ svn_wc_read_tree_conflicts_from_entry(apr_array_header_t *conflicts,
  * @since New in 1.6.
  */
 svn_error_t *
-svn_wc_add_tree_conflict_data(svn_wc_conflict_description_t *conflict,
+svn_wc_add_tree_conflict_data(const svn_wc_conflict_description_t *conflict,
                               svn_wc_adm_access_t *adm_access,
                               apr_pool_t *pool);
 
