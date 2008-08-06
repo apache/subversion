@@ -65,6 +65,7 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
 {
   apr_status_t status;
   apr_pool_t *pool;
+  svn_error_t *err;
 
 #ifndef WIN32
   {
@@ -170,7 +171,14 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
     }
 
   /* This has to happen before any pools are created. */
-  SVN_ERR(svn_dso_initialize2());
+  if ((err = svn_dso_initialize2()))
+    {
+      if (error_stream && err->message)
+        fprintf(error_stream, "%s", err->message);
+
+      svn_error_clear(err);
+      return EXIT_FAILURE;
+    }
 
   if (0 > atexit(apr_terminate))
     {
@@ -186,17 +194,14 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
   pool = svn_pool_create(NULL);
   svn_utf_initialize(pool);
 
-  {
-    svn_error_t *err = svn_nls_init();
-    if (err)
-      {
-        if (error_stream && err->message)
-          fprintf(error_stream, "%s", err->message);
+  if ((err = svn_nls_init()))
+    {
+      if (error_stream && err->message)
+        fprintf(error_stream, "%s", err->message);
 
-        svn_error_clear(err);
-        return EXIT_FAILURE;
-      }
-  }
+      svn_error_clear(err);
+      return EXIT_FAILURE;
+    }
 
   return EXIT_SUCCESS;
 }
