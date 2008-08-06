@@ -920,6 +920,7 @@ svn_repos_node_location_segments(svn_repos_t *repos,
       segment = apr_pcalloc(subpool, sizeof(*segment));
       segment->range_end = current_rev;
       segment->range_start = end_rev;
+      /* segment path should be absolute without leading '/'. */
       segment->path = cur_path + 1;
 
       SVN_ERR(svn_repos__prev_location(&appeared_rev, &prev_path, &prev_rev,
@@ -953,9 +954,13 @@ svn_repos_node_location_segments(svn_repos_t *repos,
           svn_boolean_t readable;
           svn_fs_root_t *cur_rev_root;
 
+          /* authz_read_func requires path to have a leading slash. */
+          const char *abs_path = apr_pstrcat(subpool, "/", segment->path,
+                                             NULL);
+
           SVN_ERR(svn_fs_revision_root(&cur_rev_root, fs,
                                        segment->range_end, subpool));
-          SVN_ERR(authz_read_func(&readable, cur_rev_root, segment->path,
+          SVN_ERR(authz_read_func(&readable, cur_rev_root, abs_path,
                                   authz_read_baton, subpool));
           if (! readable)
             return SVN_NO_ERROR;
