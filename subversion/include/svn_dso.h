@@ -71,7 +71,7 @@ void svn_dso_initialize(void);
  *
  * @since New in 1.6.0.
  */
-svn_error_t * svn_dso_initialize2(void);
+svn_error_t *svn_dso_initialize2(void);
 
 #if APR_HAS_DSO
 /**
