@@ -1562,33 +1562,32 @@ push_range(apr_array_header_t *rangelist,
   APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = range;
 }
 
-/* Helper for filter_merged_revisions() when operating on a subtree.
-   Like filter_merged_revisions(), this should only be called when
-   honoring mergeinfo.
+/* Helper for filter_merged_revisions() when that function is operating on
+   a *subtree* of the merge target.  Like filter_merged_revisions(), this
+   should only be called when honoring mergeinfo.
 
-   Filter the requested ranges being merged to a subtree so that we
-   don't try to describe invalid subtrees to the merge report editor.
-   Note in *CHILD_DELETED_OR_NONEXISTANT if the subtree doesn't exist,
-   is deleted, or is renamed in the requested range.
+   MERGEINFO_PATH, PARENT, REVISION1, REVISION2, PRIMARY_URL, RA_SESSION,
+   and CTX are all cascaded from filter_merged_revisions() - see that function
+   for more information on each.
 
-   PARENT, MERGEINFO_PATH, REVISION1, REVISION2, PRIMARY_URL, RA_SESSION,
-   and CTX are all cascaded from filter_merged_revisions().
+   Since this function is only invoked for subtrees of the merge target, the
+   guarantees afforded by normalize_merge_sources() don't apply.  Therefore it
+   is possible that PRIMARY_URL@REVISION1 and PRIMARY_URL@REVISION2 don't
+   describe the endpoints of an unbroken line of history.  The purpose of
+   this helper is to identify these cases of broken history and where possible
+   to adjust the requested range REVISION1:REVISION2 being merged to the subtree
+   so that we don't try to describe invalid path/revisions to the merge report
+   editor -- see drive_merge_report_editor().
 
-   Since this function is only invoked for subtrees of the merge target,
-   the guarantees afforded by normalize_merge_sources() don't apply.
-   Therefore it is possible that PRIMARY_URL@REVISION1 and
-   PRIMARY_URL@REVISION2 don't describe an unbroken line of history.
+   Set *CHILD_DELETED_OR_NONEXISTANT and *REQUESTED_RANGELIST as described
+   in the following eight cases.  *REQUESTED_RANGELIST is an array of
+   svn_merge_range_t *elements allocated from POOL.  Unless noted otherwise,
+   *REQUESTED_RANGELIST is set to a rangelist containing one svn_merge_range_t
+   *element with a 'start' field equal to REVISION1, an 'end' field equal to
+   REVISION2.  The inheritable fields of all svn_merge_range_t in
+   *REQUESTED_RANGELIST, in all cases, are always set to true.
 
-   Specifically we can end up with one of these eight cases:
-
-     Note1: Unless noted otherwise, every case sets *REQUESTED_RANGELIST
-            to a rangelist with one element defined by REVISION1 and
-            REVISION2.
-
-     Note2: The inheritability of all svn_merge_range_t in
-            *REQUESTED_RANGELIST is always TRUE.
-
-   Forward Merges, i.e. REVISION1 < REVISION2 (PEG_REV)
+   Forward Merges, i.e. REVISION1 < REVISION2
 
      A) Requested range deletes subtree.
 
@@ -1607,7 +1606,7 @@ push_range(apr_array_header_t *rangelist,
         *REQUESTED_RANGELIST with the ranges between N and REVISION2
         (inclusive) at which PRIMARY_URL exists.  Then take the intersection
         of REVISION1:N (i.e. the range which predates the existance of
-        PRIMARY_URL) and PARENT->REQUESTED_RANGELIST and add it to
+        PRIMARY_URL) and PARENT->REMAINING_RANGELIST and add it to
         *REQUESTED_RANGELIST.  This prevents us from later trying to describe
         any non-existant path/revs for this subtree in
         drive_merge_report_editor().  A good thing as that would break the
@@ -1627,7 +1626,7 @@ push_range(apr_array_header_t *rangelist,
 
         Set *CHILD_DELETED_OR_NONEXISTANT to FALSE.
 
-  Reverse Merges, i.e. REVISION1 (PEG_REV) > REVISION2
+  Reverse Merges, i.e. REVISION1 > REVISION2
 
      E) Part of requested range postdates subtree's existance.
 
@@ -1649,11 +1648,10 @@ push_range(apr_array_header_t *rangelist,
         ###
         ###   i)   The subtree merge source doesn't exist anymore at
         ###        revsion X.
+		###
         ###   ii)  Mergeinfo for X is explicitly set on the subtree.
-        ###   iii) The subtree's parent has no explicit mergeinfo for X.
         ###
-        ### This is where Kamesh utilized his recursive guess_live_ranges
-        ### function...But do we ever need to do this in practice?
+		###   iii) The subtree's parent has no explicit mergeinfo for X.
 
      F) Requested range deletes (or replaces) a subtree.
 
@@ -1802,7 +1800,7 @@ prepare_subtree_ranges(apr_array_header_t **requested_rangelist,
                   apr_array_header_t *different_name_rangelist =
                     apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
 
-                  /* Make a ranglist that describes the range which predates
+                  /* Make a rangelist that describes the range which predates
                      PRIMARY_URL's existance... */
                   apr_array_header_t *predate_rangelist =
                     init_rangelist(revision1,
