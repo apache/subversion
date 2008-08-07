@@ -48,7 +48,7 @@ extern "C" {
  * Returns svn_error_t object with corresponding apr_err returned by
  * underlying calls. In case of no error returns @c SVN_NO_ERROR.
  *
- * @since New in 1.6
+ * @since New in 1.6.
  */
 svn_error_t *svn_dso_initialize2(void);
 
@@ -69,7 +69,7 @@ svn_error_t *svn_dso_initialize2(void);
  *
  * @deprecated Provided for backwards compatibility with the 1.5 API.
  *
- * @since New in 1.4
+ * @since New in 1.4.
  */
 void svn_dso_initialize(void);
 
@@ -85,7 +85,7 @@ void svn_dso_initialize(void);
  *       them that will ever be loaded by the system, otherwise you will
  *       leak memory.
  *
- * @since New in 1.4.0.
+ * @since New in 1.4.
  */
 svn_error_t *svn_dso_load(apr_dso_handle_t **dso, const char *libname);
 #endif /* APR_HAS_DSO */
