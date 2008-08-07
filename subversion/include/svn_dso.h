@@ -48,7 +48,7 @@ extern "C" {
  * Returns svn_error_t object with corresponding apr_err returned by
  * underlying calls. In case of no error returns @c SVN_NO_ERROR.
  *
- * @since New in 1.6.0.
+ * @since New in 1.6
  */
 svn_error_t *svn_dso_initialize2(void);
 
@@ -67,9 +67,9 @@ svn_error_t *svn_dso_initialize2(void);
  *
  * Calls svn_dso_initialize2(void) upon error aborts.
  *
- * @deprecated Provided for backwards compatibility with the 1.4 API.
+ * @deprecated Provided for backwards compatibility with the 1.5 API.
  *
- * @since New in 1.4.0.
+ * @since New in 1.4
  */
 void svn_dso_initialize(void);
 
