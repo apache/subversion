@@ -801,7 +801,7 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *combined_mergeinfo,
     }
   svn_pool_destroy(iterpool);
 
-  /* Merge all the mergeinfos which are, or are children of, one or
+  /* Merge all the mergeinfos which are, or are children of, one of
      our paths of interest into one giant delta mergeinfo.  */
   for (hi = apr_hash_first(NULL, added_mergeinfo_catalog);
        hi; hi = apr_hash_next(hi))
