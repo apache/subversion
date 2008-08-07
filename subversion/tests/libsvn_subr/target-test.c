@@ -38,10 +38,11 @@ int main(int argc, char **argv)
   const char *common_path2 = 0;
   int i;
 
-  if (argc < 2) {
-    fprintf(stderr, "USAGE: %s <list of entries to be compared>\n", argv[0]);
-    return EXIT_FAILURE;
-  }
+  if (argc < 2)
+    {
+      fprintf(stderr, "USAGE: %s <list of entries to be compared>\n", argv[0]);
+      return EXIT_FAILURE;
+    }
 
   /* Initialize the app. */
   if (svn_cmdline_init("target-test", stderr) != EXIT_SUCCESS)
@@ -56,7 +57,7 @@ int main(int argc, char **argv)
     {
       const char *path_utf8;
 
-	  err = svn_utf_cstring_to_utf8(&path_utf8, argv[i], pool);
+      err = svn_utf_cstring_to_utf8(&path_utf8, argv[i], pool);
       if (err != SVN_NO_ERROR)
         svn_handle_error2(err, stderr, TRUE, "target-test: ");
       APR_ARRAY_PUSH(targets, const char *) =
