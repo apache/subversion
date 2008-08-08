@@ -9226,6 +9226,9 @@ def merge_source_normalization_and_subtree_merges(sbox):
 
 # Tests for issue #3067: 'subtrees with intersecting mergeinfo, that don't
 # exist at the start of a merge range shouldn't break the merge'
+# After r32405+32406 which checks that a file about to be deleted is identical
+# to the merge-left source file, this test fails. See the end of this email
+# <http://svn.haxx.se/dev/archive-2008-08/0124.shtml> and its thread.
 def new_subtrees_should_not_break_merge(sbox):
   "subtrees added after start of merge range are ok"
 
