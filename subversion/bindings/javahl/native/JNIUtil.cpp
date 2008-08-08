@@ -29,6 +29,7 @@
 
 #include "svn_pools.h"
 #include "svn_wc.h"
+#include "svn_dso.h"
 #include "svn_path.h"
 #include <apr_file_info.h>
 #include "svn_private_config.h"
@@ -99,6 +100,7 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
 {
   // This method has to be run only once during the run a program.
   static bool run = false;
+  svn_error_t *err;
   if (run) // already run
     return true;
 
@@ -166,6 +168,16 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
       return FALSE;
     }
 
+  /* This has to happen before any pools are created. */
+  if ((err = svn_dso_initialize2()))
+    {
+      if (stderr && err->message)
+        fprintf(stderr, "%s", err->message);
+
+      svn_error_clear(err);
+      return FALSE;
+    }
+
   if (0 > atexit(apr_terminate))
     {
       if (stderr)
@@ -228,7 +240,7 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
      ### the libsvn_wc library, which basically means SVNClient. */
   if (getenv ("SVN_ASP_DOT_NET_HACK"))
     {
-      svn_error_t *err = svn_wc_set_adm_dir("_svn", g_pool);
+      err = svn_wc_set_adm_dir("_svn", g_pool);
       if (err)
         {
           if (stderr)
