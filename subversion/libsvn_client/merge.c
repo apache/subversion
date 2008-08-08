@@ -1051,8 +1051,6 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
   merge_cmd_baton_t *merge_b = baton;
   apr_pool_t *subpool = svn_pool_create(merge_b->pool);
   svn_node_kind_t kind;
-  svn_wc_adm_access_t *parent_access;
-  const char *parent_path;
 
   /* Easy out:  if we have no adm_access for the parent directory,
      then this portion of the tree-delta "patch" must be inapplicable.
@@ -1078,13 +1076,9 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
                              subpool));
         if (same || merge_b->force)
           {
-            svn_path_split(mine, &parent_path, NULL, subpool);
-            SVN_ERR(svn_wc_adm_retrieve(&parent_access, adm_access, parent_path,
-                                        subpool));
-
             /* Passing NULL for the notify_func and notify_baton because
                repos_diff.c:delete_entry() will do it for us. */
-            SVN_ERR(svn_client__wc_delete(mine, parent_access, TRUE,
+            SVN_ERR(svn_client__wc_delete(mine, adm_access, TRUE,
                                           merge_b->dry_run, FALSE, NULL, NULL,
                                           merge_b->ctx, subpool));
             if (state)
