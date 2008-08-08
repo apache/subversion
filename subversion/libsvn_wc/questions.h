@@ -62,27 +62,6 @@ svn_wc__timestamps_equal_p(svn_boolean_t *equal_p,
                            apr_pool_t *pool);
 
 
-/* Set *MODIFIED_P to true if VERSIONED_FILE is modified with respect
- * to BASE_FILE, or false if it is not.  The comparison compensates
- * for VERSIONED_FILE's eol and keyword properties, but leaves
- * BASE_FILE alone (as though BASE_FILE were a text-base file, which
- * it usually is, only sometimes we're calling this on incoming
- * temporary text-bases).  ADM_ACCESS must be an access baton for
- * VERSIONED_FILE.  If COMPARE_TEXTBASES is false, a clean copy of the
- * versioned file is compared to VERSIONED_FILE.
- *
- * If an error is returned, the effect on *MODIFIED_P is undefined.
- *
- * Use POOL for temporary allocation.
- */
-svn_error_t *svn_wc__versioned_file_modcheck(svn_boolean_t *modified_p,
-                                             const char *versioned_file,
-                                             svn_wc_adm_access_t *adm_access,
-                                             const char *base_file,
-                                             svn_boolean_t compare_textbases,
-                                             apr_pool_t *pool);
-
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
