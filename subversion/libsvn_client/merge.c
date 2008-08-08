@@ -49,6 +49,7 @@
 
 #include "private/svn_wc_private.h"
 #include "private/svn_mergeinfo_private.h"
+#include "private/svn_debug_private.h"
 
 #include "svn_private_config.h"
 
@@ -974,6 +975,68 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
+/* Compare the two sets of properties PROPS1 and PROPS2, ignoring the
+ * "svn:mergeinfo" property, and noticing only "normal" props. Set *SAME to
+ * true if the rest of the properties are identical or false if they differ.
+ */
+static svn_error_t *
+properties_same_p(svn_boolean_t *same,
+                  apr_hash_t *props1,
+                  apr_hash_t *props2,
+                  apr_pool_t *pool)
+{
+  apr_array_header_t *prop_changes;
+  int i, diffs;
+
+  /* Examine the properties that differ */
+  SVN_ERR(svn_prop_diffs(&prop_changes, props1, props2, pool));
+  diffs = 0;
+  for (i = 0; i < prop_changes->nelts; i++)
+    {
+      const char *pname = APR_ARRAY_IDX(prop_changes, i, svn_prop_t).name;
+
+      /* Count the properties we're interested in; ignore the rest */
+      if (svn_wc_is_normal_prop(pname)
+          && strcmp(pname, SVN_PROP_MERGEINFO) != 0)
+        diffs++;
+    }
+  *same = (diffs == 0);
+  return SVN_NO_ERROR;
+}
+
+/* Compare the file OLDER (together with its normal properties in
+ * ORIGINAL_PROPS which may also contain WC props and entry props) and MINE
+ * (with its properties obtained from its WC admin area ADM_ACCESS). Set
+ * *SAME to true if they are the same or false if they differ, ignoring
+ * the "svn:mergeinfo" property, and ignoring differences in keyword
+ * expansion and end-of-line style. */
+static svn_error_t *
+files_same_p(svn_boolean_t *same,
+             const char *older,
+             apr_hash_t *original_props,
+             const char *mine,
+             svn_wc_adm_access_t *adm_access,
+             apr_pool_t *pool)
+{
+  apr_hash_t *working_props;
+
+  SVN_ERR(svn_wc_prop_list(&working_props, mine, adm_access, pool));
+
+  /* Compare the properties */
+  SVN_ERR(properties_same_p(same, original_props, working_props, pool));
+  if (*same)
+    {
+      svn_boolean_t modified;
+
+      /* Compare the file content, translating 'mine' to 'normal' form. */
+      SVN_ERR(svn_wc__versioned_file_modcheck(&modified, mine, adm_access,
+                                              older, TRUE, pool));
+      *same = !modified;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* An svn_wc_diff_callbacks3_t function. */
 static svn_error_t *
 merge_file_deleted(svn_wc_adm_access_t *adm_access,
@@ -991,7 +1054,6 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
   svn_node_kind_t kind;
   svn_wc_adm_access_t *parent_access;
   const char *parent_path;
-  svn_error_t *err;
 
   /* Easy out:  if we have no adm_access for the parent directory,
      then this portion of the tree-delta "patch" must be inapplicable.
@@ -1009,24 +1071,33 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
   switch (kind)
     {
     case svn_node_file:
-      svn_path_split(mine, &parent_path, NULL, subpool);
-      SVN_ERR(svn_wc_adm_retrieve(&parent_access, adm_access, parent_path,
-                                  subpool));
-      /* Passing NULL for the notify_func and notify_baton because
-         repos_diff.c:delete_entry() will do it for us. */
-      err = svn_client__wc_delete(mine, parent_access, merge_b->force,
-                                  merge_b->dry_run, FALSE, NULL, NULL,
-                                  merge_b->ctx, subpool);
-      if (err)
-        {
-          if (state)
-            *state = svn_wc_notify_state_obstructed;
-          svn_error_clear(err);
-        }
-      else if (state)
-        {
-          *state = svn_wc_notify_state_changed;
-        }
+      {
+        svn_boolean_t same;
+
+        /* If the files are identical, attempt deletion */
+        SVN_ERR(files_same_p(&same, older, original_props, mine, adm_access,
+                             subpool));
+        if (same || merge_b->force)
+          {
+            svn_path_split(mine, &parent_path, NULL, subpool);
+            SVN_ERR(svn_wc_adm_retrieve(&parent_access, adm_access, parent_path,
+                                        subpool));
+
+            /* Passing NULL for the notify_func and notify_baton because
+               repos_diff.c:delete_entry() will do it for us. */
+            SVN_ERR(svn_client__wc_delete(mine, parent_access, TRUE,
+                                          merge_b->dry_run, FALSE, NULL, NULL,
+                                          merge_b->ctx, subpool));
+            if (state)
+              *state = svn_wc_notify_state_changed;
+          }
+        else
+          {
+            /* The files differ, so skip instead of deleting */
+            if (state)
+              *state = svn_wc_notify_state_obstructed;
+          }
+      }
       break;
     case svn_node_dir:
       if (state)
@@ -4660,8 +4731,8 @@ do_file_merge(const char *url1,
               SVN_ERR(merge_file_deleted(adm_access,
                                          &text_state,
                                          target_wcpath,
-                                         NULL,
-                                         NULL,
+                                         tmpfile1,
+                                         tmpfile2,
                                          mimetype1, mimetype2,
                                          props1,
                                          merge_b));

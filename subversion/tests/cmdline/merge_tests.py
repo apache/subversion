@@ -12617,6 +12617,153 @@ def commit_to_subtree_added_by_merge(sbox):
   svntest.actions.run_and_verify_svn(None, ["At revision 5.\n"], [], 'up',
                                      wc_dir)
 
+
+#----------------------------------------------------------------------
+# Helper functions
+
+def svn_mkdir(path):
+  "Make and add a directory."
+  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', '--parents', path)
+
+def svn_mkfile(path):
+  "Make and add a file with some default content, and keyword expansion."
+  dirname, filename = os.path.split(path)
+  svntest.main.file_write(path, "This is the file '" + filename + "'.\n" +
+                                "Last changed in '$Revision$'.\n" +
+                                "Original second line.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'propset',
+                                     'p1', 'v1', path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'propset',
+                                     'svn:keywords', 'Revision', path)
+  #expected_output = wc.State(wc_dir,
+  #                           {path : Item(verb='Adding')})
+  #wc_status.add({path : Item(status='  ', wc_rev=3)})
+  #svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+  #                                      wc_status, None, wc_dir)
+
+def svn_copy(path1, path2):
+  "Copy a WC path locally."
+  svntest.actions.run_and_verify_svn(None, None, [], 'copy', '--parents', path1, path2)
+
+def svn_delete(path):
+  "Delete a WC path locally."
+  svntest.actions.run_and_verify_svn(None, None, [], 'delete', path)
+
+def svn_commit(path):
+  "Commit a WC path and return the new revision number."
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
+                                     'commit', '-m', '', path)
+  svn_commit.repo_rev += 1
+  print "## repo_rev is now", svn_commit.repo_rev
+  return svn_commit.repo_rev
+
+def svn_merge(src_change_num, source, target, exp_out=svntest.verify.AnyOutput):
+  "Merge a single change from path 'source' to path 'target'"
+  svntest.actions.run_and_verify_svn(None, exp_out, [],
+                                     'merge', '-c', src_change_num,
+                                     source, target)
+
+def del_identical_file(sbox):
+  "merge tries to delete a file of identical content"
+
+  # Set up a standard greek tree in r1.
+  sbox.build()
+  svn_commit.repo_rev = 1
+
+  saved_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+
+  source_d = 'source'
+  target_d = 'target'
+  source_file = os.path.join(source_d, 'file')
+  target_file = os.path.join(target_d, 'file')
+
+  # Make an identical copy, and merge a deletion to it.
+  svn_mkdir(source_d)
+  svn_mkfile(source_file)
+  s_rev = svn_commit('.')
+  svn_copy(source_file, target_file)
+  svn_delete(source_file)
+  s_rev = svn_commit('.')
+  svn_merge(s_rev, source_d, target_d, '--- Merging|D ')
+  # should be deleted quietly
+
+def del_sched_add_hist_file(sbox):
+  "merge tries to delete identical sched-add file"
+
+  # Setup a standard greek tree in r1.
+  sbox.build()
+  svn_commit.repo_rev = 1
+
+  saved_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+
+  source_d = 'source'
+  target_d = 'target'
+  source_file = os.path.join(source_d, 'file')
+  target_file = os.path.join(target_d, 'file')
+
+  # Merge a creation, and delete by reverse-merging into uncommitted WC.
+  svn_mkdir(source_d)
+  svn_copy(source_d, target_d)
+  s_rev = svn_commit('.')
+  svn_mkfile(source_file)
+  s_rev = svn_commit('.')
+  svn_merge(s_rev, source_d, target_d, '--- Merging|A ')
+  svn_merge(-s_rev, source_d, target_d, '--- Reverse-merging|D ')
+  # should be deleted quietly
+
+  os.chdir(saved_cwd)
+
+def del_differing_file(sbox):
+  "merge tries to delete a file of different content"
+
+  # Setup a standard greek tree in r1.
+  sbox.build()
+  svn_commit.repo_rev = 1
+
+  saved_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+
+  source_d = 'source'
+  target_d = 'target'
+  source_file = os.path.join(source_d, 'file')
+  target_file = os.path.join(target_d, 'file')
+
+  # Copy a file, text-modify it, and merge a deletion to it.
+  svn_mkdir(source_d)
+  svn_mkfile(source_file)
+  s_rev = svn_commit('.')
+  svn_copy(source_file, target_file)
+  svntest.main.file_append(target_file, "An extra line in the target.\n")
+  svn_delete(source_file)
+  s_rev = svn_commit(source_d)
+  svn_merge(s_rev, source_d, target_d, 'Skipped')
+  # should complain and "skip" it
+
+  source_d = 'source2'
+  target_d = 'target2'
+  source_file = os.path.join(source_d, 'file')
+  target_file = os.path.join(target_d, 'file')
+
+  # Copy a file, text-modify it, commit, and merge a deletion to it.
+  svn_mkdir(source_d)
+  svn_mkfile(source_file)
+  s_rev = svn_commit('.')
+  svn_copy(source_file, target_file)
+  svntest.main.file_append(target_file, "An extra line in the target.\n")
+  svn_delete(source_file)
+  s_rev = svn_commit('.')
+  svn_merge(s_rev, source_d, target_d, 'Skipped')
+  # should complain and "skip" it
+
+  # Make a prop-modified copy, and merge a deletion to it.
+  # ...
+
+  os.chdir(saved_cwd)
+
+
 ########################################################################
 # Run the tests
 
@@ -12755,7 +12902,7 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(merge_source_normalization_and_subtree_merges,
                          server_has_mergeinfo),
-              SkipUnless(new_subtrees_should_not_break_merge,
+              SkipUnless(XFail(new_subtrees_should_not_break_merge),
                          server_has_mergeinfo),
               SkipUnless(basic_reintegrate,
                          server_has_mergeinfo),
@@ -12791,6 +12938,9 @@ test_list = [ None,
               SkipUnless(subtrees_with_empty_mergeinfo, server_has_mergeinfo),
               SkipUnless(commit_to_subtree_added_by_merge,
                          svntest.main.is_ra_type_dav),
+              del_identical_file,
+              del_sched_add_hist_file,
+              del_differing_file,
              ]
 
 if __name__ == '__main__':
