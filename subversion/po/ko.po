@@ -259,9 +259,8 @@ msgid "Changelist doesn't match"
 msgstr "변경 목록이 일치하지 않습니다"
 
 #: ../include/svn_error_codes.h:431
-#, fuzzy
 msgid "Conflict resolution failed"
-msgstr "저장소 생성 실패"
+msgstr "충돌상황 해제에 실패하였습니다"
 
 #: ../include/svn_error_codes.h:435
 msgid "Failed to locate 'copyfrom' path in working copy"
@@ -2405,12 +2404,12 @@ msgstr "디렉토리가 아니면 목록을 얻을 수 없습니다."
 #: ../libsvn_fs_fs/dag.c:541
 #, c-format
 msgid "Can't increment mergeinfo count on node-revision %%s to negative value %%%s"
-msgstr ""
+msgstr "노드 리비전 병합정보 카운트를 %%s(을)를 음수 %%%s로 증가시킬 수 없습니다"
 
 #: ../libsvn_fs_fs/dag.c:552
-#, fuzzy, c-format
+#, c-format
 msgid "Can't increment mergeinfo count on *file* node-revision %%s to %%%s (> 1)"
-msgstr "되돌릴수 없는 노드(%s) 리비전에 대해 속성리스트를 설정할 수 없습니다."
+msgstr "파일 노드리비전 병합정보 카운트 %%s(을)를 %%%s (> 1)로 증가시킬 수 없습니다"
 
 #: ../libsvn_fs_fs/dag.c:1045
 #, c-format
@@ -2425,34 +2424,34 @@ msgstr ""
 
 #: ../libsvn_fs_fs/dag.c:1142
 msgid "Empty noderev in cache"
-msgstr ""
+msgstr "캐시의 노드리비전 정보가 비어 있습니다"
 
 #: ../libsvn_fs_fs/dag.c:1152
 msgid "Kindless noderev in cache"
-msgstr ""
+msgstr "캐시의 노드 종류가 지정되어 있지 않습니다"
 
 #: ../libsvn_fs_fs/dag.c:1159
-#, fuzzy, c-format
+#, c-format
 msgid "Unknown kind for noderev in cache: '%c'"
-msgstr "'%s'의 노드 종류를 알 수 없습니다."
+msgstr "캐시의 noderev의 종류를 알 수 없습니다: '%c'"
 
 #: ../libsvn_fs_fs/dag.c:1166
 msgid "Unterminated ID in cache"
-msgstr ""
+msgstr "캐시의 ID가 적절히 종료되지 않았습니다"
 
 #: ../libsvn_fs_fs/dag.c:1171
 #, c-format
 msgid "Bogus ID '%s' in cache"
-msgstr ""
+msgstr "캐시내에 잘못된 ID '%s'가 있습니다"
 
 #: ../libsvn_fs_fs/dag.c:1178
 msgid "No created path"
-msgstr ""
+msgstr "생성된 경로가 없습니다"
 
 #: ../libsvn_fs_fs/dag.c:1204
-#, fuzzy, c-format
+#, c-format
 msgid "Unknown node type in cache: '%c'"
-msgstr "'%s'의 노드를 알 수 없습니다."
+msgstr "캐시의 노드 종류를 알 수 없습니다: '%c'"
 
 #: ../libsvn_fs_fs/err.c:52
 #, c-format
@@ -2475,7 +2474,7 @@ msgid "Can't create FSFS txn list mutex"
 msgstr "FSFS 트랜잭션 리스트용 뮤텍스를 생성할 수 없습니다"
 
 #: ../libsvn_fs_fs/fs.c:107
-#, fuzzy, c-format
+#, c-format
 msgid "Can't create FSFS txn-current mutex"
 msgstr "FSFS 트랜잭션 리스트용 뮤텍스를 생성할 수 없습니다"
 
@@ -2496,22 +2495,22 @@ msgstr "fsfs에 대한 지원하지 않는 파일시스템 로더 버전(%d)입�
 #: ../libsvn_fs_fs/fs_fs.c:412
 #, c-format
 msgid "Can't grab FSFS txn list mutex"
-msgstr "FSFS 트랜잭션 리스트를 얻을 수 없습니다."
+msgstr "FSFS 트랜잭션 리스트용 뮤텍스를 얻을 수 없습니다."
 
 #: ../libsvn_fs_fs/fs_fs.c:420
 #, c-format
 msgid "Can't ungrab FSFS txn list mutex"
-msgstr "FSFS 트랜잭션 리스트를 놓을 수 없습니다."
+msgstr "FSFS 트랜잭션 리스트용 뮤텍스를 놓을 수 없습니다."
 
 #: ../libsvn_fs_fs/fs_fs.c:473
-#, fuzzy, c-format
+#, c-format
 msgid "Can't grab FSFS mutex for '%s'"
-msgstr "FS 뮤텍스를 얻을 수 없습니다."
+msgstr "'%s' 용 FSFS 뮤텍스를 얻을 수 없습니다."
 
 #: ../libsvn_fs_fs/fs_fs.c:488
-#, fuzzy, c-format
+#, c-format
 msgid "Can't ungrab FSFS mutex for '%s'"
-msgstr "파일시스템 뮤텍스를 얻을 수 없습니다."
+msgstr "'%s' 용 FSFS 뮤텍스를 놓을 수 없습니다."
 
 #: ../libsvn_fs_fs/fs_fs.c:559
 #, c-format
@@ -2549,33 +2548,33 @@ msgid "Can't get exclusive lock on file '%s'"
 msgstr "파일 '%s'에 대해 배타적 잠금기능을 걸 수 없습니다."
 
 #: ../libsvn_fs_fs/fs_fs.c:793
-#, fuzzy, c-format
+#, c-format
 msgid "Format file '%s' contains an unexpected non-digit"
-msgstr "'%s'의 첫번째 줄은 숫자가 아닌 것을 포함하고 있습니다."
+msgstr "포맷 파일 '%s'이 숫자가 아닌 것을 포함하고 있습니다."
 
 #: ../libsvn_fs_fs/fs_fs.c:841
-#, fuzzy, c-format
+#, c-format
 msgid "Can't read first line of format file '%s'"
-msgstr "파일 '%s'의 길이 행을 읽을 수 없습니다."
+msgstr "포맷 파일 '%s'의 첫째 행을 읽을 수 없습니다."
 
 #: ../libsvn_fs_fs/fs_fs.c:885
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' contains invalid filesystem format option '%s'"
-msgstr "'%s'는 파일이 아닙니다.  파일시스템 '%s'"
+msgstr "'%s'(은)는 잘못된 파일시스템 포맷 옵션 '%s'(을)를 포함합니다"
 
 #: ../libsvn_fs_fs/fs_fs.c:975
-#, fuzzy, c-format
+#, c-format
 msgid "Expected FS format between '1' and '%d'; found format '%d'"
-msgstr "예상되는 파일시스템 포맷 '%d', 발견된 포맷 '%d'"
+msgstr "예상되는 파일시스템 포맷은 '1'에서 '%d'까지의 수입니다. 발견된 포맷 '%d'"
 
 #: ../libsvn_fs_fs/fs_fs.c:1446 ../libsvn_fs_fs/fs_fs.c:1460
 msgid "Found malformed header in revision file"
 msgstr "리비전 파일내에 잘못된 형식의 헤더가 있습니다."
 
 #: ../libsvn_fs_fs/fs_fs.c:1494
-#, fuzzy, c-format
+#, c-format
 msgid "Invalid revision number '%ld'"
-msgstr "잘못된 리비전 번호가 지정되었습니다."
+msgstr "잘못된 리비전 번호 %ld(이)가 지정되었습니다."
 
 #: ../libsvn_fs_fs/fs_fs.c:1509 ../libsvn_fs_fs/fs_fs.c:2190
 #: ../libsvn_fs_fs/fs_fs.c:2268 ../libsvn_repos/log.c:1589
@@ -2591,9 +2590,8 @@ msgid "Malformed text rep offset line in node-rev"
 msgstr "node-rev 에 잘못된 텍스트 rep 옵셋 라인"
 
 #: ../libsvn_fs_fs/fs_fs.c:1720
-#, fuzzy
 msgid "Missing id field in node-rev"
-msgstr "node-rev 내에 kind 필드가 없습니다."
+msgstr "node-rev 내에 id 필드가 없습니다."
 
 #: ../libsvn_fs_fs/fs_fs.c:1732
 msgid "Missing kind field in node-rev"
@@ -2742,18 +2740,17 @@ msgid "Transaction out of date"
 msgstr "트랜잭션이 오래된 것임"
 
 #: ../libsvn_fs_fs/fs_fs.c:5695
-#, fuzzy
 msgid "Recovery encountered a non-directory node"
-msgstr "디렉토리가 아닌 노드에 설정하려하였습니다."
+msgstr "디렉토리가 아닌 노드를 복원하려 하였습니다."
 
 #: ../libsvn_fs_fs/fs_fs.c:5717
 msgid "Recovery encountered a deltified directory representation"
 msgstr ""
 
 #: ../libsvn_fs_fs/fs_fs.c:5862
-#, fuzzy, c-format
+#, c-format
 msgid "Expected current rev to be <= %ld but found %ld"
-msgstr "URL('%s')은 파일입니다. 디렉토리를 지정하세요."
+msgstr "현재 리비전은 %ld보다 작거나 같아야합니다 %ld가 발견되었습니다"
 
 #: ../libsvn_fs_fs/fs_fs.c:5915
 #, c-format
@@ -2839,14 +2836,14 @@ msgstr "RA 플러그인 버전이 다릅니다. '%s': 발견된 것 %d.%d.%d%s, 
 
 #: ../libsvn_ra/ra_loader.c:477 ../libsvn_ra_serf/serf.c:506
 #: ../libsvn_ra_serf/serf.c:624
-#, fuzzy, c-format
+#, c-format
 msgid "Illegal repository URL '%s'"
-msgstr "잘못된 svn 저장소 URL '%s'"
+msgstr "잘못된 저장소 URL '%s'"
 
 #: ../libsvn_ra/ra_loader.c:522
-#, fuzzy, c-format
+#, c-format
 msgid "Invalid config: unknown HTTP library '%s'"
-msgstr "잘못된 설정: 알 수 없는 http 인증 형식('%s')입니다"
+msgstr "잘못된 설정: 알 수 없는 HTTP 라이브러리 ('%s')입니다"
 
 #: ../libsvn_ra/ra_loader.c:586
 #, c-format
@@ -2854,9 +2851,9 @@ msgid "Unrecognized URL scheme for '%s'"
 msgstr "알 수 없는 URL 스키마입니다. '%s'"
 
 #: ../libsvn_ra/ra_loader.c:608
-#, fuzzy, c-format
+#, c-format
 msgid "Repository UUID '%s' doesn't match expected UUID '%s'"
-msgstr "대상 저장소의 UUID (%s)가 기대하는 UUID (%s)와 일치하지 않습니다."
+msgstr "저장소의 UUID (%s)가 기대하는 UUID (%s)와 일치하지 않습니다."
 
 #: ../libsvn_ra/ra_loader.c:664
 #, c-format
@@ -2889,9 +2886,9 @@ msgid "Unable to open an ra_local session to URL"
 msgstr "URL에 대해 ra_local 세션을 열수 없습니다."
 
 #: ../libsvn_ra_local/ra_plugin.c:492
-#, fuzzy, c-format
+#, c-format
 msgid "URL '%s' is not a child of the session's repository root URL '%s'"
-msgstr "'%s'는 '%s'와 동일한 저장소에 있지 않습니다"
+msgstr "URL '%s'(은)는 진행중인 저장소 루트 URL '%s'의 하위에 있지 않습니다"
 
 #: ../libsvn_ra_local/ra_plugin.c:1398 ../libsvn_ra_neon/session.c:925
 #: ../libsvn_ra_serf/serf.c:299 ../libsvn_ra_svn/client.c:2277
@@ -2929,9 +2926,9 @@ msgid "Could not fetch the Version Resource URL (needed during an import or when
 msgstr "리소스의 URL을 얻을 수 없습니다. (이 값은 임포트에 사용되었고,작업사본에 없을 경우 캐시된 속성에서 얻습니다.)"
 
 #: ../libsvn_ra_neon/commit.c:497
-#, fuzzy, c-format
+#, c-format
 msgid "File or directory '%s' is out of date; try updating"
-msgstr "파일 또는 디렉토리 '%s'는 만료된 것입니다."
+msgstr "파일 또는 디렉토리 '%s'는 만료된 것입니다; 업데이트 하세요"
 
 #: ../libsvn_ra_neon/commit.c:505
 msgid "The CHECKOUT response did not contain a 'Location:' header"
@@ -2940,9 +2937,9 @@ msgstr "CHECKOUT 응답에 'Location:' 헤더가 없습니다."
 #: ../libsvn_ra_neon/commit.c:515 ../libsvn_ra_neon/props.c:210
 #: ../libsvn_ra_neon/util.c:520 ../libsvn_ra_serf/commit.c:1368
 #: ../libsvn_ra_serf/commit.c:1769 ../libsvn_ra_serf/update.c:2162
-#, fuzzy, c-format
+#, c-format
 msgid "Unable to parse URL '%s'"
-msgstr "Neon이 이해할 수 없는 URL 입니다: '%s'"
+msgstr "이해할 수 없는 URL 입니다: '%s'"
 
 #: ../libsvn_ra_neon/commit.c:1045 ../libsvn_ra_serf/commit.c:1619
 #, c-format
@@ -2986,29 +2983,29 @@ msgid "DAV request failed; it's possible that the repository's pre-revprop-chang
 msgstr "DAV 요청 실패: pre-revprop-change 훅이 실패하였거나 존재하지 않을 수 있습니다."
 
 #: ../libsvn_ra_neon/fetch.c:1422
-#, fuzzy, c-format
+#, c-format
 msgid "Missing rev attr in target-revision element"
-msgstr "대상 리비전 요소에서 revision 속성이 빠졌습니다"
+msgstr "target-revision 요소에서 rev 속성이 빠졌습니다"
 
 #: ../libsvn_ra_neon/fetch.c:1433 ../libsvn_ra_serf/update.c:1465
-#, fuzzy, c-format
+#, c-format
 msgid "Missing name attr in absent-directory element"
-msgstr "open-directory 요소에서 name 속성이 빠졌습니다."
+msgstr "absent-directory 요소에서 name 속성이 빠졌습니다."
 
 #: ../libsvn_ra_neon/fetch.c:1449 ../libsvn_ra_serf/update.c:1488
-#, fuzzy, c-format
+#, c-format
 msgid "Missing name attr in absent-file element"
-msgstr "open-file 요소에서 name 속성이 빠졌습니다."
+msgstr "absent-file 요소에서 name 속성이 빠졌습니다."
 
 #: ../libsvn_ra_neon/fetch.c:1464
-#, fuzzy, c-format
+#, c-format
 msgid "Missing path attr in resource element"
-msgstr "%s 요소에서 name 속성이 빠졌습니다."
+msgstr "resource 요소에서 path 속성이 빠졌습니다."
 
 #: ../libsvn_ra_neon/fetch.c:1473
-#, fuzzy, c-format
+#, c-format
 msgid "Missing rev attr in open-directory element"
-msgstr "open-directory 요소에서 revision 속성이 빠졌습니다"
+msgstr "open-directory 요소에서 rev 속성이 빠졌습니다"
 
 #: ../libsvn_ra_neon/fetch.c:1504 ../libsvn_ra_serf/replay.c:258
 #: ../libsvn_ra_serf/update.c:1294
@@ -3023,14 +3020,14 @@ msgid "Missing name attr in add-directory element"
 msgstr "add-directory 요소에서 name 속성이 빠졌습니다."
 
 #: ../libsvn_ra_neon/fetch.c:1544
-#, fuzzy, c-format
+#, c-format
 msgid "Missing copyfrom-rev attr in add-directory element"
 msgstr "add-directory 요소에서 name 속성이 빠졌습니다."
 
 #: ../libsvn_ra_neon/fetch.c:1621
-#, fuzzy, c-format
+#, c-format
 msgid "Missing rev attr in open-file element"
-msgstr "open-file 요소에서 revision 속성이 빠졌습니다"
+msgstr "open-file 요소에서 rev 속성이 빠졌습니다"
 
 #: ../libsvn_ra_neon/fetch.c:1628 ../libsvn_ra_serf/replay.c:319
 #: ../libsvn_ra_serf/update.c:1369
@@ -3045,19 +3042,19 @@ msgid "Missing name attr in add-file element"
 msgstr "add-file 요소에서 name 속성이 빠졌습니다."
 
 #: ../libsvn_ra_neon/fetch.c:1667
-#, fuzzy, c-format
+#, c-format
 msgid "Missing copyfrom-rev attr in add-file element"
-msgstr "add-file 요소에서 name 속성이 빠졌습니다."
+msgstr "add-file 요소에서 copyfrom-rev 속성이 빠졌습니다."
 
 #: ../libsvn_ra_neon/fetch.c:1722
-#, fuzzy, c-format
+#, c-format
 msgid "Missing name attr in set-prop element"
-msgstr "%s 요소에서 name 속성이 빠졌습니다."
+msgstr "set-prop 요소에서 name 속성이 빠졌습니다."
 
 #: ../libsvn_ra_neon/fetch.c:1736
-#, fuzzy, c-format
+#, c-format
 msgid "Missing name attr in remove-prop element"
-msgstr "open-file 요소에서 name 속성이 빠졌습니다."
+msgstr "remove-prop 요소에서 name 속성이 빠졌습니다."
 
 #: ../libsvn_ra_neon/fetch.c:1810 ../libsvn_ra_serf/replay.c:232
 #: ../libsvn_ra_serf/update.c:1434
@@ -3102,14 +3099,12 @@ msgstr "dated-rev 요청에 대한 서버의 응답이 올바르지 않습니다
 
 #: ../libsvn_ra_neon/get_location_segments.c:118
 #: ../libsvn_ra_serf/getlocationsegments.c:101 ../libsvn_ra_svn/client.c:1603
-#, fuzzy
 msgid "Expected valid revision range"
-msgstr "정상적인 리비전번호와 경로가 아닙니다"
+msgstr "기대하는 리비전번호 범위가 아닙니다"
 
 #: ../libsvn_ra_neon/get_location_segments.c:207
-#, fuzzy
 msgid "'get-location-segments' REPORT not implemented"
-msgstr "get-locations REPORT 는 구현되지 않았습니다."
+msgstr "'get-location-segments' REPORT 는 구현되지 않았습니다."
 
 #: ../libsvn_ra_neon/get_locations.c:108
 msgid "Expected a valid revnum and path"
@@ -3143,9 +3138,9 @@ msgid "Invalid timeout value"
 msgstr "잘못된 타임아웃 값"
 
 #: ../libsvn_ra_neon/lock.c:253 ../libsvn_ra_neon/lock.c:385
-#, fuzzy, c-format
+#, c-format
 msgid "Failed to parse URI '%s'"
-msgstr "URI를 분석하는데 실패하였습니다."
+msgstr "URI '%s'(을)를 분석하는데 실패하였습니다."
 
 #: ../libsvn_ra_neon/lock.c:400 ../libsvn_ra_serf/locks.c:732
 #, c-format
@@ -3157,15 +3152,14 @@ msgid "Failed to fetch lock information"
 msgstr "잠금 정보 얻기 오류"
 
 #: ../libsvn_ra_neon/log.c:167 ../libsvn_ra_serf/log.c:200
-#, fuzzy, c-format
+#, c-format
 msgid "Missing name attr in revprop element"
-msgstr "%s 요소에서 name 속성이 빠졌습니다."
+msgstr "revprop 요소에서 name 속성이 빠졌습니다."
 
 #: ../libsvn_ra_neon/log.c:444 ../libsvn_ra_serf/log.c:547
 #: ../libsvn_ra_svn/client.c:1319
-#, fuzzy
 msgid "Server does not support custom revprops via log"
-msgstr "서버가 replay 명령을 지원하지 않습니다."
+msgstr "서버가 리비전 속성 수정을 지원하지 않는 오래된 버전입니다."
 
 #: ../libsvn_ra_neon/merge.c:218
 #, c-format
@@ -3232,9 +3226,9 @@ msgid "'DAV:baseline-collection' was not present on the baseline resource"
 msgstr "'DAV:baseline-collection' 은 꺼내온(baseline) 리소스에 존재하지 않습니다."
 
 #: ../libsvn_ra_neon/props.c:1001
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' was not present on the baseline resource"
-msgstr "'%s'는 리소스내에 존재 하지 않습니다."
+msgstr "'%s'는 꺼내온(baseline) 리소스내에 존재 하지 않습니다."
 
 #: ../libsvn_ra_neon/props.c:1153 ../libsvn_ra_serf/commit.c:846
 msgid "At least one property change failed; repository is unchanged"
@@ -3297,9 +3291,8 @@ msgid "Invalid config: unknown http authtype '%s'"
 msgstr "잘못된 설정: 알 수 없는 http 인증 형식('%s')입니다"
 
 #: ../libsvn_ra_neon/session.c:657
-#, fuzzy
 msgid "Module for accessing a repository via WebDAV protocol using Neon."
-msgstr "WebDAV (DeltaV) 프로토콜을 통해 저장소에 접근하는 모듈"
+msgstr "Neon을 이용하여 WebDAV 프로토콜을 통해 저장소에 접근하는 모듈"
 
 #: ../libsvn_ra_neon/session.c:812
 #, c-format
@@ -3335,18 +3328,18 @@ msgid "Invalid config: unable to load certificate file '%s'"
 msgstr "잘못된 설정: 인증서 파일 '%s' 를 읽을 수 없습니다."
 
 #: ../libsvn_ra_neon/session.c:1220
-#, fuzzy, c-format
+#, c-format
 msgid "Invalid config: unable to load PKCS#11 provider '%s'"
-msgstr "잘못된 설정: 인증서 파일 '%s' 를 읽을 수 없습니다."
+msgstr "잘못된 설정: PKCS#11 제공자 '%s'(을)를 읽을 수 없습니다."
 
 #: ../libsvn_ra_neon/session.c:1341 ../libsvn_ra_serf/serf.c:1118
 msgid "The UUID property was not found on the resource or any of its parents"
 msgstr "UUID 속성이 대상이나 대상의 어떤 상위에서도 발견되지 않았습니다"
 
 #: ../libsvn_ra_neon/session.c:1416
-#, fuzzy, c-format
+#, c-format
 msgid "Unsupported RA loader version (%d) for ra_neon"
-msgstr "ra_svn에 대한 지원하지 않는 RA 로더 버전(%d)입니다."
+msgstr "지원되지 않는 ra_neon 용 RA 로더 버전(%d)입니다"
 
 #: ../libsvn_ra_neon/util.c:203
 msgid "The request response contained at least one error"
@@ -3357,9 +3350,9 @@ msgid "The response contains a non-conforming HTTP status line"
 msgstr "응답이 부적합한 HTTP 상태 라인을 포함합니다"
 
 #: ../libsvn_ra_neon/util.c:248
-#, fuzzy, c-format
+#, c-format
 msgid "Error setting property '%s': "
-msgstr "'%s'에 대한 %s 속성을 분석하던 중 오류 발생: '%s'"
+msgstr "%s 속성을 설정 중 오류 발생: "
 
 #: ../libsvn_ra_neon/util.c:534
 #, c-format
@@ -3387,9 +3380,9 @@ msgid "Server sent unexpected return value (%d %s) in response to %s request for
 msgstr "서버가 예기치 않은 리턴 값 (%d %s) 을 %s 을/를 '%s'에 요청한 것에 대한 응답으로 보냈습니다"
 
 #: ../libsvn_ra_neon/util.c:577
-#, fuzzy, c-format
+#, c-format
 msgid "authorization failed: %s"
-msgstr "인증에 실패하였습니다."
+msgstr "인증에 실패하였습니다: %s"
 
 #: ../libsvn_ra_neon/util.c:579
 msgid "authorization failed"
@@ -3419,14 +3412,13 @@ msgid "The %s request returned invalid XML in the response: %s (%s)"
 msgstr "%s 요청의 응답으로 잘못된 XML을 반환하였습니다. : %s (%s)"
 
 #: ../libsvn_ra_serf/auth.c:287 ../libsvn_ra_serf/auth.c:293
-#, fuzzy
 msgid "Missing 'realm' attribute in Authorization header"
-msgstr "'%s'에 'timestamp' 속성이 빠졌습니다"
+msgstr "Authorization 헤더에 realm 속성이 빠졌습니다"
 
 #: ../libsvn_ra_serf/commit.c:408 ../libsvn_ra_serf/commit.c:431
-#, fuzzy, c-format
+#, c-format
 msgid "Directory '%s' is out of date; try updating"
-msgstr "디렉토리 '%s'가 없습니다."
+msgstr "디렉토리 '%s'가 너무 오래되었습니다; 업데이트 하세요"
 
 #: ../libsvn_ra_serf/commit.c:509 ../libsvn_repos/commit.c:388
 #, c-format
@@ -3444,9 +3436,8 @@ msgid "Failed writing updated file"
 msgstr "수정된 파일을 쓰는데 실패하였습니다"
 
 #: ../libsvn_ra_serf/commit.c:1103
-#, fuzzy
 msgid "The OPTIONS response did not include the requested activity-collection-set value"
-msgstr "OPTIONS 응답이 요청한 activity-collection-set 에 대한 것을 포함하고 있지 않습니다. 대개 URL이 WebDAV 가 활성화되지 않은 경우 발생합니다."
+msgstr "OPTIONS 응답이 요청한 activity-collection-set 에 대한 것을 포함하고 있지 않습니다"
 
 #: ../libsvn_ra_serf/commit.c:1131
 #, c-format
@@ -3455,15 +3446,13 @@ msgstr ""
 
 #: ../libsvn_ra_serf/commit.c:1159 ../libsvn_ra_serf/property.c:893
 #: ../libsvn_ra_serf/update.c:1134 ../libsvn_ra_serf/update.c:1679
-#, fuzzy
 msgid "The OPTIONS response did not include the requested checked-in value"
-msgstr "OPTIONS 응답이 요청한 activity-collection-set 에 대한 것을 포함하고 있지 않습니다. 대개 URL이 WebDAV 가 활성화되지 않은 경우 발생합니다."
+msgstr "OPTIONS 응답이 요청한 checked-in 값을 포함하고 있지 않습니다."
 
 #: ../libsvn_ra_serf/commit.c:1388 ../libsvn_ra_serf/commit.c:1789
 #: ../libsvn_ra_serf/property.c:907
-#, fuzzy
 msgid "The OPTIONS response did not include the requested baseline-collection value"
-msgstr "OPTIONS 응답이 요청한 activity-collection-set 에 대한 것을 포함하고 있지 않습니다. 대개 URL이 WebDAV 가 활성화되지 않은 경우 발생합니다."
+msgstr "OPTIONS 응답이 요청한 baseline-collection 값을 포함하고 있지 않습니다."
 
 #: ../libsvn_ra_serf/commit.c:1414
 #, c-format
@@ -3490,9 +3479,8 @@ msgid "Unlock request failed: %d %s"
 msgstr "잠금해제 요청 실패: %d %s"
 
 #: ../libsvn_ra_serf/property.c:921
-#, fuzzy
 msgid "The OPTIONS response did not include the requested version-name value"
-msgstr "OPTIONS 응답이 요청한 activity-collection-set 에 대한 것을 포함하고 있지 않습니다. 대개 URL이 WebDAV 가 활성화되지 않은 경우 발생합니다."
+msgstr "OPTIONS 응답이 요청한 version-name 값을 포함하고 있지 않습니다"
 
 #: ../libsvn_ra_serf/replay.c:195 ../libsvn_ra_serf/update.c:1231
 msgid "Missing revision attr in target-revision element"
@@ -3522,28 +3510,26 @@ msgid "Missing name attr in %s element"
 msgstr "%s 요소에서 name 속성이 빠졌습니다."
 
 #: ../libsvn_ra_serf/replay.c:803
-#, fuzzy, c-format
+#, c-format
 msgid "Error retrieving replay REPORT (%d)"
-msgstr "REPORT (%d) 검색 실패"
+msgstr "replay REPORT(%d)(을)를 추출하지 못했습니다"
 
 #: ../libsvn_ra_serf/serf.c:322
-#, fuzzy
 msgid "Module for accessing a repository via WebDAV protocol using serf."
-msgstr "WebDAV (DeltaV) 프로토콜을 통해 저장소에 접근하는 모듈"
+msgstr "serf를 이용하여 WebDAV 프로토콜을 통해 저장소에 접근하는 모듈"
 
 #: ../libsvn_ra_serf/serf.c:550
-#, fuzzy, c-format
+#, c-format
 msgid "Could not lookup hostname `%s'"
-msgstr "호스트명을 찾을 수 없습니다: %s://%s"
+msgstr "호스트명을 찾을 수 없습니다: `%s'"
 
 #: ../libsvn_ra_serf/serf.c:805
-#, fuzzy
 msgid "The OPTIONS response did not include the requested resourcetype value"
-msgstr "OPTIONS 응답이 요청한 activity-collection-set 에 대한 것을 포함하고 있지 않습니다. 대개 URL이 WebDAV 가 활성화되지 않은 경우 발생합니다."
+msgstr "OPTIONS 응답이 요청한 resourcetype 값을 포함하고 있지 않습니다"
 
 #: ../libsvn_ra_serf/serf.c:969
 msgid "The PROPFIND response did not include the requested resourcetype value"
-msgstr ""
+msgstr "PROPFIND 응답이 요청한 resourcetype 값을 포함하고 있지 않습니다"
 
 #: ../libsvn_ra_serf/serf.c:1186
 #, c-format
@@ -3551,14 +3537,13 @@ msgid "Unsupported RA loader version (%d) for ra_serf"
 msgstr "ra_serf에 대한 지원하지 않는 RA 로더 버전(%d)입니다."
 
 #: ../libsvn_ra_serf/update.c:823
-#, fuzzy, c-format
+#, c-format
 msgid "GET request failed: %d %s"
-msgstr "잠금 요청 실패: %d %s"
+msgstr "GET 요청 실패: %d %s"
 
 #: ../libsvn_ra_serf/update.c:2221 ../libsvn_ra_serf/util.c:1416
-#, fuzzy
 msgid "The OPTIONS response did not include the requested version-controlled-configuration value"
-msgstr "OPTIONS 응답이 요청한 activity-collection-set 에 대한 것을 포함하고 있지 않습니다. 대개 URL이 WebDAV 가 활성화되지 않은 경우 발생합니다."
+msgstr "OPTIONS 응답이 요청한 version-controlled-configuration 값을 포함하고 있지 않습니다"
 
 #: ../libsvn_ra_serf/update.c:2304
 #, c-format
@@ -3628,25 +3613,24 @@ msgid "Server requires minimum version %d"
 msgstr "서버는 적어도 버전 %d 을/를 요구합니다"
 
 #: ../libsvn_ra_svn/client.c:572
-#, fuzzy, c-format
+#, c-format
 msgid "Server only supports versions up to %d"
-msgstr "서버가 unlock 명령을 지원하지 않습니다."
+msgstr "서버가 %d 버전이하만 지원합니다"
 
 #: ../libsvn_ra_svn/client.c:580
-#, fuzzy
 msgid "Server does not support edit pipelining"
-msgstr "서버가 날짜 기반 명령을 지원하지 않습니다."
+msgstr "pipelining 편집을 지원하지 않습니다"
 
 #: ../libsvn_ra_svn/client.c:618
 msgid "Impossibly long repository root from server"
 msgstr "너무 긴 저장소 루트가 지정되었습니다."
 
 #: ../libsvn_ra_svn/client.c:630
-#, fuzzy
 msgid ""
 "Module for accessing a repository using the svn network protocol.\n"
 "  - with Cyrus SASL authentication"
-msgstr "svn 네트워크 프로토콜을 사용하여 저장소에 접근하는 모듈"
+msgstr "svn 네트워크 프로토콜을 사용하여 저장소에 접근하는 모듈\n"
+"  - Cyrus SASL 인증 이용"
 
 #: ../libsvn_ra_svn/client.c:634
 msgid "Module for accessing a repository using the svn network protocol."
@@ -3669,9 +3653,8 @@ msgid "Dirlist element not a list"
 msgstr "Dirlist 요소가 리스트 구조체가 아닙니다."
 
 #: ../libsvn_ra_svn/client.c:1116
-#, fuzzy
 msgid "Mergeinfo element is not a list"
-msgstr "Prop diff 요소가 리스트 구조체가 아닙니다."
+msgstr "Mergeinfo 요소가 리스트가 아닙니다"
 
 #: ../libsvn_ra_svn/client.c:1308
 msgid "Log entry not a list"
@@ -3694,14 +3677,12 @@ msgid "Location entry not a list"
 msgstr "Location 엔트리가 리스트 구조체가 아닙니다"
 
 #: ../libsvn_ra_svn/client.c:1582
-#, fuzzy
 msgid "'get-location-segments' not implemented"
-msgstr "get-locations는 구현되지 않았습니다"
+msgstr "'get-location-segments'가 구현되지 않았습니다"
 
 #: ../libsvn_ra_svn/client.c:1594
-#, fuzzy
 msgid "Location segment entry not a list"
-msgstr "Location 엔트리가 리스트 구조체가 아닙니다"
+msgstr "Location segment 엔트리가 리스트 구조체가 아닙니다"
 
 #: ../libsvn_ra_svn/client.c:1656
 msgid "'get-file-revs' not implemented"
@@ -3764,9 +3745,8 @@ msgid "Server doesn't support the replay command"
 msgstr "서버가 replay 명령을 지원하지 않습니다."
 
 #: ../libsvn_ra_svn/client.c:2210
-#, fuzzy
 msgid "Server doesn't support the replay-range command"
-msgstr "서버가 replay 명령을 지원하지 않습니다."
+msgstr "서버가 replay-range 명령을 지원하지 않습니다."
 
 #: ../libsvn_ra_svn/client.c:2228
 #, c-format
@@ -3797,9 +3777,8 @@ msgid "Authentication error from server: %s"
 msgstr "서버 인증 오류 : %s"
 
 #: ../libsvn_ra_svn/cyrus_auth.c:824
-#, fuzzy
 msgid "Can't get username or password"
-msgstr "암호를 얻는데 실패하였습니다."
+msgstr "ID 혹은 비밀번호를 얻는데 실패하였습니다."
 
 #: ../libsvn_ra_svn/editorp.c:129
 msgid "Successful edit status returned too soon"
@@ -3881,14 +3860,14 @@ msgid "Can't get socket timeout"
 msgstr "소켓 시간 제한 값을 구할 수 없습니다."
 
 #: ../libsvn_repos/commit.c:127
-#, fuzzy, c-format
+#, c-format
 msgid "Directory '%s' is out of date"
-msgstr "디렉토리 '%s'에 URL정보가 없습니다."
+msgstr "디렉토리 '%s'(이)가 오래되었습니다"
 
 #: ../libsvn_repos/commit.c:128
-#, fuzzy, c-format
+#, c-format
 msgid "File '%s' is out of date"
-msgstr "아이템이 오래되었습니다"
+msgstr "파일 '%s'(이)가 오래되었습니다"
 
 #: ../libsvn_repos/commit.c:296 ../libsvn_repos/commit.c:441
 #, c-format
@@ -3961,9 +3940,9 @@ msgid "* Verified revision %ld.\n"
 msgstr "* 검토된 리비전 %ld.\n"
 
 #: ../libsvn_repos/dump.c:1142
-#, fuzzy, c-format
+#, c-format
 msgid "Unexpected node kind %d for '%s'"
-msgstr "기대하지 않은 노드 종류가 발견되었습니다"
+msgstr "노드 종류(%d)(이)가 '%s'에 대해 발견되었습니다"
 
 #: ../libsvn_repos/fs-wrap.c:59 ../libsvn_repos/load.c:1351
 msgid "Commit succeeded, but post-commit hook failed"
@@ -4031,9 +4010,9 @@ msgid "Unlock"
 msgstr ""
 
 #: ../libsvn_repos/hooks.c:129
-#, fuzzy, c-format
+#, c-format
 msgid "%s hook failed (exit code %d)"
-msgstr "'%s' 훅이 실패했습니다 ( 0이 아닌 종료코드 %d 로 빠져나갔습니다)."
+msgstr "%s 훅이 실패했습니다 ( 종료코드 %d)"
 
 #: ../libsvn_repos/hooks.c:133
 #, c-format
@@ -4155,14 +4134,15 @@ msgid "Relative source revision %ld is not available in current repository"
 msgstr "상대 소스 리비전 %ld 는 현재 저장소안에서 유효하지 않습니다."
 
 #: ../libsvn_repos/load.c:1048
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Copy source checksum mismatch on copy from '%s'@%ld\n"
 " to '%s' in rev based on r%ld:\n"
 "   expected:  %s\n"
 "     actual:  %s\n"
 msgstr ""
-"베이스 체크섬 불일치 오류 '%s':\n"
+"복사 원본 체크섬 불일치 오류: 원본 '%s'@%ld\n"
+" 대상 '%s' 리비전 r%ld:\n"
 "  기대값 :  %s\n"
 "  실제값 :  %s\n"
 
@@ -4234,12 +4214,12 @@ msgstr "파일 시스템내의 '%s'는 파일이나 디렉토리가 아닙니다
 #: ../libsvn_repos/reporter.c:172
 #, c-format
 msgid "Invalid length (%%%s) when about to read a string"
-msgstr ""
+msgstr "문자열의 길이(%%%s)가 읽기에 충분하지 않습니다"
 
 #: ../libsvn_repos/reporter.c:232
-#, fuzzy, c-format
+#, c-format
 msgid "Invalid depth (%c) for path '%s'"
-msgstr "원본 경로 '%s' 에 대한 잘못된 복제입니다"
+msgstr "depth(%c)는 원본 경로 '%s'에 대해 올바르지 않습니다"
 
 #: ../libsvn_repos/reporter.c:779
 #, c-format
@@ -4267,9 +4247,9 @@ msgid "Two top-level reports with no target"
 msgstr "대상이 없는 두 개의 최상의 보고서"
 
 #: ../libsvn_repos/reporter.c:1282
-#, fuzzy, c-format
+#, c-format
 msgid "Unsupported report depth '%s'"
-msgstr "경로 '%s'에 지원될 수 없는 노드 종류입니다"
+msgstr "지원하지 않는 report depth '%s'입니다"
 
 #: ../libsvn_repos/reporter.c:1326
 msgid "Depth 'exclude' not supported for link"
@@ -4358,9 +4338,9 @@ msgid "Expected repository format '%d' or '%d'; found format '%d'"
 msgstr "예상되는 파일시스템 포맷 '%d' 또는 '%d'; 발견된 포맷 '%d'"
 
 #: ../libsvn_repos/repos.c:1508
-#, fuzzy, c-format
+#, c-format
 msgid "unknown capability '%s'"
-msgstr "알수 없는 파일시스템 종류 '%s'"
+msgstr "알 수 없는 capability '%s'"
 
 #: ../libsvn_repos/rev_hunt.c:67
 #, c-format
@@ -4382,24 +4362,24 @@ msgid "Unreadable path encountered; access denied"
 msgstr "읽을 수 없는 경로 발생; 접근 거부되었습니다."
 
 #: ../libsvn_repos/rev_hunt.c:1118
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is not a file in revision %ld"
-msgstr "'%s'은(는) 리비전 %ld에 없습니다."
+msgstr "'%s'은(는) 리비전 %ld에서 파일이 아닙니다"
 
 #: ../libsvn_subr/cache-inprocess.c:179
-#, fuzzy, c-format
+#, c-format
 msgid "Can't lock cache mutex"
-msgstr "FS 뮤텍스 할당 불가능"
+msgstr "캐시 뮤텍스 잠금 불가능"
 
 #: ../libsvn_subr/cache-inprocess.c:197
-#, fuzzy, c-format
+#, c-format
 msgid "Can't unlock cache mutex"
-msgstr "FS 뮤텍스 할당 불가능"
+msgstr "캐시 뮤텍스 해제 불가능"
 
 #: ../libsvn_subr/cache-inprocess.c:449
-#, fuzzy, c-format
+#, c-format
 msgid "Can't create cache mutex"
-msgstr "소켓을 열 수 없습니다."
+msgstr "캐시 뮤텍스 생성 실패"
 
 #: ../libsvn_subr/cache-memcache.c:153
 #, c-format
@@ -4412,14 +4392,13 @@ msgid "Unknown memcached error while writing"
 msgstr ""
 
 #: ../libsvn_subr/cache-memcache.c:218
-#, fuzzy
 msgid "Can't iterate a memcached cache"
-msgstr "분리된 상태를 설정할 수 없습니다."
+msgstr "memcache로 된 캐시를 순회할 수 없습니다"
 
 #: ../libsvn_subr/cache-memcache.c:281
-#, fuzzy, c-format
+#, c-format
 msgid "Error parsing memcache server '%s'"
-msgstr "'%s'의 구문 분석 실패"
+msgstr "memcache 서버 '%s'의 구문 분석 실패"
 
 #: ../libsvn_subr/cache-memcache.c:289
 #, c-format
@@ -4447,9 +4426,9 @@ msgid "Unknown error creating apr_memcache_t"
 msgstr ""
 
 #: ../libsvn_subr/cmdline.c:564
-#, fuzzy, c-format
+#, c-format
 msgid "Invalid config: unknown password store '%s'"
-msgstr "잘못된 설정: 알 수 없는 http 인증 형식('%s')입니다"
+msgstr "잘못된 설정: 알 수 없는 비밀번호 저장 방식 '%s'"
 
 #: ../libsvn_subr/cmdline.c:735
 #, c-format
@@ -4457,9 +4436,9 @@ msgid "Error initializing command line arguments"
 msgstr "명령행 인자 초기화 실패"
 
 #: ../libsvn_subr/config.c:647
-#, fuzzy, c-format
+#, c-format
 msgid "Config error: invalid boolean value '%s' for '[%s] %s'"
-msgstr "구성 오류: 잘못된 부울리안 값입니다. '%s'"
+msgstr "구성 오류: 잘못된 부울리안 값입니다. '%s' ('[%s] %s)"
 
 #: ../libsvn_subr/config.c:654
 #, fuzzy, c-format
