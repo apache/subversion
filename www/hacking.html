@@ -64,6 +64,7 @@ $LastChangedDate$
 <li><a href="#release-numbering">Release numbering, compatibility, and deprecation</a></li>
 <li><a href="#release-stabilization">Stabilizing and maintaining releases</a></li>
 <li><a href="#tarball-signing">Signing source distribution packages</a></li>
+<li><a href="#custom-releases">Custom releases</a></li>
 <li><a href="#l10n">Localization (l10n)</a></li>
 </ul>
 
@@ -2900,6 +2901,37 @@ tarballs.
 </p>
 </div>
 
+<div class="h2" id="custom-releases" title="custom-releases">
+<h2>Custom releases</h2>
+
+<p>It is preferred to use the patch process and have your changes
+accepted and applied to trunk to be released on the normal Subversion
+release schedule.  However, if you feel that you need to make changes
+that would not be widely accepted by the Subversion developer
+community, or need to provide early access to unreleased features, you
+should follow the guidelines below.</p>
+
+<p>First, make sure you follow the <a
+href="http://subversion.org/legal/trademark-policy.html"> Subversion
+trademark policy</a>.  You will need to differentiate your release
+from the standard Subversion releases to reduce any potential
+confusion caused by your custom release.</p>
+
+<p>Second, consider creating a branch in the public subversion
+repository to track your changes and to potentially allow your custom
+changes to be merged into mainline Subversion.</p>
+
+<p>Third, if your custom release is likely to generate bug reports
+that would not be relevant to mainline Subversion, please stay in
+touch with the users of the custom release so you can intercept and
+filter those reports.  But of course, the best option would be not to
+be in that situation in the first place&nbsp;&mdash;&nbsp;the more
+your custom release diverges from mainline Subversion, the more
+confusion it invites.  If you must make custom releases, please try to
+keep them as temporary and as non-divergent as possible.</p>
+
+</div>
+
 <div class="h2" id="l10n" title="l10n">
 <h2>Localization (l10n)</h2>
 
@@ -2961,8 +2993,6 @@ href="http://subversion.tigris.org/servlets/ProjectMailingListList"
 <p>See <a href="http://svn.collab.net/repos/svn/trunk/TRANSLATING"
 >http://svn.collab.net/repos/svn/trunk/TRANSLATING</a> for more
 information about translating.</p>
-
-</div>
 
 </div>
 </body>
