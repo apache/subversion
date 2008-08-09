@@ -48,6 +48,14 @@ Candidate changes for 1.5.2:
    Votes:
      +1: stsp
 
+ * r32417
+   Fix issue #3255: client capabilities were not passed to start-commit
+   Justification:
+     Without this fix, start-commit cannot do early rejection of
+     commits from clients that do not support mergeinfo.
+   Votes:
+     +1: kfogel
+
 Approved changes:
 =================
 
