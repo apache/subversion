@@ -51,6 +51,7 @@ $LastChangedDate$
 <li><a href="#automated-tests">Automated tests</a></li>
 <li><a href="#write-test-cases-first">Writing test cases before code</a></li>
 <li><a href="#server-debugging">Debugging the server</a></li>
+<li><a href="#net-trace">Tracing network traffic</a></li>
 <li><a href="#tracing-memory-leaks">Tracking down memory leaks</a></li>
 <li><a href="#log-messages">Writing log messages</a></li>
 <li><a href="#crediting">Crediting</a></li>
@@ -1370,6 +1371,84 @@ server, "set x = 0", and step through the code as desired.</p>
 
 </div>
 
+<div class="h2" id="net-trace" title="net-trace">
+<h2>Tracing network traffic</h2>
+
+<p>Use <a href="http://www.wireshark.org/">Wireshark</a> (formerly
+known as "Ethereal") to eavesdrop on the conversation.</p>
+
+<p>First, make sure that between captures within the same wireshark
+session, you hit <em>Clear</em>, otherwise filters from one capture
+(say, an HTTP capture) might interfere with others (say, an ra_svn
+capture). </p>
+
+<p>Assuming you're cleared, then:</p>
+
+<ol>
+<li><p>Pull down the <i>Capture</i> menu, and choose
+    <i>Capture&nbsp;Filters</i>.</p></li>
+<li><p>If debugging the http:// (WebDAV) protocol, then in the window
+    that pops up, choose "<code>HTTP&nbsp;TCP&nbsp;port&nbsp;(80)</code>"
+    (which should result in the filter string
+    "<code><i>tcp&nbsp;port&nbsp;http</i></code>").</p>
+    <p>If debugging the svn:// (ra_svn) protocol, then choose <i>New</i>,
+    give the new filter a name (say, "ra_svn"), and type
+    "<code>tcp&nbsp;port&nbsp;3690</code>" into the filter string box.</p>
+    <p>When done, click OK.</p></li> 
+<li><p>Again go to the <i>Capture</i> menu, this time choose
+    <i>Interfaces</i>, and click <i>Options</i> next to the
+    appropriate interface (probably you want interface "lo", for
+    "loopback", assuming the server will run on the same machine as
+    the client).</p></li>
+<li><p>Turn off promiscuous mode by unchecking the appropriate
+    checkbox.</p></li>
+<li><p>Click the <i>Start</i> button in the lower right to start the
+    capture.</p></li>
+<li><p>Run your Subversion client.</p></li>
+<li><p>Click the Stop icon (a red X over an ethernet interface card) when
+    the operation is finished (or <i>Capture-&gt;Stop</i> should
+    work).  Now you have a capture.  It looks like a huge list of
+    lines.</p></li>
+<li><p>Click on the <i>Protocol</i> column to sort.</p></li>
+<li><p>Then, click on the first relevant line to select it; usually this
+    is just the first line.</p></li>
+<li><p>Right click, and choose <i>Follow TCP Stream</i>.  You'll be
+    presented with the request/response pairs of the Subversion
+    client's HTTP conversion.</p></li>
+</ol>
+
+<p>The above instructions are specific to the graphical version of
+Wireshark (version 0.99.6), and don't apply to the command-line
+version known as "tshark" (which corresponds to "tethereal", from back
+when Wireshark was called Ethereal).</p>
+
+<p>Alternatively, you may set the <tt>neon-debug-mask</tt> parameter in your
+<tt>servers</tt> configuration file to cause neon's debugging output
+to appear when you run the <tt>svn</tt> client.  The numeric value of
+<tt>neon-debug-mask</tt> is a combination of the <tt>NE_DBG_...</tt> values
+in the header file <tt>ne_utils.h</tt>.  For current versions of neon, setting
+<tt>neon-debug-mask</tt> to 130 (i.e. <tt>NE_DBG_HTTP+NE_DBG_HTTPBODY)</tt>
+will cause the HTTP data to be shown.</p>
+
+<p>You may well want to disable compression when doing a network
+trace&mdash;see the <tt>http-compression</tt> parameter in the <tt>servers</tt>
+configuration file.</p>
+
+<p>Another alternative is to set up a logging proxy between the
+Subversion client and server.  A simple way to do this is to use the
+<tt>socat</tt> program.  For example, to log communication with an
+svnserve instance, run the following command:</p>
+
+<p><tt>socat -v  TCP4-LISTEN:9630,reuseaddr,fork
+    TCP4:localhost:svn</tt></p>
+
+<p>Then run your svn commands using an URL base of
+<tt>svn://127.0.0.1:9630/</tt>; <tt>socat</tt> will forward the
+traffic from port 9630 to the normal svnserve port (3690), and will
+print all traffic in both directions to standard error, prefixing it
+with &lt; and &gt; signs to show the direction of the traffic.</p>
+
+</div>
 
 <div class="h2" id="tracing-memory-leaks" title="tracing-memory-leaks">
 <h2>Tracking down memory leaks</h2>
