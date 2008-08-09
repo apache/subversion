@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import setup_path
 import unittest
 import os

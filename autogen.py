@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 # Run this script to generate a new version of functions.py
 # from the headers on your system
 

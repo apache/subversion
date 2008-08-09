@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from csvn.repos import *
 from csvn.auth import User
 import csvn.core

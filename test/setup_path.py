@@ -1,3 +1,5 @@
+#!/usr/bin/python -i
+
 # Set things up to use the bindings in the build directory.
 # Used by the testsuite, but you may also run:
 #   $ python -i tests/setup_path.py
