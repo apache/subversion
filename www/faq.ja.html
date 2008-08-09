@@ -778,7 +778,7 @@ SubversionをApacheの元で動作させる為には、Apacheからのアクセ�
 
 <p>ログメッセージは、各リビジョンの属性として貼り付けられた上で、リポジトリに中に保存されている。
 デフォルトでは、一度コミットされてしまったログメッセージ属性(<em>svn:log</em>)は、変更することが出来ない。
-これは、<a href="href="http://svnbook.red-bean.com/nightly/en/svn.advanced.props.html">リビジョン属性</a>(<em>svn:log</em>はその中の一つ)への変更は、以前のプロパティ値を完全に廃棄してしまう為で、この操作が誤って実行されないよう、Subversionは、あなたを守ってくれている、というわけだ。
+これは、<a href="http://svnbook.red-bean.com/nightly/en/svn.advanced.props.html">リビジョン属性</a>(<em>svn:log</em>はその中の一つ)への変更は、以前のプロパティ値を完全に廃棄してしまう為で、この操作が誤って実行されないよう、Subversionは、あなたを守ってくれている、というわけだ。
 とは言え、リビジョン属性を変更する為の方法は、幾つか存在する。</p>
 
 <p>最初の方法は、リビジョン属性の変更を有効にしたいリポジトリ管理者向けのものだ。
@@ -2234,7 +2234,7 @@ Apache をサービスとして実行している場合には、通常のユー�
 <p>OSが備えている、ディスク上のデータ保護機能を信じよう。</p>
 
 <p>とはいえ、もしあなたが本当に気に病んでいるならば、パスワードのキャッシュ機構を、完全に off にすることができる。svn 1.0 クライアントの場合、ランタイム設定ファイルへ 'store-auth-creds = no' と書くだけだ。svn 1.1 以上のクライアントの場合、より狭い範囲にのみ適用される 'store-passwords = no' を使うことができる(つまり、サーバ証明は、まだキャッシュされる)。
-パスワードキャッシングに関するより詳細な説明は、<a href="http://svnbook.red-bean.com/nightly/en/index.html">Nightly Build 版Subversion book</a>の第6章、<a href="http://svnbook.red-bean.com/nightly/en/svn.serverconfig.netmodel.html#svn.serverconfig.netmodel.credcache">「Client Credentials Caching」</a>を参照のこと。</a></p>
+パスワードキャッシングに関するより詳細な説明は、<a href="http://svnbook.red-bean.com/nightly/en/index.html">Nightly Build 版Subversion book</a>の第6章、<a href="http://svnbook.red-bean.com/nightly/en/svn.serverconfig.netmodel.html#svn.serverconfig.netmodel.credcache">「Client Credentials Caching」</a>を参照のこと。</p>
 
 <p>最後に、CVS は長期に渡り、パスワードを .cvspass ファイルへ保存している、ということを指摘しておこう。
 .cvspass に書かれたパスワードは、暗号化されているように見えるけど、実際には、ただ非常に簡単な、本質的には rot13 同等のアルゴリズムでスクランブルされているだけだ。
@@ -2494,6 +2494,7 @@ svn: This client is too old to work with working copy
 この問題は、あなたが1.4以降のコマンドラインクライアントを、より古い版のコマンドラインクライアントと一緒に使った場合にも起こり得る)。
 
 解法は簡単で、あなたのコマンドラインクライアントを1.4以降の版へとアップグレードすることだ。
+</p>
 
 </div>
 
