@@ -1515,9 +1515,9 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
 
           svn_pool_clear(subpool);
 
-          target = svn_path_join(base_dir,
-                                 APR_ARRAY_IDX(rel_targets, i, const char *),
-                                 subpool);
+          target = svn_dirent_join(base_dir,
+                                   APR_ARRAY_IDX(rel_targets, i, const char *),
+                                   subpool);
 
           SVN_ERR(svn_io_check_path(target, &kind, subpool));
 
@@ -1544,7 +1544,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
              Do nothing if target is already the base_dir. */
           if (strcmp(target, base_dir) != 0)
             {
-              svn_path_split(target, &parent_dir, &name, subpool);
+              svn_dirent_split(target, &parent_dir, &name, subpool);
 
               target = parent_dir;
 
@@ -1555,7 +1555,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
 
                   APR_ARRAY_PUSH(dirs_to_lock,
                                  const char *) = apr_pstrdup(pool, target);
-                  target = svn_path_dirname(target, subpool);
+                  target = svn_dirent_dirname(target, subpool);
                 }
             }
         }

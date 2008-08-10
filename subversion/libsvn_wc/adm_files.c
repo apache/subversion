@@ -125,11 +125,11 @@ v_extend_with_adm_name(const char *path,
   const char *this;
 
   /* Tack on the administrative subdirectory. */
-  path = svn_path_join(path, adm_dir_name, pool);
+  path = svn_dirent_join(path, adm_dir_name, pool);
 
   /* If this is a tmp file, name it into the tmp area. */
   if (use_tmp)
-    path = svn_path_join(path, SVN_WC__ADM_TMP, pool);
+    path = svn_dirent_join(path, SVN_WC__ADM_TMP, pool);
 
   /* Tack on everything else. */
   while ((this = va_arg(ap, const char *)) != NULL)
@@ -137,7 +137,7 @@ v_extend_with_adm_name(const char *path,
       if (this[0] == '\0')
         continue;
 
-      path = svn_path_join(path, this, pool);
+      path = svn_dirent_join(path, this, pool);
     }
 
   if (extension)

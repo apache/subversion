@@ -777,12 +777,12 @@ svn_client__harvest_committables(apr_hash_t **committables,
       /* Add the relative portion of our full path (if there are no
          relative paths, TARGET will just be PARENT_DIR for a single
          iteration. */
-      target = svn_path_join_many(subpool,
-                                  svn_wc_adm_access_path(parent_dir),
-                                  targets->nelts
-                                  ? APR_ARRAY_IDX(targets, i, const char *)
-                                  : NULL,
-                                  NULL);
+      target = svn_dirent_join_many(subpool,
+                                    svn_wc_adm_access_path(parent_dir),
+                                    targets->nelts
+                                    ? APR_ARRAY_IDX(targets, i, const char *)
+                                    : NULL,
+                                    NULL);
 
       /* No entry?  This TARGET isn't even under version control! */
       SVN_ERR(svn_wc_adm_probe_retrieve(&adm_access, parent_dir,
