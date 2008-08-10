@@ -1,7 +1,8 @@
 This branch exists to play with ideas around shared storage of
-repository data strings and such.
+repository data strings and such.  See also this issue:
 
-
+   http://subversion.tigris.org/issues/show_bug.cgi?id=2286
+   ("Identical files should share storage space in repository")
 
 ::: CURRENT PROBLEMS :::
 
