@@ -49,8 +49,13 @@ svn_nls_init(void)
   svn_error_t *err = SVN_NO_ERROR;
 
 #ifdef ENABLE_NLS
-#ifdef WIN32
+  if (getenv("SVN_LOCALE_DIR"))
+    {
+      bindtextdomain(PACKAGE_NAME, getenv("SVN_LOCALE_DIR"));
+    }
+  else
   {
+#ifdef WIN32
     WCHAR ucs2_path[MAX_PATH];
     char* utf8_path;
     const char* internal_path;
@@ -118,6 +123,7 @@ svn_nls_init(void)
   }
 #else
   bindtextdomain(PACKAGE_NAME, SVN_LOCALE_DIR);
+  }
 #ifdef HAVE_BIND_TEXTDOMAIN_CODESET
   bind_textdomain_codeset(PACKAGE_NAME, "UTF-8");
 #endif
