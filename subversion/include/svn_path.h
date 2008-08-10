@@ -63,6 +63,13 @@ const char *svn_path_internal_style(const char *path, apr_pool_t *pool);
 /** Convert @a path from the canonical internal style to the local style. */
 const char *svn_path_local_style(const char *path, apr_pool_t *pool);
 
+/** XXX 
+  */
+const char *svn_dirent_canonicalize(const char *path, apr_pool_t *pool);
+
+char *svn_dirent_join(const char *base,
+                      const char *component,
+                      apr_pool_t *pool);
 
 /** Join a base path (@a base) with a component (@a component), allocated in
  * @a pool.
@@ -102,6 +109,17 @@ char *svn_path_join(const char *base,
  */
 char *svn_path_join_many(apr_pool_t *pool, const char *base, ...);
 
+/** XXX
+ */
+char *svn_dirent_join_many(apr_pool_t *pool, const char *base, ...);
+
+/** XXX
+ */
+char *svn_dirent_basename(const char *path, apr_pool_t *pool);
+
+/** XXX
+ */
+char *svn_dirent_dirname(const char *path, apr_pool_t *pool);
 
 /** Get the basename of the specified canonicalized @a path.  The
  * basename is defined as the last component of the path (ignoring any
@@ -169,6 +187,14 @@ void svn_path_remove_component(svn_stringbuf_t *path);
  */
 void svn_path_remove_components(svn_stringbuf_t *path, apr_size_t n);
 
+/** XXX
+  * @since New in 1.6.
+  */
+void svn_dirent_split(const char *path,
+                      const char **dirpath,
+                      const char **base_name,
+                      apr_pool_t *pool);
+
 /** Divide the canonicalized @a path into @a *dirpath and @a
  * *base_name, allocated in @a pool.
  *
@@ -209,6 +235,15 @@ int svn_path_is_empty(const char *path);
 svn_boolean_t svn_dirent_is_root(const char *dirent, apr_size_t len);
 
 
+/** Return TRUE if @a dirent is considered absolute on the platform at 
+ * hand, amongst which '/foo' on all platforms or 'X:/foo', '\\\\?\\X:/foo',
+ * '\\\\server\\share\\foo' on Windows.
+ *
+ * @since New in 1.6.
+ */
+svn_boolean_t svn_dirent_is_absolute(const char *dirent, apr_size_t len);
+
+
 /** Return a new path (or URL) like @a path, but transformed such that
  * some types of path specification redundancies are removed.
  *
@@ -233,6 +268,11 @@ const char *svn_path_canonicalize(const char *path, apr_pool_t *pool);
  */
 svn_boolean_t svn_path_is_canonical(const char *path, apr_pool_t *pool);
 
+/** XXXX
+ *
+ * @since New in 1.6.
+ */
+svn_boolean_t svn_dirent_is_canonical(const char *path, apr_pool_t *pool);
 
 /** Return an integer greater than, equal to, or less than 0, according
  * as @a path1 is greater than, equal to, or less than @a path2.
@@ -253,6 +293,12 @@ int svn_path_compare_paths(const char *path1, const char *path2);
 char *svn_path_get_longest_ancestor(const char *path1,
                                     const char *path2,
                                     apr_pool_t *pool);
+
+/** XXXX
+ */
+char *svn_dirent_get_longest_ancestor(const char *path1,
+                                      const char *path2,
+                                      apr_pool_t *pool);
 
 /** Convert @a relative canonicalized path to an absolute path and
  * return the results in @a *pabsolute, allocated in @a pool.

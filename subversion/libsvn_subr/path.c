@@ -128,6 +128,47 @@ is_canonical(const char *path,
 #endif
 
 
+char *svn_dirent_join(const char *base,
+                      const char *component,
+                      apr_pool_t *pool)
+{
+  apr_size_t blen = strlen(base);
+  apr_size_t clen = strlen(component);
+  char *path;
+  int add_separator;
+
+  assert(svn_dirent_is_canonical(base, pool));
+  assert(svn_dirent_is_canonical(component, pool));
+
+  /* If the component is absolute, then return it.  */
+  if (svn_dirent_is_absolute(component, clen))
+    return apr_pmemdup(pool, component, clen + 1);
+
+  /* If either is empty return the other */
+  if (SVN_PATH_IS_EMPTY(base))
+    return apr_pmemdup(pool, component, clen + 1);
+  if (SVN_PATH_IS_EMPTY(component))
+    return apr_pmemdup(pool, base, blen + 1);
+
+  /* if last character of base is already a separator, don't add a '/' */
+  add_separator = 1;
+  if (base[blen - 1] == '/'
+#if defined(WIN32) || defined(__CYGWIN__)
+       || base[blen - 1] == ':'
+#endif /* WIN32 or Cygwin */
+        )
+          add_separator = 0;
+
+  /* Construct the new, combined path. */
+  path = apr_palloc(pool, blen + add_separator + clen + 1);
+  memcpy(path, base, blen);
+  if (add_separator)
+    path[blen] = '/';
+  memcpy(path + blen + add_separator, component, clen + 1);
+
+  return path;
+}
+
 char *svn_path_join(const char *base,
                     const char *component,
                     apr_pool_t *pool)
@@ -157,6 +198,131 @@ char *svn_path_join(const char *base,
   memcpy(path, base, blen);
   path[blen] = '/';
   memcpy(path + blen + 1, component, clen + 1);
+
+  return path;
+}
+
+char *svn_dirent_join_many(apr_pool_t *pool, const char *base, ...)
+{
+#define MAX_SAVED_LENGTHS 10
+  apr_size_t saved_lengths[MAX_SAVED_LENGTHS];
+  apr_size_t total_len;
+  int nargs;
+  va_list va;
+  const char *s;
+  apr_size_t len;
+  char *path;
+  char *p;
+  int add_separator;
+  int base_arg = 0;
+
+  total_len = strlen(base);
+
+  assert(svn_dirent_is_canonical(base, pool));
+
+  /* if last character of base is already a separator, don't add a '/' */
+  add_separator = 1;
+  if (total_len == 0 
+       || base[total_len - 1] == '/'
+#if defined(WIN32) || defined(__CYGWIN__)
+       || base[total_len - 1] == ':'
+#endif /* WIN32 or Cygwin */
+        )
+          add_separator = 0;
+
+  saved_lengths[0] = total_len;
+
+  /* Compute the length of the resulting string. */
+
+  nargs = 0;
+  va_start(va, base);
+  while ((s = va_arg(va, const char *)) != NULL)
+    {
+      len = strlen(s);
+
+      assert(svn_dirent_is_canonical(s, pool));
+
+      if (SVN_PATH_IS_EMPTY(s))
+        continue;
+
+      if (nargs++ < MAX_SAVED_LENGTHS)
+        saved_lengths[nargs] = len;
+
+      if (svn_dirent_is_absolute(s, len))
+        {
+          /* an absolute path. skip all components to this point and reset
+             the total length. */
+          total_len = len;
+          base_arg = nargs;
+          add_separator = 1;
+          if (s[len - 1] == '/'
+        #if defined(WIN32) || defined(__CYGWIN__)
+               || s[len - 1] == ':'
+        #endif /* WIN32 or Cygwin */
+                )
+                  add_separator = 0;
+        }
+      else if (nargs == base_arg + 1)
+        {
+          total_len += add_separator + len;
+        }
+      else
+        {
+          total_len += 1 + len;
+        }
+    }
+  va_end(va);
+
+  /* base == "/" and no further components. just return that. */
+  if (add_separator == 0 && total_len == 1)
+    return apr_pmemdup(pool, "/", 2);
+
+  /* we got the total size. allocate it, with room for a NULL character. */
+  path = p = apr_palloc(pool, total_len + 1);
+
+  /* if we aren't supposed to skip forward to an absolute component, and if
+     this is not an empty base that we are skipping, then copy the base
+     into the output. */
+  if (base_arg == 0 && ! (SVN_PATH_IS_EMPTY(base)))
+    {
+      if (SVN_PATH_IS_EMPTY(base))
+        memcpy(p, SVN_EMPTY_PATH, len = saved_lengths[0]);
+      else
+        memcpy(p, base, len = saved_lengths[0]);
+      p += len;
+    }
+
+  nargs = 0;
+  va_start(va, base);
+  while ((s = va_arg(va, const char *)) != NULL)
+    {
+      if (SVN_PATH_IS_EMPTY(s))
+        continue;
+
+      if (++nargs < base_arg)
+        continue;
+
+      if (nargs < MAX_SAVED_LENGTHS)
+        len = saved_lengths[nargs];
+      else
+        len = strlen(s);
+
+      /* insert a separator if we aren't copying in the first component
+         (which can happen when base_arg is set). also, don't put in a slash
+         if the prior character is a slash (occurs when prior component
+         is "/"). */
+      if (p != path &&
+          ( ! (nargs - 1 == base_arg) || add_separator))
+        *p++ = '/';
+
+      /* copy the new component and advance the pointer */
+      memcpy(p, s, len);
+      p += len;
+    }
+  va_end(va);
+
+  *p = '\0';
+  assert((apr_size_t)(p - path) == total_len);
 
   return path;
 }
@@ -341,6 +507,34 @@ previous_segment(const char *path,
     return len;
 }
 
+/* Return the length of substring necessary to encompass the entire
+ * previous path segment in PATH, which should be a LEN byte string.
+ *
+ * A trailing slash will not be included in the returned length except
+ * in the case in which PATH is absolute and there are no more
+ * previous segments.
+ */
+static apr_size_t
+dirent_previous_segment(const char *path,
+                        apr_size_t len)
+{
+  if (len == 0)
+    return 0;
+
+  --len;
+  while (len > 0 && path[len] != '/'
+#if defined(WIN32) || defined(__CYGWIN__)
+                 && path[len] != ':'
+#endif /* WIN32 or Cygwin */
+        )
+    --len;
+
+  /* check if the remaining segment including trailing '/' is a root path */
+  if (svn_dirent_is_root(path, len + 1))
+    return len + 1;
+  else
+    return len;
+}
 
 void
 svn_path_add_component(svn_stringbuf_t *path,
@@ -382,6 +576,45 @@ svn_path_remove_components(svn_stringbuf_t *path, apr_size_t n)
       svn_path_remove_component(path);
       n--;
     }
+}
+
+
+char *
+svn_dirent_dirname(const char *path, apr_pool_t *pool)
+{
+  apr_size_t len = strlen(path);
+
+  assert(is_canonical(path, len));
+
+  if (svn_dirent_is_root(path, len))
+    return apr_pstrmemdup(pool, path, len);
+  else
+    return apr_pstrmemdup(pool, path, dirent_previous_segment(path, len));
+}
+
+
+char *
+svn_dirent_basename(const char *path, apr_pool_t *pool)
+{
+  apr_size_t len = strlen(path);
+  apr_size_t start;
+
+  assert(is_canonical(path, len));
+
+  if (svn_dirent_is_root(path, len))
+    start = 0;
+  else
+    {
+      start = len;
+      while (start > 0 && path[start - 1] != '/'
+#if defined(WIN32) || defined(__CYGWIN__)
+             && path[start - 1] != ':'
+#endif /* WIN32 or Cygwin */
+            )
+        --start;
+    }
+
+  return apr_pstrmemdup(pool, path + start, len - start);
 }
 
 
@@ -432,6 +665,20 @@ svn_path_split(const char *path,
     *base_name = svn_path_basename(path, pool);
 }
 
+void
+svn_dirent_split(const char *path,
+                 const char **dirpath,
+                 const char **base_name,
+                 apr_pool_t *pool)
+{
+  assert(dirpath != base_name);
+
+  if (dirpath)
+    *dirpath = svn_dirent_dirname(path, pool);
+
+  if (base_name)
+    *base_name = svn_dirent_basename(path, pool);
+}
 
 int
 svn_path_is_empty(const char *path)
@@ -488,6 +735,27 @@ svn_dirent_is_root(const char *dirent, apr_size_t len)
 }
 
 
+svn_boolean_t
+svn_dirent_is_absolute(const char *path, apr_size_t len)
+{
+  /* path is absolute if it starts with '/' */
+  if (len > 0 && path[0] == '/')
+    return TRUE;
+ 
+  /* On Windows, path is also absolute when it starts with 'H:' or 'H:/' 
+     where 'H' is any letter. */
+#if defined(WIN32) || defined(__CYGWIN__)
+  if (len >= 2 && 
+      (path[1] == ':') &&
+      ((path[0] >= 'A' && path[0] <= 'Z') || 
+       (path[0] >= 'a' && path[0] <= 'z')))
+     return TRUE;
+#endif /* WIN32 or Cygwin */
+ 
+  return FALSE;
+}
+
+
 int
 svn_path_compare_paths(const char *path1,
                        const char *path2)
@@ -527,24 +795,24 @@ svn_path_compare_paths(const char *path1,
 }
 
 
-/* Return the string length of the longest common ancestor of PATH1 and PATH2.
+/* Return the string length of the longest common ancestor of PATH1 and PATH2.  
  *
- * This function handles everything except the URL-handling logic
- * of svn_path_get_longest_ancestor, and assumes that PATH1 and
- * PATH2 are *not* URLs.
+ * If PATH1 and PATH2 are URLs, set the URLS parameter to TRUE.
  *
- * If the two paths do not share a common ancestor, return 0.
+ * If the two paths do not share a common ancestor, return 0. 
  *
  * New strings are allocated in POOL.
  */
 static apr_size_t
 get_path_ancestor_length(const char *path1,
                          const char *path2,
+                         svn_boolean_t urls,
                          apr_pool_t *pool)
 {
   apr_size_t path1_len, path2_len;
   apr_size_t i = 0;
   apr_size_t last_dirsep = 0;
+  svn_boolean_t unc = FALSE;
 
   path1_len = strlen(path1);
   path2_len = strlen(path2);
@@ -565,25 +833,65 @@ get_path_ancestor_length(const char *path1,
         break;
     }
 
-  /* two special cases:
-     1. '/' is the longest common ancestor of '/' and '/foo'
-     2. '/' is the longest common ancestor of '/rif' and '/raf' */
-  if (i == 1 && path1[0] == '/' && path2[0] == '/')
-    return 1;
+  /* Handle some windows specific cases */
+#if defined(WIN32) || defined(__CYGWIN__)
+  if (! urls)
+    {
+      /* don't count the '//' from UNC paths */
+      if (last_dirsep == 1 && path1[0] == '/' && path1[1] == '/')
+        {
+          last_dirsep = 0;
+          unc = TRUE;
+        }
+
+      /* X:/ and X:/foo */
+      if (i == 3 && path1[2] == '/' && path1[1] == ':')
+        return i;
+      /* X: and X:/ */
+      if ((path1[i - 1] == ':' && path2[i] == '/') ||
+          (path2[i - 1] == ':' && path1[i] == '/'))
+          return 0;
+      /* X: and X:foo */
+      if (path1[i - 1] == ':' || path2[i - 1] == ':')
+          return i;
+    }
+#endif /* WIN32 or Cygwin */
 
   /* last_dirsep is now the offset of the last directory separator we
      crossed before reaching a non-matching byte.  i is the offset of
-     that non-matching byte. */
+     that non-matching byte. 
+     
+     If these are folders, return their common root folder '/' if they 
+     have that. */
   if (((i == path1_len) && (path2[i] == '/'))
-           || ((i == path2_len) && (path1[i] == '/'))
-           || ((i == path1_len) && (i == path2_len)))
+        || ((i == path2_len) && (path1[i] == '/'))
+        || ((i == path1_len) && (i == path2_len)))
     return i;
-  else
-    if (last_dirsep == 0 && path1[0] == '/' && path2[0] == '/')
-      return 1;
-    return last_dirsep;
+  else 
+    {
+      if (! urls && ! unc && 
+          last_dirsep == 0 && path1[0] == '/' && path2[0] == '/')
+        return 1;
+
+#if defined(WIN32) || defined(__CYGWIN__)
+      if (! urls && ! unc &&
+          last_dirsep == 2 && path1[1] == ':' && path1[2] == '/'
+                           && path2[1] == ':' && path2[2] == '/')
+        return 3;
+#endif /* WIN32 or Cygwin */
+
+      return last_dirsep;
+    }
 }
 
+char *
+svn_dirent_get_longest_ancestor(const char *path1,
+                                const char *path2,
+                                apr_pool_t *pool)
+{
+  return apr_pstrndup(pool, path1,
+                      get_path_ancestor_length(path1, path2, FALSE, pool));
+}
 
 char *
 svn_path_get_longest_ancestor(const char *path1,
@@ -619,6 +927,7 @@ svn_path_get_longest_ancestor(const char *path1,
       i += 3;  /* Advance past '://' */
 
       path_ancestor_len = get_path_ancestor_length(path1 + i, path2 + i,
+                                                   TRUE,
                                                    pool);
 
       if (path_ancestor_len == 0 ||
@@ -630,8 +939,7 @@ svn_path_get_longest_ancestor(const char *path1,
 
   else if ((! path1_is_url) && (! path2_is_url))
     {
-      return apr_pstrndup(pool, path1,
-                          get_path_ancestor_length(path1, path2, pool));
+      return svn_dirent_get_longest_ancestor(path1, path2, pool);
     }
 
   else
@@ -1338,6 +1646,28 @@ svn_path_canonicalize(const char *path, apr_pool_t *pool)
   return canon;
 }
 
+const char *
+svn_dirent_canonicalize(const char *path, apr_pool_t *pool)
+{
+  char *dst = svn_path_canonicalize(path, pool);;
+
+#if defined(WIN32) || defined(__CYGWIN__)
+  /* Handle a specific case on Windows where path == "X:/". Here we have to 
+     append the final '/', as svn_path_canonicalize will chop this of. */
+  if (path[0] != '\0' && path[1] == ':' && path[2] == '/' && path[3] == '\0')
+    {
+      char *dst_slash = apr_pcalloc(pool, 4);
+      dst_slash[0] =  dst[0];
+      dst_slash[1] = ':';
+      dst_slash[2] = '/';
+      dst_slash[3] = '\0';
+
+      return dst_slash;
+    }
+#endif /* WIN32 or Cygwin */
+
+  return dst;
+}
 
 svn_boolean_t
 svn_path_is_canonical(const char *path, apr_pool_t *pool)
@@ -1345,6 +1675,11 @@ svn_path_is_canonical(const char *path, apr_pool_t *pool)
   return (strcmp(path, svn_path_canonicalize(path, pool)) == 0);
 }
 
+svn_boolean_t
+svn_dirent_is_canonical(const char *path, apr_pool_t *pool)
+{
+  return (strcmp(path, svn_dirent_canonicalize(path, pool)) == 0);
+}
 
 
 /** Get APR's internal path encoding. */
