@@ -12658,7 +12658,6 @@ def svn_commit(path):
   svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
                                      'commit', '-m', '', path)
   svn_commit.repo_rev += 1
-  print "## repo_rev is now", svn_commit.repo_rev
   return svn_commit.repo_rev
 
 def svn_merge(src_change_num, source, target, exp_out=svntest.verify.AnyOutput):
