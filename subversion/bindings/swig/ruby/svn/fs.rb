@@ -595,9 +595,9 @@ module Svn
         @diff ||= Core::Diff.file_diff(@tempfile1.path, @tempfile2.path)
       end
 
-      def unified(label1, label2)
+      def unified(label1, label2, header_encoding=nil)
         if diff and diff.diff?
-          diff.unified(label1, label2)
+          diff.unified(label1, label2, header_encoding)
         else
           ""
         end

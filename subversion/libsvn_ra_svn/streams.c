@@ -56,11 +56,7 @@ static svn_boolean_t pending(apr_pollfd_t *pfd, apr_pool_t *pool)
 
   pfd->p = pool;
   pfd->reqevents = APR_POLLIN;
-#ifdef AS400
-  status = apr_poll(pfd, 1, &n, 0, pool);
-#else
   status = apr_poll(pfd, 1, &n, 0);
-#endif
   return (status == APR_SUCCESS && n);
 }
 

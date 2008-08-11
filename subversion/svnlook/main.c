@@ -140,7 +140,6 @@ static const apr_getopt_option_t options_table[] =
   {"xml",               svnlook__xml_opt, 0,
    N_("output in XML")},
 
-#ifndef AS400
   {"extensions",    'x', 1,
                     N_("Default: '-u'. When Subversion is invoking an\n"
                        "                            "
@@ -169,7 +168,6 @@ static const apr_getopt_option_t options_table[] =
                        "    --ignore-eol-style:\n"
                        "                            "
                        "       Ignore changes in EOL style")},
-#endif
 
   {0,                   0, 0, 0}
 };

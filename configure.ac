@@ -73,7 +73,7 @@ NEON_URL="http://www.webdav.org/neon/neon-${NEON_RECOMMENDED_VER}.tar.gz"
 dnl You can skip the neon version check only if you know what you are doing 
 AC_ARG_ENABLE(neon-version-check,
   AS_HELP_STRING([--disable-neon-version-check],
-		 [do not check the Neon version]),
+                 [do not check the Neon version]),
   [
     if test "$enableval" = "no" ; then
       NEON_ALLOWED_LIST="any"
@@ -211,7 +211,7 @@ dnl Check for trang.
 trang=yes
 AC_ARG_WITH(trang,
 AS_HELP_STRING([--with-trang=PATH],
-	       [Specify the command to run the trang schema converter]),
+               [Specify the command to run the trang schema converter]),
 [
     trang="$withval"
 ])
@@ -610,7 +610,7 @@ AC_FUNC_VPRINTF
 dnl check for functions needed in special file handling
 AC_CHECK_FUNCS(symlink readlink)
 
-	
+
 dnl Process some configuration options ----------
 
 AC_ARG_WITH(ssl,
@@ -626,18 +626,29 @@ AS_HELP_STRING([--with-ssl],
 
 AC_ARG_ENABLE(debug,
 AS_HELP_STRING([--enable-debug],
-	       [Turn on debugging]),
+               [Turn on debugging]),
 [
     if test "$enableval" = "yes" ; then
       enable_debugging="yes"
     else
       enable_debugging="no"
     fi
+],
+[
+    # Neither --enable-debug nor --disable-debug was passed.
+    enable_debugging="maybe"
+
+        # We leave this as 'maybe' because setting it to 'no' would modify the
+        # CFLAGS/CXXFLAGS later (just after the --enable-maintainer-mode block),
+        # and we don't want to force that.
+    #
+    # TODO: set enable_debugging='no' here, and provide another way to disable
+    #       the CFLAGS/CXXFLAGS munging.
 ])
 
 AC_ARG_ENABLE(maintainer-mode,
 AS_HELP_STRING([--enable-maintainer-mode],
-	       [Turn on debugging and very strict compile-time warnings]),
+               [Turn on debugging and very strict compile-time warnings]),
 [
     if test "$enableval" = "yes" ; then
       if test "$enable_debugging" = "no" ; then
@@ -660,14 +671,14 @@ if test "$enable_debugging" = "yes" ; then
   dnl AP_DEBUG enables specific (Apache) features for developer builds
   CFLAGS="$CFLAGS -DSVN_DEBUG -DAP_DEBUG"
   CXXFLAGS="$CXXFLAGS -DSVN_DEBUG -DAP_DEBUG"
-else
-  if test "$enable_debugging" = "no" ; then
+elif test "$enable_debugging" = "no" ; then
     CFLAGS=["`echo $CFLAGS' ' | sed -e 's/-g[0-9] //g' | sed -e 's/-g//g'`"]
     CXXFLAGS=["`echo $CXXFLAGS' ' | sed -e 's/-g[0-9] //g' | sed -e 's/-g//g'`"]
     dnl Compile with NDEBUG to get rid of assertions
     CFLAGS="$CFLAGS -DNDEBUG"
     CXXFLAGS="$CXXFLAGS -DNDEBUG"
-  fi
+# elif test "$enable_debugging" = "maybe" ; then
+#   # do nothing
 fi
 
 
@@ -692,7 +703,7 @@ SVN_LIB_Z
 MOD_ACTIVATION="-a"
 AC_ARG_ENABLE(mod-activation,
 AS_HELP_STRING([--disable-mod-activation],
-	       [Do not enable mod_dav_svn in httpd.conf]),
+               [Do not enable mod_dav_svn in httpd.conf]),
 [
     if test "$enableval" = "no" ; then
       MOD_ACTIVATION=""
@@ -707,7 +718,7 @@ AC_SUBST(MOD_ACTIVATION)
 
 AC_ARG_ENABLE(gprof,
 AS_HELP_STRING([--enable-gprof],
-	       [Produce gprof profiling data in 'gmon.out' (GCC only).]),
+               [Produce gprof profiling data in 'gmon.out' (GCC only).]),
 [
     if test "$enableval" = "yes" ; then
       dnl Probably other compilers support -pg or something similar;

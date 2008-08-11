@@ -803,7 +803,7 @@ II.   INSTALLATION
         HTTP auth types.)
       * Apache apr, apr-util, and apr-iconv libraries, version 0.9.12.
         Included in both the Subversion dependencies ZIP file and the
-        Apache 2.058 source zip.  If you are building from a Subversion
+        Apache 2.0.58 source zip.  If you are building from a Subversion
         checkout and have not downloaded Apache 2, then get these 3
         libraries from http://www.apache.org/dist/apr/.  Note that
         the 1.x APR releases are not yet functional with Subversion --

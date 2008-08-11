@@ -653,29 +653,24 @@ svn_cl__get_log_message(const char **log_msg,
   *tmp_file = NULL;
   if (lmb->message)
     {
-      svn_string_t *log_msg_string = svn_string_create(lmb->message, pool);
+      svn_stringbuf_t *log_msg_buf = svn_stringbuf_create(lmb->message, pool);
+      svn_string_t *log_msg_str = apr_pcalloc(pool, sizeof(*log_msg_str));
 
-      SVN_ERR_W(svn_subst_translate_string(&log_msg_string, log_msg_string,
+      /* Trim incoming messages of the EOF marker text and the junk
+         that follows it.  */
+      truncate_buffer_at_prefix(&(log_msg_buf->len), log_msg_buf->data, 
+                                EDITOR_EOF_PREFIX);
+
+      /* Make a string from a stringbuf, sharing the data allocation. */
+      log_msg_str->data = log_msg_buf->data;
+      log_msg_str->len = log_msg_buf->len;
+      SVN_ERR_W(svn_subst_translate_string(&log_msg_str, log_msg_str,
                                            lmb->message_encoding, pool),
                 _("Error normalizing log message to internal format"));
 
-      *log_msg = log_msg_string->data;
-
-      /* Trim incoming messages the EOF marker text and the junk that
-         follows it.  */
-      truncate_buffer_at_prefix(NULL, (char*)*log_msg, EDITOR_EOF_PREFIX);
-
+      *log_msg = log_msg_str->data;
       return SVN_NO_ERROR;
     }
-#ifdef AS400
-  /* OS400 supports only -F and -m for specifying log messages. */
-  else
-    return svn_error_create
-      (SVN_ERR_CL_NO_EXTERNAL_EDITOR, NULL,
-       _("Use of an external editor to fetch log message is not supported "
-         "on OS400; consider using the --message (-m) or --file (-F) "
-         "options"));
-#endif
 
   if (! commit_items->nelts)
     {

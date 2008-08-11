@@ -156,16 +156,3 @@ svn_client__compare_revisions(svn_opt_revision_t *revision1,
   return TRUE;
 }
 
-
-svn_boolean_t
-svn_client__revision_is_local(const svn_opt_revision_t *revision)
-{
-  if ((revision->kind == svn_opt_revision_unspecified)
-      || (revision->kind == svn_opt_revision_head)
-      || (revision->kind == svn_opt_revision_number)
-      || (revision->kind == svn_opt_revision_date))
-    return FALSE;
-  else
-    return TRUE;
-}
-
