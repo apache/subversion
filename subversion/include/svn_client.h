@@ -2492,9 +2492,10 @@ svn_client_diff_summarize_peg(const char *path,
  * and the addition of another, but if this flag is TRUE, unrelated
  * items will be diffed as if they were related.
  *
- * If @a force is not set and the merge involves deleting locally modified or
- * unversioned items the operation will fail.  If @a force is set such items
- * will be deleted.
+ * If @a force is false and the merge involves deleting a file whose
+ * content differs from the source-left version, or a locally modified
+ * directory, or an unversioned item, then the operation will fail.  If
+ * @a force is true then all such items will be deleted.
  *
  * @a merge_options (an array of <tt>const char *</tt>), if non-NULL,
  * is used to pass additional command line arguments to the merge

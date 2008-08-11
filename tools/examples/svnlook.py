@@ -265,7 +265,7 @@ class DiffEditor(delta.Editor):
       print "Added: " + path
       label = path
     elif path is None:
-      print "Removed: " + path
+      print "Removed: " + base_path
       label = base_path
     else:
       print "Modified: " + path
@@ -303,7 +303,7 @@ class DiffEditor(delta.Editor):
 
   def apply_textdelta(self, file_baton, base_checksum):
     if file_baton[2] is not None:
-      self._do_diff(file_baton[2], file_baton[2], file_baton[3])
+      self._do_diff(file_baton[2], file_baton[2])
     return None
 
 def _basename(path):

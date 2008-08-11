@@ -113,6 +113,12 @@ svn_auth__simple_first_creds_helper(void **credentials,
   const char *config_dir = apr_hash_get(parameters,
                                         SVN_AUTH_PARAM_CONFIG_DIR,
                                         APR_HASH_KEY_STRING);
+  svn_config_t *cfg = apr_hash_get(parameters,
+                                   SVN_AUTH_PARAM_CONFIG,
+                                   APR_HASH_KEY_STRING);
+  const char *server_group = apr_hash_get(parameters,
+                                          SVN_AUTH_PARAM_SERVER_GROUP,
+                                          APR_HASH_KEY_STRING);
   const char *username = apr_hash_get(parameters,
                                       SVN_AUTH_PARAM_DEFAULT_USERNAME,
                                       APR_HASH_KEY_STRING);
@@ -176,6 +182,14 @@ svn_auth__simple_first_creds_helper(void **credentials,
                 }
             }
         }
+    }
+
+  /* If we don't have a username yet, check the 'servers' file */
+  if (! username)
+    {
+      username = svn_config_get_server_setting(cfg, server_group,
+                                               SVN_CONFIG_OPTION_USERNAME,
+                                               NULL);
     }
 
   /* Ask the OS for the username if we have a password but no
@@ -520,6 +534,21 @@ prompt_for_simple_creds(svn_auth_cred_simple_t **cred_p,
               if (str && str->data)
                 def_username = str->data;
             }
+        }
+
+      /* Still no default username?  Try the 'servers' file. */
+      if (! def_username)
+        {
+          svn_config_t *cfg = apr_hash_get(parameters,
+                                           SVN_AUTH_PARAM_CONFIG,
+                                           APR_HASH_KEY_STRING);
+          const char *server_group = apr_hash_get(parameters,
+                                                  SVN_AUTH_PARAM_SERVER_GROUP,
+                                                  APR_HASH_KEY_STRING);
+          def_username =
+            svn_config_get_server_setting(cfg, server_group,
+                                          SVN_CONFIG_OPTION_USERNAME,
+                                          NULL);
         }
 
       /* Still no default username?  Try the UID. */

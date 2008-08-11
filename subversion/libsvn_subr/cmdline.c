@@ -65,6 +65,7 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
 {
   apr_status_t status;
   apr_pool_t *pool;
+  svn_error_t *err;
 
 #ifndef WIN32
   {
@@ -75,18 +76,9 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
        e.g. file descriptor 2 would be reused when opening a file, a
        write to stderr would write to that file and most likely
        corrupt it. */
-#ifdef AS400_UTF8
-    /* Even with the UTF support in V5R4 a few functions on OS400 don't
-     * support UTF-8 string arguments and require EBCDIC paths, including
-     * open(). */
-#pragma convert(0)
-#endif
     if ((fstat(0, &st) == -1 && open("/dev/null", O_RDONLY) == -1) ||
         (fstat(1, &st) == -1 && open("/dev/null", O_WRONLY) == -1) ||
         (fstat(2, &st) == -1 && open("/dev/null", O_WRONLY) == -1))
-#ifdef AS400_UTF8
-#pragma convert(1208)
-#endif
       {
         if (error_stream)
           fprintf(error_stream, "%s: error: cannot open '/dev/null'\n",
@@ -179,7 +171,14 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
     }
 
   /* This has to happen before any pools are created. */
-  svn_dso_initialize();
+  if ((err = svn_dso_initialize2()))
+    {
+      if (error_stream && err->message)
+        fprintf(error_stream, "%s", err->message);
+
+      svn_error_clear(err);
+      return EXIT_FAILURE;
+    }
 
   if (0 > atexit(apr_terminate))
     {
@@ -195,17 +194,14 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
   pool = svn_pool_create(NULL);
   svn_utf_initialize(pool);
 
-  {
-    svn_error_t *err = svn_nls_init();
-    if (err)
-      {
-        if (error_stream && err->message)
-          fprintf(error_stream, "%s", err->message);
+  if ((err = svn_nls_init()))
+    {
+      if (error_stream && err->message)
+        fprintf(error_stream, "%s", err->message);
 
-        svn_error_clear(err);
-        return EXIT_FAILURE;
-      }
-  }
+      svn_error_clear(err);
+      return EXIT_FAILURE;
+    }
 
   return EXIT_SUCCESS;
 }
@@ -717,19 +713,7 @@ svn_cmdline__getopt_init(apr_getopt_t **os,
                          const char *argv[],
                          apr_pool_t *pool)
 {
-  apr_status_t apr_err;
-#ifdef AS400_UTF8
-  /* Convert command line args from EBCDIC to UTF-8. */
-  int i;
-  for (i = 0; i < argc; ++i)
-    {
-      char *arg_utf8;
-      SVN_ERR(svn_utf_cstring_to_utf8_ex2(&arg_utf8, argv[i],
-                                          (const char *)0, pool));
-      argv[i] = arg_utf8;
-    }
-#endif
-  apr_err = apr_getopt_init(os, pool, argc, argv);
+  apr_status_t apr_err = apr_getopt_init(os, pool, argc, argv);
   if (apr_err)
     return svn_error_wrap_apr(apr_err,
                               _("Error initializing command line arguments"));
