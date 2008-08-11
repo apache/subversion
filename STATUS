@@ -38,7 +38,7 @@ Candidate changes for 1.5.2:
      A backport branch 1.5.x-ra_serf-backports has been created for this group,
      including the already approved r31313.
    Votes:
-     +1: lgo
+     +1: lgo, cmpilato
  
  * r32409
    Fix an incompatibility with BSD make, which was introduced in r24293.
