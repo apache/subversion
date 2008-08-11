@@ -12622,39 +12622,39 @@ def commit_to_subtree_added_by_merge(sbox):
 
 
 #----------------------------------------------------------------------
-# Helper functions
+# Helper functions. These take local paths using '/' separators.
 
-def svn_mkdir(path):
-  "Make and add a directory."
-  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', '--parents', path)
+def local_path(path):
+  "Convert a path from '/' separators to the local style."
+  return os.sep.join(path.split('/'))
 
 def svn_mkfile(path):
   "Make and add a file with some default content, and keyword expansion."
+  path = local_path(path)
   dirname, filename = os.path.split(path)
   svntest.main.file_write(path, "This is the file '" + filename + "'.\n" +
-                                "Last changed in '$Revision$'.\n" +
-                                "Original second line.\n")
+                                "Last changed in '$Revision$'.\n")
   svntest.actions.run_and_verify_svn(None, None, [], 'add', path)
   svntest.actions.run_and_verify_svn(None, None, [], 'propset',
                                      'p1', 'v1', path)
   svntest.actions.run_and_verify_svn(None, None, [], 'propset',
                                      'svn:keywords', 'Revision', path)
-  #expected_output = wc.State(wc_dir,
-  #                           {path : Item(verb='Adding')})
-  #wc_status.add({path : Item(status='  ', wc_rev=3)})
-  #svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-  #                                      wc_status, None, wc_dir)
 
-def svn_copy(path1, path2):
+def svn_copy(s_rev, path1, path2):
   "Copy a WC path locally."
-  svntest.actions.run_and_verify_svn(None, None, [], 'copy', '--parents', path1, path2)
+  path1 = local_path(path1)
+  path2 = local_path(path2)
+  svntest.actions.run_and_verify_svn(None, None, [], 'copy', '--parents',
+                                     '-r', s_rev, path1, path2)
 
 def svn_delete(path):
   "Delete a WC path locally."
+  path = local_path(path)
   svntest.actions.run_and_verify_svn(None, None, [], 'delete', path)
 
 def svn_commit(path):
   "Commit a WC path and return the new revision number."
+  path = local_path(path)
   svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
                                      'commit', '-m', '', path)
   svn_commit.repo_rev += 1
@@ -12662,9 +12662,15 @@ def svn_commit(path):
 
 def svn_merge(src_change_num, source, target, exp_out=svntest.verify.AnyOutput):
   "Merge a single change from path 'source' to path 'target'"
+  source = local_path(source)
+  target = local_path(target)
   svntest.actions.run_and_verify_svn(None, exp_out, [],
                                      'merge', '-c', src_change_num,
                                      source, target)
+
+#----------------------------------------------------------------------
+# Tests for merging the deletion of a node, where the node to be deleted
+# is the same as or different from the node that was deleted.
 
 def del_identical_file(sbox):
   "merge tries to delete a file of identical content"
@@ -12676,20 +12682,19 @@ def del_identical_file(sbox):
   saved_cwd = os.getcwd()
   os.chdir(sbox.wc_dir)
 
-  source_d = 'source'
-  target_d = 'target'
-  source_file = os.path.join(source_d, 'file')
-  target_file = os.path.join(target_d, 'file')
+  source = 'A/D/G'
 
   # Make an identical copy, and merge a deletion to it.
-  svn_mkdir(source_d)
-  svn_mkfile(source_file)
+  target = 'A/D/G2'
+  svn_mkfile(source+"/file")
   s_rev = svn_commit('.')
-  svn_copy(source_file, target_file)
-  svn_delete(source_file)
+  svn_copy(s_rev, source, target)
+  svn_delete(source+"/file")
   s_rev = svn_commit('.')
-  svn_merge(s_rev, source_d, target_d, '--- Merging|D ')
+  svn_merge(s_rev, source, target, '--- Merging|D ')
   # should be deleted quietly
+
+  os.chdir(saved_cwd)
 
 def del_sched_add_hist_file(sbox):
   "merge tries to delete identical sched-add file"
@@ -12701,19 +12706,16 @@ def del_sched_add_hist_file(sbox):
   saved_cwd = os.getcwd()
   os.chdir(sbox.wc_dir)
 
-  source_d = 'source'
-  target_d = 'target'
-  source_file = os.path.join(source_d, 'file')
-  target_file = os.path.join(target_d, 'file')
+  source = 'A/D/G'
 
   # Merge a creation, and delete by reverse-merging into uncommitted WC.
-  svn_mkdir(source_d)
-  svn_copy(source_d, target_d)
+  target = 'A/D/G2'
+  svn_copy(svn_commit.repo_rev, source, target)
   s_rev = svn_commit('.')
-  svn_mkfile(source_file)
+  svn_mkfile(source+"/file")
   s_rev = svn_commit('.')
-  svn_merge(s_rev, source_d, target_d, '--- Merging|A ')
-  svn_merge(-s_rev, source_d, target_d, '--- Reverse-merging|D ')
+  svn_merge(s_rev, source, target, '--- Merging|A ')
+  svn_merge(-s_rev, source, target, '--- Reverse-merging|D ')
   # should be deleted quietly
 
   os.chdir(saved_cwd)
@@ -12728,40 +12730,35 @@ def del_differing_file(sbox):
   saved_cwd = os.getcwd()
   os.chdir(sbox.wc_dir)
 
-  source_d = 'source'
-  target_d = 'target'
-  source_file = os.path.join(source_d, 'file')
-  target_file = os.path.join(target_d, 'file')
+  source = 'A/D/G'
+  s_rev_orig = 1
 
-  # Copy a file, text-modify it, and merge a deletion to it.
-  svn_mkdir(source_d)
-  svn_mkfile(source_file)
-  s_rev = svn_commit('.')
-  svn_copy(source_file, target_file)
-  svntest.main.file_append(target_file, "An extra line in the target.\n")
-  svn_delete(source_file)
-  s_rev = svn_commit(source_d)
-  svn_merge(s_rev, source_d, target_d, 'Skipped')
+  # Delete files in the source
+  svn_delete(source+"/tau")
+  s_rev_tau = svn_commit(source)
+  svn_delete(source+"/pi")
+  s_rev_pi = svn_commit(source)
+
+  # Copy a file, modify it, and merge a deletion to it.
+  target = 'A/D/G2'
+  svn_copy(s_rev_orig, source, target)
+  svntest.main.file_append(target+"/tau", "An extra line in the target.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'propset',
+                                     'newprop', 'v', target+"/pi")
+  svn_merge(s_rev_tau, source, target, 'Skipped.*tau')
+  svn_merge(s_rev_pi, source, target, 'Skipped.*pi')
   # should complain and "skip" it
 
-  source_d = 'source2'
-  target_d = 'target2'
-  source_file = os.path.join(source_d, 'file')
-  target_file = os.path.join(target_d, 'file')
-
-  # Copy a file, text-modify it, commit, and merge a deletion to it.
-  svn_mkdir(source_d)
-  svn_mkfile(source_file)
-  s_rev = svn_commit('.')
-  svn_copy(source_file, target_file)
-  svntest.main.file_append(target_file, "An extra line in the target.\n")
-  svn_delete(source_file)
-  s_rev = svn_commit('.')
-  svn_merge(s_rev, source_d, target_d, 'Skipped')
+  # Copy a file, modify it, commit, and merge a deletion to it.
+  target = 'A/D/G3'
+  svn_copy(s_rev_orig, source, target)
+  svntest.main.file_append(target+"/tau", "An extra line in the target.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'propset',
+                                     'newprop', 'v', target+"/pi")
+  svn_commit(target)
+  svn_merge(s_rev_tau, source, target, 'Skipped.*tau')
+  svn_merge(s_rev_pi, source, target, 'Skipped.*pi')
   # should complain and "skip" it
-
-  # Make a prop-modified copy, and merge a deletion to it.
-  # ...
 
   os.chdir(saved_cwd)
 
