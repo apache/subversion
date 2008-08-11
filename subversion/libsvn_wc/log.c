@@ -246,7 +246,8 @@ enum svn_wc__xfer_action {
                                        or, if that's NULL, those of NAME.
 
       When SPECIAL_ONLY is TRUE, only translate special,
-      not keywords and eol-style. ### Ignored: no effect.
+      not keywords and eol-style. ### SPECIAL_ONLY is ignored:
+      ### see <http://svn.haxx.se/dev/archive-2008-08/0089.shtml>.
 
 */
 static svn_error_t *
