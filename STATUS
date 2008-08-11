@@ -47,6 +47,7 @@ Candidate changes for 1.5.2:
      Might help downstream packagers for these systems.
    Votes:
      +1: stsp
+     +0: cmpilato
 
  * r32417
    Fix issue #3255: client capabilities were not passed to start-commit
@@ -54,7 +55,7 @@ Candidate changes for 1.5.2:
      Without this fix, start-commit cannot do early rejection of
      commits from clients that do not support mergeinfo.
    Votes:
-     +1: kfogel
+     +1: kfogel, cmpilato
 
 Approved changes:
 =================
