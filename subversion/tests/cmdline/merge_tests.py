@@ -12636,9 +12636,14 @@ def svn_mkfile(path):
                                 "Last changed in '$Revision$'.\n")
   svntest.actions.run_and_verify_svn(None, None, [], 'add', path)
   svntest.actions.run_and_verify_svn(None, None, [], 'propset',
-                                     'p1', 'v1', path)
-  svntest.actions.run_and_verify_svn(None, None, [], 'propset',
                                      'svn:keywords', 'Revision', path)
+
+def svn_modfile(path):
+  "Make text and property mods to a WC file."
+  path = local_path(path)
+  svntest.main.file_append(path, "An extra line.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'propset',
+                                     'newprop', 'v', path)
 
 def svn_copy(s_rev, path1, path2):
   "Copy a WC path locally."
@@ -12682,17 +12687,29 @@ def del_identical_file(sbox):
   saved_cwd = os.getcwd()
   os.chdir(sbox.wc_dir)
 
+  # Set up a modification and deletion in the source branch.
   source = 'A/D/G'
+  s_rev_orig = svn_commit.repo_rev
+  svn_modfile(source+"/tau")
+  s_rev_mod = svn_commit(source)
+  svn_delete(source+"/tau")
+  s_rev_del = svn_commit(source)
 
   # Make an identical copy, and merge a deletion to it.
   target = 'A/D/G2'
-  svn_mkfile(source+"/file")
-  s_rev = svn_commit('.')
-  svn_copy(s_rev, source, target)
-  svn_delete(source+"/file")
-  s_rev = svn_commit('.')
-  svn_merge(s_rev, source, target, '--- Merging|D ')
-  # should be deleted quietly
+  svn_copy(s_rev_mod, source, target)
+  svn_commit(target)
+  # Should be deleted quietly.
+  svn_merge(s_rev_del, source, target, '--- Merging|D ')
+
+  # Make a differing copy, locally modify it so it's the same,
+  # and merge a deletion to it.
+  target = 'A/D/G3'
+  svn_copy(s_rev_orig, source, target)
+  svn_commit(target)
+  svn_modfile(target+"/tau")
+  # Should be deleted quietly.
+  svn_merge(s_rev_del, source, target, '--- Merging|D ')
 
   os.chdir(saved_cwd)
 
@@ -12706,17 +12723,19 @@ def del_sched_add_hist_file(sbox):
   saved_cwd = os.getcwd()
   os.chdir(sbox.wc_dir)
 
+  # Set up a creation in the source branch.
   source = 'A/D/G'
+  s_rev_orig = svn_commit.repo_rev
+  svn_mkfile(source+"/file")
+  s_rev_add = svn_commit(source)
 
   # Merge a creation, and delete by reverse-merging into uncommitted WC.
   target = 'A/D/G2'
-  svn_copy(svn_commit.repo_rev, source, target)
-  s_rev = svn_commit('.')
-  svn_mkfile(source+"/file")
-  s_rev = svn_commit('.')
-  svn_merge(s_rev, source, target, '--- Merging|A ')
-  svn_merge(-s_rev, source, target, '--- Reverse-merging|D ')
-  # should be deleted quietly
+  svn_copy(s_rev_orig, source, target)
+  s_rev = svn_commit(target)
+  svn_merge(s_rev_add, source, target, '--- Merging|A ')
+  # Should be deleted quietly.
+  svn_merge(-s_rev_add, source, target, '--- Reverse-merging|D ')
 
   os.chdir(saved_cwd)
 
@@ -12745,9 +12764,9 @@ def del_differing_file(sbox):
   svntest.main.file_append(target+"/tau", "An extra line in the target.\n")
   svntest.actions.run_and_verify_svn(None, None, [], 'propset',
                                      'newprop', 'v', target+"/pi")
+  # Should complain and "skip" it.
   svn_merge(s_rev_tau, source, target, 'Skipped.*tau')
   svn_merge(s_rev_pi, source, target, 'Skipped.*pi')
-  # should complain and "skip" it
 
   # Copy a file, modify it, commit, and merge a deletion to it.
   target = 'A/D/G3'
@@ -12756,9 +12775,9 @@ def del_differing_file(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'propset',
                                      'newprop', 'v', target+"/pi")
   svn_commit(target)
+  # Should complain and "skip" it.
   svn_merge(s_rev_tau, source, target, 'Skipped.*tau')
   svn_merge(s_rev_pi, source, target, 'Skipped.*pi')
-  # should complain and "skip" it
 
   os.chdir(saved_cwd)
 
