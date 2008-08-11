@@ -1280,9 +1280,10 @@ merge_dir_deleted(svn_wc_adm_access_t *adm_access,
                                     merge_b->dry_run, FALSE,
                                     NULL, NULL,
                                     merge_b->ctx, subpool);
-        if (err && state)
+        if (err)
           {
-            *state = svn_wc_notify_state_obstructed;
+            if (state)
+              *state = svn_wc_notify_state_obstructed;
             svn_error_clear(err);
           }
         else if (state)
