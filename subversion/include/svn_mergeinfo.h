@@ -107,18 +107,19 @@ extern "C" {
  *
  * (a) Strings (@c svn_string_t *) containing "unparsed mergeinfo".
  *
- * (b) Hashes mapping merge source paths (@c const char *, starting
- *     with slashes) to non-empty arrays (@c apr_array_header_t *) of
- *     merge ranges (@c svn_merge_range_t *), ordered from smallest
- *     revision range to largest.  These hashes are called "mergeinfo"
- *     and are represented by @c svn_mergeinfo_t.  The sorted arrays
- *     are called "rangelists".  A @c NULL hash is used to represent
+ * (b) A "rangelist".  An array (@c apr_array_header_t *) of merge
+ *     ranges (@c svn_merge_range_t *), ordered from smallest revision
+ *     range to largest.
+ *
+ * (c) @c svn_mergeinfo_t, called "mergeinfo".  A hash mapping merge
+ *     source paths (@c const char *, starting with slashes) to
+ *     non-empty rangelist arrays.  A @c NULL hash is used to represent
  *     no mergeinfo and an empty hash is used to represent empty
  *     mergeinfo.
  *
- * (c) Hashes mapping paths (@c const char *, starting with slashes)
- *     to @c svn_mergeinfo_t.  These hashes are called "mergeinfo
- *     catalogs" and are represented by @c svn_mergeinfo_catalog_t.
+ * (d) @c svn_mergeinfo_catalog_t, called a "mergeinfo catalog".  A hash
+ *     mapping paths (@c const char *, starting with slashes) to
+ *     @c svn_mergeinfo_t.
  *
  * Both @c svn_mergeinfo_t and @c svn_mergeinfo_catalog_t are just
  * typedefs for @c apr_hash_t *; there is no static type-checking, and
