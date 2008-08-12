@@ -54,7 +54,7 @@ open_dir(apr_array_header_t *db_stack,
   apr_pool_t *subpool;
 
   /* Assert that we are in a stable state. */
-  SVN_ERR_ASSERT(db_stack && db_stack->nelts);
+  assert(db_stack && db_stack->nelts);
 
   /* Get the parent dir baton. */
   item = APR_ARRAY_IDX(db_stack, db_stack->nelts - 1, void *);
@@ -87,7 +87,7 @@ pop_stack(apr_array_header_t *db_stack,
   dir_stack_t *item;
 
   /* Assert that we are in a stable state. */
-  SVN_ERR_ASSERT(db_stack && db_stack->nelts);
+  assert(db_stack && db_stack->nelts);
 
   /* Close the most recent directory pushed to the stack. */
   item = APR_ARRAY_IDX(db_stack, db_stack->nelts - 1, dir_stack_t *);

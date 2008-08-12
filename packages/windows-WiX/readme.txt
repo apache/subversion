@@ -1,1 +1,0 @@
-This WiX project has been developed using SharpDevelop 3 - that is what is required to load the SLN file. 

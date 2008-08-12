@@ -45,7 +45,7 @@ Release notes for the @MAJOR_MINOR@.x release series may be found at:
 
     http://subversion.tigris.org/svn_@MAJOR_MINOR@_releasenotes.html
 
-You can find the list of changes between @VERSION@ and earlier versions at:
+You can find list of changes between @VERSION@ and earlier versions at:
 
     http://svn.collab.net/repos/svn/tags/@VERSION@/CHANGES
 
@@ -99,7 +99,7 @@ ann_html = """\
 
 <dl><dd><a href="http://subversion.tigris.org/svn_@MAJOR_MINOR@_releasenotes.html">http://subversion.tigris.org/svn_@MAJOR_MINOR@_releasenotes.html</a></dd></dl>
 
-<p>You can find the list of changes between @VERSION@ and earlier versions at:</p>
+<p>You can find list of changes between @VERSION@ and earlier versions at:</p>
 
 <dl><dd><a href="http://svn.collab.net/repos/svn/tags/@VERSION@/CHANGES">http://svn.collab.net/repos/svn/tags/@VERSION@/CHANGES</a></dd></dl>
 """

@@ -124,7 +124,7 @@ class BadMergeinfoInheritanceError(Error):
 class MatchError(Error):
     def __init__(self, pattern, line):
         Error.__init__(self, '/%s/ does not match log line:\n%s'
-                       % (pattern, line))
+                             % (pattern, line))
 
 
 #
@@ -327,7 +327,7 @@ class Parser(object):
                    pPATHS, pMERGEINFO_INHERITANCE, ['include-descendants'])
         paths = [urllib.unquote(x) for x in m.group(1).split()]
         inheritance = _parse_mergeinfo_inheritance(m.group(2))
-        include_descendants = m.group(3) is not None
+        include_descendants         = m.group(3) is not None
         self.handle_get_mergeinfo(paths, inheritance, include_descendants)
         return line[m.end():]
 
@@ -337,8 +337,8 @@ class Parser(object):
         # revprops=all|(<REVPROP> ...)?
         pREVPROPS = r'revprops=(all|\(([^)]+)\))'
         m = _match(line, pPATHS, pREVRANGE,
-                   [pLIMIT, 'discover-changed-paths', 'strict',
-                    'include-merged-revisions', pREVPROPS])
+                [pLIMIT, 'discover-changed-paths', 'strict',
+                 'include-merged-revisions', pREVPROPS])
         paths = [urllib.unquote(x) for x in m.group(1).split()]
         left = int(m.group(2))
         right = int(m.group(3))
@@ -409,7 +409,7 @@ class Parser(object):
         depth = _parse_depth(m.group(5))
         ignore_ancestry = m.group(6) is not None
         self.handle_diff_1path(path, left, right,
-                               depth, ignore_ancestry)
+                                        depth, ignore_ancestry)
         return line[m.end():]
 
     def _parse_diff_2paths(self, line, m):
@@ -420,7 +420,7 @@ class Parser(object):
         depth = _parse_depth(m.group(6))
         ignore_ancestry = m.group(7) is not None
         self.handle_diff_2paths(from_path, from_rev, to_path, to_rev,
-                                depth, ignore_ancestry)
+                                         depth, ignore_ancestry)
         return line[m.end():]
 
     def _parse_status(self, line):

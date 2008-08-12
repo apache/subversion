@@ -57,7 +57,7 @@ svn_cl__propdel(apr_getopt_t *os,
      properties sneaked through somehow. */
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
-                                                      opt_state->targets, 
+                                                      opt_state->targets,
                                                       ctx, pool));
 
 
@@ -115,7 +115,7 @@ svn_cl__propdel(apr_getopt_t *os,
                                NULL, target,
                                opt_state->depth,
                                FALSE, SVN_INVALID_REVNUM,
-                               opt_state->changelists, NULL, 
+                               opt_state->changelists, NULL,
                                ctx, subpool),
                               &success, opt_state->quiet,
                               SVN_ERR_UNVERSIONED_RESOURCE,

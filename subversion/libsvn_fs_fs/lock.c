@@ -152,7 +152,7 @@ write_digest_file(apr_hash_t *children,
   apr_hash_t *hash = apr_hash_make(pool);
   const char *tmp_path;
 
-  SVN_ERR(svn_fs_fs__ensure_dir_exists(svn_path_join(fs->path, PATH_LOCKS_DIR, 
+  SVN_ERR(svn_fs_fs__ensure_dir_exists(svn_path_join(fs->path, PATH_LOCKS_DIR,
                                                      pool), fs, pool));
   SVN_ERR(svn_fs_fs__ensure_dir_exists(svn_path_dirname(digest_path, pool), fs,
                                        pool));
@@ -329,7 +329,7 @@ set_lock(svn_fs_t *fs,
   svn_stringbuf_t *last_child = svn_stringbuf_create("", pool);
   apr_pool_t *subpool;
 
-  SVN_ERR_ASSERT(lock);
+  assert(lock);
 
   /* Iterate in reverse, creating the lock for LOCK->path, and then
      just adding entries for its parent, until we reach a parent
@@ -391,7 +391,7 @@ delete_lock(svn_fs_t *fs,
   svn_stringbuf_t *child_to_kill = svn_stringbuf_create("", pool);
   apr_pool_t *subpool;
 
-  SVN_ERR_ASSERT(lock);
+  assert(lock);
 
   /* Iterate in reverse, deleting the lock for LOCK->path, and then
      pruning entries from its parents. */

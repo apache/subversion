@@ -36,9 +36,7 @@ class Generator(gen_win.WinGeneratorBase):
   def write_project(self, target, fname):
     "Write a Project (.vcproj)"
 
-    if isinstance(target, gen_base.TargetProject):
-      config_type=10
-    elif isinstance(target, gen_base.TargetExe):
+    if isinstance(target, gen_base.TargetExe):
       #EXE
       config_type=1
     elif isinstance(target, gen_base.TargetJava):

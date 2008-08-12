@@ -67,7 +67,7 @@ typedef enum
 
   /* Resolve the conflicted hunks by choosing the corresponding text
      from the post-conflict base copy file.
-     
+
      Note: this is a placeholder, not actually implemented in 1.5. */
   svn_cl__accept_theirs_conflict,
 
@@ -205,8 +205,6 @@ typedef struct svn_cl__opt_state_t
   svn_cl__show_revs_t show_revs; /* mergeinfo flavor */
   svn_depth_t set_depth;         /* new sticky ambient depth value */
   svn_boolean_t reintegrate;     /* use "reintegrate" merge-source heuristic */
-  svn_boolean_t trust_server_cert; /* trust server SSL certs that would
-                                      otherwise be rejected as "untrusted" */
 } svn_cl__opt_state_t;
 
 
@@ -328,8 +326,8 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
 /*** Command-line output functions -- printing to the user. ***/
 
 /* Print out commit information found in COMMIT_INFO to the console.
- * POOL is used for temporay allocations. 
- * COMMIT_INFO should not be NULL. 
+ * POOL is used for temporay allocations.
+ * COMMIT_INFO should not be NULL.
  */
 svn_error_t *svn_cl__print_commit_info(svn_commit_info_t *commit_info,
                                        apr_pool_t *pool);
@@ -386,6 +384,16 @@ svn_error_t *
 svn_cl__print_prop_hash(apr_hash_t *prop_hash,
                         svn_boolean_t names_only,
                         apr_pool_t *pool);
+
+/* Print a single xml property name-value pair to OUTSTR.  If OUTSTR is NULL,
+   allocate it first from pool, otherwise append the xml to it.  Escape
+   property values which are not xml safe, as determined by
+   svn_xml_is_xml_safe(). */
+void
+svn_cl__print_xml_prop(svn_stringbuf_t **outstr,
+                       const char* propname,
+                       svn_string_t *propval,
+                       apr_pool_t *pool);
 
 /* Same as svn_cl__print_prop_hash(), only output xml to OUTSTR.  If OUTSTR is
    NULL, allocate it first from pool, otherwise append the xml to it. */

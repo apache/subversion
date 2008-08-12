@@ -34,10 +34,8 @@
 
 #include <QtCore/QString>
 
-#include <kaboutdata.h>
+#include <kapplication.h>
 #include <kcmdlineargs.h>
-#include <kcomponentdata.h>
-#include <klocalizedstring.h>
 #include <kwallet.h>
 
 
@@ -73,7 +71,7 @@ kwallet_password_get(const char **password,
                      SVN_VER_NUMBER,
                      ki18n("Version control system"),
                      KCmdLineArgs::CmdLineArgKDE);
-  KComponentData component_data(KCmdLineArgs::aboutData());
+  KApplication application;
   svn_boolean_t ret = FALSE;
   QString wallet_name = KWallet::Wallet::NetworkWallet();
   QString folder = QString::fromUtf8("Subversion");
@@ -139,7 +137,7 @@ kwallet_password_set(apr_hash_t *creds,
                      SVN_VER_NUMBER,
                      ki18n("Version control system"),
                      KCmdLineArgs::CmdLineArgKDE);
-  KComponentData component_data(KCmdLineArgs::aboutData());
+  KApplication application;
   svn_boolean_t ret = FALSE;
   QString q_password = QString::fromUtf8(password);
   QString wallet_name = KWallet::Wallet::NetworkWallet();

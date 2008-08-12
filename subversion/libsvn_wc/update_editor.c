@@ -72,10 +72,8 @@ struct edit_baton
 {
   /* For updates, the "destination" of the edit is the ANCHOR (the
      directory at which the edit is rooted) plus the TARGET (the
-     actual thing we wish to update).  Target may be the empty string,
-     but it is never NULL; for example, for checkouts and for updates
-     that do not specify a target path, ANCHOR holds the whole path,
-     and TARGET is empty. */
+     actual thing we wish to update).  For checkouts, ANCHOR holds the
+     whole path, and TARGET is unused. */
   const char *anchor;
   const char *target;
 
@@ -361,7 +359,9 @@ make_dir_baton(struct dir_baton **d_p,
   struct dir_baton *d;
   struct bump_dir_info *bdi;
 
-  SVN_ERR_ASSERT(path || (! pb));
+  /* Don't do this.  Just do NOT do this to me. */
+  if (pb && (! path))
+    abort();
 
   /* Okay, no easy out, so allocate and initialize a dir baton. */
   d = apr_pcalloc(pool, sizeof(*d));
@@ -643,7 +643,7 @@ struct file_baton
 
   /* The path to the incoming text base (that is, to a text-base-file-
      in-progress in the tmp area).  This gets set if there are file
-     content changes. */ 
+     content changes. */
   const char *new_text_base_path;
 
   /* If this file was added with history, this is the path to a copy
@@ -699,7 +699,9 @@ make_file_baton(struct file_baton **f_p,
 {
   struct file_baton *f = apr_pcalloc(pool, sizeof(*f));
 
-  SVN_ERR_ASSERT(path);
+  /* I rather need this information, yes. */
+  if (! path)
+    abort();
 
   /* Make the file's on-disk name. */
   f->path = svn_path_join(pb->edit_baton->anchor, path, pool);
@@ -1414,9 +1416,9 @@ add_directory(const char *path,
 
   /* Semantic check.  Either both "copyfrom" args are valid, or they're
      NULL and SVN_INVALID_REVNUM.  A mixture is illegal semantics. */
-  SVN_ERR_ASSERT((copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_revision))
-                 || (!copyfrom_path &&
-                     !SVN_IS_VALID_REVNUM(copyfrom_revision)));
+  if ((copyfrom_path && (! SVN_IS_VALID_REVNUM(copyfrom_revision)))
+      || ((! copyfrom_path) && (SVN_IS_VALID_REVNUM(copyfrom_revision))))
+    abort();
 
   SVN_ERR(check_path_under_root(pb->path, db->name, pool));
   SVN_ERR(svn_io_check_path(db->path, &kind, db->pool));
@@ -1548,7 +1550,7 @@ add_directory(const char *path,
       http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=136879
       From: "David Glasser" <glasser@davidglasser.net>
       To: "Karl Fogel" <kfogel@red-bean.com>, dev@subversion.tigris.org
-      Cc: "Arfrever Frehtes Taifersar Arahesis" <arfrever.fta@gmail.com>, 
+      Cc: "Arfrever Frehtes Taifersar Arahesis" <arfrever.fta@gmail.com>,
           glasser@tigris.org
       Subject: Re: svn commit: r30161 - in trunk/subversion: \
                libsvn_ra_neon tests/cmdline
@@ -1692,7 +1694,7 @@ open_directory(const char *path,
 
       SVN_ERR(svn_wc_conflicted_p2(&text_conflicted, &prop_conflicted,
                                    &tree_conflicted, db->path, entry, pool));
-      SVN_ERR_ASSERT(! text_conflicted);
+      assert(! text_conflicted);
       if (prop_conflicted || tree_conflicted)
         {
           db->bump_info->skipped = TRUE;
@@ -2956,8 +2958,8 @@ close_file(void *file_baton,
   /* Was this an add-with-history, with no apply_textdelta? */
   if (fb->added_with_history && ! fb->received_textdelta)
     {
-      SVN_ERR_ASSERT(! fb->text_base_path && ! fb->new_text_base_path
-                     && fb->copied_text_base);
+      assert(! fb->text_base_path && ! fb->new_text_base_path
+             && fb->copied_text_base);
 
       /* Set up the base paths like apply_textdelta does. */
       SVN_ERR(choose_base_paths(NULL, NULL, NULL, fb, pool));
@@ -3496,7 +3498,7 @@ make_editor(svn_revnum_t *target_revision,
   /* An unknown depth can't be sticky. */
   if (depth == svn_depth_unknown)
     depth_is_sticky = FALSE;
-  
+
   /* Get the anchor entry, so we can fetch the repository root. */
   SVN_ERR(svn_wc_entry(&entry, anchor, adm_access, FALSE, pool));
 
@@ -3574,7 +3576,7 @@ make_editor(svn_revnum_t *target_revision,
   if (depth_is_sticky)
     {
       const svn_wc_entry_t *target_entry;
-      SVN_ERR(svn_wc_entry(&target_entry, svn_path_join(anchor, target, pool), 
+      SVN_ERR(svn_wc_entry(&target_entry, svn_path_join(anchor, target, pool),
                            adm_access, FALSE, pool));
       if (target_entry && (target_entry->depth > depth))
         return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
@@ -3716,11 +3718,11 @@ svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
                           svn_wc_traversal_info_t *traversal_info,
                           apr_pool_t *pool)
 {
-  SVN_ERR_ASSERT(switch_url);
+  assert(switch_url);
 
   return make_editor(target_revision, anchor, svn_wc_adm_access_path(anchor),
-                     target, use_commit_times, switch_url, 
-                     depth, depth_is_sticky, allow_unver_obstructions, 
+                     target, use_commit_times, switch_url,
+                     depth, depth_is_sticky, allow_unver_obstructions,
                      notify_func, notify_baton, cancel_func, cancel_baton,
                      conflict_func, conflict_baton,
                      NULL, NULL, /* TODO(sussman): add fetch callback here  */
@@ -3745,7 +3747,7 @@ svn_wc_get_switch_editor2(svn_revnum_t *target_revision,
                           svn_wc_traversal_info_t *traversal_info,
                           apr_pool_t *pool)
 {
-  SVN_ERR_ASSERT(switch_url);
+  assert(switch_url);
 
   return svn_wc_get_switch_editor3(target_revision, anchor, target,
                                    switch_url, use_commit_times,
@@ -4172,7 +4174,7 @@ svn_wc_add_repos_file2(const char *dst_path,
 
     if (copyfrom_url)
       {
-        SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(copyfrom_rev));
+        assert(SVN_IS_VALID_REVNUM(copyfrom_rev));
 
         tmp_entry.copyfrom_url = copyfrom_url;
         tmp_entry.copyfrom_rev = copyfrom_rev;

@@ -54,7 +54,7 @@ except ImportError, e:
 ################################################################################
 def walk_tree(root, path):
   files = []
-  
+
   for name in svn.fs.dir_entries(root, path).keys():
     full = path + '/' + name
     if svn.fs.is_dir(root, full):
@@ -73,7 +73,7 @@ def get_file_list(root, included, excluded):
   regexp = re.compile(included)
   regexpout = re.compile(excluded)
   all_files = walk_tree(root, '')
-  
+
   for path in all_files:
     # Must match include and not match exclude regexp
     if regexp.match(path) and not regexpout.match(path):
@@ -120,7 +120,7 @@ def addneedslock(repos_path, uname='', commitmsg='', included='.*', excluded='^$
     files = get_rev_file_list(revroot, included, excluded)
 
   interesting_files = []
-  
+
   print 'Searching ' + str(len(files)) + ' file(s)...'
 
   for path in files:
@@ -141,11 +141,11 @@ def addneedslock(repos_path, uname='', commitmsg='', included='.*', excluded='^$
       headrev = svn.fs.youngest_rev(fsob)
       txn = svn.repos.fs_begin_txn_for_commit(repos_ptr, headrev, uname, commitmsg)
       root = svn.fs.txn_root(txn)
-  
+
       for path in interesting_files:
         print "Adding svn:needs-lock to '" + path + "'..."
         svn.fs.change_node_prop(root, path, svn.core.SVN_PROP_NEEDS_LOCK, '*')
-    
+
       conflict, newrev = svn.fs.commit_txn(txn)
       if conflict:
         raise Exception("Conflict encountered (%s)" % conflict)
@@ -153,7 +153,7 @@ def addneedslock(repos_path, uname='', commitmsg='', included='.*', excluded='^$
       print 'Created revision: ', newrev
   else:
     print 'Nothing changed.  Current Revision: ', headrev
-    
+
 
 ################################################################################
 def usage():
@@ -170,7 +170,7 @@ def main():
   included = '.*'
   excluded = '^$'
   rev = None
-  dryrun = None  
+  dryrun = None
 
   for name, value in opts:
     if name == '-u':

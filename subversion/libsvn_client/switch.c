@@ -91,7 +91,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   /* An unknown depth can't be sticky. */
   if (depth == svn_depth_unknown)
     depth_is_sticky = FALSE;
-  
+
   /* Get the external diff3, if any. */
   svn_config_get(cfg, &diff3_cmd, SVN_CONFIG_SECTION_HELPERS,
                  SVN_CONFIG_OPTION_DIFF3_CMD, NULL);
@@ -110,8 +110,8 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
     : NULL;
 
   /* Sanity check.  Without these, the switch is meaningless. */
-  SVN_ERR_ASSERT(path);
-  SVN_ERR_ASSERT(switch_url && (switch_url[0] != '\0'));
+  assert(path);
+  assert(switch_url && (switch_url[0] != '\0'));
 
   /* ### Need to lock the whole target tree to invalidate wcprops. Does
      non-recursive switch really need to invalidate the whole tree? */
@@ -129,7 +129,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   URL = apr_pstrdup(pool, entry->url);
 
   /* Open an RA session to 'source' URL */
-  SVN_ERR(svn_client__ra_session_from_path(&ra_session, &revnum, 
+  SVN_ERR(svn_client__ra_session_from_path(&ra_session, &revnum,
                                            &switch_rev_url,
                                            switch_url, adm_access,
                                            peg_revision, revision,
@@ -150,7 +150,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   /* Fetch the switch (update) editor.  If REVISION is invalid, that's
      okay; the RA driver will call editor->set_target_revision() later on. */
   SVN_ERR(svn_wc_get_switch_editor3(&revnum, adm_access, target,
-                                    switch_rev_url, use_commit_times, depth, 
+                                    switch_rev_url, use_commit_times, depth,
                                     depth_is_sticky, allow_unver_obstructions,
                                     ctx->notify_func2, ctx->notify_baton2,
                                     ctx->cancel_func, ctx->cancel_baton,
@@ -244,7 +244,7 @@ svn_client_switch2(svn_revnum_t *result_rev,
                    apr_pool_t *pool)
 {
   return svn_client__switch_internal(result_rev, path, switch_url,
-                                     peg_revision, revision, depth, 
+                                     peg_revision, revision, depth,
                                      depth_is_sticky, NULL, ignore_externals,
                                      allow_unver_obstructions, ctx, pool);
 }

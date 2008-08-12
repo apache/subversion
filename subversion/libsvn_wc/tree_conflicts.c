@@ -27,7 +27,7 @@
 /* If **INPUT starts with *TOKEN, advance *INPUT by the length of *TOKEN
  * and return TRUE. Else, return FALSE and leave *INPUT alone. */
 static svn_boolean_t
-advance_on_match(const char **input, const char *token)
+advance_on_match(char **input, const char *token)
 {
   int len = strlen(token);
   if ((strncmp(*input, token, len)) == 0)
@@ -48,8 +48,8 @@ advance_on_match(const char **input, const char *token)
  */
 static svn_error_t *
 read_victim_path(svn_wc_conflict_description_t *conflict,
-                 const char **start,
-                 const char *end,
+                 char **start,
+                 char *end,
                  apr_pool_t *pool)
 {
   svn_stringbuf_t *victim_path;
@@ -121,8 +121,8 @@ read_victim_path(svn_wc_conflict_description_t *conflict,
  */
 static svn_error_t *
 read_node_kind(svn_wc_conflict_description_t *conflict,
-               const char **start,
-               const char *end)
+               char **start,
+               char *end)
 {
   if (*start >= end)
       return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
@@ -152,8 +152,8 @@ read_node_kind(svn_wc_conflict_description_t *conflict,
  */
 static svn_error_t *
 read_operation(svn_wc_conflict_description_t *conflict,
-               const char **start,
-               const char *end)
+               char **start,
+               char *end)
 {
   if (*start >= end)
       return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
@@ -185,8 +185,8 @@ read_operation(svn_wc_conflict_description_t *conflict,
  */
 static svn_error_t *
 read_action(svn_wc_conflict_description_t *conflict,
-            const char **start,
-            const char *end)
+            char **start,
+            char *end)
 {
   if (*start >= end)
       return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
@@ -216,8 +216,8 @@ read_action(svn_wc_conflict_description_t *conflict,
  */
 static svn_error_t *
 read_reason(svn_wc_conflict_description_t *conflict,
-            const char **start,
-            const char *end)
+            char **start,
+            char *end)
 {
   if (*start >= end)
       return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
@@ -253,8 +253,8 @@ read_reason(svn_wc_conflict_description_t *conflict,
  */
 static svn_error_t *
 read_one_tree_conflict(svn_wc_conflict_description_t **conflict,
-                       const char **start,
-                       const char *end,
+                       char **start,
+                       char *end,
                        apr_pool_t *pool)
 {
   if (*start >= end)
@@ -292,7 +292,7 @@ svn_wc_read_tree_conflicts_from_entry(apr_array_header_t *conflicts,
                                        const svn_wc_entry_t *dir_entry,
                                        apr_pool_t *pool)
 {
-  const char *start, *end;
+  char *start, *end;
   svn_wc_conflict_description_t *conflict = NULL;
 
   if (dir_entry->tree_conflict_data == NULL)
@@ -303,7 +303,7 @@ svn_wc_read_tree_conflicts_from_entry(apr_array_header_t *conflicts,
 
   assert(conflicts);
 
-  start = dir_entry->tree_conflict_data;
+  start = (char*) dir_entry->tree_conflict_data;
   end = start + strlen(start);
 
   while (start != NULL && start <= end) /* Yes, '<=', because 'start == end'
@@ -328,7 +328,7 @@ svn_wc_read_tree_conflicts_from_entry(apr_array_header_t *conflicts,
 /* Like svn_stringbuf_appendcstr(), but appends a single char. */
 static void
 stringbuf_appendchar(svn_stringbuf_t *targetstr,
-                     char c)
+                    const char c)
 {
   char s[2];
   
@@ -352,7 +352,7 @@ svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
 
   for (i = 0; i < conflicts->nelts; i++)
     {
-      const svn_wc_conflict_description_t *conflict =
+      svn_wc_conflict_description_t *conflict =
           APR_ARRAY_IDX(conflicts, i, svn_wc_conflict_description_t *);
 
       path = conflict->victim_path;
@@ -465,7 +465,7 @@ svn_boolean_t
 svn_wc__tree_conflict_exists(apr_array_header_t *conflicts,
                              const char *victim_path)
 {
-  const svn_wc_conflict_description_t *conflict;
+  svn_wc_conflict_description_t *conflict;
   int i;
 
   for (i = 0; i < conflicts->nelts; i++)
@@ -480,7 +480,7 @@ svn_wc__tree_conflict_exists(apr_array_header_t *conflicts,
 }
 
 svn_error_t *
-svn_wc_add_tree_conflict_data(const svn_wc_conflict_description_t *conflict,
+svn_wc_add_tree_conflict_data(svn_wc_conflict_description_t *conflict,
                               svn_wc_adm_access_t *adm_access,
                               apr_pool_t *pool)
 {
@@ -498,11 +498,10 @@ svn_wc_add_tree_conflict_data(const svn_wc_conflict_description_t *conflict,
 }
 
 svn_error_t *
-svn_wc__loggy_add_tree_conflict_data(
-  svn_stringbuf_t *log_accum,
-  const svn_wc_conflict_description_t *conflict,
-  svn_wc_adm_access_t *adm_access,
-  apr_pool_t *pool)
+svn_wc__loggy_add_tree_conflict_data(svn_stringbuf_t *log_accum,
+                                     svn_wc_conflict_description_t *conflict,
+                                     svn_wc_adm_access_t *adm_access,
+                                     apr_pool_t *pool)
 {
   const char *dir_path;
   const svn_wc_entry_t *entry;
@@ -525,7 +524,7 @@ svn_wc__loggy_add_tree_conflict_data(
     return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
         _("Attempt to add tree conflict that already exists"));
 
-  APR_ARRAY_PUSH(conflicts, const svn_wc_conflict_description_t *) = conflict;
+  APR_ARRAY_PUSH(conflicts, svn_wc_conflict_description_t *) = conflict;
 
   SVN_ERR(svn_wc__write_tree_conflicts_to_entry(conflicts, &tmp_entry, pool));
   SVN_ERR(svn_wc__loggy_entry_modify(&log_accum,

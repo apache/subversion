@@ -176,7 +176,7 @@ svn_client__path_relative_to_root(const char **rel_path,
   svn_error_t *err = SVN_NO_ERROR;
   svn_boolean_t need_wc_cleanup = FALSE;
 
-  SVN_ERR_ASSERT(repos_root != NULL || ra_session != NULL);
+  assert(repos_root != NULL || ra_session != NULL);
 
   /* If we have a WC path... */
   if (! svn_path_is_url(path_or_url))
@@ -219,7 +219,7 @@ svn_client__path_relative_to_root(const char **rel_path,
           goto cleanup;
         }
       rel_url = svn_path_uri_decode(rel_url, pool);
-      *rel_path = include_leading_slash 
+      *rel_path = include_leading_slash
                     ? apr_pstrcat(pool, "/", rel_url, NULL) : rel_url;
     }
 
@@ -293,7 +293,7 @@ svn_client__get_repos_root(const char **repos_root,
  cleanup:
   if (sesspool)
     svn_pool_destroy(sesspool);
-    
+
   if (need_wc_cleanup)
     {
       svn_error_t *err2 = svn_wc_adm_close(adm_access);

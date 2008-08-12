@@ -665,8 +665,8 @@ svn_ra_local__get_commit_editor(svn_ra_session_t *session,
 
   /* Get the repos commit-editor */
   SVN_ERR(svn_repos_get_commit_editor5
-          (editor, edit_baton, sess->repos, NULL, 
-           svn_path_uri_decode(sess->repos_url, pool), sess->fs_path->data, 
+          (editor, edit_baton, sess->repos, NULL,
+           svn_path_uri_decode(sess->repos_url, pool), sess->fs_path->data,
            revprop_table, deltify_etc, db, NULL, NULL, pool));
 
   return SVN_NO_ERROR;
@@ -685,13 +685,13 @@ svn_ra_local__get_mergeinfo(svn_ra_session_t *session,
   svn_ra_local__session_baton_t *sess = session->priv;
   svn_mergeinfo_catalog_t tmp_catalog;
   int i;
-  apr_array_header_t *abs_paths = 
+  apr_array_header_t *abs_paths =
     apr_array_make(pool, 0, sizeof(const char *));
 
   for (i = 0; i < paths->nelts; i++)
     {
       const char *relative_path = APR_ARRAY_IDX(paths, i, const char *);
-      APR_ARRAY_PUSH(abs_paths, const char *) = 
+      APR_ARRAY_PUSH(abs_paths, const char *) =
         svn_path_join(sess->fs_path->data, relative_path, pool);
     }
 
@@ -861,7 +861,7 @@ svn_ra_local__get_log(svn_ra_session_t *session,
   svn_ra_local__session_baton_t *sess = session->priv;
   int i;
   struct log_baton lb;
-  apr_array_header_t *abs_paths = 
+  apr_array_header_t *abs_paths =
     apr_array_make(pool, 0, sizeof(const char *));
 
   if (paths)
@@ -869,7 +869,7 @@ svn_ra_local__get_log(svn_ra_session_t *session,
       for (i = 0; i < paths->nelts; i++)
         {
           const char *relative_path = APR_ARRAY_IDX(paths, i, const char *);
-          APR_ARRAY_PUSH(abs_paths, const char *) = 
+          APR_ARRAY_PUSH(abs_paths, const char *) =
             svn_path_join(sess->fs_path->data, relative_path, pool);
         }
     }

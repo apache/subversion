@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -150,7 +150,7 @@ def copy_replace_with_props(sbox, wc_copy):
               'phony-prop' : '*'}
   else:
     props = { 'phony-prop' : '*'}
-    
+
   expected_disk.tweak('A/D/G/rho',
                       contents="This is the file 'pi'.\n",
                       props=props)
@@ -3766,7 +3766,7 @@ def replaced_local_source_for_incoming_copy(sbox):
   # Make the duplicate working copy.
   svntest.main.safe_rmtree(other_wc_dir)
   shutil.copytree(wc_dir, other_wc_dir)
-  
+
   try:
     ## Test properties. ##
 
@@ -3837,10 +3837,10 @@ def unneeded_parents(sbox):
   #
   #    SRC_FILE_URL - existing file
   #    DST_DIR_URL - existing directory
-  # 
+  #
   #    Omitting "--parents" option makes above copy operation work as
   #    expected.
-  # 
+  #
   #    Bug is in libsvn_client/copy.c:801, where "dir" should be
   #    checked for null before using it in svn_ra_check_path call.
   #
@@ -3851,7 +3851,7 @@ def unneeded_parents(sbox):
   #
   # In other words, if we had "/A/B" below instead of "/A" (adjusting
   # expected_* accordingly, of course), the bug wouldn't reproduce.
-  
+
   sbox.build()
   wc_dir = sbox.wc_dir
 
@@ -3876,41 +3876,6 @@ def unneeded_parents(sbox):
     })
   svntest.actions.run_and_verify_update(
     wc_dir, expected_output, expected_disk, expected_status)
-
-
-def double_parents_with_url(sbox):
-  "svn cp --parents URL/src_dir URL/dst_dir"
-
-  sbox.build()
-  wc_dir = sbox.wc_dir
-
-  E_url = sbox.repo_url + '/A/B/E'
-  Z_url = sbox.repo_url + '/A/B/Z'
-
-  # --parents shouldn't result in a double commit of the same directory.
-  svntest.actions.run_and_verify_svn(None, None, [], 'cp', '--parents',
-                                     '-m', 'log msg', E_url, Z_url)
-
-  # Verify that it worked.
-  expected_output = svntest.wc.State(wc_dir, {
-    'A/B/Z/alpha' : Item(status='A '),
-    'A/B/Z/beta'  : Item(status='A '),
-    'A/B/Z'       : Item(status='A '),
-    })
-  expected_disk = svntest.main.greek_state.copy()
-  expected_disk.add({
-    'A/B/Z/alpha' : Item(contents="This is the file 'alpha'.\n"),
-    'A/B/Z/beta'  : Item(contents="This is the file 'beta'.\n"),
-    })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.add({
-    'A/B/Z/alpha' : Item(status='  ', wc_rev=2),
-    'A/B/Z/beta'  : Item(status='  ', wc_rev=2),
-    'A/B/Z'       : Item(status='  ', wc_rev=2),
-    })
-  svntest.actions.run_and_verify_update(
-    wc_dir, expected_output, expected_disk, expected_status)
-
 
 
 ########################################################################
@@ -3990,7 +3955,6 @@ test_list = [ None,
               allow_unversioned_parent_for_copy_src,
               replaced_local_source_for_incoming_copy,
               unneeded_parents,
-              double_parents_with_url,
              ]
 
 if __name__ == '__main__':

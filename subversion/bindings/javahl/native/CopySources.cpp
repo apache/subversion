@@ -164,7 +164,7 @@ CopySources::array(Pool &pool)
           static jmethodID getPegRevision = 0;
           if (getPegRevision == 0)
             {
-              getPegRevision = env->GetMethodID(clazz, "getPegRevision",
+              getPegRevision = env->GetMethodID(clazz, "getRevision",
                                                 "()L"JAVA_PACKAGE"/Revision;");
               if (JNIUtil::isJavaExceptionThrown() || getPegRevision == 0)
                 return NULL;

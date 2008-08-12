@@ -225,11 +225,6 @@ svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
       SVN_ERR(parser_ctx->error);
     }
 
-  if (gls_ctx->inside_report)
-    err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
-                            _("Location segment report failed on '%s'@'%ld'"),
-                              path, peg_revision);
-
   SVN_ERR(svn_ra_serf__error_on_status(gls_ctx->status_code, handler->path));
 
   svn_pool_destroy(gls_ctx->subpool);

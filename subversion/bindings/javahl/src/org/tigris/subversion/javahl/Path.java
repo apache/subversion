@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2006, 2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -39,23 +39,4 @@ public class Path
      * @return Whether Subversion can store the path in a repository.
      */
     public static native boolean isValid(String path);
-
-    /**
-     * Whether a URL is valid. Implementation may behave differently
-     * than <code>svn_path_is_url()</code>.
-     *
-     * @param path The Subversion "path" to inspect.
-     * @return Whether <code>path</code> is a URL.
-     * @throws IllegalArgumentException If <code>path</code> is
-     * <code>null</code>.
-     */
-    public static boolean isURL(String path)
-    {
-        if (path == null)
-        {
-            throw new IllegalArgumentException();
-        }
-        // Require at least "s://".
-        return (path.indexOf("://") > 0);
-    }
 }

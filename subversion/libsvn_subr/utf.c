@@ -242,10 +242,10 @@ get_xlate_handle_node(xlate_handle_node_t **ret,
   /* On OS400 V5R4 with UTF support, APR_DEFAULT_CHARSET and
    * APR_LOCALE_CHARSET are both UTF-8 (CCSID 1208), so we won't get far
    * with this assert active. */
-  SVN_ERR_ASSERT(frompage != SVN_APR_DEFAULT_CHARSET
-                 && topage != SVN_APR_DEFAULT_CHARSET
-                 && (frompage != SVN_APR_LOCALE_CHARSET
-                     || topage != SVN_APR_LOCALE_CHARSET));
+  assert(frompage != SVN_APR_DEFAULT_CHARSET
+         && topage != SVN_APR_DEFAULT_CHARSET
+         && (frompage != SVN_APR_LOCALE_CHARSET
+             || topage != SVN_APR_LOCALE_CHARSET));
 #endif
 
   /* Use the correct pool for creating the handle. */

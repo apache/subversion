@@ -84,13 +84,6 @@ static void *convert_pl_obj(SV *value, swig_type_info *tinfo,
     return *result;
 }
 
-static void *convert_pl_revnum_t(SV *value, void *dummy, apr_pool_t *pool)
-{
-  svn_revnum_t *result = apr_palloc(pool, sizeof(svn_revnum_t));
-  *result = SvIV(value);
-  return (void *)result;
-}
-
 /* perl -> c hash convertors */
 static apr_hash_t *svn_swig_pl_to_hash(SV *source,
                                        pl_element_converter_t cv,
@@ -138,15 +131,6 @@ apr_hash_t *svn_swig_pl_objs_to_hash_by_name(SV *source,
 {
     swig_type_info *tinfo = _SWIG_TYPE(typename);
     return svn_swig_pl_objs_to_hash(source, tinfo, pool);
-}
-
-apr_hash_t *svn_swig_pl_objs_to_hash_of_revnum_t(SV *source,
-                                                 apr_pool_t *pool)
-{
-
-  return svn_swig_pl_to_hash(source,
-                             (pl_element_converter_t)convert_pl_revnum_t,
-                             NULL, pool);
 }
 
 /* perl -> c array convertors */
@@ -1432,25 +1416,6 @@ svn_error_t *svn_swig_pl_make_stream(svn_stream_t **stream, SV *obj)
       croak("unknown type for svn_stream_t");
 
     return SVN_NO_ERROR;
-}
-
-svn_error_t *svn_swig_pl_ra_lock_callback(
-                    void *baton,
-                    const char *path,
-                    svn_boolean_t do_lock,
-                    const svn_lock_t *lock,
-                    svn_error_t *ra_err,
-                    apr_pool_t *pool)
-{
-  if (!SvOK((SV *)baton))
-      return SVN_NO_ERROR;
-
-  SVN_ERR(svn_swig_pl_callback_thunk(CALL_SV, baton, NULL, "sbSSS",
-                                     path, do_lock,
-                                     lock, _SWIG_TYPE("svn_lock_t *"),
-                                     ra_err, _SWIG_TYPE("svn_error_t *"),
-                                     pool, POOLINFO));
-  return SVN_NO_ERROR;
 }
 
 SV *svn_swig_pl_from_stream(svn_stream_t *stream)

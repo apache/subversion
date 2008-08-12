@@ -1110,7 +1110,7 @@ svn_client_checkout(svn_revnum_t *result_rev,
  * their sticky ambient depth value to @a depth.
  *
  * If @a allow_unver_obstructions is TRUE then the update tolerates
- * existing unversioned items that obstruct added paths.  Only
+ * existing unversioned items that obstruct added paths from @a URL.  Only
  * obstructions of the same type (file or dir) as the added item are
  * tolerated.  The text of obstructing files is left as-is, effectively
  * treating it as a user modification after the update.  Working
@@ -1207,7 +1207,7 @@ svn_client_update(svn_revnum_t *result_rev,
  * as part of this operation.
  *
  * If @a allow_unver_obstructions is TRUE then the switch tolerates
- * existing unversioned items that obstruct added paths.  Only
+ * existing unversioned items that obstruct added paths from @a URL.  Only
  * obstructions of the same type (file or dir) as the added item are
  * tolerated.  The text of obstructing files is left as-is, effectively
  * treating it as a user modification after the switch.  Working
@@ -1238,7 +1238,7 @@ svn_client_switch2(svn_revnum_t *result_rev,
 
 
 /**
- * Similar to svn_client_switch2() but with @a allow_unver_obstructions, 
+ * Similar to svn_client_switch2() but with @a allow_unver_obstructions,
  * @a ignore_externals, and @a depth_is_sticky always set to FALSE,
  * and @a depth set according to @a recurse: if @a recurse is TRUE,
  * set @a depth to @c svn_depth_infinity, if @a recurse is FALSE, set
@@ -2725,10 +2725,10 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
 
 /**
  * Drive log entry callbacks @a receiver / @a receiver_baton with the
- * revisions merged from @a merge_source_path_or_url (as of @a
+ * revisions merged from @a merge_source_url (as of @a
  * src_peg_revision) into @a path_or_url (as of @a peg_revision).  @a
  * ctx is a context used for authentication.
- * 
+ *
  * @a discover_changed_paths and @a revprops are the same as for
  * svn_client_log4().  Use @a pool for all necessary allocations.
  *
@@ -2740,7 +2740,7 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
 svn_error_t *
 svn_client_mergeinfo_log_merged(const char *path_or_url,
                                 const svn_opt_revision_t *peg_revision,
-                                const char *merge_source_path_or_url,
+                                const char *merge_source_url,
                                 const svn_opt_revision_t *src_peg_revision,
                                 svn_log_entry_receiver_t receiver,
                                 void *receiver_baton,
@@ -2751,9 +2751,9 @@ svn_client_mergeinfo_log_merged(const char *path_or_url,
 
 /**
  * Drive log entry callbacks @a receiver / @a receiver_baton with the
- * revisions eligible for merge from @a merge_source_path_or_url (as
- * of @a src_peg_revision) into @a path_or_url (as of @a
- * peg_revision).  @a ctx is a context used for authentication.
+ * revisions eligible for merge from @a merge_source_url (as of @a
+ * src_peg_revision) into @a path_or_url (as of @a peg_revision).  @a
+ * ctx is a context used for authentication.
  *
  * @a discover_changed_paths and @a revprops are the same as for
  * svn_client_log4().  Use @a pool for all necessary allocations.
@@ -2766,7 +2766,7 @@ svn_client_mergeinfo_log_merged(const char *path_or_url,
 svn_error_t *
 svn_client_mergeinfo_log_eligible(const char *path_or_url,
                                   const svn_opt_revision_t *peg_revision,
-                                  const char *merge_source_path_or_url,
+                                  const char *merge_source_url,
                                   const svn_opt_revision_t *src_peg_revision,
                                   svn_log_entry_receiver_t receiver,
                                   void *receiver_baton,
@@ -3552,8 +3552,8 @@ svn_client_revprop_get(const char *propname,
  * repository.
  *
  * If @a depth is @c svn_depth_empty, list only the properties of
- * @a target itself.  If @a depth is @c svn_depth_files, and
- * @a target is a directory, list the properties of @a target
+ * @a path_or_url itself.  If @a depth is @c svn_depth_files, and
+ * @a path_or_url is a directory, list the properties of @a path_or_url
  * and its file entries.  If @c svn_depth_immediates, list the properties
  * of its immediate file and directory entries.  If @c svn_depth_infinity,
  * list the properties of its file entries and recurse (with
@@ -3689,6 +3689,12 @@ svn_client_revprop_list(apr_hash_t **props,
  * @c svn_depth_empty.  Else if @c svn_depth_files, export @a from and
  * its immediate file children (if any) only.  If @a depth is @c
  * svn_depth_empty, then export exactly @a from and none of its children.
+ *
+ * If @a recurse is TRUE, export recursively.  Otherwise, export
+ * just the directory represented by @a from and its immediate
+ * non-directory children, but none of its child directories (if any).
+ * Also, if @a recurse is FALSE, the export will behave as if
+ * @a ignore_externals is TRUE.
  *
  * All allocations are done in @a pool.
  *
@@ -4036,7 +4042,7 @@ svn_client_remove_from_changelists(const apr_array_header_t *paths,
                                    apr_pool_t *pool);
 
 /**
- * The callback type used by svn_client_get_changelists().
+ * The callback type used by @a svn_client_get_changelist
  *
  * On each invocation, @a path is a newly discovered member of the
  * changelist, and @a baton is a private function closure.

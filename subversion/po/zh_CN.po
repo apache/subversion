@@ -4981,7 +4981,7 @@ msgid "Negative revision number found parsing '%s'"
 msgstr "解析 “%s” 时发现负的版本号"
 
 #: ../libsvn_subr/mergeinfo.c:85
-msgid "No pathname preceding ':'"
+msgid "No pathname preceeding ':'"
 msgstr "没有路径名称前缀“:”"
 
 #: ../libsvn_subr/mergeinfo.c:401

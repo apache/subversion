@@ -722,7 +722,10 @@ svn_fs_fs__dag_clone_root(dag_node_t **root_p,
   /* Oh, give me a clone...
      (If they're the same, we haven't cloned the transaction's root
      directory yet.)  */
-  SVN_ERR_ASSERT(!svn_fs_fs__id_eq(root_id, base_root_id));
+  if (svn_fs_fs__id_eq(root_id, base_root_id))
+    {
+      abort();
+    }
 
   /* One way or another, root_id now identifies a cloned root node. */
   SVN_ERR(svn_fs_fs__dag_get_node(root_p, fs, root_id, pool));

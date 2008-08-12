@@ -74,7 +74,8 @@ svn_diff__tree_insert_token(svn_diff__node_t **node, svn_diff__tree_t *tree,
   svn_diff__node_t *parent;
   int rv;
 
-  SVN_ERR_ASSERT(token);
+  if (!token)
+    abort();
 
   parent = NULL;
   node_ref = &tree->root[hash % SVN_DIFF__HASH_SIZE];

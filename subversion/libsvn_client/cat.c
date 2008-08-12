@@ -62,10 +62,10 @@ cat_local_file(const char *path,
   apr_file_t *input_file;
   svn_stream_t *input;
 
-  SVN_ERR_ASSERT(revision->kind == svn_opt_revision_working ||
-                 revision->kind == svn_opt_revision_base ||
-                 revision->kind == svn_opt_revision_committed ||
-                 revision->kind == svn_opt_revision_unspecified);
+  assert(revision->kind == svn_opt_revision_working ||
+         revision->kind == svn_opt_revision_base ||
+         revision->kind == svn_opt_revision_committed ||
+         revision->kind == svn_opt_revision_unspecified);
 
   SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
 

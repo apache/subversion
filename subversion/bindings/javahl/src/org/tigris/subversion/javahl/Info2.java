@@ -167,12 +167,6 @@ public class Info2 implements java.io.Serializable
     private long reposSize;
 
     /**
-     * The depth of the item.
-     * @since 1.6
-     */
-    private int depth;
-
-    /**
      * constructor to build the object by native code. See fields for
      * parameters
      * @param path
@@ -196,7 +190,6 @@ public class Info2 implements java.io.Serializable
      * @param conflictNew
      * @param conflictWrk
      * @param prejfile
-     * @param depth
      */
     Info2(String path, String url, long rev, int kind, String reposRootUrl,
           String reposUUID, long lastChangedRev, long lastChangedDate,
@@ -204,7 +197,7 @@ public class Info2 implements java.io.Serializable
           String copyFromUrl, long copyFromRev, long textTime, long propTime,
           String checksum, String conflictOld, String conflictNew,
           String conflictWrk, String prejfile, String changelistName,
-          long workingSize, long reposSize, int depth)
+          long workingSize, long reposSize)
     {
         this.path = path;
         this.url = url;
@@ -230,7 +223,6 @@ public class Info2 implements java.io.Serializable
         this.changelistName = changelistName;
         this.workingSize = workingSize;
         this.reposSize = reposSize;
-        this.depth = depth;
     }
 
     /**
@@ -442,15 +434,6 @@ public class Info2 implements java.io.Serializable
     public long getReposSize()
     {
         return reposSize;
-    }
-
-    /**
-     * @return The depth of the directory or <code>null</code> if the
-     * item is a file.
-     */
-    public int getDepth()
-    {
-        return depth;
     }
 
     /**

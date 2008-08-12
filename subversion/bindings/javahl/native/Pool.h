@@ -52,14 +52,14 @@ class Pool
    * valid...and BOOM!  Hence the private declaration.
    */
   Pool(Pool &that);
-  Pool &operator=(Pool &that);
+  Pool &operator= (Pool &that);
 };
 
 // The following one-line functions are best inlined by the compiler, and
 // need to be implemented in the header file for that to happen.
 
 APR_INLINE
-apr_pool_t *Pool::pool() const
+apr_pool_t *Pool::pool () const
 {
   return m_pool;
 }

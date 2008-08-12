@@ -178,7 +178,7 @@ blame_receiver(void *baton,
       else
         svn_stream_printf(out, pool, "  ");
     }
- 
+
   if (use_merged)
     SVN_ERR(print_line_info(out, merged_revision, merged_author, merged_date,
                             merged_path, opt_state->verbose, pool));
@@ -206,7 +206,7 @@ svn_cl__blame(apr_getopt_t *os,
   svn_diff_file_options_t *diff_options = svn_diff_file_options_create(pool);
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
-                                                      opt_state->targets, 
+                                                      opt_state->targets,
                                                       ctx, pool));
 
   /* Blame needs a file on which to operate. */

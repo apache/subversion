@@ -165,11 +165,10 @@
  * log accumulators are usually readily available.
  */
 svn_error_t *
-svn_wc__loggy_add_tree_conflict_data(
-  svn_stringbuf_t *log_accum,
-  const svn_wc_conflict_description_t *conflict,
-  svn_wc_adm_access_t *adm_access,
-  apr_pool_t *pool);
+svn_wc__loggy_add_tree_conflict_data(svn_stringbuf_t *log_accum,
+                                     svn_wc_conflict_description_t *conflict,
+                                     svn_wc_adm_access_t *adm_access,
+                                     apr_pool_t *pool);
 
 /*
  * Write tree conflicts (svn_wc_conflict_description_t)

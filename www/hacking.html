@@ -2138,18 +2138,9 @@ to determine what is "obvious"; if you're not sure, just ask.</p>
 the <a href="#log-messages">log message</a> of your commit. For example:</p>
 
 <pre>
-------------------------------------------------------------------------
-r32135 | stylesen | 2008-07-16 10:04:25 +0200 (Wed, 16 Jul 2008) | 8 lines
+   Obvious fix.
 
-Update "check-license.py" so that it can generate license text applicable
-to this year.
-
-Obvious fix.
-
-* tools/dev/check-license.py
-  (NEW_LICENSE): s/2005/2008/
-
-------------------------------------------------------------------------
+   * www/hacking.html: Kill some typos.
 </pre>
 
 </div>
@@ -2741,18 +2732,7 @@ get:</p>
 
 <p>A change needs three +1 votes from full committers (or partial
 committers for the involved areas), and no vetoes, to go into
-A.B.x. If partial committers would like to vote for a different area,
-which does not fall within their privilege, it must be made clear in
-the STATUS file that their vote is 'non-binding' as follows:</p>
-
-<pre>
- * r31833
-   svndumpfilter: Don't match prefixes to partial path components.
-   Fixes #desc4 of issue #1853.
-   Votes:
-     +1: danielsh, hwright
-     +1 (non-binding): stylesen
-</pre>
+A.B.x.</p>
 
 <p>If you cast a veto (i.e. -1), please state the reason in the
 concerns field, and include a url / message-id for the list discussion

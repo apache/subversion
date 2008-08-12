@@ -33,10 +33,9 @@
 /* File provider                                                         */
 /*-----------------------------------------------------------------------*/
 
-/* The keys that will be stored on disk.  These serve the same role as
-   similar constants in other providers. */
-#define AUTHN_ASCII_CERT_KEY            "ascii_cert"
-#define AUTHN_FAILURES_KEY              "failures"
+/* The keys that will be stored on disk */
+#define SVN_AUTH__AUTHFILE_ASCII_CERT_KEY            "ascii_cert"
+#define SVN_AUTH__AUTHFILE_FAILURES_KEY              "failures"
 
 
 /* retrieve ssl server CA failure overrides (if any) from servers
@@ -76,10 +75,12 @@ ssl_server_trust_file_first_credentials(void **credentials,
       svn_string_t *trusted_cert, *this_cert, *failstr;
       apr_uint32_t last_failures = 0;
 
-      trusted_cert = apr_hash_get(creds_hash, AUTHN_ASCII_CERT_KEY,
+      trusted_cert = apr_hash_get(creds_hash,
+                                  SVN_AUTH__AUTHFILE_ASCII_CERT_KEY,
                                   APR_HASH_KEY_STRING);
       this_cert = svn_string_create(cert_info->ascii_cert, pool);
-      failstr = apr_hash_get(creds_hash, AUTHN_FAILURES_KEY,
+      failstr = apr_hash_get(creds_hash,
+                             SVN_AUTH__AUTHFILE_FAILURES_KEY,
                              APR_HASH_KEY_STRING);
 
       if (failstr)
@@ -139,9 +140,13 @@ ssl_server_trust_file_save_credentials(svn_boolean_t *saved,
                            APR_HASH_KEY_STRING);
 
   creds_hash = apr_hash_make(pool);
-  apr_hash_set(creds_hash, AUTHN_ASCII_CERT_KEY, APR_HASH_KEY_STRING,
+  apr_hash_set(creds_hash,
+               SVN_AUTH__AUTHFILE_ASCII_CERT_KEY,
+               APR_HASH_KEY_STRING,
                svn_string_create(cert_info->ascii_cert, pool));
-  apr_hash_set(creds_hash, AUTHN_FAILURES_KEY, APR_HASH_KEY_STRING,
+  apr_hash_set(creds_hash,
+               SVN_AUTH__AUTHFILE_FAILURES_KEY,
+               APR_HASH_KEY_STRING,
                svn_string_createf(pool, "%lu", (unsigned long)
                                   creds->accepted_failures));
 

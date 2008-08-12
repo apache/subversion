@@ -198,7 +198,7 @@ append_prop_conflict(apr_file_t *fp,
 }
 
 
-/* Look up the entry for PATH within ADM_ACCESS and see if it has a `current'
+/* Look up the entry NAME within ADM_ACCESS and see if it has a `current'
    reject file describing a state of conflict.  Set *REJECT_FILE to the
    name of that file, or to NULL if no such file exists. */
 static svn_error_t *
@@ -212,8 +212,7 @@ get_existing_prop_reject_file(const char **reject_file,
   SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
 
   *reject_file = entry->prejfile
-    ? apr_pstrcat(pool, svn_wc_adm_access_path(adm_access), 
-                  entry->prejfile, NULL)
+    ? apr_pstrcat(pool, svn_wc_adm_access_path(adm_access), entry->prejfile)
     : NULL;
   return SVN_NO_ERROR;
 }
@@ -1187,27 +1186,6 @@ set_prop_merge_state(svn_wc_notify_state_t *state,
 }
 
 
-/* Create a temporary file in the same directory as PATH. Fill it with
- * the data in VAL. Set *NEW_PATH to its path.
- * Allocate the file metadata in POOL in such a way that the file will be
- * deleted when the pool is cleared. */
-static svn_error_t *
-write_tmp_file(const char **new_path,
-               const char *path, const svn_string_t *val,
-               apr_pool_t *pool)
-{
-  apr_file_t *new_file;
-
-  SVN_ERR(svn_io_open_unique_file2(&new_file, new_path,
-                                   path, ".tmp",
-                                   svn_io_file_del_on_pool_cleanup,
-                                   pool));
-  SVN_ERR(svn_io_file_write_full(new_file, val->data,
-                                 val->len, NULL, pool));
-  SVN_ERR(svn_io_file_close(new_file, pool));
-  return SVN_NO_ERROR;
-}
-
 
 /* Helper function for the three apply_* functions below, used when
  * merging properties together.
@@ -1248,6 +1226,8 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
 {
   svn_wc_conflict_result_t *result = NULL;
   svn_string_t *mime_propval = NULL;
+  apr_file_t *working_file, *base_file, *new_file, *merged_file;
+  const char *working_path, *base_path, *new_path, *merged_path;
   apr_pool_t *filepool = svn_pool_create(pool);
   svn_wc_conflict_description_t *cdesc;
 
@@ -1262,10 +1242,28 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
 
   /* Create a tmpfile for each of the string_t's we've got.  */
   if (working_val)
-    SVN_ERR(write_tmp_file(&cdesc->my_file, path, working_val, filepool));
+    {
+      SVN_ERR(svn_io_open_unique_file2(&working_file, &working_path,
+                                       path, ".tmp",
+                                       svn_io_file_del_on_pool_cleanup,
+                                       filepool));
+      SVN_ERR(svn_io_file_write_full(working_file, working_val->data,
+                                     working_val->len, NULL, filepool));
+      SVN_ERR(svn_io_file_close(working_file, filepool));
+      cdesc->my_file = working_path;
+    }
 
   if (new_val)
-    SVN_ERR(write_tmp_file(&cdesc->their_file, path, new_val, filepool));
+    {
+      SVN_ERR(svn_io_open_unique_file2(&new_file, &new_path,
+                                       path, ".tmp",
+                                       svn_io_file_del_on_pool_cleanup,
+                                       filepool));
+      SVN_ERR(svn_io_file_write_full(new_file, new_val->data,
+                                     new_val->len, NULL, filepool));
+      SVN_ERR(svn_io_file_close(new_file, filepool));
+      cdesc->their_file = new_path;
+    }
 
   if (!base_val && !old_val)
     {
@@ -1285,8 +1283,15 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
          conflict-callback can still attempt a 3-way merge. */
 
       const svn_string_t *the_val = base_val ? base_val : old_val;
-
-      SVN_ERR(write_tmp_file(&cdesc->base_file, path, the_val, filepool));
+      SVN_ERR(svn_io_open_unique_file2(&base_file, &base_path,
+                                       path, ".tmp",
+                                       svn_io_file_del_on_pool_cleanup,
+                                       filepool));
+      SVN_ERR(svn_io_file_write_full(base_file,
+                                     the_val->data,
+                                     the_val->len, NULL, filepool));
+      SVN_ERR(svn_io_file_close(base_file, filepool));
+      cdesc->base_file = base_path;
     }
 
   else  /* base and old are both non-NULL */
@@ -1319,17 +1324,23 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
           the_val = base_val;
         }
 
-      SVN_ERR(write_tmp_file(&cdesc->base_file, path, the_val, filepool));
+      SVN_ERR(svn_io_open_unique_file2(&base_file, &base_path,
+                                       path, ".tmp",
+                                       svn_io_file_del_on_pool_cleanup,
+                                       filepool));
+      SVN_ERR(svn_io_file_write_full(base_file, the_val->data,
+                                     the_val->len, NULL, filepool));
+      SVN_ERR(svn_io_file_close(base_file, filepool));
+      cdesc->base_file = base_path;
 
       if (working_val && new_val)
         {
-          apr_file_t *merged_file;
           svn_stream_t *mergestream;
           svn_diff_t *diff;
           svn_diff_file_options_t *options =
             svn_diff_file_options_create(filepool);
 
-          SVN_ERR(svn_io_open_unique_file2(&merged_file, &cdesc->merged_file,
+          SVN_ERR(svn_io_open_unique_file2(&merged_file, &merged_path,
                                            path, ".tmp",
                                            svn_io_file_del_on_pool_cleanup,
                                            filepool));
@@ -1341,6 +1352,8 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
                   (mergestream, diff, the_val, working_val, new_val,
                    NULL, NULL, NULL, NULL, FALSE, FALSE, filepool));
           svn_stream_close(mergestream);
+
+          cdesc->merged_file = merged_path;
         }
     }
 
@@ -2269,7 +2282,7 @@ svn_wc_prop_get(const svn_string_t **value,
       if (svn_prop_is_boolean(name))
         {
           *value = svn_string_create(SVN_PROP_BOOLEAN_TRUE, pool);
-          SVN_ERR_ASSERT(*value != NULL);
+          assert(*value != NULL);
           return SVN_NO_ERROR;
         }
     }

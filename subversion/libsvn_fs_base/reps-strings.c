@@ -188,15 +188,15 @@ static svn_error_t *
 compose_handler(svn_txdelta_window_t *window, void *baton)
 {
   struct compose_handler_baton *cb = baton;
-  SVN_ERR_ASSERT(!cb->done || window == NULL);
-  SVN_ERR_ASSERT(cb->trail && cb->trail->pool);
+  assert(!cb->done || window == NULL);
+  assert(cb->trail && cb->trail->pool);
 
   if (!cb->init && !window)
     return SVN_NO_ERROR;
 
   /* We should never get here if we've already expanded a
      self-compressed window. */
-  SVN_ERR_ASSERT(!cb->source_buf);
+  assert(!cb->source_buf);
 
   if (cb->window)
     {
@@ -207,7 +207,7 @@ compose_handler(svn_txdelta_window_t *window, void *baton)
              expand it here and signal that the combination has
              ended. */
           apr_size_t source_len = window->tview_len;
-          SVN_ERR_ASSERT(cb->window->sview_len == source_len);
+          assert(cb->window->sview_len == source_len);
           cb->source_buf = apr_palloc(cb->window_pool, source_len);
           svn_txdelta_apply_instructions(window, NULL,
                                          cb->source_buf, &source_len);
@@ -231,7 +231,7 @@ compose_handler(svn_txdelta_window_t *window, void *baton)
     {
       /* Copy the (first) window into the baton. */
       apr_pool_t *window_pool = svn_pool_create(cb->trail->pool);
-      SVN_ERR_ASSERT(cb->window_pool == NULL);
+      assert(cb->window_pool == NULL);
       cb->window = svn_txdelta_window_dup(window, window_pool);
       cb->window_pool = window_pool;
       cb->done = (window->sview_len == 0 || window->src_ops == 0);
@@ -306,9 +306,9 @@ get_one_window(struct compose_handler_baton *cb,
   while (amt != 0);
   SVN_ERR(svn_stream_close(wstream));
 
-  SVN_ERR_ASSERT(!cb->init);
-  SVN_ERR_ASSERT(cb->window != NULL);
-  SVN_ERR_ASSERT(cb->window_pool != NULL);
+  assert(!cb->init);
+  assert(cb->window != NULL);
+  assert(cb->window_pool != NULL);
   return SVN_NO_ERROR;
 }
 
@@ -354,7 +354,7 @@ rep_undeltify_range(svn_fs_t *fs,
 
       /* The source view length should not be 0 if there are source
          copy ops in the window. */
-      SVN_ERR_ASSERT(cb.window->sview_len > 0 || cb.window->src_ops == 0);
+      assert(cb.window->sview_len > 0 || cb.window->src_ops == 0);
 
       /* cb.window is the combined delta window. Read the source text
          into a buffer. */
@@ -397,7 +397,7 @@ rep_undeltify_range(svn_fs_t *fs,
                                      target_buf, &target_len);
       if (offset > 0)
         {
-          SVN_ERR_ASSERT(target_len > offset);
+          assert(target_len > offset);
           target_len -= offset;
           memcpy(buf, target_buf + offset, target_len);
           offset = 0; /* Read from the beginning of the next chunk. */
@@ -729,7 +729,7 @@ svn_fs_base__rep_contents_size(svn_filesize_t *size_p,
       apr_array_header_t *chunks = rep->contents.delta.chunks;
       rep_delta_chunk_t *last_chunk;
 
-      SVN_ERR_ASSERT(chunks->nelts);
+      assert(chunks->nelts);
 
       last_chunk = APR_ARRAY_IDX(chunks, chunks->nelts - 1,
                                  rep_delta_chunk_t *);
@@ -1219,7 +1219,7 @@ rep_contents_clear(svn_fs_t *fs,
       (SVN_ERR_FS_REP_NOT_MUTABLE, NULL,
        _("Rep '%s' is not mutable"), rep_key);
 
-  SVN_ERR_ASSERT(rep->kind == rep_kind_fulltext);
+  assert(rep->kind == rep_kind_fulltext);
 
   /* If rep has no string, just return success.  Else, clear the
      underlying string.  */

@@ -1238,7 +1238,9 @@ make_dir_baton(void **dir_baton,
   const char *full_path;
   svn_wc_status2_t *status_in_parent;
 
-  SVN_ERR_ASSERT(path || (! pb));
+  /* Don't do this.  Just do NOT do this to me. */
+  if (pb && (! path))
+    abort();
 
   /* Construct the full path of this directory. */
   if (pb)

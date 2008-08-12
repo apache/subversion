@@ -44,7 +44,6 @@ class EnumMapper
   static jint mapConflictKind(svn_wc_conflict_kind_t kind);
   static jint mapConflictAction(svn_wc_conflict_action_t action);
   static jint mapConflictReason(svn_wc_conflict_reason_t reason);
-  static jint mapDepth(svn_depth_t depth);
 };
 
 #endif  // ENUM_MAPPER_H

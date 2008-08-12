@@ -262,13 +262,13 @@ print_command_info2(const svn_opt_subcommand_desc2_t *cmd,
 
           for (i = 0; global_options[i]; i++)
             {
-              
+
               /* convert each option code into an option */
               option =
                 svn_opt_get_option_from_code2(global_options[i],
                                               options_table,
                                               cmd, pool);
-              
+
               /* print the option's docstring */
               if (option && option->description)
                 {
@@ -279,7 +279,7 @@ print_command_info2(const svn_opt_subcommand_desc2_t *cmd,
                 }
             }
         }
-          
+
       if (have_options)
         SVN_ERR(svn_cmdline_fprintf(stream, pool, "\n"));
     }
@@ -878,7 +878,7 @@ svn_opt_args_to_target_array2(apr_array_header_t **targets_p,
                               apr_array_header_t *known_targets,
                               apr_pool_t *pool)
 {
-  svn_error_t *err = svn_opt_args_to_target_array3(targets_p, os, 
+  svn_error_t *err = svn_opt_args_to_target_array3(targets_p, os,
                                                    known_targets, pool);
 
   if (err && err->apr_err == SVN_ERR_RESERVED_FILENAME_SPECIFIED)
