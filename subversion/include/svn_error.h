@@ -295,6 +295,104 @@ void svn_handle_warning(FILE *stream, svn_error_t *error);
    err->apr_err == SVN_ERR_RA_NOT_LOCKED ||                 \
    err->apr_err == SVN_ERR_FS_LOCK_EXPIRED)
 
+/** Report that an internal malfunction has occurred, and possibly terminate
+ * the program.
+ *
+ * Act as determined by the current "malfunction handler" which may have
+ * been specified by a call to svn_error_set_malfunction_handler() and which
+ * has a default behaviour as specified in that function's documentation. If
+ * the malfunction handler returns, then cause the function using this macro
+ * to return the error object that it generated.
+ *
+ * @note The intended use of this macro is where execution reaches a point
+ * that cannot possibly be reached unless there is a bug in the program.
+ *
+ * @since New in 1.6.
+ */
+#define SVN_ERR_MALFUNCTION()                               \
+  SVN_ERR(svn_error__malfunction(__FILE__, __LINE__, NULL))
+
+/** Check that a condition is true: if not, report an error and possibly
+ * terminate the program.
+ *
+ * If the Boolean expression @a expr is true, do nothing. Otherwise,
+ * act as determined by the current "malfunction handler" which may have
+ * been specified by a call to svn_error_set_malfunction_handler() and which
+ * has a default behaviour as specified in that function's documentation. If
+ * the malfunction handler returns, then cause the function using this macro
+ * to return the error object that it generated.
+ *
+ * @note The intended use of this macro is to check a condition that cannot
+ * possibly be false unless there is a bug in the program.
+ *
+ * @note The condition to be checked should not be computationally expensive
+ * if it is reached often, as, unlike traditional "assert" statements, the
+ * evaluation of this expression is not compiled out in release-mode builds.
+ *
+ * @since New in 1.6.
+ */
+#define SVN_ERR_ASSERT(expr)                                \
+  do {                                                      \
+    if (!(expr))                                            \
+      SVN_ERR(svn_error__malfunction(__FILE__, __LINE__, #expr)); \
+  } while (0)
+
+/** Helper function for the macros that report malfunctions. */
+svn_error_t *
+svn_error__malfunction(const char *file, int line, const char *expr);
+
+/** A type of function that handles an assertion failure or other internal
+ * malfunction detected within the Subversion libraries.
+ *
+ * The error occurred in the source file @a file at line @a line, and was an
+ * assertion failure of the expression @a expr, or, if @a expr is null, an
+ * unconditional error.
+ *
+ * A function of this type must do one of:
+ *   - Return an error object describing the error, using an error code in
+ *     the category SVN_ERR_MALFUNC_CATEGORY_START.
+ *   - Never return.
+ *
+ * The function may alter its behaviour according to compile-time
+ * and run-time and even interactive conditions.
+ *
+ * @since New in 1.6.
+ */
+typedef svn_error_t *(*svn_error_malfunction_handler_t)
+  (const char *file, int line, const char *expr);
+
+/** Cause subsequent malfunctions to be handled by @a func.
+ * Return the handler that was previously in effect.
+ *
+ * @a func may not be null.
+ *
+ * @note The default handler is svn_error_abort_on_malfunction().
+ *
+ * @note This function must be called in a single-threaded context.
+ *
+ * @since New in 1.6.
+ */
+svn_error_malfunction_handler_t
+svn_error_set_malfunction_handler(svn_error_malfunction_handler_t func);
+
+/** Handle a malfunction by returning an error object that describes it.
+ *
+ * This function implements @c svn_error_malfunction_handler_t.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_error_raise_on_malfunction(const char *file, int line, const char *expr);
+
+/** Handle a malfunction by printing a message to stderr and aborting.
+ *
+ * This function implements @c svn_error_malfunction_handler_t.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_error_abort_on_malfunction(const char *file, int line, const char *expr);
+
 
 #ifdef __cplusplus
 }

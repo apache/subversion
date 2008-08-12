@@ -140,10 +140,23 @@ int svn_cmdline_handle_exit_error(svn_error_t *error,
                                   apr_pool_t *pool,
                                   const char *prefix);
 
-/** A cancellation function/baton pair to be passed as the baton argument
- * to the @c svn_cmdline_*_prompt functions.
+/** A cancellation function/baton pair, and the path to the configuration
+ * directory. To be passed as the baton argument to the
+ * @c svn_cmdline_*_prompt functions.
+ *
+ * @since New in 1.6.
+ */
+typedef struct svn_cmdline_prompt_baton2_t {
+  svn_cancel_func_t cancel_func;
+  void *cancel_baton;
+  const char *config_dir;
+} svn_cmdline_prompt_baton2_t;
+
+/** Like svn_cmdline_prompt_baton2_t, but without the path to the
+ * configuration directory.
  *
  * @since New in 1.4.
+ * @deprecated Provided for backward compatibility with the 1.5 API.
  */
 typedef struct svn_cmdline_prompt_baton_t {
   svn_cancel_func_t cancel_func;
@@ -252,6 +265,28 @@ svn_cmdline_auth_ssl_client_cert_pw_prompt
    const char *realm,
    svn_boolean_t may_save,
    apr_pool_t *pool);
+
+/** An implementation of @c svn_auth_plaintext_prompt_func_t that
+ * prompts the user whether storing unencypted passwords to disk is OK.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_cmdline_auth_plaintext_prompt(svn_boolean_t *may_save_plaintext,
+                                  const char *realmstring,
+                                  void *baton,
+                                  apr_pool_t *pool);
+
+/** An implementation of @c svn_auth_plaintext_passphrase_prompt_func_t that
+ * prompts the user whether storing unencypted passphrase to disk is OK.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_cmdline_auth_plaintext_passphrase_prompt(svn_boolean_t *may_save_plaintext,
+                                             const char *realmstring,
+                                             void *baton,
+                                             apr_pool_t *pool);
 
 /** Initialize auth baton @a ab with the standard set of authentication
  * providers used by the command line client.  @a non_interactive,

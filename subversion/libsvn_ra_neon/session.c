@@ -290,6 +290,10 @@ client_ssl_decrypt_cert(svn_ra_neon__session_t *ras,
 
           if (ne_ssl_clicert_decrypt(clicert, pw_creds->password) == 0)
             {
+              error = svn_auth_save_credentials(state, pool);
+              if (error)
+                svn_error_clear(error);
+
               /* Success */
               ok = TRUE;
               break;
@@ -546,11 +550,11 @@ static svn_error_t *get_server_settings(const char **proxy_host,
       const long int timeout = strtol(timeout_str, &endstr, 10);
 
       if (*endstr)
-        return svn_error_create(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
+        return svn_error_create(SVN_ERR_BAD_CONFIG_VALUE, NULL,
                                 _("Invalid config: illegal character in "
                                   "timeout value"));
       if (timeout < 0)
-        return svn_error_create(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
+        return svn_error_create(SVN_ERR_BAD_CONFIG_VALUE, NULL,
                                 _("Invalid config: negative timeout value"));
       *timeout_seconds = timeout;
     }
@@ -563,7 +567,7 @@ static svn_error_t *get_server_settings(const char **proxy_host,
       const long int debug = strtol(debug_str, &endstr, 10);
 
       if (*endstr)
-        return svn_error_create(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
+        return svn_error_create(SVN_ERR_BAD_CONFIG_VALUE, NULL,
                                 _("Invalid config: illegal character in "
                                   "debug mask value"));
 
@@ -588,7 +592,7 @@ static svn_error_t *get_server_settings(const char **proxy_host,
           else if (svn_cstring_casecmp("negotiate", token) == 0)
             *neon_auth_types |= NE_AUTH_NEGOTIATE;
           else
-            return svn_error_createf(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
+            return svn_error_createf(SVN_ERR_BAD_CONFIG_VALUE, NULL,
                                      _("Invalid config: unknown http auth"
                                        "type '%s'"), token);
       }
@@ -1174,7 +1178,7 @@ svn_ra_neon__open(svn_ra_session_t *session,
               if (ca_cert == NULL)
                 {
                   return svn_error_createf
-                    (SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
+                    (SVN_ERR_BAD_CONFIG_VALUE, NULL,
                      _("Invalid config: unable to load certificate file '%s'"),
                      svn_path_local_style(file, pool));
                 }
@@ -1202,7 +1206,7 @@ svn_ra_neon__open(svn_ra_session_t *session,
           if (rv != NE_PK11_OK)
             {
               return svn_error_createf
-                (SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
+                (SVN_ERR_BAD_CONFIG_VALUE, NULL,
                  _("Invalid config: unable to load PKCS#11 provider '%s'"),
                  pkcs11_provider);
             }

@@ -457,14 +457,16 @@ interactive-conflicts = false
 
   # define default server file contents if none provided
   if server_contents is None:
+    http_library_str = ""
     if http_library:
-      server_contents = """
+      http_library_str = "http-library=%s" % (http_library)
+    server_contents = """
 #
 [global]
-http-library=%s
-""" % (http_library)
-    else:
-      server_contents = "#\n"
+%s
+store-plaintext-passwords=yes
+store-passwords=yes
+""" % (http_library_str)
 
   file_write(cfgfile_cfg, config_contents)
   file_write(cfgfile_srv, server_contents)

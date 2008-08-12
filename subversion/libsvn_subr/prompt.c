@@ -83,9 +83,12 @@ static svn_error_t *
 prompt(const char **result,
        const char *prompt_msg,
        svn_boolean_t hide,
-       svn_cmdline_prompt_baton_t *pb,
+       svn_cmdline_prompt_baton2_t *pb,
        apr_pool_t *pool)
 {
+  /* XXX: If this functions ever starts using members of *pb
+   * which were not included in svn_cmdline_prompt_baton_t,
+   * we need to update svn_cmdline_prompt_user2 and its callers. */
   apr_status_t status;
   apr_file_t *fp;
   char c;
@@ -194,7 +197,7 @@ svn_cmdline_auth_simple_prompt(svn_auth_cred_simple_t **cred_p,
 {
   svn_auth_cred_simple_t *ret = apr_pcalloc(pool, sizeof(*ret));
   const char *pass_prompt;
-  svn_cmdline_prompt_baton_t *pb = baton;
+  svn_cmdline_prompt_baton2_t *pb = baton;
 
   SVN_ERR(maybe_print_realm(realm, pool));
 
@@ -220,7 +223,7 @@ svn_cmdline_auth_username_prompt(svn_auth_cred_username_t **cred_p,
                                  apr_pool_t *pool)
 {
   svn_auth_cred_username_t *ret = apr_pcalloc(pool, sizeof(*ret));
-  svn_cmdline_prompt_baton_t *pb = baton;
+  svn_cmdline_prompt_baton2_t *pb = baton;
 
   SVN_ERR(maybe_print_realm(realm, pool));
 
@@ -244,7 +247,7 @@ svn_cmdline_auth_ssl_server_trust_prompt
 {
   const char *choice;
   svn_stringbuf_t *msg;
-  svn_cmdline_prompt_baton_t *pb = baton;
+  svn_cmdline_prompt_baton2_t *pb = baton;
   svn_stringbuf_t *buf = svn_stringbuf_createf
     (pool, _("Error validating server certificate for '%s':\n"), realm);
 
@@ -337,7 +340,7 @@ svn_cmdline_auth_ssl_client_cert_prompt
 {
   svn_auth_cred_ssl_client_cert_t *cred = NULL;
   const char *cert_file = NULL;
-  svn_cmdline_prompt_baton_t *pb = baton;
+  svn_cmdline_prompt_baton2_t *pb = baton;
 
   SVN_ERR(maybe_print_realm(realm, pool));
   SVN_ERR(prompt(&cert_file, _("Client certificate filename: "),
@@ -364,7 +367,7 @@ svn_cmdline_auth_ssl_client_cert_pw_prompt
   svn_auth_cred_ssl_client_cert_pw_t *cred = NULL;
   const char *result;
   const char *text = apr_psprintf(pool, _("Passphrase for '%s': "), realm);
-  svn_cmdline_prompt_baton_t *pb = baton;
+  svn_cmdline_prompt_baton2_t *pb = baton;
 
   SVN_ERR(prompt(&result, text, TRUE, pb, pool));
 
@@ -376,6 +379,117 @@ svn_cmdline_auth_ssl_client_cert_pw_prompt
   return SVN_NO_ERROR;
 }
 
+/* This is a helper for plaintext prompt functions. */
+static svn_error_t *
+plaintext_prompt_helper(svn_boolean_t *may_save_plaintext,
+                        const char *realmstring,
+                        const char *prompt_string,
+                        const char *prompt_text,
+                        void *baton,
+                        apr_pool_t *pool)
+{
+  const char *answer = NULL;
+  svn_boolean_t answered = FALSE;
+  svn_cmdline_prompt_baton2_t *pb = baton;
+  const char *config_path;
+  
+  SVN_ERR(svn_config_get_user_config_path(&config_path, pb->config_dir,
+                                          SVN_CONFIG_CATEGORY_SERVERS, pool));
+
+  SVN_ERR(svn_cmdline_fprintf(stderr, pool, prompt_text, realmstring,
+                              config_path));
+
+  do
+    {
+      svn_error_t *err = prompt(&answer, prompt_string, FALSE, pb, pool);
+      if (err)
+        {
+          if (err->apr_err == SVN_ERR_CANCELLED)
+            {
+              svn_error_clear(err);
+              *may_save_plaintext = FALSE;
+              return SVN_NO_ERROR;
+            }
+          else
+            return err;
+        }
+      if (apr_strnatcasecmp(answer, _("yes")) == 0)
+        {
+          *may_save_plaintext = TRUE;
+          answered = TRUE;
+        }
+      else if (apr_strnatcasecmp(answer, _("no")) == 0)
+        {
+          *may_save_plaintext = FALSE;
+          answered = TRUE;
+        }
+      else
+          prompt_string = _("Please type 'yes' or 'no': ");
+    }
+  while (! answered); 
+
+  return SVN_NO_ERROR;
+}
+
+/* This implements 'svn_auth_plaintext_prompt_func_t'. */
+svn_error_t *
+svn_cmdline_auth_plaintext_prompt(svn_boolean_t *may_save_plaintext,
+                                  const char *realmstring,
+                                  void *baton,
+                                  apr_pool_t *pool)
+{
+  const char *prompt_string = _("Store password unencrypted (yes/no)? ");
+  const char *prompt_text =
+  _("-----------------------------------------------------------------------\n"
+    "ATTENTION!  Your password for authentication realm:\n"
+    "\n"
+    "   %s\n"
+    "\n"
+    "can only be stored to disk unencrypted!  You are advised to configure\n"
+    "your system so that Subversion can store passwords encrypted, if\n"
+    "possible.  See the documentation for details.\n"
+    "\n"
+    "You can avoid future appearances of this warning by setting the value\n"
+    "of the 'store-plaintext-passwords' option to either 'yes' or 'no' in\n"
+    "'%s'.\n"
+    "-----------------------------------------------------------------------\n"
+    );
+
+  SVN_ERR(plaintext_prompt_helper(may_save_plaintext, realmstring,
+                                  prompt_string, prompt_text, baton,
+                                  pool));
+  return SVN_NO_ERROR;
+}
+
+/* This implements 'svn_auth_plaintext_passphrase_prompt_func_t'. */
+svn_error_t *
+svn_cmdline_auth_plaintext_passphrase_prompt(svn_boolean_t *may_save_plaintext,
+                                             const char *realmstring,
+                                             void *baton,
+                                             apr_pool_t *pool)
+{
+  const char *prompt_string = _("Store passphrase unencrypted (yes/no)? ");
+  const char *prompt_text =
+  _("-----------------------------------------------------------------------\n"
+    "ATTENTION!  Your passphrase for client certificate:\n"
+    "\n"
+    "   %s\n"
+    "\n"
+    "can only be stored to disk unencrypted!  You are advised to configure\n"
+    "your system so that Subversion can store passphrase encrypted, if\n"
+    "possible.  See the documentation for details.\n"
+    "\n"
+    "You can avoid future appearances of this warning by setting the value\n"
+    "of the 'store-ssl-client-cert-pp-plaintext' option to either 'yes' or\n"
+    "'no' in '%s'.\n"
+    "-----------------------------------------------------------------------\n"
+    );
+
+  SVN_ERR(plaintext_prompt_helper(may_save_plaintext, realmstring,
+                                  prompt_string, prompt_text, baton,
+                                  pool));
+  return SVN_NO_ERROR;
+}
 
 
 /** Generic prompting. **/
@@ -386,9 +500,11 @@ svn_cmdline_prompt_user2(const char **result,
                          svn_cmdline_prompt_baton_t *baton,
                          apr_pool_t *pool)
 {
-  return prompt(result, prompt_str, FALSE /* don't hide input */, baton, pool);
+  /* XXX: We know prompt doesn't use the new members
+   * of svn_cmdline_prompt_baton2_t. */
+  return prompt(result, prompt_str, FALSE /* don't hide input */,
+                (svn_cmdline_prompt_baton2_t *)baton, pool);
 }
-
 
 svn_error_t *
 svn_cmdline_prompt_user(const char **result,
