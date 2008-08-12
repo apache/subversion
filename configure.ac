@@ -17,6 +17,9 @@ AC_MSG_NOTICE([Configuring Subversion ]AC_PACKAGE_VERSION)
 AC_SUBST([abs_srcdir], ["`cd $srcdir && pwd`"])
 AC_SUBST([abs_builddir], ["`pwd`"])
 
+SWIG_LDFLAGS="$LDFLAGS"
+AC_SUBST([SWIG_LDFLAGS])
+
 # Generate config.nice early (before the arguments are munged)
 SVN_CONFIG_NICE(config.nice)
 
