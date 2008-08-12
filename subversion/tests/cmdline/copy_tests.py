@@ -2574,7 +2574,7 @@ def copy_added_paths_with_props(sbox):
   svntest.tree.compare_trees("disk", actual_disk_tree,
                              expected_disk.old_tree())
 
-  # Copy added dir K to dir A/C
+  # Copy added dir I to dir A/C
   I_copy_path = os.path.join(wc_dir, 'A', 'C', 'I')
   svntest.actions.run_and_verify_svn(None, None, [], 'cp',
                                      I_path, I_copy_path)
@@ -2603,9 +2603,11 @@ def copy_added_paths_with_props(sbox):
 
   # Tweak expected disk tree
   expected_disk.add({
-    'A/C/upsilon' : Item(props={'foo' : 'bar'},
+    'A/C/upsilon' : Item(props={ 'foo' : 'bar',
+                                 SVN_PROP_MERGEINFO : '' },
                          contents="This is the file 'upsilon'\n"),
-    'A/C/I'       : Item(props={'foo' : 'bar'}),
+    'A/C/I'       : Item(props={ 'foo' : 'bar',
+                                 SVN_PROP_MERGEINFO : '' }),
     })
 
   svntest.actions.run_and_verify_commit(wc_dir,
@@ -3966,7 +3968,7 @@ test_list = [ None,
               move_file_back_and_forth,
               move_dir_back_and_forth,
               copy_move_added_paths,
-              XFail(copy_added_paths_with_props),
+              copy_added_paths_with_props,
               copy_added_paths_to_URL,
               move_to_relative_paths,
               move_from_relative_paths,
