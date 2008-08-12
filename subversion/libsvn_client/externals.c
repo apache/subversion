@@ -368,6 +368,12 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
                              _("Illegal parent directory URL '%s'"),
                              parent_dir_url);
 
+  /* If the parent directory URL is at the server root, then the URL
+     may have no / after the hostname so apr_uri_parse() will leave
+     the URL's path as NULL. */
+  if (! parent_dir_parsed_uri.path)
+    parent_dir_parsed_uri.path = apr_pstrmemdup(pool, "/", 1);
+
   /* Handle URLs relative to the current directory or to the
      repository root.  The backpaths may only remove path elements,
      not the hostname.  This allows an external to refer to another
@@ -397,6 +403,12 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
             return svn_error_createf(SVN_ERR_BAD_URL, 0,
                                      _("Illegal repository root URL '%s'"),
                                      repos_root_url);
+
+          /* If the repository root URL is at the server root, then
+             the URL may have no / after the hostname so
+             apr_uri_parse() will leave the URL's path as NULL. */
+          if (! repos_root_parsed_uri.path)
+            repos_root_parsed_uri.path = apr_pstrmemdup(pool, "/", 1);
 
           base_components = svn_path_decompose(repos_root_parsed_uri.path,
                                                pool);
