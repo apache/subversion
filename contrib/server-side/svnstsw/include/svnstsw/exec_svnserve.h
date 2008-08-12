@@ -65,7 +65,7 @@ extern "C" {
  * - @a svnserve_path and @a svn_root should be passed through
  *   svnstsw_fso_is_changeable() to make sure that neither they nor
  *   their parent directories are writable by the user.
- * 
+ *
  * @param svnserve_path Null-terminated string containing the path to
  * the @p svnserve executable.  This must be an absolute path and must
  * refer to an existing executable file.  This parameter must not be
@@ -87,7 +87,7 @@ extern "C" {
  * pointer or an empty string.  Callers are encouraged to use the
  * string returned by svnstsw_get_tunnel_user_name() for this
  * parameter.
- * 
+ *
  * @param argv Null-terminated array of null-terminated strings to use
  * as the first arguments to the @p svnserve executable.  Note that
  * convention dictates that @a argv[0] must match @a svnserve_path.
@@ -97,7 +97,7 @@ extern "C" {
  * <tt>--tunnel-user=</tt>@a tunnel_user arguments will be appended to
  * the arguments in @a argv before being passed to the executable
  * named by @a svnserve_path.
- * 
+ *
  * @param envp Null-terminated array of null-terminated strings
  * containing the desired environment for the @p svnserve process.  If
  * this parameter is the null pointer, it is the equivalent to passing

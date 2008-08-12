@@ -130,9 +130,6 @@ svn_ra_serf__encode_auth_header(const char * protocol, char **header,
 }
 
 
-/* Dispatch authentication handling based on server <-> proxy authentication
-   and the list of allowed authentication schemes as passed back from the
-   server or proxy in the Authentication headers. */
 svn_error_t *
 svn_ra_serf__handle_auth(int code,
                          svn_ra_serf__session_t *session,
@@ -309,10 +306,6 @@ handle_basic_auth(svn_ra_serf__session_t *session,
                                     realm_name);
     }
 
-  /* Use svn_auth_first_credentials if this is the first time we ask for
-     credentials during this session OR if the last time we asked
-     session->auth_state wasn't set (eg. if the credentials provider was
-     cancelled by the user). */
   if (!session->auth_state)
     {
       SVN_ERR(svn_auth_first_credentials(&creds,
@@ -397,7 +390,7 @@ handle_proxy_basic_auth(svn_ra_serf__session_t *session,
   int i;
 
   tmp = apr_pstrcat(session->pool,
-                    session->proxy_username, ":", 
+                    session->proxy_username, ":",
                     session->proxy_password, NULL);
   tmp_len = strlen(tmp);
 
@@ -410,7 +403,7 @@ handle_proxy_basic_auth(svn_ra_serf__session_t *session,
                 "Proxy authentication failed");
     }
 
-  svn_ra_serf__encode_auth_header(session->proxy_auth_protocol->auth_name, 
+  svn_ra_serf__encode_auth_header(session->proxy_auth_protocol->auth_name,
                                   &session->proxy_auth_value,
                                   tmp, tmp_len, pool);
   session->proxy_auth_header = "Proxy-Authorization";
@@ -443,7 +436,7 @@ setup_request_proxy_basic_auth(svn_ra_serf__connection_t *conn,
   /* Take the default authentication header for this connection, if any. */
   if (conn->proxy_auth_header && conn->proxy_auth_value)
     {
-      serf_bucket_headers_setn(hdrs_bkt, conn->proxy_auth_header, 
+      serf_bucket_headers_setn(hdrs_bkt, conn->proxy_auth_header,
                                conn->proxy_auth_value);
     }
 

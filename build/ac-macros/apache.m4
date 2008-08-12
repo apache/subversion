@@ -85,7 +85,7 @@ if test -n "$APXS" && test "$APXS" != "no"; then
       AC_MSG_ERROR([unknown APR version])
       ;;
   esac
-  AC_EGREP_CPP([apache_minor_version= *$apache_minor_version_wanted_regex],
+  AC_EGREP_CPP([apache_minor_version="$apache_minor_version_wanted_regex"],
                [
 #include "$APXS_INCLUDE/ap_release.h"
 apache_minor_version=AP_SERVER_MINORVERSION_NUMBER],

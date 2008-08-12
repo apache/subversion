@@ -95,10 +95,12 @@
                   svn_swig_rb_ra_file_rev_handler)
 #endif
 
+#ifndef SWIGPERL
 %callback_typemap(svn_ra_lock_callback_t lock_func, void *lock_baton,
                   svn_swig_py_ra_lock_callback,
-                  svn_swig_pl_ra_lock_callback,
+                  ,
                   svn_swig_rb_ra_lock_callback)
+#endif
 
 /* ----------------------------------------------------------------------- */
 

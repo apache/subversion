@@ -118,7 +118,7 @@ static ra_svn_baton_t *ra_svn_make_baton(svn_ra_svn_conn_t *conn,
  * get one, abort the edit and return the error. */
 static svn_error_t *check_for_error(ra_svn_edit_baton_t *eb, apr_pool_t *pool)
 {
-  SVN_ERR_ASSERT(!eb->got_status);
+  assert(!eb->got_status);
   if (svn_ra_svn__input_waiting(eb->conn, pool))
     {
       eb->got_status = TRUE;
@@ -173,8 +173,8 @@ static svn_error_t *ra_svn_add_dir(const char *path, void *parent_baton,
   ra_svn_baton_t *b = parent_baton;
   const char *token = make_token('d', b->eb, pool);
 
-  SVN_ERR_ASSERT((copy_path && SVN_IS_VALID_REVNUM(copy_rev))
-                 || (!copy_path && !SVN_IS_VALID_REVNUM(copy_rev)));
+  assert((copy_path && SVN_IS_VALID_REVNUM(copy_rev))
+         || (!copy_path && !SVN_IS_VALID_REVNUM(copy_rev)));
   SVN_ERR(check_for_error(b->eb, pool));
   SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "add-dir", "ccc(?cr)", path,
                                b->token, token, copy_path, copy_rev));
@@ -243,8 +243,8 @@ static svn_error_t *ra_svn_add_file(const char *path,
   ra_svn_baton_t *b = parent_baton;
   const char *token = make_token('c', b->eb, pool);
 
-  SVN_ERR_ASSERT((copy_path && SVN_IS_VALID_REVNUM(copy_rev))
-                 || (!copy_path && !SVN_IS_VALID_REVNUM(copy_rev)));
+  assert((copy_path && SVN_IS_VALID_REVNUM(copy_rev))
+         || (!copy_path && !SVN_IS_VALID_REVNUM(copy_rev)));
   SVN_ERR(check_for_error(b->eb, pool));
   SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "add-file", "ccc(?cr)", path,
                                b->token, token, copy_path, copy_rev));
@@ -364,7 +364,7 @@ static svn_error_t *ra_svn_close_edit(void *edit_baton, apr_pool_t *pool)
   ra_svn_edit_baton_t *eb = edit_baton;
   svn_error_t *err;
 
-  SVN_ERR_ASSERT(!eb->got_status);
+  assert(!eb->got_status);
   eb->got_status = TRUE;
   SVN_ERR(svn_ra_svn_write_cmd(eb->conn, pool, "close-edit", ""));
   err = svn_ra_svn_read_cmd_response(eb->conn, pool, "");

@@ -205,7 +205,7 @@ display_prop_diffs(const apr_array_header_t *propchanges,
     {
       const char *header_fmt;
       const svn_string_t *original_value;
-      const svn_prop_t *propchange = 
+      const svn_prop_t *propchange =
         &APR_ARRAY_IDX(propchanges, i, svn_prop_t);
 
       if (original_props)
@@ -1124,8 +1124,9 @@ diff_wc_wc(const char *path1,
   const char *target;
   int levels_to_lock = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
 
-  SVN_ERR_ASSERT(! svn_path_is_url(path1));
-  SVN_ERR_ASSERT(! svn_path_is_url(path2));
+  /* Assert that we have valid input. */
+  assert(! svn_path_is_url(path1));
+  assert(! svn_path_is_url(path2));
 
   /* Currently we support only the case where path1 and path2 are the
      same path. */
@@ -1264,7 +1265,8 @@ diff_repos_wc(const char *path1,
   int levels_to_lock = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
   svn_boolean_t server_supports_depth;
 
-  SVN_ERR_ASSERT(! svn_path_is_url(path2));
+  /* Assert that we have valid input. */
+  assert(! svn_path_is_url(path2));
 
   /* Convert path1 to a URL to feed to do_diff. */
   SVN_ERR(convert_to_url(&url1, path1, pool));
@@ -1508,7 +1510,7 @@ set_up_diff_cmd_and_options(struct diff_cmd_baton *diff_cmd_baton,
                             apr_hash_t *config, apr_pool_t *pool)
 {
   const char *diff_cmd = NULL;
-  
+
   /* See if there is a command. */
   if (config)
     {
@@ -1737,8 +1739,8 @@ svn_client_diff_peg4(const apr_array_header_t *options,
   struct diff_cmd_baton diff_cmd_baton;
   svn_wc_diff_callbacks3_t diff_callbacks;
 
-  if (svn_path_is_url(path) && 
-        (start_revision->kind == svn_opt_revision_base 
+  if (svn_path_is_url(path) &&
+        (start_revision->kind == svn_opt_revision_base
          || end_revision->kind == svn_opt_revision_base) )
     return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL,
                             _("Revision type requires a working copy "

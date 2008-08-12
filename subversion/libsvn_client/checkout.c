@@ -22,6 +22,7 @@
 
 /*** Includes. ***/
 
+#include <assert.h>
 #include "svn_pools.h"
 #include "svn_wc.h"
 #include "svn_client.h"
@@ -60,8 +61,8 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
   const char *session_url;
 
   /* Sanity check.  Without these, the checkout is meaningless. */
-  SVN_ERR_ASSERT(path != NULL);
-  SVN_ERR_ASSERT(url != NULL);
+  assert(path != NULL);
+  assert(url != NULL);
 
   /* Fulfill the docstring promise of svn_client_checkout: */
   if ((revision->kind != svn_opt_revision_number)
@@ -75,7 +76,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
   {
     svn_ra_session_t *ra_session;
     svn_node_kind_t kind;
-    const char *uuid, *repos_root;
+    const char *uuid, *repos;
     apr_pool_t *session_pool = svn_pool_create(pool);
 
     /* Get the RA connection. */
@@ -95,7 +96,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
 
     /* Get the repos UUID and root URL. */
     SVN_ERR(svn_ra_get_uuid2(ra_session, &uuid, session_pool));
-    SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root, session_pool));
+    SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos, session_pool));
 
     SVN_ERR(svn_io_check_path(path, &kind, pool));
 
@@ -103,7 +104,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
        copying out useful information that needs to survive.  */
     session_url = apr_pstrdup(pool, session_url);
     uuid = (uuid ? apr_pstrdup(pool, uuid) : NULL);
-    repos_root = (repos_root ? apr_pstrdup(pool, repos_root) : NULL);
+    repos = (repos ? apr_pstrdup(pool, repos) : NULL);
     svn_pool_destroy(session_pool);
 
     if (kind == svn_node_none)
@@ -130,7 +131,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
 
             /* Make the unversioned directory into a versioned one.  */
             SVN_ERR(svn_wc_ensure_adm3(path, uuid, session_url,
-                                       repos_root, revnum, depth, pool));
+                                       repos, revnum, depth, pool));
             /* Have update fix the incompleteness. */
             err = svn_client__update_internal(result_rev, path, revision,
                                               depth, TRUE, ignore_externals,

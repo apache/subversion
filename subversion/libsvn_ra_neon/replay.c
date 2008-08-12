@@ -216,7 +216,7 @@ start_element(int *elem, void *baton, int parent_state, const char *nspace,
                                                   &dir_baton));
               }
             else
-              SVN_ERR_MALFUNCTION();
+              abort();
 
             push_dir(rb, dir_baton, name, subpool);
           }

@@ -1690,60 +1690,6 @@ def commit_with_bad_log_message(sbox):
                                         '-F', log_msg_path,
                                         iota_path)
 
-def commit_with_mixed_line_endings(sbox):
-  "commit with log message with mixed EOL"
-
-  sbox.build()
-  wc_dir = sbox.wc_dir
-
-  expected_status = make_standard_slew_of_changes(wc_dir)
-
-  iota_path = os.path.join(wc_dir, 'iota')
-  log_msg_path = os.path.join(wc_dir, 'log-message')
-
-  # Make a random change, so there's something to commit.
-  svntest.main.file_append(iota_path, 'kebab')
-
-  # Create a log message containing a zero-byte.
-  svntest.main.file_append(log_msg_path, "test\nthis\n\rcase\r\n--This line, and those below, will be ignored--\n")
-
-  # Commit and expect an error.
-  svntest.actions.run_and_verify_commit(wc_dir,
-                                        None, None,
-                                        "Error normalizing log message to internal format",
-                                        '-F', log_msg_path,
-                                        iota_path)
-
-def commit_with_mixed_line_endings_in_ignored_part(sbox):
-  "commit with log message with mixed EOL in tail"
-
-  sbox.build()
-  wc_dir = sbox.wc_dir
-
-  expected_status = make_standard_slew_of_changes(wc_dir)
-
-  iota_path = os.path.join(wc_dir, 'iota')
-  log_msg_path = os.path.join(wc_dir, 'log-message')
-
-  # Make a random change, so there's something to commit.
-  svntest.main.file_append(iota_path, 'cheeseburger')
-
-  # Create a log message containing a zero-byte.
-  svntest.main.file_append(log_msg_path, "test\n--This line, and those below, will be ignored--\nfoo\r\nbar\nbaz\n\r")
-
-  # Create expected state.
-  expected_output = svntest.wc.State(wc_dir, {
-    'iota' : Item(verb='Sending'),
-    })
-  expected_status.tweak('iota', wc_rev=2, status='  ')
-
-  # Commit the one file.
-  svntest.actions.run_and_verify_commit(wc_dir,
-                                        expected_output,
-                                        expected_status,
-                                        None,
-                                        iota_path)
-
 def from_wc_top_with_bad_editor(sbox):
   "commit with invalid external editor cmd"
 
@@ -2677,8 +2623,6 @@ test_list = [ None,
               failed_commit,
               commit_out_of_date_deletions,
               commit_with_bad_log_message,
-              commit_with_mixed_line_endings,
-              commit_with_mixed_line_endings_in_ignored_part,
               from_wc_top_with_bad_editor,
               mods_in_schedule_delete,
               Skip(tab_test, is_non_posix_os_or_cygwin_platform),

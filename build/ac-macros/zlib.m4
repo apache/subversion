@@ -41,7 +41,7 @@ AC_DEFUN(SVN_LIB_Z,
   if test "$zlib_found" = "yes"; then
     SVN_ZLIB_PREFIX="$zlib_prefix"
     SVN_ZLIB_INCLUDES="-I$zlib_prefix/include"
-    LDFLAGS="$LDFLAGS -L$zlib_prefix/lib"
+    LDFLAGS="-L$zlib_prefix/lib"
   fi
 
   SVN_ZLIB_LIBS="-lz"

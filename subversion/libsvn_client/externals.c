@@ -22,6 +22,7 @@
 
 /*** Includes. ***/
 
+#include <assert.h>
 #include <apr_uri.h>
 #include "svn_wc.h"
 #include "svn_pools.h"
@@ -506,7 +507,7 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
     new_item = NULL;
 
   /* We couldn't possibly be here if both values were null, right? */
-  SVN_ERR_ASSERT(old_item || new_item);
+  assert(old_item || new_item);
 
   /* There's one potential ugliness.  If a target subdir changed, but
      its URL did not, then ideally we'd just rename the subdir, rather

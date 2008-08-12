@@ -574,7 +574,7 @@ svn_repos_begin_report(void **report_baton,
  *
  * @a revision may be SVN_INVALID_REVNUM if (for example) @a path
  * represents a locally-added path with no revision number, or @a
- * depth is @c svn_depth_exclude.  
+ * depth is @c svn_depth_exclude.
  *
  * @a path may not be underneath a path on which svn_repos_set_path3()
  * was previously called with @c svn_depth_exclude in this report.
@@ -1417,9 +1417,8 @@ svn_repos_get_logs(svn_repos_t *repos,
 /* Retrieving mergeinfo. */
 
 /**
- * Fetch the mergeinfo for @a paths at @a revision in @a repos, and
- * set @a *catalog to a catalog of this mergeinfo.  @a *catalog will
- * never be @c NULL but may be empty.
+ * Fetch the mergeinfo for @a paths at @a rev, and save it to @a
+ * *catalog.  It will never be @c NULL but may be empty.
  *
  * @a inherit indicates whether explicit, explicit or inherited, or
  * only inherited mergeinfo for @a paths is fetched.
@@ -1431,14 +1430,14 @@ svn_repos_get_logs(svn_repos_t *repos,
  * the @c SVN_PROP_MERGEINFO property explicitly set on it.  (Note
  * that inheritance is only taken into account for the elements in @a
  * paths; descendants of the elements in @a paths which get their
- * mergeinfo via inheritance are not included in @a *catalog.)
+ * mergeinfo via inheritance are not included in @a *mergeoutput.)
  *
  * If optional @a authz_read_func is non-NULL, then use this function
  * (along with optional @a authz_read_baton) to check the readability
  * of each path which mergeinfo was requested for (from @a paths).
  * Silently omit unreadable paths from the request for mergeinfo.
  *
- * Use @a pool for all allocations.
+ * Use @a pool for temporary allocations.
  *
  * @since New in 1.5.
  */
@@ -1686,7 +1685,7 @@ svn_repos_fs_get_locks(apr_hash_t **locks,
  *
  * Validate @a name and @a new_value like the same way
  * svn_repos_fs_change_node_prop() does.
- *   
+ *
  * Use @a pool for temporary allocations.
  *
  * @since New in 1.5.
@@ -1833,7 +1832,7 @@ svn_repos_fs_change_txn_prop(svn_fs_txn_t *txn,
 /** Validating wrapper for svn_fs_change_txn_props() (which see for
  * argument descriptions).  Validate properties and their values the
  * same way svn_repos_fs_change_node_prop() does.
- * 
+ *
  * @since New in 1.5.
  */
 svn_error_t *

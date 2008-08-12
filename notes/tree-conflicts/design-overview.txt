@@ -16,7 +16,7 @@ Tree conflict handling spans the following areas:
 Purpose:
 
   Determine whether each incoming change conflicts with the state of the WC
-  receiving the change. If so, record the fact and ensure that sufficient
+  receiving the change. If so, record the fact and and ensure that sufficient
   information is preserved to enable the user to resolve the conflict. Allow
   the operation to continue on to process other items that are not affected by
   this conflict.

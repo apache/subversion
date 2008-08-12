@@ -53,8 +53,6 @@ Global options:
   --password ARG           : specify a password ARG
   --no-auth-cache          : do not cache authentication tokens
   --non-interactive        : do no interactive prompting
-  --trust-server-cert      : accept unknown SSL server certificates without
-                             prompting (but only with '--non-interactive')
   --config-dir ARG         : read user configuration files from directory ARG
 
 switch (sw): Update the working copy to a different URL.
@@ -120,7 +118,5 @@ Global options:
   --password ARG           : specify a password ARG
   --no-auth-cache          : do not cache authentication tokens
   --non-interactive        : do no interactive prompting
-  --trust-server-cert      : accept unknown SSL server certificates without
-                             prompting (but only with '--non-interactive')
   --config-dir ARG         : read user configuration files from directory ARG
 

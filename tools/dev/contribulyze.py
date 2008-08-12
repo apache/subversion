@@ -576,14 +576,6 @@ def graze(input):
                 c.add_activity(field.name, log)
                 field.add_contributor(c)
                 line = input.readline()
-                if line == log_separator:
-                  # If the log message doesn't end with its own
-                  # newline (that is, there's the newline added by the
-                  # svn client, but no further newline), then just move
-                  # on to the next log entry.
-                  just_saw_separator = True
-                  num_lines = 0
-                  break
                 log.accum(line)
                 num_lines -= 1
                 m = in_field_re.match(line)

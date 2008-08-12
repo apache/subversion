@@ -89,7 +89,8 @@ begin_trail(trail_t **trail_p,
       /* [*]
          If we're already inside a trail operation, abort() -- this is
          a coding problem (and will likely hang the repository anyway). */
-      SVN_ERR_ASSERT(! bfd->in_txn_trail);
+      if (bfd->in_txn_trail)
+        abort();
 
       SVN_ERR(BDB_WRAP(fs, "beginning Berkeley DB transaction",
                        bfd->bdb->env->txn_begin(bfd->bdb->env, 0,

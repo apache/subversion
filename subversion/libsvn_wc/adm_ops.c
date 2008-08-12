@@ -1641,9 +1641,9 @@ svn_wc_add2(const char *path,
             void *notify_baton,
             apr_pool_t *pool)
 {
-  return svn_wc_add3(path, parent_access, svn_depth_infinity, 
-                     copyfrom_url, copyfrom_rev, 
-                     cancel_func, cancel_baton, 
+  return svn_wc_add3(path, parent_access, svn_depth_infinity,
+                     copyfrom_url, copyfrom_rev,
+                     cancel_func, cancel_baton,
                      notify_func, notify_baton, pool);
 }
 
@@ -1794,7 +1794,7 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
      if we're reverting a replacement.  This is just an optimization. */
   if (baseprops)
     {
-      SVN_ERR(svn_wc__install_props(&log_accum, adm_access, fullpath, 
+      SVN_ERR(svn_wc__install_props(&log_accum, adm_access, fullpath,
                                     baseprops, baseprops, revert_base, pool));
       *reverted = TRUE;
     }
@@ -2007,7 +2007,7 @@ revert_entry(svn_depth_t *depth,
   if (kind == svn_node_dir)
     SVN_ERR(svn_wc_is_wc_root(&is_wc_root, path, dir_access, pool));
   bname = is_wc_root ? NULL : svn_path_basename(path, pool);
-  
+
   /* Additions. */
   if (entry->schedule == svn_wc_schedule_add)
     {
@@ -2151,7 +2151,7 @@ revert_entry(svn_depth_t *depth,
     (*notify_func)(notify_baton,
                    svn_wc_create_notify(path, svn_wc_notify_revert, pool),
                    pool);
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -2200,7 +2200,7 @@ revert_internal(const char *path,
              make this happen.  For now, send notification of the failure. */
           if (notify_func != NULL)
             {
-              svn_wc_notify_t *notify = 
+              svn_wc_notify_t *notify =
                 svn_wc_create_notify(path, svn_wc_notify_failed_revert, pool);
               notify_func(notify_baton, notify, pool);
             }
@@ -2268,7 +2268,7 @@ revert_internal(const char *path,
             continue;
 
           /* Skip subdirectories if we're called with depth-files. */
-          if ((depth == svn_depth_files) 
+          if ((depth == svn_depth_files)
               && (child_entry->kind != svn_node_file))
             continue;
 
@@ -2276,8 +2276,8 @@ revert_internal(const char *path,
           full_entry_path = svn_path_join(path, keystring, subpool);
 
           /* Revert the entry. */
-          SVN_ERR(revert_internal(full_entry_path, dir_access, 
-                                  depth_under_here, use_commit_times, 
+          SVN_ERR(revert_internal(full_entry_path, dir_access,
+                                  depth_under_here, use_commit_times,
                                   changelist_hash, cancel_func, cancel_baton,
                                   notify_func, notify_baton, subpool));
         }
@@ -2321,7 +2321,7 @@ svn_wc_revert2(const char *path,
                void *notify_baton,
                apr_pool_t *pool)
 {
-  return svn_wc_revert3(path, parent_access, 
+  return svn_wc_revert3(path, parent_access,
                         SVN_DEPTH_INFINITY_OR_EMPTY(recursive),
                         use_commit_times, NULL, cancel_func, cancel_baton,
                         notify_func, notify_baton, pool);
@@ -2560,16 +2560,17 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
            full_path.  We need to remove that entry: */
         if (! is_root)
           {
+            apr_hash_t *parent_entries;
             svn_wc_adm_access_t *parent_access;
 
             svn_path_split(full_path, &parent_dir, &base_name, pool);
 
             SVN_ERR(svn_wc_adm_retrieve(&parent_access, adm_access,
                                         parent_dir, pool));
-            SVN_ERR(svn_wc_entries_read(&entries, parent_access, TRUE,
+            SVN_ERR(svn_wc_entries_read(&parent_entries, parent_access, TRUE,
                                         pool));
-            svn_wc__entry_remove(entries, base_name);
-            SVN_ERR(svn_wc__entries_write(entries, parent_access, pool));
+            svn_wc__entry_remove(parent_entries, base_name);
+            SVN_ERR(svn_wc__entries_write(parent_entries, parent_access, pool));
           }
       }
 
@@ -3057,8 +3058,8 @@ svn_wc_set_changelist(const char *path,
 
   /* If the path is already assigned to the changelist we're
      trying to assign, skip it. */
-  if (entry->changelist 
-      && changelist 
+  if (entry->changelist
+      && changelist
       && strcmp(entry->changelist, changelist) == 0)
     return SVN_NO_ERROR;
 
@@ -3070,23 +3071,23 @@ svn_wc_set_changelist(const char *path,
         svn_error_createf(SVN_ERR_WC_CHANGELIST_MOVE, NULL,
                           _("Removing '%s' from changelist '%s'."),
                           path, entry->changelist);
-      notify = svn_wc_create_notify(path, svn_wc_notify_changelist_moved, 
+      notify = svn_wc_create_notify(path, svn_wc_notify_changelist_moved,
                                     pool);
       notify->err = reassign_err;
       notify_func(notify_baton, notify, pool);
       svn_error_clear(notify->err);
     }
-  
+
   /* Tweak the entry. */
   newentry.changelist = changelist;
   SVN_ERR(svn_wc__entry_modify(adm_access, entry->name, &newentry,
                                SVN_WC__ENTRY_MODIFY_CHANGELIST, TRUE, pool));
-  
+
   /* And tell someone what we've done. */
   if (notify_func)
     {
-      notify = svn_wc_create_notify(path, 
-                                    changelist 
+      notify = svn_wc_create_notify(path,
+                                    changelist
                                     ? svn_wc_notify_changelist_set
                                     : svn_wc_notify_changelist_clear,
                                     pool);

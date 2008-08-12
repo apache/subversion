@@ -26,10 +26,8 @@ class SubversionClientTestCase(unittest.TestCase):
     self.client_ctx = client.svn_client_create_context()
     self.assertEquals(self.client_ctx.log_msg_baton2, None)
     self.assertEquals(self.client_ctx.log_msg_func2, None)
-    self.assertEquals(self.client_ctx.log_msg_baton3, None)
-    self.assertEquals(self.client_ctx.log_msg_func3, None)
-    self.client_ctx.log_msg_func3 = client.svn_swig_py_get_commit_log_func
-    self.client_ctx.log_msg_baton3 = self.log_message_func
+    self.client_ctx.log_msg_func2 = client.svn_swig_py_get_commit_log_func
+    self.client_ctx.log_msg_baton2 = self.log_message_func
     self.log_message_func_calls = 0
     self.log_message = None
     self.changed_paths = None
@@ -69,16 +67,16 @@ class SubversionClientTestCase(unittest.TestCase):
     """Test direct method calls to callbacks"""
 
     # Directly invoking the msg_baton should work
-    self.client_ctx.log_msg_baton3(None, None)
-    b = self.client_ctx.log_msg_baton3
+    self.client_ctx.log_msg_baton2(None, None)
+    b = self.client_ctx.log_msg_baton2
     b(None, None)
     self.assertEqual(self.log_message_func_calls, 2)
 
-    # You can also invoke the log_msg_func3. It'd be
-    # nice if we could get log_msg_func3 function
+    # You can also invoke the log_msg_func2. It'd be
+    # nice if we could get log_msg_func2 function
     # to invoke the baton function, but, in order to do that,
     # we'd need to supply a value for the first parameter.
-    self.client_ctx.log_msg_func3(None, self.client_ctx.log_msg_baton3)
+    self.client_ctx.log_msg_func2(None, self.client_ctx.log_msg_baton2)
 
   def info_receiver(self, path, info, pool):
     """Squirrel away the output from 'svn info' so that the unit tests

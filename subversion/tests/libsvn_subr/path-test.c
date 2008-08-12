@@ -738,6 +738,12 @@ test_canonicalize(const char **msg,
     { "http://hst",           "http://hst" },
     { "http://hst/foo/../bar","http://hst/foo/../bar" },
     { "http://hst/",          "http://hst" },
+    { "http:///",             "http://" },
+    { "https://",             "https://" },
+    { "file:///",             "file://" },
+    { "file://",              "file://" },
+    { "svn:///",              "svn://" },
+    { "svn+ssh:///",          "svn+ssh://" },
     { NULL, NULL }
   };
   int i;

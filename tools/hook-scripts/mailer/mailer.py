@@ -136,7 +136,7 @@ def remove_leading_slashes(path):
 
 
 class OutputBase:
-  "Abstract base class to formalize the interface of output methods"
+  "Abstract base class to formalize the inteface of output methods"
 
   def __init__(self, cfg, repos, prefix_param):
     self.cfg = cfg

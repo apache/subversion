@@ -264,7 +264,7 @@ path_txn_proto_rev_lock(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
   fs_fs_data_t *ffd = fs->fsap_data;
   if (ffd->format >= SVN_FS_FS__MIN_PROTOREVS_DIR_FORMAT)
     return svn_path_join_many(pool, fs->path, PATH_TXN_PROTOS_DIR,
-                              apr_pstrcat(pool, txn_id, PATH_EXT_REV_LOCK, 
+                              apr_pstrcat(pool, txn_id, PATH_EXT_REV_LOCK,
                                           NULL),
                               NULL);
   else
@@ -469,7 +469,7 @@ with_some_lock(svn_error_t *(*body)(void *baton,
      within the process. */
   status = apr_thread_mutex_lock(lock_mutex);
   if (status)
-    return svn_error_wrap_apr(status, 
+    return svn_error_wrap_apr(status,
                               _("Can't grab FSFS mutex for '%s'"),
                               lock_filename);
 #endif
@@ -902,7 +902,7 @@ write_format(const char *path, int format, int max_files_per_dir,
 {
   const char *contents;
 
-  SVN_ERR_ASSERT(1 <= format && format <= SVN_FS_FS__FORMAT_NUMBER);
+  assert (1 <= format && format <= SVN_FS_FS__FORMAT_NUMBER);
   if (format >= SVN_FS_FS__MIN_LAYOUT_FORMAT_OPTION_FORMAT)
     {
       if (max_files_per_dir)
@@ -933,7 +933,7 @@ write_format(const char *path, int format, int max_files_per_dir,
     {
       apr_file_t *format_file;
       const char *path_tmp;
-      
+
       /* Create a temporary file to write the data to */
       SVN_ERR(svn_io_open_unique_file2(&format_file, &path_tmp, path, ".tmp",
                                        svn_io_file_del_none, pool));
@@ -1124,7 +1124,7 @@ upgrade_body(void *baton, apr_pool_t *pool)
 
   /* Bump the format file.  We pass 0 for the max_files_per_dir here
      so we don't have to fuss with sharding directories ourselves. */
-  SVN_ERR(write_format(format_path, SVN_FS_FS__FORMAT_NUMBER, 0, 
+  SVN_ERR(write_format(format_path, SVN_FS_FS__FORMAT_NUMBER, 0,
                        TRUE, pool));
 
   return SVN_NO_ERROR;
@@ -2513,7 +2513,7 @@ read_window(svn_txdelta_window_t **nwin, int this_chunk, struct rep_state *rs,
 {
   svn_stream_t *stream;
 
-  SVN_ERR_ASSERT(rs->chunk_index <= this_chunk);
+  assert(rs->chunk_index <= this_chunk);
 
   /* Skip windows to reach the current chunk if we aren't there yet. */
   while (rs->chunk_index < this_chunk)
@@ -2554,7 +2554,7 @@ get_combined_window(svn_txdelta_window_t **result,
   svn_txdelta_window_t *window, *nwin;
   struct rep_state *rs;
 
-  SVN_ERR_ASSERT(rb->rs_list->nelts >= 2);
+  assert(rb->rs_list->nelts >= 2);
 
   pool = svn_pool_create(rb->pool);
 
@@ -2572,7 +2572,7 @@ get_combined_window(svn_txdelta_window_t **result,
 
       SVN_ERR(read_window(&nwin, rb->chunk_index, rs, pool));
 
-      /* Combine this window with the current one.  Cycle pools so that we
+      /* Combine this window with the current one.  Cycles pools so that we
          only need to hold three windows at a time. */
       new_pool = svn_pool_create(rb->pool);
       window = svn_txdelta_compose_windows(nwin, window, new_pool);
@@ -3976,11 +3976,11 @@ svn_fs_fs__change_txn_prop(svn_fs_txn_t *txn,
 {
   apr_array_header_t *props = apr_array_make(pool, 1, sizeof(svn_prop_t));
   svn_prop_t prop;
-  
+
   prop.name = name;
   prop.value = value;
   APR_ARRAY_PUSH(props, svn_prop_t) = prop;
-  
+
   return svn_fs_fs__change_txn_props(txn, props, pool);
 }
 
@@ -4202,7 +4202,7 @@ svn_fs_fs__purge_txn(svn_fs_t *fs,
       if (err)
         return err;
 
-      err = svn_io_remove_file(path_txn_proto_rev_lock(fs, txn_id, pool), 
+      err = svn_io_remove_file(path_txn_proto_rev_lock(fs, txn_id, pool),
                                pool);
       if (err && APR_STATUS_IS_ENOENT(err->apr_err))
         {
@@ -5353,18 +5353,18 @@ commit_body(void *baton, apr_pool_t *pool)
           prop.name = SVN_FS__PROP_TXN_CHECK_OOD;
           APR_ARRAY_PUSH(props, svn_prop_t) = prop;
         }
-      
+
       if (apr_hash_get(txnprops, SVN_FS__PROP_TXN_CHECK_LOCKS,
                        APR_HASH_KEY_STRING))
         {
           prop.name = SVN_FS__PROP_TXN_CHECK_LOCKS;
           APR_ARRAY_PUSH(props, svn_prop_t) = prop;
-        }          
-      
+        }
+
       if (! apr_is_empty_array(props))
         SVN_ERR(svn_fs_fs__change_txn_props(cb->txn, props, pool));
     }
-  
+
   /* Create the shard for the rev and revprop file, if we're sharding and
      this is the first revision of a new shard.  We don't care if this
      fails because the shard already existed for some reason. */
@@ -6050,8 +6050,8 @@ svn_fs_fs__get_node_origin(const svn_fs_id_t **origin_id,
   apr_hash_t *node_origins;
 
   *origin_id = NULL;
-  SVN_ERR(get_node_origins_from_file(fs, &node_origins, 
-                                     path_node_origin(fs, node_id, pool), 
+  SVN_ERR(get_node_origins_from_file(fs, &node_origins,
+                                     path_node_origin(fs, node_id, pool),
                                      pool));
   if (node_origins)
     {

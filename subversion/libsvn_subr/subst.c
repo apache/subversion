@@ -1256,7 +1256,7 @@ detranslated_stream_special(svn_stream_t **translated_stream_p,
 
     break;
   default:
-    SVN_ERR_MALFUNCTION();
+    abort();
   }
 
   return SVN_NO_ERROR;
@@ -1377,7 +1377,7 @@ svn_subst_translate_stream3(svn_stream_t *s, /* src stream */
   char *buf = apr_palloc(subpool, SVN__STREAM_CHUNK_SIZE);
 
   /* The docstring requires that *some* translation be requested. */
-  SVN_ERR_ASSERT(eol_str || keywords);
+  assert(eol_str || keywords);
 
   baton = create_translation_baton(eol_str, repair, keywords, expand, pool);
   while (readlen == SVN__STREAM_CHUNK_SIZE)
@@ -1524,7 +1524,7 @@ detranslate_special_file_to_stream(svn_stream_t **src_stream,
                               buf->data));
     break;
   default:
-    SVN_ERR_MALFUNCTION();
+    abort ();
   }
 
   return SVN_NO_ERROR;
