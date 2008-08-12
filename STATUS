@@ -24,12 +24,12 @@ Candidate changes for 1.5.2:
    Votes:
      +1: pburba, cmpilato
 
- * r31234, r31550, r31232, r31630
+ * r31232, r31234, r31550, r31630
    Set of revisions required to make 1.5.x pass all tests over ra_serf.
+   r31232 fixes blame test 16.
    r31234 fixes AN API issue, solves merge conflict with r31313
    r31550 fixes the 'check repo uuid on repo access' feature
    r31630 fixes copy test 22.
-   r31232 fixes blame test 16.
    Justification:
      With current HEAD of 1.5.x about 10 tests are failing, so that's quite a 
      regression. Changes nominated here touch code in ra_serf only and are low
@@ -39,6 +39,7 @@ Candidate changes for 1.5.2:
      including the already approved r31313.
    Votes:
      +1: lgo, cmpilato
+     +0: arfrever
  
  * r32409
    Fix an incompatibility with BSD make, which was introduced in r24293.
@@ -46,8 +47,16 @@ Candidate changes for 1.5.2:
      Trivial fix. Fixes out-of-tree build of the bindings on BSD.
      Might help downstream packagers for these systems.
    Votes:
-     +1: stsp
+     +1: stsp, arfrever
      +0: cmpilato
+
+ * r32416, r32421
+   Respect LDFLAGS in Perl bindings.
+   Notes:
+     Previously LDFLAGS were ignored (except for libsvn_swig_perl) even when
+     the SWIG_LDFLAGS variable was set.
+   Votes:
+     +1: arfrever
 
  * r32417
    Fix issue #3255: client capabilities were not passed to start-commit
@@ -56,6 +65,17 @@ Candidate changes for 1.5.2:
      commits from clients that do not support mergeinfo.
    Votes:
      +1: kfogel, cmpilato
+
+ * r32441
+   Fix issue #3258: 8lock.t fails in non-English locale.
+   Votes:
+     +1: arfrever
+
+ * r32442
+   Respect LDFLAGS in SWIG bindings without the requirement of the exporting
+   of the SWIG_LDFLAGS variable.
+   Votes:
+     +1: arfrever
 
 Approved changes:
 =================
@@ -74,6 +94,5 @@ Approved changes:
    Question:
      Does r32056, nominated below, fix these test failures? No, unrelated.
    Votes:
-     +1: lgo, cmpilato, jerenkrantz
-     +0: arfrever (serf tests fail)
+     +1: lgo, cmpilato, jerenkrantz, arfrever
      -0: markphip (serf tests fail on OSX), epg (failure confirmed)
