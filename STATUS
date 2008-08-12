@@ -77,6 +77,11 @@ Candidate changes for 1.5.2:
    Votes:
      +1: arfrever
 
+ * r32444, r32445
+   Fix issue #3237, relative externals may core dump.
+   Votes:
+     +1: blair
+
 Approved changes:
 =================
 
