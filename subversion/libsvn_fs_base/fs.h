@@ -43,7 +43,7 @@ extern "C" {
 #define SVN_FS_BASE__FORMAT_NUMBER                4
 
 /* Minimum format number that supports forward deltas */
-#define SVN_FS_BASE__MIN_FORWARD_DELTAS_FORMAT        4
+#define SVN_FS_BASE__MIN_FORWARD_DELTAS_FORMAT    4
 
 /* Minimum format number that supports node-origins tracking */
 #define SVN_FS_BASE__MIN_NODE_ORIGINS_FORMAT      3
