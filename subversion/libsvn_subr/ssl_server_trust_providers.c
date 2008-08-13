@@ -33,8 +33,8 @@
 /* File provider                                                         */
 /*-----------------------------------------------------------------------*/
 
-/* The keys that will be stored on disk; analogous to similar
-   constants in ssl_client_cert_pw_providers.c and simple_providers.c. */
+/* The keys that will be stored on disk.  These serve the same role as
+   similar constants in other providers. */
 #define AUTHN_ASCII_CERT_KEY            "ascii_cert"
 #define AUTHN_FAILURES_KEY              "failures"
 

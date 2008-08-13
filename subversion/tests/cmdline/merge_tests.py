@@ -9226,6 +9226,9 @@ def merge_source_normalization_and_subtree_merges(sbox):
 
 # Tests for issue #3067: 'subtrees with intersecting mergeinfo, that don't
 # exist at the start of a merge range shouldn't break the merge'
+# After r32405+32406 which checks that a file about to be deleted is identical
+# to the merge-left source file, this test fails. See the end of this email
+# <http://svn.haxx.se/dev/archive-2008-08/0124.shtml> and its thread.
 def new_subtrees_should_not_break_merge(sbox):
   "subtrees added after start of merge range are ok"
 
@@ -12617,6 +12620,168 @@ def commit_to_subtree_added_by_merge(sbox):
   svntest.actions.run_and_verify_svn(None, ["At revision 5.\n"], [], 'up',
                                      wc_dir)
 
+
+#----------------------------------------------------------------------
+# Helper functions. These take local paths using '/' separators.
+
+def local_path(path):
+  "Convert a path from '/' separators to the local style."
+  return os.sep.join(path.split('/'))
+
+def svn_mkfile(path):
+  "Make and add a file with some default content, and keyword expansion."
+  path = local_path(path)
+  dirname, filename = os.path.split(path)
+  svntest.main.file_write(path, "This is the file '" + filename + "'.\n" +
+                                "Last changed in '$Revision$'.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'propset',
+                                     'svn:keywords', 'Revision', path)
+
+def svn_modfile(path):
+  "Make text and property mods to a WC file."
+  path = local_path(path)
+  svntest.main.file_append(path, "An extra line.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'propset',
+                                     'newprop', 'v', path)
+
+def svn_copy(s_rev, path1, path2):
+  "Copy a WC path locally."
+  path1 = local_path(path1)
+  path2 = local_path(path2)
+  svntest.actions.run_and_verify_svn(None, None, [], 'copy', '--parents',
+                                     '-r', s_rev, path1, path2)
+
+def svn_delete(path):
+  "Delete a WC path locally."
+  path = local_path(path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'delete', path)
+
+def svn_commit(path):
+  "Commit a WC path and return the new revision number."
+  path = local_path(path)
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
+                                     'commit', '-m', '', path)
+  svn_commit.repo_rev += 1
+  return svn_commit.repo_rev
+
+def svn_merge(src_change_num, source, target, exp_out=svntest.verify.AnyOutput):
+  "Merge a single change from path 'source' to path 'target'"
+  source = local_path(source)
+  target = local_path(target)
+  svntest.actions.run_and_verify_svn(None, exp_out, [],
+                                     'merge', '-c', src_change_num,
+                                     source, target)
+
+#----------------------------------------------------------------------
+# Tests for merging the deletion of a node, where the node to be deleted
+# is the same as or different from the node that was deleted.
+
+def del_identical_file(sbox):
+  "merge tries to delete a file of identical content"
+
+  # Set up a standard greek tree in r1.
+  sbox.build()
+  svn_commit.repo_rev = 1
+
+  saved_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+
+  # Set up a modification and deletion in the source branch.
+  source = 'A/D/G'
+  s_rev_orig = svn_commit.repo_rev
+  svn_modfile(source+"/tau")
+  s_rev_mod = svn_commit(source)
+  svn_delete(source+"/tau")
+  s_rev_del = svn_commit(source)
+
+  # Make an identical copy, and merge a deletion to it.
+  target = 'A/D/G2'
+  svn_copy(s_rev_mod, source, target)
+  svn_commit(target)
+  # Should be deleted quietly.
+  svn_merge(s_rev_del, source, target, '--- Merging|D ')
+
+  # Make a differing copy, locally modify it so it's the same,
+  # and merge a deletion to it.
+  target = 'A/D/G3'
+  svn_copy(s_rev_orig, source, target)
+  svn_commit(target)
+  svn_modfile(target+"/tau")
+  # Should be deleted quietly.
+  svn_merge(s_rev_del, source, target, '--- Merging|D ')
+
+  os.chdir(saved_cwd)
+
+def del_sched_add_hist_file(sbox):
+  "merge tries to delete identical sched-add file"
+
+  # Setup a standard greek tree in r1.
+  sbox.build()
+  svn_commit.repo_rev = 1
+
+  saved_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+
+  # Set up a creation in the source branch.
+  source = 'A/D/G'
+  s_rev_orig = svn_commit.repo_rev
+  svn_mkfile(source+"/file")
+  s_rev_add = svn_commit(source)
+
+  # Merge a creation, and delete by reverse-merging into uncommitted WC.
+  target = 'A/D/G2'
+  svn_copy(s_rev_orig, source, target)
+  s_rev = svn_commit(target)
+  svn_merge(s_rev_add, source, target, '--- Merging|A ')
+  # Should be deleted quietly.
+  svn_merge(-s_rev_add, source, target, '--- Reverse-merging|D ')
+
+  os.chdir(saved_cwd)
+
+def del_differing_file(sbox):
+  "merge tries to delete a file of different content"
+
+  # Setup a standard greek tree in r1.
+  sbox.build()
+  svn_commit.repo_rev = 1
+
+  saved_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+
+  source = 'A/D/G'
+  s_rev_orig = 1
+
+  # Delete files in the source
+  svn_delete(source+"/tau")
+  s_rev_tau = svn_commit(source)
+  svn_delete(source+"/pi")
+  s_rev_pi = svn_commit(source)
+
+  # Copy a file, modify it, and merge a deletion to it.
+  target = 'A/D/G2'
+  svn_copy(s_rev_orig, source, target)
+  svntest.main.file_append(target+"/tau", "An extra line in the target.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'propset',
+                                     'newprop', 'v', target+"/pi")
+  # Should complain and "skip" it.
+  svn_merge(s_rev_tau, source, target, 'Skipped.*tau')
+  svn_merge(s_rev_pi, source, target, 'Skipped.*pi')
+
+  # Copy a file, modify it, commit, and merge a deletion to it.
+  target = 'A/D/G3'
+  svn_copy(s_rev_orig, source, target)
+  svntest.main.file_append(target+"/tau", "An extra line in the target.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'propset',
+                                     'newprop', 'v', target+"/pi")
+  svn_commit(target)
+  # Should complain and "skip" it.
+  svn_merge(s_rev_tau, source, target, 'Skipped.*tau')
+  svn_merge(s_rev_pi, source, target, 'Skipped.*pi')
+
+  os.chdir(saved_cwd)
+
+
 ########################################################################
 # Run the tests
 
@@ -12755,7 +12920,7 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(merge_source_normalization_and_subtree_merges,
                          server_has_mergeinfo),
-              SkipUnless(new_subtrees_should_not_break_merge,
+              SkipUnless(XFail(new_subtrees_should_not_break_merge),
                          server_has_mergeinfo),
               SkipUnless(basic_reintegrate,
                          server_has_mergeinfo),
@@ -12791,6 +12956,9 @@ test_list = [ None,
               SkipUnless(subtrees_with_empty_mergeinfo, server_has_mergeinfo),
               SkipUnless(commit_to_subtree_added_by_merge,
                          svntest.main.is_ra_type_dav),
+              del_identical_file,
+              del_sched_add_hist_file,
+              del_differing_file,
              ]
 
 if __name__ == '__main__':
