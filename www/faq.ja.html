@@ -17,13 +17,13 @@
 <div class="app">
 
 <h1>Subversion FAQ</h1>
+<p>(<a href="faq.html">English</a>)</p>
+
 <div style="font-size: 70%">
 <pre>
-Based on r32010
+Based on r32412
 </pre>
 </div>
-
-<p>(<a href="faq.html">English</a>)</p>
 
 <div class="h2"><!-- no 'id' or 'title' attribute for TOC -->
 <h2>Table of Contents</h2>
@@ -869,8 +869,7 @@ $ svnadmin setlog REPOS_PATH -r N FILE
 もし、スキーマ変更が、Subversionリリース X と Yの間で起こった場合、Yへとアップグレードするリポジトリ管理者は、以下手順を踏む必要がある。</p>
 
 <ol>
- <li>svnserveやApache、その他リポジトリへアクセスするかもしれないものを、シャットダウンする。
- </li>
+ <li>svnserveやApache、その他リポジトリへアクセスするかもしれないものを、シャットダウンする。</li>
 
  <li><b><tt>svnadmin&nbsp;dump&nbsp;/path/to/repository&nbsp;&gt;&nbsp;dumpfile.txt</tt></b> を実行する。svnadmin は、バージョン X のものを使うこと。</li>
 
@@ -1915,44 +1914,7 @@ Service Packに関する各種情報は、次のリンクから入手可能。</
 <div class="h3" id="net-trace" title="net-trace">
 <h3>Subversion のクライアントとサーバの間を流れるネットワーク上のやり取りをトレースしたいのですが、どんな方法が最良でしょうか?</h3>
 
-<p>二人のやり取りに聞き耳をそば立てたいならば、<a href="http://www.wireshark.org/">Wireshark</a>(以前はEtherealって名前で知られていた)を使おう。</p>
-
-<p>まず最初に、同一 wireshark セッション内のキャプチャ間では、<em>Clear</em>を押すことを忘れずに。
-忘れてしまうと、あるキャプチャ(例えば HTTP のキャプチャ)用フィルタが、他のキャプチャ(例えば ra_svn キャプチャ)に影響をお呼びしてしまうかもしれない。</p>
-
-<p>クリアしたと仮定して、続けて、</p>
-
-<ol>
-<li><p><i>Capture</i>メニューを呼び出し、<i>Capture&nbsp;Filters</i>を選択する。</p></li>
-<li><p>http://(WebDAV) プロトコルをデバッグしたいのならば、ポップアップウィンドウの中から「<code>HTTP&nbsp;TCP&nbsp;port&nbsp;(80)</code>」を選択する(これは、filter string は「<code><i>tcp&nbsp;port&nbsp;http</i></code>」になる)。</p>
-    <p>svn:// (ra_svn) プロトコルをデバッグしたい場合、<i>New</i>を選択し、新しいフィルタへ名前を付け(例えば、「ra_svn」)、filter stringボックスへ「<code>tcp&nbsp;port&nbsp;3690</code>」 と入力する。</p>
-    <p>完了したら、OK をクリック。</p></li> 
-<li><p>再び<i>Capture</i>メニューへと行き、今度は、<i>Interfaces</i>を選択、そして、適切なインターフェイス(サーバがクライアントと同じマシン上で動作しているとする場合には、多分、あなたが使うインターフェイスは、「loopback」を意味する「lo」だろう)の隣にある、<i>Options</i>をクリックする。</p></li>
-<li><p>Promisuous モードのチェックボックスから、チェックを外す。</p></li>
-<li><p>右下にある<i>Start</i>ボタンを押して、キャプチャを開始。</p></li>
-<li><p>Subversion クライアントを実行する。</p></li>
-<li><p>操作が終了したら、Stopアイコン(イーサネットインターフェースカードの上に赤い×の付いてる奴)をクリック(または、<i>Capture-&gt;Stop</i>でも大丈夫)。
-これで、キャプチャを入手できた。膨大な量のリストのように見えるだろう。</p></li>
-<li><p><i>Protocol</i>カラムを押して、ソート。</p></li>
-<li><p>関係する最初の行をクリックして選択。大抵の場合、先頭行が丁度それにあたる。</p></li>
-<li><p>右クリックし、<i>Follow TCP Stream</i>を選択する。Subversionクライアントの HTTP のやり取りが、リクエスト/レスポンスのペアで表示されるだろう。</p></li>
-</ol>
-
-<p>上記の操作説明は、Wireshark(version 0.99.6)のグラフィカルバージョン用のもので、「tshark」(Wireshark が Ethereal と呼ばれていた時代の「tethereal」)という名で知られているコマンドライン版にはそぐわない。</p>
-
-<p>別の方法として、<tt>svn</tt>クライアントを実行させる際に、<tt>servers</tt>設定ファイルで <tt>neon-debug-mask</tt>パラメタをセットし、デバッグ出力を表示させても良いだろう。
-<tt>neon-debug-mask</tt>の数値は、<tt>ne_utils.h</tt>ヘッダファイルにある <tt>NE_DBG...</tt>値の組み合わせになる。現在のバージョンのneonでは、<tt>neon-debug-mask</tt>値に130(即ち、<tt>NE_DBG_HTTP+NE_DBG_HTTPBODY</tt>)を設定すると、HTTP データが表示されるようになるだろう。</p>
-
-<p>ネットワークトレースをしているときには、圧縮を無効化したいと思うかもしれない。<tt>servers</tt>設定ファイルの<tt>http-compression</tt>パラメタを参照のこと。</p>
-
-<p>更なる別解としては、Subversion クライアントとサーバの間に、ログ取得用のプロキシを挟む、というのがある。
-簡単なのは、<tt>socat</tt> プログラムを用いる方法。例えば、svnserver インスタンスとのやり取りの様子を記録するには、次のコマンドを実行しよう。</p>
-
-<p><tt>socat -v  TCP4-LISTEN:9630,reuseaddr,fork TCP4:localhost:svn</tt></p>
-
-<p>それから、<tt>svn://127.0.0.1:9630/</tt> を URLのベースとした svn コマンドを実行する。
-<tt>socat</tt> は 9630 ポートからのトラフィックを通常のsvnserve ポート(3690)へと転送すると共に、両方向の全トラフィックを標準エラー出力へと出力するだろう。出力の前には、トラフィックの方向を示す記号である&lt;と&gt;とが付加される。</p>
-
+<p><a href="hacking.html#net-trace">hacking.html#net-trace</a>を参照のこと。</p>
 </div>
 
 
