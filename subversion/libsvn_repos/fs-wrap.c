@@ -467,7 +467,8 @@ svn_repos_fs_lock(svn_lock_t **lock,
 
   /* Run pre-lock hook.  This could throw error, preventing
      svn_fs_lock() from happening. */
-  SVN_ERR(svn_repos__hooks_pre_lock(repos, path, username, pool));
+  SVN_ERR(svn_repos__hooks_pre_lock(repos, path, username, comment,
+                                    steal_lock, pool));
 
   /* Lock. */
   SVN_ERR(svn_fs_lock(lock, repos->fs, path, token, comment, is_dav_comment,
@@ -511,7 +512,8 @@ svn_repos_fs_unlock(svn_repos_t *repos,
 
   /* Run pre-unlock hook.  This could throw error, preventing
      svn_fs_unlock() from happening. */
-  SVN_ERR(svn_repos__hooks_pre_unlock(repos, path, username, pool));
+  SVN_ERR(svn_repos__hooks_pre_unlock(repos, path, username, token,
+                                      break_lock, pool));
 
   /* Unlock. */
   SVN_ERR(svn_fs_unlock(repos->fs, path, token, break_lock, pool));

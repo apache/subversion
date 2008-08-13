@@ -151,20 +151,6 @@ capabilities_response_handler(serf_request_t *request,
   return APR_SUCCESS;
 }
 
-/* Set up headers announcing the client's capabilities.
-   BATON and POOL are ignored. */
-static apr_status_t
-set_up_capabilities_headers(serf_bucket_t *headers,
-                            void *baton,
-                            apr_pool_t *pool)
-{
-  serf_bucket_headers_set(headers, "DAV", SVN_DAV_NS_DAV_SVN_DEPTH);
-  serf_bucket_headers_set(headers, "DAV", SVN_DAV_NS_DAV_SVN_MERGEINFO);
-  serf_bucket_headers_set(headers, "DAV", SVN_DAV_NS_DAV_SVN_LOG_REVPROPS);
-
-  return APR_SUCCESS;
-}
-
 
 /* Exchange capabilities with the server, by sending an OPTIONS
    request announcing the client's capabilities, and by filling
@@ -187,11 +173,14 @@ exchange_capabilities(svn_ra_serf__session_t *serf_sess, apr_pool_t *pool)
   handler->body_buckets = NULL;
   handler->response_handler = capabilities_response_handler;
   handler->response_baton = &crb;
-  handler->header_delegate = set_up_capabilities_headers;
   handler->session = serf_sess;
   handler->conn = serf_sess->conns[0];
 
+  /* Client capabilities are sent automagically with every request;
+     that's why we don't set up a handler->header_delegate above.
+     See issue #3255 for more. */
   svn_ra_serf__request_create(handler);
+
   return svn_ra_serf__context_run_wait(&(crb.done), serf_sess, pool);
 }
 

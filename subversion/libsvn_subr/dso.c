@@ -44,16 +44,32 @@ static int not_there_sentinel;
 void
 svn_dso_initialize()
 {
+  svn_error_t *err = svn_dso_initialize2();
+  if (err)
+    {
+      svn_error_clear(err);
+      abort();
+    }
+}
+
+svn_error_t *
+svn_dso_initialize2()
+{
+  apr_status_t status;
   if (dso_pool)
-    return;
+    return SVN_NO_ERROR;
 
   dso_pool = svn_pool_create(NULL);
 
 #if APR_HAS_THREADS
-  apr_thread_mutex_create(&dso_mutex, APR_THREAD_MUTEX_DEFAULT, dso_pool);
+  status = apr_thread_mutex_create(&dso_mutex, 
+                                   APR_THREAD_MUTEX_DEFAULT, dso_pool);
+  if (status)
+    return svn_error_wrap_apr(status, _("Can't create DSO mutex"));
 #endif
 
   dso_cache = apr_hash_make(dso_pool);
+  return SVN_NO_ERROR;
 }
 
 #if APR_HAS_DSO
@@ -63,7 +79,7 @@ svn_dso_load(apr_dso_handle_t **dso, const char *fname)
   apr_status_t status;
 
   if (! dso_pool)
-    svn_dso_initialize();
+    SVN_ERR(svn_dso_initialize2());
 
 #if APR_HAS_THREADS
   status = apr_thread_mutex_lock(dso_mutex);

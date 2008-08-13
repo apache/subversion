@@ -40,7 +40,10 @@ extern "C" {
    ends.  See the SVN_FS_BASE__MIN_*_FORMAT defines to get a sense of
    what changes and features were added in which versions of this
    back-end's format.  */
-#define SVN_FS_BASE__FORMAT_NUMBER                3
+#define SVN_FS_BASE__FORMAT_NUMBER                4
+
+/* Minimum format number that supports forward deltas */
+#define SVN_FS_BASE__MIN_FORWARD_DELTAS_FORMAT        4
 
 /* Minimum format number that supports node-origins tracking */
 #define SVN_FS_BASE__MIN_NODE_ORIGINS_FORMAT      3

@@ -36,8 +36,8 @@
 /* File provider                                                         */
 /*-----------------------------------------------------------------------*/
 
-/* The keys that will be stored on disk; analogous to similar
- * constants in ssl_server_trust_providers.c and simple_providers.c.
+/* The keys that will be stored on disk.  These serve the same role as
+ * similar constants in other providers.
  *
  * AUTHN_PASSTYPE_KEY just records the passphrase type next to the
  * passphrase, so that anyone who is manually editing their authn
