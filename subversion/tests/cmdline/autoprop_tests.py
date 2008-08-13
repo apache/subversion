@@ -30,21 +30,13 @@ Item = svntest.wc.StateItem
 
 
 # Helper function
-def check_proplist(path, exp_out, config_dir):
+def check_proplist(path, exp_out):
   """Verify that property list on PATH has a value of EXP_OUT"""
 
-  exit_code, out, err = svntest.main.run_svn(None, 'proplist', '--verbose',
-                                             path, '--config-dir', config_dir)
-
-  out2 = []
-  for line in out[1:]:
-    out2 = out2 + [line.strip()]
-  out2.sort()
-  exp_out.sort()
-  if out2 != exp_out:
+  props = svntest.tree.get_props(path)
+  if props != exp_out:
     print "Expected properties:", exp_out
-    print "Actual properties:  ", out2
-    print "Actual proplist output:", out
+    print "Actual properties:  ", props
     raise svntest.Failure
 
 
@@ -160,21 +152,20 @@ def autoprops_test(sbox, cmd, cfgenable, clienable, subdir):
   # check the properties
   if enable_flag:
     filename = os.path.join(files_wc_dir, 'foo.h')
-    check_proplist(filename, ['auto : oui'], config_dir)
+    check_proplist(filename, {'auto':'oui'})
     filename = os.path.join(files_wc_dir, 'foo.c')
-    check_proplist(filename, ['auto : oui', 'cfile : yes'], config_dir)
+    check_proplist(filename, {'auto':'oui', 'cfile':'yes'})
     filename = os.path.join(files_wc_dir, 'foo.jpg')
-    check_proplist(filename, ['auto : oui', 'jpgfile : ja'], config_dir)
+    check_proplist(filename, {'auto':'oui', 'jpgfile':'ja'})
     filename = os.path.join(files_wc_dir, 'fubar.tar')
-    check_proplist(filename, ['auto : oui', 'tarfile : si'], config_dir)
+    check_proplist(filename, {'auto':'oui', 'tarfile':'si'})
     filename = os.path.join(files_wc_dir, 'foobar.lha')
-    check_proplist(filename, ['auto : oui', 'lhafile : da', 'lzhfile : niet'],
-                   config_dir)
+    check_proplist(filename, {'auto':'oui', 'lhafile':'da', 'lzhfile':'niet'})
     filename = os.path.join(files_wc_dir, 'spacetest')
-    check_proplist(filename, ['auto : oui', 'abc : def', 'ghi :'], config_dir)
+    check_proplist(filename, {'auto':'oui', 'abc':'def', 'ghi':''})
   else:
     for filename in filenames:
-      check_proplist(os.path.join(files_wc_dir, filename), [], config_dir)
+      check_proplist(os.path.join(files_wc_dir, filename), {})
 
 
 #----------------------------------------------------------------------
