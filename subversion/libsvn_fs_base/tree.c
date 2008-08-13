@@ -1675,7 +1675,7 @@ deltify_mutable(svn_fs_t *fs,
        (Retrieving the oldest node-revision will still be fast, just
        not as blindingly so.)
        
-       For 1.6 and beyond, we just deltify the current node against it
+       For 1.6 and beyond, we just deltify the current node against its
        predecessors, using skip deltas similar to the was FSFS does.*/
 
     int pred_count, nlevels, lev, count;
