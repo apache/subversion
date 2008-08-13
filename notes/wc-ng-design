@@ -260,6 +260,14 @@ then, if these routines are passed file handles, they'll be quite
 happy, meaning they still don't need to know where the text base /
 source file is...]
 
+###GJS: the APIs should use streams so that we can decompress as the
+   stream is being read. the diff library will need a callback of some
+   kind to perform the rewind, which will effectively just close and
+   reopen the stream. if it rewinds *multiple* times, then we may want
+   to cache the decompressed version of the file. I'll
+   investigate. Given our metadata/base-text storage system, I suspect
+   it will be very easy to cache decompressed copies for a while.
+
 In order to keep developers sane, it should be extremely clear at any
 one time - when operating on a tree - which tree is being operated upon.
 
@@ -270,6 +278,7 @@ solely that specific task.
 #####XBC Do please note that this suggests yet another instance of
          pure polymorphism coded in C. This runs contrary to the
          developer sanity requirement.
+###GJS: agreed with XBC.
 
 
 Speed
@@ -282,6 +291,10 @@ One of the possible improvements would be to make wc-ng read all of
 the ACTUAL state (concentrated in one place, using apr_stat()), keeping
 it around as long as required, matching it with the WORKING state before
 operating on either (not only when deemed important!).
+
+###GJS: working copy file counts are unbounded, so we need to be
+   careful about keeping "all" stat results in memory. I'll certainly
+   keep this in mind, however.
 
 Working from the ACTUAL tree will also prove to be a step toward clarity
 regarding the exact tree which is being operated upon.
@@ -306,8 +319,12 @@ There are 3 known models for storing metadata as requested by different
 groups of users:
 
  - in-subtree metadata storage (.svn subdir model, as in wc-1.0)
+   ###GJS: euh... aren't we axing this? who has *requested* this?
  - in-'tree root' metadata storage (working copy central)
  - detached metadata storage (user-central)
+   - in $HOME/.subversion/
+   - in arbitrary location (e.g. $HOME is a (slow) NFS mount, and we
+     want the metadata on a local drive, such as /var/...)
 
 A solution to implementing each of these behaviours in order to satisfy
 the wide range of use-cases they solve, would be to define a module
@@ -317,6 +334,31 @@ Note that using within-module vtables should be less problematic than our
 post-1.0 experiences with public vtables (such as the ra-layer vtable):
 implementation details are allowed to differ between releases (even patch
 releases).
+
+###GJS: note that we are talking about both metadata AND base-text
+   content. (and yeah, optional and compresses base-texts can be done
+   during this rewrite)  Also note that we might be able to share
+   base-text content across working copies if they are all keyed by
+   the MD5 hash into storage directories (under the user-central model)
+
+###GJS: I don't think vtables are needed here. This is simply altering
+   the base location, not a whole new implementation. My plan is to
+   default to the "tree root" model with a .svn subdirectory. If a
+   .svn subdir is not found, then we fall back to looking in the
+   $HOME/.subversion/ directory (some subdir under there). If we
+   *still* don't find it, then some config options will point us to
+   the metadata/base-text location.
+
+###GJS: my plan is to upgrade the working copy if we find a pre-1.6
+   working copy. all the data will be lifted from the multiple .svn
+   subdirectories, and relocated to the "proper" storage location.
+   This will be a non-reversable upgrade, and will preclude pre-1.6
+   clients from using that working copy again.
+   Note: because of the "destructive" nature of this upgrade, and the
+   expected duration, we may want to require the user to perform an
+   explicit action in order to complete the upgrade. However, 1.6 will
+   not be able to *modify* wc-1.0 metadata -- just read it in order to
+   upgrade it to the new storage system.
 
 
 Transaction duration / memory management
@@ -349,6 +391,10 @@ wc-ng.  This will both be a measure to ensure working copy stability
 as well as developer sanity: in the early stages of the wc-ng develop-
 ment process, we'll be able to assess how well the design holds up
 under more difficult 'weather'.
+
+###GJS: agreed. as much as possible, when I (re)implement the old APIs
+   in terms of the new APIs, then I'll write a whitebox test. we'll
+   see how long I keep that up :-P
 
 Transactional updates
 ---------------------
@@ -493,6 +539,10 @@ Given the assumption of 'little code duplication', the choice for
 having several modules which implement the same API (vtable) is
 justifiable.
 
+###GJS: disagree. I plan to have just one library (libsvn_wc2?) and
+   will probably have no vtables. there is very little need for
+   distinct implementations, as far as I can tell.
+
 
 Implementation proposals
 ========================
@@ -564,6 +614,21 @@ goal of 'atomic updates' can be realised, in which case the tree can't be
 in an incomplete yet locked state.  This would also invalidate issue #1879.
 
 
+Basic Storage Mechanics
+-----------------------
+
+All metadata will be stored into a single SQLite database. This
+includes all of the "entry" fields *and* all of the properties
+attached to the files/directories. SQLite transactions will be used
+rather than the "loggy" mechanics of wc-1.0.
+
+Base text data will be stored in a multi-level directory structure,
+keyed/named by the MD5 of the file. The database will record
+appropriate mappings, content/compression types, and refcounts for the
+base text files (for the shared case).
+
+
+
 Other sections
---------------
+==============
  remain to be done
