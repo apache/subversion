@@ -4438,12 +4438,12 @@ msgstr "명령행 인자 초기화 실패"
 #: ../libsvn_subr/config.c:647
 #, c-format
 msgid "Config error: invalid boolean value '%s' for '[%s] %s'"
-msgstr "구성 오류: 잘못된 부울리안 값입니다. '%s' ('[%s] %s)"
+msgstr "구성 오류: 잘못된 부울리안 값입니다. '%s' ('[%s] %s')"
 
 #: ../libsvn_subr/config.c:654
-#, fuzzy, c-format
+#, c-format
 msgid "Config error: invalid boolean value '%s' for '%s'"
-msgstr "구성 오류: 잘못된 부울리안 값입니다. '%s'"
+msgstr "구성 오류: 잘못된 부울리안 값입니다. ('[%s] %s')"
 
 #: ../libsvn_subr/config.c:946
 #, c-format
@@ -4532,9 +4532,9 @@ msgid "Unable to make name for '%s'"
 msgstr "이름을 만들 수 없습니다. '%s'"
 
 #: ../libsvn_subr/io.c:536
-#, fuzzy, c-format
+#, c-format
 msgid "Can't create symbolic link '%s'"
-msgstr "디렉토리 '%s'을/를 생성할 수 없습니다."
+msgstr "심볼릭 링크 '%s'(을)를 생성할 수 없습니다."
 
 #: ../libsvn_subr/io.c:553 ../libsvn_subr/io.c:607 ../libsvn_subr/io.c:635
 msgid "Symbolic links are not supported on this platform"
@@ -4663,7 +4663,6 @@ msgid "Can't open stdin"
 msgstr "표준입력을 열 수 없습니다."
 
 #: ../libsvn_subr/io.c:1648
-#, fuzzy
 msgid "Reading from stdin is disallowed"
 msgstr "표준 입력으로부터 읽는 것은 현재 지원하지 않습니다."
 
@@ -4892,14 +4891,14 @@ msgid "First line of '%s' contains non-digit"
 msgstr "'%s'의 첫번째 줄은 숫자가 아닌 것을 포함하고 있습니다."
 
 #: ../libsvn_subr/kitchensink.c:41
-#, fuzzy, c-format
+#, c-format
 msgid "Invalid revision number found parsing '%s'"
-msgstr "잘못된 리비전 번호가 지정되었습니다."
+msgstr "'%s'에 잘못된 리비전 번호가 지정되었습니다."
 
 #: ../libsvn_subr/kitchensink.c:53
-#, fuzzy, c-format
+#, c-format
 msgid "Negative revision number found parsing '%s'"
-msgstr "잘못된 리비전 번호가 지정되었습니다."
+msgstr "'%s'에 음수로 된 리비전 번호가 지정되었습니다."
 
 #: ../libsvn_subr/mergeinfo.c:85
 msgid "No pathname preceding ':'"
@@ -4916,14 +4915,14 @@ msgid "Unable to parse unordered revision ranges '%s' and '%s'"
 msgstr ""
 
 #: ../libsvn_subr/mergeinfo.c:456
-#, fuzzy, c-format
+#, c-format
 msgid "Mergeinfo for '%s' maps to an empty revision range"
-msgstr "'%s'는 잘못된 리비전을 가지고 있습니다"
+msgstr "'%s'에 대한 병합정보가 비어 있는 리비전 구간에 매핑되어 있습니다"
 
 #: ../libsvn_subr/mergeinfo.c:470
-#, fuzzy, c-format
+#, c-format
 msgid "Invalid character '%c' found in revision list"
-msgstr "잘못된 끝 리비전 %ld"
+msgstr "잘못된 문자 '%c'(이)가 리비전 목록에 있습니다"
 
 #: ../libsvn_subr/mergeinfo.c:484
 #, c-format
@@ -4931,33 +4930,32 @@ msgid "Unable to parse reversed revision range '%ld-%ld'"
 msgstr ""
 
 #: ../libsvn_subr/mergeinfo.c:489
-#, fuzzy, c-format
+#, c-format
 msgid "Unable to parse revision range '%ld-%ld' with same start and end revisions"
-msgstr "시작 리비전(%ld)이 끝 리비전(%ld) 보다 더 큰 값입니다."
+msgstr "구간(%ld-%ld)을 시작 리비전과 끝 리비전으로 분석할 수 없습니다"
 
 #: ../libsvn_subr/mergeinfo.c:529 ../libsvn_subr/mergeinfo.c:536
-#, fuzzy, c-format
+#, c-format
 msgid "Invalid character '%c' found in range list"
-msgstr "잘못된 끝 리비전 %ld"
+msgstr "잘못된 문자 '%c'(이)가 구간 목록에 있습니다"
 
 #: ../libsvn_subr/mergeinfo.c:543
-#, fuzzy
 msgid "Range list parsing ended before hitting newline"
-msgstr "리비전 파일 내에 마지막 개행문자가 없습니다."
+msgstr "구간 목록을 분석이 개행을 만나기 전에 종료되었습니다"
 
 #: ../libsvn_subr/mergeinfo.c:562
 msgid "Pathname not terminated by ':'"
-msgstr ""
+msgstr "경로이름이 ':'으로 끝나지 않습니다"
 
 #: ../libsvn_subr/mergeinfo.c:570
-#, fuzzy, c-format
+#, c-format
 msgid "Could not find end of line in range list line in '%s'"
-msgstr "리비젼 %ld 에서 time을 발견 할 수 없습니다"
+msgstr "'%s' 내 구간 목록에서 라인의 끝을 찾을 수 없습니다"
 
 #: ../libsvn_subr/mergeinfo.c:607
-#, fuzzy, c-format
+#, c-format
 msgid "Could not parse mergeinfo string '%s'"
-msgstr "'%s'에 대한 GET 요청을 할 수 없습니다."
+msgstr "'%s'(을)를 병합정보로 인식할 수 없습니다"
 
 #: ../libsvn_subr/nls.c:79
 #, c-format
@@ -4982,13 +4980,12 @@ msgstr ""
 "옵션:\n"
 
 #: ../libsvn_subr/opt.c:259
-#, fuzzy
 msgid ""
 "\n"
 "Global options:\n"
 msgstr ""
 "\n"
-"옵션:\n"
+"글로벌 옵션:\n"
 
 #: ../libsvn_subr/opt.c:469
 msgid " ARG"
@@ -5009,9 +5006,8 @@ msgid "Syntax error parsing revision '%s'"
 msgstr "구문 오류 분석 리비젼 '%s'"
 
 #: ../libsvn_subr/opt.c:1064
-#, fuzzy
 msgid "Revision property pair is empty"
-msgstr "리비전 엔트리가 리스트 구조체가 아닙니다."
+msgstr "리비전 속성 쌍이 비어있습니다"
 
 #: ../libsvn_subr/opt.c:1084 ../svn/propedit-cmd.c:60 ../svn/propget-cmd.c:182
 #: ../svn/propset-cmd.c:64
@@ -5046,14 +5042,13 @@ msgstr ""
 "\n"
 
 #: ../libsvn_subr/opt.c:1214
-#, fuzzy
 msgid ""
 "Copyright (C) 2000-2008 CollabNet.\n"
 "Subversion is open source software, see http://subversion.tigris.org/\n"
 "This product includes software developed by CollabNet (http://www.Collab.Net/).\n"
 "\n"
 msgstr ""
-"Copyright (C) 2000-2007 CollabNet.\n"
+"Copyright (C) 2000-2008 CollabNet.\n"
 "Subversion은 오픈 소스 소프트웨어 입니다, http://subversion.tigris.org/\n"
 "이 제품은 CollabNet이 개발한 소프트웨어를 포함하고 있습니다.(http://www.Collab.Net/).\n"
 "\n"
@@ -5221,9 +5216,9 @@ msgstr ""
 
 #: ../libsvn_subr/simple_providers.c:353
 #: ../libsvn_subr/ssl_client_cert_pw_providers.c:305
-#, fuzzy, c-format
+#, c-format
 msgid "Config error: invalid value '%s' for option '%s'"
-msgstr "구성 오류: 잘못된 부울리안 값입니다. '%s'"
+msgstr "구성 오류: 옵션 '%s'에대한 잘못된 값 '%s'이 지정되었습니다"
 
 #: ../libsvn_subr/subst.c:1744 ../libsvn_wc/props.c:2430
 #, c-format
@@ -5320,9 +5315,9 @@ msgid "MIME type '%s' does not contain '/'"
 msgstr "MIME 타입 '%s'이  '/'를 포함하고 있지 않습니다."
 
 #: ../libsvn_subr/validate.c:67
-#, fuzzy, c-format
+#, c-format
 msgid "MIME type '%s' contains invalid character '%c'"
-msgstr "MIME 타입 '%s'의 끝이 숫자나 알파벳이 아닙니다."
+msgstr "MIME 타입 '%s'가 잘못된 문자 '%c'(을)를 가지고 있습니다"
 
 #: ../libsvn_subr/version.c:74
 #, c-format
@@ -5330,9 +5325,9 @@ msgid "Version mismatch in '%s': found %d.%d.%d%s, expected %d.%d.%d%s"
 msgstr "'%s'의 버젼이 일치하지 않습니다: 발견된 버젼 %d.%d.%d%s, 기대 버젼 %d.%d.%d%s"
 
 #: ../libsvn_subr/xml.c:403
-#, fuzzy, c-format
+#, c-format
 msgid "Malformed XML: %s at line %ld"
-msgstr "잘못된 XML: %s (줄 번호 %d)"
+msgstr "잘못된 XML: %s (줄 번호 %ld)"
 
 #: ../libsvn_wc/adm_crawler.c:678
 msgid "Error aborting report"
@@ -5435,9 +5430,8 @@ msgid "Unknown or unexpected kind for path '%s'"
 msgstr "경로 '%s'에 대한 알 수 없거나 기대하지 않은 종류입니다."
 
 #: ../libsvn_wc/adm_ops.c:2178
-#, fuzzy
 msgid "Cannot revert"
-msgstr "제거할 수 없습니다. '%s'"
+msgstr "되돌릴 수 없습니다"
 
 #: ../libsvn_wc/adm_ops.c:2205
 #, c-format
@@ -5455,19 +5449,18 @@ msgid "File '%s' has local modifications"
 msgstr "파일 '%s'는 로컬에서 수정되었습니다."
 
 #: ../libsvn_wc/adm_ops.c:2716
-#, fuzzy
 msgid "Invalid 'conflict_result' argument"
-msgstr "잘못된 설정 값"
+msgstr "잘못된 'conflict_result' 인자"
 
 #: ../libsvn_wc/adm_ops.c:3005
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is a directory, and thus cannot be a member of a changelist"
-msgstr "경로 '%s'은/는 더 이상 변경 목록과 관계없습니다.\n"
+msgstr "'%s'(은)는 디렉토리이므로 더 이상 변경 목록에 들어 갈 수 없습니다"
 
 #: ../libsvn_wc/adm_ops.c:3025
-#, fuzzy, c-format
+#, c-format
 msgid "Removing '%s' from changelist '%s'."
-msgstr "없는 변경 목록: '%s'"
+msgstr "'%s'(을)를 변경목록 '%s'에서 제거하는 중"
 
 #: ../libsvn_wc/copy.c:197
 #, c-format
@@ -5759,22 +5752,22 @@ msgstr "'%s'에 'timestamp' 속성이 빠졌습니다"
 #: ../libsvn_wc/log.c:796 ../libsvn_wc/props.c:508
 #, c-format
 msgid "Error getting 'affected time' on '%s'"
-msgstr "'%s'에 'affected time'을 얻어 오는 중 오류 발생"
+msgstr "'%s'의 'affected time'을 얻어 오는 중 오류 발생"
 
 #: ../libsvn_wc/log.c:844
-#, fuzzy, c-format
+#, c-format
 msgid "Error getting file size on '%s'"
-msgstr "'%s'에 'affected time'을 얻어 오는 중 오류 발생"
+msgstr "'%s'의 'size'를 얻어 오는 중 오류 발생"
 
 #: ../libsvn_wc/log.c:862
 #, c-format
 msgid "Error modifying entry for '%s'"
-msgstr "'%s'에 대한 엔트리 수정 중 오류 발생"
+msgstr "'%s'의 엔트리 수정 중 오류 발생"
 
 #: ../libsvn_wc/log.c:888
 #, c-format
 msgid "Error removing lock from entry for '%s'"
-msgstr "'%s'에 대한 잠금해제 오류"
+msgstr "'%s'의 잠금해제 오류"
 
 #: ../libsvn_wc/log.c:911
 #, c-format
@@ -5895,56 +5888,57 @@ msgstr ""
 "이미 value '%s'에 속성이 존재합니다. "
 
 #: ../libsvn_wc/props.c:1530
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Trying to create property '%s' with value '%s',\n"
 "but it has been locally deleted."
 msgstr ""
-"새로운 속성 '%s'를 값 '%s'에 추가하려고  하지만,\n"
-"이미 value '%s'에 속성이 존재합니다. "
+"새로운 속성 '%s'(값 '%s')(을)를 추가하려 하지만,\n"
+"이미 작업사본에서 이미 삭제되었습니다."
 
 #: ../libsvn_wc/props.c:1604
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Trying to delete property '%s' with value '%s'\n"
 "but it has been modified from '%s' to '%s'."
-msgstr "새로운 속성 '%s'을/를 삭제하려하지만, 값이 '%s'에서 '%s' (으)로 바뀌었습니다."
+msgstr "속성 '%s'(값 '%s')(을)를 삭제하려 하지만,\n"
+"작업사본이 '%s'에서 '%s'로 수정되어 있는 상태입니다"
 
 #: ../libsvn_wc/props.c:1625
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Trying to delete property '%s' with value '%s'\n"
 "but the local value is '%s'."
 msgstr ""
-"새로운 속성 '%s'를 값 '%s'에 추가하려고  하지만,\n"
-"이미 value '%s'에 속성이 존재합니다. "
+"속성 '%s'(값 '%s')(을)를 삭제하려 하지만,\n"
+"작업 사본의 값은 '%s'입니다."
 
 #: ../libsvn_wc/props.c:1712
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Trying to change property '%s' from '%s' to '%s',\n"
 "but property has been locally changed from '%s' to '%s'."
 msgstr ""
-"속성 '%s'를 '%s'에서 '%s'로 변경하려고 하지만,\n"
-"이미 값 '%s'에 속성이 존재합니다. "
+"속성 '%s'(을)를 '%s'에서 '%s'로 변경하려고 하지만,\n"
+"작업 사본 값이 '%s'에서 '%s'로 수정되어 있는 상태입니다."
 
 #: ../libsvn_wc/props.c:1720
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Trying to change property '%s' from '%s' to '%s',\n"
 "but property has been locally added with value '%s'."
 msgstr ""
-"속성 '%s'를 '%s'에서 '%s'로 변경하려고 하지만,\n"
-"이미 값 '%s'에 속성이 존재합니다. "
+"속성 '%s'(을)를 '%s'에서 '%s'로 변경하려고 하지만,\n"
+"값 '%s'(으)로 추가되어 있는 상태입니다."
 
 #: ../libsvn_wc/props.c:1741
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Trying to change property '%s' from '%s' to '%s',\n"
 "but it has been locally deleted."
 msgstr ""
 "속성 '%s'를 '%s'에서 '%s'로 변경하려고 하지만,\n"
-"그 속성은 존재 하지 않습니다."
+"이미 작업사본에서 이미 삭제되었습니다."
 
 #: ../libsvn_wc/props.c:1774
 #, c-format
@@ -6000,9 +5994,9 @@ msgid "File '%s' has binary mime type property"
 msgstr "파일 '%s'는 바이너리 MIME 타입 속성을 갖고 있습니다"
 
 #: ../libsvn_wc/props.c:2606
-#, fuzzy, c-format
+#, c-format
 msgid "Unrecognized line ending style for '%s'"
-msgstr "개행 형식이 알 수 없는 값입니다"
+msgstr "알 수 없는 개행 형식('%s')입니다"
 
 #: ../libsvn_wc/props.c:3203 ../libsvn_wc/props.c:3270
 #, c-format
@@ -6010,9 +6004,9 @@ msgid "Error parsing %s property on '%s': '%s'"
 msgstr "'%s'에 대한 %s 속성을 분석하던 중 오류 발생: '%s'"
 
 #: ../libsvn_wc/props.c:3320
-#, fuzzy, c-format
+#, c-format
 msgid "Invalid %s property on '%s': target '%s' is an absolute path or involves '..'"
-msgstr "%s'에 대한 유효하지 않은 속성 %s : 대상은 '.' 이나 '..' 을 포함하거나 절대 경로입니다"
+msgstr "유효하지 않은 속성 %s (%s'): 대상 '%s'(은)는 '..' 을 포함하거나 절대 경로입니다"
 
 #: ../libsvn_wc/questions.c:122
 #, c-format
@@ -6049,9 +6043,9 @@ msgid "No '.' entry in: '%s'"
 msgstr "'.' 이 등록되어 있지 않습니다: '%s'"
 
 #: ../libsvn_wc/update_editor.c:984
-#, fuzzy, c-format
+#, c-format
 msgid "Path '%s' is not in the working copy"
-msgstr "'%s' 은 작업 사본이 아닙니다"
+msgstr "경로 '%s' 은 작업 사본이 아닙니다"
 
 #: ../libsvn_wc/update_editor.c:1096
 #, c-format
@@ -6093,9 +6087,8 @@ msgid "Failed to mark '%s' absent: item of the same name is already scheduled fo
 msgstr "'%s' 를 없는 것으로 표시할 수 없습니다: 이미 같은 이름의 항목이 추가되도록 스케쥴되어 있습니다"
 
 #: ../libsvn_wc/update_editor.c:1807
-#, fuzzy
 msgid "Bad copyfrom arguments received"
-msgstr "많은 인자가 주어졌습니다."
+msgstr "잘못된 copyfrom 인자가 주어졌습니다."
 
 #: ../libsvn_wc/update_editor.c:1846
 #, c-format
@@ -6127,18 +6120,17 @@ msgid "Destination directory of add-with-history is missing a URL"
 msgstr ""
 
 #: ../libsvn_wc/update_editor.c:2838
-#, fuzzy
 msgid "Destination URLs are broken"
-msgstr "대상 '%s' 는 이미 존재합니다."
+msgstr "대상 URL이 잘못되었습니다"
 
 #: ../libsvn_wc/update_editor.c:3095
 msgid "No fetch_func supplied to update_editor"
 msgstr ""
 
 #: ../libsvn_wc/update_editor.c:3336
-#, fuzzy, c-format
+#, c-format
 msgid "Shallowing of working copy depths is not yet supported"
-msgstr "작업 사본과 저장소 간 이동은 지원하지 않습니다"
+msgstr ""
 
 #: ../libsvn_wc/update_editor.c:3737
 #, c-format
@@ -6160,9 +6152,9 @@ msgid "Unable to make any directories"
 msgstr "어떤 디렉토리도 만들 수 없습니다"
 
 #: ../libsvn_wc/util.c:284
-#, fuzzy, c-format
+#, c-format
 msgid "Cannot find a URL for '%s'"
-msgstr "'%s'를 위한 등록정보를 찾을 수 없습니다."
+msgstr "'%s'를 위한 URL을 찾을 수 없습니다."
 
 #: ../svn/blame-cmd.c:261 ../svn/list-cmd.c:234
 msgid "'verbose' option invalid in XML mode"
@@ -6196,14 +6188,12 @@ msgid ">>>>>>> THEIRS (select with 'tc')"
 msgstr ""
 
 #: ../svn/conflict-callbacks.c:170
-#, fuzzy
 msgid "No editor found."
-msgstr "없는 리비전 %ld 입니다."
+msgstr "편집기가 발견되지 않았습니다"
 
 #: ../svn/conflict-callbacks.c:177
-#, fuzzy
 msgid "Error running editor."
-msgstr "post-commit 훅 실행중 오류"
+msgstr "편집기를 실행하지 못하였습니다"
 
 #: ../svn/conflict-callbacks.c:187
 #, c-format
@@ -6217,9 +6207,8 @@ msgid "No merge tool found.\n"
 msgstr ""
 
 #: ../svn/conflict-callbacks.c:216
-#, fuzzy
 msgid "Error running merge tool."
-msgstr "post-commit 훅 실행중 오류"
+msgstr "병합툴을 실행하지 못하였습니다"
 
 #: ../svn/conflict-callbacks.c:286
 msgid "No editor found; leaving all conflicts."
@@ -6238,14 +6227,14 @@ msgid "Error running merge tool; leaving all conflicts."
 msgstr ""
 
 #: ../svn/conflict-callbacks.c:377
-#, fuzzy, c-format
+#, c-format
 msgid "Conflict discovered in '%s'.\n"
-msgstr "충돌한 속성 파일: %s\n"
+msgstr "충돌 발견됨: '%s'.\n"
 
 #: ../svn/conflict-callbacks.c:382
-#, fuzzy, c-format
+#, c-format
 msgid "Conflict for property '%s' discovered on '%s'.\n"
-msgstr "속성 '%s' 를 '%s'에 설정합니다.\n"
+msgstr "속성('%s') 충돌 발견됨: '%s'.\n"
 
 #: ../svn/conflict-callbacks.c:399
 #, c-format
@@ -6253,11 +6242,9 @@ msgid "They want to delete the property, you want to change the value to '%s'.\n
 msgstr ""
 
 #: ../svn/conflict-callbacks.c:408
-#, fuzzy, c-format
+#, c-format
 msgid "They want to change the property value to '%s', you want to delete the property.\n"
-msgstr ""
-"속성 '%s'를 '%s'에서 '%s'로 변경하려고 하지만,\n"
-"그 속성은 존재 하지 않습니다."
+msgstr "충돌이 발생하였습니다. 다른 곳에서 '%s'(으)로 바꾸었며, 작업사본에서는 삭제하려고 하였습니다.\n"
 
 #: ../svn/conflict-callbacks.c:430
 msgid "Select: (p) postpone"
@@ -6351,22 +6338,26 @@ msgid ""
 msgstr ""
 
 #: ../svn/conflict-callbacks.c:619 ../svn/conflict-callbacks.c:633
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Invalid option.\n"
 "\n"
-msgstr "잘못된 URL 전환"
+msgstr ""
+"잘못된 옵션.\n"
+"\n"
 
 #: ../svn/conflict-callbacks.c:663
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Conflict discovered when trying to add '%s'.\n"
 "An object of the same name already exists.\n"
-msgstr "파일 '%s'를 추가할 수 없습니다: 같은 이름의 대상이 이미 존재합니다"
+msgstr ""
+"'%s'(을)를 추가하는 도중 충돌을 발견하였습니다.\n"
+"같은 이름의 대상이 이미 존재합니다.\n"
 
 #: ../svn/conflict-callbacks.c:666
 msgid "Select: (p) postpone, (mf) mine-full, (tf) theirs-full, (h) help:"
-msgstr ""
+msgstr "선택하십시오: (p) 연기, (mf) 작업사본, (tf) 최신버전, (h) 도움말:"
 
 #: ../svn/conflict-callbacks.c:678
 #, c-format
@@ -6377,10 +6368,14 @@ msgid ""
 "  (h)  help        - show this help\n"
 "\n"
 msgstr ""
+"  (p)  postpone    - 나중에 해결하도록 미룸\n"
+"  (mf) mine-full   - 작업 사본 내용을 선택(서버의 내용을 무시)\n"
+"  (tf) theirs-full - 서버의 내용을 선택(작업 사본 내용을 덮어 씀)\n"
+"  (h)  help        - 도움말\n"
+"\n"
 
 #: ../svn/copy-cmd.c:126 ../svn/delete-cmd.c:65 ../svn/mkdir-cmd.c:66
 #: ../svn/move-cmd.c:77 ../svn/propedit-cmd.c:215
-#, fuzzy
 msgid "Local, non-commit operations do not take a log message or revision properties"
 msgstr "사본에서만 작업하고, 커밋하지 않는 명령은 로그메시지를 받지 않습니다."
 
@@ -6395,9 +6390,8 @@ msgid "Can't open stderr"
 msgstr "표준 에러(stderr)를 열 수 없습니다."
 
 #: ../svn/diff-cmd.c:182
-#, fuzzy
 msgid "'--xml' option only valid with '--summarize' option"
-msgstr "'--new' 옵션은 '--old' 옵션하고 같이 사용하여야합니다."
+msgstr "'--xml' 옵션은 '--summarize' 옵션하고 같이 사용하여야합니다."
 
 #: ../svn/diff-cmd.c:257
 msgid "'--new' option only valid with '--old' option"
@@ -6717,14 +6711,12 @@ msgid "Merged via:"
 msgstr ""
 
 #: ../svn/log-cmd.c:456
-#, fuzzy
 msgid "'with-all-revprops' option only valid in XML mode"
-msgstr "'incremental' 옵션은 XML 모드에서만 가능합니다"
+msgstr "'with-all-revprops' 옵션은 XML 모드에서만 가능합니다"
 
 #: ../svn/log-cmd.c:460
-#, fuzzy
 msgid "'with-revprop' option only valid in XML mode"
-msgstr "'incremental' 옵션은 XML 모드에서만 가능합니다"
+msgstr "'with-revprop' 옵션은 XML 모드에서만 가능합니다"
 
 #: ../svn/log-cmd.c:531
 msgid "Only relative paths can be specified after a URL"
@@ -6755,9 +6747,8 @@ msgid "specify log message ARG"
 msgstr "커밋 로그 메시지를 지정합니다."
 
 #: ../svn/main.c:120
-#, fuzzy
 msgid "print nothing, or only summary information"
-msgstr "기타 정보를 출력합니다."
+msgstr "아무것도 출력하지 않거나, 요약 정보만 출력합니다"
 
 #: ../svn/main.c:121
 msgid "descend recursively, same as --depth=infinity"
@@ -6830,7 +6821,6 @@ msgid "specify a password ARG"
 msgstr "arg를 접속에 필요한 패스워드로 사용합니다."
 
 #: ../svn/main.c:152
-#, fuzzy
 msgid ""
 "Default: '-u'. When Subversion is invoking an\n"
 "                             external diff program, ARG is simply passed along\n"
@@ -6851,18 +6841,20 @@ msgid ""
 msgstr ""
 "기본값: '-u'. Subversion이 외부 diff 프로그램을 실행할 때\n"
 "                             ARG가 프로그램의 인자로 넘겨집니다\n"
-"                             to the program. But when Subversion is using its\n"
-"                             default internal diff implementation, or when\n"
-"                             Subversion is displaying blame annotations, ARG\n"
-"                             could be any of the following:\n"
+"                             Subversion이 내장된 diff 를 사용하여\n"
+"                             실행되거나 행단위로 작성자를 보이는(blame)\n"
+"                             기능이 실행될 때 ARG는\n"
+"                             다음 중 하나를 사용할 수 있습니다\n"
 "                                -u (--unified):\n"
-"                                   Output 3 lines of unified context.\n"
+"                                   3줄을 포함한 unifed 형식으로 출력합니다.\n"
 "                                -b (--ignore-space-change):\n"
-"                                   Ignore changes in the amount of white space.\n"
+"                                   공백의 변화량을 무시합니다.\n"
 "                                -w (--ignore-all-space):\n"
-"                                   Ignore all white space.\n"
+"                                   공백을 무시합니다.\n"
 "                                --ignore-eol-style:\n"
-"                                   Ignore changes in EOL style"
+"                                   개행문자 스타일의 변경을 무시합니다\n"
+"                                -p (--show-c-function):\n"
+"                                   C 함수 이름을 diff 출력에 보여줍니다"
 
 #: ../svn/main.c:185
 msgid "pass contents of file ARG as additional args"
