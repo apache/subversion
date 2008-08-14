@@ -70,6 +70,7 @@ Candidate changes for 1.5.2:
    Fix issue #3258: 8lock.t fails in non-English locale.
    Votes:
      +1: arfrever
+     +0: hwright
 
  * r32442
    Respect LDFLAGS in SWIG bindings without the requirement of the exporting
@@ -80,7 +81,7 @@ Candidate changes for 1.5.2:
  * r32444, r32445
    Fix issue #3237, relative externals may core dump.
    Votes:
-     +1: blair
+     +1: blair, hwright
 
 Approved changes:
 =================
