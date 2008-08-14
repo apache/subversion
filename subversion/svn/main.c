@@ -688,9 +688,10 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  By default, this subcommand will add an extra newline to the end\n"
      "  of the property values so that the output looks pretty.  Also,\n"
      "  whenever there are multiple paths involved, each property value\n"
-     "  is prefixed with the path with which it is associated.  Use\n"
-     "  the --strict option to disable these beautifications (useful,\n"
-     "  for example, when redirecting binary property values to a file).\n"),
+     "  is prefixed with the path with which it is associated.  Use the\n"
+     "  --strict option to disable these beautifications (useful when re-\n"
+     "  directing a binary property value to a file, but available only if\n"
+     "  you supply a single TARGET to a non-recursive propget operation).\n"),
     {'R', opt_depth, 'r', opt_revprop, opt_strict, opt_xml, opt_changelist } },
 
   { "proplist", svn_cl__proplist, {"plist", "pl"}, N_
