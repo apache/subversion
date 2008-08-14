@@ -83,6 +83,16 @@ Candidate changes for 1.5.2:
    Votes:
      +1: blair, hwright
 
+ * r32467
+   Fix working copy corruption which happens when copying a file
+   into a directory that exists in the entries file of its parent,
+   but is not physically present on disk.
+   Justification:
+     If this happens, 'svn cleanup' won't help. There is no way to make
+     the working copy usable again except manually editing the log.
+   Votes:
+     +1: stsp
+
 Approved changes:
 =================
 
