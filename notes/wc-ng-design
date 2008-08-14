@@ -622,11 +622,128 @@ includes all of the "entry" fields *and* all of the properties
 attached to the files/directories. SQLite transactions will be used
 rather than the "loggy" mechanics of wc-1.0.
 
+###GJS: note that atomicity across the sqlite database and the content
+   of the ACTUAL tree is freakin' difficult. idea to test: metadata
+   says "not sure of ACTUAL", and when ops complete successfully, then
+   we clear the flag. during any future operation, if the flag is
+   present, then we approach the ACTUAL with extreme prejudice. also
+   note that we can batch clearing of the flags as an optimistic
+   efficiency approach (since if we batch 100 and the last fails, then
+   the other 99 will be slower until the wc-ng determines the ACTUAL
+   is in fine shape and clears the flag for future operations).
+
+###GJS: be wary of sqlite commit performance (based on some of my
+   prior experience with it). must have timing/debugging around the
+   commit operations. may need to use various transaction isolations
+   and/or batching of commits to get proper performance. thus, profile
+   output capability is mandatory to determine if we have issues, and
+   where they occur.
+
 Base text data will be stored in a multi-level directory structure,
 keyed/named by the MD5 of the file. The database will record
 appropriate mappings, content/compression types, and refcounts for the
 base text files (for the shared case).
 
+
+Metadata Schemas
+----------------
+
+BASE schema
+  name         string
+  kind         enum
+  checksum     string
+  props        blob       ### serialized props. maybe keep unserialized?
+                          ###   maybe some props should be broken out?
+  children     [string]   ### someting more than array-of-string?
+  cmt_rev      integer64
+  cmt_date     integer64  ### is there a time type?
+  cmt_author   string     ### normalize?
+
+  absent       boolean    ### really? maybe state instead, such as "omitted"?
+  revision     integer64
+  url          string     ### should be computed value?
+  repos_url    string     ### shared, per-dir?
+  repos_uuid   string     ### shared, per-dir?
+  ### lock information? in this table, or a separate locks table?
+  ### depth?
+  ### cache lastmod date of ACTUAL file? (used for detecting change)
+
+
+WORKING schema
+  name         string     ###
+  kind         enum
+  checksum     string
+  props        blob       ### serialized props. maybe keep unserialized?
+                          ###   maybe some props should be broken out?
+  children     [string]   ### someting more than array-of-string?
+  ### following are set when a copyfrom occurs. do we really need these?
+  cmt_rev      integer64
+  cmt_date     integer64  ### is there a time type?
+  cmt_author   string     ### normalize?
+
+  deleted      boolean
+  copyfrom_url string
+  copyfrom_rev integer64
+  conflict_old string     ### conflict data goes on WORKING, right?
+  conflict_new string
+  conflict_wrk string
+  prejfile     string
+  changelist   string
+
+  ### how to represent renames?
+  ### repos_url, repos_uuid: combined working copies, and/or a foreign
+  ###   repos brought in and about to be linked via svn:externals. ??
+  ### depth?
+
+
+ACTUAL schema  (what we know about the ACTUAL tree)
+  name         string
+  ### cache the checksum? probably unreliable, but could be a marker
+  ###   for "we've already noted the file is different from WORKING"
+  ### cache the kind? assume that kind, then on exception do extended
+  ###   processing to figure out the "right" thing.
+
+  lastmod      integer64  ### is there a time type?
+
+  ### note that we can't really hold any/much data here since ACTUAL
+      could change at any point in time. anything stored here should
+      simply be optimization indicators on how to approach the ACTUAL
+      tree (i.e. what assumptions to make).
+
+
+BASETEXT schema
+  checksum     string
+  present      enum       ### something like: yes, no, cached, notyet
+  refcount     integer
+  compressed   boolean    ### enum for various storage styles?
+
+  ### learn from GIT storage? can we somehow compress across this
+      entire storage heirarchy? (eg. use history and deltas to
+      reassemble fulltexts from line-of-descent)
+
+
+Note that 'children' applies only to kind==DIRECTORY
+
+### break down all modification operations to things that operate on a
+    small/fixed set of rows. if a large sequence of operations fails,
+    then it can leave the system in reparable state, since most were
+    performed. note that ACTUAL can change at any time, thus all mods
+    should be able to compensate for ACTUAL being something
+    unexpected. thus, the transformative operations should be able to
+    fail in such a way as to leave ACTUAL pretty bunged up.
+
+### maybe use handles to refer to files/dirs? take input pathname,
+    convert to native charset, and return a handle for that. same
+    handle across varous schemas.
+
+    note: could be very handy, as I'm thinking abspath for all names,
+    which gets to be pretty wordy for large working copies.
+    
+    note: with handles, a file entry could have "parent dir" cheaply,
+    and from that, we could derive repos_url/uuid from some dir table.
+
+### probably want to special-case the checksum and BASETEXT entry for
+    the "empty file"
 
 
 Other sections
