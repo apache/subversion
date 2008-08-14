@@ -79,6 +79,16 @@ def expected_merge_output(rev_ranges, additional_lines=None, foreign=False):
     lines.append(str(additional_lines))
   return "|".join(lines)
 
+def check_mergeinfo_recursively(root_path, subpaths_mergeinfo):
+  """Check that the mergeinfo properties on and under ROOT_PATH are those in
+     SUBPATHS_MERGEINFO, a {path: mergeinfo-prop-val} dictionary."""
+  expected = svntest.verify.UnorderedOutput(
+    [path + ' - ' + subpaths_mergeinfo[path] + '\n'
+     for path in subpaths_mergeinfo])
+  svntest.actions.run_and_verify_svn(None, expected, [],
+                                     'propget', '-R', SVN_PROP_MERGEINFO,
+                                     root_path)
+
 ######################################################################
 # Tests
 #
@@ -4438,7 +4448,7 @@ def avoid_repeated_merge_on_subtree_with_merge_info(sbox):
     'F/E/beta'   : Item("This is the file 'beta'.\n"),
     'F'          : Item(),
     'F/E1'       : Item(props={SVN_PROP_MERGEINFO :
-                               '/A/B/F/E:5\n/A/B/F/E1:5-8\n'}),
+                               '/A/B/F/E:5\n/A/B/F/E1:5-8'}),
     'F/E1/alpha' : Item(new_content_for_alpha1),
     'F/E1/beta'  : Item("This is the file 'beta'.\n"),
     'lambda'     : Item("This is the file 'lambda'.\n")
@@ -4491,7 +4501,7 @@ def avoid_repeated_merge_on_subtree_with_merge_info(sbox):
     'E/alpha'  : Item(newer_content_for_alpha),
     'E/beta'   : Item("This is the file 'beta'.\n"),
     'E1'       : Item(props={SVN_PROP_MERGEINFO :
-                               '/A/B/F/E:5\n/A/B/F/E1:5\n'}),
+                               '/A/B/F/E:5\n/A/B/F/E1:5'}),
     'E1/alpha' : Item(new_content_for_alpha1),
     'E1/beta'  : Item("This is the file 'beta'.\n")
     })
@@ -5717,12 +5727,8 @@ def merge_to_switched_path(sbox):
   wc_status.tweak("A_COPY/D/G/rho", status='M ')
   wc_status.tweak(wc_rev=8)
   svntest.actions.run_and_verify_status(wc_dir, wc_status)
-  expected = svntest.verify.UnorderedOutput(
-    ["Properties on '" + A_COPY_D_path + "':\n",
-     "  " + SVN_PROP_MERGEINFO + " : /A/D:4\n"])
-  svntest.actions.run_and_verify_svn(None,
-                                     expected, [],
-                                     'pl', '-vR', A_COPY_D_path)
+  check_mergeinfo_recursively(A_COPY_D_path,
+                              { A_COPY_D_path : '/A/D:4' })
 
 # Test for issues
 #
@@ -7796,7 +7802,7 @@ def merge_old_and_new_revs_from_renamed_dir(sbox):
     'D/H/psi'  : Item(status='  ', wc_rev=4),
     })
   expected_disk = wc.State('', {
-    ''         : Item(props={SVN_PROP_MERGEINFO : '/A:3\n/A_MOVED:4-5\n'}),
+    ''         : Item(props={SVN_PROP_MERGEINFO : '/A:3\n/A_MOVED:4-5'}),
     'mu'       : Item("This is 'mu' in A_MOVED.\n"),
     'C'        : Item(),
     'D'        : Item(),
@@ -9201,7 +9207,7 @@ def merge_source_normalization_and_subtree_merges(sbox):
   expected_disk = wc.State('', {
     ''        : Item(props={SVN_PROP_MERGEINFO : '/A_MOVED/D:8'}),
     'G'       : Item(props={SVN_PROP_MERGEINFO :
-                            '/A/D/G:4\n/A_MOVED/D/G:8\n'}),
+                            '/A/D/G:4\n/A_MOVED/D/G:8'}),
     'G/pi'    : Item("This is the file 'pi'.\n"),
     'G/rho'   : Item("New content"),
     'G/tau'   : Item("New content"),
@@ -10708,7 +10714,7 @@ def dont_add_mergeinfo_from_own_history(sbox):
     'D/H/omega' : Item(status='  ', wc_rev=9),
     })
   expected_A_disk = wc.State('', {
-    ''          : Item(props={SVN_PROP_MERGEINFO : '/A:3\n/A_COPY:7\n'}),
+    ''          : Item(props={SVN_PROP_MERGEINFO : '/A:3\n/A_COPY:7'}),
     'B'         : Item(),
     'mu'        : Item("New content"),
     'B/E'       : Item(),
@@ -11319,12 +11325,8 @@ def dont_merge_revs_into_subtree_that_predate_it(sbox):
   expected_status.tweak('H_COPY/psi', status='M ')
   expected_status.tweak('H_COPY/nu', status='D ')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
-  expected_props = svntest.verify.UnorderedOutput(
-    ["Properties on '" + H_COPY_path + "':\n",
-     "  " + SVN_PROP_MERGEINFO + " : /A/D/H:6-9\n"])
-  svntest.actions.run_and_verify_svn(None,
-                                     expected_props, [],
-                                     'pl', '-vR', wc_dir)
+  check_mergeinfo_recursively(wc_dir,
+                              { H_COPY_path: '/A/D/H:6-9' })
 
 #----------------------------------------------------------------------
 # Helper for merge_chokes_on_renamed_subtrees and
@@ -11507,11 +11509,8 @@ def dont_explicitly_record_implicit_mergeinfo(sbox):
                                      [], 'merge', '-c5',
                                      sbox.repo_url + '/A_copy2/mu',
                                      short_A_copy_mu_path)
-  svntest.actions.run_and_verify_svn(
-    None,
-    ["Properties on '" + short_A_copy_mu_path + "':\n",
-     "  " + SVN_PROP_MERGEINFO + " : /A_copy2/mu:5\n"],
-    [],'pl', '-v', short_A_copy_mu_path)
+  check_mergeinfo_recursively(short_A_copy_mu_path,
+                              { short_A_copy_mu_path: '/A_copy2/mu:5' })
 
   # Now, merge A_copy2 (in full) back to A_copy.  This should result in
   # mergeinfo of '/A_copy2:4-5' on A_copy and '/A_copy2/mu:4-5' on A_copy/mu
@@ -11965,21 +11964,13 @@ def subtree_merges_dont_intersect_with_targets(sbox):
                                      'update', wc_dir)
 
   # Make sure we have mergeinfo that meets the two criteria set out above.
-  expected = svntest.verify.UnorderedOutput(
-    [# Criterion 1
-     "Properties on '" + A_COPY_path + "':\n",
-     "  " + SVN_PROP_MERGEINFO + " : /A:8\n",
-     "Properties on '" + psi_COPY_path + "':\n",
-     "  " + SVN_PROP_MERGEINFO + " : /A/D/H/psi:4\n",
-     # Criterion 2
-     "Properties on '" + A_COPY_2_path + "':\n",
-     "  " + SVN_PROP_MERGEINFO + " : /A:3-4,6-8\n",
-     "Properties on '" + H_COPY_2_path + "':\n",
-     "  " + SVN_PROP_MERGEINFO + " : /A/D/H:3-7\n",
-     ])
-  svntest.actions.run_and_verify_svn(None,
-                                     expected, [],
-                                     'pl', '-vR', wc_dir)
+  check_mergeinfo_recursively(wc_dir,
+                              { # Criterion 1
+                                A_COPY_path: '/A:8',
+                                psi_COPY_path: '/A/D/H/psi:4',
+                                # Criterion 2
+                                A_COPY_2_path : '/A:3-4,6-8',
+                                H_COPY_2_path : '/A/D/H:3-7' })
 
   # Merging to the criterion 2 branch.
   #
@@ -12262,16 +12253,10 @@ def subtree_source_missing_in_requested_range(sbox):
                                      wc_dir)
 
   # Check that svn:mergeinfo is as expected.
-  expected = svntest.verify.UnorderedOutput(
-    ["Properties on '" + A_COPY_path + "':\n",
-     "  " + SVN_PROP_MERGEINFO + " : /A:8\n",
-     "Properties on '" + omega_COPY_path + "':\n",
-     "  " + SVN_PROP_MERGEINFO + " : /A/D/H/omega:2-12\n",
-     "Properties on '" + psi_COPY_path + "':\n",
-     "  " + SVN_PROP_MERGEINFO + " : /A/D/H/psi:3,8\n",])
-  svntest.actions.run_and_verify_svn(None,
-                                     expected, [],
-                                     'pl', '-vR', wc_dir)
+  check_mergeinfo_recursively(wc_dir,
+                              { A_COPY_path: '/A:8',
+                                omega_COPY_path: '/A/D/H/omega:2-12',
+                                psi_COPY_path : '/A/D/H/psi:3,8' })
 
   # Now test a reverse merge where part of the requested range postdates
   # a subtree's existance.  Merge -r12:1 to A_COPY.  This should revert

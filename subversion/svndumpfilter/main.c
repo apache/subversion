@@ -894,7 +894,7 @@ static const apr_getopt_option_t options_table[] =
     {"preserve-revprops",  svndumpfilter__preserve_revprops, 0,
      N_("Don't filter revision properties.") },
     {"targets", svndumpfilter__targets, 1,
-     N_("pass contents of file ARG as additional args")},
+     N_("Pass contents of file ARG as additional args")},
     {NULL}
   };
 
