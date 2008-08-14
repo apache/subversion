@@ -447,14 +447,13 @@ copy_file_administratively(const char *src_path,
                              _("'%s' already exists and is in the way"),
                              svn_path_local_style(dst_path, pool));
 
-  /* Even if DST_PATH doesn't exist it may still be a versioned file; it
+  /* Even if DST_PATH doesn't exist it may still be a versioned item; it
      may be scheduled for deletion, or the user may simply have removed the
      working copy.  Since we are going to write to DST_PATH text-base and
      prop-base we need to detect such cases and abort. */
   SVN_ERR(svn_wc_entry(&dst_entry, dst_path, dst_parent, FALSE, pool));
-  if (dst_entry && dst_entry->kind == svn_node_file)
+  if (dst_entry && dst_entry->schedule != svn_wc_schedule_delete)
     {
-      if (dst_entry->schedule != svn_wc_schedule_delete)
         return svn_error_createf(SVN_ERR_ENTRY_EXISTS, NULL,
                                  _("There is already a versioned item '%s'"),
                                  svn_path_local_style(dst_path, pool));
