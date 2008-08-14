@@ -157,6 +157,7 @@ CXXFLAGS = @CXXFLAGS@ $(EXTRA_CXXFLAGS)
 ### suppressed (but they may come from httpd or APR).
 CPPFLAGS = @CPPFLAGS@ $(EXTRA_CPPFLAGS)
 LDFLAGS = @LDFLAGS@ $(EXTRA_LDFLAGS)
+SWIG_LDFLAGS = @SWIG_LDFLAGS@ $(EXTRA_SWIG_LDFLAGS)
 
 COMPILE = $(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES)
 COMPILE_CXX = $(CXX) $(CPPFLAGS) $(CXXFLAGS) $(INCLUDES)
@@ -666,7 +667,7 @@ swig-pl: $(swig-pl_DEPS)
 	if test "$(SWIG_PL_DIR)" != "$(SWIG_PL_SRC_DIR)"; then \
 	  ln -sf $(SWIG_PL_SRC_DIR)/native/*.c $(SWIG_PL_DIR)/native; \
 	fi
-	cd $(SWIG_PL_DIR)/native; $(MAKE)
+	cd $(SWIG_PL_DIR)/native; $(MAKE) OTHERLDFLAGS="$(SWIG_LDFLAGS)"
 
 check-swig-pl: swig-pl swig-pl-lib
 	cd $(SWIG_PL_DIR)/native; $(MAKE) test
@@ -700,7 +701,10 @@ $(SWIG_PY_DIR)/libsvn:
 	mkdir $(SWIG_PY_DIR)/libsvn
 
 copy-swig-py: autogen-swig-py $(SWIG_PY_DIR)/libsvn
-	@cp -pf $(SWIG_PY_SRC_DIR)/*.py $(SWIG_PY_DIR)/libsvn
+	@for f in $(SWIG_PY_SRC_DIR)/*.py $(SWIG_PY_DIR)/*.py; do \
+	  ! [ -f "$$f" ] || cp -pf $$f $(SWIG_PY_DIR)/libsvn; \
+	done
+	@touch $(SWIG_PY_DIR)/libsvn/__init__.py
 
 swig-py: autogen-swig-py copy-swig-py
 

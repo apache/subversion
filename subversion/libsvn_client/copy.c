@@ -2,7 +2,7 @@
  * copy.c:  copy/move wrappers around wc 'copy' functionality.
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -598,7 +598,7 @@ path_driver_cb_func(void **dir_baton,
   /* This function should never get an empty PATH.  We can neither
      create nor delete the empty PATH, so if someone is calling us
      with such, the code is just plain wrong. */
-  assert(! svn_path_is_empty(path));
+  SVN_ERR_ASSERT(! svn_path_is_empty(path));
 
   /* Check to see if we need to add the path as a directory. */
   if (path_info->dir_add)
@@ -801,36 +801,31 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
       dir = svn_path_is_child(top_url, svn_path_dirname(pair->dst, pool),
                               pool);
 
-      /* Imagine a situation where the user passes --parents
-         unnecessarily (that is, the destination directory already
-         exists).  Suppose they're copying a file when they do this.
-         There are two syntaxes they might use:
+      /* Imagine a situation where the user tries to copy an existing source
+         directory to nonexistent directory with --parents options specified:
+            
+            svn copy --parents URL/src URL/dst
+            
+         where src exists and dst does not.  The svn_path_dirname() call above
+         will produce a string equivalent to top_url, which means
+         svn_path_is_child() will return NULL.  In this case, do not try to add
+         dst to the new_dirs list since it will be added to the commit items
+         array later in this function. */
 
-            1. svn copy --parents URL/src/foo.txt URL/dst/foo.txt
-            2. svn copy --parents URL/src/foo.txt URL/dst
-
-         Assuming src/ and dst/ exist already, then both ways should
-         create dst/foo.txt.  However, the svn_path_dirname() call
-         above will produce a string equivalent to top_url, which
-         means the svn_path_is_child() will return NULL (quirkily,
-         that's what it does when the two paths are the same).  We
-         must compensate for that behavior, while making sure not to
-         add dst/ to the list of new_dirs to be created. */
-
-      if (! dir)
-        dir = svn_path_is_child(top_url, pair->dst, pool);
-
-      SVN_ERR(svn_ra_check_path(ra_session, dir, SVN_INVALID_REVNUM, &kind,
-                                iterpool));
-
-      while (kind == svn_node_none)
+      if (dir) 
         {
-          svn_pool_clear(iterpool);
-          APR_ARRAY_PUSH(new_dirs, const char *) = dir;
-
-          svn_path_split(dir, &dir, NULL, pool);
           SVN_ERR(svn_ra_check_path(ra_session, dir, SVN_INVALID_REVNUM, &kind,
                                     iterpool));
+
+          while (kind == svn_node_none)
+            {
+              svn_pool_clear(iterpool);
+              APR_ARRAY_PUSH(new_dirs, const char *) = dir;
+
+              svn_path_split(dir, &dir, NULL, pool);
+              SVN_ERR(svn_ra_check_path(ra_session, dir, SVN_INVALID_REVNUM,
+                                        &kind, iterpool));
+            }
         }
     }
 
@@ -1502,7 +1497,7 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
       SVN_ERR(err);
     }
 
-    return SVN_NO_ERROR;
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *

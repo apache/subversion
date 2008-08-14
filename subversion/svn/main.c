@@ -101,7 +101,8 @@ typedef enum {
   opt_parents,
   opt_accept,
   opt_show_revs,
-  opt_reintegrate
+  opt_reintegrate,
+  opt_trust_server_cert
 } svn_cl__longopt_t;
 
 /* Option codes and descriptions for the command line client.
@@ -137,16 +138,13 @@ const apr_getopt_option_t svn_cl__options[] =
   {"file",          'F', 1, N_("read log message from file ARG")},
   {"incremental",   opt_incremental, 0,
                     N_("give output suitable for concatenation")},
-#ifndef AS400
   {"encoding",      opt_encoding, 1,
                     N_("treat value as being in charset encoding ARG")},
-#endif
   {"version",       opt_version, 0, N_("show program version information")},
   {"verbose",       'v', 0, N_("print extra information")},
   {"show-updates",  'u', 0, N_("display update information")},
   {"username",      opt_auth_username, 1, N_("specify a username ARG")},
   {"password",      opt_auth_password, 1, N_("specify a password ARG")},
-#ifndef AS400
   {"extensions",    'x', 1,
                     N_("Default: '-u'. When Subversion is invoking an\n"
                        "                            "
@@ -179,7 +177,6 @@ const apr_getopt_option_t svn_cl__options[] =
                        "    -p (--show-c-function):\n"
                        "                            "
                        "       Show C function name in diff output.")},
-#endif
   {"targets",       opt_targets, 1,
                     N_("pass contents of file ARG as additional args")},
   {"depth",         opt_depth, 1,
@@ -198,6 +195,10 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("disregard default and svn:ignore property ignores")},
   {"no-auth-cache", opt_no_auth_cache, 0,
                     N_("do not cache authentication tokens")},
+  {"trust-server-cert", opt_trust_server_cert, 0,
+                    N_("accept unknown SSL server certificates without\n"
+                       "                             "
+                       "prompting (but only with '--non-interactive')")},
   {"non-interactive", opt_non_interactive, 0,
                     N_("do no interactive prompting")},
   {"dry-run",       opt_dry_run, 0,
@@ -210,11 +211,9 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("ignore ancestry when calculating merges")},
   {"ignore-externals", opt_ignore_externals, 0,
                     N_("ignore externals definitions")},
-#ifndef AS400
   {"diff-cmd",      opt_diff_cmd, 1, N_("use ARG as diff command")},
   {"diff3-cmd",     opt_merge_cmd, 1, N_("use ARG as merge command")},
   {"editor-cmd",    opt_editor_cmd, 1, N_("use ARG as external editor")},
-#endif
   {"record-only",   opt_record_only, 0,
                     N_("mark revisions as merged (use with -r)")},
   {"old",           opt_old_cmd, 1, N_("use ARG as the older target")},
@@ -302,7 +301,7 @@ const apr_getopt_option_t svn_cl__options[] =
    willy-nilly to every invocation of 'svn') . */
 const int svn_cl__global_options[] =
 { opt_auth_username, opt_auth_password, opt_no_auth_cache, opt_non_interactive,
-  opt_config_dir, 0
+  opt_trust_server_cert, opt_config_dir, 0
 };
 
 /* Options for giving a log message.  (Some of these also have other uses.)
@@ -380,7 +379,6 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     {opt_merge_cmd} },
 
   { "commit", svn_cl__commit, {"ci"},
-#ifndef AS400
     N_("Send changes from your working copy to the repository.\n"
        "usage: commit [PATH...]\n"
        "\n"
@@ -388,16 +386,6 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
        "  given by a --message or --file option, an editor will be started.\n"
        "  If any targets are (or contain) locked items, those will be\n"
        "  unlocked after a successful commit.\n"),
-#else
-    N_("Send changes from your working copy to the repository.\n"
-       "usage: commit [PATH...]\n"
-       "\n"
-       "  A log message must be provided, but it can be empty.\n"
-       "  OS400 does not support the starting of an editor,\n"
-       "  so --message or --file must be used. If any targets are\n"
-       "  (or contain) locked items, those will be unlocked after a\n"
-       "  successful commit.\n"),
-#endif
     {'q', 'N', opt_depth, opt_targets, opt_no_unlock, SVN_CL__LOG_MSG_OPTIONS,
      opt_changelist, opt_keep_changelists} },
 
@@ -675,7 +663,6 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     TARGET only determines which repository to access.\n"),
     {'q', 'R', opt_depth, 'r', opt_revprop, opt_changelist} },
 
-#ifndef AS400
   { "propedit", svn_cl__propedit, {"pedit", "pe"}, N_
     ("Edit a property with an external editor.\n"
      "usage: 1. propedit PROPNAME TARGET...\n"
@@ -687,7 +674,6 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "See 'svn help propset' for more on setting properties.\n"),
     {'r', opt_revprop, SVN_CL__LOG_MSG_OPTIONS, opt_force} },
-#endif
 
   { "propget", svn_cl__propget, {"pget", "pg"}, N_
     ("Print the value of a property on files, dirs, or revisions.\n"
@@ -1369,6 +1355,9 @@ main(int argc, const char *argv[])
       case opt_non_interactive:
         opt_state.non_interactive = TRUE;
         break;
+      case opt_trust_server_cert:
+        opt_state.trust_server_cert = TRUE;
+        break;
       case opt_no_diff_deleted:
         opt_state.no_diff_deleted = TRUE;
         break;
@@ -1646,6 +1635,15 @@ main(int argc, const char *argv[])
       return svn_cmdline_handle_exit_error(err, pool, "svn: ");
     }
 
+  /* --trust-server-cert can only be used with --non-interactive */
+  if (opt_state.trust_server_cert && !opt_state.non_interactive)
+    {
+      err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("--trust-server-cert requires "
+                               "--non-interactive"));
+      return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+    }
+
   /* Ensure that 'revision_ranges' has at least one item, and that
      'start_revision' and 'end_revision' match that item. */
   if (opt_state.revision_ranges->nelts == 0)
@@ -1913,16 +1911,17 @@ main(int argc, const char *argv[])
 #endif
 
   /* Set up Authentication stuff. */
-  if ((err = svn_cmdline_setup_auth_baton(&ab,
-                                          opt_state.non_interactive,
-                                          opt_state.auth_username,
-                                          opt_state.auth_password,
-                                          opt_state.config_dir,
-                                          opt_state.no_auth_cache,
-                                          cfg,
-                                          ctx->cancel_func,
-                                          ctx->cancel_baton,
-                                          pool)))
+  if ((err = svn_cmdline_set_up_auth_baton(&ab,
+                                           opt_state.non_interactive,
+                                           opt_state.auth_username,
+                                           opt_state.auth_password,
+                                           opt_state.config_dir,
+                                           opt_state.no_auth_cache,
+                                           opt_state.trust_server_cert,
+                                           cfg,
+                                           ctx->cancel_func,
+                                           ctx->cancel_baton,
+                                           pool)))
     svn_handle_error2(err, stderr, TRUE, "svn: ");
 
   ctx->auth_baton = ab;

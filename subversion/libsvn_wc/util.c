@@ -99,7 +99,7 @@ svn_wc__ensure_directory(const char *path,
         return err;
     }
   else  /* No problem, the dir already existed, so just leave. */
-    assert(kind == svn_node_dir);
+    SVN_ERR_ASSERT(kind == svn_node_dir);
 
   return SVN_NO_ERROR;
 }

@@ -71,8 +71,10 @@ struct edit_baton
 {
   /* For updates, the "destination" of the edit is the ANCHOR (the
      directory at which the edit is rooted) plus the TARGET (the
-     actual thing we wish to update).  For checkouts, ANCHOR holds the
-     whole path, and TARGET is unused. */
+     actual thing we wish to update).  Target may be the empty string,
+     but it is never NULL; for example, for checkouts and for updates
+     that do not specify a target path, ANCHOR holds the whole path,
+     and TARGET is empty. */
   const char *anchor;
   const char *target;
 
@@ -358,9 +360,7 @@ make_dir_baton(struct dir_baton **d_p,
   struct dir_baton *d;
   struct bump_dir_info *bdi;
 
-  /* Don't do this.  Just do NOT do this to me. */
-  if (pb && (! path))
-    abort();
+  SVN_ERR_ASSERT(path || (! pb));
 
   /* Okay, no easy out, so allocate and initialize a dir baton. */
   d = apr_pcalloc(pool, sizeof(*d));
@@ -698,9 +698,7 @@ make_file_baton(struct file_baton **f_p,
 {
   struct file_baton *f = apr_pcalloc(pool, sizeof(*f));
 
-  /* I rather need this information, yes. */
-  if (! path)
-    abort();
+  SVN_ERR_ASSERT(path);
 
   /* Make the file's on-disk name. */
   f->path = svn_path_join(pb->edit_baton->anchor, path, pool);
@@ -1256,9 +1254,9 @@ add_directory(const char *path,
 
   /* Semantic check.  Either both "copyfrom" args are valid, or they're
      NULL and SVN_INVALID_REVNUM.  A mixture is illegal semantics. */
-  if ((copyfrom_path && (! SVN_IS_VALID_REVNUM(copyfrom_revision)))
-      || ((! copyfrom_path) && (SVN_IS_VALID_REVNUM(copyfrom_revision))))
-    abort();
+  SVN_ERR_ASSERT((copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_revision))
+                 || (!copyfrom_path &&
+                     !SVN_IS_VALID_REVNUM(copyfrom_revision)));
 
   SVN_ERR(check_path_under_root(pb->path, db->name, pool));
   SVN_ERR(svn_io_check_path(db->path, &kind, db->pool));
@@ -1492,7 +1490,7 @@ open_directory(const char *path,
 
       SVN_ERR(svn_wc_conflicted_p(&text_conflicted, &prop_conflicted,
                                   db->path, entry, pool));
-      assert(! text_conflicted);
+      SVN_ERR_ASSERT(! text_conflicted);
       if (prop_conflicted)
         {
           db->bump_info->skipped = TRUE;
@@ -2720,8 +2718,8 @@ close_file(void *file_baton,
   /* Was this an add-with-history, with no apply_textdelta? */
   if (fb->added_with_history && ! fb->received_textdelta)
     {
-      assert(! fb->text_base_path && ! fb->new_text_base_path
-             && fb->copied_text_base);
+      SVN_ERR_ASSERT(! fb->text_base_path && ! fb->new_text_base_path
+                     && fb->copied_text_base);
 
       /* Set up the base paths like apply_textdelta does. */
       SVN_ERR(choose_base_paths(NULL, NULL, NULL, fb, pool));
@@ -3473,7 +3471,7 @@ svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
                           svn_wc_traversal_info_t *traversal_info,
                           apr_pool_t *pool)
 {
-  assert(switch_url);
+  SVN_ERR_ASSERT(switch_url);
 
   return make_editor(target_revision, anchor, svn_wc_adm_access_path(anchor),
                      target, use_commit_times, switch_url,
@@ -3502,7 +3500,7 @@ svn_wc_get_switch_editor2(svn_revnum_t *target_revision,
                           svn_wc_traversal_info_t *traversal_info,
                           apr_pool_t *pool)
 {
-  assert(switch_url);
+  SVN_ERR_ASSERT(switch_url);
 
   return svn_wc_get_switch_editor3(target_revision, anchor, target,
                                    switch_url, use_commit_times,
@@ -3929,7 +3927,7 @@ svn_wc_add_repos_file2(const char *dst_path,
 
     if (copyfrom_url)
       {
-        assert(SVN_IS_VALID_REVNUM(copyfrom_rev));
+        SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(copyfrom_rev));
 
         tmp_entry.copyfrom_url = copyfrom_url;
         tmp_entry.copyfrom_rev = copyfrom_rev;

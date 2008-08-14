@@ -902,7 +902,7 @@ write_format(const char *path, int format, int max_files_per_dir,
 {
   const char *contents;
 
-  assert (1 <= format && format <= SVN_FS_FS__FORMAT_NUMBER);
+  SVN_ERR_ASSERT(1 <= format && format <= SVN_FS_FS__FORMAT_NUMBER);
   if (format >= SVN_FS_FS__MIN_LAYOUT_FORMAT_OPTION_FORMAT)
     {
       if (max_files_per_dir)
@@ -1324,8 +1324,12 @@ svn_fs_fs__hotcopy(const char *src_path,
           dst_subdir_shard = svn_path_join(dst_subdir, shard, iterpool);
 
           if (rev % max_files_per_dir == 0)
-            SVN_ERR(svn_io_dir_make(dst_subdir_shard, APR_OS_DEFAULT,
-                                    iterpool));
+            {
+              SVN_ERR(svn_io_dir_make(dst_subdir_shard, APR_OS_DEFAULT,
+                                      iterpool));
+              SVN_ERR(svn_fs_fs__dup_perms(dst_subdir_shard, dst_subdir,
+                                           iterpool));
+            }
         }
 
       SVN_ERR(svn_io_dir_file_copy(src_subdir_shard, dst_subdir_shard,
@@ -1355,8 +1359,12 @@ svn_fs_fs__hotcopy(const char *src_path,
           dst_subdir_shard = svn_path_join(dst_subdir, shard, iterpool);
 
           if (rev % max_files_per_dir == 0)
-            SVN_ERR(svn_io_dir_make(dst_subdir_shard, APR_OS_DEFAULT,
-                                    iterpool));
+            {
+              SVN_ERR(svn_io_dir_make(dst_subdir_shard, APR_OS_DEFAULT,
+                                      iterpool));
+              SVN_ERR(svn_fs_fs__dup_perms(dst_subdir_shard, dst_subdir,
+                                           iterpool));
+            }
         }
 
       SVN_ERR(svn_io_dir_file_copy(src_subdir_shard, dst_subdir_shard,
@@ -2513,7 +2521,7 @@ read_window(svn_txdelta_window_t **nwin, int this_chunk, struct rep_state *rs,
 {
   svn_stream_t *stream;
 
-  assert(rs->chunk_index <= this_chunk);
+  SVN_ERR_ASSERT(rs->chunk_index <= this_chunk);
 
   /* Skip windows to reach the current chunk if we aren't there yet. */
   while (rs->chunk_index < this_chunk)
@@ -2554,7 +2562,7 @@ get_combined_window(svn_txdelta_window_t **result,
   svn_txdelta_window_t *window, *nwin;
   struct rep_state *rs;
 
-  assert(rb->rs_list->nelts >= 2);
+  SVN_ERR_ASSERT(rb->rs_list->nelts >= 2);
 
   pool = svn_pool_create(rb->pool);
 
@@ -2572,7 +2580,7 @@ get_combined_window(svn_txdelta_window_t **result,
 
       SVN_ERR(read_window(&nwin, rb->chunk_index, rs, pool));
 
-      /* Combine this window with the current one.  Cycles pools so that we
+      /* Combine this window with the current one.  Cycle pools so that we
          only need to hold three windows at a time. */
       new_pool = svn_pool_create(rb->pool);
       window = svn_txdelta_compose_windows(nwin, window, new_pool);
@@ -2794,13 +2802,13 @@ rep_read_contents(void *baton,
 
 
 /* Returns whether or not the expanded fulltext of the file is
- * cacheable based on its size SIZE.  Specifically, if it will fit
+ * cachable based on its size SIZE.  Specifically, if it will fit
  * into a memcached value.  The memcached cutoff seems to be a bit
  * (header length?) under a megabyte; we round down a little to be
  * safe.
  */
 static svn_boolean_t
-fulltext_size_is_cacheable(svn_filesize_t size)
+fulltext_size_is_cachable(svn_filesize_t size)
 {
   return size < 1000000;
 }
@@ -2831,7 +2839,7 @@ read_representation(svn_stream_t **contents_p,
       struct rep_read_baton *rb;
 
       if (ffd->fulltext_cache && SVN_IS_VALID_REVNUM(rep->revision)
-          && fulltext_size_is_cacheable(rep->expanded_size))
+          && fulltext_size_is_cachable(rep->expanded_size))
         {
           svn_string_t *fulltext;
           svn_boolean_t is_cached;
@@ -5371,18 +5379,27 @@ commit_body(void *baton, apr_pool_t *pool)
   if (ffd->max_files_per_dir && new_rev % ffd->max_files_per_dir == 0)
     {
       svn_error_t *err;
-      err = svn_io_dir_make(path_rev_shard(cb->fs, new_rev, pool),
-                            APR_OS_DEFAULT, pool);
-      if (err && APR_STATUS_IS_EEXIST(err->apr_err))
-        svn_error_clear(err);
-      else
+      const char *new_dir = path_rev_shard(cb->fs, new_rev, pool);
+      err = svn_io_dir_make(new_dir, APR_OS_DEFAULT, pool);
+      if (err && !APR_STATUS_IS_EEXIST(err->apr_err))
         SVN_ERR(err);
-      err = svn_io_dir_make(path_revprops_shard(cb->fs, new_rev, pool),
-                            APR_OS_DEFAULT, pool);
-      if (err && APR_STATUS_IS_EEXIST(err->apr_err))
-        svn_error_clear(err);
-      else
+      svn_error_clear(err);
+      SVN_ERR(svn_fs_fs__dup_perms(new_dir,
+                                   svn_path_join(cb->fs->path,
+                                                 PATH_REVS_DIR,
+                                                 pool),
+                                   pool));
+
+      new_dir = path_revprops_shard(cb->fs, new_rev, pool);
+      err = svn_io_dir_make(new_dir, APR_OS_DEFAULT, pool);
+      if (err && !APR_STATUS_IS_EEXIST(err->apr_err))
         SVN_ERR(err);
+      svn_error_clear(err);
+      SVN_ERR(svn_fs_fs__dup_perms(new_dir,
+                                   svn_path_join(cb->fs->path,
+                                                 PATH_REVPROPS_DIR,
+                                                 pool),
+                                   pool));
     }
 
   /* Move the finished rev file into place. */

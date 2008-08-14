@@ -1212,7 +1212,7 @@ svn_path_split_if_file(const char *path,
   apr_finfo_t finfo;
   svn_error_t *err;
 
-  assert(svn_path_is_canonical(path, pool));
+  SVN_ERR_ASSERT(svn_path_is_canonical(path, pool));
 
   err = svn_io_stat(&finfo, path, APR_FINFO_TYPE, pool);
   if (err && ! APR_STATUS_IS_ENOENT(err->apr_err))

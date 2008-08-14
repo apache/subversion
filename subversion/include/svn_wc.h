@@ -264,7 +264,8 @@ svn_wc_adm_probe_open(svn_wc_adm_access_t **adm_access,
  * Open access batons for @a path and return in @a *anchor_access and
  * @a *target the anchor and target required to drive an editor.  Return
  * in @a *target_access the access baton for the target, which may be the
- * same as @a *anchor_access.  All the access batons will be in the
+ * same as @a *anchor_access (in which case @a *target is the empty
+ * string, never NULL).  All the access batons will be in the
  * @a *anchor_access set.
  *
  * @a levels_to_lock determines the levels_to_lock used when opening
@@ -1182,7 +1183,7 @@ typedef enum svn_wc_conflict_choice_t
 } svn_wc_conflict_choice_t;
 
 
-/** The final result returned by @a svn_wc_conflict_resolver_func_t.
+/** The final result returned by @c svn_wc_conflict_resolver_func_t.
  *
  * @note Fields may be added to the end of this structure in future
  * versions.  Therefore, to preserve binary compatibility, users
@@ -3380,7 +3381,7 @@ svn_wc_get_actual_target(const char *path,
  * when the editor driver calls @c close_edit.
  *
  * @a target is the entry in @a anchor that will actually be updated, or
- * empty if all of @a anchor should be updated.
+ * the empty string if all of @a anchor should be updated.
  *
  * The editor invokes @a notify_func with @a notify_baton as the update
  * progresses, if @a notify_func is non-NULL.
@@ -3752,12 +3753,12 @@ svn_boolean_t svn_wc_is_entry_prop(const char *name);
 /** Callback type used by @c svn_wc_canonicalize_svn_prop.
  *
  * If @a mime_type is non-null, it sets @a *mime_type to the value of
- * @a SVN_PROP_MIME_TYPE for the path passed to @c
+ * @c SVN_PROP_MIME_TYPE for the path passed to @c
  * svn_wc_canonicalize_svn_prop (allocated from @a pool).  If @a
  * stream is non-null, it writes the contents of the file to @a
  * stream.
  *
- * (Currently, this is used if you are attempting to set the @a
+ * (Currently, this is used if you are attempting to set the @c
  * SVN_PROP_EOL_STYLE property, to make sure that the value matches
  * the mime type and contents.)
  */
@@ -3883,7 +3884,7 @@ svn_wc_get_diff_editor4(svn_wc_adm_access_t *anchor,
 /**
  * Similar to svn_wc_get_diff_editor4(), but with @a changelists
  * passed as @c NULL, and @a depth set to @c svn_depth_infinity if @a
- * recurse is TRUE, or @a svn_depth_files if @a recurse is FALSE.
+ * recurse is TRUE, or @c svn_depth_files if @a recurse is FALSE.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
 
@@ -4007,7 +4008,7 @@ svn_wc_diff4(svn_wc_adm_access_t *anchor,
 /**
  * Similar to svn_wc_diff4(), but with @a changelists passed @c NULL,
  * and @a depth set to @c svn_depth_infinity if @a recurse is TRUE, or
- * @a svn_depth_files if @a recurse is FALSE.
+ * @c svn_depth_files if @a recurse is FALSE.
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */

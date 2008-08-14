@@ -281,7 +281,7 @@ static svn_error_t *readbuf_fill(svn_ra_svn_conn_t *conn, apr_pool_t *pool)
 {
   apr_size_t len;
 
-  assert(conn->read_ptr == conn->read_end);
+  SVN_ERR_ASSERT(conn->read_ptr == conn->read_end);
   SVN_ERR(writebuf_flush(conn, pool));
   len = sizeof(conn->read_buf);
   SVN_ERR(readbuf_input(conn, conn->read_buf, &len, pool));
@@ -346,7 +346,7 @@ static svn_error_t *readbuf_skip_leading_garbage(svn_ra_svn_conn_t *conn,
   apr_size_t len;
   svn_boolean_t lparen = FALSE;
 
-  assert(conn->read_ptr == conn->read_end);
+  SVN_ERR_ASSERT(conn->read_ptr == conn->read_end);
   while (1)
     {
       /* Read some data directly from the connection input source. */
@@ -469,28 +469,28 @@ static svn_error_t *vwrite_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       else if (*fmt == 'r')
         {
           rev = va_arg(ap, svn_revnum_t);
-          assert(opt || SVN_IS_VALID_REVNUM(rev));
+          SVN_ERR_ASSERT(opt || SVN_IS_VALID_REVNUM(rev));
           if (SVN_IS_VALID_REVNUM(rev))
             SVN_ERR(svn_ra_svn_write_number(conn, pool, rev));
         }
       else if (*fmt == 's')
         {
           str = va_arg(ap, const svn_string_t *);
-          assert(opt || str);
+          SVN_ERR_ASSERT(opt || str);
           if (str)
             SVN_ERR(svn_ra_svn_write_string(conn, pool, str));
         }
       else if (*fmt == 'c')
         {
           cstr = va_arg(ap, const char *);
-          assert(opt || cstr);
+          SVN_ERR_ASSERT(opt || cstr);
           if (cstr)
             SVN_ERR(svn_ra_svn_write_cstring(conn, pool, cstr));
         }
       else if (*fmt == 'w')
         {
           cstr = va_arg(ap, const char *);
-          assert(opt || cstr);
+          SVN_ERR_ASSERT(opt || cstr);
           if (cstr)
             SVN_ERR(svn_ra_svn_write_word(conn, pool, cstr));
         }
@@ -511,7 +511,7 @@ static svn_error_t *vwrite_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       else if (*fmt == '!' && !*(fmt + 1))
         return SVN_NO_ERROR;
       else
-        abort();
+        SVN_ERR_MALFUNCTION();
     }
   SVN_ERR(svn_ra_svn_end_list(conn, pool));
   return SVN_NO_ERROR;
@@ -760,7 +760,7 @@ static svn_error_t *vparse_tuple(apr_array_header_t *items, apr_pool_t *pool,
                 return SVN_NO_ERROR;
               break;
             default:
-              abort();
+              SVN_ERR_MALFUNCTION();
             }
         }
     }

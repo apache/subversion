@@ -604,10 +604,10 @@ apply_window(svn_txdelta_window_t *window, void *baton)
     }
 
   /* Make sure the source view didn't slide backwards.  */
-  assert(window->sview_len == 0
-         || (window->sview_offset >= ab->sbuf_offset
-             && (window->sview_offset + window->sview_len
-                 >= ab->sbuf_offset + ab->sbuf_len)));
+  SVN_ERR_ASSERT(window->sview_len == 0
+                 || (window->sview_offset >= ab->sbuf_offset
+                     && (window->sview_offset + window->sview_len
+                         >= ab->sbuf_offset + ab->sbuf_len)));
 
   /* Make sure there's enough room in the target buffer.  */
   size_buffer(&ab->tbuf, &ab->tbuf_size, window->tview_len, ab->pool);
@@ -652,7 +652,7 @@ apply_window(svn_txdelta_window_t *window, void *baton)
      the target view.  */
   len = window->tview_len;
   svn_txdelta_apply_instructions(window, ab->sbuf, ab->tbuf, &len);
-  assert(len == window->tview_len);
+  SVN_ERR_ASSERT(len == window->tview_len);
 
   /* Write out the output. */
 

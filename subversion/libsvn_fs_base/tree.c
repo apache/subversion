@@ -522,8 +522,7 @@ get_copy_inheritance(copy_id_inherit_t *inherit_p,
   const char *child_copy_id, *parent_copy_id;
   const char *id_path = NULL;
 
-  /* Make some assertions about the function input. */
-  assert(child && child->parent && txn_id);
+  SVN_ERR_ASSERT(child && child->parent && txn_id);
 
   /* Initialize our return variables (default: self-inheritance). */
   *inherit_p = copy_id_inherit_self;
@@ -827,7 +826,7 @@ make_path_mutable(svn_fs_root_t *root,
 
         case copy_id_inherit_unknown:
         default:
-          abort(); /* uh-oh -- somebody didn't calculate copy-ID
+          SVN_ERR_MALFUNCTION(); /* uh-oh -- somebody didn't calculate copy-ID
                       inheritance data. */
         }
 
@@ -1602,6 +1601,7 @@ deltify_mutable(svn_fs_t *fs,
   const svn_fs_id_t *id = node_id;
   apr_hash_t *entries = NULL;
   struct txn_deltify_args td_args;
+  base_fs_data_t *bfd = fs->fsap_data;
 
   /* Get the ID for PATH under ROOT if it wasn't provided. */
   if (! node_id)
@@ -1645,9 +1645,11 @@ deltify_mutable(svn_fs_t *fs,
       svn_pool_destroy(subpool);
     }
 
-  /* Finally, deltify old data against this node. */
+  /* Finally, deltify nodes appropriately. */
   {
-    /* Redeltify predecessor node-revisions of the one we added.  The
+    /* Prior to 1.6, we use the following algorithm to deltify nodes:
+    
+       Redeltify predecessor node-revisions of the one we added.  The
        idea is to require at most 2*lg(N) deltas to be applied to get
        to any node-revision in a chain of N predecessors.  We do this
        using a technique derived from skip lists:
@@ -1671,7 +1673,10 @@ deltify_mutable(svn_fs_t *fs,
        don't redeltify the oldest node-revision; it's potentially
        expensive and doesn't help retrieve any other revision.
        (Retrieving the oldest node-revision will still be fast, just
-       not as blindingly so.)  */
+       not as blindingly so.)
+       
+       For 1.6 and beyond, we just deltify the current node against its
+       predecessors, using skip deltas similar to the was FSFS does.*/
 
     int pred_count, nlevels, lev, count;
     const svn_fs_id_t *pred_id;
@@ -1688,44 +1693,29 @@ deltify_mutable(svn_fs_t *fs,
     if (pred_count == 0)
       return SVN_NO_ERROR;
 
-    /* Decide how many predecessors to redeltify.  To save overhead,
-       don't redeltify anything but the immediate predecessor if there
-       are less than 32 predecessors. */
-    nlevels = 1;
-    if (pred_count >= 32)
-      {
-        while (pred_count % 2 == 0)
-          {
-            pred_count /= 2;
-            nlevels++;
-          }
-
-        /* Don't redeltify the oldest revision. */
-        if (1 << (nlevels - 1) == pred_count)
-          nlevels--;
-      }
-
-    /* Redeltify the desired number of predecessors. */
-    count = 0;
-    pred_id = id;
-
-    /* We need to use two alternating pools because the id used in the
-       call to txn_body_pred_id is allocated by the previous inner
-       loop iteration.  If we would clear the pool each iteration we
-       would free the previous result.  */
     subpools[0] = svn_pool_create(pool);
     subpools[1] = svn_pool_create(pool);
-    for (lev = 0; lev < nlevels; lev++)
+    if (bfd->format >= SVN_FS_BASE__MIN_FORWARD_DELTAS_FORMAT)
       {
-        /* To save overhead, skip the second level (that is, never
-           redeltify the node-revision two predecessors back). */
-        if (lev == 1)
-          continue;
+        /**** FORWARD DELTA STORAGE ****/
 
-        /* Note that COUNT is not reset between levels, and neither is
-           PREDNODE; we just keep counting from where we were up to
-           where we're supposed to get. */
-        while (count < (1 << lev))
+        /* Decide which predecessor to deltify against.  Flip the rightmost '1'
+           bit of the predecessor count to determine which file rev (counting
+           from 0) we want to use.  (To see why count & (count - 1) unsets the
+           rightmost set bit, think about how you decrement a binary number. */
+        pred_count = pred_count & (pred_count - 1);
+
+        /* Walk back a number of predecessors equal to the difference between
+           pred_count and the original predecessor count.  (For example, if
+           the node has ten predecessors and we want the eighth node, walk back
+           two predecessors. */
+        pred_id = id;
+          
+        /* We need to use two alternating pools because the id used in the
+           call to txn_body_pred_id is allocated by the previous inner
+           loop iteration.  If we would clear the pool each iteration we
+           would free the previous result.  */
+        while ((pred_count++) < tpc_args.pred_count)
           {
             struct txn_pred_id_args tpi_args;
 
@@ -1743,17 +1733,85 @@ deltify_mutable(svn_fs_t *fs,
                 (SVN_ERR_FS_CORRUPT, 0,
                  _("Corrupt DB: faulty predecessor count"));
 
-            count++;
           }
 
         /* Finally, do the deltification. */
-        td_args.tgt_id = pred_id;
-        td_args.base_id = id;
+        td_args.tgt_id = id;
+        td_args.base_id = pred_id;
         td_args.is_dir = (kind == svn_node_dir);
         SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_txn_deltify, &td_args,
                                        subpools[active_subpool]));
-
       }
+    else
+      {
+        /**** REVERSE DELTA STORAGE ****/
+
+        /* Decide how many predecessors to redeltify.  To save overhead,
+           don't redeltify anything but the immediate predecessor if there
+           are less than 32 predecessors. */
+        nlevels = 1;
+        if (pred_count >= 32)
+          {
+            while (pred_count % 2 == 0)
+              {
+                pred_count /= 2;
+                nlevels++;
+              }
+
+            /* Don't redeltify the oldest revision. */
+            if (1 << (nlevels - 1) == pred_count)
+              nlevels--;
+          }
+
+        /* Redeltify the desired number of predecessors. */
+        count = 0;
+        pred_id = id;
+
+        /* We need to use two alternating pools because the id used in the
+           call to txn_body_pred_id is allocated by the previous inner
+           loop iteration.  If we would clear the pool each iteration we
+           would free the previous result.  */
+        for (lev = 0; lev < nlevels; lev++)
+          {
+            /* To save overhead, skip the second level (that is, never
+               redeltify the node-revision two predecessors back). */
+            if (lev == 1)
+              continue;
+
+            /* Note that COUNT is not reset between levels, and neither is
+               PREDNODE; we just keep counting from where we were up to
+               where we're supposed to get. */
+            while (count < (1 << lev))
+              {
+                struct txn_pred_id_args tpi_args;
+
+                active_subpool = !active_subpool;
+                svn_pool_clear(subpools[active_subpool]);
+
+                tpi_args.id = pred_id;
+                tpi_args.pool = subpools[active_subpool];
+                SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_pred_id, &tpi_args,
+                                               subpools[active_subpool]));
+                pred_id = tpi_args.pred_id;
+
+                if (pred_id == NULL)
+                  return svn_error_create
+                    (SVN_ERR_FS_CORRUPT, 0,
+                     _("Corrupt DB: faulty predecessor count"));
+
+                count++;
+              }
+
+            /* Finally, do the deltification. */
+            td_args.tgt_id = pred_id;
+            td_args.base_id = id;
+            td_args.is_dir = (kind == svn_node_dir);
+            SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_txn_deltify, &td_args,
+                                           subpools[active_subpool]));
+
+          }
+      }
+
     svn_pool_destroy(subpools[0]);
     svn_pool_destroy(subpools[1]);
   }
@@ -2981,7 +3039,7 @@ txn_body_copy(void *baton,
          stated that this requirement need not be necessary in the
          future. */
 
-      abort();
+      SVN_ERR_MALFUNCTION();
     }
 
   return SVN_NO_ERROR;
@@ -4767,7 +4825,7 @@ txn_body_get_mergeinfo_data_and_entries(void *baton, trail_t *trail)
   apr_pool_t *children_pool =
     apr_hash_pool_get(args->children_atop_mergeinfo_trees);
 
-  assert(svn_fs_base__dag_node_kind(node) == svn_node_dir);
+  SVN_ERR_ASSERT(svn_fs_base__dag_node_kind(node) == svn_node_dir);
 
   SVN_ERR(svn_fs_base__dag_dir_entries(&entries, node, trail, trail->pool));
   for (hi = apr_hash_first(NULL, entries); hi; hi = apr_hash_next(hi))

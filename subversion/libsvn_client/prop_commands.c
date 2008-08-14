@@ -874,17 +874,15 @@ svn_client_propget3(apr_hash_t **props,
 
   SVN_ERR(error_if_wcprop_name(propname));
 
+  peg_revision = svn_cl__rev_default_to_head_or_working(peg_revision,
+                                                        path_or_url);
+  revision = svn_cl__rev_default_to_peg(revision, peg_revision);
+
   *props = apr_hash_make(pool);
 
   if (! svn_path_is_url(path_or_url)
-      && (peg_revision->kind == svn_opt_revision_base
-          || peg_revision->kind == svn_opt_revision_working
-          || peg_revision->kind == svn_opt_revision_committed
-          || peg_revision->kind == svn_opt_revision_unspecified)
-      && (revision->kind == svn_opt_revision_base
-          || revision->kind == svn_opt_revision_working
-          || revision->kind == svn_opt_revision_committed
-          || revision->kind == svn_opt_revision_unspecified))
+      && SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(peg_revision->kind)
+      && SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(revision->kind))
     {
       svn_wc_adm_access_t *adm_access;
       const svn_wc_entry_t *node;
@@ -1207,6 +1205,7 @@ proplist_walk_cb(const char *path,
 }
 
 
+/* Note: this implementation is very similar to svn_client_propget3(). */
 svn_error_t *
 svn_client_proplist3(const char *path_or_url,
                      const svn_opt_revision_t *peg_revision,
@@ -1221,18 +1220,16 @@ svn_client_proplist3(const char *path_or_url,
   svn_wc_adm_access_t *adm_access;
   const char *url;
 
+  peg_revision = svn_cl__rev_default_to_head_or_working(peg_revision,
+                                                        path_or_url);
+  revision = svn_cl__rev_default_to_peg(revision, peg_revision);
+
   if (depth == svn_depth_unknown)
     depth = svn_depth_empty;
 
   if (! svn_path_is_url(path_or_url)
-      && (peg_revision->kind == svn_opt_revision_base
-          || peg_revision->kind == svn_opt_revision_working
-          || peg_revision->kind == svn_opt_revision_committed
-          || peg_revision->kind == svn_opt_revision_unspecified)
-      && (revision->kind == svn_opt_revision_base
-          || revision->kind == svn_opt_revision_working
-          || revision->kind == svn_opt_revision_committed
-          || revision->kind == svn_opt_revision_unspecified))
+      && SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(peg_revision->kind)
+      && SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(revision->kind))
     {
       svn_boolean_t pristine;
       int levels_to_lock = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
@@ -1345,7 +1342,6 @@ proplist_receiver_cb(void *baton,
   return SVN_NO_ERROR;
 }
 
-/* Note: this implementation is very similar to svn_client_propget. */
 svn_error_t *
 svn_client_proplist2(apr_array_header_t **props,
                      const char *target,
