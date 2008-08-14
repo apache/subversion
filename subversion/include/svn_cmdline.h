@@ -343,10 +343,6 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
  *
  * @since New in 1.4.
  *
- * On OS400 V5R4, prior to calling apr_getopt_init(), converts each of the
- * @a argc strings in @a argv[] in place from EBCDIC to UTF-8, allocating
- * each new UTF-8 string in @a pool.
- *
  * This is a private API for Subversion's own use.
  */
 svn_error_t *

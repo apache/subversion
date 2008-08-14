@@ -817,11 +817,12 @@ svn_swig_rb_raise_svn_repos_already_close(void)
 }
 
 VALUE
-svn_swig_rb_svn_error_new(VALUE code, VALUE message, VALUE file, VALUE line)
+svn_swig_rb_svn_error_new(VALUE code, VALUE message, VALUE file, VALUE line,
+			  VALUE child)
 {
   return rb_funcall(rb_svn_error_svn_error(),
                     id_new_corresponding_error,
-                    4, code, message, file, line);
+                    5, code, message, file, line, child);
 }
 
 VALUE
@@ -831,6 +832,7 @@ svn_swig_rb_svn_error_to_rb_error(svn_error_t *error)
   VALUE message;
   VALUE file = Qnil;
   VALUE line = Qnil;
+  VALUE child = Qnil;
 
   if (error->file)
     file = rb_str_new2(error->file);
@@ -839,15 +841,10 @@ svn_swig_rb_svn_error_to_rb_error(svn_error_t *error)
 
   message = rb_str_new2(error->message ? error->message : "");
 
-  while (error->child) {
-    error = error->child;
-    if (error->message) {
-      rb_str_concat(message, rb_str_new2("\n"));
-      rb_str_concat(message, rb_str_new2(error->message));
-    }
-  }
+  if (error->child)
+      child = svn_swig_rb_svn_error_to_rb_error(error->child);
 
-  return svn_swig_rb_svn_error_new(error_code, message, file, line);
+  return svn_swig_rb_svn_error_new(error_code, message, file, line, child);
 }
 
 void

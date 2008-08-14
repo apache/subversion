@@ -285,6 +285,9 @@ combine_with_lastrange(svn_merge_range_t** lastrange,
                 }
               else /* ((*lastrange)->start > mrange->start) */
                 {
+                  pushed_mrange_2 =
+                    apr_palloc(pool, sizeof(*pushed_mrange_2));
+
                   if ((*lastrange)->end < mrange->end)
                     {
                       pushed_mrange_2->start = (*lastrange)->end;

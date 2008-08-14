@@ -827,12 +827,12 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
     {
       const svn_prop_t *prop = &APR_ARRAY_IDX(prop_changes, i, svn_prop_t);
 
-      /* If we're merging from a foreign repository, we don't want any
-         DAV wcprops related to this file (because they'll point to
-         the wrong repository).  So we'll strip them.  (Is this a
-         layering violation?)  */
-      if ((! merge_b->same_repos)
-          && (svn_property_kind(NULL, prop->name) == svn_prop_wc_kind))
+      /* We don't want any DAV wcprops related to this file because
+         they'll point to the wrong repository (in the
+         merge-from-foreign-repository scenario) or wrong place in the
+         right repository (in the same-repos scenario).  So we'll
+         strip them.  (Is this a layering violation?)  */
+      if (svn_property_kind(NULL, prop->name) == svn_prop_wc_kind)
         continue;
 
       apr_hash_set(new_props, prop->name, APR_HASH_KEY_STRING, prop->value);
@@ -976,6 +976,68 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
+/* Compare the two sets of properties PROPS1 and PROPS2, ignoring the
+ * "svn:mergeinfo" property, and noticing only "normal" props. Set *SAME to
+ * true if the rest of the properties are identical or false if they differ.
+ */
+static svn_error_t *
+properties_same_p(svn_boolean_t *same,
+                  apr_hash_t *props1,
+                  apr_hash_t *props2,
+                  apr_pool_t *pool)
+{
+  apr_array_header_t *prop_changes;
+  int i, diffs;
+
+  /* Examine the properties that differ */
+  SVN_ERR(svn_prop_diffs(&prop_changes, props1, props2, pool));
+  diffs = 0;
+  for (i = 0; i < prop_changes->nelts; i++)
+    {
+      const char *pname = APR_ARRAY_IDX(prop_changes, i, svn_prop_t).name;
+
+      /* Count the properties we're interested in; ignore the rest */
+      if (svn_wc_is_normal_prop(pname)
+          && strcmp(pname, SVN_PROP_MERGEINFO) != 0)
+        diffs++;
+    }
+  *same = (diffs == 0);
+  return SVN_NO_ERROR;
+}
+
+/* Compare the file OLDER (together with its normal properties in
+ * ORIGINAL_PROPS which may also contain WC props and entry props) and MINE
+ * (with its properties obtained from its WC admin area ADM_ACCESS). Set
+ * *SAME to true if they are the same or false if they differ, ignoring
+ * the "svn:mergeinfo" property, and ignoring differences in keyword
+ * expansion and end-of-line style. */
+static svn_error_t *
+files_same_p(svn_boolean_t *same,
+             const char *older,
+             apr_hash_t *original_props,
+             const char *mine,
+             svn_wc_adm_access_t *adm_access,
+             apr_pool_t *pool)
+{
+  apr_hash_t *working_props;
+
+  SVN_ERR(svn_wc_prop_list(&working_props, mine, adm_access, pool));
+
+  /* Compare the properties */
+  SVN_ERR(properties_same_p(same, original_props, working_props, pool));
+  if (*same)
+    {
+      svn_boolean_t modified;
+
+      /* Compare the file content, translating 'mine' to 'normal' form. */
+      SVN_ERR(svn_wc__versioned_file_modcheck(&modified, mine, adm_access,
+                                              older, TRUE, pool));
+      *same = !modified;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* An svn_wc_diff_callbacks3_t function. */
 static svn_error_t *
 merge_file_deleted(svn_wc_adm_access_t *adm_access,
@@ -991,9 +1053,6 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
   merge_cmd_baton_t *merge_b = baton;
   apr_pool_t *subpool = svn_pool_create(merge_b->pool);
   svn_node_kind_t kind;
-  svn_wc_adm_access_t *parent_access;
-  const char *parent_path;
-  svn_error_t *err;
 
   /* Easy out:  if we have no adm_access for the parent directory,
      then this portion of the tree-delta "patch" must be inapplicable.
@@ -1011,24 +1070,29 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
   switch (kind)
     {
     case svn_node_file:
-      svn_path_split(mine, &parent_path, NULL, subpool);
-      SVN_ERR(svn_wc_adm_retrieve(&parent_access, adm_access, parent_path,
-                                  subpool));
-      /* Passing NULL for the notify_func and notify_baton because
-         repos_diff.c:delete_entry() will do it for us. */
-      err = svn_client__wc_delete(mine, parent_access, merge_b->force,
-                                  merge_b->dry_run, FALSE, NULL, NULL,
-                                  merge_b->ctx, subpool);
-      if (err)
-        {
-          if (state)
-            *state = svn_wc_notify_state_obstructed;
-          svn_error_clear(err);
-        }
-      else if (state)
-        {
-          *state = svn_wc_notify_state_changed;
-        }
+      {
+        svn_boolean_t same;
+
+        /* If the files are identical, attempt deletion */
+        SVN_ERR(files_same_p(&same, older, original_props, mine, adm_access,
+                             subpool));
+        if (same || merge_b->force)
+          {
+            /* Passing NULL for the notify_func and notify_baton because
+               repos_diff.c:delete_entry() will do it for us. */
+            SVN_ERR(svn_client__wc_delete(mine, adm_access, TRUE,
+                                          merge_b->dry_run, FALSE, NULL, NULL,
+                                          merge_b->ctx, subpool));
+            if (state)
+              *state = svn_wc_notify_state_changed;
+          }
+        else
+          {
+            /* The files differ, so skip instead of deleting */
+            if (state)
+              *state = svn_wc_notify_state_obstructed;
+          }
+      }
       break;
     case svn_node_dir:
       if (state)
@@ -1220,9 +1284,10 @@ merge_dir_deleted(svn_wc_adm_access_t *adm_access,
                                     merge_b->dry_run, FALSE,
                                     NULL, NULL,
                                     merge_b->ctx, subpool);
-        if (err && state)
+        if (err)
           {
-            *state = svn_wc_notify_state_obstructed;
+            if (state)
+              *state = svn_wc_notify_state_obstructed;
             svn_error_clear(err);
           }
         else if (state)
@@ -1566,33 +1631,32 @@ push_range(apr_array_header_t *rangelist,
   APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = range;
 }
 
-/* Helper for filter_merged_revisions() when operating on a subtree.
-   Like filter_merged_revisions(), this should only be called when
-   honoring mergeinfo.
+/* Helper for filter_merged_revisions() when that function is operating on
+   a *subtree* of the merge target.  Like filter_merged_revisions(), this
+   should only be called when honoring mergeinfo.
 
-   Filter the requested ranges being merged to a subtree so that we
-   don't try to describe invalid subtrees to the merge report editor.
-   Note in *CHILD_DELETED_OR_NONEXISTANT if the subtree doesn't exist,
-   is deleted, or is renamed in the requested range.
+   MERGEINFO_PATH, PARENT, REVISION1, REVISION2, PRIMARY_URL, RA_SESSION,
+   and CTX are all cascaded from filter_merged_revisions() - see that function
+   for more information on each.
 
-   PARENT, MERGEINFO_PATH, REVISION1, REVISION2, PRIMARY_URL, RA_SESSION,
-   and CTX are all cascaded from filter_merged_revisions().
+   Since this function is only invoked for subtrees of the merge target, the
+   guarantees afforded by normalize_merge_sources() don't apply.  Therefore it
+   is possible that PRIMARY_URL@REVISION1 and PRIMARY_URL@REVISION2 don't
+   describe the endpoints of an unbroken line of history.  The purpose of
+   this helper is to identify these cases of broken history and where possible
+   to adjust the requested range REVISION1:REVISION2 being merged to the subtree
+   so that we don't try to describe invalid path/revisions to the merge report
+   editor -- see drive_merge_report_editor().
 
-   Since this function is only invoked for subtrees of the merge target,
-   the guarantees afforded by normalize_merge_sources() don't apply.
-   Therefore it is possible that PRIMARY_URL@REVISION1 and
-   PRIMARY_URL@REVISION2 don't describe an unbroken line of history.
+   Set *CHILD_DELETED_OR_NONEXISTANT and *REQUESTED_RANGELIST as described
+   in the following eight cases.  *REQUESTED_RANGELIST is an array of
+   svn_merge_range_t *elements allocated from POOL.  Unless noted otherwise,
+   *REQUESTED_RANGELIST is set to a rangelist containing one svn_merge_range_t
+   *element with a 'start' field equal to REVISION1, an 'end' field equal to
+   REVISION2.  The inheritable fields of all svn_merge_range_t in
+   *REQUESTED_RANGELIST, in all cases, are always set to true.
 
-   Specifically we can end up with one of these eight cases:
-
-     Note1: Unless noted otherwise, every case sets *REQUESTED_RANGELIST
-            to a rangelist with one element defined by REVISION1 and
-            REVISION2.
-
-     Note2: The inheritability of all svn_merge_range_t in
-            *REQUESTED_RANGELIST is always TRUE.
-
-   Forward Merges, i.e. REVISION1 < REVISION2 (PEG_REV)
+   Forward Merges, i.e. REVISION1 < REVISION2
 
      A) Requested range deletes subtree.
 
@@ -1611,7 +1675,7 @@ push_range(apr_array_header_t *rangelist,
         *REQUESTED_RANGELIST with the ranges between N and REVISION2
         (inclusive) at which PRIMARY_URL exists.  Then take the intersection
         of REVISION1:N (i.e. the range which predates the existance of
-        PRIMARY_URL) and PARENT->REQUESTED_RANGELIST and add it to
+        PRIMARY_URL) and PARENT->REMAINING_RANGELIST and add it to
         *REQUESTED_RANGELIST.  This prevents us from later trying to describe
         any non-existant path/revs for this subtree in
         drive_merge_report_editor().  A good thing as that would break the
@@ -1631,7 +1695,7 @@ push_range(apr_array_header_t *rangelist,
 
         Set *CHILD_DELETED_OR_NONEXISTANT to FALSE.
 
-  Reverse Merges, i.e. REVISION1 (PEG_REV) > REVISION2
+  Reverse Merges, i.e. REVISION1 > REVISION2
 
      E) Part of requested range postdates subtree's existance.
 
@@ -1653,11 +1717,10 @@ push_range(apr_array_header_t *rangelist,
         ###
         ###   i)   The subtree merge source doesn't exist anymore at
         ###        revsion X.
+		###
         ###   ii)  Mergeinfo for X is explicitly set on the subtree.
-        ###   iii) The subtree's parent has no explicit mergeinfo for X.
         ###
-        ### This is where Kamesh utilized his recursive guess_live_ranges
-        ### function...But do we ever need to do this in practice?
+		###   iii) The subtree's parent has no explicit mergeinfo for X.
 
      F) Requested range deletes (or replaces) a subtree.
 
@@ -1806,7 +1869,7 @@ prepare_subtree_ranges(apr_array_header_t **requested_rangelist,
                   apr_array_header_t *different_name_rangelist =
                     apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
 
-                  /* Make a ranglist that describes the range which predates
+                  /* Make a rangelist that describes the range which predates
                      PRIMARY_URL's existance... */
                   apr_array_header_t *predate_rangelist =
                     init_rangelist(revision1,
@@ -4667,8 +4730,8 @@ do_file_merge(const char *url1,
               SVN_ERR(merge_file_deleted(adm_access,
                                          &text_state,
                                          target_wcpath,
-                                         NULL,
-                                         NULL,
+                                         tmpfile1,
+                                         tmpfile2,
                                          mimetype1, mimetype2,
                                          props1,
                                          merge_b));

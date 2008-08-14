@@ -140,7 +140,6 @@ static const apr_getopt_option_t options_table[] =
   {"xml",               svnlook__xml_opt, 0,
    N_("output in XML")},
 
-#ifndef AS400
   {"extensions",    'x', 1,
                     N_("Default: '-u'. When Subversion is invoking an\n"
                        "                            "
@@ -169,7 +168,6 @@ static const apr_getopt_option_t options_table[] =
                        "    --ignore-eol-style:\n"
                        "                            "
                        "       Ignore changes in EOL style")},
-#endif
 
   {0,                   0, 0, 0}
 };
@@ -961,7 +959,10 @@ print_diff_tree(svn_fs_root_t *root,
       svn_stringbuf_appendcstr(header, "\n");
 
       if (binary)
-        svn_stringbuf_appendcstr(header, _("(Binary files differ)\n\n"));
+        {
+          svn_stringbuf_appendcstr(header, _("(Binary files differ)\n\n"));
+          SVN_ERR(svn_cmdline_printf(pool, header->data));
+        }          
       else
         {
           svn_diff_t *diff;
@@ -1039,9 +1040,12 @@ print_diff_tree(svn_fs_root_t *root,
       apr_array_header_t *propchanges, *props;
 
       SVN_ERR(svn_fs_node_proplist(&local_proptable, root, path, pool));
-      if (node->action == 'A')
+      if (c->diff_copy_from && node->action == 'A' && is_copy)
+        SVN_ERR(svn_fs_node_proplist(&base_proptable, base_root,
+                                     base_path, pool));
+      else if (node->action == 'A')
         base_proptable = apr_hash_make(pool);
-      else
+      else  /* node->action == 'R' */
         SVN_ERR(svn_fs_node_proplist(&base_proptable, base_root,
                                      base_path, pool));
       SVN_ERR(svn_prop_diffs(&propchanges, local_proptable,

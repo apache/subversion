@@ -65,7 +65,7 @@ and returns an auth_baton.  If you use prompt providers
 you can not use this function, but need to use the
 auth_open_helper.
 
-=item SVN::Core::auth_open_helper([auth provider array);
+=item SVN::Core::auth_open_helper([auth provider array]);
 
 Prompt providers return two values instead of one.  The
 2nd parameter is a reference to whatever was passed into

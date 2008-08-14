@@ -767,6 +767,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###                              (passwords as well as server certs)"
                                                                              NL
         "###                              may be cached to disk."            NL
+        "###   username                   Specifies the default username."   NL
         "###"                                                                NL
         "### Set store-passwords to 'no' to avoid storing passwords in the"  NL
         "### auth/ area of your config directory.  It defaults to 'yes',"    NL
@@ -843,6 +844,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
 #endif
         "# neon-debug-mask = 130"                                            NL
         "# store-plaintext-passwords = no"                                   NL
+        "# username = harry"                                                 NL
         ""                                                                   NL
         "### Information for the second group:"                              NL
         "# [othergroup]"                                                     NL
@@ -970,7 +972,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         ""                                                                   NL
         "### Section for configuring external helper applications."          NL
         "[helpers]"                                                          NL
-        "### Set editor to the command used to invoke your text editor."     NL
+        "### Set editor-cmd to the command used to invoke your text editor." NL
         "###   This will override the environment variables that Subversion" NL
         "###   examines by default to find this information ($EDITOR, "      NL
         "###   et al)."                                                      NL

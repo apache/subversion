@@ -543,6 +543,8 @@ svn_error_t  *
 svn_repos__hooks_pre_lock(svn_repos_t *repos,
                           const char *path,
                           const char *username,
+                          const char *comment,
+                          svn_boolean_t steal_lock,
                           apr_pool_t *pool)
 {
   const char *hook = svn_repos_pre_lock_hook(repos, pool);
@@ -554,13 +556,15 @@ svn_repos__hooks_pre_lock(svn_repos_t *repos,
     }
   else if (hook)
     {
-      const char *args[5];
+      const char *args[7];
 
       args[0] = hook;
       args[1] = svn_path_local_style(svn_repos_path(repos, pool), pool);
       args[2] = path;
       args[3] = username;
-      args[4] = NULL;
+      args[4] = comment ? comment : "";
+      args[5] = steal_lock ? "1" : "0";
+      args[6] = NULL;
 
       SVN_ERR(run_hook_cmd(SVN_REPOS__HOOK_PRE_LOCK, hook, args, NULL, pool));
     }
@@ -612,6 +616,8 @@ svn_error_t  *
 svn_repos__hooks_pre_unlock(svn_repos_t *repos,
                             const char *path,
                             const char *username,
+                            const char *token,
+                            svn_boolean_t break_lock,
                             apr_pool_t *pool)
 {
   const char *hook = svn_repos_pre_unlock_hook(repos, pool);
@@ -623,13 +629,15 @@ svn_repos__hooks_pre_unlock(svn_repos_t *repos,
     }
   else if (hook)
     {
-      const char *args[5];
+      const char *args[7];
 
       args[0] = hook;
       args[1] = svn_path_local_style(svn_repos_path(repos, pool), pool);
       args[2] = path;
       args[3] = username ? username : "";
-      args[4] = NULL;
+      args[4] = token ? token : "";
+      args[5] = break_lock ? "1" : "0";
+      args[6] = NULL;
 
       SVN_ERR(run_hook_cmd(SVN_REPOS__HOOK_PRE_UNLOCK, hook, args, NULL,
                            pool));

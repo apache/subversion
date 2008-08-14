@@ -205,7 +205,7 @@ class SVNTreeNode:
     if self.children is not None:
       print >> stream, "    Children:  ", len(self.children)
     else:
-      print >> stream, "    Children:   N/A (node is a file)"
+      print >> stream, "    Children:  None (node is probably a file)"
 
   def __str__(self):
     import StringIO
@@ -323,23 +323,15 @@ def get_props(path):
   props = {}
   exit_code, output, errput = main.run_svn(1, "proplist", path, "--verbose")
 
-  first_value = 0
   for line in output:
     if line.startswith('Properties on '):
       continue
-    # Not a misprint; "> 0" really is preferable to ">= 0" in this case.
-    if line.find(' : ') > 0:
+    if line.startswith('  ') and line.find(' : ') >= 3:
       name, value = line.split(' : ')
-      name = name.strip()
-      value = value.strip()
+      name = name[2:]
+      value = value.rstrip("\r\n")
       props[name] = value
-      first_value = 1
     else:    # Multi-line property, so re-use the current name.
-      if first_value:
-        # Undo, as best we can, the strip(value) that was done before
-        # we knew this was a multiline property.
-        props[name] = props[name] + "\n"
-        first_value = 0
       # Keep the line endings consistent with what was done to the first
       # line by stripping whitespace and then appending a newline.  This
       # prevents multiline props on Windows that must be stored as UTF8/LF
@@ -357,7 +349,7 @@ def get_props(path):
       # from looking like this in the returned PROPS hash:
       #
       #   "propname" --> "propvalLine1<LF>propvalLine2<CR><LF>propvalLine3<LF>"
-      props[name] = props[name] + line.strip() + "\n"
+      props[name] = props[name] + "\n" + line.rstrip("\r\n")
 
   return props
 

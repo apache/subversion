@@ -1110,7 +1110,7 @@ svn_client_checkout(svn_revnum_t *result_rev,
  * their sticky ambient depth value to @a depth.
  *
  * If @a allow_unver_obstructions is TRUE then the update tolerates
- * existing unversioned items that obstruct added paths from @a URL.  Only
+ * existing unversioned items that obstruct added paths.  Only
  * obstructions of the same type (file or dir) as the added item are
  * tolerated.  The text of obstructing files is left as-is, effectively
  * treating it as a user modification after the update.  Working
@@ -1207,7 +1207,7 @@ svn_client_update(svn_revnum_t *result_rev,
  * as part of this operation.
  *
  * If @a allow_unver_obstructions is TRUE then the switch tolerates
- * existing unversioned items that obstruct added paths from @a URL.  Only
+ * existing unversioned items that obstruct added paths.  Only
  * obstructions of the same type (file or dir) as the added item are
  * tolerated.  The text of obstructing files is left as-is, effectively
  * treating it as a user modification after the switch.  Working
@@ -2498,9 +2498,10 @@ svn_client_diff_summarize_peg(const char *path,
  * and the addition of another, but if this flag is TRUE, unrelated
  * items will be diffed as if they were related.
  *
- * If @a force is not set and the merge involves deleting locally modified or
- * unversioned items the operation will fail.  If @a force is set such items
- * will be deleted.
+ * If @a force is false and the merge involves deleting a file whose
+ * content differs from the source-left version, or a locally modified
+ * directory, or an unversioned item, then the operation will fail.  If
+ * @a force is true then all such items will be deleted.
  *
  * @a merge_options (an array of <tt>const char *</tt>), if non-NULL,
  * is used to pass additional command line arguments to the merge
@@ -3558,8 +3559,8 @@ svn_client_revprop_get(const char *propname,
  * repository.
  *
  * If @a depth is @c svn_depth_empty, list only the properties of
- * @a path_or_url itself.  If @a depth is @c svn_depth_files, and
- * @a path_or_url is a directory, list the properties of @a path_or_url
+ * @a target itself.  If @a depth is @c svn_depth_files, and
+ * @a target is a directory, list the properties of @a target
  * and its file entries.  If @c svn_depth_immediates, list the properties
  * of its immediate file and directory entries.  If @c svn_depth_infinity,
  * list the properties of its file entries and recurse (with
@@ -3695,12 +3696,6 @@ svn_client_revprop_list(apr_hash_t **props,
  * @c svn_depth_empty.  Else if @c svn_depth_files, export @a from and
  * its immediate file children (if any) only.  If @a depth is @c
  * svn_depth_empty, then export exactly @a from and none of its children.
- *
- * If @a recurse is TRUE, export recursively.  Otherwise, export
- * just the directory represented by @a from and its immediate
- * non-directory children, but none of its child directories (if any).
- * Also, if @a recurse is FALSE, the export will behave as if
- * @a ignore_externals is TRUE.
  *
  * All allocations are done in @a pool.
  *
@@ -4048,7 +4043,7 @@ svn_client_remove_from_changelists(const apr_array_header_t *paths,
                                    apr_pool_t *pool);
 
 /**
- * The callback type used by @a svn_client_get_changelist
+ * The callback type used by svn_client_get_changelists().
  *
  * On each invocation, @a path is a newly discovered member of the
  * changelist, and @a baton is a private function closure.
