@@ -3211,13 +3211,23 @@ mark_mergeinfo_as_inheritable_for_a_range(
 }
 
 
-/* Get revision REV of the file that is at the root URL of RA_SESSION.
-   Store the file's text content in a new temporary file in the same
-   directory as the path WC_TARGET. Set *FILENAME to the path to that file.
-   Set *PROPS to a hash containing the file's properties.
-   All allocation occurs in POOL. */
-/* ### TODO: Create the temporary file under .svn/tmp/ instead of next to
-   the working file. */
+/* Get a file's content and properties from the repository.
+   Set *FILENAME to the local path to a new temporary file holding its text,
+   and set *PROPS to a new hash of its properties.
+
+   RA_SESSION is a session whose current root is the URL of the file itself,
+   and REV is the revision to get.
+
+   The new temporary file will be created as a sibling of WC_TARGET.
+   WC_TARGET should be the local path to the working copy of the file, but
+   it does not matter whether anything exists on disk at this path as long
+   as WC_TARGET's parent directory exists.
+
+   All allocation occurs in POOL.
+
+   ### TODO: Create the temporary file under .svn/tmp/ instead of next to
+   the working file.
+*/
 static svn_error_t *
 single_file_merge_get_file(const char **filename,
                            svn_ra_session_t *ra_session,
