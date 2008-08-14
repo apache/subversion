@@ -159,7 +159,7 @@ def run_cmd(cmd):
 # Build csvn/core/functions.py
 ########################################################################
 
-ctypesgen_basename = "wrap.py"
+ctypesgen_basename = "ctypesgen.py"
 ctypesgen = ""
 if os.path.exists(os.path.join("ctypesgen", ctypesgen_basename)):
     ctypesgen = os.path.join(os.getcwd(), "ctypesgen", ctypesgen_basename)
@@ -197,13 +197,13 @@ if os.name == "posix":
         if status != 0:
             sys.exit(status)
     elif os.WIFSIGNALED(status):
-        print >>sys.stderr, "wrap.py killed with signal %d" % os.WTERMSIG(status)
+        print >>sys.stderr, "ctypesgen.py killed with signal %d" % os.WTERMSIG(status)
         sys.exit(2)
     elif os.WIFSTOPPED(status):
-        print >>sys.stderr, "wrap.py stopped with signal %d" % os.WSTOPSIG(status)
+        print >>sys.stderr, "ctypesgen.py stopped with signal %d" % os.WSTOPSIG(status)
         sys.exit(2)
     else:
-        print >>sys.stderr, "wrap.py exited with invalid status %d" % status
+        print >>sys.stderr, "ctypesgen.py exited with invalid status %d" % status
         sys.exit(2)
 
 func_re = re.compile(r"CFUNCTYPE\(POINTER\((\w+)\)")
