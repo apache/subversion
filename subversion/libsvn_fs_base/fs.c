@@ -686,10 +686,12 @@ svn_fs_base__test_required_feature_format(svn_fs_t *fs,
 static svn_error_t *
 check_format(int format)
 {
-  /* We support format 1, 2 and 3 simultaneously.  */
+  /* We support format 1, 2, 3 and 4 simultaneously.  */
   if (format == 1 && SVN_FS_BASE__FORMAT_NUMBER == 2)
     return SVN_NO_ERROR;
   if ((format == 1 || format == 2) && SVN_FS_BASE__FORMAT_NUMBER == 3)
+    return SVN_NO_ERROR;
+  if ((format >= 1 && format <= 3) && SVN_FS_BASE__FORMAT_NUMBER == 4)
     return SVN_NO_ERROR;
 
   if (format != SVN_FS_BASE__FORMAT_NUMBER)

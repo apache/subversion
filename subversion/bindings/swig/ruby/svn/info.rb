@@ -202,7 +202,7 @@ module Svn
         stripped_path = path.sub(/\A\//, '')
         base_label = "#{stripped_base_path}\t#{base_date} (rev #{base_rev})"
         label = "#{stripped_path}\t#{date} (rev #{rev})"
-        entry.body = differ.unified(base_label, label)
+        entry.body = differ.unified(base_label, label, "UTF-8")
         parse_diff_unified(entry)
       end
     end

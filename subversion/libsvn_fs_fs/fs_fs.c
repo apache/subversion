@@ -1324,8 +1324,12 @@ svn_fs_fs__hotcopy(const char *src_path,
           dst_subdir_shard = svn_path_join(dst_subdir, shard, iterpool);
 
           if (rev % max_files_per_dir == 0)
-            SVN_ERR(svn_io_dir_make(dst_subdir_shard, APR_OS_DEFAULT,
-                                    iterpool));
+            {
+              SVN_ERR(svn_io_dir_make(dst_subdir_shard, APR_OS_DEFAULT,
+                                      iterpool));
+              SVN_ERR(svn_fs_fs__dup_perms(dst_subdir_shard, dst_subdir,
+                                           iterpool));
+            }
         }
 
       SVN_ERR(svn_io_dir_file_copy(src_subdir_shard, dst_subdir_shard,
@@ -1355,8 +1359,12 @@ svn_fs_fs__hotcopy(const char *src_path,
           dst_subdir_shard = svn_path_join(dst_subdir, shard, iterpool);
 
           if (rev % max_files_per_dir == 0)
-            SVN_ERR(svn_io_dir_make(dst_subdir_shard, APR_OS_DEFAULT,
-                                    iterpool));
+            {
+              SVN_ERR(svn_io_dir_make(dst_subdir_shard, APR_OS_DEFAULT,
+                                      iterpool));
+              SVN_ERR(svn_fs_fs__dup_perms(dst_subdir_shard, dst_subdir,
+                                           iterpool));
+            }
         }
 
       SVN_ERR(svn_io_dir_file_copy(src_subdir_shard, dst_subdir_shard,
@@ -2794,13 +2802,13 @@ rep_read_contents(void *baton,
 
 
 /* Returns whether or not the expanded fulltext of the file is
- * cacheable based on its size SIZE.  Specifically, if it will fit
+ * cachable based on its size SIZE.  Specifically, if it will fit
  * into a memcached value.  The memcached cutoff seems to be a bit
  * (header length?) under a megabyte; we round down a little to be
  * safe.
  */
 static svn_boolean_t
-fulltext_size_is_cacheable(svn_filesize_t size)
+fulltext_size_is_cachable(svn_filesize_t size)
 {
   return size < 1000000;
 }
@@ -2831,7 +2839,7 @@ read_representation(svn_stream_t **contents_p,
       struct rep_read_baton *rb;
 
       if (ffd->fulltext_cache && SVN_IS_VALID_REVNUM(rep->revision)
-          && fulltext_size_is_cacheable(rep->expanded_size))
+          && fulltext_size_is_cachable(rep->expanded_size))
         {
           svn_string_t *fulltext;
           svn_boolean_t is_cached;
@@ -5371,18 +5379,27 @@ commit_body(void *baton, apr_pool_t *pool)
   if (ffd->max_files_per_dir && new_rev % ffd->max_files_per_dir == 0)
     {
       svn_error_t *err;
-      err = svn_io_dir_make(path_rev_shard(cb->fs, new_rev, pool),
-                            APR_OS_DEFAULT, pool);
-      if (err && APR_STATUS_IS_EEXIST(err->apr_err))
-        svn_error_clear(err);
-      else
+      const char *new_dir = path_rev_shard(cb->fs, new_rev, pool);
+      err = svn_io_dir_make(new_dir, APR_OS_DEFAULT, pool);
+      if (err && !APR_STATUS_IS_EEXIST(err->apr_err))
         SVN_ERR(err);
-      err = svn_io_dir_make(path_revprops_shard(cb->fs, new_rev, pool),
-                            APR_OS_DEFAULT, pool);
-      if (err && APR_STATUS_IS_EEXIST(err->apr_err))
-        svn_error_clear(err);
-      else
+      svn_error_clear(err);
+      SVN_ERR(svn_fs_fs__dup_perms(new_dir,
+                                   svn_path_join(cb->fs->path,
+                                                 PATH_REVS_DIR,
+                                                 pool),
+                                   pool));
+
+      new_dir = path_revprops_shard(cb->fs, new_rev, pool);
+      err = svn_io_dir_make(new_dir, APR_OS_DEFAULT, pool);
+      if (err && !APR_STATUS_IS_EEXIST(err->apr_err))
         SVN_ERR(err);
+      svn_error_clear(err);
+      SVN_ERR(svn_fs_fs__dup_perms(new_dir,
+                                   svn_path_join(cb->fs->path,
+                                                 PATH_REVPROPS_DIR,
+                                                 pool),
+                                   pool));
     }
 
   /* Move the finished rev file into place. */

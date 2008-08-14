@@ -3857,6 +3857,86 @@ def update_uuid_changed(sbox):
     raise svntest.Failure
 
 
+#----------------------------------------------------------------------
+
+# Issue #1672: if an update deleting a dir prop is interrupted (by a
+# local obstruction, for example) then restarting the update will not
+# delete the prop, causing the wc to become out of sync with the
+# repository.
+def restarted_update_should_delete_dir_prop(sbox):
+  "restarted update should delete dir prop"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  
+  A_path = os.path.join(wc_dir, 'A')
+  zeta_path = os.path.join(A_path, 'zeta')
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+
+  # Commit a propset on A.
+  svntest.main.run_svn(None, 'propset', 'prop', 'val', A_path)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A': Item(verb='Sending'),
+    })
+  expected_status.tweak('A', wc_rev=2)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  # Create a second working copy.
+  other_wc = sbox.add_wc_path('other')
+  svntest.actions.duplicate_dir(wc_dir, other_wc)
+
+  other_A_path = os.path.join(other_wc, 'A')
+  other_zeta_path = os.path.join(other_wc, 'A', 'zeta')
+
+  # In the second working copy, delete A's prop and add a new file.
+  svntest.main.run_svn(None, 'propdel', 'prop', other_A_path)
+  svntest.main.file_write(other_zeta_path, 'New file\n')
+  svntest.main.run_svn(None, 'add', other_zeta_path)
+  expected_output = svntest.wc.State(other_wc, {
+    'A': Item(verb='Sending'),
+    'A/zeta' : Item(verb='Adding'),
+    })
+  expected_status = svntest.actions.get_virginal_state(other_wc, 1)
+  expected_status.tweak('A', wc_rev=3)
+  expected_status.add({
+    'A/zeta' : Item(status='  ', wc_rev=3),
+    })
+  svntest.actions.run_and_verify_commit(other_wc, expected_output,
+                                        expected_status, None, other_wc)
+
+  # Back in the first working copy, create an obstructing path and
+  # update. The update will be interrupted, resulting in an incomplete
+  # dir which still has the property.
+  svntest.main.file_write(zeta_path, 'Obstructing file\n')
+  error_re = 'Failed to add file.*object of the same name already exists'
+  svntest.actions.run_and_verify_update(wc_dir, None, None, None,
+                                        error_re)
+
+  # Now, delete the obstructing path and rerun the update.
+  # A's property should disappear.
+  os.unlink(zeta_path)
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A'      : Item(status=' U'),
+    'A/zeta' : Item(status='A '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A', props = {})
+  expected_disk.add({
+    'A/zeta' : Item("New file\n"),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.add({
+    'A/zeta' : Item(status='  ', wc_rev=3),
+    })
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        check_props = True)
+
 #######################################################################
 # Run the tests
 
@@ -3910,6 +3990,7 @@ test_list = [ None,
               update_accept_conflicts,
               eof_in_interactive_conflict_resolver,
               update_uuid_changed,
+              XFail(restarted_update_should_delete_dir_prop),
              ]
 
 if __name__ == '__main__':
