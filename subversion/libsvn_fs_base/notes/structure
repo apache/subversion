@@ -473,7 +473,7 @@ where:
 
 Committed transaction, however, have values that are skels of the form:
 
-   ("committed" ROOT-ID REV PROPLIST COPIES)
+   ("committed" ROOT-ID REV PROPLIST COPIES MERGES)
 
 where:
 
@@ -490,6 +490,10 @@ where:
      referencing all the filesystem copies created by this committed
      transaction.  Nothing currently uses this information for
      committed transactions, but it could be useful in the future.
+
+   * MERGES contains a deep-serialized 'svn_mergeinfo_catalog_t' with mergeinfo
+     added in this commit'.
+
 
 As the sole exception to the rule above, the `transactions' table
 always has one entry whose key is `next-key', and whose value is the

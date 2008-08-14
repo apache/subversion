@@ -21,6 +21,7 @@
 #include "svn_types.h"
 #include "svn_time.h"
 #include "fs_skels.h"
+#include "svn_hash.h"
 #include "skel.h"
 #include "../id.h"
 
@@ -91,7 +92,7 @@ is_valid_transaction_skel(skel_t *skel, transaction_kind_t *kind)
 {
   int len = svn_fs_base__list_length(skel);
 
-  if (len != 5)
+  if (len != 6)
     return FALSE;
 
   /* Determine (and verify) the kind. */
@@ -107,7 +108,8 @@ is_valid_transaction_skel(skel_t *skel, transaction_kind_t *kind)
   if (skel->children->next->is_atom
       && skel->children->next->next->is_atom
       && (! skel->children->next->next->next->is_atom)
-      && (! skel->children->next->next->next->next->is_atom))
+      && (! skel->children->next->next->next->next->is_atom)
+      && (! skel->children->next->next->next->next->next->is_atom))
     return TRUE;
 
   return FALSE;
@@ -423,7 +425,7 @@ svn_fs_base__parse_transaction_skel(transaction_t **transaction_p,
 {
   transaction_t *transaction;
   transaction_kind_t kind;
-  skel_t *root_id, *base_id_or_rev, *proplist, *copies;
+  skel_t *root_id, *base_id_or_rev, *proplist, *copies, *merges;
   int len;
 
   /* Validate the skel. */
@@ -434,6 +436,7 @@ svn_fs_base__parse_transaction_skel(transaction_t **transaction_p,
   base_id_or_rev = skel->children->next->next;
   proplist = skel->children->next->next->next;
   copies = skel->children->next->next->next->next;
+  merges = copies->next;
 
   /* Create the returned structure */
   transaction = apr_pcalloc(pool, sizeof(*transaction));
@@ -483,6 +486,44 @@ svn_fs_base__parse_transaction_skel(transaction_t **transaction_p,
           cpy = cpy->next;
         }
       transaction->copies = txncopies;
+    }
+
+  /* MERGES */
+  transaction->merges = apr_hash_make(pool);
+  if (svn_fs_base__list_length(merges))
+    {
+      svn_stream_t *stream;
+      apr_hash_t *merge_catalog_with_mergeinfo_as_strings;
+      svn_string_t deep_serialized_merge_catalog;
+      apr_hash_index_t *hi;
+      /* Only one item the merges skel is the deep serialized merge catalog. */
+      skel_t *merge_catalog_skel = merges->children;
+      /* No point in duplicating merge_catalog_skel->data */
+      deep_serialized_merge_catalog.data = merge_catalog_skel->data;
+      deep_serialized_merge_catalog.len = merge_catalog_skel->len;
+      stream = svn_stream_from_string(&deep_serialized_merge_catalog, pool);
+      merge_catalog_with_mergeinfo_as_strings = apr_hash_make(pool);
+      if (deep_serialized_merge_catalog.len)
+        {
+          SVN_ERR(svn_hash_read2(merge_catalog_with_mergeinfo_as_strings,
+                                 stream, NULL, pool));
+        }
+      for (hi = apr_hash_first(NULL, merge_catalog_with_mergeinfo_as_strings);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+          const void *merge_target;
+          void *value;
+          svn_string_t *mergeinfo_added_in_str;
+          svn_mergeinfo_t mergeinfo_added;
+          apr_hash_this(hi, &merge_target, NULL, &value);
+          mergeinfo_added_in_str = value;
+          SVN_ERR(svn_mergeinfo_parse(&mergeinfo_added,
+                                      mergeinfo_added_in_str->data, pool));
+          apr_hash_set(transaction->merges, merge_target,
+                       APR_HASH_KEY_STRING, mergeinfo_added);
+
+        }
     }
 
   /* Return the structure. */
@@ -953,7 +994,7 @@ svn_fs_base__unparse_transaction_skel(skel_t **skel_p,
                                       apr_pool_t *pool)
 {
   skel_t *skel;
-  skel_t *proplist_skel, *copies_skel, *header_skel;
+  skel_t *proplist_skel, *copies_skel, *header_skel, *mergeinfo_added_skel;
   svn_string_t *id_str;
   transaction_kind_t kind;
 
@@ -984,6 +1025,41 @@ svn_fs_base__unparse_transaction_skel(skel_t **skel_p,
       return skel_err("transaction");
     }
 
+  mergeinfo_added_skel = svn_fs_base__make_empty_list(pool);
+  /* MERGES */
+  if (transaction->merges)
+    {
+      svn_stream_t *stream;
+      apr_hash_t *merge_catalog_with_mergeinfo_as_strings;
+      svn_stringbuf_t *serialized_buf = svn_stringbuf_create("", pool);
+      stream = svn_stream_from_stringbuf(serialized_buf, pool);
+      merge_catalog_with_mergeinfo_as_strings = apr_hash_make(pool);
+      apr_hash_index_t *hi;
+      for (hi = apr_hash_first(NULL, transaction->merges);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+          const void *merge_target;
+          void *value;
+          svn_string_t *mergeinfo_added_in_str;
+          svn_mergeinfo_t mergeinfo_added;
+          apr_hash_this(hi, &merge_target, NULL, &value);
+          mergeinfo_added = value;
+          SVN_ERR(svn_mergeinfo_to_string(&mergeinfo_added_in_str,
+                                          mergeinfo_added, pool));
+          apr_hash_set(merge_catalog_with_mergeinfo_as_strings, merge_target,
+                       APR_HASH_KEY_STRING, mergeinfo_added_in_str);
+
+        }
+      SVN_ERR(svn_hash_write2(merge_catalog_with_mergeinfo_as_strings,
+                              stream, NULL, pool));
+      if (serialized_buf->len)
+        svn_fs_base__prepend(svn_fs_base__mem_atom(serialized_buf->data,
+                                                   serialized_buf->len, pool),
+                             mergeinfo_added_skel);
+    }
+
+  svn_fs_base__prepend(mergeinfo_added_skel, skel);
 
   /* COPIES */
   copies_skel = svn_fs_base__make_empty_list(pool);

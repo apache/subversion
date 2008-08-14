@@ -142,6 +142,10 @@ typedef struct
      no copies in this transaction.  */
   apr_array_header_t *copies;
 
+  /* mergeinfo_catalog of merge_targets having mergeinfo addition
+     or NULL if there have been no merges in this transaction.  */
+  svn_mergeinfo_catalog_t merges;
+
 } transaction_t;
 
 

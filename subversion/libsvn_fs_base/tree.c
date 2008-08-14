@@ -1258,6 +1258,23 @@ struct change_node_prop_args {
   const svn_string_t *value;
 };
 
+static svn_error_t *
+change_txn_mergeinfo(const char *txn_id,
+                     const char *path,
+                     svn_fs_root_t *root,
+                     svn_mergeinfo_t mergeinfo_added,
+                     trail_t *trail)
+{
+  /* At least for single file merges, nodes which are direct
+     children of the root are received without a leading slash
+     (e.g. "/file.txt" is received as "file.txt"), so must be made
+     absolute. */
+  const char *canon_path = svn_fs__canonicalize_abspath(path, trail->pool);
+  SVN_ERR(svn_fs_base__set_txn_mergeinfo(root->fs, txn_id, canon_path,
+                                         mergeinfo_added, trail, trail->pool));
+
+  return SVN_NO_ERROR;
+}
 
 static svn_error_t *
 txn_body_change_node_prop(void *baton,
@@ -1268,6 +1285,7 @@ txn_body_change_node_prop(void *baton,
   apr_hash_t *proplist;
   const char *txn_id = args->root->txn;
   base_fs_data_t *bfd = trail->fs->fsap_data;
+  svn_mergeinfo_t mergeinfo_added = NULL;
 
   SVN_ERR(open_path(&parent_path, args->root, args->path, 0, txn_id,
                     trail, trail->pool));
@@ -1289,7 +1307,32 @@ txn_body_change_node_prop(void *baton,
 
   /* Now, if there's no proplist, we know we need to make one. */
   if (! proplist)
-    proplist = apr_hash_make(trail->pool);
+    {
+      proplist = apr_hash_make(trail->pool);
+      SVN_ERR(svn_mergeinfo_parse(&mergeinfo_added,
+                                  args->value->data, trail->pool));
+    }
+  else
+    {
+      svn_mergeinfo_t deleted, orig_mergeinfo, new_mergeinfo;
+      if (args->value)
+        {
+          svn_string_t *orig_mergeinfo_str = apr_hash_get(proplist,
+                                                          SVN_PROP_MERGEINFO,
+                                                          APR_HASH_KEY_STRING);
+          SVN_ERR(svn_mergeinfo_parse(&orig_mergeinfo,
+                                      orig_mergeinfo_str->data, trail->pool));
+          SVN_ERR(svn_mergeinfo_parse(&new_mergeinfo,
+                                      args->value->data, trail->pool));
+          SVN_ERR(svn_mergeinfo_diff(&deleted, &mergeinfo_added,
+                                     orig_mergeinfo, new_mergeinfo,
+                                     TRUE, trail->pool));
+        }
+    }
+
+  if ((strcmp(args->name, SVN_PROP_MERGEINFO) == 0) && mergeinfo_added)
+    SVN_ERR(change_txn_mergeinfo(txn_id, args->path, args->root,
+                                 mergeinfo_added, trail));
 
   /* Set the property. */
   apr_hash_set(proplist, args->name, APR_HASH_KEY_STRING, args->value);

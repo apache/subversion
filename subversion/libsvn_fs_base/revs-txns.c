@@ -270,6 +270,33 @@ struct change_rev_prop_args {
 };
 
 
+svn_error_t *
+svn_fs_base__set_txn_mergeinfo(svn_fs_t *fs,
+                               const char *txn_name,
+                               const char *path,
+                               svn_mergeinfo_t mergeinfo_added,
+                               trail_t *trail,
+                               apr_pool_t *pool)
+{
+  transaction_t *txn;
+  svn_string_t *txn_root_id;
+  svn_string_t *txn_base_id;
+
+  SVN_ERR(get_txn(&txn, fs, txn_name, FALSE, trail, pool));
+  if (txn->kind != transaction_kind_normal)
+    return svn_fs_base__err_txn_not_mutable(fs, txn_name);
+
+  txn_root_id = svn_fs_base__id_unparse(txn->root_id, pool);
+  txn_base_id = svn_fs_base__id_unparse(txn->base_id, pool);
+  if (txn->merges)
+    {
+      apr_hash_set(txn->merges, path, APR_HASH_KEY_STRING, mergeinfo_added);
+      /* Now overwrite the transaction. */
+      return put_txn(fs, txn, txn_name, trail, pool);
+    }
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 txn_body_change_rev_prop(void *baton, trail_t *trail)
 {

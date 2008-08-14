@@ -143,6 +143,19 @@ svn_error_t *svn_fs_base__set_txn_base(svn_fs_t *fs,
                                        trail_t *trail,
                                        apr_pool_t *pool);
 
+/* Add PATH -> MERGEINFO_ADDED for the existing 'merges'(deep
+   serialized hash) skel for this TXN_NAME.
+   Use POOL for any necessary allocations.
+
+   Return SVN_ERR_FS_TRANSACTION_NOT_MUTABLE if TXN_NAME refers to a
+   transaction that has already been committed.  */
+svn_error_t *
+svn_fs_base__set_txn_mergeinfo(svn_fs_t *fs,
+                               const char *txn_name,
+                               const char *path,
+                               svn_mergeinfo_t mergeinfo_added,
+                               trail_t *trail,
+                               apr_pool_t *pool);
 
 /* Set a property NAME to VALUE on transaction TXN_NAME in FS as part
    of TRAIL.  Use POOL for any necessary allocations.

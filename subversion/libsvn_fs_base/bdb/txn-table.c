@@ -155,6 +155,7 @@ svn_fs_bdb__create_txn(const char **txn_name_p,
   txn.base_id = root_id;
   txn.proplist = NULL;
   txn.copies = NULL;
+  txn.merges = NULL;
   txn.revision = SVN_INVALID_REVNUM;
   SVN_ERR(svn_fs_bdb__put_txn(fs, &txn, txn_name, trail, pool));
 
