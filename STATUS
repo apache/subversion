@@ -90,6 +90,8 @@ Candidate changes for 1.5.2:
    Justification:
      If this happens, 'svn cleanup' won't help. There is no way to make
      the working copy usable again except manually editing the log.
+   Branch:
+     ^/branches/1.5.x-r32470
    Votes:
      +1: stsp (r32467)
      +1: danielsh
