@@ -483,7 +483,7 @@ svn_wc__working_props_committed(const char *path,
   /* The path is ensured not an excluded path. */
   /* TODO(#2843) It seems that there is no need to 
      reveal hidden entry here? */
-  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, TRUE, pool));
+  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
 
   SVN_ERR(svn_wc__prop_path(&working, path, entry->kind,
                             svn_wc__props_working, FALSE, pool));
@@ -862,7 +862,7 @@ svn_wc__loggy_revert_props_create(svn_stringbuf_t **log_accum,
 
   /* TODO(#2843) The current caller ensures that PATH will not be an excluded
      item. But do we really need show_hidden = TRUE here? */
-  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, TRUE, pool));
+  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
 
   SVN_ERR(svn_wc__prop_path(&dst_rprop, path,
                             entry->kind, svn_wc__props_revert, FALSE, pool));
@@ -974,7 +974,7 @@ svn_wc__loggy_revert_props_restore(svn_stringbuf_t **log_accum,
 
   /* TODO(#2843) The current caller ensures that PATH will not be an excluded
      item. But do we really need show_hidden = TRUE here? */
-  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, TRUE, pool));
+  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
 
   SVN_ERR(svn_wc__prop_path(&base_file, path, entry->kind, svn_wc__props_base,
                             FALSE, pool));
