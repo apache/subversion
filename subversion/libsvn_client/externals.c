@@ -2,7 +2,7 @@
  * externals.c:  handle the svn:externals property
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -59,9 +59,14 @@ struct handle_external_item_change_baton
   svn_boolean_t *timestamp_sleep;
   svn_boolean_t is_export;
 
+  /* A long lived pool.  Put anything in here that needs to outlive
+     the hash diffing callback, such as updates to the hash
+     entries. */
+  apr_pool_t *pool;
+
   /* A scratchwork pool -- do not put anything in here that needs to
      outlive the hash diffing callback! */
-  apr_pool_t *pool;
+  apr_pool_t *iter_pool;
 };
 
 
@@ -363,6 +368,12 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
                              _("Illegal parent directory URL '%s'"),
                              parent_dir_url);
 
+  /* If the parent directory URL is at the server root, then the URL
+     may have no / after the hostname so apr_uri_parse() will leave
+     the URL's path as NULL. */
+  if (! parent_dir_parsed_uri.path)
+    parent_dir_parsed_uri.path = apr_pstrmemdup(pool, "/", 1);
+
   /* Handle URLs relative to the current directory or to the
      repository root.  The backpaths may only remove path elements,
      not the hostname.  This allows an external to refer to another
@@ -392,6 +403,12 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
             return svn_error_createf(SVN_ERR_BAD_URL, 0,
                                      _("Illegal repository root URL '%s'"),
                                      repos_root_url);
+
+          /* If the repository root URL is at the server root, then
+             the URL may have no / after the hostname so
+             apr_uri_parse() will leave the URL's path as NULL. */
+          if (! repos_root_parsed_uri.path)
+            repos_root_parsed_uri.path = apr_pstrmemdup(pool, "/", 1);
 
           base_components = svn_path_decompose(repos_root_parsed_uri.path,
                                                pool);
@@ -480,17 +497,21 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
   svn_wc_external_item2_t *old_item, *new_item;
   const char *parent;
   const char *path = svn_path_join(ib->parent_dir,
-                                   (const char *) key, ib->pool);
+                                   (const char *) key, ib->iter_pool);
 
   /* Don't bother to check status, since we'll get that for free by
      attempting to retrieve the hash values anyway.  */
 
+  /* When creating the absolute URL, use the pool and not the
+     iterpool, since the hash table values outlive the iterpool and
+     any pointers they have should also outlive the iterpool.  */
   if ((ib->old_desc) && (! ib->is_export))
     {
       old_item = apr_hash_get(ib->old_desc, key, klen);
       if (old_item)
         SVN_ERR(resolve_relative_external_url(old_item, ib->repos_root_url,
-                                              ib->parent_dir_url, ib->pool));
+                                              ib->parent_dir_url,
+                                              ib->pool));
     }
   else
     old_item = NULL;
@@ -500,17 +521,14 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
       new_item = apr_hash_get(ib->new_desc, key, klen);
       if (new_item)
         SVN_ERR(resolve_relative_external_url(new_item, ib->repos_root_url,
-                                              ib->parent_dir_url, ib->pool));
+                                              ib->parent_dir_url,
+                                              ib->pool));
     }
   else
     new_item = NULL;
 
   /* We couldn't possibly be here if both values were null, right? */
-  if (! old_item && ! new_item)
-    return svn_error_createf
-      (SVN_ERR_INCORRECT_PARAMS, NULL,
-       _("handle_external_item_change() must be passed at least one non-NULL "
-         "old or new external item"));
+  SVN_ERR_ASSERT(old_item || new_item);
 
   /* There's one potential ugliness.  If a target subdir changed, but
      its URL did not, then ideally we'd just rename the subdir, rather
@@ -538,8 +556,8 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
     {
       /* The target dir might have multiple components.  Guarantee
          the path leading down to the last component. */
-      svn_path_split(path, &parent, NULL, ib->pool);
-      SVN_ERR(svn_io_make_dir_recursively(parent, ib->pool));
+      svn_path_split(path, &parent, NULL, ib->iter_pool);
+      SVN_ERR(svn_io_make_dir_recursively(parent, ib->iter_pool));
 
       /* If we were handling renames the fancy way, then before
          checking out a new subdir here, we would somehow learn if
@@ -553,7 +571,7 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
         (*ib->ctx->notify_func2)
           (ib->ctx->notify_baton2,
            svn_wc_create_notify(path, svn_wc_notify_update_external,
-                                ib->pool), ib->pool);
+                                ib->iter_pool), ib->iter_pool);
 
       if (ib->is_export)
         /* ### It should be okay to "force" this export.  Externals
@@ -566,13 +584,13 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
                                    &(new_item->peg_revision),
                                    &(new_item->revision),
                                    TRUE, FALSE, svn_depth_infinity, NULL,
-                                   ib->ctx, ib->pool));
+                                   ib->ctx, ib->iter_pool));
       else
         SVN_ERR(svn_client__checkout_internal
                 (NULL, new_item->url, path,
                  &(new_item->peg_revision), &(new_item->revision),
                  SVN_DEPTH_INFINITY_OR_FILES(TRUE),
-                 FALSE, FALSE, ib->timestamp_sleep, ib->ctx, ib->pool));
+                 FALSE, FALSE, ib->timestamp_sleep, ib->ctx, ib->iter_pool));
     }
   else if (! new_item)
     {
@@ -585,7 +603,7 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
 
       SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, path, TRUE, -1,
                                ib->ctx->cancel_func, ib->ctx->cancel_baton,
-                               ib->pool));
+                               ib->iter_pool));
 
       /* We don't use relegate_external() here, because we know that
          nothing else in this externals description (at least) is
@@ -593,7 +611,7 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
          leave stuff where the user expects it. */
       err = svn_wc_remove_from_revision_control
         (adm_access, SVN_WC_ENTRY_THIS_DIR, TRUE, FALSE,
-         ib->ctx->cancel_func, ib->ctx->cancel_baton, ib->pool);
+         ib->ctx->cancel_func, ib->ctx->cancel_baton, ib->iter_pool);
 
       /* ### Ugly. Unlock only if not going to return an error. Revisit */
       if (!err || err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD)
@@ -622,12 +640,12 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
          URL/revision. */
       SVN_ERR(switch_external(path, new_item->url, &(new_item->revision),
                               &(new_item->peg_revision),
-                              ib->timestamp_sleep, ib->ctx, ib->pool));
+                              ib->timestamp_sleep, ib->ctx, ib->iter_pool));
     }
 
-  /* Clear IB->pool -- we only use it for scratchwork (and this will
+  /* Clear ib->iter_pool -- we only use it for scratchwork (and this will
      close any RA sessions still open in this pool). */
-  svn_pool_clear(ib->pool);
+  svn_pool_clear(ib->iter_pool);
 
   return SVN_NO_ERROR;
 }
@@ -751,7 +769,8 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
   ib.update_unchanged  = cb->update_unchanged;
   ib.is_export         = cb->is_export;
   ib.timestamp_sleep   = cb->timestamp_sleep;
-  ib.pool              = svn_pool_create(cb->pool);
+  ib.pool              = cb->pool;
+  ib.iter_pool         = svn_pool_create(cb->pool);
 
   /* Get the URL of the parent directory by appending a portion of
      parent_dir to from_url.  from_url is the URL for to_path and
@@ -795,7 +814,7 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
 
   /* Now destroy the subpool we pass to the hash differ.  This will
      close any remaining RA sessions used by the hash diff callback. */
-  svn_pool_destroy(ib.pool);
+  svn_pool_destroy(ib.iter_pool);
 
   return SVN_NO_ERROR;
 }

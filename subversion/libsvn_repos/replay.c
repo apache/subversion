@@ -288,7 +288,7 @@ add_subdir(svn_fs_root_t *source_root,
                                      pool));
         }
       else
-        abort();
+        SVN_ERR_MALFUNCTION();
     }
 
   svn_pool_destroy(subpool);

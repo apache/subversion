@@ -115,8 +115,7 @@ make_dir_baton(struct dir_baton **d_p,
 {
   struct dir_baton *d;
 
-  if (pb && (! path))
-    abort();
+  SVN_ERR_ASSERT(path || (! pb));
 
   if (pb && pb->ambiently_excluded)
     {
@@ -183,8 +182,7 @@ make_file_baton(struct file_baton **f_p,
 {
   struct file_baton *f = apr_pcalloc(pool, sizeof(*f));
 
-  if (! path)
-    abort();
+  SVN_ERR_ASSERT(path);
 
   if (pb->ambiently_excluded)
     {

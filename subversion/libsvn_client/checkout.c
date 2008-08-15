@@ -60,14 +60,8 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
   const char *session_url;
 
   /* Sanity check.  Without these, the checkout is meaningless. */
-  if (! path)
-    return svn_error_createf
-      (SVN_ERR_INCORRECT_PARAMS, NULL,
-       _("svn_client__checkout_internal() must be passed a non-NULL path"));
-  if (! url)
-    return svn_error_createf
-      (SVN_ERR_INCORRECT_PARAMS, NULL,
-       _("svn_client__checkout_internal() must be passed a non-NULL url"));
+  SVN_ERR_ASSERT(path != NULL);
+  SVN_ERR_ASSERT(url != NULL);
 
   /* Fulfill the docstring promise of svn_client_checkout: */
   if ((revision->kind != svn_opt_revision_number)

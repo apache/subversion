@@ -205,6 +205,8 @@ typedef struct svn_cl__opt_state_t
   svn_cl__show_revs_t show_revs; /* mergeinfo flavor */
   svn_depth_t set_depth;         /* new sticky ambient depth value */
   svn_boolean_t reintegrate;     /* use "reintegrate" merge-source heuristic */
+  svn_boolean_t trust_server_cert; /* trust server SSL certs that would
+                                      otherwise be rejected as "untrusted" */
 } svn_cl__opt_state_t;
 
 
@@ -384,16 +386,6 @@ svn_error_t *
 svn_cl__print_prop_hash(apr_hash_t *prop_hash,
                         svn_boolean_t names_only,
                         apr_pool_t *pool);
-
-/* Print a single xml property name-value pair to OUTSTR.  If OUTSTR is NULL,
-   allocate it first from pool, otherwise append the xml to it.  Escape
-   property values which are not xml safe, as determined by
-   svn_xml_is_xml_safe(). */
-void
-svn_cl__print_xml_prop(svn_stringbuf_t **outstr,
-                       const char* propname,
-                       svn_string_t *propval,
-                       apr_pool_t *pool);
 
 /* Same as svn_cl__print_prop_hash(), only output xml to OUTSTR.  If OUTSTR is
    NULL, allocate it first from pool, otherwise append the xml to it. */
@@ -620,6 +612,14 @@ svn_cl__args_to_target_array_print_reserved(apr_array_header_t **targets_p,
                                             apr_array_header_t *known_targets,
                                             svn_client_ctx_t *ctx,
                                             apr_pool_t *pool);
+
+/* Return a string allocated in POOL that is a copy of STR but with each
+ * line prefixed with INDENT. A line is all characters up to the first
+ * CR-LF, LF-CR, CR or LF, or the end of STR if sooner. */
+const char *
+svn_cl__indent_string(const char *str,
+                      const char *indent,
+                      apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

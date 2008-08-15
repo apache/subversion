@@ -1550,10 +1550,8 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
 
               while (strcmp(target, base_dir) != 0)
                 {
-                  if ((target[0] == '\0') ||
-                      svn_dirent_is_root(target, strlen(target))
-                     )
-                    abort();
+                  SVN_ERR_ASSERT((target[0] != '\0') &&
+                                 !svn_dirent_is_root(target, strlen(target)));
 
                   APR_ARRAY_PUSH(dirs_to_lock,
                                  const char *) = apr_pstrdup(pool, target);
@@ -1735,7 +1733,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
       if (bump_err)
         goto cleanup;
 
-      assert(*commit_info_p);
+      SVN_ERR_ASSERT(*commit_info_p);
       bump_err
         = svn_wc_process_committed_queue(queue, base_dir_access,
                                          (*commit_info_p)->revision,

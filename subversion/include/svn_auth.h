@@ -238,6 +238,11 @@ typedef struct svn_auth_cred_ssl_client_cert_t
 } svn_auth_cred_ssl_client_cert_t;
 
 
+/** A function returning an SSL client certificate passphrase provider. */
+typedef void (*svn_auth_ssl_client_cert_pw_provider_func_t)
+  (svn_auth_provider_object_t **provider,
+   apr_pool_t *pool);
+
 /** SSL client certificate passphrase credential type.
  *
  * @note The realmstring used with this credential type must be a name that
@@ -500,6 +505,38 @@ typedef svn_error_t *(*svn_auth_plaintext_prompt_func_t)
    void *baton,
    apr_pool_t *pool);
 
+/** Called only by providers which save passphrase unencrypted.
+ * In this callback, clients should ask the user whether storing
+ * a passphrase for the realm identified by @a realmstring to disk
+ * in plaintext is allowed.
+ *
+ * The answer is returned in @a *may_save_plaintext.
+ * @a baton is an implementation-specific closure.
+ * All allocations should be done in @a pool.
+ *
+ * This callback is called only once per authentication realm,
+ * not once per RA session. This means that clients implementing
+ * this callback must make sure that the pool passed to any
+ * implementation of save_credentials (part of svn_auth_provider_t)
+ * survives across RA sessions.
+ *
+ * If this callback is NULL it is not called.
+ * Client developers are highly encouraged to provide this callback
+ * to ensure their users are made aware of the fact that their passphrase
+ * is going to be stored unencrypted.
+ *
+ * Clients can however set the callback to NULL and set
+ * SVN_AUTH_PARAM_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT to SVN_CONFIG_FALSE or
+ * SVN_CONFIG_TRUE to enforce a certain behaviour. 
+ *
+ * @since New in 1.6
+ */
+typedef svn_error_t *(*svn_auth_plaintext_passphrase_prompt_func_t)
+  (svn_boolean_t *may_save_plaintext,
+   const char *realmstring,
+   void *baton,
+   apr_pool_t *pool);
+
 
 /** Initialize an authentication system.
  *
@@ -571,6 +608,18 @@ const void * svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
  * SVN_CONFIG_FALSE, or SVN_CONFIG_ASK. */
 #define SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS  SVN_AUTH_PARAM_PREFIX \
                                                   "store-plaintext-passwords"
+
+/** @brief The application doesn't want any providers to save passphrase
+ * to disk. Property value is irrelevant; only property's existence
+ * matters. */
+#define SVN_AUTH_PARAM_DONT_STORE_SSL_CLIENT_CERT_PP \
+  SVN_AUTH_PARAM_PREFIX "dont-store-ssl-client-cert-pp"
+
+/** @brief Indicates whether providers may save passphrase to disk in
+ * plaintext. Property value can be either SVN_CONFIG_TRUE,
+ * SVN_CONFIG_FALSE, or SVN_CONFIG_ASK. */
+#define SVN_AUTH_PARAM_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT \
+  SVN_AUTH_PARAM_PREFIX "store-ssl-client-cert-pp-plaintext"
 
 /** @brief The application doesn't want any providers to save credentials
  * to disk. Property value is irrelevant; only property's existence
@@ -832,12 +881,29 @@ void svn_auth_get_ssl_client_cert_file_provider
 
 
 /** Create and return @a *provider, an authentication provider of type @c
- * svn_auth_cred_ssl_client_cert_pw_t, allocated in @a pool.
+ * svn_auth_cred_ssl_client_cert_pw_t that gets/sets information from the user's
+ * ~/.subversion configuration directory.
  *
- * @a *provider retrieves its credentials from the configuration
- * mechanism.  The returned credential is used when a loaded client
- * certificate is protected by a passphrase.
+ * If the provider is going to save the passphrase unencrypted,
+ * it calls @a plaintext_passphrase_prompt_func before saving the
+ * passphrase.
  *
+ * @a prompt_baton is passed to @a plaintext_passphrase_prompt_func.
+ *
+ * Allocate @a *provider in @a pool.
+ *
+ * @since New in 1.6.
+ */
+void svn_auth_get_ssl_client_cert_pw_file_provider2
+  (svn_auth_provider_object_t **provider,
+   svn_auth_plaintext_passphrase_prompt_func_t plaintext_passphrase_prompt_func,
+   void *prompt_baton,
+   apr_pool_t *pool);
+
+/** Like svn_auth_get_simple_provider2, but without the ability to
+ * call the svn_auth_plaintext_passphrase_prompt_func_t callback.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.5 API.
  * @since New in 1.4.
  */
 void svn_auth_get_ssl_client_cert_pw_file_provider

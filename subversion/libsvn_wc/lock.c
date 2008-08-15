@@ -1390,7 +1390,8 @@ do_close(svn_wc_adm_access_t *adm_access,
       apr_hash_set(adm_access->set, adm_access->path, APR_HASH_KEY_STRING,
                    NULL);
 
-      assert(! adm_access->set_owner || apr_hash_count(adm_access->set) == 0);
+      SVN_ERR_ASSERT(! adm_access->set_owner
+                     || apr_hash_count(adm_access->set) == 0);
     }
 
   return SVN_NO_ERROR;

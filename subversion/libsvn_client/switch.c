@@ -115,8 +115,8 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
     : NULL;
 
   /* Sanity check.  Without these, the switch is meaningless. */
-  assert(path);
-  assert(switch_url && (switch_url[0] != '\0'));
+  SVN_ERR_ASSERT(path);
+  SVN_ERR_ASSERT(switch_url && (switch_url[0] != '\0'));
 
   /* ### Need to lock the whole target tree to invalidate wcprops. Does
      non-recursive switch really need to invalidate the whole tree? */

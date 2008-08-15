@@ -18,6 +18,7 @@
 
 <h1>Subversion FAQ</h1>
 
+<p>Translations: <a href="faq.ja.html">&#26085;&#26412;&#35486;</a></p>
 
 <div class="h2"><!-- no 'id' or 'title' attribute for TOC -->
 <h2>Table of Contents</h2>
@@ -431,8 +432,8 @@ standalone program similar to cvs pserver, or Apache <b>httpd-2.0</b>
 using a special <b>mod_dav_svn</b> module.  <b>svnserve</b> speaks a
 custom protocol, while <b>mod_dav_svn</b> uses WebDAV as its network
 protocol.  See <a
-href="http://svnbook.red-bean.com/html-chunk/ch06.html">chapter 6</a>
-in the Subversion book to learn more.</p>
+href="http://svnbook.red-bean.com/nightly/en/svn.serverconfig.html"
+>chapter 6</a> in the Subversion book to learn more.</p>
 
 </div>
 
@@ -451,8 +452,8 @@ use Subversion?</h3>
 
 <p>For more details about setting up a network accessible Subversion
 server, see <a
-href="http://svnbook.red-bean.com/html-chunk/ch06.html">chapter 6</a>
-in the Subversion book.</p>
+href="http://svnbook.red-bean.com/nightly/en/svn.serverconfig.html"
+>chapter 6</a> in the Subversion book.</p>
 
 </div>
 
@@ -783,8 +784,8 @@ scheme is supported by running <tt>svn --version</tt>.</p>
 
 <p>A simple option is to use the <b>svnserve</b> server instead of
 Apache.  See <a
-href="http://svnbook.red-bean.com/html-chunk/ch06.html">chapter 6</a>
-in the Subversion book for details.</p>
+href="http://svnbook.red-bean.com/nightly/en/svn.serverconfig.html"
+>chapter 6</a> in the Subversion book for details.</p>
 
 <p>However, if your admins don't want you to run Apache, it's very
 likely they don't want you to run a custom server process on port 3690
@@ -1056,8 +1057,8 @@ owns the repository.</p>
 <p>If your clients are accessing via <tt>file:///</tt> or
 <tt>svn+ssh://</tt>, then there's no way to avoid access by multiple
 users.  In that case, read <a
-href="http://svnbook.red-bean.com/html-chunk/ch06s05.html">the last
-section in chapter 6</a>, and pay particular attention to the
+href="http://svnbook.red-bean.com/nightly/en/svn.serverconfig.multimethod.html"
+>the last section in chapter 6</a>, and pay particular attention to the
 "checklist" sidebar at the bottom.  It outlines a number of steps to
 make this scenario safer.</p>
 
@@ -1104,8 +1105,8 @@ revision, and the other is often a temporary transaction-tree -- thus
 the need for write access.</p>
 
 <p>This limitation only applies to the Berkeley DB backend; the <a
-href="http://svnbook.red-bean.com/svnbook-1.1/ch05.html#svn-ch-5-sect-1.2.A">FSFS
-backend</a> does not exhibit this behaviour.</p>
+href="http://svnbook.red-bean.com/nightly/en/svn.reposadmin.planning.html#svn.reposadmin.basics.backends.fsfs"
+>FSFS backend</a> does not exhibit this behaviour.</p>
 
 </div>
 
@@ -1132,8 +1133,8 @@ href="http://subversion.tigris.org/issues/show_bug.cgi?id=516">issue
 <p>In the meantime, your only recourse is to <b>svnadmin dump</b> your
 repository, then pipe the dumpfile through <b>svndumpfilter</b>
 (excluding the bad path) into an <b>svnadmin load</b> command.  See <a
-href="http://svnbook.red-bean.com/html-chunk/ch05.html">chapter 5</a>
-of the Subversion book for details about this.</p>
+href="http://svnbook.red-bean.com/nightly/en/svn.reposadmin.html"
+>chapter 5</a> of the Subversion book for details about this.</p>
 
 </div>
 
@@ -1146,7 +1147,7 @@ How do I change the log message for a revision after it's been committed?
 <p>Log messages are kept in the repository as properties attached to each
 revision.  By default, the log message property (<em>svn:log</em>) cannot be
 edited once it is committed.  That is because changes to <a
-href="http://svnbook.red-bean.com/svnbook/ch05.html#svn-ch-5-sect-1.2">revision
+href="http://svnbook.red-bean.com/nightly/en/svn.advanced.props.html">revision
 properties</a> (of which <em>svn:log</em> is one) cause the property's
 previous value to be permanently discarded, and Subversion tries to prevent
 you from doing this accidentally.  However, there are a couple of ways to get
@@ -1155,13 +1156,13 @@ Subversion to change a revision property.</p>
 <p>The first way is for the repository administrator to enable revision
 property modifications.  This is done by creating a hook called
 "pre-revprop-change" (see <a
-href="http://svnbook.red-bean.com/svnbook/ch05s02.html#svn-ch-5-sect-2.1">this
-section</a> in the Subversion book for more details about how to do this).
-The "pre-revprop-change" hook has access to the old log message before it is
-changed, so it can preserve it in some way (for example, by sending an email).
-Once revision property modifications are enabled, you can change a revision's
-log message by passing the --revprop switch to <b>svn propedit</b> or <b>svn
-propset</b>, like either one of these:</p>
+href="http://svnbook.red-bean.com/nightly/en/svn.reposadmin.create.html#svn.reposadmin.create.hooks"
+>this section</a> in the Subversion book for more details about how to do
+this).  The "pre-revprop-change" hook has access to the old log message
+before it is changed, so it can preserve it in some way (for example, by
+sending an email).  Once revision property modifications are enabled, you
+can change a revision's log message by passing the --revprop switch to
+<b>svn propedit</b> or <b>svn propset</b>, like either one of these:</p>
 
 <pre>
 $ svn propedit -r N --revprop svn:log URL
@@ -1310,9 +1311,9 @@ do the following: </p>
 </ol>
 
 <p> See
-<a href="http://svnbook.red-bean.com/html-chunk/ch05s03.html#svn-ch-5-sect-3.4"
->http://svnbook.red-bean.com/html-chunk/ch05s03.html#svn-ch-5-sect-3.4</a>
-for more details on dumping and loading.</p>
+<a href="http://svnbook.red-bean.com/nightly/en/svn.reposadmin.maint.html#svn.reposadmin.maint.migrate"
+>this section of the Subversion book</a> for more details on dumping and
+loading.</p>
 
 <p> <b>Note</b>: Most upgrades of Subversion do <i>not</i> involve a
 dump and load.  When one is required, the release announcement and the
@@ -1757,8 +1758,8 @@ mechanism to automatically set properties on files being committed.
 This means that all of your users need to remember to set certain
 properties whenever they <tt>svn add</tt> a file.  Fortunately,
 there's a client-side tool to help with this.  Read about the <a
-href="http://svnbook.red-bean.com/svnbook-1.1/ch07s02.html#svn-ch-7-sect-2.4">
-auto-props</a> feature in the book.  You need to make sure all your
+href="http://svnbook.red-bean.com/nightly/en/svn.advanced.props.html#svn.advanced.props.auto"
+>auto-props</a> feature in the book.  You need to make sure all your
 users configure their clients' auto-props settings appropriately.</p>
 
 <p>You could write a pre-commit hook script to reject any commit which
@@ -1885,10 +1886,10 @@ every commit?</h3>
 <p>This is done all the time, and is easily accomplished by adding a
 post-commit hook script to your repository.  Read about hook scripts
 in <a
-href="http://svnbook.red-bean.com/en/1.1/ch05s02.html#svn-ch-5-sect-2.1">Chapter
-5</a> of the book.  The basic idea is to make the "live site" just an
-ordinary working copy, and then have your post-commit hook script run
-'svn update' on it.</p>
+href="http://svnbook.red-bean.com/nightly/en/svn.reposadmin.create.html#svn.reposadmin.create.hooks"
+>Chapter 5</a> of the book.  The basic idea is to make the "live site"
+just an ordinary working copy, and then have your post-commit hook
+script run 'svn update' on it.</p>
 
 <p>In practice, there are a couple of things to watch out for.  The
 server program performing the commit (svnserve or apache) is the same
@@ -2079,7 +2080,7 @@ the future, however.</p>
 <p>If Subversion determines that the file is binary, the file receives
 an svn:mime-type property set to "application/octet-stream".  (You can
 always override this by using the <a
-href="http://svnbook.red-bean.com/svnbook-1.1/ch07s02.html#svn-ch-7-sect-2.4"
+href="http://svnbook.red-bean.com/nightly/en/svn.advanced.props.html#svn.advanced.props.auto"
 >auto-props feature</a> or by setting the property manually with
 <tt>svn propset</tt>.)</p>
 
@@ -2477,10 +2478,10 @@ working copy is out of date?</h3>
      (for example, directory property modifications), if the
      repository has a more recent version of the node, the commit will
      be rejected, to prevent data loss.  See <a
-     href="http://svnbook.red-bean.com/svnbook/ch02s03.html#svn-ch-2-sect-3.4">
-     The Limitations of Mixed Revisions</a> in the <a
+     href="http://svnbook.red-bean.com/nightly/en/svn.basic.in-action.html#svn.basic.in-action.mixedrevs.limits"
+     >Mixed revisions have limitations</a> in the <a
      href="http://svnbook.red-bean.com/">Version Control with
-     Subversion</a> for details.</p>
+     Subversion</a> book for details.</p>
 
      <p>You can fix the problem by running 'svn update' in the working
      copy.</p>
@@ -2594,8 +2595,9 @@ a <tt>file:</tt> URL?</h3>
 svn import file:///d:/some/path/to/repos/on/d/drive
 </pre>
 <p>See <a
-href="http://svnbook.red-bean.com/html-chunk/ch02s03.html#svn-ch-2-sidebar-1">
-Repository URLs</a> in the Subversion Book for more details.</p>
+href="http://svnbook.red-bean.com/nightly/en/svn.basic.in-action.html#svn.advanced.reposurls">
+Subversion Repository URLs</a> in the Subversion Book for more
+details.</p>
 
 </div>
 
@@ -2677,79 +2679,8 @@ sorts of information about that Service Pack here:</p>
     trace of the conversation between a Subversion client and
     server?</h3>
 
-<p>Use <a href="http://www.wireshark.org/">Wireshark</a> (formerly
-known as "Ethereal") to eavesdrop on the conversation.</p>
-
-<p>First, make sure that between captures within the same wireshark
-session, you hit <em>Clear</em>, otherwise filters from one capture
-(say, an HTTP capture) might interfere with others (say, an ra_svn
-capture). </p>
-
-<p>Assuming you're cleared, then:</p>
-
-<ol>
-<li><p>Pull down the <i>Capture</i> menu, and choose
-    <i>Capture&nbsp;Filters</i>.</p></li>
-<li><p>If debugging the http:// (WebDAV) protocol, then in the window
-    that pops up, choose "<code>HTTP&nbsp;TCP&nbsp;port&nbsp;(80)</code>"
-    (which should result in the filter string
-    "<code><i>tcp&nbsp;port&nbsp;http</i></code>").</p>
-    <p>If debugging the svn:// (ra_svn) protocol, then choose <i>New</i>,
-    give the new filter a name (say, "ra_svn"), and type
-    "<code>tcp&nbsp;port&nbsp;3690</code>" into the filter string box.</p>
-    <p>When done, click OK.</p></li> 
-<li><p>Again go to the <i>Capture</i> menu, this time choose
-    <i>Interfaces</i>, and click <i>Options</i> next to the
-    appropriate interface (probably you want interface "lo", for
-    "loopback", assuming the server will run on the same machine as
-    the client).</p></li>
-<li><p>Turn off promiscuous mode by unchecking the appropriate
-    checkbox.</p></li>
-<li><p>Click the <i>Start</i> button in the lower right to start the
-    capture.</p></li>
-<li><p>Run your Subversion client.</p></li>
-<li><p>Click the Stop icon (a red X over an ethernet interface card) when
-    the operation is finished (or <i>Capture-&gt;Stop</i> should
-    work).  Now you have a capture.  It looks like a huge list of
-    lines.</p></li>
-<li><p>Click on the <i>Protocol</i> column to sort.</p></li>
-<li><p>Then, click on the first relevant line to select it; usually this
-    is just the first line.</p></li>
-<li><p>Right click, and choose <i>Follow TCP Stream</i>.  You'll be
-    presented with the request/response pairs of the Subversion
-    client's HTTP conversion.</p></li>
-</ol>
-
-<p>The above instructions are specific to the graphical version of
-Wireshark (version 0.99.6), and don't apply to the command-line
-version known as "tshark" (which corresponds to "tethereal", from back
-when Wireshark was called Ethereal).</p>
-
-<p>Alternatively, you may set the <tt>neon-debug-mask</tt> parameter in your
-<tt>servers</tt> configuration file to cause neon's debugging output
-to appear when you run the <tt>svn</tt> client.  The numeric value of
-<tt>neon-debug-mask</tt> is a combination of the <tt>NE_DBG_...</tt> values
-in the header file <tt>ne_utils.h</tt>.  For current versions of neon, setting
-<tt>neon-debug-mask</tt> to 130 (i.e. <tt>NE_DBG_HTTP+NE_DBG_HTTPBODY)</tt>
-will cause the HTTP data to be shown.</p>
-
-<p>You may well want to disable compression when doing a network
-trace&mdash;see the <tt>http-compression</tt> parameter in the <tt>servers</tt>
-configuration file.</p>
-
-<p>Another alternative is to set up a logging proxy between the
- Subversion client and server.  A simple way to do this is to use
- the <tt>socat</tt> program.  For example, to log communication with
- an svnserve instance, run the following command:</p>
-
-<p><tt>socat -v  TCP4-LISTEN:9630,reuseaddr,fork
-    TCP4:localhost:svn</tt></p>
-
-<p>Then run your svn commands using an URL base
-  of <tt>svn://127.0.0.1:9630/</tt>; <tt>socat</tt> will forward the
-  traffic from port 9630 to the normal svnserve port (3690), and will
-  print all traffic in both directions to standard error, prefixing it
-  with &lt; and &gt; signs to show the direction of the traffic.</p>
+<p>Please see <a href="hacking.html#net-trace"
+>hacking.html#net-trace</a>.</p>
 
 </div>
 
@@ -2852,9 +2783,9 @@ $ svn log
 rev 24:&nbsp; (no author) | 2003-07-29 19:28:35 +0200 (Tue, 29 Jul 2003)
 </pre></blockquote>
 
-<p>See the Subversion Book (<a
-href="http://svnbook.red-bean.com/book.html#svn-ch-5-sect-4"
->"Networking a Repository"</a>)
+<p>See <a
+href="http://svnbook.red-bean.com/nightly/en/svn.serverconfig.httpd.html"
+>the Subversion book</a>
 to learn about configuring access restrictions in Apache.</p>
 
 </div>

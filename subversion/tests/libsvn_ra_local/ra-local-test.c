@@ -59,15 +59,7 @@ current_directory_url(const char **url,
   if (! getcwd(curdir, sizeof(curdir)))
     return svn_error_create(SVN_ERR_BASE, NULL, "getcwd() failed");
 
-#ifndef AS400_UTF8
   SVN_ERR(svn_utf_cstring_to_utf8(&utf8_ls_curdir, curdir, pool));
-#else
-  /* Even with the UTF support in V5R4 a few functions on OS400
-     still populate string reference arguments with ebcdic,
-     including _getcwd(). */
-  SVN_ERR (svn_utf_cstring_to_utf8_ex2(&utf8_ls_curdir, curdir,
-                                       (const char *)0, pool));
-#endif
   utf8_is_curdir = svn_path_internal_style(utf8_ls_curdir, pool);
 
   unencoded_url = apr_psprintf(pool, "file://%s%s%s%s",

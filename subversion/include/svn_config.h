@@ -77,6 +77,10 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_STORE_PASSWORDS           "store-passwords"
 #define SVN_CONFIG_OPTION_STORE_PLAINTEXT_PASSWORDS "store-plaintext-passwords"
 #define SVN_CONFIG_OPTION_STORE_AUTH_CREDS          "store-auth-creds"
+#define SVN_CONFIG_OPTION_STORE_SSL_CLIENT_CERT_PP  "store-ssl-client-cert-pp"
+#define SVN_CONFIG_OPTION_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT \
+                                          "store-ssl-client-cert-pp-plaintext"
+#define SVN_CONFIG_OPTION_USERNAME                  "username"
 
 #define SVN_CONFIG_CATEGORY_CONFIG          "config"
 #define SVN_CONFIG_SECTION_AUTH                 "auth"
@@ -146,9 +150,12 @@ typedef struct svn_config_t svn_config_t;
 /* Default values for some options. Should be passed as default values
  * to svn_config_get and friends, instead of hard-coding the defaults in
  * multiple places. */
-#define SVN_CONFIG_DEFAULT_OPTION_STORE_PASSWORDS           TRUE
-#define SVN_CONFIG_DEFAULT_OPTION_STORE_PLAINTEXT_PASSWORDS SVN_CONFIG_ASK
-#define SVN_CONFIG_DEFAULT_OPTION_STORE_AUTH_CREDS          TRUE
+#define SVN_CONFIG_DEFAULT_OPTION_STORE_PASSWORDS            TRUE
+#define SVN_CONFIG_DEFAULT_OPTION_STORE_PLAINTEXT_PASSWORDS  SVN_CONFIG_ASK
+#define SVN_CONFIG_DEFAULT_OPTION_STORE_AUTH_CREDS           TRUE
+#define SVN_CONFIG_DEFAULT_OPTION_STORE_SSL_CLIENT_CERT_PP   TRUE
+#define SVN_CONFIG_DEFAULT_OPTION_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT \
+                                                             SVN_CONFIG_ASK
 
 /** Read configuration information from the standard sources and merge it
  * into the hash @a *cfg_hash.  If @a config_dir is not NULL it specifies a

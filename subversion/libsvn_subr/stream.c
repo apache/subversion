@@ -93,7 +93,7 @@ svn_stream_set_close(svn_stream_t *stream, svn_close_fn_t close_fn)
 svn_error_t *
 svn_stream_read(svn_stream_t *stream, char *buffer, apr_size_t *len)
 {
-  assert(stream->read_fn != NULL);
+  SVN_ERR_ASSERT(stream->read_fn != NULL);
   return stream->read_fn(stream->baton, buffer, len);
 }
 
@@ -101,7 +101,7 @@ svn_stream_read(svn_stream_t *stream, char *buffer, apr_size_t *len)
 svn_error_t *
 svn_stream_write(svn_stream_t *stream, const char *data, apr_size_t *len)
 {
-  assert(stream->write_fn != NULL);
+  SVN_ERR_ASSERT(stream->write_fn != NULL);
   return stream->write_fn(stream->baton, data, len);
 }
 

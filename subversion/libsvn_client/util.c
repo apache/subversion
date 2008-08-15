@@ -176,7 +176,7 @@ svn_client__path_relative_to_root(const char **rel_path,
   svn_error_t *err = SVN_NO_ERROR;
   svn_boolean_t need_wc_cleanup = FALSE;
 
-  assert(repos_root != NULL || ra_session != NULL);
+  SVN_ERR_ASSERT(repos_root != NULL || ra_session != NULL);
 
   /* If we have a WC path... */
   if (! svn_path_is_url(path_or_url))
@@ -313,4 +313,38 @@ svn_client__default_walker_error_handler(const char *path,
                                          apr_pool_t *pool)
 {
   return err;
+}
+
+
+const svn_opt_revision_t *
+svn_cl__rev_default_to_head_or_base(const svn_opt_revision_t *revision,
+                                    const char *path_or_url)
+{
+  static svn_opt_revision_t head_rev = { svn_opt_revision_head, { 0 } };
+  static svn_opt_revision_t base_rev = { svn_opt_revision_base, { 0 } };
+
+  if (revision->kind == svn_opt_revision_unspecified)
+    return svn_path_is_url(path_or_url) ? &head_rev : &base_rev;
+  return revision;
+}
+
+const svn_opt_revision_t *
+svn_cl__rev_default_to_head_or_working(const svn_opt_revision_t *revision,
+                                       const char *path_or_url)
+{
+  static svn_opt_revision_t head_rev = { svn_opt_revision_head, { 0 } };
+  static svn_opt_revision_t work_rev = { svn_opt_revision_working, { 0 } };
+
+  if (revision->kind == svn_opt_revision_unspecified)
+    return svn_path_is_url(path_or_url) ? &head_rev : &work_rev;
+  return revision;
+}
+
+const svn_opt_revision_t *
+svn_cl__rev_default_to_peg(const svn_opt_revision_t *revision,
+                           const svn_opt_revision_t *peg_revision)
+{
+  if (revision->kind == svn_opt_revision_unspecified)
+    return peg_revision;
+  return revision;
 }

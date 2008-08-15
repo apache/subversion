@@ -198,7 +198,7 @@ append_prop_conflict(apr_file_t *fp,
 }
 
 
-/* Look up the entry NAME within ADM_ACCESS and see if it has a `current'
+/* Look up the entry for PATH within ADM_ACCESS and see if it has a `current'
    reject file describing a state of conflict.  Set *REJECT_FILE to the
    name of that file, or to NULL if no such file exists. */
 static svn_error_t *
@@ -212,7 +212,8 @@ get_existing_prop_reject_file(const char **reject_file,
   SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
 
   *reject_file = entry->prejfile
-    ? apr_pstrcat(pool, svn_wc_adm_access_path(adm_access), entry->prejfile)
+    ? apr_pstrcat(pool, svn_wc_adm_access_path(adm_access), 
+                  entry->prejfile, NULL)
     : NULL;
   return SVN_NO_ERROR;
 }
@@ -337,6 +338,49 @@ svn_wc__load_props(apr_hash_t **base_props_p,
 /*---------------------------------------------------------------------*/
 
 /*** Installing new properties. ***/
+
+/* Extend LOG_ACCUM with log commands to write the properties PROPS into
+ * the admin file specified by WC_PROP_KIND. ADM_ACCESS and PATH specify
+ * the WC item with which this file should be associated. */
+static svn_error_t *
+install_props_file(svn_stringbuf_t **log_accum,
+                   svn_wc_adm_access_t *adm_access,
+                   const char *path,
+                   apr_hash_t *props,
+                   svn_wc__props_kind_t wc_prop_kind,
+                   apr_pool_t *pool)
+{
+  svn_node_kind_t node_kind;
+  const char *propfile_path;
+  const char *propfile_tmp_path;
+
+  if (! svn_path_is_child(svn_wc_adm_access_path(adm_access), path, NULL))
+    node_kind = svn_node_dir;
+  else
+    node_kind = svn_node_file;
+
+  SVN_ERR(svn_wc__prop_path(&propfile_path, path,
+                            node_kind, wc_prop_kind, FALSE, pool));
+
+  /* Write the property hash into a temporary file. */
+  SVN_ERR(svn_wc__prop_path(&propfile_tmp_path, path,
+                            node_kind, wc_prop_kind, TRUE, pool));
+  SVN_ERR(save_prop_file(propfile_tmp_path, props,
+                         FALSE, pool));
+
+  /* Write a log entry to move tmp file to real file. */
+  SVN_ERR(svn_wc__loggy_move(log_accum, NULL, adm_access,
+                             propfile_tmp_path,
+                             propfile_path,
+                             FALSE, pool));
+
+  /* Make the props file read-only */
+  SVN_ERR(svn_wc__loggy_set_readonly(log_accum, adm_access,
+                                     propfile_path, pool));
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_wc__install_props(svn_stringbuf_t **log_accum,
                       svn_wc_adm_access_t *adm_access,
@@ -346,7 +390,6 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
                       svn_boolean_t write_base_props,
                       apr_pool_t *pool)
 {
-  const char *working_propfile_path, *working_prop_tmp_path;
   apr_array_header_t *prop_diffs;
   const svn_wc_entry_t *entry;
   svn_wc_entry_t tmp_entry;
@@ -359,7 +402,7 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
   else
     kind = svn_node_file;
 
-  /* Check if the props are modified. */
+  /* Check if the props are modified, and update the entry. */
   SVN_ERR(svn_prop_diffs(&prop_diffs, working_props, base_props, pool));
   tmp_entry.has_prop_mods = (prop_diffs->nelts > 0);
   tmp_entry.has_props = (apr_hash_count(working_props) > 0);
@@ -379,35 +422,20 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
   else
     entry = NULL;
 
-  /* Write our property hashes into temporary files.  Notice that the
-     paths computed are ABSOLUTE pathnames, which is what our disk
-     routines require. */
-  SVN_ERR(svn_wc__prop_path(&working_propfile_path, path,
-                            kind, svn_wc__props_working, FALSE, pool));
+  /* Save the working properties file if it differs from base. */
   if (tmp_entry.has_prop_mods)
     {
-      SVN_ERR(svn_wc__prop_path(&working_prop_tmp_path, path,
-                                kind, svn_wc__props_working, TRUE, pool));
-
-      /* Write the working prop hash to path/.svn/tmp/props/name or
-         path/.svn/tmp/dir-props */
-      SVN_ERR(save_prop_file(working_prop_tmp_path, working_props,
-                             FALSE, pool));
-
-      /* Write log entry to move working tmp copy to real working area. */
-      SVN_ERR(svn_wc__loggy_move(log_accum, NULL,
-                                 adm_access,
-                                 working_prop_tmp_path,
-                                 working_propfile_path,
-                                 FALSE, pool));
-
-      /* Make props read-only */
-      SVN_ERR(svn_wc__loggy_set_readonly(log_accum, adm_access,
-                                         working_propfile_path, pool));
+      SVN_ERR(install_props_file(log_accum, adm_access, path, working_props,
+                                 svn_wc__props_working, pool));
     }
   else
     {
       /* No property modifications, remove the file instead. */
+      const char *working_propfile_path;
+
+      SVN_ERR(svn_wc__prop_path(&working_propfile_path, path,
+                                kind, svn_wc__props_working, FALSE, pool));
+
       if (! has_propcaching || (entry && entry->has_prop_mods))
         SVN_ERR(svn_wc__loggy_remove(log_accum, adm_access,
                                      working_propfile_path, pool));
@@ -416,28 +444,18 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
   /* Repeat the above steps for the base properties if required. */
   if (write_base_props)
     {
-      const char *base_propfile_path, *base_prop_tmp_path;
-
-      SVN_ERR(svn_wc__prop_path(&base_propfile_path, path,
-                                kind, svn_wc__props_base, FALSE, pool));
-
       if (apr_hash_count(base_props) > 0)
         {
-          SVN_ERR(svn_wc__prop_path(&base_prop_tmp_path, path,
-                                    kind, svn_wc__props_base, TRUE, pool));
-
-          SVN_ERR(save_prop_file(base_prop_tmp_path, base_props, FALSE, pool));
-
-          SVN_ERR(svn_wc__loggy_move(log_accum, NULL, adm_access,
-                                     base_prop_tmp_path,
-                                     base_propfile_path,
-                                     FALSE, pool));
-
-          SVN_ERR(svn_wc__loggy_set_readonly(log_accum, adm_access,
-                                             base_propfile_path, pool));
+          SVN_ERR(install_props_file(log_accum, adm_access, path, base_props,
+                                     svn_wc__props_base, pool));
         }
       else
         {
+          const char *base_propfile_path;
+
+          SVN_ERR(svn_wc__prop_path(&base_propfile_path, path,
+                                    kind, svn_wc__props_base, FALSE, pool));
+
           if (! has_propcaching || (entry && entry->has_props))
             SVN_ERR(svn_wc__loggy_remove(log_accum, adm_access,
                                          base_propfile_path, pool));
@@ -1193,6 +1211,27 @@ set_prop_merge_state(svn_wc_notify_state_t *state,
 }
 
 
+/* Create a temporary file in the same directory as PATH. Fill it with
+ * the data in VAL. Set *NEW_PATH to its path.
+ * Allocate the file metadata in POOL in such a way that the file will be
+ * deleted when the pool is cleared. */
+static svn_error_t *
+write_tmp_file(const char **new_path,
+               const char *path, const svn_string_t *val,
+               apr_pool_t *pool)
+{
+  apr_file_t *new_file;
+
+  SVN_ERR(svn_io_open_unique_file2(&new_file, new_path,
+                                   path, ".tmp",
+                                   svn_io_file_del_on_pool_cleanup,
+                                   pool));
+  SVN_ERR(svn_io_file_write_full(new_file, val->data,
+                                 val->len, NULL, pool));
+  SVN_ERR(svn_io_file_close(new_file, pool));
+  return SVN_NO_ERROR;
+}
+
 
 /* Helper function for the three apply_* functions below, used when
  * merging properties together.
@@ -1233,8 +1272,6 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
 {
   svn_wc_conflict_result_t *result = NULL;
   svn_string_t *mime_propval = NULL;
-  apr_file_t *working_file, *base_file, *new_file, *merged_file;
-  const char *working_path, *base_path, *new_path, *merged_path;
   apr_pool_t *filepool = svn_pool_create(pool);
   svn_wc_conflict_description_t *cdesc;
 
@@ -1249,28 +1286,10 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
 
   /* Create a tmpfile for each of the string_t's we've got.  */
   if (working_val)
-    {
-      SVN_ERR(svn_io_open_unique_file2(&working_file, &working_path,
-                                       path, ".tmp",
-                                       svn_io_file_del_on_pool_cleanup,
-                                       filepool));
-      SVN_ERR(svn_io_file_write_full(working_file, working_val->data,
-                                     working_val->len, NULL, filepool));
-      SVN_ERR(svn_io_file_close(working_file, filepool));
-      cdesc->my_file = working_path;
-    }
+    SVN_ERR(write_tmp_file(&cdesc->my_file, path, working_val, filepool));
 
   if (new_val)
-    {
-      SVN_ERR(svn_io_open_unique_file2(&new_file, &new_path,
-                                       path, ".tmp",
-                                       svn_io_file_del_on_pool_cleanup,
-                                       filepool));
-      SVN_ERR(svn_io_file_write_full(new_file, new_val->data,
-                                     new_val->len, NULL, filepool));
-      SVN_ERR(svn_io_file_close(new_file, filepool));
-      cdesc->their_file = new_path;
-    }
+    SVN_ERR(write_tmp_file(&cdesc->their_file, path, new_val, filepool));
 
   if (!base_val && !old_val)
     {
@@ -1290,15 +1309,8 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
          conflict-callback can still attempt a 3-way merge. */
 
       const svn_string_t *the_val = base_val ? base_val : old_val;
-      SVN_ERR(svn_io_open_unique_file2(&base_file, &base_path,
-                                       path, ".tmp",
-                                       svn_io_file_del_on_pool_cleanup,
-                                       filepool));
-      SVN_ERR(svn_io_file_write_full(base_file,
-                                     the_val->data,
-                                     the_val->len, NULL, filepool));
-      SVN_ERR(svn_io_file_close(base_file, filepool));
-      cdesc->base_file = base_path;
+
+      SVN_ERR(write_tmp_file(&cdesc->base_file, path, the_val, filepool));
     }
 
   else  /* base and old are both non-NULL */
@@ -1331,23 +1343,17 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
           the_val = base_val;
         }
 
-      SVN_ERR(svn_io_open_unique_file2(&base_file, &base_path,
-                                       path, ".tmp",
-                                       svn_io_file_del_on_pool_cleanup,
-                                       filepool));
-      SVN_ERR(svn_io_file_write_full(base_file, the_val->data,
-                                     the_val->len, NULL, filepool));
-      SVN_ERR(svn_io_file_close(base_file, filepool));
-      cdesc->base_file = base_path;
+      SVN_ERR(write_tmp_file(&cdesc->base_file, path, the_val, filepool));
 
       if (working_val && new_val)
         {
+          apr_file_t *merged_file;
           svn_stream_t *mergestream;
           svn_diff_t *diff;
           svn_diff_file_options_t *options =
             svn_diff_file_options_create(filepool);
 
-          SVN_ERR(svn_io_open_unique_file2(&merged_file, &merged_path,
+          SVN_ERR(svn_io_open_unique_file2(&merged_file, &cdesc->merged_file,
                                            path, ".tmp",
                                            svn_io_file_del_on_pool_cleanup,
                                            filepool));
@@ -1359,8 +1365,6 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
                   (mergestream, diff, the_val, working_val, new_val,
                    NULL, NULL, NULL, NULL, FALSE, FALSE, filepool));
           svn_stream_close(mergestream);
-
-          cdesc->merged_file = merged_path;
         }
     }
 
@@ -2289,7 +2293,7 @@ svn_wc_prop_get(const svn_string_t **value,
       if (svn_prop_is_boolean(name))
         {
           *value = svn_string_create(SVN_PROP_BOOLEAN_TRUE, pool);
-          assert(*value != NULL);
+          SVN_ERR_ASSERT(*value != NULL);
           return SVN_NO_ERROR;
         }
     }

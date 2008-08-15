@@ -158,7 +158,7 @@ io_check_path(const char *path,
 }
 
 
-/* Wrapper for apr_file_open() that handles CCSID problems on OS400 V5R4. */
+/* Wrapper for apr_file_open(). */
 static apr_status_t
 file_open(apr_file_t **f,
           const char *fname,
@@ -166,84 +166,7 @@ file_open(apr_file_t **f,
           apr_fileperms_t perm,
           apr_pool_t *pool)
 {
-  apr_status_t status;
-
-#ifdef AS400
-/* All files in OS400 are tagged with a metadata CCSID (Coded Character Set
- * Identifier) which indicates the character encoding of the file's
- * contents.  Even binary files are assigned a CCSID, typically the system
- * CCSID of the machine, which is some variant of EBCDIC (there are many
- * variants of EBCDIC: CCSID 37 - COM EUROPE EBCDIC, CCSID 273 - AUSTRIAN/
- * GERMAN EBCDIC, CCSID 284 - SPANISH EBCDIC, etc..  In this comment the
- * assumed system CCSID is 37).
- *
- * APR on OS400 V5R4 is built with what IBM calls "UTF support" which means
- * that within the application text file contents are assumed to be in CCSID
- * 1208.
- *
- * On OS400 when using apr_file_open() to read, write, and/or create a file
- * there is an interplay between the APR_BINARY flag and the file's CCSID:
- *
- * File    | APR_BINARY  | Existing | Created | Conversion | Conversion
- * Exists? | Flag        | File's   | File's  | When       | When
- *         | Passed      | CCSID    | CCSID   | Writing    | Reading
- * --------------------------------------------------------------------
- * Yes     | Yes         | 1208     | N/A     | None       | None
- * Yes     | Yes         | 37       | N/A     | None       | None
- * Yes     | No          | 1208     | N/A     | None       | None
- * Yes     | No          | 37       | N/A     | 1208-->37  | 37-->1208
- * No      | Yes         | N/A      | 37      | None       | None
- * No      | No          | N/A      | 1208    | None       | None
- *
- * For example: If an existing file with CCSID 37 is opened for reading
- *              without the APR_BINARY flag, the OS will attempt to convert
- *              the file's contents from EBCDIC 37 to UTF-8.
- *
- * Now for the problem...
- *
- *  - The files Subversion handles have either binary or UTF-8 content.
- *
- *  - Subversion is not structured to differentiate between text files and
- *    binary files.  It just always passes the APR_BINARY flag when calling
- *    apr_file_open().
- *
- * So when Subversion creates a new file it always has a CCSID of 37 even
- * though the file *may* contain UTF-8 encoded text.  This isn't a problem
- * for Subversion directly since it always passes APR_BINARY when opening
- * files, therefore the content is never converted when reading/writing the
- * file.
- *
- * The problem is that other OS400 applications/utilities rely on the CCSID
- * to represent the file's contents.  For example, when a text editor opens
- * a svnserve.conf file tagged with CCSID 37 but actually containing UTF-8
- * text, the OS will attempt to convert what it thinks is EBCDIC text to
- * UTF-8.  Worse, if the file is empty, the text editor would save the
- * contents as EBCDIC.  Later, when Subversion opens the conf file it's
- * reading in "UTF-8" data that is actually EBCDIC.
- *
- * The solution to this problem is to catch the case where Subversion wants
- * to create a file and make an initial call to apr_file_open() in text mode
- * (i.e. without the APR_BINARY flag), close the file, and then re-open the
- * file in binary mode (i.e. with the APR_BINARY flag).
- */
-  apr_status_t apr_err;
-  if (flag & APR_CREATE)
-    {
-      /* If we are trying to create a file on OS400 ensure its CCSID is
-       * 1208. */
-      apr_err = apr_file_open(f, fname, flag & ~APR_BINARY, perm, pool);
-
-      if (apr_err)
-        return apr_err;
-
-      apr_file_close(*f);
-
-      /* Unset APR_EXCL so the next call to apr_file_open() doesn't
-       * return an error. */
-      flag &= ~APR_EXCL;
-    }
-#endif /* AS400 */
-  status = apr_file_open(f, fname, flag, perm, pool);
+  apr_status_t status = apr_file_open(f, fname, flag, perm, pool);
   WIN32_RETRY_LOOP(status, apr_file_open(f, fname, flag, perm, pool));
   return status;
 }
@@ -325,7 +248,7 @@ svn_io_open_unique_file2(apr_file_t **f,
   const char *unique_name_apr;
   struct temp_file_cleanup_s *baton = NULL;
 
-  assert(f || unique_name_p);
+  SVN_ERR_ASSERT(f || unique_name_p);
 
   if (delete_when == svn_io_file_del_on_pool_cleanup)
     {
@@ -456,20 +379,8 @@ svn_io_create_unique_link(const char **unique_name_p,
   const char *unique_name_apr;
   const char *dest_apr;
   int rv;
-#ifdef AS400_UTF8
-  const char *dest_apr_ebcdic;
-#endif
 
   SVN_ERR(svn_path_cstring_from_utf8(&dest_apr, dest, pool));
-
-#ifdef AS400_UTF8
-  /* On OS400 with UTF support a native cstring is UTF-8, but
-   * symlink() *really* needs EBCDIC paths. */
-  SVN_ERR(svn_utf_cstring_from_utf8_ex2(&dest_apr_ebcdic, dest_apr,
-                                        (const char*)0, pool));
-  dest_apr = dest_apr_ebcdic;
-#endif
-
   for (i = 1; i <= 99999; i++)
     {
       apr_status_t apr_err;
@@ -494,16 +405,8 @@ svn_io_create_unique_link(const char **unique_name_p,
          before starting iteration, then convert back to UTF-8 for
          return. But I suppose that would make the appending code
          sensitive to i18n in a way it shouldn't be... Oh well. */
-#ifndef AS400_UTF8
       SVN_ERR(svn_path_cstring_from_utf8(&unique_name_apr, unique_name,
                                          pool));
-#else
-      /* On OS400 with UTF support a native cstring is UTF-8,
-       * but symlink() *really* needs an EBCDIC path. */
-      SVN_ERR(svn_utf_cstring_from_utf8_ex2(&unique_name_apr, unique_name,
-                                            (const char*)0, pool));
-#endif
-
       do {
         rv = symlink(dest_apr, unique_name_apr);
       } while (rv == -1 && APR_STATUS_IS_EINTR(apr_get_os_error()));
@@ -565,18 +468,8 @@ svn_io_read_link(svn_string_t **dest,
   const char *path_apr;
   char buf[1025];
   int rv;
-#ifdef AS400_UTF8
-  const char *buf_utf8;
-#endif
 
-#ifndef AS400_UTF8
   SVN_ERR(svn_path_cstring_from_utf8(&path_apr, path, pool));
-#else
-  /* On OS400 with UTF support a native cstring is UTF-8, but
-   * readlink() *really* needs an EBCDIC path. */
-  SVN_ERR(svn_utf_cstring_from_utf8_ex2(&path_apr, path, (const char*)0,
-                                        pool));
-#endif
   do {
     rv = readlink(path_apr, buf, sizeof(buf) - 1);
   } while (rv == -1 && APR_STATUS_IS_EINTR(apr_get_os_error()));
@@ -589,18 +482,9 @@ svn_io_read_link(svn_string_t **dest,
   dest_apr.data = buf;
   dest_apr.len = rv;
 
-#ifndef AS400_UTF8
   /* ### Cast needed, one of these interfaces is wrong */
   SVN_ERR(svn_utf_string_to_utf8((const svn_string_t **)dest, &dest_apr,
                                  pool));
-#else
-  /* The buf filled by readline() is ebcdic encoded
-   * despite V5R4's UTF support. */
-  SVN_ERR(svn_utf_cstring_to_utf8_ex2(&buf_utf8, dest_apr.data,
-                                      (const char *)0, pool));
-  *dest = svn_string_create(buf_utf8, pool);
-#endif
-
   return SVN_NO_ERROR;
 #else
   return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
@@ -665,13 +549,6 @@ svn_io_temp_dir(const char **dir,
  * and rename for atomicity (see below), this would require an extra
  * close/open pair, which can be expensive, especially on
  * remote file systems.
- *
- *
- * Also, On OS400 apr_file_copy() attempts to convert the contents of
- * the source file from its CCSID to the CCSID of the destination
- * file.  This may corrupt the destination file's contents if the
- * files' CCSIDs differ from each other and/or the system CCSID.
- * (See comments for file_open() for more info on CCSIDs.)
  */
 static apr_status_t
 copy_contents(apr_file_t *from_file,
@@ -1024,29 +901,10 @@ svn_io_set_file_affected_time(apr_time_t apr_time,
 {
   apr_status_t status;
   const char *native_path;
-#ifdef AS400
-  apr_utimbuf_t aubuf;
-  apr_finfo_t finfo;
-#endif
 
   SVN_ERR(svn_path_cstring_from_utf8(&native_path, path, pool));
-
-#ifndef AS400
   status = apr_file_mtime_set(native_path, apr_time, pool);
-#else
-  /* apr_file_mtime_set() isn't implemented on OS400, but IBM does provide
-   * the OS400 specific function apr_utime() which can be used instead. */
 
-  /* Get the file's current access time, we don't want to change that,
-   * just the mod time. */
-  status = apr_stat(&finfo, native_path, APR_FINFO_ATIME, pool);
-  if (!status)
-    {
-      aubuf.atime = finfo.atime;
-      aubuf.mtime = apr_time;
-      status = apr_utime(native_path, &aubuf);
-    }
-#endif
   if (status)
     return svn_error_wrap_apr
       (status, _("Can't set access time of '%s'"),
@@ -1545,8 +1403,7 @@ svn_error_t *svn_io_file_lock2(const char *lock_file,
             (apr_err, _("Can't get exclusive lock on file '%s'"),
              svn_path_local_style(lock_file, pool));
         default:
-          /* Cannot happen. */
-          abort();
+          SVN_ERR_MALFUNCTION();
         }
     }
 
@@ -2267,7 +2124,7 @@ svn_io_run_diff(const char *dir,
   args[i++] = svn_path_local_style(to, subpool);
   args[i++] = NULL;
 
-  assert(i == nargs);
+  SVN_ERR_ASSERT(i == nargs);
 
   SVN_ERR(svn_io_run_cmd(dir, diff_utf8, args, pexitcode, NULL, TRUE,
                          NULL, outfile, errfile, subpool));
@@ -2393,7 +2250,9 @@ svn_io_run_diff3_2(int *exitcode,
   args[i++] = svn_path_local_style(older, pool);
   args[i++] = svn_path_local_style(yours, pool);
   args[i++] = NULL;
-  assert(i == nargs);
+#ifndef NDEBUG
+  SVN_ERR_ASSERT(i == nargs);
+#endif
 
   /* Run diff3, output the merged text into the scratch file. */
   SVN_ERR(svn_io_run_cmd(dir, diff3_utf8, args,

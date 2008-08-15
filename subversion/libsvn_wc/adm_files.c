@@ -410,10 +410,10 @@ svn_wc__prop_path(const char **prop_path,
   if (node_kind == svn_node_dir)  /* It's a working copy dir */
     {
       static const char * names[] = {
-        SVN_WC__ADM_DIR_PROP_BASE,    /* prop_path_kind_base */
-        SVN_WC__ADM_DIR_PROP_REVERT,  /* prop_path_kind_revert */
-        SVN_WC__ADM_DIR_WCPROPS,      /* prop_path_kind_wcprop */
-        SVN_WC__ADM_DIR_PROPS         /* prop_path_kind_working */
+        SVN_WC__ADM_DIR_PROP_BASE,    /* svn_wc__props_base */
+        SVN_WC__ADM_DIR_PROP_REVERT,  /* svn_wc__props_revert */
+        SVN_WC__ADM_DIR_WCPROPS,      /* svn_wc__props_wcprop */
+        SVN_WC__ADM_DIR_PROPS         /* svn_wc__props_working */
       };
 
       *prop_path = extend_with_adm_name
@@ -427,17 +427,17 @@ svn_wc__prop_path(const char **prop_path,
   else  /* It's a file */
     {
       static const char * extensions[] = {
-        SVN_WC__BASE_EXT,     /* prop_path_kind_base */
-        SVN_WC__REVERT_EXT,   /* prop_path_kind_revert */
-        SVN_WC__WORK_EXT,     /* prop_path_kind_wcprop */
-        SVN_WC__WORK_EXT      /* prop_path_kind_working */
+        SVN_WC__BASE_EXT,     /* svn_wc__props_base */
+        SVN_WC__REVERT_EXT,   /* svn_wc__props_revert */
+        SVN_WC__WORK_EXT,     /* svn_wc__props_wcprop */
+        SVN_WC__WORK_EXT      /* svn_wc__props_working */
       };
 
       static const char * dirs[] = {
-        SVN_WC__ADM_PROP_BASE,  /* prop_path_kind_base */
-        SVN_WC__ADM_PROP_BASE,  /* prop_path_kind_revert */
-        SVN_WC__ADM_WCPROPS,    /* prop_path_kind_wcprop */
-        SVN_WC__ADM_PROPS       /* prop_path_kind_working */
+        SVN_WC__ADM_PROP_BASE,  /* svn_wc__props_base */
+        SVN_WC__ADM_PROP_BASE,  /* svn_wc__props_revert */
+        SVN_WC__ADM_WCPROPS,    /* svn_wc__props_wcprop */
+        SVN_WC__ADM_PROPS       /* svn_wc__props_working */
       };
 
       const char *base_name;
@@ -1075,7 +1075,7 @@ svn_wc_create_tmp_file2(apr_file_t **fp,
 {
   apr_file_t *file;
 
-  assert(fp || new_name);
+  SVN_ERR_ASSERT(fp || new_name);
 
   /* Use a self-explanatory name for the file :-) . */
   path = svn_wc__adm_path(path, TRUE, pool, "tempfile", NULL);

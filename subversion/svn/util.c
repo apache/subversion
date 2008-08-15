@@ -653,29 +653,24 @@ svn_cl__get_log_message(const char **log_msg,
   *tmp_file = NULL;
   if (lmb->message)
     {
-      svn_string_t *log_msg_string = svn_string_create(lmb->message, pool);
+      svn_stringbuf_t *log_msg_buf = svn_stringbuf_create(lmb->message, pool);
+      svn_string_t *log_msg_str = apr_pcalloc(pool, sizeof(*log_msg_str));
 
-      SVN_ERR_W(svn_subst_translate_string(&log_msg_string, log_msg_string,
+      /* Trim incoming messages of the EOF marker text and the junk
+         that follows it.  */
+      truncate_buffer_at_prefix(&(log_msg_buf->len), log_msg_buf->data, 
+                                EDITOR_EOF_PREFIX);
+
+      /* Make a string from a stringbuf, sharing the data allocation. */
+      log_msg_str->data = log_msg_buf->data;
+      log_msg_str->len = log_msg_buf->len;
+      SVN_ERR_W(svn_subst_translate_string(&log_msg_str, log_msg_str,
                                            lmb->message_encoding, pool),
                 _("Error normalizing log message to internal format"));
 
-      *log_msg = log_msg_string->data;
-
-      /* Trim incoming messages the EOF marker text and the junk that
-         follows it.  */
-      truncate_buffer_at_prefix(NULL, (char*)*log_msg, EDITOR_EOF_PREFIX);
-
+      *log_msg = log_msg_str->data;
       return SVN_NO_ERROR;
     }
-#ifdef AS400
-  /* OS400 supports only -F and -m for specifying log messages. */
-  else
-    return svn_error_create
-      (SVN_ERR_CL_NO_EXTERNAL_EDITOR, NULL,
-       _("Use of an external editor to fetch log message is not supported "
-         "on OS400; consider using the --message (-m) or --file (-F) "
-         "options"));
-#endif
 
   if (! commit_items->nelts)
     {
@@ -1118,4 +1113,54 @@ svn_cl__time_cstring_to_human_cstring(const char **human_cstring,
   *human_cstring = svn_time_to_human_cstring(when, pool);
 
   return SVN_NO_ERROR;
+}
+
+
+/* Return a copy, allocated in POOL, of the next line of text from *STR
+ * up to and including a CR and/or an LF. Change *STR to point to the
+ * remainder of the string after the returned part. If there are no
+ * characters to be returned, return NULL; never return an empty string.
+ */
+static const char *
+next_line(const char **str, apr_pool_t *pool)
+{
+  const char *start = *str;
+  const char *p = *str;
+
+  /* n.b. Throughout this fn, we never read any character after a '\0'. */
+  /* Skip over all non-EOL characters, if any. */
+  while (*p != '\r' && *p != '\n' && *p != '\0')
+    p++;
+  /* Skip over \r\n or \n\r or \r or \n, if any. */
+  if (*p == '\r' || *p == '\n')
+    {
+      char c = *p++;
+
+      if ((c == '\r' && *p == '\n') || (c == '\n' && *p == '\r'))
+        p++;
+    }
+
+  /* Now p points after at most one '\n' and/or '\r'. */
+  *str = p;
+
+  if (p == start)
+    return NULL;
+
+  return svn_string_ncreate(start, p - start, pool)->data;
+}
+
+const char *
+svn_cl__indent_string(const char *str,
+                      const char *indent,
+                      apr_pool_t *pool)
+{
+  svn_stringbuf_t *out = svn_stringbuf_create("", pool);
+  const char *line;
+
+  while ((line = next_line(&str, pool)))
+    {
+      svn_stringbuf_appendcstr(out, indent);
+      svn_stringbuf_appendcstr(out, line);
+    }
+  return out->data;
 }
