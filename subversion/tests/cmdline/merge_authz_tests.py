@@ -196,11 +196,8 @@ def mergeinfo_and_skipped_paths(sbox):
   os.chdir(saved_cwd)
 
   # Manually check the props on A_COPY/D/H/omega.
-  svntest.actions.run_and_verify_svn(None,
-                                     ["Properties on '" + omega_path + "':\n",
-                                      '  ' + SVN_PROP_MERGEINFO + ' : ' +
-                                      '\n'],
-                                     [], 'pl', '-vR', omega_path)
+  svntest.actions.run_and_verify_svn(None, ['\n'], [],
+                                    'pg', SVN_PROP_MERGEINFO, omega_path)
 
   # Merge r4:8 into the restricted WC's A_COPY_2.
   #
