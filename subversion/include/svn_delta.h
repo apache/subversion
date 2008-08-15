@@ -88,7 +88,7 @@ enum svn_delta_action {
     /** Append the @a length bytes at @a offset in the source view to the
      * target.
      *
-     * It must be the case that @a 0 <= @a offset < @a offset +
+     * It must be the case that 0 <= @a offset < @a offset +
      * @a length <= size of source view.
      */
     svn_txdelta_source,
@@ -96,7 +96,7 @@ enum svn_delta_action {
     /** Append the @a length bytes at @a offset in the target view, to the
      * target.
      *
-     * It must be the case that @a 0 <= @a offset < current position in the
+     * It must be the case that 0 <= @a offset < current position in the
      * target view.
      *
      * However!  @a offset + @a length may be *beyond* the end of the existing
@@ -105,7 +105,7 @@ enum svn_delta_action {
      * it'll work out --- you're adding new bytes to the end at the
      * same rate you're reading them from the middle.  Thus, if your
      * current target text is "abcdefgh", and you get an @c svn_txdelta_target
-     * instruction whose @a offset is @a 6 and whose @a length is @a 7,
+     * instruction whose @a offset is 6 and whose @a length is 7,
      * the resulting string is "abcdefghghghghg".  This trick is actually
      * useful in encoding long runs of consecutive characters, long runs
      * of CR/LF pairs, etc.
@@ -115,7 +115,7 @@ enum svn_delta_action {
     /** Append the @a length bytes at @a offset in the window's @a new string
      * to the target.
      *
-     * It must be the case that @a 0 <= @a offset < @a offset +
+     * It must be the case that 0 <= @a offset < @a offset +
      * @a length <= length of @a new.  Windows MUST use new data in ascending
      * order with no overlap at the moment; svn_txdelta_to_svndiff()
      * depends on this.

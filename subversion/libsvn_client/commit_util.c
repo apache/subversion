@@ -247,8 +247,8 @@ harvest_committables(apr_hash_t *committables,
   if (look_up_committable(committables, path, pool))
     return SVN_NO_ERROR;
 
-  assert(entry);
-  assert(url);
+  SVN_ERR_ASSERT(entry);
+  SVN_ERR_ASSERT(url);
 
   if (ctx->cancel_func)
     SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
@@ -965,7 +965,7 @@ svn_client__condense_commit_items(const char **base_url,
   svn_client_commit_item3_t *item, *last_item = NULL;
   int i;
 
-  assert(ci && ci->nelts);
+  SVN_ERR_ASSERT(ci && ci->nelts);
 
   /* Sort our commit items by their URLs. */
   qsort(ci->elts, ci->nelts,
@@ -1197,7 +1197,7 @@ do_item_commit(void **dir_baton,
   /* If this item is supposed to be deleted, do so. */
   if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
     {
-      assert(parent_baton);
+      SVN_ERR_ASSERT(parent_baton);
       SVN_ERR(editor->delete_entry(path, item->revision,
                                    parent_baton, pool));
     }
@@ -1207,7 +1207,7 @@ do_item_commit(void **dir_baton,
     {
       if (kind == svn_node_file)
         {
-          assert(parent_baton);
+          SVN_ERR_ASSERT(parent_baton);
           SVN_ERR(editor->add_file
                   (path, parent_baton, copyfrom_url,
                    copyfrom_url ? item->copyfrom_rev : SVN_INVALID_REVNUM,
@@ -1215,7 +1215,7 @@ do_item_commit(void **dir_baton,
         }
       else
         {
-          assert(parent_baton);
+          SVN_ERR_ASSERT(parent_baton);
           SVN_ERR(editor->add_directory
                   (path, parent_baton, copyfrom_url,
                    copyfrom_url ? item->copyfrom_rev : SVN_INVALID_REVNUM,
@@ -1254,7 +1254,7 @@ do_item_commit(void **dir_baton,
         {
           if (! file_baton)
             {
-              assert(parent_baton);
+              SVN_ERR_ASSERT(parent_baton);
               SVN_ERR(editor->open_file(path, parent_baton,
                                         item->revision,
                                         file_pool, &file_baton));
@@ -1322,7 +1322,7 @@ do_item_commit(void **dir_baton,
 
       if (! file_baton)
         {
-          assert(parent_baton);
+          SVN_ERR_ASSERT(parent_baton);
           SVN_ERR(editor->open_file(path, parent_baton,
                                     item->revision,
                                     file_pool, &file_baton));
@@ -1799,11 +1799,9 @@ svn_client__get_log_msg(const char **log_msg,
       svn_error_t *err;
       apr_pool_t *subpool = svn_pool_create(pool);
       apr_array_header_t *old_commit_items =
-        apr_array_make(subpool, commit_items->nelts,
-                       ctx->log_msg_func2 ? sizeof(svn_client_commit_item2_t) :
-                       sizeof(svn_client_commit_item_t));
-      int i;
+        apr_array_make(subpool, commit_items->nelts, sizeof(void*));
 
+      int i;
       for (i = 0; i < commit_items->nelts; i++)
         {
           svn_client_commit_item3_t *item =
@@ -1848,7 +1846,7 @@ svn_client__get_log_msg(const char **log_msg,
         }
 
       if (ctx->log_msg_func2)
-        err = (*ctx->log_msg_func2)(log_msg, tmp_file, commit_items,
+        err = (*ctx->log_msg_func2)(log_msg, tmp_file, old_commit_items,
                                     ctx->log_msg_baton2, pool);
       else
         err = (*ctx->log_msg_func)(log_msg, tmp_file, old_commit_items,

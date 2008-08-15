@@ -144,6 +144,38 @@ public class BasicTests extends SVNTests
     }
 
     /**
+     * Tests Subversion path as URL predicate.
+     */
+    public void testPathIsURL() throws Throwable
+    {
+        try
+        {
+            Path.isURL(null);
+            fail("A null path should raise an exception");
+        }
+        catch (IllegalArgumentException expected)
+        {
+        }
+
+        // Subversion "paths" which aren't URLs.
+        String[] paths = { "/path", "c:\\path" };
+        for (int i = 0; i < paths.length; i++)
+        {
+            assertFalse("'" + paths[i] + "' should not be considered a URL",
+                        Path.isURL(paths[i]));
+        }
+
+        // Subversion "paths" which are URLs.
+        paths = new String[] { "http://example.com", "svn://example.com",
+                               "svn+ssh://example.com", "file:///src/svn/" };
+        for (int i = 0; i < paths.length; i++)
+        {
+            assertTrue("'" + paths[i] + "' should be considered a URL",
+                       Path.isURL(paths[i]));
+        }
+    }
+
+    /**
      * Tests Mergeinfo and RevisionRange classes.
      * @since 1.5
      */

@@ -34,6 +34,8 @@
 #include "svn_base64.h"
 #include "cl.h"
 
+#include "private/svn_cmdline_private.h"
+
 #include "svn_private_config.h"
 
 
@@ -101,53 +103,19 @@ svn_cl__print_prop_hash(apr_hash_t *prop_hash,
       /* ### We leave these printfs for now, since if propval wasn't translated
        * above, we don't know anything about its encoding.  In fact, it
        * might be binary data... */
-      if (names_only)
-        printf("  %s\n", pname_stdout);
-      else
-        printf("  %s : %s\n", pname_stdout, propval->data);
+      printf("  %s\n", pname_stdout);
+      if (!names_only)
+        {
+          /* Add an extra newline to the value before indenting, so that
+           * every line of output has the indentation whether the value
+           * already ended in a newline or not. */
+          const char *newval = apr_psprintf(pool, "%s\n", propval->data);
+
+          printf("%s", svn_cl__indent_string(newval, "    ", pool));
+        }
     }
 
   return SVN_NO_ERROR;
-}
-
-void
-svn_cl__print_xml_prop(svn_stringbuf_t **outstr,
-                       const char* propname,
-                       svn_string_t *propval,
-                       apr_pool_t *pool)
-{
-  const char *xml_safe;
-  const char *encoding = NULL;
-
-  if (*outstr == NULL)
-    *outstr = svn_stringbuf_create("", pool);
-
-  if (svn_xml_is_xml_safe(propval->data, propval->len))
-    {
-      svn_stringbuf_t *xml_esc = NULL;
-      svn_xml_escape_cdata_string(&xml_esc, propval, pool);
-      xml_safe = xml_esc->data;
-    }
-  else
-    {
-      const svn_string_t *base64ed = svn_base64_encode_string(propval, pool);
-      encoding = "base64";
-      xml_safe = base64ed->data;
-    }
-
-  if (encoding)
-    svn_xml_make_open_tag(outstr, pool, svn_xml_protect_pcdata,
-                          "property", "name", propname,
-                          "encoding", encoding, NULL);
-  else
-    svn_xml_make_open_tag(outstr, pool, svn_xml_protect_pcdata,
-                          "property", "name", propname, NULL);
-
-  svn_stringbuf_appendcstr(*outstr, xml_safe);
-
-  svn_xml_make_close_tag(outstr, pool, "property");
-
-  return;
 }
 
 svn_error_t *
@@ -187,7 +155,7 @@ svn_cl__print_xml_prop_hash(svn_stringbuf_t **outstr,
 
           SVN_ERR(svn_cmdline_cstring_from_utf8(&pname_out, pname, pool));
 
-          svn_cl__print_xml_prop(outstr, pname_out, propval, pool);
+          svn_cmdline__print_xml_prop(outstr, pname_out, propval, pool);
         }
     }
 

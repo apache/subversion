@@ -1127,9 +1127,8 @@ diff_wc_wc(const char *path1,
   const char *target;
   int levels_to_lock = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
 
-  /* Assert that we have valid input. */
-  assert(! svn_path_is_url(path1));
-  assert(! svn_path_is_url(path2));
+  SVN_ERR_ASSERT(! svn_path_is_url(path1));
+  SVN_ERR_ASSERT(! svn_path_is_url(path2));
 
   /* Currently we support only the case where path1 and path2 are the
      same path. */
@@ -1268,8 +1267,7 @@ diff_repos_wc(const char *path1,
   int levels_to_lock = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
   svn_boolean_t server_supports_depth;
 
-  /* Assert that we have valid input. */
-  assert(! svn_path_is_url(path2));
+  SVN_ERR_ASSERT(! svn_path_is_url(path2));
 
   /* Convert path1 to a URL to feed to do_diff. */
   SVN_ERR(convert_to_url(&url1, path1, pool));

@@ -43,6 +43,9 @@
 #include "svn_opt.h"
 #include "svn_props.h"
 #include "svn_diff.h"
+#include "svn_xml.h"
+
+#include "private/svn_cmdline_private.h"
 
 #include "svn_private_config.h"
 
@@ -80,7 +83,8 @@ enum
     svnlook__diff_copy_from,
     svnlook__revprop_opt,
     svnlook__full_paths,
-    svnlook__copy_info
+    svnlook__copy_info,
+    svnlook__xml_opt
   };
 
 /*
@@ -133,7 +137,9 @@ static const apr_getopt_option_t options_table[] =
   {"version",           svnlook__version, 0,
    N_("show program version information")},
 
-#ifndef AS400
+  {"xml",               svnlook__xml_opt, 0,
+   N_("output in XML")},
+
   {"extensions",    'x', 1,
                     N_("Default: '-u'. When Subversion is invoking an\n"
                        "                            "
@@ -162,7 +168,6 @@ static const apr_getopt_option_t options_table[] =
                        "    --ignore-eol-style:\n"
                        "                            "
                        "       Ignore changes in EOL style")},
-#endif
 
   {0,                   0, 0, 0}
 };
@@ -246,7 +251,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
       "List the properties of a path in the repository, or\n"
       "with the --revprop option, revision properties.\n"
       "With -v, show the property values too.\n"),
-   {'r', 't', 'v', svnlook__revprop_opt} },
+   {'r', 't', 'v', svnlook__revprop_opt, svnlook__xml_opt} },
 
   {"tree", subcommand_tree, {0},
    N_("usage: svnlook tree REPOS_PATH [PATH_IN_REPOS]\n\n"
@@ -288,6 +293,7 @@ struct svnlook_opt_state
   svn_boolean_t full_paths;       /* --full-paths */
   svn_boolean_t copy_info;        /* --copy-info */
   svn_boolean_t non_recursive;    /* --non-recursive */
+  svn_boolean_t xml;              /* --xml */
   const char *extensions;         /* diff extension args (UTF-8!) */
 };
 
@@ -953,7 +959,10 @@ print_diff_tree(svn_fs_root_t *root,
       svn_stringbuf_appendcstr(header, "\n");
 
       if (binary)
-        svn_stringbuf_appendcstr(header, _("(Binary files differ)\n\n"));
+        {
+          svn_stringbuf_appendcstr(header, _("(Binary files differ)\n\n"));
+          SVN_ERR(svn_cmdline_printf(pool, header->data));
+        }          
       else
         {
           svn_diff_t *diff;
@@ -972,6 +981,32 @@ print_diff_tree(svn_fs_root_t *root,
 
               /* Print diff header. */
               SVN_ERR(svn_cmdline_printf(pool, header->data));
+
+              /* This fflush() might seem odd, but it was added to deal
+                 with this bug report:
+
+                   http://subversion.tigris.org/servlets/ReadMsg?\
+                   list=dev&msgNo=140782
+
+                   From: "Steve Hay" <SteveHay{_AT_}planit.com>
+                   To: <dev@subversion.tigris.org>
+                   Subject: svnlook diff output in wrong order when redirected
+                   Date: Fri, 4 Jul 2008 16:34:15 +0100
+                   Message-ID: <1B32FF956ABF414C9BCE5E487A1497E702014F62@\
+                                ukmail02.planit.group>
+
+                 Adding the fflush() fixed the bug (not everyone could
+                 reproduce it, but those who could confirmed the fix).
+                 Later in the thread, Daniel Shahaf speculated as to
+                 why the fix works:
+
+                   "Because svn_cmdline_printf() uses the standard
+                    'FILE *stdout' to write to stdout, while
+                    svn_stream_for_stdout() uses (through
+                    apr_file_open_stdout()) Windows API's to get a
+                    handle for stdout?" */
+              SVN_ERR(svn_cmdline_fflush(stdout));
+
               SVN_ERR(svn_stream_for_stdout(&ostream, pool));
 
               if (orig_empty)
@@ -1005,9 +1040,12 @@ print_diff_tree(svn_fs_root_t *root,
       apr_array_header_t *propchanges, *props;
 
       SVN_ERR(svn_fs_node_proplist(&local_proptable, root, path, pool));
-      if (node->action == 'A')
+      if (c->diff_copy_from && node->action == 'A' && is_copy)
+        SVN_ERR(svn_fs_node_proplist(&base_proptable, base_root,
+                                     base_path, pool));
+      else if (node->action == 'A')
         base_proptable = apr_hash_make(pool);
-      else
+      else  /* node->action == 'R' */
         SVN_ERR(svn_fs_node_proplist(&base_proptable, base_root,
                                      base_path, pool));
       SVN_ERR(svn_prop_diffs(&propchanges, local_proptable,
@@ -1535,6 +1573,7 @@ do_pget(svnlook_ctxt_t *c,
 
 /* Print the property names of all properties on PATH in the repository.
    If VERBOSE, print their values too.
+   If XML, print as XML rather than as plain text.
    Error with SVN_ERR_FS_NOT_FOUND if PATH does not exist, or with
    SVN_ERR_PROPERTY_NOT_FOUND if no such property on PATH.
    If PATH is NULL, operate on a revision properties. */
@@ -1542,6 +1581,7 @@ static svn_error_t *
 do_plist(svnlook_ctxt_t *c,
          const char *path,
          svn_boolean_t verbose,
+         svn_boolean_t xml,
          apr_pool_t *pool)
 {
   svn_stream_t *stdout_stream;
@@ -1549,6 +1589,8 @@ do_plist(svnlook_ctxt_t *c,
   apr_hash_t *props;
   apr_hash_index_t *hi;
   svn_node_kind_t kind;
+  svn_stringbuf_t *sb = NULL;
+  svn_boolean_t revprop = FALSE;
 
   SVN_ERR(svn_stream_for_stdout(&stdout_stream, pool));
   if (path != NULL)
@@ -1558,7 +1600,33 @@ do_plist(svnlook_ctxt_t *c,
       SVN_ERR(svn_fs_node_proplist(&props, root, path, pool));
     }
   else
-    SVN_ERR(svn_fs_revision_proplist(&props, c->fs, c->rev_id, pool));
+    {
+      SVN_ERR(svn_fs_revision_proplist(&props, c->fs, c->rev_id, pool));
+      revprop = TRUE;
+    }
+
+  if (xml)
+    {
+      char *revstr = apr_psprintf(pool, "%ld", c->rev_id);
+      /* <?xml version="1.0"?> */
+      svn_xml_make_header(&sb, pool);
+
+      /* "<properties>" */
+      svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "properties", NULL);
+
+      if (revprop)
+        {
+          /* "<revprops ...>" */
+          svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "revprops",
+                                "rev", revstr, NULL);
+        }
+      else
+        {
+          /* "<target ...>" */
+          svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "target",
+                                "path", path, NULL);
+        }
+    }
 
   for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
     {
@@ -1586,10 +1654,42 @@ do_plist(svnlook_ctxt_t *c,
         {
           const char *pname_stdout;
           SVN_ERR(svn_cmdline_cstring_from_utf8(&pname_stdout, pname, pool));
-          printf("  %s : %s\n", pname_stdout, propval->data);
+          if (xml)
+            svn_cmdline__print_xml_prop(&sb, pname_stdout, propval, pool);
+          else
+            printf("  %s : %s\n", pname_stdout, propval->data);
         }
       else
-        printf("  %s\n", pname);
+        if (xml)
+          svn_xml_make_open_tag(&sb, pool, svn_xml_self_closing, "property",
+                                "name", pname, NULL);
+        else
+          printf("  %s\n", pname);
+    }
+  if (xml)
+    {
+      errno = 0;
+      if (revprop)
+        {
+          /* "</revprops>" */
+          svn_xml_make_close_tag(&sb, pool, "revprops");
+        }
+      else
+        {
+          /* "</target>" */
+          svn_xml_make_close_tag(&sb, pool, "target");
+        }
+
+      /* "</properties>" */
+      svn_xml_make_close_tag(&sb, pool, "properties");
+
+      if (fputs(sb->data, stdout) == EOF)
+        {
+          if (errno)
+            return svn_error_wrap_apr(errno, _("Write error"));
+          else
+            return svn_error_create(SVN_ERR_IO_WRITE_ERROR, NULL, NULL);
+        }
     }
 
   return SVN_NO_ERROR;
@@ -1908,7 +2008,7 @@ subcommand_plist(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   SVN_ERR(get_ctxt_baton(&c, opt_state, pool));
   SVN_ERR(do_plist(c, opt_state->revprop ? NULL : opt_state->arg1,
-                   opt_state->verbose, pool));
+                   opt_state->verbose, opt_state->xml, pool));
   return SVN_NO_ERROR;
 }
 
@@ -2067,6 +2167,10 @@ main(int argc, const char *argv[])
 
         case svnlook__revprop_opt:
           opt_state.revprop = TRUE;
+          break;
+
+        case svnlook__xml_opt:
+          opt_state.xml = TRUE;
           break;
 
         case svnlook__version:

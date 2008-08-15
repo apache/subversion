@@ -2355,6 +2355,48 @@ def basic_relative_url_with_peg_revisions(sbox):
                                 expected_output, [], 'ls', '-r3',
                                 '^//A/@3', iota_url)
 
+
+# Issue 2242, auth cache picking up password from wrong username entry
+def basic_auth_test(sbox):
+  "basic auth test"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  # Set up a custom config directory
+  tmp_dir = os.path.abspath(svntest.main.temp_dir)
+  config_dir = os.path.join(tmp_dir, 'auth-test-config')
+  svntest.main.create_config_dir(config_dir, None)
+
+  # Checkout with jrandom
+  exit_code, output, errput = svntest.main.run_command(
+    svntest.main.svn_binary, None, 1, 'co', sbox.repo_url, wc_dir,
+    '--username', 'jrandom', '--password', 'rayjandom',
+    '--config-dir', config_dir)
+
+  exit_code, output, errput = svntest.main.run_command(
+    svntest.main.svn_binary, None, 1, 'co', sbox.repo_url, wc_dir,
+    '--username', 'jrandom', '--non-interactive', '--config-dir', config_dir)
+
+  # Checkout with jconstant
+  exit_code, output, errput = svntest.main.run_command(
+    svntest.main.svn_binary, None, 1, 'co', sbox.repo_url, wc_dir,
+    '--username', 'jconstant', '--password', 'rayjandom',
+    '--config-dir', config_dir)
+
+  exit_code, output, errput = svntest.main.run_command(
+    svntest.main.svn_binary, None, 1, 'co', sbox.repo_url, wc_dir,
+    '--username', 'jconstant', '--non-interactive',
+    '--config-dir', config_dir)
+
+  # Checkout with jrandom which should fail since we do not provide
+  # a password and the above cached password belongs to jconstant
+  expected_err = ["authorization failed: Could not authenticate to server:"]
+  exit_code, output, errput = svntest.main.run_command(
+    svntest.main.svn_binary, expected_err, 1, 'co', sbox.repo_url, wc_dir,
+    '--username', 'jrandom', '--non-interactive', '--config-dir', config_dir)
+
+
 #----------------------------------------------------------------------
 
 ########################################################################
@@ -2407,6 +2449,7 @@ test_list = [ None,
               basic_relative_url_multi_repo,
               basic_relative_url_non_canonical,
               basic_relative_url_with_peg_revisions,
+              basic_auth_test,
              ]
 
 if __name__ == '__main__':

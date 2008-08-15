@@ -315,8 +315,7 @@ svn_fs_base__txn_make_committed(svn_fs_t *fs,
 {
   transaction_t *txn;
 
-  /* Don't you dare call this with an invalid REVISION. */
-  assert(SVN_IS_VALID_REVNUM(revision));
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision));
 
   /* Make sure the TXN is not committed already. */
   SVN_ERR(get_txn(&txn, fs, txn_name, FALSE, trail, pool));
