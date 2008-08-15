@@ -223,7 +223,10 @@ copy_added_dir_administratively(const char *src_path,
           SVN_ERR(svn_wc_entry(&entry, src_fullpath, src_child_dir_access,
                                TRUE, subpool));
 
-          /* TODO(#2843) Should we skip the excluded src? */
+          /* We do not need to handle excluded items here, since this function
+             only deal with the sources which are not yet in the repos.
+             Exclude flag is by definition not expected in such situation. */
+
           /* Recurse on directories; add files; ignore the rest. */
           if (this_entry.filetype == APR_DIR)
             {
@@ -784,8 +787,8 @@ svn_wc_copy2(const char *src_path,
 {
   svn_wc_adm_access_t *adm_access;
   svn_node_kind_t src_kind;
-  const char *dst_path;
-  const svn_wc_entry_t *dst_entry, *src_entry;
+  const char *dst_path, *target_path;
+  const svn_wc_entry_t *dst_entry, *src_entry, *target_entry;
 
   SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, src_path, FALSE, -1,
                                  cancel_func, cancel_baton, pool));
@@ -809,6 +812,21 @@ svn_wc_copy2(const char *src_path,
       (SVN_ERR_WC_INVALID_SCHEDULE, NULL,
        _("Cannot copy to '%s' as it is scheduled for deletion"),
        svn_path_local_style(svn_wc_adm_access_path(dst_parent), pool));
+
+  /* TODO(#2843): Rework the erroer report. */
+  /* Check if the copy target is missing or hidden and thus not exist on the
+     disk, before actually doing the file copy. */
+  target_path = svn_path_join(dst_path, dst_basename, pool);
+  SVN_ERR(svn_wc_entry(&target_entry, target_path, dst_parent, TRUE, pool));
+  if (target_entry 
+      && ((target_entry->depth == svn_depth_exclude) 
+          || target_entry->absent))
+    {
+      return svn_error_createf
+        (SVN_ERR_ENTRY_EXISTS, 
+         NULL, _("'%s' is already under version control"),
+         svn_path_local_style(target_path, pool)); 
+    }
 
   SVN_ERR(svn_io_check_path(src_path, &src_kind, pool));
 
