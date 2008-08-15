@@ -3019,13 +3019,19 @@ cached password.</p>
 <p>On Mac OS X, svn 1.4 and later uses the system Keychain
 facility to encrypt/store your svn password.</p>
 
-<p>On UNIX/Linux, there are no standard system encryption facilities,
-so the password is stored in ~/.subversion/auth/.  Notice, however,
+<p>Subversion 1.6 will address this issue for UNIX/Linux.
+Support for GNOME Keyring and KWallet has been implemented,
+both of which facilitate storing passwords on disk encrypted.
+These programs need to be available at compile-time and and at run-time.
+Otherwise, the client will fall back to caching your password in
+plaintext, but it has also been changed to <em>never</em>
+cache a password in plaintext without asking first.</p>
+
+<p>With Subversion 1.5 and earlier, on UNIX/Linux, the password can
+only be stored in plaintext in ~/.subversion/auth/.  Notice, however,
 that the directory which contains the cached passwords (usually
 ~/.subversion/auth/) has permissions of 700, meaning only you can read
 them.</p>
-
-<p>Trust your OS to protect data on disk.</p>
 
 <p>However, if you're really worried, you can permanently turn off
 password caching.  With an svn 1.0 client, just set 'store-auth-creds
