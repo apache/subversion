@@ -2606,6 +2606,383 @@ def diff_in_renamed_folder(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', '-r3:4', kappa_path)
 
+def diff_with_depth(sbox):
+  "test diffs at various depths"
+
+  sbox.build()
+
+  diff = [
+    "\n",
+    "Property changes on: .\n",
+    "___________________________________________________________________\n",
+    "Added: foo1\n",
+    "   + bar1\n",
+    "\n",
+    "\n",
+    "Property changes on: iota\n",
+    "___________________________________________________________________\n",
+    "Added: foo2\n",
+    "   + bar2\n",
+    "\n",
+    "\n",
+    "Property changes on: A\n",
+    "___________________________________________________________________\n",
+    "Added: foo3\n",
+    "   + bar3\n",
+    "\n",
+    "\n",
+    "Property changes on: " + os.path.join('A', 'B') + "\n",
+    "___________________________________________________________________\n",
+    "Added: foo4\n",
+    "   + bar4\n",
+    "\n" ]
+
+  expected_empty = svntest.verify.UnorderedOutput(diff[:6])
+  expected_files = svntest.verify.UnorderedOutput(diff[:12])
+  expected_immediates = svntest.verify.UnorderedOutput(diff[:18])
+  expected_infinity = svntest.verify.UnorderedOutput(diff[:])
+
+  os.chdir(sbox.wc_dir)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset',
+                                     'foo1', 'bar1', '.')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset',
+                                     'foo2', 'bar2', 'iota')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset',
+                                     'foo3', 'bar3', 'A')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset',
+                                     'foo4', 'bar4', os.path.join('A', 'B'))
+
+  # Test wc-wc diff.
+  svntest.actions.run_and_verify_svn(None, expected_empty, [],
+                                     'diff', '--depth', 'empty')
+  svntest.actions.run_and_verify_svn(None, expected_files, [],
+                                     'diff', '--depth', 'files')
+  svntest.actions.run_and_verify_svn(None, expected_immediates, [],
+                                     'diff', '--depth', 'immediates')
+  svntest.actions.run_and_verify_svn(None, expected_infinity, [],
+                                     'diff', '--depth', 'infinity')
+
+  # Commit the changes.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', '')
+
+  # Test repos-repos diff.  Reuse the expected outputs from above.
+  svntest.actions.run_and_verify_svn(None, expected_empty, [],
+                                     'diff', '-c2', '--depth', 'empty')
+  svntest.actions.run_and_verify_svn(None, expected_files, [],
+                                     'diff', '-c2', '--depth', 'files')
+  svntest.actions.run_and_verify_svn(None, expected_immediates, [],
+                                     'diff', '-c2', '--depth', 'immediates')
+  svntest.actions.run_and_verify_svn(None, expected_infinity, [],
+                                     'diff', '-c2', '--depth', 'infinity')
+
+  diff_wc_repos = [
+    "\n",
+    "Property changes on: .\n",
+    "___________________________________________________________________\n",
+    "Modified: foo1\n",
+    "   - bar1\n",
+    "   + baz1\n",
+    "\n",
+    "\n",
+    "Property changes on: iota\n",
+    "___________________________________________________________________\n",
+    "Modified: foo2\n",
+    "   - bar2\n",
+    "   + baz2\n",
+    "\n",
+    "\n",
+    "Index: iota\n",
+    "===================================================================\n",
+    "--- iota\t(revision 2)\n",
+    "+++ iota\t(working copy)\n",
+    "@@ -1 +1,2 @@\n",
+    " This is the file 'iota'.\n",
+    "+new text\n",
+    "Property changes on: A\n",
+    "___________________________________________________________________\n",
+    "Modified: foo3\n",
+    "   - bar3\n",
+    "   + baz3\n",
+    "\n",
+    "\n",
+    "Property changes on: " + os.path.join('A', 'B') + "\n",
+    "___________________________________________________________________\n",
+    "Modified: foo4\n",
+    "   - bar4\n",
+    "   + baz4\n",
+    "\n",
+    "Index: A/mu\n",
+    "===================================================================\n",
+    "--- A/mu\t(revision 1)\n",
+    "+++ A/mu\t(working copy)\n",
+    "@@ -1 +1,2 @@\n",
+    " This is the file 'mu'.\n",
+    "+new text\n" ]
+
+  expected_empty = svntest.verify.UnorderedOutput(diff_wc_repos[:7])
+  expected_files = svntest.verify.UnorderedOutput(diff_wc_repos[1:22])
+  expected_immediates = svntest.verify.UnorderedOutput(diff_wc_repos[1:29])
+  expected_infinity = svntest.verify.UnorderedOutput(diff_wc_repos[:])
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'up', '-r1')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset',
+                                     'foo1', 'baz1', '.')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset',
+                                     'foo2', 'baz2', 'iota')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset',
+                                     'foo3', 'baz3', 'A')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset',
+                                     'foo4', 'baz4', os.path.join('A', 'B'))
+  svntest.main.file_append(os.path.join('A', 'mu'), "new text\n")
+  svntest.main.file_append('iota', "new text\n")
+
+  # Test wc-repos diff.
+  svntest.actions.run_and_verify_svn(None, expected_empty, [],
+                                     'diff', '-rHEAD', '--depth', 'empty')
+  svntest.actions.run_and_verify_svn(None, expected_files, [],
+                                     'diff', '-rHEAD', '--depth', 'files')
+  svntest.actions.run_and_verify_svn(None, expected_immediates, [],
+                                     'diff', '-rHEAD', '--depth', 'immediates')
+  svntest.actions.run_and_verify_svn(None, expected_infinity, [],
+                                     'diff', '-rHEAD', '--depth', 'infinity')
+
+# test for issue 2920: ignore eol-style on empty lines
+def diff_ignore_eolstyle_empty_lines(sbox):
+  "ignore eol styles when diffing empty lines"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  file_name = "iota"
+  file_path = os.path.join(wc_dir, file_name)
+
+  svntest.main.file_write(file_path,
+                          "Aa\n"
+                          "\n"
+                          "Bb\n"
+                          "\n"
+                          "Cc\n")
+  expected_output = svntest.wc.State(wc_dir, {
+      'iota' : Item(verb='Sending'),
+      })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        None, None, wc_dir)
+
+  # sleep to guarantee timestamp change
+  time.sleep(1)
+
+  # commit only eol changes
+  svntest.main.file_write(file_path,
+                          "Aa\012"
+                          "\012"
+                          "Bb\r"
+                          "\r"
+                          "Cc\012",
+                          mode="wb")
+
+  svntest.actions.run_and_verify_svn(None, [], [],
+                                     'diff', '-x', '--ignore-eol-style',
+                                     file_path)
+
+def diff_backward_repos_wc_copy(sbox):
+  "backward repos->wc diff with copied file"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  os.chdir(wc_dir)
+
+  # copy a file
+  mu_path = os.path.join('A', 'mu')
+  mucp_path = os.path.join('A', 'mucopy')
+  svntest.main.run_svn(None, 'cp', mu_path, mucp_path)
+
+  # commit r2 and update back to r1
+  svntest.main.run_svn(None,
+                       'ci', '-m', 'log msg')
+  svntest.main.run_svn(None, 'up', '-r1')
+
+  # diff r2 against working copy
+  diff_repos_wc = [
+    "Index: A/mucopy\n",
+    "===================================================================\n",
+    "--- A/mucopy\t(revision 2)\n",
+    "+++ A/mucopy\t(working copy)\n",
+    "@@ -1 +0,0 @@\n",
+    "-This is the file 'mu'.\n",
+  ]
+
+  svntest.actions.run_and_verify_svn(None, diff_repos_wc, [],
+                                     'diff', '-r' , '2')
+
+#----------------------------------------------------------------------
+
+def diff_summarize_xml(sbox):
+  "xml diff summarize"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # A content modification.
+  svntest.main.file_append(os.path.join(wc_dir, "A", "mu"), "New mu content")
+
+  # A prop modification.
+  svntest.main.run_svn(None,
+                       "propset", "prop", "val",
+                       os.path.join(wc_dir, 'iota'))
+
+  # Both content and prop mods.
+  tau_path = os.path.join(wc_dir, "A", "D", "G", "tau")
+  svntest.main.file_append(tau_path, "tautau")
+  svntest.main.run_svn(None,
+                       "propset", "prop", "val", tau_path)
+
+  # A file addition.
+  newfile_path = os.path.join(wc_dir, 'newfile')
+  svntest.main.file_append(newfile_path, 'newfile')
+  svntest.main.run_svn(None, 'add', newfile_path)
+
+  # A file deletion.
+  svntest.main.run_svn(None, "delete", os.path.join(wc_dir, 'A', 'B',
+                                                    'lambda'))
+
+  # A directory addition
+  svntest.main.run_svn(None, "mkdir", os.path.join(wc_dir, 'newdir'))
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu': Item(verb='Sending'),
+    'iota': Item(verb='Sending'),
+    'newfile': Item(verb='Adding'),
+    'A/D/G/tau': Item(verb='Sending'),
+    'A/B/lambda': Item(verb='Deleting'),
+    'newdir': Item(verb='Adding'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'newfile': Item(status='  ', wc_rev=2),
+    'newdir': Item(status='  ', wc_rev=2),
+    })
+  expected_status.tweak("A/mu", "iota", "A/D/G/tau", "newfile", "newdir",
+                        wc_rev=2)
+  expected_status.remove("A/B/lambda")
+
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  # 1) Test --xml without --summarize
+  svntest.actions.run_and_verify_svn(
+    None, None, ".*--xml' option only valid with '--summarize' option",
+    'diff', wc_dir, '--xml')
+
+  # 2) Test --xml on invalid revision
+  svntest.actions.run_and_verify_diff_summarize_xml(
+    ".*No such revision 5555555",
+    None, wc_dir, None, None, None, '-r0:5555555', wc_dir)
+
+  # 3) Test working copy summarize
+  svntest.actions.run_and_verify_diff_summarize_xml(
+    ".*Summarizing diff can only compare repository to repository",
+    None, wc_dir, None, None, wc_dir)
+
+  # 4) Test --summarize --xml on -c2
+  paths = ['iota',]
+  items = ['none',]
+  kinds = ['file',]
+  props = ['modified',]
+
+  svntest.actions.run_and_verify_diff_summarize_xml(
+    [], wc_dir, paths, items, props, kinds, '-c2',
+    os.path.join(wc_dir, 'iota'))
+
+  # 5) Test --summarize --xml on -r1:2
+  paths = ['A/mu', 'iota', 'A/D/G/tau', 'newfile', 'A/B/lambda',
+           'newdir',]
+  items = ['modified', 'none', 'modified', 'added', 'deleted', 'added',]
+  kinds = ['file','file','file','file','file', 'dir',]
+  props = ['none', 'modified', 'modified', 'none', 'none', 'none',]
+
+  svntest.actions.run_and_verify_diff_summarize_xml(
+    [], wc_dir, paths, items, props, kinds, '-r1:2', wc_dir)
+
+  # 6) Same as test #5 but ran against a URL instead of a WC path
+  paths = ['A/mu', 'iota', 'A/D/G/tau', 'newfile', 'A/B/lambda',
+           'newdir',]
+  items = ['modified', 'none', 'modified', 'added', 'deleted', 'added',]
+  kinds = ['file','file','file','file','file', 'dir',]
+  props = ['none', 'modified', 'modified', 'none', 'none', 'none',]
+
+  svntest.actions.run_and_verify_diff_summarize_xml(
+    [], sbox.repo_url, paths, items, props, kinds, '-r1:2', sbox.repo_url)
+
+def diff_file_depth_empty(sbox):
+  "svn diff --depth=empty FILE_WITH_LOCAL_MODS"
+  # The bug was that no diff output would be generated.  Check that some is.
+  sbox.build()
+  iota_path = os.path.join(sbox.wc_dir, 'iota')
+  svntest.main.file_append(iota_path, "new text in iota")
+  exit_code, out, err = svntest.main.run_svn(None, 'diff',
+                                             '--depth', 'empty', iota_path)
+  if err:
+    raise svntest.Failure
+  if len(out) < 4:
+    raise svntest.Failure
+
+# This used to abort with ra_serf.
+def diff_wrong_extension_type(sbox):
+  "'svn diff -x wc -r#' should return error"
+
+  sbox.build(read_only = True)
+  expected_error = "(.*svn: Invalid argument .* in diff options.*)|" \
+                   "(svn: '.' is not a working copy)"
+  svntest.actions.run_and_verify_svn(None, [], expected_error,
+                                     'diff', '-x', sbox.wc_dir, '-r', '1')
+
+# Check the order of the arguments for an external diff tool
+def diff_external_diffcmd(sbox):
+  "svn diff --diff-cmd provides the correct arguments"
+
+  sbox.build(read_only = True)
+
+  iota_path = os.path.join(sbox.wc_dir, 'iota')
+  svntest.main.file_append(iota_path, "new text in iota")
+
+  # Create a small diff mock object that prints its arguments to stdout.
+  diff_script_path = os.path.join(sbox.wc_dir, 'diff')
+  # TODO: make the create function return the actual script name, and rename
+  # it to something more generic.
+  svntest.main.create_python_hook_script(diff_script_path, 'import sys\n'
+    'for arg in sys.argv[1:]:\n  print arg\n')
+  if sys.platform == 'win32':
+    diff_script_path = "%s.bat" % diff_script_path
+
+  expected_output = svntest.verify.ExpectedOutput([
+"Index: svn-test-work/working_copies/diff_tests-48/iota\n",
+"===================================================================\n",
+"-u\n",
+"-L\n",
+"svn-test-work/working_copies/diff_tests-48/iota\t(revision 1)\n",
+"-L\n",
+"svn-test-work/working_copies/diff_tests-48/iota\t(working copy)\n",
+"%s\n" % os.path.join(sbox.wc_dir, '.svn', 'text-base', 'iota.svn-base'),
+"%s\n" % os.path.join(sbox.wc_dir, 'iota')])
+
+  # Check that the output of diff corresponds with the expected arguments,
+  # in the correct order.
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', '--diff-cmd', diff_script_path,
+                                     iota_path)
+
 def diff_svnpatch(sbox):
   "test svnpatch format in various ways"
 
@@ -3009,383 +3386,6 @@ def diff_svnpatch(sbox):
   if (svnpatch_output != expected_svnpatch_head_r2):
     raise svntest.Failure
 
-def diff_with_depth(sbox):
-  "test diffs at various depths"
-
-  sbox.build()
-
-  diff = [
-    "\n",
-    "Property changes on: .\n",
-    "___________________________________________________________________\n",
-    "Added: foo1\n",
-    "   + bar1\n",
-    "\n",
-    "\n",
-    "Property changes on: iota\n",
-    "___________________________________________________________________\n",
-    "Added: foo2\n",
-    "   + bar2\n",
-    "\n",
-    "\n",
-    "Property changes on: A\n",
-    "___________________________________________________________________\n",
-    "Added: foo3\n",
-    "   + bar3\n",
-    "\n",
-    "\n",
-    "Property changes on: " + os.path.join('A', 'B') + "\n",
-    "___________________________________________________________________\n",
-    "Added: foo4\n",
-    "   + bar4\n",
-    "\n" ]
-
-  expected_empty = svntest.verify.UnorderedOutput(diff[:6])
-  expected_files = svntest.verify.UnorderedOutput(diff[:12])
-  expected_immediates = svntest.verify.UnorderedOutput(diff[:18])
-  expected_infinity = svntest.verify.UnorderedOutput(diff[:])
-
-  os.chdir(sbox.wc_dir)
-
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'propset',
-                                     'foo1', 'bar1', '.')
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'propset',
-                                     'foo2', 'bar2', 'iota')
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'propset',
-                                     'foo3', 'bar3', 'A')
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'propset',
-                                     'foo4', 'bar4', os.path.join('A', 'B'))
-
-  # Test wc-wc diff.
-  svntest.actions.run_and_verify_svn(None, expected_empty, [],
-                                     'diff', '--depth', 'empty')
-  svntest.actions.run_and_verify_svn(None, expected_files, [],
-                                     'diff', '--depth', 'files')
-  svntest.actions.run_and_verify_svn(None, expected_immediates, [],
-                                     'diff', '--depth', 'immediates')
-  svntest.actions.run_and_verify_svn(None, expected_infinity, [],
-                                     'diff', '--depth', 'infinity')
-
-  # Commit the changes.
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'ci', '-m', '')
-
-  # Test repos-repos diff.  Reuse the expected outputs from above.
-  svntest.actions.run_and_verify_svn(None, expected_empty, [],
-                                     'diff', '-c2', '--depth', 'empty')
-  svntest.actions.run_and_verify_svn(None, expected_files, [],
-                                     'diff', '-c2', '--depth', 'files')
-  svntest.actions.run_and_verify_svn(None, expected_immediates, [],
-                                     'diff', '-c2', '--depth', 'immediates')
-  svntest.actions.run_and_verify_svn(None, expected_infinity, [],
-                                     'diff', '-c2', '--depth', 'infinity')
-
-  diff_wc_repos = [
-    "\n",
-    "Property changes on: .\n",
-    "___________________________________________________________________\n",
-    "Modified: foo1\n",
-    "   - bar1\n",
-    "   + baz1\n",
-    "\n",
-    "\n",
-    "Property changes on: iota\n",
-    "___________________________________________________________________\n",
-    "Modified: foo2\n",
-    "   - bar2\n",
-    "   + baz2\n",
-    "\n",
-    "\n",
-    "Index: iota\n",
-    "===================================================================\n",
-    "--- iota\t(revision 2)\n",
-    "+++ iota\t(working copy)\n",
-    "@@ -1 +1,2 @@\n",
-    " This is the file 'iota'.\n",
-    "+new text\n",
-    "Property changes on: A\n",
-    "___________________________________________________________________\n",
-    "Modified: foo3\n",
-    "   - bar3\n",
-    "   + baz3\n",
-    "\n",
-    "\n",
-    "Property changes on: " + os.path.join('A', 'B') + "\n",
-    "___________________________________________________________________\n",
-    "Modified: foo4\n",
-    "   - bar4\n",
-    "   + baz4\n",
-    "\n",
-    "Index: A/mu\n",
-    "===================================================================\n",
-    "--- A/mu\t(revision 1)\n",
-    "+++ A/mu\t(working copy)\n",
-    "@@ -1 +1,2 @@\n",
-    " This is the file 'mu'.\n",
-    "+new text\n" ]
-
-  expected_empty = svntest.verify.UnorderedOutput(diff_wc_repos[:7])
-  expected_files = svntest.verify.UnorderedOutput(diff_wc_repos[1:22])
-  expected_immediates = svntest.verify.UnorderedOutput(diff_wc_repos[1:29])
-  expected_infinity = svntest.verify.UnorderedOutput(diff_wc_repos[:])
-
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'up', '-r1')
-
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'propset',
-                                     'foo1', 'baz1', '.')
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'propset',
-                                     'foo2', 'baz2', 'iota')
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'propset',
-                                     'foo3', 'baz3', 'A')
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'propset',
-                                     'foo4', 'baz4', os.path.join('A', 'B'))
-  svntest.main.file_append(os.path.join('A', 'mu'), "new text\n")
-  svntest.main.file_append('iota', "new text\n")
-
-  # Test wc-repos diff.
-  svntest.actions.run_and_verify_svn(None, expected_empty, [],
-                                     'diff', '-rHEAD', '--depth', 'empty')
-  svntest.actions.run_and_verify_svn(None, expected_files, [],
-                                     'diff', '-rHEAD', '--depth', 'files')
-  svntest.actions.run_and_verify_svn(None, expected_immediates, [],
-                                     'diff', '-rHEAD', '--depth', 'immediates')
-  svntest.actions.run_and_verify_svn(None, expected_infinity, [],
-                                     'diff', '-rHEAD', '--depth', 'infinity')
-
-# test for issue 2920: ignore eol-style on empty lines
-def diff_ignore_eolstyle_empty_lines(sbox):
-  "ignore eol styles when diffing empty lines"
-
-  sbox.build()
-  wc_dir = sbox.wc_dir
-
-  file_name = "iota"
-  file_path = os.path.join(wc_dir, file_name)
-
-  svntest.main.file_write(file_path,
-                          "Aa\n"
-                          "\n"
-                          "Bb\n"
-                          "\n"
-                          "Cc\n")
-  expected_output = svntest.wc.State(wc_dir, {
-      'iota' : Item(verb='Sending'),
-      })
-  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None, wc_dir)
-
-  # sleep to guarantee timestamp change
-  time.sleep(1)
-
-  # commit only eol changes
-  svntest.main.file_write(file_path,
-                          "Aa\012"
-                          "\012"
-                          "Bb\r"
-                          "\r"
-                          "Cc\012",
-                          mode="wb")
-
-  svntest.actions.run_and_verify_svn(None, [], [],
-                                     'diff', '-x', '--ignore-eol-style',
-                                     file_path)
-
-def diff_backward_repos_wc_copy(sbox):
-  "backward repos->wc diff with copied file"
-
-  sbox.build()
-  wc_dir = sbox.wc_dir
-  os.chdir(wc_dir)
-
-  # copy a file
-  mu_path = os.path.join('A', 'mu')
-  mucp_path = os.path.join('A', 'mucopy')
-  svntest.main.run_svn(None, 'cp', mu_path, mucp_path)
-
-  # commit r2 and update back to r1
-  svntest.main.run_svn(None,
-                       'ci', '-m', 'log msg')
-  svntest.main.run_svn(None, 'up', '-r1')
-
-  # diff r2 against working copy
-  diff_repos_wc = [
-    "Index: A/mucopy\n",
-    "===================================================================\n",
-    "--- A/mucopy\t(revision 2)\n",
-    "+++ A/mucopy\t(working copy)\n",
-    "@@ -1 +0,0 @@\n",
-    "-This is the file 'mu'.\n",
-  ]
-
-  svntest.actions.run_and_verify_svn(None, diff_repos_wc, [],
-                                     'diff', '-r' , '2')
-
-#----------------------------------------------------------------------
-
-def diff_summarize_xml(sbox):
-  "xml diff summarize"
-
-  sbox.build()
-  wc_dir = sbox.wc_dir
-
-  # A content modification.
-  svntest.main.file_append(os.path.join(wc_dir, "A", "mu"), "New mu content")
-
-  # A prop modification.
-  svntest.main.run_svn(None,
-                       "propset", "prop", "val",
-                       os.path.join(wc_dir, 'iota'))
-
-  # Both content and prop mods.
-  tau_path = os.path.join(wc_dir, "A", "D", "G", "tau")
-  svntest.main.file_append(tau_path, "tautau")
-  svntest.main.run_svn(None,
-                       "propset", "prop", "val", tau_path)
-
-  # A file addition.
-  newfile_path = os.path.join(wc_dir, 'newfile')
-  svntest.main.file_append(newfile_path, 'newfile')
-  svntest.main.run_svn(None, 'add', newfile_path)
-
-  # A file deletion.
-  svntest.main.run_svn(None, "delete", os.path.join(wc_dir, 'A', 'B',
-                                                    'lambda'))
-
-  # A directory addition
-  svntest.main.run_svn(None, "mkdir", os.path.join(wc_dir, 'newdir'))
-
-  expected_output = svntest.wc.State(wc_dir, {
-    'A/mu': Item(verb='Sending'),
-    'iota': Item(verb='Sending'),
-    'newfile': Item(verb='Adding'),
-    'A/D/G/tau': Item(verb='Sending'),
-    'A/B/lambda': Item(verb='Deleting'),
-    'newdir': Item(verb='Adding'),
-    })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.add({
-    'newfile': Item(status='  ', wc_rev=2),
-    'newdir': Item(status='  ', wc_rev=2),
-    })
-  expected_status.tweak("A/mu", "iota", "A/D/G/tau", "newfile", "newdir",
-                        wc_rev=2)
-  expected_status.remove("A/B/lambda")
-
-  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
-
-  # 1) Test --xml without --summarize
-  svntest.actions.run_and_verify_svn(
-    None, None, ".*--xml' option only valid with '--summarize' option",
-    'diff', wc_dir, '--xml')
-
-  # 2) Test --xml on invalid revision
-  svntest.actions.run_and_verify_diff_summarize_xml(
-    ".*No such revision 5555555",
-    None, wc_dir, None, None, None, '-r0:5555555', wc_dir)
-
-  # 3) Test working copy summarize
-  svntest.actions.run_and_verify_diff_summarize_xml(
-    ".*Summarizing diff can only compare repository to repository",
-    None, wc_dir, None, None, wc_dir)
-
-  # 4) Test --summarize --xml on -c2
-  paths = ['iota',]
-  items = ['none',]
-  kinds = ['file',]
-  props = ['modified',]
-
-  svntest.actions.run_and_verify_diff_summarize_xml(
-    [], wc_dir, paths, items, props, kinds, '-c2',
-    os.path.join(wc_dir, 'iota'))
-
-  # 5) Test --summarize --xml on -r1:2
-  paths = ['A/mu', 'iota', 'A/D/G/tau', 'newfile', 'A/B/lambda',
-           'newdir',]
-  items = ['modified', 'none', 'modified', 'added', 'deleted', 'added',]
-  kinds = ['file','file','file','file','file', 'dir',]
-  props = ['none', 'modified', 'modified', 'none', 'none', 'none',]
-
-  svntest.actions.run_and_verify_diff_summarize_xml(
-    [], wc_dir, paths, items, props, kinds, '-r1:2', wc_dir)
-
-  # 6) Same as test #5 but ran against a URL instead of a WC path
-  paths = ['A/mu', 'iota', 'A/D/G/tau', 'newfile', 'A/B/lambda',
-           'newdir',]
-  items = ['modified', 'none', 'modified', 'added', 'deleted', 'added',]
-  kinds = ['file','file','file','file','file', 'dir',]
-  props = ['none', 'modified', 'modified', 'none', 'none', 'none',]
-
-  svntest.actions.run_and_verify_diff_summarize_xml(
-    [], sbox.repo_url, paths, items, props, kinds, '-r1:2', sbox.repo_url)
-
-def diff_file_depth_empty(sbox):
-  "svn diff --depth=empty FILE_WITH_LOCAL_MODS"
-  # The bug was that no diff output would be generated.  Check that some is.
-  sbox.build()
-  iota_path = os.path.join(sbox.wc_dir, 'iota')
-  svntest.main.file_append(iota_path, "new text in iota")
-  exit_code, out, err = svntest.main.run_svn(None, 'diff',
-                                             '--depth', 'empty', iota_path)
-  if err:
-    raise svntest.Failure
-  if len(out) < 4:
-    raise svntest.Failure
-
-# This used to abort with ra_serf.
-def diff_wrong_extension_type(sbox):
-  "'svn diff -x wc -r#' should return error"
-
-  sbox.build(read_only = True)
-  expected_error = "(.*svn: Invalid argument .* in diff options.*)|" \
-                   "(svn: '.' is not a working copy)"
-  svntest.actions.run_and_verify_svn(None, [], expected_error,
-                                     'diff', '-x', sbox.wc_dir, '-r', '1')
-
-# Check the order of the arguments for an external diff tool
-def diff_external_diffcmd(sbox):
-  "svn diff --diff-cmd provides the correct arguments"
-
-  sbox.build(read_only = True)
-
-  iota_path = os.path.join(sbox.wc_dir, 'iota')
-  svntest.main.file_append(iota_path, "new text in iota")
-
-  # Create a small diff mock object that prints its arguments to stdout.
-  diff_script_path = os.path.join(sbox.wc_dir, 'diff')
-  # TODO: make the create function return the actual script name, and rename
-  # it to something more generic.
-  svntest.main.create_python_hook_script(diff_script_path, 'import sys\n'
-    'for arg in sys.argv[1:]:\n  print arg\n')
-  if sys.platform == 'win32':
-    diff_script_path = "%s.bat" % diff_script_path
-
-  expected_output = svntest.verify.ExpectedOutput([
-"Index: svn-test-work/working_copies/diff_tests-48/iota\n",
-"===================================================================\n",
-"-u\n",
-"-L\n",
-"svn-test-work/working_copies/diff_tests-48/iota\t(revision 1)\n",
-"-L\n",
-"svn-test-work/working_copies/diff_tests-48/iota\t(working copy)\n",
-"%s\n" % os.path.join(sbox.wc_dir, '.svn', 'text-base', 'iota.svn-base'),
-"%s\n" % os.path.join(sbox.wc_dir, 'iota')])
-
-  # Check that the output of diff corresponds with the expected arguments,
-  # in the correct order.
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
-                                     'diff', '--diff-cmd', diff_script_path,
-                                     iota_path)
-
 ########################################################################
 #Run the tests
 
@@ -3433,7 +3433,6 @@ test_list = [ None,
               diff_ignore_whitespace,
               diff_ignore_eolstyle,
               diff_in_renamed_folder,
-              diff_svnpatch,
               diff_with_depth,
               diff_ignore_eolstyle_empty_lines,
               diff_backward_repos_wc_copy,
@@ -3441,6 +3440,7 @@ test_list = [ None,
               diff_file_depth_empty,
               diff_wrong_extension_type,
               diff_external_diffcmd,
+              diff_svnpatch,
               ]
 
 if __name__ == '__main__':
