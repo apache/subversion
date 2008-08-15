@@ -131,8 +131,7 @@ editable.  Should it be in cleartext, the user would still have to go through
 svn protocol writing manually -- calculate checksums and strings length, and
 place tokens, assumed to be not so friendly for the end-user.  However, there's
 a much easier workaround: apply the patch, and then start editing the working
-copy with regular svn subcommands.  There's also the `--dry-run' option that
-can help see what the patch will do.
+copy with regular svn subcommands.
 
 
 V PATCHING
