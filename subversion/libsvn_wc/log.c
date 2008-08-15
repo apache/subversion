@@ -1178,12 +1178,10 @@ log_do_committed(struct log_runner *loggy,
                                                       pool));
 
           /* If the parent entry's working rev 'lags' behind new_rev... */
-          /* TODO(#2843) The adm_access itself ensures the path will not be
-           * excluded/deleted. Why show_hidden? */
           SVN_ERR(svn_wc_entry(&parentry,
                                svn_wc_adm_access_path(loggy->adm_access),
                                loggy->adm_access,
-                               TRUE, pool));
+                               FALSE, pool));
           if (new_rev > parentry->revision)
             {
               /* ...then the parent's revision is now officially a

@@ -150,9 +150,7 @@ check_scheme_match(svn_wc_adm_access_t *adm_access, const char *url)
   const svn_wc_entry_t *ent;
   const char *idx1, *idx2;
 
-  /* TODO(#2843): The adm_access itself ensures that it is not an excluded
-     path. It seems that we don't need to show_hidden here. */
-  SVN_ERR(svn_wc_entry(&ent, path, adm_access, TRUE, pool));
+  SVN_ERR(svn_wc_entry(&ent, path, adm_access, FALSE, pool));
 
   idx1 = strchr(url, ':');
   idx2 = strchr(ent->url, ':');

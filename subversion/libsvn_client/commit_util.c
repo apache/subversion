@@ -1280,10 +1280,11 @@ do_item_commit(void **dir_baton,
         }
 
       /* TODO(#2843)
-         Ensured by harvest_commitables(), item->path will never be 
-         an excluded path. However, will it be deleted/absent items? 
-         In other words, do we really need show_hidden = TRUE here? */
-      SVN_ERR(svn_wc_entry(&tmp_entry, item->path, adm_access, TRUE, pool));
+         Ensured by harvest_commitables(), item->path will never be an
+         excluded path. However, will it be deleted/absent items?  I think
+         committing an modification on a deleted/absent item does not make
+         sense. So it's probably safe to turn off the show_hidden flag here.*/
+      SVN_ERR(svn_wc_entry(&tmp_entry, item->path, adm_access, FALSE, pool));
       SVN_ERR(svn_wc_transmit_prop_deltas
               (item->path, adm_access, tmp_entry, editor,
                (kind == svn_node_dir) ? *dir_baton : file_baton, NULL, pool));
