@@ -1638,13 +1638,28 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(svn_wc_entry(&ent, pair->dst, adm_access, FALSE, iterpool));
-      if (ent && (ent->kind != svn_node_dir) &&
-          (ent->schedule != svn_wc_schedule_delete))
-        return svn_error_createf
-          (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-           _("Entry for '%s' exists (though the working file is missing)"),
-           svn_path_local_style(pair->dst, pool));
+      SVN_ERR(svn_wc_entry(&ent, pair->dst, adm_access, TRUE, iterpool));
+      if (ent)
+        {
+          /* TODO(#2843): Rework the error report. Maybe we can simplify the
+             condition. Currently, the first is about hidden items and the
+             second is for missing items. */
+          if (ent->depth == svn_depth_exclude
+              || ent->absent)
+            {
+              return svn_error_createf
+                (SVN_ERR_ENTRY_EXISTS, 
+                 NULL, _("'%s' is already under version control"),
+                 svn_path_local_style(pair->dst, pool)); 
+            }
+          else if ((ent->kind != svn_node_dir) &&
+                   (ent->schedule != svn_wc_schedule_delete) 
+                   && ! ent->deleted)
+            return svn_error_createf
+              (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+               _("Entry for '%s' exists (though the working file is missing)"),
+               svn_path_local_style(pair->dst, pool));
+        }
     }
 
   /* Decide whether the two repositories are the same or not. */
