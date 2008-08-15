@@ -66,7 +66,7 @@ kwallet_password_get(const char **password,
     }
 
   KCmdLineArgs::init(1,
-                     (char *[1]) { "svn" },
+                     (char *[1]) { (char *) "svn" },
                      "Subversion",
                      "subversion",
                      ki18n("Subversion"),
@@ -85,24 +85,20 @@ kwallet_password_get(const char **password,
         KWallet::Wallet::openWallet(wallet_name,
                                     -1,
                                     KWallet::Wallet::Synchronous);
-      if (wallet)
+      if (wallet && wallet->setFolder(folder))
         {
-          if (wallet->hasFolder(folder))
+          QString q_password;
+          if (wallet->readPassword(key, q_password) == 0);
             {
-              if (wallet->setFolder(folder))
-                {
-                  QString q_password;
-                  if (wallet->readPassword(key, q_password) == 0);
-                    {
-                      *password = apr_pstrmemdup(pool,
-                                                 q_password.toUtf8().data(),
-                                                 q_password.size());
-                      ret = TRUE;
-                    }
-                }
+              *password = apr_pstrmemdup(pool,
+                                         q_password.toUtf8().data(),
+                                         q_password.size());
+              ret = TRUE;
             }
         }
+      delete wallet;
     }
+
 // This function currently closes the wallet if no other application
 // is connected to the wallet. We're waiting for this to be fixed
 // upstream, see https://bugs.kde.org/show_bug.cgi?id=162570
@@ -132,7 +128,7 @@ kwallet_password_set(apr_hash_t *creds,
     }
 
   KCmdLineArgs::init(1,
-                     (char *[1]) { "svn" },
+                     (char *[1]) { (char *) "svn" },
                      "Subversion",
                      "subversion",
                      ki18n("Subversion"),
@@ -154,19 +150,18 @@ kwallet_password_set(apr_hash_t *creds,
         {
           wallet->createFolder(folder);
         }
-      if (wallet->hasFolder(folder))
+      if (wallet->setFolder(folder))
         {
-          if (wallet->setFolder(folder))
+          QString key = QString::fromUtf8(username) + "@"
+            + QString::fromUtf8(realmstring);
+          if (wallet->writePassword(key, q_password) == 0)
             {
-              QString key = QString::fromUtf8(username) + "@"
-                + QString::fromUtf8(realmstring);
-              if (wallet->writePassword(key, q_password) == 0)
-                {
-                  ret = TRUE;
-                }
+              ret = TRUE;
             }
         }
     }
+  delete wallet;
+
 // This function currently closes the wallet if no other application
 // is connected to the wallet. We're waiting for this to be fixed
 // upstream, see https://bugs.kde.org/show_bug.cgi?id=162570
