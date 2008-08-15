@@ -232,3 +232,67 @@ svn_auth_get_kwallet_simple_provider(svn_auth_provider_object_t **provider,
   *provider = po;
 }
 }
+
+
+/*-----------------------------------------------------------------------*/
+/* KWallet SSL client certificate passphrase provider,                   */
+/* puts passphrases in KWallet                                           */
+/*-----------------------------------------------------------------------*/
+
+/* Get cached encrypted credentials from the ssl client cert password
+   provider's cache. */
+static svn_error_t *
+kwallet_ssl_client_cert_pw_first_creds(void **credentials,
+                                       void **iter_baton,
+                                       void *provider_baton,
+                                       apr_hash_t *parameters,
+                                       const char *realmstring,
+                                       apr_pool_t *pool)
+{
+  return svn_auth__ssl_client_cert_pw_file_first_creds_helper
+           (credentials,
+            iter_baton, provider_baton,
+            parameters, realmstring,
+            kwallet_password_get,
+            SVN_AUTH__KWALLET_PASSWORD_TYPE,
+            pool);
+}
+
+/* Save encrypted credentials to the ssl client cert password provider's
+   cache. */
+static svn_error_t *
+kwallet_ssl_client_cert_pw_save_creds(svn_boolean_t *saved,
+                                      void *credentials,
+                                      void *provider_baton,
+                                      apr_hash_t *parameters,
+                                      const char *realmstring,
+                                      apr_pool_t *pool)
+{
+  return svn_auth__ssl_client_cert_pw_file_save_creds_helper
+           (saved, credentials,
+            provider_baton, parameters,
+            realmstring,
+            kwallet_password_set,
+            SVN_AUTH__KWALLET_PASSWORD_TYPE,
+            pool);
+}
+
+static const svn_auth_provider_t kwallet_ssl_client_cert_pw_provider = {
+  SVN_AUTH_CRED_SSL_CLIENT_CERT_PW,
+  kwallet_ssl_client_cert_pw_first_creds,
+  NULL,
+  kwallet_ssl_client_cert_pw_save_creds
+};
+
+/* Public API */
+void
+svn_auth_get_kwallet_ssl_client_cert_pw_provider
+    (svn_auth_provider_object_t **provider,
+     apr_pool_t *pool)
+{
+  svn_auth_provider_object_t *po =
+    static_cast<svn_auth_provider_object_t *> (apr_pcalloc(pool, sizeof(*po)));
+
+  po->vtable = &kwallet_ssl_client_cert_pw_provider;
+  *provider = po;
+}
