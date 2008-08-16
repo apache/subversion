@@ -1279,8 +1279,7 @@ do_item_commit(void **dir_baton,
             }
         }
 
-      /* TODO(#2843)
-         Ensured by harvest_commitables(), item->path will never be an
+      /* Ensured by harvest_commitables(), item->path will never be an
          excluded path. However, will it be deleted/absent items?  I think
          committing an modification on a deleted/absent item does not make
          sense. So it's probably safe to turn off the show_hidden flag here.*/
