@@ -104,8 +104,8 @@ Candidate changes for 1.5.2:
      Toby Peterson <toby@apple.com>, see this thread:
      http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=141888
    Notes:
-     r31837 fixes a bug introdcued in r31725:
-     Take an early out if path is "", to avoid accessing uninitalized
+     r31837 fixes a bug introduced in r31725:
+     Take an early out if path is "", to avoid accessing uninitialized
      memory later when we look at *(dst - 1).
    Votes:
      +1: stsp
