@@ -666,7 +666,6 @@ BASE schema
   repos_uuid   string     ### shared, per-dir?
   ### lock information? in this table, or a separate locks table?
   ### depth?
-  ### cache lastmod date of ACTUAL file? (used for detecting change)
 
 
 WORKING schema
