@@ -746,6 +746,18 @@ Note that 'children' applies only to kind==DIRECTORY
     the "empty file"
 
 
+Code Organization
+-----------------
+
+include/private/svn_wc_db.h  (symbols: svn_wc__db_*)
+        Storage subsystem for the WC metadata/base-text information.
+        This is a private API, and the rest of the WC will be rebuilt
+        on top of this.
+        
+        This code deals with storage, and transactional modifications
+        of the data.
+
+
 Other sections
 ==============
  remain to be done
