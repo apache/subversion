@@ -108,7 +108,7 @@ Candidate changes for 1.5.2:
      Take an early out if path is "", to avoid accessing uninitialized
      memory later when we look at *(dst - 1).
    Votes:
-     +1: stsp
+     +1: stsp, danielsh
 
 Approved changes:
 =================
