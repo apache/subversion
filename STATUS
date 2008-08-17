@@ -22,7 +22,7 @@ Candidate changes for 1.5.2:
      kfogel reviewed this and had a question, posted in:
      http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=141286
    Votes:
-     +1: pburba, cmpilato
+     +1: pburba, cmpilato, kfogel
 
  * r31232, r31234, r31550, r31630
    Set of revisions required to make 1.5.x pass all tests over ra_serf.
