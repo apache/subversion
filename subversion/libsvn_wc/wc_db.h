@@ -40,6 +40,17 @@ extern "C" {
 typedef struct svn_wc_db_t svn_wc_db_t;
 
 
+typedef enum svn_wc_db_kind_t {
+    svn_wc_db_kind_dir,
+    svn_wc_db_kind_file,
+    svn_wc_db_kind_symlink,
+
+    svn_wc_db_kind_absent_dir,
+    svn_wc_db_kind_absent_file,
+    svn_wc_db_kind_absent_symlink
+} svn_wc_db_kind_t;
+
+
 /**
  * Open the administrative database for the working copy identified by the
  * (absolute) @a path. The (opaque) handle for interacting with the database
@@ -66,7 +77,7 @@ svn_wc__db_open(svn_wc_db_t **db,
 
 /* ### base_add_* can also replace. should be okay? */
 
-/* ### can children be optional? don't think so. */
+/* ### props optional.  can children be optional? don't think so. */
 svn_error_t *
 svn_wc__db_base_add_directory(svn_wc_db_t *db,
                               const char *path,
@@ -83,8 +94,8 @@ svn_error_t *
 svn_wc__db_base_add_file(svn_wc_db_t *db,
                          const char *path,
                          svn_revnum_t revision,
-                         svn_stream_t *contents,
                          apr_hash_t *props,
+                         svn_stream_t *contents,
                          const char *checksum,
                          apr_pool_t *scratch_pool);
 
@@ -121,22 +132,16 @@ svn_wc__db_base_add_symlink(svn_wc_db_t *db,
                             const char *path,
                             svn_revnum_t revision,
                             apr_hash_t *props,
+                            const char *target,
                             apr_pool_t *scratch_pool);
 
 
 /* ### keep the revision? */
 svn_error_t *
-svn_wc__db_base_add_absent_directory(svn_wc_db_t *db,
-                                     const char *path,
-                                     svn_revnum_t revision,
-                                     apr_pool_t *scratch_pool);
-
-
-/* ### keep the revision? */
-svn_error_t *
-svn_wc__db_base_add_absent_file(svn_wc_db_t *db,
+svn_wc__db_base_add_absent_node(svn_wc_db_t *db,
                                 const char *path,
                                 svn_revnum_t revision,
+                                svn_wc_db_kind_t kind,
                                 apr_pool_t *scratch_pool);
 
 
@@ -155,52 +160,223 @@ svn_wc__db_base_move(svn_wc_db_t *db,
                      apr_pool_t *scratch_pool);
 
 
-/* ### add query functions */
+/* ### NULL may be given for OUT params */
+svn_error_t *
+svn_wc__db_base_get_info(svn_wc_db_kind_t *kind,
+                         svn_revnum_t *revision,
+                         const char **url,
+                         const char **repos_url,
+                         const char **repos_uuid,
+                         svn_wc_db_t *db,
+                         const char *path,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
+
+
+svn_error_t *
+svn_wc__db_base_get_prop(const svn_string_t **propval,
+                         svn_wc_db_t *db,
+                         const char *path,
+                         const char *propname,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
+
+
+svn_error_t *
+svn_wc__db_base_get_props(apr_hash_t **props,
+                          svn_wc_db_t *db,
+                          const char *path,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
+
+
+/* ### return some basic info for each child? e.g. kind */
+svn_error_t *
+svn_wc__db_base_get_children(const apr_array_header_t **children,
+                             svn_wc_db_t *db,
+                             const char *path,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
+
+
+/* ### NULL allowed for OUT params */
+svn_error_t *
+svn_wc__db_base_get_contents(svn_stream_t **contents,
+                             const char **checksum,
+                             svn_wc_db_t *db,
+                             const char *path,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
+
+svn_error_t *
+svn_wc__db_base_get_symlink_target(const char **target,
+                                   svn_wc_db_t *db,
+                                   const char *path,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool);
+
 
 /** @} */
 
 /**
- * @defgroup svn_wc__db_working  WORKING tree management
+ * @defgroup svn_wc__db_op  Operations on WORKING tree
  * @{
  */
 
-/* ### this section is incomplete. some funcs need updates. */
-
+/* ### svn cp WCPATH WCPATH ... can copy mixed base/working around */
 svn_error_t *
-svn_wc__db_working_add_directory(svn_wc_db_t *db,
-                                 const char *path,
-                                 const char *copyfrom_url,
-                                 svn_revnum_t copyfrom_revision,
-                                 apr_pool_t *scratch_pool);
+svn_wc__db_op_copy(svn_wc_db_t *db,
+                   const char *src_path,
+                   const char *dst_path,
+                   apr_pool_t *scratch_pool);
 
 
+/* ### svn cp URL WCPATH ... copies pure repos into wc. only this "root"
+   ### metadata is present. caller needs to "set" all information recursively.
+   ### and caller definitely has to populate ACTUAL. */
+/* ### mark node as absent? adding children or props: auto-convert away
+   ### from absent? */
+svn-error_t *
+svn_wc__db_op_copy_url(svn_wc_db_t *db,
+                       const char *path,
+                       const char *copyfrom_url,
+                       svn_revnum_t copyfrom_revision,
+                       apr_pool_t *scratch_pool);
+
+
+/* ### props, children may be NULL */
 svn_error_t *
-svn_wc__db_working_add_file(svn_wc_db_t *db,
+svn_wc__db_op_add_directory(svn_wc_db_t *db,
                             const char *path,
-                            const char *copyfrom_url,
-                            svn_revnum_t copyfrom_revision,
+                            apr_hash_t *props,
+                            const apr_array_header_t *children,
                             apr_pool_t *scratch_pool);
 
 
+/* ### props may be NULL */
 svn_error_t *
-svn_wc__db_working_delete(svn_wc_db_t *db,
+svn_wc__db_op_add_file(svn_wc_db_t *db,
+                       const char *path,
+                       apr_hash_t *props,
+                       apr_pool_t *scratch_pool);
+
+
+/* ### props may be NULL */
+svn_error_t *
+svn_wc__db_op_add_symlink(svn_wc_db_t *db,
                           const char *path,
+                          apr_hash_t *props,
+                          const char *target,
                           apr_pool_t *scratch_pool);
 
 
 svn_error_t *
-svn_wc__db_working_move(svn_wc_db_t *db,
-                        const char *src_path,
-                        const char *dst_path,
+svn_wc__db_op_add_absent_node(svn_wc_db_t *db,
+                              const char *path,
+                              svn_wc_db_kind_t kind,
+                              apr_pool_t *scratch_pool);
+
+
+svn_error_t *
+svn_wc__db_op_set_prop(svn_wc_db_t *db,
+                       const char *path,
+                       const char *propname,
+                       const svn_string_t *propval,
+                       apr_pool_t *scratch_pool);
+
+
+svn_error_t *
+svn_wc__db_op_set_props(svn_wc_db_t *db,
+                        const char *path,
+                        apr_hash_t *props,
                         apr_pool_t *scratch_pool);
 
 
 svn_error_t *
-svn_wc__db_working_set_prop(svn_wc_db_t *db,
-                            const char *path,
-                            const char *name,
-                            const svn_string_t *value,
-                            apr_pool_t *scratch_pool);
+svn_wc__db_op_delete(svn_wc_db_t *db,
+                     const char *path,
+                     apr_pool_t *scratch_pool);
+
+
+svn_error_t *
+svn_wc__db_op_move(svn_wc_db_t *db,
+                   const char *src_path,
+                   const char *dst_path,
+                   apr_pool_t *scratch_pool);
+
+
+/* ### mark PATH as (possibly) modified. "svn edit" ... right API here? */
+svn_error_t *
+svn_wc__db_op_modified(svn_wc_db_t *db,
+                       const char *path,
+                       apr_pool_t *scratch_pool);
+
+
+/* ### any other operations possible on the working copy? */
+/* ### relocate. revert. changelists. post-commit handling. resolved. status */
+
+/* ### how to handle depth? */
+
+
+/** @} */
+
+/**
+ * @defgroup svn_wc__db_read  Read operations on the BASE/WORKING tree
+ * @{
+ */
+
+/* ### NULL may be given for OUT params. if the node has not been committed:
+   ### url, repos_* will be NULL and revision will be SVN_INVALID_REVNUM
+*/
+svn_error_t *
+svn_wc__db_read_get_info(svn_wc_db_kind_t *kind,
+                         svn_revnum_t *revision,
+                         const char **url,
+                         const char **repos_url,
+                         const char **repos_uuid,
+                         svn_wc_db_t *db,
+                         const char *path,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
+
+
+svn_error_t *
+svn_wc__db_read_get_prop(const svn_string_t **propval,
+                         svn_wc_db_t *db,
+                         const char *path,
+                         const char *propname,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
+
+
+svn_error_t *
+svn_wc__db_read_get_props(apr_hash_t **props,
+                          svn_wc_db_t *db,
+                          const char *path,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
+
+
+/* ### return some basic info for each child? e.g. kind */
+svn_error_t *
+svn_wc__db_read_get_children(const apr_array_header_t **children,
+                             svn_wc_db_t *db,
+                             const char *path,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
+
+
+svn_error_t *
+svn_wc__db_read_get_symlink_target(const char **target,
+                                   svn_wc_db_t *db,
+                                   const char *path,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool);
+
+
+/* ### changelists.  */
+/* ### bulk stuff like revision_status. */
+
 
 /** @} */
 
