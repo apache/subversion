@@ -495,7 +495,8 @@ complete_directory(struct edit_baton *eb,
             {
               char * full_target;
               /* There is a small chance that the target is gone in the
-                 repository. We'd better get rid of the exclude flag now. */
+                 repository.  If so, we should get rid of the entry
+                 (and thus get rid of the exclude flag) now. */
               full_target = svn_path_join(eb->anchor, eb->target, pool);
               SVN_ERR(svn_wc__adm_retrieve_internal
                       (&target_access, eb->adm_access, full_target, pool));
