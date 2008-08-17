@@ -1101,6 +1101,11 @@ leftmod_error_chain(svn_error_t *err,
 }
 
 
+/* Delete PATH from its immediate parent PARENT_PATH, in the edit
+ * represented by EB.  Name temporary transactional logs based on
+ * *LOG_NUMBER, but set *LOG_NUMBER to 0 after running the final log.
+ * Perform all allocations in POOL.
+ */
 static svn_error_t *
 do_entry_deletion(struct edit_baton *eb,
                   const char *parent_path,
