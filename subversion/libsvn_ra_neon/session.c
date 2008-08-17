@@ -980,8 +980,7 @@ initialize_neon(apr_pool_t *ignored_pool)
 static svn_error_t *
 ensure_neon_initialized(void)
 {
-  SVN_ERR(svn_atomic__init_once(&neon_initialized, initialize_neon, NULL));
-  return SVN_NO_ERROR;
+  return svn_atomic__init_once(&neon_initialized, initialize_neon, NULL);
 }
 
 static svn_error_t *
