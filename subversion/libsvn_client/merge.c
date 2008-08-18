@@ -2856,17 +2856,33 @@ drive_merge_report_editor(const char *target_wcpath,
         }
       else if (children_with_mergeinfo && children_with_mergeinfo->nelts)
         {
+          /* Get the merge target's svn_client__merge_path_t, which is always
+             the first in the array due to depth first sorting requirement,
+             see 'THE CHILDREN_WITH_MERGEINFO ARRAY'. */
           svn_client__merge_path_t *child =
             APR_ARRAY_IDX(children_with_mergeinfo, 0,
                           svn_client__merge_path_t *);
           if (child->remaining_ranges->nelts)
             {
-              /* The merge target needs something merged, but it might
-                 not be the entire REVISION1:REVISION2 range. */
+              /* The merge target has remaining revisions to merge.  These
+                 ranges may fully or partially overlap the range described
+                 by REVISION1:REVISION2 or may not intersect that range at
+                 all. */
               svn_merge_range_t *range =
                 APR_ARRAY_IDX(child->remaining_ranges, 0,
                               svn_merge_range_t *);
-              target_start = range->start;
+              if ((!is_rollback && range->start > revision2)
+                  || (is_rollback && range->start < revision2))
+                {
+                  /* Merge target's first remaining range doesn't intersect. */
+                  target_start = revision2;
+                }
+              else
+                {
+                  /* Merge target's first remaining range partially or
+                     fully overlaps. */
+                  target_start = range->start;
+                }
             }
         }
     }
