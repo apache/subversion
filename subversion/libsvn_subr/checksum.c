@@ -26,49 +26,49 @@
 /* A useful macro:  returns the greater of its arguments. */
 #define MAX(x,y) ((x)>(y)?(x):(y))
 
+/* Returns the digest size of it's argument. */
+#define DIGESTSIZE(k) ((k) == svn_checksum_md5 ? APR_MD5_DIGESTSIZE : \
+                       (k) == svn_checksum_sha1 ? APR_SHA1_DIGESTSIZE : 0)
+
+
+/* Check to see if KIND is something we recognize.  If not, return 
+ * SVN_ERR_BAD_CHECKSUM_KIND */
+static svn_error_t *
+validate_kind(svn_checksum_kind_t kind)
+{
+  if (kind == svn_checksum_md5 || kind == svn_checksum_sha1)
+    return SVN_NO_ERROR;
+  else
+    return svn_error_create(SVN_ERR_BAD_CHECKSUM_KIND, NULL, NULL);
+}
+
+
 svn_checksum_t *
 svn_checksum_create(svn_checksum_kind_t kind,
                     apr_pool_t *pool)
 {
-  svn_checksum_t *checksum = apr_palloc(pool, sizeof(*checksum));
+  svn_checksum_t *checksum;
 
   switch (kind)
     {
       case svn_checksum_md5:
-        checksum->digest = apr_palloc(pool, APR_MD5_DIGESTSIZE);
-        break;
-
       case svn_checksum_sha1:
-        checksum->digest = apr_palloc(pool, APR_SHA1_DIGESTSIZE);
-        break;
+        checksum = apr_pcalloc(pool, sizeof(*checksum) + DIGESTSIZE(kind));
+        checksum->digest = (unsigned char *)checksum + DIGESTSIZE(kind);
+        checksum->kind = kind;
+        return checksum;
 
       default:
         return NULL;
     }
-
-  checksum->kind = kind;
-
-  return checksum;
 }
 
 svn_error_t *
 svn_checksum_clear(svn_checksum_t *checksum)
 {
-  switch (checksum->kind)
-    {
-      case svn_checksum_md5:
-        memset(checksum->digest, 0, APR_MD5_DIGESTSIZE);
-        break;
+  SVN_ERR(validate_kind(checksum->kind));
 
-      case svn_checksum_sha1:
-        memset(checksum->digest, 0, APR_SHA1_DIGESTSIZE);
-        break;
-
-      default:
-        /* We really shouldn't get here, but if we do... */
-        return svn_error_create(SVN_ERR_BAD_CHECKSUM_KIND, NULL, NULL);
-    }
-
+  memset(checksum->digest, 0, DIGESTSIZE(checksum->kind));
   return SVN_NO_ERROR;
 }
 
@@ -133,12 +133,8 @@ svn_checksum_parse_hex(svn_checksum_t *checksum,
   int len;
   int i;
 
-  if (checksum->kind == svn_checksum_md5)
-    len = APR_MD5_DIGESTSIZE;
-  else if (checksum->kind == svn_checksum_sha1)
-    len = APR_SHA1_DIGESTSIZE;
-  else
-    return svn_error_create(SVN_ERR_BAD_CHECKSUM_KIND, NULL, NULL);
+  SVN_ERR(validate_kind(checksum->kind));
+  len = DIGESTSIZE(checksum->kind);
 
   for (i = 0; i < len; i++)
     checksum->digest[i] = 
@@ -154,6 +150,7 @@ svn_checksum_dup(svn_checksum_t *src,
 {
   apr_size_t size;
   svn_checksum_t *dest;
+  svn_error_t *err;
   
   /* The duplicate of a NULL checksum is a NULL... */
   if (src == NULL)
@@ -161,12 +158,13 @@ svn_checksum_dup(svn_checksum_t *src,
 
   dest = svn_checksum_create(src->kind, pool);
 
-  if (src->kind == svn_checksum_md5)
-    size = APR_MD5_DIGESTSIZE;
-  else if (src->kind == svn_checksum_sha1)
-    size = APR_SHA1_DIGESTSIZE;
-  else
-    return NULL;
+  err = validate_kind(src->kind);
+  if (err)
+    {
+      svn_error_clear(err);
+      return NULL;
+    }
+  size = DIGESTSIZE(src->kind);
 
   dest->digest = apr_palloc(pool, size);
   memcpy(dest->digest, src->digest, size);
@@ -183,9 +181,7 @@ svn_checksum(svn_checksum_t **checksum,
 {
   apr_sha1_ctx_t sha1_ctx;
 
-  if ( !(kind == svn_checksum_md5 || kind == svn_checksum_sha1) )
-    return svn_error_create(SVN_ERR_BAD_CHECKSUM_KIND, NULL, NULL);
-
+  SVN_ERR(validate_kind(kind));
   *checksum = svn_checksum_create(kind, pool);
 
   switch (kind)
