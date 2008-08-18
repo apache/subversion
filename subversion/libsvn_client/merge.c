@@ -126,7 +126,7 @@
  *
  * CHILDREN_WITH_MERGEINFO is intially created by get_mergeinfo_paths()
  * and outside of that function and its helpers should always meet the
- * seven criteria dictated in get_mergeinfo_paths()'s doc string.
+ * criteria dictated in get_mergeinfo_paths()'s doc string.
  */
 
 /*-----------------------------------------------------------------------*/
@@ -3134,61 +3134,6 @@ mark_mergeinfo_as_inheritable_for_a_range(
   return SVN_NO_ERROR;
 }
 
-/* For shallow merges record the explicit *indirect* mergeinfo on the
-
-     1. merged files *merged* with a depth 'files'.
-     2. merged target directory *merged* with a depth 'immediates'.
-
-   All subtrees which are going to get a 'inheritable merge range'
-   because of this 'shallow' merge should have the explicit mergeinfo
-   recorded on them. */
-static svn_error_t *
-record_mergeinfo_on_merged_children(svn_depth_t depth,
-                                    svn_wc_adm_access_t *adm_access,
-                                    notification_receiver_baton_t *notify_b,
-                                    merge_cmd_baton_t *merge_b,
-                                    apr_pool_t *pool)
-{
-  if ((depth != svn_depth_infinity) && notify_b->merged_paths)
-    {
-      svn_boolean_t indirect_child_mergeinfo = FALSE;
-      apr_hash_index_t *hi;
-      svn_mergeinfo_t child_target_mergeinfo;
-      const void *merged_path;
-
-      for (hi = apr_hash_first(NULL, notify_b->merged_paths); hi;
-           hi = apr_hash_next(hi))
-        {
-          const svn_wc_entry_t *child_entry;
-          apr_hash_this(hi, &merged_path, NULL, NULL);
-          SVN_ERR(svn_wc__entry_versioned(&child_entry, merged_path,
-                                          adm_access, FALSE, pool));
-          if (((child_entry->kind == svn_node_dir)
-                && (strcmp(merge_b->target, merged_path) == 0)
-                && (depth == svn_depth_immediates))
-              || ((child_entry->kind == svn_node_file)
-                   && (depth == svn_depth_files)))
-            {
-              /* Set the explicit inheritable mergeinfo for,
-                    1. Merge target directory if depth is 'immediates'.
-                    2. If merge is on a file and requested depth is 'files'.
-               */
-              SVN_ERR(svn_client__get_wc_or_repos_mergeinfo
-                                      (&child_target_mergeinfo, child_entry,
-                                       &indirect_child_mergeinfo,
-                                       FALSE, svn_mergeinfo_inherited,
-                                       merge_b->ra_session1, merged_path,
-                                       adm_access, merge_b->ctx, pool));
-              if (indirect_child_mergeinfo)
-                SVN_ERR(svn_client__record_wc_mergeinfo(merged_path,
-                                                        child_target_mergeinfo,
-                                                        adm_access, pool));
-            }
-        }
-    }
-  return SVN_NO_ERROR;
-}
-
 
 /* Get REVISION of the file at URL.  SOURCE is a path that refers to that
    file's entry in the working copy, or NULL if we don't have one.  Return in
@@ -3442,8 +3387,9 @@ get_mergeinfo_walk_cb(const char *path,
 
   /* Store PATHs with explict mergeinfo, which are switched, are missing
      children due to a sparse checkout, are scheduled for deletion are absent
-     from the WC, and/or are first level sub directories relative to merge
-     target if depth is immediates. */
+     from the WC, are first level sub directories relative to merge target if
+     depth is immediates, and/or are file children of the merge target if
+     depth is files. */
   if (path_is_merge_target
       || has_mergeinfo_from_merge_src
       || entry->schedule == svn_wc_schedule_delete
@@ -3453,8 +3399,11 @@ get_mergeinfo_walk_cb(const char *path,
       || entry->absent
       || ((wb->depth == svn_depth_immediates) &&
           (entry->kind == svn_node_dir) &&
-          (strcmp(parent_path, path) != 0) &&
-          (strcmp(parent_path, wb->merge_target_path) == 0)))
+          (strcmp(parent_path, wb->merge_target_path) == 0))
+      || ((wb->depth == svn_depth_files) &&
+          (entry->kind == svn_node_file) &&
+          (strcmp(parent_path, wb->merge_target_path) == 0))
+          )
     {
       svn_client__merge_path_t *child =
         apr_pcalloc(wb->children_with_mergeinfo->pool, sizeof(*child));
@@ -3751,6 +3700,10 @@ insert_parent_and_sibs_of_sw_absent_del_entry(
         a sparse checkout.
      6) Path is absent from disk due to an authz restriction.
      7) Path is equal to MERGE_CMD_BATON->TARGET.
+     8) Path is an immediate *directory* child of MERGE_CMD_BATON->TARGET and
+        DEPTH is svn_depth_immediates.
+     9) Path is an immediate *file* child of MERGE_CMD_BATON->TARGET and
+        DEPTH is svn_depth_files.
 
    Store the svn_client__merge_path_t *'s in *CHILDREN_WITH_MERGEINFO in
    depth-first order based on the svn_client__merge_path_t *s path member as
@@ -5118,10 +5071,6 @@ do_directory_merge(const char *url1,
                                              filtered_rangelist, depth,
                                              adm_access, notify_b,
                                              merge_b, iterpool));
-
-          SVN_ERR(record_mergeinfo_on_merged_children(depth, adm_access,
-                                                      notify_b, merge_b,
-                                                      iterpool));
           SVN_ERR(update_wc_mergeinfo(merge_b->target, parent_entry,
                                       mergeinfo_path, merges,
                                       is_rollback, adm_access, merge_b->ctx,
