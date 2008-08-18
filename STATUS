@@ -121,6 +121,22 @@ Candidate changes for 1.5.2:
    Votes:
      +1: rhuijben
 
+ * r32494, r32522, r32523
+   Fix a bug where previous merges are incorrectly reversed leading to repeat
+   merges and spurious conflicts.
+   Notes:
+     r32494 is just a doc string tweak that hopefully makes the real fix a
+     easier to review, r32522 is a test for the bug, and r32523 is the real
+     fix.  There is a trivial conflict on r32494 when adding the new merge
+     test due to the fact that some other new merge tests are not backported
+     yet.
+   Justification:
+     Repeat merges and needless conflicts in the age of merge tracking are,
+     to put it mildly, less than desirable, see
+     http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=141832.
+   Votes:
+     +1: pburba
+
 Approved changes:
 =================
 
