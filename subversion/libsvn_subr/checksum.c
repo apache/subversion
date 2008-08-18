@@ -76,7 +76,7 @@ svn_boolean_t
 svn_checksum_match(svn_checksum_t *d1,
                    svn_checksum_t *d2)
 {
-  if (d1 == NULL || d1 == NULL)
+  if (d1 == NULL || d2 == NULL)
     return TRUE;
 
   if (d1->kind != d2->kind)
