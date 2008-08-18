@@ -12905,12 +12905,12 @@ def subtree_merges_dont_cause_spurious_conflicts(sbox):
 
   # r9 Merge all available revisions from A to A_COPY.
   #
-  # This is where the bug reveals itself, instead of cleanly merging
-  # just r3 and then r8-9, the first merge editor drive of r3 sets A_COPY
+  # This is where the bug revealed itself, instead of cleanly merging
+  # just r3 and then r8-9, the first merge editor drive of r3 set A_COPY
   # to the state it was in r7, effectively reverting the merge committed
-  # in r9.  So we see unexpected merges to omega, rho, and beta, as they
+  # in r9.  So we saw unexpected merges to omega, rho, and beta, as they
   # are returned to their r7 state and then a conflict on rho as the editor
-  # attempts to merge r8:
+  # attempted to merge r8:
   #
   #   trunk>svn merge %url%/A merge_tests-104\A_COPY
   #   --- Merging r3 into 'merge_tests-104\A_COPY\D\H\psi':
@@ -13157,8 +13157,8 @@ test_list = [ None,
               del_identical_file,
               del_sched_add_hist_file,
               del_differing_file,
-              XFail(SkipUnless(subtree_merges_dont_cause_spurious_conflicts,
-                               server_has_mergeinfo)),
+              SkipUnless(subtree_merges_dont_cause_spurious_conflicts,
+                         server_has_mergeinfo),
              ]
 
 if __name__ == '__main__':
