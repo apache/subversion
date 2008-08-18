@@ -273,9 +273,8 @@ typedef struct root_vtable_t
   /* Files */
   svn_error_t *(*file_length)(svn_filesize_t *length_p, svn_fs_root_t *root,
                               const char *path, apr_pool_t *pool);
-  svn_error_t *(*file_md5_checksum)(unsigned char digest[],
-                                    svn_fs_root_t *root,
-                                    const char *path, apr_pool_t *pool);
+  svn_error_t *(*file_checksum)(svn_checksum_t **checksum, svn_fs_root_t *root,
+                                const char *path, apr_pool_t *pool);
   svn_error_t *(*file_contents)(svn_stream_t **contents,
                                 svn_fs_root_t *root, const char *path,
                                 apr_pool_t *pool);
