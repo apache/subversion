@@ -1,7 +1,7 @@
 /* tree.c : tree-like filesystem, built on DAG filesystem
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -41,6 +41,7 @@
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_md5.h"
+#include "svn_sha1.h"
 #include "svn_mergeinfo.h"
 #include "svn_fs.h"
 #include "fs.h"
@@ -2263,18 +2264,22 @@ fs_file_length(svn_filesize_t *length_p,
 }
 
 
-/* Set DIGEST to the MD5 checksum of PATH under ROOT.  Temporary
+/* Set DIGEST to the checksum of PATH under ROOT.  Temporary
    allocations are from POOL. */
 static svn_error_t *
-fs_file_md5_checksum(unsigned char digest[],
-                     svn_fs_root_t *root,
-                     const char *path,
-                     apr_pool_t *pool)
+fs_file_checksum(svn_checksum_t **checksum,
+                 svn_fs_root_t *root,
+                 const char *path,
+                 apr_pool_t *pool)
 {
   dag_node_t *file;
 
   SVN_ERR(get_dag(&file, root, path, pool));
-  return svn_fs_fs__dag_file_checksum(digest, file, pool);
+
+  *checksum = svn_checksum_create(svn_checksum_md5, pool);
+  return svn_fs_fs__dag_file_checksum((*checksum)->digest, file, pool);
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -3707,7 +3712,7 @@ static root_vtable_t root_vtable = {
   fs_copy,
   fs_revision_link,
   fs_file_length,
-  fs_file_md5_checksum,
+  fs_file_checksum,
   fs_file_contents,
   fs_make_file,
   fs_apply_textdelta,

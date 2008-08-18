@@ -31,6 +31,7 @@
 #include "svn_xml.h"
 #include "svn_pools.h"
 #include "svn_string.h"
+#include "svn_md5.h"
 #include "svn_private_config.h"
 
 #include "fs-loader.h"
@@ -901,10 +902,45 @@ svn_fs_file_length(svn_filesize_t *length_p, svn_fs_root_t *root,
 }
 
 svn_error_t *
-svn_fs_file_md5_checksum(unsigned char digest[], svn_fs_root_t *root,
-                         const char *path, apr_pool_t *pool)
+svn_fs_file_checksum(svn_checksum_t **checksum,
+                     svn_checksum_kind_t kind,
+                     svn_fs_root_t *root,
+                     const char *path,
+                     svn_boolean_t force,
+                     apr_pool_t *pool)
 {
-  return root->vtable->file_md5_checksum(digest, root, path, pool);
+  SVN_ERR(root->vtable->file_checksum(checksum, root, path, pool));
+
+  if (force && (*checksum == NULL || (*checksum)->kind != kind))
+    {
+      svn_stream_t *contents, *checksum_contents;
+
+      SVN_ERR(svn_fs_file_contents(&contents, root, path, pool));
+      checksum_contents = svn_stream_checksummed2(contents, checksum, kind,
+                                                  NULL, svn_checksum_md5,
+                                                  TRUE, pool);
+
+      /* This will force a read of any remaining data (which is all of it in
+         this case) and dump the checksum into checksum->digest. */
+      SVN_ERR(svn_stream_close(checksum_contents));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_file_md5_checksum(unsigned char digest[],
+                         svn_fs_root_t *root,
+                         const char *path,
+                         apr_pool_t *pool)
+{
+  svn_checksum_t *md5sum;
+  
+  SVN_ERR(svn_fs_file_checksum(&md5sum, svn_checksum_md5, root, path, TRUE,
+                               pool));
+  memcpy(digest, md5sum->digest, APR_MD5_DIGESTSIZE);
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
