@@ -1412,19 +1412,6 @@ svn_fs_base__dag_deltify(dag_node_t *target,
 }
 
 
-svn_error_t *
-svn_fs_base__dag_index_checksums(dag_node_t *node, 
-                                 trail_t *trail, 
-                                 apr_pool_t *pool)
-{
-  node_revision_t *node_rev;
-
-  SVN_ERR(svn_fs_bdb__get_node_revision(&node_rev, trail->fs, node->id,
-                                        trail, pool));
-  return SVN_NO_ERROR;
-}
-
-
 
 /*** Committing ***/
 

@@ -29,7 +29,6 @@ test_checksum_parse(const char **msg,
                     svn_test_opts_t *opts,
                     apr_pool_t *pool)
 {
-  unsigned int i;
   const char *md5_digest = "8518b76f7a45fe4de2d0955085b41f98";
   const char *sha1_digest = "74d82379bcc6771454377db03b912c2b62704139";
   const char *checksum_display;
