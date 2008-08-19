@@ -257,7 +257,7 @@ add_open_helper(const char *path,
   struct edit_baton *eb = pb->edit_baton;
   struct node_baton *nb = apr_pcalloc(pool, sizeof(*nb));
 
-  assert(parent_baton && path);
+  SVN_ERR_ASSERT(parent_baton && path);
 
   nb->edit_baton = eb;
   nb->parent_baton = pb;

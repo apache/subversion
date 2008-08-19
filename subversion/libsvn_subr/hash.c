@@ -269,7 +269,7 @@ svn_hash_write_incremental(apr_hash_t *hash, apr_hash_t *oldhash,
                            svn_stream_t *stream, const char *terminator,
                            apr_pool_t *pool)
 {
-  assert(oldhash != NULL);
+  SVN_ERR_ASSERT(oldhash != NULL);
   return hash_write(hash, oldhash, stream, terminator, pool);
 }
 

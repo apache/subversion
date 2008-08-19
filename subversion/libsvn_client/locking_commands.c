@@ -81,13 +81,17 @@ store_locks_callback(void *baton,
 
   if (lb->adm_access)
     {
+      const char *base_path = svn_wc_adm_access_path(lb->adm_access);
       char *path = apr_hash_get(lb->urls_to_paths, rel_url,
                                 APR_HASH_KEY_STRING);
-      abs_path = svn_path_join(svn_wc_adm_access_path(lb->adm_access),
-                               path, lb->pool);
+      abs_path = svn_path_join(base_path, path, lb->pool);
 
       SVN_ERR(svn_wc_adm_probe_retrieve(&adm_access, lb->adm_access,
                                         abs_path, lb->pool));
+
+      /* Notify a valid working copy path */
+      notify->path = abs_path;
+      notify->path_prefix = base_path;
 
       if (do_lock)
         {

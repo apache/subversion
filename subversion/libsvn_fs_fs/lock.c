@@ -329,7 +329,7 @@ set_lock(svn_fs_t *fs,
   svn_stringbuf_t *last_child = svn_stringbuf_create("", pool);
   apr_pool_t *subpool;
 
-  assert(lock);
+  SVN_ERR_ASSERT(lock);
 
   /* Iterate in reverse, creating the lock for LOCK->path, and then
      just adding entries for its parent, until we reach a parent
@@ -391,7 +391,7 @@ delete_lock(svn_fs_t *fs,
   svn_stringbuf_t *child_to_kill = svn_stringbuf_create("", pool);
   apr_pool_t *subpool;
 
-  assert(lock);
+  SVN_ERR_ASSERT(lock);
 
   /* Iterate in reverse, deleting the lock for LOCK->path, and then
      pruning entries from its parents. */

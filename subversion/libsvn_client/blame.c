@@ -280,7 +280,7 @@ add_file_blame(const char *last_file,
 {
   if (!last_file)
     {
-      assert(chain->blame == NULL);
+      SVN_ERR_ASSERT(chain->blame == NULL);
       chain->blame = blame_create(chain, rev, 0);
     }
   else
@@ -483,7 +483,7 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
   if (revnum < frb->start_rev)
     {
       /* We shouldn't get more than one revision before start. */
-      assert(frb->last_filename == NULL);
+      SVN_ERR_ASSERT(frb->last_filename == NULL);
 
       /* The file existed before start_rev; generate no blame info for
          lines from this revision (or before). */
@@ -494,7 +494,7 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
   else
     {
       svn_string_t *str;
-      assert(revnum <= frb->end_rev);
+      SVN_ERR_ASSERT(revnum <= frb->end_rev);
 
       /* Set values from revision props. */
       frb->rev->revision = revnum;
@@ -681,7 +681,7 @@ svn_client_blame4(const char *target,
   /* Report the blame to the caller. */
 
   /* The callback has to have been called at least once. */
-  assert(frb.last_filename != NULL);
+  SVN_ERR_ASSERT(frb.last_filename != NULL);
 
   /* Create a pool for the iteration below. */
   iterpool = svn_pool_create(pool);
