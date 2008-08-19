@@ -613,6 +613,14 @@ svn_cl__args_to_target_array_print_reserved(apr_array_header_t **targets_p,
                                             svn_client_ctx_t *ctx,
                                             apr_pool_t *pool);
 
+/* Return a string allocated in POOL that is a copy of STR but with each
+ * line prefixed with INDENT. A line is all characters up to the first
+ * CR-LF, LF-CR, CR or LF, or the end of STR if sooner. */
+const char *
+svn_cl__indent_string(const char *str,
+                      const char *indent,
+                      apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
