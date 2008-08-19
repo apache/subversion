@@ -28,6 +28,7 @@
 #include "svn_utf.h"
 #include "repos.h"
 #include "svn_private_config.h"
+#include "private/svn_fs_private.h"
 
 
 
@@ -367,6 +368,44 @@ svn_repos__hooks_start_commit(svn_repos_t *repos,
   return SVN_NO_ERROR;
 }
 
+/* Set *HANDLE to an open filehandle for a temporary file (i.e.,
+   automatically deleted when closed), into which the LOCK_TOKENS have
+   been written out in the format described in the pre-commit hook
+   template.  
+
+   LOCK_TOKENS is as returned by svn_fs__access_get_lock_tokens().
+
+   Allocate *HANDLE in POOL, and use POOL for temporary allocations. */
+static svn_error_t *
+lock_token_content(apr_file_t **handle, apr_hash_t *lock_tokens,
+                   apr_pool_t *pool)
+{
+  svn_stringbuf_t *lock_str = svn_stringbuf_create("LOCK-TOKENS:\n", pool);
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(pool, lock_tokens); hi;
+       hi = apr_hash_next(hi))
+    {
+      void *val;
+      const char *path, *token;
+        
+      apr_hash_this(hi, (void *)&token, NULL, &val);
+      path = val;
+      svn_stringbuf_appendstr(lock_str,
+        svn_stringbuf_createf(pool, "%s|%s\n",
+                              svn_path_uri_autoescape(path, pool),
+                              token));
+    }
+
+  svn_stringbuf_appendcstr(lock_str, "\n");
+  SVN_ERR(create_temp_file(handle,
+                           svn_string_create_from_buf(lock_str, pool),
+                           pool));
+
+  return SVN_NO_ERROR;
+}
+
+
 
 svn_error_t  *
 svn_repos__hooks_pre_commit(svn_repos_t *repos,
@@ -383,14 +422,29 @@ svn_repos__hooks_pre_commit(svn_repos_t *repos,
   else if (hook)
     {
       const char *args[4];
+      svn_fs_access_t *access_ctx;
+      apr_file_t *stdin_handle = NULL;
 
       args[0] = hook;
       args[1] = svn_path_local_style(svn_repos_path(repos, pool), pool);
       args[2] = txn_name;
       args[3] = NULL;
 
-      SVN_ERR(run_hook_cmd(SVN_REPOS__HOOK_PRE_COMMIT, hook, args, NULL,
-                           pool));
+      SVN_ERR(svn_fs_get_access(&access_ctx, repos->fs));
+      if (access_ctx)
+        {
+          apr_hash_t *lock_tokens = svn_fs__access_get_lock_tokens(access_ctx);
+          if (apr_hash_count(lock_tokens))  {
+            SVN_ERR(lock_token_content(&stdin_handle, lock_tokens, pool));
+          }
+        }
+
+      if (!stdin_handle)
+        SVN_ERR(svn_io_file_open(&stdin_handle, SVN_NULL_DEVICE_NAME,
+                                 APR_READ, APR_OS_DEFAULT, pool));
+
+      SVN_ERR(run_hook_cmd(SVN_REPOS__HOOK_PRE_COMMIT, hook, args,
+                           stdin_handle, pool));
     }
 
   return SVN_NO_ERROR;
