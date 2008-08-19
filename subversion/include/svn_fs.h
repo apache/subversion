@@ -1492,13 +1492,13 @@ svn_fs_file_length(svn_filesize_t *length_p,
 
 
 /** Set @a *checksum to the checksum of type @a kind for the file @a path.
- * @a *checksum will be allocated out of @a pool, which will also be used for
- * temporary allocations.
+ * @a *checksum will be allocated out of @a pool, which will also be used
+ * for temporary allocations.
  *
- * If the filesystem does not have a prerecorded checksum for @a path,
- * and @a force is not TRUE, do not calculate a checksum dynamically, just
- * put NULL into @a checksum.  (By convention, the NULL checksum is
- * considered to match any checksum.)
+ * If the filesystem does not have a prerecorded checksum of @a kind for
+ * @a path, and @a force is not TRUE, do not calculate a checksum
+ * dynamically, just put NULL into @a checksum.  (By convention, the NULL
+ * checksum is considered to match any checksum.)
  *
  * Notes:
  *
@@ -1521,6 +1521,8 @@ svn_fs_file_length(svn_filesize_t *length_p,
  * Internally, of course, the filesystem checksums everything, because
  * it has access to the lowest level storage forms: strings behind
  * representations.
+ *
+ * @since New in 1.6.
  */
 svn_error_t *
 svn_fs_file_checksum(svn_checksum_t **checksum,
