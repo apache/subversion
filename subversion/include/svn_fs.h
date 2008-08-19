@@ -471,11 +471,24 @@ svn_fs_access_get_username(const char **username,
                            svn_fs_access_t *access_ctx);
 
 
-/** Push a lock-token @a token into the context @a access_ctx.  The
- * context remembers all tokens it receives, and makes them available
- * to fs functions.  The token is not duplicated into @a access_ctx's
- * pool;  make sure the token's lifetime is at least as long as @a
- * access_ctx. */
+/** Push a lock-token @a token associated with path @path into the
+ * context @a access_ctx.  The context remembers all tokens it
+ * receives, and makes them available to fs functions.  The token and
+ * path are not duplicated into @a access_ctx's pool; make sure the
+ * token's lifetime is at least as long as @a access_ctx.
+ *
+ * @since New in 1.6. */
+
+svn_error_t *
+svn_fs_access_add_lock_token2(svn_fs_access_t *access_ctx,
+                              const char *path,
+                              const char *token);
+/**
+ * Same as svn_fs_access_add_lock_token2(), but with @a path set to value 1.
+ *
+ * @deprecated Provided for backward compatibility with the 1.1 API.
+ */
+
 svn_error_t *
 svn_fs_access_add_lock_token(svn_fs_access_t *access_ctx,
                              const char *token);
@@ -1811,7 +1824,8 @@ svn_fs_set_uuid(svn_fs_t *fs,
  * string by the client), and is required to make further use of the
  * lock (including removal of the lock.)  A lock-token can also be
  * queried to return a svn_lock_t structure that describes the details
- * of the lock.
+ * of the lock.  lock-tokens must not contain any newline character,
+ * mainly due to the serialization for tokens for pre-commit hook.
  *
  * Locks are not secret; anyone can view existing locks in a
  * filesystem.  Locks are not omnipotent: they can broken and stolen
