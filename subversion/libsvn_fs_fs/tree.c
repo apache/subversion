@@ -3084,7 +3084,7 @@ fs_node_origin_rev(svn_revnum_t *revision,
            (which is allocated in SUBPOOL ... maybe). */
         svn_pool_clear(predidpool);
         SVN_ERR(svn_fs_fs__dag_get_predecessor_id(&pred_id, node, subpool));
-        pred_id = svn_fs_fs__id_copy(pred_id, predidpool);
+        pred_id = pred_id ? svn_fs_fs__id_copy(pred_id, predidpool) : NULL;
       }
 
     /* When we get here, NODE should be the first node-revision in our
