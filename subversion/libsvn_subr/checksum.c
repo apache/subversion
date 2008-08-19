@@ -17,6 +17,8 @@
  */
 
 
+#include <ctype.h>
+
 #include "svn_checksum.h"
 #include "svn_md5.h"
 #include "svn_sha1.h"
