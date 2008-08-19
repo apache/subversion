@@ -42,13 +42,15 @@ Candidate changes for 1.5.2:
    Votes:
      +1: arfrever
 
- * r32417
+ * r32417, r32538
    Fix issue #3255: client capabilities were not passed to start-commit
    Justification:
      Without this fix, start-commit cannot do early rejection of
      commits from clients that do not support mergeinfo.
+     r32538 removes duplicated headers from the neon capablity exchange request.
    Votes:
-     +1: kfogel, cmpilato
+     +1: kfogel, cmpilato (r32417 only)
+     +1: rhuijben
 
  * r32441
    Fix issue #3258: 8lock.t fails in non-English locale.
