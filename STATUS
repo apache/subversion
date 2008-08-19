@@ -22,7 +22,7 @@ Candidate changes for 1.5.2:
      A backport branch 1.5.x-ra_serf-backports has been created for this group,
      including the already approved r31313.
    Votes:
-     +1: lgo, cmpilato
+     +1: lgo, cmpilato, gstein
      +0: arfrever
  
  * r32409
