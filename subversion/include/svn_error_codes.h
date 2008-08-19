@@ -205,7 +205,7 @@ SVN_ERROR_START
              "Bogus server specification")
 
   SVN_ERRDEF(SVN_ERR_BAD_CHECKSUM_KIND,
-             SVN_ERR_BAD_CATEGORY_START + 9,
+             SVN_ERR_BAD_CATEGORY_START + 11,
              "Unsupported checksum type")
 
   /* xml errors */
