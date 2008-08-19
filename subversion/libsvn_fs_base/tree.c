@@ -4718,6 +4718,7 @@ base_node_origin_rev(svn_revnum_t *revision,
     {
       svn_fs_root_t *curroot = root;
       apr_pool_t *subpool = svn_pool_create(pool);
+      apr_pool_t *predidpool = svn_pool_create(pool);
       svn_stringbuf_t *lastpath =
         svn_stringbuf_create(path, pool);
       svn_revnum_t lastrev = SVN_INVALID_REVNUM;
@@ -4761,12 +4762,14 @@ base_node_origin_rev(svn_revnum_t *revision,
           struct txn_pred_id_args pid_args;
           svn_pool_clear(subpool);
           pid_args.id = pred_id;
+          pid_args.pred_id = NULL;
           pid_args.pool = subpool;
           SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_pred_id,
                                          &pid_args, subpool));
           if (! pid_args.pred_id)
             break;
-          pred_id = pid_args.pred_id;
+          svn_pool_clear(predidpool);
+          pred_id = svn_fs_base__id_copy(pid_args.pred_id, predidpool);
         }
 
       /* Okay.  PRED_ID should hold our origin ID now.  Let's remember
@@ -4774,6 +4777,7 @@ base_node_origin_rev(svn_revnum_t *revision,
       args.origin_id = origin_id = svn_fs_base__id_copy(pred_id, pool);
       SVN_ERR(svn_fs_base__retry_txn(root->fs, txn_body_set_node_origin,
                                       &args, subpool));
+      svn_pool_destroy(predidpool);
       svn_pool_destroy(subpool);
     }
   else
