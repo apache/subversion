@@ -2278,8 +2278,6 @@ fs_file_checksum(svn_checksum_t **checksum,
 
   *checksum = svn_checksum_create(svn_checksum_md5, pool);
   return svn_fs_fs__dag_file_checksum((*checksum)->digest, file, pool);
-
-  return SVN_NO_ERROR;
 }
 
 
