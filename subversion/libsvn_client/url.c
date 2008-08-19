@@ -82,8 +82,8 @@ svn_client__derive_location(const char **url,
         }
       else
         {
-          svn_cancel_func_t cancel_func;
-          void *cancel_baton;
+          svn_cancel_func_t cancel_func = NULL;
+          void *cancel_baton = NULL;
 
           if (ctx)
             {

@@ -138,16 +138,13 @@ const apr_getopt_option_t svn_cl__options[] =
   {"file",          'F', 1, N_("read log message from file ARG")},
   {"incremental",   opt_incremental, 0,
                     N_("give output suitable for concatenation")},
-#ifndef AS400
   {"encoding",      opt_encoding, 1,
                     N_("treat value as being in charset encoding ARG")},
-#endif
   {"version",       opt_version, 0, N_("show program version information")},
   {"verbose",       'v', 0, N_("print extra information")},
   {"show-updates",  'u', 0, N_("display update information")},
   {"username",      opt_auth_username, 1, N_("specify a username ARG")},
   {"password",      opt_auth_password, 1, N_("specify a password ARG")},
-#ifndef AS400
   {"extensions",    'x', 1,
                     N_("Default: '-u'. When Subversion is invoking an\n"
                        "                            "
@@ -180,7 +177,6 @@ const apr_getopt_option_t svn_cl__options[] =
                        "    -p (--show-c-function):\n"
                        "                            "
                        "       Show C function name in diff output.")},
-#endif
   {"targets",       opt_targets, 1,
                     N_("pass contents of file ARG as additional args")},
   {"depth",         opt_depth, 1,
@@ -215,11 +211,9 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("ignore ancestry when calculating merges")},
   {"ignore-externals", opt_ignore_externals, 0,
                     N_("ignore externals definitions")},
-#ifndef AS400
   {"diff-cmd",      opt_diff_cmd, 1, N_("use ARG as diff command")},
   {"diff3-cmd",     opt_merge_cmd, 1, N_("use ARG as merge command")},
   {"editor-cmd",    opt_editor_cmd, 1, N_("use ARG as external editor")},
-#endif
   {"record-only",   opt_record_only, 0,
                     N_("mark revisions as merged (use with -r)")},
   {"old",           opt_old_cmd, 1, N_("use ARG as the older target")},
@@ -385,7 +379,6 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     {opt_merge_cmd} },
 
   { "commit", svn_cl__commit, {"ci"},
-#ifndef AS400
     N_("Send changes from your working copy to the repository.\n"
        "usage: commit [PATH...]\n"
        "\n"
@@ -393,16 +386,6 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
        "  given by a --message or --file option, an editor will be started.\n"
        "  If any targets are (or contain) locked items, those will be\n"
        "  unlocked after a successful commit.\n"),
-#else
-    N_("Send changes from your working copy to the repository.\n"
-       "usage: commit [PATH...]\n"
-       "\n"
-       "  A log message must be provided, but it can be empty.\n"
-       "  OS400 does not support the starting of an editor,\n"
-       "  so --message or --file must be used. If any targets are\n"
-       "  (or contain) locked items, those will be unlocked after a\n"
-       "  successful commit.\n"),
-#endif
     {'q', 'N', opt_depth, opt_targets, opt_no_unlock, SVN_CL__LOG_MSG_OPTIONS,
      opt_changelist, opt_keep_changelists} },
 
@@ -680,7 +663,6 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     TARGET only determines which repository to access.\n"),
     {'q', 'R', opt_depth, 'r', opt_revprop, opt_changelist} },
 
-#ifndef AS400
   { "propedit", svn_cl__propedit, {"pedit", "pe"}, N_
     ("Edit a property with an external editor.\n"
      "usage: 1. propedit PROPNAME TARGET...\n"
@@ -692,7 +674,6 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "See 'svn help propset' for more on setting properties.\n"),
     {'r', opt_revprop, SVN_CL__LOG_MSG_OPTIONS, opt_force} },
-#endif
 
   { "propget", svn_cl__propget, {"pget", "pg"}, N_
     ("Print the value of a property on files, dirs, or revisions.\n"
@@ -707,10 +688,12 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  By default, this subcommand will add an extra newline to the end\n"
      "  of the property values so that the output looks pretty.  Also,\n"
      "  whenever there are multiple paths involved, each property value\n"
-     "  is prefixed with the path with which it is associated.  Use\n"
-     "  the --strict option to disable these beautifications (useful,\n"
-     "  for example, when redirecting binary property values to a file).\n"),
-    {'R', opt_depth, 'r', opt_revprop, opt_strict, opt_xml, opt_changelist } },
+     "  is prefixed with the path with which it is associated.  Use the\n"
+     "  --strict option to disable these beautifications (useful when\n"
+     "  redirecting a binary property value to a file, but available only\n"
+     "  if you supply a single TARGET to a non-recursive propget operation).\n"),
+    {'v', 'R', opt_depth, 'r', opt_revprop, opt_strict, opt_xml,
+     opt_changelist } },
 
   { "proplist", svn_cl__proplist, {"plist", "pl"}, N_
     ("List all properties on files, dirs, or revisions.\n"

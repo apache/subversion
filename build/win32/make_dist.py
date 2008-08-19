@@ -250,6 +250,10 @@ _disttree = {'': OptFile('%(readme)s', 'README.txt'),
              'lib/serf': (File('%(@serf)s/Release/serf.lib'),
                           ),
 
+             'lib/sasl': (File('%(@sasl)s/lib/libsasl.lib'),
+                          File('%(@sasl)s/lib/libsasl.pdb'),
+                          ),
+
              'licenses': None,
              'licenses/bdb': File('%(@berkeley-db)s/LICENSE'),
              'licenses/neon': File('%(@neon)s/src/COPYING.LIB'),
