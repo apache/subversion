@@ -8,23 +8,6 @@ delay a release, etc.
 Candidate changes for 1.5.2:
 ============================
 
- * r31232, r31234, r31550, r31630
-   Set of revisions required to make 1.5.x pass all tests over ra_serf.
-   r31232 fixes blame test 16.
-   r31234 fixes AN API issue, solves merge conflict with r31313
-   r31550 fixes the 'check repo uuid on repo access' feature
-   r31630 fixes copy test 22.
-   Justification:
-     With current HEAD of 1.5.x about 10 tests are failing, so that's quite a 
-     regression. Changes nominated here touch code in ra_serf only and are low
-     impact.
-   Notes:
-     A backport branch 1.5.x-ra_serf-backports has been created for this group,
-     including the already approved r31313.
-   Votes:
-     +1: lgo, cmpilato, gstein
-     +0: arfrever
- 
  * r32409
    Fix an incompatibility with BSD make, which was introduced in r24293.
    Justification:
@@ -134,19 +117,19 @@ Candidate changes for 1.5.2:
 Approved changes:
 =================
 
- * r31313
-   Make all ra layers return a consistent error when a path is not
-   found in the repository.
+ * r31232, r31234, r31550, r31630
+   Set of revisions required to make 1.5.x pass all tests over ra_serf.
+   r31232 fixes blame test 16.
+   r31234 fixes AN API issue, solves merge conflict with r31313
+   r31550 fixes the 'check repo uuid on repo access' feature
+   r31630 fixes copy test 22.
+   Justification:
+     With current HEAD of 1.5.x about 10 tests are failing, so that's quite a 
+     regression. Changes nominated here touch code in ra_serf only and are low
+     impact.
    Notes:
-     Small change, but API consistency is always a good thing.
-     Does not merge cleanly!
-     
-     A backport branch 1.5.x-ra_serf-backports has been created to see which 
-     revisions are needed to fix the tests that fail after r31313 is
-     backported. The group r31234 as nominated above is needed so I propose
-     to merge r31313 from the branch iff the r31234 group is approved too.
-   Question:
-     Does r32056, nominated below, fix these test failures? No, unrelated.
+     A backport branch 1.5.x-ra_serf-backports has been created for this group,
+     including the already approved r31313.
    Votes:
-     +1: lgo, cmpilato, jerenkrantz, arfrever
-     -0: markphip (serf tests fail on OSX), epg (failure confirmed)
+     +1: lgo, cmpilato, gstein
+     +0: arfrever
