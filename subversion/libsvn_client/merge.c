@@ -1540,27 +1540,52 @@ merge_dir_opened(svn_wc_adm_access_t *adm_access,
                  svn_revnum_t rev,
                  void *baton)
 {
-  merge_cmd_baton_t *merge_b = baton;
-  apr_pool_t *subpool = svn_pool_create(merge_b->pool);
-  svn_node_kind_t kind;
-  const svn_wc_entry_t *entry;
-
-  /* Find the version-control and on-disk states of this path */
-  SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, subpool));
-  SVN_ERR(svn_io_check_path(path, &kind, subpool));
-
-  /* If we're trying to open a directory that's not a directory,
-   * raise a tree conflict. */
-  if (!entry || entry->schedule == svn_wc_schedule_delete
-      || kind != svn_node_dir)
+  /* If adm_access == NULL, the tree conflict detection can be skipped,
+   * because:
+   *
+   * adm_access refers to the parent(!) directory of the directory that
+   * is to be opened. If adm_access == NULL, it means that the parent
+   * of const char *path does not exist in the current working copy.
+   *
+   * We are at arbitrary depth in a directory subtree that does not exist
+   * in the working copy, but nevertheless in a subtree off an existing
+   * working copy directory (at least off the working copy "root").
+   *
+   * This function has already been called on the first non-existent
+   * path element of this subtree, which has an existing parent (adm_access
+   * != NULL), and a tree conflict has been triggered there.
+   *
+   * Even if we wanted to report another tree-conflict, there'd be no
+   * working copy to mark the conflict in. Since the nearest existing parent
+   * directory is already marked tree-conflicted, we can rest at that.
+   */
+  if (adm_access != NULL)
     {
-      SVN_ERR(tree_conflict(merge_b, adm_access, path,
-                            svn_node_dir,
-                            svn_wc_conflict_action_edit,
-                            svn_wc_conflict_reason_deleted));
+      /* adm_access is not NULL, detect a tree-conflict, if any. */
+
+      merge_cmd_baton_t *merge_b = baton;
+      apr_pool_t *subpool = svn_pool_create(merge_b->pool);
+      svn_node_kind_t kind;
+      const svn_wc_entry_t *entry;
+
+      /* Find the version-control and on-disk states of this path */
+      SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, subpool));
+      SVN_ERR(svn_io_check_path(path, &kind, subpool));
+
+      /* If we're trying to open a directory that's not a directory,
+       * raise a tree conflict. */
+      if (!entry || entry->schedule == svn_wc_schedule_delete
+          || kind != svn_node_dir)
+        {
+          SVN_ERR(tree_conflict(merge_b, adm_access, path,
+                                svn_node_dir,
+                                svn_wc_conflict_action_edit,
+                                svn_wc_conflict_reason_deleted));
+        }
+
+      svn_pool_destroy(subpool);
     }
 
-  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
