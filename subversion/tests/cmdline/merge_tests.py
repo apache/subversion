@@ -11431,7 +11431,8 @@ def merge_chokes_on_renamed_subtrees(sbox):
   psi_COPY_moved_path = os.path.join(wc_dir, "H_COPY", "psi_moved")
 
 
-  # Cherry harvest all available revsions from 'A/D/H/psi' to 'H_COPY/psi'.
+  # Cherry harvest all available revsions from 'A/D/H/psi_moved' to
+  # 'H_COPY/psi_moved'.
   #
   # Search for the comment entitled "The Merge Kluge" elsewhere in
   # this file, to understand why we shorten and chdir() below.
