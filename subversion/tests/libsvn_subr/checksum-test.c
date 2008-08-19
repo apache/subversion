@@ -41,7 +41,7 @@ test_checksum_parse(const char **msg,
   SVN_ERR(svn_checksum_parse_hex(&checksum, svn_checksum_md5, md5_digest, pool));
   checksum_display = svn_checksum_to_cstring_display(checksum, pool);
 
-  if ( strcmp(checksum_display, md5_digest) != 0)
+  if (strcmp(checksum_display, md5_digest) != 0)
     return svn_error_createf
       (SVN_ERR_CHECKSUM_MISMATCH, NULL,
        "verify-checksum: md5 checksum mismatch:\n"
@@ -52,7 +52,7 @@ test_checksum_parse(const char **msg,
                                  pool));
   checksum_display = svn_checksum_to_cstring_display(checksum, pool);
 
-  if ( strcmp(checksum_display, sha1_digest) != 0)
+  if (strcmp(checksum_display, sha1_digest) != 0)
     return svn_error_createf
       (SVN_ERR_CHECKSUM_MISMATCH, NULL,
        "verify-checksum: sha1 checksum mismatch:\n"

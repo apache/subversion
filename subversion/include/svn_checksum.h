@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2007-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -135,6 +135,8 @@ svn_checksum_parse_hex(svn_checksum_t **checksum,
 /**
  * Return in @a *checksum the checksum of type @a kind for the bytes beginning
  * at @a data, and going for @a len.  @a *checksum is allocated in @a pool.
+ *
+ * @since New in 1.6.
  */
 svn_error_t *
 svn_checksum(svn_checksum_t **checksum,
@@ -147,6 +149,8 @@ svn_checksum(svn_checksum_t **checksum,
 /**
  * Return in @a pool a newly allocated checksum populated with the checksum
  * of type @a kind for the empty string of type.
+ *
+ * @since New in 1.6.
  */
 svn_checksum_t *
 svn_checksum_empty_checksum(svn_checksum_kind_t kind,
