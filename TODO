@@ -1,0 +1,34 @@
+The following tasks need to be completed before we can merge the
+ctypes-python-bindings to trunk.
+
+ctypes-python-bindings TODOs:
+
+ * Allow users to override default paths for both headers and libraries,
+   both at compile time and at runtime. Right now, it is possible to
+   specify additional paths but it is not possible to override the default
+   paths.
+
+ * If users have ctypesgen installed we should use the installed version
+   instead of requiring ctypesgen to be in the build dir.
+
+ * We need a setup.py script / installer for installing the ctypes python
+   bindings.
+
+ * Teach dist.sh (in Subversion trunk) to download release tarball for
+   ctypesgen.
+
+ * Teach autogen.sh --release to generate the python wrappers for ctypes
+   python bindings.
+
+ * Create ctypes-python-bindings target in Subversion trunk Makefile for
+   generating python wrappers for generating the python wrappers for the
+   ctypes python bindings. This target would be a no-op if we are in
+   release mode.
+
+ * Create install-ctypes-python-bindings target in Subversion trunk
+   Makefile for installing the ctypes python bindings.
+
+ctypesgen TODOs:
+
+ * Build release tarball of ctypesgen to be used for Subversion 1.6.
+
