@@ -129,7 +129,7 @@ Candidate changes for 1.5.2:
    Justification:
      Pool lifetime issues are bad.  Real bad.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, gstein
 
 Approved changes:
 =================
