@@ -793,10 +793,6 @@ exchange_capabilities(svn_ra_neon__session_t *ras, apr_pool_t *pool)
 
   rar = svn_ra_neon__request_create(ras, "OPTIONS", ras->url->data, pool);
 
-  ne_add_request_header(rar->ne_req, "DAV", SVN_DAV_NS_DAV_SVN_DEPTH);
-  ne_add_request_header(rar->ne_req, "DAV", SVN_DAV_NS_DAV_SVN_MERGEINFO);
-  ne_add_request_header(rar->ne_req, "DAV", SVN_DAV_NS_DAV_SVN_LOG_REVPROPS);
-
   err = svn_ra_neon__request_dispatch(&http_ret_code, rar,
                                       NULL, NULL, 200, 0, pool);
   if (err)
