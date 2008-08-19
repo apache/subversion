@@ -990,8 +990,7 @@ svn_fs_fs__dag_file_checksum(svn_checksum_t **checksum,
 
   SVN_ERR(get_node_revision(&noderev, file, pool));
 
-  *checksum = svn_checksum_create(svn_checksum_md5, pool);
-  return svn_fs_fs__file_checksum((*checksum)->digest, noderev, pool);
+  return svn_fs_fs__file_checksum(checksum, noderev, pool);
 }
 
 

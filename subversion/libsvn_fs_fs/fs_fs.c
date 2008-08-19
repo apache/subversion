@@ -3239,14 +3239,18 @@ svn_fs_fs__noderev_same_rep_key(representation_t *a,
 }
 
 svn_error_t *
-svn_fs_fs__file_checksum(unsigned char digest[],
+svn_fs_fs__file_checksum(svn_checksum_t **checksum,
                          node_revision_t *noderev,
                          apr_pool_t *pool)
 {
   if (noderev->data_rep)
-    memcpy(digest, noderev->data_rep->checksum, APR_MD5_DIGESTSIZE);
+    {
+      *checksum = svn_checksum_create(svn_checksum_md5, pool);
+      memcpy((*checksum)->digest, noderev->data_rep->checksum,
+             APR_MD5_DIGESTSIZE);
+    }
   else
-    memset(digest, 0, APR_MD5_DIGESTSIZE);
+    *checksum = NULL;
 
   return SVN_NO_ERROR;
 }
