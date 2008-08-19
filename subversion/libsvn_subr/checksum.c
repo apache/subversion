@@ -54,7 +54,7 @@ svn_checksum_create(svn_checksum_kind_t kind,
       case svn_checksum_md5:
       case svn_checksum_sha1:
         checksum = apr_pcalloc(pool, sizeof(*checksum) + DIGESTSIZE(kind));
-        checksum->digest = (unsigned char *)checksum + DIGESTSIZE(kind);
+        checksum->digest = (unsigned char *)checksum + sizeof(*checksum);
         checksum->kind = kind;
         return checksum;
 
