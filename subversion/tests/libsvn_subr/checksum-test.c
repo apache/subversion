@@ -39,8 +39,7 @@ test_checksum_parse(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  checksum = svn_checksum_create(svn_checksum_md5, pool);
-  SVN_ERR(svn_checksum_parse_hex(checksum, md5_digest));
+  SVN_ERR(svn_checksum_parse_hex(&checksum, svn_checksum_md5, md5_digest, pool));
   checksum_display = svn_checksum_to_cstring_display(checksum, pool);
 
   if ( strcmp(checksum_display, md5_digest) != 0)
@@ -50,8 +49,8 @@ test_checksum_parse(const char **msg,
        "   expected:  %s\n"
        "     actual:  %s\n", md5_digest, checksum_display);
 
-  checksum = svn_checksum_create(svn_checksum_sha1, pool);
-  SVN_ERR(svn_checksum_parse_hex(checksum, sha1_digest));
+  SVN_ERR(svn_checksum_parse_hex(&checksum, svn_checksum_sha1, sha1_digest,
+                                 pool));
   checksum_display = svn_checksum_to_cstring_display(checksum, pool);
 
   if ( strcmp(checksum_display, sha1_digest) != 0)

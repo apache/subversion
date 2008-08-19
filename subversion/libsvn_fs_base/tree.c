@@ -3650,18 +3650,14 @@ base_apply_textdelta(svn_txdelta_window_handler_t *contents_p,
   tb->pool = pool;
 
   if (base_checksum)
-    {
-      tb->base_checksum = svn_checksum_create(svn_checksum_md5, pool);
-      SVN_ERR(svn_checksum_parse_hex(tb->base_checksum, base_checksum));
-    }
+    SVN_ERR(svn_checksum_parse_hex(&tb->base_checksum, svn_checksum_md5,
+                                   base_checksum, pool));
   else
     tb->base_checksum = NULL;
 
   if (result_checksum)
-    {
-      tb->result_checksum = svn_checksum_create(svn_checksum_md5, pool);
-      SVN_ERR(svn_checksum_parse_hex(tb->result_checksum, result_checksum));
-    }
+    SVN_ERR(svn_checksum_parse_hex(&tb->result_checksum, svn_checksum_md5,
+                                   result_checksum, pool));
   else
     tb->result_checksum = NULL;
 
@@ -3808,10 +3804,8 @@ base_apply_text(svn_stream_t **contents_p,
   tb->pool = pool;
 
   if (result_checksum)
-    {
-      tb->result_checksum = svn_checksum_create(svn_checksum_md5, pool);
-      SVN_ERR(svn_checksum_parse_hex(tb->result_checksum, result_checksum));
-    }
+    SVN_ERR(svn_checksum_parse_hex(&tb->result_checksum, svn_checksum_md5,
+                                   result_checksum, pool));
   else
     tb->result_checksum = NULL;
 
