@@ -106,13 +106,14 @@ Candidate changes for 1.5.2:
    Votes:
      +1: pburba
 
- * r32545
+ * r32545, r32558
    Fix some pool usage problems in the FS backend node-origin
    calculation logic.
    Justification:
      Pool lifetime issues are bad.  Real bad.
    Votes:
-     +1: cmpilato, gstein
+     +1: gstein (r32545 only)
+     +1: cmpilato
 
 Approved changes:
 =================
