@@ -208,6 +208,10 @@ SVN_ERROR_START
              SVN_ERR_BAD_CATEGORY_START + 11,
              "Unsupported checksum type")
 
+  SVN_ERRDEF(SVN_ERR_BAD_CHECKSUM_PARSE,
+             SVN_ERR_BAD_CATEGORY_START + 12,
+             "Invalid character in hex checksum")
+
   /* xml errors */
 
   SVN_ERRDEF(SVN_ERR_XML_ATTRIB_NOT_FOUND,

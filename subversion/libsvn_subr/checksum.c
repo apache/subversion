@@ -127,19 +127,29 @@ svn_checksum_to_cstring(svn_checksum_t *checksum,
 }
 
 svn_error_t *
-svn_checksum_parse_hex(svn_checksum_t *checksum,
-                       const char *hex)
+svn_checksum_parse_hex(svn_checksum_t **checksum,
+                       svn_checksum_kind_t kind,
+                       const char *hex,
+                       apr_pool_t *pool)
 {
   int len;
   int i;
 
-  SVN_ERR(validate_kind(checksum->kind));
-  len = DIGESTSIZE(checksum->kind);
+  SVN_ERR(validate_kind(kind));
+
+  *checksum = svn_checksum_create(kind, pool);
+  len = DIGESTSIZE((*checksum)->kind);
 
   for (i = 0; i < len; i++)
-    checksum->digest[i] = 
-      (( isalpha(hex[i*2]) ? hex[i*2] - 'a' + 10 : hex[i*2] - '0') << 4) |
-      ( isalpha(hex[i*2+1]) ? hex[i*2+1] - 'a' + 10 : hex[i*2+1] - '0');
+    {
+      if ((! isxdigit(hex[i * 2])) || (! isxdigit(hex[i * 2 + 1])))
+        return svn_error_create
+          (SVN_ERR_BAD_CHECKSUM_PARSE, NULL, NULL);
+
+      (*checksum)->digest[i] = 
+        (( isalpha(hex[i*2]) ? hex[i*2] - 'a' + 10 : hex[i*2] - '0') << 4) |
+        ( isalpha(hex[i*2+1]) ? hex[i*2+1] - 'a' + 10 : hex[i*2+1] - '0');
+    }
 
   return SVN_NO_ERROR;
 }

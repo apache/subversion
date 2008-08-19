@@ -121,13 +121,16 @@ svn_checksum_to_cstring(svn_checksum_t *checksum,
                         apr_pool_t *pool);
 
 
-/** Parse the hex representation of a checksum into @checksum.
+/** Parse the hex representation of a checksum of kind @a kind into
+ * @a checksum, allocating in @a pool.
  *
  * @since New in 1.6.
  */
 svn_error_t *
-svn_checksum_parse_hex(svn_checksum_t *checksum,
-                       const char *hex);
+svn_checksum_parse_hex(svn_checksum_t **checksum,
+                       svn_checksum_kind_t kind,
+                       const char *hex,
+                       apr_pool_t *pool);
 
 /**
  * Return in @a *checksum the checksum of type @a kind for the bytes beginning
