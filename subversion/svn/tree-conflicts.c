@@ -255,6 +255,7 @@ svn_cl__append_tree_conflict_info_xml(
         break;
       case svn_wc_operation_merge:
         tmp = "merge";
+        break;
       default:
         return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
             _("Bad operation in tree conflict description"));
@@ -291,6 +292,7 @@ svn_cl__append_tree_conflict_info_xml(
         break;
       case svn_wc_conflict_reason_added:
         tmp = "added";
+        break;
       default:
         return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
             _("Bad reason in tree conflict description"));
