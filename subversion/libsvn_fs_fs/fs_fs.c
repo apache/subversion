@@ -902,7 +902,7 @@ write_format(const char *path, int format, int max_files_per_dir,
 {
   const char *contents;
 
-  assert (1 <= format && format <= SVN_FS_FS__FORMAT_NUMBER);
+  SVN_ERR_ASSERT(1 <= format && format <= SVN_FS_FS__FORMAT_NUMBER);
   if (format >= SVN_FS_FS__MIN_LAYOUT_FORMAT_OPTION_FORMAT)
     {
       if (max_files_per_dir)
@@ -2513,7 +2513,7 @@ read_window(svn_txdelta_window_t **nwin, int this_chunk, struct rep_state *rs,
 {
   svn_stream_t *stream;
 
-  assert(rs->chunk_index <= this_chunk);
+  SVN_ERR_ASSERT(rs->chunk_index <= this_chunk);
 
   /* Skip windows to reach the current chunk if we aren't there yet. */
   while (rs->chunk_index < this_chunk)
@@ -2554,7 +2554,7 @@ get_combined_window(svn_txdelta_window_t **result,
   svn_txdelta_window_t *window, *nwin;
   struct rep_state *rs;
 
-  assert(rb->rs_list->nelts >= 2);
+  SVN_ERR_ASSERT(rb->rs_list->nelts >= 2);
 
   pool = svn_pool_create(rb->pool);
 
@@ -2572,7 +2572,7 @@ get_combined_window(svn_txdelta_window_t **result,
 
       SVN_ERR(read_window(&nwin, rb->chunk_index, rs, pool));
 
-      /* Combine this window with the current one.  Cycles pools so that we
+      /* Combine this window with the current one.  Cycle pools so that we
          only need to hold three windows at a time. */
       new_pool = svn_pool_create(rb->pool);
       window = svn_txdelta_compose_windows(nwin, window, new_pool);

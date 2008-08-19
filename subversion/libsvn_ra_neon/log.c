@@ -308,7 +308,7 @@ log_end_element(void *baton, int state,
           }
         if (! SVN_IS_VALID_REVNUM(lb->log_entry->revision))
           {
-            assert(lb->nest_level);
+            SVN_ERR_ASSERT(lb->nest_level);
             lb->nest_level--;
           }
         reset_log_item(lb);
@@ -505,13 +505,8 @@ svn_error_t * svn_ra_neon__get_log(svn_ra_session_t *session,
 
   if (err && lb.limit_compat_bailout)
     {
-      svn_log_entry_t *log_entry;
-
       svn_error_clear(err);
-
-      log_entry = svn_log_entry_create(pool);
-      log_entry->revision = SVN_INVALID_REVNUM;
-      return receiver(receiver_baton, log_entry, pool);
+      err = SVN_NO_ERROR;
     }
 
   return err;

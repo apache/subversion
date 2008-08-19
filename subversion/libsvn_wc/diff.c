@@ -515,7 +515,7 @@ file_diff(struct dir_baton *dir_baton,
   apr_array_header_t *propchanges = NULL;
   apr_hash_t *baseprops = NULL;
 
-  assert(! eb->use_text_base);
+  SVN_ERR_ASSERT(! eb->use_text_base);
 
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, dir_baton->edit_baton->anchor,
                               dir_baton->path, pool));
@@ -668,7 +668,7 @@ directory_elements_diff(struct dir_baton *dir_baton)
   /* This directory should have been unchanged or replaced, not added,
      since an added directory can only contain added files and these will
      already have been compared. */
-  assert(!dir_baton->added);
+  SVN_ERR_ASSERT(!dir_baton->added);
 
   /* Everything we do below is useless if we are comparing to BASE. */
   if (dir_baton->edit_baton->use_text_base)
@@ -836,7 +836,7 @@ report_wc_file_as_added(struct dir_baton *dir_baton,
   SVN_ERR(get_empty_file(eb, &empty_file));
 
   /* We can't show additions for files that don't exist. */
-  assert(!(entry->schedule == svn_wc_schedule_delete && !eb->use_text_base));
+  SVN_ERR_ASSERT(!(entry->schedule == svn_wc_schedule_delete && !eb->use_text_base));
 
   /* If the file was added *with history*, then we don't want to
      see a comparison to the empty file;  we want the usual working
@@ -1673,7 +1673,7 @@ file_deleted(svn_wc_adm_access_t *adm_access,
 {
   struct callbacks_wrapper_baton *b = diff_baton;
 
-  assert(originalprops);
+  SVN_ERR_ASSERT(originalprops);
 
   return b->callbacks->file_deleted(adm_access, state, path,
                                     tmpfile1, tmpfile2, mimetype1, mimetype2,

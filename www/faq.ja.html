@@ -1,0 +1,2880 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<style type="text/css"> /* <![CDATA[ */
+  @import "branding/css/tigris.css";
+  @import "branding/css/inst.css";
+  /* ]]> */</style>
+<link rel="stylesheet" type="text/css" media="print"
+  href="branding/css/print.css" />
+<script type="text/javascript" src="branding/scripts/tigris.js"></script>
+<title>Subversion FAQ(in Japanese)</title>
+</head>
+
+<body>
+<div class="app">
+
+<h1>Subversion FAQ</h1>
+<div style="font-size: 70%">
+<pre>
+Based on r32010
+</pre>
+</div>
+<div class="h2"><!-- no 'id' or 'title' attribute for TOC -->
+<h2>Table of Contents</h2>
+
+<h4>General questions:</h4>
+<ul>
+<li><a href="#why">このプロジェクトの存在理由は?</a></li>
+<li><a href="#collab">Subversionって、プロプラエタリなの?
+    CollabNetが所有しているって聞いたんだけど...?</a></li> 
+<li><a href="#stable">Subversionって、僕等のプロジェクトで使える位に安定している?</a></li>
+<li><a href="#interop">Subversionのクライアント/サーバ相互接続性に関するポリシーは?</a></li>
+<li><a href="#portability">SubversionはどのOS上で動作するの?</a></li> 
+<li><a href="#filesystem">「新ファイルシステム」って、どういうこと? ext2 みたいのもの?</a></li> 
+<li><a href="#server-requirements">Subversionサーバを動作させるためには、どんなハードウェアが必要?</a></li>
+<li><a href="#apache-extension">Subversion って、Apacheのエクステンションって聞いたんだけど?サーバとして使うってこと?</a></li> 
+<li><a href="#need-apache">ってことは、Subversion を使うには、Apacheを設定しなきゃいけないってこと?</a></li> 
+<li><a href="#multiple-apachim">現在 Apache 1.x を使っていて、Subversionのリポジトリを提供するためだけに Apache 2.0へと移行することは出来ないんだ。これって、Subversion サーバを使うことが出来ないって、ことになるのかな?</a></li>  
+<li><a href="#feature-x">えーと、SCM system Yがやってるみたいに X って機能を採用するってのはどう?</a></li>
+<li><a href="#globalrev">どうして、リポジトリ全体でリビジョン番号を共有するの?  僕は、個々のプロジェクト毎に、それぞれのリビジョン番号が欲しいんだけど。</a></li>
+<li><a href="#changesets">Subversion には「チェンジセット」って存在する?</a></li>
+<li><a href="#release">次のリリースは何時?</a></li>
+<li><a href="#symlinks">Subversion は、シンボリックリンクをサポートしてる?</a></li>
+<li><a href="#logo">高解像度の Subversion ロゴが欲しいんだけど、何処で手に入るかな?</a></li>
+<li><a href="#more-information">他にも質問があるんだけど、何処で情報が入手できるかな?</a></li>  
+<li><a href="#moderation">なんで、メイリングリストへ投稿した私のメイルが流れないの?</a></li>
+</ul>
+
+<h4>How-to:</h4>
+<ul>
+<li><a href="#co-svn">Subversion のコードをチェックアウトするにはどうするの?</a></li>
+<li><a href="#repository">リポジトリを作るにはどうするの? その中にデータをインポートするには?</a></li> 
+<li><a href="#cvs2svn">既存のCVSリポジトリを Subversion リポジトリに変換するには?</a></li>
+<li><a href="#proxy">Proxyサーバに阻まれているんだけどどうしよう?</a></li>
+<li><a href="#paranoid">僕の管理者は、Subversion用のHTTPサーバを建てて欲しくないみたいなんだ。それでも僕はリモートから使いたいんだけど、どうしたらいいかな?</a></li> 
+<li><a href="#multi-proj">幾つかの異なるプロジェクトを Subversion で管理するにはどうすれば?</a></li>
+<li><a href="#multi-merge">完全に分離している二つのリポジトリをマージするにはどうすればよい?</a></li>
+<li><a href="#nfs">私のレポジトリや作業コピー、NFSサーバ上に置くべきでしょうか?</a></li>
+<li><a href="#bdblogs">なんで、私のリポジトリ、こんなにディスクスペース喰うの?</a></li>
+<li><a href="#reposperms">どうしたら、リポジトリのパーミションを正しく設定できる?</a></li>
+<li><a href="#readonly">リードオンリーの操作を行う場合にも、リポジトリへ書きこみ権限が必要になるのはなぜ?</a></li>
+<li><a href="#removal">リポジトリのヒストリーから、完全にファイルを消去するには、どうしたらよいの?</a></li>
+<li><a href="#change-log-msg">コミット済みリビジョンのログメッセージを変更するには?</a></li>
+<li><a href="#patch">Subversion のパッチ、どうやって送ればよいかな?</a></li>
+<li><a href="#in-place-import">その場 'import'ってどうやるの? つまり、オリジナルデータがそのまま作業コピーとなるように Subversion へツリーを追加したいんだけど。</a></li> 
+<li><a href="#dumpload">Subversion サーバのアップグレードについて語るとき、時々話に出てくる「ダンプ/ロードサイクル」ってなんのこと?</a></li> 
+<li><a href="#sspi">SSPI認証を使って、Windows ドメインコントローラに対して認証を行い、クライアントへ許可を与えたいんだけど、どうすればよい?</a></li>
+<li><a href="#adm-dir">「.svn」っていうディレクトリの名前、好きじゃないんだ。「SVN」とかの方が嬉しいんだけど、どこ変えれば良いの?</a></li>
+<li><a href="#case-change">ファイル名の大文字小文字変換をするには?</a></li>
+<li><a href="#merge-using-tags">branchからtrunkへマージする際、CVS でやってたように、tag を使いたいんだけど、出来ないんだよね?</a></li>
+<li><a href="#version-value-in-source">どうして $Revision$ キーワードが、僕の望んだとおりになってくれないの? これ、ファイルの最終変更リビジョンへ展開されるけど、でも、僕はファイルの現在のリビジョンとかになって欲しいんだ。</a></li>
+<li><a href="#log-in-source">Subversion には、CVS で言うところの $Log$ のように機能するキーワードは存在しないの?</a></li>
+<li><a href="#ignore-commit">我々のプロジェクトには、全ての開発者が変更しなければならないファイルがあるのですが、でも、私はそれらローカルの変更をコミットして欲しくないんです。どうやって、'svn commit' にそのファイルを無視させれば良いでしょう?</a></li>
+<li><a href="#ssh-auth-cache">リポジトリへsvn+sshを使ってアクセスすると、パスワードが~/.subversion/auth へキャッシュされないんだ。何度もパスワードを入力しないで済ます方法は?</a></li>
+<li><a href="#ssh-svnserve-location">僕の<tt>svnserve</tt>バイナリがインストールされているディレクトリは、は、僕のユーザ達のデフォルト<tt>PATH</tt>へは含まれていなくて、彼らはsvn+ssh を使うんだけど、<tt>svnserve</tt>を実行できるように、彼らの<tt>PATH</tt>を変更する方法が分からないんだ。</a></li>
+<li><a href="#ssh-authorized-keys-trick">svn+ssh://経由でのアクセスを許可したいんだけど、私、パラノイアなんだよね。各ユーザへ login を許可する、ってのは嫌なんだ。だって、彼らが私のマシンへのアクセス許可を持った人間なのかどうかって、気にしなきゃならなくなるから。</a></li>
+<li><a href="#auto-props">リポジトリにある全てのものに対して、特定のプロパティを付与するにはどうすればよい? また、どうやったら、リポジトリに登録される全ての新規ファイルへ、そのプロパティを付与できる?</a></li>
+<li><a href="#svn-editor">エディタへのパスにスペースが含まれているんだけど、どうしたら良いでしょうか?</a></li>
+<li><a href="#divining-bdb-version">リポジトリが、Berkeley DB のどのバージョンを使っているか知るには?</a></li>
+<li><a href="#website-auto-update">私はリポジトリを使って Webサイトを管理しています。どうしたら、コミット毎にアップデートが自動的に実行されるライブサイトを作れますか?</a></li>
+<li><a href="#single-file-checkout">ファイル単体をチェックアウトするには?</a></li>
+<li><a href="#wc-change-detection">作業コピー内で、既に実行されてしまった追加や削除、コピー、名前の変更などを検知するにはどうすれば良い?</a></li>
+<li><a href="#svnserve-win-service">Windows 上で、svnserve をサービスとして実行させるには?</a></li>
+<li><a href="#bdb-fsfs-convert">リポジトリを、BDBからFSFSへ、またはFSFSからBDBへ変換するにはどうしたらよいの?</a></li>
+<li><a href="#binary-files">Subversion は、どうやってバイナリファイルを取り扱うの?</a></li>
+<li><a href="#terse-diff"><tt>svn diff</tt>で、変更のあったファイル名だけ表示する方法は? 差分内容は必要ないんだけど。</a></li>
+<li><a href="#sorry-no-globbing">一度に複数のファイルを move したいんだけど、ワイルドカードや glob を使うにはどうすればよいの?</a></li>
+<li><a href="#vendor-branch">Subversion を使って、サードパーティのソフトウェアの変更版(ベンダーブランチ)をメンテするには?</a></li>
+</ul>
+
+<h4>Troubleshooting:</h4>
+<ul>
+<li><a href="#stuck-bdb-repos">僕のリポジトリは、いつでも、リカバリが必要(DB_RUNRECOVERY)というエラーメッセージを出して、刺さっているみたい。これ、何が原因?</a></li>
+<li><a href="#bdb-recovery">毎回リポジトリへアクセスする度に、プロセスがハングアップするんだけど、僕のリポジトリが壊れているの?</a></li>
+<li><a href="#bdb-cannot-allocate-memory">僕のリポジトリが「Cannot allocate memory(メモリが確保できない)」というエラーメッセージを吐き続けています。どうしたらよいのでしょう?</a></li>
+<li><a href="#wedged-wc">毎回 svn コマンドを実行する度に、作業コピーがロックされているよ、って言われるんだけど、僕のリポジトリが壊れているの?</a></li>
+<li><a href="#wc-out-of-date">commit しようとしているんですが、Subversion が、僕の作業コピーは古い、って言ってくるんだけど?</a></li>
+<li><a href="#obstructed-add">あるプロジェクトへパッチを寄贈しました。そのパッチは新規ファイルを含んでいます。で、今、<tt>svn update</tt>が動作しないのですが...。</a></li>
+<li><a href="#unrecognized-url-error">ディストリビューションバイナリをビルドして、Subversion をチェックアウトしようとしたら、「UnrecognizedURL scheme」って、エラーが表示されたんだけど、これって、どうなったの?</a></li>
+<li><a href="#db-recover">リポジトリを見つけるとき、または開こうとするときにエラーが出るんだけど、リポジトリのURLが正しいことは分かってる。何が悪いの?</a></li> 
+<li><a href="#configure-sed-error">'<tt>configure</tt>' を実行したら、<tt>subs-1.sed&nbsp;line&nbsp;38:&nbsp;Unterminated&nbsp;`s'&nbsp;command</tt>というエラーが出ました。何が問題?</a></li>
+<li><a href="#windows-msvc-build">Windows の上で、MSVC++ 6.0 を使ってSubversion を buildしているんだけど、上手く行かない。どうしたらよい?</a></li>
+<li><a href="#windows-drive-letter">Windowsのドライブレターを<tt>file: URL</tt>で使える?</a></li>
+<li><a href="#write-over-dav">ネットワーク越しに Subversion リポジトリへ書き込み操作を行うと問題が生じます。</a></li>
+<li><a href="#vs-asp-net">VS.NET/ASP.NET では .svn というディレクトリ名では問題があるように思えます。どうしたら良いでしょう?</a></li>
+<li><a href="#windows-xp-server">WindowsXP上で使っているんだけど、Subversion サーバが、たまに、壊れたデータを送出しているみたい。こんなことって、本当にあるの?</a></li>  
+<li><a href="#net-trace">Subversion のクライアントとサーバの間を流れるネットワーク上のやり取りをトレースしたいのですが、どんな方法が最良でしょうか?</a></li>
+<li><a href="#revert">どうして<tt>svn revert</tt>では、明示的にターゲットを指定しなければならないの?  どうして、再帰処理がデフォルトじゃないの? こういった挙動は、他のほとんどのサブコマンドと異なっているよね。</a></li>
+<li><a href="#db3db4">Apache を起動したら、mod_dav_svn に「bad database version」と文句を言われた。どうも db-4.X ではなく、db-3.X を見つけたらしい。</a></li>
+<li><a href="#redhat-db">Red Hat 9 上では、「Function not implemented」というエラーが出て、なにも動かない。どうすれば直ります?</a></li>
+<li><a href="#no-author">Apache(ra_dav)経由で、ファイルをコミット、またはインポートすると、SVN log で "(no author)"って表示されるのは、どうして?</a></li>
+<li><a href="#windows-access-denied">Windows上で、時々「Access Denied」エラーに遭遇します。ランダムで表示されるように見えるんだけど、なぜ?</a></li>
+<li><a href="#freebsd-hang">FreeBSD上で、ある種の操作(特に svnadmin create)が時々ハングアップするのは、なぜ?</a></li>
+<li><a href="#http-301-error">Webブラウザからリポジトリを見られるようにしているんだけど、'svn checkout' が、「301 Moved Permanently」というエラーになる。何が悪いの?</a></li>
+<li><a href="#no-copy-history">ファイルの古いバージョンを見ようとしているんだけど、svn は「path not found」とかなんとかいってくる。何が起こっているの?</a></li> 
+<li><a href="#digest-auth">HTTPダイジェスト認証が動作しないのはなぜ?</a></li>
+<li><a href="#xlc-compile">AIX 上で xlc を使ってコンパイルしてるんですが、コンパイルエラーになります。何が問題でしょうか?</a></li>
+<li><a href="#nonrecursive-checkout">あるディレクトリを(-N オプションをつけて)非再帰的にチェックアウトしましたが、今は、サブディレクトリにも「登場」して欲しいと思っています。しかし、<tt>svn up subdir</tt>は動作しません。</a></li>
+<li><a href="#mod_dav_svn-win32">Win32 の上で、Apache と一緒にmod_dav_svn を使おうとしているのですが、そんなモジュールは見つからない、というエラーになります。mod_dav_svn.so ファイルは、<tt>\Apache\modules</tt>内に、正しく存在しているのですが...。</a></li>
+<li><a href="#hook-debugging">どうしてリポジトリのフックが動作しないの?</a></li>
+<li><a href="#diff-cmd">どうして、僕の --diff-cmd は '-u' に関して文句を言うのでしょう? --extensions を使って上書きしているんですが、それが機能しません。</a></li>
+<li><a href="#plaintext-passwords">うぎゃー! 僕の Subversion クライアントが、パスワードを平文でディスク上にキャッシュしているのを見つけちゃった! うわぁ!</a></li>
+<li><a href="#bdb41-tabletype-bug">「svn: bdb: call implies an access method which isinconsistent with previous calls」ってエラーメッセージが表示されました。どうやったら直せる?</a></li>
+<li><a href="#hotcopy-large-repos">僕のリポジトリで hotbackup できないよ! svnadmin が 2Gb を越えるファイルで失敗するんだ。</a></li>
+<li><a href="#hidden-log">まさに今 commit したファイルのログエントリが見られないんだけど、どうして?</a></li>
+<li><a href="#bdb43-upgrade">Berkeley DB 4.3 以降にアップグレードしたら、リポジトリエラーが発生するようになった。</a></li>
+<li><a href="#tiger-apr-0.9.6">MacOS X 10.4(Tiger)上で稼動しているリポジトリから、http://経由でチェックアウトすると、時々、恐らく不整合エラーと思われる現象に遭遇するんだけど、なんで?</a></li>
+<li><a href="#debian-libtool">Debian GNU/Linux 上で、Subversion を作業コピーのソースから構築できません。最後のリンク段階で、エラーになってしまいます。何が悪い?</a></li>
+<li><a href="#freebsd-listen-host">FreeBSD を使っていて、suvserve を実行しているんだけど、3690番ポートで listen していないみたい。</a></li>
+<li><a href="#already-under-version-control">ディレクトリを追加したいんだけど、Subversion に「既にバージョン管理下におかれています」と言われて、できないんだ。</a></li>
+<li><a href="#slow-private-svnserve">svnserve 経由で、非公開リポジトリにアクセスすると、時々凄く遅くなる。</a></li>
+<li><a href="#ssl-negotiation-error">SSL上で、大量のデータを伴う Subversion 操作を行っていると、<tt>SSL negotiation failed: SSL error: decryption failed or bad record mac</tt>というエラーが表示されるのですが。</a></li>
+<li><a href="#broken-subclipse">「This client is too old」というエラーメッセージが出た。.</a></li>
+<li><a href="#switch-problems"><tt>svn switch</tt>が時たま上手く動作しないのはなぜ?</a></li>
+<li><a href="#long-paths">Windowsでコマンドラインクライアントをアップデートすると、「システムは指定されたパスを見つけられません」とのエラーが表示され、作業コピーが壊れているのかも、と教えてくれる。でも、TortoiseSVNのアップデートは上手く行く。何が起こっているの?</a></li>
+<li><a href="#working-copy-format-change">「This client is too old to work with working copy '...'(...作業コピーに対して、このクライアントは古すぎます)」というエラーメッセージが表示されました。Subversionをアップグレードすることなく、これを解決したいんですが。</a></li>
+<li><a href="#relocation-against-local-symbol">Neon ライブラリを 64-bit Linux 上でビルドしたら、"relocation R_X86_64_32 against `a local symbol' can not be used when making a shared object"というエラーが表示されたよ。</a></li>
+</ul>
+
+<h4>Developer questions:</h4>
+<ul>
+<li><a href="#ramdisk-tests">リグレッションテストをRAMディスク上で走らせる方法は?</a></li>
+<li><a href="#dynamic-exe-debugging">動的な Subversion バイナリを、インストールすることなしにデバッガ上で稼動させるには?</a></li>
+<li><a href="#avoiding-compiler-inlining">Subversion バイナリに対してデバッガを実行したいんだけど、コンパイラがソースをインライン展開して消し去ってしまわないようにするためには?</a></li>
+</ul>
+
+<h4>References:</h4>
+<ul>
+<li><a href="#http-methods">Subversionが使っている全ての HTTP メソッドは?</a></li>
+<li><a href="#bikeshed">「bikeshed」ってなに?</a></li> 
+<li><a href="#pronounce">「Subvesion」ってどうやって発音するの?</a></li> 
+<li><a href="#baton">「baton」ってなに?</a></li> 
+<li><a href="#def-wedged-repository">リポジトリが「Wedged」になった、っていうけど、それってどういう意味?</a></li>
+</ul>
+
+</div>
+
+
+<hr />
+
+<div class="h2" id="general-questions" title="general-questions">
+<h2>General questions:</h2>
+
+
+<div class="h3" id="why" title="why">
+<h3>このプロジェクトの存在理由は?</h3>
+
+<p>CVSユーザを乗っ取ること。より正確に言うなら、CVSに良く似た、でも多くの問題点が修正されている、新しいバージョンコントロールシステムを開発している。
+詳細はプロジェクトのフロントページを参照のこと。</p>
+
+</div>
+
+
+<div class="h3" id="collab" title="collab">
+<h3>Subversionって、プロプラエタリなの?
+CollabNetが所有しているって聞いたんだけど...?</h3>
+
+<p>いや、Subversionはオープンソースでありフリーソフトウェアだよ。
+CollabNetは、何人かのフルタイム開発者へ給料を払っていて、コードのコピーライトをもっているけど、でもそのコピーライトは、<a href="http://www.debian.org/social_contract#guidelines">Debian Free Software Guidelines</a>へ完全準拠な<a href="http://subversion.tigris.org/license-1.html">Apache/BSD-style ライセンス</a>だ。
+言い換えれば、ダウンロードや改変、そして再配布は、あなたが望むように、自由に行える。
+CollabNetや他の人に許諾を得る必要はない。</p>
+
+</div>
+
+
+<div class="h3" id="stable" title="stable">
+<h3>Subversionって、僕等のプロジェクトで使える位に安定している?</h3>
+
+<p>はい、全くもって。
+重要プロダクトで十分使えるよ。</p>
+
+<p>Subversion は2000年から開発が続けられていて、1年を過ぎた頃から、自分自身をホストできるようになった。我々がα版と宣言した年の1年後には、Subversionは、プライベートな開発者や実際の業務など、既に数多くの場所で使われるようになっていた。
+その時から、2年以上をバグ修正と安定化に費やし、1.0になったんだ。
+他のプロジェクトでは、もっと早い段階で「1.0」って宣言するじゃないかと思う。
+でも我々はその名称を使うのを、意図的に、出来るだけ引き伸ばそうと決心した。
+多くの人々がSubversionが1.0 になってから使おうと考えていることも、そのバージョン名が非常に特別な意味を持っている事にも気がついていたからだ。
+だから、この規律を守り続けたんだ。</p>
+
+</div>
+
+
+
+<div class="h3" id="interop" title="interop">
+<h3>Subversionのクライアント/サーバ相互接続性に関するポリシーは?</h3>
+
+<p>クライアントとサーバは、最大、1世代のメージャーリリースバージョンを跨がない限り動作するように設計されている。
+例えば、1.Xクライアントは、1.Yのサーバとともに動作するだろう。
+但し、クライアントとサーバのバージョンが一致しない場合には、何らかの機能が使えないかもしれない。</p>
+
+<p>クライアントとサーバの相互接続性ポリシーに関しては、<a href="hacking.html">Hacker's Guide to Subversion</a>の「Compatibility」セクションに書かれている。
+</p>
+</div>
+
+
+<div class="h3" id="portability" title="portability">
+<h3>SubversionはどのOS上で動作するの?</h3>
+
+<p>最近のUNIXや、Win32、BeOS、OS/2、MacOS Xで動作する。</p>
+
+<p>Subversionは ANSI C で書かれていて、APR(<a href="http://apr.apache.org">Apache Portable Rutime Library</a>)をポータビリティ実現の為に使っている。
+Subversionクライアントは、APRを稼動可能なOS上ならば何処ででも動作するだろうから、多くの環境で使うことが出来る。
+Subversionサーバ(つまり、リポジトリ側)についても同様だけど、Win9xプラットフォーム(Win95/Win98/WinME)では、Berkeley DBリポジトリを使うことは出来ない。
+これは、Win95上の Berkeley DB に、shared-memory セグメント問題が存在するためだ。(version 1.1から導入された)FSFSリポジトリにはこの制約は存在しない。
+しかし、Win9xのファイルロックサポートの制限により、こちらもWin9x 上では、動作しない。
+</p>
+
+<p>整理すると、Subversionクライアントは、APRが動作するプラットフォーム上でならばどこででも動作する。
+Subversionサーバも、APRが動作する全てのプラットフォームで動作するが、Win95/Win98/WinMeではリポジトリを提供することは出来ない。</p>
+
+</div>
+
+
+<div class="h3" id="filesystem" title="filesystem">
+<h3>「新ファイルシステム」って、どういうこと? ext2みたいのもの?</h3>
+
+<p>いや違う。「Subversion Filesystem」は、OSに実装されているようなカーネルレベルのファイルシステムではない。
+これはSubversionのリポジトリインターフェイスで、リビジョン間の状態が保持されているディレクトリツリーを保存する、という意味では、「版付けされたファイルシステム」と言える。
+リポジトリへアクセスするプログラムを書くことは、他のファイルシステムAPIを使うプログラムを書くのと同じようなものだ。
+大きな違いは、この特別なファイルシステムでは、書き込みが行われてもデータが失われない、ということ。
+最新の状態を取得するの同様、古いファイルツリーの状態を簡単に取り出すことが出来る。</p>
+
+</div>
+
+
+<div class="h3" id="server-requirements" title="server-requirements">          
+<h3>Subversionサーバを動作させるためには、どんなハードウェアが必要?</h3>           
+                                                                               
+<p>サーバの要求は多くの要素が関係してくる。
+例えば、ユーザ数や、コミットを初めとするサーバ関連操作の頻度、リポジトリのサイズ、独自に設定したリポジトリフックの負荷などだ。
+もし、Apacheを使っているならば、Apache自体がメモリ使用量の最大要因となるだろう。より詳しい話は、メイリングリストの<a href="http://subversion.tigris.org/servlets/BrowseList?list=users&amp;by=thread&amp;from=330941">議論</a>を参照してほしい。</p>
+
+<p>同じサーバ上で動作している、他のアプリケーションを考慮に入れるのを忘れないこと。
+例えば、リポジトリブラウザを使うのであれば、Subversion 自体とは関係なくリソースが必要になる。</p>
+
+<p>一般的に行って、同等のCVSリポジトリと比べて、より少ないサーバメモリで済むことは期待して良いよ。</p>
+
+</div>
+
+
+<div class="h3" id="apache-extension" title="apache-extension">
+<h3>Subversion って、Apacheのエクステンションって聞いたんだけど?
+サーバとして使うってこと?</h3>
+
+<p>いや、Subversion は一連のライブラリセットで、コマンドラインクライアントが付属してくるんだ。
+Subversionには2種類のサーバプロセスが存在する。
+1つは <b>svnserv</b>。これは、小さなスタンドアロンプログラムで cvs の pserver に似ている。
+もう1つは、<b>mod_dav_svn</b> という特別なモジュールと組み合わせて Apahce <b>httpd-2.0</b> を使うやり方。
+<b>svnserve</b> は独自のプロトコルを使うけど、<b>mod_dav_svn</b> は、WebDAV をネットワークプロトコルとして使う。
+より詳しく知りたい場合には、Subversion Book の<a href="http://svnbook.red-bean.com/nightly/en/svn.serverconfig.html">6章</a>を参照のこと。</p>
+
+</div>
+
+
+
+<div class="h3" id="need-apache" title="need-apache">
+<h3>ってことは、Subversion を使うには、Apacheを設定しなきゃいけないってこと?</h3>
+
+<p>端的に言えば「違う」。</p>
+
+<p>もう少し詳しく言うと、もし、リポジトリにアクセスしたいだけならば、Subversion クライアントを build しさえすれば良い。
+もし、ネットワークから使えるリポジトリを<b>提供</b>したいならば、Apache2か「svnserve」サーバを設定しなければならない。</p>
+
+<p>
+ネットワークからアクセス可能な Subversion サーバの設定方法に関しては、詳細が Subversion Bookの<a href="http://svnbook.red-bean.com/nightly/en/svn.serverconfig.html">6章</a>に書いてある。
+</p>
+</div>
+
+
+
+<div class="h3" id="multiple-apachim" title="multiple-apachim">
+<h3>現在 Apache 1.x を使っていて、Subversion のリポジトリを提供するためだけに Apache 2.0 へと移行することは出来ないんだ。
+これって、Subversion サーバを使うことが出来ないって、ことになるのかな?</h3>
+
+<p>いや、Subversion サーバとして svnserve を利用すればよい。
+十二分に動いてくれるよ。</p>
+
+<p>もし、WebDAVや、Apache サーバに付いている、他の「便利な機能」を使いたいな、と思ったら、その通り、Apache 2.0 が必要になる。
+とは言え、Apache 1.x をポート番号80で可動させたまま、Apache 2.0 を別のポートで実行させる、って選択肢もある。異なるバージョンのApacheは、同じマシン上で問題なく同居させることが可能だ。
+httpd.conf の中にある <tt>Listen</tt> ディレクティブを、「<tt>Listen&nbsp;80</tt>」から「<tt>Listen&nbsp;8080</tt>」などの適当なポート番号へと変更した上で、リポジトリ URL を告知するときに、そのポート番号を明確に示す(例えば、<tt>http://svn.mydomain.com:8080/repos/blah/trunk/</tt>とかね)だけ。</p>
+
+</div>
+
+
+<div class="h3" id="feature-x" title="feature-x">
+<h3>えーと、SCM system Yがやってるみたいに X って機能を採用するってのはどう?</h3>
+
+<p>僕達は、SCM の未知なる世界を切り開こうってわけじゃないし、この世に存在する各種SCMが有している最良の機能群を、全てとりこもう、と考えているわけでもない。
+ただ、CVSを置き換えよう、と頑張っているだけ。最初の質問を読んでみて。</p>
+
+</div>
+
+
+<div class="h3" id="globalrev" title="globalrev">
+<h3>どうして、リポジトリ全体でリビジョン番号を共有するの? 
+僕は、個々のプロジェクト毎に、それぞれのリビジョン番号が欲しいんだけど。</h3>
+<p>
+リポジトリ全体という単位で割当られるグローバルなバージョン番号は、ユーザの観点からは無意味だ。
+これは根底にあるスキーマデザインの目的実現のための、内部実装の一つである。
+とはいえ、ユーザインターフェイス的には、憂鬱な気になる、長ったらしい日付や時間の文字列を入力するよりは、場合によっては、少しだけ楽になる、ということはあるけれど。
+</p>
+
+<p>リビジョン番号は、ただリポジトリの為に、また、ユーザの利便性のために存在するに過ぎない。それは、あなたがリポジトリへ格納しているものとの関係性は<b>一切</b>ない。
+コードベースの変更レートに関する正確な指標としては、リポジトリのリビジョン番号変化は、決して適切なものではない。コードベースの変更レートに関する全体把握の為には、より適した、もっと複雑な手法が他に存在する。</p>
+
+</div>
+
+
+<div class="h3" id="changesets" title="changesets">
+<h3>Subversion には「チェンジセット」って存在する?</h3>
+
+<p>この質問は、ちょっと厄介だ。
+というのは、皆「チェンジセット」に対して、少しづつ異なる定義を持っているように思えるし、少なくとも、バージョンコントロールシステムが「チェンジセット機能を持つ」という意味に対して異なる期待を抱いているだろうから。</p>
+
+<p>以後の議論の為に、チェンジセットを簡単に定義しておこう。「チェンジセットとは、一意な名前をもった変更の集合である」。
+「変更」には、ファイルコンテンツに対するテキスト的な編集や、ツリー構造に対する修正、また、メタデータに対するちょっとした調整も含まれる。
+より一般的に言うならば、チェンジセットとは、あなたが参照できる名前をもったパッチのことだ。</p>
+
+<p>Subversionは、バージョン付けされたツリーを第一階オブジェクトとして扱っており(リポジトリは、ツリーの配列だ)、チェンジセットは(近接のtreeと比較することで得られる)そこからの導出物だ。
+ArchやBitkeeperなどのシステムでは、逆の理念の上に作られていて、これらのシステムはチェンジセットを第一階オブジェクトとして管理するように設計されている(リポジトリはパッチの集合体だ)。
+ツリーは、パッチの集合を互いに組み合わせることで導出される。</p>
+
+<p>どちらかの哲学が、他方よりも絶対的に素晴しい、というわけではない。
+この議論は少なくとも30年は遡れる。
+この2つの設計は、ソフトウェア開発のタイプによって、適していたり、そうでなかったりする。
+ここでは、この議論を行うのは止めにして、その代わり、Subversionを使ってあなたは何が出来るのか、ということを説明しよう。</p>
+
+<p>Subversionでは、グローバルリビジョン番号「N」は、リポジトリ内のツリーの名前である。
+これはN番目のコミットを終えたリポジトリの姿だ。
+またこれは暗黙的に一つのチェンジセットの名前にもなる。
+もし、ツリーNとツリーN-1を比較すれば、コミットされたパッチそのものを引き出すことが可能だ。</p>
+
+<p>これ故に、「リビジョンN」を、ただツリーとしてだけではなく、チェンジセットとして同様に捉えることも容易い。
+もしあなたが要求管理システム(issue tracker)をバグ管理に使っているならば、特定のリビジョン番号を、バグを修正した特定のパッチを参照する為に用いることができる。
+例えば、「この問題は、リビジョン9238で修正しました」という具合に。
+他の人は 'svn log -r9283' と実行することで、そのバグを修正した完全なチェンジセットに関して読むことが出来るし、'svn diff -r9237:9238'とすれば、パッチそのものを見ることができる。
+また、svn の merge コマンドもリビジョン番号を利用する。特定のチェンジセットを、あるブランチから他のブランチへマージするには、そのチェンジセット名を merge の引数へと与えればよい。
+'svn merge -r9237:9238 branchURL'は9238番のチェンジセットをあなたの作業コピーへとマージすることになるだろう。</p>
+
+<p>これは、チェンジセットを根源オブジェクトに据えて構築されたシステムみたいに複雑なことは出来ないけれども、でも、CVSよりは凄く便利だよね。</p>
+
+</div>
+
+
+<div class="h3" id="release" title="release">
+<h3>次のリリースは何時?</h3>
+
+<p>次のステータスページを参照。<a href="http://subversion.tigris.org/project_status.html">http://subversion.tigris.org/project_status.html</a></p>
+
+</div>
+
+
+<div class="h3" id="symlinks" title="symlinks">
+<h3>Subversion は、シンボリックリンクをサポートしてる?</h3>
+
+<p>Subversion 1.1(ならびにそれ以降)では、通常通りに<tt>svn add</tt>コマンドを使って、シンボリックリンクをバージョンコントロールすることが可能だ。</p>
+
+<p>詳細な回答: Subversion リポジトリは、シンボリックリンクに対する内部的なコンセプトを有しているわけではない。
+ただ「バージョン管理されたシンボリックリンク」を、'svn:special' プロパティを持つ普通のファイル、として格納しているだけだ。
+UNIX 上の svn client は、 こプロパティを参照し、そのファイルをシンボリックリンクとして、作業コピー上へ展開する。
+Win32システムには、シンボリックリンクは存在しない為、win32版のクライアントは、そのような展開を行わない。
+ただ、普通のファイルとしてオブジェクトが作られるだけだ。</p>
+
+</div>
+
+
+<div class="h3" id="logo" title="logo">
+<h3>高解像度の Subversion ロゴが欲しいんだけど、何処で手に入るかな?</h3>
+
+<p>ベクター形式の Subversion ロゴが、<a href="http://svn.collab.net/repos/svn/trunk">Subversion リポジトリ</a>内にある<a href="http://svn.collab.net/repos/svn/trunk/www">www ツリーの中の logo ディレクトリ</a>にあるよ。</p>
+
+<p> 特に、<a href="http://svn.collab.net/repos/svn/trunk/www/logo/subversion_logo.ai">Adobe Illustrator ドキュメント</a>と共に、<a href="http://svn.collab.net/repos/svn/trunk/www/logo/subversion_logo.eps">EPSバージョン</a>もその中に納められている。</p>
+
+</div>
+
+
+<div class="h3" id="more-information" title="more-information">
+<h3>他にも質問があるんだけど、何処で情報が入手できるかな?</h3>
+
+<p>もし、このFAQの残りを読んでも回答を見付けられなければ、以下のリソースをあたってみると良いだろう。</p>
+<ul>
+  <li><a href="http://svnbook.red-bean.com">The Subversion Book</a></li>
+  <li><a href="http://subversion.tigris.org/servlets/ProjectMailingListList">Subversion ユーザーズメイリングリスト</a> (<a href="mailto:users@subversion.tigris.org">users@subversion.tigris.org</a>)
+       &mdash; 注意: このメイリングリストは<a href="#moderation">モデレータ制</a>だから、あなたの投稿が配送されるまでには、少し遅延があるかも。</li>
+  <li><a href="http://svn.haxx.se/users/">Subversion ユーザーズリストのアーカイブ</a></li>
+  <li>IRC。irc.freenode.net の #svn チャンネルにて。</li>
+  <li><a href="http://www.svnforum.org/">svnforum.org</a>。Webベースの非公式なフォーラムで、メイリングリストと同じ程度の層を参加者のターゲットにしている。</li>
+</ul>
+
+</div>
+
+
+<div class="h3" id="moderation" title="moderation">
+<h3>なんで、メイリングリストへ投稿した私のメイルが流れないの?</h3>
+
+<p>我々のメイリングリストでは、SPAM配信を防ぐ為に、モデレータ制を採用している。
+その為、何れのリストに対するあなたの最初の投稿も、モデレータがそのメイル流すまでの間、遅延してしまうかもしれない。
+一度投稿が認められれば、以後、同じアドレスからの投稿は自動的に承認されるので、遅延状態になることはなくなるだろう。
+勿論、あなたの投稿アドレスが変更された場合には、再びモデレータの許可を待つことになるけど。</p>
+
+</div>
+
+
+</div>
+
+<div class="h2" id="how-to" title="how-to">
+<h2>How-to:</h2>
+
+<div class="h3" id="co-svn" title="co-svn">
+<h3>Subversion のコードをチェックアウトするにはどうするの?</h3>
+<p>Subversion クライアントを使おう。</p>
+<pre>
+        $ svn co http://svn.collab.net/repos/svn/trunk subversion
+</pre>
+<p>あなたのローカルマシンにある subversion という名前のディレクトリの中へ Sunversion のソースツリーのコピーがチェックアウトされるよ。</p>
+
+</div>
+
+
+<div class="h3" id="repository" title="repository">
+<h3>リポジトリを作るにはどうするの? その中にデータをインポートするには?</h3>
+
+<p> <a href="http://svn.collab.net/repos/svn/trunk/README">http://svn.collab.net/repos/svn/trunk/README</a>を参照。特に「セクションIV」の「Quickstart Guide」参照のこと。</p>
+
+<p>もっと詳しい情報を知りたい人は、<a href="http://svnbook.red-bean.com">The Subversion Book</a>の5章を読もう。</p>
+
+</div>
+
+
+
+<div class="h3" id="cvs2svn" title="cvs2svn">
+<h3>既存のCVSリポジトリを Subversion リポジトリに変換するには?</h3>
+
+<p> cvs2svn という変換ツールを試してみて。
+これは、<a href="http://cvs2svn.tigris.org/">http://cvs2svn.tigris.org/</a> から取得可能だ(<a href="http://cvs2svn.tigris.org/features.html" >機能リスト</a>と<a href="http://cvs2svn.tigris.org/cvs2svn.html">ドキュメント</a>も参照のこと)。
+cvs2svn は多くの人々が利用できるように作られてはいるけど、何らかの理由で、このツールがあなたの希望にそぐわないときには、少なくともこれ以外に、2つのツールを試してみることが出来る。</p>
+
+<ul>
+<li><a href="http://public.perforce.com/public/revml/index.html">VCP</a>を使ってChia-liang Kao が書いたツールが、<a href="http://search.cpan.org/perldoc?VCP::Dest::svk">CPAN</a>から取得できる。</li>
+
+<li>Lev Serebryakov が書いた refinecvs は<a href="http://lev.serebryakov.spb.ru/refinecvs/">http://lev.serebryakov.spb.ru/refinecvs/</a>から入手可能。</li>
+
+</ul>
+
+<p>あわせて<a href="links.html">Subversion links</a>ページも参照のこと。</p>
+
+</div>
+
+
+
+<div class="h3" id="proxy" title="proxy">
+<h3>Proxyサーバに阻まれているんだけどどうしよう?</h3>
+
+<p>Subversion クライアントを適切に設定することで、プロキシを超えることが出来るよ。
+まずはじめに、「servers」設定ファイルを編集して、どのプロキシサーバを使うか指定しよう。
+このファイルが置かれている場所は使っている OS に依存する。
+LinuxやUnixでは「~/.subversion」ディレクトリの中に置かれている。
+Windowsでは「%APPDATA%\Subversion」中にある(「echo %APPDATA%」を試してみよう。これは隠しディレクトリなので注意)。</p>
+
+<p>このファイルの中には、各要素の説明がコメントとして書かれている。
+もしこのファイルが存在しない場合には、最新のSubversionクライアントを入手して、適当なコマンドを実行してみよう。
+設定ディレクトリとテンプレートファイルが作成される。</p>
+
+<p>次に、プロキシサーバ自身が、Subversionの利用している全てのHTTPメソッドをサポートしているかどうかを確認する必要がある。
+いくつかのプロキシサーバは、標準では、次のメソッド群をサポートしていない: PROPFIND、REPORT、MERGE、MKACTIVITY、CHECKOUT。
+一般的に、これを解決する方法、どのプロキシソフトウェアを使っているかに依存する。
+例えばSquidでは、設定オプションをこんな風にしてみよう。</p>
+
+<pre>
+   #  TAG: extension_methods
+   #       Squid only knows about standardized HTTP request methods.
+   #       You can add up to 20 additional "extension" methods here.
+   #
+   #Default:
+   # none
+   extension_methods REPORT MERGE MKACTIVITY CHECKOUT
+</pre>
+
+<p>(Squid 2.4以降では、PROPFINDについてはすでにサポートされている)。</p>
+
+<p>プロキシサーバへ通過を許可させる、その他HTTPメソッドに関しては、「<a href="#http-methods">Subversionが使っている全ての HTTP メソッドは?</a>」も併せて参照のこと。</p>
+
+<p>プロキシに Subversion トラフィックを通過させるのが難しい、または不可能で、でも Subversion のソースコードをチェックアウトしたい場合には、プロキシを迂回することができるかもしれない。
+いくつかのプロキシは、80番ポートをフィルタしているにもかかわらず、81番ポートは何でも許可してたりする。このため、<tt>svn.collab.net</tt> のリポジトリサーバは、80番ポートと同様に81番でも待ち受けている。
+というわけで、</p>
+
+<pre>
+   svn checkout http://svn.collab.net:81/repos/svn/trunk subversion
+</pre>
+
+<p>を試してみよう。もしかすると、プロキシは素通ししてくれるかもしれない。
+別の戦略としては、SSL上でチェックアウトする、というのもあって、多くのプロキシがこれを許可している。</p>
+
+<pre>
+   svn checkout https://svn.collab.net/repos/svn/trunk subversion
+</pre>
+
+<p>勿論、あなたの使っている svn クライアントが、SSLサポートを有効にしてビルドされている必要がある。
+これには<tt>./configure</tt>スクリプトへ <tt>--with-ssl</tt>を渡せばよい。
+「https」スキームをサポートしているかどうかは、<tt>svn --version</tt>で確認することができるよ。</p>
+
+</div>
+
+
+<div class="h3" id="paranoid" title="paranoid">
+<h3>僕の管理者は、Subversion用のHTTPサーバを建てて欲しくないみたいなんだ。それでも僕はリモートから使いたいんだけど、どうしたらいいかな?</h3>
+
+<p>簡単な案は、Apache ではなく<b>svnserve</b>サーバを使うこと。
+詳細は、Subversionブックの<a href="http://svnbook.red-bean.com/nightly/en/svn.serverconfig.html">第6章</a>を参照のこと。</p>
+
+<p>でも、もしあなたの管理者がApacheの実行を認めてくれないんだったら、3690番ポートでカスタムサーバプロセスを実行するのも認めてくれそうにないよね!
+というわけで、残りの回答は、管理者が既存のSSHインフラを使うことを<i>許可してくれたら</i>、って想定で書きます。</p>
+
+<p>もし、以前にCVSサーバを使っていたのだとすれば、多分、CVSサーバへログインするのに SSH を使っていた筈。
+ra_svn Subversion アクセス手法は、Subversion で、これと同等のことを実現するための方法だ。
+ただ Subversion リポジトリURLの前に「svn+ssh」を付けるだけで良い。</p>
+<pre>
+$ svn checkout svn+ssh://your.domain.com/full/path/to/repository
+</pre>
+
+<p>これにより、SSHプログラムがリモートマシン上でプライベートな「svnserve」プロセスを稼動させ、あなたのUIDによるリポジトリアクセスや、暗号化されたリンク上での情報トンネリングを司ってくれる。</p>
+
+<p>また、これとは別の解決策としては、SSHポートフォワーディングの力を借りて、保護されているサーバへ ra_dav 経由で接続する、というのもある。
+SSHを経由することで、ファイアウォールの背後に位置している、Subversion サーバへアクセス可能なマシンへと接続することができるだろう。
+SSHサーバが、Subversionのインストールされたサーバと同じでマシンで<b>なくても</b>よい、という点に注目して欲しい。
+もちろん同じでも構わないけど、同じである必要性はない。</p>
+
+<p>まずは、Subversionリポジトリを提供しているHTTPサーバへと接続する為の、ローカルなポートフォワードを作る。
+それから、このローカルポートを経由してSubversionサーバへ「接続」する。
+これで、リクエストがSSHサーバを経由して、Subversionサーバへ「トンネル」されることになる。</p>
+
+<p>例を示そう。ra_dav の設定された Subversion サーバが、会社のファイアウォールの背後に立っている。
+IPアドレスは10.1.1.50 だ(このサーバを、svn-server.example.comと呼ぼう)。
+会社は、皆がアクセス可能な ssh-server.example.com 経由でのSSHアクセスを許可している。
+内部的には、Subversion リポジトリへ http://svn-server.example.com/repos/ours 経由でアクセスできる。</p>
+
+<p><i>例</i>: クライアントは、ポートフォワーディングを使ってssh-serverへ接続し、そのポートフォワードを経由して、チェックアウトする。</p>
+
+<pre>
+% ssh -L 8888:svn-server.example.com:80 me@ssh-server.example.com
+% svn checkout http://localhost:8888/repos/ours
+</pre>
+
+<p>svn-server.example.com は、non-trustedユーザによる、非特権ポート上で稼動している httpd インスタンスでも構わないことに注意しよう。
+この方法では、Subversion サーバに対して root アクセス権限を必須とはしない。</p>
+
+<!-- Can you use svn switch to switch your WC between your internal and
+     external Subversion server?  I think so.  -->
+
+<p>Joe Orton は以下を注記してくれた。</p>
+<pre>
+サーバは、MOVEならびにCOPYリクエストの同期先のヘッダで使われているホスト名に敏感なので、この個所には少し注意を払う必要がある。
+この方法を上手く機能させる為には、「ServerAlias localhost」が必要になるかもしれない。
+</pre>
+
+<p>SSHポートフォワーディングに関する幾つかのリンクはこちら。</p>
+
+<ul>
+<li><a href="http://www.onlamp.com/pub/a/onlamp/excerpt/ssh_11/index3.html">http://www.onlamp.com/pub/a/onlamp/excerpt/ssh_11/index3.html</a></li>
+<li><a href="http://csociety.ecn.purdue.edu/~sigos/projects/ssh/forwarding/">http://csociety.ecn.purdue.edu/~sigos/projects/ssh/forwarding/</a></li>
+<li><a href="http://www.zip.com.au/~roca/ttssh.html">TTSSH: A Win32 SSH client capable of port forwarding</a></li>
+</ul>
+
+</div>
+
+
+<div class="h3" id="multi-proj" title="multi-proj">
+<h3>幾つかの異なるプロジェクトを Subversion で管理するにはどうすれば?</h3>
+
+<p>それは取り扱うプロジェクトに依存する。
+もしそれらのプロジェクトに関連性があって、データを共有する可能性があるなら、一つのリポジトリ内に幾つかのサブディレクトリを作るという方法が最良だ。
+例えばこんな感じ。</p>
+<pre>
+        $ svnadmin create /repo/svn
+        $ svn mkdir file:///repo/svn/projA
+        $ svn mkdir file:///repo/svn/projB
+        $ svn mkdir file:///repo/svn/projC
+</pre>
+
+<p>もし、それらのプロジェクトが完全に関係性がなく、プロジェクト間でデータを共有する可能性がないのなら、恐らく、独立した無関係のリポジトリを作るのがベストだろう。</p>
+<pre>
+        $ mkdir /repo/svn
+        $ svnadmin create /repo/svn/projA
+        $ svnadmin create /repo/svn/projB
+        $ svnadmin create /repo/svn/projC
+</pre>
+<p>
+この二つのアプローチの差は、(Ben Collins-Sussman&lt;sussman@collab.net&gt;によれば)次の通り。
+</p>
+
+<ul>
+  <li>最初のケースでは、プロジェクト間でコードのコピーや移動が簡単に実行でき、履歴も保存される(今のところ、'svn cp/mv'は、単一リポジトリの中でしか動作しない)。</li>
+  <li>リビジョン番号はリポジトリ全体で共有されるから、最初のケースでは、如何なるプロジェクトに対する単一コミットも、グローバルなリビジョン番号の引き上げが発生する。というわけで、もし、誰かがprojBをチェックアウトしていて、10リビジョンが進んでいることに気がついても、実は、projB自体はちっとも変化していない、ということが起こるわけで、これは、少し奇妙に思えるかもしれない。
+まぁ、実際には、大したことないよね。ちょっと不思議な気がするのは、最初だけ。
+この現象、rapidsvn が同じリポジトリにあった時には、rapidsvn へのコミットが発生する度に svn で起こっていたことだから :-)。</li>
+  <li>2番目のケースの方が、安全性の維持は簡単になると思う。
+Apacheのアクセスコントロールを使うことにより、(ユーザとパーミッションという面で)プロジェクトを互いに隔離することが容易になる。最初のケースでは、リポジトリに対し、プロジェクトを区別するための小さなスクリプトが必要になるだろう(「このユーザは、このディレクトリ以下へのコミットは許可されている?」)。
+勿論、この為のスクリプトは提供されているので、それを使うことは可能だよ。</li>
+</ul>
+
+</div>
+
+  
+<div class="h3" id="multi-merge" title="multi-merge">
+<h3>完全に分離している二つのリポジトリをマージするにはどうすればよい?</h3>
+
+<p>片方のリポジトリについて、履歴の完全な維持、という点を気にしないのであれば、一つのプロジェクトの下へ単に新しいディレクトリを作った上で、そこへもう片方のデータをインポートすれば良い。</p>
+
+<p>もし、両方のリポジトリの履歴を維持したいのならば、'svnadmin dump'を使って片方のリポジトリのダンプを取り、'svnadmin load'で、そのダンプをもう片方のリポジトリへロードすることになる。
+リビジョン番号は変わっちゃうけれど、でも履歴は維持できるよ。</p>
+
+<p>Peter Davis &lt;peter@pdavis.cx&gt;は、svnが有するCVSモジュール同様の機能を使う方法について述べている。</p>
+
+<blockquote>
+        <p>異なるディレクトリツリーのマージを行うのであれば、CVSモジュールのsvn版を使うことが出来るよ。</p>
+
+        <p><em>svn:externals</em>プロパティをディレクトリにセットしよう。これで、オリジナルディレクトリがチェックアウトする時には何時でも、他のリポジトリからディレクトリをチェックアウトさせることが出来るようになる。
+リポジトリの分離を維持したまま、作業コピー上では、それらがマージされたかの様に見える。
+インポートされたディレクトリへコミットすれば、外部のリポジトリに対して効果が発生する。</p>
+
+        <p>このマージは完全にはクリーンではない。インポートは作業コピーにしか影響を及ぼさないから、二番目のリポジトリからインポートされたモジュールへアクセスするために、最初のリポジトリのURLを使うことは出来ない。
+両者は異なるURLのままなんだ。</p>
+</blockquote>
+
+<p>あわせて<a href="links.html#misc_utils">miscellaneous utilities</a>も探して見よう。
+複数のリポジトリをマージする時に、リビジョンの選択や並び換えを行うために役に立つツールを見つけることが出来る。
+特に、基本的な操作を行うためには<a href="http://www.coelho.net/svn-merge-repos.html">svn-merge-repos.pl</a>という perl スクリプトが、また、より高度な再編成を行う際には<a href="http://svn.borg.ch/svndumptool/">SvnDumpTool</a>という python クラスが有益だ。</p>
+</div>
+
+
+  
+<div class="h3" id="nfs" title="nfs">
+<h3>私のレポジトリや作業コピー、NFSサーバ上に置くべきでしょうか?</h3>
+
+<p>もしあなたのリポジトリが、Berkeley DB をバックエンドに使っているならば(Subversion 1.0と1.1で作られたリポジトリでは、これがデフォルト。それ以降の版ではデフォルトではない)、リモートファイルシステム(例えば、NFS)上にリポジトリを置くことはお勧め<i>しない</i>。
+Berkeley DBのデータベースとログファイルをリモートファイルシステム上に格納することは出来るが、Berkeley DB の共有リージョンファイルをリモートファイルシステム上へ格納することは出来ないから、リポジトリは、たった1台のファイルシステムクライアントからしかアクセスできないだろうし、また、1台のクライアントにすら提供できないSubversionの機能も存在するだろう。</p>
+
+<p>もしあなたがリポジトリのバックエンドに<a href="http://svn.collab.net/repos/svn/trunk/notes/fsfs">FSFS</a>を使っているならば、リポジトリを最近のNFSサーバ(即ち、lockをサポートしている、ってこと)上に格納しても大丈夫だろう。</p>
+
+<p>作業コピーはNFS上へ格納することができる(基本的なところでは、ホームディレクトリがNFSサーバ上に位置している、というのがある)。
+Subversionは、チェックアウト時、大量のリネーム処理を内部的に行っている為、LinuxのNFSサーバを使う場合には'subtree checking'を無効化すべきだ、との報告がある(デフォルトでは有効になっている)。
+subtree checking を無効化する方法については、<a href="http://nfs.sourceforge.net/nfs-howto/server.html">NFS Howto Server Guide</a><b>とexports(5)</b>を参照のこと。</p>
+
+<p>我々は、少なくとも1通、SMBでアクセスした後、作業コピーがWedged になった、というレポートを受け取っている。問題のサーバはやや古めのバージョン(2.2.7a)のSambaを稼動していた。この問題は新しめのSamba(3.0.6)では再発していない。</p>
+
+</div>
+
+  
+<div class="h3" id="bdblogs" title="bdblogs">
+<h3>なんで、私のリポジトリ、こんなにディスクスペース喰うの?</h3>
+
+<p>リポジトリは、あなたの全てのデータを、リポジトリの /db/ サブディレクトリ内にある Berkeley DBの「環境」内に蓄積している。
+この環境は、テーブルの集合やログファイル(log.*) の束を格納している。Berkeley DB はテーブルに行われた全ての変更を記録するので、実行が遮られた場合でも、首尾一貫した状態へと復元することが可能だ(<a href="#bdb-recovery">詳細はこちら</a>)。</p>
+
+<p>ログファイルは永遠に成長を続け、あなたが(リポジトリ管理者として)何らの処理を行わない限りは、ディスク空間を食いつづけるだろう。ある時点で、Berkeley DB が実際に使用するログファイルは僅かでしかない(<a href="http://subversion.tigris.org/servlets/ReadMsg?list=users&amp;msgNo=15194">この投稿</a>と続くスレッドを参照)。
+というわけで、残りは安全に削除することができる。もし、あなたが全てのログファイルを永遠に保存しておくのであれば、Berkeley DBは、リポジトリがこの世に生を受け手から後、施された全ての変更を、理論上は再現することが出来ることになる。
+でも現実的には、もしバックアップをとっているなら、多分、ディスク空間という面で、コストに見合わないと思うよ。</p>
+
+<p>どのファイルが削除可能かを確認するためには、<code>svnadmin</code> を使おう。cron でこんな感じのジョブを実行すると良いだろう。</p>
+
+<pre>
+$ svnadmin list-unused-dblogs /repos
+/repos/db/log.000003
+/repos/db/log.000004
+[...]
+
+$ svnadmin list-unused-dblogs /repos | xargs rm
+# ディスク空間を取り戻した!
+</pre>
+
+<p>この変わりに、Berkeley DB の <code>db_archive</code>コマンドを使うこともできる。</p>
+
+<pre>
+$ db_archive -a -h /repos/db | xargs rm
+# ディスク空間を取り戻した!
+</pre>
+
+<p><code>svnadmin hotcopy</code>や<code>hotbackup.py</code>も参照のこと。</p>
+
+<p><strong>注意:</strong>もしあなたが Berkeley DB 4.2 を使っているならば、Subversion は、自動ログ削除機能を有効にしてリポジトリを作成しているだろう。
+<code>svnadmin create</code>を実行時に、<code>--bdb-log-keep</code>オプションを指定することで、これを変更することが可能だ。
+Berkeley DBマニュアルに書かれた <a href="http://www.oracle.com/technology/documentation/berkeley-db/db/api_c/env_set_flags.html#DB_LOG_AUTOREMOVE"><code>DB_LOG_AUTOREMOVE</code></a>フラグを参照のこと。</p>
+
+</div>
+
+
+<div class="h3" id="reposperms" title="reposperms">
+<h3>どうしたら、リポジトリのパーミションを正しく設定できる?</h3>
+
+<p>リポジトリにアクセスできるユーザの数を、<em>極力</em>少なくしよう。例えば、apache や 'svnserve -d'を特定ユーザで起動し、リポジトリ全体をそのユーザの所有にする。他のユーザには、<tt>file:///</tt>URL経由でのリポジトリアクセスを許可しないようにし、また 'svnlook' や 'svnadmin' は、そのリポジトリ所有者権限でだけ実行されるようにしよう。</p>
+
+<p>もしクライアントが、<tt>file:///</tt> や <tt>svn+ssh://</tt>経由でアクセスするならば、複数ユーザからのアクセスを無効化させる方法は存在しない。
+この場合、<a href="http://svnbook.red-bean.com/nightly/en/svn.serverconfig.multimethod.html">第6章の最終セクション</a>を読んで、下のほうにある「チェックリスト」サイドバーへ十分注意を払おう。
+このリストには、このシナリオを安全に行う為の幾つかのステップが概説されている。</p>
+
+<b>注意: SELinux / Fedora Core 3+ / Red Hat Enterpriseをお使いの方々へ</b>
+
+<p>通常の Unix パーミッションに加え、SELinuxの元では、全てのファイル、ディレクトリ、プロセスなどが「セキュリティコンテキスト」を有している。
+プロセスがファイルへアクセスしようとした場合、Unixパーミションチェックの他に、システムは、プロセスのセキュリティコンテキストが、ファイルのコンテキストと互換性があるかを確認しようとする。</p>
+
+<p>Fedora Core 3 は(他にも同様のシステムはあるけど)、SELinux が標準でインストールされ、また設定されるので、Apacheは非常に制限されたセキュリティコンテキストの中で実行されることになる。
+SubversionをApacheの元で動作させる為には、Apacheからのアクセスを許可するよう、リポジトリのセキュリティコンテキストを設定しなければならない(もしくは、この制限機能はちょっと過剰だなぁ、と思うならば、Apache側で制限を無効化しよう)。
+ファイルのセキュリティコンテキストを設定するためには、<tt>chcon</tt> コマンドが使われる(<tt>chmod</tt>が伝統的なUNIXパーミッションをセットするのと似た方法だ)。
+例えば、リポジトリへ問題なくアクセスできるようにする為には、次のコマンドを実行し、</p>
+
+<pre>   $ chcon -R -h -t httpd_sys_content_t <i>PATH_TO_REPOSITORY</i></pre>
+
+<p>セキュリティコンテキストを設定しなければならないだろう。</p>
+
+</div>
+
+
+
+<div class="h3" id="readonly" title="readonly">
+<h3>リードオンリーの操作を行う場合にも、リポジトリへ書きこみ権限が必要になるのはなぜ?</h3>
+
+<p>ある種のクライアント操作、例えば、チェックアウトや更新は「リードオンリー」だ。
+アクセスコントロールという観点で言えば、Apacheはこれらの操作をその様に扱う。
+しかし、libsvn_fs(リポジトリファイルシステムAPI)は、ツリー差分を生成する為、一時データを書き込む必要がある。
+その為、リポジトリへアクセスするプロセスが機能する為には、Berkeley DBに対して、常に読み込み<em>と</em>書き込みのアクセスが必要になる。</p>
+
+<p>特に、リポジトリは、多くの「リードオンリー」操作に対し、2つのツリーを比較する事で対応する。
+1つのツリーは、大抵 HEADリビジョンで、もう片方は概ね一時的なトランザクションツリーだ。というわけで、書き込み権限が必要になる。</p>
+
+<p>この制限は、Berkeley DBをバックエンドを使っている場合にだけ生じ、<a href="http://svnbook.red-bean.com/nightly/en/svn.reposadmin.planning.html#svn.reposadmin.basics.backends.fsfs">FSFSバックエンド</a>では発生しない。</p>
+
+</div>
+
+
+<div class="h3" id="removal" title="removal">
+<h3>
+リポジトリのヒストリーから、完全にファイルを消去するには、どうしたらよいの?
+</h3>
+
+<p>ファイルやコミットに関する全ての痕跡を完全に消し去りたい、という特別な場合がある(例えば、誰かが間違えて、極秘ドキュメントをコミットしちゃった、とか)。
+これは、そう簡単な話ではない。
+というのも、Subversionは決して情報を失うことのないよう、よくよく考えて設計されているのだから。
+リビジョンは、他のリビジョンの上に構築される、不変のツリーだ。
+あるリビジョンを履歴上から除去した場合、ドミノ倒しのように以降に続く全てのリビジョンを目茶苦茶にしてしまい、恐らく全ての作業コピーがだめになってしまうだろう。</p>
+
+<p>とはいえ、プロジェクトとしては、いつの日か、<b>svnadmin obliterate</b> コマンドを実装する、というプランを持っている。
+このコマンドを使うことで、情報を永久に消し去ることが出来るようになるだろう(<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=516">issue 516</a>を参照の事)。</p>
+
+<p>それまでの間は、あなたの取り得る手段としては、<b>svnadmin dump</b>でリポジトリのダンプを取り、そのファイルをパイプ経由で<b>svndumpfilter</b>を通過させ(不正なパスを取り除く)、その出力を<b>svnadmin load</b>コマンドへ読み込ませる、ということになる。
+詳細は、Subversion bookの<a href="http://svnbook.red-bean.com/nightly/en/svn.reposadmin.html">第5章</a>を参照の事。</p>
+
+</div>
+
+
+<div class="h3" id="change-log-msg" title="change-log-msg">
+<h3>
+コミット済みリビジョンのログメッセージを変更するには?
+</h3>
+
+<p>ログメッセージは、各リビジョンの属性として貼り付けられた上で、リポジトリに中に保存されている。
+デフォルトでは、一度コミットされてしまったログメッセージ属性(<em>svn:log</em>)は、変更することが出来ない。
+これは、<a href="href="http://svnbook.red-bean.com/nightly/en/svn.advanced.props.html">リビジョン属性</a>(<em>svn:log</em>はその中の一つ)への変更は、以前のプロパティ値を完全に廃棄してしまう為で、この操作が誤って実行されないよう、Subversionは、あなたを守ってくれている、というわけだ。
+とは言え、リビジョン属性を変更する為の方法は、幾つか存在する。</p>
+
+<p>最初の方法は、リビジョン属性の変更を有効にしたいリポジトリ管理者向けのものだ。
+これは「pre-revprop-change」と呼ばれるフックを作ることで実現される(実現方法の詳細に関しては、Subversion book の<a href="http://svnbook.red-bean.com/nightly/en/svn.reposadmin.create.html#svn.reposadmin.create.hooks">このセクション</a>を参照)。
+この「pre-revprop-change」フックは、ログメッセージが変更される前に、古いログへアクセスするので、何らかの方法(例えば、メイルで送る、など)により、このログを保存することは可能だ。
+ひとたびリビジョン属性の変更が有効化されれば、<b>svn propedit</b>か<b>svn propset</b>へ--revpropスイッチを引き渡すことでリビジョンのログメッセージ変更が可能になる。例えば、こんな感じ。</p>
+
+<pre>
+$ svn propedit -r N --revprop svn:log URL
+$ svn propset -r N --revprop svn:log "new log message" URL
+</pre>
+
+<p>ここで N は、ログメッセージを変更したいと思っているリビジョンの番号で、URLはリポジトリの場所。
+もし、このコマンドを作業コピーの中で実行するのであれば、URLを指定する必要はない。</p>
+
+<p>ログメッセージを変更する2番目の方法は、<b>svnadmin setlog</b>を使う方法。
+これは、ファイルシステム上のリポジトリの場所を指定して実行しなければならない。
+リモートのリポジトリを、このコマンドを使用して変更することはできない。</p>
+
+<pre>
+$ svnadmin setlog REPOS_PATH -r N FILE
+</pre>
+
+<p>REPOS_PATHにはリポジトリの場所を、N には変更したいログメッセージのリビジョン番号を、FILEには新しいログメッセージの書かれているファイルを指定する。
+もし「pre-revprop-change」フックが適切に動作していない(または、何らかの理由で、フックスクリプトを迂回したい)場合には、--bypass-hooks オプションが利用可能だ。
+しかし、このオプションを使う場合には、十分に注意すること。例えば、メイルによる変更伝達や、リビジョン属性を追跡するためのバックアップシステムを迂回してしまうことになるかもしれない。</p>
+
+</div>
+
+
+<div class="h3" id="patch" title="patch">
+<h3>Subversion のパッチ、どうやって送ればよいかな?</h3>
+
+<p>まず最初に、<a href="hacking.html">Hacker's Guide to Subversion</a>を読むこと。</p> 
+
+<p>熟読したら、[PATCH]という単語と1行説明をサブジェクトに記述し、(あなたの MUA がメイルをぐちゃぐちゃにしてしまわないことが前提で)パッチをメイル内へインラインで取り込んだ上で、そのメイルをdevリストへ送ろう。
+その後、コミッタはそれを拾い上げ、適用を行い(必要に応じてフォーマットや内容の変更が行われる)、チェックインすることになる。</p>
+
+<p>基本的な手順はこんな感じ。</p>
+
+<blockquote><pre>
+        $ svn co http://svn.collab.net/repos/svn/trunk subversion
+        $ cd subversion/www
+
+                [ make changes to faq.html ]
+        
+        $ svn diff faq.html &gt; /tmp/foo
+
+        $ Mail -s "[PATCH] FAQ updates" &lt; /tmp/foo
+</pre></blockquote>
+
+<p>勿論、<a href="hacking.html">Hacker's Guide to Subversion</a>に従って、あなたのメイルには、そのパッチが何を為してくれるのか、という点に関する、分かりやすい十分な長さの説明文が含まれている筈。
+って、説明するまでもないよね。だって、実際にコードをハックし始める<em>前</em>に、既にこのガイドを読んで、完全に理解しているんだもんね :)</p>
+
+</div>
+
+
+<div class="h3" id="in-place-import" title="in-place-import">
+<h3>その場 'import'ってどうやるの? つまり、オリジナルデータがそのまま作業コピーとなるように Subversion へツリーを追加したいんだけど。</h3> 
+
+<p>例えば、/etc 内の幾つかを、あなたのリポジトリ内で、バージョン管理下に置きたいのだと仮定してみよう。</p>
+
+<pre>
+     # svn mkdir file:///root/svn-repository/etc \
+         -m "リポジトリ内に/etcに対応するディレクトリを作る"
+     # cd /etc
+     # svn checkout file:///root/svn-repository/etc .
+     # svn add apache samba alsa X11 
+     # svn commit -m "僕の設定ファイル群への最初のバージョン"
+</pre>
+
+<p>ここでは、ちょっと見珍しい、<tt>svn&nbsp;checkout</tt>の便利な機能を使っている。
+ディレクトリを、リポジトリから既存のディレクトリ内に対して、直接チェックアウトすることができる。
+まず最初に新しい空のディレクトリをリポジトリの中へ作る。
+それから、それを<tt>/etc</tt>の中にチェックアウト。
+これで<tt>/etc</tt>は作業コピーへと変化する。
+一度この作業が済んだ後は、普通に<tt>svn&nbsp;add</tt>コマンドをつかって、ファイルやサブツリー群をリポジトリへ追加することができる。</p>
+
+<p>svn import を強化して、インポートされたツリーを自動的に作業コピーへ変換できるようにする、というのは課題だ。<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=1328">issue 1328</a>を参照。</p>
+
+</div>
+
+
+<div class="h3" id="dumpload" title="dumpload">
+<h3>Subversion サーバのアップグレードについて語るとき、時々話に出てくる「ダンプ/ロードサイクル」ってなんのこと?</h3>
+
+<p>サブバージョンのリポジトリデータベーススキーマは、開発中、まれに変更になる場合がある。古いリポジトリ(Subverision 1.0 より前の開発版で作られたもの)は、アップグレードをする際、以下の手順が必要になるかも知れない。
+もし、スキーマ変更が、Subversionリリース X と Yの間で起こった場合、Yへとアップグレードするリポジトリ管理者は、以下手順を踏む必要がある。</p>
+
+<ol>
+ <li>svnserveやApache、その他リポジトリへアクセスするかもしれないものを、シャットダウンする。
+ </li>
+
+ <li><b><tt>svnadmin&nbsp;dump&nbsp;/path/to/repository&nbsp;&gt;&nbsp;dumpfile.txt</tt></b> を実行する。svnadmin は、バージョン X のものを使うこと。</li>
+
+ <li><b><tt>mv&nbsp;/path/to/repository&nbsp;/path/to/saved-old-repository</tt> </b>(即ち、既存リポジトリをリネームしておく)</li>
+
+ <li>Subverion を Y へアップグレードする(つまり、Yをビルド後インストールして、Xを置き換える)</li>
+
+ <li><b><tt>svnadmin&nbsp;create&nbsp;/path/to/repository</tt></b>を実行。バージョンYの svnadmin を使うこと。</li>
+
+ <li><b><tt>svnadmin&nbsp;load&nbsp;/path/to/repository&nbsp;&lt;&nbsp;dumpfile.txt</tt></b>。ここでも、バージョンYのsvnadminを使用。</li>
+
+ <li>フックスクリプトなどを、古いリポジトリから新しいリポジトリへコピー。</li>
+
+ <li>svnserveやApacheを再起動。</li>
+</ol>
+
+<p>ダンプとロードの方法の詳細に関しては、<a href="http://svnbook.red-bean.com/nightly/en/svn.reposadmin.maint.html#svn.reposadmin.maint.migrate">Subversion bookのこのセクション</a>を参照のこと。</p>
+
+<p><b>注意</b>: Subversion のほとんどのアップグレード時には、ダンプやロードは<i>必要ない</i>。
+これが必要になる場合、リリースアナウンスや、新版の CHANGES ファイルで、十分な告知がなされるだろう。
+もしあなたがその様な告知を目にしていないのであれば、それはスキーマに変更はない、ということであり、ダンプ/ロードも必要ない。</p>
+
+</div>
+
+ 
+<div class="h3" id="sspi" title="sspi">
+<h3>SSPI認証を使って、Windows ドメインコントローラに対して認証を行い、クライアントへ許可を与えたいんだけど、どうすればよい?</h3>
+
+<p><a href="http://tortoisesvn.tigris.org">TortoiseSVN</a>には、Windows 上で Subversion サーバを設定する為の、素晴らしいドキュメントが同梱されている。
+<a href="http://tortoisesvn.net/docs/release/TortoiseSVN_en/tsvn-serversetup.html#tsvn-serversetup-apache-5">http://tortoisesvn.net/docs/release/TortoiseSVN_en/tsvn-serversetup.html#tsvn-serversetup-apache-5</a>へアクセスして、SSPI認証のセクションを参照してみよう。</p>
+
+<p>設定上の重要な箇所は、次の行。</p>
+<pre>
+   SSPIOfferBasic On
+</pre>
+
+<p>この行が無くても、SSPIをサポートしているブラウザでは、ユーザのクレデンシャルを要求するだろう。
+しかし、SubversionのようなSSPIをサポートしていないクライアントは要求しない(現在のリリースのNeon(SubversionのHTTPライブラリのこと)は、ベーシック認証しか扱えない)。
+クライアントが決してクレデンシャルを要求しない為、認証を必要とする操作はすべて失敗となる。
+この行を加えることにより、<tt>mod_auth_sspi</tt>に対して、クライアントに対してはベーシック認証を使うことを、一方で、クレデンシャルの認証を行うためには、Windowsドメインコントローラを用いることを、指示することになる。</p>
+
+</div>
+
+  
+<div class="h3" id="adm-dir" title="adm-dir">
+<h3>「.svn」っていうディレクトリの名前、好きじゃないんだ。「SVN」とかの方が嬉しいんだけど、どこ変えれば良いの?</h3>
+
+<p>我々としては、可能な限り「.svn」と生活を共にすることをお勧めするよ。
+とは言え、Windows上でASP.NETを使っているならば、 <a href="#vs-asp-net">ここ</a> で説明しているようにSVN_ASP_DOT_NET_HACK環境変数を設定する必要があるかもしれない。</p>
+
+<p>または、完全にカスタムな名前を管理用ディレクトリの名前として使うことも可能だろう。
+我々としては、これはお勧めしない。と言うのも、あなたの作業コピーは、多分、あなたがカスタマイズした以外のSubversionクライアントでは使えないだろうから。
+しかし、どうしてもやらなければならない、というのであれば、ただ<tt>subversion/include/svn_wc.h</tt>の</p>
+
+<pre>
+#define SVN_WC_ADM_DIR_NAME   ".svn"
+</pre>
+
+<p>
+を、例えば、
+</p>
+
+<pre>
+#define SVN_WC_ADM_DIR_NAME   "SVN"
+</pre>
+
+<p>
+へと変更し、クライアントを再コンパイルすれば良い。
+</p>
+
+</div>
+
+
+<div class="h3" id="case-change" title="case-change">
+<h3>ファイル名の大文字小文字変換をするには?</h3>
+
+<p>この問題は、2つの状況で発生する。
+Windows のような大文字小文字(つまり文字ケース)を区別しないファイルシステム上でファイルを追加した場合、意図せずファイル名の文字ケースが誤った状態で登録してしまったことに気がついたのかもしれない。
+あるいは、単に、リポジトリ内にある既存ファイルの大文字小文字を変更したい、と考えたのかもしれない。</p>
+
+<p>もしあなたが、文字ケースを区別するファイルシステムを使っているならば、全く問題はない。ただファイルを新しい名前に変更するだけだ。例えばこんな感じ。</p>
+
+<pre>
+svn&nbsp;mv&nbsp;file.java&nbsp;File.java
+</pre>
+
+<p>しかし、これは、Windowsのような大文字小文字を区別しないOS上では上手くいかないだろう。
+Windows上でこれを実現するためには、ファイルをどこかへ一時的にコピーしておき、Subversion上からそのファイルを消した後、そのコピーを正しい文字ケースで追加することになる。
+また、より良い方法は、Subversion URL を使って、move 操作を実行することだ。URLを使う方法がお薦めで、なぜなら、そのファイルの履歴が保存されるし、すぐに結果が反映されるることになるから。</p>
+
+<p>とはいえ、どちらの方法も Windows 上の作業コピーには問題を残す。
+というのも、名前の競合したファイルを更新する時、Windows は未だ混乱に陥るからだ(多分、次のようなメッセージが表示されるだろう。
+<tt>svn: Failed to add file 'File.java': object of the same name already exists</tt>)。
+この問題を解決する方法の1つは、ワーキングコピーを削除して、チェックアウトし直すことだ。
+もし、これをしたくない場合には、2段階の更新手順を踏まなければならない。</p>
+
+<p>大文字小文字の間違っている各ファイルに対して、次のコマンドを実行し、文字ケースを変更する。</p>
+
+<pre>
+svn mv svn://svnserver/path/to/file.java svn://svnserver/path/to/File.java
+</pre>
+
+<p>作業コピーを更新するため、適切なディレクトリへ移動して、次の操作を実行。</p>
+
+<pre>
+svn update file.java
+svn update
+</pre>
+
+<p>最初の更新処理で、<tt>file.java</tt>を作業コピーから消し去り、次の更新処理で<tt>File.java</tt>を追加して、作業コピーを正しい状態にする。
+もし、問題のあるファイルが数多く存在するならば、次の方法で、作業コピーを更新することも可能だ。</p>
+
+<pre>
+svn update *
+svn update
+</pre>
+
+<p>今まで見てきたように、間違った文字ケースで追加されたファイルを、文字ケースを区別しないOS上で修正するのは、骨が折れる。
+是非、ファイルを最初に登録する時点で、正しく登録するようにしよう!
+最初からこの問題を防ぐために、<tt>check-case-insensitive.pl</tt>ファイルを呼び出すpre-commitフックを作成すれば良い。
+このファイルは、Subversion ソース tarball 内の、<tt>contrib/hook-scripts</tt>ディレクトリ内に置かれている。</p>
+
+</div>
+
+
+<div class="h3" id="merge-using-tags" title="merge-using-tags">
+<h3>branchからtrunkへマージする際、CVS でやってたように、tag を使いたいんだけど、出来ないんだよね?</h3>
+
+<p>以下で示すように、リビジョン番号を覚えることなく、branch からtrunk へマージを行なうことが可能だよ。また、その逆も可能(例には示してないけどね)。</p>
+
+<p>以下の例では、<tt>/home/repos</tt>という既存リポジトリがあり、この中に<tt>bar</tt>という名前の branch を作りたいということを、また、このbranch は、<tt>foo</tt>という名前の編集対象ファイルを含んでいることを仮定している。</p>
+
+<p>branch のマージトラックするため、このリポジトリには、<tt>tags/branch_traces</tt> というタグを記録しておくための場所が用意されている。</p>
+
+<pre># ブランチとタグをセットアップ
+$ svn copy file:///home/repos/trunk \
+           file:///home/repos/branches/bar_branch \
+           -m "start of bar branch"
+$ svn copy file:///home/repos/branches/bar_branch \
+           file:///home/repos/tags/branch_traces/bar_last_merge \
+           -m "start"
+
+# brach の作業コピーをチェックアウト
+$ svn checkout file:///home/repos/branches/bar_branch wc
+$ cd wc
+
+# foo.txt ファイルを編集して commit。
+$ echo "some text" &gt;&gt;foo.txt
+$ svn commit -m "edited foo"
+
+# trunk へ switch して、変更点を branch からマージ
+$ svn switch file:///home/repos/trunk
+$ svn merge file:///home/repos/tags/branch_traces/bar_last_merge \
+            file:///home/repos/branches/bar_branch
+
+# ここで foo.txt の中身を確認してみよう。先の変更が取り込まれているはず。 
+
+# マージをcommit。
+$ svn commit -m "Merge change X from bar_branch."
+
+# 最後に、現在の状態を反映しておく為、追跡用 branch を更新。
+$ svn delete -m "Remove old trace branch in preparation for refresh." \
+             file:///home/repos/tags/branch_traces/bar_last_merge
+$ svn copy file:///home/repos/branches/bar_branch                     \
+           file:///home/repos/tags/branch_traces/bar_last_merge       \
+           -m "Reflect merge of change X."
+</pre>
+
+</div>
+
+
+<div class="h3" id="version-value-in-source" title="version-value-in-source">
+<h3>どうして $Revision$ キーワードが、僕の望んだとおりになってくれないの?
+これ、ファイルの最終変更リビジョンへ展開されるけど、でも、僕はファイルの現在のリビジョンとかになって欲しいんだ。</h3>
+
+<p>
+Subversion ではリポジトリー全体でリビジョン番号が増加してゆくから、どのキーワードもその番号へ変更することはできない。
+それをやろうとすれば、毎更新とコミット時、作業コピーの中にある全てのファイルを検索し、恐らく更新してまわるはめになるだろう。
+</p>
+
+<p>
+あなたが欲しい情報(作業コピーのリビジョン)は、<tt>svnrevision</tt>コマンドを使って取得することが出来る。
+これは、与えられたパスの作業コピーに対するリビジョン番号情報を表示してくれる(詳細は<tt>svnversion --help</tt>を参照のこと)。
+</p>
+
+<p>
+これをビルドやリリースプロセスに統合することで、ソース自身にこの情報を引き渡すことが可能だ。
+例えば、<tt>GNU&nbsp;make</tt>を使ったビルド環境では、<tt>Makefile</tt>へ<a href="http://subversion.tigris.org/servlets/ReadMsg?list=dev&amp;msgNo=112564">このような処理</a>を加えれば良い。
+</p>
+
+<pre>
+##
+## これを使うには、yourfile.c の中で次のような感じにすればよい
+## printf("このプログラムは SVN の revision %s からコンパイルされました\n",SVN_REV);
+##
+
+SVNDEF := -D'SVN_REV="$(shell svnversion -n .)"'
+CFLAGS := $(SVNDEF) ... continue with your other flags ...
+</pre>
+
+<p>
+(これは、GNU版ではない<tt>make</tt>では動作しないかも知れないことに注意。
+もしあなたのビルドプロセスがポータビリティを必要としているならば、この方法を使ってはならない)</p>
+
+<p>または、こんなのをどうぞ。</p>
+
+<pre>
+##
+## すべてのビルドで、作業コピーのリビジョン文字列を記録する
+##
+svn_version.c: FORCE
+    echo -n 'const char* svn_version(void) { const char* SVN_Version = "' \
+                                       &gt; svn_version.c
+    svnversion -n .                   &gt;&gt; svn_version.c
+    echo '"; return SVN_Version; }'   &gt;&gt; svn_version.c
+
+##
+## これで、svn_version.o をリンクするすべての実行ファイルは、
+## svn_version() 関数を呼び出すことが出来る。この関数では、
+## ビルドが行われたまさにその時のリビジョン番号の記載された
+## 文字列を取得することが可能だ。
+##
+</pre>
+
+<p>
+Windowsユーザは、<tt>SubWCRev.exe</tt>コマンドが使えるだろう。
+これは、<a href="http://tortoisesvn.net/downloads">TortoiseSVN</a>のダウンロードページから入手できる。
+これは、指定されたファイル中に書かれている全ての <tt>$WCREV$</tt> タグを、現在の作業コピーのリビジョンへと置き換える。
+</p>
+
+</div>
+
+
+<div class="h3" id="log-in-source" title="log-in-source">
+<h3>Subversion には、CVS で言うところの $Log$ のように機能するキーワードは存在しないの?</h3>
+
+<p>存在しない。
+CVSの $Log$ と同等品は存在しないんだ。
+もし、特定ファイルのログを取得したいのならば、'svn log your-file-name'を実行するか、'svn log url-to-your-file'を実行すればよい。
+なぜ、$Log$ がマズイかを説明した、メイリングリストに流れた記述を次に。</p>
+
+<pre>"$Log$ は、branch間の変更をマージし始めた途端、全く持って恐怖となる。
+ほとんど確実にその箇所で競合が生じることになり(なぜって、それがこのキーワードの特質だから)、自動的な競合の解消は、どうやっても不可能となる。"</pre>
+
+<p>加えて、次の通り。</p>
+
+<pre>Subversion のログメッセージは可変であり、svn:log リビジョン属性を用いることで変更することができる。
+だから、あるファイルで$Log$を展開したとしても、古い内容となってしまっている可能性がある。
+更新処理では、$Log$ キーワードへ遭遇する度に、実際にはそのファイルが変更されていない場合であっても、適切なログメッセージを取得しなければならならなくなるだろう。</pre>
+
+<p><i>僕はそんなことは気にしないよ。どうであれ、それを使いたいんだ。実装する気はない?</i></p>
+
+<p>ない。
+我々は、それを実装する気も、この機能を実装したパッチを受け入れる気もない。
+もしあなたが、changelog 等を含んだファイルを配布したい、と考えているのならば、ビルドシステムで、この制約を回避できると思う。</p>
+
+</div>
+
+
+
+<div class="h3" id="ignore-commit" title="ignore-commit">
+<h3>我々のプロジェクトには、全ての開発者が変更しなければならないファイルがあるのですが、でも、私はそれらローカルの変更をコミットして欲しくないんです。
+どうやって、'svn commit' にそのファイルを無視させれば良いでしょう?</h3>
+
+<p>回答: その手のファイルは、バージョン管理下に置かないようにしよう。
+その変わりに、そのファイルの<em>テンプレート</em>を、「file.tmpl」といった名前で、バージョン管理下に置こう。</p>
+
+<p>そして最初の 'svn checkout' 実行後、そのテンプレートを、あなたのユーザ(または、あなたのビルドシステム)に、普通のOSのコピーを使って適切な名前でコピーさせ、そのコピーをカスタマイズさせる。
+このファイルはバージョン管理されていないから、決してコミットされることはないだろう。
+またあなたが望むなら、そのファイルを、上位ディレクトリの svn:ignore 属性へ追加することも出来る。
+こうすれば、'svn status' コマンドを実行しても、'?' のように表示されることはなくなるよ。</p>
+
+</div>
+
+
+<div class="h3" id="ssh-auth-cache" title="ssh-auth-cache">
+<h3>リポジトリへsvn+sshを使ってアクセスすると、パスワードが ~/.subversion/auth へキャッシュされないんだ。
+何度もパスワードを入力しないで済ます方法は?</h3>
+
+<p>ssh は独自のパスフレーズを有していて、独自の認証キャッシュ機構を備えている。
+この認証キャッシュは Subversion 外にあるので、Subversion とは独立して設定しなければならない。</p>
+
+<p>OpenSSH には、<b><tt>ssh-ketgen</tt></b> という鍵生成プログラムと、<b><tt>ssh-agent</tt></b> というパスフレーズキャッシュプログラム、そして、<b><tt>ssh-add</tt></b>という、パスフレーズをエージェントのキャッシュへ追加するプログラムが同梱されている。
+<tt>ssh-agent</tt>を簡単に使う為に人気のあるスクリプトが<b><tt>keychain</tt></b> だ。Windows では、ssh の有名な代替クライアントとして<b><tt>PuTTY</tt></b> がある。
+OpenSSH の鍵をインポートする為には、<b><tt>PuTTYgen</tt></b> を、パスフレーズをキャッシュする為には、<b><tt>pageant</tt></b> を参照の事。</p>
+
+<p><tt>ssh-agent</tt>の設定方法はこのドキュメントの範疇外だけど、<a href="http://www.google.com/search?hl=en&amp;lr=&amp;ie=UTF-8&amp;q=%22ssh-agent%22">Googleで、ssh-agent を検索</a>すれば、すぐに回答を得られるだろう。
+<i>もの凄く</i> せっかちなあなたは、次のリンクを参照のこと。</p>
+
+<pre>
+   <a href="http://mah.everybody.org/docs/ssh"
+           >http://mah.everybody.org/docs/ssh</a>
+   <a href="http://kimmo.suominen.com/docs/ssh/"
+           >http://kimmo.suominen.com/docs/ssh/</a>
+</pre>
+
+</div>
+
+
+<div class="h3" id="ssh-svnserve-location" title="ssh-svnserve-location">
+<h3>僕の<tt>svnserve</tt>バイナリがインストールされているディレクトリは、は、僕のユーザ達のデフォルト<tt>PATH</tt>へは含まれていなくて、彼らはsvn+ssh を使うんだけど、<tt>svnserve</tt>を実行できるように、彼らの<tt>PATH</tt>を変更する方法が分からないんだ。</h3>
+
+      <p>注意: ここでは、あなたが OpenSSH を使っていると仮定している。
+世の中には、他のssh実装も存在していて、恐らく、それら実装でも同じようなことが出来るとは思うんだけど、詳細を把握していない。</p>
+      
+      <p>あなたは、色々な login ファイル、例えば <tt>.bash_profile</tt>等と格闘して、でもどうにもならなかったんだね! 
+これは、Subversion クライアントが ssh を起動するとき、ssh は、それらのファイルを無視する為だ。
+でも、<tt>PATH</tt>を変更する必要なんてないんだ。そのかわりに ssh へ直接<tt>svnserve</tt>コマンドのフルパスを教えてやれば良い。
+ここでは、その方法を説明しよう。</p>
+
+      <p>svn+ssh アクセスが必要な各ユーザに対して、Subversion <em>専用</em>の(つまり、通常、ログインでは使わない)新しい ssh のpublic-keyペアを生成しよう。
+そのキーペアには、特別の名前を付けておこう。
+例えば、<tt>~/.ssh/id_dsa.subversion</tt> といった具合だ。
+その鍵のうち、公開鍵を、サーバマシン上にある彼らの <tt>~/.ssh/authorized_keys</tt>ファイルへ追記する。
+但し、行の先頭、<tt>ssh-ras</tt>か<tt>ssh-dss</tt>という語の前に、ちょっとだけマジックを挿入してね。</p>
+
+      <table border="1" cellspacing="2" cellpadding="2">
+        <tr><th>before</th></tr>
+        <tr><td><tt>ssh-dss&nbsp;AAAAB3Nblahblahblahblah</tt></td></tr>
+        <tr><th>after</th></tr>
+        <tr><td><tt>
+        command="/opt/subversion/bin/svnserve&nbsp;-t"&nbsp;ssh-dss&nbsp;AAAAB3Nblahblahblahblah
+        </tt></td></tr>
+      </table>
+
+      <p>当然、<tt>/opt/subversion/bin/svnserve</tt>は、あなたの環境に適した値へ置き換えること。
+また、Subversion リポジトリへのフルパスを、(<tt>-r</tt>オプションを使って)コマンドへ指定しても良いだろう。
+ユーザはタイピングする手間を少し省くことができる。</p>
+      
+      <p>この<tt>command=</tt>マジックは、例えユーザが、他のコマンドを実行しようとした場合でも、リモートマシンの sshd に対し、svnserve を実行させるように仕向ける。
+詳細は sshd(8) のマニュアルページ(<tt>AUTHORIZED_KEYS FILE FORMAT</tt>セクション)を参照のこと。</p>
+      
+      <p>さて、あなたのユーザが Subversion クライアントを実行する際には、彼らのキーペアの秘密鍵が「指示されている」<tt>SVN_SSH</tt>環境変数が設定されていることを確認しよう。
+(Bourne Again シェルでは)こんな感じになる。</p>
+
+<pre>
+SVN_SSH="ssh -i $HOME/.ssh/id_dsa.subversion"
+export SVN_SSH
+</pre>
+
+      <p><a
+      href="http://svn.collab.net/repos/svn/trunk/notes/ssh-tricks">このファイル</a>では、この問題をより深く解説しているよ。</p>
+      
+</div>
+
+
+<div class="h3" id="ssh-authorized-keys-trick" title="ssh-authorized-keys-trick">
+<h3>svn+ssh://経由でのアクセスを許可したいんだけど、私、パラノイアなんだよね。各ユーザへ login を許可する、ってのは嫌なんだ。
+だって、彼らが私のマシンへのアクセス許可を持った人間なのかどうかって、気にしなきゃならなくなるから。</h3>
+
+<p><a href="#ssh-svnserve-location">他の質問</a>への回答だけど、この中に書かれた<tt>~/.ssh/authorized_keys</tt>ファイルのハックに関するセクションを参照のこと。
+<tt>svnserve</tt>をPATHへ含める件に関しては、無視してよいよ。</p>
+</div>      
+
+
+<div class="h3" id="auto-props" title="auto-props">
+<h3>リポジトリにある全てのものに対して、特定のプロパティを付与するにはどうすればよい? また、どうやったら、リポジトリに登録される全ての新規ファイルへ、そのプロパティを付与できる?</h3>
+
+<p>Subversion はファイルのコンテンツをデフォルトでは変更しない。
+もし変更したい場合には、ファイルに対し、明示的に<tt>svn:eol-style</tt>や<tt>svn:keywords</tt>プロパティを設定する必要がある。
+これが Subversion を CVSのデフォルト動作よりもずっと安全なものにしているだけど、この安全さは、ある種の不便さも引き起こす。</p>
+
+<p>最初の質問に応えよう。既にリポジトリへ格納されている全てのファイルへ属性を付与する為には、面倒な作業が必要になる。やり方は、(作業コピー内にある)全てのファイルに対して<tt>svn propset</tt>を実行し、それを<tt>svn commit</tt>すること、せいぜいこれだけだ。
+多分、スクリプトを書くと作業が楽になると思う。</p>
+
+<p>では、新規ファイルはに関してはどうだろう?
+生憎、コミットされかかっているファイルに対して、サーバ側で属性を自動的に与える仕組みは用意されていないんだ。
+これは、全てのユーザは、ファイルを<tt>svn add</tt>する度、忘れずに、属性を適切に設定せねばならない、ということを意味する。幸い、この作業を補助するクライアントサイドのツールがある。
+Subversion Book の <a href="http://svnbook.red-bean.com/nightly/en/svn.advanced.props.html#svn.advanced.props.auto">auto-props</a>機能に関して読んでみよう。
+全てのユーザがクライアントの auto-props 設定を適切に行っているかどうかを、あなたは確認する必要がある。</p>
+
+<p>また、ファイル属性を付け忘れた新規ファイルのコミットを拒否する pre-commit フックスクリプトを書くことも可能だ(例えば、<a href="http://svn.collab.net/repos/svn/trunk/contrib/hook-scripts/check-mime-type.pl">http://svn.collab.net/repos/svn/trunk/contrib/hook-scripts/check-mime-type.pl</a>を参照)。
+でもこのアプローチは、やりすぎかもしれない。例えば、もし<tt>svn:eol-style</tt>を付け忘れた人がいた場合、他の誰かが、そのファイルを異なるOS上で開いた瞬間に気がつくと思う。
+一旦気がつけば、直すのは簡単。
+ただ、属性を設定して、コミットするだけだ。</p>
+
+<p>注意: 多くのユーザが、ランタイム設定、例えばauto-propsの設定等を、サーバからクライアントへ自動的に「ブロードキャスト」する機能が欲しい、と言ってきている。
+これは、機能要求としては既に受け付けられているんだけど(<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=1974">issue 1974</a>)、この機能は開発者の間で現在議論中なので、まだ作業には取りかかっていない。</p>
+
+</div>
+
+
+<div class="h3" id="svn-editor" title="auto-props">
+<h3>エディタへのパスにスペースが含まれているんだけど、どうしたら良いでしょうか?&nbsp;また、このエディタへコマンドラインオプションを指定したいのですが、その方法は?</h3>
+
+<p>Subversion コマンドラインクライアントは、SVN_EDITOR環境変数で定義されたエディタを起動する。
+この環境変数は、ログメッセージの入力や編集に利用される一時ファイル名と共に、直接OSへと引き渡される。</p>
+
+<p>SVN_EDITOR文字列は、そのままシステムのコマンドシェルへ引き渡されることになるため、エディタ名やエディタへのパスにスペースが含まれている場合、クォートで囲む必要があるだろう。</p>
+
+<p>例えば、Windows 上で、エディタに<code>C:\Program&nbsp;Files\Posix&nbsp;Tools\bin\vi</code>を利用する場合、この変数を次のように設定することになる。
+</p>
+<pre>
+   set SVN_EDITOR="C:\Program Files\Posix Tools\bin\vi"
+</pre>
+
+<p>Windowsのシェルでは、クォートをエスケープする必要のないことに注意。
+クォートは<code>set</code>コマンドの構文には含まれていないからね。
+</p>
+
+<p>Unixシステムでは、あなたのシェル特有の変数設定方法に従う必要がある。
+例えば、bash では、こんな感じだ。
+</p>
+<pre>
+   SVN_EDITOR='"/usr/local/more editors/bin/xemacs"'
+   export SVN_EDITOR
+</pre>
+
+<p>エディタの起動時にコマンドラインオプションが必要な場合、通常のコマンドラインと同様、エディタ名に続けてそのオプションを指定した上で、SVN_EDITOR環境変数へ設定すればよい。
+例えば、上記のエディタへ<code>-nx -r</code>オプション指定したい場合、こんな感じになるだろう。
+</p>
+
+<p>Windowsでは、</p>
+<pre>
+   set SVN_EDITOR="C:\Program Files\Posix Tools\bin\vi" -nx -r
+</pre>
+
+<p>UNIX/bashでは、</p>
+<pre>
+   SVN_EDITOR='"/usr/local/more editors/bin/xemacs" -nx -r'
+   export SVN_EDITOR
+</pre>
+
+<p>SVN_EDITOR は、Subversion 特有の、エディタを指定する為に利用される変数だ。
+Subversion では、より汎用的な EDITOR 変数もサポートしているけれど、もし Subversion で特有の挙動が必要ならば、SVN_EDITOR 変数を使うのが最良だよ。
+</p>
+
+</div>
+
+
+<div class="h3" id="divining-bdb-version" title="divining-bdb-version">
+<h3>リポジトリが、Berkeley DB のどのバージョンを使っているか知るには?</h3>
+
+<p>もし、そのリポジトリが現在稼働中のものならば、簡単な答えは「あなたがインストールしている Berkeley DB のバージョンだよ」となる。
+しかし、もしそのリポジトリが、バックアップや不明なソースから作られたもので、どのバージョンの Berkeley DB で作られたのが手がかりがないなら、こんな感じで調べよう。</p>
+
+<p>適当なコマンドを使って、リポジトリ内で最も大きな番号の割り振られた db/log.* ファイルについて、(10進で)12番目と16番目のオフセットから2つの4バイトの整数値を調べよう。
+GNU od を使う場合はこんな感じ:「<tt>od -j12 -N8 -tx4 log.<i>&lt;number&gt;</i></tt>」。Mac OS X のhexdump を使う場合には、こんな感じ:「<tt>hexdump -s12 -n8 -x
+log.<i>&lt;number&gt;</i></tt>」。
+最初の整数は、マジックナンバーである 0x00040988 となっている筈だ。
+これは、そのファイルがBerkeley DBのログファイルであることを示している。
+2番目の数値が、ログフォーマットのバージョンだ。
+下のテーブルで、Berkelet DB のバージョンを確認しよう。</p>
+
+<table border="1" cellspacing="2" cellpadding="2">
+  <tr><th>ログフォーマットバージョン</th><th>Berkeley DBバージョン</th></tr>
+  <tr><td>5 (0x00000005)</td><td>4.0</td></tr>
+  <tr><td>7 (0x00000007)</td><td>4.1</td></tr>
+  <tr><td>8 (0x00000008)</td><td>4.2</td></tr>
+  <tr><td>10 (0x0000000a)</td><td>4.3</td></tr>
+  <tr><td>11 (0x0000000b)</td><td>4.4</td></tr>
+  <tr><td>12 (0x0000000c)</td><td>4.5</td></tr>
+  <tr><td>13 (0x0000000d)</td><td>4.6</td></tr>
+</table>
+
+</div>
+
+
+<div class="h3" id="website-auto-update" title="website-auto-update">
+<h3>私はリポジトリを使って Webサイトを管理しています。どうしたら、コミット毎にアップデートが自動的に実行されるライブサイトを作れますか?</h3>
+
+<p>あなたのリポジトリへpost-commiフックスクリプトを加えることにより、何時でも簡単にこれを実現することができる。
+フックスクリプトについて、Subversion Book の<a href="http://svnbook.red-bean.com/nightly/en/svn.reposadmin.create.html#svn.reposadmin.create.hooks">第5章</a>を参照のこと。
+基本的なアイディアは、その「ライブサイト」を一般的な作業コピーにした上で、post-commit フックスクリプトにより、作業コピー上で 'svn update' を実行させれば良い。</p>
+
+<p>実際には、幾つか注意すべき点がある。
+コミットを司るサーバプログラム(svnserveまたはapache)は、post-commitフックスクリプトを実行することになるプログラムと同一だ。
+これは、このプログラムが、作業コピーを更新できる適切なパーミションを有していなければならないことを意味する。
+言い換えれば、その作業コピーは、svnserveやapacheを稼動させているのと同一ユーザに所有されていなければならない。
+または、少なくとも、その作業コピーは、適切なパーミッションを有している必要がある。</p>
+
+<p>もしそのサーバが、所有権を有していない作業コピー(例えば、ユーザ joe の ~/public_html/ 領域)をアップデートする必要があるなら、更新を司る +s バイナリプログラム(setuidされたプログラムのこと)を作る、という方法がある。
+これは、Unix が +s されたスクリプトの実行を許可しないためだ。
+次の小さなCプログラムをコンパイルしよう。</p>
+
+<pre>
+#include &lt;stddef.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;unistd.h&gt;
+int main(void)
+{
+  execl("/usr/local/bin/svn", "svn", "update", "/home/joe/public_html/",
+        (const char *) NULL);
+  return(EXIT_FAILURE);
+}
+</pre>
+
+<p>そして、このバイナリを<tt>chmod +s</tt>し、ユーザ 'joe' に対して所有権を与える。
+その後、post-commit フックで、このバイナリを起動する為のようにすればよい。</p>
+
+<p>そのフックの実行が上手く行かない場合には、<a href="#hook-debugging">「どうしてリポジトリのフックが動作しないの?」</a>を参照のこと。</p>
+
+<p>また恐らく、そのライブ作業コピー内にある .svn/ ディレクトリを、apache が公開してしまわないようにしたい、と考えるかもしれない。
+次の行を<tt>httpd.conf</tt>へ追加しよう。</p>
+
+<pre>
+# Subversion 作業コピー管理ディレクトリの表示を不許可にする
+&lt;DirectoryMatch "^/.*/\.svn/"&gt;
+    Order deny,allow
+    Deny from all
+&lt;/DirectoryMatch&gt;
+</pre>
+
+</div>
+
+
+<div class="h3" id="single-file-checkout" title="single-file-checkout">
+<h3>ファイル単体をチェックアウトするには?</h3>
+
+<p>Subversion では、ファイル単体のチェックアウトはサポートしていない。
+サポートしているのは、ディレクトリ構造でのチェックアウトだけだ。</p>
+
+<p>ただし、'svn export' を使うことでファイルを単体でエクスポートすることは出来る。
+これは、そのファイルコンテンツを取得し、バージョン付けされた作業コピーは作成しない。</p>
+
+</div>
+
+
+<div class="h3" id="wc-change-detection" title="wc-change-detection">
+<h3>作業コピー内で、既に実行されてしまった追加や削除、コピー、名前の変更などを検知するにはどうすれば良い?</h3>
+
+<p>どうにも出来無い。試行するのも不味い考えだ。</p>
+
+<p>作業コピーの基本デザインには、2つのルールがある。(1)ファイルを編集はあなたの望むのようにどうぞ。
+(2)ツリーに対するどんな変更(追加、削除、移動、コピー)も、Subversionクライアントを用いること。もしこの規則に従のであれば、Subversionクライアントは完全に作業コピーを管理できる。
+もしも、名前の変更や再配置がSubversion 外で行われた場合、UIは侵害され、作業コピーは破壊されることになるだろう。
+クライアントは、何が起ったのか推測することができない。</p>
+
+<p>人々は、時たま、この問題にぶちあたる。
+というのも、バージョン管理を「透過」にしたいと考えるからだ。
+ユーザには作業コピーを使わせ、その後に、何が行われたのかを推測し、適したクライアントコマンドを実行する為のスクリプトを走らせる。
+生憎、このテクニックで走り通せるのは、僅かな距離だけだ。
+'svn status' により、消失したファイルやバージョン管理されていないアイテムを知ることができる、スクリプトは自動的に 'svn rm' や 'svn add' を実行できる。
+しかし、もし移動やコピーが発生したら、はい、ご愁傷様。
+例えそのスクリプトが、これらを発見する素晴らしい方法を実現したとしても、'svn mv'や'svn cp'は、それが起こってしまった後では、実行することができない。</p>
+
+<p>まとめ: 作業コピーは、完全に Subversion の管理下へ置こう。
+Subversionは透過となるようにはデザインされていない。
+もし、あなたが透過性を求めるならば、apache サーバを立ち上げ、Subversion bookの Appendix C に書かれている「SVNautoversioning」機能を使ってみよう。
+これは、ユーザに対して、リポジトリをネットワークディスクのように mount させることを許可するもので、そのボリュームに対して行った如何なる変更も、サーバへ自動的にコミットされるようになる。</p>
+
+</div>
+
+
+<div class="h3" id="svnserve-win-service" title="svnserve-win-service">
+<h3>Windows 上で、svnserve をサービスとして実行させるには?</h3>
+
+<p>1.4.0以降であれば、<a href="http://svn.collab.net/repos/svn/trunk/notes/windows-service.txt">ここ</a>でインストラクションが読めるよ。</p>
+
+<p>1.4.0より前のバージョンの場合、<tt>svnserve</tt>バイナリそれ自身をWindowsサービスとしてインストールすることはできない。
+ただし、幾つか「サービスラッパー」が存在していて、それを使うことで実現可能だ。例をあげよう。</p>
+
+<ul>
+<li><a href="http://www.clanlib.org/~mbn/svnservice/">SVNService</a>は Magnus Norddahl が作ったフリーなツール。</li>
+<li><a href="http://support.microsoft.com/kb/q137890/">SrvAny</a> は Microsoft が作ったもので、無料で利用可能。</li>
+</ul>
+
+<p><tt>svnserve</tt> をサービスとして稼動させる方法に関しては、<a href="http://tortoisesvn.net/docs/release/TortoiseSVN_en/tsvn-serversetup-svnserve.html">TortiseSVN マニュアル</a>にもう少し記述があるよ。</p>
+
+</div>
+
+
+<div class="h3" id="bdb-fsfs-convert" title="bdb-fsfs-convert">
+<h3>リポジトリを、BDBからFSFSへ、またはFSFSからBDBへ変換するにはどうしたらよいの?</h3>
+
+<p>3つの手順がある。</p>
+
+<ol>
+  <li>古いフォーマットから新しいフォーマットへ<a href="#dumpload">ダンプ/ロード</a>する</li>
+  <li>フックスクリプトをコピーする</li>
+  <li>設定ファイルをコピーする</li>
+</ol>
+
+<p>ここでは、あなたは <tt>/svn/myrepos</tt> という、BDBをバックエンドに使っているリポジトリを持っていて、FSFSバックエンドを使うように変更したいと思っている、としよう。</p>
+
+<ol>
+  <li>この作業中にデータが変更されないよう、サーバを停止させる。</li>
+  <li>fsfs をバックエンドに指定し、新しいリポジトリを作成(1.2以上であれば、これがデフォルト)。例えばこんな感じ。<tt>svnadmin create /svn/myreposfsfs --fs-type fsfs</tt>。</li>
+  <li><tt>/svn/myrepos</tt>のダンプ出力をパイプで繋ぎ、<tt>/svn/myreposfsfs</tt>への入力としてロードさせる。こんな感じ。<tt>svnadmin dump /svn/myrepos -q | svnadmin load /svn/myreposfsfs</tt>Windows ユーザは、ファイルに対してダンプを行い、そのファイルからロードする、という2段階の手順で行おう。</li>
+  <li><tt>/svn/myrepos/hooks</tt>内にある、現在利用中のフックスクリプトを<tt>/svn/myreposfsfs/hooks</tt>へとコピーする。無闇と、全てをコピーしてしまわないように。Subversion の生成するテンプレートが変更されているかもしれないからね。</li>
+  <li><tt>svnadmin create</tt>コマンドによって <tt>/svn/myreposfsfs/hooks</tt>へ生成されたテンプレートスクリプトを、/svn/myrepos/hooks内のスクリプトを比較し、気に入った変更点があったら、それをアクティブスクリプトへ組み込もう。</li>
+  <li>設定ファイルを <tt>/svn/myrepos/conf</tt> から<tt>/svn/myreposfsfs/conf</tt> へコピーする(パスワードファイルを使っているなら、それも忘れずに)。もしくは、あなたが設定ファイルへ行った<em>変更点</em>を、新しいデフォルトの設定ファイルへ反映させてもよいかもね。</li>
+  <li><tt>/svn/myrepos</tt> を <tt>/svn/myreposbdb</tt> へリネームして、その後<tt>/svn/myreposfsfs</tt> を <tt>/svn/myrepos</tt> へとリネームする。ファイルのパーミションが、BDB版の時と同じになっていることを確認すること。</li>
+  <li>サーバを再起動する。</li>
+</ol>
+
+<p>無事、新しいリポジトリが全て正常に動作しているのを確認してから古いリポジトリを削除しよう。</p>
+
+<p>反対に FSFS から BDB へと移行させる場合には、<tt>svnadmin create</tt>コマンドで BDB を指定しよう。</p>
+
+</div>
+ 
+<div class="h3" id="binary-files" title="binary-files">
+<h3>Subversion は、どうやってバイナリファイルを取り扱うの?</h3>
+
+<p>初めてファイルがSubversionへ追加、もしくはインポートされるとき、ファイルがバイナリファイルかどうかが判定される。
+現時点では、Subversionはファイルの先頭の1024バイトを見るだけだ。
+もし、何れかのバイトが0である場合、または、15%以上が非アスキー表示可能文字であった場合、そのファイルはバイナリと判断される。
+とはいえ、このヒューリスティックな手法は、将来、改良されるかも。</p>
+
+<p>ファイルがバイナリだと判断された場合、そのファイルは svn:mime-type 属性へ「application/octet-strem」が設定される(この挙動は、<a href="http://svnbook.red-bean.com/nightly/en/svn.advanced.props.html#svn.advanced.props.auto">auto-props</a>機能を用いることで、または、手動で<tt>svn propset</tt>を実行して属性を設定することで、何時でも上書きが可能だ)。</p>
+
+<p>Subversionは以下のファイルをテキストとして扱う。</p>
+
+<ul>
+  <li>svn:mime-type が無いファイル</li>
+  <li>svn:mime-type が "text/" で始まっているファイル</li>
+  <li>svn:mime-type が "image/x-xbitmap" と一致するファイル</li>
+  <li>svn:mime-type が "image/x-xpixmap" と一致するファイル</li>
+</ul>
+
+<p>これ以外のファイルは全てバイナリとして扱われる。つまり、Subversion は、以下の通りに動作する。</p>
+
+<ul>
+  <li><tt>svn update</tt> や <tt>svn merge</tt> 時に、受け取った変更と、ローカルな変更とを自動的にはマージしない。</li>
+  <li><tt>svn diff</tt> で差分を表示しない。</li>
+  <li><tt>svn blame</tt> で 行単位表示を行わない。</li>
+</ul>
+
+<p>これ以外の点に関しては、Subversion はバイナリファイルをテキストファイルと同様に扱う。例えば、svn:keywords やsvn:eol-style 属性をセットした場合、Subversion はキーワード置換や、改行コード変換を、バイナリファイルに対しても実行するだろう。</p>
+
+<p>ファイルがバイナリか否か、変更点を格納する為に利用されるリポジトリ容量へは影響を及ぼさないし、クライアントサーバ間でやり取りされるトラフィックの量にも影響しないことに注意して欲しい。
+蓄積や転送に於いては、Subversionは、バイナリとテキストファイルの両者に対して同様に上手く機能する差分化手法を用いる。
+これは、'svn&nbsp;diff'コマンドで使われる差分化手法とは、全く関係がない。</p>
+
+</div>
+
+<div class="h3" id="terse-diff" title="terse-diff">
+<h3>svn diff で、変更のあったファイル名だけ表示する方法は? 差分内容は必要ないんだけど。</h3>
+<p>
+<tt>svn diff</tt>には、それを実現するオプションはないけど、
+</p>
+<ul>
+<li>もし、差分の興味の対象が、例えばリビジョン10と、その直前のリビジョンとの差ならば、<pre>svn log -vq -r10</pre>で希望の結果が入手できるよ。</li>
+<li>別の方法として、もし Unix を使っているならば、次の方法は、リビジョンの範囲に関わらず使うことが出来る。
+  <pre>
+    svn log -vq -r123:456 | egrep '^ {3}[ADMR] ' | cut -c6- | sort | uniq </pre></li>
+</ul>
+Version 1.4 の<tt>svn diff</tt>コマンドには「--summarize」オプションが付く予定だ。
+</div>
+
+<div class="h3" id="sorry-no-globbing" title="sorry-no-globbing">
+<h3>一度に複数のファイルを move したいんだけど、ワイルドカードや glob を使うにはどうすればよいの?</h3>
+<p>
+あなたは、
+</p>
+<pre>
+svn mv svn://server/trunk/stuff/* svn://server/trunk/some-other-dir
+</pre>
+<p>
+というような感じでやりたいんだろうけど、でもこれは、
+</p>
+<pre>
+svn: Path 'svn://server/trunk/stuff/*' does not exist in revision 123
+</pre>
+<p>
+といったような、訳の分からないエラーメッセージが表示されて、失敗になってしまう。
+</p>
+
+<p>
+短くて、悲しい回答だけど、これを行うビルトインの方法はないんだ。
+多くのコマンドは、<tt>mv</tt>で見たように、任意個の引数を扱うことができない。
+また、何れにしても、Subversionは "*" のようなワイルドカードを、shell がやっているようには、展開しない。
+</p>
+
+<p>
+もしも、全てのソースファイルと移動先のディレクトリとを含んだ作業コピーを持っているのであれば、シェルのワイルドカード機能を移動処理に利用する事ができる。
+例えば、こんな感じだ(Bash用)。
+</p>
+<pre>
+  for i in stuff/*; do svn mv $i some-other-dir; done
+  svn ci -m "moved all the stuff into some other dir"
+</pre>
+
+<p>
+また、移動元のファイル名のリストを準備した上で、そのリストの各要素に対して "svn mv" を行うことも出来る。
+こんな感じになるだろう。
+</p>
+<pre>
+        s=svn://server/trunk/stuff/
+        svn ls "$s"  | \
+        while read f
+           do svn mv "$s/$f" svn://server/trunk/some-other-dir -m "Moved just one file"
+        done
+</pre>
+<p>
+但し、この方法は、ソースファイル毎に commit が発生することには注意して欲しい。
+先の方法(作業コピーを使う方法)が全体で一度しか commit しないのとは、対照的だ。
+</p>
+
+<p>
+「svnmucc」または「mucc」と呼ばれるプログラムがあり(名前は、Subversion のバージョンに依存する)、ソースコードが Subverision と共に配布されているのだけど(Subversion 1.4 以前では <tt>.../contrib/client-side/mucc/mucc.c</tt> に、Subversion 1.5以降では、<tt>.../contrib/client-side/svnmucc/svnmucc.c</tt>にある)、このプログラムは、今回の問題を解決するのに使えると思う。
+</p>
+
+<p>
+<b>注意:</b> release 1.5 で、Subversion は「cp」と「mv」で複数のファイルを同時に指定することが可能になった。
+</p>
+</div>
+
+<div class="h3" id="vendor-branch" title="vendor-branch">
+<h3>Subversion を使って、サードパーティのソフトウェアの変更版(ベンダーブランチ)をメンテするには?</h3>
+
+<p>サードパーティのコードに対するローカルな変更管理に対し、サードパーティからのアップグレードも含め、Subversion を使いたいという要求を、しばしば耳にする。
+即ち、分岐した自身のブランチを維持しつつ、上層の提供元から公開される新しいリリースも組み入れたいわけだ。
+これは、一般的に<em>ベンダーブランチ</em>と呼ばれていて(この名称は Subversion 以前から使われている)、Subversion を使ってこれを管理するテクニックは、<a href="http://svnbook.red-bean.com/en/1.4/svn-book.html#svn.advanced.vendorbr">ここで説明されている</a>。</p>
+
+<p>もし、ベンダーコードがリモートの Subversion リポジトリで管理されているならば、ベンダーコードのコピーを管理に、<a href="http://piston.rubyforge.org/">Piston</a>が利用できる。</p>
+
+<p>次善の策ではあるけれど、もし<tt>svn_load_dirs.pl</tt>を使うのに多くの時間を費やしていたり、よりラクな方法を探しているならば、Jon Steven によって書かれた <a href="http://lookfirst.com/2007/11/subversion-vendor-branches-howto.html">Subversion Vendor Branches Howto</a>のステップ・バイ・ステップ解説を参照してみよう。
+この方法では、古いコードを新しいコードへ上書きする際、Subversion のバックエンドが提供している容量の増加を抑制する為の手法は用いない。
+ベンダーコードのインポート毎に、完全に新しいコピーが作成され、同一ファイルに対しても容量削減は行わない。</p>
+
+</div>
+
+</div>
+
+<div class="h2" id="troubleshooting" title="troubleshooting">
+<h2>Troubleshooting:</h2>
+
+<div id="permissions"></div>
+<div class="h3" id="stuck-bdb-repos" title="stuck-bdb-repos">
+<h3>僕のリポジトリは、いつでも、リカバリが必要(DB_RUNRECOVERY)というエラーメッセージを出して、刺さっているみたい。これ、何が原因?</h3>
+
+<p>あなたのリポジトリで利用されている Berkeley DB データベースは、中断に対して弱い。データベースにアクセスしているプロセスが、環境を「綺麗に」閉じずに消えてしまった場合、データベースは、首尾一貫性が失われた状態になってしまう。
+これが生じる原因は、一般的に次のようなものだ。</p>
+
+<ul>
+  <li>プロセスが、パーミッション問題により終了した</li>
+  <li>プロセスが、クラッシュ/セグメンテーションフォルトした</li>
+  <li>プロセスが、強制的に kill された</li>
+  <li>ディスク容量がなくなった</li>
+</ul>
+
+<p>ほとんどの場合、こうした現象に対しては、「svnadmin revover」を実行すべきだ。
+これは、リポジトリを正しい状態へと引き戻す。
+詳細に関しては<a href="#bdb-recovery">こちらの質問</a>を参照。
+ディスク容量不足が、度重なるチェックアウトや更新によって引き起こされている場合、リポジトリのクラッシュを引き起こす可能性がある。
+この場合にはリカバリは不可能だ(というわけで、バックアップを取ろう)。</p>
+
+<p>セグメンテーションフォルトや、強制的な kill、またディスク不足はかなり稀だ。パーミッション問題は非常に一般的である。
+一つのプロセスがリポジトリへアクセスし、誤って所有権やパーミションを変更してしまう。
+その後、他のプロセスがアクセスを試み、そのパーミッションによってお陀仏、というわけだ。</p>
+
+<p>これを防ぐ最良の方法は、リポジトリのパーミッションと所有権を正しく設定すること。
+我々の推奨に関しては<a href="#reposperms">こちら</a>を参照の事。
+</p>
+
+</div>
+
+
+<div id="wedged-repos"></div>
+<div class="h3" id="bdb-recovery" title="bdb-recovery">
+<h3>毎回リポジトリへアクセスする度に、プロセスがハングアップするんだけど、僕のリポジトリが壊れているの?</h3>
+
+<p>
+あなたのリポジトリは壊れていないし、データも失われていない。
+あなたのプロセスが、リポジトリへ直接アクセスしている(mod_dav_svn、svnlook、svnadmin または、file:// URL を使っている)ならば、データへアクセスするために、Berkeley DB を利用している。
+Berkeley DB は、ジャーナリングシステムで、つまり、これから行おうとしている操作を、実際に行なう前に、全て記録する。
+もし、あなたのプロセスが(Control-Cやセグメンテーションフォルトによって)終了した場合、未終了の作業内容が書かれたログファイルと共に、ロックファイルが残されたままとなる。
+そのデータベースへアクセスを試みる他のプロセスは、そのロックファイルが消え去るまで、ただハングアップし続けることになる。
+リポジトリを目覚めさせる為には、Berkeley DB に対し、作業を終了するか、データベースを首尾一貫している以前の状態へと巻き戻すかを指示する必要がある。
+</p>
+
+<p><b><span style="color: red">WARNING:</span>もし、リカバリ実行中に他のプロセスがリポジトリへアクセスしたら、そのリポジトリは深刻なダメージを受ける可能性があるよ!</b></p>
+
+<p>絶対的に確認しなければならないことは、この作業実行前に、リポジトリに対するアクセスを禁止すること(Apache をシャットダウンするとか、'svn' の実行属性を落としちゃうとか)。
+このコマンドは、データベースを所有し、管理しているユーザ権限で実行しなければならず、root として実行してはならない。rootで実行した場合、データベースを管理している非rootユーザ(多くの場合、これは、あなただったり、Apacheプロセスだったりするんだけど)ではオープンすることのできないroot所有のファイルが、dbディレクトリへ残されてしまう。
+また、recover を実行する場合には、正しい umask が設定されていることも確認すること。これを忘れると、リポジトリへのアクセスを許可されているグループに属しているユーザが、締め出されてしまうことになるだろう。</p>
+
+<p>
+まず次のコマンドを実行しよう。</p>
+
+<pre>
+   svnadmin recover /path/to/repos
+</pre>
+
+<p>コマンドが終了したら、リポジトリ内の<code>db</code>ディレクトリ内にあるパーミションを確認しよう。</p>
+
+<p>時には、"svnadmin&nbsp;recover"が上手く動作しない場合がある。この場合、こんな感じのエラーメッセージが表示されるかもしれない。</p>
+
+<pre>
+  Repository lock acquired.
+  Please wait; recovering the repository may take some time...
+  svnadmin: DB_RUNRECOVERY: Fatal error, run database recovery
+  svnadmin: bdb: Recovery function for LSN 175 7066018 failed on backward pass
+  svnadmin: bdb: PANIC: No such file or directory
+  svnadmin: bdb: PANIC: fatal region error detected; run recovery
+</pre>
+
+<p>または、こんな感じだ。</p>
+
+<pre>
+  Repository lock acquired.
+  Please wait; recovering the repository may take some time...
+  svn: DB_RUNRECOVERY: Fatal error, run database recovery
+  svn: bdb: DB_ENV-&gt;log_flush: LSN of 115/802071 past current end-of-log
+  of 115/731460
+  svn: bdb: Database environment corrupt; the wrong log files may have
+  been removed or incompatible database files imported from another
+  environment
+  [...]
+  svn: bdb: changes: unable to flush page: 0
+  svn: bdb: txn_checkpoint: failed to flush the buffer cache Invalid argument
+  svn: bdb: PANIC: Invalid argument
+  svn: bdb: PANIC: fatal region error detected; run recovery
+  svn: bdb: PANIC: fatal region error detected; run recovery
+  [...]
+</pre>
+
+<p>このような場合には、Berkeley DB 自体の<b>db_recover</b>ユーティリティを試してみよう(<a href="http://www.oracle.com/technology/documentation/berkeley-db/db/utility/db_recover.html">db_recover ドキュメント</a>を参照のこと)。
+このコマンドは、大抵、Berkeley DB がインストールされた 「bin/」サブディレクトリの中にある。例えば、Berkeley DB をソースからインストールしたのならば、<tt>/usr/local/BerkeleyDB.4.2/bin/db_recover</tt>かもしれない。
+Berkeley DB が予めインストールされたシステムでは、単純に <tt>/usr/bin/db_recover</tt>かもしれない。
+もし、複数のBerkeley DB がインストールされているならば、試そうとしているdb_recover のバージョンが、リポジトリの使っている Berkeley DB のバージョンと一致していることを確認しよう。
+</p>
+
+<p>db_recover を 「-c」 フラグ(「catastrophic recovery: 悲劇からの復活」)付きで実行する。
+冗長性の為に 「-v」 を付けても良いし、「-h」へ引数を渡して、どの db 環境をリカバリーするのかしても良い(これで、該当ディレクトリへ cd する必要がなくなる)。
+つまりこんな感じだ。</p>
+
+<pre>
+   db_recover -c -v -h /path/to/repos/db
+</pre>
+
+<p>このコマンドを、リポジトリを所有しているユーザとして実行しよう。
+ただし、今一度、これを実行している間は、(svnserver や Apache をシャットダウンするなどして)他のプロセスがリポジトリへアクセスしないことを確認すること。</p>
+
+</div>
+
+
+<div class="h3" id="bdb-cannot-allocate-memory" title="bdb-cannot-allocate-memory">
+<h3>僕のリポジトリが「Cannot allocate memory(メモリが確保できない)」というエラーメッセージを吐き続けています。
+どうしたらよいのでしょう?</h3>
+
+<p>http:// アクセスを使っている場合、「<b>Cannot allocate memory</b>」エラーは、httpd エラーログの中に、こんな感じで書かれている。</p>
+
+<blockquote>
+<pre>
+[Wed Apr 07 04:26:10 2004] [error] [client 212.151.130.227] (20014)
+Error string not specified yet: Berkeley DB error while opening 
+'strings' table for filesystem /usr/local/svn/repositories/svn/db: 
+Cannot allocate memory
+[Wed Apr 07 04:26:10 2004] [error] [client 212.151.130.227] 
+Could not fetch resource information.  [500, #0]
+[Wed Apr 07 04:26:10 2004] [error] [client 212.151.130.227] 
+Could not open the requested SVN filesystem  [500, #160029]     
+[Wed Apr 07 04:26:10 2004] [error] [client 212.151.130.227] (17) 
+File exists: Could not open the requested SVN filesystem  [500, #160029]
+</pre>
+</blockquote>
+
+<p>これは、通常のオペレーションでは発生しない筈だが、発生した場合の解決策は、<a href="#bdb-recovery">ここ</a>で述べたように、データベースリカバリを実行することだ。
+もし、これが何度も起こるようならば、多分、db/DB_CONFIG ファイルの中のデフォルトロックパラメタ(<tt>set_lk_max_locks</tt>、<tt>set_lk_max_lockers</tt>、並びに<tt>set_lk_max_objects</tt>)値を引き上げる必要があるだろう。
+既存リポジトリの DB_CONFIG を変更した場合には、その後にリカバリを実行することを忘れないこと。</p>
+
+</div>
+
+
+<div class="h3" id="wedged-wc" title="wedged-wc">
+<h3>毎回 svn コマンドを実行する度に、作業コピーがロックされているよ、って言われるんだけど、僕のリポジトリが壊れているの?</h3>
+
+<p>
+あなたの作業コピーは壊れていないし、データも失われていない。
+Subversionの作業コピーはジャーナリングシステムで、つまり、これから行おうとしている作業を、実際に実行する前に、全て記録する。
+もし svn クライアントプログラムが(セグメンテーションフォルトや kill によって。Control-Cは含まない)手荒に終了された場合、1つ以上のロックファイルが、未終了の作業に関するログファイルと共に、残されたままになっている（'svn status' コマンドを実行すると、ロックされたディレクトリの隣に'L'が表示されるだろう)。
+作業コピーへとアクセスする他の全てのプロセスは、このロックを見つけると、失敗となる。作業コピーを目覚めさせる為には、svn client に対し、作業を終了させる旨、指示する必要がある。単純に次のコマンドを実行しよう。</p>
+
+<pre>
+svn cleanup working-copy
+</pre>
+
+</div>
+
+
+<div class="h3" id="wc-out-of-date" title="wc-out-of-date">
+<h3>commit しようとしているんですが、Subversion が、僕の作業コピーは古い、って言ってくるんだけど?</h3>
+
+<p>この現象を引き起こす3つの可能性がある。</p>
+
+<ol>
+
+<li><p>失敗したコミットの残骸が、作業コピーに残っている。</p>
+
+    <p>新しいリビジョンがサーバへと追加され、クライアントがpost-commit 管理タスク(ローカルなテキストベースコピーの更新中を含む)を実行している間に、あなたのコミットが、まずい状況になったのかもしれない。
+これは様々な理由で起こる可能性があり、(稀には)データベースのバックエンドの問題によって、または、(より一般的には)まさにマズいタイミングでネットワークが切断した等が考えられる。</p>
+
+    <p>この現象が発生した場合、あなたが今コミットしようとしているその変更は、既にコミットされている可能性がある。
+'svn log -rHEAD' を使って、「失敗したと考えられている」あなたのコミットが、実際には成功しているかどうかを確認してみよう。
+もしコミットが成功していたならば、'svn revert' を使ってローカルな変更を元に戻し、その後'svn update'を行って、サーバから変更を取得しよう('svn update'だけが、ローカルコピーを最新にする、という事に注意。revert はそれを行わないよ)。</p></li>
+
+<li><p>混在リビジョン</p>
+
+     <p>Subversion でコミットを行うと、クライアントは、そのコミットが関与したノードのリビジョン番号だけを変化させる。
+作業コピーの中にある全てのノードを変化させるわけではない。
+これは、最後にコミットした時期に応じて、単一の作業コピー内に於いても、ファイルやサブディレクトリが異なるリビジョンになるかもしれない、ということだ。ある種の操作(例えばディレクトリの属性変更)では、もしリポジトリ内に、より新しいバージョンのノードが存在する場合には、データの喪失を防ぐため、コミットが拒否される。
+詳細は、<a href="http://svnbook.red-bean.com/">Version Control with Subversion</a>の<a href="http://svnbook.red-bean.com/nightly/en/svn.basic.in-action.html#svn.basic.in-action.mixedrevs.limits">Mixed revisions have limitations</a>を参照の事。</p>
+
+     <p>この問題は、作業コピー内で 'svn update' を実行することにより解消することが出来る。</p></li>
+
+<li><p>実際に古いのでは? つまり、あなたがファイルのコピーを最後に更新してから、既に誰かがそのファイルを変更していて、そのファイルに対して変更をコミットしようとしているのではないだろうか?
+これも 'svn update' で解決できるよ。</p></li>
+</ol>
+</div>
+
+
+<div class="h3" id="obstructed-add" title="obstructed-add">
+<h3>あるプロジェクトへパッチを寄贈しました。そのパッチは新規ファイルを含んでいます。で、今、<tt>svn update</tt>が動作しないのですが...。</h3>
+
+<p>新しいファイルをパッチへ含める為に、<tt>svn diff</tt>コマンドで生成されるパッチに、その新規ファイルが含まれるように、恐らくあなたは、<tt>svn add</tt>コマンドを実行したのだと思う。
+もしそのパッチがコードベースへとコミットされ、その後<tt>svn update</tt>を実行すると、あなたは、次のようなエラーメッセージを目にするはずだ。"svn: Failed to add file 'my.new.file': object of the same name already exists".</p>
+
+<p>このエラーメッセージが表示される理由は、未だ自身の作業コピー内に、ファイルのローカルコピーが残されているためだ。
+この問題を解決する手順は次の通り。</p>
+
+<ol>
+        <li><tt>svn revert</tt>コマンドを実行して、Subversion 内での追加準備状態を解除する。</li>
+        <li>該当ファイルを削除するか、または、作業コピー外へと移動させる。</li>
+        <li>これで svn update コマンドを実行できるようになったはずだ。</li>
+</ol>
+
+<p>リポジトリから取得した新しいファイルと、あなたのオリジナルのファイルと比較してみるのも良いだろう。</p>
+</div>
+
+
+<div class="h3" id="unrecognized-url-error" title="unrecognized-url-error">
+<h3>ディストリビューションバイナリをビルドして、Subversion をチェックアウトしようとしたら、「Unrecognized URL scheme」って、エラーが表示されたんだけど、これって、どうなったの?</h3>
+
+<p>Subversion はリポジトリへのアクセスにプラグインシステムを採用していて、現在、次の3つのプラグインがある。
+ra_local は、リーカルリポジトリへのアクセスするためのもの、ra_davはWebDAV 経由でリポジトリへアクセスするためのもの、そして、ra_svn は svnserve サーバ経由で、ローカルまたはリモートのリポジトリへアクセスするためのものだ。
+Subversion を使って何らかの操作を行おうとすると、プログラムはそのURLスキームに応じて、プラグインを動的にロードしようとする。
+'file://'URLでは ra_localをロードしようとするし、'http://' URLでは ra_dav をロードしようとする、といった具合だ。</p>
+
+<p>あなたが目にしたエラーは、動的リンカ/ローダがロードするプラグインを見つけられなかった、ということ。
+これは通常、Subversion を共有ライブラリと共にビルドした上で、'make install' を事前に実行せずに、実行させようとした時に発生する。別の可能性としては、make install は実行したんだけど、動的リンカ/ローダが認識できない場所に、ライブラリがインストールされた、というもの。
+Linuxでは、リンカ/ローダにライブラリを見つけさせるためには、そのライブラリディレクトリを/etc/ld.so.sonf へ追加し、ldconfig を実行しなければならない。もし、こうしたくない、または root 権限をもっていない場合には、LD_LIBRARY_PATH環境変数へそのライブラリディレクトリを指定することでも可能だ。</p>
+
+</div>
+
+
+<div class="h3" id="db-recover" title="db-recover">
+<h3>リポジトリを見つけるとき、または開こうとするときにエラーが出るんだけど、リポジトリのURLが正しいことは分かってる。何が悪いの?</h3> 
+
+<p><a href="#bdb-recovery">こちらのfaq</a>を参照。</p>
+
+</div>
+
+
+
+<div class="h3" id="configure-sed-error" title="configure-sed-error">
+<h3>`<tt>configure</tt>' を実行したら、<tt>subs-1.sed&nbsp;line&nbsp;38:&nbsp;Unterminated&nbsp;`s'&nbsp;command</tt>というエラーが出ました。何が問題?</h3>
+
+<p>
+多分、あなたのシステムには古い <tt>/usr/local/bin/apr-config</tt>と<tt>/usr/local/bin/apu-config</tt>が残っている。
+これらを取り除き、一緒にビルドしようとしている <tt>apr/</tt>と <tt>apr-util/</tt> が完全に最新のものであることを確認した上で、もう一度試してみよう。
+</p>
+
+</div>
+
+ 
+<div class="h3" id="windows-msvc-build" title="windows-msvc-build">
+<h3>Windows の上で、MSVC++ 6.0 を使って Subversion を buildしているんだけど、上手く行かない。どうしたらよい?</h3>
+
+<p>
+恐らく、最新のプラットフォームSDKを入手する必要がある。
+VC++6.0に同梱されている版は、最近の使用には適していない。
+</p>
+
+</div>
+
+
+<div class="h3" id="windows-drive-letter" title="windows-drive-letter">
+<h3>Windowsのドライブレターを <tt>file:</tt>URLで使える?</h3>
+
+<p>こんな感じ。</p>
+<pre>
+svn import file:///d:/some/path/to/repos/on/d/drive
+</pre>
+<p>詳細は Subversion Book の<a href="http://svnbook.red-bean.com/nightly/en/svn.basic.in-action.html#svn.advanced.reposurls">Repository URLs</a>をどうぞ。
+</p>
+
+</div>
+
+  
+<div class="h3" id="vs-asp-net" title="vs-asp-net">
+<h3>VS.NET/ASP.NET では .svn というディレクトリ名では問題があるように思えます。どうしたら良いでしょう?</h3>
+
+<p>VS.Net は ASP.Net と呼ばれるサブシステムをもっていて、これは、IISを通じたリモート公開を行うためにWebDAVを利用する。
+このサブシステムは、「.」で始まるどのようなパス名も受け付けない。
+これはリモートに Subversion の作業コピーをリモート公開しようとするときに問題となる。
+なぜならば、「.svn」サブディレクトリが存在するからだ。エラーメッセージとしては、「unable to read project information」といったものが、表示される。</p>
+
+<p>
+これを迂回するには、SVN_ASP_DONT_NET_HACK環境変数へ適当な値を設定しよう。
+これは Windows クライアントに対し、作業コピー内では、ディレクトリの名前として「_svn」を使うように指示するためのものだ。
+詳細は、<a href="http://subversion.tigris.org/svn_1.3_releasenotes.html#_svn-hack">Subversion 1.3 のリリースノートに書かれた関連セクション</a>を参照のこと。
+また、<a href="#adm-dir">この質問</a>では、管理ディレクトリ名をカスタマイズする他の方法に関して説明している。
+</p>
+
+</div>
+
+
+<div class="h3" id="write-over-dav" title="write-over-dav">
+<h3>ネットワーク越しに Subversion リポジトリへ書き込み操作を行うと問題が生じます。</h3>
+
+<p>例えば、あるユーザがレポートしてくれたんだけど、ローカルアクセスでは問題なく動作する import が、</p>
+<pre>
+  $ mkdir test
+  $ touch test/testfile
+  $ svn import test file:///var/svn/test -m "Initial import"
+  Adding         test/testfile
+  Transmitting file data .
+  Committed revision 1.
+</pre>
+リモートホストからでは動作しない。
+<pre>
+  $ svn import http://svn.sabi.net/test testfile -m "import"
+  nicholas's password: xxxxxxx
+
+  svn_error: #21110 : &lt;Activity not found&gt;
+
+  The specified activity does not exist.
+</pre>
+
+<p>我々は、httpd プロセスが REPOS/dev ディレクトリへ書き込みできないときにこの現象が生じることを確認している。
+パーミションを確認し、Apacheが<tt>dav/</tt> ディレクトリ(や、勿論 <tt>db/</tt> へ)書き込み出来ることを確認して欲しい。</p>
+
+</div>
+
+
+
+<div class="h3" id="windows-xp-server" title="windows-xp-server">
+<h3>WindowsXP上で使っているんだけど、Subversion サーバが、たまに、壊れたデータを送出しているみたい。こんなことって、本当にあるの?</h3>
+
+<p>Window XP Service Pack 1 をインストールする必要があるね。
+Service Packに関する各種情報は、次のリンクから入手可能。</p>
+
+    <ul><li><a href="http://support.microsoft.com/default.aspx?scid=kb;EN-US;q317949">http://support.microsoft.com/default.aspx?scid=kb;EN-US;q317949</a>(日本語版は以下のリンクを参照:<a href="http://support.microsoft.com/?scid=kb%3Bja%3B317949&amp;x=20&amp;y=13">http://support.microsoft.com/?scid=kb%3Bja%3B317949&amp;x=20&amp;y=13</a>)</li></ul>
+
+</div>
+
+
+<a name="ethereal"></a> <!-- for compatibility with old question -->
+<div class="h3" id="net-trace" title="net-trace">
+<h3>Subversion のクライアントとサーバの間を流れるネットワーク上のやり取りをトレースしたいのですが、どんな方法が最良でしょうか?</h3>
+
+<p>二人のやり取りに聞き耳をそば立てたいならば、<a href="http://www.wireshark.org/">Wireshark</a>(以前はEtherealって名前で知られていた)を使おう。</p>
+
+<p>まず最初に、同一 wireshark セッション内のキャプチャ間では、<em>Clear</em>を押すことを忘れずに。
+忘れてしまうと、あるキャプチャ(例えば HTTP のキャプチャ)用フィルタが、他のキャプチャ(例えば ra_svn キャプチャ)に影響をお呼びしてしまうかもしれない。</p>
+
+<p>クリアしたと仮定して、続けて、</p>
+
+<ol>
+<li><p><i>Capture</i>メニューを呼び出し、<i>Capture&nbsp;Filters</i>を選択する。</p></li>
+<li><p>http://(WebDAV) プロトコルをデバッグしたいのならば、ポップアップウィンドウの中から「<code>HTTP&nbsp;TCP&nbsp;port&nbsp;(80)</code>」を選択する(これは、filter string は「<code><i>tcp&nbsp;port&nbsp;http</i></code>」になる)。</p>
+    <p>svn:// (ra_svn) プロトコルをデバッグしたい場合、<i>New</i>を選択し、新しいフィルタへ名前を付け(例えば、「ra_svn」)、filter stringボックスへ「<code>tcp&nbsp;port&nbsp;3690</code>」 と入力する。</p>
+    <p>完了したら、OK をクリック。</p></li> 
+<li><p>再び<i>Capture</i>メニューへと行き、今度は、<i>Interfaces</i>を選択、そして、適切なインターフェイス(サーバがクライアントと同じマシン上で動作しているとする場合には、多分、あなたが使うインターフェイスは、「loopback」を意味する「lo」だろう)の隣にある、<i>Options</i>をクリックする。</p></li>
+<li><p>Promisuous モードのチェックボックスから、チェックを外す。</p></li>
+<li><p>右下にある<i>Start</i>ボタンを押して、キャプチャを開始。</p></li>
+<li><p>Subversion クライアントを実行する。</p></li>
+<li><p>操作が終了したら、Stopアイコン(イーサネットインターフェースカードの上に赤い×の付いてる奴)をクリック(または、<i>Capture-&gt;Stop</i>でも大丈夫)。
+これで、キャプチャを入手できた。膨大な量のリストのように見えるだろう。</p></li>
+<li><p><i>Protocol</i>カラムを押して、ソート。</p></li>
+<li><p>関係する最初の行をクリックして選択。大抵の場合、先頭行が丁度それにあたる。</p></li>
+<li><p>右クリックし、<i>Follow TCP Stream</i>を選択する。Subversionクライアントの HTTP のやり取りが、リクエスト/レスポンスのペアで表示されるだろう。</p></li>
+</ol>
+
+<p>上記の操作説明は、Wireshark(version 0.99.6)のグラフィカルバージョン用のもので、「tshark」(Wireshark が Ethereal と呼ばれていた時代の「tethereal」)という名で知られているコマンドライン版にはそぐわない。</p>
+
+<p>別の方法として、<tt>svn</tt>クライアントを実行させる際に、<tt>servers</tt>設定ファイルで <tt>neon-debug-mask</tt>パラメタをセットし、デバッグ出力を表示させても良いだろう。
+<tt>neon-debug-mask</tt>の数値は、<tt>ne_utils.h</tt>ヘッダファイルにある <tt>NE_DBG...</tt>値の組み合わせになる。現在のバージョンのneonでは、<tt>neon-debug-mask</tt>値に130(即ち、<tt>NE_DBG_HTTP+NE_DBG_HTTPBODY</tt>)を設定すると、HTTP データが表示されるようになるだろう。</p>
+
+<p>ネットワークトレースをしているときには、圧縮を無効化したいと思うかもしれない。<tt>servers</tt>設定ファイルの<tt>http-compression</tt>パラメタを参照のこと。</p>
+
+<p>更なる別解としては、Subversion クライアントとサーバの間に、ログ取得用のプロキシを挟む、というのがある。
+簡単なのは、<tt>socat</tt> プログラムを用いる方法。例えば、svnserver インスタンスとのやり取りの様子を記録するには、次のコマンドを実行しよう。</p>
+
+<p><tt>socat -v  TCP4-LISTEN:9630,reuseaddr,fork TCP4:localhost:svn</tt></p>
+
+<p>それから、<tt>svn://127.0.0.1:9630/</tt> を URLのベースとした svn コマンドを実行する。
+<tt>socat</tt> は 9630 ポートからのトラフィックを通常のsvnserve ポート(3690)へと転送すると共に、両方向の全トラフィックを標準エラー出力へと出力するだろう。出力の前には、トラフィックの方向を示す記号である&lt;と&gt;とが付加される。</p>
+
+</div>
+
+
+<div class="h3" id="revert" title="revert">
+<h3>どうして <tt>svn revert</tt>  では、明示的にターゲットを指定しなければならないの?
+どうして、再帰処理がデフォルトじゃないの? こういった挙動は、他のほとんどのサブコマンドと異なっているよね。</h3>
+
+<p>簡単に言えば「それがあなたの為だから」。</p>
+
+<p>Subversion はあなたのデータを守ることに対して大変に高い優先度を設定している。
+これは、単にバージョン管理されたデータに対してだけではない。
+既にバージョン管理されているデータに対する改変や、バージョンコントロールシステムへ追加されることが指示されているファイルに対しても、慎重に取り扱われる。</p>
+
+<p><tt>svn revert</tt>コマンドに対し、たとえターゲットが '.' だけだったとしても、明示的なターゲット指定を必要としたのは、これを達成するための一つの手段だ。
+この要求は(再帰処理を行いたい場合には、<tt>--recursive(-R)</tt>フラグを指定する必要がある、という要求も含めて)、あなたが実行しようしている内容を、しっかりと認識して欲しいからだ。
+ひとたびファイルが元に戻されてしまえば、ローカルで行なわれた変更は永遠に失われてしまうことになるのだから。</p>
+
+</div>
+
+
+
+<div class="h3" id="db3db4" title="db3db4">
+<h3>Apache を起動したら、mod_dav_svn に「bad database version」と文句を言われた。
+どうも db-4.X ではなく、db-3.X を見つけたらしい。</h3>
+
+<p>あなたの apr-util は DB-3 とリンクされていて、svn は DB-4とリンクされている。
+残念ながら、これらのDBシンボルは違わないんだ。
+mod_dav_svn が Apache のプロセス空間へロードされると、結局 apr-util の DB-3 に対してシンボル名を解決することになる。</p>
+
+<p>確実な解決方法は、apr-util を DB-4 に対してコンパイルすること。
+次の適切なスイッチを apr-util か apache の configure 実行時に引き渡せばよい。
+「--with-dbm=db4 --with-berkeley-db=/the/db/prefix」</p>
+
+</div>
+
+
+
+<div class="h3" id="redhat-db" title="redhat-db">
+<h3>Red Hat 9 上では、「Function not implemented」というエラーが出て、なにも動かない。どうすれば直ります?</h3>
+
+<p>これは、Sunversion 自体の問題ではないんだけど、Subversion ユーザが出くわす問題だ。</p>
+
+<p>Red Hat9 と Fedora は、NPTL(the Native Posix Threads Library)をサポートしたカーネルを前提としている Berkeley DB と共に配布されている。</p>
+
+<p>RedHat が提供しているカーネルにはこのサポートが組み込まれているけれど、もしあなたが自分でカーネルをコンパイルする場合には、NPTLサポートを組み込まないかもしれない。
+この場合、こんな感じのエラーが表示されることになるだろう。</p>
+<blockquote><pre>
+svn: Berkeley DB error
+svn: Berkeley DB error while creating environment for filesystem tester/db:
+Function not implemented
+</pre></blockquote>
+<p>この問題は、次にあげる何れかの解決方法で修正可能だ。</p>
+<ul>
+<li>Berkeley DB を、あなたのカーネル用に再ビルドする。</li>
+<li>Red Hat 9 カーネルを使う。</li>
+<li>あなたが使っているカーネルへ、NPTL パッチを適用する。</li>
+<li>NPTLサポートが組み込まれた最近(2.5.x)のカーネルを使う。</li>
+<li><code>LD_ASSUME_KERNEL</code>環境変数が<code>2.2.5</code>にセットされているかを確認し、もし設定されている場合には、Subversion(Apache)を起動する前にその設定を解除する(多分、この変数は Red Hat 9 上で Wine または Winex を実行するために設定したのだろう)。</li>
+</ul>
+<p>Berkeley DBのNPTLバージョンを使う為には、NPTLをサポートした glibc ライブラリも一緒に使う必要がある。これは大抵 i686 版を意味するだろう。
+詳細は、<a href="http://svn.haxx.se/users/archive-2004-03/0488.shtml">http://svn.haxx.se/users/archive-2004-03/0488.shtml</a>を参照のこと。
+</p>
+
+</div>
+
+
+<div class="h3" id="no-author" title="no-author">
+<h3>Apache(ra_dav)経由で、ファイルをコミット、またはインポートすると、SVN log で "(no author)"って表示されるのは、どうして?</h3>
+
+<p>リポジトリに対して、Apache 経由での匿名書き込みを許可している場合、Apache サーバは決して SVN クライアントにユーザ名を求めないし、認証無しでの書き込み処理を許可する。
+その為、Subversionは誰か操作を行っているのか分からず、ログはこんな感じになる。</p>
+
+<blockquote><pre>
+$ svn log
+------------------------------------------------------------------------
+rev 24:&nbsp; (no author) | 2003-07-29 19:28:35 +0200 (Tue, 29 Jul 2003)
+</pre></blockquote>
+
+<p>Apacheに対してアクセス制限を行う為の設定方法は、<a href="http://svnbook.red-bean.com/nightly/en/svn.serverconfig.httpd.html">Subversion book</a>を参照のこと。</p>
+
+</div>
+
+
+
+<div class="h3" id="windows-access-denied" title="windows-access-denied">
+<h3>Windows上で、時々「Access Denied」エラーに遭遇します。ランダムで表示されるように見えるんだけど、なぜ?</h3>
+
+<p>これは、ファイルシステムの変更を監視している、様々な Windowsのサービス(アンチウイルスソフトウェアやインデキシングサービス、COM+イベント通知サービス)によって引き起こされる。
+これは、実際には Subversion のバグではない為、修正するのが困難だ。
+現状の調査結果のまとめが<a href="http://svn.haxx.se/dev/archive-2003-10/0136.shtml">ここ</a>にある。
+多くの人々にとって、この問題の発生頻度を削減するための回避策が、revision 7598で実装された。
+もし、これよりも以前の版を使っているならば、最新の版へアップデートしてみて欲しい。
+</p>
+
+</div>
+
+
+<div class="h3" id="freebsd-hang" title="freebsd-hang">
+<h3>FreeBSD上で、ある種の操作(特に svnadmin create)が時々ハングアップするのは、なぜ?</h3>
+
+<p>これは、通常、システムにエントロピーが不足している為に生じる。
+多分、ハードディスクやネットワーク割り込みといったソースからエントロピーを集めるよう、システムを設定する必要がある。
+この変更を行う方法は、システムのマニュアルページ、特に random(4)と rndcontrol(8) を参考にしてほしい。</p>
+
+</div>
+
+
+<a name="301-error"></a> <!-- for compatibility with old
+  non-XML-name-compliant fragment id -->
+<div class="h3" id="http-301-error" title="http-301-error">
+<h3>Webブラウザからリポジトリを見られるようにしているんだけど、'svn checkout' が、「301 Moved Permanently」というエラーになる。何が悪いの?</h3>
+
+<p>httpd.conf の設定ミスが原因。大抵、このエラーは、Subversionの仮想「location」を、2つの異なるスコープ内で同時に存在するよう、定義してしまっている場合に発生する。</p>
+
+<p>例えば、リポジトリを<tt>&lt;Location /www/foo&gt;</tt>として公開していて、一方 <tt>DocumentRoot</tt> も<tt>/www</tt>として設定している場合、問題が生じる。
+<tt>/www/foo/bar</tt>へのリクエストが発生した場合、Apache は<tt>/foo/bar</tt>という名前を持つ<i>実際の</i>ファイルを<tt>DocumentRoot</tt>の中から探せばいいのか、mod_dav_svn に対して<tt>/www/foo</tt>リポジトリの中から<tt>/bar</tt>というファイルを取得してくるように指示すればいいのか分からない。
+通常、前者が勝つことになり、結果、「Moved Permanently」 エラーとなる。</p>
+
+<p>解決策としては、リポジトリの<tt>&lt;Location&gt;</tt>を、通常の Web 共有として既に公開されている領域とオーバーラップ<b>しない</b>ようにするか、もしくはその中へ収めるべきだ。</p>
+
+<p>または、リポジトリ URL と同名のオブジェクトを、Web ルートへ置くことでも構わない。
+例えば、あなたの Web サーバのドキュメントルートが <tt>/var/www</tt> にあり、Subversion のリポジトリが<tt>/home/svn/repo</tt>に位置していると想定しよう。
+従って、リポジトリを<tt>http://localhost/myrepo</tt>で提供するように Apache を設定すればよい。
+もし、その後に<tt>/var/www/myrepo</tt>ディレクトリを作った場合には、301 エラーを引き起こすことになるだろう。</p>
+
+
+</div>
+
+
+<div class="h3" id="no-copy-history" title="no-copy-history">
+<h3>ファイルの古いバージョンを見ようとしているんだけど、svn は「path not found」とかなんとかいってくる。何が起こっているの?</h3>
+
+<p>Subversion の素敵な機能の一つに、リポジトリがコピーと名前の変更を理解する、というのがあって、歴史的なつながりを保持している。
+例えば、もし <tt>/trunk</tt> を <tt>/branches/mybranch</tt> へコピーした場合、リポジトリは、branch の中にある全てのファイルは、trunk の中に「祖先」が居る事を知っている。
+<tt>svn log --verbose</tt>を実行すると歴史的なコピーを表示してくるので、この名前の変更を次のような感じで見ることが可能だ。</p>
+
+<pre>
+r7932 | joe | 2003-12-03 17:54:02 -0600 (Wed, 03 Dec 2003) | 1 line
+Changed paths:
+   A /branches/mybranch (from /trunk:7931)
+</pre>
+
+<p>残念ながら、リポジトリはコピーやリネームを気にかけているんだけど、svnクライアントのほとんど全てのサブコマンドは、気にかけて<b>いない</b>。
+<tt>svn diff</tt>や<tt>svn merge</tt>、<tt>svn cat</tt>のようなコマンドは、名前の変更に追随すべきだとは思うけれど、まだ、そうはなっていない。
+これは、1.0以降で予定されている機能で、現在<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=1093">issue#1093</a>として管理されている。
+例えば、<tt>svn diff</tt>に対して、<tt>/branches/mybranch/foo.c</tt>の二つの以前のバージョンを比較するように指示した場合、このコマンドは、名前の変更が行われているため、実際には<tt>/trunk/foo.c</tt>の二つのバージョンを比較することが要求されているんだ、ということを自動的には理解しない。
+その変わり、以前のリビジョンには branch パスが存在しない、といったエラーを表示することになるだろう。</p>
+
+<p>この手の問題全てに対する回避方法は、<i>あなた</i>が地道な調査を続けることなのだ!
+即ち、どんなパスの名前変更に関しても、あなた自身が<tt>svn log -v</tt>を用いて見逃さないように追跡を行い、それを明示的にsvn クライアントへ引き渡す必要がある。例えば、次のコマンド</p>
+
+<pre>
+$ svn diff -r 1000:2000 http://host/repos/branches/mybranch/foo.c
+svn: Filesystem has no item
+svn: '/branches/mybranch/fooc..c' not found in the repository at revision 1000
+</pre>
+
+を実行する変わりに、
+
+<pre>
+$ svn diff -r1000:2000 http://host/repos/trunk/foo.c
+...
+</pre>
+
+を実行すべきだろう。
+</div>
+
+
+<div class="h3" id="digest-auth" title="digest-auth">
+<h3>HTTPダイジェスト認証が動作しないのはなぜ?</h3>
+
+<p>これは、恐らく、Apache HTTPサーバ(バージョン2.0.48以前)の既知のバグだ。
+パッチを<a href="http://nagoya.apache.org/bugzilla/show_bug.cgi?id=25040">http://nagoya.apache.org/bugzilla/show_bug.cgi?id=25040</a>から取得することができる。
+併せて、あなたの状況が、<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=1608">http://subversion.tigris.org/issues/show_bug.cgi?id=1608</a>に書かれている内容と一致するかどうかを調べて見た方が良いだろう。</p>
+
+</div>
+
+
+<div class="h3" id="xlc-compile" title="xlc-compile">
+<h3>AIX 上で xlc を使ってコンパイルしてるんですが、コンパイルエラーになります。何が問題でしょうか?</h3>
+
+<p>コンフィギュレーション時とビルド時に、CFLAGS 環境変数へ<tt>-qlanglvl=extended </tt>を設定して、xlc を少し融通の利くようにしてあげよう。
+これで、エラー無しにコンパイルできるようになる筈だ。
+詳細は、<a href="http://svn.haxx.se/dev/archive-2004-01/0922.shtml">http://svn.haxx.se/dev/archive-2004-01/0922.shtml</a>ならびに、関連スレッドを参照のこと。</p>
+
+</div>
+ 
+
+<div class="h3" id="nonrecursive-checkout" title="nonrecursive-checkout">
+<h3>あるディレクトリを(-N オプションをつけて)非再帰的にチェックアウトしましたが、今は、サブディレクトリにも「登場」して欲しいと思っています。
+しかし、<tt>svn up subdir</tt>が動作しないのです。</h3>
+
+<p><a href="http://subversion.tigris.org/issues/show_bug.cgi?id=695">issue 695</a>を参照の事。
+<tt>svn checkout -N</tt>の現在の実装は、少し壊れている。
+このコマンドの実行結果は、不足エントリのある作業コピー、ということになるんだけど、その「不完全性」には気づかない。
+どうやら、CVSユーザのある種の人々は、このパラダイムへ幾分依存しているようなんだけど、Subversion の開発者は、そうではない。
+現状では、あなたの手続きを変更する以外、回避策は存在しない。
+リポジトリの個別のサブディレクトリ群をチェックアウトし、手動で作業コピーへ重ねてあげよう。</p>
+
+</div>
+
+
+<div class="h3" id="mod_dav_svn-win32" title="mod_dav_svn-win32">
+<h3>Win32 の上で、Apache と一緒に mod_dav_svn を使おうとしているのですが、そんなモジュールは見つからない、というエラーになります。
+mod_dav_svn.so ファイルは、<tt>\Apache\modules</tt>内に、正しく存在しているのですが...。</h3>
+
+<p>この件に関するエラーメッセージは、少し誤解を招いている。恐らく Apache は、<tt>mod_dav_svn.so</tt>が依存しているDLLを読み込むことが出来ないのだろう。
+Apache をサービスとして実行している場合には、通常のユーザと同じ<tt>PATH</tt>を有していないのかもしれない。
+<tt>libdb4*.dll</tt>、<tt>intl3_svn.dll</tt>、<tt>libeay32.dll</tt>そして<tt>ssleay32.dll</tt> が<tt>Apache\bin</tt>か<tt>Apache\modules</tt>の中に存在することを確認し、存在しない場合には Subversion のインストールされたディレクトリからコピーしよう。</p>
+
+<p>もし、それでもまだ問題が解決しない場合には、<tt>mod_dav_svn.so</tt>に対して<a href="http://www.dependencywalker.com">Dependency Walker</a>のようなツールを使用し、未解決な依存性が他に存在しないか確認して調べてみよう。</p>
+
+</div>
+
+
+<a name="win32-hooks"></a> <!-- for compatibility with old question -->
+<a name="hook-environment"></a> <!-- for yet more compatibility with old question -->
+<div class="h3" id="hook-debugging" title="hook-debugging">
+<h3>どうしてリポジトリのフックが動作しないの?</h3>
+
+<p>フックは、外部プログラムを呼び出すことを期待されているんだけど、その呼び出しが、全然生じていないよう感じだ。</p>
+
+<p>Subversion はフックスクリプトを起動する前に、<em>全て</em>の環境変数を取り除く。その中には、Unixでは $PATHが、Windows では %PATH% が含まれる。結果、スクリプトでは、絶対パス名の記述された他のプログラムだけを実行可能だ。</p>
+
+<p><b>Debugging tips:</b></p>
+<p>
+もしあなたが Linux や Unixを使っているならば、以下の手順に従って、そのスクリプトを「手動で」実行してみよう。</p>
+
+          <ol>
+            <li>「su」 や 「sudo」、または、似たようなコマンドを使って、通常そのスクリプトを実行するであろうユーザへとなろう。
+例えば、Apache を使っている場合には、<tt>httpd</tt>や<tt>wwww-data</tt>かもしれない。
+または、svnserve を使っていて、また、特別なSubversion用のユーザが用意されている場合には、<tt>svn</tt>のようなユーザなのかもしれない。
+これによって、スクリプトに潜むパーミション問題を切り分けられるだろう。</li>
+            <li>そのスクリプトを、「env」 プログラムを使い、空の環境で起動動してみよう。
+以下は、post-commit フックを実行する例だ。
+<blockquote><pre>
+                  $ env - ./post-commit /var/lib/svn-repos 1234
+</pre></blockquote>
+              「env」に対する最初の引数は、ダッシュであることに注意。これは、確実に環境を空にするためのものだ。</li>
+            <li>コンソールに出たエラーを確認しよう。</li>
+          </ol>
+
+</div>
+
+
+<div class="h3" id="diff-cmd" title="diff-cmd">
+<h3>どうして、僕の --diff-cmd は '-u' に関して文句を言うのでしょう?
+--extensions を使って上書きしているんですが、それが機能しません。</h3>
+
+<p>外部(external)の diff コマンドを使うとき、Subversion は、やや複雑なコマンドラインを組み立てる。
+最初は --diff-cmd で指定された値。次に来るのは、--extensions で指定された値(もし --extensions が空ならば、無視される)、または、--extensions が指定されていない場合(または''が指定された場合)には '-u'。
+3番目と4番目には、Subversion は -L と最初のファイルラベル(例えば、"project_issues.html (revision 11209)")を引き渡す。
+5番目と6番目には、別の '-L' と2番目のラベル。
+7番目と8番目には、1番目と2番目のファイル名(例えば、「.svn/text-base/project_issues.html.svn-base」と「.svn/tmp/project_issues.html.tmp」)。</p>
+
+<p>もし、あなたの愛用している diff コマンドが、これらの引数をサポートしていない場合、引数群を無視し、最後のファイル名だけを取り扱う、小さなラッパースクリプトを作る必要があるかもしれない。</p>
+
+<p>警告: Subversion は、外部の diff プログラムを、受信したファイルを変更する為には期待していないことに注意して欲しい。
+そうした場合、作業コピーをごちゃ混ぜにしてしまうだろう。</p>
+
+<p>詳細は、issue<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=2044">#2044</a>を参照のこと。</p>
+
+</div>
+
+
+<div class="h3" id="plaintext-passwords" title="plaintext-passwords">
+<h3>うぎゃー! 僕の Subversion クライアントが、パスワードを平文でディスク上にキャッシュしているのを見つけちゃった! うわぁ!</h3>
+
+<p>はい、落ち着いて。まずは、深呼吸を1回。</p>
+
+<p>Windows 2000以降の場合、svn 1.2 以上の版は、data の暗号化にWindowsの標準的なAPI を使っている。
+この為、該当ユーザだけが、キャッシュされたパスワードを解くことができる。</p>
+
+<p>Mac OS Xの場合、snv 1.4 以上の版では、あなたの svn パスワードを暗号化し、保存する為に、システムの Keychain 機能を使っている。</p>
+
+<p>UNIX/Linux の場合、標準的なシステムの暗号化機能が存在しないため、パスワードは、~/.subversion/auth へ格納される。
+しかし、注意してもらいたいのは、そのキャッシュされたパスワードが格納されているディレクトリ(大抵 ~/.subversion/auth)のパーミションは、700に設定されていて、即ち、あなただけが読みだし可能となっている。</p>
+
+<p>OSが備えている、ディスク上のデータ保護機能を信じよう。</p>
+
+<p>とはいえ、もしあなたが本当に気に病んでいるならば、パスワードのキャッシュ機構を、完全に off にすることができる。svn 1.0 クライアントの場合、ランタイム設定ファイルへ 'store-auth-creds = no' と書くだけだ。svn 1.1 以上のクライアントの場合、より狭い範囲にのみ適用される 'store-passwords = no' を使うことができる(つまり、サーバ証明は、まだキャッシュされる)。
+パスワードキャッシングに関するより詳細な説明は、<a href="http://svnbook.red-bean.com/nightly/en/index.html">Nightly Build 版Subversion book</a>の第6章、<a href="http://svnbook.red-bean.com/nightly/en/svn.serverconfig.netmodel.html#svn.serverconfig.netmodel.credcache">「Client Credentials Caching」</a>を参照のこと。</a></p>
+
+<p>最後に、CVS は長期に渡り、パスワードを .cvspass ファイルへ保存している、ということを指摘しておこう。
+.cvspass に書かれたパスワードは、暗号化されているように見えるけど、実際には、ただ非常に簡単な、本質的には rot13 同等のアルゴリズムでスクランブルされているだけだ。
+これは簡単にクラックされ得る。
+スクランブルの有益性は、ただ、ユーザ(例えば root)が、予期せずパスワードを目にしてしまうのを防ぐために過ぎない。
+Subversion に於いては、この点に対して深く気にしている人は存在しない。
+もし、あなたが興味を持っているならば、dev@リストへパッチを送って欲しい。</p>
+
+</div>
+
+
+<div class="h3" id="bdb41-tabletype-bug" title="bdb41-tabletype-bug">
+<h3>「svn: bdb: call implies an access method which is inconsistent with previous calls」ってエラーメッセージが表示されました。どうやったら直せる?</h3>
+
+<p>Berkeley DB 4.1 は、やや不安定な点のあることが分かっている。
+4.0や4.2の方がベターだ。このエラーメッセージは、4.1が時に壊れてしまうことを示す、唯一の兆候である。</p>
+
+<p>問題は、Berkeley DB をバックエンドに使った Subversion リポジトリ構成しているテーブル内の、あるデータベースフォーマットフィールドが壊れつつある、ということだ。
+理由は不明だが、ほとんど常に'copies'テーブルで発生し、'btree' タイプから'recno'タイプへと変更となっている。
+シンプルな回復方法は以下の通り。
+もしこの方法が成功しなかったら、Subversion Users<a href="mailto:users@subversion.tigris.org">メイリングリスト</a>へ問い合わせてみよう。</p>
+
+<ul>
+  <li>他のプロセスが、リポジトリへアクセスしようとしていないことを確認する。</li>
+  <li>まず、tarや、zipファイルなどに対して、<b>リポジトリをバックアップ</b>する。</li>
+  <li>リポジトリの<tt>db</tt>サブディレクトリへ移動する。</li>
+  <li><tt>rm __db.* log.*</tt></li>
+  <li><tt>db_dump -p -r copies &gt; copies.dump</tt></li>
+  <li><tt>copies.dump</tt> を編集する。先頭近くのセクションで、「<tt>type=recno</tt>」を 「<tt>type=btree</tt>」へと変更し、「<tt>re_len=</tt>」で始まる行を削除する。</li>
+  <li><tt>rm copies</tt></li>
+  <li><tt>db_load copies &lt; copies.dump</tt></li>
+  <li><tt>svnadmin dump .. &gt; ../../my-recovered.svndump</tt></li>
+  <li>新しいリポジトリを作成し、先ほど生成した dump ファイルを再読込させ、任意のカスタムフックや設定ファイルなどをコピーする。
+新しいリポジトリの最新リビジョン番号が、あなたの期待している番号と同じであることを確認しよう。</li>
+</ul>
+
+</div>
+
+
+<div class="h3" id="hotcopy-large-repos" title="hotcopy-large-repos">
+<h3>僕のリポジトリで hotbackup できないよ! svnadmin が 2Gb を越えるファイルで失敗するんだ。</h3>
+
+<p>APRに於ける0.9ブランチの初期のバージョン(これは Apache 2.0.x とSubversion 1.xで使われているんだけど)では、大きなファイル(2Gb+)のコピーがサポートされていない。
+'svnadmin hotcopy' 問題を解決する修正が行われ、APR 0.9.5+ とApaache 2.0.50+ に取り込まれている。
+この修正は全てのプラットフォームで動作するわけではないけれど、Linux 上では動作するよ。
+</p>
+
+</div>
+
+
+<div class="h3" id="hidden-log" title="hidden-log">
+<h3>まさに今 commit したファイルのログエントリが見られないんだけど、どうして?</h3>
+
+<p>あるリポジトリに対して '<tt>svn&nbsp;checkout</tt>' を実行し、作業コピーのリビジョンは7(即ち r7)になっていると仮定しよう。
+また、その中には、<tt>foo.c</tt>という名前のファイルが含まれているものとする。
+あなたはこのファイルを変更し、無事にコミットを終えた。この時点で、2つのことが起きている。</p>
+
+<ul>
+<li>リポジトリは、サーバ上では r8 へと進んでいる。</li>
+<li>あなたの作業コピーでは、<tt>foo.c</tt>ファイルだけが r8 へと進んでいる。作業コピーの残りは、r7のままだ。</li>
+</ul>
+
+<p>あなたが今手にしているものは、<i>混在リビジョン作業コピー</i>として知られているものだ。
+1つのファイルはr8だが、他の残りのファイルに関しては、それらがコミットされるまで、または、'<tt>svn&nbsp;update</tt>'が実行されるまで、r7のまま残されている。</p>
+
+<pre>   $ svn -v status
+   7        7 nesscg       .
+   8        8 nesscg       foo.c
+   $</pre>
+
+<p>もし '<tt>svn&nbsp;log</tt>' をコマンドを、引数を全く指定せずに実行した場合、カレントディレクトリ(上記のリストでは '<tt>.</tt>'という名前になっている)のログ情報が表示される。
+ディレクトリ自身は、まだ r7だから、あなたは r8 のログ情報を目にすることが出来ない。</p>
+
+<p>最新のログを見るためには、以下の何れかを実行しよう。</p>
+
+<ol>
+<li>'<tt>svn&nbsp;log&nbsp;-rHEAD</tt>'を実行する。</li>
+<li>'<tt>svn&nbsp;log&nbsp;URL</tt>' を実行する。URLには、リポジトリの URL を指定すること。</li>
+<li>'<tt>svn&nbsp;log&nbsp;foo.c</tt>' のように実行して、該当ファイル自体のログ情報を要求する。</li>
+<li>作業コピーをアップデートして、つまり全てを r8 にしてから、'<tt>svn&nbsp;log</tt>'を実行する。</li>
+</ol>
+
+</div>
+
+
+<div class="h3" id="bdb43-upgrade" title="bdb43-upgrade">
+<h3>Berkeley DB 4.3 以降にアップグレードしたら、リポジトリエラーが発生するようになった。</h3>
+
+<p>Berkeley DB 4.3 より前の版では、<tt>svnadmin recover</tt>は Berkeley DB リポジトリをその場でアップグレードするように動作していた。
+しかし、Version 4.3 での Berkeley DB の動作変更に伴い、今では、これは失敗してしまう。</p>
+
+<p>リポジトリをその場で Berkeley DB 4.3 以降へアップグレードするには、以下の手順に従おう。</p>
+
+<ul>
+
+<li>リポジトリにアクセスしているプロセスが存在しないことを確認しよう(Apache や svnserve を止め、file:// 経由でのアクセスや、svnlook、svnadmin などを制限する)。</li>
+
+<li><i>古い</i><tt>svnadmin</tt>バイナリ(つまり、古い Berkeley DB がリンクされたバイナリ)を使って、以下を実行しよう。
+
+  <ol>
+
+  <li>以下の様にしてリポジトリを復旧する: '<tt>svnadmin&nbsp;recover&nbsp;/path/to/repository</tt>'</li>
+
+  <li>リポジトリをバックアップする</li>
+
+  <li>使っていない全てのログを削除する。これは、次のコマンドで確認できる '<tt>svnadmin&nbsp;list-unused-dblogs&nbsp;/path/to/repeository</tt>'</li>
+
+  <li>シェアードメモリファイルを削除する。このファイルは、リポジトリの<tt>db/</tt>ディレクトリにあり、<tt>__db.00*</tt> といった形式をしている。</li>
+  </ol></li>
+
+</ul>
+
+
+<p>これにより、リポジトリを Berkeley DB 4.3 から利用することが可能だ。</p>
+
+</div>
+
+
+<div class="h3" id="tiger-apr-0.9.6" title="tiger-apr-0.9.6">
+<h3>MacOS X 10.4(Tiger)上で稼動しているリポジトリから、http://経由でチェックアウトすると、時々、恐らく不整合エラーと思われる現象に遭遇するんだけど、なんで?</h3>
+
+<p>注意: これは、Apache 2.0.x でリポジトリが提供されていることを想定している。</p>
+
+<p>APR 0.9.6 には、Tiger 上で稼動させると生じる<a href="http://issues.apache.org/bugzilla/show_bug.cgi?id=34332">バグ</a>があり、64Kb より大きなファイルをチェックアウトしようとすると発症する。
+チェックアウト失敗の結果は、しばしば、意味不明なメッセージを伴っている。あなたがクライアント側で目にするかもしれない幾つかのメッセージを以下に示そう(エラー詳細は異なっているかもしれない):</p>
+
+<pre>
+   svn: Invalid diff stream: [tgt] insn 1 starts beyond the target view position
+</pre>
+
+<pre>
+   svn: Unexpected end of svndiff input
+</pre>
+
+<pre>
+   svn: REPORT request failed on '/path/to/repository'
+   svn: REPORT of '/path/to/repository/!svn/vcc/default': Chunk delimiter was invalid
+</pre>
+
+<p>Apache の error_log 中にも、次のようなエラーが書き込まれているかもしれない。</p>
+
+<pre>
+   [error] Provider encountered an error while streaming a REPORT response.  [500, #0]
+   [error] A failure occurred while driving the update report editor [500, #190004]
+</pre>
+
+<p>このバグの存在を確認するには(あなたがリポジトリを提供しているマシンへアクセスできると仮定しているけど)、file:// URL を使って、チェックアウトを試してみることだ。
+これはApacheを経由せずに、直接ファイルシステムへアクセスすることになる。
+もし、チェックアウトの結果が完全に上手く行った場合、おそらくこれが原因である可能性が高い。</p>
+
+<p>現在のベストな解は、APR1.2.0+へアップグレードすることだ。</p>
+
+<p>代案としては、Apache の configure 実行前に以下の環境変数を設定した上で、Apache と Subversion とをそれぞれソースから再構築しても良いだろう。</p>
+
+<pre>
+   setenv ac_cv_func_poll no
+</pre>
+
+<p>または、Bourne シェル記法ではこんな感じ。</p>
+
+<pre>
+   ac_cv_func_poll=no; export ac_cv_func_poll
+</pre>
+
+<p>APR / APRUTILを別々にビルドした(つまり、Apache のtarball に付属している版を使わなかった)場合、APRの configure を実行する前にこの環境変数を設定しなければならない。
+というのも、そこが問題の潜んでいる場所だから。</p>
+
+</div>
+
+
+<div class="h3" id="debian-libtool" title="debian-libtool">
+<h3>Debian GNU/Linux 上で、Subversion を作業コピーのソースから構築できません。
+最後のリンク段階で、エラーになってしまいます。
+何が悪い?</h3>
+    
+<p>もし、Subversion trunk ソースのビルド時、最後のリンク段階で次の様なエラーが表示されるなら、</p>
+
+<pre>
+   /usr/local/apache2/lib/libaprutil-0.so.0: undefined reference to `db_create'
+   /usr/local/apache2/lib/libaprutil-0.so.0: undefined reference to `db_strerror'
+</pre>
+
+<p>おそらく、あなたは Debian GNU/Linux システムを使っていて、'libtool' をアップグレードをする必要があるからだろう(また、Debian のパッケージャーは、'libtool' を少しいじる必要があって、これが Subversion のビルドで幾つかの問題を引き起こしているのかも、とも聞いた。
+とはいえ、これは又聞きにすぎない。
+私は、この FAQエントリを書く前に、詳細を確認している時間がとれなかったんだ。
+ともかく、本件に関して詳細な議論の行われた、<a href="http://subversion.tigris.org/servlets/ReadMsg?list=dev&amp;msgNo=112617">http://subversion.tigris.org/servlets/ReadMsg?list=dev&amp;msgNo=112617</a>とそのスレッドを確認して欲しい)。</p>
+
+<p>何れにせよ、2005/11/15 時点の newly-dist-upgraded 'testing'ディストリビューションである Debian GNU/Linux システム上でこの問題に遭遇した時には、唯一の解法は、<a href="http://www.gnu.org/software/libtool/libtool.html">libtool&nbsp;1.5.20</a>を、通常の「./configure &amp;&amp; make &amp;&amp;sudo&nbsp;make&nbsp;install」手順に従ってソースから構築することだった。
+その後、私の Subversion 作業コピーツリーで 'make&nbsp;clean' を実行し、'./autogen.sh', './configure','make'とやって、全てが上手く行くようになった。</p>
+
+<p>この事象に関する別のレポートとしては、<a href="http://svn.haxx.se/dev/archive-2003-01/1125.shtml">http://svn.haxx.se/dev/archive-2003-01/1125.shtml</a>があるけど、ここで述べられた解法は、このスレッドの中では言及されていないことに注意して欲しい。</p>
+
+</div>
+
+
+<div class="h3" id="freebsd-listen-host" title="freebsd-listen-host">
+<h3>FreeBSD を使っていて、suvserve を実行しているんだけど、3690番ポートで listen していないみたい。</h3>
+    
+<p>簡潔な答え: <tt>svnserver</tt>に<tt>--listen-host=0.0.0.0</tt>オプションをつけて実行しよう。</p>
+<p>ちょっとだけ長い答え: FreeBSD デーモンは、デフォルトでは tcp6 しか listen しない。このオプションは、tcp4 でも listen するように指示する。</p>
+</div>
+
+<div class="h3" id="already-under-version-control" title="already-under-version-control">
+<h3>ディレクトリを追加したいんだけど、Subversion に「既にバージョン管理下におかれています」と言われて、できないんだ。</h3>
+<p>あなたが登録しようとしているディレクトリには、既に<tt>.svn</tt>サブディレクトリが存在している。
+確かにこれは作業コピーなんだけど、でもこれは、あなたがディレクトリを追加しようとしているのとは異なったリポジトリから取得されたものだ。
+これは多分、(<tt>svn copy</tt>ではなく)OSの「copy」コマンドを使って、サブディレクトリをこの作業コピー内にコピーした、または、他の作業コピーをこの中へコピーした為に起こったのだろう。</p>
+<p>
+簡単でキタナイ解法は、あなたの追加しようとしているディレクトリ内にある、全ての<tt>.svn</tt>ディレクトリを削除することだ。
+これで、「add」コマンドが動作するようになるだろう。
+もしあなたが Unixを使っているならば、次のコマンドで、<tt>dir</tt>配下にある<tt>.svn</tt>ディレクトリを削除することが出来る。</p>
+<pre>
+  find dir -type d -name .svn -exec rm -rf {} \;
+</pre>
+<p>とは言え、もしこのコピーが同じリポジトリからきたものならば、本当は、そのコピーを消去、もしくは移動させてから、<tt>svn copy</tt>を使って、正しくコピーするべきだと思う。
+これは、履歴を維持することも出来るし、リポジトリ使用量を削減することも出来る。
+</p>
+<p>
+もしこのコピーが異なるリポジトリからのものだったなら、「<em>何故</em>このコピーを行ったのか」と言う点を自問してみるべきだ。
+また、このディレクトリを追加することで、望んでいないディレクトリのコピーがリポジトリへと追加されてしまうことのないよう、注意しよう。
+</p>
+
+</div>
+
+<div class="h3" id="slow-private-svnserve" title="slow-private-svnserve">
+<h3>svnserve 経由で、非公開リポジトリにアクセスすると、時々凄く遅くなる。</h3>
+
+<p>これは、大抵、APRが <tt>/dev/random</tt> を使うようにコンパイルされていて、サーバが十分なエントロピーを収集できなかった時に発生する。
+もし Subversion が、そのサーバ上で APR を使う唯一のアプリケーションであるならば、<tt>configure</tt>へ<tt>--with-devrandom=/dev/urandom</tt>オプションを指定してAPRを再コンパイルしても問題はないだろう。
+一方、APRを他のプロセスでも使っているシステムの上では、これは行うべきでは<b>ない</b>。
+他のサービスの安全を損なう可能性がある。</p>
+
+</div>
+
+<div class="h3" id="ssl-negotiation-error" title="ssl-negotiation-error">
+<h3>SSL上で、大量のデータを伴う Subversion 操作を行っていると、<tt>SSL negotiation failed: SSL error: decryption failed or bad record mac</tt>というエラーが表示されるのですが。</h3>
+
+<p>これは、OpenSSL 0.9.8 の発生し得る問題だ。古いバージョンへダウングレードする(または、恐らく新しいバージョンへアップグレードする)ことで、この問題を解決できることが知られている。</p>
+
+</div>
+
+<div class="h3" id="broken-subclipse" title="broken-subclipse">
+<h3>「This client is too old」というエラーメッセージが出た。</h3>
+
+<p>
+あなたは、古いバージョン(pre-1.4)の Subversion コマンドラインクライアントとSubclipseの両方を使っている。
+あなたは、最近Subclipse をアップグレードし、それ以後、コマンドラインクライアントが次のメッセージを表示するようになった。</p>
+
+<pre>
+svn: This client is too old to work with working copy
+'/path/to/your/working/copy'; please get a newer Subversion client
+</pre>
+
+<p>
+これは Subversion の作業コピーフォーマットが非互換なものへと変更された為に生じている。
+新版の Subclipse はあなたの作業コピーをバージョンアップし、その為、あなたのコマンドラインプログラム(こちらは旧版)は、それを読めなくなってしまった(この問題は、Subclipse 特有ではない。
+この問題は、あなたが1.4以降のコマンドラインクライアントを、より古い版のコマンドラインクライアントと一緒に使った場合にも起こり得る)。
+
+解法は簡単で、あなたのコマンドラインクライアントを1.4以降の版へとアップグレードすることだ。
+
+</div>
+
+<div class="h3" id="switch-problems" title="switch-problems">
+<h3><tt>svn switch</tt>が時たま上手く動作しないのはなぜ?</h3>
+
+<p>バージョン管理されていない(また、もしかしたら ignore されている)アイテムが作業コピーにあるような場合、<tt>svn switch</tt>はエラーになる。
+切り替え処理は停止し、作業コピーは半分切り替わった状態のまま取り残される。</p>
+
+<p>不運な事に、もし間違った修正方法を採用した場合、作業コピーは利用不可能になってしまう。
+このような事態に陥った場合、時折、ユーザは、<tt>svn cleanup</tt>するようにと指示される。
+しかし、<tt>svn cleanup</tt>も失敗するかもしれない。
+<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=2505">issue #2025</a>を参照して欲しい。</p>
+
+<p>ユーザは手動で、問題を引き起こしたディレクトリやファイルを取り除き、その後<tt>svn cleanup</tt>を実行して、切り替え処理を継続させることで、この状況から復活させることが可能だ。</p>
+
+<p><i>素の</i>クリーンなチェックアウトした状態からの切り替えは、エラーになることなく、常に上手く動作することに注意して欲しい。
+あなたが開発プロセスの一部として<tt>svn switch</tt>を使っている場合、機能させるためには3つの方法がある。</p>
+
+<ol>
+
+<li>切り替え前に、(ignoreされている物も含み)バージョン管理されていないファイルを、完全にクリーンにする。
+<br /><b>警告! これはバージョン管理されていない全てのディレクトリやファイルを消し去ってしまう。
+消去対象のファイルを必要としていないことを「十分に」確認するように。</b>
+
+<blockquote>
+<div><pre><code>
+# 確認した上で、バージョン管理されていないファイルを消去
+svn status --no-ignore | grep '^[I?]' | sed 's/^[I?]//'
+svn status --no-ignore | grep '^[I?]' | sed 's/^[I?]//' | xargs rm -rf
+</code></pre></div>
+</blockquote></li>
+
+<li><i>素の</i>クリーンなチェックアウトを維持する。更新を行ってからそのコピーを作っておき、もし他のブランチへの切り替えが必要になった場合には、そのコピーの方を切り替える。</li>
+
+<li>デンジャラスに生きる :)。
+クリーンアップすることなしに、ブランチ間を切り替える。「しかし」もし切り替えエラーに遭遇した場合には、あなたは、適切なリカバリための方法を知っていなければならない。
+エラーの報告された、バージョン管理されていないファイルやディレクトリを消去する。
+それから必要に応じて「svn cleanup」を実行し、切り替えを再開する。
+<em>全て</em>のバージョン管理されてないファイルを消去するまで、この手順を何度も繰り返す必要があるだろう。</li>
+
+</ol>
+
+<p>幾つかの例が、<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=2505">ここ issue 2505</a>にある。
+問題は、svn client が切り替え処理を安全に、且つ、バージョン管理されていない如何なる物も消去することなしに行おうという点にある。
+</p>
+
+<p>このような問題を示すために、ここで2つの典型的な例を示そう。
+ここではカバーされていない、他の svn switch エラーもあるけれど、それらは、<em>素の</em>チェックアウトから切り替えることで回避できる。</p>
+
+<ol>
+
+<li>もしブランチ間で、ディレクトリが移動されたり、または名前の変更がなされている場合、バージョン管理されていない如何なるものも、問題を引き起こすだろう。
+この場合、次のようなエラーが表示される。
+<br />
+<blockquote>
+<div><pre><code>
+wc/$ svn switch $SVNROOT/$project/branches/$ticket-xxx
+svn: Won't delete locally modified directory '&lt;dir&gt;'
+svn: Left locally modified or unversioned files
+</code></pre></div>
+</blockquote>
+<p>バージョン管理されてない全てのファイルを除去し、切り替えを継続させることで、この状況から回復できる。</p></li>
+
+<li>もし、一時的なビルドファイルが追加や消去されている場合、そうした(主にビルド後などに生じる)バージョン管理されていないファイルを含むリポジトリの切り替えは失敗し、次のようなエラーとなる。
+
+<blockquote>
+<div><pre><code>
+wc/$ svn switch $SVNROOT/$project/branches/$ticket-xxx
+svn: Won't delete locally modified directory '&lt;dir&gt;'
+svn: Left locally modified or unversioned files
+</code></pre></div>
+</blockquote>
+
+<p>この場合、単にバージョン管理されていないアイテム群を取り除くだけでは回復できないだろう。
+cleanupは失敗に終わるが、しかし、svn switch は「svn cleanup」を実行するよう指示してくる。</p>
+
+<blockquote>
+<div><pre><code>
+wc/$ svn switch $SVNROOT/$project/branches/$ticket-xxx
+svn: Directory '&lt;dir&gt;/.svn' containing working copy admin area is missing
+wc/$ svn cleanup
+svn: '&lt;dir&gt;' is not a working copy directory
+wc/$ svn switch $SVNROOT/$project/branches/$ticket-xxx
+svn: Working copy '.' locked
+svn: run 'svn cleanup' to remove locks (type 'svn help cleanup' for details)
+</code></pre></div>
+</blockquote>
+
+<p>このディレクトリ(と、同様のエラーを繰り返し「switch」を妨げる他の全てのバージョン管理されていないファイル)を消去した上で切り替えを継続することで、回復できるだろう。</p></li>
+
+</ol>
+
+<p>TortoiseSVN クリーンアップエラーは、ちょっと違っている。こんな感じだ。</p>
+<blockquote>
+<div><pre><code>
+Subversion reported an error while doing a cleanup!
+&lt;dir&gt;/&lt;anotherdir&gt; is not a working copy directory
+</code></pre></div>
+</blockquote>
+
+<p>ここで述べた各事例に於いて、「svn switch」が失敗した場合には、作業コピー半分切り替わった状態のままになってしまう。
+「svn status」では、切り替わったアイテム(トップディレクトリと異なっている)には「S」を付けて、また、問題のあるディレクトリには「!」を付けて、また、問題のあるファイルには「~」を付けて(ロックを示す L が付くかもしれない)示してくれる。
+こんな感じだ。</p>
+<blockquote>
+<div><pre><code>
+wc/$ svn status 
+!      .
+!      &lt;dir&gt;
+    S  &lt;switched_things&gt;
+~      &lt;dir&gt;/&lt;thing_that_is_now_unversioned&gt;
+</code></pre></div>
+</blockquote>
+
+</div>
+
+<div class="h3" id="long-paths" title="long-paths">
+<h3>Windowsでコマンドラインクライアントをアップデートすると、「システムは指定されたパスを見つけられません」とのエラーが表示され、作業コピーが壊れているのかも、と教えてくれる。
+でも、TortoiseSVNのアップデートは上手く行く。何が起こっているの?</h3>
+
+<p><a href="http://msdn2.microsoft.com/en-us/library/aa365247.aspx#maximum_path_length">Naming a File(ファイルの名前付け)</a>に関する WindowsAPI ドキュメントを注意深い解読により、これが生じた原因に関する、最も一般的な理由を解き明かすことが出来る。
+手短に言えば、Windowsパス関数群のUnicodeバージョンを使っていて、且つ、相対パス指定ではなく絶対バス指定を使っている場合に限り、非常に長いパス名を指定することができる。
+幸いにも、Subversion が使っているApache Portable Runtime(APR)ライブラリは、絶対パス名(<tt>C:\WorkingCopy\file.txt</tt>など)を、Windows API が要求している形式(<tt>\\?\C:\WorkingCopy\file.txt</tt>)へ透過的に変換することが可能であり、また逆変換も可能だ。
+残念な点は、この長いパス名の恩恵は、絶対パス名を使ったときにしか受けられない、ということだ。</p>
+
+<p>もしパス名の長さが、あなたの直面している問題の唯一の原因であるように思えるならば、相対パスではなく(また、何も指定しないのではなく)、絶対ターゲットパス名を Subversion のコマンドラインクライアントへ指定してみよう。
+言い替えれば、次のように指定したり、</p>
+
+<blockquote>
+<div><pre><code>
+C:\&gt; svn up WorkingCopy
+</code></pre></div>
+</blockquote>
+
+<p>また、</p>
+
+<blockquote>
+<div><pre><code>
+C:\&gt; cd C:\WorkingCopy
+C:\WorkingCopy&gt; svn up
+</code></pre></div>
+</blockquote>
+
+<p>とする変わりに、</p>
+
+<blockquote>
+<div><pre><code>
+C:\&gt; svn update C:\WorkingCopy
+</code></pre></div>
+</blockquote>
+
+<p>とする、ということだ。
+もし、問題が消え去ったならば、おめでとう!
+あなたは Windows のパス長制限にぶちあたっていたわけで、そして今、その回避方法を理解したわけだ。</p>
+
+<p><strong>どうしてこの問題は、TortoiseSVN では発生しないんだろう?</strong>
+それは、TortoiseSVN は Subversion API に対して、<em>常に</em>絶対パス名を引き渡しているからだ。</p>
+
+<p><strong>では、なぜ、Subversion コマンドラインクライアントは、常に入力を絶対パスへと変換し、それを使う、という風にしないんだろう?</strong>
+Subversion 開発者達はある原則に従っている。その原則とは、ユーザ体験の観点から、ツールの出力としてパスを表示する場合には、入力として渡されたパスの記法に合わせるべきだ、というものだ。
+また、ある相対パスを絶対パスへと変換することは簡単な作業なのだか、逆変換は、複雑性で溢れている(言い替えれば、我々の優先度リストの上位には位置していない、困難な問題だということだ)。</p>
+
+</div>
+
+<div class="h3"
+     id="working-copy-format-change" title="working-copy-format-change">
+<h3>「This client is too old to work with working copy '...'(...作業コピーに対して、このクライアントは古すぎます)」というエラーメッセージが表示されました。
+Subversionをアップグレードすることなく、これを解決したいんですが。</h3>
+
+<p>時々、作業コピーのメタデータフォーマットは、マイナーリリース間で互換性を持たずに変更になる。例えば、Subversion 1.4.4で作られた作業コピーを有しているとして、でも、ある日、Subversion 1.5.0 を試してみることにした。
+その後、1.4.4へ戻そうとするものの、でもそれは機能しない。
+上記のエラーが表示されるだけだ。</p>
+
+<p>これは、1.5.0 があなたの作業コピーフォーマットを、ある新しい機能(今回の例では、チェンジリスト、keep-localフラグ、そして、可変深度ディレクトリ)をサポートするべく、アップグレードしたためだ。
+1.4.4 はこれらの新機能に関しては何も知らないが、少なくとも、作業コピーのフォーマットが、自分の扱うことが出来ない、何やら上位の版へとアップグレードされている、ということだけは認識することが出来る。</p>
+
+<p>1.5.0 では、正当な理由で作業コピーをアップグレードした。
+というのは、1.4.4 は、これらの新機能について知らないから、もし 1.4.4 が作業コピーのメタデータに触れたならば、重要な情報が消失し、場合によっては破壊してしまうかも知れない、ということに気がついたからだ(例えば、<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=2961">issue#2961</a>を参照の事)。</p>
+
+<p>しかし、この自動アップグレードという振る舞いは、あなたが、ただ新しい Subversion のリリースを、本格的にインストールするのではなく、ただ試してみたいだけ、という場合には、煩わしいものだろう。
+この為、我々は安全に作業コピーをダウングレードさせるスクリプトを配布している。</p>
+
+<blockquote>
+<p><a
+href="http://svn.collab.net/repos/svn/trunk/tools/client-side/change-svn-wc-format.py"
+>http://svn.collab.net/repos/svn/trunk/tools/client-side/change-svn-wc-format.py</a></p>
+</blockquote>
+
+<p>「<tt>--help</tt>」オプションを付けて、スクリプトを実行することで、使い方が表示される。
+Subversion の将来の版がリリースされた場合、起こりうるダウングレードのシナリオと、その影響とを記して、このFAQエントリを最新状態に保つように努力するつもりだ。</p>
+
+</div>
+
+<div class="h3"
+     id="relocation-against-local-symbol"
+     title="relocation-against-local-symbol">
+<h3>Neon ライブラリを 64-bit Linux 上でビルドしたら、"relocation R_X86_64_32 against `a local symbol' can not be used when making a shared object"というエラーが表示されたよ。</h3>
+
+<p>Neon ライブラリは Subversion サーバとクライアントとを HTTP を介して接続するために使われるのだけれど、通常、静的ライブラリとしてビルドされる。
+しかしこれは、その後で、別の動的ライブラリと結合される。
+これにより、64-bit AMD システム上では、ビルドプロセスの最中に次のようなエラーを引き起こす。</p>
+
+<blockquote>
+<div><pre><code>
+subversion-1.4.6/neon/src/.libs/libneon.a(ne_request.o): relocation R_X86_64_32
+against `a local symbol' can not be used when making a shared object;
+recompile with -fPIC
+/home/jrandom/subversion/subversion-1.4.6/neon/src/.libs/libneon.a: could not
+read symbols: Bad value
+</code></pre></div>
+</blockquote>
+
+<p>これに関しては開発者向けリスト上で<a href="http://subversion.tigris.org/servlets/ReadMsg?listName=dev&amp;msgNo=119669">話題</a>になった。</p>
+
+<p>解決策は、Subversion の configure スクリプトへ「--enable-shared」オプションを付与することだ。</p>
+
+</div>
+
+</div>
+
+<div class="h2" id="developer-questions" title="developer-questions">
+<h2>Developer questions:</h2>
+
+<div class="h3" id="ramdisk-tests" title="ramdisk-tests">
+<h3>リグレッションテストをRAMディスク上で走らせる方法は?</h3>
+
+<p>Subversion のテストデータをRAMディスク上に置いた場合、テストの実行速度を劇的に改善することができる。
+Linuxシステム上では、以下のコマンドにより、RAM ディスクを好きなタイミングでmount出来る。</p>
+
+<blockquote>
+<div><code>mount -t tmpfs tmpfs
+/path/to/src/subversion/tests/cmdline/svn-test-work
+-o uid=$USER,mode=770,size=32m</code></div>
+</blockquote>
+
+<p>または、もっと永続性のある解法が希望ならば、次のような行を、<code>/etc/fstab</code>ファイルへ追加しよう。</p>
+
+<blockquote>
+<div><code>tmpfs  /path/to/src/svn/subversion/tests/cmdline/svn-test-work
+tmpfs  defaults,user,noauto,exec,size=32m</code></div>
+</blockquote>
+
+<p>テストの実行に必要となるRAMディスクの最低サイズは、おおよそ、700MBだ。
+しかし、テストターゲットへクリーンアップ用のフラグを付与することで、(上のコンフィギュレーションの例で見たように)必要となるスペース容量を、即ちメモリ使用量を、大幅に削減することが可能だ。
+クリーンアップは、I/O処理の増加を意味するが、テストデータはメモリ上にある為、パフォーマンスの低下にはつながらないだろう。
+こんな感じだ。</p>
+
+<blockquote><div><code>
+make check CLEANUP=true
+</code></div></blockquote>
+
+<p>RAM ディスクの利用に関する、オリジナルの信用できる議論は、<a href="http://svn.haxx.se/dev/archive-2003-02/0068.shtml">http://svn.haxx.se/dev/archive-2003-02/0068.shtml</a>を参照のこと。</p>
+
+</div>
+
+
+<div class="h3" id="dynamic-exe-debugging" title="dynamic-exe-debugging">
+
+<h3>動的な Subversion バイナリを、インストールすることなしにデバッガ上で稼動させるには?</h3>
+
+<p>Unix系システムに於いては、<code>make install</code>を実行する前の状態では、Subversion ソースツリー内にある動的に構築された「実行形式」と言うのは、実のところ、再リンクを行い実際のバイナリを実行させる為のlibtoolによって生成されたシェルスクリプトである。
+以下で見るように、これはデバッグ作業を複雑なものにする。</p>
+
+<blockquote>
+<div><code>subversion$ gdb subversion/svn/svn</code></div>
+<div><code>... "/path/to/subversion/subversion/svn/svn": not in
+executable format: File format not recognized</code></div>
+</blockquote>
+
+<p>これは、configure の実行時 <code>--disable-shared</code>引数を使って、静的結合されたバイナリを作ることで回避することができるし、また、これらをインストールして、デバッガにインストールした版を指定することでも回避できる。
+しかし、多くの場合、ソースツリーのただ中でデバッグできることが、必要だったり便利だったりする。</p>
+
+<p>そこで、デバッガ内で実バイナリを実行できるように、シェルスクリプトの最後の<code>exec</code>文を編集しよう。
+gdb を使うならば、<code>exec "$progdir/$progname"</code>を<code>exec gdb --args "$progdir/$progname"</code>に置き換える、ということだ。</p>
+
+<p>このトリックは、libtoolが生成したシェルスクリプトに対してホワイトボックステストを実行する場合にも、大変に有益だよ。</p>
+
+</div>
+
+
+<div class="h3" id="avoiding-compiler-inlining"
+title="avoiding-compiler-inlining">
+
+<h3>Subversion バイナリに対してデバッガを実行したいんだけど、コンパイラがソースをインライン展開して消し去ってしまわないようにするためには?</h3>
+
+<p>デフォルトの場合、gcc はしばしばプライベート変数や関数を、適切な操作へとインライン展開することにより、最適化した上で除去する。これは、コードをデバッガで追っているときには、面倒なステップとなる。</p>
+
+<p>unix系のシステムでは、<code>make</code>時に最適化を行わせないようにする事で、回避可能だ。</p>
+
+<blockquote>
+<div><code>subversion$ make EXTRA_CFLAGS=-O0</code></div>
+</blockquote>
+
+<p>(これは「ダッシュ、オー、ゼロ」だよ)。また、<code>configure</code>実行時に、次のようにすることで、この変更をより永続性のあるものへとすることが出来る。</p>
+
+<blockquote>
+<div><code>subversion$ ./configure --enable-debug</code></div>
+</blockquote>
+
+<p>実運用向けのインストール時には、Subversion をソースからインストールする前に、余分な引数を与えずに <code>make</code>や<code>configure</code>を再実行して、この操作を元に戻すことを忘れないように。</p>
+
+</div>
+
+
+</div>
+
+<div class="h2" id="references" title="references">
+<h2>References:</h2>
+
+<div class="h3" id="http-methods" title="http-methods">
+<h3>Subversionが使っている全ての HTTP メソッドは?</h3>
+
+<p>Subversion クライアントは、mod_dav_svn サーバモジュールに対して、WebDAV/DeltaV プロトコルのサブセットを話す。端的な回答は次の通り。</p>
+
+<pre>
+     OPTIONS, PROPFIND, GET, REPORT,
+     MKACTIVITY, PROPPATCH, PUT, CHECKOUT, MKCOL,
+     MOVE, COPY, DELETE, LOCK, UNLOCK, MERGE
+</pre>
+
+<p>プロトコルの詳細は、ここに記載されている。</p>
+
+<a href="http://svn.collab.net/repos/svn/trunk/notes/webdav-protocol">http://svn.collab.net/repos/svn/trunk/notes/webdav-protocol</a>
+
+
+
+</div>
+
+
+<div class="h3" id="bikeshed" title="bikeshed">
+<h3>「bikeshed」ってなに?</h3>
+
+<p>See Poul-Henning Kamp's post to freebsd-hackers: <a href="http://www.freebsd.org/doc/en_US.ISO8859-1/books/faq/misc.html#BIKESHED-PAINTING">http://www.freebsd.org/doc/en_US.ISO8859-1/books/faq/misc.html#BIKESHED-PAINTING</a>.
+</p>
+
+</div>
+
+
+<div class="h3" id="pronounce" title="pronounce">
+<h3>「Subvesion」ってどうやって発音するの?</h3>
+
+<p>Jim Blandy、彼は Subversion の命名とリポジトリデザインを行ったんだけど、「Subversion」を<a href="http://svn.collab.net/repos/svn-committers/trunk/sounds/pronunciation/index.html">「Subversion」</a>と発音している。
+</p>
+
+</div>
+
+
+<div class="h3" id="baton" title="baton">
+<h3>「baton」ってなに?</h3>
+
+<p>Subversion のソースコードを通して、幾つもの「baton」オブジェクトへの参照が存在する。
+これは、関数に対してコンテキストを提供するただの<tt>void*</tt>データ構造だ。他のAPIでは、これらはしばしば、<tt>void *ctx</tt>や<tt>void *userdata</tt>と呼ばれるが、Subversion の開発者は、この構造を「batons」と称している。
+というのも、これらは相当数、引き回されることになるからだ。</p>
+
+</div>
+
+
+<div class="h3" id="def-wedged-repository" title="def-wedged-repository">
+<h3>リポジトリが「Wedged」になった、っていうけど、それってどういう意味?</h3>
+
+<p>wedged リポジトリとは:</p>
+
+<blockquote>
+<p>Subversion リポジトリは、2つの異なる内部パーツから構成される。
+ワーキング区画と、ストレージ区画だ。
+Wedged リポジトリとは、ワーキング区画には何らかの理由でアクセスすることができないが、ストレージ区画は問題のないリポジトリのことを言う。
+従って Wedged リポジトリでは、データの損失は生じていない。
+但し、リポジトリへアクセス出来るようにする為には、ワーキング区画を修正する必要がある。
+その方法は、<a href="#stuck-bdb-repos">この</a>エントリを参照のこと。</p>
+</blockquote>
+
+<p>corrupted リポジトリとは:</p>
+
+<blockquote>
+<p>corrupted な Subversion リポジトリとは、ストレージ区画がダメージを受けているリポジトリのことで、従って、リポジトリ内に於いて、一定量のデータ損失が生じている。</p>
+</blockquote>
+
+<p>The Jargon File の <a href="http://catb.org/~esr/jargon/html/W/wedged.html">'wedged'</a>の定義を併せて参照すると良いだろう。
+</p>
+
+</div>
+
+</div>
+
+</div>
+</body>
+</html>

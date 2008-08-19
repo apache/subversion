@@ -503,8 +503,7 @@ delta_proplists(struct context *c,
   apr_array_header_t *prop_diffs;
   int i;
 
-  /* Sanity-check our input. */
-  assert(target_path);
+  SVN_ERR_ASSERT(target_path);
 
   /* Make a subpool for local allocations. */
   subpool = svn_pool_create(pool);
@@ -724,8 +723,7 @@ delta_files(struct context *c,
   apr_pool_t *subpool;
   svn_boolean_t changed = TRUE;
 
-  /* Sanity-check our input. */
-  assert(target_path);
+  SVN_ERR_ASSERT(target_path);
 
   /* Make a subpool for local allocations. */
   subpool = svn_pool_create(pool);
@@ -830,8 +828,7 @@ add_file_or_dir(struct context *c, void *dir_baton,
   struct context *context = c;
   svn_boolean_t allowed;
 
-  /* Sanity-check our input. */
-  assert(target_path && edit_path);
+  SVN_ERR_ASSERT(target_path && edit_path);
 
   if (c->authz_read_func)
     {
@@ -888,8 +885,7 @@ replace_file_or_dir(struct context *c,
   svn_revnum_t base_revision = SVN_INVALID_REVNUM;
   svn_boolean_t allowed;
 
-  /* Sanity-check our input. */
-  assert(target_path && source_path && edit_path);
+  SVN_ERR_ASSERT(target_path && source_path && edit_path);
 
   if (c->authz_read_func)
     {
@@ -941,7 +937,7 @@ absent_file_or_dir(struct context *c,
                    svn_node_kind_t tgt_kind,
                    apr_pool_t *pool)
 {
-  assert(edit_path);
+  SVN_ERR_ASSERT(edit_path);
 
   if (tgt_kind == svn_node_dir)
     SVN_ERR(c->editor->absent_directory(edit_path, dir_baton, pool));
@@ -968,7 +964,7 @@ delta_dirs(struct context *c,
   apr_hash_index_t *hi;
   apr_pool_t *subpool;
 
-  assert(target_path);
+  SVN_ERR_ASSERT(target_path);
 
   /* Compare the property lists.  */
   SVN_ERR(delta_proplists(c, source_path, target_path,

@@ -325,7 +325,7 @@ do_wc_to_wc_copies(const apr_array_header_t *copy_pairs,
       if (ctx->cancel_func)
         SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
-      svn_path_split(pair->src, &src_parent, NULL, pool);
+      svn_path_split(pair->src, &src_parent, NULL, iterpool);
 
       /* Need to avoid attempting to open the same dir twice when source
          and destination overlap. */
@@ -371,7 +371,7 @@ do_wc_to_wc_copies(const apr_array_header_t *copy_pairs,
       if (src_access)
         {
           err = propagate_mergeinfo_within_wc(pair, src_access, dst_access,
-                                              ctx, pool);
+                                              ctx, iterpool);
           if (err)
             break;
 
@@ -379,12 +379,12 @@ do_wc_to_wc_copies(const apr_array_header_t *copy_pairs,
             SVN_ERR(svn_wc_adm_close(src_access));
         }
     }
+  svn_pool_destroy(iterpool);
 
   svn_sleep_for_timestamps();
   SVN_ERR(err);
 
   SVN_ERR(svn_wc_adm_close(dst_access));
-  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
@@ -463,7 +463,7 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
         break;
 
       err = propagate_mergeinfo_within_wc(pair, src_access, dst_access,
-                                          ctx, pool);
+                                          ctx, iterpool);
       if (err)
         break;
 
@@ -477,11 +477,10 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
         SVN_ERR(svn_wc_adm_close(dst_access));
       SVN_ERR(svn_wc_adm_close(src_access));
     }
+  svn_pool_destroy(iterpool);
 
   svn_sleep_for_timestamps();
   SVN_ERR(err);
-
-  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
@@ -599,7 +598,7 @@ path_driver_cb_func(void **dir_baton,
   /* This function should never get an empty PATH.  We can neither
      create nor delete the empty PATH, so if someone is calling us
      with such, the code is just plain wrong. */
-  assert(! svn_path_is_empty(path));
+  SVN_ERR_ASSERT(! svn_path_is_empty(path));
 
   /* Check to see if we need to add the path as a directory. */
   if (path_info->dir_add)
@@ -1773,7 +1772,7 @@ setup_copy(svn_commit_info_t **commit_info_p,
                                             iterpool));
           src_basename = svn_path_basename(pair->src, iterpool);
           if (srcs_are_urls && ! dst_is_url)
-            src_basename = svn_path_uri_decode(src_basename, pool);
+            src_basename = svn_path_uri_decode(src_basename, iterpool);
 
           /* Check to see if all the sources are urls or all working copy
            * paths. */
@@ -2015,11 +2014,11 @@ svn_client_copy4(svn_commit_info_t **commit_info_p,
 
       src_basename = svn_path_basename(src_path, subpool);
       if (svn_path_is_url(src_path) && ! svn_path_is_url(dst_path))
-        src_basename = svn_path_uri_decode(src_basename, pool);
+        src_basename = svn_path_uri_decode(src_basename, subpool);
 
       err = setup_copy(&commit_info,
                        sources,
-                       svn_path_join(dst_path, src_basename, pool),
+                       svn_path_join(dst_path, src_basename, subpool),
                        FALSE /* is_move */,
                        TRUE /* force, set to avoid deletion check */,
                        make_parents,
@@ -2033,7 +2032,7 @@ svn_client_copy4(svn_commit_info_t **commit_info_p,
       if (commit_info)
         *commit_info_p = svn_commit_info_dup(commit_info, pool);
       else
-        *commit_info_p = commit_info;
+        *commit_info_p = NULL;
     }
 
   svn_pool_destroy(subpool);
