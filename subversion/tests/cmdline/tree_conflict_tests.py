@@ -697,7 +697,7 @@ test_list = [ None,
               up_sw_dir_del_onto_del,
               XFail(up_sw_dir_add_onto_add),  # not a primary use case
               merge_file_mod_onto_not_file,
-              XFail(merge_file_del_onto_not_same),
+              merge_file_del_onto_not_same,
               merge_file_del_onto_not_file,
               merge_file_add_onto_not_none,
               merge_dir_mod_onto_not_dir,
