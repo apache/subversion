@@ -95,7 +95,7 @@ new_tree_conflict_phrases(apr_pool_t *pool)
 }
 
 static const char *
-select_their_phrase(svn_wc_conflict_description_t *conflict,
+select_their_phrase(const svn_wc_conflict_description_t *conflict,
                     struct tree_conflict_phrases *phrases)
 {
   if (conflict->operation == svn_wc_operation_update
@@ -129,7 +129,7 @@ select_their_phrase(svn_wc_conflict_description_t *conflict,
 }
 
 static const char *
-select_our_phrase(svn_wc_conflict_description_t *conflict,
+select_our_phrase(const svn_wc_conflict_description_t *conflict,
                   struct tree_conflict_phrases *phrases)
 {
   switch (conflict->reason)
@@ -192,9 +192,9 @@ select_our_phrase(svn_wc_conflict_description_t *conflict,
 
 svn_error_t *
 svn_cl__append_human_readable_tree_conflict_description(
-                                      svn_stringbuf_t *descriptions,
-                                      svn_wc_conflict_description_t *conflict,
-                                      apr_pool_t *pool)
+  svn_stringbuf_t *descriptions,
+  const svn_wc_conflict_description_t *conflict,
+  apr_pool_t *pool)
 {
   const char *their_phrase, *our_phrase;
   svn_stringbuf_t *their_phrase_with_victim, *our_phrase_with_victim;
@@ -220,9 +220,10 @@ svn_cl__append_human_readable_tree_conflict_description(
 
 
 svn_error_t *
-svn_cl__append_tree_conflict_info_xml(svn_stringbuf_t *str,
-                                      svn_wc_conflict_description_t *conflict,
-                                      apr_pool_t *pool)
+svn_cl__append_tree_conflict_info_xml(
+  svn_stringbuf_t *str,
+  const svn_wc_conflict_description_t *conflict,
+  apr_pool_t *pool)
 {
   apr_hash_t *att_hash = apr_hash_make(pool);
   const char *tmp;
