@@ -138,7 +138,7 @@ svn_checksum_parse_hex(svn_checksum_t **checksum,
   SVN_ERR(validate_kind(kind));
 
   *checksum = svn_checksum_create(kind, pool);
-  len = DIGESTSIZE((*checksum)->kind);
+  len = DIGESTSIZE(kind);
 
   for (i = 0; i < len; i++)
     {
