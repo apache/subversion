@@ -3077,9 +3077,14 @@ fs_node_origin_rev(svn_revnum_t *revision,
       {
         svn_pool_clear(subpool);
         SVN_ERR(svn_fs_fs__dag_get_node(&node, fs, pred_id, subpool));
+
+        /* Why not just fetch the predecessor ID in PREDIDPOOL?
+           Because this function doesn't necessarily honor the
+           passed-in pool, and might return a value cached in the node
+           (which is allocated in SUBPOOL ... maybe). */
         svn_pool_clear(predidpool);
-        SVN_ERR(svn_fs_fs__dag_get_predecessor_id(&pred_id, node,
-                                                  predidpool));
+        SVN_ERR(svn_fs_fs__dag_get_predecessor_id(&pred_id, node, subpool));
+        pred_id = svn_fs_fs__id_copy(pred_id, predidpool);
       }
 
     /* When we get here, NODE should be the first node-revision in our
