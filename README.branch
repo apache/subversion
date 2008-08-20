@@ -16,11 +16,12 @@ Revisions included:
     r32330, r32404 backported from trunk via r32449
   * r32550 backported from trunk via r32561
   * r32375:32379, r32394, r32396 backported from trunk via r32579
+  * r32497:32499 backported from trunk via r32587
 
 Features:
   * Don't save plaintext passwords without prompting
   * Save passwords in gnome-keyring and kwallet
-  * Save ssl client certificate passphrases in gnome-keyring
+  * Save ssl client certificate passphrases in gnome-keyring and kwallet
 
 Bugs related to this branch:
   * issue #2489 - Cache ssl client certificate passphrases
