@@ -1,0 +1,31 @@
+This branch exists in order to make some features available to users before
+we get 1.6.x released.
+
+For more information on why this branch exists, have a look at the
+following mailing list threads:
+  - http://svn.haxx.se/dev/archive-2008-08/0126.shtml
+  - http://svn.haxx.se/dev/archive-2008-08/0301.shtml
+
+Revisions included:
+  * This branch was created from 1.5.x branch at r32289 (which is the same
+    revision used for creating 1.5.1 release).
+  * 30656, 30760, 31046, 31049:31053, 31117, 31240:31245, 31258:31261,
+    31288:31291, 31308, 31337, 31361, 31367, 31370, 31426:31428, 31446,
+    31449, 31513, 31514:31522, 31539, 31541:31543, 31739, 31746:31752,
+    31854, 31861, 31931, 32083, 32132, 32143:32145, 32203:32205, 32207,
+    32330, 32404
+  * r32550 backported from trunk via r32561
+
+Features:
+  * Don't save plaintext passwords without prompting
+  * Save passwords in gnome-keyring and kwallet
+  * Save ssl client certificate passphrases in gnome-keyring
+
+Bugs related to this branch:
+  * issue #2489 - Cache ssl client certificate passphrases
+  * issue #3236 - plaintext-passwords assumes pools live across RA sessions
+  * issue #3238 - client prompts twice about caching client cert passphrase  
+  * issue #3239 - client cert passphrase cache keyed by relative path, not
+                  absolute path
+
+Backport Policy - All changes to this branch must come through trunk.
