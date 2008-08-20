@@ -2111,91 +2111,355 @@ def switch_to_root(sbox):
 
 #----------------------------------------------------------------------
 
-def tree_conflicts_in_switched_files(sbox):
-  "tree conflicts in switched files"
+# Detect tree conflicts among files and directories,
+# edited or deleted in a deep directory structure.
+#
+# See use cases 1-3 in notes/tree-conflicts/use-cases.txt for background.
+# Note that we do not try to track renames.  The only difference from
+# the behavior of Subversion 1.4 and 1.5 is the conflicted status of the
+# parent directory.
+#
+def tree_conflicts_on_switch(sbox):
+  "tree conflicts on switch (tc use cases 1 to 3)"
 
-  # Detect simple tree conflicts among files edited and renamed in a single
-  # directory.  See use cases 1-3 in notes/tree-conflicts/use-cases.txt for
-  # background.
-  
-  # We do not try to track renames.  The only difference from the behavior
-  # of Subversion 1.4/1.5 is the conflicted status of the directory.
+  # Each case is constructed and then appended to the table, which
+  # is initially empty:
+  greater_scheme = [];
 
-  sbox.build()
-  wc_dir = sbox.wc_dir
-  A = os.path.join(wc_dir, 'A')
+  # convenience definitions
+  leaf_edit = svntest.actions.deep_trees_leaf_edit
+  tree_del = svntest.actions.deep_trees_tree_del
+  leaf_del = svntest.actions.deep_trees_leaf_del
 
-  # Set up tree conflicts in wc 2
-  svntest.actions.set_up_tree_conflicts(sbox, True)
-  A2 = os.path.join(sbox.wc_dir, 'A2')
+  state_after_leaf_edit = svntest.actions.deep_trees_after_leaf_edit
+  state_after_leaf_del = svntest.actions.deep_trees_after_leaf_del
+  state_after_tree_del = svntest.actions.deep_trees_after_tree_del
 
-  # Switch wc 2 to url 1
-  expected_output = svntest.wc.State(wc_dir, {
-    'A2/D/G'       : Item(status='C '),
-    'A2/D/G/pi'    : Item(status='U '),
-    'A2/D/G/rho'   : Item(status='D '),
-    'A2/D/G/tau'   : Item(status='D '),
+  j = os.path.join
+
+  DeepTreesTestCase = svntest.actions.DeepTreesTestCase
+
+
+  # use case 1, as in notes/tree-conflicts/use-cases.txt
+  # 1.1) local tree delete, incoming leaf edit
+
+  expected_output = svntest.wc.State('', {
+    'D'                 : Item(status='C '),
+    'D/D1'              : Item(),
+    'D/D1/delta'        : Item(status='A '),
+    'F'                 : Item(status='C '),
+    'F/alpha'           : Item(status='U '),
+    'DD'                : Item(status='C '),
+    'DD/D1'             : Item(status='C '),
+    'DD/D1/D2'          : Item(),
+    'DD/D1/D2/epsilon'  : Item(status='A '),
+    'DF'                : Item(status='C '),
+    'DF/D1'             : Item(status='C '),
+    'DF/D1/beta'        : Item(status='U '),
+    'DDD'               : Item(status='C '),
+    'DDD/D1'            : Item(status='C '),
+    'DDD/D1/D2'         : Item(status='C '),
+    'DDD/D1/D2/D3'      : Item(),
+    'DDD/D1/D2/D3/zeta' : Item(status='A '),
+    'DDF'               : Item(status='C '),
+    'DDF/D1'            : Item(status='C '),
+    'DDF/D1/D2'         : Item(status='C '),
+    'DDF/D1/D2/gamma'   : Item(status='U '),
     })
 
-  expected_disk = svntest.main.greek_state.copy()
-  expected_disk.add({
-    'A2'           : Item(),
-    'A2/mu'        : Item("This is the file 'mu'.\n"),
-    'A2/B'         : Item(),
-    'A2/B/lambda'  : Item("This is the file 'lambda'.\n"),
-    'A2/B/E'       : Item(),
-    'A2/B/E/alpha' : Item("This is the file 'alpha'.\n"),
-    'A2/B/E/beta'  : Item("This is the file 'beta'.\n"),
-    'A2/B/F'       : Item(),
-    'A2/C'         : Item(),
-    'A2/D'         : Item(),
-    'A2/D/gamma'   : Item("This is the file 'gamma'.\n"),
-    'A2/D/G'       : Item(),
-    'A2/D/G/pi'    : Item("This is the file 'pi'.\nEdited in wc 1.\n"),
-    'A2/D/G/rho'   : Item("This is the file 'rho'.\nEdited in wc 2.\n"),
-    'A2/D/H'       : Item(),
-    'A2/D/H/chi'   : Item("This is the file 'chi'.\n"),
-    'A2/D/H/psi'   : Item("This is the file 'psi'.\n"),
-    'A2/D/H/omega' : Item("This is the file 'omega'.\n"),
-  })
-  expected_disk.tweak('A/D/G/pi',
-                      contents="This is the file 'pi'.\nEdited in wc 1.\n")
-  expected_disk.remove('A/D/G/rho',
-                       'A/D/G/tau')
+  expected_disk = state_after_leaf_edit
 
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.add({
-    'A2'           : Item(wc_rev=3),
-    'A2/mu'        : Item(wc_rev=3),
-    'A2/B'         : Item(wc_rev=3),
-    'A2/B/lambda'  : Item(wc_rev=3),
-    'A2/B/E'       : Item(wc_rev=3),
-    'A2/B/E/alpha' : Item(wc_rev=3),
-    'A2/B/E/beta'  : Item(wc_rev=3),
-    'A2/B/F'       : Item(wc_rev=3),
-    'A2/C'         : Item(wc_rev=3),
-    'A2/D'         : Item(wc_rev=3),
-    'A2/D/gamma'   : Item(wc_rev=3),
-    'A2/D/G'       : Item(wc_rev=3),
-    'A2/D/G/pi'    : Item(wc_rev=3),
-    'A2/D/H'       : Item(wc_rev=3),
-    'A2/D/H/chi'   : Item(wc_rev=3),
-    'A2/D/H/psi'   : Item(wc_rev=3),
-    'A2/D/H/omega' : Item(wc_rev=3),
-  })
-  expected_status.tweak(status='  ')
-  expected_status.tweak('A2', switched='S')
-  expected_status.tweak('A2/D/G', status='C ')
-  expected_status.tweak('A2/D/G/pi', status='D ')
-  expected_status.tweak('A/D/G/pi', wc_rev=3)
-  expected_status.remove('A/D/G/rho',
-                         'A/D/G/tau')
+  expected_status = svntest.wc.State('', {
+    ''                  : Item(status='  ', wc_rev='3'),
+    'D'                 : Item(status='C ', wc_rev='3'),
+    'D/D1'              : Item(status='D ', wc_rev='3'),
+    'D/D1/delta'        : Item(status='  ', wc_rev='3'),
+    'F'                 : Item(status='C ', wc_rev='3'),
+    'F/alpha'           : Item(status='D ', wc_rev='3'),
+    'DD'                : Item(status='C ', wc_rev='3'),
+    'DD/D1'             : Item(status='D ', wc_rev='3'),
+    'DD/D1/D2'          : Item(status='D ', wc_rev='3'),
+    'DD/D1/D2/epsilon'  : Item(status='  ', wc_rev='3'),
+    'DF'                : Item(status='C ', wc_rev='3'),
+    'DF/D1'             : Item(status='D ', wc_rev='3'),
+    'DF/D1/beta'        : Item(status='D ', wc_rev='3'),
+    'DDD'               : Item(status='C ', wc_rev='3'),
+    'DDD/D1'            : Item(status='D ', wc_rev='3'),
+    'DDD/D1/D2'         : Item(status='D ', wc_rev='3'),
+    'DDD/D1/D2/D3'      : Item(status='D ', wc_rev='3'),
+    'DDD/D1/D2/D3/zeta' : Item(status='  ', wc_rev='3'),
+    'DDF'               : Item(status='C ', wc_rev='3'),
+    'DDF/D1'            : Item(status='D ', wc_rev='3'),
+    'DDF/D1/D2'         : Item(status='D ', wc_rev='3'),
+    'DDF/D1/D2/gamma'   : Item(status='D ', wc_rev='3'),
+    })
 
-  svntest.actions.run_and_verify_switch(wc_dir, A2, 
-                                        sbox.repo_url + '/A',
+  greater_scheme += [ DeepTreesTestCase("local_tree_del_incoming_leaf_edit",
+                                        tree_del,
+                                        leaf_edit,
                                         expected_output,
                                         expected_disk,
-                                        expected_status)
+                                        expected_status) ]
+
+
+  # 1.2) local tree delete, incoming leaf delete
+
+  expected_output = svntest.wc.State('', {
+    'D'                 : Item(status='C '),
+    'D/D1'              : Item(status='D '),
+    'F'                 : Item(status='C '),
+    'F/alpha'           : Item(status='D '),
+    'DD'                : Item(status='C '),
+    'DD/D1'             : Item(status='C '),
+    'DD/D1/D2'          : Item(status='D '),
+    'DF'                : Item(status='C '),
+    'DF/D1'             : Item(status='C '),
+    'DF/D1/beta'        : Item(status='D '),
+    'DDD'               : Item(status='C '),
+    'DDD/D1'            : Item(status='C '),
+    'DDD/D1/D2'         : Item(status='C '),
+    'DDD/D1/D2/D3'      : Item(status='D '),
+    'DDF'               : Item(status='C '),
+    'DDF/D1'            : Item(status='C '),
+    'DDF/D1/D2'         : Item(status='C '),
+    'DDF/D1/D2/gamma'   : Item(status='D '),
+    })
+
+  expected_disk = state_after_leaf_del
+
+  expected_status = svntest.wc.State('', {
+    ''                  : Item(status='  ', wc_rev='3'),
+    'D'                 : Item(status='C ', wc_rev='3'),
+    'F'                 : Item(status='C ', wc_rev='3'),
+    'DD'                : Item(status='C ', wc_rev='3'),
+    'DD/D1'             : Item(status='D ', wc_rev='3'),
+    'DF'                : Item(status='C ', wc_rev='3'),
+    'DF/D1'             : Item(status='D ', wc_rev='3'),
+    'DDD'               : Item(status='C ', wc_rev='3'),
+    'DDD/D1'            : Item(status='D ', wc_rev='3'),
+    'DDD/D1/D2'         : Item(status='D ', wc_rev='3'),
+    'DDF'               : Item(status='C ', wc_rev='3'),
+    'DDF/D1'            : Item(status='D ', wc_rev='3'),
+    'DDF/D1/D2'         : Item(status='D ', wc_rev='3'),
+    })
+
+  greater_scheme += [ DeepTreesTestCase("local_tree_del_incoming_leaf_del",
+                                        tree_del,
+                                        leaf_del,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status) ]
+
+
+  # use case 2, as in notes/tree-conflicts/use-cases.txt
+  # 2.1) local leaf edit, incoming tree delete
+
+  # NOTE: When trying to test a complete deep_trees set at once, the
+  #       switch operation bails out on the first encountered error and
+  #       does not actually test any other subtrees.
+  #
+  #       In order to get reliable checks for all of the subdirs in a
+  #       deep_trees setup, each of the subdirs has to be checked on its
+  #       own.
+  
+  # Separate action functions for each subdir:
+
+  def leaf_edit_F(base):
+    F   = j(base, 'F', 'alpha')
+    svntest.main.file_append(F, "More text for file alpha.\n")
+
+  def leaf_edit_D(base):
+    D   = j(base, 'D', 'D1', 'delta')
+    svntest.main.file_append(D, "This is the file 'delta'.\n")
+    svntest.main.run_svn(None, 'add', D)
+
+  def leaf_edit_DF(base):
+    DF  = j(base, 'DF', 'D1', 'beta')
+    svntest.main.file_append(DF, "More text for file beta.\n")
+
+  def leaf_edit_DD(base):
+    DD  = j(base, 'DD', 'D1', 'D2', 'epsilon')
+    svntest.main.file_append(DD, "This is the file 'epsilon'.\n")
+    svntest.main.run_svn(None, 'add', DD)
+
+  def leaf_edit_DDF(base):
+    DDF = j(base, 'DDF', 'D1', 'D2', 'gamma')
+    svntest.main.file_append(DDF, "More text for file gamma.\n")
+
+  def leaf_edit_DDD(base):
+    DDD = j(base, 'DDD', 'D1', 'D2', 'D3', 'zeta')
+    svntest.main.file_append(DDD, "This is the file 'zeta'.\n")
+    svntest.main.run_svn(None, 'add', DDD)
+
+  def tree_del_F(base):
+    F   = j(base, 'F', 'alpha')
+    svntest.main.run_svn(None, 'rm', F)
+
+  def tree_del_D(base):
+    D   = j(base, 'D', 'D1')
+    svntest.main.run_svn(None, 'rm', D)
+
+  def tree_del_DF(base):
+    DF  = j(base, 'DF', 'D1')
+    svntest.main.run_svn(None, 'rm', DF)
+
+  def tree_del_DD(base):
+    DD  = j(base, 'DD', 'D1')
+    svntest.main.run_svn(None, 'rm', DD)
+
+  def tree_del_DDF(base):
+    DDF = j(base, 'DDF', 'D1')
+    svntest.main.run_svn(None, 'rm', DDF)
+
+  def tree_del_DDD(base):
+    DDD = j(base, 'DDD', 'D1')
+    svntest.main.run_svn(None, 'rm', DDD)
+
+  # Now, set up a distinct DeepTreesTestCase for each container dir.
+
+  error_re_string = "Won't delete locally modified directory"
+
+  expected_output = svntest.wc.State('', {
+    'F'                 : Item(status='C '),
+    'F/alpha'           : Item(status='D '),
+    })
+
+  expected_disk = svntest.actions.deep_trees_virginal_state.copy()
+  expected_disk.tweak('F/alpha', contents="This is the file 'alpha'.\nMore text for file alpha.\n")
+
+  expected_status = svntest.wc.State('', {
+    ''                  : Item(status='  ', wc_rev='3'),
+    'F'                 : Item(status='C ', wc_rev='3'),
+    'DDF'               : Item(status='  ', wc_rev='3'),
+    'DDF/D1'            : Item(status='  ', wc_rev='3'),
+    'DDF/D1/D2'         : Item(status='  ', wc_rev='3'),
+    'DDF/D1/D2/gamma'   : Item(status='  ', wc_rev='3'),
+    'D'                 : Item(status='  ', wc_rev='3'),
+    'D/D1'              : Item(status='  ', wc_rev='3'),
+    'DD'                : Item(status='  ', wc_rev='3'),
+    'DD/D1'             : Item(status='  ', wc_rev='3'),
+    'DD/D1/D2'          : Item(status='  ', wc_rev='3'),
+    'DF'                : Item(status='  ', wc_rev='3'),
+    'DF/D1'             : Item(status='  ', wc_rev='3'),
+    'DF/D1/beta'        : Item(status='  ', wc_rev='3'),
+    'DDD'               : Item(status='  ', wc_rev='3'),
+    'DDD/D1'            : Item(status='  ', wc_rev='3'),
+    'DDD/D1/D2'         : Item(status='  ', wc_rev='3'),
+    'DDD/D1/D2/D3'      : Item(status='  ', wc_rev='3'),
+    })
+
+  greater_scheme += [ DeepTreesTestCase("local_leaf_edit_incoming_tree_del_F",
+                                        leaf_edit_F,
+                                        tree_del_F,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status) ]
+
+  greater_scheme += [ DeepTreesTestCase("local_leaf_edit_incoming_tree_del_D",
+                                        leaf_edit_D,
+                                        tree_del_D,
+                                        error_re_string = error_re_string) ]
+
+  greater_scheme += [ DeepTreesTestCase("local_leaf_edit_incoming_tree_del_DF",
+                                        leaf_edit_DF,
+                                        tree_del_DF,
+                                        error_re_string = error_re_string) ]
+
+  greater_scheme += [ DeepTreesTestCase("local_leaf_edit_incoming_tree_del_DD",
+                                        leaf_edit_DD,
+                                        tree_del_DD,
+                                        error_re_string = error_re_string) ]
+
+  greater_scheme += [ DeepTreesTestCase("local_leaf_edit_incoming_tree_del_DDF",
+                                        leaf_edit_DDF,
+                                        tree_del_DDF,
+                                        error_re_string = error_re_string) ]
+
+  greater_scheme += [ DeepTreesTestCase("local_leaf_edit_incoming_tree_del_DDD",
+                                        leaf_edit_DDD,
+                                        tree_del_DDD,
+                                        error_re_string = error_re_string) ]
+
+
+  # 2.2) local leaf delete, incoming tree delete
+
+  expected_output = svntest.wc.State('', {
+    'D'                 : Item(status='C '),
+    'D/D1'              : Item(status='D '),
+    'F'                 : Item(status='C '),
+    'F/alpha'           : Item(status='D '),
+    'DD'                : Item(),
+    'DD/D1'             : Item(status='D '),
+    'DF'                : Item(),
+    'DF/D1'             : Item(status='D '),
+    'DDD'               : Item(),
+    'DDD/D1'            : Item(status='D '),
+    'DDF'               : Item(),
+    'DDF/D1'            : Item(status='D '),
+    })
+
+  expected_disk = state_after_tree_del
+
+  expected_status = svntest.wc.State('', {
+    ''                  : Item(status='  ', wc_rev='3'),
+    'D'                 : Item(status='C ', wc_rev='3'),
+    'F'                 : Item(status='C ', wc_rev='3'),
+    'DD'                : Item(status='  ', wc_rev='3'),
+    'DF'                : Item(status='  ', wc_rev='3'),
+    'DDD'               : Item(status='  ', wc_rev='3'),
+    'DDF'               : Item(status='  ', wc_rev='3'),
+    })
+
+  greater_scheme += [ DeepTreesTestCase("local_leaf_del_incoming_tree_del",
+                                        leaf_del,
+                                        tree_del,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status) ]
+
+
+  # use case 3, as in notes/tree-conflicts/use-cases.txt
+  # local tree delete, incoming tree delete
+
+  expected_output = svntest.wc.State('', {
+    'D'                 : Item(status='C '),
+    'D/D1'              : Item(status='D '),
+    'F'                 : Item(status='C '),
+    'F/alpha'           : Item(status='D '),
+    'DD'                : Item(status='C '),
+    'DD/D1'             : Item(status='D '),
+    'DF'                : Item(status='C '),
+    'DF/D1'             : Item(status='D '),
+    'DDD'               : Item(status='C '),
+    'DDD/D1'            : Item(status='D '),
+    'DDF'               : Item(status='C '),
+    'DDF/D1'            : Item(status='D '),
+  })
+
+  expected_disk = state_after_tree_del
+
+  expected_status = svntest.wc.State('', {
+    ''                  : Item(status='  ', wc_rev='3'),
+    'F'                 : Item(status='C ', wc_rev='3'),
+    'D'                 : Item(status='C ', wc_rev='3'),
+    'DF'                : Item(status='C ', wc_rev='3'),
+    'DD'                : Item(status='C ', wc_rev='3'),
+    'DDF'               : Item(status='C ', wc_rev='3'),
+    'DDD'               : Item(status='C ', wc_rev='3'),
+    })
+
+
+  greater_scheme += [ DeepTreesTestCase("local_tree_del_incoming_tree_del",
+                                        tree_del,
+                                        tree_del,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status) ]
+
+
+  # now run the whole bunch of them.
+  svntest.actions.deep_trees_run_tests_scheme_for_switch(sbox, greater_scheme)
+
 
 
 ########################################################################
@@ -2232,7 +2496,7 @@ test_list = [ None,
               switch_urls_with_spaces,
               switch_to_dir_with_peg_rev2,
               switch_to_root,
-              tree_conflicts_in_switched_files,
+              tree_conflicts_on_switch,
              ]
 
 if __name__ == '__main__':
