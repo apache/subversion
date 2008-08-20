@@ -1182,6 +1182,15 @@ typedef struct svn_wc_conflict_description_t
    * for the definition of a tree conflict victim.
    *
    * @since New in 1.6.
+   *
+   * TODO: Why isn't the path field (see top of struct definition) enough?
+   *       Do we ever actually have an svn_wc_conflict_description_t
+   *       object that has both path and victim_path set?
+   *       I suspect we originally added this as a separate field to
+   *       be on the safe side. But it may turn out that this field
+   *       is superfluous. If this field is removed, we must also
+   *       update the entry format description in libsvn_wc/tree_conflicts.h.
+   *          --stsp
    */
   const char *victim_path;
 
