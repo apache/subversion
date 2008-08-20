@@ -29,6 +29,9 @@ http://svn.collab.net/repos/svn/tags/1.5.2
   * fixed: improper ordering in 'svnlook diff' output (r32019)
   * fixed: mod_dav_svn memory leak with 'SVNPathAuthz short_circuit' (r32360)
   * fixed: duplicate svn:externals targets fail on co/up (issue #3246)
+  * fixed: 'svn merge --depth' inconsistencies (issue #2825)
+  * fixed: ra_serf test failures (1.5.x-ra_serf-backports branch)
+  * pass client capabilities to start-commit hook (issue #3255)
 
  Developer-visible changes:
 
