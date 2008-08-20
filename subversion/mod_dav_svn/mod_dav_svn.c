@@ -121,7 +121,16 @@ init_dso(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp)
      request pools are created, which is probably good enough for
      98% of cases. */
 
-  svn_dso_initialize();
+  svn_error_t *serr = svn_dso_initialize2();
+
+  if (serr)
+    {
+      ap_log_perror(APLOG_MARK, APLOG_ERR, serr->apr_err, plog,
+                    "mod_dav_svn: error calling svn_dso_initialize2: '%s'",
+                    serr->message ? serr->message : "(no more info)");
+      svn_error_clear(serr);
+      return HTTP_INTERNAL_SERVER_ERROR;
+    }
 
   return OK;
 }
