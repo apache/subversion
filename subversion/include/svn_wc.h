@@ -851,8 +851,8 @@ typedef enum svn_wc_notify_lock_state_t {
 /**
  * Structure used in the @c svn_wc_notify_func2_t function.
  *
- * @c kind, @c content_state, @c prop_state, @c tree_state and 
- * @c lock_state are from after @c action, not before.
+ * @c kind, @c content_state, @c prop_state and @c lock_state are from
+ * after @c action, not before.
  *
  * @note If @c action is @c svn_wc_notify_update, then @c path has
  * already been installed, so it is legitimate for an implementation of
