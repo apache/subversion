@@ -476,6 +476,13 @@ svn_ra_serf__setup_serf_req(serf_request_t *request,
       serf_bucket_headers_setn(hdrs_bkt, "Content-Type", content_type);
     }
 
+  /* These headers need to be sent with every request; see issue #3255
+     ("mod_dav_svn does not pass client capabilities to start-commit
+     hooks") for why. */
+  serf_bucket_headers_set(hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_DEPTH);
+  serf_bucket_headers_set(hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_MERGEINFO);
+  serf_bucket_headers_set(hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_LOG_REVPROPS);
+
   /* Setup server authorization headers */
   if (conn->session->auth_protocol)
     conn->session->auth_protocol->setup_request_func(conn, hdrs_bkt);
