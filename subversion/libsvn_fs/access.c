@@ -95,6 +95,7 @@ svn_fs_access_add_lock_token(svn_fs_access_t *access_ctx,
 }
 
 apr_hash_t *
-svn_fs__access_get_lock_tokens(svn_fs_access_t *access_ctx) {
+svn_fs__access_get_lock_tokens(svn_fs_access_t *access_ctx)
+{
   return access_ctx->lock_tokens;
 }
