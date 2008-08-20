@@ -92,11 +92,6 @@ Candidate changes for 1.5.2:
 Approved changes:
 =================
 
- * r32444, r32445
-   Fix issue #3237, relative externals may core dump.
-   Votes:
-     +1: blair, hwright, arfrever
-
  * r32467, r32470
    Fix working copy corruption which happens when copying a file
    into a directory that exists in the entries file of its parent,
