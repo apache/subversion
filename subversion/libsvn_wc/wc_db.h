@@ -36,10 +36,29 @@ extern "C" {
 #endif /* __cplusplus */
 
 /** Context data structure for interacting with the administrative data.
+ *
+ * ### KFF: 'svn_wc__db_t'?  (Two underscores.)
  */
 typedef struct svn_wc_db_t svn_wc_db_t;
 
 
+/* Enum indicating what kind of versioned object we're talking about.
+ *
+ * ### KFF: That is, my understanding is that this is *not* an enum
+ * ### indicating what kind of storage the DB is using, even though
+ * ### one might think that from its name.  Rather, the "svn_wc_db_"
+ * ### is a generic prefix, and this "_kind_t" type indicates the kind
+ * ### of something that's being stored in the DB.
+ *
+ * ### KFF: Btw, did you mean 'svn_wc__db_kind_t' etc?  (That is, two
+ * ### underscores.)
+ *
+ * ### KFF: Does this overlap too much with what svn_node_kind_t does?
+ * ### Also, does it make sense to encode 'absent' across these types,
+ * ### rather than just having a separate 'absent' flag?  In general,
+ * ### the interfaces in here give a lot of prominence to absence; I'm
+ * ### wondering why we're treating it so specially.
+ */
 typedef enum svn_wc_db_kind_t {
     svn_wc_db_kind_dir,
     svn_wc_db_kind_file,
@@ -55,6 +74,17 @@ typedef enum svn_wc_db_kind_t {
  * Open the administrative database for the working copy identified by the
  * (absolute) @a path. The (opaque) handle for interacting with the database
  * will be returned in @a *db.
+ *
+ * ### KFF: Would be good to state, here or in an introductory comment
+ * ### at the top of this file, whether subsequent 'path' parameters
+ * ### are absolute, or relative to the root at which @a *db was
+ * ### opened, or perhaps that both are acceptable.
+ * ###
+ * ### Also, suppose @a path is some subdirectory deep inside a
+ * ### working copy.  Is it okay to pass it, or do we need to pass the
+ * ### root of that working copy?  Perhaps there needs to be an output
+ * ### parameter 'const char **wc_root_path', so a person can tell if
+ * ### they opened the root or some subdir?
  *
  * The configuration options are provided by @a config, and must live at
  * least as long as the database.
@@ -77,7 +107,18 @@ svn_wc__db_open(svn_wc_db_t **db,
 
 /* ### base_add_* can also replace. should be okay? */
 
-/* ### props optional.  can children be optional? don't think so. */
+/* ### props optional.  can children be optional? don't think so.
+ * 
+ * ### KFF: IOW, the question is whether children is required to be a
+ * ### valid array, even if zero-length in the case of no children?  I
+ * ### dunno.  That's consistent, but inconvenient for callers who
+ * ### just want to add an empty directory and would like to pass NULL.
+ *
+ * ### KFF: By the way, I like the convention of using "scratch_pool"
+ * ### to indicate "pool in which temporary work may be done, but no
+ * ### results allocated (so you can feel free to clear or destroy it
+ * ### after this call)".  I presume that's what it means?
+ */
 svn_error_t *
 svn_wc__db_base_add_directory(svn_wc_db_t *db,
                               const char *path,
@@ -96,7 +137,7 @@ svn_wc__db_base_add_file(svn_wc_db_t *db,
                          svn_revnum_t revision,
                          apr_hash_t *props,
                          svn_stream_t *contents,
-                         const char *checksum,
+                         svn_checksum_t *checksum,
                          apr_pool_t *scratch_pool);
 
 
@@ -112,7 +153,7 @@ svn_error_t *
 svn_wc__db_base_set_contents(svn_wc_db_t *db,
                              const char *path,
                              svn_stream_t *contents,
-                             const char *checksum,
+                             svn_checksum_t *checksum,
                              apr_pool_t *scratch_pool);
 
 
@@ -121,12 +162,33 @@ svn_error_t *
 svn_wc__db_base_get_writable_contents(svn_stream_t **contents,
                                       svn_wc_db_t *db,
                                       const char *path,
-                                      const char *checksum,
+                                      svn_checksum_t *checksum,
                                       apr_pool_t *result_pool,
                                       apr_pool_t *scratch_pool);
 
 
-/* ### what data to keep for a symlink? props optional. */
+/* ### what data to keep for a symlink? props optional.
+ *
+ * ### KFF: This is an interesting question, because currently
+ * ### symlinks are versioned as regular files with the svn:special
+ * ### property; then the file's text contents indicate that it is a
+ * ### symlink and where that symlink points.  That's for portability:
+ * ### you can check 'em out onto a platform that doesn't support
+ * ### symlinks, and even modify the link and check it back in.  It's
+ * ### a great solution; but then the question for wc-ng is:
+ * ###
+ * ### Suppose you check out a symlink on platform X and platform Y. 
+ * ### X supports symlinks; Y does not.  Should the wc-ng storage for
+ * ### those two be the same?  I mean, on platform Y, the file is just
+ * ### going to look and behave like a regular file.  It would be sort
+ * ### of odd for the wc-ng storage for that file to be of a different
+ * ### type from all the other files.  (On the other hand, maybe it's
+ * ### weird today that the wc-1 storage for a working symlink is to
+ * ### be like a regular file (i.e., regular text-base and whatnot).
+ * ###
+ * ### I'm still feeling my way around this problem; just pointing out
+ * ### the issues.
+ */
 svn_error_t *
 svn_wc__db_base_add_symlink(svn_wc_db_t *db,
                             const char *path,
@@ -136,7 +198,17 @@ svn_wc__db_base_add_symlink(svn_wc_db_t *db,
                             apr_pool_t *scratch_pool);
 
 
-/* ### keep the revision? */
+/* ### keep the revision?
+ *
+ * ### KFF: What are the possible reasons for absence?  
+ *
+ *   - excluded (as in 'svn_depth_exclude')
+ *   - ...?  I know there's more, but I can't think of it now.
+ *
+ * ### I think it would help to list out the causes of absence;
+ * ### that'll help us think about questions like whether we need
+ * ### 'revision' or not.
+ */
 svn_error_t *
 svn_wc__db_base_add_absent_node(svn_wc_db_t *db,
                                 const char *path,
@@ -151,7 +223,10 @@ svn_wc__db_base_delete(svn_wc_db_t *db,
                        apr_pool_t *scratch_pool);
 
 
-/* ### revision is for dst_path. */
+/* ### revision is for dst_path.
+ *
+ * ### KFF: Hrm?  Do you mean src_path?
+ */
 svn_error_t *
 svn_wc__db_base_move(svn_wc_db_t *db,
                      const char *src_path,
@@ -182,6 +257,8 @@ svn_wc__db_base_get_prop(const svn_string_t **propval,
                          apr_pool_t *scratch_pool);
 
 
+/* ### KFF: hash mapping 'const char *' prop names to svn_string_t vals?
+ */
 svn_error_t *
 svn_wc__db_base_get_props(apr_hash_t **props,
                           svn_wc_db_t *db,
@@ -190,7 +267,14 @@ svn_wc__db_base_get_props(apr_hash_t **props,
                           apr_pool_t *scratch_pool);
 
 
-/* ### return some basic info for each child? e.g. kind */
+/* ### return some basic info for each child? e.g. kind
+ *
+ * ### KFF: perhaps you want an array of 'svn_dirent_t's?  Oh, but
+ * ### they don't store the names... Well, but maybe you want
+ * ### *children to be a hash anyway, not an array, so you can get the
+ * ### name->child mapping and have children able to be looked up in
+ * ### constant time.
+ */
 svn_error_t *
 svn_wc__db_base_get_children(const apr_array_header_t **children,
                              svn_wc_db_t *db,
@@ -208,6 +292,7 @@ svn_wc__db_base_get_contents(svn_stream_t **contents,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
 
+/* ### KFF: Hm, yeah, see earlier about symlink questions. */
 svn_error_t *
 svn_wc__db_base_get_symlink_target(const char **target,
                                    svn_wc_db_t *db,
