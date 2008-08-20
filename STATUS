@@ -96,7 +96,10 @@ Candidate changes for 1.5.2:
    Votes:
      +1: pburba
 
- * r32545, r32558
+Approved changes:
+=================
+
+ * r32545, r32558, r32582
    Fix some pool usage problems in the FS backend node-origin
    calculation logic.
    Justification:
@@ -104,6 +107,3 @@ Candidate changes for 1.5.2:
    Votes:
      +1: gstein (r32545 only)
      +1: cmpilato, vgeorgescu, kfogel
-
-Approved changes:
-=================
