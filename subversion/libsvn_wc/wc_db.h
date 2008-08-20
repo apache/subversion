@@ -54,7 +54,7 @@ typedef enum svn_wc_db_kind_t {
 /**
  * Open the administrative database for the working copy identified by the
  * (absolute) @a path. The (opaque) handle for interacting with the database
- * will be returned in @a db.
+ * will be returned in @a *db.
  *
  * The configuration options are provided by @a config, and must live at
  * least as long as the database.

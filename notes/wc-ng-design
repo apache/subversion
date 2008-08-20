@@ -651,13 +651,13 @@ Metadata Schemas
 BASE schema
   name         string
   kind         enum
-  checksum     string
+  checksum     string     ### string should indicate what kind of checksum?
   props        blob       ### serialized props. maybe keep unserialized?
                           ###   maybe some props should be broken out?
   children     [string]   ### someting more than array-of-string?
   cmt_rev      integer64
   cmt_date     integer64  ### is there a time type?
-  cmt_author   string     ### normalize?
+  cmt_author   string     ### normalize?  (besides utf8, what does "normalize" mean?)
 
   absent       boolean    ### really? maybe state instead, such as "omitted"?
   revision     integer64
@@ -665,6 +665,10 @@ BASE schema
   repos_url    string     ### shared, per-dir?
   repos_uuid   string     ### shared, per-dir?
   ### lock information? in this table, or a separate locks table?
+  ### KFF: in this table, I think.  It's rare to tell Subversion "Show
+  ### me everything that's locked", but it's common to say "Tell me if
+  ### this particular path [or set of paths] is locked".
+  ###
   ### depth?
 
 
@@ -688,6 +692,12 @@ WORKING schema
   conflict_wrk string
   prejfile     string
   changelist   string
+  ### KFF: With changelists, it's the opposite of locks: one
+  ### frequently says "show me all the files in changelist X"; I'm
+  ### not sure how frequently we need to say "show me all the
+  ### changelists this file is part of".  But anyway, the need to
+  ### discover all the files in changelist X implies that it might be
+  ### better to make a changelist table?
 
   ### how to represent renames?
   ### repos_url, repos_uuid: combined working copies, and/or a foreign
@@ -711,7 +721,8 @@ ACTUAL schema  (what we know about the ACTUAL tree)
 
 
 BASETEXT schema
-  checksum     string
+  checksum     string     ### KFF: how is this different from the
+                          ### checksum in the "BASE" schema above?
   present      enum       ### something like: yes, no, cached, notyet
   refcount     integer
   compressed   boolean    ### enum for various storage styles?
