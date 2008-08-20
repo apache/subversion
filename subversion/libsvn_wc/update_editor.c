@@ -1587,6 +1587,15 @@ externals_prop_changed(apr_array_header_t *propchanges)
   return NULL;
 }
 
+/* This implements the svn_iter_apr_hash_cb_t callback interface.
+ *
+ * Add a property named KEY ('const char *') to a list of properties
+ * to be deleted.  BATON is the list: an 'apr_array_header_t *'
+ * representing propchanges (the same type as found in struct dir_baton
+ * and struct file_baton).
+ *
+ * Ignore KLEN, VAL, and POOL.
+ */
 static svn_error_t *
 add_prop_deletion(void *baton, const void *key,
                   apr_ssize_t klen, void *val,
