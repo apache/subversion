@@ -32,8 +32,7 @@ Candidate changes for 1.5.2:
      commits from clients that do not support mergeinfo.
      r32538 removes duplicated headers from the neon capablity exchange request.
    Votes:
-     +1: kfogel (r32417 only)
-     +1: rhuijben, cmpilato
+     +1: rhuijben, cmpilato, kfogel
 
  * r32441
    Fix issue #3258: 8lock.t fails in non-English locale.
