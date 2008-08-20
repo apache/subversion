@@ -9,12 +9,13 @@ following mailing list threads:
 Revisions included:
   * This branch was created from 1.5.x branch at r32289 (which is the same
     revision used for creating 1.5.1 release).
-  * 30656, 30760, 31046, 31049:31053, 31117, 31240:31245, 31258:31261,
-    31288:31291, 31308, 31337, 31361, 31367, 31370, 31426:31428, 31446,
-    31449, 31513, 31514:31522, 31539, 31541:31543, 31739, 31746:31752,
-    31854, 31861, 31931, 32083, 32132, 32143:32145, 32203:32205, 32207,
-    32330, 32404
+  * r30656, r30760, r31046, r31049:31053, r31117, r31240:31245, r31258:31261,
+    r31288:31291, r31308, r31337, r31361, r31367, r31370, r31426:31428, r31446,
+    r31449, r31513, r31514:31522, r31539, r31541:31543, r31739, r31746:31752,
+    r31854, r31861, r31931, r32083, r32132, r32143:32145, r32203:32205, r32207,
+    r32330, r32404 backported from trunk via r32449
   * r32550 backported from trunk via r32561
+  * r32375:32379, r32394, r32396 backported from trunk via r32579
 
 Features:
   * Don't save plaintext passwords without prompting
@@ -28,4 +29,7 @@ Bugs related to this branch:
   * issue #3239 - client cert passphrase cache keyed by relative path, not
                   absolute path
 
-Backport Policy - All changes to this branch must come through trunk.
+Backport Policy:
+  - All changes should be merged from trunk to this branch. Do not
+    accidentally make direct changes on the branch, other than resolving
+    conflicts.
