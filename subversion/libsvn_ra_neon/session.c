@@ -792,7 +792,9 @@ exchange_capabilities(svn_ra_neon__session_t *ras, apr_pool_t *pool)
   svn_error_t *err = SVN_NO_ERROR;
 
   rar = svn_ra_neon__request_create(ras, "OPTIONS", ras->url->data, pool);
-
+  
+  /* Client capabilities are sent with every request.
+     See issue #3255 for more details. */
   err = svn_ra_neon__request_dispatch(&http_ret_code, rar,
                                       NULL, NULL, 200, 0, pool);
   if (err)
