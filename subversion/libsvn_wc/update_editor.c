@@ -208,7 +208,8 @@ struct dir_baton
      used for filtering; we have a separate wrapping editor for that. */
   svn_depth_t ambient_depth;
 
-  /* Was the directory marked as incomplete before the update? */
+  /* Was the directory marked as incomplete before the update?
+     (In other words, are we resuming an interrupted update?) */
   svn_boolean_t was_incomplete;
 
   /* The pool in which this baton itself is allocated. */
