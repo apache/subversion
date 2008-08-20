@@ -329,7 +329,11 @@ svn_wc__db_op_copy_url(svn_wc_db_t *db,
                        apr_pool_t *scratch_pool);
 
 
-/* ### props, children may be NULL */
+/* ### props, children may be NULL
+ *
+ * ### KFF: Okay, if children can be NULL here, then it should be
+ * ### able to be NULL up in svn_wc__db_base_add_directory().
+ */
 svn_error_t *
 svn_wc__db_op_add_directory(svn_wc_db_t *db,
                             const char *path,
@@ -377,12 +381,15 @@ svn_wc__db_op_set_props(svn_wc_db_t *db,
                         apr_pool_t *scratch_pool);
 
 
+/* ### KFF: This handles files, dirs, symlinks, anything else? */
 svn_error_t *
 svn_wc__db_op_delete(svn_wc_db_t *db,
                      const char *path,
                      apr_pool_t *scratch_pool);
 
 
+/* ### KFF: Would like to know behavior when dst_path already exists
+ * ### and is a) a dir or b) a non-dir. */
 svn_error_t *
 svn_wc__db_op_move(svn_wc_db_t *db,
                    const char *src_path,
@@ -412,6 +419,12 @@ svn_wc__db_op_modified(svn_wc_db_t *db,
 
 /* ### NULL may be given for OUT params. if the node has not been committed:
    ### url, repos_* will be NULL and revision will be SVN_INVALID_REVNUM
+
+   ### KFF: The position of 'db' in the parameter list is sort of
+   ### floating around (e.g., compare this func with the next one).
+   ### Would be nice to keep it consistent.  For example, it always
+   ### comes first, or always comes first after any result params, or
+   ### whatever.
 */
 svn_error_t *
 svn_wc__db_read_get_info(svn_wc_db_kind_t *kind,
@@ -442,7 +455,10 @@ svn_wc__db_read_get_props(apr_hash_t **props,
                           apr_pool_t *scratch_pool);
 
 
-/* ### return some basic info for each child? e.g. kind */
+/* ### return some basic info for each child? e.g. kind 
+ * 
+ * ### KFF: see earlier comment on svn_wc__db_base_get_children().
+ */
 svn_error_t *
 svn_wc__db_read_get_children(const apr_array_header_t **children,
                              svn_wc_db_t *db,
