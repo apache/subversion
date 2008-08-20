@@ -43,7 +43,7 @@ typedef struct svn_wc__db_t svn_wc__db_t;
  *
  * ### KFF: That is, my understanding is that this is *not* an enum
  * ### indicating what kind of storage the DB is using, even though
- * ### one might think that from its name.  Rather, the "svn_wc_db_"
+ * ### one might think that from its name.  Rather, the "svn_wc__db_"
  * ### is a generic prefix, and this "_kind_t" type indicates the kind
  * ### of something that's being stored in the DB.
  *
@@ -53,15 +53,15 @@ typedef struct svn_wc__db_t svn_wc__db_t;
  * ### the interfaces in here give a lot of prominence to absence; I'm
  * ### wondering why we're treating it so specially.
  */
-typedef enum svn_wc_db__kind_t {
-    svn_wc_db__kind_dir,
-    svn_wc_db__kind_file,
-    svn_wc_db__kind_symlink,
+typedef enum svn_wc__db_kind_t {
+    svn_wc__db_kind_dir,
+    svn_wc__db_kind_file,
+    svn_wc__db_kind_symlink,
 
-    svn_wc_db__kind_absent_dir,
-    svn_wc_db__kind_absent_file,
-    svn_wc_db__kind_absent_symlink
-} svn_wc_db__kind_t;
+    svn_wc__db_kind_absent_dir,
+    svn_wc__db_kind_absent_file,
+    svn_wc__db_kind_absent_symlink
+} svn_wc__db_kind_t;
 
 
 /* ### note conventions of "result_pool" for the pool where return results
@@ -225,7 +225,7 @@ svn_error_t *
 svn_wc__db_base_add_absent_node(svn_wc__db_t *db,
                                 const char *path,
                                 svn_revnum_t revision,
-                                svn_wc_db__kind_t kind,
+                                svn_wc__db_kind_t kind,
                                 apr_pool_t *scratch_pool);
 
 
@@ -249,7 +249,7 @@ svn_wc__db_base_move(svn_wc__db_t *db,
 
 /* ### NULL may be given for OUT params */
 svn_error_t *
-svn_wc__db_base_get_info(svn_wc_db__kind_t *kind,
+svn_wc__db_base_get_info(svn_wc__db_kind_t *kind,
                          svn_revnum_t *revision,
                          const char **url,
                          const char **repos_url,
@@ -383,7 +383,7 @@ svn_wc__db_op_add_symlink(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_op_add_absent_node(svn_wc__db_t *db,
                               const char *path,
-                              svn_wc_db__kind_t kind,
+                              svn_wc__db_kind_t kind,
                               apr_pool_t *scratch_pool);
 
 
@@ -474,7 +474,7 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
    ### whatever.
 */
 svn_error_t *
-svn_wc__db_read_info(svn_wc_db__kind_t *kind,
+svn_wc__db_read_info(svn_wc__db_kind_t *kind,
                      svn_revnum_t *revision,
                      const char **url,
                      const char **repos_url,
