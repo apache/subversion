@@ -270,7 +270,9 @@ svn_client__dry_run_deletions(void *merge_cmd_baton)
   return merge_b->dry_run_deletions;
 }
 
-/* Used to avoid spurious notifications (e.g. conflicts) from a merge
+/* Return true iff we're in dry-run mode and WCPATH would have been
+   deleted by now if we weren't in dry-run mode.
+   Used to avoid spurious notifications (e.g. conflicts) from a merge
    attempt into an existing target which would have been deleted if we
    weren't in dry_run mode (issue #2584).  Assumes that WCPATH is
    still versioned (e.g. has an associated entry). */
