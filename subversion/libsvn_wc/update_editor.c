@@ -1265,6 +1265,7 @@ do_entry_deletion(struct edit_baton *eb,
   const char *full_path = svn_path_join(eb->anchor, path, pool);
   svn_stringbuf_t *log_item = svn_stringbuf_create("", pool);
 
+  /* ### Error: here we're assuming parent_adm_access is non-null. Crashes in update_tests-15, for instance. */
   SVN_ERR(svn_wc_entry(&entry, full_path, parent_adm_access, FALSE, pool));
 
   if (parent_adm_access)
