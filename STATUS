@@ -78,7 +78,7 @@ Candidate changes for 1.5.2:
      Fixes a reproducable crash when performing dav requests via multiple
      threads at the same time (reported as issue on the SharpSvn users list).
    Votes:
-     +1: rhuijben
+     +1: rhuijben, kfogel
 
  * r32494, r32522, r32523
    Fix a bug where previous merges are incorrectly reversed leading to repeat
