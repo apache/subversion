@@ -2118,27 +2118,23 @@ def switch_to_root(sbox):
 # Note that we do not try to track renames.  The only difference from
 # the behavior of Subversion 1.4 and 1.5 is the conflicted status of the
 # parent directory.
-#
-def tree_conflicts_on_switch(sbox):
-  "tree conflicts on switch (tc use cases 1 to 3)"
 
-  # Each case is constructed and then appended to the table, which
-  # is initially empty:
-  greater_scheme = [];
+# convenience definitions
+leaf_edit = svntest.actions.deep_trees_leaf_edit
+tree_del = svntest.actions.deep_trees_tree_del
+leaf_del = svntest.actions.deep_trees_leaf_del
 
-  # convenience definitions
-  leaf_edit = svntest.actions.deep_trees_leaf_edit
-  tree_del = svntest.actions.deep_trees_tree_del
-  leaf_del = svntest.actions.deep_trees_leaf_del
+state_after_leaf_edit = svntest.actions.deep_trees_after_leaf_edit
+state_after_leaf_del = svntest.actions.deep_trees_after_leaf_del
+state_after_tree_del = svntest.actions.deep_trees_after_tree_del
 
-  state_after_leaf_edit = svntest.actions.deep_trees_after_leaf_edit
-  state_after_leaf_del = svntest.actions.deep_trees_after_leaf_del
-  state_after_tree_del = svntest.actions.deep_trees_after_tree_del
+j = os.path.join
 
-  j = os.path.join
+DeepTreesTestCase = svntest.actions.DeepTreesTestCase
 
-  DeepTreesTestCase = svntest.actions.DeepTreesTestCase
 
+def tree_conflicts_on_switch_1_1(sbox):
+  "tree conflicts on switch 1.1"
 
   # use case 1, as in notes/tree-conflicts/use-cases.txt
   # 1.1) local tree delete, incoming leaf edit
@@ -2194,13 +2190,17 @@ def tree_conflicts_on_switch(sbox):
     'DDF/D1/D2/gamma'   : Item(status='D ', wc_rev='3'),
     })
 
-  greater_scheme += [ DeepTreesTestCase("local_tree_del_incoming_leaf_edit",
-                                        tree_del,
-                                        leaf_edit,
-                                        expected_output,
-                                        expected_disk,
-                                        expected_status) ]
+  svntest.actions.deep_trees_run_tests_scheme_for_switch(sbox,
+    [ DeepTreesTestCase("local_tree_del_incoming_leaf_edit",
+                        tree_del,
+                        leaf_edit,
+                        expected_output,
+                        expected_disk,
+                        expected_status) ] )
 
+
+def tree_conflicts_on_switch_1_2(sbox):
+  "tree conflicts on switch 1.2"
 
   # 1.2) local tree delete, incoming leaf delete
 
@@ -2243,13 +2243,17 @@ def tree_conflicts_on_switch(sbox):
     'DDF/D1/D2'         : Item(status='D ', wc_rev='3'),
     })
 
-  greater_scheme += [ DeepTreesTestCase("local_tree_del_incoming_leaf_del",
-                                        tree_del,
-                                        leaf_del,
-                                        expected_output,
-                                        expected_disk,
-                                        expected_status) ]
+  svntest.actions.deep_trees_run_tests_scheme_for_switch(sbox,
+    [ DeepTreesTestCase("local_tree_del_incoming_leaf_del",
+                        tree_del,
+                        leaf_del,
+                        expected_output,
+                        expected_disk,
+                        expected_status) ] )
 
+
+def tree_conflicts_on_switch_2_1(sbox):
+  "tree conflicts on switch 2.1"
 
   # use case 2, as in notes/tree-conflicts/use-cases.txt
   # 2.1) local leaf edit, incoming tree delete
@@ -2261,6 +2265,8 @@ def tree_conflicts_on_switch(sbox):
   #       In order to get reliable checks for all of the subdirs in a
   #       deep_trees setup, each of the subdirs has to be checked on its
   #       own.
+
+  greater_scheme = []
   
   # Separate action functions for each subdir:
 
@@ -2380,6 +2386,12 @@ def tree_conflicts_on_switch(sbox):
                                         tree_del_DDD,
                                         error_re_string = error_re_string) ]
 
+  svntest.actions.deep_trees_run_tests_scheme_for_switch(sbox,
+                                                         greater_scheme)
+
+
+def tree_conflicts_on_switch_2_2(sbox):
+  "tree conflicts on switch 2.2"
 
   # 2.2) local leaf delete, incoming tree delete
 
@@ -2410,13 +2422,17 @@ def tree_conflicts_on_switch(sbox):
     'DDF'               : Item(status='  ', wc_rev='3'),
     })
 
-  greater_scheme += [ DeepTreesTestCase("local_leaf_del_incoming_tree_del",
-                                        leaf_del,
-                                        tree_del,
-                                        expected_output,
-                                        expected_disk,
-                                        expected_status) ]
+  svntest.actions.deep_trees_run_tests_scheme_for_switch(sbox,
+    [ DeepTreesTestCase("local_leaf_del_incoming_tree_del",
+                        leaf_del,
+                        tree_del,
+                        expected_output,
+                        expected_disk,
+                        expected_status) ] )
 
+
+def tree_conflicts_on_switch_3(sbox):
+  "tree conflicts on switch 3"
 
   # use case 3, as in notes/tree-conflicts/use-cases.txt
   # local tree delete, incoming tree delete
@@ -2449,16 +2465,14 @@ def tree_conflicts_on_switch(sbox):
     })
 
 
-  greater_scheme += [ DeepTreesTestCase("local_tree_del_incoming_tree_del",
-                                        tree_del,
-                                        tree_del,
-                                        expected_output,
-                                        expected_disk,
-                                        expected_status) ]
+  svntest.actions.deep_trees_run_tests_scheme_for_switch(sbox,
+    [ DeepTreesTestCase("local_tree_del_incoming_tree_del",
+                        tree_del,
+                        tree_del,
+                        expected_output,
+                        expected_disk,
+                        expected_status) ] )
 
-
-  # now run the whole bunch of them.
-  svntest.actions.deep_trees_run_tests_scheme_for_switch(sbox, greater_scheme)
 
 
 
@@ -2496,7 +2510,11 @@ test_list = [ None,
               switch_urls_with_spaces,
               switch_to_dir_with_peg_rev2,
               switch_to_root,
-              tree_conflicts_on_switch,
+              tree_conflicts_on_switch_1_1,
+              tree_conflicts_on_switch_1_2,
+              tree_conflicts_on_switch_2_1,
+              tree_conflicts_on_switch_2_2,
+              tree_conflicts_on_switch_3,
              ]
 
 if __name__ == '__main__':

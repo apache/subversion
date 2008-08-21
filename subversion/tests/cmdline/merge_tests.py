@@ -12923,30 +12923,32 @@ def tree_conflicts_and_obstructions(sbox):
 # Note that we do not try to track renames.  The only difference from
 # the behavior of Subversion 1.4 and 1.5 is the conflicted status of the
 # parent directory.
-#
-def tree_conflicts_on_merge_local_ci(sbox):
-  "tree conflicts on merge, local commit (tc 4-6)"
 
-  # Each case is constructed and then appended to the table, which
-  # is initially empty:
-  greater_scheme = [];
+# convenience definitions
+leaf_edit = svntest.actions.deep_trees_leaf_edit
+tree_del = svntest.actions.deep_trees_tree_del
+leaf_del = svntest.actions.deep_trees_leaf_del
 
-  # convenience definitions
-  leaf_edit = svntest.actions.deep_trees_leaf_edit
-  tree_del = svntest.actions.deep_trees_tree_del
-  leaf_del = svntest.actions.deep_trees_leaf_del
+state_after_leaf_edit = svntest.actions.deep_trees_after_leaf_edit
+state_after_leaf_del = svntest.actions.deep_trees_after_leaf_del
+state_after_tree_del = svntest.actions.deep_trees_after_tree_del
 
-  state_after_leaf_edit = svntest.actions.deep_trees_after_leaf_edit
-  state_after_leaf_del = svntest.actions.deep_trees_after_leaf_del
-  state_after_tree_del = svntest.actions.deep_trees_after_tree_del
+j = os.path.join
 
-  j = os.path.join
+DeepTreesTestCase = svntest.actions.DeepTreesTestCase
 
-  DeepTreesTestCase = svntest.actions.DeepTreesTestCase
+alpha_beta_gamma = svntest.wc.State('', {
+  'F/alpha'           : Item(),
+  'DF/D1/beta'        : Item(),
+  'DDF/D1/D2/gamma'   : Item(),
+  })
 
 
-  # use case 1, as in notes/tree-conflicts/use-cases.txt
-  # 1.1) local tree delete, incoming leaf edit
+def tree_conflicts_on_merge_local_ci_4_1(sbox):
+  "tree conflicts on merge, local commit 4.1"
+
+  # use case 4, as in notes/tree-conflicts/use-cases.txt
+  # 4.1) local tree delete, incoming leaf edit
 
   expected_output = svntest.wc.State('', {
     'F'                 : Item(status='C '),
@@ -12960,13 +12962,13 @@ def tree_conflicts_on_merge_local_ci(sbox):
   expected_disk = state_after_tree_del
 
   expected_status = svntest.wc.State('', {
-    ''                  : Item(status=' M', wc_rev='7'),
-    'F'                 : Item(status='C ', wc_rev='7'),
-    'D'                 : Item(status='C ', wc_rev='7'),
-    'DF'                : Item(status='C ', wc_rev='7'),
-    'DD'                : Item(status='C ', wc_rev='7'),
-    'DDF'               : Item(status='C ', wc_rev='7'),
-    'DDD'               : Item(status='C ', wc_rev='7'),
+    ''                  : Item(status=' M', wc_rev='3'),
+    'F'                 : Item(status='C ', wc_rev='3'),
+    'D'                 : Item(status='C ', wc_rev='3'),
+    'DF'                : Item(status='C ', wc_rev='3'),
+    'DD'                : Item(status='C ', wc_rev='3'),
+    'DDF'               : Item(status='C ', wc_rev='3'),
+    'DDD'               : Item(status='C ', wc_rev='3'),
     })
 
   expected_skip = svntest.wc.State('', {
@@ -12978,15 +12980,20 @@ def tree_conflicts_on_merge_local_ci(sbox):
     'DDD/D1/D2/D3/zeta' : Item(),
     })
 
-  greater_scheme += [ DeepTreesTestCase("local_tree_del_incoming_leaf_edit",
-                                        tree_del,
-                                        leaf_edit,
-                                        expected_output,
-                                        expected_disk,
-                                        expected_status,
-                                        expected_skip) ]
+  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
+    [ DeepTreesTestCase("local_tree_del_incoming_leaf_edit",
+                        tree_del,
+                        leaf_edit,
+                        expected_output,
+                        expected_disk,
+                        expected_status,
+                        expected_skip) ], True)
 
-  # 1.2) local tree delete, incoming leaf delete
+
+def tree_conflicts_on_merge_local_ci_4_2(sbox):
+  "tree conflicts on merge, local commit 4.2"
+
+  # 4.2) local tree delete, incoming leaf delete
 
   expected_output = svntest.wc.State('', {
     'F'                 : Item(status='C '),
@@ -13000,13 +13007,13 @@ def tree_conflicts_on_merge_local_ci(sbox):
   expected_disk = state_after_tree_del
 
   expected_status = svntest.wc.State('', {
-    ''                  : Item(status=' M', wc_rev='7'),
-    'F'                 : Item(status='C ', wc_rev='7'),
-    'D'                 : Item(status='C ', wc_rev='7'),
-    'DF'                : Item(status='C ', wc_rev='7'),
-    'DD'                : Item(status='C ', wc_rev='7'),
-    'DDF'               : Item(status='C ', wc_rev='7'),
-    'DDD'               : Item(status='C ', wc_rev='7'),
+    ''                  : Item(status=' M', wc_rev='3'),
+    'F'                 : Item(status='C ', wc_rev='3'),
+    'D'                 : Item(status='C ', wc_rev='3'),
+    'DF'                : Item(status='C ', wc_rev='3'),
+    'DD'                : Item(status='C ', wc_rev='3'),
+    'DDF'               : Item(status='C ', wc_rev='3'),
+    'DDD'               : Item(status='C ', wc_rev='3'),
     })
 
   expected_skip = svntest.wc.State('', {
@@ -13018,19 +13025,23 @@ def tree_conflicts_on_merge_local_ci(sbox):
     'DDD/D1/D2/D3'      : Item(),
     })
 
-  greater_scheme += [ DeepTreesTestCase("local_tree_del_incoming_leaf_del",
-                                        tree_del,
-                                        leaf_del,
-                                        expected_output,
-                                        expected_disk,
-                                        expected_status,
-                                        expected_skip) ]
+  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
+    [ DeepTreesTestCase("local_tree_del_incoming_leaf_del",
+                        tree_del,
+                        leaf_del,
+                        expected_output,
+                        expected_disk,
+                        expected_status,
+                        expected_skip) ], True)
 
 
 
 
-  # use case 2, as in notes/tree-conflicts/use-cases.txt
-  # 2.1) local leaf edit, incoming tree delete
+def tree_conflicts_on_merge_local_ci_5_1(sbox):
+  "tree conflicts on merge, local commit 5.1"
+
+  # use case 5, as in notes/tree-conflicts/use-cases.txt
+  # 5.1) local leaf edit, incoming tree delete
 
   expected_output = svntest.wc.State('', {
     'D'                 : Item(),
@@ -13066,44 +13077,48 @@ def tree_conflicts_on_merge_local_ci(sbox):
     })
 
   expected_status = svntest.wc.State('', {
-    ''                  : Item(status=' M', wc_rev='7'),
-    'D'                 : Item(status='  ', wc_rev='7'),
-    'D/D1'              : Item(status='D ', wc_rev='7'),
-    'D/D1/delta'        : Item(status='D ', wc_rev='8'),
-    'F'                 : Item(status='C ', wc_rev='7'),
-    'F/alpha'           : Item(status=' M', wc_rev='8'),
-    'DD'                : Item(status='  ', wc_rev='7'),
-    'DD/D1'             : Item(status='D ', wc_rev='7'),
-    'DD/D1/D2'          : Item(status='D ', wc_rev='7'),
-    'DD/D1/D2/epsilon'  : Item(status='D ', wc_rev='8'),
-    'DF'                : Item(status='  ', wc_rev='7'),
-    'DF/D1'             : Item(status='D ', wc_rev='7'),
-    'DF/D1/beta'        : Item(status='D ', wc_rev='8'),
-    'DDD'               : Item(status='  ', wc_rev='7'),
-    'DDD/D1'            : Item(status='D ', wc_rev='7'),
-    'DDD/D1/D2'         : Item(status='D ', wc_rev='7'),
-    'DDD/D1/D2/D3'      : Item(status='D ', wc_rev='7'),
-    'DDD/D1/D2/D3/zeta' : Item(status='D ', wc_rev='8'),
-    'DDF'               : Item(status='  ', wc_rev='7'),
-    'DDF/D1'            : Item(status='D ', wc_rev='7'),
-    'DDF/D1/D2'         : Item(status='D ', wc_rev='7'),
-    'DDF/D1/D2/gamma'   : Item(status='D ', wc_rev='8'),
+    ''                  : Item(status=' M', wc_rev='3'),
+    'D'                 : Item(status='  ', wc_rev='3'),
+    'D/D1'              : Item(status='D ', wc_rev='3'),
+    'D/D1/delta'        : Item(status='D ', wc_rev='4'),
+    'F'                 : Item(status='C ', wc_rev='3'),
+    'F/alpha'           : Item(status=' M', wc_rev='4'),
+    'DD'                : Item(status='  ', wc_rev='3'),
+    'DD/D1'             : Item(status='D ', wc_rev='3'),
+    'DD/D1/D2'          : Item(status='D ', wc_rev='3'),
+    'DD/D1/D2/epsilon'  : Item(status='D ', wc_rev='4'),
+    'DF'                : Item(status='  ', wc_rev='3'),
+    'DF/D1'             : Item(status='D ', wc_rev='3'),
+    'DF/D1/beta'        : Item(status='D ', wc_rev='4'),
+    'DDD'               : Item(status='  ', wc_rev='3'),
+    'DDD/D1'            : Item(status='D ', wc_rev='3'),
+    'DDD/D1/D2'         : Item(status='D ', wc_rev='3'),
+    'DDD/D1/D2/D3'      : Item(status='D ', wc_rev='3'),
+    'DDD/D1/D2/D3/zeta' : Item(status='D ', wc_rev='4'),
+    'DDF'               : Item(status='  ', wc_rev='3'),
+    'DDF/D1'            : Item(status='D ', wc_rev='3'),
+    'DDF/D1/D2'         : Item(status='D ', wc_rev='3'),
+    'DDF/D1/D2/gamma'   : Item(status='D ', wc_rev='4'),
     })
 
   expected_skip = svntest.wc.State('', {
     'F/alpha'           : Item(),
     })
 
-  greater_scheme += [ DeepTreesTestCase("local_leaf_edit_incoming_tree_del",
-                                        leaf_edit,
-                                        tree_del,
-                                        expected_output,
-                                        expected_disk,
-                                        expected_status,
-                                        expected_skip) ]
+  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
+    [ DeepTreesTestCase("local_leaf_edit_incoming_tree_del",
+                        leaf_edit,
+                        tree_del,
+                        expected_output,
+                        expected_disk,
+                        expected_status,
+                        expected_skip) ], True)
 
 
-  # 2.2) local leaf del, incoming tree delete
+def tree_conflicts_on_merge_local_ci_5_2(sbox):
+  "tree conflicts on merge, local commit 5.2"
+
+  # 5.2) local leaf del, incoming tree delete
 
   expected_output = svntest.wc.State('', {
     'D'                 : Item(status='C '),
@@ -13129,19 +13144,19 @@ def tree_conflicts_on_merge_local_ci(sbox):
     })
 
   expected_status = svntest.wc.State('', {
-    ''                  : Item(status=' M', wc_rev='7'),
-    'D'                 : Item(status='C ', wc_rev='7'),
-    'F'                 : Item(status='C ', wc_rev='7'),
-    'DD'                : Item(status='  ', wc_rev='7'),
-    'DD/D1'             : Item(status='D ', wc_rev='7'),
-    'DF'                : Item(status='  ', wc_rev='7'),
-    'DF/D1'             : Item(status='D ', wc_rev='7'),
-    'DDD'               : Item(status='  ', wc_rev='7'),
-    'DDD/D1'            : Item(status='D ', wc_rev='7'),
-    'DDD/D1/D2'         : Item(status='D ', wc_rev='7'),
-    'DDF'               : Item(status='  ', wc_rev='7'),
-    'DDF/D1'            : Item(status='D ', wc_rev='7'),
-    'DDF/D1/D2'         : Item(status='D ', wc_rev='7'),
+    ''                  : Item(status=' M', wc_rev='3'),
+    'D'                 : Item(status='C ', wc_rev='3'),
+    'F'                 : Item(status='C ', wc_rev='3'),
+    'DD'                : Item(status='  ', wc_rev='3'),
+    'DD/D1'             : Item(status='D ', wc_rev='3'),
+    'DF'                : Item(status='  ', wc_rev='3'),
+    'DF/D1'             : Item(status='D ', wc_rev='3'),
+    'DDD'               : Item(status='  ', wc_rev='3'),
+    'DDD/D1'            : Item(status='D ', wc_rev='3'),
+    'DDD/D1/D2'         : Item(status='D ', wc_rev='3'),
+    'DDF'               : Item(status='  ', wc_rev='3'),
+    'DDF/D1'            : Item(status='D ', wc_rev='3'),
+    'DDF/D1/D2'         : Item(status='D ', wc_rev='3'),
     })
 
   expected_skip = svntest.wc.State('', {
@@ -13149,16 +13164,20 @@ def tree_conflicts_on_merge_local_ci(sbox):
     'D/D1'              : Item(),
     })
 
-  greater_scheme += [ DeepTreesTestCase("local_leaf_del_incoming_tree_del",
-                                        leaf_del,
-                                        tree_del,
-                                        expected_output,
-                                        expected_disk,
-                                        expected_status,
-                                        expected_skip) ]
+  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
+    [ DeepTreesTestCase("local_leaf_del_incoming_tree_del",
+                        leaf_del,
+                        tree_del,
+                        expected_output,
+                        expected_disk,
+                        expected_status,
+                        expected_skip) ], True)
 
 
-  # use case 3, as in notes/tree-conflicts/use-cases.txt
+def tree_conflicts_on_merge_local_ci_6(sbox):
+  "tree conflicts on merge, local commit 6"
+
+  # use case 6, as in notes/tree-conflicts/use-cases.txt
   # local tree delete, incoming tree delete
 
   expected_output = svntest.wc.State('', {
@@ -13173,13 +13192,13 @@ def tree_conflicts_on_merge_local_ci(sbox):
   expected_disk = state_after_tree_del
 
   expected_status = svntest.wc.State('', {
-    ''                  : Item(status=' M', wc_rev='7'),
-    'D'                 : Item(status='C ', wc_rev='7'),
-    'F'                 : Item(status='C ', wc_rev='7'),
-    'DD'                : Item(status='C ', wc_rev='7'),
-    'DF'                : Item(status='C ', wc_rev='7'),
-    'DDD'               : Item(status='C ', wc_rev='7'),
-    'DDF'               : Item(status='C ', wc_rev='7'),
+    ''                  : Item(status=' M', wc_rev='3'),
+    'D'                 : Item(status='C ', wc_rev='3'),
+    'F'                 : Item(status='C ', wc_rev='3'),
+    'DD'                : Item(status='C ', wc_rev='3'),
+    'DF'                : Item(status='C ', wc_rev='3'),
+    'DDD'               : Item(status='C ', wc_rev='3'),
+    'DDF'               : Item(status='C ', wc_rev='3'),
     })
 
   expected_skip = svntest.wc.State('', {
@@ -13191,44 +13210,23 @@ def tree_conflicts_on_merge_local_ci(sbox):
     'DDF/D1'            : Item(),
     })
 
-  greater_scheme += [ DeepTreesTestCase("local_tree_del_incoming_tree_del",
-                                        tree_del,
-                                        tree_del,
-                                        expected_output,
-                                        expected_disk,
-                                        expected_status,
-                                        expected_skip) ]
+  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
+    [ DeepTreesTestCase("local_tree_del_incoming_tree_del",
+                        tree_del,
+                        tree_del,
+                        expected_output,
+                        expected_disk,
+                        expected_status,
+                        expected_skip) ], True)
 
-
-  # now run the whole bunch of them.
-  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox, greater_scheme,
-                                                        True)
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-def tree_conflicts_on_merge_no_local_ci(sbox):
-  "tree conflicts on merge, NO local commit (tc 4-6)"
+def tree_conflicts_on_merge_no_local_ci_4_1(sbox):
+  "tree conflicts on merge, NO local commit 4.1"
 
-  # Each case is constructed and then appended to the table, which
-  # is initially empty:
-  greater_scheme = [];
-
-  # convenience definitions
-  leaf_edit = svntest.actions.deep_trees_leaf_edit
-  tree_del = svntest.actions.deep_trees_tree_del
-  leaf_del = svntest.actions.deep_trees_leaf_del
-
-  state_after_leaf_edit = svntest.actions.deep_trees_after_leaf_edit
-  state_after_leaf_del = svntest.actions.deep_trees_after_leaf_del
-  state_after_tree_del = svntest.actions.deep_trees_after_tree_del
-
-  j = os.path.join
-
-  DeepTreesTestCase = svntest.actions.DeepTreesTestCase
-
-
-  # use case 1, as in notes/tree-conflicts/use-cases.txt
-  # 1.1) local tree delete, incoming leaf edit
+  # use case 4, as in notes/tree-conflicts/use-cases.txt
+  # 4.1) local tree delete, incoming leaf edit
 
   expected_output = svntest.wc.State('', {
     'F'                 : Item(status='C '),
@@ -13261,49 +13259,48 @@ def tree_conflicts_on_merge_no_local_ci(sbox):
     })
 
   expected_status = svntest.wc.State('', {
-    ''                  : Item(status=' M', wc_rev='7'),
-    'F'                 : Item(status='C ', wc_rev='7'),
-    'F/alpha'           : Item(status='D ', wc_rev='7'),
-    'DD'                : Item(status='C ', wc_rev='7'),
-    'DD/D1'             : Item(status='D ', wc_rev='7'),
-    'DD/D1/D2'          : Item(status='D ', wc_rev='7'),
+    ''                  : Item(status=' M', wc_rev='3'),
+    'F'                 : Item(status='C ', wc_rev='3'),
+    'F/alpha'           : Item(status='D ', wc_rev='3'),
+    'DD'                : Item(status='C ', wc_rev='3'),
+    'DD/D1'             : Item(status='D ', wc_rev='3'),
+    'DD/D1/D2'          : Item(status='D ', wc_rev='3'),
     'DD/D1/D2/epsilon'  : Item(status='A ', copied='+', wc_rev='-'),
-    'DF'                : Item(status='C ', wc_rev='7'),
-    'DF/D1'             : Item(status='D ', wc_rev='7'),
-    'DF/D1/beta'        : Item(status='D ', wc_rev='7'),
-    'DDD'               : Item(status='C ', wc_rev='7'),
-    'DDD/D1'            : Item(status='D ', wc_rev='7'),
-    'DDD/D1/D2'         : Item(status='D ', wc_rev='7'),
-    'DDD/D1/D2/D3'      : Item(status='D ', wc_rev='7'),
+    'DF'                : Item(status='C ', wc_rev='3'),
+    'DF/D1'             : Item(status='D ', wc_rev='3'),
+    'DF/D1/beta'        : Item(status='D ', wc_rev='3'),
+    'DDD'               : Item(status='C ', wc_rev='3'),
+    'DDD/D1'            : Item(status='D ', wc_rev='3'),
+    'DDD/D1/D2'         : Item(status='D ', wc_rev='3'),
+    'DDD/D1/D2/D3'      : Item(status='D ', wc_rev='3'),
     'DDD/D1/D2/D3/zeta' : Item(status='A ', copied='+', wc_rev='-'),
-    'DDF'               : Item(status='C ', wc_rev='7'),
-    'DDF/D1'            : Item(status='D ', wc_rev='7'),
-    'DDF/D1/D2'         : Item(status='D ', wc_rev='7'),
-    'DDF/D1/D2/gamma'   : Item(status='D ', wc_rev='7'),
-    'D'                 : Item(status='C ', wc_rev='7'),
-    'D/D1'              : Item(status='D ', wc_rev='7'),
+    'DDF'               : Item(status='C ', wc_rev='3'),
+    'DDF/D1'            : Item(status='D ', wc_rev='3'),
+    'DDF/D1/D2'         : Item(status='D ', wc_rev='3'),
+    'DDF/D1/D2/gamma'   : Item(status='D ', wc_rev='3'),
+    'D'                 : Item(status='C ', wc_rev='3'),
+    'D/D1'              : Item(status='D ', wc_rev='3'),
     'D/D1/delta'        : Item(status='A ', copied='+', wc_rev='-'),
-    })
-
-  alpha_beta_gamma = svntest.wc.State('', {
-    'F/alpha'           : Item(),
-    'DF/D1/beta'        : Item(),
-    'DDF/D1/D2/gamma'   : Item(),
     })
 
   expected_skip = alpha_beta_gamma
 
-  greater_scheme += [ DeepTreesTestCase(
-                               "local_tree_del_incoming_leaf_edit",
-                               tree_del,
-                               leaf_edit,
-                               expected_output,
-                               expected_disk,
-                               expected_status,
-                               expected_skip,
-                             ) ]
+  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
+    [ DeepTreesTestCase(
+               "local_tree_del_incoming_leaf_edit",
+               tree_del,
+               leaf_edit,
+               expected_output,
+               expected_disk,
+               expected_status,
+               expected_skip,
+             ) ], False)
 
-  # 1.2) local tree delete, incoming leaf delete
+
+def tree_conflicts_on_merge_no_local_ci_4_2(sbox):
+  "tree conflicts on merge, NO local commit 4.2"
+
+  # 4.2) local tree delete, incoming leaf delete
 
   expected_output = svntest.wc.State('', {
     'F'                 : Item(status='C '),
@@ -13333,44 +13330,49 @@ def tree_conflicts_on_merge_no_local_ci(sbox):
     })
 
   expected_status = svntest.wc.State('', {
-    ''                  : Item(status=' M', wc_rev='7'),
-    'F'                 : Item(status='C ', wc_rev='7'),
-    'F/alpha'           : Item(status='D ', wc_rev='7'),
-    'D'                 : Item(status='C ', wc_rev='7'),
-    'D/D1'              : Item(status='D ', wc_rev='7'),
-    'DF'                : Item(status='C ', wc_rev='7'),
-    'DF/D1'             : Item(status='D ', wc_rev='7'),
-    'DF/D1/beta'        : Item(status='D ', wc_rev='7'),
-    'DD'                : Item(status='C ', wc_rev='7'),
-    'DD/D1'             : Item(status='D ', wc_rev='7'),
-    'DD/D1/D2'          : Item(status='D ', wc_rev='7'),
-    'DDF'               : Item(status='C ', wc_rev='7'),
-    'DDF/D1'            : Item(status='D ', wc_rev='7'),
-    'DDF/D1/D2'         : Item(status='D ', wc_rev='7'),
-    'DDF/D1/D2/gamma'   : Item(status='D ', wc_rev='7'),
-    'DDD'               : Item(status='C ', wc_rev='7'),
-    'DDD/D1'            : Item(status='D ', wc_rev='7'),
-    'DDD/D1/D2'         : Item(status='D ', wc_rev='7'),
-    'DDD/D1/D2/D3'      : Item(status='D ', wc_rev='7'),
+    ''                  : Item(status=' M', wc_rev='3'),
+    'F'                 : Item(status='C ', wc_rev='3'),
+    'F/alpha'           : Item(status='D ', wc_rev='3'),
+    'D'                 : Item(status='C ', wc_rev='3'),
+    'D/D1'              : Item(status='D ', wc_rev='3'),
+    'DF'                : Item(status='C ', wc_rev='3'),
+    'DF/D1'             : Item(status='D ', wc_rev='3'),
+    'DF/D1/beta'        : Item(status='D ', wc_rev='3'),
+    'DD'                : Item(status='C ', wc_rev='3'),
+    'DD/D1'             : Item(status='D ', wc_rev='3'),
+    'DD/D1/D2'          : Item(status='D ', wc_rev='3'),
+    'DDF'               : Item(status='C ', wc_rev='3'),
+    'DDF/D1'            : Item(status='D ', wc_rev='3'),
+    'DDF/D1/D2'         : Item(status='D ', wc_rev='3'),
+    'DDF/D1/D2/gamma'   : Item(status='D ', wc_rev='3'),
+    'DDD'               : Item(status='C ', wc_rev='3'),
+    'DDD/D1'            : Item(status='D ', wc_rev='3'),
+    'DDD/D1/D2'         : Item(status='D ', wc_rev='3'),
+    'DDD/D1/D2/D3'      : Item(status='D ', wc_rev='3'),
     })
 
   expected_skip = alpha_beta_gamma
 
-  greater_scheme += [ DeepTreesTestCase(
-                               "local_tree_del_incoming_leaf_del",
-                               tree_del,
-                               leaf_del,
-                               expected_output,
-                               expected_disk,
-                               expected_status,
-                               expected_skip,
-                             ) ]
+  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
+    [ DeepTreesTestCase(
+               "local_tree_del_incoming_leaf_del",
+               tree_del,
+               leaf_del,
+               expected_output,
+               expected_disk,
+               expected_status,
+               expected_skip,
+             ) ], False)
 
 
 
 
-  # use case 2, as in notes/tree-conflicts/use-cases.txt
-  # 2.1) local leaf edit, incoming tree delete
+def tree_conflicts_on_merge_no_local_ci_5_1(sbox):
+  "tree conflicts on merge, NO local commit 5.1"
+
+
+  # use case 5, as in notes/tree-conflicts/use-cases.txt
+  # 5.1) local leaf edit, incoming tree delete
 
   expected_output = svntest.wc.State('', {
     'F'                 : Item(status='C '),
@@ -13379,28 +13381,28 @@ def tree_conflicts_on_merge_no_local_ci(sbox):
   expected_disk = state_after_leaf_edit
 
   expected_status = svntest.wc.State('', {
-    ''                  : Item(status=' M', wc_rev='7'),
-    'D'                 : Item(status='  ', wc_rev='7'),
-    'D/D1'              : Item(status=' M', wc_rev='7'),
+    ''                  : Item(status=' M', wc_rev='3'),
+    'D'                 : Item(status='  ', wc_rev='3'),
+    'D/D1'              : Item(status=' M', wc_rev='3'),
     'D/D1/delta'        : Item(status='A ', wc_rev='0'),
-    'F'                 : Item(status='C ', wc_rev='7'),
-    'F/alpha'           : Item(status='MM', wc_rev='7'),
-    'DD'                : Item(status='  ', wc_rev='7'),
-    'DD/D1'             : Item(status=' M', wc_rev='7'),
-    'DD/D1/D2'          : Item(status='  ', wc_rev='7'),
+    'F'                 : Item(status='C ', wc_rev='3'),
+    'F/alpha'           : Item(status='MM', wc_rev='3'),
+    'DD'                : Item(status='  ', wc_rev='3'),
+    'DD/D1'             : Item(status=' M', wc_rev='3'),
+    'DD/D1/D2'          : Item(status='  ', wc_rev='3'),
     'DD/D1/D2/epsilon'  : Item(status='A ', wc_rev='0'),
-    'DF'                : Item(status='  ', wc_rev='7'),
-    'DF/D1'             : Item(status=' M', wc_rev='7'),
-    'DF/D1/beta'        : Item(status='M ', wc_rev='7'),
-    'DDD'               : Item(status='  ', wc_rev='7'),
-    'DDD/D1'            : Item(status=' M', wc_rev='7'),
-    'DDD/D1/D2'         : Item(status='  ', wc_rev='7'),
-    'DDD/D1/D2/D3'      : Item(status='  ', wc_rev='7'),
+    'DF'                : Item(status='  ', wc_rev='3'),
+    'DF/D1'             : Item(status=' M', wc_rev='3'),
+    'DF/D1/beta'        : Item(status='M ', wc_rev='3'),
+    'DDD'               : Item(status='  ', wc_rev='3'),
+    'DDD/D1'            : Item(status=' M', wc_rev='3'),
+    'DDD/D1/D2'         : Item(status='  ', wc_rev='3'),
+    'DDD/D1/D2/D3'      : Item(status='  ', wc_rev='3'),
     'DDD/D1/D2/D3/zeta' : Item(status='A ', wc_rev='0'),
-    'DDF'               : Item(status='  ', wc_rev='7'),
-    'DDF/D1'            : Item(status=' M', wc_rev='7'),
-    'DDF/D1/D2'         : Item(status='  ', wc_rev='7'),
-    'DDF/D1/D2/gamma'   : Item(status='M ', wc_rev='7'),
+    'DDF'               : Item(status='  ', wc_rev='3'),
+    'DDF/D1'            : Item(status=' M', wc_rev='3'),
+    'DDF/D1/D2'         : Item(status='  ', wc_rev='3'),
+    'DDF/D1/D2/gamma'   : Item(status='M ', wc_rev='3'),
     })
 
   expected_skip = svntest.wc.State('', {
@@ -13412,18 +13414,22 @@ def tree_conflicts_on_merge_no_local_ci(sbox):
     'DDF/D1'            : Item(),
     })
 
-  greater_scheme += [ DeepTreesTestCase(
-                               "local_leaf_edit_incoming_tree_del",
-                               leaf_edit,
-                               tree_del,
-                               expected_output,
-                               expected_disk,
-                               expected_status,
-                               expected_skip,
-                             ) ]
+  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
+    [ DeepTreesTestCase(
+               "local_leaf_edit_incoming_tree_del",
+               leaf_edit,
+               tree_del,
+               expected_output,
+               expected_disk,
+               expected_status,
+               expected_skip,
+             ) ], False)
 
 
-  # 2.2) local leaf del, incoming tree delete
+def tree_conflicts_on_merge_no_local_ci_5_2(sbox):
+  "tree conflicts on merge, NO local commit 5.2"
+
+  # 5.2) local leaf del, incoming tree delete
 
   expected_output = svntest.wc.State('', {
     'D'                 : Item(status='C '),
@@ -13450,43 +13456,47 @@ def tree_conflicts_on_merge_no_local_ci(sbox):
     })
 
   expected_status = svntest.wc.State('', {
-    ''                  : Item(status=' M', wc_rev='7'),
-    'F'                 : Item(status='C ', wc_rev='7'),
-    'F/alpha'           : Item(status='D ', wc_rev='7'),
-    'DD'                : Item(status='  ', wc_rev='7'),
-    'DD/D1'             : Item(status='D ', wc_rev='7'),
-    'DD/D1/D2'          : Item(status='D ', wc_rev='7'),
-    'DF'                : Item(status='  ', wc_rev='7'),
-    'DF/D1'             : Item(status='D ', wc_rev='7'),
-    'DF/D1/beta'        : Item(status='D ', wc_rev='7'),
-    'DDD'               : Item(status='  ', wc_rev='7'),
-    'DDD/D1'            : Item(status='D ', wc_rev='7'),
-    'DDD/D1/D2'         : Item(status='D ', wc_rev='7'),
-    'DDD/D1/D2/D3'      : Item(status='D ', wc_rev='7'),
-    'DDF'               : Item(status='  ', wc_rev='7'),
-    'DDF/D1'            : Item(status='D ', wc_rev='7'),
-    'DDF/D1/D2'         : Item(status='D ', wc_rev='7'),
-    'DDF/D1/D2/gamma'   : Item(status='D ', wc_rev='7'),
-    'D'                 : Item(status='C ', wc_rev='7'),
-    'D/D1'              : Item(status='D ', wc_rev='7'),
+    ''                  : Item(status=' M', wc_rev='3'),
+    'F'                 : Item(status='C ', wc_rev='3'),
+    'F/alpha'           : Item(status='D ', wc_rev='3'),
+    'DD'                : Item(status='  ', wc_rev='3'),
+    'DD/D1'             : Item(status='D ', wc_rev='3'),
+    'DD/D1/D2'          : Item(status='D ', wc_rev='3'),
+    'DF'                : Item(status='  ', wc_rev='3'),
+    'DF/D1'             : Item(status='D ', wc_rev='3'),
+    'DF/D1/beta'        : Item(status='D ', wc_rev='3'),
+    'DDD'               : Item(status='  ', wc_rev='3'),
+    'DDD/D1'            : Item(status='D ', wc_rev='3'),
+    'DDD/D1/D2'         : Item(status='D ', wc_rev='3'),
+    'DDD/D1/D2/D3'      : Item(status='D ', wc_rev='3'),
+    'DDF'               : Item(status='  ', wc_rev='3'),
+    'DDF/D1'            : Item(status='D ', wc_rev='3'),
+    'DDF/D1/D2'         : Item(status='D ', wc_rev='3'),
+    'DDF/D1/D2/gamma'   : Item(status='D ', wc_rev='3'),
+    'D'                 : Item(status='C ', wc_rev='3'),
+    'D/D1'              : Item(status='D ', wc_rev='3'),
     })
 
   expected_skip = svntest.wc.State('', {
     'F/alpha'           : Item(),
     })
 
-  greater_scheme += [ DeepTreesTestCase(
-                               "local_leaf_del_incoming_tree_del",
-                               leaf_del,
-                               tree_del,
-                               expected_output,
-                               expected_disk,
-                               expected_status,
-                               expected_skip,
-                             ) ]
+  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
+    [ DeepTreesTestCase(
+               "local_leaf_del_incoming_tree_del",
+               leaf_del,
+               tree_del,
+               expected_output,
+               expected_disk,
+               expected_status,
+               expected_skip,
+             ) ], False)
 
 
-  # use case 3, as in notes/tree-conflicts/use-cases.txt
+def tree_conflicts_on_merge_no_local_ci_6(sbox):
+  "tree conflicts on merge, NO local commit 6"
+
+  # use case 6, as in notes/tree-conflicts/use-cases.txt
   # local tree delete, incoming tree delete
 
   expected_output = svntest.wc.State('', {
@@ -13513,45 +13523,42 @@ def tree_conflicts_on_merge_no_local_ci(sbox):
     })
 
   expected_status = svntest.wc.State('', {
-    ''                  : Item(status=' M', wc_rev='7'),
-    'DDF'               : Item(status='C ', wc_rev='7'),
-    'DDF/D1'            : Item(status='D ', wc_rev='7'),
-    'DDF/D1/D2'         : Item(status='D ', wc_rev='7'),
-    'DDF/D1/D2/gamma'   : Item(status='D ', wc_rev='7'),
-    'D'                 : Item(status='C ', wc_rev='7'),
-    'D/D1'              : Item(status='D ', wc_rev='7'),
-    'F'                 : Item(status='C ', wc_rev='7'),
-    'F/alpha'           : Item(status='D ', wc_rev='7'),
-    'DD'                : Item(status='C ', wc_rev='7'),
-    'DD/D1'             : Item(status='D ', wc_rev='7'),
-    'DD/D1/D2'          : Item(status='D ', wc_rev='7'),
-    'DF'                : Item(status='C ', wc_rev='7'),
-    'DF/D1'             : Item(status='D ', wc_rev='7'),
-    'DF/D1/beta'        : Item(status='D ', wc_rev='7'),
-    'DDD'               : Item(status='C ', wc_rev='7'),
-    'DDD/D1'            : Item(status='D ', wc_rev='7'),
-    'DDD/D1/D2'         : Item(status='D ', wc_rev='7'),
-    'DDD/D1/D2/D3'      : Item(status='D ', wc_rev='7'),
+    ''                  : Item(status=' M', wc_rev='3'),
+    'DDF'               : Item(status='C ', wc_rev='3'),
+    'DDF/D1'            : Item(status='D ', wc_rev='3'),
+    'DDF/D1/D2'         : Item(status='D ', wc_rev='3'),
+    'DDF/D1/D2/gamma'   : Item(status='D ', wc_rev='3'),
+    'D'                 : Item(status='C ', wc_rev='3'),
+    'D/D1'              : Item(status='D ', wc_rev='3'),
+    'F'                 : Item(status='C ', wc_rev='3'),
+    'F/alpha'           : Item(status='D ', wc_rev='3'),
+    'DD'                : Item(status='C ', wc_rev='3'),
+    'DD/D1'             : Item(status='D ', wc_rev='3'),
+    'DD/D1/D2'          : Item(status='D ', wc_rev='3'),
+    'DF'                : Item(status='C ', wc_rev='3'),
+    'DF/D1'             : Item(status='D ', wc_rev='3'),
+    'DF/D1/beta'        : Item(status='D ', wc_rev='3'),
+    'DDD'               : Item(status='C ', wc_rev='3'),
+    'DDD/D1'            : Item(status='D ', wc_rev='3'),
+    'DDD/D1/D2'         : Item(status='D ', wc_rev='3'),
+    'DDD/D1/D2/D3'      : Item(status='D ', wc_rev='3'),
     })
 
   expected_skip = svntest.wc.State('', {
     'F/alpha'           : Item(),
     })
 
-  greater_scheme += [ DeepTreesTestCase(
-                               "local_tree_del_incoming_tree_del",
-                               tree_del,
-                               tree_del,
-                               expected_output,
-                               expected_disk,
-                               expected_status,
-                               expected_skip,
-                             ) ]
+  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
+    [ DeepTreesTestCase(
+               "local_tree_del_incoming_tree_del",
+               tree_del,
+               tree_del,
+               expected_output,
+               expected_disk,
+               expected_status,
+               expected_skip,
+             ) ], False)
 
-
-  # now run the whole bunch of them.
-  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox, greater_scheme,
-                                                        False)
 
 
 
@@ -13733,8 +13740,16 @@ test_list = [ None,
               del_sched_add_hist_file,
               del_differing_file,
               tree_conflicts_and_obstructions,
-              tree_conflicts_on_merge_local_ci,
-              tree_conflicts_on_merge_no_local_ci,
+              tree_conflicts_on_merge_local_ci_4_1,
+              tree_conflicts_on_merge_local_ci_4_2,
+              tree_conflicts_on_merge_local_ci_5_1,
+              tree_conflicts_on_merge_local_ci_5_2,
+              tree_conflicts_on_merge_local_ci_6,
+              tree_conflicts_on_merge_no_local_ci_4_1,
+              tree_conflicts_on_merge_no_local_ci_4_2,
+              tree_conflicts_on_merge_no_local_ci_5_1,
+              tree_conflicts_on_merge_no_local_ci_5_2,
+              tree_conflicts_on_merge_no_local_ci_6,
              ]
 
 if __name__ == '__main__':

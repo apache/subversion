@@ -3947,25 +3947,21 @@ def restarted_update_should_delete_dir_prop(sbox):
 # edited or deleted in a deep directory structure.
 #
 # See use cases 1-3 in notes/tree-conflicts/use-cases.txt for background.
-#
-def tree_conflicts_on_update(sbox):
-  "tree conflicts on update (tc use cases 1 to 3)"
 
-  # Each case is constructed and then appended to this table, which
-  # is initially empty:
-  greater_scheme = [];
+# convenience definitions
+leaf_edit = svntest.actions.deep_trees_leaf_edit
+tree_del = svntest.actions.deep_trees_tree_del
+leaf_del = svntest.actions.deep_trees_leaf_del
 
-  # convenience definitions
-  leaf_edit = svntest.actions.deep_trees_leaf_edit
-  tree_del = svntest.actions.deep_trees_tree_del
-  leaf_del = svntest.actions.deep_trees_leaf_del
+state_after_leaf_edit = svntest.actions.deep_trees_after_leaf_edit
+state_after_leaf_del = svntest.actions.deep_trees_after_leaf_del
+state_after_tree_del = svntest.actions.deep_trees_after_tree_del
 
-  state_after_leaf_edit = svntest.actions.deep_trees_after_leaf_edit
-  state_after_leaf_del = svntest.actions.deep_trees_after_leaf_del
-  state_after_tree_del = svntest.actions.deep_trees_after_tree_del
+DeepTreesTestCase = svntest.actions.DeepTreesTestCase
 
-  DeepTreesTestCase = svntest.actions.DeepTreesTestCase
 
+def tree_conflicts_on_update_1_1(sbox):
+  "tree conflicts on update 1.1"
 
   # use case 1, as in notes/tree-conflicts/use-cases.txt
   # 1.1) local tree delete, incoming leaf edit
@@ -4018,13 +4014,17 @@ def tree_conflicts_on_update(sbox):
     'DDD/D1/D2/D3/zeta' : Item(status='  ', wc_rev='3'),
     })
 
-  greater_scheme += [ DeepTreesTestCase("local_tree_del_incoming_leaf_edit",
-                                        tree_del,
-                                        leaf_edit,
-                                        expected_output,
-                                        expected_disk,
-                                        expected_status) ]
+  svntest.actions.deep_trees_run_tests_scheme_for_update(sbox,
+    [ DeepTreesTestCase("local_tree_del_incoming_leaf_edit",
+                        tree_del,
+                        leaf_edit,
+                        expected_output,
+                        expected_disk,
+                        expected_status) ] )
 
+
+def tree_conflicts_on_update_1_2(sbox):
+  "tree conflicts on update 1.2"
 
   # 1.2) local tree delete, incoming leaf delete
 
@@ -4067,13 +4067,18 @@ def tree_conflicts_on_update(sbox):
     'DDD/D1/D2'         : Item(status='D ', wc_rev='3'),
     })
 
-  greater_scheme += [ DeepTreesTestCase("local_tree_del_incoming_leaf_del",
-                                        tree_del,
-                                        leaf_del,
-                                        expected_output,
-                                        expected_disk,
-                                        expected_status) ]
+  svntest.actions.deep_trees_run_tests_scheme_for_update(sbox,
+    [ DeepTreesTestCase("local_tree_del_incoming_leaf_del",
+                        tree_del,
+                        leaf_del,
+                        expected_output,
+                        expected_disk,
+                        expected_status) ] )
 
+
+
+def tree_conflicts_on_update_2_1(sbox):
+  "tree conflicts on update 2.1"
 
   # use case 2, as in notes/tree-conflicts/use-cases.txt
   # 2.1) local leaf edit, incoming tree delete
@@ -4100,13 +4105,18 @@ def tree_conflicts_on_update(sbox):
     'DDD'               : Item(status='  ', wc_rev='3'),
     })
 
-  greater_scheme += [ DeepTreesTestCase("local_leaf_edit_incoming_tree_del",
-                                        leaf_edit,
-                                        tree_del,
-                                        expected_output,
-                                        expected_disk,
-                                        expected_status) ]
+  svntest.actions.deep_trees_run_tests_scheme_for_update(sbox,
+    [ DeepTreesTestCase("local_leaf_edit_incoming_tree_del",
+                        leaf_edit,
+                        tree_del,
+                        expected_output,
+                        expected_disk,
+                        expected_status) ] )
 
+
+
+def tree_conflicts_on_update_2_2(sbox):
+  "tree conflicts on update 2.2"
 
   # 2.2) local leaf delete, incoming tree delete
 
@@ -4137,13 +4147,18 @@ def tree_conflicts_on_update(sbox):
     'D'                 : Item(status='C ', wc_rev='3'),
     })
 
-  greater_scheme += [ DeepTreesTestCase("local_leaf_del_incoming_tree_del",
-                                        leaf_del,
-                                        tree_del,
-                                        expected_output,
-                                        expected_disk,
-                                        expected_status) ]
+  svntest.actions.deep_trees_run_tests_scheme_for_update(sbox,
+    [ DeepTreesTestCase("local_leaf_del_incoming_tree_del",
+                        leaf_del,
+                        tree_del,
+                        expected_output,
+                        expected_disk,
+                        expected_status) ] )
 
+
+
+def tree_conflicts_on_update_3(sbox):
+  "tree conflicts on update 3"
 
   # use case 3, as in notes/tree-conflicts/use-cases.txt
   # local tree delete, incoming tree delete
@@ -4175,16 +4190,13 @@ def tree_conflicts_on_update(sbox):
     'DDD'               : Item(status='C ', wc_rev='3'),
     })
 
-  greater_scheme += [ DeepTreesTestCase("local_tree_del_incoming_tree_del",
-                                        tree_del,
-                                        tree_del,
-                                        expected_output,
-                                        expected_disk,
-                                        expected_status) ]
-
-
-  # now run the whole bunch of them.
-  svntest.actions.deep_trees_run_tests_scheme_for_update(sbox, greater_scheme)
+  svntest.actions.deep_trees_run_tests_scheme_for_update(sbox,
+    [ DeepTreesTestCase("local_tree_del_incoming_tree_del",
+                        tree_del,
+                        tree_del,
+                        expected_output,
+                        expected_disk,
+                        expected_status) ] )
 
 
 
@@ -4242,7 +4254,11 @@ test_list = [ None,
               eof_in_interactive_conflict_resolver,
               update_uuid_changed,
               XFail(restarted_update_should_delete_dir_prop),
-              tree_conflicts_on_update,
+              tree_conflicts_on_update_1_1,
+              tree_conflicts_on_update_1_2,
+              tree_conflicts_on_update_2_1,
+              tree_conflicts_on_update_2_2,
+              tree_conflicts_on_update_3,
              ]
 
 if __name__ == '__main__':
