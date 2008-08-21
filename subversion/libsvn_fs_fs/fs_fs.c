@@ -1645,24 +1645,7 @@ read_rep_offsets(representation_t **rep_p,
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Malformed text rep offset line in node-rev"));
 
-  /* Parse the hex MD5 hash into digest form. */
-  for (i = 0; i < APR_MD5_DIGESTSIZE; i++)
-    {
-      if ((! isxdigit(str[i * 2])) || (! isxdigit(str[i * 2 + 1])))
-        return svn_error_create
-          (SVN_ERR_FS_CORRUPT, NULL,
-           _("Malformed text rep offset line in node-rev"));
-
-      str[i * 2] = tolower(str[i * 2]);
-      rep->checksum[i] = (str[i * 2] -
-                          ((str[i * 2] <= '9') ? '0' : ('a' - 10))) << 4;
-
-      str[i * 2 + 1] = tolower(str[i * 2 + 1]);
-      rep->checksum[i] |= (str[i * 2 + 1] -
-                           ((str[i * 2 + 1] <= '9') ? '0' : ('a' - 10)));
-    }
-
-  return SVN_NO_ERROR;
+  return svn_checksum_parse_hex(&rep->checksum, svn_checksum_md5, str, pool);
 }
 
 /* See svn_fs_fs__get_node_revision, which wraps this and adds another
@@ -1879,8 +1862,8 @@ representation_string(representation_t *rep,
                         " %" SVN_FILESIZE_T_FMT " %s",
                         rep->revision, rep->offset, rep->size,
                         rep->expanded_size,
-                        svn_md5_digest_to_cstring_display(rep->checksum,
-                                                          pool));
+                        svn_checksum_to_cstring_display(rep->checksum,
+                                                        pool));
 }
 
 
@@ -2447,14 +2430,14 @@ struct rep_read_baton
   apr_size_t buf_len;
 
   /* An MD5 context for summing the data read in order to verify it. */
-  struct apr_md5_ctx_t md5_context;
+  svn_checksum_ctx_t *checksum_ctx;
   svn_boolean_t checksum_finalized;
 
   /* The stored checksum of the representation we are reading, its
      length, and the amount we've read so far.  Some of this
      information is redundant with rs_list and src_state, but it's
      convenient for the checksumming code to have it here. */
-  unsigned char checksum[APR_MD5_DIGESTSIZE];
+  svn_checksum_t *checksum;
   svn_filesize_t len;
   svn_filesize_t off;
 
@@ -2490,9 +2473,9 @@ rep_read_get_baton(struct rep_read_baton **rb_p,
   b->fs = fs;
   b->chunk_index = 0;
   b->buf = NULL;
-  apr_md5_init(&(b->md5_context));
+  b->checksum_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
   b->checksum_finalized = FALSE;
-  memcpy(b->checksum, rep->checksum, sizeof(b->checksum));
+  b->checksum = svn_checksum_dup(rep->checksum, pool);
   b->len = rep->expanded_size;
   b->off = 0;
   b->fulltext_cache_key = fulltext_cache_key;
@@ -2770,22 +2753,22 @@ rep_read_contents(void *baton,
      twice. */
   if (!rb->checksum_finalized)
     {
-      apr_md5_update(&rb->md5_context, buf, *len);
+      SVN_ERR(svn_checksum_update(rb->checksum_ctx, buf, *len));
       rb->off += *len;
       if (rb->off == rb->len)
         {
-          unsigned char checksum[APR_MD5_DIGESTSIZE];
+          svn_checksum_t *checksum;
 
           rb->checksum_finalized = TRUE;
-          apr_md5_final(checksum, &rb->md5_context);
-          if (! svn_md5_digests_match(checksum, rb->checksum))
+          svn_checksum_final(rb->checksum_ctx, &checksum, rb->pool);
+          if (!svn_checksum_match(checksum, rb->checksum))
             return svn_error_createf
               (SVN_ERR_FS_CORRUPT, NULL,
                _("Checksum mismatch while reading representation:\n"
                  "   expected:  %s\n"
                  "     actual:  %s\n"),
-               svn_md5_digest_to_cstring_display(rb->checksum, rb->pool),
-               svn_md5_digest_to_cstring_display(checksum, rb->pool));
+               svn_checksum_to_cstring_display(rb->checksum, rb->pool),
+               svn_checksum_to_cstring_display(checksum, rb->pool));
         }
     }
 
@@ -2877,7 +2860,7 @@ svn_fs_fs__get_contents(svn_stream_t **contents_p,
 struct delta_read_baton
 {
   struct rep_state *rs;
-  unsigned char checksum[APR_MD5_DIGESTSIZE];
+  svn_checksum_t *checksum;
 };
 
 /* This implements the svn_txdelta_next_window_fn_t interface. */
@@ -2904,7 +2887,10 @@ delta_read_md5_digest(void *baton)
 {
   struct delta_read_baton *drb = baton;
 
-  return drb->checksum;
+  if (drb->checksum->kind == svn_checksum_md5)
+    return drb->checksum->digest;
+  else
+    return NULL;
 }
 
 svn_error_t *
@@ -2935,8 +2921,7 @@ svn_fs_fs__get_file_delta_stream(svn_txdelta_stream_t **stream_p,
           /* Create the delta read baton. */
           struct delta_read_baton *drb = apr_pcalloc(pool, sizeof(*drb));
           drb->rs = rep_state;
-          memcpy(drb->checksum, target->data_rep->checksum,
-                 sizeof(drb->checksum));
+          drb->checksum = svn_checksum_dup(target->data_rep->checksum, pool);
           *stream_p = svn_txdelta_stream_create(drb, delta_read_next_window,
                                                 delta_read_md5_digest, pool);
           return SVN_NO_ERROR;
@@ -3239,14 +3224,14 @@ svn_fs_fs__noderev_same_rep_key(representation_t *a,
 }
 
 svn_error_t *
-svn_fs_fs__file_checksum(unsigned char digest[],
+svn_fs_fs__file_checksum(svn_checksum_t **checksum,
                          node_revision_t *noderev,
                          apr_pool_t *pool)
 {
   if (noderev->data_rep)
-    memcpy(digest, noderev->data_rep->checksum, APR_MD5_DIGESTSIZE);
+    *checksum = svn_checksum_dup(noderev->data_rep->checksum, pool);
   else
-    memset(digest, 0, APR_MD5_DIGESTSIZE);
+    *checksum = NULL;
 
   return SVN_NO_ERROR;
 }
@@ -3263,6 +3248,7 @@ svn_fs_fs__rep_copy(representation_t *rep,
   rep_new = apr_pcalloc(pool, sizeof(*rep_new));
 
   memcpy(rep_new, rep, sizeof(*rep_new));
+  rep_new->checksum = svn_checksum_dup(rep->checksum, pool);
 
   return rep_new;
 }
@@ -4437,7 +4423,7 @@ struct rep_write_baton
      writing to it. */
   void *lockcookie;
 
-  struct apr_md5_ctx_t md5_context;
+  svn_checksum_ctx_t *checksum_ctx;
 
   apr_pool_t *pool;
 
@@ -4454,7 +4440,7 @@ rep_write_contents(void *baton,
 {
   struct rep_write_baton *b = baton;
 
-  apr_md5_update(&b->md5_context, data, *len);
+  SVN_ERR(svn_checksum_update(b->checksum_ctx, data, *len));
   b->rep_size += *len;
 
   /* If we are writing a delta, use that stream. */
@@ -4532,7 +4518,7 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
 
   b = apr_pcalloc(pool, sizeof(*b));
 
-  apr_md5_init(&(b->md5_context));
+  b->checksum_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
 
   b->fs = fs;
   b->parent_pool = pool;
@@ -4612,8 +4598,8 @@ rep_write_contents_close(void *baton)
   rep->txn_id = svn_fs_fs__id_txn_id(b->noderev->id);
   rep->revision = SVN_INVALID_REVNUM;
 
-  /* Finalize the MD5 checksum. */
-  apr_md5_final(rep->checksum, &b->md5_context);
+  /* Finalize the checksum. */
+  svn_checksum_final(b->checksum_ctx, &rep->checksum, b->parent_pool);
 
   /* Write out our cosmetic end marker. */
   SVN_ERR(svn_stream_printf(b->rep_stream, b->pool, "ENDREP\n"));
@@ -4775,7 +4761,7 @@ struct write_hash_baton
 
   apr_size_t size;
 
-  struct apr_md5_ctx_t md5_context;
+  svn_checksum_ctx_t *checksum_ctx;
 };
 
 /* The handler for the write_hash_rep stream.  BATON is a
@@ -4788,7 +4774,7 @@ write_hash_handler(void *baton,
 {
   struct write_hash_baton *whb = baton;
 
-  apr_md5_update(&whb->md5_context, data, *len);
+  SVN_ERR(svn_checksum_update(whb->checksum_ctx, data, *len));
 
   SVN_ERR(svn_stream_write(whb->stream, data, len));
   whb->size += *len;
@@ -4801,7 +4787,7 @@ write_hash_handler(void *baton,
    md5 digest in CHECKSUM.  Perform temporary allocations in POOL. */
 static svn_error_t *
 write_hash_rep(svn_filesize_t *size,
-               unsigned char checksum[APR_MD5_DIGESTSIZE],
+               svn_checksum_t **checksum,
                apr_file_t *file,
                apr_hash_t *hash,
                apr_pool_t *pool)
@@ -4813,7 +4799,7 @@ write_hash_rep(svn_filesize_t *size,
 
   whb->stream = svn_stream_from_aprfile(file, pool);
   whb->size = 0;
-  apr_md5_init(&(whb->md5_context));
+  whb->checksum_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
 
   stream = svn_stream_create(whb, pool);
   svn_stream_set_write(stream, write_hash_handler);
@@ -4823,7 +4809,7 @@ write_hash_rep(svn_filesize_t *size,
   SVN_ERR(svn_hash_write2(hash, stream, SVN_HASH_TERMINATOR, pool));
 
   /* Store the results. */
-  apr_md5_final(checksum, &whb->md5_context);
+  svn_checksum_final(whb->checksum_ctx, checksum, pool);
   *size = whb->size;
 
   SVN_ERR(svn_stream_printf(whb->stream, pool, "ENDREP\n"));
@@ -4898,7 +4884,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
           noderev->data_rep->revision = rev;
           SVN_ERR(get_file_offset(&noderev->data_rep->offset, file, pool));
           SVN_ERR(write_hash_rep(&noderev->data_rep->size,
-                                 noderev->data_rep->checksum, file,
+                                 &noderev->data_rep->checksum, file,
                                  str_entries, pool));
           noderev->data_rep->expanded_size = noderev->data_rep->size;
         }
@@ -4924,7 +4910,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
       SVN_ERR(svn_fs_fs__get_proplist(&proplist, fs, noderev, pool));
       SVN_ERR(get_file_offset(&noderev->prop_rep->offset, file, pool));
       SVN_ERR(write_hash_rep(&noderev->prop_rep->size,
-                             noderev->prop_rep->checksum, file,
+                             &noderev->prop_rep->checksum, file,
                              proplist, pool));
 
       noderev->prop_rep->txn_id = NULL;

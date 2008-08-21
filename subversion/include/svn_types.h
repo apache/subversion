@@ -30,6 +30,7 @@
 #include <apr_hash.h>
 #include <apr_tables.h>
 #include <apr_time.h>
+#include <apr_sha1.h>
 
 #ifdef __cplusplus
 extern "C" {

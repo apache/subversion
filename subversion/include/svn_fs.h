@@ -471,11 +471,24 @@ svn_fs_access_get_username(const char **username,
                            svn_fs_access_t *access_ctx);
 
 
-/** Push a lock-token @a token into the context @a access_ctx.  The
- * context remembers all tokens it receives, and makes them available
- * to fs functions.  The token is not duplicated into @a access_ctx's
- * pool;  make sure the token's lifetime is at least as long as @a
- * access_ctx. */
+/** Push a lock-token @a token associated with path @path into the
+ * context @a access_ctx.  The context remembers all tokens it
+ * receives, and makes them available to fs functions.  The token and
+ * path are not duplicated into @a access_ctx's pool; make sure the
+ * token's lifetime is at least as long as @a access_ctx.
+ *
+ * @since New in 1.6. */
+
+svn_error_t *
+svn_fs_access_add_lock_token2(svn_fs_access_t *access_ctx,
+                              const char *path,
+                              const char *token);
+/**
+ * Same as svn_fs_access_add_lock_token2(), but with @a path set to value 1.
+ *
+ * @deprecated Provided for backward compatibility with the 1.1 API.
+ */
+
 svn_error_t *
 svn_fs_access_add_lock_token(svn_fs_access_t *access_ctx,
                              const char *token);
@@ -1491,14 +1504,14 @@ svn_fs_file_length(svn_filesize_t *length_p,
                    apr_pool_t *pool);
 
 
-/** Put the MD5 checksum of file @a path into @a digest, which points
- * to @c APR_MD5_DIGESTSIZE bytes of storage.  Use @a pool only for temporary
- * allocations.
+/** Set @a *checksum to the checksum of type @a kind for the file @a path.
+ * @a *checksum will be allocated out of @a pool, which will also be used
+ * for temporary allocations.
  *
- * If the filesystem does not have a prerecorded checksum for @a path,
- * do not calculate a checksum dynamically, just put all 0's into @a
- * digest.  (By convention, the all-zero checksum is considered to
- * match any checksum.)
+ * If the filesystem does not have a prerecorded checksum of @a kind for
+ * @a path, and @a force is not TRUE, do not calculate a checksum
+ * dynamically, just put NULL into @a checksum.  (By convention, the NULL
+ * checksum is considered to match any checksum.)
  *
  * Notes:
  *
@@ -1521,6 +1534,23 @@ svn_fs_file_length(svn_filesize_t *length_p,
  * Internally, of course, the filesystem checksums everything, because
  * it has access to the lowest level storage forms: strings behind
  * representations.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_fs_file_checksum(svn_checksum_t **checksum,
+                     svn_checksum_kind_t kind,
+                     svn_fs_root_t *root,
+                     const char *path,
+                     svn_boolean_t force,
+                     apr_pool_t *pool);
+
+/**
+ * Same as svn_fs_file_checksum(), only always put the MD5 checksum into of
+ * file @path into @a digest, which should point to @c APR_MD5_DIGESTSIZE bytes
+ * of storage.  If the checksum doesn't exist, put all 0's into @a digest.
+ *
+ * @deprecated Provided for backward compatibility with the 1.5 API.
  */
 svn_error_t *
 svn_fs_file_md5_checksum(unsigned char digest[],
@@ -1794,7 +1824,8 @@ svn_fs_set_uuid(svn_fs_t *fs,
  * string by the client), and is required to make further use of the
  * lock (including removal of the lock.)  A lock-token can also be
  * queried to return a svn_lock_t structure that describes the details
- * of the lock.
+ * of the lock.  lock-tokens must not contain any newline character,
+ * mainly due to the serialization for tokens for pre-commit hook.
  *
  * Locks are not secret; anyone can view existing locks in a
  * filesystem.  Locks are not omnipotent: they can broken and stolen
