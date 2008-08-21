@@ -1084,12 +1084,9 @@ def run_and_verify_unquiet_status(wc_dir_name, output_tree,
   actual = tree.build_tree_from_status (output)
 
   # Verify actual output against expected output.
-  if (singleton_handler_a or singleton_handler_b):
-    tree.compare_trees ("output", actual, output_tree,
-                        singleton_handler_a, a_baton,
-                        singleton_handler_b, b_baton)
-  else:
-    tree.compare_trees ("output", actual, output_tree)
+  tree.compare_trees ("output", actual, output_tree,
+                      singleton_handler_a, a_baton,
+                      singleton_handler_b, b_baton)
 
 def run_and_verify_diff_summarize_xml(error_re_string = [],
                                       expected_prefix = None,

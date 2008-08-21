@@ -183,7 +183,7 @@ class SVNTreeNode:
 
 
   def pprint(self, stream = sys.stdout):
-    "Pretty-print the meta data for this node."
+    "Pretty-print the meta data for this node to STREAM."
     print >> stream, " * Node name:  ", self.name
     print >> stream, "    Path:      ", self.path
     mime_type = self.props.get("svn:mime-type")
@@ -544,7 +544,8 @@ def compare_trees(label,
 # Visually show a tree's structure
 
 def dump_tree(n,indent=""):
-  "Print out a nice representation of the tree's structure."
+  """Print out a nice representation of the structure of the tree in
+  the SVNTreeNode N. Prefix each line with the string INDENT."""
 
   # Code partially stolen from Dave Beazley
   if n.children is None:
