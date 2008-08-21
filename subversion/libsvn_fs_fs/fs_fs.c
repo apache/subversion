@@ -2429,7 +2429,7 @@ struct rep_read_baton
   apr_size_t buf_pos;
   apr_size_t buf_len;
 
-  /* An MD5 context for summing the data read in order to verify it. */
+  /* A checksum context for summing the data read in order to verify it. */
   svn_checksum_ctx_t *checksum_ctx;
   svn_boolean_t checksum_finalized;
 
