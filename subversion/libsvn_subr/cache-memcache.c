@@ -54,8 +54,8 @@ typedef struct {
 
 
   /* Used to marshal values in and out of the cache. */
-  svn_cache_serialize_func_t *serialize_func;
-  svn_cache_deserialize_func_t *deserialize_func;
+  svn_cache_serialize_func_t serialize_func;
+  svn_cache_deserialize_func_t deserialize_func;
 } memcache_t;
 
 /* The wrapper around apr_memcache_t. */
@@ -227,8 +227,8 @@ static svn_cache__vtable_t memcache_vtable = {
 svn_error_t *
 svn_cache_create_memcache(svn_cache_t **cache_p,
                           svn_memcache_t *memcache,
-                          svn_cache_serialize_func_t *serialize_func,
-                          svn_cache_deserialize_func_t *deserialize_func,
+                          svn_cache_serialize_func_t serialize_func,
+                          svn_cache_deserialize_func_t deserialize_func,
                           apr_ssize_t klen,
                           const char *prefix,
                           apr_pool_t *pool)
