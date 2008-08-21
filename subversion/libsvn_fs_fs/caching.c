@@ -129,7 +129,7 @@ read_config(svn_memcache_t **memcache_p,
 }
 
 
-static svn_cache_error_handler_t warn_on_cache_errors;
+/* Implements svn_cache_error_handler_t */
 static svn_error_t *
 warn_on_cache_errors(svn_error_t *err,
                      void *baton,
