@@ -1315,19 +1315,28 @@ txn_body_change_node_prop(void *baton,
     }
   else
     {
-      svn_mergeinfo_t deleted, orig_mergeinfo, new_mergeinfo;
       if (args->value && (strcmp(args->name, SVN_PROP_MERGEINFO) == 0))
         {
           svn_string_t *orig_mergeinfo_str = apr_hash_get(proplist,
                                                           SVN_PROP_MERGEINFO,
                                                           APR_HASH_KEY_STRING);
-          SVN_ERR(svn_mergeinfo_parse(&orig_mergeinfo,
-                                      orig_mergeinfo_str->data, trail->pool));
-          SVN_ERR(svn_mergeinfo_parse(&new_mergeinfo,
-                                      args->value->data, trail->pool));
-          SVN_ERR(svn_mergeinfo_diff(&deleted, &mergeinfo_added,
-                                     orig_mergeinfo, new_mergeinfo,
-                                     TRUE, trail->pool));
+          if (orig_mergeinfo_str)
+            {
+              svn_mergeinfo_t deleted, orig_mergeinfo, new_mergeinfo;
+              SVN_ERR(svn_mergeinfo_parse(&orig_mergeinfo,
+                                          orig_mergeinfo_str->data,
+                                          trail->pool));
+              SVN_ERR(svn_mergeinfo_parse(&new_mergeinfo,
+                                          args->value->data, trail->pool));
+              SVN_ERR(svn_mergeinfo_diff(&deleted, &mergeinfo_added,
+                                         orig_mergeinfo, new_mergeinfo,
+                                         TRUE, trail->pool));
+            }
+          else
+            {
+              SVN_ERR(svn_mergeinfo_parse(&mergeinfo_added,
+                                          args->value->data, trail->pool));
+            }
         }
     }
 
