@@ -24,7 +24,7 @@
 #include "svn_time.h"
 #include "svn_string.h"
 #include "svn_fs.h"
-#include "svn_md5.h"
+#include "svn_checksum.h"
 #include "svn_mergeinfo.h"
 
 #include "../svn_test.h"
@@ -4383,8 +4383,7 @@ verify_checksum(const char **msg,
   svn_fs_txn_t *txn;
   svn_fs_root_t *txn_root;
   svn_stringbuf_t *str;
-  unsigned char expected_digest[APR_MD5_DIGESTSIZE];
-  unsigned char actual_digest[APR_MD5_DIGESTSIZE];
+  svn_checksum_t *expected_checksum, *actual_checksum;
 
   /* Write a file, compare the repository's idea of its checksum
      against our idea of its checksum.  They should be the same. */
@@ -4395,7 +4394,7 @@ verify_checksum(const char **msg,
     return SVN_NO_ERROR;
 
   str = svn_stringbuf_create("My text editor charges me rent.", pool);
-  apr_md5(expected_digest, str->data, str->len);
+  svn_checksum(&expected_checksum, svn_checksum_md5, str->data, str->len, pool);
 
   SVN_ERR(svn_test__create_fs(&fs, "test-repo-verify-checksum",
                               opts, pool));
@@ -4403,16 +4402,17 @@ verify_checksum(const char **msg,
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
   SVN_ERR(svn_fs_make_file(txn_root, "fact", pool));
   SVN_ERR(svn_test__set_file_contents(txn_root, "fact", str->data, pool));
-  SVN_ERR(svn_fs_file_md5_checksum(actual_digest, txn_root, "fact", pool));
+  SVN_ERR(svn_fs_file_checksum(actual_checksum, svn_checksum_md5, txn_root,
+                               "fact", TRUE, pool));
 
-  if (memcmp(expected_digest, actual_digest, APR_MD5_DIGESTSIZE) != 0)
+  if (!svn_checksum_match(expected_checksum, actual_checksum))
     return svn_error_createf
       (SVN_ERR_FS_GENERAL, NULL,
        "verify-checksum: checksum mismatch:\n"
        "   expected:  %s\n"
        "     actual:  %s\n",
-       svn_md5_digest_to_cstring(expected_digest, pool),
-       svn_md5_digest_to_cstring(actual_digest, pool));
+       svn_checksum_to_cstring(expected_checksum, pool),
+       svn_checksum_to_cstring(actual_checksum, pool));
 
   return SVN_NO_ERROR;
 }
