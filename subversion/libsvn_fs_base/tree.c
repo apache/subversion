@@ -1309,13 +1309,14 @@ txn_body_change_node_prop(void *baton,
   if (! proplist)
     {
       proplist = apr_hash_make(trail->pool);
-      SVN_ERR(svn_mergeinfo_parse(&mergeinfo_added,
-                                  args->value->data, trail->pool));
+      if (strcmp(args->name, SVN_PROP_MERGEINFO) == 0)
+        SVN_ERR(svn_mergeinfo_parse(&mergeinfo_added,
+                                    args->value->data, trail->pool));
     }
   else
     {
       svn_mergeinfo_t deleted, orig_mergeinfo, new_mergeinfo;
-      if (args->value)
+      if (args->value && (strcmp(args->name, SVN_PROP_MERGEINFO) == 0))
         {
           svn_string_t *orig_mergeinfo_str = apr_hash_get(proplist,
                                                           SVN_PROP_MERGEINFO,
