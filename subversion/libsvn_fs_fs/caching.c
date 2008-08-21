@@ -29,7 +29,7 @@
 
 
 /** Caching SVN_FS_ID_T values. **/
-static svn_cache_dup_func_t dup_id;
+/* Implements svn_cache_dup_func_t */
 static svn_error_t *
 dup_id(void **out,
        void *in,
@@ -40,7 +40,7 @@ dup_id(void **out,
   return SVN_NO_ERROR;
 }
 
-static svn_cache_serialize_func_t serialize_id;
+/* Implements svn_cache_serialize_func_t */
 static svn_error_t *
 serialize_id(char **data,
              apr_size_t *data_len,
@@ -56,7 +56,7 @@ serialize_id(char **data,
 }
 
 
-static svn_cache_deserialize_func_t deserialize_id;
+/* Implements svn_cache_deserialize_func_t */
 static svn_error_t *
 deserialize_id(void **out,
                const char *data,
@@ -76,7 +76,7 @@ deserialize_id(void **out,
 
 
 /** Caching directory listings. **/
-static svn_cache_dup_func_t dup_dir_listing;
+/* Implements svn_cache_dup_func_t */
 static svn_error_t *
 dup_dir_listing(void **out,
                 void *in,

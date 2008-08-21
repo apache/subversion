@@ -339,8 +339,8 @@ struct svn_memcache_t {
 svn_error_t *
 svn_cache_create_memcache(svn_cache_t **cache_p,
                           svn_memcache_t *memcache,
-                          svn_cache_serialize_func_t *serialize_func,
-                          svn_cache_deserialize_func_t *deserialize_func,
+                          svn_cache_serialize_func_t serialize_func,
+                          svn_cache_deserialize_func_t deserialize_func,
                           apr_ssize_t klen,
                           const char *prefix,
                           apr_pool_t *pool)
