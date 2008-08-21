@@ -1090,13 +1090,15 @@ def recursive_base_wc_ops(sbox):
   # Test recursive proplist
   exit_code, output, errput = svntest.main.run_svn(None, 'proplist', '-R',
                                                    '-v', wc_dir, '-rBASE')
-  verify_output([ 'old-del', 'old-keep', 'Properties on ', 'Properties on ' ],
+  verify_output([ 'old-del', 'old-keep', 'p', 'p',
+                  'Properties on ', 'Properties on ' ],
                 output, errput)
   svntest.verify.verify_exit_code(None, exit_code, 0)
 
   exit_code, output, errput = svntest.main.run_svn(None, 'proplist', '-R',
                                                    '-v', wc_dir)
-  verify_output([ 'new-add', 'new-keep', 'Properties on ', 'Properties on ' ],
+  verify_output([ 'new-add', 'new-keep', 'p', 'p',
+                  'Properties on ', 'Properties on ' ],
                 output, errput)
   svntest.verify.verify_exit_code(None, exit_code, 0)
 
@@ -1183,13 +1185,13 @@ def url_props_ops(sbox):
   # Test verbose proplist
   exit_code, output, errput = svntest.main.run_svn(None,
                                                    'proplist', '-v', iota_url)
-  verify_output([ prop1 + ' : ' + propval1, prop2 + ' : ' + propval2,
+  verify_output([ propval1, propval2, prop1, prop2,
                   'Properties on ' ], output, errput)
   svntest.verify.verify_exit_code(None, exit_code, 0)
 
   exit_code, output, errput = svntest.main.run_svn(None,
                                                    'proplist', '-v', A_url)
-  verify_output([ prop1 + ' : ' + propval1, prop2 + ' : ' + propval2,
+  verify_output([ propval1, propval2, prop1, prop2,
                   'Properties on ' ], output, errput)
   svntest.verify.verify_exit_code(None, exit_code, 0)
 
@@ -1229,7 +1231,8 @@ def removal_schedule_added_props(sbox):
   file_rm_output = ["D         " + newfile_path + "\n"]
   propls_output = [
      "Properties on '" + newfile_path + "':\n",
-     "  newprop : newvalue\n",
+     "  newprop\n",
+     "    newvalue\n",
                   ]
 
   # create new fs file
@@ -1363,7 +1366,7 @@ def depthy_wc_proplist(sbox):
   exit_code, output, errput = svntest.main.run_svn(None, 'proplist',
                                                    '--depth', 'empty',
                                                    '-v', wc_dir)
-  verify_output([ 'prop1', 'Properties on ' ],
+  verify_output([ 'prop1', 'p', 'Properties on ' ],
                 output, errput)
   svntest.verify.verify_exit_code(None, exit_code, 0)
 
@@ -1371,21 +1374,24 @@ def depthy_wc_proplist(sbox):
   exit_code, output, errput = svntest.main.run_svn(None, 'proplist',
                                                    '--depth', 'files',
                                                    '-v', wc_dir)
-  verify_output([ 'prop1', 'prop2', 'Properties on ', 'Properties on ' ],
+  verify_output([ 'prop1', 'prop2', 'p', 'p',
+                  'Properties on ', 'Properties on ' ],
                 output, errput)
   svntest.verify.verify_exit_code(None, exit_code, 0)
 
   # Test depth-immediates proplist.
   exit_code, output, errput = svntest.main.run_svn(None, 'proplist', '--depth',
                                                    'immediates', '-v', wc_dir)
-  verify_output([ 'prop1', 'prop2', 'prop3' ] + ['Properties on '] * 3,
+  verify_output([ 'prop1', 'prop2', 'prop3' ] +
+                ['p'] * 3 + ['Properties on '] * 3,
                 output, errput)
   svntest.verify.verify_exit_code(None, exit_code, 0)
 
   # Test depth-infinity proplist.
   exit_code, output, errput = svntest.main.run_svn(None, 'proplist', '--depth',
                                                    'infinity', '-v', wc_dir)
-  verify_output([ 'prop1', 'prop2', 'prop3', 'prop4' ] + ['Properties on '] * 4,
+  verify_output([ 'prop1', 'prop2', 'prop3', 'prop4' ] +
+                ['p'] * 4 + ['Properties on '] * 4,
                 output, errput)
   svntest.verify.verify_exit_code(None, exit_code, 0)
 
@@ -1623,7 +1629,8 @@ def props_over_time(sbox):
         plist_expected = expected
         if plist_expected:
           plist_expected = [ "Properties on '" + path + "':\n",
-                             "  revision : " + expected + "\n" ]
+                             "  revision\n",
+                             "    " + expected + "\n" ]
 
         if op_rev != 0:
           svntest.actions.run_and_verify_svn(None, plist_expected, [],

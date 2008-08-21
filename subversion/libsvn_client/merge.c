@@ -2786,10 +2786,31 @@ remove_absent_children(const char *target_wcpath,
 
 /* Helper for do_directory_merge().
 
-   Sets up the diff editor report and drives it by properly negating
-   subtree that could have a conflicting merge history.
+   Set up the diff editor report to merge URL1@REVISION1 to URL2@REVISION2
+   into TARGET_WCPATH and drive it.  Properly describe any subtrees of
+   TARGET_WCPATH that require only a subset of REVISION1:REVISION2 to be
+   merged -- These subtrees are described in CHILDREN_WITH_MERGEINFO, an
+   array of svn_client__merge_path_t *, see
+   'THE CHILDREN_WITH_MERGEINFO ARRAY' comment at the top of this file
+   for more info.  Note that it is possible that TARGET_WCPATH needs only
+   a subset of REVISION1:REVISION2 while its subtrees need the entire range.
 
-   MERGE_B->ra_session1 reflects URL1; MERGE_B->ra_session2 reflects URL2.
+   REVISION1 and REVISION2 must be bound by the set of remaining_ranges
+   fields in CHILDREN_WITH_MERGEINFO's elements, specifically:
+
+     1) For forward merges the oldest revision in all the remaining_ranges
+        must be equal to REVISION1 and the youngest revision in the *first*
+        range of all the remaining ranges must be equal to REVISION2.
+
+     2) For reverse merges the youngest revision in all the remaining_ranges
+        must be equal to REVISION1 and the oldest revision in the *first*
+        range of all the remaining ranges must be equal to REVISION2.
+
+   If IS_ROLLBACK is true this is a reverse merge, otherwise it is a
+   forward merge.  DEPTH, NOTIFY_B, ADM_ACCESS, and MERGE_B are cascasded from
+   do_directory_merge(), see that function for more info.  CALLBACKS are the
+   svn merge versions of the svn_wc_diff_callbacks3_t callbacks invoked by
+   the editor.
 
    If MERGE_B->sources_ancestral is set, then URL1@REVISION1 must be a
    historical ancestor of URL2@REVISION2, or vice-versa (see
@@ -3216,11 +3237,23 @@ mark_mergeinfo_as_inheritable_for_a_range(
 }
 
 
-/* Get REVISION of the file at URL.  SOURCE is a path that refers to that
-   file's entry in the working copy, or NULL if we don't have one.  Return in
-   *FILENAME the name of a file containing the file contents, in *PROPS a hash
-   containing the properties and in *REV the revision.  All allocation occurs
-   in POOL. */
+/* Get a file's content and properties from the repository.
+   Set *FILENAME to the local path to a new temporary file holding its text,
+   and set *PROPS to a new hash of its properties.
+
+   RA_SESSION is a session whose current root is the URL of the file itself,
+   and REV is the revision to get.
+
+   The new temporary file will be created as a sibling of WC_TARGET.
+   WC_TARGET should be the local path to the working copy of the file, but
+   it does not matter whether anything exists on disk at this path as long
+   as WC_TARGET's parent directory exists.
+
+   All allocation occurs in POOL.
+
+   ### TODO: Create the temporary file under .svn/tmp/ instead of next to
+   the working file.
+*/
 static svn_error_t *
 single_file_merge_get_file(const char **filename,
                            svn_ra_session_t *ra_session,
@@ -3232,8 +3265,6 @@ single_file_merge_get_file(const char **filename,
   apr_file_t *fp;
   svn_stream_t *stream;
 
-  /* ### Create this temporary file under .svn/tmp/ instead of next to
-     ### the working file.*/
   SVN_ERR(svn_io_open_unique_file2(&fp, filename,
                                    wc_target, ".tmp",
                                    svn_io_file_del_none, pool));
