@@ -12504,6 +12504,7 @@ def subtrees_with_empty_mergeinfo(sbox):
                                        None, None, None, None, None, 1)
   os.chdir(saved_cwd)
 
+#----------------------------------------------------------------------
 # Test for issue #3240 'commits to subtrees added by merge
 # corrupt working copy and repos'.
 def commit_to_subtree_added_by_merge(sbox):
