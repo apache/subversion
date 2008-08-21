@@ -90,11 +90,21 @@ svn_error_t *svn_fs_fs__rev_get_root(svn_fs_id_t **root_id,
                                      svn_revnum_t rev,
                                      apr_pool_t *pool);
 
-/* Serialize a directory contents hash. */
-svn_cache_serialize_func_t svn_fs_fs__dir_entries_serialize;
+/* Serialize a directory contents hash.
+   Implements svn_cache_serialize_func_t */
+svn_error_t *
+svn_fs_fs__dir_entries_serialize(char **data,
+                                 apr_size_t *data_len,
+                                 void *in,
+                                 apr_pool_t *pool);
 
-/* Deserialize a directory contents hash. */
-svn_cache_deserialize_func_t svn_fs_fs__dir_entries_deserialize;
+/* Deserialize a directory contents hash. 
+   Implements svn_cache_deserialize_func_t */
+svn_error_t *
+svn_fs_fs__dir_entries_deserialize(void **out,
+                                   const char *data,
+                                   apr_size_t data_len,
+                                   apr_pool_t *pool);
 
 /* Set *ENTRIES to an apr_hash_t of dirent structs that contain the
    directory entries of node-revision NODEREV in filesystem FS.  The
