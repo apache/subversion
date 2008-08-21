@@ -382,7 +382,7 @@ svn_error_t *svn_fs_fs__dag_get_edit_stream(svn_stream_t **contents,
 
    This operation is a no-op if no edits are present.  */
 svn_error_t *svn_fs_fs__dag_finalize_edits(dag_node_t *file,
-                                           const char *checksum,
+                                           svn_checksum_t *checksum,
                                            apr_pool_t *pool);
 
 
@@ -392,14 +392,14 @@ svn_error_t *svn_fs_fs__dag_file_length(svn_filesize_t *length,
                                         dag_node_t *file,
                                         apr_pool_t *pool);
 
-/* Put the recorded MD5 checksum of FILE into DIGEST, allocating from
- * POOL.  DIGEST must point to APR_MD5_DIGESTSIZE bytes of storage.
+/* Put the recorded checksum of FILE into CHECKSUM, allocating from
+ * POOL.
  *
  * If no stored checksum is available, do not calculate the checksum,
- * just put all 0's into DIGEST.
+ * just put NULL into CHECKSUM.
  */
 svn_error_t *
-svn_fs_fs__dag_file_checksum(unsigned char digest[],
+svn_fs_fs__dag_file_checksum(svn_checksum_t **checksum,
                              dag_node_t *file,
                              apr_pool_t *pool);
 

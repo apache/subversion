@@ -237,6 +237,8 @@ svn_cmdline_auth_ssl_server_trust_prompt
 /** An implementation of @c svn_auth_ssl_client_cert_prompt_func_t that
  * prompts the user for the filename of their SSL client certificate via
  * the command line.
+ * 
+ * Records absolute path of the SSL client certificate file.
  *
  * @since New in 1.4.
  *

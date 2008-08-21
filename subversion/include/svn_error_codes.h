@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -203,6 +203,14 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_BAD_SERVER_SPECIFICATION,
              SVN_ERR_BAD_CATEGORY_START + 10,
              "Bogus server specification")
+
+  SVN_ERRDEF(SVN_ERR_BAD_CHECKSUM_KIND,
+             SVN_ERR_BAD_CATEGORY_START + 11,
+             "Unsupported checksum type")
+
+  SVN_ERRDEF(SVN_ERR_BAD_CHECKSUM_PARSE,
+             SVN_ERR_BAD_CATEGORY_START + 12,
+             "Invalid character in hex checksum")
 
   /* xml errors */
 

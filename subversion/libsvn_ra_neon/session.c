@@ -792,11 +792,9 @@ exchange_capabilities(svn_ra_neon__session_t *ras, apr_pool_t *pool)
   svn_error_t *err = SVN_NO_ERROR;
 
   rar = svn_ra_neon__request_create(ras, "OPTIONS", ras->url->data, pool);
-
-  ne_add_request_header(rar->ne_req, "DAV", SVN_DAV_NS_DAV_SVN_DEPTH);
-  ne_add_request_header(rar->ne_req, "DAV", SVN_DAV_NS_DAV_SVN_MERGEINFO);
-  ne_add_request_header(rar->ne_req, "DAV", SVN_DAV_NS_DAV_SVN_LOG_REVPROPS);
-
+  
+  /* Client capabilities are sent with every request.
+     See issue #3255 for more details. */
   err = svn_ra_neon__request_dispatch(&http_ret_code, rar,
                                       NULL, NULL, 200, 0, pool);
   if (err)
@@ -980,8 +978,7 @@ initialize_neon(apr_pool_t *ignored_pool)
 static svn_error_t *
 ensure_neon_initialized(void)
 {
-  SVN_ERR(svn_atomic__init_once(&neon_initialized, initialize_neon, NULL));
-  return SVN_NO_ERROR;
+  return svn_atomic__init_once(&neon_initialized, initialize_neon, NULL);
 }
 
 static svn_error_t *

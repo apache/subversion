@@ -41,6 +41,7 @@
 #include "svn_private_config.h"
 #include "svn_time.h"
 #include "svn_config.h"
+#include "svn_iter.h"
 
 #include "wc.h"
 #include "questions.h"
@@ -206,6 +207,10 @@ struct dir_baton
   /* The depth of the directory in the wc (or inferred if added).  Not
      used for filtering; we have a separate wrapping editor for that. */
   svn_depth_t ambient_depth;
+
+  /* Was the directory marked as incomplete before the update?
+     (In other words, are we resuming an interrupted update?) */
+  svn_boolean_t was_incomplete;
 
   /* The pool in which this baton itself is allocated. */
   apr_pool_t *pool;
@@ -437,8 +442,9 @@ make_dir_baton(struct dir_baton **d_p,
   d->log_number   = 0;
   d->log_accum    = svn_stringbuf_create("", pool);
 
-  /* The caller of this function needs to fill this in. */
+  /* The caller of this function needs to fill these in. */
   d->ambient_depth = svn_depth_unknown;
+  d->was_incomplete = FALSE;
 
   apr_pool_cleanup_register(d->pool, d, cleanup_dir_baton,
                             cleanup_dir_baton_child);
@@ -1037,7 +1043,10 @@ open_root(void *edit_baton,
       SVN_ERR(svn_wc_entry(&entry, d->path, eb->adm_access,
                            FALSE, pool));
       if (entry)
-        d->ambient_depth = entry->depth;
+        {
+          d->ambient_depth = entry->depth;
+          d->was_incomplete = entry->incomplete;
+        }
 
       /* Mark directory as being at target_revision, but incomplete. */
       tmp_entry.revision = *(eb->target_revision);
@@ -1101,6 +1110,11 @@ leftmod_error_chain(svn_error_t *err,
 }
 
 
+/* Delete PATH from its immediate parent PARENT_PATH, in the edit
+ * represented by EB.  Name temporary transactional logs based on
+ * *LOG_NUMBER, but set *LOG_NUMBER to 0 after running the final log.
+ * Perform all allocations in POOL.
+ */
 static svn_error_t *
 do_entry_deletion(struct edit_baton *eb,
                   const char *parent_path,
@@ -1487,6 +1501,7 @@ open_directory(const char *path,
       svn_boolean_t prop_conflicted;
 
       db->ambient_depth = entry->depth;
+      db->was_incomplete = entry->incomplete;
 
       SVN_ERR(svn_wc_conflicted_p(&text_conflicted, &prop_conflicted,
                                   db->path, entry, pool));
@@ -1573,6 +1588,31 @@ externals_prop_changed(apr_array_header_t *propchanges)
   return NULL;
 }
 
+/* This implements the svn_iter_apr_hash_cb_t callback interface.
+ *
+ * Add a property named KEY ('const char *') to a list of properties
+ * to be deleted.  BATON is the list: an 'apr_array_header_t *'
+ * representing propchanges (the same type as found in struct dir_baton
+ * and struct file_baton).
+ *
+ * Ignore KLEN, VAL, and POOL.
+ */
+static svn_error_t *
+add_prop_deletion(void *baton, const void *key,
+                  apr_ssize_t klen, void *val,
+                  apr_pool_t *pool)
+{
+  apr_array_header_t *propchanges = baton;
+  const char *name = key;
+  svn_prop_t *prop = apr_array_push(propchanges);
+
+  /* Add the deletion of NAME to PROPCHANGES. */
+  prop->name = name;
+  prop->value = NULL;
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 close_directory(void *dir_baton,
                 apr_pool_t *pool)
@@ -1580,6 +1620,7 @@ close_directory(void *dir_baton,
   struct dir_baton *db = dir_baton;
   svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
   apr_array_header_t *entry_props, *wc_props, *regular_props;
+  apr_hash_t *base_props = NULL, *working_props = NULL;
   svn_wc_adm_access_t *adm_access;
 
   SVN_ERR(svn_categorize_props(db->propchanges, &entry_props, &wc_props,
@@ -1587,6 +1628,34 @@ close_directory(void *dir_baton,
 
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, db->edit_baton->adm_access,
                               db->path, db->pool));
+
+  /* An incomplete directory might have props which were supposed to be
+     deleted but weren't.  Because the server sent us all the props we're
+     supposed to have, any previous base props not in this list must be
+     deleted (issue #1672). */
+  if (db->was_incomplete)
+    {
+      int i;
+      apr_hash_t *props_to_delete;
+
+      SVN_ERR(svn_wc__load_props(&base_props, &working_props, NULL,
+                                 adm_access, db->path, pool));
+
+      /* Calculate which base props weren't also in the incoming
+         propchanges. */
+      props_to_delete = apr_hash_copy(pool, base_props);
+      for (i = 0; i < regular_props->nelts; i++)
+        {
+          const svn_prop_t *prop;
+          prop = &APR_ARRAY_IDX(regular_props, i, svn_prop_t);
+          apr_hash_set(props_to_delete, prop->name,
+                       APR_HASH_KEY_STRING, NULL);
+        }
+
+      /* Add these props to the incoming propchanges. */
+      SVN_ERR(svn_iter_apr_hash(NULL, props_to_delete, add_prop_deletion,
+                                regular_props, pool));
+    }
 
   /* If this directory has property changes stored up, now is the time
      to deal with them. */
@@ -1653,7 +1722,7 @@ close_directory(void *dir_baton,
           SVN_ERR_W(svn_wc__merge_props(&prop_state,
                                         adm_access, db->path,
                                         NULL /* use baseprops */,
-                                        NULL, NULL,
+                                        base_props, working_props,
                                         regular_props, TRUE, FALSE,
                                         db->edit_baton->conflict_func,
                                         db->edit_baton->conflict_baton,
