@@ -17,6 +17,7 @@ Revisions included:
   * r32550 backported from trunk via r32561
   * r32375:32379, r32394, r32396 backported from trunk via r32579
   * r32497:32499 backported from trunk via r32587
+  * r32632 backported from trunk via r32634
 
 Features:
   * Don't save plaintext passwords without prompting
