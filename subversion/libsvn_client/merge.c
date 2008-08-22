@@ -2834,7 +2834,7 @@ drive_merge_report_editor(const char *target_wcpath,
   const svn_delta_editor_t *diff_editor;
   void *diff_edit_baton;
   void *report_baton;
-  svn_revnum_t default_start, target_start;
+  svn_revnum_t target_start;
   svn_boolean_t honor_mergeinfo;
   const char *old_sess2_url;
 
@@ -2842,7 +2842,7 @@ drive_merge_report_editor(const char *target_wcpath,
 
   /* Start with a safe default starting revision for the editor and the
      merge target. */
-  default_start = target_start = revision1;
+  target_start = revision1;
 
   /* If we are honoring mergeinfo the starting revision for the merge target
      might not be REVISION1, in fact the merge target might not need *any*
@@ -2899,7 +2899,7 @@ drive_merge_report_editor(const char *target_wcpath,
      drive it. */
   SVN_ERR(svn_client__get_diff_editor(target_wcpath, adm_access, callbacks,
                                       merge_b, depth, merge_b->dry_run,
-                                      merge_b->ra_session2, default_start,
+                                      merge_b->ra_session2, revision1,
                                       notification_receiver, notify_b,
                                       merge_b->ctx->cancel_func,
                                       merge_b->ctx->cancel_baton,
