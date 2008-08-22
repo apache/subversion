@@ -1599,7 +1599,6 @@ read_rep_offsets(representation_t **rep_p,
 {
   representation_t *rep;
   char *str, *last_str;
-  int i;
 
   rep = apr_pcalloc(pool, sizeof(*rep));
   *rep_p = rep;

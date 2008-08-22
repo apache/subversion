@@ -4402,7 +4402,7 @@ verify_checksum(const char **msg,
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
   SVN_ERR(svn_fs_make_file(txn_root, "fact", pool));
   SVN_ERR(svn_test__set_file_contents(txn_root, "fact", str->data, pool));
-  SVN_ERR(svn_fs_file_checksum(actual_checksum, svn_checksum_md5, txn_root,
+  SVN_ERR(svn_fs_file_checksum(&actual_checksum, svn_checksum_md5, txn_root,
                                "fact", TRUE, pool));
 
   if (!svn_checksum_match(expected_checksum, actual_checksum))
