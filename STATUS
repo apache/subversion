@@ -78,7 +78,7 @@ Candidate changes for 1.5.2:
      This is a user-requested fix, which potentially leads to confusion.
      Small fix, includes test.
    Votes:
-     +1: hwright, danielsh
+     +1: hwright, danielsh, kfogel
 
 Approved changes:
 =================
