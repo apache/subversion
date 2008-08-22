@@ -25,12 +25,6 @@ Candidate changes for 1.5.2:
    Votes:
      +1: arfrever
 
- * r32441
-   Fix issue #3258: 8lock.t fails in non-English locale.
-   Votes:
-     +1: arfrever
-     +0: hwright
-
  * r32442
    Respect LDFLAGS in SWIG bindings without the requirement of the exporting
    of the SWIG_LDFLAGS variable.
@@ -57,17 +51,6 @@ Candidate changes for 1.5.2:
    Votes:
      +1: arfrever
 
- * r32497, r32510
-   Make libsvn_ra_neon initialization thread-safe: fix a race condition where
-   if two neon requests are started at approximately at the same time, one
-   call starts initializing and the other call thinks initialization is
-   already completed. (r32510 is a minor code simplification)
-   Justification:
-     Fixes a reproducable crash when performing dav requests via multiple
-     threads at the same time (reported as issue on the SharpSvn users list).
-   Votes:
-     +1: rhuijben, kfogel
-
  * r32494, r32522, r32523
    Fix a bug where previous merges are incorrectly reversed leading to repeat
    merges and spurious conflicts.
@@ -89,7 +72,7 @@ Candidate changes for 1.5.2:
    Votes:
      +1: arfrever, rhuijben
 
- * r32636
+ * r32636, r32639
    Don't allow repositories to be created inside existing repositories.
    Justification:
      This is a user-requested fix, which potentially leads to confusion.
@@ -99,3 +82,21 @@ Candidate changes for 1.5.2:
 
 Approved changes:
 =================
+
+ * r32441
+   Fix issue #3258: 8lock.t fails in non-English locale.
+   Votes:
+     +1: arfrever
+     +0: hwright
+
+ * r32497, r32510
+   Make libsvn_ra_neon initialization thread-safe: fix a race condition where
+   if two neon requests are started at approximately at the same time, one
+   call starts initializing and the other call thinks initialization is
+   already completed. (r32510 is a minor code simplification)
+   Justification:
+     Fixes a reproducable crash when performing dav requests via multiple
+     threads at the same time (reported as issue on the SharpSvn users list).
+   Votes:
+     +1: rhuijben, kfogel, danielsh
+
