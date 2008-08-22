@@ -875,7 +875,10 @@ def create_in_repo_subdir(sbox):
     subdir = os.path.join(repo_dir, 'Z')
     svntest.main.create_repos(subdir)
   except svntest.main.SVNRepositoryCreateFailure:
-    pass
+    return
+
+  # No SVNRepositoryCreateFailure raised?
+  raise svntest.Failure
 
 
 ########################################################################
