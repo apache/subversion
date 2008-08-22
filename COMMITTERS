@@ -59,6 +59,7 @@ Blanket commit access:
       danielsh   Daniel Shahaf <d.s@daniel.shahaf.name>
     psamuelson   Peter Samuelson <peter@p12n.org>
       rhuijben   Bert Huijben <b.huijben@competence.biz>
+      stylesen   Senthil Kumaran S <senthil@collab.net>
 
 Commit access for specific areas:
 
@@ -112,7 +113,6 @@ Commit access for specific areas:
       dkagedal   David Kågedal <davidk@lysator.liu.se>       (dsvn.el)
         dustin   Dustin J. Mitchell <dustin@zmanda.com>      (svnmerge)
    rocketraman   Raman Gupta <rocketraman@fastmail.fm>       (svnmerge)
-      stylesen   Senthil Kumaran S <senthil@collab.net>      (tests)
        rhansen   Richard Hansen <rhansen@bbn.com>            (svnstsw)
         larrys   Larry Shatzer, Jr. <larrys@gmail.com>       (svn-keyword-check.pl)
          nmiyo   MIYOKAWA, Nobuyoshi <n-miyo@tempus.org>     (faq: ja)
