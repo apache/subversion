@@ -855,6 +855,29 @@ def fsfs_recover_handle_missing_revs_or_revprops_file(sbox):
     ".*Revision 3 has a non-file where its revprops file should be.*"):
     raise svntest.Failure
 
+
+#----------------------------------------------------------------------
+
+def create_in_repo_subdir(sbox):
+  "'svnadmin create /path/to/repo/subdir'"
+
+  repo_dir = sbox.repo_dir
+  wc_dir = sbox.wc_dir
+
+  svntest.main.safe_rmtree(repo_dir, 1)
+  svntest.main.safe_rmtree(wc_dir)
+
+  # This should succeed
+  svntest.main.create_repos(repo_dir)
+
+  try:
+    # This should fail
+    subdir = os.path.join(repo_dir, 'Z')
+    svntest.main.create_repos(subdir)
+  except svntest.main.SVNRepositoryCreateFailure:
+    pass
+
+
 ########################################################################
 # Run the tests
 
@@ -879,6 +902,7 @@ test_list = [ None,
               reflect_dropped_renumbered_revs,
               SkipUnless(fsfs_recover_handle_missing_revs_or_revprops_file,
                          svntest.main.is_fs_type_fsfs),
+              create_in_repo_subdir,
              ]
 
 if __name__ == '__main__':
