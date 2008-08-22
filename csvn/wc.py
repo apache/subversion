@@ -323,11 +323,13 @@ class WC(object):
         eol -- End of line character to use (defaults to standard eol marker)"""
 
         rev = svn_opt_revision_t()
+        peg_rev = svn_opt_revision_t()
+        
         svn_client_export3(POINTER(svn_revnum_t)(),
                            self._build_path(from_path),
-                           self._build_path(to_path), NULL, byref(rev), overwrite,
-                           ignore_externals, recurse, eol, self.client,
-                           self.iterpool)
+                           self._build_path(to_path), byref(peg_rev),
+                           byref(rev), overwrite, ignore_externals, recurse,
+                           eol, self.client, self.iterpool)
 
         self.iterpool.clear()
 
