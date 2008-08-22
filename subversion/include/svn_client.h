@@ -3668,6 +3668,8 @@ svn_client_revprop_list(apr_hash_t **props,
  * @a revision is the revision that should be exported, which is only used
  * when exporting from a repository.
  *
+ * @a peg_revision and @a revision must not be @c NULL.
+ *
  * @a ctx->notify_func2 and @a ctx->notify_baton2 are the notification
  * functions and baton which are passed to svn_client_checkout() when
  * exporting from a repository.
