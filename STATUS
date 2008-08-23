@@ -75,12 +75,6 @@ Candidate changes for 1.5.2:
 Approved changes:
 =================
 
- * r32441
-   Fix issue #3258: 8lock.t fails in non-English locale.
-   Votes:
-     +1: arfrever
-     +0: hwright
-
  * r32497, r32510
    Make libsvn_ra_neon initialization thread-safe: fix a race condition where
    if two neon requests are started at approximately at the same time, one
