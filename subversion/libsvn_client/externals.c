@@ -554,6 +554,8 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
 
   if (! old_item)
     {
+      /* This branch is only used during a checkout or an export. */
+
       /* Determine if the external being added is a file or
          directory. */
       svn_ra_session_t *ra_session;
@@ -616,6 +618,9 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
     }
   else if (! new_item)
     {
+      /* This branch is only used when an external is deleted from the
+	 repository and the working copy is updated. */
+
       /* See comment in above case about fancy rename handling.  Here,
          before removing an old subdir, we would see if it wants to
          just be renamed to a new one. */
@@ -655,6 +660,10 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
   else if (! compare_external_items(new_item, old_item)
            || ib->update_unchanged)
     {
+      /* This branch handles all other changes. */
+
+      fprintf(stderr, "FFF %s %s\n", old_item->url, new_item->url);
+
       /* Either the URL changed, or the exact same item is present in
          both hashes, and caller wants to update such unchanged items.
          In the latter case, the call below will try to make sure that
