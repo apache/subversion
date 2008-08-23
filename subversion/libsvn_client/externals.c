@@ -662,8 +662,6 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
     {
       /* This branch handles all other changes. */
 
-      fprintf(stderr, "FFF %s %s\n", old_item->url, new_item->url);
-
       /* Either the URL changed, or the exact same item is present in
          both hashes, and caller wants to update such unchanged items.
          In the latter case, the call below will try to make sure that
