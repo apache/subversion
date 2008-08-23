@@ -2,6 +2,7 @@
 
 import setup_path
 import unittest
+import locale
 import os
 import shutil
 import tempfile
@@ -10,6 +11,8 @@ from csvn.core import *
 from urllib import pathname2url
 from csvn.wc import WC
 from csvn.repos import LocalRepository
+
+locale.setlocale(locale.LC_ALL, "C")
 
 repos_location = os.path.join(tempfile.gettempdir(), "svn_test_repos")
 wc_location = os.path.join(tempfile.gettempdir(), "svn_test_wc")
