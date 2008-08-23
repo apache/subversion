@@ -228,7 +228,7 @@ typedef struct svn_auth_cred_username_t
 /** @c SVN_AUTH_CRED_SSL_CLIENT_CERT credentials. */
 typedef struct svn_auth_cred_ssl_client_cert_t
 {
-  /** Full paths to the certificate file */
+  /** Absolute path to the certificate file */
   const char *cert_file;
   /** Indicates if the credentials may be saved (to disk). For example, a
    * GUI prompt implementation with a remember certificate checkbox shall

@@ -1114,7 +1114,7 @@ svn_fs_base__dag_file_length(svn_filesize_t *length,
 
 
 svn_error_t *
-svn_fs_base__dag_file_checksum(unsigned char digest[],
+svn_fs_base__dag_file_checksum(svn_checksum_t **checksum,
                                dag_node_t *file,
                                trail_t *trail,
                                apr_pool_t *pool)
@@ -1129,11 +1129,11 @@ svn_fs_base__dag_file_checksum(unsigned char digest[],
   SVN_ERR(svn_fs_bdb__get_node_revision(&noderev, file->fs, file->id,
                                         trail, pool));
   if (noderev->data_key)
-    SVN_ERR(svn_fs_base__rep_contents_checksum(digest, file->fs,
+    SVN_ERR(svn_fs_base__rep_contents_checksum(checksum, file->fs,
                                                noderev->data_key,
                                                trail, pool));
   else
-    memset(digest, 0, APR_MD5_DIGESTSIZE);
+    *checksum = NULL;
 
   return SVN_NO_ERROR;
 }
@@ -1196,7 +1196,7 @@ svn_fs_base__dag_get_edit_stream(svn_stream_t **contents,
 
 svn_error_t *
 svn_fs_base__dag_finalize_edits(dag_node_t *file,
-                                const char *checksum,
+                                svn_checksum_t *checksum,
                                 const char *txn_id,
                                 trail_t *trail,
                                 apr_pool_t *pool)
@@ -1204,6 +1204,7 @@ svn_fs_base__dag_finalize_edits(dag_node_t *file,
   svn_fs_t *fs = file->fs;   /* just for nicer indentation */
   node_revision_t *noderev;
   const char *old_data_key;
+  svn_checksum_t *rep_checksum;
 
   /* Make sure our node is a file. */
   if (file->kind != svn_node_file)
@@ -1225,24 +1226,19 @@ svn_fs_base__dag_finalize_edits(dag_node_t *file,
   if (! noderev->edit_key)
     return SVN_NO_ERROR;
 
-  if (checksum)
-    {
-      unsigned char digest[APR_MD5_DIGESTSIZE];
-      const char *hex;
+  /* Get our representation's checksum. */
+  SVN_ERR(svn_fs_base__rep_contents_checksum(&rep_checksum, fs,
+                                             noderev->edit_key, trail, pool));
 
-      SVN_ERR(svn_fs_base__rep_contents_checksum
-              (digest, fs, noderev->edit_key, trail, pool));
-
-      hex = svn_md5_digest_to_cstring_display(digest, pool);
-      if (strcmp(checksum, hex) != 0)
-        return svn_error_createf
-          (SVN_ERR_CHECKSUM_MISMATCH,
-           NULL,
-           _("Checksum mismatch, rep '%s':\n"
-             "   expected:  %s\n"
-             "     actual:  %s\n"),
-           noderev->edit_key, checksum, hex);
-    }
+  /* If our caller provided a checksum to compare, do so. */
+  if (checksum && !svn_checksum_match(checksum, rep_checksum))
+    return svn_error_createf(SVN_ERR_CHECKSUM_MISMATCH, NULL,
+                             _("Checksum mismatch, rep '%s':\n"
+                               "   expected:  %s\n"
+                               "     actual:  %s\n"),
+                             noderev->edit_key,
+                        svn_checksum_to_cstring_display(checksum, pool),
+                        svn_checksum_to_cstring_display(rep_checksum, pool));
 
   /* Now, we want to delete the old representation and replace it with
      the new.  Of course, we don't actually delete anything until
@@ -1414,7 +1410,6 @@ svn_fs_base__dag_deltify(dag_node_t *target,
 
   return SVN_NO_ERROR;
 }
-
 
 
 

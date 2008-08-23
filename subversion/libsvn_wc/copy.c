@@ -454,9 +454,9 @@ copy_file_administratively(const char *src_path,
   SVN_ERR(svn_wc_entry(&dst_entry, dst_path, dst_parent, FALSE, pool));
   if (dst_entry && dst_entry->schedule != svn_wc_schedule_delete)
     {
-        return svn_error_createf(SVN_ERR_ENTRY_EXISTS, NULL,
-                                 _("There is already a versioned item '%s'"),
-                                 svn_path_local_style(dst_path, pool));
+      return svn_error_createf(SVN_ERR_ENTRY_EXISTS, NULL,
+                               _("There is already a versioned item '%s'"),
+                               svn_path_local_style(dst_path, pool));
     }
 
   /* Sanity check 1: You cannot make a copy of something that's not

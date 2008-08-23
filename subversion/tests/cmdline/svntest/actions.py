@@ -384,15 +384,25 @@ def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
   actual = tree.build_tree_from_checkout (output)
 
   # Verify actual output against expected output.
-  tree.compare_trees ("output", actual, output_tree)
+  try:
+    tree.compare_trees ("output", actual, output_tree)
+  except tree.SVNTreeUnequal:
+    print "ACTUAL OUTPUT TREE:"
+    tree.dump_tree_script(actual, wc_dir_name + os.sep)
+    raise
 
   # Create a tree by scanning the working copy
   actual = tree.build_tree_from_wc (wc_dir_name)
 
   # Verify expected disk against actual disk.
-  tree.compare_trees ("disk", actual, disk_tree,
-                      singleton_handler_a, a_baton,
-                      singleton_handler_b, b_baton)
+  try:
+    tree.compare_trees ("disk", actual, disk_tree,
+                        singleton_handler_a, a_baton,
+                        singleton_handler_b, b_baton)
+  except tree.SVNTreeUnequal:
+    print "ACTUAL DISK TREE:"
+    tree.dump_tree_script(actual, wc_dir_name + os.sep)
+    raise
 
 
 def run_and_verify_export(URL, export_dir_name, output_tree, disk_tree,
@@ -423,7 +433,12 @@ def run_and_verify_export(URL, export_dir_name, output_tree, disk_tree,
   actual = tree.build_tree_from_checkout (output)
 
   # Verify actual output against expected output.
-  tree.compare_trees ("output", actual, output_tree)
+  try:
+    tree.compare_trees ("output", actual, output_tree)
+  except tree.SVNTreeUnequal:
+    print "ACTUAL OUTPUT TREE:"
+    tree.dump_tree_script(actual, export_dir_name + os.sep)
+    raise
 
   # Create a tree by scanning the working copy.  Don't ignore
   # the .svn directories so that we generate an error if they
@@ -431,9 +446,14 @@ def run_and_verify_export(URL, export_dir_name, output_tree, disk_tree,
   actual = tree.build_tree_from_wc (export_dir_name, ignore_svn=False)
 
   # Verify expected disk against actual disk.
-  tree.compare_trees ("disk", actual, disk_tree,
-                      singleton_handler_a, a_baton,
-                      singleton_handler_b, b_baton)
+  try:
+    tree.compare_trees ("disk", actual, disk_tree,
+                        singleton_handler_a, a_baton,
+                        singleton_handler_b, b_baton)
+  except tree.SVNTreeUnequal:
+    print "ACTUAL DISK TREE:"
+    tree.dump_tree_script(actual, export_dir_name + os.sep)
+    raise
 
 
 # run_and_verify_log_xml
@@ -608,14 +628,24 @@ def verify_update(actual_output, wc_dir_name,
 
   # Verify actual output against expected output.
   if output_tree:
-    tree.compare_trees ("output", actual_output, output_tree)
+    try:
+      tree.compare_trees ("output", actual_output, output_tree)
+    except tree.SVNTreeUnequal:
+      print "ACTUAL OUTPUT TREE:"
+      tree.dump_tree_script(actual_output, wc_dir_name + os.sep)
+      raise
 
   # Create a tree by scanning the working copy, and verify it
   if disk_tree:
     actual_disk = tree.build_tree_from_wc (wc_dir_name, check_props)
-    tree.compare_trees ("disk", actual_disk, disk_tree,
-                        singleton_handler_a, a_baton,
-                        singleton_handler_b, b_baton)
+    try:
+      tree.compare_trees ("disk", actual_disk, disk_tree,
+                          singleton_handler_a, a_baton,
+                          singleton_handler_b, b_baton)
+    except tree.SVNTreeUnequal:
+      print "ACTUAL DISK TREE:"
+      tree.dump_tree_script(actual_disk)
+      raise
 
   # Verify via 'status' command too, if possible.
   if status_tree:
@@ -841,8 +871,13 @@ def run_and_verify_merge2(dir, rev1, rev2, url1, url2,
     raise Failure
 
   myskiptree = tree.build_tree_from_skipped(out)
-  tree.compare_trees("skip", myskiptree, skip_tree,
-                     extra_skip, None, missing_skip, None)
+  try:
+    tree.compare_trees("skip", myskiptree, skip_tree,
+                       extra_skip, None, missing_skip, None)
+  except tree.SVNTreeUnequal:
+    print "ACTUAL SKIP TREE:"
+    tree.dump_tree_script(myskiptree, dir + os.sep)
+    raise
 
   actual = tree.build_tree_from_checkout(out, 0)
   verify_update (actual, dir,
@@ -1024,6 +1059,8 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_tree,
   except tree.SVNTreeError:
       verify.display_trees("Output of commit is unexpected",
                            "OUTPUT TREE", output_tree, actual)
+      print "ACTUAL OUTPUT TREE:"
+      tree.dump_tree_script(actual, wc_dir_name + os.sep)
       raise
 
   # Verify via 'status' command too, if possible.
@@ -1059,6 +1096,8 @@ def run_and_verify_status(wc_dir_name, output_tree,
                         singleton_handler_b, b_baton)
   except tree.SVNTreeError:
     verify.display_trees(None, 'STATUS OUTPUT TREE', output_tree, actual)
+    print "ACTUAL STATUS TREE:"
+    tree.dump_tree_script(actual, wc_dir_name + os.sep)
     raise
 
 
@@ -1084,12 +1123,14 @@ def run_and_verify_unquiet_status(wc_dir_name, output_tree,
   actual = tree.build_tree_from_status (output)
 
   # Verify actual output against expected output.
-  if (singleton_handler_a or singleton_handler_b):
+  try:
     tree.compare_trees ("output", actual, output_tree,
                         singleton_handler_a, a_baton,
                         singleton_handler_b, b_baton)
-  else:
-    tree.compare_trees ("output", actual, output_tree)
+  except tree.SVNTreeError:
+    print "ACTUAL OUTPUT TREE:"
+    tree.dump_tree_script(actual, wc_dir_name + os.sep)
+    raise
 
 def run_and_verify_diff_summarize_xml(error_re_string = [],
                                       expected_prefix = None,
@@ -1204,6 +1245,8 @@ def run_and_verify_diff_summarize(output_tree, error_re_string = None,
                         singleton_handler_b, b_baton)
   except tree.SVNTreeError:
     verify.display_trees(None, 'DIFF OUTPUT TREE', output_tree, actual)
+    print "ACTUAL DIFF OUTPUT TREE:"
+    tree.dump_tree_script(actual)
     raise
 
 def run_and_validate_lock(path, username):

@@ -193,6 +193,12 @@ svn_auth_get_gnome_keyring_simple_provider
   gnome_keyring_init();
 }
 
+
+/*-----------------------------------------------------------------------*/
+/* GNOME Keyring SSL client certificate passphrase provider,             */
+/* puts passphrases in GNOME Keyring                                     */
+/*-----------------------------------------------------------------------*/
+
 /* Get cached encrypted credentials from the ssl client cert password
    provider's cache. */
 static svn_error_t *
