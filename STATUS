@@ -75,17 +75,6 @@ Candidate changes for 1.5.2:
 Approved changes:
 =================
 
- * r32497, r32510
-   Make libsvn_ra_neon initialization thread-safe: fix a race condition where
-   if two neon requests are started at approximately at the same time, one
-   call starts initializing and the other call thinks initialization is
-   already completed. (r32510 is a minor code simplification)
-   Justification:
-     Fixes a reproducable crash when performing dav requests via multiple
-     threads at the same time (reported as issue on the SharpSvn users list).
-   Votes:
-     +1: rhuijben, kfogel, danielsh
-
  * r32636, r32639
    Don't allow repositories to be created inside existing repositories.
    Justification:
