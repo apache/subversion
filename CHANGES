@@ -25,8 +25,9 @@ Version 1.5.2
 http://svn.collab.net/repos/svn/tags/1.5.2
 
  User-visible changes:
-  * set correct permissions on created fsfs shards (r32355, -7)
-  * pass client capabilities to start-commit hook (issue #3255)
+  * Set correct permissions on created fsfs shards (r32355, -7)
+  * Pass client capabilities to start-commit hook (issue #3255)
+  * Don't allow repositories to be created inside each other (issue #3269)
   * fixed: improper ordering in 'svnlook diff' output (r32019)
   * fixed: mod_dav_svn memory leak with 'SVNPathAuthz short_circuit' (r32360)
   * fixed: duplicate svn:externals targets fail on co/up (issue #3246)
@@ -35,8 +36,10 @@ http://svn.collab.net/repos/svn/tags/1.5.2
   * fixed: memory leak and crashes in FS (r32545, -58, -82)
   * fixed: core dump with relative externals (issue #3237)
   * fixed: 'svn copy' working copy corruption (r32467, -70)
+  * fixed: perl bindings errors in non-English locale (issue #3258)
 
  Developer-visible changes:
+  * make libsvn_ra_neon initialization thread-safe (r32497, r32510)
 
 
 Version 1.5.1
