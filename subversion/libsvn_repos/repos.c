@@ -1178,6 +1178,7 @@ svn_repos_create(svn_repos_t **repos_p,
 {
   svn_repos_t *repos;
   svn_error_t *err;
+  const char *root_path;
 
   /* Allocate a repository object, filling in the format we will create. */
   repos = create_svn_repos_t(path, pool);
@@ -1195,6 +1196,13 @@ svn_repos_create(svn_repos_t **repos_p,
 
   if (! repos->fs_type)
     repos->fs_type = DEFAULT_FS_TYPE;
+
+  /* Don't create a repository inside another repository. */
+  root_path = svn_repos_find_root_path(path, pool);
+  if (root_path != NULL)
+    return svn_error_createf(SVN_ERR_REPOS_BAD_ARGS, NULL, _("'%s' is a "
+                              "subdirectory of an existing repository rooted "
+                              "at '%s'"), path, root_path);
 
   /* Create the various files and subdirectories for the repository. */
   SVN_ERR_W(create_repos_structure(repos, path, fs_config, pool),

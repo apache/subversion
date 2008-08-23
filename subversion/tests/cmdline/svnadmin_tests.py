@@ -721,6 +721,32 @@ def reflect_dropped_renumbered_revs(sbox):
                                      sbox.repo_url + '/branch1')
 
 
+
+#----------------------------------------------------------------------
+
+def create_in_repo_subdir(sbox):
+  "'svnadmin create /path/to/repo/subdir'"
+
+  repo_dir = sbox.repo_dir
+  wc_dir = sbox.wc_dir
+
+  svntest.main.safe_rmtree(repo_dir, 1)
+  svntest.main.safe_rmtree(wc_dir)
+
+  # This should succeed
+  svntest.main.create_repos(repo_dir)
+
+  try:
+    # This should fail
+    subdir = os.path.join(repo_dir, 'Z')
+    svntest.main.create_repos(subdir)
+  except svntest.main.SVNRepositoryCreateFailure:
+    return
+
+  # No SVNRepositoryCreateFailure raised?
+  raise svntest.Failure
+
+
 ########################################################################
 # Run the tests
 
@@ -743,6 +769,7 @@ test_list = [ None,
               load_with_parent_dir,
               set_uuid,
               reflect_dropped_renumbered_revs,
+              create_in_repo_subdir,
              ]
 
 if __name__ == '__main__':

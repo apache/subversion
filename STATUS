@@ -74,11 +74,3 @@ Candidate changes for 1.5.2:
 
 Approved changes:
 =================
-
- * r32636, r32639
-   Don't allow repositories to be created inside existing repositories.
-   Justification:
-     This is a user-requested fix, which potentially leads to confusion.
-     Small fix, includes test.
-   Votes:
-     +1: hwright, danielsh, kfogel
