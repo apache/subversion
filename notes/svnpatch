@@ -25,7 +25,7 @@ example, revisions have been stripped from the protocol to allow fuzzing.
 The implementation with the command line client uses `svn diff --svnpatch' to
 generate the rich diffs and `svn patch' to apply the diffs against a working
 copy.  Other frontends can also take advantage of svnpatch in the same way
-through the usual API's svn_client_diff4 and svn_client_patch that use files to
+through the usual API's svn_client_diff5 and svn_client_patch that use files to
 communicate.
 
 

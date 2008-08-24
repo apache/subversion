@@ -335,7 +335,7 @@ svn_cl__diff(apr_getopt_t *os,
                      (void *) target1,
                      ctx, iterpool));
           else
-            SVN_ERR(svn_client_diff4
+            SVN_ERR(svn_client_diff5
                     (options,
                      target1,
                      &(opt_state->start_revision),
@@ -380,7 +380,7 @@ svn_cl__diff(apr_getopt_t *os,
                      (void *) truepath,
                      ctx, iterpool));
           else
-            SVN_ERR(svn_client_diff_peg4
+            SVN_ERR(svn_client_diff_peg5
                     (options,
                      truepath,
                      &peg_revision,
