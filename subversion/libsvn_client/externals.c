@@ -96,21 +96,21 @@ compare_external_items(svn_wc_external_item2_t *new_item,
 }
 
 
-/* Remove PATH from revision control, and do the same to any revision
- * controlled directories underneath PATH (including directories not
- * referred to by parent svn administrative areas); then if PATH is
- * empty afterwards, remove it, else rename it to a unique name in the
- * same parent directory.
+/* Remove the directory at PATH from revision control, and do the same
+ * to any revision controlled directories underneath PATH (including
+ * directories not referred to by parent svn administrative areas);
+ * then if PATH is empty afterwards, remove it, else rename it to a
+ * unique name in the same parent directory.
  *
  * Pass CANCEL_FUNC, CANCEL_BATON to svn_wc_remove_from_revision_control.
  *
  * Use POOL for all temporary allocation.
  */
 static svn_error_t *
-relegate_external(const char *path,
-                  svn_cancel_func_t cancel_func,
-                  void *cancel_baton,
-                  apr_pool_t *pool)
+relegate_dir_external(const char *path,
+                      svn_cancel_func_t cancel_func,
+                      void *cancel_baton,
+                      apr_pool_t *pool)
 {
   svn_error_t *err;
   svn_wc_adm_access_t *adm_access;
@@ -274,10 +274,10 @@ switch_external(const char *path,
 
   if (kind == svn_node_dir)
     /* Buh-bye, old and busted ... */
-    SVN_ERR(relegate_external(path,
-                              ctx->cancel_func,
-                              ctx->cancel_baton,
-                              pool));
+    SVN_ERR(relegate_dir_external(path,
+                                  ctx->cancel_func,
+                                  ctx->cancel_baton,
+                                  pool));
   else
     {
       /* The target dir might have multiple components.  Guarantee
