@@ -169,16 +169,16 @@ relegate_dir_external(const char *path,
   return SVN_NO_ERROR;
 }
 
-/* Try to update an external PATH to URL at REVISION.
+/* Try to update a directory external at PATH to URL at REVISION.
    Use POOL for temporary allocations, and use the client context CTX. */
 static svn_error_t *
-switch_external(const char *path,
-                const char *url,
-                const svn_opt_revision_t *revision,
-                const svn_opt_revision_t *peg_revision,
-                svn_boolean_t *timestamp_sleep,
-                svn_client_ctx_t *ctx,
-                apr_pool_t *pool)
+switch_dir_external(const char *path,
+                    const char *url,
+                    const svn_opt_revision_t *revision,
+                    const svn_opt_revision_t *peg_revision,
+                    svn_boolean_t *timestamp_sleep,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool)
 {
   svn_node_kind_t kind;
   svn_error_t *err;
@@ -684,9 +684,10 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
          In the latter case, the call below will try to make sure that
          the external really is a WC pointing to the correct
          URL/revision. */
-      SVN_ERR(switch_external(path, new_item->url, &(new_item->revision),
-                              &(new_item->peg_revision),
-                              ib->timestamp_sleep, ib->ctx, ib->iter_pool));
+      SVN_ERR(switch_dir_external(path, new_item->url,&(new_item->revision),
+                                  &(new_item->peg_revision),
+                                  ib->timestamp_sleep, ib->ctx,
+                                  ib->iter_pool));
     }
 
   /* Clear ib->iter_pool -- we only use it for scratchwork (and this will
