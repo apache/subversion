@@ -969,7 +969,7 @@ def old_style_externals_ignore_peg_reg(sbox):
   # '@HEAD' does not exist.
   svntest.actions.run_and_verify_svn("External '%s' used pegs" % ext.strip(),
                                      None,
-                                     ".*URL '.*/A/D/G@HEAD' doesn't exist",
+                                     ".*URL .*/A/D/G@HEAD' .* doesn't exist",
                                      'up',
                                      wc_dir)
 

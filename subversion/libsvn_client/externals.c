@@ -570,6 +570,20 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
                                      ib->pool));
       SVN_ERR(svn_ra_check_path(ra_session, "", ra_cache.ra_revnum, &kind,
                                 ib->pool));
+
+      if (svn_node_none == kind)
+        return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                                 _("URL '%s' at revision %ld doesn't exist"), 
+                                 ra_cache.ra_session_url,
+                                 ra_cache.ra_revnum);
+
+      if (svn_node_dir != kind && svn_node_file != kind)
+        return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                                 _("URL '%s' at revision %ld is not a file "
+                                   "or a directory"), 
+                                 ra_cache.ra_session_url,
+                                 ra_cache.ra_revnum);
+
       ra_cache.kind_p = &kind;
     }
 
