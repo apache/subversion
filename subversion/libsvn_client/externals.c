@@ -45,6 +45,10 @@ struct handle_external_item_change_baton
   /* The directory that has this externals property. */
   const char *parent_dir;
 
+  /* Access baton for parent_dir.  If the external is an export, this
+     this must be NULL, otherwise it must be non-NULL. */
+  svn_wc_adm_access_t *adm_access;
+
   /* The URL for the directory that has this externals property. */
   const char *parent_dir_url;
 
@@ -105,6 +109,10 @@ compare_external_items(svn_wc_external_item2_t *new_item,
  * Pass CANCEL_FUNC, CANCEL_BATON to svn_wc_remove_from_revision_control.
  *
  * Use POOL for all temporary allocation.
+ *
+ * This function is not passed a svn_wc_adm_access_t to ensure that
+ * what is being deleted is being opened separately so if there is a
+ * lock on it, it cannot be deleted.
  */
 static svn_error_t *
 relegate_dir_external(const char *path,
@@ -719,6 +727,7 @@ struct handle_externals_desc_change_baton
   const char *to_path;
 
   /* Passed through to handle_external_item_change_baton. */
+  svn_wc_adm_access_t *adm_access;
   svn_client_ctx_t *ctx;
   const char *repos_root_url;
   svn_boolean_t update_unchanged;
@@ -747,6 +756,11 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
   svn_wc_external_item2_t *item;
   const char *ambient_depth_w;
   svn_depth_t ambient_depth;
+
+  if (cb->is_export)
+    SVN_ERR_ASSERT(!cb->adm_access);
+  else
+    SVN_ERR_ASSERT(cb->adm_access);
 
   if (cb->ambient_depths)
     {
@@ -812,6 +826,7 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
   ib.new_desc          = new_desc_hash;
   ib.parent_dir        = (const char *) key;
   ib.repos_root_url    = cb->repos_root_url;
+  ib.adm_access        = cb->adm_access;
   ib.ctx               = cb->ctx;
   ib.update_unchanged  = cb->update_unchanged;
   ib.is_export         = cb->is_export;
@@ -868,7 +883,8 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
 
 
 svn_error_t *
-svn_client__handle_externals(svn_wc_traversal_info_t *traversal_info,
+svn_client__handle_externals(svn_wc_adm_access_t *adm_access,
+                             svn_wc_traversal_info_t *traversal_info,
                              const char *from_url,
                              const char *to_path,
                              const char *repos_root_url,
@@ -896,6 +912,7 @@ svn_client__handle_externals(svn_wc_traversal_info_t *traversal_info,
   cb.from_url          = from_url;
   cb.to_path           = to_path;
   cb.repos_root_url    = repos_root_url;
+  cb.adm_access        = adm_access;
   cb.ctx               = ctx;
   cb.update_unchanged  = update_unchanged;
   cb.timestamp_sleep   = timestamp_sleep;
@@ -926,6 +943,7 @@ svn_client__fetch_externals(apr_hash_t *externals,
   cb.externals_old     = apr_hash_make(pool);
   cb.requested_depth   = requested_depth;
   cb.ambient_depths    = NULL;
+  cb.adm_access        = NULL;
   cb.ctx               = ctx;
   cb.from_url          = from_url;
   cb.to_path           = to_path;

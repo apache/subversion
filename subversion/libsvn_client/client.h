@@ -974,8 +974,9 @@ svn_client__do_commit(const char *base_url,
 /* Handle changes to the svn:externals property in the tree traversed
    by TRAVERSAL_INFO (obtained from svn_wc_get_update_editor or
    svn_wc_get_switch_editor, for example).  The tree's top level
-   directory is at TO_PATH and corresponds to FROM_URL URL in the
-   repository, which has a root URL of REPOS_ROOT_URL.
+   directory is at TO_PATH and should have a write lock in ADM_ACCESS
+   and corresponds to FROM_URL URL in the repository, which has a root
+   URL of REPOS_ROOT_URL.
 
    For each changed value of the property, discover the nature of the
    change and behave appropriately -- either check a new "external"
@@ -1009,7 +1010,8 @@ svn_client__do_commit(const char *base_url,
 
    Use POOL for temporary allocation. */
 svn_error_t *
-svn_client__handle_externals(svn_wc_traversal_info_t *traversal_info,
+svn_client__handle_externals(svn_wc_adm_access_t *adm_access,
+                             svn_wc_traversal_info_t *traversal_info,
                              const char *from_url,
                              const char *to_path,
                              const char *repos_root_url,

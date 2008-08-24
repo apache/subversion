@@ -254,7 +254,8 @@ svn_client__update_internal(svn_revnum_t *result_rev,
      handling external items (and any errors therefrom) doesn't delay
      the primary operation.  */
   if (SVN_DEPTH_IS_RECURSIVE(depth) && (! ignore_externals))
-    SVN_ERR(svn_client__handle_externals(traversal_info,
+    SVN_ERR(svn_client__handle_externals(adm_access,
+					 traversal_info,
                                          entry->url,
                                          anchor,
                                          repos_root,

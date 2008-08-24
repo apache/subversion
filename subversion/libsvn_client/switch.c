@@ -195,9 +195,9 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
      handling external items (and any errors therefrom) doesn't delay
      the primary operation. */
   if (SVN_DEPTH_IS_RECURSIVE(depth) && (! ignore_externals))
-    err = svn_client__handle_externals(traversal_info, switch_url, path,
-                                       source_root, depth, FALSE, use_sleep,
-                                       ctx, pool);
+    err = svn_client__handle_externals(adm_access, traversal_info, switch_url,
+                                       path, source_root, depth, FALSE,
+                                       use_sleep, ctx, pool);
 
   /* Sleep to ensure timestamp integrity (we do this regardless of
      errors in the actual switch operation(s)). */
