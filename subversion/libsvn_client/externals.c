@@ -548,19 +548,14 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
      extra bookkeeping worthwhile.
   */
 
-  /* Not protecting against recursive externals.  Detecting them in
-     the global case is hard, and it should be pretty obvious to a
-     user when it happens.  Worst case: your disk fills up :-). */
-
-  if (! old_item)
+  /* If the external is being checked out, exported or updated,
+     determine if the external is a file or directory. */
+  svn_node_kind_t kind;
+  svn_client__ra_session_from_path_results ra_cache = { 0 };
+  if (new_item)
     {
-      /* This branch is only used during a checkout or an export. */
-
-      /* Determine if the external being added is a file or
-         directory. */
       svn_ra_session_t *ra_session;
-      svn_client__ra_session_from_path_results ra_cache;
-      svn_node_kind_t kind;
+      svn_error_t *e;
 
       /* Get the RA connection. */
       SVN_ERR(svn_client__ra_session_from_path(&ra_session,
@@ -574,9 +569,18 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
       SVN_ERR(svn_ra_get_uuid2(ra_session, &ra_cache.repos_uuid, ib->pool));
       SVN_ERR(svn_ra_get_repos_root2(ra_session, &ra_cache.repos_root_url,
                                      ib->pool));
-      SVN_ERR(svn_ra_check_path(ra_session, "", ra_cache.ra_revnum,
-                                &kind, ib->pool));
+      SVN_ERR(svn_ra_check_path(ra_session, "", ra_cache.ra_revnum, &kind,
+                                ib->pool));
       ra_cache.kind_p = &kind;
+    }
+
+  /* Not protecting against recursive externals.  Detecting them in
+     the global case is hard, and it should be pretty obvious to a
+     user when it happens.  Worst case: your disk fills up :-). */
+
+  if (! old_item)
+    {
+      /* This branch is only used during a checkout or an export. */
 
       /* The target dir might have multiple components.  Guarantee
          the path leading down to the last component. */
