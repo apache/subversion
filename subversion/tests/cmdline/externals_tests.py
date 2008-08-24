@@ -55,7 +55,7 @@ def externals_test_setup(sbox):
   The arrangement of the externals in the first repository is:
 
     /A/C/ ==>  exdir_G                          <scheme>:///<other_repos>/A/D/G
-               ../../../<other_repos_basename>/A/D/H -r 1 exdir_H
+               -r 1 ../../../<other_repos_basename>/A/D/H exdir_H
 
     /A/D/ ==>  ^/../<other_repos_basename>/A    exdir_A
                //<other_repos>/A/D/G/           exdir_A/G/
@@ -148,7 +148,7 @@ def externals_test_setup(sbox):
   # Set up the externals properties on A/B/ and A/D/.
   externals_desc = \
            "exdir_G       " + external_url_for["A/C/exdir_G"] + "\n" + \
-           external_url_for["A/C/exdir_H"] + " -r 1 exdir_H\n"
+           "-r 1 " + external_url_for["A/C/exdir_H"] + " exdir_H\n"
 
   tmp_f = os.tempnam(wc_init_dir, 'tmp')
   svntest.main.file_append(tmp_f, externals_desc)

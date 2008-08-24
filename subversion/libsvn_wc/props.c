@@ -3332,7 +3332,8 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
          If -r is at the beginning of the line or the first token is
          an absolute URL or if the second token is not an absolute
          URL, then the URL supports peg revisions. */
-      if (0 == rev_idx || token0_is_url || ! token1_is_url)
+      if (0 == rev_idx ||
+          (-1 == rev_idx && (token0_is_url || ! token1_is_url)))
         {
           /* The URL is passed to svn_opt_parse_path in
              uncanonicalized form so that the scheme relative URL
