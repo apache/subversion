@@ -1231,6 +1231,7 @@ svn_fs_base__dag_finalize_edits(dag_node_t *file,
   node_revision_t *noderev;
   const char *old_data_key, *new_data_key, *useless_data_key = NULL;
   svn_checksum_t *rep_checksum;
+  base_fs_data_t *bfd = fs->fsap_data;
 
   /* Make sure our node is a file. */
   if (file->kind != svn_node_file)
@@ -1303,7 +1304,7 @@ svn_fs_base__dag_finalize_edits(dag_node_t *file,
 
   /* Throw away our edit -- there was an existing representation whose
      contents matched our goal. */
-  if (useless_data_key)
+  if (useless_data_key && (bfd->format >= SVN_FS_BASE__MIN_REP_SHARING_FORMAT))
     SVN_ERR(svn_fs_base__delete_rep_if_mutable(fs, useless_data_key,
                                                txn_id, trail, pool));
 
