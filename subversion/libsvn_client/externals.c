@@ -555,7 +555,6 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
   if (new_item)
     {
       svn_ra_session_t *ra_session;
-      svn_error_t *e;
 
       /* Get the RA connection. */
       SVN_ERR(svn_client__ra_session_from_path(&ra_session,
