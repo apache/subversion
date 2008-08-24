@@ -111,8 +111,9 @@ svn_checksum_to_cstring_display(svn_checksum_t *checksum,
                                 apr_pool_t *pool);
 
 
-/** Return the hex representation of @a checksum, allocating the string
- * in @a pool.  If @a digest is all zeros, then return NULL.
+/** Return the hex representation of @a checksum, allocating the
+ * string in @a pool.  If @a checksum->digest is all zeros (that is,
+ * 0, not '0'), then return NULL. 
  *
  * @since New in 1.6.
  */
