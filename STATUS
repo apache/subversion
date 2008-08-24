@@ -72,5 +72,18 @@ Candidate changes for 1.5.2:
    Votes:
      +1: arfrever, rhuijben
 
+ * r32672, r32673, r32674
+   Fix an inconsistency in parsing svn:externals with the new 1.5
+   relative URL support when both a relative URL and a relative path
+   is used with -r N.  Also, add stricter checking on svn:externals.
+   Votes:
+     +1: blair
+   Justification:
+     If an 1.4 style external with -r N and an absolute URL is changed
+     to use a relative URL, then svn will not parse the URL as a URL
+     any more but as the target directory, which is odd and
+     inconsistent behavior.  The code without this fix does not match
+     the documentation on the web site.
+
 Approved changes:
 =================
