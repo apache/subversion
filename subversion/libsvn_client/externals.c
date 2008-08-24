@@ -192,12 +192,6 @@ switch_dir_external(const char *path,
   svn_error_t *err;
   apr_pool_t *subpool = svn_pool_create(pool);
 
-  /* First notify that we're about to handle an external. */
-  if (ctx->notify_func2)
-    ctx->notify_func2(ctx->notify_baton2,
-                      svn_wc_create_notify(path, svn_wc_notify_update_external,
-                                           pool), pool);
-
   /* If path is a directory, try to update/switch to the correct URL
      and revision. */
   SVN_ERR(svn_io_check_path(path, &kind, pool));
@@ -686,6 +680,13 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
            || ib->update_unchanged)
     {
       /* This branch handles all other changes. */
+
+      /* First notify that we're about to handle an external. */
+      if (ib->ctx->notify_func2)
+        (*ib->ctx->notify_func2)
+          (ib->ctx->notify_baton2,
+           svn_wc_create_notify(path, svn_wc_notify_update_external,
+                                ib->iter_pool), ib->iter_pool);
 
       /* Either the URL changed, or the exact same item is present in
          both hashes, and caller wants to update such unchanged items.
