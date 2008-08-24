@@ -3303,6 +3303,15 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
       token0_is_url = svn_path_is_url(token0);
       token1_is_url = svn_path_is_url(token1);
 
+      if (token0_is_url && token1_is_url)
+        return svn_error_createf
+          (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, NULL,
+           _("Invalid %s property on '%s': "
+             "cannot use two absolute URLs ('%s' and '%s') in an external; "
+             "one must be a path where an absolute or relative URL is "
+             "checked out to"),
+           SVN_PROP_EXTERNALS, parent_directory_display, token0, token1);
+
       /* If -r is at the beginning of the line or the first token is
          an absolute URL or if the second token is not an absolute
          URL, then the URL supports peg revisions. */
