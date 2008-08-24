@@ -651,7 +651,7 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
                                ib->ctx->cancel_func, ib->ctx->cancel_baton,
                                ib->iter_pool));
 
-      /* We don't use relegate_external() here, because we know that
+      /* We don't use relegate_dir_external() here, because we know that
          nothing else in this externals description (at least) is
          going to need this directory, and therefore it's better to
          leave stuff where the user expects it. */
