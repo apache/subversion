@@ -576,7 +576,7 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
                                      ib->pool));
       SVN_ERR(svn_ra_check_path(ra_session, "", ra_cache.ra_revnum,
                                 &kind, ib->pool));
-      ra_cache.kind_opt = &kind;
+      ra_cache.kind_p = &kind;
 
       /* The target dir might have multiple components.  Guarantee
          the path leading down to the last component. */

@@ -589,11 +589,11 @@ typedef struct
      revnum is unknown.  */
   svn_revnum_t ra_revnum;
 
-  /* The node kind for the URL.  Since there is no enum value for an
-     unknown node kind, it is represented as a pointer to a
+  /* An optional node kind for the URL.  Since there is no enum value
+     for an unknown node kind, it is represented as a pointer to a
      svn_node_kind_t with a NULL pointer indicating an unknown
      value. */
-  svn_node_kind_t *kind_opt;
+  svn_node_kind_t *kind_p;
 } svn_client__ra_session_from_path_results;
 
 /* Checkout into PATH a working copy of URL at REVISION, and (if not

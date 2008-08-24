@@ -94,8 +94,8 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
     if ((have_revnum = (ra_cache && SVN_IS_VALID_REVNUM(ra_cache->ra_revnum))))
       revnum = ra_cache->ra_revnum;
 
-    if ((have_kind = (ra_cache && ra_cache->kind_opt)))
-      kind = *(ra_cache->kind_opt);
+    if ((have_kind = (ra_cache && ra_cache->kind_p)))
+      kind = *(ra_cache->kind_p);
 
     if (! have_repos_root_url || ! have_repos_uuid || ! have_session_url ||
         ! have_revnum || ! have_kind)
