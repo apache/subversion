@@ -19,7 +19,6 @@
 
 
 #include <stdio.h>
-#include <assert.h>
 
 #ifndef WIN32
 #include <unistd.h>

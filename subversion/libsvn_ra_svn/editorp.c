@@ -24,8 +24,6 @@
 #include <apr_strings.h>
 #include <apr_md5.h>
 
-#include <assert.h>
-
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_error.h"

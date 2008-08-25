@@ -16,8 +16,6 @@
  * ====================================================================
  */
 
-#include <assert.h>
-
 #include "svn_cache.h"
 #include "svn_pools.h"
 #include "svn_base64.h"

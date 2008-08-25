@@ -20,7 +20,6 @@
 
 #include <stdlib.h>
 #include <limits.h>
-#include <assert.h>
 #include <apr_version.h>
 #include <apr_pools.h>
 #include <apr_hash.h>

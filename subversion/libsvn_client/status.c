@@ -21,7 +21,6 @@
 
 
 /*** Includes. ***/
-#include <assert.h>
 #include <apr_strings.h>
 #include <apr_pools.h>
 

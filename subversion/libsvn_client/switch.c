@@ -22,8 +22,6 @@
 
 /*** Includes. ***/
 
-#include <assert.h>
-
 #include "svn_client.h"
 #include "svn_error.h"
 #include "svn_time.h"

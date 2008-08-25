@@ -18,8 +18,6 @@
 
 /*** Includes. ***/
 
-#include <assert.h>
-
 #include <apr_pools.h>
 #include <apr_file_io.h>
 
