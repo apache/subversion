@@ -81,5 +81,12 @@ Candidate changes for 1.5.2:
    Votes:
      +1: blair
 
+  * r32703
+    Fix a bug in the SWIG Python binding tests where test_create was
+    creating a nested repository for the tests. As of r32648, this is
+    no longer possible.
+    Votes:
+      +1: jwhitlock (non-binding)
+
 Approved changes:
 =================
