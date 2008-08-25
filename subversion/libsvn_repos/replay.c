@@ -18,7 +18,6 @@
  */
 
 
-#include <assert.h>
 #include <apr_hash.h>
 
 #include "svn_types.h"

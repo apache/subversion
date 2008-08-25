@@ -18,8 +18,6 @@
 
 
 
-#include <assert.h>
-
 #include <apr_uri.h>
 
 #include <expat.h>
