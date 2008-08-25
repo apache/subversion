@@ -137,6 +137,12 @@ svn_checksum_parse_hex(svn_checksum_t **checksum,
   int len;
   int i;
 
+  if (hex == NULL)
+    {
+      *checksum = NULL;
+      return SVN_NO_ERROR;
+    }
+
   SVN_ERR(validate_kind(kind));
 
   *checksum = svn_checksum_create(kind, pool);
