@@ -13312,8 +13312,8 @@ test_list = [ None,
               del_differing_file,
               SkipUnless(subtree_merges_dont_cause_spurious_conflicts,
                          server_has_mergeinfo),
-              XFail(SkipUnless(merge_target_and_subtrees_need_nonintersecting_ranges,
-                               server_has_mergeinfo)),
+              SkipUnless(merge_target_and_subtrees_need_nonintersecting_ranges,
+                         server_has_mergeinfo),
              ]
 
 if __name__ == '__main__':

@@ -2948,13 +2948,23 @@ drive_merge_report_editor(const char *target_wcpath,
             (strcmp(parent->path, target_wcpath) == 0) ? TRUE : FALSE;
 
           /* If a subtree needs the same range applied as it's nearest parent
-             with mergeinfo, then we don't need to describe the subtree
-             separately. */
+             with mergeinfo or neither the subtree nor its nearest parent need
+             REVISION1:REVISION2 merged, then we don't need to describe the
+             subtree separately.  In the latter case this could break the
+             editor if child->path didn't exist at REVISION2 and we attempt
+             to describe it via a reporter set_path call. */
           if (child->remaining_ranges->nelts)
             {
               range = APR_ARRAY_IDX(child->remaining_ranges, 0,
                                     svn_merge_range_t *);
-              if (parent->remaining_ranges->nelts)
+              if ((!is_rollback && range->start > revision2)
+                  || (is_rollback && range->start < revision2))
+                {
+                  /* Neither subtree nor parent need any
+                  part of REVISION1:REVISION2. */
+                  continue;
+                }
+              else if (parent->remaining_ranges->nelts)
                 {
                    svn_merge_range_t *parent_range =
                     APR_ARRAY_IDX(parent->remaining_ranges, 0,
@@ -2963,7 +2973,7 @@ drive_merge_report_editor(const char *target_wcpath,
                     APR_ARRAY_IDX(child->remaining_ranges, 0,
                                   svn_merge_range_t *);
                   if (parent_range->start == child_range->start)
-                    continue; /* Same as parent. */
+                    continue; /* Subtree needs same range as parent. */
                 }
             }
           else /* child->remaining_ranges->nelts == 0*/
