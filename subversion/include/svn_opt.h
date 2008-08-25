@@ -504,6 +504,8 @@ svn_opt_args_to_target_array3(apr_array_header_t **targets_p,
  * administrative directory.
  *
  * @since New in 1.2.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *
 svn_opt_args_to_target_array2(apr_array_header_t **targets_p,
