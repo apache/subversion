@@ -283,11 +283,11 @@ typedef struct root_vtable_t
   svn_error_t *(*apply_textdelta)(svn_txdelta_window_handler_t *contents_p,
                                   void **contents_baton_p,
                                   svn_fs_root_t *root, const char *path,
-                                  const char *base_checksum,
-                                  const char *result_checksum,
+                                  svn_checksum_t *base_checksum,
+                                  svn_checksum_t *result_checksum,
                                   apr_pool_t *pool);
   svn_error_t *(*apply_text)(svn_stream_t **contents_p, svn_fs_root_t *root,
-                             const char *path, const char *result_checksum,
+                             const char *path, svn_checksum_t *result_checksum,
                              apr_pool_t *pool);
   svn_error_t *(*contents_changed)(int *changed_p, svn_fs_root_t *root1,
                                    const char *path1, svn_fs_root_t *root2,
