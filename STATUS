@@ -83,8 +83,3 @@ Candidate changes for 1.5.2:
 
 Approved changes:
 =================
-
- * r32596
-   Support Neon 0.28.3.
-   Votes:
-     +1: arfrever, rhuijben, hwright
