@@ -12388,8 +12388,6 @@ def subtree_source_missing_in_requested_range(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
                                      'Merge r12 to A_COPY',
                                      wc_dir)
-  svntest.actions.run_and_verify_svn(None, ["At revision 14.\n"], [], 'up',
-                                     wc_dir)
 
   # Update A_COPY/D/H/rho back to r13 so it's mergeinfo doesn't include
   # r12.  Then merge a range, -r6:12 which should delete a subtree
