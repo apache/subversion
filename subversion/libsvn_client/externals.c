@@ -798,7 +798,7 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
   else if (! new_item)
     {
       /* This branch is only used when an external is deleted from the
-	 repository and the working copy is updated. */
+         repository and the working copy is updated. */
 
       /* See comment in above case about fancy rename handling.  Here,
          before removing an old subdir, we would see if it wants to
@@ -912,7 +912,7 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
                                        ib->iter_pool));
           break;
         default:
-	  SVN_ERR_MALFUNCTION();
+          SVN_ERR_MALFUNCTION();
           break;
         }
     }
