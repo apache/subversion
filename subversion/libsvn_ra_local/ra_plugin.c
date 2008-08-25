@@ -34,9 +34,6 @@
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 
-#include <assert.h>
-
-
 /*----------------------------------------------------------------*/
 
 /*** Miscellaneous helper functions ***/

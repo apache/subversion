@@ -30,8 +30,6 @@
 #include "diff.h"
 #include "svn_private_config.h"
 
-#include <assert.h>
-
 typedef struct source_tokens_t
 {
   /* A token simply is an svn_string_t pointing to

@@ -38,8 +38,6 @@
 #include "svn_path.h"
 #include "svn_ctype.h"
 
-#include <assert.h>
-
 /* A token, i.e. a line read from a file. */
 typedef struct svn_diff__file_token_t
 {

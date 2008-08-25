@@ -20,7 +20,6 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 #include <apr_pools.h>
 #include <apr_hash.h>
 #include <apr_tables.h>

@@ -23,7 +23,6 @@
 /*** Includes. ***/
 
 #include <string.h>
-#include <assert.h>
 #include <apr_strings.h>
 #include <apr_hash.h>
 #include <apr_md5.h>

@@ -45,7 +45,6 @@
 #include "svn_ra.h"
 #include "client.h"
 #include "mergeinfo.h"
-#include <assert.h>
 
 #include "private/svn_wc_private.h"
 #include "private/svn_mergeinfo_private.h"
