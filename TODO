@@ -8,9 +8,6 @@ ctypes-python-bindings TODOs:
    specify additional paths but it is not possible to override the default
    paths.
 
- * If users have ctypesgen installed we should use the installed version
-   instead of requiring ctypesgen to be in the build dir.
-
  * We need a setup.py script / installer for installing the ctypes python
    bindings.
 
@@ -21,9 +18,8 @@ ctypes-python-bindings TODOs:
    python bindings.
 
  * Create ctypes-python-bindings target in Subversion trunk Makefile for
-   generating python wrappers for generating the python wrappers for the
-   ctypes python bindings. This target would be a no-op if we are in
-   release mode.
+   generating python wrappers for the ctypes python bindings. This target
+   would be a no-op if we are in release mode.
 
  * Create install-ctypes-python-bindings target in Subversion trunk
    Makefile for installing the ctypes python bindings.
