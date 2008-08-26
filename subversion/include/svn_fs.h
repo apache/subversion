@@ -471,7 +471,7 @@ svn_fs_access_get_username(const char **username,
                            svn_fs_access_t *access_ctx);
 
 
-/** Push a lock-token @a token associated with path @path into the
+/** Push a lock-token @a token associated with path @a path into the
  * context @a access_ctx.  The context remembers all tokens it
  * receives, and makes them available to fs functions.  The token and
  * path are not duplicated into @a access_ctx's pool; make sure the
@@ -1546,8 +1546,8 @@ svn_fs_file_checksum(svn_checksum_t **checksum,
                      apr_pool_t *pool);
 
 /**
- * Same as svn_fs_file_checksum(), only always put the MD5 checksum into of
- * file @path into @a digest, which should point to @c APR_MD5_DIGESTSIZE bytes
+ * Same as svn_fs_file_checksum(), only always put the MD5 checksum of file
+ * @a path into @a digest, which should point to @c APR_MD5_DIGESTSIZE bytes
  * of storage.  If the checksum doesn't exist, put all 0's into @a digest.
  *
  * @deprecated Provided for backward compatibility with the 1.5 API.
