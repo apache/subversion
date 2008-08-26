@@ -28,9 +28,7 @@ Candidate changes for 1.5.2:
      inconsistent behavior.  The code without this fix does not match
      the documentation on the web site.
    Votes:
-     +1: blair
-     -0: cmpilato (don't use "old style" and "new style" in error messages);
-         r32739 was nomiated after the -0 and is a follow up to the -0
+     +1: blair, cmpilato
 
  * r32643
    Improve merge performance by not driving the merge editor for ranges
