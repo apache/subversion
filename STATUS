@@ -73,6 +73,28 @@ Candidate changes for 1.5.2:
     Votes:
       +1: jwhitlock (non-binding)
 
+ * r32643
+   Improve merge performance by not driving the merge editor for ranges
+   which don't need to be merged.
+   Justification:
+     After a year plus of making merge slower with merge tracking, making
+     it a bit faster is a welcome change.
+   Votes:
+     +1: pburba
+
+ * r32706, r32707
+   Fix another issue #3067 bug where subtree mergeinfo can occur that
+   breaks the merge editor drive.
+   Notes:
+     r32706 is a new test, r32707 is the fix.
+   Justification:
+     We've already encountered this problem in our own repository when
+     trying to synch up the fs-rep-sharing branch with trunk (sorry no
+     thread to reference, only discussed in IRC but the new test in r32706
+     shows how it can happen).
+   Votes:
+     +1: pburba
+
 Approved changes:
 =================
 
