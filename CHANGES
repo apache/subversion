@@ -39,9 +39,12 @@ http://svn.collab.net/repos/svn/tags/1.5.2
   * fixed: core dump with relative externals (issue #3237)
   * fixed: 'svn copy' working copy corruption (r32467, -70)
   * fixed: perl bindings errors in non-English locale (issue #3258)
+  * fixed: 'svn merge' incorrectly reverses previous merges (r32494, -522, -523)
 
  Developer-visible changes:
   * make libsvn_ra_neon initialization thread-safe (r32497, r32510)
+  * respect LDFLAGS in Swig bindings (r32416, r32421, r32442)
+  * fixed: test failures in non-English locales (r32491)
 
 
 Version 1.5.1
