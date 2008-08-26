@@ -17,42 +17,6 @@ Candidate changes for 1.5.2:
      +1: stsp, arfrever
      +0: cmpilato
 
- * r32416, r32421
-   Respect LDFLAGS in Perl bindings.
-   Notes:
-     Previously LDFLAGS were ignored (except for libsvn_swig_perl) even when
-     the SWIG_LDFLAGS variable was set.
-   Votes:
-     +1: arfrever
-
- * r32442
-   Respect LDFLAGS in SWIG bindings without the requirement of the exporting
-   of the SWIG_LDFLAGS variable.
-   Votes:
-     +1: arfrever
-
- * r32491
-   Fix test failures in non-English locale.
-   Votes:
-     +1: arfrever
-     +0: hwright
-
- * r32494, r32522, r32523
-   Fix a bug where previous merges are incorrectly reversed leading to repeat
-   merges and spurious conflicts.
-   Notes:
-     r32494 is just a doc string tweak that hopefully makes the real fix a
-     easier to review, r32522 is a test for the bug, and r32523 is the real
-     fix.  There is a trivial conflict on r32494 when adding the new merge
-     test due to the fact that some other new merge tests are not backported
-     yet.
-   Justification:
-     Repeat merges and needless conflicts in the age of merge tracking are,
-     to put it mildly, less than desirable, see
-     http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=141832.
-   Votes:
-     +1: pburba, julianfoad
-
  * r32672, r32673, r32674
    Fix an inconsistency in parsing svn:externals with the new 1.5
    relative URL support when both a relative URL and a relative path
@@ -97,3 +61,42 @@ Candidate changes for 1.5.2:
 
 Approved changes:
 =================
+
+ * r32416, r32421
+   Respect LDFLAGS in Perl bindings.
+   Notes:
+     Previously LDFLAGS were ignored (except for libsvn_swig_perl) even when
+     the SWIG_LDFLAGS variable was set.
+   Votes:
+     +1: arfrever
+     +0: cmpilato
+
+ * r32442
+   Respect LDFLAGS in SWIG bindings without the requirement of the exporting
+   of the SWIG_LDFLAGS variable.
+   Votes:
+     +1: arfrever
+     +0: cmpilato
+
+ * r32491
+   Fix test failures in non-English locale.
+   Votes:
+     +1: arfrever, cmpilato
+     +0: hwright
+
+ * r32494, r32522, r32523
+   Fix a bug where previous merges are incorrectly reversed leading to repeat
+   merges and spurious conflicts.
+   Notes:
+     r32494 is just a doc string tweak that hopefully makes the real fix a
+     easier to review, r32522 is a test for the bug, and r32523 is the real
+     fix.  There is a trivial conflict on r32494 when adding the new merge
+     test due to the fact that some other new merge tests are not backported
+     yet.
+   Justification:
+     Repeat merges and needless conflicts in the age of merge tracking are,
+     to put it mildly, less than desirable, see
+     http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=141832.
+   Votes:
+     +1: pburba, julianfoad, cmpilato
+
