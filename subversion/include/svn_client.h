@@ -866,6 +866,22 @@ typedef struct svn_client_ctx_t
 
 } svn_client_ctx_t;
 
+/** Initialize a client context.
+ * Set @a *ctx to a client context object, allocated in @a pool, that
+ * represents a particular instance of an svn client.
+ *
+ * In order to avoid backwards compatibility problems, clients must
+ * use this function to intialize and allocate the
+ * @c svn_client_ctx_t structure rather than doing so themselves, as
+ * the size of this structure may change in the future.
+ *
+ * The current implementation never returns error, but callers should
+ * still check for error, for compatibility with future versions.
+ */
+svn_error_t *
+svn_client_create_context(svn_client_ctx_t **ctx,
+                          apr_pool_t *pool);
+
 /** @} end group: Client context management */
 
 /**
@@ -924,32 +940,6 @@ svn_client_args_to_target_array(apr_array_header_t **targets_p,
 
 /** @} */
 
-/**
- * Client context
- *
- * @defgroup clnt_ctx Client context management
- *
- * @{
- */
-
-/** Initialize a client context.
- * Set @a *ctx to a client context object, allocated in @a pool, that
- * represents a particular instance of an svn client.
- *
- * In order to avoid backwards compatibility problems, clients must
- * use this function to intialize and allocate the
- * @c svn_client_ctx_t structure rather than doing so themselves, as
- * the size of this structure may change in the future.
- *
- * The current implementation never returns error, but callers should
- * still check for error, for compatibility with future versions.
- */
-svn_error_t *
-svn_client_create_context(svn_client_ctx_t **ctx,
-                          apr_pool_t *pool);
-
-/** @} end group: Client context */
-
 /**
  * Client working copy management functions
  *
