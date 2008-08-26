@@ -42,7 +42,7 @@ extern "C" {
    back-end's format.  */
 #define SVN_FS_BASE__FORMAT_NUMBER                4
 
-/* Minimum format number that supports forward deltas */
+/* Minimum format number that supports representation sharing */
 #define SVN_FS_BASE__MIN_REP_SHARING_FORMAT       4
 
 /* Minimum format number that supports forward deltas */
