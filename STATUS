@@ -62,12 +62,6 @@ Candidate changes for 1.5.2:
 Approved changes:
 =================
 
- * r32491
-   Fix test failures in non-English locale.
-   Votes:
-     +1: arfrever, cmpilato
-     +0: hwright
-
  * r32494, r32522, r32523
    Fix a bug where previous merges are incorrectly reversed leading to repeat
    merges and spurious conflicts.
