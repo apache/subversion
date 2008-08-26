@@ -3315,16 +3315,16 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
         return svn_error_createf
           (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, NULL,
            _("Invalid %s property on '%s': "
-             "cannot use a URL '%s' as the target directory for a new style "
-             "external"),
+             "cannot use a URL '%s' as the target directory for an external "
+             "definition"),
            SVN_PROP_EXTERNALS, parent_directory_display, token1);
 
       if (1 == rev_idx && token0_is_url)
         return svn_error_createf
           (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, NULL,
            _("Invalid %s property on '%s': "
-             "cannot use a URL '%s' as the target directory for an old style "
-             "external"),
+             "cannot use a URL '%s' as the target directory for an external "
+             "definition"),
            SVN_PROP_EXTERNALS, parent_directory_display, token0);
 
       /* The appearence of -r N or -rN forces the type of external.
