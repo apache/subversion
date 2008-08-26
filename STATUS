@@ -29,14 +29,7 @@ Candidate changes for 1.5.2:
      the documentation on the web site.
    Votes:
      +1: blair
-
-  * r32703
-    Fix a bug in the SWIG Python binding tests where test_create was
-    creating a nested repository for the tests. As of r32648, this is
-    no longer possible.
-    Votes:
-      +1: hwright
-      +1: jwhitlock (non-binding)
+     -0: cmpilato (don't use "old style" and "new style" in error messages)
 
  * r32643
    Improve merge performance by not driving the merge editor for ranges
@@ -45,20 +38,21 @@ Candidate changes for 1.5.2:
      After a year plus of making merge slower with merge tracking, making
      it a bit faster is a welcome change.
    Votes:
-     +1: pburba
+     +1: pburba, cmpilato
 
- * r32706, r32707
+ * r32706, r32707, r32730
    Fix another issue #3067 bug where subtree mergeinfo can occur that
    breaks the merge editor drive.
    Notes:
-     r32706 is a new test, r32707 is the fix.
+     r32706 is a new test, r32707 is the fix.  r32730 is an obvious
+     fix (comment formatting tweak).
    Justification:
      We've already encountered this problem in our own repository when
      trying to synch up the fs-rep-sharing branch with trunk (sorry no
      thread to reference, only discussed in IRC but the new test in r32706
      shows how it can happen).
    Votes:
-     +1: pburba
+     +1: pburba, cmpilato
 
 Approved changes:
 =================
@@ -79,3 +73,10 @@ Approved changes:
    Votes:
      +1: pburba, julianfoad, cmpilato
 
+  * r32703
+    Fix a bug in the SWIG Python binding tests where test_create was
+    creating a nested repository for the tests. As of r32648, this is
+    no longer possible.
+    Votes:
+      +1: hwright, cmpilato
+      +1: jwhitlock (non-binding)
