@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2007-2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -111,8 +111,9 @@ svn_checksum_to_cstring_display(svn_checksum_t *checksum,
                                 apr_pool_t *pool);
 
 
-/** Return the hex representation of @a checksum, allocating the string
- * in @a pool.  If @a digest is all zeros, then return NULL.
+/** Return the hex representation of @a checksum, allocating the
+ * string in @a pool.  If @a checksum->digest is all zeros (that is,
+ * 0, not '0'), then return NULL. 
  *
  * @since New in 1.6.
  */
@@ -121,17 +122,22 @@ svn_checksum_to_cstring(svn_checksum_t *checksum,
                         apr_pool_t *pool);
 
 
-/** Parse the hex representation of a checksum into @checksum.
+/** Parse the hex representation of a checksum of kind @a kind into
+ * @a checksum, allocating in @a pool.
  *
  * @since New in 1.6.
  */
 svn_error_t *
-svn_checksum_parse_hex(svn_checksum_t *checksum,
-                       const char *hex);
+svn_checksum_parse_hex(svn_checksum_t **checksum,
+                       svn_checksum_kind_t kind,
+                       const char *hex,
+                       apr_pool_t *pool);
 
 /**
  * Return in @a *checksum the checksum of type @a kind for the bytes beginning
  * at @a data, and going for @a len.  @a *checksum is allocated in @a pool.
+ *
+ * @since New in 1.6.
  */
 svn_error_t *
 svn_checksum(svn_checksum_t **checksum,
@@ -144,6 +150,8 @@ svn_checksum(svn_checksum_t **checksum,
 /**
  * Return in @a pool a newly allocated checksum populated with the checksum
  * of type @a kind for the empty string of type.
+ *
+ * @since New in 1.6.
  */
 svn_checksum_t *
 svn_checksum_empty_checksum(svn_checksum_kind_t kind,

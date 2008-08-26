@@ -36,7 +36,7 @@ svn_sha1_empty_string_digest(void)
 
 const char *
 svn_sha1_digest_to_cstring_display(const unsigned char digest[],
-                                  apr_pool_t *pool)
+                                   apr_pool_t *pool)
 {
   static const char *hex = "0123456789abcdef";
   char *str = apr_palloc(pool, (APR_SHA1_DIGESTSIZE * 2) + 1);

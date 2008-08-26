@@ -1,0 +1,465 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<style type="text/css"> /* <![CDATA[ */
+  @import "branding/css/tigris.css";
+  @import "branding/css/inst.css";
+  /* ]]> */</style>
+<link rel="stylesheet" type="text/css" media="print"
+  href="branding/css/print.css"/>
+<script type="text/javascript" src="branding/scripts/tigris.js"></script>
+<title>Subversion 1.6 Release Notes</title>
+</head>
+
+<body>
+<div class="app">
+
+<div class="warningmessage">
+<p><strong>Note:</strong> Subversion 1.6 is <em>not released yet</em>.
+When it is released, this warning message will disappear, and the rest
+of this page will become the release notes.  Until then, this page
+describes what is planned for the release.</p>
+</div>
+
+<div class="warningmessage">
+<p>[BRANCH] means that given feature probably will be included in Subversion
+1.6, but currently is still on a separate branch.</p>
+</div>
+
+<h1 style="text-align: center">Subversion 1.6 Release Notes</h1>
+
+<div class="h2" id="news" title="news">
+<h2>What's New in Subversion 1.6</h2>
+
+<ul>
+  <li><a href="#auth-related-improvements"
+      >Improved handling of authentication data</a></li>
+  <li><a href="#repository-root-relative-urls"
+      >Repository root relative URLs</a></li>
+  <li><a href="#file-externals"
+      >[BRANCH] Support for files in <tt>svn:externals</tt></a></li>
+  <li><a href="#svn-patch"
+      >[BRANCH] svn patch</a></li>
+  <li><a href="#tree-conflicts"
+      >[BRANCH] Improved handling of tree conflicts</a></li>
+  <li><a href="#fsfs-memcached"
+      >FSFS repositories: Support for Memcached</a></li>
+  <li><a href="#bdb-reverse-deltas"
+      >BDB repositories: Reverse deltas</a></li>
+  <li><a href="#ctypes-python-bindings"
+      >[BRANCH] Ctypes Python Bindings</a></li>
+  <li><a href="#improved-interactive-conflict-resolution"
+      >Improved interactive conflict resolution</a></li>
+  <li><a href="#apis"
+      >API changes, improvements, and much language bindings work</a></li>
+  <li><a href="#bug-fixes"
+      >More than XXX new bug fixes, enhancements</a></li>
+</ul>
+
+<p>Subversion 1.6 is a superset of all previous Subversion releases,
+and is considered the current "best" release.  Any feature or bugfix
+in 1.0.x through 1.5.x is also in 1.6, but 1.6 contains features and
+bugfixes not present in any earlier release.  The new features will
+eventually be documented in a 1.6 version of the free Subversion book,
+see <a href="http://svnbook.red-bean.com" >svnbook.red-bean.com</a>.</p>
+
+</div>  <!-- news -->
+
+<div class="h2" id="compatibility" title="compatibility">
+<h2>Compatibility Concerns</h2>
+
+<p>Older clients and servers interoperate transparently with 1.6
+servers and clients.  However, some of the new 1.6 features (e.g., <a
+href="#XXX" >XXX</a>) may not be available
+unless both client and server are the latest version .  There are also
+cases (e.g., <a href="#XXX">XXX</a>) where a
+new feature will work but will run less efficiently if the client is
+new and the server old.</p>
+
+<p>There is <strong>no need</strong> to dump and reload your
+repositories.  Subversion 1.6 can read repositories created by earlier
+versions.  To upgrade an existing installation, just install the
+newest libraries and binaries on top of the older ones.</p>
+
+<p>Subversion 1.6 maintains API/ABI compatibility with earlier
+releases, by only adding new functions, never removing old ones.  A
+program written to the 1.0, 1.1, 1.2, 1.3, 1.4 or 1.5 API can both compile
+and run using 1.6 libraries.  However, a program written for 1.6
+cannot necessarily compile or run against older libraries.</p>
+
+<div class="h3" id="new-feature-compatibility-table"
+             title="new-feature-compatibility-table">
+<h3>New Feature Compatibility Table</h3>
+<table border="1">
+  <tr>
+    <th>New Feature</th>
+    <th>Minimum Client</th>
+    <th>Minimum Server</th>
+    <th>Minimum Repository</th>
+    <th>Notes</th></tr>
+  <tr>
+    <td><a href="#XXX">XXX</a></td>
+    <td>1.6</td>
+    <td>1.6</td>
+    <td>1.6</td>
+    <td></td></tr>
+  <tr>
+    <td><a href="#XXX">XXX</a></td>
+    <td>1.6</td>
+    <td>any</td>
+    <td>any</td>
+    <td></td></tr>
+</table>
+
+</div>  <!-- new-feature-compatibility-table -->
+
+<div class="h3" id="wc-and-repos-format-change"
+             title="wc-and-repos-format-change">
+<h3>Working Copy and Repository Format Changes</h3>
+
+<p>[BRANCH] The working copy format has been upgraded.  This means that 1.5 and
+older Subversion clients will <em>not</em> be able to work with
+working copies produced by Subversion 1.6.  Working copies are <a
+href="#wc-upgrades" >upgraded automatically</a>.</p>
+
+<p>XXX(Only BDB repositories) Similarly, the repository format has changed, meaning that 1.5 and
+older versions of Subversion tools that normally access a repository
+directly (e.g. <tt>svnserve</tt>, <tt>mod_dav_svn</tt>,
+<tt>svnadmin</tt>) won't be able to read a repository created by
+Subversion 1.6.  But, repositories are <a href="#repos-upgrades"
+><strong>not</strong> upgraded automatically</a>.</p>
+
+<div class="h4" id="wc-upgrades" title="wc-upgrades">
+<h4>[BRANCH] Working Copy Upgrades</h4>
+
+<p><strong>WARNING:</strong> if a Subversion 1.6 client encounters a
+pre-1.6 working copy, it will <em>automatically</em> upgrade the
+working copy format as soon as it touches it, making it unreadable by
+older Subversion clients.  If you are using several versions of
+Subversion on your machine, be careful about which version you use in
+which working copy, to avoid accidentally upgrading a working copy.
+(But note that this "auto upgrade" behavior does <em>not</em> occur
+with the <a href="#repos-upgrades" >repositories</a>, only working
+copies.)</p>
+
+<p>If you accidentally upgrade a 1.5 working copy to 1.6, and wish to
+downgrade back to 1.5, use the <a
+href="http://svn.collab.net/repos/svn/trunk/tools/client-side/change-svn-wc-format.py"
+><tt>change-svn-wc-format.py</tt></a> script.  See <a
+href="http://subversion.tigris.org/faq.html#working-copy-format-change"
+>this FAQ entry</a> for details, and run the script with the
+<code>--help</code> option for usage instructions.</p>
+
+</div>  <!-- wc-upgrades -->
+
+<div class="h4" id="repos-upgrades" title="repos-upgrades">
+<h4>Repository Upgrades</h4>
+
+<p>The Subversion 1.6 server works with 1.5 and older repositories,
+and it will <em>not</em> upgrade such repositories to 1.6 unless
+specifically requested to via the
+<strong><code>svnadmin&nbsp;upgrade</code></strong> command.  This means
+that some of the new 1.6 features will not become available simply by
+upgrading your server: you will also have to upgrade your
+repositories.  (We decided not to auto-upgrade repositories because we
+didn't want 1.6 to silently make repositories unusable by
+1.4&nbsp;&mdash;&nbsp;that step should be a conscious decision on the
+part of the repository admin.)</p>
+
+</div>  <!-- repos-upgrades -->
+
+</div>  <!-- wc-and-repos-format-change -->
+
+<div class="h3" id="output-changes" title="output-changes">
+<h3>Command Line Output Changes</h3>
+
+<p>Although we try hard to keep output from the command line programs
+compatible between releases, new information sometimes has to be
+added.  This can break scripts that rely on the exact format of the
+output.  Unfortunately, we are not able to enumerate all of the output
+changes in 1.6, but one of them is that XXX.</p>
+
+</div>  <!-- output-changes -->
+
+<div class="h3" id="proplist-verbose" title="proplist-verbose">
+<h3>Improved output of <code>svn proplist --verbose</code></h3>
+
+<p>XXX(r32484): The output of <code>svn proplist --verbose</code> has been
+improved. Support for <code>svn propget --verbose</code> has been added.</p>
+
+<pre>   $ svn propget --verbose
+   $ svn proplist --verbose</pre>
+
+</div>  <!-- proplist-verbose -->
+
+</div>  <!-- compatibility -->
+
+<div class="h2" id="new-features" title="new-features">
+<h2>New Features</h2>
+
+<div class="h3" id="auth-related-improvements" title="auth-related-improvements">
+<h3>Improved handling of authentication data (<em>client</em>)</h3>
+
+<p>XXX</p>
+
+<div class="h4" id="auth-related-improvements-plaintext-passwords"
+title="auth-related-improvements-plaintext-passwords">
+<h4>Prompting before storing passwords in plaintext form</h4>
+
+<p>Subversion prompts before storing passwords in plaintext form.</p>
+
+</div>  <!-- auth-related-improvements-plaintext-passwords -->
+
+<div class="h4" id="auth-related-improvements-kwallet-gnome-keyring"
+title="auth-related-improvements-kwallet-gnome-keyring">
+<h4>Support for storing passwords in KWallet and GNOME Keyring (Unix-like systems)</h4>
+
+<p>Passwords can be stored in KWallet (KDE 4) and GNOME Keyring.</p>
+
+</div> <!-- auth-related-improvements-kwallet-gnome-keyring -->
+
+<div class="h4" id="auth-related-improvements-ssl-client-certificate-passphrases"
+title="auth-related-improvements-ssl-client-certificate-passphrases">
+<h4>Support for storing SSL client certificate passphrases</h4>
+
+<p>SSL client certificate passphrases can be stored in KWallet, GNOME
+Keyring or in plaintext form.</p>
+
+</div> <!-- auth-related-improvements-ssl-client-certificate-passphrases -->
+
+</div> <!-- auth-related-improvements -->
+
+<div class="h3" id="repository-root-relative-urls"
+             title="repository-root-relative-urls">
+<h3>Repository root relative URLs (<em>client</em>)</h3>
+
+<p>XXX (<a href="http://svn.collab.net/repos/svn/trunk/notes/cli-repo-root-relative-support.txt">Description</a>)</p>
+
+<pre>
+   $ svn SUBCOMMAND ^/
+   $ svn SUBCOMMAND ^/PATH
+</pre>
+
+</div>  <!-- repository-root-relative-urls -->
+
+<div class="h3" id="file-externals" title="file-externals">
+<h3>[BRANCH] Support for files in <tt>svn:externals</tt>
+    (<em>client</em>)</h3>
+
+<p>XXX</p>
+
+<div class="h4" id="file-externals-further-reading"
+             title="file-externals-further-reading">
+<h4>Further reading</h4>
+
+<p>See The <a
+href="http://svnbook.red-bean.com/nightly/en/svn.advanced.externals.html"
+>svn:externals</a> section of the Subversion Book.</p>
+
+</div>  <!-- file-externals-further-reading -->
+
+</div>  <!-- file-externals -->
+
+<div class="h3" id="svn-patch" title="svn-patch">
+<h3>[BRANCH] svn patch (<em>client</em>)</h3>
+
+<p><code>svn diff --svnpatch</code> and <code>svn patch</code>.</p>
+
+</div>  <!-- svn-patch -->
+
+<div class="h3" id="tree-conflicts" title="tree-conflicts">
+<h3>[BRANCH] Improved handling of tree conflicts (<em>client</em>)</h3>
+
+<p>Improved handling of tree conflicts.</p>
+
+</div>  <!-- tree-conflicts -->
+
+<div class="h3" id="fsfs-memcached" title="fsfs-memcached">
+<h3>FSFS repositories: Support for Memcached (<em>server</em>)</h3>
+
+<p>XXX: <a href="http://www.danga.com/memcached/">Memcached</a> can cache
+data of FSFS repositories.</p>
+
+<p>Additional build-time dependencies: APR-Util &ge;1.3 || ( APR-Util &lt;
+1.3 &amp;&amp; APR_Memcache )</p>
+
+</div> <!-- fsfs-memcached -->
+
+<div class="h3" id="bdb-reverse-deltas" title="bdb-reverse-deltas">
+<h3>BDB repositories: Reverse deltas (<em>server</em>)</h3>
+
+<p>XXX</p>
+
+</div> <!-- bdb-reverse-deltas -->
+
+<div class="h3" id="ctypes-python-bindings" title="ctypes-python-bindings">
+<h3>[BRANCH] Ctypes Python Bindings</h3>
+
+<p>XXX</p>
+
+</div> <!-- ctypes-python-bindings -->
+
+</div>  <!-- new-features -->
+
+<div class="h2" id="enhancements" title="enhancements">
+<h2>Enhancements and Bugfixes</h2>
+
+<div class="h3" id="improved-interactive-conflict-resolution"
+             title="improved-interactive-conflict-resolution">
+<h3>Improved interactive conflict resolution (<em>client</em>)</h3>
+
+<p>dc, mc, tc options.</p>
+
+<p>Here's an example using the command-line client:</p>
+
+<pre>
+   $ svn up
+   U    Makefile.in
+   Conflict discovered in 'configure.ac'.
+   Select: (p) postpone, (df) diff-full, (e) edit,
+           (mc) mine-conflict, (tc) theirs-conflict,
+           (s) show all options: s
+
+     (e)  edit             - change merged file in an editor
+     (df) diff-full        - show all changes made to merged file
+     (r)  resolved         - accept merged version of file
+
+     (dc) display-conflict - show all conflicts (ignoring merged version)
+     (mc) mine-conflict    - accept my version for all conflicts (same)
+     (tc) theirs-conflict  - accept their version for all conflicts (same)
+
+     (mf) mine-full        - accept my version of entire file (even non-conflicts)
+     (tf) theirs-full      - accept their version of entire file (same)
+
+     (p)  postpone         - mark the conflict to be resolved later
+     (l)  launch           - launch external tool to resolve conflict
+     (s)  show all         - show this list
+
+   Select: (p) postpone, (df) diff-full, (e) edit,
+           (mc) mine-conflict, (tc) theirs-conflict,
+           (s) show all options: mc
+   G    configure.ac
+   Updated to revision 36666.
+   $ 
+</pre>
+
+</div>  <!-- improved-interactive-conflict-resolution -->
+
+<div class="h3" id="cmdline" title="cmdline">
+<h3>Command-line client improvements (<em>client</em>)</h3>
+
+<p>There are far too many enhancements and new options to the
+command-line client to list them all here.  Aside from all the ones
+mentioned already in these release notes, below are a few more that we
+consider important, but please see the 1.6.0 section in the <a
+href="http://svn.collab.net/repos/svn/trunk/CHANGES">CHANGES</a> file
+for a complete list.</p>
+
+<div class="h4" id="trust-server-cert" title="trust-server-cert">
+<h4>--trust-server-cert option</h4>
+
+<p>XXX</p>
+
+</div>  <!-- trust-server-cert -->
+
+</div>  <!-- cmdline -->
+
+<div class="h3" id="apis" title="apis">
+<h3>API changes, improvements and language bindings
+    (<em>client and server</em>)</h3>
+
+<p>There are too many new and revised APIs in Subversion 1.6.0 to even
+begin to list them all here.  See the <a
+href="http://svn.collab.net/svn-doxygen/" >Subversion API
+Documentation</a> page for general API information.  If you develop a
+3rd-party client application that uses Subversion APIs, you should
+probably look at the header files for the interfaces you use and see
+what's changed.</p>
+
+<p>One general change is that most APIs that formerly took a
+<tt>recurse</tt> parameter have been upgraded to accept a
+<tt>depth</tt> parameter instead, to enable the new <a
+href="#sparse-checkouts">sparse checkouts</a> feature.</p>
+
+<p>Language bindings have mostly been updated for the new APIs, though
+some may lag more than others.</p>
+
+</div>  <!-- apis -->
+
+<div class="h3" id="bug-fixes" title="bug-fixes">
+<h3>Bug fixes (<em>client and server</em>)</h3>
+
+<p>A great many bugs have been fixed.  See the 1.6.0 section in the <a
+href="http://svn.collab.net/repos/svn/trunk/CHANGES">CHANGES</a> file
+for details.</p>
+
+</div>  <!-- bug-fixes -->
+
+</div>  <!-- enhancements -->
+
+<div class="h2" id="svn-1.4-deprecation" title="svn-1.4-deprecation">
+<h2>Subversion 1.4.x series no longer supported</h2>
+
+<p>The Subversion 1.4.x line is no longer supported.  This doesn't
+mean that your 1.4 installation is doomed; if it works well and is all
+you need, that's fine.  "No longer supported" just means we've stopped
+accepting bug reports against 1.4.x versions, and will not make any
+more 1.4.x bugfix releases, except perhaps for absolutely critical
+security or data-loss bugs.</p>
+
+</div>  <!-- svn-1.4-deprecation -->
+
+<div class="h2" id="deps" title="deps">
+<h2>Subversion Dependencies Distribution: Binary Compatibility Issues</h2>
+
+<div class="h3" id="deps-background" title="deps-background">
+<h3>Background</h3>
+
+<p>APR 0.9.x and 1.x are binary-incompatible.  This means if you are
+already using Subversion with APR 0.9.x, and then upgrade your libapr
+to 1.X <em>without rebuilding Subversion</em>, things will break.
+Things will also break if your Subversion server libraries are linked
+to one version of APR but your Apache HTTPD server is linked to a
+different version.</p>
+
+<p>For a long time, Subversion's main source distribution included APR
+0.9.x, which was the latest available at the time, along with a few
+other things (e.g., Neon, zlib) that weren't yet widespread on
+installation systems.</p>
+
+</div> <!-- deps-background -->
+
+<div class="h3" id="deps-now" title="deps-now">
+<h3>Subversion 1.6.0 Dependencies Distribution</h3>
+
+<p>Today, these dependencies are no longer exotic, so our source
+distribution contains just Subversion itself.  Those building
+Subversion are expected to have the necessary libraries already
+installed, or to be able to fetch them easily.  But for convenience,
+we still offer a "deps" distribution: it doesn't contain Subversion,
+it just has source code for those third-party libraries.</p>
+
+<p>Until Subversion 1.5.0, the deps distribution contained APR 0.9.x,
+but as of 1.5.0, we're finally upgrading it to APR 1.x.  This is
+because by now there are very few systems that will have binary
+compatibility issues, and of those, few are likely to build using the
+"deps" dist.</p>
+
+<p>If you already have a Subversion installation using APR 0.9.x, it's
+still possible to move to APR 1.x safely (although you are not
+required to, unless you use the deps dist).  Just be sure to recompile
+Subversion, and Apache httpd if necessary, after upgrading APR.</p>
+
+<p>Note that it's perfectly safe to use APR 1.x from the beginning.
+In fact, we recommend it.  If you're building Subversion for the first
+time, there's no compatibility issue to worry about, so just grab the
+latest version of APR (or use our deps dist).</p>
+
+</div> <!-- deps-now -->
+
+</div>  <!-- deps -->
+
+</div>  <!-- app -->
+</body>
+</html>

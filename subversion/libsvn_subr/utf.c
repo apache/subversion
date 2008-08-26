@@ -237,7 +237,7 @@ get_xlate_handle_node(xlate_handle_node_t **ret,
     pool = apr_hash_pool_get(xlate_handle_hash);
 
   /* Try to create a handle. */
-#if defined( WIN32)
+#if defined(WIN32)
   apr_err = svn_subr__win32_xlate_open((win32_xlate_t **)&handle, topage,
                                        frompage, pool);
 #else

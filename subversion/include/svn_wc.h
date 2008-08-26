@@ -27,6 +27,15 @@
  *
  * Used By:
  *            - Clients.
+ *
+ * Notes:
+ *            The 'path' parameters to most of these functions can be
+ *            absolute or relative (relative to current working
+ *            directory).  If there are any cases where they are
+ *            relative to the path associated with the
+ *            'svn_wc_adm_access_t *adm_access' baton passed along
+ *            with the path, those cases should be explicitly
+ *            documented, and if they are not, please fix it.
  */
 
 #ifndef SVN_WC_H
@@ -1960,8 +1969,16 @@ svn_wc_entry_dup(const svn_wc_entry_t *entry,
  * entries (@a entry) is in state of conflict; return the answers in
  * @a text_conflicted_p and @a prop_conflicted_p.
  *
- * (If the entry mentions that a .rej or .prej exist, but they are
- * both removed, assume the conflict has been resolved by the user.)
+ * If the @a entry mentions that a text conflict file (.rej suffix)
+ * exists, but it cannot be found, assume the text conflict has been
+ * resolved by the user and return FALSE in @a *text_conflicted_p.
+ *
+ * Similarly, if the @a entry mentions that a property conflicts file
+ * (.prej suffix) exists, but it cannot be found, assume the property
+ * conflicts have been resolved by the user and return FALSE in
+ * @a *prop_conflicted_p.
+ *
+ * The @a entry is not updated.
  */
 svn_error_t *
 svn_wc_conflicted_p(svn_boolean_t *text_conflicted_p,

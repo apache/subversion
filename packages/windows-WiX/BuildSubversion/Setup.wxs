@@ -15,9 +15,9 @@
 -->
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
 	<?define RTMProductVersion="1.0.0" ?>
-  	<?define ProductVersion="1.5.0" ?> <!-- change for upgrade -->
-	<?define RevisionNumber="r31699" ?> <!-- change for upgrade -->
-	<?define ProductCode="{3F119C94-9F12-4C04-B7B6-852235AC1A73}" ?> <!-- change for upgrade -->
+  	<?define ProductVersion="1.5.1" ?> <!-- change for upgrade -->
+	<?define RevisionNumber="r32289" ?> <!-- change for upgrade -->
+	<?define ProductCode="{0ED6E1BF-3604-45E9-A719-8DD3B5826706}" ?> <!-- change for upgrade -->
 	<?define UpgradeCode="{032A49B2-32FB-4AE0-BAB0-6AB953CC94DA}" ?> <!-- leave this value -->
 	<?define PackageCode="*" ?>
 
@@ -74,8 +74,6 @@
 				<?include LicensesCommonFeature.wxi ?>
 				<?include LicensesFeature20x.wxi ?>
 				<?include LicensesFeature22x.wxi ?>
-
-				<ComponentRef Id="README"/>
 
 				<ComponentRef Id="svnbookchm"/>
 			
