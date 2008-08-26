@@ -43,7 +43,8 @@ extern "C" {
  *
  * @since New in 1.1.
  */
-const svn_version_t *svn_fs_version(void);
+const svn_version_t *
+svn_fs_version(void);
 
 /**
  * @defgroup fs_handling Filesystem interaction subsystem
@@ -110,7 +111,8 @@ typedef struct svn_fs_t svn_fs_t;
  *
  * @since New in 1.2.
  */
-svn_error_t *svn_fs_initialize(apr_pool_t *pool);
+svn_error_t *
+svn_fs_initialize(apr_pool_t *pool);
 
 
 /** The type of a warning callback function.  @a baton is the value specified
@@ -243,14 +245,18 @@ svn_fs_type(const char **fs_type,
  *
  * @since New in 1.1.
  */
-const char *svn_fs_path(svn_fs_t *fs, apr_pool_t *pool);
+const char *
+svn_fs_path(svn_fs_t *fs,
+            apr_pool_t *pool);
 
 /**
  * Delete the filesystem at @a path.
  *
  * @since New in 1.1.
  */
-svn_error_t *svn_fs_delete_fs(const char *path, apr_pool_t *pool);
+svn_error_t *
+svn_fs_delete_fs(const char *path,
+                 apr_pool_t *pool);
 
 /**
  * Copy a possibly live Subversion filesystem from @a src_path to
@@ -381,19 +387,29 @@ svn_fs_berkeley_logfiles(apr_array_header_t **logfiles,
  */
 
 /** @deprecated Provided for backward compatibility with the 1.0 API. */
-svn_fs_t *svn_fs_new(apr_hash_t *fs_config, apr_pool_t *pool);
+svn_fs_t *
+svn_fs_new(apr_hash_t *fs_config,
+           apr_pool_t *pool);
 
 /** @deprecated Provided for backward compatibility with the 1.0 API. */
-svn_error_t *svn_fs_create_berkeley(svn_fs_t *fs, const char *path);
+svn_error_t *
+svn_fs_create_berkeley(svn_fs_t *fs,
+                       const char *path);
 
 /** @deprecated Provided for backward compatibility with the 1.0 API. */
-svn_error_t *svn_fs_open_berkeley(svn_fs_t *fs, const char *path);
+svn_error_t *
+svn_fs_open_berkeley(svn_fs_t *fs,
+                     const char *path);
 
 /** @deprecated Provided for backward compatibility with the 1.0 API. */
-const char *svn_fs_berkeley_path(svn_fs_t *fs, apr_pool_t *pool);
+const char *
+svn_fs_berkeley_path(svn_fs_t *fs,
+                     apr_pool_t *pool);
 
 /** @deprecated Provided for backward compatibility with the 1.0 API. */
-svn_error_t *svn_fs_delete_berkeley(const char *path, apr_pool_t *pool);
+svn_error_t *
+svn_fs_delete_berkeley(const char *path,
+                       apr_pool_t *pool);
 
 /** @deprecated Provided for backward compatibility with the 1.0 API. */
 svn_error_t *
@@ -532,7 +548,9 @@ typedef struct svn_fs_id_t svn_fs_id_t;
 /** Return -1, 0, or 1 if node revisions @a a and @a b are unrelated,
  * equivalent, or otherwise related (respectively).
  */
-int svn_fs_compare_ids(const svn_fs_id_t *a, const svn_fs_id_t *b);
+int
+svn_fs_compare_ids(const svn_fs_id_t *a,
+                   const svn_fs_id_t *b);
 
 
 
@@ -915,18 +933,22 @@ svn_fs_txn_root(svn_fs_root_t **root_p,
  * pool @a root was allocated in will have the same effect as calling
  * this function.
  */
-void svn_fs_close_root(svn_fs_root_t *root);
+void
+svn_fs_close_root(svn_fs_root_t *root);
 
 
 /** Return the filesystem to which @a root belongs.  */
-svn_fs_t *svn_fs_root_fs(svn_fs_root_t *root);
+svn_fs_t *
+svn_fs_root_fs(svn_fs_root_t *root);
 
 
 /** Return @c TRUE iff @a root is a transaction root.  */
-svn_boolean_t svn_fs_is_txn_root(svn_fs_root_t *root);
+svn_boolean_t
+svn_fs_is_txn_root(svn_fs_root_t *root);
 
 /** Return @c TRUE iff @a root is a revision root.  */
-svn_boolean_t svn_fs_is_revision_root(svn_fs_root_t *root);
+svn_boolean_t
+svn_fs_is_revision_root(svn_fs_root_t *root);
 
 
 /** If @a root is the root of a transaction, return the name of the
@@ -942,12 +964,14 @@ svn_fs_txn_root_name(svn_fs_root_t *root,
  *
  * @since New in 1.5.
  */
-svn_revnum_t svn_fs_txn_root_base_revision(svn_fs_root_t *root);
+svn_revnum_t
+svn_fs_txn_root_base_revision(svn_fs_root_t *root);
 
 /** If @a root is the root of a revision, return the revision number.
  * Otherwise, return @c SVN_INVALID_REVNUM.
  */
-svn_revnum_t svn_fs_revision_root_revision(svn_fs_root_t *root);
+svn_revnum_t
+svn_fs_revision_root_revision(svn_fs_root_t *root);
 
 /** @} */
 
