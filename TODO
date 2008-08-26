@@ -3,11 +3,6 @@ ctypes-python-bindings to trunk.
 
 ctypes-python-bindings TODOs:
 
- * Allow users to override default paths for both headers and libraries,
-   both at compile time and at runtime. Right now, it is possible to
-   specify additional paths but it is not possible to override the default
-   paths.
-
  * We need a setup.py script / installer for installing the ctypes python
    bindings.
 
