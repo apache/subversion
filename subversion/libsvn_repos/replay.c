@@ -18,14 +18,12 @@
  */
 
 
-#include <assert.h>
 #include <apr_hash.h>
-#include <apr_md5.h>
 
 #include "svn_types.h"
 #include "svn_delta.h"
 #include "svn_fs.h"
-#include "svn_md5.h"
+#include "svn_checksum.h"
 #include "svn_repos.h"
 #include "svn_props.h"
 #include "svn_pools.h"
@@ -245,7 +243,7 @@ add_subdir(svn_fs_root_t *source_root,
           svn_txdelta_window_handler_t delta_handler;
           void *delta_handler_baton, *file_baton;
           svn_txdelta_stream_t *delta_stream;
-          unsigned char digest[APR_MD5_DIGESTSIZE];
+          svn_checksum_t *checksum;
 
           SVN_ERR(editor->add_file(new_path, *dir_baton, NULL,
                                    SVN_INVALID_REVNUM, pool, &file_baton));
@@ -279,12 +277,10 @@ add_subdir(svn_fs_root_t *source_root,
                                             delta_handler_baton,
                                             pool));
 
-          SVN_ERR(svn_fs_file_md5_checksum(digest,
-                                           target_root,
-                                           new_path,
-                                           pool));
+          SVN_ERR(svn_fs_file_checksum(&checksum, svn_checksum_md5, target_root,
+                                       new_path, TRUE, pool));
           SVN_ERR(editor->close_file(file_baton,
-                                     svn_md5_digest_to_cstring(digest, pool),
+                                     svn_checksum_to_cstring(checksum, pool),
                                      pool));
         }
       else
@@ -596,19 +592,18 @@ path_driver_cb_func(void **dir_baton,
         {
           svn_txdelta_window_handler_t delta_handler;
           void *delta_handler_baton;
-          const char *checksum = NULL;
+          const char *hex_digest = NULL;
 
           if (cb->compare_root && source_root && source_path)
             {
-              unsigned char digest[APR_MD5_DIGESTSIZE];
-              SVN_ERR(svn_fs_file_md5_checksum(digest,
-                                               source_root,
-                                               source_path,
-                                               pool));
-              checksum = svn_md5_digest_to_cstring(digest, pool);
+              svn_checksum_t *checksum;
+              SVN_ERR(svn_fs_file_checksum(&checksum, svn_checksum_md5,
+                                           source_root, source_path, TRUE,
+                                           pool));
+              hex_digest = svn_checksum_to_cstring(checksum, pool);
             }
 
-          SVN_ERR(editor->apply_textdelta(file_baton, checksum, pool,
+          SVN_ERR(editor->apply_textdelta(file_baton, hex_digest, pool,
                                           &delta_handler,
                                           &delta_handler_baton));
           if (cb->compare_root)
@@ -632,10 +627,11 @@ path_driver_cb_func(void **dir_baton,
   /* Close the file baton if we opened it. */
   if (file_baton)
     {
-      unsigned char digest[APR_MD5_DIGESTSIZE];
-      SVN_ERR(svn_fs_file_md5_checksum(digest, root, path, pool));
+      svn_checksum_t *checksum;
+      SVN_ERR(svn_fs_file_checksum(&checksum, svn_checksum_md5, root, path,
+                                   TRUE, pool));
       SVN_ERR(editor->close_file(file_baton,
-                                 svn_md5_digest_to_cstring(digest, pool),
+                                 svn_checksum_to_cstring(checksum, pool),
                                  pool));
     }
 

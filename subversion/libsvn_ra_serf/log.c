@@ -18,8 +18,6 @@
 
 
 
-#include <assert.h>
-
 #include <apr_uri.h>
 
 #include <expat.h>
@@ -299,7 +297,7 @@ end_log(svn_ra_serf__xml_parser_t *parser,
         }
       if (! SVN_IS_VALID_REVNUM(info->log_entry->revision))
         {
-          assert(log_ctx->nest_level);
+          SVN_ERR_ASSERT(log_ctx->nest_level);
           log_ctx->nest_level--;
         }
 

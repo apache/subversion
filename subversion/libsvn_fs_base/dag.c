@@ -16,7 +16,6 @@
  */
 
 #include <string.h>
-#include <assert.h>
 
 #include "svn_path.h"
 #include "svn_time.h"

@@ -23,7 +23,6 @@
 /*** Includes. ***/
 
 #include <string.h>
-#include <assert.h>
 #include "svn_client.h"
 #include "svn_error.h"
 #include "svn_error_codes.h"

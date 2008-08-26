@@ -18,7 +18,6 @@
 
 
 #include <stdarg.h>
-#include <assert.h>
 
 #include <apr_general.h>
 #include <apr_pools.h>

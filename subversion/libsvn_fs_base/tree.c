@@ -37,7 +37,6 @@
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_path.h"
-#include "svn_md5.h"
 #include "svn_sha1.h"
 #include "svn_mergeinfo.h"
 #include "svn_fs.h"
@@ -1694,7 +1693,7 @@ deltify_mutable(svn_fs_t *fs,
        (Retrieving the oldest node-revision will still be fast, just
        not as blindingly so.)
        
-       For 1.6 and beyond, we just deltify the current node against it
+       For 1.6 and beyond, we just deltify the current node against its
        predecessors, using skip deltas similar to the was FSFS does.*/
 
     int pred_count, nlevels, lev, count;
@@ -3656,8 +3655,8 @@ base_apply_textdelta(svn_txdelta_window_handler_t *contents_p,
                      void **contents_baton_p,
                      svn_fs_root_t *root,
                      const char *path,
-                     const char *base_checksum,
-                     const char *result_checksum,
+                     svn_checksum_t *base_checksum,
+                     svn_checksum_t *result_checksum,
                      apr_pool_t *pool)
 {
   txdelta_baton_t *tb = apr_pcalloc(pool, sizeof(*tb));
@@ -3667,18 +3666,12 @@ base_apply_textdelta(svn_txdelta_window_handler_t *contents_p,
   tb->pool = pool;
 
   if (base_checksum)
-    {
-      tb->base_checksum = svn_checksum_create(svn_checksum_md5, pool);
-      SVN_ERR(svn_checksum_parse_hex(tb->base_checksum, base_checksum));
-    }
+    tb->base_checksum = svn_checksum_dup(base_checksum, pool);
   else
     tb->base_checksum = NULL;
 
   if (result_checksum)
-    {
-      tb->result_checksum = svn_checksum_create(svn_checksum_md5, pool);
-      SVN_ERR(svn_checksum_parse_hex(tb->result_checksum, result_checksum));
-    }
+    tb->result_checksum = svn_checksum_dup(result_checksum, pool);
   else
     tb->result_checksum = NULL;
 
@@ -3815,7 +3808,7 @@ static svn_error_t *
 base_apply_text(svn_stream_t **contents_p,
                 svn_fs_root_t *root,
                 const char *path,
-                const char *result_checksum,
+                svn_checksum_t *result_checksum,
                 apr_pool_t *pool)
 {
   struct text_baton_t *tb = apr_pcalloc(pool, sizeof(*tb));
@@ -3825,10 +3818,7 @@ base_apply_text(svn_stream_t **contents_p,
   tb->pool = pool;
 
   if (result_checksum)
-    {
-      tb->result_checksum = svn_checksum_create(svn_checksum_md5, pool);
-      SVN_ERR(svn_checksum_parse_hex(tb->result_checksum, result_checksum));
-    }
+    tb->result_checksum = svn_checksum_dup(result_checksum, pool);
   else
     tb->result_checksum = NULL;
 
@@ -4741,6 +4731,7 @@ base_node_origin_rev(svn_revnum_t *revision,
     {
       svn_fs_root_t *curroot = root;
       apr_pool_t *subpool = svn_pool_create(pool);
+      apr_pool_t *predidpool = svn_pool_create(pool);
       svn_stringbuf_t *lastpath =
         svn_stringbuf_create(path, pool);
       svn_revnum_t lastrev = SVN_INVALID_REVNUM;
@@ -4784,12 +4775,14 @@ base_node_origin_rev(svn_revnum_t *revision,
           struct txn_pred_id_args pid_args;
           svn_pool_clear(subpool);
           pid_args.id = pred_id;
+          pid_args.pred_id = NULL;
           pid_args.pool = subpool;
           SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_pred_id,
                                          &pid_args, subpool));
           if (! pid_args.pred_id)
             break;
-          pred_id = pid_args.pred_id;
+          svn_pool_clear(predidpool);
+          pred_id = svn_fs_base__id_copy(pid_args.pred_id, predidpool);
         }
 
       /* Okay.  PRED_ID should hold our origin ID now.  Let's remember
@@ -4797,6 +4790,7 @@ base_node_origin_rev(svn_revnum_t *revision,
       args.origin_id = origin_id = svn_fs_base__id_copy(pred_id, pool);
       SVN_ERR(svn_fs_base__retry_txn(root->fs, txn_body_set_node_origin,
                                       &args, subpool));
+      svn_pool_destroy(predidpool);
       svn_pool_destroy(subpool);
     }
   else

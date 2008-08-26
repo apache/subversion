@@ -78,9 +78,8 @@ svn_error_t *svn_fs_base__rep_contents_size(svn_filesize_t *size_p,
 
 /* Put into CHECKSUM the checksum for REP_KEY in FS, as part of TRAIL.  This
    is the prerecorded checksum for the rep's contents' fulltext.  If no checksum
-   of this type is available, do not calculate one dynamically, just put NULL
-   into CHECKSUM.  (By convention, the NULL checksum is considered to match any
-   checksum.) */
+   is stored, do not calculate one dynamically, just put NULL into CHECKSUM.
+   (By convention, the NULL checksum is considered to match any checksum.) */
 svn_error_t *svn_fs_base__rep_contents_checksum(svn_checksum_t **checksum,
                                                 svn_fs_t *fs,
                                                 const char *rep_key,

@@ -462,7 +462,7 @@ svn_error_t *svn_fs_base__dag_file_length(svn_filesize_t *length,
  * TRAIL.
  *
  * If no stored checksum is available, do not calculate the checksum,
- * just put all 0's into DIGEST.
+ * just put NULL into CHECKSUM.
  */
 svn_error_t *
 svn_fs_base__dag_file_checksum(svn_checksum_t **checksum,
