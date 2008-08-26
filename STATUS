@@ -97,18 +97,3 @@ Candidate changes for 1.5.2:
 
 Approved changes:
 =================
-
- * r31725, r31837
-   Canonicalise URIs which have an empty hostname part correctly.
-   This fixes the crash described in #2116 ('svn log file:///'
-   results in a failed assertion).
-   Justification:
-     Been fixed in trunk for a while, rediscovered in 1.5.1 by
-     Toby Peterson <toby@apple.com>, see this thread:
-     http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=141888
-   Notes:
-     r31837 fixes a bug introduced in r31725:
-     Take an early out if path is "", to avoid accessing uninitialized
-     memory later when we look at *(dst - 1).
-   Votes:
-     +1: stsp, danielsh, rhuijben
