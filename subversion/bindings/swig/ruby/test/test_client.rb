@@ -148,7 +148,7 @@ class SvnClientTest < Test::Unit::TestCase
     dir = "dir"
     dir2 = "dir2"
     dirs = [dir, dir2]
-    dirs_path = dirs.collect {|d| Pathname(@wc_path) + d}
+    dirs_path = dirs.collect {|d| Pathname.new(@wc_path) + d}
     dirs_full_path = dirs_path.collect {|path| path.expand_path}
 
     ctx = make_context(log)
@@ -190,7 +190,7 @@ class SvnClientTest < Test::Unit::TestCase
     log = "sample log"
     dir = "parent"
     child_dir = "parent/child"
-    dir_path = Pathname(@wc_path) + dir
+    dir_path = Pathname.new(@wc_path) + dir
     child_dir_path = dir_path + "child"
     full_paths = [dir_path, child_dir_path].collect {|path| path.expand_path}
 
@@ -1143,8 +1143,8 @@ class SvnClientTest < Test::Unit::TestCase
     src = "source\n"
     file1 = "sample1.txt"
     file2 = "sample2.txt"
-    path1 = Pathname(@wc_path) + file1
-    path2 = Pathname(@wc_path) + file2
+    path1 = Pathname.new(@wc_path) + file1
+    path2 = Pathname.new(@wc_path) + file2
     full_path2 = path2.expand_path
 
     ctx = make_context(log)
