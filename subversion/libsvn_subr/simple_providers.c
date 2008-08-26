@@ -502,7 +502,8 @@ prompt_for_simple_creds(svn_auth_cred_simple_t **cred_p,
                         svn_boolean_t may_save,
                         apr_pool_t *pool)
 {
-  const char *def_username = NULL, *def_password = NULL;
+  const char *default_username = NULL;
+  const char *default_password = NULL;
 
   *cred_p = NULL;
 
@@ -510,12 +511,12 @@ prompt_for_simple_creds(svn_auth_cred_simple_t **cred_p,
      so. */
   if (first_time)
     {
-      def_username = apr_hash_get(parameters,
-                                  SVN_AUTH_PARAM_DEFAULT_USERNAME,
-                                  APR_HASH_KEY_STRING);
+      default_username = apr_hash_get(parameters,
+                                      SVN_AUTH_PARAM_DEFAULT_USERNAME,
+                                      APR_HASH_KEY_STRING);
 
       /* No default username?  Try the auth cache. */
-      if (! def_username)
+      if (! default_username)
         {
           const char *config_dir = apr_hash_get(parameters,
                                                 SVN_AUTH_PARAM_CONFIG_DIR,
@@ -532,12 +533,12 @@ prompt_for_simple_creds(svn_auth_cred_simple_t **cred_p,
               str = apr_hash_get(creds_hash, AUTHN_USERNAME_KEY,
                                  APR_HASH_KEY_STRING);
               if (str && str->data)
-                def_username = str->data;
+                default_username = str->data;
             }
         }
 
       /* Still no default username?  Try the 'servers' file. */
-      if (! def_username)
+      if (! default_username)
         {
           svn_config_t *cfg = apr_hash_get(parameters,
                                            SVN_AUTH_PARAM_CONFIG,
@@ -545,19 +546,19 @@ prompt_for_simple_creds(svn_auth_cred_simple_t **cred_p,
           const char *server_group = apr_hash_get(parameters,
                                                   SVN_AUTH_PARAM_SERVER_GROUP,
                                                   APR_HASH_KEY_STRING);
-          def_username =
+          default_username =
             svn_config_get_server_setting(cfg, server_group,
                                           SVN_CONFIG_OPTION_USERNAME,
                                           NULL);
         }
 
       /* Still no default username?  Try the UID. */
-      if (! def_username)
-        def_username = svn_user_get_name(pool);
+      if (! default_username)
+        default_username = svn_user_get_name(pool);
 
-      def_password = apr_hash_get(parameters,
-                                  SVN_AUTH_PARAM_DEFAULT_PASSWORD,
-                                  APR_HASH_KEY_STRING);
+      default_password = apr_hash_get(parameters,
+                                      SVN_AUTH_PARAM_DEFAULT_PASSWORD,
+                                      APR_HASH_KEY_STRING);
     }
 
   /* If we have defaults, just build the cred here and return it.
@@ -566,17 +567,17 @@ prompt_for_simple_creds(svn_auth_cred_simple_t **cred_p,
    * ### 'defaults' provider that would run before the prompt
    * ### provider... Hmmm.
    */
-  if (def_username && def_password)
+  if (default_username && default_password)
     {
       *cred_p = apr_palloc(pool, sizeof(**cred_p));
-      (*cred_p)->username = apr_pstrdup(pool, def_username);
-      (*cred_p)->password = apr_pstrdup(pool, def_password);
+      (*cred_p)->username = apr_pstrdup(pool, default_username);
+      (*cred_p)->password = apr_pstrdup(pool, default_password);
       (*cred_p)->may_save = TRUE;
     }
   else
     {
       SVN_ERR(pb->prompt_func(cred_p, pb->prompt_baton, realmstring,
-                              def_username, may_save, pool));
+                              default_username, may_save, pool));
     }
 
   return SVN_NO_ERROR;
