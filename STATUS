@@ -35,6 +35,7 @@ Candidate changes for 1.5.2:
     creating a nested repository for the tests. As of r32648, this is
     no longer possible.
     Votes:
+      +1: hwright
       +1: jwhitlock (non-binding)
 
  * r32643
