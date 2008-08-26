@@ -2961,7 +2961,7 @@ drive_merge_report_editor(const char *target_wcpath,
                   || (is_rollback && range->start < revision2))
                 {
                   /* Neither subtree nor parent need any
-                  part of REVISION1:REVISION2. */
+                     part of REVISION1:REVISION2. */
                   continue;
                 }
               else if (parent->remaining_ranges->nelts)
