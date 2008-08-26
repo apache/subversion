@@ -2704,10 +2704,31 @@ remove_absent_children(const char *target_wcpath,
 
 /* Helper for do_directory_merge().
 
-   Sets up the diff editor report and drives it by properly negating
-   subtree that could have a conflicting merge history.
+   Set up the diff editor report to merge URL1@REVISION1 to URL2@REVISION2
+   into TARGET_WCPATH and drive it.  Properly describe any subtrees of
+   TARGET_WCPATH that require only a subset of REVISION1:REVISION2 to be
+   merged -- These subtrees are described in CHILDREN_WITH_MERGEINFO, an
+   array of svn_client__merge_path_t *, see
+   'THE CHILDREN_WITH_MERGEINFO ARRAY' comment at the top of this file
+   for more info.  Note that it is possible that TARGET_WCPATH needs only
+   a subset of REVISION1:REVISION2 while its subtrees need the entire range.
 
-   MERGE_B->ra_session1 reflects URL1; MERGE_B->ra_session2 reflects URL2.
+   REVISION1 and REVISION2 must be bound by the set of remaining_ranges
+   fields in CHILDREN_WITH_MERGEINFO's elements, specifically:
+
+     1) For forward merges the oldest revision in all the remaining_ranges
+        must be equal to REVISION1 and the youngest revision in the *first*
+        range of all the remaining ranges must be equal to REVISION2.
+
+     2) For reverse merges the youngest revision in all the remaining_ranges
+        must be equal to REVISION1 and the oldest revision in the *first*
+        range of all the remaining ranges must be equal to REVISION2.
+
+   If IS_ROLLBACK is true this is a reverse merge, otherwise it is a
+   forward merge.  DEPTH, NOTIFY_B, ADM_ACCESS, and MERGE_B are cascasded from
+   do_directory_merge(), see that function for more info.  CALLBACKS are the
+   svn merge versions of the svn_wc_diff_callbacks3_t callbacks invoked by
+   the editor.
 
    If MERGE_B->sources_ancestral is set, then URL1@REVISION1 must be a
    historical ancestor of URL2@REVISION2, or vice-versa (see
@@ -2757,17 +2778,33 @@ drive_merge_report_editor(const char *target_wcpath,
         }
       else if (children_with_mergeinfo && children_with_mergeinfo->nelts)
         {
+          /* Get the merge target's svn_client__merge_path_t, which is always
+             the first in the array due to depth first sorting requirement,
+             see 'THE CHILDREN_WITH_MERGEINFO ARRAY'. */
           svn_client__merge_path_t *child =
             APR_ARRAY_IDX(children_with_mergeinfo, 0, 
                           svn_client__merge_path_t *);
           if (child->remaining_ranges->nelts)
             {
-              /* The merge target needs something merged, but it might
-                 not be the entire REVISION1:REVISION2 range. */
+              /* The merge target has remaining revisions to merge.  These
+                 ranges may fully or partially overlap the range described
+                 by REVISION1:REVISION2 or may not intersect that range at
+                 all. */
               svn_merge_range_t *range =
                 APR_ARRAY_IDX(child->remaining_ranges, 0, 
                               svn_merge_range_t *);
-              target_start = range->start;
+              if ((!is_rollback && range->start > revision2)
+                  || (is_rollback && range->start < revision2))
+                {
+                  /* Merge target's first remaining range doesn't intersect. */
+                  target_start = revision2;
+                }
+              else
+                {
+                  /* Merge target's first remaining range partially or
+                     fully overlaps. */
+                  target_start = range->start;
+                }
             }
         }
     }
