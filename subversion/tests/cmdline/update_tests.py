@@ -64,7 +64,16 @@ def detect_extra_files(node, extra_files):
       if contents is None:
         return
       else:
-        real_contents = svntest.main.file_read(os.path.join(wc_dir, node.path))
+        # Strip the root_node_name from node path
+        # (svntest.tree.root_node_name, currently `__SVN_ROOT_NODE'),
+        # since it doesn't really exist. Also strip the trailing "slash".
+        real_path = node.path
+        if real_path.startswith(svntest.tree.root_node_name):
+          real_path = real_path[len(svntest.tree.root_node_name) +
+                                len(os.sep) :]
+        real_path = os.path.join(wc_dir, real_path)
+
+        real_contents = svntest.main.file_read(real_path)
         if real_contents == contents:
           extra_files.pop(extra_files.index(fdata)) # delete pattern from list
           return
