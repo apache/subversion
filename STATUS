@@ -62,15 +62,6 @@ Candidate changes for 1.5.2:
 Approved changes:
 =================
 
- * r32416, r32421
-   Respect LDFLAGS in Perl bindings.
-   Notes:
-     Previously LDFLAGS were ignored (except for libsvn_swig_perl) even when
-     the SWIG_LDFLAGS variable was set.
-   Votes:
-     +1: arfrever
-     +0: cmpilato
-
  * r32442
    Respect LDFLAGS in SWIG bindings without the requirement of the exporting
    of the SWIG_LDFLAGS variable.
