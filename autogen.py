@@ -179,8 +179,9 @@ includes = ('%s/include/subversion-1/svn_*.h '
             '%s/ap[ru]_*.h' % (svn_prefix, apr_include_dir))
 
 cmd = ["cd %s && %s %s --cpp '%s %s' %s "
-       "%s -o svn_all.py" % (tempdir, sys.executable, ctypesgen,
-                             cpp, flags, ldflags, includes)]
+       "%s -o svn_all.py --no-macro-warnings" % (tempdir, sys.executable,
+                                                 ctypesgen, cpp, flags,
+                                                 ldflags, includes)]
 cmd.extend('-R ' + x for x in options.libdirs)
 cmd = ' '.join(cmd)
 
