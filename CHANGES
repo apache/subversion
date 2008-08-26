@@ -28,6 +28,8 @@ http://svn.collab.net/repos/svn/tags/1.5.2
   * Set correct permissions on created fsfs shards (r32355, -7)
   * Pass client capabilities to start-commit hook (issue #3255)
   * Don't allow repositories to be created inside each other (issue #3269)
+  * Support Neon 0.28.3
+  * Properly canonicalise URIs with an empty hostname (issue #2116)
   * fixed: improper ordering in 'svnlook diff' output (r32019)
   * fixed: mod_dav_svn memory leak with 'SVNPathAuthz short_circuit' (r32360)
   * fixed: duplicate svn:externals targets fail on co/up (issue #3246)
