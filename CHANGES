@@ -27,9 +27,9 @@ http://svn.collab.net/repos/svn/tags/1.5.2
  User-visible changes:
   * Set correct permissions on created fsfs shards (r32355, -7)
   * Pass client capabilities to start-commit hook (issue #3255)
-  * Don't allow repositories to be created inside each other (issue #3269)
+  * Disallow creating nested repositories (issue #3269)
   * Support Neon 0.28.3
-  * Properly canonicalise URIs with an empty hostname (issue #2116)
+  * Properly canonicalize URIs with an empty hostname (issue #2116)
   * Improved merge performance for superfluous ranges (r32643)
   * Better error message for 'Malformed URL for repository' (r31867, r32365)
   * fixed: improper ordering in 'svnlook diff' output (r32019)
