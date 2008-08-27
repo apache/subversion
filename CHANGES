@@ -32,6 +32,7 @@ http://svn.collab.net/repos/svn/tags/1.5.2
   * Properly canonicalize URIs with an empty hostname (issue #2116)
   * Improved merge performance for superfluous ranges (r32643)
   * Better error message for 'Malformed URL for repository' (r31867, r32365)
+  * Improved svn:externals parsing (r32672, -673, -674, -739)
   * fixed: improper ordering in 'svnlook diff' output (r32019)
   * fixed: mod_dav_svn memory leak with 'SVNPathAuthz short_circuit' (r32360)
   * fixed: duplicate svn:externals targets fail on co/up (issue #3246)
@@ -42,6 +43,7 @@ http://svn.collab.net/repos/svn/tags/1.5.2
   * fixed: 'svn copy' working copy corruption (r32467, -70)
   * fixed: perl bindings errors in non-English locale (issue #3258)
   * fixed: 'svn merge' incorrectly reverses previous merges (r32494, -522, -523)
+  * fixed: 'svn merge' errors with subtree mergeinfo (issue #3067)
 
  Developer-visible changes:
   * make libsvn_ra_neon initialization thread-safe (r32497, r32510)
