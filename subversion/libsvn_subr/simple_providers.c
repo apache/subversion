@@ -213,7 +213,7 @@ svn_auth__simple_first_creds_helper(void **credentials,
 }
 
 
-/* Common implementation for simple_save_creds and. Uses PARAMETERS and 
+/* Common implementation for simple_save_creds. Uses PARAMETERS and 
    REALMSTRING to save a set of CREDENTIALS to the simple auth provider's 
    username and password cache. PASSWORD_SET is used to store the password.
    PASSTYPE identifies the type of the cached password. Allocates from POOL. */
