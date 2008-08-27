@@ -46,12 +46,3 @@ Candidate changes for 1.5.2:
 
 Approved changes:
 =================
-
- * r31867, r32365
-   In the "Malformed URL for repository" error message, show the URL.
-   Justification:
-     Trivial change that may shed light on a bug that we can't reproduce
-     that's been hitting several people - see the email thread
-     <http://svn.haxx.se/dev/archive-2008-06/0939.shtml>.
-   Votes:
-     +1: julianfoad, rhuijben, pburba
