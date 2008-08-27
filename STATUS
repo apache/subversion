@@ -47,15 +47,6 @@ Candidate changes for 1.5.2:
 Approved changes:
 =================
 
- * r32643
-   Improve merge performance by not driving the merge editor for ranges
-   which don't need to be merged.
-   Justification:
-     After a year plus of making merge slower with merge tracking, making
-     it a bit faster is a welcome change.
-   Votes:
-     +1: pburba, cmpilato, kameshj
-
  * r31867, r32365
    In the "Malformed URL for repository" error message, show the URL.
    Justification:

@@ -5045,7 +5045,8 @@ do_directory_merge(const char *url1,
                   range.end = end_rev;
                   break;
                 }
-              start_rev = end_rev;
+              start_rev = get_most_inclusive_start_rev(children_with_mergeinfo,
+                                                       is_rollback);
               end_rev = next_end_rev;
             }
           svn_pool_destroy(iterpool);
