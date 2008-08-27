@@ -57,13 +57,13 @@ typedef struct
 
 /* Implementation of svn_auth__password_get_t that retrieves
    the plaintext password from CREDS. */
-static svn_boolean_t
-simple_password_get(const char **password,
-                    apr_hash_t *creds,
-                    const char *realmstring,
-                    const char *username,
-                    svn_boolean_t non_interactive,
-                    apr_pool_t *pool)
+svn_boolean_t
+svn_auth__simple_password_get(const char **password,
+                              apr_hash_t *creds,
+                              const char *realmstring,
+                              const char *username,
+                              svn_boolean_t non_interactive,
+                              apr_pool_t *pool)
 {
   svn_string_t *str;
   str = apr_hash_get(creds, AUTHN_USERNAME_KEY, APR_HASH_KEY_STRING);
@@ -81,13 +81,13 @@ simple_password_get(const char **password,
 
 /* Implementation of svn_auth__password_set_t that stores
    the plaintext password in CREDS. */
-static svn_boolean_t
-simple_password_set(apr_hash_t *creds,
-                    const char *realmstring,
-                    const char *username,
-                    const char *password,
-                    svn_boolean_t non_interactive,
-                    apr_pool_t *pool)
+svn_boolean_t
+svn_auth__simple_password_set(apr_hash_t *creds,
+                              const char *realmstring,
+                              const char *username,
+                              const char *password,
+                              svn_boolean_t non_interactive,
+                              apr_pool_t *pool)
 {
   apr_hash_set(creds, AUTHN_PASSWORD_KEY, APR_HASH_KEY_STRING,
                svn_string_create(password, pool));
@@ -407,7 +407,7 @@ simple_first_creds(void **credentials,
                                              provider_baton,
                                              parameters,
                                              realmstring,
-                                             simple_password_get,
+                                             svn_auth__simple_password_get,
                                              SVN_AUTH__SIMPLE_PASSWORD_TYPE,
                                              pool);
 }
@@ -425,7 +425,7 @@ simple_save_creds(svn_boolean_t *saved,
                                             provider_baton,
                                             parameters,
                                             realmstring,
-                                            simple_password_set,
+                                            svn_auth__simple_password_set,
                                             SVN_AUTH__SIMPLE_PASSWORD_TYPE,
                                             pool);
 }

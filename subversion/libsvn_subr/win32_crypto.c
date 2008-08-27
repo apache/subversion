@@ -106,8 +106,8 @@ windows_password_encrypter(apr_hash_t *creds,
     {
       char *coded = apr_palloc(pool, apr_base64_encode_len(blobout.cbData));
       apr_base64_encode(coded, blobout.pbData, blobout.cbData);
-      crypted = simple_password_set(creds, realmstring, username, coded,
-                                    non_interactive, pool);
+      crypted = svn_auth__simple_password_set(creds, realmstring, username, 
+                                              coded, non_interactive, pool);
       LocalFree(blobout.pbData);
     }
 
@@ -144,8 +144,8 @@ windows_password_decrypter(const char **out,
   svn_boolean_t decrypted;
   char *in;
 
-  if (!simple_password_get(&in, creds, realmstring, username,
-                           non_interactive, pool))
+  if (!svn_auth__simple_password_get(&in, creds, realmstring, username,
+                                     non_interactive, pool))
     return FALSE;
 
   if (!get_crypto_function("CryptUnprotectData", &dll, &fn))
