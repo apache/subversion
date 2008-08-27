@@ -796,6 +796,9 @@ svn_client_export4(svn_revnum_t *result_rev,
   svn_revnum_t edit_revision = SVN_INVALID_REVNUM;
   const char *url;
 
+  SVN_ERR_ASSERT(peg_revision != NULL);
+  SVN_ERR_ASSERT(revision != NULL);
+
   peg_revision = svn_cl__rev_default_to_head_or_working(peg_revision, from);
   revision = svn_cl__rev_default_to_peg(revision, peg_revision);
 
