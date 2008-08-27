@@ -12404,9 +12404,7 @@ def merge_target_and_subtrees_need_nonintersecting_ranges(sbox):
   nu_COPY_path     = os.path.join(wc_dir, "A_COPY", "D", "G", "nu")
   omega_COPY_path  = os.path.join(wc_dir, "A_COPY", "D", "H", "omega")
   beta_COPY_path   = os.path.join(wc_dir, "A_COPY", "B", "E", "beta")
-  beta_COPY_path   = os.path.join(wc_dir, "A_COPY", "B", "E", "beta")
   rho_COPY_path    = os.path.join(wc_dir, "A_COPY", "D", "G", "rho")
-  omega_COPY_path  = os.path.join(wc_dir, "A_COPY", "D", "H", "omega")
   psi_COPY_path    = os.path.join(wc_dir, "A_COPY", "D", "H", "psi")
   
   # Make a branch to merge to.
@@ -12427,8 +12425,8 @@ def merge_target_and_subtrees_need_nonintersecting_ranges(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         wc_status, None, wc_dir)
 
-  # Do several merges to setup a situation where a subtree needs the merge
-  # target and two of its subtrees all need non-intersecting ranges
+  # Do several merges to setup a situation where the merge
+  # target and two of its subtrees need non-intersecting ranges
   # merged when doing a synch (a.k.a. cherry harvest) merge.
   #
   #   1) Merge -r0:7 from A to A_COPY.
@@ -12455,7 +12453,6 @@ def merge_target_and_subtrees_need_nonintersecting_ranges(sbox):
   svntest.actions.run_and_verify_svn(
     None, expected_merge_output([[-6]], 'G    ' + omega_COPY_path    + '\n'),
     [], 'merge', '-c-6', sbox.repo_url + '/A/D/H/omega', omega_COPY_path)
-  expected_output = wc.State(wc_dir, {'A/D/G/rho' : Item(verb='Sending')})
   wc_status.add({'A_COPY/D/G/nu' : Item(status='  ', wc_rev=9)})
   wc_status.tweak('A_COPY',
                   'A_COPY/B/E/beta',
