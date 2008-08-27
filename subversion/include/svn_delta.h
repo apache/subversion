@@ -427,6 +427,7 @@ svn_txdelta_to_svndiff2(svn_txdelta_window_handler_t *handler,
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
+SVN_DEPRECATED
 void
 svn_txdelta_to_svndiff(svn_stream_t *output,
                        apr_pool_t *pool,

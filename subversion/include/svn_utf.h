@@ -28,6 +28,7 @@
 
 #include "svn_error.h"
 #include "svn_string.h"
+#include "svn_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -94,6 +95,7 @@ svn_utf_cstring_to_utf8_ex2(const char **dest,
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_utf_cstring_to_utf8_ex(const char **dest,
                            const char *src,
@@ -146,6 +148,7 @@ svn_utf_cstring_from_utf8_ex2(const char **dest,
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_utf_cstring_from_utf8_ex(const char **dest,
                              const char *src,

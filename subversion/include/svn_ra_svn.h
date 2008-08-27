@@ -31,6 +31,7 @@
 #include "svn_config.h"
 
 #include "svn_delta.h"
+#include "svn_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -396,6 +397,7 @@ svn_ra_svn_handle_commands2(svn_ra_svn_conn_t *conn,
  *
  * @deprecated Provided for backward compatibility with the 1.5 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_svn_handle_commands(svn_ra_svn_conn_t *conn,
                            apr_pool_t *pool,
