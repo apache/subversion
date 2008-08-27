@@ -38,6 +38,26 @@ extern "C" {
 
 
 
+/** Macro used to mark deprecated functions.
+ *
+ * @since New in 1.6.
+ */
+#ifndef SVN_DEPRECATED
+#if !defined(SWIGPERL) && !defined(SWIGPYTHON) && !defined(SWIGRUBY)
+#if defined(__GNUC__) && (__GNUC__ >= 4 || (__GNUC__==3 && __GNUC_MINOR__>=1))
+#define SVN_DEPRECATED __attribute__((deprecated))
+#elif defined(_MSC_VER) && _MSC_VER >= 1300
+#define SVN_DEPRECATED __declspec(deprecated)
+#else
+#define SVN_DEPRECATED
+#endif
+#else
+#define SVN_DEPRECATED
+#endif
+#endif
+
+
+
 /** Subversion error object.
  *
  * Defined here, rather than in svn_error.h, to avoid a recursive @#include

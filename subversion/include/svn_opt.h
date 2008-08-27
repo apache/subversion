@@ -144,6 +144,7 @@ svn_opt_get_canonical_subcommand2(const svn_opt_subcommand_desc2_t *table,
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
+SVN_DEPRECATED
 const svn_opt_subcommand_desc_t *
 svn_opt_get_canonical_subcommand(const svn_opt_subcommand_desc_t *table,
                                  const char *cmd_name);
@@ -174,6 +175,7 @@ svn_opt_get_option_from_code2(int code,
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
+SVN_DEPRECATED
 const apr_getopt_option_t *
 svn_opt_get_option_from_code(int code,
                              const apr_getopt_option_t *option_table);
@@ -198,6 +200,7 @@ svn_opt_subcommand_takes_option3(const svn_opt_subcommand_desc2_t *command,
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_boolean_t
 svn_opt_subcommand_takes_option2(const svn_opt_subcommand_desc2_t *command,
                                  int option_code);
@@ -212,6 +215,7 @@ svn_opt_subcommand_takes_option2(const svn_opt_subcommand_desc2_t *command,
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
+SVN_DEPRECATED
 svn_boolean_t
 svn_opt_subcommand_takes_option(const svn_opt_subcommand_desc_t *command,
                                 int option_code);
@@ -246,6 +250,7 @@ svn_opt_print_generic_help2(const char *header,
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
+SVN_DEPRECATED
 void
 svn_opt_print_generic_help(const char *header,
                            const svn_opt_subcommand_desc_t *cmd_table,
@@ -291,6 +296,7 @@ svn_opt_subcommand_help3(const char *subcommand,
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 void
 svn_opt_subcommand_help2(const char *subcommand,
                          const svn_opt_subcommand_desc2_t *table,
@@ -304,6 +310,7 @@ svn_opt_subcommand_help2(const char *subcommand,
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
+SVN_DEPRECATED
 void
 svn_opt_subcommand_help(const char *subcommand,
                         const svn_opt_subcommand_desc_t *table,
@@ -492,6 +499,7 @@ svn_opt_resolve_revisions(svn_opt_revision_t *peg_rev,
  * @deprecated Provided for backward compatibility with the 1.5 API.
  * @see svn_client_args_to_target_array()
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_opt_args_to_target_array3(apr_array_header_t **targets_p,
                               apr_getopt_t *os,
@@ -507,6 +515,7 @@ svn_opt_args_to_target_array3(apr_array_header_t **targets_p,
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_opt_args_to_target_array2(apr_array_header_t **targets_p,
                               apr_getopt_t *os,
@@ -528,6 +537,7 @@ svn_opt_args_to_target_array2(apr_array_header_t **targets_p,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_opt_args_to_target_array(apr_array_header_t **targets_p,
                              apr_getopt_t *os,
@@ -684,6 +694,7 @@ svn_opt_print_help3(apr_getopt_t *os,
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 
+SVN_DEPRECATED
 svn_error_t *
 svn_opt_print_help2(apr_getopt_t *os,
                     const char *pgm_name,
@@ -702,6 +713,7 @@ svn_opt_print_help2(apr_getopt_t *os,
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_opt_print_help(apr_getopt_t *os,
                    const char *pgm_name,

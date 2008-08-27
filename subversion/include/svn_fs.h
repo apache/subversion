@@ -349,6 +349,7 @@ svn_fs_recover(const char *path,
  * callback is registered with Berkeley DB, and will forward notifications to
  * a user provided callback after performing its own processing.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_fs_set_berkeley_errcall(svn_fs_t *fs,
                             void (*handler)(const char *errpfx,
@@ -387,31 +388,37 @@ svn_fs_berkeley_logfiles(apr_array_header_t **logfiles,
  */
 
 /** @deprecated Provided for backward compatibility with the 1.0 API. */
+SVN_DEPRECATED
 svn_fs_t *
 svn_fs_new(apr_hash_t *fs_config,
            apr_pool_t *pool);
 
 /** @deprecated Provided for backward compatibility with the 1.0 API. */
+SVN_DEPRECATED
 svn_error_t *
 svn_fs_create_berkeley(svn_fs_t *fs,
                        const char *path);
 
 /** @deprecated Provided for backward compatibility with the 1.0 API. */
+SVN_DEPRECATED
 svn_error_t *
 svn_fs_open_berkeley(svn_fs_t *fs,
                      const char *path);
 
 /** @deprecated Provided for backward compatibility with the 1.0 API. */
+SVN_DEPRECATED
 const char *
 svn_fs_berkeley_path(svn_fs_t *fs,
                      apr_pool_t *pool);
 
 /** @deprecated Provided for backward compatibility with the 1.0 API. */
+SVN_DEPRECATED
 svn_error_t *
 svn_fs_delete_berkeley(const char *path,
                        apr_pool_t *pool);
 
 /** @deprecated Provided for backward compatibility with the 1.0 API. */
+SVN_DEPRECATED
 svn_error_t *
 svn_fs_hotcopy_berkeley(const char *src_path,
                         const char *dest_path,
@@ -419,6 +426,7 @@ svn_fs_hotcopy_berkeley(const char *src_path,
                         apr_pool_t *pool);
 
 /** @deprecated Provided for backward compatibility with the 1.4 API. */
+SVN_DEPRECATED
 svn_error_t *
 svn_fs_berkeley_recover(const char *path,
                         apr_pool_t *pool);
@@ -505,6 +513,7 @@ svn_fs_access_add_lock_token2(svn_fs_access_t *access_ctx,
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
 
+SVN_DEPRECATED
 svn_error_t *
 svn_fs_access_add_lock_token(svn_fs_access_t *access_ctx,
                              const char *token);
@@ -569,6 +578,7 @@ svn_fs_check_related(const svn_fs_id_t *id1,
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
+SVN_DEPRECATED
 svn_fs_id_t *
 svn_fs_parse_id(const char *data,
                 apr_size_t len,
@@ -734,6 +744,7 @@ svn_fs_begin_txn2(svn_fs_txn_t **txn_p,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_fs_begin_txn(svn_fs_txn_t **txn_p,
                  svn_fs_t *fs,
@@ -1576,6 +1587,7 @@ svn_fs_file_checksum(svn_checksum_t **checksum,
  *
  * @deprecated Provided for backward compatibility with the 1.5 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_fs_file_md5_checksum(unsigned char digest[],
                          svn_fs_root_t *root,
