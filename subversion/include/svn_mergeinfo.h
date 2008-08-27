@@ -248,7 +248,7 @@ svn_rangelist_merge(apr_array_header_t **rangelist,
  *
  * @a consider_inheritance determines how to account for the
  * @c svn_merge_range_t inheritable field when comparing @a whiteboard's
- * and @a *eraser's rangelists for equality.  @See svn_mergeinfo_diff().
+ * and @a *eraser's rangelists for equality.  @see svn_mergeinfo_diff().
  *
  * @since New in 1.5.
  */
