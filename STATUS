@@ -44,17 +44,9 @@ Candidate changes for 1.5.2:
    Votes:
      +1: pburba, cmpilato
 
- * r31867, r32365
-   In the "Malformed URL for repository" error message, show the URL.
-   Justification:
-     Trivial change that may shed light on a bug that we can't reproduce
-     that's been hitting several people - see the email thread
-     <http://svn.haxx.se/dev/archive-2008-06/0939.shtml>.
-   Votes:
-     +1: julianfoad, rhuijben
-
 Approved changes:
 =================
+
  * r32643
    Improve merge performance by not driving the merge editor for ranges
    which don't need to be merged.
@@ -64,3 +56,11 @@ Approved changes:
    Votes:
      +1: pburba, cmpilato, kameshj
 
+ * r31867, r32365
+   In the "Malformed URL for repository" error message, show the URL.
+   Justification:
+     Trivial change that may shed light on a bug that we can't reproduce
+     that's been hitting several people - see the email thread
+     <http://svn.haxx.se/dev/archive-2008-06/0939.shtml>.
+   Votes:
+     +1: julianfoad, rhuijben, pburba
