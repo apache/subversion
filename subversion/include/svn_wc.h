@@ -2002,17 +2002,19 @@ svn_wc_entry_dup(const svn_wc_entry_t *entry,
 /** Given a @a dir_path under version control, decide if one of its
  * entries (@a entry) is in state of conflict; return the answers in
  * @a text_conflicted_p, @a prop_conflicted_p and @a tree_conflicted_p.
+ *
  * @a tree_conflicted_p refers to @a entry being the victim of a conflict.
  *
- * Only files can be text conflicted.
- * Only directories can be tree conflicted.
- * Property conflicts apply to both.
+ * If the @a entry mentions that a text conflict file (.rej suffix)
+ * exists, but it cannot be found, assume the text conflict has been
+ * resolved by the user and return FALSE in @a *text_conflicted_p.
  *
- * If the entry mentions that a text conflict file, property conflicts
- * file, or a tree conflict report file (### obsolete) exist, but they are all
- * removed, assume the conflict has been resolved by the user. ### and adjust the entry?
- * ### Shouldn't this WC function just report what the entry says, and let the client
- * clear the conflict if files are gone (etc.) if that's what it wants to do?
+ * Similarly, if the @a entry mentions that a property conflicts file
+ * (.prej suffix) exists, but it cannot be found, assume the property
+ * conflicts have been resolved by the user and return FALSE in
+ * @a *prop_conflicted_p.
+ *
+ * The @a entry is not updated.
  *
  * @since New in 1.6.
  */
