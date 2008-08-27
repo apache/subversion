@@ -548,9 +548,10 @@ typedef svn_error_t *(*svn_auth_plaintext_passphrase_prompt_func_t)
  * *auth_baton, grouped by credential type, and searched in this exact
  * order.
  */
-void svn_auth_open(svn_auth_baton_t **auth_baton,
-                   apr_array_header_t *providers,
-                   apr_pool_t *pool);
+void
+svn_auth_open(svn_auth_baton_t **auth_baton,
+              apr_array_header_t *providers,
+              apr_pool_t *pool);
 
 /** Set an authentication run-time parameter.
  *
@@ -559,17 +560,19 @@ void svn_auth_open(svn_auth_baton_t **auth_baton,
  * and @a value will NOT be duplicated into the auth_baton's pool.
  * To delete a run-time parameter, pass NULL for @a value.
  */
-void svn_auth_set_parameter(svn_auth_baton_t *auth_baton,
-                            const char *name,
-                            const void *value);
+void
+svn_auth_set_parameter(svn_auth_baton_t *auth_baton,
+                       const char *name,
+                       const void *value);
 
 /** Get an authentication run-time parameter.
  *
  * Return a value for run-time parameter @a name from @a auth_baton.
  * Return NULL if the parameter doesn't exist.
  */
-const void * svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
-                                    const char *name);
+const void *
+svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
+                       const char *name);
 
 /** Universal run-time parameters, made available to all providers.
 
@@ -659,12 +662,13 @@ const void * svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
  * Use @a pool to allocate @a *state, and for temporary allocation.
  * Note that @a *credentials will be allocated in @a auth_baton's pool.
  */
-svn_error_t * svn_auth_first_credentials(void **credentials,
-                                         svn_auth_iterstate_t **state,
-                                         const char *cred_kind,
-                                         const char *realmstring,
-                                         svn_auth_baton_t *auth_baton,
-                                         apr_pool_t *pool);
+svn_error_t *
+svn_auth_first_credentials(void **credentials,
+                           svn_auth_iterstate_t **state,
+                           const char *cred_kind,
+                           const char *realmstring,
+                           svn_auth_baton_t *auth_baton,
+                           apr_pool_t *pool);
 
 /** Get another set of credentials, assuming previous ones failed to
  * authenticate.
@@ -676,9 +680,10 @@ svn_error_t * svn_auth_first_credentials(void **credentials,
  *
  * Note that @a *credentials will be allocated in @c auth_baton's pool.
  */
-svn_error_t * svn_auth_next_credentials(void **credentials,
-                                        svn_auth_iterstate_t *state,
-                                        apr_pool_t *pool);
+svn_error_t *
+svn_auth_next_credentials(void **credentials,
+                          svn_auth_iterstate_t *state,
+                          apr_pool_t *pool);
 
 /** Save a set of credentials.
  *
@@ -690,8 +695,9 @@ svn_error_t * svn_auth_next_credentials(void **credentials,
  *
  * If no credentials were ever returned, do nothing.
  */
-svn_error_t * svn_auth_save_credentials(svn_auth_iterstate_t *state,
-                                        apr_pool_t *pool);
+svn_error_t *
+svn_auth_save_credentials(svn_auth_iterstate_t *state,
+                          apr_pool_t *pool);
 
 /** @} */
 
@@ -730,7 +736,8 @@ svn_auth_get_simple_prompt_provider(svn_auth_provider_object_t **provider,
  *
  * @since New in 1.4.
  */
-void svn_auth_get_username_prompt_provider
+void
+svn_auth_get_username_prompt_provider
   (svn_auth_provider_object_t **provider,
    svn_auth_username_prompt_func_t prompt_func,
    void *prompt_baton,
@@ -758,7 +765,8 @@ void svn_auth_get_username_prompt_provider
  *
  * @since New in 1.6.
  */
-void svn_auth_get_simple_provider2
+void
+svn_auth_get_simple_provider2
   (svn_auth_provider_object_t **provider,
    svn_auth_plaintext_prompt_func_t plaintext_prompt_func,
    void* prompt_baton,
@@ -770,8 +778,9 @@ void svn_auth_get_simple_provider2
  * @deprecated Provided for backwards compatibility with the 1.5 API.
  * @since New in 1.4.
  */
-void svn_auth_get_simple_provider(svn_auth_provider_object_t **provider,
-                                  apr_pool_t *pool);
+void
+svn_auth_get_simple_provider(svn_auth_provider_object_t **provider,
+                             apr_pool_t *pool);
 
 
 #if (defined(WIN32) && !defined(__MINGW32__)) || defined(DOXYGEN)
@@ -829,8 +838,9 @@ svn_auth_get_keychain_simple_provider(svn_auth_provider_object_t **provider,
  *
  * @since New in 1.4.
  */
-void svn_auth_get_username_provider(svn_auth_provider_object_t **provider,
-                                    apr_pool_t *pool);
+void
+svn_auth_get_username_provider(svn_auth_provider_object_t **provider,
+                               apr_pool_t *pool);
 
 
 /** Create and return @a *provider, an authentication provider of type @c
@@ -842,7 +852,8 @@ void svn_auth_get_username_provider(svn_auth_provider_object_t **provider,
  *
  * @since New in 1.4.
  */
-void svn_auth_get_ssl_server_trust_file_provider
+void
+svn_auth_get_ssl_server_trust_file_provider
   (svn_auth_provider_object_t **provider,
    apr_pool_t *pool);
 
@@ -875,7 +886,8 @@ svn_auth_get_windows_ssl_server_trust_provider
  *
  * @since New in 1.4.
  */
-void svn_auth_get_ssl_client_cert_file_provider
+void
+svn_auth_get_ssl_client_cert_file_provider
   (svn_auth_provider_object_t **provider,
    apr_pool_t *pool);
 
@@ -894,7 +906,8 @@ void svn_auth_get_ssl_client_cert_file_provider
  *
  * @since New in 1.6.
  */
-void svn_auth_get_ssl_client_cert_pw_file_provider2
+void
+svn_auth_get_ssl_client_cert_pw_file_provider2
   (svn_auth_provider_object_t **provider,
    svn_auth_plaintext_passphrase_prompt_func_t plaintext_passphrase_prompt_func,
    void *prompt_baton,
@@ -906,7 +919,8 @@ void svn_auth_get_ssl_client_cert_pw_file_provider2
  * @deprecated Provided for backwards compatibility with the 1.5 API.
  * @since New in 1.4.
  */
-void svn_auth_get_ssl_client_cert_pw_file_provider
+void
+svn_auth_get_ssl_client_cert_pw_file_provider
   (svn_auth_provider_object_t **provider,
    apr_pool_t *pool);
 
@@ -920,7 +934,8 @@ void svn_auth_get_ssl_client_cert_pw_file_provider
  *
  * @since New in 1.4.
  */
-void svn_auth_get_ssl_server_trust_prompt_provider
+void
+svn_auth_get_ssl_server_trust_prompt_provider
   (svn_auth_provider_object_t **provider,
    svn_auth_ssl_server_trust_prompt_func_t prompt_func,
    void *prompt_baton,
@@ -937,7 +952,8 @@ void svn_auth_get_ssl_server_trust_prompt_provider
  *
  * @since New in 1.4.
  */
-void svn_auth_get_ssl_client_cert_prompt_provider
+void
+svn_auth_get_ssl_client_cert_prompt_provider
   (svn_auth_provider_object_t **provider,
    svn_auth_ssl_client_cert_prompt_func_t prompt_func,
    void *prompt_baton,
@@ -955,7 +971,8 @@ void svn_auth_get_ssl_client_cert_prompt_provider
  *
  * @since New in 1.4.
  */
-void svn_auth_get_ssl_client_cert_pw_prompt_provider
+void
+svn_auth_get_ssl_client_cert_pw_prompt_provider
   (svn_auth_provider_object_t **provider,
    svn_auth_ssl_client_cert_pw_prompt_func_t prompt_func,
    void *prompt_baton,

@@ -911,28 +911,17 @@ def disallow_propset_invalid_formatted_externals(sbox):
     os.remove(tmp_f)
 
   for ext in [ 'http://example.com/ -r1 foo',
-               'http://example.com/ -r 1 foo'
-               ]:
-    tmp_f = os.tempnam()
-    svntest.main.file_append(tmp_f, ext)
-    svntest.actions.run_and_verify_svn("No error for externals '%s'" % ext,
-                                       None,
-                                       '.*cannot use a URL.* old style.*',
-                                       'propset',
-                                       '-F',
-                                       tmp_f,
-                                       'svn:externals',
-                                       A_path)
-    os.remove(tmp_f)
-
-  for ext in [ '-r1 foo http://example.com/',
+               'http://example.com/ -r 1 foo',
+               '-r1 foo http://example.com/',
                '-r 1 foo http://example.com/'
                ]:
     tmp_f = os.tempnam()
     svntest.main.file_append(tmp_f, ext)
     svntest.actions.run_and_verify_svn("No error for externals '%s'" % ext,
                                        None,
-                                       '.*cannot use a URL.* new style.*',
+                                       '.*cannot use a URL \'.*\' as the ' \
+                                         'target directory for an external ' \
+                                         'definition.*',
                                        'propset',
                                        '-F',
                                        tmp_f,

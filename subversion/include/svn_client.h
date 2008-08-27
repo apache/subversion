@@ -67,7 +67,8 @@ extern "C" {
  *
  * @since New in 1.1.
  */
-const svn_version_t *svn_client_version(void);
+const svn_version_t *
+svn_client_version(void);
 
 /** Client supporting functions
  *
@@ -104,7 +105,8 @@ const svn_version_t *svn_client_version(void);
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
-void svn_client_get_simple_prompt_provider
+void
+svn_client_get_simple_prompt_provider
   (svn_auth_provider_object_t **provider,
    svn_auth_simple_prompt_func_t prompt_func,
    void *prompt_baton,
@@ -125,7 +127,8 @@ void svn_client_get_simple_prompt_provider
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
-void svn_client_get_username_prompt_provider
+void
+svn_client_get_username_prompt_provider
   (svn_auth_provider_object_t **provider,
    svn_auth_username_prompt_func_t prompt_func,
    void *prompt_baton,
@@ -866,6 +869,22 @@ typedef struct svn_client_ctx_t
 
 } svn_client_ctx_t;
 
+/** Initialize a client context.
+ * Set @a *ctx to a client context object, allocated in @a pool, that
+ * represents a particular instance of an svn client.
+ *
+ * In order to avoid backwards compatibility problems, clients must
+ * use this function to intialize and allocate the
+ * @c svn_client_ctx_t structure rather than doing so themselves, as
+ * the size of this structure may change in the future.
+ *
+ * The current implementation never returns error, but callers should
+ * still check for error, for compatibility with future versions.
+ */
+svn_error_t *
+svn_client_create_context(svn_client_ctx_t **ctx,
+                          apr_pool_t *pool);
+
 /** @} end group: Client context management */
 
 /**
@@ -924,32 +943,6 @@ svn_client_args_to_target_array(apr_array_header_t **targets_p,
 
 /** @} */
 
-/**
- * Client context
- *
- * @defgroup clnt_ctx Client context management
- *
- * @{
- */
-
-/** Initialize a client context.
- * Set @a *ctx to a client context object, allocated in @a pool, that
- * represents a particular instance of an svn client.
- *
- * In order to avoid backwards compatibility problems, clients must
- * use this function to intialize and allocate the
- * @c svn_client_ctx_t structure rather than doing so themselves, as
- * the size of this structure may change in the future.
- *
- * The current implementation never returns error, but callers should
- * still check for error, for compatibility with future versions.
- */
-svn_error_t *
-svn_client_create_context(svn_client_ctx_t **ctx,
-                          apr_pool_t *pool);
-
-/** @} end group: Client context */
-
 /**
  * Client working copy management functions
  *
@@ -4269,7 +4262,8 @@ typedef svn_error_t *(*svn_info_receiver_t)
  * @since New in 1.3.
  */
 svn_info_t *
-svn_info_dup(const svn_info_t *info, apr_pool_t *pool);
+svn_info_dup(const svn_info_t *info,
+             apr_pool_t *pool);
 
 /**
  * Invoke @a receiver with @a receiver_baton to return information
