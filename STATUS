@@ -17,19 +17,6 @@ Candidate changes for 1.5.2:
      +1: stsp, arfrever
      +0: cmpilato
 
- * r32672, r32673, r32674, r32739
-   Fix an inconsistency in parsing svn:externals with the new 1.5
-   relative URL support when both a relative URL and a relative path
-   is used with -r N.  Also, add stricter checking on svn:externals.
-   Justification:
-     If an 1.4 style external with -r N and an absolute URL is changed
-     to use a relative URL, then svn will not parse the URL as a URL
-     any more but as the target directory, which is odd and
-     inconsistent behavior.  The code without this fix does not match
-     the documentation on the web site.
-   Votes:
-     +1: blair, cmpilato
-
  * r32706, r32707, r32730
    Fix another issue #3067 bug where subtree mergeinfo can occur that
    breaks the merge editor drive.
@@ -46,3 +33,16 @@ Candidate changes for 1.5.2:
 
 Approved changes:
 =================
+
+ * r32672, r32673, r32674, r32739
+   Fix an inconsistency in parsing svn:externals with the new 1.5
+   relative URL support when both a relative URL and a relative path
+   is used with -r N.  Also, add stricter checking on svn:externals.
+   Justification:
+     If an 1.4 style external with -r N and an absolute URL is changed
+     to use a relative URL, then svn will not parse the URL as a URL
+     any more but as the target directory, which is odd and
+     inconsistent behavior.  The code without this fix does not match
+     the documentation on the web site.
+   Votes:
+     +1: blair, cmpilato, hwright
