@@ -18,7 +18,6 @@
 
 /* ==================================================================== */
 
-#ifdef SVN_HAVE_KEYCHAIN_SERVICES
 /*** Includes. ***/
 
 #include <apr_pools.h>
@@ -31,6 +30,8 @@
 #include "private/svn_auth_private.h"
 
 #include "svn_private_config.h"
+
+#ifdef SVN_HAVE_KEYCHAIN_SERVICES
 
 #include <Security/Security.h>
 
