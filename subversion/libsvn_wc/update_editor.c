@@ -1092,19 +1092,16 @@ leftmod_error_chain(svn_error_t *err,
     if (tmp_err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD)
       break;
 
-  /* If we found a "left a local mod" error, wrap and return it.
-     Otherwise, we just return our top-most error. */
+  /* If we found a "left a local mod" error, tolerate it
+     and clear the whole error. In that case we continue with
+     modified files left on the disk. */
   if (tmp_err)
     {
-      /* Remove the LOGFILE (and eat up errors from this process). */
-      svn_error_clear(svn_io_remove_file(logfile, pool));
-
-      return svn_error_createf
-        (SVN_ERR_WC_OBSTRUCTED_UPDATE, tmp_err,
-         _("Won't delete locally modified directory '%s'"),
-         svn_path_local_style(path, pool));
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
     }
 
+  /* Otherwise, we just return our top-most error. */
   return err;
 }
 
@@ -1190,7 +1187,7 @@ do_entry_deletion(struct edit_baton *eb,
                    (child_access,
                     SVN_WC_ENTRY_THIS_DIR,
                     TRUE, /* destroy */
-                    TRUE, /* instant error */
+                    FALSE, /* instant error */
                     eb->cancel_func,
                     eb->cancel_baton,
                     pool),
