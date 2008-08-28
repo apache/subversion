@@ -80,7 +80,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.6\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2008-08-28 14:16+0200\n"
-"PO-Revision-Date: 2008-08-28 15:38+0200\n"
+"PO-Revision-Date: 2008-08-28 16:17+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: German <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -224,7 +224,7 @@ msgstr "Ungültiges Zeichen in der Hex-Prüfsumme gefunden"
 
 #: ../include/svn_error_codes.h:219
 msgid "No such XML tag attribute"
-msgstr "Kein solche Eigenschaft des XML-Tags"
+msgstr "Ein solches Attribut des XML-Tags existiert nicht"
 
 #: ../include/svn_error_codes.h:223
 msgid "<delta-pkg> is missing ancestry"
@@ -2176,7 +2176,7 @@ msgstr "Speichere Knotenrevision"
 #: ../libsvn_fs_base/bdb/reps-table.c:200
 #, c-format
 msgid "No such representation '%s'"
-msgstr "Kein solche Darstellung »%s«"
+msgstr "Eine solche Darstellung »%s« existiert nicht"
 
 #. Handle any other error conditions.
 #: ../libsvn_fs_base/bdb/reps-table.c:96
