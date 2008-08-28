@@ -25,7 +25,7 @@
 #include "svn_string.h"
 #include "svn_path.h"
 #include "svn_time.h"
-#include "svn_md5.h"
+#include "svn_checksum.h"
 #include "svn_props.h"
 
 
@@ -441,15 +441,16 @@ dump_node(struct edit_baton *eb,
                                        eb->fs_root, path, pool));
           if (kind == svn_node_file)
             {
-              unsigned char md5_digest[APR_MD5_DIGESTSIZE];
+              svn_checksum_t *checksum;
               const char *hex_digest;
               SVN_ERR(svn_fs_contents_changed(&must_dump_text,
                                               compare_root, compare_path,
                                               eb->fs_root, path, pool));
 
-              SVN_ERR(svn_fs_file_md5_checksum(md5_digest, compare_root,
-                                               compare_path, pool));
-              hex_digest = svn_md5_digest_to_cstring(md5_digest, pool);
+              SVN_ERR(svn_fs_file_checksum(&checksum, svn_checksum_md5,
+                                           compare_root, compare_path,
+                                           TRUE, pool));
+              hex_digest = svn_checksum_to_cstring(checksum, pool);
               if (hex_digest)
                 SVN_ERR(svn_stream_printf(eb->stream, pool,
                                           SVN_REPOS_DUMPFILE_TEXT_COPY_SOURCE_CHECKSUM
@@ -502,7 +503,7 @@ dump_node(struct edit_baton *eb,
      here, and an MD5 checksum (if available). */
   if (must_dump_text && (kind == svn_node_file))
     {
-      unsigned char md5_digest[APR_MD5_DIGESTSIZE];
+      svn_checksum_t *checksum;
       const char *hex_digest;
       svn_filesize_t textlen;
 
@@ -519,9 +520,10 @@ dump_node(struct edit_baton *eb,
 
           if (compare_root)
             {
-              SVN_ERR(svn_fs_file_md5_checksum(md5_digest, compare_root,
-                                               compare_path, pool));
-              hex_digest = svn_md5_digest_to_cstring(md5_digest, pool);
+              SVN_ERR(svn_fs_file_checksum(&checksum, svn_checksum_md5,
+                                           compare_root, compare_path,
+                                           TRUE, pool));
+              hex_digest = svn_checksum_to_cstring(checksum, pool);
               if (hex_digest)
                 SVN_ERR(svn_stream_printf(eb->stream, pool,
                                           SVN_REPOS_DUMPFILE_TEXT_DELTA_BASE_CHECKSUM
@@ -539,8 +541,9 @@ dump_node(struct edit_baton *eb,
                                 SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH
                                 ": %" SVN_FILESIZE_T_FMT "\n", textlen));
 
-      SVN_ERR(svn_fs_file_md5_checksum(md5_digest, eb->fs_root, path, pool));
-      hex_digest = svn_md5_digest_to_cstring(md5_digest, pool);
+      SVN_ERR(svn_fs_file_checksum(&checksum, svn_checksum_md5,
+                                   eb->fs_root, path, TRUE, pool));
+      hex_digest = svn_checksum_to_cstring(checksum, pool);
       if (hex_digest)
         SVN_ERR(svn_stream_printf(eb->stream, pool,
                                   SVN_REPOS_DUMPFILE_TEXT_CONTENT_CHECKSUM

@@ -26,7 +26,6 @@ from svntest import wc
 from svntest.main import server_has_mergeinfo
 from svntest.main import SVN_PROP_MERGEINFO
 from merge_tests import set_up_branch
-from merge_tests import shorten_path_kludge
 
 ######################################################################
 #
@@ -1458,16 +1457,12 @@ def merge_sensitive_log_added_mergeinfo_replaces_inherited(sbox):
   H_COPY_path = os.path.join(wc_dir, "A_COPY", "D", "H")
 
   # Merge all available changes from 'A/D' to 'A_COPY/D' and commit as r7.
-  #
-  # Search for the comment entitled "The Merge Kluge" in merge_tests.py to
-  # understand why we shorten and chdir() below.
-  short_D_COPY_path = shorten_path_kludge(D_COPY_path)
-  expected_output = wc.State(short_D_COPY_path, {
+  expected_output = wc.State(D_COPY_path, {
     'H/psi'   : Item(status='U '),
     'G/rho'   : Item(status='U '),
     'H/omega' : Item(status='U '),
     })
-  expected_status = wc.State(short_D_COPY_path, {
+  expected_status = wc.State(D_COPY_path, {
     ''        : Item(status=' M', wc_rev=2),
     'G'       : Item(status='  ', wc_rev=2),
     'G/pi'    : Item(status='  ', wc_rev=2),
@@ -1491,10 +1486,8 @@ def merge_sensitive_log_added_mergeinfo_replaces_inherited(sbox):
     'H/omega' : Item("New content"),
     'gamma'   : Item("This is the file 'gamma'.\n")
     })
-  expected_skip = wc.State(short_D_COPY_path, { })
-  saved_cwd = os.getcwd()
-  os.chdir(svntest.main.work_dir)
-  svntest.actions.run_and_verify_merge(short_D_COPY_path, None, None,
+  expected_skip = wc.State(D_COPY_path, { })
+  svntest.actions.run_and_verify_merge(D_COPY_path, None, None,
                                        sbox.repo_url + '/A/D',
                                        expected_output,
                                        expected_disk,
@@ -1502,7 +1495,6 @@ def merge_sensitive_log_added_mergeinfo_replaces_inherited(sbox):
                                        expected_skip,
                                        None, None, None, None,
                                        None, 1)
-  os.chdir(saved_cwd)
 
   # Commit the merge.
   expected_output = svntest.wc.State(wc_dir, {
@@ -1529,11 +1521,10 @@ def merge_sensitive_log_added_mergeinfo_replaces_inherited(sbox):
   svntest.actions.run_and_verify_svn(None, ["At revision 7.\n"], [],
                                      'up', wc_dir)
   wc_status.tweak(wc_rev=7)
-  short_H_COPY_path = shorten_path_kludge(H_COPY_path)
-  expected_output = wc.State(short_H_COPY_path, {
+  expected_output = wc.State(H_COPY_path, {
     'psi' : Item(status='U ')
     })
-  expected_status = wc.State(short_H_COPY_path, {
+  expected_status = wc.State(H_COPY_path, {
     ''      : Item(status=' M', wc_rev=7),
     'psi'   : Item(status='M ', wc_rev=7),
     'omega' : Item(status='  ', wc_rev=7),
@@ -1545,14 +1536,12 @@ def merge_sensitive_log_added_mergeinfo_replaces_inherited(sbox):
     'omega' : Item("New content"),
     'chi'   : Item("This is the file 'chi'.\n"),
     })
-  expected_skip = wc.State(short_H_COPY_path, { })
-  os.chdir(svntest.main.work_dir)
-  svntest.actions.run_and_verify_merge(short_H_COPY_path, '3', '2',
+  expected_skip = wc.State(H_COPY_path, { })
+  svntest.actions.run_and_verify_merge(H_COPY_path, '3', '2',
                                        sbox.repo_url + '/A/D/H',
                                        expected_output, expected_disk,
                                        expected_status, expected_skip,
                                        None, None, None, None, None, 1)
-  os.chdir(saved_cwd)
 
   # Commit the merge.
   expected_output = svntest.wc.State(wc_dir, {

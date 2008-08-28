@@ -20,7 +20,7 @@
 
 svn_error_t *
 svn_cache_set_error_handler(svn_cache_t *cache,
-                            svn_cache_error_handler_t *handler,
+                            svn_cache_error_handler_t handler,
                             void *baton,
                             apr_pool_t *pool)
 {

@@ -691,7 +691,7 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
                              void *baton)
 {
   struct handle_externals_desc_change_baton *cb = baton;
-  struct handle_external_item_change_baton ib;
+  struct handle_external_item_change_baton ib = { 0 };
   const char *old_desc_text, *new_desc_text;
   apr_array_header_t *old_desc, *new_desc;
   apr_hash_t *old_desc_hash, *new_desc_hash;
@@ -832,7 +832,7 @@ svn_client__handle_externals(svn_wc_traversal_info_t *traversal_info,
                              apr_pool_t *pool)
 {
   apr_hash_t *externals_old, *externals_new, *ambient_depths;
-  struct handle_externals_desc_change_baton cb;
+  struct handle_externals_desc_change_baton cb = { 0 };
 
   svn_wc_edited_externals(&externals_old, &externals_new, traversal_info);
   svn_wc_traversed_depths(&ambient_depths, traversal_info);
@@ -873,7 +873,7 @@ svn_client__fetch_externals(apr_hash_t *externals,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool)
 {
-  struct handle_externals_desc_change_baton cb;
+  struct handle_externals_desc_change_baton cb = { 0 };
 
   cb.externals_new     = externals;
   cb.externals_old     = apr_hash_make(pool);

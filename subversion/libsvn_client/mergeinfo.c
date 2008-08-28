@@ -18,7 +18,6 @@
 
 #include <apr_pools.h>
 #include <apr_strings.h>
-#include <assert.h>
 
 #include "svn_pools.h"
 #include "svn_path.h"
