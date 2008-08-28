@@ -29,9 +29,11 @@ Candidate changes for 1.5.3:
      +0: danielsh (I confirm the justification, but don't understand
                    the change itself)
 
- * r32790
+ * r32790, r32796
    Fix issue #2505: make switch continue after deleting locally modified
    directories, as it update and merge do.
+   Notes:
+     r32796 updates the docstring.
    Justification:
      Small fix (with test).  User requests.
    Votes:
