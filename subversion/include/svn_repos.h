@@ -1673,6 +1673,10 @@ svn_repos_fs_begin_txn_for_update(svn_fs_txn_t **txn_p,
  * hook, return the original error wrapped with
  * SVN_ERR_REPOS_POST_LOCK_HOOK_FAILED.  If the caller sees this
  * error, it knows that the lock succeeded anyway.
+ *
+ * The pre-lock hook may cause a different token to be used for the
+ * lock, instead of @a token; see the pre-lock-hook documentation for
+ * more.
  */
 svn_error_t *
 svn_repos_fs_lock(svn_lock_t **lock,
