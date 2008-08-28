@@ -5,114 +5,6 @@
 # Copyright (C) 2004-2006 CollabNet.
 # This file is distributed under the same license as the subversion package.
 #
-msgid ""
-msgstr ""
-"Project-Id-Version: subversion 1.6\n"
-"Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2008-08-28 14:16+0200\n"
-"PO-Revision-Date: 2008-08-28 14:24+0200\n"
-"Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
-"Language-Team: German <dev@subversion.tigris.org>\n"
-"MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=UTF-8\n"
-"Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
-"X-Poedit-Basepath: ..\n"
-
-# | msgid "Cannot modify transaction named '%s' in filesystem '%s'"
-#. Constructing nice error messages for roots.
-#. Build an SVN_ERR_FS_NOT_FOUND error, with a detailed error text,
-#. for PATH in ROOT. ROOT is of type svn_fs_root_t *.
-#: ../include/private/svn_fs_util.h:53
-#, fuzzy, c-format
-msgid "File not found: transaction '%s', path '%s'"
-msgstr ""
-"Kann die Transaktion namens »%s« in Dateisystem »%s« nicht modifizieren"
-
-# | msgid "Path '%s' not found in revision %ld"
-#: ../include/private/svn_fs_util.h:58
-#, fuzzy, c-format
-msgid "File not found: revision %ld, path '%s'"
-msgstr "Pfad »%s« wurde in Revision %ld nicht gefunden"
-
-#. Build a detailed `file already exists' message for PATH in ROOT.
-#. ROOT is of type svn_fs_root_t *.
-#: ../include/private/svn_fs_util.h:69
-#, c-format
-msgid "File already exists: filesystem '%s', transaction '%s', path '%s'"
-msgstr ""
-
-#: ../include/private/svn_fs_util.h:74
-#, c-format
-msgid "File already exists: filesystem '%s', revision %ld, path '%s'"
-msgstr ""
-
-# | msgid "Object is not a transaction root"
-#. ROOT is of type svn_fs_root_t *.
-#: ../include/private/svn_fs_util.h:82
-#, fuzzy
-msgid "Root object must be a transaction root"
-msgstr "Objekt ist keine Transaktionsbasis"
-
-# | msgid "Corrupt filesystem revision %ld in filesystem '%s'"
-#. SVN_FS__ERR_NOT_MUTABLE: the caller attempted to change a node
-#. outside of a transaction. FS is of type "svn_fs_t *".
-#: ../include/private/svn_fs_util.h:89
-#, fuzzy, c-format
-msgid "File is not mutable: filesystem '%s', revision %ld, path '%s'"
-msgstr "Beschädigte Dateisystemrevision %ld in Dateisystem »%s«"
-
-# | msgid "'%s' is not a directory"
-#. FS is of type "svn fs_t *".
-#: ../include/private/svn_fs_util.h:96
-#, fuzzy, c-format
-msgid "'%s' is not a directory in filesystem '%s'"
-msgstr "»%s« ist kein Verzeichnis"
-
-# | msgid "'%s' not found in filesystem"
-#. FS is of type "svn fs_t *".
-#: ../include/private/svn_fs_util.h:103
-#, fuzzy, c-format
-msgid "'%s' is not a file in filesystem '%s'"
-msgstr "»%s« nicht im Dateisystem gefunden"
-
-# | msgid "Corrupt lock in 'locks' table for '%s' in filesystem '%s'"
-#. FS is of type "svn fs_t *", LOCK is of type "svn_lock_t *".
-#: ../include/private/svn_fs_util.h:110
-#, fuzzy, c-format
-msgid "Path '%s' is already locked by user '%s' in filesystem '%s'"
-msgstr "Beschädigte Sperre in »locks« Tabelle für »%s« in Dateisystem »%s«"
-
-# | msgid "Corrupt lockfile for path '%s' in filesystem '%s'"
-#. FS is of type "svn fs_t *".
-#: ../include/private/svn_fs_util.h:117
-#, fuzzy, c-format
-msgid "No lock on path '%s' in filesystem '%s'"
-msgstr "Beschädigte Sperrdatei für Pfad »%s« in Dateisystem »%s«"
-
-# | msgid "No copy with id '%s' in filesystem '%s'"
-#. FS is of type "svn fs_t *".
-#: ../include/private/svn_fs_util.h:124
-#, fuzzy, c-format
-msgid "Lock has expired:  lock-token '%s' in filesystem '%s'"
-msgstr "Keine Kopie mit ID »%s« in Dateisystem »%s«"
-
-# | msgid "No user associated with filesystem"
-#. FS is of type "svn fs_t *".
-#: ../include/private/svn_fs_util.h:131
-#, fuzzy, c-format
-msgid "No username is currently associated with filesystem '%s'"
-msgstr "Kein Benutzer mit dem Dateisystem verbunden"
-
-# | msgid "No transaction named '%s' in filesystem '%s'"
-#. SVN_FS__ERR_LOCK_OWNER_MISMATCH: trying to use a lock whose
-#. LOCK_OWNER doesn't match the USERNAME associated with FS.
-#. FS is of type "svn fs_t *".
-#: ../include/private/svn_fs_util.h:140
-#, fuzzy, c-format
-msgid "User '%s' is trying to use a lock owned by '%s' in filesystem '%s'"
-msgstr "Keine Transaktion namens »%s« in Dateisystem »%s«"
-
 # Translation dictionary / Übersetzungswörterbuch:
 # ------
 # Bitte aus Konsistenzgründen die folgenden Terme und Schreibweisen verwenden
@@ -183,6 +75,101 @@ msgstr "Keine Transaktion namens »%s« in Dateisystem »%s«"
 # Original:  "do no interactive prompting"
 # Infinitiv: "Keine interaktiven Rückfragen ausgeben"
 # Indikativ: "Gibt keine interaktiven Rückfragen aus"
+msgid ""
+msgstr ""
+"Project-Id-Version: subversion 1.6\n"
+"Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
+"POT-Creation-Date: 2008-08-28 14:16+0200\n"
+"PO-Revision-Date: 2008-08-28 15:38+0200\n"
+"Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
+"Language-Team: German <dev@subversion.tigris.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Poedit-Basepath: ..\n"
+
+#. Constructing nice error messages for roots.
+#. Build an SVN_ERR_FS_NOT_FOUND error, with a detailed error text,
+#. for PATH in ROOT. ROOT is of type svn_fs_root_t *.
+#: ../include/private/svn_fs_util.h:53
+#, c-format
+msgid "File not found: transaction '%s', path '%s'"
+msgstr "Datei nicht gefunden: Transaktion »%s«, Pfad »%s«"
+
+#: ../include/private/svn_fs_util.h:58
+#, c-format
+msgid "File not found: revision %ld, path '%s'"
+msgstr "Datei nicht gefunden: Revision %ld, Pfad »%s«"
+
+#. Build a detailed `file already exists' message for PATH in ROOT.
+#. ROOT is of type svn_fs_root_t *.
+#: ../include/private/svn_fs_util.h:69
+#, c-format
+msgid "File already exists: filesystem '%s', transaction '%s', path '%s'"
+msgstr "Datei existiert bereits: Dateisystem »%s«, Transaktion »%s«, Pfad »%s«"
+
+#: ../include/private/svn_fs_util.h:74
+#, c-format
+msgid "File already exists: filesystem '%s', revision %ld, path '%s'"
+msgstr "Datei existiert bereits: Dateisystem »%s«, Revision %ld, Pfad »%s«"
+
+#. ROOT is of type svn_fs_root_t *.
+#: ../include/private/svn_fs_util.h:82
+msgid "Root object must be a transaction root"
+msgstr "Basisobjekt muss eine Transaktionsbasis sein"
+
+#. SVN_FS__ERR_NOT_MUTABLE: the caller attempted to change a node
+#. outside of a transaction. FS is of type "svn_fs_t *".
+#: ../include/private/svn_fs_util.h:89
+#, c-format
+msgid "File is not mutable: filesystem '%s', revision %ld, path '%s'"
+msgstr "Datei ist nicht veränderlich: Dateisystem »%s«, Revision %ld, Pfad »%s«"
+
+#. FS is of type "svn fs_t *".
+#: ../include/private/svn_fs_util.h:96
+#, c-format
+msgid "'%s' is not a directory in filesystem '%s'"
+msgstr "»%s« ist kein Verzeichnis im Dateisystem »%s«"
+
+#. FS is of type "svn fs_t *".
+#: ../include/private/svn_fs_util.h:103
+#, c-format
+msgid "'%s' is not a file in filesystem '%s'"
+msgstr "»%s« ist im Dateisystem »%s« keine Datei"
+
+#. FS is of type "svn fs_t *", LOCK is of type "svn_lock_t *".
+#: ../include/private/svn_fs_util.h:110
+#, c-format
+msgid "Path '%s' is already locked by user '%s' in filesystem '%s'"
+msgstr "Pfad »%s« ist bereits vom Benutzer »%s« im Dateisystem »%s« gesperrt"
+
+#. FS is of type "svn fs_t *".
+#: ../include/private/svn_fs_util.h:117
+#, c-format
+msgid "No lock on path '%s' in filesystem '%s'"
+msgstr "Keine Sperre für Pfad »%s« im Dateisystem »%s«"
+
+#. FS is of type "svn fs_t *".
+#: ../include/private/svn_fs_util.h:124
+#, c-format
+msgid "Lock has expired:  lock-token '%s' in filesystem '%s'"
+msgstr "Sperre lief aus: Sperrmarke »%s« in Dateisystem »%s«"
+
+#. FS is of type "svn fs_t *".
+#: ../include/private/svn_fs_util.h:131
+#, c-format
+msgid "No username is currently associated with filesystem '%s'"
+msgstr "Zurzeit ist kein Benutzername mit dem Dateisystem »%s« verbunden"
+
+#. SVN_FS__ERR_LOCK_OWNER_MISMATCH: trying to use a lock whose
+#. LOCK_OWNER doesn't match the USERNAME associated with FS.
+#. FS is of type "svn fs_t *".
+#: ../include/private/svn_fs_util.h:140
+#, c-format
+msgid "User '%s' is trying to use a lock owned by '%s' in filesystem '%s'"
+msgstr "Der Benutzer »%s« versucht, eine von »%s« besessene Sperre im Dateisystem »%s« zu benutzen"
+
 #: ../include/svn_error_codes.h:158
 msgid "Bad parent pool passed to svn_make_pool()"
 msgstr "Falscher Elternpool an svn_make_pool() übergeben"
@@ -227,21 +214,17 @@ msgstr "Ungültiger Konfigurationswert"
 msgid "Bogus server specification"
 msgstr "Falsche Serverangabe"
 
-# | msgid "Unsupported repository version"
 #: ../include/svn_error_codes.h:209
-#, fuzzy
 msgid "Unsupported checksum type"
-msgstr "Nicht unterstützte Version des Projektarchivs"
+msgstr "Nicht unterstützter Prüfsummentyp"
 
-# | msgid "Invalid character '%c' found in range list"
 #: ../include/svn_error_codes.h:213
-#, fuzzy
 msgid "Invalid character in hex checksum"
-msgstr "Ungültiges Zeichen »%c« in der Bereichsliste gefunden"
+msgstr "Ungültiges Zeichen in der Hex-Prüfsumme gefunden"
 
 #: ../include/svn_error_codes.h:219
 msgid "No such XML tag attribute"
-msgstr "Kein solche Eigenschaft des XML Tags"
+msgstr "Kein solche Eigenschaft des XML-Tags"
 
 #: ../include/svn_error_codes.h:223
 msgid "<delta-pkg> is missing ancestry"
@@ -3731,11 +3714,10 @@ msgstr "Es ist unklar, wie mit »%s« für Eigenschaft »%s« verfahren werden s
 msgid "Attempt to fetch capability '%s' resulted in '%s'"
 msgstr "Der Versuch, die Eigenschaft »%s« abzufragen, führte zu »%s«"
 
-# | msgid "Malformed URL '%s': scheme or host or path is missing"
 #: ../libsvn_ra_neon/session.c:955
-#, fuzzy, c-format
+#, c-format
 msgid "URL '%s' is malformed or the scheme or host or path is missing"
-msgstr "Fehlerhafte URL »%s«: Schema, Rechner oder Pfad fehlt"
+msgstr "URL »%s« ist fehlerhaft oder das Schema, der Rechner oder Pfad fehlt"
 
 #: ../libsvn_ra_neon/session.c:971
 msgid "Network socket initialization failed"
@@ -4809,11 +4791,10 @@ msgstr "Erzeuge Verzeichnis für DAV-Sandkasten"
 msgid "Error opening db lockfile"
 msgstr "Fehler beim Öffnen der Datenbank-Sperrdatei"
 
-# | msgid "URL '%s' is not a child of the session's repository root URL '%s'"
 #: ../libsvn_repos/repos.c:1220
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is a subdirectory of an existing repository rooted at '%s'"
-msgstr "URL »%s« ist kein Kind der Projektarchivwurzel-URL »%s« der Sitzung"
+msgstr "»%s« ist ein Unterverzeichnis eines existierenden Projektarchivs mit der Wurzel-URL »%s«"
 
 #: ../libsvn_repos/repos.c:1226
 msgid "Repository creation failed"
@@ -4978,11 +4959,10 @@ msgstr "Kann die das angeforderte Datum nicht berechnen"
 msgid "Can't expand time"
 msgstr "Kann Zeitangabe nicht expandieren"
 
-# | msgid "Can't grab DSO mutex"
 #: ../libsvn_subr/dso.c:68
-#, fuzzy, c-format
+#, c-format
 msgid "Can't create DSO mutex"
-msgstr "Kann DSO-Mutex nicht greifen"
+msgstr "Kann DSO-Mutex nicht erzeugen"
 
 #: ../libsvn_subr/dso.c:87
 #, c-format
@@ -6619,6 +6599,9 @@ msgid ""
 "an external; one must be a path where an absolute or relative URL is checked "
 "out to"
 msgstr ""
+"Ungültige Eigenschaft %s zu »%s«: Es können nicht zwei absolute URLs (»%s« und "
+"»%s«) in einem externen Verweis verwendet werden; eine muss ein Pfad sein, in "
+"den eine absolute oder relative URL ausgecheckt wird"
 
 #: ../libsvn_wc/props.c:3317 ../libsvn_wc/props.c:3325
 #, c-format
@@ -6626,6 +6609,8 @@ msgid ""
 "Invalid %s property on '%s': cannot use a URL '%s' as the target directory "
 "for an external definition"
 msgstr ""
+"Ungültige Eigenschaft %s zu »%s«: Eine URL »%s« kann nicht als Zielverzeichnis "
+"für eine externe Definition verwendet werden"
 
 #: ../libsvn_wc/props.c:3363
 #, c-format
@@ -8570,24 +8555,7 @@ msgstr ""
 "\n"
 "Siehe »svn help propset« für Weiteres zum Setzen von Eigenschaften.\n"
 
-# | msgid ""
-# | "Print the value of a property on files, dirs, or revisions.\n"
-# | "usage: 1. propget PROPNAME [TARGET[@REV]...]\n"
-# | "       2. propget PROPNAME --revprop -r REV [TARGET]\n"
-# | "\n"
-# | "  1. Prints versioned props. If specified, REV determines in which\n"
-# | "     revision the target is first looked up.\n"
-# | "  2. Prints unversioned remote prop on repos revision.\n"
-# | "     TARGET only determines which repository to access.\n"
-# | "\n"
-# | "  By default, this subcommand will add an extra newline to the end\n"
-# | "  of the property values so that the output looks pretty.  Also,\n"
-# | "  whenever there are multiple paths involved, each property value\n"
-# | "  is prefixed with the path with which it is associated.  Use\n"
-# | "  the --strict option to disable these beautifications (useful,\n"
-# | "  for example, when redirecting binary property values to a file).\n"
 #: ../svn/main.c:679
-#, fuzzy
 msgid ""
 "Print the value of a property on files, dirs, or revisions.\n"
 "usage: 1. propget PROPNAME [TARGET[@REV]...]\n"
@@ -8621,7 +8589,10 @@ msgstr ""
 "  wenn mehrere Pfade involviert sind, die Pfade den Eigenschaftswerten\n"
 "  vorangestellt. Verwenden Sie die Option »--strict«, um diese "
 "Formatierungen\n"
-"  abzuschalten (z.B. um Binäreigenschaften in Dateien umzuleiten).\n"
+"  abzuschalten (dies ist nützlich, um einen binären Eigenschaftswert in\n"
+"  eine Datei umzuleiten, steht aber nur zur Verfügung, falls ein\n"
+"  einzelnes ZIEL für eine nicht-rekursive propget-Operation angegeben\n"
+"  wurde).\n"
 
 #: ../svn/main.c:699
 msgid ""
@@ -9704,12 +9675,10 @@ msgstr "Keine Änderungen der Eigenschaft »%s« für »%s«\n"
 msgid "Properties on '%s':\n"
 msgstr "Eigenschaften zu »%s«:\n"
 
-# | msgid "--reintegrate cannot be used with --ignore-ancestry or --record-only"
 #: ../svn/propget-cmd.c:196
-#, fuzzy
 msgid "--verbose cannot be used with --revprop or --strict or --xml"
 msgstr ""
-"--reintegrate kann nicht mit --ignore-ancestry oder --record-only verwendet "
+"--verbose kann nicht mit --revprop oder --strict oder --xml verwendet "
 "werden"
 
 #: ../svn/propget-cmd.c:288
@@ -9717,6 +9686,8 @@ msgid ""
 "Strict output of property values only available for single-target, non-"
 "recursive propget operations"
 msgstr ""
+"Strikte Ausgabe von Eigenschaftswerten ist nur für einzelne Ziele und "
+"nicht-rekursive propget-Operationen verfügbar"
 
 #: ../svn/proplist-cmd.c:158
 #, c-format
@@ -10624,9 +10595,7 @@ msgstr "Fehlende Zusammenführungsquellen übersprungen."
 msgid "Don't filter revision properties."
 msgstr "Revisionseigenschaften nicht filtern."
 
-# | msgid "pass contents of file ARG as additional args"
 #: ../svndumpfilter/main.c:897
-#, fuzzy
 msgid "Pass contents of file ARG as additional args"
 msgstr ""
 "Inhalt der Datei PAR als zusätzliche Parameter\n"
