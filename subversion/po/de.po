@@ -10,7 +10,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.5\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2008-08-28 16:20+0200\n"
-"PO-Revision-Date: 2008-08-28 16:26+0200\n"
+"PO-Revision-Date: 2008-08-28 16:35+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: German <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -3140,8 +3140,8 @@ msgid ""
 "DAV request failed; it's possible that the repository's pre-revprop-change "
 "hook either failed or is non-existent"
 msgstr ""
-"DAV Anfrage fehlgeschlagen; möglicherweise ist entweder die »pre-revprop-"
-"change« Aktion gescheitert oder sie fehlt"
+"DAV-Anfrage schlug fehl; möglicherweise ist entweder die Aktion »pre-revprop-"
+"change« gescheitert oder sie fehlt"
 
 # FIXME: collect messages!
 #: ../libsvn_ra_neon/fetch.c:1422
@@ -6210,6 +6210,9 @@ msgid ""
 "an external; one must be a path where an absolute or relative URL is checked "
 "out to"
 msgstr ""
+"Ungültige Eigenschaft %s zu »%s«: Es können nicht zwei absolute URLs (»%s« und "
+"»%s«) in einem externen Verweis verwendet werden; eine muss ein Pfad sein, in "
+"den eine absolute oder relative URL ausgecheckt wird"
 
 #: ../libsvn_wc/props.c:3315 ../libsvn_wc/props.c:3323
 #, c-format
@@ -6217,6 +6220,8 @@ msgid ""
 "Invalid %s property on '%s': cannot use a URL '%s' as the target directory "
 "for an external definition"
 msgstr ""
+"Ungültige Eigenschaft %s zu »%s«: Eine URL »%s« kann nicht als Zielverzeichnis "
+"für eine externe Definition verwendet werden"
 
 #: ../libsvn_wc/props.c:3361
 #, c-format
