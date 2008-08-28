@@ -17,5 +17,15 @@ Candidate changes for 1.5.3:
      +1: stsp, arfrever
      +0: cmpilato
 
+ * r32012
+   Fix Visual Studio meta-projects on VS2008 and allow 1.5.x to fully
+   build when using VS2008.
+   Justification:
+     Not a code change, just a tweak to the Windows build system to
+     support VS2008.  Without this change you can't build the C API
+     tests or the bindings from the command line.
+   Votes:
+     +1: pburba
+
 Approved changes:
 =================
