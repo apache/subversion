@@ -27,6 +27,7 @@
 #include <apr_dso.h>
 
 #include "svn_error.h"
+#include "svn_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -72,6 +73,7 @@ svn_dso_initialize2(void);
  *
  * @since New in 1.4.
  */
+SVN_DEPRECATED
 void
 svn_dso_initialize(void);
 

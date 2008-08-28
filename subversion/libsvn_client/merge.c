@@ -292,9 +292,18 @@ is_path_conflicted_by_merge(merge_cmd_baton_t *merge_b)
           apr_hash_count(merge_b->conflicted_paths) > 0);
 }
 
-/* Set *HONOR_MERGEINFO and *RECORD_MERGEINFO (if non-NULL)
-   appropriately for MERGE_B.
-   One rule is that we shan't record mergeinfo if we're not honoring it. */
+/* Set *HONOR_MERGEINFO and *RECORD_MERGEINFO (if non-NULL) based on the
+   merge being performed as described in MERGE_B.
+
+   If the merge source server is is capable of merge tracking, the left-side
+   merge source is an ancestor of the right-side (or vice-versa), the merge
+   source repository is the same repository as the MERGE_B->target, and
+   ancestry is being considered then set *HONOR_MERGEINFO to true, otherwise
+   set it to false.
+
+   If *HONOR_MERGEINFO is set to TRUE and the merge is not a dry run then set
+   *RECORD_MERGEINFO  to true, otherwise set it to false.
+   **/
 static APR_INLINE void
 mergeinfo_behavior(svn_boolean_t *honor_mergeinfo_p,
                    svn_boolean_t *record_mergeinfo_p,
