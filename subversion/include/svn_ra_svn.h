@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006, 2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -153,10 +153,11 @@ typedef svn_error_t *(*svn_ra_svn_edit_callback)(void *baton);
  *
  * Either @a sock or @a in_file/@a out_file must be set, not both.
  */
-svn_ra_svn_conn_t *svn_ra_svn_create_conn(apr_socket_t *sock,
-                                          apr_file_t *in_file,
-                                          apr_file_t *out_file,
-                                          apr_pool_t *pool);
+svn_ra_svn_conn_t *
+svn_ra_svn_create_conn(apr_socket_t *sock,
+                       apr_file_t *in_file,
+                       apr_file_t *out_file,
+                       apr_pool_t *pool);
 
 /** Add the capabilities in @a list to @a conn's capabilities.
  * @a list contains svn_ra_svn_item_t entries (which should be of type
@@ -165,67 +166,85 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn(apr_socket_t *sock,
  * This is idempotent: if a given capability was already set for
  * @a conn, it remains set.
  */
-svn_error_t *svn_ra_svn_set_capabilities(svn_ra_svn_conn_t *conn,
-                                         apr_array_header_t *list);
+svn_error_t *
+svn_ra_svn_set_capabilities(svn_ra_svn_conn_t *conn,
+                            apr_array_header_t *list);
 
 /** Return @c TRUE if @a conn has the capability @a capability, or
  * @c FALSE if it does not. */
-svn_boolean_t svn_ra_svn_has_capability(svn_ra_svn_conn_t *conn,
-                                        const char *capability);
+svn_boolean_t
+svn_ra_svn_has_capability(svn_ra_svn_conn_t *conn,
+                          const char *capability);
 
 /** Returns the remote address of the connection as a string, if known,
  *  or NULL if inapplicable. */
-const char *svn_ra_svn_conn_remote_host(svn_ra_svn_conn_t *conn);
+const char *
+svn_ra_svn_conn_remote_host(svn_ra_svn_conn_t *conn);
 
 /** Write a number over the net.
  *
  * Writes will be buffered until the next read or flush.
  */
-svn_error_t *svn_ra_svn_write_number(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                                     apr_uint64_t number);
+svn_error_t *
+svn_ra_svn_write_number(svn_ra_svn_conn_t *conn,
+                        apr_pool_t *pool,
+                        apr_uint64_t number);
 
 /** Write a string over the net.
  *
  * Writes will be buffered until the next read or flush.
  */
-svn_error_t *svn_ra_svn_write_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                                     const svn_string_t *str);
+svn_error_t *
+svn_ra_svn_write_string(svn_ra_svn_conn_t *conn,
+                        apr_pool_t *pool,
+                        const svn_string_t *str);
 
 /** Write a cstring over the net.
  *
  * Writes will be buffered until the next read or flush.
  */
-svn_error_t *svn_ra_svn_write_cstring(svn_ra_svn_conn_t *conn,
-                                      apr_pool_t *pool, const char *s);
+svn_error_t *
+svn_ra_svn_write_cstring(svn_ra_svn_conn_t *conn,
+                         apr_pool_t *pool,
+                         const char *s);
 
 /** Write a word over the net.
  *
  * Writes will be buffered until the next read or flush.
  */
-svn_error_t *svn_ra_svn_write_word(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                                   const char *word);
+svn_error_t *
+svn_ra_svn_write_word(svn_ra_svn_conn_t *conn,
+                      apr_pool_t *pool,
+                      const char *word);
 
 /** Write a list of properties over the net.  @a props is allowed to be NULL,
  * in which case an empty list will be written out.
  *
  * @since New in 1.5.
  */
-svn_error_t *svn_ra_svn_write_proplist(svn_ra_svn_conn_t *conn,
-                                       apr_pool_t *pool,
-                                       apr_hash_t *props);
+svn_error_t *
+svn_ra_svn_write_proplist(svn_ra_svn_conn_t *conn,
+                          apr_pool_t *pool,
+                          apr_hash_t *props);
 
 /** Begin a list.  Writes will be buffered until the next read or flush. */
-svn_error_t *svn_ra_svn_start_list(svn_ra_svn_conn_t *conn, apr_pool_t *pool);
+svn_error_t *
+svn_ra_svn_start_list(svn_ra_svn_conn_t *conn,
+                      apr_pool_t *pool);
 
 /** End a list.  Writes will be buffered until the next read or flush. */
-svn_error_t *svn_ra_svn_end_list(svn_ra_svn_conn_t *conn, apr_pool_t *pool);
+svn_error_t *
+svn_ra_svn_end_list(svn_ra_svn_conn_t *conn,
+                    apr_pool_t *pool);
 
 /** Flush the write buffer.
  *
  * Normally this shouldn't be necessary, since the write buffer is flushed
  * when a read is attempted.
  */
-svn_error_t *svn_ra_svn_flush(svn_ra_svn_conn_t *conn, apr_pool_t *pool);
+svn_error_t *
+svn_ra_svn_flush(svn_ra_svn_conn_t *conn,
+                 apr_pool_t *pool);
 
 /** Write a tuple, using a printf-like interface.
  *
@@ -266,12 +285,16 @@ svn_error_t *svn_ra_svn_flush(svn_ra_svn_conn_t *conn, apr_pool_t *pool);
        SVN_ERR(svn_ra_svn_write_word(conn, pool, words[i]));
      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)b", flag)); @endverbatim
  */
-svn_error_t *svn_ra_svn_write_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                                    const char *fmt, ...);
+svn_error_t *
+svn_ra_svn_write_tuple(svn_ra_svn_conn_t *conn,
+                       apr_pool_t *pool,
+                       const char *fmt, ...);
 
 /** Read an item from the network into @a *item. */
-svn_error_t *svn_ra_svn_read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                                  svn_ra_svn_item_t **item);
+svn_error_t *
+svn_ra_svn_read_item(svn_ra_svn_conn_t *conn,
+                     apr_pool_t *pool,
+                     svn_ra_svn_item_t **item);
 
 /** Scan data on @a conn until we find something which looks like the
  * beginning of an svn server greeting (an open paren followed by a
@@ -280,8 +303,9 @@ svn_error_t *svn_ra_svn_read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
  * sometimes write output to stdout.  It may only be called at the
  * beginning of a client connection.
  */
-svn_error_t *svn_ra_svn_skip_leading_garbage(svn_ra_svn_conn_t *conn,
-                                             apr_pool_t *pool);
+svn_error_t *
+svn_ra_svn_skip_leading_garbage(svn_ra_svn_conn_t *conn,
+                                apr_pool_t *pool);
 
 /** Parse an array of @c svn_sort__item_t structures as a tuple, using a
  * printf-like interface.  The format string @a fmt may contain:
@@ -315,31 +339,36 @@ svn_error_t *svn_ra_svn_skip_leading_garbage(svn_ra_svn_conn_t *conn,
  * will be set to @c NULL.  'b' may not appear inside an optional
  * tuple specification; use 'B' instead.
  */
-svn_error_t *svn_ra_svn_parse_tuple(apr_array_header_t *list,
-                                    apr_pool_t *pool,
-                                    const char *fmt, ...);
+svn_error_t *
+svn_ra_svn_parse_tuple(apr_array_header_t *list,
+                       apr_pool_t *pool,
+                       const char *fmt, ...);
 
 /** Read a tuple from the network and parse it as a tuple, using the
  * format string notation from svn_ra_svn_parse_tuple().
  */
-svn_error_t *svn_ra_svn_read_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                                   const char *fmt, ...);
+svn_error_t *
+svn_ra_svn_read_tuple(svn_ra_svn_conn_t *conn,
+                      apr_pool_t *pool,
+                      const char *fmt, ...);
 
 /** Parse an array of @c svn_ra_svn_item_t structures as a list of
  * properties, storing the properties in a hash table.
  *
  * @since New in 1.5.
  */
-svn_error_t *svn_ra_svn_parse_proplist(apr_array_header_t *list,
-                                       apr_pool_t *pool,
-                                       apr_hash_t **props);
+svn_error_t *
+svn_ra_svn_parse_proplist(apr_array_header_t *list,
+                          apr_pool_t *pool,
+                          apr_hash_t **props);
 
 /** Read a command response from the network and parse it as a tuple, using
  * the format string notation from svn_ra_svn_parse_tuple().
  */
-svn_error_t *svn_ra_svn_read_cmd_response(svn_ra_svn_conn_t *conn,
-                                          apr_pool_t *pool,
-                                          const char *fmt, ...);
+svn_error_t *
+svn_ra_svn_read_cmd_response(svn_ra_svn_conn_t *conn,
+                             apr_pool_t *pool,
+                             const char *fmt, ...);
 
 /** Accept commands over the network and handle them according to @a
  * commands.  Command handlers will be passed @a conn, a subpool of @a
@@ -355,40 +384,48 @@ svn_error_t *svn_ra_svn_read_cmd_response(svn_ra_svn_conn_t *conn,
  * @since New in 1.6.
  *
  */
-svn_error_t *svn_ra_svn_handle_commands2(svn_ra_svn_conn_t *conn,
-                                         apr_pool_t *pool,
-                                         const svn_ra_svn_cmd_entry_t *commands,
-                                         void *baton,
-                                         svn_boolean_t error_on_disconnect);
+svn_error_t *
+svn_ra_svn_handle_commands2(svn_ra_svn_conn_t *conn,
+                            apr_pool_t *pool,
+                            const svn_ra_svn_cmd_entry_t *commands,
+                            void *baton,
+                            svn_boolean_t error_on_disconnect);
 
 /** Similar to svn_ra_svn_handle_commands2 but @a error_on_disconnect
  * is always @c FALSE.
  *
  * @deprecated Provided for backward compatibility with the 1.5 API.
  */
-svn_error_t *svn_ra_svn_handle_commands(svn_ra_svn_conn_t *conn,
-                                        apr_pool_t *pool,
-                                        const svn_ra_svn_cmd_entry_t *commands,
-                                        void *baton);
+svn_error_t *
+svn_ra_svn_handle_commands(svn_ra_svn_conn_t *conn,
+                           apr_pool_t *pool,
+                           const svn_ra_svn_cmd_entry_t *commands,
+                           void *baton);
 
 /** Write a command over the network, using the same format string notation
  * as svn_ra_svn_write_tuple().
  */
-svn_error_t *svn_ra_svn_write_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                                  const char *cmdname, const char *fmt, ...);
+svn_error_t *
+svn_ra_svn_write_cmd(svn_ra_svn_conn_t *conn,
+                     apr_pool_t *pool,
+                     const char *cmdname,
+                     const char *fmt, ...);
 
 /** Write a successful command response over the network, using the
  * same format string notation as svn_ra_svn_write_tuple().  Do not use
  * partial tuples with this function; if you need to use partial
  * tuples, just write out the "success" and argument tuple by hand.
  */
-svn_error_t *svn_ra_svn_write_cmd_response(svn_ra_svn_conn_t *conn,
-                                           apr_pool_t *pool,
-                                           const char *fmt, ...);
+svn_error_t *
+svn_ra_svn_write_cmd_response(svn_ra_svn_conn_t *conn,
+                              apr_pool_t *pool,
+                              const char *fmt, ...);
 
 /** Write an unsuccessful command response over the network. */
-svn_error_t *svn_ra_svn_write_cmd_failure(svn_ra_svn_conn_t *conn,
-                                          apr_pool_t *pool, svn_error_t *err);
+svn_error_t *
+svn_ra_svn_write_cmd_failure(svn_ra_svn_conn_t *conn,
+                             apr_pool_t *pool,
+                             svn_error_t *err);
 
 /** Set @a *editor and @a *edit_baton to an editor which will pass editing
  * operations over the network, using @a conn and @a pool.
@@ -396,29 +433,35 @@ svn_error_t *svn_ra_svn_write_cmd_failure(svn_ra_svn_conn_t *conn,
  * Upon successful completion of the edit, the editor will invoke @a callback
  * with @a callback_baton as an argument.
  */
-void svn_ra_svn_get_editor(const svn_delta_editor_t **editor,
-                           void **edit_baton, svn_ra_svn_conn_t *conn,
-                           apr_pool_t *pool, svn_ra_svn_edit_callback callback,
-                           void *callback_baton);
+void
+svn_ra_svn_get_editor(const svn_delta_editor_t **editor,
+                      void **edit_baton,
+                      svn_ra_svn_conn_t *conn,
+                      apr_pool_t *pool,
+                      svn_ra_svn_edit_callback callback,
+                      void *callback_baton);
 
 /** Receive edit commands over the network and use them to drive @a editor
  * with @a edit_baton.  On return, @a *aborted will be set if the edit was
  * aborted.  The drive can be terminated with a finish-replay command only
  * if @a for_replay is TRUE.
  */
-svn_error_t *svn_ra_svn_drive_editor2(svn_ra_svn_conn_t *conn,
-                                      apr_pool_t *pool,
-                                      const svn_delta_editor_t *editor,
-                                      void *edit_baton,
-                                      svn_boolean_t *aborted,
-                                      svn_boolean_t for_replay);
+svn_error_t *
+svn_ra_svn_drive_editor2(svn_ra_svn_conn_t *conn,
+                         apr_pool_t *pool,
+                         const svn_delta_editor_t *editor,
+                         void *edit_baton,
+                         svn_boolean_t *aborted,
+                         svn_boolean_t for_replay);
 
 /** Like svn_ra_svn_drive_editor2, but with @a for_replay always FALSE.
  */
-svn_error_t *svn_ra_svn_drive_editor(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                                     const svn_delta_editor_t *editor,
-                                     void *edit_baton,
-                                     svn_boolean_t *aborted);
+svn_error_t *
+svn_ra_svn_drive_editor(svn_ra_svn_conn_t *conn,
+                        apr_pool_t *pool,
+                        const svn_delta_editor_t *editor,
+                        void *edit_baton,
+                        svn_boolean_t *aborted);
 
 /** This function is only intended for use by svnserve.
  *
@@ -428,15 +471,19 @@ svn_error_t *svn_ra_svn_drive_editor(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
  * error and return SVN_NO_ERROR with *success set to FALSE.  On
  * communications failure, return an error.
  */
-svn_error_t *svn_ra_svn_cram_server(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                                    svn_config_t *pwdb, const char **user,
-                                    svn_boolean_t *success);
+svn_error_t *
+svn_ra_svn_cram_server(svn_ra_svn_conn_t *conn,
+                       apr_pool_t *pool,
+                       svn_config_t *pwdb,
+                       const char **user,
+                       svn_boolean_t *success);
 
 /**
  * Get libsvn_ra_svn version information.
  * @since New in 1.1.
  */
-const svn_version_t *svn_ra_svn_version(void);
+const svn_version_t *
+svn_ra_svn_version(void);
 
 #ifdef __cplusplus
 }

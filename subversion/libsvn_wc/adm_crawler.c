@@ -26,8 +26,6 @@
 #include <apr_hash.h>
 #include <apr_md5.h>
 
-#include <assert.h>
-
 #include "svn_types.h"
 #include "svn_pools.h"
 #include "svn_wc.h"

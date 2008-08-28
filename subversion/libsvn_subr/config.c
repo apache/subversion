@@ -713,15 +713,6 @@ svn_config_get_yes_no_ask(svn_config_t *cfg, const char **valuep,
 
 
 int
-svn_config__enumerate_sections(svn_config_t *cfg,
-                               svn_config__section_enumerator_t callback,
-                               void *baton)
-{
-  return svn_config_enumerate_sections(cfg,
-                                       (svn_config_section_enumerator_t) callback, baton);
-}
-
-int
 svn_config_enumerate_sections(svn_config_t *cfg,
                               svn_config_section_enumerator_t callback,
                               void *baton)

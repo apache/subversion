@@ -16,7 +16,6 @@
  * ====================================================================
  */
 
-#include <assert.h>
 #include <apr_pools.h>
 #include <apr_strings.h>
 

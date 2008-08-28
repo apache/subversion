@@ -1412,13 +1412,6 @@ def mergeinfo_switch_elision(sbox):
   # the mergeinfo on one of the path's subtrees, the subtree's mergeinfo
   # should *not* elide!  If it did this could result in the switch of a
   # pristine tree producing local mods.
-  #
-  # Search for the comment entitled "The Merge Kluge" in merge_tests.py
-  # to understand why we shorten, and subsequently chdir() after calling
-  # this function.
-  def shorten_path_kludge(path):
-    shorten_by = len(svntest.main.work_dir) + len(os.sep)
-    return path[shorten_by:]
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -1505,12 +1498,11 @@ def mergeinfo_switch_elision(sbox):
                                         expected_status, None, wc_dir)
 
   # Merge r2:4 into A/B_COPY_1
-  short_B_COPY_1_path = shorten_path_kludge(B_COPY_1_path)
-  expected_output = svntest.wc.State(short_B_COPY_1_path, {
+  expected_output = svntest.wc.State(B_COPY_1_path, {
     'E/alpha' : Item(status='U '),
     'E/beta'  : Item(status='U '),
     })
-  expected_merge_status = svntest.wc.State(short_B_COPY_1_path, {
+  expected_merge_status = svntest.wc.State(B_COPY_1_path, {
     ''        : Item(status=' M', wc_rev=2),
     'lambda'  : Item(status='  ', wc_rev=2),
     'E'       : Item(status='  ', wc_rev=2),
@@ -1526,11 +1518,10 @@ def mergeinfo_switch_elision(sbox):
     'E/beta'  : Item("New content"),
     'F'       : Item(),
     })
-  expected_skip = svntest.wc.State(short_B_COPY_1_path, { })
+  expected_skip = svntest.wc.State(B_COPY_1_path, { })
   saved_cwd = os.getcwd()
 
-  os.chdir(svntest.main.work_dir)
-  svntest.actions.run_and_verify_merge(short_B_COPY_1_path, '2', '4',
+  svntest.actions.run_and_verify_merge(B_COPY_1_path, '2', '4',
                                        sbox.repo_url + \
                                        '/A/B',
                                        expected_output,
@@ -1539,8 +1530,6 @@ def mergeinfo_switch_elision(sbox):
                                        expected_skip,
                                        None, None, None, None,
                                        None, 1)
-
-  os.chdir(saved_cwd)
 
   # r5 - Commit the merge into A/B_COPY_1/E
   expected_output = svntest.wc.State(
@@ -1557,12 +1546,11 @@ def mergeinfo_switch_elision(sbox):
                                         expected_status, None, wc_dir)
 
   # Merge r2:4 into A/B_COPY_2/E
-  short_E_COPY_2_path = shorten_path_kludge(E_COPY_2_path)
-  expected_output = svntest.wc.State(short_E_COPY_2_path, {
+  expected_output = svntest.wc.State(E_COPY_2_path, {
     'alpha' : Item(status='U '),
     'beta'  : Item(status='U '),
     })
-  expected_merge_status = svntest.wc.State(short_E_COPY_2_path, {
+  expected_merge_status = svntest.wc.State(E_COPY_2_path, {
     ''      : Item(status=' M', wc_rev=2),
     'alpha' : Item(status='M ', wc_rev=2),
     'beta'  : Item(status='M ', wc_rev=2),
@@ -1572,11 +1560,10 @@ def mergeinfo_switch_elision(sbox):
     'alpha' : Item("New content"),
     'beta'  : Item("New content"),
     })
-  expected_skip = svntest.wc.State(short_E_COPY_2_path, { })
+  expected_skip = svntest.wc.State(E_COPY_2_path, { })
   saved_cwd = os.getcwd()
 
-  os.chdir(svntest.main.work_dir)
-  svntest.actions.run_and_verify_merge(short_E_COPY_2_path, '2', '4',
+  svntest.actions.run_and_verify_merge(E_COPY_2_path, '2', '4',
                                        sbox.repo_url + \
                                        '/A/B/E',
                                        expected_output,
@@ -1585,8 +1572,6 @@ def mergeinfo_switch_elision(sbox):
                                        expected_skip,
                                        None, None, None, None,
                                        None, 1)
-
-  os.chdir(saved_cwd)
 
   # Switch A/B_COPY_2 to URL of A/B_COPY_1.  The local mergeinfo for r1,3-4
   # on A/B_COPY_2/E is identical to the mergeinfo added to A/B_COPY_2 as a

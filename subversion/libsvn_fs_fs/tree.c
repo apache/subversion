@@ -1,7 +1,7 @@
 /* tree.c : tree-like filesystem, built on DAG filesystem
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -41,6 +41,7 @@
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_md5.h"
+#include "svn_sha1.h"
 #include "svn_mergeinfo.h"
 #include "svn_fs.h"
 #include "fs.h"
@@ -2263,18 +2264,18 @@ fs_file_length(svn_filesize_t *length_p,
 }
 
 
-/* Set DIGEST to the MD5 checksum of PATH under ROOT.  Temporary
+/* Set DIGEST to the checksum of PATH under ROOT.  Temporary
    allocations are from POOL. */
 static svn_error_t *
-fs_file_md5_checksum(unsigned char digest[],
-                     svn_fs_root_t *root,
-                     const char *path,
-                     apr_pool_t *pool)
+fs_file_checksum(svn_checksum_t **checksum,
+                 svn_fs_root_t *root,
+                 const char *path,
+                 apr_pool_t *pool)
 {
   dag_node_t *file;
 
   SVN_ERR(get_dag(&file, root, path, pool));
-  return svn_fs_fs__dag_file_checksum(digest, file, pool);
+  return svn_fs_fs__dag_file_checksum(checksum, file, pool);
 }
 
 
@@ -2330,11 +2331,11 @@ typedef struct txdelta_baton_t
   svn_stream_t *string_stream;
   svn_stringbuf_t *target_string;
 
-  /* Hex MD5 digest for the base text against which a delta is to be
+  /* MD5 digest for the base text against which a delta is to be
      applied, and for the resultant fulltext, respectively.  Either or
      both may be null, in which case ignored. */
-  const char *base_checksum;
-  const char *result_checksum;
+  svn_checksum_t *base_checksum;
+  svn_checksum_t *result_checksum;
 
   /* Pool used by db txns */
   apr_pool_t *pool;
@@ -2438,21 +2439,21 @@ apply_textdelta(void *baton, apr_pool_t *pool)
 
   if (tb->base_checksum)
     {
-      unsigned char digest[APR_MD5_DIGESTSIZE];
-      const char *hex;
+      svn_checksum_t *checksum;
 
       /* Until we finalize the node, its data_key points to the old
          contents, in other words, the base text. */
-      SVN_ERR(svn_fs_fs__dag_file_checksum(digest, tb->node, pool));
-      hex = svn_md5_digest_to_cstring(digest, pool);
-      if (hex && (strcmp(tb->base_checksum, hex) != 0))
+      SVN_ERR(svn_fs_fs__dag_file_checksum(&checksum, tb->node, pool));
+      if (!svn_checksum_match(tb->base_checksum, checksum))
         return svn_error_createf
           (SVN_ERR_CHECKSUM_MISMATCH,
            NULL,
            _("Base checksum mismatch on '%s':\n"
              "   expected:  %s\n"
              "     actual:  %s\n"),
-           tb->path, tb->base_checksum, hex);
+           tb->path,
+           svn_checksum_to_cstring_display(tb->base_checksum, pool),
+           svn_checksum_to_cstring_display(checksum, pool));
     }
 
   /* Make a readable "source" stream out of the current contents of
@@ -2498,8 +2499,8 @@ fs_apply_textdelta(svn_txdelta_window_handler_t *contents_p,
                    void **contents_baton_p,
                    svn_fs_root_t *root,
                    const char *path,
-                   const char *base_checksum,
-                   const char *result_checksum,
+                   svn_checksum_t *base_checksum,
+                   svn_checksum_t *result_checksum,
                    apr_pool_t *pool)
 {
   txdelta_baton_t *tb = apr_pcalloc(pool, sizeof(*tb));
@@ -2509,12 +2510,12 @@ fs_apply_textdelta(svn_txdelta_window_handler_t *contents_p,
   tb->pool = pool;
 
   if (base_checksum)
-    tb->base_checksum = apr_pstrdup(pool, base_checksum);
+    tb->base_checksum = svn_checksum_dup(base_checksum, pool);
   else
     tb->base_checksum = NULL;
 
   if (result_checksum)
-    tb->result_checksum = apr_pstrdup(pool, result_checksum);
+    tb->result_checksum = svn_checksum_dup(result_checksum, pool);
   else
     tb->result_checksum = NULL;
 
@@ -2546,9 +2547,9 @@ struct text_baton_t
   /* The actual fs stream that the returned stream will write to. */
   svn_stream_t *file_stream;
 
-  /* Hex MD5 digest for the final fulltext written to the file.  May
+  /* MD5 digest for the final fulltext written to the file.  May
      be null, in which case ignored. */
-  const char *result_checksum;
+  svn_checksum_t *result_checksum;
 
   /* Pool used by db txns */
   apr_pool_t *pool;
@@ -2645,7 +2646,7 @@ static svn_error_t *
 fs_apply_text(svn_stream_t **contents_p,
               svn_fs_root_t *root,
               const char *path,
-              const char *result_checksum,
+              svn_checksum_t *result_checksum,
               apr_pool_t *pool)
 {
   struct text_baton_t *tb = apr_pcalloc(pool, sizeof(*tb));
@@ -2655,7 +2656,7 @@ fs_apply_text(svn_stream_t **contents_p,
   tb->pool = pool;
 
   if (result_checksum)
-    tb->result_checksum = apr_pstrdup(pool, result_checksum);
+    tb->result_checksum = svn_checksum_dup(result_checksum, pool);
   else
     tb->result_checksum = NULL;
 
@@ -3074,9 +3075,15 @@ fs_node_origin_rev(svn_revnum_t *revision,
       {
         svn_pool_clear(subpool);
         SVN_ERR(svn_fs_fs__dag_get_node(&node, fs, pred_id, subpool));
+
+        /* Why not just fetch the predecessor ID in PREDIDPOOL?
+           Because svn_fs_fs__dag_get_predecessor_id() doesn't
+           necessarily honor the passed-in pool, and might return a
+           value cached in the node (which is allocated in
+           SUBPOOL... maybe). */ 
         svn_pool_clear(predidpool);
-        SVN_ERR(svn_fs_fs__dag_get_predecessor_id(&pred_id, node,
-                                                  predidpool));
+        SVN_ERR(svn_fs_fs__dag_get_predecessor_id(&pred_id, node, subpool));
+        pred_id = pred_id ? svn_fs_fs__id_copy(pred_id, predidpool) : NULL;
       }
 
     /* When we get here, NODE should be the first node-revision in our
@@ -3707,7 +3714,7 @@ static root_vtable_t root_vtable = {
   fs_copy,
   fs_revision_link,
   fs_file_length,
-  fs_file_md5_checksum,
+  fs_file_checksum,
   fs_file_contents,
   fs_make_file,
   fs_apply_textdelta,

@@ -33,8 +33,6 @@
 #include "svn_mergeinfo.h"
 #include "repos.h"
 
-#include <assert.h>
-
 
 /* Note:  this binary search assumes that the datestamp properties on
    each revision are in chronological order.  That is if revision A >

@@ -1125,7 +1125,7 @@ static svn_error_t *add_lock_tokens(svn_ra_svn_conn_t *conn,
                                     sb, conn, pool);
 
       token = token_item->u.string->data;
-      SVN_ERR(svn_fs_access_add_lock_token(fs_access, token));
+      SVN_ERR(svn_fs_access_add_lock_token2(fs_access, path, token));
     }
 
   return SVN_NO_ERROR;

@@ -46,7 +46,8 @@ extern "C" {
  *
  * @since New in 1.1.
  */
-const svn_version_t *svn_ra_version(void);
+const svn_version_t *
+svn_ra_version(void);
 
 
 /** This is a function type which allows the RA layer to fetch working
@@ -2136,7 +2137,9 @@ svn_ra_serf_init(int abi_version,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
-svn_error_t *svn_ra_init_ra_libs(void **ra_baton, apr_pool_t *pool);
+svn_error_t *
+svn_ra_init_ra_libs(void **ra_baton,
+                    apr_pool_t *pool);
 
 /**
  * Return an RA vtable-@a library which can handle URL.  A number of

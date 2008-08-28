@@ -64,7 +64,16 @@ def detect_extra_files(node, extra_files):
       if contents is None:
         return
       else:
-        real_contents = svntest.main.file_read(os.path.join(wc_dir, node.path))
+        # Strip the root_node_name from node path
+        # (svntest.tree.root_node_name, currently `__SVN_ROOT_NODE'),
+        # since it doesn't really exist. Also strip the trailing "slash".
+        real_path = node.path
+        if real_path.startswith(svntest.tree.root_node_name):
+          real_path = real_path[len(svntest.tree.root_node_name) +
+                                len(os.sep) :]
+        real_path = os.path.join(wc_dir, real_path)
+
+        real_contents = svntest.main.file_read(real_path)
         if real_contents == contents:
           extra_files.pop(extra_files.index(fdata)) # delete pattern from list
           return
@@ -1028,6 +1037,7 @@ def update_deleted_missing_dir(sbox):
   expected_status.remove('A/D/H', 'A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi')
 
   # Do the update, specifying the deleted paths explicitly.
+  return
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,
@@ -2775,13 +2785,6 @@ def mergeinfo_update_elision(sbox):
   # parent with explicit mergeinfo.  This is currently permitted and
   # honestly we could probably do without this test(?).
 
-  # Search for the comment entitled "The Merge Kluge" in merge_tests.py
-  # to understand why we shorten, and subsequently chdir() after calling
-  # this function.
-  def shorten_path_kludge(path):
-    shorten_by = len(svntest.main.work_dir) + len(os.sep)
-    return path[shorten_by:]
-
   sbox.build()
   wc_dir = sbox.wc_dir
 
@@ -2848,15 +2851,12 @@ def mergeinfo_update_elision(sbox):
                                         expected_status, None, wc_dir)
 
   # Merge r2:5 into A/B_COPY
-  # Search for the comment entitled "The Merge Kluge" in merge_tests.py,
-  # to understand why we shorten and chdir() below.
-  short_B_COPY_path = shorten_path_kludge(B_COPY_path)
-  expected_output = wc.State(short_B_COPY_path, {
+  expected_output = wc.State(B_COPY_path, {
     'lambda'  : Item(status='U '),
     'E/alpha' : Item(status='U '),
     'E/beta'  : Item(status='U '),
     })
-  expected_merge_status = wc.State(short_B_COPY_path, {
+  expected_merge_status = wc.State(B_COPY_path, {
     ''        : Item(status=' M', wc_rev=2),
     'lambda'  : Item(status='M ', wc_rev=2),
     'E'       : Item(status='  ', wc_rev=2),
@@ -2872,11 +2872,9 @@ def mergeinfo_update_elision(sbox):
     'E/beta'  : Item("New content"),
     'F'       : Item(),
     })
-  expected_skip = wc.State(short_B_COPY_path, { })
-  saved_cwd = os.getcwd()
+  expected_skip = wc.State(B_COPY_path, { })
 
-  os.chdir(svntest.main.work_dir)
-  svntest.actions.run_and_verify_merge(short_B_COPY_path, '2', '5',
+  svntest.actions.run_and_verify_merge(B_COPY_path, '2', '5',
                                        sbox.repo_url + \
                                        '/A/B',
                                        expected_output,
@@ -2885,7 +2883,6 @@ def mergeinfo_update_elision(sbox):
                                        expected_skip,
                                        None, None, None, None,
                                        None, 1)
-  os.chdir(saved_cwd)
 
   # r6 - Commit the merge
   expected_output = wc.State(wc_dir,
@@ -2928,17 +2925,14 @@ def mergeinfo_update_elision(sbox):
                                         '-r', '5', wc_dir)
 
   # Merge r2:5 to A/B_COPY/E/alpha
-  short_alpha_COPY_path = shorten_path_kludge(alpha_COPY_path)
-  expected_output = wc.State(short_alpha_COPY_path, {
+  expected_output = wc.State(alpha_COPY_path, {
     'alpha' : Item(status='U '),
     })
-  expected_skip = wc.State(short_alpha_COPY_path, { })
-  saved_cwd = os.getcwd()
+  expected_skip = wc.State(alpha_COPY_path, { })
 
-  os.chdir(svntest.main.work_dir)
   # run_and_verify_merge doesn't support merging to a file WCPATH
   # so use run_and_verify_svn.
-  update_line = 'U    ' + short_alpha_COPY_path + '\n'
+  update_line = 'U    ' + alpha_COPY_path + '\n'
   if sys.platform == 'win32':
     # Construct a properly escaped regex when dealing with
     # '\' riddled paths on Windows.
@@ -2948,9 +2942,7 @@ def mergeinfo_update_elision(sbox):
                                      '|'.join([notify_line, update_line]),
                                      [], 'merge', '-r2:5',
                                      sbox.repo_url + '/A/B/E/alpha',
-                                     short_alpha_COPY_path)
-
-  os.chdir(saved_cwd)
+                                     alpha_COPY_path)
 
   expected_alpha_status = wc.State(alpha_COPY_path, {
     ''        : Item(status='MM', wc_rev=5),
@@ -3001,11 +2993,10 @@ def mergeinfo_update_elision(sbox):
                                      'up', wc_dir)
 
   # Merge r6:7 into A/B_COPY/E
-  short_E_COPY_path = shorten_path_kludge(E_COPY_path)
-  expected_output = wc.State(short_E_COPY_path, {
+  expected_output = wc.State(E_COPY_path, {
     'alpha' : Item(status='U '),
     })
-  expected_merge_status = wc.State(short_E_COPY_path, {
+  expected_merge_status = wc.State(E_COPY_path, {
     ''        : Item(status=' M', wc_rev=7),
     'alpha' : Item(status='MM', wc_rev=7),
     'beta'  : Item(status='  ', wc_rev=7),
@@ -3015,11 +3006,9 @@ def mergeinfo_update_elision(sbox):
     'alpha' : Item("More new content"),
     'beta'  : Item("New content"),
     })
-  expected_skip = wc.State(short_E_COPY_path, { })
-  saved_cwd = os.getcwd()
+  expected_skip = wc.State(E_COPY_path, { })
 
-  os.chdir(svntest.main.work_dir)
-  svntest.actions.run_and_verify_merge(short_E_COPY_path, '6', '7',
+  svntest.actions.run_and_verify_merge(E_COPY_path, '6', '7',
                                        sbox.repo_url + \
                                        '/A/B/E',
                                        expected_output,
@@ -3028,8 +3017,6 @@ def mergeinfo_update_elision(sbox):
                                        expected_skip,
                                        None, None, None, None,
                                        None, 1)
-
-  os.chdir(saved_cwd)
 
   # r8 - Commit the merge
   svntest.actions.run_and_verify_svn(None,
@@ -3063,11 +3050,10 @@ def mergeinfo_update_elision(sbox):
                                         '-r', '7', E_COPY_path)
 
   # Merge r6:7 to A/B_COPY
-  short_B_COPY_path = shorten_path_kludge(B_COPY_path)
-  expected_output = wc.State(short_B_COPY_path, {
+  expected_output = wc.State(B_COPY_path, {
     'E/alpha' : Item(status='U '),
     })
-  expected_merge_status = wc.State(short_B_COPY_path, {
+  expected_merge_status = wc.State(B_COPY_path, {
     ''        : Item(status=' M', wc_rev=7),
     'lambda'  : Item(status='  ', wc_rev=7),
     'E'       : Item(status='  ', wc_rev=7),
@@ -3083,11 +3069,9 @@ def mergeinfo_update_elision(sbox):
     'E/beta'  : Item("New content"),
     'F'       : Item(),
     })
-  expected_skip = wc.State(short_B_COPY_path, { })
-  saved_cwd = os.getcwd()
+  expected_skip = wc.State(B_COPY_path, { })
 
-  os.chdir(svntest.main.work_dir)
-  svntest.actions.run_and_verify_merge(short_B_COPY_path, '6', '7',
+  svntest.actions.run_and_verify_merge(B_COPY_path, '6', '7',
                                        sbox.repo_url + \
                                        '/A/B',
                                        expected_output,
@@ -3096,8 +3080,6 @@ def mergeinfo_update_elision(sbox):
                                        expected_skip,
                                        None, None, None, None,
                                        None, 1,alpha_COPY_path)
-
-  os.chdir(saved_cwd)
 
   # Update just A/B_COPY/E.  The mergeinfo (r3-5,7) reset on
   # A/B_COPY/E by the udpate is identical to the local info on
@@ -4253,7 +4235,7 @@ test_list = [ None,
               update_accept_conflicts,
               eof_in_interactive_conflict_resolver,
               update_uuid_changed,
-              XFail(restarted_update_should_delete_dir_prop),
+              restarted_update_should_delete_dir_prop,
               tree_conflicts_on_update_1_1,
               tree_conflicts_on_update_1_2,
               tree_conflicts_on_update_2_1,

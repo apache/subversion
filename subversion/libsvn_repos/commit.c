@@ -20,7 +20,6 @@
 
 #include <apr_pools.h>
 #include <apr_file_io.h>
-#include <apr_md5.h>
 
 #include "svn_compat.h"
 #include "svn_pools.h"
@@ -29,7 +28,7 @@
 #include "svn_delta.h"
 #include "svn_fs.h"
 #include "svn_repos.h"
-#include "svn_md5.h"
+#include "svn_checksum.h"
 #include "svn_props.h"
 #include "repos.h"
 #include "svn_private_config.h"
@@ -576,21 +575,23 @@ change_file_prop(void *file_baton,
 
 static svn_error_t *
 close_file(void *file_baton,
-           const char *text_checksum,
+           const char *text_digest,
            apr_pool_t *pool)
 {
   struct file_baton *fb = file_baton;
 
-  if (text_checksum)
+  if (text_digest)
     {
-      unsigned char digest[APR_MD5_DIGESTSIZE];
-      const char *hex_digest;
+      svn_checksum_t *checksum;
+      svn_checksum_t *text_checksum;
 
-      SVN_ERR(svn_fs_file_md5_checksum
-              (digest, fb->edit_baton->txn_root, fb->path, pool));
-      hex_digest = svn_md5_digest_to_cstring(digest, pool);
+      SVN_ERR(svn_fs_file_checksum(&checksum, svn_checksum_md5,
+                                   fb->edit_baton->txn_root, fb->path,
+                                   TRUE, pool));
+      SVN_ERR(svn_checksum_parse_hex(&text_checksum, svn_checksum_md5,
+                                     text_digest, pool));
 
-      if (hex_digest && strcmp(text_checksum, hex_digest) != 0)
+      if (!svn_checksum_match(text_checksum, checksum))
         {
           return svn_error_createf
             (SVN_ERR_CHECKSUM_MISMATCH, NULL,
@@ -598,7 +599,8 @@ close_file(void *file_baton,
                "(%s):\n"
                "   expected checksum:  %s\n"
                "   actual checksum:    %s\n"),
-             fb->path, text_checksum, hex_digest);
+             fb->path, svn_checksum_to_cstring_display(text_checksum, pool),
+             svn_checksum_to_cstring_display(checksum, pool));
         }
     }
 
