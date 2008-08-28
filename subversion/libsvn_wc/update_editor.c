@@ -1072,7 +1072,7 @@ open_root(void *edit_baton,
 /* Helper for delete_entry() and do_entry_deletion().
 
    If the error chain ERR contains evidence that a local mod was left
-   (an SVN_ERR_WC_LEFT_LOCAL_MOD error), clean ERR.  Otherwise, return ERR.
+   (an SVN_ERR_WC_LEFT_LOCAL_MOD error), clear ERR.  Otherwise, return ERR.
 */
 static svn_error_t *
 leftmod_error_chain(svn_error_t *err,
