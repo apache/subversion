@@ -2093,6 +2093,53 @@ def switch_to_root(sbox):
                                         expected_disk,
                                         expected_status)
 
+#----------------------------------------------------------------------
+# Make sure that switch continue after deleting locally modified
+# directories, as it update and merge do.
+
+def tolerate_local_mods(sbox):
+  "tolerate deletion of a directory with local mods"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  A_path = os.path.join(wc_dir, 'A')
+  L_path = os.path.join(A_path, 'L')
+  LM_path = os.path.join(L_path, 'local_mod')
+  A_url = sbox.repo_url + '/A'
+  A2_url = sbox.repo_url + '/A2'
+
+  svntest.actions.run_and_verify_svn(None,
+                                     ['\n', 'Committed revision 2.\n'], [],
+                                     'cp', '-m', 'make copy', A_url, A2_url)
+
+  os.mkdir(L_path)
+  svntest.main.run_svn(None, 'add', L_path)
+  svntest.main.run_svn(None, 'ci', '-m', 'Commit added folder', wc_dir)
+
+  # locally modified unversioned file
+  svntest.main.file_write(LM_path, 'Locally modified file.\n', 'w+')
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/L' : Item(status='D '),
+    })
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'A/L' : Item(),
+    'A/L/local_mod' : Item(contents='Locally modified file.\n'),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.tweak('', 'iota', wc_rev=1)
+  expected_status.tweak('A', switched='S')
+
+  # Used to fail with locally modified or unversioned files
+  svntest.actions.run_and_verify_switch(wc_dir, A_path, A2_url,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
 ########################################################################
 # Run the tests
 
@@ -2127,6 +2174,7 @@ test_list = [ None,
               switch_urls_with_spaces,
               switch_to_dir_with_peg_rev2,
               switch_to_root,
+              tolerate_local_mods,
              ]
 
 if __name__ == '__main__':
