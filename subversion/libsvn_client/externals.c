@@ -111,9 +111,9 @@ compare_external_items(svn_wc_external_item2_t *new_item,
  *
  * Use POOL for all temporary allocation.
  *
- * This function is not passed a svn_wc_adm_access_t to ensure that
- * what is being deleted is being opened separately so if there is a
- * lock on it, it cannot be deleted.
+ * Note: this function is not passed a svn_wc_adm_access_t.  Instead,
+ * it separately opens the object being deleted, so that if there is a
+ * lock on that object, the object cannot be deleted.
  */
 static svn_error_t *
 relegate_dir_external(const char *path,
