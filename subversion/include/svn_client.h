@@ -104,6 +104,7 @@ svn_client_version(void);
  * re-prompt @a retry_limit times (via svn_auth_next_credentials()).
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
+ * Use svn_auth_get_simple_prompt_provider() instead.
  */
 SVN_DEPRECATED
 void
@@ -127,6 +128,7 @@ svn_client_get_simple_prompt_provider
  * re-prompt @a retry_limit times (via svn_auth_next_credentials()).
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
+ * Use svn_auth_get_username_prompt_provider() instead.
  */
 SVN_DEPRECATED
 void
@@ -150,6 +152,7 @@ svn_client_get_username_prompt_provider
  * SVN_AUTH_PARAM_DEFAULT_PASSWORD).
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
+ * Use svn_auth_get_simple_provider2() instead.
  */
 SVN_DEPRECATED
 void
@@ -178,6 +181,7 @@ svn_client_get_simple_provider(svn_auth_provider_object_t **provider,
  * if the password were not cached at all.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
+ * Use svn_auth_get_windows_simple_provider() instead.
  */
 SVN_DEPRECATED
 void
@@ -195,6 +199,7 @@ svn_client_get_windows_simple_provider(svn_auth_provider_object_t **provider,
  * @c SVN_AUTH_PARAM_DEFAULT_USERNAME).
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
+ * Use svn_auth_get_username_provider() instead.
  */
 SVN_DEPRECATED
 void
@@ -210,6 +215,7 @@ svn_client_get_username_provider(svn_auth_provider_object_t **provider,
  * security on an error.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
+ * Use svn_auth_get_ssl_server_trust_file_provider() instead.
  */
 SVN_DEPRECATED
 void
@@ -226,6 +232,7 @@ svn_client_get_ssl_server_trust_file_provider
  * client certificate for authentication when requested by a server.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
+ * Use svn_auth_get_ssl_client_cert_file_provider() instead.
  */
 SVN_DEPRECATED
 void
@@ -242,6 +249,7 @@ svn_client_get_ssl_client_cert_file_provider
  * certificate is protected by a passphrase.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
+ * Use svn_auth_get_ssl_client_cert_pw_file_provider2() instead.
  */
 SVN_DEPRECATED
 void
@@ -258,6 +266,7 @@ svn_client_get_ssl_client_cert_pw_file_provider
  * SSL security on an error.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
+ * Use svn_auth_get_ssl_server_trust_prompt_provider() instead.
  */
 SVN_DEPRECATED
 void
@@ -277,6 +286,7 @@ svn_client_get_ssl_server_trust_prompt_provider
  * a server.  The prompt will be retried @a retry_limit times.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
+ * Use svn_auth_get_ssl_client_cert_prompt_provider() instead.
  */
 SVN_DEPRECATED
 void
@@ -297,6 +307,7 @@ svn_client_get_ssl_client_cert_prompt_provider
  * be retried @a retry_limit times.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
+ * Use svn_auth_get_ssl_client_cert_pw_prompt_provider() instead.
  */
 SVN_DEPRECATED
 void
@@ -801,20 +812,24 @@ typedef struct svn_client_ctx_t
 
   /** notification callback function.
    * This will be called by notify_func2() by default.
-   * @deprecated Provided for backward compatibility with the 1.1 API. */
+   * @deprecated Provided for backward compatibility with the 1.1 API.
+   * Use @c notify_func2 instead. */
   svn_wc_notify_func_t notify_func;
 
   /** notification callback baton for notify_func()
-   * @deprecated Provided for backward compatibility with the 1.1 API. */
+   * @deprecated Provided for backward compatibility with the 1.1 API.
+   * Use @c notify_baton2 instead */
   void *notify_baton;
 
   /** Log message callback function.  NULL means that Subversion
     * should try not attempt to fetch a log message.
-    * @deprecated Provided for backward compatibility with the 1.2 API. */
+    * @deprecated Provided for backward compatibility with the 1.2 API.
+    * Use @c log_msg_func2 instead. */
   svn_client_get_commit_log_t log_msg_func;
 
   /** log message callback baton
-    * @deprecated Provided for backward compatibility with the 1.2 API. */
+    * @deprecated Provided for backward compatibility with the 1.2 API.
+    * Use @c log_msg_baton2 instead. */
   void *log_msg_baton;
 
   /** a hash mapping of <tt>const char *</tt> configuration file names to
@@ -2947,6 +2962,7 @@ svn_client_revert(const apr_array_header_t *paths,
  * resolution support.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
+ * Use svn_client_resolve() instead.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -3937,6 +3953,7 @@ svn_client_list(const char *path_or_url,
  * @since New in 1.3.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
+ * Use svn_client_list2() instead.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -3955,6 +3972,7 @@ svn_client_ls3(apr_hash_t **dirents,
  * @since New in 1.2.
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
+ * Use svn_client_list2() instead.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -3971,6 +3989,7 @@ svn_client_ls2(apr_hash_t **dirents,
  * the same as @a revision.
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
+ * Use svn_client_list2() instead.
  */
 SVN_DEPRECATED
 svn_error_t *
