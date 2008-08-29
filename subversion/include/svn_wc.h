@@ -1205,6 +1205,27 @@ typedef struct svn_wc_conflict_description_t
 
 } svn_wc_conflict_description_t;
 
+/**
+ * Allocate an @c svn_wc_conflict_description_t structure in @a pool,
+ * initialize to represent a tree conflict, and return it.
+ *
+ * Set the @c path field of the created struct to @a path, the @c access
+ * field to @a adm_access, the @c kind field to @c
+ * svn_wc_conflict_kind_tree, the @c node_kind to @a node_kind, and the @c
+ * operation to @a operation.
+ *
+ * @note: It is the caller's responsibility to set the other required fields
+ * (such as the four file names and @c action and @c reason).
+ *
+ * @since New in 1.6.
+ */
+svn_wc_conflict_description_t *
+svn_wc_conflict_description_create_tree(const char *path,
+                                        svn_wc_adm_access_t *adm_access,
+                                        svn_node_kind_t node_kind,
+                                        svn_wc_operation_t operation,
+                                        apr_pool_t *pool);
+
 
 /** The way in which the conflict callback chooses a course of action.
  *

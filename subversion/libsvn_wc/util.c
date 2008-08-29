@@ -292,3 +292,22 @@ svn_wc__path_switched(const char *wc_path,
 
   return SVN_NO_ERROR;
 }
+
+svn_wc_conflict_description_t *
+svn_wc_conflict_description_create_tree(const char *path,
+                                        svn_wc_adm_access_t *adm_access,
+                                        svn_node_kind_t node_kind,
+                                        svn_wc_operation_t operation,
+                                        apr_pool_t *pool)
+{
+  svn_wc_conflict_description_t *conflict;
+
+  conflict = apr_palloc(pool, sizeof(*conflict));
+  conflict->path = path;
+  conflict->node_kind = node_kind;
+  conflict->kind = svn_wc_conflict_kind_tree;
+  conflict->access = adm_access;
+  conflict->operation = operation;
+  conflict->victim_path = svn_path_basename(path, pool);
+  return conflict;
+}

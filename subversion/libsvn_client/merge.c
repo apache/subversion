@@ -348,10 +348,8 @@ tree_conflict(merge_cmd_baton_t *merge_b,
   if (merge_b->dry_run)
     return SVN_NO_ERROR;
 
-  conflict = apr_pcalloc(merge_b->pool, sizeof(svn_wc_conflict_description_t));
-  conflict->victim_path = svn_path_basename(victim_path, merge_b->pool);
-  conflict->node_kind = node_kind;
-  conflict->operation = svn_wc_operation_merge;
+  conflict = svn_wc_conflict_description_create_tree(
+    victim_path, adm_access, node_kind, svn_wc_operation_merge, merge_b->pool);
   conflict->action = action;
   conflict->reason = reason;
   SVN_ERR(svn_wc_add_tree_conflict_data(conflict, adm_access, merge_b->pool));

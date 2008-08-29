@@ -1241,12 +1241,10 @@ check_tree_conflict(svn_stringbuf_t *log_accum,
       svn_wc_conflict_description_t *conflict;
 
       /* The entry is a tree conflict victim. */
-      conflict = apr_pcalloc(pool, sizeof(svn_wc_conflict_description_t));
-      conflict->victim_path = (strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) == 0
-                               ? full_path
-                               : entry->name);
-      conflict->node_kind = entry->kind;
-      conflict->operation = svn_wc_operation_update;
+      conflict = svn_wc_conflict_description_create_tree(
+        (strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) == 0) ? full_path
+                                                          : entry->name,
+        parent_adm_access, entry->kind, svn_wc_operation_update, pool);
       conflict->action = action;
       conflict->reason = reason;
 
