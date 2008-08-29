@@ -325,6 +325,7 @@ svn_cmdline_set_up_auth_baton(svn_auth_baton_t **ab,
  * 
  * @since New in 1.4.
  * @deprecated Provided for backward compatibility with the 1.5 API.
+ * Use svn_cmdline_set_up_auth_baton() instead.
  *
  * @note This deprecation does not follow the usual pattern of putting
  * a new number on end of the function's name.  Instead, the new
