@@ -1510,7 +1510,7 @@ detranslate_special_file_to_stream(svn_stream_t **src_stream,
        contents. */
     SVN_ERR(svn_io_file_open(&s, src, APR_READ | APR_BUFFERED,
                               APR_OS_DEFAULT, pool));
-    *src_stream = svn_stream_from_aprfile(s, pool);
+    *src_stream = svn_stream_from_aprfile2(s, TRUE, pool);
 
     break;
   case APR_LNK:
@@ -1548,7 +1548,7 @@ detranslate_special_file(const char *src, const char *dst, apr_pool_t *pool)
   dst_stream = svn_stream_from_aprfile2(d, FALSE, pool);
 
   SVN_ERR(detranslate_special_file_to_stream(&src_stream, src, pool));
-  SVN_ERR(svn_stream_copy(src_stream, dst_stream, pool));
+  SVN_ERR(svn_stream_copy2(src_stream, dst_stream, NULL, NULL, pool));
 
   SVN_ERR(svn_stream_close(dst_stream));
 
@@ -1730,8 +1730,8 @@ svn_subst_copy_and_translate3(const char *src,
                                    pool));
 
   /* Now convert our two open files into streams. */
-  src_stream = svn_stream_from_aprfile(s, pool);
-  dst_stream = svn_stream_from_aprfile(d, pool);
+  src_stream = svn_stream_from_aprfile2(s, TRUE, pool);
+  dst_stream = svn_stream_from_aprfile2(d, TRUE, pool);
 
   /* Translate src stream into dst stream. */
   err = svn_subst_translate_stream3(src_stream, dst_stream, eol_str,

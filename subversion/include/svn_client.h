@@ -67,7 +67,8 @@ extern "C" {
  *
  * @since New in 1.1.
  */
-const svn_version_t *svn_client_version(void);
+const svn_version_t *
+svn_client_version(void);
 
 /** Client supporting functions
  *
@@ -103,8 +104,11 @@ const svn_version_t *svn_client_version(void);
  * re-prompt @a retry_limit times (via svn_auth_next_credentials()).
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
+ * Use svn_auth_get_simple_prompt_provider() instead.
  */
-void svn_client_get_simple_prompt_provider
+SVN_DEPRECATED
+void
+svn_client_get_simple_prompt_provider
   (svn_auth_provider_object_t **provider,
    svn_auth_simple_prompt_func_t prompt_func,
    void *prompt_baton,
@@ -124,8 +128,11 @@ void svn_client_get_simple_prompt_provider
  * re-prompt @a retry_limit times (via svn_auth_next_credentials()).
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
+ * Use svn_auth_get_username_prompt_provider() instead.
  */
-void svn_client_get_username_prompt_provider
+SVN_DEPRECATED
+void
+svn_client_get_username_prompt_provider
   (svn_auth_provider_object_t **provider,
    svn_auth_username_prompt_func_t prompt_func,
    void *prompt_baton,
@@ -145,7 +152,9 @@ void svn_client_get_username_prompt_provider
  * SVN_AUTH_PARAM_DEFAULT_PASSWORD).
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
+ * Use svn_auth_get_simple_provider2() instead.
  */
+SVN_DEPRECATED
 void
 svn_client_get_simple_provider(svn_auth_provider_object_t **provider,
                                apr_pool_t *pool);
@@ -172,7 +181,9 @@ svn_client_get_simple_provider(svn_auth_provider_object_t **provider,
  * if the password were not cached at all.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
+ * Use svn_auth_get_windows_simple_provider() instead.
  */
+SVN_DEPRECATED
 void
 svn_client_get_windows_simple_provider(svn_auth_provider_object_t **provider,
                                        apr_pool_t *pool);
@@ -188,7 +199,9 @@ svn_client_get_windows_simple_provider(svn_auth_provider_object_t **provider,
  * @c SVN_AUTH_PARAM_DEFAULT_USERNAME).
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
+ * Use svn_auth_get_username_provider() instead.
  */
+SVN_DEPRECATED
 void
 svn_client_get_username_provider(svn_auth_provider_object_t **provider,
                                  apr_pool_t *pool);
@@ -202,7 +215,9 @@ svn_client_get_username_provider(svn_auth_provider_object_t **provider,
  * security on an error.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
+ * Use svn_auth_get_ssl_server_trust_file_provider() instead.
  */
+SVN_DEPRECATED
 void
 svn_client_get_ssl_server_trust_file_provider
   (svn_auth_provider_object_t **provider,
@@ -217,7 +232,9 @@ svn_client_get_ssl_server_trust_file_provider
  * client certificate for authentication when requested by a server.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
+ * Use svn_auth_get_ssl_client_cert_file_provider() instead.
  */
+SVN_DEPRECATED
 void
 svn_client_get_ssl_client_cert_file_provider
   (svn_auth_provider_object_t **provider,
@@ -232,7 +249,9 @@ svn_client_get_ssl_client_cert_file_provider
  * certificate is protected by a passphrase.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
+ * Use svn_auth_get_ssl_client_cert_pw_file_provider2() instead.
  */
+SVN_DEPRECATED
 void
 svn_client_get_ssl_client_cert_pw_file_provider
   (svn_auth_provider_object_t **provider,
@@ -247,7 +266,9 @@ svn_client_get_ssl_client_cert_pw_file_provider
  * SSL security on an error.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
+ * Use svn_auth_get_ssl_server_trust_prompt_provider() instead.
  */
+SVN_DEPRECATED
 void
 svn_client_get_ssl_server_trust_prompt_provider
   (svn_auth_provider_object_t **provider,
@@ -265,7 +286,9 @@ svn_client_get_ssl_server_trust_prompt_provider
  * a server.  The prompt will be retried @a retry_limit times.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
+ * Use svn_auth_get_ssl_client_cert_prompt_provider() instead.
  */
+SVN_DEPRECATED
 void
 svn_client_get_ssl_client_cert_prompt_provider
   (svn_auth_provider_object_t **provider,
@@ -284,7 +307,9 @@ svn_client_get_ssl_client_cert_prompt_provider
  * be retried @a retry_limit times.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
+ * Use svn_auth_get_ssl_client_cert_pw_prompt_provider() instead.
  */
+SVN_DEPRECATED
 void
 svn_client_get_ssl_client_cert_pw_prompt_provider
   (svn_auth_provider_object_t **provider,
@@ -340,6 +365,7 @@ typedef svn_error_t *(*svn_proplist_receiver_t)
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_client_proplist_item_t *
 svn_client_proplist_item_dup(const svn_client_proplist_item_t *item,
                              apr_pool_t *pool);
@@ -532,6 +558,7 @@ svn_client_commit_item3_dup(const svn_client_commit_item3_t *item,
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
+SVN_DEPRECATED
 svn_client_commit_item2_t *
 svn_client_commit_item2_dup(const svn_client_commit_item2_t *item,
                             apr_pool_t *pool);
@@ -785,20 +812,24 @@ typedef struct svn_client_ctx_t
 
   /** notification callback function.
    * This will be called by notify_func2() by default.
-   * @deprecated Provided for backward compatibility with the 1.1 API. */
+   * @deprecated Provided for backward compatibility with the 1.1 API.
+   * Use @c notify_func2 instead. */
   svn_wc_notify_func_t notify_func;
 
   /** notification callback baton for notify_func()
-   * @deprecated Provided for backward compatibility with the 1.1 API. */
+   * @deprecated Provided for backward compatibility with the 1.1 API.
+   * Use @c notify_baton2 instead */
   void *notify_baton;
 
   /** Log message callback function.  NULL means that Subversion
     * should try not attempt to fetch a log message.
-    * @deprecated Provided for backward compatibility with the 1.2 API. */
+    * @deprecated Provided for backward compatibility with the 1.2 API.
+    * Use @c log_msg_func2 instead. */
   svn_client_get_commit_log_t log_msg_func;
 
   /** log message callback baton
-    * @deprecated Provided for backward compatibility with the 1.2 API. */
+    * @deprecated Provided for backward compatibility with the 1.2 API.
+    * Use @c log_msg_baton2 instead. */
   void *log_msg_baton;
 
   /** a hash mapping of <tt>const char *</tt> configuration file names to
@@ -866,6 +897,22 @@ typedef struct svn_client_ctx_t
 
 } svn_client_ctx_t;
 
+/** Initialize a client context.
+ * Set @a *ctx to a client context object, allocated in @a pool, that
+ * represents a particular instance of an svn client.
+ *
+ * In order to avoid backwards compatibility problems, clients must
+ * use this function to intialize and allocate the
+ * @c svn_client_ctx_t structure rather than doing so themselves, as
+ * the size of this structure may change in the future.
+ *
+ * The current implementation never returns error, but callers should
+ * still check for error, for compatibility with future versions.
+ */
+svn_error_t *
+svn_client_create_context(svn_client_ctx_t **ctx,
+                          apr_pool_t *pool);
+
 /** @} end group: Client context management */
 
 /**
@@ -924,32 +971,6 @@ svn_client_args_to_target_array(apr_array_header_t **targets_p,
 
 /** @} */
 
-/**
- * Client context
- *
- * @defgroup clnt_ctx Client context management
- *
- * @{
- */
-
-/** Initialize a client context.
- * Set @a *ctx to a client context object, allocated in @a pool, that
- * represents a particular instance of an svn client.
- *
- * In order to avoid backwards compatibility problems, clients must
- * use this function to intialize and allocate the
- * @c svn_client_ctx_t structure rather than doing so themselves, as
- * the size of this structure may change in the future.
- *
- * The current implementation never returns error, but callers should
- * still check for error, for compatibility with future versions.
- */
-svn_error_t *
-svn_client_create_context(svn_client_ctx_t **ctx,
-                          apr_pool_t *pool);
-
-/** @} end group: Client context */
-
 /**
  * Client working copy management functions
  *
@@ -1038,6 +1059,7 @@ svn_client_checkout3(svn_revnum_t *result_rev,
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_checkout2(svn_revnum_t *result_rev,
                      const char *URL,
@@ -1057,6 +1079,7 @@ svn_client_checkout2(svn_revnum_t *result_rev,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_checkout(svn_revnum_t *result_rev,
                     const char *URL,
@@ -1147,6 +1170,7 @@ svn_client_update3(apr_array_header_t **result_revs,
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_update2(apr_array_header_t **result_revs,
                    const apr_array_header_t *paths,
@@ -1163,6 +1187,7 @@ svn_client_update2(apr_array_header_t **result_revs,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_update(svn_revnum_t *result_rev,
                   const char *path,
@@ -1246,6 +1271,7 @@ svn_client_switch2(svn_revnum_t *result_rev,
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_switch(svn_revnum_t *result_rev,
                   const char *path,
@@ -1319,6 +1345,7 @@ svn_client_add4(const char *path,
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_add3(const char *path,
                 svn_boolean_t recursive,
@@ -1333,6 +1360,7 @@ svn_client_add3(const char *path,
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_add2(const char *path,
                 svn_boolean_t recursive,
@@ -1345,6 +1373,7 @@ svn_client_add2(const char *path,
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_add(const char *path,
                svn_boolean_t recursive,
@@ -1406,6 +1435,7 @@ svn_client_mkdir3(svn_commit_info_t **commit_info_p,
  * @since New in 1.3.
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_mkdir2(svn_commit_info_t **commit_info_p,
                   const apr_array_header_t *paths,
@@ -1418,6 +1448,7 @@ svn_client_mkdir2(svn_commit_info_t **commit_info_p,
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_mkdir(svn_client_commit_info_t **commit_info_p,
                  const apr_array_header_t *paths,
@@ -1489,6 +1520,7 @@ svn_client_delete3(svn_commit_info_t **commit_info_p,
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_delete2(svn_commit_info_t **commit_info_p,
                    const apr_array_header_t *paths,
@@ -1502,6 +1534,7 @@ svn_client_delete2(svn_commit_info_t **commit_info_p,
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_delete(svn_client_commit_info_t **commit_info_p,
                   const apr_array_header_t *paths,
@@ -1586,6 +1619,7 @@ svn_client_import3(svn_commit_info_t **commit_info_p,
  *
  * @deprecated Provided for backward compatibility with the 1.4 API
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_import2(svn_commit_info_t **commit_info_p,
                    const char *path,
@@ -1602,6 +1636,7 @@ svn_client_import2(svn_commit_info_t **commit_info_p,
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_import(svn_client_commit_info_t **commit_info_p,
                   const char *path,
@@ -1691,6 +1726,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
  *
  * @since New in 1.3.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_commit3(svn_commit_info_t **commit_info_p,
                    const apr_array_header_t *targets,
@@ -1707,6 +1743,7 @@ svn_client_commit3(svn_commit_info_t **commit_info_p,
  *
  * @since New in 1.2.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_commit2(svn_client_commit_info_t **commit_info_p,
                    const apr_array_header_t *targets,
@@ -1721,6 +1758,7 @@ svn_client_commit2(svn_client_commit_info_t **commit_info_p,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_commit(svn_client_commit_info_t **commit_info_p,
                   const apr_array_header_t *targets,
@@ -1793,6 +1831,7 @@ svn_client_status3(svn_revnum_t *result_rev,
  * @since New in 1.2.
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_status2(svn_revnum_t *result_rev,
                    const char *path,
@@ -1817,6 +1856,7 @@ svn_client_status2(svn_revnum_t *result_rev,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_status(svn_revnum_t *result_rev,
                   const char *path,
@@ -1908,6 +1948,7 @@ svn_client_log4(const apr_array_header_t *targets,
  * @deprecated Provided for compatibility with the 1.4 API.
  * @since New in 1.4.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_log3(const apr_array_header_t *targets,
                 const svn_opt_revision_t *peg_revision,
@@ -1929,6 +1970,7 @@ svn_client_log3(const apr_array_header_t *targets,
  * @deprecated Provided for compatibility with the 1.3 API.
  * @since New in 1.2.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_log2(const apr_array_header_t *targets,
                 const svn_opt_revision_t *start,
@@ -1962,6 +2004,7 @@ svn_client_log2(const apr_array_header_t *targets,
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_log(const apr_array_header_t *targets,
                const svn_opt_revision_t *start,
@@ -2030,6 +2073,7 @@ svn_client_blame4(const char *path_or_url,
  *
  * @since New in 1.4.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_blame3(const char *path_or_url,
                   const svn_opt_revision_t *peg_revision,
@@ -2051,6 +2095,7 @@ svn_client_blame3(const char *path_or_url,
  *
  * @since New in 1.2.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_blame2(const char *path_or_url,
                   const svn_opt_revision_t *peg_revision,
@@ -2067,6 +2112,7 @@ svn_client_blame2(const char *path_or_url,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_blame(const char *path_or_url,
                  const svn_opt_revision_t *start,
@@ -2182,6 +2228,7 @@ svn_client_diff4(const apr_array_header_t *diff_options,
  *
  * @since New in 1.3.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_diff3(const apr_array_header_t *diff_options,
                  const char *path1,
@@ -2207,6 +2254,7 @@ svn_client_diff3(const apr_array_header_t *diff_options,
  *
  * @since New in 1.2.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_diff2(const apr_array_header_t *diff_options,
                  const char *path1,
@@ -2228,6 +2276,7 @@ svn_client_diff2(const apr_array_header_t *diff_options,
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_diff(const apr_array_header_t *diff_options,
                 const char *path1,
@@ -2284,6 +2333,7 @@ svn_client_diff_peg4(const apr_array_header_t *diff_options,
  *
  * @since New in 1.3.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_diff_peg3(const apr_array_header_t *diff_options,
                      const char *path,
@@ -2308,6 +2358,7 @@ svn_client_diff_peg3(const apr_array_header_t *diff_options,
  *
  * @since New in 1.2.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_diff_peg2(const apr_array_header_t *diff_options,
                      const char *path,
@@ -2330,6 +2381,7 @@ svn_client_diff_peg2(const apr_array_header_t *diff_options,
  * @since New in 1.1.
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_diff_peg(const apr_array_header_t *diff_options,
                     const char *path,
@@ -2383,6 +2435,7 @@ svn_client_diff_summarize2(const char *path1,
  *
  * @since New in 1.4.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_diff_summarize(const char *path1,
                           const svn_opt_revision_t *revision1,
@@ -2439,6 +2492,7 @@ svn_client_diff_summarize_peg2(const char *path,
  *
  * @since New in 1.4.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_diff_summarize_peg(const char *path,
                               const svn_opt_revision_t *peg_revision,
@@ -2544,6 +2598,7 @@ svn_client_merge3(const char *source1,
  *
  * @since New in 1.4.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_merge2(const char *source1,
                   const svn_opt_revision_t *revision1,
@@ -2564,6 +2619,7 @@ svn_client_merge2(const char *source1,
  *
  * @deprecated Provided for backwards compatibility with the 1.3 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_merge(const char *source1,
                  const svn_opt_revision_t *revision1,
@@ -2644,6 +2700,7 @@ svn_client_merge_peg3(const char *source,
  *
  * @since New in 1.4.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_merge_peg2(const char *source,
                       const svn_opt_revision_t *revision1,
@@ -2666,6 +2723,7 @@ svn_client_merge_peg2(const char *source,
  *
  * @since New in 1.1.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_merge_peg(const char *source,
                      const svn_opt_revision_t *revision1,
@@ -2883,6 +2941,7 @@ svn_client_revert2(const apr_array_header_t *paths,
  *
  * @deprecated Provided for backwards compatibility with the 1.0 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_revert(const apr_array_header_t *paths,
                   svn_boolean_t recursive,
@@ -2903,7 +2962,9 @@ svn_client_revert(const apr_array_header_t *paths,
  * resolution support.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
+ * Use svn_client_resolve() instead.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_resolved(const char *path,
                     svn_boolean_t recursive,
@@ -3052,6 +3113,7 @@ svn_client_copy4(svn_commit_info_t **commit_info_p,
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_copy3(svn_commit_info_t **commit_info_p,
                  const char *src_path,
@@ -3070,6 +3132,7 @@ svn_client_copy3(svn_commit_info_t **commit_info_p,
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_copy2(svn_commit_info_t **commit_info_p,
                  const char *src_path,
@@ -3085,6 +3148,7 @@ svn_client_copy2(svn_commit_info_t **commit_info_p,
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_copy(svn_client_commit_info_t **commit_info_p,
                 const char *src_path,
@@ -3198,6 +3262,7 @@ svn_client_move5(svn_commit_info_t **commit_info_p,
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_move4(svn_commit_info_t **commit_info_p,
                  const char *src_path,
@@ -3215,6 +3280,7 @@ svn_client_move4(svn_commit_info_t **commit_info_p,
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_move3(svn_commit_info_t **commit_info_p,
                  const char *src_path,
@@ -3231,6 +3297,7 @@ svn_client_move3(svn_commit_info_t **commit_info_p,
  *
  * @since New in 1.2.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_move2(svn_client_commit_info_t **commit_info_p,
                  const char *src_path,
@@ -3247,6 +3314,7 @@ svn_client_move2(svn_client_commit_info_t **commit_info_p,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_move(svn_client_commit_info_t **commit_info_p,
                 const char *src_path,
@@ -3347,6 +3415,7 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_propset2(const char *propname,
                     const svn_string_t *propval,
@@ -3362,6 +3431,7 @@ svn_client_propset2(const char *propname,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_propset(const char *propname,
                    const svn_string_t *propval,
@@ -3421,6 +3491,7 @@ svn_client_revprop_set2(const char *propname,
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_revprop_set(const char *propname,
                        const svn_string_t *propval,
@@ -3491,6 +3562,7 @@ svn_client_propget3(apr_hash_t **props,
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_propget2(apr_hash_t **props,
                     const char *propname,
@@ -3507,6 +3579,7 @@ svn_client_propget2(apr_hash_t **props,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_propget(apr_hash_t **props,
                    const char *propname,
@@ -3595,6 +3668,7 @@ svn_client_proplist3(const char *target,
  *
  * @deprecated Provided for backward compatiblility with the 1.2 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_proplist2(apr_array_header_t **props,
                      const char *target,
@@ -3610,6 +3684,7 @@ svn_client_proplist2(apr_array_header_t **props,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_proplist(apr_array_header_t **props,
                     const char *target,
@@ -3721,6 +3796,7 @@ svn_client_export4(svn_revnum_t *result_rev,
  *
  * @since New in 1.2.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_export3(svn_revnum_t *result_rev,
                    const char *from,
@@ -3744,6 +3820,7 @@ svn_client_export3(svn_revnum_t *result_rev,
  * @since New in 1.1.
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_export2(svn_revnum_t *result_rev,
                    const char *from,
@@ -3761,6 +3838,7 @@ svn_client_export2(svn_revnum_t *result_rev,
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_export(svn_revnum_t *result_rev,
                   const char *from,
@@ -3847,6 +3925,7 @@ svn_client_list2(const char *path_or_url,
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_list(const char *path_or_url,
                 const svn_opt_revision_t *peg_revision,
@@ -3874,7 +3953,9 @@ svn_client_list(const char *path_or_url,
  * @since New in 1.3.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
+ * Use svn_client_list2() instead.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_ls3(apr_hash_t **dirents,
                apr_hash_t **locks,
@@ -3891,7 +3972,9 @@ svn_client_ls3(apr_hash_t **dirents,
  * @since New in 1.2.
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
+ * Use svn_client_list2() instead.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_ls2(apr_hash_t **dirents,
                const char *path_or_url,
@@ -3906,7 +3989,9 @@ svn_client_ls2(apr_hash_t **dirents,
  * the same as @a revision.
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
+ * Use svn_client_list2() instead.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_ls(apr_hash_t **dirents,
               const char *path_or_url,
@@ -3961,6 +4046,7 @@ svn_client_cat2(svn_stream_t *out,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_cat(svn_stream_t *out,
                const char *path_or_url,
@@ -4269,7 +4355,8 @@ typedef svn_error_t *(*svn_info_receiver_t)
  * @since New in 1.3.
  */
 svn_info_t *
-svn_info_dup(const svn_info_t *info, apr_pool_t *pool);
+svn_info_dup(const svn_info_t *info,
+             apr_pool_t *pool);
 
 /**
  * Invoke @a receiver with @a receiver_baton to return information
@@ -4332,6 +4419,7 @@ svn_client_info2(const char *path_or_url,
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_info(const char *path_or_url,
                 const svn_opt_revision_t *peg_revision,

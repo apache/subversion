@@ -369,8 +369,15 @@ for a complete list.</p>
 <h3>API changes, improvements and language bindings
     (<em>client and server</em>)</h3>
 
-<p>There are too many new and revised APIs in Subversion 1.6.0 to even
-begin to list them all here.  See the <a
+<p>The <tt>pre-lock</tt> hook can now specify the lock-token string
+via the hook's stdout; see <a
+href="http://svn.collab.net/viewcvs/svn?rev=32778&view=rev"
+>r32778</a> for details.  Note that when the hook uses this feature,
+it must take responsibility for ensuring that lock tokens are unique
+across the repository.</p>
+
+<p>There are too many new and revised APIs in Subversion 1.6.0 to list
+them all here.  See the <a
 href="http://svn.collab.net/svn-doxygen/" >Subversion API
 Documentation</a> page for general API information.  If you develop a
 3rd-party client application that uses Subversion APIs, you should

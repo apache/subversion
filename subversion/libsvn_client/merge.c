@@ -251,11 +251,6 @@ typedef struct merge_cmd_baton_t {
   svn_ra_session_t *ra_session1;
   svn_ra_session_t *ra_session2;
 
-  /* Flag indicating the fact target has everything merged already,
-     for the sake of children's merge to work it sets itself a dummy
-     merge range of requested_end_rev:requested_end_rev. */
-  svn_boolean_t target_has_dummy_merge_range;
-
   /* Pool which has a lifetime limited to one iteration over a given
      merge source, i.e. it is cleared on every call to do_directory_merge()
      or do_file_merge() in do_merge(). */
@@ -292,9 +287,18 @@ is_path_conflicted_by_merge(merge_cmd_baton_t *merge_b)
           apr_hash_count(merge_b->conflicted_paths) > 0);
 }
 
-/* Set *HONOR_MERGEINFO and *RECORD_MERGEINFO (if non-NULL)
-   appropriately for MERGE_B.
-   One rule is that we shan't record mergeinfo if we're not honoring it. */
+/* Set *HONOR_MERGEINFO and *RECORD_MERGEINFO (if non-NULL) based on the
+   merge being performed as described in MERGE_B.
+
+   If the merge source server is is capable of merge tracking, the left-side
+   merge source is an ancestor of the right-side (or vice-versa), the merge
+   source repository is the same repository as the MERGE_B->target, and
+   ancestry is being considered then set *HONOR_MERGEINFO to true, otherwise
+   set it to false.
+
+   If *HONOR_MERGEINFO is set to TRUE and the merge is not a dry run then set
+   *RECORD_MERGEINFO  to true, otherwise set it to false.
+   **/
 static APR_INLINE void
 mergeinfo_behavior(svn_boolean_t *honor_mergeinfo_p,
                    svn_boolean_t *record_mergeinfo_p,
@@ -1496,7 +1500,7 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
               notify_b->cur_ancestor_index = new_nearest_ancestor_index;
               if (!child->absent && child->remaining_ranges->nelts > 0
                   && !(new_nearest_ancestor_index == 0
-                       && notify_b->merge_b->target_has_dummy_merge_range))
+                       && child->remaining_ranges == 0))
                 {
                   svn_wc_notify_t *notify_merge_begin;
                   notify_merge_begin =
@@ -2462,28 +2466,6 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
                                          pool));
     }
 
-  /* Take advantage of the depth first ordering,
-     i.e first(0th) item is target.*/
-  if (children_with_mergeinfo->nelts > 1)
-    {
-      svn_client__merge_path_t *child =
-        APR_ARRAY_IDX(children_with_mergeinfo, 0, svn_client__merge_path_t *);
-
-      if (child->remaining_ranges->nelts == 0)
-        {
-          svn_merge_range_t *dummy_range =
-            apr_pcalloc(pool, sizeof(*dummy_range));
-          dummy_range->start = revision2;
-          dummy_range->end = revision2;
-          dummy_range->inheritable = inheritable;
-          child->remaining_ranges = apr_array_make(pool, 1,
-                                                   sizeof(dummy_range));
-          APR_ARRAY_PUSH(child->remaining_ranges, svn_merge_range_t *) =
-            dummy_range;
-          merge_b->target_has_dummy_merge_range = TRUE;
-        }
-    }
-
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
@@ -2850,40 +2832,45 @@ drive_merge_report_editor(const char *target_wcpath,
      target. */
   if (honor_mergeinfo)
     {
-      if (merge_b->target_has_dummy_merge_range)
+      svn_client__merge_path_t *child;
+
+      /* CHILDREN_WITH_MERGEINFO must always exist if we are honoring
+         mergeinfo and must have at least one element (describing the
+         merge target). */
+      SVN_ERR_ASSERT(children_with_mergeinfo);
+      SVN_ERR_ASSERT(children_with_mergeinfo->nelts);
+
+      /* Get the merge target's svn_client__merge_path_t, which is always
+         the first in the array due to depth first sorting requirement,
+         see 'THE CHILDREN_WITH_MERGEINFO ARRAY'. */
+      child = APR_ARRAY_IDX(children_with_mergeinfo, 0,
+                            svn_client__merge_path_t *);
+
+      if (child->remaining_ranges->nelts == 0)
         {
           /* The merge target doesn't need anything merged. */
           target_start = revision2;
         }
-      else if (children_with_mergeinfo && children_with_mergeinfo->nelts)
+      else
         {
-          /* Get the merge target's svn_client__merge_path_t, which is always
-             the first in the array due to depth first sorting requirement,
-             see 'THE CHILDREN_WITH_MERGEINFO ARRAY'. */
-          svn_client__merge_path_t *child =
-            APR_ARRAY_IDX(children_with_mergeinfo, 0,
-                          svn_client__merge_path_t *);
-          if (child->remaining_ranges->nelts)
+          /* The merge target has remaining revisions to merge.  These
+             ranges may fully or partially overlap the range described
+             by REVISION1:REVISION2 or may not intersect that range at
+             all. */
+          svn_merge_range_t *range =
+            APR_ARRAY_IDX(child->remaining_ranges, 0,
+                          svn_merge_range_t *);
+          if ((!is_rollback && range->start > revision2)
+              || (is_rollback && range->start < revision2))
             {
-              /* The merge target has remaining revisions to merge.  These
-                 ranges may fully or partially overlap the range described
-                 by REVISION1:REVISION2 or may not intersect that range at
-                 all. */
-              svn_merge_range_t *range =
-                APR_ARRAY_IDX(child->remaining_ranges, 0,
-                              svn_merge_range_t *);
-              if ((!is_rollback && range->start > revision2)
-                  || (is_rollback && range->start < revision2))
-                {
-                  /* Merge target's first remaining range doesn't intersect. */
-                  target_start = revision2;
-                }
-              else
-                {
-                  /* Merge target's first remaining range partially or
-                     fully overlaps. */
-                  target_start = range->start;
-                }
+              /* Merge target's first remaining range doesn't intersect. */
+              target_start = revision2;
+            }
+          else
+            {
+              /* Merge target's first remaining range partially or
+                 fully overlaps. */
+              target_start = range->start;
             }
         }
     }
@@ -2961,7 +2948,7 @@ drive_merge_report_editor(const char *target_wcpath,
                   || (is_rollback && range->start < revision2))
                 {
                   /* Neither subtree nor parent need any
-                  part of REVISION1:REVISION2. */
+                     part of REVISION1:REVISION2. */
                   continue;
                 }
               else if (parent->remaining_ranges->nelts)
@@ -2980,12 +2967,8 @@ drive_merge_report_editor(const char *target_wcpath,
             {
               /* If both the subtree and its parent need no ranges applied
                  consider that as the "same ranges" and don't describe
-                 the subtree.  If the subtree's parent is the merge target,
-                 then the parent can have a dummy range; this is still
-                 the same as no remaining ranges. */
-              if (parent->remaining_ranges->nelts == 0
-                  || (nearest_parent_is_target
-                      && merge_b->target_has_dummy_merge_range))
+                 the subtree. */
+              if (parent->remaining_ranges->nelts == 0)
                 continue; /* Same as parent. */
             }
 
@@ -5613,7 +5596,6 @@ do_merge(apr_array_header_t *merge_sources,
       merge_cmd_baton.dry_run_deletions =
         dry_run ? apr_hash_make(subpool) : NULL;
       merge_cmd_baton.conflicted_paths = NULL;
-      merge_cmd_baton.target_has_dummy_merge_range = FALSE;
       merge_cmd_baton.ra_session1 = ra_session1;
       merge_cmd_baton.ra_session2 = ra_session2;
 
