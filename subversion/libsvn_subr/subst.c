@@ -1548,7 +1548,7 @@ detranslate_special_file(const char *src, const char *dst, apr_pool_t *pool)
   dst_stream = svn_stream_from_aprfile2(d, FALSE, pool);
 
   SVN_ERR(detranslate_special_file_to_stream(&src_stream, src, pool));
-  SVN_ERR(svn_stream_copy(src_stream, dst_stream, pool));
+  SVN_ERR(svn_stream_copy2(src_stream, dst_stream, NULL, NULL, pool));
 
   SVN_ERR(svn_stream_close(dst_stream));
 
