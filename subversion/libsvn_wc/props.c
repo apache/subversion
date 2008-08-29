@@ -2410,7 +2410,7 @@ get_file_for_validation(const svn_string_t **mime_type,
     read_stream = svn_stream_from_aprfile2(fp, TRUE, pool);
 
     /* Copy from the file into the translating stream. */
-    SVN_ERR(svn_stream_copy(read_stream, stream, pool));
+    SVN_ERR(svn_stream_copy2(read_stream, stream, NULL, NULL, pool));
 
     SVN_ERR(svn_stream_close(read_stream));
     SVN_ERR(svn_io_file_close(fp, pool));
