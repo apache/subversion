@@ -19,13 +19,14 @@ Candidate changes for 1.5.3:
 
  * r32012
    Fix Visual Studio meta-projects on VS2008 and allow 1.5.x to fully
-   build when using VS2008.
+   build when using VS2008. (Makes these projects utility projects instead of
+   executable projects)
    Justification:
      Not a code change, just a tweak to the Windows build system to
      support VS2008.  Without this change you can't build the C API
      tests or the bindings from the command line.
    Votes:
-     +1: pburba
+     +1: pburba, rhuijben
      +0: danielsh (I confirm the justification, but don't understand
                    the change itself)
 
@@ -39,6 +40,16 @@ Candidate changes for 1.5.3:
      Small fix (with test).  User requests.
    Votes:
      +1: danielsh
+
+ * r31203
+   Update build.conf to remove the magic word 'update' from the description to
+   allow running the test as non-administrator on Windows Vista.
+   Justification:
+     Not a code change. Just makes it possible to run the tests as non-
+     administrator without having to type your administrator password (or using
+     a local patch).
+   Votes:
+     +1: rhuijben
 
 Approved changes:
 =================
