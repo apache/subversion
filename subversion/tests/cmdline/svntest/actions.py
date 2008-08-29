@@ -1523,8 +1523,103 @@ def make_conflict_marker_text(wc_text, merged_text, merged_rev):
          merged_text + ">>>>>>> .merge-right.r" + str(merged_rev) + "\n"
 
 
+def build_greek_tree_conflicts(sbox):
+  """Create a working copy that has tree-conflict markings.
+  After this function has been called, sbox.wc_dir is a working
+  copy that has specific tree-conflict markings.
 
+  In particular, this does two conflicting sets of edits and performs an
+  update so that tree conflicts appear.
 
+  Note that this function calls sbox.build() because it needs a clean sbox.
+  So, there is no need to call sbox.build() before this.
+
+  This function is useful for testing that tree-conflicts are handled
+  properly once they have appeared, e.g. that commits are blocked, that the
+  info output is correct, etc.
+
+  See also the tree-conflicts tests using deep_trees in various other
+  .py files, and tree_conflict_tests.py.
+  """
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  j = os.path.join
+  G = j(wc_dir, 'A', 'D', 'G')
+  pi = j(G, 'pi')
+  rho = j(G, 'rho')
+  tau = j(G, 'tau')
+
+  # Make incoming changes and "store them away" with a commit.
+  main.file_append(pi, "Incoming edit.\n")
+  main.run_svn(None, 'del', rho)
+  main.run_svn(None, 'del', tau)
+
+  expected_output = wc.State(wc_dir, {
+    'A/D/G/pi'          : Item(verb='Sending'),
+    'A/D/G/rho'         : Item(verb='Deleting'),
+    'A/D/G/tau'         : Item(verb='Deleting'),
+    })
+  expected_status = get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/D/G/pi', wc_rev='2')
+  expected_status.remove('A/D/G/rho', 'A/D/G/tau')
+  run_and_verify_commit(wc_dir, expected_output, expected_status, None,
+                        '-m', 'Incoming changes.', wc_dir )
+
+  # Update back to the pristine state ("time-warp").
+  expected_output = wc.State(wc_dir, {
+    'A/D/G/pi'          : Item(status='U '),
+    'A/D/G/rho'         : Item(status='A '),
+    'A/D/G/tau'         : Item(status='A '),
+    })
+  expected_disk = main.greek_state
+  expected_status = get_virginal_state(wc_dir, 1)
+  run_and_verify_update(wc_dir, expected_output, expected_disk,
+                        expected_status, None, None, None, None, None, False,
+                        '-r', '1', wc_dir)
+
+  # Make local changes
+  main.run_svn(None, 'del', pi)
+  main.file_append(rho, "Local edit.\n")
+  main.run_svn(None, 'del', tau)
+
+  # Update, receiving the incoming changes on top of the local changes,
+  # causing tree-conflicts.
+  expected_output = wc.State(wc_dir, {
+    'A/D/G'             : Item(status='C '),
+    'A/D/G/rho'         : Item(status='D '),
+    'A/D/G/tau'         : Item(status='D '),
+    'A/D/G/pi'          : Item(status='U '),
+    })
+  expected_disk = main.greek_state.copy()
+  expected_disk.tweak('A/D/G/pi',
+                      contents="This is the file 'pi'.\nIncoming edit.\n")
+  expected_disk.tweak('A/D/G/rho',
+                      contents="This is the file 'rho'.\nLocal edit.\n")
+  expected_disk.remove('A/D/G/tau')
+  expected_status = wc.State(wc_dir, {
+    ''                  : Item(status='  ', wc_rev='2'),
+    'iota'              : Item(status='  ', wc_rev='2'),
+    'A'                 : Item(status='  ', wc_rev='2'),
+    'A/B'               : Item(status='  ', wc_rev='2'),
+    'A/B/lambda'        : Item(status='  ', wc_rev='2'),
+    'A/B/E'             : Item(status='  ', wc_rev='2'),
+    'A/B/E/alpha'       : Item(status='  ', wc_rev='2'),
+    'A/B/E/beta'        : Item(status='  ', wc_rev='2'),
+    'A/B/F'             : Item(status='  ', wc_rev='2'),
+    'A/mu'              : Item(status='  ', wc_rev='2'),
+    'A/C'               : Item(status='  ', wc_rev='2'),
+    'A/D'               : Item(status='  ', wc_rev='2'),
+    'A/D/gamma'         : Item(status='  ', wc_rev='2'),
+    'A/D/G'             : Item(status='C ', wc_rev='2'),
+    'A/D/G/pi'          : Item(status='D ', wc_rev='2'),
+    'A/D/H'             : Item(status='  ', wc_rev='2'),
+    'A/D/H/chi'         : Item(status='  ', wc_rev='2'),
+    'A/D/H/omega'       : Item(status='  ', wc_rev='2'),
+    'A/D/H/psi'         : Item(status='  ', wc_rev='2'),
+    })
+  run_and_verify_update(wc_dir, expected_output, expected_disk,
+                        expected_status)
 
 
 

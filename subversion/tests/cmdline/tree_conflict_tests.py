@@ -289,7 +289,8 @@ d_mods = [
 # Set up all of the given SCENARIOS in their respective unique paths.
 # This means committing their initialisation actions in r2, and then
 # committing their change actions in r3 (assuming the repos was at r1).
-# (See also the somewhat related svntest.actions.set_up_tree_conflicts().)
+# (See also the somewhat related svntest.actions.build_greek_tree_conflicts()
+# and tree-conflicts tests using deep_trees in various other .py files.)
 # SCENARIOS is a list of scenario tuples: (init_actions, change_actions).
 # WC_DIR is a local path of an existing WC.
 # BR_DIR is a nonexistent path within WC_DIR.
