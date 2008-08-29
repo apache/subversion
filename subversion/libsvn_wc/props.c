@@ -90,8 +90,24 @@ load_prop_file(const char *propfile_path,
                apr_pool_t *pool)
 {
   svn_error_t *err;
+  svn_stream_t *stream;
+  apr_finfo_t finfo;
 
   apr_file_t *propfile = NULL;
+
+  /* We shouldn't be calling load_prop_file() with an empty file, but
+     we do.  This check makes sure that we don't call svn_hash_read2()
+     on an empty stream.  Ugly, hacky and crude. */
+  err = svn_io_stat(&finfo, propfile_path, APR_FINFO_SIZE, pool);
+  if (err && (APR_STATUS_IS_ENOENT(err->apr_err)
+              || APR_STATUS_IS_ENOTDIR(err->apr_err)))
+    {
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
+  SVN_ERR(err);
+  if (finfo.size == 0)
+    return SVN_NO_ERROR;
 
   err = svn_io_file_open(&propfile, propfile_path,
                          APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
@@ -106,13 +122,12 @@ load_prop_file(const char *propfile_path,
 
   SVN_ERR(err);
 
-  SVN_ERR_W(svn_hash_read(hash, propfile, pool),
+  stream = svn_stream_from_aprfile2(propfile, FALSE, pool);
+  SVN_ERR_W(svn_hash_read2(hash, stream, SVN_HASH_TERMINATOR, pool),
             apr_psprintf(pool, _("Can't parse '%s'"),
                          svn_path_local_style(propfile_path, pool)));
 
-  SVN_ERR(svn_io_file_close(propfile, pool));
-
-  return SVN_NO_ERROR;
+  return svn_stream_close(stream);
 }
 
 
@@ -129,21 +144,21 @@ save_prop_file(const char *propfile_path,
                apr_pool_t *pool)
 {
   apr_file_t *prop_tmp;
+  svn_stream_t *stream;
 
   SVN_ERR(svn_io_file_open(&prop_tmp, propfile_path,
                            (APR_WRITE | APR_CREATE | APR_TRUNCATE
                             | APR_BUFFERED),
                            APR_OS_DEFAULT, pool));
+  stream = svn_stream_from_aprfile2(prop_tmp, FALSE, pool);
 
   if (apr_hash_count(hash) != 0 || write_empty)
-    SVN_ERR_W(svn_hash_write(hash, prop_tmp, pool),
+    SVN_ERR_W(svn_hash_write2(hash, stream, SVN_HASH_TERMINATOR, pool),
               apr_psprintf(pool,
                            _("Can't write property hash to '%s'"),
                            svn_path_local_style(propfile_path, pool)));
 
-  SVN_ERR(svn_io_file_close(prop_tmp, pool));
-
-  return SVN_NO_ERROR;
+  return svn_stream_close(stream);
 }
 
 
@@ -2171,6 +2186,8 @@ svn_wc__wcprop_set(const char *name,
     {
       /* For backwards compatibility.  We don't use the cache in this case,
          so write to disk regardless of force_write. */
+      svn_stream_t *stream;
+
       /* Open the propfile for writing. */
       SVN_ERR(svn_wc__open_props(&fp,
                                  path, /* open in PATH */ entry->kind,
@@ -2179,10 +2196,13 @@ svn_wc__wcprop_set(const char *name,
                                  1, /* we DO want wcprops */
                                  pool));
       /* Write. */
-      SVN_ERR_W(svn_hash_write(prophash, fp, pool),
+      stream = svn_stream_from_aprfile2(fp, TRUE, pool);
+      SVN_ERR_W(svn_hash_write2(prophash, stream, SVN_HASH_TERMINATOR,
+                                pool),
                 apr_psprintf(pool,
                              _("Cannot write property hash for '%s'"),
                              svn_path_local_style(path, pool)));
+      svn_stream_close(stream);
 
       /* Close file, doing an atomic "move". */
       SVN_ERR(svn_wc__close_props(fp, path, entry->kind, 0, 1,
@@ -2390,7 +2410,7 @@ get_file_for_validation(const svn_string_t **mime_type,
     read_stream = svn_stream_from_aprfile2(fp, TRUE, pool);
 
     /* Copy from the file into the translating stream. */
-    SVN_ERR(svn_stream_copy(read_stream, stream, pool));
+    SVN_ERR(svn_stream_copy2(read_stream, stream, NULL, NULL, pool));
 
     SVN_ERR(svn_stream_close(read_stream));
     SVN_ERR(svn_io_file_close(fp, pool));

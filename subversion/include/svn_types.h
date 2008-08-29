@@ -851,8 +851,9 @@ typedef struct svn_merge_range_t
 {
   /**
    * If the 'start' field is less than the 'end' field then 'start' is
-   * exclusive and 'end' inclusive of the range described.  If 'start'
-   * is greater than 'end' then the opposite is true.  If 'start'
+   * exclusive and 'end' inclusive of the range described.  This is termed
+   * a forward merge range.  If 'start' is greater than 'end' then the
+   * opposite is true.  This is termed a reverse merge range.  If 'start'
    * equals 'end' the meaning of the range is not defined.
    */
   svn_revnum_t start;

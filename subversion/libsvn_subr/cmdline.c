@@ -748,7 +748,8 @@ svn_cmdline__print_xml_prop(svn_stringbuf_t **outstr,
     }
   else
     {
-      const svn_string_t *base64ed = svn_base64_encode_string(propval, pool);
+      const svn_string_t *base64ed = svn_base64_encode_string2(propval, TRUE,
+                                                               pool);
       encoding = "base64";
       xml_safe = base64ed->data;
     }

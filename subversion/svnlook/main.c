@@ -620,8 +620,7 @@ dump_contents(apr_file_t *fh,
   /* Grab the contents and copy them into fh. */
   SVN_ERR(svn_fs_file_contents(&contents, root, path, pool));
   file_stream = svn_stream_from_aprfile2(fh, TRUE, pool);
-  SVN_ERR(svn_stream_copy(contents, file_stream, pool));
-  return SVN_NO_ERROR;
+  return svn_stream_copy2(contents, file_stream, NULL, NULL, pool);
 }
 
 
@@ -2370,7 +2369,8 @@ main(int argc, const char *argv[])
         {
           const char *optstr;
           const apr_getopt_option_t *badopt =
-            svn_opt_get_option_from_code(opt_id, options_table);
+            svn_opt_get_option_from_code2(opt_id, subcommand, options_table,
+                                          pool);
           svn_opt_format_option(&optstr, badopt, FALSE, pool);
           if (subcommand->name[0] == '-')
             subcommand_help(NULL, NULL, pool);
