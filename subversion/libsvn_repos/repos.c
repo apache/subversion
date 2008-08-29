@@ -549,6 +549,11 @@ PREWRITTEN_HOOKS_TEXT
 "#   [4] COMMENT      (the comment of the lock)"                             NL
 "#   [5] STEAL-LOCK   (1 if the user is trying to steal the lock, else 0)"   NL
 "#"                                                                          NL
+"# If the hook program outputs anything on stdout, the output string will"   NL
+"# be used as the lock token for this lock operation.  If you choose to use" NL
+"# this feature, you must guarantee the tokens generated are unique across"  NL
+"# the repository each time."                                                NL
+"#"                                                                          NL
 "# The default working directory for the invocation is undefined, so"        NL
 "# the program should set one explicitly if it cares."                       NL
 "#"                                                                          NL

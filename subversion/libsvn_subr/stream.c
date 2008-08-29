@@ -985,7 +985,7 @@ svn_stream_for_stdout(svn_stream_t **out, apr_pool_t *pool)
   if (apr_err)
     return svn_error_wrap_apr(apr_err, "Can't open stdout");
 
-  *out = svn_stream_from_aprfile(stdout_file, pool);
+  *out = svn_stream_from_aprfile2(stdout_file, TRUE, pool);
 
   return SVN_NO_ERROR;
 }

@@ -1274,7 +1274,8 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
       return SVN_NO_ERROR;
     }
 
-  cdesc = apr_pcalloc(pool, sizeof(*cdesc));
+  cdesc = svn_wc_conflict_description_create_prop(
+    path, adm_access, is_dir ? svn_node_dir : svn_node_file, propname, pool);
 
   /* Create a tmpfile for each of the string_t's we've got.  */
   if (working_val)
@@ -1361,12 +1362,6 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
     }
 
   /* Build the rest of the description object: */
-  cdesc->path = path;
-  cdesc->node_kind = is_dir ? svn_node_dir : svn_node_file;
-  cdesc->kind = svn_wc_conflict_kind_property;
-  cdesc->property_name = propname;
-  cdesc->access = adm_access;
-
   if (!is_dir && working_props)
     mime_propval = apr_hash_get(working_props, SVN_PROP_MIME_TYPE,
                                 APR_HASH_KEY_STRING);
@@ -2392,7 +2387,7 @@ get_file_for_validation(const svn_string_t **mime_type,
                              0, pool));
 
     /* Get a READ_STREAM from the file we just opened. */
-    read_stream = svn_stream_from_aprfile(fp, pool);
+    read_stream = svn_stream_from_aprfile2(fp, TRUE, pool);
 
     /* Copy from the file into the translating stream. */
     SVN_ERR(svn_stream_copy(read_stream, stream, pool));

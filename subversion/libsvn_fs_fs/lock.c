@@ -197,7 +197,7 @@ write_digest_file(apr_hash_t *children,
     }
 
   if ((err = svn_hash_write2(hash,
-                             svn_stream_from_aprfile(fd, pool),
+                             svn_stream_from_aprfile2(fd, TRUE, pool),
                              SVN_HASH_TERMINATOR, pool)))
     {
       svn_error_clear(svn_io_file_close(fd, pool));
@@ -253,7 +253,7 @@ read_digest_file(apr_hash_t **children_p,
 
   hash = apr_hash_make(pool);
   if ((err = svn_hash_read2(hash,
-                            svn_stream_from_aprfile(fd, pool),
+                            svn_stream_from_aprfile2(fd, TRUE, pool),
                             SVN_HASH_TERMINATOR, pool)))
     {
       svn_error_clear(svn_io_file_close(fd, pool));
