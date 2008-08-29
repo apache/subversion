@@ -632,7 +632,7 @@ apply_textdelta(void *file_baton,
   hb->tmppath = fb->tmppath;
 
   svn_txdelta_apply(svn_stream_empty(pool),
-                    svn_stream_from_aprfile(fb->tmp_file, pool),
+                    svn_stream_from_aprfile2(fb->tmp_file, TRUE, pool),
                     fb->text_digest, NULL, pool,
                     &hb->apply_handler, &hb->apply_baton);
 
@@ -854,8 +854,8 @@ svn_client_export4(svn_revnum_t *result_rev,
           /* Step outside the editor-likeness for a moment, to actually talk
            * to the repository. */
           SVN_ERR(svn_ra_get_file(ra_session, "", revnum,
-                                  svn_stream_from_aprfile(fb->tmp_file,
-                                                          pool),
+                                  svn_stream_from_aprfile2(fb->tmp_file, TRUE,
+                                                           pool),
                                   NULL, &props, pool));
 
           /* Push the props into change_file_prop(), to update the file_baton

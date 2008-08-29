@@ -2387,7 +2387,7 @@ get_file_for_validation(const svn_string_t **mime_type,
                              0, pool));
 
     /* Get a READ_STREAM from the file we just opened. */
-    read_stream = svn_stream_from_aprfile(fp, pool);
+    read_stream = svn_stream_from_aprfile2(fp, TRUE, pool);
 
     /* Copy from the file into the translating stream. */
     SVN_ERR(svn_stream_copy(read_stream, stream, pool));

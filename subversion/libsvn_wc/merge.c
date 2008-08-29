@@ -346,7 +346,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
           const char *right_marker;
           svn_stream_t *ostream;
 
-          ostream = svn_stream_from_aprfile(result_f, pool);
+          ostream = svn_stream_from_aprfile2(result_f, TRUE, pool);
 
           SVN_ERR(svn_diff_file_diff3_2(&diff,
                                         left, tmp_target, right,

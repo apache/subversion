@@ -143,7 +143,7 @@ store_delta(apr_file_t **tempfile, svn_filesize_t *len,
   SVN_ERR(svn_io_open_unique_file2(tempfile, NULL,
                                    apr_psprintf(pool, "%s/dump", tempdir),
                                    ".tmp", svn_io_file_del_on_close, pool));
-  temp_stream = svn_stream_from_aprfile(*tempfile, pool);
+  temp_stream = svn_stream_from_aprfile2(*tempfile, TRUE, pool);
 
   /* Compute the delta and send it to the temporary file. */
   SVN_ERR(svn_fs_get_file_delta_stream(&delta_stream, oldroot, oldpath,
@@ -571,7 +571,7 @@ dump_node(struct edit_baton *eb,
       svn_stream_t *contents;
 
       if (delta_file)
-        contents = svn_stream_from_aprfile(delta_file, pool);
+        contents = svn_stream_from_aprfile2(delta_file, TRUE, pool);
       else
         SVN_ERR(svn_fs_file_contents(&contents, eb->fs_root, path, pool));
 
