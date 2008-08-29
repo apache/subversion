@@ -2580,28 +2580,22 @@ def tree_conflicts_block_commit(sbox):
   "tree conflicts block commit" 
   
   # Commit is not allowed in a directory containing tree conflicts.
-  # This test corresponds to use cases 1-3 in 
+  # This test corresponds to use cases 1-3 (with file victims) in 
   # notes/tree-conflicts/use-cases.txt.
 
-  sbox.build()
+  svntest.actions.build_greek_tree_conflicts(sbox)
   wc_dir = sbox.wc_dir
+  A = os.path.join(wc_dir, 'A')
+  D = os.path.join(wc_dir, 'A', 'D')
   G = os.path.join(wc_dir, 'A', 'D', 'G')
 
-  # Set up tree conflicts in wc 2
-  wc_dir_2 = svntest.actions.set_up_tree_conflicts(sbox)
-  G2 = os.path.join(wc_dir_2, 'A', 'D', 'G')
-  D2 = os.path.join(wc_dir_2, 'A', 'D')
-  A2 = os.path.join(wc_dir_2, 'A')
-
-  # Update in wc 2, revealing tree conflicts
-  svntest.main.run_svn(None, 'up', wc_dir_2)
-
   error_re = "remains in conflict"
-  commit_fails_at_path(wc_dir_2, wc_dir_2, error_re)
-  commit_fails_at_path(A2, A2, error_re)
-  commit_fails_at_path(D2, D2, error_re)
-  commit_fails_at_path(G2, G2, error_re)
-  commit_fails_at_path(os.path.join(G2, 'pi'), G2, error_re)
+  commit_fails_at_path(wc_dir, wc_dir, error_re)
+  commit_fails_at_path(A, A, error_re)
+  commit_fails_at_path(D, D, error_re)
+  commit_fails_at_path(G, G, error_re)
+  commit_fails_at_path(os.path.join(G, 'pi'), G, error_re)
+
                                         
 def tree_conflicts_resolved(sbox):
   "tree conflicts resolved" 
@@ -2610,37 +2604,31 @@ def tree_conflicts_resolved(sbox):
   # This test corresponds to use cases 1-3 in 
   # notes/tree-conflicts/use-cases.txt.
 
-  sbox.build()
+  svntest.actions.build_greek_tree_conflicts(sbox)
   wc_dir = sbox.wc_dir
 
-  # Set up tree conflicts in wc 2
-  wc_dir_2 = svntest.actions.set_up_tree_conflicts(sbox)
-
-  # Update in wc 2, revealing tree conflicts
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir_2)
-  
-  # Duplicate wc 2 for tests
-  wc_dir_3 =  sbox.add_wc_path('3')
-  svntest.actions.duplicate_dir(wc_dir_2, wc_dir_3)  
+  # Duplicate wc for tests
+  wc_dir_2 = sbox.add_wc_path('2')
+  svntest.actions.duplicate_dir(wc_dir, wc_dir_2)  
 
   # Resolved in directory containing tree conflicts
-  G2 = os.path.join(wc_dir_2, 'A', 'D', 'G')
-  svntest.actions.run_and_verify_svn(None, None, [], 'resolved', G2)
+  G = os.path.join(wc_dir, 'A', 'D', 'G')
+  svntest.actions.run_and_verify_svn(None, None, [], 'resolved', G)
   
-  expected_status = svntest.actions.get_virginal_state(wc_dir_2, 2)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak('A/D/G/pi',  status='D ')
   expected_status.remove('A/D/G/rho',
                          'A/D/G/tau')
 
-  svntest.actions.run_and_verify_status(wc_dir_2, expected_status)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Recursively resolved in parent directory -- expect same result
-  D3 = os.path.join(wc_dir_3, 'A', 'D')
-  G3 = os.path.join(wc_dir_3, 'A', 'D', 'G')
-  svntest.actions.run_and_verify_svn(None, None, [], 'resolved', D3, '-R')
+  D2 = os.path.join(wc_dir_2, 'A', 'D')
+  G2 = os.path.join(wc_dir_2, 'A', 'D', 'G')
+  svntest.actions.run_and_verify_svn(None, None, [], 'resolved', D2, '-R')
 
-  expected_status.wc_dir = wc_dir_3
-  svntest.actions.run_and_verify_status(wc_dir_3, expected_status)
+  expected_status.wc_dir = wc_dir_2
+  svntest.actions.run_and_verify_status(wc_dir_2, expected_status)
 
 
 ########################################################################

@@ -176,30 +176,25 @@ def info_with_tree_conflicts(sbox):
   # These tests correspond to use cases 1-3 in
   # notes/tree-conflicts/use-cases.txt.
 
-  sbox.build()
+  svntest.actions.build_greek_tree_conflicts(sbox)
   wc_dir = sbox.wc_dir
+  G = os.path.join(wc_dir, 'A', 'D', 'G')
 
-  # Set up tree conflicts in wc 2
-  wc_dir_2 = svntest.actions.set_up_tree_conflicts(sbox)
-  G2 = os.path.join(wc_dir_2, 'A', 'D', 'G')
-
-  # Update in wc 2, revealing tree conflicts
-  svntest.main.run_svn(None, 'up', wc_dir_2)
-
-  # check info of G in wc 2
-  output, error = svntest.actions.run_and_verify_svn(None, None, [],
-                                                     'info', G2)
+  # check info of G
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None, None,
+                                                                [], 'info', G)
 
   verify_lines(output,
                ["Tree conflicts:",
-                "The update edited the file 'pi'",
-                "The update deleted the file 'rho'",
-                "The update deleted the file 'tau'",
+                "The update attempted to edit 'pi'.",
+                "The update attempted to delete 'rho'",
+                "The update attempted to delete 'tau'",
                 ])
 
-  # check XML info of G in wc 2
-  output, error = svntest.actions.run_and_verify_svn(None, None, [],
-                                                     'info', G2, '--xml')
+  # check XML info of G
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None, None,
+                                                                [], 'info', G,
+                                                                '--xml')
 
   verify_xml_elements(output,
                       [('tree-conflict', {'victim'   : 'pi',

@@ -862,55 +862,48 @@ def revert_tree_conflicts_in_updated_files(sbox):
   
   # See use cases 1-3 in notes/tree-conflicts/use-cases.txt for background.
 
-  sbox.build()
+  svntest.actions.build_greek_tree_conflicts(sbox)
   wc_dir = sbox.wc_dir
   G = os.path.join(wc_dir, 'A', 'D', 'G')
 
-  # Set up tree conflicts in wc 2
-  wc_dir_2 = svntest.actions.set_up_tree_conflicts(sbox)
+  # Duplicate wc for tests
+  wc_dir_2 =  sbox.add_wc_path('2')
+  svntest.actions.duplicate_dir(wc_dir, wc_dir_2)  
   G2 = os.path.join(wc_dir_2, 'A', 'D', 'G')
 
-  # Update in wc 2, revealing tree conflicts
-  svntest.main.run_svn(None, 'update', wc_dir_2)
-
-  # Duplicate wc 2 for tests
-  wc_dir_3 =  sbox.add_wc_path('3')
-  svntest.actions.duplicate_dir(wc_dir_2, wc_dir_3)  
-  G3 = os.path.join(wc_dir_3, 'A', 'D', 'G')
-
-  # Revert recursively in wc 2
+  # Revert recursively in wc
   expected_output = svntest.verify.UnorderedOutput(
-   ["Reverted '%s'\n" % G2,
-    "Reverted '%s'\n" % os.path.join(G2, 'pi'),
+   ["Reverted '%s'\n" % G,
+    "Reverted '%s'\n" % os.path.join(G, 'pi'),
     ])
   svntest.actions.run_and_verify_svn(None, expected_output, [], 
-                                     'revert', '-R', G2)
+                                     'revert', '-R', G)
 
-  expected_status = svntest.actions.get_virginal_state(wc_dir_2, 2)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak('A/D/G',     status='  ')
   expected_status.tweak('A/D/G/pi',  status='  ')
   expected_status.remove('A/D/G/rho',
                          'A/D/G/tau')
-  svntest.actions.run_and_verify_status(wc_dir_2, expected_status)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
   
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/D/G/pi',
-                      contents="This is the file 'pi'.\nEdited in wc 1.\n")
+                      contents="This is the file 'pi'.\nIncoming edit.\n")
   expected_disk.tweak('A/D/G/rho',
-                      contents="This is the file 'rho'.\nEdited in wc 2.\n")
+                      contents="This is the file 'rho'.\nLocal edit.\n")
   expected_disk.remove('A/D/G/tau')
-  svntest.actions.verify_disk(wc_dir_2, expected_disk)
+  svntest.actions.verify_disk(wc_dir, expected_disk)
   
-  # Revert only G in wc 3
+  # Revert only G in wc 2
   expected_output = svntest.verify.UnorderedOutput(
-   ["Reverted '%s'\n" % G3,
+   ["Reverted '%s'\n" % G2,
     ])
   svntest.actions.run_and_verify_svn(None, expected_output, [], 
-                                     'revert', G3)
+                                     'revert', G2)
 
-  expected_status.wc_dir = wc_dir_3
+  expected_status.wc_dir = wc_dir_2
   expected_status.tweak('A/D/G/pi',  status='D ') # not a recursive revert
-  svntest.actions.run_and_verify_status(wc_dir_3, expected_status)
+  svntest.actions.run_and_verify_status(wc_dir_2, expected_status)
   
   
 ########################################################################

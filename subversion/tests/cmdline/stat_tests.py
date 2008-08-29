@@ -1519,51 +1519,45 @@ def status_with_tree_conflicts(sbox):
   # These tests correspond to use cases 1-3 in 
   # notes/tree-conflicts/use-cases.txt.
 
-  sbox.build()
-  G = os.path.join(sbox.wc_dir, 'A', 'D', 'G')
+  svntest.actions.build_greek_tree_conflicts(sbox)
+  wc_dir = sbox.wc_dir
+  G = os.path.join(wc_dir, 'A', 'D', 'G')
+  pi = os.path.join(G, 'pi')
+  rho = os.path.join(G, 'rho')
 
-  # Set up tree conflicts in wc 2
-  wc_dir_2 = svntest.actions.set_up_tree_conflicts(sbox)
-  G2 = os.path.join(wc_dir_2, 'A', 'D', 'G')
-  pi2 = os.path.join(G2, 'pi')
-  rho2 = os.path.join(G2, 'rho')
-
-  # Update in wc 2, revealing tree conflicts
-  svntest.main.run_svn(None,'up', wc_dir_2)
-
-  # check status of G in wc 2
+  # check status of G
   expected = svntest.verify.UnorderedOutput(
-         ["C      %s\n" % G2,
-          "D      %s\n" % pi2,
-          "?      %s\n" % rho2,
+         ["C      %s\n" % G,
+          "D      %s\n" % pi,
+          "?      %s\n" % rho,
           ])
 
   svntest.actions.run_and_verify_svn(None,
                                      expected,
                                      [],
-                                     "status", G2)
+                                     "status", G)
 
-  # check status of G in wc 2, with -v
+  # check status of G, with -v
   expected = svntest.verify.UnorderedOutput(
-         ["C               2        2 jrandom      %s\n" % G2,
-          "D               2        2 jrandom      %s\n" % pi2,
-          "?                                       %s\n" % rho2,
+         ["C               2        2 jrandom      %s\n" % G,
+          "D               2        2 jrandom      %s\n" % pi,
+          "?                                       %s\n" % rho,
           ])
 
   svntest.actions.run_and_verify_svn(None,
                                      expected,
                                      [],
-                                     "status", "-v", G2)
+                                     "status", "-v", G)
 
-  # check status of G in wc 2, with -xml
-  exit_code, output, error = svntest.main.run_svn(None, 'status', G2, '--xml')
+  # check status of G, with -xml
+  exit_code, output, error = svntest.main.run_svn(None, 'status', G, '--xml')
 
   template = ["<?xml version=\"1.0\"?>\n",
               "<status>\n",
               "<target\n",
-              "   path=\"%s\">\n" % G2,
+              "   path=\"%s\">\n" % G,
               "<entry\n",
-              "   path=\"%s\">\n" % G2,
+              "   path=\"%s\">\n" % G,
               "<wc-status\n",
               "   props=\"none\"\n",
               "   tree-conflicted=\"true\"\n",  # <-- true!
