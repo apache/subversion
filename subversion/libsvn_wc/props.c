@@ -90,8 +90,24 @@ load_prop_file(const char *propfile_path,
                apr_pool_t *pool)
 {
   svn_error_t *err;
+  svn_stream_t *stream;
+  apr_finfo_t finfo;
 
   apr_file_t *propfile = NULL;
+
+  /* We shouldn't be calling load_prop_file() with an empty file, but
+     we do.  This check makes sure that we don't call svn_hash_read2()
+     on an empty stream.  Ugly, hacky and crude. */
+  err = svn_io_stat(&finfo, propfile_path, APR_FINFO_SIZE, pool);
+  if (err && (APR_STATUS_IS_ENOENT(err->apr_err)
+              || APR_STATUS_IS_ENOTDIR(err->apr_err)))
+    {
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
+  SVN_ERR(err);
+  if (finfo.size == 0)
+    return SVN_NO_ERROR;
 
   err = svn_io_file_open(&propfile, propfile_path,
                          APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
@@ -106,13 +122,12 @@ load_prop_file(const char *propfile_path,
 
   SVN_ERR(err);
 
-  SVN_ERR_W(svn_hash_read(hash, propfile, pool),
+  stream = svn_stream_from_aprfile2(propfile, FALSE, pool);
+  SVN_ERR_W(svn_hash_read2(hash, stream, SVN_HASH_TERMINATOR, pool),
             apr_psprintf(pool, _("Can't parse '%s'"),
                          svn_path_local_style(propfile_path, pool)));
 
-  SVN_ERR(svn_io_file_close(propfile, pool));
-
-  return SVN_NO_ERROR;
+  return svn_stream_close(stream);
 }
 
 

@@ -87,6 +87,7 @@ svn_config_read_auth_data(apr_hash_t **hash,
   if (kind == svn_node_file)
     {
       apr_file_t *authfile = NULL;
+      svn_stream_t *stream;
 
       SVN_ERR_W(svn_io_file_open(&authfile, auth_path,
                                  APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
@@ -95,11 +96,12 @@ svn_config_read_auth_data(apr_hash_t **hash,
 
       *hash = apr_hash_make(pool);
 
-      SVN_ERR_W(svn_hash_read(*hash, authfile, pool),
+      stream = svn_stream_from_aprfile2(authfile, FALSE, pool);
+      SVN_ERR_W(svn_hash_read2(*hash, stream, SVN_HASH_TERMINATOR, pool),
                 apr_psprintf(pool, _("Error parsing '%s'"),
                              svn_path_local_style(auth_path, pool)));
 
-      SVN_ERR(svn_io_file_close(authfile, pool));
+      SVN_ERR(svn_stream_close(stream));
     }
 
   return SVN_NO_ERROR;
