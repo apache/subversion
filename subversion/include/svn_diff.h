@@ -424,6 +424,7 @@ svn_diff_file_diff_2(svn_diff_t **diff,
  *
  * @deprecated Provided for backwards compatibility with the 1.3 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_diff_file_diff(svn_diff_t **diff,
                    const char *original,
@@ -453,6 +454,7 @@ svn_diff_file_diff3_2(svn_diff_t **diff,
  *
  * @deprecated Provided for backwards compatibility with the 1.3 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_diff_file_diff3(svn_diff_t **diff,
                     const char *original,
@@ -484,6 +486,7 @@ svn_diff_file_diff4_2(svn_diff_t **diff,
  *
  * @deprecated Provided for backwards compatibility with the 1.3 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_diff_file_diff4(svn_diff_t **diff,
                     const char *original,
@@ -527,6 +530,7 @@ svn_diff_file_output_unified3(svn_stream_t *output_stream,
  *
  * @deprecated Provided for backwards compatibility with the 1.3 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_diff_file_output_unified2(svn_stream_t *output_stream,
                               svn_diff_t *diff,
@@ -542,6 +546,7 @@ svn_diff_file_output_unified2(svn_stream_t *output_stream,
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_diff_file_output_unified(svn_stream_t *output_stream,
                              svn_diff_t *diff,
@@ -593,6 +598,7 @@ svn_diff_file_output_merge2(svn_stream_t *output_stream,
  *
  * @deprecated Provided for backward compatibility with the 1.5 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_diff_file_output_merge(svn_stream_t *output_stream,
                            svn_diff_t *diff,
@@ -712,6 +718,7 @@ svn_diff_mem_string_output_merge2(svn_stream_t *output_stream,
  *
  * @deprecated Provided for backward compatibility with the 1.5 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_diff_mem_string_output_merge(svn_stream_t *output_stream,
                                  svn_diff_t *diff,

@@ -194,6 +194,7 @@ svn_wc_adm_open3(svn_wc_adm_access_t **adm_access,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_adm_open2(svn_wc_adm_access_t **adm_access,
                  svn_wc_adm_access_t *associated,
@@ -209,6 +210,7 @@ svn_wc_adm_open2(svn_wc_adm_access_t **adm_access,
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_adm_open(svn_wc_adm_access_t **adm_access,
                 svn_wc_adm_access_t *associated,
@@ -246,6 +248,7 @@ svn_wc_adm_probe_open3(svn_wc_adm_access_t **adm_access,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_adm_probe_open2(svn_wc_adm_access_t **adm_access,
                        svn_wc_adm_access_t *associated,
@@ -261,6 +264,7 @@ svn_wc_adm_probe_open2(svn_wc_adm_access_t **adm_access,
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_adm_probe_open(svn_wc_adm_access_t **adm_access,
                       svn_wc_adm_access_t *associated,
@@ -369,6 +373,7 @@ svn_wc_adm_probe_try3(svn_wc_adm_access_t **adm_access,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_adm_probe_try2(svn_wc_adm_access_t **adm_access,
                       svn_wc_adm_access_t *associated,
@@ -384,6 +389,7 @@ svn_wc_adm_probe_try2(svn_wc_adm_access_t **adm_access,
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_adm_probe_try(svn_wc_adm_access_t **adm_access,
                      svn_wc_adm_access_t *associated,
@@ -618,6 +624,7 @@ typedef struct svn_wc_external_item_t
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_wc_external_item_t *
 svn_wc_external_item_dup(const svn_wc_external_item_t *item,
                          apr_pool_t *pool);
@@ -659,6 +666,7 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_parse_externals_description2(apr_array_header_t **externals_p,
                                     const char *parent_directory,
@@ -673,6 +681,7 @@ svn_wc_parse_externals_description2(apr_array_header_t **externals_p,
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_parse_externals_description(apr_hash_t **externals_p,
                                    const char *parent_directory,
@@ -1100,9 +1109,15 @@ typedef enum svn_wc_conflict_kind_t
 /** A struct that describes a conflict that has occurred in the
  * working copy.  Passed to @c svn_wc_conflict_resolver_func_t.
  *
+ * The conflict described by this structure is one of:
+ *   - a conflict on the content of the file node @a path
+ *   - a conflict on the property @a property_name of @a path
+ *
  * @note Fields may be added to the end of this structure in future
  * versions.  Therefore, to preserve binary compatibility, users
- * should not directly allocate structures of this type.
+ * should not directly allocate structures of this type but should use
+ * svn_wc_create_conflict_description_text() or
+ * svn_wc_create_conflict_description_prop() instead.
  *
  * @since New in 1.5.
  */
@@ -1117,15 +1132,17 @@ typedef struct svn_wc_conflict_description_t
   /** What sort of conflict are we describing? */
   svn_wc_conflict_kind_t kind;
 
-  /** Only set if this is a property conflict. */
+  /** The name of the property whose conflict is being described.
+   *  (Only if @a kind is 'property'; else undefined.) */
   const char *property_name;
 
-  /** The following only apply to file objects:
-   *   - Whether svn thinks the object is a binary file.
-   *   - If available (non-NULL), the svn:mime-type property of the path */
+  /** Whether svn thinks ('my' version of) @c path is a 'binary' file.
+   *  (Only if @c kind is 'text', else undefined.) */
   svn_boolean_t is_binary;
 
-  /** mime-type of the object */
+  /** The svn:mime-type property of ('my' version of) @c path, if available,
+   *  else NULL.
+   *  (Only if @c kind is 'text', else undefined.) */
   const char *mime_type;
 
   /** If not NULL, an open working copy access baton to either the
@@ -1133,10 +1150,13 @@ typedef struct svn_wc_conflict_description_t
    *  directory (if @c path is a file.) */
   svn_wc_adm_access_t *access;
 
-  /** The action being attempted on @c path. */
+  /** The action being attempted on the conflicted node or property.
+   *  (When @c kind is 'text', this action must be 'edit'.) */
   svn_wc_conflict_action_t action;
 
-  /** The reason for the conflict. */
+  /** The state of the target node or property, relative to its merge-left
+   *  source, that is the reason for the conflict.
+   *  (When @c kind is 'text', this reason must be 'edited'.) */
   svn_wc_conflict_reason_t reason;
 
   /** If this is text-conflict and involves the merging of two files
@@ -1166,6 +1186,47 @@ typedef struct svn_wc_conflict_description_t
   const char *merged_file;
 
 } svn_wc_conflict_description_t;
+
+/**
+ * Allocate an @c svn_wc_conflict_description_t structure in @a pool,
+ * initialize to represent a text conflict, and return it.
+ *
+ * Set the @c path field of the created struct to @a path, the @c access
+ * field to @a adm_access, the @c kind field to @c
+ * svn_wc_conflict_kind_text, the @c node_kind to @c svn_node_file, the @c
+ * action to @c svn_wc_conflict_action_edit, and the @c reason to @c
+ * svn_wc_conflict_reason_edited.
+ *
+ * @note: It is the caller's responsibility to set the other required fields
+ * (such as the four file names and @c mime_type and @c is_binary).
+ *
+ * @since New in 1.6.
+ */
+svn_wc_conflict_description_t *
+svn_wc_conflict_description_create_text(const char *path,
+                                        svn_wc_adm_access_t *adm_access,
+                                        apr_pool_t *pool);
+
+/**
+ * Allocate an @c svn_wc_conflict_description_t structure in @a pool,
+ * initialize to represent a property conflict, and return it.
+ *
+ * Set the @c path field of the created struct to @a path, the @c access
+ * field to @a adm_access, the @c kind field to @c
+ * svn_wc_conflict_kind_prop, the @c node_kind to @a node_kind, and the @c
+ * property_name to @a property_name.
+ *
+ * @note: It is the caller's responsibility to set the other required fields
+ * (such as the four file names and @c action and @c reason).
+ *
+ * @since New in 1.6.
+ */
+svn_wc_conflict_description_t *
+svn_wc_conflict_description_create_prop(const char *path,
+                                        svn_wc_adm_access_t *adm_access,
+                                        svn_node_kind_t node_kind,
+                                        const char *property_name,
+                                        apr_pool_t *pool);
 
 
 /** The way in which the conflict callback chooses a course of action.
@@ -2087,6 +2148,7 @@ svn_wc_walk_entries3(const char *path,
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_walk_entries2(const char *path,
                      svn_wc_adm_access_t *adm_access,
@@ -2103,6 +2165,7 @@ svn_wc_walk_entries2(const char *path,
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_walk_entries(const char *path,
                     svn_wc_adm_access_t *adm_access,
@@ -2164,6 +2227,7 @@ svn_wc_ensure_adm3(const char *path,
  *
  * @since New in 1.3.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_ensure_adm2(const char *path,
                    const char *uuid,
@@ -2178,6 +2242,7 @@ svn_wc_ensure_adm2(const char *path,
  *
  * @deprecated Provided for backwards compatibility with the 1.2 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_ensure_adm(const char *path,
                   const char *uuid,
@@ -2432,6 +2497,7 @@ svn_wc_dup_status2(svn_wc_status2_t *orig_stat,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_wc_status_t *
 svn_wc_dup_status(svn_wc_status_t *orig_stat,
                   apr_pool_t *pool);
@@ -2476,6 +2542,7 @@ svn_wc_status2(svn_wc_status2_t **status,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_status(svn_wc_status_t **status,
               const char *path,
@@ -2593,6 +2660,7 @@ svn_wc_get_status_editor3(const svn_delta_editor_t **editor,
  * @since New in 1.2.
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_get_status_editor2(const svn_delta_editor_t **editor,
                           void **edit_baton,
@@ -2617,6 +2685,7 @@ svn_wc_get_status_editor2(const svn_delta_editor_t **editor,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_get_status_editor(const svn_delta_editor_t **editor,
                          void **edit_baton,
@@ -2697,6 +2766,7 @@ svn_wc_copy2(const char *src,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_copy(const char *src,
             svn_wc_adm_access_t *dst_parent,
@@ -2747,6 +2817,7 @@ svn_wc_delete3(const char *path,
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_delete2(const char *path,
                svn_wc_adm_access_t *adm_access,
@@ -2761,6 +2832,7 @@ svn_wc_delete2(const char *path,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_delete(const char *path,
               svn_wc_adm_access_t *adm_access,
@@ -2847,6 +2919,7 @@ svn_wc_add3(const char *path,
  *
  * @deprecated Provided for backward compatibility with the 1.5 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_add2(const char *path,
             svn_wc_adm_access_t *parent_access,
@@ -2863,6 +2936,7 @@ svn_wc_add2(const char *path,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_add(const char *path,
            svn_wc_adm_access_t *parent_access,
@@ -2930,6 +3004,7 @@ svn_wc_add_repos_file2(const char *dst_path,
  *
  */
 
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_add_repos_file(const char *dst_path,
                       svn_wc_adm_access_t *adm_access,
@@ -3048,6 +3123,7 @@ svn_wc_resolved_conflict3(const char *path,
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_resolved_conflict2(const char *path,
                           svn_wc_adm_access_t *adm_access,
@@ -3066,6 +3142,7 @@ svn_wc_resolved_conflict2(const char *path,
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_resolved_conflict(const char *path,
                          svn_wc_adm_access_t *adm_access,
@@ -3195,6 +3272,7 @@ svn_wc_process_committed4(const char *path,
  *
  * @deprecated Provided for backwards compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_process_committed3(const char *path,
                           svn_wc_adm_access_t *adm_access,
@@ -3214,6 +3292,7 @@ svn_wc_process_committed3(const char *path,
  *
  * @deprecated Provided for backwards compatibility with the 1.3 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_process_committed2(const char *path,
                           svn_wc_adm_access_t *adm_access,
@@ -3231,6 +3310,7 @@ svn_wc_process_committed2(const char *path,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_process_committed(const char *path,
                          svn_wc_adm_access_t *adm_access,
@@ -3313,6 +3393,7 @@ svn_wc_crawl_revisions3(const char *path,
  *
  * @deprecated Provided for compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_crawl_revisions2(const char *path,
                         svn_wc_adm_access_t *adm_access,
@@ -3332,6 +3413,7 @@ svn_wc_crawl_revisions2(const char *path,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_crawl_revisions(const char *path,
                        svn_wc_adm_access_t *adm_access,
@@ -3488,6 +3570,7 @@ svn_wc_get_update_editor3(svn_revnum_t *target_revision,
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_get_update_editor2(svn_revnum_t *target_revision,
                           svn_wc_adm_access_t *anchor,
@@ -3510,6 +3593,7 @@ svn_wc_get_update_editor2(svn_revnum_t *target_revision,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_get_update_editor(svn_revnum_t *target_revision,
                          svn_wc_adm_access_t *anchor,
@@ -3616,6 +3700,7 @@ svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_get_switch_editor2(svn_revnum_t *target_revision,
                           svn_wc_adm_access_t *anchor,
@@ -3639,6 +3724,7 @@ svn_wc_get_switch_editor2(svn_revnum_t *target_revision,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_get_switch_editor(svn_revnum_t *target_revision,
                          svn_wc_adm_access_t *anchor,
@@ -3736,6 +3822,7 @@ svn_wc_prop_set2(const char *name,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_prop_set(const char *name,
                 const svn_string_t *value,
@@ -3882,6 +3969,7 @@ svn_wc_get_diff_editor5(svn_wc_adm_access_t *anchor,
  *
  * @deprecated Provided for backward compatibility with the 1.5 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_get_diff_editor4(svn_wc_adm_access_t *anchor,
                         const char *target,
@@ -3907,6 +3995,7 @@ svn_wc_get_diff_editor4(svn_wc_adm_access_t *anchor,
 
  * @since New in 1.2.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_get_diff_editor3(svn_wc_adm_access_t *anchor,
                         const char *target,
@@ -3929,6 +4018,7 @@ svn_wc_get_diff_editor3(svn_wc_adm_access_t *anchor,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_get_diff_editor2(svn_wc_adm_access_t *anchor,
                         const char *target,
@@ -3951,6 +4041,7 @@ svn_wc_get_diff_editor2(svn_wc_adm_access_t *anchor,
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_get_diff_editor(svn_wc_adm_access_t *anchor,
                        const char *target,
@@ -4011,6 +4102,7 @@ svn_wc_diff5(svn_wc_adm_access_t *anchor,
  *
  * @deprecated Provided for backward compatibility with the 1.5 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_diff4(svn_wc_adm_access_t *anchor,
              const char *target,
@@ -4029,6 +4121,7 @@ svn_wc_diff4(svn_wc_adm_access_t *anchor,
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_diff3(svn_wc_adm_access_t *anchor,
              const char *target,
@@ -4044,6 +4137,7 @@ svn_wc_diff3(svn_wc_adm_access_t *anchor,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_diff2(svn_wc_adm_access_t *anchor,
              const char *target,
@@ -4059,6 +4153,7 @@ svn_wc_diff2(svn_wc_adm_access_t *anchor,
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_diff(svn_wc_adm_access_t *anchor,
             const char *target,
@@ -4200,6 +4295,7 @@ svn_wc_merge3(enum svn_wc_merge_outcome_t *merge_outcome,
  *
  * @deprecated Provided for backwards compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_merge2(enum svn_wc_merge_outcome_t *merge_outcome,
               const char *left,
@@ -4219,6 +4315,7 @@ svn_wc_merge2(enum svn_wc_merge_outcome_t *merge_outcome,
  *
  * @deprecated Provided for backwards compatibility with the 1.3 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_merge(const char *left,
              const char *right,
@@ -4277,6 +4374,7 @@ svn_wc_merge_props2(svn_wc_notify_state_t *state,
  * @deprecated Provided for backward compatibility with the 1.3 API.
  *
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_merge_props(svn_wc_notify_state_t *state,
                    const char *path,
@@ -4297,6 +4395,7 @@ svn_wc_merge_props(svn_wc_notify_state_t *state,
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_merge_prop_diffs(svn_wc_notify_state_t *state,
                         const char *path,
@@ -4348,6 +4447,7 @@ svn_wc_cleanup2(const char *path,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_cleanup(const char *path,
                svn_wc_adm_access_t *optional_adm_access,
@@ -4421,6 +4521,7 @@ svn_wc_relocate3(const char *path,
 /** Similar to svn_wc_relocate3(), but uses @c svn_wc_relocation_validator2_t.
  *
  * @deprecated Provided for backwards compatibility with the 1.4 API. */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_relocate2(const char *path,
                  svn_wc_adm_access_t *adm_access,
@@ -4434,6 +4535,7 @@ svn_wc_relocate2(const char *path,
 /** Similar to svn_wc_relocate2(), but uses @c svn_wc_relocation_validator_t.
  *
  * @deprecated Provided for backwards compatibility with the 1.3 API. */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_relocate(const char *path,
                 svn_wc_adm_access_t *adm_access,
@@ -4508,6 +4610,7 @@ svn_wc_revert3(const char *path,
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_revert2(const char *path,
                svn_wc_adm_access_t *parent_access,
@@ -4524,6 +4627,7 @@ svn_wc_revert2(const char *path,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_revert(const char *path,
               svn_wc_adm_access_t *parent_access,
@@ -4563,6 +4667,7 @@ svn_wc_create_tmp_file2(apr_file_t **fp,
  *
  * @deprecated For compatibility with 1.3 API
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_create_tmp_file(apr_file_t **fp,
                        const char *path,
@@ -4618,6 +4723,7 @@ svn_wc_translated_file2(const char **xlated_path,
  *
  * @deprecated Provided for compatibility with the 1.3 API
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_translated_file(const char **xlated_p,
                        const char *vfile,
@@ -4696,6 +4802,7 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
  *
  * @deprecated Provided for backwards compatibility with the 1.3 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_transmit_text_deltas(const char *path,
                             svn_wc_adm_access_t *adm_access,

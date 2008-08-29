@@ -342,6 +342,23 @@ static const char *mergeinfo1 = "/trunk: 3,5,7-9,10,11,13,14\n/fred:8-10";
 
 #define NBR_RANGELIST_DELTAS 4
 
+
+/* Convert a single svn_merge_range_t * back into an svn_stringbuf_t *.  */
+static char *
+range_to_string(svn_merge_range_t *range,
+                apr_pool_t *pool)
+{
+  if (range->start == range->end - 1)
+    return apr_psprintf(pool, "%ld%s", range->end,
+                        range->inheritable
+                        ? "" : SVN_MERGEINFO_NONINHERITABLE_STR);
+  else
+    return apr_psprintf(pool, "%ld-%ld%s", range->start + 1,
+                        range->end, range->inheritable
+                        ? "" : SVN_MERGEINFO_NONINHERITABLE_STR);
+}
+
+
 /* Verify that ACTUAL_RANGELIST matches EXPECTED_RANGES (an array of
    NBR_EXPECTED length).  Return an error based careful examination if
    they do not match.  FUNC_VERIFIED is the name of the API being
@@ -366,13 +383,10 @@ verify_ranges_match(apr_array_header_t *actual_rangelist,
       if (range->start != expected_ranges[i].start
           || range->end != expected_ranges[i].end
           || range->inheritable != expected_ranges[i].inheritable)
-          return fail(pool, "%s should report range %ld-%ld%s, "
-                      "but found %ld-%ld%s",
-                      func_verified, expected_ranges[i].start,
-                      expected_ranges[i].end,
-                      expected_ranges[i].inheritable ? "*" : "",
-                      range->start, range->end,
-                      range->inheritable ? "*" : "");
+        return fail(pool, "%s should report range %s, but found %s",
+                    func_verified,
+                    range_to_string(&expected_ranges[i], pool),
+                    range_to_string(range, pool));
     }
   return SVN_NO_ERROR;
 }
@@ -1463,9 +1477,11 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(test_parse_combine_rangeinfo),
     SVN_TEST_PASS(test_parse_broken_mergeinfo),
     SVN_TEST_PASS(test_remove_rangelist),
+    SVN_TEST_PASS(test_rangelist_remove_randomly),
     SVN_TEST_PASS(test_remove_mergeinfo),
     SVN_TEST_PASS(test_rangelist_reverse),
-    SVN_TEST_XFAIL(test_rangelist_intersect),
+    SVN_TEST_PASS(test_rangelist_intersect),
+    SVN_TEST_PASS(test_rangelist_intersect_randomly),
     SVN_TEST_PASS(test_diff_mergeinfo),
     SVN_TEST_PASS(test_merge_mergeinfo),
     SVN_TEST_PASS(test_mergeinfo_intersect),

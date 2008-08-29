@@ -966,7 +966,7 @@ parse_spool_file(svn_ra_neon__session_t *ras,
 
   SVN_ERR(svn_io_file_open(&spool_file, spool_file_name,
                            (APR_READ | APR_BUFFERED), APR_OS_DEFAULT, pool));
-  spool_stream = svn_stream_from_aprfile(spool_file, pool);
+  spool_stream = svn_stream_from_aprfile2(spool_file, TRUE, pool);
   while (1)
     {
       if (ras->callbacks &&

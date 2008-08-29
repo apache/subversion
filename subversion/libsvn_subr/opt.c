@@ -343,8 +343,8 @@ print_command_info(const svn_opt_subcommand_desc_t *cmd,
 
               /* convert each option code into an option */
               option =
-                svn_opt_get_option_from_code(cmd->valid_options[i],
-                                             options_table);
+                svn_opt_get_option_from_code2(cmd->valid_options[i],
+                                              options_table, NULL, pool);
 
               /* print the option's docstring */
               if (option && option->description)

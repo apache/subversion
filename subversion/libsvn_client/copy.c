@@ -1446,7 +1446,6 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
       svn_revnum_t real_rev;
       const char *new_text_path;
       apr_hash_t *new_props;
-      svn_error_t *err;
       const char *src_rel;
 
       SVN_ERR(svn_io_open_unique_file2(&fp, &new_text_path, pair->dst, ".tmp",
@@ -1465,12 +1464,12 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
       if (! SVN_IS_VALID_REVNUM(src_revnum))
         src_revnum = real_rev;
 
-      err = svn_wc_add_repos_file2
+      SVN_ERR(svn_wc_add_repos_file2
         (pair->dst, adm_access,
          new_text_path, NULL, new_props, NULL,
          same_repositories ? pair->src : NULL,
          same_repositories ? src_revnum : SVN_INVALID_REVNUM,
-         pool);
+         pool));
 
       SVN_ERR(svn_wc_entry(&dst_entry, pair->dst, adm_access, FALSE, pool));
       SVN_ERR(calculate_target_mergeinfo(ra_session, &src_mergeinfo,
@@ -1483,7 +1482,7 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
          and baton, and we wouldn't have to make this call here.
          However, the situation is... complicated.  See issue #1552
          for the full story. */
-      if (!err && ctx->notify_func2)
+      if (ctx->notify_func2)
         {
           svn_wc_notify_t *notify = svn_wc_create_notify(pair->dst,
                                                          svn_wc_notify_add,
@@ -1493,7 +1492,6 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
         }
 
       svn_sleep_for_timestamps();
-      SVN_ERR(err);
     }
 
   return SVN_NO_ERROR;

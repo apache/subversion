@@ -457,8 +457,8 @@ def handle_dir(path, current_parent, load_props, ignore_svn):
     else:
       dprops = {}
     new_dir_node = SVNTreeNode(os.path.basename(d), None, None, dprops)
-    handle_dir(d, new_dir_node, load_props, ignore_svn)
     current_parent.add_child(new_dir_node)
+    handle_dir(d, new_dir_node, load_props, ignore_svn)
 
 def get_child(node, name):
   """If SVNTreeNode NODE contains a child named NAME, return child;

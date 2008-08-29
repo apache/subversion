@@ -65,6 +65,7 @@ includedir = @includedir@
 mandir = @mandir@
 srcdir = @srcdir@
 datadir = @datadir@
+datarootdir = @datarootdir@
 localedir = @localedir@
 
 # where to install libsvn_swig_*

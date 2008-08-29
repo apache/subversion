@@ -876,7 +876,7 @@ svn_txdelta_skip_svndiff_window(apr_file_t *file,
                                 int svndiff_version,
                                 apr_pool_t *pool)
 {
-  svn_stream_t *stream = svn_stream_from_aprfile(file, pool);
+  svn_stream_t *stream = svn_stream_from_aprfile2(file, TRUE, pool);
   svn_filesize_t sview_offset;
   apr_size_t sview_len, tview_len, inslen, newlen;
   apr_off_t offset;

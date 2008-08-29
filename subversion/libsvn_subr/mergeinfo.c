@@ -772,9 +772,10 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
       if (i != lasti)
         {
           wboardelt = *(APR_ARRAY_IDX(whiteboard, i, svn_merge_range_t *));
-          elt1 = &wboardelt;
           lasti = i;
         }
+
+      elt1 = &wboardelt;
 
       /* If the whiteboard range is contained completely in the
          eraser, we increment the whiteboard.
@@ -813,7 +814,7 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
                   /* Retain the range that falls between the eraser
                      start and whiteboard end. */
                   tmp_range.start = elt2->start;
-                  tmp_range.end = elt1->end;
+                  tmp_range.end = MIN(elt1->end, elt2->end);
                 }
 
               combine_with_lastrange(&lastrange, &tmp_range, TRUE,
@@ -829,7 +830,7 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
                 {
                   /* Partial overlap. */
                   svn_merge_range_t tmp_range;
-                  tmp_range.start = elt1->start;
+                  tmp_range.start = MAX(elt1->start, elt2->start);
                   tmp_range.end = elt2->end;
                   tmp_range.inheritable = elt1->inheritable;
                   combine_with_lastrange(&lastrange, &tmp_range, TRUE,
@@ -854,14 +855,12 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
             j++;
           else
             {
-              if (!lastrange || !combine_ranges(&lastrange, lastrange, elt1,
-                                                consider_inheritance))
+              if (do_remove && !(lastrange &&
+                                 combine_ranges(&lastrange, lastrange, elt1,
+                                                consider_inheritance)))
                 {
-                  if (do_remove)
-                    {
-                      lastrange = svn_merge_range_dup(elt1, pool);
-                      APR_ARRAY_PUSH(*output, svn_merge_range_t *) = lastrange;
-                    }
+                  lastrange = svn_merge_range_dup(elt1, pool);
+                  APR_ARRAY_PUSH(*output, svn_merge_range_t *) = lastrange;
                 }
               i++;
             }
