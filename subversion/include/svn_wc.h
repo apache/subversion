@@ -1115,7 +1115,9 @@ typedef enum svn_wc_conflict_kind_t
  *
  * @note Fields may be added to the end of this structure in future
  * versions.  Therefore, to preserve binary compatibility, users
- * should not directly allocate structures of this type.
+ * should not directly allocate structures of this type but should use
+ * svn_wc_create_conflict_description_text() or
+ * svn_wc_create_conflict_description_prop() instead.
  *
  * @since New in 1.5.
  */
@@ -1184,6 +1186,47 @@ typedef struct svn_wc_conflict_description_t
   const char *merged_file;
 
 } svn_wc_conflict_description_t;
+
+/**
+ * Allocate an @c svn_wc_conflict_description_t structure in @a pool,
+ * initialize to represent a text conflict, and return it.
+ *
+ * Set the @c path field of the created struct to @a path, the @c access
+ * field to @a adm_access, the @c kind field to @c
+ * svn_wc_conflict_kind_text, the @c node_kind to @c svn_node_file, the @c
+ * action to @c svn_wc_conflict_action_edit, and the @c reason to @c
+ * svn_wc_conflict_reason_edited.
+ *
+ * @note: It is the caller's responsibility to set the other required fields
+ * (such as the four file names and @c mime_type and @c is_binary).
+ *
+ * @since New in 1.6.
+ */
+svn_wc_conflict_description_t *
+svn_wc_conflict_description_create_text(const char *path,
+                                        svn_wc_adm_access_t *adm_access,
+                                        apr_pool_t *pool);
+
+/**
+ * Allocate an @c svn_wc_conflict_description_t structure in @a pool,
+ * initialize to represent a property conflict, and return it.
+ *
+ * Set the @c path field of the created struct to @a path, the @c access
+ * field to @a adm_access, the @c kind field to @c
+ * svn_wc_conflict_kind_prop, the @c node_kind to @a node_kind, and the @c
+ * property_name to @a property_name.
+ *
+ * @note: It is the caller's responsibility to set the other required fields
+ * (such as the four file names and @c action and @c reason).
+ *
+ * @since New in 1.6.
+ */
+svn_wc_conflict_description_t *
+svn_wc_conflict_description_create_prop(const char *path,
+                                        svn_wc_adm_access_t *adm_access,
+                                        svn_node_kind_t node_kind,
+                                        const char *property_name,
+                                        apr_pool_t *pool);
 
 
 /** The way in which the conflict callback chooses a course of action.

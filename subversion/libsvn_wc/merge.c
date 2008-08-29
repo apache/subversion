@@ -398,24 +398,20 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
           if (conflict_func)
             {
               svn_wc_conflict_result_t *result = NULL;
-              svn_wc_conflict_description_t cdesc;
+              svn_wc_conflict_description_t *cdesc;
 
-              cdesc.path = merge_target;
-              cdesc.node_kind = svn_node_file;
-              cdesc.kind = svn_wc_conflict_kind_text;
-              cdesc.is_binary = FALSE;
-              cdesc.mime_type = (mimeprop && mimeprop->value)
-                                  ? mimeprop->value->data : NULL;
-              cdesc.access = adm_access;
-              cdesc.action = svn_wc_conflict_action_edit;
-              cdesc.reason = svn_wc_conflict_reason_edited;
-              cdesc.base_file = left;
-              cdesc.their_file = right;
-              cdesc.my_file = tmp_target;
-              cdesc.merged_file = result_target;
-              cdesc.property_name = NULL;
+              cdesc = svn_wc_conflict_description_create_text(merge_target,
+                                                              adm_access,
+                                                              pool);
+              cdesc->is_binary = FALSE;
+              cdesc->mime_type = (mimeprop && mimeprop->value)
+                                 ? mimeprop->value->data : NULL,
+              cdesc->base_file = left;
+              cdesc->their_file = right;
+              cdesc->my_file = tmp_target;
+              cdesc->merged_file = result_target;
 
-              SVN_ERR(conflict_func(&result, &cdesc, conflict_baton, pool));
+              SVN_ERR(conflict_func(&result, cdesc, conflict_baton, pool));
               if (result == NULL)
                 return svn_error_create(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
                                         NULL, _("Conflict callback violated API:"
@@ -714,24 +710,19 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
       if (conflict_func)
         {
           svn_wc_conflict_result_t *result = NULL;
-          svn_wc_conflict_description_t cdesc;
+          svn_wc_conflict_description_t *cdesc;
 
-          cdesc.path = merge_target;
-          cdesc.node_kind = svn_node_file;
-          cdesc.kind = svn_wc_conflict_kind_text;
-          cdesc.is_binary = TRUE;
-          cdesc.mime_type = (mimeprop && mimeprop->value)
-                                ? mimeprop->value->data : NULL;
-          cdesc.access = adm_access;
-          cdesc.action = svn_wc_conflict_action_edit;
-          cdesc.reason = svn_wc_conflict_reason_edited;
-          cdesc.base_file = left;
-          cdesc.their_file = right;
-          cdesc.my_file = tmp_target;
-          cdesc.merged_file = NULL;     /* notice there is NO merged file! */
-          cdesc.property_name = NULL;
+          cdesc = svn_wc_conflict_description_create_text(merge_target,
+                                                          adm_access, pool);
+          cdesc->is_binary = TRUE;
+          cdesc->mime_type = (mimeprop && mimeprop->value)
+                             ? mimeprop->value->data : NULL,
+          cdesc->base_file = left;
+          cdesc->their_file = right;
+          cdesc->my_file = tmp_target;
+          cdesc->merged_file = NULL;     /* notice there is NO merged file! */
 
-          SVN_ERR(conflict_func(&result, &cdesc, conflict_baton, pool));
+          SVN_ERR(conflict_func(&result, cdesc, conflict_baton, pool));
           if (result == NULL)
             return svn_error_create(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
                                     NULL, _("Conflict callback violated API:"
