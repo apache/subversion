@@ -619,7 +619,7 @@ dump_contents(apr_file_t *fh,
 
   /* Grab the contents and copy them into fh. */
   SVN_ERR(svn_fs_file_contents(&contents, root, path, pool));
-  file_stream = svn_stream_from_aprfile(fh, pool);
+  file_stream = svn_stream_from_aprfile2(fh, TRUE, pool);
   SVN_ERR(svn_stream_copy(contents, file_stream, pool));
   return SVN_NO_ERROR;
 }

@@ -2205,8 +2205,8 @@ apply_textdelta(void *file_baton,
     }
 
   /* Prepare to apply the delta.  */
-  svn_txdelta_apply(svn_stream_from_aprfile(hb->source, handler_pool),
-                    svn_stream_from_aprfile(hb->dest, handler_pool),
+  svn_txdelta_apply(svn_stream_from_aprfile2(hb->source, TRUE, handler_pool),
+                    svn_stream_from_aprfile2(hb->dest, TRUE, handler_pool),
                     fb->digest, fb->new_text_base_path, handler_pool,
                     &hb->apply_handler, &hb->apply_baton);
 
