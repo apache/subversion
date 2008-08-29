@@ -669,7 +669,7 @@ proppatch_walker(void *baton,
 
   if (binary_prop == TRUE)
     {
-      val = svn_base64_encode_string(val, pool);
+      val = svn_base64_encode_string2(val, TRUE, pool);
     }
   else
     {

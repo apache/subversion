@@ -151,7 +151,8 @@ change_file_or_dir_prop(const char *file_or_dir,
 
   if (value)
     {
-      const svn_string_t *enc_value = svn_base64_encode_string(value, pool);
+      const svn_string_t *enc_value = svn_base64_encode_string2(value, TRUE,
+                                                                pool);
 
       SVN_ERR(dav_svn__send_xml
                 (eb->bb, eb->output,

@@ -658,7 +658,7 @@ upd_change_xxx_prop(void *baton,
             }
           else
             {
-              qval = svn_base64_encode_string(value, pool)->data;
+              qval = svn_base64_encode_string2(value, TRUE, pool)->data;
               SVN_ERR(dav_svn__send_xml(b->uc->bb, b->uc->output,
                                         "<S:set-prop name=\"%s\" "
                                         "encoding=\"base64\">" DEBUG_CR,
