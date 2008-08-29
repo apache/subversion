@@ -2207,13 +2207,16 @@ svn_fs_fs__set_revision_proplist(svn_fs_t *fs,
   const char *final_path = path_revprops(fs, rev, pool);
   const char *tmp_path;
   apr_file_t *f;
+  svn_stream_t *stream;
 
   SVN_ERR(ensure_revision_exists(fs, rev, pool));
 
   SVN_ERR(svn_io_open_unique_file2
           (&f, &tmp_path, final_path, ".tmp", svn_io_file_del_none, pool));
-  SVN_ERR(svn_hash_write(proplist, f, pool));
-  SVN_ERR(svn_io_file_close(f, pool));
+  stream = svn_stream_from_aprfile2(f, FALSE, pool);
+  SVN_ERR(svn_hash_write2(proplist, stream, SVN_HASH_TERMINATOR, pool));
+  SVN_ERR(svn_stream_close(stream));
+
   /* We use the rev file of this revision as the perms reference,
      because when setting revprops for the first time, the revprop
      file won't exist and therefore can't serve as its own reference.
@@ -3986,6 +3989,7 @@ svn_fs_fs__change_txn_props(svn_fs_txn_t *txn,
                             apr_pool_t *pool)
 {
   apr_file_t *txn_prop_file;
+  svn_stream_t *stream;
   apr_hash_t *txn_prop = apr_hash_make(pool);
   int i;
   svn_error_t *err;
@@ -4014,11 +4018,10 @@ svn_fs_fs__change_txn_props(svn_fs_txn_t *txn,
                            APR_WRITE | APR_CREATE | APR_TRUNCATE
                            | APR_BUFFERED, APR_OS_DEFAULT, pool));
 
-  SVN_ERR(svn_hash_write(txn_prop, txn_prop_file, pool));
+  stream = svn_stream_from_aprfile2(txn_prop_file, FALSE, pool);
+  SVN_ERR(svn_hash_write2(txn_prop, stream, SVN_HASH_TERMINATOR, pool));
 
-  SVN_ERR(svn_io_file_close(txn_prop_file, pool));
-
-  return SVN_NO_ERROR;
+  return svn_stream_close(stream);
 }
 
 svn_error_t *
