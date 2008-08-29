@@ -96,7 +96,9 @@ typedef enum
 #define SVN_CL__ACCEPT_EDIT "edit"
 #define SVN_CL__ACCEPT_LAUNCH "launch"
 
-/* Return svn_cl__accept_t value corresponding to word. */
+/* Return the svn_cl__accept_t value corresponding to WORD, using exact
+ * case-sensitive string comparison. Return svn_cl__accept_invalid if WORD
+ * is empty or is not one of the known values. */
 svn_cl__accept_t
 svn_cl__accept_from_word(const char *word);
 
@@ -304,8 +306,9 @@ typedef struct {
   svn_cmdline_prompt_baton_t *pb;
 } svn_cl__conflict_baton_t;
 
-/* Return address of newly allocated and initialized
-   svn_cl__conflict_baton_t. */
+/* Create and return a conflict baton, allocated from POOL, with the values
+   ACCEPT_WHICH, CONFIG, EDITOR_CMD and PB placed in the same-named fields
+   of the baton, and its 'external_failed' field initialised to FALSE. */
 svn_cl__conflict_baton_t *
 svn_cl__conflict_baton_make(svn_cl__accept_t accept_which,
                             apr_hash_t *config,
