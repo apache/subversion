@@ -1109,6 +1109,10 @@ typedef enum svn_wc_conflict_kind_t
 /** A struct that describes a conflict that has occurred in the
  * working copy.  Passed to @c svn_wc_conflict_resolver_func_t.
  *
+ * The conflict described by this structure is one of:
+ *   - a conflict on the content of the file node @a path
+ *   - a conflict on the property @a property_name of @a path
+ *
  * @note Fields may be added to the end of this structure in future
  * versions.  Therefore, to preserve binary compatibility, users
  * should not directly allocate structures of this type.
@@ -1126,15 +1130,17 @@ typedef struct svn_wc_conflict_description_t
   /** What sort of conflict are we describing? */
   svn_wc_conflict_kind_t kind;
 
-  /** Only set if this is a property conflict. */
+  /** The name of the property whose conflict is being described.
+   *  (Only if @a kind is 'property'; else undefined.) */
   const char *property_name;
 
-  /** The following only apply to file objects:
-   *   - Whether svn thinks the object is a binary file.
-   *   - If available (non-NULL), the svn:mime-type property of the path */
+  /** Whether svn thinks ('my' version of) @c path is a 'binary' file.
+   *  (Only if @c kind is 'text', else undefined.) */
   svn_boolean_t is_binary;
 
-  /** mime-type of the object */
+  /** The svn:mime-type property of ('my' version of) @c path, if available,
+   *  else NULL.
+   *  (Only if @c kind is 'text', else undefined.) */
   const char *mime_type;
 
   /** If not NULL, an open working copy access baton to either the
@@ -1142,10 +1148,13 @@ typedef struct svn_wc_conflict_description_t
    *  directory (if @c path is a file.) */
   svn_wc_adm_access_t *access;
 
-  /** The action being attempted on @c path. */
+  /** The action being attempted on the conflicted node or property.
+   *  (When @c kind is 'text', this action must be 'edit'.) */
   svn_wc_conflict_action_t action;
 
-  /** The reason for the conflict. */
+  /** The state of the target node or property, relative to its merge-left
+   *  source, that is the reason for the conflict.
+   *  (When @c kind is 'text', this reason must be 'edited'.) */
   svn_wc_conflict_reason_t reason;
 
   /** If this is text-conflict and involves the merging of two files
