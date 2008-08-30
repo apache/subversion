@@ -1,7 +1,7 @@
 /* svndiff-test.c -- test driver for text deltas
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -68,8 +68,8 @@ main(int argc, char **argv)
     version = atoi(argv[3]);
 
   svn_txdelta(&txdelta_stream,
-              svn_stream_from_aprfile(source_file, pool),
-              svn_stream_from_aprfile(target_file, pool),
+              svn_stream_from_aprfile2(source_file, TRUE, pool),
+              svn_stream_from_aprfile2(target_file, TRUE, pool),
               pool);
 
   err = svn_stream_for_stdout(&stdout_stream, pool);

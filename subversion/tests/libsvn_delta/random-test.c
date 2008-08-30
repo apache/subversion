@@ -2,7 +2,7 @@
  * random-test.c:  Test delta generation and application using random data.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -329,8 +329,8 @@ random_test(const char **msg,
       apr_pool_t *delta_pool = svn_pool_create(pool);
 
       /* Make stage 4: apply the text delta.  */
-      svn_txdelta_apply(svn_stream_from_aprfile(source_copy, delta_pool),
-                        svn_stream_from_aprfile(target_regen, delta_pool),
+      svn_txdelta_apply(svn_stream_from_aprfile2(source_copy, TRUE, delta_pool),
+                        svn_stream_from_aprfile2(target_regen, TRUE, delta_pool),
                         NULL, NULL, delta_pool, &handler, &handler_baton);
 
       /* Make stage 3: reparse the text delta.  */
@@ -343,8 +343,8 @@ random_test(const char **msg,
 
       /* Make stage 1: create the text delta.  */
       svn_txdelta(&txdelta_stream,
-                  svn_stream_from_aprfile(source, delta_pool),
-                  svn_stream_from_aprfile(target, delta_pool),
+                  svn_stream_from_aprfile2(source, TRUE, delta_pool),
+                  svn_stream_from_aprfile2(target, TRUE, delta_pool),
                   delta_pool);
 
       SVN_ERR(svn_txdelta_send_txstream(txdelta_stream,
@@ -423,8 +423,8 @@ do_random_combine_test(const char **msg,
       apr_pool_t *delta_pool = svn_pool_create(pool);
 
       /* Make stage 4: apply the text delta.  */
-      svn_txdelta_apply(svn_stream_from_aprfile(source_copy, delta_pool),
-                        svn_stream_from_aprfile(target_regen, delta_pool),
+      svn_txdelta_apply(svn_stream_from_aprfile2(source_copy, TRUE, delta_pool),
+                        svn_stream_from_aprfile2(target_regen, TRUE, delta_pool),
                         NULL, NULL, delta_pool, &handler, &handler_baton);
 
       /* Make stage 3: reparse the text delta.  */
@@ -438,13 +438,13 @@ do_random_combine_test(const char **msg,
       /* Make stage 1: create the text deltas.  */
 
       svn_txdelta(&txdelta_stream_A,
-                  svn_stream_from_aprfile(source, delta_pool),
-                  svn_stream_from_aprfile(middle, delta_pool),
+                  svn_stream_from_aprfile2(source, TRUE, delta_pool),
+                  svn_stream_from_aprfile2(middle, TRUE, delta_pool),
                   delta_pool);
 
       svn_txdelta(&txdelta_stream_B,
-                  svn_stream_from_aprfile(middle_copy, delta_pool),
-                  svn_stream_from_aprfile(target, delta_pool),
+                  svn_stream_from_aprfile2(middle_copy, TRUE, delta_pool),
+                  svn_stream_from_aprfile2(target, TRUE, delta_pool),
                   delta_pool);
 
       {
