@@ -27,6 +27,7 @@
    apr.h, so we can't detect this case here. */
 
 #define WIN32_LEAN_AND_MEAN
+/* winsock2.h includes windows.h */
 #include <winsock2.h>
 #include <Ws2tcpip.h>
 

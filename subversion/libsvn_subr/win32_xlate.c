@@ -26,6 +26,7 @@
    compilation errors. APR_HAVE_IPV6 is only defined after including
    apr.h, so we can't detect this case here. */
 
+/* winsock2.h includes windows.h */
 #include <winsock2.h>
 #include <Ws2tcpip.h>
 #include <mlang.h>
