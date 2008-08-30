@@ -6,7 +6,7 @@
  *              information is kept.
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -291,7 +291,7 @@ svn_wc__check_killme(svn_wc_adm_access_t *adm_access,
   path = extend_with_adm_name(svn_wc_adm_access_path(adm_access),
                               NULL, FALSE, pool, SVN_WC__ADM_KILLME, NULL);
 
-  err = svn_stringbuf_from_file(&contents, path, pool);
+  err = svn_stringbuf_from_file2(&contents, path, pool);
 
   if (err)
     {

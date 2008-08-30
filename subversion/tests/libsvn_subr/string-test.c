@@ -1,8 +1,8 @@
 /*
- * string-test.c:  a collection of libsvn_string tests
+ * string-test.c:  a collection of string tests
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -438,7 +438,7 @@ test12(const char **msg,
   if (status)
     return fail(pool, "closing file");
 
-  SVN_ERR(svn_stringbuf_from_file(&s, fname, pool));
+  SVN_ERR(svn_stringbuf_from_file2(&s, fname, pool));
   SVN_ERR(check_string_contents(s, ftext, sizeof(ftext) - 1, repeat, pool));
 
   /* Reset to avoid false positives */

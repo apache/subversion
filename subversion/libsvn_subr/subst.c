@@ -2,7 +2,7 @@
  * subst.c :  generic eol/keyword substitution routines
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1661,7 +1661,7 @@ create_special_file(const char *src, const char *dst, apr_pool_t *pool)
     }
   else
     /* Read in the detranslated file. */
-    SVN_ERR(svn_stringbuf_from_file(&contents, src, pool));
+    SVN_ERR(svn_stringbuf_from_file2(&contents, src, pool));
 
   return create_special_file_from_stringbuf(contents, dst, pool);
 }

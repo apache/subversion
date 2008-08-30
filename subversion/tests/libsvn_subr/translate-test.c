@@ -2,7 +2,7 @@
  * translate-test.c -- test the eol and keyword translation subroutine
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -722,7 +722,7 @@ substitute_and_verify(const char *test_name,
 
   /** Ready to verify. **/
 
-  SVN_ERR(svn_stringbuf_from_file(&contents, dst_fname, pool));
+  SVN_ERR(svn_stringbuf_from_file2(&contents, dst_fname, pool));
 
   for (i = 0; i < (sizeof(expect) / sizeof(*expect)); i++)
     {

@@ -4,7 +4,7 @@
  * in here.
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -432,7 +432,7 @@ svn_cl__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
       (finfo_before.size != finfo_after.size))
     {
       svn_stringbuf_t *edited_contents_s;
-      err = svn_stringbuf_from_file(&edited_contents_s, tmpfile_name, pool);
+      err = svn_stringbuf_from_file2(&edited_contents_s, tmpfile_name, pool);
       if (err)
         goto cleanup;
 
