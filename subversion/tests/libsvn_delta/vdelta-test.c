@@ -1,7 +1,7 @@
 /* vdelta-test.c -- test driver for text deltas
  *
  * ====================================================================
- * Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -53,8 +53,8 @@ do_one_diff(apr_file_t *source_file, apr_file_t *target_file,
   *count = 0;
   *len = 0;
   svn_txdelta(&delta_stream,
-              svn_stream_from_aprfile2(source_file, TRUE, fpool),
-              svn_stream_from_aprfile2(target_file, TRUE, fpool),
+              svn_stream_from_aprfile(source_file, fpool),
+              svn_stream_from_aprfile(target_file, fpool),
               fpool);
   do {
     svn_error_t *err;
@@ -175,12 +175,12 @@ main(int argc, char **argv)
       }
 
       svn_txdelta(&stream_A,
-                  svn_stream_from_aprfile2(source_file_A, TRUE, fpool),
-                  svn_stream_from_aprfile2(target_file_A, TRUE, fpool),
+                  svn_stream_from_aprfile(source_file_A, fpool),
+                  svn_stream_from_aprfile(target_file_A, fpool),
                   fpool);
       svn_txdelta(&stream_B,
-                  svn_stream_from_aprfile2(source_file_B, TRUE, fpool),
-                  svn_stream_from_aprfile2(target_file_B, TRUE, fpool),
+                  svn_stream_from_aprfile(source_file_B, fpool),
+                  svn_stream_from_aprfile(target_file_B, fpool),
                   fpool);
 
       for (count_AB = 0; count_AB < count_B; ++count_AB)
