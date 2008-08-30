@@ -200,7 +200,7 @@ three_way_merge(const char *filename1,
   if (status)
     return svn_error_createf(status, NULL, "failed to open '%s'", merge_name);
 
-  ostream = svn_stream_from_aprfile(output, pool);
+  ostream = svn_stream_from_aprfile2(output, TRUE, pool);
   SVN_ERR(svn_diff_file_output_merge2(ostream, diff,
                                       filename1, filename2, filename3,
                                       NULL, NULL, NULL, NULL,
@@ -286,7 +286,7 @@ two_way_diff(const char *filename1,
   if (status)
     return svn_error_createf(status, NULL, "failed to open '%s'", diff_name);
 
-  ostream = svn_stream_from_aprfile(output, pool);
+  ostream = svn_stream_from_aprfile2(output, TRUE, pool);
   SVN_ERR(svn_diff_file_output_unified2(ostream, diff,
                                         filename1, filename2,
                                         filename1, filename2,

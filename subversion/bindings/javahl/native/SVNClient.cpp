@@ -1571,7 +1571,7 @@ svn_stream_t *SVNClient::createReadStream(apr_pool_t *pool, const char *path,
             JNIUtil::handleAPRError(apr_err, _("open file"));
             return NULL;
         }
-        read_stream = svn_stream_from_aprfile(file, pool);
+        read_stream = svn_stream_from_aprfile2(file, TRUE, pool);
         size = finfo.size;
     }
     else
