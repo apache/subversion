@@ -2,7 +2,7 @@
  * replay.c :  routines for replaying revisions
  *
  * ====================================================================
- * Copyright (c) 2005 CollabNet.  All rights reserved.
+ * Copyright (c) 2005, 2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -304,9 +304,13 @@ apply_textdelta(void *file_baton,
   else
     SVN_ERR(dav_svn__send_xml(eb->bb, eb->output, ">"));
 
-  svn_txdelta_to_svndiff(dav_svn__make_base64_output_stream(eb->bb, eb->output,
-                                                            pool),
-                         pool, handler, handler_baton);
+  svn_txdelta_to_svndiff2(handler,
+                          handler_baton,
+                          dav_svn__make_base64_output_stream(eb->bb,
+                                                             eb->output,
+                                                             pool),
+                          0,
+                          pool);
 
   eb->sending_textdelta = TRUE;
 
