@@ -902,7 +902,7 @@ static const apr_getopt_option_t options_table[] =
 /* Array of available subcommands.
  * The entire list must be terminated with an entry of nulls.
  */
-static const svn_opt_subcommand_desc_t cmd_table[] =
+static const svn_opt_subcommand_desc2_t cmd_table[] =
   {
     {"exclude", subcommand_exclude, {0},
      N_("Filter out nodes with given prefixes from dumpstream.\n"
@@ -1001,11 +1001,11 @@ subcommand_help(apr_getopt_t *os, void *baton, apr_pool_t *pool)
       "\n"
       "Available subcommands:\n");
 
-  SVN_ERR(svn_opt_print_help(os, "svndumpfilter",
-                             opt_state ? opt_state->version : FALSE,
-                             FALSE, NULL,
-                             header, cmd_table, options_table, NULL,
-                             pool));
+  SVN_ERR(svn_opt_print_help3(os, "svndumpfilter",
+                              opt_state ? opt_state->version : FALSE,
+                              FALSE, NULL,
+                              header, cmd_table, options_table, NULL,
+                              NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1186,7 +1186,7 @@ main(int argc, const char *argv[])
   apr_allocator_t *allocator;
   apr_pool_t *pool;
 
-  const svn_opt_subcommand_desc_t *subcommand = NULL;
+  const svn_opt_subcommand_desc2_t *subcommand = NULL;
   struct svndumpfilter_opt_state opt_state;
   apr_getopt_t *os;
   int opt_id;
@@ -1297,7 +1297,7 @@ main(int argc, const char *argv[])
      just typos/mistakes.  Whatever the case, the subcommand to
      actually run is subcommand_help(). */
   if (opt_state.help)
-    subcommand = svn_opt_get_canonical_subcommand(cmd_table, "help");
+    subcommand = svn_opt_get_canonical_subcommand2(cmd_table, "help");
 
   /* If we're not running the `help' subcommand, then look for a
      subcommand in the first argument. */
@@ -1308,7 +1308,7 @@ main(int argc, const char *argv[])
           if (opt_state.version)
             {
               /* Use the "help" subcommand to handle the "--version" option. */
-              static const svn_opt_subcommand_desc_t pseudo_cmd =
+              static const svn_opt_subcommand_desc2_t pseudo_cmd =
                 { "--version", subcommand_help, {0}, "",
                   {svndumpfilter__version,  /* must accept its own option */
                   } };
@@ -1328,7 +1328,7 @@ main(int argc, const char *argv[])
       else
         {
           const char *first_arg = os->argv[os->ind++];
-          subcommand = svn_opt_get_canonical_subcommand(cmd_table, first_arg);
+          subcommand = svn_opt_get_canonical_subcommand2(cmd_table, first_arg);
           if (subcommand == NULL)
             {
               const char* first_arg_utf8;
@@ -1413,11 +1413,11 @@ main(int argc, const char *argv[])
       if (opt_id == 'h' || opt_id == '?')
         continue;
 
-      if (! svn_opt_subcommand_takes_option(subcommand, opt_id))
+      if (! svn_opt_subcommand_takes_option3(subcommand, opt_id, NULL))
         {
           const char *optstr;
           const apr_getopt_option_t *badopt =
-            svn_opt_get_option_from_code2(opt_id, subcommand, options_table,
+            svn_opt_get_option_from_code2(opt_id, options_table, subcommand,
                                           pool);
           svn_opt_format_option(&optstr, badopt, FALSE, pool);
           if (subcommand->name[0] == '-')
