@@ -791,7 +791,7 @@ svn_auth_get_simple_provider(svn_auth_provider_object_t **provider,
  * ~/.subversion configuration directory.  Allocate @a *provider in
  * @a pool.
  *
- * This is like svn_client_get_simple_provider(), except that, when
+ * This is like svn_auth_get_simple_provider(), except that, when
  * running on Window 2000 or newer (or any other Windows version that
  * includes the CryptoAPI), the provider encrypts the password before
  * storing it to disk. On earlier versions of Windows, the provider
@@ -816,7 +816,7 @@ svn_auth_get_windows_simple_provider(svn_auth_provider_object_t **provider,
  * ~/.subversion configuration directory.  Allocate @a *provider in
  * @a pool.
  *
- * This is like svn_client_get_simple_provider(), except that the
+ * This is like svn_auth_get_simple_provider(), except that the
  * password is stored in the Mac OS KeyChain.
  *
  * @since New in 1.4
@@ -914,8 +914,9 @@ svn_auth_get_ssl_client_cert_pw_file_provider2
    void *prompt_baton,
    apr_pool_t *pool);
 
-/** Like svn_auth_get_simple_provider2, but without the ability to
- * call the svn_auth_plaintext_passphrase_prompt_func_t callback.
+/** Like svn_auth_get_ssl_client_cert_pw_file_provider2, but without
+ * the ability to call the svn_auth_plaintext_passphrase_prompt_func_t
+ * callback.
  *
  * @deprecated Provided for backwards compatibility with the 1.5 API.
  * @since New in 1.4.
