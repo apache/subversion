@@ -2,7 +2,7 @@
  * Incomplete regression tests for the diff/diff3 library.
  *
  * ====================================================================
- * Copyright (c) 2003-2006, 2008 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -200,7 +200,7 @@ three_way_merge(const char *filename1,
   if (status)
     return svn_error_createf(status, NULL, "failed to open '%s'", merge_name);
 
-  ostream = svn_stream_from_aprfile2(output, TRUE, pool);
+  ostream = svn_stream_from_aprfile(output, pool);
   SVN_ERR(svn_diff_file_output_merge2(ostream, diff,
                                       filename1, filename2, filename3,
                                       NULL, NULL, NULL, NULL,
@@ -210,7 +210,7 @@ three_way_merge(const char *filename1,
   status = apr_file_close(output);
   if (status)
     return svn_error_createf(status, NULL, "failed to close '%s'", merge_name);
-  SVN_ERR(svn_stringbuf_from_file2(&actual, merge_name, pool));
+  SVN_ERR(svn_stringbuf_from_file(&actual, merge_name, pool));
   if (strcmp(actual->data, expected))
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                              "failed merging diff '%s' to '%s' into '%s'",
@@ -286,7 +286,7 @@ two_way_diff(const char *filename1,
   if (status)
     return svn_error_createf(status, NULL, "failed to open '%s'", diff_name);
 
-  ostream = svn_stream_from_aprfile2(output, TRUE, pool);
+  ostream = svn_stream_from_aprfile(output, pool);
   SVN_ERR(svn_diff_file_output_unified2(ostream, diff,
                                         filename1, filename2,
                                         filename1, filename2,
@@ -296,7 +296,7 @@ two_way_diff(const char *filename1,
   if (status)
     return svn_error_createf(status, NULL, "failed to close '%s'", diff_name);
 
-  SVN_ERR(svn_stringbuf_from_file2(&actual, diff_name, pool));
+  SVN_ERR(svn_stringbuf_from_file(&actual, diff_name, pool));
   if (strcmp(actual->data, expected))
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                              "failed comparing '%s' and '%s'",
@@ -2122,8 +2122,8 @@ random_trivial_merge(const char **msg,
                                min_lines, max_lines, var_lines, block_lines,
                                i % 2, subpool));
 
-      SVN_ERR(svn_stringbuf_from_file2(&contents1, filename1, subpool));
-      SVN_ERR(svn_stringbuf_from_file2(&contents2, filename2, subpool));
+      SVN_ERR(svn_stringbuf_from_file(&contents1, filename1, subpool));
+      SVN_ERR(svn_stringbuf_from_file(&contents2, filename2, subpool));
 
       SVN_ERR(three_way_merge(filename1, filename2, filename1,
                               contents1->data, contents2->data,
@@ -2192,10 +2192,10 @@ random_three_way_merge(const char **msg,
       SVN_ERR(make_random_merge_file(filename4, num_lines, mrg_lines,
                                      num_src + num_dst, pool));
 
-      SVN_ERR(svn_stringbuf_from_file2(&original, filename1, pool));
-      SVN_ERR(svn_stringbuf_from_file2(&modified1, filename2, pool));
-      SVN_ERR(svn_stringbuf_from_file2(&modified2, filename3, pool));
-      SVN_ERR(svn_stringbuf_from_file2(&combined, filename4, pool));
+      SVN_ERR(svn_stringbuf_from_file(&original, filename1, pool));
+      SVN_ERR(svn_stringbuf_from_file(&modified1, filename2, pool));
+      SVN_ERR(svn_stringbuf_from_file(&modified2, filename3, pool));
+      SVN_ERR(svn_stringbuf_from_file(&combined, filename4, pool));
 
       SVN_ERR(three_way_merge(filename1, filename2, filename3,
                               original->data, modified1->data,
@@ -2271,10 +2271,10 @@ merge_with_part_already_present(const char **msg,
       SVN_ERR(make_random_merge_file(filename4, num_lines, mrg_lines,
                                      num_src + num_dst / 2, pool));
 
-      SVN_ERR(svn_stringbuf_from_file2(&original, filename1, pool));
-      SVN_ERR(svn_stringbuf_from_file2(&modified1, filename2, pool));
-      SVN_ERR(svn_stringbuf_from_file2(&modified2, filename3, pool));
-      SVN_ERR(svn_stringbuf_from_file2(&combined, filename4, pool));
+      SVN_ERR(svn_stringbuf_from_file(&original, filename1, pool));
+      SVN_ERR(svn_stringbuf_from_file(&modified1, filename2, pool));
+      SVN_ERR(svn_stringbuf_from_file(&modified2, filename3, pool));
+      SVN_ERR(svn_stringbuf_from_file(&combined, filename4, pool));
 
       SVN_ERR(three_way_merge(filename1, filename2, filename3,
                               original->data, modified1->data,
