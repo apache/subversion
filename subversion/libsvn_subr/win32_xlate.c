@@ -21,12 +21,13 @@
 /* Define _WIN32_DCOM for CoInitializeEx(). */
 #define _WIN32_DCOM
 
-#ifdef APR_HAVE_IPV6
+/* We must include windows.h ourselves or apr.h includes it for us with
+   many ignore options set. Including Winsock is required to resolve IPv6
+   compilation errors. APR_HAVE_IPV6 is only defined after including
+   apr.h, so we can't detect this case here. */
+
 #include <winsock2.h>
 #include <Ws2tcpip.h>
-#include <Wspiapi.h>
-#endif
-#include <windows.h>
 #include <mlang.h>
 
 #include <apr.h>

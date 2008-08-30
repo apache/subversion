@@ -21,8 +21,15 @@
 #include "svn_private_config.h"
 
 #ifdef WIN32
+/* We must include windows.h ourselves or apr.h includes it for us with
+   many ignore options set. Including Winsock is required to resolve IPv6
+   compilation errors. APR_HAVE_IPV6 is only defined after including
+   apr.h, so we can't detect this case here. */
+
 #define WIN32_LEAN_AND_MEAN
-#include <windows.h>
+#include <winsock2.h>
+#include <Ws2tcpip.h>
+
 #include <shlobj.h>
 
 #include <apr_file_info.h>
