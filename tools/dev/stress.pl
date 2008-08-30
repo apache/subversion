@@ -218,17 +218,14 @@ sub status_update_commit
         s/\r*$//;               # [Windows compat] Remove trailing \r's
         $acceptable_error = 1 if ( /^svn:[ ]
                                    (
-                                    Out[ ]of[ ]date
+                                    .*out[ ]of[ ]date
                                     |
                                     Conflict[ ]at
                                     |
                                     Baseline[ ]incorrect
                                     |
-                                    Your[ ]file[ ]or[ ]directory[ ]
-                                    \'[^\']+\'
-                                    [ ]is[ ]probably[ ]out-of-date
                                    )
-                                   /x )
+                                   /ix )
             or ( $dbrecover and  ( /^svn:[ ]
                                    (
                                     bdb:[ ]PANIC
@@ -382,7 +379,7 @@ where
     $cmd_opts{'s'} = -1;           # sleep interval
     $cmd_opts{'x'} = 4;            # files to modify
 
-    getopts( 'cdfhi:n:prs:x:D:F:N:P:R:U:W', \%cmd_opts ) or die $usage;
+    getopts( 'cdfhi:n:prs:x:D:F:N:P:R:S:U:W', \%cmd_opts ) or die $usage;
 
     # print help info (and exit nicely) if requested
     if ( $cmd_opts{'h'} )
