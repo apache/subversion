@@ -135,7 +135,7 @@ sub status_update
     print "Press return to update/commit\n" if $wait_for_key;
     read STDIN, $wait_for_key, 1 if $wait_for_key;
     print "Updating:\n";
-    $svn_cmd = "svn up $wc_dir";
+    $svn_cmd = "svn up --non-interactive $wc_dir";
 
     # Check for conflicts during the update.  If any exist, we resolve them.
     my $pid = open3(\*UPDATE_WRITE, \*UPDATE_READ, \*UPDATE_ERR_READ,
