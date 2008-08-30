@@ -2,7 +2,7 @@
  * main.c: Subversion dump stream filtering tool.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006, 2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1380,8 +1380,8 @@ main(int argc, const char *argv[])
           SVN_INT_ERR(svn_utf_cstring_to_utf8(&utf8_targets_file,
                                               opt_state.targets_file, pool));
 
-          SVN_INT_ERR(svn_stringbuf_from_file(&buffer, utf8_targets_file,
-                                              pool));
+          SVN_INT_ERR(svn_stringbuf_from_file2(&buffer, utf8_targets_file,
+                                               pool));
           SVN_INT_ERR(svn_utf_stringbuf_to_utf8(&buffer_utf8, buffer, pool));
 
           opt_state.prefixes = apr_array_append(pool,

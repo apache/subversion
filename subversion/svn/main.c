@@ -2,7 +2,7 @@
  * main.c:  Subversion command line client.
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1239,8 +1239,8 @@ main(int argc, const char *argv[])
       case 'F':
         err = svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool);
         if (! err)
-          err = svn_stringbuf_from_file(&(opt_state.filedata),
-                                        utf8_opt_arg, pool);
+          err = svn_stringbuf_from_file2(&(opt_state.filedata),
+                                         utf8_opt_arg, pool);
         if (err)
           return svn_cmdline_handle_exit_error(err, pool, "svn: ");
         dash_F_arg = opt_arg;
@@ -1256,7 +1256,7 @@ main(int argc, const char *argv[])
           err = svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool);
 
           if (! err)
-            err = svn_stringbuf_from_file(&buffer, utf8_opt_arg, pool);
+            err = svn_stringbuf_from_file2(&buffer, utf8_opt_arg, pool);
           if (! err)
             err = svn_utf_stringbuf_to_utf8(&buffer_utf8, buffer, pool);
           if (err)
