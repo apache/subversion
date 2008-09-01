@@ -2,7 +2,7 @@
  * commit.c :  routines for committing changes to the server
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1214,7 +1214,7 @@ commit_apply_txdelta(void *file_baton,
   stream = svn_stream_create(baton, pool);
   svn_stream_set_write(stream, commit_stream_write);
 
-  svn_txdelta_to_svndiff(stream, pool, handler, handler_baton);
+  svn_txdelta_to_svndiff2(handler, handler_baton, stream, 0, pool);
 
   /* Add this path to the valid targets hash. */
   add_valid_target(file->cc, file->rsrc->local_path, svn_nonrecursive);

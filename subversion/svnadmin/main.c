@@ -2,7 +2,7 @@
  * main.c: Subversion server administration tool.
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -983,7 +983,7 @@ set_revprop(const char *prop_name, const char *filename,
   SVN_ERR(svn_utf_cstring_to_utf8(&filename_utf8, filename, pool));
   filename_utf8 = svn_path_internal_style(filename_utf8, pool);
 
-  SVN_ERR(svn_stringbuf_from_file(&file_contents, filename_utf8, pool));
+  SVN_ERR(svn_stringbuf_from_file2(&file_contents, filename_utf8, pool));
 
   prop_value->data = file_contents->data;
   prop_value->len = file_contents->len;
@@ -1651,7 +1651,7 @@ main(int argc, const char *argv[])
         {
           const char *optstr;
           const apr_getopt_option_t *badopt =
-            svn_opt_get_option_from_code2(opt_id, subcommand, options_table,
+            svn_opt_get_option_from_code2(opt_id, options_table, subcommand,
                                           pool);
           svn_opt_format_option(&optstr, badopt, FALSE, pool);
           if (subcommand->name[0] == '-')
