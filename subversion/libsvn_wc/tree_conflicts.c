@@ -262,7 +262,7 @@ read_one_tree_conflict(svn_wc_conflict_description_t **conflict,
           _("Expected tree conflict data but got none"));
 
   *conflict = svn_wc_conflict_description_create_tree(
-    NULL, NULL, svn_node_none, 0, pool);
+    "", NULL, svn_node_none, 0, pool);
 
   /* Each of these modifies *START ! */
   SVN_ERR(read_victim_path(*conflict, start, end, pool));
