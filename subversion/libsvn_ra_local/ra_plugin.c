@@ -649,14 +649,11 @@ svn_ra_local__get_commit_editor(svn_ra_session_t *session,
                hi = apr_hash_next(hi))
             {
               void *val;
-              const char *path, *token;
-              const void *key;
+              const char *token;
 
-              apr_hash_this(hi, &key, NULL, &val);
-              path = svn_path_join(sess->fs_path->data, (const char *)key,
-                                   pool);
+              apr_hash_this(hi, NULL, NULL, &val);
               token = val;
-              SVN_ERR(svn_fs_access_add_lock_token2(fs_access, path, token));
+              SVN_ERR(svn_fs_access_add_lock_token(fs_access, token));
             }
         }
     }

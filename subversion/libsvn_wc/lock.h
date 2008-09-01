@@ -98,10 +98,10 @@ svn_boolean_t svn_wc__adm_missing(svn_wc_adm_access_t *adm_access,
    This function is similar to svn_wc_adm_retrieve except that if the baton
    for PATH is not found, this function sets *ADM_ACCESS to NULL and does
    not return an error. */
-svn_error_t *svn_wc__adm_retrieve_internal(svn_wc_adm_access_t **adm_access,
-                                           svn_wc_adm_access_t *associated,
-                                           const char *path,
-                                           apr_pool_t *pool);
+svn_error_t * svn_wc__adm_retrieve_internal(svn_wc_adm_access_t **adm_access,
+                                            svn_wc_adm_access_t *associated,
+                                            const char *path,
+                                            apr_pool_t *pool);
 
 /* Return the working copy format version number for ADM_ACCESS. */
 int svn_wc__adm_wc_format(svn_wc_adm_access_t *adm_access);

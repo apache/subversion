@@ -833,7 +833,7 @@ close_revision(void *revision_baton)
 
 
 /* Filtering vtable */
-svn_repos_parse_fns2_t filtering_vtable =
+svn_repos_parser_fns2_t filtering_vtable =
   {
     new_revision_record,
     uuid_record,

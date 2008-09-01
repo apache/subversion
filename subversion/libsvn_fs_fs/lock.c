@@ -63,11 +63,10 @@ static const char *
 make_digest(const char *str,
             apr_pool_t *pool)
 {
-  svn_checksum_t *checksum;
+  unsigned char digest[APR_MD5_DIGESTSIZE];
 
-  svn_checksum(&checksum, svn_checksum_md5, str, strlen(str), pool);
-
-  return svn_checksum_to_cstring_display(checksum, pool);
+  apr_md5(digest, str, strlen(str));
+  return svn_md5_digest_to_cstring_display(digest, pool);
 }
 
 

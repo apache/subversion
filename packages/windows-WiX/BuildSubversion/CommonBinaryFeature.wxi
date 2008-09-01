@@ -5,8 +5,4 @@
 				<ComponentRef Id="Libeay32Dll"/>
 				<ComponentRef Id="Ssleay32Dll"/>
 				<ComponentRef Id="LibsaslDll"/>
-				<ComponentRef Id="OpensslEXE"/>
-				<ComponentRef Id="PlugVW"/>
-				<ComponentRef Id="SaslDB2"/>
-				<ComponentRef Id="SaslPW"/>
 </Include>

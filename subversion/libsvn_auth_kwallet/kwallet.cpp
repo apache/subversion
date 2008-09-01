@@ -66,7 +66,7 @@ kwallet_password_get(const char **password,
     }
 
   KCmdLineArgs::init(1,
-                     (char *[1]) { (char *) "svn" },
+                     (char *[1]) { "svn" },
                      "Subversion",
                      "subversion",
                      ki18n("Subversion"),
@@ -85,20 +85,24 @@ kwallet_password_get(const char **password,
         KWallet::Wallet::openWallet(wallet_name,
                                     -1,
                                     KWallet::Wallet::Synchronous);
-      if (wallet && wallet->setFolder(folder))
+      if (wallet)
         {
-          QString q_password;
-          if (wallet->readPassword(key, q_password) == 0);
+          if (wallet->hasFolder(folder))
             {
-              *password = apr_pstrmemdup(pool,
-                                         q_password.toUtf8().data(),
-                                         q_password.size());
-              ret = TRUE;
+              if (wallet->setFolder(folder))
+                {
+                  QString q_password;
+                  if (wallet->readPassword(key, q_password) == 0);
+                    {
+                      *password = apr_pstrmemdup(pool,
+                                                 q_password.toUtf8().data(),
+                                                 q_password.size());
+                      ret = TRUE;
+                    }
+                }
             }
         }
-      delete wallet;
     }
-
 // This function currently closes the wallet if no other application
 // is connected to the wallet. We're waiting for this to be fixed
 // upstream, see https://bugs.kde.org/show_bug.cgi?id=162570
@@ -128,7 +132,7 @@ kwallet_password_set(apr_hash_t *creds,
     }
 
   KCmdLineArgs::init(1,
-                     (char *[1]) { (char *) "svn" },
+                     (char *[1]) { "svn" },
                      "Subversion",
                      "subversion",
                      ki18n("Subversion"),
@@ -150,18 +154,19 @@ kwallet_password_set(apr_hash_t *creds,
         {
           wallet->createFolder(folder);
         }
-      if (wallet->setFolder(folder))
+      if (wallet->hasFolder(folder))
         {
-          QString key = QString::fromUtf8(username) + "@"
-            + QString::fromUtf8(realmstring);
-          if (wallet->writePassword(key, q_password) == 0)
+          if (wallet->setFolder(folder))
             {
-              ret = TRUE;
+              QString key = QString::fromUtf8(username) + "@"
+                + QString::fromUtf8(realmstring);
+              if (wallet->writePassword(key, q_password) == 0)
+                {
+                  ret = TRUE;
+                }
             }
         }
     }
-  delete wallet;
-
 // This function currently closes the wallet if no other application
 // is connected to the wallet. We're waiting for this to be fixed
 // upstream, see https://bugs.kde.org/show_bug.cgi?id=162570
@@ -226,68 +231,4 @@ svn_auth_get_kwallet_simple_provider(svn_auth_provider_object_t **provider,
   po->vtable = &kwallet_simple_provider;
   *provider = po;
 }
-}
-
-
-/*-----------------------------------------------------------------------*/
-/* KWallet SSL client certificate passphrase provider,                   */
-/* puts passphrases in KWallet                                           */
-/*-----------------------------------------------------------------------*/
-
-/* Get cached encrypted credentials from the ssl client cert password
-   provider's cache. */
-static svn_error_t *
-kwallet_ssl_client_cert_pw_first_creds(void **credentials,
-                                       void **iter_baton,
-                                       void *provider_baton,
-                                       apr_hash_t *parameters,
-                                       const char *realmstring,
-                                       apr_pool_t *pool)
-{
-  return svn_auth__ssl_client_cert_pw_file_first_creds_helper
-           (credentials,
-            iter_baton, provider_baton,
-            parameters, realmstring,
-            kwallet_password_get,
-            SVN_AUTH__KWALLET_PASSWORD_TYPE,
-            pool);
-}
-
-/* Save encrypted credentials to the ssl client cert password provider's
-   cache. */
-static svn_error_t *
-kwallet_ssl_client_cert_pw_save_creds(svn_boolean_t *saved,
-                                      void *credentials,
-                                      void *provider_baton,
-                                      apr_hash_t *parameters,
-                                      const char *realmstring,
-                                      apr_pool_t *pool)
-{
-  return svn_auth__ssl_client_cert_pw_file_save_creds_helper
-           (saved, credentials,
-            provider_baton, parameters,
-            realmstring,
-            kwallet_password_set,
-            SVN_AUTH__KWALLET_PASSWORD_TYPE,
-            pool);
-}
-
-static const svn_auth_provider_t kwallet_ssl_client_cert_pw_provider = {
-  SVN_AUTH_CRED_SSL_CLIENT_CERT_PW,
-  kwallet_ssl_client_cert_pw_first_creds,
-  NULL,
-  kwallet_ssl_client_cert_pw_save_creds
-};
-
-/* Public API */
-void
-svn_auth_get_kwallet_ssl_client_cert_pw_provider
-    (svn_auth_provider_object_t **provider,
-     apr_pool_t *pool)
-{
-  svn_auth_provider_object_t *po =
-    static_cast<svn_auth_provider_object_t *> (apr_pcalloc(pool, sizeof(*po)));
-
-  po->vtable = &kwallet_ssl_client_cert_pw_provider;
-  *provider = po;
 }

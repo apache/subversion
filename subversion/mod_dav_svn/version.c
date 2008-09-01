@@ -1181,13 +1181,12 @@ dav_svn__push_locks(dav_resource *resource,
 
   for (hi = apr_hash_first(pool, locks); hi; hi = apr_hash_next(hi))
     {
-      const char *path, *token;
-      const void *key;
+      const char *token;
       void *val;
-      apr_hash_this(hi, &key, NULL, &val);
-      path = key, token = val;
+      apr_hash_this(hi, NULL, NULL, &val);
+      token = val;
 
-      serr = svn_fs_access_add_lock_token2(fsaccess, path, token);
+      serr = svn_fs_access_add_lock_token(fsaccess, token);
       if (serr)
         return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                     "Error pushing token into filesystem.",

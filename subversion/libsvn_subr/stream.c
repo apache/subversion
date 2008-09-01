@@ -35,7 +35,6 @@
 #include "svn_error.h"
 #include "svn_string.h"
 #include "svn_utf.h"
-#include "svn_checksum.h"
 
 
 struct svn_stream_t {
@@ -685,32 +684,39 @@ svn_stream_compressed(svn_stream_t *stream, apr_pool_t *pool)
 }
 
 
-/* Checksummed stream support */
+/* MD5 checked stream support */
 
-struct checksum_stream_baton
+struct md5_stream_baton
 {
-  svn_checksum_ctx_t *read_ctx, *write_ctx;
-  svn_checksum_t **read_checksum;  /* Output value. */
-  svn_checksum_t **write_checksum;  /* Output value. */
+  apr_md5_ctx_t read_ctx, write_ctx;
+  const unsigned char **read_digest;
+  const unsigned char **write_digest;
+  unsigned char read_digest_buf[APR_MD5_DIGESTSIZE];
+  unsigned char write_digest_buf[APR_MD5_DIGESTSIZE];
   svn_stream_t *proxy;
 
   /* True if more data should be read when closing the stream. */
   svn_boolean_t read_more;
 
-  /* Pool to allocate read buffer and output values from. */
+  /* Pool to allocate read buffer from. */
   apr_pool_t *pool;
 };
 
 static svn_error_t *
-read_handler_checksum(void *baton, char *buffer, apr_size_t *len)
+read_handler_md5(void *baton, char *buffer, apr_size_t *len)
 {
-  struct checksum_stream_baton *btn = baton;
+  struct md5_stream_baton *btn = baton;
   apr_size_t saved_len = *len;
 
   SVN_ERR(svn_stream_read(btn->proxy, buffer, len));
 
-  if (btn->read_checksum)
-    SVN_ERR(svn_checksum_update(btn->read_ctx, buffer, *len));
+  if (btn->read_digest)
+    {
+      apr_status_t apr_err = apr_md5_update(&btn->read_ctx, buffer, *len);
+
+      if (apr_err)
+        return svn_error_create(apr_err, NULL, NULL);
+    }
 
   if (saved_len != *len)
     btn->read_more = FALSE;
@@ -720,21 +726,26 @@ read_handler_checksum(void *baton, char *buffer, apr_size_t *len)
 
 
 static svn_error_t *
-write_handler_checksum(void *baton, const char *buffer, apr_size_t *len)
+write_handler_md5(void *baton, const char *buffer, apr_size_t *len)
 {
-  struct checksum_stream_baton *btn = baton;
+  struct md5_stream_baton *btn = baton;
 
-  if (btn->write_checksum && *len > 0)
-    SVN_ERR(svn_checksum_update(btn->write_ctx, buffer, *len));
+  if (btn->write_digest && *len > 0)
+    {
+      apr_status_t apr_err = apr_md5_update(&btn->write_ctx, buffer, *len);
+
+      if (apr_err)
+        return svn_error_create(apr_err, NULL, NULL);
+    }
 
   return svn_stream_write(btn->proxy, buffer, len);
 }
 
 
 static svn_error_t *
-close_handler_checksum(void *baton)
+close_handler_md5(void *baton)
 {
-  struct checksum_stream_baton *btn = baton;
+  struct md5_stream_baton *btn = baton;
 
   /* If we're supposed to drain the stream, do so before finalizing the
      checksum. */
@@ -745,106 +756,34 @@ close_handler_checksum(void *baton)
 
       do
         {
-          SVN_ERR(read_handler_checksum(baton, buf, &len));
+          SVN_ERR(read_handler_md5(baton, buf, &len));
         }
       while (btn->read_more);
     }
 
-  if (btn->read_ctx)
-    SVN_ERR(svn_checksum_final(btn->read_ctx, btn->read_checksum, btn->pool));
-
-  if (btn->write_ctx)
-    SVN_ERR(svn_checksum_final(btn->write_ctx, btn->write_checksum, btn->pool));
-
-  return svn_stream_close(btn->proxy);
-}
-
-
-svn_stream_t *
-svn_stream_checksummed2(svn_stream_t *stream,
-                        svn_checksum_t **read_checksum,
-                        svn_checksum_kind_t read_checksum_kind,
-                        svn_checksum_t **write_checksum,
-                        svn_checksum_kind_t write_checksum_kind,
-                        svn_boolean_t read_all,
-                        apr_pool_t *pool)
-{
-  svn_stream_t *s;
-  struct checksum_stream_baton *baton;
-
-  if (read_checksum == NULL && write_checksum == NULL)
-    return stream;
-
-  baton = apr_palloc(pool, sizeof(*baton));
-  if (read_checksum)
-    baton->read_ctx = svn_checksum_ctx_create(read_checksum_kind, pool);
-  else
-    baton->read_ctx = NULL;
-
-  if (write_checksum)
-    baton->write_ctx = svn_checksum_ctx_create(write_checksum_kind, pool);
-  else
-    baton->write_ctx = NULL;
-
-  baton->read_checksum = read_checksum;
-  baton->write_checksum = write_checksum;
-  baton->proxy = stream;
-  baton->read_more = read_all;
-  baton->pool = pool;
-
-  s = svn_stream_create(baton, pool);
-  svn_stream_set_read(s, read_handler_checksum);
-  svn_stream_set_write(s, write_handler_checksum);
-  svn_stream_set_close(s, close_handler_checksum);
-  return s;
-}
-
-struct md5_stream_baton
-{
-  const unsigned char **read_digest;
-  const unsigned char **write_digest;
-  svn_checksum_t *read_checksum;
-  svn_checksum_t *write_checksum;
-  svn_stream_t *proxy;
-  apr_pool_t *pool;
-};
-
-static svn_error_t *
-read_handler_md5(void *baton, char *buffer, apr_size_t *len)
-{
-  struct md5_stream_baton *btn = baton;
-  return svn_stream_read(btn->proxy, buffer, len);
-}
-
-static svn_error_t *
-write_handler_md5(void *baton, const char *buffer, apr_size_t *len)
-{
-  struct md5_stream_baton *btn = baton;
-  return svn_stream_write(btn->proxy, buffer, len);
-}
-
-static svn_error_t *
-close_handler_md5(void *baton)
-{
-  struct md5_stream_baton *btn = baton;
-
-  SVN_ERR(svn_stream_close(btn->proxy));
-
   if (btn->read_digest)
     {
-      *btn->read_digest = apr_palloc(btn->pool, APR_MD5_DIGESTSIZE);
-      memcpy((unsigned char *) *btn->read_digest, btn->read_checksum->digest,
-             APR_MD5_DIGESTSIZE);
+      apr_status_t apr_err
+        = apr_md5_final(btn->read_digest_buf, &btn->read_ctx);
+
+      if (apr_err)
+        return svn_error_create(apr_err, NULL, NULL);
+
+      *btn->read_digest = btn->read_digest_buf;
     }
 
   if (btn->write_digest)
     {
-      *btn->write_digest = apr_palloc(btn->pool, APR_MD5_DIGESTSIZE);
-      memcpy((unsigned char *) *btn->write_digest, btn->write_checksum->digest,
-             APR_MD5_DIGESTSIZE);
+      apr_status_t apr_err
+        = apr_md5_final(btn->write_digest_buf, &btn->write_ctx);
+
+      if (apr_err)
+        return svn_error_create(apr_err, NULL, NULL);
+
+      *btn->write_digest = btn->write_digest_buf;
     }
 
-  return SVN_NO_ERROR;
+  return svn_stream_close(btn->proxy);
 }
 
 
@@ -862,24 +801,13 @@ svn_stream_checksummed(svn_stream_t *stream,
     return stream;
 
   baton = apr_palloc(pool, sizeof(*baton));
+  apr_md5_init(&baton->read_ctx);
+  apr_md5_init(&baton->write_ctx);
   baton->read_digest = read_digest;
   baton->write_digest = write_digest;
+  baton->proxy = stream;
+  baton->read_more = read_all;
   baton->pool = pool;
-
-  if (read_digest)
-    baton->read_checksum = svn_checksum_create(svn_checksum_md5, pool);
-  else
-    baton->read_checksum = NULL;
-
-  if (write_digest)
-    baton->write_checksum = svn_checksum_create(svn_checksum_md5, pool);
-  else
-    baton->write_checksum = NULL;
-
-  baton->proxy = svn_stream_checksummed2(stream, &baton->read_checksum,
-                                         svn_checksum_md5,
-                                         &baton->write_checksum, 
-                                         svn_checksum_md5, read_all, pool);
 
   s = svn_stream_create(baton, pool);
   svn_stream_set_read(s, read_handler_md5);

@@ -977,7 +977,7 @@ svn_fs_fs__dag_file_length(svn_filesize_t *length,
 
 
 svn_error_t *
-svn_fs_fs__dag_file_checksum(svn_checksum_t **checksum,
+svn_fs_fs__dag_file_checksum(unsigned char digest[],
                              dag_node_t *file,
                              apr_pool_t *pool)
 {
@@ -990,7 +990,9 @@ svn_fs_fs__dag_file_checksum(svn_checksum_t **checksum,
 
   SVN_ERR(get_node_revision(&noderev, file, pool));
 
-  return svn_fs_fs__file_checksum(checksum, noderev, pool);
+  SVN_ERR(svn_fs_fs__file_checksum(digest, noderev, pool));
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -1028,24 +1030,22 @@ svn_fs_fs__dag_get_edit_stream(svn_stream_t **contents,
 
 svn_error_t *
 svn_fs_fs__dag_finalize_edits(dag_node_t *file,
-                              svn_checksum_t *checksum,
+                              const char *checksum,
                               apr_pool_t *pool)
 {
+  unsigned char digest[APR_MD5_DIGESTSIZE];
+  const char *hex;
+
   if (checksum)
     {
-      svn_checksum_t *file_checksum;
-
-      SVN_ERR(svn_fs_fs__dag_file_checksum(&file_checksum, file, pool));
-      if (!svn_checksum_match(checksum, file_checksum))
+      SVN_ERR(svn_fs_fs__dag_file_checksum(digest, file, pool));
+      hex = svn_md5_digest_to_cstring(digest, pool);
+      if (hex && strcmp(checksum, hex) != 0)
         return svn_error_createf(SVN_ERR_CHECKSUM_MISMATCH, NULL,
                                  _("Checksum mismatch, file '%s':\n"
                                    "   expected:  %s\n"
                                    "     actual:  %s\n"),
-                                 file->created_path,
-                                 svn_checksum_to_cstring_display(checksum,
-                                                                 pool),
-                                 svn_checksum_to_cstring_display(file_checksum,
-                                                                 pool));
+                                 file->created_path, checksum, hex);
     }
 
   return SVN_NO_ERROR;

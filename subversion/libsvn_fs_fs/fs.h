@@ -231,14 +231,14 @@ typedef struct
  * svn_fs_fs__rep_copy. */
 typedef struct
 {
-  /* Checksum for the contents produced by this representation.
+  /* MD5 checksum for the contents produced by this representation.
      This checksum is for the contents the rep shows to consumers,
      regardless of how the rep stores the data under the hood.  It is
      independent of the storage (fulltext, delta, whatever).
 
-     If checksum is NULL, then for compatibility behave as though this
-     checksum matches the expected checksum. */
-  svn_checksum_t *checksum;
+     If all the bytes are 0, then for compatibility behave as though
+     this checksum matches the expected checksum. */
+  unsigned char checksum[APR_MD5_DIGESTSIZE];
 
   /* Revision where this representation is located. */
   svn_revnum_t revision;

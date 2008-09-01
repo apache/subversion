@@ -1783,14 +1783,8 @@ get_resource(request_rec *r,
         }
 
       do {
-        /* Note the path/lock pairs are only for lock token checking
-           in access, and the relative path is not actually accurate
-           as it contains the !svn bits.  However, we're using only
-           the tokens anyway (for access control). */
-
-        serr = svn_fs_access_add_lock_token2(access_ctx, relative,
-                                             list->locktoken->uuid_str);
-
+        serr = svn_fs_access_add_lock_token(access_ctx,
+                                            list->locktoken->uuid_str);
         if (serr)
           return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                       "Error pushing token into filesystem.",

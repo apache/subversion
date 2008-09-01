@@ -3990,7 +3990,7 @@ test_list = [ None,
               update_accept_conflicts,
               eof_in_interactive_conflict_resolver,
               update_uuid_changed,
-              restarted_update_should_delete_dir_prop,
+              XFail(restarted_update_should_delete_dir_prop),
              ]
 
 if __name__ == '__main__':

@@ -27,15 +27,6 @@
  *
  * Used By:
  *            - Clients.
- *
- * Notes:
- *            The 'path' parameters to most of these functions can be
- *            absolute or relative (relative to current working
- *            directory).  If there are any cases where they are
- *            relative to the path associated with the
- *            'svn_wc_adm_access_t *adm_access' baton passed along
- *            with the path, those cases should be explicitly
- *            documented, and if they are not, please fix it.
  */
 
 #ifndef SVN_WC_H

@@ -37,28 +37,10 @@
 							</Component>
 						</Directory>
 						<Directory Id="zlib" Name="zlib">
-							<Component Guid="451E1EBC-9E20-4BD7-8321-0D65C4C23A1B" Id="zlREADME" DiskId="1">
+							<Component Guid="451E1EBC-9E20-4BD7-8321-0D65C4C23A1B" Id="README" DiskId="1">
 								<File Source="..\..\..\work\svn-win32-ap20x\licenses\zlib\README" Name="README.txt" Id="README">
 								<Shortcut Name="ZLIB" Id="zlibsct" Description="ZLIB License" Directory="LicenseMenuFolder" Advertise="yes" Icon="zlib.txt">
 							    	<Icon Id="zlib.txt" SourceFile="c:\windows\notepad.exe" />
-							    </Shortcut>
-								</File>
-							</Component>
-						</Directory>
-						<Directory Id="cyrussasl" Name="cyrussasl">
-							<Component Guid="DF72B8AD-9A07-4CCB-BDB1-B317A1FF856A" Id="cyCOPYING" DiskId="1">
-								<File Source="..\..\..\work\svn-win32-ap20x\licenses\cyrus-sasl\COPYING" Name="COPYING.txt" Id="COPYING">
-								<Shortcut Name="CYRUSSSL" Id="cysslsct" Description="Cyrus SASL License" Directory="LicenseMenuFolder" Advertise="yes" Icon="copying.txt">
-							    	<Icon Id="copying.txt" SourceFile="c:\windows\notepad.exe" />
-							    </Shortcut>
-								</File>
-							</Component>
-						</Directory>
-						<Directory Id="serf" Name="serf">
-							<Component Guid="B90EADE1-48B6-477F-83AF-FA8347E7A7AB" Id="serLICENSE" DiskId="1">
-								<File Source="..\..\..\work\svn-win32-ap20x\licenses\serf\LICENSE" Name="LICENSE.txt" Id="srfLICENSE">
-								<Shortcut Name="SERF" Id="serfsct" Description="Serf License" Directory="LicenseMenuFolder" Advertise="yes" Icon="license.txt">
-							    	<Icon Id="license.txt" SourceFile="c:\windows\notepad.exe" />
 							    </Shortcut>
 								</File>
 							</Component>
