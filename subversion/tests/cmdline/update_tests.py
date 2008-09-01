@@ -1037,7 +1037,6 @@ def update_deleted_missing_dir(sbox):
   expected_status.remove('A/D/H', 'A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi')
 
   # Do the update, specifying the deleted paths explicitly.
-  return
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,
