@@ -402,10 +402,10 @@ check: bin $(TEST_DEPS) @BDB_TEST_DEPS@
 	  if test "$(PARALLEL)" != ""; then                                  \
 	    flags="--parallel $$flags";                                      \
 	  fi;                                                                \
-	  $(PYTHON) $(top_srcdir)/build/run_tests.py                         \
+	  $(PYTHON) $(top_srcdir)/build/run_tests.py			     \
 	            --config-file $(top_srcdir)/subversion/tests/tests.conf  \
-	            $$flags                                                  \
-	            '$(abs_srcdir)' '$(abs_builddir)' $(TESTS);              \
+	            $$flags                 				     \
+		    '$(abs_srcdir)' '$(abs_builddir)' $(TESTS);              \
 	else                                                                 \
 	  echo "make check: Python 2.2 or greater is required,";             \
 	  echo "            but was not detected during configure";          \

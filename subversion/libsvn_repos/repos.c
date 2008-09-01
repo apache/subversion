@@ -381,17 +381,6 @@ PREWRITTEN_HOOKS_TEXT
 "#   [1] REPOS-PATH   (the path to this repository)"                         NL
 "#   [2] TXN-NAME     (the name of the txn about to be committed)"           NL
 "#"                                                                          NL
-"#   [STDIN] LOCK-TOKENS ** the lock tokens are passed via STDIN."           NL
-"#"                                                                          NL
-"#   If STDIN contains the line \"LOCK-TOKENS:\\n\" (the \"\\n\" denotes a"  NL
-"#   single newline), the lines following it are the lock tokens for"        NL
-"#   this commit.  The end of the list is marked by a line containing"       NL
-"#   only a newline character."                                              NL
-"#"                                                                          NL
-"#   Each lock token line consists of a URI-escaped path, followed"          NL
-"#   by the separator character '|', followed by the lock token string,"     NL
-"#   followed by a newline."                                                 NL
-"#"                                                                          NL
 "# The default working directory for the invocation is undefined, so"        NL
 "# the program should set one explicitly if it cares."                       NL
 "#"                                                                          NL

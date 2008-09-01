@@ -162,10 +162,10 @@ representation_t *svn_fs_fs__rep_copy(representation_t *rep,
                                       apr_pool_t *pool);
 
 
-/* Return the recorded checksum of the text representation of NODREV
-   into CHECKSUM, allocating from POOL.  If no stored checksum is
-   available, put all NULL into CHECKSUM. */
-svn_error_t *svn_fs_fs__file_checksum(svn_checksum_t **checksum,
+/* Return the record MD5 checksum of the text representation of NODREV
+   into DIGEST, allocating from POOL.  If no stored checksum is
+   available, put all 0's into DIGEST. */
+svn_error_t *svn_fs_fs__file_checksum(unsigned char digest[],
                                       node_revision_t *noderev,
                                       apr_pool_t *pool);
 

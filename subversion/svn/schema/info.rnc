@@ -9,7 +9,7 @@ info = element info { entry* }
 
 entry =
   element entry {
-    attlist.entry, url?, repository?, wc-info?, commit?, confict?, lock?
+    attlist.entry, url?, repository?, wc-info?, commit?, lock?
   }
 attlist.entry &=
   ## Local path.
@@ -41,7 +41,8 @@ wc-info =
     depth?,
     text-updated?,
     prop-updated?,
-    checksum?
+    checksum?,
+    conflict?
   }
 
 schedule =

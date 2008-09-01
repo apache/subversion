@@ -7,7 +7,9 @@
 						<?include CommonBinaryFiles.wxi ?>
 						<?include ApacheFiles20x.wxi ?>
 						<?include ApacheFiles22x.wxi ?>
-						<?include CommonSASLFiles.wxi ?>
+						<Directory Id="SASL" Name="sasl-plugins">
+							<?include CommonSASLFiles.wxi ?>
+						</Directory>
 					</Directory>
 					<Directory Id="iconv" Name="iconv">
 						<?include iconvFiles20x.wxi ?>

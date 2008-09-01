@@ -3914,33 +3914,6 @@ def double_parents_with_url(sbox):
     wc_dir, expected_output, expected_disk, expected_status)
 
 
-# Used to cause corruption not fixable by 'svn cleanup'.
-def copy_into_absent_dir(sbox):
-  "copy file into absent dir"
-
-  sbox.build(read_only = True)
-  wc_dir = sbox.wc_dir
-
-  A_path = os.path.join(wc_dir, 'A')
-  iota_path = os.path.join(wc_dir, 'iota')
-
-  # Remove 'A'
-  svntest.main.safe_rmtree(A_path)
-
-  # Copy into the now-missing dir.  This used to give this error:
-  #     svn: In directory '.'
-  #     svn: Error processing command 'modify-entry' in '.'
-  #     svn: Error modifying entry for 'A'
-  #     svn: Entry 'A' is already under version control
-  svntest.actions.run_and_verify_svn(None,
-                                     None, ".*: Path '.*' is not a directory",
-                                     'cp', iota_path, A_path)
-
-  # 'cleanup' should not error.
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'cleanup', wc_dir)
-
-
 
 ########################################################################
 # Run the tests
@@ -4020,7 +3993,6 @@ test_list = [ None,
               replaced_local_source_for_incoming_copy,
               unneeded_parents,
               double_parents_with_url,
-              copy_into_absent_dir,
              ]
 
 if __name__ == '__main__':

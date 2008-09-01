@@ -22,9 +22,5 @@
 				<ComponentRef Id="SvnserveExe22x"/>
 				<ComponentRef Id="SvnsyncExe22x"/>
 				<ComponentRef Id="SvnversionExe22x"/>
-				<ComponentRef Id="Svnmucc22x"/>
-				<ComponentRef Id="Svnpop22x"/>
-				<ComponentRef Id="Svnpush22x"/>
-				<ComponentRef Id="Svnauthval22x"/>
 				<ComponentRef Id="READMETxtap22x"/>
 </Include>

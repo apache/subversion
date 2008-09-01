@@ -5,7 +5,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -115,9 +115,6 @@ wc_passwd = 'rayjandom'
 # Username and password used by the working copies for "second user"
 # scenarios
 wc_author2 = 'jconstant' # use the same password as wc_author
-
-# Set C locale for command line programs
-os.environ['LC_ALL'] = 'C'
 
 ######################################################################
 # Global variables set during option parsing.  These should not be used
