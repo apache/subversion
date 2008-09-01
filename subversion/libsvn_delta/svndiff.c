@@ -2,7 +2,7 @@
  * svndiff.c -- Encoding and decoding svndiff-format deltas.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006, 2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -47,7 +47,7 @@
 
 /* We make one of these and get it passed back to us in calls to the
    window handler.  We only use it to record the write function and
-   baton passed to svn_txdelta_to_svndiff ().  */
+   baton passed to svn_txdelta_to_svndiff2().  */
 struct encoder_baton {
   svn_stream_t *output;
   svn_boolean_t header_done;

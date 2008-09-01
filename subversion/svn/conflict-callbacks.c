@@ -3,7 +3,7 @@
  * commandline client.
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -414,8 +414,8 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
 
               if (desc->my_file)
                 {
-                  SVN_ERR(svn_stringbuf_from_file(&myval, desc->my_file,
-                                                  subpool));
+                  SVN_ERR(svn_stringbuf_from_file2(&myval, desc->my_file,
+                                                   subpool));
                   SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
                         _("They want to delete the property, "
                           "you want to change the value to '%s'.\n"),
@@ -423,8 +423,8 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                 }
               else
                 {
-                  SVN_ERR(svn_stringbuf_from_file(&theirval, desc->their_file,
-                                                  subpool));
+                  SVN_ERR(svn_stringbuf_from_file2(&theirval, desc->their_file,
+                                                   subpool));
                   SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
                         _("They want to change the property value to '%s', "
                           "you want to delete the property.\n"),
