@@ -1940,9 +1940,9 @@ typedef struct svn_wc_entry_t
   const char *file_external_path;
 
   /** The entry is a intra-repository file external and this is the
-   * revision number that the external is checked out from.  This
-   * field is only valid when the file_external_path field is
-   * non-NULL.  The only permissable values are
+   * peg and operative revision number that the external is checked
+   * out from.  This field is only valid when the file_external_path
+   * field is non-NULL.  The only permissable values are
    * svn_opt_revision_unspecified if the entry is not an external,
    * svn_opt_revision_head if the external revision is unspecified or
    * specified with -r HEAD or svn_opt_revision_number for a specific
