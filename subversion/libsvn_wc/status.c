@@ -375,8 +375,8 @@ assemble_status(svn_wc_status2_t **status,
         final_prop_status = svn_wc_status_normal;
 
       /* If the entry has a property file, see if it has local changes. */
-      SVN_ERR(svn_wc_props_modified_p(&prop_modified_p, path, adm_access,
-                                      pool));
+      SVN_ERR(svn_wc__has_prop_mods(&prop_modified_p, path, adm_access,
+                                    pool));
 
 #ifdef HAVE_SYMLINK
       if (has_props)
