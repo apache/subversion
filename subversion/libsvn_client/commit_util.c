@@ -335,14 +335,15 @@ harvest_committables(apr_hash_t *committables,
      parent's path. */
   else
     {
-      /* Maybe the tree-conflict test should be a separate function. */
-      svn_boolean_t tc_dummy, pc_dummy;
+      /* ### Maybe the tree-conflict test should be a separate function. */
+      svn_boolean_t dummy;
       const svn_wc_entry_t *p_entry;
+
       SVN_ERR(svn_wc_entry(&p_entry, p_path, adm_access, TRUE, pool));
-      SVN_ERR(svn_wc_conflicted_p2(&tc_dummy, &pc_dummy, &treec, p_path,
+      SVN_ERR(svn_wc_conflicted_p2(&dummy, &dummy, &treec, p_path,
                                    p_entry, pool));
 
-      SVN_ERR(svn_wc_conflicted_p(&tc, &pc, p_path, entry, pool));
+      SVN_ERR(svn_wc_conflicted_p2(&tc, &pc, &dummy, p_path, entry, pool));
     }
 
   /* Bail now if any conflicts exist for the ENTRY. */
