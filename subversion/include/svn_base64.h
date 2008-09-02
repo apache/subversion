@@ -25,6 +25,7 @@
 #include <apr_md5.h>
 
 #include "svn_io.h"
+#include "svn_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -77,6 +78,7 @@ svn_base64_encode_string2(const svn_string_t *str,
  *
  * @deprecated Provided for backward compatibility with the 1.5 API.
  */
+SVN_DEPRECATED
 const svn_string_t *
 svn_base64_encode_string(const svn_string_t *str,
                          apr_pool_t *pool);

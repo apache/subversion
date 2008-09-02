@@ -144,7 +144,7 @@ send_file_contents(const char *path,
      copy we might have made above. */
   SVN_ERR(svn_io_file_open(&f, tmpfile_path ? tmpfile_path : path,
                            APR_READ, APR_OS_DEFAULT, pool));
-  contents = svn_stream_from_aprfile(f, pool);
+  contents = svn_stream_from_aprfile2(f, TRUE, pool);
 
   /* Send the file's contents to the delta-window handler. */
   SVN_ERR(svn_txdelta_send_stream(contents, handler, handler_baton,

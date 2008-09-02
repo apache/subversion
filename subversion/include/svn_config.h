@@ -295,6 +295,7 @@ typedef svn_boolean_t (*svn_config_section_enumerator_t)(const char *name,
  *
  * @deprecated Provided for backwards compatibility with the 1.2 API.
  */
+SVN_DEPRECATED
 int
 svn_config_enumerate_sections(svn_config_t *cfg,
                               svn_config_section_enumerator_t callback,
@@ -341,6 +342,7 @@ typedef svn_boolean_t (*svn_config_enumerator_t)(const char *name,
  *
  * @deprecated Provided for backwards compatibility with the 1.2 API.
  */
+SVN_DEPRECATED
 int
 svn_config_enumerate(svn_config_t *cfg,
                      const char *section,

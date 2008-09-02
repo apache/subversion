@@ -347,6 +347,7 @@ svn_repos_recover3(const char *path,
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_recover2(const char *path,
                    svn_boolean_t nonblocking,
@@ -360,6 +361,7 @@ svn_repos_recover2(const char *path,
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_recover(const char *path,
                   apr_pool_t *pool);
@@ -582,6 +584,7 @@ svn_repos_begin_report2(void **report_baton,
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_begin_report(void **report_baton,
                        svn_revnum_t revnum,
@@ -649,6 +652,7 @@ svn_repos_set_path3(void *report_baton,
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_set_path2(void *report_baton,
                     const char *path,
@@ -662,6 +666,7 @@ svn_repos_set_path2(void *report_baton,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_set_path(void *report_baton,
                    const char *path,
@@ -712,6 +717,7 @@ svn_repos_link_path3(void *report_baton,
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_link_path2(void *report_baton,
                      const char *path,
@@ -726,6 +732,7 @@ svn_repos_link_path2(void *report_baton,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_link_path(void *report_baton,
                     const char *path,
@@ -872,6 +879,7 @@ svn_repos_dir_delta2(svn_fs_root_t *src_root,
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_dir_delta(svn_fs_root_t *src_root,
                     const char *src_parent_dir,
@@ -940,6 +948,7 @@ svn_repos_replay2(svn_fs_root_t *root,
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_replay(svn_fs_root_t *root,
                  const svn_delta_editor_t *editor,
@@ -1017,6 +1026,7 @@ svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_get_commit_editor4(const svn_delta_editor_t **editor,
                              void **edit_baton,
@@ -1040,6 +1050,7 @@ svn_repos_get_commit_editor4(const svn_delta_editor_t **editor,
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_get_commit_editor3(const svn_delta_editor_t **editor,
                              void **edit_baton,
@@ -1061,6 +1072,7 @@ svn_repos_get_commit_editor3(const svn_delta_editor_t **editor,
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_get_commit_editor2(const svn_delta_editor_t **editor,
                              void **edit_baton,
@@ -1081,6 +1093,7 @@ svn_repos_get_commit_editor2(const svn_delta_editor_t **editor,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_get_commit_editor(const svn_delta_editor_t **editor,
                             void **edit_baton,
@@ -1217,6 +1230,7 @@ svn_repos_history2(svn_fs_t *fs,
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_history(svn_fs_t *fs,
                   const char *path,
@@ -1396,6 +1410,7 @@ svn_repos_get_logs4(svn_repos_t *repos,
  * @since New in 1.2.
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_get_logs3(svn_repos_t *repos,
                     const apr_array_header_t *paths,
@@ -1416,6 +1431,7 @@ svn_repos_get_logs3(svn_repos_t *repos,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_get_logs2(svn_repos_t *repos,
                     const apr_array_header_t *paths,
@@ -1435,6 +1451,7 @@ svn_repos_get_logs2(svn_repos_t *repos,
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_get_logs(svn_repos_t *repos,
                    const apr_array_header_t *paths,
@@ -1545,6 +1562,7 @@ svn_repos_get_file_revs2(svn_repos_t *repos,
  * @deprecated Provided for backward compatibility with the 1.4 API.
  * @since New in 1.1.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_get_file_revs(svn_repos_t *repos,
                         const char *path,
@@ -1616,6 +1634,7 @@ svn_repos_fs_begin_txn_for_commit2(svn_fs_txn_t **txn_p,
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_fs_begin_txn_for_commit(svn_fs_txn_t **txn_p,
                                   svn_repos_t *repos,
@@ -1654,6 +1673,10 @@ svn_repos_fs_begin_txn_for_update(svn_fs_txn_t **txn_p,
  * hook, return the original error wrapped with
  * SVN_ERR_REPOS_POST_LOCK_HOOK_FAILED.  If the caller sees this
  * error, it knows that the lock succeeded anyway.
+ *
+ * The pre-lock hook may cause a different token to be used for the
+ * lock, instead of @a token; see the pre-lock-hook documentation for
+ * more.
  */
 svn_error_t *
 svn_repos_fs_lock(svn_lock_t **lock,
@@ -1749,6 +1772,7 @@ svn_repos_fs_change_rev_prop3(svn_repos_t *repos,
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_fs_change_rev_prop2(svn_repos_t *repos,
                               svn_revnum_t rev,
@@ -1766,6 +1790,7 @@ svn_repos_fs_change_rev_prop2(svn_repos_t *repos,
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_fs_change_rev_prop(svn_repos_t *repos,
                              svn_revnum_t rev,
@@ -2110,6 +2135,7 @@ svn_repos_dump_fs2(svn_repos_t *repos,
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_dump_fs(svn_repos_t *repos,
                   svn_stream_t *dumpstream,
@@ -2177,6 +2203,7 @@ svn_repos_load_fs2(svn_repos_t *repos,
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_load_fs(svn_repos_t *repos,
                   svn_stream_t *dumpstream,
@@ -2396,6 +2423,7 @@ typedef struct svn_repos_parse_fns_t
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_parse_dumpstream(svn_stream_t *stream,
                            const svn_repos_parser_fns_t *parse_fns,
@@ -2411,6 +2439,7 @@ svn_repos_parse_dumpstream(svn_stream_t *stream,
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_get_fs_build_parser(const svn_repos_parser_fns_t **parser,
                               void **parse_baton,

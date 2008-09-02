@@ -274,7 +274,7 @@ get_file_from_ra(struct file_baton *b, svn_revnum_t revision)
                                    "", svn_io_file_del_on_pool_cleanup,
                                    b->pool));
 
-  fstream = svn_stream_from_aprfile(file, b->pool);
+  fstream = svn_stream_from_aprfile2(file, TRUE, b->pool);
   SVN_ERR(svn_ra_get_file(b->edit_baton->ra_session,
                           b->path,
                           revision,
@@ -717,11 +717,11 @@ apply_textdelta(void *file_baton,
                             &(b->path_end_revision), adm_access,
                             svn_io_file_del_on_pool_cleanup, b->pool));
 
-  svn_txdelta_apply(svn_stream_from_aprfile(b->file_start_revision, b->pool),
-                    svn_stream_from_aprfile(b->file_end_revision, b->pool),
-                    NULL,
-                    b->path,
-                    b->pool,
+  svn_txdelta_apply(svn_stream_from_aprfile2(b->file_start_revision, TRUE,
+                                             b->pool),
+                    svn_stream_from_aprfile2(b->file_end_revision, TRUE,
+                                             b->pool),
+                    NULL, b->path, b->pool,
                     &(b->apply_handler), &(b->apply_baton));
 
   *handler = window_handler;

@@ -214,6 +214,7 @@ svn_handle_error2(svn_error_t *error,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 void
 svn_handle_error(svn_error_t *error,
                  FILE *stream,

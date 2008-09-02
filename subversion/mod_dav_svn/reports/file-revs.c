@@ -92,7 +92,7 @@ send_prop(struct file_rev_baton *frb,
     }
   else
     {
-      val = svn_base64_encode_string(val, pool);
+      val = svn_base64_encode_string2(val, TRUE, pool);
       SVN_ERR(dav_svn__send_xml(frb->bb, frb->output,
                                 "<S:%s name=\"%s\" encoding=\"base64\">"
                                 "%s</S:%s>" DEBUG_CR,

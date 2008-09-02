@@ -1065,7 +1065,8 @@ append_setprop(svn_stringbuf_t *body,
     }
   else
     {
-      const svn_string_t *base64ed = svn_base64_encode_string(value, pool);
+      const svn_string_t *base64ed = svn_base64_encode_string2(value, TRUE,
+                                                               pool);
       encoding = " V:encoding=\"base64\"";
       xml_safe = base64ed->data;
     }
