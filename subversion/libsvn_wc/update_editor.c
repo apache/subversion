@@ -2194,6 +2194,7 @@ open_file(const char *path,
   svn_wc_adm_access_t *adm_access;
   svn_boolean_t text_conflicted;
   svn_boolean_t prop_conflicted;
+  svn_boolean_t tree_conflicted;
 
   /* the file_pool can stick around for a *long* time, so we want to use
      a subpool for any temporary allocations. */
@@ -2231,8 +2232,8 @@ open_file(const char *path,
      aren't actually doing any "work" or fetching any persistent data. */
 
   /* If the file is in conflict, don't mess with it. */
-  SVN_ERR(svn_wc_conflicted_p(&text_conflicted, &prop_conflicted,
-                              pb->path, entry, pool));
+  SVN_ERR(svn_wc_conflicted_p2(&text_conflicted, &prop_conflicted,
+                               &tree_conflicted, pb->path, entry, pool));
   if (text_conflicted || prop_conflicted)
     {
       fb->skipped = TRUE;

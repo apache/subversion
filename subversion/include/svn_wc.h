@@ -2119,7 +2119,10 @@ svn_wc_conflicted_p2(svn_boolean_t *text_conflicted_p,
 
 /** Like svn_wc_conflicted_p2, but without the capability to
  * detect tree conflicts.
+ *
+ * @deprecated Provided for backward compatibility with the 1.5 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_conflicted_p(svn_boolean_t *text_conflicted_p,
                     svn_boolean_t *prop_conflicted_p,
