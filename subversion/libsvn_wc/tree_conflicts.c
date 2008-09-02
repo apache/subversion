@@ -22,8 +22,6 @@
 #include "svn_types.h"
 #include "svn_private_config.h"
 
-#include <assert.h>
-
 /* If **INPUT starts with *TOKEN, advance *INPUT by the length of *TOKEN
  * and return TRUE. Else, return FALSE and leave *INPUT alone. */
 static svn_boolean_t
@@ -302,7 +300,7 @@ svn_wc_read_tree_conflicts_from_entry(apr_array_header_t *conflicts,
       return SVN_NO_ERROR;
     }
 
-  assert(conflicts);
+  SVN_ERR_ASSERT(conflicts);
 
   start = dir_entry->tree_conflict_data;
   end = start + strlen(start);
@@ -514,7 +512,7 @@ svn_wc__loggy_add_tree_conflict_data(
    * Otherwise we should not have been called. */
   dir_path = svn_wc_adm_access_path(adm_access);
   SVN_ERR(svn_wc_entry(&entry, dir_path, adm_access, TRUE, pool));
-  assert(entry->kind == svn_node_dir);
+  SVN_ERR_ASSERT(entry->kind == svn_node_dir);
 
   conflicts = apr_array_make(pool, 0,
                              sizeof(svn_wc_conflict_description_t *));
