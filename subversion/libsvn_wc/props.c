@@ -3032,17 +3032,6 @@ modified_props(svn_boolean_t *modified_p,
 
 
 svn_error_t *
-svn_wc__props_modified(const char *path,
-                       apr_hash_t **which_props,
-                       svn_wc_adm_access_t *adm_access,
-                       apr_pool_t *pool)
-{
-  svn_boolean_t modified_p;
-  return modified_props(&modified_p, path, which_props, adm_access, pool);
-}
-
-
-svn_error_t *
 svn_wc_props_modified_p(svn_boolean_t *modified_p,
                         const char *path,
                         svn_wc_adm_access_t *adm_access,
@@ -3058,31 +3047,7 @@ svn_wc__has_prop_mods(svn_boolean_t *prop_mods,
                       svn_wc_adm_access_t *adm_access,
                       apr_pool_t *pool)
 {
-
-  /* For an enough recent WC, we can have a really easy out. */
-  if (svn_wc__adm_wc_format(adm_access) > SVN_WC__NO_PROPCACHING_VERSION)
-    {
-      const svn_wc_entry_t *entry;
-      SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, TRUE, pool));
-      *prop_mods = entry->has_prop_mods;
-    }
-  else
-    {
-      apr_array_header_t *propmods;
-      apr_hash_t *localprops = apr_hash_make(pool);
-      apr_hash_t *baseprops = apr_hash_make(pool);
-
-      /* Load all properties into hashes */
-      SVN_ERR(svn_wc__load_props(&baseprops, &localprops, NULL,
-                                 adm_access, path, pool));
-
-      /* Get an array of local changes by comparing the hashes. */
-      SVN_ERR(svn_prop_diffs(&propmods, localprops, baseprops, pool));
-
-      *prop_mods = propmods->nelts > 0;
-    }
-
-  return SVN_NO_ERROR;
+  return modified_props(prop_mods, path, NULL, adm_access, pool);
 }
 
 
