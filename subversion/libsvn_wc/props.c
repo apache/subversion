@@ -2814,7 +2814,7 @@ svn_wc__has_props(svn_boolean_t *has_props,
 
 
 /* Common implementation for svn_wc_props_modified_p()
-   and svn_wc__props_modified().
+   and svn_wc__has_prop_mods().
 
    Set *MODIFIED_P to true if PATH's properties are modified
    with regard to the base revision, else set MODIFIED_P to false.
