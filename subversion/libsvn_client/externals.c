@@ -363,7 +363,7 @@ switch_file_external(svn_wc_adm_access_t *adm_access,
       if (err)
         goto cleanup;
 
-      err = svn_wc_add2(path, target_adm_access,
+      err = svn_wc_add3(path, target_adm_access, svn_depth_infinity,
                         NULL, /* const char *copyfrom_url */
                         SVN_INVALID_REVNUM, /* svn_revnum_t copyfrom_rev */
                         ctx->cancel_func, ctx->cancel_baton,
