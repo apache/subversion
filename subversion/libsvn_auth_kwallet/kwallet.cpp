@@ -1,5 +1,5 @@
 /*
- * kwallet.cpp: KWallet provider for SVN_AUTH_CRED_SIMPLE
+ * kwallet.cpp: KWallet provider for SVN_AUTH_CRED_*
  *
  * ====================================================================
  * Copyright (c) 2008 CollabNet.  All rights reserved.
