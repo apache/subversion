@@ -70,19 +70,6 @@ svn_wc__entry_versioned_internal(const svn_wc_entry_t **entry,
                                    (show_hidden), NULL, 0, (pool))
 #endif
 
-/** If @a path's properties are modified with regard to the base revision set
- * @a *which_props to a hashtable
- * (<tt>const char *name</tt> -> <tt>const svn_string_t *value</tt>)
- * that contains only the modified properties or an empty hash if there are
- * no modifications.  @a adm_access must be an access baton for @a path.
- * @a *which_props is allocated in @a pool.
- *
- * @since New in 1.5.
- */
-svn_error_t *svn_wc__props_modified(const char *path,
-                                    apr_hash_t **which_props,
-                                    svn_wc_adm_access_t *adm_access,
-                                    apr_pool_t *pool);
 
 /** Given a @a wcpath with its accompanying @a entry, set @a *switched to
  * true if @a wcpath is switched, otherwise set @a *switched to false.
