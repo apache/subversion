@@ -1130,7 +1130,8 @@ typedef enum svn_wc_operation_t
  * versions.  Therefore, to preserve binary compatibility, users
  * should not directly allocate structures of this type but should use
  * svn_wc_create_conflict_description_text() or
- * svn_wc_create_conflict_description_prop() instead.
+ * svn_wc_create_conflict_description_prop() or
+ * svn_wc_create_conflict_description_tree() instead.
  *
  * @since New in 1.5.
  */
