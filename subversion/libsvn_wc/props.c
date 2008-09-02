@@ -1369,9 +1369,10 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
                                                  filepool);
           SVN_ERR(svn_diff_mem_string_diff3(&diff, the_val, working_val,
                                             new_val, options, filepool));
-          SVN_ERR(svn_diff_mem_string_output_merge
+          SVN_ERR(svn_diff_mem_string_output_merge2
                   (mergestream, diff, the_val, working_val, new_val,
-                   NULL, NULL, NULL, NULL, FALSE, FALSE, filepool));
+                   NULL, NULL, NULL, NULL,
+                   svn_diff_conflict_display_modified_latest, filepool));
           svn_stream_close(mergestream);
         }
     }
