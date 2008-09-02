@@ -3949,51 +3949,19 @@ def tree_conflicts_on_update_1_1(sbox):
 
   expected_output = wc.State('', {
     'F'                 : Item(status='C '),
-    'F/alpha'           : Item(status='U '),
     'D'                 : Item(status='C '),
-    'D/D1/delta'        : Item(status='A '),
     'DF'                : Item(status='C '),
-    'DF/D1'             : Item(status='C '),
-    'DF/D1/beta'        : Item(status='U '),
     'DD'                : Item(status='C '),
-    'DD/D1'             : Item(status='C '),
-    'DD/D1/D2/epsilon'  : Item(status='A '),
     'DDF'               : Item(status='C '),
-    'DDF/D1'            : Item(status='C '),
-    'DDF/D1/D2'         : Item(status='C '),
-    'DDF/D1/D2/gamma'   : Item(status='U '),
     'DDD'               : Item(status='C '),
-    'DDD/D1'            : Item(status='C '),
-    'DDD/D1/D2'         : Item(status='C '),
-    'DDD/D1/D2/D3/zeta' : Item(status='A '),
     })
 
-  expected_disk = state_after_leaf_edit
+  expected_disk = state_after_tree_del
 
-  expected_status = wc.State('', {
-    ''                  : Item(status='  ', wc_rev='3'),
-    'F'                 : Item(status='C ', wc_rev='3'),
-    'F/alpha'           : Item(status='D ', wc_rev='3'),
-    'D'                 : Item(status='C ', wc_rev='3'),
-    'D/D1'              : Item(status='D ', wc_rev='3'),
-    'D/D1/delta'        : Item(status='  ', wc_rev='3'),
-    'DF'                : Item(status='C ', wc_rev='3'),
-    'DF/D1'             : Item(status='D ', wc_rev='3'),
-    'DF/D1/beta'        : Item(status='D ', wc_rev='3'),
-    'DD'                : Item(status='C ', wc_rev='3'),
-    'DD/D1'             : Item(status='D ', wc_rev='3'),
-    'DD/D1/D2'          : Item(status='D ', wc_rev='3'),
-    'DD/D1/D2/epsilon'  : Item(status='  ', wc_rev='3'),
-    'DDF'               : Item(status='C ', wc_rev='3'),
-    'DDF/D1'            : Item(status='D ', wc_rev='3'),
-    'DDF/D1/D2'         : Item(status='D ', wc_rev='3'),
-    'DDF/D1/D2/gamma'   : Item(status='D ', wc_rev='3'),
-    'DDD'               : Item(status='C ', wc_rev='3'),
-    'DDD/D1'            : Item(status='D ', wc_rev='3'),
-    'DDD/D1/D2'         : Item(status='D ', wc_rev='3'),
-    'DDD/D1/D2/D3'      : Item(status='D ', wc_rev='3'),
-    'DDD/D1/D2/D3/zeta' : Item(status='  ', wc_rev='3'),
-    })
+  expected_status = state_after_tree_del.copy()
+  expected_status.add({ '' : Item(status='  ') }) # also set root's attributes
+  expected_status.tweak(wc_rev=3)
+  expected_status.tweak('F', 'D', 'DF', 'DD', 'DDF', 'DDD', status='C ')
 
   svntest.actions.deep_trees_run_tests_scheme_for_update(sbox,
     [ DeepTreesTestCase("local_tree_del_incoming_leaf_edit",
@@ -4011,42 +3979,19 @@ def tree_conflicts_on_update_1_2(sbox):
 
   expected_output = wc.State('', {
     'F'                 : Item(status='C '),
-    'F/alpha'           : Item(status='D '),
     'D'                 : Item(status='C '),
-    'D/D1'              : Item(status='D '),
     'DF'                : Item(status='C '),
-    'DF/D1'             : Item(status='C '),
-    'DF/D1/beta'        : Item(status='D '),
     'DD'                : Item(status='C '),
-    'DD/D1'             : Item(status='C '),
-    'DD/D1/D2'          : Item(status='D '),
     'DDF'               : Item(status='C '),
-    'DDF/D1'            : Item(status='C '),
-    'DDF/D1/D2'         : Item(status='C '),
-    'DDF/D1/D2/gamma'   : Item(status='D '),
     'DDD'               : Item(status='C '),
-    'DDD/D1'            : Item(status='C '),
-    'DDD/D1/D2'         : Item(status='C '),
-    'DDD/D1/D2/D3'      : Item(status='D '),
     })
 
-  expected_disk = state_after_leaf_del
+  expected_disk = state_after_tree_del
 
-  expected_status = wc.State('', {
-    ''                  : Item(status='  ', wc_rev='3'),
-    'F'                 : Item(status='C ', wc_rev='3'),
-    'D'                 : Item(status='C ', wc_rev='3'),
-    'DF'                : Item(status='C ', wc_rev='3'),
-    'DF/D1'             : Item(status='D ', wc_rev='3'),
-    'DD'                : Item(status='C ', wc_rev='3'),
-    'DD/D1'             : Item(status='D ', wc_rev='3'),
-    'DDF'               : Item(status='C ', wc_rev='3'),
-    'DDF/D1'            : Item(status='D ', wc_rev='3'),
-    'DDF/D1/D2'         : Item(status='D ', wc_rev='3'),
-    'DDD'               : Item(status='C ', wc_rev='3'),
-    'DDD/D1'            : Item(status='D ', wc_rev='3'),
-    'DDD/D1/D2'         : Item(status='D ', wc_rev='3'),
-    })
+  expected_status = state_after_tree_del.copy()
+  expected_status.add({ '' : Item(status='  ') }) # also set root's attributes
+  expected_status.tweak(wc_rev=3)
+  expected_status.tweak('F', 'D', 'DF', 'DD', 'DDF', 'DDD', status='C ')
 
   svntest.actions.deep_trees_run_tests_scheme_for_update(sbox,
     [ DeepTreesTestCase("local_tree_del_incoming_leaf_del",
@@ -4066,25 +4011,19 @@ def tree_conflicts_on_update_2_1(sbox):
 
   expected_output = wc.State('', {
     'F'                 : Item(status='C '),
-    'F/alpha'           : Item(status='D '),
-    'D/D1'              : Item(status='D '),
-    'DF/D1'             : Item(status='D '),
-    'DD/D1'             : Item(status='D '),
-    'DDF/D1'            : Item(status='D '),
-    'DDD/D1'            : Item(status='D '),
+    'D'                 : Item(status='C '),
+    'DF'                : Item(status='C '),
+    'DD'                : Item(status='C '),
+    'DDF'               : Item(status='C '),
+    'DDD'               : Item(status='C '),
     })
 
   expected_disk = state_after_leaf_edit
 
-  expected_status = wc.State('', {
-    ''                  : Item(status='  ', wc_rev='3'),
-    'F'                 : Item(status='C ', wc_rev='3'),
-    'D'                 : Item(status='  ', wc_rev='3'),
-    'DF'                : Item(status='  ', wc_rev='3'),
-    'DD'                : Item(status='  ', wc_rev='3'),
-    'DDF'               : Item(status='  ', wc_rev='3'),
-    'DDD'               : Item(status='  ', wc_rev='3'),
-    })
+  expected_status = state_after_leaf_edit.copy()
+  expected_status.add({ '' : Item(status='  ') }) # also set root's attributes
+  expected_status.tweak(wc_rev=3)
+  expected_status.tweak('F', 'D', 'DF', 'DD', 'DDF', 'DDD', status='C ')
 
   svntest.actions.deep_trees_run_tests_scheme_for_update(sbox,
     [ DeepTreesTestCase("local_leaf_edit_incoming_tree_del",
@@ -4102,31 +4041,20 @@ def tree_conflicts_on_update_2_2(sbox):
   # 2.2) local leaf delete, incoming tree delete
 
   expected_output = wc.State('', {
-    'D'                 : Item(status='C '),
-    'D/D1'              : Item(status='D '),
     'F'                 : Item(status='C '),
-    'F/alpha'           : Item(status='D '),
-    'DD'                : Item(),
-    'DD/D1'             : Item(status='D '),
-    'DF'                : Item(),
-    'DF/D1'             : Item(status='D '),
-    'DDD'               : Item(),
-    'DDD/D1'            : Item(status='D '),
-    'DDF'               : Item(),
-    'DDF/D1'            : Item(status='D '),
+    'D'                 : Item(status='C '),
+    'DF'                : Item(status='C '),
+    'DD'                : Item(status='C '),
+    'DDF'               : Item(status='C '),
+    'DDD'               : Item(status='C '),
     })
 
-  expected_disk = state_after_tree_del
+  expected_disk = state_after_leaf_del
 
-  expected_status = wc.State('', {
-    ''                  : Item(status='  ', wc_rev='3'),
-    'F'                 : Item(status='C ', wc_rev='3'),
-    'DD'                : Item(status='  ', wc_rev='3'),
-    'DF'                : Item(status='  ', wc_rev='3'),
-    'DDD'               : Item(status='  ', wc_rev='3'),
-    'DDF'               : Item(status='  ', wc_rev='3'),
-    'D'                 : Item(status='C ', wc_rev='3'),
-    })
+  expected_status = state_after_leaf_del.copy()
+  expected_status.add({ '' : Item(status='  ') }) # also set root's attributes
+  expected_status.tweak(wc_rev=3)
+  expected_status.tweak('F', 'D', 'DF', 'DD', 'DDF', 'DDD', status='C ')
 
   svntest.actions.deep_trees_run_tests_scheme_for_update(sbox,
     [ DeepTreesTestCase("local_leaf_del_incoming_tree_del",
@@ -4146,30 +4074,19 @@ def tree_conflicts_on_update_3(sbox):
 
   expected_output = wc.State('', {
     'F'                 : Item(status='C '),
-    'F/alpha'           : Item(status='D '),
     'D'                 : Item(status='C '),
-    'D/D1'              : Item(status='D '),
     'DF'                : Item(status='C '),
-    'DF/D1'             : Item(status='D '),
     'DD'                : Item(status='C '),
-    'DD/D1'             : Item(status='D '),
     'DDF'               : Item(status='C '),
-    'DDF/D1'            : Item(status='D '),
     'DDD'               : Item(status='C '),
-    'DDD/D1'            : Item(status='D '),
     })
 
   expected_disk = state_after_tree_del
 
-  expected_status = wc.State('', {
-    ''                  : Item(status='  ', wc_rev='3'),
-    'F'                 : Item(status='C ', wc_rev='3'),
-    'D'                 : Item(status='C ', wc_rev='3'),
-    'DF'                : Item(status='C ', wc_rev='3'),
-    'DD'                : Item(status='C ', wc_rev='3'),
-    'DDF'               : Item(status='C ', wc_rev='3'),
-    'DDD'               : Item(status='C ', wc_rev='3'),
-    })
+  expected_status = state_after_tree_del.copy()
+  expected_status.add({ '' : Item(status='  ') }) # also set root's attributes
+  expected_status.tweak(wc_rev=3)
+  expected_status.tweak('F', 'D', 'DF', 'DD', 'DDF', 'DDD', status='C ')
 
   svntest.actions.deep_trees_run_tests_scheme_for_update(sbox,
     [ DeepTreesTestCase("local_tree_del_incoming_tree_del",
@@ -4235,11 +4152,11 @@ test_list = [ None,
               eof_in_interactive_conflict_resolver,
               update_uuid_changed,
               restarted_update_should_delete_dir_prop,
-              tree_conflicts_on_update_1_1,
-              tree_conflicts_on_update_1_2,
-              tree_conflicts_on_update_2_1,
-              tree_conflicts_on_update_2_2,
-              tree_conflicts_on_update_3,
+              XFail(tree_conflicts_on_update_1_1),
+              XFail(tree_conflicts_on_update_1_2),
+              XFail(tree_conflicts_on_update_2_1),
+              XFail(tree_conflicts_on_update_2_2),
+              XFail(tree_conflicts_on_update_3),
              ]
 
 if __name__ == '__main__':

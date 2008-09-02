@@ -1672,11 +1672,23 @@ Item = wc.StateItem
 
 # initial deep trees state
 deep_trees_virginal_state = wc.State('', {
+  'F'               : Item(),
   'F/alpha'         : Item("This is the file 'alpha'.\n"),
+  'D'               : Item(),
   'D/D1'            : Item(),
+  'DF'              : Item(),
+  'DF/D1'           : Item(),
   'DF/D1/beta'      : Item("This is the file 'beta'.\n"),
+  'DD'              : Item(),
+  'DD/D1'           : Item(),
   'DD/D1/D2'        : Item(),
+  'DDF'             : Item(),
+  'DDF/D1'          : Item(),
+  'DDF/D1/D2'       : Item(),
   'DDF/D1/D2/gamma' : Item("This is the file 'gamma'.\n"),
+  'DDD'             : Item(),
+  'DDD/D1'          : Item(),
+  'DDD/D1/D2'       : Item(),
   'DDD/D1/D2/D3'    : Item(),
   })
 
@@ -1704,11 +1716,26 @@ def deep_trees_leaf_edit(base):
 
 # deep trees state after a call to deep_trees_leaf_edit
 deep_trees_after_leaf_edit = wc.State('', {
+  'F'                 : Item(),
   'F/alpha'           : Item("This is the file 'alpha'.\nMore text for file alpha.\n"),
+  'D'                 : Item(),
+  'D/D1'              : Item(),
   'D/D1/delta'        : Item("This is the file 'delta'.\n"),
+  'DF'                : Item(),
+  'DF/D1'             : Item(),
   'DF/D1/beta'        : Item("This is the file 'beta'.\nMore text for file beta.\n"),
+  'DD'                : Item(),
+  'DD/D1'             : Item(),
+  'DD/D1/D2'          : Item(),
   'DD/D1/D2/epsilon'  : Item("This is the file 'epsilon'.\n"),
+  'DDF'               : Item(),
+  'DDF/D1'            : Item(),
+  'DDF/D1/D2'         : Item(),
   'DDF/D1/D2/gamma'   : Item("This is the file 'gamma'.\nMore text for file gamma.\n"),
+  'DDD'               : Item(),
+  'DDD/D1'            : Item(),
+  'DDD/D1/D2'         : Item(),
+  'DDD/D1/D2/D3'      : Item(),
   'DDD/D1/D2/D3/zeta' : Item("This is the file 'zeta'.\n"),
   })
 
@@ -1729,9 +1756,15 @@ def deep_trees_leaf_del(base):
 deep_trees_after_leaf_del = wc.State('', {
   'F'               : Item(),
   'D'               : Item(),
+  'DF'              : Item(),
   'DF/D1'           : Item(),
+  'DD'              : Item(),
   'DD/D1'           : Item(),
+  'DDF'             : Item(),
+  'DDF/D1'          : Item(),
   'DDF/D1/D2'       : Item(),
+  'DDD'             : Item(),
+  'DDD/D1'          : Item(),
   'DDD/D1/D2'       : Item(),
   })
 
