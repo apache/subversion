@@ -127,6 +127,7 @@ svn_hash_write_incremental(apr_hash_t *hash,
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_hash_read(apr_hash_t *hash,
               apr_file_t *srcfile,
@@ -138,6 +139,7 @@ svn_hash_read(apr_hash_t *hash,
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_hash_write(apr_hash_t *hash,
                apr_file_t *destfile,

@@ -140,7 +140,7 @@ cat_local_file(const char *path,
     SVN_ERR(svn_subst_translate_stream3(input, output, eol, FALSE, kw,
                                         TRUE, pool));
   else
-    SVN_ERR(svn_stream_copy(input, output, pool));
+    SVN_ERR(svn_stream_copy2(input, output, NULL, NULL, pool));
 
   SVN_ERR(svn_stream_close(input));
 

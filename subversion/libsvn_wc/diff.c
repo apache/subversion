@@ -1376,8 +1376,8 @@ apply_textdelta(void *file_baton,
                                   parent, svn_io_file_del_on_pool_cleanup,
                                   b->pool));
 
-  svn_txdelta_apply(svn_stream_from_aprfile(b->original_file, b->pool),
-                    svn_stream_from_aprfile(b->temp_file, b->pool),
+  svn_txdelta_apply(svn_stream_from_aprfile2(b->original_file, TRUE, b->pool),
+                    svn_stream_from_aprfile2(b->temp_file, TRUE, b->pool),
                     NULL,
                     b->temp_file_path,
                     b->pool,

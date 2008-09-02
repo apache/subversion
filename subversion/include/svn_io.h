@@ -185,6 +185,7 @@ svn_io_open_unique_file2(apr_file_t **f,
  *       required.
  *
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_io_open_unique_file(apr_file_t **f,
                         const char **unique_name_p,
@@ -364,6 +365,7 @@ svn_io_set_file_read_write(const char *path,
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_io_set_file_read_write_carefully(const char *path,
                                      svn_boolean_t enable_write,
@@ -504,6 +506,7 @@ svn_io_file_create(const char *file,
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_io_file_lock(const char *lock_file,
                  svn_boolean_t exclusive,
@@ -659,6 +662,7 @@ svn_stream_from_aprfile2(apr_file_t *file,
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
+SVN_DEPRECATED
 svn_stream_t *
 svn_stream_from_aprfile(apr_file_t *file,
                         apr_pool_t *pool);
@@ -736,6 +740,7 @@ svn_stream_checksummed2(svn_stream_t *stream,
  * @since New in 1.4.
  * @deprecated Provided for backward compatibility with the 1.5 API.
  */
+SVN_DEPRECATED
 svn_stream_t *
 svn_stream_checksummed(svn_stream_t *stream,
                        const unsigned char **read_digest,
@@ -824,6 +829,7 @@ svn_stream_copy2(svn_stream_t *from,
  * @since New in 1.1.
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_stream_copy(svn_stream_t *from,
                 svn_stream_t *to,
@@ -865,6 +871,7 @@ svn_stringbuf_from_file2(svn_stringbuf_t **result,
  *
  * @deprecated Provided for backwards compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_stringbuf_from_file(svn_stringbuf_t **result,
                         const char *filename,
@@ -907,6 +914,7 @@ svn_io_remove_dir2(const char *path,
  *
  * @deprecated Provided for backward compatibility with the 1.4 API
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_io_remove_dir(const char *path,
                   apr_pool_t *pool);
@@ -947,6 +955,7 @@ svn_io_get_dirents2(apr_hash_t **dirents,
  *
  * @deprecated Provided for backwards compatibility with the 1.2 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_io_get_dirents(apr_hash_t **dirents,
                    const char *path,
@@ -1133,6 +1142,7 @@ svn_io_run_diff3_2(int *exitcode,
  *
  * @deprecated Provided for backwards compatibility with the 1.3 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_io_run_diff3(const char *dir,
                  const char *mine,
@@ -1185,6 +1195,7 @@ svn_io_detect_mimetype2(const char **mimetype,
  *
  * @deprecated Provided for backward compatibility with the 1.4 API
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_io_detect_mimetype(const char **mimetype,
                        const char *file,

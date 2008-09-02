@@ -425,7 +425,7 @@ diff_content_changed(const char *path,
   int i;
 
   /* Get a stream from our output file. */
-  os = svn_stream_from_aprfile(diff_cmd_baton->outfile, subpool);
+  os = svn_stream_from_aprfile2(diff_cmd_baton->outfile, TRUE, subpool);
 
   /* Generate the diff headers. */
 

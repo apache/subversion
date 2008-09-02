@@ -107,9 +107,12 @@ extern "C" {
  *
  * (a) Strings (@c svn_string_t *) containing "unparsed mergeinfo".
  *
- * (b) A "rangelist".  An array (@c apr_array_header_t *) of merge
- *     ranges (@c svn_merge_range_t *), ordered from smallest revision
- *     range to largest.
+ * (b) A "rangelist".  An array (@c apr_array_header_t *) of non-overlapping
+ *     merge ranges (@c svn_merge_range_t *), sorted as said by
+ *     @c svn_sort_compare_ranges().  An empty range list is represented by
+ *     an empty array.  Unless specifically noted otherwise, all APIs require
+ *     rangelists that describe only forward ranges, i.e. the range's start
+ *     revision is less than its end revision.
  *
  * (c) @c svn_mergeinfo_t, called "mergeinfo".  A hash mapping merge
  *     source paths (@c const char *, starting with slashes) to

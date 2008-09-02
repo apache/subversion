@@ -1,5 +1,5 @@
 /*
- * gnome_keyring.c: GNOME Keyring provider for SVN_AUTH_CRED_SIMPLE
+ * gnome_keyring.c: GNOME Keyring provider for SVN_AUTH_CRED_*
  *
  * ====================================================================
  * Copyright (c) 2008 CollabNet.  All rights reserved.

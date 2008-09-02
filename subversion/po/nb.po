@@ -7,14 +7,19 @@
 # '' - «»
 # allocate - reservere
 # ancestor - opprinnelse
+# API - programmeringsgrensesnitt
 # argument - argument
+# authentication realm - autentiseringsområde
 # bump - øke
+# cache - hurtiglager
 # cached - lagrede
+# capability - evne
 # changelist - forandringsliste
 # checkout - hente ut, uthenting
 # client - klient
 # commit - sende inn, innsending
 # corrupt - ødelagt, skadet
+# credentials - legitimasjonsdata
 # cursor - databasepeker
 # daemon - tjeneste
 # deprecated - avlegs
@@ -27,6 +32,8 @@
 # item - element
 # lock token - låsnøkkel
 # malformed - misdannet
+# malfunction - funksjonsfeil
+# memcache - minnehurtiglager
 # merge - flette
 # mergeinfo - fletteinformasjon
 # module - modul
@@ -39,6 +46,7 @@
 # plugin - programtillegg
 # property - egenskap
 # record - post
+# reintegration - tilbakeføring
 # relocation - relokalisering, forflytning(?)
 # remote - fjerntliggende
 # repository - depot
@@ -64,7 +72,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.6\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2008-07-15 12:05+0200\n"
-"PO-Revision-Date: 2008-02-23 15:08+0100\n"
+"PO-Revision-Date: 2008-08-29 13:23+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -112,9 +120,8 @@ msgid "Invalid configuration value"
 msgstr "Ugyldig verdi i innstilling"
 
 #: ../include/svn_error_codes.h:205
-#, fuzzy
 msgid "Bogus server specification"
-msgstr "Mangler påkrevet revisjonsspesifikasjon"
+msgstr "Fiktiv tjenerspesifikasjon"
 
 #: ../include/svn_error_codes.h:211
 msgid "No such XML tag attribute"
@@ -592,9 +599,8 @@ msgid "Server can only replay from the root of a repository"
 msgstr "Tjeneren kan bare spille av fra roten av et depot"
 
 #: ../include/svn_error_codes.h:756
-#, fuzzy
 msgid "Repository UUID does not match expected UUID"
-msgstr "UUID for kildedepotet (%s) samsvarer ikke med forventet UUID (%s)"
+msgstr "Depot-UUID samsvarer ikke med forventet UUID"
 
 #: ../include/svn_error_codes.h:762
 msgid "RA layer failed to init socket layer"
@@ -680,11 +686,11 @@ msgstr "Initialisering av SSPI-biblioteket feilet"
 
 #: ../include/svn_error_codes.h:869
 msgid "Server SSL certificate untrusted"
-msgstr ""
+msgstr "SSL-sertifikat fra tjeneren er ikke godkjent"
 
 #: ../include/svn_error_codes.h:877
 msgid "Credential data unavailable"
-msgstr "Akkreditive data er utilgjengelige"
+msgstr "Legitimasjonsdata er utilgjengelig"
 
 #: ../include/svn_error_codes.h:881
 msgid "No authentication provider available"
@@ -695,9 +701,8 @@ msgid "All authentication providers exhausted"
 msgstr "Alle autentiseringsinstanser er brukt opp"
 
 #: ../include/svn_error_codes.h:889
-#, fuzzy
 msgid "Credentials not saved"
-msgstr "Akkreditive data er utilgjengelige"
+msgstr "Legitimasjonsdata er ikke lagret"
 
 #: ../include/svn_error_codes.h:894
 msgid "Authentication failed"
@@ -836,14 +841,12 @@ msgid "No versioned parent directories"
 msgstr "Ingen versjonerte foreldrekataloger"
 
 #: ../include/svn_error_codes.h:1050
-#, fuzzy
 msgid "Working copy and merge source not ready for reintegration"
-msgstr "En arbeidskopi som flettekilde krever en eksplisitt revisjon"
+msgstr "Arbeidskopien og flettekilden er ikke klar for tilbakeføring"
 
 #: ../include/svn_error_codes.h:1056
-#, fuzzy
 msgid "A problem occurred; see other errors for details"
-msgstr "Et problem har oppstått. Se på videre feilmeldinger for detaljer"
+msgstr "Et problem har oppstått; sjekk andre feilmeldinger for detaljer"
 
 #: ../include/svn_error_codes.h:1060
 msgid "Failure loading plugin"
@@ -927,7 +930,7 @@ msgstr "Feil under tolking av fletteinformasjon"
 
 #: ../include/svn_error_codes.h:1143
 msgid "Cease invocation of this API"
-msgstr ""
+msgstr "Avslutt oppkall av dette programmeringsgrensesnittet"
 
 #: ../include/svn_error_codes.h:1148
 msgid "Error parsing revision number"
@@ -935,7 +938,7 @@ msgstr "Feil under tolking av revisjonsnummer"
 
 #: ../include/svn_error_codes.h:1153
 msgid "Iteration terminated before completion"
-msgstr ""
+msgstr "Gjentakelse avsluttet før den ble fullført"
 
 #: ../include/svn_error_codes.h:1158
 msgid "Unknown changelist"
@@ -947,16 +950,15 @@ msgstr "Reservert katalognavn i kommandolinjeargumenter"
 
 #: ../include/svn_error_codes.h:1168
 msgid "Inquiry about unknown capability"
-msgstr ""
+msgstr "Forespørsel om ukjent evne"
 
 #: ../include/svn_error_codes.h:1173
-#, fuzzy
 msgid "Test skipped"
-msgstr "Testen feilet"
+msgstr "Test droppet"
 
 #: ../include/svn_error_codes.h:1178
 msgid "apr memcache library not available"
-msgstr ""
+msgstr "Bibliotek for APR-minnehurtiglager er ikke tilgjengelig"
 
 #: ../include/svn_error_codes.h:1184
 msgid "Error parsing arguments"
@@ -1069,14 +1071,14 @@ msgid "'%s' already exists and is not a directory"
 msgstr "«%s» finnes allerede og er ikke en katalog"
 
 #: ../libsvn_client/cmdline.c:72
-#, fuzzy, c-format
+#, c-format
 msgid "Improper relative URL '%s'"
-msgstr "Egenskaper for «%s»:\n"
+msgstr "Uriktig relativ URL «%s»"
 
 #: ../libsvn_client/cmdline.c:130
 #, c-format
 msgid "All non-relative targets must have the same root URL"
-msgstr ""
+msgstr "Alle mål som ikke er relative må ha samme rot-URL"
 
 #: ../libsvn_client/cmdline.c:249 ../libsvn_subr/opt.c:986
 #, c-format
@@ -1175,9 +1177,9 @@ msgid "Commit item '%s' has copy flag but no copyfrom URL"
 msgstr "Objekt «%s» for innsending har kopimerke satt, men ingen copyfrom-URL"
 
 #: ../libsvn_client/commit_util.c:451
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is scheduled for addition, but is missing"
-msgstr "«%s» er klarert for å legges til i en ikke-versjonert forelder"
+msgstr "«%s» er klarert for å legges til, men den mangler"
 
 #: ../libsvn_client/commit_util.c:706
 #, c-format
@@ -1312,9 +1314,9 @@ msgid "'%s' has local modifications"
 msgstr "«%s» er endret lokalt"
 
 #: ../libsvn_client/diff.c:136
-#, fuzzy, c-format
+#, c-format
 msgid "   Reverse-merged %s:r%s%s"
-msgstr "Tilbakestilte %s:r%s%s"
+msgstr "   Tilbakeflettet %s:r%s%s"
 
 #: ../libsvn_client/diff.c:155
 #, c-format
@@ -1424,24 +1426,24 @@ msgid "URL '%s' does not begin with a scheme"
 msgstr "URL-en «%s» starter ikke med et skjema"
 
 #: ../libsvn_client/externals.c:363
-#, fuzzy, c-format
+#, c-format
 msgid "Illegal parent directory URL '%s'"
-msgstr "Ulovlig URL for foreldrekatalog: «%s»."
+msgstr "Ulovlig URL for foreldrekatalog: «%s»"
 
 #: ../libsvn_client/externals.c:393
-#, fuzzy, c-format
+#, c-format
 msgid "Illegal repository root URL '%s'"
-msgstr "Ulovlig URL for depotrot: «%s»."
+msgstr "Ulovlig URL for depotrot: «%s»"
 
 #: ../libsvn_client/externals.c:435
 #, c-format
 msgid "The external relative URL '%s' cannot have backpaths, i.e. '..'"
-msgstr ""
+msgstr "Den eksterne relative URL-en «%s» kan ikke inneholde bakoverstier, dvs. «..»"
 
 #: ../libsvn_client/externals.c:467
-#, fuzzy, c-format
+#, c-format
 msgid "Unrecognized format for the relative external URL '%s'"
-msgstr "Ukjent format for relativ ekstern URL «%s»."
+msgstr "Ukjent format for den relative eksterne URL-en «%s»"
 
 #: ../libsvn_client/externals.c:689
 #, c-format
@@ -1449,9 +1451,9 @@ msgid "Traversal of '%s' found no ambient depth"
 msgstr ""
 
 #: ../libsvn_client/externals.c:820
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is not a URL"
-msgstr "Filstien «%s» er ikke en URL"
+msgstr "«%s» er ikke en URL"
 
 #: ../libsvn_client/info.c:405
 #, c-format
@@ -1552,7 +1554,7 @@ msgstr ".merge-right.r%ld"
 
 #: ../libsvn_client/merge.c:2170
 msgid "Cannot reverse-merge a range from a path's own future history; try updating first"
-msgstr ""
+msgstr "Kan ikke tilbakeflette et område fra den framtidige historien til en sti; prøv en oppdatering først"
 
 #: ../libsvn_client/merge.c:2677
 #, c-format
@@ -1567,26 +1569,27 @@ msgstr ""
 "løs alle konflikter og kjør flettingen på nytt for å legge til de\n"
 "resterende uflettede revisjonene"
 
+# ### FIXME: Tungvint setning
 #: ../libsvn_client/merge.c:5367
 msgid "Use of two URLs is not compatible with mergeinfo modification"
-msgstr ""
+msgstr "Bruken av to URL-er er ikke kompatibel med modifisering av fletteinformasjon"
 
+# ### FIXME: Tungvint setning
 #: ../libsvn_client/merge.c:5374 ../libsvn_client/merge.c:5590
 msgid "Merge from foreign repository is not compatible with mergeinfo modification"
-msgstr ""
+msgstr "Fletting fra et fremmed depot er ikke kompatibel med modifisering av fletteinformasjon"
 
 #: ../libsvn_client/merge.c:5896
-#, fuzzy
 msgid "Cannot reintegrate into a working copy with a switched subtree"
-msgstr "Kan ikke blande depot- og arbeidskopikilder"
+msgstr "Kan ikke tilbakeføre til en arbeidskopi med et byttet katalogtre"
 
 #: ../libsvn_client/merge.c:5901
 msgid "Cannot reintegrate into a working copy not entirely at infinite depth"
-msgstr ""
+msgstr "Kan ikke tilbakeføre til en arbeidskopi som ikke er satt til uendelig dybde"
 
 #: ../libsvn_client/merge.c:5906
 msgid "Cannot reintegrate into a working copy that has local modifications"
-msgstr ""
+msgstr "Kan ikke tilbakeføre til en arbeidskopi som har lokale forandringer"
 
 #: ../libsvn_client/merge.c:5912
 msgid "Cannot determine revision of working copy"
@@ -1594,7 +1597,7 @@ msgstr "Kan ikke anslå revisjonen for arbeidskopien"
 
 #: ../libsvn_client/merge.c:5916
 msgid "Cannot reintegrate into mixed-revision working copy; try updating first"
-msgstr ""
+msgstr "Kan ikke tilbakeføre inn i en arbeidskopi med blandede revisjoner; prøv oppdatering først"
 
 #: ../libsvn_client/merge.c:5983
 #, c-format
@@ -1604,7 +1607,7 @@ msgstr "Minst en revisjon {r%ld} er fortsatt ikke flettet fra «%s»"
 #: ../libsvn_client/merge.c:6141 ../libsvn_client/merge.c:6305
 #, c-format
 msgid "'%s@%ld' must be ancestrally related to '%s@%ld'"
-msgstr ""
+msgstr "«%s@%ld» må være slektsmessig forbundet med «%s@%ld»"
 
 #: ../libsvn_client/merge.c:6264
 #, c-format
@@ -1653,17 +1656,17 @@ msgstr "Verdien blir ikke satt uten tvang"
 #: ../libsvn_client/prop_commands.c:508
 #, c-format
 msgid "revprop '%s' in r%ld is unexpectedly absent in repository (maybe someone else deleted it?)"
-msgstr ""
+msgstr "revisjonsegenskapen «%s» i r%ld er plutselig borte fra depotet (kanskje noen andre slettet den?)"
 
 #: ../libsvn_client/prop_commands.c:517
 #, c-format
 msgid "revprop '%s' in r%ld has unexpected value in repository (maybe someone else changed it?)"
-msgstr ""
+msgstr "revisjonsegenskapen «%s» i r%ld har en ukjent verdi i depotet (kanskje noen andre forandret den?)"
 
 #: ../libsvn_client/prop_commands.c:525
 #, c-format
 msgid "revprop '%s' in r%ld is unexpectedly present in repository (maybe someone else set it?)"
-msgstr ""
+msgstr "revisjonsegenskapen «%s» i r%ld oppsto plutselig i depotet (kanskje noen andre opprettet den?)"
 
 #: ../libsvn_client/prop_commands.c:714
 #, c-format
@@ -1723,9 +1726,9 @@ msgstr ""
 "«%s»"
 
 #: ../libsvn_client/util.c:216
-#, fuzzy, c-format
+#, c-format
 msgid "URL '%s' is not a child of repository root URL '%s'"
-msgstr "«%s» er ikke det samme depotet som «%s»"
+msgstr "URL-en «%s» er ikke underlagt depotrotURL-en «%s»"
 
 #: ../libsvn_delta/svndiff.c:144
 msgid "Compression of svndiff data failed"
@@ -2135,9 +2138,9 @@ msgid "Attempted to open node with an illegal name '%s'"
 msgstr "Forsøkte å åpne node med det ulovlige navnet «%s»"
 
 #: ../libsvn_fs_base/dag.c:1546
-#, fuzzy, c-format
+#, c-format
 msgid "Attempted merge tracking info change on immutable node"
-msgstr "Forsøkte å fjerne uforanderlig node"
+msgstr "Forsøkte å forandre flettefølgeinfo på en uforanderlig node"
 
 #: ../libsvn_fs_base/dag.c:1586
 #, fuzzy, c-format
@@ -2413,7 +2416,7 @@ msgid "Bad merge; target '%s' has id '%s', same as ancestor"
 msgstr "Feilaktig fletting; målet «%s» har ID «%s», samme som opprinnelse"
 
 #: ../libsvn_fs_base/tree.c:2431
-#, fuzzy, c-format
+#, c-format
 msgid "Transaction '%s' out-of-date with respect to revision '%s'"
 msgstr "Transaksjonen «%s» er utdatert i forhold til revisjon «%s»"
 
@@ -2464,7 +2467,7 @@ msgstr "Noderevisjon «%s» påstår å være på toppen av et tre som inneholde
 
 #: ../libsvn_fs_fs/caching.c:70
 msgid "Bad ID in cache"
-msgstr ""
+msgstr "Feil i ID i hurtiglager"
 
 #: ../libsvn_fs_fs/dag.c:432 ../libsvn_ra_serf/serf.c:975
 msgid "Can't get entries of non-directory"
@@ -2493,34 +2496,34 @@ msgstr ""
 
 #: ../libsvn_fs_fs/dag.c:1142
 msgid "Empty noderev in cache"
-msgstr ""
+msgstr "Tom noderevisjon i hurtiglager"
 
 #: ../libsvn_fs_fs/dag.c:1152
 msgid "Kindless noderev in cache"
-msgstr ""
+msgstr "Typeløs noderevisjon i hurtiglager"
 
 #: ../libsvn_fs_fs/dag.c:1159
-#, fuzzy, c-format
+#, c-format
 msgid "Unknown kind for noderev in cache: '%c'"
-msgstr "Ukjent nodetype for representasjon «%s»"
+msgstr "Ukjent type på noderevisjon i hurtiglager: «%c»"
 
 #: ../libsvn_fs_fs/dag.c:1166
 msgid "Unterminated ID in cache"
-msgstr ""
+msgstr "Hurtiglager inneholder ID som ikke er avsluttet"
 
 #: ../libsvn_fs_fs/dag.c:1171
 #, c-format
 msgid "Bogus ID '%s' in cache"
-msgstr ""
+msgstr "Fiktiv ID «%s» i hurtiglager"
 
 #: ../libsvn_fs_fs/dag.c:1178
 msgid "No created path"
-msgstr ""
+msgstr "Ingen opprettet sti"
 
 #: ../libsvn_fs_fs/dag.c:1204
-#, fuzzy, c-format
+#, c-format
 msgid "Unknown node type in cache: '%c'"
-msgstr "Ukjent nodetype for «%s»"
+msgstr "Ukjent nodetype i hurtiglager: «%c»"
 
 #: ../libsvn_fs_fs/err.c:52
 #, c-format
@@ -2871,7 +2874,7 @@ msgid "Node-revision '%s@%ld' claims to have mergeinfo but doesn't"
 msgstr "Noderevisjon «%s@%ld» påstår å ha fletteinformasjon, men har ikke det"
 
 #: ../libsvn_fs_fs/tree.c:3679
-#, fuzzy, c-format
+#, c-format
 msgid "Querying mergeinfo requires version %d of the FSFS filesystem schema; filesystem '%s' uses only version %d"
 msgstr "Forespørsel om fletteinformasjon krever versjon %d av FSFS-filsystemskjemaet; filsystemet «%s» bruker bare versjon %d"
 
@@ -2910,9 +2913,9 @@ msgid "Illegal repository URL '%s'"
 msgstr "Ulovlig depot-URL «%s»"
 
 #: ../libsvn_ra/ra_loader.c:498
-#, fuzzy, c-format
+#, c-format
 msgid "Invalid config: unknown HTTP library '%s'"
-msgstr "Ugyldig innstilling: Ukjent http-bibliotek"
+msgstr "Ugyldig innstilling: Ukjent http-bibliotek: «%s»"
 
 #: ../libsvn_ra/ra_loader.c:553
 #, c-format
@@ -2920,9 +2923,9 @@ msgid "Unrecognized URL scheme for '%s'"
 msgstr "Ukjent URL-skjema for «%s»"
 
 #: ../libsvn_ra/ra_loader.c:575
-#, fuzzy, c-format
+#, c-format
 msgid "Repository UUID '%s' doesn't match expected UUID '%s'"
-msgstr "UUID for kildedepotet (%s) samsvarer ikke med forventet UUID (%s)"
+msgstr "Depotets UUID «%s» samsvarer ikke med forventet UUID «%s»"
 
 #: ../libsvn_ra/ra_loader.c:631
 #, c-format
@@ -2955,15 +2958,15 @@ msgid "Unable to open an ra_local session to URL"
 msgstr "Klarer ikke åpne en ra_local-økt til URL"
 
 #: ../libsvn_ra_local/ra_plugin.c:492
-#, fuzzy, c-format
+#, c-format
 msgid "URL '%s' is not a child of the session's repository root URL '%s'"
-msgstr "«%s» er ikke det samme depotet som «%s»"
+msgstr "URL-en «%s» ligger ikke under øktens depotrot-URL «%s»"
 
 #: ../libsvn_ra_local/ra_plugin.c:1398 ../libsvn_ra_neon/session.c:921
 #: ../libsvn_ra_serf/serf.c:299 ../libsvn_ra_svn/client.c:2277
 #, c-format
 msgid "Don't know anything about capability '%s'"
-msgstr ""
+msgstr "Vet ingenting om evne «%s»"
 
 #: ../libsvn_ra_local/ra_plugin.c:1476
 #, c-format
@@ -3227,9 +3230,8 @@ msgstr "Mangler navnattributt i «revprop»-element"
 
 #: ../libsvn_ra_neon/log.c:444 ../libsvn_ra_serf/log.c:547
 #: ../libsvn_ra_svn/client.c:1319
-#, fuzzy
 msgid "Server does not support custom revprops via log"
-msgstr "Tjeneren støtter ikke replay-kommandoen"
+msgstr "Tjeneren støtter ikke tilpassede egenskaper via logging"
 
 #: ../libsvn_ra_neon/merge.c:218
 #, c-format
@@ -3367,22 +3369,22 @@ msgstr "Modul for tilgang til depot via WebDAV-protokollen ved hjelp av Neon."
 #: ../libsvn_ra_neon/session.c:808
 #, c-format
 msgid "OPTIONS request (for capabilities) got HTTP response code %d"
-msgstr ""
+msgstr "OPTIONS-forespørsel (om evner) mottok HTTP-responskoden %d"
 
 #: ../libsvn_ra_neon/session.c:904 ../libsvn_ra_serf/serf.c:282
 #, c-format
 msgid "Don't know how to handle '%s' for capability '%s'"
-msgstr ""
+msgstr "Vet ikke hvordan «%s» skal håndteres for evne «%s»"
 
 #: ../libsvn_ra_neon/session.c:928 ../libsvn_ra_serf/serf.c:306
 #, c-format
 msgid "Attempt to fetch capability '%s' resulted in '%s'"
-msgstr ""
+msgstr "Forsøk på å hente evne «%s» resulterte i «%s»"
 
 #: ../libsvn_ra_neon/session.c:951
 #, c-format
 msgid "Malformed URL '%s': scheme or host or path is missing"
-msgstr ""
+msgstr "Misdannet URL «%s»: Skjema, tjener eller sti mangler"
 
 #: ../libsvn_ra_neon/session.c:1002
 msgid "Network socket initialization failed"
@@ -3398,9 +3400,9 @@ msgid "Invalid config: unable to load certificate file '%s'"
 msgstr "Ugyldig innstilling: Kan ikke laste inn sertifikatfilen «%s»"
 
 #: ../libsvn_ra_neon/session.c:1216
-#, fuzzy, c-format
+#, c-format
 msgid "Invalid config: unable to load PKCS#11 provider '%s'"
-msgstr "Ugyldig innstilling: Kan ikke laste inn sertifikatfilen «%s»"
+msgstr "Ugyldig innstilling: Kan ikke laste PKCS#11-leverandør «%s»"
 
 #: ../libsvn_ra_neon/session.c:1337 ../libsvn_ra_serf/serf.c:1118
 msgid "The UUID property was not found on the resource or any of its parents"
@@ -3482,9 +3484,8 @@ msgid "The %s request returned invalid XML in the response: %s (%s)"
 msgstr "Forespørselen %s returnerte ugyldig XML i svaret: %s (%s)"
 
 #: ../libsvn_ra_serf/auth.c:287 ../libsvn_ra_serf/auth.c:293
-#, fuzzy
 msgid "Missing 'realm' attribute in Authorization header"
-msgstr "Mangler «tidsmerke»-attributt i «%s»"
+msgstr "Mangler «realm»-attributt (områdeattributt) i autorisasjonsheader"
 
 #: ../libsvn_ra_serf/commit.c:408 ../libsvn_ra_serf/commit.c:431
 #, c-format
@@ -3507,9 +3508,8 @@ msgid "Failed writing updated file"
 msgstr "Feil under skriving av oppdatert fil"
 
 #: ../libsvn_ra_serf/commit.c:1103
-#, fuzzy
 msgid "The OPTIONS response did not include the requested activity-collection-set value"
-msgstr "OPTIONS-responsen manglet den forespurte activity-collection-set. Dette betyr ofte at adressen ikke er klargjort for WebDAV"
+msgstr "OPTIONS-responsen manglet den forespurte «activity-collection-set»-verdien"
 
 #: ../libsvn_ra_serf/commit.c:1131
 #, c-format
@@ -3518,15 +3518,13 @@ msgstr "%s av «%s»: %d %s (%s://%s)"
 
 #: ../libsvn_ra_serf/commit.c:1159 ../libsvn_ra_serf/property.c:893
 #: ../libsvn_ra_serf/update.c:1134 ../libsvn_ra_serf/update.c:1679
-#, fuzzy
 msgid "The OPTIONS response did not include the requested checked-in value"
-msgstr "OPTIONS-responsen manglet den forespurte activity-collection-set. Dette betyr ofte at adressen ikke er klargjort for WebDAV"
+msgstr "OPTIONS-responsen manglet den forespurte innlagte verdien"
 
 #: ../libsvn_ra_serf/commit.c:1388 ../libsvn_ra_serf/commit.c:1789
 #: ../libsvn_ra_serf/property.c:907
-#, fuzzy
 msgid "The OPTIONS response did not include the requested baseline-collection value"
-msgstr "OPTIONS-responsen manglet den forespurte activity-collection-set. Dette betyr ofte at adressen ikke er klargjort for WebDAV"
+msgstr "OPTIONS-responsen manglet den forespurte «baseline-collection»-verdien"
 
 #: ../libsvn_ra_serf/commit.c:1414
 #, c-format
@@ -3553,9 +3551,8 @@ msgid "Unlock request failed: %d %s"
 msgstr "«Lås opp»-forespørsel feilet: %d %s"
 
 #: ../libsvn_ra_serf/property.c:921
-#, fuzzy
 msgid "The OPTIONS response did not include the requested version-name value"
-msgstr "OPTIONS-responsen manglet den forespurte activity-collection-set. Dette betyr ofte at adressen ikke er klargjort for WebDAV"
+msgstr "OPTIONS-responsen manglet den forespurte «version-name»-verdien"
 
 #: ../libsvn_ra_serf/replay.c:195 ../libsvn_ra_serf/update.c:1231
 msgid "Missing revision attr in target-revision element"
@@ -3585,9 +3582,9 @@ msgid "Missing name attr in %s element"
 msgstr "Mangler navnattributt i «%s»-element"
 
 #: ../libsvn_ra_serf/replay.c:803
-#, fuzzy, c-format
+#, c-format
 msgid "Error retrieving replay REPORT (%d)"
-msgstr "Feil under henting av REPORT (%d)"
+msgstr "Feil under henting av avspillings-REPORT (%d)"
 
 #: ../libsvn_ra_serf/serf.c:322
 msgid "Module for accessing a repository via WebDAV protocol using serf."
@@ -3599,14 +3596,12 @@ msgid "Could not lookup hostname `%s'"
 msgstr "Klarte ikke å lete opp tjenernavn: «%s»"
 
 #: ../libsvn_ra_serf/serf.c:805
-#, fuzzy
 msgid "The OPTIONS response did not include the requested resourcetype value"
-msgstr "OPTIONS-responsen manglet den forespurte activity-collection-set. Dette betyr ofte at adressen ikke er klargjort for WebDAV"
+msgstr "OPTIONS-responsen manglet den forespurte ressurstypeverdien."
 
 #: ../libsvn_ra_serf/serf.c:969
-#, fuzzy
 msgid "The PROPFIND response did not include the requested resourcetype value"
-msgstr "OPTIONS-responsen manglet den forespurte activity-collection-set. Dette betyr ofte at adressen ikke er klargjort for WebDAV"
+msgstr "PROPFIND-responsen manglet den forespurte ressurstypeverdien"
 
 #: ../libsvn_ra_serf/serf.c:1186
 #, c-format
@@ -3619,9 +3614,8 @@ msgid "GET request failed: %d %s"
 msgstr "GET-forespørsel feilet: %d %s"
 
 #: ../libsvn_ra_serf/update.c:2221 ../libsvn_ra_serf/util.c:1416
-#, fuzzy
 msgid "The OPTIONS response did not include the requested version-controlled-configuration value"
-msgstr "OPTIONS-responsen manglet den forespurte activity-collection-set. Dette betyr ofte at adressen ikke er klargjort for WebDAV"
+msgstr "OPTIONS-responsen manglet den forespurte «version-controlled-configuration»-verdien"
 
 #: ../libsvn_ra_serf/update.c:2304
 #, c-format
@@ -3705,11 +3699,11 @@ msgid "Impossibly long repository root from server"
 msgstr "Umulig lang depotrot fra tjener"
 
 #: ../libsvn_ra_svn/client.c:630
-#, fuzzy
 msgid ""
 "Module for accessing a repository using the svn network protocol.\n"
 "  - with Cyrus SASL authentication"
-msgstr "Modul for tilgang til depot ved bruk av svn-nettverksprotokollen."
+msgstr "Modul for tilgang til depot ved bruk av svn-nettverksprotokollen.\n"
+"  - med Cyrus SASL-autentisering"
 
 #: ../libsvn_ra_svn/client.c:634
 msgid "Module for accessing a repository using the svn network protocol."
@@ -3831,7 +3825,7 @@ msgstr "Tjeneren støtter ikke «replay-range»-kommandoen"
 #: ../libsvn_ra_svn/client.c:2228
 #, c-format
 msgid "Expected 'revprops', found '%s'"
-msgstr ""
+msgstr "Forventet «revprops», fant «%s»"
 
 #: ../libsvn_ra_svn/client.c:2341
 #, c-format
@@ -3982,7 +3976,7 @@ msgstr "Ugyldig målsti"
 
 #: ../libsvn_repos/delta.c:243
 msgid "Delta depth 'exclude' not supported"
-msgstr ""
+msgstr "Deltadybde «exclude» støttes ikke"
 
 #: ../libsvn_repos/delta.c:269
 msgid "Invalid editor anchoring; at least one of the input paths is not a directory and there was no source entry"
@@ -4035,11 +4029,11 @@ msgstr "Lagring av ikke-regulær egenskap «%s» er forbudt gjennom depotgrenses
 
 #: ../libsvn_repos/fs-wrap.c:180
 msgid "Cannot accept log message because it is not encoded in UTF-8"
-msgstr ""
+msgstr "Kan ikke godta loggmelding fordi den ikke er kodet i UTF-8"
 
 #: ../libsvn_repos/fs-wrap.c:190
 msgid "Cannot accept non-LF line endings in log message"
-msgstr ""
+msgstr "Kan ikke godta loggmelding med linjeslutt som ikke er LF"
 
 #: ../libsvn_repos/fs-wrap.c:305
 #, c-format
@@ -4337,7 +4331,7 @@ msgstr "Rapportdybden «%s» er ikke støttet"
 
 #: ../libsvn_repos/reporter.c:1326
 msgid "Depth 'exclude' not supported for link"
-msgstr ""
+msgstr "Dybde «exclude» støttes ikke for lenke"
 
 #: ../libsvn_repos/reporter.c:1405
 msgid "Request depth 'exclude' not supported"
@@ -4422,9 +4416,9 @@ msgid "Expected repository format '%d' or '%d'; found format '%d'"
 msgstr "Forventet depotformat «%d» eller «%d»; fant format «%d»"
 
 #: ../libsvn_repos/repos.c:1504
-#, fuzzy, c-format
+#, c-format
 msgid "unknown capability '%s'"
-msgstr "Filsystem-typen «%s» er ukjent"
+msgstr "ukjent evne «%s»"
 
 #: ../libsvn_repos/rev_hunt.c:67
 #, c-format
@@ -4451,29 +4445,29 @@ msgid "'%s' is not a file in revision %ld"
 msgstr "«%s» er ikke en fil i revisjon %ld"
 
 #: ../libsvn_subr/cache-inprocess.c:179
-#, fuzzy, c-format
+#, c-format
 msgid "Can't lock cache mutex"
-msgstr "Kan ikke reservere filsystem-mutex"
+msgstr "Kan ikke låse hurtiglager-mutex"
 
 #: ../libsvn_subr/cache-inprocess.c:197
-#, fuzzy, c-format
+#, c-format
 msgid "Can't unlock cache mutex"
-msgstr "Kan ikke reservere filsystem-mutex"
+msgstr "Kan ikke låse opp hurtiglager-mutex"
 
 #: ../libsvn_subr/cache-inprocess.c:449
-#, fuzzy, c-format
+#, c-format
 msgid "Can't create cache mutex"
-msgstr "Kan ikke opprette sokkel"
+msgstr "Kan ikke opprette hurtiglager-mutex"
 
 #: ../libsvn_subr/cache-memcache.c:153
 #, c-format
 msgid "Unknown memcached error while reading"
-msgstr ""
+msgstr "Ukjent feil lagret i hurtiglager under lesing"
 
 #: ../libsvn_subr/cache-memcache.c:203
 #, c-format
 msgid "Unknown memcached error while writing"
-msgstr ""
+msgstr "Ukjent feil lagret i hurtiglager under skriving"
 
 #: ../libsvn_subr/cache-memcache.c:218
 #, fuzzy
@@ -4481,39 +4475,39 @@ msgid "Can't iterate a memcached cache"
 msgstr "Kan ikke kjøre i bakgrunnen"
 
 #: ../libsvn_subr/cache-memcache.c:281
-#, fuzzy, c-format
+#, c-format
 msgid "Error parsing memcache server '%s'"
-msgstr "Feil under tolking av «%s»"
+msgstr "Feil under tolking av hurtiglagertjener «%s»"
 
 #: ../libsvn_subr/cache-memcache.c:289
 #, c-format
 msgid "Scope not allowed in memcache server '%s'"
-msgstr ""
+msgstr "Omfang ikke lovlig i hurtiglagertjener «%s»"
 
 #: ../libsvn_subr/cache-memcache.c:297
 #, c-format
 msgid "Must specify host and port for memcache server '%s'"
-msgstr ""
+msgstr "Tjener og port må spesifiseres for hurtiglagertjener «%s»"
 
 #: ../libsvn_subr/cache-memcache.c:316
 #, c-format
 msgid "Unknown error creating memcache server"
-msgstr ""
+msgstr "Ukjent feil under opprettelse av hurtiglagertjener"
 
 #: ../libsvn_subr/cache-memcache.c:324
 #, c-format
 msgid "Unknown error adding server to memcache"
-msgstr ""
+msgstr "Ukjent feil under tillegging av tjener til hurtiglager"
 
 #: ../libsvn_subr/cache-memcache.c:394
 #, c-format
 msgid "Unknown error creating apr_memcache_t"
-msgstr ""
+msgstr "Ukjent feil under opprettelse av apr_memcache_t"
 
 #: ../libsvn_subr/cmdline.c:525
-#, fuzzy, c-format
+#, c-format
 msgid "Invalid config: unknown password store '%s'"
-msgstr "Ugyldig innstilling: Ukjent http-autentiseringstype «%s»"
+msgstr "Ugyldig innstilling: Ukjent passordlager «%s»"
 
 #: ../libsvn_subr/cmdline.c:685
 #, c-format
@@ -4521,14 +4515,14 @@ msgid "Error initializing command line arguments"
 msgstr "Feil under initialisering av kommandolinjeargumenter"
 
 #: ../libsvn_subr/config.c:647
-#, fuzzy, c-format
+#, c-format
 msgid "Config error: invalid boolean value '%s' for '[%s] %s'"
-msgstr "Feil i oppsettet: Ugyldig booleansk verdi «%s»"
+msgstr "Feil i oppsettet: Ugyldig booleansk verdi «%s» for «[%s] %s»"
 
 #: ../libsvn_subr/config.c:654
-#, fuzzy, c-format
+#, c-format
 msgid "Config error: invalid boolean value '%s' for '%s'"
-msgstr "Feil i oppsettet: Ugyldig booleansk verdi «%s»"
+msgstr "Feil i oppsettet: Ugyldig booleansk verdi «%s» for «%s»"
 
 #: ../libsvn_subr/config.c:946
 #, c-format
@@ -4599,7 +4593,7 @@ msgstr ""
 #: ../libsvn_subr/error.c:495
 #, c-format
 msgid "In file '%s' line %d: internal malfunction"
-msgstr ""
+msgstr "I filen «%s», linje %d: Intern funksjonsfeil"
 
 #: ../libsvn_subr/io.c:150
 #, c-format
@@ -4987,7 +4981,7 @@ msgstr "Negativt revisjonsnummer funnet under tolking av «%s»"
 
 #: ../libsvn_subr/mergeinfo.c:85
 msgid "No pathname preceding ':'"
-msgstr ""
+msgstr "Ingen stinavn foran «:»"
 
 #: ../libsvn_subr/mergeinfo.c:401
 #, c-format
@@ -5037,10 +5031,11 @@ msgstr "Stinavn er ikke avsluttet med «:»"
 msgid "Could not find end of line in range list line in '%s'"
 msgstr "Fant ikke linjeslutt i linje med områdeliste i «%s»"
 
+# ### FIXME: Er det korrekt å bytte ut «mergeinfo» her?
 #: ../libsvn_subr/mergeinfo.c:607
-#, fuzzy, c-format
+#, c-format
 msgid "Could not parse mergeinfo string '%s'"
-msgstr "Kunne ikke lage GET-forespørsel for «%s»"
+msgstr "Klarte ikke å tolke fletteinfo-streng «%s»"
 
 #: ../libsvn_subr/nls.c:79
 #, c-format
@@ -5091,9 +5086,8 @@ msgid "Syntax error parsing revision '%s'"
 msgstr "Syntaksfeil under analysering av revisjon «%s»"
 
 #: ../libsvn_subr/opt.c:1064
-#, fuzzy
 msgid "Revision property pair is empty"
-msgstr "Revisjonspost er ikke en liste"
+msgstr "Tomt revisjonsegenskapspar"
 
 #: ../libsvn_subr/opt.c:1084 ../svn/propedit-cmd.c:60 ../svn/propget-cmd.c:182
 #: ../svn/propset-cmd.c:64
@@ -5246,7 +5240,7 @@ msgstr "Adgangsfrase/-setning for «%s»: "
 
 #: ../libsvn_subr/prompt.c:391
 msgid "Store password unencrypted (yes/no)? "
-msgstr ""
+msgstr "Lagre passord ukryptert (yes/no)?"
 
 #: ../libsvn_subr/prompt.c:400
 #, c-format
@@ -5260,6 +5254,14 @@ msgid ""
 "your system so that Subversion can store passwords encrypted, if\n"
 "possible.  See the documentation for details.\n"
 msgstr ""
+"-----------------------------------------------------------------------\n"
+"OBS! Passordet ditt for autentiseringsområde:\n"
+"\n"
+"   %s\n"
+"\n"
+"kan bare lagres ukryptert på disken! Det anbefales at du setter opp\n"
+"systemet ditt slik at Subversion kan lagre passord kryptert, hvis\n"
+"mulig. Les i dokumentasjonen for detaljer.\n"
 
 #: ../libsvn_subr/prompt.c:412
 #, c-format
@@ -5269,23 +5271,32 @@ msgid ""
 "of the 'store-plaintext-passwords' option to either 'yes' or 'no' in\n"
 "'%s'.\n"
 msgstr ""
+"\n"
+"Du kan slå av framtidige visninger av denne advarselen ved å sette verdien\n"
+"for «store-plaintext-passwords»-valget til enten «yes» eller «no» i\n"
+"«%s».\n"
 
+# ### FIXME: Det må leses i kildekoden for å se om dette med «ja» og 
+# «nei» er konsekvent oppførsel. I mellomtiden lar vi tvilen komme 
+# tiltalte til gode, og bruker ja/nei-mulighetene her, selv om det er en 
+# liten sjanse for at det vil bli ustandard oppførsel i forhold til 
+# andre steder.
 #: ../libsvn_subr/prompt.c:435
 msgid "yes"
-msgstr ""
+msgstr "ja"
 
 #: ../libsvn_subr/prompt.c:440
 msgid "no"
-msgstr ""
+msgstr "nei"
 
 #: ../libsvn_subr/prompt.c:446
 msgid "Please type 'yes' or 'no': "
-msgstr ""
+msgstr "Du må svare enten «ja» eller «nei»: "
 
 #: ../libsvn_subr/simple_providers.c:357
-#, fuzzy, c-format
+#, c-format
 msgid "Config error: invalid value '%s' for option '%s'"
-msgstr "Feil i oppsettet: Ugyldig booleansk verdi «%s»"
+msgstr "Feil i oppsettet: Ugyldig verdi «%s» for valget «%s»"
 
 #: ../libsvn_subr/subst.c:1744 ../libsvn_wc/props.c:2430
 #, c-format
@@ -5379,9 +5390,9 @@ msgid "MIME type '%s' does not contain '/'"
 msgstr "MIME-typen «%s» inneholder ikke «/»"
 
 #: ../libsvn_subr/validate.c:67
-#, fuzzy, c-format
+#, c-format
 msgid "MIME type '%s' contains invalid character '%c'"
-msgstr "MIME-typen «%s» slutter med ikke-alfanumerisk tegn"
+msgstr "MIME-typen «%s» inneholder ugyldig tegn «%c»"
 
 #: ../libsvn_subr/version.c:74
 #, c-format
@@ -5914,11 +5925,11 @@ msgstr "«%s» er ikke en arbeidskopikatalog"
 
 #: ../libsvn_wc/merge.c:421 ../libsvn_wc/merge.c:737
 msgid "Conflict callback violated API: returned no results"
-msgstr ""
+msgstr "Konflikt-tilbakekall brøt med programmeringsbiblioteket: Returnerte ingen resultater"
 
 #: ../libsvn_wc/merge.c:784
 msgid "Conflict callback violated API: returned no merged file"
-msgstr ""
+msgstr "Konflikt-tilbakekall brøt med programmeringsbiblioteket: Returnerte ingen flettet fil"
 
 #: ../libsvn_wc/props.c:111
 #, c-format
@@ -5937,11 +5948,11 @@ msgstr "Mangler linjeslutt i «wcprops»-fil for «%s»"
 
 #: ../libsvn_wc/props.c:1381
 msgid "Conflict callback violated API: returned no results."
-msgstr ""
+msgstr "Konflikt-tilbakekall brøt med programmeringsbiblioteket: Returnerte ingen resultater."
 
 #: ../libsvn_wc/props.c:1421
 msgid "Conflict callback violated API: returned no merged file."
-msgstr ""
+msgstr "Konflikt-tilbakekall brøt med programmeringsbiblioteket: Returnerte ingen flettet fil."
 
 #: ../libsvn_wc/props.c:1515
 #, c-format
@@ -5989,13 +6000,13 @@ msgstr ""
 "men egenskapen er blitt forandret lokalt fra «%s» til «%s»."
 
 #: ../libsvn_wc/props.c:1720
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Trying to change property '%s' from '%s' to '%s',\n"
 "but property has been locally added with value '%s'."
 msgstr ""
 "Prøver å forandre egenskapen «%s» fra «%s» til «%s»,\n"
-"men egenskapen er blitt lagt til lokalt med verdien «%s»"
+"men egenskapen er blitt lagt til lokalt med verdien «%s»."
 
 #: ../libsvn_wc/props.c:1741
 #, c-format
@@ -6158,9 +6169,8 @@ msgid "Failed to mark '%s' absent: item of the same name is already scheduled fo
 msgstr "Klarte ikke å merke «%s» som fraværende: Oppføring med samme navn er allerede forberedt for tillegging"
 
 #: ../libsvn_wc/update_editor.c:1807
-#, fuzzy
 msgid "Bad copyfrom arguments received"
-msgstr "For mange argumenter angitt"
+msgstr "Feil i mottatte «copyfrom»-argumenter"
 
 #: ../libsvn_wc/update_editor.c:1846
 #, c-format
@@ -6189,7 +6199,7 @@ msgstr "Feil kontrollsum for «%s». Lagret: «%s», gjeldende: «%s»"
 
 #: ../libsvn_wc/update_editor.c:2823
 msgid "Destination directory of add-with-history is missing a URL"
-msgstr ""
+msgstr "Målkatalog for tillegging med historie mangler en URL"
 
 #: ../libsvn_wc/update_editor.c:2838
 msgid "Destination URLs are broken"
@@ -6249,15 +6259,15 @@ msgstr "«%s» ser ikke ut som en nettadresse"
 
 #: ../svn/conflict-callbacks.c:143
 msgid "||||||| ORIGINAL"
-msgstr ""
+msgstr "||||||| ORIGINAL"
 
 #: ../svn/conflict-callbacks.c:144
 msgid "<<<<<<< MINE (select with 'mc')"
-msgstr ""
+msgstr "<<<<<<< MIN (velg med «mc»)"
 
 #: ../svn/conflict-callbacks.c:145
 msgid ">>>>>>> THEIRS (select with 'tc')"
-msgstr ""
+msgstr ">>>>>>> DERES (velg med «tc»)"
 
 #: ../svn/conflict-callbacks.c:170
 msgid "No editor found."
@@ -6285,24 +6295,20 @@ msgid "Error running merge tool."
 msgstr "Feil ved kjøring av fletteverktøy."
 
 #: ../svn/conflict-callbacks.c:286
-#, fuzzy
 msgid "No editor found; leaving all conflicts."
-msgstr "Fant ingen tekstbehandler, lar alle konflikter bli liggende."
+msgstr "Fant ingen tekstbehandler; lar alle konflikter bli liggende."
 
 #: ../svn/conflict-callbacks.c:295
-#, fuzzy
 msgid "Error running editor; leaving all conflicts."
-msgstr "Feil ved kjøring av tekstbehandler, lar alle konflikter bli liggende."
+msgstr "Feil ved kjøring av tekstbehandler; lar alle konflikter bli liggende."
 
 #: ../svn/conflict-callbacks.c:327
-#, fuzzy
 msgid "No merge tool found; leaving all conflicts."
-msgstr "Fant ingen fletteverktøy, lar alle konflikter bli liggende."
+msgstr "Fant ingen fletteverktøy; lar alle konflikter bli liggende."
 
 #: ../svn/conflict-callbacks.c:336
-#, fuzzy
 msgid "Error running merge tool; leaving all conflicts."
-msgstr "Feil ved kjøring av fletteverktøy, lar alle konflikter bli liggende."
+msgstr "Feil ved kjøring av fletteverktøy; lar alle konflikter bli liggende."
 
 #: ../svn/conflict-callbacks.c:377
 #, c-format
@@ -6325,40 +6331,37 @@ msgid "They want to change the property value to '%s', you want to delete the pr
 msgstr "De vil forandre verdien for egenskapen til «%s», du vil slette egenskapen.\n"
 
 #: ../svn/conflict-callbacks.c:430
-#, fuzzy
 msgid "Select: (p) postpone"
-msgstr "Velg: (p) - utsett"
+msgstr "Velg: (p) utsett"
 
 #: ../svn/conflict-callbacks.c:435
-#, fuzzy
 msgid ", (df) diff-full, (e) edit"
-msgstr ", (d) - full diff, (e) - rediger"
+msgstr ", (df) full diff, (e) rediger"
 
 #: ../svn/conflict-callbacks.c:439 ../svn/conflict-callbacks.c:452
-#, fuzzy
 msgid ", (r) resolved"
-msgstr ", (r) - løst"
+msgstr ", (r) løst"
 
 #: ../svn/conflict-callbacks.c:445
 msgid ""
 ",\n"
 "        (mc) mine-conflict, (tc) theirs-conflict"
 msgstr ""
+",\n"
+"        (mc) min konflikt, (tc) deres konflikt"
 
 #: ../svn/conflict-callbacks.c:455
-#, fuzzy
 msgid ""
 ",\n"
 "        (mf) mine-full, (tf) theirs-full"
-msgstr "(m) - min som full, (t) - deres som full"
+msgstr "(m) min som full, (t) deres som full"
 
 #: ../svn/conflict-callbacks.c:462
-#, fuzzy
 msgid "(s) show all options: "
-msgstr "(h) - hjelp for flere valg: "
+msgstr "(s) vis alle valg: "
 
 #: ../svn/conflict-callbacks.c:470
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "\n"
 "  (e)  edit             - change merged file in an editor\n"
@@ -6377,14 +6380,21 @@ msgid ""
 "  (s)  show all         - show this list\n"
 "\n"
 msgstr ""
-"  (p) utsett     - merk konflikten som skal løses senere\n"
-"  (d) full-diff  - vis alle forandringer i flettet fil\n"
-"  (e) rediger    - rediger flettet fil i en tekstbehandler\n"
-"  (r) løst       - aksepter flettet versjon av fil\n"
-"  (m) min-full   - aksepter min versjon av filen (ignorer deres forandringer)\n"
-"  (t) deres-full - aksepter deres versjon av filen (mist mine forandringer)\n"
-"  (l) kjør       - bruk tredjeparts programvare for å løse konflikten\n"
-"  (h) hjelp      - vis denne listen\n"
+"\n"
+"  (e)  rediger        - rediger flettet fil i en tekstbehandler\n"
+"  (df) diff-full      - vis alle forandringer i flettet fil\n"
+"  (r)  løst           - godta flettet versjon av fil\n"
+"\n"
+"  (dc) vis konflikt   - vis alle konflikter (ignorer flettet versjon)\n"
+"  (mc) min konflikt   - godta min versjon for alle konflikter (samme)\n"
+"  (td) deres konflikt - godta deres versjon for alle konflikter (samme)\n"
+"\n"
+"  (mf) min-full       - godta min versjon av hele filen (også ikke-konflikter)\n"
+"  (tf) deres-full     - godta deres versjon av hele filen (samme)\n"
+"\n"
+"  (p)  utsett         - merk konflikten som skal løses senere\n"
+"  (l)  kjør           - bruk eksternt verktøy for å løse konflikten\n"
+"  (s)  vis alt        - vis denne listen\n"
 "\n"
 
 #: ../svn/conflict-callbacks.c:505 ../svn/conflict-callbacks.c:529
@@ -6393,6 +6403,8 @@ msgid ""
 "Invalid option; cannot choose based on conflicts in a binary file.\n"
 "\n"
 msgstr ""
+"Ugyldig valg; kan ikke velge basert på konflikter i en binærfil.\n"
+"\n"
 
 #: ../svn/conflict-callbacks.c:513 ../svn/conflict-callbacks.c:537
 #, c-format
@@ -6400,6 +6412,8 @@ msgid ""
 "Invalid option; cannot choose based on conflicts for properties.\n"
 "\n"
 msgstr ""
+"Ugyldig valg; kan ikke velge basert på konflikter i egenskaper.\n"
+"\n"
 
 #: ../svn/conflict-callbacks.c:566
 #, c-format
@@ -6407,6 +6421,8 @@ msgid ""
 "Invalid option; cannot display conflicts for a binary file.\n"
 "\n"
 msgstr ""
+"Ugyldig valg; kan ikke vise konflikter for en binærfil.\n"
+"\n"
 
 #: ../svn/conflict-callbacks.c:574
 #, c-format
@@ -6414,13 +6430,16 @@ msgid ""
 "Invalid option; cannot display conflicts for properties.\n"
 "\n"
 msgstr ""
+"Ugyldig valg; kan ikke vise konflikter for egenskaper.\n"
+"\n"
 
 #: ../svn/conflict-callbacks.c:582
 #, c-format
 msgid ""
 "Invalid option; original files not available.\n"
 "\n"
-msgstr ""
+msgstr "Ugyldig valg; originale filer ikke tilgjengelig.\n"
+"\n"
 
 #: ../svn/conflict-callbacks.c:594
 #, c-format
@@ -6450,12 +6469,11 @@ msgstr ""
 "Et objekt med det samme navnet finnes allerede.\n"
 
 #: ../svn/conflict-callbacks.c:666
-#, fuzzy
 msgid "Select: (p) postpone, (mf) mine-full, (tf) theirs-full, (h) help:"
-msgstr "Velg: (p) - utsett, (m) - min-full, (t) - deres-full, (h) - hjelp :"
+msgstr "Velg: (p) utsett, (mf) min-full, (tf) deres-full, (h) hjelp:"
 
 #: ../svn/conflict-callbacks.c:678
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "  (p)  postpone    - resolve the conflict later\n"
 "  (mf) mine-full   - accept pre-existing item (ignore upstream addition)\n"
@@ -6463,10 +6481,10 @@ msgid ""
 "  (h)  help        - show this help\n"
 "\n"
 msgstr ""
-"  (p) utsett     - løs konflikten senere\n"
-"  (m) min-full   - godta elementet som lå der (ignorer innkommende tillegg)\n"
-"  (t) deres-full - godta innkommende element (overskriv elementet som lå der)\n"
-"  (h) hjelp      - vis denne listen\n"
+"  (p) utsett      - løs konflikten senere\n"
+"  (mf) min-full   - godta elementet som lå der (ignorer innkommende tillegg)\n"
+"  (tf) deres-full - godta innkommende element (overskriv elementet som lå der)\n"
+"  (h) hjelp       - vis denne listen\n"
 "\n"
 
 #: ../svn/copy-cmd.c:126 ../svn/delete-cmd.c:65 ../svn/mkdir-cmd.c:66
@@ -6823,7 +6841,7 @@ msgstr "Bare relative stier kan bli spesifisert etter en URL"
 #: ../svn/log-cmd.c:571
 #, c-format
 msgid "cannot assign with 'with-revprop' option (drop the '=')"
-msgstr ""
+msgstr "kan ikke tildele med «with-revprop»-valget (fjern «=»)"
 
 #: ../svn/main.c:114
 msgid "force operation to run"
@@ -6922,7 +6940,6 @@ msgid "specify a password ARG"
 msgstr "angi passordet ARG"
 
 #: ../svn/main.c:152
-#, fuzzy
 msgid ""
 "Default: '-u'. When Subversion is invoking an\n"
 "                             external diff program, ARG is simply passed along\n"
@@ -6941,10 +6958,11 @@ msgid ""
 "                                -p (--show-c-function):\n"
 "                                   Show C function name in diff output."
 msgstr ""
-"Standardverdi: «-u». Når Subversion kjører et eksternt diff-program,\n"
-"                             kjøres dette programmet med parametrene ARG.\n"
-"                             Men når Subversion bruker den interne diff-\n"
-"                             implementasjonen, eller når Subversion viser\n"
+"Standardverdi: «-u». Når Subversion kjører et\n"
+"                             eksternt diff-program, kjøres dette\n"
+"                             programmet med parametrene ARG.\n"
+"                             Men når Subversion bruker standard diff-\n"
+"                             implementasjon, eller når Subversion viser\n"
 "                             «blame»-informasjon, kan ARG være følgende:\n"
 "                                -u (--unified):\n"
 "                                   Vis tre linjer med omkringliggende tekst.\n"
@@ -7004,7 +7022,8 @@ msgstr "ikke mellomlagre autentiseringsinformasjon"
 msgid ""
 "accept unknown SSL server certificates without\n"
 "                             prompting (but only with '--non-interactive')"
-msgstr ""
+msgstr "godta ukjente SSL-tjenersertifikater uten\n"
+"                             å spørre (men bare med «--non-interactive»)"
 
 #: ../svn/main.c:207 ../svnsync/main.c:116
 msgid "do no interactive prompting"
@@ -7105,11 +7124,12 @@ msgid "remove changelist association"
 msgstr "fjern assosiasjon med forandringsliste"
 
 #: ../svn/main.c:247
-#, fuzzy
 msgid ""
 "operate only on members of changelist ARG\n"
 "                             [aliases: --cl]"
-msgstr "operer bare på medlemmer av forandringsliste ARG"
+msgstr ""
+"operer bare på medlemmer av forandringsliste ARG\n"
+"                             [alias: --cl]"
 
 #: ../svn/main.c:251
 msgid "don't delete changelists after commit"
@@ -7161,7 +7181,7 @@ msgstr ""
 
 #: ../svn/main.c:277
 msgid "lump-merge all of source URL's unmerged changes"
-msgstr ""
+msgstr "flett alle uflettede forandringer fra kilde-URLen på en gang"
 
 #: ../svn/main.c:324
 msgid ""
@@ -7208,18 +7228,16 @@ msgstr ""
 "  blir lett opp.\n"
 
 #: ../svn/main.c:349
-#, fuzzy
 msgid ""
 "Associate (or dissociate) changelist CLNAME with the named files.\n"
 "usage: 1. changelist CLNAME TARGET...\n"
 "       2. changelist --remove TARGET...\n"
 msgstr ""
-"Assosier (eller deassosier) lokale stier med forandringsliste FLNAVN.\n"
+"Assosier (eller deassosier) forandringsliste FLNAVN med de angitte filene.\n"
 "bruk: 1. changelist FLNAVN MÅL...\n"
 "      2. changelist --remove MÅL...\n"
 
 #: ../svn/main.c:355
-#, fuzzy
 msgid ""
 "Check out a working copy from a repository.\n"
 "usage: checkout URL[@REV]... [PATH]\n"
@@ -7257,15 +7275,18 @@ msgstr ""
 "  katalog under STI hvor underkatalogen får samme navn som nettadressens\n"
 "  basenavn.\n"
 "\n"
-"Hvis --force brukes, vil uversjonerte stier som ligger i veien i\n"
-"målkatalogen ikke føre til at uthentingen automatisk vil feile. Hvis stien\n"
-"som ligger i veien er av samme type (fil eller katalog) som den tilsvarende\n"
-"stien i depotet vil den bli versjonert, men innholdet vil ikke bli forandret.\n"
-"Dette betyr at underelementene i en katalog som ligger i veien også kan\n"
-"sperre for elementer og dermed bli versjonert. For filer vil forandringer i\n"
-"innhold mellom depotet og elementet som sperrer bli behandlet som lokale\n"
-"forandringer i arbeidskopien. Alle egenskaper fra depotet blir lagt til\n"
-"stien som sperrer.\n"
+"  Hvis --force brukes, vil uversjonerte stier som ligger i veien i\n"
+"  målkatalogen ikke føre til at uthentingen automatisk vil feile. Hvis\n"
+"  stien som ligger i veien er av samme type (fil eller katalog) som den\n"
+"  tilsvarende stien i depotet vil den bli versjonert, men innholdet vil\n"
+"  ikke bli forandret. Dette betyr at underelementene i en katalog som\n"
+"  ligger i veien også kan sperre for elementer og dermed bli versjonert.\n"
+"  For filer vil forandringer i innhold mellom depotet og elementet som\n"
+"  sperrer bli behandlet som lokale forandringer i arbeidskopien. Alle\n"
+"  egenskaper fra depotet blir lagt til stien som sperrer.\n"
+"\n"
+"  Se også «svn help update» for en liste over tegn som rapporterer hva\n"
+"  som ble gjort.\n"
 
 #: ../svn/main.c:382
 msgid ""
@@ -7511,7 +7532,6 @@ msgstr ""
 "  ignoreres hvis --force er spesifisert.\n"
 
 #: ../svn/main.c:517
-#, fuzzy
 msgid ""
 "Display information about a local or remote item.\n"
 "usage: info [TARGET[@REV]...]\n"
@@ -7590,12 +7610,10 @@ msgid "specify lock comment ARG"
 msgstr "angi låsekommentar ARG"
 
 #: ../svn/main.c:556
-#, fuzzy
 msgid "force validity of lock comment source"
-msgstr "godkjenn angitt kilde for loggmelding"
+msgstr "krev at kilden for låsekommentaren er gyldig"
 
 #: ../svn/main.c:559
-#, fuzzy
 msgid ""
 "Show the log messages for a set of revision(s) and/or file(s).\n"
 "usage: 1. log [PATH]\n"
@@ -7634,7 +7652,8 @@ msgstr ""
 "\n"
 "  2. Viser loggmeldinger for STIene («.» er standard) under URL.\n"
 "     Hvis spesifisert, angir REV i hvilken revisjon URLen først blir\n"
-"     letet opp. Standard revisjonsområde er HEAD:1.\n"
+"     letet opp, og standard revisjonsområde er REV:1. Ellers blir URLen\n"
+"     letet opp i HEAD, og standard revisjonsområde er HEAD:1.\n"
 "\n"
 "  Hvis -v brukes, vises alle berørte filstier med hver sin loggmelding.\n"
 "  Hvis -q brukes, skrives ikke loggmelding (kan brukes sammen med -v).\n"
@@ -7655,12 +7674,10 @@ msgid "retrieve revision property ARG"
 msgstr "hent revisjonsegenskap ARG"
 
 #: ../svn/main.c:589
-#, fuzzy
 msgid "the change made in revision ARG"
-msgstr "forandringen gjort av ARG"
+msgstr "forandringen gjort i revisjon ARG"
 
 #: ../svn/main.c:592
-#, fuzzy
 msgid ""
 "Apply the differences between two sources to a working copy path.\n"
 "usage: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
@@ -7700,7 +7717,7 @@ msgstr ""
 "Flett forskjellene mellom to kilder inn i en arbeidskopi.\n"
 "bruk: 1. merge kildeURL1[@N] kildeURL2[@M] [AKSTI]\n"
 "      2. merge kildeAKSTI1@N kildeAKSTI2@M [AKSTI]\n"
-"      3. merge [[-c M]... | [-r N:M]...] [KILDE[@REV] [AKSTI]]\n"
+"      3. merge [-c M[,N...] | -r N:M ...] KILDE[@REV] [AKSTI]\n"
 "\n"
 "  1. I den første formen angis kilde-URLene med revisjonene N og M.\n"
 "     Dette er de to kildefilene som sammenlignes. Hvis revisjonene\n"
@@ -7717,20 +7734,21 @@ msgstr ""
 "     hvert revisjonsområde som er angitt. Hvis REV utelates, brukes\n"
 "     HEAD. «-c M» tilsvarer «-r <M-1>:M», og «-c -M» gjør det motsatte:\n"
 "     «-r M:<M-1>». Hvis ingen revisjonsområder angis, brukes\n"
-"     standardområdet 1:HEAD. «-c» og/eller «-r» kan spesifiseres flere\n"
+"     standardområdet 0:REV. «-c» og/eller «-r» kan spesifiseres flere\n"
 "     ganger, og blanding av revisjonsområder som går framover og bakover\n"
 "     er fullstendig lovlig.\n"
 "\n"
 "  AKSTI er filstien for arbeidskopien som mottar endringene. Hvis\n"
 "  AKSTI utelates, er standardverdien «.» med mindre kildene har\n"
-"  identiske basenavn som passer en fil innenfor «.». I så fall settes\n"
+"  identiske basenavn som passer med en fil innenfor «.». I så fall legges\n"
 "  forskjellene inn i den filen.\n"
 "\n"
-"  MERK: Subversion vil bare holde rede på metadata internt om\n"
-"  fletteoperasjonen hvis de to kildene er beslektet etterkommermessig --\n"
-"  hvis den første kilden er en «forfader» til den første, eller omvendt.\n"
-"  Dette er garantert å være tilfellet når den tredje formen ovenfor\n"
-"  brukes.\n"
+"  MERK: Subversion vil bare lagre metadata for å følge flettingen hvis\n"
+"  de to kildene er på den samme historielinjen -- hvis den første kilden\n"
+"  er en stamfar til den andre, eller omvendt. Dette er garantert å være\n"
+"  tilfellet når den tredje formen ovenfor brukes. --ignore-ancestry\n"
+"  overstyrer dette, og tvinger Subversion til å anse kildene som ubeslektet\n"
+"  og ikke følge flettingen.\n"
 
 #: ../svn/main.c:630
 msgid ""
@@ -8015,6 +8033,10 @@ msgid ""
 "\n"
 "  Note:  the --accept option is currently required.\n"
 msgstr ""
+"Løs konflikter i filer eller kataloger i en arbeidskopi.\n"
+"bruk: resolve --accept=ARG [STI...]\n"
+"\n"
+"  Merk: «--accept»-valget er for øyeblikket påkrevd.\n"
 
 #: ../svn/main.c:795
 msgid ""
@@ -8024,7 +8046,6 @@ msgid ""
 msgstr ""
 
 #: ../svn/main.c:802
-#, fuzzy
 msgid ""
 "Remove 'conflicted' state on working copy files or directories.\n"
 "usage: resolved PATH...\n"
@@ -8038,8 +8059,9 @@ msgstr ""
 "bruk: resolved STI...\n"
 "\n"
 "  Merk: Denne delkommandoen tar ikke bort konflikter og fjerner heller ikke\n"
-"  konfliktmarkører. Alt den gjør er å fjerne hjelpefilene som ble opprettet\n"
-"  da konflikten oppsto og gjør det mulig å legge inn STI igjen.\n"
+"  konfliktmarkører. Alt den gjør er å fjerne hjelpefilene som er relatert\n"
+"  til konflikten og gjør det mulig å legge inn STI igjen. Denne metoden\n"
+"  er avlegs, og er erstattet av «svn resolve --accept working».\n"
 
 #: ../svn/main.c:812
 msgid ""
@@ -8366,9 +8388,9 @@ msgid "Can't specify -c with --old"
 msgstr "Kan ikke spesifisere -c med --old"
 
 #: ../svn/main.c:1192
-#, fuzzy, c-format
+#, c-format
 msgid "Non-numeric change argument (%s) given to -c"
-msgstr "Ikke-numerisk forandringsargument angitt med -c"
+msgstr "Ikke-numerisk forandringsargument (%s) brukt sammen med -c"
 
 #: ../svn/main.c:1200
 msgid "There is no change 0"
@@ -8385,9 +8407,9 @@ msgid "Error converting depth from locale to UTF8"
 msgstr ""
 
 #: ../svn/main.c:1316 ../svn/main.c:1335
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is not a valid depth; try 'empty', 'files', 'immediates', or 'infinity'"
-msgstr "«%s» er ikke et gyldig revisjonsområde"
+msgstr "«%s» er ikke en gyldig dybde; prøv «empty», «files», «immediates» eller «infinity»"
 
 #: ../svn/main.c:1445
 #, c-format
@@ -8395,14 +8417,14 @@ msgid "Syntax error in native-eol argument '%s'"
 msgstr "Syntaksfeil i «native-eol»-argumentet «%s»"
 
 #: ../svn/main.c:1491
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is not a valid --accept value"
-msgstr "«%s» er ikke en gyldig EOL-verdi"
+msgstr "«%s» er ikke en gyldig «--accept»-verdi"
 
 #: ../svn/main.c:1500
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is not a valid --show-revs value"
-msgstr "«%s» er ikke en gyldig EOL-verdi"
+msgstr "«%s» er ikke en gyldig «--show-revs»-verdi"
 
 #: ../svn/main.c:1562 ../svndumpfilter/main.c:1315 ../svnlook/main.c:2265
 #, c-format
@@ -8430,16 +8452,15 @@ msgstr "Flere revisjonsargumenter ble brukt; kan ikke spesifisere -c flere gange
 
 #: ../svn/main.c:1643
 msgid "-r and -c can't be used with --reintegrate"
-msgstr ""
+msgstr "-r og -c kan ikke brukes sammen med --reintegrate"
 
 #: ../svn/main.c:1652
-#, fuzzy
 msgid "--depth and --set-depth are mutually exclusive"
-msgstr "--auto-props og --no-auto-props utelukker hverandre gjensidig"
+msgstr "--depth og --set-depth utelukker hverandre gjensidig"
 
 #: ../svn/main.c:1661 ../svnsync/main.c:2001
 msgid "--trust-server-cert requires --non-interactive"
-msgstr ""
+msgstr "--trust-server-cert krever --non-interactive"
 
 #: ../svn/main.c:1711
 msgid "Log message file is a versioned file; use '--force-log' to override"
@@ -8462,9 +8483,8 @@ msgstr ""
 "for å overstyre"
 
 #: ../svn/main.c:1756
-#, fuzzy
 msgid "--relocate and --depth are mutually exclusive"
-msgstr "--auto-props og --no-auto-props utelukker hverandre gjensidig"
+msgstr "--relocate og --depth utelukker hverandre gjensidig"
 
 #: ../svn/main.c:1833
 msgid "--auto-props and --no-auto-props are mutually exclusive"
@@ -8472,20 +8492,20 @@ msgstr "--auto-props og --no-auto-props utelukker hverandre gjensidig"
 
 #: ../svn/main.c:1847
 msgid "--reintegrate cannot be used with --ignore-ancestry or --record-only"
-msgstr ""
+msgstr "--reintegrate kan ikke brukes sammen med --ignore-ancestry eller --record-only"
 
 #: ../svn/main.c:1855
 msgid "--reintegrate cannot be used with --ignore-ancestry"
-msgstr ""
+msgstr "--reintegrate kan ikke brukes sammen med --ignore-ancestry"
 
 #: ../svn/main.c:1863
 msgid "--reintegrate cannot be used with --record-only"
-msgstr ""
+msgstr "--reintegrate kan ikke brukes sammen med --record-only"
 
 #: ../svn/main.c:1977 ../svn/main.c:1983
 #, c-format
 msgid "--accept=%s incompatible with --non-interactive"
-msgstr ""
+msgstr "--accept=%s er inkompatibel med --non-interactive"
 
 #: ../svn/main.c:2010
 msgid "Try 'svn help' for more info"
@@ -8498,9 +8518,8 @@ msgstr ""
 "flere detaljer)\n"
 
 #: ../svn/merge-cmd.c:105
-#, fuzzy
 msgid "Merge source required"
-msgstr "Andre revisjon er påkrevd"
+msgstr "Flettekilde er påkrevd"
 
 #: ../svn/merge-cmd.c:151
 msgid "Second revision required"
@@ -8511,9 +8530,8 @@ msgid "Too many arguments given"
 msgstr "For mange argumenter angitt"
 
 #: ../svn/merge-cmd.c:182
-#, fuzzy
 msgid "Cannot specify a revision range with two URLs"
-msgstr "Kan ikke angi revisjoner (unntatt HEAD) ved flytteoperasjoner"
+msgstr "Kan ikke angi et revisjonsområde med to URL-er"
 
 #: ../svn/merge-cmd.c:209
 msgid "A working copy merge source needs an explicit revision"
@@ -8521,14 +8539,13 @@ msgstr "En arbeidskopi som flettekilde krever en eksplisitt revisjon"
 
 #: ../svn/merge-cmd.c:292
 msgid "--depth cannot be used with --reintegrate"
-msgstr ""
+msgstr "--depth kan ikke brukes sammen med --reintegrate"
 
 #: ../svn/merge-cmd.c:297
 msgid "--force cannot be used with --reintegrate"
-msgstr ""
+msgstr "--force kan ikke brukes sammen med --reintegrate"
 
 #: ../svn/mergeinfo-cmd.c:71
-#, fuzzy
 msgid "Not enough arguments given"
 msgstr "Ikke nok argumenter angitt"
 
@@ -8537,9 +8554,8 @@ msgid "Try 'svn add' or 'svn add --non-recursive' instead?"
 msgstr "Prøve «svn add» eller «svn add --non-recursive» i stedet?"
 
 #: ../svn/mkdir-cmd.c:92
-#, fuzzy
 msgid "Try 'svn mkdir --parents' instead?"
-msgstr "Prøve «svn revert --recursive» i stedet?"
+msgstr "Prøve «svn mkdir --parents» i stedet?"
 
 #: ../svn/notify.c:82
 #, c-format
@@ -8717,58 +8733,52 @@ msgstr "Stien «%s» er ikke lengre medlem av en forandringsliste.\n"
 #: ../svn/notify.c:431
 #, c-format
 msgid "--- Merging differences between repository URLs into '%s':\n"
-msgstr ""
+msgstr "--- Fletter forskjeller mellom depot-URLer inn i «%s»:\n"
 
 #: ../svn/notify.c:436
-#, fuzzy, c-format
+#, c-format
 msgid "--- Merging r%ld into '%s':\n"
-msgstr ""
-"\n"
-"--- Forandringsliste «%s»:\n"
+msgstr "--- Fletter r%ld inn i «%s»:\n"
 
 #: ../svn/notify.c:440
 #, c-format
 msgid "--- Reverse-merging r%ld into '%s':\n"
-msgstr ""
+msgstr "--- Tilbakefletter r%ld inn i «%s»:\n"
 
 #: ../svn/notify.c:444
 #, c-format
 msgid "--- Merging r%ld through r%ld into '%s':\n"
-msgstr ""
+msgstr "--- Fletter r%ld til r%ld inn i «%s»:\n"
 
 #: ../svn/notify.c:450
 #, c-format
 msgid "--- Reverse-merging r%ld through r%ld into '%s':\n"
-msgstr ""
+msgstr "--- Tilbakefletter r%ld til r%ld inn i «%s»:\n"
 
 #: ../svn/notify.c:461
 #, c-format
 msgid "--- Merging differences between foreign repository URLs into '%s':\n"
-msgstr ""
+msgstr "--- Fletter forskjeller mellom fremmede depot-URLer inn i «%s»:\n"
 
 #: ../svn/notify.c:467
-#, fuzzy, c-format
+#, c-format
 msgid "--- Merging (from foreign repository) r%ld into '%s':\n"
-msgstr ""
-"\n"
-"--- Forandringsliste «%s»:\n"
+msgstr "--- Fletter (fra fremmed depot) r%ld inn i «%s»:\n"
 
 #: ../svn/notify.c:472
-#, fuzzy, c-format
+#, c-format
 msgid "--- Reverse-merging (from foreign repository) r%ld into '%s':\n"
-msgstr ""
-"\n"
-"--- Forandringsliste «%s»:\n"
+msgstr "--- Tilbakefletter (fra fremmed depot) r%ld inn i «%s»:\n"
 
 #: ../svn/notify.c:477
 #, c-format
 msgid "--- Merging (from foreign repository) r%ld through r%ld into '%s':\n"
-msgstr ""
+msgstr "--- Fletter (fra fremmed depot) r%ld til r%ld inn i «%s»:\n"
 
 #: ../svn/notify.c:483
 #, c-format
 msgid "--- Reverse-merging (from foreign repository) r%ld through r%ld into '%s':\n"
-msgstr ""
+msgstr "--- Tilbakefletter (fra fremmed depot) r%ld til r%ld inn i «%s»:\n"
 
 #: ../svn/propdel-cmd.c:82
 #, c-format
@@ -8792,7 +8802,7 @@ msgstr "Egenskapen «%s» slettet fra «%s».\n"
 
 #: ../svn/propedit-cmd.c:65 ../svn/propset-cmd.c:89
 msgid "--encoding option applies only to textual Subversion-controlled properties"
-msgstr ""
+msgstr "«--encoding»-valget gjelder bare for tekstbaserte Subversion-kontrollerte egenskaper"
 
 #: ../svn/propedit-cmd.c:128
 #, c-format
@@ -8856,6 +8866,8 @@ msgid ""
 "To turn off the %s property, use 'svn propdel';\n"
 "setting the property to '%s' will not turn it off."
 msgstr ""
+"For å slå av %s-valget, bruk «svn propdel»;\n"
+"det å sette egenskapen til «%s» vil ikke slå det av."
 
 #: ../svn/propset-cmd.c:119
 #, c-format
@@ -8884,16 +8896,15 @@ msgstr "Egenskapen «%s» satt på «%s»\n"
 
 #: ../svn/resolve-cmd.c:74
 msgid "missing --accept option"
-msgstr ""
+msgstr "mangler «--accept»-valget"
 
 #: ../svn/resolve-cmd.c:77
 msgid "invalid 'accept' ARG"
-msgstr ""
+msgstr "ugyldig «accept»-argument"
 
 #: ../svn/revert-cmd.c:71
-#, fuzzy
 msgid "Try 'svn revert --depth infinity' instead?"
-msgstr "Prøve «svn revert --recursive» i stedet?"
+msgstr "Prøve «svn revert --depth infinity» i stedet?"
 
 #: ../svn/status-cmd.c:300
 #, c-format
@@ -8934,10 +8945,9 @@ msgstr ""
 
 #: ../svn/util.c:132
 msgid "The EDITOR, SVN_EDITOR or VISUAL environment variable or 'editor-cmd' run-time configuration option is empty or consists solely of whitespace. Expected a shell command."
-msgstr ""
+msgstr "«EDITOR»-, «SVN_EDITOR»- eller «VISUAL»-miljøvariablene eller valget «editor-cmd» i kjøreoppsettet er enten tom eller inneholder bare blanktegn. Forventet en skallkommando."
 
 #: ../svn/util.c:139
-#, fuzzy
 msgid "None of the environment variables SVN_EDITOR, VISUAL or EDITOR are set, and no 'editor-cmd' run-time configuration option was found"
 msgstr "Ingen av miljøvariablene SVN_EDITOR, VISUAL eller EDITOR er satt, og innstillingen «editor-cmd» ble heller ikke funnet"
 
@@ -8963,12 +8973,11 @@ msgstr "system(«%s») returnerte %d"
 
 #: ../svn/util.c:231
 msgid "The SVN_MERGE environment variable is empty or consists solely of whitespace. Expected a shell command.\n"
-msgstr ""
+msgstr "Miljøvariabelen SVN_MERGE er enten tom eller består kun av blanktegn. Forventet en skallkommando.\n"
 
 #: ../svn/util.c:237
-#, fuzzy
 msgid "The environment variable SVN_MERGE and the merge-tool-cmd run-time configuration option were not set.\n"
-msgstr "Ingen av miljøvariablene SVN_EDITOR, VISUAL eller EDITOR er satt, og innstillingen «editor-cmd» ble heller ikke funnet"
+msgstr "Miljøvariabelen SVN_MERGE og innstillingen «merge-tool-cmd» er ikke definert.\n"
 
 #: ../svn/util.c:364
 #, c-format
@@ -9008,7 +9017,6 @@ msgid "Could not use external editor to fetch log message; consider setting the 
 msgstr "Kunne ikke bruke en ekstern redigerer for å hente inn loggmeldingen. Du bør vurdere å sette miljøvariabelen $SVN_EDITOR eller bruke valgene --message (-m) eller --file (-F)"
 
 #: ../svn/util.c:810
-#, fuzzy
 msgid ""
 "\n"
 "Log message unchanged or not specified\n"
@@ -9016,16 +9024,15 @@ msgid ""
 msgstr ""
 "\n"
 "Loggmeldingen er uforandret eller ikke spesifisert\n"
-"Avbryt (a), fortsett (c), rediger (e)\n"
+"avbryt (a), fortsett (c), rediger (e)\n"
 
 #: ../svn/util.c:863
 msgid "Use --force to override this restriction"
 msgstr "Bruk --force for å komme rundt denne begrensningen"
 
 #: ../svn/util.c:1112
-#, fuzzy
 msgid "(invalid date)"
-msgstr "(mangler dato)"
+msgstr "(ugyldig dato)"
 
 #: ../svnadmin/main.c:95 ../svndumpfilter/main.c:66
 #, c-format
@@ -9134,13 +9141,12 @@ msgstr ""
 "                             tidligere enn 1.4"
 
 #: ../svnadmin/main.c:302
-#, fuzzy
 msgid ""
 "use format compatible with Subversion versions\n"
 "                             earlier than 1.5"
 msgstr ""
 "bruk format som er kompatibelt med Subversionversjoner\n"
-"                             tidligere enn 1.4"
+"                             tidligere enn 1.5"
 
 #: ../svnadmin/main.c:315
 msgid ""
@@ -9272,6 +9278,10 @@ msgid ""
 "Print descriptions of all locks on or under PATH-IN-REPOS (which,\n"
 "if not provided, is the root of the repository).\n"
 msgstr ""
+"bruk: svnadmin lslocks DEPOTSTI [STI-I-DEPOT]\n"
+"\n"
+"Vis beskrivelser av alle låser i eller under STI-I-DEPOT (som,\n"
+"hvis ikke angitt, er roten av depotet).\n"
 
 #: ../svnadmin/main.c:385
 msgid ""
@@ -9373,6 +9383,11 @@ msgid ""
 "NEW_UUID is provided, use that as the new repository UUID; otherwise,\n"
 "generate a brand new UUID for the repository.\n"
 msgstr ""
+"bruk: svnadmin setuuid DEPOTSTI [NY_UUID]\n"
+"\n"
+"Nullstill depot-UUID for depotet som er plassert på DEPOTSTI. Hvis\n"
+"NY_UUID angis, brukes den som ny depot-UUID. Hvis ingen NY_UUID er\n"
+"angitt, genereres en ny UUID for depotet.\n"
 
 #: ../svnadmin/main.c:438
 msgid ""
@@ -9389,6 +9404,17 @@ msgid ""
 "integrity of the repository.  It does not guarantee the most optimized\n"
 "repository state as a dump and subsequent load would.\n"
 msgstr ""
+"bruk: svnadmin upgrade DEPOTSTI\n"
+"\n"
+"Oppgrader depotet plassert i DEPOTSTI til den nyeste støttede\n"
+"skjemaversjonen.\n"
+"\n"
+"Denne funksjonaliteten skal gjøre livet lettere for depotadministratorer\n"
+"som vil gjøre bruk av ny funksjonalitet i Subversion uten å måtte gå til\n"
+"det potensielt kostbare skrittet å foreta en dump/innlastingsoperasjon.\n"
+"Oppgraderingen gjør akkurat nok for å oppnå dette og samtidig\n"
+"opprettholde integriteten i depotet. Den garanterer ikke den mest\n"
+"optimale depottilstanden som en dump- og lasteoperasjon ville gitt.\n"
 
 #: ../svnadmin/main.c:451
 msgid ""
@@ -9565,7 +9591,7 @@ msgid "Removed lock on '%s'.\n"
 msgstr "Fjernet lås på «%s».\n"
 
 #: ../svnadmin/main.c:1305
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Repository lock acquired.\n"
 "Please wait; upgrading the repository may take some time...\n"
@@ -9575,18 +9601,20 @@ msgstr ""
 
 #: ../svnadmin/main.c:1351
 msgid "Upgrade of this repository's underlying versioned filesystem is not supported; consider dumping and loading the data elsewhere"
-msgstr ""
+msgstr "Uppgradering av det underliggende versjonerte filsystemet til dette depotet støttes ikke; vurder dump og innlasting av dataene et annet sted"
 
 #: ../svnadmin/main.c:1358
 msgid "Upgrade of this repository is not supported; consider dumping and loading the data elsewhere"
-msgstr ""
+msgstr "Oppgradering av dette depotet støttes ikke; vurder dump og innlasting av dataene et annet sted"
 
 #: ../svnadmin/main.c:1364
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "\n"
 "Upgrade completed.\n"
-msgstr "Oppdatering ferdig.\n"
+msgstr ""
+"\n"
+"Oppgradering ferdig.\n"
 
 #: ../svnadmin/main.c:1459
 msgid "Multiple revision arguments encountered; try '-r N:M' instead of '-r N -r M'"
@@ -9637,17 +9665,17 @@ msgstr "Ingen gyldig «copyfrom»-revisjon i filtrert strøm"
 #: ../svndumpfilter/main.c:678
 #, c-format
 msgid "Missing merge source path '%s'; try with --skip-missing-merge-sources"
-msgstr ""
+msgstr "Mangler flettekildesti «%s»; præv med --skip-missing-merge-sources"
 
 #: ../svndumpfilter/main.c:698
-#, fuzzy, c-format
+#, c-format
 msgid "No valid revision range 'start' in filtered stream"
-msgstr "Ingen gyldig «copyfrom»-revisjon i filtrert strøm"
+msgstr "Ikke gyldig revisjonsområde-«start» i filtrert strøm"
 
 #: ../svndumpfilter/main.c:705
-#, fuzzy, c-format
+#, c-format
 msgid "No valid revision range 'end' in filtered stream"
-msgstr "Ingen gyldig «copyfrom»-revisjon i filtrert strøm"
+msgstr "Ikke gyldig revisjonsområde-«slutt» i filtrert strøm"
 
 #: ../svndumpfilter/main.c:751
 msgid "Delta property block detected - not supported by svndumpfilter"
@@ -9668,9 +9696,8 @@ msgstr ""
 "                             filtrering."
 
 #: ../svndumpfilter/main.c:892
-#, fuzzy
 msgid "Skip missing merge sources."
-msgstr "Hoppet over savnet mål: «%s»\n"
+msgstr "Utelat manglende flettekilder."
 
 #: ../svndumpfilter/main.c:894
 msgid "Don't filter revision properties."
@@ -9793,9 +9820,8 @@ msgid "show full paths instead of indenting them"
 msgstr "vis komplette stier istedenfor å bruke innrykk"
 
 #: ../svnlook/main.c:111
-#, fuzzy
 msgid "maximum number of history entries"
-msgstr "maksimum antall loggmeldinger"
+msgstr "maksimum antall historieposter"
 
 #: ../svnlook/main.c:114
 msgid "do not print differences for added files"
@@ -10033,19 +10059,19 @@ msgstr ""
 "Vis det yngste revisjonsnummeret.\n"
 
 #: ../svnlook/main.c:792
-#, fuzzy, c-format
+#, c-format
 msgid "Added: %s\n"
-msgstr "Lagt til"
+msgstr "Lagt til: %s\n"
 
 #: ../svnlook/main.c:794
-#, fuzzy, c-format
+#, c-format
 msgid "Deleted: %s\n"
-msgstr "Opprettet: %s\n"
+msgstr "Slettet: %s\n"
 
 #: ../svnlook/main.c:796
-#, fuzzy, c-format
+#, c-format
 msgid "Modified: %s\n"
-msgstr "Endret"
+msgstr "Endret: %s\n"
 
 #: ../svnlook/main.c:882
 #, c-format
@@ -10069,11 +10095,11 @@ msgid "Index"
 msgstr "Indeks"
 
 #: ../svnlook/main.c:964
-#, fuzzy
 msgid ""
 "(Binary files differ)\n"
 "\n"
-msgstr "(Binære filer inneholder forskjeller)\n"
+msgstr "(Binære filer er forskjellige)\n"
+"\n"
 
 #: ../svnlook/main.c:1129
 msgid "unknown"
@@ -10245,14 +10271,12 @@ msgid "tunnel mode"
 msgstr "tunnelmodus"
 
 #: ../svnserve/main.c:146
-#, fuzzy
 msgid "listen-once mode (useful for debugging)"
-msgstr "lytt én gang (nyttig for avlusing)"
+msgstr "«lytt én gang»-modus (nyttig for avlusing)"
 
 #: ../svnserve/main.c:149
-#, fuzzy
 msgid "Windows service mode (Service Control Manager)"
-msgstr "Klarte ikke å koble til Service Control Manager"
+msgstr "Windows tjenestemodus (Service Control Manager)"
 
 #: ../svnserve/main.c:151
 msgid "root of directory to serve"
@@ -10263,9 +10287,8 @@ msgid "force read only, overriding repository config file"
 msgstr "bruk skrivebeskyttet tilgang, overstyr konfigurasjonsfila for depotet"
 
 #: ../svnserve/main.c:155
-#, fuzzy
 msgid "read configuration from file ARG"
-msgstr "les brukerens innstillingsfil fra katalogen ARG"
+msgstr "les oppsett fra filen ARG"
 
 #: ../svnserve/main.c:158
 msgid ""
@@ -10295,40 +10318,42 @@ msgstr "tjenernavn eller IP-adresse for lytting (for tjenestemodus)"
 #. ### Making the assumption here that WIN32 never has fork and so
 #. * ### this option never exists when --service exists.
 #: ../svnserve/main.c:179
-#, fuzzy
 msgid "use threads instead of fork [mode: daemon]"
-msgstr "bruk tråder istedenfor tvillingprosesser/fork"
+msgstr "bruk tråder istedenfor tvillingprosesser (fork) [modus: daemon]"
 
 #: ../svnserve/main.c:183
-#, fuzzy
 msgid ""
 "run in foreground (useful for debugging)\n"
 "                             [mode: daemon]"
 msgstr "kjør i forgrunnen (nyttig for avlusing)"
+"                             [modus: daemon]"
 
 #: ../svnserve/main.c:187
-#, fuzzy
 msgid "svnserve log file"
-msgstr "Oppretter «svnserve.conf»-fil"
+msgstr "loggfil for svnserve"
 
 #: ../svnserve/main.c:190
 msgid ""
 "write server process ID to file ARG\n"
 "                             [mode: daemon, listen-once, service]"
 msgstr ""
+"skriv ID for tjenerprosess til filen ARG\n"
+"                             [modus: daemon, listen-once, service]"
 
 #: ../svnserve/main.c:194
 msgid ""
 "write server process ID to file ARG\n"
 "                             [mode: daemon, listen-once]"
 msgstr ""
+"skriv ID for tjenerprosess til filen ARG\n"
+"                             [modus: daemon, listen-once]"
 
 #: ../svnserve/main.c:199
-#, fuzzy
 msgid ""
 "tunnel username (default is current uid's name)\n"
 "                             [mode: tunnel]"
-msgstr "tunnelbrukernavn (Standard: Navn for gjeldende UID)"
+msgstr "tunnelbrukernavn (Standard: Navn for gjeldende uid)"
+"                             [modus: tunnel]"
 
 #: ../svnserve/main.c:202 ../svnversion/main.c:125
 msgid "display this help"
@@ -10340,33 +10365,32 @@ msgid "Type '%s --help' for usage.\n"
 msgstr "Skriv «%s --help» for bruk.\n"
 
 #: ../svnserve/main.c:225
-#, fuzzy
 msgid ""
 "usage: svnserve [-d | -i | -t | -X | --service] [options]\n"
 "\n"
 "Valid options:\n"
 msgstr ""
-"bruk: svnserve [valg]\n"
+"bruk: svnserve [-d | -i | -t | -X | --service] [valg]\n"
 "\n"
-"Lovlige valg:\n"
+"Gyldige valg:\n"
 
 #: ../svnserve/main.c:231
-#, fuzzy
 msgid ""
 "usage: svnserve [-d | -i | -t | -X] [options]\n"
 "\n"
 "Valid options:\n"
 msgstr ""
-"bruk: svnserve [valg]\n"
+"bruk: svnserve [-d | -i | -t | -X] [valg]\n"
 "\n"
-"Lovlige valg:\n"
+"Gyldige valg:\n"
 
 #: ../svnserve/main.c:259
-#, fuzzy
 msgid ""
 "\n"
 "Cyrus SASL authentication is available.\n"
-msgstr "Ingen autentiseringsinstans er tilgjengelig"
+msgstr ""
+"\n"
+"Cyrus SASL-autentisering er tilgjengelig.\n"
 
 #: ../svnserve/main.c:494
 #, c-format
@@ -10374,9 +10398,8 @@ msgid "svnserve: Root path '%s' does not exist or is not a directory.\n"
 msgstr "svnserve: Rotstien «%s» finnes ikke eller er ikke en katalog.\n"
 
 #: ../svnserve/main.c:551
-#, fuzzy
 msgid "You must specify exactly one of -d, -i, -t, --service or -X.\n"
-msgstr "Nøyaktig én av disse må spesifiseres: -d, -i, -t eller -X.\n"
+msgstr "Nøyaktig én av disse må spesifiseres: -d, -i, -t, --service eller -X.\n"
 
 #: ../svnserve/main.c:554
 msgid "You must specify exactly one of -d, -i, -t or -X.\n"
@@ -10411,7 +10434,7 @@ msgstr "Kan ikke binde tjenersokkel"
 #: ../svnserve/main.c:771
 #, c-format
 msgid "Can't accept client connection"
-msgstr "Kan ikke akseptere klienttilkobling"
+msgstr "Kan ikke godta klienttilkobling"
 
 #: ../svnserve/main.c:833
 #, c-format
@@ -10429,24 +10452,21 @@ msgid "Can't create thread"
 msgstr "Kan ikke opprette tråd"
 
 #: ../svnserve/serve.c:1758
-#, fuzzy
 msgid "Path is not a string"
-msgstr "Filstien er ikke til en fil i en arbeidskopi"
+msgstr "Stien er ikke en streng"
 
 #: ../svnserve/serve.c:1912
-#, fuzzy
 msgid "Log revprop entry not a string"
-msgstr "Loggpost er ikke en liste"
+msgstr "Loggrevisjonsegenskapen er ikke en streng"
 
 #: ../svnserve/serve.c:1919
-#, fuzzy, c-format
+#, c-format
 msgid "Unknown revprop word '%s' in log command"
-msgstr "svn-protokollen kjenner ikke kommandoen"
+msgstr "Ukjent revisjonsegenskaps-ord «%s» i loggkommando"
 
 #: ../svnserve/serve.c:1935
-#, fuzzy
 msgid "Log path entry not a string"
-msgstr "Loggpost er ikke en liste"
+msgstr "Post for loggsti er ikke en streng"
 
 #: ../svnserve/winservice.c:341
 #, c-format

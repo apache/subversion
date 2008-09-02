@@ -49,12 +49,23 @@ typedef struct svn_client__merge_path_t
                                         ranges. */
   svn_boolean_t absent;              /* PATH is absent from the WC, probably
                                         due to authz restrictions. */
-  apr_array_header_t *remaining_ranges; /* Per path remaining ranges list. */
-  svn_mergeinfo_t pre_merge_mergeinfo;  /* mergeinfo on a path prior to a
+
+  /* The remaining ranges to be merged to PATH.  When describing a forward
+     merge this rangelist adheres to the rules for rangelists described in
+     svn_mergeinfo.h.  However, when describing reverse merges this
+     rangelist can contain reverse merge ranges that are not sorted per
+     svn_sort_compare_ranges(), but rather are sorted such that the ranges
+     with the youngest start revisions come first.  In both the forward and
+     reverse merge cases the ranges should never overlap.  This rangelist
+     may be empty. */
+  apr_array_header_t *remaining_ranges;
+  
+  svn_mergeinfo_t pre_merge_mergeinfo;  /* Mergeinfo on PATH prior to a
                                            merge.*/
-  svn_mergeinfo_t implicit_mergeinfo;   /* Implicit mergeinfo on a path prior
+  svn_mergeinfo_t implicit_mergeinfo;   /* Implicit mergeinfo on PATH prior
                                            to a merge.*/
-  svn_boolean_t indirect_mergeinfo;
+  svn_boolean_t indirect_mergeinfo;     /* Whether PRE_MERGE_MERGEINFO was
+                                           explicit or inherited. */
   svn_boolean_t scheduled_for_deletion; /* PATH is scheduled for deletion. */
 } svn_client__merge_path_t;
 

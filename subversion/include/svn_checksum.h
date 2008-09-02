@@ -125,6 +125,8 @@ svn_checksum_to_cstring(svn_checksum_t *checksum,
 /** Parse the hex representation of a checksum of kind @a kind into
  * @a checksum, allocating in @a pool.
  *
+ * If @a hex is @c NULL, then @a *checksum will also be @c NULL.
+ *
  * @since New in 1.6.
  */
 svn_error_t *

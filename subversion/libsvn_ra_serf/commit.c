@@ -2,7 +2,7 @@
  * commit.c :  entry point for commit RA functions for ra_serf
  *
  * ====================================================================
- * Copyright (c) 2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2006, 2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -669,7 +669,7 @@ proppatch_walker(void *baton,
 
   if (binary_prop == TRUE)
     {
-      val = svn_base64_encode_string(val, pool);
+      val = svn_base64_encode_string2(val, TRUE, pool);
     }
   else
     {
@@ -1696,7 +1696,7 @@ apply_textdelta(void *file_baton,
   ctx->stream = svn_stream_create(ctx, pool);
   svn_stream_set_write(ctx->stream, svndiff_stream_write);
 
-  svn_txdelta_to_svndiff(ctx->stream, pool, handler, handler_baton);
+  svn_txdelta_to_svndiff2(handler, handler_baton, ctx->stream, 0, pool);
 
   ctx->base_checksum = base_checksum;
 

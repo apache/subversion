@@ -312,7 +312,7 @@ db_output_value(dav_db *db,
       if (! svn_xml_is_xml_safe(propval->data, propval->len))
         {
           const svn_string_t *enc_propval
-            = svn_base64_encode_string(propval, pool);
+            = svn_base64_encode_string2(propval, TRUE, pool);
           xml_safe = enc_propval->data;
           encoding = apr_pstrcat(pool, " V:encoding=\"base64\"", NULL);
         }

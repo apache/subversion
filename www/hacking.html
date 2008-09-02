@@ -2659,15 +2659,17 @@ API documentation with a diff to the new one.  For example:</p>
     * Similar to svn_repos_dump_fs2(), but with the @a use_deltas
     * parameter always set to @c FALSE.
     */
-   svn_error_t *svn_repos_dump_fs(svn_repos_t *repos,
-                                  svn_stream_t *dumpstream,
-                                  svn_stream_t *feedback_stream,
-                                  svn_revnum_t start_rev,
-                                  svn_revnum_t end_rev,
-                                  svn_boolean_t incremental,
-                                  svn_cancel_func_t cancel_func,
-                                  void *cancel_baton,
-                                  apr_pool_t *pool);
+   SVN_DEPRECATED
+   svn_error_t *
+   svn_repos_dump_fs(svn_repos_t *repos,
+                     svn_stream_t *dumpstream,
+                     svn_stream_t *feedback_stream,
+                     svn_revnum_t start_rev,
+                     svn_revnum_t end_rev,
+                     svn_boolean_t incremental,
+                     svn_cancel_func_t cancel_func,
+                     void *cancel_baton,
+                     apr_pool_t *pool);
 </pre>
 
 <p>When the major release number changes, the "best" new API in a
