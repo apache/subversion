@@ -754,6 +754,9 @@ diff_dir_deleted(svn_wc_adm_access_t *adm_access,
                  const char *path,
                  void *diff_baton)
 {
+  if (state)
+    *state = svn_wc_notify_state_unknown;
+
   return SVN_NO_ERROR;
 }
 
