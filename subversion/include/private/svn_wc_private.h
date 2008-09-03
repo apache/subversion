@@ -118,12 +118,13 @@ svn_wc__path_switched(const char *wcpath,
  *
  * Use POOL for temporary allocation.
  */
-svn_error_t *svn_wc__versioned_file_modcheck(svn_boolean_t *modified_p,
-                                             const char *versioned_file,
-                                             svn_wc_adm_access_t *adm_access,
-                                             const char *base_file,
-                                             svn_boolean_t compare_textbases,
-                                             apr_pool_t *pool);
+svn_error_t *
+svn_wc__versioned_file_modcheck(svn_boolean_t *modified_p,
+                                const char *versioned_file,
+                                svn_wc_adm_access_t *adm_access,
+                                const char *base_file,
+                                svn_boolean_t compare_textbases,
+                                apr_pool_t *pool);
 
 #ifdef __cplusplus
 }
