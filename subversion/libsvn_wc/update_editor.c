@@ -1238,9 +1238,8 @@ check_tree_conflict(svn_stringbuf_t *log_accum,
 
       /* The entry is a tree conflict victim. */
       conflict = svn_wc_conflict_description_create_tree(
-        (strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) == 0) ? full_path
-                                                          : entry->name,
-        parent_adm_access, entry->kind, svn_wc_operation_update, pool);
+        full_path, parent_adm_access, entry->kind, svn_wc_operation_update,
+        pool);
       conflict->action = action;
       conflict->reason = reason;
 

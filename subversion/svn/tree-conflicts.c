@@ -18,6 +18,7 @@
 
 #include "tree-conflicts.h"
 #include "svn_xml.h"
+#include "svn_path.h"
 
 #include "svn_private_config.h"
 
@@ -196,7 +197,7 @@ svn_cl__append_human_readable_tree_conflict_description(
   const svn_wc_conflict_description_t *conflict,
   apr_pool_t *pool)
 {
-  const char *their_phrase, *our_phrase;
+  const char *victim_name, *their_phrase, *our_phrase;
   svn_stringbuf_t *their_phrase_with_victim, *our_phrase_with_victim;
   struct tree_conflict_phrases *phrases = new_tree_conflict_phrases(pool);
 
@@ -207,10 +208,11 @@ svn_cl__append_human_readable_tree_conflict_description(
                             _("Invalid tree conflict data"));
 
   /* Substitute the '%s' format in the phrases with the victim path. */
+  victim_name = svn_path_basename(conflict->path, pool);
   their_phrase_with_victim = svn_stringbuf_createf(pool, their_phrase,
-                                                   conflict->victim_path);
+                                                   victim_name);
   our_phrase_with_victim = svn_stringbuf_createf(pool, our_phrase,
-                                                 conflict->victim_path);
+                                                 victim_name);
 
   svn_stringbuf_appendstr(descriptions, their_phrase_with_victim);
   svn_stringbuf_appendstr(descriptions, our_phrase_with_victim);
@@ -229,7 +231,7 @@ svn_cl__append_tree_conflict_info_xml(
   const char *tmp;
 
   apr_hash_set(att_hash, "victim", APR_HASH_KEY_STRING,
-               conflict->victim_path);
+               svn_path_basename(conflict->path, pool));
 
   switch (conflict->node_kind)
     {

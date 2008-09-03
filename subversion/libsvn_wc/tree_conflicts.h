@@ -56,7 +56,7 @@
  * None of these fields can be empty.
  *
  * The victim_path field stores the path of the tree conflict victim,
- * and corresponds to the same field in svn_wc_conflict_description_t.
+ * and corresponds to the 'path' field in svn_wc_conflict_description_t.
  *
  * The node_kind field indicates the node kind of the victim, and
  * corresponds to the node_kind field in svn_wc_conflict_description_t.
@@ -171,6 +171,7 @@ svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
  */
 svn_boolean_t
 svn_wc__tree_conflict_exists(apr_array_header_t *conflicts,
-                             const char *victim_path);
+                             const char *victim_path,
+                             apr_pool_t *pool);
 
 #endif /* SVN_LIBSVN_WC_TREE_CONFLICTS_H */

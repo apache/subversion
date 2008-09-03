@@ -342,6 +342,5 @@ svn_wc_conflict_description_create_tree(const char *path,
   conflict->kind = svn_wc_conflict_kind_tree;
   conflict->access = adm_access;
   conflict->operation = operation;
-  conflict->victim_path = svn_path_basename(path, pool);
   return conflict;
 }
