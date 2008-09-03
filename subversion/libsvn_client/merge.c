@@ -101,16 +101,22 @@
  * ranges (-c/-r) are specified.
  *
  *                 1 URL                        2 URLs
- *     +--------------------------------+---------------------+
- *  -c |       mergeinfo-driven         |                     |
- *  or |        cherrypicking           |    unsupported      |
- *  -r |    (svn_client_merge_peg)      |                     |
- *     +--------------------------------+---------------------+
- *  no |      mergeinfo-driven          |   mergeinfo-writing |
- *  -c |        whole-branch            |    diff-and-apply   |
- *  or |       heuristic merge          |  (svn_client_merge) |
- *  -r | (svn_client_merge_reintegrate) |                     |
- *     +--------------------------------+---------------------+
+ * +----+--------------------------------+---------------------+
+ * | -c |       mergeinfo-driven         |                     |
+ * | or |        cherrypicking           |                     |
+ * | -r |    (svn_client_merge_peg)      |                     |
+ * |----+--------------------------------+                     |
+ * |    |       mergeinfo-driven         |     unsupported     |
+ * |    |  'cherry harvest', i.e. merge  |                     |
+ * |    |  all revisions from URL that   |                     |
+ * | no |  have not already been merged  |                     |
+ * | -c |    (svn_client_merge_peg)      |                     |
+ * | or +--------------------------------+---------------------+
+ * | -r |      mergeinfo-driven          |   mergeinfo-writing |
+ * |    |        whole-branch            |    diff-and-apply   |
+ * |    |       heuristic merge          |  (svn_client_merge) |
+ * |    | (svn_client_merge_reintegrate) |                     |
+ * +----+--------------------------------+---------------------+
  *
  *
  */
@@ -123,7 +129,7 @@
  * merge target and any of its subtrees which have explicit mergeinfo
  * or otherwise need special attention during a merge.
  *
- * CHILDREN_WITH_MERGEINFO is intially created by get_mergeinfo_paths()
+ * CHILDREN_WITH_MERGEINFO is initially created by get_mergeinfo_paths()
  * and outside of that function and its helpers should always meet the
  * criteria dictated in get_mergeinfo_paths()'s doc string.
  */
@@ -2351,7 +2357,7 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
 
 /* Helper for do_directory_merge().
 
-   For each child in CHILDREN_WITH_MERGEINFO, populates that
+   For each child in CHILDREN_WITH_MERGEINFO, populate that
    child's remaining_ranges list.  CHILDREN_WITH_MERGEINFO is expected
    to be sorted in depth first order.  All persistent allocations are
    from CHILDREN_WITH_MERGEINFO->pool.
@@ -2360,6 +2366,10 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
    intelligent about populating remaining_ranges list.  Otherwise, it
    will claim that each child has a single remaining range, from
    revision1, to revision2.
+
+   Note that if REVISION1 > REVISION2, then each child's remaining_ranges
+   member does not adhere to the API rules for rangelists described in
+   svn_mergeinfo.h -- See svn_client__merge_path_t. 
 
    See `MERGEINFO MERGE SOURCE NORMALIZATION' for more requirements
    around the values of URL1, REVISION1, URL2, and REVISION2.
@@ -2766,27 +2776,55 @@ remove_absent_children(const char *target_wcpath,
 /* Helper for do_directory_merge().
 
    Set up the diff editor report to merge URL1@REVISION1 to URL2@REVISION2
-   into TARGET_WCPATH and drive it.  Properly describe any subtrees of
-   TARGET_WCPATH that require only a subset of REVISION1:REVISION2 to be
-   merged -- These subtrees are described in CHILDREN_WITH_MERGEINFO, an
-   array of svn_client__merge_path_t *, see
-   'THE CHILDREN_WITH_MERGEINFO ARRAY' comment at the top of this file
-   for more info.  Note that it is possible that TARGET_WCPATH needs only
-   a subset of REVISION1:REVISION2 while its subtrees need the entire range.
+   into TARGET_WCPATH and drive it.
+
+   If mergeinfo is not being honored based on MERGE_B, see the doc string for
+   mergeinfo_behavior() for how this is determined, then ignore
+   CHILDREN_WITH_MERGEINFO and merge the diff between URL1@REVISION1 and
+   URL2@REVISION2 to TARGET_WCPATH.
+
+   If mergeinfo is being honored then perform a history-aware merge,
+   describing TARGET_WCPATH and its subtrees to the reporter in such as way as
+   to avoid repeating merges already performed per the mergeinfo and natural
+   history of TARGET_WCPATH and its subtrees.
+   
+   The ranges that still need to be merged to the TARGET_WCPATH and its
+   subtrees are described in CHILDREN_WITH_MERGEINFO, an array of
+   svn_client__merge_path_t * -- see 'THE CHILDREN_WITH_MERGEINFO ARRAY'
+   comment at the top of this file for more info.  Note that it is possible
+   TARGET_WCPATH and/or some of its subtrees need only a subset, or no part,
+   of REVISION1:REVISION2 to be merged.  Though there is little point to
+   calling this function if TARGET_WCPATH and all its subtrees have already
+   had URL1@REVISION1 to URL2@REVISION2 merged, this will work but is a no-op.
 
    REVISION1 and REVISION2 must be bound by the set of remaining_ranges
    fields in CHILDREN_WITH_MERGEINFO's elements, specifically:
 
-     1) For forward merges the oldest revision in all the remaining_ranges
-        must be equal to REVISION1 and the youngest revision in the *first*
-        range of all the remaining ranges must be equal to REVISION2.
+   For forward merges (REVISION1 < REVISION2):
+   
+     1) The first svn_merge_range_t * element of each child's remaining_ranges
+        array must meet one of the following conditions:
 
-     2) For reverse merges the youngest revision in all the remaining_ranges
-        must be equal to REVISION1 and the oldest revision in the *first*
-        range of all the remaining ranges must be equal to REVISION2.
+        a) The range's start field is greater than or equal to REVISION2.
 
-   If IS_ROLLBACK is true this is a reverse merge, otherwise it is a
-   forward merge.  DEPTH, NOTIFY_B, ADM_ACCESS, and MERGE_B are cascasded from
+        b) The range's end field is REVISION2.
+
+     2) Among all the ranges that meet condition 'b' the oldest start
+        revision must equal REVISION1.
+
+   For reverse merges (REVISION1 > REVISION2):
+   
+     1) The first svn_merge_range_t * element of each child's remaining_ranges
+        array must meet one of the following conditions:
+
+        a) The range's start field is less than or equal to REVISION2.
+
+        b) The range's end field is REVISION2.
+
+     2) Among all the ranges that meet condition 'b' the youngest start
+        revision must equal REVISION1.
+
+   DEPTH, NOTIFY_B, ADM_ACCESS, and MERGE_B are cascasded from
    do_directory_merge(), see that function for more info.  CALLBACKS are the
    svn merge versions of the svn_wc_diff_callbacks3_t callbacks invoked by
    the editor.
@@ -2803,7 +2841,6 @@ drive_merge_report_editor(const char *target_wcpath,
                           const char *url2,
                           svn_revnum_t revision2,
                           apr_array_header_t *children_with_mergeinfo,
-                          svn_boolean_t is_rollback,
                           svn_depth_t depth,
                           notification_receiver_baton_t *notify_b,
                           svn_wc_adm_access_t *adm_access,
@@ -2818,6 +2855,7 @@ drive_merge_report_editor(const char *target_wcpath,
   svn_revnum_t target_start;
   svn_boolean_t honor_mergeinfo;
   const char *old_sess2_url;
+  svn_boolean_t is_rollback = revision1 > revision2;
 
   mergeinfo_behavior(&honor_mergeinfo, NULL, merge_b);
 
@@ -2931,11 +2969,10 @@ drive_merge_report_editor(const char *target_wcpath,
                                  svn_client__merge_path_t *);
 
           /* Note if the child's parent is the merge target. */
-          nearest_parent_is_target =
-            (strcmp(parent->path, target_wcpath) == 0) ? TRUE : FALSE;
+          nearest_parent_is_target = (parent_index == 0);
 
-          /* If a subtree needs the same range applied as it's nearest parent
-             with mergeinfo or neither the subtree nor its nearest parent need
+          /* If a subtree needs the same range applied as its nearest parent
+             with mergeinfo or neither the subtree nor this parent need
              REVISION1:REVISION2 merged, then we don't need to describe the
              subtree separately.  In the latter case this could break the
              editor if child->path didn't exist at REVISION2 and we attempt
@@ -2947,8 +2984,9 @@ drive_merge_report_editor(const char *target_wcpath,
               if ((!is_rollback && range->start > revision2)
                   || (is_rollback && range->start < revision2))
                 {
-                  /* Neither subtree nor parent need any
-                     part of REVISION1:REVISION2. */
+                  /* This child's first remaining range comes after the range
+                     we are currently merging, so skip it. We expect to get
+                     to it in a subsequent call to this function. */
                   continue;
                 }
               else if (parent->remaining_ranges->nelts)
@@ -2969,7 +3007,7 @@ drive_merge_report_editor(const char *target_wcpath,
                  consider that as the "same ranges" and don't describe
                  the subtree. */
               if (parent->remaining_ranges->nelts == 0)
-                continue; /* Same as parent. */
+                continue;
             }
 
           /* Ok, we really need to describe this subtree as it needs different
@@ -3136,19 +3174,19 @@ slice_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
 
 /* Helper for do_directory_merge().
 
-   Remove the first remaining revision range for each child in
-   CHILDREN_WITH_MERGEINFO *iff* that child was already merged.  END_REV is the
-   ending revision of the most recently merged range, i.e. the same end_rev
-   passed to drive_merge_report_editor() by do_directory_merge().  If a
-   range is removed from a child's remaining_ranges array, allocate the new
-   remaining_ranges array in POOL.
+   For each child in CHILDREN_WITH_MERGEINFO remove the first remaining_ranges
+   svn_merge_range_t *element of the child if that range has an end revision
+   equal to REVISION.
+
+   If a range is removed from a child's remaining_ranges array, allocate the
+   new remaining_ranges array in POOL.
 
    ### TODO: We should have remaining_ranges in reverse order to avoid
    ### recreating and reallocationg the remaining_ranges every time we want
    ### to remove the first range.  If the ranges were reversed we could simply
    ### pop the last element in the array. */
 static void
-remove_first_range_from_remaining_ranges(svn_revnum_t end_rev,
+remove_first_range_from_remaining_ranges(svn_revnum_t revision,
                                          apr_array_header_t
                                            *children_with_mergeinfo,
                                          apr_pool_t *pool)
@@ -3165,7 +3203,7 @@ remove_first_range_from_remaining_ranges(svn_revnum_t end_rev,
         {
           svn_merge_range_t *first_range =
             APR_ARRAY_IDX(child->remaining_ranges, 0, svn_merge_range_t *);
-          if (first_range->end == end_rev)
+          if (first_range->end == revision)
             {
               apr_array_header_t *orig_remaining_ranges =
                 child->remaining_ranges;
@@ -3834,14 +3872,25 @@ insert_parent_and_sibs_of_sw_absent_del_entry(
 
    Store the svn_client__merge_path_t *'s in *CHILDREN_WITH_MERGEINFO in
    depth-first order based on the svn_client__merge_path_t *s path member as
-   sorted by svn_path_compare_paths().
+   sorted by svn_path_compare_paths().  Set the remaining_ranges field of each
+   element to NULL.
 
    Note: Since the walk is rooted at MERGE_CMD_BATON->TARGET, the latter is
    guaranteed to be in *CHILDREN_WITH_MERGEINFO and due to the depth-first
    ordering it is guaranteed to be the first element in
    *CHILDREN_WITH_MERGEINFO.
 
-   Cascade MERGE_SRC_CANON_PATH. */
+   MERGE_COMMAND_BATON, URL1, URL2, REVISION1, REVISION2, and ADM_ACCESS are
+   cascaded from the arguments of the same name in do_directory_merge().
+
+   RA_SESSION is the session for, and SOURCE_ROOT_URL is the repository root
+   for, the younger of URL1@REVISION1 and URL2@REVISION2.
+
+   MERGE_SRC_CANON_PATH is the path of of the younger of URL1@REVISION1 and
+   URL2@REVISION2, relative to SOURCE_ROOT_URL (with a leading '/').
+
+
+*/
 static svn_error_t *
 get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                     merge_cmd_baton_t *merge_cmd_baton,
@@ -3854,7 +3903,6 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                     svn_revnum_t revision2,
                     svn_ra_session_t *ra_session,
                     svn_wc_adm_access_t *adm_access,
-                    svn_client_ctx_t *ctx,
                     svn_depth_t depth,
                     apr_pool_t *pool)
 {
@@ -3866,7 +3914,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
     { adm_access, children_with_mergeinfo,
       merge_src_canon_path, merge_cmd_baton->target, source_root_url,
       url1, url2, revision1, revision2,
-      depth, ra_session, ctx };
+      depth, ra_session, merge_cmd_baton->ctx };
 
   /* Cover cases 1), 2), 6), and 7) by walking the WC to get all paths which
      have mergeinfo and/or are switched or are absent from disk or is the
@@ -4974,7 +5022,7 @@ do_directory_merge(const char *url1,
         }
       return drive_merge_report_editor(target_wcpath,
                                        url1, revision1, url2, revision2,
-                                       NULL, is_rollback, depth, notify_b,
+                                       NULL, depth, notify_b,
                                        adm_access, &merge_callbacks,
                                        merge_b, pool);
     }
@@ -4999,7 +5047,7 @@ do_directory_merge(const char *url1,
                               mergeinfo_path, target_entry, source_root_url,
                               url1, url2, revision1, revision2,
                               ra_session, adm_access,
-                              merge_b->ctx, depth, pool));
+                              depth, pool));
 
   /* The first item from the NOTIFY_B->CHILDREN_WITH_MERGEINFO is always
      the target thanks to depth-first ordering. */
@@ -5043,18 +5091,16 @@ do_directory_merge(const char *url1,
       /* Is there anything to merge? */
       if (SVN_IS_VALID_REVNUM(start_rev))
         {
-          range.start = start_rev;
-
-         /* Now examine NOTIFY_B->CHILDREN_WITH_MERGEINFO to find the youngest
-            ending revision that actually needs to be merged (for reverse
-            merges this is the oldest starting revision). */
-          end_rev =
-            get_most_inclusive_end_rev(notify_b->children_with_mergeinfo,
-                                       is_rollback);
-
           /* Adjust range to describe the start of our most
              inclusive merge. */
           range.start = start_rev;
+
+          /* Now examine NOTIFY_B->CHILDREN_WITH_MERGEINFO to find the youngest
+             ending revision that actually needs to be merged (for reverse
+             merges this is the oldest starting revision). */
+           end_rev =
+             get_most_inclusive_end_rev(notify_b->children_with_mergeinfo,
+                                        is_rollback);
 
           /* While END_REV is valid, do the following:
 
@@ -5062,7 +5108,7 @@ do_directory_merge(const char *url1,
                 the element's remaing_ranges member has as it's first element
                 a range that ends with end_rev.
 
-             2. Starting with START_REV, call drive_merge_report_editor()
+             2. Starting with start_rev, call drive_merge_report_editor()
                 on MERGE_B->target for start_rev:end_rev.
 
              3. Remove the first element from each
@@ -5138,7 +5184,6 @@ do_directory_merge(const char *url1,
                 real_url1, start_rev,
                 real_url2, end_rev,
                 notify_b->children_with_mergeinfo,
-                is_rollback,
                 depth, notify_b, adm_access,
                 &merge_callbacks, merge_b,
                 iterpool));
@@ -5185,7 +5230,7 @@ do_directory_merge(const char *url1,
 
           SVN_ERR(drive_merge_report_editor(merge_b->target,
                                             url1, revision1, url2, revision2,
-                                            NULL, is_rollback,
+                                            NULL,
                                             depth, notify_b, adm_access,
                                             &merge_callbacks, merge_b,
                                             pool));
