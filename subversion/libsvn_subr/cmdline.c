@@ -478,6 +478,9 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
 #ifdef SVN_HAVE_KEYCHAIN_SERVICES
           svn_auth_get_keychain_simple_provider(&provider, pool);
           APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+
+          svn_auth_get_keychain_ssl_client_cert_pw_provider(&provider, pool);
+          APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 #endif
           continue;
         }
