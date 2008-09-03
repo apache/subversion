@@ -25,8 +25,10 @@
 #include "svn_path.h"
 #include "svn_props.h"
 #include "svn_repos.h"
+#include "svn_time.h"
 #include "repos.h"
 #include "svn_private_config.h"
+#include "private/svn_utf_private.h"
 
 
 /*** Commit wrappers ***/
@@ -146,17 +148,63 @@ svn_repos_fs_begin_txn_for_update(svn_fs_txn_t **txn_p,
 /*** Property wrappers ***/
 
 /* Validate that property NAME is valid for use in a Subversion
-   repository. */
+   repository; return SVN_ERR_REPOS_BAD_ARGS if it isn't.  For some "svn:"
+   properties, also validate the value, and return SVN_ERR_BAD_PROPERTY_VALUE
+   if it is not valid.
+
+   Use POOL for temporary allocations.
+ */
 static svn_error_t *
-validate_prop(const char *name)
+validate_prop(const char *name, const svn_string_t *value, apr_pool_t *pool)
 {
   svn_prop_kind_t kind = svn_property_kind(NULL, name);
+
+  /* Disallow setting non-regular properties. */
   if (kind != svn_prop_regular_kind)
     return svn_error_createf
       (SVN_ERR_REPOS_BAD_ARGS, NULL,
        _("Storage of non-regular property '%s' is disallowed through the "
          "repository interface, and could indicate a bug in your client"),
        name);
+
+  /* Validate "svn:" properties. */
+  if (svn_prop_is_svn_prop(name) && value != NULL)
+    {
+      /* Validate that log message is UTF-8 with LF line endings. */
+      if (strcmp(name, SVN_PROP_REVISION_LOG) == 0)
+        {
+          if (svn_utf__is_valid(value->data, value->len) == FALSE)
+            {
+              return svn_error_create
+                (SVN_ERR_BAD_PROPERTY_VALUE, NULL,
+                 _("Cannot accept log message because it is not encoded in "
+                   "UTF-8"));
+            }
+
+          /* Disallow inconsistent line ending style, by simply looking for
+           * carriage return characters ('\r'). */
+          if (strchr(value->data, '\r') != NULL)
+            {
+              return svn_error_create
+                (SVN_ERR_BAD_PROPERTY_VALUE, NULL,
+                 _("Cannot accept non-LF line endings "
+                   "in log message"));
+            }
+        }
+
+      /* "svn:date" should be a valid date. */
+      if (strcmp(name, SVN_PROP_REVISION_DATE) == 0)
+        {
+          apr_time_t temp;
+          svn_error_t *err;
+
+          err = svn_time_from_cstring(&temp, value->data, pool);
+          if (err)
+            return svn_error_create(SVN_ERR_BAD_PROPERTY_VALUE,
+                                    err, NULL);
+        }
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -169,7 +217,7 @@ svn_repos_fs_change_node_prop(svn_fs_root_t *root,
                               apr_pool_t *pool)
 {
   /* Validate the property, then call the wrapped function. */
-  SVN_ERR(validate_prop(name));
+  SVN_ERR(validate_prop(name, value, pool));
   return svn_fs_change_node_prop(root, path, name, value, pool);
 }
 
@@ -182,7 +230,10 @@ svn_repos_fs_change_txn_props(svn_fs_txn_t *txn,
   int i;
 
   for (i = 0; i < txnprops->nelts; i++)
-    SVN_ERR(validate_prop(APR_ARRAY_IDX(txnprops, i, svn_prop_t).name));
+    {
+      svn_prop_t *prop = &APR_ARRAY_IDX(txnprops, i, svn_prop_t);
+      SVN_ERR(validate_prop(prop->name, prop->value, pool));
+    }
 
   return svn_fs_change_txn_props(txn, txnprops, pool);
 }
@@ -227,8 +278,9 @@ svn_repos_fs_change_rev_prop3(svn_repos_t *repos,
 
   if (readability == svn_repos_revision_access_full)
     {
-      SVN_ERR(validate_prop(name));
+      SVN_ERR(validate_prop(name, new_value, pool));
       SVN_ERR(svn_fs_revision_prop(&old_value, repos->fs, rev, name, pool));
+
       if (! new_value)
         action = 'D';
       else if (! old_value)
@@ -396,6 +448,7 @@ svn_repos_fs_lock(svn_lock_t **lock,
   svn_error_t *err;
   svn_fs_access_t *access_ctx = NULL;
   const char *username = NULL;
+  const char *new_token;
   apr_array_header_t *paths;
 
   /* Setup an array of paths in anticipation of the ra layers handling
@@ -415,7 +468,10 @@ svn_repos_fs_lock(svn_lock_t **lock,
 
   /* Run pre-lock hook.  This could throw error, preventing
      svn_fs_lock() from happening. */
-  SVN_ERR(svn_repos__hooks_pre_lock(repos, path, username, pool));
+  SVN_ERR(svn_repos__hooks_pre_lock(repos, &new_token, path, username, comment,
+                                    steal_lock, pool));
+  if (*new_token)
+    token = new_token;
 
   /* Lock. */
   SVN_ERR(svn_fs_lock(lock, repos->fs, path, token, comment, is_dav_comment,
@@ -459,7 +515,8 @@ svn_repos_fs_unlock(svn_repos_t *repos,
 
   /* Run pre-unlock hook.  This could throw error, preventing
      svn_fs_unlock() from happening. */
-  SVN_ERR(svn_repos__hooks_pre_unlock(repos, path, username, pool));
+  SVN_ERR(svn_repos__hooks_pre_unlock(repos, path, username, token,
+                                      break_lock, pool));
 
   /* Unlock. */
   SVN_ERR(svn_fs_unlock(repos->fs, path, token, break_lock, pool));

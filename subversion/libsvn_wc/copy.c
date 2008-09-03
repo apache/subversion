@@ -39,10 +39,43 @@
 
 /*** Code. ***/
 
+/* Copy all properties of SRC_PATH to DST_PATH. */
+static svn_error_t *
+copy_props(const char *src_path,
+           const char *dst_path,
+           svn_wc_adm_access_t *src_access,
+           svn_wc_adm_access_t *dst_access,
+           apr_pool_t *pool)
+{
+  apr_hash_t *props;
+  apr_hash_index_t *hi;
+
+  SVN_ERR(svn_wc_prop_list(&props, src_path, src_access, pool));
+  for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
+    {
+      const char *propname;
+      svn_string_t *propval;
+      const void *key;
+      void *val;
+
+      apr_hash_this(hi, &key, NULL, &val);
+      propname = key;
+      propval = val;
+
+      SVN_ERR(svn_wc_prop_set2(propname, propval,
+                               dst_path, dst_access,
+                               FALSE /* skip_checks */,
+                               pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Helper function for svn_wc_copy2() which handles WC->WC copying of
    files which are scheduled for addition or unversioned.
 
-   Copy file SRC_PATH to DST_BASENAME in DST_PARENT_ACCESS.
+   Copy file SRC_PATH in SRC_ACCESS to DST_BASENAME in DST_PARENT_ACCESS.
 
    DST_PARENT_ACCESS is a 0 depth locked access for a versioned directory
    in the same WC as SRC_PATH.
@@ -58,6 +91,7 @@
 static svn_error_t *
 copy_added_file_administratively(const char *src_path,
                                  svn_boolean_t src_is_added,
+                                 svn_wc_adm_access_t *src_access,
                                  svn_wc_adm_access_t *dst_parent_access,
                                  const char *dst_basename,
                                  svn_cancel_func_t cancel_func,
@@ -75,10 +109,14 @@ copy_added_file_administratively(const char *src_path,
 
   if (src_is_added)
     {
-      SVN_ERR(svn_wc_add2(dst_path, dst_parent_access, NULL,
-                          SVN_INVALID_REVNUM, cancel_func,
+      SVN_ERR(svn_wc_add3(dst_path, dst_parent_access, svn_depth_infinity,
+                          NULL, SVN_INVALID_REVNUM, cancel_func,
                           cancel_baton, notify_func,
                           notify_baton, pool));
+
+      SVN_ERR(copy_props(src_path, dst_path,
+                         src_access, dst_parent_access,
+                         pool));
     }
 
   return SVN_NO_ERROR;
@@ -150,9 +188,14 @@ copy_added_dir_administratively(const char *src_path,
 
       /* Add the directory, adding locking access for dst_path
          to dst_parent_access at the same time. */
-      SVN_ERR(svn_wc_add2(dst_path, dst_parent_access, NULL,
+      SVN_ERR(svn_wc_add3(dst_path, dst_parent_access, svn_depth_infinity, NULL,
                           SVN_INVALID_REVNUM, cancel_func, cancel_baton,
                           notify_func, notify_baton, pool));
+
+      /* Copy properties. */
+      SVN_ERR(copy_props(src_path, dst_path,
+                         src_access, dst_parent_access,
+                         pool));
 
       /* Get the accesses for the newly added dir and its source, we'll
          need both to process any of SRC_PATHS's children below. */
@@ -241,6 +284,7 @@ copy_added_dir_administratively(const char *src_path,
             {
               SVN_ERR(copy_added_file_administratively(src_fullpath,
                                                        entry ? TRUE : FALSE,
+                                                       src_child_dir_access,
                                                        dst_child_dir_access,
                                                        this_entry.name,
                                                        cancel_func,
@@ -403,17 +447,16 @@ copy_file_administratively(const char *src_path,
                              _("'%s' already exists and is in the way"),
                              svn_path_local_style(dst_path, pool));
 
-  /* Even if DST_PATH doesn't exist it may still be a versioned file; it
+  /* Even if DST_PATH doesn't exist it may still be a versioned item; it
      may be scheduled for deletion, or the user may simply have removed the
      working copy.  Since we are going to write to DST_PATH text-base and
      prop-base we need to detect such cases and abort. */
   SVN_ERR(svn_wc_entry(&dst_entry, dst_path, dst_parent, FALSE, pool));
-  if (dst_entry && dst_entry->kind == svn_node_file)
+  if (dst_entry && dst_entry->schedule != svn_wc_schedule_delete)
     {
-      if (dst_entry->schedule != svn_wc_schedule_delete)
-        return svn_error_createf(SVN_ERR_ENTRY_EXISTS, NULL,
-                                 _("There is already a versioned item '%s'"),
-                                 svn_path_local_style(dst_path, pool));
+      return svn_error_createf(SVN_ERR_ENTRY_EXISTS, NULL,
+                               _("There is already a versioned item '%s'"),
+                               svn_path_local_style(dst_path, pool));
     }
 
   /* Sanity check 1: You cannot make a copy of something that's not
@@ -755,7 +798,7 @@ copy_dir_administratively(const char *src_path,
 
     SVN_ERR(svn_wc_adm_close(adm_access));
 
-    SVN_ERR(svn_wc_add2(dst_path, dst_parent,
+    SVN_ERR(svn_wc_add3(dst_path, dst_parent, svn_depth_infinity,
                         copyfrom_url, copyfrom_rev,
                         cancel_func, cancel_baton,
                         notify_copied, notify_baton, pool));
@@ -815,7 +858,7 @@ svn_wc_copy2(const char *src_path,
       if (src_entry->schedule == svn_wc_schedule_add
           && (! src_entry->copied))
         {
-          SVN_ERR(copy_added_file_administratively(src_path, TRUE,
+          SVN_ERR(copy_added_file_administratively(src_path, TRUE, adm_access,
                                                    dst_parent, dst_basename,
                                                    cancel_func, cancel_baton,
                                                    notify_func, notify_baton,

@@ -87,7 +87,7 @@ svn_fs__canonicalize_abspath(const char *path, apr_pool_t *pool)
 }
 
 svn_error_t *
-svn_fs__check_fs(svn_fs_t *fs, 
+svn_fs__check_fs(svn_fs_t *fs,
                  svn_boolean_t expect_open)
 {
   if ((expect_open && fs->fsap_data)

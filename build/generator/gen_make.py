@@ -186,7 +186,7 @@ class Generator(gen_base.GeneratorBase):
       source_dir = build_path_dirname(source)
       opts = self.swig.opts[objname.lang]
       if not self.release_mode:
-        self.ofile.write('$(top_builddir)/%s: %s\n' % (objname, deps) +
+        self.ofile.write('%s: %s\n' % (objname, deps) +
           '\t$(SWIG) $(SWIG_INCLUDES) %s ' % opts +
           '-o $@ $(top_srcdir)/%s\n' % source
         )
@@ -382,7 +382,6 @@ class Generator(gen_base.GeneratorBase):
 
       if area == 'apache-mod':
         self.ofile.write('install-mods-shared: %s\n' % (string.join(files),))
-        la_tweaked = { }
         for file in files:
           # cd to dirname before install to work around libtool 1.4.2 bug.
           dirname, fname = build_path_splitfile(file)
@@ -392,41 +391,6 @@ class Generator(gen_base.GeneratorBase):
                            '$(MKDIR) "$(APACHE_LIBEXECDIR)" ; '
                            '$(INSTALL_MOD_SHARED) -n %s %s\n'
                            % (dirname, name, fname))
-          if ext == '.la':
-            la_tweaked[file + '-a'] = None
-
-        for apmod in inst_targets:
-          for source in self.graph.get_sources(gen_base.DT_LINK, apmod.name,
-                                               gen_base.Target):
-            if not source.external_lib:
-              bt = source.filename
-              if bt[-3:] == '.la':
-                la_tweaked[bt + '-a'] = None
-        la_tweaked = la_tweaked.keys()
-        la_tweaked.sort()
-
-        # Construct a .libs directory within the Apache area and populate it
-        # with the appropriate files. Also drop the .la file in the target dir.
-        self.ofile.write('\ninstall-mods-static: %s\n'
-                         '\t$(MKDIR) $(DESTDIR)%s\n'
-                         % (string.join(la_tweaked + self.apache_files),
-                            build_path_join('$(APACHE_TARGET)', '.libs')))
-        for file in la_tweaked:
-          dirname, fname = build_path_splitfile(file)
-          base = os.path.splitext(fname)[0]
-          self.ofile.write('\t$(INSTALL_MOD_STATIC) %s $(DESTDIR)%s\n'
-                           '\t$(INSTALL_MOD_STATIC) %s $(DESTDIR)%s\n'
-                           % (build_path_join(dirname, '.libs', base + '.a'),
-                              build_path_join('$(APACHE_TARGET)', '.libs',
-                                              base + '.a'),
-                              file,
-                              build_path_join('$(APACHE_TARGET)', base + '.la')))
-
-        # copy the other files to the target dir
-        for file in self.apache_files:
-          self.ofile.write('\t$(INSTALL_MOD_STATIC) %s $(DESTDIR)%s\n'
-                           % (file, build_path_join('$(APACHE_TARGET)',
-                                                 build_path_basename(file))))
         self.ofile.write('\n')
 
       elif area != 'test' and area != 'bdb-test':

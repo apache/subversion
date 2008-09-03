@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -142,6 +142,8 @@ extern "C" {
                                          + (21 * SVN_ERR_CATEGORY_SIZE))
 #define SVN_ERR_RA_SERF_CATEGORY_START  (APR_OS_START_USERERR \
                                          + (22 * SVN_ERR_CATEGORY_SIZE))
+#define SVN_ERR_MALFUNC_CATEGORY_START  (APR_OS_START_USERERR \
+                                         + (23 * SVN_ERR_CATEGORY_SIZE))
 
 #endif /* DOXYGEN_SHOULD_SKIP_THIS */
 
@@ -192,6 +194,23 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_BAD_UUID,
              SVN_ERR_BAD_CATEGORY_START + 8,
              "Bogus UUID")
+
+  /** @since New in 1.6. */
+  SVN_ERRDEF(SVN_ERR_BAD_CONFIG_VALUE,
+             SVN_ERR_BAD_CATEGORY_START + 9,
+             "Invalid configuration value")
+
+  SVN_ERRDEF(SVN_ERR_BAD_SERVER_SPECIFICATION,
+             SVN_ERR_BAD_CATEGORY_START + 10,
+             "Bogus server specification")
+
+  SVN_ERRDEF(SVN_ERR_BAD_CHECKSUM_KIND,
+             SVN_ERR_BAD_CATEGORY_START + 11,
+             "Unsupported checksum type")
+
+  SVN_ERRDEF(SVN_ERR_BAD_CHECKSUM_PARSE,
+             SVN_ERR_BAD_CATEGORY_START + 12,
+             "Invalid character in hex checksum")
 
   /* xml errors */
 
@@ -770,10 +789,16 @@ SVN_ERROR_START
              SVN_ERR_RA_DAV_CATEGORY_START + 5,
              "RA layer file already exists")
 
+  /** @deprecated To improve consistency between ra layers, this error code
+      is replaced by SVN_ERR_BAD_CONFIG_VALUE.
+      Slated for removal in the next major release. */
   SVN_ERRDEF(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE,
              SVN_ERR_RA_DAV_CATEGORY_START + 6,
              "Invalid configuration value")
 
+  /** @deprecated To improve consistency between ra layers, this error code
+      is replaced in ra_{neon|serf} by SVN_ERR_FS_NOT_FOUND.
+      Slated for removal in the next major release. */
   SVN_ERRDEF(SVN_ERR_RA_DAV_PATH_NOT_FOUND,
              SVN_ERR_RA_DAV_CATEGORY_START + 7,
              "HTTP Path Not Found")
@@ -869,7 +894,7 @@ SVN_ERROR_START
 
   SVN_ERRDEF(SVN_ERR_AUTHN_CREDS_NOT_SAVED,
              SVN_ERR_AUTHN_CATEGORY_START + 3,
-             "All authentication providers exhausted")
+             "Credentials not saved")
 
   /** @since New in 1.5. */
   SVN_ERRDEF(SVN_ERR_AUTHN_FAILED,
@@ -1036,7 +1061,7 @@ SVN_ERROR_START
 
   SVN_ERRDEF(SVN_ERR_BASE,
              SVN_ERR_MISC_CATEGORY_START + 0,
-             "A problem occurred; see later errors for details")
+             "A problem occurred; see other errors for details")
 
   SVN_ERRDEF(SVN_ERR_PLUGIN_LOAD_FAILURE,
              SVN_ERR_MISC_CATEGORY_START + 1,
@@ -1139,7 +1164,7 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_UNKNOWN_CHANGELIST,
              SVN_ERR_MISC_CATEGORY_START + 24,
              "Unknown changelist")
-  
+
   /** @since New in 1.5. */
   SVN_ERRDEF(SVN_ERR_RESERVED_FILENAME_SPECIFIED,
              SVN_ERR_MISC_CATEGORY_START + 25,
@@ -1149,6 +1174,16 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_UNKNOWN_CAPABILITY,
              SVN_ERR_MISC_CATEGORY_START + 26,
              "Inquiry about unknown capability")
+
+  /** @since New in 1.6. */
+  SVN_ERRDEF(SVN_ERR_TEST_SKIPPED,
+             SVN_ERR_MISC_CATEGORY_START + 27,
+             "Test skipped")
+
+  /** @since New in 1.6. */
+  SVN_ERRDEF(SVN_ERR_NO_APR_MEMCACHE,
+             SVN_ERR_MISC_CATEGORY_START + 28,
+             "apr memcache library not available")
 
   /* command-line client errors */
 
@@ -1195,6 +1230,12 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_CL_NO_EXTERNAL_MERGE_TOOL,
              SVN_ERR_CL_CATEGORY_START + 10,
              "No external merge tool available")
+
+  /* malfunctions such as assertion failures */
+
+  SVN_ERRDEF(SVN_ERR_ASSERTION_FAIL,
+             SVN_ERR_MALFUNC_CATEGORY_START + 0,
+             "Assertion failure")
 
 SVN_ERROR_END
 

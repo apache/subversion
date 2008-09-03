@@ -1221,7 +1221,7 @@ def forced_switch(sbox):
 #----------------------------------------------------------------------
 
 def forced_switch_failures(sbox):
-  "forced switch fails with some types of obstuctions"
+  "forced switch fails with some types of obstruction"
   sbox.build()
 
   # Add a directory to obstruct a file.
@@ -1411,13 +1411,6 @@ def mergeinfo_switch_elision(sbox):
   # the mergeinfo on one of the path's subtrees, the subtree's mergeinfo
   # should *not* elide!  If it did this could result in the switch of a
   # pristine tree producing local mods.
-  #
-  # Search for the comment entitled "The Merge Kluge" in merge_tests.py
-  # to understand why we shorten, and subsequently chdir() after calling
-  # this function.
-  def shorten_path_kludge(path):
-    shorten_by = len(svntest.main.work_dir) + len(os.sep)
-    return path[shorten_by:]
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -1504,12 +1497,11 @@ def mergeinfo_switch_elision(sbox):
                                         expected_status, None, wc_dir)
 
   # Merge r2:4 into A/B_COPY_1
-  short_B_COPY_1_path = shorten_path_kludge(B_COPY_1_path)
-  expected_output = svntest.wc.State(short_B_COPY_1_path, {
+  expected_output = svntest.wc.State(B_COPY_1_path, {
     'E/alpha' : Item(status='U '),
     'E/beta'  : Item(status='U '),
     })
-  expected_merge_status = svntest.wc.State(short_B_COPY_1_path, {
+  expected_merge_status = svntest.wc.State(B_COPY_1_path, {
     ''        : Item(status=' M', wc_rev=2),
     'lambda'  : Item(status='  ', wc_rev=2),
     'E'       : Item(status='  ', wc_rev=2),
@@ -1525,11 +1517,10 @@ def mergeinfo_switch_elision(sbox):
     'E/beta'  : Item("New content"),
     'F'       : Item(),
     })
-  expected_skip = svntest.wc.State(short_B_COPY_1_path, { })
+  expected_skip = svntest.wc.State(B_COPY_1_path, { })
   saved_cwd = os.getcwd()
 
-  os.chdir(svntest.main.work_dir)
-  svntest.actions.run_and_verify_merge(short_B_COPY_1_path, '2', '4',
+  svntest.actions.run_and_verify_merge(B_COPY_1_path, '2', '4',
                                        sbox.repo_url + \
                                        '/A/B',
                                        expected_output,
@@ -1538,8 +1529,6 @@ def mergeinfo_switch_elision(sbox):
                                        expected_skip,
                                        None, None, None, None,
                                        None, 1)
-
-  os.chdir(saved_cwd)
 
   # r5 - Commit the merge into A/B_COPY_1/E
   expected_output = svntest.wc.State(
@@ -1556,12 +1545,11 @@ def mergeinfo_switch_elision(sbox):
                                         expected_status, None, wc_dir)
 
   # Merge r2:4 into A/B_COPY_2/E
-  short_E_COPY_2_path = shorten_path_kludge(E_COPY_2_path)
-  expected_output = svntest.wc.State(short_E_COPY_2_path, {
+  expected_output = svntest.wc.State(E_COPY_2_path, {
     'alpha' : Item(status='U '),
     'beta'  : Item(status='U '),
     })
-  expected_merge_status = svntest.wc.State(short_E_COPY_2_path, {
+  expected_merge_status = svntest.wc.State(E_COPY_2_path, {
     ''      : Item(status=' M', wc_rev=2),
     'alpha' : Item(status='M ', wc_rev=2),
     'beta'  : Item(status='M ', wc_rev=2),
@@ -1571,11 +1559,10 @@ def mergeinfo_switch_elision(sbox):
     'alpha' : Item("New content"),
     'beta'  : Item("New content"),
     })
-  expected_skip = svntest.wc.State(short_E_COPY_2_path, { })
+  expected_skip = svntest.wc.State(E_COPY_2_path, { })
   saved_cwd = os.getcwd()
 
-  os.chdir(svntest.main.work_dir)
-  svntest.actions.run_and_verify_merge(short_E_COPY_2_path, '2', '4',
+  svntest.actions.run_and_verify_merge(E_COPY_2_path, '2', '4',
                                        sbox.repo_url + \
                                        '/A/B/E',
                                        expected_output,
@@ -1584,8 +1571,6 @@ def mergeinfo_switch_elision(sbox):
                                        expected_skip,
                                        None, None, None, None,
                                        None, 1)
-
-  os.chdir(saved_cwd)
 
   # Switch A/B_COPY_2 to URL of A/B_COPY_1.  The local mergeinfo for r1,3-4
   # on A/B_COPY_2/E is identical to the mergeinfo added to A/B_COPY_2 as a
@@ -2100,10 +2085,57 @@ def switch_to_root(sbox):
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau')
-  expected_status.add_state('A/D/G', 
+  expected_status.add_state('A/D/G',
                             svntest.actions.get_virginal_state(wc_dir, 1))
   expected_status.tweak('A/D/G', switched = 'S')
   svntest.actions.run_and_verify_switch(wc_dir, ADG_path, sbox.repo_url,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
+#----------------------------------------------------------------------
+# Make sure that switch continue after deleting locally modified
+# directories, as it update and merge do.
+
+def tolerate_local_mods(sbox):
+  "tolerate deletion of a directory with local mods"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  A_path = os.path.join(wc_dir, 'A')
+  L_path = os.path.join(A_path, 'L')
+  LM_path = os.path.join(L_path, 'local_mod')
+  A_url = sbox.repo_url + '/A'
+  A2_url = sbox.repo_url + '/A2'
+
+  svntest.actions.run_and_verify_svn(None,
+                                     ['\n', 'Committed revision 2.\n'], [],
+                                     'cp', '-m', 'make copy', A_url, A2_url)
+
+  os.mkdir(L_path)
+  svntest.main.run_svn(None, 'add', L_path)
+  svntest.main.run_svn(None, 'ci', '-m', 'Commit added folder', wc_dir)
+
+  # locally modified unversioned file
+  svntest.main.file_write(LM_path, 'Locally modified file.\n', 'w+')
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/L' : Item(status='D '),
+    })
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'A/L' : Item(),
+    'A/L/local_mod' : Item(contents='Locally modified file.\n'),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.tweak('', 'iota', wc_rev=1)
+  expected_status.tweak('A', switched='S')
+
+  # Used to fail with locally modified or unversioned files
+  svntest.actions.run_and_verify_switch(wc_dir, A_path, A2_url,
                                         expected_output,
                                         expected_disk,
                                         expected_status)
@@ -2142,6 +2174,7 @@ test_list = [ None,
               switch_urls_with_spaces,
               switch_to_dir_with_peg_rev2,
               switch_to_root,
+              tolerate_local_mods,
              ]
 
 if __name__ == '__main__':

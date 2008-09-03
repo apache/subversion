@@ -247,8 +247,8 @@ harvest_committables(apr_hash_t *committables,
   if (look_up_committable(committables, path, pool))
     return SVN_NO_ERROR;
 
-  assert(entry);
-  assert(url);
+  SVN_ERR_ASSERT(entry);
+  SVN_ERR_ASSERT(url);
 
   if (ctx->cancel_func)
     SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
@@ -438,7 +438,19 @@ harvest_committables(apr_hash_t *committables,
      information about it. */
   if (state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
     {
+      svn_node_kind_t working_kind;
       svn_boolean_t eol_prop_changed;
+
+      /* First of all, the working file or directory must exist.
+         See issue #3198. */
+      SVN_ERR(svn_io_check_path(path, &working_kind, pool));
+      if (working_kind == svn_node_none)
+        {
+          return svn_error_createf
+            (SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+             _("'%s' is scheduled for addition, but is missing"),
+             svn_path_local_style(path, pool));
+        }
 
       /* See if there are property modifications to send. */
       SVN_ERR(check_prop_mods(&prop_mod, &eol_prop_changed, path,
@@ -948,7 +960,7 @@ svn_client__condense_commit_items(const char **base_url,
   svn_client_commit_item3_t *item, *last_item = NULL;
   int i;
 
-  assert(ci && ci->nelts);
+  SVN_ERR_ASSERT(ci && ci->nelts);
 
   /* Sort our commit items by their URLs. */
   qsort(ci->elts, ci->nelts,
@@ -1056,7 +1068,8 @@ struct path_driver_cb_baton
   void *edit_baton;                    /* commit editor's baton */
   apr_hash_t *file_mods;               /* hash: path->file_mod_t */
   apr_hash_t *tempfiles;               /* hash of tempfiles created */
-  const char *notify_path_prefix;      /* notification path prefix */
+  const char *notify_path_prefix;      /* notification path prefix
+                                          (NULL is okay, else abs path) */
   svn_client_ctx_t *ctx;               /* client context baton */
   apr_hash_t *commit_items;            /* the committables */
 };
@@ -1080,7 +1093,6 @@ do_item_commit(void **dir_baton,
   svn_wc_adm_access_t *adm_access = cb_baton->adm_access;
   const svn_delta_editor_t *editor = cb_baton->editor;
   apr_hash_t *file_mods = cb_baton->file_mods;
-  const char *notify_path_prefix = cb_baton->notify_path_prefix;
   svn_client_ctx_t *ctx = cb_baton->ctx;
 
   /* Do some initializations. */
@@ -1121,19 +1133,8 @@ do_item_commit(void **dir_baton,
      describe what we're about to do to this item.  */
   if (ctx->notify_func2)
     {
-      /* Convert an absolute path into a relative one (if possible.) */
-      const char *npath = NULL;
+      const char *npath = item->path;
       svn_wc_notify_t *notify;
-
-      if (notify_path_prefix)
-        {
-          if (strcmp(notify_path_prefix, item->path))
-            npath = svn_path_is_child(notify_path_prefix, item->path, pool);
-          else
-            npath = ".";
-        }
-      if (! npath)
-        npath = item->path; /* Otherwise just use full path */
 
       if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
           && (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD))
@@ -1183,6 +1184,7 @@ do_item_commit(void **dir_baton,
       if (notify)
         {
           notify->kind = item->kind;
+          notify->path_prefix = cb_baton->notify_path_prefix;
           (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
         }
     }
@@ -1190,7 +1192,7 @@ do_item_commit(void **dir_baton,
   /* If this item is supposed to be deleted, do so. */
   if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
     {
-      assert(parent_baton);
+      SVN_ERR_ASSERT(parent_baton);
       SVN_ERR(editor->delete_entry(path, item->revision,
                                    parent_baton, pool));
     }
@@ -1200,7 +1202,7 @@ do_item_commit(void **dir_baton,
     {
       if (kind == svn_node_file)
         {
-          assert(parent_baton);
+          SVN_ERR_ASSERT(parent_baton);
           SVN_ERR(editor->add_file
                   (path, parent_baton, copyfrom_url,
                    copyfrom_url ? item->copyfrom_rev : SVN_INVALID_REVNUM,
@@ -1208,7 +1210,7 @@ do_item_commit(void **dir_baton,
         }
       else
         {
-          assert(parent_baton);
+          SVN_ERR_ASSERT(parent_baton);
           SVN_ERR(editor->add_directory
                   (path, parent_baton, copyfrom_url,
                    copyfrom_url ? item->copyfrom_rev : SVN_INVALID_REVNUM,
@@ -1247,7 +1249,7 @@ do_item_commit(void **dir_baton,
         {
           if (! file_baton)
             {
-              assert(parent_baton);
+              SVN_ERR_ASSERT(parent_baton);
               SVN_ERR(editor->open_file(path, parent_baton,
                                         item->revision,
                                         file_pool, &file_baton));
@@ -1311,7 +1313,7 @@ do_item_commit(void **dir_baton,
 
       if (! file_baton)
         {
-          assert(parent_baton);
+          SVN_ERR_ASSERT(parent_baton);
           SVN_ERR(editor->open_file(path, parent_baton,
                                     item->revision,
                                     file_pool, &file_baton));
@@ -1434,22 +1436,11 @@ svn_client__do_commit(const char *base_url,
       if (ctx->notify_func2)
         {
           svn_wc_notify_t *notify;
-          const char *npath = NULL;
-
-          if (notify_path_prefix)
-            {
-              if (strcmp(notify_path_prefix, item->path) != 0)
-                npath = svn_path_is_child(notify_path_prefix, item->path,
-                                          subpool);
-              else
-                npath = ".";
-            }
-          if (! npath)
-            npath = item->path;
-          notify = svn_wc_create_notify(npath,
+          notify = svn_wc_create_notify(item->path,
                                         svn_wc_notify_commit_postfix_txdelta,
                                         subpool);
           notify->kind = svn_node_file;
+          notify->path_prefix = notify_path_prefix;
           (*ctx->notify_func2)(ctx->notify_baton2, notify, subpool);
         }
 
@@ -1799,11 +1790,9 @@ svn_client__get_log_msg(const char **log_msg,
       svn_error_t *err;
       apr_pool_t *subpool = svn_pool_create(pool);
       apr_array_header_t *old_commit_items =
-        apr_array_make(subpool, commit_items->nelts,
-                       ctx->log_msg_func2 ? sizeof(svn_client_commit_item2_t) :
-                       sizeof(svn_client_commit_item_t));
-      int i;
+        apr_array_make(subpool, commit_items->nelts, sizeof(void*));
 
+      int i;
       for (i = 0; i < commit_items->nelts; i++)
         {
           svn_client_commit_item3_t *item =
@@ -1848,7 +1837,7 @@ svn_client__get_log_msg(const char **log_msg,
         }
 
       if (ctx->log_msg_func2)
-        err = (*ctx->log_msg_func2)(log_msg, tmp_file, commit_items,
+        err = (*ctx->log_msg_func2)(log_msg, tmp_file, old_commit_items,
                                     ctx->log_msg_baton2, pool);
       else
         err = (*ctx->log_msg_func)(log_msg, tmp_file, old_commit_items,
@@ -1865,21 +1854,28 @@ svn_client__get_log_msg(const char **log_msg,
     }
 }
 
-svn_error_t *svn_client__get_revprop_table(apr_hash_t **revprop_table,
-                                           const char *log_msg,
-                                           svn_client_ctx_t *ctx,
-                                           apr_pool_t *pool)
+svn_error_t *
+svn_client__ensure_revprop_table(apr_hash_t **revprop_table_out,
+                                 const apr_hash_t *revprop_table_in,
+                                 const char *log_msg,
+                                 svn_client_ctx_t *ctx,
+                                 apr_pool_t *pool)
 {
-  if (ctx->revprop_table && svn_prop_has_svn_prop(ctx->revprop_table, pool))
-    return svn_error_create(SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
-                            _("Standard properties can't be set "
-                              "explicitly as revision properties"));
-  if (ctx->revprop_table)
-    *revprop_table = apr_hash_copy(pool, ctx->revprop_table);
+  apr_hash_t *new_revprop_table;
+  if (revprop_table_in)
+    {
+      if (svn_prop_has_svn_prop(revprop_table_in, pool))
+        return svn_error_create(SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
+                                _("Standard properties can't be set "
+                                  "explicitly as revision properties"));
+      new_revprop_table = apr_hash_copy(pool, revprop_table_in);
+    }
   else
-    *revprop_table = apr_hash_make(pool);
-  apr_hash_set(*revprop_table, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING,
+    {
+      new_revprop_table = apr_hash_make(pool);
+    }
+  apr_hash_set(new_revprop_table, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING,
                svn_string_create(log_msg, pool));
-
+  *revprop_table_out = new_revprop_table;
   return SVN_NO_ERROR;
 }

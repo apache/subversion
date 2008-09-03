@@ -30,10 +30,31 @@
 #include <apr_hash.h>
 #include <apr_tables.h>
 #include <apr_time.h>
+#include <apr_sha1.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
+
+
+
+/** Macro used to mark deprecated functions.
+ *
+ * @since New in 1.6.
+ */
+#ifndef SVN_DEPRECATED
+#if !defined(SWIGPERL) && !defined(SWIGPYTHON) && !defined(SWIGRUBY)
+#if defined(__GNUC__) && (__GNUC__ >= 4 || (__GNUC__==3 && __GNUC_MINOR__>=1))
+#define SVN_DEPRECATED __attribute__((deprecated))
+#elif defined(_MSC_VER) && _MSC_VER >= 1300
+#define SVN_DEPRECATED __declspec(deprecated)
+#else
+#define SVN_DEPRECATED
+#endif
+#else
+#define SVN_DEPRECATED
+#endif
+#endif
 
 
 
@@ -830,8 +851,9 @@ typedef struct svn_merge_range_t
 {
   /**
    * If the 'start' field is less than the 'end' field then 'start' is
-   * exclusive and 'end' inclusive of the range described.  If 'start'
-   * is greater than 'end' then the opposite is true.  If 'start'
+   * exclusive and 'end' inclusive of the range described.  This is termed
+   * a forward merge range.  If 'start' is greater than 'end' then the
+   * opposite is true.  This is termed a reverse merge range.  If 'start'
    * equals 'end' the meaning of the range is not defined.
    */
   svn_revnum_t start;

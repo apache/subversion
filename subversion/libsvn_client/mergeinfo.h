@@ -49,10 +49,23 @@ typedef struct svn_client__merge_path_t
                                         ranges. */
   svn_boolean_t absent;              /* PATH is absent from the WC, probably
                                         due to authz restrictions. */
-  apr_array_header_t *remaining_ranges; /* Per path remaining ranges list. */
-  svn_mergeinfo_t pre_merge_mergeinfo;  /* mergeinfo on a path prior to a
+
+  /* The remaining ranges to be merged to PATH.  When describing a forward
+     merge this rangelist adheres to the rules for rangelists described in
+     svn_mergeinfo.h.  However, when describing reverse merges this
+     rangelist can contain reverse merge ranges that are not sorted per
+     svn_sort_compare_ranges(), but rather are sorted such that the ranges
+     with the youngest start revisions come first.  In both the forward and
+     reverse merge cases the ranges should never overlap.  This rangelist
+     may be empty. */
+  apr_array_header_t *remaining_ranges;
+  
+  svn_mergeinfo_t pre_merge_mergeinfo;  /* Mergeinfo on PATH prior to a
                                            merge.*/
-  svn_boolean_t indirect_mergeinfo;
+  svn_mergeinfo_t implicit_mergeinfo;   /* Implicit mergeinfo on PATH prior
+                                           to a merge.*/
+  svn_boolean_t indirect_mergeinfo;     /* Whether PRE_MERGE_MERGEINFO was
+                                           explicit or inherited. */
   svn_boolean_t scheduled_for_deletion; /* PATH is scheduled for deletion. */
 } svn_client__merge_path_t;
 
@@ -63,7 +76,7 @@ typedef struct svn_client__merge_path_t
 /* Find explicit or inherited WC mergeinfo for WCPATH, and return it
    in *MERGEINFO (NULL if no mergeinfo is set).  Set *INHERITED to
    whether the mergeinfo was inherited (TRUE or FALSE).
-   
+
    This function will search for inherited mergeinfo in the parents of
    WCPATH only if the working revision of WCPATH falls within the range
    of the parent's last committed revision to the parent's working
@@ -73,7 +86,7 @@ typedef struct svn_client__merge_path_t
    inherited mergeinfo for WCPATH is retrieved.
 
    Don't look for inherited mergeinfo any higher than LIMIT_PATH
-   (ignored if NULL).
+   (ignored if NULL) or beyond any switched path.
 
    Set *WALKED_PATH to the path climbed from WCPATH to find inherited
    mergeinfo, or "" if none was found. (ignored if NULL). */
@@ -198,10 +211,10 @@ svn_client__record_wc_mergeinfo(const char *wcpath,
    copy (or possibly repository) ancestor with equivalent mergeinfo.
 
    If WC_ELISION_LIMIT_PATH is NULL check up to the root of the working copy
-   for an elision destination, if none is found check the repository,
-   otherwise check as far as WC_ELISION_LIMIT_PATH within the working copy.
-   TARGET_PATH and WC_ELISION_LIMIT_PATH, if it exists, must both be absolute
-   or relative to the working directory.
+   or the nearest switched parent for an elision destination, if none is found
+   check the repository, otherwise check as far as WC_ELISION_LIMIT_PATH
+   within the working copy.  TARGET_PATH and WC_ELISION_LIMIT_PATH, if it
+   exists, must both be absolute or relative to the working directory.
 
    Elision occurs if:
 

@@ -7,11 +7,11 @@ SWIG=swig-1.3.31
 
 APR=apr-1.2.12
 APR_UTIL=apr-util-1.2.12
-NEON=neon-0.28.2
-SERF=serf-0.1.2
+NEON=neon-0.28.3
+SERF=serf-0.2.0
 ZLIB=zlib-1.2.3
 
-HTTPD=httpd-2.2.8
+HTTPD=httpd-2.2.9
 HTTPD_OOPS=
 APR_ICONV=apr-iconv-1.2.1
 APR_ICONV_OOPS=

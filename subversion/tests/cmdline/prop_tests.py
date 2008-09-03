@@ -1090,13 +1090,15 @@ def recursive_base_wc_ops(sbox):
   # Test recursive proplist
   exit_code, output, errput = svntest.main.run_svn(None, 'proplist', '-R',
                                                    '-v', wc_dir, '-rBASE')
-  verify_output([ 'old-del', 'old-keep', 'Properties on ', 'Properties on ' ],
+  verify_output([ 'old-del', 'old-keep', 'p', 'p',
+                  'Properties on ', 'Properties on ' ],
                 output, errput)
   svntest.verify.verify_exit_code(None, exit_code, 0)
 
   exit_code, output, errput = svntest.main.run_svn(None, 'proplist', '-R',
                                                    '-v', wc_dir)
-  verify_output([ 'new-add', 'new-keep', 'Properties on ', 'Properties on ' ],
+  verify_output([ 'new-add', 'new-keep', 'p', 'p',
+                  'Properties on ', 'Properties on ' ],
                 output, errput)
   svntest.verify.verify_exit_code(None, exit_code, 0)
 
@@ -1183,13 +1185,13 @@ def url_props_ops(sbox):
   # Test verbose proplist
   exit_code, output, errput = svntest.main.run_svn(None,
                                                    'proplist', '-v', iota_url)
-  verify_output([ prop1 + ' : ' + propval1, prop2 + ' : ' + propval2,
+  verify_output([ propval1, propval2, prop1, prop2,
                   'Properties on ' ], output, errput)
   svntest.verify.verify_exit_code(None, exit_code, 0)
 
   exit_code, output, errput = svntest.main.run_svn(None,
                                                    'proplist', '-v', A_url)
-  verify_output([ prop1 + ' : ' + propval1, prop2 + ' : ' + propval2,
+  verify_output([ propval1, propval2, prop1, prop2,
                   'Properties on ' ], output, errput)
   svntest.verify.verify_exit_code(None, exit_code, 0)
 
@@ -1229,7 +1231,8 @@ def removal_schedule_added_props(sbox):
   file_rm_output = ["D         " + newfile_path + "\n"]
   propls_output = [
      "Properties on '" + newfile_path + "':\n",
-     "  newprop : newvalue\n",
+     "  newprop\n",
+     "    newvalue\n",
                   ]
 
   # create new fs file
@@ -1363,7 +1366,7 @@ def depthy_wc_proplist(sbox):
   exit_code, output, errput = svntest.main.run_svn(None, 'proplist',
                                                    '--depth', 'empty',
                                                    '-v', wc_dir)
-  verify_output([ 'prop1', 'Properties on ' ],
+  verify_output([ 'prop1', 'p', 'Properties on ' ],
                 output, errput)
   svntest.verify.verify_exit_code(None, exit_code, 0)
 
@@ -1371,21 +1374,24 @@ def depthy_wc_proplist(sbox):
   exit_code, output, errput = svntest.main.run_svn(None, 'proplist',
                                                    '--depth', 'files',
                                                    '-v', wc_dir)
-  verify_output([ 'prop1', 'prop2', 'Properties on ', 'Properties on ' ],
+  verify_output([ 'prop1', 'prop2', 'p', 'p',
+                  'Properties on ', 'Properties on ' ],
                 output, errput)
   svntest.verify.verify_exit_code(None, exit_code, 0)
 
   # Test depth-immediates proplist.
   exit_code, output, errput = svntest.main.run_svn(None, 'proplist', '--depth',
                                                    'immediates', '-v', wc_dir)
-  verify_output([ 'prop1', 'prop2', 'prop3' ] + ['Properties on '] * 3,
+  verify_output([ 'prop1', 'prop2', 'prop3' ] +
+                ['p'] * 3 + ['Properties on '] * 3,
                 output, errput)
   svntest.verify.verify_exit_code(None, exit_code, 0)
 
   # Test depth-infinity proplist.
   exit_code, output, errput = svntest.main.run_svn(None, 'proplist', '--depth',
                                                    'infinity', '-v', wc_dir)
-  verify_output([ 'prop1', 'prop2', 'prop3', 'prop4' ] + ['Properties on '] * 4,
+  verify_output([ 'prop1', 'prop2', 'prop3', 'prop4' ] +
+                ['p'] * 4 + ['Properties on '] * 4,
                 output, errput)
   svntest.verify.verify_exit_code(None, exit_code, 0)
 
@@ -1566,7 +1572,7 @@ def props_over_time(sbox):
   # Convenience variables
   iota_path = os.path.join(wc_dir, 'iota')
   iota_url = sbox.repo_url + '/iota'
-    
+
   # Add/tweak a property 'revision' with value revision-committed to a
   # file, commit, and then repeat this a few times.
   for rev in range(2, 4):
@@ -1576,7 +1582,7 @@ def props_over_time(sbox):
   # Backdate to r2 so the defaults for URL- vs. WC-style queries are
   # different.
   svntest.main.run_svn(None, 'up', '-r2', wc_dir)
-  
+
   # Now, test propget of the property across many combinations of
   # pegrevs, operative revs, and wc-path vs. url style input specs.
   # NOTE: We're using 0 in these loops to mean "unspecified".
@@ -1623,7 +1629,8 @@ def props_over_time(sbox):
         plist_expected = expected
         if plist_expected:
           plist_expected = [ "Properties on '" + path + "':\n",
-                             "  revision : " + expected + "\n" ]
+                             "  revision\n",
+                             "    " + expected + "\n" ]
 
         if op_rev != 0:
           svntest.actions.run_and_verify_svn(None, plist_expected, [],
@@ -1632,6 +1639,21 @@ def props_over_time(sbox):
         else:
           svntest.actions.run_and_verify_svn(None, plist_expected, [],
                                              'proplist', '-v', peg_path)
+
+def invalid_propvalues(sbox):
+  "test handling invalid svn:* property values"
+
+  sbox.build(create_wc = False)
+  repo_dir = sbox.repo_dir
+  repo_url = sbox.repo_url
+
+  svntest.actions.enable_revprop_changes(repo_dir)
+
+  expected_stderr = '.*unexpected property value.*|.*Bogus date.*'
+  svntest.actions.run_and_verify_svn(None, [], expected_stderr,
+                                     'propset', '--revprop', '-r', '0',
+                                     'svn:date', 'Sat May 10 12:12:31 2008',
+                                     repo_url)
 
 ########################################################################
 # Run the tests
@@ -1651,12 +1673,8 @@ test_list = [ None,
               copy_inherits_special_props,
               # If we learn how to write a pre-revprop-change hook for
               # non-Posix platforms, we won't have to skip here:
-              # TODO(epg): Removed Skip as long as we have this XFail
-              # because I couldn't get Skip and XFail to interact
-              # properly (it kept showing the failure and then
-              # printing PASS instead of XFAIL).
-              #Skip(revprop_change, is_non_posix_and_non_windows_os),
-              XFail(revprop_change, svntest.main.is_ra_type_dav),
+              Skip(XFail(revprop_change, svntest.main.is_ra_type_dav),
+                   is_non_posix_and_non_windows_os),
               prop_value_conversions,
               binary_props,
               recursive_base_wc_ops,
@@ -1670,6 +1688,9 @@ test_list = [ None,
               SkipUnless(perms_on_symlink, svntest.main.is_posix_os),
               remove_custom_ns_props,
               props_over_time,
+              # XFail the same reason revprop_change() is.
+              SkipUnless(XFail(invalid_propvalues, svntest.main.is_ra_type_dav),
+                    svntest.main.server_enforces_date_syntax),
              ]
 
 if __name__ == '__main__':

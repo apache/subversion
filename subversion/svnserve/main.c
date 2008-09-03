@@ -136,6 +136,7 @@ void winservice_notify_stop(void)
 #define SVNSERVE_OPT_PID_FILE    261
 #define SVNSERVE_OPT_SERVICE     262
 #define SVNSERVE_OPT_CONFIG_FILE 263
+#define SVNSERVE_OPT_LOG_FILE 264
 
 static const apr_getopt_option_t svnserve__options[] =
   {
@@ -182,6 +183,8 @@ static const apr_getopt_option_t svnserve__options[] =
      N_("run in foreground (useful for debugging)\n"
         "                             "
         "[mode: daemon]")},
+    {"log-file",         SVNSERVE_OPT_LOG_FILE, 1,
+     N_("svnserve log file")},
     {"pid-file",         SVNSERVE_OPT_PID_FILE, 1,
 #ifdef WIN32
      N_("write server process ID to file ARG\n"
@@ -374,6 +377,7 @@ int main(int argc, const char *argv[])
   int mode_opt_count = 0;
   const char *config_filename = NULL;
   const char *pid_filename = NULL;
+  const char *log_filename = NULL;
   svn_node_kind_t kind;
 
   /* Initialize the app. */
@@ -408,6 +412,7 @@ int main(int argc, const char *argv[])
   params.cfg = NULL;
   params.pwdb = NULL;
   params.authzdb = NULL;
+  params.log_file = NULL;
 
   while (1)
     {
@@ -527,6 +532,13 @@ int main(int argc, const char *argv[])
                                             pool));
           break;
 
+        case SVNSERVE_OPT_LOG_FILE:
+          SVN_INT_ERR(svn_utf_cstring_to_utf8(&log_filename, arg, pool));
+          log_filename = svn_path_internal_style(log_filename, pool);
+          SVN_INT_ERR(svn_path_get_absolute(&log_filename, log_filename,
+                                            pool));
+          break;
+
         }
     }
   if (os->ind != argc)
@@ -551,7 +563,13 @@ int main(int argc, const char *argv[])
       SVN_INT_ERR(load_configs(&params.cfg, &params.pwdb, &params.authzdb,
                                config_filename, TRUE,
                                svn_path_dirname(config_filename, pool),
+                               NULL, NULL, /* server baton, conn */
                                pool));
+
+  if (log_filename)
+    SVN_INT_ERR(svn_io_file_open(&params.log_file, log_filename,
+                                 APR_WRITE | APR_CREATE | APR_APPEND,
+                                 APR_OS_DEFAULT, pool));
 
   if (params.tunnel_user && run_mode != run_mode_tunnel)
     {
@@ -760,7 +778,7 @@ int main(int argc, const char *argv[])
         {
           err = serve(conn, &params, connection_pool);
 
-          if (err && err->apr_err != SVN_ERR_RA_SVN_CONNECTION_CLOSED)
+          if (err)
             svn_handle_error2(err, stdout, FALSE, "svnserve: ");
           svn_error_clear(err);
 
@@ -777,7 +795,12 @@ int main(int argc, const char *argv[])
           if (status == APR_INCHILD)
             {
               apr_socket_close(sock);
-              svn_error_clear(serve(conn, &params, connection_pool));
+              err = serve(conn, &params, connection_pool);
+              log_error(err, params.log_file,
+                        svn_ra_svn_conn_remote_host(conn),
+                        NULL, NULL, /* user, repos */
+                        connection_pool);
+              svn_error_clear(err);
               apr_socket_close(usock);
               exit(0);
             }
@@ -787,7 +810,12 @@ int main(int argc, const char *argv[])
             }
           else
             {
-              /* Log an error, when we support logging. */
+              err = svn_error_wrap_apr(status, "apr_proc_fork");
+              log_error(err, params.log_file,
+                        svn_ra_svn_conn_remote_host(conn),
+                        NULL, NULL, /* user, repos */
+                        connection_pool);
+              svn_error_clear(err);
               apr_socket_close(usock);
             }
           svn_pool_destroy(connection_pool);

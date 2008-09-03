@@ -44,6 +44,7 @@
 #include "svn_md5.h"
 #include "svn_xml.h"
 #include "svn_time.h"
+#include "svn_diff.h"
 
 #include "wc.h"
 #include "log.h"
@@ -1376,8 +1377,9 @@ svn_wc_get_ancestry(char **url,
 
 
 svn_error_t *
-svn_wc_add2(const char *path,
+svn_wc_add3(const char *path,
             svn_wc_adm_access_t *parent_access,
+            svn_depth_t depth,
             const char *copyfrom_url,
             svn_revnum_t copyfrom_rev,
             svn_cancel_func_t cancel_func,
@@ -1525,13 +1527,6 @@ svn_wc_add2(const char *path,
 
   if (kind == svn_node_dir) /* scheduling a directory for addition */
     {
-      /* Note that both calls to svn_wc_ensure_adm3() below pass
-         svn_depth_infinity.  Even if 'svn add' were invoked with some
-         other depth, we'd want to create the adm area with
-         svn_depth_infinity, because when the user passes add a depth,
-         that's just a way of telling Subversion what items to add,
-         not a way of telling Subversion what depth the resultant
-         newly-versioned directory should have. */
 
       if (! copyfrom_url)
         {
@@ -1549,7 +1544,7 @@ svn_wc_add2(const char *path,
           /* Make sure this new directory has an admistrative subdirectory
              created inside of it */
           SVN_ERR(svn_wc_ensure_adm3(path, NULL, new_url, p_entry->repos,
-                                     0, svn_depth_infinity, pool));
+                                     0, depth, pool));
         }
       else
         {
@@ -1559,7 +1554,7 @@ svn_wc_add2(const char *path,
              copyfrom arguments to the ensure call. */
           SVN_ERR(svn_wc_ensure_adm3(path, NULL, copyfrom_url,
                                      parent_entry->repos, copyfrom_rev,
-                                     svn_depth_infinity, pool));
+                                     depth, pool));
         }
 
       /* We want the locks to persist, so use the access baton's pool */
@@ -1603,7 +1598,7 @@ svn_wc_add2(const char *path,
 
           /* Change the entry urls recursively (but not the working rev). */
           SVN_ERR(svn_wc__do_update_cleanup(path, adm_access,
-                                            svn_depth_infinity, new_url,
+                                            depth, new_url,
                                             parent_entry->repos,
                                             SVN_INVALID_REVNUM, NULL,
                                             NULL, FALSE, apr_hash_make(pool),
@@ -1635,6 +1630,22 @@ svn_wc_add2(const char *path,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc_add2(const char *path,
+            svn_wc_adm_access_t *parent_access,
+            const char *copyfrom_url,
+            svn_revnum_t copyfrom_rev,
+            svn_cancel_func_t cancel_func,
+            void *cancel_baton,
+            svn_wc_notify_func2_t notify_func,
+            void *notify_baton,
+            apr_pool_t *pool)
+{
+  return svn_wc_add3(path, parent_access, svn_depth_infinity,
+                     copyfrom_url, copyfrom_rev,
+                     cancel_func, cancel_baton,
+                     notify_func, notify_baton, pool);
+}
 
 svn_error_t *
 svn_wc_add(const char *path,
@@ -1656,7 +1667,6 @@ svn_wc_add(const char *path,
                      cancel_func, cancel_baton,
                      svn_wc__compat_call_notify_func, &nb, pool);
 }
-
 
 
 /* Thoughts on Reversion.
@@ -1784,7 +1794,7 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
      if we're reverting a replacement.  This is just an optimization. */
   if (baseprops)
     {
-      SVN_ERR(svn_wc__install_props(&log_accum, adm_access, fullpath, 
+      SVN_ERR(svn_wc__install_props(&log_accum, adm_access, fullpath,
                                     baseprops, baseprops, revert_base, pool));
       *reverted = TRUE;
     }
@@ -1987,7 +1997,7 @@ revert_entry(svn_depth_t *depth,
   if (kind == svn_node_dir)
     SVN_ERR(svn_wc_is_wc_root(&is_wc_root, path, dir_access, pool));
   bname = is_wc_root ? NULL : svn_path_basename(path, pool);
-  
+
   /* Additions. */
   if (entry->schedule == svn_wc_schedule_add)
     {
@@ -2131,7 +2141,7 @@ revert_entry(svn_depth_t *depth,
     (*notify_func)(notify_baton,
                    svn_wc_create_notify(path, svn_wc_notify_revert, pool),
                    pool);
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -2180,7 +2190,7 @@ revert_internal(const char *path,
              make this happen.  For now, send notification of the failure. */
           if (notify_func != NULL)
             {
-              svn_wc_notify_t *notify = 
+              svn_wc_notify_t *notify =
                 svn_wc_create_notify(path, svn_wc_notify_failed_revert, pool);
               notify_func(notify_baton, notify, pool);
             }
@@ -2248,7 +2258,7 @@ revert_internal(const char *path,
             continue;
 
           /* Skip subdirectories if we're called with depth-files. */
-          if ((depth == svn_depth_files) 
+          if ((depth == svn_depth_files)
               && (child_entry->kind != svn_node_file))
             continue;
 
@@ -2256,8 +2266,8 @@ revert_internal(const char *path,
           full_entry_path = svn_path_join(path, keystring, subpool);
 
           /* Revert the entry. */
-          SVN_ERR(revert_internal(full_entry_path, dir_access, 
-                                  depth_under_here, use_commit_times, 
+          SVN_ERR(revert_internal(full_entry_path, dir_access,
+                                  depth_under_here, use_commit_times,
                                   changelist_hash, cancel_func, cancel_baton,
                                   notify_func, notify_baton, subpool));
         }
@@ -2301,8 +2311,8 @@ svn_wc_revert2(const char *path,
                void *notify_baton,
                apr_pool_t *pool)
 {
-  return svn_wc_revert3(path, parent_access, 
-                        recursive ? svn_depth_infinity : svn_depth_empty,
+  return svn_wc_revert3(path, parent_access,
+                        SVN_DEPTH_INFINITY_OR_EMPTY(recursive),
                         use_commit_times, NULL, cancel_func, cancel_baton,
                         notify_func, notify_baton, pool);
 }
@@ -2540,16 +2550,17 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
            full_path.  We need to remove that entry: */
         if (! is_root)
           {
+            apr_hash_t *parent_entries;
             svn_wc_adm_access_t *parent_access;
 
             svn_path_split(full_path, &parent_dir, &base_name, pool);
 
             SVN_ERR(svn_wc_adm_retrieve(&parent_access, adm_access,
                                         parent_dir, pool));
-            SVN_ERR(svn_wc_entries_read(&entries, parent_access, TRUE,
+            SVN_ERR(svn_wc_entries_read(&parent_entries, parent_access, TRUE,
                                         pool));
-            svn_wc__entry_remove(entries, base_name);
-            SVN_ERR(svn_wc__entries_write(entries, parent_access, pool));
+            svn_wc__entry_remove(parent_entries, base_name);
+            SVN_ERR(svn_wc__entries_write(parent_entries, parent_access, pool));
           }
       }
 
@@ -2639,34 +2650,78 @@ resolve_conflict_on_entry(const char *path,
   svn_boolean_t was_present, need_feedback = FALSE;
   apr_uint64_t modify_flags = 0;
   svn_wc_entry_t *entry = svn_wc_entry_dup(orig_entry, pool);
-  const char *auto_resolve_src;
 
-  /* Handle automatic conflict resolution before the temporary files are
-   * deleted, if necessary. */
-  switch (conflict_choice)
+  if (resolve_text)
     {
-    case svn_wc_conflict_choose_base:
-      auto_resolve_src = entry->conflict_old;
-      break;
-    case svn_wc_conflict_choose_mine_full:
-      auto_resolve_src = entry->conflict_wrk;
-      break;
-    case svn_wc_conflict_choose_theirs_full:
-      auto_resolve_src = entry->conflict_new;
-      break;
-    case svn_wc_conflict_choose_merged:
-      auto_resolve_src = NULL;
-      break;
-    default:
-      return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
-                              _("Invalid 'conflict_result' argument"));
-    }
+      const char *auto_resolve_src;
 
-    if (auto_resolve_src)
-      SVN_ERR(svn_io_copy_file(
-        svn_path_join(svn_wc_adm_access_path(conflict_dir), auto_resolve_src,
-                      pool),
-        path, TRUE, pool));
+      /* Handle automatic conflict resolution before the temporary files are
+       * deleted, if necessary. */
+      switch (conflict_choice)
+        {
+        case svn_wc_conflict_choose_base:
+          auto_resolve_src = entry->conflict_old;
+          break;
+        case svn_wc_conflict_choose_mine_full:
+          auto_resolve_src = entry->conflict_wrk;
+          break;
+        case svn_wc_conflict_choose_theirs_full:
+          auto_resolve_src = entry->conflict_new;
+          break;
+        case svn_wc_conflict_choose_merged:
+          auto_resolve_src = NULL;
+          break;
+        case svn_wc_conflict_choose_theirs_conflict:
+        case svn_wc_conflict_choose_mine_conflict:
+          {
+            if (entry->conflict_old && entry->conflict_wrk &&
+                entry->conflict_new)
+              {
+                apr_file_t *tmp_f;
+                svn_stream_t *tmp_stream;
+                svn_diff_t *diff;
+                svn_diff_conflict_display_style_t style =
+                  conflict_choice == svn_wc_conflict_choose_theirs_conflict
+                  ? svn_diff_conflict_display_latest
+                  : svn_diff_conflict_display_modified;
+
+                SVN_ERR(svn_wc_create_tmp_file2(&tmp_f,
+                                                &auto_resolve_src,
+                                                svn_wc_adm_access_path(conflict_dir),
+                                                svn_io_file_del_none,
+                                                pool));
+                tmp_stream = svn_stream_from_aprfile2(tmp_f, FALSE, pool);
+                SVN_ERR(svn_diff_file_diff3_2(&diff,
+                                              entry->conflict_old,
+                                              entry->conflict_wrk,
+                                              entry->conflict_new,
+                                              svn_diff_file_options_create(pool),
+                                              pool));
+                SVN_ERR(svn_diff_file_output_merge2(tmp_stream, diff,
+                                                    entry->conflict_old,
+                                                    entry->conflict_wrk,
+                                                    entry->conflict_new,
+                                                    /* markers ignored */
+                                                    NULL, NULL, NULL, NULL,
+                                                    style,
+                                                    pool));
+                SVN_ERR(svn_stream_close(tmp_stream));
+              }
+            else
+              auto_resolve_src = NULL;
+            break;
+          }
+        default:
+          return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
+                                  _("Invalid 'conflict_result' argument"));
+        }
+
+      if (auto_resolve_src)
+        SVN_ERR(svn_io_copy_file(
+          svn_path_join(svn_wc_adm_access_path(conflict_dir), auto_resolve_src,
+                        pool),
+          path, TRUE, pool));
+    }
 
   /* Yes indeed, being able to map a function over a list would be nice. */
   if (resolve_text && entry->conflict_old)
@@ -2826,7 +2881,8 @@ svn_wc_resolved_conflict2(const char *path,
                           apr_pool_t *pool)
 {
   return svn_wc_resolved_conflict3(path, adm_access, resolve_text,
-                                   resolve_props, recurse,
+                                   resolve_props,
+                                   SVN_DEPTH_INFINITY_OR_EMPTY(recurse),
                                    svn_wc_conflict_choose_merged,
                                    notify_func, notify_baton, cancel_func,
                                    cancel_baton, pool);
@@ -2854,20 +2910,9 @@ svn_wc_resolved_conflict3(const char *path,
   baton->notify_baton = notify_baton;
   baton->conflict_choice = conflict_choice;
 
-  if (depth == svn_depth_empty)
-    {
-      const svn_wc_entry_t *entry;
-      SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
-
-      SVN_ERR(resolve_found_entry_callback(path, entry, baton, pool));
-    }
-  else
-    {
-      SVN_ERR(svn_wc_walk_entries3(path, adm_access,
-                                   &resolve_walk_callbacks, baton, depth,
-                                   FALSE, cancel_func, cancel_baton, pool));
-
-    }
+  SVN_ERR(svn_wc_walk_entries3(path, adm_access,
+                               &resolve_walk_callbacks, baton, depth,
+                               FALSE, cancel_func, cancel_baton, pool));
 
   return SVN_NO_ERROR;
 }
@@ -2966,8 +3011,8 @@ svn_wc_set_changelist(const char *path,
 
   /* If the path is already assigned to the changelist we're
      trying to assign, skip it. */
-  if (entry->changelist 
-      && changelist 
+  if (entry->changelist
+      && changelist
       && strcmp(entry->changelist, changelist) == 0)
     return SVN_NO_ERROR;
 
@@ -2979,23 +3024,23 @@ svn_wc_set_changelist(const char *path,
         svn_error_createf(SVN_ERR_WC_CHANGELIST_MOVE, NULL,
                           _("Removing '%s' from changelist '%s'."),
                           path, entry->changelist);
-      notify = svn_wc_create_notify(path, svn_wc_notify_changelist_moved, 
+      notify = svn_wc_create_notify(path, svn_wc_notify_changelist_moved,
                                     pool);
       notify->err = reassign_err;
       notify_func(notify_baton, notify, pool);
       svn_error_clear(notify->err);
     }
-  
+
   /* Tweak the entry. */
   newentry.changelist = changelist;
   SVN_ERR(svn_wc__entry_modify(adm_access, entry->name, &newentry,
                                SVN_WC__ENTRY_MODIFY_CHANGELIST, TRUE, pool));
-  
+
   /* And tell someone what we've done. */
   if (notify_func)
     {
-      notify = svn_wc_create_notify(path, 
-                                    changelist 
+      notify = svn_wc_create_notify(path,
+                                    changelist
                                     ? svn_wc_notify_changelist_set
                                     : svn_wc_notify_changelist_clear,
                                     pool);

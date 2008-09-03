@@ -413,8 +413,8 @@ static svn_error_t *try_auth(svn_ra_svn__session_baton_t *sess,
 
   /* Prepare the initial authentication token. */
   if (outlen > 0 || strcmp(mech, "EXTERNAL") == 0)
-    arg = svn_base64_encode_string(svn_string_ncreate(out, outlen, pool),
-                                   pool);
+    arg = svn_base64_encode_string2(svn_string_ncreate(out, outlen, pool),
+                                    TRUE, pool);
 
   /* Send the initial client response */
   SVN_ERR(svn_ra_svn__auth_response(sess->conn, pool, mech,
@@ -457,13 +457,17 @@ static svn_error_t *try_auth(svn_ra_svn__session_baton_t *sess,
         return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                                 sasl_errdetail(sasl_ctx));
 
+      /* If the server thinks we're done, then don't send any response. */
+      if (strcmp(status, "success") == 0)
+        break;
+
       if (outlen > 0)
         {
           arg = svn_string_ncreate(out, outlen, pool);
           /* Write our response. */
           /* For CRAM-MD5, we don't use base64-encoding. */
           if (strcmp(mech, "CRAM-MD5") != 0)
-            arg = svn_base64_encode_string(arg, pool);
+            arg = svn_base64_encode_string2(arg, TRUE, pool);
           SVN_ERR(svn_ra_svn_write_cstring(sess->conn, pool, arg->data));
         }
       else

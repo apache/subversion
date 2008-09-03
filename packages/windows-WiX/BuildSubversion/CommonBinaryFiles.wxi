@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Include>
+						<Component Guid="62FBA90E-1EBE-443D-9AD0-3877A178AEA7" Id="Intl3_svnDll" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\bin\intl3_svn.dll" Name="intl3_svn.dll" Id="intl3_svn.dll" />
+						</Component>
+						<Component Guid="810B6327-45AB-49E7-8E26-7DD0961FF8F0" Id="Libdb44Dll" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\bin\libdb44.dll" Name="libdb44.dll" Id="libdb44.dll22x" />
+						</Component>
+						<Component Guid="FB857F1D-23FC-4615-AC3B-E90373A59CE4" Id="Libeay32Dll" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\bin\libeay32.dll" Name="libeay32.dll" Id="libeay32.dll" />
+						</Component>
+						<Component Guid="4C693F57-80E8-4A1F-8033-1BB4285613B4" Id="LibsaslDll" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\bin\libsasl.dll" Name="libsasl.dll" Id="libsasl.dll" />
+						</Component>
+						<Component Guid="540945A8-88AD-4427-AEEB-55B70F87DA2C" Id="Ssleay32Dll" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\bin\ssleay32.dll" Name="ssleay32.dll" Id="ssleay32.dll" />
+						</Component>
+						<Component Guid="18F16840-833E-4A81-9607-0CCDF2F94564" Id="OpensslEXE" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\bin\openssl.exe" Name="openssl.exe" Id="openssl.exe" />
+						</Component>
+						<Component Guid="9A0D7D07-08DA-45B2-8E73-470DD5AB1B7D" Id="PlugVW" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\bin\pluginviewer.exe" Name="pluginviewer.exe" Id="pluginviewer.exe" />
+						</Component>
+						<Component Guid="C0CC19EB-57C7-4256-A4BD-6BB026F1615B" Id="SaslDB2" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\bin\sasldblistusers2.exe" Name="sasldblistusers2.exe" Id="sasldblistusers2.exe" />
+						</Component>
+						<Component Guid="66B1636E-FA1D-4665-8BF2-987D110C310A" Id="SaslPW" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\bin\saslpasswd2.exe" Name="saslpasswd2.exe" Id="saslpasswd2.exe" />
+						</Component>
+						<Component Guid="3516DB65-3E8F-48C1-ADCB-182914C4DB1B" Id="svnbookchm" DiskId="1">
+							<File Source="..\..\..\SubversionTagSource\packages\windows-innosetup\in\doc\svn-book.chm" Name="svn-book.chm" Id="svnbookchmfl">
+								<Shortcut Name="Subversion Documentation" Id="svnbooksct" Description="Subversion Documentation" Directory="SubversionMenuFolder" Advertise="yes" Icon="doc.chm">
+							    	<Icon Id="doc.chm" SourceFile="..\..\..\SubversionTagSource\packages\windows-innosetup\in\doc\svn-book.chm" />
+							    </Shortcut>
+							</File>
+	
+							<RemoveFolder Id="Removesvnbook" On="uninstall" />
+						</Component>
+</Include>

@@ -48,7 +48,7 @@ svn_cl__copy(apr_getopt_t *os,
   int i;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
-                                                      opt_state->targets, 
+                                                      opt_state->targets,
                                                       ctx, pool));
   if (targets->nelts < 2)
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
@@ -131,10 +131,9 @@ svn_cl__copy(apr_getopt_t *os,
     SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton3), opt_state,
                                        NULL, ctx->config, pool));
 
-  ctx->revprop_table = opt_state->revprop_table;
-
   err = svn_client_copy4(&commit_info, sources, dst_path, TRUE,
-                         opt_state->parents, ctx, pool);
+                         opt_state->parents, opt_state->revprop_table,
+                         ctx, pool);
 
   if (ctx->log_msg_func3)
     SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton3, err));

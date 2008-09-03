@@ -17,7 +17,6 @@
  */
 
 #include "ra_local.h"
-#include <assert.h>
 #include <string.h>
 #include "svn_path.h"
 #include "svn_private_config.h"
@@ -46,24 +45,33 @@ svn_ra_local__split_URL(svn_repos_t **repos,
   /* Then, skip what's between the "file://" prefix and the next
      occurance of '/' -- this is the hostname, and we are considering
      everything from that '/' until the end of the URL to be the
-     absolute path portion of the URL. */
+     absolute path portion of the URL.
+     If we got just "file://", treat it the same as "file:///". */
   hostname = URL + 7;
-  path = strchr(hostname, '/');
-  if (! path)
-    return svn_error_createf
-      (SVN_ERR_RA_ILLEGAL_URL, NULL,
-       _("Local URL '%s' contains only a hostname, no path"), URL);
-
-  /* Treat localhost as an empty hostname. */
-  if (hostname != path)
+  if (*hostname == '\0')
     {
-      hostname = svn_path_uri_decode(apr_pstrmemdup(pool, hostname,
-                                                    path - hostname), pool);
-      if (strncmp(hostname, "localhost", 9) == 0)
-        hostname = NULL;
+      path = "/";
+      hostname = NULL;
     }
   else
-    hostname = NULL;
+    {
+      path = strchr(hostname, '/');
+      if (! path)
+        return svn_error_createf
+          (SVN_ERR_RA_ILLEGAL_URL, NULL,
+           _("Local URL '%s' contains only a hostname, no path"), URL);
+
+      /* Treat localhost as an empty hostname. */
+      if (hostname != path)
+        {
+          hostname = svn_path_uri_decode(apr_pstrmemdup(pool, hostname,
+                                                        path - hostname), pool);
+          if (strncmp(hostname, "localhost", 9) == 0)
+            hostname = NULL;
+        }
+      else
+        hostname = NULL;
+    }
 
   /* Duplicate the URL, starting at the top of the path.
      At the same time, we URI-decode the path. */
@@ -154,7 +162,7 @@ svn_ra_local__split_URL(svn_repos_t **repos,
   /* Ensure that *FS_PATH has its leading slash. */
   if (**fs_path != '/')
     *fs_path = apr_pstrcat(pool, "/", *fs_path, NULL);
-  
+
   /* Remove the path components in *fs_path from the original URL, to get
      the URL to the repository root. */
   urlbuf = svn_stringbuf_create(URL, pool);

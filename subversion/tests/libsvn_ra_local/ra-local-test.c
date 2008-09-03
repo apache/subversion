@@ -59,15 +59,7 @@ current_directory_url(const char **url,
   if (! getcwd(curdir, sizeof(curdir)))
     return svn_error_create(SVN_ERR_BASE, NULL, "getcwd() failed");
 
-#ifndef AS400_UTF8
   SVN_ERR(svn_utf_cstring_to_utf8(&utf8_ls_curdir, curdir, pool));
-#else
-  /* Even with the UTF support in V5R4 a few functions on OS400
-     still populate string reference arguments with ebcdic,
-     including _getcwd(). */
-  SVN_ERR (svn_utf_cstring_to_utf8_ex2(&utf8_ls_curdir, curdir,
-                                       (const char *)0, pool));
-#endif
   utf8_is_curdir = svn_path_internal_style(utf8_ls_curdir, pool);
 
   unencoded_url = apr_psprintf(pool, "file://%s%s%s%s",
@@ -85,7 +77,7 @@ current_directory_url(const char **url,
 static svn_error_t *
 make_and_open_local_repos(svn_ra_session_t **session,
                           const char *repos_name,
-                          const char *fs_type,
+                          svn_test_opts_t *opts,
                           apr_pool_t *pool)
 {
   svn_repos_t *repos;
@@ -94,7 +86,7 @@ make_and_open_local_repos(svn_ra_session_t **session,
 
   SVN_ERR(svn_ra_create_callbacks(&cbtable, pool));
 
-  SVN_ERR(svn_test__create_repos(&repos, repos_name, fs_type, pool));
+  SVN_ERR(svn_test__create_repos(&repos, repos_name, opts, pool));
   SVN_ERR(svn_ra_initialize(pool));
 
   SVN_ERR(current_directory_url(&url, repos_name, pool));
@@ -130,7 +122,7 @@ open_ra_session(const char **msg,
     return SVN_NO_ERROR;
 
   SVN_ERR(make_and_open_local_repos(&session,
-                                    "test-repo-open", opts->fs_type, pool));
+                                    "test-repo-open", opts, pool));
 
   return SVN_NO_ERROR;
 }
@@ -152,7 +144,7 @@ get_youngest_rev(const char **msg,
     return SVN_NO_ERROR;
 
   SVN_ERR(make_and_open_local_repos(&session,
-                                    "test-repo-getrev", opts->fs_type,
+                                    "test-repo-getrev", opts,
                                     pool));
 
   /* Get the youngest revision and make sure it's 0. */
@@ -286,7 +278,7 @@ split_url_host(const char **msg,
    FS, plus additional cruft (IN_REPOS_PATH) that theoretically refers to a
    versioned resource in that repository.  Finally, it runs this URL
    through svn_ra_local__split_URL to verify that it accurately
-   separates the filesystem path and the repository path cruft. 
+   separates the filesystem path and the repository path cruft.
 
    If IN_REPOS_PATH is NULL, we'll split the root URL and verify our
    parts that way (noting that that in-repos-path that results should
@@ -294,14 +286,14 @@ split_url_host(const char **msg,
 static svn_error_t *
 check_split_url(const char *repos_path,
                 const char *in_repos_path,
-                const char *fs_type,
+                svn_test_opts_t *opts,
                 apr_pool_t *pool)
 {
   svn_repos_t *repos;
   const char *url, *root_url, *repos_part, *in_repos_part;
 
   /* Create a filesystem and repository */
-  SVN_ERR(svn_test__create_repos(&repos, repos_path, fs_type, pool));
+  SVN_ERR(svn_test__create_repos(&repos, repos_path, opts, pool));
 
   SVN_ERR(current_directory_url(&root_url, repos_path, pool));
   if (in_repos_path)
@@ -326,7 +318,7 @@ check_split_url(const char *repos_path,
     (SVN_ERR_TEST_FAILED, NULL,
      "svn_ra_local__split_URL failed to properly split the URL\n"
      "%s\n%s\n%s\n%s",
-     repos_part, root_url, in_repos_part, 
+     repos_part, root_url, in_repos_part,
      in_repos_path ? in_repos_path : "(null)");
 }
 
@@ -347,15 +339,15 @@ split_url_test(const char **msg,
      in-repository path begins.  */
   SVN_ERR(check_split_url("test-repo-split-fs1",
                           "/trunk/foobar/quux.c",
-                          opts->fs_type,
+                          opts,
                           pool));
   SVN_ERR(check_split_url("test-repo-split-fs2",
                           "/alpha/beta/gamma/delta/epsilon/zeta/eta/theta",
-                          opts->fs_type,
+                          opts,
                           pool));
   SVN_ERR(check_split_url("test-repo-split-fs3",
                           NULL,
-                          opts->fs_type,
+                          opts,
                           pool));
 
   return SVN_NO_ERROR;

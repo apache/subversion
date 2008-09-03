@@ -24,17 +24,39 @@
 
 struct edit_baton
 {
+  /* The editor/baton we're wrapping. */
   const svn_delta_editor_t *wrapped_editor;
   void *wrapped_edit_baton;
+
+  /* The depth to which we are limiting the drive of the wrapped
+     editor/baton. */
   svn_depth_t requested_depth;
+
+  /* Does the wrapped editor/baton have an explicit target (in the
+     anchor/target sense of the word)? */
   svn_boolean_t has_target;
 };
 
 struct node_baton
 {
+  /* TRUE iff this node was filtered out -- that is, not allowed to
+     pass through to the wrapped editor -- by virtue of not appearing
+     at a depth in the tree that was "inside" the requested depth.  Of
+     course, any children of this node will be deeper still, and so
+     will also be filtered out for the same reason. */
   svn_boolean_t filtered;
+
+  /* Pointer to the edit_baton. */
   void *edit_baton;
+
+  /* The real node baton we're wrapping.  May be a directory or file
+     baton; we don't care. */
   void *wrapped_baton;
+
+  /* The calculated depth (in terms of counted, stacked, integral
+     deepnesses) of this node.  If the node is a directory, this value
+     is 1 greater than the value of the same on its parent directory;
+     if a file, it is equal to its parent directory's depth value. */
   int dir_depth;
 };
 
@@ -54,6 +76,10 @@ make_node_baton(void *edit_baton,
   return b;
 }
 
+/* Return TRUE iff changes to immediate children of the directory
+   identified by PB, when those children are of node kind KIND, are
+   allowed by the requested depth which this editor is trying to
+   preserve.  EB is the edit baton.  */
 static svn_boolean_t
 okay_to_edit(struct edit_baton *eb,
              struct node_baton *pb,
@@ -61,14 +87,31 @@ okay_to_edit(struct edit_baton *eb,
 {
   int effective_depth;
 
+  /* If we've already filter out the parent directory, we necessarily
+     are filtering out its children, too.  */
   if (pb->filtered)
     return FALSE;
 
+  /* Calculate the effective depth of the parent directory.
+
+     NOTE:  "Depth" in this sense is not the same as the Subversion
+     magic depth keywords.  Here, we're talking about a literal,
+     integral, stacked depth of directories.
+
+     The root of the edit is generally depth=1, subdirectories thereof
+     depth=2, and so on.  But if we have an edit target -- which means
+     that the real target of the edit operation isn't the root
+     directory, but is instead some immediate child thereof -- we have
+     to adjust our calculated effected depth such that the target
+     itself is depth=1 (as are its siblings, which we trust aren't
+     present in the edit at all), immediate subdirectories thereof are
+     depth=2, and so on.
+  */
   effective_depth = pb->dir_depth - (eb->has_target ? 1 : 0);
   switch (eb->requested_depth)
     {
     case svn_depth_empty:
-      return (kind == svn_node_dir && effective_depth <= 0);
+      return (effective_depth <= 0);
     case svn_depth_files:
       return ((effective_depth <= 0)
               || (kind == svn_node_file && effective_depth == 1));

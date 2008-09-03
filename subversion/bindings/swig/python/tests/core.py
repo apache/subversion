@@ -22,7 +22,7 @@ class SubversionCoreTestCase(unittest.TestCase):
     self.assertEqual(1, svn.core.svn_mime_type_is_binary("image/png"))
 
   def test_mime_type_validate(self):
-    self.assertRaises(svn.core.SubversionException, 
+    self.assertRaises(svn.core.SubversionException,
             svn.core.svn_mime_type_validate, "this\nis\ninvalid\n")
     svn.core.svn_mime_type_validate("unknown/but-valid; charset=utf8")
 

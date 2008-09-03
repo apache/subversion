@@ -146,12 +146,17 @@ Step 3:  Install Specific Language Bindings
        'make install-swig-py DESTDIR=$RPM_BUILD_ROOT/usr'.
 
    4.  Make sure that whatever directory the bindings got installed in
-       is in your PYTHONPATH.  That directory depends on how you
+       is in your Python search path.  That directory depends on how you
        installed; a typical location is /usr/local/lib/svn-python/.
 
-       An nice way to do this is:
+       There are several ways to do this. See Python's documentation for
+       'sys.path' and 'PYTHONPATH'. A nice way to do this is:
        $ echo /usr/local/lib/svn-python \
            > /usr/lib/python2.x/site-packages/subversion.pth
+
+       You may also need to update your operating system's dynamic linker
+       configuration to enable Python to load these new libraries. On some
+       systems this is done by running 'ldconfig'.
 
 
 *  Perl

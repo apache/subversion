@@ -20,8 +20,7 @@
 
 #include "svn_fs.h"
 #include "svn_delta.h"
-
-#include "fs.h"
+#include "svn_cache.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -55,6 +54,7 @@ extern "C" {
 
 /* Generic DAG node stuff.  */
 
+typedef struct dag_node_t dag_node_t;
 
 /* Fill *NODE with a dag_node_t representing node revision ID in FS,
    allocating in POOL.  */
@@ -72,9 +72,35 @@ svn_fs_fs__dag_get_node(dag_node_t **node,
 dag_node_t *svn_fs_fs__dag_dup(dag_node_t *node,
                                apr_pool_t *pool);
 
+/* Like svn_fs_fs__dag_dup, but implementing the svn_cache_dup_func_t
+   prototype, and NULLing the FS field. */
+svn_error_t *
+svn_fs_fs__dag_dup_for_cache(void **out,
+                             void *in,
+                             apr_pool_t *pool);
+
+/* Serialize a DAG node. 
+   Implements svn_cache_serialize_func_t */
+svn_error_t *
+svn_fs_fs__dag_serialize(char **data,
+                         apr_size_t *data_len,
+                         void *in,
+                         apr_pool_t *pool);
+
+/* Deserialize a DAG node. 
+   Implements svn_cache_deserialize_func_t */
+svn_error_t *
+svn_fs_fs__dag_deserialize(void **out,
+                           const char *data,
+                           apr_size_t data_len,
+                           apr_pool_t *pool);
 
 /* Return the filesystem containing NODE.  */
 svn_fs_t *svn_fs_fs__dag_get_fs(dag_node_t *node);
+
+/* Changes the filesystem containing NODE to FS.  (Used when pulling
+   nodes out of a shared cache, say.) */
+void svn_fs_fs__dag_set_fs(dag_node_t *node, svn_fs_t *fs);
 
 
 /* Set *REV to NODE's revision number, allocating in POOL.  If NODE
@@ -369,7 +395,7 @@ svn_error_t *svn_fs_fs__dag_get_edit_stream(svn_stream_t **contents,
 
    This operation is a no-op if no edits are present.  */
 svn_error_t *svn_fs_fs__dag_finalize_edits(dag_node_t *file,
-                                           const char *checksum,
+                                           svn_checksum_t *checksum,
                                            apr_pool_t *pool);
 
 
@@ -379,14 +405,14 @@ svn_error_t *svn_fs_fs__dag_file_length(svn_filesize_t *length,
                                         dag_node_t *file,
                                         apr_pool_t *pool);
 
-/* Put the recorded MD5 checksum of FILE into DIGEST, allocating from
- * POOL.  DIGEST must point to APR_MD5_DIGESTSIZE bytes of storage.
+/* Put the recorded checksum of FILE into CHECKSUM, allocating from
+ * POOL.
  *
  * If no stored checksum is available, do not calculate the checksum,
- * just put all 0's into DIGEST.
+ * just put NULL into CHECKSUM.
  */
 svn_error_t *
-svn_fs_fs__dag_file_checksum(unsigned char digest[],
+svn_fs_fs__dag_file_checksum(svn_checksum_t **checksum,
                              dag_node_t *file,
                              apr_pool_t *pool);
 

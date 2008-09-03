@@ -44,7 +44,7 @@ svn_cl__revert(apr_getopt_t *os,
   svn_error_t *err;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
-                                                      opt_state->targets, 
+                                                      opt_state->targets,
                                                       ctx, pool));
 
   /* Revert has no implicit dot-target `.', so don't you put that code here! */
@@ -60,7 +60,7 @@ svn_cl__revert(apr_getopt_t *os,
   if (opt_state->depth == svn_depth_unknown)
     opt_state->depth = svn_depth_empty;
 
-  err = svn_client_revert2(targets, opt_state->depth, 
+  err = svn_client_revert2(targets, opt_state->depth,
                            opt_state->changelists, ctx, pool);
 
   if (err

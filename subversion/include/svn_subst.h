@@ -140,6 +140,7 @@ svn_subst_build_keywords2(apr_hash_t **kw,
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_subst_build_keywords(svn_subst_keywords_t *kw,
                          const char *keywords_string,
@@ -177,6 +178,7 @@ svn_subst_keywords_differ2(apr_hash_t *a,
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
+SVN_DEPRECATED
 svn_boolean_t
 svn_subst_keywords_differ(const svn_subst_keywords_t *a,
                           const svn_subst_keywords_t *b,
@@ -203,7 +205,7 @@ svn_subst_keywords_differ(const svn_subst_keywords_t *a,
  * ignored (not contracted or expanded).  If the @a keywords hash
  * itself is @c NULL, keyword substitution will be altogether ignored.
  *
- * Detect only keywords that are no longer than @c SVN_IO_MAX_KEYWORD_LEN
+ * Detect only keywords that are no longer than @c SVN_KEYWORD_MAX_LEN
  * bytes, including the delimiters and the keyword itself.
  *
  * Note that a translation request is *required*:  one of @a eol_str or
@@ -291,6 +293,7 @@ svn_subst_stream_from_specialfile(svn_stream_t **stream,
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_subst_translate_stream2(svn_stream_t *src,
                             svn_stream_t *dst,
@@ -308,6 +311,7 @@ svn_subst_translate_stream2(svn_stream_t *src,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_subst_translate_stream(svn_stream_t *src,
                            svn_stream_t *dst,
@@ -354,6 +358,7 @@ svn_subst_copy_and_translate3(const char *src,
  * @deprecated Provided for backward compatibility with the 1.2 API.
  * @since New in 1.1.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_subst_copy_and_translate2(const char *src,
                               const char *dst,
@@ -370,6 +375,7 @@ svn_subst_copy_and_translate2(const char *src,
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_subst_copy_and_translate(const char *src,
                              const char *dst,
@@ -408,6 +414,7 @@ svn_subst_translate_cstring2(const char *src,
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_subst_translate_cstring(const char *src,
                             const char **dst,

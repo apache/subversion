@@ -2,7 +2,7 @@
  * subst.c :  generic eol/keyword substitution routines
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1256,7 +1256,7 @@ detranslated_stream_special(svn_stream_t **translated_stream_p,
 
     break;
   default:
-    abort();
+    SVN_ERR_MALFUNCTION();
   }
 
   return SVN_NO_ERROR;
@@ -1377,7 +1377,7 @@ svn_subst_translate_stream3(svn_stream_t *s, /* src stream */
   char *buf = apr_palloc(subpool, SVN__STREAM_CHUNK_SIZE);
 
   /* The docstring requires that *some* translation be requested. */
-  assert(eol_str || keywords);
+  SVN_ERR_ASSERT(eol_str || keywords);
 
   baton = create_translation_baton(eol_str, repair, keywords, expand, pool);
   while (readlen == SVN__STREAM_CHUNK_SIZE)
@@ -1510,7 +1510,7 @@ detranslate_special_file_to_stream(svn_stream_t **src_stream,
        contents. */
     SVN_ERR(svn_io_file_open(&s, src, APR_READ | APR_BUFFERED,
                               APR_OS_DEFAULT, pool));
-    *src_stream = svn_stream_from_aprfile(s, pool);
+    *src_stream = svn_stream_from_aprfile2(s, TRUE, pool);
 
     break;
   case APR_LNK:
@@ -1524,7 +1524,7 @@ detranslate_special_file_to_stream(svn_stream_t **src_stream,
                               buf->data));
     break;
   default:
-    abort ();
+    SVN_ERR_MALFUNCTION();
   }
 
   return SVN_NO_ERROR;
@@ -1548,7 +1548,7 @@ detranslate_special_file(const char *src, const char *dst, apr_pool_t *pool)
   dst_stream = svn_stream_from_aprfile2(d, FALSE, pool);
 
   SVN_ERR(detranslate_special_file_to_stream(&src_stream, src, pool));
-  SVN_ERR(svn_stream_copy(src_stream, dst_stream, pool));
+  SVN_ERR(svn_stream_copy2(src_stream, dst_stream, NULL, NULL, pool));
 
   SVN_ERR(svn_stream_close(dst_stream));
 
@@ -1661,7 +1661,7 @@ create_special_file(const char *src, const char *dst, apr_pool_t *pool)
     }
   else
     /* Read in the detranslated file. */
-    SVN_ERR(svn_stringbuf_from_file(&contents, src, pool));
+    SVN_ERR(svn_stringbuf_from_file2(&contents, src, pool));
 
   return create_special_file_from_stringbuf(contents, dst, pool);
 }
@@ -1730,8 +1730,8 @@ svn_subst_copy_and_translate3(const char *src,
                                    pool));
 
   /* Now convert our two open files into streams. */
-  src_stream = svn_stream_from_aprfile(s, pool);
-  dst_stream = svn_stream_from_aprfile(d, pool);
+  src_stream = svn_stream_from_aprfile2(s, TRUE, pool);
+  dst_stream = svn_stream_from_aprfile2(d, TRUE, pool);
 
   /* Translate src stream into dst stream. */
   err = svn_subst_translate_stream3(src_stream, dst_stream, eol_str,

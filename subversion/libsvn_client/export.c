@@ -94,7 +94,7 @@ static svn_error_t *
 copy_one_versioned_file(const char *from,
                         const char *to,
                         svn_wc_adm_access_t *adm_access,
-                        svn_opt_revision_t *revision,
+                        const svn_opt_revision_t *revision,
                         const char *native_eol,
                         apr_pool_t *pool)
 {
@@ -103,7 +103,7 @@ copy_one_versioned_file(const char *from,
   svn_subst_eol_style_t style;
   apr_hash_t *props;
   const char *base;
-  svn_string_t *eol_style, *keywords, *executable, *externals, *special;
+  svn_string_t *eol_style, *keywords, *executable, *special;
   const char *eol = NULL;
   svn_boolean_t local_mod = FALSE;
   apr_time_t tm;
@@ -149,8 +149,6 @@ copy_one_versioned_file(const char *from,
                           APR_HASH_KEY_STRING);
   executable = apr_hash_get(props, SVN_PROP_EXECUTABLE,
                             APR_HASH_KEY_STRING);
-  externals = apr_hash_get(props, SVN_PROP_EXTERNALS,
-                           APR_HASH_KEY_STRING);
   special = apr_hash_get(props, SVN_PROP_SPECIAL,
                          APR_HASH_KEY_STRING);
 
@@ -211,7 +209,7 @@ copy_one_versioned_file(const char *from,
 static svn_error_t *
 copy_versioned_files(const char *from,
                      const char *to,
-                     svn_opt_revision_t *revision,
+                     const svn_opt_revision_t *revision,
                      svn_boolean_t force,
                      svn_boolean_t ignore_externals,
                      svn_depth_t depth,
@@ -634,7 +632,7 @@ apply_textdelta(void *file_baton,
   hb->tmppath = fb->tmppath;
 
   svn_txdelta_apply(svn_stream_empty(pool),
-                    svn_stream_from_aprfile(fb->tmp_file, pool),
+                    svn_stream_from_aprfile2(fb->tmp_file, TRUE, pool),
                     fb->text_digest, NULL, pool,
                     &hb->apply_handler, &hb->apply_baton);
 
@@ -798,11 +796,14 @@ svn_client_export4(svn_revnum_t *result_rev,
   svn_revnum_t edit_revision = SVN_INVALID_REVNUM;
   const char *url;
 
+  SVN_ERR_ASSERT(peg_revision != NULL);
+  SVN_ERR_ASSERT(revision != NULL);
+
+  peg_revision = svn_cl__rev_default_to_head_or_working(peg_revision, from);
+  revision = svn_cl__rev_default_to_peg(revision, peg_revision);
+
   if (svn_path_is_url(from) ||
-      ! (revision->kind == svn_opt_revision_base ||
-         revision->kind == svn_opt_revision_committed ||
-         revision->kind == svn_opt_revision_working ||
-         revision->kind == svn_opt_revision_unspecified))
+      ! SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(revision->kind))
     {
       svn_revnum_t revnum;
       svn_ra_session_t *ra_session;
@@ -853,8 +854,8 @@ svn_client_export4(svn_revnum_t *result_rev,
           /* Step outside the editor-likeness for a moment, to actually talk
            * to the repository. */
           SVN_ERR(svn_ra_get_file(ra_session, "", revnum,
-                                  svn_stream_from_aprfile(fb->tmp_file,
-                                                          pool),
+                                  svn_stream_from_aprfile2(fb->tmp_file, TRUE,
+                                                           pool),
                                   NULL, &props, pool));
 
           /* Push the props into change_file_prop(), to update the file_baton
@@ -946,17 +947,10 @@ svn_client_export4(svn_revnum_t *result_rev,
     }
   else
     {
-      svn_opt_revision_t working_revision = *revision;
       /* This is a working copy export. */
-      if (working_revision.kind == svn_opt_revision_unspecified)
-        {
-          /* Default to WORKING in the case that we have
-             been given a working copy path */
-          working_revision.kind = svn_opt_revision_working;
-        }
 
       /* just copy the contents of the working copy into the target path. */
-      SVN_ERR(copy_versioned_files(from, to, &working_revision, overwrite,
+      SVN_ERR(copy_versioned_files(from, to, revision, overwrite,
                                    ignore_externals, depth, native_eol,
                                    ctx, pool));
     }

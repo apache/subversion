@@ -72,6 +72,9 @@ static VALUE cSvnFsFileSystem = Qnil;
 static VALUE cSvnRa = Qnil;
 static VALUE cSvnRaReporter3 = Qnil;
 
+static apr_pool_t *swig_rb_pool;
+static apr_allocator_t *swig_rb_allocator;
+
 #define DECLARE_ID(key) static ID id_ ## key
 #define DEFINE_ID(key) DEFINE_ID_WITH_NAME(key, #key)
 #define DEFINE_ID_WITH_NAME(key, name) id_ ## key = rb_intern(name)
@@ -443,26 +446,48 @@ svn_swig_rb_initialize_ids(void)
   DEFINE_ID(upcase);
 }
 
+static void
+check_apr_status(apr_status_t status, VALUE exception_class, const char *format)
+{
+    if (status != APR_SUCCESS) {
+	char buffer[1024];
+	apr_strerror(status, buffer, sizeof(buffer) - 1);
+	rb_raise(exception_class, format, buffer);
+    }
+}
+
 void
 svn_swig_rb_initialize(void)
 {
-  apr_status_t status;
   apr_pool_t *pool;
   VALUE mSvnConverter, mSvnLocale, mSvnGetText;
 
-  status = apr_initialize();
-  if (status) {
-    char buf[1024];
-    apr_strerror(status, buf, sizeof(buf) - 1);
-    rb_raise(rb_eLoadError, "cannot initialize APR: %s", buf);
-  }
+  check_apr_status(apr_initialize(), rb_eLoadError, "cannot initialize APR: %s");
 
   if (atexit(apr_terminate)) {
     rb_raise(rb_eLoadError, "atexit registration failed");
   }
 
-  pool = svn_pool_create(NULL);
-  svn_utf_initialize(pool);
+  check_apr_status(apr_allocator_create(&swig_rb_allocator),
+		   rb_eLoadError, "failed to create allocator: %s");
+  apr_allocator_max_free_set(swig_rb_allocator,
+			     SVN_ALLOCATOR_RECOMMENDED_MAX_FREE);
+
+  swig_rb_pool = svn_pool_create_ex(NULL, swig_rb_allocator);
+  apr_pool_tag(swig_rb_pool, "svn-ruby-pool");
+#if APR_HAS_THREADS
+  {
+    apr_thread_mutex_t *mutex;
+
+    check_apr_status(apr_thread_mutex_create(&mutex, APR_THREAD_MUTEX_DEFAULT,
+					     swig_rb_pool),
+		     rb_eLoadError, "failed to create allocator: %s");
+    apr_allocator_mutex_set(swig_rb_allocator, mutex);
+  }
+#endif
+  apr_allocator_owner_set(swig_rb_allocator, swig_rb_pool);
+
+  svn_utf_initialize(swig_rb_pool);
 
   svn_swig_rb_initialize_ids();
 
@@ -485,8 +510,19 @@ svn_swig_rb_initialize(void)
   mSvnGetText = rb_define_module_under(rb_svn(), "GetText");
   rb_define_module_function(mSvnGetText, "bindtextdomain",
                             svn_swig_rb_gettext_bindtextdomain, 1);
-  rb_define_module_function(mSvnGetText, "_",
-                            svn_swig_rb_gettext__, 1);
+  rb_define_module_function(mSvnGetText, "_", svn_swig_rb_gettext__, 1);
+}
+
+apr_pool_t *
+svn_swig_rb_pool(void)
+{
+    return swig_rb_pool;
+}
+
+apr_allocator_t *
+svn_swig_rb_allocator(void)
+{
+    return swig_rb_allocator;
 }
 
 
@@ -781,11 +817,12 @@ svn_swig_rb_raise_svn_repos_already_close(void)
 }
 
 VALUE
-svn_swig_rb_svn_error_new(VALUE code, VALUE message, VALUE file, VALUE line)
+svn_swig_rb_svn_error_new(VALUE code, VALUE message, VALUE file, VALUE line,
+			  VALUE child)
 {
   return rb_funcall(rb_svn_error_svn_error(),
                     id_new_corresponding_error,
-                    4, code, message, file, line);
+                    5, code, message, file, line, child);
 }
 
 VALUE
@@ -795,6 +832,7 @@ svn_swig_rb_svn_error_to_rb_error(svn_error_t *error)
   VALUE message;
   VALUE file = Qnil;
   VALUE line = Qnil;
+  VALUE child = Qnil;
 
   if (error->file)
     file = rb_str_new2(error->file);
@@ -803,15 +841,10 @@ svn_swig_rb_svn_error_to_rb_error(svn_error_t *error)
 
   message = rb_str_new2(error->message ? error->message : "");
 
-  while (error->child) {
-    error = error->child;
-    if (error->message) {
-      rb_str_concat(message, rb_str_new2("\n"));
-      rb_str_concat(message, rb_str_new2(error->message));
-    }
-  }
+  if (error->child)
+      child = svn_swig_rb_svn_error_to_rb_error(error->child);
 
-  return svn_swig_rb_svn_error_new(error_code, message, file, line);
+  return svn_swig_rb_svn_error_new(error_code, message, file, line, child);
 }
 
 void

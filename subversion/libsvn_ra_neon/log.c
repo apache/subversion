@@ -72,7 +72,8 @@ struct log_baton
   void *receiver_baton;
 
   int limit;
-  int count;
+  int nest_level; /* used to track mergeinfo nesting levels */
+  int count; /* only incremented when nest_level == 0 */
 
   /* If we're in backwards compatibility mode for the svn log --limit
      stuff, we need to be able to bail out while parsing log messages.
@@ -289,17 +290,25 @@ log_end_element(void *baton, int state,
 
            If we've seen as many log entries as we're going to show just
            error out of the XML parser so we can avoid having to parse the
-           remaining XML, but set lb->err to SVN_NO_ERROR so no error will
-           end up being shown to the user. */
-        if (lb->limit && (++lb->count > lb->limit))
+           remaining XML, but set a flag that we will later use to ensure
+           this error will not be shown to the user. */
+        if (lb->limit && (lb->nest_level == 0) && (++lb->count > lb->limit))
           {
             lb->limit_compat_bailout = TRUE;
             return svn_error_create(APR_EGENERAL, NULL, NULL);
           }
-
         SVN_ERR((*(lb->receiver))(lb->receiver_baton,
                                   lb->log_entry,
                                   lb->subpool));
+        if (lb->log_entry->has_children)
+          {
+            lb->nest_level++;
+          }
+        if (! SVN_IS_VALID_REVNUM(lb->log_entry->revision))
+          {
+            SVN_ERR_ASSERT(lb->nest_level);
+            lb->nest_level--;
+          }
         reset_log_item(lb);
       }
       break;
@@ -456,6 +465,7 @@ svn_error_t * svn_ra_neon__get_log(svn_ra_session_t *session,
   lb.subpool = svn_pool_create(pool);
   lb.limit = limit;
   lb.count = 0;
+  lb.nest_level = 0;
   lb.limit_compat_bailout = FALSE;
   lb.cdata = svn_stringbuf_create("", pool);
   lb.log_entry = svn_log_entry_create(pool);
@@ -493,13 +503,8 @@ svn_error_t * svn_ra_neon__get_log(svn_ra_session_t *session,
 
   if (err && lb.limit_compat_bailout)
     {
-      svn_log_entry_t *log_entry;
-
       svn_error_clear(err);
-
-      log_entry = svn_log_entry_create(pool);
-      log_entry->revision = SVN_INVALID_REVNUM;
-      return receiver(receiver_baton, log_entry, pool);
+      err = SVN_NO_ERROR;
     }
 
   return err;

@@ -1,0 +1,72 @@
+﻿<Project ToolsVersion="3.5" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <ProjectGuid>{B7895E09-F3EE-4CD0-B5AB-36611B25752E}</ProjectGuid>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <OutputType>Package</OutputType>
+    <RootNamespace>BuildSubversion</RootNamespace>
+    <OutputName>Setup-Subversion-1.5.1</OutputName>
+    <WixToolPath Condition=" '$(WixToolPath)' == '' ">$(SharpDevelopBinPath)\Tools\Wix</WixToolPath>
+    <WixTargetsPath Condition=" '$(WixTargetsPath)' == '' ">$(WixToolPath)\wix.targets</WixTargetsPath>
+    <WixTasksPath Condition=" '$(WixTasksPath)' == '' ">$(WixToolPath)\WixTasks.dll</WixTasksPath>
+    <SupressIces>ICE45</SupressIces>
+    <WixVariables>WixUIInfoRtf=Pre.rtf;WixUIPostRtf=Post.rtf</WixVariables>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <OutputPath>bin\Debug\</OutputPath>
+    <DebugSymbols>True</DebugSymbols>
+    <DebugType>Full</DebugType>
+    <Optimize>False</Optimize>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <OutputPath>bin\Release\</OutputPath>
+    <DebugSymbols>False</DebugSymbols>
+    <DebugType>None</DebugType>
+    <Optimize>True</Optimize>
+  </PropertyGroup>
+  <Import Project="$(WixToolPath)\wix.targets" />
+  <ItemGroup>
+    <WixExtension Include="$(WixToolPath)\WixUIExtension.dll" />
+    <None Include="ApacheFiles20x.wxi" />
+    <None Include="ApacheFeature20x.wxi" />
+    <None Include="ApacheFeature22x.wxi" />
+    <None Include="ApacheFiles22x.wxi" />
+    <None Include="CommonBinaryFeature.wxi" />
+    <None Include="CommonBinaryFiles.wxi" />
+    <None Include="CommonShareFeature.wxi" />
+    <None Include="CommonShareFiles.wxi" />
+    <None Include="CommonSASLFiles.wxi" />
+    <None Include="CommonSASLFeature.wxi" />
+    <Compile Include="CreateIcons.wxs" />
+    <Compile Include="Files.wxs" />
+    <None Include="Post.rtf" />
+    <None Include="ProgramMenu.wxi" />
+    <None Include="iconvFeature20x.wxi" />
+    <None Include="iconvFeature22x.wxi" />
+    <None Include="iconvFiles20x.wxi" />
+    <None Include="iconvFiles22x.wxi" />
+    <None Include="Licenses20x.wxi" />
+    <None Include="Licenses22x.wxi" />
+    <None Include="LicensesCommon.wxi" />
+    <None Include="LicensesCommonFeature.wxi" />
+    <None Include="LicensesFeature20x.wxi" />
+    <None Include="LicensesFeature22x.wxi" />
+    <Compile Include="Setup.wxs" />
+    <None Include="WixDialog\AdminExitDialog.wxs" />
+    <None Include="WixDialog\ApacheSelectDlg.wxs" />
+    <None Include="WixDialog\InfoDlg.wxs" />
+    <None Include="WixDialog\PostDlg.wxs" />
+    <None Include="WixDialog\ReadyDlg.wxs" />
+    <None Include="WixDialog\WelcomeDlgSv.wxs" />
+    <None Include="WixDialog\WixUI_en-us-subversion.wxl" />
+    <None Include="WixDialog\WixUI_Subversion.wxs" />
+    <None Include="dlgbmp.bmp" />
+    <None Include="Pre.rtf" />
+    <EmbeddedResource Include="WixDialog\WixUI_en-us-subversion.wxl">
+      <Link>WixUI_en-us-subversion.wxl</Link>
+    </EmbeddedResource>
+    <None Include="wiz-55x55x24.bmp" />
+    <Folder Include="WixDialog" />
+    <WixLibrary Include="WixDialog\WixUI_Subversion.wixlib" />
+  </ItemGroup>
+</Project>

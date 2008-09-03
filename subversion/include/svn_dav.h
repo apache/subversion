@@ -168,7 +168,7 @@ extern "C" {
  * Note that this says nothing about whether the repository can handle
  * mergeinfo, only whether the server does.  For more information, see
  * mod_dav_svn/version.c:get_vsn_options().
- */ 
+ */
 #define SVN_DAV_NS_DAV_SVN_MERGEINFO SVN_DAV_PROP_NS_DAV "svn/mergeinfo"
 
 /** Presence of this in a DAV header in an OPTIONS response indicates

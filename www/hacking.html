@@ -51,6 +51,7 @@ $LastChangedDate$
 <li><a href="#automated-tests">Automated tests</a></li>
 <li><a href="#write-test-cases-first">Writing test cases before code</a></li>
 <li><a href="#server-debugging">Debugging the server</a></li>
+<li><a href="#net-trace">Tracing network traffic</a></li>
 <li><a href="#tracing-memory-leaks">Tracking down memory leaks</a></li>
 <li><a href="#log-messages">Writing log messages</a></li>
 <li><a href="#crediting">Crediting</a></li>
@@ -64,6 +65,7 @@ $LastChangedDate$
 <li><a href="#release-numbering">Release numbering, compatibility, and deprecation</a></li>
 <li><a href="#release-stabilization">Stabilizing and maintaining releases</a></li>
 <li><a href="#tarball-signing">Signing source distribution packages</a></li>
+<li><a href="#custom-releases">Custom releases</a></li>
 <li><a href="#l10n">Localization (l10n)</a></li>
 </ul>
 
@@ -108,8 +110,8 @@ to contribute, then look at:</p>
 
 <ul>
 <li><p>The bugs/issues database
-       <a href="http://subversion.tigris.org/project_issues.html"
-               >http://subversion.tigris.org/project_issues.html</a></p></li>
+       <a href="http://subversion.tigris.org/issue-tracker.html"
+               >http://subversion.tigris.org/issue-tracker.html</a></p></li>
 
 <li><p>The bite-sized tasks page
        <a href="http://subversion.tigris.org/project_tasks.html"
@@ -597,7 +599,7 @@ following conventions apply:</p>
   parameter names with <code>@a</code>, and type and macro names with
   <code>@c</code>.</li>
 
-  <li>Use <code>&lt;tt&gt;...&lt;tt&gt;</code> to display multiple words
+  <li>Use <code>&lt;tt&gt;...&lt;/tt&gt;</code> to display multiple words
   and <code>@p</code> to display only one word in typewriter font.</li>
 
   <li>Constant values, such as <code>TRUE</code>, <code>FALSE</code> and 
@@ -1369,6 +1371,84 @@ server, "set x = 0", and step through the code as desired.</p>
 
 </div>
 
+<div class="h2" id="net-trace" title="net-trace">
+<h2>Tracing network traffic</h2>
+
+<p>Use <a href="http://www.wireshark.org/">Wireshark</a> (formerly
+known as "Ethereal") to eavesdrop on the conversation.</p>
+
+<p>First, make sure that between captures within the same wireshark
+session, you hit <em>Clear</em>, otherwise filters from one capture
+(say, an HTTP capture) might interfere with others (say, an ra_svn
+capture). </p>
+
+<p>Assuming you're cleared, then:</p>
+
+<ol>
+<li><p>Pull down the <i>Capture</i> menu, and choose
+    <i>Capture&nbsp;Filters</i>.</p></li>
+<li><p>If debugging the http:// (WebDAV) protocol, then in the window
+    that pops up, choose "<code>HTTP&nbsp;TCP&nbsp;port&nbsp;(80)</code>"
+    (which should result in the filter string
+    "<code><i>tcp&nbsp;port&nbsp;http</i></code>").</p>
+    <p>If debugging the svn:// (ra_svn) protocol, then choose <i>New</i>,
+    give the new filter a name (say, "ra_svn"), and type
+    "<code>tcp&nbsp;port&nbsp;3690</code>" into the filter string box.</p>
+    <p>When done, click OK.</p></li> 
+<li><p>Again go to the <i>Capture</i> menu, this time choose
+    <i>Interfaces</i>, and click <i>Options</i> next to the
+    appropriate interface (probably you want interface "lo", for
+    "loopback", assuming the server will run on the same machine as
+    the client).</p></li>
+<li><p>Turn off promiscuous mode by unchecking the appropriate
+    checkbox.</p></li>
+<li><p>Click the <i>Start</i> button in the lower right to start the
+    capture.</p></li>
+<li><p>Run your Subversion client.</p></li>
+<li><p>Click the Stop icon (a red X over an ethernet interface card) when
+    the operation is finished (or <i>Capture-&gt;Stop</i> should
+    work).  Now you have a capture.  It looks like a huge list of
+    lines.</p></li>
+<li><p>Click on the <i>Protocol</i> column to sort.</p></li>
+<li><p>Then, click on the first relevant line to select it; usually this
+    is just the first line.</p></li>
+<li><p>Right click, and choose <i>Follow TCP Stream</i>.  You'll be
+    presented with the request/response pairs of the Subversion
+    client's HTTP conversion.</p></li>
+</ol>
+
+<p>The above instructions are specific to the graphical version of
+Wireshark (version 0.99.6), and don't apply to the command-line
+version known as "tshark" (which corresponds to "tethereal", from back
+when Wireshark was called Ethereal).</p>
+
+<p>Alternatively, you may set the <tt>neon-debug-mask</tt> parameter in your
+<tt>servers</tt> configuration file to cause neon's debugging output
+to appear when you run the <tt>svn</tt> client.  The numeric value of
+<tt>neon-debug-mask</tt> is a combination of the <tt>NE_DBG_...</tt> values
+in the header file <tt>ne_utils.h</tt>.  For current versions of neon, setting
+<tt>neon-debug-mask</tt> to 130 (i.e. <tt>NE_DBG_HTTP+NE_DBG_HTTPBODY)</tt>
+will cause the HTTP data to be shown.</p>
+
+<p>You may well want to disable compression when doing a network
+trace&mdash;see the <tt>http-compression</tt> parameter in the <tt>servers</tt>
+configuration file.</p>
+
+<p>Another alternative is to set up a logging proxy between the
+Subversion client and server.  A simple way to do this is to use the
+<tt>socat</tt> program.  For example, to log communication with an
+svnserve instance, run the following command:</p>
+
+<p><tt>socat -v  TCP4-LISTEN:9630,reuseaddr,fork
+    TCP4:localhost:svn</tt></p>
+
+<p>Then run your svn commands using an URL base of
+<tt>svn://127.0.0.1:9630/</tt>; <tt>socat</tt> will forward the
+traffic from port 9630 to the normal svnserve port (3690), and will
+print all traffic in both directions to standard error, prefixing it
+with &lt; and &gt; signs to show the direction of the traffic.</p>
+
+</div>
 
 <div class="h2" id="tracing-memory-leaks" title="tracing-memory-leaks">
 <h2>Tracking down memory leaks</h2>
@@ -1599,8 +1679,10 @@ r20946 for an example.</p>
 <p>In general, there is a tension between making entries easy to find
 by searching for identifiers, and wasting time or producing unreadable
 entries by being exhaustive.  Use the above guidelines and your best
-judgment, and be considerate of your fellow developers.  (Also, run
-"svn log" to see how others have been writing their log entries.)</p>
+judgment, and be considerate of your fellow developers.  (Also, <a
+href="http://subversion.tigris.org/servlets/BrowseList?listName=svn">
+run "svn log"</a> to see how others have been writing their log
+entries.)</p>
 
 <p>Log messages for documentation or translation have somewhat looser
 guidelines.  The requirement to name every symbol obviously does not
@@ -1642,8 +1724,8 @@ author:</p>
 <p>If multiple individuals wrote the patch, list them each on a
 separate line&nbsp;&mdash;&nbsp;making sure to start each continuation
 line with whitespace.  Non-committers should be listed by name, if
-known, and e-mail.  Full and partial committers may be listed similarly,
-but preferably by their canonical usernames from <a
+known, and e-mail.  Full and partial committers should be listed by
+their canonical usernames from <a
 href="http://svn.collab.net/repos/svn/trunk/COMMITTERS"
 >COMMITTERS</a> (the leftmost column in that file).  Additionally,
 "me" is an acceptable shorthand for the person actually committing the
@@ -1819,10 +1901,10 @@ just a way to clearly mark off the log message from its surrounding
 context.)</p>
 
 <p>If possible, send the patch as an attachment with a mime-type of
-text/x-diff, text/x-patch, or text/plain.  Most people's mailreaders
-can display those inline, and having the patch as an attachment allows
-them to extract the patch from the message conveniently.  Never send
-patches in archived or compressed form (e.g., tar, gzip, zip, bzip2),
+<code>text/x-diff</code>, <code>text/x-patch</code>, or <code>text/plain</code>.
+Most people's mailreaders can display those inline, and having the patch as an
+attachment allows them to extract the patch from the message conveniently.
+Never send patches in archived or compressed form (e.g., tar, gzip, zip, bzip2),
 because that prevents people from reviewing the patch directly in
 their mailreaders.</p>
 
@@ -1888,7 +1970,7 @@ experience or commit access.  Expertise in using one's mail reading
 software is optional, but recommended :-).</p>
 
 <p>The current patch manager is Daniel Shahaf 
-&lt;d.s@daniel.shahaf.co.il&gt;.</p>
+&lt;danielsh@tigris.org&gt;.</p>
 
 </div>
 
@@ -1974,7 +2056,7 @@ release, so urgent issues would go there):</p>
         close_as_dup(i)
       elif issue_is_invalid(i):
         # A frequent reason for invalidity is that the reporter
-        # did not follow the <a href="http://subversion.tigris.org/project_issues.html#buddy-system">"buddy system"</a> for filing.
+        # did not follow the <a href="http://subversion.tigris.org/issue-tracker.html#buddy-system">"buddy system"</a> for filing.
         close_as_invalid(i)
       elif issue_already_fixed(i):
         close_as_fixed(i)
@@ -2131,6 +2213,24 @@ obvious typos, grammar mistakes, and formatting problems wherever they
 may be&nbsp;&mdash;&nbsp;in the web pages, API documentation, code
 comments, commit messages, etc.  We rely on the committer's judgement
 to determine what is "obvious"; if you're not sure, just ask.</p>
+
+<p>Whenever you invoke the "obvious fix" rule, please say so in
+the <a href="#log-messages">log message</a> of your commit. For example:</p>
+
+<pre>
+------------------------------------------------------------------------
+r32135 | stylesen | 2008-07-16 10:04:25 +0200 (Wed, 16 Jul 2008) | 8 lines
+
+Update "check-license.py" so that it can generate license text applicable
+to this year.
+
+Obvious fix.
+
+* tools/dev/check-license.py
+  (NEW_LICENSE): s/2005/2008/
+
+------------------------------------------------------------------------
+</pre>
 
 </div>
 
@@ -2559,15 +2659,17 @@ API documentation with a diff to the new one.  For example:</p>
     * Similar to svn_repos_dump_fs2(), but with the @a use_deltas
     * parameter always set to @c FALSE.
     */
-   svn_error_t *svn_repos_dump_fs(svn_repos_t *repos,
-                                  svn_stream_t *dumpstream,
-                                  svn_stream_t *feedback_stream,
-                                  svn_revnum_t start_rev,
-                                  svn_revnum_t end_rev,
-                                  svn_boolean_t incremental,
-                                  svn_cancel_func_t cancel_func,
-                                  void *cancel_baton,
-                                  apr_pool_t *pool);
+   SVN_DEPRECATED
+   svn_error_t *
+   svn_repos_dump_fs(svn_repos_t *repos,
+                     svn_stream_t *dumpstream,
+                     svn_stream_t *feedback_stream,
+                     svn_revnum_t start_rev,
+                     svn_revnum_t end_rev,
+                     svn_boolean_t incremental,
+                     svn_cancel_func_t cancel_func,
+                     void *cancel_baton,
+                     apr_pool_t *pool);
 </pre>
 
 <p>When the major release number changes, the "best" new API in a
@@ -2661,8 +2763,7 @@ schedule or release date:</p>
 <li><p>Without voting:</p>
     <ul>
     <li><p>Changes to the STATUS file.</p></li>
-    <li><p>Documentation file changes, including to the book, README,
-           INSTALL, www/, etc.</p></li>
+    <li><p>Documentation fixes.</p></li>
     <li><p>Changes that are a normal part of release bookkeeping, for
            example, the steps listed in notes/releases.txt.</p></li>
     <li><p>Changes to dist.sh by, or approved by, the release manager.</p></li>
@@ -2674,7 +2775,6 @@ schedule or release date:</p>
 <li><p>With voting:</p>
     <ul>
     <li><p>Anything affecting only tools/, packages/, or bindings/.</p></li>
-    <li><p>Doc fixes in core code header or source files.</p></li>
     <li><p>Changes to printed output, such as error and usage messages, as
            long as format string "%" codes and their args are not
            touched.</p></li>
@@ -2723,12 +2823,37 @@ get:</p>
 
 <p>A change needs three +1 votes from full committers (or partial
 committers for the involved areas), and no vetoes, to go into
-A.B.x.</p>
+A.B.x. If partial committers would like to vote for a different area,
+which does not fall within their privilege, it must be made clear in
+the STATUS file that their vote is 'non-binding' as follows:</p>
+
+<pre>
+ * r31833
+   svndumpfilter: Don't match prefixes to partial path components.
+   Fixes #desc4 of issue #1853.
+   Votes:
+     +1: danielsh, hwright
+     +1 (non-binding): stylesen
+</pre>
 
 <p>If you cast a veto (i.e. -1), please state the reason in the
 concerns field, and include a url / message-id for the list discussion
 if any.  You can go back and add the link later if the thread isn't
 available at the time you commit the veto.</p>
+
+<p>If you add revisions to a group, note that the previous voters have
+not voted for those revisions, as follows:</p>
+
+<pre>
+   * r30643, r30653, r30785
+     Update bash completion script.
+     Votes:
+       +1: arfrever (r30785 only), stylesen
+</pre>
+
+<p>If in case votes have been communicated via IRC or other means,
+note that in the log message. <a href="#obvious-fix">Obvious fixes</a>
+do not require '(rX only)' to be mentioned.</p>
 
 <p>Voting +1 on a change doesn't just mean you approve of it in
 principle.  It means you have thoroughly reviewed the change, and find
@@ -2846,7 +2971,7 @@ to download and test it separately.  The trick is to extract the
 
 <pre>
     bzip2 -cd subversion-1.3.0-rc4.tar.bz2 \
-    | gzip -9n > subversion-1.3.0-rc4.tar.gz
+    | gzip -9n &gt; subversion-1.3.0-rc4.tar.gz
 </pre>
 
 <p>The resulting file should be identical to the file generated by the
@@ -2855,6 +2980,37 @@ To verify that the files are identical, you may use either the MD5 checksums
 or the release manager's signature, both of which should be provided with the
 tarballs.
 </p>
+</div>
+
+<div class="h2" id="custom-releases" title="custom-releases">
+<h2>Custom releases</h2>
+
+<p>It is preferred to use the patch process and have your changes
+accepted and applied to trunk to be released on the normal Subversion
+release schedule.  However, if you feel that you need to make changes
+that would not be widely accepted by the Subversion developer
+community, or need to provide early access to unreleased features, you
+should follow the guidelines below.</p>
+
+<p>First, make sure you follow the <a
+href="http://subversion.org/legal/trademark-policy.html">Subversion
+trademark policy</a>.  You will need to differentiate your release
+from the standard Subversion releases to reduce any potential
+confusion caused by your custom release.</p>
+
+<p>Second, consider creating a branch in the public Subversion
+repository to track your changes and to potentially allow your custom
+changes to be merged into mainline Subversion.</p>
+
+<p>Third, if your custom release is likely to generate bug reports
+that would not be relevant to mainline Subversion, please stay in
+touch with the users of the custom release so you can intercept and
+filter those reports.  But of course, the best option would be not to
+be in that situation in the first place&nbsp;&mdash;&nbsp;the more
+your custom release diverges from mainline Subversion, the more
+confusion it invites.  If you must make custom releases, please try to
+keep them as temporary and as non-divergent as possible.</p>
+
 </div>
 
 <div class="h2" id="l10n" title="l10n">
@@ -2905,6 +3061,19 @@ href="http://www.gnu.org/software/gettext/manual/html_node/gettext_toc.html"
 provides additional information on writing translatable programs in
 its section "Preparing Program Sources".  Its hints mainly apply to
 string composition.</p>
+
+<p>Currently available translations can be found in <a
+href="http://svn.collab.net/repos/svn/trunk/subversion/po/" >the po
+section of the repository</a>.  Please contact
+dev@subversion.tigris.org when you want to start a translation not
+available yet.  Translation discussion takes place both on that list
+and on dedicated native language mailing lists (<a
+href="http://subversion.tigris.org/servlets/ProjectMailingListList"
+><em>l10n-??@subversion.tigris.org</em></a>).</p>
+
+<p>See <a href="http://svn.collab.net/repos/svn/trunk/TRANSLATING"
+>http://svn.collab.net/repos/svn/trunk/TRANSLATING</a> for more
+information about translating.</p>
 
 </div>
 

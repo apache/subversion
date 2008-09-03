@@ -26,8 +26,10 @@ class SubversionClientTestCase(unittest.TestCase):
     self.client_ctx = client.svn_client_create_context()
     self.assertEquals(self.client_ctx.log_msg_baton2, None)
     self.assertEquals(self.client_ctx.log_msg_func2, None)
-    self.client_ctx.log_msg_func2 = client.svn_swig_py_get_commit_log_func
-    self.client_ctx.log_msg_baton2 = self.log_message_func
+    self.assertEquals(self.client_ctx.log_msg_baton3, None)
+    self.assertEquals(self.client_ctx.log_msg_func3, None)
+    self.client_ctx.log_msg_func3 = client.svn_swig_py_get_commit_log_func
+    self.client_ctx.log_msg_baton3 = self.log_message_func
     self.log_message_func_calls = 0
     self.log_message = None
     self.changed_paths = None
@@ -67,16 +69,16 @@ class SubversionClientTestCase(unittest.TestCase):
     """Test direct method calls to callbacks"""
 
     # Directly invoking the msg_baton should work
-    self.client_ctx.log_msg_baton2(None, None)
-    b = self.client_ctx.log_msg_baton2
+    self.client_ctx.log_msg_baton3(None, None)
+    b = self.client_ctx.log_msg_baton3
     b(None, None)
     self.assertEqual(self.log_message_func_calls, 2)
 
-    # You can also invoke the log_msg_func2. It'd be
-    # nice if we could get log_msg_func2 function
+    # You can also invoke the log_msg_func3. It'd be
+    # nice if we could get log_msg_func3 function
     # to invoke the baton function, but, in order to do that,
     # we'd need to supply a value for the first parameter.
-    self.client_ctx.log_msg_func2(None, self.client_ctx.log_msg_baton2)
+    self.client_ctx.log_msg_func3(None, self.client_ctx.log_msg_baton3)
 
   def info_receiver(self, path, info, pool):
     """Squirrel away the output from 'svn info' so that the unit tests
@@ -151,6 +153,15 @@ class SubversionClientTestCase(unittest.TestCase):
 
     commit_info = client.mkdir2((dir,), self.client_ctx)
     self.assertEqual(commit_info.revision, 13)
+    self.assertEqual(self.log_message_func_calls, 1)
+
+  def test_mkdir_url_with_revprops(self):
+    """Test svn_client_mkdir3 on a file:// URL, with added revprops"""
+    dir = urljoin(REPOS_URL+"/", "some/deep/subdir")
+
+    commit_info = client.mkdir3((dir,), 1, {'customprop':'value'},
+                                self.client_ctx)
+    self.assertEqual(commit_info.revision, 14)
     self.assertEqual(self.log_message_func_calls, 1)
 
   def test_log3_url(self):
