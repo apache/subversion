@@ -19,6 +19,7 @@
 #include "tree_conflicts.h"
 #include "log.h"
 #include "entries.h"
+#include "svn_path.h"
 #include "svn_types.h"
 #include "svn_private_config.h"
 
@@ -37,8 +38,8 @@ advance_on_match(const char **input, const char *token)
     return FALSE;
 }
 
-/* Parse the 'victim_path' field pointed to by *START into the
- * tree conflict descriptor pointed to by CONFLICT.
+/* Parse the 'victim path' field pointed to by *START. Modify the 'path'
+ * field of *CONFLICT by appending the victim name to its existing value.
  * Stop reading at a field delimiter and never read past END.
  * After reading, make *START point to the character after
  * the field delimiter.
@@ -106,7 +107,7 @@ read_victim_path(svn_wc_conflict_description_t *conflict,
     return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
         _("No delimiter after 'victim_path' in tree conflict description"));
 
-  conflict->victim_path = victim_path->data;
+  conflict->path = svn_path_join(conflict->path, victim_path->data, pool);
 
   return SVN_NO_ERROR;
 }
@@ -247,12 +248,14 @@ read_reason(svn_wc_conflict_description_t *conflict,
  * the string after the conflict description that was read, set *START
  * to the first character of the next conflict description.
  * Otherwise, set *START to NULL.
+ * DIR_PATH is the path to the WC directory whose conflicts are being read.
  * Do all allocations in pool.
  */
 static svn_error_t *
 read_one_tree_conflict(svn_wc_conflict_description_t **conflict,
                        const char **start,
                        const char *end,
+                       const char *dir_path,
                        apr_pool_t *pool)
 {
   if (*start >= end)
@@ -260,7 +263,7 @@ read_one_tree_conflict(svn_wc_conflict_description_t **conflict,
           _("Expected tree conflict data but got none"));
 
   *conflict = svn_wc_conflict_description_create_tree(
-    "", NULL, svn_node_none, 0, pool);
+    dir_path, NULL, svn_node_none, 0, pool);
 
   /* Each of these modifies *START ! */
   SVN_ERR(read_victim_path(*conflict, start, end, pool));
@@ -288,8 +291,9 @@ read_one_tree_conflict(svn_wc_conflict_description_t **conflict,
 
 svn_error_t *
 svn_wc_read_tree_conflicts_from_entry(apr_array_header_t *conflicts,
-                                       const svn_wc_entry_t *dir_entry,
-                                       apr_pool_t *pool)
+                                      const svn_wc_entry_t *dir_entry,
+                                      const char *dir_path,
+                                      apr_pool_t *pool)
 {
   const char *start, *end;
   svn_wc_conflict_description_t *conflict = NULL;
@@ -309,7 +313,7 @@ svn_wc_read_tree_conflicts_from_entry(apr_array_header_t *conflicts,
                                            is a special case that is dealt
                                            with further down the call chain. */
     {
-      SVN_ERR(read_one_tree_conflict(&conflict, &start, end, pool));
+      SVN_ERR(read_one_tree_conflict(&conflict, &start, end, dir_path, pool));
       if (conflict != NULL)
         APR_ARRAY_PUSH(conflicts, svn_wc_conflict_description_t *) = conflict;
     }
@@ -354,13 +358,13 @@ svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
       const svn_wc_conflict_description_t *conflict =
           APR_ARRAY_IDX(conflicts, i, svn_wc_conflict_description_t *);
 
-      path = conflict->victim_path;
-      len = strlen(conflict->victim_path);
+      path = svn_path_basename(conflict->path, pool);
+      len = strlen(path);
       if (len == 0)
         return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-                        _("Empty victim_path in tree conflict description"));
+                        _("Empty victim path in tree conflict description"));
 
-      /* Escape separator chars while writing victim_path. */
+      /* Escape separator chars while writing victim path. */
       for (j = 0; j < len; j++)
         {
           if ((path[j] == SVN_WC__TREE_CONFLICT_DESC_FIELD_SEPARATOR) ||
@@ -462,7 +466,8 @@ svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
  */
 svn_boolean_t
 svn_wc__tree_conflict_exists(apr_array_header_t *conflicts,
-                             const char *victim_path)
+                             const char *victim_path,
+                             apr_pool_t *pool)
 {
   const svn_wc_conflict_description_t *conflict;
   int i;
@@ -471,7 +476,7 @@ svn_wc__tree_conflict_exists(apr_array_header_t *conflicts,
     {
       conflict = APR_ARRAY_IDX(conflicts, i, 
                                svn_wc_conflict_description_t *);
-      if (strcmp(conflict->victim_path, victim_path) == 0)
+      if (strcmp(svn_path_basename(conflict->path, pool), victim_path) == 0)
         return TRUE;
     }
 
@@ -516,11 +521,14 @@ svn_wc__loggy_add_tree_conflict_data(
 
   conflicts = apr_array_make(pool, 0,
                              sizeof(svn_wc_conflict_description_t *));
-  SVN_ERR(svn_wc_read_tree_conflicts_from_entry(conflicts, entry, pool));
+  SVN_ERR(svn_wc_read_tree_conflicts_from_entry(conflicts, entry, dir_path,
+                                                pool));
 
-  /* If CONFLICTS has a tree conflict with the same victim_path as the
+  /* If CONFLICTS has a tree conflict with the same victim path as the
    * new conflict, then the working copy has been corrupted. */
-  if (svn_wc__tree_conflict_exists(conflicts, conflict->victim_path))
+  if (svn_wc__tree_conflict_exists(conflicts,
+                                   svn_path_basename(conflict->path, pool),
+                                   pool))
     return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
         _("Attempt to add tree conflict that already exists"));
 

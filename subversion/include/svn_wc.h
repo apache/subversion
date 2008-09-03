@@ -1137,7 +1137,7 @@ typedef enum svn_wc_operation_t
  */
 typedef struct svn_wc_conflict_description_t
 {
-  /** The path that is being operated on */
+  /** The path that is in conflict (for a tree conflict, it is the victim) */
   const char *path;
 
   /** The node type of the path being operated on */
@@ -1205,24 +1205,6 @@ typedef struct svn_wc_conflict_description_t
    * @since New in 1.6.
    */
   svn_wc_operation_t operation;
-
-  /** The path to the victim of a tree conflict.
-   *
-   * See the notes at the top of subversion/libsvn_wc/tree_conflicts.h
-   * for the definition of a tree conflict victim.
-   *
-   * @since New in 1.6.
-   *
-   * TODO: Why isn't the path field (see top of struct definition) enough?
-   *       Do we ever actually have an svn_wc_conflict_description_t
-   *       object that has both path and victim_path set?
-   *       I suspect we originally added this as a separate field to
-   *       be on the safe side. But it may turn out that this field
-   *       is superfluous. If this field is removed, we must also
-   *       update the entry format description in libsvn_wc/tree_conflicts.h.
-   *          --stsp
-   */
-  const char *victim_path;
 
 } svn_wc_conflict_description_t;
 
@@ -5098,6 +5080,7 @@ svn_wc_set_changelist(const char *path,
  * Read tree conflict descriptions from @a dir_entry.
  * Append pointers to newly allocated svn_wc_conflict_description_t
  * objects to the array pointed to by @a conflicts.
+ * @a dir_path is the path to the WC directory whose conflicts are being read.
  * Do all allocations in @a pool.
  *
  * @since New in 1.6.
@@ -5105,6 +5088,7 @@ svn_wc_set_changelist(const char *path,
 svn_error_t *
 svn_wc_read_tree_conflicts_from_entry(apr_array_header_t *conflicts,
                                       const svn_wc_entry_t *dir_entry,
+                                      const char *dir_path,
                                       apr_pool_t *pool);
 
 /**

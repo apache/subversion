@@ -48,14 +48,14 @@ test_read_tree_conflict(const char **msg,
 
   exp_conflict = apr_pcalloc(pool,
                                   sizeof(svn_wc_conflict_description_t));
-  exp_conflict->victim_path  = "Foo.c";
+  exp_conflict->path         = "Foo.c";
   exp_conflict->node_kind    = svn_node_file;
   exp_conflict->operation    = svn_wc_operation_update;
   exp_conflict->action       = svn_wc_conflict_action_delete;
   exp_conflict->reason       = svn_wc_conflict_reason_edited;
 
   conflicts = apr_array_make(pool, 1, sizeof(svn_wc_conflict_description_t *));
-  SVN_ERR(svn_wc_read_tree_conflicts_from_entry(conflicts, &entry, pool));
+  SVN_ERR(svn_wc_read_tree_conflicts_from_entry(conflicts, &entry, "", pool));
 
   conflict = APR_ARRAY_IDX(conflicts, 0,
       svn_wc_conflict_description_t *);
@@ -64,7 +64,7 @@ test_read_tree_conflict(const char **msg,
       (conflict->action    != exp_conflict->action) ||
       (conflict->reason    != exp_conflict->reason) ||
       (conflict->operation != exp_conflict->operation) ||
-      (strcmp(conflict->victim_path, exp_conflict->victim_path) != 0))
+      (strcmp(conflict->path, exp_conflict->path) != 0))
     return fail(pool, "Unexpected tree conflict");
 
   return SVN_NO_ERROR;
@@ -90,28 +90,28 @@ test_read_2_tree_conflicts(const char **msg,
     "Foo.c:file:update:deleted:edited|Bar.h:file:update:edited:deleted";
 
   exp_conflict1 = apr_pcalloc(pool, sizeof(svn_wc_conflict_description_t));
-  exp_conflict1->victim_path  = "Foo.c";
+  exp_conflict1->path         = "Foo.c";
   exp_conflict1->node_kind    = svn_node_file;
   exp_conflict1->operation    = svn_wc_operation_update;
   exp_conflict1->action       = svn_wc_conflict_action_delete;
   exp_conflict1->reason       = svn_wc_conflict_reason_edited;
 
   exp_conflict2 = apr_pcalloc(pool, sizeof(svn_wc_conflict_description_t));
-  exp_conflict2->victim_path  = "Bar.h";
+  exp_conflict2->path         = "Bar.h";
   exp_conflict2->node_kind    = svn_node_file;
   exp_conflict2->operation    = svn_wc_operation_update;
   exp_conflict2->action       = svn_wc_conflict_action_edit;
   exp_conflict2->reason       = svn_wc_conflict_reason_deleted;
 
   conflicts = apr_array_make(pool, 1, sizeof(svn_wc_conflict_description_t *));
-  SVN_ERR(svn_wc_read_tree_conflicts_from_entry(conflicts, &entry, pool));
+  SVN_ERR(svn_wc_read_tree_conflicts_from_entry(conflicts, &entry, "", pool));
 
   conflict1 = APR_ARRAY_IDX(conflicts, 0, svn_wc_conflict_description_t *);
   if ((conflict1->node_kind != exp_conflict1->node_kind) ||
       (conflict1->action    != exp_conflict1->action) ||
       (conflict1->reason    != exp_conflict1->reason) ||
       (conflict1->operation != exp_conflict1->operation) ||
-      (strcmp(conflict1->victim_path, exp_conflict1->victim_path) != 0))
+      (strcmp(conflict1->path, exp_conflict1->path) != 0))
     return fail(pool, "Tree conflict struct #1 has bad data");
 
   conflict2 = APR_ARRAY_IDX(conflicts, 1, svn_wc_conflict_description_t *);
@@ -119,7 +119,7 @@ test_read_2_tree_conflicts(const char **msg,
       (conflict2->action    != exp_conflict2->action) ||
       (conflict2->reason    != exp_conflict2->reason) ||
       (conflict2->operation != exp_conflict2->operation) ||
-      (strcmp(conflict2->victim_path, exp_conflict2->victim_path) != 0))
+      (strcmp(conflict2->path, exp_conflict2->path) != 0))
     return fail(pool, "Tree conflict struct #2 has bad data");
 
   return SVN_NO_ERROR;
@@ -176,7 +176,7 @@ test_read_invalid_tree_conflicts(const char **msg,
   for (i = 0; broken_tree_conflict_test_data[i] != NULL; i++)
     {
       entry.tree_conflict_data = broken_tree_conflict_test_data[i];
-      err = svn_wc_read_tree_conflicts_from_entry(conflicts, &entry, pool);
+      err = svn_wc_read_tree_conflicts_from_entry(conflicts, &entry, "", pool);
       if (err == SVN_NO_ERROR)
         return fail(pool,
                     "Error in broken tree conflict data was not detected");
@@ -202,7 +202,7 @@ test_write_tree_conflict(const char **msg,
     return SVN_NO_ERROR;
 
   conflict = apr_pcalloc(pool, sizeof(svn_wc_conflict_description_t));
-  conflict->victim_path  = "Foo.c";
+  conflict->path         = "Foo.c";
   conflict->node_kind    = svn_node_file;
   conflict->operation    = svn_wc_operation_update;
   conflict->action       = svn_wc_conflict_action_delete;
@@ -241,14 +241,14 @@ test_write_2_tree_conflicts(const char **msg,
     return SVN_NO_ERROR;
 
   conflict1 = apr_pcalloc(pool, sizeof(svn_wc_conflict_description_t));
-  conflict1->victim_path  = "Foo.c";
+  conflict1->path         = "Foo.c";
   conflict1->node_kind    = svn_node_file;
   conflict1->operation    = svn_wc_operation_update;
   conflict1->action       = svn_wc_conflict_action_delete;
   conflict1->reason       = svn_wc_conflict_reason_edited;
 
   conflict2 = apr_pcalloc(pool, sizeof(svn_wc_conflict_description_t));
-  conflict2->victim_path  = "Bar.h";
+  conflict2->path         = "Bar.h";
   conflict2->node_kind    = svn_node_file;
   conflict2->operation    = svn_wc_operation_update;
   conflict2->action       = svn_wc_conflict_action_edit;
@@ -290,9 +290,9 @@ test_write_invalid_tree_conflicts(const char **msg,
 
   entry = apr_pcalloc(pool, sizeof(svn_wc_entry_t));
 
-  /* victim_path */
+  /* victim path */
   conflict = apr_pcalloc(pool, sizeof(svn_wc_conflict_description_t));
-  conflict->victim_path  = "";
+  conflict->path         = "";
   conflict->node_kind    = svn_node_file;
   conflict->operation    = svn_wc_operation_update;
   conflict->action       = svn_wc_conflict_action_delete;
@@ -305,13 +305,13 @@ test_write_invalid_tree_conflicts(const char **msg,
   err = svn_wc__write_tree_conflicts_to_entry(conflicts, entry, pool);
   if (err == SVN_NO_ERROR)
     return fail(pool,
-                "Failed to detect blank conflict victim_path");
+                "Failed to detect blank conflict victim path");
   svn_error_clear(err);
   apr_array_pop(conflicts);
 
   /* node_kind */
   conflict = apr_pcalloc(pool, sizeof(svn_wc_conflict_description_t));
-  conflict->victim_path  = "Foo";
+  conflict->path         = "Foo";
   conflict->node_kind    = svn_node_none;
   conflict->operation    = svn_wc_operation_update;
   conflict->action       = svn_wc_conflict_action_delete;
@@ -328,7 +328,7 @@ test_write_invalid_tree_conflicts(const char **msg,
 
   /* operation */
   conflict = apr_pcalloc(pool, sizeof(svn_wc_conflict_description_t));
-  conflict->victim_path  = "Foo.c";
+  conflict->path         = "Foo.c";
   conflict->node_kind    = svn_node_file;
   conflict->operation    = 99;
   conflict->action       = svn_wc_conflict_action_delete;
@@ -345,7 +345,7 @@ test_write_invalid_tree_conflicts(const char **msg,
 
   /* action */
   conflict = apr_pcalloc(pool, sizeof(svn_wc_conflict_description_t));
-  conflict->victim_path  = "Foo.c";
+  conflict->path         = "Foo.c";
   conflict->node_kind    = svn_node_file;
   conflict->operation    = svn_wc_operation_update;
   conflict->action       = 99;
@@ -362,7 +362,7 @@ test_write_invalid_tree_conflicts(const char **msg,
 
   /* reason */
   conflict = apr_pcalloc(pool, sizeof(svn_wc_conflict_description_t));
-  conflict->victim_path  = "Foo.c";
+  conflict->path         = "Foo.c";
   conflict->node_kind    = svn_node_file;
   conflict->operation    = svn_wc_operation_update;
   conflict->action       = svn_wc_conflict_action_delete;
@@ -396,7 +396,7 @@ test_exists_0(const char **msg,
   conflicts = apr_array_make(pool, 0,
       sizeof(svn_wc_conflict_description_t *));
  
-  if (svn_wc__tree_conflict_exists(conflicts, "Foo.c"))
+  if (svn_wc__tree_conflict_exists(conflicts, "Foo.c", pool))
     return fail(pool, "Bogus TRUE result searching for tree conflict");
 
   return SVN_NO_ERROR;
@@ -417,7 +417,7 @@ test_exists_1(const char **msg,
     return SVN_NO_ERROR;
 
   conflict = apr_pcalloc(pool, sizeof(svn_wc_conflict_description_t));
-  conflict->victim_path  = "Foo.c";
+  conflict->path         = "Foo.c";
   conflict->node_kind    = svn_node_file;
   conflict->operation    = svn_wc_operation_update;
   conflict->action       = svn_wc_conflict_action_delete;
@@ -427,10 +427,10 @@ test_exists_1(const char **msg,
       sizeof(svn_wc_conflict_description_t *));
   APR_ARRAY_PUSH(conflicts, svn_wc_conflict_description_t *) = conflict;
 
-  if (! svn_wc__tree_conflict_exists(conflicts, "Foo.c"))
+  if (! svn_wc__tree_conflict_exists(conflicts, "Foo.c", pool))
     return fail(pool, "Failed to find tree conflict");
 
-  if (svn_wc__tree_conflict_exists(conflicts, "not there"))
+  if (svn_wc__tree_conflict_exists(conflicts, "not there", pool))
     return fail(pool, "Bogus TRUE result searching for tree conflict");
 
   return SVN_NO_ERROR;
@@ -451,14 +451,14 @@ test_exists_2(const char **msg,
     return SVN_NO_ERROR;
 
   conflict1 = apr_pcalloc(pool, sizeof(svn_wc_conflict_description_t));
-  conflict1->victim_path  = "Foo.c";
+  conflict1->path         = "Foo.c";
   conflict1->node_kind    = svn_node_file;
   conflict1->operation    = svn_wc_operation_update;
   conflict1->action       = svn_wc_conflict_action_delete;
   conflict1->reason       = svn_wc_conflict_reason_edited;
 
   conflict2 = apr_pcalloc(pool, sizeof(svn_wc_conflict_description_t));
-  conflict2->victim_path  = "Bar.h";
+  conflict2->path         = "Bar.h";
   conflict2->node_kind    = svn_node_file;
   conflict2->operation    = svn_wc_operation_update;
   conflict2->action       = svn_wc_conflict_action_edit;
@@ -470,13 +470,13 @@ test_exists_2(const char **msg,
   APR_ARRAY_PUSH(conflicts, svn_wc_conflict_description_t *) = conflict2;
 
 
-  if (! svn_wc__tree_conflict_exists(conflicts, "Foo.c"))
+  if (! svn_wc__tree_conflict_exists(conflicts, "Foo.c", pool))
     return fail(pool, "Failed to find 1st tree conflict");
 
-  if (! svn_wc__tree_conflict_exists(conflicts, "Bar.h"))
+  if (! svn_wc__tree_conflict_exists(conflicts, "Bar.h", pool))
     return fail(pool, "Failed to find 2nd tree conflict");
 
-  if (svn_wc__tree_conflict_exists(conflicts, "not there"))
+  if (svn_wc__tree_conflict_exists(conflicts, "not there", pool))
     return fail(pool, "Bogus TRUE result searching for tree conflict");
 
   return SVN_NO_ERROR;
