@@ -788,6 +788,9 @@ SVN_ERROR_START
              SVN_ERR_RA_DAV_CATEGORY_START + 6,
              "Invalid configuration value")
 
+  /** @deprecated To improve consistency between ra layers, this error code
+      is replaced in ra_{neon|serf} by SVN_ERR_FS_NOT_FOUND.
+      Slated for removal in the next major release. */
   SVN_ERRDEF(SVN_ERR_RA_DAV_PATH_NOT_FOUND,
              SVN_ERR_RA_DAV_CATEGORY_START + 7,
              "HTTP Path Not Found")

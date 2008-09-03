@@ -151,20 +151,6 @@ capabilities_response_handler(serf_request_t *request,
   return APR_SUCCESS;
 }
 
-/* Set up headers announcing the client's capabilities.
-   BATON and POOL are ignored. */
-static apr_status_t
-set_up_capabilities_headers(serf_bucket_t *headers,
-                            void *baton,
-                            apr_pool_t *pool)
-{
-  serf_bucket_headers_set(headers, "DAV", SVN_DAV_NS_DAV_SVN_DEPTH);
-  serf_bucket_headers_set(headers, "DAV", SVN_DAV_NS_DAV_SVN_MERGEINFO);
-  serf_bucket_headers_set(headers, "DAV", SVN_DAV_NS_DAV_SVN_LOG_REVPROPS);
-
-  return APR_SUCCESS;
-}
-
 
 /* Exchange capabilities with the server, by sending an OPTIONS
    request announcing the client's capabilities, and by filling
@@ -187,11 +173,14 @@ exchange_capabilities(svn_ra_serf__session_t *serf_sess, apr_pool_t *pool)
   handler->body_buckets = NULL;
   handler->response_handler = capabilities_response_handler;
   handler->response_baton = &crb;
-  handler->header_delegate = set_up_capabilities_headers;
   handler->session = serf_sess;
   handler->conn = serf_sess->conns[0];
 
+  /* Client capabilities are sent automagically with every request;
+     that's why we don't set up a handler->header_delegate above.
+     See issue #3255 for more. */
   svn_ra_serf__request_create(handler);
+
   return svn_ra_serf__context_run_wait(&(crb.done), serf_sess, pool);
 }
 
@@ -257,8 +246,7 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
                   svn_error_clear(err);
                   cap_result = capability_no;
                 }
-              else if (err->apr_err == SVN_ERR_FS_NOT_FOUND
-                       || err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND)
+              else if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
                 {
                   /* Mergeinfo requests use relative paths, and
                      anyway we're in r0, so this is a likely error,
@@ -839,16 +827,21 @@ svn_ra_serf__check_path(svn_ra_session_t *ra_session,
   const char *path, *res_type;
   svn_revnum_t fetched_rev;
 
-  SVN_ERR(fetch_path_props(&prop_ctx, &props, &path, &fetched_rev,
-                           session, rel_path,
-                           revision, check_path_props, pool));
+  svn_error_t *err = fetch_path_props(&prop_ctx, &props, &path, &fetched_rev,
+                                      session, rel_path,
+                                      revision, check_path_props, pool);
 
-  if (prop_ctx && (svn_ra_serf__propfind_status_code(prop_ctx) == 404))
+  if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
     {
+      svn_error_clear(err);
       *kind = svn_node_none;
     }
   else
     {
+      /* Any other error, raise to caller. */
+      if (err)
+        return err;
+
       res_type = svn_ra_serf__get_ver_prop(props, path, fetched_rev,
                                            "DAV:", "resourcetype");
       if (!res_type)
@@ -976,9 +969,21 @@ svn_ra_serf__stat(svn_ra_session_t *ra_session,
   const char *path;
   svn_revnum_t fetched_rev;
   svn_dirent_t *entry;
+  svn_error_t *err;
 
-  SVN_ERR(fetch_path_props(&prop_ctx, &props, &path, &fetched_rev,
-                           session, rel_path, revision, all_props, pool));
+  err = fetch_path_props(&prop_ctx, &props, &path, &fetched_rev,
+                         session, rel_path, revision, all_props, pool);
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
+        {
+          svn_error_clear(err);
+          *dirent = NULL;
+          return SVN_NO_ERROR;
+        }
+      else
+        return err;
+    }
 
   entry = apr_pcalloc(pool, sizeof(*entry));
 
@@ -1006,7 +1011,7 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
 
   path = session->repos_url.path;
 
-  /* If we have a relative path, append it. */
+  /* If we have a relative path, URI encode and append it. */
   if (rel_path)
     {
       path = svn_path_url_add_component(path, rel_path, pool);
@@ -1117,6 +1122,15 @@ svn_ra_serf__get_repos_root(svn_ra_session_t *ra_session,
   return SVN_NO_ERROR;
 }
 
+/* TODO: to fetch the uuid from the repository, we need:
+   1. a path that exists in HEAD
+   2. a path that's readable
+
+   get_uuid handles the case where a path doesn't exist in HEAD and also the
+   case where the root of the repository is not readable.
+   However, it does not handle the case where we're fetching path not existing
+   in HEAD of a repository with unreadable root directory.
+ */
 static svn_error_t *
 svn_ra_serf__get_uuid(svn_ra_session_t *ra_session,
                       const char **uuid,
@@ -1127,19 +1141,25 @@ svn_ra_serf__get_uuid(svn_ra_session_t *ra_session,
 
   props = apr_hash_make(pool);
 
-  SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
-                                      session->repos_url_str,
-                                      SVN_INVALID_REVNUM, "0", uuid_props,
-                                      pool));
-  *uuid = svn_ra_serf__get_prop(props, session->repos_url_str,
-                                SVN_DAV_PROP_NS_DAV, "repository-uuid");
-
-  if (!*uuid)
+  if (!session->uuid)
     {
-      return svn_error_create(APR_EGENERAL, NULL,
-                              _("The UUID property was not found on the "
-                                "resource or any of its parents"));
+      const char *vcc_url, *relative_url;
+
+      /* We're not interested in vcc_url and relative_url, but this call also
+         stores the repository's uuid in the session. */
+      SVN_ERR(svn_ra_serf__discover_root(&vcc_url,
+                                         &relative_url,
+                                         session, session->conns[0],
+                                         session->repos_url.path, pool));
+      if (!session->uuid)
+        {
+          return svn_error_create(APR_EGENERAL, NULL,
+                                  _("The UUID property was not found on the "
+                                    "resource or any of its parents"));
+        }
     }
+  
+  *uuid = session->uuid;
 
   return SVN_NO_ERROR;
 }

@@ -5,40 +5,51 @@ details on how release lines and voting work, what kinds of bugs can
 delay a release, etc.
 
 
-Candidate changes for 1.5.1:
+Candidate changes for 1.5.3:
 ============================
 
-
- * r31658, r31659
-   Fix a remaining bug with issue #2825, Handle --depth option for 'merge'
-   operations in terms of both content and mergeinfo.
+ * r32409
+   Fix an incompatibility with BSD make, which was introduced in r24293.
    Justification:
-     An inoperative merge to a directory at --depth files should set
-     non-inheritable mergeinfo on the merge target and 'normal' mergeinfo
-     on any of the target's file children.  Without this fix the file
-     children get no mergeinfo set/updated.  This is a fairly minor bug, but
-     it is inconsistent with the way we currently handle inoperative merges
-     in every other situation (i.e. we still set mergeinfo - see issue #2883).
-   Notes:
-     kfogel reviewed this and had a question, posted in:
-     http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=141286
+     Trivial fix. Fixes out-of-tree build of the bindings on BSD.
+     Might help downstream packagers for these systems.
    Votes:
-     +1: pburba, cmpilato
+     +1: stsp, arfrever
+     +0: cmpilato
 
+ * r32012
+   Fix Visual Studio meta-projects on VS2008 and allow 1.5.x to fully
+   build when using VS2008. (Makes these projects utility projects instead of
+   executable projects)
+   Justification:
+     Not a code change, just a tweak to the Windows build system to
+     support VS2008.  Without this change you can't build the C API
+     tests or the bindings from the command line.
+   Votes:
+     +1: pburba, rhuijben
+     +0: danielsh (I confirm the justification, but don't understand
+                   the change itself)
+
+ * r32790, r32796, r32798
+   Fix issue #2505: make switch continue after deleting locally modified
+   directories, as it update and merge do.
+   Notes:
+     r32796 updates the docstring.
+     r32798 is an obvious fix.
+   Justification:
+     Small fix (with test).  User requests.
+   Votes:
+     +1: danielsh
+
+ * r31203
+   Update build.conf to remove the magic word 'update' from the description to
+   allow running the test as non-administrator on Windows Vista.
+   Justification:
+     Not a code change. Just makes it possible to run the tests as non-
+     administrator without having to type your administrator password (or using
+     a local patch).
+   Votes:
+     +1: rhuijben
 
 Approved changes:
 =================
-
-
- * r31313
-   Make all ra layers return a consistent error when a path is not
-   found in the repository.
-   Notes:
-     Small change, but API consistency is always a good thing.
-     Does not merge cleanly!
-   Question:
-     Does r32056, nominated below, fix these test failures?
-   Votes:
-     +1: lgo, cmpilato, jerenkrantz
-     +0: arfrever (serf tests fail)
-     -0: markphip (serf tests fail on OSX), epg (failure confirmed)

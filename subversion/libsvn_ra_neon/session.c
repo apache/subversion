@@ -39,6 +39,7 @@
 #include "svn_time.h"
 #include "svn_xml.h"
 #include "svn_private_config.h"
+#include "private/svn_atomic.h"
 
 #ifdef SVN_NEON_0_28
 #include <ne_pkcs11.h>
@@ -47,6 +48,8 @@
 #include "ra_neon.h"
 
 #define DEFAULT_HTTP_TIMEOUT 3600
+
+static svn_atomic_t neon_initialized = 0;
 
 
 /* a cleanup routine attached to the pool that contains the RA session
@@ -790,10 +793,6 @@ exchange_capabilities(svn_ra_neon__session_t *ras, apr_pool_t *pool)
 
   rar = svn_ra_neon__request_create(ras, "OPTIONS", ras->url->data, pool);
 
-  ne_add_request_header(rar->ne_req, "DAV", SVN_DAV_NS_DAV_SVN_DEPTH);
-  ne_add_request_header(rar->ne_req, "DAV", SVN_DAV_NS_DAV_SVN_MERGEINFO);
-  ne_add_request_header(rar->ne_req, "DAV", SVN_DAV_NS_DAV_SVN_LOG_REVPROPS);
-
   err = svn_ra_neon__request_dispatch(&http_ret_code, rar,
                                       NULL, NULL, 200, 0, pool);
   if (err)
@@ -882,8 +881,7 @@ svn_ra_neon__has_capability(svn_ra_session_t *session,
                   svn_error_clear(err);
                   cap_result = capability_no;
                 }
-              else if (err->apr_err == SVN_ERR_FS_NOT_FOUND
-                       || err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND)
+              else if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
                 {
                   /* Mergeinfo requests use relative paths, and
                      anyway we're in r0, so this is a likely error,
@@ -952,13 +950,33 @@ parse_url(ne_uri *uri, const char *url)
       || uri->host == NULL || uri->path == NULL || uri->scheme == NULL)
     {
       ne_uri_free(uri);
-      return svn_error_create(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                              _("Malformed URL for repository"));
+      return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                               _("URL '%s' is malformed or the "
+                                 "scheme or host or path is missing"), url);
     }
   if (uri->port == 0)
     uri->port = ne_uri_defaultport(uri->scheme);
 
   return SVN_NO_ERROR;
+}
+
+/* Initializer function matching the prototype accepted by
+   svn_atomic__init_once(). */
+static svn_error_t *
+initialize_neon(apr_pool_t *ignored_pool)
+{
+  if (ne_sock_init() != 0)
+    return svn_error_create(SVN_ERR_RA_DAV_SOCK_INIT, NULL,
+                            _("Network socket initialization failed"));
+
+  return SVN_NO_ERROR;
+}
+
+/* Initialize neon when not initialized before. */
+static svn_error_t *
+ensure_neon_initialized(void)
+{
+  return svn_atomic__init_once(&neon_initialized, initialize_neon, NULL);
 }
 
 static svn_error_t *
@@ -1000,10 +1018,8 @@ svn_ra_neon__open(svn_ra_session_t *session,
   apr_pool_cleanup_register(pool, uri, cleanup_uri, apr_pool_cleanup_null);
 
 
-  /* Can we initialize network? */
-  if (ne_sock_init() != 0)
-    return svn_error_create(SVN_ERR_RA_DAV_SOCK_INIT, NULL,
-                            _("Network socket initialization failed"));
+  /* Initialize neon if required */
+  SVN_ERR(ensure_neon_initialized());
 
   /* we want to know if the repository is actually somewhere else */
   /* ### not yet: http_redirect_register(sess, ... ); */
