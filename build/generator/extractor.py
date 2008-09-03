@@ -41,9 +41,7 @@ def extract_funcs(fname):
 _filter_names = [
   'svn_boolean_t',  # svn_config_enumerator_t looks like (to our regex) a
                     # function declaration for svn_boolean_t
-                    
-  # Not available on Windows
-  'svn_auth_get_keychain_simple_provider', 
+  'svn_auth_get_keychain_simple_provider', # Not available on Windows
   'svn_auth_get_keychain_ssl_client_cert_pw_provider',
   ]
 
