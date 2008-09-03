@@ -67,7 +67,7 @@ typedef enum
 
   /* Resolve the conflicted hunks by choosing the corresponding text
      from the post-conflict base copy file.
-     
+
      Note: this is a placeholder, not actually implemented in 1.5. */
   svn_cl__accept_theirs_conflict,
 
@@ -96,7 +96,9 @@ typedef enum
 #define SVN_CL__ACCEPT_EDIT "edit"
 #define SVN_CL__ACCEPT_LAUNCH "launch"
 
-/* Return svn_cl__accept_t value corresponding to word. */
+/* Return the svn_cl__accept_t value corresponding to WORD, using exact
+ * case-sensitive string comparison. Return svn_cl__accept_invalid if WORD
+ * is empty or is not one of the known values. */
 svn_cl__accept_t
 svn_cl__accept_from_word(const char *word);
 
@@ -205,6 +207,8 @@ typedef struct svn_cl__opt_state_t
   svn_cl__show_revs_t show_revs; /* mergeinfo flavor */
   svn_depth_t set_depth;         /* new sticky ambient depth value */
   svn_boolean_t reintegrate;     /* use "reintegrate" merge-source heuristic */
+  svn_boolean_t trust_server_cert; /* trust server SSL certs that would
+                                      otherwise be rejected as "untrusted" */
 } svn_cl__opt_state_t;
 
 
@@ -302,8 +306,9 @@ typedef struct {
   svn_cmdline_prompt_baton_t *pb;
 } svn_cl__conflict_baton_t;
 
-/* Return address of newly allocated and initialized
-   svn_cl__conflict_baton_t. */
+/* Create and return a conflict baton, allocated from POOL, with the values
+   ACCEPT_WHICH, CONFIG, EDITOR_CMD and PB placed in the same-named fields
+   of the baton, and its 'external_failed' field initialised to FALSE. */
 svn_cl__conflict_baton_t *
 svn_cl__conflict_baton_make(svn_cl__accept_t accept_which,
                             apr_hash_t *config,
@@ -326,11 +331,23 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
 /*** Command-line output functions -- printing to the user. ***/
 
 /* Print out commit information found in COMMIT_INFO to the console.
- * POOL is used for temporay allocations. 
- * COMMIT_INFO should not be NULL. 
+ * POOL is used for temporay allocations.
+ * COMMIT_INFO should not be NULL.
  */
 svn_error_t *svn_cl__print_commit_info(svn_commit_info_t *commit_info,
                                        apr_pool_t *pool);
+
+
+/* Convert the date in DATA to a human-readable UTF-8-encoded string
+ * *HUMAN_CSTRING, or set the latter to "(invalid date)" if DATA is not
+ * a valid date.  DATA should be as expected by svn_time_from_cstring().
+ *
+ * Do all allocations in POOL.
+ */
+svn_error_t *
+svn_cl__time_cstring_to_human_cstring(const char **human_cstring,
+                                      const char *data,
+                                      apr_pool_t *pool);
 
 
 /* Print STATUS for PATH to stdout for human consumption.  Prints in
@@ -372,16 +389,6 @@ svn_error_t *
 svn_cl__print_prop_hash(apr_hash_t *prop_hash,
                         svn_boolean_t names_only,
                         apr_pool_t *pool);
-
-/* Print a single xml property name-value pair to OUTSTR.  If OUTSTR is NULL,
-   allocate it first from pool, otherwise append the xml to it.  Escape
-   property values which are not xml safe, as determined by
-   svn_xml_is_xml_safe(). */
-void
-svn_cl__print_xml_prop(svn_stringbuf_t **outstr,
-                       const char* propname,
-                       svn_string_t *propval,
-                       apr_pool_t *pool);
 
 /* Same as svn_cl__print_prop_hash(), only output xml to OUTSTR.  If OUTSTR is
    NULL, allocate it first from pool, otherwise append the xml to it. */
@@ -608,6 +615,14 @@ svn_cl__args_to_target_array_print_reserved(apr_array_header_t **targets_p,
                                             apr_array_header_t *known_targets,
                                             svn_client_ctx_t *ctx,
                                             apr_pool_t *pool);
+
+/* Return a string allocated in POOL that is a copy of STR but with each
+ * line prefixed with INDENT. A line is all characters up to the first
+ * CR-LF, LF-CR, CR or LF, or the end of STR if sooner. */
+const char *
+svn_cl__indent_string(const char *str,
+                      const char *indent,
+                      apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

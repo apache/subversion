@@ -34,9 +34,6 @@
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 
-#include <assert.h>
-
-
 /*----------------------------------------------------------------*/
 
 /*** Miscellaneous helper functions ***/
@@ -408,6 +405,28 @@ svn_ra_local__get_schemes(apr_pool_t *pool)
   return schemes;
 }
 
+/* Do nothing.
+ *
+ * Why is this acceptable?  As of now, FS warnings are used for only
+ * two things: failures to close BDB repositories and failures to
+ * interact with memcached in FSFS (new in 1.6).  In 1.5 and earlier,
+ * we did not call svn_fs_set_warning_func in ra_local, which means
+ * that any BDB-closing failure would have led to abort()s; the fact
+ * that this hasn't led to huge hues and cries makes it seem likely
+ * that this just doesn't happen that often, at least not through
+ * ra_local.  And as far as memcached goes, it seems unlikely that
+ * somebody is going to go through the trouble of setting up and
+ * running memcached servers but then use ra_local access.  So we
+ * ignore errors here, so that memcached can use the FS warnings API
+ * without crashing ra_local.
+ */
+static void
+ignore_warnings(void *baton,
+                svn_error_t *err)
+{
+  return;
+}
+
 static svn_error_t *
 svn_ra_local__open(svn_ra_session_t *session,
                    const char *repos_URL,
@@ -438,6 +457,9 @@ svn_ra_local__open(svn_ra_session_t *session,
   /* Cache the filesystem object from the repos here for
      convenience. */
   sess->fs = svn_repos_fs(sess->repos);
+
+  /* Ignore FS warnings. */
+  svn_fs_set_warning_func(sess->fs, ignore_warnings, NULL);
 
   /* Cache the repository UUID as well */
   SVN_ERR(svn_fs_get_uuid(sess->fs, &sess->uuid, session->pool));
@@ -624,11 +646,14 @@ svn_ra_local__get_commit_editor(svn_ra_session_t *session,
                hi = apr_hash_next(hi))
             {
               void *val;
-              const char *token;
+              const char *path, *token;
+              const void *key;
 
-              apr_hash_this(hi, NULL, NULL, &val);
+              apr_hash_this(hi, &key, NULL, &val);
+              path = svn_path_join(sess->fs_path->data, (const char *)key,
+                                   pool);
               token = val;
-              SVN_ERR(svn_fs_access_add_lock_token(fs_access, token));
+              SVN_ERR(svn_fs_access_add_lock_token2(fs_access, path, token));
             }
         }
     }
@@ -640,8 +665,8 @@ svn_ra_local__get_commit_editor(svn_ra_session_t *session,
 
   /* Get the repos commit-editor */
   SVN_ERR(svn_repos_get_commit_editor5
-          (editor, edit_baton, sess->repos, NULL, 
-           svn_path_uri_decode(sess->repos_url, pool), sess->fs_path->data, 
+          (editor, edit_baton, sess->repos, NULL,
+           svn_path_uri_decode(sess->repos_url, pool), sess->fs_path->data,
            revprop_table, deltify_etc, db, NULL, NULL, pool));
 
   return SVN_NO_ERROR;
@@ -660,13 +685,13 @@ svn_ra_local__get_mergeinfo(svn_ra_session_t *session,
   svn_ra_local__session_baton_t *sess = session->priv;
   svn_mergeinfo_catalog_t tmp_catalog;
   int i;
-  apr_array_header_t *abs_paths = 
+  apr_array_header_t *abs_paths =
     apr_array_make(pool, 0, sizeof(const char *));
 
   for (i = 0; i < paths->nelts; i++)
     {
       const char *relative_path = APR_ARRAY_IDX(paths, i, const char *);
-      APR_ARRAY_PUSH(abs_paths, const char *) = 
+      APR_ARRAY_PUSH(abs_paths, const char *) =
         svn_path_join(sess->fs_path->data, relative_path, pool);
     }
 
@@ -836,7 +861,7 @@ svn_ra_local__get_log(svn_ra_session_t *session,
   svn_ra_local__session_baton_t *sess = session->priv;
   int i;
   struct log_baton lb;
-  apr_array_header_t *abs_paths = 
+  apr_array_header_t *abs_paths =
     apr_array_make(pool, 0, sizeof(const char *));
 
   if (paths)
@@ -844,7 +869,7 @@ svn_ra_local__get_log(svn_ra_session_t *session,
       for (i = 0; i < paths->nelts; i++)
         {
           const char *relative_path = APR_ARRAY_IDX(paths, i, const char *);
-          APR_ARRAY_PUSH(abs_paths, const char *) = 
+          APR_ARRAY_PUSH(abs_paths, const char *) =
             svn_path_join(sess->fs_path->data, relative_path, pool);
         }
     }

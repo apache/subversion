@@ -1,0 +1,851 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Include>
+						<Component Guid="439E7D0D-6F78-46F6-9709-CFFE39671C79" Id="Adobe_stdencSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\adobe-stdenc.so" Name="adobe-stdenc.so" Id="adobe_stdenc.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="CA761514-8855-4124-A215-8422D5712255" Id="Adobe_symbolSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\adobe-symbol.so" Name="adobe-symbol.so" Id="adobe_symbol.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="A830F680-B8D1-4E33-940A-1048E0C58C6A" Id="Adobe_zdingbatsSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\adobe-zdingbats.so" Name="adobe-zdingbats.so" Id="adobe_zdingbats.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="0FE8B7E2-2321-4ED1-934E-062930A023B0" Id="Big5So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\big5.so" Name="big5.so" Id="big5.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="360FD809-E86D-4102-A78B-E3614665BE55" Id="Cns11643_plane1So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cns11643-plane1.so" Name="cns11643-plane1.so" Id="cns11643_plane1.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="35B73CAB-B68B-4324-B6BB-B4EA999BACBB" Id="Cns11643_plane14So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cns11643-plane14.so" Name="cns11643-plane14.so" Id="cns11643_plane14.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="DC67D348-FD1F-461C-9CD9-50E7ACBC1C04" Id="Cns11643_plane2So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cns11643-plane2.so" Name="cns11643-plane2.so" Id="cns11643_plane2.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="E105EDD6-C9D2-4C4F-B94C-4BA5F6BEEB3E" Id="Cp037So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp037.so" Name="cp037.so" Id="cp037.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="FA9C7FC0-EDF4-4723-9F7E-5F7C4E2B2576" Id="Cp038So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp038.so" Name="cp038.so" Id="cp038.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="C81129E1-2B93-4F16-B6E3-2B08693965F0" Id="Cp10000So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp10000.so" Name="cp10000.so" Id="cp10000.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="28075D27-2EFB-4AB9-BE35-9C8CD1AFD18D" Id="Cp10006So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp10006.so" Name="cp10006.so" Id="cp10006.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="56D2A367-AD27-4C20-8538-6D4B45354ABF" Id="Cp10007So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp10007.so" Name="cp10007.so" Id="cp10007.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="4C12E8CD-D2B4-49C5-9790-8041D95D1318" Id="Cp10029So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp10029.so" Name="cp10029.so" Id="cp10029.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="0771DFBE-73D8-47C1-B09C-24CBC0B6D9D8" Id="Cp1006So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp1006.so" Name="cp1006.so" Id="cp1006.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="98D3B655-F6DD-4E62-BA5F-7C3CC11A5407" Id="Cp10079So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp10079.so" Name="cp10079.so" Id="cp10079.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="02259A77-D9E7-4594-909B-64520C02C4DF" Id="Cp10081So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp10081.so" Name="cp10081.so" Id="cp10081.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="AC8CEF6C-9EE7-4D81-99D5-211674505150" Id="Cp1026So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp1026.so" Name="cp1026.so" Id="cp1026.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="B77D7AC4-DCE7-4B97-87F9-32DFE8CAEA4C" Id="Cp273So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp273.so" Name="cp273.so" Id="cp273.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="E271EB9B-2E33-4408-881B-805D9296835A" Id="Cp274So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp274.so" Name="cp274.so" Id="cp274.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="05777D08-93AA-4E22-BE09-3D3C15F080C4" Id="Cp275So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp275.so" Name="cp275.so" Id="cp275.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="5A276E66-9000-43F6-8156-36A84BA9749F" Id="Cp277So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp277.so" Name="cp277.so" Id="cp277.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="43C6748A-1F2D-4B35-9E9C-080900E48335" Id="Cp278So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp278.so" Name="cp278.so" Id="cp278.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="30A1683B-2113-44AF-A0BC-55D3132EBFC6" Id="Cp280So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp280.so" Name="cp280.so" Id="cp280.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="88BCDEE6-1360-4F6C-B7F1-D92ED8043033" Id="Cp281So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp281.so" Name="cp281.so" Id="cp281.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="89BF98BD-001B-452C-BB38-7439B06D6441" Id="Cp284So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp284.so" Name="cp284.so" Id="cp284.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="D5B06179-F07A-4BC2-8C0F-7FF673F443E2" Id="Cp285So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp285.so" Name="cp285.so" Id="cp285.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="E353027D-A3F6-48C9-B211-D0308123D0F5" Id="Cp290So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp290.so" Name="cp290.so" Id="cp290.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="374EAC47-A515-4DF1-8B8C-19BD942B3987" Id="Cp297So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp297.so" Name="cp297.so" Id="cp297.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="F8D2E8BE-74FF-4627-AD7C-D0FF076410B3" Id="Cp420So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp420.so" Name="cp420.so" Id="cp420.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="6D1D2606-6870-4A57-BAA7-803D2ABE8904" Id="Cp423So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp423.so" Name="cp423.so" Id="cp423.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="9207A965-03E7-40D0-9750-8459D56DE620" Id="Cp424So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp424.so" Name="cp424.so" Id="cp424.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="01E05C82-03A0-4EE9-A854-FD4F48504F52" Id="Cp437So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp437.so" Name="cp437.so" Id="cp437.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="92714AE1-625C-4DE7-B6E6-DE6E7BC65991" Id="Cp500So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp500.so" Name="cp500.so" Id="cp500.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="62CAA34E-BA15-4400-AB94-29AF834BCDC1" Id="Cp737So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp737.so" Name="cp737.so" Id="cp737.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="7F0E2A3C-13EC-450D-A776-C08D091D9808" Id="Cp775So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp775.so" Name="cp775.so" Id="cp775.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="38C4813D-691E-4197-9252-A1F12A0C2EBC" Id="Cp850So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp850.so" Name="cp850.so" Id="cp850.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="EADC3F26-D711-43F0-837E-09F477EC3A96" Id="Cp851So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp851.so" Name="cp851.so" Id="cp851.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="9B7BDE20-6C1C-41EB-9350-CCF73EE97DAA" Id="Cp852So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp852.so" Name="cp852.so" Id="cp852.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="3651EC21-877F-463D-8970-F3A4D9B095DF" Id="Cp855So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp855.so" Name="cp855.so" Id="cp855.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="6A3FF0F8-E9ED-4C65-8BB5-197BBBC18154" Id="Cp856So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp856.so" Name="cp856.so" Id="cp856.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="B293B96B-C5A2-435B-BFD0-D4DCE91689CA" Id="Cp857So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp857.so" Name="cp857.so" Id="cp857.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="C951AC9E-1590-4D54-B461-7BA99A10C2EB" Id="Cp860So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp860.so" Name="cp860.so" Id="cp860.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="FE800F16-D707-45FD-8979-6D3C8BC0F57A" Id="Cp861So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp861.so" Name="cp861.so" Id="cp861.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="6205EC61-1158-4DEE-BA57-FBA1738D2FA4" Id="Cp862So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp862.so" Name="cp862.so" Id="cp862.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="03B4F61E-4642-4186-AFB4-7A7D387E2D94" Id="Cp863So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp863.so" Name="cp863.so" Id="cp863.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="7851FC52-171C-47B6-AA71-A11DF25032B5" Id="Cp864So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp864.so" Name="cp864.so" Id="cp864.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="D55CD9A1-4CB5-4280-B89D-57754B206622" Id="Cp865So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp865.so" Name="cp865.so" Id="cp865.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="B02D4B70-AB64-40F9-B897-7EDBB3EF39FE" Id="Cp866So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp866.so" Name="cp866.so" Id="cp866.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="0069678B-ED21-4334-9731-1D8B29FA3156" Id="Cp868So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp868.so" Name="cp868.so" Id="cp868.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="974E9951-5721-4853-8624-C3F3AB296E26" Id="Cp869So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp869.so" Name="cp869.so" Id="cp869.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="1DDF60A9-7AC2-491C-B97F-90C483EE4615" Id="Cp870So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp870.so" Name="cp870.so" Id="cp870.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="ABFB8322-2CBA-4F91-AB2B-E8E933570010" Id="Cp871So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp871.so" Name="cp871.so" Id="cp871.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="86A7A0E2-C6B4-42DB-AB66-A75DF8FDE5C3" Id="Cp874So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp874.so" Name="cp874.so" Id="cp874.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="158CD083-37C4-4CDA-B763-5EAB168E1635" Id="Cp875So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp875.so" Name="cp875.so" Id="cp875.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="E1E28AE1-7FB3-4524-81F0-11B11193D8CB" Id="Cp880So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp880.so" Name="cp880.so" Id="cp880.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="B6F78A9B-31CC-4176-9BF3-9E16C26C813E" Id="Cp891So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp891.so" Name="cp891.so" Id="cp891.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="A36EB210-768D-4421-BBD9-484CC51C0654" Id="Cp903So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp903.so" Name="cp903.so" Id="cp903.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="E8838D14-5D22-4A12-A4D0-12383395D655" Id="Cp904So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp904.so" Name="cp904.so" Id="cp904.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="622AC3E8-899A-4690-8D44-3EC836BA8643" Id="Cp905So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp905.so" Name="cp905.so" Id="cp905.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="22F96799-156C-4082-A00E-99AB61B1C62A" Id="Cp918So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp918.so" Name="cp918.so" Id="cp918.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="86AC1B8D-40B3-4CFA-84A0-2CB14B710307" Id="Cp932So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp932.so" Name="cp932.so" Id="cp932.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="9918E5E2-53CE-405F-B128-4883F0B079ED" Id="Cp936So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp936.so" Name="cp936.so" Id="cp936.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="BB40F62D-D879-4073-BB93-502FDC95B241" Id="Cp949So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp949.so" Name="cp949.so" Id="cp949.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="0C35EF87-E3B6-4921-A6EA-2A933B474F01" Id="Cp950So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\cp950.so" Name="cp950.so" Id="cp950.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="14DCB49F-FF8B-4200-891B-20887E2EA912" Id="Dec_mcsSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\dec-mcs.so" Name="dec-mcs.so" Id="dec_mcs.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="DEDFD6FD-01CD-49FA-B586-11E0B7473E31" Id="Ebcdic_at_de_aSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\ebcdic-at-de-a.so" Name="ebcdic-at-de-a.so" Id="ebcdic_at_de_a.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="E2BDD537-1244-4B90-A3EF-8BDB51ED220F" Id="Ebcdic_at_deSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\ebcdic-at-de.so" Name="ebcdic-at-de.so" Id="ebcdic_at_de.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="208288A0-F896-4BD6-A58B-95F876AC88AD" Id="Ebcdic_ca_frSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\ebcdic-ca-fr.so" Name="ebcdic-ca-fr.so" Id="ebcdic_ca_fr.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="ECECFD35-EFA3-4067-AF29-785F5C375D63" Id="Ebcdic_dk_no_aSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\ebcdic-dk-no-a.so" Name="ebcdic-dk-no-a.so" Id="ebcdic_dk_no_a.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="30EAFB9C-C5B9-4140-8A7E-474C4CFE6BF1" Id="Ebcdic_dk_noSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\ebcdic-dk-no.so" Name="ebcdic-dk-no.so" Id="ebcdic_dk_no.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="00A294DF-2657-434B-9FB3-9680C46C61C0" Id="Ebcdic_es_aSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\ebcdic-es-a.so" Name="ebcdic-es-a.so" Id="ebcdic_es_a.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="C70AB87D-9F1D-485D-A013-C8A5A93E8AB4" Id="Ebcdic_es_sSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\ebcdic-es-s.so" Name="ebcdic-es-s.so" Id="ebcdic_es_s.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="7E5BB488-F86C-40A6-9AB5-0247A8234F6B" Id="Ebcdic_esSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\ebcdic-es.so" Name="ebcdic-es.so" Id="ebcdic_es.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="48BCCD51-F566-4194-AE61-AB89A875CE46" Id="Ebcdic_fi_se_aSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\ebcdic-fi-se-a.so" Name="ebcdic-fi-se-a.so" Id="ebcdic_fi_se_a.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="431C6436-70CB-44D1-87AE-982539F435BE" Id="Ebcdic_fi_seSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\ebcdic-fi-se.so" Name="ebcdic-fi-se.so" Id="ebcdic_fi_se.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="69FFF02D-CAB8-4844-A9D4-C3372FE84356" Id="Ebcdic_frSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\ebcdic-fr.so" Name="ebcdic-fr.so" Id="ebcdic_fr.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="05007D8D-BA89-404F-AB72-6A1E70A6E69E" Id="Ebcdic_itSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\ebcdic-it.so" Name="ebcdic-it.so" Id="ebcdic_it.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="FF3641B9-B798-4EC3-A844-80A06828DD49" Id="Ebcdic_ptSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\ebcdic-pt.so" Name="ebcdic-pt.so" Id="ebcdic_pt.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="ACC5491E-8E6D-403C-B88B-BD4C61740D0F" Id="Ebcdic_ukSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\ebcdic-uk.so" Name="ebcdic-uk.so" Id="ebcdic_uk.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="40908FFE-ABB5-40F2-9390-1D0AA2DC6472" Id="Ebcdic_usSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\ebcdic-us.so" Name="ebcdic-us.so" Id="ebcdic_us.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="173F6AB8-47BB-4D84-813B-FB771D86412A" Id="Euc_jpSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\euc-jp.so" Name="euc-jp.so" Id="euc_jp.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="AE283D48-D7ED-47A1-97C7-3C60795C02B6" Id="Euc_krSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\euc-kr.so" Name="euc-kr.so" Id="euc_kr.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="3EC328AB-AF76-4E33-B5CD-D19EE30F2114" Id="Euc_twSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\euc-tw.so" Name="euc-tw.so" Id="euc_tw.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="C2B7394B-88DB-476C-8490-750E63FE3EB7" Id="Gb12345So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\gb12345.so" Name="gb12345.so" Id="gb12345.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="6486388A-EFBA-4CCF-80CE-C49958919AD2" Id="Gb2312So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\gb2312.so" Name="gb2312.so" Id="gb2312.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="E1358514-E59B-4770-A12B-CA84F7FDBBFF" Id="Gb_2312_80So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\gb_2312-80.so" Name="gb_2312-80.so" Id="gb_2312_80.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="62C47228-0E03-4CE2-94FB-CCB057757DD1" Id="Hp_roman8So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\hp-roman8.so" Name="hp-roman8.so" Id="hp_roman8.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="1FC82C28-69FA-43F4-8622-19402039B9EA" Id="Iso_10646_ucs_2So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-10646-ucs-2.so" Name="iso-10646-ucs-2.so" Id="iso_10646_ucs_2.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="12549231-94DC-4F17-932A-15A73E286B51" Id="Iso_10646_ucs_4So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-10646-ucs-4.so" Name="iso-10646-ucs-4.so" Id="iso_10646_ucs_4.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="1EF57FCB-C32C-4454-83B4-C009843069EC" Id="Iso_2022_cnSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-2022-cn.so" Name="iso-2022-cn.so" Id="iso_2022_cn.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="33AF7B7C-3E79-4DDC-AC71-CD7F088724BC" Id="Iso_2022_jp_2So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-2022-jp-2.so" Name="iso-2022-jp-2.so" Id="iso_2022_jp_2.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="6601EC69-C057-44F2-8A90-53D41CF2EEAD" Id="Iso_2022_jpSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-2022-jp.so" Name="iso-2022-jp.so" Id="iso_2022_jp.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="4F9D53AB-AF42-44BD-8CD7-8D300C53B998" Id="Iso_2022_krSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-2022-kr.so" Name="iso-2022-kr.so" Id="iso_2022_kr.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="1A161218-3A63-48DF-AEC4-D00E915E1F27" Id="Iso_8859_1So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-8859-1.so" Name="iso-8859-1.so" Id="iso_8859_1.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="9A701746-14F0-4E62-B1FF-5FF5429E4A7C" Id="Iso_8859_10So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-8859-10.so" Name="iso-8859-10.so" Id="iso_8859_10.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="9A52494A-28A7-4CAF-846A-7FB3F342EFAB" Id="Iso_8859_13So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-8859-13.so" Name="iso-8859-13.so" Id="iso_8859_13.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="F2FF197D-AC04-4F35-B74C-3CF32D4CA4B2" Id="Iso_8859_14So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-8859-14.so" Name="iso-8859-14.so" Id="iso_8859_14.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="F1FAD79F-A746-45E7-AED0-45CF3DD6FEBF" Id="Iso_8859_15So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-8859-15.so" Name="iso-8859-15.so" Id="iso_8859_15.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="E98B5FD7-9006-473B-A923-F207845AEEE6" Id="Iso_8859_2So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-8859-2.so" Name="iso-8859-2.so" Id="iso_8859_2.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="B62AF331-D3F2-4AED-83AB-35F37B5F7D5C" Id="Iso_8859_3So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-8859-3.so" Name="iso-8859-3.so" Id="iso_8859_3.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="DE304D8C-9462-4079-AB98-EAA90FB013E5" Id="Iso_8859_4So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-8859-4.so" Name="iso-8859-4.so" Id="iso_8859_4.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="276ABD26-558B-4F09-9BDD-ED943B49AE11" Id="Iso_8859_5So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-8859-5.so" Name="iso-8859-5.so" Id="iso_8859_5.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="9C770B3E-E4C3-4EAB-B4B2-8D68DBE36EC9" Id="Iso_8859_6So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-8859-6.so" Name="iso-8859-6.so" Id="iso_8859_6.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="C038C7D4-F72F-40B4-8596-1B210B4F891D" Id="Iso_8859_7So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-8859-7.so" Name="iso-8859-7.so" Id="iso_8859_7.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="0D80581F-B809-4645-A580-E047BF6C6B0A" Id="Iso_8859_8So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-8859-8.so" Name="iso-8859-8.so" Id="iso_8859_8.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="B6DB0EC7-EF4B-4327-A0EE-E5F3B8862D0C" Id="Iso_8859_9So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-8859-9.so" Name="iso-8859-9.so" Id="iso_8859_9.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="0B216116-F0D1-4408-816A-F4729620F45C" Id="Iso_ir_10So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-10.so" Name="iso-ir-10.so" Id="iso_ir_10.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="76DAAC0C-547C-4FF4-8ECF-C28FB09F7690" Id="Iso_ir_102So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-102.so" Name="iso-ir-102.so" Id="iso_ir_102.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="CDB599BC-E0A0-4EAA-BAF8-1B53ED60931B" Id="Iso_ir_103So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-103.so" Name="iso-ir-103.so" Id="iso_ir_103.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="391B214E-5566-4956-A991-8D7C4C986E80" Id="Iso_ir_11So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-11.so" Name="iso-ir-11.so" Id="iso_ir_11.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="873ADC83-6E45-4638-A8E8-A6C0A53C51CE" Id="Iso_ir_111So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-111.so" Name="iso-ir-111.so" Id="iso_ir_111.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="2570E4D7-70A1-448C-85AA-D792549ED5DC" Id="Iso_ir_121So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-121.so" Name="iso-ir-121.so" Id="iso_ir_121.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="10F5219D-A663-4201-B2C0-F0128EF7F86F" Id="Iso_ir_122So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-122.so" Name="iso-ir-122.so" Id="iso_ir_122.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="FD26E728-6997-43D4-9739-0C38338073C4" Id="Iso_ir_123So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-123.so" Name="iso-ir-123.so" Id="iso_ir_123.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="4E4D02EC-DBF2-44BE-9CB6-FA9691E130DF" Id="Iso_ir_128So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-128.so" Name="iso-ir-128.so" Id="iso_ir_128.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="5FB15A92-DB8C-49C3-9C7D-B54F03B5F9E6" Id="Iso_ir_13So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-13.so" Name="iso-ir-13.so" Id="iso_ir_13.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="31613FA6-5272-442C-AB92-2C48032DA162" Id="Iso_ir_139So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-139.so" Name="iso-ir-139.so" Id="iso_ir_139.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="2142F10F-437E-49EC-9CBD-44742AFD9203" Id="Iso_ir_14So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-14.so" Name="iso-ir-14.so" Id="iso_ir_14.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="21F3E674-28F7-40F7-A3D6-952F08F4CBA9" Id="Iso_ir_141So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-141.so" Name="iso-ir-141.so" Id="iso_ir_141.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="8001CC70-EA8E-4026-89C5-C3AB06EBDF7A" Id="Iso_ir_142So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-142.so" Name="iso-ir-142.so" Id="iso_ir_142.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="A5696609-01F0-43AE-881C-8785BC369009" Id="Iso_ir_143So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-143.so" Name="iso-ir-143.so" Id="iso_ir_143.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="7DB966F2-4DDC-4D5A-9C3B-20FB5B321880" Id="Iso_ir_146So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-146.so" Name="iso-ir-146.so" Id="iso_ir_146.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="80C097C8-C8F1-4837-8A2F-A175F2321BEA" Id="Iso_ir_147So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-147.so" Name="iso-ir-147.so" Id="iso_ir_147.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="E5ADABAF-2B52-4D0B-BD56-8EBF840C046B" Id="Iso_ir_15So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-15.so" Name="iso-ir-15.so" Id="iso_ir_15.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="C7EDCEAC-0421-4127-A399-1B2D1B02DAD5" Id="Iso_ir_150So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-150.so" Name="iso-ir-150.so" Id="iso_ir_150.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="822E6029-D017-4512-9789-F1310421B5B0" Id="Iso_ir_151So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-151.so" Name="iso-ir-151.so" Id="iso_ir_151.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="3A617CA3-3770-4394-8304-672D47F9E940" Id="Iso_ir_152So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-152.so" Name="iso-ir-152.so" Id="iso_ir_152.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="A8021109-3E8C-4034-A88C-08F62056A327" Id="Iso_ir_153So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-153.so" Name="iso-ir-153.so" Id="iso_ir_153.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="528F99C0-8A31-440F-9BBE-301B7C70FD93" Id="Iso_ir_154So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-154.so" Name="iso-ir-154.so" Id="iso_ir_154.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="D7298F9E-D5D9-434D-B192-CFC4AE8590D3" Id="Iso_ir_155So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-155.so" Name="iso-ir-155.so" Id="iso_ir_155.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="078BA88D-D1A4-467A-BB60-2B631BEE7903" Id="Iso_ir_158So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-158.so" Name="iso-ir-158.so" Id="iso_ir_158.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="61A0CA7C-374E-4800-B208-D6C91CCC9B3B" Id="Iso_ir_16So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-16.so" Name="iso-ir-16.so" Id="iso_ir_16.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="DE77C3A2-9B86-486D-9CF5-C18AF2469AF2" Id="Iso_ir_17So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-17.so" Name="iso-ir-17.so" Id="iso_ir_17.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="61C7D350-2E1D-403D-90AC-F57B399AC74D" Id="Iso_ir_18So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-18.so" Name="iso-ir-18.so" Id="iso_ir_18.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="DA258B26-D330-4D77-99B7-5D3931DF3E06" Id="Iso_ir_19So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-19.so" Name="iso-ir-19.so" Id="iso_ir_19.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="340FC2A6-A5BA-4291-8304-0EC328BD9267" Id="Iso_ir_2So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-2.so" Name="iso-ir-2.so" Id="iso_ir_2.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="F58DF3BA-B0D4-4341-BF7C-632607EB8FC3" Id="Iso_ir_21So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-21.so" Name="iso-ir-21.so" Id="iso_ir_21.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="987ABB4B-E588-4430-955D-9E865E72272A" Id="Iso_ir_25So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-25.so" Name="iso-ir-25.so" Id="iso_ir_25.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="6E42085C-8D96-4E5B-A651-37CB0A5F98A0" Id="Iso_ir_27So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-27.so" Name="iso-ir-27.so" Id="iso_ir_27.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="CFF3BB41-CAA8-46AB-9A96-2E7E0714E7D6" Id="Iso_ir_37So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-37.so" Name="iso-ir-37.so" Id="iso_ir_37.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="F81FA741-B72D-4281-865A-1BE106D71E5B" Id="Iso_ir_4So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-4.so" Name="iso-ir-4.so" Id="iso_ir_4.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="6C7E12B8-7141-4865-86E8-59D6FA5098E1" Id="Iso_ir_47So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-47.so" Name="iso-ir-47.so" Id="iso_ir_47.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="C94AE96A-12CE-49F5-825C-2118EAF67A76" Id="Iso_ir_49So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-49.so" Name="iso-ir-49.so" Id="iso_ir_49.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="AF97BE6A-A5F9-4876-9558-FD348814C040" Id="Iso_ir_50So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-50.so" Name="iso-ir-50.so" Id="iso_ir_50.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="A5B6418C-277D-4A82-87C5-B8A1AA0B151E" Id="Iso_ir_51So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-51.so" Name="iso-ir-51.so" Id="iso_ir_51.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="2F3D8428-1964-4FE7-B29C-518532AEDD41" Id="Iso_ir_54So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-54.so" Name="iso-ir-54.so" Id="iso_ir_54.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="BD2166F8-5014-4326-8D29-C85F0E606709" Id="Iso_ir_55So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-55.so" Name="iso-ir-55.so" Id="iso_ir_55.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="16D91D1C-CBED-4553-A2E6-2B69ACC6D605" Id="Iso_ir_57So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-57.so" Name="iso-ir-57.so" Id="iso_ir_57.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="7AC1FCC0-8871-45F3-BA93-6EA345F7DAB3" Id="Iso_ir_60So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-60.so" Name="iso-ir-60.so" Id="iso_ir_60.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="0B455F8C-B455-40B3-9059-3593ECD0F893" Id="Iso_ir_61So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-61.so" Name="iso-ir-61.so" Id="iso_ir_61.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="0AC28823-D00B-4797-8E29-942D5D896F3F" Id="Iso_ir_69So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-69.so" Name="iso-ir-69.so" Id="iso_ir_69.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="A605ADEE-6208-4072-A803-6E9C61CEE6F1" Id="Iso_ir_70So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-70.so" Name="iso-ir-70.so" Id="iso_ir_70.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="076321C2-CE0B-406F-8E6B-642C7714095E" Id="Iso_ir_8_1So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-8-1.so" Name="iso-ir-8-1.so" Id="iso_ir_8_1.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="45F84AAC-6401-4FE6-830A-0DAAADAC5BAF" Id="Iso_ir_8_2So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-8-2.so" Name="iso-ir-8-2.so" Id="iso_ir_8_2.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="7CE4CC00-8AD1-4C60-95BF-1487E68177D0" Id="Iso_ir_84So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-84.so" Name="iso-ir-84.so" Id="iso_ir_84.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="3D9CB527-EF04-4F75-A54A-4C7DB5AA456E" Id="Iso_ir_85So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-85.so" Name="iso-ir-85.so" Id="iso_ir_85.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="95170BB4-2A27-4A05-B8B4-7C3A7A0F051F" Id="Iso_ir_86So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-86.so" Name="iso-ir-86.so" Id="iso_ir_86.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="DDB0ACB8-E132-4B57-8CA2-1B3A830A2C5A" Id="Iso_ir_88So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-88.so" Name="iso-ir-88.so" Id="iso_ir_88.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="16FAA679-6737-4E8B-BA2C-32F7C96AC285" Id="Iso_ir_89So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-89.so" Name="iso-ir-89.so" Id="iso_ir_89.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="0BEE0C45-E3BA-48E4-AC14-1181BF755A27" Id="Iso_ir_9_1So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-9-1.so" Name="iso-ir-9-1.so" Id="iso_ir_9_1.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="96A4E743-D10D-4407-BED5-4EFF2BA441FD" Id="Iso_ir_9_2So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-9-2.so" Name="iso-ir-9-2.so" Id="iso_ir_9_2.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="B8F0FA57-11D6-4B5D-9355-3081EEE72508" Id="Iso_ir_90So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-90.so" Name="iso-ir-90.so" Id="iso_ir_90.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="7FF46BA7-08BC-40DF-8E2A-65692F59424F" Id="Iso_ir_91So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-91.so" Name="iso-ir-91.so" Id="iso_ir_91.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="D476AC32-D402-48A2-95FE-0607943E4F84" Id="Iso_ir_92So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-92.so" Name="iso-ir-92.so" Id="iso_ir_92.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="C238D0F9-F8B8-48CB-919B-791F6F5B8D35" Id="Iso_ir_93So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-93.so" Name="iso-ir-93.so" Id="iso_ir_93.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="EB557750-8CA9-498F-99EB-CB750786DB0E" Id="Iso_ir_94So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-94.so" Name="iso-ir-94.so" Id="iso_ir_94.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="48E46ECE-2B8D-45CB-B654-8EA6A199F8B1" Id="Iso_ir_95So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-95.so" Name="iso-ir-95.so" Id="iso_ir_95.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="65E49CFB-6C06-4C62-90EF-835A30788229" Id="Iso_ir_96So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-96.so" Name="iso-ir-96.so" Id="iso_ir_96.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="C5038D83-B14F-4177-8ACA-5D98990760EF" Id="Iso_ir_98So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-98.so" Name="iso-ir-98.so" Id="iso_ir_98.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="6D1C287E-1258-4BDB-A766-09039B33C28A" Id="Iso_ir_99So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso-ir-99.so" Name="iso-ir-99.so" Id="iso_ir_99.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="EB3FA2DA-0251-46FE-A572-381F65D1308E" Id="Iso646_dkSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso646-dk.so" Name="iso646-dk.so" Id="iso646_dk.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="5792A5D4-D37B-4725-A415-BC9C0C331AFE" Id="Iso646_krSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\iso646-kr.so" Name="iso646-kr.so" Id="iso646_kr.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="4EB8ADCF-2F6A-4940-9732-4B3EE75F68E0" Id="Jis_x0201So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\jis_x0201.so" Name="jis_x0201.so" Id="jis_x0201.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="FB10C62C-2ED6-4E74-ADB1-396A09371AF4" Id="Jis_x0208_1983So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\jis_x0208-1983.so" Name="jis_x0208-1983.so" Id="jis_x0208_1983.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="73BBCD4D-7B93-425B-9F42-28144F2D4A66" Id="Jis_x0212_1990So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\jis_x0212-1990.so" Name="jis_x0212-1990.so" Id="jis_x0212_1990.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="B7824C0D-CE24-4019-9803-87DA13D57906" Id="JohabSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\johab.so" Name="johab.so" Id="johab.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="B518D15E-D31E-488F-A06A-C72E4195EF17" Id="Koi8_rSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\koi8-r.so" Name="koi8-r.so" Id="koi8_r.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="315D1118-789C-4CFB-915F-986645B4B415" Id="Koi8_ruSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\koi8-ru.so" Name="koi8-ru.so" Id="koi8_ru.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="716B00FF-6DAA-408B-AF0B-0E851BEB63A3" Id="Koi8_uSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\koi8-u.so" Name="koi8-u.so" Id="koi8_u.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="DEF5665B-CA5D-44A9-A069-92FF44DDFC91" Id="Ksx1001So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\ksx1001.so" Name="ksx1001.so" Id="ksx1001.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="71CCFC00-96B6-4664-A262-B1A714779111" Id="Mac_ceSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\mac-ce.so" Name="mac-ce.so" Id="mac_ce.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="B8C120B4-9BCA-4CB5-B9B3-E21AA1FBEFA7" Id="Mac_croatianSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\mac-croatian.so" Name="mac-croatian.so" Id="mac_croatian.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="A7A483F1-EDAD-4AA3-AA0E-9A5AF0C638C8" Id="Mac_cyrillicSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\mac-cyrillic.so" Name="mac-cyrillic.so" Id="mac_cyrillic.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="4DC88FE7-261F-47A9-AB05-B0FFD2C3E04F" Id="Mac_dingbatsSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\mac-dingbats.so" Name="mac-dingbats.so" Id="mac_dingbats.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="6F1EF216-8484-4DC1-BEAB-1E87FA0F4A10" Id="Mac_greekSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\mac-greek.so" Name="mac-greek.so" Id="mac_greek.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="EB10ECFA-C4D0-4F1E-B192-45701DC9C830" Id="Mac_icelandSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\mac-iceland.so" Name="mac-iceland.so" Id="mac_iceland.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="2723E99C-28D8-4C84-B363-5AFE91C8227E" Id="Mac_japanSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\mac-japan.so" Name="mac-japan.so" Id="mac_japan.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="E8AD1D2E-3EDC-4334-98E4-5F018BFD870D" Id="Mac_romanSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\mac-roman.so" Name="mac-roman.so" Id="mac_roman.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="364BFDF1-9078-4517-B1CD-F1AE5909F2C3" Id="Mac_romaniaSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\mac-romania.so" Name="mac-romania.so" Id="mac_romania.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="5EDED1C1-BC69-4F89-987B-F3BFA821A81A" Id="Mac_thaiSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\mac-thai.so" Name="mac-thai.so" Id="mac_thai.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="A9ED6FA3-7A09-4B81-A3A4-4CE75B05753B" Id="Mac_turkishSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\mac-turkish.so" Name="mac-turkish.so" Id="mac_turkish.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="C91D2BCF-D0A7-4473-BFB1-19D5692DABD9" Id="Mac_ukraineSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\mac-ukraine.so" Name="mac-ukraine.so" Id="mac_ukraine.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="E355284F-C861-43D6-A244-ACAE61608D6E" Id="MacintoshSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\macintosh.so" Name="macintosh.so" Id="macintosh.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="0815ECFF-4200-4535-AFB4-1C5D15F62FD7" Id="Osd_ebcdic_df04_1So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\osd_ebcdic_df04_1.so" Name="osd_ebcdic_df04_1.so" Id="osd_ebcdic_df04_1.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="A38F5372-D354-451B-BCC5-6C09C205450A" Id="Osd_ebcdic_df04_15So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\osd_ebcdic_df04_15.so" Name="osd_ebcdic_df04_15.so" Id="osd_ebcdic_df04_15.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="6729B24C-9368-4357-B0D0-3F17AF884A54" Id="Shift_jisSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\shift_jis.so" Name="shift_jis.so" Id="shift_jis.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="16A4C7A4-743A-4A41-9599-7C7C75C9F070" Id="Ucs2_internalSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\ucs2-internal.so" Name="ucs2-internal.so" Id="ucs2_internal.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="B1F2FF6F-6B30-445A-B995-89EABF45B9BC" Id="Ucs4_internalSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\ucs4-internal.so" Name="ucs4-internal.so" Id="ucs4_internal.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="7C1B4354-8870-48BE-889A-1B5184DA4AF0" Id="Unicode_1_1_utf_7So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\unicode-1-1-utf-7.so" Name="unicode-1-1-utf-7.so" Id="unicode_1_1_utf_7.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="147B3B82-2D84-4370-9743-FF2D28245EFB" Id="Us_asciiSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\us-ascii.so" Name="us-ascii.so" Id="us_ascii.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="602D6605-6461-4154-9140-2E50AE739B69" Id="Utf_16So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\utf-16.so" Name="utf-16.so" Id="utf_16.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="D2F293CA-60B6-4A93-8328-4F46DC9D8088" Id="Utf_8So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\utf-8.so" Name="utf-8.so" Id="utf_8.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="E87D0142-AFFB-4CE1-8DCA-03409A72DB67" Id="Windows_1250So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\windows-1250.so" Name="windows-1250.so" Id="windows_1250.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="65200F71-5F40-4253-8C97-A245577F6910" Id="Windows_1251So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\windows-1251.so" Name="windows-1251.so" Id="windows_1251.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="5CDC40D3-F3BF-4741-B9BE-813E905970C3" Id="Windows_1252So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\windows-1252.so" Name="windows-1252.so" Id="windows_1252.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="3487A149-731E-4D7E-A010-C388EFA07610" Id="Windows_1253So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\windows-1253.so" Name="windows-1253.so" Id="windows_1253.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="A01E44D4-849D-4EF0-9648-474F9D91EF26" Id="Windows_1254So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\windows-1254.so" Name="windows-1254.so" Id="windows_1254.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="672A367A-4F04-441B-B204-5C125F496247" Id="Windows_1255So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\windows-1255.so" Name="windows-1255.so" Id="windows_1255.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="230D4FE0-4C43-48D4-8E3C-2F05C0C16CB7" Id="Windows_1256So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\windows-1256.so" Name="windows-1256.so" Id="windows_1256.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="01E2D89D-83A0-48F6-BCD9-21CA3964A465" Id="Windows_1257So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\windows-1257.so" Name="windows-1257.so" Id="windows_1257.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="9F68537B-8915-416D-A8D0-AB88E24C7920" Id="Windows_1258So" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\windows-1258.so" Name="windows-1258.so" Id="windows_1258.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="D22707AE-FA0B-4CE1-B2EC-4DAA6C767C3D" Id="_tbl_simpleSo" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\iconv\_tbl_simple.so" Name="_tbl_simple.so" Id="_tbl_simple.so" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+</Include>

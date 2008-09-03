@@ -19,7 +19,6 @@
 
 
 #include <apr_pools.h>
-#include <assert.h>
 
 #include "svn_error.h"
 #include "svn_pools.h"
@@ -314,7 +313,7 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
   if (base_access)
     {
       const svn_wc_entry_t *entry;
-      
+
       SVN_ERR(svn_wc_entry(&entry, base_dir, base_access, FALSE, pool));
 
       if (entry && entry->uuid)
@@ -372,7 +371,7 @@ svn_client_uuid_from_path(const char **uuid,
   const svn_wc_entry_t *entry;
 
   SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access,
-                                 TRUE,  /* show deleted */ pool));
+                                  TRUE,  /* show deleted */ pool));
 
   if (entry->uuid)
     {
@@ -481,7 +480,7 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
 svn_error_t *
 svn_client__path_relative_to_session(const char **rel_path,
                                      svn_ra_session_t *ra_session,
-                                     const char *url, 
+                                     const char *url,
                                      apr_pool_t *pool)
 {
   const char *session_url;
@@ -489,7 +488,7 @@ svn_client__path_relative_to_session(const char **rel_path,
   if (strcmp(session_url, url) == 0)
     *rel_path = "";
   else
-    *rel_path = svn_path_uri_decode(svn_path_is_child(session_url, url, pool), 
+    *rel_path = svn_path_uri_decode(svn_path_is_child(session_url, url, pool),
                                     pool);
   return SVN_NO_ERROR;
 }
@@ -540,9 +539,9 @@ gls_receiver(svn_location_segment_t *segment,
 static int
 compare_segments(const void *a, const void *b)
 {
-  const svn_location_segment_t *a_seg 
+  const svn_location_segment_t *a_seg
     = *((const svn_location_segment_t * const *) a);
-  const svn_location_segment_t *b_seg 
+  const svn_location_segment_t *b_seg
     = *((const svn_location_segment_t * const *) b);
   if (a_seg->range_start == b_seg->range_start)
     return 0;
@@ -757,13 +756,13 @@ svn_client__get_youngest_common_ancestor(const char **ancestor_path,
   /* We're going to cheat and use history-as-mergeinfo because it
      saves us a bunch of annoying custom data comparisons and such. */
   SVN_ERR(svn_client__get_history_as_mergeinfo(&history1, path_or_url1,
-                                               &revision1, 
-                                               SVN_INVALID_REVNUM, 
+                                               &revision1,
+                                               SVN_INVALID_REVNUM,
                                                SVN_INVALID_REVNUM,
                                                NULL, NULL, ctx, pool));
   SVN_ERR(svn_client__get_history_as_mergeinfo(&history2, path_or_url2,
-                                               &revision2, 
-                                               SVN_INVALID_REVNUM, 
+                                               &revision2,
+                                               SVN_INVALID_REVNUM,
                                                SVN_INVALID_REVNUM,
                                                NULL, NULL, ctx, pool));
 
@@ -787,7 +786,8 @@ svn_client__get_youngest_common_ancestor(const char **ancestor_path,
         {
           /* We have a path match.  Now, did our two histories share
              any revisions at that path? */
-          SVN_ERR(svn_rangelist_intersect(&common, ranges1, ranges2, pool));
+          SVN_ERR(svn_rangelist_intersect(&common, ranges1, ranges2,
+                                          TRUE, pool));
           if (common->nelts)
             {
               svn_merge_range_t *yc_range =

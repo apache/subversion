@@ -125,8 +125,8 @@ svn_boolean_t svn_prop_is_svn_prop(const char *prop_name);
  *
  * @since New in 1.5.
  */
-svn_boolean_t svn_prop_has_svn_prop(apr_hash_t *props,
-                                     apr_pool_t *pool);
+svn_boolean_t svn_prop_has_svn_prop(const apr_hash_t *props,
+                                    apr_pool_t *pool);
 
 /** Return @c TRUE iff @a prop_name is a Subversion property whose
  * value is interpreted as a boolean.

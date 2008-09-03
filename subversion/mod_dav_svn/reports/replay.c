@@ -2,7 +2,7 @@
  * replay.c :  routines for replaying revisions
  *
  * ====================================================================
- * Copyright (c) 2005 CollabNet.  All rights reserved.
+ * Copyright (c) 2005, 2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -34,6 +34,7 @@
 #include "svn_path.h"
 #include "svn_dav.h"
 #include "svn_props.h"
+#include "private/svn_log.h"
 
 #include "../dav_svn.h"
 
@@ -150,7 +151,8 @@ change_file_or_dir_prop(const char *file_or_dir,
 
   if (value)
     {
-      const svn_string_t *enc_value = svn_base64_encode_string(value, pool);
+      const svn_string_t *enc_value = svn_base64_encode_string2(value, TRUE,
+                                                                pool);
 
       SVN_ERR(dav_svn__send_xml
                 (eb->bb, eb->output,
@@ -302,9 +304,13 @@ apply_textdelta(void *file_baton,
   else
     SVN_ERR(dav_svn__send_xml(eb->bb, eb->output, ">"));
 
-  svn_txdelta_to_svndiff(dav_svn__make_base64_output_stream(eb->bb, eb->output,
-                                                            pool),
-                         pool, handler, handler_baton);
+  svn_txdelta_to_svndiff2(handler,
+                          handler_baton,
+                          dav_svn__make_base64_output_stream(eb->bb,
+                                                             eb->output,
+                                                             pool),
+                          0,
+                          pool);
 
   eb->sending_textdelta = TRUE;
 
@@ -485,17 +491,9 @@ dav_svn__replay_report(const dav_resource *resource,
                                 "Problem closing editor drive",
                                 resource->pool);
 
-  {
-    const char *action, *log_base_dir;
-
-    if (base_dir && base_dir[0] != '\0')
-      log_base_dir = svn_path_uri_encode(base_dir, resource->info->r->pool);
-    else
-      log_base_dir = "/";
-    action = apr_psprintf(resource->info->r->pool, "replay %s r%ld",
-                          log_base_dir, rev);
-    dav_svn__operational_log(resource->info, action);
-  }
+  dav_svn__operational_log(resource->info,
+                           svn_log__replay(base_dir, rev,
+                                           resource->info->r->pool));
 
   /* Flush the brigade. */
   if ((apr_err = ap_fflush(output, bb)))

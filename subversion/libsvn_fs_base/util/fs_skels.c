@@ -226,7 +226,7 @@ is_valid_node_revision_header_skel(skel_t *skel, skel_t **kind_p)
       && (! (skel->children->next->next->next->next->is_atom
              && skel->children->next->next->next->next->next->is_atom)))
     return FALSE;
-      
+
   /* got predecessor count? */
   if ((len > 3)
       && (! skel->children->next->next->next->is_atom))
@@ -520,14 +520,21 @@ svn_fs_base__parse_representation_skel(representation_t **rep_p,
   /* CHECKSUM */
   if (header_skel->children->next->next)
     {
-      memcpy(rep->checksum,
-             header_skel->children->next->next->children->next->data,
-             APR_MD5_DIGESTSIZE);
+      skel_t *checksum_skel = header_skel->children->next->next;
+
+      if (svn_fs_base__matches_atom(checksum_skel->children, "md5"))
+        {
+          rep->checksum = svn_checksum_create(svn_checksum_md5, pool);
+          memcpy(rep->checksum->digest, checksum_skel->children->next->data,
+                 APR_MD5_DIGESTSIZE);
+        }
+      else
+        return skel_err("checksum type");
     }
   else
     {
       /* Older repository, no checksum, so manufacture an all-zero checksum */
-      memset(rep->checksum, 0, APR_MD5_DIGESTSIZE);
+      rep->checksum = NULL;
     }
 
   /* KIND-SPECIFIC stuff */
@@ -631,7 +638,7 @@ svn_fs_base__parse_node_revision_skel(node_revision_t **noderev_p,
     {
       cur_skel = header_skel->children->next->next;
       if (cur_skel->len)
-        noderev->predecessor_id = svn_fs_base__id_parse(cur_skel->data, 
+        noderev->predecessor_id = svn_fs_base__id_parse(cur_skel->data,
                                                         cur_skel->len, pool);
 
       /* PREDECESSOR-COUNT */
@@ -650,9 +657,9 @@ svn_fs_base__parse_node_revision_skel(node_revision_t **noderev_p,
               cur_skel = cur_skel->next;
               noderev->has_mergeinfo = atoi(apr_pstrmemdup(pool,
                                                            cur_skel->data,
-                                                           cur_skel->len)) 
+                                                           cur_skel->len))
                                          ? TRUE : FALSE;
-              noderev->mergeinfo_count = 
+              noderev->mergeinfo_count =
                 apr_atoi64(apr_pstrmemdup(pool,
                                           cur_skel->next->data,
                                           cur_skel->next->len));
@@ -1052,14 +1059,40 @@ svn_fs_base__unparse_representation_skel(skel_t **skel_p,
       those parts first. **/
 
   /* CHECKSUM */
-  {
-    skel_t *checksum_skel = svn_fs_base__make_empty_list(pool);
-    svn_fs_base__prepend(svn_fs_base__mem_atom
-                         (rep->checksum, APR_MD5_DIGESTSIZE, pool),
-                         checksum_skel);
-    svn_fs_base__prepend(svn_fs_base__str_atom("md5", pool), checksum_skel);
-    svn_fs_base__prepend(checksum_skel, header_skel);
-  }
+  if (rep->checksum)
+    {
+      skel_t *checksum_skel = svn_fs_base__make_empty_list(pool);
+
+      switch (rep->checksum->kind)
+        {
+          case svn_checksum_md5:
+            svn_fs_base__prepend(svn_fs_base__mem_atom(rep->checksum->digest,
+                                                       APR_MD5_DIGESTSIZE,
+                                                       pool),
+                                 checksum_skel);
+            svn_fs_base__prepend(svn_fs_base__str_atom("md5", pool),
+                                 checksum_skel);
+            break;
+
+          default:
+            return skel_err("checksum");
+        }
+      svn_fs_base__prepend(checksum_skel, header_skel);
+    }
+  else
+    {
+      /* Need to add a "empty" MD5 checksum. */
+      skel_t *checksum_skel = svn_fs_base__make_empty_list(pool);
+      svn_checksum_t *empty_md5 = svn_checksum_create(svn_checksum_md5, pool);
+      SVN_ERR(svn_checksum_clear(empty_md5));
+
+      svn_fs_base__prepend(svn_fs_base__mem_atom(empty_md5->digest,
+                                                 APR_MD5_DIGESTSIZE, pool),
+                           checksum_skel);
+      svn_fs_base__prepend(svn_fs_base__str_atom("md5", pool), checksum_skel);
+      
+      svn_fs_base__prepend(checksum_skel, header_skel);
+    }
 
   /* TXN */
   if (rep->txn_id)
@@ -1156,7 +1189,7 @@ svn_fs_base__unparse_representation_skel(skel_t **skel_p,
       svn_fs_base__prepend(header_skel, skel);
     }
   else /* unknown kind */
-    abort();
+    SVN_ERR_MALFUNCTION();
 
   /* Validate and return the skel. */
   if (! is_valid_representation_skel(skel))
@@ -1184,20 +1217,20 @@ svn_fs_base__unparse_node_revision_skel(skel_t **skel_p,
   if (format >= SVN_FS_BASE__MIN_MERGEINFO_FORMAT)
     {
       /* MERGEINFO-COUNT */
-      num_str = apr_psprintf(pool, "%" APR_INT64_T_FMT, 
+      num_str = apr_psprintf(pool, "%" APR_INT64_T_FMT,
                              noderev->mergeinfo_count);
       svn_fs_base__prepend(svn_fs_base__str_atom(num_str, pool), header_skel);
- 
+
       /* HAS-MERGEINFO */
-      svn_fs_base__prepend(svn_fs_base__mem_atom(noderev->has_mergeinfo 
+      svn_fs_base__prepend(svn_fs_base__mem_atom(noderev->has_mergeinfo
                                                  ? "1" : "0",
-                                                 1, pool), header_skel); 
+                                                 1, pool), header_skel);
 
       /* PREDECESSOR-COUNT padding (only if we *don't* have a valid
          value; if we do, we'll pick that up below) */
       if (noderev->predecessor_count == -1)
         {
-          svn_fs_base__prepend(svn_fs_base__mem_atom(NULL, 0, pool), 
+          svn_fs_base__prepend(svn_fs_base__mem_atom(NULL, 0, pool),
                                header_skel);
         }
     }
@@ -1235,7 +1268,7 @@ svn_fs_base__unparse_node_revision_skel(skel_t **skel_p,
   else if (noderev->kind == svn_node_dir)
     svn_fs_base__prepend(svn_fs_base__str_atom("dir", pool), header_skel);
   else
-    abort();
+    SVN_ERR_MALFUNCTION();
 
   /* ### do we really need to check *node->FOO_key ? if a key doesn't
      ### exist, then the field should be NULL ...  */

@@ -280,7 +280,7 @@ add_file_blame(const char *last_file,
 {
   if (!last_file)
     {
-      assert(chain->blame == NULL);
+      SVN_ERR_ASSERT(chain->blame == NULL);
       chain->blame = blame_create(chain, rev, 0);
     }
   else
@@ -452,7 +452,7 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
   else
     /* Means empty stream below. */
     delta_baton->source_file = NULL;
-  last_stream = svn_stream_from_aprfile(delta_baton->source_file, pool);
+  last_stream = svn_stream_from_aprfile2(delta_baton->source_file, TRUE, pool);
 
   if (frb->include_merged_revisions && !frb->merged_revision)
     filepool = frb->filepool;
@@ -464,7 +464,7 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
                                    frb->tmp_path,
                                    ".tmp", svn_io_file_del_on_pool_cleanup,
                                    filepool));
-  cur_stream = svn_stream_from_aprfile(delta_baton->file, frb->currpool);
+  cur_stream = svn_stream_from_aprfile2(delta_baton->file, TRUE, frb->currpool);
 
   /* Get window handler for applying delta. */
   svn_txdelta_apply(last_stream, cur_stream, NULL, NULL,
@@ -483,7 +483,7 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
   if (revnum < frb->start_rev)
     {
       /* We shouldn't get more than one revision before start. */
-      assert(frb->last_filename == NULL);
+      SVN_ERR_ASSERT(frb->last_filename == NULL);
 
       /* The file existed before start_rev; generate no blame info for
          lines from this revision (or before). */
@@ -494,7 +494,7 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
   else
     {
       svn_string_t *str;
-      assert(revnum <= frb->end_rev);
+      SVN_ERR_ASSERT(revnum <= frb->end_rev);
 
       /* Set values from revision props. */
       frb->rev->revision = revnum;
@@ -681,7 +681,7 @@ svn_client_blame4(const char *target,
   /* Report the blame to the caller. */
 
   /* The callback has to have been called at least once. */
-  assert(frb.last_filename != NULL);
+  SVN_ERR_ASSERT(frb.last_filename != NULL);
 
   /* Create a pool for the iteration below. */
   iterpool = svn_pool_create(pool);
@@ -689,7 +689,8 @@ svn_client_blame4(const char *target,
   /* Open the last file and get a stream. */
   SVN_ERR(svn_io_file_open(&file, frb.last_filename, APR_READ | APR_BUFFERED,
                            APR_OS_DEFAULT, pool));
-  stream = svn_subst_stream_translated(svn_stream_from_aprfile(file, pool),
+  stream = svn_subst_stream_translated(svn_stream_from_aprfile2(file, TRUE,
+                                                                pool),
                                        "\n", TRUE, NULL, FALSE, pool);
 
   /* Perform optional merged chain normalization. */

@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Include>
+						<Directory Id="apr22x" Name="apr">
+							<Component Guid="8EAD3031-D8E5-47FF-B2AC-AE1A5A97E68A" Id="LICENSE22x" DiskId="1">
+								<File Source="..\..\..\work\svn-win32-ap20x\licenses\apr\LICENSE" Name="LICENSE.txt" Id="LICENSE22x">
+								<Shortcut Name="APR" Id="aprsct22x" Description="APR License" Directory="LicenseMenuFolder" Advertise="yes" Icon="apr22x.txt">
+							    	<Icon Id="apr22x.txt" SourceFile="c:\windows\notepad.exe" />
+							    </Shortcut>
+								</File>
+								<Condition>APACHEVERSION = "Apache22"</Condition>
+							</Component>
+							<Component Guid="13BF7C1A-9468-4BC3-B5B4-2ED8362DC717" Id="NOTICE22x" DiskId="1">
+								<File Source="..\..\..\work\svn-win32-ap20x\licenses\apr\NOTICE" Name="NOTICE.txt" Id="NOTICE22x">
+								<Shortcut Name="APR Notice" Id="aprnotsct22x" Description="APR Notice" Directory="LicenseMenuFolder" Advertise="yes" Icon="NOTICE22x.txt">
+							    	<Icon Id="NOTICE22x.txt" SourceFile="c:\windows\notepad.exe" />
+							    </Shortcut>
+								</File>
+								<Condition>APACHEVERSION = "Apache22"</Condition>
+							</Component>
+						</Directory>
+						<Directory Id="apr_iconv22x" Name="apr-iconv">
+							<Component Guid="B1620CDC-67A3-4A5F-A1A8-F04434F64CA1" Id="Apr_iconvLICENSE22x" DiskId="1">
+								<File Source="..\..\..\work\svn-win32-ap20x\licenses\apr-iconv\LICENSE" Name="LICENSE.txt" Id="apr_iconv.LICENSE22x">
+								<Shortcut Name="APRI-CONV" Id="apriconvsct22x" Description="APR-ICONV License" Directory="LicenseMenuFolder" Advertise="yes" Icon="apriconv22x.txt">
+							    	<Icon Id="apriconv22x.txt" SourceFile="c:\windows\notepad.exe" />
+							    </Shortcut>
+								</File>
+								<Condition>APACHEVERSION = "Apache22"</Condition>
+							</Component>
+							<Component Guid="E49F22A4-3E98-450C-8260-2804AD786B8B" Id="APRICONVNOTICE22x" DiskId="1">
+								<File Source="..\..\..\work\svn-win32-ap20x\licenses\apr-iconv\NOTICE" Name="APR-ICONV NOTICE.txt" Id="APRICONVNOTICE22x">
+								<Shortcut Name="APR-ICONV Notice" Id="apriconvnotsct22x" Description="APR-ICONV Notice" Directory="LicenseMenuFolder" Advertise="yes" Icon="APRICONVNTC22x.txt">
+							    	<Icon Id="APRICONVNTC22x.txt" SourceFile="c:\windows\notepad.exe" />
+							    </Shortcut>
+								</File>
+								<Condition>APACHEVERSION = "Apache22"</Condition>
+							</Component>
+						</Directory>
+						<Directory Id="apr_util22x" Name="apr-util">
+							<Component Guid="B2B75254-66A7-4C6D-9932-FFA42E2BAE02" Id="Apr_utilLICENSE22x" DiskId="1">
+								<File Source="..\..\..\work\svn-win32-ap20x\licenses\apr-util\LICENSE" Name="LICENSE.txt" Id="apr_util.LICENSE22x">
+								<Shortcut Name="APRIUTL" Id="aprutlsct22x" Description="APR-UTIL License" Directory="LicenseMenuFolder" Advertise="yes" Icon="apriutil22x.txt">
+							    	<Icon Id="apriutil22x.txt" SourceFile="c:\windows\notepad.exe" />
+							    </Shortcut>
+								</File>
+								<Condition>APACHEVERSION = "Apache22"</Condition>
+							</Component>
+							<Component Guid="CCE43508-61B0-478A-A6F4-B7F865F536AA" Id="APRUTILNOTICE22x" DiskId="1">
+								<File Source="..\..\..\work\svn-win32-ap20x\licenses\apr-util\NOTICE" Name="APR-UTIL NOTICE.txt" Id="APRUTILNOTICE22x">
+								<Shortcut Name="APR-UTIL Notice" Id="aprutilnotsct22x" Description="APR-UTIL Notice" Directory="LicenseMenuFolder" Advertise="yes" Icon="APRUTILNOTICE22x.txt">
+							    	<Icon Id="APRUTILNOTICE22x.txt" SourceFile="c:\windows\notepad.exe" />
+							    </Shortcut>
+								</File>
+								<Condition>APACHEVERSION = "Apache22"</Condition>
+							</Component>
+						</Directory>
+</Include>

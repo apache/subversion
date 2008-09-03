@@ -2291,6 +2291,111 @@ def basic_relative_url_multi_repo(sbox):
                                 svntest.verify.AnyOutput, 'blame',
                                 '^/A/mu', iota_url_repo1, iota_url_repo2)
 
+def basic_relative_url_non_canonical(sbox):
+  "basic relative url non-canonical targets"
+
+  sbox.build()
+
+  iota_url = sbox.repo_url + '/iota'
+
+  expected_output = [
+    "B/\n",
+    "C/\n",
+    "D/\n",
+    "mu\n",
+    "iota\n"
+    ]
+
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None,
+                                expected_output, [], 'ls',
+                                '^/A/', iota_url)
+
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None,
+                                expected_output, [], 'ls',
+                                '^//A/', iota_url)
+
+def basic_relative_url_with_peg_revisions(sbox):
+  "basic relative url targets with peg revisions"
+
+  sbox.build()
+
+  # First, make a new revision of iota.
+  iota = os.path.join(sbox.wc_dir, 'iota')
+  svntest.main.file_append(iota, "New contents for iota\n")
+  svntest.main.run_svn(None, 'ci',
+                       '-m', '', iota)
+
+  iota_url = sbox.repo_url + '/iota'
+
+  # Now, make a new revision of A/mu .
+  mu = os.path.join(sbox.wc_dir, 'A', 'mu')
+  mu_url = sbox.repo_url + '/A/mu'
+
+  svntest.main.file_append(mu, "New contents for mu\n")
+  svntest.main.run_svn(None, 'ci', '-m', '', mu)
+
+  # Delete the file from the current revision
+  svntest.main.run_svn(None, 'rm', '-m', '', mu_url)
+
+  expected_output = [
+    "B/\n",
+    "C/\n",
+    "D/\n",
+    "mu\n",
+    "iota\n"
+    ]
+
+  # Canonical version with peg revision
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None,
+                                expected_output, [], 'ls', '-r3',
+                                '^/A/@3', iota_url)
+
+  # Non-canonical version with peg revision
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None,
+                                expected_output, [], 'ls', '-r3',
+                                '^//A/@3', iota_url)
+
+
+# Issue 2242, auth cache picking up password from wrong username entry
+def basic_auth_test(sbox):
+  "basic auth test"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  # Set up a custom config directory
+  tmp_dir = os.path.abspath(svntest.main.temp_dir)
+  config_dir = os.path.join(tmp_dir, 'auth-test-config')
+  svntest.main.create_config_dir(config_dir, None)
+
+  # Checkout with jrandom
+  exit_code, output, errput = svntest.main.run_command(
+    svntest.main.svn_binary, None, 1, 'co', sbox.repo_url, wc_dir,
+    '--username', 'jrandom', '--password', 'rayjandom',
+    '--config-dir', config_dir)
+
+  exit_code, output, errput = svntest.main.run_command(
+    svntest.main.svn_binary, None, 1, 'co', sbox.repo_url, wc_dir,
+    '--username', 'jrandom', '--non-interactive', '--config-dir', config_dir)
+
+  # Checkout with jconstant
+  exit_code, output, errput = svntest.main.run_command(
+    svntest.main.svn_binary, None, 1, 'co', sbox.repo_url, wc_dir,
+    '--username', 'jconstant', '--password', 'rayjandom',
+    '--config-dir', config_dir)
+
+  exit_code, output, errput = svntest.main.run_command(
+    svntest.main.svn_binary, None, 1, 'co', sbox.repo_url, wc_dir,
+    '--username', 'jconstant', '--non-interactive',
+    '--config-dir', config_dir)
+
+  # Checkout with jrandom which should fail since we do not provide
+  # a password and the above cached password belongs to jconstant
+  expected_err = ["authorization failed: Could not authenticate to server:"]
+  exit_code, output, errput = svntest.main.run_command(
+    svntest.main.svn_binary, expected_err, 1, 'co', sbox.repo_url, wc_dir,
+    '--username', 'jrandom', '--non-interactive', '--config-dir', config_dir)
+
 
 #----------------------------------------------------------------------
 
@@ -2342,6 +2447,9 @@ test_list = [ None,
               basic_relative_url_using_current_dir,
               basic_relative_url_using_other_targets,
               basic_relative_url_multi_repo,
+              basic_relative_url_non_canonical,
+              basic_relative_url_with_peg_revisions,
+              basic_auth_test,
              ]
 
 if __name__ == '__main__':

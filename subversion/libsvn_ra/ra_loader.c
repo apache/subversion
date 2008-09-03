@@ -19,8 +19,6 @@
 /* ==================================================================== */
 
 /*** Includes. ***/
-#include <assert.h>
-
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 
@@ -59,8 +57,8 @@
    ### any code which uses the pre-1.2 API svn_ra_get_ra_library
    ### instead of svn_ra_open. */
 
-#if defined(SVN_LIBSVN_CLIENT_LINKS_RA_NEON) && defined (SVN_LIBSVN_CLIENT_LINKS_RA_SERF)
-#define MUST_CHOOSE_DAV
+#if defined(SVN_HAVE_NEON) && defined(SVN_HAVE_SERF)
+#define CHOOSABLE_DAV_MODULE
 #endif
 
 
@@ -389,41 +387,167 @@ svn_error_t *svn_ra_open3(svn_ra_session_t **session_p,
   svn_ra_session_t *session;
   const struct ra_lib_defn *defn;
   const svn_ra__vtable_t *vtable = NULL;
-#ifdef MUST_CHOOSE_DAV
   svn_config_t *servers = NULL;
+  const char *server_group;
+  apr_uri_t repos_URI;
+  apr_status_t apr_err;
+#ifdef CHOOSABLE_DAV_MODULE
   const char *http_library = "neon";
+#endif
+  /* Auth caching parameters. */
+  svn_boolean_t store_passwords = SVN_CONFIG_DEFAULT_OPTION_STORE_PASSWORDS;
+  svn_boolean_t store_auth_creds = SVN_CONFIG_DEFAULT_OPTION_STORE_AUTH_CREDS;
+  const char *store_plaintext_passwords
+    = SVN_CONFIG_DEFAULT_OPTION_STORE_PLAINTEXT_PASSWORDS;
+  svn_boolean_t store_pp = SVN_CONFIG_DEFAULT_OPTION_STORE_SSL_CLIENT_CERT_PP;
+  const char *store_pp_plaintext
+    = SVN_CONFIG_DEFAULT_OPTION_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT;
+
+  if (callbacks->auth_baton)
+    {
+      /* The 'store-passwords' and 'store-auth-creds' parameters used to
+       * live in SVN_CONFIG_CATEGORY_CONFIG. For backward compatibility,
+       * if values for these parameters have already been set by our
+       * callers, we use those values as defaults.
+       *
+       * Note that we can only catch the case where users explicitly set
+       * "store-passwords = no" or 'store-auth-creds = no".
+       *
+       * However, since the default value for both these options is
+       * currently (and has always been) "yes", users won't know
+       * the difference if they set "store-passwords = yes" or
+       * "store-auth-creds = yes" -- they'll get the expected behaviour.
+       */
+
+      if (svn_auth_get_parameter(callbacks->auth_baton,
+                                 SVN_AUTH_PARAM_DONT_STORE_PASSWORDS) != NULL)
+        store_passwords = FALSE;
+
+      if (svn_auth_get_parameter(callbacks->auth_baton,
+                                 SVN_AUTH_PARAM_NO_AUTH_CACHE) != NULL)
+        store_auth_creds = FALSE;
+    }
 
   if (config)
     {
+      /* Grab the 'servers' config. */
       servers = apr_hash_get(config, SVN_CONFIG_CATEGORY_SERVERS,
                              APR_HASH_KEY_STRING);
       if (servers)
         {
-          apr_uri_t repos_URI;
-          apr_status_t apr_err;
-          const char *server_group;
+          /* First, look in the global section. */
 
+          SVN_ERR(svn_config_get_bool
+            (servers, &store_passwords, SVN_CONFIG_SECTION_GLOBAL,
+             SVN_CONFIG_OPTION_STORE_PASSWORDS,
+             store_passwords));
+
+          SVN_ERR(svn_config_get_yes_no_ask
+            (servers, &store_plaintext_passwords, SVN_CONFIG_SECTION_GLOBAL,
+             SVN_CONFIG_OPTION_STORE_PLAINTEXT_PASSWORDS,
+             SVN_CONFIG_DEFAULT_OPTION_STORE_PLAINTEXT_PASSWORDS));
+
+          SVN_ERR(svn_config_get_bool
+            (servers, &store_pp, SVN_CONFIG_SECTION_GLOBAL,
+             SVN_CONFIG_OPTION_STORE_SSL_CLIENT_CERT_PP,
+             store_pp));
+
+          SVN_ERR(svn_config_get_yes_no_ask
+            (servers, &store_pp_plaintext,
+             SVN_CONFIG_SECTION_GLOBAL,
+             SVN_CONFIG_OPTION_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT,
+             SVN_CONFIG_DEFAULT_OPTION_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT));
+
+          SVN_ERR(svn_config_get_bool
+            (servers, &store_auth_creds, SVN_CONFIG_SECTION_GLOBAL,
+              SVN_CONFIG_OPTION_STORE_AUTH_CREDS,
+              store_auth_creds));
+
+          /* Find out where we're about to connect to, and
+           * try to pick a server group based on the destination. */
           apr_err = apr_uri_parse(pool, repos_URL, &repos_URI);
-          if (apr_err != APR_SUCCESS)
+          /* ### Should apr_uri_parse leave hostname NULL?  It doesn't
+           * for "file:///" URLs, only for bogus URLs like "bogus".
+           * If this is the right behavior for apr_uri_parse, maybe we
+           * should have a svn_uri_parse wrapper. */
+          if (apr_err != APR_SUCCESS || repos_URI.hostname == NULL)
             return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
                                      _("Illegal repository URL '%s'"),
                                      repos_URL);
           server_group = svn_config_find_group(servers, repos_URI.hostname,
                                                SVN_CONFIG_SECTION_GROUPS, pool);
 
+          if (server_group)
+            {
+              /* Override global auth caching parameters with the ones
+               * for the server group, if any. */
+              SVN_ERR(svn_config_get_bool(servers, &store_auth_creds,
+                                          server_group,
+                                          SVN_CONFIG_OPTION_STORE_AUTH_CREDS,
+                                          store_auth_creds));
+
+              SVN_ERR(svn_config_get_bool(servers, &store_passwords,
+                                          server_group,
+                                          SVN_CONFIG_OPTION_STORE_PASSWORDS,
+                                          store_passwords));
+
+              SVN_ERR(svn_config_get_yes_no_ask
+                (servers, &store_plaintext_passwords, server_group,
+                 SVN_CONFIG_OPTION_STORE_PLAINTEXT_PASSWORDS,
+                 store_plaintext_passwords));
+
+              SVN_ERR(svn_config_get_bool
+                (servers, &store_pp,
+                 server_group, SVN_CONFIG_OPTION_STORE_SSL_CLIENT_CERT_PP,
+                 store_pp));
+
+              SVN_ERR(svn_config_get_yes_no_ask
+                (servers, &store_pp_plaintext, server_group,
+                 SVN_CONFIG_OPTION_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT,
+                 store_pp_plaintext));
+            }
+#ifdef CHOOSABLE_DAV_MODULE
+          /* Now, which DAV-based RA method do we want to use today? */
           http_library
             = svn_config_get_server_setting(servers,
-                                            server_group,
+                                            server_group, /* NULL is OK */
                                             SVN_CONFIG_OPTION_HTTP_LIBRARY,
                                             "neon");
 
           if (strcmp(http_library, "neon") != 0 &&
               strcmp(http_library, "serf") != 0)
-            return svn_error_create(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
-                                    _("Invalid config: unknown HTTP library"));
+            return svn_error_createf(SVN_ERR_BAD_CONFIG_VALUE, NULL,
+                                     _("Invalid config: unknown HTTP library "
+                                       "'%s'"),
+                                     http_library);
+#endif
         }
     }
-#endif
+
+  if (callbacks->auth_baton)
+    {
+      /* Save auth caching parameters in the auth parameter hash. */
+      if (! store_passwords)
+        svn_auth_set_parameter(callbacks->auth_baton,
+                               SVN_AUTH_PARAM_DONT_STORE_PASSWORDS, "");
+
+      svn_auth_set_parameter(callbacks->auth_baton,
+                             SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS,
+                             store_plaintext_passwords);
+
+      if (! store_pp)
+        svn_auth_set_parameter(callbacks->auth_baton,
+                               SVN_AUTH_PARAM_DONT_STORE_SSL_CLIENT_CERT_PP,
+                               "");
+
+      svn_auth_set_parameter(callbacks->auth_baton,
+                             SVN_AUTH_PARAM_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT,
+                             store_pp_plaintext);
+
+      if (! store_auth_creds)
+        svn_auth_set_parameter(callbacks->auth_baton,
+                               SVN_AUTH_PARAM_NO_AUTH_CACHE, "");
+    }
 
   /* Find the library. */
   for (defn = ra_libraries; defn->ra_name != NULL; ++defn)
@@ -434,7 +558,7 @@ svn_error_t *svn_ra_open3(svn_ra_session_t **session_p,
         {
           svn_ra__init_func_t initfunc = defn->initfunc;
 
-#ifdef MUST_CHOOSE_DAV
+#ifdef CHOOSABLE_DAV_MODULE
           if (defn->schemes == dav_schemes
               && strcmp(defn->ra_name, http_library) != 0)
             continue;
@@ -656,7 +780,7 @@ svn_error_t *svn_ra_get_file(svn_ra_session_t *session,
                              apr_hash_t **props,
                              apr_pool_t *pool)
 {
-  assert(*path != '/');
+  SVN_ERR_ASSERT(*path != '/');
   return session->vtable->get_file(session, path, revision, stream,
                                    fetched_rev, props, pool);
 }
@@ -669,7 +793,7 @@ svn_error_t *svn_ra_get_dir(svn_ra_session_t *session,
                             apr_hash_t **props,
                             apr_pool_t *pool)
 {
-  assert(*path != '/');
+  SVN_ERR_ASSERT(*path != '/');
   return session->vtable->get_dir(session, dirents, fetched_rev, props,
                                   path, revision, SVN_DIRENT_ALL, pool);
 }
@@ -683,7 +807,7 @@ svn_error_t *svn_ra_get_dir2(svn_ra_session_t *session,
                              apr_uint32_t dirent_fields,
                              apr_pool_t *pool)
 {
-  assert(*path != '/');
+  SVN_ERR_ASSERT(*path != '/');
   return session->vtable->get_dir(session, dirents, fetched_rev, props,
                                   path, revision, dirent_fields, pool);
 }
@@ -703,7 +827,7 @@ svn_error_t *svn_ra_get_mergeinfo(svn_ra_session_t *session,
   for (i = 0; i < paths->nelts; i++)
     {
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
-      assert(*path != '/');
+      SVN_ERR_ASSERT(*path != '/');
     }
 
   /* Check server Merge Tracking capability. */
@@ -730,8 +854,8 @@ svn_error_t *svn_ra_do_update2(svn_ra_session_t *session,
                                void *update_baton,
                                apr_pool_t *pool)
 {
-  assert(svn_path_is_empty(update_target)
-         || svn_path_is_single_path_component(update_target));
+  SVN_ERR_ASSERT(svn_path_is_empty(update_target)
+                 || svn_path_is_single_path_component(update_target));
   return session->vtable->do_update(session,
                                     reporter, report_baton,
                                     revision_to_update_to, update_target,
@@ -751,8 +875,8 @@ svn_error_t *svn_ra_do_update(svn_ra_session_t *session,
                               apr_pool_t *pool)
 {
   struct reporter_3in2_baton *b = apr_palloc(pool, sizeof(*b));
-  assert(svn_path_is_empty(update_target)
-         || svn_path_is_single_path_component(update_target));
+  SVN_ERR_ASSERT(svn_path_is_empty(update_target)
+                 || svn_path_is_single_path_component(update_target));
   *reporter = &reporter_3in2_wrapper;
   *report_baton = b;
   return session->vtable->do_update(session,
@@ -775,8 +899,8 @@ svn_error_t *svn_ra_do_switch2(svn_ra_session_t *session,
                                void *switch_baton,
                                apr_pool_t *pool)
 {
-  assert(svn_path_is_empty(switch_target)
-         || svn_path_is_single_path_component(switch_target));
+  SVN_ERR_ASSERT(svn_path_is_empty(switch_target)
+                 || svn_path_is_single_path_component(switch_target));
   return session->vtable->do_switch(session,
                                     reporter, report_baton,
                                     revision_to_switch_to, switch_target,
@@ -796,8 +920,8 @@ svn_error_t *svn_ra_do_switch(svn_ra_session_t *session,
                               apr_pool_t *pool)
 {
   struct reporter_3in2_baton *b = apr_palloc(pool, sizeof(*b));
-  assert(svn_path_is_empty(switch_target)
-         || svn_path_is_single_path_component(switch_target));
+  SVN_ERR_ASSERT(svn_path_is_empty(switch_target)
+                 || svn_path_is_single_path_component(switch_target));
   *reporter = &reporter_3in2_wrapper;
   *report_baton = b;
   return session->vtable->do_switch(session,
@@ -818,8 +942,8 @@ svn_error_t *svn_ra_do_status2(svn_ra_session_t *session,
                                void *status_baton,
                                apr_pool_t *pool)
 {
-  assert(svn_path_is_empty(status_target)
-         || svn_path_is_single_path_component(status_target));
+  SVN_ERR_ASSERT(svn_path_is_empty(status_target)
+                 || svn_path_is_single_path_component(status_target));
   return session->vtable->do_status(session,
                                     reporter, report_baton,
                                     status_target, revision, depth,
@@ -837,8 +961,8 @@ svn_error_t *svn_ra_do_status(svn_ra_session_t *session,
                               apr_pool_t *pool)
 {
   struct reporter_3in2_baton *b = apr_palloc(pool, sizeof(*b));
-  assert(svn_path_is_empty(status_target)
-         || svn_path_is_single_path_component(status_target));
+  SVN_ERR_ASSERT(svn_path_is_empty(status_target)
+                 || svn_path_is_single_path_component(status_target));
   *reporter = &reporter_3in2_wrapper;
   *report_baton = b;
   return session->vtable->do_status(session,
@@ -861,8 +985,8 @@ svn_error_t *svn_ra_do_diff3(svn_ra_session_t *session,
                              void *diff_baton,
                              apr_pool_t *pool)
 {
-  assert(svn_path_is_empty(diff_target)
-         || svn_path_is_single_path_component(diff_target));
+  SVN_ERR_ASSERT(svn_path_is_empty(diff_target)
+                 || svn_path_is_single_path_component(diff_target));
   return session->vtable->do_diff(session,
                                   reporter, report_baton,
                                   revision, diff_target,
@@ -885,8 +1009,8 @@ svn_error_t *svn_ra_do_diff2(svn_ra_session_t *session,
                              apr_pool_t *pool)
 {
   struct reporter_3in2_baton *b = apr_palloc(pool, sizeof(*b));
-  assert(svn_path_is_empty(diff_target)
-         || svn_path_is_single_path_component(diff_target));
+  SVN_ERR_ASSERT(svn_path_is_empty(diff_target)
+                 || svn_path_is_single_path_component(diff_target));
   *reporter = &reporter_3in2_wrapper;
   *report_baton = b;
   return session->vtable->do_diff(session,
@@ -909,8 +1033,8 @@ svn_error_t *svn_ra_do_diff(svn_ra_session_t *session,
                             void *diff_baton,
                             apr_pool_t *pool)
 {
-  assert(svn_path_is_empty(diff_target)
-         || svn_path_is_single_path_component(diff_target));
+  SVN_ERR_ASSERT(svn_path_is_empty(diff_target)
+                 || svn_path_is_single_path_component(diff_target));
   return svn_ra_do_diff2(session, reporter, report_baton, revision,
                          diff_target, recurse, ignore_ancestry, TRUE,
                          versus_url, diff_editor, diff_baton, pool);
@@ -929,11 +1053,14 @@ svn_error_t *svn_ra_get_log2(svn_ra_session_t *session,
                              void *receiver_baton,
                              apr_pool_t *pool)
 {
-  int i;
-  for (i = 0; i < paths->nelts; i++)
+  if (paths)
     {
-      const char *path = APR_ARRAY_IDX(paths, i, const char *);
-      assert(*path != '/');
+      int i;
+      for (i = 0; i < paths->nelts; i++)
+        {
+          const char *path = APR_ARRAY_IDX(paths, i, const char *);
+          SVN_ERR_ASSERT(*path != '/');
+        }
     }
 
   if (include_merged_revisions)
@@ -958,12 +1085,15 @@ svn_error_t *svn_ra_get_log(svn_ra_session_t *session,
 {
   svn_log_entry_receiver_t receiver2;
   void *receiver2_baton;
-  int i;
 
-  for (i = 0; i < paths->nelts; i++)
+  if (paths)
     {
-      const char *path = APR_ARRAY_IDX(paths, i, const char *);
-      assert(*path != '/');
+      int i;
+      for (i = 0; i < paths->nelts; i++)
+        {
+          const char *path = APR_ARRAY_IDX(paths, i, const char *);
+          SVN_ERR_ASSERT(*path != '/');
+        }
     }
 
   svn_compat_wrap_log_receiver(&receiver2, &receiver2_baton,
@@ -982,7 +1112,7 @@ svn_error_t *svn_ra_check_path(svn_ra_session_t *session,
                                svn_node_kind_t *kind,
                                apr_pool_t *pool)
 {
-  assert(*path != '/');
+  SVN_ERR_ASSERT(*path != '/');
   return session->vtable->check_path(session, path, revision, kind, pool);
 }
 
@@ -992,7 +1122,7 @@ svn_error_t *svn_ra_stat(svn_ra_session_t *session,
                          svn_dirent_t **dirent,
                          apr_pool_t *pool)
 {
-  assert(*path != '/');
+  SVN_ERR_ASSERT(*path != '/');
   return session->vtable->stat(session, path, revision, dirent, pool);
 }
 
@@ -1037,7 +1167,7 @@ svn_error_t *svn_ra_get_locations(svn_ra_session_t *session,
 {
   svn_error_t *err;
 
-  assert(*path != '/');
+  SVN_ERR_ASSERT(*path != '/');
   err = session->vtable->get_locations(session, locations, path,
                                        peg_revision, location_revisions, pool);
   if (err && (err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED))
@@ -1064,7 +1194,7 @@ svn_ra_get_location_segments(svn_ra_session_t *session,
 {
   svn_error_t *err;
 
-  assert(*path != '/');
+  SVN_ERR_ASSERT(*path != '/');
   err = session->vtable->get_location_segments(session, path, peg_revision,
                                                start_rev, end_rev,
                                                receiver, receiver_baton, pool);
@@ -1092,7 +1222,7 @@ svn_error_t *svn_ra_get_file_revs(svn_ra_session_t *session,
   svn_file_rev_handler_t handler2;
   void *handler2_baton;
 
-  assert(*path != '/');
+  SVN_ERR_ASSERT(*path != '/');
 
   svn_compat_wrap_file_rev_handler(&handler2, &handler2_baton,
                                    handler, handler_baton,
@@ -1113,7 +1243,7 @@ svn_error_t *svn_ra_get_file_revs2(svn_ra_session_t *session,
 {
   svn_error_t *err;
 
-  assert(*path != '/');
+  SVN_ERR_ASSERT(*path != '/');
 
   if (include_merged_revisions)
     SVN_ERR(svn_ra__assert_mergeinfo_capable_server(session, NULL, pool));
@@ -1146,7 +1276,7 @@ svn_error_t *svn_ra_lock(svn_ra_session_t *session,
     {
       const void *path;
       apr_hash_this(hi, &path, NULL, NULL);
-      assert(*((const char *)path) != '/');
+      SVN_ERR_ASSERT(*((const char *)path) != '/');
     }
 
   if (comment && ! svn_xml_is_xml_safe(comment, strlen(comment)))
@@ -1171,7 +1301,7 @@ svn_error_t *svn_ra_unlock(svn_ra_session_t *session,
     {
       const void *path;
       apr_hash_this(hi, &path, NULL, NULL);
-      assert(*((const char *)path) != '/');
+      SVN_ERR_ASSERT(*((const char *)path) != '/');
     }
 
   return session->vtable->unlock(session, path_tokens, break_lock,
@@ -1183,7 +1313,7 @@ svn_error_t *svn_ra_get_lock(svn_ra_session_t *session,
                              const char *path,
                              apr_pool_t *pool)
 {
-  assert(*path != '/');
+  SVN_ERR_ASSERT(*path != '/');
   return session->vtable->get_lock(session, lock, path, pool);
 }
 
@@ -1192,7 +1322,7 @@ svn_error_t *svn_ra_get_locks(svn_ra_session_t *session,
                               const char *path,
                               apr_pool_t *pool)
 {
-  assert(*path != '/');
+  SVN_ERR_ASSERT(*path != '/');
   return session->vtable->get_locks(session, locks, path, pool);
 }
 
@@ -1219,9 +1349,9 @@ svn_ra_replay_range(svn_ra_session_t *session,
                     void *replay_baton,
                     apr_pool_t *pool)
 {
-  svn_error_t *err = 
-    session->vtable->replay_range(session, start_revision, end_revision, 
-                                  low_water_mark, text_deltas, 
+  svn_error_t *err =
+    session->vtable->replay_range(session, start_revision, end_revision,
+                                  low_water_mark, text_deltas,
                                   revstart_func, revfinish_func,
                                   replay_baton, pool);
 
@@ -1243,14 +1373,14 @@ svn_ra_replay_range(svn_ra_session_t *session,
 
           SVN_ERR(svn_ra_rev_proplist(session, rev, &rev_props, subpool));
 
-          SVN_ERR(revstart_func(rev, replay_baton, 
-                                &editor, &edit_baton, 
+          SVN_ERR(revstart_func(rev, replay_baton,
+                                &editor, &edit_baton,
                                 rev_props,
                                 subpool));
           SVN_ERR(svn_ra_replay(session, rev, low_water_mark,
-                                text_deltas, editor, edit_baton, 
+                                text_deltas, editor, edit_baton,
                                 subpool));
-          SVN_ERR(revfinish_func(rev, replay_baton, 
+          SVN_ERR(revfinish_func(rev, replay_baton,
                                  editor, edit_baton,
                                  rev_props,
                                  subpool));

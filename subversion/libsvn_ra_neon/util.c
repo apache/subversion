@@ -510,8 +510,10 @@ svn_ra_neon__copy_href(svn_stringbuf_t *dst, const char *src,
   */
 
   apr_uri_t uri;
-  apr_status_t apr_status
-    = apr_uri_parse(pool, src, &uri);
+  apr_status_t apr_status;
+  /* SRC can have trailing '/' */
+  src = svn_path_canonicalize(src, pool);
+  apr_status = apr_uri_parse(pool, src, &uri);
 
   if (apr_status != APR_SUCCESS)
     return svn_error_wrap_apr(apr_status,
@@ -540,7 +542,7 @@ generate_error(svn_ra_neon__request_t *req, apr_pool_t *pool)
       switch (req->code)
         {
         case 404:
-          return svn_error_create(SVN_ERR_RA_DAV_PATH_NOT_FOUND, NULL,
+          return svn_error_create(SVN_ERR_FS_NOT_FOUND, NULL,
                                   apr_psprintf(pool, _("'%s' path not found"),
                                                req->url));
 
@@ -964,7 +966,7 @@ parse_spool_file(svn_ra_neon__session_t *ras,
 
   SVN_ERR(svn_io_file_open(&spool_file, spool_file_name,
                            (APR_READ | APR_BUFFERED), APR_OS_DEFAULT, pool));
-  spool_stream = svn_stream_from_aprfile(spool_file, pool);
+  spool_stream = svn_stream_from_aprfile2(spool_file, TRUE, pool);
   while (1)
     {
       if (ras->callbacks &&
@@ -1418,6 +1420,22 @@ svn_ra_neon__request_dispatch(int *code_p,
                                 (const char *) key, (const char *) val);
         }
     }
+
+  /* Certain headers must be transmitted unconditionally with every
+     request; see issue #3255 ("mod_dav_svn does not pass client
+     capabilities to start-commit hooks") for why.  It's okay if one
+     of these headers was already added via extra_headers above --
+     they are all idempotent headers.
+
+     Note that at most one could have been sent via extra_headers,
+     because extra_headers is a hash and the key would be the same for
+     all of them: "DAV".  In a just and righteous world, extra_headers
+     would be an array, not a hash, so that callers could send the
+     same header with different values too.  But, apparently, that
+     hasn't been necessary yet. */
+  ne_add_request_header(req->ne_req, "DAV", SVN_DAV_NS_DAV_SVN_DEPTH);
+  ne_add_request_header(req->ne_req, "DAV", SVN_DAV_NS_DAV_SVN_MERGEINFO);
+  ne_add_request_header(req->ne_req, "DAV", SVN_DAV_NS_DAV_SVN_LOG_REVPROPS);
 
   if (body)
     ne_set_request_body_buffer(req->ne_req, body, strlen(body));

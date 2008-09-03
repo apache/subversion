@@ -87,7 +87,7 @@
 # working copy: copia di lavoro (CL)
 msgid ""
 msgstr ""
-"Project-Id-Version: subversion 1.2.0\n"
+"Project-Id-Version: subversion 1.6\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2007-10-12 06:53+0200\n"
 "PO-Revision-Date: 2007-10-12 10:09+0200\n"

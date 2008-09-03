@@ -22,8 +22,6 @@
 
 /*** Includes. ***/
 
-#include <assert.h>
-
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_error.h"
@@ -119,7 +117,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   /* An unknown depth can't be sticky. */
   if (depth == svn_depth_unknown)
     depth_is_sticky = FALSE;
-  
+
   /* ### Ah, the irony.  We'd like to base our levels_to_lock on the
      ### depth we're going to use for the update.  But that may depend
      ### on the depth in the working copy, which we can't discover
@@ -133,7 +131,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   levels_to_lock = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
 
   /* Sanity check.  Without this, the update is meaningless. */
-  assert(path);
+  SVN_ERR_ASSERT(path);
 
   if (svn_path_is_url(path))
     return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
@@ -264,7 +262,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
 
   if (sleep_here)
     svn_sleep_for_timestamps();
-  
+
   SVN_ERR(svn_wc_adm_close(adm_access));
 
   /* Let everyone know we're finished here. */
@@ -316,7 +314,7 @@ svn_client_update3(apr_array_header_t **result_revs,
       if (ctx->cancel_func && (err = ctx->cancel_func(ctx->cancel_baton)))
         break;
 
-      err = svn_client__update_internal(&result_rev, path, revision, depth, 
+      err = svn_client__update_internal(&result_rev, path, revision, depth,
                                         depth_is_sticky, ignore_externals,
                                         allow_unver_obstructions,
                                         &sleep, TRUE, ctx, subpool);
@@ -370,6 +368,6 @@ svn_client_update(svn_revnum_t *result_rev,
 {
   return svn_client__update_internal(result_rev, path, revision,
                                      SVN_DEPTH_INFINITY_OR_FILES(recurse),
-                                     FALSE, FALSE, FALSE, NULL, 
+                                     FALSE, FALSE, FALSE, NULL,
                                      TRUE, ctx, pool);
 }

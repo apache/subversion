@@ -22,24 +22,18 @@
 #include <apr_pools.h>
 #include <apr_file_io.h>
 
-#ifdef AS400
-#include <apr_portable.h>
-#include <spawn.h>
-#include <fcntl.h>
-#endif
-
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_repos.h"
 #include "svn_utf.h"
 #include "repos.h"
 #include "svn_private_config.h"
+#include "private/svn_fs_private.h"
 
 
 
 /*** Hook drivers. ***/
 
-#ifndef AS400
 /* Helper function for run_hook_cmd().  Wait for a hook to finish
    executing and return either SVN_NO_ERROR if the hook script completed
    without error, or an error describing the reason for failure.
@@ -156,7 +150,6 @@ check_hook_result(const char *name, const char *cmd, apr_proc_t *cmd_proc,
   return svn_error_create(SVN_ERR_REPOS_HOOK_FAILURE, err,
                           failure_message->data);
 }
-#endif /* AS400 */
 
 /* NAME, CMD and ARGS are the name, path to and arguments for the hook
    program that is to be run.  The hook's exit status will be checked,
@@ -164,16 +157,20 @@ check_hook_result(const char *name, const char *cmd, apr_proc_t *cmd_proc,
    the returned error.
 
    If STDIN_HANDLE is non-null, pass it as the hook's stdin, else pass
-   no stdin to the hook. */
+   no stdin to the hook.
+
+   If RESULT is non-null, set *RESULT to the stdout of the hook or to
+   a zero-length string if the hook generates no output on stdout. */
 static svn_error_t *
-run_hook_cmd(const char *name,
+run_hook_cmd(svn_string_t **result,
+             const char *name,
              const char *cmd,
              const char **args,
              apr_file_t *stdin_handle,
              apr_pool_t *pool)
-#ifndef AS400
 {
   apr_file_t *read_errhandle, *write_errhandle, *null_handle;
+  apr_file_t *read_outhandle, *write_outhandle;  
   apr_status_t apr_err;
   svn_error_t *err;
   apr_proc_t cmd_proc;
@@ -203,16 +200,39 @@ run_hook_cmd(const char *name,
       (apr_err, _("Can't make pipe write handle non-inherited for hook '%s'"),
        cmd);
 
+  if (result)
+    {
+      /* Create a pipe to access stdout of the child. */
+      apr_err = apr_file_pipe_create(&read_outhandle, &write_outhandle, pool);
+      if (apr_err)
+        return svn_error_wrap_apr
+          (apr_err, _("Can't create pipe for hook '%s'"), cmd);
 
-  /* Redirect stdout to the null device */
-  apr_err = apr_file_open(&null_handle, SVN_NULL_DEVICE_NAME, APR_WRITE,
-                          APR_OS_DEFAULT, pool);
-  if (apr_err)
-    return svn_error_wrap_apr
-      (apr_err, _("Can't create null stdout for hook '%s'"), cmd);
+      apr_err = apr_file_inherit_unset(read_outhandle);
+      if (apr_err)
+        return svn_error_wrap_apr
+          (apr_err,
+           _("Can't make pipe read handle non-inherited for hook '%s'"), cmd);
+
+      apr_err = apr_file_inherit_unset(write_outhandle);
+      if (apr_err)
+        return svn_error_wrap_apr
+          (apr_err,
+           _("Can't make pipe write handle non-inherited for hook '%s'"), cmd);
+    }
+  else
+    {
+      /* Redirect stdout to the null device */
+        apr_err = apr_file_open(&null_handle, SVN_NULL_DEVICE_NAME, APR_WRITE,
+                                APR_OS_DEFAULT, pool);
+        if (apr_err)
+          return svn_error_wrap_apr
+            (apr_err, _("Can't create null stdout for hook '%s'"), cmd);
+    }
 
   err = svn_io_start_cmd(&cmd_proc, ".", cmd, args, FALSE,
-                         stdin_handle, null_handle, write_errhandle, pool);
+                         stdin_handle, result ? write_outhandle : null_handle,
+                         write_errhandle, pool);
 
   /* This seems to be done automatically if we pass the third parameter of
      apr_procattr_child_in/out_set(), but svn_io_run_cmd()'s interface does
@@ -222,6 +242,14 @@ run_hook_cmd(const char *name,
   if (!err && apr_err)
     return svn_error_wrap_apr
       (apr_err, _("Error closing write end of stderr pipe"));
+
+  if (result)
+    {
+      apr_err = apr_file_close(write_outhandle);
+      if (!err && apr_err)
+        return svn_error_wrap_apr
+          (apr_err, _("Error closing write end of stderr pipe"));
+    }
 
   if (err)
     {
@@ -241,228 +269,26 @@ run_hook_cmd(const char *name,
     return svn_error_wrap_apr
       (apr_err, _("Error closing read end of stderr pipe"));
 
-  apr_err = apr_file_close(null_handle);
-  if (!err && apr_err)
-    return svn_error_wrap_apr(apr_err, _("Error closing null file"));
+  if (result)
+    {
+      svn_stringbuf_t *native_stdout;
+      SVN_ERR(svn_stringbuf_from_aprfile(&native_stdout, read_outhandle, pool));
+      apr_err = apr_file_close(read_outhandle);
+      if (!err && apr_err)
+        return svn_error_wrap_apr
+          (apr_err, _("Error closing read end of stderr pipe"));
+
+      *result = svn_string_create_from_buf(native_stdout, pool);
+    }
+  else
+    {
+      apr_err = apr_file_close(null_handle);
+      if (!err && apr_err)
+        return svn_error_wrap_apr(apr_err, _("Error closing null file"));
+    }
 
   return err;
 }
-#else /* Run hooks with spawn() on OS400. */
-#define AS400_BUFFER_SIZE 256
-{
-  const char **native_args;
-  int fd_map[3], stderr_pipe[2], exitcode;
-  svn_stringbuf_t *script_output;
-  pid_t child_pid, wait_rv;
-  apr_size_t args_arr_size = 0, i;
-  struct inheritance xmp_inherit = {0};
-#pragma convert(0)
-  /* Despite the UTF support in V5R4 a few functions still require
-   * EBCDIC args. */
-  char *xmp_envp[2] = {"QIBM_USE_DESCRIPTOR_STDIO=Y", NULL};
-  const char *dev_null_ebcdic = SVN_NULL_DEVICE_NAME;
-#pragma convert(1208)
-
-  /* Find number of elements in args array. */
-  while (args[args_arr_size] != NULL)
-    args_arr_size++;
-
-  /* Allocate memory for the native_args string array plus one for
-   * the ending null element. */
-  native_args = apr_palloc(pool, sizeof(char *) * args_arr_size + 1);
-
-  /* Convert UTF-8 args to EBCDIC for use by spawn(). */
-  for (i = 0; args[i] != NULL; i++)
-    {
-      SVN_ERR(svn_utf_cstring_from_utf8_ex2((const char**)(&(native_args[i])),
-                                            args[i], (const char *)0,
-                                            pool));
-    }
-
-  /* Make the last element in the array a NULL pointer as required
-   * by spawn. */
-  native_args[args_arr_size] = NULL;
-
-  /* Map stdin. */
-  if (stdin_handle)
-    {
-      /* Get OS400 file descriptor of APR stdin file and map it. */
-      if (apr_os_file_get(&fd_map[0], stdin_handle))
-        {
-          return svn_error_createf(SVN_ERR_REPOS_HOOK_FAILURE, NULL,
-                                   "Error converting APR file to OS400 "
-                                   "type for hook script '%s'", cmd);
-        }
-    }
-  else
-    {
-      fd_map[0] = open(dev_null_ebcdic, O_RDONLY);
-      if (fd_map[0] == -1)
-
-        return svn_error_createf(SVN_ERR_REPOS_HOOK_FAILURE, NULL,
-                                 "Error opening /dev/null for hook "
-                                 "script '%s'", cmd);
-    }
-
-
-  /* Map stdout. */
-  fd_map[1] = open(dev_null_ebcdic, O_WRONLY);
-  if (fd_map[1] == -1)
-    return svn_error_createf(SVN_ERR_REPOS_HOOK_FAILURE, NULL,
-                             "Error opening /dev/null for hook script '%s'",
-                             cmd);
-
-  /* Map stderr. */
-  /* Get pipe for hook's stderr. */
-  if (pipe(stderr_pipe) != 0)
-    {
-      return svn_error_createf(SVN_ERR_REPOS_HOOK_FAILURE, NULL,
-                               "Can't create stderr pipe for "
-                               "hook '%s'", cmd);
-    }
-  fd_map[2] = stderr_pipe[1];
-
-  /* Spawn the hook command. */
-  child_pid = spawn(native_args[0], 3, fd_map, &xmp_inherit, native_args,
-                    xmp_envp);
-  if (child_pid == -1)
-    {
-      return svn_error_createf(SVN_ERR_REPOS_HOOK_FAILURE, NULL,
-                               "Error spawning process for hook script '%s'",
-                               cmd);
-    }
-
-  /* Close the stdout file descriptor. */
-  if (close(fd_map[1]) == -1)
-    return svn_error_createf(SVN_ERR_REPOS_HOOK_FAILURE, NULL,
-                             "Error closing write end of stdout pipe to "
-                             "hook script '%s'", cmd);
-
-  /* Close the write end of the stderr pipe so any subsequent reads
-   * don't hang. */
-  if (close(fd_map[2]) == -1)
-    return svn_error_createf(SVN_ERR_REPOS_HOOK_FAILURE, NULL,
-                             "Error closing write end of stderr pipe to "
-                             "hook script '%s'", cmd);
-
-  script_output = svn_stringbuf_create("", pool);
-
-  while (1)
-    {
-      int rc;
-
-      svn_stringbuf_ensure(script_output,
-                           script_output->len + AS400_BUFFER_SIZE + 1);
-
-      rc = read(stderr_pipe[0],
-                &(script_output->data[script_output->len]),
-                AS400_BUFFER_SIZE);
-
-      if (rc == -1)
-        {
-          return svn_error_createf(SVN_ERR_REPOS_HOOK_FAILURE, NULL,
-                                   "Error reading stderr of hook "
-                                   "script '%s'", cmd);
-        }
-
-      script_output->len += rc;
-
-      /* If read() returned 0 then EOF was found and we are done reading
-       * stderr. */
-      if (rc == 0)
-        {
-          script_output->data[script_output->len] = '\0';
-          break;
-        }
-    }
-
-  /* Close the read end of the stderr pipe. */
-  if (close(stderr_pipe[0]) == -1)
-    return svn_error_createf(SVN_ERR_REPOS_HOOK_FAILURE, NULL,
-                             "Error closing read end of stderr "
-                             "pipe to hook script '%s'", cmd);
-
-  /* Wait for the child process to complete. */
-  wait_rv = waitpid(child_pid, &exitcode, 0);
-  if (wait_rv == -1)
-    {
-      return svn_error_createf(SVN_ERR_REPOS_HOOK_FAILURE, NULL,
-                               "Error waiting for process completion of "
-                               "hook script '%s'", cmd);
-    }
-
-
-  if (WIFEXITED(exitcode))
-    {
-      if (WEXITSTATUS(exitcode))
-        {
-          svn_error_t *err;
-          const char *utf8_stderr = NULL;
-          svn_stringbuf_t *failure_message = svn_stringbuf_createf(
-            pool, "'%s' hook failed (exited with a non-zero exitcode "
-            "of %d).  ", name, exitcode);
-
-          if (!svn_stringbuf_isempty(script_output))
-            {
-              /* OS400 scripts produce EBCDIC stderr, so convert it. */
-              err = svn_utf_cstring_to_utf8_ex2(&utf8_stderr,
-                                                script_output->data,
-                                                (const char*)0, pool);
-              if (err)
-                {
-                  utf8_stderr = "[Error output could not be translated from "
-                                "the native locale to UTF-8.]";
-                  svn_error_clear(err);
-
-                }
-            }
-
-          if (utf8_stderr)
-            {
-              svn_stringbuf_appendcstr(failure_message,
-                                       "The following error output was "
-                                       "produced by the hook:\n");
-              svn_stringbuf_appendcstr(failure_message, utf8_stderr);
-            }
-          else
-            {
-              svn_stringbuf_appendcstr(failure_message,
-                                       "No error output was produced by "
-                                       "the hook.");
-            }
-          return svn_error_create(SVN_ERR_REPOS_HOOK_FAILURE, NULL,
-                                  failure_message->data);
-        }
-      else
-        /* Success! */
-        return SVN_NO_ERROR;
-    }
-  else if (WIFSIGNALED(exitcode))
-    {
-      return svn_error_createf(SVN_ERR_REPOS_HOOK_FAILURE, NULL,
-                               "Process '%s' failed because of an "
-                               "uncaught terminating signal", cmd);
-    }
-  else if (WIFEXCEPTION(exitcode))
-    {
-      return svn_error_createf(SVN_ERR_REPOS_HOOK_FAILURE, NULL,
-                               "Process '%s' failed unexpectedly with "
-                               "OS400 exception %d", cmd,
-                               WEXCEPTNUMBER(exitcode));
-    }
-  else if (WIFSTOPPED(exitcode))
-    {
-      return svn_error_createf(SVN_ERR_REPOS_HOOK_FAILURE, NULL,
-                               "Process '%s' stopped unexpectedly by "
-                               "signal %d", cmd, WSTOPSIG(exitcode));
-    }
-  else
-    {
-      return svn_error_createf(SVN_ERR_REPOS_HOOK_FAILURE, NULL,
-                               "Process '%s' failed unexpectedly", cmd);
-    }
-}
-#endif /* AS400 */
 
 
 /* Create a temporary file F that will automatically be deleted when it is
@@ -516,7 +342,7 @@ check_hook_cmd(const char *hook, svn_boolean_t *broken_link, apr_pool_t *pool)
   for (extn = check_extns; *extn; ++extn)
     {
       const char *const hook_path =
-        (**extn ? apr_pstrcat(pool, hook, *extn, 0) : hook);
+        (**extn ? apr_pstrcat(pool, hook, *extn, NULL) : hook);
 
       svn_node_kind_t kind;
       if (!(err = svn_io_check_resolved_path(hook_path, &kind, pool))
@@ -564,11 +390,20 @@ svn_repos__hooks_start_commit(svn_repos_t *repos,
   else if (hook)
     {
       const char *args[5];
-      char *capabilities_string = svn_cstring_join(capabilities, ":", pool);
+      char *capabilities_string;
 
-      /* Get rid of that annoying final colon. */
-      if (capabilities_string[0])
-        capabilities_string[strlen(capabilities_string) - 1] = '\0';
+      if (capabilities)
+        {
+          capabilities_string = svn_cstring_join(capabilities, ":", pool);
+
+          /* Get rid of that annoying final colon. */
+          if (capabilities_string[0])
+            capabilities_string[strlen(capabilities_string) - 1] = '\0';
+        }
+      else
+        {
+          capabilities_string = apr_pstrdup(pool, "");
+        }
 
       args[0] = hook;
       args[1] = svn_path_local_style(svn_repos_path(repos, pool), pool);
@@ -576,12 +411,50 @@ svn_repos__hooks_start_commit(svn_repos_t *repos,
       args[3] = capabilities_string;
       args[4] = NULL;
 
-      SVN_ERR(run_hook_cmd(SVN_REPOS__HOOK_START_COMMIT, hook, args, NULL,
+      SVN_ERR(run_hook_cmd(NULL, SVN_REPOS__HOOK_START_COMMIT, hook, args, NULL,
                            pool));
     }
 
   return SVN_NO_ERROR;
 }
+
+/* Set *HANDLE to an open filehandle for a temporary file (i.e.,
+   automatically deleted when closed), into which the LOCK_TOKENS have
+   been written out in the format described in the pre-commit hook
+   template.  
+
+   LOCK_TOKENS is as returned by svn_fs__access_get_lock_tokens().
+
+   Allocate *HANDLE in POOL, and use POOL for temporary allocations. */
+static svn_error_t *
+lock_token_content(apr_file_t **handle, apr_hash_t *lock_tokens,
+                   apr_pool_t *pool)
+{
+  svn_stringbuf_t *lock_str = svn_stringbuf_create("LOCK-TOKENS:\n", pool);
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(pool, lock_tokens); hi;
+       hi = apr_hash_next(hi))
+    {
+      void *val;
+      const char *path, *token;
+        
+      apr_hash_this(hi, (void *)&token, NULL, &val);
+      path = val;
+      svn_stringbuf_appendstr(lock_str,
+        svn_stringbuf_createf(pool, "%s|%s\n",
+                              svn_path_uri_autoescape(path, pool),
+                              token));
+    }
+
+  svn_stringbuf_appendcstr(lock_str, "\n");
+  SVN_ERR(create_temp_file(handle,
+                           svn_string_create_from_buf(lock_str, pool),
+                           pool));
+
+  return SVN_NO_ERROR;
+}
+
 
 
 svn_error_t  *
@@ -599,14 +472,29 @@ svn_repos__hooks_pre_commit(svn_repos_t *repos,
   else if (hook)
     {
       const char *args[4];
+      svn_fs_access_t *access_ctx;
+      apr_file_t *stdin_handle = NULL;
 
       args[0] = hook;
       args[1] = svn_path_local_style(svn_repos_path(repos, pool), pool);
       args[2] = txn_name;
       args[3] = NULL;
 
-      SVN_ERR(run_hook_cmd(SVN_REPOS__HOOK_PRE_COMMIT, hook, args, NULL,
-                           pool));
+      SVN_ERR(svn_fs_get_access(&access_ctx, repos->fs));
+      if (access_ctx)
+        {
+          apr_hash_t *lock_tokens = svn_fs__access_get_lock_tokens(access_ctx);
+          if (apr_hash_count(lock_tokens))  {
+            SVN_ERR(lock_token_content(&stdin_handle, lock_tokens, pool));
+          }
+        }
+
+      if (!stdin_handle)
+        SVN_ERR(svn_io_file_open(&stdin_handle, SVN_NULL_DEVICE_NAME,
+                                 APR_READ, APR_OS_DEFAULT, pool));
+
+      SVN_ERR(run_hook_cmd(NULL, SVN_REPOS__HOOK_PRE_COMMIT, hook, args,
+                           stdin_handle, pool));
     }
 
   return SVN_NO_ERROR;
@@ -634,7 +522,7 @@ svn_repos__hooks_post_commit(svn_repos_t *repos,
       args[2] = apr_psprintf(pool, "%ld", rev);
       args[3] = NULL;
 
-      SVN_ERR(run_hook_cmd(SVN_REPOS__HOOK_POST_COMMIT, hook, args, NULL,
+      SVN_ERR(run_hook_cmd(NULL, SVN_REPOS__HOOK_POST_COMMIT, hook, args, NULL,
                            pool));
     }
 
@@ -682,7 +570,7 @@ svn_repos__hooks_pre_revprop_change(svn_repos_t *repos,
       args[5] = action_string;
       args[6] = NULL;
 
-      SVN_ERR(run_hook_cmd(SVN_REPOS__HOOK_PRE_REVPROP_CHANGE, hook, args,
+      SVN_ERR(run_hook_cmd(NULL, SVN_REPOS__HOOK_PRE_REVPROP_CHANGE, hook, args,
                            stdin_handle, pool));
 
       SVN_ERR(svn_io_file_close(stdin_handle, pool));
@@ -744,8 +632,8 @@ svn_repos__hooks_post_revprop_change(svn_repos_t *repos,
       args[5] = action_string;
       args[6] = NULL;
 
-      SVN_ERR(run_hook_cmd(SVN_REPOS__HOOK_POST_REVPROP_CHANGE, hook, args,
-                           stdin_handle, pool));
+      SVN_ERR(run_hook_cmd(NULL, SVN_REPOS__HOOK_POST_REVPROP_CHANGE, hook,
+                           args, stdin_handle, pool));
 
       SVN_ERR(svn_io_file_close(stdin_handle, pool));
     }
@@ -757,8 +645,11 @@ svn_repos__hooks_post_revprop_change(svn_repos_t *repos,
 
 svn_error_t  *
 svn_repos__hooks_pre_lock(svn_repos_t *repos,
+                          const char **token,
                           const char *path,
                           const char *username,
+                          const char *comment,
+                          svn_boolean_t steal_lock,
                           apr_pool_t *pool)
 {
   const char *hook = svn_repos_pre_lock_hook(repos, pool);
@@ -770,16 +661,24 @@ svn_repos__hooks_pre_lock(svn_repos_t *repos,
     }
   else if (hook)
     {
-      const char *args[5];
+      const char *args[7];
+      svn_string_t *buf;
 
       args[0] = hook;
       args[1] = svn_path_local_style(svn_repos_path(repos, pool), pool);
       args[2] = path;
       args[3] = username;
-      args[4] = NULL;
+      args[4] = comment ? comment : "";
+      args[5] = steal_lock ? "1" : "0";
+      args[6] = NULL;
 
-      SVN_ERR(run_hook_cmd(SVN_REPOS__HOOK_PRE_LOCK, hook, args, NULL, pool));
+      SVN_ERR(run_hook_cmd(&buf, SVN_REPOS__HOOK_PRE_LOCK, hook, args, NULL,
+                           pool));
+      if (token)
+        *token = buf->data;
     }
+  else if (token)
+    *token = "";
 
   return SVN_NO_ERROR;
 }
@@ -814,8 +713,8 @@ svn_repos__hooks_post_lock(svn_repos_t *repos,
       args[3] = NULL;
       args[4] = NULL;
 
-      SVN_ERR(run_hook_cmd(SVN_REPOS__HOOK_POST_LOCK, hook, args, stdin_handle,
-                           pool));
+      SVN_ERR(run_hook_cmd(NULL, SVN_REPOS__HOOK_POST_LOCK, hook, args,
+                           stdin_handle, pool));
 
       SVN_ERR(svn_io_file_close(stdin_handle, pool));
     }
@@ -828,6 +727,8 @@ svn_error_t  *
 svn_repos__hooks_pre_unlock(svn_repos_t *repos,
                             const char *path,
                             const char *username,
+                            const char *token,
+                            svn_boolean_t break_lock,
                             apr_pool_t *pool)
 {
   const char *hook = svn_repos_pre_unlock_hook(repos, pool);
@@ -839,15 +740,17 @@ svn_repos__hooks_pre_unlock(svn_repos_t *repos,
     }
   else if (hook)
     {
-      const char *args[5];
+      const char *args[7];
 
       args[0] = hook;
       args[1] = svn_path_local_style(svn_repos_path(repos, pool), pool);
       args[2] = path;
       args[3] = username ? username : "";
-      args[4] = NULL;
+      args[4] = token ? token : "";
+      args[5] = break_lock ? "1" : "0";
+      args[6] = NULL;
 
-      SVN_ERR(run_hook_cmd(SVN_REPOS__HOOK_PRE_UNLOCK, hook, args, NULL,
+      SVN_ERR(run_hook_cmd(NULL, SVN_REPOS__HOOK_PRE_UNLOCK, hook, args, NULL,
                            pool));
     }
 
@@ -884,7 +787,7 @@ svn_repos__hooks_post_unlock(svn_repos_t *repos,
       args[3] = NULL;
       args[4] = NULL;
 
-      SVN_ERR(run_hook_cmd(SVN_REPOS__HOOK_POST_UNLOCK, hook, args,
+      SVN_ERR(run_hook_cmd(NULL, SVN_REPOS__HOOK_POST_UNLOCK, hook, args,
                            stdin_handle, pool));
 
       SVN_ERR(svn_io_file_close(stdin_handle, pool));

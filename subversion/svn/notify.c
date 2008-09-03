@@ -55,13 +55,23 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 {
   struct notify_baton *nb = baton;
   char statchar_buf[5] = "    ";
-  const char *path_local;
+  const char *path_local = n->path;
   svn_error_t *err;
 
-  if (svn_path_is_url(n->path))
-    path_local = n->path;
-  else
-    path_local = svn_path_local_style(n->path, pool);
+  if (n->path_prefix)
+    {
+      path_local = svn_path_is_child(n->path_prefix, path_local, pool);
+
+      if (!path_local)
+        {
+          if (strcmp(n->path, n->path_prefix) == 0)
+            path_local = ".";
+          else
+            path_local = n->path;
+        }
+    }
+
+  path_local = svn_path_local_style(path_local, pool);
 
   switch (n->action)
     {
@@ -453,7 +463,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
                                  path_local);
       else if (n->merge_range->start == n->merge_range->end - 1
           || n->merge_range->start == n->merge_range->end)
-        err = svn_cmdline_printf(pool, 
+        err = svn_cmdline_printf(pool,
                                  _("--- Merging (from foreign repository) "
                                    "r%ld into '%s':\n"),
                                  n->merge_range->end, path_local);

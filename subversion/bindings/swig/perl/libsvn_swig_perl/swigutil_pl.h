@@ -74,6 +74,8 @@ svn_error_t *svn_swig_pl_callback_thunk(perl_func_invoker_t caller_func,
 SV *svn_swig_pl_prophash_to_hash(apr_hash_t *hash);
 SV *svn_swig_pl_convert_hash(apr_hash_t *hash, swig_type_info *tinfo);
 
+SV *svn_swig_pl_convert_hash_of_revnum_t(apr_hash_t *hash);
+
 const apr_array_header_t *svn_swig_pl_strings_to_array(SV *source,
                                                        apr_pool_t *pool);
 
@@ -84,6 +86,8 @@ apr_hash_t *svn_swig_pl_objs_to_hash(SV *source, swig_type_info *tinfo,
 apr_hash_t *svn_swig_pl_objs_to_hash_by_name(SV *source,
                                              const char *typename,
                                              apr_pool_t *pool);
+apr_hash_t *svn_swig_pl_objs_to_hash_of_revnum_t(SV *source,
+                                                 apr_pool_t *pool);
 const apr_array_header_t *svn_swig_pl_objs_to_array(SV *source,
                                                     swig_type_info *tinfo,
                                                     apr_pool_t *pool);
@@ -243,6 +247,12 @@ void svn_swig_pl_hold_ref_in_pool(apr_pool_t *pool, SV *sv);
 /* md5 access class */
 SV *svn_swig_pl_from_md5(unsigned char *digest);
 
+svn_error_t *svn_swig_pl_ra_lock_callback(void *baton,
+                                          const char *path,
+                                          svn_boolean_t do_lock,
+                                          const svn_lock_t *lock,
+                                          svn_error_t *ra_err,
+                                          apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

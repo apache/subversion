@@ -38,6 +38,9 @@ def test_stderr(re_string, stderr):
   for line in stderr:
     if exp_err_re.search(line):
       return
+  if svntest.main.verbose_mode:
+    map(sys.stdout.write, stderr)
+    print "Expected stderr reg-ex: '" + re_string + "'"
   raise svntest.Failure("Checkout failed but not in the expected way")
 
 #----------------------------------------------------------------------
@@ -664,7 +667,7 @@ def co_with_obstructing_local_adds(sbox):
   F_path = os.path.join(wc_dir, 'A', 'B', 'F')
   omicron_path = os.path.join(wc_dir, 'A', 'B', 'F', 'omicron')
   chi_path = os.path.join(wc_dir, 'A', 'D', 'H', 'chi')
-  
+
   svntest.actions.run_and_verify_svn("Copy error:", None, [],
                                      'cp', chi_path,
                                      omicron_path)

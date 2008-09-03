@@ -25,6 +25,7 @@
 #include "svn_base64.h"
 #include "svn_props.h"
 #include "svn_dav.h"
+#include "private/svn_log.h"
 
 #include "../dav_svn.h"
 
@@ -91,7 +92,7 @@ send_prop(struct file_rev_baton *frb,
     }
   else
     {
-      val = svn_base64_encode_string(val, pool);
+      val = svn_base64_encode_string2(val, TRUE, pool);
       SVN_ERR(dav_svn__send_xml(frb->bb, frb->output,
                                 "<S:%s name=\"%s\" encoding=\"base64\">"
                                 "%s</S:%s>" DEBUG_CR,
@@ -324,12 +325,9 @@ dav_svn__file_revs_report(const dav_resource *resource,
 
   /* We've detected a 'high level' svn action to log. */
   dav_svn__operational_log(resource->info,
-                           apr_psprintf(resource->pool,
-                                        "get-file-revs %s r%ld:%ld%s",
-                             svn_path_uri_encode(path, resource->pool),
-                             start, end,
-                             (include_merged_revisions
-                              ? " include-merged-revisions" : "")));
+                           svn_log__get_file_revs(path, start, end,
+                                                  include_merged_revisions,
+                                                  resource->pool));
 
   /* Flush the contents of the brigade (returning an error only if we
      don't already have one). */

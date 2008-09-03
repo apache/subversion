@@ -70,19 +70,6 @@ svn_wc__entry_versioned_internal(const svn_wc_entry_t **entry,
                                    (show_hidden), NULL, 0, (pool))
 #endif
 
-/** If @a path's properties are modified with regard to the base revision set
- * @a *which_props to a hashtable
- * (<tt>const char *name</tt> -> <tt>const svn_string_t *value</tt>)
- * that contains only the modified properties or an empty hash if there are
- * no modifications.  @a adm_access must be an access baton for @a path.
- * @a *which_props is allocated in @a pool.
- *
- * @since New in 1.5.
- */
-svn_error_t *svn_wc__props_modified(const char *path,
-                                    apr_hash_t **which_props,
-                                    svn_wc_adm_access_t *adm_access,
-                                    apr_pool_t *pool);
 
 /** Given a @a wcpath with its accompanying @a entry, set @a *switched to
  * true if @a wcpath is switched, otherwise set @a *switched to false.
@@ -116,6 +103,27 @@ svn_wc__path_switched(const char *wcpath,
               && entry->changelist \
               && apr_hash_get(clhash, entry->changelist, \
                               APR_HASH_KEY_STRING))) ? TRUE : FALSE)
+
+
+/* Set *MODIFIED_P to true if VERSIONED_FILE is modified with respect
+ * to BASE_FILE, or false if it is not.  The comparison compensates
+ * for VERSIONED_FILE's eol and keyword properties, but leaves
+ * BASE_FILE alone (as though BASE_FILE were a text-base file, which
+ * it usually is, only sometimes we're calling this on incoming
+ * temporary text-bases).  ADM_ACCESS must be an access baton for
+ * VERSIONED_FILE.  If COMPARE_TEXTBASES is false, a clean copy of the
+ * versioned file is compared to VERSIONED_FILE.
+ *
+ * If an error is returned, the effect on *MODIFIED_P is undefined.
+ *
+ * Use POOL for temporary allocation.
+ */
+svn_error_t *svn_wc__versioned_file_modcheck(svn_boolean_t *modified_p,
+                                             const char *versioned_file,
+                                             svn_wc_adm_access_t *adm_access,
+                                             const char *base_file,
+                                             svn_boolean_t compare_textbases,
+                                             apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

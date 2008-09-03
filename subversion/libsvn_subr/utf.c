@@ -38,12 +38,7 @@
 
 #define SVN_UTF_NTOU_XLATE_HANDLE "svn-utf-ntou-xlate-handle"
 #define SVN_UTF_UTON_XLATE_HANDLE "svn-utf-uton-xlate-handle"
-
-#ifndef AS400
 #define SVN_APR_UTF8_CHARSET "UTF-8"
-#else
-#define SVN_APR_UTF8_CHARSET (const char*)1208
-#endif
 
 #if APR_HAS_THREADS
 static apr_thread_mutex_t *xlate_handle_mutex = NULL;
@@ -140,7 +135,6 @@ get_xlate_key(const char *topage,
               const char *frompage,
               apr_pool_t *pool)
 {
-#ifndef AS400
   /* In the cases of SVN_APR_LOCALE_CHARSET and SVN_APR_DEFAULT_CHARSET
    * topage/frompage is really an int, not a valid string.  So generate a
    * unique key accordingly. */
@@ -156,11 +150,6 @@ get_xlate_key(const char *topage,
 
   return apr_pstrcat(pool, "svn-utf-", frompage, "to", topage,
                      "-xlate-handle", NULL);
-#else
-  /* OS400 code pages are always ints. */
-  return apr_psprintf(pool, "svn-utf-%dto%d-xlate-handle", (int)frompage,
-                      (int)topage);
-#endif
 }
 
 /* Set *RET to a handle node for converting from FROMPAGE to TOPAGE,
@@ -238,26 +227,19 @@ get_xlate_handle_node(xlate_handle_node_t **ret,
 
   /* The error handling doesn't support the following cases, since we don't
      use them currently.  Catch this here. */
-#ifndef AS400
-  /* On OS400 V5R4 with UTF support, APR_DEFAULT_CHARSET and
-   * APR_LOCALE_CHARSET are both UTF-8 (CCSID 1208), so we won't get far
-   * with this assert active. */
-  assert(frompage != SVN_APR_DEFAULT_CHARSET
-         && topage != SVN_APR_DEFAULT_CHARSET
-         && (frompage != SVN_APR_LOCALE_CHARSET
-             || topage != SVN_APR_LOCALE_CHARSET));
-#endif
+  SVN_ERR_ASSERT(frompage != SVN_APR_DEFAULT_CHARSET
+                 && topage != SVN_APR_DEFAULT_CHARSET
+                 && (frompage != SVN_APR_LOCALE_CHARSET
+                     || topage != SVN_APR_LOCALE_CHARSET));
 
   /* Use the correct pool for creating the handle. */
   if (userdata_key && xlate_handle_hash)
     pool = apr_hash_pool_get(xlate_handle_hash);
 
   /* Try to create a handle. */
-#if defined( WIN32)
+#if defined(WIN32)
   apr_err = svn_subr__win32_xlate_open((win32_xlate_t **)&handle, topage,
                                        frompage, pool);
-#elif defined(AS400)
-  apr_err = apr_xlate_open(&handle, (int)topage, (int)frompage, pool);
 #else
   apr_err = apr_xlate_open(&handle, topage, frompage, pool);
 #endif
@@ -269,7 +251,6 @@ get_xlate_handle_node(xlate_handle_node_t **ret,
       const char *errstr;
       /* Can't use svn_error_wrap_apr here because it calls functions in
          this file, leading to infinite recursion. */
-#ifndef AS400
       if (frompage == SVN_APR_LOCALE_CHARSET)
         errstr = apr_psprintf(pool,
                               _("Can't create a character converter from "
@@ -282,13 +263,7 @@ get_xlate_handle_node(xlate_handle_node_t **ret,
         errstr = apr_psprintf(pool,
                               _("Can't create a character converter from "
                                 "'%s' to '%s'"), frompage, topage);
-#else
-      /* Handle the error condition normally prevented by the assert
-       * above. */
-      errstr = apr_psprintf(pool,
-                            _("Can't create a character converter from "
-                              "'%i' to '%i'"), frompage, topage);
-#endif
+
       err = svn_error_create(apr_err, NULL, errstr);
       goto cleanup;
     }
@@ -515,7 +490,6 @@ convert_to_stringbuf(xlate_handle_node_t *node,
 
       /* Can't use svn_error_wrap_apr here because it calls functions in
          this file, leading to infinite recursion. */
-#ifndef AS400
       if (node->frompage == SVN_APR_LOCALE_CHARSET)
         errstr = apr_psprintf
           (pool, _("Can't convert string from native encoding to '%s':"),
@@ -528,13 +502,7 @@ convert_to_stringbuf(xlate_handle_node_t *node,
         errstr = apr_psprintf
           (pool, _("Can't convert string from '%s' to '%s':"),
            node->frompage, node->topage);
-#else
-      /* On OS400 V5R4 every possible node->topage and node->frompage
-       * *really* is an int. */
-      errstr = apr_psprintf
-        (pool, _("Can't convert string from CCSID '%i' to CCSID '%i'"),
-         node->frompage, node->topage);
-#endif
+
       err = svn_error_create(apr_err, NULL, fuzzy_escape(src_data,
                                                          src_length, pool));
       return svn_error_create(apr_err, err, errstr);

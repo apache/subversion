@@ -21,7 +21,6 @@
 
 
 
-#include <assert.h>
 #include <apr_pools.h>
 #include <apr_file_io.h>
 #include "svn_io.h"
@@ -99,7 +98,7 @@ svn_wc__ensure_directory(const char *path,
         return err;
     }
   else  /* No problem, the dir already existed, so just leave. */
-    assert(kind == svn_node_dir);
+    SVN_ERR_ASSERT(kind == svn_node_dir);
 
   return SVN_NO_ERROR;
 }
@@ -128,6 +127,7 @@ svn_wc_create_notify(const char *path,
   ret->revision = SVN_INVALID_REVNUM;
   ret->changelist_name = NULL;
   ret->merge_range = NULL;
+  ret->path_prefix = NULL;
 
   return ret;
 }
@@ -164,6 +164,8 @@ svn_wc_dup_notify(const svn_wc_notify_t *notify,
     ret->changelist_name = apr_pstrdup(pool, ret->changelist_name);
   if (ret->merge_range)
     ret->merge_range = svn_merge_range_dup(ret->merge_range, pool);
+  if (ret->path_prefix)
+    ret->path_prefix = apr_pstrdup(pool, ret->path_prefix);
 
   return ret;
 }
@@ -288,4 +290,39 @@ svn_wc__path_switched(const char *wc_path,
   *switched = strcmp(parent_child_url, entry->url) != 0;
 
   return SVN_NO_ERROR;
+}
+
+svn_wc_conflict_description_t *
+svn_wc_conflict_description_create_text(const char *path,
+                                        svn_wc_adm_access_t *adm_access,
+                                        apr_pool_t *pool)
+{
+  svn_wc_conflict_description_t *conflict;
+
+  conflict = apr_palloc(pool, sizeof(*conflict));
+  conflict->path = path;
+  conflict->node_kind = svn_node_file;
+  conflict->kind = svn_wc_conflict_kind_text;
+  conflict->access = adm_access;
+  conflict->action = svn_wc_conflict_action_edit;
+  conflict->reason = svn_wc_conflict_reason_edited;
+  return conflict;
+}
+
+svn_wc_conflict_description_t *
+svn_wc_conflict_description_create_prop(const char *path,
+                                        svn_wc_adm_access_t *adm_access,
+                                        svn_node_kind_t node_kind,
+                                        const char *property_name,
+                                        apr_pool_t *pool)
+{
+  svn_wc_conflict_description_t *conflict;
+
+  conflict = apr_palloc(pool, sizeof(*conflict));
+  conflict->path = path;
+  conflict->node_kind = node_kind;
+  conflict->kind = svn_wc_conflict_kind_property;
+  conflict->access = adm_access;
+  conflict->property_name = property_name;
+  return conflict;
 }

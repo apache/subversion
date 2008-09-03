@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Include>
+				<ComponentRef Id="saslanon"/>
+				<ComponentRef Id="saslcramm"/>
+				<ComponentRef Id="sasldig"/>
+				<ComponentRef Id="sasllog"/>
+				<ComponentRef Id="saslntlm"/>
+				<ComponentRef Id="saslplain"/>
+				<ComponentRef Id="sasldb"/>
+</Include>

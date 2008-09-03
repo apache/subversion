@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Include>
+						<Component Guid="E7540A5B-FBB3-49F9-AD3F-5FF7F425EE07" Id="LibaprDll22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\bin\libapr-1.dll" Name="libapr-1.dll" Id="libapr1.dll22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="74DAFC7E-2D3C-4811-9D30-CC6053A6B0C1" Id="LibapriconvDll22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\bin\libapriconv-1.dll" Name="libapriconv-1.dll" Id="libapriconv1.dll22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="960D1647-8EE5-4476-B817-6C97EED526E5" Id="LibaprutilDll22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\bin\libaprutil-1.dll" Name="libaprutil-1.dll" Id="libaprutil1.dll22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="9DEE01C4-EECE-4E58-9CF2-DA924D0A5663" Id="Libsvnclient22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\bin\libsvn_client-1.dll" Name="libsvn_client-1.dll" Id="libsvn_client1.dll22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="620B7AF5-9E8A-4388-A6A3-2B07134691C8" Id="Libsvndelta22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\bin\libsvn_delta-1.dll" Name="libsvn_delta-1.dll" Id="libsvn_delta1.dll22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="8A505E8C-AEA2-4105-A960-D8C6DBB0FDA5" Id="Libsvndiff22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\bin\libsvn_diff-1.dll" Name="libsvn_diff-1.dll" Id="libsvn_diff1.dll22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="EF0E155D-2133-4C86-98B7-7BE5B1BED91A" Id="libsvnfs22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\bin\libsvn_fs-1.dll" Name="libsvn_fs-1.dll" Id="libsvn_fs1.dll22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="1086C7F2-9D79-4CF5-8FB9-465D9EA5120E" Id="libsvnra22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\bin\libsvn_ra-1.dll" Name="libsvn_ra-1.dll" Id="libsvn_ra1.dll22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="FD0480C5-ABCC-4DA1-92E1-9368BACA52E9" Id="libsvnrepos22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\bin\libsvn_repos-1.dll" Name="libsvn_repos-1.dll" Id="libsvn_repos1.dll22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="8A8AF430-71C0-496F-A90E-A8AB94A190B4" Id="libsvnsubr22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\bin\libsvn_subr-1.dll" Name="libsvn_subr-1.dll" Id="libsvn_subr1.dll22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="AF3BAFEA-206A-47A2-8EB5-600FCB570953" Id="libsvnwc22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\bin\libsvn_wc-1.dll" Name="libsvn_wc-1.dll" Id="libsvn_wc1.dll22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="2134A3F8-41C5-47FE-A058-974FBEF7A43F" Id="Mod_authz_svnSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\bin\mod_authz_svn.so" Name="mod_authz_svn.so" Id="mod_authz_svn.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="DFB04EB4-B769-4656-8919-3B8BAFFC40F8" Id="Mod_dav_svnSo22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\bin\mod_dav_svn.so" Name="mod_dav_svn.so" Id="mod_dav_svn.so22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="2CCAB5D5-9F75-4B0F-92E2-300737B3E195" Id="SvnExe22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\bin\svn.exe" Name="svn.exe" Id="svn.exe22x" />
+							<Environment 
+								Action="set" 
+								Id="SVNPath22x" 
+								Name="PATH" 
+								Part="last" 
+								System="yes"
+								Permanent="no"
+								Value="[INSTALLDIR]bin"
+							/>
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="7BF975D7-0CE3-49FE-B26D-52CB75B8F95B" Id="SvnadminExe22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\bin\svnadmin.exe" Name="svnadmin.exe" Id="svnadmin.exe22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="CCDA2353-DE04-4FE6-8C89-138E290E4221" Id="SvndumpfilterExe22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\bin\svndumpfilter.exe" Name="svndumpfilter.exe" Id="svndumpfilter.exe22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="79A83395-A033-406F-8D5E-40DE9C6F9B98" Id="SvnlookExe22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\bin\svnlook.exe" Name="svnlook.exe" Id="svnlook.exe22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="3DDB058D-BC43-4E1F-AC82-848C011AA1ED" Id="SvnserveExe22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\bin\svnserve.exe" Name="svnserve.exe" Id="svnserve.exe22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="10EF4610-4CA1-49A2-B6D9-06A75E11A1C8" Id="SvnsyncExe22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\bin\svnsync.exe" Name="svnsync.exe" Id="svnsync.exe22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="D182D168-22B7-42A0-9AA0-7A041E604635" Id="SvnversionExe22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\bin\svnversion.exe" Name="svnversion.exe" Id="svnversion.exe22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="9AFBFBAC-8BDE-4919-92E7-6C7DD51A3A0A" Id="Svnmucc22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\bin\svnmucc.exe" Name="svnmucc.exe" Id="svnmucc.exe22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="40C123F9-D4A2-4BA1-B2DE-C6CEAA409ED4" Id="Svnpop22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\bin\svn-populate-node-origins-index.exe" Name="svn-populate-node-origins-index.exe" Id="svnpopulatenodeoriginsindex.exe22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="33F182D3-3628-42E7-A972-DB07BCFFB5D8" Id="Svnpush22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\bin\svn-push.exe" Name="svn-push.exe" Id="svnpush.exe22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="C7BBC2A1-4928-4DE6-A54B-BA065D935495" Id="Svnauthval22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\bin\svnauthz-validate.exe" Name="svnauthz-validate.exe" Id="svnauthzvalidate.exe22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="34395389-E8B9-42E2-9232-D9CEBEF335A0" Id="READMETxtap22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\README.txt" Name="README.txt" Id="flREADMEtxtap22x">
+								<Shortcut Name="README" Id="readmesctap22x" Description="Subversion ReadMe" Directory="SubversionMenuFolder" Advertise="yes" Icon="readmeap22x.txt">
+							    	<Icon Id="readmeap22x.txt" SourceFile="c:\windows\notepad.exe" />
+							    </Shortcut>
+							</File>
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+							<RemoveFolder Id="RemoveReadmeap22x" On="uninstall" />
+						</Component>
+</Include>

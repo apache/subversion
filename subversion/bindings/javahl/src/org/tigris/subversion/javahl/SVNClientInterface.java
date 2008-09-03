@@ -19,6 +19,7 @@
 package org.tigris.subversion.javahl;
 
 import java.io.OutputStream;
+import java.util.Map;
 
 /**
  * This interface is the commom interface for all subversion
@@ -69,7 +70,8 @@ public interface SVNClientInterface
      *
      * @param path      File to gather status.
      * @param onServer  Request status information from the server.
-     * @return  the subversion status of the file.
+     * @return The Subversion status of the file, or <code>null</code>
+     * if no status is available.
      * @deprecated Use {@link #status(String, int, boolean, boolean,
      *                                boolean, boolean, StatusCallback)}
      *             instead.
@@ -429,11 +431,14 @@ public interface SVNClientInterface
      * @param message   if path is a url, this will be the commit message.
      * @param force     delete even when there are local modifications.
      * @param keepLocal only remove the paths from the repository.
+     * @param revpropTable A string-to-string mapping of revision properties
+     *                     to values which will be set if this operation
+     *                     results in a commit.
      * @throws ClientException
      * @since 1.5
      */
     void remove(String[] path, String message, boolean force,
-                boolean keepLocal)
+                boolean keepLocal, Map revpropTable)
             throws ClientException;
 
     /**
@@ -606,6 +611,9 @@ public interface SVNClientInterface
      * @param noUnlock        do remove any locks
      * @param keepChangelist  keep changelist associations after the commit.
      * @param changelists  if non-null, filter paths using changelists
+     * @param revpropTable A string-to-string mapping of revision properties
+     *                     to values which will be set if this operation
+     *                     results in a commit.
      * @return The new revision number created by the commit, or
      * {@link Revision#SVN_INVALID_REVNUM} if the revision number is
      * invalid.
@@ -614,7 +622,7 @@ public interface SVNClientInterface
      */
     long commit(String[] path, String message, int depth,
                 boolean noUnlock, boolean keepChangelist,
-                String[] changelists)
+                String[] changelists, Map revpropTable)
             throws ClientException;
 
     /**
@@ -627,11 +635,14 @@ public interface SVNClientInterface
      * @param copyAsChild Whether to copy <code>srcPaths</code> as
      * children of <code>destPath</code>.
      * @param makeParents Whether to create intermediate parents
+     * @param revpropTable A string-to-string mapping of revision properties
+     *                     to values which will be set if this operation
+     *                     results in a commit.
      * @throws ClientException If the copy operation fails.
      * @since 1.5
      */
     void copy(CopySource[] sources, String destPath, String message,
-              boolean copyAsChild, boolean makeParents)
+              boolean copyAsChild, boolean makeParents, Map revpropTable)
         throws ClientException;
 
     /**
@@ -661,11 +672,15 @@ public interface SVNClientInterface
      * @param moveAsChild Whether to move <code>srcPaths</code> as
      * children of <code>destPath</code>.
      * @param makeParents Whether to create intermediate parents.
+     * @param revpropTable A string-to-string mapping of revision properties
+     *                     to values which will be set if this operation
+     *                     results in a commit.
      * @throws ClientException If the move operation fails.
      * @since 1.5
      */
     void move(String[] srcPaths, String destPath, String message,
-              boolean force, boolean moveAsChild, boolean makeParents)
+              boolean force, boolean moveAsChild, boolean makeParents,
+              Map revpropTable)
         throws ClientException;
 
     /**
@@ -699,10 +714,14 @@ public interface SVNClientInterface
      * @param path      directories to be created
      * @param message   commit message to used if path contains urls
      * @param makeParents Whether to create intermediate parents
+     * @param revpropTable A string-to-string mapping of revision properties
+     *                     to values which will be set if this operation
+     *                     results in a commit.
      * @throws ClientException
      * @since 1.5
      */
-    void mkdir(String[] path, String message, boolean makeParents)
+    void mkdir(String[] path, String message, boolean makeParents,
+               Map revpropTable)
             throws ClientException;
 
     /**
@@ -857,12 +876,16 @@ public interface SVNClientInterface
      * @param noIgnore  whether to add files matched by ignore patterns
      * @param ignoreUnknownNodeTypes whether to ignore files which
      *                  the node type is not konwn, just as pipes
+     * @param revpropTable A string-to-string mapping of revision properties
+     *                     to values which will be set if this operation
+     *                     results in a commit.
      * @throws ClientException
      *
      * @since 1.5
      */
     void doImport(String path, String url, String message, int depth,
-                  boolean noIgnore, boolean ignoreUnknownNodeTypes)
+                  boolean noIgnore, boolean ignoreUnknownNodeTypes,
+                  Map revpropTable)
             throws ClientException;
 
     /**
@@ -1320,11 +1343,15 @@ public interface SVNClientInterface
      * @param depth   the depth to recurse into subdirectories
      * @param changelists changelists to filter by
      * @param force   do not check if the value is valid
+     * @param revpropTable A string-to-string mapping of revision properties
+     *                     to values which will be set if this operation
+     *                     results in a commit.
      * @throws ClientException
      * @since 1.5
      */
     void propertySet(String path, String name, String value, int depth,
-                     String[] changelists, boolean force)
+                     String[] changelists, boolean force,
+                     Map revpropTable)
             throws ClientException;
 
     /**

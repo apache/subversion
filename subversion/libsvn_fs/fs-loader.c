@@ -31,6 +31,7 @@
 #include "svn_xml.h"
 #include "svn_pools.h"
 #include "svn_string.h"
+#include "svn_md5.h"
 #include "svn_private_config.h"
 
 #include "fs-loader.h"
@@ -655,7 +656,7 @@ svn_fs_change_txn_prop(svn_fs_txn_t *txn, const char *name,
 }
 
 svn_error_t *
-svn_fs_change_txn_props(svn_fs_txn_t *txn, apr_array_header_t *props, 
+svn_fs_change_txn_props(svn_fs_txn_t *txn, apr_array_header_t *props,
                         apr_pool_t *pool)
 {
   return txn->vtable->change_props(txn, props, pool);
@@ -901,10 +902,45 @@ svn_fs_file_length(svn_filesize_t *length_p, svn_fs_root_t *root,
 }
 
 svn_error_t *
-svn_fs_file_md5_checksum(unsigned char digest[], svn_fs_root_t *root,
-                         const char *path, apr_pool_t *pool)
+svn_fs_file_checksum(svn_checksum_t **checksum,
+                     svn_checksum_kind_t kind,
+                     svn_fs_root_t *root,
+                     const char *path,
+                     svn_boolean_t force,
+                     apr_pool_t *pool)
 {
-  return root->vtable->file_md5_checksum(digest, root, path, pool);
+  SVN_ERR(root->vtable->file_checksum(checksum, root, path, pool));
+
+  if (force && (*checksum == NULL || (*checksum)->kind != kind))
+    {
+      svn_stream_t *contents, *checksum_contents;
+
+      SVN_ERR(svn_fs_file_contents(&contents, root, path, pool));
+      checksum_contents = svn_stream_checksummed2(contents, checksum, kind,
+                                                  NULL, svn_checksum_md5,
+                                                  TRUE, pool);
+
+      /* This will force a read of any remaining data (which is all of it in
+         this case) and dump the checksum into checksum->digest. */
+      SVN_ERR(svn_stream_close(checksum_contents));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_file_md5_checksum(unsigned char digest[],
+                         svn_fs_root_t *root,
+                         const char *path,
+                         apr_pool_t *pool)
+{
+  svn_checksum_t *md5sum;
+  
+  SVN_ERR(svn_fs_file_checksum(&md5sum, svn_checksum_md5, root, path, TRUE,
+                               pool));
+  memcpy(digest, md5sum->digest, APR_MD5_DIGESTSIZE);
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -927,9 +963,17 @@ svn_fs_apply_textdelta(svn_txdelta_window_handler_t *contents_p,
                        const char *path, const char *base_checksum,
                        const char *result_checksum, apr_pool_t *pool)
 {
+  svn_checksum_t *base, *result;
+
+  /* TODO: If we ever rev this API, we should make the supplied checksums
+     svn_checksum_t structs. */
+  SVN_ERR(svn_checksum_parse_hex(&base, svn_checksum_md5, base_checksum,
+                                 pool));
+  SVN_ERR(svn_checksum_parse_hex(&result, svn_checksum_md5, result_checksum,
+                                 pool));
+
   return root->vtable->apply_textdelta(contents_p, contents_baton_p, root,
-                                       path, base_checksum, result_checksum,
-                                       pool);
+                                       path, base, result, pool);
 }
 
 svn_error_t *
@@ -937,8 +981,14 @@ svn_fs_apply_text(svn_stream_t **contents_p, svn_fs_root_t *root,
                   const char *path, const char *result_checksum,
                   apr_pool_t *pool)
 {
-  return root->vtable->apply_text(contents_p, root, path, result_checksum,
-                                  pool);
+  svn_checksum_t *result;
+
+  /* TODO: If we ever rev this API, we should make the supplied checksum an
+     svn_checksum_t struct. */
+  SVN_ERR(svn_checksum_parse_hex(&result, svn_checksum_md5, result_checksum,
+                                 pool));
+
+  return root->vtable->apply_text(contents_p, root, path, result, pool);
 }
 
 svn_error_t *

@@ -59,7 +59,7 @@ test_elide_mergeinfo_catalog(const char **msg,
 
   iterpool = svn_pool_create(pool);
 
-  for (i = 0; 
+  for (i = 0;
        i < sizeof(elide_testcases) / sizeof(elide_testcases[0]);
        i++)
     {
@@ -73,16 +73,16 @@ test_elide_mergeinfo_catalog(const char **msg,
         {
           apr_hash_t *mergeinfo;
 
-          SVN_ERR(svn_mergeinfo_parse(&mergeinfo, item->unparsed_mergeinfo, 
+          SVN_ERR(svn_mergeinfo_parse(&mergeinfo, item->unparsed_mergeinfo,
                                       iterpool));
           apr_hash_set(catalog, item->path, APR_HASH_KEY_STRING, mergeinfo);
         }
-      
+
       SVN_ERR(svn_client__elide_mergeinfo_catalog(catalog, iterpool));
 
       for (item = elide_testcases[i]; item->path; item++)
         {
-          apr_hash_t *mergeinfo = apr_hash_get(catalog, item->path, 
+          apr_hash_t *mergeinfo = apr_hash_get(catalog, item->path,
                                                APR_HASH_KEY_STRING);
           if (item->remains && !mergeinfo)
             return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
@@ -96,7 +96,7 @@ test_elide_mergeinfo_catalog(const char **msg,
     }
 
   svn_pool_destroy(iterpool);
-  return SVN_NO_ERROR;  
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *

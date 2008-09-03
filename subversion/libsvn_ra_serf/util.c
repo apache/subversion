@@ -79,7 +79,7 @@ ssl_convert_serf_failures(int failures)
 }
 
 /* Convert a hash table containing the fields (as documented in X.509) of an
-   organisation to a string ORG, allocated in POOL. ORG is as returned by 
+   organisation to a string ORG, allocated in POOL. ORG is as returned by
    serf_ssl_cert_issuer() and serf_ssl_cert_subject(). */
 static char *
 convert_organisation_to_str(apr_hash_t *org, apr_pool_t *pool)
@@ -93,15 +93,15 @@ convert_organisation_to_str(apr_hash_t *org, apr_pool_t *pool)
                       (char*)apr_hash_get(org, "E", APR_HASH_KEY_STRING));
 }
 
-/* Callback that implements serf_ssl_need_server_cert_t. This function is 
-   called on receiving a ssl certificate of a server when opening a https 
-   connection. It allows Subversion to override the initial validation done 
+/* Callback that implements serf_ssl_need_server_cert_t. This function is
+   called on receiving a ssl certificate of a server when opening a https
+   connection. It allows Subversion to override the initial validation done
    by serf.
-   Serf provides us the @a baton as provided in the call to 
+   Serf provides us the @a baton as provided in the call to
    serf_ssl_server_cert_callback_set. The result of serf's initial validation
    of the certificate @a CERT is returned as a bitmask in FAILURES. */
 static apr_status_t
-ssl_server_cert(void *baton, int failures, 
+ssl_server_cert(void *baton, int failures,
                 const serf_ssl_certificate_t *cert)
 {
   svn_ra_serf__connection_t *conn = baton;
@@ -119,7 +119,7 @@ ssl_server_cert(void *baton, int failures,
 
   /* Construct the realmstring, e.g. https://svn.collab.net:443 */
   realmstring = apr_uri_unparse(subpool,
-                                &conn->session->repos_url, 
+                                &conn->session->repos_url,
                                 APR_URI_UNP_OMITPATHINFO);
 
   /* Extract the info from the certificate */
@@ -207,7 +207,7 @@ load_authorities(svn_ra_serf__connection_t *conn, const char *authorities,
       if (status != APR_SUCCESS)
         {
           return svn_error_createf
-            (SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
+            (SVN_ERR_BAD_CONFIG_VALUE, NULL,
              _("Invalid config: unable to load certificate file '%s'"),
              svn_path_local_style(file, pool));
         }
@@ -227,7 +227,7 @@ svn_ra_serf__conn_setup(apr_socket_t *sock,
   svn_ra_serf__connection_t *conn = baton;
 
 #if SERF_VERSION_AT_LEAST(0,1,3)
-  bucket = serf_context_bucket_socket_create(conn->session->context, 
+  bucket = serf_context_bucket_socket_create(conn->session->context,
                                              sock, conn->bkt_alloc);
 #else
   bucket = serf_bucket_socket_create(sock, conn->bkt_alloc);
@@ -263,9 +263,9 @@ svn_ra_serf__conn_setup(apr_socket_t *sock,
               svn_error_t *err;
               err = load_authorities(conn, conn->session->ssl_authorities,
                                      conn->session->pool);
-              if (err) 
+              if (err)
                 {
-                  /* TODO: we need a way to pass this error back to the 
+                  /* TODO: we need a way to pass this error back to the
                      caller */
                   svn_error_clear(err);
                 }
@@ -484,6 +484,13 @@ svn_ra_serf__setup_serf_req(serf_request_t *request,
       serf_bucket_headers_setn(hdrs_bkt, "Content-Type", content_type);
     }
 
+  /* These headers need to be sent with every request; see issue #3255
+     ("mod_dav_svn does not pass client capabilities to start-commit
+     hooks") for why. */
+  serf_bucket_headers_set(hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_DEPTH);
+  serf_bucket_headers_set(hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_MERGEINFO);
+  serf_bucket_headers_set(hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_LOG_REVPROPS);
+
   /* Setup server authorization headers */
   if (conn->session->auth_protocol)
     conn->session->auth_protocol->setup_request_func(conn, hdrs_bkt);
@@ -516,7 +523,7 @@ svn_ra_serf__setup_serf_req(serf_request_t *request,
   if (conn->session->using_proxy)
     {
       char *root = apr_uri_unparse(conn->session->pool,
-                                   &conn->session->repos_url, 
+                                   &conn->session->repos_url,
                                    APR_URI_UNP_OMITPATHINFO);
       serf_bucket_request_set_root(*req_bkt, root);
     }
@@ -550,12 +557,12 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
         {
           continue;
         }
+      if (sess->pending_error)
+        {
+          return sess->pending_error;
+        }
       if (status)
         {
-          if (sess->pending_error)
-            {
-              return sess->pending_error;
-            }
           return svn_error_wrap_apr(status, "Error running context");
         }
       /* Debugging purposes only! */
@@ -1074,8 +1081,6 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
           XML_ParserFree(ctx->xmlp);
           if (xml_status == XML_STATUS_ERROR && ctx->ignore_errors == FALSE)
             {
-              status = SVN_ERR_RA_DAV_REQUEST_FAILED;
-
               svn_error_clear(ctx->error);
             }
 
@@ -1184,7 +1189,7 @@ handle_response(serf_request_t *request,
           ctx->session->pending_error =
               svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
                                _("Premature EOF seen from server"));
-          return ctx->session->pending_error->apr_err;
+          return status;
         }
     }
 
@@ -1236,7 +1241,7 @@ handle_response(serf_request_t *request,
               svn_error_create(APR_EGENERAL, NULL,
                                _("Unspecified error message"));
         }
-      return ctx->session->pending_error->apr_err;
+      return APR_EGENERAL;
     }
   else
     {
@@ -1354,7 +1359,7 @@ svn_ra_serf__discover_root(const char **vcc_url,
                            apr_pool_t *pool)
 {
   apr_hash_t *props;
-  const char *path, *relative_path, *present_path = "";
+  const char *path, *relative_path, *present_path = "", *uuid;
 
   /* If we're only interested in our VCC, just return it. */
   if (session->vcc_url && !rel_path)
@@ -1366,33 +1371,49 @@ svn_ra_serf__discover_root(const char **vcc_url,
   props = apr_hash_make(pool);
   path = orig_path;
   *vcc_url = NULL;
+  uuid = NULL;
 
   do
     {
-      SVN_ERR(svn_ra_serf__retrieve_props(props, session, conn,
-                                          path, SVN_INVALID_REVNUM,
-                                          "0", base_props, pool));
-      *vcc_url =
-          svn_ra_serf__get_ver_prop(props, path,
-                                    SVN_INVALID_REVNUM,
-                                    "DAV:",
-                                    "version-controlled-configuration");
-
-      if (*vcc_url)
+      svn_error_t *err = svn_ra_serf__retrieve_props(props, session, conn,
+                                                     path, SVN_INVALID_REVNUM,
+                                                     "0", base_props, pool);
+      if (! err)
         {
+          *vcc_url =
+              svn_ra_serf__get_ver_prop(props, path,
+                                        SVN_INVALID_REVNUM,
+                                        "DAV:",
+                                        "version-controlled-configuration");
+
           relative_path = svn_ra_serf__get_ver_prop(props, path,
                                                     SVN_INVALID_REVNUM,
                                                     SVN_DAV_PROP_NS_DAV,
                                                     "baseline-relative-path");
+
+          uuid = svn_ra_serf__get_ver_prop(props, path,
+                                           SVN_INVALID_REVNUM,
+                                           SVN_DAV_PROP_NS_DAV,
+                                           "repository-uuid");
           break;
         }
+      else
+        {
+          if (err->apr_err != SVN_ERR_FS_NOT_FOUND)
+            {
+              return err;  /* found a _real_ error */
+            }
+          else
+            {
+              /* This happens when the file is missing in HEAD. */
+              svn_error_clear(err);
 
-      /* This happens when the file is missing in HEAD. */
-
-      /* Okay, strip off. */
-      present_path = svn_path_join(svn_path_basename(path, pool),
-                                   present_path, pool);
-      path = svn_path_dirname(path, pool);
+              /* Okay, strip off. */
+              present_path = svn_path_join(svn_path_basename(path, pool),
+                                           present_path, pool);
+              path = svn_path_dirname(path, pool);
+            }
+        }
     }
   while (!svn_path_is_empty(path));
 
@@ -1423,23 +1444,53 @@ svn_ra_serf__discover_root(const char **vcc_url,
       /* Now recreate the root_url. */
       session->repos_root = session->repos_url;
       session->repos_root.path = apr_pstrdup(session->pool, url_buf->data);
-      session->repos_root_str = 
+      session->repos_root_str =
         svn_path_canonicalize(apr_uri_unparse(session->pool,
                                               &session->repos_root, 0),
                               session->pool);
+    }
+
+  /* Store the repository UUID in the cache. */
+  if (!session->uuid)
+    {
+      session->uuid = apr_pstrdup(session->pool, uuid);
     }
 
   if (rel_path)
     {
       if (present_path[0] != '\0')
         {
-          *rel_path = svn_path_url_add_component(relative_path,
-                                                 present_path, pool);
+          /* The relative path is supposed to be URI decoded, so decode
+             present_path before joining both together. */
+          *rel_path = svn_path_join(relative_path,
+                                    svn_path_uri_decode(present_path, pool),
+                                    pool);
         }
       else
         {
           *rel_path = relative_path;
         }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_serf__error_on_status(int status_code, const char *path)
+{
+  switch(status_code)
+    {
+      case 301:
+      case 302:
+        return svn_error_createf(SVN_ERR_RA_DAV_RELOCATED, NULL,
+                        (status_code == 301)
+                        ? _("Repository moved permanently to '%s';"
+                            " please relocate")
+                        : _("Repository moved temporarily to '%s';"
+                            " please relocate"), path);
+      case 404:
+        return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
+                                 _("'%s' path not found"), path);
     }
 
   return SVN_NO_ERROR;

@@ -1,0 +1,304 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<style type="text/css"> /* <![CDATA[ */
+  @import "branding/css/tigris.css";
+  @import "branding/css/inst.css";
+  /* ]]> */</style>
+<link rel="stylesheet" type="text/css" media="print"
+  href="branding/css/print.css"/>
+<script type="text/javascript" src="branding/scripts/tigris.js"></script>
+<title>Subversion Packages</title>
+</head>
+
+<body>
+<div class="app">
+
+<h1 style="text-align: center;">Getting Subversion</h1>
+
+<p>The best available version of Subversion is:&nbsp;<a
+href="svn_1.5_releasenotes.html">1.5.2</a></p>
+
+<p>You can install Subversion by compiling its <a
+href="#source-release">source code release</a> directly, or you can
+install one of the <a href="#binary-packages">prepackaged binaries</a>
+if there is one for your operating system.  Unless a release has
+"<tt>alpha</tt>", "<tt>beta</tt>", or "<tt>rc</tt>" in its name, it is
+tested and considered stable for production use.  Once you have
+Subversion installed, most of your questions can be answered at our <a
+href="index.html#help" >help section</a>.</p>
+
+<p>When upgrading, just install "on top of" the older release.
+Subversion 1.x is forward-compatible with any newer 1.y.  No
+repository upgrade is required.  As long as client and server both
+have the same major release number (1), olders clients will work with
+newer servers and newer clients will work with older servers.  The
+only caveat is that if the client and server minor release numbers
+don't match (e.g., 1.0 and 1.1), then some of the features of the
+newer release may not be activated.</p>
+
+</div>
+
+<div class="h2" id="source-release" title="source-release">
+<h2>Source Code</h2>
+
+<p>To build Subversion from a source code release:</p>
+
+<ol>
+   <li><p>Download the latest distribution from the <a
+   href="http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=260&amp;expandFolder=74"
+   >Source Releases Area</a>.<br />
+   Windows users should download <tt>.zip</tt> files.  For all other operating
+   systems, download <tt>.tar.gz</tt> or <tt>.tar.bz2</tt> files.</p></li>
+
+   <li><p>Build and install it according to the instructions in the
+   <a href="http://svn.collab.net/repos/svn/trunk/INSTALL">INSTALL</a>
+   file in the top level of the distribution.  You will end up with a
+   'svn' binary in the <tt>subversion/svn/</tt> subdirectory
+   (or installed in <tt>/usr/local/bin/</tt>, if you ran
+   'make install'.)</p></li>
+</ol>
+
+</div>   <!-- source-release -->
+
+<div class="h2" id="binary-packages" title="binary-packages">
+<h2>Binary Packages</h2>
+
+<p>The Subversion project <b>does <i>not</i> officially endorse or
+maintain</b> any binary packages of the Subversion software.  However,
+volunteers have created binary packages for different distributions
+and platforms, and as a convenience, we maintain a list of links to
+them here.  If there are any problems with or questions about the
+different binary packages please send email to the <a
+href="mailto:users@subversion.tigris.org">Subversion users mailing
+list</a>.</p>
+
+<div style="background-color: yellow; color: red;">
+<p><b>NOTE: Binary packages usually come out about a week after the
+corresponding source release.  Please don't post to the mailing lists
+asking when a binary package for a given platform will be ready.  The
+packagers already know when new source releases come out, and work as
+fast as they can to make binaries available.</b></p>
+</div>
+
+<table width="700" border="1" cellpadding="4" class="sborder" style="margin-left:auto; margin-right:auto; text-align: center;">
+    <tr align="left" valign="top">
+      <td colspan="4"><div style="text-align: center;"><strong>Subversion Binary Packages</strong></div></td>
+    </tr>
+
+    <tr align="left" valign="top">
+      <td style="text-align: center;"><strong>AIX</strong><br/>
+        <img alt="logo" src="images/aix.png"/>
+      </td>
+      
+      <td>
+      <div id="aix" title="aix">
+        <a
+        href="http://downloads.open.collab.net/binaries.html">openCollabNet</a>
+      </div>  <!-- aix -->
+      </td>
+
+      <td style="text-align: center;"><strong>Debian</strong><br/>
+        <img alt="logo" src="images/debian.png"/>
+      </td>
+      <td><div id="debian" title="debian">
+        <a href="http://packages.debian.org/search?keywords=subversion&amp;exact=1"
+          >Debian Project</a><br/>
+          <tt>apt-get install subversion</tt>
+      </div>  <!-- debian -->
+      </td>
+    </tr>
+
+    <tr align="left" valign="top">
+      <td style="text-align: center;"><strong>HP-UX</strong><br/>
+        <img alt="logo" src="images/hp.png"/>
+      </td>
+      <td>
+      <div id="hpux" title="hpux">
+        <a
+        href="http://hpux.connect.org.uk/hppd/cgi-bin/search?term=subversion.">
+        HP Porting Centre</a>
+      </div>  <!-- hpux -->
+      </td>
+
+      <td style="text-align: center;"><strong>Fedora</strong><br/>
+        <img alt="logo" src="images/fedora.png"/>
+      </td>
+      <td>
+      <div id="fedora" title="fedora">
+        <a
+        href="https://admin.fedoraproject.org/pkgdb/packages/name/subversion">
+        Fedora Project</a><br/>
+          <tt>yum install subversion</tt>
+      </div>  <!-- fedora -->
+      </td>
+    </tr>
+
+    <tr align="left" valign="top">
+      <td style="text-align: center;"><strong>Mac OS X</strong><br/>
+        <img alt="logo" src="images/mac.png"/>
+      </td>
+      <td>
+      <div id="osx" title="osx">
+        <a
+        href="http://pdb.finkproject.org/pdb/package.php/svn">Fink package</a>
+        (Requires Fink)<br/>
+        <a
+        href="http://www.macports.org/ports.php?by=name&amp;substr=subversion">
+        MacPorts</a> (Requires MacPorts)<br/>
+        <a href="http://downloads.open.collab.net/binaries.html">openCollabNet
+        </a> (Universal)
+      </div>  <!-- osx -->
+      </td>
+
+      <td style="text-align: center;"><strong>FreeBSD</strong><br/>
+        <img alt="logo" src="images/freebsd.png"/>
+      </td>
+      <td>
+      <div id="freebsd" title="freebsd">
+        <a
+        href="http://www.freebsd.org/cgi/cvsweb.cgi/ports/devel/subversion">
+        FreeBSD Project</a><br/>
+        <tt>cd /usr/ports/devel/subversion;<br/>
+            make install</tt>
+      </div>  <!-- freebsd -->
+      </td>
+    </tr>
+
+    <tr align="left" valign="top">
+      <td style="text-align: center;"><strong>Red Hat</strong><br/>
+        <img alt="logo" src="images/redhat.png"/>
+      </td>
+      <td>
+      <div id="redhat" title="redhat">
+        <a href="http://www.collab.net/downloads/subversion/redhat.html">
+        CollabNet</a> (Certified binaries)<br/>
+        <a href="http://the.earth.li/pub/subversion/summersoft.fay.ar.us/pub/subversion/latest/">
+        SummerSoft</a> (Red Hat 8,9 +)
+      </div>  <!-- redhat -->
+      </td>
+
+      <td style="text-align: center"><strong>NetBSD</strong><br/>
+        <img alt="logo" src="images/netbsd.png"/>
+      </td>
+      <td>
+      <div id="netbsd" title="netbsd">
+        <a
+        href="http://cvsweb.netbsd.org/bsdweb.cgi/pkgsrc/devel/subversion/">
+        pkgsrc</a><br/>
+          <tt>cd /usr/pkgsrc/devel/subversion;<br/>
+              make install clean</tt>
+      </div>  <!-- netbsd -->
+      </td>
+    </tr>
+
+    <tr align="left" valign="top">
+      <td style="text-align: center;"><strong>Solaris</strong><br/>
+        <img alt="logo" src="images/solaris.png"/>
+      </td>
+      <td>
+      <div id="solaris" title="solaris">
+        <a href="http://www.collab.net/downloads/subversion/solaris.html">
+        CollabNet</a> (Certified binaries, SPARC)<br/>
+        <a href="http://www.sunfreeware.com/">Sunfreeware</a> (SPARC &amp; i386)
+      </div>  <!-- solaris -->
+      </td>
+
+      <td style="text-align: center;"><strong>OpenBSD</strong><br/>
+        <img alt="logo" src="images/openbsd.png"/>
+      </td>
+      <td>
+      <div id="openbsd" title="openbsd">
+        <a
+        href="http://www.openbsd.org/cgi-bin/cvsweb.cgi/ports/devel/subversion/">
+        OpenBSD Project</a><br/>
+        <tt>cd /usr/ports/devel/subversion;<br/>
+            make install</tt>
+      </div>  <!-- openbsd -->
+      </td>
+    </tr>
+
+    <tr align="left" valign="top">
+      <td style="text-align: center;"><strong>Windows</strong><br/>
+        <img alt="logo" src="images/windows.png"/>
+      </td>
+      <td>
+      <div id="windows" title="windows">
+        <a
+        href="http://www.collab.net/downloads/subversion/">
+        CollabNet</a> (Certified binaries)<br/>
+        Tigris.org: <a href="http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=91">Apache 2.0</a> or <a href="http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=8100">Apache 2.2</a><br/>
+        <a href="http://www.sliksvn.com/en/download">SlikSVN</a>:
+        32 and 64 bit client MSI<br/>
+        <a href="http://www.visualsvn.com/server">VisualSVN</a>
+        (VisualSVN Server)
+      </div>  <!-- windows -->
+      </td>
+
+      <td style="text-align: center;"><strong>Ubuntu</strong><br/>
+        <img alt="logo" src="images/ubuntu.png"/>
+      </td>
+      <td>
+      <div id="ubuntu" title="ubuntu">
+        <a href="http://packages.ubuntu.com/hardy/devel/subversion">Ubuntu
+        Packages</a><br/>
+        <tt>apt-get install subversion</tt>
+      </div>  <!-- ubuntu -->
+      </td>
+    </tr>
+  </table>
+
+  <p>Note: Apache 2.0 and Apache 2.2 are not binary-compatible. If you plan to
+     use mod_dav_svn be sure that you obtain the correct version for your
+     version of Apache.</p>
+
+<div class="h3" id="maintainers" title="maintainers">
+<h3>Package Maintainers</h3>
+<ul>
+  <li><a href="mailto:rhuijben@open.collab.net">Bert Huijben</a>, 
+    <a href="http://sharpsvn.open.collab.net/">SharpSvn</a> Project:
+    SlikSVN Windows setups</li>
+  <li><a href="mailto:chris01@users.sourceforge.net">Christian Schaffner</a>:
+    Mac OS X binaries using Fink. </li>
+  <li><a href="http://www.collab.net/subversion">CollabNet</a>:
+    Certified binaries for Red Hat, Solaris and Windows.</li>
+  <li><a href="mailto:david@summersoft.fay.ar.us">David Summers</a>,
+    <a href="http://summersoft.fay.ar.us/">Summersoft</a>:
+    Red Hat binaries.</li>
+  <li><a href="http://packages.debian.org/subversion">Debian Project</a>:
+    Debian binaries.</li>
+  <li><a href="mailto:djheap@gmail.com">D.J. Heap</a>,
+    <a href="mailto:users@subversion.tigris.org?bcc=brane@xbc.nu">Branko 
+    &#268;ibej</a>  and <a href="mailto:troy@ebswift.com">Troy Simpson</a>:
+    Tigris.org Subversion binaries.</li>
+  <li><a href="mailto:epg@NetBSD.org">Eric Gillespie:</a> pkgsrc.</li>
+  <li><a href="https://admin.fedoraproject.org/pkgdb/packages/name/subversion">
+    Fedora Project</a>: Fedora binaries.</li>
+  <li><a href="http://www.freebsd.org/cgi/cvsweb.cgi/ports/devel/subversion">
+    FreeBSD Project</a>: FreeBSD binaries.</li>
+  <li><a href="http://hpux.connect.org.uk/hppd/cgi-bin/search?term=subversion.">
+    HP Porting Centre</a>: HP UX binaries.</li>
+  <li><a href="mailto:facilitators@svnbinaries.open.collab.net">
+    Jeremy Whitlock</a>, <a href="http://svnbinaries.open.collab.net/">
+    SVNbinaries</a> project: AIX and Universal Mac OS X binaries </li>
+  <li><a href="http://www.macports.org/ports.php?by=name&amp;substr=subversion">
+    MacPorts</a>: Apple OS X MacPorts binaries.</li>
+  <li><a href="http://www.openbsd.org/cgi-bin/cvsweb.cgi/ports/devel/subversion/">
+    OpenBSD Project</a>: OpenBSD binaries.</li>
+  <li><a href="mailto:steve@smc.vnet.net">Steven M. Christensen</a>:
+    Solaris SPARC and i386 binaries.</li>
+  <li><a href="http://packages.ubuntu.com/hardy/devel/subversion">
+    Ubuntu project</a>: Ubuntu binaries. </li>
+  <li><a href="http://www.visualsvn.com">VisualSVN</a>: VisualSVN Server for
+    Windows.</li>
+</ul>
+
+</div>
+
+</div>
+
+</body>
+</html>
+
+

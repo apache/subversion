@@ -20,7 +20,6 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 
 #include <apr_pools.h>
 #include <apr_hash.h>
@@ -41,6 +40,7 @@
 #include "svn_private_config.h"
 #include "svn_time.h"
 #include "svn_config.h"
+#include "svn_iter.h"
 
 #include "wc.h"
 #include "questions.h"
@@ -71,8 +71,10 @@ struct edit_baton
 {
   /* For updates, the "destination" of the edit is the ANCHOR (the
      directory at which the edit is rooted) plus the TARGET (the
-     actual thing we wish to update).  For checkouts, ANCHOR holds the
-     whole path, and TARGET is unused. */
+     actual thing we wish to update).  Target may be the empty string,
+     but it is never NULL; for example, for checkouts and for updates
+     that do not specify a target path, ANCHOR holds the whole path,
+     and TARGET is empty. */
   const char *anchor;
   const char *target;
 
@@ -204,6 +206,10 @@ struct dir_baton
   /* The depth of the directory in the wc (or inferred if added).  Not
      used for filtering; we have a separate wrapping editor for that. */
   svn_depth_t ambient_depth;
+
+  /* Was the directory marked as incomplete before the update?
+     (In other words, are we resuming an interrupted update?) */
+  svn_boolean_t was_incomplete;
 
   /* The pool in which this baton itself is allocated. */
   apr_pool_t *pool;
@@ -358,9 +364,7 @@ make_dir_baton(struct dir_baton **d_p,
   struct dir_baton *d;
   struct bump_dir_info *bdi;
 
-  /* Don't do this.  Just do NOT do this to me. */
-  if (pb && (! path))
-    abort();
+  SVN_ERR_ASSERT(path || (! pb));
 
   /* Okay, no easy out, so allocate and initialize a dir baton. */
   d = apr_pcalloc(pool, sizeof(*d));
@@ -437,8 +441,9 @@ make_dir_baton(struct dir_baton **d_p,
   d->log_number   = 0;
   d->log_accum    = svn_stringbuf_create("", pool);
 
-  /* The caller of this function needs to fill this in. */
+  /* The caller of this function needs to fill these in. */
   d->ambient_depth = svn_depth_unknown;
+  d->was_incomplete = FALSE;
 
   apr_pool_cleanup_register(d->pool, d, cleanup_dir_baton,
                             cleanup_dir_baton_child);
@@ -642,7 +647,7 @@ struct file_baton
 
   /* The path to the incoming text base (that is, to a text-base-file-
      in-progress in the tmp area).  This gets set if there are file
-     content changes. */ 
+     content changes. */
   const char *new_text_base_path;
 
   /* If this file was added with history, this is the path to a copy
@@ -698,9 +703,7 @@ make_file_baton(struct file_baton **f_p,
 {
   struct file_baton *f = apr_pcalloc(pool, sizeof(*f));
 
-  /* I rather need this information, yes. */
-  if (! path)
-    abort();
+  SVN_ERR_ASSERT(path);
 
   /* Make the file's on-disk name. */
   f->path = svn_path_join(pb->edit_baton->anchor, path, pool);
@@ -997,6 +1000,7 @@ check_path_under_root(const char *base_path,
 
 /*** The callbacks we'll plug into an svn_delta_editor_t structure. ***/
 
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 set_target_revision(void *edit_baton,
                     svn_revnum_t target_revision,
@@ -1010,6 +1014,7 @@ set_target_revision(void *edit_baton,
 }
 
 
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 open_root(void *edit_baton,
           svn_revnum_t base_revision, /* This is ignored in co */
@@ -1039,7 +1044,10 @@ open_root(void *edit_baton,
       SVN_ERR(svn_wc_entry(&entry, d->path, eb->adm_access,
                            FALSE, pool));
       if (entry)
-        d->ambient_depth = entry->depth;
+        {
+          d->ambient_depth = entry->depth;
+          d->was_incomplete = entry->incomplete;
+        }
 
       /* Mark directory as being at target_revision, but incomplete. */
       tmp_entry.revision = *(eb->target_revision);
@@ -1063,11 +1071,10 @@ open_root(void *edit_baton,
 }
 
 
-/* Helper for delete_entry().
+/* Helper for delete_entry() and do_entry_deletion().
 
-   Search an error chain (ERR) for evidence that a local mod was left.
-   If so, cleanup LOGFILE and return an appropriate error.  Otherwise,
-   just return the original error chain.
+   If the error chain ERR contains evidence that a local mod was left
+   (an SVN_ERR_WC_LEFT_LOCAL_MOD error), clear ERR.  Otherwise, return ERR.
 */
 static svn_error_t *
 leftmod_error_chain(svn_error_t *err,
@@ -1086,23 +1093,25 @@ leftmod_error_chain(svn_error_t *err,
     if (tmp_err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD)
       break;
 
-  /* If we found a "left a local mod" error, wrap and return it.
-     Otherwise, we just return our top-most error. */
+  /* If we found a "left a local mod" error, tolerate it
+     and clear the whole error. In that case we continue with
+     modified files left on the disk. */
   if (tmp_err)
     {
-      /* Remove the LOGFILE (and eat up errors from this process). */
-      svn_error_clear(svn_io_remove_file(logfile, pool));
-
-      return svn_error_createf
-        (SVN_ERR_WC_OBSTRUCTED_UPDATE, tmp_err,
-         _("Won't delete locally modified directory '%s'"),
-         svn_path_local_style(path, pool));
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
     }
 
+  /* Otherwise, we just return our top-most error. */
   return err;
 }
 
 
+/* Delete PATH from its immediate parent PARENT_PATH, in the edit
+ * represented by EB.  Name temporary transactional logs based on
+ * *LOG_NUMBER, but set *LOG_NUMBER to 0 after running the final log.
+ * Perform all allocations in POOL.
+ */
 static svn_error_t *
 do_entry_deletion(struct edit_baton *eb,
                   const char *parent_path,
@@ -1179,7 +1188,7 @@ do_entry_deletion(struct edit_baton *eb,
                    (child_access,
                     SVN_WC_ENTRY_THIS_DIR,
                     TRUE, /* destroy */
-                    TRUE, /* instant error */
+                    FALSE, /* instant error */
                     eb->cancel_func,
                     eb->cancel_baton,
                     pool),
@@ -1200,6 +1209,7 @@ do_entry_deletion(struct edit_baton *eb,
 }
 
 
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 delete_entry(const char *path,
              svn_revnum_t revision,
@@ -1215,6 +1225,7 @@ delete_entry(const char *path,
 }
 
 
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 add_directory(const char *path,
               void *parent_baton,
@@ -1256,9 +1267,9 @@ add_directory(const char *path,
 
   /* Semantic check.  Either both "copyfrom" args are valid, or they're
      NULL and SVN_INVALID_REVNUM.  A mixture is illegal semantics. */
-  if ((copyfrom_path && (! SVN_IS_VALID_REVNUM(copyfrom_revision)))
-      || ((! copyfrom_path) && (SVN_IS_VALID_REVNUM(copyfrom_revision))))
-    abort();
+  SVN_ERR_ASSERT((copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_revision))
+                 || (!copyfrom_path &&
+                     !SVN_IS_VALID_REVNUM(copyfrom_revision)));
 
   SVN_ERR(check_path_under_root(pb->path, db->name, pool));
   SVN_ERR(svn_io_check_path(db->path, &kind, db->pool));
@@ -1284,7 +1295,7 @@ add_directory(const char *path,
 
       if (err && err->apr_err != SVN_ERR_WC_NOT_DIRECTORY)
         {
-          /* Something quite unexepected has happened. */
+          /* Something quite unexpected has happened. */
           return err;
         }
       else if (err) /* Not a versioned dir. */
@@ -1356,7 +1367,7 @@ add_directory(const char *path,
       http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=136879
       From: "David Glasser" <glasser@davidglasser.net>
       To: "Karl Fogel" <kfogel@red-bean.com>, dev@subversion.tigris.org
-      Cc: "Arfrever Frehtes Taifersar Arahesis" <arfrever.fta@gmail.com>, 
+      Cc: "Arfrever Frehtes Taifersar Arahesis" <arfrever.fta@gmail.com>,
           glasser@tigris.org
       Subject: Re: svn commit: r30161 - in trunk/subversion: \
                libsvn_ra_neon tests/cmdline
@@ -1455,6 +1466,7 @@ add_directory(const char *path,
 }
 
 
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 open_directory(const char *path,
                void *parent_baton,
@@ -1489,10 +1501,11 @@ open_directory(const char *path,
       svn_boolean_t prop_conflicted;
 
       db->ambient_depth = entry->depth;
+      db->was_incomplete = entry->incomplete;
 
       SVN_ERR(svn_wc_conflicted_p(&text_conflicted, &prop_conflicted,
                                   db->path, entry, pool));
-      assert(! text_conflicted);
+      SVN_ERR_ASSERT(! text_conflicted);
       if (prop_conflicted)
         {
           db->bump_info->skipped = TRUE;
@@ -1535,6 +1548,7 @@ open_directory(const char *path,
 }
 
 
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 change_dir_prop(void *dir_baton,
                 const char *name,
@@ -1575,6 +1589,32 @@ externals_prop_changed(apr_array_header_t *propchanges)
   return NULL;
 }
 
+/* This implements the svn_iter_apr_hash_cb_t callback interface.
+ *
+ * Add a property named KEY ('const char *') to a list of properties
+ * to be deleted.  BATON is the list: an 'apr_array_header_t *'
+ * representing propchanges (the same type as found in struct dir_baton
+ * and struct file_baton).
+ *
+ * Ignore KLEN, VAL, and POOL.
+ */
+static svn_error_t *
+add_prop_deletion(void *baton, const void *key,
+                  apr_ssize_t klen, void *val,
+                  apr_pool_t *pool)
+{
+  apr_array_header_t *propchanges = baton;
+  const char *name = key;
+  svn_prop_t *prop = apr_array_push(propchanges);
+
+  /* Add the deletion of NAME to PROPCHANGES. */
+  prop->name = name;
+  prop->value = NULL;
+
+  return SVN_NO_ERROR;
+}
+
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 close_directory(void *dir_baton,
                 apr_pool_t *pool)
@@ -1582,6 +1622,7 @@ close_directory(void *dir_baton,
   struct dir_baton *db = dir_baton;
   svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
   apr_array_header_t *entry_props, *wc_props, *regular_props;
+  apr_hash_t *base_props = NULL, *working_props = NULL;
   svn_wc_adm_access_t *adm_access;
 
   SVN_ERR(svn_categorize_props(db->propchanges, &entry_props, &wc_props,
@@ -1589,6 +1630,34 @@ close_directory(void *dir_baton,
 
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, db->edit_baton->adm_access,
                               db->path, db->pool));
+
+  /* An incomplete directory might have props which were supposed to be
+     deleted but weren't.  Because the server sent us all the props we're
+     supposed to have, any previous base props not in this list must be
+     deleted (issue #1672). */
+  if (db->was_incomplete)
+    {
+      int i;
+      apr_hash_t *props_to_delete;
+
+      SVN_ERR(svn_wc__load_props(&base_props, &working_props, NULL,
+                                 adm_access, db->path, pool));
+
+      /* Calculate which base props weren't also in the incoming
+         propchanges. */
+      props_to_delete = apr_hash_copy(pool, base_props);
+      for (i = 0; i < regular_props->nelts; i++)
+        {
+          const svn_prop_t *prop;
+          prop = &APR_ARRAY_IDX(regular_props, i, svn_prop_t);
+          apr_hash_set(props_to_delete, prop->name,
+                       APR_HASH_KEY_STRING, NULL);
+        }
+
+      /* Add these props to the incoming propchanges. */
+      SVN_ERR(svn_iter_apr_hash(NULL, props_to_delete, add_prop_deletion,
+                                regular_props, pool));
+    }
 
   /* If this directory has property changes stored up, now is the time
      to deal with them. */
@@ -1655,7 +1724,7 @@ close_directory(void *dir_baton,
           SVN_ERR_W(svn_wc__merge_props(&prop_state,
                                         adm_access, db->path,
                                         NULL /* use baseprops */,
-                                        NULL, NULL,
+                                        base_props, working_props,
                                         regular_props, TRUE, FALSE,
                                         db->edit_baton->conflict_func,
                                         db->edit_baton->conflict_baton,
@@ -1766,6 +1835,7 @@ absent_file_or_dir(const char *path,
 }
 
 
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 absent_file(const char *path,
             void *parent_baton,
@@ -1775,6 +1845,7 @@ absent_file(const char *path,
 }
 
 
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 absent_directory(const char *path,
                  void *parent_baton,
@@ -1784,7 +1855,7 @@ absent_directory(const char *path,
 }
 
 
-
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 add_file(const char *path,
          void *parent_baton,
@@ -1892,6 +1963,7 @@ add_file(const char *path,
 }
 
 
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 open_file(const char *path,
           void *parent_baton,
@@ -2023,7 +2095,7 @@ choose_base_paths(const char **checksum_p,
 }
 
 
-
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 apply_textdelta(void *file_baton,
                 const char *base_checksum,
@@ -2143,8 +2215,8 @@ apply_textdelta(void *file_baton,
     }
 
   /* Prepare to apply the delta.  */
-  svn_txdelta_apply(svn_stream_from_aprfile(hb->source, handler_pool),
-                    svn_stream_from_aprfile(hb->dest, handler_pool),
+  svn_txdelta_apply(svn_stream_from_aprfile2(hb->source, TRUE, handler_pool),
+                    svn_stream_from_aprfile2(hb->dest, TRUE, handler_pool),
                     fb->digest, fb->new_text_base_path, handler_pool,
                     &hb->apply_handler, &hb->apply_baton);
 
@@ -2159,8 +2231,7 @@ apply_textdelta(void *file_baton,
 }
 
 
-
-
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 change_file_prop(void *file_baton,
                  const char *name,
@@ -2700,6 +2771,7 @@ merge_file(svn_wc_notify_state_t *content_state,
 }
 
 
+/* An svn_delta_editor_t function. */
 /* Mostly a wrapper around merge_file. */
 static svn_error_t *
 close_file(void *file_baton,
@@ -2720,8 +2792,8 @@ close_file(void *file_baton,
   /* Was this an add-with-history, with no apply_textdelta? */
   if (fb->added_with_history && ! fb->received_textdelta)
     {
-      assert(! fb->text_base_path && ! fb->new_text_base_path
-             && fb->copied_text_base);
+      SVN_ERR_ASSERT(! fb->text_base_path && ! fb->new_text_base_path
+                     && fb->copied_text_base);
 
       /* Set up the base paths like apply_textdelta does. */
       SVN_ERR(choose_base_paths(NULL, NULL, NULL, fb, pool));
@@ -3148,6 +3220,7 @@ add_file_with_history(const char *path,
 }
 
 
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 close_edit(void *edit_baton,
            apr_pool_t *pool)
@@ -3253,7 +3326,7 @@ make_editor(svn_revnum_t *target_revision,
   /* An unknown depth can't be sticky. */
   if (depth == svn_depth_unknown)
     depth_is_sticky = FALSE;
-  
+
   /* Get the anchor entry, so we can fetch the repository root. */
   SVN_ERR(svn_wc_entry(&entry, anchor, adm_access, FALSE, pool));
 
@@ -3331,7 +3404,7 @@ make_editor(svn_revnum_t *target_revision,
   if (depth_is_sticky)
     {
       const svn_wc_entry_t *target_entry;
-      SVN_ERR(svn_wc_entry(&target_entry, svn_path_join(anchor, target, pool), 
+      SVN_ERR(svn_wc_entry(&target_entry, svn_path_join(anchor, target, pool),
                            adm_access, FALSE, pool));
       if (target_entry && (target_entry->depth > depth))
         return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
@@ -3473,11 +3546,11 @@ svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
                           svn_wc_traversal_info_t *traversal_info,
                           apr_pool_t *pool)
 {
-  assert(switch_url);
+  SVN_ERR_ASSERT(switch_url);
 
   return make_editor(target_revision, anchor, svn_wc_adm_access_path(anchor),
-                     target, use_commit_times, switch_url, 
-                     depth, depth_is_sticky, allow_unver_obstructions, 
+                     target, use_commit_times, switch_url,
+                     depth, depth_is_sticky, allow_unver_obstructions,
                      notify_func, notify_baton, cancel_func, cancel_baton,
                      conflict_func, conflict_baton,
                      NULL, NULL, /* TODO(sussman): add fetch callback here  */
@@ -3502,7 +3575,7 @@ svn_wc_get_switch_editor2(svn_revnum_t *target_revision,
                           svn_wc_traversal_info_t *traversal_info,
                           apr_pool_t *pool)
 {
-  assert(switch_url);
+  SVN_ERR_ASSERT(switch_url);
 
   return svn_wc_get_switch_editor3(target_revision, anchor, target,
                                    switch_url, use_commit_times,
@@ -3929,7 +4002,7 @@ svn_wc_add_repos_file2(const char *dst_path,
 
     if (copyfrom_url)
       {
-        assert(SVN_IS_VALID_REVNUM(copyfrom_rev));
+        SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(copyfrom_rev));
 
         tmp_entry.copyfrom_url = copyfrom_url;
         tmp_entry.copyfrom_rev = copyfrom_rev;

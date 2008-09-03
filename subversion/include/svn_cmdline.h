@@ -34,6 +34,7 @@
 #include "svn_utf.h"
 #include "svn_auth.h"
 #include "svn_config.h"
+#include "svn_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -140,10 +141,23 @@ int svn_cmdline_handle_exit_error(svn_error_t *error,
                                   apr_pool_t *pool,
                                   const char *prefix);
 
-/** A cancellation function/baton pair to be passed as the baton argument
- * to the @c svn_cmdline_*_prompt functions.
+/** A cancellation function/baton pair, and the path to the configuration
+ * directory. To be passed as the baton argument to the
+ * @c svn_cmdline_*_prompt functions.
+ *
+ * @since New in 1.6.
+ */
+typedef struct svn_cmdline_prompt_baton2_t {
+  svn_cancel_func_t cancel_func;
+  void *cancel_baton;
+  const char *config_dir;
+} svn_cmdline_prompt_baton2_t;
+
+/** Like svn_cmdline_prompt_baton2_t, but without the path to the
+ * configuration directory.
  *
  * @since New in 1.4.
+ * @deprecated Provided for backward compatibility with the 1.5 API.
  */
 typedef struct svn_cmdline_prompt_baton_t {
   svn_cancel_func_t cancel_func;
@@ -167,6 +181,7 @@ svn_cmdline_prompt_user2(const char **result,
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_cmdline_prompt_user(const char **result,
                         const char *prompt_str,
@@ -224,6 +239,8 @@ svn_cmdline_auth_ssl_server_trust_prompt
 /** An implementation of @c svn_auth_ssl_client_cert_prompt_func_t that
  * prompts the user for the filename of their SSL client certificate via
  * the command line.
+ * 
+ * Records absolute path of the SSL client certificate file.
  *
  * @since New in 1.4.
  *
@@ -253,16 +270,69 @@ svn_cmdline_auth_ssl_client_cert_pw_prompt
    svn_boolean_t may_save,
    apr_pool_t *pool);
 
-/** Initialize auth baton @a ab with the standard set of authentication
- * providers used by the command line client.  @a non_interactive,
- * @a username, @a password, @a config_dir, and @a no_auth_cache are the
- * values of the command line options of the same names.  @a cfg is the
- * @c SVN_CONFIG_CATEGORY_CONFIG configuration, and @a cancel_func and
- * @a cancel_baton control the cancellation of the prompting providers
- * that are initialized.  @a pool is used for all allocations.
+/** An implementation of @c svn_auth_plaintext_prompt_func_t that
+ * prompts the user whether storing unencypted passwords to disk is OK.
  *
- * @since New in 1.4.
+ * @since New in 1.6.
  */
+svn_error_t *
+svn_cmdline_auth_plaintext_prompt(svn_boolean_t *may_save_plaintext,
+                                  const char *realmstring,
+                                  void *baton,
+                                  apr_pool_t *pool);
+
+/** An implementation of @c svn_auth_plaintext_passphrase_prompt_func_t that
+ * prompts the user whether storing unencypted passphrase to disk is OK.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_cmdline_auth_plaintext_passphrase_prompt(svn_boolean_t *may_save_plaintext,
+                                             const char *realmstring,
+                                             void *baton,
+                                             apr_pool_t *pool);
+
+/** Initialize auth baton @a ab with the standard set of authentication
+ * providers used by the command line client.
+ *
+ * @a non_interactive, @a username, @a password, @a config_dir,
+ * @a no_auth_cache, and @a trust_server_cert are the values of the
+ * command line options of the corresponding names.
+ *
+ * @a cfg is the @c SVN_CONFIG_CATEGORY_CONFIG configuration, and
+ * @a cancel_func and @a cancel_baton control the cancellation of the
+ * prompting providers that are initialized.
+ *
+ * Use @a pool for all allocations.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_cmdline_set_up_auth_baton(svn_auth_baton_t **ab,
+                              svn_boolean_t non_interactive,
+                              const char *username,
+                              const char *password,
+                              const char *config_dir,
+                              svn_boolean_t no_auth_cache,
+                              svn_boolean_t trust_server_cert,
+                              svn_config_t *cfg,
+                              svn_cancel_func_t cancel_func,
+                              void *cancel_baton,
+                              apr_pool_t *pool);
+
+/** Similar to svn_cmdline_set_up_auth_baton(), but with 
+ * @a trust_server_cert always set to false.
+ * 
+ * @since New in 1.4.
+ * @deprecated Provided for backward compatibility with the 1.5 API.
+ * Use svn_cmdline_set_up_auth_baton() instead.
+ *
+ * @note This deprecation does not follow the usual pattern of putting
+ * a new number on end of the function's name.  Instead, the new
+ * function name is distinguished from the old by a grammatical
+ * improvement: the verb "set_up" instead of the noun "setup".
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
                              svn_boolean_t non_interactive,
@@ -278,10 +348,6 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
 /** Wrapper for apr_getopt_init(), which see.
  *
  * @since New in 1.4.
- *
- * On OS400 V5R4, prior to calling apr_getopt_init(), converts each of the
- * @a argc strings in @a argv[] in place from EBCDIC to UTF-8, allocating
- * each new UTF-8 string in @a pool.
  *
  * This is a private API for Subversion's own use.
  */

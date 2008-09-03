@@ -67,7 +67,8 @@ extern "C" {
  *
  * @since New in 1.1.
  */
-const svn_version_t *svn_client_version(void);
+const svn_version_t *
+svn_client_version(void);
 
 /** Client supporting functions
  *
@@ -103,8 +104,11 @@ const svn_version_t *svn_client_version(void);
  * re-prompt @a retry_limit times (via svn_auth_next_credentials()).
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
+ * Use svn_auth_get_simple_prompt_provider() instead.
  */
-void svn_client_get_simple_prompt_provider
+SVN_DEPRECATED
+void
+svn_client_get_simple_prompt_provider
   (svn_auth_provider_object_t **provider,
    svn_auth_simple_prompt_func_t prompt_func,
    void *prompt_baton,
@@ -124,8 +128,11 @@ void svn_client_get_simple_prompt_provider
  * re-prompt @a retry_limit times (via svn_auth_next_credentials()).
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
+ * Use svn_auth_get_username_prompt_provider() instead.
  */
-void svn_client_get_username_prompt_provider
+SVN_DEPRECATED
+void
+svn_client_get_username_prompt_provider
   (svn_auth_provider_object_t **provider,
    svn_auth_username_prompt_func_t prompt_func,
    void *prompt_baton,
@@ -145,7 +152,9 @@ void svn_client_get_username_prompt_provider
  * SVN_AUTH_PARAM_DEFAULT_PASSWORD).
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
+ * Use svn_auth_get_simple_provider2() instead.
  */
+SVN_DEPRECATED
 void
 svn_client_get_simple_provider(svn_auth_provider_object_t **provider,
                                apr_pool_t *pool);
@@ -172,7 +181,9 @@ svn_client_get_simple_provider(svn_auth_provider_object_t **provider,
  * if the password were not cached at all.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
+ * Use svn_auth_get_windows_simple_provider() instead.
  */
+SVN_DEPRECATED
 void
 svn_client_get_windows_simple_provider(svn_auth_provider_object_t **provider,
                                        apr_pool_t *pool);
@@ -188,7 +199,9 @@ svn_client_get_windows_simple_provider(svn_auth_provider_object_t **provider,
  * @c SVN_AUTH_PARAM_DEFAULT_USERNAME).
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
+ * Use svn_auth_get_username_provider() instead.
  */
+SVN_DEPRECATED
 void
 svn_client_get_username_provider(svn_auth_provider_object_t **provider,
                                  apr_pool_t *pool);
@@ -202,7 +215,9 @@ svn_client_get_username_provider(svn_auth_provider_object_t **provider,
  * security on an error.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
+ * Use svn_auth_get_ssl_server_trust_file_provider() instead.
  */
+SVN_DEPRECATED
 void
 svn_client_get_ssl_server_trust_file_provider
   (svn_auth_provider_object_t **provider,
@@ -217,7 +232,9 @@ svn_client_get_ssl_server_trust_file_provider
  * client certificate for authentication when requested by a server.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
+ * Use svn_auth_get_ssl_client_cert_file_provider() instead.
  */
+SVN_DEPRECATED
 void
 svn_client_get_ssl_client_cert_file_provider
   (svn_auth_provider_object_t **provider,
@@ -232,7 +249,9 @@ svn_client_get_ssl_client_cert_file_provider
  * certificate is protected by a passphrase.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
+ * Use svn_auth_get_ssl_client_cert_pw_file_provider2() instead.
  */
+SVN_DEPRECATED
 void
 svn_client_get_ssl_client_cert_pw_file_provider
   (svn_auth_provider_object_t **provider,
@@ -247,7 +266,9 @@ svn_client_get_ssl_client_cert_pw_file_provider
  * SSL security on an error.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
+ * Use svn_auth_get_ssl_server_trust_prompt_provider() instead.
  */
+SVN_DEPRECATED
 void
 svn_client_get_ssl_server_trust_prompt_provider
   (svn_auth_provider_object_t **provider,
@@ -265,7 +286,9 @@ svn_client_get_ssl_server_trust_prompt_provider
  * a server.  The prompt will be retried @a retry_limit times.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
+ * Use svn_auth_get_ssl_client_cert_prompt_provider() instead.
  */
+SVN_DEPRECATED
 void
 svn_client_get_ssl_client_cert_prompt_provider
   (svn_auth_provider_object_t **provider,
@@ -284,7 +307,9 @@ svn_client_get_ssl_client_cert_prompt_provider
  * be retried @a retry_limit times.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
+ * Use svn_auth_get_ssl_client_cert_pw_prompt_provider() instead.
  */
+SVN_DEPRECATED
 void
 svn_client_get_ssl_client_cert_pw_prompt_provider
   (svn_auth_provider_object_t **provider,
@@ -340,6 +365,7 @@ typedef svn_error_t *(*svn_proplist_receiver_t)
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_client_proplist_item_t *
 svn_client_proplist_item_dup(const svn_client_proplist_item_t *item,
                              apr_pool_t *pool);
@@ -532,6 +558,7 @@ svn_client_commit_item3_dup(const svn_client_commit_item3_t *item,
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
+SVN_DEPRECATED
 svn_client_commit_item2_t *
 svn_client_commit_item2_dup(const svn_client_commit_item2_t *item,
                             apr_pool_t *pool);
@@ -785,20 +812,24 @@ typedef struct svn_client_ctx_t
 
   /** notification callback function.
    * This will be called by notify_func2() by default.
-   * @deprecated Provided for backward compatibility with the 1.1 API. */
+   * @deprecated Provided for backward compatibility with the 1.1 API.
+   * Use @c notify_func2 instead. */
   svn_wc_notify_func_t notify_func;
 
   /** notification callback baton for notify_func()
-   * @deprecated Provided for backward compatibility with the 1.1 API. */
+   * @deprecated Provided for backward compatibility with the 1.1 API.
+   * Use @c notify_baton2 instead */
   void *notify_baton;
 
   /** Log message callback function.  NULL means that Subversion
     * should try not attempt to fetch a log message.
-    * @deprecated Provided for backward compatibility with the 1.2 API. */
+    * @deprecated Provided for backward compatibility with the 1.2 API.
+    * Use @c log_msg_func2 instead. */
   svn_client_get_commit_log_t log_msg_func;
 
   /** log message callback baton
-    * @deprecated Provided for backward compatibility with the 1.2 API. */
+    * @deprecated Provided for backward compatibility with the 1.2 API.
+    * Use @c log_msg_baton2 instead. */
   void *log_msg_baton;
 
   /** a hash mapping of <tt>const char *</tt> configuration file names to
@@ -855,11 +886,6 @@ typedef struct svn_client_ctx_t
    * @since New in 1.5. */
   apr_hash_t *mimetypes_map;
 
-  /** Table holding the extra revision properties to be set.  This table
-   * cannot contain any standard Subversion properties.
-   * @since New in 1.5. */
-  apr_hash_t *revprop_table;
-
   /** Conflict resolution callback and baton, if available.
    * @since New in 1.5. */
   svn_wc_conflict_resolver_func_t conflict_func;
@@ -870,6 +896,22 @@ typedef struct svn_client_ctx_t
   const char *client_name;
 
 } svn_client_ctx_t;
+
+/** Initialize a client context.
+ * Set @a *ctx to a client context object, allocated in @a pool, that
+ * represents a particular instance of an svn client.
+ *
+ * In order to avoid backwards compatibility problems, clients must
+ * use this function to intialize and allocate the
+ * @c svn_client_ctx_t structure rather than doing so themselves, as
+ * the size of this structure may change in the future.
+ *
+ * The current implementation never returns error, but callers should
+ * still check for error, for compatibility with future versions.
+ */
+svn_error_t *
+svn_client_create_context(svn_client_ctx_t **ctx,
+                          apr_pool_t *pool);
 
 /** @} end group: Client context management */
 
@@ -929,32 +971,6 @@ svn_client_args_to_target_array(apr_array_header_t **targets_p,
 
 /** @} */
 
-/**
- * Client context
- *
- * @defgroup clnt_ctx Client context management
- *
- * @{
- */
-
-/** Initialize a client context.
- * Set @a *ctx to a client context object, allocated in @a pool, that
- * represents a particular instance of an svn client.
- *
- * In order to avoid backwards compatibility problems, clients must
- * use this function to intialize and allocate the
- * @c svn_client_ctx_t structure rather than doing so themselves, as
- * the size of this structure may change in the future.
- *
- * The current implementation never returns error, but callers should
- * still check for error, for compatibility with future versions.
- */
-svn_error_t *
-svn_client_create_context(svn_client_ctx_t **ctx,
-                          apr_pool_t *pool);
-
-/** @} end group: Client context */
-
 /**
  * Client working copy management functions
  *
@@ -1043,6 +1059,7 @@ svn_client_checkout3(svn_revnum_t *result_rev,
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_checkout2(svn_revnum_t *result_rev,
                      const char *URL,
@@ -1062,6 +1079,7 @@ svn_client_checkout2(svn_revnum_t *result_rev,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_checkout(svn_revnum_t *result_rev,
                     const char *URL,
@@ -1115,7 +1133,7 @@ svn_client_checkout(svn_revnum_t *result_rev,
  * their sticky ambient depth value to @a depth.
  *
  * If @a allow_unver_obstructions is TRUE then the update tolerates
- * existing unversioned items that obstruct added paths from @a URL.  Only
+ * existing unversioned items that obstruct added paths.  Only
  * obstructions of the same type (file or dir) as the added item are
  * tolerated.  The text of obstructing files is left as-is, effectively
  * treating it as a user modification after the update.  Working
@@ -1152,6 +1170,7 @@ svn_client_update3(apr_array_header_t **result_revs,
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_update2(apr_array_header_t **result_revs,
                    const apr_array_header_t *paths,
@@ -1168,6 +1187,7 @@ svn_client_update2(apr_array_header_t **result_revs,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_update(svn_revnum_t *result_rev,
                   const char *path,
@@ -1212,7 +1232,7 @@ svn_client_update(svn_revnum_t *result_rev,
  * as part of this operation.
  *
  * If @a allow_unver_obstructions is TRUE then the switch tolerates
- * existing unversioned items that obstruct added paths from @a URL.  Only
+ * existing unversioned items that obstruct added paths.  Only
  * obstructions of the same type (file or dir) as the added item are
  * tolerated.  The text of obstructing files is left as-is, effectively
  * treating it as a user modification after the switch.  Working
@@ -1243,7 +1263,7 @@ svn_client_switch2(svn_revnum_t *result_rev,
 
 
 /**
- * Similar to svn_client_switch2() but with @a allow_unver_obstructions, 
+ * Similar to svn_client_switch2() but with @a allow_unver_obstructions,
  * @a ignore_externals, and @a depth_is_sticky always set to FALSE,
  * and @a depth set according to @a recurse: if @a recurse is TRUE,
  * set @a depth to @c svn_depth_infinity, if @a recurse is FALSE, set
@@ -1251,6 +1271,7 @@ svn_client_switch2(svn_revnum_t *result_rev,
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_switch(svn_revnum_t *result_rev,
                   const char *path,
@@ -1320,10 +1341,11 @@ svn_client_add4(const char *path,
 /**
  * Similar to svn_client_add4(), but with @a add_parents always set to
  * FALSE and @a depth set according to @a recursive: if TRUE, then
- * @a depth is @c svn_depth_infinity, if FALSE, then @c svn_depth_files.
+ * @a depth is @c svn_depth_infinity, if FALSE, then @c svn_depth_empty.
  *
- * @deprecated Provided for backward compatibility with the 1.3 API.
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_add3(const char *path,
                 svn_boolean_t recursive,
@@ -1338,6 +1360,7 @@ svn_client_add3(const char *path,
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_add2(const char *path,
                 svn_boolean_t recursive,
@@ -1350,6 +1373,7 @@ svn_client_add2(const char *path,
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_add(const char *path,
                svn_boolean_t recursive,
@@ -1378,6 +1402,12 @@ svn_client_add(const char *path,
  * If @a make_parents is TRUE, create any non-existent parent directories
  * also.
  *
+ * If non-NULL, @a revprop_table is a hash table holding additional,
+ * custom revision properties (<tt>const char *</tt> names mapped to
+ * <tt>svn_string_t *</tt> values) to be set on the new revision in
+ * the event that this is a committing operation.  This table cannot
+ * contain any standard Subversion properties.
+ *
  * @a ctx->log_msg_func3/@a ctx->log_msg_baton3 are a callback/baton
  * combo that this function can use to query for a commit log message
  * when one is needed.
@@ -1393,16 +1423,19 @@ svn_error_t *
 svn_client_mkdir3(svn_commit_info_t **commit_info_p,
                   const apr_array_header_t *paths,
                   svn_boolean_t make_parents,
+                  const apr_hash_t *revprop_table,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool);
 
 
 /**
- * Same as svn_client_mkdir3(), but with @a make_parents always FALSE.
+ * Same as svn_client_mkdir3(), but with @a make_parents always FALSE,
+ * and @a revprop_table always NULL.
  *
  * @since New in 1.3.
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_mkdir2(svn_commit_info_t **commit_info_p,
                   const apr_array_header_t *paths,
@@ -1415,6 +1448,7 @@ svn_client_mkdir2(svn_commit_info_t **commit_info_p,
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_mkdir(svn_client_commit_info_t **commit_info_p,
                  const apr_array_header_t *paths,
@@ -1455,6 +1489,12 @@ svn_client_mkdir(svn_client_commit_info_t **commit_info_p,
  * for removal from the repository.  Once the scheduled deletion is
  * committed, they will appear as unversioned paths in the working copy.
  *
+ * If non-NULL, @a revprop_table is a hash table holding additional,
+ * custom revision properties (<tt>const char *</tt> names mapped to
+ * <tt>svn_string_t *</tt> values) to be set on the new revision in
+ * the event that this is a committing operation.  This table cannot
+ * contain any standard Subversion properties.
+ *
  * @a ctx->log_msg_func3/@a ctx->log_msg_baton3 are a callback/baton
  * combo that this function can use to query for a commit log message
  * when one is needed.
@@ -1470,15 +1510,17 @@ svn_client_delete3(svn_commit_info_t **commit_info_p,
                    const apr_array_header_t *paths,
                    svn_boolean_t force,
                    svn_boolean_t keep_local,
+                   const apr_hash_t *revprop_table,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
 
 /**
  * Similar to svn_client_delete3(), but with @a keep_local always set
- * to FALSE.
+ * to FALSE, and @a revprop_table passed as NULL.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_delete2(svn_commit_info_t **commit_info_p,
                    const apr_array_header_t *paths,
@@ -1492,6 +1534,7 @@ svn_client_delete2(svn_commit_info_t **commit_info_p,
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_delete(svn_client_commit_info_t **commit_info_p,
                   const apr_array_header_t *paths,
@@ -1531,6 +1574,11 @@ svn_client_delete(svn_client_commit_info_t **commit_info_p,
  *
  * Use @a pool for any temporary allocation.
  *
+ * If non-NULL, @a revprop_table is a hash table holding additional,
+ * custom revision properties (<tt>const char *</tt> names mapped to
+ * <tt>svn_string_t *</tt> values) to be set on the new revision.
+ * This table cannot contain any standard Subversion properties.
+ *
  * @a ctx->log_msg_func3/@a ctx->log_msg_baton3 are a callback/baton
  * combo that this function can use to query for a commit log message
  * when one is needed.
@@ -1557,18 +1605,21 @@ svn_client_import3(svn_commit_info_t **commit_info_p,
                    svn_depth_t depth,
                    svn_boolean_t no_ignore,
                    svn_boolean_t ignore_unknown_node_types,
+                   const apr_hash_t *revprop_table,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
 
 /**
  * Similar to svn_client_import3(), but with @a ignore_unknown_node_types
- * always set to @c FALSE, and @a depth set according to @a nonrecursive:
- * if TRUE, then @a depth is @c svn_depth_files, else @c svn_depth_infinity.
+ * always set to @c FALSE, @a revprop_table passed as NULL, and @a
+ * depth set according to @a nonrecursive: if TRUE, then @a depth is
+ * @c svn_depth_files, else @c svn_depth_infinity.
  *
  * @since New in 1.3.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_import2(svn_commit_info_t **commit_info_p,
                    const char *path,
@@ -1585,6 +1636,7 @@ svn_client_import2(svn_commit_info_t **commit_info_p,
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_import(svn_client_commit_info_t **commit_info_p,
                   const char *path,
@@ -1611,6 +1663,11 @@ svn_client_import(svn_client_commit_info_t **commit_info_p,
  * need not be canonicalized nor condensed; this function will take care of
  * that.  If @a targets has zero elements, then do nothing and return
  * immediately without error.
+ *
+ * If non-NULL, @a revprop_table is a hash table holding additional,
+ * custom revision properties (<tt>const char *</tt> names mapped to
+ * <tt>svn_string_t *</tt> values) to be set on the new revision.
+ * This table cannot contain any standard Subversion properties.
  *
  * If @a ctx->notify_func2 is non-NULL, then call @a ctx->notify_func2 with
  * @a ctx->notify_baton2 as the commit progresses, with any of the following
@@ -1654,19 +1711,22 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
                    svn_boolean_t keep_locks,
                    svn_boolean_t keep_changelists,
                    const apr_array_header_t *changelists,
+                   const apr_hash_t *revprop_table,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
 
 /**
  * Similar to svn_client_commit4(), but always with NULL for
- * @a changelist_name, FALSE for @a keep_changelist, and @a depth
- * set according to @a recurse: if @a recurse is TRUE, use
- * @c svn_depth_infinity, else @c svn_depth_files.
+ * @a changelist_name, FALSE for @a keep_changelist, NULL for @a
+ * revprop_table, and @a depth set according to @a recurse: if @a
+ * recurse is TRUE, use @c svn_depth_infinity, else @c
+ * svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  *
  * @since New in 1.3.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_commit3(svn_commit_info_t **commit_info_p,
                    const apr_array_header_t *targets,
@@ -1683,6 +1743,7 @@ svn_client_commit3(svn_commit_info_t **commit_info_p,
  *
  * @since New in 1.2.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_commit2(svn_client_commit_info_t **commit_info_p,
                    const apr_array_header_t *targets,
@@ -1697,6 +1758,7 @@ svn_client_commit2(svn_client_commit_info_t **commit_info_p,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_commit(svn_client_commit_info_t **commit_info_p,
                   const apr_array_header_t *targets,
@@ -1769,6 +1831,7 @@ svn_client_status3(svn_revnum_t *result_rev,
  * @since New in 1.2.
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_status2(svn_revnum_t *result_rev,
                    const char *path,
@@ -1793,6 +1856,7 @@ svn_client_status2(svn_revnum_t *result_rev,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_status(svn_revnum_t *result_rev,
                   const char *path,
@@ -1884,6 +1948,7 @@ svn_client_log4(const apr_array_header_t *targets,
  * @deprecated Provided for compatibility with the 1.4 API.
  * @since New in 1.4.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_log3(const apr_array_header_t *targets,
                 const svn_opt_revision_t *peg_revision,
@@ -1905,6 +1970,7 @@ svn_client_log3(const apr_array_header_t *targets,
  * @deprecated Provided for compatibility with the 1.3 API.
  * @since New in 1.2.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_log2(const apr_array_header_t *targets,
                 const svn_opt_revision_t *start,
@@ -1938,6 +2004,7 @@ svn_client_log2(const apr_array_header_t *targets,
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_log(const apr_array_header_t *targets,
                const svn_opt_revision_t *start,
@@ -2006,6 +2073,7 @@ svn_client_blame4(const char *path_or_url,
  *
  * @since New in 1.4.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_blame3(const char *path_or_url,
                   const svn_opt_revision_t *peg_revision,
@@ -2027,6 +2095,7 @@ svn_client_blame3(const char *path_or_url,
  *
  * @since New in 1.2.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_blame2(const char *path_or_url,
                   const svn_opt_revision_t *peg_revision,
@@ -2043,6 +2112,7 @@ svn_client_blame2(const char *path_or_url,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_blame(const char *path_or_url,
                  const svn_opt_revision_t *start,
@@ -2158,6 +2228,7 @@ svn_client_diff4(const apr_array_header_t *diff_options,
  *
  * @since New in 1.3.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_diff3(const apr_array_header_t *diff_options,
                  const char *path1,
@@ -2183,6 +2254,7 @@ svn_client_diff3(const apr_array_header_t *diff_options,
  *
  * @since New in 1.2.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_diff2(const apr_array_header_t *diff_options,
                  const char *path1,
@@ -2204,6 +2276,7 @@ svn_client_diff2(const apr_array_header_t *diff_options,
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_diff(const apr_array_header_t *diff_options,
                 const char *path1,
@@ -2260,6 +2333,7 @@ svn_client_diff_peg4(const apr_array_header_t *diff_options,
  *
  * @since New in 1.3.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_diff_peg3(const apr_array_header_t *diff_options,
                      const char *path,
@@ -2284,6 +2358,7 @@ svn_client_diff_peg3(const apr_array_header_t *diff_options,
  *
  * @since New in 1.2.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_diff_peg2(const apr_array_header_t *diff_options,
                      const char *path,
@@ -2306,6 +2381,7 @@ svn_client_diff_peg2(const apr_array_header_t *diff_options,
  * @since New in 1.1.
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_diff_peg(const apr_array_header_t *diff_options,
                     const char *path,
@@ -2359,6 +2435,7 @@ svn_client_diff_summarize2(const char *path1,
  *
  * @since New in 1.4.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_diff_summarize(const char *path1,
                           const svn_opt_revision_t *revision1,
@@ -2415,6 +2492,7 @@ svn_client_diff_summarize_peg2(const char *path,
  *
  * @since New in 1.4.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_diff_summarize_peg(const char *path,
                               const svn_opt_revision_t *peg_revision,
@@ -2468,9 +2546,10 @@ svn_client_diff_summarize_peg(const char *path,
  * and the addition of another, but if this flag is TRUE, unrelated
  * items will be diffed as if they were related.
  *
- * If @a force is not set and the merge involves deleting locally modified or
- * unversioned items the operation will fail.  If @a force is set such items
- * will be deleted.
+ * If @a force is false and the merge involves deleting a file whose
+ * content differs from the source-left version, or a locally modified
+ * directory, or an unversioned item, then the operation will fail.  If
+ * @a force is true then all such items will be deleted.
  *
  * @a merge_options (an array of <tt>const char *</tt>), if non-NULL,
  * is used to pass additional command line arguments to the merge
@@ -2519,6 +2598,7 @@ svn_client_merge3(const char *source1,
  *
  * @since New in 1.4.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_merge2(const char *source1,
                   const svn_opt_revision_t *revision1,
@@ -2539,6 +2619,7 @@ svn_client_merge2(const char *source1,
  *
  * @deprecated Provided for backwards compatibility with the 1.3 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_merge(const char *source1,
                  const svn_opt_revision_t *revision1,
@@ -2619,6 +2700,7 @@ svn_client_merge_peg3(const char *source,
  *
  * @since New in 1.4.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_merge_peg2(const char *source,
                       const svn_opt_revision_t *revision1,
@@ -2641,6 +2723,7 @@ svn_client_merge_peg2(const char *source,
  *
  * @since New in 1.1.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_merge_peg(const char *source,
                      const svn_opt_revision_t *revision1,
@@ -2701,10 +2784,10 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
 
 /**
  * Drive log entry callbacks @a receiver / @a receiver_baton with the
- * revisions merged from @a merge_source_url (as of @a
+ * revisions merged from @a merge_source_path_or_url (as of @a
  * src_peg_revision) into @a path_or_url (as of @a peg_revision).  @a
  * ctx is a context used for authentication.
- * 
+ *
  * @a discover_changed_paths and @a revprops are the same as for
  * svn_client_log4().  Use @a pool for all necessary allocations.
  *
@@ -2716,7 +2799,7 @@ svn_client_mergeinfo_get_merged(apr_hash_t **mergeinfo,
 svn_error_t *
 svn_client_mergeinfo_log_merged(const char *path_or_url,
                                 const svn_opt_revision_t *peg_revision,
-                                const char *merge_source_url,
+                                const char *merge_source_path_or_url,
                                 const svn_opt_revision_t *src_peg_revision,
                                 svn_log_entry_receiver_t receiver,
                                 void *receiver_baton,
@@ -2727,9 +2810,9 @@ svn_client_mergeinfo_log_merged(const char *path_or_url,
 
 /**
  * Drive log entry callbacks @a receiver / @a receiver_baton with the
- * revisions eligible for merge from @a merge_source_url (as of @a
- * src_peg_revision) into @a path_or_url (as of @a peg_revision).  @a
- * ctx is a context used for authentication.
+ * revisions eligible for merge from @a merge_source_path_or_url (as
+ * of @a src_peg_revision) into @a path_or_url (as of @a
+ * peg_revision).  @a ctx is a context used for authentication.
  *
  * @a discover_changed_paths and @a revprops are the same as for
  * svn_client_log4().  Use @a pool for all necessary allocations.
@@ -2742,7 +2825,7 @@ svn_client_mergeinfo_log_merged(const char *path_or_url,
 svn_error_t *
 svn_client_mergeinfo_log_eligible(const char *path_or_url,
                                   const svn_opt_revision_t *peg_revision,
-                                  const char *merge_source_url,
+                                  const char *merge_source_path_or_url,
                                   const svn_opt_revision_t *src_peg_revision,
                                   svn_log_entry_receiver_t receiver,
                                   void *receiver_baton,
@@ -2858,6 +2941,7 @@ svn_client_revert2(const apr_array_header_t *paths,
  *
  * @deprecated Provided for backwards compatibility with the 1.0 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_revert(const apr_array_header_t *paths,
                   svn_boolean_t recursive,
@@ -2878,7 +2962,9 @@ svn_client_revert(const apr_array_header_t *paths,
  * resolution support.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
+ * Use svn_client_resolve() instead.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_resolved(const char *path,
                     svn_boolean_t recursive,
@@ -2901,12 +2987,9 @@ svn_client_resolved(const char *path,
  * @c svn_wc_conflict_choose_merged, don't change the contents at all,
  * just remove the conflict status, which is the pre-1.5 behavior.
  *
- * (@c svn_wc_conflict_choose_theirs_conflict and
- * @c svn_wc_conflict_choose_mine_conflict are not yet implemented;
- * the effect of passing one of those values as @a conflict_choice is
- * currently undefined, which may or may not be an underhanded way of
- * allowing real behaviors to be added for them later without revving
- * this interface.)
+ * @c svn_wc_conflict_choose_theirs_conflict and @c
+ * svn_wc_conflict_choose_mine_conflict are not legal for binary
+ * files or properties.
  *
  * If @a path is not in a state of conflict to begin with, do nothing.
  * If @a path's conflict state is removed and @a ctx->notify_func2 is non-NULL,
@@ -2994,6 +3077,12 @@ typedef struct svn_client_copy_source_t
  * If @a make_parents is TRUE, create any non-existent parent directories
  * also.
  *
+ * If non-NULL, @a revprop_table is a hash table holding additional,
+ * custom revision properties (<tt>const char *</tt> names mapped to
+ * <tt>svn_string_t *</tt> values) to be set on the new revision in
+ * the event that this is a committing operation.  This table cannot
+ * contain any standard Subversion properties.
+ *
  * @a ctx->log_msg_func3/@a ctx->log_msg_baton3 are a callback/baton combo
  * that this function can use to query for a commit log message when one is
  * needed.
@@ -3010,18 +3099,21 @@ svn_client_copy4(svn_commit_info_t **commit_info_p,
                  const char *dst_path,
                  svn_boolean_t copy_as_child,
                  svn_boolean_t make_parents,
+                 const apr_hash_t *revprop_table,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool);
 
 /**
  * Similar to svn_client_copy4(), with only one @a src_path, @a
- * copy_as_child set to @c FALSE, and @a make_parents set to @c FALSE.
- * Also, use @a src_revision as both the operational and peg revision.
+ * copy_as_child set to @c FALSE, @a revprop_table passed as NULL, and
+ * @a make_parents set to @c FALSE.  Also, use @a src_revision as both
+ * the operational and peg revision.
  *
  * @since New in 1.4.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_copy3(svn_commit_info_t **commit_info_p,
                  const char *src_path,
@@ -3040,6 +3132,7 @@ svn_client_copy3(svn_commit_info_t **commit_info_p,
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_copy2(svn_commit_info_t **commit_info_p,
                  const char *src_path,
@@ -3055,6 +3148,7 @@ svn_client_copy2(svn_commit_info_t **commit_info_p,
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_copy(svn_client_commit_info_t **commit_info_p,
                 const char *src_path,
@@ -3130,6 +3224,12 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
  * If @a make_parents is TRUE, create any non-existent parent directories
  * also.
  *
+ * If non-NULL, @a revprop_table is a hash table holding additional,
+ * custom revision properties (<tt>const char *</tt> names mapped to
+ * <tt>svn_string_t *</tt> values) to be set on the new revision in
+ * the event that this is a committing operation.  This table cannot
+ * contain any standard Subversion properties.
+ *
  * @a ctx->log_msg_func3/@a ctx->log_msg_baton3 are a callback/baton combo that
  * this function can use to query for a commit log message when one is needed.
  *
@@ -3149,17 +3249,20 @@ svn_client_move5(svn_commit_info_t **commit_info_p,
                  svn_boolean_t force,
                  svn_boolean_t move_as_child,
                  svn_boolean_t make_parents,
+                 const apr_hash_t *revprop_table,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool);
 
 /**
  * Similar to svn_client_move5(), with only one @a src_path, @a
- * move_as_child set to @c FALSE, and @a make_parents set to @c FALSE.
+ * move_as_child set to @c FALSE, @a revprop_table passed as NULL, and
+ * @a make_parents set to @c FALSE.
  *
  * @since New in 1.4.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_move4(svn_commit_info_t **commit_info_p,
                  const char *src_path,
@@ -3177,6 +3280,7 @@ svn_client_move4(svn_commit_info_t **commit_info_p,
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_move3(svn_commit_info_t **commit_info_p,
                  const char *src_path,
@@ -3193,6 +3297,7 @@ svn_client_move3(svn_commit_info_t **commit_info_p,
  *
  * @since New in 1.2.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_move2(svn_client_commit_info_t **commit_info_p,
                  const char *src_path,
@@ -3209,6 +3314,7 @@ svn_client_move2(svn_client_commit_info_t **commit_info_p,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_move(svn_client_commit_info_t **commit_info_p,
                 const char *src_path,
@@ -3274,6 +3380,12 @@ svn_client_move(svn_client_commit_info_t **commit_info_p,
  * of one of those changelists.  If @a changelists is empty (or
  * altogether @c NULL), no changelist filtering occurs.
  *
+ * If non-NULL, @a revprop_table is a hash table holding additional,
+ * custom revision properties (<tt>const char *</tt> names mapped to
+ * <tt>svn_string_t *</tt> values) to be set on the new revision in
+ * the event that this is a committing operation.  This table cannot
+ * contain any standard Subversion properties.
+ *
  * If @a ctx->cancel_func is non-NULL, invoke it passing @a
  * ctx->cancel_baton at various places during the operation.
  *
@@ -3290,18 +3402,20 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
                     svn_boolean_t skip_checks,
                     svn_revnum_t base_revision_for_url,
                     const apr_array_header_t *changelists,
+                    const apr_hash_t *revprop_table,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool);
 
 /**
  * Like svn_client_propset3(), but with @a base_revision_for_url
  * always @c SVN_INVALID_REVNUM; @a commit_info_p always @c NULL; @a
- * changelists always @c NULL; and @a depth set according to @a
- * recurse: if @a recurse is TRUE, @a depth is @c svn_depth_infinity,
- * else @c svn_depth_empty.
+ * changelists always @c NULL; @a revprop_table always @c NULL; and @a
+ * depth set according to @a recurse: if @a recurse is TRUE, @a depth
+ * is @c svn_depth_infinity, else @c svn_depth_empty.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_propset2(const char *propname,
                     const svn_string_t *propval,
@@ -3317,6 +3431,7 @@ svn_client_propset2(const char *propname,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_propset(const char *propname,
                    const svn_string_t *propval,
@@ -3329,6 +3444,18 @@ svn_client_propset(const char *propname,
  * authentication, and @a pool for all memory allocation.  Return the actual
  * rev affected in @a *set_rev.  A @a propval of @c NULL will delete the
  * property.
+ *
+ * If @a original_propval is non-NULL, then just before setting the
+ * new value, check that the old value matches @a original_propval;
+ * if they do not match, return the error @c SVN_ERR_RA_OUT_OF_DATE.
+ * This is to help clients support interactive editing of revprops:
+ * without this check, the window during which the property may change
+ * underneath the user is as wide as the amount of time the user
+ * spends editing the property.  With this check, the window is
+ * reduced to a small, constant amount of time right before we set the
+ * new value.  (To check that an old value is still non-existent, set
+ * @a original_propval->data to NULL, and @a original_propval->len is
+ * ignored.)
  *
  * If @a force is TRUE, allow newlines in the author property.
  *
@@ -3344,7 +3471,27 @@ svn_client_propset(const char *propname,
  *
  * Also note that unless the administrator creates a
  * pre-revprop-change hook in the repository, this feature will fail.
+ *
+ * @since New in 1.6.
  */
+svn_error_t *
+svn_client_revprop_set2(const char *propname,
+                        const svn_string_t *propval,
+                        const svn_string_t *original_propval,
+                        const char *URL,
+                        const svn_opt_revision_t *revision,
+                        svn_revnum_t *set_rev,
+                        svn_boolean_t force,
+                        svn_client_ctx_t *ctx,
+                        apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_revprop_set2(), but with @a original_propval
+ * always @c NULL.
+ *
+ * @deprecated Provided for backward compatibility with the 1.0 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_revprop_set(const char *propname,
                        const svn_string_t *propval,
@@ -3415,6 +3562,7 @@ svn_client_propget3(apr_hash_t **props,
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_propget2(apr_hash_t **props,
                     const char *propname,
@@ -3431,6 +3579,7 @@ svn_client_propget2(apr_hash_t **props,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_propget(apr_hash_t **props,
                    const char *propname,
@@ -3477,8 +3626,8 @@ svn_client_revprop_get(const char *propname,
  * repository.
  *
  * If @a depth is @c svn_depth_empty, list only the properties of
- * @a path_or_url itself.  If @a depth is @c svn_depth_files, and
- * @a path_or_url is a directory, list the properties of @a path_or_url
+ * @a target itself.  If @a depth is @c svn_depth_files, and
+ * @a target is a directory, list the properties of @a target
  * and its file entries.  If @c svn_depth_immediates, list the properties
  * of its immediate file and directory entries.  If @c svn_depth_infinity,
  * list the properties of its file entries and recurse (with
@@ -3519,6 +3668,7 @@ svn_client_proplist3(const char *target,
  *
  * @deprecated Provided for backward compatiblility with the 1.2 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_proplist2(apr_array_header_t **props,
                      const char *target,
@@ -3534,6 +3684,7 @@ svn_client_proplist2(apr_array_header_t **props,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_proplist(apr_array_header_t **props,
                     const char *target,
@@ -3592,6 +3743,8 @@ svn_client_revprop_list(apr_hash_t **props,
  * @a revision is the revision that should be exported, which is only used
  * when exporting from a repository.
  *
+ * @a peg_revision and @a revision must not be @c NULL.
+ *
  * @a ctx->notify_func2 and @a ctx->notify_baton2 are the notification
  * functions and baton which are passed to svn_client_checkout() when
  * exporting from a repository.
@@ -3614,12 +3767,6 @@ svn_client_revprop_list(apr_hash_t **props,
  * @c svn_depth_empty.  Else if @c svn_depth_files, export @a from and
  * its immediate file children (if any) only.  If @a depth is @c
  * svn_depth_empty, then export exactly @a from and none of its children.
- *
- * If @a recurse is TRUE, export recursively.  Otherwise, export
- * just the directory represented by @a from and its immediate
- * non-directory children, but none of its child directories (if any).
- * Also, if @a recurse is FALSE, the export will behave as if
- * @a ignore_externals is TRUE.
  *
  * All allocations are done in @a pool.
  *
@@ -3649,6 +3796,7 @@ svn_client_export4(svn_revnum_t *result_rev,
  *
  * @since New in 1.2.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_export3(svn_revnum_t *result_rev,
                    const char *from,
@@ -3672,6 +3820,7 @@ svn_client_export3(svn_revnum_t *result_rev,
  * @since New in 1.1.
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_export2(svn_revnum_t *result_rev,
                    const char *from,
@@ -3689,6 +3838,7 @@ svn_client_export2(svn_revnum_t *result_rev,
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_export(svn_revnum_t *result_rev,
                   const char *from,
@@ -3775,6 +3925,7 @@ svn_client_list2(const char *path_or_url,
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_list(const char *path_or_url,
                 const svn_opt_revision_t *peg_revision,
@@ -3802,7 +3953,9 @@ svn_client_list(const char *path_or_url,
  * @since New in 1.3.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
+ * Use svn_client_list2() instead.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_ls3(apr_hash_t **dirents,
                apr_hash_t **locks,
@@ -3819,7 +3972,9 @@ svn_client_ls3(apr_hash_t **dirents,
  * @since New in 1.2.
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
+ * Use svn_client_list2() instead.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_ls2(apr_hash_t **dirents,
                const char *path_or_url,
@@ -3834,7 +3989,9 @@ svn_client_ls2(apr_hash_t **dirents,
  * the same as @a revision.
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
+ * Use svn_client_list2() instead.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_ls(apr_hash_t **dirents,
               const char *path_or_url,
@@ -3889,6 +4046,7 @@ svn_client_cat2(svn_stream_t *out,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_cat(svn_stream_t *out,
                const char *path_or_url,
@@ -3967,7 +4125,7 @@ svn_client_remove_from_changelists(const apr_array_header_t *paths,
                                    apr_pool_t *pool);
 
 /**
- * The callback type used by @a svn_client_get_changelist
+ * The callback type used by svn_client_get_changelists().
  *
  * On each invocation, @a path is a newly discovered member of the
  * changelist, and @a baton is a private function closure.
@@ -4197,7 +4355,8 @@ typedef svn_error_t *(*svn_info_receiver_t)
  * @since New in 1.3.
  */
 svn_info_t *
-svn_info_dup(const svn_info_t *info, apr_pool_t *pool);
+svn_info_dup(const svn_info_t *info,
+             apr_pool_t *pool);
 
 /**
  * Invoke @a receiver with @a receiver_baton to return information
@@ -4260,6 +4419,7 @@ svn_client_info2(const char *path_or_url,
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_info(const char *path_or_url,
                 const svn_opt_revision_t *peg_revision,

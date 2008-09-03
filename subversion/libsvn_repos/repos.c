@@ -15,8 +15,6 @@
  * ====================================================================
  */
 
-#include <assert.h>
-
 #include <apr_pools.h>
 #include <apr_file_io.h>
 
@@ -381,6 +379,17 @@ PREWRITTEN_HOOKS_TEXT
 "#   [1] REPOS-PATH   (the path to this repository)"                         NL
 "#   [2] TXN-NAME     (the name of the txn about to be committed)"           NL
 "#"                                                                          NL
+"#   [STDIN] LOCK-TOKENS ** the lock tokens are passed via STDIN."           NL
+"#"                                                                          NL
+"#   If STDIN contains the line \"LOCK-TOKENS:\\n\" (the \"\\n\" denotes a"  NL
+"#   single newline), the lines following it are the lock tokens for"        NL
+"#   this commit.  The end of the list is marked by a line containing"       NL
+"#   only a newline character."                                              NL
+"#"                                                                          NL
+"#   Each lock token line consists of a URI-escaped path, followed"          NL
+"#   by the separator character '|', followed by the lock token string,"     NL
+"#   followed by a newline."                                                 NL
+"#"                                                                          NL
 "# The default working directory for the invocation is undefined, so"        NL
 "# the program should set one explicitly if it cares."                       NL
 "#"                                                                          NL
@@ -537,6 +546,13 @@ PREWRITTEN_HOOKS_TEXT
 "#   [1] REPOS-PATH   (the path to this repository)"                         NL
 "#   [2] PATH         (the path in the repository about to be locked)"       NL
 "#   [3] USER         (the user creating the lock)"                          NL
+"#   [4] COMMENT      (the comment of the lock)"                             NL
+"#   [5] STEAL-LOCK   (1 if the user is trying to steal the lock, else 0)"   NL
+"#"                                                                          NL
+"# If the hook program outputs anything on stdout, the output string will"   NL
+"# be used as the lock token for this lock operation.  If you choose to use" NL
+"# this feature, you must guarantee the tokens generated are unique across"  NL
+"# the repository each time."                                                NL
 "#"                                                                          NL
 "# The default working directory for the invocation is undefined, so"        NL
 "# the program should set one explicitly if it cares."                       NL
@@ -618,6 +634,8 @@ PREWRITTEN_HOOKS_TEXT
 "#   [1] REPOS-PATH   (the path to this repository)"                         NL
 "#   [2] PATH         (the path in the repository about to be unlocked)"     NL
 "#   [3] USER         (the user destroying the lock)"                        NL
+"#   [4] TOKEN        (the lock token to be destroyed)"                      NL
+"#   [5] BREAK-UNLOCK (1 if the user is breaking the lock, else 0)"          NL
 "#"                                                                          NL
 "# The default working directory for the invocation is undefined, so"        NL
 "# the program should set one explicitly if it cares."                       NL
@@ -726,8 +744,7 @@ PREWRITTEN_HOOKS_TEXT
 "REPOS=\"$1\""                                                               NL
 "REV=\"$2\""                                                                 NL
                                                                              NL
-"commit-email.pl \"$REPOS\" \"$REV\" commit-watchers@example.org"            NL
-"log-commit.py --repository \"$REPOS\" --revision \"$REV\""                  NL;
+"mailer.py commit \"$REPOS\" \"$REV\" /path/to/mailer.conf"                  NL;
 
 #undef SCRIPT_NAME
 
@@ -912,8 +929,8 @@ PREWRITTEN_HOOKS_TEXT
 "PROPNAME=\"$4\""                                                            NL
 "ACTION=\"$5\""                                                              NL
 ""                                                                           NL
-"commit-email.pl --revprop-change \"$REPOS\" \"$REV\" \"$USER\" \"$PROPNAME\" "
-"watchers@example.org"                                                       NL;
+"mailer.py propchange2 \"$REPOS\" \"$REV\" \"$USER\" \"$PROPNAME\" "
+"\"$ACTION\" /path/to/mailer.conf"                                           NL;
 
 #undef SCRIPT_NAME
 
@@ -1178,6 +1195,7 @@ svn_repos_create(svn_repos_t **repos_p,
 {
   svn_repos_t *repos;
   svn_error_t *err;
+  const char *root_path;
 
   /* Allocate a repository object, filling in the format we will create. */
   repos = create_svn_repos_t(path, pool);
@@ -1195,6 +1213,13 @@ svn_repos_create(svn_repos_t **repos_p,
 
   if (! repos->fs_type)
     repos->fs_type = DEFAULT_FS_TYPE;
+
+  /* Don't create a repository inside another repository. */
+  root_path = svn_repos_find_root_path(path, pool);
+  if (root_path != NULL)
+    return svn_error_createf(SVN_ERR_REPOS_BAD_ARGS, NULL, _("'%s' is a "
+                              "subdirectory of an existing repository rooted "
+                              "at '%s'"), path, root_path);
 
   /* Create the various files and subdirectories for the repository. */
   SVN_ERR_W(create_repos_structure(repos, path, fs_config, pool),
@@ -1381,7 +1406,7 @@ svn_repos_upgrade(const char *path,
   const char *format_path;
   int format;
   apr_pool_t *subpool = svn_pool_create(pool);
-  
+
   /* Fetch a repository object; for the Berkeley DB backend, it is
      initialized with an EXCLUSIVE lock on the database.  This will at
      least prevent others from trying to read or write to it while we
@@ -1399,12 +1424,12 @@ svn_repos_upgrade(const char *path,
   format_path = svn_path_join(repos->path, SVN_REPOS__FORMAT, subpool);
   SVN_ERR(svn_io_read_version_file(&format, format_path, subpool));
   SVN_ERR(svn_io_write_version_file(format_path, format, subpool));
-  
+
   /* Try to upgrade the filesystem. */
   SVN_ERR(svn_fs_upgrade(repos->db_path, subpool));
 
   /* Now overwrite our format file with the latest version. */
-  SVN_ERR(svn_io_write_version_file(format_path, SVN_REPOS__FORMAT_NUMBER, 
+  SVN_ERR(svn_io_write_version_file(format_path, SVN_REPOS__FORMAT_NUMBER,
                                     subpool));
 
   /* Close shop and free the subpool, to release the exclusive lock. */
@@ -1460,7 +1485,7 @@ svn_repos_has_capability(svn_repos_t *repos,
       svn_mergeinfo_catalog_t ignored;
       apr_array_header_t *paths = apr_array_make(pool, 1,
                                                  sizeof(char *));
-      
+
       SVN_ERR(svn_fs_revision_root(&root, repos->fs, 0, pool));
       APR_ARRAY_PUSH(paths, const char *) = "";
       err = svn_fs_get_mergeinfo(&ignored, root, paths, FALSE, FALSE, pool);

@@ -26,8 +26,6 @@
 #include <apr_hash.h>
 #include <apr_md5.h>
 
-#include <assert.h>
-
 #include "svn_types.h"
 #include "svn_pools.h"
 #include "svn_wc.h"
@@ -103,7 +101,7 @@ restore_file(const char *file_path,
       const svn_wc_entry_t *entry;
 
       SVN_ERR(svn_wc_entry(&entry, file_path, adm_access, FALSE, pool));
-      assert(entry != NULL);
+      SVN_ERR_ASSERT(entry != NULL);
 
       SVN_ERR(svn_io_set_file_affected_time(entry->cmt_date,
                                             file_path, pool));

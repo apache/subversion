@@ -20,7 +20,6 @@
 
 #include <stdlib.h>
 #include <limits.h>
-#include <assert.h>
 #include <apr_version.h>
 #include <apr_pools.h>
 #include <apr_hash.h>
@@ -269,7 +268,7 @@ svn_hash_write_incremental(apr_hash_t *hash, apr_hash_t *oldhash,
                            svn_stream_t *stream, const char *terminator,
                            apr_pool_t *pool)
 {
-  assert(oldhash != NULL);
+  SVN_ERR_ASSERT(oldhash != NULL);
   return hash_write(hash, oldhash, stream, terminator, pool);
 }
 
@@ -277,7 +276,7 @@ svn_hash_write_incremental(apr_hash_t *hash, apr_hash_t *oldhash,
 svn_error_t *
 svn_hash_write(apr_hash_t *hash, apr_file_t *destfile, apr_pool_t *pool)
 {
-  return hash_write(hash, NULL, svn_stream_from_aprfile(destfile, pool),
+  return hash_write(hash, NULL, svn_stream_from_aprfile2(destfile, TRUE, pool),
                     SVN_HASH_TERMINATOR, pool);
 }
 
@@ -441,7 +440,7 @@ svn_hash_keys(apr_array_header_t **array,
               apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
-  
+
   *array = apr_array_make(pool, apr_hash_count(hash), sizeof(const char *));
 
   for (hi = apr_hash_first(pool, hash); hi; hi = apr_hash_next(hi))
@@ -451,7 +450,7 @@ svn_hash_keys(apr_array_header_t **array,
 
       apr_hash_this(hi, &key, NULL, NULL);
       path = key;
-      
+
       APR_ARRAY_PUSH(*array, const char *) = path;
     }
 
@@ -468,7 +467,7 @@ svn_hash_from_cstring_keys(apr_hash_t **hash_p,
   apr_hash_t *hash = apr_hash_make(pool);
   for (i = 0; i < keys->nelts; i++)
     {
-      const char *key = 
+      const char *key =
         apr_pstrdup(pool, APR_ARRAY_IDX(keys, i, const char *));
       apr_hash_set(hash, key, APR_HASH_KEY_STRING, key);
     }

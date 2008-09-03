@@ -13,22 +13,19 @@ require 'greek_tree'
 
 module SvnTestUtil
   def setup_default_variables
-    test_dir = Pathname.new(File.dirname(__FILE__))
-    pwd = Pathname.new(Dir.pwd)
-    @base_dir = test_dir.relative_path_from(pwd).to_s
     @author = ENV["USER"] || "sample-user"
     @password = "sample-password"
     @realm = "sample realm"
-    @repos_path = File.join(@base_dir, "repos")
+    @repos_path = "repos"
     @full_repos_path = File.expand_path(@repos_path)
     @repos_uri = "file://#{@full_repos_path.sub(/^\/?/, '/')}"
     @svnserve_host = "127.0.0.1"
     @svnserve_ports = (64152..64282).collect{|x| x.to_s}
-    @wc_base_dir = File.join(@base_dir, "wc-tmp")
+    @wc_base_dir = "wc-tmp"
     @wc_path = File.join(@wc_base_dir, "wc")
     @full_wc_path = File.expand_path(@wc_path)
-    @tmp_path = File.join(@base_dir, "tmp")
-    @config_path = File.join(@base_dir, "config")
+    @tmp_path = "tmp"
+    @config_path = "config"
     @greek = Greek.new(@tmp_path, @wc_path, @repos_uri)
   end
 

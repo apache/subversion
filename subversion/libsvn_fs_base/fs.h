@@ -40,7 +40,10 @@ extern "C" {
    ends.  See the SVN_FS_BASE__MIN_*_FORMAT defines to get a sense of
    what changes and features were added in which versions of this
    back-end's format.  */
-#define SVN_FS_BASE__FORMAT_NUMBER                3
+#define SVN_FS_BASE__FORMAT_NUMBER                4
+
+/* Minimum format number that supports forward deltas */
+#define SVN_FS_BASE__MIN_FORWARD_DELTAS_FORMAT    4
 
 /* Minimum format number that supports node-origins tracking */
 #define SVN_FS_BASE__MIN_NODE_ORIGINS_FORMAT      3
@@ -54,8 +57,8 @@ extern "C" {
 /* Return SVN_ERR_UNSUPPORTED_FEATURE if the version of filesystem FS does
    not indicate support for FEATURE (which REQUIRES a newer version). */
 svn_error_t *
-svn_fs_base__test_required_feature_format(svn_fs_t *fs, 
-                                          const char *feature, 
+svn_fs_base__test_required_feature_format(svn_fs_t *fs,
+                                          const char *feature,
                                           int requires);
 
 
@@ -228,14 +231,14 @@ typedef struct
      transaction). */
   const char *txn_id;
 
-  /* MD5 checksum for the contents produced by this representation.
+  /* Checksum for the contents produced by this representation.
      This checksum is for the contents the rep shows to consumers,
      regardless of how the rep stores the data under the hood.  It is
      independent of the storage (fulltext, delta, whatever).
 
-     If all the bytes are 0, then for compatibility behave as though
+     If this is NULL, then for compatibility behave as though
      this checksum matches the expected checksum. */
-  unsigned char checksum[APR_MD5_DIGESTSIZE];
+  svn_checksum_t *checksum;
 
   /* kind-specific stuff */
   union

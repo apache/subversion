@@ -17,12 +17,12 @@
  */
 
 
-#include <assert.h>
 #include <apr_hash.h>
 
 #include "svn_types.h"
 #include "svn_pools.h"
 #include "svn_fs.h"
+#include "private/svn_fs_private.h"
 
 #include "fs-loader.h"
 
@@ -35,7 +35,7 @@ svn_fs_create_access(svn_fs_access_t **access_ctx,
 {
   svn_fs_access_t *ac;
 
-  assert(username != NULL);
+  SVN_ERR_ASSERT(username != NULL);
 
   ac = apr_pcalloc(pool, sizeof(*ac));
   ac->username = apr_pstrdup(pool, username);
@@ -77,11 +77,24 @@ svn_fs_access_get_username(const char **username,
 
 
 svn_error_t *
+svn_fs_access_add_lock_token2(svn_fs_access_t *access_ctx,
+                              const char *path,
+                              const char *token)
+{
+  apr_hash_set(access_ctx->lock_tokens,
+               token, APR_HASH_KEY_STRING, (void *) path);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_fs_access_add_lock_token(svn_fs_access_t *access_ctx,
                              const char *token)
 {
-  apr_hash_set(access_ctx->lock_tokens,
-               token, APR_HASH_KEY_STRING, (void *) 1);
+  return svn_fs_access_add_lock_token2(access_ctx, (const char *) 1, token);
+}
 
-  return SVN_NO_ERROR;
+apr_hash_t *
+svn_fs__access_get_lock_tokens(svn_fs_access_t *access_ctx)
+{
+  return access_ctx->lock_tokens;
 }

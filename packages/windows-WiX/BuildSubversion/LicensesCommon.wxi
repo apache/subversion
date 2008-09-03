@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Include>
+						<Directory Id="bdb" Name="bdb">
+							<Component Guid="F619FBA1-23FF-4529-9E89-73E69DDCCCCA" Id="BdbLICENSE" DiskId="1">
+								<File Source="..\..\..\work\svn-win32-ap20x\licenses\bdb\LICENSE" Name="LICENSE.txt" Id="bdb.LICENSE">
+								<Shortcut Name="BDB" Id="bdbsct" Description="BDB License" Directory="LicenseMenuFolder" Advertise="yes" Icon="bdb.txt">
+							    	<Icon Id="bdb.txt" SourceFile="c:\windows\notepad.exe" />
+							    </Shortcut>
+								</File>
+							</Component>
+						</Directory>
+						<Directory Id="neon" Name="neon">
+							<Component Guid="D36983EA-3E56-4DAF-928B-AF9BD52D8B8D" Id="COPYINGLIB" DiskId="1">
+								<File Source="..\..\..\work\svn-win32-ap20x\licenses\neon\COPYING.LIB" Name="COPYING.txt" Id="COPYING.LIB">
+								<Shortcut Name="NEON" Id="neonsct" Description="NEON License" Directory="LicenseMenuFolder" Advertise="yes" Icon="neon.txt">
+							    	<Icon Id="neon.txt" SourceFile="c:\windows\notepad.exe" />
+							    </Shortcut>
+								</File>
+							</Component>
+						</Directory>
+						<Directory Id="OPENSSL" Name="OPENSSL">
+							<Component Guid="24B6B839-F279-49CA-A5EE-6A0B83DC7AC9" Id="OPENSSLLICENSE" DiskId="1">
+								<File Source="..\..\..\work\svn-win32-ap20x\licenses\OPENSSL\LICENSE" Name="LICENSE.txt" Id="OPENSSL.LICENSE">
+								<Shortcut Name="OPENSSL" Id="opensslsct" Description="OPENSSL License" Directory="LicenseMenuFolder" Advertise="yes" Icon="openssl.txt">
+							    	<Icon Id="openssl.txt" SourceFile="c:\windows\notepad.exe" />
+							    </Shortcut>
+								</File>
+							</Component>
+						</Directory>
+						<Directory Id="SVN" Name="SVN">
+							<Component Guid="CBC50717-49AD-42CC-9C85-EBA353B3048C" Id="SVNLICENSE" DiskId="1">
+								<File Source="..\..\..\work\svn-win32-ap20x\licenses\SVN\COPYING" Name="COPYING.txt" Id="SVN.LICENSE">
+								<Shortcut Name="Subversion" Id="svnsct" Description="Subversion License" Directory="LicenseMenuFolder" Advertise="yes" Icon="COPYING.txt">
+							    	<Icon Id="COPYING.txt" SourceFile="c:\windows\notepad.exe" />
+							    </Shortcut>
+								</File>
+							</Component>
+						</Directory>
+						<Directory Id="zlib" Name="zlib">
+							<Component Guid="451E1EBC-9E20-4BD7-8321-0D65C4C23A1B" Id="zlREADME" DiskId="1">
+								<File Source="..\..\..\work\svn-win32-ap20x\licenses\zlib\README" Name="README.txt" Id="README">
+								<Shortcut Name="ZLIB" Id="zlibsct" Description="ZLIB License" Directory="LicenseMenuFolder" Advertise="yes" Icon="zlib.txt">
+							    	<Icon Id="zlib.txt" SourceFile="c:\windows\notepad.exe" />
+							    </Shortcut>
+								</File>
+							</Component>
+						</Directory>
+						<Directory Id="cyrussasl" Name="cyrussasl">
+							<Component Guid="DF72B8AD-9A07-4CCB-BDB1-B317A1FF856A" Id="cyCOPYING" DiskId="1">
+								<File Source="..\..\..\work\svn-win32-ap20x\licenses\cyrus-sasl\COPYING" Name="COPYING.txt" Id="COPYING">
+								<Shortcut Name="CYRUSSSL" Id="cysslsct" Description="Cyrus SASL License" Directory="LicenseMenuFolder" Advertise="yes" Icon="copying.txt">
+							    	<Icon Id="copying.txt" SourceFile="c:\windows\notepad.exe" />
+							    </Shortcut>
+								</File>
+							</Component>
+						</Directory>
+						<Directory Id="serf" Name="serf">
+							<Component Guid="B90EADE1-48B6-477F-83AF-FA8347E7A7AB" Id="serLICENSE" DiskId="1">
+								<File Source="..\..\..\work\svn-win32-ap20x\licenses\serf\LICENSE" Name="LICENSE.txt" Id="srfLICENSE">
+								<Shortcut Name="SERF" Id="serfsct" Description="Serf License" Directory="LicenseMenuFolder" Advertise="yes" Icon="license.txt">
+							    	<Icon Id="license.txt" SourceFile="c:\windows\notepad.exe" />
+							    </Shortcut>
+								</File>
+							</Component>
+						</Directory>
+</Include>

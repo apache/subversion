@@ -22,7 +22,6 @@
 
 /*** Includes. ***/
 
-#include <assert.h>
 #include "svn_client.h"
 #include "svn_string.h"
 #include "svn_error.h"
@@ -41,8 +40,7 @@
 
 /* Helper function to handle copying a potentially translated version of
    local file PATH to OUTPUT.  REVISION must be one of the following: BASE,
-   COMMITTED, WORKING, or UNSPECIFIED.  If the revision is UNSPECIFIED, it
-   will default to BASE.  Uses POOL for temporary allocations. */
+   COMMITTED, WORKING.  Uses POOL for temporary allocations. */
 static svn_error_t *
 cat_local_file(const char *path,
                svn_stream_t *output,
@@ -62,10 +60,7 @@ cat_local_file(const char *path,
   apr_file_t *input_file;
   svn_stream_t *input;
 
-  assert(revision->kind == svn_opt_revision_working ||
-         revision->kind == svn_opt_revision_base ||
-         revision->kind == svn_opt_revision_committed ||
-         revision->kind == svn_opt_revision_unspecified);
+  SVN_ERR_ASSERT(SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(revision->kind));
 
   SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
 
@@ -145,7 +140,7 @@ cat_local_file(const char *path,
     SVN_ERR(svn_subst_translate_stream3(input, output, eol, FALSE, kw,
                                         TRUE, pool));
   else
-    SVN_ERR(svn_stream_copy(input, output, pool));
+    SVN_ERR(svn_stream_copy2(input, output, NULL, NULL, pool));
 
   SVN_ERR(svn_stream_close(input));
 
@@ -169,15 +164,23 @@ svn_client_cat2(svn_stream_t *out,
   const char *url;
   svn_stream_t *output = out;
 
+  /* ### Inconsistent default revision logic in this command. */
+  if (peg_revision->kind == svn_opt_revision_unspecified)
+    {
+      peg_revision = svn_cl__rev_default_to_head_or_working(peg_revision,
+                                                            path_or_url);
+      revision = svn_cl__rev_default_to_head_or_base(revision, path_or_url);
+    }
+  else
+    {
+      peg_revision = svn_cl__rev_default_to_head_or_working(peg_revision,
+                                                            path_or_url);
+      revision = svn_cl__rev_default_to_peg(revision, peg_revision);
+    }
+
   if (! svn_path_is_url(path_or_url)
-      && (peg_revision->kind == svn_opt_revision_base
-          || peg_revision->kind == svn_opt_revision_working
-          || peg_revision->kind == svn_opt_revision_committed
-          || peg_revision->kind == svn_opt_revision_unspecified)
-      && (revision->kind == svn_opt_revision_base
-          || revision->kind == svn_opt_revision_working
-          || revision->kind == svn_opt_revision_committed
-          || revision->kind == svn_opt_revision_unspecified))
+      && SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(peg_revision->kind)
+      && SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(revision->kind))
     {
       svn_wc_adm_access_t *adm_access;
 

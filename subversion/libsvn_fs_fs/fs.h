@@ -25,6 +25,8 @@
 #include <apr_network_io.h>
 
 #include "svn_fs.h"
+#include "svn_cache.h"
+#include "svn_config.h"
 #include "private/svn_fs_private.h"
 
 #ifdef __cplusplus
@@ -50,6 +52,8 @@ extern "C" {
 #define PATH_TXN_CURRENT      "txn-current"      /* File with next txn key */
 #define PATH_TXN_CURRENT_LOCK "txn-current-lock" /* Lock for txn-current */
 #define PATH_LOCKS_DIR        "locks"            /* Directory of locks */
+/* If you change this, look at tests/svn_test_fs.c(maybe_install_fsfs_conf) */
+#define PATH_CONFIG           "fsfs.conf"        /* Configuration */
 
 /* Names of special files and file extensions for transactions */
 #define PATH_CHANGES       "changes"       /* Records changes made so far */
@@ -64,6 +68,10 @@ extern "C" {
 /* Names of files in legacy FS formats */
 #define PATH_REV           "rev"           /* Proto rev file */
 #define PATH_REV_LOCK      "rev-lock"      /* Proto rev (write) lock file */
+
+/* Names of sections and options in fsfs.conf. */
+#define CONFIG_SECTION_CACHES     "caches"
+#define CONFIG_OPTION_FAIL_STOP       "fail-stop"
 
 /* The format number of this filesystem.
    This is independent of the repository format number, and
@@ -90,15 +98,6 @@ extern "C" {
 /* The minimum format number that maintains minfo-here and minfo-count
    noderev fields. */
 #define SVN_FS_FS__MIN_MERGEINFO_FORMAT 3
-
-/* Maximum number of directories to cache dirents for.
-   This *must* be a power of 2 for DIR_CACHE_ENTRIES_MASK
-   to work.  */
-#define NUM_DIR_CACHE_ENTRIES 128
-#define DIR_CACHE_ENTRIES_MASK(x) ((x) & (NUM_DIR_CACHE_ENTRIES - 1))
-
-/* Maximum number of revroot ids to cache dirents for at a time. */
-#define NUM_RRI_CACHE_ENTRIES 4096
 
 /* Private FSFS-specific data shared between all svn_txn_t objects that
    relate to a particular transaction in a filesystem (as identified
@@ -164,32 +163,9 @@ typedef struct
   apr_pool_t *common_pool;
 } fs_fs_shared_data_t;
 
-typedef struct dag_node_t dag_node_t;
-
-/* Structure for DAG-node cache.  Cache items are arranged in a
-   circular LRU list with a dummy entry, and also indexed with a hash
-   table.  Transaction nodes are cached within the individual txn
-   roots; revision nodes are cached together within the FS object. */
-typedef struct dag_node_cache_t
-{
-  const char *key;                /* Lookup key for cached node: path
-                                     for txns; rev catenated with path
-                                     for revs */
-  dag_node_t *node;               /* Cached node */
-  struct dag_node_cache_t *prev;  /* Next node in LRU list */
-  struct dag_node_cache_t *next;  /* Previous node in LRU list */
-  apr_pool_t *pool;               /* Pool in which node is allocated */
-} dag_node_cache_t;
-
-
 /* Private (non-shared) FSFS-specific data for each svn_fs_t object. */
 typedef struct
 {
-  /* A cache of the last directory opened within the filesystem. */
-  svn_fs_id_t *dir_cache_id[NUM_DIR_CACHE_ENTRIES];
-  apr_hash_t *dir_cache[NUM_DIR_CACHE_ENTRIES];
-  apr_pool_t *dir_cache_pool[NUM_DIR_CACHE_ENTRIES];
-
   /* The format number of this FS. */
   int format;
   /* The maximum number of files to store per directory (for sharded
@@ -202,23 +178,27 @@ typedef struct
   /* The revision that was youngest, last time we checked. */
   svn_revnum_t youngest_rev_cache;
 
-  /* Caches of immutable data.
-     
-     Both of these could be moved to fs_fs_shared_data_t to make them
-     last longer; on the other hand, this would require adding mutexes
-     for threaded builds.
-  */
+  /* The fsfs.conf file, parsed.  Allocated in FS->pool. */
+  svn_config_t *config;
 
-  /* A cache of revision root IDs, allocated in this subpool.  (IDs
-     are so small that one pool per ID would be overkill;
-     unfortunately, this means the only way we expire cache entries is
-     by wiping the whole cache.) */
-  apr_hash_t *rev_root_id_cache;
-  apr_pool_t *rev_root_id_cache_pool;
+  /* Caches of immutable data.  (Note that if these are created with
+     svn_cache_create_memcache, the data can be shared between
+     multiple svn_fs_t's for the same filesystem.) */
+
+  /* A cache of revision root IDs, mapping from (svn_revnum_t *) to
+     (svn_fs_id_t *).  (Not threadsafe.) */
+  svn_cache_t *rev_root_id_cache;
 
   /* DAG node cache for immutable nodes */
-  dag_node_cache_t rev_node_list;
-  apr_hash_t *rev_node_cache;
+  svn_cache_t *rev_node_cache;
+
+  /* A cache of the contents of immutable directories; maps from
+     unparsed FS ID to ###x. */
+  svn_cache_t *dir_cache;
+
+  /* Fulltext cache; currently only used with memcached.  Maps from
+     rep key to svn_string_t. */
+  svn_cache_t *fulltext_cache;
 
   /* Data shared between all svn_fs_t objects for a given filesystem. */
   fs_fs_shared_data_t *shared;
@@ -251,14 +231,14 @@ typedef struct
  * svn_fs_fs__rep_copy. */
 typedef struct
 {
-  /* MD5 checksum for the contents produced by this representation.
+  /* Checksum for the contents produced by this representation.
      This checksum is for the contents the rep shows to consumers,
      regardless of how the rep stores the data under the hood.  It is
      independent of the storage (fulltext, delta, whatever).
 
-     If all the bytes are 0, then for compatibility behave as though
-     this checksum matches the expected checksum. */
-  unsigned char checksum[APR_MD5_DIGESTSIZE];
+     If checksum is NULL, then for compatibility behave as though this
+     checksum matches the expected checksum. */
+  svn_checksum_t *checksum;
 
   /* Revision where this representation is located. */
   svn_revnum_t revision;

@@ -18,7 +18,6 @@
 
 
 #include <stdarg.h>
-#include <assert.h>
 
 #include <apr_general.h>
 #include <apr_pools.h>
@@ -375,6 +374,7 @@ svn_handle_error2(svn_error_t *err,
      use a subpool. */
   apr_pool_t *subpool;
   apr_array_header_t *empties;
+  svn_error_t *tmp_err;
 
   /* ### The rest of this file carefully avoids using svn_pool_*(),
      preferring apr_pool_*() instead.  I can't remember why -- it may
@@ -383,16 +383,17 @@ svn_handle_error2(svn_error_t *err,
   apr_pool_create(&subpool, err->pool);
   empties = apr_array_make(subpool, 0, sizeof(apr_status_t));
 
-  while (err)
+  tmp_err = err;
+  while (tmp_err)
     {
       int i;
       svn_boolean_t printed_already = FALSE;
 
-      if (! err->message)
+      if (! tmp_err->message)
         {
           for (i = 0; i < empties->nelts; i++)
             {
-              if (err->apr_err == APR_ARRAY_IDX(empties, i, apr_status_t) )
+              if (tmp_err->apr_err == APR_ARRAY_IDX(empties, i, apr_status_t) )
                 {
                   printed_already = TRUE;
                   break;
@@ -402,23 +403,28 @@ svn_handle_error2(svn_error_t *err,
 
       if (! printed_already)
         {
-          print_error(err, stream, prefix);
-          if (! err->message)
+          print_error(tmp_err, stream, prefix);
+          if (! tmp_err->message)
             {
-              APR_ARRAY_PUSH(empties, apr_status_t) = err->apr_err;
+              APR_ARRAY_PUSH(empties, apr_status_t) = tmp_err->apr_err;
             }
         }
 
-      err = err->child;
+      tmp_err = tmp_err->child;
     }
 
   svn_pool_destroy(subpool);
 
   fflush(stream);
   if (fatal)
-    /* XXX Shouldn't we exit(1) here instead, so that atexit handlers
-       get called?  --xbc */
-    abort();
+    {
+      /* Avoid abort()s in maintainer mode. */
+      svn_error_clear(err);
+
+      /* We exit(1) here instead of abort()ing so that atexit handlers
+         get called. */
+      exit(EXIT_FAILURE);
+    }
 }
 
 
@@ -474,4 +480,46 @@ svn_strerror(apr_status_t statcode, char *buf, apr_size_t bufsize)
       }
 
   return apr_strerror(statcode, buf, bufsize);
+}
+
+svn_error_t *
+svn_error_raise_on_malfunction(const char *file, int line, const char *expr)
+{
+  if (expr)
+    return svn_error_createf(SVN_ERR_ASSERTION_FAIL, NULL,
+                             _("In file '%s' line %d: assertion failed (%s)"),
+                             file, line, expr);
+  else
+    return svn_error_createf(SVN_ERR_ASSERTION_FAIL, NULL,
+                             _("In file '%s' line %d: internal malfunction"),
+                             file, line);
+}
+
+svn_error_t *
+svn_error_abort_on_malfunction(const char *file, int line, const char *expr)
+{
+  svn_error_t *err = svn_error_raise_on_malfunction(file, line, expr);
+
+  svn_handle_error2(err, stderr, TRUE, "svn: ");
+  return err;  /* Not reached. */
+}
+
+/* The current handler for reporting malfunctions, and its default setting. */
+static svn_error_malfunction_handler_t malfunction_handler
+  = svn_error_abort_on_malfunction;
+
+svn_error_malfunction_handler_t
+svn_error_set_malfunction_handler(svn_error_malfunction_handler_t func)
+{
+  svn_error_malfunction_handler_t old_malfunction_handler
+    = malfunction_handler;
+
+  malfunction_handler = func;
+  return old_malfunction_handler;
+}
+
+svn_error_t *
+svn_error__malfunction(const char *file, int line, const char *expr)
+{
+  return malfunction_handler(file, line, expr);
 }

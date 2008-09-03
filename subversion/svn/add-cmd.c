@@ -46,7 +46,7 @@ svn_cl__add(apr_getopt_t *os,
   apr_pool_t *subpool;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
-                                                      opt_state->targets, 
+                                                      opt_state->targets,
                                                       ctx, pool));
 
   if (! targets->nelts)

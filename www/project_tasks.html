@@ -15,477 +15,117 @@
 <body>
 <div class="app">
 
-<h1 style="text-align: center;">What Needs Doing?</h1>
+<h2 style="text-align: center">Project Tasks Redirect Page</h2>
 
-<p>There are a lot of different things you can do to help Subversion.
-Not all involve coding; there are plenty of non-programming roles for
-eager volunteers.</p>
+<p>The material that used to be here has moved to <a
+href="tasks.html">tasks.html</a>.</p>
 
-<p>Below are some of the needs we've identified, but please don't take
-these as gospel!  New volunteers bring fresh viewpoints, and one of
-the most important things you can do is point out a need we hadn't
-recognized before&nbsp;&mdash;&nbsp;and then fill it.</p>
+<p>This page exists only to provide redirection for links that used to
+be here.  Each one is redirected individually (unfortunately, doing a
+usual "META"-style redirect on the whole page wouldn't work, because
+this server strips the relevant headers).</p>
 
-<!-- ************************************************************* -->
-<div class="h2" id="summer-of-code" title="summer-of-code">
-<h2>Google Summer of Code Tasks</h2>
+<hr/>
 
-<p>These are the ideas that the Subversion developers have for <a
-href="http://code.google.com/soc/">Google Summer of Code</a>
-applicants.  These are just some ideas&nbsp;&mdash;&nbsp;if you have
-other ideas, we're happy to consider them too, please just post them
-to <a
-href="mailto:dev@subversion.tigris.org">dev@subversion.tigris.org</a>.</p>
+<div id="source-release" title="source-release">
+<p><strong>"source-release"</strong> has moved; please try <a
+   href="getting.html#source-release" >here</a> instead.</p>
+</div>  <!-- source-release -->
 
-<p>However, please don't select tasks in the other sections of this
-page as your Summer of Code proposal, as those are either not the
-right size for the Summer of Code, or are not coding tasks and
-therefore not eligible.</p>
+<div id="summer-of-code" title="summer-of-code">
+<p><strong>"summer-of-code"</strong> has moved; please try <a
+   href="tasks.html#summer-of-code" >here</a> instead.</p>
+</div>  <!-- summer-of-code -->
 
-<p>You should also read the <a href="hacking.html">Hacker's Guide to
-Subversion</a> before starting out on a proposal. Don't hesitate to
-ask for details or start discussing one of these tasks on the <a
-href="mailto:dev@subversion.tigris.org">dev@subversion.tigris.org</a>
-mailing list (see <a
-href="http://subversion.tigris.org/servlets/ProjectMailingListList"
->here</a> for subscription information).</p>
+<div id="sparse-dirs-deselect" title="sparse-dirs-deselect">
+<p><strong>"sparse-dirs-deselect"</strong> has moved; please try <a
+   href="tasks.html#sparse-dirs-deselect" >here</a> instead.</p>
+</div>  <!-- sparse-dirs-deselect -->
 
-<p>In fact, please discuss your task on the mailing list regardless of
-whether you've submitted your application yet.  Eagerness to engage
-with the rest of the Subversion development community will be
-considered favourable in evaluating your application.</p>
-
-<p>If you have questions about the application process, compensation,
-or the Google Summer of Code program in general, please see the
-program <a
-href="http://code.google.com/opensource/gsoc/2008/faqs.html">FAQ</a>
-</p>
-
-<!-- ************************************************************* -->
-<div class="h3" id="sparse-dirs-deselect" title="sparse-dirs-deselect">
-<h3>Deselection interface for sparse directories.</h3>
-
-<p>See <a
-href="http://subversion.tigris.org/issues/show_bug.cgi?id=2843"
->issue&nbsp;#2843</a>.</p>
-
-<p>Although we now support <a
-href="http://svn.collab.net/repos/svn/trunk/notes/sparse-directories.txt"
->sparse checkouts</a>, we do not yet have any way to remove subtrees
-from a working copy once they have been brought in.  This task
-involves coming up with an interface specification first (via list
-discussion), and then implementing it.</p>
-
-</div> <!-- spars-dirs-deselect -->
-
-<!-- ************************************************************* -->
-<div class="h3" id="externals-commit" title="externals-commit">
-<h3>Make commit descend into svn:externals directories.</h3>
-
-<p>See <a
-href="http://subversion.tigris.org/issues/show_bug.cgi?id=1167"
->issue&nbsp;#1167</a>.</p>
-
-<p>See also <a
-href="http://subversion.tigris.org/issues/show_bug.cgi?id=2325" >issue
-2325</a> (svn cleanup should follow svn:external references).</p>
-
+<div id="externals-commit" title="externals-commit">
+<p><strong>"externals-commit"</strong> has moved; please try <a
+   href="tasks.html#externals-commit" >here</a> instead.</p>
 </div>  <!-- externals-commit -->
 
-<!-- ************************************************************* -->
-<div class="h3" id="dav-interop" title="dav-interop">
-<h3>Better DAV interoperability.</h3>
-
-<p>Over DAV (http://), Subversion should map the svn:executable and
-svn:mime-type to the DAV-standard props, for better interoperability
-with existing DAV clients.</p>
-
-<p>See <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=1345"
->issue&nbsp;#1345</a>.</p>
-
+<div id="dav-interop" title="dav-interop">
+<p><strong>"dav-interop"</strong> has moved; please try <a
+   href="tasks.html#dav-interop" >here</a> instead.</p>
 </div>  <!-- dav-interop -->
 
-<!-- ************************************************************* -->
-<div class="h3" id="progress-output" title="progress-output">
-<h3>Show progress output.</h3>
-
-<p>Improve the progress output displayed during update and commit.</p>
-
-<p>See <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=1264"
->Issue&nbsp;#1264</a> and <a
-href="http://subversion.tigris.org/issues/show_bug.cgi?id=901"
->issue&nbsp;#901</a>.</p>
-
+<div id="progress-output" title="progress-output">
+<p><strong>"progress-output"</strong> has moved; please try <a
+   href="tasks.html#progress-output" >here</a> instead.</p>
 </div>  <!-- progress-output -->
 
-
-<!-- ************************************************************* -->
-<div class="h3" id="customizable-diff" title="customizable-diff">
-<h3>More customizable behavior for diff.</h3>
-
-<p>Fully customizable external diff invocations, and support for
-external diff commands for non-text types.</p>
-
-<p>See <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=2044"
->Issue&nbsp;#2044</a> and <a
-href="http://subversion.tigris.org/issues/show_bug.cgi?id=2447"
->issue&nbsp;#2447</a>.</p>
-
+<div id="customizable-diff" title="customizable-diff">
+<p><strong>"customizable-diff"</strong> has moved; please try <a
+   href="tasks.html#customizable-diff" >here</a> instead.</p>
 </div>  <!-- customizable-diff -->
 
-
-<!-- ************************************************************* -->
-<div class="h3" id="authz-improvements" title="authz-improvements">
-<h3>Authz improvements</h3>
-
-<p>Note: Summer of Code may require two or more depending on
-complexity.</p>
-
-<ul>
-<li><p><a href="http://subversion.tigris.org/issues/show_bug.cgi?id=2445" 
-    >2445</a>: Allow users to change passwords.</p></li>
-
-<li><p><a href="http://subversion.tigris.org/issues/show_bug.cgi?id=2958" 
-    >2958</a>/<a
-    href="http://subversion.tigris.org/issues/show_bug.cgi?id=2662" 
-    >2662</a>: Authz path wildcards; these are probably duplicate
-    issues, and the latter one has a patch already, though it may be
-    out-of-date now.</p></li>
-
-<li><p><a href="http://subversion.tigris.org/issues/show_bug.cgi?id=2338" 
-    >2338</a> mod_authz_svn should be able to use httpd's groups
-    config.</p></li>
-
-<li><p><a href="http://subversion.tigris.org/issues/show_bug.cgi?id=2143" 
-    >2143</a> Additional authz action controls (e.g., add/remove
-    files).</p></li>
-
-</ul>
-
+<div id="authz-improvements" title="authz-improvements">
+<p><strong>"authz-improvements"</strong> has moved; please try <a
+   href="tasks.html#authz-improvements" >here</a> instead.</p>
 </div>  <!-- authz-improvements -->
 
-
-<!-- ************************************************************* -->
-<div class="h3" id="interactive-merge-source-selection"
-             title="interactive-merge-source-selection">
-<h3>Interactive merge source selection</h3>
-
-<p>See <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=3065"
->issue&nbsp;#3065</a>.</p>
-
+<div id="interactive-merge-source-selection">
+<p><strong>"interactive-merge-source-selection"</strong> has moved; please try <a
+   href="tasks.html#interactive-merge-source-selection" >here</a> instead.</p>
 </div>  <!-- interactive-merge-source-selection -->
 
+<div id="svn-commit" title="svn-commit">
+<p><strong>"svn-commit"</strong> has moved; please try <a
+   href="tasks.html#svn-commit" >here</a> instead.</p>
+</div>  <!-- svn-commit -->
 
-<!-- These are some other ones I considered for SoC 2008, but decided
-     (for now) to leave off the list.  Feel free to publish them if
-     you think they're appropriate.
+<div id="svnserve-logging" title="svnserve-logging">
+<p><strong>"svnserve-logging"</strong> has moved; please try <a
+   href="tasks.html#svnserve-logging" >here</a> instead.</p>
+</div>  <!-- svnserve-logging -->
 
-     1233 mime-type guessing improved for Unix systems
-     2286 shared storage for identical files
-     2194 Support Unicode encodings other than UTF8 as plain text
-     783  Construct a notification system for properties [iffy...]
--->
+<div id="svn-augmented-diff" title="svn-augmented-diff">
+<p><strong>"svn-augmented-diff"</strong> has moved; please try <a
+   href="tasks.html#svn-augmented-diff" >here</a> instead.</p>
+</div>  <!-- svn-augmented-diff -->
 
-<!-- ************************************************************* -->
-<div class="h3" id="svn-commit" title="svn-commit">
-<h3>Allow Commit from multiple working copies</h3>
+<div id="information-management" title="information-management">
+<p><strong>"information-management"</strong> has moved; please try <a
+   href="tasks.html#information-management" >here</a> instead.</p>
+</div>  <!-- information-management -->
 
-<p>Currently, 'svn commit' cannot commit changes that are located in
-two or more disconnected working copies (lacking a common parent),
-even if those working copies belong to the same repository.  This is
-a fairly common need for users that work on multiple projects that
-are all stored in the same repository and need to commit the changes
-for multiple projects in a single atomic commit transaction.</p>
+<div id="issue-management" title="issue-management">
+<p><strong>"issue-management"</strong> has moved; please try <a
+   href="tasks.html#issue-management" >here</a> instead.</p>
+</div>  <!-- issue-management -->
 
-<p>There are several issues in the issue tracker that describe the
-problem in more detail (see <a
-href="http://subversion.tigris.org/issues/show_bug.cgi?id=2381">issue
-#2381</a>).</p>
+<div id="faq-management" title="faq-management">
+<p><strong>"faq-management"</strong> has moved; please try <a
+   href="tasks.html#faq-management" >here</a> instead.</p>
+</div>  <!-- faq-management -->
 
-</div>
+<div id="bite-sized" title="bite-sized">
+<p><strong>"bite-sized"</strong> has moved; please try <a
+   href="tasks.html#bite-sized" >here</a> instead.</p>
+</div>  <!-- bite-sized -->
 
+<div id="larger-tasks" title="larger-tasks">
+<p><strong>"larger-tasks"</strong> has moved; please try <a
+   href="tasks.html#larger-tasks" >here</a> instead.</p>
+</div>  <!-- larger-tasks -->
 
-<!-- ************************************************************* -->
-<div class="h3" id="svnserve-logging" title="svnserve-logging">
-<h3>Operation and error logging for svnserve (<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=2409"
->issue&nbsp;#2409</a>):</h3>
+<div id="error-messages" title="error-messages">
+<p><strong>"error-messages"</strong> has moved; please try <a
+   href="tasks.html#error-messages" >here</a> instead.</p>
+</div>  <!-- error-messages -->
 
-<p>Subversion 1.3.0 added support for operational logging in
-mod_dav_svn.  That is, logging what actual client-side operations are
-performed on a repository, rather than just logging the endless flow
-of WebDAV requests.  Support for this kind of logging, as well as
-error logging, needs to be added to the standalone svnserve daemon.
-This requires some work in the APR library, which would provide the
-actual logging facility.</p>
+<div id="bindings" title="bindings">
+<p><strong>"bindings"</strong> has moved; please try <a
+   href="tasks.html#bindings" >here</a> instead.</p>
+</div>  <!-- bindings -->
 
-<p>This has been extensively discussed on the Subversion development
-mailing list in the past.  A good first step would be to review the
-previous proposals.</p>
-
-<p><em>This task may have been started at <a
-href="http://svn.collab.net/repos/svn/branches/svnserve-logging"
->http://svn.collab.net/repos/svn/branches/svnserve-logging</a>.</em></p>
-</div>
-
-<!-- ************************************************************* -->
-<div class="h3" id="svn-augmented-diff" title="svn-augmented-diff">
-<h3>An augmented diff representation</h3>
-
-<p>Currently, 'svn diff' outputs a patch in the so-called "Unified
-diff" format.  The problem is, this format is fairly old, and as such
-can represent only textual differences between files.  It does not
-represent structural changes to the directory tree, nor can it
-encompass changes to various metadata, the kind used extremely
-frequently by Subversion.</p>
-
-<p>'svn diff' actually has two or three use cases.  The first is to
-produce a human-reviewable description of a change suitable for code
-review.  The second (and maybe third) are to produce a file that can
-be sent by email or stored somewhere for later application, by patch(1)
-(the second use case) or some other more-capable patch tool (the third
-use case).  Of these, 'svn diff' currently only supports the first case.
-For example, copied files are currently shown as differences against the
-original version of the file, which makes review easier, though isn't
-suitable for applying with patch.</p>
-
-<p>This task is: First, to propose a solution for serialising a complete
-representation of a change.  Then, implement that solution with a new
-switch to 'svn diff' and a new subcommand ('svn patch'?) that would
-apply a previously created serialised patch.</p>
-
-<p>Things to consider in your design of the serialisation format:</p>
-<ul>
-<li>Whether it represents content diffs in a human-readable format
-(probably using the unified diff format), Subversion's native binary
-delta format, or some other format.  Considerations include non-precise
-(fuzzy) patching and representing changes to binary files.</li>
-<li>Whether it should be compatible (to some degree) with patch(1)
-(by encoding extra information in a "garbage" chunk of data that patch
-will ignore, similar to the way property changes are reported today).</li>
-<li>How renames (when eventually implemented as a primitive operation)
-should be represented.</li>
-</ul>
-
-<p>Note that <a href="http://svk.elixus.org">SVK</a> posesses such a
-rich unified diff format.  It may or may not be desirable to reuse the
-same kind of representation; that decision is part of the task!</p>
-
-<p><em>This task may have been started at <a
-href="http://svn.collab.net/repos/svn/branches/svnpatch-diff"
->http://svn.collab.net/repos/svn/branches/svnpatch-diff</a>.</em></p>
-
-</div>
-
-
-</div>
-
-<!-- ============================================================= -->
-<div class="h2" id="information-management" title="information-management">
-<h2>Information Management Tasks</h2>
-
-<p>These are non-coding tasks, so they are <b>NOT</b> eligible for
-<a href="http://code.google.com/summerofcode.html">Google Summer of Code</a>.
-If you have come here from the Summer of Code pages, skip this section of the
-page.</p>
-
-<div class="h3" id="issue-management" title="issue-management">
-<h3>Issue Management</h3>
-
-<p>Do we need an Issue Manager?  Maybe...</p>
-
-<p>The Subversion <a
-href="http://subversion.tigris.org/project_issues.html">bug
-database</a> has been managed in a rather ad hoc fashion thus far.
-Periodically we make sweeps over all outstanding issues and try to
-prioritize them, organize them into scheduled milestones, note
-dependencies between issues, etc.  These methods have been moderately
-successful up till now, but they are not scaling well as the number of
-issues grows.  Since issue growth is proportional to user base growth,
-the issue tracker is becoming a victim of Subversion's success.  We
-need to find new ways of managing our issues, ways that do not involve
-making O(N) sweeps over the entire list of open issues at regular
-intervals.</p>
-
-<p>While we have some semi-formalized management roles (patch manager,
-release manager, etc), we have never had an issue manager.  It might
-be time to get one, though.  It's not yet clear whether the problem is
-mainly one of attention, or of algorithm, or both, but having someone
-dedicated to managing the issues database couldn't hurt.  One thing
-such a person could do would be to go through the list of outstanding
-issues, figure out which ones are likely to be <a
-href="#bite-sized">bite-sized tasks</a>, and mark them as such, so
-that other volunteers have an easier time choosing things to work on.
-We've already marked various issues as bite-sized, but we haven't done
-so consistently as new issues come in.  This means there are a lot of
-potential entry points to the project going unnoticed.  Want to help
-us solve that?</p>
-
-<p>Creative ideas welcome!  If you'd like to help with this, please <a
-href="http://subversion.tigris.org/servlets/ProjectMailingListList"
->subscribe</a> to the <a
-href="mailto:dev@subversion.tigris.org">dev@subversion.tigris.org</a>
-mailing list and post your thoughts.</p>
-
-</div>
-
-<div class="h3" id="faq-management" title="faq-management">
-<h3>FAQ Management</h3>
-
-<p>We need a FAQ manager.  A FAQ manager is someone who stays
-subscribed to the <a
-href="mailto:users@subversion.tigris.org">users@subversion.tigris.org</a>
-and <a href="mailto:dev@subversion.tigris.org"
->dev@subversion.tigris.org</a> mailing lists, watches for common
-questions or addenda to existing questions, and slowly adjusts the
-Subversion <a href="faq.html">FAQ</a> in response to the problems
-users are having "in the wild".  This is also a great way to get
-familiar with Subversion usage patterns and common problems.  If you
-use or administrate Subversion anyway, helping to manage the FAQ is a
-great way to expand your troubleshooting skills.</p>
-
-<p>Again, creative ideas are most welcome.  Please post to the <a
-href="mailto:dev@subversion.tigris.org">dev@subversion.tigris.org</a>
-mailing list if you're interested in this.</p>
-
-</div>
-
-</div>
-
-<!-- ============================================================= -->
-<div class="h2" id="bite-sized" title="bite-sized">
-<h2>Bite-Sized Coding Tasks</h2>
-
-<p>The Subversion bug database contains many issues classified as
-"bite-sized" tasks&nbsp;&mdash;&nbsp;tasks that are well-defined and
-self-contained, and thus suitable for a volunteer looking to get
-involved with the project.  You <i>don't</i> need broad or detailed
-knowledge of Subversion's design to take on one of these, just a
-pretty good idea of how things generally work, and familiarity with
-the coding guidelines in the
-<a href="hacking.html">Hacker's Guide to Subversion</a>.  Many tasks
-are things a volunteer could pick off in a spare week or two, and
-they're a great way to start learning your way around the Subversion
-code.</p>
-
-<p> If you start one of these tasks, please notify the other
-developers by marking the issue as "STARTED" in the issue tracker,
-then mail <a
-href="mailto:dev@subversion.tigris.org">dev@subversion.tigris.org</a>
-(<a
-href="http://subversion.tigris.org/servlets/ProjectMailingListList"
->subscribe</a> to that list too) with questions.  Don't be shy, it's a
-very civil mailing list.</p>
-
-<p>When you're ready to send in a patch, see the <a
-href="http://subversion.tigris.org/mailing-list-guidelines.html#patches"
->patch posting guidelines</a>.  Don't be discouraged if your patch
-goes through several iterations of review by other developers; this is
-normal.</p>
-
-<p>Here is the <a
-href="http://subversion.tigris.org/issues/buglist.cgi?component=subversion&amp;issue_status=UNCONFIRMED&amp;issue_status=NEW&amp;issue_status=STARTED&amp;issue_status=REOPENED&amp;keywords=bite-sized&amp;cmdtype=doit"
->list of all bite-sized tasks</a>.</p>
-
-</div>
-
-<!-- ============================================================= -->
-<div class="h2" id="larger-tasks" title="larger-tasks">
-<h2>Larger (But Not Necessarily Huge) Coding Tasks</h2>
-
-<p>The tasks listed below are bigger than bite-sized, but probably
-don't require new research to solve.  In other words, most of them are
-a <a href="http://www.catb.org/~esr/jargon/html/S/SMOP.html">Simple
-Matter Of Programming</a>.  You'd need to either be, or be willing to
-become, familiar with Subversion's internals to solve one of
-these.</p>
-
-<p>As with the <a href="#bite-sized">bite-sized tasks</a>, please read
-the
-<a href="hacking.html">Hacker's Guide to Subversion</a> and don't
-hesitate to ask questions on the
-<a href="mailto:users@subversion.tigris.org">users@subversion.tigris.org</a>
-and
-<a href="mailto:dev@subversion.tigris.org">dev@subversion.tigris.org</a>
-mailing lists (see <a
-href="http://subversion.tigris.org/servlets/ProjectMailingListList"
->here</a> for subscription information).  Before posting any patches,
-see the <a
-href="http://subversion.tigris.org/mailing-list-guidelines.html#patches"
->patch posting guidelines</a>.</p>
-
-<p>For <a href="project_status.html#upcoming">groups of tasks tied to
-specific releases</a>, peruse the <a href="project_status.html">status
-page</a>.  For a longer-term view of Subversion's vision, see the <a
-href="roadmap.html">road map</a>.</p>
-
-<div class="h3" id="error-messages" title="error-messages">
-<h3><a href="http://subversion.tigris.org/issues/show_bug.cgi?id=1254"
->issue&nbsp;#1254</a>, etc: Improve error messages</h3>
-
-<p>Too many of Subversion's error messages are terse or confusing.
-Many instances are recorded in
-<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=1254"
->issue&nbsp;#1254</a>, but see also issues
-<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=2302"
->#2302</a>,
-<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=2295"
->#2295</a>, and
-<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=2275"
->#2275</a>.</p>
-
-</div>
-
-</div>
-
-<!-- ============================================================= -->
-<div class="h2" id="bindings" title="bindings">
-<h2>Improved Bindings to Other Languages</h2>
-
-<p>One of Subversion's strengths is that it offers a rich set of
-"binding surfaces": well-documented APIs that are available not only
-in C (Subversion's native language) but in other programming languages
-as well (see the <a
- href="links.html#lang_bindings">complete list</a>).</p>
-
-<p>Some of these language bindings are maintained via <a
-href="http://www.swig.org/">SWIG</a>, a tool that partially automates
-the process of generating bindings, while others are maintained by
-hand.  Many of the bindings do not have complete coverage yet, or have
-interface problems where they do have coverage.  So even though
-they're used in many production systems, there's still plenty of work
-to do.  Specifically:</p>
-
-<ul>
-
-<li><p>The <a
-href="http://svn.collab.net/repos/svn/trunk/subversion/bindings/swig/python/"
->SWIG/Python bindings</a> are in pretty good shape, but their coverage
-is not yet complete.  Help is welcome.</p></li>
-
-<li><p>Our <a
-href="http://svn.collab.net/repos/svn/trunk/subversion/bindings/java/javahl/"
->Java</a>, <a
-href="http://svn.collab.net/repos/svn/trunk/subversion/bindings/swig/perl/"
->SWIG/Perl</a>, and <a
-href="http://svn.collab.net/repos/svn/trunk/subversion/bindings/swig/ruby/"
->SWIG/Ruby</a> bindings are in pretty good shape, but maybe there are
-other languages you'd like to call Subversion APIs from?  Lisp/Scheme?
-Feel free to start a new bindings project, if you don't see what you
-need here.</p></li>
-
-</ul>
-
-</div>
-
-<!-- ============================================================= -->
-<div class="h2" id="all-issues" title="all-issues">
-<h2>All Open Issues</h2>
-
-<p>You want to see the complete list of open bugs, in all its glory?
-Don't say we didn't <a
-href="http://subversion.tigris.org/issues/buglist.cgi?component=subversion&amp;issue_status=UNCONFIRMED&amp;issue_status=NEW&amp;issue_status=STARTED&amp;issue_status=REOPENED&amp;order=issues.target_milestone%2C%20issues.priority%2C%20issues.issue_type">warn you...</a></p>
-
-</div>
+<div id="all-issues" title="all-issues">
+<p><strong>"all-issues"</strong> has moved; please try <a
+   href="tasks.html#all-issues" >here</a> instead.</p>
+</div>  <!-- all-issues -->
 
 </div>
 </body>

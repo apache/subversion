@@ -419,17 +419,6 @@ Test one or both of the tarballs:
     gpg -ba subversion-deps-X.Y.Z.zip
 </pre>
 
-</div> <!-- rolling-release -->
-
-
-<div class="h2" id="blessing-release" title="blessing-release">
-<h2>Blessing a release</h2>
-</div> <!-- blessing-release -->
-
-
-<div class="h2" id="releasing-release" title="releasing-release">
-<h2>The actual releasing</h2>
-
 <p><b>Subversion Operations</b></p>
 <p>Create the tag with the svn_version.h that reflects the final
 release.  You do this by updating your working copy to the release
@@ -453,6 +442,17 @@ and copy from the working copy to the tag URL.  For example:</p>
 <p>Bump the svn_version.h for the original branch.  If you just did
 1.0.2 then svn_version.h should have the proper values for 1.0.3 and
 so on.</p>
+
+</div> <!-- rolling-release -->
+
+
+<div class="h2" id="blessing-release" title="blessing-release">
+<h2>Blessing a release</h2>
+</div> <!-- blessing-release -->
+
+
+<div class="h2" id="releasing-release" title="releasing-release">
+<h2>The actual releasing</h2>
 
 <p><b>Upload the tarballs to
   http://subversion.tigris.org/downloads/.</b></p>
@@ -508,11 +508,15 @@ Tigris news items are in HTML format not plain text.</p>
 <p>Send an announcement to dev@, users@, and announce@ lists.  Ensure
 that your mailer doesn't wrap the URLs over multiple lines.</p>
 
-<p>You should also notify freshmeat of the new release.  You need to
-be listed as a release manager or admin for the <a
-href="http://freshmeat.net/projects/subversion/">Subversion project
-  on Freshmeat</a>.  Contact one of the folks who are already listed
-if you need access.  Your submission will also be tweaked by the
+<p>You should also notify Freshmeat of the new release.  For a regular
+final release, this involves adding the new release to the "Stable"
+Freshmeat project branch (click the "add release" link in the top
+navigation bar); alpha, beta, and RC releases get filed the say way,
+but under the "Development" branch.  You need to be listed as a
+release manager or admin for the <a
+href="http://freshmeat.net/projects/subversion/" >Subversion project
+on Freshmeat</a>.  Contact one of the folks who are already listed if
+you need access.  Your submission will also be tweaked by the
 freshmeat crew before it goes public.</p>
 
 <p><b>Update the website</b></p>
@@ -520,8 +524,8 @@ freshmeat crew before it goes public.</p>
   <li>Edit the www/project_status.html file appropriately in /trunk
   *NOT* in the release branch and commit. Remember edit a search term
   at the end of release's issue link.</li>
-  <li>Update the best available version at the top of
-  www/project_packages.html</li>
+  <li>Update the best available version on the front page and at the
+  top of www/getting.html</li>
   <li>Update the "Latest Release" section of www/index.html to point
   to the new announcement.</li>
   <li>Commit the modifications.</li>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Include>
+				<ComponentRef Id="Intl3_svnDll"/>
+				<ComponentRef Id="Libdb44Dll"/>
+				<ComponentRef Id="Libeay32Dll"/>
+				<ComponentRef Id="Ssleay32Dll"/>
+				<ComponentRef Id="LibsaslDll"/>
+				<ComponentRef Id="OpensslEXE"/>
+				<ComponentRef Id="PlugVW"/>
+				<ComponentRef Id="SaslDB2"/>
+				<ComponentRef Id="SaslPW"/>
+</Include>
