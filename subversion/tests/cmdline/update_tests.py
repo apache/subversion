@@ -4024,6 +4024,10 @@ def tree_conflicts_on_update_2_1(sbox):
   expected_status.add({ '' : Item(status='  ') }) # also set root's attributes
   expected_status.tweak(wc_rev=3)
   expected_status.tweak('F', 'D', 'DF', 'DD', 'DDF', 'DDD', status='C ')
+  expected_status.tweak('F/alpha', 'DF/D1/beta', 'DDF/D1/D2/gamma',
+                        status='M ')
+  expected_status.tweak('D/D1/delta', 'DD/D1/D2/epsilon',
+                        'DDD/D1/D2/D3/zeta', status='A ')
 
   svntest.actions.deep_trees_run_tests_scheme_for_update(sbox,
     [ DeepTreesTestCase("local_leaf_edit_incoming_tree_del",
@@ -4051,10 +4055,12 @@ def tree_conflicts_on_update_2_2(sbox):
 
   expected_disk = state_after_leaf_del
 
-  expected_status = state_after_leaf_del.copy()
+  expected_status = svntest.actions.deep_trees_virginal_state.copy()
   expected_status.add({ '' : Item(status='  ') }) # also set root's attributes
   expected_status.tweak(wc_rev=3)
   expected_status.tweak('F', 'D', 'DF', 'DD', 'DDF', 'DDD', status='C ')
+  expected_status.tweak('F/alpha', 'DF/D1/beta', 'DDF/D1/D2/gamma',
+                        'D/D1', 'DD/D1/D2', 'DDD/D1/D2/D3', status='D ')
 
   svntest.actions.deep_trees_run_tests_scheme_for_update(sbox,
     [ DeepTreesTestCase("local_leaf_del_incoming_tree_del",
