@@ -106,15 +106,6 @@ svn_client__get_revision_number(svn_revnum_t *revnum,
                                 const char *path,
                                 apr_pool_t *pool);
 
-/* Return true if REVISION1 and REVISION2 would result in the same
-   revision number if interpreted in the context of the same working
-   copy and path and repository, or if both are of kind
-   svn_opt_revision_unspecified.  Otherwise, return false. */
-svn_boolean_t
-svn_client__compare_revisions(svn_opt_revision_t *revision1,
-                              svn_opt_revision_t *revision2);
-
-
 /* Set *COPYFROM_PATH and *COPYFROM_REV to the path and revision that
    served as the source of the copy from which PATH_OR_URL at REVISION
    was created, or NULL and SVN_INVALID_REVNUM (respectively) if
@@ -1000,10 +991,6 @@ svn_client__do_commit(const char *base_url,
        need access to the original auth-obtaining callbacks that
        produced auth baton in the first place.  Hmmm. ###
 
-   If UPDATE_UNCHANGED, then run svn_client_update() on any external
-   items that are the same in both the before and after traversal
-   info.
-
    *TIMESTAMP_SLEEP will be set TRUE if a sleep is required to ensure
    timestamp integrity, *TIMESTAMP_SLEEP will be unchanged if no sleep
    is required.
@@ -1016,7 +1003,6 @@ svn_client__handle_externals(svn_wc_adm_access_t *adm_access,
                              const char *to_path,
                              const char *repos_root_url,
                              svn_depth_t requested_depth,
-                             svn_boolean_t update_unchanged,
                              svn_boolean_t *timestamp_sleep,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *pool);
