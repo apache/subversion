@@ -19,9 +19,10 @@ Revisions included:
   * r32497:32499 backported from trunk via r32587
   * r32632 backported from trunk via r32634
   * r32752, r32756, r32765, r32773, r32860 backported from trunk via r32864
-  * Merge from 1.5.x branch at r32878 branch to bring it up-to-date with
-    1.5.2 release.
+  * Merge from 1.5.x branch at r32878 to bring it up-to-date with 1.5.2
+    release.
   * r32873 backported from trunk via r32877
+  * r32887 backported from trunk via r32888
 
 Features:
   * Don't save plaintext passwords without prompting
