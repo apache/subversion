@@ -124,8 +124,10 @@ out_of_date(const char *path, svn_node_kind_t kind)
   return svn_error_createf(SVN_ERR_FS_TXN_OUT_OF_DATE, NULL,
                            (kind == svn_node_dir
                             ? _("Directory '%s' is out of date")
-                            : _("File '%s' is out of date")),
-                           path);
+                            : kind == svn_node_file
+			    ? _("File '%s' is out of date")
+			    : _("File or directory '%s' is out of date")),
+			   path);
 }
 
 
@@ -236,10 +238,9 @@ delete_entry(const char *path,
   SVN_ERR(check_authz(eb, parent->path, eb->txn_root,
                       svn_authz_write, pool));
 
-  /* If PATH doesn't exist in the txn, that's fine (merge
-     allows this). */
+  /* If PATH doesn't exist in the txn, the working copy is out of date. */
   if (kind == svn_node_none)
-    return SVN_NO_ERROR;
+    return out_of_date(full_path, kind);
 
   /* Now, make sure we're deleting the node we *think* we're
      deleting, else return an out-of-dateness error. */

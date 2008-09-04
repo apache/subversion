@@ -749,15 +749,11 @@ static svn_error_t * commit_delete_entry(const char *path,
                    APR_HASH_KEY_STRING, SVN_DAV_OPTION_KEEP_LOCKS);
     }
 
-  /* 404 is ignored, because mod_dav_svn is effectively merging
-     against the HEAD revision on-the-fly.  In such a universe, a
-     failed deletion (because it's already missing) is OK;  deletion
-     is an idempotent merge operation. */
   serr = svn_ra_neon__simple_request(&code, parent->cc->ras,
                                      "DELETE", child,
                                      extra_headers, NULL,
-                                     204 /* Created */,
-                                     404 /* Not Found */, pool);
+                                     204 /* No Content */,
+                                     NULL, pool);
 
   /* A locking-related error most likely means we were deleting a
      directory rather than a file, and didn't send all of the
