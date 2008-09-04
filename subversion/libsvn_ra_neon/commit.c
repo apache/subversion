@@ -753,7 +753,7 @@ static svn_error_t * commit_delete_entry(const char *path,
                                      "DELETE", child,
                                      extra_headers, NULL,
                                      204 /* No Content */,
-                                     NULL, pool);
+                                     0, pool);
 
   /* A locking-related error most likely means we were deleting a
      directory rather than a file, and didn't send all of the
