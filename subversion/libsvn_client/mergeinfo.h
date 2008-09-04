@@ -26,21 +26,15 @@
 /*** Data Structures ***/
 
 
-/* Structure used by discover_and_merge_children() and consumers of the
-   children_with_mergeinfo array it populates.  The struct describes
-   working copy paths that meet one or more of the following criteria:
-
-     1) Path has explicit mergeinfo
-     2) Path is switched
-     3) Path has an immediate child which is switched or otherwise
-        missing from the WC.
-     4) Path has a sibling which is switched or otherwise missing
-        from the WC.
-     5) Path is the target of a merge.
+/* Structure to store information about working copy paths that need special
+   consideration during a mergeinfo aware merge -- See the
+   'THE CHILDREN_WITH_MERGEINFO ARRAY' meta comment and the doc string for the
+   function get_mergeinfo_paths() in libsvn_client/merge.c.
 */
 typedef struct svn_client__merge_path_t
 {
-  const char *path;
+  const char *path;                  /* Working copy path relative to the
+                                        merge target. */
   svn_boolean_t missing_child;       /* PATH has an immediate child which is
                                         missing. */
   svn_boolean_t switched;            /* PATH is switched. */
@@ -57,7 +51,7 @@ typedef struct svn_client__merge_path_t
      svn_sort_compare_ranges(), but rather are sorted such that the ranges
      with the youngest start revisions come first.  In both the forward and
      reverse merge cases the ranges should never overlap.  This rangelist
-     may be empty. */
+     may be NULL or empty. */
   apr_array_header_t *remaining_ranges;
   
   svn_mergeinfo_t pre_merge_mergeinfo;  /* Mergeinfo on PATH prior to a

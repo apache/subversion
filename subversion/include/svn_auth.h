@@ -832,7 +832,7 @@ svn_auth_get_keychain_simple_provider(svn_auth_provider_object_t **provider,
  * user's ~/.subversion configuration directory.  Allocate @a *provider in
  * @a pool.
  *
- * This is like svn_client_get_ssl_client_cert_pw_file_provider(), except
+ * This is like svn_auth_get_ssl_client_cert_pw_file_provider(), except
  * that the password is stored in the Mac OS KeyChain.
  *
  * @since New in 1.6
