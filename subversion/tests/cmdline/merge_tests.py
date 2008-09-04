@@ -4535,10 +4535,11 @@ def set_up_branch(sbox, branch_only = False, nbr_of_branches = 1):
   '''Starting with standard greek tree, copy 'A' NBR_OF_BRANCHES times
   to A_COPY, A_COPY_2, A_COPY_3, and so on.  Then make four modifications
   (setting file contents to "New content") under A:
-  r(2 + NBR_OF_BRANCHES) - A/D/H/psi
-  r(3 + NBR_OF_BRANCHES) - A/D/G/rho
-  r(4 + NBR_OF_BRANCHES) - A/B/E/beta
-  r(5 + NBR_OF_BRANCHES) - A/D/H/omega'''
+    r(2 + NBR_OF_BRANCHES) - A/D/H/psi
+    r(3 + NBR_OF_BRANCHES) - A/D/G/rho
+    r(4 + NBR_OF_BRANCHES) - A/B/E/beta
+    r(5 + NBR_OF_BRANCHES) - A/D/H/omega
+  Return (expected_disk, expected_status).'''
 
   wc_dir = sbox.wc_dir
 
@@ -12068,13 +12069,23 @@ def svn_commit(path):
   svn_commit.repo_rev += 1
   return svn_commit.repo_rev
 
-def svn_merge(src_change_num, source, target, exp_out=svntest.verify.AnyOutput):
+def svn_merge(src_change_num, source, target, exp_out=None):
   "Merge a single change from path 'source' to path 'target'"
   source = local_path(source)
   target = local_path(target)
+  if exp_out is None:
+    exp_1 = "--- Merging r" + str(src_change_num)
+    exp_1 += " into '" + target + ".*':"
+    exp_2 = "(A |D |[UG] | [UG]|[UG][UG])   " + target + ".*"
+    exp_out = svntest.verify.RegexOutput(exp_1 + "|" + exp_2)
   svntest.actions.run_and_verify_svn(None, exp_out, [],
                                      'merge', '-c', src_change_num,
                                      source, target)
+
+def svn_propset(pname, pvalue, *paths):
+  "Set property 'pname' to value 'pvalue' on each path in 'paths'"
+  svntest.actions.run_and_verify_svn(None, None, [], 'propset', pname, pvalue,
+                                     *(local_path(path) for path in paths))
 
 #----------------------------------------------------------------------
 # Tests for merging the deletion of a node, where the node to be deleted
@@ -12537,6 +12548,44 @@ def merge_target_and_subtrees_need_nonintersecting_ranges(sbox):
                                        None, None, None, None,
                                        None, 1)
 
+def merge_two_edits_to_same_prop(sbox):
+  "merge two successive edits to the same property"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make a branch to merge to. (This is r6.)
+  wc_disk, wc_status = set_up_branch(sbox, False, 1)
+  svn_commit.repo_rev = 6
+
+  # Change into the WC dir for convenience
+  was_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+  wc_disk.wc_dir = ''
+  wc_status.wc_dir = ''
+
+  # In the source, make two successive changes to the same property
+  svn_propset('p', 'new-val-1', 'A/mu')
+  rev1 = svn_commit('A/mu')
+  svn_propset('p', 'new-val-2', 'A/mu')
+  rev2 = svn_commit('A/mu')
+
+  # Merge the first change, then the second, to a target branch.
+  svn_merge(rev1, 'A', 'A_COPY')
+  svn_merge(rev2, 'A', 'A_COPY')
+
+  # Both changes should merge automatically: the second one should not
+  # complain about the local mod which the first one caused. The starting
+  # value in the target ("mine") for the second merge is exactly equal to
+  # the merge-left source value.
+
+  # A merge-tracking version of this problem is when the merge-tracking
+  # algorithm breaks a single requested merge into two phases because of
+  # some other target within the same merge requiring only a part of the
+  # revision range.
+
+  os.chdir(was_cwd)
+
 ########################################################################
 # Run the tests
 
@@ -12718,6 +12767,7 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(merge_target_and_subtrees_need_nonintersecting_ranges,
                          server_has_mergeinfo),
+              XFail(merge_two_edits_to_same_prop),
              ]
 
 if __name__ == '__main__':
