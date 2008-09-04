@@ -59,6 +59,11 @@
  *      unless otherwise documented, and may seg fault if passed
  *      NULL.  The input data may *contain* null bytes, of course, just
  *      the data pointer itself must not be NULL.
+ *
+ * <h3>Memory allocation</h3>
+ *
+ *   All the functions make a deep copy of all input data, and never store
+ *   a pointer to the original input data.
  */
 
 
