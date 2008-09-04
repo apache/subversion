@@ -140,7 +140,7 @@ _svn()
 	           |-x|--extensions|-m|--message|-F|--file|--encoding|
 	           |--diff-cmd|--diff3-cmd|--editor-cmd|--old|--new|
 	           |--config-dir|--native-eol|-l|--limit|-c|--change|--depth|
-                   |--with-revprop|--changelist|--accept"
+                   |--with-revprop|--changelist|--accept|--show-revs"
 
 	# svn:* and other (env SVN_BASH_*_PROPS) properties
 	local svnProps revProps allProps psCmds propCmds
@@ -369,6 +369,8 @@ _svn()
 		    values='postpone base mine-full theirs-full edit launch'
 		fi
 	    }
+
+	    [[ $previous = '--show-revs' ]] && values='merged eligible'
 
 	    if [[ $previous = '--username' ]] ; then
 	      values="$SVN_BASH_USERNAME"
