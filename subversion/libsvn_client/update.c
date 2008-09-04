@@ -257,7 +257,6 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                                          anchor,
                                          repos_root,
                                          depth,
-                                         TRUE, /* update unchanged ones */
                                          use_sleep, ctx, pool));
 
   if (sleep_here)
