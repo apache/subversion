@@ -898,7 +898,7 @@ svn_io_remove_file(const char *path,
  * doesn't exist.  Use @a pool for temporary allocations.
  *
  * Because recursive delete of a directory tree can be a lengthy operation,
- * provide @a cancel_func and @a cancel_baton for interuptability.
+ * provide @a cancel_func and @a cancel_baton for interruptability.
  *
  * @since New in 1.5.
  */
@@ -910,7 +910,7 @@ svn_io_remove_dir2(const char *path,
                    apr_pool_t *pool);
 
 /** Similar to svn_io_remove_dir2(), but with @a ignore_enoent set to
- * @c FALSE.
+ * @c FALSE and @a cancel_func and @a cancel_baton set to @c NULL.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API
  */
