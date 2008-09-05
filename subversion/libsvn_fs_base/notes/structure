@@ -682,7 +682,8 @@ Merging algorithm:
        must be merged or declared to be in conflict.
   
        If SOURCE-ENTRY and TARGET-ENTRY are both null, that's a
-       double delete; flag a conflict.
+       double delete; if one of them is null, that's a delete versus
+       a modification. In any of these cases, flag a conflict.
   
        If any of the three entries is of type file, declare a conflict.
   
