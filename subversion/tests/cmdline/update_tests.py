@@ -1035,6 +1035,7 @@ def update_deleted_missing_dir(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta')
   expected_status.remove('A/D/H', 'A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi')
+  expected_status.tweak('A/B', 'A/D', status='C ')
 
   # Do the update, specifying the deleted paths explicitly.
   svntest.actions.run_and_verify_update(wc_dir,
@@ -1043,6 +1044,15 @@ def update_deleted_missing_dir(sbox):
                                         expected_status,
                                         None, None, None, None, None,
                                         0, "-r", "2", E_path, H_path)
+
+  # This update created tree conflicts ("update tried to
+  # delete a directory that was locally deleted"), marking
+  # C  A/B
+  # C  A/D
+  # Just ignore them, i.e. resolve.
+  B_path = os.path.join(wc_dir, 'A', 'B')
+  D_path = os.path.join(wc_dir, 'A', 'D')
+  svntest.main.run_svn(None, 'resolved',  B_path, D_path)
 
   # Update back to the old revision again
   svntest.main.run_svn(None,
@@ -1054,6 +1064,7 @@ def update_deleted_missing_dir(sbox):
 
   # This time we're updating the whole working copy
   expected_status.tweak(wc_rev=2)
+  expected_status.tweak('A/B', 'A/D', status='  ')
 
   # Do the update, on the whole working copy this time
   svntest.actions.run_and_verify_update(wc_dir,
@@ -1105,6 +1116,15 @@ def another_hudson_problem(sbox):
                                      ['D    '+G_path+'\n',
                                       'Updated to revision 3.\n'], [],
                                      'up', G_path)
+
+  # This update created a tree conflict ("update tried to
+  # delete a directory that was locally deleted"), marking
+  # C  A/D. Just ignore it, i.e. resolve it.
+  D_path = os.path.join(wc_dir, 'A', 'D')
+  svntest.actions.run_and_verify_svn(None,
+    ["Resolved conflicted state of " +
+     "'svn-test-work/working_copies/update_tests-15/A/D'\n"], [],
+    'resolved',  D_path)
 
   # Both G and gamma should be 'deleted', update should produce no output
   expected_output = svntest.wc.State(wc_dir, { })
