@@ -205,10 +205,15 @@ detranslate_wc_file(const char **detranslated_file,
                svn_wc_adm_access_path(adm_access),
                svn_io_file_del_none, pool));
 
+      /* Always 'repair' EOLs here, so that we can apply a diff that changes
+       * from inconsistent newlines and no 'svn:eol-style' to consistent
+       * newlines and 'svn:eol-style' set. */
+
       SVN_ERR(svn_subst_translate_to_normal_form(merge_target,
                                                  detranslated,
                                                  style,
-                                                 eol, eol ? FALSE : TRUE,
+                                                 eol,
+                                                 TRUE /* always_repair_eols */,
                                                  keywords,
                                                  special,
                                                  pool));
@@ -243,9 +248,14 @@ maybe_update_target_eols(const char **new_target,
                                       svn_wc_adm_access_path(adm_access),
                                       svn_io_file_del_none,
                                       pool));
+
+      /* Always 'repair' EOLs here, so that we can apply a diff that changes
+       * from inconsistent newlines and no 'svn:eol-style' to consistent
+       * newlines and 'svn:eol-style' set. */
+
       SVN_ERR(svn_subst_copy_and_translate3(old_target,
                                             tmp_new,
-                                            eol, TRUE,
+                                            eol, TRUE /* repair EOLs */,
                                             NULL, FALSE,
                                             FALSE, pool));
       *new_target = tmp_new;
