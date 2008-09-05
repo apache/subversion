@@ -2,7 +2,7 @@
  * merge.c:  merging changes into a working file
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006, 2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -378,15 +378,14 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
           else
             right_marker = ">>>>>>> .new";
 
-          SVN_ERR(svn_diff_file_output_merge(ostream, diff,
-                                             left, tmp_target, right,
-                                             left_marker,
-                                             target_marker,
-                                             right_marker,
-                                             "=======", /* seperator */
-                                             FALSE, /* display original */
-                                             FALSE, /* resolve conflicts */
-                                             pool));
+          SVN_ERR(svn_diff_file_output_merge2(ostream, diff,
+                                              left, tmp_target, right,
+                                              left_marker,
+                                              target_marker,
+                                              right_marker,
+                                              "=======", /* seperator */
+                                              svn_diff_conflict_display_modified_latest,
+                                              pool));
           SVN_ERR(svn_stream_close(ostream));
 
           contains_conflicts = svn_diff_contains_conflicts(diff);
