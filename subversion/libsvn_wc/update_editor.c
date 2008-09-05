@@ -1202,31 +1202,48 @@ check_tree_conflict(svn_stringbuf_t *log_accum,
       else
         {
           svn_boolean_t modified;
+          svn_node_kind_t kind;
 
-          /* If we are about to delete a path that has local mods,
+          SVN_ERR(svn_io_check_path(full_path, &kind, pool));
+
+          /* If we are about to delete a path that is locally missing,
            * mark the containing directory as tree conflicted.
-           * This is tree conflict use case 2 as described in the
-           * paper attached to issue #2282
+           * This is tree conflict use case 3.
            * See also notes/tree-conflicts/detection.txt
            */
-          SVN_ERR(entry_has_local_mods(&modified, parent_adm_access, entry,
-                                       full_path, pool));
+          if (kind == svn_node_none)
+            reason = svn_wc_conflict_reason_missing;
+          else
+            {
+             
 
-          /* ### TODO: Also detect deep modifications in a directory tree.
-           *     The update editor will not visit subdirectories of a
-           *     directory it wants to delete. Therefore, we need to start
-           *     a separate crawl here to make sure the directory tree we
-           *     are about to delete hasn't been locally modified anywhere.
-           */
+              /* If we are about to delete a path that has local mods,
+               * mark the containing directory as tree conflicted.
+               * This is tree conflict use case 2 as described in the
+               * paper attached to issue #2282
+               * See also notes/tree-conflicts/detection.txt
+               */
+              SVN_ERR(entry_has_local_mods(&modified, parent_adm_access,
+                                           entry, full_path, pool));
+
+
+              /* ### TODO: Also detect deep modifications in a directory tree.
+               *   The update editor will not visit subdirectories of a
+               *   directory it wants to delete. Therefore, we need to start
+               *   a separate crawl here to make sure the directory tree we
+               *   are about to delete hasn't been locally modified anywhere.
+               */
 #if 0
-          SVN_ERR(subtrees_have_local_mods(&modified, parent_adm_access, entry,
-                                           full_path, pool));
-          /* Alternatively, have entry_has_local_mods() do the recursion. */
+              SVN_ERR(subtrees_have_local_mods(&modified, parent_adm_access,
+                                                entry, full_path, pool));
+              /* Alternatively, have entry_has_local_mods() do the recursion.
+               */
 #endif
 
-           if (modified)
-            {
-              reason = svn_wc_conflict_reason_edited;
+               if (modified)
+                 {
+                   reason = svn_wc_conflict_reason_edited;
+                 }
             }
         }
       break;
@@ -1253,8 +1270,6 @@ check_tree_conflict(svn_stringbuf_t *log_accum,
 /* Delete PATH from its immediate parent PARENT_PATH, in the edit
  * represented by EB.  Name temporary transactional logs based on
  * *LOG_NUMBER, but set *LOG_NUMBER to 0 after running the final log.
- * PARENT_ADM_ACCESS is the admin access baton for the parent directory,
- * or NULL if this is the target of the "update" being deleted.
  * Perform all allocations in POOL.
  */
 static svn_error_t *
@@ -1262,21 +1277,22 @@ do_entry_deletion(struct edit_baton *eb,
                   const char *parent_path,
                   const char *path,
                   int *log_number,
-                  svn_wc_adm_access_t *parent_adm_access,
                   apr_pool_t *pool)
 {
+  svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *entry;
   const char *full_path = svn_path_join(eb->anchor, path, pool);
   svn_stringbuf_t *log_item = svn_stringbuf_create("", pool);
 
-  /* ### Error: here we're assuming parent_adm_access is non-null. Crashes in update_tests-15, for instance. */
-  SVN_ERR(svn_wc_entry(&entry, full_path, parent_adm_access, FALSE, pool));
+  SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access,
+                              parent_path, pool));
 
-  if (parent_adm_access)
-    SVN_ERR(check_tree_conflict(log_item, full_path, entry, parent_adm_access,
-                                svn_wc_conflict_action_delete, pool));
+  SVN_ERR(svn_wc__entry_versioned(&entry, full_path, adm_access, FALSE, pool));
 
-  SVN_ERR(svn_wc__loggy_delete_entry(&log_item, parent_adm_access, full_path,
+  SVN_ERR(check_tree_conflict(log_item, full_path, entry, adm_access,
+                              svn_wc_conflict_action_delete, pool));
+
+  SVN_ERR(svn_wc__loggy_delete_entry(&log_item, adm_access, full_path,
                                      pool));
 
   /* If the thing being deleted is the *target* of this update, then
@@ -1291,7 +1307,7 @@ do_entry_deletion(struct edit_baton *eb,
         (entry->kind == svn_node_file) ? svn_node_file : svn_node_dir;  /* ### redundant? */
       tmp_entry.deleted = TRUE;
 
-      SVN_ERR(svn_wc__loggy_entry_modify(&log_item, parent_adm_access,
+      SVN_ERR(svn_wc__loggy_entry_modify(&log_item, adm_access,
                                          full_path, &tmp_entry,
                                          SVN_WC__ENTRY_MODIFY_REVISION
                                          | SVN_WC__ENTRY_MODIFY_KIND  /* ### redundant change? */
@@ -1301,7 +1317,7 @@ do_entry_deletion(struct edit_baton *eb,
       eb->target_deleted = TRUE;
     }
 
-  SVN_ERR(svn_wc__write_log(parent_adm_access, *log_number, log_item, pool));
+  SVN_ERR(svn_wc__write_log(adm_access, *log_number, log_item, pool));
 
   if (eb->switch_url)
     {
@@ -1344,7 +1360,7 @@ do_entry_deletion(struct edit_baton *eb,
         }
     }
 
-  SVN_ERR(svn_wc__run_log(parent_adm_access, NULL, pool));
+  SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
   *log_number = 0;
 
   if (eb->notify_func)
@@ -1365,15 +1381,11 @@ delete_entry(const char *path,
              apr_pool_t *pool)
 {
   struct dir_baton *pb = parent_baton;
-  svn_wc_adm_access_t *parent_adm_access;
 
   SVN_ERR(check_path_under_root(pb->path, svn_path_basename(path, pool),
                                 pool));
-  SVN_ERR(svn_wc_adm_retrieve(&parent_adm_access, pb->edit_baton->adm_access,
-                              pb->path, pool));
-
   return do_entry_deletion(pb->edit_baton, pb->path, path, &pb->log_number,
-                           parent_adm_access, pool);
+                           pool);
 }
 
 
@@ -3463,8 +3475,7 @@ close_edit(void *edit_baton,
      pretend that the editor deleted the entry.  The helper function
      do_entry_deletion() will take care of the necessary steps.  */
   if ((*eb->target) && (svn_wc__adm_missing(eb->adm_access, target_path)))
-    SVN_ERR(do_entry_deletion(eb, eb->anchor, eb->target, &log_number, NULL,
-                              pool));
+    SVN_ERR(do_entry_deletion(eb, eb->anchor, eb->target, &log_number, pool));
 
   /* The editor didn't even open the root; we have to take care of
      some cleanup stuffs. */
