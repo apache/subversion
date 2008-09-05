@@ -99,6 +99,9 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
 
 /* Obtain any mergeinfo for the root-relative repository filesystem path
    REL_PATH from the repository, and set it in *TARGET_MERGEINFO.
+   RA_SESSION should be an open RA session pointing at the URL that REL_PATH
+   is relative to, or NULL, in which case this function will open its own
+   temporary session.
 
    INHERIT indicates whether explicit, explicit or inherited, or only
    inherited mergeinfo for REL_PATH is obtained.
@@ -124,7 +127,11 @@ svn_client__get_repos_mergeinfo(svn_ra_session_t *ra_session,
    target has no info of its own.
 
    If no mergeinfo can be obtained from the WC or REPOS_ONLY is TRUE,
-   get it from the repository (opening a new RA session if RA_SESSION
+   get it from the repository.  RA_SESSION should be an open RA session
+   pointing at ENTRY->URL, or NULL, in which case this function will open
+   its own temporary session.
+   
+   (opening a new RA session if RA_SESSION
    is NULL).  Store any mergeinfo obtained for TARGET_WCPATH -- which
    is reflected by ENTRY -- in *TARGET_MERGEINFO, if no mergeinfo is
    found *TARGET_MERGEINFO is NULL.
