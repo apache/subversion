@@ -1,7 +1,7 @@
 /* load.c --- parsing a 'dumpfile'-formatted stream.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006, 2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -972,7 +972,7 @@ new_revision_record(void **revision_baton,
   SVN_ERR(svn_fs_youngest_rev(&head_rev, pb->fs, pool));
 
   /* FIXME: This is a lame fallback loading multiple segments of dump in
-     several seperate operations. It is highly susceptible to race conditions.
+     several separate operations. It is highly susceptible to race conditions.
      Calculate the revision 'offset' for finding copyfrom sources.
      It might be positive or negative. */
   rb->rev_offset = (rb->rev) - (head_rev + 1);

@@ -383,7 +383,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                                               left_marker,
                                               target_marker,
                                               right_marker,
-                                              "=======", /* seperator */
+                                              "=======", /* separator */
                                               svn_diff_conflict_display_modified_latest,
                                               pool));
           SVN_ERR(svn_stream_close(ostream));
