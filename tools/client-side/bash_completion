@@ -136,11 +136,12 @@ _svn()
 
 	# options that require a parameter
 	# note: continued lines must end '|' continuing lines must start '|'
-	optsParam="-r|--revision|--username|--password|--targets|
-	           |-x|--extensions|-m|--message|-F|--file|--encoding|
-	           |--diff-cmd|--diff3-cmd|--editor-cmd|--old|--new|
-	           |--config-dir|--native-eol|-l|--limit|-c|--change|--depth|
-                   |--with-revprop|--changelist|--accept|--show-revs"
+	optsParam="-r|--revision|--username|--password|--targets"
+	optsParam="$optsParam|-x|--extensions|-m|--message|-F|--file"
+	optsParam="$optsParam|--encoding|--diff-cmd|--diff3-cmd|--editor-cmd"
+	optsParam="$optsParam|--old|--new|--config-dir|--native-eol|-l|--limit"
+	optsParam="$optsParam|-c|--change|--depth|--set-depth|--with-revprop"
+	optsParam="$optsParam|--changelist|--accept|--show-revs"
 
 	# svn:* and other (env SVN_BASH_*_PROPS) properties
 	local svnProps revProps allProps psCmds propCmds
@@ -355,7 +356,7 @@ _svn()
 		values="--unified --ignore-space-change \
    		        --ignore-all-space --ignore-eol-style"
 
-	    [[ $previous = '--depth' ]] && \
+	    [[ $previous = '--depth' || $previous = '--set-depth' ]] && \
 		values='empty files immediates infinity'
 
 	    [[ $previous = '--accept' ]] && \
