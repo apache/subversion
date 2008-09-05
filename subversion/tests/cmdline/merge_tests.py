@@ -12086,8 +12086,9 @@ def svn_merge(rev_spec, source, target, exp_out=None):
 
 def svn_propset(pname, pvalue, *paths):
   "Set property 'pname' to value 'pvalue' on each path in 'paths'"
+  local_paths = tuple(local_path(path) for path in paths)
   svntest.actions.run_and_verify_svn(None, None, [], 'propset', pname, pvalue,
-                                     *(local_path(path) for path in paths))
+                                     *local_paths)
 
 #----------------------------------------------------------------------
 # Tests for merging the deletion of a node, where the node to be deleted
