@@ -944,7 +944,8 @@ typedef struct svn_wc_notify_t {
  *
  * Set the @c path field of the created struct to @a path, and @c action to
  * @a action.  Set all other fields to their @c _unknown, @c NULL or
- * invalid value, respectively.
+ * invalid value, respectively. Make only a shallow copy of the pointer
+ * @a path.
  *
  * @since New in 1.2.
  */
@@ -1195,7 +1196,8 @@ typedef struct svn_wc_conflict_description_t
  * field to @a adm_access, the @c kind field to @c
  * svn_wc_conflict_kind_text, the @c node_kind to @c svn_node_file, the @c
  * action to @c svn_wc_conflict_action_edit, and the @c reason to @c
- * svn_wc_conflict_reason_edited.
+ * svn_wc_conflict_reason_edited. Make only shallow copies of the pointer
+ * arguments.
  *
  * @note: It is the caller's responsibility to set the other required fields
  * (such as the four file names and @c mime_type and @c is_binary).
@@ -1214,7 +1216,8 @@ svn_wc_conflict_description_create_text(const char *path,
  * Set the @c path field of the created struct to @a path, the @c access
  * field to @a adm_access, the @c kind field to @c
  * svn_wc_conflict_kind_prop, the @c node_kind to @a node_kind, and the @c
- * property_name to @a property_name.
+ * property_name to @a property_name. Make only shallow copies of the pointer
+ * arguments.
  *
  * @note: It is the caller's responsibility to set the other required fields
  * (such as the four file names and @c action and @c reason).
@@ -1289,7 +1292,8 @@ typedef struct svn_wc_conflict_result_t
  *
  * Set the @c choice field of the structure to @a choice, and @c
  * merged_file to @a merged_file.  Set all other fields to their @c
- * _unknown, @c NULL or invalid value, respectively.
+ * _unknown, @c NULL or invalid value, respectively. Make only a shallow
+ * copy of the pointer argument @a merged_file.
  *
  * @since New in 1.5.
  */

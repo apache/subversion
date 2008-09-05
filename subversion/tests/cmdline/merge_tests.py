@@ -4535,10 +4535,11 @@ def set_up_branch(sbox, branch_only = False, nbr_of_branches = 1):
   '''Starting with standard greek tree, copy 'A' NBR_OF_BRANCHES times
   to A_COPY, A_COPY_2, A_COPY_3, and so on.  Then make four modifications
   (setting file contents to "New content") under A:
-  r(2 + NBR_OF_BRANCHES) - A/D/H/psi
-  r(3 + NBR_OF_BRANCHES) - A/D/G/rho
-  r(4 + NBR_OF_BRANCHES) - A/B/E/beta
-  r(5 + NBR_OF_BRANCHES) - A/D/H/omega'''
+    r(2 + NBR_OF_BRANCHES) - A/D/H/psi
+    r(3 + NBR_OF_BRANCHES) - A/D/G/rho
+    r(4 + NBR_OF_BRANCHES) - A/B/E/beta
+    r(5 + NBR_OF_BRANCHES) - A/D/H/omega
+  Return (expected_disk, expected_status).'''
 
   wc_dir = sbox.wc_dir
 
@@ -12068,13 +12069,26 @@ def svn_commit(path):
   svn_commit.repo_rev += 1
   return svn_commit.repo_rev
 
-def svn_merge(src_change_num, source, target, exp_out=svntest.verify.AnyOutput):
-  "Merge a single change from path 'source' to path 'target'"
+def svn_merge(rev_spec, source, target, exp_out=None):
+  """Merge a single change from path 'source' to path 'target'.
+  SRC_CHANGE_NUM is either a number (to cherry-pick that specific change)
+  or a command-line option revision range string such as '-r10:20'."""
   source = local_path(source)
   target = local_path(target)
+  if isinstance(rev_spec, type(0)):
+    rev_spec = '-c' + str(rev_spec)
+  if exp_out is None:
+    exp_1 = "--- Merging r.* into '" + target + ".*':"
+    exp_2 = "(A |D |[UG] | [UG]|[UG][UG])   " + target + ".*"
+    exp_out = svntest.verify.RegexOutput(exp_1 + "|" + exp_2)
   svntest.actions.run_and_verify_svn(None, exp_out, [],
-                                     'merge', '-c', src_change_num,
-                                     source, target)
+                                     'merge', rev_spec, source, target)
+
+def svn_propset(pname, pvalue, *paths):
+  "Set property 'pname' to value 'pvalue' on each path in 'paths'"
+  local_paths = tuple(local_path(path) for path in paths)
+  svntest.actions.run_and_verify_svn(None, None, [], 'propset', pname, pvalue,
+                                     *local_paths)
 
 #----------------------------------------------------------------------
 # Tests for merging the deletion of a node, where the node to be deleted
@@ -12537,6 +12551,89 @@ def merge_target_and_subtrees_need_nonintersecting_ranges(sbox):
                                        None, None, None, None,
                                        None, 1)
 
+def merge_two_edits_to_same_prop(sbox):
+  "merge two successive edits to the same property"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make a branch to merge to. (This is r6.)
+  wc_disk, wc_status = set_up_branch(sbox, False, 1)
+  svn_commit.repo_rev = 6
+
+  # Change into the WC dir for convenience
+  was_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+  wc_disk.wc_dir = ''
+  wc_status.wc_dir = ''
+
+  # In the source, make two successive changes to the same property
+  svn_propset('p', 'new-val-1', 'A/mu')
+  rev1 = svn_commit('A/mu')
+  svn_propset('p', 'new-val-2', 'A/mu')
+  rev2 = svn_commit('A/mu')
+
+  # Merge the first change, then the second, to a target branch.
+  svn_merge(rev1, 'A', 'A_COPY')
+  svn_merge(rev2, 'A', 'A_COPY')
+
+  # Both changes should merge automatically: the second one should not
+  # complain about the local mod which the first one caused. The starting
+  # value in the target ("mine") for the second merge is exactly equal to
+  # the merge-left source value.
+
+  # A merge-tracking version of this problem is when the merge-tracking
+  # algorithm breaks a single requested merge into two phases because of
+  # some other target within the same merge requiring only a part of the
+  # revision range.
+
+  os.chdir(was_cwd)
+
+def merge_an_eol_unification_and_set_svn_eol_style(sbox):
+  "merge an EOL unification and set svn:eol-style"
+  # In svn 1.5.2, merging the two changes between these three states:
+  #   r1. inconsistent EOLs and no svn:eol-style
+  #   r2. consistent EOLs and no svn:eol-style
+  #   r3. consistent EOLs and svn:eol-style=native
+  # fails if attempted as a single merge (e.g. "svn merge r1:3") though it
+  # succeeds if attempted in two phases (e.g. "svn merge -c2,3").
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make a branch to merge to. (This will be r6.)
+  wc_disk, wc_status = set_up_branch(sbox, False, 1)
+  svn_commit.repo_rev = 6
+
+  # Change into the WC dir for convenience
+  was_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+  wc_disk.wc_dir = ''
+  wc_status.wc_dir = ''
+
+  content1 = 'Line1\nLine2\r\n'
+  content2 = 'Line1' + os.linesep + 'Line2' + os.linesep
+
+  # In the source branch, create initial state and two successive changes
+  svntest.main.file_write('A/mu', content1)
+  rev1 = svn_commit('A/mu')
+  svntest.main.file_write('A/mu', content2)
+  rev2 = svn_commit('A/mu')
+  svn_propset('svn:eol-style', 'native', 'A/mu')
+  rev3 = svn_commit('A/mu')
+
+  # Merge the initial state (inconsistent EOLs) to the target branch.
+  svn_merge(rev1, 'A', 'A_COPY')
+  svn_commit('A_COPY')
+
+  # Merge the two changes together to the target branch.
+  svn_merge('-r'+str(rev1)+':'+str(rev3), 'A', 'A_COPY')
+
+  # That merge should succeed.
+  # Surprise: setting svn:eol-style='LF' instead of 'native' doesn't fail.
+  # Surprise: if we don't merge the file's 'rev1' state first, it doesn't fail
+  # nor even raise a conflict.
+
 ########################################################################
 # Run the tests
 
@@ -12595,8 +12692,8 @@ test_list = [ None,
               SkipUnless(cherry_pick_text_conflict,
                          server_has_mergeinfo),
               merge_file_replace,
-              SkipUnless(merge_dir_replace,
-                         server_has_mergeinfo),
+              XFail(SkipUnless(merge_dir_replace,
+                               server_has_mergeinfo)),
               XFail(merge_dir_and_file_replace),
               merge_file_replace_to_mixed_rev_wc,
               merge_added_dir_to_deleted_in_target,
@@ -12718,6 +12815,8 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(merge_target_and_subtrees_need_nonintersecting_ranges,
                          server_has_mergeinfo),
+              XFail(merge_two_edits_to_same_prop),
+              merge_an_eol_unification_and_set_svn_eol_style,
              ]
 
 if __name__ == '__main__':

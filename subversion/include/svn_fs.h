@@ -459,6 +459,8 @@ typedef struct svn_fs_access_t svn_fs_access_t;
 /** Set @a *access_ctx to a new @c svn_fs_access_t object representing
  *  @a username, allocated in @a pool.  @a username is presumed to
  *  have been authenticated by the caller.
+ *
+ *  Make a deep copy of @a username.
  */
 svn_error_t *
 svn_fs_create_access(svn_fs_access_t **access_ctx,
