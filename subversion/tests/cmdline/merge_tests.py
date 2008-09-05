@@ -12611,13 +12611,15 @@ def merge_an_eol_unification_and_set_svn_eol_style(sbox):
   wc_disk.wc_dir = ''
   wc_status.wc_dir = ''
 
-  content1 = 'Line1\nLine2\r\n'
-  content2 = 'Line1' + os.linesep + 'Line2' + os.linesep
+  content1 = 'Line1\nLine2\r\n'  # write as 'binary' to get these exact EOLs
+  content2 = 'Line1\nLine2\n'    # write as 'text' to get native EOLs in file
 
-  # In the source branch, create initial state and two successive changes
-  svntest.main.file_write('A/mu', content1)
+  # In the source branch, create initial state and two successive changes.
+  # Use binary mode to write the first file so no newline conversion occurs.
+  svntest.main.file_write('A/mu', content1, 'wb')
   rev1 = svn_commit('A/mu')
-  svntest.main.file_write('A/mu', content2)
+  # Use text mode to write the second copy of the file to get native EOLs.
+  svntest.main.file_write('A/mu', content2, 'w')
   rev2 = svn_commit('A/mu')
   svn_propset('svn:eol-style', 'native', 'A/mu')
   rev3 = svn_commit('A/mu')
