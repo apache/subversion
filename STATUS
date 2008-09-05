@@ -40,17 +40,3 @@ Candidate changes for 1.5.3:
 
 Approved changes:
 =================
-
- * r32012
-   Fix Visual Studio meta-projects on VS2008 and allow 1.5.x to fully
-   build when using VS2008. (Makes these projects utility projects instead of
-   executable projects)
-   Justification:
-     Not a code change, just a tweak to the Windows build system to
-     support VS2008.  Without this change you can't build the C API
-     tests or the bindings from the command line.
-   Votes:
-     +1: pburba, rhuijben, zhakov
-     +0: danielsh (I confirm the justification, but don't understand
-                   the change itself)
-
