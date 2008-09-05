@@ -1036,7 +1036,7 @@ main(int argc, const char *argv[])
   if (svn_cmdline_init("svn", stderr) != EXIT_SUCCESS)
     return EXIT_FAILURE;
 
-  /* Create our top-level pool.  Use a seperate mutexless allocator,
+  /* Create our top-level pool.  Use a separate mutexless allocator,
    * given this application is single threaded.
    */
   if (apr_allocator_create(&allocator))
