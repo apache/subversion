@@ -124,6 +124,8 @@ function _svn_lls()
 # - other options?
 # - obsolete options could be removed from auto-comp? (e.g. -N)
 # - obsolete commands could be removed? (e.g. resolved)
+# - completion does not work properly when editing in the middle of the line
+#   status/previous are those at the end of the line, not at the entry position
 _svn()
 {
 	local cur cmds cmdOpts pOpts mOpts rOpts qOpts nOpts optsParam opt
@@ -185,6 +187,7 @@ _svn()
 	#    hasRevPropOpt: is --revprop set
 	#    hasRevisionOpt: is --revision set
 	#    hasRelocateOpt: is --relocate set
+        #    hasReintegrateOpt: is --reintegrate set
 	#    acceptOpt: the value of --accept
 	# nargs: how many arguments were found
 	# stat: status of parsing at the 'current' word
