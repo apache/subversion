@@ -12815,7 +12815,7 @@ test_list = [ None,
               SkipUnless(merge_target_and_subtrees_need_nonintersecting_ranges,
                          server_has_mergeinfo),
               XFail(merge_two_edits_to_same_prop),
-              XFail(merge_an_eol_unification_and_set_svn_eol_style),
+              merge_an_eol_unification_and_set_svn_eol_style,
              ]
 
 if __name__ == '__main__':
