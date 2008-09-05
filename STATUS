@@ -39,7 +39,7 @@ Candidate changes for 1.5.3:
    Justification:
      Small fix (with test).  User requests.
    Votes:
-     +1: danielsh
+     +1: danielsh, zhakov
 
  * r31203
    Update build.conf to remove the magic word 'update' from the description to
