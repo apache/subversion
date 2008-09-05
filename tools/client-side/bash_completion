@@ -135,11 +135,11 @@ _svn()
 
 	# Possible expansions, without pure-prefix abbreviations such as "up".
 	cmds='add blame annotate praise cat changelist cl checkout co cleanup'
-	cmds="$cmds commit ci copy cp delete remove rm diff export help import"
-	cmds="$cmds info list ls lock log merge mergeinfo mkdir move mv rename"
-	cmds="$cmds propdel pdel propedit pedit propget pget proplist plist"
-	cmds="$cmds propset pset resolve resolved revert status switch unlock"
-	cmds="$cmds update"
+	cmds+=" commit ci copy cp delete remove rm diff export help import"
+	cmds+=" info list ls lock log merge mergeinfo mkdir move mv rename"
+	cmds+=" propdel pdel propedit pedit propget pget proplist plist"
+	cmds+=" propset pset resolve resolved revert status switch unlock"
+	cmds+=" update"
 
 	# help options have a strange command status...
 	local helpOpts='--help -h'
@@ -149,11 +149,11 @@ _svn()
 	# options that require a parameter
 	# note: continued lines must end '|' continuing lines must start '|'
 	optsParam="-r|--revision|--username|--password|--targets"
-	optsParam="$optsParam|-x|--extensions|-m|--message|-F|--file"
-	optsParam="$optsParam|--encoding|--diff-cmd|--diff3-cmd|--editor-cmd"
-	optsParam="$optsParam|--old|--new|--config-dir|--native-eol|-l|--limit"
-	optsParam="$optsParam|-c|--change|--depth|--set-depth|--with-revprop"
-	optsParam="$optsParam|--changelist|--accept|--show-revs"
+	optsParam+="|-x|--extensions|-m|--message|-F|--file"
+	optsParam+="|--encoding|--diff-cmd|--diff3-cmd|--editor-cmd"
+	optsParam+="|--old|--new|--config-dir|--native-eol|-l|--limit"
+	optsParam+="|-c|--change|--depth|--set-depth|--with-revprop"
+	optsParam+="|--changelist|--accept|--show-revs"
 
 	# svn:* and other (env SVN_BASH_*_PROPS) properties
 	local svnProps revProps allProps psCmds propCmds
@@ -187,7 +187,7 @@ _svn()
 	#    hasRevPropOpt: is --revprop set
 	#    hasRevisionOpt: is --revision set
 	#    hasRelocateOpt: is --relocate set
-        #    hasReintegrateOpt: is --reintegrate set
+	#    hasReintegrateOpt: is --reintegrate set
 	#    acceptOpt: the value of --accept
 	# nargs: how many arguments were found
 	# stat: status of parsing at the 'current' word
@@ -471,7 +471,7 @@ _svn()
 	    # completion.  It does not always work.  There is a strange bug
 	    # where one may get "svn:svn:xxx" in some unclear cases.
 	    #
-    	    # Thus the handling is reprogrammed here...
+	    # Thus the handling is reprogrammed here...
 	    # The code assumes that property names look like *:*,
 	    # but it also works reasonably well with simple names.
 	    local choices=
@@ -618,8 +618,8 @@ _svn()
 		[[ $SVN_BASH_COMPL_EXT == *recurse* ]] || \
 		    status="$status --non-recursive"
 
-    	        # I'm not sure that it can work with externals in call cases
-	        # the output contains translatable sentences (even with quiet)
+		# I'm not sure that it can work with externals in call cases
+		# the output contains translatable sentences (even with quiet)
 		[[ $SVN_BASH_COMPL_EXT == *externals* ]] || \
 		    status="$status --ignore-externals"
 
@@ -684,7 +684,7 @@ _svn()
 
 		# when not recursive, some relevant files may exist
 		# within subdirectories, so they are added here.
-	        # should it be restricted to svn-managed subdirs? no??
+		# should it be restricted to svn-managed subdirs? no??
 		if [[ $SVN_BASH_COMPL_EXT != *recurse* ]] ; then
 		    files="$files $( _svn_lls dir $cur* )"
 		fi
@@ -857,8 +857,8 @@ _svn()
 	esac
 
 	# add options that are nearly always available
-	[[ "$cmd" != "--version" ]] && cmdOpts="$cmdOpts $helpOpts"
-	cmdOpts="$cmdOpts --config-dir"
+	[[ "$cmd" != "--version" ]] && cmdOpts+=" $helpOpts"
+	cmdOpts+=" --config-dir"
 
         # --accept (edit|launch) incompatible with --non-interactive
 	if [[ $acceptOpt == @(edit|launch) ]] ;
@@ -869,7 +869,7 @@ _svn()
 	# take out options already given
 	for opt in $options
 	do
-	        local optBase
+		local optBase
 
 		# remove leading dashes and arguments
 		case $opt in
@@ -998,7 +998,7 @@ _svnadmin ()
 		;;
 	esac
 
-	cmdOpts="$cmdOpts --help -h"
+	cmdOpts+=" --help -h"
 
 	# take out options already given
 	for (( i=2; i<=$COMP_CWORD-1; ++i )) ; do
