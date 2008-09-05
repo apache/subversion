@@ -2,7 +2,7 @@
  * add.c:  wrappers around wc add/mkdir functionality.
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -810,7 +810,7 @@ svn_client__make_local_parents(const char *path,
          err instead, so that the user is warned that we just
          created an unversioned directory? */
 
-      svn_error_clear(svn_io_remove_dir(path, pool));
+      svn_error_clear(svn_io_remove_dir2(path, FALSE, NULL, NULL, pool));
     }
 
   return err;
