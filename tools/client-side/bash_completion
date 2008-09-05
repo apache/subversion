@@ -361,7 +361,7 @@ _svn()
 	      # we guess that it is a merge from the trunk
 	      COMPREPLY=( $(compgen -W ${here/\/branches\/*/\/trunk} -- $cur ) )
 	      return 0
-	    elif [[ "$here" == */trunk ]] ; then
+	    elif [[ "$here" == */trunk* ]] ; then
 	      # we guess that it is a merge from a branch
 	      COMPREPLY=( $(compgen -W ${here/\/trunk*/\/branches\/} -- $cur ) )
 	      return 0
