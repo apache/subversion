@@ -1676,7 +1676,7 @@ write_entry(svn_stringbuf_t *buf,
 /* Append a single entry ENTRY as an XML element to the string OUTPUT,
    using the entry for "this dir" THIS_DIR for
    comparison/optimization.  Allocations are done in POOL.  */
-static void
+static svn_error_t *
 write_entry_xml(svn_stringbuf_t **output,
                 svn_wc_entry_t *entry,
                 const char *name,
@@ -1688,7 +1688,7 @@ write_entry_xml(svn_stringbuf_t **output,
 
   /*** Create a hash that represents an entry. ***/
 
-  assert(name);
+  SVN_ERR_ASSERT(name);
 
   /* Name */
   apr_hash_set(atts, SVN_WC__ENTRY_ATTR_NAME, APR_HASH_KEY_STRING,
@@ -1956,12 +1956,14 @@ write_entry_xml(svn_stringbuf_t **output,
                              svn_xml_self_closing,
                              SVN_WC__ENTRIES_ENTRY,
                              atts);
+
+  return SVN_NO_ERROR;
 }
 
 /* Construct an entries file from the ENTRIES hash in XML format in a
    newly allocated stringbuf and return it in *OUTPUT.  Allocate the
    result in POOL.  THIS_DIR is the this_dir entry in ENTRIES.  */
-static void
+static svn_error_t *
 write_entries_xml(svn_stringbuf_t **output,
                   apr_hash_t *entries,
                   svn_wc_entry_t *this_dir,
@@ -1978,7 +1980,8 @@ write_entries_xml(svn_stringbuf_t **output,
                         NULL);
 
   /* Write out "this dir" */
-  write_entry_xml(output, this_dir, SVN_WC_ENTRY_THIS_DIR, this_dir, pool);
+  SVN_ERR(write_entry_xml(output, this_dir, SVN_WC_ENTRY_THIS_DIR,
+                          this_dir, pool));
 
   for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
     {
@@ -1997,12 +2000,14 @@ write_entries_xml(svn_stringbuf_t **output,
         continue;
 
       /* Append the entry to output */
-      write_entry_xml(output, this_entry, key, this_dir, subpool);
+      SVN_ERR(write_entry_xml(output, this_entry, key, this_dir, subpool));
     }
 
   svn_xml_make_close_tag(output, pool, SVN_WC__ENTRIES_TOPLEVEL);
 
   svn_pool_destroy(subpool);
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -2076,7 +2081,7 @@ svn_wc__entries_write(apr_hash_t *entries,
     }
   else
     /* This is needed during cleanup of a not yet upgraded WC. */
-    write_entries_xml(&bigstr, entries, this_dir, pool);
+    SVN_ERR(write_entries_xml(&bigstr, entries, this_dir, pool));
 
   SVN_ERR_W(svn_io_file_write_full(outfile, bigstr->data,
                                    bigstr->len, NULL, pool),
