@@ -18,7 +18,6 @@
 
 
 #include <string.h>
-#include <assert.h>
 
 #include <apr_strings.h>
 
@@ -2110,7 +2109,7 @@ svn_wc__entries_write(apr_hash_t *entries,
 
    POOL may be used to allocate memory referenced by ENTRIES.
  */
-static void
+static svn_error_t *
 fold_entry(apr_hash_t *entries,
            const char *name,
            apr_uint64_t modify_flags,
@@ -2120,7 +2119,7 @@ fold_entry(apr_hash_t *entries,
   svn_wc_entry_t *cur_entry
     = apr_hash_get(entries, name, APR_HASH_KEY_STRING);
 
-  assert(name != NULL);
+  SVN_ERR_ASSERT(name != NULL);
 
   if (! cur_entry)
     cur_entry = alloc_entry(pool);
@@ -2323,6 +2322,8 @@ fold_entry(apr_hash_t *entries,
      already did, in which case this could have been skipped, but what
      the heck. */
   apr_hash_set(entries, cur_entry->name, APR_HASH_KEY_STRING, cur_entry);
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -2624,11 +2625,11 @@ svn_wc__entry_modify(svn_wc_adm_access_t *adm_access,
      changes into the entry. */
   if (! entry_was_deleted_p)
     {
-      fold_entry(entries, name, modify_flags, entry,
-                 svn_wc_adm_access_pool(adm_access));
+      SVN_ERR(fold_entry(entries, name, modify_flags, entry,
+                         svn_wc_adm_access_pool(adm_access)));
       if (entries != entries_nohidden)
-        fold_entry(entries_nohidden, name, modify_flags, entry,
-                   svn_wc_adm_access_pool(adm_access));
+        SVN_ERR(fold_entry(entries_nohidden, name, modify_flags, entry,
+                           svn_wc_adm_access_pool(adm_access)));
     }
 
   /* Sync changes to disk. */
