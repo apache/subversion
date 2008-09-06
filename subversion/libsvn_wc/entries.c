@@ -331,26 +331,26 @@ unserialize_file_external(const char **path_result,
    write_str(). */
 static svn_error_t *
 serialize_file_external(const char **str, const char *path,
-                        svn_opt_revision_t rev, apr_pool_t *pool)
+                        svn_opt_revision_t *rev, apr_pool_t *pool)
 {
   const char *s;
 
   if (path)
     {
-      switch (rev.kind)
+      switch (rev->kind)
         {
         case svn_opt_revision_head:
           s = apr_pstrcat(pool, path, "@HEAD", NULL);
           break;
         case svn_opt_revision_number:
-          s = apr_pstrcat(pool, path, "@", apr_itoa(pool, rev.value.number),
+          s = apr_pstrcat(pool, path, "@", apr_itoa(pool, rev->value.number),
                           NULL);
           break;
         default:
           return svn_error_createf
             (SVN_ERR_INCORRECT_PARAMS, NULL,
              _("Illegal file external revision kind %d for path '%s'"),
-             rev.kind, path);
+             rev->kind, path);
           break;
         }
     }
@@ -1771,7 +1771,7 @@ write_entry(svn_stringbuf_t *buf,
   {
     const char *s;
     SVN_ERR(serialize_file_external(&s, entry->file_external_path,
-                                    entry->file_external_rev, pool));
+                                    &entry->file_external_rev, pool));
     write_str(buf, s, pool);
   }
 
