@@ -1937,16 +1937,29 @@ typedef struct svn_wc_entry_t
   svn_depth_t depth;
 
   /** The entry is a intra-repository file external and this is the
-   * repository root relative path to the file, otherwise NULL if the
-   * entry is not a file external.
+   * repository root relative path to the file specified in the
+   * externals definition, otherwise NULL if the entry is not a file
+   * external.
    *
    * @since New in 1.6. */
   const char *file_external_path;
 
   /** The entry is a intra-repository file external and this is the
-   * peg and operative revision number that the external is checked
-   * out from.  This field is only valid when the file_external_path
-   * field is non-NULL.  The only permissable values are
+   * peg revision number specified in the externals definition.  This
+   * field is only valid when the file_external_path field is
+   * non-NULL.  The only permissible values are
+   * svn_opt_revision_unspecified if the entry is not an external,
+   * svn_opt_revision_head if the external revision is unspecified or
+   * specified with -r HEAD or svn_opt_revision_number for a specific
+   * revision number.
+   *
+   * @since New in 1.6. */
+  svn_opt_revision_t file_external_peg_rev;
+
+  /** The entry is a intra-repository file external and this is the
+   * operative revision number specified in the externals definition.
+   * This field is only valid when the file_external_path field is
+   * non-NULL.  The only permissible values are
    * svn_opt_revision_unspecified if the entry is not an external,
    * svn_opt_revision_head if the external revision is unspecified or
    * specified with -r HEAD or svn_opt_revision_number for a specific
