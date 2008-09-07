@@ -74,7 +74,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.6\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2008-09-07 06:18+0200\n"
-"PO-Revision-Date: 2008-09-07 06:07+0200\n"
+"PO-Revision-Date: 2008-09-07 07:29+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -4039,9 +4039,9 @@ msgid "File '%s' is out of date"
 msgstr "Filen «%s» er utdatert"
 
 #: ../libsvn_repos/commit.c:129
-#, fuzzy, c-format
+#, c-format
 msgid "File or directory '%s' is out of date"
-msgstr "Katalogen «%s» er utdatert"
+msgstr "Filen eller katalogen «%s» er utdatert"
 
 #: ../libsvn_repos/commit.c:296 ../libsvn_repos/commit.c:441
 #, c-format
