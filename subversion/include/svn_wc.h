@@ -4946,8 +4946,7 @@ typedef struct svn_wc_revision_status_t
    * @since New in 1.5.
    */
   svn_boolean_t sparse_checkout;
-}
-svn_wc_revision_status_t;
+} svn_wc_revision_status_t;
 
 /** Set @a *result_p to point to a new @c svn_wc_revision_status_t structure
  * containing a summary of the revision range and status of the working copy

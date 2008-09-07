@@ -256,7 +256,7 @@ analogous to CVS/ subdirs.  See the separate sections below for more details.
    Pristine repos properties for those files, in hashdump format.  Named
    with the extension `.svn-base'.
 
-   For an entry scheduled for replacement, the text-base of the deleted
+   For an entry scheduled for replacement, the prop-base of the deleted
    entry may be stored in `foo.c.svn-revert'.
 
    
