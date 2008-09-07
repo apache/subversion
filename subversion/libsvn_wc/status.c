@@ -254,6 +254,7 @@ assemble_status(svn_wc_status2_t **status,
   svn_boolean_t prop_modified_p = FALSE;
   svn_boolean_t locked_p = FALSE;
   svn_boolean_t switched_p = FALSE;
+  svn_boolean_t file_external_p = FALSE;
 #ifdef HAVE_SYMLINK
   svn_boolean_t wc_special;
 #endif /* HAVE_SYMLINK */
@@ -300,6 +301,7 @@ assemble_status(svn_wc_status2_t **status,
       stat->locked = FALSE;
       stat->copied = FALSE;
       stat->switched = FALSE;
+      stat->file_external = FALSE;
 
       /* If this path has no entry, but IS present on disk, it's
          unversioned.  If this file is being explicitly ignored (due
@@ -340,12 +342,16 @@ assemble_status(svn_wc_status2_t **status,
         final_text_status = svn_wc_status_obstructed;
     }
 
-  /* Is this item switched?  Well, to be switched it must have both an URL
-     and a parent with an URL, at the very least.
-     If this is the root folder on the (virtual) disk, entry and parent_entry
-     will be equal. */
-  if (entry->url && parent_entry && parent_entry->url &&
-      entry != parent_entry)
+  /** File externals are switched files, but they are not shown as
+      such.  To be switched it must have both an URL and a parent with
+      an URL, at the very least.  If this is the root folder on the
+      (virtual) disk, entry and parent_entry will be equal. */
+  if (entry->file_external_path)
+    {
+      file_external_p = TRUE;
+    }
+  else if (entry->url && parent_entry && parent_entry->url &&
+           entry != parent_entry)
     {
       /* An item is switched if its working copy basename differs from the
          basename of its URL. */
@@ -493,8 +499,8 @@ assemble_status(svn_wc_status2_t **status,
          || (final_text_status == svn_wc_status_normal))
         && ((final_prop_status == svn_wc_status_none)
             || (final_prop_status == svn_wc_status_normal))
-        && (! locked_p) && (! switched_p) && (! entry->lock_token)
-        && (! repos_lock) && (! entry->changelist))
+        && (! locked_p) && (! switched_p) && (! file_external_p)
+        && (! entry->lock_token) && (! repos_lock) && (! entry->changelist))
       {
         *status = NULL;
         return SVN_NO_ERROR;
@@ -511,6 +517,7 @@ assemble_status(svn_wc_status2_t **status,
   stat->repos_prop_status = svn_wc_status_none;   /* default */
   stat->locked = locked_p;
   stat->switched = switched_p;
+  stat->file_external = file_external_p;
   stat->copied = entry->copied;
   stat->repos_lock = repos_lock;
   stat->url = (entry->url ? entry->url : NULL);
@@ -1393,6 +1400,8 @@ is_sendable_status(svn_wc_status2_t *status,
   if (status->locked)
     return TRUE;
   if (status->switched)
+    return TRUE;
+  if (status->file_external)
     return TRUE;
 
   /* If there is a lock token, send it. */

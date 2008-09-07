@@ -2376,7 +2376,8 @@ enum svn_wc_status_kind
     /** an unversioned resource is in the way of the versioned resource */
     svn_wc_status_obstructed,
 
-    /** an unversioned path populated by an svn:externals property */
+    /** an unversioned directory path populated by an svn:externals
+        property; this status is not used for file externals */
     svn_wc_status_external,
 
     /** a directory doesn't contain a complete entries list */
@@ -2416,7 +2417,7 @@ typedef struct svn_wc_status2_t
   svn_boolean_t copied;
 
   /** a file or directory can be 'switched' if the switch command has been
-   * used.
+   * used.  If this is TRUE, then file_external will be FALSE.
    */
   svn_boolean_t switched;
 
@@ -2470,6 +2471,11 @@ typedef struct svn_wc_status2_t
    * @since New in 1.3
    */
   const char *ood_last_cmt_author;
+
+  /** If the item is a file that was added to the working copy with an
+      svn:externals; if file_external is TRUE, then switched is always
+      FALSE. */
+  svn_boolean_t file_external;
 
   /** @} */
 
