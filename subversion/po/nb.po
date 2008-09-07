@@ -73,7 +73,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.6\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2008-09-07 05:58+0200\n"
+"POT-Creation-Date: 2008-09-07 06:18+0200\n"
 "PO-Revision-Date: 2008-09-07 06:07+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
@@ -1396,8 +1396,8 @@ msgid "'%s' is in the way of the resource actually under version control"
 msgstr "«%s» er i veien for den versjonshåndterte ressursen"
 
 #: ../libsvn_client/delete.c:67 ../libsvn_wc/adm_ops.c:3000
-#: ../libsvn_wc/entries.c:1272 ../libsvn_wc/entries.c:2383
-#: ../libsvn_wc/entries.c:3003 ../libsvn_wc/update_editor.c:2465
+#: ../libsvn_wc/entries.c:1271 ../libsvn_wc/entries.c:2392
+#: ../libsvn_wc/entries.c:3012 ../libsvn_wc/update_editor.c:2465
 #, c-format
 msgid "'%s' is not under version control"
 msgstr "«%s» er ikke under versjonskontroll"
@@ -1514,37 +1514,37 @@ msgstr "«%s» finnes allerede"
 msgid "Checksum mismatch for '%s'; expected: '%s', actual: '%s'"
 msgstr "Kontrollsum for «%s» er feil. Forventet: «%s», gjeldende: «%s»"
 
-#: ../libsvn_client/externals.c:319
+#: ../libsvn_client/externals.c:291
 #, c-format
 msgid "URL '%s' does not begin with a scheme"
 msgstr "URL-en «%s» starter ikke med et skjema"
 
-#: ../libsvn_client/externals.c:368
+#: ../libsvn_client/externals.c:340
 #, c-format
 msgid "Illegal parent directory URL '%s'"
 msgstr "Ulovlig URL for foreldrekatalog: «%s»"
 
-#: ../libsvn_client/externals.c:404
+#: ../libsvn_client/externals.c:376
 #, c-format
 msgid "Illegal repository root URL '%s'"
 msgstr "Ulovlig URL for depotrot: «%s»"
 
-#: ../libsvn_client/externals.c:452
+#: ../libsvn_client/externals.c:424
 #, c-format
 msgid "The external relative URL '%s' cannot have backpaths, i.e. '..'"
 msgstr "Den eksterne relative URL-en «%s» kan ikke inneholde bakoverstier, dvs. «..»"
 
-#: ../libsvn_client/externals.c:484
+#: ../libsvn_client/externals.c:456
 #, c-format
 msgid "Unrecognized format for the relative external URL '%s'"
 msgstr "Ukjent format for den relative eksterne URL-en «%s»"
 
-#: ../libsvn_client/externals.c:711
+#: ../libsvn_client/externals.c:681
 #, c-format
 msgid "Traversal of '%s' found no ambient depth"
 msgstr ""
 
-#: ../libsvn_client/externals.c:843
+#: ../libsvn_client/externals.c:811
 #, c-format
 msgid "'%s' is not a URL"
 msgstr "«%s» er ikke en URL"
@@ -2499,8 +2499,8 @@ msgstr "Uventet uforanderlig node i «%s»"
 msgid "Conflict at '%s'"
 msgstr "Konflikt i «%s»"
 
-#: ../libsvn_fs_base/tree.c:1931 ../libsvn_fs_base/tree.c:2683
-#: ../libsvn_fs_fs/tree.c:1237 ../libsvn_fs_fs/tree.c:1776
+#: ../libsvn_fs_base/tree.c:1931 ../libsvn_fs_base/tree.c:2684
+#: ../libsvn_fs_fs/tree.c:1237 ../libsvn_fs_fs/tree.c:1777
 msgid "Bad merge; ancestor, source, and target not all in same fs"
 msgstr "Feilaktig fletting; opprinnelse, kilde og mål er ikke alle i det samme filsystemet"
 
@@ -2509,25 +2509,25 @@ msgstr "Feilaktig fletting; opprinnelse, kilde og mål er ikke alle i det samme 
 msgid "Bad merge; target '%s' has id '%s', same as ancestor"
 msgstr "Feilaktig fletting; målet «%s» har ID «%s», samme som opprinnelse"
 
-#: ../libsvn_fs_base/tree.c:2490
+#: ../libsvn_fs_base/tree.c:2491
 #, c-format
 msgid "Transaction '%s' out-of-date with respect to revision '%s'"
 msgstr "Transaksjonen «%s» er utdatert i forhold til revisjon «%s»"
 
-#: ../libsvn_fs_base/tree.c:2868 ../libsvn_fs_fs/tree.c:1914
+#: ../libsvn_fs_base/tree.c:2869 ../libsvn_fs_fs/tree.c:1915
 msgid "The root directory cannot be deleted"
 msgstr "Rotkatalogen kan ikke slettes"
 
-#: ../libsvn_fs_base/tree.c:3089 ../libsvn_fs_fs/tree.c:1997
+#: ../libsvn_fs_base/tree.c:3090 ../libsvn_fs_fs/tree.c:1998
 #, c-format
 msgid "Cannot copy between two different filesystems ('%s' and '%s')"
 msgstr "Kan ikke kopiere mellom to forskjellige filsystemer («%s» og «%s»)"
 
-#: ../libsvn_fs_base/tree.c:3098 ../libsvn_fs_fs/tree.c:2003
+#: ../libsvn_fs_base/tree.c:3099 ../libsvn_fs_fs/tree.c:2004
 msgid "Copy from mutable tree not currently supported"
 msgstr "Kopi fra foranderlig tre er foreløpig ikke støttet"
 
-#: ../libsvn_fs_base/tree.c:3594 ../libsvn_fs_fs/tree.c:2451
+#: ../libsvn_fs_base/tree.c:3595 ../libsvn_fs_fs/tree.c:2452
 #, c-format
 msgid ""
 "Base checksum mismatch on '%s':\n"
@@ -2538,23 +2538,23 @@ msgstr ""
 "   forventet:  %s\n"
 "     faktisk:  %s\n"
 
-#: ../libsvn_fs_base/tree.c:3851 ../libsvn_fs_fs/tree.c:2689
+#: ../libsvn_fs_base/tree.c:3852 ../libsvn_fs_fs/tree.c:2690
 msgid "Cannot compare file contents between two different filesystems"
 msgstr "Kan ikke sammenligne filinnhold mellom to forskjellige filsystemer"
 
-#: ../libsvn_fs_base/tree.c:3860 ../libsvn_fs_base/tree.c:3865
-#: ../libsvn_fs_fs/tree.c:2698 ../libsvn_fs_fs/tree.c:2703
+#: ../libsvn_fs_base/tree.c:3861 ../libsvn_fs_base/tree.c:3866
+#: ../libsvn_fs_fs/tree.c:2699 ../libsvn_fs_fs/tree.c:2704
 #: ../libsvn_ra/compat.c:676
 #, c-format
 msgid "'%s' is not a file"
 msgstr "«%s» er ikke en fil"
 
-#: ../libsvn_fs_base/tree.c:4874 ../libsvn_fs_base/tree.c:5062
+#: ../libsvn_fs_base/tree.c:4875 ../libsvn_fs_base/tree.c:5063
 #, c-format
 msgid "Node-revision '%s' claims to have mergeinfo but doesn't"
 msgstr "Noderevisjon «%s» påstår å ha fletteinformasjon, men har det ikke"
 
-#: ../libsvn_fs_base/tree.c:4898
+#: ../libsvn_fs_base/tree.c:4899
 #, c-format
 msgid "Node-revision '%s' claims to sit atop a tree containing mergeinfo but is not a directory"
 msgstr "Noderevisjon «%s» påstår å være på toppen av et tre som inneholder fletteinformasjon, men er ikke en katalog"
@@ -2957,17 +2957,17 @@ msgstr "Stien «%s» finnes ikke i HEAD-revisjonen"
 msgid "Lock failed: newer version of '%s' exists"
 msgstr "Låsing feilet: En nyere versjon av «%s» finnes"
 
-#: ../libsvn_fs_fs/tree.c:3440
+#: ../libsvn_fs_fs/tree.c:3441
 #, c-format
 msgid "Node-revision #'%s' claims to have mergeinfo but doesn't"
 msgstr "Noderevisjon #«%s» påstår å ha fletteinformasjon, men har ikke det"
 
-#: ../libsvn_fs_fs/tree.c:3563
+#: ../libsvn_fs_fs/tree.c:3564
 #, c-format
 msgid "Node-revision '%s@%ld' claims to have mergeinfo but doesn't"
 msgstr "Noderevisjon «%s@%ld» påstår å ha fletteinformasjon, men har ikke det"
 
-#: ../libsvn_fs_fs/tree.c:3686
+#: ../libsvn_fs_fs/tree.c:3687
 #, c-format
 msgid "Querying mergeinfo requires version %d of the FSFS filesystem schema; filesystem '%s' uses only version %d"
 msgstr "Forespørsel om fletteinformasjon krever versjon %d av FSFS-filsystemskjemaet; filsystemet «%s» bruker bare versjon %d"
@@ -3101,18 +3101,18 @@ msgid "The CHECKOUT response did not contain a 'Location:' header"
 msgstr "CHECKOUT-responsen inneholdt ikke en «Location:»-header"
 
 #: ../libsvn_ra_neon/commit.c:513 ../libsvn_ra_neon/props.c:210
-#: ../libsvn_ra_neon/util.c:520 ../libsvn_ra_serf/commit.c:1368
-#: ../libsvn_ra_serf/commit.c:1769 ../libsvn_ra_serf/update.c:2162
+#: ../libsvn_ra_neon/util.c:520 ../libsvn_ra_serf/commit.c:1365
+#: ../libsvn_ra_serf/commit.c:1766 ../libsvn_ra_serf/update.c:2162
 #, c-format
 msgid "Unable to parse URL '%s'"
 msgstr "Klarer ikke å tolke URL-en «%s»"
 
-#: ../libsvn_ra_neon/commit.c:1043 ../libsvn_ra_serf/commit.c:1619
+#: ../libsvn_ra_neon/commit.c:1039 ../libsvn_ra_serf/commit.c:1616
 #, c-format
 msgid "File '%s' already exists"
 msgstr "Filen «%s» finnes allerede"
 
-#: ../libsvn_ra_neon/commit.c:1168
+#: ../libsvn_ra_neon/commit.c:1164
 #, c-format
 msgid "Could not write svndiff to temp file"
 msgstr "Kunne ikke skrive svndiff til midlertidig fil"
@@ -3144,7 +3144,7 @@ msgstr ""
 msgid "Server response missing the expected deadprop-count property"
 msgstr "Tjenerresponsen mangler den forventede «deadprop-count»-egenskapen"
 
-#: ../libsvn_ra_neon/fetch.c:1176 ../libsvn_ra_serf/commit.c:2145
+#: ../libsvn_ra_neon/fetch.c:1176 ../libsvn_ra_serf/commit.c:2142
 msgid "DAV request failed; it's possible that the repository's pre-revprop-change hook either failed or is non-existent"
 msgstr "DAV-forespørsel feilet. Det er mulig at haken til depotets pre-revprop-change enten feilet eller ikke finnes"
 
@@ -3586,7 +3586,7 @@ msgstr "Mangler «realm»-attributt (områdeattributt) i autorisasjonsheader"
 msgid "Directory '%s' is out of date; try updating"
 msgstr "Katalogen «%s» er utdatert; prøv oppdatering"
 
-#: ../libsvn_ra_serf/commit.c:509 ../libsvn_repos/commit.c:387
+#: ../libsvn_ra_serf/commit.c:509 ../libsvn_repos/commit.c:388
 #, c-format
 msgid "Path '%s' not present"
 msgstr "Stien «%s» ikke til stede"
@@ -3615,12 +3615,12 @@ msgstr "%s av «%s»: %d %s (%s://%s)"
 msgid "The OPTIONS response did not include the requested checked-in value"
 msgstr "OPTIONS-responsen manglet den forespurte innlagte verdien"
 
-#: ../libsvn_ra_serf/commit.c:1388 ../libsvn_ra_serf/commit.c:1789
+#: ../libsvn_ra_serf/commit.c:1385 ../libsvn_ra_serf/commit.c:1786
 #: ../libsvn_ra_serf/property.c:907
 msgid "The OPTIONS response did not include the requested baseline-collection value"
 msgstr "OPTIONS-responsen manglet den forespurte «baseline-collection»-verdien"
 
-#: ../libsvn_ra_serf/commit.c:1414
+#: ../libsvn_ra_serf/commit.c:1411
 #, c-format
 msgid "Adding a directory failed: %s on %s (%d)"
 msgstr "Tillegging av katalog feilet: %s på %s (%d)"
@@ -4033,22 +4033,27 @@ msgstr "Kan ikke motta tidsavbrudd for sokkel"
 msgid "Directory '%s' is out of date"
 msgstr "Katalogen «%s» er utdatert"
 
-#: ../libsvn_repos/commit.c:127
+#: ../libsvn_repos/commit.c:128
 #, c-format
 msgid "File '%s' is out of date"
 msgstr "Filen «%s» er utdatert"
 
-#: ../libsvn_repos/commit.c:295 ../libsvn_repos/commit.c:440
+#: ../libsvn_repos/commit.c:129
+#, fuzzy, c-format
+msgid "File or directory '%s' is out of date"
+msgstr "Katalogen «%s» er utdatert"
+
+#: ../libsvn_repos/commit.c:296 ../libsvn_repos/commit.c:441
 #, c-format
 msgid "Got source path but no source revision for '%s'"
 msgstr "Fikk kildesti, men ingen kilderevisjon for «%s»"
 
-#: ../libsvn_repos/commit.c:327 ../libsvn_repos/commit.c:471
+#: ../libsvn_repos/commit.c:328 ../libsvn_repos/commit.c:472
 #, c-format
 msgid "Source url '%s' is from different repository"
 msgstr "Kilde-URL «%s» er fra et forskjellig depot"
 
-#: ../libsvn_repos/commit.c:598
+#: ../libsvn_repos/commit.c:599
 #, c-format
 msgid ""
 "Checksum mismatch for resulting fulltext\n"
@@ -5688,167 +5693,167 @@ msgstr "Kan ikke kopiere til «%s», den kommer ikke fra depotet «%s», men fra
 msgid "Cannot copy to '%s' as it is scheduled for deletion"
 msgstr "Kan ikke kopiere til «%s» fordi den er klargjort for sletting"
 
-#: ../libsvn_wc/entries.c:94 ../libsvn_wc/entries.c:368
-#: ../libsvn_wc/entries.c:604 ../libsvn_wc/entries.c:865
+#: ../libsvn_wc/entries.c:93 ../libsvn_wc/entries.c:367
+#: ../libsvn_wc/entries.c:603 ../libsvn_wc/entries.c:864
 #, c-format
 msgid "Entry '%s' has invalid '%s' value"
 msgstr "Oppføringen «%s» har ugyldig «%s»-verdi"
 
-#: ../libsvn_wc/entries.c:114
+#: ../libsvn_wc/entries.c:113
 msgid "Invalid escape sequence"
 msgstr "Ugyldig escape-sekvens"
 
 # ### FIXME: Find a proper translation for “escaped”.
-#: ../libsvn_wc/entries.c:121
+#: ../libsvn_wc/entries.c:120
 msgid "Invalid escaped character"
 msgstr "Ugyldig beskyttet («escaped») tegn"
 
-#: ../libsvn_wc/entries.c:139 ../libsvn_wc/entries.c:168
-#: ../libsvn_wc/entries.c:210 ../libsvn_wc/entries.c:222
+#: ../libsvn_wc/entries.c:138 ../libsvn_wc/entries.c:167
+#: ../libsvn_wc/entries.c:209 ../libsvn_wc/entries.c:221
 msgid "Unexpected end of entry"
 msgstr "Uventet slutt på post"
 
-#: ../libsvn_wc/entries.c:192
+#: ../libsvn_wc/entries.c:191
 #, c-format
 msgid "Entry contains non-canonical path '%s'"
 msgstr ""
 
-#: ../libsvn_wc/entries.c:244
+#: ../libsvn_wc/entries.c:243
 #, c-format
 msgid "Invalid value for field '%s'"
 msgstr "Ugyldig verdi i felt «%s»"
 
-#: ../libsvn_wc/entries.c:326 ../libsvn_wc/entries.c:579
+#: ../libsvn_wc/entries.c:325 ../libsvn_wc/entries.c:578
 #, c-format
 msgid "Entry '%s' has invalid node kind"
 msgstr "Posten «%s» har ugyldig nodetype"
 
-#: ../libsvn_wc/entries.c:347 ../libsvn_wc/entries.c:556
+#: ../libsvn_wc/entries.c:346 ../libsvn_wc/entries.c:555
 #, c-format
 msgid "Entry for '%s' has invalid repository root"
 msgstr "Posten «%s» har ugyldig depotrot"
 
-#: ../libsvn_wc/entries.c:1011
+#: ../libsvn_wc/entries.c:1010
 #, c-format
 msgid "XML parser failed in '%s'"
 msgstr "XML-behandler feilet i «%s»"
 
-#: ../libsvn_wc/entries.c:1070
+#: ../libsvn_wc/entries.c:1069
 msgid "Missing default entry"
 msgstr "Mangler standardoppføring"
 
-#: ../libsvn_wc/entries.c:1075
+#: ../libsvn_wc/entries.c:1074
 msgid "Default entry has no revision number"
 msgstr "Standardoppføringen mangler revisjonsnummer"
 
-#: ../libsvn_wc/entries.c:1080
+#: ../libsvn_wc/entries.c:1079
 msgid "Default entry is missing URL"
 msgstr "Standardoppføringen mangler adresse"
 
-#: ../libsvn_wc/entries.c:1156
+#: ../libsvn_wc/entries.c:1155
 #, c-format
 msgid "Invalid version line in entries file of '%s'"
 msgstr "Ugyldig versjonslinje i «entries»-fil for «%s»"
 
-#: ../libsvn_wc/entries.c:1173
+#: ../libsvn_wc/entries.c:1172
 msgid "Missing entry terminator"
 msgstr "Mangler postavslutning"
 
-#: ../libsvn_wc/entries.c:1176
+#: ../libsvn_wc/entries.c:1175
 msgid "Invalid entry terminator"
 msgstr "Ugyldig postavslutning"
 
-#: ../libsvn_wc/entries.c:1180
+#: ../libsvn_wc/entries.c:1179
 #, c-format
 msgid "Error at entry %d in entries file for '%s':"
 msgstr "Feil i post %d i «entries»-fil for «%s»:"
 
-#: ../libsvn_wc/entries.c:1303
+#: ../libsvn_wc/entries.c:1302
 #, c-format
 msgid "Corrupt working copy: '%s' has no default entry"
 msgstr "Ødelagt arbeidskopi: «%s» mangler standardoppføring"
 
-#: ../libsvn_wc/entries.c:1320
+#: ../libsvn_wc/entries.c:1319
 #, c-format
 msgid "Corrupt working copy: directory '%s' has an invalid schedule"
 msgstr "Ødelagt arbeidskopi: Katalogen «%s» er klargjort for en ugyldig oppgave"
 
-#: ../libsvn_wc/entries.c:1354
+#: ../libsvn_wc/entries.c:1353
 #, c-format
 msgid "Corrupt working copy: '%s' in directory '%s' has an invalid schedule"
 msgstr "Ødelagt arbeidskopi: «%s» i katalogen «%s» er klargjort for en ugyldig oppgave"
 
-#: ../libsvn_wc/entries.c:1363
+#: ../libsvn_wc/entries.c:1362
 #, c-format
 msgid "Corrupt working copy: '%s' in directory '%s' (which is scheduled for addition) is not itself scheduled for addition"
 msgstr "Ødelagt arbeidskopi: «%s» i katalogen «%s» (som er klargjort for å bli lagt til) er ikke selv klargjort for dette"
 
-#: ../libsvn_wc/entries.c:1371
+#: ../libsvn_wc/entries.c:1370
 #, c-format
 msgid "Corrupt working copy: '%s' in directory '%s' (which is scheduled for deletion) is not itself scheduled for deletion"
 msgstr "Ødelagt arbeidskopi: «%s» i katalogen «%s» (som er klargjort for sletting) er ikke selv klargjort for dette"
 
-#: ../libsvn_wc/entries.c:1379
+#: ../libsvn_wc/entries.c:1378
 #, c-format
 msgid "Corrupt working copy: '%s' in directory '%s' (which is scheduled for replacement) has an invalid schedule"
 msgstr "Ødelagt arbeidskopi: «%s» i katalogen «%s» (som er klargjort for å bli byttet ut) er ikke selv klargjort for dette"
 
-#: ../libsvn_wc/entries.c:2026
+#: ../libsvn_wc/entries.c:2032
 #, c-format
 msgid "No default entry in directory '%s'"
 msgstr "Standardoppføring mangler i katalogen «%s»"
 
-#: ../libsvn_wc/entries.c:2081
+#: ../libsvn_wc/entries.c:2088
 #, c-format
 msgid "Error writing to '%s'"
 msgstr "Feil under skriving til «%s»"
 
-#: ../libsvn_wc/entries.c:2410
+#: ../libsvn_wc/entries.c:2419
 #, c-format
 msgid "Can't add '%s' to deleted directory; try undeleting its parent directory first"
 msgstr "Kan ikke legge «%s» til en slettet katalog. Prøv å gjenopprette foreldrekatalogen først"
 
-#: ../libsvn_wc/entries.c:2416
+#: ../libsvn_wc/entries.c:2425
 #, c-format
 msgid "Can't replace '%s' in deleted directory; try undeleting its parent directory first"
 msgstr "Kan ikke slette «%s» i en slettet katalog. Prøv å gjenopprette foreldrekatalogen først"
 
-#: ../libsvn_wc/entries.c:2425
+#: ../libsvn_wc/entries.c:2434
 #, c-format
 msgid "'%s' is marked as absent, so it cannot be scheduled for addition"
 msgstr "«%s» er merket som fraværende, så den kan ikke forberedes for å bli lagt til"
 
-#: ../libsvn_wc/entries.c:2454
+#: ../libsvn_wc/entries.c:2463
 #, c-format
 msgid "Entry '%s' is already under version control"
 msgstr "Oppføringen «%s» er allerede under versjonskontroll"
 
-#: ../libsvn_wc/entries.c:2551
+#: ../libsvn_wc/entries.c:2560
 #, c-format
 msgid "Entry '%s' has illegal schedule"
 msgstr "Oppføringen «%s» er forberedt for å gjøre en ulovlig oppgave"
 
-#: ../libsvn_wc/entries.c:2696
+#: ../libsvn_wc/entries.c:2705
 #, c-format
 msgid "No such entry: '%s'"
 msgstr "Post ikke funnet: «%s»"
 
-#: ../libsvn_wc/entries.c:2829
+#: ../libsvn_wc/entries.c:2838
 #, c-format
 msgid "Error writing entries file for '%s'"
 msgstr "Feil under skriving av postfil for «%s»"
 
-#: ../libsvn_wc/entries.c:2872
+#: ../libsvn_wc/entries.c:2881
 #, c-format
 msgid "Directory '%s' has no THIS_DIR entry"
 msgstr "Katalogen «%s» har ingen THIS_DIR-oppføring"
 
-#: ../libsvn_wc/entries.c:3019
+#: ../libsvn_wc/entries.c:3028
 #, c-format
 msgid "'%s' has an unrecognized node kind"
 msgstr "«%s» har en ukjent nodetype"
 
-#: ../libsvn_wc/entries.c:3056
+#: ../libsvn_wc/entries.c:3065
 #, c-format
 msgid "Unexpectedly found '%s': path is marked 'missing'"
 msgstr "Fant «%s» uventet: Filstien er merket som savnet"
@@ -6044,11 +6049,11 @@ msgstr "Feil under skriving av loggfil for «%s»"
 msgid "'%s' is not a working copy directory"
 msgstr "«%s» er ikke en arbeidskopikatalog"
 
-#: ../libsvn_wc/merge.c:417 ../libsvn_wc/merge.c:728
+#: ../libsvn_wc/merge.c:426 ../libsvn_wc/merge.c:737
 msgid "Conflict callback violated API: returned no results"
 msgstr "Konflikt-tilbakekall brøt med programmeringsbiblioteket: Returnerte ingen resultater"
 
-#: ../libsvn_wc/merge.c:775
+#: ../libsvn_wc/merge.c:784
 msgid "Conflict callback violated API: returned no merged file"
 msgstr "Konflikt-tilbakekall brøt med programmeringsbiblioteket: Returnerte ingen flettet fil"
 
@@ -6383,27 +6388,27 @@ msgstr "Hopper over binær fil: «%s»\n"
 msgid "'%s' does not appear to be a URL"
 msgstr "«%s» ser ikke ut som en nettadresse"
 
-#: ../svn/conflict-callbacks.c:147
+#: ../svn/conflict-callbacks.c:148
 msgid "||||||| ORIGINAL"
 msgstr "||||||| ORIGINAL"
 
-#: ../svn/conflict-callbacks.c:148
+#: ../svn/conflict-callbacks.c:149
 msgid "<<<<<<< MINE (select with 'mc')"
 msgstr "<<<<<<< MIN (velg med «mc»)"
 
-#: ../svn/conflict-callbacks.c:149
+#: ../svn/conflict-callbacks.c:150
 msgid ">>>>>>> THEIRS (select with 'tc')"
 msgstr ">>>>>>> DERES (velg med «tc»)"
 
-#: ../svn/conflict-callbacks.c:183
+#: ../svn/conflict-callbacks.c:184
 msgid "No editor found."
 msgstr "Ingen tekstbehandler funnet."
 
-#: ../svn/conflict-callbacks.c:190
+#: ../svn/conflict-callbacks.c:191
 msgid "Error running editor."
 msgstr "Feil ved kjøring av tekstbehandler."
 
-#: ../svn/conflict-callbacks.c:200
+#: ../svn/conflict-callbacks.c:201
 #, c-format
 msgid ""
 "Invalid option; there's no merged version to edit.\n"
@@ -6412,63 +6417,63 @@ msgstr ""
 "Ugyldig valg; det er ingen flettet versjon å redigere.\n"
 "\n"
 
-#: ../svn/conflict-callbacks.c:230
+#: ../svn/conflict-callbacks.c:231
 msgid "No merge tool found.\n"
 msgstr "Ingen fletteverktøy funnet.\n"
 
-#: ../svn/conflict-callbacks.c:237
+#: ../svn/conflict-callbacks.c:238
 msgid "Error running merge tool."
 msgstr "Feil ved kjøring av fletteverktøy."
 
-#: ../svn/conflict-callbacks.c:307
+#: ../svn/conflict-callbacks.c:308
 msgid "No editor found; leaving all conflicts."
 msgstr "Fant ingen tekstbehandler; lar alle konflikter bli liggende."
 
-#: ../svn/conflict-callbacks.c:316
+#: ../svn/conflict-callbacks.c:317
 msgid "Error running editor; leaving all conflicts."
 msgstr "Feil ved kjøring av tekstbehandler; lar alle konflikter bli liggende."
 
-#: ../svn/conflict-callbacks.c:348
+#: ../svn/conflict-callbacks.c:349
 msgid "No merge tool found; leaving all conflicts."
 msgstr "Fant ingen fletteverktøy; lar alle konflikter bli liggende."
 
-#: ../svn/conflict-callbacks.c:357
+#: ../svn/conflict-callbacks.c:358
 msgid "Error running merge tool; leaving all conflicts."
 msgstr "Feil ved kjøring av fletteverktøy; lar alle konflikter bli liggende."
 
-#: ../svn/conflict-callbacks.c:398
+#: ../svn/conflict-callbacks.c:399
 #, c-format
 msgid "Conflict discovered in '%s'.\n"
 msgstr "Konflikt oppdaget i «%s».\n"
 
-#: ../svn/conflict-callbacks.c:403
+#: ../svn/conflict-callbacks.c:404
 #, c-format
 msgid "Conflict for property '%s' discovered on '%s'.\n"
 msgstr "Konflikt for egenskap «%s» oppdaget i «%s».\n"
 
-#: ../svn/conflict-callbacks.c:420
+#: ../svn/conflict-callbacks.c:421
 #, c-format
 msgid "They want to delete the property, you want to change the value to '%s'.\n"
 msgstr "De vil slette egenskapen, du vil forandre verdien til «%s».\n"
 
-#: ../svn/conflict-callbacks.c:429
+#: ../svn/conflict-callbacks.c:430
 #, c-format
 msgid "They want to change the property value to '%s', you want to delete the property.\n"
 msgstr "De vil forandre verdien for egenskapen til «%s», du vil slette egenskapen.\n"
 
-#: ../svn/conflict-callbacks.c:451
+#: ../svn/conflict-callbacks.c:452
 msgid "Select: (p) postpone"
 msgstr "Velg: (p) utsett"
 
-#: ../svn/conflict-callbacks.c:456
+#: ../svn/conflict-callbacks.c:457
 msgid ", (df) diff-full, (e) edit"
 msgstr ", (df) full diff, (e) rediger"
 
-#: ../svn/conflict-callbacks.c:460 ../svn/conflict-callbacks.c:473
+#: ../svn/conflict-callbacks.c:461 ../svn/conflict-callbacks.c:474
 msgid ", (r) resolved"
 msgstr ", (r) løst"
 
-#: ../svn/conflict-callbacks.c:466
+#: ../svn/conflict-callbacks.c:467
 msgid ""
 ",\n"
 "        (mc) mine-conflict, (tc) theirs-conflict"
@@ -6476,17 +6481,17 @@ msgstr ""
 ",\n"
 "        (mc) min konflikt, (tc) deres konflikt"
 
-#: ../svn/conflict-callbacks.c:476
+#: ../svn/conflict-callbacks.c:477
 msgid ""
 ",\n"
 "        (mf) mine-full, (tf) theirs-full"
 msgstr "(m) min som full, (t) deres som full"
 
-#: ../svn/conflict-callbacks.c:483
+#: ../svn/conflict-callbacks.c:484
 msgid "(s) show all options: "
 msgstr "(s) vis alle valg: "
 
-#: ../svn/conflict-callbacks.c:491
+#: ../svn/conflict-callbacks.c:492
 #, c-format
 msgid ""
 "\n"
@@ -6523,7 +6528,7 @@ msgstr ""
 "  (s)  vis alt        - vis denne listen\n"
 "\n"
 
-#: ../svn/conflict-callbacks.c:526 ../svn/conflict-callbacks.c:550
+#: ../svn/conflict-callbacks.c:527 ../svn/conflict-callbacks.c:551
 #, c-format
 msgid ""
 "Invalid option; cannot choose based on conflicts in a binary file.\n"
@@ -6532,7 +6537,7 @@ msgstr ""
 "Ugyldig valg; kan ikke velge basert på konflikter i en binærfil.\n"
 "\n"
 
-#: ../svn/conflict-callbacks.c:534 ../svn/conflict-callbacks.c:558
+#: ../svn/conflict-callbacks.c:535 ../svn/conflict-callbacks.c:559
 #, c-format
 msgid ""
 "Invalid option; cannot choose based on conflicts for properties.\n"
@@ -6541,7 +6546,7 @@ msgstr ""
 "Ugyldig valg; kan ikke velge basert på konflikter i egenskaper.\n"
 "\n"
 
-#: ../svn/conflict-callbacks.c:587
+#: ../svn/conflict-callbacks.c:588
 #, c-format
 msgid ""
 "Invalid option; cannot display conflicts for a binary file.\n"
@@ -6550,7 +6555,7 @@ msgstr ""
 "Ugyldig valg; kan ikke vise konflikter for en binærfil.\n"
 "\n"
 
-#: ../svn/conflict-callbacks.c:595
+#: ../svn/conflict-callbacks.c:596
 #, c-format
 msgid ""
 "Invalid option; cannot display conflicts for properties.\n"
@@ -6559,7 +6564,7 @@ msgstr ""
 "Ugyldig valg; kan ikke vise konflikter for egenskaper.\n"
 "\n"
 
-#: ../svn/conflict-callbacks.c:603
+#: ../svn/conflict-callbacks.c:604
 #, c-format
 msgid ""
 "Invalid option; original files not available.\n"
@@ -6568,7 +6573,7 @@ msgstr ""
 "Ugyldig valg; originale filer ikke tilgjengelig.\n"
 "\n"
 
-#: ../svn/conflict-callbacks.c:615
+#: ../svn/conflict-callbacks.c:616
 #, c-format
 msgid ""
 "Invalid option; there's no merged version to diff.\n"
@@ -6577,7 +6582,7 @@ msgstr ""
 "Ugyldig valg; det er ingen flettet versjon å se forandringer i.\n"
 "\n"
 
-#: ../svn/conflict-callbacks.c:640 ../svn/conflict-callbacks.c:654
+#: ../svn/conflict-callbacks.c:641 ../svn/conflict-callbacks.c:655
 #, c-format
 msgid ""
 "Invalid option.\n"
@@ -6586,7 +6591,7 @@ msgstr ""
 "Ugyldig valg.\n"
 "\n"
 
-#: ../svn/conflict-callbacks.c:684
+#: ../svn/conflict-callbacks.c:685
 #, c-format
 msgid ""
 "Conflict discovered when trying to add '%s'.\n"
@@ -6595,11 +6600,11 @@ msgstr ""
 "Oppdaget konflikt under tillegging av «%s».\n"
 "Et objekt med det samme navnet finnes allerede.\n"
 
-#: ../svn/conflict-callbacks.c:687
+#: ../svn/conflict-callbacks.c:688
 msgid "Select: (p) postpone, (mf) mine-full, (tf) theirs-full, (h) help:"
 msgstr "Velg: (p) utsett, (mf) min-full, (tf) deres-full, (h) hjelp:"
 
-#: ../svn/conflict-callbacks.c:699
+#: ../svn/conflict-callbacks.c:700
 #, c-format
 msgid ""
 "  (p)  postpone    - resolve the conflict later\n"
