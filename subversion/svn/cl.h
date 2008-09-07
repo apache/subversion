@@ -362,7 +362,7 @@ svn_cl__time_cstring_to_human_cstring(const char **human_cstring,
    When DETAILED is set, and REPOS_LOCKS is set, treat missing repository locks
    as broken WC locks. */
 svn_error_t *svn_cl__print_status(const char *path,
-                                  svn_wc_status2_t *status,
+                                  const svn_wc_status2_t *status,
                                   svn_boolean_t detailed,
                                   svn_boolean_t show_last_committed,
                                   svn_boolean_t skip_unrecognized,
@@ -374,7 +374,7 @@ svn_error_t *svn_cl__print_status(const char *path,
    allocations. */
 svn_error_t *
 svn_cl__print_status_xml(const char *path,
-                         svn_wc_status2_t *status,
+                         const svn_wc_status2_t *status,
                          apr_pool_t *pool);
 
 
