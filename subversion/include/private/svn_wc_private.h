@@ -126,6 +126,25 @@ svn_wc__versioned_file_modcheck(svn_boolean_t *modified_p,
                                 svn_boolean_t compare_textbases,
                                 apr_pool_t *pool);
 
+/* For the NAME entry in the entries in ADM_ACCESS, set the
+ * file_external_path to URL, the file_external_peg_rev to *PEG_REV
+ * and the file_external_rev to *REV.  The URL may be NULL which
+ * clears the file external information in the entry.  The repository
+ * root URL is given in REPOS_ROOT_URL and is used to store a
+ * repository root relative path in the entry.  POOL is used for
+ * temporary allocations.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_wc__set_file_external_location(svn_wc_adm_access_t *adm_access,
+                                   const char *name,
+                                   const char *url,
+                                   const svn_opt_revision_t *peg_rev,
+                                   const svn_opt_revision_t *rev,
+                                   const char *repos_root_url,
+                                   apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

@@ -3050,3 +3050,40 @@ svn_wc_set_changelist(const char *path,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_wc__set_file_external_location(svn_wc_adm_access_t *adm_access,
+                                   const char *name,
+                                   const char *url,
+                                   const svn_opt_revision_t *peg_rev,
+                                   const svn_opt_revision_t *rev,
+                                   const char *repos_root_url,
+                                   apr_pool_t *pool)
+{
+  apr_hash_t *entries;
+  svn_wc_entry_t entry = { 0 };
+
+  SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, pool));
+
+  if (url)
+    {
+      /* A repository root relative path is stored in the entry. */
+      SVN_ERR_ASSERT(peg_rev);
+      SVN_ERR_ASSERT(rev);
+      entry.file_external_path = url + strlen(repos_root_url);
+      entry.file_external_peg_rev = *peg_rev;
+      entry.file_external_rev = *rev;
+    }
+  else
+    {
+      entry.file_external_path = NULL;
+      entry.file_external_peg_rev.kind = svn_opt_revision_unspecified;
+      entry.file_external_rev.kind = svn_opt_revision_unspecified;
+    }
+
+  SVN_ERR(svn_wc__entry_modify(adm_access, name, &entry,
+                               SVN_WC__ENTRY_MODIFY_FILE_EXTERNAL, TRUE,
+                               pool));
+
+  return SVN_NO_ERROR;
+}

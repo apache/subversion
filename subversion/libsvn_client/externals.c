@@ -34,6 +34,7 @@
 #include "client.h"
 
 #include "svn_private_config.h"
+#include "private/svn_wc_private.h"
 
 
 /* Closure for handle_external_item_change. */
@@ -275,11 +276,15 @@ switch_dir_external(const char *path,
    access baton that has a write lock.  Use POOL for temporary
    allocations, and use the client context CTX. */
 static svn_error_t *
-switch_file_external(svn_wc_adm_access_t *adm_access,
-                     const char *path,
+switch_file_external(const char *path,
+                     const char *url,
+                     const svn_opt_revision_t *peg_revision,
+                     const svn_opt_revision_t *revision,
+                     svn_wc_adm_access_t *adm_access,
                      svn_ra_session_t *ra_session,
                      const char *ra_session_url,
                      svn_revnum_t ra_revnum,
+                     const char *repos_root_url,
                      svn_boolean_t *timestamp_sleep,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool)
@@ -345,6 +350,12 @@ switch_file_external(svn_wc_adm_access_t *adm_access,
       if (err)
         goto cleanup;
       revert_file = TRUE;
+
+      err = svn_wc__set_file_external_location(target_adm_access, target,
+                                               url, peg_revision, revision,
+                                               repos_root_url, subpool);
+      if (err)
+        goto cleanup;
     }
 
   err = svn_wc_get_switch_editor3(&ra_revnum, target_adm_access, target,
@@ -755,10 +766,15 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
                      ib->iter_pool));
           break;
         case svn_node_file:
-          SVN_ERR(switch_file_external(ib->adm_access, path,
+          SVN_ERR(switch_file_external(path,
+                                       new_item->url,
+                                       &new_item->peg_revision,
+                                       &new_item->revision,
+                                       ib->adm_access,
                                        ra_session,
                                        ra_cache.ra_session_url,
                                        ra_cache.ra_revnum,
+                                       ra_cache.repos_root_url,
                                        ib->timestamp_sleep, ib->ctx,
                                        ib->iter_pool));
           break;
@@ -875,10 +891,15 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
                                       ib->iter_pool));
           break;
         case svn_node_file:
-          SVN_ERR(switch_file_external(ib->adm_access, path,
+          SVN_ERR(switch_file_external(path,
+                                       new_item->url,
+                                       &new_item->peg_revision,
+                                       &new_item->revision,
+                                       ib->adm_access,
                                        ra_session,
                                        ra_cache.ra_session_url,
                                        ra_cache.ra_revnum,
+                                       ra_cache.repos_root_url,
                                        ib->timestamp_sleep, ib->ctx,
                                        ib->iter_pool));
           break;
