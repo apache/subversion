@@ -43,6 +43,7 @@
 # node - node
 # parse - tolke
 # path - sti
+# peg revision - knaggrevisjon
 # plugin - programtillegg
 # property - egenskap
 # record - post
@@ -57,6 +58,7 @@
 # source - kilde
 # stack - stabel
 # subcommand - delkommando
+# switched - byttet
 # target - mål
 # token - nøkkel (i lock-sammenheng)
 # unsupported x - x ikke støttet
@@ -71,8 +73,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.6\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2008-09-04 08:13+0200\n"
-"PO-Revision-Date: 2008-08-29 13:23+0200\n"
+"POT-Creation-Date: 2008-09-07 05:58+0200\n"
+"PO-Revision-Date: 2008-09-07 05:58+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -142,7 +144,7 @@ msgstr "Ingen lås på stien «%s» i filsystem «%s»"
 
 #. FS is of type "svn fs_t *".
 #: ../include/private/svn_fs_util.h:125
-#, fuzzy, c-format
+#, c-format
 msgid "Lock has expired: lock-token '%s' in filesystem '%s'"
 msgstr "Låsen er utgått: Låsnøkkel «%s» i filsystem «%s»"
 
@@ -205,14 +207,12 @@ msgid "Bogus server specification"
 msgstr "Fiktiv tjenerspesifikasjon"
 
 #: ../include/svn_error_codes.h:209
-#, fuzzy
 msgid "Unsupported checksum type"
-msgstr "Depotets versjon støttes ikke"
+msgstr "Kontrollsumtypen støttes ikke"
 
 #: ../include/svn_error_codes.h:213
-#, fuzzy
 msgid "Invalid character in hex checksum"
-msgstr "Ugyldig tegn «%c» funnet i områdeliste"
+msgstr "Ugyldig tegn i heksadesimal-kontrollsum"
 
 #: ../include/svn_error_codes.h:219
 msgid "No such XML tag attribute"
@@ -1053,7 +1053,7 @@ msgstr "Bibliotek for APR-minnehurtiglager er ikke tilgjengelig"
 
 #: ../include/svn_error_codes.h:1191
 msgid "Couldn't perform atomic initialization"
-msgstr ""
+msgstr "Klarte ikke å utføre atomisk initialisering"
 
 #: ../include/svn_error_codes.h:1197
 msgid "Error parsing arguments"
@@ -1100,9 +1100,8 @@ msgid "No external merge tool available"
 msgstr "Ingen eksterne fletteverktøy er tilgjengelig"
 
 #: ../include/svn_error_codes.h:1243
-#, fuzzy
 msgid "Assertion failure"
-msgstr "Autorisasjonen feilet"
+msgstr "Forutsetning feilet"
 
 #: ../libsvn_client/add.c:344 ../libsvn_wc/copy.c:231
 #, c-format
@@ -1466,7 +1465,7 @@ msgstr "Noen nødvendige revisjoner er ikke spesifisert"
 
 #: ../libsvn_client/diff.c:918
 msgid "At least one revision must be non-local for a pegged diff"
-msgstr "Minst én revisjon må være ikke-lokal for en bundet diff"
+msgstr "Minst én revisjon må være ikke-lokal for en knagg-diff"
 
 #: ../libsvn_client/diff.c:1030 ../libsvn_client/diff.c:1042
 #, c-format
@@ -3390,12 +3389,12 @@ msgstr "Egenskapen relative-path ble ikke funnet i ressursen"
 
 #: ../libsvn_ra_neon/props.c:982
 msgid "'DAV:baseline-collection' was not present on the baseline resource"
-msgstr "«DAV:baseline-collection» ble ikke funnet i grunnlinje-ressursen"
+msgstr "«DAV:baseline-collection» ble ikke funnet i grunnlinjeressursen"
 
 #: ../libsvn_ra_neon/props.c:1001
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' was not present on the baseline resource"
-msgstr "«%s» var ikke tilstede i ressursen"
+msgstr "«%s» var ikke tilstede i grunnlinjeressursen"
 
 #: ../libsvn_ra_neon/props.c:1154 ../libsvn_ra_serf/commit.c:846
 msgid "At least one property change failed; repository is unchanged"
@@ -3477,9 +3476,9 @@ msgid "Attempt to fetch capability '%s' resulted in '%s'"
 msgstr "Forsøk på å hente evne «%s» resulterte i «%s»"
 
 #: ../libsvn_ra_neon/session.c:955
-#, fuzzy, c-format
+#, c-format
 msgid "URL '%s' is malformed or the scheme or host or path is missing"
-msgstr "Misdannet URL «%s»: Skjema, tjener eller sti mangler"
+msgstr "URL-en «%s» er misdannet, eller skjemaet, tjeneren eller stien mangler"
 
 #: ../libsvn_ra_neon/session.c:971
 msgid "Network socket initialization failed"
@@ -4503,9 +4502,9 @@ msgid "Error opening db lockfile"
 msgstr "Feil under åpning av låsefil for database"
 
 #: ../libsvn_repos/repos.c:1220
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is a subdirectory of an existing repository rooted at '%s'"
-msgstr "URL-en «%s» ligger ikke under øktens depotrot-URL «%s»"
+msgstr "«%s» er en underkatalog av et eksisterende depot med roten på «%s»"
 
 #: ../libsvn_repos/repos.c:1226
 msgid "Repository creation failed"
@@ -4668,9 +4667,9 @@ msgid "Can't expand time"
 msgstr "Kan ikke ekspandere tid"
 
 #: ../libsvn_subr/dso.c:68
-#, fuzzy, c-format
+#, c-format
 msgid "Can't create DSO mutex"
-msgstr "Kan ikke overta DSO-mutex"
+msgstr "Kan ikke opprette DSO-mutex"
 
 #: ../libsvn_subr/dso.c:87
 #, c-format
@@ -4694,7 +4693,7 @@ msgstr "%sadvarsel: %s\n"
 #: ../libsvn_subr/error.c:490
 #, c-format
 msgid "In file '%s' line %d: assertion failed (%s)"
-msgstr ""
+msgstr "I filen «%s», linje %d: Forutsetning feilet (%s)"
 
 #: ../libsvn_subr/error.c:494
 #, c-format
@@ -5344,11 +5343,6 @@ msgstr "Filnavn for klientsertifikat: "
 msgid "Passphrase for '%s': "
 msgstr "Adgangsfrase/-setning for «%s»: "
 
-# ### FIXME: Det må leses i kildekoden for å se om dette med «ja» og 
-# «nei» er konsekvent oppførsel. I mellomtiden lar vi tvilen komme 
-# tiltalte til gode, og bruker ja/nei-mulighetene her, selv om det er en 
-# liten sjanse for at det vil bli ustandard oppførsel i forhold til 
-# andre steder.
 #: ../libsvn_subr/prompt.c:415
 msgid "yes"
 msgstr "ja"
@@ -5363,10 +5357,10 @@ msgstr "Du må svare enten «ja» eller «nei»: "
 
 #: ../libsvn_subr/prompt.c:440
 msgid "Store password unencrypted (yes/no)? "
-msgstr "Lagre passord ukryptert (yes/no)?"
+msgstr "Lagre passord ukryptert (ja/nei)?"
 
 #: ../libsvn_subr/prompt.c:442
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "-----------------------------------------------------------------------\n"
 "ATTENTION!  Your password for authentication realm:\n"
@@ -5390,14 +5384,17 @@ msgstr ""
 "kan bare lagres ukryptert på disken! Det anbefales at du setter opp\n"
 "systemet ditt slik at Subversion kan lagre passord kryptert, hvis\n"
 "mulig. Les i dokumentasjonen for detaljer.\n"
+"\n"
+"Hvis du vil forhindre at denne advarselen vises i framtiden, kan du sette\n"
+"verdien for «store-plaintext-passwords»-valget til enten «yes» eller\n"
+"«no» i «%s».\n"
 
 #: ../libsvn_subr/prompt.c:470
-#, fuzzy
 msgid "Store passphrase unencrypted (yes/no)? "
-msgstr "Lagre passord ukryptert (yes/no)?"
+msgstr "Lagre passord ukryptert (ja/nei)?"
 
 #: ../libsvn_subr/prompt.c:472
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "-----------------------------------------------------------------------\n"
 "ATTENTION!  Your passphrase for client certificate:\n"
@@ -5414,13 +5411,17 @@ msgid ""
 "-----------------------------------------------------------------------\n"
 msgstr ""
 "-----------------------------------------------------------------------\n"
-"OBS! Passordet ditt for autentiseringsområde:\n"
+"OBS! Passordet ditt for klientsertifikat:\n"
 "\n"
 "   %s\n"
 "\n"
 "kan bare lagres ukryptert på disken! Det anbefales at du setter opp\n"
 "systemet ditt slik at Subversion kan lagre passord kryptert, hvis\n"
 "mulig. Les i dokumentasjonen for detaljer.\n"
+"\n"
+"Hvis du vil forhindre at denne advarselen vises i framtiden, kan du sette\n"
+"verdien for «store-ssl-client-cert-pp-plaintext»-valget til enten «yes»\n"
+"eller «no» i «%s».\n"
 
 #: ../libsvn_subr/simple_providers.c:439
 #: ../libsvn_subr/ssl_client_cert_pw_providers.c:307
@@ -6203,12 +6204,12 @@ msgstr "Feil under tolking av %s-egenskapen på «%s»: «%s»"
 #: ../libsvn_wc/props.c:3289
 #, c-format
 msgid "Invalid %s property on '%s': cannot use two absolute URLs ('%s' and '%s') in an external; one must be a path where an absolute or relative URL is checked out to"
-msgstr ""
+msgstr "Ugyldig %s-egenskap på «%s»: Kan ikke bruke to absolutte URL-er («%s» og «%s») på en ekstern definisjon; en av dem må være en sti hvor en absolutt eller relativ URL hentes ut"
 
 #: ../libsvn_wc/props.c:3298 ../libsvn_wc/props.c:3306
 #, c-format
 msgid "Invalid %s property on '%s': cannot use a URL '%s' as the target directory for an external definition"
-msgstr ""
+msgstr "Ugyldig %s-egenskap på «%s»: Kan ikke bruke URL «%s» som målkatalog for en ekstern definisjon"
 
 #: ../libsvn_wc/props.c:3344
 #, c-format
@@ -6335,9 +6336,9 @@ msgid "No fetch_func supplied to update_editor"
 msgstr ""
 
 #: ../libsvn_wc/update_editor.c:3411
-#, fuzzy, c-format
+#, c-format
 msgid "Shallowing of working copy depths is not yet supported"
-msgstr "Flyttinger mellom arbeidskopien og depotet er ikke støttet"
+msgstr "Dybder på arbeidskopier kan for øyeblikket ikke gjøres grunnere"
 
 #: ../libsvn_wc/update_editor.c:3812
 #, c-format
@@ -7590,8 +7591,8 @@ msgid ""
 "  looked up.\n"
 msgstr ""
 "Lag en ikke-versjonert kopi av et tre i depotet.\n"
-"bruk: 1. export [-r REV] URL[@PEGREV] [STI]\n"
-"      2. export [-r REV] STI1[@PEGREV] [STI]\n"
+"bruk: 1. export [-r REV] URL[@KNAGGREV] [STI]\n"
+"      2. export [-r REV] STI1[@KNAGGREV] [STI]\n"
 "\n"
 "  1. Oppretter et rent katalogtre fra depotet spesifisert av URL\n"
 "     (med revisjonen REV hvis angitt, ellers HEAD) i filstien STI.\n"
@@ -7604,7 +7605,7 @@ msgstr ""
 "     til den den lokale katalogen. Hvis REV utelates, bevares alle lokale\n"
 "     endringer. Filer som ikke er under versjonskontroll kopieres ikke.\n"
 "\n"
-"  Hvis PEGREV er spesifisert, angir det i hvilken revisjon målet først\n"
+"  Hvis KNAGGREV er spesifisert, angir det i hvilken revisjon målet først\n"
 "  blir lett opp.\n"
 
 #: ../svn/main.c:480
@@ -7869,6 +7870,14 @@ msgid ""
 "  SOURCE to TARGET; otherwise, display the type of information\n"
 "  specified by the --show-revs option.\n"
 msgstr ""
+"Vis fletterelatert informasjon.\n"
+"bruk: mergeinfo KILDE[@REV] [MÅL[@REV]]\n"
+"\n"
+"  Vis informasjon som er relatert til flettinger (eller potensielle\n"
+"  flettinger) mellom KILDE og MÅL (standard: «.»). Hvis valget\n"
+"  --show-revs ikke er angitt, vis revisjoner som er blitt flettet fra\n"
+"  KILDE til MÅL; ellers vis typen informasjon spesifisert med\n"
+"  «--show-revs»-valget\n"
 
 #: ../svn/main.c:624
 msgid ""
@@ -7951,7 +7960,6 @@ msgstr ""
 "     MÅL angir bare hvilket depot som skal aksesseres.\n"
 
 #: ../svn/main.c:667
-#, fuzzy
 msgid ""
 "Edit a property with an external editor.\n"
 "usage: 1. propedit PROPNAME TARGET...\n"
@@ -7967,14 +7975,13 @@ msgstr ""
 "bruk: 1. propedit EGENSKAPSNAVN MÅL...\n"
 "      2. propedit EGENSKAPSNAVN --revprop -r REV [MÅL]\n"
 "\n"
-"  1. Redigerer versjonert egenskap i arbeidskopien eller depotet.\n"
+"  1. Redigerer en versjonert egenskap i arbeidskopien eller depotet.\n"
 "  2. Redigerer en uversjonert fjerntliggende egenskap i en depotrevisjon.\n"
 "     MÅL angir bare hvilket depot som skal aksesseres.\n"
 "\n"
 "Se «svn help propset» for mer om setting av egenskaper.\n"
 
 #: ../svn/main.c:679
-#, fuzzy
 msgid ""
 "Print the value of a property on files, dirs, or revisions.\n"
 "usage: 1. propget PROPNAME [TARGET[@REV]...]\n"
@@ -7993,20 +8000,22 @@ msgid ""
 "  redirecting a binary property value to a file, but available only\n"
 "  if you supply a single TARGET to a non-recursive propget operation).\n"
 msgstr ""
-"Vis verdien for en egenskap på filer, kataloger\n"
-"eller revisjoner.\n"
+"Vis verdien for en egenskap på filer, kataloger eller revisjoner.\n"
 "bruk: 1. propget EGENSKAPSNAVN [MÅL[@REV]...]\n"
 "      2. propget EGENSKAPSNAVN --revprop -r REV [MÅL]\n"
 "\n"
-"  1. Viser versjonerte egenskaper i arbeidskopien. Hvis REV er spesifisert,\n"
-"     angir dette i hvilken revisjon målet først blir lett opp.\n"
-"  2. Viser uversjonert fjerntliggende egenskap i en depotrevisjon.\n"
+"  1. Viser versjonerte egenskaper. Hvis REV er spesifisert, angir dette\n"
+"     i hvilken revisjon målet først blir lett opp.\n"
+"  2. Viser uversjonert fjerntliggende egenskap i en depotrevisjon. MÅL\n"
+"     avgjør bare hvilket depot som skal aksessereres.\n"
 "\n"
 "  Som standard legger denne delkommandoen til et ekstra linjeskift bak\n"
-"  egenskapens verdi, slik at visningen ser penere ut. I tillegg har hver\n"
-"  egenskap filstien som forstavelse når flere stier vises. Du kan bruke\n"
-"  argumentet --strict for å ta bort disse forskjønnelsene (dette er nyttig\n"
-"  for eksempel når binære egenskaper sendes til en fil).\n"
+"  egenskapens verdi, slik at visningen ser penere ut. I tillegg, når det\n"
+"  er flere stier involvert, legges stien til foran hver egenskapsverdi\n"
+"  som den tilhører. Du kan bruke valget --strict for å ta bort disse\n"
+"  forskjønnelsene (dette er nyttig for eksempel når binære egenskaper\n"
+"  sendes til en fil, men er bare tilgjengelig hvis du angir ett enkelt\n"
+"  MÅL til en ikke-rekursiv propget-operasjon).\n"
 
 #: ../svn/main.c:699
 msgid ""
@@ -8030,7 +8039,6 @@ msgstr ""
 "     MÅL angir bare hvilket depot som skal aksesseres.\n"
 
 #: ../svn/main.c:710
-#, fuzzy
 msgid ""
 "Set the value of a property on files, dirs, or revisions.\n"
 "usage: 1. propset PROPNAME PROPVAL PATH...\n"
@@ -8098,13 +8106,14 @@ msgstr ""
 "\n"
 "  Verdien kan angis med «--file»-valget istedenfor EGENSKAPSVERDI.\n"
 "\n"
-"  1. Lager en lokal versjonert egenskap i arbeidskopien.\n"
-"  2. Lager en uversjonert, fjerntliggende egenskapsforandring i en\n"
-"     depotrevisjon.\n"
+"  1. Forandrer en egenskap på en fil eller katalog i arbeidskopien.\n"
+"  2. Forandrer en uversjonert egenskap i en depotrevisjon.\n"
+"     (MÅL avgjør kun hvilket depot som skal åpnes.)\n"
 "\n"
 "  Merk: I tillegg til at svn kan lagre hvilke som helst egenskaper, behandles\n"
 "  følgende egenskaper spesielt:\n"
-"    svn:ignore     - En linjedelt liste over filstier som skal ignoreres\n"
+"    svn:ignore     - En liste over filstier (jokertegn kan brukes)\n"
+"                     som skal ignoreres, en på hver linje.\n"
 "    svn:keywords   - Nøkkelord som utvides. Gyldige nøkkelord er:\n"
 "      URL , HeadURL            - URLen til objektets seneste revisjon.\n"
 "      Author, LastChangedBy    - Den som gjorde den siste endringen.\n"
@@ -8113,7 +8122,8 @@ msgstr ""
 "      LastChangedRevision\n"
 "      Id                       - Sammendrag av de fire foregående\n"
 "                                 nøkkelordene.\n"
-"    svn:executable - Gjør en fil kjørbar hvis den er til stede.\n"
+"    svn:executable - Gjør en fil kjørbar hvis den er til stede. Bruk\n"
+"      «svn propdel svn:executable STI...» for å gjøre en fil ukjørbar.\n"
 "    svn:eol-style  - Enten «native», «LF», «CR» eller «CRLF».\n"
 "    svn:mime-type  - En fils MIME-type. Brukes for å bestemme om filen skal\n"
 "      flettes og hvordan filen sendes via Apache. En MIME-type som begynner\n"
@@ -8121,12 +8131,28 @@ msgstr ""
 "      annet behandles binært.\n"
 "    svn:externals  - En linjeskift-delt liste med modul-spesifikasjoner.\n"
 "      Hver av dem består av en relativ filsti, valgfrie revisjonsargumenter\n"
-"      og en URL. Eksempler:\n"
+"      og en URL. Rekkefølgen på de tre elementene avgjør oppførselen.\n"
+"      Subversion 1.4 og tidligere støtter bare de følgende formater og\n"
+"      URL-en kan ikke inneholde knaggrevisjoner:\n"
 "        foo             http://example.com/repos/zig\n"
 "        foo/bar -r 1234 http://example.com/repos/zag\n"
+"      Subversion 1.5 og senere støtter formatene ovenfor og de følgende\n"
+"      formatene hvor URL-ene kan inneholde knaggrevisjoner:\n"
+"                http://example.com/repos/zig foo\n"
+"        -r 1234 http://example.com/repos/zig foo/bar\n"
+"      Relative URL-er støttes i Subversion 1.5 og senere for alle formater\n"
+"      nevnt ovenfor og indikeres ved å starte URL-en med en av de følgende\n"
+"      strengene:\n"
+"        ../  til foreldrekatalogen av eksterndefineringen som er hentet\n"
+"        ^/   til depotroten\n"
+"        //   til skjemaet\n"
+"        /    til tjenerroten\n"
+"      Det tvetydige formatet 'relativ_sti relativ_sti' tolkes som\n"
+"      'relativ_url relativ_sti' med støtte for knaggrevisjon.\n"
 "    svn:needs-lock - Hvis den er til stede, indikerer dette at filen bør\n"
 "      låses før den blir modifisert. Skrivebeskytter filen i arbeidskopien\n"
-"      når den ikke er låst.\n"
+"      når den ikke er låst. Bruk «svn propdel svn:needs-lock STI...»\n"
+"      for å slette.\n"
 "  Egenskapene svn:keywords, svn:executable, svn:eol-style, svn:mime-type og\n"
 "  svn:needs-lock kan ikke settes på en katalog. Et ikke-rekursivt forsøk\n"
 "  vil feile, og et rekursivt forsøk vil sette egenskapene bare på filene\n"
@@ -8187,7 +8213,6 @@ msgstr ""
 "  konflikttilstander. Den henter imidlertid ikke tilbake slettede kataloger.\n"
 
 #: ../svn/main.c:803
-#, fuzzy
 msgid ""
 "Print the status of working copy files and directories.\n"
 "usage: status [PATH...]\n"
@@ -8265,9 +8290,11 @@ msgstr ""
 "Vis status på filer og kataloger i arbeidskopien.\n"
 "bruk: status [STI...]\n"
 "\n"
-"  Uten argumenter vises kun lokale endringer (nettverkstilgang trengs ikke).\n"
-"  Med argumentet -u vises endringer i depotet i tillegg til\n"
-"  arbeidskopien.\n"
+"  Uten argumenter vises kun lokale endringer (nettverkstilgang er ikke\n"
+"  nødvendig).\n"
+"  Med argumentet -q vises bare oppsummert informasjon om elementer som er\n"
+"  forandret lokalt.\n"
+"  Med argumentet -u vises endringer i depotet i tillegg til arbeidskopien.\n"
 "  Med argumentet -v vises komplett informasjon om hvert objekt.\n"
 "\n"
 "  De første seks kolonnene har hver en bredde på ett tegn:\n"
@@ -8337,7 +8364,6 @@ msgstr ""
 "    Status mot revisjon:   981\n"
 
 #: ../svn/main.c:879
-#, fuzzy
 msgid ""
 "Update the working copy to a different URL.\n"
 "usage: 1. switch URL[@PEGREV] [PATH]\n"
@@ -8374,27 +8400,37 @@ msgid ""
 "  reporting the action taken.\n"
 msgstr ""
 "Oppdater arbeidskopien til en annen nettadresse.\n"
-"bruk: 1. switch URL [STI]\n"
+"bruk: 1. switch URL[@KNAGGREV] [STI]\n"
 "      2. switch --relocate FRA TIL [STI...]\n"
 "\n"
 "  1. Oppdater arbeidskopien slik at den gjenspeiler en annen URL innenfor\n"
 "     depotet. Denne virkemåten ligner «svn update» og er en metode\n"
 "     for å flytte en arbeidskopi til en annen forgrening eller merke\n"
 "     innenfor det samme depotet.\n"
+"     Hvis KNAGGREV er spesifisert, avgjør den i hvilken revisjon målet\n"
+"     blir lett opp.\n"
+"\n"
+"     Hvis --force brukes, vil uversjonerte stier som ligger i veien i\n"
+"     arbeidskopien ikke føre til at oppdateringen automatisk vil feile. Hvis\n"
+"     stien som ligger i veien er av samme type (fil eller katalog) som den\n"
+"     tilsvarende stien i depotet vil den bli versjonert, men innholdet vil ikke\n"
+"     bli forandret. Dette betyr at underelementene i en katalog som ligger i\n"
+"     veien også kan sperre for elementer og dermed bli versjonert. For filer\n"
+"     vil forandringer i innhold mellom depotet og elementet som sperrer bli\n"
+"     behandlet som lokale forandringer i arbeidskopien. Alle egenskaper fra\n"
+"     depotet blir lagt til stien som ligger i veien.\n"
+"\n"
+"     Bruk «--set-depth»-valget for å bestemme dybden på arbeidskopien på\n"
+"     målene for operasjonen. For øyeblikket kan dybden på en arbeidskopi\n"
+"     kun økes, du kan ikke gjøre en katalog grunnere.\n"
 "\n"
 "  2. Forandre bare URL-metadata som tilhører arbeidskopien innbyrdes.\n"
 "     Dette gjøres når depotets plassering endres (som etter\n"
 "     en plan- eller tjenernavnsendring), men arbeidskopien din\n"
 "     fortsatt gjenspeiler samme katalog i det samme depotet.\n"
 "\n"
-"Hvis --force brukes, vil uversjonerte stier som ligger i veien i arbeidskopien\n"
-"ikke føre til at oppdateringen automatisk vil feile. Hvis stien som ligger i\n"
-"veien er av samme type (fil eller katalog) som den tilsvarende stien i depotet\n"
-"vil den bli versjonert, men innholdet vil ikke bli forandret. Dette betyr at\n"
-"underelementene i en katalog som ligger i veien også kan sperre for elementer\n"
-"og dermed bli versjonert. For filer vil forandringer i innhold mellom depotet\n"
-"og elementet som sperrer bli behandlet som lokale forandringer i arbeidskopien.\n"
-"Alle egenskaper fra depotet blir lagt til stien som sperrer.\n"
+"  Se også «svn help update» for en liste over mulige tegn som rapporterer\n"
+"  om hva som ble gjort.\n"
 
 #: ../svn/main.c:916
 msgid ""
@@ -8409,7 +8445,6 @@ msgstr ""
 "  Bruk --force for å bryte låsen.\n"
 
 #: ../svn/main.c:923
-#, fuzzy
 msgid ""
 "Bring changes from the repository into the working copy.\n"
 "usage: update [PATH...]\n"
@@ -8455,8 +8490,8 @@ msgstr ""
 "  Hvis ingen revisjon angis, gjelder topprevisjonen (HEAD).\n"
 "  Du kan ellers synkronisere arbeidskopien til en revisjon med -r.\n"
 "\n"
-"For hvert oppdatert objekt vises en rad hvor det første tegnet viser hva\n"
-"som er blitt gjort. Disse tegnene betyr:\n"
+"  For hvert oppdatert objekt vises en rad hvor det første tegnet viser hva\n"
+"  som er blitt gjort. Disse tegnene betyr:\n"
 "\n"
 "    A  Lagt til\n"
 "    D  Slettet\n"
@@ -8470,15 +8505,20 @@ msgstr ""
 "  En «B» i den tredje kolonnen indikerer at låsen for filen er blitt\n"
 "  brutt eller stjålet.\n"
 "\n"
-"Hvis --force brukes, vil uversjonerte stier som ligger i veien i arbeidskopien\n"
-"ikke føre til at oppdateringen automatisk vil feile. Hvis stien som ligger i\n"
-"veien er av samme type (fil eller katalog) som den tilsvarende stien i depotet\n"
-"vil den bli versjonert, men innholdet vil ikke bli forandret. Dette betyr at\n"
-"underelementene i en katalog som ligger i veien også kan sperre for elementer\n"
-"og dermed bli versjonert. For filer vil forandringer i innhold mellom depotet\n"
-"og elementet som sperrer bli behandlet som lokale forandringer i arbeidskopien.\n"
-"Alle egenskaper fra depotet blir lagt til stien som sperrer. Stier som\n"
-"allerede eksisterte merkes med en «E» i den første kolonnen.\n"
+"  Hvis --force brukes, vil uversjonerte stier som ligger i veien i\n"
+"  arbeidskopien ikke føre til at oppdateringen automatisk vil feile. Hvis stien\n"
+"  som ligger i veien er av samme type (fil eller katalog) som den tilsvarende\n"
+"  stien i depotet vil den bli versjonert, men innholdet vil ikke bli forandret.\n"
+"  Dette betyr at underelementene i en katalog som ligger i veien også kan\n"
+"  sperre for elementer og dermed bli versjonert. For filer vil forandringer i\n"
+"  innhold mellom depotet og elementet som sperrer bli behandlet som lokale\n"
+"  forandringer i arbeidskopien. Alle egenskaper fra depotet blir lagt til stien\n"
+"  som sperrer. Stier som allerede eksisterte merkes med en «E» i den første\n"
+"  kolonnen.\n"
+"\n"
+"  Bruk «--set-depth»-valget for å sette en ny arbeidskopidybde på målene\n"
+"  for denne operasjonen. For øyeblikket kan dybden på en arbeidskopi kun\n"
+"  økes, du kan ikke gjøre en arbeidskopi grunnere.\n"
 
 #: ../svn/main.c:1003 ../svnadmin/main.c:78 ../svnlook/main.c:339
 #: ../svnsync/main.c:191
@@ -8514,7 +8554,7 @@ msgstr "Syntaksfeil i revisjonsargumentet «%s»"
 #: ../svn/main.c:1291 ../svn/main.c:1310
 #, c-format
 msgid "Error converting depth from locale to UTF8"
-msgstr ""
+msgstr "Feil under konvertering av dybde fra lokalt tegnsett til UTF-8"
 
 #: ../svn/main.c:1299 ../svn/main.c:1318
 #, c-format
@@ -8954,9 +8994,8 @@ msgid "Properties on '%s':\n"
 msgstr "Egenskaper for «%s»:\n"
 
 #: ../svn/propget-cmd.c:196
-#, fuzzy
 msgid "--verbose cannot be used with --revprop or --strict or --xml"
-msgstr "--reintegrate kan ikke brukes sammen med --ignore-ancestry eller --record-only"
+msgstr "--verbose kan ikke brukes sammen med --revprop, --strict eller --xml"
 
 #: ../svn/propget-cmd.c:288
 msgid "Strict output of property values only available for single-target, non-recursive propget operations"
@@ -9691,9 +9730,8 @@ msgstr ""
 "\n"
 
 #: ../svnadmin/main.c:1250
-#, fuzzy
 msgid "No paths to unlock provided"
-msgstr "Ingen låsnøkkel skaffet"
+msgstr "Ingen stier angitt for opplåsing"
 
 #: ../svnadmin/main.c:1268
 #, c-format
@@ -9819,9 +9857,8 @@ msgid "Don't filter revision properties."
 msgstr "Ikke filtrer revisjonsegenskaper."
 
 #: ../svndumpfilter/main.c:897
-#, fuzzy
 msgid "Pass contents of file ARG as additional args"
-msgstr "bruk innholdet i filen ARG som tilleggsargumenter"
+msgstr "Bruk innholdet i filen ARG som tilleggsargumenter"
 
 #: ../svndumpfilter/main.c:908
 msgid ""
@@ -10117,7 +10154,6 @@ msgstr ""
 "Vis loggmelding.\n"
 
 #: ../svnlook/main.c:240
-#, fuzzy
 msgid ""
 "usage: 1. svnlook propget REPOS_PATH PROPNAME PATH_IN_REPOS\n"
 "                           2. svnlook propget --revprop REPOS_PATH PROPNAME\n"
@@ -10125,13 +10161,13 @@ msgid ""
 "Print the raw value of a property on a path in the repository.\n"
 "With --revprop, print the raw value of a revision property.\n"
 msgstr ""
-"bruk: svnlook propget DEPOTSTI EGENSKAPSNAVN [STI_I_DEPOT]\n"
+"bruk: 1. svnlook propget DEPOTSTI EGENSKAPSNAVN [STI_I_DEPOT]\n"
+"                           2. svnlook propget --revprop DEPOTSTI EGENSKAP\n"
 "\n"
 "Skriv ut råverdien for en egenskap i en filsti i depotet.\n"
 "Med --revprop skrives råverdien av en revisjonsegenskap.\n"
 
 #: ../svnlook/main.c:248
-#, fuzzy
 msgid ""
 "usage: 1. svnlook proplist REPOS_PATH PATH_IN_REPOS\n"
 "                             2. svnlook proplist --revprop REPOS_PATH\n"
@@ -10140,7 +10176,8 @@ msgid ""
 "with the --revprop option, revision properties.\n"
 "With -v, show the property values too.\n"
 msgstr ""
-"bruk: svnlook proplist DEPOTSTI [STI_I_DEPOT]\n"
+"bruk: 1. svnlook proplist DEPOTSTI [STI_I_DEPOT]\n"
+"                             2. svnlook proplist --revprop DEPOTSTI\n"
 "\n"
 "Viser egenskapene for en filsti i depotet, eller\n"
 "med «--revprop»-valget, revisjonsegenskaper.\n"
@@ -10446,7 +10483,9 @@ msgstr "bruk tråder istedenfor tvillingprosesser (fork) [modus: daemon]"
 msgid ""
 "run in foreground (useful for debugging)\n"
 "                             [mode: daemon]"
-msgstr "kjør i forgrunnen (nyttig for avlusing)                             [modus: daemon]"
+msgstr ""
+"kjør i forgrunnen (nyttig for avlusing)\n"
+"                             [modus: daemon]"
 
 #: ../svnserve/main.c:187
 msgid "svnserve log file"
@@ -10472,7 +10511,9 @@ msgstr ""
 msgid ""
 "tunnel username (default is current uid's name)\n"
 "                             [mode: tunnel]"
-msgstr "tunnelbrukernavn (Standard: Navn for gjeldende uid)                             [modus: tunnel]"
+msgstr ""
+"tunnelbrukernavn (Standard: Navn for gjeldende uid)\n"
+"                             [modus: tunnel]"
 
 #: ../svnserve/main.c:202 ../svnversion/main.c:125
 msgid "display this help"
@@ -10837,8 +10878,11 @@ msgstr "Prøv «svnsync help» for mer informasjon"
 msgid "Type 'svnversion --help' for usage.\n"
 msgstr "Skriv «svnversion --help» for bruksanvisning.\n"
 
+# ### FIXME: Finn på en fornuftig oversettelse av «sparse». Foreløpig 
+# brukes «glissen», og det er litt ... vel, uvant, for å si det på en 
+# diplomatisk måte.
 #: ../svnversion/main.c:51
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "usage: svnversion [OPTIONS] [WC_PATH [TRAIL_URL]]\n"
 "\n"
@@ -10886,8 +10930,9 @@ msgstr ""
 "\n"
 "   4123:4168     arbeidskopi med blandede revisjoner\n"
 "   4168M         arbeidskopi med endringer\n"
-"   4123S         arbeidskopi som er byttet på («switched»)\n"
-"   4123:4168MS   blandet revisjon, endret, og byttet på\n"
+"   4123S         arbeidskopi som er byttet («switched»)\n"
+"   4123P         delvis arbeidskopi, fra en glissen («sparse») uthenting\n"
+"   4123:4168MS   blandet revisjon, endret, og byttet\n"
 "\n"
 "  Hvis programmet kjøres i en katalog som ikke er en arbeidskopi, f.eks. en\n"
 "  eksportert katalog, skrives «eksportert» ut.\n"
