@@ -1716,7 +1716,7 @@ test_list = [ None,
               # XFail the same reason revprop_change() is.
               SkipUnless(XFail(invalid_propvalues, svntest.main.is_ra_type_dav),
                     svntest.main.server_enforces_date_syntax),
-              same_replacement_props,
+              XFail(same_replacement_props),
              ]
 
 if __name__ == '__main__':
