@@ -1057,6 +1057,11 @@ SVN_ERROR_START
              SVN_ERR_CLIENT_CATEGORY_START + 16,
              "Working copy and merge source not ready for reintegration")
 
+  /** @since New in 1.6. */
+  SVN_ERRDEF(SVN_ERR_CLIENT_FILE_EXTERNAL_OVERWRITE_VERSIONED,
+             SVN_ERR_CLIENT_CATEGORY_START + 17,
+             "A file external cannot overwrite an existing versioned item")
+
   /* misc errors */
 
   SVN_ERRDEF(SVN_ERR_BASE,

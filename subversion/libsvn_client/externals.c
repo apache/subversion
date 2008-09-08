@@ -322,9 +322,20 @@ switch_file_external(const char *path,
                               SVN_CONFIG_SECTION_MISCELLANY,
                               SVN_CONFIG_OPTION_USE_COMMIT_TIMES, FALSE));
 
-  /* If there is no entry in the working copy, then add an empty
-     file. */
-  if (! entry)
+  /* If there is a versioned item with this name, ensure it's a file
+     external before working with it.  If there is no entry in the
+     working copy, then create an empty file and add it to the working
+     copy. */
+  if (entry)
+    {
+      if (! entry->file_external_path)
+        return svn_error_createf
+          (SVN_ERR_CLIENT_FILE_EXTERNAL_OVERWRITE_VERSIONED, 0,
+           _("The file external from '%s' cannot overwrite the existing "
+             "versioned item at '%s'"),
+           url, path);
+    }
+  else
     {
       apr_file_t *f;
 
