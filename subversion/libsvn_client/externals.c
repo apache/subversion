@@ -863,7 +863,7 @@ svn_client__fetch_externals(apr_hash_t *externals,
 
 svn_error_t *
 svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
-                               svn_wc_status_func2_t status_func,
+                               svn_wc_status_func3_t status_func,
                                void *status_baton,
                                svn_depth_t depth,
                                svn_boolean_t get_all,
@@ -935,7 +935,7 @@ svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
                                     iterpool), iterpool);
 
           /* And then do the status. */
-          SVN_ERR(svn_client_status3(NULL, fullpath,
+          SVN_ERR(svn_client_status4(NULL, fullpath,
                                      &(external->revision),
                                      status_func, status_baton,
                                      depth, get_all, update,

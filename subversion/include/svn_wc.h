@@ -2562,7 +2562,21 @@ svn_wc_status(svn_wc_status_t **status,
  * @a baton is a closure object; it should be provided by the
  * implementation, and passed by the caller.
  *
+ * @a pool will be cleared between invocations to the callback.
+ *
+ * @since New in 1.6.
+ */
+typedef svn_error_t *(*svn_wc_status_func3_t)(void *baton,
+                                              const char *path,
+                                              svn_wc_status2_t *status,
+                                              apr_pool_t *pool);
+
+/**
+ * Same as svn_wc_status_func3_t(), but without a provided pool or
+ * the ability to propogate errors.
+ *
  * @since New in 1.2.
+ * @deprecated Provided for backward compatibility with the 1.5 API.
  */
 typedef void (*svn_wc_status_func2_t)(void *baton,
                                       const char *path,
@@ -2634,8 +2648,34 @@ typedef void (*svn_wc_status_func_t)(void *baton,
  * Allocate the editor itself in @a pool, but the editor does temporary
  * allocations in a subpool of @a pool.
  *
- * @since New in 1.5.
+ * @since New in 1.6.
  */
+svn_error_t *
+svn_wc_get_status_editor4(const svn_delta_editor_t **editor,
+                          void **edit_baton,
+                          void **set_locks_baton,
+                          svn_revnum_t *edit_revision,
+                          svn_wc_adm_access_t *anchor,
+                          const char *target,
+                          svn_depth_t depth,
+                          svn_boolean_t get_all,
+                          svn_boolean_t no_ignore,
+                          apr_array_header_t *ignore_patterns,
+                          svn_wc_status_func3_t status_func,
+                          void *status_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          svn_wc_traversal_info_t *traversal_info,
+                          apr_pool_t *pool);
+
+/**
+ * Same as svn_wc_get_status_editor4(), but using @c svn_wc_status_func2_t
+ * instead of @c svn_wc_status_func3_t.
+ *
+ * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.4 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_get_status_editor3(const svn_delta_editor_t **editor,
                           void **edit_baton,
