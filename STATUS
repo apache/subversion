@@ -53,5 +53,13 @@ Candidate changes for 1.5.3:
    Votes:
      +1: pburba
 
+ * r32977
+   Fix the current early bailout of 'svn log' as exhibited during
+   `svn log -gq -r31828 file:///usr/local/svn/subversion'.
+   Justification:
+     Server logic fault tolerance.  Code mo'-betta-ness.
+   Votes:
+     +1: cmpilato
+
 Approved changes:
 =================
