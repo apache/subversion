@@ -474,11 +474,12 @@ const char *svn_path_uri_decode(const char *path, apr_pool_t *pool);
  * allocated in @a pool.
  *
  * @a component need not be a single path segment, but if it contains
- * multiple segments, they must be separated by '/'.  If @a component
- * is already URI-encoded, just use <tt>svn_path_join (url, component,
- * pool)</tt> instead.
+ * multiple segments, they must be separated by '/'.
  *
  * @a url need not be a canonical path; it may have a trailing '/'.
+ *
+ * @note To add a component that is already URI-encoded, use
+ *       <tt>svn_path_join(url, component, pool)</tt> instead.
  */
 const char *svn_path_url_add_component(const char *url,
                                        const char *component,
