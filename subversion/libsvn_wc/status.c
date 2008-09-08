@@ -2,7 +2,7 @@
  * status.c: construct a status structure from an entry structure
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1356,11 +1356,11 @@ make_file_baton(struct dir_baton *parent_dir_baton,
   return f;
 }
 
-/* Return a boolean answer to the question "Is STATUS something that
-   should be reported?".  EB is the edit baton. */
-static svn_boolean_t
-is_sendable_status(svn_wc_status2_t *status,
-                   struct edit_baton *eb)
+
+svn_boolean_t
+svn_wc__is_sendable_status(svn_wc_status2_t *status,
+                           svn_boolean_t no_ignore,
+                           svn_boolean_t get_all)
 {
   /* If the repository status was touched at all, it's interesting. */
   if (status->repos_text_status != svn_wc_status_none)
@@ -1373,12 +1373,12 @@ is_sendable_status(svn_wc_status2_t *status,
     return TRUE;
 
   /* If the item is ignored, and we don't want ignores, skip it. */
-  if ((status->text_status == svn_wc_status_ignored) && (! eb->no_ignore))
+  if ((status->text_status == svn_wc_status_ignored) && (! no_ignore))
     return FALSE;
 
   /* If we want everything, we obviously want this single-item subset
      of everything. */
-  if (eb->get_all)
+  if (get_all)
     return TRUE;
 
   /* If the item is unversioned, display it. */
@@ -1499,7 +1499,7 @@ handle_statii(struct edit_baton *eb,
         }
       if (dir_was_deleted)
         status->repos_text_status = svn_wc_status_deleted;
-      if (is_sendable_status(status, eb))
+      if (svn_wc__is_sendable_status(status, eb->no_ignore, eb->get_all))
         SVN_ERR((eb->status_func)(eb->status_baton, key, status, subpool));
     }
 
@@ -1773,7 +1773,8 @@ close_directory(void *dir_baton,
       SVN_ERR(handle_statii(eb, dir_status ? dir_status->entry : NULL,
                             db->path, db->statii, was_deleted, db->depth,
                             pool));
-      if (dir_status && is_sendable_status(dir_status, eb))
+      if (dir_status && svn_wc__is_sendable_status(dir_status, eb->no_ignore,
+                                                  eb->get_all))
         SVN_ERR((eb->status_func)(eb->status_baton, db->path, dir_status,
                                   pool));
       apr_hash_set(pb->statii, db->path, APR_HASH_KEY_STRING, NULL);
@@ -1803,7 +1804,8 @@ close_directory(void *dir_baton,
                            eb->status_func, eb->status_baton,
                            eb->cancel_func, eb->cancel_baton, pool));
                 }
-              if (is_sendable_status(tgt_status, eb))
+              if (svn_wc__is_sendable_status(tgt_status, eb->no_ignore,
+                                             eb->get_all))
                 SVN_ERR((eb->status_func)(eb->status_baton, path, tgt_status,
                                           pool));
             }
@@ -1815,7 +1817,8 @@ close_directory(void *dir_baton,
              because it is the root of the edit drive. */
           SVN_ERR(handle_statii(eb, eb->anchor_status->entry, db->path,
                                 db->statii, FALSE, eb->default_depth, pool));
-          if (is_sendable_status(eb->anchor_status, eb))
+          if (svn_wc__is_sendable_status(eb->anchor_status, eb->no_ignore,
+                                         eb->get_all))
             SVN_ERR((eb->status_func)(eb->status_baton, db->path,
                                       eb->anchor_status, pool));
           eb->anchor_status = NULL;
