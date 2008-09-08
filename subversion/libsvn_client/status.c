@@ -47,7 +47,7 @@ struct status_baton
 {
   svn_boolean_t deleted_in_repos;          /* target is deleted in repos */
   apr_hash_t *changelist_hash;             /* keys are changelist names */
-  svn_wc_status_func2_t real_status_func;  /* real status function */
+  svn_wc_status_func3_t real_status_func;  /* real status function */
   void *real_status_baton;                 /* real status baton */
 };
 
@@ -56,11 +56,12 @@ struct status_baton
    need to make (such as noting that the target of the status is
    missing from HEAD in the repository).
 
-   This implements the 'svn_wc_status_func2_t' function type. */
-static void
+   This implements the 'svn_wc_status_func3_t' function type. */
+static svn_error_t *
 tweak_status(void *baton,
              const char *path,
-             svn_wc_status2_t *status)
+             svn_wc_status2_t *status,
+             apr_pool_t *pool)
 {
   struct status_baton *sb = baton;
 
@@ -74,10 +75,10 @@ tweak_status(void *baton,
      changelists our caller is interested in, we filter our this status
      transmission.  */
   if (! SVN_WC__CL_MATCH(sb->changelist_hash, status->entry))
-    return;
+    return SVN_NO_ERROR;
 
   /* Call the real status function/baton. */
-  sb->real_status_func(sb->real_status_baton, path, status);
+  return sb->real_status_func(sb->real_status_baton, path, status, pool);
 }
 
 /* A baton for our reporter that is used to collect locks. */
@@ -206,10 +207,10 @@ static svn_ra_reporter3_t lock_fetch_reporter = {
 
 
 svn_error_t *
-svn_client_status3(svn_revnum_t *result_rev,
+svn_client_status4(svn_revnum_t *result_rev,
                    const char *path,
                    const svn_opt_revision_t *revision,
-                   svn_wc_status_func2_t status_func,
+                   svn_wc_status_func3_t status_func,
                    void *status_baton,
                    svn_depth_t depth,
                    svn_boolean_t get_all,
@@ -268,7 +269,7 @@ svn_client_status3(svn_revnum_t *result_rev,
   /* Get the status edit, and use our wrapping status function/baton
      as the callback pair. */
   SVN_ERR(svn_wc_get_default_ignores(&ignores, ctx->config, pool));
-  SVN_ERR(svn_wc_get_status_editor3(&editor, &edit_baton, &set_locks_baton,
+  SVN_ERR(svn_wc_get_status_editor4(&editor, &edit_baton, &set_locks_baton,
                                     &edit_revision, anchor_access, target,
                                     depth, get_all, no_ignore, ignores,
                                     tweak_status, &sb, ctx->cancel_func,
@@ -404,6 +405,47 @@ svn_client_status3(svn_revnum_t *result_rev,
                                            update, no_ignore, ctx, pool));
 
   return SVN_NO_ERROR;
+}
+
+struct status3_wrapper_baton
+{
+  svn_wc_status_func2_t old_func;
+  void *old_baton;
+};
+
+static svn_error_t *
+status3_wrapper_func(void *baton,
+                     const char *path,
+                     svn_wc_status2_t *status,
+                     apr_pool_t *pool)
+{
+  struct status3_wrapper_baton *swb = baton;
+
+  swb->old_func(swb->old_baton, path, status);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_status3(svn_revnum_t *result_rev,
+                   const char *path,
+                   const svn_opt_revision_t *revision,
+                   svn_wc_status_func2_t status_func,
+                   void *status_baton,
+                   svn_depth_t depth,
+                   svn_boolean_t get_all,
+                   svn_boolean_t update,
+                   svn_boolean_t no_ignore,
+                   svn_boolean_t ignore_externals,
+                   const apr_array_header_t *changelists,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
+{
+  struct status3_wrapper_baton swb = { status_func, status_baton };
+
+  return svn_client_status4(result_rev, path, revision, status3_wrapper_func,
+                            &swb, depth, get_all, update, no_ignore,
+                            ignore_externals, changelists, ctx, pool);
+            
 }
 
 svn_error_t *
