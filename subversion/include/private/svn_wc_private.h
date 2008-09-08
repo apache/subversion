@@ -126,6 +126,18 @@ svn_wc__versioned_file_modcheck(svn_boolean_t *modified_p,
                                 svn_boolean_t compare_textbases,
                                 apr_pool_t *pool);
 
+/**
+ * Return a boolean answer to the question "Is @a status something that
+ * should be reported?".  @a no_ignore and @a get_all are the same as
+ * svn_wc_get_status_editor4().
+ * 
+ * @since New in 1.6.
+ */
+svn_boolean_t
+svn_wc__is_sendable_status(svn_wc_status2_t *status,
+                           svn_boolean_t no_ignore,
+                           svn_boolean_t get_all);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
