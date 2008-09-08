@@ -119,7 +119,7 @@ int svn_sort_compare_paths(const void *a, const void *b);
  *
  * Both @c svn_merge_range_t *'s must describe forward merge ranges.
  *
- * If @a and @b intersect then the range with the lower start revision
+ * If @a a and @a b intersect then the range with the lower start revision
  * is considered the lesser range.  If the ranges' start revisions are
  * equal then the range with the lower end revision is considered the
  * lesser range.
