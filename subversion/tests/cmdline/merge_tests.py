@@ -12651,7 +12651,6 @@ def merge_adds_mergeinfo_correctly(sbox):
   #  C) Mergeinfo describing the merge performed.
   #
   # See http://subversion.tigris.org/servlets/ReadMsg?listName=dev&msgNo=142460
-  # This test is marked as XFail since B) and C) are not happening.
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -13030,8 +13029,8 @@ test_list = [ None,
                          server_has_mergeinfo),
               XFail(merge_two_edits_to_same_prop),
               merge_an_eol_unification_and_set_svn_eol_style,
-              XFail(SkipUnless(merge_adds_mergeinfo_correctly,
-                               server_has_mergeinfo)),
+              SkipUnless(merge_adds_mergeinfo_correctly,
+                         server_has_mergeinfo),
              ]
 
 if __name__ == '__main__':
