@@ -189,8 +189,8 @@ svn_checksum_update(svn_checksum_ctx_t *ctx,
  * @since New in 1.6.
  */
 svn_error_t *
-svn_checksum_final(const svn_checksum_ctx_t *ctx,
-                   svn_checksum_t **checksum,
+svn_checksum_final(svn_checksum_t **checksum,
+                   const svn_checksum_ctx_t *ctx,
                    apr_pool_t *pool);
 
 

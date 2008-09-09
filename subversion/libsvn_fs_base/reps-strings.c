@@ -885,7 +885,7 @@ txn_body_read_rep(void *baton, trail_t *trail)
             {
               representation_t *rep;
 
-              svn_checksum_final(args->rb->checksum_ctx, &args->rb->checksum,
+              svn_checksum_final(&args->rb->checksum, args->rb->checksum_ctx,
                                  trail->pool);
               args->rb->checksum_finalized = TRUE;
 
@@ -1156,7 +1156,7 @@ rep_write_close_contents(void *baton)
 
   if (! wb->finalized)
     {
-      SVN_ERR(svn_checksum_final(wb->checksum_ctx, &wb->checksum, wb->pool));
+      SVN_ERR(svn_checksum_final(&wb->checksum, wb->checksum_ctx, wb->pool));
       wb->finalized = TRUE;
     }
 
