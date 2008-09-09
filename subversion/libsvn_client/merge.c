@@ -6533,10 +6533,12 @@ calculate_left_hand_side(const char **url_left,
          over and over. */
       /* We never merged to the source.  Just return the branch point. */
       const char *yc_ancestor_path,
-        *source_url = svn_path_join(source_repos_root, source_repos_rel_path,
-                                    subpool),
-        *target_url = svn_path_join(source_repos_root, target_repos_rel_path,
-                                    subpool);
+        *source_url = svn_path_url_add_component(source_repos_root,
+                                                 source_repos_rel_path,
+                                                 subpool),
+        *target_url = svn_path_url_add_component(source_repos_root,
+                                                 target_repos_rel_path,
+                                                 subpool);
 
       SVN_ERR(svn_client__get_youngest_common_ancestor(&yc_ancestor_path,
                                                        rev_left,
@@ -6548,7 +6550,8 @@ calculate_left_hand_side(const char **url_left,
                                  _("'%s@%ld' must be ancestrally related to "
                                    "'%s@%ld'"), source_url, source_rev,
                                  target_url, target_rev);
-      *url_left = svn_path_join(source_repos_root, yc_ancestor_path, pool);
+      *url_left = svn_path_url_add_component(source_repos_root,
+                                             yc_ancestor_path, pool);
       *source_mergeinfo_p = apr_hash_make(pool);
 
       svn_pool_destroy(subpool);

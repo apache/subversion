@@ -12846,6 +12846,37 @@ def merge_adds_mergeinfo_correctly(sbox):
                                        None, None, None, None,
                                        None, 1)
 
+def merge_file_with_space_in_its_path(sbox):
+  "merge a file with space in its path"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  some_dir = os.path.join(wc_dir, "some dir")
+  file1 = os.path.join(some_dir, "file1")
+  file2 = os.path.join(some_dir, "file2")
+
+  # Make r2.
+  os.mkdir(some_dir)
+  svntest.main.file_append(file1, "Initial text in the file.\n")
+  svntest.main.run_svn(None, "add", some_dir)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     "ci", "-m", "r2", wc_dir)
+
+  # Make r3.
+  svntest.main.run_svn(None, "copy", file1, file2)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     "ci", "-m", "r3", wc_dir)
+
+  # Make r4.
+  svntest.main.file_append(file2, "Next line of text in the file.\n")
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     "ci", "-m", "r4", wc_dir)
+
+  target_url = sbox.repo_url + '/some%20dir/file2'
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     "merge", "--reintegrate", target_url,
+                                     file1)
+
 ########################################################################
 # Run the tests
 
@@ -13031,6 +13062,7 @@ test_list = [ None,
               merge_an_eol_unification_and_set_svn_eol_style,
               SkipUnless(merge_adds_mergeinfo_correctly,
                          server_has_mergeinfo),
+              merge_file_with_space_in_its_path,
              ]
 
 if __name__ == '__main__':
