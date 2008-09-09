@@ -1655,6 +1655,31 @@ def invalid_propvalues(sbox):
                                      'svn:date', 'Sat May 10 12:12:31 2008',
                                      repo_url)
 
+def same_replacement_props(sbox):
+  "commit replacement props when same as old props"
+  # issue #3282
+  sbox.build()
+  foo_path = os.path.join(sbox.wc_dir, 'foo')
+  open(foo_path, 'w').close()
+  svntest.main.run_svn(None, 'add', foo_path)
+  svntest.main.run_svn(None, 'propset', 'someprop', 'someval', foo_path)
+  svntest.main.run_svn(None, 'ci', '-m', 'commit first foo', foo_path)
+  svntest.main.run_svn(None, 'rm', foo_path)
+  # Now replace 'foo'.
+  open(foo_path, 'w').close()
+  svntest.main.run_svn(None, 'add', foo_path)
+  # Set the same property again, with the same value.
+  svntest.main.run_svn(None, 'propset', 'someprop', 'someval', foo_path)
+  svntest.main.run_svn(None, 'ci', '-m', 'commit second foo', foo_path)
+  # Check if the property made it into the repository.
+  foo_url = sbox.repo_url + '/foo'
+  expected_out = [ "Properties on '" + foo_url + "':\n",
+                   "  someprop\n",
+                   "    someval\n" ]
+  svntest.actions.run_and_verify_svn(None, expected_out, [],
+                                     'proplist', '-v', foo_url)
+
+
 ########################################################################
 # Run the tests
 
@@ -1691,6 +1716,7 @@ test_list = [ None,
               # XFail the same reason revprop_change() is.
               SkipUnless(XFail(invalid_propvalues, svntest.main.is_ra_type_dav),
                     svntest.main.server_enforces_date_syntax),
+              XFail(same_replacement_props),
              ]
 
 if __name__ == '__main__':

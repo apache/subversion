@@ -74,7 +74,7 @@ resolve_repos_relative_url(const char **absolute_url,
 
   /* No assumptions are made about the canonicalization of the input
    * arguments, it is presumed that the output will be canonicalized after
-   * this function, which will remove any duplicate path seperator.
+   * this function, which will remove any duplicate path separator.
    */
   *absolute_url = apr_pstrcat(pool, repos_root_url, relative_url + 1, NULL);
 
@@ -141,7 +141,7 @@ check_root_url_of_target(const char **root_url,
 svn_error_t *
 svn_client_args_to_target_array(apr_array_header_t **targets_p,
                                 apr_getopt_t *os,
-                                apr_array_header_t *known_targets,
+                                const apr_array_header_t *known_targets,
                                 svn_client_ctx_t *ctx,
                                 apr_pool_t *pool)
 {

@@ -2,7 +2,7 @@
  * status-cmd.c -- Display status information in current directory
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -47,7 +47,6 @@ struct status_baton
   svn_boolean_t show_last_committed;
   svn_boolean_t skip_unrecognized;
   svn_boolean_t repos_locks;
-  apr_pool_t *pool;
 
   apr_hash_t *cached_changelists;
   apr_pool_t *cl_pool;          /* where cached changelists are allocated */
@@ -104,41 +103,31 @@ print_finish_target_xml(svn_revnum_t repos_rev,
 
 /* Function which *actually* causes a status structure to be output to
    the user.  Called by both print_status() and svn_cl__status(). */
-static void
+static svn_error_t * 
 print_status_normal_or_xml(void *baton,
                            const char *path,
-                           svn_wc_status2_t *status)
+                           const svn_wc_status2_t *status,
+                           apr_pool_t *pool)
 {
   struct status_baton *sb = baton;
-  svn_error_t *err;
 
   if (sb->xml_mode)
-    err = svn_cl__print_status_xml(path, status, sb->pool);
+    return svn_cl__print_status_xml(path, status, pool);
   else
-    err = svn_cl__print_status(path, status, sb->detailed,
-                               sb->show_last_committed,
-                               sb->skip_unrecognized,
-                               sb->repos_locks,
-                               sb->pool);
-
-  if (err)
-    {
-      /* Print if it is the first error. */
-      if (!sb->had_print_error)
-        {
-          sb->had_print_error = TRUE;
-          svn_handle_error2(err, stderr, FALSE, "svn: ");
-        }
-      svn_error_clear(err);
-    }
+    return svn_cl__print_status(path, status, sb->detailed,
+                                sb->show_last_committed,
+                                sb->skip_unrecognized,
+                                sb->repos_locks,
+                                pool);
 }
 
 
 /* A status callback function for printing STATUS for PATH. */
-static void
+static svn_error_t *
 print_status(void *baton,
              const char *path,
-             svn_wc_status2_t *status)
+             svn_wc_status2_t *status,
+             apr_pool_t *pool)
 {
   struct status_baton *sb = baton;
 
@@ -165,10 +154,10 @@ print_status(void *baton,
         }
 
       APR_ARRAY_PUSH(path_array, struct status_cache *) = scache;
-      return;
+      return SVN_NO_ERROR;
     }
 
-  print_status_normal_or_xml(baton, path, status);
+  return print_status_normal_or_xml(baton, path, status, pool);
 }
 
 /* This implements the `svn_opt_subcommand_t' interface. */
@@ -226,7 +215,6 @@ svn_cl__status(apr_getopt_t *os,
   sb.skip_unrecognized = opt_state->quiet;
   sb.repos_locks = opt_state->update;
   sb.xml_mode = opt_state->xml;
-  sb.pool = subpool;
   sb.cached_changelists = master_cl_hash;
   sb.cl_pool = pool;
 
@@ -245,7 +233,7 @@ svn_cl__status(apr_getopt_t *os,
 
       /* Retrieve a hash of status structures with the information
          requested by the user. */
-      SVN_ERR(svn_cl__try(svn_client_status3(&repos_rev, target, &rev,
+      SVN_ERR(svn_cl__try(svn_client_status4(&repos_rev, target, &rev,
                                              print_status, &sb,
                                              opt_state->depth,
                                              opt_state->verbose,
@@ -304,7 +292,8 @@ svn_cl__status(apr_getopt_t *os,
             {
               struct status_cache *scache =
                 APR_ARRAY_IDX(path_array, j, struct status_cache *);
-              print_status_normal_or_xml(&sb, scache->path, scache->status);
+              SVN_ERR(print_status_normal_or_xml(&sb, scache->path,
+                                                 scache->status, pool));
             }
 
           if (opt_state->xml)

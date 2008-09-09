@@ -299,11 +299,12 @@ add_helper(svn_boolean_t is_dir,
       if (! is_dir)
         {
           /* files have checksums */
-          unsigned char digest[APR_MD5_DIGESTSIZE];
-          SVN_ERR(svn_fs_file_md5_checksum
-                  (digest, uc->rev_root, real_path, pool));
+          svn_checksum_t *checksum;
+          SVN_ERR(svn_fs_file_checksum(&checksum, svn_checksum_md5,
+                                       uc->rev_root, real_path, TRUE,
+                                       pool));
 
-          child->text_checksum = svn_md5_digest_to_cstring(digest, pool);
+          child->text_checksum = svn_checksum_to_cstring(checksum, pool);
         }
       else
         {
