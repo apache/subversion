@@ -87,8 +87,8 @@ svn_checksum_clear(svn_checksum_t *checksum);
  * @since New in 1.6.
  */
 svn_boolean_t
-svn_checksum_match(svn_checksum_t *d1,
-                   svn_checksum_t *d2);
+svn_checksum_match(const svn_checksum_t *d1,
+                   const svn_checksum_t *d2);
 
 
 /**
