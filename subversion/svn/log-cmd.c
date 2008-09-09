@@ -2,7 +2,7 @@
  * log-cmd.c -- Display log messages
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -295,7 +295,7 @@ log_entry_receiver(void *baton,
  *   errors with helpful hints about the -m and -F options.
  *
  * * subversion/libsvn_client/commit.c
- *   (svn_client_commit): Actually capture and propogate &quot;no external
+ *   (svn_client_commit): Actually capture and propagate &quot;no external
  *   editor&quot; errors.</msg>
  * </logentry>
  * </log>
