@@ -2530,7 +2530,7 @@ typedef struct svn_wc_status_t
  * @since New in 1.2.
  */
 svn_wc_status2_t *
-svn_wc_dup_status2(svn_wc_status2_t *orig_stat,
+svn_wc_dup_status2(const svn_wc_status2_t *orig_stat,
                    apr_pool_t *pool);
 
 
@@ -2541,7 +2541,7 @@ svn_wc_dup_status2(svn_wc_status2_t *orig_stat,
  */
 SVN_DEPRECATED
 svn_wc_status_t *
-svn_wc_dup_status(svn_wc_status_t *orig_stat,
+svn_wc_dup_status(const svn_wc_status_t *orig_stat,
                   apr_pool_t *pool);
 
 
@@ -2698,7 +2698,7 @@ svn_wc_get_status_editor4(const svn_delta_editor_t **editor,
                           svn_depth_t depth,
                           svn_boolean_t get_all,
                           svn_boolean_t no_ignore,
-                          apr_array_header_t *ignore_patterns,
+                          const apr_array_header_t *ignore_patterns,
                           svn_wc_status_func3_t status_func,
                           void *status_baton,
                           svn_cancel_func_t cancel_func,

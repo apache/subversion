@@ -963,7 +963,7 @@ svn_client_create_context(svn_client_ctx_t **ctx,
 svn_error_t *
 svn_client_args_to_target_array(apr_array_header_t **targets_p,
                                 apr_getopt_t *os,
-                                apr_array_header_t *known_targets,
+                                const apr_array_header_t *known_targets,
                                 svn_client_ctx_t *ctx,
                                 apr_pool_t *pool);
 

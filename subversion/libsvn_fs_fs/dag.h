@@ -113,7 +113,7 @@ svn_error_t *svn_fs_fs__dag_get_revision(svn_revnum_t *rev,
 
 /* Return the node revision ID of NODE.  The value returned is shared
    with NODE, and will be deallocated when NODE is.  */
-const svn_fs_id_t *svn_fs_fs__dag_get_id(dag_node_t *node);
+const svn_fs_id_t *svn_fs_fs__dag_get_id(const dag_node_t *node);
 
 
 /* Return the created path of NODE.  The value returned is shared
@@ -156,7 +156,7 @@ svn_fs_fs__dag_has_mergeinfo(svn_boolean_t *has_mergeinfo,
                              apr_pool_t *pool);
 
 /* Return non-zero IFF NODE is currently mutable. */
-svn_boolean_t svn_fs_fs__dag_check_mutable(dag_node_t *node);
+svn_boolean_t svn_fs_fs__dag_check_mutable(const dag_node_t *node);
 
 /* Return the node kind of NODE. */
 svn_node_kind_t svn_fs_fs__dag_node_kind(dag_node_t *node);
