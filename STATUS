@@ -63,12 +63,3 @@ Candidate changes for 1.5.3:
 
 Approved changes:
 =================
-
- * r31546
-   Binding test fixes for Perl 5.10.
-   Justification:
-     Perl 5.10 is the current stable release.  The test was using some
-     deprecate feature.
-   Votes:
-     +1: clkao
-     +1: psamuelson
