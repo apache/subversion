@@ -79,7 +79,7 @@ svn_cache_set(svn_cache_t *cache,
 
 svn_error_t *
 svn_cache_iter(svn_boolean_t *completed,
-               svn_cache_t *cache,
+               const svn_cache_t *cache,
                svn_iter_apr_hash_cb_t user_cb,
                void *user_baton,
                apr_pool_t *pool)
