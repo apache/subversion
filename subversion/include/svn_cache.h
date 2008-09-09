@@ -215,7 +215,7 @@ svn_cache_set_error_handler(svn_cache_t *cache,
 svn_error_t *
 svn_cache_get(void **value,
               svn_boolean_t *found,
-              svn_cache_t *cache,
+              const svn_cache_t *cache,
               const void *key,
               apr_pool_t *pool);
 
