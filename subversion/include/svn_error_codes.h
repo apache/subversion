@@ -1190,6 +1190,11 @@ SVN_ERROR_START
              SVN_ERR_MISC_CATEGORY_START + 28,
              "apr memcache library not available")
 
+  /** @since New in 1.6. */
+  SVN_ERRDEF(SVN_ERR_ATOMIC_INIT_FAILURE,
+             SVN_ERR_MISC_CATEGORY_START + 29,
+             "Couldn't perform atomic initialization")
+
   /* command-line client errors */
 
   SVN_ERRDEF(SVN_ERR_CL_ARG_PARSING_ERROR,

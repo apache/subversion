@@ -75,8 +75,8 @@ svn_checksum_clear(svn_checksum_t *checksum)
 }
 
 svn_boolean_t
-svn_checksum_match(svn_checksum_t *d1,
-                   svn_checksum_t *d2)
+svn_checksum_match(const svn_checksum_t *d1,
+                   const svn_checksum_t *d2)
 {
   if (d1 == NULL || d2 == NULL)
     return TRUE;
@@ -97,7 +97,7 @@ svn_checksum_match(svn_checksum_t *d1,
 }
 
 const char *
-svn_checksum_to_cstring_display(svn_checksum_t *checksum,
+svn_checksum_to_cstring_display(const svn_checksum_t *checksum,
                                 apr_pool_t *pool)
 {
   switch (checksum->kind)
@@ -113,7 +113,7 @@ svn_checksum_to_cstring_display(svn_checksum_t *checksum,
 }
 
 const char *
-svn_checksum_to_cstring(svn_checksum_t *checksum,
+svn_checksum_to_cstring(const svn_checksum_t *checksum,
                         apr_pool_t *pool)
 {
   switch (checksum->kind)
@@ -163,7 +163,7 @@ svn_checksum_parse_hex(svn_checksum_t **checksum,
 }
 
 svn_checksum_t *
-svn_checksum_dup(svn_checksum_t *src,
+svn_checksum_dup(const svn_checksum_t *src,
                  apr_pool_t *pool)
 {
   apr_size_t size;
@@ -305,8 +305,8 @@ svn_checksum_update(svn_checksum_ctx_t *ctx,
 }
 
 svn_error_t *
-svn_checksum_final(svn_checksum_ctx_t *ctx,
-                   svn_checksum_t **checksum,
+svn_checksum_final(svn_checksum_t **checksum,
+                   const svn_checksum_ctx_t *ctx,
                    apr_pool_t *pool)
 {
   *checksum = svn_checksum_create(ctx->kind, pool);

@@ -460,6 +460,8 @@ typedef struct svn_fs_access_t svn_fs_access_t;
 /** Set @a *access_ctx to a new @c svn_fs_access_t object representing
  *  @a username, allocated in @a pool.  @a username is presumed to
  *  have been authenticated by the caller.
+ *
+ *  Make a deep copy of @a username.
  */
 svn_error_t *
 svn_fs_create_access(svn_fs_access_t **access_ctx,
@@ -503,7 +505,6 @@ svn_fs_access_get_username(const char **username,
  * token's lifetime is at least as long as @a access_ctx.
  *
  * @since New in 1.6. */
-
 svn_error_t *
 svn_fs_access_add_lock_token2(svn_fs_access_t *access_ctx,
                               const char *path,

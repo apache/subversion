@@ -1000,6 +1000,7 @@ check_path_under_root(const char *base_path,
 
 /*** The callbacks we'll plug into an svn_delta_editor_t structure. ***/
 
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 set_target_revision(void *edit_baton,
                     svn_revnum_t target_revision,
@@ -1013,6 +1014,7 @@ set_target_revision(void *edit_baton,
 }
 
 
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 open_root(void *edit_baton,
           svn_revnum_t base_revision, /* This is ignored in co */
@@ -1207,6 +1209,7 @@ do_entry_deletion(struct edit_baton *eb,
 }
 
 
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 delete_entry(const char *path,
              svn_revnum_t revision,
@@ -1222,6 +1225,7 @@ delete_entry(const char *path,
 }
 
 
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 add_directory(const char *path,
               void *parent_baton,
@@ -1462,6 +1466,7 @@ add_directory(const char *path,
 }
 
 
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 open_directory(const char *path,
                void *parent_baton,
@@ -1543,6 +1548,7 @@ open_directory(const char *path,
 }
 
 
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 change_dir_prop(void *dir_baton,
                 const char *name,
@@ -1608,6 +1614,7 @@ add_prop_deletion(void *baton, const void *key,
   return SVN_NO_ERROR;
 }
 
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 close_directory(void *dir_baton,
                 apr_pool_t *pool)
@@ -1828,6 +1835,7 @@ absent_file_or_dir(const char *path,
 }
 
 
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 absent_file(const char *path,
             void *parent_baton,
@@ -1837,6 +1845,7 @@ absent_file(const char *path,
 }
 
 
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 absent_directory(const char *path,
                  void *parent_baton,
@@ -1846,7 +1855,7 @@ absent_directory(const char *path,
 }
 
 
-
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 add_file(const char *path,
          void *parent_baton,
@@ -1954,6 +1963,7 @@ add_file(const char *path,
 }
 
 
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 open_file(const char *path,
           void *parent_baton,
@@ -2085,7 +2095,7 @@ choose_base_paths(const char **checksum_p,
 }
 
 
-
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 apply_textdelta(void *file_baton,
                 const char *base_checksum,
@@ -2221,8 +2231,7 @@ apply_textdelta(void *file_baton,
 }
 
 
-
-
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 change_file_prop(void *file_baton,
                  const char *name,
@@ -2762,6 +2771,7 @@ merge_file(svn_wc_notify_state_t *content_state,
 }
 
 
+/* An svn_delta_editor_t function. */
 /* Mostly a wrapper around merge_file. */
 static svn_error_t *
 close_file(void *file_baton,
@@ -3210,6 +3220,7 @@ add_file_with_history(const char *path,
 }
 
 
+/* An svn_delta_editor_t function. */
 static svn_error_t *
 close_edit(void *edit_baton,
            apr_pool_t *pool)

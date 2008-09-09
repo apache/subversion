@@ -2,7 +2,7 @@
  * main.c: Subversion server inspection tool.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006, 2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1014,10 +1014,10 @@ print_diff_tree(svn_fs_root_t *root,
                 SVN_ERR(generate_label(&orig_label, base_root,
                                        base_path, pool));
               SVN_ERR(generate_label(&new_label, root, path, pool));
-              SVN_ERR(svn_diff_file_output_unified2
+              SVN_ERR(svn_diff_file_output_unified3
                       (ostream, diff, orig_path, new_path,
                        orig_label, new_label,
-                       svn_cmdline_output_encoding(pool), pool));
+                       svn_cmdline_output_encoding(pool), NULL, FALSE, pool));
               SVN_ERR(svn_stream_close(ostream));
               SVN_ERR(svn_cmdline_printf(pool, "\n"));
             }
@@ -2074,7 +2074,7 @@ main(int argc, const char *argv[])
   if (svn_cmdline_init("svnlook", stderr) != EXIT_SUCCESS)
     return EXIT_FAILURE;
 
-  /* Create our top-level pool.  Use a seperate mutexless allocator,
+  /* Create our top-level pool.  Use a separate mutexless allocator,
    * given this application is single threaded.
    */
   if (apr_allocator_create(&allocator))
