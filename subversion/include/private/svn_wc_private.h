@@ -134,7 +134,7 @@ svn_wc__versioned_file_modcheck(svn_boolean_t *modified_p,
  * @since New in 1.6.
  */
 svn_boolean_t
-svn_wc__is_sendable_status(svn_wc_status2_t *status,
+svn_wc__is_sendable_status(const svn_wc_status2_t *status,
                            svn_boolean_t no_ignore,
                            svn_boolean_t get_all);
 
