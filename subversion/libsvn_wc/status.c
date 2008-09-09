@@ -1358,7 +1358,7 @@ make_file_baton(struct dir_baton *parent_dir_baton,
 
 
 svn_boolean_t
-svn_wc__is_sendable_status(svn_wc_status2_t *status,
+svn_wc__is_sendable_status(const svn_wc_status2_t *status,
                            svn_boolean_t no_ignore,
                            svn_boolean_t get_all)
 {
