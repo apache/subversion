@@ -2371,7 +2371,7 @@ svn_wc_status(svn_wc_status_t **status,
 
 
 svn_wc_status2_t *
-svn_wc_dup_status2(svn_wc_status2_t *orig_stat,
+svn_wc_dup_status2(const svn_wc_status2_t *orig_stat,
                    apr_pool_t *pool)
 {
   svn_wc_status2_t *new_stat = apr_palloc(pool, sizeof(*new_stat));
@@ -2399,7 +2399,7 @@ svn_wc_dup_status2(svn_wc_status2_t *orig_stat,
 
 
 svn_wc_status_t *
-svn_wc_dup_status(svn_wc_status_t *orig_stat,
+svn_wc_dup_status(const svn_wc_status_t *orig_stat,
                   apr_pool_t *pool)
 {
   svn_wc_status_t *new_stat = apr_palloc(pool, sizeof(*new_stat));
