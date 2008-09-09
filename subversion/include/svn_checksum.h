@@ -107,7 +107,7 @@ svn_checksum_dup(const svn_checksum_t *src,
  * @since New in 1.6.
  */
 const char *
-svn_checksum_to_cstring_display(svn_checksum_t *checksum,
+svn_checksum_to_cstring_display(const svn_checksum_t *checksum,
                                 apr_pool_t *pool);
 
 
@@ -118,7 +118,7 @@ svn_checksum_to_cstring_display(svn_checksum_t *checksum,
  * @since New in 1.6.
  */
 const char *
-svn_checksum_to_cstring(svn_checksum_t *checksum,
+svn_checksum_to_cstring(const svn_checksum_t *checksum,
                         apr_pool_t *pool);
 
 

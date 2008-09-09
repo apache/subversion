@@ -97,7 +97,7 @@ svn_checksum_match(const svn_checksum_t *d1,
 }
 
 const char *
-svn_checksum_to_cstring_display(svn_checksum_t *checksum,
+svn_checksum_to_cstring_display(const svn_checksum_t *checksum,
                                 apr_pool_t *pool)
 {
   switch (checksum->kind)
@@ -113,7 +113,7 @@ svn_checksum_to_cstring_display(svn_checksum_t *checksum,
 }
 
 const char *
-svn_checksum_to_cstring(svn_checksum_t *checksum,
+svn_checksum_to_cstring(const svn_checksum_t *checksum,
                         apr_pool_t *pool)
 {
   switch (checksum->kind)
