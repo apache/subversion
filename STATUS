@@ -61,6 +61,9 @@ Candidate changes for 1.5.3:
    Votes:
      +1: cmpilato
 
+Approved changes:
+=================
+
  * r31546
    Binding test fixes for Perl 5.10.
    Justification:
@@ -68,6 +71,4 @@ Candidate changes for 1.5.3:
      deprecate feature.
    Votes:
      +1: clkao
-
-Approved changes:
-=================
+     +1: psamuelson
