@@ -553,7 +553,7 @@ merge_props_changed(svn_wc_adm_access_t *adm_access,
     {
       int i;
 
-      /* svn_wc_merge_props() requires ADM_ACCESS to be the access for
+      /* svn_wc_merge_props2() requires ADM_ACCESS to be the access for
          the parent of PATH. Since the advent of merge tracking,
          do_directory_merge() may call this (indirectly) with
          the access for the merge_b->target instead (issue #2781).
