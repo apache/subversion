@@ -2492,7 +2492,7 @@ typedef struct svn_wc_status_t
  * @since New in 1.2.
  */
 svn_wc_status2_t *
-svn_wc_dup_status2(svn_wc_status2_t *orig_stat,
+svn_wc_dup_status2(const svn_wc_status2_t *orig_stat,
                    apr_pool_t *pool);
 
 
@@ -2503,7 +2503,7 @@ svn_wc_dup_status2(svn_wc_status2_t *orig_stat,
  */
 SVN_DEPRECATED
 svn_wc_status_t *
-svn_wc_dup_status(svn_wc_status_t *orig_stat,
+svn_wc_dup_status(const svn_wc_status_t *orig_stat,
                   apr_pool_t *pool);
 
 
