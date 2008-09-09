@@ -156,7 +156,7 @@ svn_fs_fs__dag_has_mergeinfo(svn_boolean_t *has_mergeinfo,
                              apr_pool_t *pool);
 
 /* Return non-zero IFF NODE is currently mutable. */
-svn_boolean_t svn_fs_fs__dag_check_mutable(dag_node_t *node);
+svn_boolean_t svn_fs_fs__dag_check_mutable(const dag_node_t *node);
 
 /* Return the node kind of NODE. */
 svn_node_kind_t svn_fs_fs__dag_node_kind(dag_node_t *node);
