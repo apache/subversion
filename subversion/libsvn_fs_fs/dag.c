@@ -78,7 +78,7 @@ svn_node_kind_t svn_fs_fs__dag_node_kind(dag_node_t *node)
 
 
 const svn_fs_id_t *
-svn_fs_fs__dag_get_id(dag_node_t *node)
+svn_fs_fs__dag_get_id(const dag_node_t *node)
 {
   return node->id;
 }
