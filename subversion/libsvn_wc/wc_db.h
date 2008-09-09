@@ -31,6 +31,11 @@
 #ifndef SVN_WC_DB_H
 #define SVN_WC_DB_H
 
+#include "svn_types.h"
+#include "svn_error.h"
+#include "svn_config.h"
+#include "svn_io.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -64,6 +69,15 @@ typedef enum svn_wc__db_kind_t {
 } svn_wc__db_kind_t;
 
 
+typedef enum svn_wc__db_status_t {
+    svn_wc__db_status_normal,
+    svn_wc__db_status_added,  /* ### no history. text_mod set to TRUE */
+    svn_wc__db_status_moved,  /* ### has history */
+    svn_wc__db_status_copied,  /* ### has history */
+    svn_wc__db_status_deleted  /* ### text_mod, prop_mod will be FALSE */
+} svn_wc__db_status_t;
+
+
 /* ### note conventions of "result_pool" for the pool where return results
    ### are allocated, and "scratch_pool" for the pool that is used for
    ### intermediate allocations (and which can be safely cleared upon
@@ -75,6 +89,9 @@ typedef enum svn_wc__db_kind_t {
    ### flux. I'm iterating in public, but do not want to doc until it feels
    ### like it is "Right".
 */
+
+/* ### where/how to handle: text_time, prop_time, locks, working_size
+ */
 
 /**
  * Open the administrative database for the working copy identified by the
@@ -115,12 +132,8 @@ svn_wc__db_open(svn_wc__db_t **db,
 
 /* ### base_add_* can also replace. should be okay? */
 
-/* ### props optional.  can children be optional? don't think so.
- * 
- * ### KFF: IOW, the question is whether children is required to be a
- * ### valid array, even if zero-length in the case of no children?  I
- * ### dunno.  That's consistent, but inconvenient for callers who
- * ### just want to add an empty directory and would like to pass NULL.
+/* ### props optional. children must be known before calling (but may be
+ * ### NULL or a zero-length array to indicate "no children").
  *
  * ### KFF: By the way, I like the convention of using "scratch_pool"
  * ### to indicate "pool in which temporary work may be done, but no
@@ -235,7 +248,8 @@ svn_wc__db_base_delete(svn_wc__db_t *db,
                        apr_pool_t *scratch_pool);
 
 
-/* ### revision is for dst_path.
+/* ### revision is for dst_path ("after moving src_path to dst_path,
+ * ### mark the new nodes (node?) as being at that revision")
  *
  * ### KFF: Hrm?  Do you mean src_path?
  */
@@ -342,7 +356,7 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
    ### and caller definitely has to populate ACTUAL. */
 /* ### mark node as absent? adding children or props: auto-convert away
    ### from absent? */
-svn-error_t *
+svn_error_t *
 svn_wc__db_op_copy_url(svn_wc__db_t *db,
                        const char *path,
                        const char *copyfrom_url,
@@ -350,7 +364,7 @@ svn_wc__db_op_copy_url(svn_wc__db_t *db,
                        apr_pool_t *scratch_pool);
 
 
-/* ### props, children may be NULL
+/* ### props may be NULL. children must be known before calling.
  *
  * ### KFF: Okay, if children can be NULL here, then it should be
  * ### able to be NULL up in svn_wc__db_base_add_directory().
@@ -464,8 +478,21 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
  * @{
  */
 
-/* ### NULL may be given for OUT params. if the node has not been committed:
-   ### url, repos_* will be NULL and revision will be SVN_INVALID_REVNUM
+/* ### NULL may be given for OUT params.
+
+   ### if the node has not been committed (after adding):
+   ###   url, repos_* will be NULL
+   ###   revision will be SVN_INVALID_REVNUM
+   ###   status will be svn_wc__db_status_added
+   ###   text_mod will be TRUE
+   ###   prop_mod will be TRUE if any props have been set
+   ###   base_shadowed will be FALSE
+
+   ### put all these OUT params into a structure? but this interface allows
+   ### us to query for one or all pieces of information (harder with a struct)
+
+   ### original_url will be NULL if this node is not copied/moved
+   ### original_rev will be SVN_INVALID_REVNUM if this node is not copied/moved
 
    ### KFF: The position of 'db' in the parameter list is sort of
    ### floating around (e.g., compare this func with the next one).
@@ -480,6 +507,13 @@ svn_wc__db_read_info(svn_wc__db_kind_t *kind,
                      const char **repos_url,
                      const char **repos_uuid,
                      const char **changelist,
+                     svn_wc__db_status_t *status,
+                     svn_boolean_t *text_mod,  /* ### possibly modified */
+                     svn_boolean_t *props_mod,
+                     svn_boolean_t *base_shadowed,  /* ### WORKING shadows a
+                                                       ### deleted BASE? */
+                     const char **original_url,
+                     svn_revnum_t *original_rev,
                      svn_wc__db_t *db,
                      const char *path,
                      apr_pool_t *result_pool,
@@ -552,7 +586,13 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
                            apr_pool_t *scratch_pool);
 
 
-/* ### post-commit handling. */
+/* ### post-commit handling.
+ * ### maybe multiple phases?
+ * ### 1) mark a changelist as being-committed
+ * ### 2) collect ACTUAL content, store for future use as TEXTBASE
+ * ### 3) caller performs commit
+ * ### 4) post-commit, integrate changelist into BASE
+ */
 
 
 /** @} */
