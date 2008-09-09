@@ -106,7 +106,7 @@ print_finish_target_xml(svn_revnum_t repos_rev,
 static svn_error_t * 
 print_status_normal_or_xml(void *baton,
                            const char *path,
-                           svn_wc_status2_t *status,
+                           const svn_wc_status2_t *status,
                            apr_pool_t *pool)
 {
   struct status_baton *sb = baton;
