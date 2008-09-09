@@ -81,7 +81,7 @@ struct edit_baton
   void *cancel_baton;
 
   /* The configured set of default ignores. */
-  apr_array_header_t *ignores;
+  const apr_array_header_t *ignores;
 
   /* Externals info harvested during the status run. */
   svn_wc_traversal_info_t *traversal_info;
@@ -576,7 +576,7 @@ send_status_structure(const char *path,
 */
 static svn_error_t *
 collect_ignore_patterns(apr_array_header_t **patterns,
-                        apr_array_header_t *ignores,
+                        const apr_array_header_t *ignores,
                         svn_wc_adm_access_t *adm_access,
                         apr_pool_t *pool)
 {
@@ -691,7 +691,7 @@ get_dir_status(struct edit_baton *eb,
                const svn_wc_entry_t *parent_entry,
                svn_wc_adm_access_t *adm_access,
                const char *entry,
-               apr_array_header_t *ignores,
+               const apr_array_header_t *ignores,
                svn_depth_t depth,
                svn_boolean_t get_all,
                svn_boolean_t no_ignore,
@@ -714,7 +714,7 @@ handle_dir_entry(struct edit_baton *eb,
                  const svn_wc_entry_t *entry,
                  svn_node_kind_t kind,
                  svn_boolean_t special,
-                 apr_array_header_t *ignores,
+                 const apr_array_header_t *ignores,
                  svn_depth_t depth,
                  svn_boolean_t get_all,
                  svn_boolean_t no_ignore,
@@ -796,7 +796,7 @@ get_dir_status(struct edit_baton *eb,
                const svn_wc_entry_t *parent_entry,
                svn_wc_adm_access_t *adm_access,
                const char *entry,
-               apr_array_header_t *ignore_patterns,
+               const apr_array_header_t *ignore_patterns,
                svn_depth_t depth,
                svn_boolean_t get_all,
                svn_boolean_t no_ignore,
@@ -1301,7 +1301,7 @@ make_dir_baton(void **dir_baton,
     {
       svn_wc_adm_access_t *dir_access;
       svn_wc_status2_t *this_dir_status;
-      apr_array_header_t *ignores = eb->ignores;
+      const apr_array_header_t *ignores = eb->ignores;
       SVN_ERR(svn_wc_adm_retrieve(&dir_access, eb->adm_access,
                                   d->path, pool));
       SVN_ERR(get_dir_status(eb, status_in_parent->entry, dir_access, NULL,
@@ -1450,7 +1450,7 @@ handle_statii(struct edit_baton *eb,
               svn_depth_t depth,
               apr_pool_t *pool)
 {
-  apr_array_header_t *ignores = eb->ignores;
+  const apr_array_header_t *ignores = eb->ignores;
   apr_hash_index_t *hi;
   apr_pool_t *subpool = svn_pool_create(pool);
   svn_wc_status_func3_t status_func = eb->status_func;
@@ -1974,7 +1974,7 @@ close_edit(void *edit_baton,
            apr_pool_t *pool)
 {
   struct edit_baton *eb = edit_baton;
-  apr_array_header_t *ignores = eb->ignores;
+  const apr_array_header_t *ignores = eb->ignores;
   svn_error_t *err = NULL;
 
   /* If we get here and the root was not opened as part of the edit,
@@ -2076,7 +2076,7 @@ svn_wc_get_status_editor4(const svn_delta_editor_t **editor,
                           svn_depth_t depth,
                           svn_boolean_t get_all,
                           svn_boolean_t no_ignore,
-                          apr_array_header_t *ignore_patterns,
+                          const apr_array_header_t *ignore_patterns,
                           svn_wc_status_func3_t status_func,
                           void *status_baton,
                           svn_cancel_func_t cancel_func,
@@ -2114,9 +2114,11 @@ svn_wc_get_status_editor4(const svn_delta_editor_t **editor,
     }
   else
     {
-      eb->ignores = apr_array_make(pool, 16, sizeof(const char *));
-      svn_cstring_split_append(eb->ignores, SVN_CONFIG_DEFAULT_GLOBAL_IGNORES,
+      apr_array_header_t *ignores = apr_array_make(pool, 16,
+                                                   sizeof(const char *));
+      svn_cstring_split_append(ignores, SVN_CONFIG_DEFAULT_GLOBAL_IGNORES,
                                "\n\r\t\v ", FALSE, pool);
+      eb->ignores = ignores;
     }
 
   /* The edit baton's status structure maps to PATH, and the editor
