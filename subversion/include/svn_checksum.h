@@ -97,7 +97,7 @@ svn_checksum_match(const svn_checksum_t *d1,
  * @since New in 1.6.
  */
 svn_checksum_t *
-svn_checksum_dup(svn_checksum_t *src,
+svn_checksum_dup(const svn_checksum_t *src,
                  apr_pool_t *pool);
 
 

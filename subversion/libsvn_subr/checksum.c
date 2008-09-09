@@ -163,7 +163,7 @@ svn_checksum_parse_hex(svn_checksum_t **checksum,
 }
 
 svn_checksum_t *
-svn_checksum_dup(svn_checksum_t *src,
+svn_checksum_dup(const svn_checksum_t *src,
                  apr_pool_t *pool)
 {
   apr_size_t size;
