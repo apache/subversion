@@ -381,14 +381,11 @@ log_entry_receiver_xml(void *baton,
               && SVN_IS_VALID_REVNUM(log_item->copyfrom_rev))
             {
               /* <path action="X" copyfrom-path="xxx" copyfrom-rev="xxx"> */
-              svn_stringbuf_t *escpath = svn_stringbuf_create("", pool);
-              svn_xml_escape_attr_cstring(&escpath,
-                                          log_item->copyfrom_path, pool);
               revstr = apr_psprintf(pool, "%ld",
                                     log_item->copyfrom_rev);
               svn_xml_make_open_tag(&sb, pool, svn_xml_protect_pcdata, "path",
                                     "action", action,
-                                    "copyfrom-path", escpath->data,
+                                    "copyfrom-path", log_item->copyfrom_path,
                                     "copyfrom-rev", revstr, NULL);
             }
           else
