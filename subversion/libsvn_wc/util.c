@@ -299,20 +299,13 @@ svn_wc_conflict_description_create_text(const char *path,
 {
   svn_wc_conflict_description_t *conflict;
 
-  conflict = apr_palloc(pool, sizeof(*conflict));
+  conflict = apr_pcalloc(pool, sizeof(*conflict));
   conflict->path = path;
   conflict->node_kind = svn_node_file;
   conflict->kind = svn_wc_conflict_kind_text;
   conflict->access = adm_access;
   conflict->action = svn_wc_conflict_action_edit;
   conflict->reason = svn_wc_conflict_reason_edited;
-
-  conflict->base_file = NULL;
-  conflict->merged_file = NULL;
-  conflict->my_file = NULL;
-  conflict->their_file = NULL;
-  conflict->property_name = NULL;
-  conflict->mime_type = NULL;
   return conflict;
 }
 
@@ -325,20 +318,11 @@ svn_wc_conflict_description_create_prop(const char *path,
 {
   svn_wc_conflict_description_t *conflict;
 
-  conflict = apr_palloc(pool, sizeof(*conflict));
+  conflict = apr_pcalloc(pool, sizeof(*conflict));
   conflict->path = path;
   conflict->node_kind = node_kind;
   conflict->kind = svn_wc_conflict_kind_property;
   conflict->access = adm_access;
   conflict->property_name = property_name;
-
-  conflict->action = svn_wc_conflict_action_edit;
-  conflict->reason = svn_wc_conflict_reason_edited;
-  conflict->base_file = NULL;
-  conflict->merged_file = NULL;
-  conflict->my_file = NULL;
-  conflict->their_file = NULL;
-  conflict->property_name = NULL;
-  conflict->mime_type = NULL;
   return conflict;
 }
