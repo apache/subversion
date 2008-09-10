@@ -13089,7 +13089,7 @@ def natural_history_filtering(sbox):
   
   # Merge all available revisions from A_COPY to A_COPY_2.  The mergeinfo on
   # A_COPY_2 should reflect both the merge of revisions 2-9 from A_COPY *and*
-  # revision 8 from A.  Reivisions 2-7 from A should not be part of the
+  # revisions 7-8 from A.  Reivisions 2-6 from A should not be part of the
   # explicit mergeinfo on A_COPY_2 as they are already part of its natural
   # history.
   expected_output = wc.State(A_COPY_2_path, {
@@ -13117,7 +13117,7 @@ def natural_history_filtering(sbox):
     'D/H/omega' : Item(status='  ', wc_rev=9),
     })
   expected_disk = wc.State('', {
-    ''          : Item(props={SVN_PROP_MERGEINFO : '/A:8\n/A_COPY:2-9'}),
+    ''          : Item(props={SVN_PROP_MERGEINFO : '/A:7-8\n/A_COPY:2-9'}),
     'B'         : Item(),
     'mu'        : Item("This is the file 'mu'.\n"),
     'B/E'       : Item(),
