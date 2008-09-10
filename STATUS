@@ -1,3 +1,11 @@
+     * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+     *                                                     *
+     *  THIS RELEASE STREAM IS SUPERCEDED BY 1.5.x BUT     *
+     *  REMAINS OPEN TO RECEIVE FIXES FOR SERIOUS AND      *
+     *  SECURITY-RELATED BUGS.                             *
+     *                                                     *
+     * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
 This file tracks the status of releases in the 1.4.x line.
 
 See "Stabilizing and maintaining releases" in trunk/www/hacking.html for
