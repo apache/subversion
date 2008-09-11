@@ -2,7 +2,7 @@
  * merge.c:  merging changes into a working file
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006, 2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -205,10 +205,15 @@ detranslate_wc_file(const char **detranslated_file,
                svn_wc_adm_access_path(adm_access),
                svn_io_file_del_none, pool));
 
+      /* Always 'repair' EOLs here, so that we can apply a diff that changes
+       * from inconsistent newlines and no 'svn:eol-style' to consistent
+       * newlines and 'svn:eol-style' set. */
+
       SVN_ERR(svn_subst_translate_to_normal_form(merge_target,
                                                  detranslated,
                                                  style,
-                                                 eol, eol ? FALSE : TRUE,
+                                                 eol,
+                                                 TRUE /* always_repair_eols */,
                                                  keywords,
                                                  special,
                                                  pool));
@@ -243,9 +248,14 @@ maybe_update_target_eols(const char **new_target,
                                       svn_wc_adm_access_path(adm_access),
                                       svn_io_file_del_none,
                                       pool));
+
+      /* Always 'repair' EOLs here, so that we can apply a diff that changes
+       * from inconsistent newlines and no 'svn:eol-style' to consistent
+       * newlines and 'svn:eol-style' set. */
+
       SVN_ERR(svn_subst_copy_and_translate3(old_target,
                                             tmp_new,
-                                            eol, TRUE,
+                                            eol, TRUE /* repair EOLs */,
                                             NULL, FALSE,
                                             FALSE, pool));
       *new_target = tmp_new;
@@ -368,15 +378,14 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
           else
             right_marker = ">>>>>>> .new";
 
-          SVN_ERR(svn_diff_file_output_merge(ostream, diff,
-                                             left, tmp_target, right,
-                                             left_marker,
-                                             target_marker,
-                                             right_marker,
-                                             "=======", /* seperator */
-                                             FALSE, /* display original */
-                                             FALSE, /* resolve conflicts */
-                                             pool));
+          SVN_ERR(svn_diff_file_output_merge2(ostream, diff,
+                                              left, tmp_target, right,
+                                              left_marker,
+                                              target_marker,
+                                              right_marker,
+                                              "=======", /* separator */
+                                              svn_diff_conflict_display_modified_latest,
+                                              pool));
           SVN_ERR(svn_stream_close(ostream));
 
           contains_conflicts = svn_diff_contains_conflicts(diff);

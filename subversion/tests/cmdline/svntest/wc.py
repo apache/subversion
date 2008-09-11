@@ -85,7 +85,7 @@ class State:
             path = path.replace('\\', '/')
           path_ref = self.desc[path]
         except KeyError, e:
-          e.args = "Path '%s' not present in WC state descriptor" % path
+          e.args = ["Path '%s' not present in WC state descriptor" % path]
           raise
         apply(path_ref.tweak, (), kw)
     else:

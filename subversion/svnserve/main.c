@@ -2,7 +2,7 @@
  * main.c :  Main control function for svnserve
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -259,8 +259,8 @@ static svn_error_t * version(apr_pool_t *pool)
                            _("\nCyrus SASL authentication is available.\n"));
 #endif
 
-  return svn_opt_print_help(NULL, "svnserve", TRUE, FALSE, version_footer->data,
-                            NULL, NULL, NULL, NULL, pool);
+  return svn_opt_print_help3(NULL, "svnserve", TRUE, FALSE, version_footer->data,
+                             NULL, NULL, NULL, NULL, NULL, pool);
 }
 
 

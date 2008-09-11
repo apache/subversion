@@ -26,21 +26,15 @@
 /*** Data Structures ***/
 
 
-/* Structure used by discover_and_merge_children() and consumers of the
-   children_with_mergeinfo array it populates.  The struct describes
-   working copy paths that meet one or more of the following criteria:
-
-     1) Path has explicit mergeinfo
-     2) Path is switched
-     3) Path has an immediate child which is switched or otherwise
-        missing from the WC.
-     4) Path has a sibling which is switched or otherwise missing
-        from the WC.
-     5) Path is the target of a merge.
+/* Structure to store information about working copy paths that need special
+   consideration during a mergeinfo aware merge -- See the
+   'THE CHILDREN_WITH_MERGEINFO ARRAY' meta comment and the doc string for the
+   function get_mergeinfo_paths() in libsvn_client/merge.c.
 */
 typedef struct svn_client__merge_path_t
 {
-  const char *path;
+  const char *path;                  /* Working copy path relative to the
+                                        merge target. */
   svn_boolean_t missing_child;       /* PATH has an immediate child which is
                                         missing. */
   svn_boolean_t switched;            /* PATH is switched. */
@@ -57,7 +51,7 @@ typedef struct svn_client__merge_path_t
      svn_sort_compare_ranges(), but rather are sorted such that the ranges
      with the youngest start revisions come first.  In both the forward and
      reverse merge cases the ranges should never overlap.  This rangelist
-     may be empty. */
+     may be NULL or empty. */
   apr_array_header_t *remaining_ranges;
   
   svn_mergeinfo_t pre_merge_mergeinfo;  /* Mergeinfo on PATH prior to a
@@ -105,6 +99,9 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
 
 /* Obtain any mergeinfo for the root-relative repository filesystem path
    REL_PATH from the repository, and set it in *TARGET_MERGEINFO.
+   RA_SESSION should be an open RA session pointing at the URL that REL_PATH
+   is relative to, or NULL, in which case this function will open its own
+   temporary session.
 
    INHERIT indicates whether explicit, explicit or inherited, or only
    inherited mergeinfo for REL_PATH is obtained.
@@ -130,7 +127,11 @@ svn_client__get_repos_mergeinfo(svn_ra_session_t *ra_session,
    target has no info of its own.
 
    If no mergeinfo can be obtained from the WC or REPOS_ONLY is TRUE,
-   get it from the repository (opening a new RA session if RA_SESSION
+   get it from the repository.  RA_SESSION should be an open RA session
+   pointing at ENTRY->URL, or NULL, in which case this function will open
+   its own temporary session.
+   
+   (opening a new RA session if RA_SESSION
    is NULL).  Store any mergeinfo obtained for TARGET_WCPATH -- which
    is reflected by ENTRY -- in *TARGET_MERGEINFO, if no mergeinfo is
    found *TARGET_MERGEINFO is NULL.
