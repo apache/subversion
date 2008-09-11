@@ -580,9 +580,11 @@ merge_props_changed(svn_wc_adm_access_t *adm_access,
                                       TRUE, -1, ctx->cancel_func,
                                       ctx->cancel_baton, subpool));
 
-      /* Don't add mergeinfo from PATH's own history. */
-      SVN_ERR(filter_self_referential_mergeinfo(&props, path, merge_b,
-                                                adm_access, subpool));
+      /* If this is a forward merge then don't add new mergeinfo to
+         PATH that is already part of PATH's own history. */
+      if (merge_b->merge_source.rev1 < merge_b->merge_source.rev2)
+        SVN_ERR(filter_self_referential_mergeinfo(&props, path, merge_b,
+                                                  adm_access, subpool));
 
       err = svn_wc_merge_props2(state, path, adm_access, original_props, props,
                                 FALSE, merge_b->dry_run, ctx->conflict_func,
