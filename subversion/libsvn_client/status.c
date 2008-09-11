@@ -56,22 +56,6 @@ struct status_baton
 };
 
 
-/* A hash comparator function for tweak_status().
- *
- * This implements svn_hash_diff_func_t.
- */
-static svn_error_t *
-props_hash_diff_func(const void *key,
-                     apr_ssize_t klen,
-                     enum svn_hash_diff_key_status status,
-                     void *baton)
-{
-  if (status == svn_hash_diff_key_b)
-    *((svn_boolean_t *) baton) = FALSE;
-
-  return SVN_NO_ERROR;
-}
-
 /* A status callback function which wraps the *real* status
    function/baton.   This sucker takes care of any status tweaks we
    need to make (such as noting that the target of the status is
@@ -103,13 +87,22 @@ tweak_status(void *baton,
   if (sb->ignored_props && status->prop_status == svn_wc_status_modified)
     {
       svn_boolean_t ignore = TRUE;
-      svn_boolean_t mod_props;
-      apr_hash_t *which_props;
+      apr_array_header_t *which_props;
+      int i;
 
-      SVN_ERR(svn_wc_props_modified2(&mod_props, path, &which_props,
-                                     sb->adm_access, pool));
-      SVN_ERR(svn_hash_diff(sb->ignored_props, which_props,
-                            props_hash_diff_func, &ignore, pool));
+      SVN_ERR(svn_wc_get_prop_diffs(&which_props, NULL, path, sb->adm_access,
+                                    pool));
+
+      for (i = 0; i < which_props->nelts; i++)
+        {
+          svn_prop_t *prop = &APR_ARRAY_IDX(which_props, i, svn_prop_t);
+
+          if (apr_hash_get(sb->ignored_props, prop->name,
+                           APR_HASH_KEY_STRING) != NULL)
+            continue;
+
+          ignore = FALSE;
+        }
 
       if (ignore)
         {
