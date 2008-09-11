@@ -869,6 +869,7 @@ svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
                                svn_boolean_t get_all,
                                svn_boolean_t update,
                                svn_boolean_t no_ignore,
+                               apr_hash_t *ignored_props,
                                svn_client_ctx_t *ctx,
                                apr_pool_t *pool)
 {
@@ -939,7 +940,8 @@ svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
                                      &(external->revision),
                                      status_func, status_baton,
                                      depth, get_all, update,
-                                     no_ignore, FALSE, NULL, ctx, iterpool));
+                                     no_ignore, FALSE, NULL, ignored_props,
+                                     ctx, iterpool));
         }
     }
 

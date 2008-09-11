@@ -998,7 +998,7 @@ svn_client__fetch_externals(apr_hash_t *externals,
 
 
 /* Perform status operations on each external in TRAVERSAL_INFO.  All
-   other options are the same as those passed to svn_client_status(). */
+   other options are the same as those passed to svn_client_status4(). */
 svn_error_t *
 svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
                                svn_wc_status_func3_t status_func,
@@ -1007,6 +1007,7 @@ svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
                                svn_boolean_t get_all,
                                svn_boolean_t update,
                                svn_boolean_t no_ignore,
+                               apr_hash_t *ignored_props,
                                svn_client_ctx_t *ctx,
                                apr_pool_t *pool);
 

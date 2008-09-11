@@ -102,7 +102,8 @@ typedef enum {
   opt_accept,
   opt_show_revs,
   opt_reintegrate,
-  opt_trust_server_cert
+  opt_trust_server_cert,
+  opt_ignore_prop
 } svn_cl__longopt_t;
 
 /* Option codes and descriptions for the command line client.
@@ -269,6 +270,8 @@ const apr_getopt_option_t svn_cl__options[] =
                        "('merged', 'eligible')")},
   {"reintegrate",   opt_reintegrate, 0,
                     N_("lump-merge all of source URL's unmerged changes")},
+  {"ignore-prop",  opt_ignore_prop, 1,
+                    N_("ignore changes to property ARG")},
 
   /* Long-opt Aliases
    *
@@ -873,7 +876,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "                 965       687 joe          wc/zig.c\n"
      "    Status against revision:   981\n"),
     { 'u', 'v', 'N', opt_depth, 'q', opt_no_ignore, opt_incremental, opt_xml,
-      opt_ignore_externals, opt_changelist} },
+      opt_ignore_externals, opt_changelist, opt_ignore_prop} },
 
   { "switch", svn_cl__switch, {"sw"}, N_
     ("Update the working copy to a different URL.\n"
@@ -1486,6 +1489,16 @@ main(int argc, const char *argv[])
         break;
       case opt_reintegrate:
         opt_state.reintegrate = TRUE;
+        break;
+      case opt_ignore_prop:
+        if (opt_state.ignored_props == NULL)
+          opt_state.ignored_props = apr_hash_make(pool);
+
+        /* We don't care about the values in the ignored_props hash, but just
+           setting the value to NULL has the effect of deleting the key, so
+           we pick something. */
+        apr_hash_set(opt_state.ignored_props, apr_pstrdup(pool, opt_arg),
+                     APR_HASH_KEY_STRING, (void *) 0xdeadbeef);
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away

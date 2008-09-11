@@ -3031,6 +3031,16 @@ modified_props(svn_boolean_t *modified_p,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc_props_modified2(svn_boolean_t *modified_p,
+                       const char *path,
+                       apr_hash_t **which_props,
+                       svn_wc_adm_access_t *adm_access,
+                       apr_pool_t *pool)
+{
+  return modified_props(modified_p, path, which_props, adm_access, pool);
+}
+
 
 svn_error_t *
 svn_wc_props_modified_p(svn_boolean_t *modified_p,

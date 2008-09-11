@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -1510,6 +1510,59 @@ def status_dash_u_type_change(sbox):
                                      [],
                                      "status", "-u")
 
+
+#----------------------------------------------------------------------
+
+def status_ignored_props(sbox):
+  "'svn st --ignore-prop FOO'"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  os.chdir(wc_dir)
+
+  A_path = 'A'
+  C_path = os.path.join(A_path, 'C')
+  D_path = os.path.join(A_path, 'D')
+  H_path = os.path.join(D_path, 'H')
+  G_path = os.path.join(D_path, 'G')
+  iota_path = 'iota'
+  beta_path = os.path.join(A_path, 'B', 'E', 'beta')
+  gamma_path = os.path.join(D_path, 'gamma')
+  chi_path = os.path.join(H_path, 'chi')
+  rho_path = os.path.join(G_path, 'rho')
+
+  # Set some properties
+  svntest.main.run_svn(None, 'propset', 'svn:foo', 'bar', beta_path, H_path,
+                       C_path, gamma_path, rho_path)
+  svntest.main.run_svn(None, 'propset', 'svn:bar', 'foo', iota_path, chi_path, rho_path)
+
+  # Check vanilla status
+  expected = svntest.verify.UnorderedOutput(
+        [' M     ' + beta_path + '\n',
+         ' M     ' + H_path + '\n',
+         ' M     ' + C_path + '\n',
+         ' M     ' + gamma_path + '\n',
+         ' M     ' + rho_path + '\n',
+         ' M     ' + iota_path + '\n',
+         ' M     ' + chi_path + '\n'])
+  svntest.actions.run_and_verify_svn(None, expected, [], 'status')
+
+  # Check '--ignore-prop' status on one property
+  expected = svntest.verify.UnorderedOutput([
+         ' M     ' + iota_path + '\n',
+         ' M     ' + rho_path + '\n',
+         ' M     ' + chi_path + '\n'])
+  svntest.actions.run_and_verify_svn(None, expected, [], 'status',
+                                     '--ignore-prop', 'svn:foo')
+
+  # Check '--ignore-prop' status on all the properties
+  expected = svntest.verify.UnorderedOutput([])
+  svntest.actions.run_and_verify_svn(None, expected, [], 'status',
+                                     '--ignore-prop', 'svn:foo',
+                                     '--ignore-prop', 'svn:bar')
+
+
 ########################################################################
 # Run the tests
 
@@ -1547,6 +1600,7 @@ test_list = [ None,
               status_depth_local,
               status_depth_update,
               status_dash_u_type_change,
+              status_ignored_props,
              ]
 
 if __name__ == '__main__':

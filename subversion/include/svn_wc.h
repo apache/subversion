@@ -1703,7 +1703,28 @@ svn_wc_text_modified_p(svn_boolean_t *modified_p,
 /** Set @a *modified_p to non-zero if @a path's properties are modified
  * with regard to the base revision, else set @a modified_p to zero.
  * @a adm_access must be an access baton for @a path.
+ *
+ * If @a which_props is not @c NULL, and there are property modifications,
+ * then @a *which_props will be allocated in @a pool and filled 
+ * <tt>const char *</tt> -> <tt>const svn_string_t *</tt> key-value
+ * mappings of the modified properties.
+ *
+ * @since New in 1.6.
  */
+svn_error_t *
+svn_wc_props_modified2(svn_boolean_t *modified_p,
+                       const char *path,
+                       apr_hash_t **which_props,
+                       svn_wc_adm_access_t *adm_access,
+                       apr_pool_t *pool);
+
+
+/**
+ * Same as svn_wc_props_modified2(), but with @c NULL for @a which_props.
+ *
+ * @deprecated Provided for backward compatibility with the 1.5 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_props_modified_p(svn_boolean_t *modified_p,
                         const char *path,

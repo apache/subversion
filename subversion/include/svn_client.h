@@ -1805,6 +1805,12 @@ svn_client_commit(svn_client_commit_info_t **commit_info_p,
  * it's a member of one of those changelists.  If @a changelists is
  * empty (or altogether @c NULL), no changelist filtering occurs.
  *
+ * @a ignored_props is a hash of <tt>const char *</tt> property names
+ * for which modifications will be ignored.  (The keys of the hash
+ * contain the names of the properties, while the values of the hash are
+ * themselves ignored.)  @a ignored_props may be @c NULL, in which case
+ * it is treated like an empty hash.
+ *
  * @since New in 1.6.
  */
 svn_error_t *
@@ -1819,12 +1825,14 @@ svn_client_status4(svn_revnum_t *result_rev,
                    svn_boolean_t no_ignore,
                    svn_boolean_t ignore_externals,
                    const apr_array_header_t *changelists,
+                   apr_hash_t *ignored_props,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
 
 /**
  * Same as svn_client_status4(), but using an @c svn_wc_status_func2_t
- * instead of an @c svn_wc_status_func3_t.
+ * instead of an @c svn_wc_status_func3_t, and without the ability to
+ * ignore property modifications.
  *
  * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.5 API.

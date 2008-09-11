@@ -49,7 +49,28 @@ struct status_baton
   apr_hash_t *changelist_hash;             /* keys are changelist names */
   svn_wc_status_func3_t real_status_func;  /* real status function */
   void *real_status_baton;                 /* real status baton */
+  apr_hash_t *ignored_props;               /* props to ignore mods to */
+  svn_wc_adm_access_t *adm_access;         /* access to the wc */
+  svn_boolean_t no_ignore;            /* Same as svn_client_status4() */
+  svn_boolean_t get_all;              /* Same as svn_client_status4() */
 };
+
+
+/* A hash comparator function for tweak_status().
+ *
+ * This implements svn_hash_diff_func_t.
+ */
+static svn_error_t *
+props_hash_diff_func(const void *key,
+                     apr_ssize_t klen,
+                     enum svn_hash_diff_key_status status,
+                     void *baton)
+{
+  if (status == svn_hash_diff_key_b)
+    *((svn_boolean_t *) baton) = FALSE;
+
+  return SVN_NO_ERROR;
+}
 
 /* A status callback function which wraps the *real* status
    function/baton.   This sucker takes care of any status tweaks we
@@ -76,6 +97,28 @@ tweak_status(void *baton,
      transmission.  */
   if (! SVN_WC__CL_MATCH(sb->changelist_hash, status->entry))
     return SVN_NO_ERROR;
+
+  /* If we have ignored props, the information returned by libsvn_wc isn't
+     sufficient, so we'll need to do a bit more digging. */
+  if (sb->ignored_props && status->prop_status == svn_wc_status_modified)
+    {
+      svn_boolean_t ignore = TRUE;
+      svn_boolean_t mod_props;
+      apr_hash_t *which_props;
+
+      SVN_ERR(svn_wc_props_modified2(&mod_props, path, &which_props,
+                                     sb->adm_access, pool));
+      SVN_ERR(svn_hash_diff(sb->ignored_props, which_props,
+                            props_hash_diff_func, &ignore, pool));
+
+      if (ignore)
+        {
+          status->prop_status = svn_wc_status_normal;
+
+          if (!svn_wc__is_sendable_status(status, sb->no_ignore, sb->get_all))
+            return SVN_NO_ERROR;
+        }
+    }
 
   /* Call the real status function/baton. */
   return sb->real_status_func(sb->real_status_baton, path, status, pool);
@@ -218,6 +261,7 @@ svn_client_status4(svn_revnum_t *result_rev,
                    svn_boolean_t no_ignore,
                    svn_boolean_t ignore_externals,
                    const apr_array_header_t *changelists,
+                   apr_hash_t *ignored_props,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
@@ -236,10 +280,21 @@ svn_client_status4(svn_revnum_t *result_rev,
   if (changelists && changelists->nelts)
     SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelists, pool));
 
+  if (ignored_props && apr_hash_count(ignored_props) == 0)
+    ignored_props = NULL;
+
+  /* We don't yet support ignored properties with '-u', so error. */
+  if (ignored_props && update)
+    return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+              _("Ignoring properties with a remote status not yet supported."));
+
   sb.real_status_func = status_func;
   sb.real_status_baton = status_baton;
   sb.deleted_in_repos = FALSE;
   sb.changelist_hash = changelist_hash;
+  sb.ignored_props = ignored_props;
+  sb.no_ignore = no_ignore;
+  sb.get_all = get_all;
 
   /* Try to open the target directory. If the target is a file or an
      unversioned directory, open the parent directory instead */
@@ -265,6 +320,7 @@ svn_client_status4(svn_revnum_t *result_rev,
     return err;
 
   anchor = svn_wc_adm_access_path(anchor_access);
+  sb.adm_access = anchor_access;
 
   /* Get the status edit, and use our wrapping status function/baton
      as the callback pair. */
@@ -402,7 +458,8 @@ svn_client_status4(svn_revnum_t *result_rev,
   if (SVN_DEPTH_IS_RECURSIVE(depth) && (! ignore_externals))
     SVN_ERR(svn_client__do_external_status(traversal_info, status_func,
                                            status_baton, depth, get_all,
-                                           update, no_ignore, ctx, pool));
+                                           update, no_ignore, ignored_props,
+                                           ctx, pool));
 
   return SVN_NO_ERROR;
 }
@@ -444,7 +501,7 @@ svn_client_status3(svn_revnum_t *result_rev,
 
   return svn_client_status4(result_rev, path, revision, status3_wrapper_func,
                             &swb, depth, get_all, update, no_ignore,
-                            ignore_externals, changelists, ctx, pool);
+                            ignore_externals, changelists, NULL, ctx, pool);
             
 }
 

@@ -209,6 +209,9 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t reintegrate;     /* use "reintegrate" merge-source heuristic */
   svn_boolean_t trust_server_cert; /* trust server SSL certs that would
                                       otherwise be rejected as "untrusted" */
+  apr_hash_t *ignored_props;     /* list of props to ignore changes to.
+                                    Only the keys of the hash have meaning, the
+                                    values can be arbitrary. */
 } svn_cl__opt_state_t;
 
 
