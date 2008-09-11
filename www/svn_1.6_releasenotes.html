@@ -223,12 +223,12 @@ title="auth-related-improvements-plaintext-passwords">
 
 <pre>
    $ svn checkout https://www.example.com/repository/trunk repository_trunk
-   Authentication realm: <https://www.example.com> Example
+   Authentication realm: &lt;https://www.example.com&gt; Example
    Password for 'user':
    -----------------------------------------------------------------------
    ATTENTION!  Your password for authentication realm:
 
-      <https://www.example.com> Example
+      &lt;https://www.example.com&gt; Example
 
    can only be stored to disk unencrypted!  You are advised to configure
    your system so that Subversion can store passwords encrypted, if
@@ -403,7 +403,7 @@ for a complete list.</p>
 
 <p>The <tt>pre-lock</tt> hook can now specify the lock-token string
 via the hook's stdout; see <a
-href="http://svn.collab.net/viewcvs/svn?rev=32778&view=rev"
+href="http://svn.collab.net/viewcvs/svn?rev=32778&amp;view=rev"
 >r32778</a> for details.  Note that when the hook uses this feature,
 it must take responsibility for ensuring that lock tokens are unique
 across the repository.</p>
