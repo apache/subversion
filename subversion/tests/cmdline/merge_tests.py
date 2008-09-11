@@ -13093,6 +13093,7 @@ def natural_history_filtering(sbox):
   # explicit mergeinfo on A_COPY_2 as they are already part of its natural
   # history.
   expected_output = wc.State(A_COPY_2_path, {
+    ''         : Item(status=' U'),
     'D/H/chi'  : Item(status='U '),
     })
   expected_status = wc.State(A_COPY_2_path, {
