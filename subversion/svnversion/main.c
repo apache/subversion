@@ -1,6 +1,6 @@
 /*
  * ====================================================================
- * Copyright (c) 2003-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -29,8 +29,8 @@
 static svn_error_t *
 version(apr_pool_t *pool)
 {
-  return svn_opt_print_help(NULL, "svnversion", TRUE, FALSE, NULL, NULL,
-                            NULL, NULL, NULL, pool);
+  return svn_opt_print_help3(NULL, "svnversion", TRUE, FALSE, NULL, NULL,
+                             NULL, NULL, NULL, NULL, pool);
 }
 
 static void
@@ -132,7 +132,7 @@ main(int argc, const char *argv[])
   if (svn_cmdline_init("svnversion", stderr) != EXIT_SUCCESS)
     return EXIT_FAILURE;
 
-  /* Create our top-level pool.  Use a seperate mutexless allocator,
+  /* Create our top-level pool.  Use a separate mutexless allocator,
    * given this application is single threaded.
    */
   if (apr_allocator_create(&allocator))

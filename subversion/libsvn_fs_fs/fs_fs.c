@@ -2765,7 +2765,7 @@ rep_read_contents(void *baton,
           svn_checksum_t *checksum;
 
           rb->checksum_finalized = TRUE;
-          svn_checksum_final(rb->checksum_ctx, &checksum, rb->pool);
+          svn_checksum_final(&checksum, rb->checksum_ctx, rb->pool);
           if (!svn_checksum_match(checksum, rb->checksum))
             return svn_error_createf
               (SVN_ERR_FS_CORRUPT, NULL,
@@ -4604,7 +4604,7 @@ rep_write_contents_close(void *baton)
   rep->revision = SVN_INVALID_REVNUM;
 
   /* Finalize the checksum. */
-  svn_checksum_final(b->checksum_ctx, &rep->checksum, b->parent_pool);
+  svn_checksum_final(&rep->checksum, b->checksum_ctx, b->parent_pool);
 
   /* Write out our cosmetic end marker. */
   SVN_ERR(svn_stream_printf(b->rep_stream, b->pool, "ENDREP\n"));
@@ -4814,7 +4814,7 @@ write_hash_rep(svn_filesize_t *size,
   SVN_ERR(svn_hash_write2(hash, stream, SVN_HASH_TERMINATOR, pool));
 
   /* Store the results. */
-  svn_checksum_final(whb->checksum_ctx, checksum, pool);
+  svn_checksum_final(checksum, whb->checksum_ctx, pool);
   *size = whb->size;
 
   SVN_ERR(svn_stream_printf(whb->stream, pool, "ENDREP\n"));

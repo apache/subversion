@@ -94,6 +94,24 @@ svn_auth__simple_password_set(apr_hash_t *creds,
   return TRUE;
 }
 
+/* Set **USERNAME to the username retrieved from CREDS; ignore
+   other parameters. *USERNAME will have the same lifetime as CREDS. */
+static svn_boolean_t
+simple_username_get(const char **username,
+                    apr_hash_t *creds,
+                    const char *realmstring,
+                    svn_boolean_t non_interactive)
+{
+  svn_string_t *str;
+  str = apr_hash_get(creds, AUTHN_USERNAME_KEY, APR_HASH_KEY_STRING);
+  if (str && str->data)
+    {
+      *username = str->data;
+      return TRUE;
+    }
+  return FALSE;
+}
+
 /* Common implementation for simple_first_creds. Uses PARAMETERS, REALMSTRING 
    and the simple auth provider's username and password cache to fill a set of
    CREDENTIALS. PASSWORD_GET is used to obtain the password value.
@@ -127,45 +145,91 @@ svn_auth__simple_first_creds_helper(void **credentials,
   svn_boolean_t non_interactive = apr_hash_get(parameters,
                                                SVN_AUTH_PARAM_NON_INTERACTIVE,
                                                APR_HASH_KEY_STRING) != NULL;
+  const char *default_username = NULL; /* Default username from cache. */
+  const char *default_password = NULL; /* Default password from cache. */
 
-  svn_boolean_t may_save = username || password;
+  /* This checks if we should save the CREDS, iff saving the credentials is
+     allowed by the run-time configuration. */
+  svn_boolean_t need_to_save = FALSE;
+  apr_hash_t *creds_hash = NULL;
   svn_error_t *err;
+  svn_string_t *str;
+  svn_boolean_t have_passtype = FALSE;
 
-  /* If we don't have a username and a password yet, we try the auth cache */
-  if (! (username && password))
+  /* Try to load credentials from a file on disk, based on the
+     realmstring.  Don't throw an error, though: if something went
+     wrong reading the file, no big deal.  What really matters is that
+     we failed to get the creds, so allow the auth system to try the
+     next provider. */
+  err = svn_config_read_auth_data(&creds_hash, SVN_AUTH_CRED_SIMPLE,
+                                  realmstring, config_dir, pool);
+  if (err)
     {
-      apr_hash_t *creds_hash = NULL;
-
-      /* Try to load credentials from a file on disk, based on the
-         realmstring.  Don't throw an error, though: if something went
-         wrong reading the file, no big deal.  What really matters is that
-         we failed to get the creds, so allow the auth system to try the
-         next provider. */
-      err = svn_config_read_auth_data(&creds_hash, SVN_AUTH_CRED_SIMPLE,
-                                      realmstring, config_dir, pool);
       svn_error_clear(err);
-      if (! err && creds_hash)
+      err = NULL;
+    }
+  else if (creds_hash)
+    {
+      /* We have something in the auth cache for this realm. */
+      /* The password type in the auth data must match the
+         mangler's type, otherwise the password must be
+         interpreted by another provider. */
+      str = apr_hash_get(creds_hash, AUTHN_PASSTYPE_KEY, APR_HASH_KEY_STRING);
+      if (str && str->data)
+        if (passtype && (0 == strcmp(str->data, passtype)))
+          have_passtype = TRUE;
+
+      /* See if we need to save this username if it is not present in
+         auth cache. */
+      if (username)
         {
-          svn_string_t *str;
-          if (! username)
+          if (!simple_username_get(&default_username, creds_hash, realmstring,
+                                   non_interactive))
             {
-              str = apr_hash_get(creds_hash, AUTHN_USERNAME_KEY,
-                                 APR_HASH_KEY_STRING);
-              if (str && str->data)
-                username = str->data;
+              need_to_save = TRUE;
             }
+          else
+            {
+              if (0 == strcmp(default_username, username))
+                need_to_save = FALSE;
+              else
+                need_to_save = TRUE;
+            }
+	}
+
+      /* See if we need to save this password if it is not present in
+         auth cache. */
+      if (password)
+        {
+          if (have_passtype)
+            {
+              if (!password_get(&default_password, creds_hash, realmstring,
+                                username, non_interactive, pool))
+                {
+                  need_to_save = TRUE;
+                }
+              else
+                {
+                  if (0 == strcmp(default_password, password))
+                    need_to_save = FALSE;
+                  else
+                    need_to_save = TRUE;
+                }
+            }
+        }
+
+      /* If we don't have a username and a password yet, we try the
+         auth cache */
+      if (! (username && password))
+        {
+          if (! username)
+            if (!simple_username_get(&username, creds_hash, realmstring,
+                                     non_interactive))
+              username = NULL;
 
           if (username && ! password)
             {
-              svn_boolean_t have_passtype;
-              /* The password type in the auth data must match the
-                 mangler's type, otherwise the password must be
-                 interpreted by another provider. */
-              str = apr_hash_get(creds_hash, AUTHN_PASSTYPE_KEY,
-                                 APR_HASH_KEY_STRING);
-              have_passtype = (str && str->data);
-              if (have_passtype && passtype
-                  && 0 != strcmp(str->data, passtype))
+              if (! have_passtype)
                 password = NULL;
               else
                 {
@@ -176,11 +240,17 @@ svn_auth__simple_first_creds_helper(void **credentials,
                   /* If the auth data didn't contain a password type,
                      force a write to upgrade the format of the auth
                      data file. */
-                  if (password && passtype && !have_passtype)
-                    may_save = TRUE;
+                  if (password && ! have_passtype)
+                    need_to_save = TRUE;
                 }
             }
         }
+    }
+  else
+    {
+      /* Nothing was present in the auth cache, so indicate that these
+         credentials should be saved. */
+      need_to_save = TRUE;
     }
 
   /* If we don't have a username yet, check the 'servers' file */
@@ -201,7 +271,7 @@ svn_auth__simple_first_creds_helper(void **credentials,
       svn_auth_cred_simple_t *creds = apr_pcalloc(pool, sizeof(*creds));
       creds->username = username;
       creds->password = password;
-      creds->may_save = may_save;
+      creds->may_save = need_to_save;
       *credentials = creds;
     }
   else

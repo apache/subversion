@@ -751,10 +751,10 @@ close_handler_checksum(void *baton)
     }
 
   if (btn->read_ctx)
-    SVN_ERR(svn_checksum_final(btn->read_ctx, btn->read_checksum, btn->pool));
+    SVN_ERR(svn_checksum_final(btn->read_checksum, btn->read_ctx, btn->pool));
 
   if (btn->write_ctx)
-    SVN_ERR(svn_checksum_final(btn->write_ctx, btn->write_checksum, btn->pool));
+    SVN_ERR(svn_checksum_final(btn->write_checksum, btn->write_ctx, btn->pool));
 
   return svn_stream_close(btn->proxy);
 }

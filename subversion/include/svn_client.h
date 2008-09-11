@@ -963,7 +963,7 @@ svn_client_create_context(svn_client_ctx_t **ctx,
 svn_error_t *
 svn_client_args_to_target_array(apr_array_header_t **targets_p,
                                 apr_getopt_t *os,
-                                apr_array_header_t *known_targets,
+                                const apr_array_header_t *known_targets,
                                 svn_client_ctx_t *ctx,
                                 apr_pool_t *pool);
 
@@ -1805,8 +1805,31 @@ svn_client_commit(svn_client_commit_info_t **commit_info_p,
  * it's a member of one of those changelists.  If @a changelists is
  * empty (or altogether @c NULL), no changelist filtering occurs.
  *
- * @since New in 1.5.
+ * @since New in 1.6.
  */
+svn_error_t *
+svn_client_status4(svn_revnum_t *result_rev,
+                   const char *path,
+                   const svn_opt_revision_t *revision,
+                   svn_wc_status_func3_t status_func,
+                   void *status_baton,
+                   svn_depth_t depth,
+                   svn_boolean_t get_all,
+                   svn_boolean_t update,
+                   svn_boolean_t no_ignore,
+                   svn_boolean_t ignore_externals,
+                   const apr_array_header_t *changelists,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool);
+
+/**
+ * Same as svn_client_status4(), but using an @c svn_wc_status_func2_t
+ * instead of an @c svn_wc_status_func3_t.
+ *
+ * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.5 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_status3(svn_revnum_t *result_rev,
                    const char *path,

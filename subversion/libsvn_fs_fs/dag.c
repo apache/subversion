@@ -78,7 +78,7 @@ svn_node_kind_t svn_fs_fs__dag_node_kind(dag_node_t *node)
 
 
 const svn_fs_id_t *
-svn_fs_fs__dag_get_id(dag_node_t *node)
+svn_fs_fs__dag_get_id(const dag_node_t *node)
 {
   return node->id;
 }
@@ -162,7 +162,7 @@ get_node_revision(node_revision_t **noderev_p,
 }
 
 
-svn_boolean_t svn_fs_fs__dag_check_mutable(dag_node_t *node)
+svn_boolean_t svn_fs_fs__dag_check_mutable(const dag_node_t *node)
 {
   return (svn_fs_fs__id_txn_id(svn_fs_fs__dag_get_id(node)) != NULL);
 }

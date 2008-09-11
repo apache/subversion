@@ -1369,9 +1369,10 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
                                                  filepool);
           SVN_ERR(svn_diff_mem_string_diff3(&diff, the_val, working_val,
                                             new_val, options, filepool));
-          SVN_ERR(svn_diff_mem_string_output_merge
+          SVN_ERR(svn_diff_mem_string_output_merge2
                   (mergestream, diff, the_val, working_val, new_val,
-                   NULL, NULL, NULL, NULL, FALSE, FALSE, filepool));
+                   NULL, NULL, NULL, NULL,
+                   svn_diff_conflict_display_modified_latest, filepool));
           svn_stream_close(mergestream);
         }
     }
@@ -2037,7 +2038,7 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
 }
 
 
-/* This is DEPRECATED, use svn_wc_merge_props() instead. */
+/* This is DEPRECATED, use svn_wc_merge_props2() instead. */
 svn_error_t *
 svn_wc_merge_prop_diffs(svn_wc_notify_state_t *state,
                         const char *path,
@@ -2048,10 +2049,10 @@ svn_wc_merge_prop_diffs(svn_wc_notify_state_t *state,
                         apr_pool_t *pool)
 {
   /* NOTE: Here, we use implementation knowledge.  The public
-     svn_wc_merge_props doesn't allow NULL as baseprops argument, but we know
+     svn_wc_merge_props2 doesn't allow NULL as baseprops argument, but we know
      that it works. */
-  return svn_wc_merge_props(state, path, adm_access, NULL, propchanges,
-                            base_merge, dry_run, pool);
+  return svn_wc_merge_props2(state, path, adm_access, NULL, propchanges,
+                             base_merge, dry_run, NULL, NULL, pool);
 }
 
 
@@ -2814,7 +2815,7 @@ svn_wc__has_props(svn_boolean_t *has_props,
 
 
 /* Common implementation for svn_wc_props_modified_p()
-   and svn_wc__props_modified().
+   and svn_wc__has_prop_mods().
 
    Set *MODIFIED_P to true if PATH's properties are modified
    with regard to the base revision, else set MODIFIED_P to false.
@@ -3032,17 +3033,6 @@ modified_props(svn_boolean_t *modified_p,
 
 
 svn_error_t *
-svn_wc__props_modified(const char *path,
-                       apr_hash_t **which_props,
-                       svn_wc_adm_access_t *adm_access,
-                       apr_pool_t *pool)
-{
-  svn_boolean_t modified_p;
-  return modified_props(&modified_p, path, which_props, adm_access, pool);
-}
-
-
-svn_error_t *
 svn_wc_props_modified_p(svn_boolean_t *modified_p,
                         const char *path,
                         svn_wc_adm_access_t *adm_access,
@@ -3058,31 +3048,7 @@ svn_wc__has_prop_mods(svn_boolean_t *prop_mods,
                       svn_wc_adm_access_t *adm_access,
                       apr_pool_t *pool)
 {
-
-  /* For an enough recent WC, we can have a really easy out. */
-  if (svn_wc__adm_wc_format(adm_access) > SVN_WC__NO_PROPCACHING_VERSION)
-    {
-      const svn_wc_entry_t *entry;
-      SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, TRUE, pool));
-      *prop_mods = entry->has_prop_mods;
-    }
-  else
-    {
-      apr_array_header_t *propmods;
-      apr_hash_t *localprops = apr_hash_make(pool);
-      apr_hash_t *baseprops = apr_hash_make(pool);
-
-      /* Load all properties into hashes */
-      SVN_ERR(svn_wc__load_props(&baseprops, &localprops, NULL,
-                                 adm_access, path, pool));
-
-      /* Get an array of local changes by comparing the hashes. */
-      SVN_ERR(svn_prop_diffs(&propmods, localprops, baseprops, pool));
-
-      *prop_mods = propmods->nelts > 0;
-    }
-
-  return SVN_NO_ERROR;
+  return modified_props(prop_mods, path, NULL, adm_access, pool);
 }
 
 
