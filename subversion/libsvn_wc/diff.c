@@ -875,16 +875,14 @@ report_wc_file_as_added(struct dir_baton *dir_baton,
            | SVN_WC_TRANSLATE_USE_GLOBAL_TMP,
            pool));
 
-  SVN_ERR(eb->callbacks->file_added
+  return eb->callbacks->file_added
           (adm_access, NULL, NULL,
            path,
            empty_file, translated_file,
            0, entry->revision,
            NULL, mimetype,
            propchanges, emptyprops,
-           eb->callback_baton));
-
-  return SVN_NO_ERROR;
+           eb->callback_baton);
 }
 
 /* Report an existing directory in the working copy (either in BASE
@@ -1826,15 +1824,13 @@ svn_wc_get_diff_editor5(svn_wc_adm_access_t *anchor,
                                                 anchor,
                                                 pool));
 
-  SVN_ERR(svn_delta_get_cancellation_editor(cancel_func,
-                                            cancel_baton,
-                                            inner_editor,
-                                            inner_baton,
-                                            editor,
-                                            edit_baton,
-                                            pool));
-
-  return SVN_NO_ERROR;
+  return svn_delta_get_cancellation_editor(cancel_func,
+                                           cancel_baton,
+                                           inner_editor,
+                                           inner_baton,
+                                           editor,
+                                           edit_baton,
+                                           pool);
 }
 
 svn_error_t *
@@ -1980,9 +1976,7 @@ svn_wc_diff5(svn_wc_adm_access_t *anchor,
   else
     b = make_dir_baton(eb->anchor_path, NULL, eb, FALSE, depth, eb->pool);
 
-  SVN_ERR(directory_elements_diff(b));
-
-  return SVN_NO_ERROR;
+  return directory_elements_diff(b);
 }
 
 svn_error_t *
