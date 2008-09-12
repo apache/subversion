@@ -255,7 +255,7 @@ svn_client_status4(svn_revnum_t *result_rev,
                    svn_boolean_t no_ignore,
                    svn_boolean_t ignore_externals,
                    const apr_array_header_t *changelists,
-                   apr_hash_t *ignored_props,
+                   svn_boolean_t ignore_mergeinfo,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
@@ -267,6 +267,7 @@ svn_client_status4(svn_revnum_t *result_rev,
   const svn_wc_entry_t *entry = NULL;
   struct status_baton sb;
   apr_array_header_t *ignores;
+  apr_hash_t *ignored_props;
   svn_error_t *err;
   apr_hash_t *changelist_hash = NULL;
   svn_revnum_t edit_revision = SVN_INVALID_REVNUM;
@@ -274,7 +275,13 @@ svn_client_status4(svn_revnum_t *result_rev,
   if (changelists && changelists->nelts)
     SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelists, pool));
 
-  if (ignored_props && apr_hash_count(ignored_props) == 0)
+  if (ignore_mergeinfo)
+    {
+      ignored_props = apr_hash_make(pool);
+      apr_hash_set(ignored_props, SVN_PROP_MERGEINFO, APR_HASH_KEY_STRING,
+                   (void *) 0xdeadbeef);
+    }
+  else
     ignored_props = NULL;
 
   /* We don't yet support ignored properties with '-u', so error. */
@@ -495,7 +502,7 @@ svn_client_status3(svn_revnum_t *result_rev,
 
   return svn_client_status4(result_rev, path, revision, status3_wrapper_func,
                             &swb, depth, get_all, update, no_ignore,
-                            ignore_externals, changelists, NULL, ctx, pool);
+                            ignore_externals, changelists, FALSE, ctx, pool);
             
 }
 

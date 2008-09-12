@@ -241,7 +241,7 @@ svn_cl__status(apr_getopt_t *os,
                                              opt_state->no_ignore,
                                              opt_state->ignore_externals,
                                              opt_state->changelists,
-                                             opt_state->ignored_props,
+                                             opt_state->ignore_mergeinfo,
                                              ctx, subpool),
                           NULL, opt_state->quiet,
                           /* not versioned: */
