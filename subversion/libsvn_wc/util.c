@@ -447,28 +447,28 @@ vwrite_tuple(svn_stream_t *target,
       else if (*fmt == 'r')
         {
           rev = va_arg(ap, svn_revnum_t);
-          assert(opt || SVN_IS_VALID_REVNUM(rev));
+          SVN_ERR_ASSERT(opt || SVN_IS_VALID_REVNUM(rev));
           if (SVN_IS_VALID_REVNUM(rev))
             SVN_ERR(svn_wc_write_number(target, pool, rev));
         }
       else if (*fmt == 's')
         {
           str = va_arg(ap, const svn_string_t *);
-          assert(opt || str);
+          SVN_ERR_ASSERT(opt || str);
           if (str)
             SVN_ERR(svn_wc_write_string(target, pool, str));
         }
       else if (*fmt == 'c')
         {
           cstr = va_arg(ap, const char *);
-          assert(opt || cstr);
+          SVN_ERR_ASSERT(opt || cstr);
           if (cstr)
             SVN_ERR(svn_wc_write_cstring(target, pool, cstr));
         }
       else if (*fmt == 'w')
         {
           cstr = va_arg(ap, const char *);
-          assert(opt || cstr);
+          SVN_ERR_ASSERT(opt || cstr);
           if (cstr)
             SVN_ERR(svn_wc_write_word(target, pool, cstr));
         }
