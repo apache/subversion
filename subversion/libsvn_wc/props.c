@@ -20,7 +20,6 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 #include <apr_pools.h>
 #include <apr_hash.h>
 #include <apr_tables.h>
@@ -91,8 +90,24 @@ load_prop_file(const char *propfile_path,
                apr_pool_t *pool)
 {
   svn_error_t *err;
+  svn_stream_t *stream;
+  apr_finfo_t finfo;
 
   apr_file_t *propfile = NULL;
+
+  /* We shouldn't be calling load_prop_file() with an empty file, but
+     we do.  This check makes sure that we don't call svn_hash_read2()
+     on an empty stream.  Ugly, hacky and crude. */
+  err = svn_io_stat(&finfo, propfile_path, APR_FINFO_SIZE, pool);
+  if (err && (APR_STATUS_IS_ENOENT(err->apr_err)
+              || APR_STATUS_IS_ENOTDIR(err->apr_err)))
+    {
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
+  SVN_ERR(err);
+  if (finfo.size == 0)
+    return SVN_NO_ERROR;
 
   err = svn_io_file_open(&propfile, propfile_path,
                          APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
@@ -107,13 +122,12 @@ load_prop_file(const char *propfile_path,
 
   SVN_ERR(err);
 
-  SVN_ERR_W(svn_hash_read(hash, propfile, pool),
+  stream = svn_stream_from_aprfile2(propfile, FALSE, pool);
+  SVN_ERR_W(svn_hash_read2(hash, stream, SVN_HASH_TERMINATOR, pool),
             apr_psprintf(pool, _("Can't parse '%s'"),
                          svn_path_local_style(propfile_path, pool)));
 
-  SVN_ERR(svn_io_file_close(propfile, pool));
-
-  return SVN_NO_ERROR;
+  return svn_stream_close(stream);
 }
 
 
@@ -130,21 +144,21 @@ save_prop_file(const char *propfile_path,
                apr_pool_t *pool)
 {
   apr_file_t *prop_tmp;
+  svn_stream_t *stream;
 
   SVN_ERR(svn_io_file_open(&prop_tmp, propfile_path,
                            (APR_WRITE | APR_CREATE | APR_TRUNCATE
                             | APR_BUFFERED),
                            APR_OS_DEFAULT, pool));
+  stream = svn_stream_from_aprfile2(prop_tmp, FALSE, pool);
 
   if (apr_hash_count(hash) != 0 || write_empty)
-    SVN_ERR_W(svn_hash_write(hash, prop_tmp, pool),
+    SVN_ERR_W(svn_hash_write2(hash, stream, SVN_HASH_TERMINATOR, pool),
               apr_psprintf(pool,
                            _("Can't write property hash to '%s'"),
                            svn_path_local_style(propfile_path, pool)));
 
-  SVN_ERR(svn_io_file_close(prop_tmp, pool));
-
-  return SVN_NO_ERROR;
+  return svn_stream_close(stream);
 }
 
 
@@ -1275,7 +1289,8 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
       return SVN_NO_ERROR;
     }
 
-  cdesc = apr_pcalloc(pool, sizeof(*cdesc));
+  cdesc = svn_wc_conflict_description_create_prop(
+    path, adm_access, is_dir ? svn_node_dir : svn_node_file, propname, pool);
 
   /* Create a tmpfile for each of the string_t's we've got.  */
   if (working_val)
@@ -1354,20 +1369,15 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
                                                  filepool);
           SVN_ERR(svn_diff_mem_string_diff3(&diff, the_val, working_val,
                                             new_val, options, filepool));
-          SVN_ERR(svn_diff_mem_string_output_merge
+          SVN_ERR(svn_diff_mem_string_output_merge2
                   (mergestream, diff, the_val, working_val, new_val,
-                   NULL, NULL, NULL, NULL, FALSE, FALSE, filepool));
+                   NULL, NULL, NULL, NULL,
+                   svn_diff_conflict_display_modified_latest, filepool));
           svn_stream_close(mergestream);
         }
     }
 
   /* Build the rest of the description object: */
-  cdesc->path = path;
-  cdesc->node_kind = is_dir ? svn_node_dir : svn_node_file;
-  cdesc->kind = svn_wc_conflict_kind_property;
-  cdesc->property_name = propname;
-  cdesc->access = adm_access;
-
   if (!is_dir && working_props)
     mime_propval = apr_hash_get(working_props, SVN_PROP_MIME_TYPE,
                                 APR_HASH_KEY_STRING);
@@ -2028,7 +2038,7 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
 }
 
 
-/* This is DEPRECATED, use svn_wc_merge_props() instead. */
+/* This is DEPRECATED, use svn_wc_merge_props2() instead. */
 svn_error_t *
 svn_wc_merge_prop_diffs(svn_wc_notify_state_t *state,
                         const char *path,
@@ -2039,10 +2049,10 @@ svn_wc_merge_prop_diffs(svn_wc_notify_state_t *state,
                         apr_pool_t *pool)
 {
   /* NOTE: Here, we use implementation knowledge.  The public
-     svn_wc_merge_props doesn't allow NULL as baseprops argument, but we know
+     svn_wc_merge_props2 doesn't allow NULL as baseprops argument, but we know
      that it works. */
-  return svn_wc_merge_props(state, path, adm_access, NULL, propchanges,
-                            base_merge, dry_run, pool);
+  return svn_wc_merge_props2(state, path, adm_access, NULL, propchanges,
+                             base_merge, dry_run, NULL, NULL, pool);
 }
 
 
@@ -2177,6 +2187,8 @@ svn_wc__wcprop_set(const char *name,
     {
       /* For backwards compatibility.  We don't use the cache in this case,
          so write to disk regardless of force_write. */
+      svn_stream_t *stream;
+
       /* Open the propfile for writing. */
       SVN_ERR(svn_wc__open_props(&fp,
                                  path, /* open in PATH */ entry->kind,
@@ -2185,10 +2197,13 @@ svn_wc__wcprop_set(const char *name,
                                  1, /* we DO want wcprops */
                                  pool));
       /* Write. */
-      SVN_ERR_W(svn_hash_write(prophash, fp, pool),
+      stream = svn_stream_from_aprfile2(fp, TRUE, pool);
+      SVN_ERR_W(svn_hash_write2(prophash, stream, SVN_HASH_TERMINATOR,
+                                pool),
                 apr_psprintf(pool,
                              _("Cannot write property hash for '%s'"),
                              svn_path_local_style(path, pool)));
+      svn_stream_close(stream);
 
       /* Close file, doing an atomic "move". */
       SVN_ERR(svn_wc__close_props(fp, path, entry->kind, 0, 1,
@@ -2393,10 +2408,10 @@ get_file_for_validation(const svn_string_t **mime_type,
                              0, pool));
 
     /* Get a READ_STREAM from the file we just opened. */
-    read_stream = svn_stream_from_aprfile(fp, pool);
+    read_stream = svn_stream_from_aprfile2(fp, TRUE, pool);
 
     /* Copy from the file into the translating stream. */
-    SVN_ERR(svn_stream_copy(read_stream, stream, pool));
+    SVN_ERR(svn_stream_copy2(read_stream, stream, NULL, NULL, pool));
 
     SVN_ERR(svn_stream_close(read_stream));
     SVN_ERR(svn_io_file_close(fp, pool));
@@ -2800,7 +2815,7 @@ svn_wc__has_props(svn_boolean_t *has_props,
 
 
 /* Common implementation for svn_wc_props_modified_p()
-   and svn_wc__props_modified().
+   and svn_wc__has_prop_mods().
 
    Set *MODIFIED_P to true if PATH's properties are modified
    with regard to the base revision, else set MODIFIED_P to false.
@@ -3018,17 +3033,6 @@ modified_props(svn_boolean_t *modified_p,
 
 
 svn_error_t *
-svn_wc__props_modified(const char *path,
-                       apr_hash_t **which_props,
-                       svn_wc_adm_access_t *adm_access,
-                       apr_pool_t *pool)
-{
-  svn_boolean_t modified_p;
-  return modified_props(&modified_p, path, which_props, adm_access, pool);
-}
-
-
-svn_error_t *
 svn_wc_props_modified_p(svn_boolean_t *modified_p,
                         const char *path,
                         svn_wc_adm_access_t *adm_access,
@@ -3044,31 +3048,7 @@ svn_wc__has_prop_mods(svn_boolean_t *prop_mods,
                       svn_wc_adm_access_t *adm_access,
                       apr_pool_t *pool)
 {
-
-  /* For an enough recent WC, we can have a really easy out. */
-  if (svn_wc__adm_wc_format(adm_access) > SVN_WC__NO_PROPCACHING_VERSION)
-    {
-      const svn_wc_entry_t *entry;
-      SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, TRUE, pool));
-      *prop_mods = entry->has_prop_mods;
-    }
-  else
-    {
-      apr_array_header_t *propmods;
-      apr_hash_t *localprops = apr_hash_make(pool);
-      apr_hash_t *baseprops = apr_hash_make(pool);
-
-      /* Load all properties into hashes */
-      SVN_ERR(svn_wc__load_props(&baseprops, &localprops, NULL,
-                                 adm_access, path, pool));
-
-      /* Get an array of local changes by comparing the hashes. */
-      SVN_ERR(svn_prop_diffs(&propmods, localprops, baseprops, pool));
-
-      *prop_mods = propmods->nelts > 0;
-    }
-
-  return SVN_NO_ERROR;
+  return modified_props(prop_mods, path, NULL, adm_access, pool);
 }
 
 
@@ -3303,10 +3283,37 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
       token0_is_url = svn_path_is_url(token0);
       token1_is_url = svn_path_is_url(token1);
 
-      /* If -r is at the beginning of the line or the first token is
+      if (token0_is_url && token1_is_url)
+        return svn_error_createf
+          (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, NULL,
+           _("Invalid %s property on '%s': "
+             "cannot use two absolute URLs ('%s' and '%s') in an external; "
+             "one must be a path where an absolute or relative URL is "
+             "checked out to"),
+           SVN_PROP_EXTERNALS, parent_directory_display, token0, token1);
+
+      if (0 == rev_idx && token1_is_url)
+        return svn_error_createf
+          (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, NULL,
+           _("Invalid %s property on '%s': "
+             "cannot use a URL '%s' as the target directory for an external "
+             "definition"),
+           SVN_PROP_EXTERNALS, parent_directory_display, token1);
+
+      if (1 == rev_idx && token0_is_url)
+        return svn_error_createf
+          (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, NULL,
+           _("Invalid %s property on '%s': "
+             "cannot use a URL '%s' as the target directory for an external "
+             "definition"),
+           SVN_PROP_EXTERNALS, parent_directory_display, token0);
+
+      /* The appearence of -r N or -rN forces the type of external.
+         If -r is at the beginning of the line or the first token is
          an absolute URL or if the second token is not an absolute
          URL, then the URL supports peg revisions. */
-      if (0 == rev_idx || token0_is_url || ! token1_is_url)
+      if (0 == rev_idx ||
+          (-1 == rev_idx && (token0_is_url || ! token1_is_url)))
         {
           /* The URL is passed to svn_opt_parse_path in
              uncanonicalized form so that the scheme relative URL

@@ -24,7 +24,7 @@
 #include "svn_time.h"
 #include "svn_string.h"
 #include "svn_fs.h"
-#include "svn_md5.h"
+#include "svn_checksum.h"
 #include "svn_mergeinfo.h"
 
 #include "../svn_test.h"
@@ -3555,41 +3555,25 @@ check_all_revisions(const char **msg,
    to a file, calculate and return the MD5 digest for the contents of
    the file. */
 static svn_error_t *
-get_file_digest(unsigned char digest[APR_MD5_DIGESTSIZE],
-                svn_fs_root_t *root,
-                const char *path,
-                apr_pool_t *pool)
+get_file_checksum(svn_checksum_t **checksum,
+                  svn_checksum_kind_t checksum_kind,
+                  svn_fs_root_t *root,
+                  const char *path,
+                  apr_pool_t *pool)
 {
   svn_stream_t *stream;
-  apr_size_t len;
-  const apr_size_t buf_size = 100000;
-  apr_md5_ctx_t context;
-
-  /* ### todo:  Pool usage in svndiff is currently really, really
-     crappy.  We need to keep this buffer fairly large so we don't run
-     out of memory doing undeltification of large files into tiny
-     buffers.  Issue #465.  */
-  char *buf = apr_palloc(pool, buf_size);
+  svn_stream_t *checksum_stream;
 
   /* Get a stream for the file contents. */
   SVN_ERR(svn_fs_file_contents(&stream, root, path, pool));
 
-  /* Initialize APR MD5 context. */
-  apr_md5_init(&context);
+  /* Get a checksummed stream for the contents. */
+  *checksum = svn_checksum_create(checksum_kind, pool);
+  checksum_stream = svn_stream_checksummed2(stream, checksum, checksum_kind,
+                                            NULL, svn_checksum_md5, TRUE, pool);
 
-  do
-    {
-      /* "please fill the buf with bytes" */
-      len = buf_size;
-      SVN_ERR(svn_stream_read(stream, buf, &len));
-
-      /* Update the MD5 calculation with the data we just read.  */
-      apr_md5_update(&context, buf, len);
-
-    } while (len == buf_size);  /* Continue until a short read. */
-
-  /* Finalize MD5 calculation. */
-  apr_md5_final(digest, &context);
+  /* Close the stream, forcing a complete read and copy the digest. */
+  SVN_ERR(svn_stream_close(checksum_stream));
 
   return SVN_NO_ERROR;
 }
@@ -3660,8 +3644,9 @@ file_integrity_helper(apr_size_t filesize, apr_uint32_t *seed,
   apr_pool_t *subpool = svn_pool_create(pool);
   svn_string_t contents;
   char *content_buffer;
-  unsigned char digest[APR_MD5_DIGESTSIZE];
-  unsigned char digest_list[100][APR_MD5_DIGESTSIZE];
+  svn_checksum_t *checksum;
+  svn_checksum_kind_t checksum_kind = svn_checksum_md5;
+  svn_checksum_t *checksum_list[100];
   svn_txdelta_window_handler_t wh_func;
   void *wh_baton;
   svn_revnum_t j;
@@ -3693,13 +3678,14 @@ file_integrity_helper(apr_size_t filesize, apr_uint32_t *seed,
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
   SVN_ERR(svn_fs_make_file(txn_root, "bigfile", subpool));
   random_data_to_buffer(content_buffer, filesize, TRUE, seed);
-  apr_md5(digest, contents.data, contents.len);
+  SVN_ERR(svn_checksum(&checksum, checksum_kind, contents.data, contents.len,
+                       pool));
   SVN_ERR(svn_fs_apply_textdelta
           (&wh_func, &wh_baton, txn_root, "bigfile", NULL, NULL, subpool));
   SVN_ERR(svn_txdelta_send_string(&contents, wh_func, wh_baton, subpool));
   SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, subpool));
   SVN_ERR(svn_fs_deltify_revision(fs, youngest_rev, subpool));
-  memcpy(digest_list[youngest_rev], digest, APR_MD5_DIGESTSIZE);
+  checksum_list[youngest_rev] = checksum;
   svn_pool_clear(subpool);
 
   /* Now, let's make some edits to the beginning of our file, and
@@ -3707,26 +3693,28 @@ file_integrity_helper(apr_size_t filesize, apr_uint32_t *seed,
   SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
   random_data_to_buffer(content_buffer, 20, TRUE, seed);
-  apr_md5(digest, contents.data, contents.len);
+  SVN_ERR(svn_checksum(&checksum, checksum_kind, contents.data, contents.len,
+                       pool));
   SVN_ERR(svn_fs_apply_textdelta
           (&wh_func, &wh_baton, txn_root, "bigfile", NULL, NULL, subpool));
   SVN_ERR(svn_txdelta_send_string(&contents, wh_func, wh_baton, subpool));
   SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, subpool));
   SVN_ERR(svn_fs_deltify_revision(fs, youngest_rev, subpool));
-  memcpy(digest_list[youngest_rev], digest, APR_MD5_DIGESTSIZE);
+  checksum_list[youngest_rev] = checksum;
   svn_pool_clear(subpool);
 
   /* Now, let's make some edits to the end of our file. */
   SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
   random_data_to_buffer(content_buffer + (filesize - 20), 20, TRUE, seed);
-  apr_md5(digest, contents.data, contents.len);
+  SVN_ERR(svn_checksum(&checksum, checksum_kind, contents.data, contents.len,
+                       pool));
   SVN_ERR(svn_fs_apply_textdelta
           (&wh_func, &wh_baton, txn_root, "bigfile", NULL, NULL, subpool));
   SVN_ERR(svn_txdelta_send_string(&contents, wh_func, wh_baton, subpool));
   SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, subpool));
   SVN_ERR(svn_fs_deltify_revision(fs, youngest_rev, subpool));
-  memcpy(digest_list[youngest_rev], digest, APR_MD5_DIGESTSIZE);
+  checksum_list[youngest_rev] = checksum;
   svn_pool_clear(subpool);
 
   /* How about some edits to both the beginning and the end of the
@@ -3735,13 +3723,14 @@ file_integrity_helper(apr_size_t filesize, apr_uint32_t *seed,
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
   random_data_to_buffer(content_buffer, 20, TRUE, seed);
   random_data_to_buffer(content_buffer + (filesize - 20), 20, TRUE, seed);
-  apr_md5(digest, contents.data, contents.len);
+  SVN_ERR(svn_checksum(&checksum, checksum_kind, contents.data, contents.len,
+                       pool));
   SVN_ERR(svn_fs_apply_textdelta
           (&wh_func, &wh_baton, txn_root, "bigfile", NULL, NULL, subpool));
   SVN_ERR(svn_txdelta_send_string(&contents, wh_func, wh_baton, subpool));
   SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, subpool));
   SVN_ERR(svn_fs_deltify_revision(fs, youngest_rev, subpool));
-  memcpy(digest_list[youngest_rev], digest, APR_MD5_DIGESTSIZE);
+  checksum_list[youngest_rev] = checksum;
   svn_pool_clear(subpool);
 
   /* Alright, now we're just going to go crazy.  Let's make many more
@@ -3752,14 +3741,15 @@ file_integrity_helper(apr_size_t filesize, apr_uint32_t *seed,
       SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
       SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
       random_data_to_buffer(content_buffer, filesize, FALSE, seed);
-      apr_md5(digest, contents.data, contents.len);
+      SVN_ERR(svn_checksum(&checksum, checksum_kind, contents.data,
+                           contents.len, pool));
       SVN_ERR(svn_fs_apply_textdelta(&wh_func, &wh_baton, txn_root,
                                      "bigfile", NULL, NULL, subpool));
       SVN_ERR(svn_txdelta_send_string
               (&contents, wh_func, wh_baton, subpool));
       SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, subpool));
       SVN_ERR(svn_fs_deltify_revision(fs, youngest_rev, subpool));
-      memcpy(digest_list[youngest_rev], digest, APR_MD5_DIGESTSIZE);
+      checksum_list[youngest_rev] = checksum;
       svn_pool_clear(subpool);
     }
 
@@ -3770,16 +3760,42 @@ file_integrity_helper(apr_size_t filesize, apr_uint32_t *seed,
   for (j = youngest_rev; j > 0; j--)
     {
       SVN_ERR(svn_fs_revision_root(&rev_root, fs, j, subpool));
-      SVN_ERR(get_file_digest(digest, rev_root, "bigfile", subpool));
-      if (memcmp(digest, digest_list[j], APR_MD5_DIGESTSIZE))
+      SVN_ERR(get_file_checksum(&checksum, checksum_kind, rev_root, "bigfile",
+                                subpool));
+      if (!svn_checksum_match(checksum, checksum_list[j]))
         return svn_error_createf
           (SVN_ERR_FS_GENERAL, NULL,
-           "MD5 checksum failure, revision %ld", j);
+           "verify-checksum: checksum mismatch, revision %ld:\n"
+           "   expected:  %s\n"
+           "     actual:  %s\n", j,
+        svn_checksum_to_cstring(checksum_list[j], pool),
+        svn_checksum_to_cstring(checksum, pool));
+
       svn_pool_clear(subpool);
     }
 
   svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+small_file_integrity(const char **msg,
+                     svn_boolean_t msg_only,
+                     svn_test_opts_t *opts,
+                     apr_pool_t *pool)
+{
+  apr_uint32_t seed = (apr_uint32_t) apr_time_now();
+  *msg = apr_psprintf(pool,
+                      "create and modify small file (seed=%lu)",
+                      (unsigned long) seed);
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Just use a really small file size... */
+  return file_integrity_helper(20, &seed, opts,
+                               "test-repo-small-file-integrity", pool);
 }
 
 
@@ -4367,8 +4383,7 @@ verify_checksum(const char **msg,
   svn_fs_txn_t *txn;
   svn_fs_root_t *txn_root;
   svn_stringbuf_t *str;
-  unsigned char expected_digest[APR_MD5_DIGESTSIZE];
-  unsigned char actual_digest[APR_MD5_DIGESTSIZE];
+  svn_checksum_t *expected_checksum, *actual_checksum;
 
   /* Write a file, compare the repository's idea of its checksum
      against our idea of its checksum.  They should be the same. */
@@ -4379,7 +4394,7 @@ verify_checksum(const char **msg,
     return SVN_NO_ERROR;
 
   str = svn_stringbuf_create("My text editor charges me rent.", pool);
-  apr_md5(expected_digest, str->data, str->len);
+  svn_checksum(&expected_checksum, svn_checksum_md5, str->data, str->len, pool);
 
   SVN_ERR(svn_test__create_fs(&fs, "test-repo-verify-checksum",
                               opts, pool));
@@ -4387,16 +4402,17 @@ verify_checksum(const char **msg,
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
   SVN_ERR(svn_fs_make_file(txn_root, "fact", pool));
   SVN_ERR(svn_test__set_file_contents(txn_root, "fact", str->data, pool));
-  SVN_ERR(svn_fs_file_md5_checksum(actual_digest, txn_root, "fact", pool));
+  SVN_ERR(svn_fs_file_checksum(&actual_checksum, svn_checksum_md5, txn_root,
+                               "fact", TRUE, pool));
 
-  if (memcmp(expected_digest, actual_digest, APR_MD5_DIGESTSIZE) != 0)
+  if (!svn_checksum_match(expected_checksum, actual_checksum))
     return svn_error_createf
       (SVN_ERR_FS_GENERAL, NULL,
        "verify-checksum: checksum mismatch:\n"
        "   expected:  %s\n"
        "     actual:  %s\n",
-       svn_md5_digest_to_cstring(expected_digest, pool),
-       svn_md5_digest_to_cstring(actual_digest, pool));
+       svn_checksum_to_cstring(expected_checksum, pool),
+       svn_checksum_to_cstring(actual_checksum, pool));
 
   return SVN_NO_ERROR;
 }
@@ -4935,5 +4951,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(unordered_txn_dirprops),
     SVN_TEST_PASS(set_uuid),
     SVN_TEST_PASS(node_origin_rev),
+    SVN_TEST_PASS(small_file_integrity),
     SVN_TEST_NULL
   };

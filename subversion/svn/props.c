@@ -103,10 +103,16 @@ svn_cl__print_prop_hash(apr_hash_t *prop_hash,
       /* ### We leave these printfs for now, since if propval wasn't translated
        * above, we don't know anything about its encoding.  In fact, it
        * might be binary data... */
-      if (names_only)
-        printf("  %s\n", pname_stdout);
-      else
-        printf("  %s : %s\n", pname_stdout, propval->data);
+      printf("  %s\n", pname_stdout);
+      if (!names_only)
+        {
+          /* Add an extra newline to the value before indenting, so that
+           * every line of output has the indentation whether the value
+           * already ended in a newline or not. */
+          const char *newval = apr_psprintf(pool, "%s\n", propval->data);
+
+          printf("%s", svn_cl__indent_string(newval, "    ", pool));
+        }
     }
 
   return SVN_NO_ERROR;

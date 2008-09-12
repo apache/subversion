@@ -18,7 +18,6 @@
 
 
 
-#include <assert.h>
 #include <stdlib.h> /* for free() */
 
 #define APR_WANT_STRFUNC

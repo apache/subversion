@@ -280,7 +280,7 @@ compare_and_verify(svn_boolean_t *modified_p,
   if (verify_checksum || need_translation)
     {
       /* Reading files is necessary. */
-      const unsigned char *digest;
+      svn_checksum_t *checksum;
       /* "v_" means versioned_file, "b_" means base_file. */
       apr_file_t *v_file_h, *b_file_h;
       svn_stream_t *v_stream, *b_stream;
@@ -299,8 +299,9 @@ compare_and_verify(svn_boolean_t *modified_p,
                                          TRUE, pool));
 
           if (entry->checksum)
-            b_stream = svn_stream_checksummed(b_stream, &digest, NULL, TRUE,
-                                              pool);
+            b_stream = svn_stream_checksummed2(b_stream, &checksum,
+                                               svn_checksum_md5, NULL,
+                                               svn_checksum_md5, TRUE, pool);
         }
 
       if (compare_textbases && need_translation)
@@ -335,9 +336,9 @@ compare_and_verify(svn_boolean_t *modified_p,
 
       if (verify_checksum && entry->checksum)
         {
-          const char *checksum;
-          checksum = svn_md5_digest_to_cstring_display(digest, pool);
-          if (strcmp(checksum, entry->checksum) != 0)
+          const char *digest;
+          digest = svn_checksum_to_cstring_display(checksum, pool);
+          if (strcmp(digest, entry->checksum) != 0)
             {
               return svn_error_createf
                 (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
@@ -346,7 +347,7 @@ compare_and_verify(svn_boolean_t *modified_p,
                     "     actual:  %s\n"),
                   svn_path_local_style(base_file, pool),
                   entry->checksum,
-                  checksum);
+                  digest);
             }
         }
     }

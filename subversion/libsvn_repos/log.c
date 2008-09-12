@@ -748,7 +748,8 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *combined_mergeinfo,
          not-found errors returned by the filesystem.  */
       err = svn_repos__prev_location(&appeared_rev, &prev_path, &prev_rev,
                                      fs, rev, path, iterpool);
-      if (err && (err->apr_err == SVN_ERR_FS_NOT_FOUND))
+      if (err && (err->apr_err == SVN_ERR_FS_NOT_FOUND || 
+                  err->apr_err == SVN_ERR_FS_NOT_DIRECTORY))
         {
           svn_error_clear(err);
           err = SVN_NO_ERROR;
@@ -774,7 +775,8 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *combined_mergeinfo,
       APR_ARRAY_PUSH(query_paths, const char *) = prev_path;
       err = svn_fs_get_mergeinfo(&catalog, prev_root, query_paths,
                                  svn_mergeinfo_inherited, FALSE, iterpool);    
-      if (err && (err->apr_err == SVN_ERR_FS_NOT_FOUND))
+      if (err && (err->apr_err == SVN_ERR_FS_NOT_FOUND ||
+                  err->apr_err == SVN_ERR_FS_NOT_DIRECTORY))
         {
           svn_error_clear(err);
           err = SVN_NO_ERROR;
@@ -1348,6 +1350,7 @@ handle_merged_revisions(svn_revnum_t rev,
                     receiver, receiver_baton, authz_read_func,
                     authz_read_baton, iterpool);
       if (err && (err->apr_err == SVN_ERR_FS_NOT_FOUND ||
+                  err->apr_err == SVN_ERR_FS_NOT_DIRECTORY ||
                   err->apr_err == SVN_ERR_FS_NO_SUCH_REVISION))
         {
           svn_error_clear(err);

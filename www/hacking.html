@@ -1525,11 +1525,11 @@ that with a descriptive paragraph if necessary.  This not only helps
 put developers in the right frame of mind for reading the rest of the
 log message, but also plays well with the "CIA" bot that echoes the
 first line of each commit to realtime forums like IRC.  (For details,
-see <a href="http://cia.navi.cx/">http://cia.navi.cx/</a>.)  However,
-if the commit is just one simple change to one file, then you can
-dispense with the general description and simply go straight to the
-detailed description, in the standard filename-then-symbol format
-shown below.</p>
+see <a href="http://cia.vc/">http://cia.vc/</a>.)  However, if the 
+commit is just one simple change to one file, then you can dispense
+with the general description and simply go straight to the detailed
+description, in the standard filename-then-symbol format shown
+below.</p>
 
 <p>Throughout the log message, use full sentences, not sentence
 fragments.  Fragments are more often ambiguous, and it takes only a
@@ -1901,10 +1901,10 @@ just a way to clearly mark off the log message from its surrounding
 context.)</p>
 
 <p>If possible, send the patch as an attachment with a mime-type of
-text/x-diff, text/x-patch, or text/plain.  Most people's mailreaders
-can display those inline, and having the patch as an attachment allows
-them to extract the patch from the message conveniently.  Never send
-patches in archived or compressed form (e.g., tar, gzip, zip, bzip2),
+<code>text/x-diff</code>, <code>text/x-patch</code>, or <code>text/plain</code>.
+Most people's mailreaders can display those inline, and having the patch as an
+attachment allows them to extract the patch from the message conveniently.
+Never send patches in archived or compressed form (e.g., tar, gzip, zip, bzip2),
 because that prevents people from reviewing the patch directly in
 their mailreaders.</p>
 
@@ -2659,15 +2659,17 @@ API documentation with a diff to the new one.  For example:</p>
     * Similar to svn_repos_dump_fs2(), but with the @a use_deltas
     * parameter always set to @c FALSE.
     */
-   svn_error_t *svn_repos_dump_fs(svn_repos_t *repos,
-                                  svn_stream_t *dumpstream,
-                                  svn_stream_t *feedback_stream,
-                                  svn_revnum_t start_rev,
-                                  svn_revnum_t end_rev,
-                                  svn_boolean_t incremental,
-                                  svn_cancel_func_t cancel_func,
-                                  void *cancel_baton,
-                                  apr_pool_t *pool);
+   SVN_DEPRECATED
+   svn_error_t *
+   svn_repos_dump_fs(svn_repos_t *repos,
+                     svn_stream_t *dumpstream,
+                     svn_stream_t *feedback_stream,
+                     svn_revnum_t start_rev,
+                     svn_revnum_t end_rev,
+                     svn_boolean_t incremental,
+                     svn_cancel_func_t cancel_func,
+                     void *cancel_baton,
+                     apr_pool_t *pool);
 </pre>
 
 <p>When the major release number changes, the "best" new API in a

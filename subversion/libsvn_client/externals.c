@@ -54,8 +54,6 @@ struct handle_external_item_change_baton
   /* Passed through to svn_client_* functions. */
   svn_client_ctx_t *ctx;
 
-  /* If set, then run update on items that didn't change. */
-  svn_boolean_t update_unchanged;
   svn_boolean_t *timestamp_sleep;
   svn_boolean_t is_export;
 
@@ -68,32 +66,6 @@ struct handle_external_item_change_baton
      outlive the hash diffing callback! */
   apr_pool_t *iter_pool;
 };
-
-
-/* Return true if NEW_ITEM and OLD_ITEM represent the same external
-   item at the same revision checked out into the same target subdir,
-   else return false.
-
-   ### If this returned the nature of the difference, we could use it
-   to update externals more efficiently.  For example, if we know
-   that only the revision number changed, but the target URL did not,
-   we could get away with an "update -r" on the external, instead of
-   a re-checkout. */
-static svn_boolean_t
-compare_external_items(svn_wc_external_item2_t *new_item,
-                       svn_wc_external_item2_t *old_item)
-{
-  if ((strcmp(new_item->target_dir, old_item->target_dir) != 0)
-      || (strcmp(new_item->url, old_item->url) != 0)
-      || (! svn_client__compare_revisions(&(new_item->revision),
-                                          &(old_item->revision)))
-      || (! svn_client__compare_revisions(&(new_item->peg_revision),
-                                          &(old_item->peg_revision))))
-    return FALSE;
-
-  /* Else. */
-  return TRUE;
-}
 
 
 /* Remove PATH from revision control, and do the same to any revision
@@ -112,7 +84,7 @@ relegate_external(const char *path,
                   void *cancel_baton,
                   apr_pool_t *pool)
 {
-  svn_error_t *err;
+  svn_error_t *err = SVN_NO_ERROR;
   svn_wc_adm_access_t *adm_access;
 
   SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, path, TRUE, -1, cancel_func,
@@ -133,6 +105,7 @@ relegate_external(const char *path,
       const char *new_path;
 
       svn_error_clear(err);
+      err = SVN_NO_ERROR;
 
       /* Reserve the new dir name. */
       SVN_ERR(svn_io_open_unique_file2
@@ -159,14 +132,13 @@ relegate_external(const char *path,
       err = svn_io_remove_file(new_path, pool);
       svn_error_clear(err);  /* It's not clear why this is ignored, is
                                  it because the rename will catch it? */
+      err = SVN_NO_ERROR;
 
       /* Rename. */
       SVN_ERR(svn_io_file_rename(path, new_path, pool));
     }
-  else if (err)
-    return err;
 
-  return SVN_NO_ERROR;
+  return err;
 }
 
 /* Try to update an external PATH to URL at REVISION.
@@ -287,13 +259,11 @@ switch_external(const char *path,
     }
 
   /* ... Hello, new hotness. */
-  SVN_ERR(svn_client__checkout_internal(NULL, url, path, peg_revision,
-                                        revision,
-                                        SVN_DEPTH_INFINITY_OR_FILES(TRUE),
-                                        FALSE, FALSE, timestamp_sleep,
-                                        ctx, pool));
-
-  return SVN_NO_ERROR;
+  return svn_client__checkout_internal(NULL, url, path, peg_revision,
+                                       revision,
+                                       SVN_DEPTH_INFINITY_OR_FILES(TRUE),
+                                       FALSE, FALSE, timestamp_sleep,
+                                       ctx, pool);
 }
 
 /* Return the scheme of @a uri in @a scheme allocated from @a pool.
@@ -630,8 +600,7 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
       /* ### If there were multiple path components leading down to
          that wc, we could try to remove them too. */
     }
-  else if (! compare_external_items(new_item, old_item)
-           || ib->update_unchanged)
+  else
     {
       /* Either the URL changed, or the exact same item is present in
          both hashes, and caller wants to update such unchanged items.
@@ -674,7 +643,6 @@ struct handle_externals_desc_change_baton
   /* Passed through to handle_external_item_change_baton. */
   svn_client_ctx_t *ctx;
   const char *repos_root_url;
-  svn_boolean_t update_unchanged;
   svn_boolean_t *timestamp_sleep;
   svn_boolean_t is_export;
 
@@ -691,7 +659,7 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
                              void *baton)
 {
   struct handle_externals_desc_change_baton *cb = baton;
-  struct handle_external_item_change_baton ib;
+  struct handle_external_item_change_baton ib = { 0 };
   const char *old_desc_text, *new_desc_text;
   apr_array_header_t *old_desc, *new_desc;
   apr_hash_t *old_desc_hash, *new_desc_hash;
@@ -766,7 +734,6 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
   ib.parent_dir        = (const char *) key;
   ib.repos_root_url    = cb->repos_root_url;
   ib.ctx               = cb->ctx;
-  ib.update_unchanged  = cb->update_unchanged;
   ib.is_export         = cb->is_export;
   ib.timestamp_sleep   = cb->timestamp_sleep;
   ib.pool              = cb->pool;
@@ -826,13 +793,12 @@ svn_client__handle_externals(svn_wc_traversal_info_t *traversal_info,
                              const char *to_path,
                              const char *repos_root_url,
                              svn_depth_t requested_depth,
-                             svn_boolean_t update_unchanged,
                              svn_boolean_t *timestamp_sleep,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *pool)
 {
   apr_hash_t *externals_old, *externals_new, *ambient_depths;
-  struct handle_externals_desc_change_baton cb;
+  struct handle_externals_desc_change_baton cb = { 0 };
 
   svn_wc_edited_externals(&externals_old, &externals_new, traversal_info);
   svn_wc_traversed_depths(&ambient_depths, traversal_info);
@@ -850,15 +816,12 @@ svn_client__handle_externals(svn_wc_traversal_info_t *traversal_info,
   cb.to_path           = to_path;
   cb.repos_root_url    = repos_root_url;
   cb.ctx               = ctx;
-  cb.update_unchanged  = update_unchanged;
   cb.timestamp_sleep   = timestamp_sleep;
   cb.is_export         = FALSE;
   cb.pool              = pool;
 
-  SVN_ERR(svn_hash_diff(cb.externals_old, cb.externals_new,
-                        handle_externals_desc_change, &cb, pool));
-
-  return SVN_NO_ERROR;
+  return svn_hash_diff(cb.externals_old, cb.externals_new,
+                       handle_externals_desc_change, &cb, pool);
 }
 
 
@@ -873,7 +836,7 @@ svn_client__fetch_externals(apr_hash_t *externals,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool)
 {
-  struct handle_externals_desc_change_baton cb;
+  struct handle_externals_desc_change_baton cb = { 0 };
 
   cb.externals_new     = externals;
   cb.externals_old     = apr_hash_make(pool);
@@ -883,21 +846,18 @@ svn_client__fetch_externals(apr_hash_t *externals,
   cb.from_url          = from_url;
   cb.to_path           = to_path;
   cb.repos_root_url    = repos_root_url;
-  cb.update_unchanged  = TRUE;
   cb.timestamp_sleep   = timestamp_sleep;
   cb.is_export         = is_export;
   cb.pool              = pool;
 
-  SVN_ERR(svn_hash_diff(cb.externals_old, cb.externals_new,
-                        handle_externals_desc_change, &cb, pool));
-
-  return SVN_NO_ERROR;
+  return svn_hash_diff(cb.externals_old, cb.externals_new,
+                       handle_externals_desc_change, &cb, pool);
 }
 
 
 svn_error_t *
 svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
-                               svn_wc_status_func2_t status_func,
+                               svn_wc_status_func3_t status_func,
                                void *status_baton,
                                svn_depth_t depth,
                                svn_boolean_t get_all,
@@ -969,7 +929,7 @@ svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
                                     iterpool), iterpool);
 
           /* And then do the status. */
-          SVN_ERR(svn_client_status3(NULL, fullpath,
+          SVN_ERR(svn_client_status4(NULL, fullpath,
                                      &(external->revision),
                                      status_func, status_baton,
                                      depth, get_all, update,

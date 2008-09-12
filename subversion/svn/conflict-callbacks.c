@@ -3,7 +3,7 @@
  * commandline client.
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -80,6 +80,8 @@ svn_cl__accept_from_word(const char *word)
 }
 
 
+/* Print on stdout a diff between the 'base' and 'merged' files, if both of
+ * those are available, else between 'their' and 'my' files, of DESC. */
 static svn_error_t *
 show_diff(const svn_wc_conflict_description_t *desc,
           apr_pool_t *pool)
@@ -108,16 +110,19 @@ show_diff(const svn_wc_conflict_description_t *desc,
   SVN_ERR(svn_stream_for_stdout(&output, pool));
   SVN_ERR(svn_diff_file_diff_2(&diff, path1, path2,
                                options, pool));
-  SVN_ERR(svn_diff_file_output_unified2(output, diff,
+  SVN_ERR(svn_diff_file_output_unified3(output, diff,
                                         path1, path2,
                                         NULL, NULL,
                                         APR_LOCALE_CHARSET,
+                                        NULL, FALSE,
                                         pool));
 
   return SVN_NO_ERROR;
 }
 
 
+/* Print on stdout just the conflict hunks of a diff among the 'base', 'their'
+ * and 'my' files of DESC. */
 static svn_error_t *
 show_conflicts(const svn_wc_conflict_description_t *desc,
                apr_pool_t *pool)
@@ -151,6 +156,15 @@ show_conflicts(const svn_wc_conflict_description_t *desc,
 }
 
 
+/* Run an external editor, passing it the 'merged' file in DESC, or, if the
+ * 'merged' file is null, return an error. The tool to use is determined by
+ * B->editor_cmd, B->config and environment variables; see
+ * svn_cl__edit_file_externally() for details.
+ *
+ * If the tool runs, set *PERFORMED_EDIT to true; if a tool is not
+ * configured or cannot run, do not touch *PERFORMED_EDIT, report the error
+ * on stderr, and return SVN_NO_ERROR; if any other error is encountered,
+ * return that error. */
 static svn_error_t *
 open_editor(svn_boolean_t *performed_edit,
             const svn_wc_conflict_description_t *desc,
@@ -191,6 +205,14 @@ open_editor(svn_boolean_t *performed_edit,
 }
 
 
+/* Run an external merge tool, passing it the 'base', 'their', 'my' and
+ * 'merged' files in DESC. The tool to use is determined by B->config and
+ * environment variables; see svn_cl__merge_file_externally() for details.
+ *
+ * If the tool runs, set *PERFORMED_EDIT to true; if a tool is not
+ * configured or cannot run, do not touch *PERFORMED_EDIT, report the error
+ * on stderr, and return SVN_NO_ERROR; if any other error is encountered,
+ * return that error.  */
 static svn_error_t *
 launch_resolver(svn_boolean_t *performed_edit,
                 const svn_wc_conflict_description_t *desc,
@@ -393,8 +415,8 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
 
               if (desc->my_file)
                 {
-                  SVN_ERR(svn_stringbuf_from_file(&myval, desc->my_file,
-                                                  subpool));
+                  SVN_ERR(svn_stringbuf_from_file2(&myval, desc->my_file,
+                                                   subpool));
                   SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
                         _("They want to delete the property, "
                           "you want to change the value to '%s'.\n"),
@@ -402,8 +424,8 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                 }
               else
                 {
-                  SVN_ERR(svn_stringbuf_from_file(&theirval, desc->their_file,
-                                                  subpool));
+                  SVN_ERR(svn_stringbuf_from_file2(&theirval, desc->their_file,
+                                                   subpool));
                   SVN_ERR(svn_cmdline_fprintf(stderr, subpool,
                         _("They want to change the property value to '%s', "
                           "you want to delete the property.\n"),

@@ -6,6 +6,7 @@ http://svn.collab.net/repos/svn/tags/1.6.0
   - Major new features:
 
   - Minor new features and improvements:
+    * pre-lock hook can now specify lock tokens via stdout (r32778)
 
   - Client-side bugfixes:
 
@@ -21,16 +22,34 @@ http://svn.collab.net/repos/svn/tags/1.6.0
 
 
 Version 1.5.2
-(24 Jul 2008, from /branches/1.5.x)
+(29 Aug 2008, from /branches/1.5.x)
 http://svn.collab.net/repos/svn/tags/1.5.2
 
  User-visible changes:
-  * set correct permissions on created fsfs shards (r32355, -7)
+  * Set correct permissions on created fsfs shards (r32355, -7)
+  * Pass client capabilities to start-commit hook (issue #3255)
+  * Disallow creating nested repositories (issue #3269)
+  * Support Neon 0.28.3
+  * Properly canonicalize URIs with an empty hostname (issue #2116)
+  * Improved merge performance for superfluous ranges (r32643)
+  * Better error message for 'Malformed URL for repository' (r31867, r32365)
+  * Improved svn:externals parsing (r32672, -673, -674, -739)
   * fixed: improper ordering in 'svnlook diff' output (r32019)
   * fixed: mod_dav_svn memory leak with 'SVNPathAuthz short_circuit' (r32360)
   * fixed: duplicate svn:externals targets fail on co/up (issue #3246)
+  * fixed: 'svn merge --depth' inconsistencies (issue #2825)
+  * fixed: ra_serf test failures (1.5.x-ra_serf-backports branch)
+  * fixed: memory leak and crashes in FS (r32545, -58, -82)
+  * fixed: core dump with relative externals (issue #3237)
+  * fixed: 'svn copy' working copy corruption (r32467, -70)
+  * fixed: perl bindings errors in non-English locale (issue #3258)
+  * fixed: 'svn merge' incorrectly reverses previous merges (r32494, -522, -523)
+  * fixed: 'svn merge' errors with subtree mergeinfo (issue #3067)
 
  Developer-visible changes:
+  * make libsvn_ra_neon initialization thread-safe (r32497, r32510)
+  * respect LDFLAGS in Swig bindings (r32416, r32421, r32442)
+  * fixed: test failures in non-English locales (r32491)
 
 
 Version 1.5.1

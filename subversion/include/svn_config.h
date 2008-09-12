@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -172,9 +172,10 @@ typedef struct svn_config_t svn_config_t;
  * svn_config_t * items representing the configuration values for that
  * category.
  */
-svn_error_t *svn_config_get_config(apr_hash_t **cfg_hash,
-                                   const char *config_dir,
-                                   apr_pool_t *pool);
+svn_error_t *
+svn_config_get_config(apr_hash_t **cfg_hash,
+                      const char *config_dir,
+                      apr_pool_t *pool);
 
 
 /** Read configuration data from @a file (a file or registry path) into
@@ -183,10 +184,11 @@ svn_error_t *svn_config_get_config(apr_hash_t **cfg_hash,
  * If @a file does not exist, then if @a must_exist, return an error,
  * otherwise return an empty @c svn_config_t.
  */
-svn_error_t *svn_config_read(svn_config_t **cfgp,
-                             const char *file,
-                             svn_boolean_t must_exist,
-                             apr_pool_t *pool);
+svn_error_t *
+svn_config_read(svn_config_t **cfgp,
+                const char *file,
+                svn_boolean_t must_exist,
+                apr_pool_t *pool);
 
 /** Like svn_config_read(), but merges the configuration data from @a file
  * (a file or registry path) into @a *cfg, which was previously returned
@@ -194,9 +196,10 @@ svn_error_t *svn_config_read(svn_config_t **cfgp,
  * expansions in @a cfg, so that the next svn_config_get() takes the
  * modifications into account.
  */
-svn_error_t *svn_config_merge(svn_config_t *cfg,
-                              const char *file,
-                              svn_boolean_t must_exist);
+svn_error_t *
+svn_config_merge(svn_config_t *cfg,
+                 const char *file,
+                 svn_boolean_t must_exist);
 
 
 /** Find the value of a (@a section, @a option) pair in @a cfg, set @a
@@ -212,9 +215,12 @@ svn_error_t *svn_config_merge(svn_config_t *cfg,
  *
  * This function may change @a cfg by expanding option values.
  */
-void svn_config_get(svn_config_t *cfg, const char **valuep,
-                    const char *section, const char *option,
-                    const char *default_value);
+void
+svn_config_get(svn_config_t *cfg,
+               const char **valuep,
+               const char *section,
+               const char *option,
+               const char *default_value);
 
 /** Add or replace the value of a (@a section, @a option) pair in @a cfg with
  * @a value.
@@ -223,9 +229,11 @@ void svn_config_get(svn_config_t *cfg, const char **valuep,
  *
  * To remove an option, pass NULL for the @c value.
  */
-void svn_config_set(svn_config_t *cfg,
-                    const char *section, const char *option,
-                    const char *value);
+void
+svn_config_set(svn_config_t *cfg,
+               const char *section,
+               const char *option,
+               const char *value);
 
 /** Like svn_config_get(), but for boolean values.
  *
@@ -233,17 +241,22 @@ void svn_config_set(svn_config_t *cfg,
  * are 'TRUE'/'FALSE', 'yes'/'no', 'on'/'off', '1'/'0'; case does not
  * matter. Returns an error if the option doesn't contain a known string.
  */
-svn_error_t *svn_config_get_bool(svn_config_t *cfg, svn_boolean_t *valuep,
-                                 const char *section, const char *option,
-                                 svn_boolean_t default_value);
+svn_error_t *
+svn_config_get_bool(svn_config_t *cfg,
+                    svn_boolean_t *valuep,
+                    const char *section,
+                    const char *option,
+                    svn_boolean_t default_value);
 
 /** Like svn_config_set(), but for boolean values.
  *
  * Sets the option to 'TRUE'/'FALSE', depending on @a value.
  */
-void svn_config_set_bool(svn_config_t *cfg,
-                         const char *section, const char *option,
-                         svn_boolean_t value);
+void
+svn_config_set_bool(svn_config_t *cfg,
+                    const char *section,
+                    const char *option,
+                    svn_boolean_t value);
 
 /** Like svn_config_get(), but only for yes/no/ask values.
  *
@@ -262,8 +275,10 @@ void svn_config_set_bool(svn_config_t *cfg,
  * @since New in 1.6.
  */
 svn_error_t *
-svn_config_get_yes_no_ask(svn_config_t *cfg, const char **valuep,
-                          const char *section, const char *option,
+svn_config_get_yes_no_ask(svn_config_t *cfg,
+                          const char **valuep,
+                          const char *section,
+                          const char *option,
                           const char* default_value);
 
 /** Similar to @c svn_config_section_enumerator2_t, but is not
@@ -281,9 +296,11 @@ typedef svn_boolean_t (*svn_config_section_enumerator_t)(const char *name,
  *
  * @deprecated Provided for backwards compatibility with the 1.2 API.
  */
-int svn_config_enumerate_sections(svn_config_t *cfg,
-                                  svn_config_section_enumerator_t callback,
-                                  void *baton);
+SVN_DEPRECATED
+int
+svn_config_enumerate_sections(svn_config_t *cfg,
+                              svn_config_section_enumerator_t callback,
+                              void *baton);
 
 /** A callback function used in enumerating config sections.
  *
@@ -306,9 +323,10 @@ typedef svn_boolean_t (*svn_config_section_enumerator2_t)(const char *name,
  *
  * @since New in 1.3.
  */
-int svn_config_enumerate_sections2(svn_config_t *cfg,
-                                   svn_config_section_enumerator2_t callback,
-                                   void *baton, apr_pool_t *pool);
+int
+svn_config_enumerate_sections2(svn_config_t *cfg,
+                               svn_config_section_enumerator2_t callback,
+                               void *baton, apr_pool_t *pool);
 
 /** Similar to @c svn_config_enumerator2_t, but is not
  * provided with a memory pool argument.
@@ -325,8 +343,12 @@ typedef svn_boolean_t (*svn_config_enumerator_t)(const char *name,
  *
  * @deprecated Provided for backwards compatibility with the 1.2 API.
  */
-int svn_config_enumerate(svn_config_t *cfg, const char *section,
-                         svn_config_enumerator_t callback, void *baton);
+SVN_DEPRECATED
+int
+svn_config_enumerate(svn_config_t *cfg,
+                     const char *section,
+                     svn_config_enumerator_t callback,
+                     void *baton);
 
 
 /** A callback function used in enumerating config options.
@@ -358,25 +380,32 @@ typedef svn_boolean_t (*svn_config_enumerator2_t)(const char *name,
  *
  * @since New in 1.3.
  */
-int svn_config_enumerate2(svn_config_t *cfg, const char *section,
-                          svn_config_enumerator2_t callback, void *baton,
-                          apr_pool_t *pool);
+int
+svn_config_enumerate2(svn_config_t *cfg,
+                      const char *section,
+                      svn_config_enumerator2_t callback,
+                      void *baton,
+                      apr_pool_t *pool);
 
 /**
  * Return @c TRUE if @a section exists in @a cfg, @c FALSE otherwise.
  *
  * @since New in 1.4.
  */
-svn_boolean_t svn_config_has_section(svn_config_t *cfg, const char *section);
+svn_boolean_t
+svn_config_has_section(svn_config_t *cfg,
+                       const char *section);
 
 /** Enumerate the group @a master_section in @a cfg.  Each variable
  * value is interpreted as a list of glob patterns (separated by comma
  * and optional whitespace).  Return the name of the first variable
  * whose value matches @a key, or @c NULL if no variable matches.
  */
-const char *svn_config_find_group(svn_config_t *cfg, const char *key,
-                                  const char *master_section,
-                                  apr_pool_t *pool);
+const char *
+svn_config_find_group(svn_config_t *cfg,
+                      const char *key,
+                      const char *master_section,
+                      apr_pool_t *pool);
 
 /** Retrieve value corresponding to @a option_name in @a cfg, or
  *  return @a default_value if none is found.
@@ -386,10 +415,11 @@ const char *svn_config_find_group(svn_config_t *cfg, const char *key,
  *  for an override in a server group,
  *
  */
-const char *svn_config_get_server_setting(svn_config_t *cfg,
-                                          const char* server_group,
-                                          const char* option_name,
-                                          const char* default_value);
+const char *
+svn_config_get_server_setting(svn_config_t *cfg,
+                              const char* server_group,
+                              const char* option_name,
+                              const char* default_value);
 
 /** Retrieve value into @a result_value corresponding to @a option_name for a
  *  given @a server_group in @a cfg, or return @a default_value if none is
@@ -399,12 +429,13 @@ const char *svn_config_get_server_setting(svn_config_t *cfg,
  *  an override in a server group. If the value found is not a valid integer,
  *  a @c svn_error_t* will be returned.
  */
-svn_error_t *svn_config_get_server_setting_int(svn_config_t *cfg,
-                                               const char *server_group,
-                                               const char *option_name,
-                                               apr_int64_t default_value,
-                                               apr_int64_t *result_value,
-                                               apr_pool_t *pool);
+svn_error_t *
+svn_config_get_server_setting_int(svn_config_t *cfg,
+                                  const char *server_group,
+                                  const char *option_name,
+                                  apr_int64_t default_value,
+                                  apr_int64_t *result_value,
+                                  apr_pool_t *pool);
 
 
 /** Set @a *valuep according to @a option_name for a given
@@ -417,11 +448,12 @@ svn_error_t *svn_config_get_server_setting_int(svn_config_t *cfg,
  *
  * @since New in 1.6.
  */
-svn_error_t *svn_config_get_server_setting_bool(svn_config_t *cfg,
-                                                svn_boolean_t *valuep,
-                                                const char *server_group,
-                                                const char *option_name,
-                                                svn_boolean_t default_value);
+svn_error_t *
+svn_config_get_server_setting_bool(svn_config_t *cfg,
+                                   svn_boolean_t *valuep,
+                                   const char *server_group,
+                                   const char *option_name,
+                                   svn_boolean_t default_value);
 
 
 
@@ -439,7 +471,9 @@ svn_error_t *svn_config_get_server_setting_bool(svn_config_t *cfg,
  * However, if creating a config template file succeeds, return an
  * error if unable to initialize its contents.
  */
-svn_error_t *svn_config_ensure(const char *config_dir, apr_pool_t *pool);
+svn_error_t *
+svn_config_ensure(const char *config_dir,
+                  apr_pool_t *pool);
 
 
 
@@ -471,11 +505,12 @@ svn_error_t *svn_config_ensure(const char *config_dir, apr_pool_t *pool);
  * The hashtable will contain <tt>const char *</tt> keys and
  * <tt>svn_string_t *</tt> values.
  */
-svn_error_t * svn_config_read_auth_data(apr_hash_t **hash,
-                                        const char *cred_kind,
-                                        const char *realmstring,
-                                        const char *config_dir,
-                                        apr_pool_t *pool);
+svn_error_t *
+svn_config_read_auth_data(apr_hash_t **hash,
+                          const char *cred_kind,
+                          const char *realmstring,
+                          const char *config_dir,
+                          apr_pool_t *pool);
 
 /** Use @a cred_kind and @a realmstring to create or overwrite a file
  * within the ~/.subversion/auth/ area.  Write the contents of @a hash into
@@ -489,11 +524,12 @@ svn_error_t * svn_config_read_auth_data(apr_hash_t **hash,
  * The hashtable must contain <tt>const char *</tt> keys and
  * <tt>svn_string_t *</tt> values.
  */
-svn_error_t * svn_config_write_auth_data(apr_hash_t *hash,
-                                         const char *cred_kind,
-                                         const char *realmstring,
-                                         const char *config_dir,
-                                         apr_pool_t *pool);
+svn_error_t *
+svn_config_write_auth_data(apr_hash_t *hash,
+                           const char *cred_kind,
+                           const char *realmstring,
+                           const char *config_dir,
+                           apr_pool_t *pool);
 
 /** Put the absolute path to the user's configuration directory,
  * or to a file within that directory, into @a *path.

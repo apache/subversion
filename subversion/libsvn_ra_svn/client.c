@@ -27,7 +27,6 @@
 #include <apr_network_io.h>
 #include <apr_md5.h>
 #include <apr_uri.h>
-#include <assert.h>
 
 #include "svn_types.h"
 #include "svn_string.h"

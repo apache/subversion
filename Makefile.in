@@ -65,6 +65,7 @@ includedir = @includedir@
 mandir = @mandir@
 srcdir = @srcdir@
 datadir = @datadir@
+datarootdir = @datarootdir@
 localedir = @localedir@
 
 # where to install libsvn_swig_*
@@ -328,9 +329,10 @@ fast-clean: doc-clean
 # clean all but bulky test output, returning to before './configure' was run.
 SVN_CONFIG_SCRIPT_FILES = @SVN_CONFIG_SCRIPT_FILES@
 fast-distclean: fast-clean
-	rm -f Makefile config.cache config.log config.nice config.status \
+	rm -fr Makefile config.cache config.log config.nice config.status \
 	libtool mkmf.log subversion/svn_private_config.h \
-              $(SVN_CONFIG_SCRIPT_FILES)
+	subversion/bindings/javahl/classes subversion/bindings/javahl/include \
+	$(SVN_CONFIG_SCRIPT_FILES)
 
 # clean everything out, returning to before './autogen.sh' was run.
 local-extraclean: local-distclean extraclean-swig
@@ -402,10 +404,10 @@ check: bin $(TEST_DEPS) @BDB_TEST_DEPS@
 	  if test "$(PARALLEL)" != ""; then                                  \
 	    flags="--parallel $$flags";                                      \
 	  fi;                                                                \
-	  $(PYTHON) $(top_srcdir)/build/run_tests.py			     \
+	  $(PYTHON) $(top_srcdir)/build/run_tests.py                         \
 	            --config-file $(top_srcdir)/subversion/tests/tests.conf  \
-	            $$flags                 				     \
-		    '$(abs_srcdir)' '$(abs_builddir)' $(TESTS);              \
+	            $$flags                                                  \
+	            '$(abs_srcdir)' '$(abs_builddir)' $(TESTS);              \
 	else                                                                 \
 	  echo "make check: Python 2.2 or greater is required,";             \
 	  echo "            but was not detected during configure";          \

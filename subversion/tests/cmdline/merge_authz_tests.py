@@ -31,7 +31,6 @@ Skip = svntest.testcase.Skip
 SkipUnless = svntest.testcase.SkipUnless
 
 from merge_tests import set_up_branch
-from merge_tests import shorten_path_kludge
 
 from svntest.main import SVN_PROP_MERGEINFO
 from svntest.main import write_restrictive_svnserve_conf
@@ -120,21 +119,17 @@ def mergeinfo_and_skipped_paths(sbox):
 
   # Merge r4:8 into the restricted WC's A_COPY.
   #
-  # Search for the comment entitled "The Merge Kluge" elsewhere in
-  # this file, to understand why we shorten and chdir() below.
-  #
   # We expect A_COPY/B/E to be skipped because we can't access the source
   # and A_COPY/D/H/omega because it is missing.  Since we have A_COPY/B/E
   # we should override it's inherited mergeinfo, giving it just what it
   # inherited from A_COPY before the merge.  omega is missing, but since
   # it is a file we can record the fact that it is missing in its parent
   # directory A_COPY/D/H.
-  short_path = shorten_path_kludge(A_COPY_path)
-  expected_output = wc.State(short_path, {
+  expected_output = wc.State(A_COPY_path, {
     'D/G/rho'   : Item(status='U '),
     'D/H/psi'   : Item(status='U '),
     })
-  expected_status = wc.State(short_path, {
+  expected_status = wc.State(A_COPY_path, {
     ''          : Item(status=' M', wc_rev=8),
     'D/H/chi'   : Item(status='  ', wc_rev=8),
     'D/H/psi'   : Item(status='M ', wc_rev=8),
@@ -178,13 +173,12 @@ def mergeinfo_and_skipped_paths(sbox):
     'mu'        : Item("This is the file 'mu'.\n"),
     'C'         : Item(),
     })
-  expected_skip = wc.State(short_path, {
+  expected_skip = wc.State(A_COPY_path, {
     'D/H/omega' : Item(),
     'B/E'       : Item(),
     })
   saved_cwd = os.getcwd()
-  os.chdir(svntest.main.work_dir)
-  svntest.actions.run_and_verify_merge(short_path, '4', '8',
+  svntest.actions.run_and_verify_merge(A_COPY_path, '4', '8',
                                        sbox.repo_url + \
                                        '/A',
                                        expected_output,
@@ -193,14 +187,10 @@ def mergeinfo_and_skipped_paths(sbox):
                                        expected_skip,
                                        None, None, None, None,
                                        None, 1)
-  os.chdir(saved_cwd)
 
   # Manually check the props on A_COPY/D/H/omega.
-  svntest.actions.run_and_verify_svn(None,
-                                     ["Properties on '" + omega_path + "':\n",
-                                      '  ' + SVN_PROP_MERGEINFO + ' : ' +
-                                      '\n'],
-                                     [], 'pl', '-vR', omega_path)
+  svntest.actions.run_and_verify_svn(None, ['\n'], [],
+                                    'pg', SVN_PROP_MERGEINFO, omega_path)
 
   # Merge r4:8 into the restricted WC's A_COPY_2.
   #
@@ -215,11 +205,10 @@ def mergeinfo_and_skipped_paths(sbox):
   # get their own mergeinfo.  Note that A_COPY_2/D/H is both the parent of
   # a missing child and the sibling of missing child, but the former always
   # takes precedence in terms of getting *non*-inheritable mergeinfo.
-  short_path = shorten_path_kludge(A_COPY_2_path)
-  expected_output = wc.State(short_path, {
+  expected_output = wc.State(A_COPY_2_path, {
     'D/H/omega' : Item(status='U '),
     })
-  expected_status = wc.State(short_path, {
+  expected_status = wc.State(A_COPY_2_path, {
     ''          : Item(status=' M', wc_rev=8),
     'D/H/chi'   : Item(status=' M', wc_rev=8),
     'D/H/omega' : Item(status='MM', wc_rev=8),
@@ -254,15 +243,14 @@ def mergeinfo_and_skipped_paths(sbox):
     'mu'        : Item("This is the file 'mu'.\n"),
     'C'         : Item(),
     })
-  expected_skip = wc.State(short_path, {
+  expected_skip = wc.State(A_COPY_2_path, {
     'D/G'     : Item(),
     'D/G/rho' : Item(),
     'D/H/psi' : Item(),
     'B/E'     : Item(),
     })
   saved_cwd = os.getcwd()
-  os.chdir(svntest.main.work_dir)
-  svntest.actions.run_and_verify_merge(short_path, '4', '8',
+  svntest.actions.run_and_verify_merge(A_COPY_2_path, '4', '8',
                                        sbox.repo_url + \
                                        '/A',
                                        expected_output,
@@ -271,7 +259,6 @@ def mergeinfo_and_skipped_paths(sbox):
                                        expected_skip,
                                        None, None, None, None,
                                        None, 1, 0)
-  os.chdir(saved_cwd)
 
   # Merge r5:7 into the restricted WC's A_COPY_3.
   #
@@ -279,11 +266,10 @@ def mergeinfo_and_skipped_paths(sbox):
   # source *or* the destination we expect its parent A_COPY_3/B to get
   # non-inheritable mergeinfo and its two existing siblings, A_COPY_3/B/F
   # and A_COPY_3/B/lambda to get their own mergeinfo.
-  short_path = shorten_path_kludge(A_COPY_3_path)
-  expected_output = wc.State(short_path, {
+  expected_output = wc.State(A_COPY_3_path, {
     'D/G/rho' : Item(status='U '),
     })
-  expected_status = wc.State(short_path, {
+  expected_status = wc.State(A_COPY_3_path, {
     ''          : Item(status=' M', wc_rev=8),
     'D/H/chi'   : Item(status='  ', wc_rev=8),
     'D/H/omega' : Item(status='  ', wc_rev=8),
@@ -320,10 +306,9 @@ def mergeinfo_and_skipped_paths(sbox):
     'mu'        : Item("This is the file 'mu'.\n"),
     'C'         : Item(),
     })
-  expected_skip = wc.State(short_path, {'B/E' : Item()})
+  expected_skip = wc.State(A_COPY_3_path, {'B/E' : Item()})
   saved_cwd = os.getcwd()
-  os.chdir(svntest.main.work_dir)
-  svntest.actions.run_and_verify_merge(short_path, '5', '7',
+  svntest.actions.run_and_verify_merge(A_COPY_3_path, '5', '7',
                                        sbox.repo_url + \
                                        '/A',
                                        expected_output,
@@ -332,7 +317,6 @@ def mergeinfo_and_skipped_paths(sbox):
                                        expected_skip,
                                        None, None, None, None,
                                        None, 1, 0)
-  os.chdir(saved_cwd)
   svntest.actions.run_and_verify_svn(None, None, [], 'revert', '--recursive',
                                      wc_restricted)
 
@@ -343,11 +327,10 @@ def mergeinfo_and_skipped_paths(sbox):
   # Merge -c5 -c8 to the restricted WC's A_COPY_2/D/H.  r5 gets merged first
   # but is a no-op, r8 get's merged next and is operative so the mergeinfo
   # should be updated to reflect both merges.
-  short_path = shorten_path_kludge(A_COPY_2_H_path)
-  expected_output = wc.State(short_path, {
+  expected_output = wc.State(A_COPY_2_H_path, {
     'omega' : Item(status='U '),
     })
-  expected_status = wc.State(short_path, {
+  expected_status = wc.State(A_COPY_2_H_path, {
     ''      : Item(status=' M', wc_rev=8),
     'chi'   : Item(status=' M', wc_rev=8),
     'omega' : Item(status='MM', wc_rev=8),
@@ -359,10 +342,9 @@ def mergeinfo_and_skipped_paths(sbox):
     'chi'   : Item("This is the file 'chi'.\n",
                    props={SVN_PROP_MERGEINFO : '/A/D/H/chi:5,8'}),
     })
-  expected_skip = wc.State(short_path, {'psi' : Item()})
+  expected_skip = wc.State(A_COPY_2_H_path, {'psi' : Item()})
   saved_cwd = os.getcwd()
-  os.chdir(svntest.main.work_dir)
-  svntest.actions.run_and_verify_merge(short_path, '4', '5',
+  svntest.actions.run_and_verify_merge(A_COPY_2_H_path, '4', '5',
                                        sbox.repo_url + \
                                        '/A/D/H',
                                        expected_output,
@@ -372,7 +354,6 @@ def mergeinfo_and_skipped_paths(sbox):
                                        None, None, None, None,
                                        None, 1, 0, '-c5', '-c8')
 
-  os.chdir(saved_cwd)
 
   # Test issue #2829 'Improve handling for skipped paths encountered
   # during a merge'
@@ -394,12 +375,11 @@ def mergeinfo_and_skipped_paths(sbox):
   # non-inheritable mergeinfo (due to the fact 'A_COPY_2/D/H/psi' is missing).
   # 'A_COPY_2/D/H/zeta' must therefore get its own explicit mergeinfo from
   # this merge.
-  short_path = shorten_path_kludge(A_COPY_2_H_path)
-  expected_output = wc.State(short_path, {
+  expected_output = wc.State(A_COPY_2_H_path, {
     'omega' : Item(status='U '),
     'zeta'  : Item(status='A '),
     })
-  expected_status = wc.State(short_path, {
+  expected_status = wc.State(A_COPY_2_H_path, {
     ''      : Item(status=' M', wc_rev=8),
     'chi'   : Item(status=' M', wc_rev=8),
     'omega' : Item(status='MM', wc_rev=8),
@@ -414,10 +394,9 @@ def mergeinfo_and_skipped_paths(sbox):
     'zeta'  : Item("This is the file 'zeta'.\n",
                    props={SVN_PROP_MERGEINFO : '/A/D/H/zeta:8-9'}),
     })
-  expected_skip = wc.State(short_path, {})
+  expected_skip = wc.State(A_COPY_2_H_path, {})
   saved_cwd = os.getcwd()
-  os.chdir(svntest.main.work_dir)
-  svntest.actions.run_and_verify_merge(short_path, '7', '9',
+  svntest.actions.run_and_verify_merge(A_COPY_2_H_path, '7', '9',
                                        sbox.repo_url + \
                                        '/A/D/H',
                                        expected_output,
@@ -426,7 +405,6 @@ def mergeinfo_and_skipped_paths(sbox):
                                        expected_skip,
                                        None, None, None, None,
                                        None, 1, 0)
-  os.chdir(saved_cwd)
 
 ########################################################################
 # Run the tests
