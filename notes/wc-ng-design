@@ -674,6 +674,10 @@ rather than the "loggy" mechanics of wc-1.0.
    re-downloading a potentially large amount of data again.  Seems like
    we still need to provide that capability.
 
+   ###GJS: sqlite transactions replace the atomicity that loggy was
+           originally designed for. it sounds like loggy is also be
+           used as a work queue, and that is easily handled in sqlite.
+
 Base text data will be stored in a multi-level directory structure,
 keyed/named by the MD5 of the file. The database will record
 appropriate mappings, content/compression types, and refcounts for the
