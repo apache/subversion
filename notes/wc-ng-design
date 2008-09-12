@@ -139,6 +139,13 @@ Requirements
    update obstructions used to leave the working copy unrecoverable
  * Client side 'true renames' support where one side can't be committed
    without the other (relates to issue #876)
+
+   ###JSS: Perhaps this is obvious... I think that requirement is fine for the
+      user doing the commit.  We still need to remember that another user doing
+      the update may not have authz permission to the directory it was renamed
+      into or may have a checkout of a sub-tree and that target directory may
+      not exist.  Likewise, the original location might be unavailable too.
+
  * Change detection should become entirely internal to libsvn_wc (referring
    to the fact that libsvn_client currently calls svn_wait_for_timestamps()),
    even though under 'use-commit-times=yes', this waiting is
@@ -427,6 +434,18 @@ in this document, or elsewhere in the subversion (source) tree:
  * File name comparison routines (!) (availability; which compensate
      for the different ways Unicode characters can be represented
      [re: NFC/NFD Unicode issue])
+
+   ###JSS: Talking with ehu on IRC when I asked him about how to handle this
+   issue: "if we accept that some repositories will be unusable with wc-ng,
+   then we can standardize anything that comes in from the server as well as
+   the directory side into the same encoding.  we'd be writing files with the
+   standardized encoding."  The rest of this conversation centered around the
+   fact that either APR or the OS will convert the filename to the correct
+   form for the filesystem when doing the stat() call.  Note, ehu says: "(we'll
+   need to retain the filename we got from the server though: we'll need it to
+   describe the file through the editor interface: the server still allows all
+   encodings.)"
+
  * URL manipulation routines (availability)
  * URL comparison routines (availability; which compensate for
      different ways the same URL can be encoded; see issue #2490)
@@ -638,6 +657,13 @@ rather than the "loggy" mechanics of wc-1.0.
    and/or batching of commits to get proper performance. thus, profile
    output capability is mandatory to determine if we have issues, and
    where they occur.
+
+###JSS: I don't see how transactions by themselves can replace loggy.
+   Right now, if you abort something like 'svn update' or 'svn checkout',
+   loggy has recorded all the files to be downloaded, and will pick up
+   where it left off.  We did this as an optimization to prevent
+   re-downloading a potentially large amount of data again.  Seems like
+   we still need to provide that capability.
 
 Base text data will be stored in a multi-level directory structure,
 keyed/named by the MD5 of the file. The database will record

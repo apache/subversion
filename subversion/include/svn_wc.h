@@ -2611,7 +2611,7 @@ typedef svn_error_t *(*svn_wc_status_func3_t)(void *baton,
 
 /**
  * Same as svn_wc_status_func3_t(), but without a provided pool or
- * the ability to propogate errors.
+ * the ability to propagate errors.
  *
  * @since New in 1.2.
  * @deprecated Provided for backward compatibility with the 1.5 API.

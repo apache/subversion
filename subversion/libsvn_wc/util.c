@@ -299,7 +299,7 @@ svn_wc_conflict_description_create_text(const char *path,
 {
   svn_wc_conflict_description_t *conflict;
 
-  conflict = apr_palloc(pool, sizeof(*conflict));
+  conflict = apr_pcalloc(pool, sizeof(*conflict));
   conflict->path = path;
   conflict->node_kind = svn_node_file;
   conflict->kind = svn_wc_conflict_kind_text;
@@ -318,7 +318,7 @@ svn_wc_conflict_description_create_prop(const char *path,
 {
   svn_wc_conflict_description_t *conflict;
 
-  conflict = apr_palloc(pool, sizeof(*conflict));
+  conflict = apr_pcalloc(pool, sizeof(*conflict));
   conflict->path = path;
   conflict->node_kind = node_kind;
   conflict->kind = svn_wc_conflict_kind_property;

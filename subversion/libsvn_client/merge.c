@@ -197,6 +197,18 @@ check_scheme_match(svn_wc_adm_access_t *adm_access, const char *url)
 
 /*** Repos-Diff Editor Callbacks ***/
 
+typedef struct merge_source_t
+{
+  /* "left" side URL and revision (inclusive iff youngest) */
+  const char *url1;
+  svn_revnum_t rev1;
+
+  /* "right" side URL and revision (inclusive iff youngest) */
+  const char *url2;
+  svn_revnum_t rev2;
+
+} merge_source_t;
+
 typedef struct merge_cmd_baton_t {
   svn_boolean_t force;
   svn_boolean_t dry_run;
@@ -220,7 +232,11 @@ typedef struct merge_cmd_baton_t {
                                          dir is added as a child of a
                                          versioned dir (dry-run only) */
   const char *target;                 /* Working copy target of merge */
-  const char *url;                    /* The second URL in the merge */
+
+  /* The left and right URLs and revs.  The value of this field changes to
+     reflect the merge_source_t *currently* being merged by do_merge(). */
+  merge_source_t merge_source;
+
   svn_client_ctx_t *ctx;              /* Client context for callbacks, etc. */
 
   /* Whether invocation of the merge_file_added() callback required
@@ -553,7 +569,7 @@ merge_props_changed(svn_wc_adm_access_t *adm_access,
     {
       int i;
 
-      /* svn_wc_merge_props() requires ADM_ACCESS to be the access for
+      /* svn_wc_merge_props2() requires ADM_ACCESS to be the access for
          the parent of PATH. Since the advent of merge tracking,
          do_directory_merge() may call this (indirectly) with
          the access for the merge_b->target instead (issue #2781).
@@ -564,9 +580,11 @@ merge_props_changed(svn_wc_adm_access_t *adm_access,
                                       TRUE, -1, ctx->cancel_func,
                                       ctx->cancel_baton, subpool));
 
-      /* Don't add mergeinfo from PATH's own history. */
-      SVN_ERR(filter_self_referential_mergeinfo(&props, path, merge_b,
-                                                adm_access, subpool));
+      /* If this is a forward merge then don't add new mergeinfo to
+         PATH that is already part of PATH's own history. */
+      if (merge_b->merge_source.rev1 < merge_b->merge_source.rev2)
+        SVN_ERR(filter_self_referential_mergeinfo(&props, path, merge_b,
+                                                  adm_access, subpool));
 
       err = svn_wc_merge_props2(state, path, adm_access, original_props, props,
                                 FALSE, merge_b->dry_run, ctx->conflict_func,
@@ -933,10 +951,10 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
                 const char *child = svn_path_is_child(merge_b->target,
                                                       mine, subpool);
                 if (child != NULL)
-                  copyfrom_url = svn_path_url_add_component(merge_b->url,
+                  copyfrom_url = svn_path_url_add_component(merge_b->merge_source.url2,
                                                             child, subpool);
                 else
-                  copyfrom_url = merge_b->url;
+                  copyfrom_url = merge_b->merge_source.url2;
                 copyfrom_rev = rev2;
                 SVN_ERR(check_scheme_match(adm_access, copyfrom_url));
               }
@@ -1201,7 +1219,8 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
      add. */
   if (merge_b->same_repos)
     {
-      copyfrom_url = svn_path_url_add_component(merge_b->url, child, subpool);
+      copyfrom_url = svn_path_url_add_component(merge_b->merge_source.url2,
+                                                child, subpool);
       copyfrom_rev = rev;
       SVN_ERR(check_scheme_match(adm_access, copyfrom_url));
     }
@@ -4220,18 +4239,6 @@ remove_noop_merge_ranges(apr_array_header_t **operative_ranges_p,
 
 /*** Merge Source Normalization ***/
 
-typedef struct merge_source_t
-{
-  /* "left" side URL and revision (inclusive iff youngest) */
-  const char *url1;
-  svn_revnum_t rev1;
-
-  /* "right" side URL and revision (inclusive iff youngest) */
-  const char *url2;
-  svn_revnum_t rev2;
-
-} merge_source_t;
-
 /* qsort-compatible sort routine, rating merge_source_t * objects to
    be in descending (youngest-to-oldest) order based on their ->rev1
    component. */
@@ -5858,7 +5865,7 @@ do_merge(apr_array_header_t *merge_sources,
 
       /* Populate the portions of the merge context baton that need to
          be reset for each merge source iteration. */
-      merge_cmd_baton.url = url2;
+      merge_cmd_baton.merge_source = *merge_source;
       merge_cmd_baton.added_path = NULL;
       merge_cmd_baton.add_necessitated_merge = FALSE;
       merge_cmd_baton.dry_run_deletions =
@@ -6533,10 +6540,12 @@ calculate_left_hand_side(const char **url_left,
          over and over. */
       /* We never merged to the source.  Just return the branch point. */
       const char *yc_ancestor_path,
-        *source_url = svn_path_join(source_repos_root, source_repos_rel_path,
-                                    subpool),
-        *target_url = svn_path_join(source_repos_root, target_repos_rel_path,
-                                    subpool);
+        *source_url = svn_path_url_add_component(source_repos_root,
+                                                 source_repos_rel_path,
+                                                 subpool),
+        *target_url = svn_path_url_add_component(source_repos_root,
+                                                 target_repos_rel_path,
+                                                 subpool);
 
       SVN_ERR(svn_client__get_youngest_common_ancestor(&yc_ancestor_path,
                                                        rev_left,
@@ -6548,7 +6557,8 @@ calculate_left_hand_side(const char **url_left,
                                  _("'%s@%ld' must be ancestrally related to "
                                    "'%s@%ld'"), source_url, source_rev,
                                  target_url, target_rev);
-      *url_left = svn_path_join(source_repos_root, yc_ancestor_path, pool);
+      *url_left = svn_path_url_add_component(source_repos_root,
+                                             yc_ancestor_path, pool);
       *source_mergeinfo_p = apr_hash_make(pool);
 
       svn_pool_destroy(subpool);

@@ -178,20 +178,30 @@ part of the repository admin.)</p>
 compatible between releases, new information sometimes has to be
 added.  This can break scripts that rely on the exact format of the
 output.  Unfortunately, we are not able to enumerate all of the output
-changes in 1.6, but one of them is that XXX.</p>
+changes in 1.6, but one of them is that the output of <code>svn proplist
+--verbose</code> was improved.</p>
 
-</div>  <!-- output-changes -->
-
-<div class="h3" id="proplist-verbose" title="proplist-verbose">
-<h3>Improved output of <code>svn proplist --verbose</code></h3>
+<div class="h4" id="proplist-verbose" title="proplist-verbose">
+<h4>Improved output of <code>svn proplist --verbose</code></h4>
 
 <p>XXX(r32484): The output of <code>svn proplist --verbose</code> has been
-improved. Support for <code>svn propget --verbose</code> has been added.</p>
+improved.</p>
 
-<pre>   $ svn propget --verbose
-   $ svn proplist --verbose</pre>
+<pre>
+   $ svn proplist --verbose build.conf
+   Properties on 'build.conf':
+     svn:eol-style
+       native
+     svn:mergeinfo
+       /trunk/build.conf:1-4800
+       /branches/a/build.conf:3000-3400
+       /branches/b/build.conf:3200-3600
+   $ 
+</pre>
 
 </div>  <!-- proplist-verbose -->
+
+</div>  <!-- output-changes -->
 
 </div>  <!-- compatibility -->
 
@@ -209,6 +219,28 @@ title="auth-related-improvements-plaintext-passwords">
 
 <p>Subversion prompts before storing passwords in plaintext form.</p>
 
+<p>Example:</p>
+
+<pre>
+   $ svn checkout https://www.example.com/repository/trunk repository_trunk
+   Authentication realm: &lt;https://www.example.com&gt; Example
+   Password for 'user':
+   -----------------------------------------------------------------------
+   ATTENTION!  Your password for authentication realm:
+
+      &lt;https://www.example.com&gt; Example
+
+   can only be stored to disk unencrypted!  You are advised to configure
+   your system so that Subversion can store passwords encrypted, if
+   possible.  See the documentation for details.
+
+   You can avoid future appearances of this warning by setting the value
+   of the 'store-plaintext-passwords' option to either 'yes' or 'no' in
+   '/home/user/.subversion/servers'.
+   -----------------------------------------------------------------------
+   Store password unencrypted (yes/no)?
+</pre>
+
 </div>  <!-- auth-related-improvements-plaintext-passwords -->
 
 <div class="h4" id="auth-related-improvements-kwallet-gnome-keyring"
@@ -224,7 +256,7 @@ title="auth-related-improvements-ssl-client-certificate-passphrases">
 <h4>Support for storing SSL client certificate passphrases</h4>
 
 <p>SSL client certificate passphrases can be stored in KWallet, GNOME
-Keyring or in plaintext form.</p>
+Keyring, Mac OS Keychain, or in plaintext form.</p>
 
 </div> <!-- auth-related-improvements-ssl-client-certificate-passphrases -->
 
@@ -371,7 +403,7 @@ for a complete list.</p>
 
 <p>The <tt>pre-lock</tt> hook can now specify the lock-token string
 via the hook's stdout; see <a
-href="http://svn.collab.net/viewcvs/svn?rev=32778&view=rev"
+href="http://svn.collab.net/viewcvs/svn?rev=32778&amp;view=rev"
 >r32778</a> for details.  Note that when the hook uses this feature,
 it must take responsibility for ensuring that lock tokens are unique
 across the repository.</p>
