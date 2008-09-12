@@ -192,9 +192,7 @@ print_status(const char *path,
                            ? 'K' : ' '),
                           path));
 
-  SVN_ERR(svn_cmdline_fflush(stdout));
-
-  return SVN_NO_ERROR;
+  return svn_cmdline_fflush(stdout);
 }
 
 

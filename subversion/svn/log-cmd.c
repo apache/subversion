@@ -424,9 +424,7 @@ log_entry_receiver_xml(void *baton,
   else
     svn_xml_make_close_tag(&sb, pool, "logentry");
 
-  SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
-
-  return SVN_NO_ERROR;
+  return svn_cl__error_checked_fputs(sb->data, stdout);
 }
 
 
