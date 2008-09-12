@@ -7,7 +7,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.5\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2008-09-12 14:16+0900\n"
-"PO-Revision-Date: 2008-07-26 14:41+0200\n"
+"PO-Revision-Date: 2008-09-12 15:41+0900\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Korean <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -38,7 +38,7 @@ msgstr "수상한 MIME-type"
 
 #: ../include/svn_error_codes.h:182
 msgid "Wrong or unexpected property value"
-msgstr ""
+msgstr "잘못되거나 기대하지 않은 속성값"
 
 #: ../include/svn_error_codes.h:186
 msgid "Version file format not correct"
@@ -3312,16 +3312,14 @@ msgstr "Authorization 헤더에 realm 속성이 빠졌습니다."
 #: ../libsvn_ra_serf/blame.c:470 ../libsvn_ra_serf/commit.c:1150
 #: ../libsvn_ra_serf/property.c:886 ../libsvn_ra_serf/serf.c:665
 #: ../libsvn_ra_serf/update.c:1134 ../libsvn_ra_serf/update.c:1678
-#, fuzzy
 msgid "The OPTIONS response did not include the requested checked-in value"
-msgstr "OPTIONS 응답이 요청한 activity-collection-set 에 대한 것을 포함하고 있지 않습니다. 대개 URL이 WebDAV 가 활성화되지 않은 경우 발생합니다."
+msgstr "OPTIONS 응답이 요청한 checked-in 값을 포함하고 있지 않습니다."
 
 #: ../libsvn_ra_serf/blame.c:499 ../libsvn_ra_serf/commit.c:1379
 #: ../libsvn_ra_serf/commit.c:1780 ../libsvn_ra_serf/property.c:900
 #: ../libsvn_ra_serf/serf.c:787 ../libsvn_ra_serf/serf.c:1045
-#, fuzzy
 msgid "The OPTIONS response did not include the requested baseline-collection value"
-msgstr "OPTIONS 응답이 요청한 activity-collection-set 에 대한 것을 포함하고 있지 않습니다. 대개 URL이 WebDAV 가 활성화되지 않은 경우 발생합니다."
+msgstr "OPTIONS 응답이 요청한 baseline-collection 값을 포함하고 있지 않습니다."
 
 #: ../libsvn_ra_serf/commit.c:408 ../libsvn_ra_serf/commit.c:422
 #, c-format
@@ -3427,14 +3425,12 @@ msgid "The OPTIONS response did not include the requested version-controlled-con
 msgstr ""
 
 #: ../libsvn_ra_serf/serf.c:682
-#, fuzzy
 msgid "The OPTIONS response did not include the requested version-name value"
-msgstr "OPTIONS 응답이 요청한 activity-collection-set 에 대한 것을 포함하고 있지 않습니다. 대개 URL이 WebDAV 가 활성화되지 않은 경우 발생합니다."
+msgstr "OPTIONS 응답이 요청한 version-name 값을 포함하고 있지 않습니다"
 
 #: ../libsvn_ra_serf/serf.c:851
-#, fuzzy
 msgid "The OPTIONS response did not include the requested resourcetype value"
-msgstr "OPTIONS 응답이 요청한 activity-collection-set 에 대한 것을 포함하고 있지 않습니다. 대개 URL이 WebDAV 가 활성화되지 않은 경우 발생합니다."
+msgstr "OPTIONS 응답이 요청한 resourcetype 값을 포함하고 있지 않습니다"
 
 #: ../libsvn_ra_serf/serf.c:1225
 #, c-format
@@ -6020,9 +6016,8 @@ msgid ", (r) resolved"
 msgstr ""
 
 #: ../svn/conflict-callbacks.c:411
-#, fuzzy
 msgid "(h) help for more options: "
-msgstr "더 많은 정보를 위해 'svn help'를 이용해 보세요"
+msgstr "(h) 더 많은 옵션에 대한 도움말:"
 
 #: ../svn/conflict-callbacks.c:419
 #, c-format
@@ -7635,7 +7630,6 @@ msgid ""
 msgstr ""
 
 #: ../svn/main.c:796
-#, fuzzy
 msgid ""
 "Remove 'conflicted' state on working copy files or directories.\n"
 "usage: resolved PATH...\n"
@@ -7648,9 +7642,10 @@ msgstr ""
 "작업사본내의 파일이나 디렉토리의 충돌 상황을 제거합니다.\n"
 "사용법: resolved PATH...\n"
 "\n"
-"  주의:  본 부속 명령은 충돌한 것을 실제로 해결해 주는 것이 아닙니다.\n"
-"  단지 충돌 표시만을 없앨 뿐입니다. 충돌 요소들과 관련된 파일만\n"
-"  삭제하며, 다시 커밋할 수 있는 상태로 만들어줍니다.\n"
+"  주의:  본 명령은 충돌한 것을 실제로 해결해 주는 것이 아닙니다.\n"
+"  단지 충돌 표시만을 없앨 뿐입니다. 즉, PATH의 충돌 파일과 관련되어\n"
+"  생성된 파일들을 제거하고, 다시 커밋할 수 있도록 허가하는 역할만 합니다.\n"
+"  'svn resolve --accept working'과 같은 옵션을 사용하면 내용을 수정하게 됩니다\n"
 
 #: ../svn/main.c:806
 msgid ""
@@ -7667,7 +7662,6 @@ msgstr ""
 "  해결하지 않습니다. 그리고, 삭제된 디렉토리에 대해서는 다시 되돌려놓지 않습니다.\n"
 
 #: ../svn/main.c:814
-#, fuzzy
 msgid ""
 "Print the status of working copy files and directories.\n"
 "usage: status [PATH...]\n"
@@ -7745,12 +7739,13 @@ msgstr ""
 "작업 사본내의 파일과 디렉토리에 대한 상태를 출력합니다.\n"
 "사용법: status [PATH...]\n"
 "\n"
-"  인자 없이 주어질 경우 작업 사본에서 수정된 아이템만 출력합니다.\n"
-"  -u 옵션을 주면, 작업 리비전과 서버의 날짜 지남 정보를 출력합니다.\n"
+"  옵션이 없을 때는 네트워크 작업이 없이 작업 사본에서 수정된 내역만 출력합니다.\n"
+"  -p 옵션을 주면, 작업사본에서 수정된 요약 내역을 출력합니다.\n"
+"  -u 옵션을 주면, 작업 리비전과 서버의 업데이트 정보를 출력합니다.\n"
 "  -v 옵션을 주면, 모든 아이템들의 전체 정보를 보여줍니다.\n"
 "\n"
 "  출력되는 처음 여섯개의 컬럼은 각각 다음과 같은 의미를 가집니다:\n"
-"    첫번째 컬럼: 추가, 삭제 변경, 변경없음에 대한 것을 의미합니다.\n"
+"    첫번째 컬럼: 추가, 삭제, 변경에 대한 것을 의미합니다.\n"
 "      ' ' 변경 없음\n"
 "      'A' 추가됨\n"
 "      'C' 충돌함\n"
@@ -7786,7 +7781,7 @@ msgstr ""
 "      'T' 저장소가 잠기었고, 존재해야할 잠금토큰이 사라졌습니다.\n"
 "      'B' 저장소가 잠기지 않았으며, 존재하는 잠금토큰이 깨진상태입니다.\n"
 "\n"
-"  날짜가 지난 정보에는 여덟번째 컬럼에 나타납니다.(-u 옵션):\n"
+"  업데이트 정보는 여덟번째 컬럼에 나타납니다.(-u 옵션):\n"
 "      '*' 새 리비전이 저장소에 있습니다.\n"
 "      ' ' 작업사본은 최신의 것입니다.\n"
 "\n"
@@ -7815,7 +7810,6 @@ msgstr ""
 "    Status against revision:   981\n"
 
 #: ../svn/main.c:890
-#, fuzzy
 msgid ""
 "Update the working copy to a different URL.\n"
 "usage: 1. switch URL[@PEGREV] [PATH]\n"
@@ -7848,29 +7842,35 @@ msgid ""
 "     or hostname change) but your working copy still reflects the same\n"
 "     directory within the same repository.\n"
 msgstr ""
-"작업사본을 다른 URL에 업데이트합니다.\n"
-"사용법: 1. switch URL [PATH]\n"
+"작업사본을 다른 URL의 내용으로 업데이트합니다.\n"
+"사용법: 1. switch URL[@PEGREV] [PATH]\n"
 "       2. switch --relocate FROM TO [PATH...]\n"
 "\n"
-"  1. 작업사본을 저장소내의 새 URL로 미러링을 합니다.\n"
+"  1. 새 URL의 내용을 가져와서 작업사본에 업데이트 합니다.\n"
 "     'svn update'와 비슷한 일을 합니다. 하지만 이것은\n"
 "     작업사본의 URL을 같은 저장소내의 브랜치나 태그로 전환하는데 사용합니다.\n"
+"     대상을 찾을 처음 리비전을 PEGREV로 지정해줄 수 있습니다.\n"
+"\n"
+"     현 작업 사본에 관리대상으로 추가되지 않은 파일이 존재하고, switch를 할\n"
+"     URL에 같은 이름의 파일이 관리대상으로 이미 존재하는 경우 오류를 내게 됩니다.\n"
+"     이 경우 --force 를 주게되면 오류가 나지 않으며, switch될 URL의 관리대상으로\n"
+"     취급하게 됩니다. 두 대응되는 대상이 같은 형식(파일 또는 디렉토리)이면,\n"
+"     파일의 경우 저장소의 내용과 다른 것이 작업사본에 있는 경우 저장소에서 \n"
+"     꺼내온 뒤 수정한 것으로 봅니다. 즉, 현 작업 사본의 내용이 바뀌지\n"
+"     않은 채 새 URL의 메타 정보가 추가되며, 내용은 수정된 것으로 보게 됩니다.\n"
+"     디렉토리의 경우 하위의 모든 파일이 버전 관리 대상으로 추가됩니다.\n"
+"     또한, 저장소에 있는 대상의 속성들이 모두 작업사본에 적용됩니다.\n"
+"     즉, switch 명령으로 내용은 변하지 않으며, 메타 정보와 속성이 변경됩니다.\n"
+"\n"
+"     업데이트 대상의 디렉토리 깊이를 조정하려면, --set-depth를 사용합니다.\n"
+"     이 옵션은 증가하는 방향으로만 사용할 수 있습니다. 즉, 현재 작업하고 있는\n"
+"     디렉토리보다 더 하위의 내용을 가져올 경우에만 사용하며 작업하는 사본의\n"
+"     깊이를 얕게 만들 수는 없습니다.\n"
 "\n"
 "  2. 작업 사본 하위 디렉토리에는 checkout 할 때의 URL 정보가 들어 있는 \n"
-"     메타정보가 있습니다. 이 정보를 새 URL로 갱신합니다.\n"
+"     메타정보가 있습니다. 이 정보만 새 URL로 갱신합니다.\n"
 "     즉, 접근하는 방식이(ssh, http등)나 호스트 이름이 바뀐 경우에만 되며,\n"
 "     작업사본의 구조는 그대로 유지합니다.\n"
-"\n"
-"  현 작업 사본에 관리대상으로 추가되지 않은 파일이 존재하고, switch를 할\n"
-"  URL에 같은 이름의 파일이 관리대상으로 이미 존재하는 경우 오류를 내게 됩니다.\n"
-"  이 경우 --force 를 주게되면, 오류가 나지 않으며, switch될 URL의 관리대상으로\n"
-"  취급하게 됩니다. 두 대응되는 대상이 같은 형식(파일 또는 디렉토리)이면,\n"
-"  파일의 경우 저장소의 내용과 다른 것이 작업사본에 있는 경우 저장소에서 \n"
-"  꺼내온 뒤 수정한 것으로 봅니다. 즉, 현 작업 사본의 내용이 바뀌지\n"
-"  않은 채 새 URL의 메타 정보가 추가되며, 내용은 수정된 것으로 보게 됩니다.\n"
-"  디렉토리의 경우 하위의 모든 파일이 버전 관리 대상으로 추가됩니다.\n"
-"  또한, 저장소에 있는 대상의 속성들이 모두 작업사본에 적용됩니다.\n"
-"  즉, switch 명령으로 내용은 변하지 않으며, 메타 정보와 속성이 변경됩니다.\n"
 
 #: ../svn/main.c:924
 msgid ""
@@ -7885,7 +7885,6 @@ msgstr ""
 "  --force 를 사용하면 강제로 해제합니다.\n"
 
 #: ../svn/main.c:931
-#, fuzzy
 msgid ""
 "Bring changes from the repository into the working copy.\n"
 "usage: update [PATH...]\n"
@@ -7939,6 +7938,7 @@ msgstr ""
 "    U  최신 내용으로 반영함\n"
 "    C  충돌발생함\n"
 "    G  수정된 내용에 최신 변경 내용을 병합함\n"
+"    E  존재함\n"
 "\n"
 "  첫번째 컬럼은 실제 파일에 대하여 수행한 동작을 나타내며,\n"
 "  두번째 컬럼은 속성에 대하여 수행한 동작을 나타냅니다.\n"
@@ -7956,6 +7956,11 @@ msgstr ""
 "  또한, 저장소에 있는 대상의 속성들이 모두 작업사본에 적용됩니다.\n"
 "  이렇게 충돌나는 대상에 대해서는 처음 컬럼에 'E'가 나타나게 됩니다.\n"
 "\n"
+"     업데이트 대상의 디렉토리 깊이를 조정하려면, --set-depth를 사용합니다.\n"
+"     이 옵션은 증가하는 방향으로만 사용할 수 있습니다. 즉, 현재 작업하고 있는\n"
+"     디렉토리보다 더 하위의 내용을 가져올 경우에만 사용하며 작업하는 사본의\n"
+"     깊이를 얕게 만들 수는 없습니다.\n"
+"\n"
 
 #: ../svn/main.c:1011 ../svnadmin/main.c:78 ../svnlook/main.c:329
 #: ../svnsync/main.c:184
@@ -7963,9 +7968,8 @@ msgid "Caught signal"
 msgstr "시그널 수신"
 
 #: ../svn/main.c:1030
-#, fuzzy
 msgid "Revision property pair is empty"
-msgstr "리비전 엔트리가 리스트 구조체가 아닙니다."
+msgstr "리비전 속성 쌍이 비어있습니다"
 
 #: ../svn/main.c:1050 ../svn/propedit-cmd.c:60 ../svn/propget-cmd.c:180
 #: ../svn/propset-cmd.c:64
@@ -8867,7 +8871,6 @@ msgstr ""
 "모든 커밋안된 트랜잭션의 이름을 출력해줍니다.\n"
 
 #: ../svnadmin/main.c:390
-#, fuzzy
 msgid ""
 "usage: svnadmin recover REPOS_PATH\n"
 "\n"
@@ -8878,8 +8881,8 @@ msgid ""
 msgstr ""
 "사용법: svnadmin recover REPOS_PATH\n"
 "\n"
-"저장소에서 버클리 디비 복구 절차를 수행합니다.\n"
-"복구를 해야하는 오류를 일으킨적이 있다면 이를 실행하십시오\n"
+"저장소에 복구 절차를 수행합니다. 복구를 해야하는 오류를 일으킨적이\n"
+"있어서 복구를 해야할 필요가 있다면 실행하십시오.\n 버클리 디비"
 "복구는 배타적 접근을 필요로하며 저장소가 다른 프로세스에 의해\n"
 "사용되고 있다면 종료됩니다.\n"
 
@@ -9136,9 +9139,8 @@ msgstr ""
 "\n"
 
 #: ../svnadmin/main.c:1250
-#, fuzzy
 msgid "No paths to unlock provided"
-msgstr "잠금 토큰이 제공되지 않았습니다."
+msgstr "잠금해제를 위한 경로가 지정되지 않았습니다"
 
 #: ../svnadmin/main.c:1268
 #, c-format
@@ -9151,13 +9153,13 @@ msgid "Removed lock on '%s'.\n"
 msgstr "잠금 해제됨 '%s'\n"
 
 #: ../svnadmin/main.c:1305
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Repository lock acquired.\n"
 "Please wait; upgrading the repository may take some time...\n"
 msgstr ""
 "저장소 잠금을 획득했습니다.\n"
-"기다려 주십시오; 저장소 복구는 시간이 소요될 수 있습니다...\n"
+"기다려 주십시오; 저장소 업그레이드는 시간이 소요될 수 있습니다...\n"
 
 #: ../svnadmin/main.c:1351
 msgid "Upgrade of this repository's underlying versioned filesystem is not supported; consider dumping and loading the data elsewhere"
@@ -9228,14 +9230,14 @@ msgid "Missing merge source path '%s'; try with --skip-missing-merge-sources"
 msgstr ""
 
 #: ../svndumpfilter/main.c:698
-#, fuzzy, c-format
+#, c-format
 msgid "No valid revision range 'start' in filtered stream"
-msgstr "필터링된 스트립내에 복사 원본의 리비전이 올바르지 않습니다."
+msgstr "필터링된 스트림내 리비전 구간의 'start' 항이 올바르지 않습니다"
 
 #: ../svndumpfilter/main.c:705
-#, fuzzy, c-format
+#, c-format
 msgid "No valid revision range 'end' in filtered stream"
-msgstr "필터링된 스트립내에 복사 원본의 리비전이 올바르지 않습니다."
+msgstr "필터링된 스트림내 리비전 구간의 'end' 항이 올바르지 않습니다"
 
 #: ../svndumpfilter/main.c:751
 msgid "Delta property block detected - not supported by svndumpfilter"
@@ -9859,9 +9861,8 @@ msgid "listen once (useful for debugging)"
 msgstr "1 회만 listen 합니다. (디버깅에 사용됩니다.)"
 
 #: ../svnserve/main.c:164
-#, fuzzy
 msgid "read configuration from file ARG"
-msgstr "arg로 지정된 디렉토리에서 사용자 구성화일을 읽습니다."
+msgstr "arg로 지정된 파일에서 사용자 구성화일을 읽습니다."
 
 #: ../svnserve/main.c:166
 msgid "write server process ID to file ARG"
@@ -10199,7 +10200,7 @@ msgid "Type 'svnversion --help' for usage.\n"
 msgstr "사용법을 보시려면, 'svnversion --help' 을 이용하세요.\n"
 
 #: ../svnversion/main.c:51
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "usage: svnversion [OPTIONS] [WC_PATH [TRAIL_URL]]\n"
 "\n"
@@ -10232,7 +10233,7 @@ msgid ""
 msgstr ""
 "사용법: svnversion [OPTIONS] WC_PATH [TRAIL_URL]\n"
 "\n"
-"  작업 사본 WC_PATH에 대하여 축약된 \"version number\"를 출력합니다.\n"
+"  작업 사본 WC_PATH에 대하여 축약된 'version number'를 출력합니다.\n"
 "  TRAIL_URL 은 URL의 뒤에 오는 부분으로서, WC_PATH가 태그/브랜치로\n"
 "  전환되었는지 판단하기 위한 부분입니다. (WC_PATH 내에서의 태그/브랜치\n"
 "  전환 여부 판단은 TRAIL_URL과 연관성 없이 진행됩니다) 버전 번호는 \n"
@@ -10248,6 +10249,7 @@ msgstr ""
 "   4123:4168     혼합된 리비전의 작업 사본\n"
 "   4168M         수정된 작업 사본\n"
 "   4123S         전환된 작업 사본\n"
+"   4123P         듬성듬성 체크아웃한 작업 사본의 일부\n"
 "   4123:4168MS   혼합된 리비전의 수정되고 전환된 작업 사본\n"
 "\n"
 "  작업 사본이 아닌 디렉토리에서 수행되면, 예를 들면 익스포트된 디렉토리라면\n"
