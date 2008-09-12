@@ -69,9 +69,8 @@ file_fetcher(void *baton,
                                                  NULL, NULL, NULL,
                                                  FALSE, TRUE,
                                                  ffb->ctx, ffb->pool));
-  SVN_ERR(svn_ra_get_file(ffb->session, path, revision, stream,
-                          fetched_rev, props, pool));
-  return SVN_NO_ERROR;
+  return svn_ra_get_file(ffb->session, path, revision, stream,
+                         fetched_rev, props, pool);
 }
 
 

@@ -84,7 +84,7 @@ relegate_external(const char *path,
                   void *cancel_baton,
                   apr_pool_t *pool)
 {
-  svn_error_t *err;
+  svn_error_t *err = SVN_NO_ERROR;
   svn_wc_adm_access_t *adm_access;
 
   SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, path, TRUE, -1, cancel_func,
@@ -105,6 +105,7 @@ relegate_external(const char *path,
       const char *new_path;
 
       svn_error_clear(err);
+      err = SVN_NO_ERROR;
 
       /* Reserve the new dir name. */
       SVN_ERR(svn_io_open_unique_file2
@@ -131,14 +132,13 @@ relegate_external(const char *path,
       err = svn_io_remove_file(new_path, pool);
       svn_error_clear(err);  /* It's not clear why this is ignored, is
                                  it because the rename will catch it? */
+      err = SVN_NO_ERROR;
 
       /* Rename. */
       SVN_ERR(svn_io_file_rename(path, new_path, pool));
     }
-  else if (err)
-    return err;
 
-  return SVN_NO_ERROR;
+  return err;
 }
 
 /* Try to update an external PATH to URL at REVISION.
@@ -259,13 +259,11 @@ switch_external(const char *path,
     }
 
   /* ... Hello, new hotness. */
-  SVN_ERR(svn_client__checkout_internal(NULL, url, path, peg_revision,
-                                        revision,
-                                        SVN_DEPTH_INFINITY_OR_FILES(TRUE),
-                                        FALSE, FALSE, timestamp_sleep,
-                                        ctx, pool));
-
-  return SVN_NO_ERROR;
+  return svn_client__checkout_internal(NULL, url, path, peg_revision,
+                                       revision,
+                                       SVN_DEPTH_INFINITY_OR_FILES(TRUE),
+                                       FALSE, FALSE, timestamp_sleep,
+                                       ctx, pool);
 }
 
 /* Return the scheme of @a uri in @a scheme allocated from @a pool.
@@ -822,10 +820,8 @@ svn_client__handle_externals(svn_wc_traversal_info_t *traversal_info,
   cb.is_export         = FALSE;
   cb.pool              = pool;
 
-  SVN_ERR(svn_hash_diff(cb.externals_old, cb.externals_new,
-                        handle_externals_desc_change, &cb, pool));
-
-  return SVN_NO_ERROR;
+  return svn_hash_diff(cb.externals_old, cb.externals_new,
+                       handle_externals_desc_change, &cb, pool);
 }
 
 
@@ -854,10 +850,8 @@ svn_client__fetch_externals(apr_hash_t *externals,
   cb.is_export         = is_export;
   cb.pool              = pool;
 
-  SVN_ERR(svn_hash_diff(cb.externals_old, cb.externals_new,
-                        handle_externals_desc_change, &cb, pool));
-
-  return SVN_NO_ERROR;
+  return svn_hash_diff(cb.externals_old, cb.externals_new,
+                       handle_externals_desc_change, &cb, pool);
 }
 
 

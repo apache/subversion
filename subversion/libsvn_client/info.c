@@ -267,12 +267,10 @@ crawl_entries(const char *wcpath,
   fe_baton.changelist_hash = changelist_hash;
   fe_baton.receiver = receiver;
   fe_baton.receiver_baton = receiver_baton;
-  SVN_ERR(svn_wc_walk_entries3(wcpath, adm_access,
-                               &entry_walk_callbacks, &fe_baton,
-                               depth, FALSE, ctx->cancel_func,
-                               ctx->cancel_baton, pool));
-
-  return SVN_NO_ERROR;
+  return svn_wc_walk_entries3(wcpath, adm_access,
+                              &entry_walk_callbacks, &fe_baton,
+                              depth, FALSE, ctx->cancel_func,
+                              ctx->cancel_baton, pool);
 }
 
 /* Set *SAME_P to TRUE if URL exists in the head of the repository and
