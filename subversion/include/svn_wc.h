@@ -1259,7 +1259,8 @@ svn_wc_conflict_description_create_prop(const char *path,
  * Set the @c path field of the created struct to @a path, the @c access
  * field to @a adm_access, the @c kind field to @c
  * svn_wc_conflict_kind_tree, the @c node_kind to @a node_kind, and the @c
- * operation to @a operation.
+ * operation to @a operation. Make only shallow copies of the pointer
+ * arguments.
  *
  * @note: It is the caller's responsibility to set the other required fields
  * (such as the four file names and @c action and @c reason).
