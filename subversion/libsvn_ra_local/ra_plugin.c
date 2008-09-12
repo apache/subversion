@@ -34,9 +34,6 @@
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 
-#include <assert.h>
-
-
 /*----------------------------------------------------------------*/
 
 /*** Miscellaneous helper functions ***/
@@ -649,11 +646,14 @@ svn_ra_local__get_commit_editor(svn_ra_session_t *session,
                hi = apr_hash_next(hi))
             {
               void *val;
-              const char *token;
+              const char *path, *token;
+              const void *key;
 
-              apr_hash_this(hi, NULL, NULL, &val);
+              apr_hash_this(hi, &key, NULL, &val);
+              path = svn_path_join(sess->fs_path->data, (const char *)key,
+                                   pool);
               token = val;
-              SVN_ERR(svn_fs_access_add_lock_token(fs_access, token));
+              SVN_ERR(svn_fs_access_add_lock_token2(fs_access, path, token));
             }
         }
     }

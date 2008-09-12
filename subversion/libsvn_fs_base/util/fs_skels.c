@@ -520,14 +520,21 @@ svn_fs_base__parse_representation_skel(representation_t **rep_p,
   /* CHECKSUM */
   if (header_skel->children->next->next)
     {
-      memcpy(rep->checksum,
-             header_skel->children->next->next->children->next->data,
-             APR_MD5_DIGESTSIZE);
+      skel_t *checksum_skel = header_skel->children->next->next;
+
+      if (svn_fs_base__matches_atom(checksum_skel->children, "md5"))
+        {
+          rep->checksum = svn_checksum_create(svn_checksum_md5, pool);
+          memcpy(rep->checksum->digest, checksum_skel->children->next->data,
+                 APR_MD5_DIGESTSIZE);
+        }
+      else
+        return skel_err("checksum type");
     }
   else
     {
       /* Older repository, no checksum, so manufacture an all-zero checksum */
-      memset(rep->checksum, 0, APR_MD5_DIGESTSIZE);
+      rep->checksum = NULL;
     }
 
   /* KIND-SPECIFIC stuff */
@@ -1052,14 +1059,40 @@ svn_fs_base__unparse_representation_skel(skel_t **skel_p,
       those parts first. **/
 
   /* CHECKSUM */
-  {
-    skel_t *checksum_skel = svn_fs_base__make_empty_list(pool);
-    svn_fs_base__prepend(svn_fs_base__mem_atom
-                         (rep->checksum, APR_MD5_DIGESTSIZE, pool),
-                         checksum_skel);
-    svn_fs_base__prepend(svn_fs_base__str_atom("md5", pool), checksum_skel);
-    svn_fs_base__prepend(checksum_skel, header_skel);
-  }
+  if (rep->checksum)
+    {
+      skel_t *checksum_skel = svn_fs_base__make_empty_list(pool);
+
+      switch (rep->checksum->kind)
+        {
+          case svn_checksum_md5:
+            svn_fs_base__prepend(svn_fs_base__mem_atom(rep->checksum->digest,
+                                                       APR_MD5_DIGESTSIZE,
+                                                       pool),
+                                 checksum_skel);
+            svn_fs_base__prepend(svn_fs_base__str_atom("md5", pool),
+                                 checksum_skel);
+            break;
+
+          default:
+            return skel_err("checksum");
+        }
+      svn_fs_base__prepend(checksum_skel, header_skel);
+    }
+  else
+    {
+      /* Need to add a "empty" MD5 checksum. */
+      skel_t *checksum_skel = svn_fs_base__make_empty_list(pool);
+      svn_checksum_t *empty_md5 = svn_checksum_create(svn_checksum_md5, pool);
+      SVN_ERR(svn_checksum_clear(empty_md5));
+
+      svn_fs_base__prepend(svn_fs_base__mem_atom(empty_md5->digest,
+                                                 APR_MD5_DIGESTSIZE, pool),
+                           checksum_skel);
+      svn_fs_base__prepend(svn_fs_base__str_atom("md5", pool), checksum_skel);
+      
+      svn_fs_base__prepend(checksum_skel, header_skel);
+    }
 
   /* TXN */
   if (rep->txn_id)

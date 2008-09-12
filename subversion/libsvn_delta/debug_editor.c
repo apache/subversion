@@ -402,7 +402,7 @@ svn_delta__get_debug_editor(const svn_delta_editor_t **editor,
   if (apr_err)
     return svn_error_wrap_apr(apr_err, "Problem opening stderr");
 
-  out = svn_stream_from_aprfile(errfp, pool);
+  out = svn_stream_from_aprfile2(errfp, TRUE, pool);
 
   tree_editor->set_target_revision = set_target_revision;
   tree_editor->open_root = open_root;

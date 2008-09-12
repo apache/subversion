@@ -2,7 +2,7 @@
  * commit.c :  routines for committing changes to the server
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -25,8 +25,6 @@
 #define APR_WANT_STDIO
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
-
-#include <assert.h>
 
 #include "svn_pools.h"
 #include "svn_error.h"
@@ -751,15 +749,11 @@ static svn_error_t * commit_delete_entry(const char *path,
                    APR_HASH_KEY_STRING, SVN_DAV_OPTION_KEEP_LOCKS);
     }
 
-  /* 404 is ignored, because mod_dav_svn is effectively merging
-     against the HEAD revision on-the-fly.  In such a universe, a
-     failed deletion (because it's already missing) is OK;  deletion
-     is an idempotent merge operation. */
   serr = svn_ra_neon__simple_request(&code, parent->cc->ras,
                                      "DELETE", child,
                                      extra_headers, NULL,
-                                     204 /* Created */,
-                                     404 /* Not Found */, pool);
+                                     204 /* No Content */,
+                                     0, pool);
 
   /* A locking-related error most likely means we were deleting a
      directory rather than a file, and didn't send all of the
@@ -1216,7 +1210,7 @@ commit_apply_txdelta(void *file_baton,
   stream = svn_stream_create(baton, pool);
   svn_stream_set_write(stream, commit_stream_write);
 
-  svn_txdelta_to_svndiff(stream, pool, handler, handler_baton);
+  svn_txdelta_to_svndiff2(handler, handler_baton, stream, 0, pool);
 
   /* Add this path to the valid targets hash. */
   add_valid_target(file->cc, file->rsrc->local_path, svn_nonrecursive);

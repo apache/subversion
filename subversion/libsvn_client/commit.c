@@ -23,7 +23,6 @@
 /*** Includes. ***/
 
 #include <string.h>
-#include <assert.h>
 #include <apr_strings.h>
 #include <apr_hash.h>
 #include <apr_md5.h>
@@ -145,18 +144,15 @@ send_file_contents(const char *path,
      copy we might have made above. */
   SVN_ERR(svn_io_file_open(&f, tmpfile_path ? tmpfile_path : path,
                            APR_READ, APR_OS_DEFAULT, pool));
-  contents = svn_stream_from_aprfile(f, pool);
+  contents = svn_stream_from_aprfile2(f, TRUE, pool);
 
   /* Send the file's contents to the delta-window handler. */
   SVN_ERR(svn_txdelta_send_stream(contents, handler, handler_baton,
                                   digest, pool));
 
   /* Close our contents file. */
-  SVN_ERR(svn_io_file_close(f, pool));
-
+  return svn_io_file_close(f, pool);
   /* The temp file is removed by the pool cleanup run by the caller */
-
-  return SVN_NO_ERROR;
 }
 
 
@@ -253,9 +249,7 @@ import_file(const svn_delta_editor_t *editor,
 
   /* Finally, close the file. */
   text_checksum = svn_md5_digest_to_cstring(digest, pool);
-  SVN_ERR(editor->close_file(file_baton, text_checksum, pool));
-
-  return SVN_NO_ERROR;
+  return editor->close_file(file_baton, text_checksum, pool);
 }
 
 
@@ -586,11 +580,9 @@ import(const char *path,
     }
 
   if (import_ctx->repos_changed)
-    SVN_ERR(editor->close_edit(edit_baton, pool));
+    return editor->close_edit(edit_baton, pool);
   else
-    SVN_ERR(editor->abort_edit(edit_baton, pool));
-
-  return SVN_NO_ERROR;
+    return editor->abort_edit(edit_baton, pool);
 }
 
 
@@ -1243,15 +1235,13 @@ post_process_commit_item(void *baton, void *this_item, apr_pool_t *pool)
 
   /* Allocate the queue in a longer-lived pool than (iter)pool:
      we want it to survive the next iteration. */
-  SVN_ERR(svn_wc_queue_committed
+  return svn_wc_queue_committed
           (&(btn->queue),
            item->path, adm_access, loop_recurse,
            item->incoming_prop_changes,
            remove_lock, (! btn->keep_changelists),
            apr_hash_get(btn->digests, item->path, APR_HASH_KEY_STRING),
-           subpool));
-
-  return SVN_NO_ERROR;
+           subpool);
 }
 
 

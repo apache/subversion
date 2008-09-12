@@ -15,7 +15,6 @@
  * ====================================================================
  */
 
-#include <assert.h>
 #include <string.h>
 
 #include <apr_tables.h>

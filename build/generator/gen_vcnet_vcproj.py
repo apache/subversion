@@ -48,8 +48,6 @@ class Generator(gen_win.WinGeneratorBase):
         config_type=4
       else:
         config_type=2
-    elif isinstance(target, gen_base.TargetProject):
-      config_type=1
     elif isinstance(target, gen_base.TargetI18N):
       config_type=4
     else:

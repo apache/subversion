@@ -241,12 +241,10 @@ if __name__ == '__main__':
   if args:
     conf = args[0]
 
+  # First merge options with previously saved to gen-make.opts if --reload
+  # options used
   for opt, val in opts:
-    if opt == '-s':
-      skip = 1
-    elif opt == '-t':
-      gentype = val
-    elif opt == '--reload':
+    if opt == '--reload':
       prev_conf = ConfigParser.ConfigParser()
       prev_conf.read('gen-make.opts')
       for opt, val in prev_conf.items('options'):
@@ -255,6 +253,14 @@ if __name__ == '__main__':
       del prev_conf
     else:
       rest.add(opt, val)
+
+  # Parse options list
+  for opt, val in rest.list:
+    if opt == '-s':
+      skip = 1
+    elif opt == '-t':
+      gentype = val
+    else:
       if opt == '--with-httpd':
         rest.add('--with-apr', os.path.join(val, 'srclib', 'apr'))
         rest.add('--with-apr-util', os.path.join(val, 'srclib', 'apr-util'))

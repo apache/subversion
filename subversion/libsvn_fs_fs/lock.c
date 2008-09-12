@@ -16,7 +16,6 @@
  */
 
 
-#include <assert.h>
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_path.h"
@@ -63,10 +62,11 @@ static const char *
 make_digest(const char *str,
             apr_pool_t *pool)
 {
-  unsigned char digest[APR_MD5_DIGESTSIZE];
+  svn_checksum_t *checksum;
 
-  apr_md5(digest, str, strlen(str));
-  return svn_md5_digest_to_cstring_display(digest, pool);
+  svn_checksum(&checksum, svn_checksum_md5, str, strlen(str), pool);
+
+  return svn_checksum_to_cstring_display(checksum, pool);
 }
 
 
@@ -197,7 +197,7 @@ write_digest_file(apr_hash_t *children,
     }
 
   if ((err = svn_hash_write2(hash,
-                             svn_stream_from_aprfile(fd, pool),
+                             svn_stream_from_aprfile2(fd, TRUE, pool),
                              SVN_HASH_TERMINATOR, pool)))
     {
       svn_error_clear(svn_io_file_close(fd, pool));
@@ -253,7 +253,7 @@ read_digest_file(apr_hash_t **children_p,
 
   hash = apr_hash_make(pool);
   if ((err = svn_hash_read2(hash,
-                            svn_stream_from_aprfile(fd, pool),
+                            svn_stream_from_aprfile2(fd, TRUE, pool),
                             SVN_HASH_TERMINATOR, pool)))
     {
       svn_error_clear(svn_io_file_close(fd, pool));

@@ -75,14 +75,9 @@ A: That's possible, but requires some gymnastics.  You see, each repository
    has its own UUID, which is stored in the working copy, so if you check
    out from the mirror, and then do a 'svn switch --relocate' to point to
    the master it'll error out.  To make this work you need to make sure that
-   the mirrors have the same UUID as the master.  You can set a repository
-   UUID via the following technique:
-
-$ cat - <<EOF | svnadmin load --force-uuid dest
-SVN-fs-dump-format-version: 2
-
-UUID: d48dd586-eb1d-0410-b581-e6e13afcedeb
-EOF
+   the mirrors have the same UUID as the master.  You can read a repository
+   UUID with 'svnlook uuid' or 'svn info', and change it with
+   'svnadmin setuuid'.
 
    Once both the mirror and master repositories have the same UUID you can
    safely check out from the mirror and commit to the master, all you have

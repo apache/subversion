@@ -2,7 +2,7 @@
  * diff.c: comparing
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -44,7 +44,6 @@
 #include "svn_sorts.h"
 #include "svn_base64.h"
 #include "client.h"
-#include <assert.h>
 
 #include "private/svn_wc_private.h"
 
@@ -490,7 +489,7 @@ diff_content_changed(const char *path,
   int i;
 
   /* Get a stream from our output file. */
-  os = svn_stream_from_aprfile(diff_cmd_baton->outfile, subpool);
+  os = svn_stream_from_aprfile2(diff_cmd_baton->outfile, TRUE, subpool);
 
   /* Generate the diff headers. */
 
@@ -787,13 +786,11 @@ diff_file_deleted_no_diff(svn_wc_adm_access_t *adm_access,
   if (state)
     *state = svn_wc_notify_state_unknown;
 
-  SVN_ERR(file_printf_from_utf8
+  return file_printf_from_utf8
           (diff_cmd_baton->outfile,
            diff_cmd_baton->header_encoding,
            "Index: %s (deleted)" APR_EOL_STR "%s" APR_EOL_STR,
-           path, equal_string));
-
-  return SVN_NO_ERROR;
+           path, equal_string);
 }
 
 /* An svn_wc_diff_callbacks3_t function.
@@ -1222,8 +1219,7 @@ diff_wc_wc(const char *path1,
   SVN_ERR(svn_wc_diff5(adm_access, target, callbacks, callback_baton,
                        depth, ignore_ancestry, changelists,
                        callback_baton->svnpatch_file, pool));
-  SVN_ERR(svn_wc_adm_close(adm_access));
-  return SVN_NO_ERROR;
+  return svn_wc_adm_close(adm_access);
 }
 
 
@@ -1293,9 +1289,7 @@ diff_repos_repos(const struct diff_parameters *diff_param,
                              svn_depth_infinity,
                              FALSE, NULL,
                              pool));
-  SVN_ERR(reporter->finish_report(report_baton, pool));
-
-  return SVN_NO_ERROR;
+  return reporter->finish_report(report_baton, pool);
 }
 
 
@@ -1433,8 +1427,7 @@ diff_repos_wc(const char *path1,
                                   FALSE, NULL, NULL, /* notification is N/A */
                                   NULL, pool));
 
-  SVN_ERR(svn_wc_adm_close(adm_access));
-  return SVN_NO_ERROR;
+  return svn_wc_adm_close(adm_access);
 }
 
 
@@ -1542,9 +1535,7 @@ diff_summarize_repos_repos(const struct diff_parameters *diff_param,
   SVN_ERR(reporter->set_path(report_baton, "", drr.rev1,
                              svn_depth_infinity,
                              FALSE, NULL, pool));
-  SVN_ERR(reporter->finish_report(report_baton, pool));
-
-  return SVN_NO_ERROR;
+  return reporter->finish_report(report_baton, pool);
 }
 
 /* This is basically just the guts of svn_client_diff_summarize[_peg](). */
@@ -1561,16 +1552,12 @@ do_diff_summarize(const struct diff_parameters *diff_param,
   SVN_ERR(check_paths(diff_param, &diff_paths));
 
   if (diff_paths.is_repos1 && diff_paths.is_repos2)
-    {
-      SVN_ERR(diff_summarize_repos_repos(diff_param, summarize_func,
-                                         summarize_baton, ctx, pool));
-    }
+    return diff_summarize_repos_repos(diff_param, summarize_func,
+                                      summarize_baton, ctx, pool);
   else
     return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                             _("Summarizing diff can only compare repository "
                               "to repository"));
-
-  return SVN_NO_ERROR;
 }
 
 

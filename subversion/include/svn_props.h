@@ -303,6 +303,52 @@ svn_boolean_t svn_prop_name_is_valid(const char *prop_name);
  */
 #define SVN_PROP_MERGEINFO SVN_PROP_PREFIX "mergeinfo"
 
+
+/** Meta-data properties.
+ *
+ * ====================================================================
+ * They are documented here to avoid name reuse in other branches;
+ * the "plain" subversion doesn't use them (yet?).
+ * ====================================================================
+ *
+ * The following properties are used for storing meta-data about 
+ * individual entries in the meta-data branches of subversion,
+ * see issue #1256 or browseable at
+ * http://svn.collab.net/viewvc/svn/branches/meta-data-versioning/ .
+ * Furthermore @c svntar (http://svn.borg.ch/svntar/) and @c FSVS
+ * (http://fsvs.tigris.org/) use these, too.
+ *
+ * Please note that these formats are very UNIX-centric currently;
+ * a bit of discussion about Windows can be read at
+ * http://article.gmane.org/gmane.comp.version-control.subversion.devel/103991 
+ *
+ * @defgroup svn_prop_meta_data Meta-data properties
+ * @{ */
+
+/** The files' last modification time.
+ * This is stored as string in the form @c "2008-08-07T07:38:51.008782Z", to 
+ * be converted by the functions @c svn_time_to_cstring() and 
+ * @c svn_time_from_cstring(). */
+#define SVN_PROP_TEXT_TIME  SVN_PROP_PREFIX "text-time"
+
+/** The files' owner.
+ * Stored as numeric ID, optionally followed by whitespace and the string:
+ * @c "1000 pmarek". Parsers @b should accept any number of whitespace,
+ * and writers @b should put exactly a single space. */
+#define SVN_PROP_OWNER SVN_PROP_PREFIX "owner"
+
+/** The files' group.
+ * The same format as for @c SVN_PROP_OWNER, the owner-property. */
+#define SVN_PROP_GROUP  SVN_PROP_PREFIX "group"
+
+/** The files' unix-mode.
+ * Stored in octal, with a leading @c 0; may have 5 digits if any of @c setuid,
+ * @c setgid or @c sticky are set; an example is @c "0644". */
+#define SVN_PROP_UNIX_MODE  SVN_PROP_PREFIX "unix-mode"
+
+/** @} */ /* Meta-data properties */
+
+
 /** @} */
 
 /** WC props are props that are invisible to users:  they're generated

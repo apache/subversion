@@ -183,7 +183,7 @@ class SVNTreeNode:
 
 
   def pprint(self, stream = sys.stdout):
-    "Pretty-print the meta data for this node."
+    "Pretty-print the meta data for this node to STREAM."
     print >> stream, " * Node name:  ", self.name
     print >> stream, "    Path:      ", self.path
     mime_type = self.props.get("svn:mime-type")
@@ -206,6 +206,66 @@ class SVNTreeNode:
       print >> stream, "    Children:  ", len(self.children)
     else:
       print >> stream, "    Children:  None (node is probably a file)"
+
+  def print_script(self, stream = sys.stdout, subtree = ""):
+    """Python-script-print the meta data for this node to STREAM.
+    Print only those nodes whose path string starts with the string SUBTREE,
+    and print only the part of the path string that remains after SUBTREE."""
+
+    # remove some occurrences of root_node_name = "__SVN_ROOT_NODE",
+    # it is in the way when matching for a subtree, and looks bad.
+    path = self.path
+    if path.startswith(root_node_name + os.sep):
+      path = path[len(root_node_name + os.sep):]
+
+    # remove the subtree path, skip this node if necessary.
+    if path.startswith(subtree):
+      path = path[len(subtree):]
+    else:
+      return
+
+    line = "  %-20s: Item(" % ("'%s'" % path)
+    comma = False
+
+    mime_type = self.props.get("svn:mime-type")
+    if not mime_type or mime_type.startswith("text/"):
+      if self.contents is not None:
+        # Escape some characters for nicer script and readability.
+        # (This is error output. I guess speed is no consideration here.)
+        line += "contents=\"%s\"" % (self.contents
+                                     .replace('\n','\\n')
+                                     .replace('"','\\"')
+                                     .replace('\r','\\r')
+                                     .replace('\t','\\t'))
+        comma = True
+    else:
+      line += 'content is binary data'
+      comma = True
+
+    if self.props:
+      if comma:
+        line += ", "
+      line += "props={"
+      comma = False
+
+      for name in self.props:
+        if comma:
+          line += ", "
+        line += "'%s':'%s'" % (name, self.props[name])
+        comma = True
+
+      line += "}"
+      comma = True
+
+    for name in self.atts:
+      if comma:
+        line += ", "
+      line += "%s='%s'" % (name, self.atts[name])
+      comma = True
+
+    line += "),"
+    print >> stream, line
+
 
   def __str__(self):
     import StringIO
@@ -313,7 +373,8 @@ def create_from_path(path, contents=None, props={}, atts={}):
 
 # helper for handle_dir(), which is a helper for build_tree_from_wc()
 def get_props(path):
-  "Return a hash of props for PATH, using the svn client."
+  """Return a hash of props for PATH, using the svn client. Convert each
+     embedded end-of-line to a single LF character."""
 
   # It's not kosher to look inside .svn/ and try to read the internal
   # property storage format.  Instead, we use 'svn proplist'.  After
@@ -323,33 +384,28 @@ def get_props(path):
   props = {}
   exit_code, output, errput = main.run_svn(1, "proplist", path, "--verbose")
 
+  # Parse the output
   for line in output:
+    line = line.rstrip('\r\n')  # ignore stdout's EOL sequence
+
     if line.startswith('Properties on '):
       continue
-    if line.startswith('  ') and line.find(' : ') >= 3:
-      name, value = line.split(' : ')
-      name = name[2:]
-      value = value.rstrip("\r\n")
-      props[name] = value
-    else:    # Multi-line property, so re-use the current name.
-      # Keep the line endings consistent with what was done to the first
-      # line by stripping whitespace and then appending a newline.  This
-      # prevents multiline props on Windows that must be stored as UTF8/LF
-      # in the repository (e.g. svn:mergeinfo), say like this:
-      #
-      #   "propname : propvalLine1<LF>propvalLine2<LF>propvalLine3"
-      #
-      # but that print to stdout like this:
-      #
-      #   Properties on 'somepath':<CR><LF>
-      #     propname : propvalLine1<CR><CR><LF>
-      #   propvalLine1<CR><CR><LF>
-      #   propvalLine1<CR><LF>
-      #
-      # from looking like this in the returned PROPS hash:
-      #
-      #   "propname" --> "propvalLine1<LF>propvalLine2<CR><LF>propvalLine3<LF>"
-      props[name] = props[name] + "\n" + line.rstrip("\r\n")
+
+    elif line.startswith('    '):
+      # It's (part of) the value
+      props[name] += line[4:] + '\n'  # strip the indentation
+
+    elif line.startswith('  '):
+      # It's the name
+      name = line[2:]  # strip the indentation
+      props[name] = ''
+
+    else:
+      raise "Malformed line from proplist: '"+line+"'"
+
+  # Strip, from each property value, the final new-line that we added
+  for name in props:
+    props[name] = props[name][:-1]
 
   return props
 
@@ -401,8 +457,8 @@ def handle_dir(path, current_parent, load_props, ignore_svn):
     else:
       dprops = {}
     new_dir_node = SVNTreeNode(os.path.basename(d), None, None, dprops)
-    handle_dir(d, new_dir_node, load_props, ignore_svn)
     current_parent.add_child(new_dir_node)
+    handle_dir(d, new_dir_node, load_props, ignore_svn)
 
 def get_child(node, name):
   """If SVNTreeNode NODE contains a child named NAME, return child;
@@ -548,7 +604,8 @@ def compare_trees(label,
 # Visually show a tree's structure
 
 def dump_tree(n,indent=""):
-  "Print out a nice representation of the tree's structure."
+  """Print out a nice representation of the structure of the tree in
+  the SVNTreeNode N. Prefix each line with the string INDENT."""
 
   # Code partially stolen from Dave Beazley
   if n.children is None:
@@ -570,6 +627,28 @@ def dump_tree(n,indent=""):
       dump_tree(c,indent + "  +-- ")
     else:
       dump_tree(c,indent + "  |-- ")
+
+
+def dump_tree_script__crawler(n, subtree=""):
+  "Helper for dump_tree_script. See that comment."
+
+  # skip printing the root node.
+  if n.name != root_node_name:
+    n.print_script(subtree=subtree)
+
+  for child in n.children or []:
+    dump_tree_script__crawler(child, subtree)
+
+
+def dump_tree_script(n, subtree=""):
+  """Print out a python script representation of the structure of the tree
+  in the SVNTreeNode N. Print only those nodes whose path string starts
+  with the string SUBTREE, and print only the part of the path string
+  that remains after SUBTREE."""
+
+  print "svntest.wc.State('%s', {" % subtree
+  dump_tree_script__crawler(n, subtree)
+  print "})"
 
 
 ###################################################################

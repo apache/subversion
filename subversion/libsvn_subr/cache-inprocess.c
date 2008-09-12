@@ -33,7 +33,7 @@ typedef struct {
   apr_ssize_t klen;
 
   /* Used to copy values in and out of the cache. */
-  svn_cache_dup_func_t *dup_func;
+  svn_cache_dup_func_t dup_func;
 
   /* The number of pages we're allowed to allocate before having to
    * try to reuse one. */
@@ -412,7 +412,7 @@ static svn_cache__vtable_t inprocess_cache_vtable = {
 
 svn_error_t *
 svn_cache_create_inprocess(svn_cache_t **cache_p,
-                           svn_cache_dup_func_t *dup_func,
+                           svn_cache_dup_func_t dup_func,
                            apr_ssize_t klen,
                            apr_int64_t pages,
                            apr_int64_t items_per_page,
