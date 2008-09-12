@@ -75,10 +75,8 @@ get_prop_path(const char **ppath,
   const svn_wc_entry_t *entry;
 
   SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, TRUE, pool));
-  SVN_ERR(svn_wc__prop_path(ppath, path, entry->kind,
-                            props_kind, FALSE, pool));
-
-  return SVN_NO_ERROR;
+  return svn_wc__prop_path(ppath, path, entry->kind,
+                           props_kind, FALSE, pool);
 }
 
 /* If PROPFILE_PATH exists (and is a file), assume it's full of
@@ -181,11 +179,9 @@ open_reject_tmp_file(apr_file_t **fp, const char **reject_tmp_path,
                             svn_wc__props_working, TRUE, pool));
 
   /* Reserve a .prej file based on it.  */
-  SVN_ERR(svn_io_open_unique_file2(fp, reject_tmp_path, tmp_path,
-                                   SVN_WC__PROP_REJ_EXT,
-                                   svn_io_file_del_none, pool));
-
-  return SVN_NO_ERROR;
+  return svn_io_open_unique_file2(fp, reject_tmp_path, tmp_path,
+                                  SVN_WC__PROP_REJ_EXT,
+                                  svn_io_file_del_none, pool);
 }
 
 
@@ -205,10 +201,8 @@ append_prop_conflict(apr_file_t *fp,
                                  &written, pool));
 
   native_text = svn_utf_cstring_from_utf8_fuzzy(APR_EOL_STR, pool);
-  SVN_ERR(svn_io_file_write_full(fp, native_text, strlen(native_text),
-                                 &written, pool));
-
-  return SVN_NO_ERROR;
+  return svn_io_file_write_full(fp, native_text, strlen(native_text),
+                                &written, pool);
 }
 
 
@@ -389,10 +383,8 @@ install_props_file(svn_stringbuf_t **log_accum,
                              FALSE, pool));
 
   /* Make the props file read-only */
-  SVN_ERR(svn_wc__loggy_set_readonly(log_accum, adm_access,
-                                     propfile_path, pool));
-
-  return SVN_NO_ERROR;
+  return svn_wc__loggy_set_readonly(log_accum, adm_access,
+                                    propfile_path, pool);
 }
 
 svn_error_t *
@@ -507,11 +499,9 @@ svn_wc__working_props_committed(const char *path,
 
   SVN_ERR(svn_wc_adm_probe_retrieve(&mod_access, adm_access, path, pool));
   mod_entry.has_prop_mods = FALSE;
-  SVN_ERR(svn_wc__entry_modify(mod_access, entry->name, &mod_entry,
-                               SVN_WC__ENTRY_MODIFY_HAS_PROP_MODS,
-                               sync_entries, pool));
-
-  return SVN_NO_ERROR;
+  return svn_wc__entry_modify(mod_access, entry->name, &mod_entry,
+                              SVN_WC__ENTRY_MODIFY_HAS_PROP_MODS,
+                              sync_entries, pool);
 }
 
 
@@ -624,10 +614,8 @@ read_wcprops(svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
 
   svn_wc__adm_access_set_wcprops(adm_access, all_wcprops);
 
-  SVN_ERR(svn_wc__close_adm_file(file, svn_wc_adm_access_path(adm_access),
-                                 SVN_WC__ADM_ALL_WCPROPS, FALSE, pool));
-
-  return SVN_NO_ERROR;
+  return svn_wc__close_adm_file(file, svn_wc_adm_access_path(adm_access),
+                                SVN_WC__ADM_ALL_WCPROPS, FALSE, pool);
 }
 
 static svn_error_t *
@@ -707,10 +695,8 @@ write_wcprops(svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
       SVN_ERR(svn_hash_write2(proplist, stream, SVN_HASH_TERMINATOR, subpool));
     }
 
-  SVN_ERR(svn_wc__close_adm_file(file, svn_wc_adm_access_path(adm_access),
-                                 SVN_WC__ADM_ALL_WCPROPS, TRUE, pool));
-
-  return SVN_NO_ERROR;
+  return svn_wc__close_adm_file(file, svn_wc_adm_access_path(adm_access),
+                                SVN_WC__ADM_ALL_WCPROPS, TRUE, pool);
 }
 
 
@@ -720,18 +706,13 @@ svn_wc__props_flush(const char *path,
                     svn_wc_adm_access_t *adm_access,
                     apr_pool_t *pool)
 {
+  svn_wc_adm_access_t *prop_access;
+
   if (props_kind != svn_wc__props_wcprop)
     return SVN_NO_ERROR;
-  else
-    {
-      svn_wc_adm_access_t *prop_access;
 
-      SVN_ERR(svn_wc_adm_probe_retrieve(&prop_access, adm_access,
-                                        path, pool));;
-      SVN_ERR(write_wcprops(prop_access, pool));
-    }
-
-  return SVN_NO_ERROR;
+  SVN_ERR(svn_wc_adm_probe_retrieve(&prop_access, adm_access, path, pool));
+  return write_wcprops(prop_access, pool);
 }
 
 
@@ -988,9 +969,8 @@ svn_wc__loggy_revert_props_restore(svn_stringbuf_t **log_accum,
   SVN_ERR(svn_wc__prop_path(&revert_file, path, entry->kind,
                             svn_wc__props_revert, FALSE, pool));
 
-  SVN_ERR(svn_wc__loggy_move(log_accum, NULL, adm_access,
-                             revert_file, base_file, FALSE, pool));
-  return SVN_NO_ERROR;
+  return svn_wc__loggy_move(log_accum, NULL, adm_access,
+                            revert_file, base_file, FALSE, pool);
 }
 
 
@@ -1061,8 +1041,7 @@ combine_mergeinfo_props(const svn_string_t **output,
   SVN_ERR(svn_mergeinfo_parse(&mergeinfo1, prop_val1->data, pool));
   SVN_ERR(svn_mergeinfo_parse(&mergeinfo2, prop_val2->data, pool));
   SVN_ERR(svn_mergeinfo_merge(mergeinfo1, mergeinfo2, pool));
-  SVN_ERR(svn_mergeinfo_to_string((svn_string_t **)output, mergeinfo1, pool));
-  return SVN_NO_ERROR;
+  return svn_mergeinfo_to_string((svn_string_t **)output, mergeinfo1, pool);
 }
 
 /* Perform a 3-way merge operation on mergeinfo.  FROM_PROP_VAL is
@@ -1235,8 +1214,7 @@ write_tmp_file(const char **new_path,
                                    pool));
   SVN_ERR(svn_io_file_write_full(new_file, val->data,
                                  val->len, NULL, pool));
-  SVN_ERR(svn_io_file_close(new_file, pool));
-  return SVN_NO_ERROR;
+  return svn_io_file_close(new_file, pool);
 }
 
 
@@ -2110,9 +2088,7 @@ svn_wc__wcprop_list(apr_hash_t **wcprops,
   SVN_ERR(svn_wc__prop_path(&prop_path, path, entry->kind,
                             svn_wc__props_wcprop, FALSE, pool));
   *wcprops = apr_hash_make(pool);
-  SVN_ERR(load_prop_file(prop_path, *wcprops, pool));
-
-  return SVN_NO_ERROR;
+  return load_prop_file(prop_path, *wcprops, pool);
 }
 
 
@@ -2586,9 +2562,7 @@ svn_wc_prop_set2(const char *name,
   SVN_ERR(svn_wc__install_props(&log_accum, adm_access, path,
                                 base_prophash, prophash, FALSE, pool));
   SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
-  SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
-
-  return SVN_NO_ERROR;
+  return svn_wc__run_log(adm_access, NULL, pool);
 }
 
 

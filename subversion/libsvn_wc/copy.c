@@ -798,13 +798,11 @@ copy_dir_administratively(const char *src_path,
 
     SVN_ERR(svn_wc_adm_close(adm_access));
 
-    SVN_ERR(svn_wc_add3(dst_path, dst_parent, svn_depth_infinity,
-                        copyfrom_url, copyfrom_rev,
-                        cancel_func, cancel_baton,
-                        notify_copied, notify_baton, pool));
+    return svn_wc_add3(dst_path, dst_parent, svn_depth_infinity,
+                       copyfrom_url, copyfrom_rev,
+                       cancel_func, cancel_baton,
+                       notify_copied, notify_baton, pool);
   }
-
-  return SVN_NO_ERROR;
 }
 
 
@@ -893,10 +891,7 @@ svn_wc_copy2(const char *src_path,
         }
     }
 
-  SVN_ERR(svn_wc_adm_close(adm_access));
-
-
-  return SVN_NO_ERROR;
+  return svn_wc_adm_close(adm_access);
 }
 
 

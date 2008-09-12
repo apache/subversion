@@ -319,11 +319,10 @@ add_directory(const char *path,
       b->ambient_depth = svn_depth_infinity;
     }
 
-  SVN_ERR(eb->wrapped_editor->add_directory(path, pb->wrapped_baton,
-                                            copyfrom_path,
-                                            copyfrom_revision,
-                                            pool, &b->wrapped_baton));
-  return SVN_NO_ERROR;
+  return eb->wrapped_editor->add_directory(path, pb->wrapped_baton,
+                                           copyfrom_path,
+                                           copyfrom_revision,
+                                           pool, &b->wrapped_baton);
 }
 
 static svn_error_t *
@@ -375,11 +374,9 @@ add_file(const char *path,
   if (b->ambiently_excluded)
     return SVN_NO_ERROR;
 
-  SVN_ERR(eb->wrapped_editor->add_file(path, pb->wrapped_baton,
-                                       copyfrom_path, copyfrom_revision,
-                                       pool, &b->wrapped_baton));
-
-  return SVN_NO_ERROR;
+  return eb->wrapped_editor->add_file(path, pb->wrapped_baton,
+                                      copyfrom_path, copyfrom_revision,
+                                      pool, &b->wrapped_baton);
 }
 
 static svn_error_t *
@@ -398,10 +395,9 @@ open_file(const char *path,
   if (b->ambiently_excluded)
     return SVN_NO_ERROR;
 
-  SVN_ERR(eb->wrapped_editor->open_file(path, pb->wrapped_baton,
-                                        base_revision, pool,
-                                        &b->wrapped_baton));
-  return SVN_NO_ERROR;
+  return eb->wrapped_editor->open_file(path, pb->wrapped_baton,
+                                       base_revision, pool,
+                                       &b->wrapped_baton);
 }
 
 static svn_error_t *

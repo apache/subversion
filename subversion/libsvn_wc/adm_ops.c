@@ -480,9 +480,7 @@ process_committed_leaf(int log_number,
     }
 
   /* Write our accumulation of log entries into a log file */
-  SVN_ERR(svn_wc__write_log(adm_access, log_number, logtags, pool));
-
-  return SVN_NO_ERROR;
+  return svn_wc__write_log(adm_access, log_number, logtags, pool);
 }
 
 
@@ -800,9 +798,7 @@ svn_wc_process_committed4(const char *path,
                                      remove_changelist, digest, pool));
 
   /* Run the log file(s) we just created. */
-  SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
-
-  return SVN_NO_ERROR;
+  return svn_wc__run_log(adm_access, NULL, pool);
 }
 
 svn_error_t *
@@ -2910,11 +2906,9 @@ svn_wc_resolved_conflict3(const char *path,
   baton->notify_baton = notify_baton;
   baton->conflict_choice = conflict_choice;
 
-  SVN_ERR(svn_wc_walk_entries3(path, adm_access,
-                               &resolve_walk_callbacks, baton, depth,
-                               FALSE, cancel_func, cancel_baton, pool));
-
-  return SVN_NO_ERROR;
+  return svn_wc_walk_entries3(path, adm_access,
+                              &resolve_walk_callbacks, baton, depth,
+                              FALSE, cancel_func, cancel_baton, pool);
 }
 
 svn_error_t *svn_wc_add_lock(const char *path, const svn_lock_t *lock,
