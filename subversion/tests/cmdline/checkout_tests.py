@@ -741,7 +741,7 @@ test_list = [ None,
               checkout_creates_intermediate_folders,
               checkout_peg_rev,
               checkout_peg_rev_date,
-              co_with_obstructing_local_adds,
+              XFail(co_with_obstructing_local_adds),
             ]
 
 if __name__ == "__main__":
