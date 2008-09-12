@@ -43,6 +43,7 @@
 #include <apr_hash.h>
 #include <apr_md5.h>
 
+#include "svn_error.h"
 #include "svn_pools.h"
 #include "svn_path.h"
 #include "svn_md5.h"
@@ -1510,7 +1511,7 @@ svnpatch_close_edit(void *edit_baton,
 {
   struct edit_baton *eb = edit_baton;
   
-  assert(eb->root_opened);
+  SVN_ERR_ASSERT(eb->root_opened);
   SVN_ERR(svn_wc_write_cmd(eb->svnpatch_stream, eb->pool,
                            "close-edit", ""));
   return SVN_NO_ERROR;
@@ -1606,7 +1607,7 @@ path_driver_cb_func(void **dir_baton,
     {
       case svn_wc_schedule_replace: /* fallthrough del + add */
       case svn_wc_schedule_delete:
-        assert(pb);
+        SVN_ERR_ASSERT(pb);
         eb->reverse_order = 1; /* TODO: fix this crappy workaround */
         SVN_ERR(editor->delete_entry
                 (path, SVN_INVALID_REVNUM, pb, pool));
@@ -1618,7 +1619,7 @@ path_driver_cb_func(void **dir_baton,
       case svn_wc_schedule_add:
         if (entry->kind == svn_node_file)
           {
-            assert(pb);
+            SVN_ERR_ASSERT(pb);
             SVN_ERR(editor->add_file
                     (path, pb, copyfrom_url, SVN_INVALID_REVNUM,
                      pool, &fb));
@@ -1626,7 +1627,7 @@ path_driver_cb_func(void **dir_baton,
           }
         else /* dir */
           {
-            assert(pb);
+            SVN_ERR_ASSERT(pb);
             SVN_ERR(editor->add_directory
                     (path, pb, copyfrom_url, SVN_INVALID_REVNUM,
                      pool, dir_baton));
@@ -1643,7 +1644,7 @@ path_driver_cb_func(void **dir_baton,
           {
             if (! fb)
               {
-                assert(pb);
+                SVN_ERR_ASSERT(pb);
                 SVN_ERR(editor->open_file
                         (path, pb, SVN_INVALID_REVNUM, pool, &fb));
                 file_need_close = TRUE;
@@ -2525,7 +2526,7 @@ close_edit(void *edit_baton,
   if (eb->svnpatch_stream)
     {
       /* No more target left to diff. */
-      assert(eb->diff_targets->nelts < 1);
+      SVN_ERR_ASSERT(eb->diff_targets->nelts < 1);
       SVN_ERR(eb->diff_editor->close_edit
               (eb, pool));
     }
