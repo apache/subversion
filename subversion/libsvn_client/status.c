@@ -102,6 +102,7 @@ tweak_status(void *baton,
             continue;
 
           ignore = FALSE;
+          break;
         }
 
       if (ignore)
