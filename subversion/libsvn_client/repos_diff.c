@@ -281,23 +281,19 @@ get_file_from_ra(struct file_baton *b, svn_revnum_t revision)
                           fstream, NULL,
                           &(b->pristine_props),
                           b->pool));
-  SVN_ERR(svn_io_file_close(file, b->pool));
-
-  return SVN_NO_ERROR;
+  return svn_io_file_close(file, b->pool);
 }
 
 /* Get the props attached to a directory in the repository at BASE_REVISION. */
 static svn_error_t *
 get_dirprops_from_ra(struct dir_baton *b, svn_revnum_t base_revision)
 {
-  SVN_ERR(svn_ra_get_dir2(b->edit_baton->ra_session,
-                          NULL, NULL, &(b->pristine_props),
-                          b->path,
-                          base_revision,
-                          0,
-                          b->pool));
-
-  return SVN_NO_ERROR;
+  return svn_ra_get_dir2(b->edit_baton->ra_session,
+                         NULL, NULL, &(b->pristine_props),
+                         b->path,
+                         base_revision,
+                         0,
+                         b->pool);
 }
 
 
@@ -315,20 +311,18 @@ create_empty_file(apr_file_t **file,
                   apr_pool_t *pool)
 {
   if (adm_access && svn_wc_adm_locked(adm_access))
-    SVN_ERR(svn_wc_create_tmp_file2(file, empty_file_path,
-                                    svn_wc_adm_access_path(adm_access),
-                                    delete_when, pool));
+    return svn_wc_create_tmp_file2(file, empty_file_path,
+                                   svn_wc_adm_access_path(adm_access),
+                                   delete_when, pool);
   else
     {
       const char *temp_dir;
 
       SVN_ERR(svn_io_temp_dir(&temp_dir, pool));
-      SVN_ERR(svn_io_open_unique_file2(file, empty_file_path,
-                                       svn_path_join(temp_dir, "tmp", pool),
-                                       "", delete_when, pool));
+      return svn_io_open_unique_file2(file, empty_file_path,
+                                      svn_path_join(temp_dir, "tmp", pool),
+                                      "", delete_when, pool);
     }
-
-  return SVN_NO_ERROR;
 }
 
 /* Return in *PATH_ACCESS the access baton for the directory PATH by
@@ -613,11 +607,9 @@ open_directory(const char *path,
   SVN_ERR(get_path_access(&adm_access, eb->adm_access, pb->wcpath, TRUE,
                           pool));
 
-  SVN_ERR(eb->diff_callbacks->dir_opened
-          (adm_access, b->wcpath, base_revision,
-           b->edit_baton->diff_cmd_baton));
-
-  return SVN_NO_ERROR;
+  return eb->diff_callbacks->dir_opened
+         (adm_access, b->wcpath, base_revision,
+          b->edit_baton->diff_cmd_baton);
 }
 
 
@@ -658,9 +650,7 @@ open_file(const char *path,
   b = make_file_baton(path, FALSE, pb->edit_baton, pool);
   *file_baton = b;
 
-  SVN_ERR(get_file_from_ra(b, base_revision));
-
-  return SVN_NO_ERROR;
+  return get_file_from_ra(b, base_revision);
 }
 
 /* Do the work of applying the text delta.  */
@@ -1092,14 +1082,13 @@ svn_client__get_diff_editor(const char *target,
   tree_editor->absent_directory = absent_directory;
   tree_editor->absent_file = absent_file;
 
-  SVN_ERR(svn_delta_get_cancellation_editor(cancel_func,
-                                            cancel_baton,
-                                            tree_editor,
-                                            eb,
-                                            editor,
-                                            edit_baton,
-                                            pool));
+  return svn_delta_get_cancellation_editor(cancel_func,
+                                           cancel_baton,
+                                           tree_editor,
+                                           eb,
+                                           editor,
+                                           edit_baton,
+                                           pool);
 
   /* We don't destroy subpool, as it's managed by the edit baton. */
-  return SVN_NO_ERROR;
 }
