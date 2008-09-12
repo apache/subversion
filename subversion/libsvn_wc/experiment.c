@@ -27,6 +27,15 @@ typedef svn_error_t (*walker_func_t)(const char *path,
                                      void *baton,
                                      apr_pool_t *scratch_pool);
 
+typedef enum walker_mode_e {
+    walker_mode_base,
+    walker_mode_working,
+    walker_mode_actual
+
+    /* ### other variants? e.g. actual - ignored?
+     * ### NO: insert a filtering callback to proxy to your callback
+     */
+} walker_mode_t;
 
 struct walker_entry {
     const char *dirpath;
@@ -34,6 +43,7 @@ struct walker_entry {
 };
 
 
+/* NOTE: children should live at least as long as "pool" */
 void append_entries(apr_array_header_t *queue,
                     const char *dirpath,
                     const apr_array_header_t *children,
@@ -47,7 +57,7 @@ void append_entries(apr_array_header_t *queue,
         struct walker_entry *entry = apr_palloc(pool, sizeof(*entry));
 
         entry->dirpath = dirpath;
-        entry->name = apr_pstrdup(pool, name);
+        entry->name = name;
 
         APR_ARRAY_PUSH(queue, struct walker_entry *) = entry;
       }
@@ -57,13 +67,15 @@ void append_entries(apr_array_header_t *queue,
 svn_error_t *
 generic_walker(svn_wc__db_t *db,
                const char *path,
+               walker_mode_t mode,
                walker_func_t walk_func,
                void *walk_baton,
                apr_pool_t *scratch_pool)
 {
-    apr_array_header_t *queue = apr_array_make(scratch_pool, 0, 10);
+    apr_pool_t *queue_pool = scratch_pool;
     apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-    struct walker_entry *entry = apr_palloc(scratch_pool, sizeof(*entry));
+    apr_array_header_t *queue = apr_array_make(queue_pool, 0, 10);
+    struct walker_entry *entry = apr_palloc(queue_pool, sizeof(*entry));
 
     entry->dirpath = path;
     entry->name = "";
@@ -80,20 +92,52 @@ generic_walker(svn_wc__db_t *db,
         entry = APR_ARRAY_IDX(queue, queue->nelts - 1, struct walker_entry *);
 
         nodepath = svn_path_join(entry->dirpath, entry->name, iterpool);
-        SVN_ERR(svn_wc__db_read_info(&kind, NULL, NULL, NULL, NULL, NULL,
-                                     NULL, NULL, NULL, NULL, NULL, NULL,
-                                     db, nodepath, iterpool, iterpool));
+
+        if (mode == walker_mode_base)
+          {
+            SVN_ERR(svn_wc__db_base_get_info(&kind, NULL, NULL, NULL, NULL,
+                                             db, nodepath, iterpool, iterpool));
+          }
+        else if (mode == walker_mode_working)
+          {
+            SVN_ERR(svn_wc__db_read_info(&kind, NULL, NULL, NULL, NULL, NULL,
+                                         NULL, NULL, NULL, NULL, NULL, NULL,
+                                         db, nodepath, iterpool, iterpool));
+          }
+        else if (mode == walker_mode_actual)
+          {
+          }
+        else
+          {
+            /* ### ERROR */
+          }
+
         if (kind == svn_wc__db_kind_dir)
           {
             const apr_array_header_t *children;
 
             /* copy the path into a long-lived pool */
-            const char *dirpath = apr_pstrdup(scratch_pool, nodepath);
+            const char *dirpath = apr_pstrdup(queue_pool, nodepath);
 
-            SVN_ERR(svn_wc__db_read_children(&children, db, nodepath,
-                                             scratch_pool, iterpool));
+            if (mode == walker_mode_base)
+              {
+                SVN_ERR(svn_wc__db_base_get_children(&children, db, nodepath,
+                                                     queue_pool, iterpool));
+              }
+            else if (mode == walker_mode_working)
+              {
+                SVN_ERR(svn_wc__db_read_children(&children, db, nodepath,
+                                                 queue_pool, iterpool));
+              }
+            else if (mode == walker_mode_actual)
+              {
+              }
+            else
+              {
+                /* ### ERROR */
+              }
 
-            append_entries(queue, dirpath, children, scratch_pool);
+            append_entries(queue, dirpath, children, queue_pool);
           }
 
         (*walk_func)(nodepath, walk_baton, iterpool);
