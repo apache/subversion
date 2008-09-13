@@ -536,6 +536,33 @@ file_diff(struct dir_baton *dir_baton,
 
   /* Prep these two paths early. */
   textbase = svn_wc__text_base_path(path, FALSE, pool);
+
+  /* If the regular text base is not there, we fall back to the revert
+     text base (if that's not present either, we'll error later).  But
+     the logic here is subtler than one might at first expect.
+
+     When the file has some non-replacement scheduling, then it can be
+     expected to still have its regular text base.  But what about
+     when it's replaced or replaced-with-history?  In both cases, a
+     revert text-base will be present; in the latter case only, a
+     regular text-base be present as well.  So which text-base do we
+     want to use for the diff?
+     
+     One could argue that we should never diff against the revert
+     base, and instead diff against the empty-file for both types of
+     replacement.  After all, there is no ancestry relationship
+     between the working file and the base file.  But my guess is that
+     in practice, users want to see the diff between their working
+     file and "the nearest versioned thing", whatever that is.  I'm
+     not 100% sure this is the right decision, but it at least seems
+     to match our test suite's expectations. */
+  {
+    svn_node_kind_t kind;
+    SVN_ERR(svn_io_check_path(textbase, &kind, pool));
+    if (kind == svn_node_none)
+      textbase = svn_wc__text_revert_path(path, FALSE, pool);
+  }
+
   SVN_ERR(get_empty_file(eb, &empty_file));
 
   /* Get property diffs if this is not schedule delete. */
