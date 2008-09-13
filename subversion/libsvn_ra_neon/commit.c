@@ -972,9 +972,7 @@ static svn_error_t * commit_close_dir(void *dir_baton,
 
   /* Perform all of the property changes on the directory. Note that we
      checked out the directory when the first prop change was noted. */
-  SVN_ERR(do_proppatch(dir->cc->ras, dir->rsrc, dir, pool));
-
-  return SVN_NO_ERROR;
+  return do_proppatch(dir->cc->ras, dir->rsrc, dir, pool);
 }
 
 static svn_error_t * commit_add_file(const char *path,
@@ -1320,9 +1318,7 @@ static svn_error_t * commit_close_file(void *file_baton,
 
   /* Perform all of the property changes on the file. Note that we
      checked out the file when the first prop change was noted. */
-  SVN_ERR(do_proppatch(cc->ras, file->rsrc, file, pool));
-
-  return SVN_NO_ERROR;
+  return do_proppatch(cc->ras, file->rsrc, file, pool);
 }
 
 

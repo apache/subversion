@@ -1366,10 +1366,7 @@ svn_ra_neon__maybe_store_auth_info(svn_ra_neon__session_t *ras,
     return SVN_NO_ERROR;
 
   /* If we ever got credentials, ask the iter_baton to save them.  */
-  SVN_ERR(svn_auth_save_credentials(ras->auth_iterstate,
-                                    pool));
-
-  return SVN_NO_ERROR;
+  return svn_auth_save_credentials(ras->auth_iterstate, pool);
 }
 
 
