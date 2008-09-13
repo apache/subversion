@@ -44,6 +44,14 @@ Candidate changes for 1.5.3:
    Votes:
      +1: rhuijben, zhakov
 
+ * r32771
+   po-update.sh: Search for messages in svn_fs_util.h.
+   Justification:
+     po-update.sh without this change doesn't add messages from svn_fs_util.h
+     to .po files, so these messages are untranslated.
+   Votes:
+     +1: arfrever
+
  * r32968, r32975
    Fix bug which occurs when a merge adds explicit mergeinfo to a subtree that
    had no explicit mergeinfo prior to the merge.  This new mergeinfo could
@@ -58,6 +66,7 @@ Candidate changes for 1.5.3:
      aforementioned thread.
    Votes:
      +1: pburba
+     +0: arfrever
 
  * r32977
    Fix the current early bailout of 'svn log' as exhibited during
