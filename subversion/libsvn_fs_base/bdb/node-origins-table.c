@@ -118,10 +118,9 @@ svn_error_t *svn_fs_bdb__set_node_origin(svn_fs_t *fs,
   /* Create a value from our ORIGIN_ID, and add this record to the table. */
   svn_fs_base__id_to_dbt(&value, origin_id, pool);
   svn_fs_base__trail_debug(trail, "node-origins", "put");
-  SVN_ERR(BDB_WRAP(fs, _("storing node-origins record"),
-                   bfd->node_origins->put(bfd->node_origins, trail->db_txn,
-                                          &key, &value, 0)));
-  return SVN_NO_ERROR;
+  return BDB_WRAP(fs, _("storing node-origins record"),
+                  bfd->node_origins->put(bfd->node_origins, trail->db_txn,
+                                         &key, &value, 0));
 }
 
 svn_error_t *svn_fs_bdb__delete_node_origin(svn_fs_t *fs,
@@ -134,8 +133,7 @@ svn_error_t *svn_fs_bdb__delete_node_origin(svn_fs_t *fs,
 
   svn_fs_base__str_to_dbt(&key, node_id);
   svn_fs_base__trail_debug(trail, "node-origins", "del");
-  SVN_ERR(BDB_WRAP(fs, "deleting entry from 'node-origins' table",
-                   bfd->node_origins->del(bfd->node_origins,
-                                          trail->db_txn, &key, 0)));
-  return SVN_NO_ERROR;
+  return BDB_WRAP(fs, "deleting entry from 'node-origins' table",
+                  bfd->node_origins->del(bfd->node_origins,
+                                         trail->db_txn, &key, 0));
 }
