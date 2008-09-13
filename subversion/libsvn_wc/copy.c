@@ -566,9 +566,6 @@ post_copy_cleanup(svn_wc_adm_access_t *adm_access,
   /* Remove wcprops. */
   SVN_ERR(svn_wc__props_delete(path, svn_wc__props_wcprop, adm_access, pool));
 
-  /* Read this directory's entries file. */
-  SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, pool));
-
   /* Because svn_io_copy_dir_recursively() doesn't copy directory
      permissions, we'll patch up our tree's .svn subdirs to be
      hidden. */
