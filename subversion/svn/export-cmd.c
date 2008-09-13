@@ -87,6 +87,6 @@ svn_cl__export(apr_getopt_t *os,
     SVN_ERR_W(err,
               _("Destination directory exists; please remove "
                 "the directory or use --force to overwrite"));
-  else
-    return err;
+
+  return err;
 }
