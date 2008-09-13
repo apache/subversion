@@ -1900,11 +1900,12 @@ add_file(const char *path,
 
   /* When adding, there should be nothing with this name unless unversioned
      obstructions are permitted or the obstruction is scheduled for addition
-     without history. */
+     (or replacement) without history. */
   if (kind != svn_node_none)
     {
       if (eb->allow_unver_obstructions
-          || (entry && entry->schedule == svn_wc_schedule_add))
+          || (entry && ((entry->schedule == svn_wc_schedule_add
+                         || entry->schedule == svn_wc_schedule_replace))))
         {
           if (entry && entry->copied)
             {
@@ -2060,7 +2061,7 @@ choose_base_paths(const char **checksum_p,
   SVN_ERR(svn_wc_entry(&ent, fb->path, adm_access, FALSE, pool));
 
   replaced = ent && ent->schedule == svn_wc_schedule_replace;
-  use_revert_base = replaced && (ent->copyfrom_url != NULL);
+  use_revert_base = replaced;
   if (use_revert_base)
     {
       fb->text_base_path = svn_wc__text_revert_path(fb->path, FALSE, fb->pool);

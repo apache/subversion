@@ -328,8 +328,7 @@ svn_wc__load_props(apr_hash_t **base_props_p,
     {
       *revert_props_p = apr_hash_make(pool);
 
-      if (entry->schedule == svn_wc_schedule_replace
-          && entry->copied)
+      if (entry->schedule == svn_wc_schedule_replace)
         {
           const char *revert_prop_path;
 
