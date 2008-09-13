@@ -84,11 +84,9 @@ svn_fs_bdb__changes_add(svn_fs_t *fs,
   svn_fs_base__str_to_dbt(&query, key);
   svn_fs_base__skel_to_dbt(&value, skel, pool);
   svn_fs_base__trail_debug(trail, "changes", "put");
-  SVN_ERR(BDB_WRAP(fs, _("creating change"),
-                   bfd->changes->put(bfd->changes, trail->db_txn,
-                                     &query, &value, 0)));
-
-  return SVN_NO_ERROR;
+  return BDB_WRAP(fs, _("creating change"),
+                  bfd->changes->put(bfd->changes, trail->db_txn,
+                                    &query, &value, 0));
 }
 
 
