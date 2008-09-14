@@ -3445,6 +3445,9 @@ read_change(change_t **change_p,
                             _("Invalid changes line in rev-file"));
 
   change->noderev_id = svn_fs_fs__id_parse(str, strlen(str), pool);
+  if (change->noderev_id == NULL)
+    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                            _("Invalid changes line in rev-file"));
 
   /* Get the change type. */
   str = apr_strtok(NULL, " ", &last_str);
