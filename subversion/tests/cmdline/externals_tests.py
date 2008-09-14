@@ -54,6 +54,7 @@ def externals_test_setup(sbox):
 
   The arrangement of the externals in the first repository is:
 
+    /A/B/ ==>  ^/A/D/gamma                      gamma
     /A/C/ ==>  exdir_G                          <scheme>:///<other_repos>/A/D/G
                ../../../<other_repos_basename>/A/D/H@1 exdir_H
 
@@ -96,6 +97,7 @@ def externals_test_setup(sbox):
 
   # These are the directories on which `svn:externals' will be set, in
   # revision 6 on the first repo.
+  B_path = os.path.join(wc_init_dir, "A/B")
   C_path = os.path.join(wc_init_dir, "A/C")
   D_path = os.path.join(wc_init_dir, "A/D")
 
@@ -140,12 +142,24 @@ def externals_test_setup(sbox):
   # This is the returned dictionary.
   external_url_for = { }
 
+  external_url_for["A/B/gamma"] = "^/A/D/gamma"
   external_url_for["A/C/exdir_G"] = other_repo_url + "/A/D/G"
   external_url_for["A/C/exdir_H"] = "../../../" + \
                                     other_repo_basename + \
                                     "/A/D/H@1"
 
-  # Set up the externals properties on A/C/ and A/D/.
+  # Set up the externals properties on A/B/, A/C/ and A/D/.
+  externals_desc = \
+           external_url_for["A/B/gamma"] + " gamma\n"
+
+  tmp_f = os.tempnam(wc_init_dir, 'tmp')
+  svntest.main.file_append(tmp_f, externals_desc)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'pset',
+                                     '-F', tmp_f, 'svn:externals', B_path)
+
+  os.remove(tmp_f)
+
   externals_desc = \
            "exdir_G       " + external_url_for["A/C/exdir_G"] + "\n" + \
            external_url_for["A/C/exdir_H"] + " exdir_H\n"
@@ -183,12 +197,13 @@ def externals_test_setup(sbox):
   # Commit the property changes.
 
   expected_output = svntest.wc.State(wc_init_dir, {
+    'A/B' : Item(verb='Sending'),
     'A/C' : Item(verb='Sending'),
     'A/D' : Item(verb='Sending'),
     })
 
   expected_status = svntest.actions.get_virginal_state(wc_init_dir, 5)
-  expected_status.tweak('A/C', 'A/D', wc_rev=6, status='  ')
+  expected_status.tweak('A/B', 'A/C', 'A/D', wc_rev=6, status='  ')
 
   svntest.actions.run_and_verify_commit(wc_init_dir,
                                         expected_output,
@@ -977,7 +992,7 @@ test_list = [ None,
               update_receive_change_under_external,
               modify_and_update_receive_new_external,
               disallow_dot_or_dotdot_directory_reference,
-              export_with_externals,
+              XFail(export_with_externals),
               export_wc_with_externals,
               external_with_peg_and_op_revision,
               new_style_externals,
