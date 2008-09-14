@@ -886,9 +886,7 @@ read_format(int *pformat, int *max_files_per_dir,
          svn_path_local_style(path, pool), buf);
     }
 
-  SVN_ERR(svn_io_file_close(file, pool));
-
-  return SVN_NO_ERROR;
+  return svn_io_file_close(file, pool);
 }
 
 /* Write the format number and maximum number of files per directory
@@ -956,9 +954,7 @@ write_format(const char *path, int format, int max_files_per_dir,
     }
 
   /* And set the perms to make it read only */
-  SVN_ERR(svn_io_set_file_read_only(path, FALSE, pool));
-
-  return SVN_NO_ERROR;
+  return svn_io_set_file_read_only(path, FALSE, pool);
 }
 
 /* Return the error SVN_ERR_FS_UNSUPPORTED_FORMAT if FS's format
@@ -1068,9 +1064,7 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
 
   SVN_ERR(svn_io_file_close(uuid_file, pool));
 
-  SVN_ERR(get_youngest(&(ffd->youngest_rev_cache), path, pool));
-
-  return SVN_NO_ERROR;
+  return get_youngest(&(ffd->youngest_rev_cache), path, pool);
 }
 
 /* Wrapper around svn_io_file_create which ignores EEXIST. */
@@ -1124,10 +1118,8 @@ upgrade_body(void *baton, apr_pool_t *pool)
 
   /* Bump the format file.  We pass 0 for the max_files_per_dir here
      so we don't have to fuss with sharding directories ourselves. */
-  SVN_ERR(write_format(format_path, SVN_FS_FS__FORMAT_NUMBER, 0,
-                       TRUE, pool));
-
-  return SVN_NO_ERROR;
+  return write_format(format_path, SVN_FS_FS__FORMAT_NUMBER, 0,
+                      TRUE, pool);
 }
 
 
@@ -1406,10 +1398,8 @@ svn_fs_fs__hotcopy(const char *src_path,
     SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, PATH_TXN_CURRENT, pool));
 
   /* Hotcopied FS is complete. Stamp it with a format file. */
-  SVN_ERR(write_format(svn_path_join(dst_path, PATH_FORMAT, pool),
-                       format, max_files_per_dir, FALSE, pool));
-
-  return SVN_NO_ERROR;
+  return write_format(svn_path_join(dst_path, PATH_FORMAT, pool),
+                      format, max_files_per_dir, FALSE, pool);
 }
 
 svn_error_t *
@@ -1930,9 +1920,7 @@ svn_fs_fs__write_noderev(svn_stream_t *outfile,
         SVN_ERR(svn_stream_printf(outfile, pool, HEADER_MINFO_HERE ": y\n"));
     }
 
-  SVN_ERR(svn_stream_printf(outfile, pool, "\n"));
-
-  return SVN_NO_ERROR;
+  return svn_stream_printf(outfile, pool, "\n");
 }
 
 svn_error_t *
@@ -1961,9 +1949,7 @@ svn_fs_fs__put_node_revision(svn_fs_t *fs,
                                    svn_fs_fs__fs_supports_mergeinfo(fs),
                                    pool));
 
-  SVN_ERR(svn_io_file_close(noderev_file, pool));
-
-  return SVN_NO_ERROR;
+  return svn_io_file_close(noderev_file, pool);
 }
 
 
@@ -2221,11 +2207,9 @@ svn_fs_fs__set_revision_proplist(svn_fs_t *fs,
      because when setting revprops for the first time, the revprop
      file won't exist and therefore can't serve as its own reference.
      (Whereas the rev file should already exist at this point.) */
-  SVN_ERR(svn_fs_fs__move_into_place(tmp_path, final_path,
-                                     svn_fs_fs__path_rev(fs, rev, pool),
-                                     pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_fs__move_into_place(tmp_path, final_path,
+                                    svn_fs_fs__path_rev(fs, rev, pool),
+                                    pool);
 }
 
 svn_error_t *
@@ -2881,9 +2865,7 @@ delta_read_next_window(svn_txdelta_window_t **window, void *baton,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(read_window(window, drb->rs->chunk_index, drb->rs, pool));
-
-  return SVN_NO_ERROR;
+  return read_window(window, drb->rs->chunk_index, drb->rs, pool);
 }
 
 /* This implements the svn_txdelta_md5_digest_fn_t interface. */
@@ -3732,9 +3714,7 @@ create_new_txn_noderev_from_rev(svn_fs_t *fs,
   copy_id = svn_fs_fs__id_copy_id(noderev->id);
   noderev->id = svn_fs_fs__id_txn_create(node_id, copy_id, txn_id, pool);
 
-  SVN_ERR(svn_fs_fs__put_node_revision(fs, noderev->id, noderev, TRUE, pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_fs__put_node_revision(fs, noderev->id, noderev, TRUE, pool);
 }
 
 /* A structure used by get_and_increment_txn_key_body(). */
@@ -3843,9 +3823,7 @@ create_txn_dir(const char **id_p, svn_fs_t *fs, svn_revnum_t rev,
                                apr_pstrcat(pool, *id_p, PATH_EXT_TXN, NULL),
                                NULL);
 
-  SVN_ERR(svn_io_dir_make(txn_dir, APR_OS_DEFAULT, pool));
-
-  return SVN_NO_ERROR;
+  return svn_io_dir_make(txn_dir, APR_OS_DEFAULT, pool);
 }
 
 /* Create a unique directory for a transaction in FS based on revision
@@ -3936,10 +3914,8 @@ svn_fs_fs__create_txn(svn_fs_txn_t **txn_p,
                              pool));
 
   /* Create the next-ids file. */
-  SVN_ERR(svn_io_file_create(path_txn_next_ids(fs, txn->id, pool), "0 0\n",
-                             pool));
-
-  return SVN_NO_ERROR;
+  return svn_io_file_create(path_txn_next_ids(fs, txn->id, pool), "0 0\n",
+                            pool);
 }
 
 /* Store the property list for transaction TXN_ID in PROPLIST.
@@ -3962,9 +3938,7 @@ get_txn_proplist(apr_hash_t *proplist,
                          svn_stream_from_aprfile2(txn_prop_file, TRUE, pool),
                          SVN_HASH_TERMINATOR, pool));
 
-  SVN_ERR(svn_io_file_close(txn_prop_file, pool));
-
-  return SVN_NO_ERROR;
+  return svn_io_file_close(txn_prop_file, pool);
 }
 
 svn_error_t *
@@ -4073,9 +4047,7 @@ write_next_ids(svn_fs_t *fs,
   SVN_ERR(svn_stream_printf(out_stream, pool, "%s %s\n", node_id, copy_id));
 
   SVN_ERR(svn_stream_close(out_stream));
-  SVN_ERR(svn_io_file_close(file, pool));
-
-  return SVN_NO_ERROR;
+  return svn_io_file_close(file, pool);
 }
 
 /* Find out what the next unique node-id and copy-id are for
@@ -4295,8 +4267,7 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
                                 strlen(name), name));
     }
 
-  SVN_ERR(svn_io_file_close(file, pool));
-  return SVN_NO_ERROR;
+  return svn_io_file_close(file, pool);
 }
 
 /* Write a single change entry, path PATH, change CHANGE, and copyfrom
@@ -4353,9 +4324,7 @@ write_change_entry(apr_file_t *file,
                                      NULL, pool));
     }
 
-  SVN_ERR(svn_io_file_write_full(file, "\n", 1, NULL, pool));
-
-  return SVN_NO_ERROR;
+  return svn_io_file_write_full(file, "\n", 1, NULL, pool);
 }
 
 svn_error_t *
@@ -4390,9 +4359,7 @@ svn_fs_fs__add_change(svn_fs_t *fs,
 
   SVN_ERR(write_change_entry(file, path, change, copyfrom, pool));
 
-  SVN_ERR(svn_io_file_close(file, pool));
-
-  return SVN_NO_ERROR;
+  return svn_io_file_close(file, pool);
 }
 
 /* This baton is used by the representation writing streams.  It keeps
@@ -4450,15 +4417,9 @@ rep_write_contents(void *baton,
 
   /* If we are writing a delta, use that stream. */
   if (b->delta_stream)
-    {
-      SVN_ERR(svn_stream_write(b->delta_stream, data, len));
-    }
+    return svn_stream_write(b->delta_stream, data, len);
   else
-    {
-      SVN_ERR(svn_stream_write(b->rep_stream, data, len));
-    }
-
-  return SVN_NO_ERROR;
+    return svn_stream_write(b->rep_stream, data, len);
 }
 
 /* Given a node-revision NODEREV in filesystem FS, return the
@@ -4817,9 +4778,7 @@ write_hash_rep(svn_filesize_t *size,
   svn_checksum_final(checksum, whb->checksum_ctx, pool);
   *size = whb->size;
 
-  SVN_ERR(svn_stream_printf(whb->stream, pool, "ENDREP\n"));
-
-  return SVN_NO_ERROR;
+  return svn_stream_printf(whb->stream, pool, "ENDREP\n");
 }
 
 /* Copy a node-revision specified by id ID in fileystem FS from a
@@ -5148,9 +5107,7 @@ write_current(svn_fs_t *fs, svn_revnum_t rev, const char *next_node_id,
 
   SVN_ERR(svn_io_file_close(file, pool));
 
-  SVN_ERR(svn_fs_fs__move_into_place(tmp_name, name, name, pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_fs__move_into_place(tmp_name, name, name, pool);
 }
 
 /* Update the current file to hold the correct next node and copy_ids
@@ -5932,9 +5889,7 @@ recover_body(void *baton, apr_pool_t *pool)
 
   /* Now store the discovered youngest revision, and the next IDs if
      relevant, in a new current file. */
-  SVN_ERR(write_current(fs, max_rev, next_node_id, next_copy_id, pool));
-
-  return SVN_NO_ERROR;
+  return write_current(fs, max_rev, next_node_id, next_copy_id, pool);
 }
 
 /* This implements the fs_library_vtable_t.recover() API. */
@@ -6017,9 +5972,7 @@ svn_fs_fs__ensure_dir_exists(const char *path,
 
   /* We successfully created a new directory.  Dup the permissions
      from FS->path. */
-  SVN_ERR(svn_fs_fs__dup_perms(path, fs->path, pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_fs__dup_perms(path, fs->path, pool);
 }
 
 /* Set *NODE_ORIGINS to a hash mapping 'const char *' node IDs to
@@ -6127,9 +6080,7 @@ set_node_origins_for_file(svn_fs_t *fs,
   SVN_ERR(svn_stream_close(stream));
 
   /* Rename the temp file as the real destination */
-  SVN_ERR(svn_io_file_rename(path_tmp, node_origins_path, pool));
-
-  return SVN_NO_ERROR;
+  return svn_io_file_rename(path_tmp, node_origins_path, pool);
 }
 
 
@@ -6311,9 +6262,7 @@ change_rev_prop_body(void *baton, apr_pool_t *pool)
 
   apr_hash_set(table, cb->name, APR_HASH_KEY_STRING, cb->value);
 
-  SVN_ERR(svn_fs_fs__set_revision_proplist(cb->fs, cb->rev, table, pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_fs__set_revision_proplist(cb->fs, cb->rev, table, pool);
 }
 
 svn_error_t *

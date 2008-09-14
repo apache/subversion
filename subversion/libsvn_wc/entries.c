@@ -3042,9 +3042,7 @@ svn_wc__entries_init(const char *path,
 
   /* Now we have a `entries' file with exactly one entry, an entry
      for this dir.  Close the file and sync it up. */
-  SVN_ERR(svn_wc__close_adm_file(f, path, SVN_WC__ADM_ENTRIES, 1, pool));
-
-  return SVN_NO_ERROR;
+  return svn_wc__close_adm_file(f, path, SVN_WC__ADM_ENTRIES, 1, pool);
 }
 
 
@@ -3254,13 +3252,11 @@ svn_wc_mark_missing_deleted(const char *path,
       svn_path_split(path, &parent_path, &bname, pool);
 
       SVN_ERR(svn_wc_adm_retrieve(&adm_access, parent, parent_path, pool));
-      SVN_ERR(svn_wc__entry_modify(adm_access, bname, &newent,
+      return svn_wc__entry_modify(adm_access, bname, &newent,
                                    (SVN_WC__ENTRY_MODIFY_DELETED
                                     | SVN_WC__ENTRY_MODIFY_SCHEDULE
                                     | SVN_WC__ENTRY_MODIFY_FORCE),
-                                   TRUE, /* sync right away */ pool));
-
-      return SVN_NO_ERROR;
+                                   TRUE, /* sync right away */ pool);
     }
   else
     return svn_error_createf(SVN_ERR_WC_PATH_FOUND, NULL,

@@ -3382,9 +3382,7 @@ single_file_merge_get_file(const char **filename,
   stream = svn_stream_from_aprfile2(fp, FALSE, pool);
   SVN_ERR(svn_ra_get_file(ra_session, "", rev,
                           stream, NULL, props, pool));
-  SVN_ERR(svn_stream_close(stream));
-
-  return SVN_NO_ERROR;
+  return svn_stream_close(stream);
 }
 
 
@@ -6221,8 +6219,7 @@ svn_client_merge3(const char *source1,
              the merge_cousins_and_supplement_mergeinfo() routine). */
           svn_pool_destroy(sesspool);
 
-          SVN_ERR(svn_wc_adm_close(adm_access));
-          return SVN_NO_ERROR;
+          return svn_wc_adm_close(adm_access);
         }
     }
   else
@@ -6245,9 +6242,7 @@ svn_client_merge3(const char *source1,
                    ignore_ancestry, force, dry_run,
                    record_only, depth, merge_options, ctx, pool));
 
-  SVN_ERR(svn_wc_adm_close(adm_access));
-
-  return SVN_NO_ERROR;
+  return svn_wc_adm_close(adm_access);
 }
 
 svn_error_t *
@@ -6769,9 +6764,7 @@ svn_client_merge_reintegrate(const char *source,
                                                  merge_options, ctx, pool));
 
   /* Shutdown the administrative session. */
-  SVN_ERR(svn_wc_adm_close(adm_access));
-
-  return SVN_NO_ERROR;
+  return svn_wc_adm_close(adm_access);
 }
 
 
@@ -6848,9 +6841,7 @@ svn_client_merge_peg3(const char *source,
                    merge_options, ctx, pool));
 
   /* Shutdown the administrative session. */
-  SVN_ERR(svn_wc_adm_close(adm_access));
-
-  return SVN_NO_ERROR;
+  return svn_wc_adm_close(adm_access);
 }
 
 

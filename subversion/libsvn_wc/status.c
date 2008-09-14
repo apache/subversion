@@ -1967,14 +1967,12 @@ close_file(void *file_baton,
       repos_prop_status = fb->prop_changed ? svn_wc_status_modified : 0;
     }
 
-  SVN_ERR(tweak_statushash(fb, NULL, FALSE,
-                           fb->edit_baton->adm_access,
-                           fb->path, FALSE,
-                           repos_text_status,
-                           repos_prop_status, SVN_INVALID_REVNUM,
-                           repos_lock));
-
-  return SVN_NO_ERROR;
+  return tweak_statushash(fb, NULL, FALSE,
+                          fb->edit_baton->adm_access,
+                          fb->path, FALSE,
+                          repos_text_status,
+                          repos_prop_status, SVN_INVALID_REVNUM,
+                          repos_lock);
 }
 
 
@@ -2359,10 +2357,9 @@ svn_wc_status2(svn_wc_status2_t **status,
                              FALSE, pool));
     }
 
-  SVN_ERR(assemble_status(status, path, adm_access, entry, parent_entry,
-                          svn_node_unknown, FALSE, /* bogus */
-                          TRUE, FALSE, NULL, NULL, pool));
-  return SVN_NO_ERROR;
+  return assemble_status(status, path, adm_access, entry, parent_entry,
+                         svn_node_unknown, FALSE, /* bogus */
+                         TRUE, FALSE, NULL, NULL, pool);
 }
 
 
@@ -2435,8 +2432,6 @@ svn_wc_get_ignores(apr_array_header_t **patterns,
   apr_array_header_t *default_ignores;
 
   SVN_ERR(svn_wc_get_default_ignores(&default_ignores, config, pool));
-  SVN_ERR(collect_ignore_patterns(patterns, default_ignores, adm_access,
-                                  pool));
-
-  return SVN_NO_ERROR;
+  return collect_ignore_patterns(patterns, default_ignores, adm_access,
+                                 pool);
 }
