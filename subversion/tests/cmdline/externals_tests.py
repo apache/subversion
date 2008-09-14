@@ -271,6 +271,7 @@ def checkout_with_externals(sbox):
 
   # Probe the working copy a bit, see if it's as expected.
   expected_existing_paths = [
+    os.path.join(wc_dir, "A", "B", "gamma"),
     os.path.join(wc_dir, "A", "C", "exdir_G"),
     os.path.join(wc_dir, "A", "C", "exdir_G", "pi"),
     os.path.join(wc_dir, "A", "C", "exdir_H"),
@@ -285,12 +286,14 @@ def checkout_with_externals(sbox):
   probe_paths_exist(expected_existing_paths)
 
   # Pick a file at random, make sure it has the expected contents.
-  exdir_H_omega_path = os.path.join(wc_dir, "A", "C", "exdir_H", "omega")
-  fp = open(exdir_H_omega_path, 'r')
-  lines = fp.readlines()
-  if not ((len(lines) == 1) and (lines[0] == "This is the file 'omega'.\n")):
-    raise svntest.Failure("Unexpected contents for rev 1 of " +
-                          exdir_H_omega_path)
+  for path, contents in ((os.path.join(wc_dir, "A", "C", "exdir_H", "omega"),
+                          "This is the file 'omega'.\n"),
+                         (os.path.join(wc_dir, "A", "B", "gamma"),
+                          "This is the file 'gamma'.\n")):
+    fp = open(path, 'r')
+    lines = fp.readlines()
+    if not ((len(lines) == 1) and (lines[0] == contents)):
+      raise svntest.Failure("Unexpected contents for rev 1 of " + path)
 
 #----------------------------------------------------------------------
 
