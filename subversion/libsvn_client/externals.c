@@ -775,17 +775,26 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
                      ib->iter_pool));
           break;
         case svn_node_file:
-          SVN_ERR(switch_file_external(path,
-                                       new_item->url,
-                                       &new_item->peg_revision,
-                                       &new_item->revision,
-                                       ib->adm_access,
-                                       ra_session,
-                                       ra_cache.ra_session_url,
-                                       ra_cache.ra_revnum,
-                                       ra_cache.repos_root_url,
-                                       ib->timestamp_sleep, ib->ctx,
-                                       ib->iter_pool));
+          if (ib->is_export)
+            /* Do not overwrite an existing file with this file
+               external. */
+            SVN_ERR(svn_client_export4(NULL, new_item->url, path,
+                                       &(new_item->peg_revision),
+                                       &(new_item->revision),
+                                       FALSE, TRUE, svn_depth_infinity, NULL,
+                                       ib->ctx, ib->iter_pool));
+          else
+            SVN_ERR(switch_file_external(path,
+                                         new_item->url,
+                                         &new_item->peg_revision,
+                                         &new_item->revision,
+                                         ib->adm_access,
+                                         ra_session,
+                                         ra_cache.ra_session_url,
+                                         ra_cache.ra_revnum,
+                                         ra_cache.repos_root_url,
+                                         ib->timestamp_sleep, ib->ctx,
+                                         ib->iter_pool));
           break;
         default:
           SVN_ERR_MALFUNCTION();
