@@ -2082,7 +2082,9 @@ svn_wc_entry_dup(const svn_wc_entry_t *entry,
  * entries (@a entry) is in state of conflict; return the answers in
  * @a text_conflicted_p, @a prop_conflicted_p and @a tree_conflicted_p.
  *
- * @a tree_conflicted_p refers to @a entry being the victim of a conflict.
+ * If @a entry is the THIS_DIR entry of @a dir_path, and this directory
+ * currently contains one or more tree-conflicted children, then set
+ * @a *tree_conflicted_p to true, else set it to false.
  *
  * If the @a entry mentions that a text conflict file (.rej suffix)
  * exists, but it cannot be found, assume the text conflict has been
