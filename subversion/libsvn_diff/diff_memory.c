@@ -278,9 +278,7 @@ svn_diff_mem_string_diff(svn_diff_t **diff,
 
   baton.normalization_options = options;
 
-  SVN_ERR(svn_diff_diff(diff, &baton, &svn_diff__mem_vtable, pool));
-
-  return SVN_NO_ERROR;
+  return svn_diff_diff(diff, &baton, &svn_diff__mem_vtable, pool);
 }
 
 svn_error_t *
@@ -300,9 +298,7 @@ svn_diff_mem_string_diff3(svn_diff_t **diff,
 
   baton.normalization_options = options;
 
-  SVN_ERR(svn_diff_diff3(diff, &baton, &svn_diff__mem_vtable, pool));
-
-  return SVN_NO_ERROR;
+  return svn_diff_diff3(diff, &baton, &svn_diff__mem_vtable, pool);
 }
 
 
@@ -325,9 +321,7 @@ svn_diff_mem_string_diff4(svn_diff_t **diff,
 
   baton.normalization_options = options;
 
-  SVN_ERR(svn_diff_diff4(diff, &baton, &svn_diff__mem_vtable, pool));
-
-  return SVN_NO_ERROR;
+  return svn_diff_diff4(diff, &baton, &svn_diff__mem_vtable, pool);
 }
 
 
@@ -515,11 +509,9 @@ output_unified_diff_modified(void *baton,
                                      unified_output_delete,
                                      original_start,
                                      original_start + original_length));
-  SVN_ERR(output_unified_token_range(btn, 1/*modified*/, unified_output_insert,
-                                     modified_start,
-                                     modified_start + modified_length));
-
-  return SVN_NO_ERROR;
+  return output_unified_token_range(btn, 1/*modified*/, unified_output_insert,
+                                    modified_start,
+                                    modified_start + modified_length);
 }
 
 static const svn_diff_output_fns_t mem_output_unified_vtable =

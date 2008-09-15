@@ -251,9 +251,7 @@ create_locks(svn_repos_t *repos, apr_pool_t *pool)
             _("Creating lock dir"));
 
   SVN_ERR(create_db_lock(repos, pool));
-  SVN_ERR(create_db_logs_lock(repos, pool));
-
-  return SVN_NO_ERROR;
+  return create_db_logs_lock(repos, pool);
 }
 
 
@@ -1150,10 +1148,8 @@ create_repos_structure(svn_repos_t *repos,
     SVN_ERR(svn_io_file_write_full(f, readme_footer, strlen(readme_footer),
                                    &written, pool));
 
-    SVN_ERR(svn_io_file_close(f, pool));
+    return svn_io_file_close(f, pool);
   }
-
-  return SVN_NO_ERROR;
 }
 
 
@@ -1389,9 +1385,7 @@ svn_repos_open(svn_repos_t **repos_p,
   /* Fetch a repository object initialized with a shared read/write
      lock on the database. */
 
-  SVN_ERR(get_repos(repos_p, path, FALSE, FALSE, TRUE, pool));
-
-  return SVN_NO_ERROR;
+  return get_repos(repos_p, path, FALSE, FALSE, TRUE, pool);
 }
 
 
@@ -1449,9 +1443,7 @@ svn_repos_delete(const char *path,
   SVN_ERR(svn_fs_delete_fs(db_path, pool));
 
   /* ...then blow away everything else.  */
-  SVN_ERR(svn_io_remove_dir2(path, FALSE, NULL, NULL, pool));
-
-  return SVN_NO_ERROR;
+  return svn_io_remove_dir2(path, FALSE, NULL, NULL, pool);
 }
 
 
@@ -1699,16 +1691,11 @@ static svn_error_t *hotcopy_structure(void *baton,
   target = svn_path_join(ctx->dest, sub_path, pool);
 
   if (finfo->filetype == APR_DIR)
-    {
-      SVN_ERR(create_repos_dir(target, pool));
-    }
+    return create_repos_dir(target, pool);
   else if (finfo->filetype == APR_REG)
-    {
-
-      SVN_ERR(svn_io_copy_file(path, target, TRUE, pool));
-    }
-
-  return SVN_NO_ERROR;
+    return svn_io_copy_file(path, target, TRUE, pool);
+  else
+    return SVN_NO_ERROR;
 }
 
 
@@ -1725,9 +1712,7 @@ lock_db_logs_file(svn_repos_t *repos,
      repositories created before hotcopy functionality.  */
   svn_error_clear(create_db_logs_lock(repos, pool));
 
-  SVN_ERR(svn_io_file_lock2(lock_file, exclusive, FALSE, pool));
-
-  return SVN_NO_ERROR;
+  return svn_io_file_lock2(lock_file, exclusive, FALSE, pool);
 }
 
 
@@ -1786,11 +1771,9 @@ svn_repos_hotcopy(const char *src_path,
                          clean_logs, pool));
 
   /* Destination repository is ready.  Stamp it with a format number. */
-  SVN_ERR(svn_io_write_version_file
+  return svn_io_write_version_file
           (svn_path_join(dst_repos->path, SVN_REPOS__FORMAT, pool),
-           dst_repos->format, pool));
-
-  return SVN_NO_ERROR;
+           dst_repos->format, pool);
 }
 
 /* Return the library version number. */

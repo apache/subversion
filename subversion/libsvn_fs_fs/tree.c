@@ -852,13 +852,11 @@ add_change(svn_fs_t *fs,
            const char *copyfrom_path,
            apr_pool_t *pool)
 {
-  SVN_ERR(svn_fs_fs__add_change(fs, txn_id,
-                                svn_fs__canonicalize_abspath(path, pool),
-                                noderev_id, change_kind, text_mod, prop_mod,
-                                copyfrom_rev, copyfrom_path,
-                                pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_fs__add_change(fs, txn_id,
+                               svn_fs__canonicalize_abspath(path, pool),
+                               noderev_id, change_kind, text_mod, prop_mod,
+                               copyfrom_rev, copyfrom_path,
+                               pool);
 }
 
 
@@ -903,9 +901,7 @@ svn_fs_fs__node_created_rev(svn_revnum_t *revision,
   dag_node_t *node;
 
   SVN_ERR(get_dag(&node, root, path, pool));
-  SVN_ERR(svn_fs_fs__dag_get_revision(revision, node, pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_fs__dag_get_revision(revision, node, pool);
 }
 
 
@@ -963,13 +959,11 @@ svn_fs_fs__check_path(svn_node_kind_t *kind_p,
        || (err->apr_err == SVN_ERR_FS_NOT_DIRECTORY)))
     {
       svn_error_clear(err);
+      err = SVN_NO_ERROR;
       *kind_p = svn_node_none;
     }
-  else if (err)
-    {
-      return err;
-    }
-  return SVN_NO_ERROR;
+
+  return err;
 }
 
 /* Set *VALUE_P to the value of the property named PROPNAME of PATH in
@@ -1097,12 +1091,10 @@ fs_change_node_prop(svn_fs_root_t *root,
                                       pool));
 
   /* Make a record of this modification in the changes table. */
-  SVN_ERR(add_change(root->fs, txn_id, path,
-                     svn_fs_fs__dag_get_id(parent_path->node),
-                     svn_fs_path_change_modify, FALSE, TRUE, SVN_INVALID_REVNUM,
-                     NULL, pool));
-
-  return SVN_NO_ERROR;
+  return add_change(root->fs, txn_id, path,
+                    svn_fs_fs__dag_get_id(parent_path->node),
+                    svn_fs_path_change_modify, FALSE, TRUE, SVN_INVALID_REVNUM,
+                    NULL, pool);
 }
 
 
@@ -1128,10 +1120,8 @@ fs_props_changed(svn_boolean_t *changed_p,
 
   SVN_ERR(get_dag(&node1, root1, path1, pool));
   SVN_ERR(get_dag(&node2, root2, path2, pool));
-  SVN_ERR(svn_fs_fs__dag_things_different(changed_p, NULL,
-                                          node1, node2, pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_fs__dag_things_different(changed_p, NULL,
+                                         node1, node2, pool);
 }
 
 
@@ -1142,8 +1132,7 @@ fs_props_changed(svn_boolean_t *changed_p,
 static svn_error_t *
 get_root(dag_node_t **node, svn_fs_root_t *root, apr_pool_t *pool)
 {
-  SVN_ERR(get_dag(node, root, "", pool));
-  return SVN_NO_ERROR;
+  return get_dag(node, root, "", pool);
 }
 
 
@@ -1167,9 +1156,7 @@ update_ancestry(svn_fs_t *fs,
   noderev->predecessor_count = source_pred_count;
   if (noderev->predecessor_count != -1)
     noderev->predecessor_count++;
-  SVN_ERR(svn_fs_fs__put_node_revision(fs, target_id, noderev, FALSE, pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_fs__put_node_revision(fs, target_id, noderev, FALSE, pool);
 }
 
 
@@ -1837,8 +1824,7 @@ fs_dir_entries(apr_hash_t **table_p,
 
   /* Get the entries for this path in the caller's pool. */
   SVN_ERR(get_dag(&node, root, path, pool));
-  SVN_ERR(svn_fs_fs__dag_dir_entries(table_p, node, pool, pool));
-  return SVN_NO_ERROR;
+  return svn_fs_fs__dag_dir_entries(table_p, node, pool, pool);
 }
 
 
@@ -1885,11 +1871,9 @@ fs_make_dir(svn_fs_root_t *root,
                              sub_dir, pool));
 
   /* Make a record of this modification in the changes table. */
-  SVN_ERR(add_change(root->fs, txn_id, path, svn_fs_fs__dag_get_id(sub_dir),
-                     svn_fs_path_change_add, FALSE, FALSE, SVN_INVALID_REVNUM,
-                     NULL, pool));
-
-  return SVN_NO_ERROR;
+  return add_change(root->fs, txn_id, path, svn_fs_fs__dag_get_id(sub_dir),
+                    svn_fs_path_change_add, FALSE, FALSE, SVN_INVALID_REVNUM,
+                    NULL, pool);
 }
 
 
@@ -1941,12 +1925,10 @@ fs_delete_node(svn_fs_root_t *root,
                                         pool));
 
   /* Make a record of this modification in the changes table. */
-  SVN_ERR(add_change(root->fs, txn_id, path,
-                     svn_fs_fs__dag_get_id(parent_path->node),
-                     svn_fs_path_change_delete, FALSE, FALSE,
-                     SVN_INVALID_REVNUM, NULL, pool));
-
-  return SVN_NO_ERROR;
+  return add_change(root->fs, txn_id, path,
+                    svn_fs_fs__dag_get_id(parent_path->node),
+                    svn_fs_path_change_delete, FALSE, FALSE,
+                    SVN_INVALID_REVNUM, NULL, pool);
 }
 
 
@@ -2237,11 +2219,9 @@ fs_make_file(svn_fs_root_t *root,
                              pool));
 
   /* Make a record of this modification in the changes table. */
-  SVN_ERR(add_change(root->fs, txn_id, path, svn_fs_fs__dag_get_id(child),
-                     svn_fs_path_change_add, TRUE, FALSE, SVN_INVALID_REVNUM,
-                     NULL, pool));
-
-  return SVN_NO_ERROR;
+  return add_change(root->fs, txn_id, path, svn_fs_fs__dag_get_id(child),
+                    svn_fs_path_change_add, TRUE, FALSE, SVN_INVALID_REVNUM,
+                    NULL, pool);
 }
 
 
@@ -2259,9 +2239,7 @@ fs_file_length(svn_filesize_t *length_p,
   SVN_ERR(get_dag(&file, root, path, pool));
 
   /* Now fetch its length */
-  SVN_ERR(svn_fs_fs__dag_file_length(length_p, file, pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_fs__dag_file_length(length_p, file, pool);
 }
 
 
@@ -2483,12 +2461,10 @@ apply_textdelta(void *baton, apr_pool_t *pool)
                     &(tb->interpreter_baton));
 
   /* Make a record of this modification in the changes table. */
-  SVN_ERR(add_change(tb->root->fs, txn_id, tb->path,
-                     svn_fs_fs__dag_get_id(tb->node),
-                     svn_fs_path_change_modify, TRUE, FALSE, SVN_INVALID_REVNUM,
-                     NULL, pool));
-
-  return SVN_NO_ERROR;
+  return add_change(tb->root->fs, txn_id, tb->path,
+                    svn_fs_fs__dag_get_id(tb->node),
+                    svn_fs_path_change_modify, TRUE, FALSE, SVN_INVALID_REVNUM,
+                    NULL, pool);
 }
 
 
@@ -2591,10 +2567,8 @@ text_stream_closer(void *baton)
   SVN_ERR(svn_stream_close(tb->file_stream));
 
   /* Need to tell fs that we're done sending text */
-  SVN_ERR(svn_fs_fs__dag_finalize_edits(tb->node, tb->result_checksum,
-                                        tb->pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_fs__dag_finalize_edits(tb->node, tb->result_checksum,
+                                       tb->pool);
 }
 
 
@@ -2631,12 +2605,10 @@ apply_text(void *baton, apr_pool_t *pool)
   svn_stream_set_close(tb->stream, text_stream_closer);
 
   /* Make a record of this modification in the changes table. */
-  SVN_ERR(add_change(tb->root->fs, txn_id, tb->path,
-                     svn_fs_fs__dag_get_id(tb->node),
-                     svn_fs_path_change_modify, TRUE, FALSE, SVN_INVALID_REVNUM,
-                     NULL, pool));
-
-  return SVN_NO_ERROR;
+  return add_change(tb->root->fs, txn_id, tb->path,
+                    svn_fs_fs__dag_get_id(tb->node),
+                    svn_fs_path_change_modify, TRUE, FALSE, SVN_INVALID_REVNUM,
+                    NULL, pool);
 }
 
 
@@ -2706,10 +2678,8 @@ fs_contents_changed(svn_boolean_t *changed_p,
 
   SVN_ERR(get_dag(&node1, root1, path1, pool));
   SVN_ERR(get_dag(&node2, root2, path2, pool));
-  SVN_ERR(svn_fs_fs__dag_things_different(NULL, changed_p,
-                                          node1, node2, pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_fs__dag_things_different(NULL, changed_p,
+                                         node1, node2, pool);
 }
 
 
@@ -2733,10 +2703,8 @@ fs_get_file_delta_stream(svn_txdelta_stream_t **stream_p,
   SVN_ERR(get_dag(&target_node, target_root, target_path, pool));
 
   /* Create a delta stream that turns the source into the target.  */
-  SVN_ERR(svn_fs_fs__dag_get_file_delta_stream(stream_p, source_node,
-                                               target_node, pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_fs__dag_get_file_delta_stream(stream_p, source_node,
+                                              target_node, pool);
 }
 
 
@@ -3567,10 +3535,9 @@ get_mergeinfo_for_path(svn_mergeinfo_t *mergeinfo,
   if (nearest_ancestor == parent_path)
     {
       /* We can return this directly. */
-      SVN_ERR(svn_mergeinfo_parse(mergeinfo,
-                                  mergeinfo_string->data,
-                                  result_pool));
-      return SVN_NO_ERROR;
+      return svn_mergeinfo_parse(mergeinfo,
+                                 mergeinfo_string->data,
+                                 result_pool);
     }
   else
     {
@@ -3589,13 +3556,12 @@ get_mergeinfo_for_path(svn_mergeinfo_t *mergeinfo,
                                         NULL, SVN_INVALID_REVNUM,
                                         SVN_INVALID_REVNUM, pool));
 
-      SVN_ERR(append_to_merged_froms(mergeinfo,
-                                     temp_mergeinfo,
-                                     parent_path_relpath(parent_path,
-                                                         nearest_ancestor,
-                                                         pool),
-                                     result_pool));
-      return SVN_NO_ERROR;
+      return append_to_merged_froms(mergeinfo,
+                                    temp_mergeinfo,
+                                    parent_path_relpath(parent_path,
+                                                        nearest_ancestor,
+                                                        pool),
+                                    result_pool);
     }
 }
 

@@ -571,9 +571,7 @@ svn_fs_base__get_mutable_rep(const char **new_rep_key,
                           svn_checksum_empty_checksum(svn_checksum_md5,
                                                       pool),
                           pool);
-  SVN_ERR(svn_fs_bdb__write_new_rep(new_rep_key, fs, rep, trail, pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_bdb__write_new_rep(new_rep_key, fs, rep, trail, pool);
 }
 
 
@@ -605,8 +603,7 @@ svn_fs_base__delete_rep_if_mutable(svn_fs_t *fs,
   else /* unknown kind */
     return UNKNOWN_NODE_KIND(rep_key);
 
-  SVN_ERR(svn_fs_bdb__delete_rep(fs, rep_key, trail, pool));
-  return SVN_NO_ERROR;
+  return svn_fs_bdb__delete_rep(fs, rep_key, trail, pool);
 }
 
 
@@ -1073,9 +1070,7 @@ txn_body_write_rep(void *baton, trail_t *trail)
                     trail,
                     trail->pool));
 
-  SVN_ERR(svn_checksum_update(args->wb->checksum_ctx, args->buf, args->len));
-
-  return SVN_NO_ERROR;
+  return svn_checksum_update(args->wb->checksum_ctx, args->buf, args->len);
 }
 
 
@@ -1129,10 +1124,8 @@ txn_body_write_close_rep(void *baton, trail_t *trail)
   SVN_ERR(svn_fs_bdb__read_rep(&rep, wb->fs, wb->rep_key,
                                trail, trail->pool));
   rep->checksum = svn_checksum_dup(wb->checksum, trail->pool);
-  SVN_ERR(svn_fs_bdb__write_rep(wb->fs, wb->rep_key, rep,
-                                trail, trail->pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_bdb__write_rep(wb->fs, wb->rep_key, rep,
+                               trail, trail->pool);
 }
 
 
@@ -1162,18 +1155,10 @@ rep_write_close_contents(void *baton)
 
   /* If we got a trail, use it; else make one. */
   if (wb->trail)
-    {
-      SVN_ERR(txn_body_write_close_rep(wb, wb->trail));
-    }
+    return txn_body_write_close_rep(wb, wb->trail);
   else
-    {
-      SVN_ERR(svn_fs_base__retry_txn(wb->fs,
-                                     txn_body_write_close_rep,
-                                     wb,
-                                     wb->pool));
-    }
-
-  return SVN_NO_ERROR;
+    return svn_fs_base__retry_txn(wb->fs, txn_body_write_close_rep,
+                                  wb, wb->pool);
 }
 
 

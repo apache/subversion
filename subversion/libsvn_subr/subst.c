@@ -1203,10 +1203,7 @@ translated_stream_write(void *baton,
   svn_pool_clear(b->iterpool);
 
   b->written = TRUE;
-  SVN_ERR(translate_chunk(b->stream, b->out_baton, buffer, *len,
-                          b->iterpool));
-
-  return SVN_NO_ERROR;
+  return translate_chunk(b->stream, b->out_baton, buffer, *len, b->iterpool);
 }
 
 static svn_error_t *
@@ -1553,9 +1550,7 @@ detranslate_special_file(const char *src, const char *dst, apr_pool_t *pool)
   SVN_ERR(svn_stream_close(dst_stream));
 
   /* Do the atomic rename from our temporary location. */
-  SVN_ERR(svn_io_file_rename(dst_tmp, dst, pool));
-
-  return SVN_NO_ERROR;
+  return svn_io_file_rename(dst_tmp, dst, pool);
 }
 
 /* Creates a special file DST from the internal representation given
@@ -1708,11 +1703,9 @@ svn_subst_copy_and_translate3(const char *src,
   if (special || path_special)
     {
       if (expand)
-        SVN_ERR(create_special_file(src, dst, pool));
+        return create_special_file(src, dst, pool);
       else
-        SVN_ERR(detranslate_special_file(src, dst, pool));
-
-      return SVN_NO_ERROR;
+        return detranslate_special_file(src, dst, pool);
     }
 
   /* The easy way out:  no translation needed, just copy. */
@@ -1754,9 +1747,7 @@ svn_subst_copy_and_translate3(const char *src,
   SVN_ERR(svn_io_file_close(d, pool));
 
   /* Now that dst_tmp contains the translated data, do the atomic rename. */
-  SVN_ERR(svn_io_file_rename(dst_tmp, dst, pool));
-
-  return SVN_NO_ERROR;
+  return svn_io_file_rename(dst_tmp, dst, pool);
 }
 
 

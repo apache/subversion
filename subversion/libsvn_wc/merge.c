@@ -925,9 +925,7 @@ svn_wc_merge3(enum svn_wc_merge_outcome_t *merge_outcome,
   /* Write our accumulation of log entries into a log file */
   SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
 
-  SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
-
-  return SVN_NO_ERROR;
+  return svn_wc__run_log(adm_access, NULL, pool);
 }
 
 

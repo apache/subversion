@@ -755,11 +755,9 @@ svn_repos_replay2(svn_fs_root_t *root,
     }
 
   /* Call the path-based editor driver. */
-  SVN_ERR(svn_delta_path_driver(editor, edit_baton,
-                                SVN_INVALID_REVNUM, paths,
-                                path_driver_cb_func, &cb_baton, pool));
-
-  return SVN_NO_ERROR;
+  return svn_delta_path_driver(editor, edit_baton,
+                               SVN_INVALID_REVNUM, paths,
+                               path_driver_cb_func, &cb_baton, pool);
 }
 
 svn_error_t *

@@ -720,13 +720,11 @@ diff_file_deleted_no_diff(svn_wc_adm_access_t *adm_access,
   if (state)
     *state = svn_wc_notify_state_unknown;
 
-  SVN_ERR(file_printf_from_utf8
+  return file_printf_from_utf8
           (diff_cmd_baton->outfile,
            diff_cmd_baton->header_encoding,
            "Index: %s (deleted)" APR_EOL_STR "%s" APR_EOL_STR,
-           path, equal_string));
-
-  return SVN_NO_ERROR;
+           path, equal_string);
 }
 
 /* An svn_wc_diff_callbacks3_t function.
@@ -1152,8 +1150,7 @@ diff_wc_wc(const char *path1,
 
   SVN_ERR(svn_wc_diff5(adm_access, target, callbacks, callback_baton,
                        depth, ignore_ancestry, changelists, pool));
-  SVN_ERR(svn_wc_adm_close(adm_access));
-  return SVN_NO_ERROR;
+  return svn_wc_adm_close(adm_access);
 }
 
 
@@ -1222,9 +1219,7 @@ diff_repos_repos(const struct diff_parameters *diff_param,
                              svn_depth_infinity,
                              FALSE, NULL,
                              pool));
-  SVN_ERR(reporter->finish_report(report_baton, pool));
-
-  return SVN_NO_ERROR;
+  return reporter->finish_report(report_baton, pool);
 }
 
 
@@ -1361,8 +1356,7 @@ diff_repos_wc(const char *path1,
                                   FALSE, NULL, NULL, /* notification is N/A */
                                   NULL, pool));
 
-  SVN_ERR(svn_wc_adm_close(adm_access));
-  return SVN_NO_ERROR;
+  return svn_wc_adm_close(adm_access);
 }
 
 
@@ -1383,44 +1377,42 @@ do_diff(const struct diff_parameters *diff_param,
     {
       if (diff_paths.is_repos2)
         {
-          SVN_ERR(diff_repos_repos(diff_param, callbacks, callback_baton,
-                                   ctx, pool));
+          return diff_repos_repos(diff_param, callbacks, callback_baton,
+                                  ctx, pool);
         }
       else /* path2 is a working copy path */
         {
-          SVN_ERR(diff_repos_wc(diff_param->path1, diff_param->revision1,
-                                diff_param->peg_revision,
-                                diff_param->path2, diff_param->revision2,
-                                FALSE, diff_param->depth,
-                                diff_param->ignore_ancestry,
-                                diff_param->changelists,
-                                callbacks, callback_baton, ctx, pool));
+          return diff_repos_wc(diff_param->path1, diff_param->revision1,
+                               diff_param->peg_revision,
+                               diff_param->path2, diff_param->revision2,
+                               FALSE, diff_param->depth,
+                               diff_param->ignore_ancestry,
+                               diff_param->changelists,
+                               callbacks, callback_baton, ctx, pool);
         }
     }
   else /* path1 is a working copy path */
     {
       if (diff_paths.is_repos2)
         {
-          SVN_ERR(diff_repos_wc(diff_param->path2, diff_param->revision2,
-                                diff_param->peg_revision,
-                                diff_param->path1, diff_param->revision1,
-                                TRUE, diff_param->depth,
-                                diff_param->ignore_ancestry,
-                                diff_param->changelists,
-                                callbacks, callback_baton, ctx, pool));
+          return diff_repos_wc(diff_param->path2, diff_param->revision2,
+                               diff_param->peg_revision,
+                               diff_param->path1, diff_param->revision1,
+                               TRUE, diff_param->depth,
+                               diff_param->ignore_ancestry,
+                               diff_param->changelists,
+                               callbacks, callback_baton, ctx, pool);
         }
       else /* path2 is a working copy path */
         {
-          SVN_ERR(diff_wc_wc(diff_param->path1, diff_param->revision1,
-                             diff_param->path2, diff_param->revision2,
-                             diff_param->depth,
-                             diff_param->ignore_ancestry,
-                             diff_param->changelists,
-                             callbacks, callback_baton, ctx, pool));
+          return diff_wc_wc(diff_param->path1, diff_param->revision1,
+                            diff_param->path2, diff_param->revision2,
+                            diff_param->depth,
+                            diff_param->ignore_ancestry,
+                            diff_param->changelists,
+                            callbacks, callback_baton, ctx, pool);
         }
     }
-
-  return SVN_NO_ERROR;
 }
 
 /* Perform a diff summary between two repository paths. */
@@ -1467,9 +1459,7 @@ diff_summarize_repos_repos(const struct diff_parameters *diff_param,
   SVN_ERR(reporter->set_path(report_baton, "", drr.rev1,
                              svn_depth_infinity,
                              FALSE, NULL, pool));
-  SVN_ERR(reporter->finish_report(report_baton, pool));
-
-  return SVN_NO_ERROR;
+  return reporter->finish_report(report_baton, pool);
 }
 
 /* This is basically just the guts of svn_client_diff_summarize[_peg](). */
@@ -1486,16 +1476,12 @@ do_diff_summarize(const struct diff_parameters *diff_param,
   SVN_ERR(check_paths(diff_param, &diff_paths));
 
   if (diff_paths.is_repos1 && diff_paths.is_repos2)
-    {
-      SVN_ERR(diff_summarize_repos_repos(diff_param, summarize_func,
-                                         summarize_baton, ctx, pool));
-    }
+    return diff_summarize_repos_repos(diff_param, summarize_func,
+                                      summarize_baton, ctx, pool);
   else
     return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                             _("Summarizing diff can only compare repository "
                               "to repository"));
-
-  return SVN_NO_ERROR;
 }
 
 

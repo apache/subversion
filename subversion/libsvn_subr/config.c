@@ -217,12 +217,8 @@ get_category_config(svn_config_t **cfg,
 
   SVN_ERR(svn_config_get_user_config_path(&usr_cfg_path, config_dir, category,
                                           pool));
-  SVN_ERR(read_all(cfg,
-                   sys_reg_path, usr_reg_path,
-                   sys_cfg_path, usr_cfg_path,
-                   pool));
-
-  return SVN_NO_ERROR;
+  return read_all(cfg, sys_reg_path, usr_reg_path,
+                  sys_cfg_path, usr_cfg_path, pool);
 }
 
 
