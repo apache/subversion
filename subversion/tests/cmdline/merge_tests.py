@@ -23,6 +23,7 @@ import time
 # Our testing module
 import svntest
 from svntest import wc
+from svntest.tree import SVNTreeUnequal
 
 # (abbreviation)
 Item = wc.StateItem
@@ -487,6 +488,7 @@ def add_with_history(sbox):
 
 #----------------------------------------------------------------------
 
+# This test involves tree conflicts.
 def delete_file_and_dir(sbox):
   "merge that deletes items"
 
@@ -560,7 +562,9 @@ def delete_file_and_dir(sbox):
   # target of the merge 'B2' gets mergeinfo for r3 and B2's two skipped
   # children, 'E' and 'lambda', get override mergeinfo reflecting their
   # mergeinfo prior to the merge (in this case empty mergeinfo).
-  expected_output = wc.State(B2_path, { })
+  expected_output = wc.State(B2_path, {
+    ''        : Item(status='C ')
+    })
   expected_disk = wc.State('', {
     ''        : Item(props={SVN_PROP_MERGEINFO : '/A/B:3'}),
     'E'       : Item(props={SVN_PROP_MERGEINFO : '',
@@ -573,7 +577,7 @@ def delete_file_and_dir(sbox):
                             'foo' : 'foo_val'}),
     })
   expected_status2 = wc.State(B2_path, {
-    ''        : Item(status=' M'),
+    ''        : Item(status='CM'),
     'E'       : Item(status=' M'),
     'E/alpha' : Item(status='  '),
     'E/beta'  : Item(status='  '),
@@ -830,6 +834,7 @@ def simple_property_merges(sbox):
 #----------------------------------------------------------------------
 # This is a regression for issue #1176.
 
+# This test involves tree conflicts.
 def merge_catches_nonexistent_target(sbox):
   "merge should not die if a target file is absent"
 
@@ -881,9 +886,12 @@ def merge_catches_nonexistent_target(sbox):
                                         None, wc_dir)
 
   # Merge the change to newfile (from r3) into G, where newfile
-  # doesn't exist.
+  # doesn't exist. This is a tree conflict (use case 4, see
+  # notes/tree-conflicts/detection.txt).
   os.chdir(G_path)
-  expected_output = wc.State('', { })
+  expected_output = wc.State('', {
+    ''         : Item(status='C '),
+    })
   expected_status = wc.State('', {
     ''     : Item(status=' M' ),
     'pi'   : Item(status='  ' ),
@@ -891,6 +899,10 @@ def merge_catches_nonexistent_target(sbox):
     'tau'  : Item(status='  ' ),
     })
   expected_status.tweak(wc_rev=1)
+
+  # G_path should be marked as tree-conflicted
+  expected_status.tweak('', status='CM')
+
   expected_disk = wc.State('', {
     ''     : Item(props={SVN_PROP_MERGEINFO : '/A/D/Q:3'}),
     'pi'   : Item("This is the file 'pi'.\n"),
@@ -909,6 +921,7 @@ def merge_catches_nonexistent_target(sbox):
 
 #----------------------------------------------------------------------
 
+# This test involves tree conflicts.
 def merge_tree_deleted_in_target(sbox):
   "merge on deleted directory in target"
 
@@ -944,6 +957,7 @@ def merge_tree_deleted_in_target(sbox):
                                      'up', os.path.join(wc_dir,'A'))
 
   expected_output = wc.State(I_path, {
+    ''        : Item(status='C '),
     'lambda'  : Item(status='U '),
     })
   expected_disk = wc.State('', {
@@ -952,7 +966,7 @@ def merge_tree_deleted_in_target(sbox):
     'lambda'  : Item("This is the file 'lambda'.\nchange lambda.\n"),
     })
   expected_status = wc.State(I_path, {
-    ''        : Item(status=' M'),
+    ''        : Item(status='CM'),
     'F'       : Item(status='  '),
     'lambda'  : Item(status='M '),
     })
@@ -972,6 +986,7 @@ def merge_tree_deleted_in_target(sbox):
 #----------------------------------------------------------------------
 # Issue #2515
 
+# This test involves tree conflicts.
 def merge_added_dir_to_deleted_in_target(sbox):
   "merge an added dir on a deleted dir in target"
 
@@ -1002,7 +1017,9 @@ def merge_added_dir_to_deleted_in_target(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                       'up', os.path.join(wc_dir,'A'))
 
-  expected_output = wc.State(I_path, {})
+  expected_output = wc.State(I_path, {
+    ''        : Item(status='C '),
+    })
   expected_disk = wc.State('', {
     'E'       : Item(),
     'E/alpha' : Item("This is the file 'alpha'.\n"),
@@ -1521,6 +1538,7 @@ def merge_binary_file (sbox):
 # Regression test for issue #2403: Incorrect 3-way merge of "added"
 # binary file which already exists (unmodified) in the WC
 
+# This test involves tree conflicts.
 def three_way_merge_add_of_existing_binary_file(sbox):
   "3-way merge of 'file add' into existing binary"
 
@@ -1561,6 +1579,7 @@ def three_way_merge_add_of_existing_binary_file(sbox):
   # And after the merge, the status should not report any differences.
 
   expected_output = wc.State(wc_dir, {
+    "A"       : Item(status="C "),
     "A/theta" : Item(status="A "),
     })
 
@@ -1576,7 +1595,7 @@ def three_way_merge_add_of_existing_binary_file(sbox):
   expected_status.add({
     "A/theta" : Item(status="  ", wc_rev=3),
     })
-  expected_status.tweak("A", status=" M")
+  expected_status.tweak("A", status="CM")
   expected_status.remove("")  # top-level of the WC
   expected_status.remove("iota")
   expected_skip = wc.State("", { })
@@ -1666,6 +1685,7 @@ def merge_in_new_file_and_diff(sbox):
 
 # Issue #1425:  'svn merge' should skip over any unversioned obstructions.
 
+# This test involves tree conflicts. - but attempting to test for pre-tree-conflict behaviour
 def merge_skips_obstructions(sbox):
   "merge should skip over unversioned obstructions"
 
@@ -1710,6 +1730,7 @@ def merge_skips_obstructions(sbox):
   # error when the addition of foo is obstructed.
 
   expected_output = wc.State(C_path, {
+    ''       : Item(status='C '),
     'Q'      : Item(status='A '),
     'Q/bar'  : Item(status='A '),
     })
@@ -1720,7 +1741,7 @@ def merge_skips_obstructions(sbox):
     'foo'    : Item("foo"),
     })
   expected_status = wc.State(C_path, {
-    ''       : Item(status=' M', wc_rev=1),
+    ''       : Item(status='CM', wc_rev=1),
     'Q'      : Item(status='A ', wc_rev='-', copied='+'),
     'Q/bar'  : Item(status='A ', wc_rev='-', copied='+'),
     })
@@ -1750,7 +1771,8 @@ def merge_skips_obstructions(sbox):
   svntest.actions.run_and_verify_status(wc_dir, pre_merge_status)
 
   expected_output = wc.State(C_path, {
-    'foo'  : Item(status='A '),
+    ''       : Item(status='C '),
+    'foo'    : Item(status='A '),
     })
   expected_disk = wc.State('', {
     ''       : Item(props={SVN_PROP_MERGEINFO : '/A/B/F:2'}),
@@ -1758,7 +1780,7 @@ def merge_skips_obstructions(sbox):
     'foo'    : Item("foo"),
     })
   expected_status = wc.State(C_path, {
-    ''     : Item(status=' M', wc_rev=1),
+    ''     : Item(status='CM', wc_rev=1),
     'foo'  : Item(status='A ', wc_rev='-', copied='+'),
     })
   expected_skip = wc.State(C_path, {
@@ -1801,22 +1823,23 @@ def merge_skips_obstructions(sbox):
   svntest.main.file_append(iota_path, "foo") # unversioned
   os.mkdir(G_path) # unversioned
 
-  expected_output = wc.State(wc_dir, { })
+  expected_output = wc.State(wc_dir, {
+    'iota'   : Item(status='D '),
+    ''       : Item(status='C '),
+    })
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.remove('A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau')
+  expected_disk.remove('A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau', 'iota')
   expected_disk.add({
     ''             : Item(props={SVN_PROP_MERGEINFO : '/:3'}),
     'A/B/F/Q'      : Item(),
     'A/B/F/Q/bar'  : Item("bar"),
     'A/B/F/foo'    : Item("foo"),
-    'iota'         : Item("foo"),
     'A/C/Q'        : Item("foo"),
     })
   # No-op merge still sets mergeinfo
-  expected_status.tweak('', status=' M')
+  expected_status.tweak('', status='CM')
   expected_skip = wc.State(wc_dir, {
     'A/D/G'  : Item(),
-    'iota'   : Item(),
     })
 
   svntest.actions.run_and_verify_merge(wc_dir, '2', '3',
@@ -1830,7 +1853,6 @@ def merge_skips_obstructions(sbox):
 
   # Revert the local mods, and commit a change to A/B/lambda (r4), and then
   # commit the deletion of the same file. (r5)
-  os.unlink(iota_path)
   svntest.main.safe_rmtree(G_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'revert', '-R', wc_dir)
   expected_status.tweak('', status='  ')
@@ -1865,10 +1887,13 @@ def merge_skips_obstructions(sbox):
   svntest.main.file_append(lambda_path, "foo") # unversioned
 
   expected_output = wc.State(wc_dir, { })
+  expected_output = wc.State(wc_dir, {
+    'A/B'         : Item(status='C ')
+    })
   expected_disk.add({
     'A/B/lambda'      : Item("foo"),
     })
-  expected_disk.remove('A/D/G', 'iota')
+  expected_disk.remove('A/D/G')
   expected_disk.tweak('', props={SVN_PROP_MERGEINFO : '/:4'})
   expected_skip = wc.State(wc_dir, {
     'A/B/lambda'  : Item(),
@@ -1876,6 +1901,7 @@ def merge_skips_obstructions(sbox):
   # No-op merge still sets mergeinfo.
   expected_status_short = expected_status.copy(wc_dir)
   expected_status_short.tweak('', status=' M')
+  expected_status_short.tweak('A/B', status='C ')
 
   svntest.actions.run_and_verify_merge(wc_dir, '3', '4',
                                        sbox.repo_url,
@@ -1933,6 +1959,7 @@ def merge_skips_obstructions(sbox):
 # items would attempt to add the items and fail, leaving the working
 # copy locked and broken.
 
+# This test involves tree conflicts.
 def merge_into_missing(sbox):
   "merge into missing must not break working copy"
 
@@ -1990,11 +2017,12 @@ def merge_into_missing(sbox):
   svntest.main.safe_rmtree(Q_path)
 
   expected_output = wc.State(F_path, {
+    ''      : Item(status='C ')
     })
   expected_disk = wc.State('', {
     })
   expected_status = wc.State(F_path, {
-    ''      : Item(status='  ', wc_rev=1),
+    ''      : Item(status='C ', wc_rev=1),
     'foo'   : Item(status='! ', wc_rev=2),
     'Q'     : Item(status='! ', wc_rev='?'),
     })
@@ -2013,8 +2041,9 @@ def merge_into_missing(sbox):
                                        None, None, None, None, None,
                                        0, 0, '--dry-run')
 
+  expected_status.tweak('', status='C ')
   expected_status.tweak('foo', status='!M')
-  expected_status.tweak('', status=' M')
+  expected_status.tweak('', status='CM')
   svntest.actions.run_and_verify_merge(F_path, '1', '2', F_url,
                                        expected_output,
                                        expected_disk,
@@ -3650,6 +3679,7 @@ def merge_ignore_eolstyle(sbox):
 
 #----------------------------------------------------------------------
 # Issue 2584
+# This test involves tree conflicts.
 def merge_add_over_versioned_file_conflicts(sbox):
   "conflict from merge of add over versioned file"
 
@@ -3681,15 +3711,16 @@ def merge_add_over_versioned_file_conflicts(sbox):
   # Merge changes from r1:2 into our pre-existing "alpha" file,
   # causing a conflict.
   expected_output = wc.State(E_path, {
-    'alpha'   : Item(status='C '),
+    ''        : Item(status='C '),
+    'alpha'   : Item(status='A '),
     })
   expected_disk = wc.State('', {
     'alpha'    : Item(""),  # state filled in below
     'beta'    : Item("This is the file 'beta'.\n"),
     })
   expected_status = wc.State(E_path, {
-    ''       : Item(status=' M', wc_rev=1),
-    'alpha'  : Item(status='C ', wc_rev=1),
+    ''       : Item(status='CM', wc_rev=1),
+    'alpha'  : Item(status='  ', wc_rev=1),
     'beta'   : Item(status='  ', wc_rev=1),
     })
 
@@ -6291,6 +6322,7 @@ def foreign_repos_does_not_update_mergeinfo(sbox):
   expected_status.tweak('A_COPY/D/G/rho', 'A_COPY/B/E/beta', status='M ')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+# This test involves tree conflicts.
 def avoid_reflected_revs(sbox):
   "avoid repeated merges for cyclic merging"
 
@@ -6456,11 +6488,12 @@ def avoid_reflected_revs(sbox):
 
   # Merge 2:8 from A_COPY(feature branch) to A(trunk).
   expected_output = wc.State(A_path, {
+    ''       : Item(status='C '),
     'bfile2' : Item(status='A '),
     'bfile1' : Item(status='A '),
     })
   expected_status = wc.State(A_path, {
-    ''          : Item(status=' M', wc_rev=6),
+    ''          : Item(status='CM', wc_rev=6),
     'bfile2'    : Item(status='A ', wc_rev='-', copied='+'),
     'bfile1'    : Item(status='A ', wc_rev='-', copied='+'),
     'tfile2'    : Item(status='  ', wc_rev=6),
@@ -6969,6 +7002,7 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
   Acopy_path = os.path.join(wc_dir, 'A_copy')
   gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
   Acopy_gamma_path = os.path.join(wc_dir, 'A_copy', 'D', 'gamma')
+  Acopy_D_path = os.path.join(wc_dir, 'A_copy', 'D')
   A_url = sbox.repo_url + '/A'
   Acopy_url = sbox.repo_url + '/A_copy'
 
@@ -7049,8 +7083,15 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
                                      [], 'merge', '-r1:4',
                                      A_url + '/D/gamma' + '@4',
                                      Acopy_gamma_path)
-  svntest.actions.run_and_verify_svn(None, expected_merge_output([[3,5]],
-                                     'D    ' + Acopy_gamma_path + '\n'),
+
+  # This merge causes a tree conflict. Since the result of the previous
+  # merge of A/D/gamma into A_copy/D has not yet been committed, it is
+  # considered a local modification of A_Copy/D/gamma by the following
+  # merge. A delete merged ontop of a modified file is a tree conflict.
+  # See notes/tree-conflicts/detection.txt
+  svntest.actions.run_and_verify_svn(None, expected_merge_output([[5], [3,5]],
+                                     ['D    ' + Acopy_gamma_path + '\n',
+                                     'C    ' + Acopy_D_path + '\n']),
                                      [], 'merge', '-r1:5', '--force',
                                      A_url, Acopy_path)
 
@@ -7893,6 +7934,7 @@ def merge_with_auto_rev_range_detection(sbox):
                                        None, None, None, None, None,
                                        1, 1)
 
+# This test involves tree conflicts.
 def mergeinfo_recording_in_skipped_merge(sbox):
   "mergeinfo recording in skipped merge"
 
@@ -7933,11 +7975,12 @@ def mergeinfo_recording_in_skipped_merge(sbox):
   # Merge /A to /A_COPY ie., r1 to r4
   expected_output = wc.State(A_COPY_path, {
     'mu' : Item(status='U '),
+    'B'        : Item(status='C ', wc_rev=2),
     })
   expected_status = wc.State(A_COPY_path, {
     ''         : Item(status=' M', wc_rev=2),
     'mu'       : Item(status='M ', wc_rev=2),
-    'B'        : Item(status='  ', wc_rev=2),
+    'B'        : Item(status='C ', wc_rev=2),
     'B/lambda' : Item(status='  ', wc_rev=2),
     'B/F'      : Item(status='  ', wc_rev=2),
     'B/E'      : Item(status='D ', wc_rev=2),
@@ -10504,7 +10547,6 @@ def foreign_repos_2_url(sbox):
   svntest.actions.verify_disk(wc_dir2, expected_disk,
                               None, None, None, None, 1)
 
-
 def merge_added_subtree(sbox):
   "merge added subtree"
 
@@ -11318,6 +11360,7 @@ def merge_broken_link(sbox):
     expected_merge_output([[4]], 'U    ' + copy_path + '/beta_link\n'),
     [], 'merge', '-c4', src_path, copy_path)
 
+#----------------------------------------------------------------------
 
 # Test for issue #3199 'Subtree merges broken when required ranges
 # don't intersect with merge target'
@@ -13149,6 +13192,752 @@ def natural_history_filtering(sbox):
                                        None, None, None, None,
                                        None, 1)
 
+
+# Helper for text output.
+def verify_lines(lines, regexes):
+  """Return True if each of the given regular expressions matches
+     exactly one line in the list of lines."""
+  for regex in regexes:
+    num_patterns_found = 0
+    for line in lines:
+      if re.search(regex, line):
+        num_patterns_found += 1
+    if num_patterns_found != 1:
+      print("UNEXPECTED OUTPUT: " + str(num_patterns_found) +
+        " occurrences of '" + regex + "'")
+      if svntest.main.verbose_mode:
+        print " Actual output:"
+        map(lambda x: sys.stdout.write("  " + x), lines)
+        print " Expected regexes:"
+        map(lambda x: sys.stdout.write("  " + x + "\n"), regexes)
+      return False
+  return True
+
+def verify_tree_conflict_info(path, actions_and_victims):
+  """Raise an exception if the output of "svn info PATH"
+     does not report tree conflicts for exactly the victims
+     listed in ACTIONS_AND_VICTIMS, each element of which is
+     (action, victim) where ACTION is "add" or "edit" or "delete"
+     and VICTIM is a regex that matches the victim path."""
+  exit_code, output, error = svntest.main.run_svn(None, 'info', path)
+  if not verify_lines(output,
+                      map(lambda (action, victim):
+                          "attempted to " + action + ".*" + victim,
+                          actions_and_victims)):
+    raise svntest.Failure("Wrong tree-conflict result")
+
+
+
+# This test involves tree conflicts.
+def tree_conflicts_and_obstructions(sbox):
+  "tree conflicts and obstructions"
+
+  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=3146. ##
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  trunk_url = sbox.repo_url + '/A/B/E'
+  branch_path = os.path.join(wc_dir, 'branch')
+  br_alpha_moved = os.path.join(branch_path, 'alpha-moved')
+
+  # Create a branch
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                     trunk_url,
+                                     sbox.repo_url + '/branch',
+                                     '-m', "Creating the Branch")
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     trunk_url + '/alpha',
+                                     trunk_url + '/alpha-moved',
+                                     '-m', "Move alpha to alpha-moved")
+
+  # Update to revision 2.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'update', wc_dir)
+
+  svntest.main.file_write(br_alpha_moved, "I am blocking myself from trunk\n")
+
+  branch_path = os.path.join(wc_dir, "branch")
+
+  # Merge the obstructions into the branch.
+  expected_output = svntest.wc.State(branch_path, {
+    ''            : Item(status='C '),
+    'alpha'       : Item(status='D '),
+    })
+  expected_disk = wc.State('', {
+    'beta'        : Item("This is the file 'beta'.\n"),
+    'alpha-moved' : Item("I am blocking myself from trunk\n"),
+    })
+  expected_status = wc.State(branch_path, {
+    ''            : Item(status='CM', wc_rev=3),
+    'alpha'       : Item(status='D ', wc_rev=3),
+    'beta'        : Item(status='  ', wc_rev=3),
+    })
+  expected_skip = wc.State(branch_path, {
+    'alpha-moved' : Item(),
+    })
+
+  svntest.actions.run_and_verify_merge(branch_path,
+                                       '1', 'HEAD', trunk_url,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip)
+
+  # Make sure all victims have been found.
+  verify_tree_conflict_info(branch_path,
+                            [('add', 'alpha-moved')])
+
+
+#----------------------------------------------------------------------
+
+# Detect tree conflicts among files and directories,
+# edited or deleted in a deep directory structure.
+#
+# See use cases 4-6 in notes/tree-conflicts/use-cases.txt for background.
+# Note that we do not try to track renames.  The only difference from
+# the behavior of Subversion 1.4 and 1.5 is the conflicted status of the
+# parent directory.
+
+# convenience definitions
+leaf_edit = svntest.actions.deep_trees_leaf_edit
+tree_del = svntest.actions.deep_trees_tree_del
+leaf_del = svntest.actions.deep_trees_leaf_del
+
+state_after_leaf_edit = svntest.actions.deep_trees_after_leaf_edit
+state_after_leaf_del = svntest.actions.deep_trees_after_leaf_del
+state_after_tree_del = svntest.actions.deep_trees_after_tree_del
+
+j = os.path.join
+
+DeepTreesTestCase = svntest.actions.DeepTreesTestCase
+
+alpha_beta_gamma = svntest.wc.State('', {
+  'F/alpha'           : Item(),
+  'DF/D1/beta'        : Item(),
+  'DDF/D1/D2/gamma'   : Item(),
+  })
+
+
+def tree_conflicts_on_merge_local_ci_4_1(sbox):
+  "tree conflicts on merge, local commit 4.1"
+
+  # use case 4, as in notes/tree-conflicts/use-cases.txt
+  # 4.1) local tree delete, incoming leaf edit
+
+  expected_output = svntest.wc.State('', {
+    'F'                 : Item(status='C '),
+    'D'                 : Item(status='C '),
+    'DF'                : Item(status='C '),
+    'DD'                : Item(status='C '),
+    'DDF'               : Item(status='C '),
+    'DDD'               : Item(status='C '),
+    })
+
+  expected_disk = state_after_tree_del
+
+  expected_status = svntest.wc.State('', {
+    ''                  : Item(status=' M', wc_rev='3'),
+    'F'                 : Item(status='C ', wc_rev='3'),
+    'D'                 : Item(status='C ', wc_rev='3'),
+    'DF'                : Item(status='C ', wc_rev='3'),
+    'DD'                : Item(status='C ', wc_rev='3'),
+    'DDF'               : Item(status='C ', wc_rev='3'),
+    'DDD'               : Item(status='C ', wc_rev='3'),
+    })
+
+  expected_skip = svntest.wc.State('', {
+    'F/alpha'           : Item(),
+    'DF/D1/beta'        : Item(),
+    'DDF/D1/D2/gamma'   : Item(),
+    'D/D1/delta'        : Item(),
+    'DD/D1/D2/epsilon'  : Item(),
+    'DDD/D1/D2/D3/zeta' : Item(),
+    })
+
+  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
+    [ DeepTreesTestCase("local_tree_del_incoming_leaf_edit",
+                        tree_del,
+                        leaf_edit,
+                        expected_output,
+                        expected_disk,
+                        expected_status,
+                        expected_skip) ], True)
+
+
+def tree_conflicts_on_merge_local_ci_4_2(sbox):
+  "tree conflicts on merge, local commit 4.2"
+
+  # 4.2) local tree delete, incoming leaf delete
+
+  expected_output = svntest.wc.State('', {
+    'F'                 : Item(status='C '),
+    'D'                 : Item(status='C '),
+    'DF'                : Item(status='C '),
+    'DD'                : Item(status='C '),
+    'DDF'               : Item(status='C '),
+    'DDD'               : Item(status='C '),
+    })
+
+  expected_disk = state_after_tree_del
+
+  expected_status = svntest.wc.State('', {
+    ''                  : Item(status=' M', wc_rev='3'),
+    'F'                 : Item(status='C ', wc_rev='3'),
+    'D'                 : Item(status='C ', wc_rev='3'),
+    'DF'                : Item(status='C ', wc_rev='3'),
+    'DD'                : Item(status='C ', wc_rev='3'),
+    'DDF'               : Item(status='C ', wc_rev='3'),
+    'DDD'               : Item(status='C ', wc_rev='3'),
+    })
+
+  expected_skip = svntest.wc.State('', {
+    'F/alpha'           : Item(),
+    'DF/D1/beta'        : Item(),
+    'DDF/D1/D2/gamma'   : Item(),
+    'D/D1'              : Item(),
+    'DD/D1/D2'          : Item(),
+    'DDD/D1/D2/D3'      : Item(),
+    })
+
+  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
+    [ DeepTreesTestCase("local_tree_del_incoming_leaf_del",
+                        tree_del,
+                        leaf_del,
+                        expected_output,
+                        expected_disk,
+                        expected_status,
+                        expected_skip) ], True)
+
+
+
+
+def tree_conflicts_on_merge_local_ci_5_1(sbox):
+  "tree conflicts on merge, local commit 5.1"
+
+  # use case 5, as in notes/tree-conflicts/use-cases.txt
+  # 5.1) local leaf edit, incoming tree delete
+
+  expected_output = svntest.wc.State('', {
+    'D'                 : Item(),
+    'D/D1'              : Item(status='D '),
+    'F'                 : Item(status='C '),
+    'DD'                : Item(),
+    'DD/D1'             : Item(status='D '),
+    'DF'                : Item(),
+    'DF/D1'             : Item(status='D '),
+    'DDD'               : Item(),
+    'DDD/D1'            : Item(status='D '),
+    'DDF'               : Item(),
+    'DDF/D1'            : Item(status='D '),
+    })
+
+  expected_disk = svntest.wc.State('', {
+    'DF'                : Item(),
+    'DF/D1'             : Item(),
+    'DDF'               : Item(),
+    'DDF/D1'            : Item(),
+    'DDF/D1/D2'         : Item(),
+    'F'                 : Item(),
+    'F/alpha'           : Item(contents="This is the file 'alpha'.\nMore text for file alpha.\n"),
+    'DDD'               : Item(),
+    'DDD/D1'            : Item(),
+    'DDD/D1/D2'         : Item(),
+    'DDD/D1/D2/D3'      : Item(),
+    'DD'                : Item(),
+    'DD/D1'             : Item(),
+    'DD/D1/D2'          : Item(),
+    'D'                 : Item(),
+    'D/D1'              : Item(),
+    })
+
+  expected_status = svntest.wc.State('', {
+    ''                  : Item(status=' M', wc_rev='3'),
+    'D'                 : Item(status='  ', wc_rev='3'),
+    'D/D1'              : Item(status='D ', wc_rev='3'),
+    'D/D1/delta'        : Item(status='D ', wc_rev='4'),
+    'F'                 : Item(status='C ', wc_rev='3'),
+    'F/alpha'           : Item(status=' M', wc_rev='4'),
+    'DD'                : Item(status='  ', wc_rev='3'),
+    'DD/D1'             : Item(status='D ', wc_rev='3'),
+    'DD/D1/D2'          : Item(status='D ', wc_rev='3'),
+    'DD/D1/D2/epsilon'  : Item(status='D ', wc_rev='4'),
+    'DF'                : Item(status='  ', wc_rev='3'),
+    'DF/D1'             : Item(status='D ', wc_rev='3'),
+    'DF/D1/beta'        : Item(status='D ', wc_rev='4'),
+    'DDD'               : Item(status='  ', wc_rev='3'),
+    'DDD/D1'            : Item(status='D ', wc_rev='3'),
+    'DDD/D1/D2'         : Item(status='D ', wc_rev='3'),
+    'DDD/D1/D2/D3'      : Item(status='D ', wc_rev='3'),
+    'DDD/D1/D2/D3/zeta' : Item(status='D ', wc_rev='4'),
+    'DDF'               : Item(status='  ', wc_rev='3'),
+    'DDF/D1'            : Item(status='D ', wc_rev='3'),
+    'DDF/D1/D2'         : Item(status='D ', wc_rev='3'),
+    'DDF/D1/D2/gamma'   : Item(status='D ', wc_rev='4'),
+    })
+
+  expected_skip = svntest.wc.State('', {
+    'F/alpha'           : Item(),
+    })
+
+  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
+    [ DeepTreesTestCase("local_leaf_edit_incoming_tree_del",
+                        leaf_edit,
+                        tree_del,
+                        expected_output,
+                        expected_disk,
+                        expected_status,
+                        expected_skip) ], True)
+
+
+def tree_conflicts_on_merge_local_ci_5_2(sbox):
+  "tree conflicts on merge, local commit 5.2"
+
+  # 5.2) local leaf del, incoming tree delete
+
+  expected_output = svntest.wc.State('', {
+    'D'                 : Item(status='C '),
+    'F'                 : Item(status='C '),
+    'DD'                : Item(),
+    'DD/D1'             : Item(status='D '),
+    'DF'                : Item(),
+    'DF/D1'             : Item(status='D '),
+    'DDD'               : Item(),
+    'DDD/D1'            : Item(status='D '),
+    'DDF'               : Item(),
+    'DDF/D1'            : Item(status='D '),
+    })
+
+
+  expected_disk = svntest.wc.State('', {
+    'F'                 : Item(),
+    'D'                 : Item(),
+    'DF/D1'             : Item(),
+    'DD/D1'             : Item(),
+    'DDF/D1/D2'         : Item(),
+    'DDD/D1/D2'         : Item(),
+    })
+
+  expected_status = svntest.wc.State('', {
+    ''                  : Item(status=' M', wc_rev='3'),
+    'D'                 : Item(status='C ', wc_rev='3'),
+    'F'                 : Item(status='C ', wc_rev='3'),
+    'DD'                : Item(status='  ', wc_rev='3'),
+    'DD/D1'             : Item(status='D ', wc_rev='3'),
+    'DF'                : Item(status='  ', wc_rev='3'),
+    'DF/D1'             : Item(status='D ', wc_rev='3'),
+    'DDD'               : Item(status='  ', wc_rev='3'),
+    'DDD/D1'            : Item(status='D ', wc_rev='3'),
+    'DDD/D1/D2'         : Item(status='D ', wc_rev='3'),
+    'DDF'               : Item(status='  ', wc_rev='3'),
+    'DDF/D1'            : Item(status='D ', wc_rev='3'),
+    'DDF/D1/D2'         : Item(status='D ', wc_rev='3'),
+    })
+
+  expected_skip = svntest.wc.State('', {
+    'F/alpha'           : Item(),
+    'D/D1'              : Item(),
+    })
+
+  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
+    [ DeepTreesTestCase("local_leaf_del_incoming_tree_del",
+                        leaf_del,
+                        tree_del,
+                        expected_output,
+                        expected_disk,
+                        expected_status,
+                        expected_skip) ], True)
+
+
+def tree_conflicts_on_merge_local_ci_6(sbox):
+  "tree conflicts on merge, local commit 6"
+
+  # use case 6, as in notes/tree-conflicts/use-cases.txt
+  # local tree delete, incoming tree delete
+
+  expected_output = svntest.wc.State('', {
+    'F'                 : Item(status='C '),
+    'D'                 : Item(status='C '),
+    'DF'                : Item(status='C '),
+    'DD'                : Item(status='C '),
+    'DDF'               : Item(status='C '),
+    'DDD'               : Item(status='C '),
+    })
+
+  expected_disk = state_after_tree_del
+
+  expected_status = svntest.wc.State('', {
+    ''                  : Item(status=' M', wc_rev='3'),
+    'D'                 : Item(status='C ', wc_rev='3'),
+    'F'                 : Item(status='C ', wc_rev='3'),
+    'DD'                : Item(status='C ', wc_rev='3'),
+    'DF'                : Item(status='C ', wc_rev='3'),
+    'DDD'               : Item(status='C ', wc_rev='3'),
+    'DDF'               : Item(status='C ', wc_rev='3'),
+    })
+
+  expected_skip = svntest.wc.State('', {
+    'D/D1'              : Item(),
+    'F/alpha'           : Item(),
+    'DD/D1'             : Item(),
+    'DF/D1'             : Item(),
+    'DDD/D1'            : Item(),
+    'DDF/D1'            : Item(),
+    })
+
+  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
+    [ DeepTreesTestCase("local_tree_del_incoming_tree_del",
+                        tree_del,
+                        tree_del,
+                        expected_output,
+                        expected_disk,
+                        expected_status,
+                        expected_skip) ], True)
+
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+def tree_conflicts_on_merge_no_local_ci_4_1(sbox):
+  "tree conflicts on merge, NO local commit 4.1"
+
+  # use case 4, as in notes/tree-conflicts/use-cases.txt
+  # 4.1) local tree delete, incoming leaf edit
+
+  expected_output = svntest.wc.State('', {
+    'F'                 : Item(status='C '),
+    'D'                 : Item(status='C '),
+    'D/D1'              : Item(),
+    'D/D1/delta'        : Item(status='A '),
+    'DF'                : Item(status='C '),
+    'DF/D1'             : Item(status='C '),
+    'DD'                : Item(status='C '),
+    'DD/D1'             : Item(status='C '),
+    'DD/D1/D2'          : Item(),
+    'DD/D1/D2/epsilon'  : Item(status='A '),
+    'DDF'               : Item(status='C '),
+    'DDF/D1'            : Item(status='C '),
+    'DDF/D1/D2'         : Item(status='C '),
+    'DDD'               : Item(status='C '),
+    'DDD/D1'            : Item(status='C '),
+    'DDD/D1/D2'         : Item(status='C '),
+    'DDD/D1/D2/D3'      : Item(),
+    'DDD/D1/D2/D3/zeta' : Item(status='A '),
+    })
+
+  expected_disk = svntest.wc.State('', {
+    'F'                 : Item(),
+    'D/D1/delta'        : Item(contents="This is the file 'delta'.\n"),
+    'DF/D1'             : Item(),
+    'DD/D1/D2/epsilon'  : Item(contents="This is the file 'epsilon'.\n"),
+    'DDF/D1/D2'         : Item(),
+    'DDD/D1/D2/D3/zeta' : Item(contents="This is the file 'zeta'.\n"),
+    })
+
+  expected_status = svntest.wc.State('', {
+    ''                  : Item(status=' M', wc_rev='3'),
+    'F'                 : Item(status='C ', wc_rev='3'),
+    'F/alpha'           : Item(status='D ', wc_rev='3'),
+    'DD'                : Item(status='C ', wc_rev='3'),
+    'DD/D1'             : Item(status='D ', wc_rev='3'),
+    'DD/D1/D2'          : Item(status='D ', wc_rev='3'),
+    'DD/D1/D2/epsilon'  : Item(status='A ', copied='+', wc_rev='-'),
+    'DF'                : Item(status='C ', wc_rev='3'),
+    'DF/D1'             : Item(status='D ', wc_rev='3'),
+    'DF/D1/beta'        : Item(status='D ', wc_rev='3'),
+    'DDD'               : Item(status='C ', wc_rev='3'),
+    'DDD/D1'            : Item(status='D ', wc_rev='3'),
+    'DDD/D1/D2'         : Item(status='D ', wc_rev='3'),
+    'DDD/D1/D2/D3'      : Item(status='D ', wc_rev='3'),
+    'DDD/D1/D2/D3/zeta' : Item(status='A ', copied='+', wc_rev='-'),
+    'DDF'               : Item(status='C ', wc_rev='3'),
+    'DDF/D1'            : Item(status='D ', wc_rev='3'),
+    'DDF/D1/D2'         : Item(status='D ', wc_rev='3'),
+    'DDF/D1/D2/gamma'   : Item(status='D ', wc_rev='3'),
+    'D'                 : Item(status='C ', wc_rev='3'),
+    'D/D1'              : Item(status='D ', wc_rev='3'),
+    'D/D1/delta'        : Item(status='A ', copied='+', wc_rev='-'),
+    })
+
+  expected_skip = alpha_beta_gamma
+
+  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
+    [ DeepTreesTestCase(
+               "local_tree_del_incoming_leaf_edit",
+               tree_del,
+               leaf_edit,
+               expected_output,
+               expected_disk,
+               expected_status,
+               expected_skip,
+             ) ], False)
+
+
+def tree_conflicts_on_merge_no_local_ci_4_2(sbox):
+  "tree conflicts on merge, NO local commit 4.2"
+
+  # 4.2) local tree delete, incoming leaf delete
+
+  expected_output = svntest.wc.State('', {
+    'F'                 : Item(status='C '),
+    'D'                 : Item(status='C '),
+    'D/D1'              : Item(status='D '),
+    'DF'                : Item(status='C '),
+    'DF/D1'             : Item(status='C '),
+    'DD'                : Item(status='C '),
+    'DD/D1'             : Item(status='C '),
+    'DD/D1/D2'          : Item(status='D '),
+    'DDF'               : Item(status='C '),
+    'DDF/D1'            : Item(status='C '),
+    'DDF/D1/D2'         : Item(status='C '),
+    'DDD'               : Item(status='C '),
+    'DDD/D1'            : Item(status='C '),
+    'DDD/D1/D2'         : Item(status='C '),
+    'DDD/D1/D2/D3'      : Item(status='D '),
+    })
+
+  expected_disk = svntest.wc.State('', {
+    'F'                 : Item(),
+    'D/D1'              : Item(),
+    'DF/D1'             : Item(),
+    'DD/D1/D2'          : Item(),
+    'DDF/D1/D2'         : Item(),
+    'DDD/D1/D2/D3'      : Item(),
+    })
+
+  expected_status = svntest.wc.State('', {
+    ''                  : Item(status=' M', wc_rev='3'),
+    'F'                 : Item(status='C ', wc_rev='3'),
+    'F/alpha'           : Item(status='D ', wc_rev='3'),
+    'D'                 : Item(status='C ', wc_rev='3'),
+    'D/D1'              : Item(status='D ', wc_rev='3'),
+    'DF'                : Item(status='C ', wc_rev='3'),
+    'DF/D1'             : Item(status='D ', wc_rev='3'),
+    'DF/D1/beta'        : Item(status='D ', wc_rev='3'),
+    'DD'                : Item(status='C ', wc_rev='3'),
+    'DD/D1'             : Item(status='D ', wc_rev='3'),
+    'DD/D1/D2'          : Item(status='D ', wc_rev='3'),
+    'DDF'               : Item(status='C ', wc_rev='3'),
+    'DDF/D1'            : Item(status='D ', wc_rev='3'),
+    'DDF/D1/D2'         : Item(status='D ', wc_rev='3'),
+    'DDF/D1/D2/gamma'   : Item(status='D ', wc_rev='3'),
+    'DDD'               : Item(status='C ', wc_rev='3'),
+    'DDD/D1'            : Item(status='D ', wc_rev='3'),
+    'DDD/D1/D2'         : Item(status='D ', wc_rev='3'),
+    'DDD/D1/D2/D3'      : Item(status='D ', wc_rev='3'),
+    })
+
+  expected_skip = alpha_beta_gamma
+
+  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
+    [ DeepTreesTestCase(
+               "local_tree_del_incoming_leaf_del",
+               tree_del,
+               leaf_del,
+               expected_output,
+               expected_disk,
+               expected_status,
+               expected_skip,
+             ) ], False)
+
+
+
+
+def tree_conflicts_on_merge_no_local_ci_5_1(sbox):
+  "tree conflicts on merge, NO local commit 5.1"
+
+
+  # use case 5, as in notes/tree-conflicts/use-cases.txt
+  # 5.1) local leaf edit, incoming tree delete
+
+  expected_output = svntest.wc.State('', {
+    'F'                 : Item(status='C '),
+    })
+
+  expected_disk = state_after_leaf_edit
+
+  expected_status = svntest.wc.State('', {
+    ''                  : Item(status=' M', wc_rev='3'),
+    'D'                 : Item(status='  ', wc_rev='3'),
+    'D/D1'              : Item(status=' M', wc_rev='3'),
+    'D/D1/delta'        : Item(status='A ', wc_rev='0'),
+    'F'                 : Item(status='C ', wc_rev='3'),
+    'F/alpha'           : Item(status='MM', wc_rev='3'),
+    'DD'                : Item(status='  ', wc_rev='3'),
+    'DD/D1'             : Item(status=' M', wc_rev='3'),
+    'DD/D1/D2'          : Item(status='  ', wc_rev='3'),
+    'DD/D1/D2/epsilon'  : Item(status='A ', wc_rev='0'),
+    'DF'                : Item(status='  ', wc_rev='3'),
+    'DF/D1'             : Item(status=' M', wc_rev='3'),
+    'DF/D1/beta'        : Item(status='M ', wc_rev='3'),
+    'DDD'               : Item(status='  ', wc_rev='3'),
+    'DDD/D1'            : Item(status=' M', wc_rev='3'),
+    'DDD/D1/D2'         : Item(status='  ', wc_rev='3'),
+    'DDD/D1/D2/D3'      : Item(status='  ', wc_rev='3'),
+    'DDD/D1/D2/D3/zeta' : Item(status='A ', wc_rev='0'),
+    'DDF'               : Item(status='  ', wc_rev='3'),
+    'DDF/D1'            : Item(status=' M', wc_rev='3'),
+    'DDF/D1/D2'         : Item(status='  ', wc_rev='3'),
+    'DDF/D1/D2/gamma'   : Item(status='M ', wc_rev='3'),
+    })
+
+  expected_skip = svntest.wc.State('', {
+    'D/D1'              : Item(),
+    'F/alpha'           : Item(),
+    'DD/D1'             : Item(),
+    'DF/D1'             : Item(),
+    'DDD/D1'            : Item(),
+    'DDF/D1'            : Item(),
+    })
+
+  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
+    [ DeepTreesTestCase(
+               "local_leaf_edit_incoming_tree_del",
+               leaf_edit,
+               tree_del,
+               expected_output,
+               expected_disk,
+               expected_status,
+               expected_skip,
+             ) ], False)
+
+
+def tree_conflicts_on_merge_no_local_ci_5_2(sbox):
+  "tree conflicts on merge, NO local commit 5.2"
+
+  # 5.2) local leaf del, incoming tree delete
+
+  expected_output = svntest.wc.State('', {
+    'D'                 : Item(status='C '),
+    'D/D1'              : Item(status='D '),
+    'F'                 : Item(status='C '),
+    'DD'                : Item(),
+    'DD/D1'             : Item(status='D '),
+    'DF'                : Item(),
+    'DF/D1'             : Item(status='D '),
+    'DDD'               : Item(),
+    'DDD/D1'            : Item(status='D '),
+    'DDF'               : Item(),
+    'DDF/D1'            : Item(status='D '),
+    })
+
+
+  expected_disk = svntest.wc.State('', {
+    'F'                 : Item(),
+    'D/D1'              : Item(),
+    'DF/D1'             : Item(),
+    'DD/D1/D2'          : Item(),
+    'DDF/D1/D2'         : Item(),
+    'DDD/D1/D2/D3'      : Item(),
+    })
+
+  expected_status = svntest.wc.State('', {
+    ''                  : Item(status=' M', wc_rev='3'),
+    'F'                 : Item(status='C ', wc_rev='3'),
+    'F/alpha'           : Item(status='D ', wc_rev='3'),
+    'DD'                : Item(status='  ', wc_rev='3'),
+    'DD/D1'             : Item(status='D ', wc_rev='3'),
+    'DD/D1/D2'          : Item(status='D ', wc_rev='3'),
+    'DF'                : Item(status='  ', wc_rev='3'),
+    'DF/D1'             : Item(status='D ', wc_rev='3'),
+    'DF/D1/beta'        : Item(status='D ', wc_rev='3'),
+    'DDD'               : Item(status='  ', wc_rev='3'),
+    'DDD/D1'            : Item(status='D ', wc_rev='3'),
+    'DDD/D1/D2'         : Item(status='D ', wc_rev='3'),
+    'DDD/D1/D2/D3'      : Item(status='D ', wc_rev='3'),
+    'DDF'               : Item(status='  ', wc_rev='3'),
+    'DDF/D1'            : Item(status='D ', wc_rev='3'),
+    'DDF/D1/D2'         : Item(status='D ', wc_rev='3'),
+    'DDF/D1/D2/gamma'   : Item(status='D ', wc_rev='3'),
+    'D'                 : Item(status='C ', wc_rev='3'),
+    'D/D1'              : Item(status='D ', wc_rev='3'),
+    })
+
+  expected_skip = svntest.wc.State('', {
+    'F/alpha'           : Item(),
+    })
+
+  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
+    [ DeepTreesTestCase(
+               "local_leaf_del_incoming_tree_del",
+               leaf_del,
+               tree_del,
+               expected_output,
+               expected_disk,
+               expected_status,
+               expected_skip,
+             ) ], False)
+
+
+def tree_conflicts_on_merge_no_local_ci_6(sbox):
+  "tree conflicts on merge, NO local commit 6"
+
+  # use case 6, as in notes/tree-conflicts/use-cases.txt
+  # local tree delete, incoming tree delete
+
+  expected_output = svntest.wc.State('', {
+    'D'                 : Item(status='C '),
+    'D/D1'              : Item(status='D '),
+    'F'                 : Item(status='C '),
+    'DD'                : Item(status='C '),
+    'DD/D1'             : Item(status='D '),
+    'DF'                : Item(status='C '),
+    'DF/D1'             : Item(status='D '),
+    'DDD'               : Item(status='C '),
+    'DDD/D1'            : Item(status='D '),
+    'DDF'               : Item(status='C '),
+    'DDF/D1'            : Item(status='D '),
+    })
+
+  expected_disk = svntest.wc.State('', {
+    'F'                 : Item(),
+    'D/D1'              : Item(),
+    'DF/D1'             : Item(),
+    'DD/D1/D2'          : Item(),
+    'DDF/D1/D2'         : Item(),
+    'DDD/D1/D2/D3'      : Item(),
+    })
+
+  expected_status = svntest.wc.State('', {
+    ''                  : Item(status=' M', wc_rev='3'),
+    'DDF'               : Item(status='C ', wc_rev='3'),
+    'DDF/D1'            : Item(status='D ', wc_rev='3'),
+    'DDF/D1/D2'         : Item(status='D ', wc_rev='3'),
+    'DDF/D1/D2/gamma'   : Item(status='D ', wc_rev='3'),
+    'D'                 : Item(status='C ', wc_rev='3'),
+    'D/D1'              : Item(status='D ', wc_rev='3'),
+    'F'                 : Item(status='C ', wc_rev='3'),
+    'F/alpha'           : Item(status='D ', wc_rev='3'),
+    'DD'                : Item(status='C ', wc_rev='3'),
+    'DD/D1'             : Item(status='D ', wc_rev='3'),
+    'DD/D1/D2'          : Item(status='D ', wc_rev='3'),
+    'DF'                : Item(status='C ', wc_rev='3'),
+    'DF/D1'             : Item(status='D ', wc_rev='3'),
+    'DF/D1/beta'        : Item(status='D ', wc_rev='3'),
+    'DDD'               : Item(status='C ', wc_rev='3'),
+    'DDD/D1'            : Item(status='D ', wc_rev='3'),
+    'DDD/D1/D2'         : Item(status='D ', wc_rev='3'),
+    'DDD/D1/D2/D3'      : Item(status='D ', wc_rev='3'),
+    })
+
+  expected_skip = svntest.wc.State('', {
+    'F/alpha'           : Item(),
+    })
+
+  svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,
+    [ DeepTreesTestCase(
+               "local_tree_del_incoming_tree_del",
+               tree_del,
+               tree_del,
+               expected_output,
+               expected_disk,
+               expected_status,
+               expected_skip,
+             ) ], False)
+
+
+
+
 ########################################################################
 # Run the tests
 
@@ -13186,10 +13975,10 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(merge_in_new_file_and_diff,
                          server_has_mergeinfo),
-              SkipUnless(merge_skips_obstructions,
-                         server_has_mergeinfo),
-              SkipUnless(merge_into_missing,
-                         server_has_mergeinfo),
+              XFail(SkipUnless(merge_skips_obstructions,
+                               server_has_mergeinfo)),
+              XFail(SkipUnless(merge_into_missing,
+                               server_has_mergeinfo)),
               SkipUnless(dry_run_adds_file_with_prop,
                          server_has_mergeinfo),
               merge_binary_with_common_ancestry,
@@ -13216,8 +14005,8 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(merge_ignore_eolstyle,
                          server_has_mergeinfo),
-              SkipUnless(merge_add_over_versioned_file_conflicts,
-                         server_has_mergeinfo),
+              XFail(SkipUnless(merge_add_over_versioned_file_conflicts,
+                               server_has_mergeinfo)),
               SkipUnless(merge_conflict_markers_matching_eol,
                          server_has_mergeinfo),
               SkipUnless(merge_eolstyle_handling,
@@ -13270,8 +14059,8 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(merge_with_auto_rev_range_detection,
                          server_has_mergeinfo),
-              SkipUnless(mergeinfo_recording_in_skipped_merge,
-                         server_has_mergeinfo),
+              XFail(SkipUnless(mergeinfo_recording_in_skipped_merge,
+                               server_has_mergeinfo)),
               SkipUnless(cherry_picking,
                          server_has_mergeinfo),
               SkipUnless(propchange_of_subdir_raises_conflict,
@@ -13325,7 +14114,7 @@ test_list = [ None,
                          svntest.main.is_ra_type_dav),
               del_identical_file,
               del_sched_add_hist_file,
-              del_differing_file,
+              XFail(del_differing_file),
               SkipUnless(subtree_merges_dont_cause_spurious_conflicts,
                          server_has_mergeinfo),
               SkipUnless(merge_target_and_subtrees_need_nonintersecting_ranges,
@@ -13337,6 +14126,17 @@ test_list = [ None,
               merge_file_with_space_in_its_path,
               XFail(SkipUnless(natural_history_filtering,
                                server_has_mergeinfo)),
+              tree_conflicts_and_obstructions,
+              tree_conflicts_on_merge_local_ci_4_1,
+              tree_conflicts_on_merge_local_ci_4_2,
+              tree_conflicts_on_merge_local_ci_5_1,
+              tree_conflicts_on_merge_local_ci_5_2,
+              tree_conflicts_on_merge_local_ci_6,
+              tree_conflicts_on_merge_no_local_ci_4_1,
+              tree_conflicts_on_merge_no_local_ci_4_2,
+              tree_conflicts_on_merge_no_local_ci_5_1,
+              tree_conflicts_on_merge_no_local_ci_5_2,
+              tree_conflicts_on_merge_no_local_ci_6,
              ]
 
 if __name__ == '__main__':
