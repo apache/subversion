@@ -106,11 +106,31 @@ generic_walker(svn_wc__db_t *db,
           }
         else if (mode == walker_mode_actual)
           {
+            svn_node_kind_t nkind;
+            svn_boolean_t special;
+
+            SVN_ERR(svn_io_check_special_path(nodepath, &nkind, &special,
+                                              iterpool));
+            if (nkind == svn_node_file)
+              {
+                if (special)
+                  kind = svn_wc__db_kind_symlink;
+                else
+                  kind = svn_wc__db_kind_file;
+              }
+            else if (nkind == svn_node_dir)
+              kind = svn_wc__db_kind_dir;
+            else
+              {
+                /* ### ERROR */
+              }
           }
         else
           {
             /* ### ERROR */
           }
+
+        /* ### what to do about the absent kinds? */
 
         if (kind == svn_wc__db_kind_dir)
           {
@@ -131,6 +151,27 @@ generic_walker(svn_wc__db_t *db,
               }
             else if (mode == walker_mode_actual)
               {
+                apr_hash_t *dirhash;
+                apr_hash_index_t *hi;
+                apr_array_header_t *dirkeys;
+
+                SVN_ERR(svn_io_get_dir_filenames(&dirhash, nodepath,
+                                                 iterpool));
+                dirkeys = apr_array_make(queue_pool, 0, 10);
+                for (hi = apr_hash_first(iterpool, dirhash);
+                     hi != NULL;
+                     hi = apr_hash_next(hi))
+                  {
+                    const void *key;
+
+                    apr_hash_this(hi, &key, NULL, NULL);
+                    APR_ARRAY_PUSH(dirkeys, const char *)
+                      = apr_pstrdup(queue_pool, (const char *)key);
+                  }
+
+                /* Now that the array is built, assign to the (const)
+                   children array. */
+                children = dirkeys;
               }
             else
               {
