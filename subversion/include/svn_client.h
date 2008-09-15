@@ -4343,6 +4343,7 @@ typedef struct svn_info_t
    * @since New in 1.5.
    */
   apr_size_t working_size;
+
   /** @} */
 
   /**
@@ -4353,6 +4354,17 @@ typedef struct svn_info_t
    * @since New in 1.5.
    */
   apr_size_t size;
+
+  /**
+   * For a directory only, all tree-conflicted children, stored
+   * in an array of @c svn_wc_conflict_description_t, 
+   * @since New in 1.6.
+   * @name Working-copy path fields
+   * @{
+   */
+  apr_array_header_t *tree_conflicts;
+
+  /** @} */
 
 } svn_info_t;
 

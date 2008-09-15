@@ -1349,6 +1349,7 @@ log_do_committed(struct log_runner *loggy,
   entry->copyfrom_rev = SVN_INVALID_REVNUM;
   entry->has_prop_mods = FALSE;
   entry->working_size = finfo.size;
+  entry->tree_conflict_data = NULL;
   if ((err = svn_wc__entry_modify(loggy->adm_access, name, entry,
                                   (SVN_WC__ENTRY_MODIFY_REVISION
                                    | SVN_WC__ENTRY_MODIFY_SCHEDULE
@@ -1365,6 +1366,7 @@ log_do_committed(struct log_runner *loggy,
                                       : 0)
                                    | SVN_WC__ENTRY_MODIFY_HAS_PROP_MODS
                                    | SVN_WC__ENTRY_MODIFY_WORKING_SIZE
+                                   | SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA
                                    | SVN_WC__ENTRY_MODIFY_FORCE),
                                   FALSE, pool)))
     return svn_error_createf
@@ -2224,6 +2226,10 @@ svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
   ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_FORCE,
                  SVN_WC__LOG_ATTR_FORCE,
                  "true");
+
+  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA,
+                 SVN_WC__ENTRY_ATTR_TREE_CONFLICT_DATA,
+                 entry->tree_conflict_data ? entry->tree_conflict_data : "");
 
 #undef ADD_ENTRY_ATTR
 

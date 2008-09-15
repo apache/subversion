@@ -58,6 +58,7 @@ build_info_from_dirent(svn_info_t **info,
   tmpinfo->depth                = svn_depth_unknown;
   tmpinfo->working_size         = SVN_INFO_SIZE_UNKNOWN;
   tmpinfo->size                 = dirent->size;
+  tmpinfo->tree_conflicts       = NULL;
 
   *info = tmpinfo;
   return SVN_NO_ERROR;
@@ -65,10 +66,12 @@ build_info_from_dirent(svn_info_t **info,
 
 
 /* Helper: build an svn_info_t *INFO struct from svn_wc_entry_t ENTRY,
-   allocated in POOL.  Pointer fields are copied by reference, not dup'd. */
+   allocated in POOL.  Pointer fields are copied by reference, not dup'd.
+   PATH is the path of the WC node that ENTRY represents. */
 static svn_error_t *
 build_info_from_entry(svn_info_t **info,
                       const svn_wc_entry_t *entry,
+                      const char *path,
                       apr_pool_t *pool)
 {
   svn_info_t *tmpinfo = apr_pcalloc(pool, sizeof(*tmpinfo));
@@ -98,6 +101,16 @@ build_info_from_entry(svn_info_t **info,
   tmpinfo->changelist           = entry->changelist;
   tmpinfo->working_size         = entry->working_size;
   tmpinfo->size                 = SVN_INFO_SIZE_UNKNOWN;
+
+  /* Check for tree conflicts (only "this-dir" entries have tree conflicts). */
+  if ((strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) == 0)
+      && entry->tree_conflict_data)
+    {
+      tmpinfo->tree_conflicts = apr_array_make(pool, 1,
+                                     sizeof(svn_wc_conflict_description_t *));
+      SVN_ERR(svn_wc_read_tree_conflicts_from_entry(tmpinfo->tree_conflicts,
+                                                    entry, path, pool));
+    }
 
   /* lock stuff */
   if (entry->lock_token)  /* the token is the critical bit. */
@@ -229,7 +242,7 @@ info_found_entry_callback(const char *path,
   if (SVN_WC__CL_MATCH(fe_baton->changelist_hash, entry))
     {
       svn_info_t *info;
-      SVN_ERR(build_info_from_entry(&info, entry, pool));
+      SVN_ERR(build_info_from_entry(&info, entry, path, pool));
       SVN_ERR(fe_baton->receiver(fe_baton->receiver_baton, path, info, pool));
     }
   return SVN_NO_ERROR;
