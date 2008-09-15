@@ -491,23 +491,40 @@ there.  We're trying to replace CVS.  See the first question.</p>
 <h3>Why does the entire repository share the 
     same revision number? I want each of my projects to have their
     own revision numbers.</h3>
-<p>
-The global revision number attached to the repository as a whole is
-meaningless from a user's perspective. It's an internal mechanism that
-accomplishes the goal of the underlying schema design. It just so
-happens to be exposed so that the user's interface can sometimes be a
-little more convenient than always having to type obnoxiously long
-date/time strings.
-</p>
 
-<p>
-The revision number is only relevant to the repository, and user
-convenience. It has <b>no</b> impact on any other factor of what you
-store in the repository.  Repository revision number bumps aren't
-nearly useful enough to be an accurate indication of the real rate of
-change of a given code base.  There are other more complicated ways to
-get a much better picture of a code-base's rate of change.
-</p>
+<p>First, note that Subversion has no concept of projects.  The
+repository just stores a versioned directory
+tree&nbsp;&mdash;&nbsp;you may consider certain sub-trees to be
+projects, but Subversion doesn't treat them differently from any other
+sub-tree.  Thus, the interpretation of what constitutes a project in
+the repository is left entirely up to the users.  (This is similar to
+how <a
+href="http://svnbook.red-bean.com/nightly/en/svn.branchmerge.using.html"
+>branches</a> and <a
+href="http://svnbook.red-bean.com/nightly/en/svn.branchmerge.tags.html"
+>tags</a> are conventions built on top of copies, instead of being
+basic concepts built into Subversion itself.)</p>
+
+<p>Each time you commit a change, the repository stores a new revision
+of that overall repository tree, and labels the new tree with a new
+revision number.  Of course, most of the tree is the same as the
+revision before, except for the parts you changed.</p>
+
+<p>The new revision number is a sequential label that applies to the
+entire new tree, not just to the files and directories you touched in
+that revision.  However, colloquially, a revision number is used to
+refer to the change committed in that revision; for example, "the
+change in r588" ("r588" is shorthand for "revision 588") really means
+"the difference between repository trees 587 and 588", or put another
+way, "the change made to tree 587 to produce tree 588".
+
+<p>Thus, the advancing revision number marks the progress of the
+repository as a whole; you generally can't gauge the progress of a
+particular project within the repository by watching the revision
+number.  Also, the revision number should not be used as the
+publicly-visible release number of a particular project in the
+repository.  For that, you should devise some other mechanism of
+distinguishing releases.</p>
 
 </div>
 
