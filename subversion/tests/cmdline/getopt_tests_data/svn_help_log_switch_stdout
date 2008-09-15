@@ -46,6 +46,7 @@ Valid options:
   --xml                    : output in XML
   -l [--limit] ARG         : maximum number of log entries
   --with-all-revprops      : retrieve all revision properties
+  --with-no-revprops       : retrieve no revision properties
   --with-revprop ARG       : retrieve revision property ARG
 
 Global options:
