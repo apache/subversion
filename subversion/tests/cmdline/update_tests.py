@@ -1122,8 +1122,7 @@ def another_hudson_problem(sbox):
   # C  A/D. Just ignore it, i.e. resolve it.
   D_path = os.path.join(wc_dir, 'A', 'D')
   svntest.actions.run_and_verify_svn(None,
-    ["Resolved conflicted state of " +
-     "'svn-test-work/working_copies/update_tests-15/A/D'\n"], [],
+    ["Resolved conflicted state of '" + D_path + "'\n"], [],
     'resolved',  D_path)
 
   # Both G and gamma should be 'deleted', update should produce no output
