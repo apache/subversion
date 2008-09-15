@@ -3818,7 +3818,10 @@ def update_uuid_changed(sbox):
     # No 'Repository UUID' line in 'svn info'?
     raise svntest.verify.SVNUnexpectedStdout(output)
 
-  sbox.build(read_only = True)
+  # read_only=False, since we don't want to run setuuid on the (shared)
+  # pristine repository.
+  sbox.build(read_only = False) 
+
   wc_dir = sbox.wc_dir
   repo_dir = sbox.repo_dir
 
