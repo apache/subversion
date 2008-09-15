@@ -555,10 +555,9 @@ svn_ra_local__change_rev_prop(svn_ra_session_t *session,
 {
   svn_ra_local__session_baton_t *sess = session->priv;
   SVN_ERR(get_username(session, pool));
-  SVN_ERR(svn_repos_fs_change_rev_prop3(sess->repos, rev, sess->username,
-                                        name, value, TRUE, TRUE, NULL, NULL,
-                                        pool));
-  return SVN_NO_ERROR;
+  return svn_repos_fs_change_rev_prop3(sess->repos, rev, sess->username,
+                                       name, value, TRUE, TRUE, NULL, NULL,
+                                       pool);
 }
 
 static svn_error_t *
@@ -664,12 +663,10 @@ svn_ra_local__get_commit_editor(svn_ra_session_t *session,
                svn_string_create(sess->username, pool));
 
   /* Get the repos commit-editor */
-  SVN_ERR(svn_repos_get_commit_editor5
-          (editor, edit_baton, sess->repos, NULL,
-           svn_path_uri_decode(sess->repos_url, pool), sess->fs_path->data,
-           revprop_table, deltify_etc, db, NULL, NULL, pool));
-
-  return SVN_NO_ERROR;
+  return svn_repos_get_commit_editor5
+         (editor, edit_baton, sess->repos, NULL,
+          svn_path_uri_decode(sess->repos_url, pool), sess->fs_path->data,
+          revprop_table, deltify_etc, db, NULL, NULL, pool);
 }
 
 
@@ -915,8 +912,7 @@ svn_ra_local__do_check_path(svn_ra_session_t *session,
   if (! SVN_IS_VALID_REVNUM(revision))
     SVN_ERR(svn_fs_youngest_rev(&revision, sess->fs, pool));
   SVN_ERR(svn_fs_revision_root(&root, sess->fs, revision, pool));
-  SVN_ERR(svn_fs_check_path(kind, root, abs_path, pool));
-  return SVN_NO_ERROR;
+  return svn_fs_check_path(kind, root, abs_path, pool);
 }
 
 
@@ -935,9 +931,7 @@ svn_ra_local__stat(svn_ra_session_t *session,
     SVN_ERR(svn_fs_youngest_rev(&revision, sess->fs, pool));
   SVN_ERR(svn_fs_revision_root(&root, sess->fs, revision, pool));
 
-  SVN_ERR(svn_repos_stat(dirent, root, abs_path, pool));
-
-  return SVN_NO_ERROR;
+  return svn_repos_stat(dirent, root, abs_path, pool);
 }
 
 
@@ -1345,11 +1339,9 @@ svn_ra_local__replay(svn_ra_session_t *session,
 
   SVN_ERR(svn_fs_revision_root(&root, svn_repos_fs(sess->repos),
                                revision, pool));
-  SVN_ERR(svn_repos_replay2(root, sess->fs_path->data, low_water_mark,
-                            send_deltas, editor, edit_baton, NULL, NULL,
-                            pool));
-
-  return SVN_NO_ERROR;
+  return svn_repos_replay2(root, sess->fs_path->data, low_water_mark,
+                           send_deltas, editor, edit_baton, NULL, NULL,
+                           pool);
 }
 
 

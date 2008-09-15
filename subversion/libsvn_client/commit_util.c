@@ -914,12 +914,10 @@ harvest_copy_committables(void *baton, void *item, apr_pool_t *pool)
 
   /* Handle this SRC.  Because add_committable() uses the hash pool to
      allocate the new commit_item, we can safely use the iterpool here. */
-  SVN_ERR(harvest_committables(btn->committables, NULL, pair->src,
-                               dir_access, pair->dst, entry->url, entry,
-                               NULL, FALSE, TRUE, svn_depth_infinity,
-                               FALSE, NULL, btn->ctx, pool));
-
-  return SVN_NO_ERROR;
+  return harvest_committables(btn->committables, NULL, pair->src,
+                              dir_access, pair->dst, entry->url, entry,
+                              NULL, FALSE, TRUE, svn_depth_infinity,
+                              FALSE, NULL, btn->ctx, pool);
 }
 
 
@@ -941,10 +939,8 @@ svn_client__get_copy_committables(apr_hash_t **committables,
 
   /* For each copy pair, harvest the committables for that pair into the
      committables hash. */
-  SVN_ERR(svn_iter_apr_array(NULL, copy_pairs,
-                             harvest_copy_committables, &btn, pool));
-
-  return SVN_NO_ERROR;
+  return svn_iter_apr_array(NULL, copy_pairs,
+                            harvest_copy_committables, &btn, pool);
 }
 
 
@@ -1479,8 +1475,7 @@ svn_client__do_commit(const char *base_url,
   svn_pool_destroy(subpool);
 
   /* Close the edit. */
-  SVN_ERR(editor->close_edit(edit_baton, pool));
-  return SVN_NO_ERROR;
+  return editor->close_edit(edit_baton, pool);
 }
 
 /* Commit callback baton */

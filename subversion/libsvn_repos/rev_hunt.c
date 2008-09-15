@@ -64,9 +64,7 @@ get_time(apr_time_t *tm,
       (SVN_ERR_FS_GENERAL, NULL,
        _("Failed to find time on revision %ld"), rev);
 
-  SVN_ERR(svn_time_from_cstring(tm, date_str->data, pool));
-
-  return SVN_NO_ERROR;
+  return svn_time_from_cstring(tm, date_str->data, pool);
 }
 
 

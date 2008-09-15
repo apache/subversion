@@ -865,9 +865,8 @@ svn_txdelta_read_svndiff_window(svn_txdelta_window_t **window,
     return svn_error_create(SVN_ERR_SVNDIFF_UNEXPECTED_END, NULL,
                             _("Unexpected end of svndiff input"));
   *window = apr_palloc(pool, sizeof(**window));
-  SVN_ERR(decode_window(*window, sview_offset, sview_len, tview_len, inslen,
-                        newlen, buf, pool, svndiff_version));
-  return SVN_NO_ERROR;
+  return decode_window(*window, sview_offset, sview_len, tview_len, inslen,
+                       newlen, buf, pool, svndiff_version);
 }
 
 

@@ -270,8 +270,7 @@ write_fs_type(const char *path, const char *fs_type, apr_pool_t *pool)
   SVN_ERR(svn_io_file_write_full(file, fs_type, strlen(fs_type), NULL,
                                  pool));
   SVN_ERR(svn_io_file_write_full(file, "\n", 1, NULL, pool));
-  SVN_ERR(svn_io_file_close(file, pool));
-  return SVN_NO_ERROR;
+  return svn_io_file_close(file, pool);
 }
 
 
@@ -450,9 +449,7 @@ svn_fs_hotcopy(const char *src_path, const char *dest_path,
   SVN_ERR(svn_fs_type(&fs_type, src_path, pool));
   SVN_ERR(get_library_vtable(&vtable, fs_type, pool));
   SVN_ERR(vtable->hotcopy(src_path, dest_path, clean, pool));
-  SVN_ERR(write_fs_type(dest_path, fs_type, pool));
-
-  return SVN_NO_ERROR;
+  return write_fs_type(dest_path, fs_type, pool);
 }
 
 svn_error_t *

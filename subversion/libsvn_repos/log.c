@@ -477,9 +477,8 @@ check_history(svn_boolean_t *changed,
      then set *CHANGED to true and get the next history
      rev where this path was changed. */
   *changed = TRUE;
-  SVN_ERR(get_history(info, fs, strict, authz_read_func,
-                      authz_read_baton, start, pool));
-  return SVN_NO_ERROR;
+  return get_history(info, fs, strict, authz_read_func,
+                     authz_read_baton, start, pool);
 }
 
 /* Return the next interesting revision in our list of HISTORIES. */
@@ -982,9 +981,7 @@ send_log(svn_revnum_t rev,
   log_entry->has_children = has_children;
 
   /* Send the entry to the receiver. */
-  SVN_ERR((*receiver)(receiver_baton, log_entry, pool));
-
-  return SVN_NO_ERROR;
+  return (*receiver)(receiver_baton, log_entry, pool);
 }
 
 /* This controls how many history objects we keep open.  For any targets
@@ -1363,8 +1360,7 @@ handle_merged_revisions(svn_revnum_t rev,
   /* Send the empty revision.  */
   empty_log_entry = svn_log_entry_create(pool);
   empty_log_entry->revision = SVN_INVALID_REVNUM;
-  SVN_ERR((*receiver)(receiver_baton, empty_log_entry, pool));
-  return SVN_NO_ERROR;
+  return (*receiver)(receiver_baton, empty_log_entry, pool);
 }
 
 /* Find logs for PATHS from HIST_START to HIST_END in FS, and invoke

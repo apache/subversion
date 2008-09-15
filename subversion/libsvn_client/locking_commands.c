@@ -432,9 +432,9 @@ svn_client_lock(const apr_array_header_t *targets,
 
   /* Unlock the wc. */
   if (adm_access)
-    SVN_ERR(svn_wc_adm_close(adm_access));
-
-  return SVN_NO_ERROR;
+    return svn_wc_adm_close(adm_access);
+  else
+    return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -480,8 +480,8 @@ svn_client_unlock(const apr_array_header_t *targets,
 
   /* Unlock the wc. */
   if (adm_access)
-    SVN_ERR(svn_wc_adm_close(adm_access));
-
-  return SVN_NO_ERROR;
+    return svn_wc_adm_close(adm_access);
+  else
+    return SVN_NO_ERROR;
 }
 

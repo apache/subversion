@@ -325,10 +325,8 @@ file_xfer_under_path(svn_wc_adm_access_t *adm_access,
         SVN_ERR(svn_wc__maybe_set_read_only(NULL, full_dest_path,
                                             adm_access, pool));
 
-        SVN_ERR(svn_wc__maybe_set_executable(NULL, full_dest_path,
-                                             adm_access, pool));
-
-        return SVN_NO_ERROR;
+        return svn_wc__maybe_set_executable(NULL, full_dest_path,
+                                            adm_access, pool);
       }
     case svn_wc__xfer_cp_and_detranslate:
       {
@@ -341,9 +339,7 @@ file_xfer_under_path(svn_wc_adm_access_t *adm_access,
                  SVN_WC_TRANSLATE_TO_NF
                  | SVN_WC_TRANSLATE_FORCE_COPY,
                  pool));
-        SVN_ERR(svn_io_file_rename(tmp_file, full_dest_path, pool));
-
-        return SVN_NO_ERROR;
+        return svn_io_file_rename(tmp_file, full_dest_path, pool);
       }
 
     case svn_wc__xfer_mv:
@@ -660,10 +656,8 @@ log_do_file_maybe_executable(struct log_runner *loggy,
     = svn_path_join(svn_wc_adm_access_path(loggy->adm_access), name,
                     loggy->pool);
 
-  SVN_ERR(svn_wc__maybe_set_executable(NULL, full_path, loggy->adm_access,
-                                      loggy->pool));
-
-  return SVN_NO_ERROR;
+  return svn_wc__maybe_set_executable(NULL, full_path, loggy->adm_access,
+                                     loggy->pool);
 }
 
 /* Maybe make file NAME in log's CWD readonly */
@@ -675,10 +669,8 @@ log_do_file_maybe_readonly(struct log_runner *loggy,
     = svn_path_join(svn_wc_adm_access_path(loggy->adm_access), name,
                     loggy->pool);
 
-  SVN_ERR(svn_wc__maybe_set_read_only(NULL, full_path, loggy->adm_access,
-                                      loggy->pool));
-
-  return SVN_NO_ERROR;
+  return svn_wc__maybe_set_read_only(NULL, full_path, loggy->adm_access,
+                                     loggy->pool);
 }
 
 /* Set file NAME in log's CWD to timestamp value in ATTS. */
@@ -1716,9 +1708,7 @@ run_log_from_memory(svn_wc_adm_access_t *adm_access,
   SVN_ERR(svn_xml_parse(parser, buf, buf_len, 0));
 
   /* Pacify Expat with a pointless closing element tag. */
-  SVN_ERR(svn_xml_parse(parser, log_end, strlen(log_end), 1));
-
-  return SVN_NO_ERROR;
+  return svn_xml_parse(parser, log_end, strlen(log_end), 1);
 }
 
 
@@ -2458,10 +2448,8 @@ svn_wc__write_log(svn_wc_adm_access_t *adm_access,
             apr_psprintf(pool, _("Error writing log for '%s'"),
                          svn_path_local_style(logfile_name, pool)));
 
-  SVN_ERR(svn_wc__close_adm_file(log_file, adm_path, logfile_name,
-                                 TRUE, pool));
-
-  return SVN_NO_ERROR;
+  return svn_wc__close_adm_file(log_file, adm_path, logfile_name,
+                                TRUE, pool);
 }
 
 
@@ -2574,7 +2562,5 @@ svn_wc_cleanup2(const char *path,
   if (svn_wc__adm_path_exists(path, 0, pool, NULL))
     SVN_ERR(svn_wc__adm_cleanup_tmp_area(adm_access, pool));
 
-  SVN_ERR(svn_wc_adm_close(adm_access));
-
-  return SVN_NO_ERROR;
+  return svn_wc_adm_close(adm_access);
 }

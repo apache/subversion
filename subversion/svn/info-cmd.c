@@ -47,8 +47,7 @@ svn_cl__info_print_time(apr_time_t atime,
   const char *time_utf8;
 
   time_utf8 = svn_time_to_human_cstring(atime, pool);
-  SVN_ERR(svn_cmdline_printf(pool, "%s: %s\n", desc, time_utf8));
-  return SVN_NO_ERROR;
+  return svn_cmdline_printf(pool, "%s: %s\n", desc, time_utf8);
 }
 
 
@@ -473,9 +472,7 @@ print_info(void *baton,
     }
 
   /* Print extra newline separator. */
-  SVN_ERR(svn_cmdline_printf(pool, "\n"));
-
-  return SVN_NO_ERROR;
+  return svn_cmdline_printf(pool, "\n");
 }
 
 
