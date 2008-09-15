@@ -315,6 +315,12 @@ dav_svn__log_report(const dav_resource *resource,
           revprops = NULL; /* presence indicates fetch all revprops */
           seen_revprop_element = lrb.requested_custom_revprops = TRUE;
         }
+      else if (strcmp(child->name, "no-revprops") == 0)
+        {
+          /* presence indicates fetch no revprops */
+
+          seen_revprop_element = lrb.requested_custom_revprops = TRUE;
+        }
       else if (strcmp(child->name, "revprop") == 0)
         {
           if (revprops)

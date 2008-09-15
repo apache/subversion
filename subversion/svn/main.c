@@ -98,6 +98,7 @@ typedef enum {
   opt_keep_local,
   opt_with_revprop,
   opt_with_all_revprops,
+  opt_with_no_revprops,
   opt_parents,
   opt_accept,
   opt_show_revs,
@@ -246,6 +247,8 @@ const apr_getopt_option_t svn_cl__options[] =
   {"keep-local",    opt_keep_local, 0, N_("keep path in working copy")},
   {"with-all-revprops",  opt_with_all_revprops, 0,
                     N_("retrieve all revision properties")},
+  {"with-no-revprops",  opt_with_no_revprops, 0,
+                    N_("retrieve no revision properties")},
   {"with-revprop",  opt_with_revprop, 1,
                     N_("set revision property ARG in new revision\n"
                        "                             "
@@ -567,7 +570,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    svn log http://www.example.com/repo/project/foo.c\n"
      "    svn log http://www.example.com/repo/project foo.c bar.c\n"),
     {'r', 'q', 'v', 'g', 'c', opt_targets, opt_stop_on_copy, opt_incremental,
-     opt_xml, 'l', opt_with_all_revprops, opt_with_revprop},
+     opt_xml, 'l', opt_with_all_revprops, opt_with_no_revprops, opt_with_revprop},
     {{opt_with_revprop, N_("retrieve revision property ARG")},
      {'c', N_("the change made in revision ARG")}} },
 
@@ -1454,6 +1457,9 @@ main(int argc, const char *argv[])
         /* If --with-all-revprops is specified along with one or more
          * --with-revprops options, --with-all-revprops takes precedence. */
         opt_state.all_revprops = TRUE;
+        break;
+      case opt_with_no_revprops:
+        opt_state.no_revprops = TRUE;
         break;
       case opt_with_revprop:
         err = svn_opt_parse_revprop(&opt_state.revprop_table, opt_arg, pool);
