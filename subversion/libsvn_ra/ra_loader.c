@@ -1388,9 +1388,7 @@ svn_ra_replay_range(svn_ra_session_t *session,
       svn_pool_destroy(subpool);
     }
 
-  SVN_ERR(err);
-
-  return SVN_NO_ERROR;
+  return err;
 }
 
 svn_error_t *svn_ra_has_capability(svn_ra_session_t *session,
@@ -1518,9 +1516,7 @@ svn_ra_get_ra_library(svn_ra_plugin_t **library,
           if (! *library)
             break;
 
-          SVN_ERR(check_ra_version((*library)->get_version(), scheme));
-
-          return SVN_NO_ERROR;
+          return check_ra_version((*library)->get_version(), scheme);
         }
     }
 

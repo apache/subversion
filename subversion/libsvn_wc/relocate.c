@@ -129,12 +129,9 @@ svn_wc_relocate3(const char *path,
     return svn_error_create(SVN_ERR_ENTRY_NOT_FOUND, NULL, NULL);
 
   if (entry->kind == svn_node_file)
-    {
-      SVN_ERR(relocate_entry(adm_access, entry, from, to,
-                             validator, validator_baton, TRUE /* sync */,
-                             pool));
-      return SVN_NO_ERROR;
-    }
+    return relocate_entry(adm_access, entry, from, to,
+                          validator, validator_baton, TRUE /* sync */,
+                          pool);
 
   /* Relocate THIS_DIR first, in order to pre-validate the relocated URL
      of all of the other entries.  This is technically cheating because
@@ -182,8 +179,7 @@ svn_wc_relocate3(const char *path,
   svn_pool_destroy(subpool);
 
   SVN_ERR(svn_wc__props_delete(path, svn_wc__props_wcprop, adm_access, pool));
-  SVN_ERR(svn_wc__entries_write(entries, adm_access, pool));
-  return SVN_NO_ERROR;
+  return svn_wc__entries_write(entries, adm_access, pool);
 }
 
 /* Compatibility baton and wrapper. */

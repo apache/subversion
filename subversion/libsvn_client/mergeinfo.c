@@ -61,11 +61,12 @@ svn_client__parse_mergeinfo(svn_mergeinfo_t *mergeinfo,
                                        svn_depth_empty, NULL, ctx, pool));
   propval = apr_hash_get(props, wcpath, APR_HASH_KEY_STRING);
   if (propval)
-    SVN_ERR(svn_mergeinfo_parse(mergeinfo, propval->data, pool));
+    return svn_mergeinfo_parse(mergeinfo, propval->data, pool);
   else
-    *mergeinfo = NULL;
-
-  return SVN_NO_ERROR;
+    {
+      *mergeinfo = NULL;
+      return SVN_NO_ERROR;
+    }
 }
 
 svn_error_t *
@@ -1170,9 +1171,9 @@ location_from_path_and_rev(const char **url,
   svn_pool_destroy(subpool);
 
   if (adm_access)
-    SVN_ERR(svn_wc_adm_close(adm_access));
-
-  return SVN_NO_ERROR;
+    return svn_wc_adm_close(adm_access);
+  else
+    return SVN_NO_ERROR;
 }
 
 

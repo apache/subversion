@@ -433,9 +433,7 @@ svn_config__parse_file(svn_config_t *cfg, const char *file,
 
   /* Close the file and streams (and other cleanup): */
   SVN_ERR(svn_stream_close(ctx.stream));
-  SVN_ERR(svn_io_file_close(f, pool));
-
-  return SVN_NO_ERROR;
+  return svn_io_file_close(f, pool);
 }
 
 

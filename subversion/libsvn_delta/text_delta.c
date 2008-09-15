@@ -462,8 +462,7 @@ tpush_close_handler(void *baton)
     }
 
   /* Send a final NULL window signifying the end. */
-  SVN_ERR(tb->wh(NULL, tb->whb));
-  return SVN_NO_ERROR;
+  return tb->wh(NULL, tb->whb);
 }
 
 
@@ -734,9 +733,7 @@ svn_txdelta_send_string(const svn_string_t *string,
   SVN_ERR((*handler)(&window, handler_baton));
 
   /* Push a NULL at the handler, because we're done. */
-  SVN_ERR((*handler)(NULL, handler_baton));
-
-  return SVN_NO_ERROR;
+  return (*handler)(NULL, handler_baton);
 }
 
 svn_error_t *svn_txdelta_send_stream(svn_stream_t *stream,
