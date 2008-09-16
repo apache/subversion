@@ -1524,7 +1524,7 @@ svn_wc_add3(const char *path,
   if (is_replace)
     {
       /* We don't want the old base text (if any) and base props to be
-         mistakenly used as the bases for the new, replacment object.
+         mistakenly used as the bases for the new, replacement object.
          So, move them out of the way. */
 
       /* ### TODO: In an ideal world, this whole function would be loggy.
