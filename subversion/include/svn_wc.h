@@ -1979,7 +1979,11 @@ typedef struct svn_wc_entry_t
    * @since New in 1.5. */
   svn_depth_t depth;
 
-<<<<<<< .working
+  /** Serialized data for all of the tree conflicts detected in this_dir.
+   *
+   * @since New in 1.6. */
+  const char *tree_conflict_data;
+
   /** The entry is a intra-repository file external and this is the
    * repository root relative path to the file specified in the
    * externals definition, otherwise NULL if the entry is not a file
@@ -2012,13 +2016,6 @@ typedef struct svn_wc_entry_t
    * @since New in 1.6. */
   svn_opt_revision_t file_external_rev;
 
-=======
-  /** Serialized data for all of the tree conflicts detected in this_dir.
-   *
-   * @since New in 1.6. */
-  const char *tree_conflict_data;
-
->>>>>>> .merge-right.r33082
   /* IMPORTANT: If you extend this structure, check the following functions in
    * subversion/libsvn_wc/entries.c, to see if you need to extend them as well.
    *

@@ -258,11 +258,8 @@ assemble_status(svn_wc_status2_t **status,
   svn_boolean_t prop_modified_p = FALSE;
   svn_boolean_t locked_p = FALSE;
   svn_boolean_t switched_p = FALSE;
-<<<<<<< .working
-  svn_boolean_t file_external_p = FALSE;
-=======
   svn_boolean_t tree_conflicted_p = FALSE;
->>>>>>> .merge-right.r33082
+  svn_boolean_t file_external_p = FALSE;
 #ifdef HAVE_SYMLINK
   svn_boolean_t wc_special;
 #endif /* HAVE_SYMLINK */
@@ -309,11 +306,8 @@ assemble_status(svn_wc_status2_t **status,
       stat->locked = FALSE;
       stat->copied = FALSE;
       stat->switched = FALSE;
-<<<<<<< .working
-      stat->file_external = FALSE;
-=======
       stat->tree_conflicted = FALSE;
->>>>>>> .merge-right.r33082
+      stat->file_external = FALSE;
 
       /* If this path has no entry, but IS present on disk, it's
          unversioned.  If this file is being explicitly ignored (due
@@ -513,13 +507,9 @@ assemble_status(svn_wc_status2_t **status,
          || (final_text_status == svn_wc_status_normal))
         && ((final_prop_status == svn_wc_status_none)
             || (final_prop_status == svn_wc_status_normal))
-<<<<<<< .working
         && (! locked_p) && (! switched_p) && (! file_external_p)
-        && (! entry->lock_token) && (! repos_lock) && (! entry->changelist))
-=======
-        && (! locked_p) && (! switched_p) && (! entry->lock_token)
-        && (! repos_lock) && (! entry->changelist) && (! tree_conflicted_p))
->>>>>>> .merge-right.r33082
+        && (! entry->lock_token) && (! repos_lock) && (! entry->changelist)
+        && (! tree_conflicted_p))
       {
         *status = NULL;
         return SVN_NO_ERROR;

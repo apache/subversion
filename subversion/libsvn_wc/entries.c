@@ -644,7 +644,10 @@ read_entry(svn_wc_entry_t **new_entry,
   }
   MAYBE_DONE;
 
-<<<<<<< .working
+  /* Tree conflict data. */
+  SVN_ERR(read_str(&entry->tree_conflict_data, buf, end, pool));
+  MAYBE_DONE;
+
   /* File external URL and revision. */
   {
     const char *str;
@@ -657,12 +660,6 @@ read_entry(svn_wc_entry_t **new_entry,
   }
   MAYBE_DONE;
 
-=======
-  /* Tree conflict data. */
-  SVN_ERR(read_str(&entry->tree_conflict_data, buf, end, pool));
-  MAYBE_DONE;
-
->>>>>>> .merge-right.r33082
  done:
   *new_entry = entry;
   return SVN_NO_ERROR;
@@ -1860,7 +1857,9 @@ write_entry(svn_stringbuf_t *buf,
       write_val(buf, val, strlen(val));
     }
 
-<<<<<<< .working
+  /* Tree conflict data. */
+  write_str(buf, entry->tree_conflict_data, pool);
+
   /* File externals. */
   {
     const char *s;
@@ -1870,11 +1869,6 @@ write_entry(svn_stringbuf_t *buf,
     write_str(buf, s, pool);
   }
 
-=======
-  /* Tree conflict data. */
-  write_str(buf, entry->tree_conflict_data, pool);
-
->>>>>>> .merge-right.r33082
   /* Remove redundant separators at the end of the entry. */
   while (buf->len > 1 && buf->data[buf->len - 2] == '\n')
     buf->len--;
@@ -2912,15 +2906,12 @@ svn_wc_entry_dup(const svn_wc_entry_t *entry, apr_pool_t *pool)
     dupentry->cachable_props = apr_pstrdup(pool, entry->cachable_props);
   if (entry->present_props)
     dupentry->present_props = apr_pstrdup(pool, entry->present_props);
-<<<<<<< .working
-  if (entry->file_external_path)
-    dupentry->file_external_path = apr_pstrdup(pool,
-                                               entry->file_external_path);
-=======
   if (entry->tree_conflict_data)
     dupentry->tree_conflict_data = apr_pstrdup(pool,
                                                entry->tree_conflict_data);
->>>>>>> .merge-right.r33082
+  if (entry->file_external_path)
+    dupentry->file_external_path = apr_pstrdup(pool,
+                                               entry->file_external_path);
   return dupentry;
 }
 
