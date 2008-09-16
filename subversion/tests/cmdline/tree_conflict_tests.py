@@ -340,7 +340,8 @@ def set_up_repos(wc_dir, br_dir, scenarios):
 
 # Ensure "svn status" on path PARENT shows a Conflict on PARENT.
 def ensure_status_c_on_parent(parent):
-  expected_stdout = svntest.verify.RegexOutput("^C.* " + parent + "$",
+  expected_stdout = svntest.verify.RegexOutput("^C.* " + re.escape(parent)
+                                               + "$",
                                                match_all=False)
   run_and_verify_svn(None, expected_stdout, [],
                      'status', parent)
