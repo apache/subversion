@@ -110,6 +110,12 @@ fi
 dnl Find Apache with a recent-enough magic module number
 SVN_FIND_APACHE(20020903)
 
+dnl Search for SQLite
+SQLITE_ALLOWED_LIST="3.*"
+SQLITE_RECOMMENDED_VER="3.6.2"
+SQLITE_URL="http://www.sqlite.org/sqlite-${SQLITE_RECOMMENDED_VER}.tar.gz"
+SVN_LIB_SQLITE(${SQLITE_ALLOWED_LIST}, ${SQLITE_RECOMMENDED_VER}, ${SQLITE_URL})
+
 dnl Set up a number of directories ---------------------
 
 dnl Create SVN_BINDIR for proper substitution
