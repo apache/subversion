@@ -1534,6 +1534,14 @@ def build_greek_tree_conflicts(sbox):
   Note that this function calls sbox.build() because it needs a clean sbox.
   So, there is no need to call sbox.build() before this.
 
+  The conflicts are the result of an 'update' on the following changes:
+
+                Incoming    Local
+
+    A/D/G/pi    text-mod    del
+    A/D/G/rho   del         text-mod
+    A/D/G/tau   del         del
+
   This function is useful for testing that tree-conflicts are handled
   properly once they have appeared, e.g. that commits are blocked, that the
   info output is correct, etc.
