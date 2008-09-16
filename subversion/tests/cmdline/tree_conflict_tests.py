@@ -457,7 +457,8 @@ def ensure_tree_conflict(sbox, operation,
         ensure_status_c_on_parent(target_path)
 
         verbose_print("--- Resolving the conflict")
-        run_and_verify_svn(None, "Resolved .* '" + target_path + "'", [],
+        run_and_verify_svn(None,
+                           "Resolved .* '" + re.escape(target_path) + "'", [],
                            'resolved', target_path)
 
         #verbose_print("--- Checking that 'status' does not report a conflict")
