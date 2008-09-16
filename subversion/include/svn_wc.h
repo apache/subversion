@@ -1805,7 +1805,7 @@ typedef enum svn_wc_schedule_t
  *
  * @since New in 1.5
  */
-#define SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN -1
+#define SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN (-1)
 
 /** @} */
 
