@@ -503,6 +503,10 @@ depth:
    entries and pulls new entries with depth infinity as well.
    Default is infinite (`').
 
+tree-conflicts:
+   A list of details of the tree conflicts that children are currently
+   suffering. This is only allowed on the this_dir entry.
+
 The only fields allowed in an entry for a directory (other than the
 this_dir entry) are name, absent, deleted, schedule, copied,
 copyfrom-url, copyfrom-rev and kind.  The other fields are only stored
