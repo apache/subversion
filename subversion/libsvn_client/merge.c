@@ -3817,7 +3817,8 @@ get_mergeinfo_walk_cb(const char *path,
               const char *mergeinfo_url =
                 svn_path_join(wb->source_root_url,
                               /* Skip leading '/' or join won't work. */
-                              ++(merge_src_child_path->data),
+                              svn_path_uri_encode(
+                                merge_src_child_path->data + 1, pool),
                               pool);
               svn_opt_revision_t *start_revision, *end_revision;
               const char *start_url, *end_url;
