@@ -266,6 +266,16 @@ void svn_stringbuf_appendstr(svn_stringbuf_t *targetstr,
 void svn_stringbuf_appendcstr(svn_stringbuf_t *targetstr,
                               const char *cstr);
 
+/** Append a single character to @a targetstr.
+ *
+ * reallocs if necessary. @a targetstr is affected, nothing else is.
+ *
+ * @since New in 1.6.
+ *
+ */
+void svn_stringbuf_appendchar(svn_stringbuf_t *targetstr,
+                              char c);
+
 /** Return a duplicate of @a original_string. */
 svn_stringbuf_t *svn_stringbuf_dup(const svn_stringbuf_t *original_string,
                                    apr_pool_t *pool);
