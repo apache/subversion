@@ -328,18 +328,6 @@ svn_wc_read_tree_conflicts_from_entry(apr_array_header_t *conflicts,
   return SVN_NO_ERROR;
 }
 
-/* Like svn_stringbuf_appendcstr(), but appends a single char. */
-static void
-stringbuf_appendchar(svn_stringbuf_t *targetstr,
-                     char c)
-{
-  char s[2];
-  
-  s[0] = c;
-  s[1] = '\0';
-  svn_stringbuf_appendbytes(targetstr, s, 1);
-}
-
 /*
  * This function could be static, but we need to link to it
  * in a unit test in tests/libsvn_wc/, so it isn't.
@@ -371,12 +359,12 @@ svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
               (path[j] == SVN_WC__TREE_CONFLICT_DESC_SEPARATOR) ||
               (path[j] == SVN_WC__TREE_CONFLICT_ESCAPE_CHAR))
             {
-              stringbuf_appendchar(buf, SVN_WC__TREE_CONFLICT_ESCAPE_CHAR);
+              svn_stringbuf_appendchar(buf, SVN_WC__TREE_CONFLICT_ESCAPE_CHAR);
             }
           svn_stringbuf_appendbytes(buf, &(path[j]), 1);
         }
 
-      stringbuf_appendchar(buf, SVN_WC__TREE_CONFLICT_DESC_FIELD_SEPARATOR);
+      svn_stringbuf_appendchar(buf, SVN_WC__TREE_CONFLICT_DESC_FIELD_SEPARATOR);
 
       switch (conflict->node_kind)
         {
@@ -391,7 +379,7 @@ svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
                 _("Bad node_kind in tree conflict description"));
         }
 
-      stringbuf_appendchar(buf, SVN_WC__TREE_CONFLICT_DESC_FIELD_SEPARATOR);
+      svn_stringbuf_appendchar(buf, SVN_WC__TREE_CONFLICT_DESC_FIELD_SEPARATOR);
 
       switch (conflict->operation)
         {
@@ -409,7 +397,7 @@ svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
                 _("Bad operation in tree conflict description"));
         }
 
-      stringbuf_appendchar(buf, SVN_WC__TREE_CONFLICT_DESC_FIELD_SEPARATOR);
+      svn_stringbuf_appendchar(buf, SVN_WC__TREE_CONFLICT_DESC_FIELD_SEPARATOR);
 
       switch (conflict->action)
         {
@@ -427,7 +415,7 @@ svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
                 _("Bad action in tree conflict description"));
         }
 
-      stringbuf_appendchar(buf, SVN_WC__TREE_CONFLICT_DESC_FIELD_SEPARATOR);
+      svn_stringbuf_appendchar(buf, SVN_WC__TREE_CONFLICT_DESC_FIELD_SEPARATOR);
 
       switch (conflict->reason)
         {
@@ -452,7 +440,7 @@ svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
         }
 
       if (i < (conflicts->nelts - 1))
-        stringbuf_appendchar(buf, SVN_WC__TREE_CONFLICT_DESC_SEPARATOR);
+        svn_stringbuf_appendchar(buf, SVN_WC__TREE_CONFLICT_DESC_SEPARATOR);
     }
 
   dir_entry->tree_conflict_data = apr_pstrdup(pool, buf->data);
