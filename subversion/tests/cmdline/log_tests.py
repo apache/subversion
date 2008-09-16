@@ -263,6 +263,7 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
                        '--username', svntest.main.wc_author2)
 
   # Do some mergeing - r6
+  # From branch_a to trunk: add 'upsilon' and modify 'iota' and 'mu'.
   #
   # Mergeinfo changes on /trunk:
   #    Merged /trunk:r2
@@ -274,7 +275,7 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
                        '--username', svntest.main.wc_author2)
   os.chdir('..')
 
-  # Add omicron to branches/a - r7
+  # Add 'blocked/omicron' to branches/a - r7
   svntest.main.run_svn(None, 'mkdir', os.path.join(branch_a, 'blocked'))
   svntest.main.file_write(os.path.join(branch_a, omicron_path),
                           "This is the file 'omicron'.\n")
@@ -389,7 +390,9 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
                           "Don't forget to look at 'upsilon', as well.\n" +
                           "This is yet more content in 'mu'.",
                           "wb")
+  # Resolve conflicts, and commit
   svntest.main.run_svn(None, 'resolved', os.path.join('A', 'mu'))
+  svntest.main.run_svn(None, 'resolved', 'A')
   svntest.main.run_svn(None, 'ci', '-m',
                        "Merge branches/c to trunk, " +
                        "resolving a conflict in 'mu'.",
