@@ -199,7 +199,8 @@ typedef struct svn_cl__opt_state_t
                                     THIS IS TEMPORARY (LAST OF CHANGELISTS) */
   svn_boolean_t keep_changelists;/* don't remove changelists after commit */
   svn_boolean_t keep_local;      /* delete path only from repository */
-  svn_boolean_t all_revprops;    /* retrieve all props */
+  svn_boolean_t all_revprops;    /* retrieve all revprops */
+  svn_boolean_t no_revprops;     /* retrieve no revprops */
   apr_hash_t *revprop_table;     /* table of revision properties to get/set */
   svn_boolean_t parents;         /* create intermediate directories */
   svn_boolean_t use_merge_history; /* use/display extra merge information */

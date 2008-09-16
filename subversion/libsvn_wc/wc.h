@@ -69,8 +69,14 @@ extern "C" {
  * The change from 8 to 9 was the addition of changelists, keep-local,
  * and sticky depth (for selective/sparse checkouts).
  *
+<<<<<<< .working
  * The change from 9 to 10 was the addition of file externals.
  *
+=======
+ * The change from 9 to 10 will include the addition of tree-conflicts
+ * (but the number has not been bumped yet).
+ *
+>>>>>>> .merge-right.r33097
  * Please document any further format changes here.
  */
 #define SVN_WC__VERSION       10
