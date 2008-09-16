@@ -23,6 +23,10 @@
 #include "svn_types.h"
 #include "svn_private_config.h"
 
+static const char field_separator = SVN_WC__TREE_CONFLICT_DESC_FIELD_SEPARATOR;
+static const char desc_separator = SVN_WC__TREE_CONFLICT_DESC_SEPARATOR;
+static const char escape_char = SVN_WC__TREE_CONFLICT_ESCAPE_CHAR;
+
 /* If **INPUT starts with *TOKEN, advance *INPUT by the length of *TOKEN
  * and return TRUE. Else, return FALSE and leave *INPUT alone. */
 static svn_boolean_t
@@ -64,7 +68,7 @@ read_victim_path(svn_wc_conflict_description_t *conflict,
   {
     /* The field or description separators may occur inside the
      * victim_path if they are escaped. */
-    if (! escape && **start == SVN_WC__TREE_CONFLICT_ESCAPE_CHAR)
+    if (! escape && **start == escape_char)
       {
         escape = TRUE;
         (*start)++;
@@ -74,9 +78,9 @@ read_victim_path(svn_wc_conflict_description_t *conflict,
             _("Unexpected end of tree conflict description, within escape "
               "sequence in 'victim_path'"));
 
-        if (**start != SVN_WC__TREE_CONFLICT_DESC_SEPARATOR
-            && **start != SVN_WC__TREE_CONFLICT_DESC_FIELD_SEPARATOR
-            && **start != SVN_WC__TREE_CONFLICT_ESCAPE_CHAR)
+        if (**start != desc_separator
+            && **start != field_separator
+            && **start != escape_char)
           return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
             _("Illegal escaped character in 'victim_path' of tree "
               "conflict description"));
@@ -84,9 +88,9 @@ read_victim_path(svn_wc_conflict_description_t *conflict,
 
     if (! escape)
       {
-        if (**start == SVN_WC__TREE_CONFLICT_DESC_FIELD_SEPARATOR)
+        if (**start == field_separator)
           break;
-        else if (**start == SVN_WC__TREE_CONFLICT_DESC_SEPARATOR)
+        else if (**start == desc_separator)
           return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
              _("Unescaped description delimiter inside 'victim_path' "
                "in tree conflict description"));
@@ -101,7 +105,7 @@ read_victim_path(svn_wc_conflict_description_t *conflict,
     return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
              _("Empty 'victim_path' in tree conflict description"));
 
-  if (**start == SVN_WC__TREE_CONFLICT_DESC_FIELD_SEPARATOR)
+  if (**start == field_separator)
     (*start)++;
   else
     return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
@@ -135,7 +139,7 @@ read_node_kind(svn_wc_conflict_description_t *conflict,
     return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
              _("Invalid 'node_kind' field in tree conflict description"));
 
-  if (*start >= end || **start != SVN_WC__TREE_CONFLICT_DESC_FIELD_SEPARATOR)
+  if (*start >= end || **start != field_separator)
     return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
             _("No delimiter after 'node_kind' in tree conflict description"));
 
@@ -168,7 +172,7 @@ read_operation(svn_wc_conflict_description_t *conflict,
     return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
              _("Invalid 'operation' field in tree conflict description"));
 
-  if (*start >= end || **start != SVN_WC__TREE_CONFLICT_DESC_FIELD_SEPARATOR)
+  if (*start >= end || **start != field_separator)
     return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
             _("No delimiter after 'operation' in tree conflict description"));
 
@@ -201,7 +205,7 @@ read_action(svn_wc_conflict_description_t *conflict,
     return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
              _("Invalid 'action' field in tree conflict description"));
 
-  if (*start >= end || **start != SVN_WC__TREE_CONFLICT_DESC_FIELD_SEPARATOR)
+  if (*start >= end || **start != field_separator)
     return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
              _("No delimiter after 'action' in tree conflict description"));
 
@@ -237,7 +241,7 @@ read_reason(svn_wc_conflict_description_t *conflict,
              _("Invalid 'reason' field in tree conflict description"));
 
   /* This was the last field to parse, leave *START alone.
-   * It should already point to an SVN_WC__TREE_CONFLICT_DESC_SEPARATOR.
+   * It should already point to a description separator.
    */
   return SVN_NO_ERROR;
 }
@@ -272,9 +276,9 @@ read_one_tree_conflict(svn_wc_conflict_description_t **conflict,
   SVN_ERR(read_action(*conflict, start, end));
   SVN_ERR(read_reason(*conflict, start, end));
 
-  /* *START should now point to an SVN_WC__TREE_CONFLICT_DESC_SEPARATOR
+  /* *START should now point to a description separator
    * if there are any descriptions left. */
-  if (**start == SVN_WC__TREE_CONFLICT_DESC_SEPARATOR)
+  if (**start == desc_separator)
     (*start)++;
   else
     {
@@ -355,16 +359,16 @@ svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
       /* Escape separator chars while writing victim path. */
       for (j = 0; j < len; j++)
         {
-          if ((path[j] == SVN_WC__TREE_CONFLICT_DESC_FIELD_SEPARATOR) ||
-              (path[j] == SVN_WC__TREE_CONFLICT_DESC_SEPARATOR) ||
-              (path[j] == SVN_WC__TREE_CONFLICT_ESCAPE_CHAR))
+          if ((path[j] == field_separator) ||
+              (path[j] == desc_separator) ||
+              (path[j] == escape_char))
             {
-              svn_stringbuf_appendchar(buf, SVN_WC__TREE_CONFLICT_ESCAPE_CHAR);
+              svn_stringbuf_appendbytes(buf, &escape_char, 1);
             }
           svn_stringbuf_appendbytes(buf, &(path[j]), 1);
         }
 
-      svn_stringbuf_appendchar(buf, SVN_WC__TREE_CONFLICT_DESC_FIELD_SEPARATOR);
+      svn_stringbuf_appendbytes(buf, &field_separator, 1);
 
       switch (conflict->node_kind)
         {
@@ -379,7 +383,7 @@ svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
                 _("Bad node_kind in tree conflict description"));
         }
 
-      svn_stringbuf_appendchar(buf, SVN_WC__TREE_CONFLICT_DESC_FIELD_SEPARATOR);
+      svn_stringbuf_appendbytes(buf, &field_separator, 1);
 
       switch (conflict->operation)
         {
@@ -397,7 +401,7 @@ svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
                 _("Bad operation in tree conflict description"));
         }
 
-      svn_stringbuf_appendchar(buf, SVN_WC__TREE_CONFLICT_DESC_FIELD_SEPARATOR);
+      svn_stringbuf_appendbytes(buf, &field_separator, 1);
 
       switch (conflict->action)
         {
@@ -415,7 +419,7 @@ svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
                 _("Bad action in tree conflict description"));
         }
 
-      svn_stringbuf_appendchar(buf, SVN_WC__TREE_CONFLICT_DESC_FIELD_SEPARATOR);
+      svn_stringbuf_appendbytes(buf, &field_separator, 1);
 
       switch (conflict->reason)
         {
@@ -440,7 +444,7 @@ svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
         }
 
       if (i < (conflicts->nelts - 1))
-        svn_stringbuf_appendchar(buf, SVN_WC__TREE_CONFLICT_DESC_SEPARATOR);
+        svn_stringbuf_appendbytes(buf, &desc_separator, 1);
     }
 
   dir_entry->tree_conflict_data = apr_pstrdup(pool, buf->data);
