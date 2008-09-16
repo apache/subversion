@@ -12121,8 +12121,9 @@ def svn_merge(rev_spec, source, target, exp_out=None):
   if isinstance(rev_spec, type(0)):
     rev_spec = '-c' + str(rev_spec)
   if exp_out is None:
-    exp_1 = "--- Merging r.* into '" + target + ".*':"
-    exp_2 = "(A |D |[UG] | [UG]|[UG][UG])   " + target + ".*"
+    target_re = re.escape(target)
+    exp_1 = "--- Merging r.* into '" + target_re + ".*':"
+    exp_2 = "(A |D |[UG] | [UG]|[UG][UG])   " + target_re + ".*"
     exp_out = svntest.verify.RegexOutput(exp_1 + "|" + exp_2)
   svntest.actions.run_and_verify_svn(None, exp_out, [],
                                      'merge', rev_spec, source, target)
