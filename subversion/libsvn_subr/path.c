@@ -855,7 +855,7 @@ svn_path_is_dotpath_present(const char *path)
   if (strstr(path, "/./") != NULL)
     return TRUE;
 
-  if (path[len - 2] == '/' && path[len - 1] == '.')
+  if (len >= 2 && path[len - 2] == '/' && path[len - 1] == '.')
     return TRUE;
 
   return FALSE;
