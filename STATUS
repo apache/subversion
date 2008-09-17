@@ -51,6 +51,7 @@ Candidate changes:
     Fix a segmentation fault when an error occurs in log message callback
     in the Ruby bindings.
     Branch: 1.3.x-r20741
+      (This branch was removed from HEAD in r33133.)
     Justification:
       A segmentation fault bug is critical bug.
     Votes:
@@ -62,6 +63,7 @@ Veto-blocked changes:
     Fix issue #2306: modification of "svn:needs-lock" should adjust
     the native file system's read-only attribute within a WC.
     Branch: 1.3.x-r17333
+      (This branch was removed from HEAD in r33133.)
     Justification:
       Backport of a change to trunk which resolves buggy behavior on
       Windows, behavior which is inconsistent with Linux.
