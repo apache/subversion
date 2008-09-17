@@ -1,11 +1,10 @@
 dnl   SVN_LIB_SQLITE(wanted_regex, recommended_ver, url)
 dnl
 dnl   Search for a suitable version of sqlite.  wanted_regex is a
-dnl   regular expression used in a Bourne shell switch/case statement
-dnl   to match versions of sqlite that can be used.  recommended_ver is the
-dnl   recommended version of sqlite, which is not necessarily the latest
-dnl   released version of sqlite that exists.  url is the URL of the
-dnl   recommended version of sqlite.
+dnl   regular expression used in an egrep context to match versions
+dnl   of sqlite that can be used.  recommended_ver is the recommended
+dnl   version of sqlite, which is not necessarily the latest version
+dnl   released.  url is the URL of the recommended version of sqlite.
 dnl
 dnl   If a --with-sqlite=PREFIX option is passed search for a suitable
 dnl   sqlite installed on the system.  In this case ignore any sqlite/
@@ -21,7 +20,7 @@ dnl   it to yes.
 
 AC_DEFUN(SVN_LIB_SQLITE,
 [
-  SQLITE_ALLOWED_LIST="$1"
+  SQLITE_ALLOWED_PATTERN="$1"
   SQLITE_RECOMMENDED_VER="$2"
   SQLITE_URL="$3"
   SQLITE_PKGNAME="sqlite3"
@@ -46,19 +45,15 @@ AC_DEFUN(SVN_LIB_SQLITE,
     if test -x "$pkg_config"; then
       AC_MSG_CHECKING([sqlite library version (via pkg-config)])
       sqlite_version=`$pkg_config $SQLITE_PKGNAME --modversion --silence-errors`
-      case $sqlite_version in
-        $SQLITE_ALLOWED_LIST)
-          AC_MSG_RESULT([$sqlite_version])
-          svn_lib_sqlite="yes"
-          SVN_SQLITE_INCLUDES="`$pkg_config $SQLITE_PKGNAME --cflags`"
-          SVN_SQLITE_LIBS="`$pkg_config $SQLITE_PKGNAME --libs`"
-          AC_CHECK_LIB(sqlite3, sqlite3_threadsafe,
-                       [threadsafety_runtime_check_avail=yes])
-          ;;
-        *)
-          AC_MSG_RESULT([none or unsupported $sqlite_version])
-          ;;
-      esac
+      
+      if $ECHO $sqlite_version | $EGREP -q $SQLITE_ALLOWED_PATTERN; then
+        AC_MSG_RESULT([$sqlite_version])
+        svn_lib_sqlite="yes"
+        SVN_SQLITE_INCLUDES="`$pkg_config $SQLITE_PKGNAME --cflags`"
+        SVN_SQLITE_LIBS="`$pkg_config $SQLITE_PKGNAME --libs`"
+      else
+        AC_MSG_RESULT([none or unsupported $sqlite_version])
+      fi
     fi
 
     if test -z "$svn_lib_sqlite"; then
@@ -69,11 +64,6 @@ AC_DEFUN(SVN_LIB_SQLITE,
       fi
     fi
   ])
-
-  if test "$threadsafety_runtime_check_avail" = "yes"; then
-    AC_DEFINE([SVN_HAVE_SQLITE_THREADSAFE_PREDICATE], [1],
-      [Defined if SQLite 3.5+'s thread-safety runtime check is available.])
-  fi
 
   AC_SUBST(SVN_SQLITE_INCLUDES)
   AC_SUBST(SVN_SQLITE_LIBS)
@@ -92,18 +82,26 @@ AC_DEFUN(SVN_SQLITE_CONFIG,
   fi
 
   AC_CHECK_HEADER(sqlite3.h,
-    [ AC_CHECK_LIB(sqlite3, sqlite3_close,
+    [
+      AC_MSG_CHECKING([sqlite library version (via header)])
+      AC_EGREP_CPP($SQLITE_ALLOWED_PATTERN,
+      [#include <sqlite3.h>
+       SQLITE_VERSION],
       [
-        svn_lib_sqlite="yes"
-        if test "$sqlite_dir" != "" && test -d "$sqlite_dir"; then
-          SVN_SQLITE_INCLUDES="-I$sqlite_dir/include"
-          SVN_SQLITE_LIBS="-L$sqlite_dir/lib -lsqlite3"
-        else
-          SVN_SQLITE_LIBS="-lsqlite3"
-        fi
-
-        AC_CHECK_LIB(sqlite3, sqlite3_threadsafe,
-                     [threadsafety_runtime_check_avail=yes])
+        AC_MSG_RESULT([good])
+        AC_CHECK_LIB(sqlite3, sqlite3_close,
+        [
+          svn_lib_sqlite="yes"
+          if test "$sqlite_dir" != "" && test -d "$sqlite_dir"; then
+            SVN_SQLITE_INCLUDES="-I$sqlite_dir/include"
+            SVN_SQLITE_LIBS="-L$sqlite_dir/lib -lsqlite3"
+          else
+            SVN_SQLITE_LIBS="-lsqlite3"
+          fi
+        ])
+      ],
+      [
+        AC_MSG_RESULT([none or unsupported])
       ])
     ])
 

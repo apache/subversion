@@ -318,18 +318,11 @@ check_format(svn_sqlite__db_t *db, int latest_schema,
 static svn_error_t *
 init_sqlite()
 {
-  svn_boolean_t is_threadsafe = TRUE;
-
   /* SQLite 3.5 allows verification of its thread-safety at runtime.
      Older versions are simply expected to have been configured with
      --enable-threadsafe, which compiles with -DSQLITE_THREADSAFE=1
      (or -DTHREADSAFE, for older versions). */
-#ifdef SVN_HAVE_SQLITE_THREADSAFE_PREDICATE
-  /* sqlite3_threadsafe() was available at Subversion 'configure'-time. */
-  is_threadsafe = sqlite3_threadsafe();
-#endif /* SVN_HAVE_SQLITE_THREADSAFE_PREDICATE */
-
-  if (! is_threadsafe)
+  if (! sqlite3_threadsafe())
     return svn_error_create(SVN_ERR_SQLITE_ERROR, NULL,
                             _("SQLite is required to be compiled and run in "
                               "thread-safe mode"));
