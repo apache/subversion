@@ -842,6 +842,26 @@ svn_path_is_single_path_component(const char *name)
 
 
 svn_boolean_t
+svn_path_is_dotpath_present(const char *path)
+{
+  int len = strlen(path);
+
+  if (! strcmp(path, "."))
+    return TRUE;
+
+  if (! strncmp(path, "./", 2))
+    return TRUE;
+
+  if (strstr(path, "/./") != NULL)
+    return TRUE;
+
+  if (path[len - 2] == '/' && path[len - 1] == '.')
+    return TRUE;
+
+  return FALSE;
+}
+
+svn_boolean_t
 svn_path_is_backpath_present(const char *path)
 {
   int len = strlen(path);

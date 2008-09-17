@@ -396,6 +396,16 @@ svn_boolean_t svn_path_is_single_path_component(const char *name);
 svn_boolean_t svn_path_is_backpath_present(const char *path);
 
 
+/**
+ * Test to see if a dotpath, i.e. '.', is present in @a path.
+ * If not, return @c FALSE.
+ * If so, return @c TRUE.
+ *
+ * @since New in 1.6.
+ */
+svn_boolean_t svn_path_is_dotpath_present(const char *path);
+
+
 /** Test if @a path2 is a child of @a path1.
  * If not, return @c NULL.
  * If so, return a copy of the remainder path, allocated in @a pool.
@@ -442,6 +452,9 @@ svn_path_is_ancestor(const char *path1, const char *path2);
  *
  * Return @c SVN_NO_ERROR if valid and @c SVN_ERR_FS_PATH_SYNTAX if
  * invalid.
+ *
+ * @note Despite returning an @c SVN_ERR_FS_* error, this function has
+ * nothing to do with the versioned filesystem's concept of validity.
  *
  * @since New in 1.2.
  */
