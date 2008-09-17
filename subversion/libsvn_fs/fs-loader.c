@@ -328,6 +328,8 @@ default_warning_func(void *baton, svn_error_t *err)
 
 /* Check whether PATH is valid for a filesystem, following (most of) the
  * requirements in svn_fs.h:"Directory entry names and directory paths".
+ *
+ * Return SVN_ERR_FS_PATH_SYNTAX if PATH is not valid.
  */
 static svn_error_t *
 path_valid(const char *path, apr_pool_t *pool)
