@@ -30,6 +30,7 @@
 #include "svn_user.h"
 
 #include "private/svn_auth_private.h"
+#include "private/svn_atomic.h"
 
 #include "svn_private_config.h"
 
@@ -44,28 +45,38 @@
    Windows CryptoAPI. Used during decryption to verify that the
    encrypted data were valid. */
 static const WCHAR description[] = L"auth_svn.simple.wincrypt";
+static HINSTANCE crypto_dll = NULL;
+static svn_atomic_t crypto_dll_loaded = 0;
 
-/* Dynamically load the address of function NAME in PDLL into
-   PFN. Return TRUE if the function name was found, otherwise
-   FALSE. Equivalent to dlsym(). */
-static svn_boolean_t
-get_crypto_function(const char *name, HINSTANCE *pdll, FARPROC *pfn)
+/* Initializer function matching the prototype accepted by
+   svn_atomic__init_once(). */
+static svn_error_t *
+load_crypto_dll(apr_pool_t *pool)
 {
   /* In case anyone wonders why we use LoadLibraryA here: This will
      always work on Win9x/Me, whilst LoadLibraryW may not. */
-  HINSTANCE dll = LoadLibraryA("Crypt32.dll");
-  if (dll)
+  crypto_dll = LoadLibraryA("Crypt32.dll");
+  return SVN_NO_ERROR;
+}
+
+/* Dynamically resolve the address of function NAME in crypt32.dll. Return
+   NULL if the function name was not found. */
+static FARPROC
+get_crypto_function(const char *name)
+{
+  svn_error_t *err;
+
+  err = svn_atomic__init_once(&crypto_dll_loaded, load_crypto_dll, NULL);
+  if (err)
     {
-      FARPROC fn = GetProcAddress(dll, name);
-      if (fn)
-        {
-          *pdll = dll;
-          *pfn = fn;
-          return TRUE;
-        }
-      FreeLibrary(dll);
+      svn_error_clear(err);
+      return NULL;
     }
-  return FALSE;
+
+  if (!crypto_dll)
+    return NULL;
+
+  return GetProcAddress(crypto_dll, name);
 }
 
 /* Implementation of svn_auth__password_set_t that encrypts
@@ -87,16 +98,14 @@ windows_password_encrypter(apr_hash_t *creds,
      DWORD,                      /* dwFlags */
      DATA_BLOB*);                /* pDataOut */
 
-  HINSTANCE dll;
-  FARPROC fn;
   encrypt_fn_t encrypt;
   DATA_BLOB blobin;
   DATA_BLOB blobout;
   svn_boolean_t crypted;
 
-  if (!get_crypto_function("CryptProtectData", &dll, &fn))
+  encrypt = (encrypt_fn_t) get_crypto_function("CryptProtectData");
+  if (!encrypt)
     return FALSE;
-  encrypt = (encrypt_fn_t) fn;
 
   blobin.cbData = strlen(in);
   blobin.pbData = (BYTE*) in;
@@ -111,7 +120,6 @@ windows_password_encrypter(apr_hash_t *creds,
       LocalFree(blobout.pbData);
     }
 
-  FreeLibrary(dll);
   return crypted;
 }
 
@@ -135,8 +143,6 @@ windows_password_decrypter(const char **out,
      DWORD,                      /* dwFlags */
      DATA_BLOB*);                /* pDataOut */
 
-  HINSTANCE dll;
-  FARPROC fn;
   DATA_BLOB blobin;
   DATA_BLOB blobout;
   LPWSTR descr;
@@ -148,9 +154,9 @@ windows_password_decrypter(const char **out,
                                      non_interactive, pool))
     return FALSE;
 
-  if (!get_crypto_function("CryptUnprotectData", &dll, &fn))
+  decrypt = (decrypt_fn_t) get_crypto_function("CryptUnprotectData");
+  if (!decrypt)
     return FALSE;
-  decrypt = (decrypt_fn_t) fn;
 
   blobin.cbData = strlen(in);
   blobin.pbData = apr_palloc(pool, apr_base64_decode_len(in));
@@ -166,7 +172,6 @@ windows_password_decrypter(const char **out,
       LocalFree(blobout.pbData);
     }
 
-  FreeLibrary(dll);
   return decrypted;
 }
 
@@ -254,7 +259,6 @@ typedef BOOL (WINAPI *freecertcontext_fn_t)(
   PCCERT_CONTEXT pCertContext);
 
 typedef struct {
-  HINSTANCE cryptodll;
   createcertcontext_fn_t createcertcontext;
   getcertchain_fn_t getcertchain;
   freecertchain_fn_t freecertchain;
@@ -293,16 +297,13 @@ windows_ssl_server_trust_first_credentials(void **credentials,
       return SVN_NO_ERROR;
     }
 
-  if (!pb->cryptodll)
+  if (!pb->createcertcontext || !pb->getcertchain || !pb->freecertchain
+      || !pb->freecertcontext)
     {
       /* give up, go on to next provider. */
       *credentials = NULL;
       return SVN_NO_ERROR;
     }
-
-  if (!pb->createcertcontext || !pb->getcertchain || !pb->freecertchain
-      || !pb->freecertcontext)
-    ok = FALSE;
 
   if (ok)
     {
@@ -368,22 +369,6 @@ windows_ssl_server_trust_first_credentials(void **credentials,
   return SVN_NO_ERROR;
 }
 
-static apr_status_t
-windows_ssl_server_trust_cleanup(void *baton)
-{
-  windows_ssl_server_trust_provider_baton_t *pb = baton;
-  if (pb->cryptodll)
-    {
-      FreeLibrary(pb->cryptodll);
-      pb->cryptodll = NULL;
-      pb->createcertcontext = NULL;
-      pb->freecertchain = NULL;
-      pb->freecertcontext = NULL;
-      pb->getcertchain = NULL;
-    }
-  return APR_SUCCESS;
-}
-
 static const svn_auth_provider_t windows_server_trust_provider = {
   SVN_AUTH_CRED_SSL_SERVER_TRUST,
   windows_ssl_server_trust_first_credentials,
@@ -400,26 +385,17 @@ svn_auth_get_windows_ssl_server_trust_provider
   windows_ssl_server_trust_provider_baton_t *pb =
     apr_pcalloc(pool, sizeof(*pb));
 
-  /* In case anyone wonders why we use LoadLibraryA here: This will
-     always work on Win9x/Me, whilst LoadLibraryW may not. */
-  pb->cryptodll = LoadLibraryA("Crypt32.dll");
-  if (pb->cryptodll)
-    {
-      pb->createcertcontext =
-        (createcertcontext_fn_t)GetProcAddress(pb->cryptodll,
-                                               "CertCreateCertificateContext");
-      pb->getcertchain =
-        (getcertchain_fn_t)GetProcAddress(pb->cryptodll,
-                                          "CertGetCertificateChain");
-      pb->freecertchain =
-        (freecertchain_fn_t)GetProcAddress(pb->cryptodll,
-                                           "CertFreeCertificateChain");
-      pb->freecertcontext =
-        (freecertcontext_fn_t)GetProcAddress(pb->cryptodll,
-                                             "CertFreeCertificateContext");
-      apr_pool_cleanup_register(pool, pb, windows_ssl_server_trust_cleanup,
-                                apr_pool_cleanup_null);
-    }
+  pb->createcertcontext = (createcertcontext_fn_t)
+    get_crypto_function("CertCreateCertificateContext");
+
+  pb->getcertchain = (getcertchain_fn_t)
+    get_crypto_function("CertGetCertificateChain");
+
+  pb->freecertchain = (freecertchain_fn_t)
+    get_crypto_function("CertFreeCertificateChain");
+
+  pb->freecertcontext = (freecertcontext_fn_t)
+    get_crypto_function("CertFreeCertificateContext");
 
   po->vtable = &windows_server_trust_provider;
   po->provider_baton = pb;
