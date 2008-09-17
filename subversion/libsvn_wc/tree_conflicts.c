@@ -537,3 +537,70 @@ svn_wc__loggy_add_tree_conflict_data(
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc_get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
+                         const char *victim_path,
+                         svn_wc_adm_access_t *adm_access,
+                         apr_pool_t *pool)
+{
+  const char *parent_path = svn_path_dirname(victim_path, pool);
+  svn_wc_adm_access_t *parent_adm_access;
+  svn_boolean_t parent_adm_access_is_temporary = FALSE;
+  svn_error_t *err;
+  apr_array_header_t *conflicts;
+  const svn_wc_entry_t *entry;
+  int i;
+
+  /* Try to get the parent's admin access baton from the baton set. */
+  err = svn_wc_adm_retrieve(&parent_adm_access, adm_access, parent_path, pool);
+  if (err && (err->apr_err == SVN_ERR_WC_NOT_LOCKED))
+    {
+      svn_error_clear(err);
+
+      /* Try to access the parent dir independently. We can't add a parent's
+         access baton to the existing access baton set of its child, because
+         the lifetimes would be wrong according to doc string of
+         svn_wc_adm_open3(), so we get open it temporarily and close it after
+         use. */
+      err = svn_wc_adm_open3(&parent_adm_access, NULL, parent_path,
+                             FALSE, 0, NULL, NULL, pool);
+      parent_adm_access_is_temporary = TRUE;
+
+      /* If the parent isn't a WC dir, the child can't be tree-conflicted. */
+      if (err && (err->apr_err == SVN_ERR_WC_NOT_DIRECTORY))
+        {
+          svn_error_clear(err);
+          *tree_conflict = NULL;
+          return SVN_NO_ERROR;
+        }
+    }
+  SVN_ERR(err);
+
+  conflicts = apr_array_make(pool, 0,
+                             sizeof(svn_wc_conflict_description_t *));
+  SVN_ERR(svn_wc_entry(&entry, parent_path, parent_adm_access, TRUE, pool));
+  SVN_ERR(svn_wc_read_tree_conflicts_from_entry(conflicts, entry, parent_path,
+                                                pool));
+
+  *tree_conflict = NULL;
+  for (i = 0; i < conflicts->nelts; i++)
+    {
+      svn_wc_conflict_description_t *conflict;
+
+      conflict = APR_ARRAY_IDX(conflicts, i,
+                               svn_wc_conflict_description_t *);
+      if (strcmp(svn_path_basename(conflict->path, pool),
+                 svn_path_basename(victim_path, pool)) == 0)
+        {
+          *tree_conflict = conflict;
+          break;
+        }
+    }
+
+  /* If we opened a temporary admin access baton, close it. */
+  if (parent_adm_access_is_temporary)
+    SVN_ERR(svn_wc_adm_close(parent_adm_access));
+
+  return SVN_NO_ERROR;
+}
+
