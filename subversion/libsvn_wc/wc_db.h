@@ -128,9 +128,8 @@ svn_wc__db_open(svn_wc__db_t **db,
  * In most cases, svn operations will deal with multiple targets. Each
  * target may have a different administrative database, and others will
  * be sharing a database. This function will open all relevant databases
- * for the paths identified in @a paths. The databases will be returned
- * in @a dbs, as a hash mapping the path to an svn_wc__db_t * value.
- * Database handles will be shared if two paths imply the same database.
+ * for the paths identified in @a paths. One handle is returned which
+ * will handle the interaction with all the relevant databases.
  *
  * The @a config will be used to identify how to locate the database
  * for each target listed in @a paths.
@@ -139,7 +138,7 @@ svn_wc__db_open(svn_wc__db_t **db,
  * will be made in @a scratch_pool.
  */
 svn_error_t *
-svn_wc__db_open_many(apr_hash_t **dbs,
+svn_wc__db_open_many(svn_wc__db_t **db,
                      const apr_array_header_t *paths,
                      svn_config_t *config,
                      apr_pool_t *result_pool,
