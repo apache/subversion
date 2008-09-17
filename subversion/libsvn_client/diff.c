@@ -174,9 +174,11 @@ display_prop_diffs(const apr_array_header_t *propchanges,
                    const char *encoding,
                    apr_file_t *file,
                    const char *relative_to_dir,
+                   apr_hash_t *ignored_props,
                    apr_pool_t *pool)
 {
   int i;
+  svn_boolean_t header_printed = FALSE;
 
   if (relative_to_dir)
     {
@@ -191,21 +193,17 @@ display_prop_diffs(const apr_array_header_t *propchanges,
         return MAKE_ERR_BAD_RELATIVE_PATH(path, relative_to_dir);
     }
 
-  SVN_ERR(file_printf_from_utf8(file, encoding,
-                                _("%sProperty changes on: %s%s"),
-                                APR_EOL_STR,
-                                svn_path_local_style(path, pool),
-                                APR_EOL_STR));
-
-  SVN_ERR(file_printf_from_utf8(file, encoding, "%s" APR_EOL_STR,
-                                under_string));
-
   for (i = 0; i < propchanges->nelts; i++)
     {
       const char *header_fmt;
       const svn_string_t *original_value;
       const svn_prop_t *propchange =
         &APR_ARRAY_IDX(propchanges, i, svn_prop_t);
+
+      /* If the property is amoung our ignored set, skip it. */
+      if (ignored_props && apr_hash_get(ignored_props, propchange->name,
+                                        APR_HASH_KEY_STRING))
+        continue;
 
       if (original_props)
         original_value = apr_hash_get(original_props,
@@ -226,6 +224,22 @@ display_prop_diffs(const apr_array_header_t *propchanges,
         header_fmt = _("Deleted: %s%s");
       else
         header_fmt = _("Modified: %s%s");
+
+      /* Lazily print the property diff header. */
+      if (!header_printed)
+        {
+          SVN_ERR(file_printf_from_utf8(file, encoding,
+                                        _("%sProperty changes on: %s%s"),
+                                        APR_EOL_STR,
+                                        svn_path_local_style(path, pool),
+                                        APR_EOL_STR));
+
+          SVN_ERR(file_printf_from_utf8(file, encoding, "%s" APR_EOL_STR,
+                                        under_string));
+
+          header_printed = TRUE;
+        }
+
       SVN_ERR(file_printf_from_utf8(file, encoding, header_fmt,
                                     propchange->name, APR_EOL_STR));
 
@@ -284,7 +298,8 @@ display_prop_diffs(const apr_array_header_t *propchanges,
      to native encoding, at least conditionally?  Or is it better to
      have under_string always output the same eol, so programs can
      find it consistently?  Also, what about checking for error? */
-  apr_file_printf(file, APR_EOL_STR);
+  if (header_printed)
+    apr_file_printf(file, APR_EOL_STR);
 
   return SVN_NO_ERROR;
 }
@@ -348,6 +363,9 @@ struct diff_cmd_baton {
   /* The directory that diff target paths should be considered as
      relative to for output generation (see issue #2723). */
   const char *relative_to_dir;
+
+  /* Props which, when we encounter mods for, we ignore. */
+  apr_hash_t *ignored_props;
 };
 
 
@@ -390,6 +408,7 @@ diff_props_changed(svn_wc_adm_access_t *adm_access,
                                diff_cmd_baton->header_encoding,
                                diff_cmd_baton->outfile,
                                diff_cmd_baton->relative_to_dir,
+                               diff_cmd_baton->ignored_props,
                                subpool));
 
   if (state)
@@ -869,9 +888,6 @@ struct diff_parameters
 
   /* Ignore deleted */
   svn_boolean_t no_diff_deleted;
-
-  /* Ignored props */
-  apr_hash_t *ignored_props;
 
   /* Changelists of interest */
   const apr_array_header_t *changelists;
@@ -1612,15 +1628,6 @@ svn_client_diff5(const apr_array_header_t *options,
   diff_params.no_diff_deleted = no_diff_deleted;
   diff_params.changelists = changelists;
 
-  if (ignore_mergeinfo)
-    {
-      diff_params.ignored_props = apr_hash_make(pool);
-      apr_hash_set(diff_params.ignored_props, SVN_PROP_MERGEINFO,
-                   APR_HASH_KEY_STRING, (void *) 0xdeadbeef);
-    }
-  else
-    diff_params.ignored_props = NULL;
-
   /* setup callback and baton */
   diff_callbacks.file_changed = diff_file_changed;
   diff_callbacks.file_added = diff_file_added;
@@ -1647,6 +1654,15 @@ svn_client_diff5(const apr_array_header_t *options,
   diff_cmd_baton.force_empty = FALSE;
   diff_cmd_baton.force_binary = ignore_content_type;
   diff_cmd_baton.relative_to_dir = relative_to_dir;
+
+  if (ignore_mergeinfo)
+    {
+      diff_cmd_baton.ignored_props = apr_hash_make(pool);
+      apr_hash_set(diff_cmd_baton.ignored_props, SVN_PROP_MERGEINFO,
+                   APR_HASH_KEY_STRING, (void *) 0xdeadbeef);
+    }
+  else
+    diff_cmd_baton.ignored_props = NULL;
 
   return do_diff(&diff_params, &diff_callbacks, &diff_cmd_baton, ctx, pool);
 }
@@ -1782,15 +1798,6 @@ svn_client_diff_peg5(const apr_array_header_t *options,
   diff_params.no_diff_deleted = no_diff_deleted;
   diff_params.changelists = changelists;
 
-  if (ignore_mergeinfo)
-    {
-      diff_params.ignored_props = apr_hash_make(pool);
-      apr_hash_set(diff_params.ignored_props, SVN_PROP_MERGEINFO,
-                   APR_HASH_KEY_STRING, (void *) 0xdeadbeef);
-    }
-  else
-    diff_params.ignored_props = NULL;
-
   /* setup callback and baton */
   diff_callbacks.file_changed = diff_file_changed;
   diff_callbacks.file_added = diff_file_added;
@@ -1817,6 +1824,15 @@ svn_client_diff_peg5(const apr_array_header_t *options,
   diff_cmd_baton.force_empty = FALSE;
   diff_cmd_baton.force_binary = ignore_content_type;
   diff_cmd_baton.relative_to_dir = relative_to_dir;
+
+  if (ignore_mergeinfo)
+    {
+      diff_cmd_baton.ignored_props = apr_hash_make(pool);
+      apr_hash_set(diff_cmd_baton.ignored_props, SVN_PROP_MERGEINFO,
+                   APR_HASH_KEY_STRING, (void *) 0xdeadbeef);
+    }
+  else
+    diff_cmd_baton.ignored_props = NULL;
 
   return do_diff(&diff_params, &diff_callbacks, &diff_cmd_baton, ctx, pool);
 }
@@ -1955,13 +1971,8 @@ svn_client_diff_summarize3(const char *path1,
   diff_params.changelists = changelists;
 
   if (ignore_mergeinfo)
-    {
-      diff_params.ignored_props = apr_hash_make(pool);
-      apr_hash_set(diff_params.ignored_props, SVN_PROP_MERGEINFO,
-                   APR_HASH_KEY_STRING, (void *) 0xdeadbeef);
-    }
-  else
-    diff_params.ignored_props = NULL;
+    return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+      _("Ignoring properties with 'diff --summarize' not yet supported"));
 
   return do_diff_summarize(&diff_params, summarize_func, summarize_baton,
                            ctx, pool);
@@ -2032,13 +2043,8 @@ svn_client_diff_summarize_peg3(const char *path,
   diff_params.changelists = changelists;
 
   if (ignore_mergeinfo)
-    {
-      diff_params.ignored_props = apr_hash_make(pool);
-      apr_hash_set(diff_params.ignored_props, SVN_PROP_MERGEINFO,
-                   APR_HASH_KEY_STRING, (void *) 0xdeadbeef);
-    }
-  else
-    diff_params.ignored_props = NULL;
+    return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+      _("Ignoring properties with 'diff --summarize' not yet supported"));
 
   return do_diff_summarize(&diff_params, summarize_func, summarize_baton,
                            ctx, pool);

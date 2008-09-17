@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -2980,6 +2980,105 @@ def diff_external_diffcmd(sbox):
                                      'diff', '--diff-cmd', diff_script_path,
                                      iota_path)
 
+# Check ignoring mergeinfo in a diff
+def diff_ignore_mergeinfo(sbox):
+  "svn diff --ignore-mergeinfo"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  os.chdir(wc_dir)
+
+  A_path = 'A'
+  C_path = os.path.join(A_path, 'C')
+  D_path = os.path.join(A_path, 'D')
+  H_path = os.path.join(D_path, 'H')
+  G_path = os.path.join(D_path, 'G')
+  iota_path = 'iota'
+  beta_path = os.path.join(A_path, 'B', 'E', 'beta')
+  gamma_path = os.path.join(D_path, 'gamma')
+  chi_path = os.path.join(H_path, 'chi')
+  rho_path = os.path.join(G_path, 'rho')
+
+  # Set some completely bogus mergeinfo
+  svntest.main.run_svn(None, 'propset', 'svn:mergeinfo', 'bar:1-2', beta_path,
+                       H_path, C_path, gamma_path, rho_path)
+  svntest.main.run_svn(None, 'propset', 'svn:bar', 'foo', iota_path, chi_path, 
+                       rho_path)
+
+  # Run and check vanilla diff
+  expected_output = [
+    "\n",
+    "Property changes on: A/B/E/beta\n",
+    "___________________________________________________________________\n",
+    "Added: svn:mergeinfo\n",
+    "   Merged bar:r1-2\n",
+    "\n",
+    "\n",
+    "Property changes on: A/C\n",
+    "___________________________________________________________________\n",
+    "Added: svn:mergeinfo\n",
+    "   Merged bar:r1-2\n",
+    "\n",
+    "\n",
+    "Property changes on: A/D/gamma\n",
+    "___________________________________________________________________\n",
+    "Added: svn:mergeinfo\n",
+    "   Merged bar:r1-2\n",
+    "\n",
+    "\n",
+    "Property changes on: A/D/G/rho\n",
+    "___________________________________________________________________\n",
+    "Added: svn:bar\n",
+    "   + foo\n",
+    "Added: svn:mergeinfo\n",
+    "   Merged bar:r1-2\n",
+    "\n",
+    "\n",
+    "Property changes on: A/D/H\n",
+    "___________________________________________________________________\n",
+    "Added: svn:mergeinfo\n",
+    "   Merged bar:r1-2\n",
+    "\n",
+    "\n",
+    "Property changes on: A/D/H/chi\n",
+    "___________________________________________________________________\n",
+    "Added: svn:bar\n",
+    "   + foo\n",
+    "\n",
+    "\n",
+    "Property changes on: iota\n",
+    "___________________________________________________________________\n",
+    "Added: svn:bar\n",
+    "   + foo\n",
+    "\n",
+   ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff')
+
+  # Run and check --ignore-mergeinfo diff
+  expected_output = [
+    "\n",
+    "Property changes on: A/D/G/rho\n",
+    "___________________________________________________________________\n",
+    "Added: svn:bar\n",
+    "   + foo\n",
+    "\n",
+    "\n",
+    "Property changes on: A/D/H/chi\n",
+    "___________________________________________________________________\n",
+    "Added: svn:bar\n",
+    "   + foo\n",
+    "\n",
+    "\n",
+    "Property changes on: iota\n",
+    "___________________________________________________________________\n",
+    "Added: svn:bar\n",
+    "   + foo\n",
+    "\n",
+   ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff',
+                                     '--ignore-mergeinfo')
+
 ########################################################################
 #Run the tests
 
@@ -3034,6 +3133,7 @@ test_list = [ None,
               diff_file_depth_empty,
               diff_wrong_extension_type,
               diff_external_diffcmd,
+              diff_ignore_mergeinfo,
               ]
 
 if __name__ == '__main__':
