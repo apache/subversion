@@ -1681,7 +1681,7 @@ svn_ra_get_locks(svn_ra_session_t *session,
  * When receiving information for one revision, a callback @a revstart_func is
  * called; this callback will provide an editor and baton through which the
  * revision will be replayed.
- * When replaying the revision is finished, callback @a fevfinish_func will be
+ * When replaying the revision is finished, callback @a revfinish_func will be
  * called so the editor can be closed.
  *
  * Changes will be limited to those that occur under @a session's URL, and

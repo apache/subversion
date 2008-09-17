@@ -120,12 +120,9 @@ read_config(svn_memcache_t **memcache_p,
   SVN_ERR(svn_fs_fs__get_config(&config, fs, pool));
   SVN_ERR(svn_cache_make_memcache_from_config(memcache_p, config,
                                               fs->pool));
-  SVN_ERR(svn_config_get_bool(config, fail_stop,
-                              CONFIG_SECTION_CACHES, CONFIG_OPTION_FAIL_STOP,
-                              FALSE));
-
-  return SVN_NO_ERROR;
-
+  return svn_config_get_bool(config, fail_stop,
+                             CONFIG_SECTION_CACHES, CONFIG_OPTION_FAIL_STOP,
+                             FALSE);
 }
 
 

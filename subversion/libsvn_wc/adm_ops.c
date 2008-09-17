@@ -480,9 +480,7 @@ process_committed_leaf(int log_number,
     }
 
   /* Write our accumulation of log entries into a log file */
-  SVN_ERR(svn_wc__write_log(adm_access, log_number, logtags, pool));
-
-  return SVN_NO_ERROR;
+  return svn_wc__write_log(adm_access, log_number, logtags, pool);
 }
 
 
@@ -800,9 +798,7 @@ svn_wc_process_committed4(const char *path,
                                      remove_changelist, digest, pool));
 
   /* Run the log file(s) we just created. */
-  SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
-
-  return SVN_NO_ERROR;
+  return svn_wc__run_log(adm_access, NULL, pool);
 }
 
 svn_error_t *
@@ -1525,6 +1521,34 @@ svn_wc_add3(const char *path,
     SVN_ERR(svn_wc__props_delete(path, svn_wc__props_working,
                                  adm_access, pool));
 
+  if (is_replace)
+    {
+      /* We don't want the old base text (if any) and base props to be
+         mistakenly used as the bases for the new, replacement object.
+         So, move them out of the way. */
+
+      /* ### TODO: In an ideal world, this whole function would be loggy.
+       * ### But the directory recursion code below is already tangled
+       * ### enough, and re-doing the code above would require setting
+       * ### up more of tmp_entry.  It's more than a SMOP.  For now,
+       * ### I'm leaving it be, though we set up the revert base(s)
+       * ### loggily because that's Just How It's Done.
+       */
+      svn_stringbuf_t *log_accum = svn_stringbuf_create("", pool);
+
+      if (orig_entry->kind == svn_node_file)
+        {
+          const char *textb = svn_wc__text_base_path(path, FALSE, pool);
+          const char *rtextb = svn_wc__text_revert_path(path, FALSE, pool);
+          SVN_ERR(svn_wc__loggy_move(&log_accum, NULL, adm_access,
+                                     textb, rtextb, FALSE, pool));
+        }
+      SVN_ERR(svn_wc__loggy_revert_props_create(&log_accum, path,
+                                                adm_access, TRUE, pool));
+      SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
+      SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
+    }
+
   if (kind == svn_node_dir) /* scheduling a directory for addition */
     {
 
@@ -1717,8 +1741,14 @@ svn_wc_add(const char *path,
 
 */
 
-/* Revert ENTRY for NAME in directory represented by ADM_ACCESS. Sets
-   *REVERTED to TRUE if something actually is reverted.
+/* Revert ENTRY for NAME in directory represented by ADM_ACCESS. 
+
+   Set *REVERTED to TRUE if something (text or props or both) is
+   reverted, FALSE otherwise.  
+
+   If something is reverted and USE_COMMIT_TIMES is true, then update
+   the entry's timestamp to the last-committed-time; otherwise don't
+   do that.
 
    Use SVN_WC_ENTRY_THIS_DIR as NAME for reverting ADM_ACCESS directory
    itself.
@@ -1740,6 +1770,9 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
   apr_hash_t *baseprops = NULL;
   svn_boolean_t revert_base = FALSE;
 
+  /* By default, assume no action; we'll see what happens later. */
+  *reverted = FALSE;
+
   /* Build the full path of the thing we're reverting. */
   fullpath = svn_wc_adm_access_path(adm_access);
   if (strcmp(name, SVN_WC_ENTRY_THIS_DIR) != 0)
@@ -1748,7 +1781,7 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
   /* Deal with properties. */
   if (entry->schedule == svn_wc_schedule_replace)
     {
-       revert_base = entry->copied;
+       revert_base = entry->schedule == svn_wc_schedule_replace;
       /* Use the revertpath as the new propsbase if it exists. */
 
       baseprops = apr_hash_make(pool);
@@ -1803,54 +1836,108 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
 
   if (entry->kind == svn_node_file)
     {
-      svn_node_kind_t base_kind;
-      const char *base_thing;
-      svn_boolean_t tgt_modified;
+      svn_node_kind_t kind;
 
-      /* If the working file is missing, we need to reinstall it. */
+      const char *regular_base_path
+        = svn_wc__text_base_path(fullpath, FALSE, pool);
+
+      /* This becomes NULL if there is no revert-base. */
+      const char *revert_base_path
+        = svn_wc__text_revert_path(fullpath, FALSE, pool);
+
       if (! reinstall_working)
         {
-          svn_node_kind_t kind;
+          /* If the working file is missing, we need to reinstall it. */
           SVN_ERR(svn_io_check_path(fullpath, &kind, pool));
           if (kind == svn_node_none)
             reinstall_working = TRUE;
         }
 
-      base_thing = svn_wc__text_base_path(fullpath, FALSE, pool);
+      /* Whether or not the working file was missing, if there is a
+         revert text-base, we'll need to put it back to the regular
+         text-base and then reinstall the working file.  (Strictly
+         speaking, the working file could be unmodified w.r.t. the
+         revert-base, but discovering that would be costly and chances
+         are it's not the case anyway.  So we just assume. */
+      SVN_ERR(svn_io_check_path(revert_base_path, &kind, pool));
+      if (kind == svn_node_file)
+        {
+          reinstall_working = TRUE;
+        }
+      else if (kind == svn_node_none)
+        {
+          SVN_ERR(svn_io_check_path(regular_base_path, &kind, pool));
+          if (kind != svn_node_file)
+            {
+              /* A real file must have either a regular or a revert
+                 text-base.  If it has neither, we could be looking at
+                 the situation described in issue #2101, in which
+                 case all we can do is deliver the expected error. */
+              return svn_error_createf(APR_ENOENT, NULL,
+                                       _("Error restoring text for '%s'"),
+                                       svn_path_local_style(fullpath, pool));
+            }
+          else
+            {
+              revert_base_path = NULL;
+            }
+        }
+      else
+        {
+          return svn_error_createf
+            (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
+             _("unexpected kind for revert-base '%s'"),
+             svn_path_local_style(revert_base_path, pool));
+        }
 
-      /* Check for text base presence. */
-      SVN_ERR(svn_io_check_path(base_thing, &base_kind, pool));
+      /* You'd think we could just write out one log command to move
+         the revert base (if any) to the regular base, then another to
+         copy-and-translate the regular base to the working file.
 
-      if (base_kind != svn_node_file)
-        return svn_error_createf(APR_ENOENT, NULL,
-                                 _("Error restoring text for '%s'"),
-                                 svn_path_local_style(fullpath, pool));
+         Unfortunately, svn_wc__loggy_copy() doesn't actually write
+         out a copy instruction if the src file for the copy isn't
+         present *at the time the log is being composed*.  See that
+         function's documentation for details.
 
-      /* Look for a revert base file.  If it exists use it for the
-         text base for the file.  If it doesn't use the normal text base. */
-      SVN_ERR(svn_wc__loggy_move
-              (&log_accum, &tgt_modified, adm_access,
-               svn_wc__text_revert_path(fullpath, FALSE, pool), base_thing,
-               FALSE, pool));
-      reinstall_working = reinstall_working || tgt_modified;
+         So instead, we write out a log command to copy-and-translate
+         the revert text-base to the working file, then another log
+         command to move the revert text-base to the regular
+         text-base. */
 
-      /* A shortcut: since we will translate when reinstall_working,
-         we don't need to check if the working file is modified. */
-      if (! reinstall_working)
-        SVN_ERR(svn_wc__text_modified_internal_p(&reinstall_working,
-                                                 fullpath, FALSE, adm_access,
-                                                 FALSE, pool));
+      if (revert_base_path)
+        {
+          SVN_ERR(svn_wc__loggy_copy
+                  (&log_accum, NULL, adm_access, svn_wc__copy_translate,
+                   revert_base_path, fullpath, FALSE, pool));
+          SVN_ERR(svn_wc__loggy_move
+                  (&log_accum, NULL, adm_access,
+                   revert_base_path, regular_base_path, FALSE, pool));
+          *reverted = TRUE;
+        }
+      else
+        {
+          /* No revert-base -- so don't assume reinstall_working either. */
 
+          if (! reinstall_working)
+            {
+              SVN_ERR(svn_wc__text_modified_internal_p
+                      (&reinstall_working, fullpath, FALSE,
+                       adm_access, FALSE, pool));
+            }
+
+          if (reinstall_working)
+            {
+              SVN_ERR(svn_wc__loggy_copy
+                      (&log_accum, NULL, adm_access, svn_wc__copy_translate,
+                       regular_base_path, fullpath, FALSE, pool));
+              *reverted = TRUE;
+            }
+        }
+
+      /* If we reinstalled the working file, then maybe update the
+         text timestamp in the entries file. */
       if (reinstall_working)
         {
-          /* If there are textual mods (or if the working file is
-             missing altogether), copy the text-base out into
-             the working copy, and update the timestamp in the entries
-             file. */
-          SVN_ERR(svn_wc__loggy_copy(&log_accum, NULL, adm_access,
-                                     svn_wc__copy_translate,
-                                     base_thing, fullpath, FALSE, pool));
-
           /* Possibly set the timestamp to last-commit-time, rather
              than the 'now' time that already exists. */
           if (use_commit_times && entry->cmt_date)
@@ -1864,8 +1951,6 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
                    fullpath, SVN_WC__ENTRY_ATTR_TEXT_TIME, pool));
           SVN_ERR(svn_wc__loggy_set_entry_working_size_from_wc
                   (&log_accum, adm_access, fullpath, pool));
-
-          *reverted = TRUE;
         }
     }
 
@@ -1945,6 +2030,16 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
       *reverted = TRUE;
     }
 
+  /* If the entry is for this_dir, delete tree conflict data. */
+  if ((strcmp(name, SVN_WC_ENTRY_THIS_DIR) == 0) 
+      && entry->tree_conflict_data)
+    {
+      flags |= SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA;
+      tmp_entry.tree_conflict_data = NULL;
+      *reverted = TRUE;
+
+    }
+
   /* Modify the entry, loggily. */
   SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_access, fullpath,
                                      &tmp_entry, flags, pool));
@@ -1984,9 +2079,13 @@ revert_entry(svn_depth_t *depth,
              apr_pool_t *pool)
 {
   const char *bname;
-  svn_boolean_t reverted = FALSE;
   svn_boolean_t is_wc_root = FALSE;
   svn_wc_adm_access_t *dir_access;
+
+  /* Initialize this even though revert_admin_things() is guaranteed
+     to set it, because we don't know that revert_admin_things() will
+     be called. */
+  svn_boolean_t reverted = FALSE;
 
   /* Fetch the access baton for this path. */
   SVN_ERR(svn_wc_adm_probe_retrieve(&dir_access, parent_access, path, pool));
@@ -2630,8 +2729,9 @@ attempt_deletion(const char *parent_dir,
 
    PATH is the path to the item to be resolved, BASE_NAME is the basename
    of PATH, and CONFLICT_DIR is the access baton for PATH.  ORIG_ENTRY is
-   the entry prior to resolution. RESOLVE_TEXT and RESOLVE_PROPS are TRUE
-   if text and property conficts respectively are to be resolved.
+   the entry prior to resolution. RESOLVE_TEXT, RESOLVE_PROPS and
+   RESOLVE_TREE are TRUE if text, property and tree conflicts respectively
+   are to be resolved.
 
    See svn_wc_resolved_conflict3() for how CONFLICT_CHOICE behaves.
 */
@@ -2642,6 +2742,7 @@ resolve_conflict_on_entry(const char *path,
                           const char *base_name,
                           svn_boolean_t resolve_text,
                           svn_boolean_t resolve_props,
+                          svn_boolean_t resolve_tree,
                           svn_wc_conflict_choice_t conflict_choice,
                           svn_wc_notify_func2_t notify_func,
                           void *notify_baton,
@@ -2757,6 +2858,14 @@ resolve_conflict_on_entry(const char *path,
       need_feedback |= was_present;
     }
 
+  if (resolve_tree && (entry->kind == svn_node_dir)
+      && entry->tree_conflict_data) 
+    {
+      modify_flags |= SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA;
+      entry->tree_conflict_data = NULL;
+      need_feedback |= was_present;
+    }
+
   if (modify_flags)
     {
       /* Although removing the files is sufficient to indicate that the
@@ -2774,12 +2883,14 @@ resolve_conflict_on_entry(const char *path,
           /* Sanity check:  see if libsvn_wc *still* thinks this item is in a
              state of conflict that we have asked to resolve.  If not, report
              the successful resolution.  */
-          svn_boolean_t text_conflict, prop_conflict;
-          SVN_ERR(svn_wc_conflicted_p(&text_conflict, &prop_conflict,
-                                      svn_wc_adm_access_path(conflict_dir),
-                                      entry, pool));
+          svn_boolean_t text_conflict, prop_conflict, tree_conflict;
+          SVN_ERR(svn_wc_conflicted_p2(&text_conflict, &prop_conflict,
+                                       &tree_conflict,
+                                       svn_wc_adm_access_path(conflict_dir),
+                                       entry, pool));
           if ((! (resolve_text && text_conflict))
-              && (! (resolve_props && prop_conflict)))
+              && (! (resolve_props && prop_conflict))
+              && (! (resolve_tree && tree_conflict)))
             (*notify_func)(notify_baton,
                            svn_wc_create_notify(path, svn_wc_notify_resolved,
                                                 pool), pool);
@@ -2797,6 +2908,8 @@ struct resolve_callback_baton
   svn_boolean_t resolve_text;
   /* TRUE if property conflicts are to be resolved. */
   svn_boolean_t resolve_props;
+  /* TRUE if tree conflicts are to be resolved. */
+  svn_boolean_t resolve_tree;
   /* The type of automatic conflict resolution to perform */
   svn_wc_conflict_choice_t conflict_choice;
   /* An access baton for the tree, with write access */
@@ -2833,6 +2946,7 @@ resolve_found_entry_callback(const char *path,
 
   return resolve_conflict_on_entry(path, entry, adm_access, base_name,
                                    baton->resolve_text, baton->resolve_props,
+                                   baton->resolve_tree,
                                    baton->conflict_choice, baton->notify_func,
                                    baton->notify_baton, pool);
 }
@@ -2901,20 +3015,40 @@ svn_wc_resolved_conflict3(const char *path,
                           void *cancel_baton,
                           apr_pool_t *pool)
 {
+  return svn_wc_resolved_conflict4(path, adm_access, resolve_text,
+                                   resolve_props, FALSE, depth,
+                                   svn_wc_conflict_choose_merged,
+                                   notify_func, notify_baton, cancel_func,
+                                   cancel_baton, pool);
+}
+
+svn_error_t *
+svn_wc_resolved_conflict4(const char *path,
+                          svn_wc_adm_access_t *adm_access,
+                          svn_boolean_t resolve_text,
+                          svn_boolean_t resolve_props,
+                          svn_boolean_t resolve_tree,
+                          svn_depth_t depth,
+                          svn_wc_conflict_choice_t conflict_choice,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          apr_pool_t *pool)
+{
   struct resolve_callback_baton *baton = apr_pcalloc(pool, sizeof(*baton));
 
   baton->resolve_text = resolve_text;
   baton->resolve_props = resolve_props;
+  baton->resolve_tree = resolve_tree;
   baton->adm_access = adm_access;
   baton->notify_func = notify_func;
   baton->notify_baton = notify_baton;
   baton->conflict_choice = conflict_choice;
 
-  SVN_ERR(svn_wc_walk_entries3(path, adm_access,
-                               &resolve_walk_callbacks, baton, depth,
-                               FALSE, cancel_func, cancel_baton, pool));
-
-  return SVN_NO_ERROR;
+  return svn_wc_walk_entries3(path, adm_access,
+                              &resolve_walk_callbacks, baton, depth,
+                              FALSE, cancel_func, cancel_baton, pool);
 }
 
 svn_error_t *svn_wc_add_lock(const char *path, const svn_lock_t *lock,

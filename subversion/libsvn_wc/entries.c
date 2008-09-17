@@ -497,6 +497,10 @@ read_entry(svn_wc_entry_t **new_entry,
   }
   MAYBE_DONE;
 
+  /* Tree conflict data. */
+  SVN_ERR(read_str(&entry->tree_conflict_data, buf, end, pool));
+  MAYBE_DONE;
+
  done:
   *new_entry = entry;
   return SVN_NO_ERROR;
@@ -651,6 +655,17 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
         entry->conflict_wrk =
           *(entry->conflict_wrk)
           ? apr_pstrdup(pool, entry->conflict_wrk) : NULL;
+      }
+
+    if ((entry->tree_conflict_data
+         = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_TREE_CONFLICT_DATA,
+                        APR_HASH_KEY_STRING)))
+      {
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA;
+        /* Normalize "" (used by the log runner) to NULL */
+        entry->tree_conflict_data =
+          *(entry->tree_conflict_data)
+          ? apr_pstrdup(pool, entry->tree_conflict_data) : NULL;
       }
   }
 
@@ -1663,6 +1678,9 @@ write_entry(svn_stringbuf_t *buf,
       write_val(buf, val, strlen(val));
     }
 
+  /* Tree conflict data. */
+  write_str(buf, entry->tree_conflict_data, pool);
+
   /* Remove redundant separators at the end of the entry. */
   while (buf->len > 1 && buf->data[buf->len - 2] == '\n')
     buf->len--;
@@ -2277,6 +2295,12 @@ fold_entry(apr_hash_t *entries,
   /* Note that we don't bother to fold entry->depth, because it is
      only meaningful on the this-dir entry anyway. */
 
+  /* Tree conflict data. */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA)
+    cur_entry->tree_conflict_data = entry->tree_conflict_data
+      ? apr_pstrdup(pool, entry->tree_conflict_data)
+                              : NULL;
+
   /* Absorb defaults from the parent dir, if any, unless this is a
      subdir entry. */
   if (cur_entry->kind != svn_node_dir)
@@ -2683,6 +2707,9 @@ svn_wc_entry_dup(const svn_wc_entry_t *entry, apr_pool_t *pool)
     dupentry->cachable_props = apr_pstrdup(pool, entry->cachable_props);
   if (entry->present_props)
     dupentry->present_props = apr_pstrdup(pool, entry->present_props);
+  if (entry->tree_conflict_data)
+    dupentry->tree_conflict_data = apr_pstrdup(pool,
+                                               entry->tree_conflict_data);
   return dupentry;
 }
 
@@ -2840,9 +2867,7 @@ svn_wc__entries_init(const char *path,
 
   /* Now we have a `entries' file with exactly one entry, an entry
      for this dir.  Close the file and sync it up. */
-  SVN_ERR(svn_wc__close_adm_file(f, path, SVN_WC__ADM_ENTRIES, 1, pool));
-
-  return SVN_NO_ERROR;
+  return svn_wc__close_adm_file(f, path, SVN_WC__ADM_ENTRIES, 1, pool);
 }
 
 
@@ -3052,13 +3077,11 @@ svn_wc_mark_missing_deleted(const char *path,
       svn_path_split(path, &parent_path, &bname, pool);
 
       SVN_ERR(svn_wc_adm_retrieve(&adm_access, parent, parent_path, pool));
-      SVN_ERR(svn_wc__entry_modify(adm_access, bname, &newent,
+      return svn_wc__entry_modify(adm_access, bname, &newent,
                                    (SVN_WC__ENTRY_MODIFY_DELETED
                                     | SVN_WC__ENTRY_MODIFY_SCHEDULE
                                     | SVN_WC__ENTRY_MODIFY_FORCE),
-                                   TRUE, /* sync right away */ pool));
-
-      return SVN_NO_ERROR;
+                                   TRUE, /* sync right away */ pool);
     }
   else
     return svn_error_createf(SVN_ERR_WC_PATH_FOUND, NULL,

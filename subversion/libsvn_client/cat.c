@@ -142,9 +142,7 @@ cat_local_file(const char *path,
   else
     SVN_ERR(svn_stream_copy2(input, output, NULL, NULL, pool));
 
-  SVN_ERR(svn_stream_close(input));
-
-  return SVN_NO_ERROR;
+  return svn_stream_close(input);
 }
 
 svn_error_t *
@@ -191,9 +189,7 @@ svn_client_cat2(svn_stream_t *out,
 
       SVN_ERR(cat_local_file(path_or_url, out, adm_access, revision, pool));
 
-      SVN_ERR(svn_wc_adm_close(adm_access));
-
-      return SVN_NO_ERROR;
+      return svn_wc_adm_close(adm_access);
     }
 
   /* Get an RA plugin for this filesystem object. */

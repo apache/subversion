@@ -155,8 +155,7 @@ store_delta(apr_file_t **tempfile, svn_filesize_t *len,
   SVN_ERR(svn_io_file_seek(*tempfile, APR_CUR, &offset, pool));
   *len = offset;
   offset = 0;
-  SVN_ERR(svn_io_file_seek(*tempfile, APR_SET, &offset, pool));
-  return SVN_NO_ERROR;
+  return svn_io_file_seek(*tempfile, APR_SET, &offset, pool);
 }
 
 
@@ -579,9 +578,7 @@ dump_node(struct edit_baton *eb,
     }
 
   len = 2;
-  SVN_ERR(svn_stream_write(eb->stream, "\n\n", &len)); /* ### needed? */
-
-  return SVN_NO_ERROR;
+  return svn_stream_write(eb->stream, "\n\n", &len); /* ### needed? */
 }
 
 
@@ -914,9 +911,7 @@ write_revision_record(svn_stream_t *stream,
   SVN_ERR(svn_stream_write(stream, encoded_prophash->data, &len));
 
   len = 1;
-  SVN_ERR(svn_stream_write(stream, "\n", &len));
-
-  return SVN_NO_ERROR;
+  return svn_stream_write(stream, "\n", &len);
 }
 
 

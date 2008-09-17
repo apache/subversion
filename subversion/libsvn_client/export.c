@@ -372,8 +372,7 @@ copy_versioned_files(const char *from,
                                       native_eol, pool));
     }
 
-  SVN_ERR(svn_wc_adm_close(adm_access));
-  return SVN_NO_ERROR;
+  return svn_wc_adm_close(adm_access);
 }
 
 

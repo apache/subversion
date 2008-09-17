@@ -2,7 +2,7 @@
  * log-cmd.c -- Display log messages
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -295,7 +295,7 @@ log_entry_receiver(void *baton,
  *   errors with helpful hints about the -m and -F options.
  *
  * * subversion/libsvn_client/commit.c
- *   (svn_client_commit): Actually capture and propogate &quot;no external
+ *   (svn_client_commit): Actually capture and propagate &quot;no external
  *   editor&quot; errors.</msg>
  * </logentry>
  * </log>
@@ -381,14 +381,11 @@ log_entry_receiver_xml(void *baton,
               && SVN_IS_VALID_REVNUM(log_item->copyfrom_rev))
             {
               /* <path action="X" copyfrom-path="xxx" copyfrom-rev="xxx"> */
-              svn_stringbuf_t *escpath = svn_stringbuf_create("", pool);
-              svn_xml_escape_attr_cstring(&escpath,
-                                          log_item->copyfrom_path, pool);
               revstr = apr_psprintf(pool, "%ld",
                                     log_item->copyfrom_rev);
               svn_xml_make_open_tag(&sb, pool, svn_xml_protect_pcdata, "path",
                                     "action", action,
-                                    "copyfrom-path", escpath->data,
+                                    "copyfrom-path", log_item->copyfrom_path,
                                     "copyfrom-rev", revstr, NULL);
             }
           else
@@ -427,9 +424,7 @@ log_entry_receiver_xml(void *baton,
   else
     svn_xml_make_close_tag(&sb, pool, "logentry");
 
-  SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
-
-  return SVN_NO_ERROR;
+  return svn_cl__error_checked_fputs(sb->data, stdout);
 }
 
 
@@ -454,6 +449,10 @@ svn_cl__log(apr_getopt_t *os,
       if (opt_state->all_revprops)
         return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                 _("'with-all-revprops' option only valid in"
+                                  " XML mode"));
+      if (opt_state->no_revprops)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("'with-no-revprops' option only valid in"
                                   " XML mode"));
       if (opt_state->revprop_table != NULL)
         return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
@@ -553,6 +552,12 @@ svn_cl__log(apr_getopt_t *os,
 
       if (opt_state->all_revprops)
         revprops = NULL;
+      else if(opt_state->no_revprops)
+	{
+	  revprops = apr_array_make(pool,
+				    0,
+                                    sizeof(char *));
+	}
       else if (opt_state->revprop_table != NULL)
         {
           apr_hash_index_t *hi;
