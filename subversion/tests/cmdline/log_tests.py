@@ -1586,9 +1586,63 @@ def merge_sensitive_log_added_mergeinfo_replaces_inherited(sbox):
   run_log_g_r8(os.path.join(wc_dir, "A_COPY", "D", "H"))
   run_log_g_r8(os.path.join(wc_dir, "A_COPY", "D", "H", "psi"))
 
+#----------------------------------------------------------------------
+
+def merge_sensitive_log_propmod_merge_inheriting_path(sbox):
+  "log -g and simple propmod to merge-inheriting path"
+
+  # Issue #3285 (http://subversion.tigris.org/issues/show_bug.cgi?id=3285)
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  wc_disk, wc_status = set_up_branch(sbox)
+
+  A_path = os.path.join(wc_dir, 'A')
+  A_COPY_path = os.path.join(wc_dir, 'A_COPY')
+  A_COPY_psi_path = os.path.join(wc_dir, 'A_COPY', 'D', 'H', 'psi')
+
+  # Merge the post-copy changes to A into A_COPY
+  svntest.main.run_svn(None, 'up', wc_dir)
+  svntest.main.run_svn(None, 'merge', '-r2:6', A_path, A_COPY_path)
+  svntest.main.run_svn(None, 'ci', '-m', 'Merge changes from A.', wc_dir)
+
+  # Now, tweak a non-mergeinfo property on A_COPY.
+  svntest.main.run_svn(None, 'up', wc_dir)
+  svntest.main.run_svn(None, 'propset', 'foo', 'bar', A_COPY_psi_path)
+  svntest.main.run_svn(None, 'ci', '-m',
+                       'Set property "foo" to "bar" on A_COPY/D/H/psi', wc_dir)
+  svntest.main.run_svn(None, 'up', wc_dir)
+  
+  # Check that log -g -r7 on wc_dir/A_COPY and parents show merges of r3-r6.
+  def run_log_g_r7(log_target):
+    expected_merges = {
+      7 : [],
+      6 : [7],
+      5 : [7],
+      4 : [7],
+      3 : [7],
+      }
+    exit_code, output, err = svntest.actions.run_and_verify_svn(
+      None, None, [], 'log', '-g', '-r7', log_target)
+    log_chain = parse_log_output(output)
+    check_merge_results(log_chain, expected_merges)
+  run_log_g_r7(wc_dir)
+  run_log_g_r7(A_COPY_path)
+
+  # Check that log -g -r8 on wc_dir/A_COPY/D/H/psi and parents show no merges.
+  def run_log_g_r8(log_target):
+    expected_merges = { 8 : [] }
+    exit_code, output, err = svntest.actions.run_and_verify_svn(
+      None, None, [], 'log', '-g', '-r8', log_target)
+    log_chain = parse_log_output(output)
+    check_merge_results(log_chain, expected_merges)
+  run_log_g_r8(wc_dir)
+  run_log_g_r8(A_COPY_path)
+  run_log_g_r8(A_COPY_psi_path)
+
+
 ########################################################################
 # Run the tests
-
 
 # list all tests here, starting with None:
 test_list = [ None,
@@ -1625,6 +1679,8 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(merge_sensitive_log_added_mergeinfo_replaces_inherited,
                          server_has_mergeinfo),
+              XFail(SkipUnless(merge_sensitive_log_propmod_merge_inheriting_path,
+                         server_has_mergeinfo)),
              ]
 
 if __name__ == '__main__':
