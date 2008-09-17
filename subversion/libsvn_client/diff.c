@@ -166,7 +166,7 @@ display_mergeinfo_diff(const char *old_mergeinfo_val,
 
 /* A helper func that writes out verbal descriptions of property diffs
    to FILE.   Of course, the apr_file_t will probably be the 'outfile'
-   passed to svn_client_diff4, which is probably stdout. */
+   passed to svn_client_diff5, which is probably stdout. */
 static svn_error_t *
 display_prop_diffs(const apr_array_header_t *propchanges,
                    apr_hash_t *original_props,
@@ -328,7 +328,7 @@ struct diff_cmd_baton {
   const char *orig_path_2;
 
   /* These are the numeric representations of the revisions passed to
-     svn_client_diff4, either may be SVN_INVALID_REVNUM.  We need these
+     svn_client_diff5, either may be SVN_INVALID_REVNUM.  We need these
      because some of the svn_wc_diff_callbacks3_t don't get revision
      arguments.
 
@@ -870,6 +870,9 @@ struct diff_parameters
   /* Ignore deleted */
   svn_boolean_t no_diff_deleted;
 
+  /* Ignored props */
+  apr_hash_t *ignored_props;
+
   /* Changelists of interest */
   const apr_array_header_t *changelists;
 };
@@ -1062,8 +1065,8 @@ diff_prepare_repos_repos(const struct diff_parameters *params,
 
 /* A Theoretical Note From Ben, regarding do_diff().
 
-   This function is really svn_client_diff4().  If you read the public
-   API description for svn_client_diff4(), it sounds quite Grand.  It
+   This function is really svn_client_diff5().  If you read the public
+   API description for svn_client_diff5(), it sounds quite Grand.  It
    sounds really generalized and abstract and beautiful: that it will
    diff any two paths, be they working-copy paths or URLs, at any two
    revisions.
@@ -1083,7 +1086,7 @@ diff_prepare_repos_repos(const struct diff_parameters *params,
    pigeonholed into one of these three use-cases, we currently bail
    with a friendly apology.
 
-   Perhaps someday a brave soul will truly make svn_client_diff4
+   Perhaps someday a brave soul will truly make svn_client_diff5
    perfectly general.  For now, we live with the 90% case.  Certainly,
    the commandline client only calls this function in legal ways.
    When there are other users of svn_client.h, maybe this will become
@@ -1096,7 +1099,7 @@ static svn_error_t *
 unsupported_diff_error(svn_error_t *child_err)
 {
   return svn_error_create(SVN_ERR_INCORRECT_PARAMS, child_err,
-                          _("Sorry, svn_client_diff4 was called in a way "
+                          _("Sorry, svn_client_diff5 was called in a way "
                             "that is not yet supported"));
 }
 
@@ -1106,7 +1109,7 @@ unsupported_diff_error(svn_error_t *child_err)
    PATH1 and PATH2 are both working copy paths.  REVISION1 and
    REVISION2 are their respective revisions.
 
-   All other options are the same as those passed to svn_client_diff4(). */
+   All other options are the same as those passed to svn_client_diff5(). */
 static svn_error_t *
 diff_wc_wc(const char *path1,
            const svn_opt_revision_t *revision1,
@@ -1162,7 +1165,7 @@ diff_wc_wc(const char *path1,
    DIFF_PARAM.PATH2 is the path at the peg revision, and the actual two
    paths compared are determined by following copy history from PATH2.
 
-   All other options are the same as those passed to svn_client_diff4(). */
+   All other options are the same as those passed to svn_client_diff5(). */
 static svn_error_t *
 diff_repos_repos(const struct diff_parameters *diff_param,
                  const svn_wc_diff_callbacks3_t *callbacks,
@@ -1232,7 +1235,7 @@ diff_repos_repos(const struct diff_parameters *diff_param,
    revision, and the actual repository path to be compared is
    determined by following copy history.
 
-   All other options are the same as those passed to svn_client_diff4(). */
+   All other options are the same as those passed to svn_client_diff5(). */
 static svn_error_t *
 diff_repos_wc(const char *path1,
               const svn_opt_revision_t *revision1,
@@ -1571,7 +1574,7 @@ set_up_diff_cmd_and_options(struct diff_cmd_baton *diff_cmd_baton,
       * These cases require server communication.
 */
 svn_error_t *
-svn_client_diff4(const apr_array_header_t *options,
+svn_client_diff5(const apr_array_header_t *options,
                  const char *path1,
                  const svn_opt_revision_t *revision1,
                  const char *path2,
@@ -1581,6 +1584,7 @@ svn_client_diff4(const apr_array_header_t *options,
                  svn_boolean_t ignore_ancestry,
                  svn_boolean_t no_diff_deleted,
                  svn_boolean_t ignore_content_type,
+                 svn_boolean_t ignore_mergeinfo,
                  const char *header_encoding,
                  apr_file_t *outfile,
                  apr_file_t *errfile,
@@ -1607,6 +1611,15 @@ svn_client_diff4(const apr_array_header_t *options,
   diff_params.ignore_ancestry = ignore_ancestry;
   diff_params.no_diff_deleted = no_diff_deleted;
   diff_params.changelists = changelists;
+
+  if (ignore_mergeinfo)
+    {
+      diff_params.ignored_props = apr_hash_make(pool);
+      apr_hash_set(diff_params.ignored_props, SVN_PROP_MERGEINFO,
+                   APR_HASH_KEY_STRING, (void *) 0xdeadbeef);
+    }
+  else
+    diff_params.ignored_props = NULL;
 
   /* setup callback and baton */
   diff_callbacks.file_changed = diff_file_changed;
@@ -1636,6 +1649,31 @@ svn_client_diff4(const apr_array_header_t *options,
   diff_cmd_baton.relative_to_dir = relative_to_dir;
 
   return do_diff(&diff_params, &diff_callbacks, &diff_cmd_baton, ctx, pool);
+}
+
+svn_error_t *
+svn_client_diff4(const apr_array_header_t *options,
+                 const char *path1,
+                 const svn_opt_revision_t *revision1,
+                 const char *path2,
+                 const svn_opt_revision_t *revision2,
+                 const char *relative_to_dir,
+                 svn_depth_t depth,
+                 svn_boolean_t ignore_ancestry,
+                 svn_boolean_t no_diff_deleted,
+                 svn_boolean_t ignore_content_type,
+                 const char *header_encoding,
+                 apr_file_t *outfile,
+                 apr_file_t *errfile,
+                 const apr_array_header_t *changelists,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool)
+{
+  return svn_client_diff5(options, path1, revision1, path2, revision2,
+                          relative_to_dir, depth, ignore_ancestry,
+                          no_diff_deleted, ignore_content_type, FALSE,
+                          header_encoding, outfile, errfile, changelists,
+                          ctx, pool);
 }
 
 svn_error_t *
@@ -1703,7 +1741,7 @@ svn_client_diff(const apr_array_header_t *options,
 }
 
 svn_error_t *
-svn_client_diff_peg4(const apr_array_header_t *options,
+svn_client_diff_peg5(const apr_array_header_t *options,
                      const char *path,
                      const svn_opt_revision_t *peg_revision,
                      const svn_opt_revision_t *start_revision,
@@ -1713,6 +1751,7 @@ svn_client_diff_peg4(const apr_array_header_t *options,
                      svn_boolean_t ignore_ancestry,
                      svn_boolean_t no_diff_deleted,
                      svn_boolean_t ignore_content_type,
+                     svn_boolean_t ignore_mergeinfo,
                      const char *header_encoding,
                      apr_file_t *outfile,
                      apr_file_t *errfile,
@@ -1743,6 +1782,15 @@ svn_client_diff_peg4(const apr_array_header_t *options,
   diff_params.no_diff_deleted = no_diff_deleted;
   diff_params.changelists = changelists;
 
+  if (ignore_mergeinfo)
+    {
+      diff_params.ignored_props = apr_hash_make(pool);
+      apr_hash_set(diff_params.ignored_props, SVN_PROP_MERGEINFO,
+                   APR_HASH_KEY_STRING, (void *) 0xdeadbeef);
+    }
+  else
+    diff_params.ignored_props = NULL;
+
   /* setup callback and baton */
   diff_callbacks.file_changed = diff_file_changed;
   diff_callbacks.file_added = diff_file_added;
@@ -1771,6 +1819,31 @@ svn_client_diff_peg4(const apr_array_header_t *options,
   diff_cmd_baton.relative_to_dir = relative_to_dir;
 
   return do_diff(&diff_params, &diff_callbacks, &diff_cmd_baton, ctx, pool);
+}
+
+svn_error_t *
+svn_client_diff_peg4(const apr_array_header_t *options,
+                     const char *path,
+                     const svn_opt_revision_t *peg_revision,
+                     const svn_opt_revision_t *start_revision,
+                     const svn_opt_revision_t *end_revision,
+                     const char *relative_to_dir,
+                     svn_depth_t depth,
+                     svn_boolean_t ignore_ancestry,
+                     svn_boolean_t no_diff_deleted,
+                     svn_boolean_t ignore_content_type,
+                     const char *header_encoding,
+                     apr_file_t *outfile,
+                     apr_file_t *errfile,
+                     const apr_array_header_t *changelists,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool)
+{
+  return svn_client_diff_peg5(options, path, peg_revision, start_revision,
+                              end_revision, relative_to_dir, depth,
+                              ignore_ancestry, no_diff_deleted,
+                              ignore_content_type, FALSE, header_encoding,
+                              outfile, errfile, changelists, ctx, pool);
 }
 
 svn_error_t *
@@ -1851,12 +1924,13 @@ svn_client_diff_peg(const apr_array_header_t *options,
 }
 
 svn_error_t *
-svn_client_diff_summarize2(const char *path1,
+svn_client_diff_summarize3(const char *path1,
                            const svn_opt_revision_t *revision1,
                            const char *path2,
                            const svn_opt_revision_t *revision2,
                            svn_depth_t depth,
                            svn_boolean_t ignore_ancestry,
+                           svn_boolean_t ignore_mergeinfo,
                            const apr_array_header_t *changelists,
                            svn_client_diff_summarize_func_t summarize_func,
                            void *summarize_baton,
@@ -1880,8 +1954,35 @@ svn_client_diff_summarize2(const char *path1,
   diff_params.no_diff_deleted = FALSE;
   diff_params.changelists = changelists;
 
+  if (ignore_mergeinfo)
+    {
+      diff_params.ignored_props = apr_hash_make(pool);
+      apr_hash_set(diff_params.ignored_props, SVN_PROP_MERGEINFO,
+                   APR_HASH_KEY_STRING, (void *) 0xdeadbeef);
+    }
+  else
+    diff_params.ignored_props = NULL;
+
   return do_diff_summarize(&diff_params, summarize_func, summarize_baton,
                            ctx, pool);
+}
+
+svn_error_t *
+svn_client_diff_summarize2(const char *path1,
+                           const svn_opt_revision_t *revision1,
+                           const char *path2,
+                           const svn_opt_revision_t *revision2,
+                           svn_depth_t depth,
+                           svn_boolean_t ignore_ancestry,
+                           const apr_array_header_t *changelists,
+                           svn_client_diff_summarize_func_t summarize_func,
+                           void *summarize_baton,
+                           svn_client_ctx_t *ctx,
+                           apr_pool_t *pool)
+{
+  return svn_client_diff_summarize3(path1, revision1, path2, revision2, depth,
+                                    ignore_ancestry, FALSE, changelists,
+                                    summarize_func, summarize_baton, ctx, pool);
 }
 
 svn_error_t *
@@ -1904,12 +2005,13 @@ svn_client_diff_summarize(const char *path1,
 }
 
 svn_error_t *
-svn_client_diff_summarize_peg2(const char *path,
+svn_client_diff_summarize_peg3(const char *path,
                                const svn_opt_revision_t *peg_revision,
                                const svn_opt_revision_t *start_revision,
                                const svn_opt_revision_t *end_revision,
                                svn_depth_t depth,
                                svn_boolean_t ignore_ancestry,
+                               svn_boolean_t ignore_mergeinfo,
                                const apr_array_header_t *changelists,
                                svn_client_diff_summarize_func_t summarize_func,
                                void *summarize_baton,
@@ -1929,10 +2031,37 @@ svn_client_diff_summarize_peg2(const char *path,
   diff_params.no_diff_deleted = FALSE;
   diff_params.changelists = changelists;
 
+  if (ignore_mergeinfo)
+    {
+      diff_params.ignored_props = apr_hash_make(pool);
+      apr_hash_set(diff_params.ignored_props, SVN_PROP_MERGEINFO,
+                   APR_HASH_KEY_STRING, (void *) 0xdeadbeef);
+    }
+  else
+    diff_params.ignored_props = NULL;
+
   return do_diff_summarize(&diff_params, summarize_func, summarize_baton,
                            ctx, pool);
 }
 
+svn_error_t *
+svn_client_diff_summarize_peg2(const char *path,
+                               const svn_opt_revision_t *peg_revision,
+                               const svn_opt_revision_t *start_revision,
+                               const svn_opt_revision_t *end_revision,
+                               svn_depth_t depth,
+                               svn_boolean_t ignore_ancestry,
+                               const apr_array_header_t *changelists,
+                               svn_client_diff_summarize_func_t summarize_func,
+                               void *summarize_baton,
+                               svn_client_ctx_t *ctx,
+                               apr_pool_t *pool)
+{
+  return svn_client_diff_summarize_peg3(path, peg_revision, start_revision,
+                                        end_revision, depth, ignore_ancestry,
+                                        FALSE, changelists, summarize_func,
+                                        summarize_baton, ctx, pool);
+}
 
 svn_error_t *
 svn_client_diff_summarize_peg(const char *path,

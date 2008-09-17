@@ -456,7 +456,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  Use just 'svn diff' to display local modifications in a working copy.\n"),
     {'r', 'c', opt_old_cmd, opt_new_cmd, 'N', opt_depth, opt_diff_cmd, 'x',
      opt_no_diff_deleted, opt_notice_ancestry, opt_summarize, opt_changelist,
-     opt_force, opt_xml} },
+     opt_force, opt_xml, opt_ignore_mergeinfo } },
 
   { "export", svn_cl__export, {0}, N_
     ("Create an unversioned copy of a tree.\n"

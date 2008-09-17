@@ -315,19 +315,20 @@ svn_cl__diff(apr_getopt_t *os,
           target2 = svn_path_join(new_target, path, iterpool);
 
           if (opt_state->summarize)
-            SVN_ERR(svn_client_diff_summarize2
+            SVN_ERR(svn_client_diff_summarize3
                     (target1,
                      &opt_state->start_revision,
                      target2,
                      &opt_state->end_revision,
                      opt_state->depth,
                      opt_state->notice_ancestry ? FALSE : TRUE,
+                     opt_state->ignore_mergeinfo,
                      opt_state->changelists,
                      summarize_func,
                      (void *) target1,
                      ctx, iterpool));
           else
-            SVN_ERR(svn_client_diff4
+            SVN_ERR(svn_client_diff5
                     (options,
                      target1,
                      &(opt_state->start_revision),
@@ -338,6 +339,7 @@ svn_cl__diff(apr_getopt_t *os,
                      opt_state->notice_ancestry ? FALSE : TRUE,
                      opt_state->no_diff_deleted,
                      opt_state->force,
+                     opt_state->ignore_mergeinfo,
                      svn_cmdline_output_encoding(pool),
                      outfile,
                      errfile,
@@ -359,19 +361,20 @@ svn_cl__diff(apr_getopt_t *os,
               ? svn_opt_revision_head : svn_opt_revision_working;
 
           if (opt_state->summarize)
-            SVN_ERR(svn_client_diff_summarize_peg2
+            SVN_ERR(svn_client_diff_summarize_peg3
                     (truepath,
                      &peg_revision,
                      &opt_state->start_revision,
                      &opt_state->end_revision,
                      opt_state->depth,
                      opt_state->notice_ancestry ? FALSE : TRUE,
+                     opt_state->ignore_mergeinfo,
                      opt_state->changelists,
                      summarize_func,
                      (void *) truepath,
                      ctx, iterpool));
           else
-            SVN_ERR(svn_client_diff_peg4
+            SVN_ERR(svn_client_diff_peg5
                     (options,
                      truepath,
                      &peg_revision,
@@ -382,6 +385,7 @@ svn_cl__diff(apr_getopt_t *os,
                      opt_state->notice_ancestry ? FALSE : TRUE,
                      opt_state->no_diff_deleted,
                      opt_state->force,
+                     opt_state->ignore_mergeinfo,
                      svn_cmdline_output_encoding(pool),
                      outfile,
                      errfile,
