@@ -3996,11 +3996,10 @@ get_mergeinfo_walk_cb(const char *path,
               svn_error_t *err;
               const char *original_ra_url = NULL;
               const char *mergeinfo_url =
-                svn_path_join(wb->source_root_url,
-                              /* Skip leading '/' or join won't work. */
-                              svn_path_uri_encode(
-                                merge_src_child_path->data + 1, pool),
-                              pool);
+                svn_path_url_add_component(wb->source_root_url,
+                                           /* Skip leading '/'. */
+                                           merge_src_child_path->data + 1,
+                                           pool);
               svn_opt_revision_t *start_revision, *end_revision;
               const char *start_url, *end_url;
               svn_opt_revision_t peg_rev, rev1_opt, rev2_opt;
