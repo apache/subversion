@@ -35,7 +35,8 @@ svn_boolean_t
 svn_utf__is_valid(const char *src, apr_size_t len);
 
 /* As for svn_utf__is_valid but SRC is NULL terminated. */
-svn_boolean_t svn_utf__cstring_is_valid(const char *src);
+svn_boolean_t
+svn_utf__cstring_is_valid(const char *src);
 
 
 #ifdef __cplusplus
