@@ -23,27 +23,6 @@ Candidate changes for 1.5.3:
      +1: stsp, arfrever
      +0: cmpilato
 
- * r32790, r32796, r32798
-   Fix issue #2505: make switch continue after deleting locally modified
-   directories, as it update and merge do.
-   Notes:
-     r32796 updates the docstring.
-     r32798 is an obvious fix.
-   Justification:
-     Small fix (with test).  User requests.
-   Votes:
-     +1: danielsh, zhakov
-
- * r31203
-   Update build.conf to remove the magic word 'update' from the description to
-   allow running the test as non-administrator on Windows Vista.
-   Justification:
-     Not a code change. Just makes it possible to run the tests as non-
-     administrator without having to type your administrator password (or using
-     a local patch).
-   Votes:
-     +1: rhuijben, zhakov
-
  * r32771
    po-update.sh: Search for messages in svn_fs_util.h.
    Justification:
@@ -88,3 +67,25 @@ Candidate changes for 1.5.3:
   
 Approved changes:
 =================
+
+ * r32790, r32796, r32798
+   Fix issue #2505: make switch continue after deleting locally modified
+   directories, as it update and merge do.
+   Notes:
+     r32796 updates the docstring.
+     r32798 is an obvious fix.
+   Justification:
+     Small fix (with test).  User requests.
+   Votes:
+     +1: danielsh, zhakov, cmpilato
+
+ * r31203
+   Update build.conf to remove the magic word 'update' from the description to
+   allow running the test as non-administrator on Windows Vista.
+   Justification:
+     Not a code change. Just makes it possible to run the tests as non-
+     administrator without having to type your administrator password (or using
+     a local patch).
+   Votes:
+     +1: rhuijben, zhakov, cmpilato
+
