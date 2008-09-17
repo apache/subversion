@@ -14,12 +14,3 @@ Status of 1.0.10:
 ================
 
 Candidate changes:
-
-  * r24073, r24126, r24128
-    Branch: 1.0.x-issue-2751
-    Fix rare FS corruption in the bdb filesystem implementation.
-    Justification:
-      Well, *corruption* ...
-    Votes:
-      +1: dionisos, cmpilato, dlr
-
