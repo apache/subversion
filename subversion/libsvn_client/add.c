@@ -774,9 +774,7 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
     }
 
   /* Close the edit. */
-  SVN_ERR(editor->close_edit(edit_baton, pool));
-
-  return SVN_NO_ERROR;
+  return editor->close_edit(edit_baton, pool);
 }
 
 

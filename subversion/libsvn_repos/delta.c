@@ -371,10 +371,7 @@ svn_repos_dir_delta2(svn_fs_root_t *src_root,
     SVN_ERR(editor->close_directory(root_baton, pool));
 
   /* Close the edit. */
-  SVN_ERR(editor->close_edit(edit_baton, pool));
-
-  /* All's well that ends well. */
-  return SVN_NO_ERROR;
+  return editor->close_edit(edit_baton, pool);
 }
 
 
@@ -624,19 +621,17 @@ send_text_delta(struct context *c,
   if (c->text_deltas && delta_stream)
     {
       /* Deliver the delta stream to the file.  */
-      SVN_ERR(svn_txdelta_send_txstream(delta_stream,
-                                        delta_handler,
-                                        delta_handler_baton,
-                                        pool));
+      return svn_txdelta_send_txstream(delta_stream,
+                                       delta_handler,
+                                       delta_handler_baton,
+                                       pool);
     }
   else
     {
       /* The caller doesn't want text delta data.  Just send a single
          NULL window. */
-      SVN_ERR(delta_handler(NULL, delta_handler_baton));
+      return delta_handler(NULL, delta_handler_baton);
     }
-
-  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -848,7 +843,7 @@ add_file_or_dir(struct context *c, void *dir_baton,
                                              &subdir_baton));
       SVN_ERR(delta_dirs(context, subdir_baton, MAYBE_DEMOTE_DEPTH(depth),
                          NULL, target_path, edit_path, pool));
-      SVN_ERR(context->editor->close_directory(subdir_baton, pool));
+      return context->editor->close_directory(subdir_baton, pool);
     }
   else
     {
@@ -862,11 +857,9 @@ add_file_or_dir(struct context *c, void *dir_baton,
       SVN_ERR(svn_fs_file_checksum(&checksum, svn_checksum_md5,
                                    context->target_root, target_path,
                                    TRUE, pool));
-      SVN_ERR(context->editor->close_file
-              (file_baton, svn_checksum_to_cstring(checksum, pool), pool));
+      return context->editor->close_file
+             (file_baton, svn_checksum_to_cstring(checksum, pool), pool);
     }
-
-  return SVN_NO_ERROR;
 }
 
 
@@ -909,7 +902,7 @@ replace_file_or_dir(struct context *c,
                                         &subdir_baton));
       SVN_ERR(delta_dirs(c, subdir_baton, MAYBE_DEMOTE_DEPTH(depth),
                          source_path, target_path, edit_path, pool));
-      SVN_ERR(c->editor->close_directory(subdir_baton, pool));
+      return c->editor->close_directory(subdir_baton, pool);
     }
   else
     {
@@ -922,11 +915,9 @@ replace_file_or_dir(struct context *c,
       SVN_ERR(svn_fs_file_checksum(&checksum, svn_checksum_md5,
                                    c->target_root, target_path, TRUE,
                                    pool));
-      SVN_ERR(c->editor->close_file
-              (file_baton, svn_checksum_to_cstring(checksum, pool), pool));
+      return c->editor->close_file
+             (file_baton, svn_checksum_to_cstring(checksum, pool), pool);
     }
-
-  return SVN_NO_ERROR;
 }
 
 
@@ -943,11 +934,9 @@ absent_file_or_dir(struct context *c,
   SVN_ERR_ASSERT(edit_path);
 
   if (tgt_kind == svn_node_dir)
-    SVN_ERR(c->editor->absent_directory(edit_path, dir_baton, pool));
+    return c->editor->absent_directory(edit_path, dir_baton, pool);
   else
-    SVN_ERR(c->editor->absent_file(edit_path, dir_baton, pool));
-
-  return SVN_NO_ERROR;
+    return c->editor->absent_file(edit_path, dir_baton, pool);
 }
 
 

@@ -1086,6 +1086,7 @@ typedef enum svn_wc_conflict_reason_t
   svn_wc_conflict_reason_edited,     /* local edits are already present */
   svn_wc_conflict_reason_obstructed, /* another object is in the way */
   svn_wc_conflict_reason_deleted,    /* object is already schedule-delete */
+  svn_wc_conflict_reason_added,      /* object is already added or schedule-add */
   svn_wc_conflict_reason_missing,    /* object is unknown or missing */
   svn_wc_conflict_reason_unversioned /* object is unversioned */
 
@@ -1100,11 +1101,23 @@ typedef enum svn_wc_conflict_reason_t
 typedef enum svn_wc_conflict_kind_t
 {
   svn_wc_conflict_kind_text,         /* textual conflict (on a file) */
-  svn_wc_conflict_kind_property      /* property conflict (on a file or dir) */
-
-  /* ### Add future kinds here that represent "tree" conflicts. */
+  svn_wc_conflict_kind_property,     /* property conflict (on a file or dir) */
+  svn_wc_conflict_kind_tree          /* tree conflict (on a dir) */
 
 } svn_wc_conflict_kind_t;
+
+
+/** The user operation that exposed a conflict.
+ *
+ * @since New in 1.6.
+ */
+typedef enum svn_wc_operation_t
+{
+  svn_wc_operation_update,
+  svn_wc_operation_switch,
+  svn_wc_operation_merge,
+
+} svn_wc_operation_t;
 
 
 /** A struct that describes a conflict that has occurred in the
@@ -1118,13 +1131,14 @@ typedef enum svn_wc_conflict_kind_t
  * versions.  Therefore, to preserve binary compatibility, users
  * should not directly allocate structures of this type but should use
  * svn_wc_create_conflict_description_text() or
- * svn_wc_create_conflict_description_prop() instead.
+ * svn_wc_create_conflict_description_prop() or
+ * svn_wc_create_conflict_description_tree() instead.
  *
  * @since New in 1.5.
  */
 typedef struct svn_wc_conflict_description_t
 {
-  /** The path that is being operated on */
+  /** The path that is in conflict (for a tree conflict, it is the victim) */
   const char *path;
 
   /** The node type of the path being operated on */
@@ -1186,6 +1200,13 @@ typedef struct svn_wc_conflict_description_t
   /** merged version; may contain conflict markers */
   const char *merged_file;
 
+  /** The operation that exposed the conflict.
+   * Used only for tree conflicts.
+   *
+   * @since New in 1.6.
+   */
+  svn_wc_operation_t operation;
+
 } svn_wc_conflict_description_t;
 
 /**
@@ -1229,6 +1250,28 @@ svn_wc_conflict_description_create_prop(const char *path,
                                         svn_wc_adm_access_t *adm_access,
                                         svn_node_kind_t node_kind,
                                         const char *property_name,
+                                        apr_pool_t *pool);
+
+/**
+ * Allocate an @c svn_wc_conflict_description_t structure in @a pool,
+ * initialize to represent a tree conflict, and return it.
+ *
+ * Set the @c path field of the created struct to @a path, the @c access
+ * field to @a adm_access, the @c kind field to @c
+ * svn_wc_conflict_kind_tree, the @c node_kind to @a node_kind, and the @c
+ * operation to @a operation. Make only shallow copies of the pointer
+ * arguments.
+ *
+ * @note: It is the caller's responsibility to set the other required fields
+ * (such as the four file names and @c action and @c reason).
+ *
+ * @since New in 1.6.
+ */
+svn_wc_conflict_description_t *
+svn_wc_conflict_description_create_tree(const char *path,
+                                        svn_wc_adm_access_t *adm_access,
+                                        svn_node_kind_t node_kind,
+                                        svn_wc_operation_t operation,
                                         apr_pool_t *pool);
 
 
@@ -1762,7 +1805,7 @@ typedef enum svn_wc_schedule_t
  *
  * @since New in 1.5
  */
-#define SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN -1
+#define SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN (-1)
 
 /** @} */
 
@@ -1936,6 +1979,11 @@ typedef struct svn_wc_entry_t
    * @since New in 1.5. */
   svn_depth_t depth;
 
+  /** Serialized data for all of the tree conflicts detected in this_dir.
+   *
+   * @since New in 1.6. */
+  const char *tree_conflict_data;
+
   /* IMPORTANT: If you extend this structure, check the following functions in
    * subversion/libsvn_wc/entries.c, to see if you need to extend them as well.
    *
@@ -2032,7 +2080,11 @@ svn_wc_entry_dup(const svn_wc_entry_t *entry,
 
 /** Given a @a dir_path under version control, decide if one of its
  * entries (@a entry) is in state of conflict; return the answers in
- * @a text_conflicted_p and @a prop_conflicted_p.
+ * @a text_conflicted_p, @a prop_conflicted_p and @a tree_conflicted_p.
+ *
+ * If @a entry is the THIS_DIR entry of @a dir_path, and this directory
+ * currently contains one or more tree-conflicted children, then set
+ * @a *tree_conflicted_p to true, else set it to false.
  *
  * If the @a entry mentions that a text conflict file (.rej suffix)
  * exists, but it cannot be found, assume the text conflict has been
@@ -2044,7 +2096,23 @@ svn_wc_entry_dup(const svn_wc_entry_t *entry,
  * @a *prop_conflicted_p.
  *
  * The @a entry is not updated.
+ *
+ * @since New in 1.6.
  */
+svn_error_t *
+svn_wc_conflicted_p2(svn_boolean_t *text_conflicted_p,
+                     svn_boolean_t *prop_conflicted_p,
+                     svn_boolean_t *tree_conflicted_p,
+                     const char *dir_path,
+                     const svn_wc_entry_t *entry,
+                     apr_pool_t *pool);
+
+/** Like svn_wc_conflicted_p2, but without the capability to
+ * detect tree conflicts.
+ *
+ * @deprecated Provided for backward compatibility with the 1.5 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_conflicted_p(svn_boolean_t *text_conflicted_p,
                     svn_boolean_t *prop_conflicted_p,
@@ -2441,6 +2509,11 @@ typedef struct svn_wc_status2_t
 
   /** @} */
 
+  /** Set @c TRUE if the entry is a directory containing tree conflicts.
+   * @since New in 1.6
+   */
+  svn_boolean_t tree_conflicted;
+
   /* NOTE! Please update svn_wc_dup_status2() when adding new fields here. */
 } svn_wc_status2_t;
 
@@ -2573,7 +2646,7 @@ typedef svn_error_t *(*svn_wc_status_func3_t)(void *baton,
 
 /**
  * Same as svn_wc_status_func3_t(), but without a provided pool or
- * the ability to propogate errors.
+ * the ability to propagate errors.
  *
  * @since New in 1.2.
  * @deprecated Provided for backward compatibility with the 1.5 API.
@@ -3102,7 +3175,8 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
  * Assuming @a path is under version control and in a state of conflict,
  * then take @a path *out* of this state.  If @a resolve_text is TRUE then
  * any text conflict is resolved, if @a resolve_props is TRUE then any
- * property conflicts are resolved.
+ * property conflicts are resolved, if @a resolve_tree is TRUE then any
+ * tree conflicts are resolved.
  *
  * If @a depth is @c svn_depth_empty, act only on @a path; if
  * @c svn_depth_files, resolve @a path and its conflicted file
@@ -3139,11 +3213,32 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
  * return @c SVN_NO_ERROR.
  *
  * If @c path was successfully taken out of a state of conflict, report this
- * information to @c notify_func (if non-@c NULL.)  If only text or only
- * property conflict resolution was requested, and it was successful, then
- * success gets reported.
+ * information to @c notify_func (if non-@c NULL.)  If only text, only
+ * property, or only tree conflict resolution was requested, and it was
+ * successful, then success gets reported.
  *
- * @since New in 1.5.
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_wc_resolved_conflict4(const char *path,
+                          svn_wc_adm_access_t *adm_access,
+                          svn_boolean_t resolve_text,
+                          svn_boolean_t resolve_props,
+                          svn_boolean_t resolve_tree,
+                          svn_depth_t depth,
+                          svn_wc_conflict_choice_t conflict_choice,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          apr_pool_t *pool);
+
+
+/**
+ * Similar to svn_wc_resolved_conflict4(), but without tree-conflict
+ * resolution support.
+ *
+ * @deprecated Provided for backward compatibility with the 1.5 API.
  */
 svn_error_t *
 svn_wc_resolved_conflict3(const char *path,
@@ -5027,6 +5122,45 @@ svn_wc_set_changelist(const char *path,
 
 /** @} */
 
+/** Set @a *tree_conflict to a newly allocated @c svn_wc_conflict_description_t
+ * structure describing the tree conflict state of @a victim_path, or to null
+ * if @a victim_path is not in a state of tree conflict. @a adm_access is the
+ * admin access baton for @a victim_path. Use @a pool for all allocations.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_wc_get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
+                         const char *victim_path,
+                         svn_wc_adm_access_t *adm_access,
+                         apr_pool_t *pool);
+
+/**
+ * Read tree conflict descriptions from @a dir_entry.
+ * Append pointers to newly allocated svn_wc_conflict_description_t
+ * objects to the array pointed to by @a conflicts.
+ * @a dir_path is the path to the WC directory whose conflicts are being read.
+ * Do all allocations in @a pool.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_wc_read_tree_conflicts_from_entry(apr_array_header_t *conflicts,
+                                      const svn_wc_entry_t *dir_entry,
+                                      const char *dir_path,
+                                      apr_pool_t *pool);
+
+/**
+ * Add a tree conflict to the directory entry belonging to @a adm_access.
+ * Pass a description of the new tree conflict in @a conflict.
+ * Do all allocations in @a pool.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_wc_add_tree_conflict_data(const svn_wc_conflict_description_t *conflict,
+                              svn_wc_adm_access_t *adm_access,
+                              apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

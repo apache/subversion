@@ -110,14 +110,12 @@ show_diff(const svn_wc_conflict_description_t *desc,
   SVN_ERR(svn_stream_for_stdout(&output, pool));
   SVN_ERR(svn_diff_file_diff_2(&diff, path1, path2,
                                options, pool));
-  SVN_ERR(svn_diff_file_output_unified3(output, diff,
-                                        path1, path2,
-                                        NULL, NULL,
-                                        APR_LOCALE_CHARSET,
-                                        NULL, FALSE,
-                                        pool));
-
-  return SVN_NO_ERROR;
+  return svn_diff_file_output_unified3(output, diff,
+                                       path1, path2,
+                                       NULL, NULL,
+                                       APR_LOCALE_CHARSET,
+                                       NULL, FALSE,
+                                       pool);
 }
 
 
@@ -141,18 +139,16 @@ show_conflicts(const svn_wc_conflict_description_t *desc,
                                 options, pool));
   /* ### Consider putting the markers/labels from
      ### svn_wc__merge_internal in the conflict description. */
-  SVN_ERR(svn_diff_file_output_merge2(output, diff,
-                                      desc->base_file,
-                                      desc->my_file,
-                                      desc->their_file,
-                                      _("||||||| ORIGINAL"),
-                                      _("<<<<<<< MINE (select with 'mc')"),
-                                      _(">>>>>>> THEIRS (select with 'tc')"),
-                                      "=======",
-                                      svn_diff_conflict_display_only_conflicts,
-                                      pool));
-
-  return SVN_NO_ERROR;
+  return svn_diff_file_output_merge2(output, diff,
+                                     desc->base_file,
+                                     desc->my_file,
+                                     desc->their_file,
+                                     _("||||||| ORIGINAL"),
+                                     _("<<<<<<< MINE (select with 'mc')"),
+                                     _(">>>>>>> THEIRS (select with 'tc')"),
+                                     "=======",
+                                     svn_diff_conflict_display_only_conflicts,
+                                     pool);
 }
 
 

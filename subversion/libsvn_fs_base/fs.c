@@ -456,9 +456,7 @@ bdb_write_config(svn_fs_t *fs)
                                      NULL, fs->pool));
     }
 
-  SVN_ERR(svn_io_file_close(dbconfig_file, fs->pool));
-
-  return SVN_NO_ERROR;
+  return svn_io_file_close(dbconfig_file, fs->pool);
 }
 
 
@@ -790,9 +788,7 @@ bdb_recover(const char *path, svn_boolean_t fatal, apr_pool_t *pool)
                            ((fatal ? DB_RECOVER_FATAL : DB_RECOVER)
                             | SVN_BDB_PRIVATE_ENV_FLAGS),
                            0666, pool));
-  SVN_ERR(svn_fs_bdb__close(bdb));
-
-  return SVN_NO_ERROR;
+  return svn_fs_bdb__close(bdb);
 }
 
 static svn_error_t *
@@ -1245,9 +1241,7 @@ base_delete_fs(const char *path,
   SVN_ERR(svn_fs_bdb__remove(path, pool));
 
   /* Remove the environment directory. */
-  SVN_ERR(svn_io_remove_dir2(path, FALSE, NULL, NULL, pool));
-
-  return SVN_NO_ERROR;
+  return svn_io_remove_dir2(path, FALSE, NULL, NULL, pool);
 }
 
 static const svn_version_t *

@@ -1216,8 +1216,8 @@ svn_ra_neon__do_check_path(svn_ra_session_t *session,
     {
 
       svn_error_clear(err);
+      err = SVN_NO_ERROR;
       *kind = svn_node_none;
-      return SVN_NO_ERROR;
     }
 
   return err;

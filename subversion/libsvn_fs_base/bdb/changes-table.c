@@ -1,7 +1,7 @@
 /* changes-table.c : operations on the `changes' table
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -84,11 +84,9 @@ svn_fs_bdb__changes_add(svn_fs_t *fs,
   svn_fs_base__str_to_dbt(&query, key);
   svn_fs_base__skel_to_dbt(&value, skel, pool);
   svn_fs_base__trail_debug(trail, "changes", "put");
-  SVN_ERR(BDB_WRAP(fs, _("creating change"),
-                   bfd->changes->put(bfd->changes, trail->db_txn,
-                                     &query, &value, 0)));
-
-  return SVN_NO_ERROR;
+  return BDB_WRAP(fs, _("creating change"),
+                  bfd->changes->put(bfd->changes, trail->db_txn,
+                                    &query, &value, 0));
 }
 
 
@@ -107,7 +105,7 @@ svn_fs_bdb__changes_delete(svn_fs_t *fs,
                              svn_fs_base__str_to_dbt(&query, key), 0);
 
   /* If there're no changes for KEY, that is acceptable.  Any other
-     error should be propogated to the caller, though.  */
+     error should be propagated to the caller, though.  */
   if ((db_err) && (db_err != DB_NOTFOUND))
     {
       SVN_ERR(BDB_WRAP(fs, _("deleting changes"), db_err));

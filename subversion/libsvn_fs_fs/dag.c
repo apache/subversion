@@ -344,10 +344,8 @@ set_entry(dag_node_t *parent,
   SVN_ERR(get_node_revision(&parent_noderev, parent, pool));
 
   /* Set the new entry. */
-  SVN_ERR(svn_fs_fs__set_entry(parent->fs, txn_id, parent_noderev, name, id,
-                               kind, pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_fs__set_entry(parent->fs, txn_id, parent_noderev, name, id,
+                              kind, pool);
 }
 
 
@@ -409,10 +407,8 @@ make_entry(dag_node_t **child_p,
   /* We can safely call set_entry because we already know that
      PARENT is mutable, and we just created CHILD, so we know it has
      no ancestors (therefore, PARENT cannot be an ancestor of CHILD) */
-  SVN_ERR(set_entry(parent, name, svn_fs_fs__dag_get_id(*child_p),
-                    new_noderev.kind, txn_id, pool));
-
-  return SVN_NO_ERROR;
+  return set_entry(parent, name, svn_fs_fs__dag_get_id(*child_p),
+                   new_noderev.kind, txn_id, pool);
 }
 
 
@@ -501,9 +497,7 @@ svn_fs_fs__dag_set_proplist(dag_node_t *node,
   SVN_ERR(get_node_revision(&noderev, node, pool));
 
   /* Set the new proplist. */
-  SVN_ERR(svn_fs_fs__set_proplist(node->fs, noderev, proplist, pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_fs__set_proplist(node->fs, noderev, proplist, pool);
 }
 
 
@@ -555,10 +549,8 @@ svn_fs_fs__dag_increment_mergeinfo_count(dag_node_t *node,
     }
 
   /* Flush it out. */
-  SVN_ERR(svn_fs_fs__put_node_revision(node->fs, noderev->id,
-                                       noderev, FALSE, pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_fs__put_node_revision(node->fs, noderev->id,
+                                      noderev, FALSE, pool);
 }
 
 svn_error_t *
@@ -584,10 +576,8 @@ svn_fs_fs__dag_set_has_mergeinfo(dag_node_t *node,
   noderev->has_mergeinfo = has_mergeinfo;
 
   /* Flush it out. */
-  SVN_ERR(svn_fs_fs__put_node_revision(node->fs, noderev->id,
-                                       noderev, FALSE, pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_fs__put_node_revision(node->fs, noderev->id,
+                                      noderev, FALSE, pool);
 }
 
 
@@ -723,15 +713,13 @@ svn_fs_fs__dag_clone_root(dag_node_t **root_p,
      directory yet.)  */
   SVN_ERR_ASSERT(!svn_fs_fs__id_eq(root_id, base_root_id));
 
-  /* One way or another, root_id now identifies a cloned root node. */
-  SVN_ERR(svn_fs_fs__dag_get_node(root_p, fs, root_id, pool));
-
   /*
    * (Sung to the tune of "Home, Home on the Range", with thanks to
    * Randall Garrett and Isaac Asimov.)
    */
 
-  return SVN_NO_ERROR;
+  /* One way or another, root_id now identifies a cloned root node. */
+  return svn_fs_fs__dag_get_node(root_p, fs, root_id, pool);
 }
 
 
@@ -794,10 +782,8 @@ svn_fs_fs__dag_delete(dag_node_t *parent,
   SVN_ERR(svn_fs_fs__dag_delete_if_mutable(parent->fs, id, pool));
 
   /* Remove this entry from its parent's entries list. */
-  SVN_ERR(svn_fs_fs__set_entry(parent->fs, txn_id, parent_noderev, name,
-                               NULL, svn_node_unknown, pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_fs__set_entry(parent->fs, txn_id, parent_noderev, name,
+                              NULL, svn_node_unknown, pool);
 }
 
 
@@ -817,9 +803,7 @@ svn_fs_fs__dag_remove_node(svn_fs_t *fs,
                              "Attempted removal of immutable node");
 
   /* Delete the node revision. */
-  SVN_ERR(svn_fs_fs__delete_node_revision(fs, id, pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_fs__delete_node_revision(fs, id, pool);
 }
 
 
@@ -864,9 +848,7 @@ svn_fs_fs__dag_delete_if_mutable(svn_fs_t *fs,
 
   /* ... then delete the node itself, after deleting any mutable
      representations and strings it points to. */
-  SVN_ERR(svn_fs_fs__dag_remove_node(fs, id, pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_fs__dag_remove_node(fs, id, pool);
 }
 
 svn_error_t *
@@ -946,10 +928,8 @@ svn_fs_fs__dag_get_file_delta_stream(svn_txdelta_stream_t **stream_p,
   SVN_ERR(get_node_revision(&tgt_noderev, target, pool));
 
   /* Get the delta stream. */
-  SVN_ERR(svn_fs_fs__get_file_delta_stream(stream_p, target->fs,
-                                           src_noderev, tgt_noderev, pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_fs__get_file_delta_stream(stream_p, target->fs,
+                                          src_noderev, tgt_noderev, pool);
 }
 
 
@@ -969,9 +949,7 @@ svn_fs_fs__dag_file_length(svn_filesize_t *length,
   /* Go get a fresh node-revision for FILE, and . */
   SVN_ERR(get_node_revision(&noderev, file, pool));
 
-  SVN_ERR(svn_fs_fs__file_length(length, noderev, pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_fs__file_length(length, noderev, pool);
 }
 
 
@@ -1284,10 +1262,8 @@ svn_fs_fs__dag_copy(dag_node_t *to_node,
     }
 
   /* Set the entry in to_node to the new id. */
-  SVN_ERR(svn_fs_fs__dag_set_entry(to_node, entry, id, from_node->kind,
-                                   txn_id, pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_fs__dag_set_entry(to_node, entry, id, from_node->kind,
+                                  txn_id, pool);
 }
 
 

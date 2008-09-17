@@ -150,6 +150,9 @@ def _usage_exit():
   print "  --with-swig=DIR"
   print "           look for the swig program in DIR"
   print
+  print "  --with-sqlite=DIR"
+  print "           look for sqlite in DIR"
+  print
   print "  --with-sasl=DIR"
   print "           look for the sasl headers and libs in DIR"
   print
@@ -216,6 +219,7 @@ if __name__ == '__main__':
                             'with-zlib=',
                             'with-junit=',
                             'with-swig=',
+                            'with-sqlite=',
                             'with-sasl=',
                             'with-apr_memcache=',
                             'enable-pool-debug',
