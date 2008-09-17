@@ -1679,8 +1679,8 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(merge_sensitive_log_added_mergeinfo_replaces_inherited,
                          server_has_mergeinfo),
-              XFail(SkipUnless(merge_sensitive_log_propmod_merge_inheriting_path,
-                         server_has_mergeinfo)),
+              SkipUnless(merge_sensitive_log_propmod_merge_inheriting_path,
+                         server_has_mergeinfo),
              ]
 
 if __name__ == '__main__':
