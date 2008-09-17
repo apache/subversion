@@ -5125,7 +5125,10 @@ svn_wc_set_changelist(const char *path,
 /** Set @a *tree_conflict to a newly allocated @c svn_wc_conflict_description_t
  * structure describing the tree conflict state of @a victim_path, or to null
  * if @a victim_path is not in a state of tree conflict. @a adm_access is the
- * admin access baton for @a victim_path. Use @a pool for all allocations. */
+ * admin access baton for @a victim_path. Use @a pool for all allocations.
+ *
+ * @since New in 1.6.
+ */
 svn_error_t *
 svn_wc_get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
                          const char *victim_path,
