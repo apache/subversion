@@ -382,8 +382,7 @@ bdb_init_cb(apr_pool_t *pool)
 svn_error_t *
 svn_fs_bdb__init(apr_pool_t* pool)
 {
-  SVN_ERR(svn_atomic__init_once(&bdb_cache_state, bdb_init_cb, pool));
-  return SVN_NO_ERROR;
+  return svn_atomic__init_once(&bdb_cache_state, bdb_init_cb, pool);
 }
 
 static APR_INLINE void
@@ -574,10 +573,8 @@ bdb_open(bdb_env_t *bdb, u_int32_t flags, int mode)
           (bdb, bdb->env->set_flags(bdb->env, SVN_BDB_AUTO_COMMIT, 1)));
 #endif
 
-  SVN_ERR(bdb_cache_key(&bdb->key, &bdb->dbconfig_file,
-                        bdb->path, bdb->pool));
-
-  return SVN_NO_ERROR;
+  return bdb_cache_key(&bdb->key, &bdb->dbconfig_file,
+                       bdb->path, bdb->pool);
 }
 
 

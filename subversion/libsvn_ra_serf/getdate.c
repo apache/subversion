@@ -241,7 +241,5 @@ svn_ra_serf__get_dated_revision(svn_ra_session_t *ra_session,
 
   *date_ctx->revision = SVN_INVALID_REVNUM;
 
-  SVN_ERR(svn_ra_serf__context_run_wait(&date_ctx->done, session, pool));
-
-  return SVN_NO_ERROR;
+  return svn_ra_serf__context_run_wait(&date_ctx->done, session, pool);
 }

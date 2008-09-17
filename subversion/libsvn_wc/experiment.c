@@ -43,7 +43,8 @@ struct walker_entry {
 };
 
 
-/* NOTE: children should live at least as long as "pool" */
+/* NOTE: the filenames referenced by @a children should live at least as
+   long as "pool". The array itself can have any lifetime. */
 void append_entries(apr_array_header_t *queue,
                     const char *dirpath,
                     const apr_array_header_t *children,
@@ -139,6 +140,9 @@ generic_walker(svn_wc__db_t *db,
             /* copy the path into a long-lived pool */
             const char *dirpath = apr_pstrdup(queue_pool, nodepath);
 
+            /* Note: for the first two modes, the "children" array is
+               allocated in queue_pool along with the string values.
+               Technically, we only need the string values in that pool. */
             if (mode == walker_mode_base)
               {
                 SVN_ERR(svn_wc__db_base_get_children(&children, db, nodepath,
@@ -157,7 +161,11 @@ generic_walker(svn_wc__db_t *db,
 
                 SVN_ERR(svn_io_get_dir_filenames(&dirhash, nodepath,
                                                  iterpool));
-                dirkeys = apr_array_make(queue_pool, 0, 10);
+
+                /* Copy all keys into a new array, copying the *data* into
+                   queue_pool. We can't use svn_hash_keys() because it
+                   will not copy the strings. */
+                dirkeys = apr_array_make(iterpool, 0, 10);
                 for (hi = apr_hash_first(iterpool, dirhash);
                      hi != NULL;
                      hi = apr_hash_next(hi))

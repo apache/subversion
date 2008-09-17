@@ -1276,9 +1276,7 @@ svn_ra_neon__open(svn_ra_session_t *session,
   ne_set_progress(sess2, ra_neon_neonprogress, neonprogress_baton);
   session->priv = ras;
 
-  SVN_ERR(exchange_capabilities(ras, pool));
-
-  return SVN_NO_ERROR;
+  return exchange_capabilities(ras, pool);
 }
 
 

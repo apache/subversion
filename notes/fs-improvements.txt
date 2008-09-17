@@ -156,7 +156,7 @@ like that.  Fortunately, copyIDs are generated from a new `copies'
 table, which maps unique copyIDs onto (REV COPY_DST_PATH
 COPY_DST_NODEKEY).  We look up the rev/path for the old copyID,
 convert it to a node key, and compare it to the node key we're
-currently on.  Voil‡!  Actually, we're not sure we'll store all of
+currently on.  Voil√†!  Actually, we're not sure we'll store all of
 those in the copies table, it may boil down to just the DST_NODEKEY or
 just the other two, we'll see.
 

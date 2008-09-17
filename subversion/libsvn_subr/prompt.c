@@ -155,9 +155,7 @@ prompt(const char **result,
         return svn_error_wrap_apr(status, _("Can't get password"));
     }
 
-  SVN_ERR(svn_cmdline_cstring_to_utf8(result, strbuf->data, pool));
-
-  return SVN_NO_ERROR;
+  return svn_cmdline_cstring_to_utf8(result, strbuf->data, pool);
 }
 
 
@@ -454,10 +452,9 @@ svn_cmdline_auth_plaintext_prompt(svn_boolean_t *may_save_plaintext,
     "-----------------------------------------------------------------------\n"
     );
 
-  SVN_ERR(plaintext_prompt_helper(may_save_plaintext, realmstring,
-                                  prompt_string, prompt_text, baton,
-                                  pool));
-  return SVN_NO_ERROR;
+  return plaintext_prompt_helper(may_save_plaintext, realmstring,
+                                 prompt_string, prompt_text, baton,
+                                 pool);
 }
 
 /* This implements 'svn_auth_plaintext_passphrase_prompt_func_t'. */
@@ -484,10 +481,9 @@ svn_cmdline_auth_plaintext_passphrase_prompt(svn_boolean_t *may_save_plaintext,
     "-----------------------------------------------------------------------\n"
     );
 
-  SVN_ERR(plaintext_prompt_helper(may_save_plaintext, realmstring,
-                                  prompt_string, prompt_text, baton,
-                                  pool));
-  return SVN_NO_ERROR;
+  return plaintext_prompt_helper(may_save_plaintext, realmstring,
+                                 prompt_string, prompt_text, baton,
+                                 pool);
 }
 
 

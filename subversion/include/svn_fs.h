@@ -504,7 +504,6 @@ svn_fs_access_get_username(const char **username,
  * token's lifetime is at least as long as @a access_ctx.
  *
  * @since New in 1.6. */
-
 svn_error_t *
 svn_fs_access_add_lock_token2(svn_fs_access_t *access_ctx,
                               const char *path,

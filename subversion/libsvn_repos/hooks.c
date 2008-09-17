@@ -305,8 +305,7 @@ create_temp_file(apr_file_t **f, const svn_string_t *value, apr_pool_t *pool)
                                    svn_path_join(dir, "hook-input", pool),
                                    "", svn_io_file_del_on_close, pool));
   SVN_ERR(svn_io_file_write_full(*f, value->data, value->len, NULL, pool));
-  SVN_ERR(svn_io_file_seek(*f, APR_SET, &offset, pool));
-  return SVN_NO_ERROR;
+  return svn_io_file_seek(*f, APR_SET, &offset, pool);
 }
 
 
@@ -448,11 +447,8 @@ lock_token_content(apr_file_t **handle, apr_hash_t *lock_tokens,
     }
 
   svn_stringbuf_appendcstr(lock_str, "\n");
-  SVN_ERR(create_temp_file(handle,
-                           svn_string_create_from_buf(lock_str, pool),
-                           pool));
-
-  return SVN_NO_ERROR;
+  return create_temp_file(handle,
+                          svn_string_create_from_buf(lock_str, pool), pool);
 }
 
 

@@ -417,8 +417,6 @@ svn_stringbuf_appendcstr(svn_stringbuf_t *targetstr, const char *cstr)
 }
 
 
-
-
 svn_stringbuf_t *
 svn_stringbuf_dup(const svn_stringbuf_t *original_string, apr_pool_t *pool)
 {

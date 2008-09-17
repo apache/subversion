@@ -709,7 +709,7 @@ svn_stream_compressed(svn_stream_t *stream,
  *
  * When the stream is closed, @a *read_checksum and @a *write_checksum
  * are set to point to the resulting checksums, of type @a read_checksum_kind
- * and @a write_checksum_kind, respectively..
+ * and @a write_checksum_kind, respectively.
  *
  * Both @a read_checksum and @a write_checksum can be @c NULL, in which case
  * the respective checksum isn't calculated.

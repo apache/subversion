@@ -350,14 +350,12 @@ svn_fs_bdb__string_append(svn_fs_t *fs,
 
   /* Store a new record into the database. */
   svn_fs_base__trail_debug(trail, "strings", "put");
-  SVN_ERR(BDB_WRAP(fs, "appending string",
-                   bfd->strings->put
-                   (bfd->strings, trail->db_txn,
-                    svn_fs_base__str_to_dbt(&query, *key),
-                    svn_fs_base__set_dbt(&result, buf, len),
-                    0)));
-
-  return SVN_NO_ERROR;
+  return BDB_WRAP(fs, "appending string",
+                  bfd->strings->put
+                  (bfd->strings, trail->db_txn,
+                   svn_fs_base__str_to_dbt(&query, *key),
+                   svn_fs_base__set_dbt(&result, buf, len),
+                   0));
 }
 
 
@@ -460,9 +458,7 @@ svn_fs_bdb__string_delete(svn_fs_t *fs,
        "No such string '%s'", key);
 
   /* Handle any other error conditions.  */
-  SVN_ERR(BDB_WRAP(fs, "deleting string", db_err));
-
-  return SVN_NO_ERROR;
+  return BDB_WRAP(fs, "deleting string", db_err);
 }
 
 

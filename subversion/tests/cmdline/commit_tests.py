@@ -21,6 +21,7 @@ import string, sys, os, re
 
 # Our testing module
 import svntest
+from svntest import wc
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -2602,6 +2603,71 @@ def commit_added_missing(sbox):
                                      [], ".* is scheduled for addition, but is missing",
                                      'commit', '-m', 'logmsg', wc_dir)
 
+#----------------------------------------------------------------------
+
+# Helper for commit-failure tests
+def commit_fails_at_path(path, wc_dir, error_re):
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        None,
+                                        None,
+                                        error_re,
+                                        path)
+
+def tree_conflicts_block_commit(sbox):
+  "tree conflicts block commit" 
+  
+  # Commit is not allowed in a directory containing tree conflicts.
+  # This test corresponds to use cases 1-3 (with file victims) in 
+  # notes/tree-conflicts/use-cases.txt.
+
+  svntest.actions.build_greek_tree_conflicts(sbox)
+  wc_dir = sbox.wc_dir
+  A = os.path.join(wc_dir, 'A')
+  D = os.path.join(wc_dir, 'A', 'D')
+  G = os.path.join(wc_dir, 'A', 'D', 'G')
+
+  error_re = "remains in conflict"
+  commit_fails_at_path(wc_dir, wc_dir, error_re)
+  commit_fails_at_path(A, A, error_re)
+  commit_fails_at_path(D, D, error_re)
+  commit_fails_at_path(G, G, error_re)
+  commit_fails_at_path(os.path.join(G, 'pi'), G, error_re)
+
+                                        
+def tree_conflicts_resolved(sbox):
+  "tree conflicts resolved" 
+  
+  # Commit is allowed after tree conflicts are resolved.
+  # This test corresponds to use cases 1-3 in 
+  # notes/tree-conflicts/use-cases.txt.
+
+  svntest.actions.build_greek_tree_conflicts(sbox)
+  wc_dir = sbox.wc_dir
+
+  # Duplicate wc for tests
+  wc_dir_2 = sbox.add_wc_path('2')
+  svntest.actions.duplicate_dir(wc_dir, wc_dir_2)  
+
+  # Resolved in directory containing tree conflicts
+  G = os.path.join(wc_dir, 'A', 'D', 'G')
+  svntest.actions.run_and_verify_svn(None, None, [], 'resolved', G)
+  
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak('A/D/G/pi',  status='D ')
+  expected_status.remove('A/D/G/rho',
+                         'A/D/G/tau')
+
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Recursively resolved in parent directory -- expect same result
+  D2 = os.path.join(wc_dir_2, 'A', 'D')
+  G2 = os.path.join(wc_dir_2, 'A', 'D', 'G')
+  svntest.actions.run_and_verify_svn(None, None, [], 'resolved', D2, '-R')
+
+  expected_status.wc_dir = wc_dir_2
+  svntest.actions.run_and_verify_status(wc_dir_2, expected_status)
+
+
 ########################################################################
 # Run the tests
 
@@ -2634,7 +2700,7 @@ test_list = [ None,
               commit_multiple_wc,
               commit_nonrecursive,
               failed_commit,
-              commit_out_of_date_deletions,
+              XFail(commit_out_of_date_deletions, svntest.main.is_ra_type_dav),
               commit_with_bad_log_message,
               commit_with_mixed_line_endings,
               commit_with_mixed_line_endings_in_ignored_part,
@@ -2668,6 +2734,8 @@ test_list = [ None,
                          server_gets_client_capabilities),
               commit_url,
               commit_added_missing,
+              tree_conflicts_block_commit,
+              tree_conflicts_resolved,
              ]
 
 if __name__ == '__main__':

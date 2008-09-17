@@ -145,7 +145,7 @@ def externals_test_setup(sbox):
                                     other_repo_basename + \
                                     "/A/D/H"
 
-  # Set up the externals properties on A/B/ and A/D/.
+  # Set up the externals properties on A/C/ and A/D/.
   externals_desc = \
            "exdir_G       " + external_url_for["A/C/exdir_G"] + "\n" + \
            "-r 1 " + external_url_for["A/C/exdir_H"] + " exdir_H\n"

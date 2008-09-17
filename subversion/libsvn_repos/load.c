@@ -260,9 +260,7 @@ prefix_mergeinfo_paths(svn_string_t **mergeinfo_val,
       path = svn_path_join(parent_dir, (const char*)merge_source+1, pool);
       apr_hash_set(prefixed_mergeinfo, path, APR_HASH_KEY_STRING, rangelist);
     }
-  SVN_ERR(svn_mergeinfo_to_string(mergeinfo_val, prefixed_mergeinfo, pool));
-
-  return SVN_NO_ERROR;
+  return svn_mergeinfo_to_string(mergeinfo_val, prefixed_mergeinfo, pool);
 }
 
 
@@ -1211,10 +1209,8 @@ set_node_property(void *baton,
         }
     }
 
-  SVN_ERR(svn_fs_change_node_prop(rb->txn_root, nb->path,
-                                  name, value, nb->pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_change_node_prop(rb->txn_root, nb->path,
+                                 name, value, nb->pool);
 }
 
 
@@ -1225,10 +1221,8 @@ delete_node_property(void *baton,
   struct node_baton *nb = baton;
   struct revision_baton *rb = nb->rb;
 
-  SVN_ERR(svn_fs_change_node_prop(rb->txn_root, nb->path,
-                                  name, NULL, nb->pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_change_node_prop(rb->txn_root, nb->path,
+                                 name, NULL, nb->pool);
 }
 
 
@@ -1302,9 +1296,7 @@ close_node(void *baton)
   struct parse_baton *pb = rb->pb;
   apr_size_t len = 7;
 
-  SVN_ERR(svn_stream_write(pb->outstream, _(" done.\n"), &len));
-
-  return SVN_NO_ERROR;
+  return svn_stream_write(pb->outstream, _(" done.\n"), &len);
 }
 
 
@@ -1378,19 +1370,17 @@ close_revision(void *baton)
 
   if (*new_rev == rb->rev)
     {
-      SVN_ERR(svn_stream_printf(pb->outstream, rb->pool,
-                                _("\n------- Committed revision %ld"
-                                  " >>>\n\n"), *new_rev));
+      return svn_stream_printf(pb->outstream, rb->pool,
+                               _("\n------- Committed revision %ld"
+                                 " >>>\n\n"), *new_rev);
     }
   else
     {
-      SVN_ERR(svn_stream_printf(pb->outstream, rb->pool,
-                                _("\n------- Committed new rev %ld"
-                                  " (loaded from original rev %ld"
-                                  ") >>>\n\n"), *new_rev, rb->rev));
+      return svn_stream_printf(pb->outstream, rb->pool,
+                               _("\n------- Committed new rev %ld"
+                                 " (loaded from original rev %ld"
+                                 ") >>>\n\n"), *new_rev, rb->rev);
     }
-
-  return SVN_NO_ERROR;
 }
 
 
@@ -1497,10 +1487,8 @@ svn_repos_load_fs2(svn_repos_t *repos,
   pb->use_pre_commit_hook = use_pre_commit_hook;
   pb->use_post_commit_hook = use_post_commit_hook;
 
-  SVN_ERR(svn_repos_parse_dumpstream2(dumpstream, parser, parse_baton,
-                                      cancel_func, cancel_baton, pool));
-
-  return SVN_NO_ERROR;
+  return svn_repos_parse_dumpstream2(dumpstream, parser, parse_baton,
+                                     cancel_func, cancel_baton, pool);
 }
 
 

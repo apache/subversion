@@ -89,11 +89,9 @@ svn_fs_bdb__put_txn(svn_fs_t *fs,
   svn_fs_base__str_to_dbt(&key, txn_name);
   svn_fs_base__skel_to_dbt(&value, txn_skel, pool);
   svn_fs_base__trail_debug(trail, "transactions", "put");
-  SVN_ERR(BDB_WRAP(fs, _("storing transaction record"),
-                   bfd->transactions->put(bfd->transactions, trail->db_txn,
-                                          &key, &value, 0)));
-
-  return SVN_NO_ERROR;
+  return BDB_WRAP(fs, _("storing transaction record"),
+                  bfd->transactions->put(bfd->transactions, trail->db_txn,
+                                         &key, &value, 0));
 }
 
 
@@ -134,8 +132,7 @@ allocate_txn_id(const char **id_p,
   db_err = bfd->transactions->put(bfd->transactions, trail->db_txn,
                                   &query, &result, 0);
 
-  SVN_ERR(BDB_WRAP(fs, "bumping next transaction key", db_err));
-  return SVN_NO_ERROR;
+  return BDB_WRAP(fs, "bumping next transaction key", db_err);
 }
 
 
@@ -181,11 +178,9 @@ svn_fs_bdb__delete_txn(svn_fs_t *fs,
   /* Delete the transaction from the `transactions' table. */
   svn_fs_base__str_to_dbt(&key, txn_name);
   svn_fs_base__trail_debug(trail, "transactions", "del");
-  SVN_ERR(BDB_WRAP(fs, "deleting entry from 'transactions' table",
-                   bfd->transactions->del(bfd->transactions,
-                                          trail->db_txn, &key, 0)));
-
-  return SVN_NO_ERROR;
+  return BDB_WRAP(fs, "deleting entry from 'transactions' table",
+                  bfd->transactions->del(bfd->transactions,
+                                         trail->db_txn, &key, 0));
 }
 
 
