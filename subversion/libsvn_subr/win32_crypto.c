@@ -226,4 +226,204 @@ svn_auth_get_windows_simple_provider(svn_auth_provider_object_t **provider,
   *provider = po;
 }
 
+
+/*-----------------------------------------------------------------------*/
+/* Windows SSL server trust provider, validates ssl certificate using    */
+/* CryptoApi.                                                            */
+/*-----------------------------------------------------------------------*/
+
+typedef PCCERT_CONTEXT (WINAPI *createcertcontext_fn_t)(
+    DWORD dwCertEncodingType,
+    const BYTE *pbCertEncoded,
+    DWORD cbCertEncoded);
+
+typedef BOOL (WINAPI *getcertchain_fn_t)(
+  HCERTCHAINENGINE hChainEngine,
+  PCCERT_CONTEXT pCertContext,
+  LPFILETIME pTime,
+  HCERTSTORE hAdditionalStore,
+  PCERT_CHAIN_PARA pChainPara,
+  DWORD dwFlags,
+  LPVOID pvReserved,
+  PCCERT_CHAIN_CONTEXT* ppChainContext);
+
+typedef VOID (WINAPI *freecertchain_fn_t)(
+  PCCERT_CHAIN_CONTEXT pChainContext);
+
+typedef BOOL (WINAPI *freecertcontext_fn_t)(
+  PCCERT_CONTEXT pCertContext);
+
+typedef struct {
+  HINSTANCE cryptodll;
+  createcertcontext_fn_t createcertcontext;
+  getcertchain_fn_t getcertchain;
+  freecertchain_fn_t freecertchain;
+  freecertcontext_fn_t freecertcontext;
+} windows_ssl_server_trust_provider_baton_t;
+
+/* Retrieve ssl server CA failure overrides (if any) from CryptoApi. */
+static svn_error_t *
+windows_ssl_server_trust_first_credentials(void **credentials,
+                                           void **iter_baton,
+                                           void *provider_baton,
+                                           apr_hash_t *parameters,
+                                           const char *realmstring,
+                                           apr_pool_t *pool)
+{
+  PCCERT_CONTEXT cert_context = NULL;
+  CERT_CHAIN_PARA chain_para;
+  PCCERT_CHAIN_CONTEXT chain_context = NULL;
+  svn_boolean_t ok = TRUE;
+  windows_ssl_server_trust_provider_baton_t *pb = provider_baton;
+
+  apr_uint32_t *failures = apr_hash_get(parameters,
+                                        SVN_AUTH_PARAM_SSL_SERVER_FAILURES,
+                                        APR_HASH_KEY_STRING);
+  const svn_auth_ssl_server_cert_info_t *cert_info =
+    apr_hash_get(parameters,
+                 SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO,
+                 APR_HASH_KEY_STRING);
+
+  if (*failures & ~SVN_AUTH_SSL_UNKNOWNCA)
+    {
+      /* give up, go on to next provider; the only thing we can accept
+         is an unknown certificate authority. */
+
+      *credentials = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  if (!pb->cryptodll)
+    {
+      /* give up, go on to next provider. */
+      *credentials = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  if (!pb->createcertcontext || !pb->getcertchain || !pb->freecertchain
+      || !pb->freecertcontext)
+    ok = FALSE;
+
+  if (ok)
+    {
+      int cert_len;
+      char *binary_cert;
+
+      /* Use apr-util as CryptStringToBinaryA is available only on XP+. */
+      binary_cert = apr_palloc(pool,
+                               apr_base64_decode_len(cert_info->ascii_cert));
+      cert_len = apr_base64_decode(binary_cert, cert_info->ascii_cert);
+
+      /* Parse the certificate into a context. */
+      cert_context = pb->createcertcontext
+        (X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, binary_cert, cert_len);
+
+      if (!cert_context)
+        ok = FALSE; /* Windows does not think the certificate is valid. */
+    }
+
+  if (ok)
+    {
+       /* Retrieve the certificate chain of the certificate
+          (a certificate without a valid root does not have a chain). */
+       memset(&chain_para, 0, sizeof(chain_para));
+       chain_para.cbSize = sizeof(chain_para);
+
+       if (pb->getcertchain(NULL, cert_context, NULL, NULL, &chain_para,
+                        CERT_CHAIN_CACHE_END_CERT,
+                        NULL, &chain_context))
+         {
+           if (chain_context->rgpChain[0]->TrustStatus.dwErrorStatus
+               != CERT_TRUST_NO_ERROR)
+            {
+              /* The certificate is not 100% valid, just fall back to the
+                 Subversion certificate handling. */
+
+              ok = FALSE;
+            }
+         }
+       else
+         ok = FALSE;
+    }
+
+  if (chain_context)
+    pb->freecertchain(chain_context);
+  if (cert_context)
+    pb->freecertcontext(cert_context);
+
+  if (!ok)
+    {
+      /* go on to next provider. */
+      *credentials = NULL;
+      return SVN_NO_ERROR;
+    }
+  else
+    {
+      svn_auth_cred_ssl_server_trust_t *creds =
+        apr_pcalloc(pool, sizeof(*creds));
+      creds->may_save = FALSE; /* No need to save it. */
+      *credentials = creds;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static apr_status_t
+windows_ssl_server_trust_cleanup(void *baton)
+{
+  windows_ssl_server_trust_provider_baton_t *pb = baton;
+  if (pb->cryptodll)
+    {
+      FreeLibrary(pb->cryptodll);
+      pb->cryptodll = NULL;
+      pb->createcertcontext = NULL;
+      pb->freecertchain = NULL;
+      pb->freecertcontext = NULL;
+      pb->getcertchain = NULL;
+    }
+  return APR_SUCCESS;
+}
+
+static const svn_auth_provider_t windows_server_trust_provider = {
+  SVN_AUTH_CRED_SSL_SERVER_TRUST,
+  windows_ssl_server_trust_first_credentials,
+  NULL,
+  NULL,
+};
+
+/* Public API */
+void
+svn_auth_get_windows_ssl_server_trust_provider
+  (svn_auth_provider_object_t **provider, apr_pool_t *pool)
+{
+  svn_auth_provider_object_t *po = apr_pcalloc(pool, sizeof(*po));
+  windows_ssl_server_trust_provider_baton_t *pb =
+    apr_pcalloc(pool, sizeof(*pb));
+
+  /* In case anyone wonders why we use LoadLibraryA here: This will
+     always work on Win9x/Me, whilst LoadLibraryW may not. */
+  pb->cryptodll = LoadLibraryA("Crypt32.dll");
+  if (pb->cryptodll)
+    {
+      pb->createcertcontext =
+        (createcertcontext_fn_t)GetProcAddress(pb->cryptodll,
+                                               "CertCreateCertificateContext");
+      pb->getcertchain =
+        (getcertchain_fn_t)GetProcAddress(pb->cryptodll,
+                                          "CertGetCertificateChain");
+      pb->freecertchain =
+        (freecertchain_fn_t)GetProcAddress(pb->cryptodll,
+                                           "CertFreeCertificateChain");
+      pb->freecertcontext =
+        (freecertcontext_fn_t)GetProcAddress(pb->cryptodll,
+                                             "CertFreeCertificateContext");
+      apr_pool_cleanup_register(pool, pb, windows_ssl_server_trust_cleanup,
+                                apr_pool_cleanup_null);
+    }
+
+  po->vtable = &windows_server_trust_provider;
+  po->provider_baton = pb;
+  *provider = po;
+}
+
 #endif /* WIN32 */
