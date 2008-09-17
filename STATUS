@@ -67,14 +67,3 @@ Candidate changes for 1.5.3:
   
 Approved changes:
 =================
-
- * r31203
-   Update build.conf to remove the magic word 'update' from the description to
-   allow running the test as non-administrator on Windows Vista.
-   Justification:
-     Not a code change. Just makes it possible to run the tests as non-
-     administrator without having to type your administrator password (or using
-     a local patch).
-   Votes:
-     +1: rhuijben, zhakov, cmpilato
-
