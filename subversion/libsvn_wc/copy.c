@@ -586,9 +586,6 @@ post_copy_cleanup(svn_wc_adm_access_t *adm_access,
   /* Remove wcprops. */
   SVN_ERR(svn_wc__props_delete(path, svn_wc__props_wcprop, adm_access, pool));
 
-  /* Read this directory's entries file. */
-  SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, pool));
-
   /* Because svn_io_copy_dir_recursively() doesn't copy directory
      permissions, we'll patch up our tree's .svn subdirs to be
      hidden. */
@@ -818,13 +815,11 @@ copy_dir_administratively(const char *src_path,
 
     SVN_ERR(svn_wc_adm_close(adm_access));
 
-    SVN_ERR(svn_wc_add3(dst_path, dst_parent, svn_depth_infinity,
-                        copyfrom_url, copyfrom_rev,
-                        cancel_func, cancel_baton,
-                        notify_copied, notify_baton, pool));
+    return svn_wc_add3(dst_path, dst_parent, svn_depth_infinity,
+                       copyfrom_url, copyfrom_rev,
+                       cancel_func, cancel_baton,
+                       notify_copied, notify_baton, pool);
   }
-
-  return SVN_NO_ERROR;
 }
 
 
@@ -914,10 +909,7 @@ svn_wc_copy2(const char *src_path,
         }
     }
 
-  SVN_ERR(svn_wc_adm_close(adm_access));
-
-
-  return SVN_NO_ERROR;
+  return svn_wc_adm_close(adm_access);
 }
 
 

@@ -683,6 +683,16 @@ keyed/named by the MD5 of the file. The database will record
 appropriate mappings, content/compression types, and refcounts for the
 base text files (for the shared case).
 
+When the metadata is recorded in a central area (rather than the WC
+root), then it is possible for the metadata and the base files to
+become out of date with respect to all the working copies on the
+system. We will revamp "svn cleanup" to re-tally the base text
+reference counts, eliminate unreferenced bases, verify that the
+working copies are still present, ensure the metadata <-> WC
+integrity, deal with moves of metadata from central -> wc-root (can
+happen if somebody rm -rf's the wc, then does a checkout and wants the
+metadata at the wc-root (this time)), and other consistency checks.
+
 
 Metadata Schemas
 ----------------

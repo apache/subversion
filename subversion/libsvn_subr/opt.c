@@ -1203,10 +1203,7 @@ print_version_info(const char *pgm_name,
                    apr_pool_t *pool)
 {
   if (quiet)
-    {
-      SVN_ERR(svn_cmdline_printf(pool, "%s\n", SVN_VER_NUMBER));
-      return SVN_NO_ERROR;
-    }
+    return svn_cmdline_printf(pool, "%s\n", SVN_VER_NUMBER);
 
   SVN_ERR(svn_cmdline_printf(pool, _("%s, version %s\n"
                                      "   compiled %s, %s\n\n"), pgm_name,

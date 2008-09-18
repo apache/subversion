@@ -137,9 +137,7 @@ read_chunk(apr_file_t *file, const char *path,
    * XXX: Check.
    */
   SVN_ERR(svn_io_file_seek(file, APR_SET, &offset, pool));
-  SVN_ERR(svn_io_file_read_full(file, buffer, length, NULL, pool));
-
-  return SVN_NO_ERROR;
+  return svn_io_file_read_full(file, buffer, length, NULL, pool);
 }
 
 
@@ -236,10 +234,8 @@ datasource_open(void *baton, svn_diff_datasource_e datasource)
   file_baton->buffer[idx] = file_baton->curp[idx] = curp;
   file_baton->endp[idx] = endp;
 
-  SVN_ERR(read_chunk(file_baton->file[idx], file_baton->path[idx],
-                     curp, length, 0, file_baton->pool));
-
-  return SVN_NO_ERROR;
+  return read_chunk(file_baton->file[idx], file_baton->path[idx],
+                    curp, length, 0, file_baton->pool);
 }
 
 

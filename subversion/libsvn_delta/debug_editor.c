@@ -62,11 +62,9 @@ set_target_revision(void *edit_baton,
   SVN_ERR(svn_stream_printf(eb->out, pool, "set_target_revision : %ld\n",
                             target_revision));
 
-  SVN_ERR(eb->wrapped_editor->set_target_revision(eb->wrapped_edit_baton,
-                                                  target_revision,
-                                                  pool));
-
-  return SVN_NO_ERROR;
+  return eb->wrapped_editor->set_target_revision(eb->wrapped_edit_baton,
+                                                 target_revision,
+                                                 pool);
 }
 
 static svn_error_t *
@@ -108,12 +106,10 @@ delete_entry(const char *path,
   SVN_ERR(svn_stream_printf(eb->out, pool, "delete_entry : %s:%ld\n",
                             path, base_revision));
 
-  SVN_ERR(eb->wrapped_editor->delete_entry(path,
-                                           base_revision,
-                                           pb->wrapped_dir_baton,
-                                           pool));
-
-  return SVN_NO_ERROR;
+  return eb->wrapped_editor->delete_entry(path,
+                                          base_revision,
+                                          pb->wrapped_dir_baton,
+                                          pool);
 }
 
 static svn_error_t *

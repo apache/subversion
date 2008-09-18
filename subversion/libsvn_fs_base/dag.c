@@ -423,8 +423,7 @@ set_entry(dag_node_t *parent,
                                                  TRUE, trail, pool));
   len = raw_entries_buf->len;
   SVN_ERR(svn_stream_write(wstream, raw_entries_buf->data, &len));
-  SVN_ERR(svn_stream_close(wstream));
-  return SVN_NO_ERROR;
+  return svn_stream_close(wstream);
 }
 
 
@@ -488,10 +487,8 @@ make_entry(dag_node_t **child_p,
   /* We can safely call set_entry because we already know that
      PARENT is mutable, and we just created CHILD, so we know it has
      no ancestors (therefore, PARENT cannot be an ancestor of CHILD) */
-  SVN_ERR(set_entry(parent, name, svn_fs_base__dag_get_id(*child_p),
-                    txn_id, trail, pool));
-
-  return SVN_NO_ERROR;
+  return set_entry(parent, name, svn_fs_base__dag_get_id(*child_p),
+                   txn_id, trail, pool);
 }
 
 
@@ -790,15 +787,13 @@ svn_fs_base__dag_clone_root(dag_node_t **root_p,
       SVN_ERR(svn_fs_base__set_txn_root(fs, txn_id, root_id, trail, pool));
     }
 
-  /* One way or another, root_id now identifies a cloned root node. */
-  SVN_ERR(svn_fs_base__dag_get_node(root_p, fs, root_id, trail, pool));
-
   /*
    * (Sung to the tune of "Home, Home on the Range", with thanks to
    * Randall Garrett and Isaac Asimov.)
    */
 
-  return SVN_NO_ERROR;
+  /* One way or another, root_id now identifies a cloned root node. */
+  return svn_fs_base__dag_get_node(root_p, fs, root_id, trail, pool);
 }
 
 
@@ -960,12 +955,10 @@ svn_fs_base__dag_remove_node(svn_fs_t *fs,
                                                txn_id, trail, pool));
 
   /* Delete the node revision itself. */
-  SVN_ERR(svn_fs_base__delete_node_revision(fs, id,
-                                            noderev->predecessor_id
-                                              ? FALSE : TRUE,
-                                            trail, pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_base__delete_node_revision(fs, id,
+                                           noderev->predecessor_id
+                                             ? FALSE : TRUE,
+                                           trail, pool);
 }
 
 
@@ -1014,9 +1007,7 @@ svn_fs_base__dag_delete_if_mutable(svn_fs_t *fs,
 
   /* ... then delete the node itself, after deleting any mutable
      representations and strings it points to. */
-  SVN_ERR(svn_fs_base__dag_remove_node(fs, id, txn_id, trail, pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_base__dag_remove_node(fs, id, txn_id, trail, pool);
 }
 
 
@@ -1073,15 +1064,13 @@ svn_fs_base__dag_get_contents(svn_stream_t **contents,
      the stream that we're not providing it a trail that lives across
      reads.  This means the stream will do each read in a one-off,
      temporary trail.  */
-  SVN_ERR(svn_fs_base__rep_contents_read_stream(contents, file->fs,
-                                                noderev->data_key,
-                                                FALSE, trail, pool));
+  return svn_fs_base__rep_contents_read_stream(contents, file->fs,
+                                               noderev->data_key,
+                                               FALSE, trail, pool);
 
   /* Note that we're not registering any `close' func, because there's
      nothing to cleanup outside of our trail.  When the trail is
      freed, the stream/baton will be too. */
-
-  return SVN_NO_ERROR;
 }
 
 
@@ -1363,10 +1352,8 @@ svn_fs_base__dag_copy(dag_node_t *to_node,
     }
 
   /* Set the entry in to_node to the new id. */
-  SVN_ERR(svn_fs_base__dag_set_entry(to_node, entry, id, txn_id,
-                                     trail, pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_base__dag_set_entry(to_node, entry, id, txn_id,
+                                    trail, pool);
 }
 
 
@@ -1452,10 +1439,8 @@ svn_fs_base__dag_commit_txn(svn_revnum_t *new_rev,
      so it's definitely newer than any previous revision's date. */
   date.data = svn_time_to_cstring(apr_time_now(), pool);
   date.len = strlen(date.data);
-  SVN_ERR(svn_fs_base__set_rev_prop(fs, *new_rev, SVN_PROP_REVISION_DATE,
-                                    &date, trail, pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_base__set_rev_prop(fs, *new_rev, SVN_PROP_REVISION_DATE,
+                                   &date, trail, pool);
 }
 
 
@@ -1594,7 +1579,5 @@ svn_fs_base__dag_adjust_mergeinfo_count(dag_node_t *node,
                                           APR_INT64_T_FMT),
                              node_rev->mergeinfo_count);
 
-  SVN_ERR(svn_fs_bdb__put_node_revision(fs, id, node_rev, trail, pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_bdb__put_node_revision(fs, id, node_rev, trail, pool);
 }
