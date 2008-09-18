@@ -2,7 +2,7 @@
  * string-test.c:  a collection of libsvn_string tests
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -29,11 +29,11 @@
 #include <apr_pools.h>
 #include <apr_file_io.h>
 
+#include "../svn_test.h"
+
 #include "svn_io.h"
 #include "svn_error.h"
 #include "svn_string.h"   /* This includes <apr_*.h> */
-
-#include "../svn_test.h"
 
 
 /* A quick way to create error messages.  */

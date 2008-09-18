@@ -193,44 +193,35 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 
     case svn_wc_notify_update_update:
       {
-        /* If this is an inoperative dir change, do no notification.
-           An inoperative dir change is when a directory gets closed
-           without any props having been changed. */
-        if (! ((n->kind == svn_node_dir)
-               && ((n->prop_state == svn_wc_notify_state_inapplicable)
-                   || (n->prop_state == svn_wc_notify_state_unknown)
-                   || (n->prop_state == svn_wc_notify_state_unchanged))))
+        if (n->content_state == svn_wc_notify_state_conflicted)
+            statchar_buf[0] = 'C';
+        else if (n->kind == svn_node_file)
           {
-            if (n->kind == svn_node_file)
-              {
-                if (n->content_state == svn_wc_notify_state_conflicted)
-                  statchar_buf[0] = 'C';
-                else if (n->content_state == svn_wc_notify_state_merged)
-                  statchar_buf[0] = 'G';
-                else if (n->content_state == svn_wc_notify_state_changed)
-                  statchar_buf[0] = 'U';
-              }
+            if (n->content_state == svn_wc_notify_state_merged)
+              statchar_buf[0] = 'G';
+            else if (n->content_state == svn_wc_notify_state_changed)
+              statchar_buf[0] = 'U';
+          }
 
-            if (n->prop_state == svn_wc_notify_state_conflicted)
-              statchar_buf[1] = 'C';
-            else if (n->prop_state == svn_wc_notify_state_merged)
-              statchar_buf[1] = 'G';
-            else if (n->prop_state == svn_wc_notify_state_changed)
-              statchar_buf[1] = 'U';
+        if (n->prop_state == svn_wc_notify_state_conflicted)
+          statchar_buf[1] = 'C';
+        else if (n->prop_state == svn_wc_notify_state_merged)
+          statchar_buf[1] = 'G';
+        else if (n->prop_state == svn_wc_notify_state_changed)
+          statchar_buf[1] = 'U';
 
-            if (n->lock_state == svn_wc_notify_lock_state_unlocked)
-              statchar_buf[2] = 'B';
+        if (n->lock_state == svn_wc_notify_lock_state_unlocked)
+          statchar_buf[2] = 'B';
 
-            if (statchar_buf[0] != ' ' || statchar_buf[1] != ' ')
-              nb->received_some_change = TRUE;
+        if (statchar_buf[0] != ' ' || statchar_buf[1] != ' ')
+          nb->received_some_change = TRUE;
 
-            if (statchar_buf[0] != ' ' || statchar_buf[1] != ' '
-                || statchar_buf[2] != ' ')
-              {
-                if ((err = svn_cmdline_printf(pool, "%s %s\n",
-                                              statchar_buf, path_local)))
-                  goto print_error;
-              }
+        if (statchar_buf[0] != ' ' || statchar_buf[1] != ' '
+            || statchar_buf[2] != ' ')
+          {
+            if ((err = svn_cmdline_printf(pool, "%s %s\n",
+                                          statchar_buf, path_local)))
+              goto print_error;
           }
       }
       break;

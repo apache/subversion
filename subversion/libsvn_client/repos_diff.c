@@ -1332,7 +1332,12 @@ close_directory(void *dir_baton,
       notify = svn_wc_create_notify(b->wcpath,
                                     svn_wc_notify_update_update, pool);
       notify->kind = svn_node_dir;
-      notify->content_state = svn_wc_notify_state_inapplicable;
+
+      /* In case of a tree conflict during merge, the diff callback
+       * sets content_state appropriately. So copy the state into the
+       * notify_t to make sure conflicts get displayed. */
+      notify->content_state = content_state;
+      
       notify->prop_state = prop_state;
       notify->lock_state = svn_wc_notify_lock_state_inapplicable;
       (*eb->notify_func)(eb->notify_baton, notify, pool);
