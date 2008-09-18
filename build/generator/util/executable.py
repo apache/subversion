@@ -23,20 +23,8 @@ def find(file, dirs=None):
 
 def output(cmd, strip=None):
   """Run a command and collect all output"""
-  try:
-    # Python 2.x
-    stdin, stdout = os.popen4(cmd)
-    assert(not stdin.close())
-  except AttributeError:
-    try:
-      # Python 1.x on Unix
-      import posix
-      stdout = posix.popen('%s 2>&1' % cmd)
-    except ImportError:
-      # Python 1.x on Windows (no cygwin)
-      # There's no easy way to collect output from stderr, so we'll
-      # just collect stdout.
-      stdout = os.popen(cmd)
+  stdin, stdout = os.popen4(cmd)
+  assert(not stdin.close())
   output = stdout.read()
   assert(not stdout.close())
   if strip:
