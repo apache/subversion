@@ -82,11 +82,9 @@ put_copy(svn_fs_t *fs,
   svn_fs_base__str_to_dbt(&key, copy_id);
   svn_fs_base__skel_to_dbt(&value, copy_skel, pool);
   svn_fs_base__trail_debug(trail, "copies", "put");
-  SVN_ERR(BDB_WRAP(fs, _("storing copy record"),
-                   bfd->copies->put(bfd->copies, trail->db_txn,
-                                    &key, &value, 0)));
-
-  return SVN_NO_ERROR;
+  return BDB_WRAP(fs, _("storing copy record"),
+                  bfd->copies->put(bfd->copies, trail->db_txn,
+                                   &key, &value, 0));
 }
 
 
@@ -125,8 +123,7 @@ svn_fs_bdb__reserve_copy_id(const char **id_p,
                             svn_fs_base__str_to_dbt(&result, next_key),
                             0);
 
-  SVN_ERR(BDB_WRAP(fs, _("bumping next copy key"), db_err));
-  return SVN_NO_ERROR;
+  return BDB_WRAP(fs, _("bumping next copy key"), db_err);
 }
 
 

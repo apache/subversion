@@ -567,9 +567,7 @@ complete_directory(struct edit_baton *eb,
   svn_pool_destroy(subpool);
 
   /* An atomic write of the whole entries file. */
-  SVN_ERR(svn_wc__entries_write(entries, adm_access, pool));
-
-  return SVN_NO_ERROR;
+  return svn_wc__entries_write(entries, adm_access, pool);
 }
 
 
@@ -1539,12 +1537,10 @@ open_directory(const char *path,
 
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access,
                               db->path, pool));
-  SVN_ERR(svn_wc__entry_modify(adm_access, NULL /* THIS_DIR */,
-                               &tmp_entry, flags,
-                               TRUE /* immediate write */,
-                               pool));
-
-  return SVN_NO_ERROR;
+  return svn_wc__entry_modify(adm_access, NULL /* THIS_DIR */,
+                              &tmp_entry, flags,
+                              TRUE /* immediate write */,
+                              pool);
 }
 
 
@@ -1824,14 +1820,12 @@ absent_file_or_dir(const char *path,
   /* And, of course, marking as absent is the whole point. */
   tmp_entry.absent = TRUE;
 
-  SVN_ERR(svn_wc__entry_modify(adm_access, name, &tmp_entry,
-                               (SVN_WC__ENTRY_MODIFY_KIND    |
-                                SVN_WC__ENTRY_MODIFY_REVISION |
-                                SVN_WC__ENTRY_MODIFY_DELETED |
-                                SVN_WC__ENTRY_MODIFY_ABSENT),
-                               TRUE /* immediate write */, pool));
-
-  return SVN_NO_ERROR;
+  return svn_wc__entry_modify(adm_access, name, &tmp_entry,
+                              (SVN_WC__ENTRY_MODIFY_KIND    |
+                               SVN_WC__ENTRY_MODIFY_REVISION |
+                               SVN_WC__ENTRY_MODIFY_DELETED |
+                               SVN_WC__ENTRY_MODIFY_ABSENT),
+                              TRUE /* immediate write */, pool);
 }
 
 
@@ -1906,11 +1900,12 @@ add_file(const char *path,
 
   /* When adding, there should be nothing with this name unless unversioned
      obstructions are permitted or the obstruction is scheduled for addition
-     without history. */
+     (or replacement) without history. */
   if (kind != svn_node_none)
     {
       if (eb->allow_unver_obstructions
-          || (entry && entry->schedule == svn_wc_schedule_add))
+          || (entry && ((entry->schedule == svn_wc_schedule_add
+                         || entry->schedule == svn_wc_schedule_replace))))
         {
           if (entry && entry->copied)
             {
@@ -2066,7 +2061,7 @@ choose_base_paths(const char **checksum_p,
   SVN_ERR(svn_wc_entry(&ent, fb->path, adm_access, FALSE, pool));
 
   replaced = ent && ent->schedule == svn_wc_schedule_replace;
-  use_revert_base = replaced && (ent->copyfrom_url != NULL);
+  use_revert_base = replaced;
   if (use_revert_base)
     {
       fb->text_base_path = svn_wc__text_revert_path(fb->path, FALSE, fb->pool);
@@ -2380,11 +2375,9 @@ loggy_tweak_entry(svn_stringbuf_t *log_accum,
       modify_flags |= SVN_WC__ENTRY_MODIFY_URL;
     }
 
-  SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_access,
-                                     path, &tmp_entry, modify_flags,
-                                     pool));
-
-  return SVN_NO_ERROR;
+  return svn_wc__loggy_entry_modify(&log_accum, adm_access,
+                                    path, &tmp_entry, modify_flags,
+                                    pool);
 }
 
 
@@ -2784,10 +2777,7 @@ close_file(void *file_baton,
   svn_wc_notify_lock_state_t lock_state;
 
   if (fb->skipped)
-    {
-      SVN_ERR(maybe_bump_dir_info(eb, fb->bump_info, pool));
-      return SVN_NO_ERROR;
-    }
+    return maybe_bump_dir_info(eb, fb->bump_info, pool);
 
   /* Was this an add-with-history, with no apply_textdelta? */
   if (fb->added_with_history && ! fb->received_textdelta)
@@ -3423,15 +3413,13 @@ make_editor(svn_revnum_t *target_revision,
                                                   pool));
     }
 
-  SVN_ERR(svn_delta_get_cancellation_editor(cancel_func,
-                                            cancel_baton,
-                                            inner_editor,
-                                            inner_baton,
-                                            editor,
-                                            edit_baton,
-                                            pool));
-
-  return SVN_NO_ERROR;
+  return svn_delta_get_cancellation_editor(cancel_func,
+                                           cancel_baton,
+                                           inner_editor,
+                                           inner_baton,
+                                           editor,
+                                           edit_baton,
+                                           pool);
 }
 
 
@@ -3923,10 +3911,8 @@ install_added_props(svn_stringbuf_t *log_accum,
                                  entry_props, pool));
 
   /* This writes a whole bunch of log commands to install wcprops.  */
-  SVN_ERR(accumulate_wcprops(log_accum, adm_access,
-                             dst_path, wc_props, pool));
-
-  return SVN_NO_ERROR;
+  return accumulate_wcprops(log_accum, adm_access,
+                            dst_path, wc_props, pool);
 }
 
 svn_error_t *
@@ -4104,9 +4090,7 @@ svn_wc_add_repos_file2(const char *dst_path,
   /* Write our accumulation of log entries into a log file */
   SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
 
-  SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
-
-  return SVN_NO_ERROR;
+  return svn_wc__run_log(adm_access, NULL, pool);
 }
 
 

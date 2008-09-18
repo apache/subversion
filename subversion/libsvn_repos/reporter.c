@@ -702,10 +702,9 @@ add_file_smartly(report_baton_t *b,
         }
     }
 
-  SVN_ERR(b->editor->add_file(path, parent_baton,
-                              *copyfrom_path, *copyfrom_rev,
-                              pool, new_file_baton));
-  return SVN_NO_ERROR;
+  return b->editor->add_file(path, parent_baton,
+                             *copyfrom_path, *copyfrom_rev,
+                             pool, new_file_baton);
 }
 
 

@@ -703,11 +703,9 @@ simple_prompt_next_creds(void **credentials_p,
     }
   ib->retries++;
 
-  SVN_ERR(prompt_for_simple_creds((svn_auth_cred_simple_t **) credentials_p,
-                                  pb, parameters, realmstring, FALSE,
-                                  ! no_auth_cache, pool));
-
-  return SVN_NO_ERROR;
+  return prompt_for_simple_creds((svn_auth_cred_simple_t **) credentials_p,
+                                 pb, parameters, realmstring, FALSE,
+                                 ! no_auth_cache, pool);
 }
 
 

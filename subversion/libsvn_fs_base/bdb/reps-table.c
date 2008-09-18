@@ -99,9 +99,7 @@ svn_fs_bdb__read_rep(representation_t **rep_p,
   skel = svn_fs_base__parse_skel(result.data, result.size, pool);
 
   /* Convert to a native type.  */
-  SVN_ERR(svn_fs_base__parse_representation_skel(rep_p, skel, pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_base__parse_representation_skel(rep_p, skel, pool);
 }
 
 
@@ -121,14 +119,12 @@ svn_fs_bdb__write_rep(svn_fs_t *fs,
 
   /* Now write the record. */
   svn_fs_base__trail_debug(trail, "representations", "put");
-  SVN_ERR(BDB_WRAP(fs, _("storing representation"),
-                   bfd->representations->put
-                   (bfd->representations, trail->db_txn,
-                    svn_fs_base__str_to_dbt(&query, key),
-                    svn_fs_base__skel_to_dbt(&result, skel, pool),
-                    0)));
-
-  return SVN_NO_ERROR;
+  return BDB_WRAP(fs, _("storing representation"),
+                  bfd->representations->put
+                  (bfd->representations, trail->db_txn,
+                   svn_fs_base__str_to_dbt(&query, key),
+                   svn_fs_base__skel_to_dbt(&result, skel, pool),
+                   0));
 }
 
 
@@ -172,9 +168,7 @@ svn_fs_bdb__write_new_rep(const char **key,
      svn_fs_base__str_to_dbt(&result, next_key),
      0);
 
-  SVN_ERR(BDB_WRAP(fs, _("bumping next representation key"), db_err));
-
-  return SVN_NO_ERROR;
+  return BDB_WRAP(fs, _("bumping next representation key"), db_err);
 }
 
 
@@ -200,7 +194,5 @@ svn_fs_bdb__delete_rep(svn_fs_t *fs,
        _("No such representation '%s'"), key);
 
   /* Handle any other error conditions.  */
-  SVN_ERR(BDB_WRAP(fs, _("deleting representation"), db_err));
-
-  return SVN_NO_ERROR;
+  return BDB_WRAP(fs, _("deleting representation"), db_err);
 }
