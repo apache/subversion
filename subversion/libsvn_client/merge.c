@@ -132,6 +132,8 @@
  * CHILDREN_WITH_MERGEINFO is initially created by get_mergeinfo_paths()
  * and outside of that function and its helpers should always meet the
  * criteria dictated in get_mergeinfo_paths()'s doc string.
+ *
+ * CHILDREN_WITH_MERGEINFO should never contain NULL elements.
  */
 
 /*-----------------------------------------------------------------------*/
@@ -287,6 +289,10 @@ typedef struct merge_cmd_baton_t {
      merge source, i.e. it is cleared on every call to do_directory_merge()
      or do_file_merge() in do_merge(). */
   apr_pool_t *pool;
+
+  /* Pool which has a lifetime at least as long as all the iterations over
+     all merge sources. */
+  apr_pool_t *long_pool;
 } merge_cmd_baton_t;
 
 apr_hash_t *
@@ -3254,36 +3260,51 @@ make_merge_conflict_error(const char *target_wcpath,
 
 /* Helper for do_directory_merge().
 
-   TARGET_WCPATH is a directory and CHILDREN_WITH_MERGEINFO is filled
-   with paths (svn_client__merge_path_t *) arranged in depth first order,
-   which have mergeinfo set on them or meet one of the other criteria
-   defined in get_mergeinfo_paths().  Remove any paths absent from disk
-   or scheduled for deletion from CHILDREN_WITH_MERGEINFO which are equal to
-   or are descendants of TARGET_WCPATH by setting those children to NULL.
-   Also remove the path from the NOTIFY_B->SKIPPED_PATHS hash. */
+   NOTIFY_B is cascased from the argument of the same name to
+   do_directory_merge().
+
+   Starting at the second element (if it exists) of
+   NOTIFY_B->CHILDREN_WITH_MERGEINFO find any children that represent
+   paths absent from disk or scheduled for deletion and then remove those
+   children from NOTIFY_B->CHILDREN_WITH_MERGEINFO and remove the paths
+   they represent from NOTIFY_B->SKIPPED_PATHS. */
 static void
-remove_absent_children(const char *target_wcpath,
-                       apr_array_header_t *children_with_mergeinfo,
-                       notification_receiver_baton_t *notify_b)
+remove_absent_children(notification_receiver_baton_t *notify_b)
 {
-  /* Before we try to override mergeinfo for skipped paths, make sure
-     the path isn't absent due to authz restrictions, because there's
-     nothing we can do about those. */
   int i;
-  for (i = 0; i < children_with_mergeinfo->nelts; i++)
+
+  for (i = 1; i < notify_b->children_with_mergeinfo->nelts; i++)
     {
       svn_client__merge_path_t *child =
-        APR_ARRAY_IDX(children_with_mergeinfo,
+        APR_ARRAY_IDX(notify_b->children_with_mergeinfo,
                       i, svn_client__merge_path_t *);
-      if (child
-          && (child->absent || child->scheduled_for_deletion)
-          && svn_path_is_ancestor(target_wcpath, child->path))
+      if (child && (child->absent || child->scheduled_for_deletion))
         {
           if (notify_b->skipped_paths)
-            apr_hash_set(notify_b->skipped_paths, child->path,
+            apr_hash_set(notify_b->skipped_paths,
+                         apr_pstrdup(notify_b->pool, child->path),
                          APR_HASH_KEY_STRING, NULL);
-          APR_ARRAY_IDX(children_with_mergeinfo, i,
-                        svn_client__merge_path_t *) = NULL;
+
+          /* If there are remaining children after the one we want to delete
+             then shift them over.  It would be nice if APR could delete
+             arbitrary elements in apr_array_header_t so we could avoid
+             this horror. */
+          if (i + 1 < notify_b->children_with_mergeinfo->nelts)
+            {
+              memmove(notify_b->children_with_mergeinfo->elts +
+                        i * notify_b->children_with_mergeinfo->elt_size,
+                      notify_b->children_with_mergeinfo->elts +
+                        (i + 1) * notify_b->children_with_mergeinfo->elt_size,
+                      notify_b->children_with_mergeinfo->elt_size *
+                        ((notify_b->children_with_mergeinfo->nelts - 1) - i));
+              /* Reprocess the "new" element [i] as it could also be absent
+                 or scheduled for deletion. */
+              --i;
+            }
+
+          /* Resize NOTIFY_B->CHILDREN_WITH_MERGEINFO to account
+             for the deleted child. */
+          --(notify_b->children_with_mergeinfo->nelts);
         }
     }
 }
@@ -5668,11 +5689,18 @@ do_directory_merge(const char *url1,
   svn_boolean_t same_urls = (strcmp(url1, url2) == 0);
 
   mergeinfo_behavior(&honor_mergeinfo, &record_mergeinfo, merge_b);
-
-  /* Initialize NOTIFY_B->CHILDREN_WITH_MERGEINFO. See the comment 
-     'THE CHILDREN_WITH_MERGEINFO ARRAY' at the start of this file. */
-  notify_b->children_with_mergeinfo =
-    apr_array_make(pool, 0, sizeof(svn_client__merge_path_t *));
+  
+  /* If URL1@REVISION1:URL2@REVISION2 is the first (possibly of many) merge
+     source(s) being merged by do_merge() then initialize
+     NOTIFY_B->CHILDREN_WITH_MERGEINFO. */
+  if (notify_b->children_with_mergeinfo == NULL)
+    {
+      /* Initialize NOTIFY_B->CHILDREN_WITH_MERGEINFO. See the comment 
+         'THE CHILDREN_WITH_MERGEINFO ARRAY' at the start of this file. */
+      notify_b->children_with_mergeinfo =
+        apr_array_make(merge_b->long_pool, 0,
+                       sizeof(svn_client__merge_path_t *));
+    }
 
   /* If our merge sources aren't related to each other, or don't come
      from the same repository as our target, mergeinfo is meaningless
@@ -5712,20 +5740,23 @@ do_directory_merge(const char *url1,
   /* Point our RA_SESSION to the URL of our youngest merge source side. */
   ra_session = is_rollback ? merge_b->ra_session1 : merge_b->ra_session2;
 
-  /* Fill NOTIFY_B->CHILDREN_WITH_MERGEINFO with child paths (const
-     svn_client__merge_path_t *) which might have intersecting merges
-     because they meet one or more of the criteria described in
-     get_mergeinfo_paths(). Here the paths are arranged in a depth
-     first order. */
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &source_root_url, pool));
   SVN_ERR(svn_client__path_relative_to_root(&mergeinfo_path, primary_url,
                                             source_root_url, TRUE, NULL,
                                             NULL, pool));
-  SVN_ERR(get_mergeinfo_paths(notify_b->children_with_mergeinfo, merge_b,
-                              mergeinfo_path, target_entry, source_root_url,
-                              url1, url2, revision1, revision2,
-                              ra_session, adm_access,
-                              depth, pool));
+
+  /* Per the rules of NOTIFY_B->CHILDREN_WITH_MERGEINFO, this array should
+     always contain at least one element representing the the merge target
+     itself.  If it is empty that implies this is the first merge source
+     being merged by do_merge() so we must walk the WC to find the children
+     of TARGET_ENTRY that have explicit mergeinfo or otherwise need to
+     be accounted for. */
+  if (!notify_b->children_with_mergeinfo->nelts)
+    SVN_ERR(get_mergeinfo_paths(notify_b->children_with_mergeinfo, merge_b,
+                                mergeinfo_path, target_entry, source_root_url,
+                                url1, url2, revision1, revision2,
+                                ra_session, adm_access,
+                                depth, merge_b->long_pool));
 
   /* The first item from the NOTIFY_B->CHILDREN_WITH_MERGEINFO is always
      the target thanks to depth-first ordering. */
@@ -5936,11 +5967,13 @@ do_directory_merge(const char *url1,
          merges, minus any unresolved conflicts and skips. */
       apr_hash_t *merges;
 
-      /* Remove absent children at or under TARGET_WCPATH from
-         NOTIFY_B->SKIPPED_PATHS and NOTIFY_B->CHILDREN_WITH_MERGEINFO
-         before we calculate the merges performed. */
-      remove_absent_children(merge_b->target,
-                             notify_b->children_with_mergeinfo, notify_b);
+      /* We can't override mergeinfo for paths skipped because they are
+         absent from disk and we don't need to override mergeinfo for
+         paths scheduled for deletion.  So before we start recording
+         mergeinfo remove from NOTIFY_B->SKIPPED_PATHS and
+         NOTIFY_B->CHILDREN_WITH_MERGEINFO any children of TARGET_PATH that
+         are absent from disk or scheduled for deletion. */
+      remove_absent_children(notify_b);
 
       /* Filter any ranges from MERGE_B->TARGET's own history, there is no
          need to record this explicitly in mergeinfo, it is already part of
@@ -6273,6 +6306,7 @@ do_merge(apr_array_header_t *merge_sources,
   merge_cmd_baton.target_missing_child = FALSE;
   merge_cmd_baton.target = target;
   merge_cmd_baton.pool = subpool;
+  merge_cmd_baton.long_pool = pool;
   merge_cmd_baton.merge_options = merge_options;
   merge_cmd_baton.diff3_cmd = diff3_cmd;
 
