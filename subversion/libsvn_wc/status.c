@@ -158,6 +158,10 @@ struct dir_baton
   apr_time_t ood_last_cmt_date;
   svn_node_kind_t ood_kind;
   const char *ood_last_cmt_author;
+
+  /* This means (in terms of 'svn status') that some child is involved in
+     a tree conflict. */
+  svn_boolean_t tree_conflicted;
 };
 
 
@@ -254,6 +258,7 @@ assemble_status(svn_wc_status2_t **status,
   svn_boolean_t prop_modified_p = FALSE;
   svn_boolean_t locked_p = FALSE;
   svn_boolean_t switched_p = FALSE;
+  svn_boolean_t tree_conflicted_p = FALSE;
 #ifdef HAVE_SYMLINK
   svn_boolean_t wc_special;
 #endif /* HAVE_SYMLINK */
@@ -300,6 +305,7 @@ assemble_status(svn_wc_status2_t **status,
       stat->locked = FALSE;
       stat->copied = FALSE;
       stat->switched = FALSE;
+      stat->tree_conflicted = FALSE;
 
       /* If this path has no entry, but IS present on disk, it's
          unversioned.  If this file is being explicitly ignored (due
@@ -401,7 +407,8 @@ assemble_status(svn_wc_status2_t **status,
         final_prop_status = svn_wc_status_modified;
 
       if (entry->prejfile || entry->conflict_old ||
-          entry->conflict_new || entry->conflict_wrk)
+          entry->conflict_new || entry->conflict_wrk ||
+          entry->tree_conflict_data)
         {
           svn_boolean_t text_conflict_p, prop_conflict_p;
           const char *parent_dir;
@@ -411,8 +418,9 @@ assemble_status(svn_wc_status2_t **status,
           else  /* non-directory, that's all we need to know */
             parent_dir = svn_path_dirname(path, pool);
 
-          SVN_ERR(svn_wc_conflicted_p(&text_conflict_p, &prop_conflict_p,
-                                      parent_dir, entry, pool));
+          SVN_ERR(svn_wc_conflicted_p2(&text_conflict_p, &prop_conflict_p,
+                                       &tree_conflicted_p, parent_dir, entry,
+                                       pool));
 
           if (text_conflict_p)
             final_text_status = svn_wc_status_conflicted;
@@ -494,7 +502,7 @@ assemble_status(svn_wc_status2_t **status,
         && ((final_prop_status == svn_wc_status_none)
             || (final_prop_status == svn_wc_status_normal))
         && (! locked_p) && (! switched_p) && (! entry->lock_token)
-        && (! repos_lock) && (! entry->changelist))
+        && (! repos_lock) && (! entry->changelist) && (! tree_conflicted_p))
       {
         *status = NULL;
         return SVN_NO_ERROR;
@@ -518,6 +526,7 @@ assemble_status(svn_wc_status2_t **status,
   stat->ood_last_cmt_date = 0;
   stat->ood_kind = svn_node_none;
   stat->ood_last_cmt_author = NULL;
+  stat->tree_conflicted = tree_conflicted_p;
 
   *status = stat;
 
@@ -1385,12 +1394,14 @@ svn_wc__is_sendable_status(const svn_wc_status2_t *status,
   if (status->text_status == svn_wc_status_unversioned)
     return TRUE;
 
-  /* If the text or property states are interesting, send it. */
+  /* If the text, property or tree state is interesting, send it. */
   if ((status->text_status != svn_wc_status_none)
       && (status->text_status != svn_wc_status_normal))
     return TRUE;
   if ((status->prop_status != svn_wc_status_none)
       && (status->prop_status != svn_wc_status_normal))
+    return TRUE;
+  if (status->tree_conflicted)
     return TRUE;
 
   /* If it's locked or switched, send it. */
@@ -1753,6 +1764,9 @@ close_directory(void *dir_baton,
               eb->anchor_status->ood_last_cmt_author =
                 apr_pstrdup(pool, db->ood_last_cmt_author);
             }
+
+          if (eb->anchor_status->entry->tree_conflict_data)
+            eb->anchor_status->tree_conflicted = svn_wc_status_conflicted;
         }
     }
 
@@ -1994,7 +2008,6 @@ close_edit(void *edit_baton,
 
       if (kind == svn_node_dir)
         {
-          svn_wc_adm_access_t *tgt_access;
           const svn_wc_entry_t *tgt_entry;
 
           err = svn_wc_entry(&tgt_entry, full_path, eb->adm_access,
@@ -2013,6 +2026,8 @@ close_edit(void *edit_baton,
             }
           else
             {
+              svn_wc_adm_access_t *tgt_access;
+
               err = svn_wc_adm_retrieve(&tgt_access, eb->adm_access,
                                         full_path, pool);
               if (err) goto cleanup;

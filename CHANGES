@@ -21,6 +21,18 @@ http://svn.collab.net/repos/svn/tags/1.6.0
  * Bindings
 
 
+Version 1.5.3
+(?? ??? 2008, from /branches/1.5.x)
+http://svn.collab.net/repos/svn/tags/1.5.2
+
+ User-visible changes:
+  * Allow switch to continue after deleting locally modified dirs (issue #2505)
+
+ Developer-visible changes:
+  * Allow the tests to run as non-administrator on Windows Vista (r31203)
+  * fixed: bindings test for Perl 5.10 (r31546)
+
+
 Version 1.5.2
 (29 Aug 2008, from /branches/1.5.x)
 http://svn.collab.net/repos/svn/tags/1.5.2

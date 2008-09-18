@@ -654,6 +654,7 @@ def update_delete_modified_files(sbox):
   # expect an 'obstructed update' error (see issue #1196), but
   # nowadays we expect success (see issue #1806).
   expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E'       : Item(status='C '), # tree conflict (issue #2282)
     'A/B/E/alpha' : Item(status='D '),
     'A/D/G'       : Item(status='D '),
     })
@@ -667,6 +668,7 @@ def update_delete_modified_files(sbox):
   expected_disk.remove('A/D/G/rho')
   expected_disk.remove('A/D/G/tau')
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak('A/B/E', status='C ') # tree conflict (issue #2282)
   expected_status.remove('A/B/E/alpha')
   expected_status.remove('A/D/G')
   expected_status.remove('A/D/G/pi')
@@ -935,6 +937,7 @@ def prop_update_on_scheduled_delete(sbox):
 
   # Expected output tree for update of other_wc.
   expected_output = svntest.wc.State(other_wc, {
+    ''     : Item(status='C '), # tree conflict (issue #2282)
     'iota' : Item(status=' U'),
     })
 
@@ -944,6 +947,7 @@ def prop_update_on_scheduled_delete(sbox):
 
   # Expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(other_wc, 2)
+  expected_status.tweak('', status='C ') # tree conflict (issue #2282)
   expected_status.tweak('iota', status='D ')
 
   # Do the update and check the results in three ways.
@@ -1031,6 +1035,7 @@ def update_deleted_missing_dir(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta')
   expected_status.remove('A/D/H', 'A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi')
+  expected_status.tweak('A/B', 'A/D', status='C ')
 
   # Do the update, specifying the deleted paths explicitly.
   svntest.actions.run_and_verify_update(wc_dir,
@@ -1039,6 +1044,15 @@ def update_deleted_missing_dir(sbox):
                                         expected_status,
                                         None, None, None, None, None,
                                         0, "-r", "2", E_path, H_path)
+
+  # This update created tree conflicts ("update tried to
+  # delete a directory that was locally deleted"), marking
+  # C  A/B
+  # C  A/D
+  # Just ignore them, i.e. resolve.
+  B_path = os.path.join(wc_dir, 'A', 'B')
+  D_path = os.path.join(wc_dir, 'A', 'D')
+  svntest.main.run_svn(None, 'resolved',  B_path, D_path)
 
   # Update back to the old revision again
   svntest.main.run_svn(None,
@@ -1050,6 +1064,7 @@ def update_deleted_missing_dir(sbox):
 
   # This time we're updating the whole working copy
   expected_status.tweak(wc_rev=2)
+  expected_status.tweak('A/B', 'A/D', status='  ')
 
   # Do the update, on the whole working copy this time
   svntest.actions.run_and_verify_update(wc_dir,
@@ -1101,6 +1116,14 @@ def another_hudson_problem(sbox):
                                      ['D    '+G_path+'\n',
                                       'Updated to revision 3.\n'], [],
                                      'up', G_path)
+
+  # This update created a tree conflict ("update tried to
+  # delete a directory that was locally deleted"), marking
+  # C  A/D. Just ignore it, i.e. resolve it.
+  D_path = os.path.join(wc_dir, 'A', 'D')
+  svntest.actions.run_and_verify_svn(None,
+    ["Resolved conflicted state of '" + D_path + "'\n"], [],
+    'resolved',  D_path)
 
   # Both G and gamma should be 'deleted', update should produce no output
   expected_output = svntest.wc.State(wc_dir, { })
@@ -3921,6 +3944,188 @@ def restarted_update_should_delete_dir_prop(sbox):
                                         expected_status,
                                         check_props = True)
 
+#----------------------------------------------------------------------
+
+# Detect tree conflicts among files and directories,
+# edited or deleted in a deep directory structure.
+#
+# See use cases 1-3 in notes/tree-conflicts/use-cases.txt for background.
+
+# convenience definitions
+leaf_edit = svntest.actions.deep_trees_leaf_edit
+tree_del = svntest.actions.deep_trees_tree_del
+leaf_del = svntest.actions.deep_trees_leaf_del
+
+state_after_leaf_edit = svntest.actions.deep_trees_after_leaf_edit
+state_after_leaf_del = svntest.actions.deep_trees_after_leaf_del
+state_after_tree_del = svntest.actions.deep_trees_after_tree_del
+
+DeepTreesTestCase = svntest.actions.DeepTreesTestCase
+
+
+def tree_conflicts_on_update_1_1(sbox):
+  "tree conflicts on update 1.1"
+
+  # use case 1, as in notes/tree-conflicts/use-cases.txt
+  # 1.1) local tree delete, incoming leaf edit
+
+  expected_output = wc.State('', {
+    'F'                 : Item(status='C '),
+    'D'                 : Item(status='C '),
+    'DF'                : Item(status='C '),
+    'DD'                : Item(status='C '),
+    'DDF'               : Item(status='C '),
+    'DDD'               : Item(status='C '),
+    })
+
+  expected_disk = state_after_tree_del
+
+  expected_status = state_after_tree_del.copy()
+  expected_status.add({ '' : Item(status='  ') }) # also set root's attributes
+  expected_status.tweak(wc_rev=3)
+  expected_status.tweak('F', 'D', 'DF', 'DD', 'DDF', 'DDD', status='C ')
+
+  svntest.actions.deep_trees_run_tests_scheme_for_update(sbox,
+    [ DeepTreesTestCase("local_tree_del_incoming_leaf_edit",
+                        tree_del,
+                        leaf_edit,
+                        expected_output,
+                        expected_disk,
+                        expected_status) ] )
+
+
+def tree_conflicts_on_update_1_2(sbox):
+  "tree conflicts on update 1.2"
+
+  # 1.2) local tree delete, incoming leaf delete
+
+  expected_output = wc.State('', {
+    'F'                 : Item(status='C '),
+    'D'                 : Item(status='C '),
+    'DF'                : Item(status='C '),
+    'DD'                : Item(status='C '),
+    'DDF'               : Item(status='C '),
+    'DDD'               : Item(status='C '),
+    })
+
+  expected_disk = state_after_tree_del
+
+  expected_status = state_after_tree_del.copy()
+  expected_status.add({ '' : Item(status='  ') }) # also set root's attributes
+  expected_status.tweak(wc_rev=3)
+  expected_status.tweak('F', 'D', 'DF', 'DD', 'DDF', 'DDD', status='C ')
+
+  svntest.actions.deep_trees_run_tests_scheme_for_update(sbox,
+    [ DeepTreesTestCase("local_tree_del_incoming_leaf_del",
+                        tree_del,
+                        leaf_del,
+                        expected_output,
+                        expected_disk,
+                        expected_status) ] )
+
+
+
+def tree_conflicts_on_update_2_1(sbox):
+  "tree conflicts on update 2.1"
+
+  # use case 2, as in notes/tree-conflicts/use-cases.txt
+  # 2.1) local leaf edit, incoming tree delete
+
+  expected_output = wc.State('', {
+    'F'                 : Item(status='C '),
+    'D'                 : Item(status='C '),
+    'DF'                : Item(status='C '),
+    'DD'                : Item(status='C '),
+    'DDF'               : Item(status='C '),
+    'DDD'               : Item(status='C '),
+    })
+
+  expected_disk = state_after_leaf_edit
+
+  expected_status = state_after_leaf_edit.copy()
+  expected_status.add({ '' : Item(status='  ') }) # also set root's attributes
+  expected_status.tweak(wc_rev=3)
+  expected_status.tweak('F', 'D', 'DF', 'DD', 'DDF', 'DDD', status='C ')
+  expected_status.tweak('F/alpha', 'DF/D1/beta', 'DDF/D1/D2/gamma',
+                        status='M ')
+  expected_status.tweak('D/D1/delta', 'DD/D1/D2/epsilon',
+                        'DDD/D1/D2/D3/zeta', status='A ')
+
+  svntest.actions.deep_trees_run_tests_scheme_for_update(sbox,
+    [ DeepTreesTestCase("local_leaf_edit_incoming_tree_del",
+                        leaf_edit,
+                        tree_del,
+                        expected_output,
+                        expected_disk,
+                        expected_status) ] )
+
+
+
+def tree_conflicts_on_update_2_2(sbox):
+  "tree conflicts on update 2.2"
+
+  # 2.2) local leaf delete, incoming tree delete
+
+  expected_output = wc.State('', {
+    'F'                 : Item(status='C '),
+    'D'                 : Item(status='C '),
+    'DF'                : Item(status='C '),
+    'DD'                : Item(status='C '),
+    'DDF'               : Item(status='C '),
+    'DDD'               : Item(status='C '),
+    })
+
+  expected_disk = state_after_leaf_del
+
+  expected_status = svntest.actions.deep_trees_virginal_state.copy()
+  expected_status.add({ '' : Item(status='  ') }) # also set root's attributes
+  expected_status.tweak(wc_rev=3)
+  expected_status.tweak('F', 'D', 'DF', 'DD', 'DDF', 'DDD', status='C ')
+  expected_status.tweak('F/alpha', 'DF/D1/beta', 'DDF/D1/D2/gamma',
+                        'D/D1', 'DD/D1/D2', 'DDD/D1/D2/D3', status='D ')
+
+  svntest.actions.deep_trees_run_tests_scheme_for_update(sbox,
+    [ DeepTreesTestCase("local_leaf_del_incoming_tree_del",
+                        leaf_del,
+                        tree_del,
+                        expected_output,
+                        expected_disk,
+                        expected_status) ] )
+
+
+
+def tree_conflicts_on_update_3(sbox):
+  "tree conflicts on update 3"
+
+  # use case 3, as in notes/tree-conflicts/use-cases.txt
+  # local tree delete, incoming tree delete
+
+  expected_output = wc.State('', {
+    'F'                 : Item(status='C '),
+    'D'                 : Item(status='C '),
+    'DF'                : Item(status='C '),
+    'DD'                : Item(status='C '),
+    'DDF'               : Item(status='C '),
+    'DDD'               : Item(status='C '),
+    })
+
+  expected_disk = state_after_tree_del
+
+  expected_status = state_after_tree_del.copy()
+  expected_status.add({ '' : Item(status='  ') }) # also set root's attributes
+  expected_status.tweak(wc_rev=3)
+  expected_status.tweak('F', 'D', 'DF', 'DD', 'DDF', 'DDD', status='C ')
+
+  svntest.actions.deep_trees_run_tests_scheme_for_update(sbox,
+    [ DeepTreesTestCase("local_tree_del_incoming_tree_del",
+                        tree_del,
+                        tree_del,
+                        expected_output,
+                        expected_disk,
+                        expected_status) ] )
+
+
+
 #######################################################################
 # Run the tests
 
@@ -3957,10 +4162,10 @@ test_list = [ None,
               update_eolstyle_handling,
               update_copy_of_old_rev,
               forced_update,
-              forced_update_failures,
+              XFail(forced_update_failures),
               XFail(update_wc_on_windows_drive),
-              update_wc_with_replaced_file,
-              update_with_obstructing_additions,
+              XFail(update_wc_with_replaced_file),
+              XFail(update_with_obstructing_additions),
               update_conflicted,
               SkipUnless(mergeinfo_update_elision,
                          server_has_mergeinfo),
@@ -3975,6 +4180,11 @@ test_list = [ None,
               eof_in_interactive_conflict_resolver,
               update_uuid_changed,
               restarted_update_should_delete_dir_prop,
+              XFail(tree_conflicts_on_update_1_1),
+              XFail(tree_conflicts_on_update_1_2),
+              XFail(tree_conflicts_on_update_2_1),
+              XFail(tree_conflicts_on_update_2_2),
+              XFail(tree_conflicts_on_update_3),
              ]
 
 if __name__ == '__main__':

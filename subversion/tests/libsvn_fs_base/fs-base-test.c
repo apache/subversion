@@ -1,7 +1,7 @@
 /* fs-test.c --- tests for the filesystem
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -19,13 +19,14 @@
 #include <string.h>
 #include <apr_pools.h>
 
+#include "../svn_test.h"
+
 #include "svn_pools.h"
 #include "svn_time.h"
 #include "svn_string.h"
 #include "svn_fs.h"
 #include "svn_md5.h"
 
-#include "../svn_test.h"
 #include "../svn_test_fs.h"
 
 #include "../../libsvn_fs_base/id.h"

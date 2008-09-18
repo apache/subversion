@@ -450,6 +450,10 @@ svn_cl__log(apr_getopt_t *os,
         return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                 _("'with-all-revprops' option only valid in"
                                   " XML mode"));
+      if (opt_state->no_revprops)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("'with-no-revprops' option only valid in"
+                                  " XML mode"));
       if (opt_state->revprop_table != NULL)
         return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                 _("'with-revprop' option only valid in"
@@ -548,6 +552,12 @@ svn_cl__log(apr_getopt_t *os,
 
       if (opt_state->all_revprops)
         revprops = NULL;
+      else if(opt_state->no_revprops)
+	{
+	  revprops = apr_array_make(pool,
+				    0,
+                                    sizeof(char *));
+	}
       else if (opt_state->revprop_table != NULL)
         {
           apr_hash_index_t *hi;
