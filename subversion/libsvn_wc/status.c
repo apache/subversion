@@ -212,6 +212,8 @@ struct file_baton
 /* Fill in *STATUS for PATH, whose entry data is in ENTRY.  Allocate
    *STATUS in POOL.
 
+   ADM_ACCESS is an access baton for PATH.
+
    ENTRY may be null, for non-versioned entities.  In this case, we
    will assemble a special status structure item which implies a
    non-versioned thing.
@@ -259,6 +261,7 @@ assemble_status(svn_wc_status2_t **status,
   svn_boolean_t locked_p = FALSE;
   svn_boolean_t switched_p = FALSE;
   svn_boolean_t has_tree_conflicted_children = FALSE;
+  svn_boolean_t tree_conflicted_p;
 #ifdef HAVE_SYMLINK
   svn_boolean_t wc_special;
 #endif /* HAVE_SYMLINK */
@@ -293,9 +296,17 @@ assemble_status(svn_wc_status2_t **status,
     SVN_ERR(svn_io_check_special_path(path, &path_kind, &path_special,
                                       pool));
 
+  /* Find out whether it's a tree conflict victim. */
+  {
+    svn_wc_conflict_description_t *conflict;
+
+    SVN_ERR(svn_wc_get_tree_conflict(&conflict, path, adm_access, pool));
+    tree_conflicted_p = (conflict != NULL);
+  }
+
   if (! entry)
     {
-      /* return a blank structure. */
+      /* return a fairly blank structure. */
       stat = apr_pcalloc(pool, sizeof(*stat));
       stat->entry = NULL;
       stat->text_status = svn_wc_status_none;
@@ -306,6 +317,7 @@ assemble_status(svn_wc_status2_t **status,
       stat->copied = FALSE;
       stat->switched = FALSE;
       stat->has_tree_conflicted_children = FALSE;
+      stat->is_tree_conflict_victim = tree_conflicted_p;
 
       /* If this path has no entry, but IS present on disk, it's
          unversioned.  If this file is being explicitly ignored (due
@@ -418,6 +430,9 @@ assemble_status(svn_wc_status2_t **status,
           else  /* non-directory, that's all we need to know */
             parent_dir = svn_path_dirname(path, pool);
 
+          /* The entry says there was a conflict, but the user might have
+             marked it as resolved by deleting the artifact files, so check
+             for that. */
           SVN_ERR(svn_wc_conflicted_p2(&text_conflict_p, &prop_conflict_p,
                                        &has_tree_conflicted_children,
                                        parent_dir, entry, pool));
@@ -502,7 +517,7 @@ assemble_status(svn_wc_status2_t **status,
         && ((final_prop_status == svn_wc_status_none)
             || (final_prop_status == svn_wc_status_normal))
         && (! locked_p) && (! switched_p) && (! entry->lock_token)
-        && (! repos_lock) && (! entry->changelist)
+        && (! repos_lock) && (! entry->changelist) && (! tree_conflicted_p)
         && (! has_tree_conflicted_children))
       {
         *status = NULL;
@@ -528,6 +543,7 @@ assemble_status(svn_wc_status2_t **status,
   stat->ood_kind = svn_node_none;
   stat->ood_last_cmt_author = NULL;
   stat->has_tree_conflicted_children = has_tree_conflicted_children;
+  stat->is_tree_conflict_victim = tree_conflicted_p;
 
   *status = stat;
 
@@ -1403,6 +1419,8 @@ svn_wc__is_sendable_status(const svn_wc_status2_t *status,
       && (status->prop_status != svn_wc_status_normal))
     return TRUE;
   if (status->has_tree_conflicted_children)
+    return TRUE;
+  if (status->is_tree_conflict_victim)
     return TRUE;
 
   /* If it's locked or switched, send it. */

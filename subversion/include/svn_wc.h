@@ -2515,6 +2515,11 @@ typedef struct svn_wc_status2_t
    */
   svn_boolean_t has_tree_conflicted_children;
 
+  /** True if the entry is the victim of a tree conflict.
+   * @since New in 1.6
+   */
+  svn_boolean_t is_tree_conflict_victim;
+
   /* NOTE! Please update svn_wc_dup_status2() when adding new fields here. */
 } svn_wc_status2_t;
 
