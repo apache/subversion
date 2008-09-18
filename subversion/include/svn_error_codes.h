@@ -1195,6 +1195,21 @@ SVN_ERROR_START
              SVN_ERR_MISC_CATEGORY_START + 29,
              "Couldn't perform atomic initialization")
 
+  /** @since New in 1.6. */
+  SVN_ERRDEF(SVN_ERR_SQLITE_ERROR,
+             SVN_ERR_MISC_CATEGORY_START + 30,
+             "SQLite error")
+
+  /** @since New in 1.6. */
+  SVN_ERRDEF(SVN_ERR_SQLITE_READONLY,
+             SVN_ERR_MISC_CATEGORY_START + 31,
+             "Attempted to write to readonly SQLite db")
+
+  /** @since New in 1.6. */
+  SVN_ERRDEF(SVN_ERR_SQLITE_UNSUPPORTED_SCHEMA,
+             SVN_ERR_MISC_CATEGORY_START + 32,
+             "Unsupported schema found in SQLite db")
+
   /* command-line client errors */
 
   SVN_ERRDEF(SVN_ERR_CL_ARG_PARSING_ERROR,

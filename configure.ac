@@ -110,6 +110,13 @@ fi
 dnl Find Apache with a recent-enough magic module number
 SVN_FIND_APACHE(20020903)
 
+dnl Search for SQLite
+SQLITE_ALLOWED_PATTERN="3\.5\..*|3\.6\..*"
+SQLITE_RECOMMENDED_VER="3.5.9"
+SQLITE_URL="http://www.sqlite.org/sqlite-${SQLITE_RECOMMENDED_VER}.tar.gz"
+SVN_LIB_SQLITE(${SQLITE_ALLOWED_PATTERN}, ${SQLITE_RECOMMENDED_VER},
+               ${SQLITE_URL})
+
 dnl Set up a number of directories ---------------------
 
 dnl Create SVN_BINDIR for proper substitution
@@ -338,11 +345,11 @@ if test "$with_gnome_keyring" != "no"; then
   if test "$enable_shared" = "yes"; then
     if test "$APR_HAS_DSO" = "yes"; then
       if test "$HAVE_PKG_CONFIG" = "yes"; then
-        AC_MSG_CHECKING([for GLib, D-Bus and GNOME Keyring .pc files])
-        if pkg-config --exists glib-2.0 dbus-1 gnome-keyring-1; then
+        AC_MSG_CHECKING([for GLib and GNOME Keyring .pc files])
+        if pkg-config --exists glib-2.0 gnome-keyring-1; then
           AC_MSG_RESULT([yes])
           old_CPPFLAGS="$CPPFLAGS"
-          SVN_GNOME_KEYRING_INCLUDES="`pkg-config --cflags glib-2.0 dbus-1 gnome-keyring-1`"
+          SVN_GNOME_KEYRING_INCLUDES="`pkg-config --cflags glib-2.0 gnome-keyring-1`"
           CPPFLAGS="$CPPFLAGS $SVN_GNOME_KEYRING_INCLUDES"
           AC_CHECK_HEADER(gnome-keyring.h, with_gnome_keyring=yes, with_gnome_keyring=no)
           AC_MSG_CHECKING([for GNOME Keyring])
@@ -351,14 +358,14 @@ if test "$with_gnome_keyring" != "no"; then
             AC_DEFINE([SVN_HAVE_GNOME_KEYRING], [1], 
                       [Is GNOME Keyring support enabled?])
             CPPFLAGS="$old_CPPFLAGS"
-            SVN_GNOME_KEYRING_LIBS="`pkg-config --libs glib-2.0 dbus-1 gnome-keyring-1`"
+            SVN_GNOME_KEYRING_LIBS="`pkg-config --libs glib-2.0 gnome-keyring-1`"
           else
             AC_MSG_RESULT([no])
             AC_MSG_ERROR([cannot find GNOME Keyring])
           fi
         else
           AC_MSG_RESULT([no])
-          AC_MSG_ERROR([cannot find GLib, D-Bus and GNOME Keyring .pc files])
+          AC_MSG_ERROR([cannot find GLib and GNOME Keyring .pc files])
         fi
       else
         AC_MSG_ERROR([cannot find pkg-config])

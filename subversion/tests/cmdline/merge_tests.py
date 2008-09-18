@@ -12930,7 +12930,6 @@ def natural_history_filtering(sbox):
   # former should be filtered, but the latter allowed and recorded on the
   # target.  See
   # http://subversion.tigris.org/servlets/ReadMsg?listName=dev&msgNo=142777.
-  # Marked as XFail until the problems described there are resolved. 
   #
   # To set up a situation where this can occur we'll do the following:
   #
@@ -14125,8 +14124,8 @@ test_list = [ None,
               SkipUnless(merge_adds_mergeinfo_correctly,
                          server_has_mergeinfo),
               merge_file_with_space_in_its_path,
-              XFail(SkipUnless(natural_history_filtering,
-                               server_has_mergeinfo)),
+              SkipUnless(natural_history_filtering,
+                         server_has_mergeinfo),
               tree_conflicts_and_obstructions,
               tree_conflicts_on_merge_local_ci_4_1,
               tree_conflicts_on_merge_local_ci_4_2,

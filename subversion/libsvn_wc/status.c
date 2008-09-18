@@ -2018,7 +2018,6 @@ close_edit(void *edit_baton,
 
       if (kind == svn_node_dir)
         {
-          svn_wc_adm_access_t *tgt_access;
           const svn_wc_entry_t *tgt_entry;
 
           err = svn_wc_entry(&tgt_entry, full_path, eb->adm_access,
@@ -2037,6 +2036,8 @@ close_edit(void *edit_baton,
             }
           else
             {
+              svn_wc_adm_access_t *tgt_access;
+
               err = svn_wc_adm_retrieve(&tgt_access, eb->adm_access,
                                         full_path, pool);
               if (err) goto cleanup;

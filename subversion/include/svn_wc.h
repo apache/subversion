@@ -1805,7 +1805,7 @@ typedef enum svn_wc_schedule_t
  *
  * @since New in 1.5
  */
-#define SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN -1
+#define SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN (-1)
 
 /** @} */
 
@@ -5159,6 +5159,19 @@ svn_wc_set_changelist(const char *path,
                       apr_pool_t *pool);
 
 /** @} */
+
+/** Set @a *tree_conflict to a newly allocated @c svn_wc_conflict_description_t
+ * structure describing the tree conflict state of @a victim_path, or to null
+ * if @a victim_path is not in a state of tree conflict. @a adm_access is the
+ * admin access baton for @a victim_path. Use @a pool for all allocations.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_wc_get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
+                         const char *victim_path,
+                         svn_wc_adm_access_t *adm_access,
+                         apr_pool_t *pool);
 
 /**
  * Read tree conflict descriptions from @a dir_entry.
