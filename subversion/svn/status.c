@@ -97,7 +97,7 @@ print_status(const char *path,
   if (status->entry 
       && (status->entry->kind == svn_node_dir)
       && (status->text_status == svn_wc_status_normal)
-      && (status->tree_conflicted))
+      && (status->has_tree_conflicted_children))
     text_status = svn_wc_status_conflicted;
 
   if (detailed)
@@ -235,7 +235,7 @@ svn_cl__print_status_xml(const char *path,
   if (status->entry && ! status->entry->copied)
     apr_hash_set(att_hash, "revision", APR_HASH_KEY_STRING,
                  apr_psprintf(pool, "%ld", status->entry->revision));
-  if (status->tree_conflicted)
+  if (status->has_tree_conflicted_children)
     apr_hash_set(att_hash, "tree-conflicted", APR_HASH_KEY_STRING,"true");
   svn_xml_make_open_tag_hash(&sb, pool, svn_xml_normal, "wc-status",
                              att_hash);
