@@ -1592,43 +1592,9 @@ def build_greek_tree_conflicts(sbox):
   main.run_svn(None, 'del', tau)
 
   # Update, receiving the incoming changes on top of the local changes,
-  # causing tree-conflicts.
-  expected_output = wc.State(wc_dir, {
-    'A/D/G'             : Item(status='C '),
-    'A/D/G/rho'         : Item(status='D '),
-    'A/D/G/tau'         : Item(status='D '),
-    'A/D/G/pi'          : Item(status='U '),
-    })
-  expected_disk = main.greek_state.copy()
-  expected_disk.tweak('A/D/G/pi',
-                      contents="This is the file 'pi'.\nIncoming edit.\n")
-  expected_disk.tweak('A/D/G/rho',
-                      contents="This is the file 'rho'.\nLocal edit.\n")
-  expected_disk.remove('A/D/G/tau')
-  expected_status = wc.State(wc_dir, {
-    ''                  : Item(status='  ', wc_rev='2'),
-    'iota'              : Item(status='  ', wc_rev='2'),
-    'A'                 : Item(status='  ', wc_rev='2'),
-    'A/B'               : Item(status='  ', wc_rev='2'),
-    'A/B/lambda'        : Item(status='  ', wc_rev='2'),
-    'A/B/E'             : Item(status='  ', wc_rev='2'),
-    'A/B/E/alpha'       : Item(status='  ', wc_rev='2'),
-    'A/B/E/beta'        : Item(status='  ', wc_rev='2'),
-    'A/B/F'             : Item(status='  ', wc_rev='2'),
-    'A/mu'              : Item(status='  ', wc_rev='2'),
-    'A/C'               : Item(status='  ', wc_rev='2'),
-    'A/D'               : Item(status='  ', wc_rev='2'),
-    'A/D/gamma'         : Item(status='  ', wc_rev='2'),
-    'A/D/G'             : Item(status='C ', wc_rev='2'),
-    'A/D/G/pi'          : Item(status='D ', wc_rev='2'),
-    'A/D/H'             : Item(status='  ', wc_rev='2'),
-    'A/D/H/chi'         : Item(status='  ', wc_rev='2'),
-    'A/D/H/omega'       : Item(status='  ', wc_rev='2'),
-    'A/D/H/psi'         : Item(status='  ', wc_rev='2'),
-    })
-  run_and_verify_update(wc_dir, expected_output, expected_disk,
-                        expected_status)
-
+  # causing tree conflicts.  Don't check for any particular result: that is
+  # the job of other tests.
+  run_and_verify_svn(None, verify.AnyOutput, [], 'update', wc_dir)
 
 
 def make_deep_trees(base):

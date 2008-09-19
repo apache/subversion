@@ -848,10 +848,10 @@ class WinGeneratorBase(GeneratorBase):
       if target.lang == "ruby":
         fakeincludes.extend(self.ruby_includes)
 
-    fakeincludes.extend([
-                         self.apath(self.zlib_path),
-                         self.apath(self.sqlite_path, 'inc'),
-                         ])
+    fakeincludes.append(self.apath(self.zlib_path))
+    
+    if self.sqlite_path:
+      fakeincludes.append(self.apath(self.sqlite_path, 'inc'))
 
     if self.sasl_path:
       fakeincludes.append(self.apath(self.sasl_path, 'include'))
@@ -871,8 +871,9 @@ class WinGeneratorBase(GeneratorBase):
     fakelibdirs = [ self.apath(self.bdb_path, "lib"),
                     self.apath(self.neon_path),
                     self.apath(self.zlib_path),
-                    self.apath(self.sqlite_path, "lib"),
                     ]
+    if self.sqlite_path:
+      fakelibdirs.append(self.apath(self.sqlite_path, "lib"))
     if self.sasl_path:
       fakelibdirs.append(self.apath(self.sasl_path, "lib"))
     if self.serf_lib:
