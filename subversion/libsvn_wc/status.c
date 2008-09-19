@@ -522,15 +522,9 @@ assemble_status(svn_wc_status2_t **status,
          || (final_text_status == svn_wc_status_normal))
         && ((final_prop_status == svn_wc_status_none)
             || (final_prop_status == svn_wc_status_normal))
-<<<<<<< .working
         && (! locked_p) && (! switched_p) && (! file_external_p)
         && (! entry->lock_token) && (! repos_lock) && (! entry->changelist)
-        && (! tree_conflicted_p))
-=======
-        && (! locked_p) && (! switched_p) && (! entry->lock_token)
-        && (! repos_lock) && (! entry->changelist) && (! tree_conflicted_p)
-        && (! has_tree_conflicted_children))
->>>>>>> .merge-right.r33173
+        && (! tree_conflicted_p) && (! has_tree_conflicted_children))
       {
         *status = NULL;
         return SVN_NO_ERROR;
