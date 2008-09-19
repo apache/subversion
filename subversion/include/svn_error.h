@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -48,13 +48,18 @@ extern "C" {
 #include "svn_error_codes.h"
 
 /** Set the error location for debug mode. */
-void svn_error__locate(const char *file, long line);
+void
+svn_error__locate(const char *file,
+                  long line);
 
 
 /** Put an English description of @a statcode into @a buf and return @a buf,
  * NULL-terminated. @a statcode is either an svn error or apr error.
  */
-char *svn_strerror(apr_status_t statcode, char *buf, apr_size_t bufsize);
+char *
+svn_strerror(apr_status_t statcode,
+             char *buf,
+             apr_size_t bufsize);
 
 
 /** If @a err has a custom error message, return that, otherwise
@@ -67,7 +72,8 @@ char *svn_strerror(apr_status_t statcode, char *buf, apr_size_t bufsize);
  * this function is thread-safe and yet does no allocation.
  */
 const char *svn_err_best_message(svn_error_t *err,
-                                 char *buf, apr_size_t bufsize);
+                                 char *buf,
+                                 apr_size_t bufsize);
 
 
 
@@ -95,9 +101,10 @@ const char *svn_err_best_message(svn_error_t *err,
  *        If creating the "bottommost" error in a chain, pass @c NULL for
  *        the child argument.
  */
-svn_error_t *svn_error_create(apr_status_t apr_err,
-                              svn_error_t *child,
-                              const char *message);
+svn_error_t *
+svn_error_create(apr_status_t apr_err,
+                 svn_error_t *child,
+                 const char *message);
 
 /** Wrapper macro to collect file and line information */
 #define svn_error_create \
@@ -107,10 +114,11 @@ svn_error_t *svn_error_create(apr_status_t apr_err,
  * with a printf-style error message produced by passing @a fmt, using
  * apr_psprintf().
  */
-svn_error_t *svn_error_createf(apr_status_t apr_err,
-                               svn_error_t *child,
-                               const char *fmt,
-                               ...)
+svn_error_t *
+svn_error_createf(apr_status_t apr_err,
+                  svn_error_t *child,
+                  const char *fmt,
+                  ...)
   __attribute__ ((format(printf, 3, 4)));
 
 /** Wrapper macro to collect file and line information */
@@ -125,7 +133,10 @@ svn_error_t *svn_error_createf(apr_status_t apr_err,
  * (If UTF-8 translation of the APR error message fails, the ": " and
  * APR error are not appended to the error message.)
  */
-svn_error_t *svn_error_wrap_apr(apr_status_t status, const char *fmt, ...)
+svn_error_t *
+svn_error_wrap_apr(apr_status_t status,
+                   const char *fmt,
+                   ...)
        __attribute__((format(printf, 2, 3)));
 
 /** Wrapper macro to collect file and line information */
@@ -136,7 +147,9 @@ svn_error_t *svn_error_wrap_apr(apr_status_t status, const char *fmt, ...)
  * message, before throwing it up the stack.  (It uses all of the
  * @a child's fields.)
  */
-svn_error_t *svn_error_quick_wrap(svn_error_t *child, const char *new_msg);
+svn_error_t *
+svn_error_quick_wrap(svn_error_t *child,
+                     const char *new_msg);
 
 /** Wrapper macro to collect file and line information */
 #define svn_error_quick_wrap \
@@ -146,7 +159,9 @@ svn_error_t *svn_error_quick_wrap(svn_error_t *child, const char *new_msg);
  * chain will be copied into @a chain's pool and destroyed, so @a new_err
  * itself becomes invalid after this function.
  */
-void svn_error_compose(svn_error_t *chain, svn_error_t *new_err);
+void
+svn_error_compose(svn_error_t *chain,
+                  svn_error_t *new_err);
 
 /** Return the root cause of @a err by finding the last error in its
  * chain (e.g. it or its children).  @a err may be @c SVN_NO_ERROR, in
@@ -154,13 +169,15 @@ void svn_error_compose(svn_error_t *chain, svn_error_t *new_err);
  *
  * @since New in 1.5.
  */
-svn_error_t *svn_error_root_cause(svn_error_t *err);
+svn_error_t *
+svn_error_root_cause(svn_error_t *err);
 
 /** Create a new error that is a deep copy of @a err and return it.
  *
  * @since New in 1.2.
  */
-svn_error_t *svn_error_dup(svn_error_t *err);
+svn_error_t *
+svn_error_dup(svn_error_t *err);
 
 /** Free the memory used by @a error, as well as all ancestors and
  * descendants of @a error.
@@ -171,7 +188,8 @@ svn_error_t *svn_error_dup(svn_error_t *err);
  * nothing; thus, svn_error_clear(svn_foo(...)) works as an idiom to
  * ignore errors.
  */
-void svn_error_clear(svn_error_t *error);
+void
+svn_error_clear(svn_error_t *error);
 
 
 /**
@@ -186,18 +204,21 @@ void svn_error_clear(svn_error_t *error);
  *
  * @since New in 1.2.
  */
-void svn_handle_error2(svn_error_t *error,
-                       FILE *stream,
-                       svn_boolean_t fatal,
-                       const char *prefix);
+void
+svn_handle_error2(svn_error_t *error,
+                  FILE *stream,
+                  svn_boolean_t fatal,
+                  const char *prefix);
 
 /** Like svn_handle_error2() but with @c prefix set to "svn: "
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
-void svn_handle_error(svn_error_t *error,
-                      FILE *stream,
-                      svn_boolean_t fatal);
+SVN_DEPRECATED
+void
+svn_handle_error(svn_error_t *error,
+                 FILE *stream,
+                 svn_boolean_t fatal);
 
 /**
  * Very basic default warning handler: print out the error @a error to the
@@ -206,11 +227,16 @@ void svn_handle_error(svn_error_t *error,
  *
  * @since New in 1.2.
  */
-void svn_handle_warning2(FILE *stream, svn_error_t *error, const char *prefix);
+void
+svn_handle_warning2(FILE *stream,
+                    svn_error_t *error,
+                    const char *prefix);
 
 /** Like svn_handle_warning2() but with @c prefix set to "svn: "
  */
-void svn_handle_warning(FILE *stream, svn_error_t *error);
+void
+svn_handle_warning(FILE *stream,
+                   svn_error_t *error);
 
 
 /** A statement macro for checking error values.
@@ -352,7 +378,9 @@ void svn_handle_warning(FILE *stream, svn_error_t *error);
  * @since New in 1.6.
  */
 svn_error_t *
-svn_error__malfunction(const char *file, int line, const char *expr);
+svn_error__malfunction(const char *file,
+                       int line,
+                       const char *expr);
 
 /** A type of function that handles an assertion failure or other internal
  * malfunction detected within the Subversion libraries.
@@ -395,7 +423,9 @@ svn_error_set_malfunction_handler(svn_error_malfunction_handler_t func);
  * @since New in 1.6.
  */
 svn_error_t *
-svn_error_raise_on_malfunction(const char *file, int line, const char *expr);
+svn_error_raise_on_malfunction(const char *file,
+                               int line,
+                               const char *expr);
 
 /** Handle a malfunction by printing a message to stderr and aborting.
  *
@@ -404,7 +434,9 @@ svn_error_raise_on_malfunction(const char *file, int line, const char *expr);
  * @since New in 1.6.
  */
 svn_error_t *
-svn_error_abort_on_malfunction(const char *file, int line, const char *expr);
+svn_error_abort_on_malfunction(const char *file,
+                               int line,
+                               const char *expr);
 
 
 #ifdef __cplusplus

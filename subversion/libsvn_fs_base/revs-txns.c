@@ -15,7 +15,6 @@
  * ====================================================================
  */
 
-#include <assert.h>
 #include <string.h>
 
 #include <apr_tables.h>
@@ -275,11 +274,9 @@ txn_body_change_rev_prop(void *baton, trail_t *trail)
 {
   struct change_rev_prop_args *args = baton;
 
-  SVN_ERR(svn_fs_base__set_rev_prop(trail->fs, args->rev,
-                                    args->name, args->value,
-                                    trail, trail->pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_base__set_rev_prop(trail->fs, args->rev,
+                                   args->name, args->value,
+                                   trail, trail->pool);
 }
 
 
@@ -297,9 +294,7 @@ svn_fs_base__change_rev_prop(svn_fs_t *fs,
   args.rev = rev;
   args.name = name;
   args.value = value;
-  SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_change_rev_prop, &args, pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_base__retry_txn(fs, txn_body_change_rev_prop, &args, pool);
 }
 
 
@@ -584,9 +579,7 @@ svn_fs_base__change_txn_prop(svn_fs_txn_t *txn,
   args.id = txn->id;
   args.name = name;
   args.value = value;
-  SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_change_txn_prop, &args, pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_base__retry_txn(fs, txn_body_change_txn_prop, &args, pool);
 }
 
 
@@ -724,10 +717,8 @@ svn_fs_base__begin_txn(svn_fs_txn_t **txn_p,
      automatically overwritten with a revision datestamp. */
   date.data = svn_time_to_cstring(apr_time_now(), pool);
   date.len = strlen(date.data);
-  SVN_ERR(svn_fs_base__change_txn_prop(txn, SVN_PROP_REVISION_DATE,
-                                       &date, pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_base__change_txn_prop(txn, SVN_PROP_REVISION_DATE,
+                                       &date, pool);
 }
 
 

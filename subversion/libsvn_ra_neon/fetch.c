@@ -18,7 +18,6 @@
 
 
 
-#include <assert.h>
 #include <stdlib.h> /* for free() */
 
 #define APR_WANT_STRFUNC
@@ -544,10 +543,7 @@ static svn_error_t *simple_fetch_file(svn_ra_neon__session_t *ras,
 
   /* Only bother with text-deltas if our caller cares. */
   if (! text_deltas)
-    {
-      SVN_ERR((*frc.handler)(NULL, frc.handler_baton));
-      return SVN_NO_ERROR;
-    }
+    return (*frc.handler)(NULL, frc.handler_baton);
 
   frc.pool = pool;
 
@@ -557,9 +553,7 @@ static svn_error_t *simple_fetch_file(svn_ra_neon__session_t *ras,
                              TRUE, pool));
 
   /* close the handler, since the file reading completed successfully. */
-  SVN_ERR((*frc.handler)(NULL, frc.handler_baton));
-
-  return SVN_NO_ERROR;
+  return (*frc.handler)(NULL, frc.handler_baton);
 }
 
 /* Helper for svn_ra_neon__get_file.  This implements
@@ -577,9 +571,7 @@ get_file_reader(void *userdata, const char *buf, size_t len)
     apr_md5_update(&(fwc->md5_context), buf, len);
 
   /* Write however many bytes were passed in by neon. */
-  SVN_ERR(svn_stream_write(stream, buf, &len));
-
-  return SVN_NO_ERROR;
+  return svn_stream_write(stream, buf, &len);
 }
 
 
@@ -1203,9 +1195,7 @@ svn_error_t *svn_ra_neon__rev_proplist(svn_ra_session_t *session,
      resource.  In particular, convert the xml-property-namespaces
      into ones that the client understands.  Strip away the DAV:
      liveprops as well. */
-  SVN_ERR(filter_props(*props, baseline, FALSE, pool));
-
-  return SVN_NO_ERROR;
+  return filter_props(*props, baseline, FALSE, pool);
 }
 
 
@@ -2418,9 +2408,7 @@ static svn_error_t * reporter_finish_report(void *report_baton,
     }
 
   /* store auth info if we can. */
-  SVN_ERR(svn_ra_neon__maybe_store_auth_info(rb->ras, pool));
-
-  return SVN_NO_ERROR;
+  return svn_ra_neon__maybe_store_auth_info(rb->ras, pool);
 }
 
 static const svn_ra_reporter3_t ra_neon_reporter = {

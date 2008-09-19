@@ -18,7 +18,6 @@
 
 
 #include <string.h>
-#include <assert.h>
 
 #include <apr_strings.h>
 
@@ -498,6 +497,10 @@ read_entry(svn_wc_entry_t **new_entry,
   }
   MAYBE_DONE;
 
+  /* Tree conflict data. */
+  SVN_ERR(read_str(&entry->tree_conflict_data, buf, end, pool));
+  MAYBE_DONE;
+
  done:
   *new_entry = entry;
   return SVN_NO_ERROR;
@@ -652,6 +655,17 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
         entry->conflict_wrk =
           *(entry->conflict_wrk)
           ? apr_pstrdup(pool, entry->conflict_wrk) : NULL;
+      }
+
+    if ((entry->tree_conflict_data
+         = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_TREE_CONFLICT_DATA,
+                        APR_HASH_KEY_STRING)))
+      {
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA;
+        /* Normalize "" (used by the log runner) to NULL */
+        entry->tree_conflict_data =
+          *(entry->tree_conflict_data)
+          ? apr_pstrdup(pool, entry->tree_conflict_data) : NULL;
       }
   }
 
@@ -1478,7 +1492,7 @@ write_time(svn_stringbuf_t *buf, apr_time_t val, apr_pool_t *pool)
 /* Append a single entry ENTRY to the string OUTPUT, using the
    entry for "this dir" THIS_DIR for comparison/optimization.
    Allocations are done in POOL.  */
-static void
+static svn_error_t *
 write_entry(svn_stringbuf_t *buf,
             svn_wc_entry_t *entry,
             const char *name,
@@ -1490,7 +1504,7 @@ write_entry(svn_stringbuf_t *buf,
   svn_boolean_t is_this_dir = strcmp(name, SVN_WC_ENTRY_THIS_DIR) == 0;
   svn_boolean_t is_subdir = ! is_this_dir && (entry->kind == svn_node_dir);
 
-  assert(name);
+  SVN_ERR_ASSERT(name);
 
   /* Name. */
   write_str(buf, name, pool);
@@ -1664,17 +1678,22 @@ write_entry(svn_stringbuf_t *buf,
       write_val(buf, val, strlen(val));
     }
 
+  /* Tree conflict data. */
+  write_str(buf, entry->tree_conflict_data, pool);
+
   /* Remove redundant separators at the end of the entry. */
   while (buf->len > 1 && buf->data[buf->len - 2] == '\n')
     buf->len--;
 
   svn_stringbuf_appendbytes(buf, "\f\n", 2);
+
+  return SVN_NO_ERROR;
 }
 
 /* Append a single entry ENTRY as an XML element to the string OUTPUT,
    using the entry for "this dir" THIS_DIR for
    comparison/optimization.  Allocations are done in POOL.  */
-static void
+static svn_error_t *
 write_entry_xml(svn_stringbuf_t **output,
                 svn_wc_entry_t *entry,
                 const char *name,
@@ -1686,7 +1705,7 @@ write_entry_xml(svn_stringbuf_t **output,
 
   /*** Create a hash that represents an entry. ***/
 
-  assert(name);
+  SVN_ERR_ASSERT(name);
 
   /* Name */
   apr_hash_set(atts, SVN_WC__ENTRY_ATTR_NAME, APR_HASH_KEY_STRING,
@@ -1954,12 +1973,14 @@ write_entry_xml(svn_stringbuf_t **output,
                              svn_xml_self_closing,
                              SVN_WC__ENTRIES_ENTRY,
                              atts);
+
+  return SVN_NO_ERROR;
 }
 
 /* Construct an entries file from the ENTRIES hash in XML format in a
    newly allocated stringbuf and return it in *OUTPUT.  Allocate the
    result in POOL.  THIS_DIR is the this_dir entry in ENTRIES.  */
-static void
+static svn_error_t *
 write_entries_xml(svn_stringbuf_t **output,
                   apr_hash_t *entries,
                   svn_wc_entry_t *this_dir,
@@ -1976,7 +1997,8 @@ write_entries_xml(svn_stringbuf_t **output,
                         NULL);
 
   /* Write out "this dir" */
-  write_entry_xml(output, this_dir, SVN_WC_ENTRY_THIS_DIR, this_dir, pool);
+  SVN_ERR(write_entry_xml(output, this_dir, SVN_WC_ENTRY_THIS_DIR,
+                          this_dir, pool));
 
   for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
     {
@@ -1995,12 +2017,14 @@ write_entries_xml(svn_stringbuf_t **output,
         continue;
 
       /* Append the entry to output */
-      write_entry_xml(output, this_entry, key, this_dir, subpool);
+      SVN_ERR(write_entry_xml(output, this_entry, key, this_dir, subpool));
     }
 
   svn_xml_make_close_tag(output, pool, SVN_WC__ENTRIES_TOPLEVEL);
 
   svn_pool_destroy(subpool);
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -2047,7 +2071,8 @@ svn_wc__entries_write(apr_hash_t *entries,
       bigstr = svn_stringbuf_createf(pool, "%d\n",
                                      svn_wc__adm_wc_format(adm_access));
       /* Write out "this dir" */
-      write_entry(bigstr, this_dir, SVN_WC_ENTRY_THIS_DIR, this_dir, pool);
+      SVN_ERR(write_entry(bigstr, this_dir, SVN_WC_ENTRY_THIS_DIR,
+                          this_dir, pool));
 
       for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
         {
@@ -2066,14 +2091,14 @@ svn_wc__entries_write(apr_hash_t *entries,
             continue;
 
           /* Append the entry to BIGSTR */
-          write_entry(bigstr, this_entry, key, this_dir, subpool);
+          SVN_ERR(write_entry(bigstr, this_entry, key, this_dir, subpool));
         }
 
       svn_pool_destroy(subpool);
     }
   else
     /* This is needed during cleanup of a not yet upgraded WC. */
-    write_entries_xml(&bigstr, entries, this_dir, pool);
+    SVN_ERR(write_entries_xml(&bigstr, entries, this_dir, pool));
 
   SVN_ERR_W(svn_io_file_write_full(outfile, bigstr->data,
                                    bigstr->len, NULL, pool),
@@ -2102,7 +2127,7 @@ svn_wc__entries_write(apr_hash_t *entries,
 
    POOL may be used to allocate memory referenced by ENTRIES.
  */
-static void
+static svn_error_t *
 fold_entry(apr_hash_t *entries,
            const char *name,
            apr_uint64_t modify_flags,
@@ -2112,7 +2137,7 @@ fold_entry(apr_hash_t *entries,
   svn_wc_entry_t *cur_entry
     = apr_hash_get(entries, name, APR_HASH_KEY_STRING);
 
-  assert(name != NULL);
+  SVN_ERR_ASSERT(name != NULL);
 
   if (! cur_entry)
     cur_entry = alloc_entry(pool);
@@ -2270,6 +2295,12 @@ fold_entry(apr_hash_t *entries,
   /* Note that we don't bother to fold entry->depth, because it is
      only meaningful on the this-dir entry anyway. */
 
+  /* Tree conflict data. */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA)
+    cur_entry->tree_conflict_data = entry->tree_conflict_data
+      ? apr_pstrdup(pool, entry->tree_conflict_data)
+                              : NULL;
+
   /* Absorb defaults from the parent dir, if any, unless this is a
      subdir entry. */
   if (cur_entry->kind != svn_node_dir)
@@ -2315,6 +2346,8 @@ fold_entry(apr_hash_t *entries,
      already did, in which case this could have been skipped, but what
      the heck. */
   apr_hash_set(entries, cur_entry->name, APR_HASH_KEY_STRING, cur_entry);
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -2616,11 +2649,11 @@ svn_wc__entry_modify(svn_wc_adm_access_t *adm_access,
      changes into the entry. */
   if (! entry_was_deleted_p)
     {
-      fold_entry(entries, name, modify_flags, entry,
-                 svn_wc_adm_access_pool(adm_access));
+      SVN_ERR(fold_entry(entries, name, modify_flags, entry,
+                         svn_wc_adm_access_pool(adm_access)));
       if (entries != entries_nohidden)
-        fold_entry(entries_nohidden, name, modify_flags, entry,
-                   svn_wc_adm_access_pool(adm_access));
+        SVN_ERR(fold_entry(entries_nohidden, name, modify_flags, entry,
+                           svn_wc_adm_access_pool(adm_access)));
     }
 
   /* Sync changes to disk. */
@@ -2674,6 +2707,9 @@ svn_wc_entry_dup(const svn_wc_entry_t *entry, apr_pool_t *pool)
     dupentry->cachable_props = apr_pstrdup(pool, entry->cachable_props);
   if (entry->present_props)
     dupentry->present_props = apr_pstrdup(pool, entry->present_props);
+  if (entry->tree_conflict_data)
+    dupentry->tree_conflict_data = apr_pstrdup(pool,
+                                               entry->tree_conflict_data);
   return dupentry;
 }
 
@@ -2822,7 +2858,7 @@ svn_wc__entries_init(const char *path,
    */
   entry->cachable_props = SVN_WC__CACHABLE_PROPS;
 
-  write_entry(accum, entry, SVN_WC_ENTRY_THIS_DIR, entry, pool);
+  SVN_ERR(write_entry(accum, entry, SVN_WC_ENTRY_THIS_DIR, entry, pool));
 
   SVN_ERR_W(svn_io_file_write_full(f, accum->data, accum->len, NULL, pool),
             apr_psprintf(pool,
@@ -2831,9 +2867,7 @@ svn_wc__entries_init(const char *path,
 
   /* Now we have a `entries' file with exactly one entry, an entry
      for this dir.  Close the file and sync it up. */
-  SVN_ERR(svn_wc__close_adm_file(f, path, SVN_WC__ADM_ENTRIES, 1, pool));
-
-  return SVN_NO_ERROR;
+  return svn_wc__close_adm_file(f, path, SVN_WC__ADM_ENTRIES, 1, pool);
 }
 
 
@@ -3043,13 +3077,11 @@ svn_wc_mark_missing_deleted(const char *path,
       svn_path_split(path, &parent_path, &bname, pool);
 
       SVN_ERR(svn_wc_adm_retrieve(&adm_access, parent, parent_path, pool));
-      SVN_ERR(svn_wc__entry_modify(adm_access, bname, &newent,
+      return svn_wc__entry_modify(adm_access, bname, &newent,
                                    (SVN_WC__ENTRY_MODIFY_DELETED
                                     | SVN_WC__ENTRY_MODIFY_SCHEDULE
                                     | SVN_WC__ENTRY_MODIFY_FORCE),
-                                   TRUE, /* sync right away */ pool));
-
-      return SVN_NO_ERROR;
+                                   TRUE, /* sync right away */ pool);
     }
   else
     return svn_error_createf(SVN_ERR_WC_PATH_FOUND, NULL,

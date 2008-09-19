@@ -4,7 +4,9 @@ require 'fileutils'
 module SvnTestUtil
   module Windows
     module Svnserve
-      SERVICE_NAME = 'test-svn-server'
+      def service_name
+        "test-svn-server--port-#{@svnserve_port}"
+      end
 
       class << self
         def escape_value(value)
@@ -17,9 +19,9 @@ module SvnTestUtil
         args = args.collect do |key, value|
           "#{key}= #{Svnserve.escape_value(value)}"
         end.join(" ")
-        result = `sc #{command} #{SERVICE_NAME} #{args}`
+        result = `sc #{command} #{service_name} #{args}`
         if result.match(/FAILED/)
-          raise "Failed to #{command} #{SERVICE_NAME}: #{args}"
+          raise "Failed to #{command} #{service_name}: #{args}"
         end
         /^\s*STATE\s*:\s\d+\s*(.*?)\s*$/ =~ result
         $1
@@ -44,7 +46,7 @@ module SvnTestUtil
       end
 
       def setup_svnserve
-        @svnserve_port = @svnserve_ports.first
+        @svnserve_port = @svnserve_ports.last
         @repos_svnserve_uri = "svn://#{@svnserve_host}:#{@svnserve_port}"
         grant_everyone_full_access(@full_repos_path)
 
@@ -99,7 +101,7 @@ module SvnTestUtil
           user = ENV["USERNAME"] || Etc.getlogin
           service_control('create',
                           [["binPath", "#{svnserve_path} #{args.join(' ')}"],
-                           ["DisplayName", SERVICE_NAME],
+                           ["DisplayName", service_name],
                            ["type", "own"]])
         end
         service_control('start')

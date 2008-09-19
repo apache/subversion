@@ -15,8 +15,6 @@
  * ====================================================================
  */
 
-#include <assert.h>
-
 #include "fs.h"
 #include "trail.h"
 #include "err.h"

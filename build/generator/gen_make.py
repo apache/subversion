@@ -11,8 +11,6 @@ import gen_base
 import generator.swig.header_wrappers
 import generator.swig.checkout_swig_header
 import generator.swig.external_runtime
-import generator.util.executable
-_exec = generator.util.executable
 
 from gen_base import build_path_join, build_path_strip, build_path_splitfile, \
       build_path_basename, build_path_dirname, build_path_retreat, unique

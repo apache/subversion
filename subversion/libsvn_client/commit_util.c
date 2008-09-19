@@ -235,7 +235,7 @@ harvest_committables(apr_hash_t *committables,
   apr_byte_t state_flags = 0;
   svn_node_kind_t kind;
   const char *p_path;
-  svn_boolean_t tc, pc;
+  svn_boolean_t tc, pc, treec;
   const char *cf_url = NULL;
   svn_revnum_t cf_rev = entry->copyfrom_rev;
   const svn_string_t *propval;
@@ -319,14 +319,15 @@ harvest_committables(apr_hash_t *committables,
                                           APR_HASH_KEY_STRING))))
         {
           entry = e;
-          SVN_ERR(svn_wc_conflicted_p(&tc, &pc, path, entry, pool));
+          SVN_ERR(svn_wc_conflicted_p2(&tc, &pc, &treec, path, entry, pool));
         }
 
       /* No new entry?  Just check the parent's pointer for
          conflicts. */
       else
         {
-          SVN_ERR(svn_wc_conflicted_p(&tc, &pc, p_path, entry, pool));
+          SVN_ERR(svn_wc_conflicted_p2(&tc, &pc, &treec, p_path, entry,
+                                       pool));
         }
     }
 
@@ -334,11 +335,19 @@ harvest_committables(apr_hash_t *committables,
      parent's path. */
   else
     {
-      SVN_ERR(svn_wc_conflicted_p(&tc, &pc, p_path, entry, pool));
+      /* ### Maybe the tree-conflict test should be a separate function. */
+      svn_boolean_t dummy;
+      const svn_wc_entry_t *p_entry;
+
+      SVN_ERR(svn_wc_entry(&p_entry, p_path, adm_access, TRUE, pool));
+      SVN_ERR(svn_wc_conflicted_p2(&dummy, &dummy, &treec, p_path,
+                                   p_entry, pool));
+
+      SVN_ERR(svn_wc_conflicted_p2(&tc, &pc, &dummy, p_path, entry, pool));
     }
 
   /* Bail now if any conflicts exist for the ENTRY. */
-  if (tc || pc)
+  if (tc || pc || treec)
     {
       /* Paths in conflict which are not part of our changelist should
          be ignored. */
@@ -905,12 +914,10 @@ harvest_copy_committables(void *baton, void *item, apr_pool_t *pool)
 
   /* Handle this SRC.  Because add_committable() uses the hash pool to
      allocate the new commit_item, we can safely use the iterpool here. */
-  SVN_ERR(harvest_committables(btn->committables, NULL, pair->src,
-                               dir_access, pair->dst, entry->url, entry,
-                               NULL, FALSE, TRUE, svn_depth_infinity,
-                               FALSE, NULL, btn->ctx, pool));
-
-  return SVN_NO_ERROR;
+  return harvest_committables(btn->committables, NULL, pair->src,
+                              dir_access, pair->dst, entry->url, entry,
+                              NULL, FALSE, TRUE, svn_depth_infinity,
+                              FALSE, NULL, btn->ctx, pool);
 }
 
 
@@ -932,10 +939,8 @@ svn_client__get_copy_committables(apr_hash_t **committables,
 
   /* For each copy pair, harvest the committables for that pair into the
      committables hash. */
-  SVN_ERR(svn_iter_apr_array(NULL, copy_pairs,
-                             harvest_copy_committables, &btn, pool));
-
-  return SVN_NO_ERROR;
+  return svn_iter_apr_array(NULL, copy_pairs,
+                            harvest_copy_committables, &btn, pool);
 }
 
 
@@ -1470,8 +1475,7 @@ svn_client__do_commit(const char *base_url,
   svn_pool_destroy(subpool);
 
   /* Close the edit. */
-  SVN_ERR(editor->close_edit(edit_baton, pool));
-  return SVN_NO_ERROR;
+  return editor->close_edit(edit_baton, pool);
 }
 
 /* Commit callback baton */

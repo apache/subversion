@@ -1090,13 +1090,15 @@ def recursive_base_wc_ops(sbox):
   # Test recursive proplist
   exit_code, output, errput = svntest.main.run_svn(None, 'proplist', '-R',
                                                    '-v', wc_dir, '-rBASE')
-  verify_output([ 'old-del', 'old-keep', 'Properties on ', 'Properties on ' ],
+  verify_output([ 'old-del', 'old-keep', 'p', 'p',
+                  'Properties on ', 'Properties on ' ],
                 output, errput)
   svntest.verify.verify_exit_code(None, exit_code, 0)
 
   exit_code, output, errput = svntest.main.run_svn(None, 'proplist', '-R',
                                                    '-v', wc_dir)
-  verify_output([ 'new-add', 'new-keep', 'Properties on ', 'Properties on ' ],
+  verify_output([ 'new-add', 'new-keep', 'p', 'p',
+                  'Properties on ', 'Properties on ' ],
                 output, errput)
   svntest.verify.verify_exit_code(None, exit_code, 0)
 
@@ -1183,13 +1185,13 @@ def url_props_ops(sbox):
   # Test verbose proplist
   exit_code, output, errput = svntest.main.run_svn(None,
                                                    'proplist', '-v', iota_url)
-  verify_output([ prop1 + ' : ' + propval1, prop2 + ' : ' + propval2,
+  verify_output([ propval1, propval2, prop1, prop2,
                   'Properties on ' ], output, errput)
   svntest.verify.verify_exit_code(None, exit_code, 0)
 
   exit_code, output, errput = svntest.main.run_svn(None,
                                                    'proplist', '-v', A_url)
-  verify_output([ prop1 + ' : ' + propval1, prop2 + ' : ' + propval2,
+  verify_output([ propval1, propval2, prop1, prop2,
                   'Properties on ' ], output, errput)
   svntest.verify.verify_exit_code(None, exit_code, 0)
 
@@ -1229,7 +1231,8 @@ def removal_schedule_added_props(sbox):
   file_rm_output = ["D         " + newfile_path + "\n"]
   propls_output = [
      "Properties on '" + newfile_path + "':\n",
-     "  newprop : newvalue\n",
+     "  newprop\n",
+     "    newvalue\n",
                   ]
 
   # create new fs file
@@ -1363,7 +1366,7 @@ def depthy_wc_proplist(sbox):
   exit_code, output, errput = svntest.main.run_svn(None, 'proplist',
                                                    '--depth', 'empty',
                                                    '-v', wc_dir)
-  verify_output([ 'prop1', 'Properties on ' ],
+  verify_output([ 'prop1', 'p', 'Properties on ' ],
                 output, errput)
   svntest.verify.verify_exit_code(None, exit_code, 0)
 
@@ -1371,21 +1374,24 @@ def depthy_wc_proplist(sbox):
   exit_code, output, errput = svntest.main.run_svn(None, 'proplist',
                                                    '--depth', 'files',
                                                    '-v', wc_dir)
-  verify_output([ 'prop1', 'prop2', 'Properties on ', 'Properties on ' ],
+  verify_output([ 'prop1', 'prop2', 'p', 'p',
+                  'Properties on ', 'Properties on ' ],
                 output, errput)
   svntest.verify.verify_exit_code(None, exit_code, 0)
 
   # Test depth-immediates proplist.
   exit_code, output, errput = svntest.main.run_svn(None, 'proplist', '--depth',
                                                    'immediates', '-v', wc_dir)
-  verify_output([ 'prop1', 'prop2', 'prop3' ] + ['Properties on '] * 3,
+  verify_output([ 'prop1', 'prop2', 'prop3' ] +
+                ['p'] * 3 + ['Properties on '] * 3,
                 output, errput)
   svntest.verify.verify_exit_code(None, exit_code, 0)
 
   # Test depth-infinity proplist.
   exit_code, output, errput = svntest.main.run_svn(None, 'proplist', '--depth',
                                                    'infinity', '-v', wc_dir)
-  verify_output([ 'prop1', 'prop2', 'prop3', 'prop4' ] + ['Properties on '] * 4,
+  verify_output([ 'prop1', 'prop2', 'prop3', 'prop4' ] +
+                ['p'] * 4 + ['Properties on '] * 4,
                 output, errput)
   svntest.verify.verify_exit_code(None, exit_code, 0)
 
@@ -1623,7 +1629,8 @@ def props_over_time(sbox):
         plist_expected = expected
         if plist_expected:
           plist_expected = [ "Properties on '" + path + "':\n",
-                             "  revision : " + expected + "\n" ]
+                             "  revision\n",
+                             "    " + expected + "\n" ]
 
         if op_rev != 0:
           svntest.actions.run_and_verify_svn(None, plist_expected, [],
@@ -1647,6 +1654,31 @@ def invalid_propvalues(sbox):
                                      'propset', '--revprop', '-r', '0',
                                      'svn:date', 'Sat May 10 12:12:31 2008',
                                      repo_url)
+
+def same_replacement_props(sbox):
+  "commit replacement props when same as old props"
+  # issue #3282
+  sbox.build()
+  foo_path = os.path.join(sbox.wc_dir, 'foo')
+  open(foo_path, 'w').close()
+  svntest.main.run_svn(None, 'add', foo_path)
+  svntest.main.run_svn(None, 'propset', 'someprop', 'someval', foo_path)
+  svntest.main.run_svn(None, 'ci', '-m', 'commit first foo', foo_path)
+  svntest.main.run_svn(None, 'rm', foo_path)
+  # Now replace 'foo'.
+  open(foo_path, 'w').close()
+  svntest.main.run_svn(None, 'add', foo_path)
+  # Set the same property again, with the same value.
+  svntest.main.run_svn(None, 'propset', 'someprop', 'someval', foo_path)
+  svntest.main.run_svn(None, 'ci', '-m', 'commit second foo', foo_path)
+  # Check if the property made it into the repository.
+  foo_url = sbox.repo_url + '/foo'
+  expected_out = [ "Properties on '" + foo_url + "':\n",
+                   "  someprop\n",
+                   "    someval\n" ]
+  svntest.actions.run_and_verify_svn(None, expected_out, [],
+                                     'proplist', '-v', foo_url)
+
 
 ########################################################################
 # Run the tests
@@ -1684,6 +1716,7 @@ test_list = [ None,
               # XFail the same reason revprop_change() is.
               SkipUnless(XFail(invalid_propvalues, svntest.main.is_ra_type_dav),
                     svntest.main.server_enforces_date_syntax),
+              same_replacement_props,
              ]
 
 if __name__ == '__main__':

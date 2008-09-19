@@ -21,6 +21,7 @@ import string, sys, os, re
 
 # Our testing module
 import svntest
+from svntest import wc
 
 # (abbreviation)
 Skip = svntest.testcase.Skip
@@ -1610,63 +1611,100 @@ def commit_nonrecursive(sbox):
 #----------------------------------------------------------------------
 # Regression for #1017: ra_neon was allowing the deletion of out-of-date
 # files or dirs, which majorly violates Subversion's semantics.
-
+# An out-of-date error should be raised if the object to be committed has
+# already been deleted or modified in the repo.
 
 def commit_out_of_date_deletions(sbox):
   "commit deletion of out-of-date file or dir"
 
+  # Path           WC 1    WC backup
+  # ===========    ====    =========
+  # A/C            pset    del
+  # A/I            del     pset
+  # A/B/F          del     del
+  # A/D/H/omega    text    del
+  # A/B/E/alpha    pset    del
+  # A/D/H/chi      del     text
+  # A/B/E/beta     del     pset
+  # A/D/H/psi      del     del
+
   sbox.build()
   wc_dir = sbox.wc_dir
+  
+  # Need another empty dir
+  I_path = os.path.join(wc_dir, 'A', 'I')
+  os.mkdir(I_path)
+  svntest.main.run_svn(None, 'add', I_path)
+  svntest.main.run_svn(None, 'ci', '-m', 'prep', wc_dir)
+  svntest.main.run_svn(None, 'up', wc_dir)  
 
   # Make a backup copy of the working copy
   wc_backup = sbox.add_wc_path('backup')
   svntest.actions.duplicate_dir(wc_dir, wc_backup)
 
-  # Change omega's text, and make a propchange to A/C directory
-  omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega')
+  # Edits in wc 1
   C_path = os.path.join(wc_dir, 'A', 'C')
-  svntest.main.file_append(omega_path, 'appended omega text')
+  omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega')
+  alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
   svntest.main.run_svn(None, 'propset', 'fooprop', 'foopropval', C_path)
+  svntest.main.file_append(omega_path, 'appended omega text')
+  svntest.main.run_svn(None, 'propset', 'fooprop', 'foopropval', alpha_path)
 
-  # Commit revision 2.
+  # Deletions in wc 1
+  I_path = os.path.join(wc_dir, 'A', 'I')
+  F_path = os.path.join(wc_dir, 'A', 'B', 'F')
+  chi_path = os.path.join(wc_dir, 'A', 'D', 'H', 'chi')
+  beta_path = os.path.join(wc_dir, 'A', 'B', 'E', 'beta')
+  psi_path = os.path.join(wc_dir, 'A', 'D', 'H', 'psi')
+  svntest.main.run_svn(None, 'rm', I_path, F_path, chi_path, beta_path,
+                       psi_path)
+
+  # Commit in wc 1
   expected_output = svntest.wc.State(wc_dir, {
-    'A/D/H/omega' : Item(verb='Sending'),
-    'A/C' : Item(verb='Sending'),
-    })
-  expected_status =  svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak('A/D/H/omega', 'A/C', wc_rev=2, status='  ')
+      'A/C' : Item(verb='Sending'),
+      'A/I' : Item(verb='Deleting'),
+      'A/B/F' : Item(verb='Deleting'),
+      'A/D/H/omega' : Item(verb='Sending'),
+      'A/B/E/alpha' : Item(verb='Sending'),
+      'A/D/H/chi' : Item(verb='Deleting'),
+      'A/B/E/beta' : Item(verb='Deleting'),
+      'A/D/H/psi' : Item(verb='Deleting'),
+      })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak('A/C', 'A/D/H/omega', 'A/B/E/alpha', wc_rev=3,
+                        status='  ')
+  expected_status.remove('A/B/F', 'A/D/H/chi', 'A/B/E/beta', 'A/D/H/psi')
+  commit = svntest.actions.run_and_verify_commit
+  commit(wc_dir, expected_output, expected_status, None, wc_dir)
 
-  svntest.actions.run_and_verify_commit(wc_dir,
-                                        expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
-
-  # Now, in the second working copy, schedule both omega and C for deletion.
-  omega_path = os.path.join(wc_backup, 'A', 'D', 'H', 'omega')
+  # Edits in wc backup
+  I_path = os.path.join(wc_backup, 'A', 'I')
+  chi_path = os.path.join(wc_backup, 'A', 'D', 'H', 'chi')
+  beta_path = os.path.join(wc_backup, 'A', 'B', 'E','beta')
+  svntest.main.run_svn(None, 'propset', 'fooprop', 'foopropval', I_path)
+  svntest.main.file_append(chi_path, 'appended chi text')
+  svntest.main.run_svn(None, 'propset', 'fooprop', 'foopropval', beta_path)
+  
+  # Deletions in wc backup
   C_path = os.path.join(wc_backup, 'A', 'C')
-  svntest.main.run_svn(None, 'rm', omega_path, C_path)
+  F_path = os.path.join(wc_backup, 'A', 'B', 'F')
+  omega_path = os.path.join(wc_backup, 'A', 'D', 'H', 'omega')
+  alpha_path = os.path.join(wc_backup, 'A', 'B', 'E', 'alpha')
+  psi_path = os.path.join(wc_backup, 'A', 'D', 'H', 'psi')
+  svntest.main.run_svn(None, 'rm', C_path, F_path, omega_path, alpha_path,
+                       psi_path)
 
-  # Attempt to delete omega.  This should return an (expected)
-  # out-of-dateness error.
-  exit_code, outlines, errlines = svntest.main.run_svn(1, 'commit', '-m',
-                                                       'blah', omega_path)
-  for line in errlines:
-    if re.match(".*[Oo]ut.of.date.*", line):
-      break
-  else:
-    raise svntest.Failure
-
-  # Attempt to delete directory C.  This should return an (expected)
-  # out-of-dateness error.
-  exit_code, outlines, errlines = svntest.main.run_svn(1, 'commit', '-m',
-                                                       'blah', C_path)
-  for line in errlines:
-    if re.match(".*[Oo]ut.of.date.*", line):
-      break
-  else:
-    raise svntest.Failure
-
+  # A commit of any one of these files or dirs should fail
+  error_re = "out of date"
+  commit(wc_backup, None, None, error_re, C_path)
+  commit(wc_backup, None, None, "File not found: transaction", I_path)
+  commit(wc_backup, None, None, error_re, F_path)
+  commit(wc_backup, None, None, error_re, omega_path)
+  commit(wc_backup, None, None, error_re, alpha_path)
+  commit(wc_backup, None, None, "File not found: transaction", chi_path)
+  commit(wc_backup, None, None, "File not found: transaction", beta_path)
+  commit(wc_backup, None, None, error_re, psi_path)
+                                        
 def commit_with_bad_log_message(sbox):
   "commit with a log message containing bad data"
 
@@ -2565,6 +2603,71 @@ def commit_added_missing(sbox):
                                      [], ".* is scheduled for addition, but is missing",
                                      'commit', '-m', 'logmsg', wc_dir)
 
+#----------------------------------------------------------------------
+
+# Helper for commit-failure tests
+def commit_fails_at_path(path, wc_dir, error_re):
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        None,
+                                        None,
+                                        error_re,
+                                        path)
+
+def tree_conflicts_block_commit(sbox):
+  "tree conflicts block commit" 
+  
+  # Commit is not allowed in a directory containing tree conflicts.
+  # This test corresponds to use cases 1-3 (with file victims) in 
+  # notes/tree-conflicts/use-cases.txt.
+
+  svntest.actions.build_greek_tree_conflicts(sbox)
+  wc_dir = sbox.wc_dir
+  A = os.path.join(wc_dir, 'A')
+  D = os.path.join(wc_dir, 'A', 'D')
+  G = os.path.join(wc_dir, 'A', 'D', 'G')
+
+  error_re = "remains in conflict"
+  commit_fails_at_path(wc_dir, wc_dir, error_re)
+  commit_fails_at_path(A, A, error_re)
+  commit_fails_at_path(D, D, error_re)
+  commit_fails_at_path(G, G, error_re)
+  commit_fails_at_path(os.path.join(G, 'pi'), G, error_re)
+
+                                        
+def tree_conflicts_resolved(sbox):
+  "tree conflicts resolved" 
+  
+  # Commit is allowed after tree conflicts are resolved.
+  # This test corresponds to use cases 1-3 in 
+  # notes/tree-conflicts/use-cases.txt.
+
+  svntest.actions.build_greek_tree_conflicts(sbox)
+  wc_dir = sbox.wc_dir
+
+  # Duplicate wc for tests
+  wc_dir_2 = sbox.add_wc_path('2')
+  svntest.actions.duplicate_dir(wc_dir, wc_dir_2)  
+
+  # Resolved in directory containing tree conflicts
+  G = os.path.join(wc_dir, 'A', 'D', 'G')
+  svntest.actions.run_and_verify_svn(None, None, [], 'resolved', G)
+  
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak('A/D/G/pi',  status='D ')
+  expected_status.remove('A/D/G/rho',
+                         'A/D/G/tau')
+
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Recursively resolved in parent directory -- expect same result
+  D2 = os.path.join(wc_dir_2, 'A', 'D')
+  G2 = os.path.join(wc_dir_2, 'A', 'D', 'G')
+  svntest.actions.run_and_verify_svn(None, None, [], 'resolved', D2, '-R')
+
+  expected_status.wc_dir = wc_dir_2
+  svntest.actions.run_and_verify_status(wc_dir_2, expected_status)
+
+
 ########################################################################
 # Run the tests
 
@@ -2597,7 +2700,7 @@ test_list = [ None,
               commit_multiple_wc,
               commit_nonrecursive,
               failed_commit,
-              commit_out_of_date_deletions,
+              XFail(commit_out_of_date_deletions, svntest.main.is_ra_type_dav),
               commit_with_bad_log_message,
               commit_with_mixed_line_endings,
               commit_with_mixed_line_endings_in_ignored_part,
@@ -2631,6 +2734,8 @@ test_list = [ None,
                          server_gets_client_capabilities),
               commit_url,
               commit_added_missing,
+              tree_conflicts_block_commit,
+              tree_conflicts_resolved,
              ]
 
 if __name__ == '__main__':

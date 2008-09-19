@@ -26,8 +26,6 @@
 #include <apr_hash.h>
 #include <apr_md5.h>
 
-#include <assert.h>
-
 #include "svn_types.h"
 #include "svn_pools.h"
 #include "svn_wc.h"
@@ -117,11 +115,9 @@ restore_file(const char *file_path,
     }
 
   /* Modify our entry's text-timestamp to match the working file. */
-  SVN_ERR(svn_wc__entry_modify(adm_access, bname,
-                               &newentry, SVN_WC__ENTRY_MODIFY_TEXT_TIME,
-                               TRUE /* do_sync now */, pool));
-
-  return SVN_NO_ERROR;
+  return svn_wc__entry_modify(adm_access, bname,
+                              &newentry, SVN_WC__ENTRY_MODIFY_TEXT_TIME,
+                              TRUE /* do_sync now */, pool);
 }
 
 
@@ -528,9 +524,7 @@ svn_wc_crawl_revisions3(const char *path,
 
       /* Finish the report, which causes the update editor to be
          driven. */
-      SVN_ERR(reporter->finish_report(report_baton, pool));
-
-      return SVN_NO_ERROR;
+      return reporter->finish_report(report_baton, pool);
     }
 
   base_rev = entry->revision;

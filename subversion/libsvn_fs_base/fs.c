@@ -454,9 +454,7 @@ bdb_write_config(svn_fs_t *fs)
                                      NULL, fs->pool));
     }
 
-  SVN_ERR(svn_io_file_close(dbconfig_file, fs->pool));
-
-  return SVN_NO_ERROR;
+  return svn_io_file_close(dbconfig_file, fs->pool);
 }
 
 
@@ -686,10 +684,12 @@ svn_fs_base__test_required_feature_format(svn_fs_t *fs,
 static svn_error_t *
 check_format(int format)
 {
-  /* We support format 1, 2 and 3 simultaneously.  */
+  /* We support format 1, 2, 3 and 4 simultaneously.  */
   if (format == 1 && SVN_FS_BASE__FORMAT_NUMBER == 2)
     return SVN_NO_ERROR;
   if ((format == 1 || format == 2) && SVN_FS_BASE__FORMAT_NUMBER == 3)
+    return SVN_NO_ERROR;
+  if ((format >= 1 && format <= 3) && SVN_FS_BASE__FORMAT_NUMBER == 4)
     return SVN_NO_ERROR;
 
   if (format != SVN_FS_BASE__FORMAT_NUMBER)
@@ -779,9 +779,7 @@ bdb_recover(const char *path, svn_boolean_t fatal, apr_pool_t *pool)
                            ((fatal ? DB_RECOVER_FATAL : DB_RECOVER)
                             | SVN_BDB_PRIVATE_ENV_FLAGS),
                            0666, pool));
-  SVN_ERR(svn_fs_bdb__close(bdb));
-
-  return SVN_NO_ERROR;
+  return svn_fs_bdb__close(bdb);
 }
 
 static svn_error_t *
@@ -1232,9 +1230,7 @@ base_delete_fs(const char *path,
   SVN_ERR(svn_fs_bdb__remove(path, pool));
 
   /* Remove the environment directory. */
-  SVN_ERR(svn_io_remove_dir2(path, FALSE, NULL, NULL, pool));
-
-  return SVN_NO_ERROR;
+  return svn_io_remove_dir2(path, FALSE, NULL, NULL, pool);
 }
 
 static const svn_version_t *

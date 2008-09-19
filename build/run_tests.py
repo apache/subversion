@@ -70,10 +70,15 @@ class TestHarness:
       cnt += 1
     self._open_log('r')
     log_lines = self.log.readlines()
+    # Print summaries from least interesting to most interesting.
     skipped = filter(lambda x: x[:6] == 'SKIP: ', log_lines)
     if skipped:
       print 'At least one test was SKIPPED, checking ' + self.logfile
       map(sys.stdout.write, skipped)
+    xfailed = filter(lambda x: x[:6] == 'XFAIL:', log_lines)
+    if xfailed:
+      print 'At least one test XFAILED, checking ' + self.logfile
+      map(sys.stdout.write, xfailed)
     if failed:
       print 'At least one test FAILED, checking ' + self.logfile
       map(sys.stdout.write, filter(lambda x: x[:6] in ('FAIL: ', 'XPASS:'),
@@ -93,7 +98,7 @@ class TestHarness:
       self.log = None
 
   def _run_test(self, prog, test_nr, total_tests):
-    'Run a single test.'
+    "Run a single test. Return the test's exit code."
 
     def quote(arg):
       if sys.platform == 'win32':
@@ -167,8 +172,10 @@ class TestHarness:
     print >> self.log, 'END: ' + progbase + '\n'
     return failed
 
-  def _run_prog(self, progname, cmdline):
-    'Execute COMMAND, redirecting standard output and error to the log file.'
+  def _run_prog(self, progname, arglist):
+    '''Execute the file PROGNAME in a subprocess, with ARGLIST as its
+    arguments (a list/tuple of arg0..argN), redirecting standard output and
+    error to the log file. Return the command's exit code.'''
     def restore_streams(stdout, stderr):
       os.dup2(stdout, 1)
       os.dup2(stderr, 2)
@@ -183,7 +190,7 @@ class TestHarness:
     try:
       os.dup2(self.log.fileno(), 1)
       os.dup2(self.log.fileno(), 2)
-      rv = os.spawnv(os.P_WAIT, progname, cmdline)
+      rv = os.spawnv(os.P_WAIT, progname, arglist)
     except:
       restore_streams(old_stdout, old_stderr)
       raise

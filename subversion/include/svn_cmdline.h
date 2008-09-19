@@ -34,6 +34,7 @@
 #include "svn_utf.h"
 #include "svn_auth.h"
 #include "svn_config.h"
+#include "svn_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -180,6 +181,7 @@ svn_cmdline_prompt_user2(const char **result,
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_cmdline_prompt_user(const char **result,
                         const char *prompt_str,
@@ -237,6 +239,8 @@ svn_cmdline_auth_ssl_server_trust_prompt
 /** An implementation of @c svn_auth_ssl_client_cert_prompt_func_t that
  * prompts the user for the filename of their SSL client certificate via
  * the command line.
+ * 
+ * Records absolute path of the SSL client certificate file.
  *
  * @since New in 1.4.
  *
@@ -321,12 +325,14 @@ svn_cmdline_set_up_auth_baton(svn_auth_baton_t **ab,
  * 
  * @since New in 1.4.
  * @deprecated Provided for backward compatibility with the 1.5 API.
+ * Use svn_cmdline_set_up_auth_baton() instead.
  *
  * @note This deprecation does not follow the usual pattern of putting
  * a new number on end of the function's name.  Instead, the new
  * function name is distinguished from the old by a grammatical
  * improvement: the verb "set_up" instead of the noun "setup".
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
                              svn_boolean_t non_interactive,

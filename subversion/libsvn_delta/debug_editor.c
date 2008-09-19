@@ -62,11 +62,9 @@ set_target_revision(void *edit_baton,
   SVN_ERR(svn_stream_printf(eb->out, pool, "set_target_revision : %ld\n",
                             target_revision));
 
-  SVN_ERR(eb->wrapped_editor->set_target_revision(eb->wrapped_edit_baton,
-                                                  target_revision,
-                                                  pool));
-
-  return SVN_NO_ERROR;
+  return eb->wrapped_editor->set_target_revision(eb->wrapped_edit_baton,
+                                                 target_revision,
+                                                 pool);
 }
 
 static svn_error_t *
@@ -108,12 +106,10 @@ delete_entry(const char *path,
   SVN_ERR(svn_stream_printf(eb->out, pool, "delete_entry : %s:%ld\n",
                             path, base_revision));
 
-  SVN_ERR(eb->wrapped_editor->delete_entry(path,
-                                           base_revision,
-                                           pb->wrapped_dir_baton,
-                                           pool));
-
-  return SVN_NO_ERROR;
+  return eb->wrapped_editor->delete_entry(path,
+                                          base_revision,
+                                          pb->wrapped_dir_baton,
+                                          pool);
 }
 
 static svn_error_t *
@@ -402,7 +398,7 @@ svn_delta__get_debug_editor(const svn_delta_editor_t **editor,
   if (apr_err)
     return svn_error_wrap_apr(apr_err, "Problem opening stderr");
 
-  out = svn_stream_from_aprfile(errfp, pool);
+  out = svn_stream_from_aprfile2(errfp, TRUE, pool);
 
   tree_editor->set_target_revision = set_target_revision;
   tree_editor->open_root = open_root;

@@ -237,7 +237,7 @@ get_xlate_handle_node(xlate_handle_node_t **ret,
     pool = apr_hash_pool_get(xlate_handle_hash);
 
   /* Try to create a handle. */
-#if defined( WIN32)
+#if defined(WIN32)
   apr_err = svn_subr__win32_xlate_open((win32_xlate_t **)&handle, topage,
                                        frompage, pool);
 #else
@@ -720,9 +720,7 @@ svn_utf_cstring_to_utf8(const char **dest,
   err = convert_cstring(dest, src, node, pool);
   put_xlate_handle_node(node, SVN_UTF_NTOU_XLATE_HANDLE, pool);
   SVN_ERR(err);
-  SVN_ERR(check_cstring_utf8(*dest, pool));
-
-  return SVN_NO_ERROR;
+  return check_cstring_utf8(*dest, pool);
 }
 
 
@@ -742,9 +740,7 @@ svn_utf_cstring_to_utf8_ex2(const char **dest,
   err = convert_cstring(dest, src, node, pool);
   put_xlate_handle_node(node, convset_key, pool);
   SVN_ERR(err);
-  SVN_ERR(check_cstring_utf8(*dest, pool));
-
-  return SVN_NO_ERROR;
+  return check_cstring_utf8(*dest, pool);
 }
 
 

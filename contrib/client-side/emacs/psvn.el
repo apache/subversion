@@ -2314,7 +2314,7 @@ repository than the working copy."
   "Return whether LINE-INFO represents a locked file.
 This is column three of the `svn status' output.
 The result will be nil or \"L\".
-\(A file becomes locked when an operation is interupted; run \\[svn-status-cleanup]'
+\(A file becomes locked when an operation is interrupted; run \\[svn-status-cleanup]'
 to unlock it.\)"
   (nth 8 line-info))
 (defun svn-status-line-info->historymark (line-info)

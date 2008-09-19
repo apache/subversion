@@ -17,14 +17,12 @@
  */
 
 
-#include <assert.h>
 #include <apr_hash.h>
-#include <apr_md5.h>
 
 #include "svn_types.h"
 #include "svn_delta.h"
 #include "svn_fs.h"
-#include "svn_md5.h"
+#include "svn_checksum.h"
 #include "svn_path.h"
 #include "svn_repos.h"
 #include "svn_pools.h"
@@ -373,10 +371,7 @@ svn_repos_dir_delta2(svn_fs_root_t *src_root,
     SVN_ERR(editor->close_directory(root_baton, pool));
 
   /* Close the edit. */
-  SVN_ERR(editor->close_edit(edit_baton, pool));
-
-  /* All's well that ends well. */
-  return SVN_NO_ERROR;
+  return editor->close_edit(edit_baton, pool);
 }
 
 
@@ -626,19 +621,17 @@ send_text_delta(struct context *c,
   if (c->text_deltas && delta_stream)
     {
       /* Deliver the delta stream to the file.  */
-      SVN_ERR(svn_txdelta_send_txstream(delta_stream,
-                                        delta_handler,
-                                        delta_handler_baton,
-                                        pool));
+      return svn_txdelta_send_txstream(delta_stream,
+                                       delta_handler,
+                                       delta_handler_baton,
+                                       pool);
     }
   else
     {
       /* The caller doesn't want text delta data.  Just send a single
          NULL window. */
-      SVN_ERR(delta_handler(NULL, delta_handler_baton));
+      return delta_handler(NULL, delta_handler_baton);
     }
-
-  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -650,7 +643,7 @@ svn_repos__compare_files(svn_boolean_t *changed_p,
                          apr_pool_t *pool)
 {
   svn_filesize_t size1, size2;
-  unsigned char digest1[APR_MD5_DIGESTSIZE], digest2[APR_MD5_DIGESTSIZE];
+  svn_checksum_t *checksum1, *checksum2;
   svn_stream_t *stream1, *stream2;
   char *buf1, *buf2;
   apr_size_t len1, len2;
@@ -678,9 +671,11 @@ svn_repos__compare_files(svn_boolean_t *changed_p,
 
   /* Same sizes, huh?  Well, if their checksums differ, we know they
      differ. */
-  SVN_ERR(svn_fs_file_md5_checksum(digest1, root1, path1, pool));
-  SVN_ERR(svn_fs_file_md5_checksum(digest2, root2, path2, pool));
-  if (! svn_md5_digests_match(digest1, digest2))
+  SVN_ERR(svn_fs_file_checksum(&checksum1, svn_checksum_md5, root1, path1,
+                               FALSE, pool));
+  SVN_ERR(svn_fs_file_checksum(&checksum2, svn_checksum_md5, root2, path2,
+                               FALSE, pool));
+  if (! svn_checksum_match(checksum1, checksum2))
     {
       *changed_p = TRUE;
       return SVN_NO_ERROR;
@@ -762,7 +757,7 @@ delta_files(struct context *c,
   if (changed)
     {
       svn_txdelta_stream_t *delta_stream = NULL;
-      unsigned char source_digest[APR_MD5_DIGESTSIZE];
+      svn_checksum_t *source_checksum;
       const char *source_hex_digest = NULL;
 
       if (c->text_deltas)
@@ -778,11 +773,12 @@ delta_files(struct context *c,
 
       if (source_path)
         {
-          SVN_ERR(svn_fs_file_md5_checksum
-                  (source_digest, c->source_root, source_path, subpool));
+          SVN_ERR(svn_fs_file_checksum(&source_checksum, svn_checksum_md5,
+                                       c->source_root, source_path, TRUE,
+                                       subpool));
 
-          source_hex_digest = svn_md5_digest_to_cstring(source_digest,
-                                                        subpool);
+          source_hex_digest = svn_checksum_to_cstring(source_checksum,
+                                                      subpool);
         }
 
       SVN_ERR(send_text_delta(c, file_baton, source_hex_digest,
@@ -847,24 +843,23 @@ add_file_or_dir(struct context *c, void *dir_baton,
                                              &subdir_baton));
       SVN_ERR(delta_dirs(context, subdir_baton, MAYBE_DEMOTE_DEPTH(depth),
                          NULL, target_path, edit_path, pool));
-      SVN_ERR(context->editor->close_directory(subdir_baton, pool));
+      return context->editor->close_directory(subdir_baton, pool);
     }
   else
     {
       void *file_baton;
-      unsigned char digest[APR_MD5_DIGESTSIZE];
+      svn_checksum_t *checksum;
 
       SVN_ERR(context->editor->add_file(edit_path, dir_baton,
                                         NULL, SVN_INVALID_REVNUM, pool,
                                         &file_baton));
       SVN_ERR(delta_files(context, file_baton, NULL, target_path, pool));
-      SVN_ERR(svn_fs_file_md5_checksum(digest, context->target_root,
-                                       target_path, pool));
-      SVN_ERR(context->editor->close_file
-              (file_baton, svn_md5_digest_to_cstring(digest, pool), pool));
+      SVN_ERR(svn_fs_file_checksum(&checksum, svn_checksum_md5,
+                                   context->target_root, target_path,
+                                   TRUE, pool));
+      return context->editor->close_file
+             (file_baton, svn_checksum_to_cstring(checksum, pool), pool);
     }
-
-  return SVN_NO_ERROR;
 }
 
 
@@ -907,23 +902,22 @@ replace_file_or_dir(struct context *c,
                                         &subdir_baton));
       SVN_ERR(delta_dirs(c, subdir_baton, MAYBE_DEMOTE_DEPTH(depth),
                          source_path, target_path, edit_path, pool));
-      SVN_ERR(c->editor->close_directory(subdir_baton, pool));
+      return c->editor->close_directory(subdir_baton, pool);
     }
   else
     {
       void *file_baton;
-      unsigned char digest[APR_MD5_DIGESTSIZE];
+      svn_checksum_t *checksum;
 
       SVN_ERR(c->editor->open_file(edit_path, dir_baton, base_revision,
                                    pool, &file_baton));
       SVN_ERR(delta_files(c, file_baton, source_path, target_path, pool));
-      SVN_ERR(svn_fs_file_md5_checksum(digest, c->target_root,
-                                       target_path, pool));
-      SVN_ERR(c->editor->close_file
-              (file_baton, svn_md5_digest_to_cstring(digest, pool), pool));
+      SVN_ERR(svn_fs_file_checksum(&checksum, svn_checksum_md5,
+                                   c->target_root, target_path, TRUE,
+                                   pool));
+      return c->editor->close_file
+             (file_baton, svn_checksum_to_cstring(checksum, pool), pool);
     }
-
-  return SVN_NO_ERROR;
 }
 
 
@@ -940,11 +934,9 @@ absent_file_or_dir(struct context *c,
   SVN_ERR_ASSERT(edit_path);
 
   if (tgt_kind == svn_node_dir)
-    SVN_ERR(c->editor->absent_directory(edit_path, dir_baton, pool));
+    return c->editor->absent_directory(edit_path, dir_baton, pool);
   else
-    SVN_ERR(c->editor->absent_file(edit_path, dir_baton, pool));
-
-  return SVN_NO_ERROR;
+    return c->editor->absent_file(edit_path, dir_baton, pool);
 }
 
 

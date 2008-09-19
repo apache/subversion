@@ -55,8 +55,8 @@ def am_revisions(ctx):
       rev = skel.Rev(rec[1])
       revnum = rec[0] - 1
       print "r%d: txn %s%s" % (revnum, rev.txn,
-          (not ctx.txns_db.has_key(rev.txn)) and "*** MISSING TXN ***" or "")
-      ok(not txn2rev.has_key(rev.txn), 'Multiple revs bound to same txn')
+          (rev.txn not in ctx.txns_db) and "*** MISSING TXN ***" or "")
+      ok(rev.txn not in txn2rev, 'Multiple revs bound to same txn')
       txn2rev[rev.txn] = revnum
       rec = cur.next()
   finally:
@@ -82,7 +82,7 @@ def am_changes(ctx):
           lead = " " * len(lead)
         print "%s %s %s %s %s %s%s" % (lead, opmap[ch.kind], ch.path, ch.node,
             ch.textmod and "T" or "-", ch.propmod and "P" or "-",
-            (not ctx.nodes_db.has_key(ch.node)) \
+            (ch.node not in ctx.nodes_db) \
                 and "*** MISSING NODE ***" or "")
         prevtxn = rec[0]
         if len(rec[0]) > maximum_txnid_len:
@@ -163,7 +163,7 @@ def am_nodes(ctx):
         try:
           rep = skel.Rep(ctx.reps_db[nd.proprep])
           prkind = reptype[rep.kind]
-          if ctx.bad_reps.has_key(nd.proprep):
+          if nd.proprep in ctx.bad_reps:
             prkind += " *** BAD ***"
         except KeyError:
           prkind = "*** MISSING ***"
@@ -171,7 +171,7 @@ def am_nodes(ctx):
         try:
           rep = skel.Rep(ctx.reps_db[nd.datarep])
           drkind = reptype[rep.kind]
-          if ctx.bad_reps.has_key(nd.datarep):
+          if nd.datarep in ctx.bad_reps:
             drkind += " *** BAD ***"
         except KeyError:
           drkind = "*** MISSING ***"
@@ -205,7 +205,7 @@ def am_reps(ctx):
             codecs.getencoder('hex_codec')(rep.cksum)[0])
         if rep.kind == "fulltext":
           note = ""
-          if not ctx.strings_db.has_key(rep.str):
+          if rep.str not in ctx.strings_db:
             note = " *MISS*"
             ctx.bad_reps[rec[0]] = None
           print lead+("fulltext str %s%s" % (rep.str, note))
@@ -217,10 +217,10 @@ def am_reps(ctx):
             len(rep.windows) != 1 and "s" or ""))
           for window in rep.windows:
             noterep = notestr = ""
-            if not ctx.reps_db.has_key(window.vs_rep):
+            if window.vs_rep not in ctx.reps_db:
               noterep = " *MISS*"
               ctx.bad_reps[rec[0]] = None
-            if not ctx.strings_db.has_key(window.str):
+            if window.str not in ctx.strings_db:
               notestr = " *MISS*"
               ctx.bad_reps[rec[0]] = None
             print "\toff %s len %s vs-rep %s%s str %s%s" % (window.offset,

@@ -4,7 +4,7 @@
  * in here.
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -432,7 +432,7 @@ svn_cl__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
       (finfo_before.size != finfo_after.size))
     {
       svn_stringbuf_t *edited_contents_s;
-      err = svn_stringbuf_from_file(&edited_contents_s, tmpfile_name, pool);
+      err = svn_stringbuf_from_file2(&edited_contents_s, tmpfile_name, pool);
       if (err)
         goto cleanup;
 
@@ -800,10 +800,10 @@ svn_cl__get_log_message(const char **log_msg,
       if (! message)
         {
           const char *reply;
-          SVN_ERR(svn_cmdline_prompt_user
+          SVN_ERR(svn_cmdline_prompt_user2
                   (&reply,
                    _("\nLog message unchanged or not specified\n"
-                     "(a)bort, (c)ontinue, (e)dit:\n"), pool));
+                     "(a)bort, (c)ontinue, (e)dit:\n"), NULL, pool));
           if (reply)
             {
               char letter = apr_tolower(reply[0]);
@@ -1113,4 +1113,54 @@ svn_cl__time_cstring_to_human_cstring(const char **human_cstring,
   *human_cstring = svn_time_to_human_cstring(when, pool);
 
   return SVN_NO_ERROR;
+}
+
+
+/* Return a copy, allocated in POOL, of the next line of text from *STR
+ * up to and including a CR and/or an LF. Change *STR to point to the
+ * remainder of the string after the returned part. If there are no
+ * characters to be returned, return NULL; never return an empty string.
+ */
+static const char *
+next_line(const char **str, apr_pool_t *pool)
+{
+  const char *start = *str;
+  const char *p = *str;
+
+  /* n.b. Throughout this fn, we never read any character after a '\0'. */
+  /* Skip over all non-EOL characters, if any. */
+  while (*p != '\r' && *p != '\n' && *p != '\0')
+    p++;
+  /* Skip over \r\n or \n\r or \r or \n, if any. */
+  if (*p == '\r' || *p == '\n')
+    {
+      char c = *p++;
+
+      if ((c == '\r' && *p == '\n') || (c == '\n' && *p == '\r'))
+        p++;
+    }
+
+  /* Now p points after at most one '\n' and/or '\r'. */
+  *str = p;
+
+  if (p == start)
+    return NULL;
+
+  return svn_string_ncreate(start, p - start, pool)->data;
+}
+
+const char *
+svn_cl__indent_string(const char *str,
+                      const char *indent,
+                      apr_pool_t *pool)
+{
+  svn_stringbuf_t *out = svn_stringbuf_create("", pool);
+  const char *line;
+
+  while ((line = next_line(&str, pool)))
+    {
+      svn_stringbuf_appendcstr(out, indent);
+      svn_stringbuf_appendcstr(out, line);
+    }
+  return out->data;
 }

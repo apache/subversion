@@ -29,7 +29,7 @@
 
 
 /** Caching SVN_FS_ID_T values. **/
-static svn_cache_dup_func_t dup_id;
+/* Implements svn_cache_dup_func_t */
 static svn_error_t *
 dup_id(void **out,
        void *in,
@@ -40,7 +40,7 @@ dup_id(void **out,
   return SVN_NO_ERROR;
 }
 
-static svn_cache_serialize_func_t serialize_id;
+/* Implements svn_cache_serialize_func_t */
 static svn_error_t *
 serialize_id(char **data,
              apr_size_t *data_len,
@@ -56,7 +56,7 @@ serialize_id(char **data,
 }
 
 
-static svn_cache_deserialize_func_t deserialize_id;
+/* Implements svn_cache_deserialize_func_t */
 static svn_error_t *
 deserialize_id(void **out,
                const char *data,
@@ -76,7 +76,7 @@ deserialize_id(void **out,
 
 
 /** Caching directory listings. **/
-static svn_cache_dup_func_t dup_dir_listing;
+/* Implements svn_cache_dup_func_t */
 static svn_error_t *
 dup_dir_listing(void **out,
                 void *in,
@@ -120,16 +120,13 @@ read_config(svn_memcache_t **memcache_p,
   SVN_ERR(svn_fs_fs__get_config(&config, fs, pool));
   SVN_ERR(svn_cache_make_memcache_from_config(memcache_p, config,
                                               fs->pool));
-  SVN_ERR(svn_config_get_bool(config, fail_stop,
-                              CONFIG_SECTION_CACHES, CONFIG_OPTION_FAIL_STOP,
-                              FALSE));
-
-  return SVN_NO_ERROR;
-
+  return svn_config_get_bool(config, fail_stop,
+                             CONFIG_SECTION_CACHES, CONFIG_OPTION_FAIL_STOP,
+                             FALSE);
 }
 
 
-static svn_cache_error_handler_t warn_on_cache_errors;
+/* Implements svn_cache_error_handler_t */
 static svn_error_t *
 warn_on_cache_errors(svn_error_t *err,
                      void *baton,

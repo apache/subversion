@@ -26,7 +26,6 @@ from svntest import wc
 from svntest.main import server_has_mergeinfo
 from svntest.main import SVN_PROP_MERGEINFO
 from merge_tests import set_up_branch
-from merge_tests import shorten_path_kludge
 
 ######################################################################
 #
@@ -264,6 +263,7 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
                        '--username', svntest.main.wc_author2)
 
   # Do some mergeing - r6
+  # From branch_a to trunk: add 'upsilon' and modify 'iota' and 'mu'.
   #
   # Mergeinfo changes on /trunk:
   #    Merged /trunk:r2
@@ -275,7 +275,7 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
                        '--username', svntest.main.wc_author2)
   os.chdir('..')
 
-  # Add omicron to branches/a - r7
+  # Add 'blocked/omicron' to branches/a - r7
   svntest.main.run_svn(None, 'mkdir', os.path.join(branch_a, 'blocked'))
   svntest.main.file_write(os.path.join(branch_a, omicron_path),
                           "This is the file 'omicron'.\n")
@@ -390,7 +390,9 @@ http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=
                           "Don't forget to look at 'upsilon', as well.\n" +
                           "This is yet more content in 'mu'.",
                           "wb")
+  # Resolve conflicts, and commit
   svntest.main.run_svn(None, 'resolved', os.path.join('A', 'mu'))
+  svntest.main.run_svn(None, 'resolved', 'A')
   svntest.main.run_svn(None, 'ci', '-m',
                        "Merge branches/c to trunk, " +
                        "resolving a conflict in 'mu'.",
@@ -1455,16 +1457,12 @@ def merge_sensitive_log_added_mergeinfo_replaces_inherited(sbox):
   H_COPY_path = os.path.join(wc_dir, "A_COPY", "D", "H")
 
   # Merge all available changes from 'A/D' to 'A_COPY/D' and commit as r7.
-  #
-  # Search for the comment entitled "The Merge Kluge" in merge_tests.py to
-  # understand why we shorten and chdir() below.
-  short_D_COPY_path = shorten_path_kludge(D_COPY_path)
-  expected_output = wc.State(short_D_COPY_path, {
+  expected_output = wc.State(D_COPY_path, {
     'H/psi'   : Item(status='U '),
     'G/rho'   : Item(status='U '),
     'H/omega' : Item(status='U '),
     })
-  expected_status = wc.State(short_D_COPY_path, {
+  expected_status = wc.State(D_COPY_path, {
     ''        : Item(status=' M', wc_rev=2),
     'G'       : Item(status='  ', wc_rev=2),
     'G/pi'    : Item(status='  ', wc_rev=2),
@@ -1488,10 +1486,8 @@ def merge_sensitive_log_added_mergeinfo_replaces_inherited(sbox):
     'H/omega' : Item("New content"),
     'gamma'   : Item("This is the file 'gamma'.\n")
     })
-  expected_skip = wc.State(short_D_COPY_path, { })
-  saved_cwd = os.getcwd()
-  os.chdir(svntest.main.work_dir)
-  svntest.actions.run_and_verify_merge(short_D_COPY_path, None, None,
+  expected_skip = wc.State(D_COPY_path, { })
+  svntest.actions.run_and_verify_merge(D_COPY_path, None, None,
                                        sbox.repo_url + '/A/D',
                                        expected_output,
                                        expected_disk,
@@ -1499,7 +1495,6 @@ def merge_sensitive_log_added_mergeinfo_replaces_inherited(sbox):
                                        expected_skip,
                                        None, None, None, None,
                                        None, 1)
-  os.chdir(saved_cwd)
 
   # Commit the merge.
   expected_output = svntest.wc.State(wc_dir, {
@@ -1526,11 +1521,10 @@ def merge_sensitive_log_added_mergeinfo_replaces_inherited(sbox):
   svntest.actions.run_and_verify_svn(None, ["At revision 7.\n"], [],
                                      'up', wc_dir)
   wc_status.tweak(wc_rev=7)
-  short_H_COPY_path = shorten_path_kludge(H_COPY_path)
-  expected_output = wc.State(short_H_COPY_path, {
+  expected_output = wc.State(H_COPY_path, {
     'psi' : Item(status='U ')
     })
-  expected_status = wc.State(short_H_COPY_path, {
+  expected_status = wc.State(H_COPY_path, {
     ''      : Item(status=' M', wc_rev=7),
     'psi'   : Item(status='M ', wc_rev=7),
     'omega' : Item(status='  ', wc_rev=7),
@@ -1542,14 +1536,12 @@ def merge_sensitive_log_added_mergeinfo_replaces_inherited(sbox):
     'omega' : Item("New content"),
     'chi'   : Item("This is the file 'chi'.\n"),
     })
-  expected_skip = wc.State(short_H_COPY_path, { })
-  os.chdir(svntest.main.work_dir)
-  svntest.actions.run_and_verify_merge(short_H_COPY_path, '3', '2',
+  expected_skip = wc.State(H_COPY_path, { })
+  svntest.actions.run_and_verify_merge(H_COPY_path, '3', '2',
                                        sbox.repo_url + '/A/D/H',
                                        expected_output, expected_disk,
                                        expected_status, expected_skip,
                                        None, None, None, None, None, 1)
-  os.chdir(saved_cwd)
 
   # Commit the merge.
   expected_output = svntest.wc.State(wc_dir, {
@@ -1594,9 +1586,63 @@ def merge_sensitive_log_added_mergeinfo_replaces_inherited(sbox):
   run_log_g_r8(os.path.join(wc_dir, "A_COPY", "D", "H"))
   run_log_g_r8(os.path.join(wc_dir, "A_COPY", "D", "H", "psi"))
 
+#----------------------------------------------------------------------
+
+def merge_sensitive_log_propmod_merge_inheriting_path(sbox):
+  "log -g and simple propmod to merge-inheriting path"
+
+  # Issue #3285 (http://subversion.tigris.org/issues/show_bug.cgi?id=3285)
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  wc_disk, wc_status = set_up_branch(sbox)
+
+  A_path = os.path.join(wc_dir, 'A')
+  A_COPY_path = os.path.join(wc_dir, 'A_COPY')
+  A_COPY_psi_path = os.path.join(wc_dir, 'A_COPY', 'D', 'H', 'psi')
+
+  # Merge the post-copy changes to A into A_COPY
+  svntest.main.run_svn(None, 'up', wc_dir)
+  svntest.main.run_svn(None, 'merge', '-r2:6', A_path, A_COPY_path)
+  svntest.main.run_svn(None, 'ci', '-m', 'Merge changes from A.', wc_dir)
+
+  # Now, tweak a non-mergeinfo property on A_COPY.
+  svntest.main.run_svn(None, 'up', wc_dir)
+  svntest.main.run_svn(None, 'propset', 'foo', 'bar', A_COPY_psi_path)
+  svntest.main.run_svn(None, 'ci', '-m',
+                       'Set property "foo" to "bar" on A_COPY/D/H/psi', wc_dir)
+  svntest.main.run_svn(None, 'up', wc_dir)
+  
+  # Check that log -g -r7 on wc_dir/A_COPY and parents show merges of r3-r6.
+  def run_log_g_r7(log_target):
+    expected_merges = {
+      7 : [],
+      6 : [7],
+      5 : [7],
+      4 : [7],
+      3 : [7],
+      }
+    exit_code, output, err = svntest.actions.run_and_verify_svn(
+      None, None, [], 'log', '-g', '-r7', log_target)
+    log_chain = parse_log_output(output)
+    check_merge_results(log_chain, expected_merges)
+  run_log_g_r7(wc_dir)
+  run_log_g_r7(A_COPY_path)
+
+  # Check that log -g -r8 on wc_dir/A_COPY/D/H/psi and parents show no merges.
+  def run_log_g_r8(log_target):
+    expected_merges = { 8 : [] }
+    exit_code, output, err = svntest.actions.run_and_verify_svn(
+      None, None, [], 'log', '-g', '-r8', log_target)
+    log_chain = parse_log_output(output)
+    check_merge_results(log_chain, expected_merges)
+  run_log_g_r8(wc_dir)
+  run_log_g_r8(A_COPY_path)
+  run_log_g_r8(A_COPY_psi_path)
+
+
 ########################################################################
 # Run the tests
-
 
 # list all tests here, starting with None:
 test_list = [ None,
@@ -1632,6 +1678,8 @@ test_list = [ None,
               SkipUnless(merge_sensitive_log_target_with_bogus_mergeinfo,
                          server_has_mergeinfo),
               SkipUnless(merge_sensitive_log_added_mergeinfo_replaces_inherited,
+                         server_has_mergeinfo),
+              SkipUnless(merge_sensitive_log_propmod_merge_inheriting_path,
                          server_has_mergeinfo),
              ]
 

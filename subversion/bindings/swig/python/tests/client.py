@@ -177,7 +177,7 @@ class SubversionClientTestCase(unittest.TestCase):
     self.assertEqual(self.log_message, "More directories.")
     self.assertEqual(len(self.changed_paths), 3)
     for dir in ('/trunk/dir1', '/trunk/dir2', '/trunk/dir3'):
-      self.assert_(self.changed_paths.has_key(dir))
+      self.assert_(dir in self.changed_paths)
       self.assertEqual(self.changed_paths[dir].action, 'A')
 
   def test_uuid_from_url(self):

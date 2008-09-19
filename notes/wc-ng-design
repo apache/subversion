@@ -64,6 +64,15 @@ found:
  * ACTUAL: The tree as it is in modified form on the local disk.
     This tree may differ from WORKING when having been modified
     with non-Subversion transforming commands (such as plain 'rm').
+   
+   Potential differences from WORKING
+   * node in ACTUAL is not present in WORKING ("unversioned" node)
+   * node not present in ACTUAL is in WORKING ("missing" node)
+   * node in ACTUAL has different kind from associated node in WORKING
+     ("obstructed" node)
+     
+   Properties are recorded in WORKING; ACTUAL has no properties.
+   File contents are recorded in ACTUAL; WORKING has no contents.
 
 In the context of the 'svn update' command:
 
@@ -75,7 +84,7 @@ In the context of the 'svn update' command:
      these trees generally represent "in transition" or "intermediary"
      state with the intent to become the final tree.
 
-Additionally, three more trees may be related to the working copy
+Additionally, two more trees may be related to the working copy
 when considering the 'svn merge' command:
 
  * START: The tree used as the base state for the 'merge' command
@@ -139,6 +148,13 @@ Requirements
    update obstructions used to leave the working copy unrecoverable
  * Client side 'true renames' support where one side can't be committed
    without the other (relates to issue #876)
+
+   ###JSS: Perhaps this is obvious... I think that requirement is fine for the
+      user doing the commit.  We still need to remember that another user doing
+      the update may not have authz permission to the directory it was renamed
+      into or may have a checkout of a sub-tree and that target directory may
+      not exist.  Likewise, the original location might be unavailable too.
+
  * Change detection should become entirely internal to libsvn_wc (referring
    to the fact that libsvn_client currently calls svn_wait_for_timestamps()),
    even though under 'use-commit-times=yes', this waiting is
@@ -260,6 +276,14 @@ then, if these routines are passed file handles, they'll be quite
 happy, meaning they still don't need to know where the text base /
 source file is...]
 
+###GJS: the APIs should use streams so that we can decompress as the
+   stream is being read. the diff library will need a callback of some
+   kind to perform the rewind, which will effectively just close and
+   reopen the stream. if it rewinds *multiple* times, then we may want
+   to cache the decompressed version of the file. I'll
+   investigate. Given our metadata/base-text storage system, I suspect
+   it will be very easy to cache decompressed copies for a while.
+
 In order to keep developers sane, it should be extremely clear at any
 one time - when operating on a tree - which tree is being operated upon.
 
@@ -270,6 +294,7 @@ solely that specific task.
 #####XBC Do please note that this suggests yet another instance of
          pure polymorphism coded in C. This runs contrary to the
          developer sanity requirement.
+###GJS: agreed with XBC.
 
 
 Speed
@@ -282,6 +307,10 @@ One of the possible improvements would be to make wc-ng read all of
 the ACTUAL state (concentrated in one place, using apr_stat()), keeping
 it around as long as required, matching it with the WORKING state before
 operating on either (not only when deemed important!).
+
+###GJS: working copy file counts are unbounded, so we need to be
+   careful about keeping "all" stat results in memory. I'll certainly
+   keep this in mind, however.
 
 Working from the ACTUAL tree will also prove to be a step toward clarity
 regarding the exact tree which is being operated upon.
@@ -306,8 +335,12 @@ There are 3 known models for storing metadata as requested by different
 groups of users:
 
  - in-subtree metadata storage (.svn subdir model, as in wc-1.0)
+   ###GJS: euh... aren't we axing this? who has *requested* this?
  - in-'tree root' metadata storage (working copy central)
  - detached metadata storage (user-central)
+   - in $HOME/.subversion/
+   - in arbitrary location (e.g. $HOME is a (slow) NFS mount, and we
+     want the metadata on a local drive, such as /var/...)
 
 A solution to implementing each of these behaviours in order to satisfy
 the wide range of use-cases they solve, would be to define a module
@@ -317,6 +350,31 @@ Note that using within-module vtables should be less problematic than our
 post-1.0 experiences with public vtables (such as the ra-layer vtable):
 implementation details are allowed to differ between releases (even patch
 releases).
+
+###GJS: note that we are talking about both metadata AND base-text
+   content. (and yeah, optional and compresses base-texts can be done
+   during this rewrite)  Also note that we might be able to share
+   base-text content across working copies if they are all keyed by
+   the MD5 hash into storage directories (under the user-central model)
+
+###GJS: I don't think vtables are needed here. This is simply altering
+   the base location, not a whole new implementation. My plan is to
+   default to the "tree root" model with a .svn subdirectory. If a
+   .svn subdir is not found, then we fall back to looking in the
+   $HOME/.subversion/ directory (some subdir under there). If we
+   *still* don't find it, then some config options will point us to
+   the metadata/base-text location.
+
+###GJS: my plan is to upgrade the working copy if we find a pre-1.6
+   working copy. all the data will be lifted from the multiple .svn
+   subdirectories, and relocated to the "proper" storage location.
+   This will be a non-reversable upgrade, and will preclude pre-1.6
+   clients from using that working copy again.
+   Note: because of the "destructive" nature of this upgrade, and the
+   expected duration, we may want to require the user to perform an
+   explicit action in order to complete the upgrade. However, 1.6 will
+   not be able to *modify* wc-1.0 metadata -- just read it in order to
+   upgrade it to the new storage system.
 
 
 Transaction duration / memory management
@@ -350,6 +408,10 @@ as well as developer sanity: in the early stages of the wc-ng develop-
 ment process, we'll be able to assess how well the design holds up
 under more difficult 'weather'.
 
+###GJS: agreed. as much as possible, when I (re)implement the old APIs
+   in terms of the new APIs, then I'll write a whitebox test. we'll
+   see how long I keep that up :-P
+
 Transactional updates
 ---------------------
 
@@ -381,6 +443,18 @@ in this document, or elsewhere in the subversion (source) tree:
  * File name comparison routines (!) (availability; which compensate
      for the different ways Unicode characters can be represented
      [re: NFC/NFD Unicode issue])
+
+   ###JSS: Talking with ehu on IRC when I asked him about how to handle this
+   issue: "if we accept that some repositories will be unusable with wc-ng,
+   then we can standardize anything that comes in from the server as well as
+   the directory side into the same encoding.  we'd be writing files with the
+   standardized encoding."  The rest of this conversation centered around the
+   fact that either APR or the OS will convert the filename to the correct
+   form for the filesystem when doing the stat() call.  Note, ehu says: "(we'll
+   need to retain the filename we got from the server though: we'll need it to
+   describe the file through the editor interface: the server still allows all
+   encodings.)"
+
  * URL manipulation routines (availability)
  * URL comparison routines (availability; which compensate for
      different ways the same URL can be encoded; see issue #2490)
@@ -493,6 +567,10 @@ Given the assumption of 'little code duplication', the choice for
 having several modules which implement the same API (vtable) is
 justifiable.
 
+###GJS: disagree. I plan to have just one library and no plans for
+   vtables. there is very little need for distinct implementations, as
+   far as I can tell.
+
 
 Implementation proposals
 ========================
@@ -564,6 +642,197 @@ goal of 'atomic updates' can be realised, in which case the tree can't be
 in an incomplete yet locked state.  This would also invalidate issue #1879.
 
 
+Basic Storage Mechanics
+-----------------------
+
+All metadata will be stored into a single SQLite database. This
+includes all of the "entry" fields *and* all of the properties
+attached to the files/directories. SQLite transactions will be used
+rather than the "loggy" mechanics of wc-1.0.
+
+###GJS: note that atomicity across the sqlite database and the content
+   of the ACTUAL tree is freakin' difficult. idea to test: metadata
+   says "not sure of ACTUAL", and when ops complete successfully, then
+   we clear the flag. during any future operation, if the flag is
+   present, then we approach the ACTUAL with extreme prejudice. also
+   note that we can batch clearing of the flags as an optimistic
+   efficiency approach (since if we batch 100 and the last fails, then
+   the other 99 will be slower until the wc-ng determines the ACTUAL
+   is in fine shape and clears the flag for future operations).
+
+###GJS: be wary of sqlite commit performance (based on some of my
+   prior experience with it). must have timing/debugging around the
+   commit operations. may need to use various transaction isolations
+   and/or batching of commits to get proper performance. thus, profile
+   output capability is mandatory to determine if we have issues, and
+   where they occur.
+
+###JSS: I don't see how transactions by themselves can replace loggy.
+   Right now, if you abort something like 'svn update' or 'svn checkout',
+   loggy has recorded all the files to be downloaded, and will pick up
+   where it left off.  We did this as an optimization to prevent
+   re-downloading a potentially large amount of data again.  Seems like
+   we still need to provide that capability.
+
+   ###GJS: sqlite transactions replace the atomicity that loggy was
+           originally designed for. it sounds like loggy is also be
+           used as a work queue, and that is easily handled in sqlite.
+
+Base text data will be stored in a multi-level directory structure,
+keyed/named by the MD5 of the file. The database will record
+appropriate mappings, content/compression types, and refcounts for the
+base text files (for the shared case).
+
+When the metadata is recorded in a central area (rather than the WC
+root), then it is possible for the metadata and the base files to
+become out of date with respect to all the working copies on the
+system. We will revamp "svn cleanup" to re-tally the base text
+reference counts, eliminate unreferenced bases, verify that the
+working copies are still present, ensure the metadata <-> WC
+integrity, deal with moves of metadata from central -> wc-root (can
+happen if somebody rm -rf's the wc, then does a checkout and wants the
+metadata at the wc-root (this time)), and other consistency checks.
+
+
+Metadata Schemas
+----------------
+
+BASE schema
+  name         string
+  kind         enum
+  checksum     string     ### string should indicate what kind of checksum?
+  props        blob       ### serialized props. maybe keep unserialized?
+                          ###   maybe some props should be broken out?
+  children     [string]   ### someting more than array-of-string?
+  cmt_rev      integer64
+  cmt_date     integer64  ### is there a time type?
+  cmt_author   string     ### normalize?  (besides utf8, what does "normalize" mean?)
+
+  absent       boolean    ### really? maybe state instead, such as "omitted"?
+  revision     integer64
+  url          string     ### should be computed value?
+  repos_url    string     ### shared, per-dir?
+  repos_uuid   string     ### shared, per-dir?
+  ### lock information? in this table, or a separate locks table?
+  ### KFF: in this table, I think.  It's rare to tell Subversion "Show
+  ### me everything that's locked", but it's common to say "Tell me if
+  ### this particular path [or set of paths] is locked".
+  ###
+  ### depth?
+
+
+WORKING schema
+  name         string     ###
+  kind         enum
+  checksum     string
+  props        blob       ### serialized props. maybe keep unserialized?
+                          ###   maybe some props should be broken out?
+  children     [string]   ### someting more than array-of-string?
+  ### following are set when a copyfrom occurs. do we really need these?
+  cmt_rev      integer64
+  cmt_date     integer64  ### is there a time type?
+  cmt_author   string     ### normalize?
+
+  deleted      boolean
+  copyfrom_url string
+  copyfrom_rev integer64
+  conflict_old string     ### conflict data goes on WORKING, right?
+  conflict_new string
+  conflict_wrk string
+  prejfile     string
+  changelist   string
+  ### KFF: With changelists, it's the opposite of locks: one
+  ### frequently says "show me all the files in changelist X"; I'm
+  ### not sure how frequently we need to say "show me all the
+  ### changelists this file is part of".  But anyway, the need to
+  ### discover all the files in changelist X implies that it might be
+  ### better to make a changelist table?
+
+  ### how to represent renames?
+  ### repos_url, repos_uuid: combined working copies, and/or a foreign
+  ###   repos brought in and about to be linked via svn:externals. ??
+  ### depth?
+
+
+ACTUAL schema  (what we know about the ACTUAL tree)
+  name         string
+  ### cache the checksum? probably unreliable, but could be a marker
+  ###   for "we've already noted the file is different from WORKING"
+  ### cache the kind? assume that kind, then on exception do extended
+  ###   processing to figure out the "right" thing.
+
+  lastmod      integer64  ### is there a time type?
+
+  ### note that we can't really hold any/much data here since ACTUAL
+      could change at any point in time. anything stored here should
+      simply be optimization indicators on how to approach the ACTUAL
+      tree (i.e. what assumptions to make).
+
+
+BASETEXT schema
+  checksum     string     ### KFF: how is this different from the
+                          ### checksum in the "BASE" schema above?
+  present      enum       ### something like: yes, no, cached, notyet
+  refcount     integer
+  compressed   boolean    ### enum for various storage styles?
+
+  ### learn from GIT storage? can we somehow compress across this
+      entire storage heirarchy? (eg. use history and deltas to
+      reassemble fulltexts from line-of-descent)
+
+
+Note that 'children' applies only to kind==DIRECTORY
+
+### break down all modification operations to things that operate on a
+    small/fixed set of rows. if a large sequence of operations fails,
+    then it can leave the system in reparable state, since most were
+    performed. note that ACTUAL can change at any time, thus all mods
+    should be able to compensate for ACTUAL being something
+    unexpected. thus, the transformative operations should be able to
+    fail in such a way as to leave ACTUAL pretty bunged up.
+
+### maybe use handles to refer to files/dirs? take input pathname,
+    convert to native charset, and return a handle for that. same
+    handle across varous schemas.
+
+    note: could be very handy, as I'm thinking abspath for all names,
+    which gets to be pretty wordy for large working copies.
+    
+    note: with handles, a file entry could have "parent dir" cheaply,
+    and from that, we could derive repos_url/uuid from some dir table.
+
+### probably want to special-case the checksum and BASETEXT entry for
+    the "empty file"
+
+
+Code Organization
+-----------------
+
+libsvn_wc/wc_db.h  (symbols: svn_wc__db_*)
+        Storage subsystem for the WC metadata/base-text information.
+        This is a private API, and the rest of the WC will be rebuilt
+        on top of this.
+        
+        This code deals with storage, and transactional modifications
+        of the data.
+        
+        Note: this is a random-access, low-level API. Editors will be
+        built on top of this layer.
+
+
+svn_wc.h API
+------------
+
+Note that we also have an opportunity to revamp the WC API. Things
+like access batons will definitely disappear, but there will most
+likely be great opportunities for other design changes.
+
+Note that removing access batons (and other API changes) will ripple
+up until libsvn_client, and may even have an affect on *its* API.
+
+### the form of a new API is unknown/TBD.
+
+
 Other sections
---------------
+==============
  remain to be done

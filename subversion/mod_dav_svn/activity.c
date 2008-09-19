@@ -2,7 +2,7 @@
  * activity.c: DeltaV activity handling
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -28,6 +28,7 @@
 #include "svn_md5.h"
 #include "svn_path.h"
 #include "svn_fs.h"
+#include "svn_props.h"
 #include "svn_repos.h"
 #include "private/svn_fs_private.h"
 
@@ -281,6 +282,9 @@ dav_svn__create_activity(const dav_svn_repos *repos,
   svn_revnum_t rev;
   svn_fs_txn_t *txn;
   svn_error_t *serr;
+  apr_hash_t *revprop_table = apr_hash_make(pool);
+  apr_hash_set(revprop_table, SVN_PROP_REVISION_AUTHOR, APR_HASH_KEY_STRING,
+               svn_string_create(repos->username, pool));
 
   serr = svn_fs_youngest_rev(&rev, repos->fs, pool);
   if (serr != NULL)
@@ -290,9 +294,9 @@ dav_svn__create_activity(const dav_svn_repos *repos,
                                   repos->pool);
     }
 
-  serr = svn_repos_fs_begin_txn_for_commit(&txn, repos->repos, rev,
-                                           repos->username, NULL,
-                                           repos->pool);
+  serr = svn_repos_fs_begin_txn_for_commit2(&txn, repos->repos, rev,
+                                            revprop_table,
+                                            repos->pool);
   if (serr != NULL)
     {
       return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,

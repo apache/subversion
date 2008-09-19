@@ -1125,7 +1125,7 @@ static svn_error_t *add_lock_tokens(svn_ra_svn_conn_t *conn,
                                     sb, conn, pool);
 
       token = token_item->u.string->data;
-      SVN_ERR(svn_fs_access_add_lock_token(fs_access, token));
+      SVN_ERR(svn_fs_access_add_lock_token2(fs_access, path, token));
     }
 
   return SVN_NO_ERROR;
@@ -1291,7 +1291,7 @@ static svn_error_t *get_file(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   char buf[4096];
   apr_size_t len;
   svn_boolean_t want_props, want_contents;
-  unsigned char digest[APR_MD5_DIGESTSIZE];
+  svn_checksum_t *checksum;
   svn_error_t *err, *write_err;
 
   /* Parse arguments. */
@@ -1314,8 +1314,9 @@ static svn_error_t *get_file(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   /* Fetch the properties and a stream for the contents. */
   SVN_CMD_ERR(svn_fs_revision_root(&root, b->fs, rev, pool));
-  SVN_CMD_ERR(svn_fs_file_md5_checksum(digest, root, full_path, pool));
-  hex_digest = svn_md5_digest_to_cstring_display(digest, pool);
+  SVN_CMD_ERR(svn_fs_file_checksum(&checksum, svn_checksum_md5, root,
+                                   full_path, TRUE, pool));
+  hex_digest = svn_checksum_to_cstring_display(checksum, pool);
   if (want_props)
     SVN_CMD_ERR(get_props(&props, root, full_path, pool));
   if (want_contents)

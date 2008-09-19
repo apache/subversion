@@ -17,6 +17,9 @@ AC_MSG_NOTICE([Configuring Subversion ]AC_PACKAGE_VERSION)
 AC_SUBST([abs_srcdir], ["`cd $srcdir && pwd`"])
 AC_SUBST([abs_builddir], ["`pwd`"])
 
+SWIG_LDFLAGS="$LDFLAGS"
+AC_SUBST([SWIG_LDFLAGS])
+
 # Generate config.nice early (before the arguments are munged)
 SVN_CONFIG_NICE(config.nice)
 
@@ -67,8 +70,8 @@ SVN_LIB_APRUTIL($APU_VER_REGEXES)
 
 # Either a space-separated list of allowable Neon versions, or "any" to
 # mean allow anything.
-NEON_ALLOWED_LIST="0.25.0 0.25.1 0.25.2 0.25.3 0.25.4 0.25.5 0.26.0 0.26.1 0.26.2 0.26.3 0.26.4 0.27.2 0.28.0 0.28.1 0.28.2 0.29.0-dev"
-NEON_RECOMMENDED_VER=0.28.2
+NEON_ALLOWED_LIST="0.25.0 0.25.1 0.25.2 0.25.3 0.25.4 0.25.5 0.26.0 0.26.1 0.26.2 0.26.3 0.26.4 0.27.2 0.28.0 0.28.1 0.28.2 0.28.3 0.29.0-dev"
+NEON_RECOMMENDED_VER=0.28.3
 NEON_URL="http://www.webdav.org/neon/neon-${NEON_RECOMMENDED_VER}.tar.gz"
 dnl You can skip the neon version check only if you know what you are doing 
 AC_ARG_ENABLE(neon-version-check,
@@ -106,6 +109,13 @@ fi
 
 dnl Find Apache with a recent-enough magic module number
 SVN_FIND_APACHE(20020903)
+
+dnl Search for SQLite
+SQLITE_ALLOWED_PATTERN="(3\.5|3\.6)($|\..*)"
+SQLITE_RECOMMENDED_VER="3.5.9"
+SQLITE_URL="http://www.sqlite.org/sqlite-${SQLITE_RECOMMENDED_VER}.tar.gz"
+SVN_LIB_SQLITE(${SQLITE_ALLOWED_PATTERN}, ${SQLITE_RECOMMENDED_VER},
+               ${SQLITE_URL})
 
 dnl Set up a number of directories ---------------------
 

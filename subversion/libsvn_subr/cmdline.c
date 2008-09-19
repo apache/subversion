@@ -510,6 +510,9 @@ svn_cmdline_set_up_auth_baton(svn_auth_baton_t **ab,
 #ifdef SVN_HAVE_KEYCHAIN_SERVICES
           svn_auth_get_keychain_simple_provider(&provider, pool);
           APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+
+          svn_auth_get_keychain_ssl_client_cert_pw_provider(&provider, pool);
+          APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 #endif
           continue;
         }
@@ -530,8 +533,8 @@ svn_cmdline_set_up_auth_baton(svn_auth_baton_t **ab,
                                     pool));
           if (provider)
             {
-              APR_ARRAY_PUSH(providers,
-                             svn_auth_provider_object_t *) = provider;
+              APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *)
+                = provider;
             }
           SVN_ERR(get_auth_provider(&provider, "gnome_keyring",
                                     "ssl_client_cert_pw", pool));
@@ -550,8 +553,15 @@ svn_cmdline_set_up_auth_baton(svn_auth_baton_t **ab,
           SVN_ERR(get_auth_provider(&provider, "kwallet", "simple",  pool));
           if (provider)
             {
-              APR_ARRAY_PUSH(providers,
-                             svn_auth_provider_object_t *) = provider;
+              APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *)
+                = provider;
+            }
+          SVN_ERR(get_auth_provider(&provider, "kwallet",
+                                    "ssl_client_cert_pw", pool));
+          if (provider)
+            {
+              APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *)
+                = provider;
             }
 #endif
           continue;
@@ -741,7 +751,8 @@ svn_cmdline__print_xml_prop(svn_stringbuf_t **outstr,
     }
   else
     {
-      const svn_string_t *base64ed = svn_base64_encode_string(propval, pool);
+      const svn_string_t *base64ed = svn_base64_encode_string2(propval, TRUE,
+                                                               pool);
       encoding = "base64";
       xml_safe = base64ed->data;
     }

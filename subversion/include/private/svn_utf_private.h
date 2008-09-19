@@ -31,7 +31,12 @@ extern "C" {
  * according to the rules laid down by the Unicode 4.0 standard, FALSE
  * otherwise.  This function is faster than svn_utf__last_valid().
  */
-svn_boolean_t svn_utf__is_valid(const char *src, apr_size_t len);
+svn_boolean_t
+svn_utf__is_valid(const char *src, apr_size_t len);
+
+/* As for svn_utf__is_valid but SRC is NULL terminated. */
+svn_boolean_t
+svn_utf__cstring_is_valid(const char *src);
 
 
 #ifdef __cplusplus

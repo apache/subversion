@@ -19,7 +19,6 @@
 
 
 #include <stdio.h>
-#include <assert.h>
 
 #ifndef WIN32
 #include <unistd.h>
@@ -483,9 +482,7 @@ svn_io_read_link(svn_string_t **dest,
   dest_apr.len = rv;
 
   /* ### Cast needed, one of these interfaces is wrong */
-  SVN_ERR(svn_utf_string_to_utf8((const svn_string_t **)dest, &dest_apr,
-                                 pool));
-  return SVN_NO_ERROR;
+  return svn_utf_string_to_utf8((const svn_string_t **)dest, &dest_apr, pool);
 #else
   return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                           _("Symbolic links are not supported on this "
@@ -858,9 +855,7 @@ svn_error_t *svn_io_file_create(const char *file,
                            pool));
   SVN_ERR(svn_io_file_write_full(f, contents, strlen(contents),
                                  &written, pool));
-  SVN_ERR(svn_io_file_close(f, pool));
-
-  return SVN_NO_ERROR;
+  return svn_io_file_close(f, pool);
 }
 
 svn_error_t *svn_io_dir_file_copy(const char *src_path,
@@ -871,9 +866,7 @@ svn_error_t *svn_io_dir_file_copy(const char *src_path,
   const char *file_dest_path = svn_path_join(dest_path, file, pool);
   const char *file_src_path = svn_path_join(src_path, file, pool);
 
-  SVN_ERR(svn_io_copy_file(file_src_path, file_dest_path, TRUE, pool));
-
-  return SVN_NO_ERROR;
+  return svn_io_copy_file(file_src_path, file_dest_path, TRUE, pool);
 }
 
 
@@ -1020,9 +1013,7 @@ reown_file(const char *path_apr,
                                    ".tmp", svn_io_file_del_none, pool));
   SVN_ERR(svn_io_file_rename(path_apr, unique_name, pool));
   SVN_ERR(svn_io_copy_file(unique_name, path_apr, TRUE, pool));
-  SVN_ERR(svn_io_remove_file(unique_name, pool));
-
-  return SVN_NO_ERROR;
+  return svn_io_remove_file(unique_name, pool);
 }
 
 /* Determine what the read-write PERMS for PATH should be by ORing
@@ -1490,8 +1481,7 @@ svn_stringbuf_from_file2(svn_stringbuf_t **result,
     }
 
   SVN_ERR(svn_stringbuf_from_aprfile(result, f, pool));
-  SVN_ERR(svn_io_file_close(f, pool));
-  return SVN_NO_ERROR;
+  return svn_io_file_close(f, pool);
 }
 
 
@@ -2053,9 +2043,7 @@ svn_io_run_cmd(const char *path,
   SVN_ERR(svn_io_start_cmd(&cmd_proc, path, cmd, args, inherit,
                            infile, outfile, errfile, pool));
 
-  SVN_ERR(svn_io_wait_for_cmd(&cmd_proc, cmd, exitcode, exitwhy, pool));
-
-  return SVN_NO_ERROR;
+  return svn_io_wait_for_cmd(&cmd_proc, cmd, exitcode, exitwhy, pool);
 }
 
 
@@ -2812,6 +2800,10 @@ dir_make(const char *path, apr_fileperms_t perm,
     }
 #endif
 
+/* Windows does not implement sgid. Skip here because retrieving 
+   the file permissions via APR_FINFO_PROT | APR_FINFO_OWNER is documented 
+   to be 'incredibly expensive'. */
+#ifndef WIN32
   if (sgid)
     {
       apr_finfo_t finfo;
@@ -2823,6 +2815,7 @@ dir_make(const char *path, apr_fileperms_t perm,
       if (!status)
         apr_file_perms_set(path_apr, finfo.protection | APR_GSETID);
     }
+#endif
 
   return SVN_NO_ERROR;
 }
@@ -3137,9 +3130,7 @@ svn_io_write_version_file(const char *path,
   SVN_ERR(svn_io_file_rename(path_tmp, path, pool));
 
   /* And finally remove the perms to make it read only */
-  SVN_ERR(svn_io_set_file_read_only(path, FALSE, pool));
-
-  return SVN_NO_ERROR;
+  return svn_io_set_file_read_only(path, FALSE, pool);
 }
 
 
@@ -3241,9 +3232,7 @@ contents_identical_p(svn_boolean_t *identical_p,
   svn_error_clear(err2);
 
   SVN_ERR(svn_io_file_close(file1_h, pool));
-  SVN_ERR(svn_io_file_close(file2_h, pool));
-
-  return SVN_NO_ERROR;
+  return svn_io_file_close(file2_h, pool);
 }
 
 

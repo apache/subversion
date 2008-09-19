@@ -22,8 +22,6 @@
 
 /*** Includes. ***/
 
-#include <assert.h>
-
 #include "svn_client.h"
 #include "svn_error.h"
 #include "svn_time.h"
@@ -196,7 +194,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
      the primary operation. */
   if (SVN_DEPTH_IS_RECURSIVE(depth) && (! ignore_externals))
     err = svn_client__handle_externals(traversal_info, switch_url, path,
-                                       source_root, depth, FALSE, use_sleep,
+                                       source_root, depth, use_sleep,
                                        ctx, pool);
 
   /* Sleep to ensure timestamp integrity (we do this regardless of

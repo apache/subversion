@@ -12,7 +12,7 @@ Blanket commit access:
           jimb   Jim Blandy <jimb@red-bean.com>
        sussman   Ben Collins-Sussman <sussman@red-bean.com>
         kfogel   Karl Fogel <kfogel@red-bean.com>
-        gstein   Greg Stein <gstein@lyra.org>
+        gstein   Greg Stein <gstein@gmail.com>
          brane   Branko Čibej <brane@xbc.nu>
            joe   Joe Orton <joe@light.plus.com>
        ghudson   Greg Hudson <ghudson@mit.edu>
@@ -58,6 +58,10 @@ Blanket commit access:
            kou   Kouhei Sutou <kou@cozmixng.org>
       danielsh   Daniel Shahaf <d.s@daniel.shahaf.name>
     psamuelson   Peter Samuelson <peter@p12n.org>
+      rhuijben   Bert Huijben <b.huijben@competence.biz>
+      stylesen   Senthil Kumaran S <senthil@collab.net>
+     steveking   Stefan Küng <tortoisesvn@gmail.com>
+         neels   Neels J. Hofmeyr <neels@elego.de>
 
 Commit access for specific areas:
 
@@ -111,7 +115,6 @@ Commit access for specific areas:
       dkagedal   David Kågedal <davidk@lysator.liu.se>       (dsvn.el)
         dustin   Dustin J. Mitchell <dustin@zmanda.com>      (svnmerge)
    rocketraman   Raman Gupta <rocketraman@fastmail.fm>       (svnmerge)
-      stylesen   Senthil Kumaran S <senthil@collab.net>      (tests)
        rhansen   Richard Hansen <rhansen@bbn.com>            (svnstsw)
         larrys   Larry Shatzer, Jr. <larrys@gmail.com>       (svn-keyword-check.pl)
          nmiyo   MIYOKAWA, Nobuyoshi <n-miyo@tempus.org>     (faq: ja)
@@ -143,20 +146,22 @@ giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
 
      gthompson   Glenn A. Thompson <gthompson@cdr.net>       (pluggable-db br.)
        sigfred   Sigfred Håversen <bsdlist@mumak.com>        (svnserve-ssl br.)
-        pmarek   Ph. Marek <philipp.marek@bmlv.gv.at>        (meta-data-v br.)
+        pmarek   Ph. Marek <philipp@marek.priv.at>           (meta-data-v br.)
       jpeacock   John Peacock <jpeacock@rowman.com>          (perl-bindings-
                                                               improvements br.)
     nikclayton   Nik Clayton <nik@ngo.org.uk>                (perl-bindings-
                                                               improvements br.)
           sage   Sage LaTorra <sagelt@gmail.com>             (ctypes-python-
                                                               bindings br.)
-       cacknin   Charles Acknin <charlesacknin@gmail.com>    (svnpatch-diff
-                                                                br.)
+       cacknin   Charles Acknin <charlesacknin@gmail.com>    (svnpatch-diff 
+                                                              br.)
        sbutler   Stephen Butler <sbutler@elego.de>           (tree-conflicts
                                                               br., diff-
                                                               callbacks3 br.)
-    firemeteor   Guo Rui <timmyguo@mail.ustc.edu.cn>          (issue-2843-dev
-                                                                br.)
+    firemeteor   Guo Rui <timmyguo@mail.ustc.edu.cn>         (issue-2843-dev
+                                                              br.)
+     jwhitlock   Jeremy Whitlock <jcscoobyrs@gmail.com>      (ctypes-python-
+                                                              bindings br.)
 
   Subprojects that are complete, abandoned or have moved elsewhere:
 

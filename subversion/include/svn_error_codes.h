@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -203,6 +203,14 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_BAD_SERVER_SPECIFICATION,
              SVN_ERR_BAD_CATEGORY_START + 10,
              "Bogus server specification")
+
+  SVN_ERRDEF(SVN_ERR_BAD_CHECKSUM_KIND,
+             SVN_ERR_BAD_CATEGORY_START + 11,
+             "Unsupported checksum type")
+
+  SVN_ERRDEF(SVN_ERR_BAD_CHECKSUM_PARSE,
+             SVN_ERR_BAD_CATEGORY_START + 12,
+             "Invalid character in hex checksum")
 
   /* xml errors */
 
@@ -1176,6 +1184,26 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_NO_APR_MEMCACHE,
              SVN_ERR_MISC_CATEGORY_START + 28,
              "apr memcache library not available")
+
+  /** @since New in 1.6. */
+  SVN_ERRDEF(SVN_ERR_ATOMIC_INIT_FAILURE,
+             SVN_ERR_MISC_CATEGORY_START + 29,
+             "Couldn't perform atomic initialization")
+
+  /** @since New in 1.6. */
+  SVN_ERRDEF(SVN_ERR_SQLITE_ERROR,
+             SVN_ERR_MISC_CATEGORY_START + 30,
+             "SQLite error")
+
+  /** @since New in 1.6. */
+  SVN_ERRDEF(SVN_ERR_SQLITE_READONLY,
+             SVN_ERR_MISC_CATEGORY_START + 31,
+             "Attempted to write to readonly SQLite db")
+
+  /** @since New in 1.6. */
+  SVN_ERRDEF(SVN_ERR_SQLITE_UNSUPPORTED_SCHEMA,
+             SVN_ERR_MISC_CATEGORY_START + 32,
+             "Unsupported schema found in SQLite db")
 
   /* command-line client errors */
 

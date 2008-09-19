@@ -64,7 +64,16 @@ def detect_extra_files(node, extra_files):
       if contents is None:
         return
       else:
-        real_contents = svntest.main.file_read(os.path.join(wc_dir, node.path))
+        # Strip the root_node_name from node path
+        # (svntest.tree.root_node_name, currently `__SVN_ROOT_NODE'),
+        # since it doesn't really exist. Also strip the trailing "slash".
+        real_path = node.path
+        if real_path.startswith(svntest.tree.root_node_name):
+          real_path = real_path[len(svntest.tree.root_node_name) +
+                                len(os.sep) :]
+        real_path = os.path.join(wc_dir, real_path)
+
+        real_contents = svntest.main.file_read(real_path)
         if real_contents == contents:
           extra_files.pop(extra_files.index(fdata)) # delete pattern from list
           return
@@ -645,6 +654,7 @@ def update_delete_modified_files(sbox):
   # expect an 'obstructed update' error (see issue #1196), but
   # nowadays we expect success (see issue #1806).
   expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E'       : Item(status='C '), # tree conflict (issue #2282)
     'A/B/E/alpha' : Item(status='D '),
     'A/D/G'       : Item(status='D '),
     })
@@ -658,6 +668,7 @@ def update_delete_modified_files(sbox):
   expected_disk.remove('A/D/G/rho')
   expected_disk.remove('A/D/G/tau')
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak('A/B/E', status='C ') # tree conflict (issue #2282)
   expected_status.remove('A/B/E/alpha')
   expected_status.remove('A/D/G')
   expected_status.remove('A/D/G/pi')
@@ -926,6 +937,7 @@ def prop_update_on_scheduled_delete(sbox):
 
   # Expected output tree for update of other_wc.
   expected_output = svntest.wc.State(other_wc, {
+    ''     : Item(status='C '), # tree conflict (issue #2282)
     'iota' : Item(status=' U'),
     })
 
@@ -935,6 +947,7 @@ def prop_update_on_scheduled_delete(sbox):
 
   # Expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(other_wc, 2)
+  expected_status.tweak('', status='C ') # tree conflict (issue #2282)
   expected_status.tweak('iota', status='D ')
 
   # Do the update and check the results in three ways.
@@ -1022,6 +1035,7 @@ def update_deleted_missing_dir(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta')
   expected_status.remove('A/D/H', 'A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi')
+  expected_status.tweak('A/B', 'A/D', status='C ')
 
   # Do the update, specifying the deleted paths explicitly.
   svntest.actions.run_and_verify_update(wc_dir,
@@ -1030,6 +1044,15 @@ def update_deleted_missing_dir(sbox):
                                         expected_status,
                                         None, None, None, None, None,
                                         0, "-r", "2", E_path, H_path)
+
+  # This update created tree conflicts ("update tried to
+  # delete a directory that was locally deleted"), marking
+  # C  A/B
+  # C  A/D
+  # Just ignore them, i.e. resolve.
+  B_path = os.path.join(wc_dir, 'A', 'B')
+  D_path = os.path.join(wc_dir, 'A', 'D')
+  svntest.main.run_svn(None, 'resolved',  B_path, D_path)
 
   # Update back to the old revision again
   svntest.main.run_svn(None,
@@ -1041,6 +1064,7 @@ def update_deleted_missing_dir(sbox):
 
   # This time we're updating the whole working copy
   expected_status.tweak(wc_rev=2)
+  expected_status.tweak('A/B', 'A/D', status='  ')
 
   # Do the update, on the whole working copy this time
   svntest.actions.run_and_verify_update(wc_dir,
@@ -1092,6 +1116,14 @@ def another_hudson_problem(sbox):
                                      ['D    '+G_path+'\n',
                                       'Updated to revision 3.\n'], [],
                                      'up', G_path)
+
+  # This update created a tree conflict ("update tried to
+  # delete a directory that was locally deleted"), marking
+  # C  A/D. Just ignore it, i.e. resolve it.
+  D_path = os.path.join(wc_dir, 'A', 'D')
+  svntest.actions.run_and_verify_svn(None,
+    ["Resolved conflicted state of '" + D_path + "'\n"], [],
+    'resolved',  D_path)
 
   # Both G and gamma should be 'deleted', update should produce no output
   expected_output = svntest.wc.State(wc_dir, { })
@@ -2771,13 +2803,6 @@ def mergeinfo_update_elision(sbox):
   # parent with explicit mergeinfo.  This is currently permitted and
   # honestly we could probably do without this test(?).
 
-  # Search for the comment entitled "The Merge Kluge" in merge_tests.py
-  # to understand why we shorten, and subsequently chdir() after calling
-  # this function.
-  def shorten_path_kludge(path):
-    shorten_by = len(svntest.main.work_dir) + len(os.sep)
-    return path[shorten_by:]
-
   sbox.build()
   wc_dir = sbox.wc_dir
 
@@ -2844,15 +2869,12 @@ def mergeinfo_update_elision(sbox):
                                         expected_status, None, wc_dir)
 
   # Merge r2:5 into A/B_COPY
-  # Search for the comment entitled "The Merge Kluge" in merge_tests.py,
-  # to understand why we shorten and chdir() below.
-  short_B_COPY_path = shorten_path_kludge(B_COPY_path)
-  expected_output = wc.State(short_B_COPY_path, {
+  expected_output = wc.State(B_COPY_path, {
     'lambda'  : Item(status='U '),
     'E/alpha' : Item(status='U '),
     'E/beta'  : Item(status='U '),
     })
-  expected_merge_status = wc.State(short_B_COPY_path, {
+  expected_merge_status = wc.State(B_COPY_path, {
     ''        : Item(status=' M', wc_rev=2),
     'lambda'  : Item(status='M ', wc_rev=2),
     'E'       : Item(status='  ', wc_rev=2),
@@ -2868,11 +2890,9 @@ def mergeinfo_update_elision(sbox):
     'E/beta'  : Item("New content"),
     'F'       : Item(),
     })
-  expected_skip = wc.State(short_B_COPY_path, { })
-  saved_cwd = os.getcwd()
+  expected_skip = wc.State(B_COPY_path, { })
 
-  os.chdir(svntest.main.work_dir)
-  svntest.actions.run_and_verify_merge(short_B_COPY_path, '2', '5',
+  svntest.actions.run_and_verify_merge(B_COPY_path, '2', '5',
                                        sbox.repo_url + \
                                        '/A/B',
                                        expected_output,
@@ -2881,7 +2901,6 @@ def mergeinfo_update_elision(sbox):
                                        expected_skip,
                                        None, None, None, None,
                                        None, 1)
-  os.chdir(saved_cwd)
 
   # r6 - Commit the merge
   expected_output = wc.State(wc_dir,
@@ -2924,17 +2943,14 @@ def mergeinfo_update_elision(sbox):
                                         '-r', '5', wc_dir)
 
   # Merge r2:5 to A/B_COPY/E/alpha
-  short_alpha_COPY_path = shorten_path_kludge(alpha_COPY_path)
-  expected_output = wc.State(short_alpha_COPY_path, {
+  expected_output = wc.State(alpha_COPY_path, {
     'alpha' : Item(status='U '),
     })
-  expected_skip = wc.State(short_alpha_COPY_path, { })
-  saved_cwd = os.getcwd()
+  expected_skip = wc.State(alpha_COPY_path, { })
 
-  os.chdir(svntest.main.work_dir)
   # run_and_verify_merge doesn't support merging to a file WCPATH
   # so use run_and_verify_svn.
-  update_line = 'U    ' + short_alpha_COPY_path + '\n'
+  update_line = 'U    ' + alpha_COPY_path + '\n'
   if sys.platform == 'win32':
     # Construct a properly escaped regex when dealing with
     # '\' riddled paths on Windows.
@@ -2944,9 +2960,7 @@ def mergeinfo_update_elision(sbox):
                                      '|'.join([notify_line, update_line]),
                                      [], 'merge', '-r2:5',
                                      sbox.repo_url + '/A/B/E/alpha',
-                                     short_alpha_COPY_path)
-
-  os.chdir(saved_cwd)
+                                     alpha_COPY_path)
 
   expected_alpha_status = wc.State(alpha_COPY_path, {
     ''        : Item(status='MM', wc_rev=5),
@@ -2997,11 +3011,10 @@ def mergeinfo_update_elision(sbox):
                                      'up', wc_dir)
 
   # Merge r6:7 into A/B_COPY/E
-  short_E_COPY_path = shorten_path_kludge(E_COPY_path)
-  expected_output = wc.State(short_E_COPY_path, {
+  expected_output = wc.State(E_COPY_path, {
     'alpha' : Item(status='U '),
     })
-  expected_merge_status = wc.State(short_E_COPY_path, {
+  expected_merge_status = wc.State(E_COPY_path, {
     ''        : Item(status=' M', wc_rev=7),
     'alpha' : Item(status='MM', wc_rev=7),
     'beta'  : Item(status='  ', wc_rev=7),
@@ -3011,11 +3024,9 @@ def mergeinfo_update_elision(sbox):
     'alpha' : Item("More new content"),
     'beta'  : Item("New content"),
     })
-  expected_skip = wc.State(short_E_COPY_path, { })
-  saved_cwd = os.getcwd()
+  expected_skip = wc.State(E_COPY_path, { })
 
-  os.chdir(svntest.main.work_dir)
-  svntest.actions.run_and_verify_merge(short_E_COPY_path, '6', '7',
+  svntest.actions.run_and_verify_merge(E_COPY_path, '6', '7',
                                        sbox.repo_url + \
                                        '/A/B/E',
                                        expected_output,
@@ -3024,8 +3035,6 @@ def mergeinfo_update_elision(sbox):
                                        expected_skip,
                                        None, None, None, None,
                                        None, 1)
-
-  os.chdir(saved_cwd)
 
   # r8 - Commit the merge
   svntest.actions.run_and_verify_svn(None,
@@ -3059,11 +3068,10 @@ def mergeinfo_update_elision(sbox):
                                         '-r', '7', E_COPY_path)
 
   # Merge r6:7 to A/B_COPY
-  short_B_COPY_path = shorten_path_kludge(B_COPY_path)
-  expected_output = wc.State(short_B_COPY_path, {
+  expected_output = wc.State(B_COPY_path, {
     'E/alpha' : Item(status='U '),
     })
-  expected_merge_status = wc.State(short_B_COPY_path, {
+  expected_merge_status = wc.State(B_COPY_path, {
     ''        : Item(status=' M', wc_rev=7),
     'lambda'  : Item(status='  ', wc_rev=7),
     'E'       : Item(status='  ', wc_rev=7),
@@ -3079,11 +3087,9 @@ def mergeinfo_update_elision(sbox):
     'E/beta'  : Item("New content"),
     'F'       : Item(),
     })
-  expected_skip = wc.State(short_B_COPY_path, { })
-  saved_cwd = os.getcwd()
+  expected_skip = wc.State(B_COPY_path, { })
 
-  os.chdir(svntest.main.work_dir)
-  svntest.actions.run_and_verify_merge(short_B_COPY_path, '6', '7',
+  svntest.actions.run_and_verify_merge(B_COPY_path, '6', '7',
                                        sbox.repo_url + \
                                        '/A/B',
                                        expected_output,
@@ -3092,8 +3098,6 @@ def mergeinfo_update_elision(sbox):
                                        expected_skip,
                                        None, None, None, None,
                                        None, 1,alpha_COPY_path)
-
-  os.chdir(saved_cwd)
 
   # Update just A/B_COPY/E.  The mergeinfo (r3-5,7) reset on
   # A/B_COPY/E by the udpate is identical to the local info on
@@ -3837,7 +3841,10 @@ def update_uuid_changed(sbox):
     # No 'Repository UUID' line in 'svn info'?
     raise svntest.verify.SVNUnexpectedStdout(output)
 
-  sbox.build(read_only = True)
+  # read_only=False, since we don't want to run setuuid on the (shared)
+  # pristine repository.
+  sbox.build(read_only = False) 
+
   wc_dir = sbox.wc_dir
   repo_dir = sbox.repo_dir
 
@@ -3855,6 +3862,268 @@ def update_uuid_changed(sbox):
   uuid_after = wc_uuid(wc_dir)
   if uuid_before != uuid_after:
     raise svntest.Failure
+
+
+#----------------------------------------------------------------------
+
+# Issue #1672: if an update deleting a dir prop is interrupted (by a
+# local obstruction, for example) then restarting the update will not
+# delete the prop, causing the wc to become out of sync with the
+# repository.
+def restarted_update_should_delete_dir_prop(sbox):
+  "restarted update should delete dir prop"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  
+  A_path = os.path.join(wc_dir, 'A')
+  zeta_path = os.path.join(A_path, 'zeta')
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+
+  # Commit a propset on A.
+  svntest.main.run_svn(None, 'propset', 'prop', 'val', A_path)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A': Item(verb='Sending'),
+    })
+  expected_status.tweak('A', wc_rev=2)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  # Create a second working copy.
+  other_wc = sbox.add_wc_path('other')
+  svntest.actions.duplicate_dir(wc_dir, other_wc)
+
+  other_A_path = os.path.join(other_wc, 'A')
+  other_zeta_path = os.path.join(other_wc, 'A', 'zeta')
+
+  # In the second working copy, delete A's prop and add a new file.
+  svntest.main.run_svn(None, 'propdel', 'prop', other_A_path)
+  svntest.main.file_write(other_zeta_path, 'New file\n')
+  svntest.main.run_svn(None, 'add', other_zeta_path)
+  expected_output = svntest.wc.State(other_wc, {
+    'A': Item(verb='Sending'),
+    'A/zeta' : Item(verb='Adding'),
+    })
+  expected_status = svntest.actions.get_virginal_state(other_wc, 1)
+  expected_status.tweak('A', wc_rev=3)
+  expected_status.add({
+    'A/zeta' : Item(status='  ', wc_rev=3),
+    })
+  svntest.actions.run_and_verify_commit(other_wc, expected_output,
+                                        expected_status, None, other_wc)
+
+  # Back in the first working copy, create an obstructing path and
+  # update. The update will be interrupted, resulting in an incomplete
+  # dir which still has the property.
+  svntest.main.file_write(zeta_path, 'Obstructing file\n')
+  error_re = 'Failed to add file.*object of the same name already exists'
+  svntest.actions.run_and_verify_update(wc_dir, None, None, None,
+                                        error_re)
+
+  # Now, delete the obstructing path and rerun the update.
+  # A's property should disappear.
+  os.unlink(zeta_path)
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A'      : Item(status=' U'),
+    'A/zeta' : Item(status='A '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A', props = {})
+  expected_disk.add({
+    'A/zeta' : Item("New file\n"),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.add({
+    'A/zeta' : Item(status='  ', wc_rev=3),
+    })
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        check_props = True)
+
+#----------------------------------------------------------------------
+
+# Detect tree conflicts among files and directories,
+# edited or deleted in a deep directory structure.
+#
+# See use cases 1-3 in notes/tree-conflicts/use-cases.txt for background.
+
+# convenience definitions
+leaf_edit = svntest.actions.deep_trees_leaf_edit
+tree_del = svntest.actions.deep_trees_tree_del
+leaf_del = svntest.actions.deep_trees_leaf_del
+
+state_after_leaf_edit = svntest.actions.deep_trees_after_leaf_edit
+state_after_leaf_del = svntest.actions.deep_trees_after_leaf_del
+state_after_tree_del = svntest.actions.deep_trees_after_tree_del
+
+DeepTreesTestCase = svntest.actions.DeepTreesTestCase
+
+
+def tree_conflicts_on_update_1_1(sbox):
+  "tree conflicts on update 1.1"
+
+  # use case 1, as in notes/tree-conflicts/use-cases.txt
+  # 1.1) local tree delete, incoming leaf edit
+
+  expected_output = wc.State('', {
+    'F'                 : Item(status='C '),
+    'D'                 : Item(status='C '),
+    'DF'                : Item(status='C '),
+    'DD'                : Item(status='C '),
+    'DDF'               : Item(status='C '),
+    'DDD'               : Item(status='C '),
+    })
+
+  expected_disk = state_after_tree_del
+
+  expected_status = state_after_tree_del.copy()
+  expected_status.add({ '' : Item(status='  ') }) # also set root's attributes
+  expected_status.tweak(wc_rev=3)
+  expected_status.tweak('F', 'D', 'DF', 'DD', 'DDF', 'DDD', status='C ')
+
+  svntest.actions.deep_trees_run_tests_scheme_for_update(sbox,
+    [ DeepTreesTestCase("local_tree_del_incoming_leaf_edit",
+                        tree_del,
+                        leaf_edit,
+                        expected_output,
+                        expected_disk,
+                        expected_status) ] )
+
+
+def tree_conflicts_on_update_1_2(sbox):
+  "tree conflicts on update 1.2"
+
+  # 1.2) local tree delete, incoming leaf delete
+
+  expected_output = wc.State('', {
+    'F'                 : Item(status='C '),
+    'D'                 : Item(status='C '),
+    'DF'                : Item(status='C '),
+    'DD'                : Item(status='C '),
+    'DDF'               : Item(status='C '),
+    'DDD'               : Item(status='C '),
+    })
+
+  expected_disk = state_after_tree_del
+
+  expected_status = state_after_tree_del.copy()
+  expected_status.add({ '' : Item(status='  ') }) # also set root's attributes
+  expected_status.tweak(wc_rev=3)
+  expected_status.tweak('F', 'D', 'DF', 'DD', 'DDF', 'DDD', status='C ')
+
+  svntest.actions.deep_trees_run_tests_scheme_for_update(sbox,
+    [ DeepTreesTestCase("local_tree_del_incoming_leaf_del",
+                        tree_del,
+                        leaf_del,
+                        expected_output,
+                        expected_disk,
+                        expected_status) ] )
+
+
+
+def tree_conflicts_on_update_2_1(sbox):
+  "tree conflicts on update 2.1"
+
+  # use case 2, as in notes/tree-conflicts/use-cases.txt
+  # 2.1) local leaf edit, incoming tree delete
+
+  expected_output = wc.State('', {
+    'F'                 : Item(status='C '),
+    'D'                 : Item(status='C '),
+    'DF'                : Item(status='C '),
+    'DD'                : Item(status='C '),
+    'DDF'               : Item(status='C '),
+    'DDD'               : Item(status='C '),
+    })
+
+  expected_disk = state_after_leaf_edit
+
+  expected_status = state_after_leaf_edit.copy()
+  expected_status.add({ '' : Item(status='  ') }) # also set root's attributes
+  expected_status.tweak(wc_rev=3)
+  expected_status.tweak('F', 'D', 'DF', 'DD', 'DDF', 'DDD', status='C ')
+  expected_status.tweak('F/alpha', 'DF/D1/beta', 'DDF/D1/D2/gamma',
+                        status='M ')
+  expected_status.tweak('D/D1/delta', 'DD/D1/D2/epsilon',
+                        'DDD/D1/D2/D3/zeta', status='A ')
+
+  svntest.actions.deep_trees_run_tests_scheme_for_update(sbox,
+    [ DeepTreesTestCase("local_leaf_edit_incoming_tree_del",
+                        leaf_edit,
+                        tree_del,
+                        expected_output,
+                        expected_disk,
+                        expected_status) ] )
+
+
+
+def tree_conflicts_on_update_2_2(sbox):
+  "tree conflicts on update 2.2"
+
+  # 2.2) local leaf delete, incoming tree delete
+
+  expected_output = wc.State('', {
+    'F'                 : Item(status='C '),
+    'D'                 : Item(status='C '),
+    'DF'                : Item(status='C '),
+    'DD'                : Item(status='C '),
+    'DDF'               : Item(status='C '),
+    'DDD'               : Item(status='C '),
+    })
+
+  expected_disk = state_after_leaf_del
+
+  expected_status = svntest.actions.deep_trees_virginal_state.copy()
+  expected_status.add({ '' : Item(status='  ') }) # also set root's attributes
+  expected_status.tweak(wc_rev=3)
+  expected_status.tweak('F', 'D', 'DF', 'DD', 'DDF', 'DDD', status='C ')
+  expected_status.tweak('F/alpha', 'DF/D1/beta', 'DDF/D1/D2/gamma',
+                        'D/D1', 'DD/D1/D2', 'DDD/D1/D2/D3', status='D ')
+
+  svntest.actions.deep_trees_run_tests_scheme_for_update(sbox,
+    [ DeepTreesTestCase("local_leaf_del_incoming_tree_del",
+                        leaf_del,
+                        tree_del,
+                        expected_output,
+                        expected_disk,
+                        expected_status) ] )
+
+
+
+def tree_conflicts_on_update_3(sbox):
+  "tree conflicts on update 3"
+
+  # use case 3, as in notes/tree-conflicts/use-cases.txt
+  # local tree delete, incoming tree delete
+
+  expected_output = wc.State('', {
+    'F'                 : Item(status='C '),
+    'D'                 : Item(status='C '),
+    'DF'                : Item(status='C '),
+    'DD'                : Item(status='C '),
+    'DDF'               : Item(status='C '),
+    'DDD'               : Item(status='C '),
+    })
+
+  expected_disk = state_after_tree_del
+
+  expected_status = state_after_tree_del.copy()
+  expected_status.add({ '' : Item(status='  ') }) # also set root's attributes
+  expected_status.tweak(wc_rev=3)
+  expected_status.tweak('F', 'D', 'DF', 'DD', 'DDF', 'DDD', status='C ')
+
+  svntest.actions.deep_trees_run_tests_scheme_for_update(sbox,
+    [ DeepTreesTestCase("local_tree_del_incoming_tree_del",
+                        tree_del,
+                        tree_del,
+                        expected_output,
+                        expected_disk,
+                        expected_status) ] )
+
 
 
 #######################################################################
@@ -3893,10 +4162,10 @@ test_list = [ None,
               update_eolstyle_handling,
               update_copy_of_old_rev,
               forced_update,
-              forced_update_failures,
+              XFail(forced_update_failures),
               XFail(update_wc_on_windows_drive),
-              update_wc_with_replaced_file,
-              update_with_obstructing_additions,
+              XFail(update_wc_with_replaced_file),
+              XFail(update_with_obstructing_additions),
               update_conflicted,
               SkipUnless(mergeinfo_update_elision,
                          server_has_mergeinfo),
@@ -3910,6 +4179,12 @@ test_list = [ None,
               update_accept_conflicts,
               eof_in_interactive_conflict_resolver,
               update_uuid_changed,
+              restarted_update_should_delete_dir_prop,
+              XFail(tree_conflicts_on_update_1_1),
+              XFail(tree_conflicts_on_update_1_2),
+              XFail(tree_conflicts_on_update_2_1),
+              XFail(tree_conflicts_on_update_2_2),
+              XFail(tree_conflicts_on_update_3),
              ]
 
 if __name__ == '__main__':

@@ -2574,7 +2574,7 @@ def copy_added_paths_with_props(sbox):
   svntest.tree.compare_trees("disk", actual_disk_tree,
                              expected_disk.old_tree())
 
-  # Copy added dir K to dir A/C
+  # Copy added dir I to dir A/C
   I_copy_path = os.path.join(wc_dir, 'A', 'C', 'I')
   svntest.actions.run_and_verify_svn(None, None, [], 'cp',
                                      I_path, I_copy_path)
@@ -2603,9 +2603,11 @@ def copy_added_paths_with_props(sbox):
 
   # Tweak expected disk tree
   expected_disk.add({
-    'A/C/upsilon' : Item(props={'foo' : 'bar'},
+    'A/C/upsilon' : Item(props={ 'foo' : 'bar',
+                                 SVN_PROP_MERGEINFO : '' },
                          contents="This is the file 'upsilon'\n"),
-    'A/C/I'       : Item(props={'foo' : 'bar'}),
+    'A/C/I'       : Item(props={ 'foo' : 'bar',
+                                 SVN_PROP_MERGEINFO : '' }),
     })
 
   svntest.actions.run_and_verify_commit(wc_dir,
@@ -3912,6 +3914,33 @@ def double_parents_with_url(sbox):
     wc_dir, expected_output, expected_disk, expected_status)
 
 
+# Used to cause corruption not fixable by 'svn cleanup'.
+def copy_into_absent_dir(sbox):
+  "copy file into absent dir"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  A_path = os.path.join(wc_dir, 'A')
+  iota_path = os.path.join(wc_dir, 'iota')
+
+  # Remove 'A'
+  svntest.main.safe_rmtree(A_path)
+
+  # Copy into the now-missing dir.  This used to give this error:
+  #     svn: In directory '.'
+  #     svn: Error processing command 'modify-entry' in '.'
+  #     svn: Error modifying entry for 'A'
+  #     svn: Entry 'A' is already under version control
+  svntest.actions.run_and_verify_svn(None,
+                                     None, ".*: Path '.*' is not a directory",
+                                     'cp', iota_path, A_path)
+
+  # 'cleanup' should not error.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cleanup', wc_dir)
+
+
 
 ########################################################################
 # Run the tests
@@ -3966,7 +3995,7 @@ test_list = [ None,
               move_file_back_and_forth,
               move_dir_back_and_forth,
               copy_move_added_paths,
-              XFail(copy_added_paths_with_props),
+              copy_added_paths_with_props,
               copy_added_paths_to_URL,
               move_to_relative_paths,
               move_from_relative_paths,
@@ -3991,6 +4020,7 @@ test_list = [ None,
               replaced_local_source_for_incoming_copy,
               unneeded_parents,
               double_parents_with_url,
+              copy_into_absent_dir,
              ]
 
 if __name__ == '__main__':

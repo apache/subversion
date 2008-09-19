@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -33,6 +33,7 @@
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_string.h"
+#include "svn_checksum.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -91,9 +92,10 @@ typedef struct svn_io_dirent_t {
  *
  * @see svn_node_kind_t
  */
-svn_error_t *svn_io_check_path(const char *path,
-                               svn_node_kind_t *kind,
-                               apr_pool_t *pool);
+svn_error_t *
+svn_io_check_path(const char *path,
+                  svn_node_kind_t *kind,
+                  apr_pool_t *pool);
 
 /**
  * Like svn_io_check_path(), but also set *is_special to @c TRUE if
@@ -101,16 +103,18 @@ svn_error_t *svn_io_check_path(const char *path,
  *
  * @since New in 1.1.
  */
-svn_error_t *svn_io_check_special_path(const char *path,
-                                       svn_node_kind_t *kind,
-                                       svn_boolean_t *is_special,
-                                       apr_pool_t *pool);
+svn_error_t *
+svn_io_check_special_path(const char *path,
+                          svn_node_kind_t *kind,
+                          svn_boolean_t *is_special,
+                          apr_pool_t *pool);
 
 /** Like svn_io_check_path(), but resolve symlinks.  This returns the
     same varieties of @a kind as svn_io_check_path(). */
-svn_error_t *svn_io_check_resolved_path(const char *path,
-                                        svn_node_kind_t *kind,
-                                        apr_pool_t *pool);
+svn_error_t *
+svn_io_check_resolved_path(const char *path,
+                           svn_node_kind_t *kind,
+                           apr_pool_t *pool);
 
 
 /** Open a new file (for reading and writing) with a unique name based on
@@ -164,12 +168,13 @@ svn_error_t *svn_io_check_resolved_path(const char *path,
  * @since New in 1.4
  *
  */
-svn_error_t *svn_io_open_unique_file2(apr_file_t **f,
-                                      const char **unique_name_p,
-                                      const char *path,
-                                      const char *suffix,
-                                      svn_io_file_del_t delete_when,
-                                      apr_pool_t *pool);
+svn_error_t *
+svn_io_open_unique_file2(apr_file_t **f,
+                         const char **unique_name_p,
+                         const char *path,
+                         const char *suffix,
+                         svn_io_file_del_t delete_when,
+                         apr_pool_t *pool);
 
 /** Like svn_io_open_unique_file2, but can't delete on pool cleanup.
  *
@@ -180,12 +185,14 @@ svn_error_t *svn_io_open_unique_file2(apr_file_t **f,
  *       required.
  *
  */
-svn_error_t *svn_io_open_unique_file(apr_file_t **f,
-                                     const char **unique_name_p,
-                                     const char *path,
-                                     const char *suffix,
-                                     svn_boolean_t delete_on_close,
-                                     apr_pool_t *pool);
+SVN_DEPRECATED
+svn_error_t *
+svn_io_open_unique_file(apr_file_t **f,
+                        const char **unique_name_p,
+                        const char *path,
+                        const char *suffix,
+                        svn_boolean_t delete_on_close,
+                        apr_pool_t *pool);
 
 /**
  * Like svn_io_open_unique_file(), except that instead of creating a
@@ -193,11 +200,12 @@ svn_error_t *svn_io_open_unique_file(apr_file_t **f,
  *
  * @since New in 1.1.
  */
-svn_error_t *svn_io_create_unique_link(const char **unique_name_p,
-                                       const char *path,
-                                       const char *dest,
-                                       const char *suffix,
-                                       apr_pool_t *pool);
+svn_error_t *
+svn_io_create_unique_link(const char **unique_name_p,
+                          const char *path,
+                          const char *dest,
+                          const char *suffix,
+                          apr_pool_t *pool);
 
 
 /**
@@ -206,16 +214,18 @@ svn_error_t *svn_io_create_unique_link(const char **unique_name_p,
  *
  * @since New in 1.1.
  */
-svn_error_t *svn_io_read_link(svn_string_t **dest,
-                              const char *path,
-                              apr_pool_t *pool);
+svn_error_t *
+svn_io_read_link(svn_string_t **dest,
+                 const char *path,
+                 apr_pool_t *pool);
 
 
 /** Set @a *dir to a directory path (allocated in @a pool) deemed
  * usable for the creation of temporary files and subdirectories.
  */
-svn_error_t *svn_io_temp_dir(const char **dir,
-                             apr_pool_t *pool);
+svn_error_t *
+svn_io_temp_dir(const char **dir,
+                apr_pool_t *pool);
 
 
 /** Copy @a src to @a dst atomically, in a "byte-for-byte" manner.
@@ -223,10 +233,11 @@ svn_error_t *svn_io_temp_dir(const char **dir,
  * are utf8-encoded filenames.  If @a copy_perms is TRUE, set @a dst's
  * permissions to match those of @a src.
  */
-svn_error_t *svn_io_copy_file(const char *src,
-                              const char *dst,
-                              svn_boolean_t copy_perms,
-                              apr_pool_t *pool);
+svn_error_t *
+svn_io_copy_file(const char *src,
+                 const char *dst,
+                 svn_boolean_t copy_perms,
+                 apr_pool_t *pool);
 
 /**
  * Copy symbolic link @a src to @a dst atomically.  Overwrite @a dst
@@ -236,9 +247,10 @@ svn_error_t *svn_io_copy_file(const char *src,
  *
  * @since New in 1.1.
  */
-svn_error_t *svn_io_copy_link(const char *src,
-                              const char *dst,
-                              apr_pool_t *pool);
+svn_error_t *
+svn_io_copy_link(const char *src,
+                 const char *dst,
+                 apr_pool_t *pool);
 
 
 /** Recursively copy directory @a src into @a dst_parent, as a new entry named
@@ -251,14 +263,14 @@ svn_error_t *svn_io_copy_link(const char *src,
  * various points during the operation.  If it returns any error
  * (typically @c SVN_ERR_CANCELLED), return that error immediately.
  */
-svn_error_t *svn_io_copy_dir_recursively(const char *src,
-                                         const char *dst_parent,
-                                         const char *dst_basename,
-                                         svn_boolean_t copy_perms,
-                                         svn_cancel_func_t cancel_func,
-                                         void *cancel_baton,
-                                         apr_pool_t *pool);
-
+svn_error_t *
+svn_io_copy_dir_recursively(const char *src,
+                            const char *dst_parent,
+                            const char *dst_basename,
+                            svn_boolean_t copy_perms,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
+                            apr_pool_t *pool);
 
 
 /** Create directory @a path on the file system, creating intermediate
@@ -268,7 +280,9 @@ svn_error_t *svn_io_copy_dir_recursively(const char *src,
  * This is essentially a wrapper for apr_dir_make_recursive(), passing
  * @c APR_OS_DEFAULT as the permissions.
  */
-svn_error_t *svn_io_make_dir_recursively(const char *path, apr_pool_t *pool);
+svn_error_t *
+svn_io_make_dir_recursively(const char *path,
+                            apr_pool_t *pool);
 
 
 /** Set @a *is_empty_p to @c TRUE if directory @a path is empty, else to
@@ -284,9 +298,10 @@ svn_io_dir_empty(svn_boolean_t *is_empty_p,
 /** Append @a src to @a dst.  @a dst will be appended to if it exists, else it
  * will be created.  Both @a src and @a dst are utf8-encoded.
  */
-svn_error_t *svn_io_append_file(const char *src,
-                                const char *dst,
-                                apr_pool_t *pool);
+svn_error_t *
+svn_io_append_file(const char *src,
+                   const char *dst,
+                   apr_pool_t *pool);
 
 
 /** Make a file as read-only as the operating system allows.
@@ -301,9 +316,10 @@ svn_error_t *svn_io_append_file(const char *src,
  * directories for compatibility reasons, but as its name implies, it
  * should be used only for files.
  */
-svn_error_t *svn_io_set_file_read_only(const char *path,
-                                       svn_boolean_t ignore_enoent,
-                                       apr_pool_t *pool);
+svn_error_t *
+svn_io_set_file_read_only(const char *path,
+                          svn_boolean_t ignore_enoent,
+                          apr_pool_t *pool);
 
 
 /** Make a file as writable as the operating system allows.
@@ -321,9 +337,10 @@ svn_error_t *svn_io_set_file_read_only(const char *path,
  * directories for compatibility reasons, but as its name implies, it
  * should be used only for files.
  */
-svn_error_t *svn_io_set_file_read_write(const char *path,
-                                        svn_boolean_t ignore_enoent,
-                                        apr_pool_t *pool);
+svn_error_t *
+svn_io_set_file_read_write(const char *path,
+                           svn_boolean_t ignore_enoent,
+                           apr_pool_t *pool);
 
 
 /** Similar to svn_io_set_file_read_* functions.
@@ -348,10 +365,12 @@ svn_error_t *svn_io_set_file_read_write(const char *path,
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
-svn_error_t *svn_io_set_file_read_write_carefully(const char *path,
-                                                  svn_boolean_t enable_write,
-                                                  svn_boolean_t ignore_enoent,
-                                                  apr_pool_t *pool);
+SVN_DEPRECATED
+svn_error_t *
+svn_io_set_file_read_write_carefully(const char *path,
+                                     svn_boolean_t enable_write,
+                                     svn_boolean_t ignore_enoent,
+                                     apr_pool_t *pool);
 
 /** Set @a path's "executability" (but do nothing if it is a symlink).
  *
@@ -378,10 +397,11 @@ svn_error_t *svn_io_set_file_read_write_carefully(const char *path,
  * directories for compatibility reasons, but as its name implies, it
  * should be used only for files.
  */
-svn_error_t *svn_io_set_file_executable(const char *path,
-                                        svn_boolean_t executable,
-                                        svn_boolean_t ignore_enoent,
-                                        apr_pool_t *pool);
+svn_error_t *
+svn_io_set_file_executable(const char *path,
+                           svn_boolean_t executable,
+                           svn_boolean_t ignore_enoent,
+                           apr_pool_t *pool);
 
 /** Determine whether a file is executable by the current user.
  * Set @a *executable to @c TRUE if the file @a path is executable by the
@@ -389,9 +409,10 @@ svn_error_t *svn_io_set_file_executable(const char *path,
  *
  * On Windows and on platforms without userids, always returns @c FALSE.
  */
-svn_error_t *svn_io_is_file_executable(svn_boolean_t *executable,
-                                       const char *path,
-                                       apr_pool_t *pool);
+svn_error_t *
+svn_io_is_file_executable(svn_boolean_t *executable,
+                          const char *path,
+                          apr_pool_t *pool);
 
 
 /** Read a line from @a file into @a buf, but not exceeding @a *limit bytes.
@@ -403,7 +424,9 @@ svn_error_t *svn_io_is_file_executable(svn_boolean_t *executable,
  * When the file is out of lines, @c APR_EOF will be returned.
  */
 svn_error_t *
-svn_io_read_length_line(apr_file_t *file, char *buf, apr_size_t *limit,
+svn_io_read_length_line(apr_file_t *file,
+                        char *buf,
+                        apr_size_t *limit,
                         apr_pool_t *pool);
 
 
@@ -413,9 +436,10 @@ svn_io_read_length_line(apr_file_t *file, char *buf, apr_size_t *limit,
  * @note This is the APR mtime which corresponds to the traditional mtime
  * on Unix, and the last write time on Windows.
  */
-svn_error_t *svn_io_file_affected_time(apr_time_t *apr_time,
-                                       const char *path,
-                                       apr_pool_t *pool);
+svn_error_t *
+svn_io_file_affected_time(apr_time_t *apr_time,
+                          const char *path,
+                          apr_pool_t *pool);
 
 /** Set the timestamp of file @a path to @a apr_time.  @a path is
  *  utf8-encoded.
@@ -423,9 +447,10 @@ svn_error_t *svn_io_file_affected_time(apr_time_t *apr_time,
  * @note This is the APR mtime which corresponds to the traditional mtime
  * on Unix, and the last write time on Windows.
  */
-svn_error_t *svn_io_set_file_affected_time(apr_time_t apr_time,
-                                           const char *path,
-                                           apr_pool_t *pool);
+svn_error_t *
+svn_io_set_file_affected_time(apr_time_t apr_time,
+                              const char *path,
+                              apr_pool_t *pool);
 
 
 
@@ -438,36 +463,40 @@ svn_error_t *svn_io_set_file_affected_time(apr_time_t apr_time,
  * cannot be determined, then the sizes are not known to be different,
  * so @a *different_p is set to 0.
  */
-svn_error_t *svn_io_filesizes_different_p(svn_boolean_t *different_p,
-                                          const char *file1,
-                                          const char *file2,
-                                          apr_pool_t *pool);
+svn_error_t *
+svn_io_filesizes_different_p(svn_boolean_t *different_p,
+                             const char *file1,
+                             const char *file2,
+                             apr_pool_t *pool);
 
 
 /** Put the md5 checksum of @a file into @a digest.
  * @a digest points to @c APR_MD5_DIGESTSIZE bytes of storage.
  * Use @a pool only for temporary allocations.
  */
-svn_error_t *svn_io_file_checksum(unsigned char digest[],
-                                  const char *file,
-                                  apr_pool_t *pool);
+svn_error_t *
+svn_io_file_checksum(unsigned char digest[],
+                     const char *file,
+                     apr_pool_t *pool);
 
 
 /** Set @a *same to TRUE if @a file1 and @a file2 have the same
  * contents, else set it to FALSE.  Use @a pool for temporary allocations.
  */
-svn_error_t *svn_io_files_contents_same_p(svn_boolean_t *same,
-                                          const char *file1,
-                                          const char *file2,
-                                          apr_pool_t *pool);
+svn_error_t *
+svn_io_files_contents_same_p(svn_boolean_t *same,
+                             const char *file1,
+                             const char *file2,
+                             apr_pool_t *pool);
 
 /** Create file at utf8-encoded @a file with contents @a contents.
  * @a file must not already exist.
  * Use @a pool for memory allocations.
  */
-svn_error_t *svn_io_file_create(const char *file,
-                                const char *contents,
-                                apr_pool_t *pool);
+svn_error_t *
+svn_io_file_create(const char *file,
+                   const char *contents,
+                   apr_pool_t *pool);
 
 /**
  * Lock file at @a lock_file. If @a exclusive is TRUE,
@@ -477,9 +506,11 @@ svn_error_t *svn_io_file_create(const char *file,
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
-svn_error_t *svn_io_file_lock(const char *lock_file,
-                              svn_boolean_t exclusive,
-                              apr_pool_t *pool);
+SVN_DEPRECATED
+svn_error_t *
+svn_io_file_lock(const char *lock_file,
+                 svn_boolean_t exclusive,
+                 apr_pool_t *pool);
 
 /**
  * Lock file at @a lock_file. If @a exclusive is TRUE,
@@ -493,26 +524,29 @@ svn_error_t *svn_io_file_lock(const char *lock_file,
  *
  * @since New in 1.1.
  */
-svn_error_t *svn_io_file_lock2(const char *lock_file,
-                               svn_boolean_t exclusive,
-                               svn_boolean_t nonblocking,
-                               apr_pool_t *pool);
+svn_error_t *
+svn_io_file_lock2(const char *lock_file,
+                  svn_boolean_t exclusive,
+                  svn_boolean_t nonblocking,
+                  apr_pool_t *pool);
 /**
  * Flush any unwritten data from @a file to disk.  Use @a pool for
  *  memory allocations.
  *
  * @since New in 1.1.
  */
-svn_error_t *svn_io_file_flush_to_disk(apr_file_t *file,
-                                       apr_pool_t *pool);
+svn_error_t *
+svn_io_file_flush_to_disk(apr_file_t *file,
+                          apr_pool_t *pool);
 
 /** Copy file @a file from location @a src_path to location @a dest_path.
  * Use @a pool for memory allocations.
  */
-svn_error_t *svn_io_dir_file_copy(const char *src_path,
-                                  const char *dest_path,
-                                  const char *file,
-                                  apr_pool_t *pool);
+svn_error_t *
+svn_io_dir_file_copy(const char *src_path,
+                     const char *dest_path,
+                     const char *file,
+                     apr_pool_t *pool);
 
 
 /** Generic byte-streams
@@ -563,23 +597,34 @@ typedef svn_error_t *(*svn_close_fn_t)(void *baton);
 
 
 /** Create a generic stream.  @see svn_stream_t. */
-svn_stream_t *svn_stream_create(void *baton, apr_pool_t *pool);
+svn_stream_t *
+svn_stream_create(void *baton,
+                  apr_pool_t *pool);
 
 /** Set @a stream's baton to @a baton */
-void svn_stream_set_baton(svn_stream_t *stream, void *baton);
+void
+svn_stream_set_baton(svn_stream_t *stream,
+                     void *baton);
 
 /** Set @a stream's read function to @a read_fn */
-void svn_stream_set_read(svn_stream_t *stream, svn_read_fn_t read_fn);
+void
+svn_stream_set_read(svn_stream_t *stream,
+                    svn_read_fn_t read_fn);
 
 /** Set @a stream's write function to @a write_fn */
-void svn_stream_set_write(svn_stream_t *stream, svn_write_fn_t write_fn);
+void
+svn_stream_set_write(svn_stream_t *stream,
+                     svn_write_fn_t write_fn);
 
 /** Set @a stream's close function to @a close_fn */
-void svn_stream_set_close(svn_stream_t *stream, svn_close_fn_t close_fn);
+void
+svn_stream_set_close(svn_stream_t *stream,
+                     svn_close_fn_t close_fn);
 
 
 /** Create a stream that is empty for reading and infinite for writing. */
-svn_stream_t *svn_stream_empty(apr_pool_t *pool);
+svn_stream_t *
+svn_stream_empty(apr_pool_t *pool);
 
 /** Return a stream allocated in @a pool which forwards all requests
  * to @a stream.  Destruction is explicitly excluded from forwarding.
@@ -588,7 +633,9 @@ svn_stream_t *svn_stream_empty(apr_pool_t *pool);
  *
  * @since New in 1.4.
  */
-svn_stream_t *svn_stream_disown(svn_stream_t *stream, apr_pool_t *pool);
+svn_stream_t *
+svn_stream_disown(svn_stream_t *stream,
+                  apr_pool_t *pool);
 
 /** Create a stream from an APR file.  For convenience, if @a file is
  * @c NULL, an empty stream created by svn_stream_empty() is returned.
@@ -601,9 +648,10 @@ svn_stream_t *svn_stream_disown(svn_stream_t *stream, apr_pool_t *pool);
  *
  * @since New in 1.4.
  */
-svn_stream_t * svn_stream_from_aprfile2(apr_file_t *file,
-                                        svn_boolean_t disown,
-                                        apr_pool_t *pool);
+svn_stream_t *
+svn_stream_from_aprfile2(apr_file_t *file,
+                         svn_boolean_t disown,
+                         apr_pool_t *pool);
 
 /** Similar to svn_stream_from_aprfile2(), except that the file will
  * always be disowned.
@@ -614,25 +662,32 @@ svn_stream_t * svn_stream_from_aprfile2(apr_file_t *file,
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */
-svn_stream_t *svn_stream_from_aprfile(apr_file_t *file, apr_pool_t *pool);
+SVN_DEPRECATED
+svn_stream_t *
+svn_stream_from_aprfile(apr_file_t *file,
+                        apr_pool_t *pool);
 
 /** Set @a *out to a generic stream connected to stdout, allocated in
  * @a pool.  The stream and its underlying APR handle will be closed
  * when @a pool is cleared or destroyed.
  */
-svn_error_t *svn_stream_for_stdout(svn_stream_t **out, apr_pool_t *pool);
+svn_error_t *
+svn_stream_for_stdout(svn_stream_t **out,
+                      apr_pool_t *pool);
 
 /** Return a generic stream connected to stringbuf @a str.  Allocate the
  * stream in @a pool.
  */
-svn_stream_t *svn_stream_from_stringbuf(svn_stringbuf_t *str,
-                                        apr_pool_t *pool);
+svn_stream_t *
+svn_stream_from_stringbuf(svn_stringbuf_t *str,
+                          apr_pool_t *pool);
 
 /** Return a generic read-only stream connected to string @a str.
  *  Allocate the stream in @a pool.
  */
-svn_stream_t *svn_stream_from_string(svn_string_t *str,
-                                     apr_pool_t *pool);
+svn_stream_t *
+svn_stream_from_string(svn_string_t *str,
+                       apr_pool_t *pool);
 
 /** Return a stream that decompresses all data read and compresses all
  * data written. The stream @a stream is used to read and write all
@@ -644,18 +699,20 @@ svn_stream_t *svn_stream_from_string(svn_string_t *str,
  *
  * @note From 1.4, compression support is always compiled in.
  */
-svn_stream_t *svn_stream_compressed(svn_stream_t *stream,
-                                    apr_pool_t *pool);
+svn_stream_t *
+svn_stream_compressed(svn_stream_t *stream,
+                      apr_pool_t *pool);
 
 /** Return a stream that calculates checksums for all data read
  * and written.  The stream @a stream is used to read and write all data.
  * The stream and the resulting digests are allocated in @a pool.
  *
- * When the stream is closed, @a read_digest and @a write_digest
- * are set to point to the resulting digests.
+ * When the stream is closed, @a *read_checksum and @a *write_checksum
+ * are set to point to the resulting checksums, of type @a read_checksum_kind
+ * and @a write_checksum_kind, respectively.
  *
- * Both @a read_digest and @a write_digest
- * can be @c NULL, in which case the respective checksum isn't calculated.
+ * Both @a read_checksum and @a write_checksum can be @c NULL, in which case
+ * the respective checksum isn't calculated.
  *
  * If @a read_all is TRUE, make sure that all data available on @a
  * stream is read (and checksummed) when the stream is closed.
@@ -665,33 +722,57 @@ svn_stream_t *svn_stream_compressed(svn_stream_t *stream,
  * The @a stream passed into this function is closed when the created
  * stream is closed.
  *
- * @since New in 1.4.
+ * @since New in 1.6.
  */
-svn_stream_t *svn_stream_checksummed(svn_stream_t *stream,
-                                     const unsigned char **read_digest,
-                                     const unsigned char **write_digest,
-                                     svn_boolean_t read_all,
-                                     apr_pool_t *pool);
+svn_stream_t *
+svn_stream_checksummed2(svn_stream_t *stream,
+                        svn_checksum_t **read_checksum,
+                        svn_checksum_kind_t read_checksum_kind,
+                        svn_checksum_t **write_checksum,
+                        svn_checksum_kind_t write_checksum_kind,
+                        svn_boolean_t read_all,
+                        apr_pool_t *pool);
+
+/**
+ * Similar to svn_stream_checksummed2(), but always returning the MD5
+ * checksum in @a read_digest and @a write_digest.
+ *
+ * @since New in 1.4.
+ * @deprecated Provided for backward compatibility with the 1.5 API.
+ */
+SVN_DEPRECATED
+svn_stream_t *
+svn_stream_checksummed(svn_stream_t *stream,
+                       const unsigned char **read_digest,
+                       const unsigned char **write_digest,
+                       svn_boolean_t read_all,
+                       apr_pool_t *pool);
 
 /** Read from a generic stream. @see svn_stream_t. */
-svn_error_t *svn_stream_read(svn_stream_t *stream, char *buffer,
-                             apr_size_t *len);
+svn_error_t *
+svn_stream_read(svn_stream_t *stream,
+                char *buffer,
+                apr_size_t *len);
 
 /** Write to a generic stream. @see svn_stream_t. */
-svn_error_t *svn_stream_write(svn_stream_t *stream, const char *data,
-                              apr_size_t *len);
+svn_error_t *
+svn_stream_write(svn_stream_t *stream,
+                 const char *data,
+                 apr_size_t *len);
 
 /** Close a generic stream. @see svn_stream_t. */
-svn_error_t *svn_stream_close(svn_stream_t *stream);
+svn_error_t *
+svn_stream_close(svn_stream_t *stream);
 
 
 /** Write to @a stream using a printf-style @a fmt specifier, passed through
  * apr_psprintf() using memory from @a pool.
  */
-svn_error_t *svn_stream_printf(svn_stream_t *stream,
-                               apr_pool_t *pool,
-                               const char *fmt,
-                               ...)
+svn_error_t *
+svn_stream_printf(svn_stream_t *stream,
+                  apr_pool_t *pool,
+                  const char *fmt,
+                  ...)
        __attribute__((format(printf, 3, 4)));
 
 /** Write to @a stream using a printf-style @a fmt specifier, passed through
@@ -703,11 +784,12 @@ svn_error_t *svn_stream_printf(svn_stream_t *stream,
  *
  * @since New in 1.3.
  */
-svn_error_t *svn_stream_printf_from_utf8(svn_stream_t *stream,
-                                         const char *encoding,
-                                         apr_pool_t *pool,
-                                         const char *fmt,
-                                         ...)
+svn_error_t *
+svn_stream_printf_from_utf8(svn_stream_t *stream,
+                            const char *encoding,
+                            apr_pool_t *pool,
+                            const char *fmt,
+                            ...)
        __attribute__((format(printf, 4, 5)));
 
 /** Allocate @a *stringbuf in @a pool, and read into it one line (terminated
@@ -733,10 +815,12 @@ svn_stream_readline(svn_stream_t *stream,
  *
  * @since New in 1.5.
  */
-svn_error_t *svn_stream_copy2(svn_stream_t *from, svn_stream_t *to,
-                              svn_cancel_func_t cancel_func,
-                              void *cancel_baton,
-                              apr_pool_t *pool);
+svn_error_t *
+svn_stream_copy2(svn_stream_t *from,
+                 svn_stream_t *to,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
+                 apr_pool_t *pool);
 
 
 /**
@@ -745,8 +829,11 @@ svn_error_t *svn_stream_copy2(svn_stream_t *from, svn_stream_t *to,
  * @since New in 1.1.
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
-svn_error_t *svn_stream_copy(svn_stream_t *from, svn_stream_t *to,
-                             apr_pool_t *pool);
+SVN_DEPRECATED
+svn_error_t *
+svn_stream_copy(svn_stream_t *from,
+                svn_stream_t *to,
+                apr_pool_t *pool);
 
 /** Set @a *same to TRUE if @a stream1 and @a stream2 have the same
  * contents, else set it to FALSE.  Use @a pool for temporary allocations.
@@ -773,9 +860,10 @@ svn_stream_contents_same(svn_boolean_t *same,
  *
  * @since New in 1.5.
  */
-svn_error_t *svn_stringbuf_from_file2(svn_stringbuf_t **result,
-                                      const char *filename,
-                                      apr_pool_t *pool);
+svn_error_t *
+svn_stringbuf_from_file2(svn_stringbuf_t **result,
+                         const char *filename,
+                         apr_pool_t *pool);
 
 /** Similar to svn_stringbuf_from_file2(), except that if @a filename
  * is "-", return the error @c SVN_ERR_UNSUPPORTED_FEATURE and don't
@@ -783,44 +871,53 @@ svn_error_t *svn_stringbuf_from_file2(svn_stringbuf_t **result,
  *
  * @deprecated Provided for backwards compatibility with the 1.4 API.
  */
-svn_error_t *svn_stringbuf_from_file(svn_stringbuf_t **result,
-                                     const char *filename,
-                                     apr_pool_t *pool);
+SVN_DEPRECATED
+svn_error_t *
+svn_stringbuf_from_file(svn_stringbuf_t **result,
+                        const char *filename,
+                        apr_pool_t *pool);
 
 /** Sets @a *result to a string containing the contents of the already opened
  * @a file.  Reads from the current position in file to the end.  Does not
  * close the file or reset the cursor position.
  */
-svn_error_t *svn_stringbuf_from_aprfile(svn_stringbuf_t **result,
-                                        apr_file_t *file,
-                                        apr_pool_t *pool);
+svn_error_t *
+svn_stringbuf_from_aprfile(svn_stringbuf_t **result,
+                           apr_file_t *file,
+                           apr_pool_t *pool);
 
 /** Remove file @a path, a utf8-encoded path.  This wraps apr_file_remove(),
  * converting any error to a Subversion error.
  */
-svn_error_t *svn_io_remove_file(const char *path, apr_pool_t *pool);
+svn_error_t *
+svn_io_remove_file(const char *path,
+                   apr_pool_t *pool);
 
 /** Recursively remove directory @a path.  @a path is utf8-encoded.
  * If @a ignore_enoent is @c TRUE, don't fail if the target directory
  * doesn't exist.  Use @a pool for temporary allocations.
  *
  * Because recursive delete of a directory tree can be a lengthy operation,
- * provide @a cancel_func and @a cancel_baton for interuptability.
+ * provide @a cancel_func and @a cancel_baton for interruptability.
  *
  * @since New in 1.5.
  */
-svn_error_t *svn_io_remove_dir2(const char *path,
-                                svn_boolean_t ignore_enoent,
-                                svn_cancel_func_t cancel_func,
-                                void *cancel_baton,
-                                apr_pool_t *pool);
+svn_error_t *
+svn_io_remove_dir2(const char *path,
+                   svn_boolean_t ignore_enoent,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
+                   apr_pool_t *pool);
 
 /** Similar to svn_io_remove_dir2(), but with @a ignore_enoent set to
- * @c FALSE.
+ * @c FALSE and @a cancel_func and @a cancel_baton set to @c NULL.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API
  */
-svn_error_t *svn_io_remove_dir(const char *path, apr_pool_t *pool);
+SVN_DEPRECATED
+svn_error_t *
+svn_io_remove_dir(const char *path,
+                  apr_pool_t *pool);
 
 /** Read all of the disk entries in directory @a path, a utf8-encoded
  * path.  Set @a *dirents to a hash mapping dirent names (<tt>char *</tt>) to
@@ -831,9 +928,10 @@ svn_error_t *svn_io_remove_dir(const char *path, apr_pool_t *pool);
  *
  * @since New in 1.4.
  */
-svn_error_t *svn_io_get_dir_filenames(apr_hash_t **dirents,
-                                      const char *path,
-                                      apr_pool_t *pool);
+svn_error_t *
+svn_io_get_dir_filenames(apr_hash_t **dirents,
+                         const char *path,
+                         apr_pool_t *pool);
 
 /** Read all of the disk entries in directory @a path, a utf8-encoded
  * path.  Set @a *dirents to a hash mapping dirent names (<tt>char *</tt>) to
@@ -847,18 +945,21 @@ svn_error_t *svn_io_get_dir_filenames(apr_hash_t **dirents,
  *
  * @since New in 1.3.
  */
-svn_error_t *svn_io_get_dirents2(apr_hash_t **dirents,
-                                 const char *path,
-                                 apr_pool_t *pool);
+svn_error_t *
+svn_io_get_dirents2(apr_hash_t **dirents,
+                    const char *path,
+                    apr_pool_t *pool);
 
 /** Similar to svn_io_get_dirents2(), but @a *dirents is a hash table
  * with @c svn_node_kind_t values.
  *
  * @deprecated Provided for backwards compatibility with the 1.2 API.
  */
-svn_error_t *svn_io_get_dirents(apr_hash_t **dirents,
-                                const char *path,
-                                apr_pool_t *pool);
+SVN_DEPRECATED
+svn_error_t *
+svn_io_get_dirents(apr_hash_t **dirents,
+                   const char *path,
+                   apr_pool_t *pool);
 
 
 /** Callback function type for svn_io_dir_walk() */
@@ -880,11 +981,12 @@ typedef svn_error_t * (*svn_io_walk_func_t)(void *baton,
  *
  * All allocations will be performed in @a pool.
  */
-svn_error_t *svn_io_dir_walk(const char *dirname,
-                             apr_int32_t wanted,
-                             svn_io_walk_func_t walk_func,
-                             void *walk_baton,
-                             apr_pool_t *pool);
+svn_error_t *
+svn_io_dir_walk(const char *dirname,
+                apr_int32_t wanted,
+                svn_io_walk_func_t walk_func,
+                void *walk_baton,
+                apr_pool_t *pool);
 
 /**
  * Start @a cmd with @a args, using utf8-encoded @a path as working
@@ -907,15 +1009,16 @@ svn_error_t *svn_io_dir_walk(const char *dirname,
  *
  * @since New in 1.3.
  */
-svn_error_t *svn_io_start_cmd(apr_proc_t *cmd_proc,
-                              const char *path,
-                              const char *cmd,
-                              const char *const *args,
-                              svn_boolean_t inherit,
-                              apr_file_t *infile,
-                              apr_file_t *outfile,
-                              apr_file_t *errfile,
-                              apr_pool_t *pool);
+svn_error_t *
+svn_io_start_cmd(apr_proc_t *cmd_proc,
+                 const char *path,
+                 const char *cmd,
+                 const char *const *args,
+                 svn_boolean_t inherit,
+                 apr_file_t *infile,
+                 apr_file_t *outfile,
+                 apr_file_t *errfile,
+                 apr_pool_t *pool);
 
 /**
  * Wait for the process @a *cmd_proc to complete and optionally retrieve
@@ -930,26 +1033,28 @@ svn_error_t *svn_io_start_cmd(apr_proc_t *cmd_proc,
  *
  * @since New in 1.3.
  */
-svn_error_t *svn_io_wait_for_cmd(apr_proc_t *cmd_proc,
-                                 const char *cmd,
-                                 int *exitcode,
-                                 apr_exit_why_e *exitwhy,
-                                 apr_pool_t *pool);
+svn_error_t *
+svn_io_wait_for_cmd(apr_proc_t *cmd_proc,
+                    const char *cmd,
+                    int *exitcode,
+                    apr_exit_why_e *exitwhy,
+                    apr_pool_t *pool);
 
 /** Run a command to completion, by first calling svn_io_start_cmd() and
  * then calling svn_io_wait_for_cmd().  The parameters correspond to
  * the same-named parameters of those two functions.
  */
-svn_error_t *svn_io_run_cmd(const char *path,
-                            const char *cmd,
-                            const char *const *args,
-                            int *exitcode,
-                            apr_exit_why_e *exitwhy,
-                            svn_boolean_t inherit,
-                            apr_file_t *infile,
-                            apr_file_t *outfile,
-                            apr_file_t *errfile,
-                            apr_pool_t *pool);
+svn_error_t *
+svn_io_run_cmd(const char *path,
+               const char *cmd,
+               const char *const *args,
+               int *exitcode,
+               apr_exit_why_e *exitwhy,
+               svn_boolean_t inherit,
+               apr_file_t *infile,
+               apr_file_t *outfile,
+               apr_file_t *errfile,
+               apr_pool_t *pool);
 
 /** Invoke @c the configured diff program, with @a user_args (an array
  * of utf8-encoded @a num_user_args arguments) if they are specified
@@ -970,18 +1075,19 @@ svn_error_t *svn_io_run_cmd(const char *path,
  *
  * Do all allocation in @a pool.
  */
-svn_error_t *svn_io_run_diff(const char *dir,
-                             const char *const *user_args,
-                             int num_user_args,
-                             const char *label1,
-                             const char *label2,
-                             const char *from,
-                             const char *to,
-                             int *exitcode,
-                             apr_file_t *outfile,
-                             apr_file_t *errfile,
-                             const char *diff_cmd,
-                             apr_pool_t *pool);
+svn_error_t *
+svn_io_run_diff(const char *dir,
+                const char *const *user_args,
+                int num_user_args,
+                const char *label1,
+                const char *label2,
+                const char *from,
+                const char *to,
+                int *exitcode,
+                apr_file_t *outfile,
+                apr_file_t *errfile,
+                const char *diff_cmd,
+                apr_pool_t *pool);
 
 
 /** Invoke the configured @c diff3 program, in utf8-encoded @a dir
@@ -1018,34 +1124,37 @@ svn_error_t *svn_io_run_diff(const char *dir,
  *
  * @since New in 1.4.
  */
-svn_error_t *svn_io_run_diff3_2(int *exitcode,
-                                const char *dir,
-                                const char *mine,
-                                const char *older,
-                                const char *yours,
-                                const char *mine_label,
-                                const char *older_label,
-                                const char *yours_label,
-                                apr_file_t *merged,
-                                const char *diff3_cmd,
-                                const apr_array_header_t *user_args,
-                                apr_pool_t *pool);
+svn_error_t *
+svn_io_run_diff3_2(int *exitcode,
+                   const char *dir,
+                   const char *mine,
+                   const char *older,
+                   const char *yours,
+                   const char *mine_label,
+                   const char *older_label,
+                   const char *yours_label,
+                   apr_file_t *merged,
+                   const char *diff3_cmd,
+                   const apr_array_header_t *user_args,
+                   apr_pool_t *pool);
 
 /** Similar to svn_io_run_diff3_2(), but with @a user_args set to @c NULL.
  *
  * @deprecated Provided for backwards compatibility with the 1.3 API.
  */
-svn_error_t *svn_io_run_diff3(const char *dir,
-                              const char *mine,
-                              const char *older,
-                              const char *yours,
-                              const char *mine_label,
-                              const char *older_label,
-                              const char *yours_label,
-                              apr_file_t *merged,
-                              int *exitcode,
-                              const char *diff3_cmd,
-                              apr_pool_t *pool);
+SVN_DEPRECATED
+svn_error_t *
+svn_io_run_diff3(const char *dir,
+                 const char *mine,
+                 const char *older,
+                 const char *yours,
+                 const char *mine_label,
+                 const char *older_label,
+                 const char *yours_label,
+                 apr_file_t *merged,
+                 int *exitcode,
+                 const char *diff3_cmd,
+                 apr_pool_t *pool);
 
 
 /** Parse utf8-encoded @a mimetypes_file as a MIME types file (such as
@@ -1055,9 +1164,10 @@ svn_error_t *svn_io_run_diff3(const char *dir,
  *
  * @since New in 1.5.
  */
-svn_error_t *svn_io_parse_mimetypes_file(apr_hash_t **type_map,
-                                         const char *mimetypes_file,
-                                         apr_pool_t *pool);
+svn_error_t *
+svn_io_parse_mimetypes_file(apr_hash_t **type_map,
+                            const char *mimetypes_file,
+                            apr_pool_t *pool);
 
 
 /** Examine utf8-encoded @a file to determine if it can be described by a
@@ -1073,10 +1183,11 @@ svn_error_t *svn_io_parse_mimetypes_file(apr_hash_t **type_map,
  *
  * @since New in 1.5.
  */
-svn_error_t *svn_io_detect_mimetype2(const char **mimetype,
-                                     const char *file,
-                                     apr_hash_t *mimetype_map,
-                                     apr_pool_t *pool);
+svn_error_t *
+svn_io_detect_mimetype2(const char **mimetype,
+                        const char *file,
+                        apr_hash_t *mimetype_map,
+                        apr_pool_t *pool);
 
 
 /** Like svn_io_detect_mimetype2, but with @a mimetypes_map set to
@@ -1084,77 +1195,99 @@ svn_error_t *svn_io_detect_mimetype2(const char **mimetype,
  *
  * @deprecated Provided for backward compatibility with the 1.4 API
  */
-svn_error_t *svn_io_detect_mimetype(const char **mimetype,
-                                    const char *file,
-                                    apr_pool_t *pool);
+SVN_DEPRECATED
+svn_error_t *
+svn_io_detect_mimetype(const char **mimetype,
+                       const char *file,
+                       apr_pool_t *pool);
 
 
 /** Wrapper for apr_file_open().  @a fname is utf8-encoded. */
 svn_error_t *
-svn_io_file_open(apr_file_t **new_file, const char *fname,
-                 apr_int32_t flag, apr_fileperms_t perm,
+svn_io_file_open(apr_file_t **new_file,
+                 const char *fname,
+                 apr_int32_t flag,
+                 apr_fileperms_t perm,
                  apr_pool_t *pool);
 
 
 /** Wrapper for apr_file_close(). */
 svn_error_t *
-svn_io_file_close(apr_file_t *file, apr_pool_t *pool);
+svn_io_file_close(apr_file_t *file,
+                  apr_pool_t *pool);
 
 
 /** Wrapper for apr_file_getc(). */
 svn_error_t *
-svn_io_file_getc(char *ch, apr_file_t *file, apr_pool_t *pool);
+svn_io_file_getc(char *ch,
+                 apr_file_t *file,
+                 apr_pool_t *pool);
 
 
 /** Wrapper for apr_file_info_get(). */
 svn_error_t *
-svn_io_file_info_get(apr_finfo_t *finfo, apr_int32_t wanted,
-                     apr_file_t *file, apr_pool_t *pool);
+svn_io_file_info_get(apr_finfo_t *finfo,
+                     apr_int32_t wanted,
+                     apr_file_t *file,
+                     apr_pool_t *pool);
 
 
 /** Wrapper for apr_file_read(). */
 svn_error_t *
-svn_io_file_read(apr_file_t *file, void *buf,
-                 apr_size_t *nbytes, apr_pool_t *pool);
+svn_io_file_read(apr_file_t *file,
+                 void *buf,
+                 apr_size_t *nbytes,
+                 apr_pool_t *pool);
 
 
 /** Wrapper for apr_file_read_full(). */
 svn_error_t *
-svn_io_file_read_full(apr_file_t *file, void *buf,
-                      apr_size_t nbytes, apr_size_t *bytes_read,
+svn_io_file_read_full(apr_file_t *file,
+                      void *buf,
+                      apr_size_t nbytes,
+                      apr_size_t *bytes_read,
                       apr_pool_t *pool);
 
 
 /** Wrapper for apr_file_seek(). */
 svn_error_t *
-svn_io_file_seek(apr_file_t *file, apr_seek_where_t where,
-                 apr_off_t *offset, apr_pool_t *pool);
+svn_io_file_seek(apr_file_t *file,
+                 apr_seek_where_t where,
+                 apr_off_t *offset,
+                 apr_pool_t *pool);
 
 
 /** Wrapper for apr_file_write(). */
 svn_error_t *
-svn_io_file_write(apr_file_t *file, const void *buf,
-                  apr_size_t *nbytes, apr_pool_t *pool);
+svn_io_file_write(apr_file_t *file,
+                  const void *buf,
+                  apr_size_t *nbytes,
+                  apr_pool_t *pool);
 
 
 /** Wrapper for apr_file_write_full(). */
 svn_error_t *
-svn_io_file_write_full(apr_file_t *file, const void *buf,
-                       apr_size_t nbytes, apr_size_t *bytes_written,
+svn_io_file_write_full(apr_file_t *file,
+                       const void *buf,
+                       apr_size_t nbytes,
+                       apr_size_t *bytes_written,
                        apr_pool_t *pool);
 
 
 /** Wrapper for apr_stat().  @a fname is utf8-encoded. */
 svn_error_t *
-svn_io_stat(apr_finfo_t *finfo, const char *fname,
-            apr_int32_t wanted, apr_pool_t *pool);
+svn_io_stat(apr_finfo_t *finfo,
+            const char *fname,
+            apr_int32_t wanted,
+            apr_pool_t *pool);
 
 
 /** Wrapper for apr_file_rename().  @a from_path and @a to_path are
  * utf8-encoded.
  */
 svn_error_t *
-svn_io_file_rename(const char *from_path, const char *to_path,
+svn_io_file_rename(const char *from_path,
+                   const char *to_path,
                    apr_pool_t *pool);
 
 
@@ -1167,18 +1300,22 @@ svn_io_file_rename(const char *from_path, const char *to_path,
  * @since New in 1.3.
  */
 svn_error_t *
-svn_io_file_move(const char *from_path, const char *to_path,
+svn_io_file_move(const char *from_path,
+                 const char *to_path,
                  apr_pool_t *pool);
 
 
 /** Wrapper for apr_dir_make().  @a path is utf8-encoded. */
 svn_error_t *
-svn_io_dir_make(const char *path, apr_fileperms_t perm, apr_pool_t *pool);
+svn_io_dir_make(const char *path,
+                apr_fileperms_t perm,
+                apr_pool_t *pool);
 
 /** Same as svn_io_dir_make(), but sets the hidden attribute on the
     directory on systems that support it. */
 svn_error_t *
-svn_io_dir_make_hidden(const char *path, apr_fileperms_t perm,
+svn_io_dir_make_hidden(const char *path,
+                       apr_fileperms_t perm,
                        apr_pool_t *pool);
 
 /**
@@ -1192,12 +1329,15 @@ svn_io_dir_make_hidden(const char *path, apr_fileperms_t perm,
  * @since New in 1.1.
  */
 svn_error_t *
-svn_io_dir_make_sgid(const char *path, apr_fileperms_t perm,
+svn_io_dir_make_sgid(const char *path,
+                     apr_fileperms_t perm,
                      apr_pool_t *pool);
 
 /** Wrapper for apr_dir_open().  @a dirname is utf8-encoded. */
 svn_error_t *
-svn_io_dir_open(apr_dir_t **new_dir, const char *dirname, apr_pool_t *pool);
+svn_io_dir_open(apr_dir_t **new_dir,
+                const char *dirname,
+                apr_pool_t *pool);
 
 
 /** Wrapper for apr_dir_remove().  @a dirname is utf8-encoded.
@@ -1205,7 +1345,8 @@ svn_io_dir_open(apr_dir_t **new_dir, const char *dirname, apr_pool_t *pool);
  * svn_io_remove_dir2(), which is recursive.
  */
 svn_error_t *
-svn_io_dir_remove_nonrecursive(const char *dirname, apr_pool_t *pool);
+svn_io_dir_remove_nonrecursive(const char *dirname,
+                               apr_pool_t *pool);
 
 
 /** Wrapper for apr_dir_read().  Ensures that @a finfo->name is
@@ -1233,7 +1374,9 @@ svn_io_dir_read(apr_finfo_t *finfo,
  * all allocations.
  */
 svn_error_t *
-svn_io_read_version_file(int *version, const char *path, apr_pool_t *pool);
+svn_io_read_version_file(int *version,
+                         const char *path,
+                         apr_pool_t *pool);
 
 /** Create (or overwrite) the file at @a path with new contents,
  * formatted as a non-negative integer @a version followed by a single
@@ -1241,7 +1384,9 @@ svn_io_read_version_file(int *version, const char *path, apr_pool_t *pool);
  * @a pool for all allocations.
  */
 svn_error_t *
-svn_io_write_version_file(const char *path, int version, apr_pool_t *pool);
+svn_io_write_version_file(const char *path,
+                          int version,
+                          apr_pool_t *pool);
 
 /** @} */
 
