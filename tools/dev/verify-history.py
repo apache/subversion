@@ -36,7 +36,7 @@ class HistoryChecker:
     root = fs.revision_root(self.fs_ptr, revision)
     changes = fs.paths_changed(root)
     while 1:
-      if changes.has_key(path):
+      if path in changes:
         return 1
       if path == '/':
         return 0

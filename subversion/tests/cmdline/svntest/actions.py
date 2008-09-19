@@ -5,7 +5,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -913,7 +913,7 @@ def run_and_verify_mergeinfo(error_re_string = None,
   if out != expected_output:
     exp_hash = dict.fromkeys(expected_output)
     for rev in out:
-      if exp_hash.has_key(rev):
+      if rev in exp_hash:
         del(exp_hash[rev])
       else:
         extra_out.append(rev)
