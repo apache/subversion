@@ -2541,11 +2541,6 @@ typedef struct svn_wc_status2_t
    */
   const char *ood_last_cmt_author;
 
-  /** If the item is a file that was added to the working copy with an
-      svn:externals; if file_external is TRUE, then switched is always
-      FALSE. */
-  svn_boolean_t file_external;
-
   /** @} */
 
   /** Set @c TRUE if the entry is a directory containing tree conflicts.
@@ -2557,6 +2552,11 @@ typedef struct svn_wc_status2_t
    * @since New in 1.6
    */
   svn_boolean_t is_tree_conflict_victim;
+
+  /** If the item is a file that was added to the working copy with an
+      svn:externals; if file_external is TRUE, then switched is always
+      FALSE. */
+  svn_boolean_t file_external;
 
   /* NOTE! Please update svn_wc_dup_status2() when adding new fields here. */
 } svn_wc_status2_t;
