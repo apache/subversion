@@ -1560,7 +1560,7 @@ def status_with_tree_conflicts(sbox):
               "   path=\"%s\">\n" % G,
               "<wc-status\n",
               "   props=\"none\"\n",
-              "   tree-conflicted=\"true\"\n",  # <-- true!
+              "   has-tree-conflicted-children=\"true\"\n",  # <-- true!
               "   item=\"normal\"\n",
               "   revision=\"2\">\n",
               "<commit\n",

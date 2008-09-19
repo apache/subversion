@@ -52,7 +52,7 @@ attlist.wc-status &=
   attribute switched { "true" | "false" }?,
   ## Tree-conflict status of a directory.
   [ a:defaultValue = "false" ]
-  attribute tree-conflicted { "true" | "false" }?
+  attribute has-tree-conflicted-children { "true" | "false" }?
 
 ## Status in repository (if --update was specified).
 repos-status = element repos-status { attlist.repos-status, lock? }
