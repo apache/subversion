@@ -176,6 +176,58 @@ svn_auth_get_windows_simple_provider(svn_auth_provider_object_t **provider,
 /* CryptoApi.                                                            */
 /*-----------------------------------------------------------------------*/
 
+/* Helper for windows_ssl_server_trust_first_credentials for validating
+ * certificate using CryptoApi. Sets *OK_P to TRUE if base64 encoded ASCII_CERT
+ * certificate considered as valid.
+ */
+static svn_error_t *
+windows_validate_certificate(svn_boolean_t *ok_p,
+                             const char *ascii_cert,
+                             apr_pool_t *pool)
+{
+  PCCERT_CONTEXT cert_context = NULL;
+  CERT_CHAIN_PARA chain_para;
+  PCCERT_CHAIN_CONTEXT chain_context = NULL;
+  int cert_len;
+  char *binary_cert;
+
+  *ok_p = FALSE;
+
+  /* Use apr-util as CryptStringToBinaryA is available only on XP+. */
+  binary_cert = apr_palloc(pool,
+                           apr_base64_decode_len(ascii_cert));
+  cert_len = apr_base64_decode(binary_cert, ascii_cert);
+
+  /* Parse the certificate into a context. */
+  cert_context = CertCreateCertificateContext
+    (X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, binary_cert, cert_len);
+
+  if (cert_context)
+    {
+      /* Retrieve the certificate chain of the certificate
+         (a certificate without a valid root does not have a chain). */
+      memset(&chain_para, 0, sizeof(chain_para));
+      chain_para.cbSize = sizeof(chain_para);
+
+      if (CertGetCertificateChain(NULL, cert_context, NULL, NULL, &chain_para,
+                                  CERT_CHAIN_CACHE_END_CERT,
+                                  NULL, &chain_context))
+        {
+          if (chain_context->rgpChain[0]->TrustStatus.dwErrorStatus
+              == CERT_TRUST_NO_ERROR)
+            {
+              /* Windows think the certificate is valid. */
+              *ok_p = TRUE;
+            }
+
+          CertFreeCertificateChain(chain_context);
+        }
+      CertFreeCertificateContext(cert_context);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Retrieve ssl server CA failure overrides (if any) from CryptoApi. */
 static svn_error_t *
 windows_ssl_server_trust_first_credentials(void **credentials,
@@ -185,11 +237,6 @@ windows_ssl_server_trust_first_credentials(void **credentials,
                                            const char *realmstring,
                                            apr_pool_t *pool)
 {
-  PCCERT_CONTEXT cert_context = NULL;
-  CERT_CHAIN_PARA chain_para;
-  PCCERT_CHAIN_CONTEXT chain_context = NULL;
-  svn_boolean_t ok = TRUE;
-
   apr_uint32_t *failures = apr_hash_get(parameters,
                                         SVN_AUTH_PARAM_SSL_SERVER_FAILURES,
                                         APR_HASH_KEY_STRING);
@@ -198,69 +245,26 @@ windows_ssl_server_trust_first_credentials(void **credentials,
                  SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO,
                  APR_HASH_KEY_STRING);
 
-  if (*failures & ~SVN_AUTH_SSL_UNKNOWNCA)
-    {
-      /* give up, go on to next provider; the only thing we can accept
-         is an unknown certificate authority. */
+  *credentials = NULL;
+  *iter_baton = NULL;
 
-      *credentials = NULL;
-      return SVN_NO_ERROR;
+  /* We can accept only unknown certificate authority. */
+  if (*failures & SVN_AUTH_SSL_UNKNOWNCA)
+    {
+      svn_boolean_t ok;
+
+      SVN_ERR(windows_validate_certificate(&ok, cert_info->ascii_cert, pool));
+
+      /* Windows thinks that certificate is ok. */
+      if (ok)
+        {
+          /* Clear failure flag. */
+          *failures &= ~SVN_AUTH_SSL_UNKNOWNCA;
+        }
     }
 
-  if (ok)
-    {
-      int cert_len;
-      char *binary_cert;
-
-      /* Use apr-util as CryptStringToBinaryA is available only on XP+. */
-      binary_cert = apr_palloc(pool,
-                               apr_base64_decode_len(cert_info->ascii_cert));
-      cert_len = apr_base64_decode(binary_cert, cert_info->ascii_cert);
-
-      /* Parse the certificate into a context. */
-      cert_context = CertCreateCertificateContext
-        (X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, binary_cert, cert_len);
-
-      if (!cert_context)
-        ok = FALSE; /* Windows does not think the certificate is valid. */
-    }
-
-  if (ok)
-    {
-       /* Retrieve the certificate chain of the certificate
-          (a certificate without a valid root does not have a chain). */
-       memset(&chain_para, 0, sizeof(chain_para));
-       chain_para.cbSize = sizeof(chain_para);
-
-       if (CertGetCertificateChain(NULL, cert_context, NULL, NULL, &chain_para,
-                                   CERT_CHAIN_CACHE_END_CERT,
-                                   NULL, &chain_context))
-         {
-           if (chain_context->rgpChain[0]->TrustStatus.dwErrorStatus
-               != CERT_TRUST_NO_ERROR)
-            {
-              /* The certificate is not 100% valid, just fall back to the
-                 Subversion certificate handling. */
-
-              ok = FALSE;
-            }
-         }
-       else
-         ok = FALSE;
-    }
-
-  if (chain_context)
-    CertFreeCertificateChain(chain_context);
-  if (cert_context)
-    CertFreeCertificateContext(cert_context);
-
-  if (!ok)
-    {
-      /* go on to next provider. */
-      *credentials = NULL;
-      return SVN_NO_ERROR;
-    }
-  else
+  /* If all failures are cleared now, we return the creds */
+  if (! *failures)
     {
       svn_auth_cred_ssl_server_trust_t *creds =
         apr_pcalloc(pool, sizeof(*creds));
