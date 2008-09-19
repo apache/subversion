@@ -302,6 +302,7 @@ switch_file_external(const char *path,
   svn_boolean_t use_commit_times;
   svn_boolean_t unlink_file = FALSE;
   svn_boolean_t revert_file = FALSE;
+  svn_boolean_t remove_from_revision_control = FALSE;
   svn_error_t *err = NULL;
   svn_error_t *e;
 
@@ -335,7 +336,29 @@ switch_file_external(const char *path,
     }
   else
     {
+      const svn_wc_entry_t *anchor_dir_entry;
       apr_file_t *f;
+      svn_boolean_t text_conflicted;
+      svn_boolean_t prop_conflicted;
+      svn_boolean_t has_tree_conflicted_children;
+
+      /* Check for a conflict on the containing directory.  Because a
+         switch is done on the added file later, it will leave a
+         conflict on the directory.  To prevent resolving a conflict
+         due to another change on the directory, do not allow a file
+         external to be added when one exists. */
+      SVN_ERR(svn_wc_entry(&anchor_dir_entry, anchor, adm_access, FALSE,
+                           subpool));
+      SVN_ERR_ASSERT(anchor_dir_entry);
+      SVN_ERR(svn_wc_conflicted_p2(&text_conflicted, &prop_conflicted,
+                                   &has_tree_conflicted_children,
+                                   anchor, anchor_dir_entry, subpool));
+      if (text_conflicted || prop_conflicted)
+        return svn_error_createf
+          (SVN_ERR_WC_FOUND_CONFLICT, 0,
+           _("The file external from '%s' cannot be written to '%s' while "
+             "'%s' remains in conflict"),
+          url, path, anchor);
 
       /* Try to create an empty file.  If there is a file already
          there, then don't touch it. */
@@ -407,6 +430,32 @@ switch_file_external(const char *path,
   if (err)
     goto cleanup;
 
+  /* Do some additional work if the file external is newly added to
+     the wc. */
+  if (unlink_file)
+    {
+      /* At this point the newly created file external is switched, so
+         if there is an error, to back everything out the file cannot
+         be reverted, it needs to be removed forcibly from the wc.. */
+      revert_file = FALSE;
+      remove_from_revision_control = TRUE;
+
+      /* Switching a newly added file causes a conflict on the anchor
+         directory, so resolve it. */
+      err = svn_wc_resolved_conflict4(anchor, 
+                                      target_adm_access,
+                                      FALSE, FALSE, TRUE,
+                                      svn_depth_empty,
+                                      svn_wc_conflict_choose_merged,
+                                      NULL, /* svn_wc_notify_func2_t */
+                                      NULL, /* void * */
+                                      ctx->cancel_func,
+                                      ctx->cancel_baton,
+                                      subpool);
+      if (err)
+        goto cleanup;
+  }
+
   return SVN_NO_ERROR;
 
  cleanup:
@@ -419,6 +468,17 @@ switch_file_external(const char *path,
                          NULL, /* svn_wc_notify_func2_t */
                          NULL, /* void *notify_baton */
                          subpool);
+      if (e)
+        svn_error_clear(e);
+    }
+
+  if (remove_from_revision_control)
+    {
+      e = svn_wc_remove_from_revision_control(target_adm_access, target,
+                                              TRUE, FALSE,
+                                              ctx->cancel_func,
+                                              ctx->cancel_baton,
+                                              subpool);
       if (e)
         svn_error_clear(e);
     }
