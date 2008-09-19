@@ -92,7 +92,10 @@ CREATE TABLE NODE (
   lock_token  TEXT,
   lock_owner  TEXT,
   lock_comment  TEXT,
-  lock_date  INTEGER  /* ### or TEXT and ISO? */
+  lock_date  INTEGER,  /* ### or TEXT and ISO? */
+
+  /* ### some text or prop changes exist. this node is in a changelist. */
+  changelist_id  INTEGER
   );
 
 CREATE UNIQUE INDEX I_PATH ON NODE (dir_id, filename);
@@ -149,7 +152,9 @@ CREATE TABLE NODE_CHANGES (
   kind  INTEGER,
 
   copyfrom_repos_path  TEXT,
-  copyfrom_revnum  INTEGER
+  copyfrom_revnum  INTEGER,
+
+  changelist_id  INTEGER
   );
 
 CREATE UNIQUE INDEX I_PATH_CHANGES ON NODE_CHANGES (dir_id, filename);
