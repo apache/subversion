@@ -724,7 +724,7 @@ class WinGeneratorBase(GeneratorBase):
         # we don't add the dll to the list.
         if is_lib and dep.msvc_export and not self.disable_shared:
           static_dep = self.graph.get_sources(gen_base.DT_LINK, dep.name)[0]
-          if deps.has_key(static_dep):
+          if static_dep in deps:
             continue
         deps[dep] = dep_kind
 
