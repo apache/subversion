@@ -3,9 +3,6 @@ ctypes-python-bindings to trunk.
 
 ctypes-python-bindings TODOs:
 
- * We need a setup.py script / installer for installing the ctypes python
-   bindings.
-
  * Teach dist.sh (in Subversion trunk) to download release tarball for
    ctypesgen.
 
