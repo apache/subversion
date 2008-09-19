@@ -2800,6 +2800,7 @@ dir_make(const char *path, apr_fileperms_t perm,
     }
 #endif
 
+#ifndef WIN32
   if (sgid)
     {
       apr_finfo_t finfo;
@@ -2811,6 +2812,7 @@ dir_make(const char *path, apr_fileperms_t perm,
       if (!status)
         apr_file_perms_set(path_apr, finfo.protection | APR_GSETID);
     }
+#endif
 
   return SVN_NO_ERROR;
 }

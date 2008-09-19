@@ -249,8 +249,12 @@ copy_versioned_files(const char *from,
       /* Try to make the new directory.  If this fails because the
          directory already exists, check our FORCE flag to see if we
          care. */
+#ifndef WIN32
       SVN_ERR(svn_io_stat(&finfo, from, APR_FINFO_PROT, pool));
       err = svn_io_dir_make(to, finfo.protection, pool);
+#else
+      err = svn_io_dir_make(to, APR_OS_DEFAULT, pool);
+#endif
       if (err)
         {
           if (! APR_STATUS_IS_EEXIST(err->apr_err))
