@@ -1188,7 +1188,7 @@ svn_wc_delete3(const char *path,
   if (!entry)
     return erase_unversioned_from_wc(path, cancel_func, cancel_baton, pool);
 
-  /* A file external should not be deleted, since the file external is
+  /* A file external should not be deleted since the file external is
      implemented as a switched file and it would delete the file the
      file external is switched to, which is not the behavior the user
      would probably want. */
