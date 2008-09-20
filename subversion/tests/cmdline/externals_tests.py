@@ -983,8 +983,8 @@ def old_style_externals_ignore_peg_reg(sbox):
 
 #----------------------------------------------------------------------
 
-def cannot_rm_file_externals(sbox):
-  "should not be able to delete a file external"
+def cannot_move_or_remove_file_externals(sbox):
+  "should not be able to mv or rm a file external"
 
   external_url_for = externals_test_setup(sbox)
   wc_dir         = sbox.wc_dir
@@ -1003,6 +1003,16 @@ def cannot_rm_file_externals(sbox):
                                      "the svn:externals description",
                                      'rm',
                                      os.path.join(wc_dir, 'A', 'B', 'gamma'))
+
+  # Should not be able to move the file external.
+  svntest.actions.run_and_verify_svn("Able to move file external",
+                                     None,
+                                     ".*Cannot move the file external at "
+                                     ".*gamma.*; please propedit the "
+                                     "svn:externals description",
+                                     'mv',
+                                     os.path.join(wc_dir, 'A', 'B', 'gamma'),
+                                     os.path.join(wc_dir, 'A', 'B', 'gamma1'))
 
   # But the directory that contains it can be deleted.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 6)
@@ -1051,7 +1061,7 @@ test_list = [ None,
               new_style_externals,
               disallow_propset_invalid_formatted_externals,
               old_style_externals_ignore_peg_reg,
-              cannot_rm_file_externals
+              cannot_move_or_remove_file_externals
              ]
 
 if __name__ == '__main__':

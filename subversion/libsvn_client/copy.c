@@ -1807,6 +1807,43 @@ try_copy(svn_commit_info_t **commit_info_p,
       svn_pool_destroy(iterpool);
     }
 
+  /* A file external should not be moved since the file external is
+     implemented as a switched file and it would delete the file the
+     file external is switched to, which is not the behavior the user
+     would probably want. */
+  if (is_move && !srcs_are_urls)
+    {
+      apr_pool_t *iterpool = svn_pool_create(pool);
+
+      for (i = 0; i < copy_pairs->nelts; i++)
+        {
+          svn_client__copy_pair_t *pair =
+            APR_ARRAY_IDX(copy_pairs, i, svn_client__copy_pair_t *);
+
+          svn_wc_adm_access_t *adm_access;
+          const svn_wc_entry_t *entry;
+
+          svn_pool_clear(iterpool);
+
+          SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, pair->src, FALSE,
+                                         0, ctx->cancel_func,
+                                         ctx->cancel_baton, iterpool));
+          SVN_ERR(svn_wc__entry_versioned(&entry, pair->src, adm_access, FALSE,
+                                          iterpool));
+          SVN_ERR(svn_wc_adm_close(adm_access));
+
+          if (entry->file_external_path)
+            return svn_error_createf(SVN_ERR_WC_CANNOT_MOVE_FILE_EXTERNAL,
+                                     NULL,
+                                     _("Cannot move the file external at "
+                                       "'%s'; please propedit the "
+                                       "svn:externals description that "
+                                       "created it"),
+                                     svn_path_local_style(pair->src, pool));
+        }
+      svn_pool_destroy(iterpool);
+    }
+
   if (is_move)
     {
       if (srcs_are_urls == dst_is_url)

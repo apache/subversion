@@ -452,6 +452,11 @@ SVN_ERROR_START
              SVN_ERR_WC_CATEGORY_START + 30,
              "Cannot delete a file external")
 
+  /** @since New in 1.6. */
+  SVN_ERRDEF(SVN_ERR_WC_CANNOT_MOVE_FILE_EXTERNAL,
+             SVN_ERR_WC_CATEGORY_START + 31,
+             "Cannot move a file external")
+
   /* fs errors */
 
   SVN_ERRDEF(SVN_ERR_FS_GENERAL,
