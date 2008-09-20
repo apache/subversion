@@ -1061,7 +1061,7 @@ test_list = [ None,
               new_style_externals,
               disallow_propset_invalid_formatted_externals,
               old_style_externals_ignore_peg_reg,
-              cannot_move_or_remove_file_externals
+              cannot_move_or_remove_file_externals,
              ]
 
 if __name__ == '__main__':
