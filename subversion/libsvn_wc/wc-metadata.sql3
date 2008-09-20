@@ -37,7 +37,8 @@ CREATE TABLE WORKING_COPY (
   repos_id  INTEGER NOT NULL,
 
   /* absolute path in the local filesystem */
-  local_path  TEXT NOT NULL,
+  /* ### NULL if the metadata is stored in the wc root */
+  local_path  TEXT,
 
   /* repository path corresponding to root of the working copy */
   repos_path  TEXT NOT NULL
@@ -51,13 +52,14 @@ CREATE TABLE DIRECTORY (
 
   wc_id  INTEGER NOT NULL,
 
-  /* relative path from wcroot */
+  /* relative path from wcroot. "" is used for the wcroot. */
   local_relpath  TEXT NOT NULL,
 
   /* path in repository */
   /* ### for switched subdirs, this could point to something other than
      ### local_relpath would imply. anything else for switching? */
-  repos_path  TEXT NOT NULL
+  /* ### NULL if local_relpath can imply the repos path */
+  repos_path  TEXT
   );
 
 CREATE UNIQUE INDEX I_DIR_PATH ON DIRECTORY (wc_id, local_relpath);
@@ -68,7 +70,8 @@ CREATE TABLE NODE (
 
   dir_id  INTEGER NOT NULL,
 
-  filename  TEXT,
+  /* ### use "" for "this directory" */
+  filename  TEXT NOT NULL,
 
   revnum  INTEGER NOT NULL,
 
@@ -78,7 +81,7 @@ CREATE TABLE NODE (
 
   /* ### NOT NULL? do we always have this info? */
   changed_rev  INTEGER,
-  /* ### or use TEXT and ISO-8601 datetime? */
+  /* this is an APR date/time (microseconds since 1970) */
   changed_date  INTEGER,
   changed_author  TEXT,
 
@@ -92,9 +95,10 @@ CREATE TABLE NODE (
   lock_token  TEXT,
   lock_owner  TEXT,
   lock_comment  TEXT,
-  lock_date  INTEGER,  /* ### or TEXT and ISO? */
+  /* this is an APR date/time (microseconds since 1970) */
+  lock_date  INTEGER,
 
-  /* ### some text or prop changes exist. this node is in a changelist. */
+  /* ### this node is in a changelist. */
   changelist_id  INTEGER
   );
 
@@ -123,9 +127,9 @@ CREATE TABLE BASE_TEXT (
 
   compression  INTEGER NOT NULL,
 
-  /* ### do we need to deal with repos-size vs. eol-style-size? this
-     ### size should be what is in ACTUAL so we can quickly detect
-     ### differences. */
+  /* ### do we need to deal with repos-size vs. eol-style-size?
+     ### this value is the pristine size of ACTUAL so we can quickly
+     ### detect differences. */
   actual_size  INTEGER NOT NULL,
 
   /* ### used to verify the pristine file is "proper" */
