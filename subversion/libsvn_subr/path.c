@@ -1016,7 +1016,7 @@ svn_path_is_ancestor(const char *path1, const char *path2)
 
   /* If path1 is empty and path2 is not absoulte, then path1 is an ancestor. */
   if (SVN_PATH_IS_EMPTY(path1))
-    return *path2 != '/';
+    return ! svn_dirent_is_absolute(path2, strlen(path2));
 
   /* If path1 is a prefix of path2, then:
      - If path1 ends in a path separator,

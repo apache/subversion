@@ -937,6 +937,13 @@ test_path_is_ancestor(const char **msg,
     { "foo",             "foo/bar",       TRUE},
     { "foo.",            "foo./.bar",     TRUE},
 
+    { SVN_EMPTY_PATH,    "/",             FALSE},
+#ifdef WIN32
+    { SVN_EMPTY_PATH,    "C:/",           FALSE},
+#else
+    { SVN_EMPTY_PATH,    "C:/",           TRUE},
+#endif
+
     { "../foo",          "..",            FALSE},
     { SVN_EMPTY_PATH,    SVN_EMPTY_PATH,  TRUE},
     { "/",               "/",             TRUE},
