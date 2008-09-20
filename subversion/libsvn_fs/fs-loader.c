@@ -354,10 +354,9 @@ path_valid(const char *path, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-/* This API is publicly deprecated, but we continue to use it
-   internally to properly allocate svn_fs_t structures. */
+/* Allocate svn_fs_t structure. */
 svn_fs_t *
-svn_fs_new(apr_hash_t *fs_config, apr_pool_t *pool)
+fs_new(apr_hash_t *fs_config, apr_pool_t *pool)
 {
   svn_fs_t *fs = apr_palloc(pool, sizeof(*fs));
   fs->pool = pool;
@@ -369,6 +368,12 @@ svn_fs_new(apr_hash_t *fs_config, apr_pool_t *pool)
   fs->vtable = NULL;
   fs->fsap_data = NULL;
   return fs;
+}
+
+svn_fs_t *
+svn_fs_new(apr_hash_t *fs_config, apr_pool_t *pool)
+{
+  return fs_new(fs_config, pool);
 }
 
 void
@@ -400,7 +405,7 @@ svn_fs_create(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
   SVN_ERR(write_fs_type(path, fs_type, pool));
 
   /* Perform the actual creation. */
-  *fs_p = svn_fs_new(fs_config, pool);
+  *fs_p = fs_new(fs_config, pool);
   SVN_ERR(acquire_fs_mutex());
   err = vtable->create(*fs_p, path, pool, common_pool);
   err2 = release_fs_mutex();
@@ -421,7 +426,7 @@ svn_fs_open(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
   fs_library_vtable_t *vtable;
 
   SVN_ERR(fs_library_vtable(&vtable, path, pool));
-  *fs_p = svn_fs_new(fs_config, pool);
+  *fs_p = fs_new(fs_config, pool);
   SVN_ERR(acquire_fs_mutex());
   err = vtable->open_fs(*fs_p, path, pool, common_pool);
   err2 = release_fs_mutex();
@@ -442,7 +447,7 @@ svn_fs_upgrade(const char *path, apr_pool_t *pool)
   svn_fs_t *fs;
 
   SVN_ERR(fs_library_vtable(&vtable, path, pool));
-  fs = svn_fs_new(NULL, pool);
+  fs = fs_new(NULL, pool);
   SVN_ERR(acquire_fs_mutex());
   err = vtable->upgrade_fs(fs, path, pool, common_pool);
   err2 = release_fs_mutex();
@@ -493,7 +498,7 @@ svn_fs_recover(const char *path,
   svn_fs_t *fs;
 
   SVN_ERR(fs_library_vtable(&vtable, path, pool));
-  fs = svn_fs_new(NULL, pool);
+  fs = fs_new(NULL, pool);
   SVN_ERR(acquire_fs_mutex());
   err = vtable->open_fs_for_recovery(fs, path, pool, common_pool);
   err2 = release_fs_mutex();
