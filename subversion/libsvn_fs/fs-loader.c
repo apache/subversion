@@ -355,7 +355,7 @@ path_valid(const char *path, apr_pool_t *pool)
 }
 
 /* Allocate svn_fs_t structure. */
-svn_fs_t *
+static svn_fs_t *
 fs_new(apr_hash_t *fs_config, apr_pool_t *pool)
 {
   svn_fs_t *fs = apr_palloc(pool, sizeof(*fs));
