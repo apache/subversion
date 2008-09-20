@@ -23,10 +23,28 @@ def find(file, dirs=None):
 
 def output(cmd, strip=None):
   """Run a command and collect all output"""
-  stdin, stdout = os.popen4(cmd)
-  assert(not stdin.close())
-  output = stdout.read()
-  assert(not stdout.close())
+  try:
+    # Python >=2.4
+
+    # Check that cmd is in PATH (otherwise we'd get a generic OSError later)
+    import distutils.spawn
+    if type(cmd) == type(''):
+      cmdname = cmd
+    elif type(cmd) == type([]):
+      cmdname = cmd[0]
+    if distutils.spawn.find_executable(cmdname) is None:
+      return None
+
+    # Run it
+    import subprocess
+    (output, empty_stderr) = subprocess.Popen(cmd, stdout=subprocess.PIPE, \
+                               stderr=subprocess.STDOUT).communicate()
+  except ImportError:
+    # Python <2.4
+    (stdin, stdout) = os.popen4(cmd)
+    assert(not stdin.close())
+    output = stdout.read()
+    assert(not stdout.close())
   if strip:
     return string.strip(output)
   else:

@@ -140,7 +140,11 @@ ssl_server_cert(void *baton, int failures,
   if (! cert_info.valid_until)
     cert_info.valid_until = apr_pstrdup(subpool, "[invalid date]");
   cert_info.issuer_dname = convert_organisation_to_str(issuer, subpool);
+#if SERF_VERSION_AT_LEAST(0, 2, 1)
+  cert_info.ascii_cert = serf_ssl_cert_export(cert, subpool);
+#else
   cert_info.ascii_cert = "ce";
+#endif
 
   svn_failures = ssl_convert_serf_failures(failures);
 

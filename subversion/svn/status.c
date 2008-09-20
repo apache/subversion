@@ -250,7 +250,8 @@ svn_cl__print_status_xml(const char *path,
     apr_hash_set(att_hash, "revision", APR_HASH_KEY_STRING,
                  apr_psprintf(pool, "%ld", status->entry->revision));
   if (status->has_tree_conflicted_children)
-    apr_hash_set(att_hash, "tree-conflicted", APR_HASH_KEY_STRING,"true");
+    apr_hash_set(att_hash, "has-tree-conflicted-children", APR_HASH_KEY_STRING,
+                 "true");
   svn_xml_make_open_tag_hash(&sb, pool, svn_xml_normal, "wc-status",
                              att_hash);
 
