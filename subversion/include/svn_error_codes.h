@@ -447,6 +447,10 @@ SVN_ERROR_START
              SVN_ERR_WC_CATEGORY_START + 29,
              "Moving a path from one changelist to another")
 
+  /** @since New in 1.6. */
+  SVN_ERRDEF(SVN_ERR_WC_CANNOT_DELETE_FILE_EXTERNAL,
+             SVN_ERR_WC_CATEGORY_START + 30,
+             "Cannot delete a file external")
 
   /* fs errors */
 

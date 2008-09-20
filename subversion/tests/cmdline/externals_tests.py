@@ -981,6 +981,56 @@ def old_style_externals_ignore_peg_reg(sbox):
                                      wc_dir)
 
 
+#----------------------------------------------------------------------
+
+def cannot_rm_file_externals(sbox):
+  "should not be able to delete a file external"
+
+  external_url_for = externals_test_setup(sbox)
+  wc_dir         = sbox.wc_dir
+  repo_url       = sbox.repo_url
+
+  # Checkout a working copy.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'checkout',
+                                     repo_url, wc_dir)
+
+  # Should not be able to delete the file external.
+  svntest.actions.run_and_verify_svn("Able to delete file external",
+                                     None,
+                                     ".*Cannot remove the file external at "
+                                     ".*gamma.*; please propedit or propdel "
+                                     "the svn:externals description",
+                                     'rm',
+                                     os.path.join(wc_dir, 'A', 'B', 'gamma'))
+
+  # But the directory that contains it can be deleted.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 6)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'rm',
+                                     os.path.join(wc_dir, "A", "B"))
+
+  expected_status.tweak('A/B', status='D ')
+  expected_output = svntest.wc.State(wc_dir, {
+      'A/B' : Item(verb='Deleting'),
+      })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 6)
+  expected_status.remove('A/B', 'A/B/E', 'A/B/E/alpha', 'A/B/E/beta',
+                         'A/B/F', 'A/B/lambda')
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, expected_status,
+                                        None, wc_dir)
+
+  # Bring the working copy up to date and check that the file the file
+  # external is switched to still exists.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'up',
+                                     repo_url, wc_dir)
+
+  file(os.path.join(wc_dir, 'A', 'D', 'gamma')).close()
+
 ########################################################################
 # Run the tests
 
@@ -1000,7 +1050,8 @@ test_list = [ None,
               external_with_peg_and_op_revision,
               new_style_externals,
               disallow_propset_invalid_formatted_externals,
-              old_style_externals_ignore_peg_reg
+              old_style_externals_ignore_peg_reg,
+              cannot_rm_file_externals
              ]
 
 if __name__ == '__main__':

@@ -1188,6 +1188,17 @@ svn_wc_delete3(const char *path,
   if (!entry)
     return erase_unversioned_from_wc(path, cancel_func, cancel_baton, pool);
 
+  /* A file external should not be deleted, since the file external is
+     implemented as a switched file and it would delete the file the
+     file external is switched to, which is not the behavior the user
+     would probably want. */
+  if (entry->file_external_path)
+    return svn_error_createf(SVN_ERR_WC_CANNOT_DELETE_FILE_EXTERNAL, NULL,
+                             _("Cannot remove the file external at '%s'; "
+                               "please propedit or propdel the svn:externals "
+                               "description that created it"),
+                             svn_path_local_style(path, pool));
+
   /* Note: Entries caching?  What happens to this entry when the entries
      file is updated?  Lets play safe and copy the values */
   was_schedule = entry->schedule;
