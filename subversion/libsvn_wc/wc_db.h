@@ -531,7 +531,7 @@ svn_wc__db_read_info(svn_wc__db_kind_t *kind,
                      svn_boolean_t *props_mod,
                      svn_boolean_t *base_shadowed,  /* ### WORKING shadows a
                                                        ### deleted BASE? */
-                     const char **original_url,
+                     const char **original_repos_path,
                      svn_revnum_t *original_rev,
                      svn_wc__db_t *db,
                      const char *path,
