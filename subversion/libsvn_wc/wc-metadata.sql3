@@ -82,16 +82,17 @@ CREATE TABLE NODE (
 
   /* Information about the last change to this node */
   changed_rev  INTEGER NOT NULL,
-  /* this is an APR date/time (microseconds since 1970) */
-  changed_date  INTEGER NOT NULL,
+  changed_date  INTEGER NOT NULL,  /* an APR date/time (usec since 1970) */
   changed_author  TEXT NOT NULL,
+
+  /* NULL depth means "default" (typically svn_depth_infinity) */
+  depth  INTEGER,
 
   /* ### note: these values are caches from the server! */
   lock_token  TEXT,
   lock_owner  TEXT,
   lock_comment  TEXT,
-  /* this is an APR date/time (microseconds since 1970) */
-  lock_date  INTEGER
+  lock_date  INTEGER  /* an APR date/time (usec since 1970) */
   );
 
 CREATE UNIQUE INDEX I_PATH ON NODE (dir_id, filename);
@@ -142,22 +143,21 @@ CREATE UNIQUE INDEX I_CHECKSUM ON BASE_TEXT (checksum);
 CREATE TABLE NODE_CHANGES (
   id  INTEGER PRIMARY KEY AUTOINCREMENT, 
 
+  /* Basic information about the node.  filename=="" for "this directory". */
   dir_id  INTEGER NOT NULL,
+  filename  TEXT NOT NULL,
+  kind  INTEGER NOT NULL,
 
-  filename  TEXT,
+  /* Enumerated type specifying what kind of change is at this location. */
+  status  INTEGER NOT NULL,
 
-  /* ### NULL kind implies "deletion". or use a special enumerated value? */
-  kind  INTEGER,
-
-  /* We've observed a change, or a proactive, administrative notification
-    (i.e. "svn edit"). ### do these need to be separated? */
-  text_modified  INTEGER,
-
-  /* where this node was copied/moved from */
+  /* Where this node was copied/moved from. */
   original_repos_path  TEXT,
   original_revnum  INTEGER,
   text_id  INTEGER,
-  moved  INTEGER,  /* ### boolean. on both ends of a move. */
+  changed_rev  INTEGER,
+  changed_date  INTEGER,  /* an APR date/time (usec since 1970) */
+  changed_author  TEXT,
 
   /* ### do we want to record the revnums which caused this? */
   conflict_old  TEXT,
