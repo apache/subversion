@@ -292,10 +292,6 @@ switch_file_external(const char *path,
   const char *anchor;
   const char *target;
   const svn_wc_entry_t *entry;
-  const svn_delta_editor_t *switch_editor;
-  void *switch_edit_baton;
-  const svn_ra_reporter3_t *reporter;
-  void *report_baton;
   svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
                                                  SVN_CONFIG_CATEGORY_CONFIG,
                                                  APR_HASH_KEY_STRING) : NULL;
@@ -389,43 +385,14 @@ switch_file_external(const char *path,
         goto cleanup;
     }
 
-  err = svn_wc_get_switch_editor3(&ra_revnum, target_adm_access, target,
-                                  ra_session_url,
-                                  use_commit_times,
-                                  svn_depth_empty,
-                                  FALSE, /* depth_is_sticky */
-                                  FALSE, /* allow_unver_obstructions */
-                                  NULL, /* svn_wc_notify_func2_t */
-                                  NULL, /* void *notify_baton */
-                                  ctx->cancel_func,
-                                  ctx->cancel_baton,
-                                  NULL, /* svn_wc_conflict_resolver_func_t */
-                                  NULL, /* void *conflict_baton */
-                                  NULL, /* const char *diff3_cmd */
-                                  NULL, /* apr_array_header_t *preserved_exts */
-                                  &switch_editor,
-                                  &switch_edit_baton,
-                                  NULL, /* svn_wc_traversal_info_t * */
-                                  subpool);
-  if (err)
-    goto cleanup;
-
-  err = svn_ra_do_switch2(ra_session, &reporter, &report_baton, ra_revnum,
-                          target, svn_depth_empty, ra_session_url,
-                          switch_editor, switch_edit_baton, pool);
-  if (err)
-    goto cleanup;
-
-  err = svn_wc_crawl_revisions3(path, target_adm_access, reporter,
-                                report_baton,
-                                FALSE, /* restore_files */
-                                svn_depth_empty,
-                                FALSE, /* depth_compatibility_trick */
-                                use_commit_times,
-                                NULL, /* svn_wc_notify_func2_t */
-                                NULL, /* void *notify_baton */
-                                NULL, /* svn_wc_traversal_info_t * */
-                                subpool);
+  err = svn_client__switch_internal(NULL, path, url, peg_revision, revision,
+                                    adm_access, svn_depth_empty,
+                                    FALSE, /* depth_is_sticky */
+                                    timestamp_sleep,
+                                    TRUE, /* ignore_externals */
+                                    FALSE, /* allow_unver_obstructions */
+                                    ctx,
+                                    pool);
   if (err)
     goto cleanup;
 
