@@ -140,7 +140,11 @@ ssl_server_cert(void *baton, int failures,
   if (! cert_info.valid_until)
     cert_info.valid_until = apr_pstrdup(subpool, "[invalid date]");
   cert_info.issuer_dname = convert_organisation_to_str(issuer, subpool);
+#if SERF_VERSION_AT_LEAST(0, 2, 1)
+  cert_info.ascii_cert = serf_ssl_cert_export(cert, subpool);
+#else
   cert_info.ascii_cert = "ce";
+#endif
 
   svn_failures = ssl_convert_serf_failures(failures);
 
@@ -486,7 +490,10 @@ svn_ra_serf__setup_serf_req(serf_request_t *request,
 
   /* These headers need to be sent with every request; see issue #3255
      ("mod_dav_svn does not pass client capabilities to start-commit
-     hooks") for why. */
+     hooks") for why. 
+
+     ### NOTE ###  If you add more headers here, make the same change
+     in propfind_buckets.c:become_request(). */
   serf_bucket_headers_set(hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_DEPTH);
   serf_bucket_headers_set(hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_MERGEINFO);
   serf_bucket_headers_set(hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_LOG_REVPROPS);

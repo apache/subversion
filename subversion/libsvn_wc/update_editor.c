@@ -1701,15 +1701,16 @@ open_directory(const char *path,
          all flags. */
       svn_boolean_t text_conflicted;
       svn_boolean_t prop_conflicted;
-      svn_boolean_t tree_conflicted;
+      svn_boolean_t has_tree_conflicted_children;
 
       db->ambient_depth = entry->depth;
       db->was_incomplete = entry->incomplete;
 
       SVN_ERR(svn_wc_conflicted_p2(&text_conflicted, &prop_conflicted,
-                                   &tree_conflicted, db->path, entry, pool));
+                                   &has_tree_conflicted_children, db->path,
+                                   entry, pool));
       SVN_ERR_ASSERT(! text_conflicted);
-      if (prop_conflicted || tree_conflicted)
+      if (prop_conflicted || has_tree_conflicted_children)
         {
           db->bump_info->skipped = TRUE;
           apr_hash_set(eb->skipped_paths, apr_pstrdup(eb->pool, db->path),
@@ -1829,7 +1830,7 @@ close_directory(void *dir_baton,
   apr_hash_t *base_props = NULL, *working_props = NULL;
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *entry;
-  svn_boolean_t tree_conflicted;
+  svn_boolean_t has_tree_conflicted_children;
   svn_boolean_t text_conflicted, prop_conflicted; /* Dummies (never read). */
 
   SVN_ERR(svn_categorize_props(db->propchanges, &entry_props, &wc_props,
@@ -1963,8 +1964,9 @@ close_directory(void *dir_baton,
 
   /* Check for tree conflicts in this directory. */
   SVN_ERR(svn_wc_entry(&entry, db->path, adm_access, TRUE, db->pool));
-  SVN_ERR(svn_wc_conflicted_p2(&text_conflicted, &prop_conflicted, 
-                               &tree_conflicted, db->path, entry, db->pool));
+  SVN_ERR(svn_wc_conflicted_p2(&text_conflicted, &prop_conflicted,
+                               &has_tree_conflicted_children, db->path, entry,
+                               db->pool));
 
   /* Notify of any prop changes on this directory -- but do nothing
      if it's an added or skipped directory, because notification has already
@@ -1982,7 +1984,7 @@ close_directory(void *dir_baton,
                                pool);
       notify->kind = svn_node_dir;
       notify->prop_state = prop_state;
-      notify->content_state = tree_conflicted
+      notify->content_state = has_tree_conflicted_children
           ? svn_wc_notify_state_conflicted
           : svn_wc_notify_state_unknown;
     (*db->edit_baton->notify_func)(db->edit_baton->notify_baton,
@@ -2201,7 +2203,7 @@ open_file(const char *path,
   svn_wc_adm_access_t *adm_access;
   svn_boolean_t text_conflicted;
   svn_boolean_t prop_conflicted;
-  svn_boolean_t tree_conflicted;
+  svn_boolean_t has_tree_conflicted_children;
 
   /* the file_pool can stick around for a *long* time, so we want to use
      a subpool for any temporary allocations. */
@@ -2240,7 +2242,8 @@ open_file(const char *path,
 
   /* If the file is in conflict, don't mess with it. */
   SVN_ERR(svn_wc_conflicted_p2(&text_conflicted, &prop_conflicted,
-                               &tree_conflicted, pb->path, entry, pool));
+                               &has_tree_conflicted_children, pb->path, entry,
+                               pool));
   if (text_conflicted || prop_conflicted)
     {
       fb->skipped = TRUE;

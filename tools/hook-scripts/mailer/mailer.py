@@ -356,7 +356,7 @@ class Commit(Messenger):
         param_list = params.items()
         param_list.sort()
         # collect the set of paths belonging to this group
-        if self.groups.has_key( (group, tuple(param_list)) ):
+        if (group, tuple(param_list)) in self.groups:
           old_param, paths = self.groups[group, tuple(param_list)]
         else:
           paths = { }
@@ -460,7 +460,7 @@ class PropChange(Messenger):
                         % (self.author, self.repos.rev, self.propname,
                            actions.get(self.action, 'Unknown (\'%s\')' \
                                        % self.action)))
-      if self.action == 'A' or not actions.has_key(self.action):
+      if self.action == 'A' or self.action not in actions:
         self.output.write('Property value:\n')
         propvalue = self.repos.get_rev_prop(self.propname)
         self.output.write(propvalue)
@@ -536,7 +536,7 @@ class Lock(Messenger):
         param_list = params.items()
         param_list.sort()
         # collect the set of paths belonging to this group
-        if self.groups.has_key( (group, tuple(param_list)) ):
+        if (group, tuple(param_list)) in self.groups:
           old_param, paths = self.groups[group, tuple(param_list)]
         else:
           paths = { }
@@ -710,7 +710,7 @@ def generate_list(changekind, changelist, paths, in_paths):
 
   items = [ ]
   for path, change in changelist:
-    if selection(change) and paths.has_key(path) == in_paths:
+    if selection(change) and (path in paths) == in_paths:
       item = _data(
         path=path,
         is_dir=change.item_kind == svn.core.svn_node_dir,
@@ -775,7 +775,7 @@ class DiffGenerator:
         continue
 
       # is this change in (or out of) the set of matched paths?
-      if self.paths.has_key(path) != self.in_paths:
+      if (path in self.paths) != self.in_paths:
         continue
 
       if change.base_rev != -1:

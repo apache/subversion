@@ -97,12 +97,14 @@ generic_walker(svn_wc__db_t *db,
         if (mode == walker_mode_base)
           {
             SVN_ERR(svn_wc__db_base_get_info(&kind, NULL, NULL, NULL, NULL,
+                                             NULL, NULL, NULL, NULL, NULL,
                                              db, nodepath, iterpool, iterpool));
           }
         else if (mode == walker_mode_working)
           {
             SVN_ERR(svn_wc__db_read_info(&kind, NULL, NULL, NULL, NULL, NULL,
                                          NULL, NULL, NULL, NULL, NULL, NULL,
+                                         NULL, NULL, NULL,
                                          db, nodepath, iterpool, iterpool));
           }
         else if (mode == walker_mode_actual)

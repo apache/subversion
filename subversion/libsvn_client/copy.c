@@ -120,8 +120,8 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
                                                     adm_access, pool));
           SVN_ERR(svn_client__get_repos_mergeinfo(ra_session, &src_mergeinfo,
                                                   mergeinfo_path, src_revnum,
-                                                  svn_mergeinfo_inherited, TRUE,
-                                                  pool));
+                                                  svn_mergeinfo_inherited,
+                                                  TRUE, pool));
         }
       else
         {
@@ -244,8 +244,9 @@ get_copy_pair_ancestors(const apr_array_header_t *copy_pairs,
   char *top_src;
   int i;
 
-  top_src = apr_pstrdup(subpool, APR_ARRAY_IDX(copy_pairs, 0,
-                                               svn_client__copy_pair_t *)->src);
+  top_src = apr_pstrdup(subpool,
+                        APR_ARRAY_IDX(copy_pairs, 0,
+                                      svn_client__copy_pair_t *)->src);
 
   /* Because all the destinations are in the same directory, we can easily
      determine their common ancestor. */
@@ -879,8 +880,8 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
                                           &ignored_url, &ignored_rev,
                                           NULL,
                                           pair->src, &pair->src_peg_revision,
-                                          &pair->src_op_revision, &dead_end_rev,
-                                          ctx, pool));
+                                          &pair->src_op_revision,
+                                          &dead_end_rev, ctx, pool));
 
       /* Get the portions of the SRC and DST URLs that are relative to
          TOP_URL, and URI-decode those sections. */
@@ -1101,7 +1102,8 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
     {
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
-      top_dst_url = svn_path_get_longest_ancestor(top_dst_url, pair->dst, pool);
+      top_dst_url = svn_path_get_longest_ancestor(top_dst_url, pair->dst,
+                                                  pool);
     }
 
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, top_dst_url,
@@ -1189,7 +1191,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
             }
         }
 
-      for (i = 0; i < copy_pairs->nelts; i++ )
+      for (i = 0; i < copy_pairs->nelts; i++)
         {
           svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                             svn_client__copy_pair_t *);
@@ -1787,7 +1789,7 @@ try_copy(svn_commit_info_t **commit_info_p,
     {
       apr_pool_t *iterpool = svn_pool_create(pool);
 
-      for (i = 0; i < copy_pairs->nelts; i++ )
+      for (i = 0; i < copy_pairs->nelts; i++)
         {
           svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                             svn_client__copy_pair_t *);
@@ -1881,8 +1883,9 @@ try_copy(svn_commit_info_t **commit_info_p,
                                                  ctx->cancel_func,
                                                  ctx->cancel_baton,
                                                  iterpool));
-                  SVN_ERR(svn_wc__entry_versioned(&entry, pair->src, adm_access,
-                                                  FALSE, iterpool));
+                  SVN_ERR(svn_wc__entry_versioned(&entry, pair->src,
+                                                  adm_access, FALSE,
+                                                  iterpool));
                   SVN_ERR(svn_wc_adm_close(adm_access));
 
                   url = (entry->copied ? entry->copyfrom_url : entry->url);

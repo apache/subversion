@@ -30,7 +30,6 @@
 #include "svn_user.h"
 
 #include "private/svn_auth_private.h"
-#include "private/svn_atomic.h"
 
 #include "svn_private_config.h"
 
@@ -45,39 +44,6 @@
    Windows CryptoAPI. Used during decryption to verify that the
    encrypted data were valid. */
 static const WCHAR description[] = L"auth_svn.simple.wincrypt";
-static HINSTANCE crypto_dll = NULL;
-static svn_atomic_t crypto_dll_loaded = 0;
-
-/* Initializer function matching the prototype accepted by
-   svn_atomic__init_once(). */
-static svn_error_t *
-load_crypto_dll(apr_pool_t *pool)
-{
-  /* In case anyone wonders why we use LoadLibraryA here: This will
-     always work on Win9x/Me, whilst LoadLibraryW may not. */
-  crypto_dll = LoadLibraryA("Crypt32.dll");
-  return SVN_NO_ERROR;
-}
-
-/* Dynamically resolve the address of function NAME in crypt32.dll. Return
-   NULL if the function name was not found. */
-static FARPROC
-get_crypto_function(const char *name)
-{
-  svn_error_t *err;
-
-  err = svn_atomic__init_once(&crypto_dll_loaded, load_crypto_dll, NULL);
-  if (err)
-    {
-      svn_error_clear(err);
-      return NULL;
-    }
-
-  if (!crypto_dll)
-    return NULL;
-
-  return GetProcAddress(crypto_dll, name);
-}
 
 /* Implementation of svn_auth__password_set_t that encrypts
    the incoming password using the Windows CryptoAPI. */
@@ -89,28 +55,14 @@ windows_password_encrypter(apr_hash_t *creds,
                            svn_boolean_t non_interactive,
                            apr_pool_t *pool)
 {
-  typedef BOOL (CALLBACK *encrypt_fn_t)
-    (DATA_BLOB *,                /* pDataIn */
-     LPCWSTR,                    /* szDataDescr */
-     DATA_BLOB *,                /* pOptionalEntropy */
-     PVOID,                      /* pvReserved */
-     CRYPTPROTECT_PROMPTSTRUCT*, /* pPromptStruct */
-     DWORD,                      /* dwFlags */
-     DATA_BLOB*);                /* pDataOut */
-
-  encrypt_fn_t encrypt;
   DATA_BLOB blobin;
   DATA_BLOB blobout;
   svn_boolean_t crypted;
 
-  encrypt = (encrypt_fn_t) get_crypto_function("CryptProtectData");
-  if (!encrypt)
-    return FALSE;
-
   blobin.cbData = strlen(in);
   blobin.pbData = (BYTE*) in;
-  crypted = encrypt(&blobin, description, NULL, NULL, NULL,
-                    CRYPTPROTECT_UI_FORBIDDEN, &blobout);
+  crypted = CryptProtectData(&blobin, description, NULL, NULL, NULL,
+                             CRYPTPROTECT_UI_FORBIDDEN, &blobout);
   if (crypted)
     {
       char *coded = apr_palloc(pool, apr_base64_encode_len(blobout.cbData));
@@ -134,19 +86,9 @@ windows_password_decrypter(const char **out,
                            svn_boolean_t non_interactive,
                            apr_pool_t *pool)
 {
-  typedef BOOL (CALLBACK * decrypt_fn_t)
-    (DATA_BLOB *,                /* pDataIn */
-     LPWSTR *,                   /* ppszDataDescr */
-     DATA_BLOB *,                /* pOptionalEntropy */
-     PVOID,                      /* pvReserved */
-     CRYPTPROTECT_PROMPTSTRUCT*, /* pPromptStruct */
-     DWORD,                      /* dwFlags */
-     DATA_BLOB*);                /* pDataOut */
-
   DATA_BLOB blobin;
   DATA_BLOB blobout;
   LPWSTR descr;
-  decrypt_fn_t decrypt;
   svn_boolean_t decrypted;
   char *in;
 
@@ -154,15 +96,11 @@ windows_password_decrypter(const char **out,
                                      non_interactive, pool))
     return FALSE;
 
-  decrypt = (decrypt_fn_t) get_crypto_function("CryptUnprotectData");
-  if (!decrypt)
-    return FALSE;
-
   blobin.cbData = strlen(in);
   blobin.pbData = apr_palloc(pool, apr_base64_decode_len(in));
   apr_base64_decode(blobin.pbData, in);
-  decrypted = decrypt(&blobin, &descr, NULL, NULL, NULL,
-                      CRYPTPROTECT_UI_FORBIDDEN, &blobout);
+  decrypted = CryptUnprotectData(&blobin, &descr, NULL, NULL, NULL,
+                                 CRYPTPROTECT_UI_FORBIDDEN, &blobout);
   if (decrypted)
     {
       if (0 == lstrcmpW(descr, description))
@@ -170,6 +108,7 @@ windows_password_decrypter(const char **out,
       else
         decrypted = FALSE;
       LocalFree(blobout.pbData);
+      LocalFree(descr);
     }
 
   return decrypted;
@@ -237,33 +176,57 @@ svn_auth_get_windows_simple_provider(svn_auth_provider_object_t **provider,
 /* CryptoApi.                                                            */
 /*-----------------------------------------------------------------------*/
 
-typedef PCCERT_CONTEXT (WINAPI *createcertcontext_fn_t)(
-    DWORD dwCertEncodingType,
-    const BYTE *pbCertEncoded,
-    DWORD cbCertEncoded);
+/* Helper for windows_ssl_server_trust_first_credentials for validating
+ * certificate using CryptoApi. Sets *OK_P to TRUE if base64 encoded ASCII_CERT
+ * certificate considered as valid.
+ */
+static svn_error_t *
+windows_validate_certificate(svn_boolean_t *ok_p,
+                             const char *ascii_cert,
+                             apr_pool_t *pool)
+{
+  PCCERT_CONTEXT cert_context = NULL;
+  CERT_CHAIN_PARA chain_para;
+  PCCERT_CHAIN_CONTEXT chain_context = NULL;
+  int cert_len;
+  char *binary_cert;
 
-typedef BOOL (WINAPI *getcertchain_fn_t)(
-  HCERTCHAINENGINE hChainEngine,
-  PCCERT_CONTEXT pCertContext,
-  LPFILETIME pTime,
-  HCERTSTORE hAdditionalStore,
-  PCERT_CHAIN_PARA pChainPara,
-  DWORD dwFlags,
-  LPVOID pvReserved,
-  PCCERT_CHAIN_CONTEXT* ppChainContext);
+  *ok_p = FALSE;
 
-typedef VOID (WINAPI *freecertchain_fn_t)(
-  PCCERT_CHAIN_CONTEXT pChainContext);
+  /* Use apr-util as CryptStringToBinaryA is available only on XP+. */
+  binary_cert = apr_palloc(pool,
+                           apr_base64_decode_len(ascii_cert));
+  cert_len = apr_base64_decode(binary_cert, ascii_cert);
 
-typedef BOOL (WINAPI *freecertcontext_fn_t)(
-  PCCERT_CONTEXT pCertContext);
+  /* Parse the certificate into a context. */
+  cert_context = CertCreateCertificateContext
+    (X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, binary_cert, cert_len);
 
-typedef struct {
-  createcertcontext_fn_t createcertcontext;
-  getcertchain_fn_t getcertchain;
-  freecertchain_fn_t freecertchain;
-  freecertcontext_fn_t freecertcontext;
-} windows_ssl_server_trust_provider_baton_t;
+  if (cert_context)
+    {
+      /* Retrieve the certificate chain of the certificate
+         (a certificate without a valid root does not have a chain). */
+      memset(&chain_para, 0, sizeof(chain_para));
+      chain_para.cbSize = sizeof(chain_para);
+
+      if (CertGetCertificateChain(NULL, cert_context, NULL, NULL, &chain_para,
+                                  CERT_CHAIN_CACHE_END_CERT,
+                                  NULL, &chain_context))
+        {
+          if (chain_context->rgpChain[0]->TrustStatus.dwErrorStatus
+              == CERT_TRUST_NO_ERROR)
+            {
+              /* Windows think the certificate is valid. */
+              *ok_p = TRUE;
+            }
+
+          CertFreeCertificateChain(chain_context);
+        }
+      CertFreeCertificateContext(cert_context);
+    }
+
+  return SVN_NO_ERROR;
+}
 
 /* Retrieve ssl server CA failure overrides (if any) from CryptoApi. */
 static svn_error_t *
@@ -274,12 +237,6 @@ windows_ssl_server_trust_first_credentials(void **credentials,
                                            const char *realmstring,
                                            apr_pool_t *pool)
 {
-  PCCERT_CONTEXT cert_context = NULL;
-  CERT_CHAIN_PARA chain_para;
-  PCCERT_CHAIN_CONTEXT chain_context = NULL;
-  svn_boolean_t ok = TRUE;
-  windows_ssl_server_trust_provider_baton_t *pb = provider_baton;
-
   apr_uint32_t *failures = apr_hash_get(parameters,
                                         SVN_AUTH_PARAM_SSL_SERVER_FAILURES,
                                         APR_HASH_KEY_STRING);
@@ -288,77 +245,26 @@ windows_ssl_server_trust_first_credentials(void **credentials,
                  SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO,
                  APR_HASH_KEY_STRING);
 
-  if (*failures & ~SVN_AUTH_SSL_UNKNOWNCA)
-    {
-      /* give up, go on to next provider; the only thing we can accept
-         is an unknown certificate authority. */
+  *credentials = NULL;
+  *iter_baton = NULL;
 
-      *credentials = NULL;
-      return SVN_NO_ERROR;
+  /* We can accept only unknown certificate authority. */
+  if (*failures & SVN_AUTH_SSL_UNKNOWNCA)
+    {
+      svn_boolean_t ok;
+
+      SVN_ERR(windows_validate_certificate(&ok, cert_info->ascii_cert, pool));
+
+      /* Windows thinks that certificate is ok. */
+      if (ok)
+        {
+          /* Clear failure flag. */
+          *failures &= ~SVN_AUTH_SSL_UNKNOWNCA;
+        }
     }
 
-  if (!pb->createcertcontext || !pb->getcertchain || !pb->freecertchain
-      || !pb->freecertcontext)
-    {
-      /* give up, go on to next provider. */
-      *credentials = NULL;
-      return SVN_NO_ERROR;
-    }
-
-  if (ok)
-    {
-      int cert_len;
-      char *binary_cert;
-
-      /* Use apr-util as CryptStringToBinaryA is available only on XP+. */
-      binary_cert = apr_palloc(pool,
-                               apr_base64_decode_len(cert_info->ascii_cert));
-      cert_len = apr_base64_decode(binary_cert, cert_info->ascii_cert);
-
-      /* Parse the certificate into a context. */
-      cert_context = pb->createcertcontext
-        (X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, binary_cert, cert_len);
-
-      if (!cert_context)
-        ok = FALSE; /* Windows does not think the certificate is valid. */
-    }
-
-  if (ok)
-    {
-       /* Retrieve the certificate chain of the certificate
-          (a certificate without a valid root does not have a chain). */
-       memset(&chain_para, 0, sizeof(chain_para));
-       chain_para.cbSize = sizeof(chain_para);
-
-       if (pb->getcertchain(NULL, cert_context, NULL, NULL, &chain_para,
-                        CERT_CHAIN_CACHE_END_CERT,
-                        NULL, &chain_context))
-         {
-           if (chain_context->rgpChain[0]->TrustStatus.dwErrorStatus
-               != CERT_TRUST_NO_ERROR)
-            {
-              /* The certificate is not 100% valid, just fall back to the
-                 Subversion certificate handling. */
-
-              ok = FALSE;
-            }
-         }
-       else
-         ok = FALSE;
-    }
-
-  if (chain_context)
-    pb->freecertchain(chain_context);
-  if (cert_context)
-    pb->freecertcontext(cert_context);
-
-  if (!ok)
-    {
-      /* go on to next provider. */
-      *credentials = NULL;
-      return SVN_NO_ERROR;
-    }
-  else
+  /* If all failures are cleared now, we return the creds */
+  if (! *failures)
     {
       svn_auth_cred_ssl_server_trust_t *creds =
         apr_pcalloc(pool, sizeof(*creds));
@@ -382,23 +288,8 @@ svn_auth_get_windows_ssl_server_trust_provider
   (svn_auth_provider_object_t **provider, apr_pool_t *pool)
 {
   svn_auth_provider_object_t *po = apr_pcalloc(pool, sizeof(*po));
-  windows_ssl_server_trust_provider_baton_t *pb =
-    apr_pcalloc(pool, sizeof(*pb));
-
-  pb->createcertcontext = (createcertcontext_fn_t)
-    get_crypto_function("CertCreateCertificateContext");
-
-  pb->getcertchain = (getcertchain_fn_t)
-    get_crypto_function("CertGetCertificateChain");
-
-  pb->freecertchain = (freecertchain_fn_t)
-    get_crypto_function("CertFreeCertificateChain");
-
-  pb->freecertcontext = (freecertcontext_fn_t)
-    get_crypto_function("CertFreeCertificateContext");
 
   po->vtable = &windows_server_trust_provider;
-  po->provider_baton = pb;
   *provider = po;
 }
 

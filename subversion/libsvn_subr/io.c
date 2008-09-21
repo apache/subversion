@@ -2800,6 +2800,10 @@ dir_make(const char *path, apr_fileperms_t perm,
     }
 #endif
 
+/* Windows does not implement sgid. Skip here because retrieving 
+   the file permissions via APR_FINFO_PROT | APR_FINFO_OWNER is documented 
+   to be 'incredibly expensive'. */
+#ifndef WIN32
   if (sgid)
     {
       apr_finfo_t finfo;
@@ -2811,6 +2815,7 @@ dir_make(const char *path, apr_fileperms_t perm,
       if (!status)
         apr_file_perms_set(path_apr, finfo.protection | APR_GSETID);
     }
+#endif
 
   return SVN_NO_ERROR;
 }

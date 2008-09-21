@@ -71,10 +71,14 @@ typedef enum svn_wc__db_kind_t {
 
 typedef enum svn_wc__db_status_t {
     svn_wc__db_status_normal,
+    svn_wc__db_status_changed,  /* ### text may be modified. or props_mod. */
     svn_wc__db_status_added,  /* ### no history. text_mod set to TRUE */
-    svn_wc__db_status_moved,  /* ### has history */
+    svn_wc__db_status_moved_src,  /* ### deleted */
+    svn_wc__db_status_moved_dst,  /* ### has history */
     svn_wc__db_status_copied,  /* ### has history */
     svn_wc__db_status_deleted  /* ### text_mod, prop_mod will be FALSE */
+
+    /* ### copied+changed?  moved_dst+changed? */
 } svn_wc__db_status_t;
 
 
@@ -128,9 +132,8 @@ svn_wc__db_open(svn_wc__db_t **db,
  * In most cases, svn operations will deal with multiple targets. Each
  * target may have a different administrative database, and others will
  * be sharing a database. This function will open all relevant databases
- * for the paths identified in @a paths. The databases will be returned
- * in @a dbs, as a hash mapping the path to an svn_wc__db_t * value.
- * Database handles will be shared if two paths imply the same database.
+ * for the paths identified in @a paths. One handle is returned which
+ * will handle the interaction with all the relevant databases.
  *
  * The @a config will be used to identify how to locate the database
  * for each target listed in @a paths.
@@ -139,7 +142,7 @@ svn_wc__db_open(svn_wc__db_t **db,
  * will be made in @a scratch_pool.
  */
 svn_error_t *
-svn_wc__db_open_many(apr_hash_t **dbs,
+svn_wc__db_open_many(svn_wc__db_t **db,
                      const apr_array_header_t *paths,
                      svn_config_t *config,
                      apr_pool_t *result_pool,
@@ -281,11 +284,19 @@ svn_wc__db_base_move(svn_wc__db_t *db,
                      apr_pool_t *scratch_pool);
 
 
-/* ### NULL may be given for OUT params */
+/* ### NULL may be given for OUT params
+   ### @a switched means this directory is different from what parent/filename
+   ### would imply for @a repos_path. the @repos_url may be different.
+*/
 svn_error_t *
 svn_wc__db_base_get_info(svn_wc__db_kind_t *kind,
                          svn_revnum_t *revision,
-                         const char **url,
+                         const char **repos_path,
+                         svn_revnum_t *changed_rev,
+                         apr_time_t *changed_date,
+                         const char **changed_author,
+                         svn_depth_t *depth,
+                         svn_boolean_t *switched,
                          const char **repos_url,
                          const char **repos_uuid,
                          svn_wc__db_t *db,
@@ -379,7 +390,7 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_op_copy_url(svn_wc__db_t *db,
                        const char *path,
-                       const char *copyfrom_url,
+                       const char *copyfrom_repos_path,
                        svn_revnum_t copyfrom_revision,
                        apr_pool_t *scratch_pool);
 
@@ -501,7 +512,7 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
 /* ### NULL may be given for OUT params.
 
    ### if the node has not been committed (after adding):
-   ###   url, repos_* will be NULL
+   ###   repos_* will be NULL
    ###   revision will be SVN_INVALID_REVNUM
    ###   status will be svn_wc__db_status_added
    ###   text_mod will be TRUE
@@ -511,7 +522,7 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
    ### put all these OUT params into a structure? but this interface allows
    ### us to query for one or all pieces of information (harder with a struct)
 
-   ### original_url will be NULL if this node is not copied/moved
+   ### original_repos_path will be NULL if this node is not copied/moved
    ### original_rev will be SVN_INVALID_REVNUM if this node is not copied/moved
 
    ### KFF: The position of 'db' in the parameter list is sort of
@@ -519,21 +530,28 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
    ### Would be nice to keep it consistent.  For example, it always
    ### comes first, or always comes first after any result params, or
    ### whatever.
+
+   ### note that @a base_shadowed can be derived. if the status specifies
+   ### an add/copy/move *and* there is a corresponding node in BASE, then
+   ### the BASE has been deleted to open the way for this node.
 */
 svn_error_t *
 svn_wc__db_read_info(svn_wc__db_kind_t *kind,
                      svn_revnum_t *revision,
-                     const char **url,
-                     const char **repos_url,
-                     const char **repos_uuid,
+                     const char **repos_path,
                      const char **changelist,
                      svn_wc__db_status_t *status,
                      svn_boolean_t *text_mod,  /* ### possibly modified */
                      svn_boolean_t *props_mod,
                      svn_boolean_t *base_shadowed,  /* ### WORKING shadows a
                                                        ### deleted BASE? */
-                     const char **original_url,
+                     const char **original_repos_path,
                      svn_revnum_t *original_rev,
+                     svn_revnum_t *changed_rev,
+                     apr_time_t *changed_date,
+                     const char **changed_author,
+                     const char **repos_url, /* ### repos base url */
+                     const char **repos_uuid,
                      svn_wc__db_t *db,
                      const char *path,
                      apr_pool_t *result_pool,
@@ -586,8 +604,6 @@ svn_wc__db_read_symlink_target(const char **target,
    ### are these things? are we okay with an in-memory array? examine other
    ### changelist usage -- we may already assume the list fits in memory.
   */
-
-/* ### bulk stuff like revision_status. */
 
 
 /** @} */

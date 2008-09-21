@@ -28,6 +28,8 @@ struct status_baton
   svn_boolean_t committed;           /* examine last committed revisions */
   const char *wc_path;               /* path whose URL we're looking for */
   const char *wc_url;    /* URL for the path whose URL we're looking for */
+  svn_cancel_func_t cancel_func;
+  void *cancel_baton;
   apr_pool_t *pool;         /* pool in which to store alloc-needy things */
 };
 
@@ -45,12 +47,14 @@ analyze_status(const char *path,
   svn_boolean_t props_mod;
   svn_revnum_t original_rev;
 
+  SVN_ERR((*sb->cancel_func)(sb->cancel_baton));
+
   /* ### if sb->committed, then we need to read last-changed information
      ### from the base. need some API updates in wc_db.h for that. */
 
-  SVN_ERR(svn_wc__db_read_info(NULL, &revision, &url, NULL, NULL, NULL,
+  SVN_ERR(svn_wc__db_read_info(NULL, &revision, &url, NULL,
                                &status, &text_mod, &props_mod, NULL, NULL,
-                               &original_rev,
+                               &original_rev, NULL, NULL, NULL, NULL, NULL,
                                sb->db, path, scratch_pool, scratch_pool));
 
   sb->result->modified |= text_mod | props_mod;
@@ -115,10 +119,9 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
   sb.committed = committed;
   sb.wc_path = wc_path;
   sb.wc_url = NULL;
+  sb.cancel_func = cancel_func;
+  sb.cancel_baton = cancel_baton;
   sb.pool = pool;
-
-  /* ### need to put cancel information into the baton, and then check
-     ### that so we can exit from the walker. */
 
   /* ### pool as scratch_pool? we should probably update our signature */
   SVN_ERR(generic_walker(db, wc_path, walker_mode_working,
