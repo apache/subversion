@@ -77,29 +77,21 @@ CREATE TABLE NODE (
 
   kind  INTEGER NOT NULL,
 
+  /* NULL for a directory */
   text_id  INTEGER,
 
-  /* ### NOT NULL? do we always have this info? */
-  changed_rev  INTEGER,
+  /* Information about the last change to this node */
+  changed_rev  INTEGER NOT NULL,
   /* this is an APR date/time (microseconds since 1970) */
-  changed_date  INTEGER,
-  changed_author  TEXT,
+  changed_date  INTEGER NOT NULL,
+  changed_author  TEXT NOT NULL,
 
-  /* ### the following fields are used to define the WORKING tree */
-  conflict_old  TEXT,
-  conflict_new  TEXT,
-  conflict_working  TEXT,
-  prop_reject  TEXT,  /* ### is this right? */
-
-  /* ### note: these are caches from the server! */
+  /* ### note: these values are caches from the server! */
   lock_token  TEXT,
   lock_owner  TEXT,
   lock_comment  TEXT,
   /* this is an APR date/time (microseconds since 1970) */
-  lock_date  INTEGER,
-
-  /* ### this node is in a changelist. */
-  changelist_id  INTEGER
+  lock_date  INTEGER
   );
 
 CREATE UNIQUE INDEX I_PATH ON NODE (dir_id, filename);
@@ -123,13 +115,15 @@ CREATE UNIQUE INDEX I_NODE_PROPS ON PROPERTIES (node_id);
 CREATE TABLE BASE_TEXT (
   id  INTEGER PRIMARY KEY AUTOINCREMENT,
 
+  /* ### the hash algorithm (MD5 or SHA-1) is encoded in this value */
   checksum  TEXT NOT NULL,
 
+  /* ### enumerated values specifying type of compression */
   compression  INTEGER NOT NULL,
 
   /* ### do we need to deal with repos-size vs. eol-style-size?
-     ### this value is the pristine size of ACTUAL so we can quickly
-     ### detect differences. */
+     ### this value is the pristine size of ACTUAL (after appropriate
+     ### transforms) so we can quickly detect differences. */
   actual_size  INTEGER NOT NULL,
 
   /* ### used to verify the pristine file is "proper" */
@@ -155,8 +149,21 @@ CREATE TABLE NODE_CHANGES (
   /* ### NULL kind implies "deletion". or use a special enumerated value? */
   kind  INTEGER,
 
-  copyfrom_repos_path  TEXT,
-  copyfrom_revnum  INTEGER,
+  /* We've observed a change, or a proactive, administrative notification
+    (i.e. "svn edit"). ### do these need to be separated? */
+  text_modified  INTEGER,
+
+  /* where this node was copied/moved from */
+  original_repos_path  TEXT,
+  original_revnum  INTEGER,
+  text_id  INTEGER,
+  moved  INTEGER,  /* ### boolean. on both ends of a move. */
+
+  /* ### do we want to record the revnums which caused this? */
+  conflict_old  TEXT,
+  conflict_new  TEXT,
+  conflict_working  TEXT,
+  prop_reject  TEXT,  /* ### is this right? */
 
   changelist_id  INTEGER
   );
