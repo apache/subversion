@@ -17,6 +17,7 @@
  */
 
 #include "svn_wc.h"
+#include "wc_db.h"
 
 #include "svn_private_config.h"
 

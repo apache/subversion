@@ -23,9 +23,9 @@
 #include "wc_db.h"
 
 
-typedef svn_error_t (*walker_func_t)(const char *path,
-                                     void *baton,
-                                     apr_pool_t *scratch_pool);
+typedef svn_error_t * (*walker_func_t)(const char *path,
+                                       void *baton,
+                                       apr_pool_t *scratch_pool);
 
 typedef enum walker_mode_e {
     walker_mode_base,
