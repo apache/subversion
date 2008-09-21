@@ -189,7 +189,11 @@ generic_walker(svn_wc__db_t *db,
             append_entries(queue, dirpath, children, queue_pool);
           }
 
-        (*walk_func)(nodepath, walk_baton, iterpool);
+        /* ### hmm. we should probably destroy iterpool before returning? */
+        /* ### we should probably have an error that says "stop, I'm done"
+           ### that will then be mapped into SVN_NO_ERROR on return from
+           ### the walker. */
+        SVN_ERR((*walk_func)(nodepath, walk_baton, iterpool));
       }
 
     svn_pool_destroy(iterpool);
