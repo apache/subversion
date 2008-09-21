@@ -629,7 +629,9 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
                               apr_pool_t *pool);
 
 /* Switch a working copy PATH to URL@PEG_REVISION at REVISION, and (if not
-   NULL) set RESULT_REV to the switch revision.  Only switch as deeply as DEPTH
+   NULL) set RESULT_REV to the switch revision.  ADM_ACCESS may be NULL, but
+   if is not, it is a write locked working copy administrative access baton
+   that has an associated baton for PATH.  Only switch as deeply as DEPTH
    indicates.  If TIMESTAMP_SLEEP is NULL this function will sleep before
    returning to ensure timestamp integrity.  If TIMESTAMP_SLEEP is not
    NULL then the function will not sleep but will set *TIMESTAMP_SLEEP
@@ -646,6 +648,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                             const char *url,
                             const svn_opt_revision_t *peg_revision,
                             const svn_opt_revision_t *revision,
+                            svn_wc_adm_access_t *adm_access,
                             svn_depth_t depth,
                             svn_boolean_t depth_is_sticky,
                             svn_boolean_t *timestamp_sleep,
