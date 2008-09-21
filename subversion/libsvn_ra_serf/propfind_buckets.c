@@ -174,7 +174,10 @@ static void become_request(serf_bucket_t *bucket)
 
   /* These headers need to be sent with every request; see issue #3255
      ("mod_dav_svn does not pass client capabilities to start-commit
-     hooks") for why. */
+     hooks") for why.
+
+     ### NOTE ###  If you add more headers here, make the same change
+     in util.c:svn_ra_serf__setup_serf_req(). */
   serf_bucket_headers_set(hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_DEPTH);
   serf_bucket_headers_set(hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_MERGEINFO);
   serf_bucket_headers_set(hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_LOG_REVPROPS);

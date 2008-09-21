@@ -4065,7 +4065,9 @@ test_list = [ None,
               unneeded_parents,
               double_parents_with_url,
               copy_into_absent_dir,
-              find_copyfrom_information_upstairs,
+              # svn_path_is_ancestor() is broken; see r33211.
+              XFail(find_copyfrom_information_upstairs,
+                    svntest.main.is_os_windows)
              ]
 
 if __name__ == '__main__':
