@@ -25,6 +25,7 @@
 /* A baton for analyze_status(). */
 struct status_baton
 {
+  svn_wc__db_t *db;
   svn_wc_revision_status_t *result;           /* where to put the result */
   svn_boolean_t committed;           /* examine last committed revisions */
   const char *wc_path;               /* path whose URL we're looking for */
@@ -68,19 +69,44 @@ analyze_status(const char *path,
       revision = original_rev;
     }
 
-  if (sb->result->min_rev == SVN_INVALID_REVNUM
-      || revision < sb->result->min_rev)
-    sb->result->min_rev = revision;
+  if (revision != SVN_INVALID_REVNUM)
+    {
+      if (sb->result->min_rev == SVN_INVALID_REVNUM
+          || revision < sb->result->min_rev)
+        sb->result->min_rev = revision;
 
-  if (sb->result->max_rev == SVN_INVALID_REVNUM
-      || revision > sb->result->max_rev)
-    sb->result->max_rev = revision;
+      if (sb->result->max_rev == SVN_INVALID_REVNUM
+          || revision > sb->result->max_rev)
+        sb->result->max_rev = revision;
+    }
 
-#if 0
-  /* ### need to figure out how to read/store this data */
-  sb->result->switched |= status->switched;
-  sb->result->sparse_checkout |= (status->entry->depth != svn_depth_infinity);
-#endif
+  if (!sb->result->sparse_checkout || !sb->result->switched)
+    {
+      svn_depth_t depth;
+      svn_boolean_t switched;
+
+      err = svn_wc__base_get_info(NULL, NULL, NULL, NULL, NULL, NULL,
+                                  &depth, &switched, NULL, NULL,
+                                  sb->db, path, scratch_pool, scratch_pool);
+      if (err != NULL)
+        {
+          if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+            return err;
+          svn_error_clear(err);
+
+          /* This node is part of WORKING, but not BASE. Therefore, it does
+             not have a depth, nor can it be switched. */
+          /* ### hmm. really true? we could "svn move" a short-depth tree.
+             ### can we actually switch a schedule-add file/dir? */
+        }
+      else
+        {
+          if (depth != svn_depth_infinity)
+            sb->result->sparse_checkout = TRUE;
+          if (switched)
+            sb->result->switched = TRUE;
+        }
+    }
 
   if (sb->wc_path
       && sb->wc_url == NULL
@@ -116,6 +142,7 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
   result->sparse_checkout = FALSE;
 
   /* initialize walking baton */
+  sb.db = db;
   sb.result = result;
   sb.committed = committed;
   sb.wc_path = wc_path;
