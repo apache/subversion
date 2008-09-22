@@ -661,6 +661,9 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
   const char *parent;
   const char *path = svn_path_join(ib->parent_dir,
                                    (const char *) key, ib->iter_pool);
+  svn_ra_session_t *ra_session;
+  svn_node_kind_t kind;
+  svn_client__ra_session_from_path_results ra_cache = { 0 };
 
   /* Don't bother to check status, since we'll get that for free by
      attempting to retrieve the hash values anyway.  */
@@ -713,9 +716,6 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
 
   /* If the external is being checked out, exported or updated,
      determine if the external is a file or directory. */
-  svn_ra_session_t *ra_session;
-  svn_node_kind_t kind;
-  svn_client__ra_session_from_path_results ra_cache = { 0 };
   if (new_item)
     {
       /* Get the RA connection. */
