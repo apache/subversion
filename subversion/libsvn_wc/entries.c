@@ -196,6 +196,32 @@ read_path(const char **result,
   return SVN_NO_ERROR;
 }
 
+/* This is read_path() for urls. This function does not do the is_canonical
+   test for entries from working copies older than version 10, as since that
+   version the canonicalization of urls has been changed. See issue #2475.
+   If the test is done and fails, read_url returs an error. */
+static svn_error_t *
+read_url(const char **result,
+         char **buf, const char *end,
+         int wc_format,
+         apr_pool_t *pool)
+{
+  SVN_ERR(read_str(result, buf, end, pool));
+
+  /* If the wc format is <10 canonicalize the url, */
+  if (*result && **result)
+    {
+      if (wc_format < SVN_WC__CHANGED_CANONICAL_URLS)
+        *result = svn_path_canonicalize(*result, pool);
+      else
+        if (! svn_path_is_canonical(*result, pool))
+          return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
+                                   _("Entry contains non-canonical path '%s'"),
+                                   *result);
+    }
+  return SVN_NO_ERROR;
+}
+
 /* Read a field from [*BUF, END), terminated by a newline character.
    The field may not contain escape sequences.  The field is not
    copied and the buffer is modified in place, by replacing the
@@ -441,10 +467,12 @@ serialize_file_external(const char **str, const char *path,
 /* Allocate an entry from POOL and read it from [*BUF, END).  The
    buffer may be modified in place while parsing.  Return the new
    entry in *NEW_ENTRY.  Advance *BUF to point at the end of the entry
-   record. */
+   record.
+   The entries file format should be provided in ENTRIES_FORMAT. */
 static svn_error_t *
 read_entry(svn_wc_entry_t **new_entry,
            char **buf, const char *end,
+           int entries_format,
            apr_pool_t *pool)
 {
   svn_wc_entry_t *entry = alloc_entry(pool);
@@ -482,11 +510,11 @@ read_entry(svn_wc_entry_t **new_entry,
   MAYBE_DONE;
 
   /* Attempt to set up url path (again, see resolve_to_defaults). */
-  SVN_ERR(read_path(&entry->url, buf, end, pool));
+  SVN_ERR(read_url(&entry->url, buf, end, entries_format, pool));
   MAYBE_DONE;
 
   /* Set up repository root.  Make sure it is a prefix of url. */
-  SVN_ERR(read_path(&entry->repos, buf, end, pool));
+  SVN_ERR(read_url(&entry->repos, buf, end, entries_format, pool));
   if (entry->repos && entry->url
       && ! svn_path_is_ancestor(entry->repos, entry->url))
     return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
@@ -574,7 +602,7 @@ read_entry(svn_wc_entry_t **new_entry,
   SVN_ERR(read_bool(&entry->copied, SVN_WC__ENTRY_ATTR_COPIED, buf, end));
   MAYBE_DONE;
 
-  SVN_ERR(read_path(&entry->copyfrom_url, buf, end, pool));
+  SVN_ERR(read_url(&entry->copyfrom_url, buf, end, entries_format, pool));
   MAYBE_DONE;
   SVN_ERR(read_revnum(&entry->copyfrom_rev, buf, end, pool));
   MAYBE_DONE;
@@ -1323,7 +1351,7 @@ read_entries(svn_wc_adm_access_t *adm_access,
   apr_hash_t *entries = apr_hash_make(svn_wc_adm_access_pool(adm_access));
   char *curp, *endp;
   svn_wc_entry_t *entry;
-  int entryno;
+  int entryno, entries_format;
 
   /* Open the entries file. */
   SVN_ERR(svn_wc__open_adm_file(&infile, path,
@@ -1341,20 +1369,25 @@ read_entries(svn_wc_adm_access_t *adm_access,
                               buf->data, buf->len, pool));
   else
     {
-      /* Skip format line. */
-      /* ### Could read it here and report it to caller if it wants it. */
-      curp = memchr(curp, '\n', buf->len);
-      if (! curp)
+      const char *val;
+
+      /* Read the format line from the entries file. In case we're in the middle
+         of upgrading a working copy, this line will contain the original format 
+         pre-upgrade. */
+      SVN_ERR(read_val(&val, &curp, endp));
+      if (val)
+        entries_format = (apr_off_t)apr_strtoi64(val, NULL, 0);
+      else
         return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
                                  _("Invalid version line in entries file "
                                    "of '%s'"),
                                  svn_path_local_style(path, pool));
-      ++curp;
       entryno = 1;
 
       while (curp != endp)
         {
           svn_error_t *err = read_entry(&entry, &curp, endp,
+                                        entries_format,
                                         svn_wc_adm_access_pool(adm_access));
           if (! err)
             {

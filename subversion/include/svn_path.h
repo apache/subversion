@@ -227,6 +227,8 @@ svn_dirent_is_root(const char *dirent, apr_size_t len);
  * separator characters, and possibly other semantically inoperative
  * transformations.
  *
+ * Convert the scheme and hostname to lowercase (see issue #2475)
+ *
  * The returned path may be statically allocated, equal to @a path, or
  * allocated from @a pool.
  */
