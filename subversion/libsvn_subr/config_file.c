@@ -366,7 +366,8 @@ svn_config__parse_file(svn_config_t *cfg, const char *file,
 
   ctx.cfg = cfg;
   ctx.file = file;
-  ctx.stream = svn_subst_stream_translated(svn_stream_from_aprfile(f, pool),
+  ctx.stream = svn_subst_stream_translated(svn_stream_from_aprfile2(f, TRUE,
+                                                                    pool),
                                            "\n", TRUE, NULL, FALSE, pool);
   ctx.line = 1;
   ctx.have_ungotten_char = FALSE;
@@ -432,9 +433,7 @@ svn_config__parse_file(svn_config_t *cfg, const char *file,
 
   /* Close the file and streams (and other cleanup): */
   SVN_ERR(svn_stream_close(ctx.stream));
-  SVN_ERR(svn_io_file_close(f, pool));
-
-  return SVN_NO_ERROR;
+  return svn_io_file_close(f, pool);
 }
 
 

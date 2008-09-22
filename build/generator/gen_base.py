@@ -101,7 +101,7 @@ class GeneratorBase:
     parser_sections = parser.sections()
     parser_sections.sort() # Have a reproducible ordering
     for section_name in parser_sections:
-      if self.skip_sections.has_key(section_name):
+      if section_name in self.skip_sections:
         continue
 
       options = {}
@@ -129,7 +129,7 @@ class GeneratorBase:
         # Translate string names to Section objects
         dep_section_objects = []
         for section_name in string.split(dep_names):
-          if self.sections.has_key(section_name):
+          if section_name in self.sections:
             dep_section_objects.append(self.sections[section_name])
 
         # For each dep_section that this section declares a dependency on,
@@ -202,13 +202,13 @@ class DependencyGraph:
       self.deps[dt] = { }
 
   def add(self, type, target, source):
-    if self.deps[type].has_key(target):
+    if target in self.deps[type]:
       self.deps[type][target].append(source)
     else:
       self.deps[type][target] = [ source ]
 
   def bulk_add(self, type, target, sources):
-    if self.deps[type].has_key(target):
+    if target in self.deps[type]:
       self.deps[type][target].extend(sources)
     else:
       self.deps[type][target] = sources[:]
@@ -943,7 +943,7 @@ class IncludeDependencyInfo:
     """Scan the C or SWIG file FNAME, and return the full paths of each
     include file that is a direct or indirect dependency, as a 2-tuple:
       (C_INCLUDES, SWIG_INCLUDES)."""
-    if self._deps.has_key(fname):
+    if fname in self._deps:
       hdrs = self._deps[fname]
     else:
       hdrs = self._scan_for_includes(fname)
@@ -1104,7 +1104,7 @@ def unique(seq):
   list = [ ]
   dupes = { }
   for e in seq:
-    if not dupes.has_key(e):
+    if e not in dupes:
       dupes[e] = None
       list.append(e)
   return list

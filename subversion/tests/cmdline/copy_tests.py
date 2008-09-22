@@ -3941,6 +3941,50 @@ def copy_into_absent_dir(sbox):
                                      'cleanup', wc_dir)
 
 
+def find_copyfrom_information_upstairs(sbox):
+  "renaming inside a copied subtree shouldn't hang"
+
+  # The final command in this series would cause the client to hang...
+  # 
+  #    ${SVN} cp A A2
+  #    cd A2/B
+  #    ${SVN} mkdir blah
+  #    ${SVN} mv lambda blah
+  # 
+  # ...because it wouldn't walk up past "" to find copyfrom information
+  # (which would be in A2/.svn/entries, not on A2/B/.svn/entries).
+  # Instead, it would keep thinking the parent of "" is "", and so
+  # loop forever, gobbling a little bit more memory with each iteration.
+  #
+  # Two things fixed this:
+  #
+  #   1) The client walks upward beyond CWD now, so it finds the
+  #      copyfrom information.
+  #
+  #   2) Even if we do top out at "" without finding copyfrom information
+  #      (say, because someone has corrupted their working copy), we'll
+  #      still detect it and error, thus breaking the loop.
+  #
+  # This only tests case (1).  We could test that (2) gets the expected
+  # error ("no parent with copyfrom information found above 'lambda'"),
+  # but we'd need to chroot to the top of the working copy or manually
+  # corrupt the wc by removing the copyfrom lines from A2/.svn/entries.
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  A_path = os.path.join(wc_dir, 'A')
+  A2_path = os.path.join(wc_dir, 'A2')
+  B2_path = os.path.join(A2_path, 'B')
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp', A_path, A2_path)
+  saved_cwd = os.getcwd()
+  try:
+    os.chdir(B2_path)
+    svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', 'blah')
+    svntest.actions.run_and_verify_svn(None, None, [], 'mv', 'lambda', 'blah')
+  finally:
+    os.chdir(saved_cwd)
 
 ########################################################################
 # Run the tests
@@ -4021,6 +4065,9 @@ test_list = [ None,
               unneeded_parents,
               double_parents_with_url,
               copy_into_absent_dir,
+              # svn_path_is_ancestor() is broken; see r33211.
+              XFail(find_copyfrom_information_upstairs,
+                    svntest.main.is_os_windows)
              ]
 
 if __name__ == '__main__':

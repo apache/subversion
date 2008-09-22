@@ -18,8 +18,6 @@
 
 
 
-#include <assert.h>
-
 #define APR_WANT_STRFUNC
 #include <apr_want.h> /* for strcmp() */
 
@@ -424,6 +422,10 @@ svn_error_t * svn_ra_neon__get_log(svn_ra_session_t *session,
           else
             want_custom_revprops = TRUE;
         }
+      if (revprops->nelts == 0) 
+	{
+	  svn_stringbuf_appendcstr(request_body, "<S:no-revprops/>");
+	}
     }
   else
     {

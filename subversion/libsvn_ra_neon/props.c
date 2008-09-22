@@ -1065,7 +1065,8 @@ append_setprop(svn_stringbuf_t *body,
     }
   else
     {
-      const svn_string_t *base64ed = svn_base64_encode_string(value, pool);
+      const svn_string_t *base64ed = svn_base64_encode_string2(value, TRUE,
+                                                               pool);
       encoding = " V:encoding=\"base64\"";
       xml_safe = base64ed->data;
     }
@@ -1215,8 +1216,8 @@ svn_ra_neon__do_check_path(svn_ra_session_t *session,
     {
 
       svn_error_clear(err);
+      err = SVN_NO_ERROR;
       *kind = svn_node_none;
-      return SVN_NO_ERROR;
     }
 
   return err;

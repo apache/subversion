@@ -206,7 +206,9 @@ svn_auth__ssl_client_cert_pw_file_save_creds_helper
       /* If the passphrase is going to be stored encrypted, go right
          ahead and store it to disk. Else determine whether saving
          in plaintext is OK. */
-      if (strcmp(passtype, SVN_AUTH__GNOME_KEYRING_PASSWORD_TYPE) == 0)
+      if (strcmp(passtype, SVN_AUTH__KWALLET_PASSWORD_TYPE) == 0
+          || strcmp(passtype, SVN_AUTH__GNOME_KEYRING_PASSWORD_TYPE) == 0
+          || strcmp(passtype, SVN_AUTH__KEYCHAIN_PASSWORD_TYPE) == 0)
         {
           may_save_passphrase = TRUE;
         }
@@ -494,11 +496,9 @@ ssl_client_cert_pw_prompt_next_cred(void **credentials_p,
     }
   ib->retries++;
 
-  SVN_ERR(ib->pb->prompt_func((svn_auth_cred_ssl_client_cert_pw_t **)
-                              credentials_p, ib->pb->prompt_baton,
-                              ib->realmstring, ! no_auth_cache, pool));
-
-  return SVN_NO_ERROR;
+  return ib->pb->prompt_func((svn_auth_cred_ssl_client_cert_pw_t **)
+                             credentials_p, ib->pb->prompt_baton,
+                             ib->realmstring, ! no_auth_cache, pool);
 }
 
 

@@ -217,12 +217,8 @@ get_category_config(svn_config_t **cfg,
 
   SVN_ERR(svn_config_get_user_config_path(&usr_cfg_path, config_dir, category,
                                           pool));
-  SVN_ERR(read_all(cfg,
-                   sys_reg_path, usr_reg_path,
-                   sys_cfg_path, usr_cfg_path,
-                   pool));
-
-  return SVN_NO_ERROR;
+  return read_all(cfg, sys_reg_path, usr_reg_path,
+                  sys_cfg_path, usr_cfg_path, pool);
 }
 
 
@@ -712,15 +708,6 @@ svn_config_get_yes_no_ask(svn_config_t *cfg, const char **valuep,
 }
 
 
-int
-svn_config__enumerate_sections(svn_config_t *cfg,
-                               svn_config__section_enumerator_t callback,
-                               void *baton)
-{
-  return svn_config_enumerate_sections(cfg,
-                                       (svn_config_section_enumerator_t) callback, baton);
-}
-
 int
 svn_config_enumerate_sections(svn_config_t *cfg,
                               svn_config_section_enumerator_t callback,

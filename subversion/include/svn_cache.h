@@ -49,9 +49,9 @@ extern "C" {
  *
  * @since New in 1.6.
 */
-typedef svn_error_t *(svn_cache_dup_func_t)(void **out,
-                                            void *in,
-                                            apr_pool_t *pool);
+typedef svn_error_t *(*svn_cache_dup_func_t)(void **out,
+                                             void *in,
+                                             apr_pool_t *pool);
 
 /**
  * A function type for deserializing an object @a *out from the string
@@ -59,10 +59,10 @@ typedef svn_error_t *(svn_cache_dup_func_t)(void **out,
  *
  * @since New in 1.6.
 */
-typedef svn_error_t *(svn_cache_deserialize_func_t)(void **out,
-                                                    const char *data,
-                                                    apr_size_t data_len,
-                                                    apr_pool_t *pool);
+typedef svn_error_t *(*svn_cache_deserialize_func_t)(void **out,
+                                                     const char *data,
+                                                     apr_size_t data_len,
+                                                     apr_pool_t *pool);
 
 /**
  * A function type for serializing an object @a in into bytes.  The
@@ -71,10 +71,10 @@ typedef svn_error_t *(svn_cache_deserialize_func_t)(void **out,
  *
  * @since New in 1.6.
 */
-typedef svn_error_t *(svn_cache_serialize_func_t)(char **data,
-                                                  apr_size_t *data_len,
-                                                  void *in,
-                                                  apr_pool_t *pool);
+typedef svn_error_t *(*svn_cache_serialize_func_t)(char **data,
+                                                   apr_size_t *data_len,
+                                                   void *in,
+                                                   apr_pool_t *pool);
 
 /**
  * A function type for transforming or ignoring errors.  @a pool may
@@ -82,9 +82,9 @@ typedef svn_error_t *(svn_cache_serialize_func_t)(char **data,
  *
  * @since New in 1.6.
  */
-typedef svn_error_t *(svn_cache_error_handler_t)(svn_error_t *err,
-                                                 void *baton,
-                                                 apr_pool_t *pool);
+typedef svn_error_t *(*svn_cache_error_handler_t)(svn_error_t *err,
+                                                  void *baton,
+                                                  apr_pool_t *pool);
 
 /**
  * A wrapper around apr_memcache_t, provided essentially so that the
@@ -129,7 +129,7 @@ typedef struct svn_cache_t svn_cache_t;
  */
 svn_error_t *
 svn_cache_create_inprocess(svn_cache_t **cache_p,
-                           svn_cache_dup_func_t *dup_func,
+                           svn_cache_dup_func_t dup_func,
                            apr_ssize_t klen,
                            apr_int64_t pages,
                            apr_int64_t items_per_page,
@@ -161,8 +161,8 @@ svn_cache_create_inprocess(svn_cache_t **cache_p,
 svn_error_t *
 svn_cache_create_memcache(svn_cache_t **cache_p,
                           svn_memcache_t *memcache,
-                          svn_cache_serialize_func_t *serialize_func,
-                          svn_cache_deserialize_func_t *deserialize_func,
+                          svn_cache_serialize_func_t serialize_func,
+                          svn_cache_deserialize_func_t deserialize_func,
                           apr_ssize_t klen,
                           const char *prefix,
                           apr_pool_t *pool);
@@ -197,7 +197,7 @@ svn_cache_make_memcache_from_config(svn_memcache_t **memcache_p,
  */
 svn_error_t *
 svn_cache_set_error_handler(svn_cache_t *cache,
-                            svn_cache_error_handler_t *handler,
+                            svn_cache_error_handler_t handler,
                             void *baton,
                             apr_pool_t *pool);
 
@@ -215,7 +215,7 @@ svn_cache_set_error_handler(svn_cache_t *cache,
 svn_error_t *
 svn_cache_get(void **value,
               svn_boolean_t *found,
-              svn_cache_t *cache,
+              const svn_cache_t *cache,
               const void *key,
               apr_pool_t *pool);
 
@@ -263,7 +263,7 @@ svn_cache_set(svn_cache_t *cache,
  */
 svn_error_t *
 svn_cache_iter(svn_boolean_t *completed,
-               svn_cache_t *cache,
+               const svn_cache_t *cache,
                svn_iter_apr_hash_cb_t func,
                void *baton,
                apr_pool_t *pool);

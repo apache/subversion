@@ -256,7 +256,7 @@ analogous to CVS/ subdirs.  See the separate sections below for more details.
    Pristine repos properties for those files, in hashdump format.  Named
    with the extension `.svn-base'.
 
-   For an entry scheduled for replacement, the text-base of the deleted
+   For an entry scheduled for replacement, the prop-base of the deleted
    entry may be stored in `foo.c.svn-revert'.
 
    
@@ -502,6 +502,20 @@ depth:
    `empty'.  `' means infinite (normal) depth -- the directory has all its
    entries and pulls new entries with depth infinity as well.
    Default is infinite (`').
+
+tree-conflicts:
+   A list of details of the tree conflicts that children are currently
+   suffering. This is only allowed on the this_dir entry.
+
+file-external:
+   File externals are intra-repository and are implemented as a newly
+   added switched file, equivalent to the following commands:
+     $ touch foo
+     $ svn add foo
+     $ svn switch URL foo
+   This property contains the path relative to the repository root for
+   the file external and the peg revision it is checked out from in
+   a path peg revision format PATH@URL.
 
 The only fields allowed in an entry for a directory (other than the
 this_dir entry) are name, absent, deleted, schedule, copied,

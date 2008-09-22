@@ -490,10 +490,10 @@ def _get_value((refname, start, rest), ctx):
   if rest is None:
     # it was a string constant
     return start
-  if ctx.for_index.has_key(start):
+  if start in ctx.for_index:
     list, idx = ctx.for_index[start]
     ob = list[idx]
-  elif ctx.data.has_key(start):
+  elif start in ctx.data:
     ob = ctx.data[start]
   else:
     raise UnknownReference(refname)

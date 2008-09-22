@@ -2,7 +2,7 @@
  * svndiff.c -- Encoding and decoding svndiff-format deltas.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006, 2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -47,7 +47,7 @@
 
 /* We make one of these and get it passed back to us in calls to the
    window handler.  We only use it to record the write function and
-   baton passed to svn_txdelta_to_svndiff ().  */
+   baton passed to svn_txdelta_to_svndiff2().  */
 struct encoder_baton {
   svn_stream_t *output;
   svn_boolean_t header_done;
@@ -865,9 +865,8 @@ svn_txdelta_read_svndiff_window(svn_txdelta_window_t **window,
     return svn_error_create(SVN_ERR_SVNDIFF_UNEXPECTED_END, NULL,
                             _("Unexpected end of svndiff input"));
   *window = apr_palloc(pool, sizeof(**window));
-  SVN_ERR(decode_window(*window, sview_offset, sview_len, tview_len, inslen,
-                        newlen, buf, pool, svndiff_version));
-  return SVN_NO_ERROR;
+  return decode_window(*window, sview_offset, sview_len, tview_len, inslen,
+                       newlen, buf, pool, svndiff_version);
 }
 
 
@@ -876,7 +875,7 @@ svn_txdelta_skip_svndiff_window(apr_file_t *file,
                                 int svndiff_version,
                                 apr_pool_t *pool)
 {
-  svn_stream_t *stream = svn_stream_from_aprfile(file, pool);
+  svn_stream_t *stream = svn_stream_from_aprfile2(file, TRUE, pool);
   svn_filesize_t sview_offset;
   apr_size_t sview_len, tview_len, inslen, newlen;
   apr_off_t offset;

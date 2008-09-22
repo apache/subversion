@@ -249,8 +249,17 @@ copy_versioned_files(const char *from,
       /* Try to make the new directory.  If this fails because the
          directory already exists, check our FORCE flag to see if we
          care. */
+         
+      /* Skip retrieving the umask on windows. Apr does not implement setting 
+         filesystem privileges on Windows. 
+         Retrieving the file permissions with APR_FINFO_PROT | APR_FINFO_OWNER 
+         is documented to be 'incredibly expensive' */
+#ifdef WIN32      
+      err = svn_io_dir_make(to, APR_OS_DEFAULT, pool);      
+#else
       SVN_ERR(svn_io_stat(&finfo, from, APR_FINFO_PROT, pool));
       err = svn_io_dir_make(to, finfo.protection, pool);
+#endif
       if (err)
         {
           if (! APR_STATUS_IS_EEXIST(err->apr_err))
@@ -372,8 +381,7 @@ copy_versioned_files(const char *from,
                                       native_eol, pool));
     }
 
-  SVN_ERR(svn_wc_adm_close(adm_access));
-  return SVN_NO_ERROR;
+  return svn_wc_adm_close(adm_access);
 }
 
 
@@ -632,7 +640,7 @@ apply_textdelta(void *file_baton,
   hb->tmppath = fb->tmppath;
 
   svn_txdelta_apply(svn_stream_empty(pool),
-                    svn_stream_from_aprfile(fb->tmp_file, pool),
+                    svn_stream_from_aprfile2(fb->tmp_file, TRUE, pool),
                     fb->text_digest, NULL, pool,
                     &hb->apply_handler, &hb->apply_baton);
 
@@ -796,6 +804,9 @@ svn_client_export4(svn_revnum_t *result_rev,
   svn_revnum_t edit_revision = SVN_INVALID_REVNUM;
   const char *url;
 
+  SVN_ERR_ASSERT(peg_revision != NULL);
+  SVN_ERR_ASSERT(revision != NULL);
+
   peg_revision = svn_cl__rev_default_to_head_or_working(peg_revision, from);
   revision = svn_cl__rev_default_to_peg(revision, peg_revision);
 
@@ -851,8 +862,8 @@ svn_client_export4(svn_revnum_t *result_rev,
           /* Step outside the editor-likeness for a moment, to actually talk
            * to the repository. */
           SVN_ERR(svn_ra_get_file(ra_session, "", revnum,
-                                  svn_stream_from_aprfile(fb->tmp_file,
-                                                          pool),
+                                  svn_stream_from_aprfile2(fb->tmp_file, TRUE,
+                                                           pool),
                                   NULL, &props, pool));
 
           /* Push the props into change_file_prop(), to update the file_baton

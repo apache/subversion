@@ -1,7 +1,7 @@
 /* tree.c : tree-like filesystem, built on DAG filesystem
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -41,6 +41,7 @@
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_md5.h"
+#include "svn_sha1.h"
 #include "svn_mergeinfo.h"
 #include "svn_fs.h"
 #include "fs.h"
@@ -851,13 +852,11 @@ add_change(svn_fs_t *fs,
            const char *copyfrom_path,
            apr_pool_t *pool)
 {
-  SVN_ERR(svn_fs_fs__add_change(fs, txn_id,
-                                svn_fs__canonicalize_abspath(path, pool),
-                                noderev_id, change_kind, text_mod, prop_mod,
-                                copyfrom_rev, copyfrom_path,
-                                pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_fs__add_change(fs, txn_id,
+                               svn_fs__canonicalize_abspath(path, pool),
+                               noderev_id, change_kind, text_mod, prop_mod,
+                               copyfrom_rev, copyfrom_path,
+                               pool);
 }
 
 
@@ -902,9 +901,7 @@ svn_fs_fs__node_created_rev(svn_revnum_t *revision,
   dag_node_t *node;
 
   SVN_ERR(get_dag(&node, root, path, pool));
-  SVN_ERR(svn_fs_fs__dag_get_revision(revision, node, pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_fs__dag_get_revision(revision, node, pool);
 }
 
 
@@ -962,13 +959,11 @@ svn_fs_fs__check_path(svn_node_kind_t *kind_p,
        || (err->apr_err == SVN_ERR_FS_NOT_DIRECTORY)))
     {
       svn_error_clear(err);
+      err = SVN_NO_ERROR;
       *kind_p = svn_node_none;
     }
-  else if (err)
-    {
-      return err;
-    }
-  return SVN_NO_ERROR;
+
+  return err;
 }
 
 /* Set *VALUE_P to the value of the property named PROPNAME of PATH in
@@ -1096,12 +1091,10 @@ fs_change_node_prop(svn_fs_root_t *root,
                                       pool));
 
   /* Make a record of this modification in the changes table. */
-  SVN_ERR(add_change(root->fs, txn_id, path,
-                     svn_fs_fs__dag_get_id(parent_path->node),
-                     svn_fs_path_change_modify, FALSE, TRUE, SVN_INVALID_REVNUM,
-                     NULL, pool));
-
-  return SVN_NO_ERROR;
+  return add_change(root->fs, txn_id, path,
+                    svn_fs_fs__dag_get_id(parent_path->node),
+                    svn_fs_path_change_modify, FALSE, TRUE, SVN_INVALID_REVNUM,
+                    NULL, pool);
 }
 
 
@@ -1127,10 +1120,8 @@ fs_props_changed(svn_boolean_t *changed_p,
 
   SVN_ERR(get_dag(&node1, root1, path1, pool));
   SVN_ERR(get_dag(&node2, root2, path2, pool));
-  SVN_ERR(svn_fs_fs__dag_things_different(changed_p, NULL,
-                                          node1, node2, pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_fs__dag_things_different(changed_p, NULL,
+                                         node1, node2, pool);
 }
 
 
@@ -1141,8 +1132,7 @@ fs_props_changed(svn_boolean_t *changed_p,
 static svn_error_t *
 get_root(dag_node_t **node, svn_fs_root_t *root, apr_pool_t *pool)
 {
-  SVN_ERR(get_dag(node, root, "", pool));
-  return SVN_NO_ERROR;
+  return get_dag(node, root, "", pool);
 }
 
 
@@ -1166,9 +1156,7 @@ update_ancestry(svn_fs_t *fs,
   noderev->predecessor_count = source_pred_count;
   if (noderev->predecessor_count != -1)
     noderev->predecessor_count++;
-  SVN_ERR(svn_fs_fs__put_node_revision(fs, target_id, noderev, FALSE, pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_fs__put_node_revision(fs, target_id, noderev, FALSE, pool);
 }
 
 
@@ -1451,7 +1439,8 @@ merge(svn_stringbuf_t *conflict_p,
           apr_int64_t sub_mergeinfo_increment;
 
           /* If SOURCE-ENTRY and TARGET-ENTRY are both null, that's a
-             double delete; flag a conflict. */
+             double delete; if one of them is null, that's a delete versus
+             a modification. In any of these cases, flag a conflict. */
           if (s_entry == NULL || t_entry == NULL)
             return conflict_err(conflict_p,
                                 svn_path_join(target_path,
@@ -1835,8 +1824,7 @@ fs_dir_entries(apr_hash_t **table_p,
 
   /* Get the entries for this path in the caller's pool. */
   SVN_ERR(get_dag(&node, root, path, pool));
-  SVN_ERR(svn_fs_fs__dag_dir_entries(table_p, node, pool, pool));
-  return SVN_NO_ERROR;
+  return svn_fs_fs__dag_dir_entries(table_p, node, pool, pool);
 }
 
 
@@ -1883,11 +1871,9 @@ fs_make_dir(svn_fs_root_t *root,
                              sub_dir, pool));
 
   /* Make a record of this modification in the changes table. */
-  SVN_ERR(add_change(root->fs, txn_id, path, svn_fs_fs__dag_get_id(sub_dir),
-                     svn_fs_path_change_add, FALSE, FALSE, SVN_INVALID_REVNUM,
-                     NULL, pool));
-
-  return SVN_NO_ERROR;
+  return add_change(root->fs, txn_id, path, svn_fs_fs__dag_get_id(sub_dir),
+                    svn_fs_path_change_add, FALSE, FALSE, SVN_INVALID_REVNUM,
+                    NULL, pool);
 }
 
 
@@ -1939,12 +1925,10 @@ fs_delete_node(svn_fs_root_t *root,
                                         pool));
 
   /* Make a record of this modification in the changes table. */
-  SVN_ERR(add_change(root->fs, txn_id, path,
-                     svn_fs_fs__dag_get_id(parent_path->node),
-                     svn_fs_path_change_delete, FALSE, FALSE,
-                     SVN_INVALID_REVNUM, NULL, pool));
-
-  return SVN_NO_ERROR;
+  return add_change(root->fs, txn_id, path,
+                    svn_fs_fs__dag_get_id(parent_path->node),
+                    svn_fs_path_change_delete, FALSE, FALSE,
+                    SVN_INVALID_REVNUM, NULL, pool);
 }
 
 
@@ -2235,11 +2219,9 @@ fs_make_file(svn_fs_root_t *root,
                              pool));
 
   /* Make a record of this modification in the changes table. */
-  SVN_ERR(add_change(root->fs, txn_id, path, svn_fs_fs__dag_get_id(child),
-                     svn_fs_path_change_add, TRUE, FALSE, SVN_INVALID_REVNUM,
-                     NULL, pool));
-
-  return SVN_NO_ERROR;
+  return add_change(root->fs, txn_id, path, svn_fs_fs__dag_get_id(child),
+                    svn_fs_path_change_add, TRUE, FALSE, SVN_INVALID_REVNUM,
+                    NULL, pool);
 }
 
 
@@ -2257,24 +2239,22 @@ fs_file_length(svn_filesize_t *length_p,
   SVN_ERR(get_dag(&file, root, path, pool));
 
   /* Now fetch its length */
-  SVN_ERR(svn_fs_fs__dag_file_length(length_p, file, pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_fs__dag_file_length(length_p, file, pool);
 }
 
 
-/* Set DIGEST to the MD5 checksum of PATH under ROOT.  Temporary
+/* Set DIGEST to the checksum of PATH under ROOT.  Temporary
    allocations are from POOL. */
 static svn_error_t *
-fs_file_md5_checksum(unsigned char digest[],
-                     svn_fs_root_t *root,
-                     const char *path,
-                     apr_pool_t *pool)
+fs_file_checksum(svn_checksum_t **checksum,
+                 svn_fs_root_t *root,
+                 const char *path,
+                 apr_pool_t *pool)
 {
   dag_node_t *file;
 
   SVN_ERR(get_dag(&file, root, path, pool));
-  return svn_fs_fs__dag_file_checksum(digest, file, pool);
+  return svn_fs_fs__dag_file_checksum(checksum, file, pool);
 }
 
 
@@ -2330,11 +2310,11 @@ typedef struct txdelta_baton_t
   svn_stream_t *string_stream;
   svn_stringbuf_t *target_string;
 
-  /* Hex MD5 digest for the base text against which a delta is to be
+  /* MD5 digest for the base text against which a delta is to be
      applied, and for the resultant fulltext, respectively.  Either or
      both may be null, in which case ignored. */
-  const char *base_checksum;
-  const char *result_checksum;
+  svn_checksum_t *base_checksum;
+  svn_checksum_t *result_checksum;
 
   /* Pool used by db txns */
   apr_pool_t *pool;
@@ -2438,21 +2418,21 @@ apply_textdelta(void *baton, apr_pool_t *pool)
 
   if (tb->base_checksum)
     {
-      unsigned char digest[APR_MD5_DIGESTSIZE];
-      const char *hex;
+      svn_checksum_t *checksum;
 
       /* Until we finalize the node, its data_key points to the old
          contents, in other words, the base text. */
-      SVN_ERR(svn_fs_fs__dag_file_checksum(digest, tb->node, pool));
-      hex = svn_md5_digest_to_cstring(digest, pool);
-      if (hex && (strcmp(tb->base_checksum, hex) != 0))
+      SVN_ERR(svn_fs_fs__dag_file_checksum(&checksum, tb->node, pool));
+      if (!svn_checksum_match(tb->base_checksum, checksum))
         return svn_error_createf
           (SVN_ERR_CHECKSUM_MISMATCH,
            NULL,
            _("Base checksum mismatch on '%s':\n"
              "   expected:  %s\n"
              "     actual:  %s\n"),
-           tb->path, tb->base_checksum, hex);
+           tb->path,
+           svn_checksum_to_cstring_display(tb->base_checksum, pool),
+           svn_checksum_to_cstring_display(checksum, pool));
     }
 
   /* Make a readable "source" stream out of the current contents of
@@ -2481,12 +2461,10 @@ apply_textdelta(void *baton, apr_pool_t *pool)
                     &(tb->interpreter_baton));
 
   /* Make a record of this modification in the changes table. */
-  SVN_ERR(add_change(tb->root->fs, txn_id, tb->path,
-                     svn_fs_fs__dag_get_id(tb->node),
-                     svn_fs_path_change_modify, TRUE, FALSE, SVN_INVALID_REVNUM,
-                     NULL, pool));
-
-  return SVN_NO_ERROR;
+  return add_change(tb->root->fs, txn_id, tb->path,
+                    svn_fs_fs__dag_get_id(tb->node),
+                    svn_fs_path_change_modify, TRUE, FALSE, SVN_INVALID_REVNUM,
+                    NULL, pool);
 }
 
 
@@ -2498,8 +2476,8 @@ fs_apply_textdelta(svn_txdelta_window_handler_t *contents_p,
                    void **contents_baton_p,
                    svn_fs_root_t *root,
                    const char *path,
-                   const char *base_checksum,
-                   const char *result_checksum,
+                   svn_checksum_t *base_checksum,
+                   svn_checksum_t *result_checksum,
                    apr_pool_t *pool)
 {
   txdelta_baton_t *tb = apr_pcalloc(pool, sizeof(*tb));
@@ -2509,12 +2487,12 @@ fs_apply_textdelta(svn_txdelta_window_handler_t *contents_p,
   tb->pool = pool;
 
   if (base_checksum)
-    tb->base_checksum = apr_pstrdup(pool, base_checksum);
+    tb->base_checksum = svn_checksum_dup(base_checksum, pool);
   else
     tb->base_checksum = NULL;
 
   if (result_checksum)
-    tb->result_checksum = apr_pstrdup(pool, result_checksum);
+    tb->result_checksum = svn_checksum_dup(result_checksum, pool);
   else
     tb->result_checksum = NULL;
 
@@ -2546,9 +2524,9 @@ struct text_baton_t
   /* The actual fs stream that the returned stream will write to. */
   svn_stream_t *file_stream;
 
-  /* Hex MD5 digest for the final fulltext written to the file.  May
+  /* MD5 digest for the final fulltext written to the file.  May
      be null, in which case ignored. */
-  const char *result_checksum;
+  svn_checksum_t *result_checksum;
 
   /* Pool used by db txns */
   apr_pool_t *pool;
@@ -2589,10 +2567,8 @@ text_stream_closer(void *baton)
   SVN_ERR(svn_stream_close(tb->file_stream));
 
   /* Need to tell fs that we're done sending text */
-  SVN_ERR(svn_fs_fs__dag_finalize_edits(tb->node, tb->result_checksum,
-                                        tb->pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_fs__dag_finalize_edits(tb->node, tb->result_checksum,
+                                       tb->pool);
 }
 
 
@@ -2629,12 +2605,10 @@ apply_text(void *baton, apr_pool_t *pool)
   svn_stream_set_close(tb->stream, text_stream_closer);
 
   /* Make a record of this modification in the changes table. */
-  SVN_ERR(add_change(tb->root->fs, txn_id, tb->path,
-                     svn_fs_fs__dag_get_id(tb->node),
-                     svn_fs_path_change_modify, TRUE, FALSE, SVN_INVALID_REVNUM,
-                     NULL, pool));
-
-  return SVN_NO_ERROR;
+  return add_change(tb->root->fs, txn_id, tb->path,
+                    svn_fs_fs__dag_get_id(tb->node),
+                    svn_fs_path_change_modify, TRUE, FALSE, SVN_INVALID_REVNUM,
+                    NULL, pool);
 }
 
 
@@ -2645,7 +2619,7 @@ static svn_error_t *
 fs_apply_text(svn_stream_t **contents_p,
               svn_fs_root_t *root,
               const char *path,
-              const char *result_checksum,
+              svn_checksum_t *result_checksum,
               apr_pool_t *pool)
 {
   struct text_baton_t *tb = apr_pcalloc(pool, sizeof(*tb));
@@ -2655,7 +2629,7 @@ fs_apply_text(svn_stream_t **contents_p,
   tb->pool = pool;
 
   if (result_checksum)
-    tb->result_checksum = apr_pstrdup(pool, result_checksum);
+    tb->result_checksum = svn_checksum_dup(result_checksum, pool);
   else
     tb->result_checksum = NULL;
 
@@ -2704,10 +2678,8 @@ fs_contents_changed(svn_boolean_t *changed_p,
 
   SVN_ERR(get_dag(&node1, root1, path1, pool));
   SVN_ERR(get_dag(&node2, root2, path2, pool));
-  SVN_ERR(svn_fs_fs__dag_things_different(NULL, changed_p,
-                                          node1, node2, pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_fs__dag_things_different(NULL, changed_p,
+                                         node1, node2, pool);
 }
 
 
@@ -2731,10 +2703,8 @@ fs_get_file_delta_stream(svn_txdelta_stream_t **stream_p,
   SVN_ERR(get_dag(&target_node, target_root, target_path, pool));
 
   /* Create a delta stream that turns the source into the target.  */
-  SVN_ERR(svn_fs_fs__dag_get_file_delta_stream(stream_p, source_node,
-                                               target_node, pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_fs__dag_get_file_delta_stream(stream_p, source_node,
+                                              target_node, pool);
 }
 
 
@@ -3074,9 +3044,15 @@ fs_node_origin_rev(svn_revnum_t *revision,
       {
         svn_pool_clear(subpool);
         SVN_ERR(svn_fs_fs__dag_get_node(&node, fs, pred_id, subpool));
+
+        /* Why not just fetch the predecessor ID in PREDIDPOOL?
+           Because svn_fs_fs__dag_get_predecessor_id() doesn't
+           necessarily honor the passed-in pool, and might return a
+           value cached in the node (which is allocated in
+           SUBPOOL... maybe). */ 
         svn_pool_clear(predidpool);
-        SVN_ERR(svn_fs_fs__dag_get_predecessor_id(&pred_id, node,
-                                                  predidpool));
+        SVN_ERR(svn_fs_fs__dag_get_predecessor_id(&pred_id, node, subpool));
+        pred_id = pred_id ? svn_fs_fs__id_copy(pred_id, predidpool) : NULL;
       }
 
     /* When we get here, NODE should be the first node-revision in our
@@ -3559,10 +3535,9 @@ get_mergeinfo_for_path(svn_mergeinfo_t *mergeinfo,
   if (nearest_ancestor == parent_path)
     {
       /* We can return this directly. */
-      SVN_ERR(svn_mergeinfo_parse(mergeinfo,
-                                  mergeinfo_string->data,
-                                  result_pool));
-      return SVN_NO_ERROR;
+      return svn_mergeinfo_parse(mergeinfo,
+                                 mergeinfo_string->data,
+                                 result_pool);
     }
   else
     {
@@ -3581,13 +3556,12 @@ get_mergeinfo_for_path(svn_mergeinfo_t *mergeinfo,
                                         NULL, SVN_INVALID_REVNUM,
                                         SVN_INVALID_REVNUM, pool));
 
-      SVN_ERR(append_to_merged_froms(mergeinfo,
-                                     temp_mergeinfo,
-                                     parent_path_relpath(parent_path,
-                                                         nearest_ancestor,
-                                                         pool),
-                                     result_pool));
-      return SVN_NO_ERROR;
+      return append_to_merged_froms(mergeinfo,
+                                    temp_mergeinfo,
+                                    parent_path_relpath(parent_path,
+                                                        nearest_ancestor,
+                                                        pool),
+                                    result_pool);
     }
 }
 
@@ -3707,7 +3681,7 @@ static root_vtable_t root_vtable = {
   fs_copy,
   fs_revision_link,
   fs_file_length,
-  fs_file_md5_checksum,
+  fs_file_checksum,
   fs_file_contents,
   fs_make_file,
   fs_apply_textdelta,

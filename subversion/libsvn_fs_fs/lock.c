@@ -16,7 +16,6 @@
  */
 
 
-#include <assert.h>
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_path.h"
@@ -63,10 +62,11 @@ static const char *
 make_digest(const char *str,
             apr_pool_t *pool)
 {
-  unsigned char digest[APR_MD5_DIGESTSIZE];
+  svn_checksum_t *checksum;
 
-  apr_md5(digest, str, strlen(str));
-  return svn_md5_digest_to_cstring_display(digest, pool);
+  svn_checksum(&checksum, svn_checksum_md5, str, strlen(str), pool);
+
+  return svn_checksum_to_cstring_display(checksum, pool);
 }
 
 
@@ -197,7 +197,7 @@ write_digest_file(apr_hash_t *children,
     }
 
   if ((err = svn_hash_write2(hash,
-                             svn_stream_from_aprfile(fd, pool),
+                             svn_stream_from_aprfile2(fd, TRUE, pool),
                              SVN_HASH_TERMINATOR, pool)))
     {
       svn_error_clear(svn_io_file_close(fd, pool));
@@ -209,10 +209,8 @@ write_digest_file(apr_hash_t *children,
 
   SVN_ERR(svn_io_file_close(fd, pool));
   SVN_ERR(svn_io_file_rename(tmp_path, digest_path, pool));
-  SVN_ERR(svn_fs_fs__dup_perms
-          (digest_path, svn_fs_fs__path_rev(fs, 0, pool), pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_fs__dup_perms
+         (digest_path, svn_fs_fs__path_rev(fs, 0, pool), pool);
 }
 
 
@@ -253,7 +251,7 @@ read_digest_file(apr_hash_t **children_p,
 
   hash = apr_hash_make(pool);
   if ((err = svn_hash_read2(hash,
-                            svn_stream_from_aprfile(fd, pool),
+                            svn_stream_from_aprfile2(fd, TRUE, pool),
                             SVN_HASH_TERMINATOR, pool)))
     {
       svn_error_clear(svn_io_file_close(fd, pool));
@@ -807,9 +805,7 @@ unlock_body(void *baton, apr_pool_t *pool)
     }
 
   /* Remove lock and lock token files. */
-  SVN_ERR(delete_lock(ub->fs, lock, pool));
-
-  return SVN_NO_ERROR;
+  return delete_lock(ub->fs, lock, pool);
 }
 
 
@@ -843,9 +839,7 @@ svn_fs_fs__lock(svn_lock_t **lock_p,
   lb.steal_lock = steal_lock;
   lb.pool = pool;
 
-  SVN_ERR(svn_fs_fs__with_write_lock(fs, lock_body, &lb, pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_fs__with_write_lock(fs, lock_body, &lb, pool);
 }
 
 
@@ -883,9 +877,7 @@ svn_fs_fs__unlock(svn_fs_t *fs,
   ub.token = token;
   ub.break_lock = break_lock;
 
-  SVN_ERR(svn_fs_fs__with_write_lock(fs, unlock_body, &ub, pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_fs__with_write_lock(fs, unlock_body, &ub, pool);
 }
 
 

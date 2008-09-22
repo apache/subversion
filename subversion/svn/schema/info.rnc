@@ -9,7 +9,8 @@ info = element info { entry* }
 
 entry =
   element entry {
-    attlist.entry, url?, repository?, wc-info?, commit?, lock?
+    attlist.entry, url?, repository?, wc-info?, commit?, conflict?, lock?, 
+    tree-conflicts?
   }
 attlist.entry &=
   ## Local path.
@@ -41,8 +42,7 @@ wc-info =
     depth?,
     text-updated?,
     prop-updated?,
-    checksum?,
-    conflict?
+    checksum?
   }
 
 schedule =
@@ -85,3 +85,21 @@ prop-file = element prop-file { string }
 
 ## Depth of this directory, always "infinity" for non-directories
 depth = element depth { "infinity" | "immediates" | "files" | "empty" }
+
+tree-conflicts =
+  element tree-conflicts { tree-conflict+ }
+
+tree-conflict =
+  element tree-conflict { attlist.tree-conflict }
+
+attlist.tree-conflict &=
+  ## Local path to the original victim.
+  attribute victim { string },
+  ## Path type.
+  attribute kind { "file" | "dir" },
+  ## Operation causing the tree conflict.
+  attribute operation { "update" | "merge" | "switch" },
+  ## Operation's action on the victim.
+  attribute action { "edited" | "deleted" },
+  ## Local reason for the conflict.
+  attribute reason { "edited" | "deleted" | "missing" }

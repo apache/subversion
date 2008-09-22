@@ -31,7 +31,10 @@
 #include "svn_xml.h"
 #include "svn_pools.h"
 #include "svn_string.h"
+#include "svn_md5.h"
 #include "svn_private_config.h"
+
+#include "private/svn_utf_private.h"
 
 #include "fs-loader.h"
 
@@ -269,8 +272,7 @@ write_fs_type(const char *path, const char *fs_type, apr_pool_t *pool)
   SVN_ERR(svn_io_file_write_full(file, fs_type, strlen(fs_type), NULL,
                                  pool));
   SVN_ERR(svn_io_file_write_full(file, "\n", 1, NULL, pool));
-  SVN_ERR(svn_io_file_close(file, pool));
-  return SVN_NO_ERROR;
+  return svn_io_file_close(file, pool);
 }
 
 
@@ -324,10 +326,37 @@ default_warning_func(void *baton, svn_error_t *err)
   abort();
 }
 
-/* This API is publicly deprecated, but we continue to use it
-   internally to properly allocate svn_fs_t structures. */
-svn_fs_t *
-svn_fs_new(apr_hash_t *fs_config, apr_pool_t *pool)
+/* Check whether PATH is valid for a filesystem, following (most of) the
+ * requirements in svn_fs.h:"Directory entry names and directory paths".
+ *
+ * Return SVN_ERR_FS_PATH_SYNTAX if PATH is not valid.
+ */
+static svn_error_t *
+path_valid(const char *path, apr_pool_t *pool)
+{
+  /* UTF-8 encoded string without NULs. */
+  if (! svn_utf__cstring_is_valid(path))
+    {
+      return svn_error_createf(SVN_ERR_FS_PATH_SYNTAX, NULL,
+                               _("Path '%s' is not in UTF-8"), path);
+    }
+
+  /* No "." or ".." elements. */
+  if (svn_path_is_backpath_present(path)
+      || svn_path_is_dotpath_present(path))
+    {
+      return svn_error_createf(SVN_ERR_FS_PATH_SYNTAX, NULL,
+                               _("Path '%s' contains '.' or '..' element"),
+                               path);
+    }
+
+  /* That's good enough. */
+  return SVN_NO_ERROR;
+}
+
+/* Allocate svn_fs_t structure. */
+static svn_fs_t *
+fs_new(apr_hash_t *fs_config, apr_pool_t *pool)
 {
   svn_fs_t *fs = apr_palloc(pool, sizeof(*fs));
   fs->pool = pool;
@@ -339,6 +368,12 @@ svn_fs_new(apr_hash_t *fs_config, apr_pool_t *pool)
   fs->vtable = NULL;
   fs->fsap_data = NULL;
   return fs;
+}
+
+svn_fs_t *
+svn_fs_new(apr_hash_t *fs_config, apr_pool_t *pool)
+{
+  return fs_new(fs_config, pool);
 }
 
 void
@@ -370,7 +405,7 @@ svn_fs_create(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
   SVN_ERR(write_fs_type(path, fs_type, pool));
 
   /* Perform the actual creation. */
-  *fs_p = svn_fs_new(fs_config, pool);
+  *fs_p = fs_new(fs_config, pool);
   SVN_ERR(acquire_fs_mutex());
   err = vtable->create(*fs_p, path, pool, common_pool);
   err2 = release_fs_mutex();
@@ -391,7 +426,7 @@ svn_fs_open(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
   fs_library_vtable_t *vtable;
 
   SVN_ERR(fs_library_vtable(&vtable, path, pool));
-  *fs_p = svn_fs_new(fs_config, pool);
+  *fs_p = fs_new(fs_config, pool);
   SVN_ERR(acquire_fs_mutex());
   err = vtable->open_fs(*fs_p, path, pool, common_pool);
   err2 = release_fs_mutex();
@@ -412,7 +447,7 @@ svn_fs_upgrade(const char *path, apr_pool_t *pool)
   svn_fs_t *fs;
 
   SVN_ERR(fs_library_vtable(&vtable, path, pool));
-  fs = svn_fs_new(NULL, pool);
+  fs = fs_new(NULL, pool);
   SVN_ERR(acquire_fs_mutex());
   err = vtable->upgrade_fs(fs, path, pool, common_pool);
   err2 = release_fs_mutex();
@@ -449,9 +484,7 @@ svn_fs_hotcopy(const char *src_path, const char *dest_path,
   SVN_ERR(svn_fs_type(&fs_type, src_path, pool));
   SVN_ERR(get_library_vtable(&vtable, fs_type, pool));
   SVN_ERR(vtable->hotcopy(src_path, dest_path, clean, pool));
-  SVN_ERR(write_fs_type(dest_path, fs_type, pool));
-
-  return SVN_NO_ERROR;
+  return write_fs_type(dest_path, fs_type, pool);
 }
 
 svn_error_t *
@@ -465,7 +498,7 @@ svn_fs_recover(const char *path,
   svn_fs_t *fs;
 
   SVN_ERR(fs_library_vtable(&vtable, path, pool));
-  fs = svn_fs_new(NULL, pool);
+  fs = fs_new(NULL, pool);
   SVN_ERR(acquire_fs_mutex());
   err = vtable->open_fs_for_recovery(fs, path, pool, common_pool);
   err2 = release_fs_mutex();
@@ -868,7 +901,7 @@ svn_fs_dir_entries(apr_hash_t **entries_p, svn_fs_root_t *root,
 svn_error_t *
 svn_fs_make_dir(svn_fs_root_t *root, const char *path, apr_pool_t *pool)
 {
-  SVN_ERR(svn_path_check_valid(path, pool));
+  SVN_ERR(path_valid(path, pool));
   return root->vtable->make_dir(root, path, pool);
 }
 
@@ -882,7 +915,7 @@ svn_error_t *
 svn_fs_copy(svn_fs_root_t *from_root, const char *from_path,
             svn_fs_root_t *to_root, const char *to_path, apr_pool_t *pool)
 {
-  SVN_ERR(svn_path_check_valid(to_path, pool));
+  SVN_ERR(path_valid(to_path, pool));
   return to_root->vtable->copy(from_root, from_path, to_root, to_path, pool);
 }
 
@@ -901,10 +934,45 @@ svn_fs_file_length(svn_filesize_t *length_p, svn_fs_root_t *root,
 }
 
 svn_error_t *
-svn_fs_file_md5_checksum(unsigned char digest[], svn_fs_root_t *root,
-                         const char *path, apr_pool_t *pool)
+svn_fs_file_checksum(svn_checksum_t **checksum,
+                     svn_checksum_kind_t kind,
+                     svn_fs_root_t *root,
+                     const char *path,
+                     svn_boolean_t force,
+                     apr_pool_t *pool)
 {
-  return root->vtable->file_md5_checksum(digest, root, path, pool);
+  SVN_ERR(root->vtable->file_checksum(checksum, root, path, pool));
+
+  if (force && (*checksum == NULL || (*checksum)->kind != kind))
+    {
+      svn_stream_t *contents, *checksum_contents;
+
+      SVN_ERR(svn_fs_file_contents(&contents, root, path, pool));
+      checksum_contents = svn_stream_checksummed2(contents, checksum, kind,
+                                                  NULL, svn_checksum_md5,
+                                                  TRUE, pool);
+
+      /* This will force a read of any remaining data (which is all of it in
+         this case) and dump the checksum into checksum->digest. */
+      SVN_ERR(svn_stream_close(checksum_contents));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_file_md5_checksum(unsigned char digest[],
+                         svn_fs_root_t *root,
+                         const char *path,
+                         apr_pool_t *pool)
+{
+  svn_checksum_t *md5sum;
+  
+  SVN_ERR(svn_fs_file_checksum(&md5sum, svn_checksum_md5, root, path, TRUE,
+                               pool));
+  memcpy(digest, md5sum->digest, APR_MD5_DIGESTSIZE);
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -917,7 +985,7 @@ svn_fs_file_contents(svn_stream_t **contents, svn_fs_root_t *root,
 svn_error_t *
 svn_fs_make_file(svn_fs_root_t *root, const char *path, apr_pool_t *pool)
 {
-  SVN_ERR(svn_path_check_valid(path, pool));
+  SVN_ERR(path_valid(path, pool));
   return root->vtable->make_file(root, path, pool);
 }
 
@@ -927,9 +995,17 @@ svn_fs_apply_textdelta(svn_txdelta_window_handler_t *contents_p,
                        const char *path, const char *base_checksum,
                        const char *result_checksum, apr_pool_t *pool)
 {
+  svn_checksum_t *base, *result;
+
+  /* TODO: If we ever rev this API, we should make the supplied checksums
+     svn_checksum_t structs. */
+  SVN_ERR(svn_checksum_parse_hex(&base, svn_checksum_md5, base_checksum,
+                                 pool));
+  SVN_ERR(svn_checksum_parse_hex(&result, svn_checksum_md5, result_checksum,
+                                 pool));
+
   return root->vtable->apply_textdelta(contents_p, contents_baton_p, root,
-                                       path, base_checksum, result_checksum,
-                                       pool);
+                                       path, base, result, pool);
 }
 
 svn_error_t *
@@ -937,8 +1013,14 @@ svn_fs_apply_text(svn_stream_t **contents_p, svn_fs_root_t *root,
                   const char *path, const char *result_checksum,
                   apr_pool_t *pool)
 {
-  return root->vtable->apply_text(contents_p, root, path, result_checksum,
-                                  pool);
+  svn_checksum_t *result;
+
+  /* TODO: If we ever rev this API, we should make the supplied checksum an
+     svn_checksum_t struct. */
+  SVN_ERR(svn_checksum_parse_hex(&result, svn_checksum_md5, result_checksum,
+                                 pool));
+
+  return root->vtable->apply_text(contents_p, root, path, result, pool);
 }
 
 svn_error_t *

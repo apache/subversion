@@ -1510,6 +1510,78 @@ def status_dash_u_type_change(sbox):
                                      [],
                                      "status", "-u")
 
+#----------------------------------------------------------------------
+
+def status_with_tree_conflicts(sbox):
+  "status with tree conflicts" 
+  
+  # Status messages reflecting tree conflict status.
+  # These tests correspond to use cases 1-3 in 
+  # notes/tree-conflicts/use-cases.txt.
+
+  svntest.actions.build_greek_tree_conflicts(sbox)
+  wc_dir = sbox.wc_dir
+  G = os.path.join(wc_dir, 'A', 'D', 'G')
+  pi = os.path.join(G, 'pi')
+  rho = os.path.join(G, 'rho')
+
+  # check status of G
+  expected = svntest.verify.UnorderedOutput(
+         ["C      %s\n" % G,
+          "D      %s\n" % pi,
+          "?      %s\n" % rho,
+          ])
+
+  svntest.actions.run_and_verify_svn(None,
+                                     expected,
+                                     [],
+                                     "status", G)
+
+  # check status of G, with -v
+  expected = svntest.verify.UnorderedOutput(
+         ["C               2        2 jrandom      %s\n" % G,
+          "D               2        2 jrandom      %s\n" % pi,
+          "?                                       %s\n" % rho,
+          ])
+
+  svntest.actions.run_and_verify_svn(None,
+                                     expected,
+                                     [],
+                                     "status", "-v", G)
+
+  # check status of G, with -xml
+  exit_code, output, error = svntest.main.run_svn(None, 'status', G, '--xml')
+
+  template = ["<?xml version=\"1.0\"?>\n",
+              "<status>\n",
+              "<target\n",
+              "   path=\"%s\">\n" % G,
+              "<entry\n",
+              "   path=\"%s\">\n" % G,
+              "<wc-status\n",
+              "   props=\"none\"\n",
+              "   has-tree-conflicted-children=\"true\"\n",  # <-- true!
+              "   item=\"normal\"\n",
+              "   revision=\"2\">\n",
+              "<commit\n",
+              "   revision=\"2\">\n",
+              "<author>%s</author>\n" % svntest.main.wc_author,
+              "<date></date>\n", # will be ignored
+              "</commit>\n",
+              "</wc-status>\n",
+              "</entry>\n",
+             ]
+
+  for i in range(0, len(output)):
+    if output[i].startswith("<date>"):
+      continue # ignore <date>
+    if output[i] == "</entry>\n":
+      break # read only the first entry
+    if output[i] != template[i]:
+      print "ERROR: expected:", template[i], "actual:", output[i]
+      raise svntest.Failure
+
+
 ########################################################################
 # Run the tests
 
@@ -1547,6 +1619,7 @@ test_list = [ None,
               status_depth_local,
               status_depth_update,
               status_dash_u_type_change,
+              status_with_tree_conflicts,
              ]
 
 if __name__ == '__main__':

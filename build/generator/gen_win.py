@@ -50,6 +50,7 @@ class GeneratorBase(gen_base.GeneratorBase):
     self.swig_path = None
     self.vsnet_version = '7.00'
     self.vsnet_proj_ver = '7.00'
+    self.sqlite_path = None
     self.skip_sections = { 'mod_dav_svn': None,
                            'mod_authz_svn': None }
 
@@ -94,6 +95,8 @@ class GeneratorBase(gen_base.GeneratorBase):
         self.zlib_path = val
       elif opt == '--with-swig':
         self.swig_path = val
+      elif opt == '--with-sqlite':
+        self.sqlite_path = val
       elif opt == '--with-sasl':
         self.sasl_path = val
       elif opt == '--with-openssl':
@@ -164,6 +167,12 @@ class WinGeneratorBase(GeneratorBase):
 
     # Initialize parent
     GeneratorBase.__init__(self, fname, verfname, options)
+
+### SQLite is optional for now, so don't perform this check (yet)
+#    if self.sqlite_path is None:
+#      sys.stderr.write('ERROR: SQLite path not specifed. ' + \
+#                       'Use --with-sqlite option.')
+#      sys.exit(1)
 
     if self.bdb_lib is not None:
       sys.stderr.write("Found %s.lib in %s\n" % (self.bdb_lib, self.bdb_path))
@@ -715,7 +724,7 @@ class WinGeneratorBase(GeneratorBase):
         # we don't add the dll to the list.
         if is_lib and dep.msvc_export and not self.disable_shared:
           static_dep = self.graph.get_sources(gen_base.DT_LINK, dep.name)[0]
-          if deps.has_key(static_dep):
+          if static_dep in deps:
             continue
         deps[dep] = dep_kind
 
@@ -839,9 +848,10 @@ class WinGeneratorBase(GeneratorBase):
       if target.lang == "ruby":
         fakeincludes.extend(self.ruby_includes)
 
-    fakeincludes.extend([
-                         self.apath(self.zlib_path),
-                         ])
+    fakeincludes.append(self.apath(self.zlib_path))
+    
+    if self.sqlite_path:
+      fakeincludes.append(self.apath(self.sqlite_path, 'inc'))
 
     if self.sasl_path:
       fakeincludes.append(self.apath(self.sasl_path, 'include'))
@@ -862,6 +872,8 @@ class WinGeneratorBase(GeneratorBase):
                     self.apath(self.neon_path),
                     self.apath(self.zlib_path),
                     ]
+    if self.sqlite_path:
+      fakelibdirs.append(self.apath(self.sqlite_path, "lib"))
     if self.sasl_path:
       fakelibdirs.append(self.apath(self.sasl_path, "lib"))
     if self.serf_lib:
@@ -938,6 +950,9 @@ class WinGeneratorBase(GeneratorBase):
 
       if dep.external_lib == '$(SVN_DB_LIBS)':
         nondeplibs.append(dblib)
+
+      if dep.external_lib == '$(SVN_SQLITE_LIBS)':
+        nondeplibs.append('sqlite3.lib')
 
       if self.neon_lib and dep.external_lib == '$(NEON_LIBS)':
         nondeplibs.append(neonlib)

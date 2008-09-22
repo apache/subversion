@@ -46,6 +46,7 @@ SVN_GNOME_KEYRING_LIBS = @SVN_GNOME_KEYRING_LIBS@
 SVN_KWALLET_LIBS = @SVN_KWALLET_LIBS@
 SVN_SASL_LIBS = @SVN_SASL_LIBS@
 SVN_SERF_LIBS = @SVN_SERF_LIBS@
+SVN_SQLITE_LIBS = @SVN_SQLITE_LIBS@
 SVN_ZLIB_LIBS = @SVN_ZLIB_LIBS@
 
 LIBS = @LIBS@
@@ -65,6 +66,7 @@ includedir = @includedir@
 mandir = @mandir@
 srcdir = @srcdir@
 datadir = @datadir@
+datarootdir = @datarootdir@
 localedir = @localedir@
 
 # where to install libsvn_swig_*
@@ -109,7 +111,8 @@ LT_CXX_LIBADD = @LT_CXX_LIBADD@
 INCLUDES = -I$(top_srcdir)/subversion/include -I$(top_builddir)/subversion \
            @SVN_APR_INCLUDES@ @SVN_APRUTIL_INCLUDES@ @SVN_APR_MEMCACHE_INCLUDES@ \
            @SVN_GNOME_KEYRING_INCLUDES@ @SVN_KWALLET_INCLUDES@ @SVN_NEON_INCLUDES@ \
-           @SVN_SASL_INCLUDES@ @SVN_SERF_INCLUDES@ @SVN_ZLIB_INCLUDES@
+           @SVN_SASL_INCLUDES@ @SVN_SERF_INCLUDES@ @SVN_ZLIB_INCLUDES@ \
+           @SVN_SQLITE_INCLUDES@
 
 APACHE_INCLUDES = @APACHE_INCLUDES@
 APACHE_LIBEXECDIR = $(DESTDIR)@APACHE_LIBEXECDIR@
@@ -328,9 +331,10 @@ fast-clean: doc-clean
 # clean all but bulky test output, returning to before './configure' was run.
 SVN_CONFIG_SCRIPT_FILES = @SVN_CONFIG_SCRIPT_FILES@
 fast-distclean: fast-clean
-	rm -f Makefile config.cache config.log config.nice config.status \
+	rm -fr Makefile config.cache config.log config.nice config.status \
 	libtool mkmf.log subversion/svn_private_config.h \
-              $(SVN_CONFIG_SCRIPT_FILES)
+	subversion/bindings/javahl/classes subversion/bindings/javahl/include \
+	$(SVN_CONFIG_SCRIPT_FILES)
 
 # clean everything out, returning to before './autogen.sh' was run.
 local-extraclean: local-distclean extraclean-swig
@@ -402,10 +406,10 @@ check: bin $(TEST_DEPS) @BDB_TEST_DEPS@
 	  if test "$(PARALLEL)" != ""; then                                  \
 	    flags="--parallel $$flags";                                      \
 	  fi;                                                                \
-	  $(PYTHON) $(top_srcdir)/build/run_tests.py			     \
+	  $(PYTHON) $(top_srcdir)/build/run_tests.py                         \
 	            --config-file $(top_srcdir)/subversion/tests/tests.conf  \
-	            $$flags                 				     \
-		    '$(abs_srcdir)' '$(abs_builddir)' $(TESTS);              \
+	            $$flags                                                  \
+	            '$(abs_srcdir)' '$(abs_builddir)' $(TESTS);              \
 	else                                                                 \
 	  echo "make check: Python 2.2 or greater is required,";             \
 	  echo "            but was not detected during configure";          \

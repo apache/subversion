@@ -2436,9 +2436,7 @@ finish_report(void *report_baton,
     }
 
   /* FIXME subpool */
-  SVN_ERR(report->update_editor->close_edit(report->update_baton, sess->pool));
-
-  return SVN_NO_ERROR;
+  return report->update_editor->close_edit(report->update_baton, sess->pool);
 }
 
 static svn_error_t *

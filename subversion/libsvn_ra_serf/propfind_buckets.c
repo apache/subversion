@@ -172,6 +172,16 @@ static void become_request(serf_bucket_t *bucket)
       serf_bucket_headers_setn(hdrs_bkt, "Label", ctx->label);
     }
 
+  /* These headers need to be sent with every request; see issue #3255
+     ("mod_dav_svn does not pass client capabilities to start-commit
+     hooks") for why.
+
+     ### NOTE ###  If you add more headers here, make the same change
+     in util.c:svn_ra_serf__setup_serf_req(). */
+  serf_bucket_headers_set(hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_DEPTH);
+  serf_bucket_headers_set(hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_MERGEINFO);
+  serf_bucket_headers_set(hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_LOG_REVPROPS);
+
   /* Setup server authorization headers */
   if (ctx->conn->session->auth_protocol)
     ctx->conn->session->auth_protocol->setup_request_func(ctx->conn, hdrs_bkt);

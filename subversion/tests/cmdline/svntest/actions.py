@@ -5,7 +5,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -384,15 +384,25 @@ def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
   actual = tree.build_tree_from_checkout (output)
 
   # Verify actual output against expected output.
-  tree.compare_trees ("output", actual, output_tree)
+  try:
+    tree.compare_trees ("output", actual, output_tree)
+  except tree.SVNTreeUnequal:
+    print "ACTUAL OUTPUT TREE:"
+    tree.dump_tree_script(actual, wc_dir_name + os.sep)
+    raise
 
   # Create a tree by scanning the working copy
   actual = tree.build_tree_from_wc (wc_dir_name)
 
   # Verify expected disk against actual disk.
-  tree.compare_trees ("disk", actual, disk_tree,
-                      singleton_handler_a, a_baton,
-                      singleton_handler_b, b_baton)
+  try:
+    tree.compare_trees ("disk", actual, disk_tree,
+                        singleton_handler_a, a_baton,
+                        singleton_handler_b, b_baton)
+  except tree.SVNTreeUnequal:
+    print "ACTUAL DISK TREE:"
+    tree.dump_tree_script(actual, wc_dir_name + os.sep)
+    raise
 
 
 def run_and_verify_export(URL, export_dir_name, output_tree, disk_tree,
@@ -423,7 +433,12 @@ def run_and_verify_export(URL, export_dir_name, output_tree, disk_tree,
   actual = tree.build_tree_from_checkout (output)
 
   # Verify actual output against expected output.
-  tree.compare_trees ("output", actual, output_tree)
+  try:
+    tree.compare_trees ("output", actual, output_tree)
+  except tree.SVNTreeUnequal:
+    print "ACTUAL OUTPUT TREE:"
+    tree.dump_tree_script(actual, export_dir_name + os.sep)
+    raise
 
   # Create a tree by scanning the working copy.  Don't ignore
   # the .svn directories so that we generate an error if they
@@ -431,9 +446,14 @@ def run_and_verify_export(URL, export_dir_name, output_tree, disk_tree,
   actual = tree.build_tree_from_wc (export_dir_name, ignore_svn=False)
 
   # Verify expected disk against actual disk.
-  tree.compare_trees ("disk", actual, disk_tree,
-                      singleton_handler_a, a_baton,
-                      singleton_handler_b, b_baton)
+  try:
+    tree.compare_trees ("disk", actual, disk_tree,
+                        singleton_handler_a, a_baton,
+                        singleton_handler_b, b_baton)
+  except tree.SVNTreeUnequal:
+    print "ACTUAL DISK TREE:"
+    tree.dump_tree_script(actual, export_dir_name + os.sep)
+    raise
 
 
 # run_and_verify_log_xml
@@ -608,14 +628,24 @@ def verify_update(actual_output, wc_dir_name,
 
   # Verify actual output against expected output.
   if output_tree:
-    tree.compare_trees ("output", actual_output, output_tree)
+    try:
+      tree.compare_trees ("output", actual_output, output_tree)
+    except tree.SVNTreeUnequal:
+      print "ACTUAL OUTPUT TREE:"
+      tree.dump_tree_script(actual_output, wc_dir_name + os.sep)
+      raise
 
   # Create a tree by scanning the working copy, and verify it
   if disk_tree:
     actual_disk = tree.build_tree_from_wc (wc_dir_name, check_props)
-    tree.compare_trees ("disk", actual_disk, disk_tree,
-                        singleton_handler_a, a_baton,
-                        singleton_handler_b, b_baton)
+    try:
+      tree.compare_trees ("disk", actual_disk, disk_tree,
+                          singleton_handler_a, a_baton,
+                          singleton_handler_b, b_baton)
+    except tree.SVNTreeUnequal:
+      print "ACTUAL DISK TREE:"
+      tree.dump_tree_script(actual_disk)
+      raise
 
   # Verify via 'status' command too, if possible.
   if status_tree:
@@ -841,8 +871,13 @@ def run_and_verify_merge2(dir, rev1, rev2, url1, url2,
     raise Failure
 
   myskiptree = tree.build_tree_from_skipped(out)
-  tree.compare_trees("skip", myskiptree, skip_tree,
-                     extra_skip, None, missing_skip, None)
+  try:
+    tree.compare_trees("skip", myskiptree, skip_tree,
+                       extra_skip, None, missing_skip, None)
+  except tree.SVNTreeUnequal:
+    print "ACTUAL SKIP TREE:"
+    tree.dump_tree_script(myskiptree, dir + os.sep)
+    raise
 
   actual = tree.build_tree_from_checkout(out, 0)
   verify_update (actual, dir,
@@ -878,7 +913,7 @@ def run_and_verify_mergeinfo(error_re_string = None,
   if out != expected_output:
     exp_hash = dict.fromkeys(expected_output)
     for rev in out:
-      if exp_hash.has_key(rev):
+      if rev in exp_hash:
         del(exp_hash[rev])
       else:
         extra_out.append(rev)
@@ -1024,6 +1059,8 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_tree,
   except tree.SVNTreeError:
       verify.display_trees("Output of commit is unexpected",
                            "OUTPUT TREE", output_tree, actual)
+      print "ACTUAL OUTPUT TREE:"
+      tree.dump_tree_script(actual, wc_dir_name + os.sep)
       raise
 
   # Verify via 'status' command too, if possible.
@@ -1059,6 +1096,8 @@ def run_and_verify_status(wc_dir_name, output_tree,
                         singleton_handler_b, b_baton)
   except tree.SVNTreeError:
     verify.display_trees(None, 'STATUS OUTPUT TREE', output_tree, actual)
+    print "ACTUAL STATUS TREE:"
+    tree.dump_tree_script(actual, wc_dir_name + os.sep)
     raise
 
 
@@ -1084,12 +1123,14 @@ def run_and_verify_unquiet_status(wc_dir_name, output_tree,
   actual = tree.build_tree_from_status (output)
 
   # Verify actual output against expected output.
-  if (singleton_handler_a or singleton_handler_b):
+  try:
     tree.compare_trees ("output", actual, output_tree,
                         singleton_handler_a, a_baton,
                         singleton_handler_b, b_baton)
-  else:
-    tree.compare_trees ("output", actual, output_tree)
+  except tree.SVNTreeError:
+    print "ACTUAL OUTPUT TREE:"
+    tree.dump_tree_script(actual, wc_dir_name + os.sep)
+    raise
 
 def run_and_verify_diff_summarize_xml(error_re_string = [],
                                       expected_prefix = None,
@@ -1204,6 +1245,8 @@ def run_and_verify_diff_summarize(output_tree, error_re_string = None,
                         singleton_handler_b, b_baton)
   except tree.SVNTreeError:
     verify.display_trees(None, 'DIFF OUTPUT TREE', output_tree, actual)
+    print "ACTUAL DIFF OUTPUT TREE:"
+    tree.dump_tree_script(actual)
     raise
 
 def run_and_validate_lock(path, username):
@@ -1478,3 +1521,706 @@ def make_conflict_marker_text(wc_text, merged_text, merged_rev):
   came)."""
   return "<<<<<<< .working\n" + wc_text + "=======\n" + \
          merged_text + ">>>>>>> .merge-right.r" + str(merged_rev) + "\n"
+
+
+def build_greek_tree_conflicts(sbox):
+  """Create a working copy that has tree-conflict markings.
+  After this function has been called, sbox.wc_dir is a working
+  copy that has specific tree-conflict markings.
+
+  In particular, this does two conflicting sets of edits and performs an
+  update so that tree conflicts appear.
+
+  Note that this function calls sbox.build() because it needs a clean sbox.
+  So, there is no need to call sbox.build() before this.
+
+  The conflicts are the result of an 'update' on the following changes:
+
+                Incoming    Local
+
+    A/D/G/pi    text-mod    del
+    A/D/G/rho   del         text-mod
+    A/D/G/tau   del         del
+
+  This function is useful for testing that tree-conflicts are handled
+  properly once they have appeared, e.g. that commits are blocked, that the
+  info output is correct, etc.
+
+  See also the tree-conflicts tests using deep_trees in various other
+  .py files, and tree_conflict_tests.py.
+  """
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  j = os.path.join
+  G = j(wc_dir, 'A', 'D', 'G')
+  pi = j(G, 'pi')
+  rho = j(G, 'rho')
+  tau = j(G, 'tau')
+
+  # Make incoming changes and "store them away" with a commit.
+  main.file_append(pi, "Incoming edit.\n")
+  main.run_svn(None, 'del', rho)
+  main.run_svn(None, 'del', tau)
+
+  expected_output = wc.State(wc_dir, {
+    'A/D/G/pi'          : Item(verb='Sending'),
+    'A/D/G/rho'         : Item(verb='Deleting'),
+    'A/D/G/tau'         : Item(verb='Deleting'),
+    })
+  expected_status = get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/D/G/pi', wc_rev='2')
+  expected_status.remove('A/D/G/rho', 'A/D/G/tau')
+  run_and_verify_commit(wc_dir, expected_output, expected_status, None,
+                        '-m', 'Incoming changes.', wc_dir )
+
+  # Update back to the pristine state ("time-warp").
+  expected_output = wc.State(wc_dir, {
+    'A/D/G/pi'          : Item(status='U '),
+    'A/D/G/rho'         : Item(status='A '),
+    'A/D/G/tau'         : Item(status='A '),
+    })
+  expected_disk = main.greek_state
+  expected_status = get_virginal_state(wc_dir, 1)
+  run_and_verify_update(wc_dir, expected_output, expected_disk,
+                        expected_status, None, None, None, None, None, False,
+                        '-r', '1', wc_dir)
+
+  # Make local changes
+  main.run_svn(None, 'del', pi)
+  main.file_append(rho, "Local edit.\n")
+  main.run_svn(None, 'del', tau)
+
+  # Update, receiving the incoming changes on top of the local changes,
+  # causing tree conflicts.  Don't check for any particular result: that is
+  # the job of other tests.
+  run_and_verify_svn(None, verify.AnyOutput, [], 'update', wc_dir)
+
+
+def make_deep_trees(base):
+  """Helper function for deep trees conflicts. Create a set of trees,
+  each in its own "container" dir. Any conflicts can be tested separately
+  in each container.
+  """
+  j = os.path.join
+  # Create the container dirs.
+  F   = j(base, 'F')
+  D   = j(base, 'D')
+  DF  = j(base, 'DF')
+  DD  = j(base, 'DD')
+  DDF = j(base, 'DDF')
+  DDD = j(base, 'DDD')
+  os.makedirs(F)
+  os.makedirs(j(D, 'D1'))
+  os.makedirs(j(DF, 'D1'))
+  os.makedirs(j(DD, 'D1', 'D2'))
+  os.makedirs(j(DDF, 'D1', 'D2'))
+  os.makedirs(j(DDD, 'D1', 'D2', 'D3'))
+
+  # Create their files.
+  alpha = j(F, 'alpha')
+  beta  = j(DF, 'D1', 'beta')
+  gamma = j(DDF, 'D1', 'D2', 'gamma')
+  main.file_append(alpha, "This is the file 'alpha'.\n")
+  main.file_append(beta, "This is the file 'beta'.\n")
+  main.file_append(gamma, "This is the file 'gamma'.\n")
+
+
+def add_deep_trees(sbox, base_dir_name):
+  """Prepare a "deep_trees" within a given directory.
+
+  The directory <sbox.wc_dir>/<base_dir_name> is created and a deep_tree
+  is created within. The items are only added, a commit has to be
+  called separately, if needed.
+
+  <base_dir_name> will thus be a container for the set of containers
+  mentioned in make_deep_trees().
+  """
+  j = os.path.join
+  base = j(sbox.wc_dir, base_dir_name)
+  make_deep_trees(base)
+  main.run_svn(None, 'add', base)
+
+
+Item = wc.StateItem
+
+# initial deep trees state
+deep_trees_virginal_state = wc.State('', {
+  'F'               : Item(),
+  'F/alpha'         : Item("This is the file 'alpha'.\n"),
+  'D'               : Item(),
+  'D/D1'            : Item(),
+  'DF'              : Item(),
+  'DF/D1'           : Item(),
+  'DF/D1/beta'      : Item("This is the file 'beta'.\n"),
+  'DD'              : Item(),
+  'DD/D1'           : Item(),
+  'DD/D1/D2'        : Item(),
+  'DDF'             : Item(),
+  'DDF/D1'          : Item(),
+  'DDF/D1/D2'       : Item(),
+  'DDF/D1/D2/gamma' : Item("This is the file 'gamma'.\n"),
+  'DDD'             : Item(),
+  'DDD/D1'          : Item(),
+  'DDD/D1/D2'       : Item(),
+  'DDD/D1/D2/D3'    : Item(),
+  })
+
+
+# Many actions on deep trees and their resulting states...
+
+def deep_trees_leaf_edit(base):
+  """Helper function for deep trees test cases. Append text to files,
+  create new files in empty directories."""
+  j = os.path.join
+  F   = j(base, 'F', 'alpha')
+  DF  = j(base, 'DF', 'D1', 'beta')
+  DDF = j(base, 'DDF', 'D1', 'D2', 'gamma')
+  main.file_append(F, "More text for file alpha.\n")
+  main.file_append(DF, "More text for file beta.\n")
+  main.file_append(DDF, "More text for file gamma.\n")
+
+  D   = j(base, 'D', 'D1', 'delta')
+  DD  = j(base, 'DD', 'D1', 'D2', 'epsilon')
+  DDD = j(base, 'DDD', 'D1', 'D2', 'D3', 'zeta')
+  main.file_append(D, "This is the file 'delta'.\n")
+  main.file_append(DD, "This is the file 'epsilon'.\n")
+  main.file_append(DDD, "This is the file 'zeta'.\n")
+  main.run_svn(None, 'add', D, DD, DDD)
+
+# deep trees state after a call to deep_trees_leaf_edit
+deep_trees_after_leaf_edit = wc.State('', {
+  'F'                 : Item(),
+  'F/alpha'           : Item("This is the file 'alpha'.\nMore text for file alpha.\n"),
+  'D'                 : Item(),
+  'D/D1'              : Item(),
+  'D/D1/delta'        : Item("This is the file 'delta'.\n"),
+  'DF'                : Item(),
+  'DF/D1'             : Item(),
+  'DF/D1/beta'        : Item("This is the file 'beta'.\nMore text for file beta.\n"),
+  'DD'                : Item(),
+  'DD/D1'             : Item(),
+  'DD/D1/D2'          : Item(),
+  'DD/D1/D2/epsilon'  : Item("This is the file 'epsilon'.\n"),
+  'DDF'               : Item(),
+  'DDF/D1'            : Item(),
+  'DDF/D1/D2'         : Item(),
+  'DDF/D1/D2/gamma'   : Item("This is the file 'gamma'.\nMore text for file gamma.\n"),
+  'DDD'               : Item(),
+  'DDD/D1'            : Item(),
+  'DDD/D1/D2'         : Item(),
+  'DDD/D1/D2/D3'      : Item(),
+  'DDD/D1/D2/D3/zeta' : Item("This is the file 'zeta'.\n"),
+  })
+
+
+def deep_trees_leaf_del(base):
+  """Helper function for deep trees test cases. Delete files and empty
+  dirs."""
+  j = os.path.join
+  F   = j(base, 'F', 'alpha')
+  D   = j(base, 'D', 'D1')
+  DF  = j(base, 'DF', 'D1', 'beta')
+  DD  = j(base, 'DD', 'D1', 'D2')
+  DDF = j(base, 'DDF', 'D1', 'D2', 'gamma')
+  DDD = j(base, 'DDD', 'D1', 'D2', 'D3')
+  main.run_svn(None, 'rm', F, D, DF, DD, DDF, DDD)
+
+# deep trees state after a call to deep_trees_leaf_del
+deep_trees_after_leaf_del = wc.State('', {
+  'F'               : Item(),
+  'D'               : Item(),
+  'DF'              : Item(),
+  'DF/D1'           : Item(),
+  'DD'              : Item(),
+  'DD/D1'           : Item(),
+  'DDF'             : Item(),
+  'DDF/D1'          : Item(),
+  'DDF/D1/D2'       : Item(),
+  'DDD'             : Item(),
+  'DDD/D1'          : Item(),
+  'DDD/D1/D2'       : Item(),
+  })
+
+
+def deep_trees_tree_del(base):
+  """Helper function for deep trees test cases.  Delete top-level dirs."""
+  j = os.path.join
+  F   = j(base, 'F', 'alpha')
+  D   = j(base, 'D', 'D1')
+  DF  = j(base, 'DF', 'D1')
+  DD  = j(base, 'DD', 'D1')
+  DDF = j(base, 'DDF', 'D1')
+  DDD = j(base, 'DDD', 'D1')
+  main.run_svn(None, 'rm', F, D, DF, DD, DDF, DDD)
+
+# deep trees state after a call to deep_trees_tree_del
+deep_trees_after_tree_del = wc.State('', {
+  'F'                 : Item(),
+  'D'                 : Item(),
+  'DF'                : Item(),
+  'DD'                : Item(),
+  'DDF'               : Item(),
+  'DDD'               : Item(),
+  })
+
+
+
+
+class DeepTreesTestCase:
+  """Describes one tree-conflicts test case.
+  See deep_trees_run_tests_scheme_for_update(), ..._switch(), ..._merge().
+  
+  The name field is the subdirectory name in which the test should be run.
+
+  The local_action and incoming_action are the functions to run
+  to construct the local changes and incoming changes, respectively.
+  See deep_trees_leaf_edit, deep_trees_tree_del, etc.
+
+  The expected_* and error_re_string arguments are described in functions
+  run_and_verify_[update|switch|merge]
+
+  Note: expected_skip is only used in merge, i.e. using
+  deep_trees_run_tests_scheme_for_merge.
+  """
+
+  def __init__(self, name, local_action, incoming_action,
+                expected_output = None, expected_disk = None,
+                expected_status = None, expected_skip = None,
+                error_re_string = None):
+    self.name = name
+    self.local_action = local_action
+    self.incoming_action = incoming_action
+    self.expected_output = expected_output
+    self.expected_disk = expected_disk
+    self.expected_status = expected_status
+    self.expected_skip = expected_skip
+    self.error_re_string = error_re_string
+
+
+
+def deep_trees_run_tests_scheme_for_update(sbox, greater_scheme):
+  """
+  Runs a given list of tests for conflicts occuring at an update operation.
+
+  This function wants to save time and perform a number of different
+  test cases using just a single repository and performing just one commit
+  for all test cases instead of one for each test case.
+
+   1) Each test case is initialized in a separate subdir. Each subdir
+      again contains one set of "deep_trees", being separate container
+      dirs for different depths of trees (F, D, DF, DD, DDF, DDD).
+
+   2) A commit is performed across all test cases and depths.
+      (our initial state, -r2)
+
+   3) In each test case subdir (e.g. "local_tree_del_incoming_leaf_edit"),
+      its *incoming* action is performed (e.g. "deep_trees_leaf_edit"), in
+      each of the different depth trees (F, D, DF, ... DDD).
+
+   4) A commit is performed across all test cases and depths:
+      our "incoming" state is "stored away in the repository for now",
+      -r3.
+
+   5) All test case dirs and contained deep_trees are time-warped
+      (updated) back to -r2, the initial state containing deep_trees.
+
+   6) In each test case subdir (e.g. "local_tree_del_incoming_leaf_edit"),
+      its *local* action is performed (e.g. "deep_trees_leaf_del"), in
+      each of the different depth trees (F, D, DF, ... DDD).
+
+   7) An update to -r3 is performed across all test cases and depths.
+      This causes tree-conflicts between the "local" state in the working
+      copy and the "incoming" state from the repository, -r3.
+
+  The sbox parameter is just the sbox passed to a test function. No need
+  to call sbox.build(), since it is called (once) within this function.
+
+  The "table" greater_scheme models all of the different test cases
+  that should be run using a single repository.
+
+  greater_scheme is a list of DeepTreesTestCase items, which define complete
+  test setups, so that they can be performed as described above.
+  """
+
+  j = os.path.join
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+
+  # 1) create directories
+
+  for test_case in greater_scheme:
+    try:
+      add_deep_trees(sbox, test_case.name)
+    except:
+      print "ERROR IN: Tests scheme for update: " \
+          + "while setting up deep trees in '%s'" % test_case.name
+      raise
+
+
+  # 2) commit initial state
+
+  main.run_svn(None, 'commit', '-m', 'initial state', wc_dir)
+
+  
+  # 3) apply incoming changes
+
+  for test_case in greater_scheme:
+    try:
+      test_case.incoming_action(j(sbox.wc_dir, test_case.name))
+    except:
+      print "ERROR IN: Tests scheme for update: " \
+          + "while performing incoming action in '%s'" % test_case.name
+      raise
+
+
+  # 4) commit incoming changes
+
+  main.run_svn(None, 'commit', '-m', 'incoming changes', wc_dir)
+
+
+  # 5) time-warp back to -r2
+
+  main.run_svn(None, 'update', '-r2', wc_dir)
+
+
+  # 6) apply local changes
+
+  for test_case in greater_scheme:
+    try:
+      test_case.local_action(j(wc_dir, test_case.name))
+    except:
+      print "ERROR IN: Tests scheme for update: " \
+          + "while performing local action in '%s'" % test_case.name
+      raise
+
+
+  # 7) update to -r3, conflicting with incoming changes.
+  #    A lot of different things are expected.
+  #    Do separate update operations for each test case.
+
+  for test_case in greater_scheme:
+    try:
+      base = j(wc_dir, test_case.name)
+
+      x_out = test_case.expected_output
+      if x_out != None:
+        x_out = x_out.copy()
+        x_out.wc_dir = base
+
+      x_disk = test_case.expected_disk
+      
+      x_status = test_case.expected_status
+      if x_status != None:
+        x_status.copy()
+        x_status.wc_dir = base
+
+      run_and_verify_update(base, x_out, x_disk, x_status,
+                            error_re_string = test_case.error_re_string)
+    except:
+      print "ERROR IN: Tests scheme for update: " \
+          + "while verifying in '%s'" % test_case.name
+      raise
+
+
+
+def deep_trees_run_tests_scheme_for_switch(sbox, greater_scheme):
+  """
+  Runs a given list of tests for conflicts occuring at a switch operation.
+
+  This function wants to save time and perform a number of different
+  test cases using just a single repository and performing just one commit
+  for all test cases instead of one for each test case.
+
+   1) Each test case is initialized in a separate subdir. Each subdir
+      again contains two subdirs: one "local" and one "incoming" for
+      the switch operation. These contain a set of deep_trees each.
+
+   2) A commit is performed across all test cases and depths.
+      (our initial state, -r2)
+
+   3) In each test case subdir's incoming subdir, the
+      incoming actions are performed.
+
+   4) A commit is performed across all test cases and depths. (-r3)
+
+   5) In each test case subdir's local subdir, the local actions are
+      performed. They remain uncommitted in the working copy.
+
+   6) In each test case subdir's local dir, a switch is performed to its
+      corresponding incoming dir.
+      This causes conflicts between the "local" state in the working
+      copy and the "incoming" state from the incoming subdir (still -r3).
+
+  The sbox parameter is just the sbox passed to a test function. No need
+  to call sbox.build(), since it is called (once) within this function.
+
+  The "table" greater_scheme models all of the different test cases
+  that should be run using a single repository.
+
+  greater_scheme is a list of DeepTreesTestCase items, which define complete
+  test setups, so that they can be performed as described above.
+  """
+
+  j = os.path.join
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  
+  # 1) Create directories.
+
+  for test_case in greater_scheme:
+    try:
+      base = j(sbox.wc_dir, test_case.name)
+      os.makedirs(base)
+      make_deep_trees(j(base, "local"))
+      make_deep_trees(j(base, "incoming"))
+      main.run_svn(None, 'add', base)
+    except:
+      print "ERROR IN: Tests scheme for switch: " \
+          + "while setting up deep trees in '%s'" % test_case.name
+      raise
+
+
+  # 2) Commit initial state (-r2).
+
+  main.run_svn(None, 'commit', '-m', 'initial state', wc_dir)
+
+  
+  # 3) Apply incoming changes
+
+  for test_case in greater_scheme:
+    try:
+      test_case.incoming_action(j(sbox.wc_dir, test_case.name, "incoming"))
+    except:
+      print "ERROR IN: Tests scheme for switch: " \
+          + "while performing incoming action in '%s'" % test_case.name
+      raise
+
+
+  # 4) Commit all changes (-r3).
+
+  main.run_svn(None, 'commit', '-m', 'incoming changes', wc_dir)
+
+
+  # 5) Apply local changes in their according subdirs.
+
+  for test_case in greater_scheme:
+    try:
+      test_case.local_action(j(sbox.wc_dir, test_case.name, "local"))
+    except:
+      print "ERROR IN: Tests scheme for switch: " \
+          + "while performing local action in '%s'" % test_case.name
+      raise
+
+
+  # 6) switch the local dir to the incoming url, conflicting with incoming
+  #    changes. A lot of different things are expected.
+  #    Do separate switch operations for each test case.
+
+  for test_case in greater_scheme:
+    try:
+      local = j(wc_dir, test_case.name, "local")
+      incoming = sbox.repo_url + "/" + test_case.name + "/incoming"
+
+      x_out = test_case.expected_output
+      if x_out != None:
+        x_out = x_out.copy()
+        x_out.wc_dir = local
+
+      x_disk = test_case.expected_disk
+      
+      x_status = test_case.expected_status
+      if x_status != None:
+        x_status.copy()
+        x_status.wc_dir = local
+
+      run_and_verify_switch(local, local, incoming, x_out, x_disk, x_status,
+                            error_re_string = test_case.error_re_string)
+    except:
+      print "ERROR IN: Tests scheme for switch: " \
+          + "while verifying in '%s'" % test_case.name
+      raise
+
+
+def deep_trees_run_tests_scheme_for_merge(sbox, greater_scheme,
+                                          do_commit_local_changes):
+  """
+  Runs a given list of tests for conflicts occuring at a merge operation.
+
+  This function wants to save time and perform a number of different
+  test cases using just a single repository and performing just one commit
+  for all test cases instead of one for each test case.
+
+   1) Each test case is initialized in a separate subdir. Each subdir
+      initially contains another subdir, called "incoming", which
+      contains a set of deep_trees.
+
+   2) A commit is performed across all test cases and depths.
+      (a pre-initial state)
+
+   3) In each test case subdir, the "incoming" subdir is copied to "local",
+      via the `svn copy' command. Each test case's subdir now has two sub-
+      dirs: "local" and "incoming", initial states for the merge operation.
+
+   4) An update is performed across all test cases and depths, so that the
+      copies made in 3) are pulled into the wc.
+
+   5) In each test case's "incoming" subdir, the incoming action is
+      performed.
+
+   6) A commit is performed across all test cases and depths, to commit
+      the incoming changes.
+      If do_commit_local_changes is True, this becomes step 7 (swap steps).
+
+   7) In each test case's "local" subdir, the local_action is performed.
+      If do_commit_local_changes is True, this becomes step 6 (swap steps).
+      Then, in effect, the local changes are committed as well.
+
+   8) In each test case subdir, the "incoming" subdir is merged into the
+      "local" subdir.
+      This causes conflicts between the "local" state in the working
+      copy and the "incoming" state from the incoming subdir.
+
+  The sbox parameter is just the sbox passed to a test function. No need
+  to call sbox.build(), since it is called (once) within this function.
+
+  The "table" greater_scheme models all of the different test cases
+  that should be run using a single repository.
+
+  greater_scheme is a list of DeepTreesTestCase items, which define complete
+  test setups, so that they can be performed as described above.
+  """
+
+  j = os.path.join
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # 1) Create directories.
+  for test_case in greater_scheme:
+    try:
+      base = j(sbox.wc_dir, test_case.name)
+      os.makedirs(base)
+      make_deep_trees(j(base, "incoming"))
+      main.run_svn(None, 'add', base)
+    except:
+      print "ERROR IN: Tests scheme for merge: " \
+          + "while setting up deep trees in '%s'" % test_case.name
+      raise
+
+
+  # 2) Commit pre-initial state (-r2).
+
+  main.run_svn(None, 'commit', '-m', 'pre-initial state', wc_dir)
+
+  
+  # 3) Copy "incoming" to "local".
+
+  for test_case in greater_scheme:
+    try:
+      base_url = sbox.repo_url + "/" + test_case.name
+      incoming_url = base_url + "/incoming"
+      local_url = base_url + "/local"
+      main.run_svn(None, 'cp', incoming_url, local_url, '-m',
+                   'copy incoming to local')
+    except:
+      print "ERROR IN: Tests scheme for merge: " \
+          + "while copying deep trees in '%s'" % test_case.name
+      raise
+
+  # 4) Update to load all of the "/local" subdirs into the working copies.
+
+  try:
+    main.run_svn(None, 'up', sbox.wc_dir)
+  except:
+    print "ERROR IN: Tests scheme for merge: " \
+          + "while updating local subdirs"
+    raise
+
+
+  # 5) Perform incoming actions
+  
+  for test_case in greater_scheme:
+    try:
+      test_case.incoming_action(j(sbox.wc_dir, test_case.name, "incoming"))
+    except:
+      print "ERROR IN: Tests scheme for merge: " \
+          + "while performing incoming action in '%s'" % test_case.name
+      raise
+
+
+  # 6) or 7) Commit all incoming actions
+
+  if not do_commit_local_changes:
+    try:
+      main.run_svn(None, 'ci', '-m', 'Committing incoming actions',
+                   sbox.wc_dir)
+    except:
+      print "ERROR IN: Tests scheme for merge: " \
+          + "while committing incoming actions"
+      raise
+
+
+  # 7) or 6) Perform all local actions.
+  
+  for test_case in greater_scheme:
+    try:
+      test_case.local_action(j(sbox.wc_dir, test_case.name, "local"))
+    except:
+      print "ERROR IN: Tests scheme for merge: " \
+          + "while performing local action in '%s'" % test_case.name
+      raise
+  
+
+  # 6) or 7) Commit all incoming actions
+
+  if do_commit_local_changes:
+    try:
+      main.run_svn(None, 'ci', '-m', 'Committing incoming and local actions', 
+                   sbox.wc_dir)
+    except:
+      print "ERROR IN: Tests scheme for merge: " \
+          + "while committing incoming and local actions"
+      raise
+
+
+  # 8) Merge all "incoming" subdirs to their respective "local" subdirs.
+  #    This creates conflicts between the local changes in the "local" wc
+  #    subdirs and the incoming states committed in the "incoming" subdirs.
+
+  for test_case in greater_scheme:
+    try:
+      local = j(sbox.wc_dir, test_case.name, "local")
+      incoming = sbox.repo_url + "/" + test_case.name + "/incoming"
+
+      x_out = test_case.expected_output
+      if x_out != None:
+        x_out = x_out.copy()
+        x_out.wc_dir = local
+
+      x_disk = test_case.expected_disk
+      
+      x_status = test_case.expected_status
+      if x_status != None:
+        x_status.copy()
+        x_status.wc_dir = local
+
+      x_skip = test_case.expected_skip
+      if x_skip != None:
+        x_skip.copy()
+        x_skip.wc_dir = local
+
+      run_and_verify_merge(local, None, None, incoming,
+                           x_out, x_disk, x_status, x_skip,
+                           error_re_string = test_case.error_re_string,
+                           dry_run = False)
+    except:
+      print "ERROR IN: Tests scheme for merge: " \
+          + "while verifying in '%s'" % test_case.name
+      raise
+
+

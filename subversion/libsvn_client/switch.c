@@ -2,7 +2,7 @@
  * switch.c:  implement 'switch' feature via WC & RA interfaces.
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -21,8 +21,6 @@
 
 
 /*** Includes. ***/
-
-#include <assert.h>
 
 #include "svn_client.h"
 #include "svn_error.h"
@@ -57,6 +55,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                             const char *switch_url,
                             const svn_opt_revision_t *peg_revision,
                             const svn_opt_revision_t *revision,
+                            svn_wc_adm_access_t *adm_access,
                             svn_depth_t depth,
                             svn_boolean_t depth_is_sticky,
                             svn_boolean_t *timestamp_sleep,
@@ -72,7 +71,8 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   svn_ra_session_t *ra_session;
   svn_revnum_t revnum;
   svn_error_t *err = SVN_NO_ERROR;
-  svn_wc_adm_access_t *adm_access, *dir_access;
+  svn_wc_adm_access_t *dir_access;
+  const svn_boolean_t close_adm_access = ! adm_access;
   const char *diff3_cmd;
   svn_boolean_t use_commit_times;
   svn_boolean_t sleep_here;
@@ -115,10 +115,31 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
 
   /* ### Need to lock the whole target tree to invalidate wcprops. Does
      non-recursive switch really need to invalidate the whole tree? */
-  SVN_ERR(svn_wc_adm_open_anchor(&adm_access, &dir_access, &target, path,
-                                 TRUE, -1, ctx->cancel_func,
-                                 ctx->cancel_baton, pool));
-  anchor = svn_wc_adm_access_path(adm_access);
+  if (adm_access)
+    {
+      svn_wc_adm_access_t *a = adm_access;
+      const char *dir_access_path;
+
+      /* This is a little hacky, but open two new read-only access
+         baton's to get the anchor and target access batons that would
+         be used if a locked access baton was not available. */
+      SVN_ERR(svn_wc_adm_open_anchor(&adm_access, &dir_access, &target, path,
+                                     FALSE, -1, ctx->cancel_func,
+                                     ctx->cancel_baton, pool));
+      anchor = svn_wc_adm_access_path(adm_access);
+      dir_access_path = svn_wc_adm_access_path(dir_access);
+      SVN_ERR(svn_wc_adm_close(adm_access));
+
+      SVN_ERR(svn_wc_adm_retrieve(&adm_access, a, anchor, pool));
+      SVN_ERR(svn_wc_adm_retrieve(&dir_access, a, dir_access_path, pool));
+    }
+  else
+    {
+      SVN_ERR(svn_wc_adm_open_anchor(&adm_access, &dir_access, &target, path,
+                                     TRUE, -1, ctx->cancel_func,
+                                     ctx->cancel_baton, pool));
+      anchor = svn_wc_adm_access_path(adm_access);
+    }
 
   SVN_ERR(svn_wc__entry_versioned(&entry, anchor, adm_access, FALSE, pool));
   if (! entry->url)
@@ -195,9 +216,9 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
      handling external items (and any errors therefrom) doesn't delay
      the primary operation. */
   if (SVN_DEPTH_IS_RECURSIVE(depth) && (! ignore_externals))
-    err = svn_client__handle_externals(traversal_info, switch_url, path,
-                                       source_root, depth, FALSE, use_sleep,
-                                       ctx, pool);
+    err = svn_client__handle_externals(adm_access, traversal_info, switch_url,
+                                       path, source_root, depth,
+                                       use_sleep, ctx, pool);
 
   /* Sleep to ensure timestamp integrity (we do this regardless of
      errors in the actual switch operation(s)). */
@@ -208,7 +229,8 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   if (err)
     return err;
 
-  SVN_ERR(svn_wc_adm_close(adm_access));
+  if (close_adm_access)
+    SVN_ERR(svn_wc_adm_close(adm_access));
 
   /* Let everyone know we're finished here. */
   if (ctx->notify_func2)
@@ -244,7 +266,7 @@ svn_client_switch2(svn_revnum_t *result_rev,
                    apr_pool_t *pool)
 {
   return svn_client__switch_internal(result_rev, path, switch_url,
-                                     peg_revision, revision, depth,
+                                     peg_revision, revision, NULL, depth,
                                      depth_is_sticky, NULL, ignore_externals,
                                      allow_unver_obstructions, ctx, pool);
 }
@@ -261,7 +283,7 @@ svn_client_switch(svn_revnum_t *result_rev,
   svn_opt_revision_t peg_revision;
   peg_revision.kind = svn_opt_revision_unspecified;
   return svn_client__switch_internal(result_rev, path, switch_url,
-                                     &peg_revision, revision,
+                                     &peg_revision, revision, NULL,
                                      SVN_DEPTH_INFINITY_OR_FILES(recurse),
                                      FALSE, NULL, FALSE, FALSE, ctx, pool);
 }

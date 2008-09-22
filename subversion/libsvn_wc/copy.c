@@ -316,8 +316,15 @@ get_copyfrom_url_rev_via_parent(const char *src_path,
                                 svn_wc_adm_access_t *src_access,
                                 apr_pool_t *pool)
 {
-  const char *parent_path = svn_path_dirname(src_path, pool);
-  const char *rest = svn_path_basename(src_path, pool);
+  const char *parent_path;
+  const char *rest;
+  const char *abs_src_path;
+
+  SVN_ERR(svn_path_get_absolute(&abs_src_path, src_path, pool));
+
+  parent_path = svn_path_dirname(abs_src_path, pool);
+  rest = svn_path_basename(abs_src_path, pool);
+
   *copyfrom_url = NULL;
 
   while (! *copyfrom_url)
@@ -353,9 +360,25 @@ get_copyfrom_url_rev_via_parent(const char *src_path,
         }
       else
         {
+          const char *last_parent_path = parent_path;
+
           rest = svn_path_join(svn_path_basename(parent_path, pool),
                                rest, pool);
           parent_path = svn_path_dirname(parent_path, pool);
+
+          if (strcmp(parent_path, last_parent_path) == 0)
+            {
+              /* If this happens, it probably means that parent_path is "".
+                 But there's no reason to limit ourselves to just that case;
+                 given everything else that's going on in this function, a
+                 strcmp() is pretty cheap, and the result we're trying to
+                 prevent is an infinite loop if svn_path_dirname() returns
+                 its input unchanged. */
+              return svn_error_createf
+                (SVN_ERR_WC_COPYFROM_PATH_NOT_FOUND, NULL,
+                 _("no parent with copyfrom information found above '%s'"),
+                 svn_path_local_style(src_path, pool));
+            }
         }
     }
 
@@ -454,9 +477,9 @@ copy_file_administratively(const char *src_path,
   SVN_ERR(svn_wc_entry(&dst_entry, dst_path, dst_parent, FALSE, pool));
   if (dst_entry && dst_entry->schedule != svn_wc_schedule_delete)
     {
-        return svn_error_createf(SVN_ERR_ENTRY_EXISTS, NULL,
-                                 _("There is already a versioned item '%s'"),
-                                 svn_path_local_style(dst_path, pool));
+      return svn_error_createf(SVN_ERR_ENTRY_EXISTS, NULL,
+                               _("There is already a versioned item '%s'"),
+                               svn_path_local_style(dst_path, pool));
     }
 
   /* Sanity check 1: You cannot make a copy of something that's not
@@ -565,9 +588,6 @@ post_copy_cleanup(svn_wc_adm_access_t *adm_access,
 
   /* Remove wcprops. */
   SVN_ERR(svn_wc__props_delete(path, svn_wc__props_wcprop, adm_access, pool));
-
-  /* Read this directory's entries file. */
-  SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, pool));
 
   /* Because svn_io_copy_dir_recursively() doesn't copy directory
      permissions, we'll patch up our tree's .svn subdirs to be
@@ -798,13 +818,11 @@ copy_dir_administratively(const char *src_path,
 
     SVN_ERR(svn_wc_adm_close(adm_access));
 
-    SVN_ERR(svn_wc_add3(dst_path, dst_parent, svn_depth_infinity,
-                        copyfrom_url, copyfrom_rev,
-                        cancel_func, cancel_baton,
-                        notify_copied, notify_baton, pool));
+    return svn_wc_add3(dst_path, dst_parent, svn_depth_infinity,
+                       copyfrom_url, copyfrom_rev,
+                       cancel_func, cancel_baton,
+                       notify_copied, notify_baton, pool);
   }
-
-  return SVN_NO_ERROR;
 }
 
 
@@ -893,10 +911,7 @@ svn_wc_copy2(const char *src_path,
         }
     }
 
-  SVN_ERR(svn_wc_adm_close(adm_access));
-
-
-  return SVN_NO_ERROR;
+  return svn_wc_adm_close(adm_access);
 }
 
 

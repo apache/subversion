@@ -890,7 +890,7 @@ II.   INSTALLATION
         SDK documentation:
 
        "To register the SDK bin, include, and library directories with
-        Microsoft Visual Studio® version 6.0 and Visual Studio .NET,
+        Microsoft Visual StudioÂ® version 6.0 and Visual Studio .NET,
         click Start, point to All Programs, point to Microsoft Platform
         SDK February 2003, point to Visual Studio Registration, and then
         click Register PSDK Directories with Visual Studio. This

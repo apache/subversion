@@ -2,7 +2,7 @@
  * wc.h :  shared stuff internal to the svn_wc library.
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -69,9 +69,12 @@ extern "C" {
  * The change from 8 to 9 was the addition of changelists, keep-local,
  * and sticky depth (for selective/sparse checkouts).
  *
+ * The change from 9 to 10 was the addition of tree-conflicts and file
+ * externals.
+ *
  * Please document any further format changes here.
  */
-#define SVN_WC__VERSION       9
+#define SVN_WC__VERSION       10
 
 /* A version <= this doesn't have property caching in the entries file. */
 #define SVN_WC__NO_PROPCACHING_VERSION 5

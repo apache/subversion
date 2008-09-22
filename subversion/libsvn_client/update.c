@@ -22,8 +22,6 @@
 
 /*** Includes. ***/
 
-#include <assert.h>
-
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_error.h"
@@ -71,9 +69,8 @@ file_fetcher(void *baton,
                                                  NULL, NULL, NULL,
                                                  FALSE, TRUE,
                                                  ffb->ctx, ffb->pool));
-  SVN_ERR(svn_ra_get_file(ffb->session, path, revision, stream,
-                          fetched_rev, props, pool));
-  return SVN_NO_ERROR;
+  return svn_ra_get_file(ffb->session, path, revision, stream,
+                         fetched_rev, props, pool);
 }
 
 
@@ -254,12 +251,12 @@ svn_client__update_internal(svn_revnum_t *result_rev,
      handling external items (and any errors therefrom) doesn't delay
      the primary operation.  */
   if (SVN_DEPTH_IS_RECURSIVE(depth) && (! ignore_externals))
-    SVN_ERR(svn_client__handle_externals(traversal_info,
+    SVN_ERR(svn_client__handle_externals(adm_access,
+                                         traversal_info,
                                          entry->url,
                                          anchor,
                                          repos_root,
                                          depth,
-                                         TRUE, /* update unchanged ones */
                                          use_sleep, ctx, pool));
 
   if (sleep_here)

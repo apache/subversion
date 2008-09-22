@@ -20,7 +20,6 @@
 
 #include <stdlib.h>
 #include <limits.h>
-#include <assert.h>
 #include <apr_version.h>
 #include <apr_pools.h>
 #include <apr_hash.h>
@@ -277,7 +276,7 @@ svn_hash_write_incremental(apr_hash_t *hash, apr_hash_t *oldhash,
 svn_error_t *
 svn_hash_write(apr_hash_t *hash, apr_file_t *destfile, apr_pool_t *pool)
 {
-  return hash_write(hash, NULL, svn_stream_from_aprfile(destfile, pool),
+  return hash_write(hash, NULL, svn_stream_from_aprfile2(destfile, TRUE, pool),
                     SVN_HASH_TERMINATOR, pool);
 }
 

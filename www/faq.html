@@ -197,9 +197,6 @@ a <tt>file:</tt> URL?</a></li>
 <li><a href="#http-301-error">I can see my repository in a web browser, but
     'svn checkout' gives me an error about "301 Moved Permanently".
     What's wrong?</a></li>
-<li><a href="#no-copy-history">I'm trying to look at an old version of my
-    file, but svn says something about "path not found".  What's going
-    on?</a></li> 
 <li><a href="#digest-auth">Why doesn't HTTP Digest auth work?</a></li>
 <li><a href="#xlc-compile">Compiling with xlc on AIX, I get compilation
     errors.  What's wrong?</a></li>
@@ -494,23 +491,42 @@ there.  We're trying to replace CVS.  See the first question.</p>
 <h3>Why does the entire repository share the 
     same revision number? I want each of my projects to have their
     own revision numbers.</h3>
-<p>
-The global revision number attached to the repository as a whole is
-meaningless from a user's perspective. It's an internal mechanism that
-accomplishes the goal of the underlying schema design. It just so
-happens to be exposed so that the user's interface can sometimes be a
-little more convenient than always having to type obnoxiously long
-date/time strings.
-</p>
 
-<p>
-The revision number is only relevant to the repository, and user
-convenience. It has <b>no</b> impact on any other factor of what you
-store in the repository.  Repository revision number bumps aren't
-nearly useful enough to be an accurate indication of the real rate of
-change of a given code base.  There are other more complicated ways to
-get a much better picture of a code-base's rate of change.
-</p>
+<p>First, note that Subversion has no concept of projects.  The
+repository just stores a versioned directory
+tree&nbsp;&mdash;&nbsp;you may consider certain sub-trees to be
+projects, but Subversion doesn't treat them differently from any other
+sub-tree.  Thus, the interpretation of what constitutes a project in
+the repository is left entirely up to the users.  (This is similar to
+how <a
+href="http://svnbook.red-bean.com/nightly/en/svn.branchmerge.using.html"
+>branches</a> and <a
+href="http://svnbook.red-bean.com/nightly/en/svn.branchmerge.tags.html"
+>tags</a> are conventions built on top of copies, instead of being
+basic concepts built into Subversion itself.)</p>
+
+<p>Each time you commit a change, the repository stores a new revision
+of that overall repository tree, and labels the new tree with a new
+revision number.  Of course, most of the tree is the same as the
+revision before, except for the parts you changed.</p>
+
+<p>The new revision number is a sequential label that applies to the
+entire new tree, not just to the files and directories you touched in
+that revision.  However, colloquially, a revision number is used to
+refer to the change committed in that revision; for example, "the
+change in r588" ("r588" is shorthand for "revision 588") really means
+"the difference between repository trees 587 and 588", or put another
+way, "the change made to tree 587 to produce tree 588".
+
+<p>Thus, the advancing revision number marks the progress of the
+repository as a whole; you generally can't gauge the progress of a
+particular project within the repository by watching the revision
+number.  Also, the revision number should not be used as the
+publicly-visible release number of a particular project in the
+repository.  For that, you should devise some other mechanism of
+distinguishing releases, such as using <a
+href="http://svnbook.red-bean.com/nightly/en/svn.branchmerge.tags.html"
+>tags</a>.</p>
 
 </div>
 
@@ -2860,59 +2876,6 @@ a 301 error to occur.</p>
 </div>
 
 
-<div class="h3" id="no-copy-history" title="no-copy-history">
-<h3>I'm trying to look at an old version of my
-    file, but svn says something about "path not found".  What's going
-    on?</h3>
-
-<p>A nice feature of Subversion is that the repository understands
-copies and renames, and preserves the historical connections.  For
-example, if you copy <tt>/trunk</tt> to <tt>/branches/mybranch</tt>,
-then the repository understands that every file in the branch has a
-"predecessor" in the trunk.  Running <tt>svn log --verbose</tt> will
-show you the historical copy, so you can see the rename:</p>
-
-<pre>
-r7932 | joe | 2003-12-03 17:54:02 -0600 (Wed, 03 Dec 2003) | 1 line
-Changed paths:
-   A /branches/mybranch (from /trunk:7931)
-</pre>
-
-<p>Unfortunately, while the repository is aware of copies and renames,
-almost all the svn client subcommands are <b>not</b> aware.  Commands
-like <tt>svn diff</tt>, <tt>svn merge</tt>, and <tt>svn cat</tt> ought
-to understand and follow renames, but don't yet do this.  It's
-scheduled as post-1.0 feature, currently <a
-href="http://subversion.tigris.org/issues/show_bug.cgi?id=1093">issue
-#1093</a>.  For example, if you ask <tt>svn diff</tt> to compare two
-earlier versions of <tt>/branches/mybranch/foo.c</tt>, the command
-will not automatically understand that the task actually requires
-comparing two versions of <tt>/trunk/foo.c</tt>, due to the rename.
-Instead, you'll see an error about how the branch-path doesn't exist
-in the earlier revisions.</p>
-
-<p>The workaround for all problems of this sort is to do the legwork
-yourself.  That is: <i>you</i> need to be aware of any renamed paths,
-discover them yourself using <tt>svn log -v</tt>, and then provide
-them explicitly to the svn client.  For example, instead of
-running</p>
-
-<pre>
-$ svn diff -r 1000:2000 http://host/repos/branches/mybranch/foo.c
-svn: Filesystem has no item
-svn: '/branches/mybranch/fooc..c' not found in the repository at revision 1000
-</pre>
-
-...you would instead run
-
-<pre>
-$ svn diff -r1000:2000 http://host/repos/trunk/foo.c
-...
-</pre>
-
-</div>
-
-
 <div class="h3" id="digest-auth" title="digest-auth">
 <h3>Why doesn't HTTP Digest auth work?</h3>
 
@@ -3075,13 +3038,19 @@ cached password.</p>
 <p>On Mac OS X, svn 1.4 and later uses the system Keychain
 facility to encrypt/store your svn password.</p>
 
-<p>On UNIX/Linux, there are no standard system encryption facilities,
-so the password is stored in ~/.subversion/auth/.  Notice, however,
+<p>Subversion 1.6 will address this issue for UNIX/Linux.
+Support for GNOME Keyring and KWallet has been implemented,
+both of which facilitate storing passwords on disk encrypted.
+These programs need to be available at compile-time and and at run-time.
+Otherwise, the client will fall back to caching your password in
+plaintext, but it has also been changed to <em>never</em>
+cache a password in plaintext without asking first.</p>
+
+<p>With Subversion 1.5 and earlier, on UNIX/Linux, the password can
+only be stored in plaintext in ~/.subversion/auth/.  Notice, however,
 that the directory which contains the cached passwords (usually
 ~/.subversion/auth/) has permissions of 700, meaning only you can read
 them.</p>
-
-<p>Trust your OS to protect data on disk.</p>
 
 <p>However, if you're really worried, you can permanently turn off
 password caching.  With an svn 1.0 client, just set 'store-auth-creds

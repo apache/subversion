@@ -5,8 +5,6 @@ For a list of options, run this script with the --help option.
 """
 
 # $HeadURL$
-# $LastChangedDate$
-# $LastChangedBy$
 # $LastChangedRevision$
 
 import os, sys

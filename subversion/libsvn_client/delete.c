@@ -220,9 +220,7 @@ delete_urls(svn_commit_info_t **commit_info_p,
     }
 
   /* Close the edit. */
-  SVN_ERR(editor->close_edit(edit_baton, pool));
-
-  return SVN_NO_ERROR;
+  return editor->close_edit(edit_baton, pool);
 }
 
 svn_error_t *
@@ -243,10 +241,11 @@ svn_client__wc_delete(const char *path,
 
   if (!dry_run)
     /* Mark the entry for commit deletion and perform wc deletion */
-    SVN_ERR(svn_wc_delete3(path, adm_access,
-                           ctx->cancel_func, ctx->cancel_baton,
-                           notify_func, notify_baton, keep_local, pool));
-  return SVN_NO_ERROR;
+    return svn_wc_delete3(path, adm_access,
+                          ctx->cancel_func, ctx->cancel_baton,
+                          notify_func, notify_baton, keep_local, pool);
+  else
+    return SVN_NO_ERROR;
 }
 
 

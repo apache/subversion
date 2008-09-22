@@ -343,8 +343,8 @@ print_command_info(const svn_opt_subcommand_desc_t *cmd,
 
               /* convert each option code into an option */
               option =
-                svn_opt_get_option_from_code(cmd->valid_options[i],
-                                             options_table);
+                svn_opt_get_option_from_code2(cmd->valid_options[i],
+                                              options_table, NULL, pool);
 
               /* print the option's docstring */
               if (option && option->description)
@@ -1203,10 +1203,7 @@ print_version_info(const char *pgm_name,
                    apr_pool_t *pool)
 {
   if (quiet)
-    {
-      SVN_ERR(svn_cmdline_printf(pool, "%s\n", SVN_VER_NUMBER));
-      return SVN_NO_ERROR;
-    }
+    return svn_cmdline_printf(pool, "%s\n", SVN_VER_NUMBER);
 
   SVN_ERR(svn_cmdline_printf(pool, _("%s, version %s\n"
                                      "   compiled %s, %s\n\n"), pgm_name,
