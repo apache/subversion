@@ -744,6 +744,13 @@ test_canonicalize(const char **msg,
     { "file://",              "file://" },
     { "svn:///",              "svn://" },
     { "svn+ssh:///",          "svn+ssh://" },
+    { "http://HST/",          "http://hst" },
+    { "http://HST/FOO/BaR",   "http://hst/FOO/BaR" },
+    { "svn+ssh://j.raNDom@HST/BaR", "svn+ssh://j.raNDom@hst/BaR" },
+    { "svn+SSH://j.random:jRaY@HST/BaR", "svn+ssh://j.random:jRaY@hst/BaR" },
+    { "SVN+ssh://j.raNDom:jray@HST/BaR", "svn+ssh://j.raNDom:jray@hst/BaR" },
+    { "fILe:///Users/jrandom/wc", "file:///Users/jrandom/wc" },
+
     { NULL, NULL }
   };
   int i;
@@ -1307,6 +1314,13 @@ test_is_canonical(const char **msg,
     { "http://hst/foo/../bar", TRUE },
     { "http://hst/",           FALSE },
     { "foo/./bar",             FALSE },
+    { "http://HST/",           FALSE },
+    { "http://HST/FOO/BaR",    FALSE },
+    { "svn+ssh://j.raNDom@HST/BaR", FALSE },
+    { "svn+SSH://j.random:jRaY@HST/BaR", FALSE },
+    { "SVN+ssh://j.raNDom:jray@HST/BaR", FALSE },    
+    { "svn+ssh://j.raNDom:jray@hst/BaR", TRUE },
+    { "fILe:///Users/jrandom/wc", FALSE },
     { NULL, FALSE }
   };
   int i;

@@ -69,8 +69,8 @@ extern "C" {
  * The change from 8 to 9 was the addition of changelists, keep-local,
  * and sticky depth (for selective/sparse checkouts).
  *
- * The change from 9 to 10 was the addition of tree-conflicts and file
- * externals.
+ * The change from 9 to 10 was the addition of tree-conflicts, file
+ * externals and a different canonicalization of urls.
  *
  * Please document any further format changes here.
  */
@@ -84,6 +84,10 @@ extern "C" {
 
 /* A version <= this has wcprops stored in one file per entry. */
 #define SVN_WC__WCPROPS_MANY_FILES_VERSION 7
+
+/* A version < this can have urls that aren't canonical according to the new
+   rules. See issue #2475. */
+#define SVN_WC__CHANGED_CANONICAL_URLS 10
 
 /*** Update traversals. ***/
 

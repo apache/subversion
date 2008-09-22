@@ -23,6 +23,7 @@
 
 #include <apr_file_info.h>
 #include <apr_lib.h>
+#include <apr_uri.h>
 
 #include "svn_string.h"
 #include "svn_path.h"
@@ -1278,6 +1279,7 @@ svn_path_canonicalize(const char *path, apr_pool_t *pool)
   apr_size_t seglen;
   apr_size_t canon_segments = 0;
   svn_boolean_t uri;
+  apr_uri_t host_uri;
 
   /* "" is already canonical, so just return it; note that later code
      depends on path not being zero-length.  */
@@ -1286,34 +1288,52 @@ svn_path_canonicalize(const char *path, apr_pool_t *pool)
 
   dst = canon = apr_pcalloc(pool, strlen(path) + 1);
 
-  /* Copy over the URI scheme if present. */
-  src = skip_uri_scheme(path);
-  if (src)
+  /* Try to parse the path as an URI. */
+  if (apr_uri_parse(pool, path, &host_uri) == APR_SUCCESS &&
+      host_uri.scheme)
     {
+      /* convert scheme and hostname to lowercase */
+      apr_size_t offset;
+      int i;
+
       uri = TRUE;
-      memcpy(dst, path, src - path);
-      dst += (src - path);
+      for(i = 0; host_uri.scheme[i]; i++)
+        host_uri.scheme[i] = tolower(host_uri.scheme[i]);
+      for(i = 0; host_uri.hostname[i]; i++)
+        host_uri.hostname[i] = tolower(host_uri.hostname[i]);
+
+      /* path will be pointing to a new memory location, so update src to
+       * point to the new location too. */
+      offset = strlen(host_uri.scheme) + 3; /* "(scheme)://" */
+      path = apr_uri_unparse(pool, &host_uri, APR_URI_UNP_REVEALPASSWORD);
+
+      /* skip 3rd '/' in file:/// uri */
+      if (path[offset] == '/')
+        offset++;
+
+      /* copy src to dst */
+      memcpy(dst, path, offset);
+      dst += offset;
+
+      src = path + offset;
     }
   else
     {
       uri = FALSE;
       src = path;
-    }
-
-  /* If this is an absolute path, then just copy over the initial
-     separator character. */
-  if (*src == '/')
-    {
-      *(dst++) = *(src++);
+      /* If this is an absolute path, then just copy over the initial
+         separator character. */
+      if (*src == '/')
+        {
+          *(dst++) = *(src++);
 
 #if defined(WIN32) || defined(__CYGWIN__)
-      /* On Windows permit two leading separator characters which means an
-       * UNC path.  However, a double slash in a URI after the scheme is never
-       * valid. */
-      if (!uri && *src == '/')
-        *(dst++) = *(src++);
+          /* On Windows permit two leading separator characters which means an
+           * UNC path. */
+          if (*src == '/')
+            *(dst++) = *(src++);
 #endif /* WIN32 or Cygwin */
-
+        }
     }
 
   while (*src)
@@ -1354,7 +1374,7 @@ svn_path_canonicalize(const char *path, apr_pool_t *pool)
       /* Otherwise, make sure to strip the third slash from URIs which
        * have an empty hostname part, such as http:/// or file:/// */
       else if (uri && strcmp(skip_uri_scheme(canon), "/") == 0)
-        dst--;
+              dst--;
     }
 
   *dst = '\0';
