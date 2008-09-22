@@ -2251,6 +2251,7 @@ svn_client_diff5(const apr_array_header_t *diff_options,
  *
  * @since New in 1.5.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_diff4(const apr_array_header_t *diff_options,
                  const char *path1,
@@ -2385,6 +2386,7 @@ svn_client_diff_peg5(const apr_array_header_t *diff_options,
  *
  * @since New in 1.5.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_diff_peg4(const apr_array_header_t *diff_options,
                      const char *path,
