@@ -2,7 +2,7 @@
  * entries.c :  manipulating the administrative `entries' file.
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -65,6 +65,9 @@ alloc_entry(apr_pool_t *pool)
   entry->kind = svn_node_none;
   entry->working_size = SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN;
   entry->depth = svn_depth_infinity;
+  entry->file_external_path = NULL;
+  entry->file_external_peg_rev.kind = svn_opt_revision_unspecified;
+  entry->file_external_rev.kind = svn_opt_revision_unspecified;
   return entry;
 }
 
@@ -291,6 +294,150 @@ read_time(apr_time_t *result,
   return SVN_NO_ERROR;
 }
 
+/**
+ * Parse the string at *STR as an revision and save the result in
+ * *OPT_REV.  After returning successfully, *STR points at next
+ * character in *STR where further parsing can be done.
+ */
+svn_error_t *
+string_to_opt_revision(svn_opt_revision_t *opt_rev,
+                       const char **str,
+                       apr_pool_t *pool)
+{
+  const char *s = *str;
+
+  SVN_ERR_ASSERT(opt_rev);
+
+  while (*s && *s != ':')
+    ++s;
+
+  /* Should not find a \0. */
+  if (!*s)
+    return svn_error_createf
+      (SVN_ERR_INCORRECT_PARAMS, NULL,
+       _("Found an unexpected \\0 in the file external '%s'"), *str);
+
+  if (0 == strncmp(*str, "HEAD:", 5))
+    {
+      opt_rev->kind = svn_opt_revision_head;
+    }
+  else
+    {
+      svn_revnum_t rev;
+      const char *endptr;
+
+      SVN_ERR(svn_revnum_parse(&rev, *str, &endptr));
+      SVN_ERR_ASSERT(endptr == s);
+      opt_rev->kind = svn_opt_revision_number;
+      opt_rev->value.number = rev;
+    }
+
+  *str = s + 1;
+
+  return SVN_NO_ERROR;
+}
+
+/**
+ * Given a revision, return a string for the revision, either "HEAD"
+ * or a string representation of the revision value.  All other
+ * revision kinds return an error.
+ */
+svn_error_t *
+opt_revision_to_string(const char **str,
+                       const char *path,
+                       const svn_opt_revision_t *rev,
+                       apr_pool_t *pool)
+{
+  switch (rev->kind)
+    {
+    case svn_opt_revision_head:
+      *str = apr_pstrmemdup(pool, "HEAD", 4);
+      break;
+    case svn_opt_revision_number:
+      *str = apr_itoa(pool, rev->value.number);
+      break;
+    default:
+      return svn_error_createf
+        (SVN_ERR_INCORRECT_PARAMS, NULL,
+         _("Illegal file external revision kind %d for path '%s'"),
+         rev->kind, path);
+      break;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Parse a file external specification in the NULL terminated STR and
+   place the path in PATH_RESULT, the peg revision in PEG_REV_RESULT
+   and revision number in REV_RESULT.  STR may be NULL, in which case
+   PATH_RESULT will be set to NULL and both PEG_REV_RESULT and
+   REV_RESULT set to svn_opt_revision_unspecified.
+
+   The format that is read is the same as a working-copy path with a
+   peg revision; see svn_opt_parse_path(). */
+static svn_error_t *
+unserialize_file_external(const char **path_result,
+                          svn_opt_revision_t *peg_rev_result,
+                          svn_opt_revision_t *rev_result,
+                          const char *str,
+                          apr_pool_t *pool)
+{
+  if (str)
+    {
+      svn_opt_revision_t peg_rev;
+      svn_opt_revision_t op_rev;
+      const char *s = str;
+
+      SVN_ERR(string_to_opt_revision(&peg_rev, &s, pool));
+      SVN_ERR(string_to_opt_revision(&op_rev, &s, pool));
+
+      *path_result = apr_pstrdup(pool, s);
+      *peg_rev_result = peg_rev;
+      *rev_result = op_rev;
+    }
+  else
+    {
+      *path_result = NULL;
+      peg_rev_result->kind = svn_opt_revision_unspecified;
+      rev_result->kind = svn_opt_revision_unspecified;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Serialize into STR the file external path, peg revision number and
+   the operative revision number into a format that
+   unserialize_file_external() can parse.  The format is
+     %{peg_rev}:%{rev}:%{path}
+   where a rev will either be HEAD or the string revision number.  If
+   PATH is NULL then STR will be set to NULL.  This method writes to a
+   string instead of a svn_stringbuf_t so that the string can be
+   protected by write_str(). */
+static svn_error_t *
+serialize_file_external(const char **str, const char *path,
+                        svn_opt_revision_t *peg_rev, svn_opt_revision_t *rev,
+                        apr_pool_t *pool)
+{
+  const char *s;
+
+  if (path)
+    {
+      const char *s1;
+      const char *s2;
+
+      SVN_ERR(opt_revision_to_string(&s1, path, peg_rev, pool));
+      SVN_ERR(opt_revision_to_string(&s2, path, rev, pool));
+
+      s = apr_pstrcat(pool, s1, ":", s2, ":", path, NULL);
+    }
+  else
+    s = NULL;
+
+  *str = s;
+
+  return SVN_NO_ERROR;
+}
+
 /* Allocate an entry from POOL and read it from [*BUF, END).  The
    buffer may be modified in place while parsing.  Return the new
    entry in *NEW_ENTRY.  Advance *BUF to point at the end of the entry
@@ -499,6 +646,18 @@ read_entry(svn_wc_entry_t **new_entry,
 
   /* Tree conflict data. */
   SVN_ERR(read_str(&entry->tree_conflict_data, buf, end, pool));
+  MAYBE_DONE;
+
+  /* File external URL and revision. */
+  {
+    const char *str;
+    SVN_ERR(read_str(&str, buf, end, pool));
+    SVN_ERR(unserialize_file_external(&entry->file_external_path,
+                                      &entry->file_external_peg_rev,
+                                      &entry->file_external_rev,
+                                      str,
+                                      pool));
+  }
   MAYBE_DONE;
 
  done:
@@ -922,6 +1081,26 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
           entry->working_size = (apr_off_t)apr_strtoi64(val, NULL, 0);
 
         *modify_flags |= SVN_WC__ENTRY_MODIFY_WORKING_SIZE;
+      }
+  }
+
+  /* File externals */
+  {
+    const char *val
+      = apr_hash_get(atts,
+                     SVN_WC__ENTRY_ATTR_FILE_EXTERNAL,
+                     APR_HASH_KEY_STRING);
+
+    if (val)
+      {
+        SVN_ERR(unserialize_file_external(&(entry->file_external_path),
+                                          &(entry->file_external_peg_rev),
+                                          &(entry->file_external_rev),
+                                          val,
+                                          pool));
+        entry->file_external_path = apr_pstrdup(pool,
+                                                entry->file_external_path);
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_FILE_EXTERNAL;
       }
   }
 
@@ -1681,6 +1860,15 @@ write_entry(svn_stringbuf_t *buf,
   /* Tree conflict data. */
   write_str(buf, entry->tree_conflict_data, pool);
 
+  /* File externals. */
+  {
+    const char *s;
+    SVN_ERR(serialize_file_external(&s, entry->file_external_path,
+                                    &entry->file_external_peg_rev,
+                                    &entry->file_external_rev, pool));
+    write_str(buf, s, pool);
+  }
+
   /* Remove redundant separators at the end of the entry. */
   while (buf->len > 1 && buf->data[buf->len - 2] == '\n')
     buf->len--;
@@ -2342,6 +2530,17 @@ fold_entry(apr_hash_t *entries,
       cur_entry->keep_local = FALSE;
     }
 
+  /* File externals. */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_FILE_EXTERNAL)
+    {
+      cur_entry->file_external_path = (entry->file_external_path
+                                       ? apr_pstrdup(pool,
+                                                     entry->file_external_path)
+                                       : NULL);
+      cur_entry->file_external_peg_rev = entry->file_external_peg_rev;
+      cur_entry->file_external_rev = entry->file_external_rev;
+    }
+
   /* Make sure the entry exists in the entries hash.  Possibly it
      already did, in which case this could have been skipped, but what
      the heck. */
@@ -2710,6 +2909,9 @@ svn_wc_entry_dup(const svn_wc_entry_t *entry, apr_pool_t *pool)
   if (entry->tree_conflict_data)
     dupentry->tree_conflict_data = apr_pstrdup(pool,
                                                entry->tree_conflict_data);
+  if (entry->file_external_path)
+    dupentry->file_external_path = apr_pstrdup(pool,
+                                               entry->file_external_path);
   return dupentry;
 }
 

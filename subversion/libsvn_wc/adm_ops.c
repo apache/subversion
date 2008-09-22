@@ -1188,6 +1188,17 @@ svn_wc_delete3(const char *path,
   if (!entry)
     return erase_unversioned_from_wc(path, cancel_func, cancel_baton, pool);
 
+  /* A file external should not be deleted since the file external is
+     implemented as a switched file and it would delete the file the
+     file external is switched to, which is not the behavior the user
+     would probably want. */
+  if (entry->file_external_path)
+    return svn_error_createf(SVN_ERR_WC_CANNOT_DELETE_FILE_EXTERNAL, NULL,
+                             _("Cannot remove the file external at '%s'; "
+                               "please propedit or propdel the svn:externals "
+                               "description that created it"),
+                             svn_path_local_style(path, pool));
+
   /* Note: Entries caching?  What happens to this entry when the entries
      file is updated?  Lets play safe and copy the values */
   was_schedule = entry->schedule;
@@ -3181,6 +3192,43 @@ svn_wc_set_changelist(const char *path,
       notify->changelist_name = changelist;
       notify_func(notify_baton, notify, pool);
     }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__set_file_external_location(svn_wc_adm_access_t *adm_access,
+                                   const char *name,
+                                   const char *url,
+                                   const svn_opt_revision_t *peg_rev,
+                                   const svn_opt_revision_t *rev,
+                                   const char *repos_root_url,
+                                   apr_pool_t *pool)
+{
+  apr_hash_t *entries;
+  svn_wc_entry_t entry = { 0 };
+
+  SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, pool));
+
+  if (url)
+    {
+      /* A repository root relative path is stored in the entry. */
+      SVN_ERR_ASSERT(peg_rev);
+      SVN_ERR_ASSERT(rev);
+      entry.file_external_path = url + strlen(repos_root_url);
+      entry.file_external_peg_rev = *peg_rev;
+      entry.file_external_rev = *rev;
+    }
+  else
+    {
+      entry.file_external_path = NULL;
+      entry.file_external_peg_rev.kind = svn_opt_revision_unspecified;
+      entry.file_external_rev.kind = svn_opt_revision_unspecified;
+    }
+
+  SVN_ERR(svn_wc__entry_modify(adm_access, name, &entry,
+                               SVN_WC__ENTRY_MODIFY_FILE_EXTERNAL, TRUE,
+                               pool));
 
   return SVN_NO_ERROR;
 }
