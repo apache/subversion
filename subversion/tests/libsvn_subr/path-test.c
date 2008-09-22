@@ -750,7 +750,16 @@ test_canonicalize(const char **msg,
     { "svn+SSH://j.random:jRaY@HST/BaR", "svn+ssh://j.random:jRaY@hst/BaR" },
     { "SVN+ssh://j.raNDom:jray@HST/BaR", "svn+ssh://j.raNDom:jray@hst/BaR" },
     { "fILe:///Users/jrandom/wc", "file:///Users/jrandom/wc" },
-
+#if defined(WIN32) || defined(__CYGWIN__)
+    { "file:///C:/temp/repos", "file:///c:/temp/repos" },
+    { "file:///C:/temp/REPOS", "file:///c:/temp/REPOS" },
+    { "//server/share/",       "//server/share" },
+    { "//server/SHare/",       "//server/SHare" },
+    { "//SERVER/SHare/",       "//server/SHare" },
+#else /* WIN32 or Cygwin */
+    { "file:///C:/temp/repos", "file:///C:/temp/repos" },
+    { "file:///C:/temp/REPOS", "file:///C:/temp/REPOS" },
+#endif /* non-WIN32 */
     { NULL, NULL }
   };
   int i;
@@ -1321,7 +1330,19 @@ test_is_canonical(const char **msg,
     { "SVN+ssh://j.raNDom:jray@HST/BaR", FALSE },    
     { "svn+ssh://j.raNDom:jray@hst/BaR", TRUE },
     { "fILe:///Users/jrandom/wc", FALSE },
-    { NULL, FALSE }
+#if defined(WIN32) || defined(__CYGWIN__)
+    { "file:///C:/temp/repos", FALSE },
+    { "file:///C:/temp/REPOS", FALSE },
+    { "file:///c:/temp/REPOS", TRUE },
+    { "//server/share/",       FALSE },
+    { "//server/share",        TRUE },
+    { "//server/SHare",        TRUE },
+    { "//SERVER/SHare",        FALSE },
+#else /* WIN32 or Cygwin */
+    { "file:///C:/temp/repos", TRUE },
+    { "file:///C:/temp/REPOS", TRUE },
+#endif /* non-WIN32 */
+    { NULL, FALSE },
   };
   int i;
 
