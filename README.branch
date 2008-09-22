@@ -23,7 +23,7 @@ Revisions included:
     release.
   * r32873 backported from trunk via r32877
   * r32887 backported from trunk via r32888
-  * r33118 backported from trunk via r33119
+  * r33118 backported from trunk via r33119 and reverted in r33233
   * r33182 backported from trunk via r33233
   * r33214 backported from trunk via r33234
 
