@@ -32,6 +32,7 @@
 #include "svn_private_config.h"
 
 #include <glib.h>
+#include <dbus/dbus.h>
 #include <gnome-keyring.h>
 
 
@@ -50,6 +51,11 @@ gnome_keyring_password_get(const char **password,
                            apr_pool_t *pool)
 {
   if (non_interactive)
+    {
+      return FALSE;
+    }
+
+  if (! dbus_bus_get(DBUS_BUS_SESSION, NULL))
     {
       return FALSE;
     }
@@ -97,6 +103,11 @@ gnome_keyring_password_set(apr_hash_t *creds,
                            apr_pool_t *pool)
 {
   if (non_interactive)
+    {
+      return FALSE;
+    }
+
+  if (! dbus_bus_get(DBUS_BUS_SESSION, NULL))
     {
       return FALSE;
     }
