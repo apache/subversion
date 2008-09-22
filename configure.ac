@@ -334,6 +334,13 @@ if test "$with_gnome_keyring" != "no"; then
         AC_MSG_CHECKING([for GLib, D-Bus and GNOME Keyring .pc files])
         if pkg-config --exists glib-2.0 dbus-1 gnome-keyring-1; then
           AC_MSG_RESULT([yes])
+          AC_MSG_CHECKING([D-Bus version])
+          DBUS_VERSION="`pkg-config --modversion dbus-1`"
+          AC_MSG_RESULT([$DBUS_VERSION])
+          # D-Bus 0.* requires DBUS_API_SUBJECT_TO_CHANGE
+          if test -n ["`echo "$DBUS_VERSION" | $GREP '^0\.[[:digit:]]\+'`"]; then
+            CPPFLAGS="$CPPFLAGS -DDBUS_API_SUBJECT_TO_CHANGE"
+          fi
           old_CPPFLAGS="$CPPFLAGS"
           SVN_GNOME_KEYRING_INCLUDES="`pkg-config --cflags glib-2.0 dbus-1 gnome-keyring-1`"
           CPPFLAGS="$CPPFLAGS $SVN_GNOME_KEYRING_INCLUDES"
