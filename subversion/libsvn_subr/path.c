@@ -1405,7 +1405,7 @@ svn_path_canonicalize(const char *path, apr_pool_t *pool)
          (the first path segment) to lowercase as Windows threats it as case
          insensitive. 
          Note: normally the share name is treated as case insensitive too, but
-         it seems to be possible to configure Samba to thread those as case
+         it seems to be possible to configure Samba to treat those as case
          sensitive, so better leave that alone. */
       dst = canon + 2;
       while (*dst && *dst != '/')
