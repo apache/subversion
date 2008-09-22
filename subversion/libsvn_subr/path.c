@@ -1397,19 +1397,22 @@ svn_path_canonicalize(const char *path, apr_pool_t *pool)
 #if defined(WIN32) || defined(__CYGWIN__)
   /* Skip leading double slashes when there are less than 2
    * canon segments. UNC paths *MUST* have two segments. */
-  if (canon_segments < 2 && canon[0] == '/' && canon[1] == '/')
-    return canon + 1;
-  else
+  if (canon[0] == '/' && canon[1] == '/')
     {
-      /* Now we're sure this is a valid UNC path, convert the server name 
-         (the first path segment) to lowercase as Windows threats it as case
-         insensitive. 
-         Note: normally the share name is treated as case insensitive too, but
-         it seems to be possible to configure Samba to treat those as case
-         sensitive, so better leave that alone. */
-      dst = canon + 2;
-      while (*dst && *dst != '/')
-        *(dst++) = tolower(*dst);
+      if (canon_segments < 2)
+        return canon + 1;
+      else
+        {
+          /* Now we're sure this is a valid UNC path, convert the server name 
+             (the first path segment) to lowercase as Windows threats it as case
+             insensitive. 
+             Note: normally the share name is treated as case insensitive too, but
+             it seems to be possible to configure Samba to treat those as case
+             sensitive, so better leave that alone. */
+          dst = canon + 2;
+          while (*dst && *dst != '/')
+            *(dst++) = tolower(*dst);
+        }
     }
 #endif /* WIN32 or Cygwin */
 
