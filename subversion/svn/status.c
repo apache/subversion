@@ -53,6 +53,18 @@ generate_status_code(enum svn_wc_status_kind status)
     }
 }
 
+/* Return the single character representation of the switched column
+   status. */
+static char
+generate_switch_column_code(const svn_wc_status2_t *status)
+{
+  if (status->switched)
+    return 'S';
+  else if (status->file_external)
+    return 'X';
+  else
+    return ' ';
+}
 
 /* Return the detailed string representation of STATUS */
 static const char *
@@ -169,7 +181,7 @@ print_status(const char *path,
                                 generate_status_code(status->prop_status),
                                 status->locked ? 'L' : ' ',
                                 status->copied ? '+' : ' ',
-                                status->switched ? 'S' : ' ',
+                                generate_switch_column_code(status),
                                 lock_status,
                                 ood_status,
                                 working_rev,
@@ -184,7 +196,7 @@ print_status(const char *path,
                               generate_status_code(status->prop_status),
                               status->locked ? 'L' : ' ',
                               status->copied ? '+' : ' ',
-                              status->switched ? 'S' : ' ',
+                              generate_switch_column_code(status),
                               lock_status,
                               ood_status,
                               working_rev,
@@ -197,7 +209,7 @@ print_status(const char *path,
                           generate_status_code(status->prop_status),
                           status->locked ? 'L' : ' ',
                           status->copied ? '+' : ' ',
-                          status->switched ? 'S' : ' ',
+                          generate_switch_column_code(status),
                           ((status->entry && status->entry->lock_token)
                            ? 'K' : ' '),
                           path));
@@ -232,6 +244,8 @@ svn_cl__print_status_xml(const char *path,
     apr_hash_set(att_hash, "copied", APR_HASH_KEY_STRING, "true");
   if (status->switched)
     apr_hash_set(att_hash, "switched", APR_HASH_KEY_STRING, "true");
+  if (status->file_external)
+    apr_hash_set(att_hash, "file-external", APR_HASH_KEY_STRING, "true");
   if (status->entry && ! status->entry->copied)
     apr_hash_set(att_hash, "revision", APR_HASH_KEY_STRING,
                  apr_psprintf(pool, "%ld", status->entry->revision));
