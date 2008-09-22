@@ -176,7 +176,7 @@ print_status(const char *path,
 
           SVN_ERR
             (svn_cmdline_printf(pool,
-                                "%c%c%c%c%c%c %c   %6s   %6s %-12s %s\n",
+                                "%c%c%c%c%c%c  %c   %6s   %6s %-12s %s\n",
                                 generate_status_code(text_status),
                                 generate_status_code(status->prop_status),
                                 status->locked ? 'L' : ' ',
@@ -191,7 +191,7 @@ print_status(const char *path,
         }
       else
         SVN_ERR
-          (svn_cmdline_printf(pool, "%c%c%c%c%c%c %c   %6s   %s\n",
+          (svn_cmdline_printf(pool, "%c%c%c%c%c%c  %c   %6s   %s\n",
                               generate_status_code(text_status),
                               generate_status_code(status->prop_status),
                               status->locked ? 'L' : ' ',
@@ -204,7 +204,7 @@ print_status(const char *path,
     }
   else
     SVN_ERR
-      (svn_cmdline_printf(pool, "%c%c%c%c%c%c %s\n",
+      (svn_cmdline_printf(pool, "%c%c%c%c%c%c  %s\n",
                           generate_status_code(text_status),
                           generate_status_code(status->prop_status),
                           status->locked ? 'L' : ' ',
