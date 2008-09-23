@@ -1413,10 +1413,50 @@ svn_fs_base__dag_copy(dag_node_t *to_node,
 
 /*** Deltification ***/
 
+/* Maybe change the representation identified by TARGET_REP_KEY to be
+   a delta against the representation identified by SOURCE_REP_KEY.
+   Some reasons why we wouldn't include:
+
+      - TARGET_REP_KEY and SOURCE_REP_KEY are the same key.
+
+      - TARGET_REP_KEY's representation isn't mutable in TXN_ID (if
+        TXN_ID is non-NULL).
+
+      - The delta provides less space savings that a fulltext (this is
+        a detail handled by lower logic layers, not this function).
+
+   Do this work in TRAIL, using POOL for necessary allocations.
+*/
+static svn_error_t *
+maybe_deltify_mutable_rep(const char *target_rep_key,
+                          const char *source_rep_key,
+                          const char *txn_id,
+                          trail_t *trail,
+                          apr_pool_t *pool)
+{
+  if (! (target_rep_key && source_rep_key 
+         && (strcmp(target_rep_key, source_rep_key) != 0)))
+    return SVN_NO_ERROR;
+
+  if (txn_id)
+    {
+      representation_t *target_rep;
+      SVN_ERR(svn_fs_bdb__read_rep(&target_rep, trail->fs, target_rep_key,
+                                   trail, pool));
+      if (strcmp(target_rep->txn_id, txn_id) != 0)
+        return SVN_NO_ERROR;
+    }
+  
+  return svn_fs_base__rep_deltify(trail->fs, target_rep_key, source_rep_key,
+                                  trail, pool);
+}
+
+
 svn_error_t *
 svn_fs_base__dag_deltify(dag_node_t *target,
                          dag_node_t *source,
                          svn_boolean_t props_only,
+                         const char *txn_id,
                          trail_t *trail,
                          apr_pool_t *pool)
 {
@@ -1431,21 +1471,15 @@ svn_fs_base__dag_deltify(dag_node_t *target,
 
   /* If TARGET and SOURCE both have properties, and are not sharing a
      property key, deltify TARGET's properties.  */
-  if (target_nr->prop_key
-      && source_nr->prop_key
-      && (strcmp(target_nr->prop_key, source_nr->prop_key)))
-    SVN_ERR(svn_fs_base__rep_deltify(fs, target_nr->prop_key,
-                                     source_nr->prop_key, trail, pool));
+  SVN_ERR(maybe_deltify_mutable_rep(target_nr->prop_key, source_nr->prop_key,
+                                    txn_id, trail, pool));
 
   /* If we are not only attending to properties, and if TARGET and
      SOURCE both have data, and are not sharing a data key, deltify
      TARGET's data.  */
-  if ((! props_only)
-      && target_nr->data_key
-      && source_nr->data_key
-      && (strcmp(target_nr->data_key, source_nr->data_key)))
-    SVN_ERR(svn_fs_base__rep_deltify(fs, target_nr->data_key,
-                                     source_nr->data_key, trail, pool));
+  if (! props_only)
+    SVN_ERR(maybe_deltify_mutable_rep(target_nr->data_key, source_nr->data_key,
+                                      txn_id, trail, pool));
 
   return SVN_NO_ERROR;
 }

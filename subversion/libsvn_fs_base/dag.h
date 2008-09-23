@@ -519,6 +519,10 @@ svn_error_t *svn_fs_base__dag_copy(dag_node_t *to_node,
    return success.  If PROPS_ONLY is non-zero, only the node property
    portion of TARGET will be deltified.
 
+   If TXN_ID is non-NULL, it is the transaction ID in which TARGET's
+   representation(s) must have been created (otherwise deltification
+   is silently not attempted).
+
    WARNING WARNING WARNING: Do *NOT* call this with a mutable SOURCE
    node.  Things will go *very* sour if you deltify TARGET against a
    node that might just disappear from the filesystem in the (near)
@@ -526,6 +530,7 @@ svn_error_t *svn_fs_base__dag_copy(dag_node_t *to_node,
 svn_error_t *svn_fs_base__dag_deltify(dag_node_t *target,
                                       dag_node_t *source,
                                       svn_boolean_t props_only,
+                                      const char *txn_id,
                                       trail_t *trail,
                                       apr_pool_t *pool);
 
