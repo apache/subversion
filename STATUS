@@ -78,16 +78,3 @@ Candidate changes for 1.5.3:
 
 Approved changes:
 =================
-
- * r32900, r32911, r32912
-   Update tools/client-side/bash_completion to support v1.5 features.
-   r32900 and r32911 add completion for the arguments of the --show-revs
-     and --set-depth options, respectively.
-   r32912 adds heuristic completion help for merging.
-   Justification:
-     Useful updates. Little harm if anything is wrong with it.
-   Notes:
-     Requires only one +1 and one +0.
-   Votes:
-     +0: fabien (by email <http://svn.haxx.se/dev/archive-2008-09/0151.shtml>)
-     +1: julianfoad
