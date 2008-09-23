@@ -1493,6 +1493,9 @@ struct deltify_committed_args
 
 struct txn_deltify_args
 {
+  /* The transaction ID whose nodes are being deltified. */
+  const char *txn_id;
+
   /* The target is what we're deltifying. */
   const svn_fs_id_t *tgt_id;
 
@@ -1525,7 +1528,7 @@ txn_body_txn_deltify(void *baton, trail_t *trail)
       SVN_ERR(svn_fs_base__dag_get_node(&base_node, trail->fs, args->base_id,
                                         trail, trail->pool));
       SVN_ERR(svn_fs_base__dag_deltify(tgt_node, base_node, args->is_dir,
-                                       trail, trail->pool));
+                                       args->txn_id, trail, trail->pool));
     }
 
   /* If this isn't a directory, record a mapping of TGT_NODE's data
@@ -1644,6 +1647,7 @@ deltify_mutable(svn_fs_t *fs,
     }
 
   /* Index ID's data checksum. */
+  td_args.txn_id = txn_id;
   td_args.tgt_id = id;
   td_args.base_id = NULL;
   td_args.is_dir = (kind == svn_node_dir);
@@ -1740,6 +1744,7 @@ deltify_mutable(svn_fs_t *fs,
           }
 
         /* Finally, do the deltification. */
+        td_args.txn_id = txn_id;
         td_args.tgt_id = id;
         td_args.base_id = pred_id;
         td_args.is_dir = (kind == svn_node_dir);
@@ -1807,6 +1812,7 @@ deltify_mutable(svn_fs_t *fs,
               }
 
             /* Finally, do the deltification. */
+            td_args.txn_id = NULL;  /* Don't require mutable reps */
             td_args.tgt_id = pred_id;
             td_args.base_id = id;
             td_args.is_dir = (kind == svn_node_dir);
