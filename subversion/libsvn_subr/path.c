@@ -23,6 +23,7 @@
 
 #include <apr_file_info.h>
 #include <apr_lib.h>
+#include <apr_uri.h>
 
 #include "svn_string.h"
 #include "svn_path.h"
@@ -842,24 +843,55 @@ svn_path_is_single_path_component(const char *name)
 
 
 svn_boolean_t
+svn_path_is_dotpath_present(const char *path)
+{
+  int len;
+
+  /* The empty string does not have a dotpath */
+  if (path[0] == '\0')
+    return FALSE;
+
+  /* Handle "." or a leading "./" */
+  if (path[0] == '.' && (path[1] == '\0' || path[1] == '/'))
+    return TRUE;
+
+  /* Paths of length 1 (at this point) have no dotpath present. */
+  if (path[1] == '\0')
+    return FALSE;
+
+  /* If any segment is "/./", then a dotpath is present. */
+  if (strstr(path, "/./") != NULL)
+    return TRUE;
+
+  /* Does the path end in "/." ? */
+  len = strlen(path);
+  return path[len - 2] == '/' && path[len - 1] == '.';
+}
+
+svn_boolean_t
 svn_path_is_backpath_present(const char *path)
 {
-  int len = strlen(path);
+  int len;
 
-  if (! strcmp(path, ".."))
+  /* 0 and 1-length paths do not have a backpath */
+  if (path[0] == '\0' || path[1] == '\0')
+    return FALSE;
+
+  /* Handle ".." or a leading "../" */
+  if (path[0] == '.' && path[1] == '.' && (path[2] == '\0' || path[2] == '/'))
     return TRUE;
 
-  if (! strncmp(path, "../", 3))
-    return TRUE;
+  /* Paths of length 2 (at this point) have no backpath present. */
+  if (path[2] == '\0')
+    return FALSE;
 
+  /* If any segment is "..", then a backpath is present. */
   if (strstr(path, "/../") != NULL)
     return TRUE;
 
-  if (len >= 3
-      && (! strncmp(path + len - 3, "/..", 3)))
-    return TRUE;
-
-  return FALSE;
+  /* Does the path end in "/.." ? */
+  len = strlen(path);
+  return path[len - 3] == '/' && path[len - 2] == '.' && path[len - 1] == '.';
 }
 
 
@@ -1247,6 +1279,7 @@ svn_path_canonicalize(const char *path, apr_pool_t *pool)
   apr_size_t seglen;
   apr_size_t canon_segments = 0;
   svn_boolean_t uri;
+  apr_uri_t host_uri;
 
   /* "" is already canonical, so just return it; note that later code
      depends on path not being zero-length.  */
@@ -1255,34 +1288,52 @@ svn_path_canonicalize(const char *path, apr_pool_t *pool)
 
   dst = canon = apr_pcalloc(pool, strlen(path) + 1);
 
-  /* Copy over the URI scheme if present. */
-  src = skip_uri_scheme(path);
-  if (src)
+  /* Try to parse the path as an URI. */
+  if (apr_uri_parse(pool, path, &host_uri) == APR_SUCCESS &&
+      host_uri.scheme && host_uri.hostname)
     {
+      /* convert scheme and hostname to lowercase */
+      apr_size_t offset;
+      int i;
+
       uri = TRUE;
-      memcpy(dst, path, src - path);
-      dst += (src - path);
+      for(i = 0; host_uri.scheme[i]; i++)
+        host_uri.scheme[i] = tolower(host_uri.scheme[i]);
+      for(i = 0; host_uri.hostname[i]; i++)
+        host_uri.hostname[i] = tolower(host_uri.hostname[i]);
+
+      /* path will be pointing to a new memory location, so update src to
+       * point to the new location too. */
+      offset = strlen(host_uri.scheme) + 3; /* "(scheme)://" */
+      path = apr_uri_unparse(pool, &host_uri, APR_URI_UNP_REVEALPASSWORD);
+
+      /* skip 3rd '/' in file:/// uri */
+      if (path[offset] == '/')
+        offset++;
+
+      /* copy src to dst */
+      memcpy(dst, path, offset);
+      dst += offset;
+
+      src = path + offset;
     }
   else
     {
       uri = FALSE;
       src = path;
-    }
-
-  /* If this is an absolute path, then just copy over the initial
-     separator character. */
-  if (*src == '/')
-    {
-      *(dst++) = *(src++);
+      /* If this is an absolute path, then just copy over the initial
+         separator character. */
+      if (*src == '/')
+        {
+          *(dst++) = *(src++);
 
 #if defined(WIN32) || defined(__CYGWIN__)
-      /* On Windows permit two leading separator characters which means an
-       * UNC path.  However, a double slash in a URI after the scheme is never
-       * valid. */
-      if (!uri && *src == '/')
-        *(dst++) = *(src++);
+          /* On Windows permit two leading separator characters which means an
+           * UNC path. */
+          if (*src == '/')
+            *(dst++) = *(src++);
 #endif /* WIN32 or Cygwin */
-
+        }
     }
 
   while (*src)
@@ -1298,6 +1349,20 @@ svn_path_canonicalize(const char *path, apr_pool_t *pool)
         {
           /* Noop segment, so do nothing. */
         }
+#if defined(WIN32) || defined(__CYGWIN__)
+      /* If this is the first path segment of a file:// URI and it contains a
+         windows drive letter, convert the drive letter to upper case. */
+      else if (uri && canon_segments == 0 && seglen == 2 &&
+          strcmp(host_uri.scheme, "file") == 0 &&
+          src[0] >= 'a' && src[0] <= 'z' && src[1] == ':')
+        {
+          *(dst++) = toupper(src[0]);
+          *(dst++) = ':';
+          if (*next)
+            *(dst++) = *next;
+          canon_segments++;
+        }
+#endif /* WIN32 or Cygwin */
       else
         {
           /* An actual segment, append it to the destination path */
@@ -1322,8 +1387,9 @@ svn_path_canonicalize(const char *path, apr_pool_t *pool)
         dst --;
       /* Otherwise, make sure to strip the third slash from URIs which
        * have an empty hostname part, such as http:/// or file:/// */
-      else if (uri && strcmp(skip_uri_scheme(canon), "/") == 0)
-        dst--;
+      else if (uri && host_uri.hostname[0] == '\0' &&
+               host_uri.path && host_uri.path[0] == '/')
+              dst--;
     }
 
   *dst = '\0';
@@ -1331,8 +1397,23 @@ svn_path_canonicalize(const char *path, apr_pool_t *pool)
 #if defined(WIN32) || defined(__CYGWIN__)
   /* Skip leading double slashes when there are less than 2
    * canon segments. UNC paths *MUST* have two segments. */
-  if (canon_segments < 2 && canon[0] == '/' && canon[1] == '/')
-    return canon + 1;
+  if (canon[0] == '/' && canon[1] == '/')
+    {
+      if (canon_segments < 2)
+        return canon + 1;
+      else
+        {
+          /* Now we're sure this is a valid UNC path, convert the server name 
+             (the first path segment) to lowercase as Windows treats it as case
+             insensitive. 
+             Note: normally the share name is treated as case insensitive too,
+             but it seems to be possible to configure Samba to treat those as
+             case sensitive, so better leave that alone. */
+          dst = canon + 2;
+          while (*dst && *dst != '/')
+            *(dst++) = tolower(*dst);
+        }
+    }
 #endif /* WIN32 or Cygwin */
 
   return canon;

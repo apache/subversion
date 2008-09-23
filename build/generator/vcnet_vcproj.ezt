@@ -110,7 +110,7 @@
 				<Tool
 					Name="VCCLCompilerTool"
 					ObjectFile="$(IntDir)/[sources.reldir]/"
-					ProgramDataBaseFileName="$(IntDir)/[sources.reldir]/"/>
+					ProgramDataBaseFileName="$(IntDir)/[sources.reldir]/[target.proj_name]-[sources.reldir].pdb"/>
 			</FileConfiguration>
 [end][end][end]
 		</File>

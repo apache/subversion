@@ -30,9 +30,11 @@
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_path.h"
+#include "svn_config.h"
 #include "client.h"
 
 #include "svn_private_config.h"
+#include "private/svn_wc_private.h"
 
 
 /* Closure for handle_external_item_change. */
@@ -44,6 +46,10 @@ struct handle_external_item_change_baton
 
   /* The directory that has this externals property. */
   const char *parent_dir;
+
+  /* Access baton for parent_dir.  If the external is an export, this
+     this must be NULL, otherwise it must be non-NULL. */
+  svn_wc_adm_access_t *adm_access;
 
   /* The URL for the directory that has this externals property. */
   const char *parent_dir_url;
@@ -68,21 +74,25 @@ struct handle_external_item_change_baton
 };
 
 
-/* Remove PATH from revision control, and do the same to any revision
- * controlled directories underneath PATH (including directories not
- * referred to by parent svn administrative areas); then if PATH is
- * empty afterwards, remove it, else rename it to a unique name in the
- * same parent directory.
+/* Remove the directory at PATH from revision control, and do the same
+ * to any revision controlled directories underneath PATH (including
+ * directories not referred to by parent svn administrative areas);
+ * then if PATH is empty afterwards, remove it, else rename it to a
+ * unique name in the same parent directory.
  *
  * Pass CANCEL_FUNC, CANCEL_BATON to svn_wc_remove_from_revision_control.
  *
  * Use POOL for all temporary allocation.
+ *
+ * Note: this function is not passed a svn_wc_adm_access_t.  Instead,
+ * it separately opens the object being deleted, so that if there is a
+ * lock on that object, the object cannot be deleted.
  */
 static svn_error_t *
-relegate_external(const char *path,
-                  svn_cancel_func_t cancel_func,
-                  void *cancel_baton,
-                  apr_pool_t *pool)
+relegate_dir_external(const char *path,
+                      svn_cancel_func_t cancel_func,
+                      void *cancel_baton,
+                      apr_pool_t *pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
   svn_wc_adm_access_t *adm_access;
@@ -141,26 +151,20 @@ relegate_external(const char *path,
   return err;
 }
 
-/* Try to update an external PATH to URL at REVISION.
+/* Try to update a directory external at PATH to URL at REVISION.
    Use POOL for temporary allocations, and use the client context CTX. */
 static svn_error_t *
-switch_external(const char *path,
-                const char *url,
-                const svn_opt_revision_t *revision,
-                const svn_opt_revision_t *peg_revision,
-                svn_boolean_t *timestamp_sleep,
-                svn_client_ctx_t *ctx,
-                apr_pool_t *pool)
+switch_dir_external(const char *path,
+                    const char *url,
+                    const svn_opt_revision_t *revision,
+                    const svn_opt_revision_t *peg_revision,
+                    svn_boolean_t *timestamp_sleep,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool)
 {
   svn_node_kind_t kind;
   svn_error_t *err;
   apr_pool_t *subpool = svn_pool_create(pool);
-
-  /* First notify that we're about to handle an external. */
-  if (ctx->notify_func2)
-    ctx->notify_func2(ctx->notify_baton2,
-                      svn_wc_create_notify(path, svn_wc_notify_update_external,
-                                           pool), pool);
 
   /* If path is a directory, try to update/switch to the correct URL
      and revision. */
@@ -226,8 +230,8 @@ switch_external(const char *path,
 
               SVN_ERR(svn_client__switch_internal(NULL, path, url,
                                                   peg_revision, revision,
-                                                  svn_depth_infinity, TRUE,
-                                                  timestamp_sleep,
+                                                  NULL, svn_depth_infinity,
+                                                  TRUE, timestamp_sleep,
                                                   FALSE, FALSE, ctx, subpool));
 
               svn_pool_destroy(subpool);
@@ -246,10 +250,10 @@ switch_external(const char *path,
 
   if (kind == svn_node_dir)
     /* Buh-bye, old and busted ... */
-    SVN_ERR(relegate_external(path,
-                              ctx->cancel_func,
-                              ctx->cancel_baton,
-                              pool));
+    SVN_ERR(relegate_dir_external(path,
+                                  ctx->cancel_func,
+                                  ctx->cancel_baton,
+                                  pool));
   else
     {
       /* The target dir might have multiple components.  Guarantee
@@ -260,10 +264,199 @@ switch_external(const char *path,
 
   /* ... Hello, new hotness. */
   return svn_client__checkout_internal(NULL, url, path, peg_revision,
-                                       revision,
+                                       revision, NULL,
                                        SVN_DEPTH_INFINITY_OR_FILES(TRUE),
                                        FALSE, FALSE, timestamp_sleep,
                                        ctx, pool);
+}
+
+/* Try to update a file external at PATH to URL at REVISION using a
+   access baton that has a write lock.  Use POOL for temporary
+   allocations, and use the client context CTX. */
+static svn_error_t *
+switch_file_external(const char *path,
+                     const char *url,
+                     const svn_opt_revision_t *peg_revision,
+                     const svn_opt_revision_t *revision,
+                     svn_wc_adm_access_t *adm_access,
+                     svn_ra_session_t *ra_session,
+                     const char *ra_session_url,
+                     svn_revnum_t ra_revnum,
+                     const char *repos_root_url,
+                     svn_boolean_t *timestamp_sleep,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool)
+{
+  apr_pool_t *subpool = svn_pool_create(pool);
+  svn_wc_adm_access_t *target_adm_access;
+  const char *anchor;
+  const char *target;
+  const svn_wc_entry_t *entry;
+  svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
+                                                 SVN_CONFIG_CATEGORY_CONFIG,
+                                                 APR_HASH_KEY_STRING) : NULL;
+  svn_boolean_t use_commit_times;
+  svn_boolean_t unlink_file = FALSE;
+  svn_boolean_t revert_file = FALSE;
+  svn_boolean_t remove_from_revision_control = FALSE;
+  svn_error_t *err = NULL;
+  svn_error_t *e;
+
+  /* There must be a working copy to place the file external into. */
+  SVN_ERR(svn_wc_get_actual_target(path, &anchor, &target, subpool));
+  SVN_ERR(svn_wc_adm_retrieve(&target_adm_access, adm_access, anchor,
+                              subpool));
+  SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, subpool));
+
+  /* Only one notification is done for the external, so don't notify
+     for any following steps.  Use the following trick to add the file
+     then switch it to the external URL. */
+
+  /* See if the user wants last-commit timestamps instead of current ones. */
+  SVN_ERR(svn_config_get_bool(cfg, &use_commit_times,
+                              SVN_CONFIG_SECTION_MISCELLANY,
+                              SVN_CONFIG_OPTION_USE_COMMIT_TIMES, FALSE));
+
+  /* If there is a versioned item with this name, ensure it's a file
+     external before working with it.  If there is no entry in the
+     working copy, then create an empty file and add it to the working
+     copy. */
+  if (entry)
+    {
+      if (! entry->file_external_path)
+        return svn_error_createf
+          (SVN_ERR_CLIENT_FILE_EXTERNAL_OVERWRITE_VERSIONED, 0,
+           _("The file external from '%s' cannot overwrite the existing "
+             "versioned item at '%s'"),
+           url, path);
+    }
+  else
+    {
+      const svn_wc_entry_t *anchor_dir_entry;
+      apr_file_t *f;
+      svn_boolean_t text_conflicted;
+      svn_boolean_t prop_conflicted;
+      svn_boolean_t has_tree_conflicted_children;
+
+      /* Check for a conflict on the containing directory.  Because a
+         switch is done on the added file later, it will leave a
+         conflict on the directory.  To prevent resolving a conflict
+         due to another change on the directory, do not allow a file
+         external to be added when one exists. */
+      SVN_ERR(svn_wc__entry_versioned(&anchor_dir_entry, anchor, adm_access,
+                                      FALSE, subpool));
+      SVN_ERR(svn_wc_conflicted_p2(&text_conflicted, &prop_conflicted,
+                                   &has_tree_conflicted_children,
+                                   anchor, anchor_dir_entry, subpool));
+      if (text_conflicted || prop_conflicted)
+        return svn_error_createf
+          (SVN_ERR_WC_FOUND_CONFLICT, 0,
+           _("The file external from '%s' cannot be written to '%s' while "
+             "'%s' remains in conflict"),
+          url, path, anchor);
+
+      /* Try to create an empty file.  If there is a file already
+         there, then don't touch it. */
+      SVN_ERR(svn_io_file_open(&f,
+                               path,
+                               APR_WRITE | APR_CREATE | APR_EXCL,
+                               APR_OS_DEFAULT,
+                               subpool));
+      unlink_file = TRUE;
+      err = svn_io_file_close(f, pool);
+      if (err)
+        goto cleanup;
+
+      err = svn_wc_add3(path, target_adm_access, svn_depth_infinity,
+                        NULL, /* const char *copyfrom_url */
+                        SVN_INVALID_REVNUM, /* svn_revnum_t copyfrom_rev */
+                        ctx->cancel_func, ctx->cancel_baton,
+                        NULL, /* svn_wc_notify_func2_t notify_func */
+                        NULL, /* void *notify_baton */
+                        subpool);
+      if (err)
+        goto cleanup;
+      revert_file = TRUE;
+
+      err = svn_wc__set_file_external_location(target_adm_access, target,
+                                               url, peg_revision, revision,
+                                               repos_root_url, subpool);
+      if (err)
+        goto cleanup;
+    }
+
+  err = svn_client__switch_internal(NULL, path, url, peg_revision, revision,
+                                    adm_access, svn_depth_empty,
+                                    FALSE, /* depth_is_sticky */
+                                    timestamp_sleep,
+                                    TRUE, /* ignore_externals */
+                                    FALSE, /* allow_unver_obstructions */
+                                    ctx,
+                                    pool);
+  if (err)
+    goto cleanup;
+
+  /* Do some additional work if the file external is newly added to
+     the wc. */
+  if (unlink_file)
+    {
+      /* At this point the newly created file external is switched, so
+         if there is an error, to back everything out the file cannot
+         be reverted, it needs to be removed forcibly from the wc.. */
+      revert_file = FALSE;
+      remove_from_revision_control = TRUE;
+
+      /* Switching a newly added file causes a conflict on the anchor
+         directory, so resolve it. */
+      err = svn_wc_resolved_conflict4(anchor, 
+                                      target_adm_access,
+                                      FALSE, FALSE, TRUE,
+                                      svn_depth_empty,
+                                      svn_wc_conflict_choose_merged,
+                                      NULL, /* svn_wc_notify_func2_t */
+                                      NULL, /* void * */
+                                      ctx->cancel_func,
+                                      ctx->cancel_baton,
+                                      subpool);
+      if (err)
+        goto cleanup;
+  }
+
+  return SVN_NO_ERROR;
+
+ cleanup:
+  if (revert_file)
+    {
+      e = svn_wc_revert3(path, adm_access, svn_depth_empty, use_commit_times,
+                         NULL, /* apr_array_header_t *changelists */
+                         ctx->cancel_func,
+                         ctx->cancel_baton,
+                         NULL, /* svn_wc_notify_func2_t */
+                         NULL, /* void *notify_baton */
+                         subpool);
+      if (e)
+        svn_error_clear(e);
+    }
+
+  if (remove_from_revision_control)
+    {
+      e = svn_wc_remove_from_revision_control(target_adm_access, target,
+                                              TRUE, FALSE,
+                                              ctx->cancel_func,
+                                              ctx->cancel_baton,
+                                              subpool);
+      if (e)
+        svn_error_clear(e);
+    }
+
+  if (unlink_file)
+    {
+      e = svn_io_remove_file(path, subpool);
+      if (e)
+        svn_error_clear(e);
+    }
+
+  return err;
 }
 
 /* Return the scheme of @a uri in @a scheme allocated from @a pool.
@@ -468,6 +661,9 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
   const char *parent;
   const char *path = svn_path_join(ib->parent_dir,
                                    (const char *) key, ib->iter_pool);
+  svn_ra_session_t *ra_session;
+  svn_node_kind_t kind;
+  svn_client__ra_session_from_path_results ra_cache = { 0 };
 
   /* Don't bother to check status, since we'll get that for free by
      attempting to retrieve the hash values anyway.  */
@@ -518,23 +714,48 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
      extra bookkeeping worthwhile.
   */
 
+  /* If the external is being checked out, exported or updated,
+     determine if the external is a file or directory. */
+  if (new_item)
+    {
+      /* Get the RA connection. */
+      SVN_ERR(svn_client__ra_session_from_path(&ra_session,
+                                               &ra_cache.ra_revnum,
+                                               &ra_cache.ra_session_url,
+                                               new_item->url, NULL,
+                                               &(new_item->peg_revision),
+                                               &(new_item->revision), ib->ctx,
+                                               ib->pool));
+
+      SVN_ERR(svn_ra_get_uuid2(ra_session, &ra_cache.repos_uuid, ib->pool));
+      SVN_ERR(svn_ra_get_repos_root2(ra_session, &ra_cache.repos_root_url,
+                                     ib->pool));
+      SVN_ERR(svn_ra_check_path(ra_session, "", ra_cache.ra_revnum, &kind,
+                                ib->pool));
+
+      if (svn_node_none == kind)
+        return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                                 _("URL '%s' at revision %ld doesn't exist"), 
+                                 ra_cache.ra_session_url,
+                                 ra_cache.ra_revnum);
+
+      if (svn_node_dir != kind && svn_node_file != kind)
+        return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                                 _("URL '%s' at revision %ld is not a file "
+                                   "or a directory"), 
+                                 ra_cache.ra_session_url,
+                                 ra_cache.ra_revnum);
+
+      ra_cache.kind_p = &kind;
+    }
+
   /* Not protecting against recursive externals.  Detecting them in
      the global case is hard, and it should be pretty obvious to a
      user when it happens.  Worst case: your disk fills up :-). */
 
   if (! old_item)
     {
-      /* The target dir might have multiple components.  Guarantee
-         the path leading down to the last component. */
-      svn_path_split(path, &parent, NULL, ib->iter_pool);
-      SVN_ERR(svn_io_make_dir_recursively(parent, ib->iter_pool));
-
-      /* If we were handling renames the fancy way, then before
-         checking out a new subdir here, we would somehow learn if
-         it's really just a rename of an old one.  That would work in
-         tandem with the next case -- this case would do nothing,
-         knowing that the next case either already has, or soon will,
-         rename the external subdirectory. */
+      /* This branch is only used during a checkout or an export. */
 
       /* First notify that we're about to handle an external. */
       if (ib->ctx->notify_func2)
@@ -543,55 +764,143 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
            svn_wc_create_notify(path, svn_wc_notify_update_external,
                                 ib->iter_pool), ib->iter_pool);
 
-      if (ib->is_export)
-        /* ### It should be okay to "force" this export.  Externals
-           only get created in subdirectories of versioned
-           directories, so an external directory couldn't already
-           exist before the parent export process unless a versioned
-           directory above it did, which means the user would have
-           already had to force these creations to occur. */
-        SVN_ERR(svn_client_export4(NULL, new_item->url, path,
-                                   &(new_item->peg_revision),
-                                   &(new_item->revision),
-                                   TRUE, FALSE, svn_depth_infinity, NULL,
-                                   ib->ctx, ib->iter_pool));
-      else
-        SVN_ERR(svn_client__checkout_internal
-                (NULL, new_item->url, path,
-                 &(new_item->peg_revision), &(new_item->revision),
-                 SVN_DEPTH_INFINITY_OR_FILES(TRUE),
-                 FALSE, FALSE, ib->timestamp_sleep, ib->ctx, ib->iter_pool));
+      switch (*ra_cache.kind_p)
+        {
+        case svn_node_dir:
+          /* The target dir might have multiple components.  Guarantee
+             the path leading down to the last component. */
+          svn_path_split(path, &parent, NULL, ib->iter_pool);
+          SVN_ERR(svn_io_make_dir_recursively(parent, ib->iter_pool));
+
+          /* If we were handling renames the fancy way, then before
+             checking out a new subdir here, we would somehow learn if
+             it's really just a rename of an old one.  That would work in
+             tandem with the next case -- this case would do nothing,
+             knowing that the next case either already has, or soon will,
+             rename the external subdirectory. */
+
+          if (ib->is_export)
+            /* ### It should be okay to "force" this export.  Externals
+               only get created in subdirectories of versioned
+               directories, so an external directory couldn't already
+               exist before the parent export process unless a versioned
+               directory above it did, which means the user would have
+               already had to force these creations to occur. */
+            SVN_ERR(svn_client_export4(NULL, new_item->url, path,
+                                       &(new_item->peg_revision),
+                                       &(new_item->revision),
+                                       TRUE, FALSE, svn_depth_infinity, NULL,
+                                       ib->ctx, ib->iter_pool));
+          else
+            SVN_ERR(svn_client__checkout_internal
+                    (NULL, new_item->url, path,
+                     &(new_item->peg_revision), &(new_item->revision),
+                     &ra_cache,
+                     SVN_DEPTH_INFINITY_OR_FILES(TRUE),
+                     FALSE, FALSE, ib->timestamp_sleep, ib->ctx,
+                     ib->iter_pool));
+          break;
+        case svn_node_file:
+          if (ib->is_export)
+            /* Do not overwrite an existing file with this file
+               external. */
+            SVN_ERR(svn_client_export4(NULL, new_item->url, path,
+                                       &(new_item->peg_revision),
+                                       &(new_item->revision),
+                                       FALSE, TRUE, svn_depth_infinity, NULL,
+                                       ib->ctx, ib->iter_pool));
+          else
+            SVN_ERR(switch_file_external(path,
+                                         new_item->url,
+                                         &new_item->peg_revision,
+                                         &new_item->revision,
+                                         ib->adm_access,
+                                         ra_session,
+                                         ra_cache.ra_session_url,
+                                         ra_cache.ra_revnum,
+                                         ra_cache.repos_root_url,
+                                         ib->timestamp_sleep, ib->ctx,
+                                         ib->iter_pool));
+          break;
+        default:
+          SVN_ERR_MALFUNCTION();
+          break;
+        }
     }
   else if (! new_item)
     {
+      /* This branch is only used when an external is deleted from the
+         repository and the working copy is updated. */
+
       /* See comment in above case about fancy rename handling.  Here,
          before removing an old subdir, we would see if it wants to
          just be renamed to a new one. */
 
-      svn_error_t *err, *err2;
+      svn_error_t *err;
       svn_wc_adm_access_t *adm_access;
+      svn_boolean_t close_access_baton_when_done;
 
-      SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, path, TRUE, -1,
-                               ib->ctx->cancel_func, ib->ctx->cancel_baton,
-                               ib->iter_pool));
+      const char *what_to_remove;
 
-      /* We don't use relegate_external() here, because we know that
+      /* Determine if a directory or file external is being removed.
+         Try to handle the case when the user deletes the external by
+         hand or it is missing.  First try to open the directory for a
+         directory external.  If that doesn't work, get the access
+         baton for the parent directory and remove the entry for the
+         external. */
+      err = svn_wc_adm_open3(&adm_access, NULL, path, TRUE, -1,
+                             ib->ctx->cancel_func, ib->ctx->cancel_baton,
+                             ib->iter_pool);
+      if (err)
+        {
+          const char *anchor;
+          const char *target;
+          svn_error_t *err2;
+
+          SVN_ERR(svn_wc_get_actual_target(path, &anchor, &target,
+                                           ib->iter_pool));
+
+          err2 = svn_wc_adm_retrieve(&adm_access, ib->adm_access, anchor,
+                                     ib->iter_pool);
+          if (err2)
+            {
+              svn_error_clear(err2);
+              return err;
+            }
+          else
+            {
+              svn_error_clear(err);
+            }
+          close_access_baton_when_done = FALSE;
+          what_to_remove = target;
+        }
+      else
+        {
+          close_access_baton_when_done = TRUE;
+          what_to_remove = SVN_WC_ENTRY_THIS_DIR;
+        }
+
+      /* We don't use relegate_dir_external() here, because we know that
          nothing else in this externals description (at least) is
          going to need this directory, and therefore it's better to
          leave stuff where the user expects it. */
       err = svn_wc_remove_from_revision_control
-        (adm_access, SVN_WC_ENTRY_THIS_DIR, TRUE, FALSE,
+        (adm_access, what_to_remove, TRUE, FALSE,
          ib->ctx->cancel_func, ib->ctx->cancel_baton, ib->iter_pool);
 
       /* ### Ugly. Unlock only if not going to return an error. Revisit */
-      if (!err || err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD)
-        if ((err2 = svn_wc_adm_close(adm_access)))
-          {
-            if (!err)
-              err = err2;
-            else
-              svn_error_clear(err2);
-          }
+      if (close_access_baton_when_done &&
+          (!err || err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
+        {
+          svn_error_t *err2 = svn_wc_adm_close(adm_access);
+          if (err2)
+            {
+              if (!err)
+                err = err2;
+              else
+                svn_error_clear(err2);
+            }
+        }
 
       if (err && (err->apr_err != SVN_ERR_WC_LEFT_LOCAL_MOD))
         return err;
@@ -602,14 +911,46 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
     }
   else
     {
+      /* This branch handles all other changes. */
+
+      /* First notify that we're about to handle an external. */
+      if (ib->ctx->notify_func2)
+        (*ib->ctx->notify_func2)
+          (ib->ctx->notify_baton2,
+           svn_wc_create_notify(path, svn_wc_notify_update_external,
+                                ib->iter_pool), ib->iter_pool);
+
       /* Either the URL changed, or the exact same item is present in
          both hashes, and caller wants to update such unchanged items.
          In the latter case, the call below will try to make sure that
          the external really is a WC pointing to the correct
          URL/revision. */
-      SVN_ERR(switch_external(path, new_item->url, &(new_item->revision),
-                              &(new_item->peg_revision),
-                              ib->timestamp_sleep, ib->ctx, ib->iter_pool));
+      switch (*ra_cache.kind_p)
+        {
+        case svn_node_dir:
+          SVN_ERR(switch_dir_external(path, new_item->url,
+                                      &(new_item->revision),
+                                      &(new_item->peg_revision),
+                                      ib->timestamp_sleep, ib->ctx,
+                                      ib->iter_pool));
+          break;
+        case svn_node_file:
+          SVN_ERR(switch_file_external(path,
+                                       new_item->url,
+                                       &new_item->peg_revision,
+                                       &new_item->revision,
+                                       ib->adm_access,
+                                       ra_session,
+                                       ra_cache.ra_session_url,
+                                       ra_cache.ra_revnum,
+                                       ra_cache.repos_root_url,
+                                       ib->timestamp_sleep, ib->ctx,
+                                       ib->iter_pool));
+          break;
+        default:
+          SVN_ERR_MALFUNCTION();
+          break;
+        }
     }
 
   /* Clear ib->iter_pool -- we only use it for scratchwork (and this will
@@ -641,6 +982,7 @@ struct handle_externals_desc_change_baton
   const char *to_path;
 
   /* Passed through to handle_external_item_change_baton. */
+  svn_wc_adm_access_t *adm_access;
   svn_client_ctx_t *ctx;
   const char *repos_root_url;
   svn_boolean_t *timestamp_sleep;
@@ -668,6 +1010,11 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
   svn_wc_external_item2_t *item;
   const char *ambient_depth_w;
   svn_depth_t ambient_depth;
+
+  if (cb->is_export)
+    SVN_ERR_ASSERT(!cb->adm_access);
+  else
+    SVN_ERR_ASSERT(cb->adm_access);
 
   if (cb->ambient_depths)
     {
@@ -733,6 +1080,7 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
   ib.new_desc          = new_desc_hash;
   ib.parent_dir        = (const char *) key;
   ib.repos_root_url    = cb->repos_root_url;
+  ib.adm_access        = cb->adm_access;
   ib.ctx               = cb->ctx;
   ib.is_export         = cb->is_export;
   ib.timestamp_sleep   = cb->timestamp_sleep;
@@ -788,7 +1136,8 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
 
 
 svn_error_t *
-svn_client__handle_externals(svn_wc_traversal_info_t *traversal_info,
+svn_client__handle_externals(svn_wc_adm_access_t *adm_access,
+                             svn_wc_traversal_info_t *traversal_info,
                              const char *from_url,
                              const char *to_path,
                              const char *repos_root_url,
@@ -815,6 +1164,7 @@ svn_client__handle_externals(svn_wc_traversal_info_t *traversal_info,
   cb.from_url          = from_url;
   cb.to_path           = to_path;
   cb.repos_root_url    = repos_root_url;
+  cb.adm_access        = adm_access;
   cb.ctx               = ctx;
   cb.timestamp_sleep   = timestamp_sleep;
   cb.is_export         = FALSE;
@@ -842,6 +1192,7 @@ svn_client__fetch_externals(apr_hash_t *externals,
   cb.externals_old     = apr_hash_make(pool);
   cb.requested_depth   = requested_depth;
   cb.ambient_depths    = NULL;
+  cb.adm_access        = NULL;
   cb.ctx               = ctx;
   cb.from_url          = from_url;
   cb.to_path           = to_path;

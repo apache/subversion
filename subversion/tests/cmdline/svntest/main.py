@@ -281,7 +281,7 @@ def get_admin_name():
   "Return name of SVN administrative subdirectory."
 
   if (windows or sys.platform == 'cygwin') \
-      and os.environ.has_key('SVN_ASP_DOT_NET_HACK'):
+      and 'SVN_ASP_DOT_NET_HACK' in os.environ:
     return '_svn'
   else:
     return '.svn'

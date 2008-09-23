@@ -756,7 +756,7 @@ def build_tree_from_status(lines):
 
   # 'status -v' output looks like this:
   #
-  #      "%c%c%c%c%c%c %c   %6s   %6s %-12s %s\n"
+  #      "%c%c%c%c%c%c  %c   %6s   %6s %-12s %s\n"
   #
   # (Taken from 'print_status' in subversion/svn/status.c.)
   #
@@ -770,7 +770,7 @@ def build_tree_from_status(lines):
   #    - switched flag         (4)  (single letter: "S" or " ")
   #    - repos lock status     (5)  (single letter: "K", "O", "B", "T", " ")
   #
-  #    [one space]
+  #    [two spaces]
   #
   #    - out-of-date flag      (6)  (single letter: "*" or " ")
   #
@@ -791,7 +791,7 @@ def build_tree_from_status(lines):
   #    - path                 (10)  (string of characters until newline)
 
   # Try http://www.wordsmith.org/anagram/anagram.cgi?anagram=ACDRMGU
-  rm = re.compile('^([!MACDRUG_ ][MACDRUG_ ])([L ])([+ ])([S ])([KOBT ]) ([* ])   [^0-9-]*(\d+|-|\?) +(\d|-|\?)+ +(\S+) +(.+)')
+  rm = re.compile('^([!MACDRUG_ ][MACDRUG_ ])([L ])([+ ])([S ])([KOBT ])  ([* ])   [^0-9-]*(\d+|-|\?) +(\d|-|\?)+ +(\S+) +(.+)')
   for line in lines:
 
     # Quit when we hit an externals status announcement (### someday we can fix

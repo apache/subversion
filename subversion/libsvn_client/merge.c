@@ -2159,7 +2159,8 @@ push_range(apr_array_header_t *rangelist,
 
    MERGEINFO_PATH, PARENT, REVISION1, REVISION2, PRIMARY_URL, RA_SESSION,
    and CTX are all cascaded from filter_merged_revisions() - see that function
-   for more information on each.
+   for more information on each.  In particular note that PARENT must have
+   been processed already by this function.
 
    Since this function is only invoked for subtrees of the merge target, the
    guarantees afforded by normalize_merge_sources() don't apply.  Therefore it
@@ -2470,6 +2471,9 @@ prepare_subtree_ranges(apr_array_header_t **requested_rangelist,
    mergeinfo - see svn_client__get_history_as_mergeinfo().
 
    NOTE: This should only be called when honoring mergeinfo.
+   
+   NOTE: Like calculate_remaining_ranges() if PARENT is present then this
+   function must have previously been called for PARENT.
 */
 static svn_error_t *
 filter_merged_revisions(svn_client__merge_path_t *parent,
@@ -2666,6 +2670,11 @@ filter_merged_revisions(svn_client__merge_path_t *parent,
    represent the nearest working copy ancestor of CHILD.
 
    NOTE: This should only be called when honoring mergeinfo.
+
+   NOTE: If PARENT is present then this function must have previously been
+   called for PARENT, i.e. if populate_remaining_ranges() is calling this
+   function for a set of svn_client__merge_path_t* the calls must be made
+   in depth-first order.
 
    NOTE: When performing reverse merges, return
    SVN_ERR_CLIENT_NOT_READY_TO_MERGE if URL1@REVISION1, URL2@REVISION2, and
@@ -2874,8 +2883,9 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
 
    For each child in CHILDREN_WITH_MERGEINFO, populate that
    child's remaining_ranges list.  CHILDREN_WITH_MERGEINFO is expected
-   to be sorted in depth first order.  All persistent allocations are
-   from CHILDREN_WITH_MERGEINFO->pool.
+   to be sorted in depth first order and each child must be processed in
+   that order.  All persistent allocations are from
+   CHILDREN_WITH_MERGEINFO->pool.
 
    If HONOR_MERGEINFO is set, this function will actually try to be
    intelligent about populating remaining_ranges list.  Otherwise, it

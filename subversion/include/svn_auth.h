@@ -784,7 +784,7 @@ svn_auth_get_simple_provider(svn_auth_provider_object_t **provider,
                              apr_pool_t *pool);
 
 
-#if (defined(WIN32) && !defined(__MINGW32__)) || defined(DOXYGEN)
+#if (defined(WIN32) && !defined(__MINGW32__)) || defined(DOXYGEN) || defined(CTYPESGEN)
 /**
  * Create and return @a *provider, an authentication provider of type @c
  * svn_auth_cred_simple_t that gets/sets information from the user's
@@ -807,9 +807,9 @@ svn_auth_get_simple_provider(svn_auth_provider_object_t **provider,
 void
 svn_auth_get_windows_simple_provider(svn_auth_provider_object_t **provider,
                                      apr_pool_t *pool);
-#endif /* WIN32 || DOXYGEN */
+#endif /* WIN32 && !__MINGW32__ || DOXYGEN || CTYPESGEN */
 
-#if defined(DARWIN) || defined(DOXYGEN)
+#if defined(DARWIN) || defined(DOXYGEN) || defined(CTYPESGEN)
 /**
  * Create and return @a *provider, an authentication provider of type @c
  * svn_auth_cred_simple_t that gets/sets information from the user's
@@ -842,7 +842,7 @@ void
 svn_auth_get_keychain_ssl_client_cert_pw_provider
   (svn_auth_provider_object_t **provider,
    apr_pool_t *pool);
-#endif /* DARWIN || DOXYGEN */
+#endif /* DARWIN || DOXYGEN || CTYPESGEN */
 
 
 /** Create and return @a *provider, an authentication provider of type @c
@@ -876,7 +876,7 @@ svn_auth_get_ssl_server_trust_file_provider
    apr_pool_t *pool);
 
 
-#if (defined(WIN32) && !defined(__MINGW32__)) || defined(DOXYGEN)
+#if (defined(WIN32) && !defined(__MINGW32__)) || defined(DOXYGEN) || defined(CTYPESGEN)
 /**
  * Create and return @a *provider, an authentication provider of type @c
  * svn_auth_cred_ssl_server_trust_t, allocated in @a pool.
@@ -893,7 +893,7 @@ void
 svn_auth_get_windows_ssl_server_trust_provider
   (svn_auth_provider_object_t **provider,
    apr_pool_t *pool);
-#endif /* WIN32 || DOXYGEN */
+#endif /* WIN32 && !__MINGW32__ || DOXYGEN || CTYPESGEN */
 
 /** Create and return @a *provider, an authentication provider of type @c
  * svn_auth_cred_ssl_client_cert_t, allocated in @a pool.
