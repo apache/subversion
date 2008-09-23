@@ -1,6 +1,7 @@
 #!/home/djames/bin/python
 
 from ctypes import *
+import functions
 from functions import *
 from tempfile import TemporaryFile
 import sys
@@ -101,4 +102,18 @@ class Pool(object):
 
     # Mark pool as valid
     self._is_valid = lambda: 1
+
+
+# Special case for Subversion 1.5 and earlier: Make sure that platform-
+# specific functions are available, even if the headers were generated on a
+# different platform.
+
+for f in ('svn_auth_get_windows_simple_provider',
+          'svn_auth_get_windows_ssl_server_trust_provider',
+          'svn_auth_get_keychain_simple_provider'):
+
+    if hasattr(functions._libs['svn_subr-1'], f) and f not in locals():
+        f = getattr(functions._libs['svn_subr-1'], f)
+        f.restype = None
+        f.argtypes = [POINTER(POINTER(svn_auth_provider_object_t)), POINTER(apr_pool_t)]
 
