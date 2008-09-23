@@ -1290,7 +1290,7 @@ svn_path_canonicalize(const char *path, apr_pool_t *pool)
 
   /* Try to parse the path as an URI. */
   if (apr_uri_parse(pool, path, &host_uri) == APR_SUCCESS &&
-      host_uri.scheme)
+      host_uri.scheme && host_uri.hostname)
     {
       /* convert scheme and hostname to lowercase */
       apr_size_t offset;
