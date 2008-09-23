@@ -3,6 +3,9 @@ Version 1.6.0
 http://svn.collab.net/repos/svn/tags/1.6.0
 
  User-visible changes:
+  - General:
+    * Windows versions of Subversion require at least Windows 2000 (r33170)
+
   - Major new features:
 
   - Minor new features and improvements:
@@ -34,7 +37,7 @@ http://svn.collab.net/repos/svn/tags/1.5.2
 
 
 Version 1.5.2
-(29 Aug 2008, from /branches/1.5.x)
+(30 Aug 2008, from /branches/1.5.x)
 http://svn.collab.net/repos/svn/tags/1.5.2
 
  User-visible changes:
@@ -65,7 +68,7 @@ http://svn.collab.net/repos/svn/tags/1.5.2
 
 
 Version 1.5.1
-(24 Jul 2008, from /branches/1.5.x)
+(26 Jul 2008, from /branches/1.5.x)
 http://svn.collab.net/repos/svn/tags/1.5.1
 
  User-visible changes:

@@ -34,6 +34,12 @@ extern "C" {
 typedef struct svn_sqlite__db_t svn_sqlite__db_t;
 typedef struct svn_sqlite__stmt_t svn_sqlite__stmt_t;
 
+typedef enum svn_sqlite__mode_e {
+    svn_sqlite__mode_readonly,   /* open the database read-only */
+    svn_sqlite__mode_readwrite,  /* open the database read-write */
+    svn_sqlite__mode_rwcreate    /* open/create the database read-write */
+} svn_sqlite__mode_t;
+
 
 /* Steps the given statement; raises an SVN error (and finalizes the
    statement) if it doesn't return SQLITE_DONE. */
@@ -63,6 +69,7 @@ svn_sqlite__exec(svn_sqlite__db_t *db, const char *sql);
    temporary allocations are made in SCRATCH_POOL. */
 svn_error_t *
 svn_sqlite__open(svn_sqlite__db_t **db, const char *repos_path,
+                 svn_sqlite__mode_t mode,
                  int latest_schema, const char * const *upgrade_sql,
                  apr_pool_t *result_pool, apr_pool_t *scratch_pool);
 

@@ -1984,6 +1984,38 @@ typedef struct svn_wc_entry_t
    * @since New in 1.6. */
   const char *tree_conflict_data;
 
+  /** The entry is a intra-repository file external and this is the
+   * repository root relative path to the file specified in the
+   * externals definition, otherwise NULL if the entry is not a file
+   * external.
+   *
+   * @since New in 1.6. */
+  const char *file_external_path;
+
+  /** The entry is a intra-repository file external and this is the
+   * peg revision number specified in the externals definition.  This
+   * field is only valid when the file_external_path field is
+   * non-NULL.  The only permissible values are
+   * svn_opt_revision_unspecified if the entry is not an external,
+   * svn_opt_revision_head if the external revision is unspecified or
+   * specified with -r HEAD or svn_opt_revision_number for a specific
+   * revision number.
+   *
+   * @since New in 1.6. */
+  svn_opt_revision_t file_external_peg_rev;
+
+  /** The entry is a intra-repository file external and this is the
+   * operative revision number specified in the externals definition.
+   * This field is only valid when the file_external_path field is
+   * non-NULL.  The only permissible values are
+   * svn_opt_revision_unspecified if the entry is not an external,
+   * svn_opt_revision_head if the external revision is unspecified or
+   * specified with -r HEAD or svn_opt_revision_number for a specific
+   * revision number.
+   *
+   * @since New in 1.6. */
+  svn_opt_revision_t file_external_rev;
+
   /* IMPORTANT: If you extend this structure, check the following functions in
    * subversion/libsvn_wc/entries.c, to see if you need to extend them as well.
    *
@@ -2080,11 +2112,12 @@ svn_wc_entry_dup(const svn_wc_entry_t *entry,
 
 /** Given a @a dir_path under version control, decide if one of its
  * entries (@a entry) is in state of conflict; return the answers in
- * @a text_conflicted_p, @a prop_conflicted_p and @a tree_conflicted_p.
+ * @a text_conflicted_p, @a prop_conflicted_p and @a
+ * has_tree_conflicted_children.
  *
  * If @a entry is the THIS_DIR entry of @a dir_path, and this directory
  * currently contains one or more tree-conflicted children, then set
- * @a *tree_conflicted_p to true, else set it to false.
+ * @a *has_tree_conflicted_children to true, else set it to false.
  *
  * If the @a entry mentions that a text conflict file (.rej suffix)
  * exists, but it cannot be found, assume the text conflict has been
@@ -2102,7 +2135,7 @@ svn_wc_entry_dup(const svn_wc_entry_t *entry,
 svn_error_t *
 svn_wc_conflicted_p2(svn_boolean_t *text_conflicted_p,
                      svn_boolean_t *prop_conflicted_p,
-                     svn_boolean_t *tree_conflicted_p,
+                     svn_boolean_t *has_tree_conflicted_children,
                      const char *dir_path,
                      const svn_wc_entry_t *entry,
                      apr_pool_t *pool);
@@ -2412,7 +2445,8 @@ enum svn_wc_status_kind
     /** an unversioned resource is in the way of the versioned resource */
     svn_wc_status_obstructed,
 
-    /** an unversioned path populated by an svn:externals property */
+    /** an unversioned directory path populated by an svn:externals
+        property; this status is not used for file externals */
     svn_wc_status_external,
 
     /** a directory doesn't contain a complete entries list */
@@ -2452,7 +2486,7 @@ typedef struct svn_wc_status2_t
   svn_boolean_t copied;
 
   /** a file or directory can be 'switched' if the switch command has been
-   * used.
+   * used.  If this is TRUE, then file_external will be FALSE.
    */
   svn_boolean_t switched;
 
@@ -2512,7 +2546,17 @@ typedef struct svn_wc_status2_t
   /** Set @c TRUE if the entry is a directory containing tree conflicts.
    * @since New in 1.6
    */
-  svn_boolean_t tree_conflicted;
+  svn_boolean_t has_tree_conflicted_children;
+
+  /** True if the entry is the victim of a tree conflict.
+   * @since New in 1.6
+   */
+  svn_boolean_t is_tree_conflict_victim;
+
+  /** If the item is a file that was added to the working copy with an
+      svn:externals; if file_external is TRUE, then switched is always
+      FALSE. */
+  svn_boolean_t file_external;
 
   /* NOTE! Please update svn_wc_dup_status2() when adding new fields here. */
 } svn_wc_status2_t;

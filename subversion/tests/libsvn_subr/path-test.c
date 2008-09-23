@@ -735,6 +735,8 @@ test_canonicalize(const char **msg,
     { "../../foo/",           "../../foo" },
     { "../../foo/..",         "../../foo/.." },
     { "/../../",              "/../.." },
+    { "dirA",                 "dirA" },
+    { "foo/dirA",             "foo/dirA" },
     { "http://hst",           "http://hst" },
     { "http://hst/foo/../bar","http://hst/foo/../bar" },
     { "http://hst/",          "http://hst" },
@@ -744,6 +746,24 @@ test_canonicalize(const char **msg,
     { "file://",              "file://" },
     { "svn:///",              "svn://" },
     { "svn+ssh:///",          "svn+ssh://" },
+    { "http://HST/",          "http://hst" },
+    { "http://HST/FOO/BaR",   "http://hst/FOO/BaR" },
+    { "svn+ssh://j.raNDom@HST/BaR", "svn+ssh://j.raNDom@hst/BaR" },
+    { "svn+SSH://j.random:jRaY@HST/BaR", "svn+ssh://j.random:jRaY@hst/BaR" },
+    { "SVN+ssh://j.raNDom:jray@HST/BaR", "svn+ssh://j.raNDom:jray@hst/BaR" },
+    { "fILe:///Users/jrandom/wc", "file:///Users/jrandom/wc" },
+#if defined(WIN32) || defined(__CYGWIN__)
+    { "file:///c:/temp/repos", "file:///C:/temp/repos" },
+    { "file:///c:/temp/REPOS", "file:///C:/temp/REPOS" },
+    { "file:///C:/temp/REPOS", "file:///C:/temp/REPOS" },
+    { "//server/share/",       "//server/share" },
+    { "//server/SHare/",       "//server/SHare" },
+    { "//SERVER/SHare/",       "//server/SHare" },
+#else /* WIN32 or Cygwin */
+    { "file:///c:/temp/repos", "file:///c:/temp/repos" },
+    { "file:///c:/temp/REPOS", "file:///c:/temp/REPOS" },
+    { "file:///C:/temp/REPOS", "file:///C:/temp/REPOS" },
+#endif /* non-WIN32 */
     { NULL, NULL }
   };
   int i;
@@ -1303,11 +1323,33 @@ test_is_canonical(const char **msg,
     { "../../foo/",            FALSE },
     { "../../foo/..",          TRUE },
     { "/../../",               FALSE },
+    { "dirA",                  TRUE },
+    { "foo/dirA",              TRUE },
     { "http://hst",            TRUE },
     { "http://hst/foo/../bar", TRUE },
     { "http://hst/",           FALSE },
     { "foo/./bar",             FALSE },
-    { NULL, FALSE }
+    { "http://HST/",           FALSE },
+    { "http://HST/FOO/BaR",    FALSE },
+    { "svn+ssh://j.raNDom@HST/BaR", FALSE },
+    { "svn+SSH://j.random:jRaY@HST/BaR", FALSE },
+    { "SVN+ssh://j.raNDom:jray@HST/BaR", FALSE },    
+    { "svn+ssh://j.raNDom:jray@hst/BaR", TRUE },
+    { "fILe:///Users/jrandom/wc", FALSE },
+#if defined(WIN32) || defined(__CYGWIN__)
+    { "file:///c:/temp/repos", FALSE },
+    { "file:///c:/temp/REPOS", FALSE },
+    { "file:///C:/temp/REPOS", TRUE },
+    { "//server/share/",       FALSE },
+    { "//server/share",        TRUE },
+    { "//server/SHare",        TRUE },
+    { "//SERVER/SHare",        FALSE },
+#else /* WIN32 or Cygwin */
+    { "file:///c:/temp/repos", TRUE },
+    { "file:///c:/temp/REPOS", TRUE },
+    { "file:///C:/temp/REPOS", TRUE },
+#endif /* non-WIN32 */
+    { NULL, FALSE },
   };
   int i;
 

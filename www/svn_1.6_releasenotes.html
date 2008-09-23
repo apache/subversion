@@ -38,7 +38,7 @@ describes what is planned for the release.</p>
   <li><a href="#repository-root-relative-urls"
       >Repository root relative URLs</a></li>
   <li><a href="#file-externals"
-      >[BRANCH] Support for files in <tt>svn:externals</tt></a></li>
+      >Support for files in <tt>svn:externals</tt></a></li>
   <li><a href="#svn-patch"
       >[BRANCH] svn patch</a></li>
   <li><a href="#tree-conflicts"
@@ -276,10 +276,58 @@ Keyring, Mac OS Keychain, or in plaintext form.</p>
 </div>  <!-- repository-root-relative-urls -->
 
 <div class="h3" id="file-externals" title="file-externals">
-<h3>[BRANCH] Support for files in <tt>svn:externals</tt>
+<h3>Support for files in <tt>svn:externals</tt>
     (<em>client</em>)</h3>
 
-<p>XXX</p>
+<p>
+  If the URL in a <tt>svn:externals</tt> description refers to a file,
+  it will be added into the working copy as a versioned item.
+</p>
+
+<p>
+  There are a few differences between directory and file
+  externals.
+</p>
+
+<ul>
+  <li>
+    The path to the file external must be in a working copy that is
+    already checked out.  While directory externals can place the
+    external directory at any depth and it will create any
+    intermediate directories, file externals must be placed into a
+    working copy that is already checked out.
+  </li>
+  <li>
+    The file external's URL must be in the same repository as the URL
+    that the file external will be inserted into; inter-repository
+    file externals are not supported.
+  </li>
+  <li>
+    While commits do not descend into a directory external, a commit
+    in a directory containing a file external will commit any
+    modifications to the file external.
+  </li>
+</ul>
+
+<p>The differences between a normal versioned file and a file
+external.</p>
+
+<ul>
+  <li>
+    File externals cannot be moved or deleted; the
+    <tt>svn:externals</tt> property must be modified instead; however,
+    file externals can be copied.
+  </li>
+</ul>
+
+<p>Other facts.</p>
+
+<ul>
+  <li>
+    A file external shows up as a <tt>X</tt> in the switched status
+    column.
+  </li>
+</ul>
 
 <div class="h4" id="file-externals-further-reading"
              title="file-externals-further-reading">
