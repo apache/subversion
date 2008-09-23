@@ -1351,12 +1351,12 @@ svn_path_canonicalize(const char *path, apr_pool_t *pool)
         }
 #if defined(WIN32) || defined(__CYGWIN__)
       /* If this is the first path segment of a file:// URI and it contains a
-         windows drive letter, convert the drive letter to lower case. */
+         windows drive letter, convert the drive letter to upper case. */
       else if (uri && canon_segments == 0 && seglen == 2 &&
           strcmp(host_uri.scheme, "file") == 0 &&
-          src[0] >= 'A' && src[0] <= 'Z' && src[1] == ':')
+          src[0] >= 'a' && src[0] <= 'z' && src[1] == ':')
         {
-          *(dst++) = tolower(src[0]);
+          *(dst++) = toupper(src[0]);
           *(dst++) = ':';
           if (*next)
             *(dst++) = *next;
