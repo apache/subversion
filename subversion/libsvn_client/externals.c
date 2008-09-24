@@ -300,7 +300,6 @@ switch_file_external(const char *path,
   svn_boolean_t revert_file = FALSE;
   svn_boolean_t remove_from_revision_control = FALSE;
   svn_error_t *err = NULL;
-  svn_error_t *e;
 
   /* There must be a working copy to place the file external into. */
   SVN_ERR(svn_wc_get_actual_target(path, &anchor, &target, subpool));
@@ -427,31 +426,33 @@ switch_file_external(const char *path,
  cleanup:
   if (revert_file)
     {
-      e = svn_wc_revert3(path, adm_access, svn_depth_empty, use_commit_times,
-                         NULL, /* apr_array_header_t *changelists */
-                         ctx->cancel_func,
-                         ctx->cancel_baton,
-                         NULL, /* svn_wc_notify_func2_t */
-                         NULL, /* void *notify_baton */
-                         subpool);
+      svn_error_t *e = 
+        svn_wc_revert3(path, adm_access, svn_depth_empty, use_commit_times,
+                       NULL, /* apr_array_header_t *changelists */
+                       ctx->cancel_func,
+                       ctx->cancel_baton,
+                       NULL, /* svn_wc_notify_func2_t */
+                       NULL, /* void *notify_baton */
+                       subpool);
       if (e)
         svn_error_clear(e);
     }
 
   if (remove_from_revision_control)
     {
-      e = svn_wc_remove_from_revision_control(target_adm_access, target,
-                                              TRUE, FALSE,
-                                              ctx->cancel_func,
-                                              ctx->cancel_baton,
-                                              subpool);
+      svn_error_t * e = svn_wc_remove_from_revision_control(target_adm_access,
+                                                            target,
+                                                            TRUE, FALSE,
+                                                            ctx->cancel_func,
+                                                            ctx->cancel_baton,
+                                                            subpool);
       if (e)
         svn_error_clear(e);
     }
 
   if (unlink_file)
     {
-      e = svn_io_remove_file(path, subpool);
+      svn_error_t *e = svn_io_remove_file(path, subpool);
       if (e)
         svn_error_clear(e);
     }
