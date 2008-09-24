@@ -14,11 +14,11 @@ delay a release, etc.
 Candidate changes for 1.5.3:
 ============================
 
- * r33201
+ * r33201, r33212
    Fix a bug whereby 'svn mv' could cause the client to loop forever.
    Justification: hanging forever while memory grows is double-plus ungood.
    Votes:
-     +1: kfogel
+     +1: kfogel (r33201 only), danielsh
 
  * r32409
    Fix an incompatibility with BSD make, which was introduced in r24293.
