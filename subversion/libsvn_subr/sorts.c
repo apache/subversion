@@ -153,3 +153,72 @@ svn_sort__hash(apr_hash_t *ht,
 
   return ary;
 }
+
+/* Return the lowest index at which the element *KEY should be inserted into
+   the array at BASE which has NELTS elements of size ELT_SIZE bytes each,
+   according to the ordering defined by COMPARE_FUNC.
+   The array must already be sorted in the ordering defined by COMPARE_FUNC.
+   COMPARE_FUNC is defined as for the C stdlib function bsearch().
+   Note: This function is modeled on bsearch() and on lower_bound() in the
+   C++ STL.
+ */
+static int
+bsearch_lower_bound(const void *key,
+                    const void *base,
+                    int nelts,
+                    size_t elt_size,
+                    int (*compare_func)(const void *, const void *))
+{
+  int lower = 0;
+  int upper = nelts - 1;
+
+  /* Binary search for the lowest position at which to insert KEY. */
+  while (lower <= upper)
+    {
+      int try = (lower + upper) / 2;
+      int cmp = compare_func((const char *)base + try * elt_size, key);
+
+      if (cmp < 0)
+        lower = try + 1;
+      else
+        upper = try - 1;
+    }
+  assert(lower == upper + 1);
+
+  return lower;
+}
+
+int
+svn_sort__bsearch_lower_bound(const void *key,
+                              apr_array_header_t *array,
+                              int (*compare_func)(const void *, const void *))
+{
+  return bsearch_lower_bound(key,
+                             array->elts, array->nelts, array->elt_size,
+                             compare_func);
+}
+
+void
+svn_sort__array_insert(const void *new_element,
+                       apr_array_header_t *array,
+                       int insert_index)
+{
+  int elements_to_move;
+  char *new_position;
+
+  assert(0 <= insert_index && insert_index <= array->nelts);
+  elements_to_move = array->nelts - insert_index;  /* before bumping nelts */
+
+  /* Grow the array, allocating a new space at the end. Note: this can
+     reallocate the array's "elts" at a different address. */
+  apr_array_push(array);
+
+  /* Move the elements after INSERT_INDEX along. (When elements_to_move == 0,
+     this is a no-op.) */
+  new_position = (char *)array->elts + insert_index * array->elt_size;
+  memmove(new_position + array->elt_size, new_position,
+          array->elt_size * elements_to_move);
+
+  /* Copy in the new element */
+  memcpy(new_position, new_element, array->elt_size);
+}
