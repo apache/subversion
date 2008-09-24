@@ -42,6 +42,9 @@ extern "C" {
    back-end's format.  */
 #define SVN_FS_BASE__FORMAT_NUMBER                4
 
+/* Minimum format number that supports explicit metadata */
+#define SVN_FS_BASE__MIN_METADATA_FORMAT          4
+
 /* Minimum format number that supports forward deltas */
 #define SVN_FS_BASE__MIN_FORWARD_DELTAS_FORMAT    4
 
@@ -83,6 +86,7 @@ typedef struct
   DB *locks;
   DB *lock_tokens;
   DB *node_origins;
+  DB *metadata;
 
   /* A boolean for tracking when we have a live Berkeley DB
      transaction trail alive. */

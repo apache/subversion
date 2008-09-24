@@ -169,6 +169,7 @@ cleanup_fs(svn_fs_t *fs)
   SVN_ERR(cleanup_fs_db(fs, &bfd->locks, "locks"));
   SVN_ERR(cleanup_fs_db(fs, &bfd->lock_tokens, "lock-tokens"));
   SVN_ERR(cleanup_fs_db(fs, &bfd->node_origins, "node-origins"));
+  SVN_ERR(cleanup_fs_db(fs, &bfd->metadata, "metadata"));
 
   /* Finally, close the environment.  */
   bfd->bdb = 0;
@@ -616,6 +617,17 @@ open_databases(svn_fs_t *fs,
                        svn_fs_bdb__open_node_origins_table(&bfd->node_origins,
                                                            bfd->bdb->env,
                                                            create)));
+    }
+
+
+  if (format >= SVN_FS_BASE__MIN_METADATA_FORMAT)
+    {
+      SVN_ERR(BDB_WRAP(fs, (create
+                            ? "creating 'metadata' table"
+                            : "opening 'matadata' table"),
+                       svn_fs_bdb__open_metadata_table(&bfd->metadata,
+                                                       bfd->bdb->env,
+                                                       create)));
     }
 
   return SVN_NO_ERROR;
