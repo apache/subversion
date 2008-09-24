@@ -14,11 +14,19 @@ delay a release, etc.
 Candidate changes for 1.5.3:
 ============================
 
+ * r33109, r33121
+   Correctly URI-encode a path when it becomes a URI.
+   Justification: merging a file whose name had spaces was broken
+   Notes: Similar fixes may be needed elsewhere, and if they are made,
+          they should probably also be proposed for backport.
+   Votes:
+     +1: kfogel
+
  * r33201, r33212
    Fix a bug whereby 'svn mv' could cause the client to loop forever.
    Justification: hanging forever while memory grows is double-plus ungood.
    Votes:
-     +1: kfogel (r33201 only), danielsh
+     +1: kfogel, danielsh
 
  * r32409
    Fix an incompatibility with BSD make, which was introduced in r24293.
