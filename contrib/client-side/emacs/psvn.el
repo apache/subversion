@@ -3416,7 +3416,7 @@ When called with a prefix argument it is possible to store/load different sets o
   (interactive "P")
   (let ((file-list (gethash arg svn-status-usermark-storage)))
     (svn-status-apply-usermark-checked
-     '(lambda (info) (member (svn-status-line-info->filename-nondirectory info) file-list)) t)))
+     '(lambda (info) (member (svn-status-line-info->filename info) file-list)) t)))
 
 (defvar svn-status-regexp-history nil
   "History list of regular expressions used in svn status commands.")
