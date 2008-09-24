@@ -274,6 +274,13 @@ class SVNTreeNode:
     return s.getvalue()
 
 
+  def __cmp__(self, other):
+    """Define a simple ordering of two nodes without regard to their full
+    path (i.e. position in the tree). This can be used for sorting the
+    children within a directory."""
+    return cmp(self.name, other.name)
+
+
 # reserved name of the root of the tree
 root_node_name = "__SVN_ROOT_NODE"
 
@@ -297,18 +304,6 @@ def add_elements_as_path(top_node, element_list):
     new_node = SVNTreeNode(i, None)
     prev_node.add_child(new_node)
     prev_node = new_node
-
-
-# Sorting function -- sort 2 nodes by their names.
-def node_is_greater(a, b):
-  "Sort the names of two nodes."
-  # Interal use only
-  if a.name == b.name:
-    return 0
-  if a.name > b.name:
-    return 1
-  else:
-    return -1
 
 
 # Helper for compare_trees
@@ -608,10 +603,8 @@ def dump_tree(n,indent=""):
   the SVNTreeNode N. Prefix each line with the string INDENT."""
 
   # Code partially stolen from Dave Beazley
-  if n.children is None:
-    tmp_children = []
-  else:
-    tmp_children = n.children
+  tmp_children = n.children or []
+  tmp_children.sort()
 
   if n.name == root_node_name:
     print "%s%s" % (indent, "ROOT")
@@ -622,8 +615,7 @@ def dump_tree(n,indent=""):
   indent = indent.replace("+", " ")
   for i in range(len(tmp_children)):
     c = tmp_children[i]
-    if i == len(tmp_children
-                )-1:
+    if i == len(tmp_children)-1:
       dump_tree(c,indent + "  +-- ")
     else:
       dump_tree(c,indent + "  |-- ")
