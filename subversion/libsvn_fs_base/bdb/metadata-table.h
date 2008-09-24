@@ -38,20 +38,13 @@ int svn_fs_bdb__open_metadata_table(DB **metadata_p,
 
 /* Add metadata to the `metadata' table in FS, as part of TRAIL.
 
-   KEY and VAL should be NULL-terminated strings.  */
-svn_error_t *svn_fs_bdb__metadata_add(svn_fs_t *fs,
+   KEY and VAL should be NULL-terminated strings.  If VAL is NULL,
+   the key is removed from the table. */
+svn_error_t *svn_fs_bdb__metadata_set(svn_fs_t *fs,
                                       const char *key,
                                       const char *val,
                                       trail_t *trail,
                                       apr_pool_t *pool);
-
-
-/* Remove the metadata whose key is KEY from the `metadata' table of
-   FS, as part of TRAIL.  */
-svn_error_t *svn_fs_bdb__metadata_delete(svn_fs_t *fs,
-                                         const char *key,
-                                         trail_t *trail,
-                                         apr_pool_t *pool);
 
 
 /* Retrieve metadata cooresponding to KEY in FS and put it into *VAL
