@@ -772,6 +772,11 @@ SVN_ERROR_START
              SVN_ERR_RA_CATEGORY_START + 9,
              "Repository UUID does not match expected UUID")
 
+  /** @since New in 1.6. */
+  SVN_ERRDEF(SVN_ERR_RA_REPOS_ROOT_URL_MISMATCH,
+             SVN_ERR_RA_CATEGORY_START + 10,
+             "Repository root URL does not match expected root URL")
+
   /* ra_dav errors */
 
   SVN_ERRDEF(SVN_ERR_RA_DAV_SOCK_INIT,
