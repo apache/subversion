@@ -447,6 +447,9 @@ typedef struct {
   /* The connection and session to be used for this request. */
   svn_ra_serf__connection_t *conn;
   svn_ra_serf__session_t *session;
+
+  /* Marks whether a snapshot was set on the body bucket. */
+  svn_boolean_t body_snapshot_set;
 } svn_ra_serf__handler_t;
 
 /*
