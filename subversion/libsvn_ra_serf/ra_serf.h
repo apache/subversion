@@ -766,15 +766,6 @@ svn_ra_serf__propfind_is_done(svn_ra_serf__propfind_context_t *ctx);
 int
 svn_ra_serf__propfind_status_code(svn_ra_serf__propfind_context_t *ctx);
 
-/* Our PROPFIND bucket */
-serf_bucket_t *
-svn_ra_serf__bucket_propfind_create(svn_ra_serf__connection_t *conn,
-                                    const char *path,
-                                    const char *label,
-                                    const char *depth,
-                                    const svn_ra_serf__dav_props_t *find_props,
-                                    serf_bucket_alloc_t *allocator);
-
 /*
  * This function will deliver a PROP_CTX PROPFIND request in the SESS
  * serf context for the properties listed in LOOKUP_PROPS at URL for
