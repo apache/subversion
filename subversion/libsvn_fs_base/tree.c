@@ -2803,6 +2803,22 @@ svn_fs_base__deltify(svn_fs_t *fs,
   svn_fs_root_t *root;
   const char *txn_id;
   struct rev_get_txn_id_args args;
+  const char *val;
+  svn_revnum_t forward_delta_rev;
+
+  SVN_ERR(svn_fs_base__metadata_get(&val, fs,
+                                    SVN_FS_BASE__METADATA_FORWARD_DELTA_UPGRADE,
+                                    pool));
+
+  if (val != NULL)
+    {
+      SVN_ERR(svn_revnum_parse(&forward_delta_rev, val, NULL));
+
+      if (revision <= forward_delta_rev)
+        return svn_error_createf
+          (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+           _("Cannot deltify revisions prior to r%ld"), forward_delta_rev+1);
+    }
 
   SVN_ERR(svn_fs_base__revision_root(&root, fs, revision, pool));
 
