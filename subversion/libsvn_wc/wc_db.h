@@ -165,21 +165,32 @@ svn_wc__db_open_many(svn_wc__db_t **db,
  */
 svn_error_t *
 svn_wc__db_base_add_directory(svn_wc__db_t *db,
-                              const char *path,
+                              const char *local_path,
+                              const char *repos_path,
                               svn_revnum_t revision,
-                              apr_hash_t *props,
-                              const apr_array_header_t *children,
-                              const char *repos_url,
+                              const apr_hash_t *props,
+                              svn_revnum_t changed_rev,
+                              apr_time_t changed_date,
+                              const char *changed_author,
+                              const char *repos_base_url,
                               const char *repos_uuid,
+                              const apr_array_header_t *children,
+                              svn_depth_t depth,
                               apr_pool_t *scratch_pool);
 
 
 /* ### contents, props, checksum are optional */
 svn_error_t *
 svn_wc__db_base_add_file(svn_wc__db_t *db,
-                         const char *path,
+                         const char *local_path,
+                         const char *repos_path,
                          svn_revnum_t revision,
-                         apr_hash_t *props,
+                         const apr_hash_t *props,
+                         svn_revnum_t changed_rev,
+                         apr_time_t changed_date,
+                         const char *changed_author,
+                         const char *repos_base_url,
+                         const char *repos_uuid,
                          svn_stream_t *contents,
                          svn_checksum_t *checksum,
                          apr_pool_t *scratch_pool);
@@ -239,9 +250,15 @@ svn_wc__db_base_get_writable_contents(svn_stream_t **contents,
  */
 svn_error_t *
 svn_wc__db_base_add_symlink(svn_wc__db_t *db,
-                            const char *path,
+                            const char *local_path,
+                            const char *repos_path,
                             svn_revnum_t revision,
-                            apr_hash_t *props,
+                            const apr_hash_t *props,
+                            svn_revnum_t changed_rev,
+                            apr_time_t changed_date,
+                            const char *changed_author,
+                            const char *repos_base_url,
+                            const char *repos_uuid,
                             const char *target,
                             apr_pool_t *scratch_pool);
 
@@ -286,7 +303,7 @@ svn_wc__db_base_move(svn_wc__db_t *db,
 
 /* ### NULL may be given for OUT params
    ### @a switched means this directory is different from what parent/filename
-   ### would imply for @a repos_path. the @repos_url may be different.
+   ### would imply for @a repos_path.
 */
 svn_error_t *
 svn_wc__db_base_get_info(svn_wc__db_kind_t *kind,
@@ -296,8 +313,8 @@ svn_wc__db_base_get_info(svn_wc__db_kind_t *kind,
                          apr_time_t *changed_date,
                          const char **changed_author,
                          svn_depth_t *depth,
-                         svn_boolean_t *switched,
-                         const char **repos_url,
+                         svn_boolean_t *switched,  /* ### derived */
+                         const char **repos_base_url,
                          const char **repos_uuid,
                          svn_wc__db_t *db,
                          const char *path,
@@ -550,7 +567,7 @@ svn_wc__db_read_info(svn_wc__db_kind_t *kind,
                      svn_revnum_t *changed_rev,
                      apr_time_t *changed_date,
                      const char **changed_author,
-                     const char **repos_url, /* ### repos base url */
+                     const char **repos_base_url,
                      const char **repos_uuid,
                      svn_wc__db_t *db,
                      const char *path,

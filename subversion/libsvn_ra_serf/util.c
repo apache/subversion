@@ -490,10 +490,7 @@ svn_ra_serf__setup_serf_req(serf_request_t *request,
 
   /* These headers need to be sent with every request; see issue #3255
      ("mod_dav_svn does not pass client capabilities to start-commit
-     hooks") for why. 
-
-     ### NOTE ###  If you add more headers here, make the same change
-     in propfind_buckets.c:become_request(). */
+     hooks") for why. */
   serf_bucket_headers_set(hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_DEPTH);
   serf_bucket_headers_set(hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_MERGEINFO);
   serf_bucket_headers_set(hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_LOG_REVPROPS);
@@ -1135,7 +1132,12 @@ svn_ra_serf__handle_server_error(serf_request_t *request,
 /* Implements the serf_response_handler_t interface.  Wait for HTTP
    response status and headers, and invoke CTX->response_handler() to
    carry out operation-specific processing.  Afterwards, check for
-   connection close. */
+   connection close.
+
+   If during the setup of the request we set a snapshot on the body buckets, 
+   handle_response has to make sure these buckets get destroyed iff the
+   request doesn't have to be resent.
+   */
 static apr_status_t
 handle_response(serf_request_t *request,
                 serf_bucket_t *response,
@@ -1155,24 +1157,25 @@ handle_response(serf_request_t *request,
                                        ctx->response_error_baton);
           if (status)
             {
-              return status;
+              goto cleanup;
             }
         }
 
       svn_ra_serf__request_create(ctx);
 
-      return APR_SUCCESS;
+      status = APR_SUCCESS;
+      goto cleanup;
     }
 
   status = serf_bucket_response_status(response, &sl);
   if (SERF_BUCKET_READ_ERROR(status))
     {
-      return status;
+      goto cleanup;
     }
   if (!sl.version && (APR_STATUS_IS_EOF(status) ||
                       APR_STATUS_IS_EAGAIN(status)))
     {
-      return status;
+      goto cleanup;
     }
 
   status = serf_bucket_response_wait_for_headers(response);
@@ -1180,7 +1183,7 @@ handle_response(serf_request_t *request,
     {
       if (!APR_STATUS_IS_EOF(status))
         {
-          return status;
+          goto cleanup;
         }
 
       /* Cases where a lack of a response body (via EOF) is okay:
@@ -1196,7 +1199,7 @@ handle_response(serf_request_t *request,
           ctx->session->pending_error =
               svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
                                _("Premature EOF seen from server"));
-          return status;
+          goto cleanup;
         }
     }
 
@@ -1221,7 +1224,8 @@ handle_response(serf_request_t *request,
         {
           ctx->session->pending_error = err;
           svn_ra_serf__handle_discard_body(request, response, NULL, pool);
-          return ctx->session->pending_error->apr_err;
+          status = ctx->session->pending_error->apr_err;
+          goto cleanup;
         }
       else
         {
@@ -1233,6 +1237,13 @@ handle_response(serf_request_t *request,
           if (! APR_STATUS_IS_EAGAIN(status))
             {
               svn_ra_serf__priority_request_create(ctx);
+#if ! SERF_VERSION_AT_LEAST(0, 1, 3)
+              if (APR_STATUS_IS_EOF(status))
+                {
+                  status = svn_ra_serf__is_conn_closing(response);
+                }
+#endif
+              return status;
             }
         }
     }
@@ -1248,7 +1259,8 @@ handle_response(serf_request_t *request,
               svn_error_create(APR_EGENERAL, NULL,
                                _("Unspecified error message"));
         }
-      return APR_EGENERAL;
+      status = APR_EGENERAL;
+      goto cleanup;
     }
   else
     {
@@ -1262,6 +1274,16 @@ handle_response(serf_request_t *request,
       status = svn_ra_serf__is_conn_closing(response);
     }
 #endif
+
+cleanup:
+  /* If a snapshot was set on the body bucket, it wasn't destroyed when the 
+     request was sent, we have to destroy it now upon successful handling of
+     the response. */
+  if (ctx->body_snapshot_set && ctx->body_buckets)
+    {
+      serf_bucket_destroy(ctx->body_buckets);
+      ctx->body_buckets = NULL;
+    }
 
   return status;
 }
@@ -1306,6 +1328,8 @@ setup_request(serf_request_t *request,
     }
   else
     {
+      serf_bucket_t *body_bkt = ctx->body_buckets;
+
       if (strcmp(ctx->method, "HEAD") == 0)
         {
           *acceptor = accept_head;
@@ -1313,15 +1337,52 @@ setup_request(serf_request_t *request,
 
       if (ctx->body_delegate)
         {
-          ctx->body_buckets =
+          body_bkt = ctx->body_buckets =
               ctx->body_delegate(ctx->body_delegate_baton,
                                  serf_request_get_alloc(request),
                                  pool);
         }
+      /* If this is a request that has to be retried, we might be able to reuse
+         the existing body buckets if a snapshot was set. */
+      else if (ctx->body_buckets)
+          {
+            /* Wrap the body bucket in a barrier bucket if a snapshot was set.
+               After the request is sent serf will destroy the request bucket
+               (req_bkt) including this barrier bucket, but this way our
+               body_buckets bucket will not be destroyed and we can reuse it
+               later.
+               This does put ownership of body_buckets in our own hands though, 
+               so we have to make sure it gets destroyed when handling the
+               response. */
+            /* TODO: for now we assume restoring a snapshot on a bucket that
+               hasn't been read yet is a cheap operation. We need a way to find
+               out if we really need to restore a snapshot, or if we still are
+               in the initial state. */
+#if SERF_VERSION_AT_LEAST(0,3,0)
+            apr_status_t status;
+            if (ctx->body_snapshot_set)
+              {
+                /* If restoring a snapshot doesn't work, we have to fall back
+                   on current behavior (ie. retrying a request fails). */
+                status = serf_bucket_restore_snapshot(ctx->body_buckets);
+              }
+            status = serf_bucket_snapshot(ctx->body_buckets);
+            if (status == APR_SUCCESS)
+              {
+                /* If the snapshot wasn't successful (maybe because the caller
+                   used a bucket that doesn't support the snapshot feature),
+                   fall back to non-snapshot behavior and hope that the request
+                   is handled the first time. */
+                ctx->body_snapshot_set = TRUE;
+                body_bkt = serf_bucket_barrier_create(ctx->body_buckets,
+                             serf_request_get_alloc(request));
+              }
+#endif
+          }
 
       svn_ra_serf__setup_serf_req(request, req_bkt, &headers_bkt, ctx->conn,
                                   ctx->method, ctx->path,
-                                  ctx->body_buckets, ctx->body_type);
+                                  body_bkt, ctx->body_type);
 
       if (ctx->header_delegate)
         {

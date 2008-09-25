@@ -41,6 +41,25 @@
 
 
 
+svn_client__merge_path_t *
+svn_client__merge_path_dup(const svn_client__merge_path_t *old,
+                           apr_pool_t *pool)
+{
+  svn_client__merge_path_t *new = apr_pmemdup(pool, old, sizeof(*old));
+
+  new->path = apr_pstrdup(pool, old->path);
+  if (new->remaining_ranges)
+    new->remaining_ranges = svn_rangelist_dup(old->remaining_ranges, pool);
+  if (new->pre_merge_mergeinfo)
+    new->pre_merge_mergeinfo = svn_mergeinfo_dup(old->pre_merge_mergeinfo,
+                                                 pool);
+  if (new->implicit_mergeinfo)
+    new->implicit_mergeinfo = svn_mergeinfo_dup(old->implicit_mergeinfo,
+                                                 pool);
+
+  return new;
+}
+
 svn_error_t *
 svn_client__parse_mergeinfo(svn_mergeinfo_t *mergeinfo,
                             const svn_wc_entry_t *entry,

@@ -325,7 +325,7 @@ read_time(apr_time_t *result,
  * *OPT_REV.  After returning successfully, *STR points at next
  * character in *STR where further parsing can be done.
  */
-svn_error_t *
+static svn_error_t *
 string_to_opt_revision(svn_opt_revision_t *opt_rev,
                        const char **str,
                        apr_pool_t *pool)
@@ -368,7 +368,7 @@ string_to_opt_revision(svn_opt_revision_t *opt_rev,
  * or a string representation of the revision value.  All other
  * revision kinds return an error.
  */
-svn_error_t *
+static svn_error_t *
 opt_revision_to_string(const char **str,
                        const char *path,
                        const svn_opt_revision_t *rev,
