@@ -299,14 +299,49 @@ switch_file_external(const char *path,
   svn_boolean_t unlink_file = FALSE;
   svn_boolean_t revert_file = FALSE;
   svn_boolean_t remove_from_revision_control = FALSE;
+  svn_boolean_t close_adm_access = FALSE;
   svn_error_t *err = NULL;
-  svn_error_t *e;
 
   /* There must be a working copy to place the file external into. */
   SVN_ERR(svn_wc_get_actual_target(path, &anchor, &target, subpool));
-  SVN_ERR(svn_wc_adm_retrieve(&target_adm_access, adm_access, anchor,
-                              subpool));
-  SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, subpool));
+
+  /* Try to get a access baton for the anchor using the input access
+     baton.  If this fails and returns SVN_ERR_WC_NOT_LOCKED, then try
+     to get a new access baton to support inserting a file external
+     into a directory external. */
+  err = svn_wc_adm_retrieve(&target_adm_access, adm_access, anchor, subpool);
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_WC_NOT_LOCKED)
+        {
+          const char *dest_wc_repos_root_url;
+          svn_opt_revision_t peg_rev;
+
+          svn_error_clear(err);
+          close_adm_access = TRUE;
+          SVN_ERR(svn_wc_adm_open3(&target_adm_access, NULL, anchor, TRUE, 1,
+                                   ctx->cancel_func, ctx->cancel_baton,
+                                   subpool));
+
+          /* Check that the repository root URL for the newly opened
+             wc is the same as the file external. */
+          peg_rev.kind = svn_opt_revision_base;
+          SVN_ERR(svn_client__get_repos_root(&dest_wc_repos_root_url,
+                                             anchor, &peg_rev,
+                                             target_adm_access, ctx, subpool));
+
+          if (0 != strcmp(repos_root_url, dest_wc_repos_root_url))
+            return svn_error_createf
+              (SVN_ERR_RA_REPOS_ROOT_URL_MISMATCH, NULL,
+               _("Cannot insert a file external from '%s' into a working "
+                 "copy from a different repository rooted at '%s'"),
+               url, dest_wc_repos_root_url);
+        }
+      else
+        return err;
+    }
+
+  SVN_ERR(svn_wc_entry(&entry, path, target_adm_access, FALSE, subpool));
 
   /* Only one notification is done for the external, so don't notify
      for any following steps.  Use the following trick to add the file
@@ -324,11 +359,16 @@ switch_file_external(const char *path,
   if (entry)
     {
       if (! entry->file_external_path)
-        return svn_error_createf
-          (SVN_ERR_CLIENT_FILE_EXTERNAL_OVERWRITE_VERSIONED, 0,
-           _("The file external from '%s' cannot overwrite the existing "
-             "versioned item at '%s'"),
-           url, path);
+        {
+          if (close_adm_access)
+            SVN_ERR(svn_wc_adm_close(target_adm_access));
+
+          return svn_error_createf
+            (SVN_ERR_CLIENT_FILE_EXTERNAL_OVERWRITE_VERSIONED, 0,
+             _("The file external from '%s' cannot overwrite the existing "
+               "versioned item at '%s'"),
+             url, path);
+        }
     }
   else
     {
@@ -343,8 +383,8 @@ switch_file_external(const char *path,
          conflict on the directory.  To prevent resolving a conflict
          due to another change on the directory, do not allow a file
          external to be added when one exists. */
-      SVN_ERR(svn_wc__entry_versioned(&anchor_dir_entry, anchor, adm_access,
-                                      FALSE, subpool));
+      SVN_ERR(svn_wc__entry_versioned(&anchor_dir_entry, anchor,
+                                      target_adm_access, FALSE, subpool));
       SVN_ERR(svn_wc_conflicted_p2(&text_conflicted, &prop_conflicted,
                                    &has_tree_conflicted_children,
                                    anchor, anchor_dir_entry, subpool));
@@ -386,7 +426,7 @@ switch_file_external(const char *path,
     }
 
   err = svn_client__switch_internal(NULL, path, url, peg_revision, revision,
-                                    adm_access, svn_depth_empty,
+                                    target_adm_access, svn_depth_empty,
                                     FALSE, /* depth_is_sticky */
                                     timestamp_sleep,
                                     TRUE, /* ignore_externals */
@@ -422,39 +462,48 @@ switch_file_external(const char *path,
         goto cleanup;
   }
 
+  if (close_adm_access)
+    SVN_ERR(svn_wc_adm_close(target_adm_access));
+
   return SVN_NO_ERROR;
 
  cleanup:
   if (revert_file)
     {
-      e = svn_wc_revert3(path, adm_access, svn_depth_empty, use_commit_times,
-                         NULL, /* apr_array_header_t *changelists */
-                         ctx->cancel_func,
-                         ctx->cancel_baton,
-                         NULL, /* svn_wc_notify_func2_t */
-                         NULL, /* void *notify_baton */
-                         subpool);
+      svn_error_t *e = 
+        svn_wc_revert3(path, target_adm_access, svn_depth_empty,
+                       use_commit_times,
+                       NULL, /* apr_array_header_t *changelists */
+                       ctx->cancel_func,
+                       ctx->cancel_baton,
+                       NULL, /* svn_wc_notify_func2_t */
+                       NULL, /* void *notify_baton */
+                       subpool);
       if (e)
         svn_error_clear(e);
     }
 
   if (remove_from_revision_control)
     {
-      e = svn_wc_remove_from_revision_control(target_adm_access, target,
-                                              TRUE, FALSE,
-                                              ctx->cancel_func,
-                                              ctx->cancel_baton,
-                                              subpool);
+      svn_error_t * e = svn_wc_remove_from_revision_control(target_adm_access,
+                                                            target,
+                                                            TRUE, FALSE,
+                                                            ctx->cancel_func,
+                                                            ctx->cancel_baton,
+                                                            subpool);
       if (e)
         svn_error_clear(e);
     }
 
   if (unlink_file)
     {
-      e = svn_io_remove_file(path, subpool);
+      svn_error_t *e = svn_io_remove_file(path, subpool);
       if (e)
         svn_error_clear(e);
     }
+
+  if (close_adm_access)
+    SVN_ERR(svn_wc_adm_close(target_adm_access));
 
   return err;
 }

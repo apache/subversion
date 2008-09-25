@@ -150,6 +150,23 @@ svn_sort__hash(apr_hash_t *ht,
                                       const svn_sort__item_t *),
                apr_pool_t *pool);
 
+/* Return the lowest index at which the element *KEY should be inserted into
+   the array ARRAY, according to the ordering defined by COMPARE_FUNC.
+   The array must already be sorted in the ordering defined by COMPARE_FUNC.
+   COMPARE_FUNC is defined as for the C stdlib function bsearch(). */
+int
+svn_sort__bsearch_lower_bound(const void *key,
+                              apr_array_header_t *array,
+                              int (*compare_func)(const void *, const void *));
+
+/* Insert a shallow copy of *NEW_ELEMENT into the array ARRAY at the index
+   INSERT_INDEX, growing the array and shuffling existing elements along to
+   make room. */
+void
+svn_sort__array_insert(const void *new_element,
+                       apr_array_header_t *array,
+                       int insert_index);
+
 
 #ifdef __cplusplus
 }
