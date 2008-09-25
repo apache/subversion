@@ -842,12 +842,17 @@ base_upgrade(svn_fs_t *fs, const char *path, apr_pool_t *pool,
     {
       apr_pool_t *subpool = svn_pool_create(pool);
 
-      SVN_ERR(open_databases(fs, FALSE, SVN_FS_BASE__FORMAT_NUMBER, path,
-                             subpool));
-      SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_record_upgrade_rev, NULL,
-                                     subpool));
+      /* Open the filesystem in a subpool (so we can control its
+         closure) and do our fiddling.
 
-      /* This closes the database. */
+         NOTE: By using base_open() here instead of open_databases(),
+         we will end up re-reading the format file that we just wrote.
+         But it's better to use the existing encapsulation of "opening
+         the filesystem" rather than duplicating (or worse, partially
+         duplicating) that logic here.  */
+      SVN_ERR(base_open(fs, path, subpool, common_pool));
+      SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_record_upgrade_rev, 
+                                     NULL, subpool));
       svn_pool_destroy(subpool);
     }
 
