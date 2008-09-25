@@ -167,7 +167,7 @@ static int
 bsearch_lower_bound(const void *key,
                     const void *base,
                     int nelts,
-                    size_t elt_size,
+                    int elt_size,
                     int (*compare_func)(const void *, const void *))
 {
   int lower = 0;
