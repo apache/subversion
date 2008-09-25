@@ -570,12 +570,9 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
           svn_mergeinfo_t mergeinfo, younger_mergeinfo;
           svn_mergeinfo_t filtered_mergeinfo = NULL;
           svn_mergeinfo_t filtered_younger_mergeinfo = NULL;
-          const char *target_url, *merge_source_root_url;
+          const char *target_url;
           const svn_wc_entry_t *target_entry;
           const char *old_url = NULL;
-
-          SVN_ERR(svn_ra_get_repos_root2(merge_b->ra_session2,
-                                         &merge_source_root_url, pool));
 
           /* Get an entry for PATH so we can find its base revision. */
           SVN_ERR(svn_wc__entry_versioned(&target_entry, path, adm_access,
