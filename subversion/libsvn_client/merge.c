@@ -4166,8 +4166,10 @@ static int
 compare_merge_path_t_as_paths(const void *a,
                               const void *b)
 {
-  svn_client__merge_path_t *child1 = *((svn_client__merge_path_t * const *) a);
-  svn_client__merge_path_t *child2 = *((svn_client__merge_path_t * const *) b);
+  const svn_client__merge_path_t *child1
+    = *((const svn_client__merge_path_t * const *) a);
+  const svn_client__merge_path_t *child2
+    = *((const svn_client__merge_path_t * const *) b);
 
   return svn_path_compare_paths(child1->path, child2->path);
 }
