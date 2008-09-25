@@ -183,11 +183,20 @@ class StateItem:
     if wc_rev is not None:
       wc_rev = str(wc_rev)
 
+    # Any attribute can be None if not relevant, unless otherwise stated.
+
+    # A string of content (if the node is a file).
     self.contents = contents
+    # A dictionary mapping prop name to prop value; never None.
     self.props = props
+    # A two-character string from the first two columns of 'svn status'.
     self.status = status
+    # The action word such as 'Adding' printed by commands like 'svn update'.
     self.verb = verb
+    # The base revision number of the node in the WC, as a string.
     self.wc_rev = wc_rev
+    # For the following attributes, the value is the status character of that
+    # field from 'svn status', except using value None instead of status ' '.
     self.locked = locked
     self.copied = copied
     self.switched = switched
