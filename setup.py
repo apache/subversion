@@ -77,6 +77,8 @@ class build(_build):
                               "is installed"))
   _build.user_options.append(("cppflags=", None, "extra flags to pass to the c "
                               "preprocessor"))
+  _build.user_options.append(("ldflags=", None, "extra flags to pass to the "
+                              "ctypesgen linker"))
   _build.user_options.append(("lib-dirs=", None, "colon-delimited list of paths "
                               "to append to the search path"))
   _build.user_options.append(("save-preprocessed-headers=", None, "full path to "
@@ -89,6 +91,7 @@ class build(_build):
     self.ctypesgen = None
     self.subversion = None
     self.cppflags = ""
+    self.ldflags = ""
     self.lib_dirs = None
     self.save_preprocessed_headers = None
 
@@ -174,8 +177,9 @@ class build(_build):
           if self.subversion != '/usr' and self.subversion != apr_prefix:
             library_path.append("%s/lib" % self.subversion)
 
-        return (apr_prefix, apr_include_dir, cpp,
-                " ".join(ldflags), " ".join(flags), ":".join(library_path))
+        return (apr_prefix, apr_include_dir, cpp + " " + self.cppflags,
+                " ".join(ldflags) + " " + self.ldflags, " ".join(flags),
+                ":".join(library_path))
   
   # get_apr_config()
 
@@ -191,11 +195,10 @@ class build(_build):
       includes = ('%s/include/subversion-1/svn_*.h '
                   '%s/ap[ru]_*.h' % (self.subversion, apr_include_dir))
       cmd = ["cd %s && %s %s --cpp '%s %s' %s "
-             "%s %s -o svn_all.py --no-macro-warnings" % (tempdir, sys.executable,
-                                                          ctypesgen_path, cpp,
-                                                          flags, ldflags,
-                                                          includes, self.cppflags
-                                                          )]
+             "%s -o svn_all.py --no-macro-warnings" % (tempdir, sys.executable,
+                                                       ctypesgen_path, cpp,
+                                                       flags, ldflags,
+                                                       includes)]
       if self.lib_dirs:
         cmd.extend('-R ' + x for x in self.lib_dirs.split(":"))
       cmd = ' '.join(cmd)
