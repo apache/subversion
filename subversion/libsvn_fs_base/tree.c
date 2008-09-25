@@ -1450,10 +1450,11 @@ txn_body_metadata_get(void *baton, trail_t *trail)
   if (err && err->apr_err == SVN_ERR_FS_NO_SUCH_METADATA)
     {
       svn_error_clear(err);
+      err = SVN_NO_ERROR;
       *mga->val = NULL;
     }
 
-  return SVN_NO_ERROR;
+  return err;
 }
 
 svn_error_t *
