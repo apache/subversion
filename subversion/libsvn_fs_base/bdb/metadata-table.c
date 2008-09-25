@@ -55,6 +55,18 @@ svn_fs_bdb__open_metadata_table(DB **metadata_p,
     }
   BDB_ERR(error);
 
+  /* If we're creating the table from scratch (not upgrading), record the
+     upgrade rev as 0. */
+  if (create)
+    {
+      DBT key, value;
+
+      BDB_ERR(metadata->put(metadata, 0,
+                            svn_fs_base__str_to_dbt(&key,
+                                   SVN_FS_BASE__METADATA_FORWARD_DELTA_UPGRADE),
+                            svn_fs_base__str_to_dbt(&value, "0"), 0));
+    }
+
   *metadata_p = metadata;
   return 0;
 }
