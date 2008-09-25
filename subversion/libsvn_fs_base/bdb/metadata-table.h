@@ -15,8 +15,8 @@
  * ====================================================================
  */
 
-#ifndef SVN_LIBSVN_FS_LOCKS_TABLE_H
-#define SVN_LIBSVN_FS_LOCKS_TABLE_H
+#ifndef SVN_LIBSVN_FS_METADATA_TABLE_H
+#define SVN_LIBSVN_FS_METADATA_TABLE_H
 
 #include "svn_fs.h"
 #include "svn_error.h"
@@ -63,4 +63,4 @@ svn_fs_bdb__metadata_get(const char **val,
 }
 #endif /* __cplusplus */
 
-#endif /* SVN_LIBSVN_FS_LOCKS_TABLE_H */
+#endif /* SVN_LIBSVN_FS_METADATA_TABLE_H */
