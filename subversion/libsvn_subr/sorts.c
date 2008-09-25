@@ -157,6 +157,7 @@ svn_sort__hash(apr_hash_t *ht,
 /* Return the lowest index at which the element *KEY should be inserted into
    the array at BASE which has NELTS elements of size ELT_SIZE bytes each,
    according to the ordering defined by COMPARE_FUNC.
+   0 <= NELTS <= INT_MAX, 1 <= ELT_SIZE <= INT_MAX.
    The array must already be sorted in the ordering defined by COMPARE_FUNC.
    COMPARE_FUNC is defined as for the C stdlib function bsearch().
    Note: This function is modeled on bsearch() and on lower_bound() in the
@@ -175,7 +176,7 @@ bsearch_lower_bound(const void *key,
   /* Binary search for the lowest position at which to insert KEY. */
   while (lower <= upper)
     {
-      int try = (lower + upper) / 2;
+      int try = lower + (upper - lower) / 2;  /* careful to avoid overflow */
       int cmp = compare_func((const char *)base + try * elt_size, key);
 
       if (cmp < 0)
