@@ -808,7 +808,6 @@ base_open_for_recovery(svn_fs_t *fs, const char *path, apr_pool_t *pool,
 static svn_error_t *
 txn_body_record_upgrade_rev(void *baton, trail_t *trail)
 {
-  struct txn_record_metadata_args *args = baton;
   svn_revnum_t youngest_rev;
   const char *value;
 
