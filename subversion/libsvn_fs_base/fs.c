@@ -56,7 +56,6 @@
 #include "bdb/locks-table.h"
 #include "bdb/lock-tokens-table.h"
 #include "bdb/node-origins-table.h"
-#include "bdb/metadata-table.h"
 
 #include "../libsvn_fs/fs-loader.h"
 #include "private/svn_fs_util.h"
@@ -806,21 +805,6 @@ base_open_for_recovery(svn_fs_t *fs, const char *path, apr_pool_t *pool,
 }
 
 static svn_error_t *
-txn_body_record_upgrade_rev(void *baton, trail_t *trail)
-{
-  svn_revnum_t youngest_rev;
-  const char *value;
-
-  SVN_ERR(svn_fs_bdb__youngest_rev(&youngest_rev, trail->fs, trail,
-                                   trail->pool));
-  value = apr_psprintf(trail->pool, "%ld", youngest_rev);
-
-  return svn_fs_bdb__metadata_set(trail->fs,
-                                  SVN_FS_BASE__METADATA_FORWARD_DELTA_UPGRADE,
-                                  value, trail, trail->pool);
-}
-
-static svn_error_t *
 base_upgrade(svn_fs_t *fs, const char *path, apr_pool_t *pool,
              apr_pool_t *common_pool)
 {
@@ -841,6 +825,8 @@ base_upgrade(svn_fs_t *fs, const char *path, apr_pool_t *pool,
   if (old_format_number < SVN_FS_BASE__MIN_FORWARD_DELTAS_FORMAT)
     {
       apr_pool_t *subpool = svn_pool_create(pool);
+      svn_revnum_t youngest_rev;
+      const char *value;
 
       /* Open the filesystem in a subpool (so we can control its
          closure) and do our fiddling.
@@ -851,8 +837,13 @@ base_upgrade(svn_fs_t *fs, const char *path, apr_pool_t *pool,
          the filesystem" rather than duplicating (or worse, partially
          duplicating) that logic here.  */
       SVN_ERR(base_open(fs, path, subpool, common_pool));
-      SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_record_upgrade_rev, 
-                                     NULL, subpool));
+
+      /* Fetch the youngest rev, and record it */
+      SVN_ERR(svn_fs_base__youngest_rev(&youngest_rev, fs, subpool));
+      value = apr_psprintf(subpool, "%ld", youngest_rev);
+      SVN_ERR(svn_fs_base__metadata_set(fs,
+                                  SVN_FS_BASE__METADATA_FORWARD_DELTA_UPGRADE,
+                                  value, subpool));
       svn_pool_destroy(subpool);
     }
 
