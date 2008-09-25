@@ -154,6 +154,8 @@ class State:
         atts['switched'] = item.switched
       if item.writelocked is not None:
         atts['writelocked'] = item.writelocked
+      if item.treeconflict is not None:
+        atts['treeconflict'] = item.treeconflict
       nodelist.append((os.path.normpath(os.path.join(self.wc_dir, path)),
                        item.contents,
                        item.props,
@@ -174,7 +176,8 @@ class StateItem:
 
   def __init__(self, contents=None, props=None,
                status=None, verb=None, wc_rev=None,
-               locked=None, copied=None, switched=None, writelocked=None):
+               locked=None, copied=None, switched=None, writelocked=None,
+               treeconflict=None):
     # provide an empty prop dict if it wasn't provided
     if props is None:
       props = { }
@@ -201,6 +204,8 @@ class StateItem:
     self.copied = copied
     self.switched = switched
     self.writelocked = writelocked
+    # Value 'T' or ' ', or None as an expected status meaning 'do not check'.
+    self.treeconflict = treeconflict
 
   def copy(self):
     "Make a deep copy of self."
