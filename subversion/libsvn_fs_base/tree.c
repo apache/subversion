@@ -1442,9 +1442,18 @@ static svn_error_t *
 txn_body_metadata_get(void *baton, trail_t *trail)
 {
   struct metadata_get_args *mga = baton;
+  svn_error_t *err;
 
-  return svn_fs_bdb__metadata_get(mga->val, trail->fs, mga->key, trail,
-                                  trail->pool);
+  err = svn_fs_bdb__metadata_get(mga->val, trail->fs, mga->key, trail,
+                                 trail->pool);
+
+  if (err && err->apr_err == SVN_ERR_FS_NO_SUCH_METADATA)
+    {
+      svn_error_clear(err);
+      *mga->val = NULL;
+    }
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
