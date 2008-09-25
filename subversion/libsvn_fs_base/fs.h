@@ -66,6 +66,13 @@ svn_fs_base__test_required_feature_format(svn_fs_t *fs,
 
 
 
+/*** Metadata keys. ***/
+
+/* Revision at which the repo started using forward deltas. */
+#define SVN_FS_BASE__METADATA_FORWARD_DELTA_UPGRADE  "forward-delta-rev"
+
+
+
 /*** The filesystem structure.  ***/
 
 typedef struct

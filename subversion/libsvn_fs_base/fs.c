@@ -56,6 +56,7 @@
 #include "bdb/locks-table.h"
 #include "bdb/lock-tokens-table.h"
 #include "bdb/node-origins-table.h"
+#include "bdb/metadata-table.h"
 
 #include "../libsvn_fs/fs-loader.h"
 #include "private/svn_fs_util.h"
@@ -805,13 +806,53 @@ base_open_for_recovery(svn_fs_t *fs, const char *path, apr_pool_t *pool,
 }
 
 static svn_error_t *
+txn_body_record_upgrade_rev(void *baton, trail_t *trail)
+{
+  struct txn_record_metadata_args *args = baton;
+  svn_revnum_t youngest_rev;
+  const char *value;
+
+  SVN_ERR(svn_fs_bdb__youngest_rev(&youngest_rev, trail->fs, trail,
+                                   trail->pool));
+  value = apr_psprintf(trail->pool, "%ld", youngest_rev);
+
+  return svn_fs_bdb__metadata_set(trail->fs,
+                                  SVN_FS_BASE__METADATA_FORWARD_DELTA_UPGRADE,
+                                  value, trail, trail->pool);
+}
+
+static svn_error_t *
 base_upgrade(svn_fs_t *fs, const char *path, apr_pool_t *pool,
              apr_pool_t *common_pool)
 {
-  /* Currently, upgrading just means bumping the format file's stored
-     version number. */
-  return svn_io_write_version_file(svn_path_join(path, FORMAT_FILE, pool),
-                                   SVN_FS_BASE__FORMAT_NUMBER, pool);
+  const char *version_file_path;
+  int old_format_number;
+  
+  version_file_path = svn_path_join(path, FORMAT_FILE, pool);
+
+  /* Read the old number so we've got it on hand later on. */
+  SVN_ERR(svn_io_read_version_file(&old_format_number, version_file_path,
+                                   pool));
+
+  /* Bump the format file's stored version number. */
+  SVN_ERR(svn_io_write_version_file(version_file_path,
+                                    SVN_FS_BASE__FORMAT_NUMBER, pool));
+
+  /* Check and see if we need to record the "bump" revision. */
+  if (old_format_number < SVN_FS_BASE__MIN_FORWARD_DELTAS_FORMAT)
+    {
+      apr_pool_t *subpool = svn_pool_create(pool);
+
+      SVN_ERR(open_databases(fs, FALSE, SVN_FS_BASE__FORMAT_NUMBER, path,
+                             subpool));
+      SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_record_upgrade_rev, NULL,
+                                     subpool));
+
+      /* This closes the database. */
+      svn_pool_destroy(subpool);
+    }
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
