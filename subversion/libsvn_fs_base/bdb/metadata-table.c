@@ -90,15 +90,6 @@ svn_fs_bdb__metadata_set(svn_fs_t *fs,
 
 
 svn_error_t *
-svn_fs_bdb__metadata_delete(svn_fs_t *fs,
-                            const char *key_str,
-                            trail_t *trail,
-                            apr_pool_t *pool)
-{
-}
-
-
-svn_error_t *
 svn_fs_bdb__metadata_get(const char **val,
                          svn_fs_t *fs,
                          const char *key_str,
