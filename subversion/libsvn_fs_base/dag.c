@@ -607,7 +607,7 @@ svn_fs_base__dag_set_proplist(dag_node_t *node,
   SVN_ERR(svn_fs_base__unparse_proplist_skel(&proplist_skel,
                                              proplist, pool));
   raw_proplist_buf = svn_fs_base__unparse_skel(proplist_skel, pool);
-  SVN_ERR(svn_checksum(&checksum, svn_checksum_md5, raw_proplist_buf->data,
+  SVN_ERR(svn_checksum(&checksum, svn_checksum_sha1, raw_proplist_buf->data,
                        raw_proplist_buf->len, pool));
 
   /* If the resulting property list is exactly the same as another
@@ -1245,8 +1245,10 @@ svn_fs_base__dag_finalize_edits(dag_node_t *file,
   SVN_ERR(svn_fs_base__rep_contents_checksum(&rep_checksum, fs,
                                              noderev->edit_key, trail, pool));
 
-  /* If our caller provided a checksum to compare, do so. */
-  if (checksum && !svn_checksum_match(checksum, rep_checksum))
+  /* If our caller provided a checksum of the right kind to compare, do so. */
+  if (checksum
+        && checksum->kind == rep_checksum->kind
+        && !svn_checksum_match(checksum, rep_checksum))
     return svn_error_createf(SVN_ERR_CHECKSUM_MISMATCH, NULL,
                              _("Checksum mismatch, rep '%s':\n"
                                "   expected:  %s\n"
