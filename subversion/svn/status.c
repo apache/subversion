@@ -114,9 +114,9 @@ print_status(const char *path,
     text_status = svn_wc_status_conflicted;
 
   /* To indicate this node is the victim of a tree conflict, we show
-     'T' in the tree-conflict column, overriding any other status. */
+     'C' in the tree-conflict column, overriding any other status. */
   if (status->is_tree_conflict_victim)
-    tree_status_code = 'T';
+    tree_status_code = 'C';
 
   if (detailed)
     {
