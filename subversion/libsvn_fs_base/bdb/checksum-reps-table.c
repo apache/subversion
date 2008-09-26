@@ -1,7 +1,7 @@
 /* checksum-reps-table.c : operations on the `checksum-reps' table
  *
  * ====================================================================
- * Copyright (c) 2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2007-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -66,6 +66,12 @@ svn_error_t *svn_fs_bdb__get_checksum_rep(const char **rep_key,
   DBT key, value;
   int db_err;
   
+  /* We only allow SHA1 checksums in this table. */
+  if (checksum->kind != svn_checksum_sha1)
+    return svn_error_create(SVN_ERR_BAD_CHECKSUM_KIND, NULL,
+                            _("Only SHA1 checksums can be used as keys in the "
+                              "checksum-reps table.\n"));
+  
   svn_fs_base__trail_debug(trail, "checksum-reps", "get");
   db_err = bfd->checksum_reps->get(bfd->checksum_reps, trail->db_txn,
                                    svn_fs_base__checksum_to_dbt(&key, checksum),
@@ -90,6 +96,12 @@ svn_error_t *svn_fs_bdb__set_checksum_rep(svn_fs_t *fs,
 #ifdef SVN_DISALLOW_CHECKSUM_REP_CHANGES
   int db_err;
 #endif
+
+  /* We only allow SHA1 checksums in this table. */
+  if (checksum->kind != svn_checksum_sha1)
+    return svn_error_create(SVN_ERR_BAD_CHECKSUM_KIND, NULL,
+                            _("Only SHA1 checksums can be used as keys in the "
+                              "checksum-reps table.\n"));
   
   /* Create a key from our CHECKSUM. */
   svn_fs_base__checksum_to_dbt(&key, checksum);
@@ -133,6 +145,12 @@ svn_error_t *svn_fs_bdb__delete_checksum_rep(svn_fs_t *fs,
 {
   base_fs_data_t *bfd = fs->fsap_data;
   DBT key;
+
+  /* We only allow SHA1 checksums in this table. */
+  if (checksum->kind != svn_checksum_sha1)
+    return svn_error_create(SVN_ERR_BAD_CHECKSUM_KIND, NULL,
+                            _("Only SHA1 checksums can be used as keys in the "
+                              "checksum-reps table.\n"));
   
   svn_fs_base__checksum_to_dbt(&key, checksum);
   svn_fs_base__trail_debug(trail, "checksum-reps", "del");

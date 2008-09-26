@@ -3672,7 +3672,12 @@ txn_body_apply_textdelta(void *baton, trail_t *trail)
          contents, in other words, the base text. */
       SVN_ERR(svn_fs_base__dag_file_checksum(&checksum, tb->node,
                                              trail, trail->pool));
-      if (!svn_checksum_match(tb->base_checksum, checksum))
+      /* TODO: This only compares checksums if they are the same kind, but
+         we're calculating both SHA1 and MD5 checksums somewhere in
+         reps-strings.c.  Could we keep them both around somehow so this
+         check could be more comprehensive? */
+      if (tb->base_checksum->kind == checksum->kind 
+            && !svn_checksum_match(tb->base_checksum, checksum))
         return svn_error_createf
           (SVN_ERR_CHECKSUM_MISMATCH,
            NULL,
