@@ -25,6 +25,7 @@
 #include <apr_pools.h>
 
 #include "svn_types.h"
+#include "svn_version.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -836,6 +837,15 @@ svn_auth_get_keychain_ssl_client_cert_pw_provider
 
 #if (!defined(DARWIN) && !defined(WIN32)) || defined(DOXYGEN)
 /**
+ * Get libsvn_auth_gnome_keyring version information.
+ *
+ * @since New in 1.6
+ */
+const svn_version_t *
+svn_auth_gnome_keyring_version(void);
+
+
+/**
  * Create and return @a *provider, an authentication provider of type @c
  * svn_auth_cred_simple_t that gets/sets information from the user's
  * ~/.subversion configuration directory.  Allocate @a *provider in
@@ -871,6 +881,15 @@ void
 svn_auth_get_gnome_keyring_ssl_client_cert_pw_provider
   (svn_auth_provider_object_t **provider,
    apr_pool_t *pool);
+
+
+/**
+ * Get libsvn_auth_kwallet version information.
+ *
+ * @since New in 1.6
+ */
+const svn_version_t *
+svn_auth_kwallet_version(void);
 
 
 /**
