@@ -4274,6 +4274,8 @@ svn_wc_diff5(svn_wc_adm_access_t *anchor,
  * Similar to svn_wc_diff5(), but with a @c svn_wc_diff_callbacks2_t argument
  * instead of @c svn_wc_diff_callbacks3_t.
  *
+ * @a svnpatch_file is always set to @c NULL.
+ *
  * @deprecated Provided for backward compatibility with the 1.5 API.
  */
 SVN_DEPRECATED
@@ -4285,15 +4287,12 @@ svn_wc_diff4(svn_wc_adm_access_t *anchor,
              svn_depth_t depth,
              svn_boolean_t ignore_ancestry,
              const apr_array_header_t *changelists,
-             apr_file_t *svnpatch_file,
              apr_pool_t *pool);
 
 /**
  * Similar to svn_wc_diff4(), but with @a changelists passed @c NULL,
  * and @a depth set to @c svn_depth_infinity if @a recurse is TRUE, or
  * @c svn_depth_files if @a recurse is FALSE.
- *
- * @a svnpatch_file is always set to @c NULL.
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */

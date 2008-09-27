@@ -2063,7 +2063,7 @@ close_directory(void *dir_baton,
        * below -- @c join_dir_baton -- to join with previous commands
        * and mislead svn_delta_path_driver() -- no open-root/dir and a
        * set of relative paths.
-       * TODO: factorize with svn_wc_diff4's similar section. */
+       * TODO: factorize with svn_wc_diff5's similar section. */
       if (eb->diff_targets->nelts > 0)
         {
           int i;
@@ -3017,14 +3017,13 @@ svn_wc_diff4(svn_wc_adm_access_t *anchor,
              svn_depth_t depth,
              svn_boolean_t ignore_ancestry,
              const apr_array_header_t *changelists,
-             apr_file_t *svnpatch_file,
              apr_pool_t *pool)
 {
 
 
   return svn_wc_diff5(anchor, target, callbacks2_wrap(callbacks, pool),
                       callback_baton, depth, ignore_ancestry, changelists,
-                      svnpatch_file, pool);
+                      NULL, pool);
 }
 
 svn_error_t *
@@ -3038,7 +3037,7 @@ svn_wc_diff3(svn_wc_adm_access_t *anchor,
 {
   return svn_wc_diff4(anchor, target, callbacks, callback_baton,
                       SVN_DEPTH_INFINITY_OR_FILES(recurse), ignore_ancestry,
-                      NULL, NULL, pool);
+                      NULL, pool);
 }
 
 svn_error_t *
