@@ -95,10 +95,8 @@ svn_base64_decode_string(const svn_string_t *str,
                          apr_pool_t *pool);
 
 
-/** Return a base64-encoded checksum for finalized @c digest.
- *
- * @c digest contains @c APR_MD5_DIGESTSIZE bytes of finalized data.
- * Allocate the returned checksum in @c pool.
+/** Return a base64-encoded checksum for finalized @a checksum.
+ * Allocate the returned checksum in @a pool.
  *
  * If @a checksum->kind is not recognized, return @c 0.
  *
