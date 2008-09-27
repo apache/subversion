@@ -2,7 +2,7 @@
  * delete.c:  wrappers around wc delete functionality.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -45,8 +45,6 @@ find_undeletables(void *baton,
                   svn_wc_status2_t *status,
                   apr_pool_t *pool)
 {
-  struct status_baton *sb = baton;
-
   /* Check for error-ful states. */
   if (status->text_status == svn_wc_status_obstructed)
     return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
