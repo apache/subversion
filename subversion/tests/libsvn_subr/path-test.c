@@ -970,58 +970,6 @@ test_path_remove_component(const char **msg,
 }
 
 static svn_error_t *
-test_dirent_is_root(const char **msg,
-                    svn_boolean_t msg_only,
-                    svn_test_opts_t *opts,
-                    apr_pool_t *pool)
-{
-  apr_size_t i;
-
-  /* Paths to test and their expected results. */
-  struct {
-    const char *path;
-    svn_boolean_t result;
-  } tests[] = {
-    { "/foo/bar",      FALSE },
-    { "/foo",          FALSE },
-    { "/",             TRUE },
-    { "",              FALSE },
-#if defined(WIN32) || defined(__CYGWIN__)
-    { "X:/foo",        FALSE },
-    { "X:/",           TRUE },
-    { "X:foo",         FALSE },
-    { "X:",            TRUE },
-    { "//srv/shr",     TRUE },
-    { "//srv",         TRUE },
-    { "//srv/shr/fld", FALSE },
-#else /* WIN32 or Cygwin */
-    { "/X:foo",        FALSE },
-    { "/X:",           FALSE },
-#endif /* non-WIN32 */
-  };
-
-  *msg = "test svn_dirent_is_root";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i++)
-    {
-      svn_boolean_t retval;
-
-      retval = svn_dirent_is_root(tests[i].path, strlen(tests[i].path));
-      if (tests[i].result != retval)
-        return svn_error_createf
-          (SVN_ERR_TEST_FAILED, NULL,
-           "svn_dirent_is_root (%s) returned %s instead of %s",
-           tests[i].path, retval ? "TRUE" : "FALSE",
-           tests[i].result ? "TRUE" : "FALSE");
-    }
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
 test_path_check_valid(const char **msg,
                       svn_boolean_t msg_only,
                       svn_test_opts_t *opts,
@@ -1598,7 +1546,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(test_path_decompose),
     SVN_TEST_PASS(test_path_canonicalize),
     SVN_TEST_PASS(test_path_remove_component),
-    SVN_TEST_PASS(test_dirent_is_root),
     SVN_TEST_PASS(test_path_is_ancestor),
     SVN_TEST_PASS(test_path_check_valid),
     SVN_TEST_PASS(test_is_single_path_component),

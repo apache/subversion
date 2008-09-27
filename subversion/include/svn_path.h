@@ -209,15 +209,12 @@ svn_path_split(const char *path,
 int
 svn_path_is_empty(const char *path);
 
-/** Return TRUE if @a directory is considered a root directory on the platform
- * at hand, amongst which '/' on all platforms or 'X:/', '\\\\?\\X:/',
- * '\\\\.\\..', '\\\\server\\share' on Windows.
- *
- * @since New in 1.5.
- */
+#ifndef SVN_DIRENT_URI_H
+/* This declaration has been moved to svn_dirent_uri.h, remains here only for
+   compatiblity reasons. */
 svn_boolean_t
 svn_dirent_is_root(const char *dirent, apr_size_t len);
-
+#endif /* SVN_DIRENT_URI_H */
 
 /** Return a new path (or URL) like @a path, but transformed such that
  * some types of path specification redundancies are removed.
