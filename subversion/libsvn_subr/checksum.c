@@ -329,3 +329,9 @@ svn_checksum_final(svn_checksum_t **checksum,
 
   return SVN_NO_ERROR;
 }
+
+apr_size_t
+svn_checksum_size(svn_checksum_t *checksum)
+{
+  return DIGESTSIZE(checksum->kind);
+}
