@@ -37,6 +37,7 @@ extern "C" {
  *
  * @since New in 1.6.
  */
+SVN_DEPRECATED
 const unsigned char *
 svn_sha1_empty_string_digest(void);
 
@@ -46,6 +47,7 @@ svn_sha1_empty_string_digest(void);
  *
  * @since New in 1.6.
  */
+SVN_DEPRECATED
 const char *
 svn_sha1_digest_to_cstring_display(const unsigned char digest[],
                                    apr_pool_t *pool);
@@ -57,6 +59,7 @@ svn_sha1_digest_to_cstring_display(const unsigned char digest[],
  *
  * @since New in 1.6.
  */
+SVN_DEPRECATED
 const char *
 svn_sha1_digest_to_cstring(const unsigned char digest[],
                            apr_pool_t *pool);
@@ -68,6 +71,7 @@ svn_sha1_digest_to_cstring(const unsigned char digest[],
  *
  * @since New in 1.6.
  */
+SVN_DEPRECATED
 svn_boolean_t
 svn_sha1_digests_match(const unsigned char d1[],
                        const unsigned char d2[]);
