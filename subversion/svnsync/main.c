@@ -1,6 +1,6 @@
 /*
  * ====================================================================
- * Copyright (c) 2005-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2005-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -23,6 +23,8 @@
 #include "svn_auth.h"
 #include "svn_opt.h"
 #include "svn_ra.h"
+
+#include "private/svn_opt_private.h"
 
 #include "svn_private_config.h"
 
@@ -693,7 +695,7 @@ initialize_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
   apr_array_header_t *targets;
   subcommand_baton_t *baton;
 
-  SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
+  SVN_ERR(svn_opt__args_to_target_array(&targets, os,
                                         apr_array_make(pool, 0,
                                                        sizeof(const char *)),
                                         pool));
@@ -1624,7 +1626,7 @@ synchronize_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
   subcommand_baton_t *baton;
   const char *to_url;
 
-  SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
+  SVN_ERR(svn_opt__args_to_target_array(&targets, os,
                                         apr_array_make(pool, 0,
                                                        sizeof(const char *)),
                                         pool));
@@ -1721,7 +1723,7 @@ copy_revprops_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
 
   /* If there are two args, the last one is a revision range.  We'll
      effectively pop it from the end of the list.  Why?  Because
-     svn_opt_args_to_target_array2() does waaaaay too many useful
+     svn_opt__args_to_target_array() does waaaaay too many useful
      things for us not to use it.  */
   if (os->argc - os->ind == 2)
     {
@@ -1776,7 +1778,7 @@ copy_revprops_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
         }
     }
 
-  SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
+  SVN_ERR(svn_opt__args_to_target_array(&targets, os,
                                         apr_array_make(pool, 1,
                                                        sizeof(const char *)),
                                         pool));
