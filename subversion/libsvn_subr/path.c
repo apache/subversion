@@ -26,6 +26,7 @@
 #include <apr_uri.h>
 
 #include "svn_string.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_private_config.h"         /* for SVN_PATH_LOCAL_SEPARATOR */
 #include "svn_utf.h"
@@ -444,50 +445,6 @@ svn_path_is_empty(const char *path)
 
   return 0;
 }
-
-
-/* We decided against using apr_filepath_root here because of the negative
-   performance impact (creating a pool and converting strings ). */
-svn_boolean_t
-svn_dirent_is_root(const char *dirent, apr_size_t len)
-{
-  /* directory is root if it's equal to '/' */
-  if (len == 1 && dirent[0] == '/')
-    return TRUE;
-
-#if defined(WIN32) || defined(__CYGWIN__)
-  /* On Windows and Cygwin, 'H:' or 'H:/' (where 'H' is any letter)
-     are also root directories */
-  if ((len == 2 || len == 3) &&
-      (dirent[1] == ':') &&
-      ((dirent[0] >= 'A' && dirent[0] <= 'Z') ||
-       (dirent[0] >= 'a' && dirent[0] <= 'z')) &&
-      (len == 2 || (dirent[2] == '/' && len == 3)))
-    return TRUE;
-
-  /* On Windows and Cygwin, both //drive and //drive//share are root
-     directories */
-  if (len >= 2 && dirent[0] == '/' && dirent[1] == '/'
-      && dirent[len - 1] != '/')
-    {
-      int segments = 0;
-      int i;
-      for (i = len; i >= 2; i--)
-        {
-          if (dirent[i] == '/')
-            {
-              segments ++;
-              if (segments > 1)
-                return FALSE;
-            }
-        }
-      return (segments <= 1);
-    }
-#endif /* WIN32 or Cygwin */
-
-  return FALSE;
-}
-
 
 int
 svn_path_compare_paths(const char *path1,
