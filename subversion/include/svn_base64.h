@@ -99,7 +99,23 @@ svn_base64_decode_string(const svn_string_t *str,
  *
  * @c digest contains @c APR_MD5_DIGESTSIZE bytes of finalized data.
  * Allocate the returned checksum in @c pool.
+ *
+ * If @a checksum->kind is not recognized, return @c 0.
+ *
+ * @since New in 1.6.
  */
+svn_stringbuf_t *
+svn_base64_from_checksum(svn_checksum_t *checksum,
+                         apr_pool_t *pool);
+
+/** Return a base64-encoded checksum for finalized @c digest.
+ *
+ * @c digest contains @c APR_MD5_DIGESTSIZE bytes of finalized data.
+ * Allocate the returned checksum in @c pool.
+ *
+ * @deprecated Provided for backward compatibility with the 1.5 API.
+ */
+SVN_DEPRECATED
 svn_stringbuf_t *
 svn_base64_from_md5(unsigned char digest[],
                     apr_pool_t *pool);
