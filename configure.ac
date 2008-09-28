@@ -70,7 +70,7 @@ SVN_LIB_APRUTIL($APU_VER_REGEXES)
 
 # Either a space-separated list of allowable Neon versions, or "any" to
 # mean allow anything.
-NEON_ALLOWED_LIST="0.25.0 0.25.1 0.25.2 0.25.3 0.25.4 0.25.5 0.26.0 0.26.1 0.26.2 0.26.3 0.26.4 0.27.2 0.28.0 0.28.1 0.28.2 0.28.3 0.29.0-dev"
+NEON_ALLOWED_LIST="0\.25 0\.26 0\.27\.2 0\.28"
 NEON_RECOMMENDED_VER=0.28.3
 NEON_URL="http://www.webdav.org/neon/neon-${NEON_RECOMMENDED_VER}.tar.gz"
 dnl You can skip the neon version check only if you know what you are doing 
@@ -111,7 +111,7 @@ dnl Find Apache with a recent-enough magic module number
 SVN_FIND_APACHE(20020903)
 
 dnl Search for SQLite
-SQLITE_ALLOWED_PATTERN="3\.5\..*|3\.6\..*"
+SQLITE_ALLOWED_PATTERN="(3\.5|3\.6)($|\..*)"
 SQLITE_RECOMMENDED_VER="3.5.9"
 SQLITE_URL="http://www.sqlite.org/sqlite-${SQLITE_RECOMMENDED_VER}.tar.gz"
 SVN_LIB_SQLITE(${SQLITE_ALLOWED_PATTERN}, ${SQLITE_RECOMMENDED_VER},
@@ -345,11 +345,18 @@ if test "$with_gnome_keyring" != "no"; then
   if test "$enable_shared" = "yes"; then
     if test "$APR_HAS_DSO" = "yes"; then
       if test "$HAVE_PKG_CONFIG" = "yes"; then
-        AC_MSG_CHECKING([for GLib and GNOME Keyring .pc files])
-        if pkg-config --exists glib-2.0 gnome-keyring-1; then
+        AC_MSG_CHECKING([for GLib, D-Bus and GNOME Keyring .pc files])
+        if pkg-config --exists glib-2.0 dbus-1 gnome-keyring-1; then
           AC_MSG_RESULT([yes])
+          AC_MSG_CHECKING([D-Bus version])
+          DBUS_VERSION="`pkg-config --modversion dbus-1`"
+          AC_MSG_RESULT([$DBUS_VERSION])
+          # D-Bus 0.* requires DBUS_API_SUBJECT_TO_CHANGE
+          if test -n ["`echo "$DBUS_VERSION" | $GREP '^0\.[[:digit:]]\+'`"]; then
+            CPPFLAGS="$CPPFLAGS -DDBUS_API_SUBJECT_TO_CHANGE"
+          fi
           old_CPPFLAGS="$CPPFLAGS"
-          SVN_GNOME_KEYRING_INCLUDES="`pkg-config --cflags glib-2.0 gnome-keyring-1`"
+          SVN_GNOME_KEYRING_INCLUDES="`pkg-config --cflags glib-2.0 dbus-1 gnome-keyring-1`"
           CPPFLAGS="$CPPFLAGS $SVN_GNOME_KEYRING_INCLUDES"
           AC_CHECK_HEADER(gnome-keyring.h, with_gnome_keyring=yes, with_gnome_keyring=no)
           AC_MSG_CHECKING([for GNOME Keyring])
@@ -358,14 +365,14 @@ if test "$with_gnome_keyring" != "no"; then
             AC_DEFINE([SVN_HAVE_GNOME_KEYRING], [1], 
                       [Is GNOME Keyring support enabled?])
             CPPFLAGS="$old_CPPFLAGS"
-            SVN_GNOME_KEYRING_LIBS="`pkg-config --libs glib-2.0 gnome-keyring-1`"
+            SVN_GNOME_KEYRING_LIBS="`pkg-config --libs glib-2.0 dbus-1 gnome-keyring-1`"
           else
             AC_MSG_RESULT([no])
             AC_MSG_ERROR([cannot find GNOME Keyring])
           fi
         else
           AC_MSG_RESULT([no])
-          AC_MSG_ERROR([cannot find GLib and GNOME Keyring .pc files])
+          AC_MSG_ERROR([cannot find GLib, D-Bus and GNOME Keyring .pc files])
         fi
       else
         AC_MSG_ERROR([cannot find pkg-config])

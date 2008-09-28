@@ -132,7 +132,7 @@ def verify_changelist_output(output, expected_adds=None,
     match = _re_cl_rem.match(line)
     if match \
        and expected_removals \
-       and expected_removals.has_key(match.group(1)):
+       and match.group(1) in expected_removals:
         continue
     elif match:
       raise svntest.Failure("Unexpected changelist removal line: " + line)
@@ -146,7 +146,7 @@ def verify_changelist_output(output, expected_adds=None,
     match = _re_cl_skip.match(line)
     if match \
        and expected_skips \
-       and expected_skips.has_key(match.group(1)):
+       and match.group(1) in expected_skips:
         continue
     elif match:
       raise svntest.Failure("Unexpected changelist skip line: " + line)

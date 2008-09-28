@@ -156,18 +156,18 @@ class SVNLook:
         execcmd_kwargs = {}
         keywords = ["show", "noerror"]
         for key in keywords:
-            if kwargs.has_key(key):
+            if key in kwargs:
                 execcmd_kwargs[key] = kwargs[key]
         return self._execcmd(*execcmd_args, **execcmd_kwargs)
 
     def _add_txnrev(self, cmd_args, received_kwargs):
-        if received_kwargs.has_key("txn"):
+        if "txn" in received_kwargs:
             txn = received_kwargs.get("txn")
             if txn is not None:
                 cmd_args += ["-t", txn]
         elif self.txn is not None:
             cmd_args += ["-t", self.txn]
-        if received_kwargs.has_key("rev"):
+        if "rev" in received_kwargs:
             rev = received_kwargs.get("rev")
             if rev is not None:
                 cmd_args += ["-r", rev]

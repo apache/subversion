@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -63,7 +63,9 @@ typedef struct svn_prop_t
  *
  * @since New in 1.3.
  */
-svn_prop_t *svn_prop_dup(const svn_prop_t *prop, apr_pool_t *pool);
+svn_prop_t *
+svn_prop_dup(const svn_prop_t *prop,
+             apr_pool_t *pool);
 
 
 /**
@@ -72,7 +74,8 @@ svn_prop_t *svn_prop_dup(const svn_prop_t *prop, apr_pool_t *pool);
  * @since New in 1.3.
  */
 apr_array_header_t *
-svn_prop_array_dup(const apr_array_header_t *array, apr_pool_t *pool);
+svn_prop_array_dup(const apr_array_header_t *array,
+                   apr_pool_t *pool);
 
 
 /**
@@ -83,7 +86,8 @@ svn_prop_array_dup(const apr_array_header_t *array, apr_pool_t *pool);
  * @since New in 1.5.
  */
 apr_array_header_t *
-svn_prop_hash_to_array(apr_hash_t *hash, apr_pool_t *pool);
+svn_prop_hash_to_array(apr_hash_t *hash,
+                       apr_pool_t *pool);
 
 
 /**
@@ -110,14 +114,16 @@ typedef enum svn_prop_kind
  * (if @a prefix_len is non-@c NULL) set @a *prefix_len to the length of
  * the prefix of @a prop_name that was sufficient to distinguish its kind.
  */
-svn_prop_kind_t svn_property_kind(int *prefix_len,
-                                  const char *prop_name);
+svn_prop_kind_t
+svn_property_kind(int *prefix_len,
+                  const char *prop_name);
 
 
 /** Return @c TRUE iff @a prop_name represents the name of a Subversion
  * property.
  */
-svn_boolean_t svn_prop_is_svn_prop(const char *prop_name);
+svn_boolean_t
+svn_prop_is_svn_prop(const char *prop_name);
 
 
 /** Return @c TRUE iff @a props has at least one property whose name
@@ -125,15 +131,17 @@ svn_boolean_t svn_prop_is_svn_prop(const char *prop_name);
  *
  * @since New in 1.5.
  */
-svn_boolean_t svn_prop_has_svn_prop(const apr_hash_t *props,
-                                    apr_pool_t *pool);
+svn_boolean_t
+svn_prop_has_svn_prop(const apr_hash_t *props,
+                      apr_pool_t *pool);
 
 /** Return @c TRUE iff @a prop_name is a Subversion property whose
  * value is interpreted as a boolean.
  *
  * @since New in 1.5
  */
-svn_boolean_t svn_prop_is_boolean(const char *prop_name);
+svn_boolean_t
+svn_prop_is_boolean(const char *prop_name);
 
 /** If @a prop_name requires that its value be stored as UTF8/LF in the
  * repository, then return @c TRUE.  Else return @c FALSE.  This is for
@@ -142,7 +150,8 @@ svn_boolean_t svn_prop_is_boolean(const char *prop_name);
  * svn_subst_translate_string()/svn_subst_detranslate_string() for
  * help with this task.)
  */
-svn_boolean_t svn_prop_needs_translation(const char *prop_name);
+svn_boolean_t
+svn_prop_needs_translation(const char *prop_name);
 
 
 /** Given a @a proplist array of @c svn_prop_t structures, allocate
@@ -161,11 +170,12 @@ svn_boolean_t svn_prop_needs_translation(const char *prop_name);
  *     into @c svn_prop_kind_t.  That way we can add more prop kinds
  *     in the future without changing this interface...
  */
-svn_error_t *svn_categorize_props(const apr_array_header_t *proplist,
-                                  apr_array_header_t **entry_props,
-                                  apr_array_header_t **wc_props,
-                                  apr_array_header_t **regular_props,
-                                  apr_pool_t *pool);
+svn_error_t *
+svn_categorize_props(const apr_array_header_t *proplist,
+                     apr_array_header_t **entry_props,
+                     apr_array_header_t **wc_props,
+                     apr_array_header_t **regular_props,
+                     apr_pool_t *pool);
 
 
 /** Given two property hashes (<tt>const char *name</tt> -> <tt>const
@@ -183,10 +193,11 @@ svn_error_t *svn_categorize_props(const apr_array_header_t *proplist,
    value = foo     value = bar       Set occurred (modification)
    value = NULL    value = baz       Set occurred (creation) @endverbatim
  */
-svn_error_t *svn_prop_diffs(apr_array_header_t **propdiffs,
-                            apr_hash_t *target_props,
-                            apr_hash_t *source_props,
-                            apr_pool_t *pool);
+svn_error_t *
+svn_prop_diffs(apr_array_header_t **propdiffs,
+               apr_hash_t *target_props,
+               apr_hash_t *source_props,
+               apr_pool_t *pool);
 
 
 /**
@@ -197,7 +208,8 @@ svn_error_t *svn_prop_diffs(apr_array_header_t **propdiffs,
  *
  * @since New in 1.5.
  */
-svn_boolean_t svn_prop_name_is_valid(const char *prop_name);
+svn_boolean_t
+svn_prop_name_is_valid(const char *prop_name);
 
 
 

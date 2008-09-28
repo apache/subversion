@@ -1,5 +1,5 @@
 /*
- * sha1.c:   checksum routines
+ * sha1.c: SHA1 checksum routines
  *
  * ====================================================================
  * Copyright (c) 2008 CollabNet.  All rights reserved.
@@ -17,25 +17,25 @@
  */
 
 
-#include "svn_sha1.h"
+#include "sha1.h"
 
 
 
 /* The SHA1 digest for the empty string. */
-static const unsigned char svn_sha1__empty_string_digest[] = {
+static const unsigned char svn_sha1__empty_string_digest_array[] = {
   0xda, 0x39, 0xa3, 0xee, 0x5e, 0x6b, 0x4b, 0x0d, 0x32, 0x55,
   0xbf, 0xef, 0x95, 0x60, 0x18, 0x90, 0xaf, 0xd8, 0x07, 0x09
 };
 
 const unsigned char *
-svn_sha1_empty_string_digest(void)
+svn_sha1__empty_string_digest(void)
 {
-  return svn_sha1__empty_string_digest;
+  return svn_sha1__empty_string_digest_array;
 }
 
 
 const char *
-svn_sha1_digest_to_cstring_display(const unsigned char digest[],
+svn_sha1__digest_to_cstring_display(const unsigned char digest[],
                                    apr_pool_t *pool)
 {
   static const char *hex = "0123456789abcdef";
@@ -54,19 +54,19 @@ svn_sha1_digest_to_cstring_display(const unsigned char digest[],
 
 
 const char *
-svn_sha1_digest_to_cstring(const unsigned char digest[], apr_pool_t *pool)
+svn_sha1__digest_to_cstring(const unsigned char digest[], apr_pool_t *pool)
 {
   static const unsigned char zeros_digest[APR_SHA1_DIGESTSIZE] = { 0 };
 
   if (memcmp(digest, zeros_digest, APR_SHA1_DIGESTSIZE) != 0)
-    return svn_sha1_digest_to_cstring_display(digest, pool);
+    return svn_sha1__digest_to_cstring_display(digest, pool);
   else
     return NULL;
 }
 
 
 svn_boolean_t
-svn_sha1_digests_match(const unsigned char d1[], const unsigned char d2[])
+svn_sha1__digests_match(const unsigned char d1[], const unsigned char d2[])
 {
   static const unsigned char zeros[APR_SHA1_DIGESTSIZE] = { 0 };
 

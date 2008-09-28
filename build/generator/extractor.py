@@ -3,7 +3,7 @@
 # extractor.py: extract function names from declarations in header files
 #
 # ====================================================================
-# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2006, 2008 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -45,6 +45,12 @@ _filter_names = [
   # Not available on Windows
   'svn_auth_get_keychain_simple_provider', 
   'svn_auth_get_keychain_ssl_client_cert_pw_provider',
+  'svn_auth_get_gnome_keyring_simple_provider',
+  'svn_auth_get_gnome_keyring_ssl_client_cert_pw_provider',
+  'svn_auth_get_kwallet_simple_provider',
+  'svn_auth_get_kwallet_ssl_client_cert_pw_provider',
+  'svn_auth_gnome_keyring_version',
+  'svn_auth_kwallet_version',
   ]
 
 if __name__ == '__main__':
