@@ -11,7 +11,12 @@ import os, sys
 import filecmp
 import shutil
 import traceback
-import ConfigParser
+try:
+  # Python >=3.0
+  import configparser
+except ImportError:
+  # Python <3.0
+  import ConfigParser as configparser
 import string
 import random
 
@@ -64,7 +69,7 @@ sys.path.insert(1, 'build')
 
 import gen_win
 version_header = os.path.join('subversion', 'include', 'svn_version.h')
-cp = ConfigParser.ConfigParser()
+cp = configparser.ConfigParser()
 cp.read('gen-make.opts')
 gen_obj = gen_win.GeneratorBase('build.conf', version_header,
                                 cp.items('options'))
