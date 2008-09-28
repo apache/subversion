@@ -236,9 +236,9 @@ class WinGeneratorBase(GeneratorBase):
       svnissrel = os.path.join("packages","win32-innosetup","svn.iss.release")
       svnissdeb = os.path.join("packages","win32-innosetup","svn.iss.debug")
       if self.write_file_if_changed(svnissrel, buf.replace("@CONFIG@", "Release")):
-        print 'Wrote %s' % svnissrel
+        print('Wrote %s' % svnissrel)
       if self.write_file_if_changed(svnissdeb, buf.replace("@CONFIG@", "Debug")):
-        print 'Wrote %s' % svnissdeb
+        print('Wrote %s' % svnissdeb)
 
     # Generate the build_zlib.bat file
     if self.zlib_path:
@@ -283,7 +283,7 @@ class WinGeneratorBase(GeneratorBase):
                    generator.swig.external_runtime):
         swig.Generator(self.conf, self.swig_exe).write()
     else:
-      print "%s not found; skipping SWIG file generation..." % self.swig_exe
+      print("%s not found; skipping SWIG file generation..." % self.swig_exe)
 
   def path(self, *paths):
     """Convert build path to msvc path and prepend root"""
@@ -1012,7 +1012,7 @@ class WinGeneratorBase(GeneratorBase):
       old_contents = None
     if old_contents != new_contents:
       open(fname, 'wb').write(new_contents)
-      print "Wrote:", fname
+      print("Wrote:", fname)
 
   def write_with_template(self, fname, tname, data):
     fout = StringIO()

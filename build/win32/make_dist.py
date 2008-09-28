@@ -52,8 +52,8 @@ class Action:
       return None
 
   def _copy_file(self, source, target):
-    print 'copy:', source
-    print '  to:', target
+    print('copy:', source)
+    print('  to:', target)
     shutil.copyfile(source, target)
 
 class File(Action):
@@ -77,7 +77,7 @@ class OptFile(Action):
   def run(self, dir, cfg):
     path = self._safe_expand(cfg, self.path)
     if path is None or not os.path.isfile(path):
-      print 'make_dist: File not found:', self.path
+      print('make_dist: File not found:', self.path)
       return
     if self.name is None:
       name = os.path.basename(path)
@@ -102,7 +102,7 @@ class InstallDocs(Action):
   def run(self, dir, cfg):
     config = self._expand(cfg, self.config)
     pattern = os.path.join(self._expand(cfg, self.path), '*.*')
-    print 'make_dist: Generating documentation'
+    print('make_dist: Generating documentation')
     old_cwd = os.getcwd()
     try:
       os.chdir(_srcdir)
@@ -123,7 +123,7 @@ class InstallIconv(Action):
   def run(self, dir, cfg):
     source = os.path.abspath(self._expand(cfg, self.source))
     build_mode = self._expand(cfg, self.build_mode)
-    print 'make_dist: Installing apr-iconv modules'
+    print('make_dist: Installing apr-iconv modules')
     install = ('"%s" -nologo -f Makefile.win install'
                + ' INSTALL_DIR="%s"'
                + ' BUILD_MODE=%s BIND_MODE=%s') \
@@ -151,7 +151,7 @@ class InstallJar(Action):
   def run(self, dir, cfg):
     source = os.path.abspath(self._expand(cfg, self.source))
     jarfile = os.path.abspath(os.path.join(dir, self.jar))
-    print 'make_dist: Creating jar', self.jar
+    print('make_dist: Creating jar', self.jar)
     _system('"%s" cvf "%s" -C "%s" .'
             % (cfg.get('tools', 'jar'), jarfile, source))
 
@@ -373,8 +373,8 @@ def _read_config():
       continue
     optdir = os.path.abspath(os.path.join(_srcdir, optcfg.get('options', opt)))
     if not os.path.isdir(optdir):
-      print 'make_dist:', opt, '=', optdir
-      print 'make_dist: Target is not a directory'
+      print('make_dist:', opt, '=', optdir)
+      print('make_dist: Target is not a directory')
       _exit(1)
     cfg.set('DEFAULT', '@' + opt[7:], optdir)
 
@@ -409,7 +409,7 @@ def _make_zip(suffix, pathlist, extras):
     os.chdir(_distdir)
     if os.path.exists(zipname):
       os.remove(zipname)
-    print 'make_dist: Creating %s' % zipname
+    print('make_dist: Creating %s' % zipname)
     _stdout.write('make_dist: Creating %s\n' % zipname)
     _system(zipcmd)
   except:
@@ -433,7 +433,7 @@ def _make_dist(cfg):
     for reldir in dirlist:
       dir = os.path.join(distdir, reldir)
       if not os.path.exists(dir):
-        print 'make_dist: Creating directory', reldir
+        print('make_dist: Creating directory', reldir)
         _stdout.write('make_dist: Creating directory %s\n' % reldir)
         os.makedirs(dir)
       action = _disttree[reldir]

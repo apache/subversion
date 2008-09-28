@@ -24,35 +24,35 @@ except AttributeError:
 def _usage_exit():
   "print usage, exit the script"
 
-  print "Driver for running the tests on Windows."
-  print "Usage: python win-tests.py [option] [test-path]"
-  print
-  print "Valid options:"
-  print "  -r, --release          : test the Release configuration"
-  print "  -d, --debug            : test the Debug configuration (default)"
-  print "  --bin=PATH             : use the svn binaries installed in PATH"
-  print "  -u URL, --url=URL      : run ra_dav or ra_svn tests against URL;"
-  print "                           will start svnserve for ra_svn tests"
-  print "  -v, --verbose          : talk more"
-  print "  -f, --fs-type=type     : filesystem type to use (fsfs is default)"
-  print "  -c, --cleanup          : cleanup after running a test"
+  print("Driver for running the tests on Windows.")
+  print("Usage: python win-tests.py [option] [test-path]")
+  print()
+  print("Valid options:")
+  print("  -r, --release          : test the Release configuration")
+  print("  -d, --debug            : test the Debug configuration (default)")
+  print("  --bin=PATH             : use the svn binaries installed in PATH")
+  print("  -u URL, --url=URL      : run ra_dav or ra_svn tests against URL;")
+  print("                           will start svnserve for ra_svn tests")
+  print("  -v, --verbose          : talk more")
+  print("  -f, --fs-type=type     : filesystem type to use (fsfs is default)")
+  print("  -c, --cleanup          : cleanup after running a test")
 
-  print "  --svnserve-args=list   : comma-separated list of arguments for"
-  print "                           svnserve"
-  print "                           default is '-d,-r,<test-path-root>'"
-  print "  --asp.net-hack         : use '_svn' instead of '.svn' for the admin"
-  print "                           dir name"
-  print "  --httpd-dir            : location where Apache HTTPD is installed"
-  print "  --httpd-port           : port for Apache HTTPD; random port number"
-  print "                           will be used, if not specified"
-  print "  --http-library         : dav library to use, neon (default) or serf"
-  print "  --list                 : print test doc strings only"
-  print "  --enable-sasl          : enable Cyrus SASL authentication for"
-  print "                           svnserve"
-  print "  -p, --parallel         : run multiple tests in parallel"
-  print "  --server-minor-version : the minor version of the server being"
-  print "                           tested"
-  print " --config-file           : Configuration file for tests"
+  print("  --svnserve-args=list   : comma-separated list of arguments for")
+  print("                           svnserve")
+  print("                           default is '-d,-r,<test-path-root>'")
+  print("  --asp.net-hack         : use '_svn' instead of '.svn' for the admin")
+  print("                           dir name")
+  print("  --httpd-dir            : location where Apache HTTPD is installed")
+  print("  --httpd-port           : port for Apache HTTPD; random port number")
+  print("                           will be used, if not specified")
+  print("  --http-library         : dav library to use, neon (default) or serf")
+  print("  --list                 : print test doc strings only")
+  print("  --enable-sasl          : enable Cyrus SASL authentication for")
+  print("                           svnserve")
+  print("  -p, --parallel         : run multiple tests in parallel")
+  print("  --server-minor-version : the minor version of the server being")
+  print("                           tested")
+  print(" --config-file           : Configuration file for tests")
 
   sys.exit(0)
 
@@ -86,7 +86,7 @@ opts, args = my_getopt(sys.argv[1:], 'hrdvcpu:f:',
                         'list', 'enable-sasl', 'bin=', 'parallel',
                         'config-file=', 'server-minor-version='])
 if len(args) > 1:
-  print 'Warning: non-option arguments after the first one will be ignored'
+  print('Warning: non-option arguments after the first one will be ignored')
 
 # Interpret the options and set parameters
 base_url, fs_type, verbose, cleanup = None, None, None, None
@@ -190,12 +190,12 @@ def create_target_dir(dirname):
   tgt_dir = os.path.join(abs_builddir, dirname)
   if not os.path.exists(tgt_dir):
     if verbose:
-      print "mkdir:", tgt_dir
+      print("mkdir:", tgt_dir)
     os.makedirs(tgt_dir)
 
 def copy_changed_file(src, tgt):
   if not os.path.isfile(src):
-    print 'Could not find ' + src
+    print('Could not find ' + src)
     sys.exit(1)
   if os.path.isdir(tgt):
     tgt = os.path.join(tgt, os.path.basename(src))
@@ -203,12 +203,12 @@ def copy_changed_file(src, tgt):
     assert os.path.isfile(tgt)
     if filecmp.cmp(src, tgt):
       if verbose:
-        print "same:", src
-        print " and:", tgt
+        print("same:", src)
+        print(" and:", tgt)
       return 0
   if verbose:
-    print "copy:", src
-    print "  to:", tgt
+    print("copy:", src)
+    print("  to:", tgt)
   shutil.copy(src, tgt)
   return 1
 
@@ -312,7 +312,7 @@ class Svnserve:
       args = [self.name, '-d', '-r', self.root]
     else:
       args = [self.name] + self.args
-    print 'Starting', self.kind, self.name
+    print('Starting', self.kind, self.name)
     try:
       import win32process
       import win32con
@@ -329,12 +329,12 @@ class Svnserve:
     if self.proc_handle is not None:
       try:
         import win32process
-        print 'Stopping', self.name
+        print('Stopping', self.name)
         win32process.TerminateProcess(self.proc_handle, 0)
         return
       except ImportError:
         pass
-    print 'Svnserve.stop not implemented'
+    print('Svnserve.stop not implemented')
 
 class Httpd:
   "Run httpd for DAV tests"
@@ -468,9 +468,9 @@ class Httpd:
 
   def start(self):
     "Install and start HTTPD service"
-    print 'Installing service', self.service_name
+    print('Installing service', self.service_name)
     os.spawnv(os.P_WAIT, self.path, self.httpd_args + ['-k', 'install'])
-    print 'Starting service', self.service_name
+    print('Starting service', self.service_name)
     os.spawnv(os.P_WAIT, self.path, self.httpd_args + ['-k', 'start'])
 
   def stop(self):
@@ -510,7 +510,7 @@ if run_httpd:
 if daemon:
   daemon.start()
 
-print 'Testing', objdir, 'configuration on', repo_loc
+print('Testing', objdir, 'configuration on', repo_loc)
 sys.path.insert(0, os.path.join(abs_srcdir, 'build'))
 import run_tests
 th = run_tests.TestHarness(abs_srcdir, abs_builddir,
@@ -538,7 +538,7 @@ for tgt in copied_execs:
   try:
     if os.path.isfile(tgt):
       if verbose:
-        print "kill:", tgt
+        print("kill:", tgt)
       os.unlink(tgt)
   except:
     traceback.print_exc(file=sys.stdout)
