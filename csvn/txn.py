@@ -301,7 +301,7 @@ class Txn(object):
             if copyfrom_path:
                 copyfrom_path = "%s/%s" % (copyfrom_path, path_component)
 
-        if parent.ops.has_key(path):
+        if path in parent.ops:
             node = parent.open(path)
             if node.action == "DELETE":
                 kind = svn_node_none
@@ -337,7 +337,7 @@ class _txn_operation(object):
 
     def open(self, path, action="OPEN", kind=svn_node_dir,
              copyfrom_path = None, copyfrom_rev = -1, local_path = None):
-        if self.ops.has_key(path):
+        if path in self.ops:
             op = self.ops[path]
             if action == "OPEN" and op.kind in (svn_node_dir, svn_node_file):
                 return op
