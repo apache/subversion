@@ -193,7 +193,7 @@ class Options:
     self.dict = {}
 
   def add(self, opt, val):
-    if self.dict.has_key(opt):
+    if opt in self.dict:
       self.list[self.dict[opt]] = (opt, val)
     else:
       self.dict[opt] = len(self.list)

@@ -87,6 +87,8 @@
 ;; * *   - svn-status-mark-changed
 ;; * .   - svn-status-mark-by-file-ext
 ;; * %   - svn-status-mark-filename-regexp
+;; * s   - svn-status-store-usermarks
+;; * l   - svn-status-load-usermarks
 ;; .     - svn-status-goto-root-or-return
 ;; f     - svn-status-find-file
 ;; o     - svn-status-find-file-other-window
@@ -718,6 +720,7 @@ This is nil if the log entry is for a new commit.")
 (defvar svn-client-version nil "The version number of the used svn client")
 (defvar svn-status-get-line-information-for-file nil)
 (defvar svn-status-base-dir-cache (make-hash-table :test 'equal :weakness nil))
+(defvar svn-status-usermark-storage (make-hash-table :test 'equal :weakness nil))
 (defvar svn-log-registered-link-handlers (make-hash-table :test 'eql :weakness nil))
 
 (defvar svn-status-partner-buffer nil "The partner buffer for this svn related buffer")
@@ -1927,6 +1930,8 @@ A and B must be line-info's."
   (define-key svn-status-mode-mark-map (kbd "*") 'svn-status-mark-changed)
   (define-key svn-status-mode-mark-map (kbd ".") 'svn-status-mark-by-file-ext)
   (define-key svn-status-mode-mark-map (kbd "%") 'svn-status-mark-filename-regexp)
+  (define-key svn-status-mode-mark-map (kbd "s") 'svn-status-store-usermarks)
+  (define-key svn-status-mode-mark-map (kbd "l") 'svn-status-load-usermarks)
   (define-key svn-status-mode-mark-map (kbd "u") 'svn-status-show-svn-diff-for-marked-files))
 
 (when (not svn-status-mode-search-map)
@@ -2088,6 +2093,8 @@ A and B must be line-info's."
      ["Mark/Unmark modified/added/deleted" svn-status-mark-changed t]
      ["Mark/Unmark filename by extension" svn-status-mark-by-file-ext t]
      ["Mark/Unmark filename by regexp" svn-status-mark-filename-regexp t]
+     ["Store Usermarks" svn-status-store-usermarks t]
+     ["Load Usermarks" svn-status-load-usermarks t]
      )
     ["Hide Unknown" svn-status-toggle-hide-unknown
      :style toggle :selected svn-status-hide-unknown]
@@ -3394,6 +3401,22 @@ If called with a prefix ARG, unmark all such files."
 (defun svn-status-unset-all-usermarks ()
   (interactive)
   (svn-status-apply-usermark-checked '(lambda (info) t) nil))
+
+(defun svn-status-store-usermarks (arg)
+  "Store the current usermarks in `svn-status-usermark-storage'.
+When called with a prefix argument it is possible to store different sets of marks."
+  (interactive "P")
+  (let ((file-list (svn-status-get-file-list-names t)))
+    (svn-puthash arg file-list svn-status-usermark-storage)
+    (message "psvn stored %d user marks" (length file-list))))
+
+(defun svn-status-load-usermarks (arg)
+  "Load previously stored user marks from `svn-status-usermark-storage'.
+When called with a prefix argument it is possible to store/load different sets of marks."
+  (interactive "P")
+  (let ((file-list (gethash arg svn-status-usermark-storage)))
+    (svn-status-apply-usermark-checked
+     '(lambda (info) (member (svn-status-line-info->filename info) file-list)) t)))
 
 (defvar svn-status-regexp-history nil
   "History list of regular expressions used in svn status commands.")

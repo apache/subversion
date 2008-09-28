@@ -49,10 +49,10 @@ attlist.wc-status &=
   attribute copied { "true" | "false" }?,
   # Item switched relative to its parent.
   [ a:defaultValue = "false" ]
-  attribute switched { "true" | "false" }?
+  attribute switched { "true" | "false" }?,
   ## Tree-conflict status of a directory.
   [ a:defaultValue = "false" ]
-  attribute tree-conflicted { "true" | "false" }?,
+  attribute has-tree-conflicted-children { "true" | "false" }?
 
 ## Status in repository (if --update was specified).
 repos-status = element repos-status { attlist.repos-status, lock? }

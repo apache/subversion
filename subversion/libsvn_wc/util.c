@@ -27,6 +27,7 @@
 #include "svn_io.h"
 #include "svn_types.h"
 #include "svn_error.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "wc.h"   /* just for prototypes of things in this .c file */

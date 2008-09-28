@@ -21,7 +21,8 @@
 
 #include "svn_checksum.h"
 #include "svn_md5.h"
-#include "svn_sha1.h"
+
+#include "sha1.h"
 
 
 
@@ -89,7 +90,7 @@ svn_checksum_match(const svn_checksum_t *d1,
       case svn_checksum_md5:
         return svn_md5_digests_match(d1->digest, d2->digest);
       case svn_checksum_sha1:
-        return svn_sha1_digests_match(d1->digest, d2->digest);
+        return svn_sha1__digests_match(d1->digest, d2->digest);
       default:
         /* We really shouldn't get here, but if we do... */
         return FALSE;
@@ -105,7 +106,7 @@ svn_checksum_to_cstring_display(const svn_checksum_t *checksum,
       case svn_checksum_md5:
         return svn_md5_digest_to_cstring_display(checksum->digest, pool);
       case svn_checksum_sha1:
-        return svn_sha1_digest_to_cstring_display(checksum->digest, pool);
+        return svn_sha1__digest_to_cstring_display(checksum->digest, pool);
       default:
         /* We really shouldn't get here, but if we do... */
         return NULL;
@@ -121,7 +122,7 @@ svn_checksum_to_cstring(const svn_checksum_t *checksum,
       case svn_checksum_md5:
         return svn_md5_digest_to_cstring(checksum->digest, pool);
       case svn_checksum_sha1:
-        return svn_sha1_digest_to_cstring(checksum->digest, pool);
+        return svn_sha1__digest_to_cstring(checksum->digest, pool);
       default:
         /* We really shouldn't get here, but if we do... */
         return NULL;
@@ -237,7 +238,7 @@ svn_checksum_empty_checksum(svn_checksum_kind_t kind,
         break;
 
       case svn_checksum_sha1:
-        memcpy(checksum->digest, svn_sha1_empty_string_digest(),
+        memcpy(checksum->digest, svn_sha1__empty_string_digest(),
                APR_SHA1_DIGESTSIZE);
         break;
 
@@ -327,4 +328,10 @@ svn_checksum_final(svn_checksum_t **checksum,
     }
 
   return SVN_NO_ERROR;
+}
+
+apr_size_t
+svn_checksum_size(svn_checksum_t *checksum)
+{
+  return DIGESTSIZE(checksum->kind);
 }

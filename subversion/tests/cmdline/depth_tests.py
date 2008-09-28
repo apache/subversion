@@ -1329,10 +1329,10 @@ def status_in_depthy_wc(sbox):
 
   status = [
     "Status against revision:      2\n",
-    "       *        1   .\n",
-    "       *        1   iota\n",
-    "       *        1   A\n",
-    "       *        1   " + os.path.join('A', 'mu') + "\n",
+    "        *        1   .\n",
+    "        *        1   iota\n",
+    "        *        1   A\n",
+    "        *        1   " + os.path.join('A', 'mu') + "\n",
   ]
 
   os.chdir(wc_empty)

@@ -2,7 +2,7 @@
  * client.h :  shared stuff internal to the client library.
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -556,6 +556,39 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool);
 
+/* Structure holding the results of svn_client__ra_session_from_path()
+   plus the repository root URL and UUID and the node kind for the
+   input URL, REVISION and PEG_REVISION .  See
+   svn_client__ra_session_from_path() for the meaning of these fields.
+   This structure is used by svn_client__checkout_internal() to save
+   one or more round-trips if the client already gathered some of this
+   information.  Not all the fields need to be filled in.  */
+typedef struct
+{
+  /* The repository root URL.  A NULL value means the root URL is
+     unknown.*/
+  const char *repos_root_url;
+
+  /* The repository UUID.  A NULL value means the UUID is unknown.  */
+  const char *repos_uuid;
+
+  /* The actual final resulting URL for the input URL.  This may be
+     different because of copy history.  A NULL value means the
+     resulting URL is unknown.  */
+  const char *ra_session_url;
+
+  /* The actual final resulting revision for the input URL.  An
+     invalid revnum as determined by SVN_IS_VALID_REVNUM() means the
+     revnum is unknown.  */
+  svn_revnum_t ra_revnum;
+
+  /* An optional node kind for the URL.  Since there is no enum value
+     for an unknown node kind, it is represented as a pointer to a
+     svn_node_kind_t with a NULL pointer indicating an unknown
+     value. */
+  svn_node_kind_t *kind_p;
+} svn_client__ra_session_from_path_results;
+
 /* Checkout into PATH a working copy of URL at REVISION, and (if not
    NULL) set RESULT_REV to the checked out revision.
 
@@ -567,6 +600,11 @@ svn_client__update_internal(svn_revnum_t *result_rev,
    svn_depth_empty, just check out PATH, with none of its entries.
 
    DEPTH must be a definite depth, not (e.g.) svn_depth_unknown.
+
+   RA_CACHE is a pointer to a cache of information for the URL at
+   REVISION based of the PEG_REVISION.  Any information not in
+   *RA_CACHE is retrieved by a round-trip to the repository.  RA_CACHE
+   may be NULL which indicates that no cache information is available.
 
    If IGNORE_EXTERNALS is true, do no externals processing.
 
@@ -584,6 +622,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
                               const char *path,
                               const svn_opt_revision_t *peg_revision,
                               const svn_opt_revision_t *revision,
+                              const svn_client__ra_session_from_path_results *ra_cache,
                               svn_depth_t depth,
                               svn_boolean_t ignore_externals,
                               svn_boolean_t allow_unver_obstructions,
@@ -592,7 +631,9 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
                               apr_pool_t *pool);
 
 /* Switch a working copy PATH to URL@PEG_REVISION at REVISION, and (if not
-   NULL) set RESULT_REV to the switch revision.  Only switch as deeply as DEPTH
+   NULL) set RESULT_REV to the switch revision.  ADM_ACCESS may be NULL, but
+   if is not, it is a write locked working copy administrative access baton
+   that has an associated baton for PATH.  Only switch as deeply as DEPTH
    indicates.  If TIMESTAMP_SLEEP is NULL this function will sleep before
    returning to ensure timestamp integrity.  If TIMESTAMP_SLEEP is not
    NULL then the function will not sleep but will set *TIMESTAMP_SLEEP
@@ -609,6 +650,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                             const char *url,
                             const svn_opt_revision_t *peg_revision,
                             const svn_opt_revision_t *revision,
+                            svn_wc_adm_access_t *adm_access,
                             svn_depth_t depth,
                             svn_boolean_t depth_is_sticky,
                             svn_boolean_t *timestamp_sleep,
@@ -935,8 +977,9 @@ svn_client__do_commit(const char *base_url,
 /* Handle changes to the svn:externals property in the tree traversed
    by TRAVERSAL_INFO (obtained from svn_wc_get_update_editor or
    svn_wc_get_switch_editor, for example).  The tree's top level
-   directory is at TO_PATH and corresponds to FROM_URL URL in the
-   repository, which has a root URL of REPOS_ROOT_URL.
+   directory is at TO_PATH and should have a write lock in ADM_ACCESS
+   and corresponds to FROM_URL URL in the repository, which has a root
+   URL of REPOS_ROOT_URL.
 
    For each changed value of the property, discover the nature of the
    change and behave appropriately -- either check a new "external"
@@ -966,7 +1009,8 @@ svn_client__do_commit(const char *base_url,
 
    Use POOL for temporary allocation. */
 svn_error_t *
-svn_client__handle_externals(svn_wc_traversal_info_t *traversal_info,
+svn_client__handle_externals(svn_wc_adm_access_t *adm_access,
+                             svn_wc_traversal_info_t *traversal_info,
                              const char *from_url,
                              const char *to_path,
                              const char *repos_root_url,

@@ -104,7 +104,7 @@ def general_symlink(sbox):
 
   was_cwd = os.getcwd()
   os.chdir(wc_dir)
-  svntest.actions.run_and_verify_svn(None, [ "M      newfile\n" ], [], 'st')
+  svntest.actions.run_and_verify_svn(None, [ "M       newfile\n" ], [], 'st')
 
   os.chdir(was_cwd)
 
@@ -137,7 +137,7 @@ def replace_file_with_symlink(sbox):
   # Does status show the obstruction?
   was_cwd = os.getcwd()
   os.chdir(wc_dir)
-  svntest.actions.run_and_verify_svn(None, [ "~      iota\n" ], [], 'st')
+  svntest.actions.run_and_verify_svn(None, [ "~       iota\n" ], [], 'st')
 
   # And does a commit fail?
   os.chdir(was_cwd)
@@ -289,7 +289,7 @@ def replace_symlink_with_file(sbox):
   # Does status show the obstruction?
   was_cwd = os.getcwd()
   os.chdir(wc_dir)
-  svntest.actions.run_and_verify_svn(None, [ "~      newfile\n" ], [], 'st')
+  svntest.actions.run_and_verify_svn(None, [ "~       newfile\n" ], [], 'st')
 
   # And does a commit fail?
   os.chdir(was_cwd)
@@ -570,7 +570,7 @@ def replace_symlink_with_dir(sbox):
   # Does status show the obstruction?
   was_cwd = os.getcwd()
   os.chdir(wc_dir)
-  svntest.actions.run_and_verify_svn(None, [ "~      from\n" ], [], 'st')
+  svntest.actions.run_and_verify_svn(None, [ "~       from\n" ], [], 'st')
 
   # The commit shouldn't do anything.
   # I'd expect a failed commit here, but replacing a file locally with a

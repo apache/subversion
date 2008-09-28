@@ -844,7 +844,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "      'I' Ignored\n"
      "      'M' Modified\n"
      "      'R' Replaced\n"
-     "      'X' item is unversioned, but is used by an externals definition\n"
+     "      'X' an unversioned directory created by an externals definition\n"
      "      '?' item is not under version control\n"
      "      '!' item is missing (removed by non-svn command) or incomplete\n"
      "      '~' versioned item obstructed by some item of a different kind\n"
@@ -858,9 +858,10 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    Fourth column: Scheduled commit will contain addition-with-history\n"
      "      ' ' no history scheduled with commit\n"
      "      '+' history scheduled with commit\n"
-     "    Fifth column: Whether the item is switched relative to its parent\n"
+     "    Fifth column: Whether the item is switched or a file external\n"
      "      ' ' normal\n"
-     "      'S' switched\n"
+     "      'S' the item has a Switched URL relative to the parent\n"
+     "      'X' a versioned file created by an eXternals definition\n"
      "    Sixth column: Repository lock token\n"
      "      (without -u)\n"
      "      ' ' no lock token\n"
@@ -1845,7 +1846,7 @@ main(int argc, const char *argv[])
       /* Fallback to default config if the config directory isn't readable. */
       if (err->apr_err == APR_EACCES)
         {
-          svn_handle_warning(stderr, err);
+          svn_handle_warning2(stderr, err, "svn: ");
           svn_error_clear(err);
         }
       else

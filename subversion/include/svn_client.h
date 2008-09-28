@@ -160,7 +160,7 @@ svn_client_get_simple_provider(svn_auth_provider_object_t **provider,
                                apr_pool_t *pool);
 
 
-#if (defined(WIN32) && !defined(__MINGW32__)) || defined(DOXYGEN)
+#if (defined(WIN32) && !defined(__MINGW32__)) || defined(DOXYGEN) || defined(CTYPESGEN)
 /**
  * Create and return @a *provider, an authentication provider of type @c
  * svn_auth_cred_simple_t that gets/sets information from the user's
@@ -187,7 +187,7 @@ SVN_DEPRECATED
 void
 svn_client_get_windows_simple_provider(svn_auth_provider_object_t **provider,
                                        apr_pool_t *pool);
-#endif /* WIN32 || DOXYGEN */
+#endif /* WIN32 && !__MINGW32__ || DOXYGEN || CTYPESGEN */
 
 /** Create and return @a *provider, an authentication provider of type @c
  * svn_auth_cred_username_t that gets/sets information from a user's

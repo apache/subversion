@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -165,7 +165,7 @@ def same_dict(d1, d2):
   if len(d1) != len(d2):
     return False
   for (key, val) in d1.items():
-    if (not d2.has_key(key) or d2[key] != val):
+    if (key not in d2 or d2[key] != val):
       return False
   return True
 
