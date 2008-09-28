@@ -615,7 +615,7 @@ def check_log_chain(chain, revlist, path_counts=[]):
       raise SVNUnexpectedLogs('Malformed log line counts', chain, 'lines')
 
     # Check that the log message looks right:
-    pattern = 'Log message for revision ' + `saw_rev`
+    pattern = 'Log message for revision ' + repr(saw_rev)
     msg_re = re.compile(pattern)
     if not msg_re.search(msg):
       raise SVNUnexpectedLogs("Malformed log message, expected '%s'" % msg,
