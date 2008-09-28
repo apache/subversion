@@ -11,7 +11,12 @@ try:
   my_getopt = getopt.gnu_getopt
 except AttributeError:
   my_getopt = getopt.getopt
-import ConfigParser
+try:
+  # Python >=3.0
+  import configparser
+except ImportError:
+  # Python <3.0
+  import ConfigParser as configparser
 
 # for the generator modules
 sys.path.insert(0, os.path.join('build', 'generator'))
@@ -249,7 +254,7 @@ if __name__ == '__main__':
   # options used
   for opt, val in opts:
     if opt == '--reload':
-      prev_conf = ConfigParser.ConfigParser()
+      prev_conf = configparser.ConfigParser()
       prev_conf.read('gen-make.opts')
       for opt, val in prev_conf.items('options'):
         if opt != '--debug':
