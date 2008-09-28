@@ -353,7 +353,7 @@ class Httpd:
       self.name = 'httpd.exe'
       self.path = os.path.join(self.httpd_dir, 'bin', self.name)
       if not os.path.exists(self.path):
-        raise RuntimeError, "Could not find a valid httpd binary!"
+        raise RuntimeError("Could not find a valid httpd binary!")
 
     self.root_dir = os.path.join(CMDLINE_TEST_SCRIPT_NATIVE_PATH, 'httpd')
     self.root = os.path.join(abs_builddir, self.root_dir)

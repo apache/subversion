@@ -928,8 +928,8 @@ class IncludeDependencyInfo:
           if _is_public_include(h):
             hdrs[_swig_include_wrapper(h)] = '%'
           else:
-            raise RuntimeError, "Public include '%s' depends on '%s', " \
-                "which is not a public include! What's going on?" % (fname, h)
+            raise RuntimeError("Public include '%s' depends on '%s', " \
+                "which is not a public include! What's going on?" % (fname, h))
         swig_fname = _swig_include_wrapper(fname)
         swig_bname = os.path.basename(swig_fname)
         self._deps[swig_fname] = hdrs

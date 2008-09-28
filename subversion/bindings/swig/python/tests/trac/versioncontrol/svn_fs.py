@@ -56,9 +56,8 @@ class SubversionRepository(Repository):
         Repository.__init__(self, authz)
 
         if core.SVN_VER_MAJOR < 1:
-            raise TracError, \
-                  "Subversion >= 1.0 required: Found %d.%d.%d" % \
-                  (core.SVN_VER_MAJOR, core.SVN_VER_MINOR, core.SVN_VER_MICRO)
+            raise TracError("Subversion >= 1.0 required: Found %d.%d.%d" % \
+                  (core.SVN_VER_MAJOR, core.SVN_VER_MINOR, core.SVN_VER_MICRO))
 
         self.repos = None
         self.fs_ptr = None
@@ -69,7 +68,7 @@ class SubversionRepository(Repository):
             path = os.path.split(path)[0]
         self.path = repos.svn_repos_find_root_path(path)
         if self.path is None:
-            raise TracError, "%s does not appear to be a Subversion repository." % (path, )
+            raise TracError("%s does not appear to be a Subversion repository." % (path, ))
         if self.path != path:
             self.scope = path[len(self.path):]
             if not self.scope[-1] == '/':
@@ -107,7 +106,7 @@ class SubversionRepository(Repository):
         if rev is None:
             rev = self.youngest_rev
         elif rev > self.youngest_rev:
-            raise TracError, "Revision %s doesn't exist yet" % rev
+            raise TracError("Revision %s doesn't exist yet" % rev)
         return rev
 
     def close(self):
@@ -205,17 +204,17 @@ class SubversionRepository(Repository):
         if self.has_node(old_path, old_rev):
             old_node = self.get_node(old_path, old_rev)
         else:
-            raise TracError, ('The Base for Diff is invalid: path %s'
+            raise TracError('The Base for Diff is invalid: path %s'
                               ' doesn\'t exist in revision %s' \
                               % (old_path, old_rev))
         if self.has_node(new_path, new_rev):
             new_node = self.get_node(new_path, new_rev)
         else:
-            raise TracError, ('The Target for Diff is invalid: path %s'
+            raise TracError('The Target for Diff is invalid: path %s'
                               ' doesn\'t exist in revision %s' \
                               % (new_path, new_rev))
         if new_node.kind != old_node.kind:
-            raise TracError, ('Diff mismatch: Base is a %s (%s in revision %s) '
+            raise TracError('Diff mismatch: Base is a %s (%s in revision %s) '
                               'and Target is a %s (%s in revision %s).' \
                               % (old_node.kind, old_path, old_rev,
                                  new_node.kind, new_path, new_rev))
@@ -265,7 +264,7 @@ class SubversionNode(Node):
         self.root = fs.revision_root(fs_ptr, rev)
         node_type = fs.check_path(self.root, self.scoped_path)
         if not node_type in _kindmap:
-            raise TracError, "No node at %s in revision %s" % (path, rev)
+            raise TracError("No node at %s in revision %s" % (path, rev))
         self.created_rev = fs.node_created_rev(self.root, self.scoped_path)
         self.created_path = fs.node_created_path(self.root, self.scoped_path)
         # Note: 'created_path' differs from 'path' if the last change was a copy,

@@ -531,7 +531,7 @@ def parse_log_output(log_lines):
         chain.append(this_item)
     else:  # if didn't see separator now, then something's wrong
       print this_line
-      raise SVNLogParseError, "trailing garbage after log message"
+      raise SVNLogParseError("trailing garbage after log message")
 
   return chain
 
