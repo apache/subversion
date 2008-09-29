@@ -154,6 +154,11 @@ void svn_dirent_split(const char *dirent,
  */
 svn_boolean_t svn_dirent_is_absolute(const char *dirent, apr_size_t len);
 
+/** Return TRUE if @a uri is considered absolute.
+ *
+ * @since New in 1.6.
+ */
+svn_boolean_t svn_uri_is_absolute(const char *dirent, apr_size_t len);
 
 /** Return TRUE if @a dirent is considered a root directory on the platform
  * at hand, amongst which '/' on all platforms or 'X:/', '\\\\?\\X:/',
@@ -163,6 +168,15 @@ svn_boolean_t svn_dirent_is_absolute(const char *dirent, apr_size_t len);
  */
 svn_boolean_t
 svn_dirent_is_root(const char *dirent, apr_size_t len);
+
+/** Return TRUE if @a uri is a root path, so starts with '/'. 
+ *
+ * Do not use this function with URLs.
+ * 
+ * @since New in 1.6
+ */
+svn_boolean_t
+svn_uri_is_root(const char *uri, apr_size_t len);
 
 /** Return a new dirent like @a dirent, but transformed such that some types
  * of dirent specification redundancies are removed.
@@ -219,6 +233,42 @@ char *
 svn_uri_get_longest_ancestor(const char *path1,
                              const char *path2,
                              apr_pool_t *pool);
+
+/** Test if @a uri2 is a child of @a uri1.
+ * If not, return @c NULL.
+ * If so, return a copy of the remainder uri, allocated in @a pool.
+ * (The remainder is the component which, added to @a uri1, yields
+ * @a uri2.  The remainder does not begin with a dir separator.)
+ *
+ * Both uris must be in canonical form, and must either be absolute,
+ * or contain no ".." components.
+ *
+ * If @a uri2 is the same as @a uri1, it is not considered a child,
+ * so the result is @c NULL; an empty string is never returned.
+ *
+ * If @a pool is @c NULL , a pointer into @a uri2 will be returned to
+ *       identify the remainder uri.
+ *
+ * ### todo: the ".." restriction is unfortunate, and would ideally
+ * be lifted by making the implementation smarter.  But this is not
+ * trivial: if the uri is "../foo", how do you know whether or not
+ * the current directory is named "foo" in its parent?
+ *
+ * @since New in 1.6.
+ */
+const char *
+svn_uri_is_child(const char *uri1, const char *uri2,
+                 apr_pool_t *pool);
+
+/**
+ * This function is similar as @c svn_uri_is_child, except that it supports
+ * Windows dirents and UNC paths on Windows.
+ *
+ * @since New in 1.6.
+ */
+const char *
+svn_dirent_is_child(const char *dirent1, const char *dirent2,
+                    apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

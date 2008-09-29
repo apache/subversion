@@ -321,6 +321,68 @@ get_longest_ancestor_length(svn_boolean_t uris,
   return last_dirsep;
 }
 
+static const char *
+is_child(svn_boolean_t uri, const char *path1, const char *path2, apr_pool_t *pool)
+{
+  apr_size_t i;
+
+  /* assert (is_canonical (path1, strlen (path1)));  ### Expensive strlen */
+  /* assert (is_canonical (path2, strlen (path2)));  ### Expensive strlen */
+
+  /* Allow "" and "foo" or "H:foo" to be parent/child */
+  if (SVN_PATH_IS_EMPTY(path1))               /* "" is the parent  */
+    {
+      if (SVN_PATH_IS_EMPTY(path2))            /* "" not a child    */
+        return NULL;
+
+      /* check if this is an absolute path */
+      if (uri && svn_uri_is_absolute(path2, strlen(path2)) ||
+         (! uri && svn_dirent_is_absolute(path2, strlen(path2))))
+        return NULL;
+      else
+        return apr_pstrdup(pool, path2);      /* everything else is child */
+    }
+
+  /* Reach the end of at least one of the paths.  How should we handle
+     things like path1:"foo///bar" and path2:"foo/bar/baz"?  It doesn't
+     appear to arise in the current Subversion code, it's not clear to me
+     if they should be parent/child or not. */
+  for (i = 0; path1[i] && path2[i]; i++)
+    if (path1[i] != path2[i])
+      return NULL;
+
+  /* There are two cases that are parent/child
+          ...      path1[i] == '\0'
+          .../foo  path2[i] == '/'
+      or
+          /        path1[i] == '\0'
+          /foo     path2[i] != '/'
+
+     Other root paths (like X:/) fall under the former case:
+          X:/        path1[i] == '\0'
+          X:/foo     path2[i] != '/'
+
+     Check for '//' to avoid matching '/' and '//srv'.
+  */
+  if (path1[i] == '\0' && path2[i])
+    {
+      if (path1[i - 1] == '/'
+#if defined(WIN32) || defined(__CYGWIN__)
+          || (! uri && path1[i - 1] == ':')
+#endif /* WIN32 or Cygwin */
+           )
+        if (path2[i] == '/')
+          return NULL;
+        else
+          return apr_pstrdup(pool, path2 + i);
+      else if (path2[i] == '/')
+        return apr_pstrdup(pool, path2 + i) + 1;
+    }
+
+  /* Otherwise, path2 isn't a child. */
+  return NULL;
+}
+
 
 /**** Public API functions ****/
 
@@ -362,6 +424,16 @@ svn_dirent_is_root(const char *dirent, apr_size_t len)
       return (segments <= 1);
     }
 #endif /* WIN32 or Cygwin */
+
+  return FALSE;
+}
+
+svn_boolean_t
+svn_uri_is_root(const char *uri, apr_size_t len)
+{
+  /* directory is root if it's equal to '/' */
+  if (len == 1 && uri[0] == '/')
+    return TRUE;
 
   return FALSE;
 }
@@ -650,6 +722,22 @@ svn_uri_get_longest_ancestor(const char *uri1,
     }
 }
 
+const char *
+svn_dirent_is_child(const char *dirent1,
+                    const char *dirent2,
+                    apr_pool_t *pool)
+{
+  return is_child(DIRENT, dirent1, dirent2, pool);
+}
+
+const char *
+svn_uri_is_child(const char *uri1,
+                 const char *uri2,
+                 apr_pool_t *pool)
+{
+  return is_child(URI, uri1, uri2, pool);
+}
+
 svn_boolean_t
 svn_dirent_is_absolute(const char *dirent, apr_size_t len)
 {
@@ -667,6 +755,16 @@ svn_dirent_is_absolute(const char *dirent, apr_size_t len)
      return TRUE;
 #endif /* WIN32 or Cygwin */
  
+  return FALSE;
+}
+
+svn_boolean_t
+svn_uri_is_absolute(const char *uri, apr_size_t len)
+{
+  /* uri is absolute if it starts with '/' */
+  if (uri > 0 && uri[0] == '/')
+    return TRUE;
+
   return FALSE;
 }
 
