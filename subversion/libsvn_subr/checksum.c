@@ -20,9 +20,10 @@
 #include <ctype.h>
 
 #include "svn_checksum.h"
-#include "svn_md5.h"
+#include "svn_error.h"
 
 #include "sha1.h"
+#include "md5.h"
 
 
 
@@ -104,7 +105,7 @@ svn_checksum_to_cstring_display(const svn_checksum_t *checksum,
   switch (checksum->kind)
     {
       case svn_checksum_md5:
-        return svn_md5_digest_to_cstring_display(checksum->digest, pool);
+        return svn_md5__digest_to_cstring_display(checksum->digest, pool);
       case svn_checksum_sha1:
         return svn_sha1__digest_to_cstring_display(checksum->digest, pool);
       default:
@@ -120,7 +121,7 @@ svn_checksum_to_cstring(const svn_checksum_t *checksum,
   switch (checksum->kind)
     {
       case svn_checksum_md5:
-        return svn_md5_digest_to_cstring(checksum->digest, pool);
+        return svn_md5__digest_to_cstring(checksum->digest, pool);
       case svn_checksum_sha1:
         return svn_sha1__digest_to_cstring(checksum->digest, pool);
       default:
@@ -233,7 +234,7 @@ svn_checksum_empty_checksum(svn_checksum_kind_t kind,
   switch (kind)
     {
       case svn_checksum_md5:
-        memcpy(checksum->digest, svn_md5_empty_string_digest(),
+        memcpy(checksum->digest, svn_md5__empty_string_digest(),
                APR_MD5_DIGESTSIZE);
         break;
 
