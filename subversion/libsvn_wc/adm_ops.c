@@ -386,20 +386,22 @@ process_committed_leaf(int log_number,
           */
           const char *latest_base;
           svn_error_t *err;
-          unsigned char local_digest[APR_MD5_DIGESTSIZE];
+          svn_checksum_t *local_checksum;
 
           latest_base = svn_wc__text_base_path(path, TRUE, pool);
-          err = svn_io_file_checksum(local_digest, latest_base, pool);
+          err = svn_io_file_checksum2(&local_checksum, latest_base,
+                                      svn_checksum_md5, pool);
 
           if (err && APR_STATUS_IS_ENOENT(err->apr_err))
             {
               svn_error_clear(err);
               latest_base = svn_wc__text_base_path(path, FALSE, pool);
-              err = svn_io_file_checksum(local_digest, latest_base, pool);
+              err = svn_io_file_checksum2(&local_checksum, latest_base,
+                                          svn_checksum_md5, pool);
             }
 
           if (! err)
-            hex_digest = svn_md5_digest_to_cstring(local_digest, pool);
+            hex_digest = svn_checksum_to_cstring(local_checksum, pool);
           else if (APR_STATUS_IS_ENOENT(err->apr_err))
             svn_error_clear(err);
           else
@@ -2019,11 +2021,12 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
       if (entry->kind == svn_node_file && entry->copyfrom_url)
         {
           const char *base_path;
-          unsigned char digest[APR_MD5_DIGESTSIZE];
+          svn_checksum_t *checksum;
 
           base_path = svn_wc__text_revert_path(fullpath, FALSE, pool);
-          SVN_ERR(svn_io_file_checksum(digest, base_path, pool));
-          tmp_entry.checksum = svn_md5_digest_to_cstring(digest, pool);
+          SVN_ERR(svn_io_file_checksum2(&checksum, base_path,
+                                        svn_checksum_md5, pool));
+          tmp_entry.checksum = svn_checksum_to_cstring(checksum, pool);
           flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
         }
 
