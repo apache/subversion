@@ -89,7 +89,7 @@ svn_checksum_match(const svn_checksum_t *d1,
   switch (d1->kind)
     {
       case svn_checksum_md5:
-        return svn_md5_digests_match(d1->digest, d2->digest);
+        return svn_md5__digests_match(d1->digest, d2->digest);
       case svn_checksum_sha1:
         return svn_sha1__digests_match(d1->digest, d2->digest);
       default:

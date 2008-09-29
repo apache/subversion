@@ -349,8 +349,14 @@ process_committed_leaf(int log_number,
   svn_wc_entry_t tmp_entry;
   apr_uint64_t modify_flags = 0;
   svn_stringbuf_t *logtags = svn_stringbuf_create("", pool);
+  svn_checksum_t *checksum = NULL;
 
   SVN_ERR(svn_wc__adm_write_check(adm_access));
+  if (digest)
+    {
+      checksum = svn_checksum_create(svn_checksum_md5, pool);
+      checksum->digest = digest;
+    }
 
   /* Set PATH's working revision to NEW_REVNUM; if REV_DATE and
      REV_AUTHOR are both non-NULL, then set the 'committed-rev',
@@ -366,8 +372,8 @@ process_committed_leaf(int log_number,
       SVN_ERR(remove_revert_file(&logtags, adm_access, path, FALSE, pool));
       SVN_ERR(remove_revert_file(&logtags, adm_access, path, TRUE, pool));
 
-      if (digest)
-        hex_digest = svn_md5_digest_to_cstring(digest, pool);
+      if (checksum)
+        hex_digest = svn_checksum_to_cstring(checksum, pool);
       else
         {
           /* There may be a new text base sitting in the adm tmp area

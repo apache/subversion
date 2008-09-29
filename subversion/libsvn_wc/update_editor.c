@@ -2936,7 +2936,10 @@ merge_file(svn_wc_notify_state_t *content_state,
          on replaced files. */
       if (!is_replaced)
         {
-          tmp_entry.checksum = svn_md5_digest_to_cstring(fb->digest, pool);
+          svn_checksum_t *checksum = svn_checksum_create(svn_checksum_md5,
+                                                         pool);
+          checksum->digest = fb->digest;
+          tmp_entry.checksum = svn_checksum_to_cstring(checksum, pool);
           flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
         }
     }
@@ -3045,7 +3048,12 @@ close_file(void *file_baton,
   /* window-handler assembles new pristine text in .svn/tmp/text-base/  */
   if (fb->new_text_base_path && text_checksum)
     {
-      const char *real_sum = svn_md5_digest_to_cstring(fb->digest, pool);
+      svn_checksum_t *checksum;
+      const char *real_sum;
+      
+      checksum = svn_checksum_create(svn_checksum_md5, pool);
+      checksum->digest = fb->digest;
+      real_sum = svn_checksum_to_cstring(checksum, pool);
 
       if (real_sum && (strcmp(text_checksum, real_sum) != 0))
         return svn_error_createf
