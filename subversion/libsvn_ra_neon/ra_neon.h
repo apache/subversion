@@ -1052,6 +1052,15 @@ svn_ra_neon__has_capability(svn_ra_session_t *session,
                             const char *capability,
                             apr_pool_t *pool);
 
+/*
+ * Implements the get_revision_deleted RA layer function. */
+svn_error_t *
+svn_ra_neon__get_revision_deleted(svn_ra_session_t *session,
+                                  const char *path,
+                                  svn_revnum_t peg_revision,
+                                  svn_revnum_t end_revision,
+                                  svn_revnum_t *revision_deleted,
+                                  apr_pool_t *pool);
 
 /* Helper function.  Loop over LOCK_TOKENS and assemble all keys and
    values into a stringbuf allocated in POOL.  The string will be of

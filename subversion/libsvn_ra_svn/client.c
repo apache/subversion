@@ -2279,6 +2279,18 @@ static svn_error_t *ra_svn_has_capability(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+ra_svn_get_revision_deleted(svn_ra_session_t *session,
+                            const char *path,
+                            svn_revnum_t peg_revision,
+                            svn_revnum_t end_revision,
+                            svn_revnum_t *revision_deleted,
+                            apr_pool_t *pool)
+
+{
+  return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL, NULL);
+}
+
 
 static const svn_ra__vtable_t ra_svn_vtable = {
   svn_ra_svn_version,
@@ -2315,6 +2327,7 @@ static const svn_ra__vtable_t ra_svn_vtable = {
   ra_svn_replay,
   ra_svn_has_capability,
   ra_svn_replay_range,
+  ra_svn_get_revision_deleted,
 };
 
 svn_error_t *
