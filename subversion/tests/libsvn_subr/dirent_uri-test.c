@@ -639,6 +639,162 @@ test_dirent_split(const char **msg,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_dirent_get_longest_ancestor(const char **msg,
+                                 svn_boolean_t msg_only,
+                                 svn_test_opts_t *opts,
+                                 apr_pool_t *pool)
+{
+  apr_size_t i;
+
+  /* Paths to test and their expected results. */
+  struct {
+    const char *path1;
+    const char *path2;
+    const char *result;
+  } tests[] = {
+    { "/foo",           "/foo/bar",        "/foo"},
+    { "/foo/bar",       "foo/bar",         SVN_EMPTY_PATH},
+    { "/",              "/foo",            "/"},
+    { SVN_EMPTY_PATH,   "foo",             SVN_EMPTY_PATH},
+    { SVN_EMPTY_PATH,   ".bar",            SVN_EMPTY_PATH},
+    { "/.bar",          "/",               "/"},
+    { "foo/bar",        "foo",             "foo"},
+    { "/foo/bar",       "/foo",            "/foo"},
+    { "/rif",           "/raf",            "/"},
+    { "foo",            "bar",             SVN_EMPTY_PATH},
+    { "foo",            "foo/bar",         "foo"},
+    { "foo.",           "foo./.bar",       "foo."},
+    { SVN_EMPTY_PATH,   SVN_EMPTY_PATH,    SVN_EMPTY_PATH},
+    { "/",              "/",               "/"},
+    { "X:foo",          "Y:foo",           SVN_EMPTY_PATH},
+    { "X:/folder1",     "Y:/folder2",      SVN_EMPTY_PATH},
+#if defined(WIN32) || defined(__CYGWIN__)
+    { "X:/",            "X:/",             "X:/"},
+    { "X:/foo/bar/A/D/H/psi", "X:/foo/bar/A/B", "X:/foo/bar/A" },
+    { "X:/foo/bar/boo", "X:/foo/bar/baz/boz", "X:/foo/bar"},
+    { "X:foo/bar",      "X:foo/bar/boo",   "X:foo/bar"},
+    { "//srv/shr",      "//srv/shr/fld",   "//srv/shr" },
+    { "//srv/shr/fld",  "//srv/shr",       "//srv/shr" },
+    { "//srv/shr/fld",  "//srv2/shr/fld",  SVN_EMPTY_PATH },
+    { "X:/foo",         "X:/",             "X:/"},
+    { "X:/folder1",     "X:/folder2",      "X:/"},
+    { "X:/",            "X:/foo",          "X:/"},
+    { "X:",             "X:foo",           "X:"},
+    { "X:",             "X:/",             SVN_EMPTY_PATH},
+    { "X:foo",          "X:bar",           "X:"},
+#else /* WIN32 or Cygwin */
+    { "X:/foo",         "X:",              "X:"},
+    { "X:/folder1",     "X:/folder2",      "X:"},
+    { "X:",             "X:foo",           SVN_EMPTY_PATH},
+    { "X:foo",          "X:bar",           SVN_EMPTY_PATH},
+#endif /* non-WIN32 */
+  };
+
+  *msg = "test svn_dirent_get_longest_ancestor";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i++)
+    {
+      const char *retval;
+
+      retval = svn_dirent_get_longest_ancestor(tests[i].path1, tests[i].path2,
+                                               pool);
+
+      if (strcmp(tests[i].result, retval))
+        return svn_error_createf
+          (SVN_ERR_TEST_FAILED, NULL,
+           "svn_dirent_get_longest_ancestor (%s, %s) returned %s instead of %s",
+           tests[i].path1, tests[i].path2, retval, tests[i].result);
+
+      /* changing the order of the paths should return the same results */
+      retval = svn_dirent_get_longest_ancestor(tests[i].path2, tests[i].path1,
+                                               pool);
+
+      if (strcmp(tests[i].result, retval))
+        return svn_error_createf
+          (SVN_ERR_TEST_FAILED, NULL,
+           "svn_dirent_get_longest_ancestor (%s, %s) returned %s instead of %s",
+           tests[i].path2, tests[i].path1, retval, tests[i].result);
+    }
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_uri_get_longest_ancestor(const char **msg,
+                              svn_boolean_t msg_only,
+                              svn_test_opts_t *opts,
+                              apr_pool_t *pool)
+{
+  apr_size_t i;
+
+  /* Paths to test and their expected results. */
+  struct {
+    const char *path1;
+    const char *path2;
+    const char *result;
+  } tests[] = {
+    { "/foo",           "/foo/bar",        "/foo"},
+    { "/foo/bar",       "foo/bar",         SVN_EMPTY_PATH},
+    { "/",              "/foo",            "/"},
+    { SVN_EMPTY_PATH,   "foo",             SVN_EMPTY_PATH},
+    { SVN_EMPTY_PATH,   ".bar",            SVN_EMPTY_PATH},
+    { "/.bar",          "/",               "/"},
+    { "foo/bar",        "foo",             "foo"},
+    { "/foo/bar",       "/foo",            "/foo"},
+    { "/rif",           "/raf",            "/"},
+    { "foo",            "bar",             SVN_EMPTY_PATH},
+    { "foo",            "foo/bar",         "foo"},
+    { "foo.",           "foo./.bar",       "foo."},
+    { SVN_EMPTY_PATH,   SVN_EMPTY_PATH,    SVN_EMPTY_PATH},
+    { "/",              "/",               "/"},
+    { "http://test",    "http://test",     "http://test"},
+    { "http://test",    "http://taste",    SVN_EMPTY_PATH},
+    { "http://test",    "http://test/foo", "http://test"},
+    { "http://test",    "file://test/foo", SVN_EMPTY_PATH},
+    { "http://test",    "http://testF",    SVN_EMPTY_PATH},
+    { "http://",        "http://test",     SVN_EMPTY_PATH},
+    { "file:///A/C",    "file:///B/D",     SVN_EMPTY_PATH},
+    { "file:///A/C",    "file:///A/D",     "file:///A"},
+    { "X:/foo",         "X:",              "X:"},
+    { "X:/folder1",     "X:/folder2",      "X:"},
+    { "X:",             "X:foo",           SVN_EMPTY_PATH},
+    { "X:foo",          "X:bar",           SVN_EMPTY_PATH},
+  };
+
+  *msg = "test svn_uri_get_longest_ancestor";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i++)
+    {
+      const char *retval;
+
+      retval = svn_uri_get_longest_ancestor(tests[i].path1, tests[i].path2,
+                                             pool);
+
+      if (strcmp(tests[i].result, retval))
+        return svn_error_createf
+          (SVN_ERR_TEST_FAILED, NULL,
+           "svn_uri_get_longest_ancestor (%s, %s) returned %s instead of %s",
+           tests[i].path1, tests[i].path2, retval, tests[i].result);
+
+      /* changing the order of the paths should return the same results */
+      retval = svn_uri_get_longest_ancestor(tests[i].path2, tests[i].path1,
+                                             pool);
+
+      if (strcmp(tests[i].result, retval))
+        return svn_error_createf
+          (SVN_ERR_TEST_FAILED, NULL,
+           "svn_uri_get_longest_ancestor (%s, %s) returned %s instead of %s",
+           tests[i].path2, tests[i].path1, retval, tests[i].result);
+    }
+  return SVN_NO_ERROR;
+}
+
 
 /* The test table.  */
 
@@ -653,5 +809,7 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(test_dirent_canonicalize),
     SVN_TEST_PASS(test_dirent_is_canonical),
     SVN_TEST_PASS(test_dirent_split),
+    SVN_TEST_PASS(test_dirent_get_longest_ancestor),
+    SVN_TEST_PASS(test_uri_get_longest_ancestor),
     SVN_TEST_NULL
   };

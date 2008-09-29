@@ -192,6 +192,34 @@ const char *svn_dirent_canonicalize(const char *dirent, apr_pool_t *pool);
  */
 svn_boolean_t svn_dirent_is_canonical(const char *dirent, apr_pool_t *pool);
 
+/** Return the longest common dirent shared by two canonicalized dirents,
+ * @a dirent1 and @a dirent2.  If there's no common ancestor, return the
+ * empty path.
+ *
+ * @since New in 1.6.
+ */
+char *
+svn_dirent_get_longest_ancestor(const char *dirent1,
+                                const char *dirent2,
+                                apr_pool_t *pool);
+
+/** Return the longest common path shared by two canonicalized uris,
+ * @a uri1 and @a uri2.  If there's no common ancestor, return the
+ * empty path.
+ *
+ * @a path1 and @a path2 may be URLs.  In order for two URLs to have
+ * a common ancestor, they must (a) have the same protocol (since two URLs
+ * with the same path but different protocols may point at completely
+ * different resources), and (b) share a common ancestor in their path
+ * component, i.e. 'protocol://' is not a sufficient ancestor.
+ *
+ * @since New in 1.6.
+ */
+char *
+svn_uri_get_longest_ancestor(const char *path1,
+                             const char *path2,
+                             apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
