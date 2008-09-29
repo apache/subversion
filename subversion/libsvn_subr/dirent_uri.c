@@ -323,7 +323,8 @@ get_longest_ancestor_length(svn_boolean_t uris,
 }
 
 static const char *
-is_child(svn_boolean_t uri, const char *path1, const char *path2, apr_pool_t *pool)
+is_child(svn_boolean_t uri, const char *path1, const char *path2,
+         apr_pool_t *pool)
 {
   apr_size_t i;
 
@@ -334,7 +335,7 @@ is_child(svn_boolean_t uri, const char *path1, const char *path2, apr_pool_t *po
         return NULL;
 
       /* check if this is an absolute path */
-      if (uri && svn_uri_is_absolute(path2, strlen(path2)) ||
+      if ((uri && svn_uri_is_absolute(path2, strlen(path2))) ||
          (! uri && svn_dirent_is_absolute(path2, strlen(path2))))
         return NULL;
       else
