@@ -960,8 +960,8 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
   apr_file_t *basefile = NULL;
   apr_file_t *tempbasefile;
   const char *base_digest_hex = NULL;
-  const unsigned char *base_digest = NULL;
-  const unsigned char *local_digest = NULL;
+  svn_checksum_t *base_checksum = NULL;
+  svn_checksum_t *local_checksum = NULL;
   svn_error_t *err;
   const svn_wc_entry_t *ent;
   svn_stream_t *base_stream;
@@ -1009,13 +1009,14 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
       if (! ent->checksum)
         {
           /*### FIXME: The entries file should hold a checksum */
-          unsigned char tmp_digest[APR_MD5_DIGESTSIZE];
+          svn_checksum_t *tmp_checksum;
 
           /* If there's no checksum in this entry, calculate one */
           const char *tb = svn_wc__text_base_path (path, FALSE, pool);
 
-          SVN_ERR (svn_io_file_checksum (tmp_digest, tb, pool));
-          base_digest_hex = svn_md5_digest_to_cstring_display(tmp_digest, pool);
+          SVN_ERR (svn_io_file_checksum2(&tmp_checksum, tb, svn_checksum_md5,
+                                         pool));
+          base_digest_hex = svn_checksum_to_cstring_display(tmp_checksum, pool);
         }
       else
         base_digest_hex = ent->checksum;
@@ -1033,7 +1034,8 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
   base_stream = svn_stream_from_aprfile2(basefile, TRUE, pool);
   if (! fulltext)
     base_stream
-      = svn_stream_checksummed(base_stream, &base_digest, NULL, TRUE, pool);
+      = svn_stream_checksummed2(base_stream, &base_checksum, svn_checksum_md5,
+                                NULL, svn_checksum_md5, TRUE, pool);
 
   svn_txdelta(&txdelta_stream, base_stream, local_stream, pool);
 
@@ -1055,12 +1057,12 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
 
   /* If we have an error, it may be caused by a corrupt text base.
      Check the checksum and discard `err' if they don't match. */
-  if (! fulltext && ent->checksum && base_digest)
+  if (! fulltext && ent->checksum && base_checksum)
     {
       /*### FIXME: The entries file should hold a checksum,
         meaning the above condition should not include ent->checksum */
 
-      base_digest_hex = svn_md5_digest_to_cstring_display(base_digest, pool);
+      base_digest_hex = svn_checksum_to_cstring_display(base_checksum, pool);
 
       if (strcmp(base_digest_hex, ent->checksum) != 0)
         {
@@ -1101,14 +1103,15 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
   if (basefile)
     SVN_ERR(svn_wc__close_text_base(basefile, path, 0, pool));
 
-  local_digest = svn_txdelta_md5_digest(txdelta_stream);
+  local_checksum = svn_checksum_create(svn_checksum_md5, pool);
+  local_checksum->digest = svn_txdelta_md5_digest(txdelta_stream);
 
   if (digest)
-    memcpy(digest, local_digest, APR_MD5_DIGESTSIZE);
+    memcpy(digest, local_checksum->digest, svn_checksum_size(local_checksum));
 
   /* Close the file baton, and get outta here. */
   return editor->close_file
-    (file_baton, svn_md5_digest_to_cstring(local_digest, pool), pool);
+    (file_baton, svn_checksum_to_cstring(local_checksum, pool), pool);
 }
 
 svn_error_t *
