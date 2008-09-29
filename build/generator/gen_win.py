@@ -1012,7 +1012,7 @@ class WinGeneratorBase(GeneratorBase):
       old_contents = None
     if old_contents != new_contents:
       open(fname, 'wb').write(new_contents)
-      print("Wrote:", fname)
+      print("Wrote: %s" % fname)
 
   def write_with_template(self, fname, tname, data):
     fout = StringIO()
