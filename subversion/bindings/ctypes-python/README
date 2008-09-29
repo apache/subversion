@@ -43,20 +43,6 @@ test/run_all.py should look something like this:
 
    OK
 
-You can also test the bindings by running the example.py script.
-
-The output of example.py should look something like this:
-
-    $ python example.py
-
-    Repos UUID:  4419cd3e-282d-48c6-bf73-3fb589a7fb24
-    Committed revision 1
-    Committed revision 2
-    Committed revision 3
-    Committed revision 4
-    Committed revision 5
-    Committed revision 6
-
 ---------------
 INSTALLING CSVN
 ---------------
