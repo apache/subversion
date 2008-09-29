@@ -234,6 +234,16 @@ svn_uri_get_longest_ancestor(const char *path1,
                              const char *path2,
                              apr_pool_t *pool);
 
+/** Convert @a relative canonicalized dirent to an absolute dirent and
+ * return the results in @a *pabsolute, allocated in @a pool.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_dirent_get_absolute(const char **pabsolute,
+                        const char *relative,
+                        apr_pool_t *pool);
+
 /** Test if @a uri2 is a child of @a uri1.
  * If not, return @c NULL.
  * If so, return a copy of the remainder uri, allocated in @a pool.
