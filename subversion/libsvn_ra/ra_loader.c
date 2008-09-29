@@ -1399,6 +1399,30 @@ svn_error_t *svn_ra_has_capability(svn_ra_session_t *session,
   return session->vtable->has_capability(session, has, capability, pool);
 }
 
+svn_error_t *
+svn_ra_get_revision_deleted(svn_ra_session_t *session,
+                            const char *path,
+                            svn_revnum_t peg_revision,
+                            svn_revnum_t end_revision,
+                            svn_revnum_t *revision_deleted,
+                            apr_pool_t *pool)
+{
+  if (!SVN_IS_VALID_REVNUM(peg_revision))
+    return svn_error_createf(SVN_ERR_CLIENT_BAD_REVISION, NULL,
+                             _("Invalid peg revision %ld"), peg_revision);
+  if (!SVN_IS_VALID_REVNUM(end_revision))
+    return svn_error_createf(SVN_ERR_CLIENT_BAD_REVISION, NULL,
+                             _("Invalid end revision %ld"), end_revision);
+  if (end_revision <= peg_revision)
+    return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL,
+                            _("Peg revision must precede end revision"));
+  return session->vtable->get_revision_deleted(session, path,
+                                               peg_revision,
+                                               end_revision,
+                                               revision_deleted,
+                                               pool);
+}
+
 
 
 svn_error_t *
