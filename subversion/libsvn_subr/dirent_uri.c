@@ -327,9 +327,6 @@ is_child(svn_boolean_t uri, const char *path1, const char *path2, apr_pool_t *po
 {
   apr_size_t i;
 
-  /* assert (is_canonical (path1, strlen (path1)));  ### Expensive strlen */
-  /* assert (is_canonical (path2, strlen (path2)));  ### Expensive strlen */
-
   /* Allow "" and "foo" or "H:foo" to be parent/child */
   if (SVN_PATH_IS_EMPTY(path1))               /* "" is the parent  */
     {
@@ -341,7 +338,8 @@ is_child(svn_boolean_t uri, const char *path1, const char *path2, apr_pool_t *po
          (! uri && svn_dirent_is_absolute(path2, strlen(path2))))
         return NULL;
       else
-        return apr_pstrdup(pool, path2);      /* everything else is child */
+        /* everything else is child */
+        return pool ? apr_pstrdup(pool, path2) : path2;
     }
 
   /* Reach the end of at least one of the paths.  How should we handle
@@ -375,9 +373,9 @@ is_child(svn_boolean_t uri, const char *path1, const char *path2, apr_pool_t *po
         if (path2[i] == '/')
           return NULL;
         else
-          return apr_pstrdup(pool, path2 + i);
+          return pool ? apr_pstrdup(pool, path2 + i) : path2 + i;
       else if (path2[i] == '/')
-        return apr_pstrdup(pool, path2 + i) + 1;
+        return pool ? apr_pstrdup(pool, path2 + i + 1) : path2 + i + 1;
     }
 
   /* Otherwise, path2 isn't a child. */
