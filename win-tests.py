@@ -195,7 +195,7 @@ def create_target_dir(dirname):
   tgt_dir = os.path.join(abs_builddir, dirname)
   if not os.path.exists(tgt_dir):
     if verbose:
-      print("mkdir:", tgt_dir)
+      print("mkdir: %s" % tgt_dir)
     os.makedirs(tgt_dir)
 
 def copy_changed_file(src, tgt):
@@ -208,12 +208,12 @@ def copy_changed_file(src, tgt):
     assert os.path.isfile(tgt)
     if filecmp.cmp(src, tgt):
       if verbose:
-        print("same:", src)
-        print(" and:", tgt)
+        print("same: %s" % src)
+        print(" and: %s" % tgt)
       return 0
   if verbose:
-    print("copy:", src)
-    print("  to:", tgt)
+    print("copy: %s" % src)
+    print("  to: %s" % tgt)
   shutil.copy(src, tgt)
   return 1
 
@@ -317,7 +317,7 @@ class Svnserve:
       args = [self.name, '-d', '-r', self.root]
     else:
       args = [self.name] + self.args
-    print('Starting', self.kind, self.name)
+    print('Starting %s %s' % (self.kind, self.name))
     try:
       import win32process
       import win32con
@@ -334,7 +334,7 @@ class Svnserve:
     if self.proc_handle is not None:
       try:
         import win32process
-        print('Stopping', self.name)
+        print('Stopping %s' % self.name)
         win32process.TerminateProcess(self.proc_handle, 0)
         return
       except ImportError:
@@ -473,9 +473,9 @@ class Httpd:
 
   def start(self):
     "Install and start HTTPD service"
-    print('Installing service', self.service_name)
+    print('Installing service %s' % self.service_name)
     os.spawnv(os.P_WAIT, self.path, self.httpd_args + ['-k', 'install'])
-    print('Starting service', self.service_name)
+    print('Starting service %s' % self.service_name)
     os.spawnv(os.P_WAIT, self.path, self.httpd_args + ['-k', 'start'])
 
   def stop(self):
@@ -515,7 +515,7 @@ if run_httpd:
 if daemon:
   daemon.start()
 
-print('Testing', objdir, 'configuration on', repo_loc)
+print('Testing %s configuration on %s' % (objdir, repo_loc))
 sys.path.insert(0, os.path.join(abs_srcdir, 'build'))
 import run_tests
 th = run_tests.TestHarness(abs_srcdir, abs_builddir,
@@ -543,7 +543,7 @@ for tgt in copied_execs:
   try:
     if os.path.isfile(tgt):
       if verbose:
-        print("kill:", tgt)
+        print("kill: %s" % tgt)
       os.unlink(tgt)
   except:
     traceback.print_exc(file=sys.stdout)

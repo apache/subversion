@@ -56,7 +56,7 @@ if sys.argv[1] == '--compile':
       sysconfig.get_config_vars('CC', 'BASECFLAGS', 'OPT', 'CCSHARED')
   if basecflags:
     opt = basecflags + ' ' + opt
-  print(cc, opt, ccshared)
+  print("%s %s %s" % (cc, opt, ccshared))
   sys.exit(0)
 
 def add_option(options, name, value=None):
