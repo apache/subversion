@@ -484,121 +484,13 @@ svn_path_compare_paths(const char *path1,
   return (unsigned char)(path1[i]) < (unsigned char)(path2[i]) ? -1 : 1;
 }
 
-
-/* Return the string length of the longest common ancestor of PATH1 and PATH2.
- *
- * This function handles everything except the URL-handling logic
- * of svn_path_get_longest_ancestor, and assumes that PATH1 and
- * PATH2 are *not* URLs.
- *
- * If the two paths do not share a common ancestor, return 0.
- *
- * New strings are allocated in POOL.
- */
-static apr_size_t
-get_path_ancestor_length(const char *path1,
-                         const char *path2,
-                         apr_pool_t *pool)
-{
-  apr_size_t path1_len, path2_len;
-  apr_size_t i = 0;
-  apr_size_t last_dirsep = 0;
-
-  path1_len = strlen(path1);
-  path2_len = strlen(path2);
-
-  if (SVN_PATH_IS_EMPTY(path1) || SVN_PATH_IS_EMPTY(path2))
-    return 0;
-
-  while (path1[i] == path2[i])
-    {
-      /* Keep track of the last directory separator we hit. */
-      if (path1[i] == '/')
-        last_dirsep = i;
-
-      i++;
-
-      /* If we get to the end of either path, break out. */
-      if ((i == path1_len) || (i == path2_len))
-        break;
-    }
-
-  /* two special cases:
-     1. '/' is the longest common ancestor of '/' and '/foo'
-     2. '/' is the longest common ancestor of '/rif' and '/raf' */
-  if (i == 1 && path1[0] == '/' && path2[0] == '/')
-    return 1;
-
-  /* last_dirsep is now the offset of the last directory separator we
-     crossed before reaching a non-matching byte.  i is the offset of
-     that non-matching byte. */
-  if (((i == path1_len) && (path2[i] == '/'))
-           || ((i == path2_len) && (path1[i] == '/'))
-           || ((i == path1_len) && (i == path2_len)))
-    return i;
-  else
-    if (last_dirsep == 0 && path1[0] == '/' && path2[0] == '/')
-      return 1;
-    return last_dirsep;
-}
-
-
 char *
 svn_path_get_longest_ancestor(const char *path1,
                               const char *path2,
                               apr_pool_t *pool)
 {
-  svn_boolean_t path1_is_url, path2_is_url;
-  path1_is_url = svn_path_is_url(path1);
-  path2_is_url = svn_path_is_url(path2);
-
-  if (path1_is_url && path2_is_url)
-    {
-      apr_size_t path_ancestor_len;
-      apr_size_t i = 0;
-
-      /* Find ':' */
-      while (1)
-        {
-          /* No shared protocol => no common prefix */
-          if (path1[i] != path2[i])
-            return apr_pmemdup(pool, SVN_EMPTY_PATH,
-                               sizeof(SVN_EMPTY_PATH));
-
-          if (path1[i] == ':')
-            break;
-
-          /* They're both URLs, so EOS can't come before ':' */
-          assert((path1[i] != '\0') && (path2[i] != '\0'));
-
-          i++;
-        }
-
-      i += 3;  /* Advance past '://' */
-
-      path_ancestor_len = get_path_ancestor_length(path1 + i, path2 + i,
-                                                   pool);
-
-      if (path_ancestor_len == 0 ||
-          (path_ancestor_len == 1 && (path1 + i)[0] == '/'))
-        return apr_pmemdup(pool, SVN_EMPTY_PATH, sizeof(SVN_EMPTY_PATH));
-      else
-        return apr_pstrndup(pool, path1, path_ancestor_len + i);
-    }
-
-  else if ((! path1_is_url) && (! path2_is_url))
-    {
-      return apr_pstrndup(pool, path1,
-                          get_path_ancestor_length(path1, path2, pool));
-    }
-
-  else
-    {
-      /* A URL and a non-URL => no common prefix */
-      return apr_pmemdup(pool, SVN_EMPTY_PATH, sizeof(SVN_EMPTY_PATH));
-    }
+  return svn_uri_get_longest_ancestor(path1, path2, pool);
 }
-
 
 const char *
 svn_path_is_child(const char *path1,
