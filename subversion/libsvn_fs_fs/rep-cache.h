@@ -27,17 +27,29 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+/* ### These functions are currently implemented only if Subversion is
+   ### compiled with ENABLE_SQLITE_TESTING.  Otherwise, these functions are
+   ### compiled, but implemented as no-ops. */
+
+/* Open (and create, if needed) the rep cache database associated with FS.
+   Use POOL for temporary allocations. */
 svn_error_t *
 svn_fs_fs__open_rep_cache(svn_fs_t *fs,
                           apr_pool_t *pool);
 
+/* Return the representation REP in FS which has fulltext CHECKSUM.
+   REP is allocated in POOL. */
 svn_error_t *
 svn_fs_fs__get_rep_reference(representation_t **rep,
+                             svn_fs_t *fs,
                              svn_checksum_t *checksum,
                              apr_pool_t *pool);
 
+/* Set the representation REP in FS, using REP->CHECKSUM.
+   Use POOL for temporary allocations. */
 svn_error_t *
-svn_fs_fs__set_rep_reference(representation_t *rep,
+svn_fs_fs__set_rep_reference(svn_fs_t *fs,
+                             representation_t *rep,
                              apr_pool_t *pool);
 
 #ifdef __cplusplus

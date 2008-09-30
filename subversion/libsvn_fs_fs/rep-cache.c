@@ -141,6 +141,7 @@ svn_fs_fs__open_rep_cache(svn_fs_t *fs,
 
 svn_error_t *
 svn_fs_fs__get_rep_reference(representation_t **rep,
+                             svn_fs_t *fs,
                              svn_checksum_t *checksum,
                              apr_pool_t *pool)
 {
@@ -148,7 +149,8 @@ svn_fs_fs__get_rep_reference(representation_t **rep,
 }
 
 svn_error_t *
-svn_fs_fs__set_rep_reference(representation_t *rep_ref,
+svn_fs_fs__set_rep_reference(svn_fs_t *fs,
+                             representation_t *rep_ref,
                              apr_pool_t *pool)
 {
   return SVN_NO_ERROR;
@@ -167,6 +169,7 @@ svn_fs_fs__open_rep_cache(svn_fs_t *fs,
 
 svn_error_t *
 svn_fs_fs__get_rep_reference(representation_t **rep,
+                             svn_fs_t *fs,
                              svn_checksum_t *checksum,
                              apr_pool_t *pool)
 {
@@ -175,7 +178,8 @@ svn_fs_fs__get_rep_reference(representation_t **rep,
 }
 
 svn_error_t *
-svn_fs_fs__set_rep_reference(representation_t *rep_ref,
+svn_fs_fs__set_rep_reference(svn_fs_t *fs,
+                             representation_t *rep_ref,
                              apr_pool_t *pool)
 {
   return SVN_NO_ERROR;
