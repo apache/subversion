@@ -49,14 +49,16 @@ _filter_names = [
   'svn_auth_get_gnome_keyring_ssl_client_cert_pw_provider',
   'svn_auth_get_kwallet_simple_provider',
   'svn_auth_get_kwallet_ssl_client_cert_pw_provider',
+  'svn_auth_gnome_keyring_version',
+  'svn_auth_kwallet_version',
   ]
 
 if __name__ == '__main__':
   # run the extractor over each file mentioned
   import sys
-  print "EXPORTS"
+  print("EXPORTS")
   for fname in sys.argv[1:]:
     for func in extract_funcs(fname):
-      print func
+      print(func)
     if os.path.basename(fname) == 'svn_ctype.h':
-      print 'svn_ctype_table = svn_ctype_table_internal CONSTANT'
+      print('svn_ctype_table = svn_ctype_table_internal CONSTANT')

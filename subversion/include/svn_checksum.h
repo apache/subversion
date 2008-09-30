@@ -194,6 +194,15 @@ svn_checksum_final(svn_checksum_t **checksum,
                    apr_pool_t *pool);
 
 
+/**
+ * Return the digest size of @a checksum.
+ *
+ * @since New in 1.6.
+ */
+apr_size_t
+svn_checksum_size(svn_checksum_t *checksum);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

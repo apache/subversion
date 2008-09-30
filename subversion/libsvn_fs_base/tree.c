@@ -37,7 +37,6 @@
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_path.h"
-#include "svn_sha1.h"
 #include "svn_mergeinfo.h"
 #include "svn_fs.h"
 #include "svn_sorts.h"

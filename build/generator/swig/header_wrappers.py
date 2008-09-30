@@ -302,10 +302,10 @@ class Generator(generator.swig.Generator):
 
 if __name__ == "__main__":
   if len(sys.argv) < 3:
-    print """Usage: %s build.conf swig [ subversion/include/header_file.h ]
+    print("""Usage: %s build.conf swig [ subversion/include/header_file.h ]
 Generates SWIG proxy wrappers around Subversion header files. If no header
 files are specified, generate wrappers for subversion/include/*.h. """ % \
-    os.path.basename(sys.argv[0])
+    os.path.basename(sys.argv[0]))
   else:
     gen = Generator(sys.argv[1], sys.argv[2])
     if len(sys.argv) > 3:

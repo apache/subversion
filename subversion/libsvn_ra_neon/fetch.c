@@ -77,7 +77,7 @@ typedef struct {
 
 typedef struct {
   svn_boolean_t do_checksum;  /* only accumulate checksum if set */
-  apr_md5_ctx_t md5_context;  /* accumulating checksum of file contents */
+  svn_checksum_ctx_t *checksum_ctx; /* accumulating checksum of file contents */
   svn_stream_t *stream;       /* stream to write file contents to */
 } file_write_ctx_t;
 
@@ -568,7 +568,7 @@ get_file_reader(void *userdata, const char *buf, size_t len)
   svn_stream_t *stream = fwc->stream;
 
   if (fwc->do_checksum)
-    apr_md5_update(&(fwc->md5_context), buf, len);
+    SVN_ERR(svn_checksum_update(fwc->checksum_ctx, buf, len));
 
   /* Write however many bytes were passed in by neon. */
   return svn_stream_write(stream, buf, &len);
@@ -705,7 +705,6 @@ svn_error_t *svn_ra_neon__get_file(svn_ra_session_t *session,
       const svn_string_t *expected_checksum = NULL;
       file_write_ctx_t fwc;
       ne_propname md5_propname = { SVN_DAV_PROP_NS_DAV, "md5-checksum" };
-      unsigned char digest[APR_MD5_DIGESTSIZE];
       const char *hex_digest;
 
       /* Only request a checksum if we're getting the file contents. */
@@ -736,7 +735,7 @@ svn_error_t *svn_ra_neon__get_file(svn_ra_session_t *session,
       fwc.stream = stream;
 
       if (fwc.do_checksum)
-        apr_md5_init(&(fwc.md5_context));
+        fwc.checksum_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
 
       /* Fetch the file, shoving it at the provided stream. */
       SVN_ERR(custom_get_request(ras, final_url, path,
@@ -747,8 +746,10 @@ svn_error_t *svn_ra_neon__get_file(svn_ra_session_t *session,
 
       if (fwc.do_checksum)
         {
-          apr_md5_final(digest, &(fwc.md5_context));
-          hex_digest = svn_md5_digest_to_cstring_display(digest, pool);
+          svn_checksum_t *checksum;
+
+          SVN_ERR(svn_checksum_final(&checksum, fwc.checksum_ctx, pool));
+          hex_digest = svn_checksum_to_cstring_display(checksum, pool);
 
           if (strcmp(hex_digest, expected_checksum->data) != 0)
             return svn_error_createf

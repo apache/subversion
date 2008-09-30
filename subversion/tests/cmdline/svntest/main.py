@@ -1176,7 +1176,7 @@ def run_one_test(n, test_list, parallel = 0, finished_tests = None):
   """
 
   if (n < 1) or (n > len(test_list) - 1):
-    print "There is no test", `n` + ".\n"
+    print "There is no test", repr(n) + ".\n"
     return 1
 
   # Run the test.

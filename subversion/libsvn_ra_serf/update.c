@@ -1165,7 +1165,7 @@ fetch_file(report_context_t *ctx, report_info_t *info)
       fetch_ctx->sess = ctx->sess;
       fetch_ctx->conn = conn;
 
-      handler = apr_pcalloc(info->pool, sizeof(*handler));
+      handler = apr_pcalloc(info->dir->pool, sizeof(*handler));
 
       handler->method = "GET";
       handler->path = fetch_ctx->info->url;
