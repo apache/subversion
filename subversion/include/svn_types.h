@@ -423,8 +423,9 @@ typedef struct svn_dirent_t
  *
  * @since New in 1.4.
  */
-svn_dirent_t *svn_dirent_dup(const svn_dirent_t *dirent,
-                             apr_pool_t *pool);
+svn_dirent_t *
+svn_dirent_dup(const svn_dirent_t *dirent,
+               apr_pool_t *pool);
 
 
 
@@ -761,8 +762,9 @@ typedef svn_error_t *(*svn_commit_callback_t)
  * quotes, newlines, or other garbage on the end, such as might be
  * unsafe in an HTTP header.
  */
-svn_error_t *svn_mime_type_validate(const char *mime_type,
-                                    apr_pool_t *pool);
+svn_error_t *
+svn_mime_type_validate(const char *mime_type,
+                       apr_pool_t *pool);
 
 
 /** Return FALSE iff @a mime_type is a textual type.
@@ -770,7 +772,8 @@ svn_error_t *svn_mime_type_validate(const char *mime_type,
  * All mime types that start with "text/" are textual, plus some special
  * cases (for example, "image/x-xbitmap").
  */
-svn_boolean_t svn_mime_type_is_binary(const char *mime_type);
+svn_boolean_t
+svn_mime_type_is_binary(const char *mime_type);
 
 
 

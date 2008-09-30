@@ -75,7 +75,7 @@ svn_wc_set_adm_dir(const char *name, apr_pool_t *pool)
 
      FIXME:
      An identical list is used in
-       libsvn_subr/opt.c:svn_opt_args_to_target_array3(),
+       libsvn_subr/opt.c:svn_opt__args_to_target_array(),
      but that function can't use this list, because that use would
      create a circular dependency between libsvn_wc and libsvn_subr.
      Make sure changes to the lists are always synchronized! */

@@ -78,7 +78,13 @@ CREATE TABLE NODE (
   kind  INTEGER NOT NULL,
 
   /* NULL for a directory */
-  text_id  INTEGER,
+  checksum  TEXT,
+
+  /* ### do we need to deal with repos-size vs. eol-style-size?
+     ### this value is the pristine size of ACTUAL (after appropriate
+     ### transforms as defined for this node), so we can quickly detect
+     ### differences. */
+  actual_size  INTEGER NOT NULL,
 
   /* Information about the last change to this node */
   changed_rev  INTEGER NOT NULL,
@@ -113,27 +119,21 @@ CREATE TABLE PROPERTIES (
 CREATE UNIQUE INDEX I_NODE_PROPS ON PROPERTIES (node_id);
 
 
-CREATE TABLE BASE_TEXT (
-  id  INTEGER PRIMARY KEY AUTOINCREMENT,
-
+CREATE TABLE TEXT_BASE (
   /* ### the hash algorithm (MD5 or SHA-1) is encoded in this value */
-  checksum  TEXT NOT NULL,
+  checksum  TEXT NOT NULL PRIMARY KEY,
 
-  /* ### enumerated values specifying type of compression */
-  compression  INTEGER NOT NULL,
+  /* ### enumerated values specifying type of compression. NULL implies
+     ### that no compression has been applied. */
+  compression  INTEGER,
 
-  /* ### do we need to deal with repos-size vs. eol-style-size?
-     ### this value is the pristine size of ACTUAL (after appropriate
-     ### transforms) so we can quickly detect differences. */
-  actual_size  INTEGER NOT NULL,
+  /* ### used to verify the pristine file is "proper". NULL if unknown,
+     ### and (thus) the pristine copy is incomplete/unusable. */
+  stored_size  INTEGER,
 
-  /* ### used to verify the pristine file is "proper" */
-  stored_size  INTEGER NOT NULL,
-
-  refcount INTEGER NOT NULL
+  refcount  INTEGER NOT NULL
   );
 
-CREATE UNIQUE INDEX I_CHECKSUM ON BASE_TEXT (checksum);
 
 /* ------------------------------------------------------------------------- */
 
@@ -154,7 +154,8 @@ CREATE TABLE NODE_CHANGES (
   /* Where this node was copied/moved from. */
   original_repos_path  TEXT,
   original_revnum  INTEGER,
-  text_id  INTEGER,
+  checksum  TEXT,
+  actual_size  INTEGER,
   changed_rev  INTEGER,
   changed_date  INTEGER,  /* an APR date/time (usec since 1970) */
   changed_author  TEXT,

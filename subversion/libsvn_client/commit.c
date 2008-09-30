@@ -35,6 +35,7 @@
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_error_codes.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_io.h"
 #include "svn_md5.h"
@@ -179,6 +180,7 @@ import_file(const svn_delta_editor_t *editor,
   void *file_baton;
   const char *mimetype = NULL;
   unsigned char digest[APR_MD5_DIGESTSIZE];
+  svn_checksum_t *checksum;
   const char *text_checksum;
   apr_hash_t* properties;
   apr_hash_index_t *hi;
@@ -248,7 +250,10 @@ import_file(const svn_delta_editor_t *editor,
                              properties, digest, pool));
 
   /* Finally, close the file. */
-  text_checksum = svn_md5_digest_to_cstring(digest, pool);
+  checksum = svn_checksum_create(svn_checksum_md5, pool);
+  checksum->digest = digest;
+  text_checksum = svn_checksum_to_cstring(checksum, pool);
+
   return editor->close_file(file_baton, text_checksum, pool);
 }
 

@@ -309,7 +309,7 @@ def textual_merges_galore(sbox):
   # clean.
   other_rho_text = ""
   for x in range(1,10):
-    other_rho_text = other_rho_text + 'Unobtrusive line ' + `x` + ' in rho\n'
+    other_rho_text = other_rho_text + 'Unobtrusive line ' + repr(x) + ' in rho\n'
   current_other_rho_text = svntest.main.file_read(other_rho_path)
   svntest.main.file_write(other_rho_path,
                           other_rho_text + current_other_rho_text)
@@ -1258,7 +1258,7 @@ def merge_with_implicit_target_helper(sbox, arg_flav):
   orig_mu_text = svntest.tree.get_text(mu_path)
   added_mu_text = ""
   for x in range(2,11):
-    added_mu_text = added_mu_text + 'This is line ' + `x` + ' in mu\n'
+    added_mu_text = added_mu_text + 'This is line ' + repr(x) + ' in mu\n'
   svntest.main.file_append(mu_path, added_mu_text)
 
   # Create expected output tree for initial commit
@@ -1375,7 +1375,7 @@ def merge_with_prev (sbox):
   orig_mu_text = svntest.tree.get_text(mu_path)
   added_mu_text = ""
   for x in range(2,11):
-    added_mu_text = added_mu_text + '\nThis is line ' + `x` + ' in mu'
+    added_mu_text = added_mu_text + '\nThis is line ' + repr(x) + ' in mu'
   added_mu_text += "\n"
   svntest.main.file_append(mu_path, added_mu_text)
 

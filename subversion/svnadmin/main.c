@@ -35,6 +35,8 @@
 #include "svn_time.h"
 #include "svn_user.h"
 
+#include "private/svn_opt_private.h"
+
 #include "svn_private_config.h"
 
 
@@ -1161,7 +1163,7 @@ subcommand_lslocks(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   apr_hash_t *locks;
   apr_hash_index_t *hi;
 
-  SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
+  SVN_ERR(svn_opt__args_to_target_array(&targets, os,
                                         apr_array_make(pool, 0,
                                                        sizeof(const char *)),
                                         pool));

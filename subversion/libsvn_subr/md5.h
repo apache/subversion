@@ -1,5 +1,6 @@
-/**
- * @copyright
+/*
+ * md5.h: Converting and comparing MD5 checksums
+ *
  * ====================================================================
  * Copyright (c) 2008 CollabNet.  All rights reserved.
  *
@@ -13,19 +14,15 @@
  * individuals.  For exact contribution history, see the revision
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
- * @endcopyright
- *
- * @file svn_sha1.h
- * @brief Converting and comparing SHA1 checksums.
  */
 
-#ifndef SVN_SHA1_H
-#define SVN_SHA1_H
+#ifndef SVN_LIBSVN_SUBR_MD5_H
+#define SVN_LIBSVN_SUBR_MD5_H
 
 #include <apr_pools.h>
-#include <apr_sha1.h>
-#include "svn_error.h"
-#include "svn_pools.h"
+#include <apr_md5.h>
+
+#include "svn_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -33,47 +30,38 @@ extern "C" {
 
 
 
-/** The SHA1 digest for the empty string.
- *
- * @since New in 1.6.
- */
+/* The MD5 digest for the empty string. */
 const unsigned char *
-svn_sha1_empty_string_digest(void);
+svn_md5__empty_string_digest(void);
 
 
-/** Return the hex representation of @a digest, which must be
- * @c APR_SHA1_DIGESTSIZE bytes long, allocating the string in @a pool.
- *
- * @since New in 1.6.
+/* Return the hex representation of DIGEST, which must be
+ * APR_MD5_DIGESTSIZE bytes long, allocating the string in POOL.
  */
 const char *
-svn_sha1_digest_to_cstring_display(const unsigned char digest[],
+svn_md5__digest_to_cstring_display(const unsigned char digest[],
                                    apr_pool_t *pool);
 
 
-/** Return the hex representation of @a digest, which must be
- * @c APR_SHA1_DIGESTSIZE bytes long, allocating the string in @a pool.
- * If @a digest is all zeros, then return NULL.
- *
- * @since New in 1.6.
+/* Return the hex representation of DIGEST, which must be
+ * APR_MD5_DIGESTSIZE bytes long, allocating the string in POOL.
+ * If DIGEST is all zeros, then return NULL.
  */
 const char *
-svn_sha1_digest_to_cstring(const unsigned char digest[],
+svn_md5__digest_to_cstring(const unsigned char digest[],
                            apr_pool_t *pool);
 
 
-/** Compare digests @a d1 and @a d2, each @c APR_SHA1_DIGESTSIZE bytes long.
+/** Compare digests D1 and D2, each APR_MD5_DIGESTSIZE bytes long.
  * If neither is all zeros, and they do not match, then return FALSE;
  * else return TRUE.
- *
- * @since New in 1.6.
  */
 svn_boolean_t
-svn_sha1_digests_match(const unsigned char d1[],
-                       const unsigned char d2[]);
+svn_md5__digests_match(const unsigned char d1[],
+                        const unsigned char d2[]);
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
-#endif /* SVN_SHA1_H */
+#endif /* SVN_LIBSVN_SUBR_MD5_H */

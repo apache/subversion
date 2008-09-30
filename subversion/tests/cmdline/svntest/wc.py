@@ -204,7 +204,7 @@ class StateItem:
     self.copied = copied
     self.switched = switched
     self.writelocked = writelocked
-    # Value 'T' or ' ', or None as an expected status meaning 'do not check'.
+    # Value 'C' or ' ', or None as an expected status meaning 'do not check'.
     self.treeconflict = treeconflict
 
   def copy(self):
