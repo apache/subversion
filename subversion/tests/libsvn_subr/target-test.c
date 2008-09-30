@@ -1,10 +1,8 @@
 /*
- * target-test.c:
- * Utility used by target-test.py to test svn_path_condense_targets().
- * Note that this file by itself is not a complete C test.
+ * target-test.c: test the condense_targets functions
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -18,95 +16,184 @@
  * ====================================================================
  */
 
-#define APR_WANT_STDIO
-#include <apr_want.h>
 #include <apr_general.h>
 
-#include "svn_cmdline.h"
+
+#ifdef _MSC_VER
+#include <direct.h>
+#define getcwd _getcwd
+#else
+#include <unistd.h> /* for getcwd() */
+#endif
+
 #include "svn_pools.h"
 #include "svn_path.h"
-#include "svn_utf.h"
-#include "svn_error.h"
 
-int main(int argc, char **argv)
+#include "../svn_test.h"
+
+typedef svn_error_t *(*condense_targets_func_t)
+                           (const char **pcommon,
+                            apr_array_header_t **pcondensed_targets,
+                            const apr_array_header_t *targets,
+                            svn_boolean_t remove_redundancies,
+                            apr_pool_t *pool);
+
+/** Executes function CONDENSE_TARGETS twice - with and without requesting the 
+ * condensed targets list -  on TEST_TARGETS (comma sep. string) and compares
+ * the results with EXP_COMMON and EXP_TARGETS (comma sep. string).
+ * 
+ * @note: a '%' character at the beginning of EXP_COMMON or EXP_TARGETS will
+ * be replaced by the current working directory.
+ *
+ * Returns an error if any of the comparisons fail.
+ */
+static svn_error_t *
+condense_targets_tests_helper(const char* title,
+                              const char* test_targets,
+                              const char* exp_common,
+                              const char* exp_targets,
+                              const char* func_name,
+                              condense_targets_func_t condense_targets,
+                              apr_pool_t *pool)
 {
-  apr_pool_t *pool;
-  svn_error_t *err;
   apr_array_header_t *targets;
   apr_array_header_t *condensed_targets;
-  const char *common_path = 0;
-  const char *common_path2 = 0;
+  const char *common_path, *common_path2;
+  char *token, *iter, *exp_common_abs = (char*)exp_common;
   int i;
+  const char curdir[8192];
 
-  if (argc < 2)
-    {
-      fprintf(stderr, "USAGE: %s <list of entries to be compared>\n", argv[0]);
-      return EXIT_FAILURE;
-    }
-
-  /* Initialize the app. */
-  if (svn_cmdline_init("target-test", stderr) != EXIT_SUCCESS)
-    return EXIT_FAILURE;
-
-  /* Create our top-level pool. */
-  pool = svn_pool_create(NULL);
+  if (! getcwd(curdir, sizeof(curdir)))
+    return svn_error_create(SVN_ERR_BASE, NULL, "getcwd() failed");
 
   /* Create the target array */
-  targets = apr_array_make(pool, argc - 1, sizeof(const char *));
-  for (i = 1; i < argc; i++)
+  targets = apr_array_make(pool, sizeof(test_targets), sizeof(const char *));
+  token = apr_strtok(apr_pstrdup(pool, test_targets), ",", &iter);
+  while (token)
     {
-      const char *path_utf8;
-
-      err = svn_utf_cstring_to_utf8(&path_utf8, argv[i], pool);
-      if (err != SVN_NO_ERROR)
-        svn_handle_error2(err, stderr, TRUE, "target-test: ");
       APR_ARRAY_PUSH(targets, const char *) =
-        svn_path_internal_style(path_utf8, pool);
-    }
-
+        svn_path_internal_style(token, pool);
+      token = apr_strtok(NULL, ",", &iter);
+    };
 
   /* Call the function */
-  err = svn_path_condense_targets(&common_path, &condensed_targets, targets,
-                                  TRUE, pool);
-  if (err != SVN_NO_ERROR)
-    svn_handle_error2(err, stderr, TRUE, "target-test: ");
+  SVN_ERR(condense_targets(&common_path, &condensed_targets, targets,
+                           TRUE, pool));
 
-  /* Display the results */
-  {
-    const char *common_path_stdout;
-    err = svn_utf_cstring_from_utf8(&common_path_stdout, common_path, pool);
-    if (err != SVN_NO_ERROR)
-      svn_handle_error2(err, stderr, TRUE, "target-test: ");
-    printf("%s: ", common_path_stdout);
-  }
+  /* Verify the common part with the expected (prefix with cwd). */
+  if (*exp_common == '%')
+    exp_common_abs = apr_pstrcat(pool, curdir, exp_common + 1, NULL);
+
+  if (strcmp(common_path, exp_common_abs) != 0)
+    {
+      return svn_error_createf
+        (SVN_ERR_TEST_FAILED, NULL,
+         "%s (test %s) returned %s instead of %s",
+           func_name, title,
+           common_path, exp_common_abs);
+    }
+
+  /* Verify the condensed targets */
+  token = apr_strtok(apr_pstrdup(pool, exp_targets), ",", &iter);
   for (i = 0; i < condensed_targets->nelts; i++)
     {
       const char * target = APR_ARRAY_IDX(condensed_targets, i, const char*);
-      if (target)
+      if (token && (*token == '%'))
+        token = apr_pstrcat(pool, curdir, token + 1, NULL);
+      if (! token ||
+          (target && (strcmp(target, token) != 0)))
         {
-          const char *target_stdout;
-          err = svn_utf_cstring_from_utf8(&target_stdout, target, pool);
-          if (err != SVN_NO_ERROR)
-            svn_handle_error2(err, stderr, TRUE, "target-test: ");
-          printf("%s, ", target_stdout);
+          return svn_error_createf
+            (SVN_ERR_TEST_FAILED, NULL,
+             "%s (test %s) couldn't find %s in expected targets list",
+               func_name, title,
+               target); 
         }
-      else
-        printf("NULL, ");
+      token = apr_strtok(NULL, ",", &iter);
     }
-  printf("\n");
 
   /* Now ensure it works without the pbasename */
-  err = svn_path_condense_targets(&common_path2, NULL, targets, TRUE, pool);
-  if (err != SVN_NO_ERROR)
-    svn_handle_error2(err, stderr, TRUE, "target-test: ");
+  SVN_ERR(condense_targets(&common_path2, NULL, targets, TRUE, pool));
 
+  /* Verify the common part again */
   if (strcmp(common_path, common_path2) != 0)
     {
-      printf("Common path without getting targets does not match common path "
-             "with targets\n");
-      return EXIT_FAILURE;
+      return svn_error_createf
+        (SVN_ERR_TEST_FAILED, NULL,
+         "%s (test %s): Common path without getting targets %s does not match" \
+         "common path with targets %s",
+          func_name, title,
+          common_path2, common_path); 
     }
 
-
-  return EXIT_SUCCESS;
+  return SVN_NO_ERROR;
 }
+
+
+static svn_error_t *
+test_path_condense_targets(const char **msg,
+                           svn_boolean_t msg_only,
+                           svn_test_opts_t *opts,
+                           apr_pool_t *pool)
+{
+  int i;
+  struct {
+    const char* title;
+    const char* targets;
+    const char* exp_common;
+    const char* exp_targets;
+  } tests[] = {
+    { "normal use", "z/A/B,z/A,z/A/C,z/D/E,z/D/F,z/D,z/G,z/G/H,z/G/I",
+      "%/z", "A,D,G" },
+    {"identical dirs", "z/A,z/A,z/A,z/A",
+     "%/z/A", "" },
+    {"identical files", "z/A/file,z/A/file,z/A/file,z/A/file",
+     "%/z/A/file", "" },
+    {"single dir", "z/A",
+     "%/z/A", "" },
+    {"single file", "z/A/file",
+     "%/z/A/file", "" },
+    {"URLs", "http://host/A/C,http://host/A/C/D,http://host/A/B/D",
+     "http://host/A", "C,B/D" },
+    {"URLs with no common prefix", 
+     "http://host1/A/C,http://host2/A/C/D,http://host3/A/B/D",
+     "", "http://host1/A/C,http://host2/A/C/D,http://host3/A/B/D" },
+    {"file URLs with no common prefix", "file:///A/C,file:///B/D",
+     "", "file:///A/C,file:///B/D" },
+    {"URLs with mixed protocols",
+     "http://host/A/C,file:///B/D,gopher://host/A",
+     "", "http://host/A/C,file:///B/D,gopher://host/A" },
+    {"mixed paths and URLs",
+     "z/A/B,z/A,http://host/A/C/D,http://host/A/C",
+     "", "%/z/A,http://host/A/C" },
+  };
+
+  *msg = "test svn_path_condense_targets";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i++)
+    {
+      SVN_ERR(condense_targets_tests_helper(tests[i].title, 
+                                            tests[i].targets,
+                                            tests[i].exp_common,
+                                            tests[i].exp_targets,
+                                            "svn_path_condense_targets",
+                                            svn_path_condense_targets,
+                                            pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+
+/* The test table.  */
+
+struct svn_test_descriptor_t test_funcs[] =
+  {
+    SVN_TEST_NULL,
+    SVN_TEST_PASS(test_path_condense_targets),
+    SVN_TEST_NULL
+  };
