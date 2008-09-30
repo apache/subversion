@@ -48,6 +48,7 @@
 #include "key-gen.h"
 #include "fs_fs.h"
 #include "id.h"
+#include "rep-cache.h"
 
 #include "private/svn_fs_util.h"
 #include "../libsvn_fs/fs-loader.h"
@@ -102,6 +103,7 @@
 /* Kinds of representation. */
 #define REP_PLAIN          "PLAIN"
 #define REP_DELTA          "DELTA"
+#define REP_REFERENCE      "REFERENCE"
 
 /* Notes:
 
@@ -1063,6 +1065,9 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
   ffd->uuid = apr_pstrdup(fs->pool, buf);
 
   SVN_ERR(svn_io_file_close(uuid_file, pool));
+
+  /* Open (and possibly create) the rep cache. */
+  SVN_ERR(svn_fs_fs__open_rep_cache(fs, fs->pool));
 
   return get_youngest(&(ffd->youngest_rev_cache), path, pool);
 }
@@ -5516,6 +5521,9 @@ svn_fs_fs__create(svn_fs_t *fs,
   SVN_ERR(svn_fs_fs__set_uuid(fs, svn_uuid_generate(pool), pool));
 
   SVN_ERR(write_revision_zero(fs));
+
+  /* Create the rep cache. */
+  SVN_ERR(svn_fs_fs__open_rep_cache(fs, fs->pool));
 
   /* Create the txn-current file if the repository supports
      the transaction sequence file. */
