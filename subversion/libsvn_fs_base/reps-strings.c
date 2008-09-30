@@ -642,14 +642,14 @@ struct rep_read_baton
      we read data, and finalized when the stream is closed. */
   svn_checksum_ctx_t *md5_checksum_ctx;
 
-  /* Final resting place of the checksum created by checksum context. */
+  /* Final resting place of the checksum created by md5_checksum_cxt. */
   svn_checksum_t *md5_checksum;
 
-  /* MD5 checksum context.  Initialized when the baton is created, updated as
+  /* SHA1 checksum context.  Initialized when the baton is created, updated as
      we read data, and finalized when the stream is closed. */
   svn_checksum_ctx_t *sha1_checksum_ctx;
 
-  /* Final resting place of the checksum created by checksum context. */
+  /* Final resting place of the checksum created by sha1_checksum_cxt. */
   svn_checksum_t *sha1_checksum;
 
   /* The length of the rep's contents (as fulltext, that is,
