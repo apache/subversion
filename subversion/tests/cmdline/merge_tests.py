@@ -8845,9 +8845,6 @@ def merge_source_normalization_and_subtree_merges(sbox):
 
 # Tests for issue #3067: 'subtrees with intersecting mergeinfo, that don't
 # exist at the start of a merge range shouldn't break the merge'
-# After r32405+32406 which checks that a file about to be deleted is identical
-# to the merge-left source file, this test fails. See the end of this email
-# <http://svn.haxx.se/dev/archive-2008-08/0124.shtml> and its thread.
 def new_subtrees_should_not_break_merge(sbox):
   "subtrees added after start of merge range are ok"
 
@@ -13946,9 +13943,6 @@ def subtree_gets_changes_even_if_ultimately_deleted(sbox):
   # identical to the deleted source *before* attempting to delete it.  Then the
   # file should get those changes first and then be deleted rather than skipped.
   #
-  # Currently this test is marked as XFail since the aforementioned scenario
-  # results in a skip rather than deletion of the file.
-  #
   # This problem, as discussed here,
   # http://subversion.tigris.org/servlets/ReadMsg?listName=dev&msgNo=141533,
   # is only nominally a tree conflict issue.  More accurately this is yet
@@ -14027,9 +14021,6 @@ def subtree_gets_changes_even_if_ultimately_deleted(sbox):
   # Then when merging the deletion of A_COPY/D/H/psi in r8 the file will
   # be identical to the deleted source A/D/H/psi and the deletion will
   # succeed.
-  #
-  # This test is currently marked as XFail as r7 is never merged causing
-  # A_COPY/D/H/psi to be skipped rather than deleted.
   #
   # Update WC before merging so mergeinfo elision and inheritance
   # occur smoothly.
@@ -14195,8 +14186,8 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(merge_source_normalization_and_subtree_merges,
                          server_has_mergeinfo),
-              XFail(SkipUnless(new_subtrees_should_not_break_merge,
-                               server_has_mergeinfo)),
+              SkipUnless(new_subtrees_should_not_break_merge,
+                         server_has_mergeinfo),
               SkipUnless(basic_reintegrate,
                          server_has_mergeinfo),
               XFail(reintegrate_with_rename),
@@ -14256,8 +14247,8 @@ test_list = [ None,
               tree_conflicts_on_merge_no_local_ci_5_1,
               tree_conflicts_on_merge_no_local_ci_5_2,
               tree_conflicts_on_merge_no_local_ci_6,
-              XFail(SkipUnless(subtree_gets_changes_even_if_ultimately_deleted,
-                               server_has_mergeinfo)),
+              SkipUnless(subtree_gets_changes_even_if_ultimately_deleted,
+                         server_has_mergeinfo),
              ]
 
 if __name__ == '__main__':
