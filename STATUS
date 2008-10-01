@@ -77,7 +77,7 @@ Candidate changes for 1.5.3:
    Justification:
      This is a regression from 1.5.0.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, pburba
 
  * r33173
    ra_serf: Fix the svn_ra_replay API, which got broken when svn_ra_replay_range
