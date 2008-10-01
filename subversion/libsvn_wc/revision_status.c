@@ -84,6 +84,7 @@ analyze_status(const char *path,
     {
       svn_depth_t depth;
       svn_boolean_t switched;
+      svn_error_t *err;
 
       err = svn_wc__base_get_info(NULL, NULL, NULL, NULL, NULL, NULL,
                                   &depth, &switched, NULL, NULL,

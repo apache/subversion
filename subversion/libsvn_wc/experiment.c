@@ -96,7 +96,8 @@ generic_walker(svn_wc__db_t *db,
 
         if (mode == walker_mode_base)
           {
-            SVN_ERR(svn_wc__db_base_get_info(&kind, NULL, NULL, NULL, NULL,
+            SVN_ERR(svn_wc__db_base_get_info(&kind,
+                                             NULL, NULL, NULL, NULL, NULL,
                                              NULL, NULL, NULL, NULL, NULL,
                                              db, nodepath, iterpool, iterpool));
           }
