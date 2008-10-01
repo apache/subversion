@@ -4935,8 +4935,9 @@ write_final_rev(const svn_fs_id_t **new_id_p,
                                    svn_fs_fs__fs_supports_mergeinfo(fs),
                                    pool));
 
-  /* Save the representation's hash in the rep cache. */
-  SVN_ERR(svn_fs_fs__set_rep_reference(fs, noderev->data_rep, pool));
+  /* Save the representations' hashes in the rep cache. */
+  if (noderev->data_rep)
+    SVN_ERR(svn_fs_fs__set_rep_reference(fs, noderev->data_rep, pool));
   if (noderev->prop_rep)
     SVN_ERR(svn_fs_fs__set_rep_reference(fs, noderev->prop_rep, pool));
 
