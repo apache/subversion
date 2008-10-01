@@ -69,6 +69,27 @@ Candidate changes for 1.5.3:
    Votes:
      +1: cmpilato
 
+ * r29969, r33013, r33016, r33022, r33112
+   Fix a merge bug and greatly improve merge performance in a common
+   merge use case.
+   Notes:
+     r29969 is a small bit of merge code cleanup that has no functional
+     effect but prevents a conflict when r33112 is merged. r33013, r33016,
+     and r33022 are a new merge test and some tweaks to that test. r33112
+     is the fix itself.
+   Justification:
+     The minor bug is described here,
+     http://subversion.tigris.org/servlets/ReadMsg?list=dev&&msgNo=142849,
+     but probably more important is the performance improvement. A while
+     back glasser pointed out that the code to filter self-referential
+     mergeinfo was a performance hog, see 
+     http://svn.haxx.se/dev/archive-2008-02/0206.shtml, and made some
+     suggestions to improve performance.  r33112 implements glasser's
+     suggestions, which speeds up merge significantly in some cases,
+     see http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=143030.
+   Votes:
+     +1: pburba
+
  * r33136, r33137
    Fix issue #3285 - 'svn log -g' mistakes property change for
    mergeinfo removal.
