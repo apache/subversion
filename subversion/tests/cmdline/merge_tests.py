@@ -309,7 +309,7 @@ def textual_merges_galore(sbox):
   # clean.
   other_rho_text = ""
   for x in range(1,10):
-    other_rho_text = other_rho_text + 'Unobtrusive line ' + `x` + ' in rho\n'
+    other_rho_text = other_rho_text + 'Unobtrusive line ' + repr(x) + ' in rho\n'
   current_other_rho_text = svntest.main.file_read(other_rho_path)
   svntest.main.file_write(other_rho_path,
                           other_rho_text + current_other_rho_text)
@@ -1258,7 +1258,7 @@ def merge_with_implicit_target_helper(sbox, arg_flav):
   orig_mu_text = svntest.tree.get_text(mu_path)
   added_mu_text = ""
   for x in range(2,11):
-    added_mu_text = added_mu_text + 'This is line ' + `x` + ' in mu\n'
+    added_mu_text = added_mu_text + 'This is line ' + repr(x) + ' in mu\n'
   svntest.main.file_append(mu_path, added_mu_text)
 
   # Create expected output tree for initial commit
@@ -1375,7 +1375,7 @@ def merge_with_prev (sbox):
   orig_mu_text = svntest.tree.get_text(mu_path)
   added_mu_text = ""
   for x in range(2,11):
-    added_mu_text = added_mu_text + '\nThis is line ' + `x` + ' in mu'
+    added_mu_text = added_mu_text + '\nThis is line ' + repr(x) + ' in mu'
   added_mu_text += "\n"
   svntest.main.file_append(mu_path, added_mu_text)
 
@@ -13935,8 +13935,127 @@ def tree_conflicts_on_merge_no_local_ci_6(sbox):
                expected_skip,
              ) ], False)
 
+def subtree_gets_changes_even_if_ultimately_deleted(sbox):
+  "subtree gets changes even if ultimately deleted"
 
+  # merge_tests.py 101 'merge tries to delete a file of identical content'
+  # demonstrates how a file can be deleted by a merge if the file is identical
+  # to the file deleted in the merge source.  If the file differs then it
+  # should be 'skipped' as a tree-conflict.  But suppose the file has
+  # mergeinfo such that the requested merge should bring the file into a state
+  # identical to the deleted source *before* attempting to delete it.  Then the
+  # file should get those changes first and then be deleted rather than skipped.
+  #
+  # Currently this test is marked as XFail since the aforementioned scenario
+  # results in a skip rather than deletion of the file.
+  #
+  # This problem, as discussed here,
+  # http://subversion.tigris.org/servlets/ReadMsg?listName=dev&msgNo=141533,
+  # is only nominally a tree conflict issue.  More accurately this is yet
+  # another issue #3067 problem, in that the merge target has a subtree which
+  # doesn't exist in part of the requested merge range.
 
+  # r1: Create a greek tree.
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Some paths we'll care about
+  H_COPY_path   = os.path.join(wc_dir, "A_COPY", "D", "H")
+  psi_path      = os.path.join(wc_dir, "A", "D", "H", "psi")
+  psi_COPY_path = os.path.join(wc_dir, "A_COPY", "D", "H", "psi")
+
+  # r2 - r6: Copy A to A_COPY and then make some text changes under A.
+  set_up_branch(sbox)
+
+  # r7: Make an additional text mod to A/D/H/psi.
+  svntest.main.file_write(psi_path, "Even newer content")
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'mod psi', wc_dir)
+
+  # r8: Delete A/D/H/psi.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'delete', psi_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'delete psi', wc_dir)
+
+  # Update WC before merging so mergeinfo elision and inheritance
+  # occur smoothly.
+  svntest.main.run_svn(None, 'up', wc_dir)
+
+  # r9: Merge r3,7 from A/D/H to A_COPY/D/H, then reverse merge r7 from
+  # A/D/H/psi to A_COPY/D/H/psi.
+  expected_output = wc.State(H_COPY_path, {
+    'psi' : Item(status='U '),
+    'psi' : Item(status='G '),
+    })
+  expected_status = wc.State(H_COPY_path, {
+    ''      : Item(status=' M', wc_rev=8),
+    'psi'   : Item(status='M ', wc_rev=8),
+    'omega' : Item(status='  ', wc_rev=8),
+    'chi'   : Item(status='  ', wc_rev=8),
+    })
+  expected_disk = wc.State('', {
+    ''      : Item(props={SVN_PROP_MERGEINFO : '/A/D/H:3,7'}),
+    'psi'   : Item("Even newer content"),
+    'omega' : Item("This is the file 'omega'.\n"),
+    'chi'   : Item("This is the file 'chi'.\n"),
+    })
+  expected_skip = wc.State(H_COPY_path, { })
+
+  svntest.actions.run_and_verify_merge(H_COPY_path, None, None,
+                                       sbox.repo_url + '/A/D/H',
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       None, None, None, None, None, 1, 0,
+                                       '-c3,7')
+  svntest.actions.run_and_verify_svn(None,
+                                     expected_merge_output([[-7]], 'G    ' +
+                                                           psi_COPY_path +
+                                                           '\n'),
+                                     [], 'merge', '-c-7',
+                                     sbox.repo_url + '/A/D/H/psi@7',
+                                     psi_COPY_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m',
+                                     'merge -c3,7 from A/D/H,' \
+                                     'reverse merge -c-7 from A/D/H/psi',
+                                     wc_dir)
+
+  # Merge all available revisions from A/D/H to A_COPY/D/H.  This merge
+  # ultimately tries to delete A_COPY/D/H/psi, but first it should merge
+  # r7 to A_COPY/D/H/psi, since that is one of the available revisions.
+  # Then when merging the deletion of A_COPY/D/H/psi in r8 the file will
+  # be identical to the deleted source A/D/H/psi and the deletion will
+  # succeed.
+  #
+  # This test is currently marked as XFail as r7 is never merged causing
+  # A_COPY/D/H/psi to be skipped rather than deleted.
+  #
+  # Update WC before merging so mergeinfo elision and inheritance
+  # occur smoothly.
+  svntest.main.run_svn(None, 'up', wc_dir)
+  expected_output = wc.State(H_COPY_path, {
+    'omega' : Item(status='U '),
+    'psi'   : Item(status='D '),
+    })
+  expected_status = wc.State(H_COPY_path, {
+    ''      : Item(status=' M', wc_rev=9),
+    'psi'   : Item(status='D ', wc_rev=9),
+    'omega' : Item(status='M ', wc_rev=9),
+    'chi'   : Item(status='  ', wc_rev=9),
+    })
+  expected_disk = wc.State('', {
+    ''      : Item(props={SVN_PROP_MERGEINFO : '/A/D/H:2-9'}),
+    'omega' : Item("New content"),
+    'chi'   : Item("This is the file 'chi'.\n"),
+    })
+  expected_skip = wc.State(H_COPY_path, { })
+
+  svntest.actions.run_and_verify_merge(H_COPY_path, None, None,
+                                       sbox.repo_url + '/A/D/H',
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       None, None, None, None, None, 1)
 
 ########################################################################
 # Run the tests
@@ -14137,6 +14256,8 @@ test_list = [ None,
               tree_conflicts_on_merge_no_local_ci_5_1,
               tree_conflicts_on_merge_no_local_ci_5_2,
               tree_conflicts_on_merge_no_local_ci_6,
+              XFail(SkipUnless(subtree_gets_changes_even_if_ultimately_deleted,
+                               server_has_mergeinfo)),
              ]
 
 if __name__ == '__main__':

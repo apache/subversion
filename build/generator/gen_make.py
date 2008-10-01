@@ -5,7 +5,12 @@
 import os
 import sys
 import string
-import ConfigParser
+try:
+  # Python >=3.0
+  import configparser
+except ImportError:
+  # Python <3.0
+  import ConfigParser as configparser
 
 import gen_base
 import generator.swig.header_wrappers
@@ -52,7 +57,7 @@ class Generator(gen_base.GeneratorBase):
     install_deps = self.graph.get_deps(gen_base.DT_INSTALL)
     install_sources = self.graph.get_all_sources(gen_base.DT_INSTALL)
 
-    cp = ConfigParser.ConfigParser()
+    cp = configparser.ConfigParser()
     cp.read('gen-make.opts')
     if cp.has_option('options', '--installed-libs'):
       self.installed_libs = cp.get('options', '--installed-libs').split(',')

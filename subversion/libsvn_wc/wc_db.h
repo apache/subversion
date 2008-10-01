@@ -43,6 +43,12 @@ extern "C" {
 /** Context data structure for interacting with the administrative data. */
 typedef struct svn_wc__db_t svn_wc__db_t;
 
+/**
+ * Directory handle for working with pristine files associatd with a specific
+ * BASE/WORKING/ACTUAL directory.
+ */
+typedef struct svn_wc__db_pdh_t svn_wc__db_pdh_t;
+
 
 /* Enum indicating what kind of versioned object we're talking about.
  *
@@ -94,8 +100,10 @@ typedef enum svn_wc__db_status_t {
    ### like it is "Right".
 */
 
-/* ### where/how to handle: text_time, prop_time, locks, working_size
- */
+/* ### where/how to handle: text_time, prop_time, locks, working_size */
+
+/* ### update docstrings: all paths should be internal/canonical */
+
 
 /**
  * Open the administrative database for the working copy identified by the
@@ -153,6 +161,9 @@ svn_wc__db_open_many(svn_wc__db_t **db,
  * @{
  */
 
+/* ### should we allow props to be optional? any reason for that? toss
+   ### the set_props() interface? */
+
 /* ### base_add_* can also replace. should be okay? */
 
 /* ### props optional. children must be known before calling (but may be
@@ -165,22 +176,32 @@ svn_wc__db_open_many(svn_wc__db_t **db,
  */
 svn_error_t *
 svn_wc__db_base_add_directory(svn_wc__db_t *db,
-                              const char *path,
+                              const char *local_path,
+                              const char *repos_path,
                               svn_revnum_t revision,
-                              apr_hash_t *props,
-                              const apr_array_header_t *children,
-                              const char *repos_url,
+                              const apr_hash_t *props,
+                              svn_revnum_t changed_rev,
+                              apr_time_t changed_date,
+                              const char *changed_author,
+                              const char *repos_base_url,
                               const char *repos_uuid,
+                              const apr_array_header_t *children,
+                              svn_depth_t depth,
                               apr_pool_t *scratch_pool);
 
 
-/* ### contents, props, checksum are optional */
+/* ### props are optional */
 svn_error_t *
 svn_wc__db_base_add_file(svn_wc__db_t *db,
-                         const char *path,
+                         const char *local_path,
+                         const char *repos_path,
                          svn_revnum_t revision,
-                         apr_hash_t *props,
-                         svn_stream_t *contents,
+                         const apr_hash_t *props,
+                         svn_revnum_t changed_rev,
+                         apr_time_t changed_date,
+                         const char *changed_author,
+                         const char *repos_base_url,
+                         const char *repos_uuid,
                          svn_checksum_t *checksum,
                          apr_pool_t *scratch_pool);
 
@@ -190,29 +211,6 @@ svn_wc__db_base_set_props(svn_wc__db_t *db,
                           const char *path,
                           apr_hash_t *props,
                           apr_pool_t *scratch_pool);
-
-
-/* ### lib pulls contents into storage. resulting content's checksum is
-   ### given by @a checksum. (checksum optional; if omitted, it will be
-   ### computed during stream-read) */
-svn_error_t *
-svn_wc__db_base_set_contents(svn_wc__db_t *db,
-                             const char *path,
-                             svn_stream_t *contents,
-                             svn_checksum_t *checksum,
-                             apr_pool_t *scratch_pool);
-
-
-/* ### caller pushes contents into storage. the resulting (pushed) content
-   ### will have @a checksum recorded. (checksum optional; if omitted, it
-   ### will be computed to stream-write) */
-svn_error_t *
-svn_wc__db_base_get_writable_contents(svn_stream_t **contents,
-                                      svn_wc__db_t *db,
-                                      const char *path,
-                                      svn_checksum_t *checksum,
-                                      apr_pool_t *result_pool,
-                                      apr_pool_t *scratch_pool);
 
 
 /* ### what data to keep for a symlink? props optional.
@@ -239,9 +237,15 @@ svn_wc__db_base_get_writable_contents(svn_stream_t **contents,
  */
 svn_error_t *
 svn_wc__db_base_add_symlink(svn_wc__db_t *db,
-                            const char *path,
+                            const char *local_path,
+                            const char *repos_path,
                             svn_revnum_t revision,
-                            apr_hash_t *props,
+                            const apr_hash_t *props,
+                            svn_revnum_t changed_rev,
+                            apr_time_t changed_date,
+                            const char *changed_author,
+                            const char *repos_base_url,
+                            const char *repos_uuid,
                             const char *target,
                             apr_pool_t *scratch_pool);
 
@@ -286,7 +290,7 @@ svn_wc__db_base_move(svn_wc__db_t *db,
 
 /* ### NULL may be given for OUT params
    ### @a switched means this directory is different from what parent/filename
-   ### would imply for @a repos_path. the @repos_url may be different.
+   ### would imply for @a repos_path.
 */
 svn_error_t *
 svn_wc__db_base_get_info(svn_wc__db_kind_t *kind,
@@ -296,8 +300,9 @@ svn_wc__db_base_get_info(svn_wc__db_kind_t *kind,
                          apr_time_t *changed_date,
                          const char **changed_author,
                          svn_depth_t *depth,
-                         svn_boolean_t *switched,
-                         const char **repos_url,
+                         svn_checksum_t **checksum,  /* ### for files only */
+                         svn_boolean_t *switched,  /* ### derived */
+                         const char **repos_base_url,
                          const char **repos_uuid,
                          svn_wc__db_t *db,
                          const char *path,
@@ -340,15 +345,6 @@ svn_wc__db_base_get_children(const apr_array_header_t **children,
                              apr_pool_t *scratch_pool);
 
 
-/* ### NULL allowed for OUT params */
-svn_error_t *
-svn_wc__db_base_get_contents(svn_stream_t **contents,
-                             svn_checksum_t **checksum,
-                             svn_wc__db_t *db,
-                             const char *path,
-                             apr_pool_t *result_pool,
-                             apr_pool_t *scratch_pool);
-
 /* ### KFF: Hm, yeah, see earlier about symlink questions. */
 svn_error_t *
 svn_wc__db_base_get_symlink_target(const char **target,
@@ -366,6 +362,82 @@ svn_wc__db_base_get_symlink_target(const char **target,
 
 /* ### anything else needed for maintaining the BASE tree? */
 
+
+/** @} */
+
+/**
+ * @defgroup svn_wc__db_pristine  Pristine ("text base") management
+ * @{
+ */
+
+/* ### ASSUMPTION: we always have a pristine file's checksum before it is
+   ### ever presented to us. thus, we never need to compute it as we store
+   ### the pristine file into our storage area. */
+
+/* ### checksums have no path component, so we need to get the pristine
+   ### database associated with a specific directory (the smallest granularity
+   ### that a particular configuration can allow). this directory handle
+   ### can then be used for further operations on pristine files associated
+   ### with the BASE/WORKING/ACTUAL contents in that directory. */
+svn_error_t *
+svn_wc__db_pristine_dirhandle(svn_wc__db_pdh_t **pdh,
+                              svn_wc__db_t *db,
+                              const char *dirpath,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
+
+
+/* ### @a contents may NOT be NULL. */
+svn_error_t *
+svn_wc__db_pristine_read(svn_stream_t **contents,
+                         svn_wc__db_pdh_t *pdh,
+                         svn_checksum_t *checksum,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
+
+
+/* ### caller pushes contents into storage, keyed by @a checksum.
+   ### note: if caller has a source stream, then it should use
+   ###   svn_stream_copy to pull/push the content into storage. */
+/* ### @a contents may NOT be NULL. */
+svn_error_t *
+svn_wc__db_pristine_write(svn_stream_t **contents,
+                          svn_wc__db_pdh_t *pdh,
+                          svn_checksum_t *checksum,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
+
+
+/* ### NULL may be provided for @a actual_size and @a refcount.
+   ### (NOT for @a present)
+
+   ### we may have a text-base, but not (yet) know what the translated
+   ### size will/should be; in this situation, @a present is TRUE, and
+   ### @a actual_size is SVN_INVALID_FILESIZE.
+*/
+svn_error_t *
+svn_wc__db_pristine_check(svn_boolean_t *present,
+                          svn_filesize_t *actual_size,
+                          int *refcount,
+                          svn_wc__db_pdh_t *pdh,
+                          svn_checksum_t *checksum,
+                          apr_pool_t *scratch_pool);
+
+
+/* ### @a new_refcount may be NULL */
+svn_error_t *
+svn_wc__db_pristine_incref(int *new_refcount,
+                           svn_wc__db_pdh_t *pdh,
+                           svn_checksum_t *checksum,
+                           apr_pool_t *scratch_pool);
+
+
+/* ### @a new_refcount may be NULL */
+svn_error_t *
+svn_wc__db_pristine_decref(int *new_refcount,
+                           svn_wc__db_pdh_t *pdh,
+                           svn_checksum_t *checksum,
+                           apr_pool_t *scratch_pool);
 
 /** @} */
 
@@ -550,7 +622,7 @@ svn_wc__db_read_info(svn_wc__db_kind_t *kind,
                      svn_revnum_t *changed_rev,
                      apr_time_t *changed_date,
                      const char **changed_author,
-                     const char **repos_url, /* ### repos base url */
+                     const char **repos_base_url,
                      const char **repos_uuid,
                      svn_wc__db_t *db,
                      const char *path,

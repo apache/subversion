@@ -449,8 +449,8 @@ def basic_merging_update(sbox):
   mu_text = ""
   rho_text = ""
   for x in range(2,11):
-    mu_text = mu_text + '\nThis is line ' + `x` + ' in mu'
-    rho_text = rho_text + '\nThis is line ' + `x` + ' in rho'
+    mu_text = mu_text + '\nThis is line ' + repr(x) + ' in mu'
+    rho_text = rho_text + '\nThis is line ' + repr(x) + ' in rho'
   svntest.main.file_append(mu_path, mu_text)
   svntest.main.file_append(rho_path, rho_text)
 
@@ -505,12 +505,12 @@ def basic_merging_update(sbox):
   # open in 'truncate to zero then write" mode
   backup_mu_text = 'This is the new line 1 in the backup copy of mu'
   for x in range(2,11):
-    backup_mu_text = backup_mu_text + '\nThis is line ' + `x` + ' in mu'
+    backup_mu_text = backup_mu_text + '\nThis is line ' + repr(x) + ' in mu'
   svntest.main.file_write(mu_path_backup, backup_mu_text, 'w+')
 
   backup_rho_text = 'This is the new line 1 in the backup copy of rho'
   for x in range(2,11):
-    backup_rho_text = backup_rho_text + '\nThis is line ' + `x` + ' in rho'
+    backup_rho_text = backup_rho_text + '\nThis is line ' + repr(x) + ' in rho'
   svntest.main.file_write(rho_path_backup, backup_rho_text, 'w+')
 
   # Create expected output tree for an update of the wc_backup.

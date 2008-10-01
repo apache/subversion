@@ -48,7 +48,7 @@ def status_unversioned_file_in_current_dir(sbox):
 
   svntest.main.file_append('foo', 'a new file')
 
-  svntest.actions.run_and_verify_svn(None, [ "?      foo\n" ], [],
+  svntest.actions.run_and_verify_svn(None, [ "?       foo\n" ], [],
                                      'stat', 'foo')
 
 #----------------------------------------------------------------------
@@ -297,9 +297,9 @@ def status_for_unignored_file(sbox):
 
   # status on the directory with --no-ignore
   expected = svntest.verify.UnorderedOutput(
-        ['I      newdir\n',
-         'I      newfile\n',
-         ' M     .\n'])
+        ['I       newdir\n',
+         'I       newfile\n',
+         ' M      .\n'])
   svntest.actions.run_and_verify_svn(None,
                                      expected,
                                      [],
@@ -307,8 +307,8 @@ def status_for_unignored_file(sbox):
 
   # status specifying the file explicitly on the command line
   expected = svntest.verify.UnorderedOutput(
-        ['I      newdir\n',
-         'I      newfile\n'])
+        ['I       newdir\n',
+         'I       newfile\n'])
   svntest.actions.run_and_verify_svn(None,
                                      expected,
                                      [],
@@ -359,9 +359,9 @@ def status_nonrecursive_update_different_cwd(sbox):
   os.chdir(wc_dir)
 
   expected_output = [
-    '       *                                %s\n' % os.path.join("C", "J"),
-    'A               0       ?   ?           %s\n' % os.path.join("C", "K"),
-    '       *        1        1 jrandom      C\n',
+    '        *                                %s\n' % os.path.join("C", "J"),
+    'A                0       ?   ?           %s\n' % os.path.join("C", "K"),
+    '        *        1        1 jrandom      C\n',
     'Status against revision:      2\n' ]
 
   os.chdir('A')
@@ -371,9 +371,9 @@ def status_nonrecursive_update_different_cwd(sbox):
                                      'status', '-v', '-N', '-u', 'C')
 
   expected_output = [
-    '       *                                J\n',
-    'A               0       ?   ?           K\n',
-    '       *        1        1 jrandom      .\n',
+    '        *                                J\n',
+    'A                0       ?   ?           K\n',
+    '        *        1        1 jrandom      .\n',
     'Status against revision:      2\n']
 
   os.chdir('C')
@@ -842,8 +842,8 @@ def status_ignored_dir(sbox):
 
   # run_and_verify_status doesn't handle this weird kind of entry.
   svntest.actions.run_and_verify_svn(None,
-                                     ['I      *            ' + new_dir + "\n",
-                                      '       *        1   ' + wc_dir + "\n",
+                                     ['I       *            ' + new_dir + "\n",
+                                      '        *        1   ' + wc_dir + "\n",
                                       'Status against revision:      2\n'], [],
                                      "status", "-u", wc_dir)
 
@@ -869,15 +869,15 @@ def status_missing_dir(sbox):
   # ok, blow away the A/D/G directory
   svntest.main.safe_rmtree(a_d_g)
 
-  expected = svntest.verify.UnorderedOutput(["!      " + a_d_g + "\n"])
+  expected = svntest.verify.UnorderedOutput(["!       " + a_d_g + "\n"])
   svntest.actions.run_and_verify_svn(None, expected, [], "status", wc_dir)
 
   expected = svntest.verify.UnorderedOutput(
-         ["       *            " + os.path.join(a_d_g, "pi") + "\n",
-          "       *            " + os.path.join(a_d_g, "rho") + "\n",
-          "       *            " + os.path.join(a_d_g, "tau") + "\n",
-          "!      *       ?    " + a_d_g + "\n",
-          "       *        1   " + os.path.join(wc_dir, "A", "D") + "\n",
+         ["        *            " + os.path.join(a_d_g, "pi") + "\n",
+          "        *            " + os.path.join(a_d_g, "rho") + "\n",
+          "        *            " + os.path.join(a_d_g, "tau") + "\n",
+          "!       *       ?    " + a_d_g + "\n",
+          "        *        1   " + os.path.join(wc_dir, "A", "D") + "\n",
           "Status against revision:      1\n" ])
 
   # now run status -u, we should be able to do this without crashing
@@ -934,13 +934,13 @@ def status_add_plus_conflict(sbox):
                                      branch_url, '-r', '4:5', trunk_dir)
 
   lines = [
-    "?      " + os.path.join(wc_dir, "trunk", "file.merge-left.r4") + "\n",
-    "?      " + os.path.join(wc_dir, "trunk", "file.merge-right.r5") + "\n",
-    "?      " + os.path.join(wc_dir, "trunk", "file.working") + "\n",
-    "C  +   " + os.path.join(wc_dir, "trunk", "file") + "\n",
+    "?       " + os.path.join(wc_dir, "trunk", "file.merge-left.r4") + "\n",
+    "?       " + os.path.join(wc_dir, "trunk", "file.merge-right.r5") + "\n",
+    "?       " + os.path.join(wc_dir, "trunk", "file.working") + "\n",
+    "C  +    " + os.path.join(wc_dir, "trunk", "file") + "\n",
   ]
   if svntest.main.server_has_mergeinfo():
-    lines.append(" M     " + os.path.join(wc_dir, "trunk") + "\n")
+    lines.append(" M      " + os.path.join(wc_dir, "trunk") + "\n")
 
   expected_output = svntest.verify.UnorderedOutput(lines)
 
@@ -1026,8 +1026,8 @@ def status_update_with_incoming_props(sbox):
   # Can't use run_and_verify_status here because the out-of-date
   # information in the status output isn't copied in the status tree.
   expected = svntest.verify.UnorderedOutput(
-         ["       *        1   " + A_path + "\n",
-          "       *        1   " + wc_dir + "\n",
+         ["        *        1   " + A_path + "\n",
+          "        *        1   " + wc_dir + "\n",
           "Status against revision:      2\n" ])
 
   svntest.actions.run_and_verify_svn(None,
@@ -1037,10 +1037,10 @@ def status_update_with_incoming_props(sbox):
                                      wc_dir)
 
   expected = svntest.verify.UnorderedOutput(
-         ["                1        1 jrandom      " +
+         ["                 1        1 jrandom      " +
           os.path.join(wc_dir, "iota") + "\n",
-          "       *        1        1 jrandom      " + A_path + "\n",
-          "       *        1        1 jrandom      " + wc_dir + "\n",
+          "        *        1        1 jrandom      " + A_path + "\n",
+          "        *        1        1 jrandom      " + wc_dir + "\n",
           "Status against revision:      2\n" ])
 
   svntest.actions.run_and_verify_svn(None, expected, [],
@@ -1163,27 +1163,27 @@ def status_update_verbose_with_incoming_props(sbox):
   # information in the status output isn't copied in the status tree.
   common = "        1        1 jrandom      "
   expected = svntest.verify.UnorderedOutput(
-         ["        " + common + os.path.join(E_path, 'alpha') + "\n",
-          "        " + common + os.path.join(E_path, 'beta') + "\n",
-          "       *" + common + os.path.join(E_path) + "\n",
-          "        " + common + os.path.join(B_path, 'lambda') + "\n",
-          "        " + common + os.path.join(B_path, 'F') + "\n",
-          "        " + common + B_path + "\n",
-          "        " + common + os.path.join(G_path, 'pi') + "\n",
-          "        " + common + os.path.join(G_path, 'rho') + "\n",
-          "        " + common + os.path.join(G_path, 'tau') + "\n",
-          "        " + common + G_path + "\n",
-          "        " + common + os.path.join(H_path, 'chi') + "\n",
-          "        " + common + os.path.join(H_path, 'omega') + "\n",
-          "        " + common + os.path.join(H_path, 'psi') + "\n",
-          "        " + common + H_path + "\n",
-          "        " + common + os.path.join(D_path, 'gamma') + "\n",
-          "       *" + common + D_path + "\n",
-          "        " + common + os.path.join(A_path, 'mu') + "\n",
-          "        " + common + os.path.join(A_path, 'C') + "\n",
-          "        " + common + A_path + "\n",
-          "        " + common + os.path.join(wc_dir, 'iota') + "\n",
-          "       *" + common + wc_dir  + "\n",
+         ["         " + common + os.path.join(E_path, 'alpha') + "\n",
+          "         " + common + os.path.join(E_path, 'beta') + "\n",
+          "        *" + common + os.path.join(E_path) + "\n",
+          "         " + common + os.path.join(B_path, 'lambda') + "\n",
+          "         " + common + os.path.join(B_path, 'F') + "\n",
+          "         " + common + B_path + "\n",
+          "         " + common + os.path.join(G_path, 'pi') + "\n",
+          "         " + common + os.path.join(G_path, 'rho') + "\n",
+          "         " + common + os.path.join(G_path, 'tau') + "\n",
+          "         " + common + G_path + "\n",
+          "         " + common + os.path.join(H_path, 'chi') + "\n",
+          "         " + common + os.path.join(H_path, 'omega') + "\n",
+          "         " + common + os.path.join(H_path, 'psi') + "\n",
+          "         " + common + H_path + "\n",
+          "         " + common + os.path.join(D_path, 'gamma') + "\n",
+          "        *" + common + D_path + "\n",
+          "         " + common + os.path.join(A_path, 'mu') + "\n",
+          "         " + common + os.path.join(A_path, 'C') + "\n",
+          "         " + common + A_path + "\n",
+          "         " + common + os.path.join(wc_dir, 'iota') + "\n",
+          "        *" + common + wc_dir  + "\n",
           "Status against revision:      2\n" ])
 
   svntest.actions.run_and_verify_svn(None,
@@ -1237,7 +1237,7 @@ def status_nonrecursive_update(sbox):
                                         '-r', '1', wc_dir)
 
   # Check the remote status of folder A (non-recursively)
-  xout = ["       *        1   " + os.path.join(wc_dir, "A", "mu") + "\n",
+  xout = ["        *        1   " + os.path.join(wc_dir, "A", "mu") + "\n",
           "Status against revision:      2\n" ]
 
   svntest.actions.run_and_verify_svn(None,
@@ -1297,7 +1297,7 @@ def status_depth_local(sbox):
 
   # depth=empty
   expected = svntest.verify.UnorderedOutput(
-                  [" M     %s\n" % A_path])
+                  [" M      %s\n" % A_path])
   svntest.actions.run_and_verify_svn(None,
                                      expected,
                                      [],
@@ -1305,8 +1305,8 @@ def status_depth_local(sbox):
 
   # depth=files
   expected = svntest.verify.UnorderedOutput(
-                  [" M     %s\n" % A_path,
-                   "M      %s\n" % mu_path])
+                  [" M      %s\n" % A_path,
+                   "M       %s\n" % mu_path])
 
   svntest.actions.run_and_verify_svn(None,
                                      expected,
@@ -1315,9 +1315,9 @@ def status_depth_local(sbox):
 
   # depth=immediates
   expected = svntest.verify.UnorderedOutput(
-                  [" M     %s\n" % A_path,
-                   " M     %s\n" % D_path,
-                   "M      %s\n" % mu_path])
+                  [" M      %s\n" % A_path,
+                   " M      %s\n" % D_path,
+                   "M       %s\n" % mu_path])
 
   svntest.actions.run_and_verify_svn(None,
                                      expected,
@@ -1326,10 +1326,10 @@ def status_depth_local(sbox):
 
   # depth=infinity (the default)
   expected = svntest.verify.UnorderedOutput(
-                  [" M     %s\n" % A_path,
-                   " M     %s\n" % D_path,
-                   "M      %s\n" % mu_path,
-                   "M      %s\n" % gamma_path])
+                  [" M      %s\n" % A_path,
+                   " M      %s\n" % D_path,
+                   "M       %s\n" % mu_path,
+                   "M       %s\n" % gamma_path])
 
   svntest.actions.run_and_verify_svn(None,
                                      expected,
@@ -1361,7 +1361,7 @@ def status_depth_update(sbox):
 
   # depth=empty
   expected = svntest.verify.UnorderedOutput(
-                  ["       *        1   %s\n" % A_path,
+                  ["        *        1   %s\n" % A_path,
                    "Status against revision:      3\n"])
 
   svntest.actions.run_and_verify_svn(None,
@@ -1371,8 +1371,8 @@ def status_depth_update(sbox):
 
   # depth=files
   expected = svntest.verify.UnorderedOutput(
-                  ["       *        1   %s\n" % mu_path,
-                   "       *        1   %s\n" % A_path,
+                  ["        *        1   %s\n" % mu_path,
+                   "        *        1   %s\n" % A_path,
                    "Status against revision:      3\n"])
 
   svntest.actions.run_and_verify_svn(None,
@@ -1383,9 +1383,9 @@ def status_depth_update(sbox):
 
   # depth=immediates
   expected = svntest.verify.UnorderedOutput(
-                  ["       *        1   %s\n" % A_path,
-                   "       *        1   %s\n" % D_path,
-                   "       *        1   %s\n" % mu_path,
+                  ["        *        1   %s\n" % A_path,
+                   "        *        1   %s\n" % D_path,
+                   "        *        1   %s\n" % mu_path,
                    "Status against revision:      3\n"])
 
   svntest.actions.run_and_verify_svn(None,
@@ -1396,10 +1396,10 @@ def status_depth_update(sbox):
 
   # depth=infinity (the default)
   expected = svntest.verify.UnorderedOutput(
-                  ["       *        1   %s\n" % A_path,
-                   "       *        1   %s\n" % D_path,
-                   "       *        1   %s\n" % mu_path,
-                   "       *        1   %s\n" % gamma_path,
+                  ["        *        1   %s\n" % A_path,
+                   "        *        1   %s\n" % D_path,
+                   "        *        1   %s\n" % mu_path,
+                   "        *        1   %s\n" % gamma_path,
                    "Status against revision:      3\n"])
 
   svntest.actions.run_and_verify_svn(None,
@@ -1430,12 +1430,12 @@ def status_dash_u_deleted_directories(sbox):
 
   # check status -u of B
   expected = svntest.verify.UnorderedOutput(
-         ["D               1   %s\n" % "B",
-          "D               1   %s\n" % os.path.join("B", "lambda"),
-          "D               1   %s\n" % os.path.join("B", "E"),
-          "D               1   %s\n" % os.path.join("B", "E", "alpha"),
-          "D               1   %s\n" % os.path.join("B", "E", "beta"),
-          "D               1   %s\n" % os.path.join("B", "F"),
+         ["D                1   %s\n" % "B",
+          "D                1   %s\n" % os.path.join("B", "lambda"),
+          "D                1   %s\n" % os.path.join("B", "E"),
+          "D                1   %s\n" % os.path.join("B", "E", "alpha"),
+          "D                1   %s\n" % os.path.join("B", "E", "beta"),
+          "D                1   %s\n" % os.path.join("B", "F"),
           "Status against revision:      1\n" ])
   svntest.actions.run_and_verify_svn(None,
                                      expected,
@@ -1445,12 +1445,12 @@ def status_dash_u_deleted_directories(sbox):
   # again, but now from inside B, should give the same output
   os.chdir("B")
   expected = svntest.verify.UnorderedOutput(
-         ["D               1   %s\n" % ".",
-          "D               1   %s\n" % "lambda",
-          "D               1   %s\n" % "E",
-          "D               1   %s\n" % os.path.join("E", "alpha"),
-          "D               1   %s\n" % os.path.join("E", "beta"),
-          "D               1   %s\n" % "F",
+         ["D                1   %s\n" % ".",
+          "D                1   %s\n" % "lambda",
+          "D                1   %s\n" % "E",
+          "D                1   %s\n" % os.path.join("E", "alpha"),
+          "D                1   %s\n" % os.path.join("E", "beta"),
+          "D                1   %s\n" % "F",
           "Status against revision:      1\n" ])
   svntest.actions.run_and_verify_svn(None,
                                      expected,
@@ -1459,9 +1459,9 @@ def status_dash_u_deleted_directories(sbox):
 
   # check status -u of B/E
   expected = svntest.verify.UnorderedOutput(
-         ["D               1   %s\n" % os.path.join("B", "E"),
-          "D               1   %s\n" % os.path.join("B", "E", "alpha"),
-          "D               1   %s\n" % os.path.join("B", "E", "beta"),
+         ["D                1   %s\n" % os.path.join("B", "E"),
+          "D                1   %s\n" % os.path.join("B", "E", "alpha"),
+          "D                1   %s\n" % os.path.join("B", "E", "beta"),
           "Status against revision:      1\n" ])
 
   os.chdir(was_cwd)
@@ -1488,7 +1488,7 @@ def status_dash_u_type_change(sbox):
   os.remove('iota')
   os.mkdir('iota')
 
-  xout = ["~               1   iota\n",
+  xout = ["~                1   iota\n",
           "Status against revision:      1\n" ]
 
   svntest.actions.run_and_verify_svn(None,
@@ -1501,8 +1501,8 @@ def status_dash_u_type_change(sbox):
   os.mkdir('A')
 
   expected = svntest.verify.UnorderedOutput(
-         ["~               1   iota\n",
-          "~              ?    A\n",
+         ["~                1   iota\n",
+          "~               ?    A\n",
           "Status against revision:      1\n" ])
 
   svntest.actions.run_and_verify_svn(None,
@@ -1527,9 +1527,9 @@ def status_with_tree_conflicts(sbox):
 
   # check status of G
   expected = svntest.verify.UnorderedOutput(
-         ["C      %s\n" % G,
-          "D      %s\n" % pi,
-          "?      %s\n" % rho,
+         ["C       %s\n" % G,
+          "D     C %s\n" % pi,
+          "?     C %s\n" % rho,
           ])
 
   svntest.actions.run_and_verify_svn(None,
@@ -1539,9 +1539,9 @@ def status_with_tree_conflicts(sbox):
 
   # check status of G, with -v
   expected = svntest.verify.UnorderedOutput(
-         ["C               2        2 jrandom      %s\n" % G,
-          "D               2        2 jrandom      %s\n" % pi,
-          "?                                       %s\n" % rho,
+         ["C                2        2 jrandom      %s\n" % G,
+          "D     C          2        2 jrandom      %s\n" % pi,
+          "?     C                                  %s\n" % rho,
           ])
 
   svntest.actions.run_and_verify_svn(None,

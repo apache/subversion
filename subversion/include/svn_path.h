@@ -209,15 +209,12 @@ svn_path_split(const char *path,
 int
 svn_path_is_empty(const char *path);
 
-/** Return TRUE if @a directory is considered a root directory on the platform
- * at hand, amongst which '/' on all platforms or 'X:/', '\\\\?\\X:/',
- * '\\\\.\\..', '\\\\server\\share' on Windows.
- *
- * @since New in 1.5.
- */
+#ifndef SVN_DIRENT_URI_H
+/* This declaration has been moved to svn_dirent_uri.h, remains here only for
+   compatiblity reasons. */
 svn_boolean_t
 svn_dirent_is_root(const char *dirent, apr_size_t len);
-
+#endif /* SVN_DIRENT_URI_H */
 
 /** Return a new path (or URL) like @a path, but transformed such that
  * some types of path specification redundancies are removed.
@@ -226,6 +223,8 @@ svn_dirent_is_root(const char *dirent, apr_size_t len);
  * multiple adjacent separator characters, removing trailing
  * separator characters, and possibly other semantically inoperative
  * transformations.
+ *
+ * Convert the scheme and hostname to lowercase (see issue #2475)
  *
  * The returned path may be statically allocated, equal to @a path, or
  * allocated from @a pool.
@@ -508,12 +507,24 @@ svn_path_uri_decode(const char *path, apr_pool_t *pool);
  * allocated in @a pool.
  *
  * @a component need not be a single path segment, but if it contains
- * multiple segments, they must be separated by '/'.
+ * multiple segments, they must be separated by '/'.  @a component
+ * should not begin with '/', however; if it does, the behavior is
+ * undefined.
  *
  * @a url need not be a canonical path; it may have a trailing '/'.
  *
  * @note To add a component that is already URI-encoded, use
  *       <tt>svn_path_join(url, component, pool)</tt> instead.
+ *
+ * @note gstein suggests this for when @a component begins with '/':
+ * 
+ *       "replace the path entirely
+ *        https://example.com:4444/base/path joined with /leading/slash,
+ *        should return: https://example.com:4444/leading/slash
+ *        per the RFCs on combining URIs"
+ *
+ *       We may implement that someday, which is why leading '/' is
+ *       merely undefined right now.
  */
 const char *
 svn_path_url_add_component(const char *url,

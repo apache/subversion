@@ -570,12 +570,9 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
           svn_mergeinfo_t mergeinfo, younger_mergeinfo;
           svn_mergeinfo_t filtered_mergeinfo = NULL;
           svn_mergeinfo_t filtered_younger_mergeinfo = NULL;
-          const char *target_url, *merge_source_root_url;
+          const char *target_url;
           const svn_wc_entry_t *target_entry;
           const char *old_url = NULL;
-
-          SVN_ERR(svn_ra_get_repos_root2(merge_b->ra_session2,
-                                         &merge_source_root_url, pool));
 
           /* Get an entry for PATH so we can find its base revision. */
           SVN_ERR(svn_wc__entry_versioned(&target_entry, path, adm_access,
@@ -4158,157 +4155,65 @@ get_mergeinfo_error_handler(const char *path,
     }
 }
 
-/* Helper for get_mergeinfo_paths()
-
-   CHILDREN_WITH_MERGEINFO is a depth first sorted array filled with
-   svn_client__merge_path_t *.  Starting at the element in
-   CHILDREN_WITH_MERGEINFO located at START_INDEX look for that
-   element's child/parent (as indicated by LOOKING_FOR_CHILD) named
-   PATH. If the child/parent is found, set *CHILD_OR_PARENT to that
-   element and return the index at which if was found.  If the
-   child/parent is not found set *CHILD_OR_PARENT to NULL and return
-   the index at which it should be inserted. */
-static int
-find_child_or_parent(apr_array_header_t *children_with_mergeinfo,
-                     svn_client__merge_path_t **child_or_parent,
-                     const char *path,
-                     svn_boolean_t looking_for_child,
-                     int start_index,
-                     apr_pool_t *pool)
-{
-  int j = 0;
-  *child_or_parent = NULL;
-
-  /* If possible, search forwards in the depth first sorted array
-     to find a child PATH or backwards to find a parent PATH. */
-  if (start_index >= 0 && start_index < children_with_mergeinfo->nelts)
-    {
-      for (j = looking_for_child ? start_index + 1 : start_index;
-           looking_for_child ? j < children_with_mergeinfo->nelts : j >= 0;
-           j = looking_for_child ? j + 1 : j - 1)
-        {
-          /* If this potential child is neither the child we are looking for
-             or another one of PARENT's children then CHILD_PATH doesn't
-             exist in CHILDREN_WITH_MERGEINFO. */
-          svn_client__merge_path_t *potential_child_or_parent =
-            APR_ARRAY_IDX(children_with_mergeinfo, j,
-                          svn_client__merge_path_t *);
-          int cmp = svn_path_compare_paths(path,
-                                           potential_child_or_parent->path);
-          if (cmp == 0)
-            {
-              /* Found child or parent. */
-              *child_or_parent = potential_child_or_parent;
-              break;
-            }
-          else if ((looking_for_child && cmp < 0)
-                   || (!looking_for_child && cmp > 0))
-            {
-              /* PATH doesn't exist, but found where it should be inserted. */
-              if (!looking_for_child)
-                j++;
-              break;
-            }
-          else if (!looking_for_child && j == 0)
-            {
-              /* Looking for a parent but are at start of the array so we know
-                 where to insert the parent. */
-              break;
-            }
-          /* else we are looking for a child but found one of its
-             siblings...keep looking. */
-        }
-    }
-  return j;
-}
-
-/* CHILDREN_WITH_MERGEINFO is a depth first sorted array filled with
-   svn_client__merge_path_t *.  See the meta comment
-   'THE CHILDREN_WITH_MERGEINFO ARRAY' at the top of this file.
-   
-   Search CHILDREN_WITH_MERGEINFO for the svn_client_merge_path_t *
-   with a path element equal to PATH.  If it is found then set *MERGE_PATH
-   to this element and return the index at which it was found.  If it
-   is not found then set *MERGE_PATH to NULL and return the index at which
-   a new svn_client_merge_path_t * should be inserted to maintain
-   CHILDREN_WITH_MERGEINFO's depth-first ordering. */
-static int
-find_child_with_mergeinfo(apr_array_header_t *children_with_mergeinfo,
-                          svn_client__merge_path_t **merge_path,
-                          const char *path,
-                          apr_pool_t *pool)
-{
-  return find_child_or_parent(children_with_mergeinfo,
-                              merge_path, path, FALSE,
-                              children_with_mergeinfo->nelts - 1,
-                              pool);
-}
-
-/* Helper for get_mergeinfo_paths()
-
-   CHILDREN_WITH_MERGEINFO is a depth first sorted array filled with
-   svn_client__merge_path_t *.  Insert INSERT_ELEMENT into the
-   CHILDREN_WITH_MERGEINFO array at index INSERT_INDEX. */
-static void
-insert_child_to_merge(apr_array_header_t *children_with_mergeinfo,
-                      svn_client__merge_path_t *insert_element,
-                      int insert_index)
-{
-  if (insert_index == children_with_mergeinfo->nelts)
-    {
-      APR_ARRAY_PUSH(children_with_mergeinfo,
-                     svn_client__merge_path_t *) = insert_element;
-    }
-  else
-    {
-      /* Copy the last element of CHILDREN_WITH_MERGEINFO and add it to the
-         end of the array. */
-      int j;
-      svn_client__merge_path_t *curr =
-        APR_ARRAY_IDX(children_with_mergeinfo,
-                      children_with_mergeinfo->nelts - 1,
-                      svn_client__merge_path_t *);
-      svn_client__merge_path_t *curr_copy =
-        apr_palloc(children_with_mergeinfo->pool, sizeof(*curr_copy));
-
-      *curr_copy = *curr;
-      APR_ARRAY_PUSH(children_with_mergeinfo,
-                     svn_client__merge_path_t *) = curr_copy;
-
-      /* Move all elements from INSERT_INDEX to the end of the array forward
-         one spot then insert the new element. */
-      for (j = children_with_mergeinfo->nelts - 2; j >= insert_index; j--)
-        {
-          svn_client__merge_path_t *prev;
-          curr = APR_ARRAY_IDX(children_with_mergeinfo, j,
-                               svn_client__merge_path_t *);
-          if (j == insert_index)
-            *curr = *insert_element;
-          else
-            {
-              prev = APR_ARRAY_IDX(children_with_mergeinfo, j - 1,
-                                   svn_client__merge_path_t *);
-              *curr = *prev;
-            }
-        }
-    }
-}
-
-/* Helper for get_mergeinfo_paths()'s qsort() call. */
+/* Compare two svn_client__merge_path_t elements **A and **B, given the
+   addresses of pointers to them. Return an integer less than, equal to, or
+   greater than zero if A sorts before, the same as, or after B, respectively.
+   This is a helper for qsort() and bsearch() on an array of such elements. */
 static int
 compare_merge_path_t_as_paths(const void *a,
                               const void *b)
 {
-  svn_client__merge_path_t *child1 = *((svn_client__merge_path_t * const *) a);
-  svn_client__merge_path_t *child2 = *((svn_client__merge_path_t * const *) b);
+  const svn_client__merge_path_t *child1
+    = *((const svn_client__merge_path_t * const *) a);
+  const svn_client__merge_path_t *child2
+    = *((const svn_client__merge_path_t * const *) b);
 
   return svn_path_compare_paths(child1->path, child2->path);
 }
 
+/* Return a pointer to the element of CHILDREN_WITH_MERGEINFO whose path
+ * is PATH, or return NULL if there is no such element. */
+static svn_client__merge_path_t *
+get_child_with_mergeinfo(const apr_array_header_t *children_with_mergeinfo,
+                         const char *path)
+{
+  svn_client__merge_path_t merge_path;
+  svn_client__merge_path_t *key;
+  svn_client__merge_path_t **pchild;
+
+  merge_path.path = path;
+  key = &merge_path;
+  pchild = bsearch(&key, children_with_mergeinfo->elts,
+                   children_with_mergeinfo->nelts,
+                   children_with_mergeinfo->elt_size,
+                   compare_merge_path_t_as_paths);
+  return pchild ? *pchild : NULL;
+}
+
+/* Insert a deep copy of INSERT_ELEMENT into the CHILDREN_WITH_MERGEINFO
+   array at its correct position.  Allocate the new storage from the array's
+   pool.  CHILDREN_WITH_MERGEINFO is a depth first sorted array of
+   (svn_client__merge_path_t *). */
+static void
+insert_child_to_merge(apr_array_header_t *children_with_mergeinfo,
+                      const svn_client__merge_path_t *insert_element)
+{
+  int insert_index;
+  const svn_client__merge_path_t *new_element;
+
+  /* Find where to insert the new element */
+  insert_index =
+    svn_sort__bsearch_lower_bound(&insert_element, children_with_mergeinfo,
+                                  compare_merge_path_t_as_paths);
+
+  new_element = svn_client__merge_path_dup(insert_element,
+                                           children_with_mergeinfo->pool);
+  svn_sort__array_insert(&new_element, children_with_mergeinfo, insert_index);
+}
+
 /* Helper for get_mergeinfo_paths().  If CHILD->PATH is switched or
    absent then make sure its parent is marked as missing a child.
-   Start looking up for parent from *CURR_INDEX in
-   CHILDREN_WITH_MERGEINFO.  Create the parent and insert it into
+   Create the parent and insert it into
    CHILDREN_WITH_MERGEINFO if necessary (and increment *CURR_INDEX
    so that caller don't process the inserted element).  Also ensure
    that CHILD->PATH's siblings which are not already present in
@@ -4328,15 +4233,13 @@ insert_parent_and_sibs_of_sw_absent_del_entry(
   apr_hash_t *entries;
   apr_hash_index_t *hi;
   svn_wc_adm_access_t *parent_access;
-  int insert_index, parent_index;
 
   if (!(child->absent
           || (child->switched
               && strcmp(merge_cmd_baton->target, child->path) != 0)))
     return SVN_NO_ERROR;
 
-  parent_index = find_child_or_parent(children_with_mergeinfo, &parent,
-                                      parent_path, FALSE, *curr_index, pool);
+  parent = get_child_with_mergeinfo(children_with_mergeinfo, parent_path);
   if (parent)
     {
       parent->missing_child = TRUE;
@@ -4348,7 +4251,7 @@ insert_parent_and_sibs_of_sw_absent_del_entry(
       parent->path = apr_pstrdup(children_with_mergeinfo->pool, parent_path);
       parent->missing_child = TRUE;
       /* Insert PARENT into CHILDREN_WITH_MERGEINFO. */
-      insert_child_to_merge(children_with_mergeinfo, parent, parent_index);
+      insert_child_to_merge(children_with_mergeinfo, parent);
       /* Increment for loop index so we don't process the inserted element. */
       (*curr_index)++;
     } /*(parent == NULL) */
@@ -4371,9 +4274,8 @@ insert_parent_and_sibs_of_sw_absent_del_entry(
 
       /* Does this child already exist in CHILDREN_WITH_MERGEINFO? */
       child_path = svn_path_join(parent->path, key, pool);
-      insert_index = find_child_or_parent(children_with_mergeinfo,
-                                          &sibling_of_missing, child_path,
-                                          TRUE, parent_index, pool);
+      sibling_of_missing = get_child_with_mergeinfo(children_with_mergeinfo,
+                                                    child_path);
       /* Create the missing child and insert it into CHILDREN_WITH_MERGEINFO.*/
       if (!sibling_of_missing)
         {
@@ -4381,8 +4283,7 @@ insert_parent_and_sibs_of_sw_absent_del_entry(
                                            sizeof(*sibling_of_missing));
           sibling_of_missing->path = apr_pstrdup(children_with_mergeinfo->pool,
                                                  child_path);
-          insert_child_to_merge(children_with_mergeinfo, sibling_of_missing,
-                                insert_index);
+          insert_child_to_merge(children_with_mergeinfo, sibling_of_missing);
         }
     }
   return SVN_NO_ERROR;
@@ -4486,7 +4387,6 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
   iterpool = svn_pool_create(pool);
   for (i = 0; i < children_with_mergeinfo->nelts; i++)
     {
-      int insert_index;
       svn_client__merge_path_t *child =
         APR_ARRAY_IDX(children_with_mergeinfo, i, svn_client__merge_path_t *);
       svn_pool_clear(iterpool);
@@ -4546,10 +4446,8 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                  not, create it and insert it into CHILDREN_WITH_MERGEINFO and
                  set override mergeinfo on it. */
               child_path = svn_path_join(child->path, key, iterpool);
-              insert_index = find_child_or_parent(children_with_mergeinfo,
-                                                  &child_of_noninheritable,
-                                                  child_path, TRUE, i,
-                                                  iterpool);
+              child_of_noninheritable =
+                get_child_with_mergeinfo(children_with_mergeinfo, child_path);
               if (!child_of_noninheritable)
                 {
                   child_of_noninheritable =
@@ -4558,8 +4456,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                   child_of_noninheritable->path =
                     apr_pstrdup(children_with_mergeinfo->pool, child_path);
                   insert_child_to_merge(children_with_mergeinfo,
-                                        child_of_noninheritable,
-                                        insert_index);
+                                        child_of_noninheritable);
                   if (!merge_cmd_baton->dry_run
                       && merge_cmd_baton->same_repos)
                     {
@@ -5521,7 +5418,6 @@ process_children_with_new_mergeinfo(merge_cmd_baton_t *merge_b,
           svn_mergeinfo_t path_explicit_mergeinfo;
           const svn_wc_entry_t *path_entry;
           svn_boolean_t indirect;
-          int index_for_new_child;
           svn_client__merge_path_t *new_child;
 
           apr_pool_clear(iterpool);
@@ -5579,10 +5475,9 @@ process_children_with_new_mergeinfo(merge_cmd_baton_t *merge_b,
 
               /* If the path is not in NOTIFY_B->CHILDREN_WITH_MERGEINFO
                  then add it. */
-              index_for_new_child =
-                find_child_with_mergeinfo(notify_b->children_with_mergeinfo,
-                                          &new_child, path_with_new_mergeinfo,
-                                          iterpool);
+              new_child =
+                get_child_with_mergeinfo(notify_b->children_with_mergeinfo,
+                                         path_with_new_mergeinfo);
               if (!new_child)
                 {
                   int parent_index =
@@ -5615,7 +5510,7 @@ process_children_with_new_mergeinfo(merge_cmd_baton_t *merge_b,
                      parent->remaining_ranges,
                      notify_b->children_with_mergeinfo->pool);
                   insert_child_to_merge(notify_b->children_with_mergeinfo,
-                                        new_child, index_for_new_child);
+                                        new_child);
                 }
             }
           /* Return MERGE_B->RA_SESSION2 to its initial state if we

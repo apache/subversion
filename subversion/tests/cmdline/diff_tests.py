@@ -369,8 +369,8 @@ def repo_diff(wc_dir, rev1, rev2, check_fn):
 
   exit_code, diff_output, err_output = svntest.main.run_svn(None,
                                                             'diff', '-r',
-                                                            `rev2` + ':'
-                                                                   + `rev1`)
+                                                            repr(rev2) + ':'
+                                                                   + repr(rev1))
   if check_fn(diff_output):
     raise svntest.Failure
 

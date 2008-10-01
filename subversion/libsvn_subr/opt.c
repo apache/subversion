@@ -2,7 +2,7 @@
  * opt.c :  option and argument parsing for Subversion command lines
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -894,7 +894,7 @@ svn_opt_args_to_target_array2(apr_array_header_t **targets_p,
 /* Note: This is substantially copied into svn_client_args_to_target_array() in
  * order to move to libsvn_client while maintaining backward compatibility. */
 svn_error_t *
-svn_opt_args_to_target_array3(apr_array_header_t **targets_p,
+svn_opt__args_to_target_array(apr_array_header_t **targets_p,
                               apr_getopt_t *os,
                               apr_array_header_t *known_targets,
                               apr_pool_t *pool)
@@ -1003,6 +1003,14 @@ svn_opt_args_to_target_array3(apr_array_header_t **targets_p,
   return err;
 }
 
+svn_error_t *
+svn_opt_args_to_target_array3(apr_array_header_t **targets_p,
+                              apr_getopt_t *os,
+                              apr_array_header_t *known_targets,
+                              apr_pool_t *pool)
+{
+  return svn_opt__args_to_target_array(targets_p, os,known_targets, pool);
+}
 
 svn_error_t *
 svn_opt_args_to_target_array(apr_array_header_t **targets_p,

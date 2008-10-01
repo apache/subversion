@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2006, 2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2006-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -41,11 +41,12 @@ extern "C" {
  *
  * @since New in 1.4.
  */
-void svn_compat_wrap_commit_callback(svn_commit_callback2_t *callback2,
-                                     void **callback2_baton,
-                                     svn_commit_callback_t callback,
-                                     void *callback_baton,
-                                     apr_pool_t *pool);
+void
+svn_compat_wrap_commit_callback(svn_commit_callback2_t *callback2,
+                                void **callback2_baton,
+                                svn_commit_callback_t callback,
+                                void *callback_baton,
+                                apr_pool_t *pool);
 
 /** Clear svn:author, svn:date, and svn:log from @a revprops if not NULL.
  * Use this if you must handle these three properties separately for
@@ -84,11 +85,12 @@ svn_compat_log_revprops_out(const char **author, const char **date,
  *
  * @since New in 1.5.
  */
-void svn_compat_wrap_log_receiver(svn_log_entry_receiver_t *receiver2,
-                                  void **receiver2_baton,
-                                  svn_log_message_receiver_t receiver,
-                                  void *receiver_baton,
-                                  apr_pool_t *pool);
+void
+svn_compat_wrap_log_receiver(svn_log_entry_receiver_t *receiver2,
+                             void **receiver2_baton,
+                             svn_log_message_receiver_t receiver,
+                             void *receiver_baton,
+                             apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

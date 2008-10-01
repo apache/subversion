@@ -161,7 +161,7 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
                                  cancel_func, cancel_baton,
                                  pool));
 
-  SVN_ERR(svn_wc_get_status_editor3(&editor, &edit_baton, NULL,
+  SVN_ERR(svn_wc_get_status_editor4(&editor, &edit_baton, NULL,
                                     &edit_revision, anchor_access, target,
                                     svn_depth_infinity,
                                     TRUE  /* get_all */,

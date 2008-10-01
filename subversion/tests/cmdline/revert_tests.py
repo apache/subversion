@@ -718,16 +718,16 @@ def status_of_missing_dir_after_revert(sbox):
                                      A_D_G_path)
 
   expected_output = svntest.verify.UnorderedOutput(
-    ["D      " + os.path.join(A_D_G_path, "pi") + "\n",
-     "D      " + os.path.join(A_D_G_path, "rho") + "\n",
-     "D      " + os.path.join(A_D_G_path, "tau") + "\n"])
+    ["D       " + os.path.join(A_D_G_path, "pi") + "\n",
+     "D       " + os.path.join(A_D_G_path, "rho") + "\n",
+     "D       " + os.path.join(A_D_G_path, "tau") + "\n"])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      "status", wc_dir)
 
   svntest.main.safe_rmtree(A_D_G_path)
 
   expected_output = svntest.verify.UnorderedOutput(
-    ["!      " + A_D_G_path + "\n"])
+    ["!       " + A_D_G_path + "\n"])
   svntest.actions.run_and_verify_svn(None, expected_output, [], "status",
                                      wc_dir)
 
@@ -813,16 +813,16 @@ def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
                                      G_path)
 
   expected_output = svntest.verify.UnorderedOutput(
-    ["?      " + os.path.join(G_path, "pi") + "\n",
-     "?      " + os.path.join(G_path, "rho") + "\n",
-     "?      " + os.path.join(G_path, "tau") + "\n"])
+    ["?       " + os.path.join(G_path, "pi") + "\n",
+     "?       " + os.path.join(G_path, "rho") + "\n",
+     "?       " + os.path.join(G_path, "tau") + "\n"])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      "status", wc_dir)
 
   svntest.main.safe_rmtree(G_path)
 
   expected_output = svntest.verify.UnorderedOutput(
-    ["!      " + G_path + "\n"])
+    ["!       " + G_path + "\n"])
   svntest.actions.run_and_verify_svn(None, expected_output, [], "status",
                                      wc_dir)
 
