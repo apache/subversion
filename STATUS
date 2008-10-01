@@ -90,6 +90,25 @@ Candidate changes for 1.5.3:
    Votes:
      +1: pburba
 
+ * r30257, r33024, r33026
+   Don't try to filter natural history from added mergeinfo during
+   reverse merges.
+   Notes:
+     r30257 is the urelated removal of an unused private struct in merge.c,
+     not required but avoids a conflict with r33024.  r33024 is a change to
+     include more information in the merge command baton, it results in no
+     functional change itself but r33026 relies on this new information.
+     There's a single trailing whitespace conflict during merge of r33024.
+     r33026 is the core change.
+   Justification:
+     A reverse merge should simply return mergeinfo to a previous
+     representation -- see
+     http://subversion.tigris.org/servlets/ReadMsg?listName=dev&msgNo=142777.
+     This change also improves reverse merge performance as it eliminates
+     some unnecessary communication with the repository.
+   Votes:
+     +1: pburba
+
  * r33136, r33137
    Fix issue #3285 - 'svn log -g' mistakes property change for
    mergeinfo removal.
