@@ -57,9 +57,9 @@ class Generator(generator.swig.Generator):
 
 if __name__ == "__main__":
   if len(sys.argv) != 4:
-    print "Usage: %s build.conf swig file.swg"
-    print "Checkout a specific header file from SWIG's library into"
-    print "the Subversion proxy directory."
+    print("Usage: %s build.conf swig file.swg")
+    print("Checkout a specific header file from SWIG's library into")
+    print("the Subversion proxy directory.")
   else:
     gen = Generator(sys.argv[1], sys.argv[2])
     gen.checkout(sys.argv[3])

@@ -1,0 +1,17 @@
+The following tasks need to be completed before we release Subversion 1.6.
+
+ctypes-python-bindings TODOs:
+
+ * Teach dist.sh (in Subversion trunk) to download release tarball for
+   ctypesgen.
+
+ * Create ctypes-python-bindings target in Subversion trunk Makefile for
+   generating python wrappers for the ctypes python bindings.
+
+ * Create install-ctypes-python-bindings target in Subversion trunk
+   Makefile for installing the ctypes python bindings.
+
+ctypesgen TODOs:
+
+ * Build release tarball of ctypesgen to be used for Subversion 1.6.
+

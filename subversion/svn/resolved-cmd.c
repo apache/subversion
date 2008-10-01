@@ -74,7 +74,7 @@ svn_cl__resolved(apr_getopt_t *os,
                                subpool);
       if (err)
         {
-          svn_handle_warning(stderr, err);
+          svn_handle_warning2(stderr, err, "svn: ");
           svn_error_clear(err);
         }
     }

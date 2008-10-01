@@ -779,7 +779,7 @@ def build_tree_from_status(lines):
   #    - copied flag           (3)  (single letter: "+" or " ")
   #    - switched flag         (4)  (single letter: "S" or " ")
   #    - repos lock status     (5)  (single letter: "K", "O", "B", "T", " ")
-  #    - tree conflict flag    (6)  (single letter: "T" or " ")
+  #    - tree conflict flag    (6)  (single letter: "C" or " ")
   #
   #    [one space]
   #
@@ -802,7 +802,7 @@ def build_tree_from_status(lines):
   #    - path                 (11)  (string of characters until newline)
 
   # Try http://www.wordsmith.org/anagram/anagram.cgi?anagram=ACDRMGU
-  rm = re.compile('^([!MACDRUG_ ][MACDRUG_ ])([L ])([+ ])([S ])([KOBT ])([T ]) ([* ])   [^0-9-]*(\d+|-|\?) +(\d|-|\?)+ +(\S+) +(.+)')
+  rm = re.compile('^([!MACDRUG_ ][MACDRUG_ ])([L ])([+ ])([S ])([KOBT ])([C ]) ([* ])   [^0-9-]*(\d+|-|\?) +(\d|-|\?)+ +(\S+) +(.+)')
   for line in lines:
 
     # Quit when we hit an externals status announcement (### someday we can fix

@@ -38,9 +38,10 @@ class Parser:
 
 def usage_and_exit(msg):
   if msg:
-    print >> sys.stderr, "%s\n" % msg
-  print >> sys.stderr, "usage: %s SVN_VERSION.H" % \
-    os.path.basename(sys.argv[0])
+    sys.stderr.write("%s\n\n" % msg)
+  sys.stderr.write("usage: %s SVN_VERSION.H\n" % \
+    os.path.basename(sys.argv[0]))
+  sys.stderr.flush()
   sys.exit(1)
 
 if __name__ == '__main__':

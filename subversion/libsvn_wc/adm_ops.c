@@ -349,8 +349,14 @@ process_committed_leaf(int log_number,
   svn_wc_entry_t tmp_entry;
   apr_uint64_t modify_flags = 0;
   svn_stringbuf_t *logtags = svn_stringbuf_create("", pool);
+  svn_checksum_t *checksum = NULL;
 
   SVN_ERR(svn_wc__adm_write_check(adm_access));
+  if (digest)
+    {
+      checksum = svn_checksum_create(svn_checksum_md5, pool);
+      checksum->digest = digest;
+    }
 
   /* Set PATH's working revision to NEW_REVNUM; if REV_DATE and
      REV_AUTHOR are both non-NULL, then set the 'committed-rev',
@@ -366,8 +372,8 @@ process_committed_leaf(int log_number,
       SVN_ERR(remove_revert_file(&logtags, adm_access, path, FALSE, pool));
       SVN_ERR(remove_revert_file(&logtags, adm_access, path, TRUE, pool));
 
-      if (digest)
-        hex_digest = svn_md5_digest_to_cstring(digest, pool);
+      if (checksum)
+        hex_digest = svn_checksum_to_cstring(checksum, pool);
       else
         {
           /* There may be a new text base sitting in the adm tmp area
@@ -386,20 +392,22 @@ process_committed_leaf(int log_number,
           */
           const char *latest_base;
           svn_error_t *err;
-          unsigned char local_digest[APR_MD5_DIGESTSIZE];
+          svn_checksum_t *local_checksum;
 
           latest_base = svn_wc__text_base_path(path, TRUE, pool);
-          err = svn_io_file_checksum(local_digest, latest_base, pool);
+          err = svn_io_file_checksum2(&local_checksum, latest_base,
+                                      svn_checksum_md5, pool);
 
           if (err && APR_STATUS_IS_ENOENT(err->apr_err))
             {
               svn_error_clear(err);
               latest_base = svn_wc__text_base_path(path, FALSE, pool);
-              err = svn_io_file_checksum(local_digest, latest_base, pool);
+              err = svn_io_file_checksum2(&local_checksum, latest_base,
+                                          svn_checksum_md5, pool);
             }
 
           if (! err)
-            hex_digest = svn_md5_digest_to_cstring(local_digest, pool);
+            hex_digest = svn_checksum_to_cstring(local_checksum, pool);
           else if (APR_STATUS_IS_ENOENT(err->apr_err))
             svn_error_clear(err);
           else
@@ -1792,20 +1800,19 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
   /* Deal with properties. */
   if (entry->schedule == svn_wc_schedule_replace)
     {
-       revert_base = entry->schedule == svn_wc_schedule_replace;
+      /* Refer to the original base, before replacement. */
+      revert_base = TRUE;
+
       /* Use the revertpath as the new propsbase if it exists. */
 
       baseprops = apr_hash_make(pool);
-      SVN_ERR(svn_wc__load_props((! revert_base) ? &baseprops : NULL,
-                                 NULL,
-                                 revert_base ? &baseprops : NULL,
+      SVN_ERR(svn_wc__load_props(NULL, NULL, &baseprops,
                                  adm_access, fullpath, pool));
 
       /* Ensure the revert propfile gets removed. */
-      if (revert_base)
-        SVN_ERR(svn_wc__loggy_props_delete(&log_accum,
-                                           fullpath, svn_wc__props_revert,
-                                           adm_access, pool));
+      SVN_ERR(svn_wc__loggy_props_delete(&log_accum,
+                                         fullpath, svn_wc__props_revert,
+                                         adm_access, pool));
       *reverted = TRUE;
     }
 
@@ -2019,11 +2026,12 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
       if (entry->kind == svn_node_file && entry->copyfrom_url)
         {
           const char *base_path;
-          unsigned char digest[APR_MD5_DIGESTSIZE];
+          svn_checksum_t *checksum;
 
           base_path = svn_wc__text_revert_path(fullpath, FALSE, pool);
-          SVN_ERR(svn_io_file_checksum(digest, base_path, pool));
-          tmp_entry.checksum = svn_md5_digest_to_cstring(digest, pool);
+          SVN_ERR(svn_io_file_checksum2(&checksum, base_path,
+                                        svn_checksum_md5, pool));
+          tmp_entry.checksum = svn_checksum_to_cstring(checksum, pool);
           flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
         }
 

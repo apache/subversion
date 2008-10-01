@@ -32,6 +32,7 @@
 #include "svn_pools.h"
 #include "svn_delta.h"
 #include "svn_string.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_xml.h"
 #include "svn_error.h"
@@ -2367,11 +2368,12 @@ apply_textdelta(void *file_baton,
      compatibility we assume that no checksum always matches. */
   if (checksum)
     {
-      unsigned char digest[APR_MD5_DIGESTSIZE];
+      svn_checksum_t *digest;
       const char *hex_digest;
 
-      SVN_ERR(svn_io_file_checksum(digest, fb->text_base_path, pool));
-      hex_digest = svn_md5_digest_to_cstring_display(digest, pool);
+      SVN_ERR(svn_io_file_checksum2(&digest, fb->text_base_path,
+                                    svn_checksum_md5, pool));
+      hex_digest = svn_checksum_to_cstring_display(digest, pool);
 
       /* Compare the base_checksum here, rather than in the window
          handler, because there's no guarantee that the handler will
@@ -2934,7 +2936,10 @@ merge_file(svn_wc_notify_state_t *content_state,
          on replaced files. */
       if (!is_replaced)
         {
-          tmp_entry.checksum = svn_md5_digest_to_cstring(fb->digest, pool);
+          svn_checksum_t *checksum = svn_checksum_create(svn_checksum_md5,
+                                                         pool);
+          checksum->digest = fb->digest;
+          tmp_entry.checksum = svn_checksum_to_cstring(checksum, pool);
           flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
         }
     }
@@ -3021,6 +3026,8 @@ close_file(void *file_baton,
   /* Was this an add-with-history, with no apply_textdelta? */
   if (fb->added_with_history && ! fb->received_textdelta)
     {
+      svn_checksum_t *checksum;
+
       SVN_ERR_ASSERT(! fb->text_base_path && ! fb->new_text_base_path
                      && fb->copied_text_base);
 
@@ -3031,15 +3038,22 @@ close_file(void *file_baton,
       SVN_ERR(svn_io_copy_file(fb->copied_text_base,
                                fb->new_text_base_path,
                                TRUE, pool));
-      SVN_ERR(svn_io_file_checksum(fb->digest,
-                                   fb->new_text_base_path,
-                                   pool));
+      SVN_ERR(svn_io_file_checksum2(&checksum,
+                                    fb->new_text_base_path,
+                                    svn_checksum_md5,
+                                    pool));
+      memcpy(fb->digest, checksum->digest, svn_checksum_size(checksum));
     }
 
   /* window-handler assembles new pristine text in .svn/tmp/text-base/  */
   if (fb->new_text_base_path && text_checksum)
     {
-      const char *real_sum = svn_md5_digest_to_cstring(fb->digest, pool);
+      svn_checksum_t *checksum;
+      const char *real_sum;
+      
+      checksum = svn_checksum_create(svn_checksum_md5, pool);
+      checksum->digest = fb->digest;
+      real_sum = svn_checksum_to_cstring(checksum, pool);
 
       if (real_sum && (strcmp(text_checksum, real_sum) != 0))
         return svn_error_createf
@@ -4310,7 +4324,7 @@ svn_wc_add_repos_file2(const char *dst_path,
 
   /* Install new text base. */
   {
-    unsigned char digest[APR_MD5_DIGESTSIZE];
+    svn_checksum_t *checksum;
     svn_wc_entry_t tmp_entry;
 
     /* Write out log commands to set up the new text base and its
@@ -4321,9 +4335,10 @@ svn_wc_add_repos_file2(const char *dst_path,
     SVN_ERR(svn_wc__loggy_set_readonly(&log_accum, adm_access,
                                        text_base_path, pool));
 
-    SVN_ERR(svn_io_file_checksum(digest, tmp_text_base_path, pool));
+    SVN_ERR(svn_io_file_checksum2(&checksum, tmp_text_base_path,
+                                  svn_checksum_md5, pool));
 
-    tmp_entry.checksum = svn_md5_digest_to_cstring(digest, pool);
+    tmp_entry.checksum = svn_checksum_to_cstring(checksum, pool);
     SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_access,
                                        dst_path, &tmp_entry,
                                        SVN_WC__ENTRY_MODIFY_CHECKSUM,
