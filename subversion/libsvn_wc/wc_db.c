@@ -44,6 +44,12 @@ struct svn_wc__db_pdh_t {
   const char *base_dir;
 };
 
+/* ### since we're putting the pristine files per-dir, then we don't need
+   ### to create subdirectories in order to keep the directory size down.
+   ### when we can aggregate pristine files across dirs/wcs, then we will
+   ### need to undo the SKIP. */
+#define SVN__SKIP_SUBDIR
+
 
 static svn_error_t *
 get_pristine_fname(const char **path,
@@ -54,11 +60,14 @@ get_pristine_fname(const char **path,
                    apr_pool_t *scratch_pool)
 {
   const char *hexdigest = svn_checksum_to_cstring(checksum, scratch_pool);
+#ifndef SVN__SKIP_SUBDIR
   char subdir[3] = { 0 };
+#endif
 
   /* We should have a valid checksum and (thus) a valid digest. */
   SVN_ERR_ASSERT(hexdigest != NULL);
 
+#ifndef SVN__SKIP_SUBDIR
   /* Get the first two characters of the digest, for the subdir. */
   subdir[0] = hexdigest[0];
   subdir[1] = hexdigest[1];
@@ -77,16 +86,23 @@ get_pristine_fname(const char **path,
          try to access the file within this (missing?) pristine subdir. */
       svn_error_clear(err);
     }
+#endif
 
   /* The file is located at DIR/.svn/pristine/XX/XXYYZZ... */
   *path = svn_path_join_many(scratch_pool,
-                             pdh->base_dir, subdir, hexdigest, NULL);
+                             pdh->base_dir,
+#ifndef SVN__SKIP_SUBDIR
+                             subdir,
+#endif
+                             hexdigest,
+                             NULL);
   return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
 svn_wc__db_open_many(svn_wc__db_t **db,
+                     svn_wc__db_openmode_t mode,
                      const apr_array_header_t *paths,
                      svn_config_t *config,
                      apr_pool_t *result_pool,
@@ -217,11 +233,20 @@ svn_wc__db_pristine_write(svn_stream_t **contents,
 
 svn_error_t *
 svn_wc__db_pristine_check(svn_boolean_t *present,
-                          svn_filesize_t *actual_size,
                           int *refcount,
                           svn_wc__db_pdh_t *pdh,
                           svn_checksum_t *checksum,
+                          svn_wc__db_checkmode_t mode,
                           apr_pool_t *scratch_pool)
+{
+  return svn_error__malfunction(__FILE__, __LINE__, "Not implemented.");
+}
+
+
+svn_error_t *
+svn_wc__db_pristine_repair(svn_wc__db_pdh_t *pdh,
+                           svn_checksum_t *checksum,
+                           apr_pool_t *scratch_pool)
 {
   return svn_error__malfunction(__FILE__, __LINE__, "Not implemented.");
 }
