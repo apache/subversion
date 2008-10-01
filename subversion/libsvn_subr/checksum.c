@@ -156,7 +156,7 @@ svn_checksum_parse_hex(svn_checksum_t **checksum,
         return svn_error_create
           (SVN_ERR_BAD_CHECKSUM_PARSE, NULL, NULL);
 
-      (unsigned char)(*checksum)->digest[i] = 
+      ((unsigned char *)(*checksum)->digest)[i] = 
         (( isalpha(hex[i*2]) ? hex[i*2] - 'a' + 10 : hex[i*2] - '0') << 4) |
         ( isalpha(hex[i*2+1]) ? hex[i*2+1] - 'a' + 10 : hex[i*2+1] - '0');
     }
