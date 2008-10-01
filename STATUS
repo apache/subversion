@@ -21,7 +21,7 @@ Candidate changes for 1.5.3:
    Notes: Similar fixes may be needed elsewhere, and if they are made,
           they should probably also be proposed for backport.
    Votes:
-     +1: kfogel
+     +1: kfogel, blair
 
  * r33201, r33212
    Fix a bug whereby 'svn mv' could cause the client to loop forever.
