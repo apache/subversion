@@ -58,7 +58,6 @@ cleanup_db_apr(void *data)
   if (!err)
     return APR_SUCCESS;
 
-  printf("Warning! %d\n", err->apr_err);
   fs->warning(fs->warning_baton, err);
   svn_error_clear(err);
 
@@ -96,10 +95,23 @@ svn_fs_fs__get_rep_reference(representation_t **rep,
 
 svn_error_t *
 svn_fs_fs__set_rep_reference(svn_fs_t *fs,
-                             representation_t *rep_ref,
+                             representation_t *rep,
                              apr_pool_t *pool)
 {
-  return SVN_NO_ERROR;
+  fs_fs_data_t *ffd = fs->fsap_data;
+  svn_boolean_t have_row;
+  svn_sqlite__stmt_t *stmt;
+
+  SVN_ERR(svn_sqlite__prepare(&stmt, ffd->rep_cache,
+                              "insert into rep_cache (hash, revision, offset) "
+                              "values (?, ?, ?);", pool));
+  SVN_ERR(svn_sqlite__bind_text(stmt, 1, svn_checksum_to_cstring(rep->checksum,
+                                                                 pool)));
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 2, rep->revision));
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 3, rep->offset));
+
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  return svn_sqlite__finalize(stmt);
 }
 
 #else
