@@ -99,6 +99,8 @@ svn_path_join(const char *base, const char *component, apr_pool_t *pool);
  * If any component is an absolute path, then it resets the base and
  * further components will be appended to it.
  *
+ * This function does not support URLs.
+ *
  * See svn_path_join() for further notes about joining paths.
  */
 char *
