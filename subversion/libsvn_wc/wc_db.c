@@ -177,8 +177,8 @@ svn_wc__db_pristine_read(svn_stream_t **contents,
                              result_pool, scratch_pool));
 
   SVN_ERR(svn_io_file_open(&fh, path,
-                           APR_FOPEN_READ
-                             | APR_FOPEN_BINARY,
+                           APR_READ
+                             | APR_BINARY,
                            APR_OS_DEFAULT, result_pool));
   *contents = svn_stream_from_aprfile2(fh, FALSE, result_pool);
 
@@ -200,10 +200,10 @@ svn_wc__db_pristine_write(svn_stream_t **contents,
                              result_pool, scratch_pool));
 
   SVN_ERR(svn_io_file_open(&fh, path,
-                           APR_FOPEN_WRITE
-                             | APR_FOPEN_CREATE
-                             | APR_FOPEN_EXCL
-                             | APR_FOPEN_BINARY,
+                           APR_WRITE
+                             | APR_CREATE
+                             | APR_EXCL
+                             | APR_BINARY,
                            APR_OS_DEFAULT, result_pool));
 
   *contents = svn_stream_from_aprfile2(fh, FALSE, result_pool);
