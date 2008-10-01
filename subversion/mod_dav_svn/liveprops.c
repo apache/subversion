@@ -628,11 +628,11 @@ insert_prop(const dav_resource *resource,
               || resource->type == DAV_RESOURCE_TYPE_WORKING
               || resource->type == DAV_RESOURCE_TYPE_VERSION))
         {
-          unsigned char digest[APR_MD5_DIGESTSIZE];
+          svn_checksum_t *checksum;
 
-          serr = svn_fs_file_md5_checksum(digest,
-                                          resource->info->root.root,
-                                          resource->info->repos_path, p);
+          serr = svn_fs_file_checksum(&checksum, svn_checksum_md5,
+                                      resource->info->root.root,
+                                      resource->info->repos_path, TRUE, p);
           if (serr != NULL)
             {
               /* ### what to do? */
@@ -641,7 +641,7 @@ insert_prop(const dav_resource *resource,
               break;
             }
 
-          value = svn_md5_digest_to_cstring(digest, p);
+          value = svn_checksum_to_cstring(checksum, p);
 
           if (! value)
             return DAV_PROP_INSERT_NOTSUPP;

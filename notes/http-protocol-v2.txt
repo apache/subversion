@@ -1,0 +1,274 @@
+               A Streamlined HTTP Protocol for Subversion
+
+GOAL
+====
+
+Write a new HTTP protocol for svn, one which is entirely proprietary
+and designed for speed.
+
+
+PURPOSE / HISTORY
+=================
+
+Subversion standardized on Apache and the WebDAV/DeltaV protocol as a
+back in the earliest days of development, based on some very strong
+value propositions:
+
+  A. Able to go through corporate firewalls
+  B. Zillions of authn/authz options via Apache
+  C. Standardized encryption (SSL)
+  D. Excellent logging
+  E. Built-in repository browsing
+  F. Interoperability with other WebDAV clients
+  G. Caching within intermediate proxies
+
+Unfortunately, DeltaV is an insanely complex and inefficient protocol,
+and doesn't fit Subversion's model well at all.  The result is that
+Subversion speaks a "limited portion" of DeltaV, and pays a huge price
+for this complexity:  speed.
+
+### GJS: doesn't fit? heh. IMO, it does... you should have seen it
+    *before* I grok'd the design and started providing feedback. it
+    just doesn't match it *precisely*
+
+A typical network trace involves dozens of unnecessary turnarounds
+where the client keeps asking for the same information over and over
+again, all for the sake of following DeltaV.  And then once the client
+has "discovered" the information it needs, it often ends up making a
+custom REPORT request anyway.  Most svn operations are at least twice
+as slow over HTTP than over the custom svnserve protocol.
+
+### GJS: that is the fault of the client, not the protocol. somewhere
+    around the time that I stopped working on SVN for a while, I
+    identified several things that an RA layer could cache in order to
+    avoid looking them up again. nobody ever implemented that. thus,
+    it is hard to claim the fault lies in the protocol when we KNOW we
+    don't have to re-fetch certain items.
+
+### GJS: turnarounds don't have to be expensive if you can pipeline
+    them. that is one of the (design) reasons for Serf. Again,
+    unrelated to the protocol, but simply the implementation. And
+    proposing a *new* implementation rather than fixing an existing
+    one seems to be a much more monumental task.
+
+
+PROPOSAL
+========
+
+Write a new HTTP protocol for svn;  map RA requests directly to HTTP
+requests.
+
+  * svn over HTTP would be much faster (eliminate turnarounds)
+
+### GJS: again: pipelining.
+ 
+  * svn over HTTP would be almost as easy to extend as svnserve.
+
+### GJS: have we had an issue with extending our current HTTP use?
+
+  * svn over HTTP would be comprehensible to devs and users both
+    (require no knowledge of DeltaV concepts).
+
+  * We'd still maintain almost all of Apache's advantages
+    (propositions A through E above).
+
+### GJS: and with the right design, should be able to get the G that I
+    added above.
+
+  * We'd give up proposition F, which hasn't given us anything but the
+    ability to mount svn repositories as network drives.  (For those
+    who *really* need this rarely-used feature, mod_dav_svn would
+    still be available.)
+
+  * We could freely advertise a fixed syntax for browsing older
+    revisions, without worrying about violating DeltaV.
+
+### GJS: we can do this today. DeltaV certainly doesn't proscribe what
+    we can do in our URL namespace. my reluctance to advertise one was
+    to give us maximum flexibility on the server, and to defer browing
+    to external tools like ViewVC or Trac.
+
+
+MILE-HIGH DESIGN
+================
+
+  * Write a new mod_svn module for Apache.
+
+  * Extend libsvn_ra_serf to detect the Apache feature and speak the
+    new protocol.
+
+  * Full client/server compatibility:
+
+      - newer clients can still operate against old servers: they look
+        for new protocol in OPTIONS response; if not available, fall
+        back to DeltaV.
+
+      - older clients can still operate against new servers: admins
+        can run mod_svn and mod_dav_svn simultaneously, making the
+        same repository available to both modules via different
+        <Location> blocks.
+
+
+DESIGN
+======
+
+(Note: a lot of this is directly inspired by libsvn_ra_svn/protocol.)
+
+
+1. Client-Server Negotiation
+----------------------------
+
+  The administrator makes an svn repository available at a specific
+  URI, which we'll refer to as the "repository root URI".
+
+  mod_svn then advertises the new protocol in an OPTIONS response
+  against the repository root URI.  It specifically includes a mininum
+  and maximum version number of the protocol it understands.
+
+  ra_serf always starts an RA session with an OPTIONS request against
+  the repository root URI.  If new protocol isn't present (or an
+  unsuitable version), it falls back to DeltaV protocol.
+
+  TODO: like svnserve, mod_svn may also want to advertise specific
+  features in its OPTIONS response.
+
+
+2. General Command Mechanism
+----------------------------
+
+  From here, the client initiates HTTP requests match up with the
+  svn_ra.h interfaces.  Each RA 'command' takes a set of parameters
+  and represents a single network turnaround.
+
+  The standard pattern is to follow the lead of the mercurial network
+  protocol and embed these commands in either HTTP/1.1 GET or POST
+  methods against the repository root URI.  The command and parameters
+  are embedded into the request URI itself as standard query syntax.
+
+  For example, if the repository is available at the root URI
+  '/repos', then a client might send requests like these:
+
+     GET /repos?cmd=get-latest-rev
+
+     GET /repos?cmd=rev-proplist&r=23
+
+     GET /repos?cmd=get-file&r=23&path=/trunk/foo.c
+
+### GJS: in order to allow for intermediate caches to work, the URLs
+    need to be well-designed up-front. I can help with that.
+
+  For requests which require large data exchanges, the big payloads go
+  into request and/or response bodies.  For example:
+
+     GET /repos?cmd=update&targetrev=100
+
+     [body contains complete 'update report' describing working copy's
+     revisions;  response is a complete editor-drive.]
+     
+### GJS: no. I've never seen a GET request with a body. You want to
+    avoid that, or you could end up being incompatible with many
+    proxies. If you need input data, then make it a POST, or use one
+    of the other HTTP methods defined by HTTP, WebDAV, or DeltaV.
+
+     POST /repos?cmd=commit&keeplocks=true
+
+     [body contains complete editor-drive from client, including
+     possible revision-props that need changing (like svn:log), as
+     well as any necessary lock-tokens.  response is the newly
+     committed revision number.]
+
+
+3. Representation of editor drives and client reports
+-----------------------------------------------------
+
+  We use the standard editor commandset, just like svnserve does.  We
+  can use a XML representation as our DAV protocol does, though
+  greatly simplified, e.g.
+
+  <editor-drive send-all="true">
+    <target-revision rev="2"/>
+    <open-directory rev="2">
+      <set-prop name="svn:entry:committed-rev">2</set-prop>
+      <S:add-file name="ab.c">
+        <set-prop name="svn:eol-style">native</set-prop>
+        <txdelta>...base64-encoded file content...</txdelta>
+      </add-file>
+      <add-directory name="os">
+        ...directory contents...
+      </add-directory>
+    </open-directory>
+  </editor-drive>
+
+  Notice the lack of <D:checked-in> elements and xml element namespaces.
+
+  Client reports would similarly simplified, using the standard
+  'set-path', 'link-path', 'delete-path' elements.
+
+  (NOTE:  I'm not wed to XML here.  We could just do a bunch of
+  embedded s-expressions, exactly like svnserve does.  Heck, maybe we
+  could even use svnserve's parsing/unparsing code!)
+
+### GJS: personally, I'd recommend protocol buffers, or Apache Thrift
+    (a third-party reimplementation of PBs done at facebook). just
+    toss out the formats used in FS and the svn protocol, and let a
+    new/external library do the marshalling for us.
+    http://stuartsierra.com/2008/07/10/thrift-vs-protocol-buffers
+
+
+4. Commands
+-----------
+
+In the list of commands, all commands are assumed to be attached as
+?cmd=command to GET requests on the repository root URI, with the
+exception of {commit, ...}, which are attached to POST requests.
+
+Command parameters are all query-encoded (&parm=val), and optional
+parameters are listed in brackets.  Server response values are assumed
+to be in response bodies.
+
+
+  reparent
+    params:   &rev=number
+    response: 
+
+  get-latest-rev
+    params:   
+    response: number
+
+  get-dated-rev
+    params:   &date=string
+    response: number
+
+  change-rev-prop
+    params:   &rev=number&name=string[&val=string]
+    response: 
+    If value is not specified, the rev-prop is removed.
+
+  rev-proplist
+    params:   &rev=number
+    response: a list of property name/val pairs
+
+  rev-prop
+    params:   &rev=number&name=string
+    response: propval
+
+  commit
+    params:  [&keep-locks=boolean]
+    request body:
+             optional list of revprops (including svn:log)
+             optional list of lockpath:locktoken pairs
+             editor-drive
+    response:
+             new revnum OR commit-error-message
+
+  get-file
+    params:   &path=string&[want-props=bool&want-contents=bool&rev=number]
+    response: 
+              revnum
+              optional checksum
+              optional props
+              contents
+
+
+  .... NOT YET FINISHED ....
+

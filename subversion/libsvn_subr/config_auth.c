@@ -41,7 +41,7 @@ auth_file_path(const char **path,
                apr_pool_t *pool)
 {
   const char *authdir_path, *hexname;
-  unsigned char digest[APR_MD5_DIGESTSIZE];
+  svn_checksum_t *checksum;
 
   /* Construct the path to the directory containing the creds files,
      e.g. "~/.subversion/auth/svn.simple".  The last component is
@@ -54,8 +54,9 @@ auth_file_path(const char **path,
 
       /* Construct the basename of the creds file.  It's just the
          realmstring converted into an md5 hex string.  */
-      apr_md5(digest, realmstring, strlen(realmstring));
-      hexname = svn_md5_digest_to_cstring(digest, pool);
+      SVN_ERR(svn_checksum(&checksum, svn_checksum_md5, realmstring,
+                           strlen(realmstring), pool));
+      hexname = svn_checksum_to_cstring(checksum, pool);
 
       *path = svn_path_join(authdir_path, hexname, pool);
     }

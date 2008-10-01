@@ -8,7 +8,12 @@ import string
 import glob
 import re
 import fileinput
-import ConfigParser
+try:
+  # Python >=3.0
+  import configparser
+except ImportError:
+  # Python <3.0
+  import ConfigParser as configparser
 import generator.swig
 
 import getversion
@@ -49,7 +54,7 @@ class GeneratorBase:
         self.release_mode = 1
 
     # Now read and parse build.conf
-    parser = ConfigParser.ConfigParser()
+    parser = configparser.ConfigParser()
     parser.read(fname)
 
     self.conf = build_path(os.path.abspath(fname))
@@ -923,8 +928,8 @@ class IncludeDependencyInfo:
           if _is_public_include(h):
             hdrs[_swig_include_wrapper(h)] = '%'
           else:
-            raise RuntimeError, "Public include '%s' depends on '%s', " \
-                "which is not a public include! What's going on?" % (fname, h)
+            raise RuntimeError("Public include '%s' depends on '%s', " \
+                "which is not a public include! What's going on?" % (fname, h))
         swig_fname = _swig_include_wrapper(fname)
         swig_bname = os.path.basename(swig_fname)
         self._deps[swig_fname] = hdrs

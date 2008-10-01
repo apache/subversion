@@ -48,7 +48,7 @@ class ChangedPath:
     self.path = path
     if action not in [None, CHANGE_ACTION_MODIFY, CHANGE_ACTION_ADD,
                       CHANGE_ACTION_DELETE, CHANGE_ACTION_REPLACE]:
-      raise Exception, "unsupported change type"
+      raise Exception("unsupported change type")
     self.action = action
 
     ### it would be nice to avoid this flag. however, without it, it would

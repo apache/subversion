@@ -66,15 +66,15 @@ def parse_and_verify_blame(output, expected_blame, with_merged=0):
 
   # Verify the results
   if len(results) != len(expected_blame):
-    raise svntest.Failure, "expected and actual results not the same length"
+    raise svntest.Failure("expected and actual results not the same length")
 
   pairs = zip(results, expected_blame)
   for num in xrange(len(pairs)):
     (item, expected_item) = pairs[num]
     for key in keys:
       if item[key] != expected_item[key]:
-        raise svntest.Failure, 'on line %d, expecting %s "%s", found "%s"' % \
-          (num+1, key, str(expected_item[key]), str(item[key]))
+        raise svntest.Failure('on line %d, expecting %s "%s", found "%s"' % \
+          (num+1, key, str(expected_item[key]), str(item[key])))
 
 
 ######################################################################

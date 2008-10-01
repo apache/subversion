@@ -27,7 +27,12 @@
 import os
 import sys
 import string
-import ConfigParser
+try:
+  # Python >=3.0
+  import configparser
+except ImportError:
+  # Python <3.0
+  import ConfigParser as configparser
 import time
 import popen2
 import cStringIO
@@ -1123,7 +1128,7 @@ class Config:
   _predefined = ('general', 'defaults', 'maps')
 
   def __init__(self, fname, repos, global_params):
-    cp = ConfigParser.ConfigParser()
+    cp = configparser.ConfigParser()
     cp.read(fname)
 
     # record the (non-default) groups that we find

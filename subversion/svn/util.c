@@ -906,7 +906,7 @@ svn_cl__try(svn_error_t *err,
           if (err->apr_err == apr_err)
             {
               if (! quiet)
-                svn_handle_warning(stderr, err);
+                svn_handle_warning2(stderr, err, "svn: ");
               svn_error_clear(err);
               return SVN_NO_ERROR;
             }

@@ -1439,7 +1439,7 @@ def fill_file_with_lines(wc_path, line_nbr, line_descrip=None,
   # Generate the new contents for the file.
   contents = ""
   for n in range(line_nbr, line_nbr + 3):
-    contents = contents + line_descrip + " " + `n` + " in '" + \
+    contents = contents + line_descrip + " " + repr(n) + " in '" + \
                os.path.basename(wc_path) + "'.\n"
 
   # Write the new contents to the file.
