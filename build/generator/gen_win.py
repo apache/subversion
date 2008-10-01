@@ -951,7 +951,9 @@ class WinGeneratorBase(GeneratorBase):
       if dep.external_lib == '$(SVN_DB_LIBS)':
         nondeplibs.append(dblib)
 
-      if dep.external_lib == '$(SVN_SQLITE_LIBS)':
+      # SQLite is optional for now, so only add the dependency when the path
+      # the the libs has been specified.
+      if dep.external_lib == '$(SVN_SQLITE_LIBS)' and self.sqlite_path:
         nondeplibs.append('sqlite3.lib')
 
       if self.neon_lib and dep.external_lib == '$(NEON_LIBS)':
