@@ -103,7 +103,6 @@
 /* Kinds of representation. */
 #define REP_PLAIN          "PLAIN"
 #define REP_DELTA          "DELTA"
-#define REP_REFERENCE      "REFERENCE"
 
 /* Notes:
 
@@ -4553,6 +4552,7 @@ rep_write_contents_close(void *baton)
 {
   struct rep_write_baton *b = baton;
   representation_t *rep;
+  representation_t *old_rep;
   apr_off_t offset;
 
   rep = apr_pcalloc(b->parent_pool, sizeof(*rep));
@@ -4575,10 +4575,25 @@ rep_write_contents_close(void *baton)
   /* Finalize the checksum. */
   svn_checksum_final(&rep->checksum, b->checksum_ctx, b->parent_pool);
 
-  /* Write out our cosmetic end marker. */
-  SVN_ERR(svn_stream_printf(b->rep_stream, b->pool, "ENDREP\n"));
+  /* Check and see if we already have a representation somewhere that's
+     identical to the one we just wrote out. */
+  SVN_ERR(svn_fs_fs__get_rep_reference(&old_rep, b->fs, rep->checksum,
+                                       b->parent_pool));
+  if (old_rep)
+    {
+      /* We need to erase from the protorev the data we just wrote. */
+      SVN_ERR(svn_io_file_trunc(b->file, b->rep_offset, b->pool));
 
-  b->noderev->data_rep = rep;
+      /* Use the old rep for this content. */
+      b->noderev->data_rep = old_rep;
+    }
+  else
+    {
+      /* Write out our cosmetic end marker. */
+      SVN_ERR(svn_stream_printf(b->rep_stream, b->pool, "ENDREP\n"));
+
+      b->noderev->data_rep = rep;
+    }
 
   /* Write out the new node-rev information. */
   SVN_ERR(svn_fs_fs__put_node_revision(b->fs, b->noderev->id, b->noderev, FALSE,
