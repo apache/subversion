@@ -1,5 +1,5 @@
 /*
- * get_rev_deleted.c :  ra_serf get_revision_deleted API implementation.
+ * get_deleted_rev.c :  ra_neon get_deleted_rev API implementation.
  *
  * ====================================================================
  * Copyright (c) 2008 CollabNet.  All rights reserved.
@@ -18,15 +18,15 @@
 
 
 #include "../libsvn_ra/ra_loader.h"
-#include "ra_serf.h"
+#include "ra_neon.h"
 
 svn_error_t *
-svn_ra_serf__get_revision_deleted(svn_ra_session_t *session,
-                                  const char *path,
-                                  svn_revnum_t peg_revision,
-                                  svn_revnum_t end_revision,
-                                  svn_revnum_t *revision_deleted,
-                                  apr_pool_t *pool)
+svn_ra_neon__get_deleted_rev(svn_ra_session_t *session,
+                             const char *path,
+                             svn_revnum_t peg_revision,
+                             svn_revnum_t end_revision,
+                             svn_revnum_t *revision_deleted,
+                             apr_pool_t *pool)
 {
   return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL, NULL);
 }

@@ -1195,13 +1195,14 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
                             const char *capability,
                             apr_pool_t *pool);
 
+/* Implements the get_deleted_rev RA layer function. */
 svn_error_t *
-svn_ra_serf__get_revision_deleted(svn_ra_session_t *session,
-                                  const char *path,
-                                  svn_revnum_t peg_revision,
-                                  svn_revnum_t end_revision,
-                                  svn_revnum_t *revision_deleted,
-                                  apr_pool_t *pool);
+svn_ra_serf__get_deleted_rev(svn_ra_session_t *session,
+                             const char *path,
+                             svn_revnum_t peg_revision,
+                             svn_revnum_t end_revision,
+                             svn_revnum_t *revision_deleted,
+                             apr_pool_t *pool);
 
 /*** Authentication handler declarations ***/
 

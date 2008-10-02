@@ -1146,7 +1146,7 @@ static const svn_ra__vtable_t serf_vtable = {
   svn_ra_serf__replay,
   svn_ra_serf__has_capability,
   svn_ra_serf__replay_range,
-  svn_ra_serf__get_revision_deleted
+  svn_ra_serf__get_deleted_rev
 };
 
 svn_error_t *

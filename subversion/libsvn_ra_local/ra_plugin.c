@@ -1394,12 +1394,12 @@ svn_ra_local__has_capability(svn_ra_session_t *session,
 }
 
 static svn_error_t *
-svn_ra_local__get_revision_deleted(svn_ra_session_t *session,
-                                   const char *path,
-                                   svn_revnum_t peg_revision,
-                                   svn_revnum_t end_revision,
-                                   svn_revnum_t *revision_deleted,
-                                   apr_pool_t *pool)
+svn_ra_local__get_deleted_rev(svn_ra_session_t *session,
+                              const char *path,
+                              svn_revnum_t peg_revision,
+                              svn_revnum_t end_revision,
+                              svn_revnum_t *revision_deleted,
+                              apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
 
@@ -1460,7 +1460,7 @@ static const svn_ra__vtable_t ra_local_vtable =
   svn_ra_local__replay,
   svn_ra_local__has_capability,
   svn_ra_local__replay_range,
-  svn_ra_local__get_revision_deleted
+  svn_ra_local__get_deleted_rev
 };
 
 
