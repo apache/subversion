@@ -37,11 +37,13 @@
 const char *upgrade_sql[] = { NULL,
   "pragma auto_vacuum = 1;"
   APR_EOL_STR
-  "create table rep_cache (hash text not null,         "
-  "                        revision integer not null,  "
-  "                        offset integer not null);   "
+  "create table rep_cache (hash text not null,               "
+  "                        revision integer not null,        "
+  "                        offset integer not null,          "
+  "                        size integer not null,            "
+  "                        expanded_size integer not null);  "
   APR_EOL_STR
-  "create unique index i_hash on rep_cache(hash);      "
+  "create unique index i_hash on rep_cache(hash);            "
   APR_EOL_STR
   };
 
@@ -90,6 +92,31 @@ svn_fs_fs__get_rep_reference(representation_t **rep,
                              svn_checksum_t *checksum,
                              apr_pool_t *pool)
 {
+  fs_fs_data_t *ffd = fs->fsap_data;
+  svn_boolean_t have_row;
+  svn_sqlite__stmt_t *stmt;
+
+  SVN_ERR(svn_sqlite__prepare(&stmt, ffd->rep_cache,
+                "select revision, offset, size, expanded_size from rep_cache "
+                "where hash = ?", pool));
+  SVN_ERR(svn_sqlite__bind_text(stmt, 1, svn_checksum_to_cstring(checksum,
+                                                                 pool)));
+
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (have_row)
+    {
+      *rep = apr_pcalloc(pool, sizeof(**rep));
+      (*rep)->checksum = svn_checksum_dup(checksum, pool);
+      (*rep)->revision = svn_sqlite__column_revnum(stmt, 0);
+      (*rep)->offset = svn_sqlite__column_int(stmt, 1);
+      (*rep)->size = svn_sqlite__column_int(stmt, 2);
+      (*rep)->expanded_size = svn_sqlite__column_int(stmt, 3);
+    }
+  else
+    *rep = NULL;
+
+  SVN_ERR(svn_sqlite__finalize(stmt));
+
   return SVN_NO_ERROR;
 }
 
@@ -101,14 +128,45 @@ svn_fs_fs__set_rep_reference(svn_fs_t *fs,
   fs_fs_data_t *ffd = fs->fsap_data;
   svn_boolean_t have_row;
   svn_sqlite__stmt_t *stmt;
+  representation_t *old_rep;
+
+  /* Check to see if we already have a mapping for REP->CHECKSUM.  If so,
+     and the value is the same one we were about to write, that's
+     cool -- just do nothing.  If, however, the value is *different*,
+     that's a red flag!  */
+  SVN_ERR(svn_fs_fs__get_rep_reference(&old_rep, fs, rep->checksum, pool));
+
+  if (old_rep)
+    {
+      if ( (old_rep->revision != rep->revision)
+            || (old_rep->offset != rep->offset)
+            || (old_rep->size != rep->size)
+            || (old_rep->expanded_size != rep->expanded_size) )
+        return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                _("Representation key for checksum '%s' exists in filesystem "
+                  "'%s', with different value(%ld,%" APR_OFF_T_FMT ",%"
+                  SVN_FILESIZE_T_FMT ",%" SVN_FILESIZE_T_FMT ") than what we "
+                  "were about to store(%ld,%" APR_OFF_T_FMT ",%"
+                  SVN_FILESIZE_T_FMT ",%" SVN_FILESIZE_T_FMT ")"),
+                  svn_checksum_to_cstring_display(rep->checksum, pool),
+                  fs->path, old_rep->revision, old_rep->offset, old_rep->size,
+                  old_rep->expanded_size, rep->revision, rep->offset, rep->size,
+                  rep->expanded_size);
+      else
+        return SVN_NO_ERROR;
+    }
+    
 
   SVN_ERR(svn_sqlite__prepare(&stmt, ffd->rep_cache,
-                              "insert into rep_cache (hash, revision, offset) "
-                              "values (?, ?, ?);", pool));
+                "insert into rep_cache (hash, revision, offset, size, "
+                "expanded_size) "
+                "values (?, ?, ?, ?, ?);", pool));
   SVN_ERR(svn_sqlite__bind_text(stmt, 1, svn_checksum_to_cstring(rep->checksum,
                                                                  pool)));
   SVN_ERR(svn_sqlite__bind_int64(stmt, 2, rep->revision));
   SVN_ERR(svn_sqlite__bind_int64(stmt, 3, rep->offset));
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 4, rep->size));
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 5, rep->expanded_size));
 
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   return svn_sqlite__finalize(stmt);
