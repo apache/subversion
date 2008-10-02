@@ -2617,6 +2617,18 @@ svn_io_file_write_full(apr_file_t *file, const void *buf,
 
 
 svn_error_t *
+svn_io_file_trunc(apr_file_t *file, apr_off_t offset, apr_pool_t *pool)
+{
+  return do_io_file_wrapper_cleanup
+    (file, apr_file_trunc(file, offset),
+     N_("Can't truncate file '%s'"),
+     N_("Can't truncate stream"),
+     pool);
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_io_read_length_line(apr_file_t *file, char *buf, apr_size_t *limit,
                         apr_pool_t *pool)
 {
