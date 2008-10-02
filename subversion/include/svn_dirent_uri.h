@@ -280,6 +280,24 @@ const char *
 svn_dirent_is_child(const char *dirent1, const char *dirent2,
                     apr_pool_t *pool);
 
+/** Return TRUE if @a dirent1 is an ancestor of @a dirent2 or the dirents are
+ * equal and FALSE otherwise.
+ *
+ * @since New in 1.6.
+ */
+svn_boolean_t
+svn_dirent_is_ancestor(const char *path1, const char *path2);
+
+/** Return TRUE if @a uri1 is an ancestor of @a uri2 or the uris are
+ * equal and FALSE otherwise.
+ *
+ * This function supports URLs.
+ *
+ * @since New in 1.6.
+ */
+svn_boolean_t
+svn_uri_is_ancestor(const char *path1, const char *path2);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

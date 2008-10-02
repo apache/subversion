@@ -383,6 +383,35 @@ is_child(svn_boolean_t uri, const char *path1, const char *path2,
   return NULL;
 }
 
+svn_boolean_t
+is_ancestor(svn_boolean_t uri, const char *path1, const char *path2)
+{
+  apr_size_t path1_len;
+
+  /* If path1 is empty and path2 is not absolute, then path1 is an ancestor. */
+  if (SVN_PATH_IS_EMPTY(path1))
+    {
+      return uri ? ! svn_uri_is_absolute(path2)
+                 : ! svn_dirent_is_absolute(path2);
+    }
+
+  /* If path1 is a prefix of path2, then:
+     - If path1 ends in a path separator,
+     - If the paths are of the same length
+     OR
+     - path2 starts a new path component after the common prefix,
+     then path1 is an ancestor. */
+  path1_len = strlen(path1);
+  if (strncmp(path1, path2, path1_len) == 0)
+    return path1[path1_len - 1] == '/'
+#if defined(WIN32) || defined(__CYGWIN__)
+      || (! uri && path1[path1_len - 1] == ':')
+#endif /* WIN32 or Cygwin */
+      || (path2[path1_len] == '/' || path2[path1_len] == '\0');
+
+  return FALSE;
+}
+
 
 /**** Public API functions ****/
 
@@ -736,6 +765,18 @@ svn_uri_is_child(const char *uri1,
                  apr_pool_t *pool)
 {
   return is_child(URI, uri1, uri2, pool);
+}
+
+svn_boolean_t
+svn_dirent_is_ancestor(const char *dirent1, const char *dirent2)
+{
+  return is_ancestor(DIRENT, dirent1, dirent2);
+}
+
+svn_boolean_t
+svn_uri_is_ancestor(const char *uri1, const char *uri2)
+{
+  return is_ancestor(URI, uri1, uri2);
 }
 
 svn_boolean_t
