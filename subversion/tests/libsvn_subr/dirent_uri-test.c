@@ -773,8 +773,10 @@ test_dirent_is_ancestor(const char **msg,
     { "X:/foo",          "X:/",           FALSE},
     { "X:/",             "X:/foo",        TRUE},
     { "X:",              "X:foo",         TRUE},
+    { SVN_EMPTY_PATH,    "C:/",           FALSE},
 #else /* WIN32 or Cygwin */
     { "X:",              "X:foo",         FALSE},
+    { SVN_EMPTY_PATH,    "C:/",           TRUE},
 #endif /* non-WIN32 */
   };
 
