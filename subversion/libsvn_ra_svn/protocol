@@ -446,6 +446,10 @@ second place for auth-request point as noted below.
       (revprops here is the literal word "revprops".)
     response   ( )
 
+  get-deleted-rev
+    params:   ( path:string peg-rev:number end-rev:number )
+    response: ( deleted-rev:number )
+
 3.1.2. Editor Command Set
 
 An edit operation produces only one response, at close-edit or
