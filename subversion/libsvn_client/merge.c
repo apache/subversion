@@ -2300,16 +2300,16 @@ adjust_deleted_subtree_ranges(svn_client__merge_path_t *child,
 
               /* PRIMARY_URL@older_rev exists, so it was deleted at some
                  revision prior to peg_rev, find that revision. */
-              err = svn_ra_get_revision_deleted(ra_session, mergeinfo_path,
-                                                older_rev, younger_rev,
-                                                &revision_primary_url_deleted,
-                                                pool);
+              err = svn_ra_get_deleted_rev(ra_session, mergeinfo_path,
+                                           older_rev, younger_rev,
+                                           &revision_primary_url_deleted,
+                                           pool);
 
-              /* ### 3067ds TODO: What if svn_ra_get_revision_deleted() isn't
+              /* ### 3067ds TODO: What if svn_ra_get_deleted_rev() isn't
                  ### implemented on the server? */
               SVN_ERR(err);
 
-              /* ### 3067ds TODO: svn_ra_get_revision_deleted() should never
+              /* ### 3067ds TODO: svn_ra_get_deleted_rev() should never
                  ### set revision_primary_url_deleted to an invalid revision
                  ### but what if it does?  Is setting CHILD->REMAINING_RANGES
                  ### eqaul to PARENT's as good a solution as any?

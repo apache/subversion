@@ -1772,12 +1772,12 @@ svn_ra_has_capability(svn_ra_session_t *session,
  * @since New in 1.6.
  */
 svn_error_t *
-svn_ra_get_revision_deleted(svn_ra_session_t *session,
-                            const char *path,
-                            svn_revnum_t peg_revision,
-                            svn_revnum_t end_revision,
-                            svn_revnum_t *revision_deleted,
-                            apr_pool_t *pool);
+svn_ra_get_deleted_rev(svn_ra_session_t *session,
+                       const char *path,
+                       svn_revnum_t peg_revision,
+                       svn_revnum_t end_revision,
+                       svn_revnum_t *revision_deleted,
+                       apr_pool_t *pool);
 
 /**
  * The capability of understanding @c svn_depth_t (e.g., the server
