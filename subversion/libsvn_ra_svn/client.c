@@ -2289,7 +2289,19 @@ ra_svn_get_deleted_rev(svn_ra_session_t *session,
                        apr_pool_t *pool)
 
 {
-  return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL, NULL);
+  svn_ra_svn__session_baton_t *sess_baton = session->priv;
+  svn_ra_svn_conn_t *conn = sess_baton->conn;
+
+  /* Transmit the parameters. */
+  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "get-deleted-rev", "crr",
+                               path, peg_revision, end_revision));
+
+  /* Servers before 1.6 don't support this command.  Check for this here. */
+  SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess_baton, pool),
+                                 _("'get-deleted-rev' not implemented")));
+
+  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "r", revision_deleted));
+  return SVN_NO_ERROR;
 }
 
 
