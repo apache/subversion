@@ -169,7 +169,7 @@ test_dirent_is_absolute(const char **msg,
     {
       svn_boolean_t retval;
 
-      retval = svn_dirent_is_absolute(tests[i].path, strlen(tests[i].path));
+      retval = svn_dirent_is_absolute(tests[i].path);
       if (tests[i].result != retval)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
@@ -204,6 +204,9 @@ test_uri_is_absolute(const char **msg,
     { "X:foo",         FALSE },
     { "X:foo/bar",     FALSE },
     { "X:",            FALSE },
+    { "http://",       TRUE },
+    { "http://test",   TRUE },
+    { "http://foo/bar",TRUE },
   };
 
   *msg = "test svn_uri_is_absolute";
@@ -215,7 +218,7 @@ test_uri_is_absolute(const char **msg,
     {
       svn_boolean_t retval;
 
-      retval = svn_uri_is_absolute(tests[i].path, strlen(tests[i].path));
+      retval = svn_uri_is_absolute(tests[i].path);
       if (tests[i].result != retval)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
