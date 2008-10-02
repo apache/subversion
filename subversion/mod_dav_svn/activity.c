@@ -283,8 +283,12 @@ dav_svn__create_activity(const dav_svn_repos *repos,
   svn_fs_txn_t *txn;
   svn_error_t *serr;
   apr_hash_t *revprop_table = apr_hash_make(pool);
-  apr_hash_set(revprop_table, SVN_PROP_REVISION_AUTHOR, APR_HASH_KEY_STRING,
-               svn_string_create(repos->username, pool));
+
+  if (repos->username)
+    {
+      apr_hash_set(revprop_table, SVN_PROP_REVISION_AUTHOR, APR_HASH_KEY_STRING,
+                   svn_string_create(repos->username, pool));
+    }
 
   serr = svn_fs_youngest_rev(&rev, repos->fs, pool);
   if (serr != NULL)
