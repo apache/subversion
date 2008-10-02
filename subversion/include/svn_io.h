@@ -1289,6 +1289,14 @@ svn_io_file_write_full(apr_file_t *file,
                        apr_pool_t *pool);
 
 
+/** Wrapper for apr_file_trunc().
+  * @since New in 1.6. */
+svn_error_t *
+svn_io_file_trunc(apr_file_t *file,
+                  apr_off_t offset,
+                  apr_pool_t *pool);
+
+
 /** Wrapper for apr_stat().  @a fname is utf8-encoded. */
 svn_error_t *
 svn_io_stat(apr_finfo_t *finfo,
