@@ -30,6 +30,7 @@ def usage():
   print("    --compile  : return a compile command")
   print("    --link     : return a link command")
   print("    --libs     : return just the library options for linking")
+  print("    --site     : return the path to site-packages")
   sys.exit(1)
 
 if len(sys.argv) != 2:
@@ -144,6 +145,10 @@ if sys.argv[1] == '--link':
 
 if sys.argv[1] == '--libs':
   print(" ".join(lib_options()))
+  sys.exit(0)
+
+if sys.argv[1] == '--site':
+  print sysconfig.get_python_lib()
   sys.exit(0)
 
 usage()
