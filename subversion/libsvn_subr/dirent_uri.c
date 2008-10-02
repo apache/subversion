@@ -335,8 +335,8 @@ is_child(svn_boolean_t uri, const char *path1, const char *path2,
         return NULL;
 
       /* check if this is an absolute path */
-      if ((uri && svn_uri_is_absolute(path2, strlen(path2))) ||
-         (! uri && svn_dirent_is_absolute(path2, strlen(path2))))
+      if ((uri && svn_uri_is_absolute(path2)) ||
+         (! uri && svn_dirent_is_absolute(path2)))
         return NULL;
       else
         /* everything else is child */
@@ -451,7 +451,7 @@ char *svn_dirent_join(const char *base,
   assert(svn_dirent_is_canonical(component, pool));
 
   /* If the component is absolute, then return it.  */
-  if (svn_dirent_is_absolute(component, clen))
+  if (svn_dirent_is_absolute(component))
     return apr_pmemdup(pool, component, clen + 1);
 
   /* If either is empty return the other */
@@ -525,7 +525,7 @@ char *svn_dirent_join_many(apr_pool_t *pool, const char *base, ...)
       if (nargs++ < MAX_SAVED_LENGTHS)
         saved_lengths[nargs] = len;
 
-      if (svn_dirent_is_absolute(s, len))
+      if (svn_dirent_is_absolute(s))
         {
           /* an absolute dirent. skip all components to this point and reset
              the total length. */
@@ -739,19 +739,21 @@ svn_uri_is_child(const char *uri1,
 }
 
 svn_boolean_t
-svn_dirent_is_absolute(const char *dirent, apr_size_t len)
+svn_dirent_is_absolute(const char *dirent)
 {
+  if (! dirent)
+    return FALSE;
+
   /* dirent is absolute if it starts with '/' */
-  if (len > 0 && dirent[0] == '/')
+  if (dirent[0] == '/')
     return TRUE;
  
   /* On Windows, dirent is also absolute when it starts with 'H:' or 'H:/' 
      where 'H' is any letter. */
 #if defined(WIN32) || defined(__CYGWIN__)
-  if (len >= 2 && 
-      (dirent[1] == ':') &&
-      ((dirent[0] >= 'A' && dirent[0] <= 'Z') ||
-       (dirent[0] >= 'a' && dirent[0] <= 'z')))
+  if (((dirent[0] >= 'A' && dirent[0] <= 'Z') ||
+       (dirent[0] >= 'a' && dirent[0] <= 'z')) &&
+      (dirent[1] == ':'))
      return TRUE;
 #endif /* WIN32 or Cygwin */
  
@@ -759,13 +761,14 @@ svn_dirent_is_absolute(const char *dirent, apr_size_t len)
 }
 
 svn_boolean_t
-svn_uri_is_absolute(const char *uri, apr_size_t len)
+svn_uri_is_absolute(const char *uri)
 {
   /* uri is absolute if it starts with '/' */
-  if (uri > 0 && uri[0] == '/')
+  if (uri && uri[0] == '/')
     return TRUE;
 
-  return FALSE;
+  /* URLs are absolute. */
+  return svn_path_is_url(uri);
 }
 
 svn_error_t *

@@ -152,13 +152,13 @@ void svn_dirent_split(const char *dirent,
  *
  * @since New in 1.6.
  */
-svn_boolean_t svn_dirent_is_absolute(const char *dirent, apr_size_t len);
+svn_boolean_t svn_dirent_is_absolute(const char *dirent);
 
-/** Return TRUE if @a uri is considered absolute.
+/** Return TRUE if @a uri is considered absolute or is a URL.
  *
  * @since New in 1.6.
  */
-svn_boolean_t svn_uri_is_absolute(const char *dirent, apr_size_t len);
+svn_boolean_t svn_uri_is_absolute(const char *dirent);
 
 /** Return TRUE if @a dirent is considered a root directory on the platform
  * at hand, amongst which '/' on all platforms or 'X:/', '\\\\?\\X:/',
