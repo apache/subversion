@@ -504,23 +504,7 @@ svn_path_is_child(const char *path1,
 svn_boolean_t
 svn_path_is_ancestor(const char *path1, const char *path2)
 {
-  apr_size_t path1_len = strlen(path1);
-
-  /* If path1 is empty and path2 is not absoulte, then path1 is an ancestor. */
-  if (SVN_PATH_IS_EMPTY(path1))
-    return *path2 != '/';
-
-  /* If path1 is a prefix of path2, then:
-     - If path1 ends in a path separator,
-     - If the paths are of the same length
-     OR
-     - path2 starts a new path component after the common prefix,
-     then path1 is an ancestor. */
-  if (strncmp(path1, path2, path1_len) == 0)
-    return path1[path1_len - 1] == '/'
-      || (path2[path1_len] == '/' || path2[path1_len] == '\0');
-
-  return FALSE;
+  return svn_uri_is_ancestor(path1, path2);
 }
 
 
