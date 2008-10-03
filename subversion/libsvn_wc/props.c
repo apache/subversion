@@ -3097,7 +3097,8 @@ svn_wc_get_prop_diffs(apr_array_header_t **propchanges,
  */
 static svn_error_t *
 find_and_remove_externals_revision(int *rev_idx,
-                                   apr_array_header_t *line_parts,
+                                   const char **line_parts,
+                                   int num_line_parts,
                                    svn_wc_external_item2_t *item,
                                    const char *parent_directory_display,
                                    const char *line,
@@ -3107,7 +3108,7 @@ find_and_remove_externals_revision(int *rev_idx,
 
   for (i = 0; i < 2; ++i)
     {
-      const char *token = APR_ARRAY_IDX(line_parts, i, const char *);
+      const char *token = line_parts[i];
 
       if (token[0] == '-' && token[1] == 'r')
         {
@@ -3122,17 +3123,17 @@ find_and_remove_externals_revision(int *rev_idx,
             {
               /* There must be a total of four elements in the line if
                  -r N is used. */
-              if (line_parts->nelts != 4)
+              if (num_line_parts != 4)
                 goto parse_error;
 
               shift_count = 2;
-              digits_ptr = APR_ARRAY_IDX(line_parts, i+1, const char *);
+              digits_ptr = line_parts[i+1];
             }
           else
             {
               /* There must be a total of three elements in the line
                  if -rN is used. */
-              if (line_parts->nelts != 3)
+              if (num_line_parts != 3)
                 goto parse_error;
 
               shift_count = 1;
@@ -3153,11 +3154,9 @@ find_and_remove_externals_revision(int *rev_idx,
 
           /* Shift any line elements past the revision specification
              down over the revision specification. */
-          for (j = i; j < line_parts->nelts-shift_count; ++j)
-            APR_ARRAY_IDX(line_parts, j, const char *) =
-              APR_ARRAY_IDX(line_parts, j+shift_count, const char *);
-          for (j = 0; j < shift_count; ++j)
-            apr_array_pop(line_parts);
+          for (j = i; j < num_line_parts-shift_count; ++j)
+            line_parts[j] = line_parts[j+shift_count];
+          line_parts[num_line_parts-shift_count] = NULL;
 
           /* Found the revision, so leave the function immediately, do
            * not continue looking for additional revisions. */
@@ -3167,7 +3166,7 @@ find_and_remove_externals_revision(int *rev_idx,
 
   /* No revision was found, so there must be exactly two items in the
      line array. */
-  if (line_parts->nelts == 2)
+  if (num_line_parts == 2)
     return SVN_NO_ERROR;
 
  parse_error:
@@ -3197,7 +3196,9 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
   for (i = 0; i < lines->nelts; i++)
     {
       const char *line = APR_ARRAY_IDX(lines, i, const char *);
-      apr_array_header_t *line_parts;
+      apr_status_t status;
+      char **line_parts;
+      int num_line_parts;
       svn_wc_external_item2_t *item;
       const char *token0;
       const char *token1;
@@ -3213,7 +3214,14 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
 
       /* else proceed */
 
-      line_parts = svn_cstring_split(line, " \t", TRUE, pool);
+      status = apr_tokenize_to_argv(line, &line_parts, pool);
+      if (status)
+        return svn_error_wrap_apr(status,
+                                  _("Can't split line into components: '%s'"),
+                                  line);
+      /* Count the number of tokens. */
+      for (num_line_parts = 0; line_parts[num_line_parts]; num_line_parts++)
+        ;
 
       SVN_ERR(svn_wc_external_item_create
               ((const svn_wc_external_item2_t **) &item, pool));
@@ -3237,7 +3245,7 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
        * relative URL like /svn/repos/trunk, so this case is taken as
        * case 4).
        */
-      if (line_parts->nelts < 2 || line_parts->nelts > 4)
+      if (num_line_parts < 2 || num_line_parts > 4)
         return svn_error_createf
           (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, NULL,
            _("Error parsing %s property on '%s': '%s'"),
@@ -3249,12 +3257,13 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
          or -rN from the line item array.  If it is found, rev_idx
          contains the index into line_parts where '-r' was found and
          set item->revision to the parsed revision. */
-      SVN_ERR(find_and_remove_externals_revision(&rev_idx, line_parts, item,
+      SVN_ERR(find_and_remove_externals_revision(&rev_idx, line_parts,
+                                                 num_line_parts, item,
                                                  parent_directory_display,
                                                  line, pool));
 
-      token0 = APR_ARRAY_IDX(line_parts, 0, const char *);
-      token1 = APR_ARRAY_IDX(line_parts, 1, const char *);
+      token0 = line_parts[0];
+      token1 = line_parts[1];
 
       token0_is_url = svn_path_is_url(token0);
       token1_is_url = svn_path_is_url(token1);
