@@ -46,10 +46,14 @@ svn_fs_fs__get_rep_reference(representation_t **rep,
                              apr_pool_t *pool);
 
 /* Set the representation REP in FS, using REP->CHECKSUM.
-   Use POOL for temporary allocations. */
+   Use POOL for temporary allocations.
+   
+   If REJECT_DUP is TRUE, return an error if there is an existing
+   match for REP->CHECKSUM. */
 svn_error_t *
 svn_fs_fs__set_rep_reference(svn_fs_t *fs,
                              representation_t *rep,
+                             svn_boolean_t reject_dup,
                              apr_pool_t *pool);
 
 #ifdef __cplusplus
