@@ -188,7 +188,7 @@ canonicalize(svn_boolean_t uri, const char *path, apr_pool_t *pool)
 #if defined(WIN32) || defined(__CYGWIN__)
           /* On Windows permit two leading separator characters which means an
            * UNC path. */
-          if (*src == '/')
+          if (! uri && *src == '/')
             *(dst++) = *(src++);
 #endif /* WIN32 or Cygwin */
         }
