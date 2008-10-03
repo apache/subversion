@@ -383,7 +383,7 @@ is_child(svn_boolean_t uri, const char *path1, const char *path2,
   return NULL;
 }
 
-svn_boolean_t
+static svn_boolean_t
 is_ancestor(svn_boolean_t uri, const char *path1, const char *path2)
 {
   apr_size_t path1_len;
