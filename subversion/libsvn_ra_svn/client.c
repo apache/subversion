@@ -25,7 +25,6 @@
 #include <apr_general.h>
 #include <apr_strings.h>
 #include <apr_network_io.h>
-#include <apr_md5.h>
 #include <apr_uri.h>
 
 #include "svn_types.h"
@@ -39,7 +38,6 @@
 #include "svn_ra.h"
 #include "../libsvn_ra/ra_loader.h"
 #include "svn_ra_svn.h"
-#include "svn_md5.h"
 #include "svn_props.h"
 #include "svn_mergeinfo.h"
 

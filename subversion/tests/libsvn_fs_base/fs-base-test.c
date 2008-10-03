@@ -25,7 +25,6 @@
 #include "svn_time.h"
 #include "svn_string.h"
 #include "svn_fs.h"
-#include "svn_md5.h"
 
 #include "../svn_test_fs.h"
 
