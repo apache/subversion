@@ -148,7 +148,7 @@ if sys.argv[1] == '--libs':
   sys.exit(0)
 
 if sys.argv[1] == '--site':
-  print sysconfig.get_python_lib()
+  print(sysconfig.get_python_lib())
   sys.exit(0)
 
 usage()
