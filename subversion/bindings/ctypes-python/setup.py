@@ -69,12 +69,13 @@ class build(_build):
                               "installed or the full path to the apr-config or "
                               "apr-1-config file"))
   _build.user_options.append(("apr-util=", None, "full path to where apr-util "
-                              "is installed or the full path to the  apu-config"
+                              "is installed or the full path to the apu-config"
                               "apu-1-config file"))
   _build.user_options.append(("subversion=", None, "full path to where "
                               "Subversion is installed"))
   _build.user_options.append(("ctypesgen=", None, "full path to where ctypesgen "
-                              "is installed"))
+                              "is installed, to the ctypesgen source tree or "
+                              "the full path to ctypesgen.py"))
   _build.user_options.append(("cppflags=", None, "extra flags to pass to the c "
                               "preprocessor"))
   _build.user_options.append(("ldflags=", None, "extra flags to pass to the "
@@ -189,14 +190,13 @@ class build(_build):
   def build_functions_py(self):
     (apr_prefix, apr_include_dir, cpp, ldflags, flags,
      library_path) = self.get_apr_config()
-    ctypesgen_path = os.path.join(self.ctypesgen, "ctypesgen.py")
     tempdir = mkdtemp()
     try:
       includes = ('%s/include/subversion-1/svn_*.h '
                   '%s/ap[ru]_*.h' % (self.subversion, apr_include_dir))
       cmd = ["cd %s && %s %s --cpp '%s %s' %s "
              "%s -o svn_all.py --no-macro-warnings" % (tempdir, sys.executable,
-                                                       ctypesgen_path, cpp,
+                                                       self.ctypesgen_py, cpp,
                                                        flags, ldflags,
                                                        includes)]
       if self.lib_dirs:
@@ -272,8 +272,10 @@ class build(_build):
           self.apr_config = os.path.join(self.apr, "bin", "apr-1-config")
         else:
           self.apr_config = None
-      else:
+      elif os.path.basename(self.apr) in ("apr-config", "apr-1-config"):
         self.apr_config = self.apr
+      else:
+        self.apr_config = None
     else:
       self.apr_config = None
 
@@ -298,8 +300,10 @@ class build(_build):
           self.apu_config = os.path.join(self.apr_util, "bin", "apu-1-config")
         else:
           self.apu_config = None
-      else:
+      elif os.path.basename(self.apr_util) in ("apu-config", "apu-1-config"):
         self.apu_config = self.apr_util
+      else:
+        self.apu_config = None
     else:
       self.apu_config = None
 
@@ -327,10 +331,29 @@ class build(_build):
                                   "must point to a valid ctypesgen " \
                                   "installation"
 
-    if not os.path.exists(os.path.join(self.ctypesgen, "ctypesgen.py")):
-      raise DistutilsOptionError, "The --ctypesgen option is not valid. " \
-                                  "Could not locate %s/ctypesgen.py" \
-                                  % self.ctypesgen
+    if os.path.exists(self.ctypesgen):
+      if os.path.isdir(self.ctypesgen):
+        if os.path.exists(os.path.join(self.ctypesgen, "ctypesgen.py")):
+          self.ctypesgen_py = os.path.join(self.ctypesgen, "ctypesgen.py")
+        elif os.path.exists(os.path.join(self.ctypesgen, "bin",
+                                         "ctypesgen.py")):
+          self.ctypesgen_py = os.path.join(self.ctypesgen, "bin",
+                                           "ctypesgen.py")
+        else:
+          self.ctypesgen_py = None
+      else:
+        if os.path.basename(self.ctypesgen) == "ctypesgen.py":
+          self.ctypesgen_py = self.ctypesgen
+        else:
+          self.ctypesgen_py = None
+    else:
+      self.ctypesgen_py = None
+
+    if not self.ctypesgen_py:
+      raise DistutilsOptionError, "The --ctypesgen option is not valid.  It " \
+                                  "must point to a valid ctypesgen " \
+                                  "installation, a ctypesgen source tree or " \
+                                  "to the ctypesgen.py script"
 
   # validate_functions()
 
