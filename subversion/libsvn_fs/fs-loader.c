@@ -20,6 +20,7 @@
 #include <string.h>
 #include <apr.h>
 #include <apr_hash.h>
+#include <apr_md5.h>
 #include <apr_thread_mutex.h>
 #include <apr_uuid.h>
 
@@ -31,7 +32,6 @@
 #include "svn_xml.h"
 #include "svn_pools.h"
 #include "svn_string.h"
-#include "svn_md5.h"
 #include "svn_private_config.h"
 
 #include "private/svn_utf_private.h"

@@ -18,7 +18,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <apr_pools.h>
-#include <apr_md5.h>
 
 #include "../svn_test.h"
 
