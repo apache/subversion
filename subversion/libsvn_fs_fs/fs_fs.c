@@ -4864,6 +4864,8 @@ write_final_rev(const svn_fs_id_t **new_id_p,
 
       if (noderev->data_rep && noderev->data_rep->txn_id)
         {
+          representation_t *old_rep;
+
           /* Write out the contents of this directory as a text rep. */
           SVN_ERR(unparse_dir_entries(&str_entries, entries, pool));
 
@@ -4874,6 +4876,16 @@ write_final_rev(const svn_fs_id_t **new_id_p,
                                  &noderev->data_rep->checksum, file,
                                  str_entries, pool));
           noderev->data_rep->expanded_size = noderev->data_rep->size;
+
+          /* Now check and see if we've already got a rep that looks exactly like the one
+             we just wrote out, if so, use it. */
+          SVN_ERR(svn_fs_fs__get_rep_reference(&old_rep, fs, noderev->data_rep->checksum,
+                                               pool));
+          if (old_rep)
+            {
+              SVN_ERR(svn_io_file_trunc(file, noderev->data_rep->offset, pool));
+              noderev->data_rep = old_rep;
+            }
         }
     }
   else
@@ -4893,6 +4905,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   if (noderev->prop_rep && noderev->prop_rep->txn_id)
     {
       apr_hash_t *proplist;
+      representation_t *old_rep;
 
       SVN_ERR(svn_fs_fs__get_proplist(&proplist, fs, noderev, pool));
       SVN_ERR(get_file_offset(&noderev->prop_rep->offset, file, pool));
@@ -4902,6 +4915,16 @@ write_final_rev(const svn_fs_id_t **new_id_p,
 
       noderev->prop_rep->txn_id = NULL;
       noderev->prop_rep->revision = rev;
+
+      /* Now check and see if we've already got a rep that looks exactly like the one
+         we just wrote out, if so, use it. */
+      SVN_ERR(svn_fs_fs__get_rep_reference(&old_rep, fs, noderev->prop_rep->checksum,
+                                           pool));
+      if (old_rep)
+        {
+          SVN_ERR(svn_io_file_trunc(file, noderev->prop_rep->offset, pool));
+          noderev->prop_rep = old_rep;
+        }
     }
 
 
