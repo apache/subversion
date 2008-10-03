@@ -123,6 +123,7 @@ svn_fs_fs__get_rep_reference(representation_t **rep,
 svn_error_t *
 svn_fs_fs__set_rep_reference(svn_fs_t *fs,
                              representation_t *rep,
+                             svn_boolean_t reject_dup,
                              apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
@@ -138,10 +139,10 @@ svn_fs_fs__set_rep_reference(svn_fs_t *fs,
 
   if (old_rep)
     {
-      if ( (old_rep->revision != rep->revision)
+      if ( reject_dup && ((old_rep->revision != rep->revision)
             || (old_rep->offset != rep->offset)
             || (old_rep->size != rep->size)
-            || (old_rep->expanded_size != rep->expanded_size) )
+            || (old_rep->expanded_size != rep->expanded_size)) )
         return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                 _("Representation key for checksum '%s' exists in filesystem "
                   "'%s', with different value(%ld,%" APR_OFF_T_FMT ",%"
@@ -196,6 +197,7 @@ svn_fs_fs__get_rep_reference(representation_t **rep,
 svn_error_t *
 svn_fs_fs__set_rep_reference(svn_fs_t *fs,
                              representation_t *rep_ref,
+                             svn_boolean_t reject_dup,
                              apr_pool_t *pool)
 {
   return SVN_NO_ERROR;
