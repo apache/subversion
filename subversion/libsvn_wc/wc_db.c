@@ -99,7 +99,7 @@ get_pristine_fname(const char **path,
 #endif
 
   /* The file is located at DIR/.svn/pristine/XX/XXYYZZ... */
-  *path = svn_path_join_many(scratch_pool,
+  *path = svn_path_join_many(result_pool,
                              pdh->base_dir,
 #ifndef SVN__SKIP_SUBDIR
                              subdir,
@@ -235,7 +235,7 @@ svn_wc__db_pristine_dirhandle(svn_wc__db_pdh_t **pdh,
 
       *pdh = apr_hash_get(db->dir_data, dirpath, APR_HASH_KEY_STRING);
 
-      SVN_ERR_ASSERT(pdh != NULL);
+      SVN_ERR_ASSERT(*pdh != NULL);
     }
 
   return SVN_NO_ERROR;
