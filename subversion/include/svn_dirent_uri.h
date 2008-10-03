@@ -52,6 +52,34 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+/** Convert @a dirent from the local style to the canonical internal style.
+ *
+ * @since New in 1.6.
+ */
+const char *
+svn_dirent_internal_style(const char *dirent, apr_pool_t *pool);
+
+/** Convert @a dirent from the canonical internal style to the local style.
+ *
+ * @since New in 1.6.
+ */
+const char *
+svn_dirent_local_style(const char *dirent, apr_pool_t *pool);
+
+/** Convert @a uri from the local style to the canonical internal style.
+ *
+ * @since New in 1.6.
+ */
+const char *
+svn_uri_internal_style(const char *uri, apr_pool_t *pool);
+
+/** Convert @a uri from the canonical internal style to the local style.
+ *
+ * @since New in 1.6.
+ */
+const char *
+svn_uri_local_style(const char *uri, apr_pool_t *pool);
+
 /** Join a base dirent (@a base) with a component (@a component), allocated in
  * @a pool.
  *
@@ -195,6 +223,24 @@ svn_uri_is_root(const char *uri, apr_size_t len);
  */
 const char *svn_dirent_canonicalize(const char *dirent, apr_pool_t *pool);
 
+
+/** Return a new uri like @a uri, but transformed such that some types
+ * of uri specification redundancies are removed.
+ *
+ * This involves collapsing redundant "/./" elements, removing
+ * multiple adjacent separator characters, removing trailing
+ * separator characters, and possibly other semantically inoperative
+ * transformations.
+ *
+ * This functions supports URLs.
+ *
+ * The returned uri may be statically allocated, equal to @a uri, or
+ * allocated from @a pool.
+ *
+ * @since New in 1.6.
+ */
+const char *svn_uri_canonicalize(const char *uri, apr_pool_t *pool);
+
 /** Return @c TRUE iff dirent is canonical.  Use @a pool for temporary
  * allocations.
  *
@@ -205,6 +251,17 @@ const char *svn_dirent_canonicalize(const char *dirent, apr_pool_t *pool);
  * @since New in 1.6.
  */
 svn_boolean_t svn_dirent_is_canonical(const char *dirent, apr_pool_t *pool);
+
+/** Return @c TRUE iff uri is canonical.  Use @a pool for temporary
+ * allocations.
+ *
+ * @note The test for canonicalization is currently defined as
+ * "looks exactly the same as @c svn_uri_canonicalize() would make
+ * it look".
+ *
+ * @since New in 1.6.
+ */
+svn_boolean_t svn_uri_is_canonical(const char *uri, apr_pool_t *pool);
 
 /** Return the longest common dirent shared by two canonicalized dirents,
  * @a dirent1 and @a dirent2.  If there's no common ancestor, return the

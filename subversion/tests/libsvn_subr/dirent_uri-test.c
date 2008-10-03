@@ -582,6 +582,100 @@ test_dirent_canonicalize(const char **msg,
 }
 
 static svn_error_t *
+test_uri_canonicalize(const char **msg,
+                      svn_boolean_t msg_only,
+                      svn_test_opts_t *opts,
+                      apr_pool_t *pool)
+{
+  struct {
+    const char *path;
+    const char *result;
+  } tests[] = {
+    { "",                     "" },
+    { ".",                    "" },
+    { "/",                    "/" },
+    { "/.",                   "/" },
+    { "./",                   "" },
+    { "./.",                  "" },
+    { "//",                   "/" },
+    { "/////",                "/" },
+    { "./././.",              "" },
+    { "////././.",            "/" },
+    { "foo",                  "foo" },
+    { ".foo",                 ".foo" },
+    { "foo.",                 "foo." },
+    { "/foo",                 "/foo" },
+    { "foo/",                 "foo" },
+    { "foo./",                "foo." },
+    { "foo./.",               "foo." },
+    { "foo././/.",            "foo." },
+    { "/foo/bar",             "/foo/bar" },
+    { "foo/..",               "foo/.." },
+    { "foo/../",              "foo/.." },
+    { "foo/../.",             "foo/.." },
+    { "foo//.//bar",          "foo/bar" },
+    { "///foo",               "/foo" },
+    { "/.//./.foo",           "/.foo" },
+    { ".///.foo",             ".foo" },
+    { "../foo",               "../foo" },
+    { "../../foo/",           "../../foo" },
+    { "../../foo/..",         "../../foo/.." },
+    { "/../../",              "/../.." },
+    { "X:/foo",               "X:/foo" },
+    { "X:",                   "X:" },
+    { "X:foo",                "X:foo" },
+    { "C:/folder/subfolder/file", "C:/folder/subfolder/file" },
+    { "http://hst",           "http://hst" },
+    { "http://hst/foo/../bar","http://hst/foo/../bar" },
+    { "http://hst/",          "http://hst" },
+    { "http:///",             "http://" },
+    { "https://",             "https://" },
+    { "file:///",             "file://" },
+    { "file://",              "file://" },
+    { "svn:///",              "svn://" },
+    { "svn+ssh:///",          "svn+ssh://" },
+    { "http://HST/",          "http://hst" },
+    { "http://HST/FOO/BaR",   "http://hst/FOO/BaR" },
+    { "svn+ssh://j.raNDom@HST/BaR", "svn+ssh://j.raNDom@hst/BaR" },
+    { "svn+SSH://j.random:jRaY@HST/BaR", "svn+ssh://j.random:jRaY@hst/BaR" },
+    { "SVN+ssh://j.raNDom:jray@HST/BaR", "svn+ssh://j.raNDom:jray@hst/BaR" },
+    { "fILe:///Users/jrandom/wc", "file:///Users/jrandom/wc" },
+    { "fiLE:///",             "file://" },
+    { "fiLE://",              "file://" },
+#if defined(WIN32) || defined(__CYGWIN__)
+    { "file:///c:/temp/repos", "file:///C:/temp/repos" },
+    { "file:///c:/temp/REPOS", "file:///C:/temp/REPOS" },
+    { "file:///C:/temp/REPOS", "file:///C:/temp/REPOS" },
+#else /* WIN32 or Cygwin */
+    { "file:///c:/temp/repos", "file:///c:/temp/repos" },
+    { "file:///c:/temp/REPOS", "file:///c:/temp/REPOS" },
+    { "file:///C:/temp/REPOS", "file:///C:/temp/REPOS" },
+#endif /* non-WIN32 */
+    { NULL, NULL }
+  };
+  int i;
+
+  *msg = "test svn_uri_canonicalize";
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  i = 0;
+  while (tests[i].path)
+    {
+      const char *canonical = svn_uri_canonicalize(tests[i].path, pool);
+
+      if (strcmp(canonical, tests[i].result))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_uri_canonicalize(\"%s\") returned "
+                                 "\"%s\" expected \"%s\"",
+                                 tests[i].path, canonical, tests[i].result);
+      ++i;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 test_dirent_is_canonical(const char **msg,
                         svn_boolean_t msg_only,
                         svn_test_opts_t *opts,
@@ -659,6 +753,100 @@ test_dirent_is_canonical(const char **msg,
       if (tests[i].canonical != canonical)
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "svn_dirent_is_canonical(\"%s\") returned "
+                                 "\"%s\" expected \"%s\"",
+                                 tests[i].path,
+                                 canonical ? "TRUE" : "FALSE",
+                                 tests[i].canonical ? "TRUE" : "FALSE");
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_uri_is_canonical(const char **msg,
+                      svn_boolean_t msg_only,
+                      svn_test_opts_t *opts,
+                      apr_pool_t *pool)
+{
+  struct {
+    const char *path;
+    svn_boolean_t canonical;
+  } tests[] = {
+    { "",                      TRUE },
+    { ".",                     FALSE },
+    { "/",                     TRUE },
+    { "/.",                    FALSE },
+    { "./",                    FALSE },
+    { "./.",                   FALSE },
+    { "//",                    FALSE },
+    { "/////",                 FALSE },
+    { "./././.",               FALSE },
+    { "////././.",             FALSE },
+    { "foo",                   TRUE },
+    { ".foo",                  TRUE },
+    { "foo.",                  TRUE },
+    { "/foo",                  TRUE },
+    { "foo/",                  FALSE },
+    { "foo./",                 FALSE },
+    { "foo./.",                FALSE },
+    { "foo././/.",             FALSE },
+    { "/foo/bar",              TRUE },
+    { "foo/..",                TRUE },
+    { "foo/../",               FALSE },
+    { "foo/../.",              FALSE },
+    { "foo//.//bar",           FALSE },
+    { "///foo",                FALSE },
+    { "/.//./.foo",            FALSE },
+    { ".///.foo",              FALSE },
+    { "../foo",                TRUE },
+    { "../../foo/",            FALSE },
+    { "../../foo/..",          TRUE },
+    { "/../../",               FALSE },
+    { "dirA",                  TRUE },
+    { "foo/dirA",              TRUE },
+    { "foo/./bar",             FALSE },
+    { "http://hst",            TRUE },
+    { "http://hst/foo/../bar", TRUE },
+    { "http://hst/",           FALSE },
+    { "http://HST/",           FALSE },
+    { "http://HST/FOO/BaR",    FALSE },
+    { "svn+ssh://j.raNDom@HST/BaR", FALSE },
+    { "svn+SSH://j.random:jRaY@HST/BaR", FALSE },
+    { "SVN+ssh://j.raNDom:jray@HST/BaR", FALSE },    
+    { "svn+ssh://j.raNDom:jray@hst/BaR", TRUE },
+    { "fILe:///Users/jrandom/wc", FALSE },
+    { "fiLE:///",              FALSE },
+    { "fiLE://",               FALSE },
+    { "C:/folder/subfolder/file", TRUE },
+    { "X:/foo",                TRUE },
+    { "X:",                    TRUE },
+    { "X:foo",                 TRUE },
+    { "X:foo/",                FALSE },
+#if defined(WIN32) || defined(__CYGWIN__)
+    { "file:///c:/temp/repos", FALSE },
+    { "file:///c:/temp/REPOS", FALSE },
+    { "file:///C:/temp/REPOS", TRUE },
+#else /* WIN32 or Cygwin */
+    { "file:///c:/temp/repos", TRUE },
+    { "file:///c:/temp/REPOS", TRUE },
+    { "file:///C:/temp/REPOS", TRUE },
+#endif /* non-WIN32 */
+    { NULL, FALSE },
+  };
+  int i;
+
+  *msg = "test svn_uri_is_canonical";
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  for (i = 0; tests[i].path; i++)
+    {
+      svn_boolean_t canonical;
+
+      canonical = svn_uri_is_canonical(tests[i].path, pool);
+      if (tests[i].canonical != canonical)
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_uri_is_canonical(\"%s\") returned "
                                  "\"%s\" expected \"%s\"",
                                  tests[i].path,
                                  canonical ? "TRUE" : "FALSE",
@@ -1259,7 +1447,9 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(test_dirent_basename),
     SVN_TEST_PASS(test_dirent_dirname),
     SVN_TEST_PASS(test_dirent_canonicalize),
+    SVN_TEST_PASS(test_uri_canonicalize),
     SVN_TEST_PASS(test_dirent_is_canonical),
+    SVN_TEST_PASS(test_uri_is_canonical),
     SVN_TEST_PASS(test_dirent_split),
     SVN_TEST_PASS(test_dirent_get_longest_ancestor),
     SVN_TEST_PASS(test_uri_get_longest_ancestor),
