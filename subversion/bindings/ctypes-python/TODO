@@ -5,11 +5,9 @@ ctypes-python-bindings TODOs:
  * Teach dist.sh (in Subversion trunk) to download release tarball for
    ctypesgen.
 
- * Create ctypes-python-bindings target in Subversion trunk Makefile for
-   generating python wrappers for the ctypes python bindings.
-
- * Create install-ctypes-python-bindings target in Subversion trunk
-   Makefile for installing the ctypes python bindings.
+ * Teach Makefile to do in-place build of ctypes-python which do not rely
+   on Subversion being installed.  (Might also require some changes to
+   setup.py.)
 
 ctypesgen TODOs:
 

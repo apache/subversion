@@ -529,8 +529,8 @@ svn_fs_base__parse_representation_skel(representation_t **rep_p,
       if (svn_fs_base__matches_atom(checksum_skel->children, "md5"))
         {
           rep->checksum = svn_checksum_create(svn_checksum_md5, pool);
-          memcpy(rep->checksum->digest, checksum_skel->children->next->data,
-                 APR_MD5_DIGESTSIZE);
+          memcpy((unsigned char *)rep->checksum->digest,
+                 checksum_skel->children->next->data, APR_MD5_DIGESTSIZE);
         }
       else if (svn_fs_base__matches_atom(checksum_skel->children, "sha1"))
         {

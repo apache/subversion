@@ -3100,7 +3100,8 @@ find_and_remove_externals_revision(int *rev_idx,
                                    apr_array_header_t *line_parts,
                                    svn_wc_external_item2_t *item,
                                    const char *parent_directory_display,
-                                   const char *line)
+                                   const char *line,
+                                   apr_pool_t *pool)
 {
   int i;
 
@@ -3110,8 +3111,8 @@ find_and_remove_externals_revision(int *rev_idx,
 
       if (token[0] == '-' && token[1] == 'r')
         {
+          svn_opt_revision_t end_revision = { svn_opt_revision_unspecified };
           const char *digits_ptr;
-          const char *end_ptr;
           int shift_count;
           int j;
 
@@ -3138,14 +3139,16 @@ find_and_remove_externals_revision(int *rev_idx,
               digits_ptr = token+2;
             }
 
-          item->revision.kind = svn_opt_revision_number;
-          SVN_ERR(svn_revnum_parse(&item->revision.value.number,
-                                   digits_ptr,
-                                   &end_ptr));
-
-          /* If there's trailing garbage after the digits, then treat
-             the revision as invalid. */
-          if (*end_ptr != '\0')
+          if (svn_opt_parse_revision(&item->revision,
+                                     &end_revision,
+                                     digits_ptr, pool) != 0)
+            goto parse_error;
+          /* We want a single revision, not a range. */
+          if (end_revision.kind != svn_opt_revision_unspecified)
+            goto parse_error;
+          /* Allow only numbers and dates, not keywords. */
+          if (item->revision.kind != svn_opt_revision_number
+              && item->revision.kind != svn_opt_revision_date)
             goto parse_error;
 
           /* Shift any line elements past the revision specification
@@ -3248,7 +3251,7 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
          set item->revision to the parsed revision. */
       SVN_ERR(find_and_remove_externals_revision(&rev_idx, line_parts, item,
                                                  parent_directory_display,
-                                                 line));
+                                                 line, pool));
 
       token0 = APR_ARRAY_IDX(line_parts, 0, const char *);
       token1 = APR_ARRAY_IDX(line_parts, 1, const char *);

@@ -480,7 +480,13 @@ test_path_join(const char **msg,
     { "X:", "/def", "/def" },
     { "X:abc", "/d", "/d" },
     { "X:abc", "/", "/" },
-
+    { "file://", "foo", "file:///foo" },
+    { "file:///foo", "bar", "file:///foo/bar" },
+    { "file:///foo", SVN_EMPTY_PATH, "file:///foo" },
+    { SVN_EMPTY_PATH, "file:///foo", "file:///foo" },
+    { "file:///X:", "bar", "file:///X:/bar" },
+    { "file:///X:foo", "bar", "file:///X:foo/bar" },
+    { "http://svn.dm.net", "repos", "http://svn.dm.net/repos" },
 #if defined(WIN32) || defined(__CYGWIN__)
 /* These will fail, see issue #2028
     { "//srv/shr",     "fld",     "//srv/shr/fld" },
@@ -520,6 +526,10 @@ test_path_join(const char **msg,
                                  "svn_path_join(\"%s\", \"%s\") returned "
                                  "\"%s\". expected \"%s\"",
                                  base, comp, result, expect);
+
+      /* svn_path_join_many does not support URLs, so skip the URL tests. */
+      if (svn_path_is_url(base))
+        continue;
 
       result = svn_path_join_many(pool, base, comp, NULL);
       if (strcmp(result, expect))

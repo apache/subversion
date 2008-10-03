@@ -902,7 +902,7 @@ def disallow_propset_invalid_formatted_externals(sbox):
     svntest.main.file_append(tmp_f, ext)
     svntest.actions.run_and_verify_svn("No error for externals '%s'" % ext,
                                        None,
-                                       '.*Invalid revision number found.*',
+                                       '.*Error parsing svn:externals.*',
                                        'propset',
                                        '-F',
                                        tmp_f,
