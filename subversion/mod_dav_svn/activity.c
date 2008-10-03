@@ -23,9 +23,9 @@
 #include <httpd.h>
 #include <mod_dav.h>
 
+#include "svn_checksum.h"
 #include "svn_error.h"
 #include "svn_io.h"
-#include "svn_md5.h"
 #include "svn_path.h"
 #include "svn_fs.h"
 #include "svn_props.h"
@@ -41,9 +41,10 @@
 static const char *
 escape_activity(const char *activity_id, apr_pool_t *pool)
 {
-  unsigned char digest[APR_MD5_DIGESTSIZE];
-  apr_md5(digest, activity_id, strlen(activity_id));
-  return svn_md5_digest_to_cstring_display(digest, pool);
+  svn_checksum_t *checksum = svn_checksum_create(svn_checksum_md5, pool);
+  svn_error_clear(svn_checksum(&checksum, svn_checksum_md5, activity_id,
+                               strlen(activity_id), pool));
+  return svn_checksum_to_cstring_display(checksum, pool);
 }
 
 /* Return filename for ACTIVITY_ID under the repository in REPOS. */
