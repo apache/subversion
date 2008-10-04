@@ -955,7 +955,6 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
   svn_txdelta_window_handler_t handler;
   void *wh_baton;
   svn_txdelta_stream_t *txdelta_stream;
-  apr_file_t *basefile = NULL;
   apr_file_t *tempbasefile;
   const char *base_digest_hex = NULL;
   svn_checksum_t *base_checksum = NULL;
@@ -1019,7 +1018,11 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
       else
         base_digest_hex = ent->checksum;
 
-      SVN_ERR(svn_wc__open_text_base(&basefile, path, APR_READ, pool));
+      SVN_ERR(svn_wc_get_pristine_contents(&base_stream, path, pool, pool));
+    }
+  else
+    {
+      base_stream = svn_stream_empty(pool);
     }
 
   /* Tell the editor that we're about to apply a textdelta to the
@@ -1027,14 +1030,13 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
   SVN_ERR(editor->apply_textdelta
           (file_baton, base_digest_hex, pool, &handler, &wh_baton));
 
-  /* Create a text-delta stream object that pulls
-     data out of the two files. */
-  base_stream = svn_stream_from_aprfile2(basefile, TRUE, pool);
   if (! fulltext)
     base_stream
       = svn_stream_checksummed2(base_stream, &base_checksum, svn_checksum_md5,
                                 NULL, svn_checksum_md5, TRUE, pool);
 
+  /* Create a text-delta stream object that pulls
+     data out of the two files. */
   svn_txdelta(&txdelta_stream, base_stream, local_stream, pool);
 
   /* Pull windows from the delta stream and feed to the consumer. */
@@ -1096,10 +1098,6 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
   SVN_ERR_W(err, apr_psprintf(pool,
                               _("While preparing '%s' for commit"),
                               svn_path_local_style(path, pool)));
-
-  /* Close base file, if it was opened. */
-  if (basefile)
-    SVN_ERR(svn_io_file_close(basefile, pool));
 
   local_checksum = svn_checksum_create(svn_checksum_md5, pool);
   local_checksum->digest = svn_txdelta_md5_digest(txdelta_stream);
