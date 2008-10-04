@@ -374,7 +374,7 @@ class Commit(Messenger):
       if change.item_kind == svn.core.svn_node_dir:
         dirs[path] = None
       else:
-        idx = string.rfind(path, '/')
+        idx = path.rfind('/')
         if idx == -1:
           dirs[''] = None
         else:
