@@ -280,13 +280,13 @@ def locate_libs():
 def fix_case(path):
     path = os.path.normpath(path)
     parts = string.split(path, os.path.sep)
-    drive = string.upper(parts[0])
+    drive = parts[0].upper()
     parts = parts[1:]
     path = drive + os.path.sep
     for part in parts:
         dirs = os.listdir(path)
         for dir in dirs:
-            if string.lower(dir) == string.lower(part):
+            if dir.lower() == part.lower():
                 path = os.path.join(path, dir)
                 break
     return path

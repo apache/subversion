@@ -401,7 +401,7 @@ class WinGeneratorBase(GeneratorBase):
     for cfg in self.configs:
       configs.append(
         ProjectItem(name=cfg,
-                    lower=string.lower(cfg),
+                    lower=cfg.lower(),
                     defines=self.get_win_defines(target, cfg),
                     libdirs=self.get_win_lib_dirs(target, cfg),
                     libs=self.get_win_libs(target, cfg),

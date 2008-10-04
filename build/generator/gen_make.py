@@ -75,7 +75,7 @@ class Generator(gen_base.GeneratorBase):
       if isinstance(target, gen_base.TargetRaModule) or \
          isinstance(target, gen_base.TargetFsModule):
         # name of the module: strip 'libsvn_' and upper-case it
-        name = string.upper(target.name[7:])
+        name = target.name[7:].upper()
 
         # construct a list of the other .la libs to link against
         retreat = build_path_retreat(target.path)
@@ -398,7 +398,7 @@ class Generator(gen_base.GeneratorBase):
 
       elif area != 'test' and area != 'bdb-test':
         area_var = string.replace(area, '-', '_')
-        upper_var = string.upper(area_var)
+        upper_var = area_var.upper()
         self.ofile.write('install-%s: %s\n'
                          '\t$(MKDIR) $(DESTDIR)$(%sdir)\n'
                          % (area, string.join(files), area_var))

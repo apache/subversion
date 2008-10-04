@@ -101,9 +101,9 @@ class Generator(gen_win.WinGeneratorBase):
       # Python 1.5.2
       myhash = string.join(map(lambda x: '%02x' % ord(x), hash.digest()), '')
 
-    guid = string.upper("{%s-%s-%s-%s-%s}" % (myhash[0:8], myhash[8:12],
-                                              myhash[12:16], myhash[16:20],
-                                              myhash[20:32]))
+    guid = ("{%s-%s-%s-%s-%s}" % (myhash[0:8], myhash[8:12],
+                                  myhash[12:16], myhash[16:20],
+                                  myhash[20:32])).upper()
     return guid
 
   def getguid(self, path):
@@ -112,7 +112,7 @@ class Generator(gen_win.WinGeneratorBase):
       proj = open(path)
       line = proj.readline()
       while len(line) > 0:
-        l = string.lower(line)
+        l = line.lower()
         pos = l.find('projectguid="{')
         if pos >= 0:
           guid = line[pos+13:pos+13+38]
