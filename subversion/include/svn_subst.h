@@ -540,6 +540,21 @@ svn_error_t *svn_subst_detranslate_string(svn_string_t **new_value,
                                           apr_pool_t *pool);
 
 
+/** Get a stream that contains the (detranslated) "normal form" of the
+ * file located at @a path. If the file is not special, then a normal,
+ * readonly stream is opened up on it.
+ *
+ * The stream is allocated in @a result_pool, and all temporary allocations
+ * are performed in @a scratch_pool.
+ *
+ * @since New in 1.6
+ */
+svn_error_t *
+svn_subst_get_detranslated_stream(svn_stream_t **stream,
+                                  const char *path,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
+
 
 #ifdef __cplusplus
 }
