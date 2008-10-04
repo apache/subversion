@@ -645,20 +645,6 @@ svn_wc__open_revert_base(apr_file_t **handle,
 }
 
 
-
-svn_error_t *
-svn_wc__close_text_base(apr_file_t *fp,
-                        const char *path,
-                        int write,
-                        apr_pool_t *pool)
-{
-  const char *parent_path, *base_name;
-  svn_path_split(path, &parent_path, &base_name, pool);
-  return close_adm_file(fp, parent_path, SVN_WC__BASE_EXT, write, pool,
-                        SVN_WC__ADM_TEXT_BASE, base_name, NULL);
-}
-
-
 svn_error_t *
 svn_wc__open_props(apr_file_t **handle,
                    const char *path,

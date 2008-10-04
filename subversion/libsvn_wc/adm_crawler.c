@@ -1099,7 +1099,7 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
 
   /* Close base file, if it was opened. */
   if (basefile)
-    SVN_ERR(svn_wc__close_text_base(basefile, path, 0, pool));
+    SVN_ERR(svn_io_file_close(basefile, pool));
 
   local_checksum = svn_checksum_create(svn_checksum_md5, pool);
   local_checksum->digest = svn_txdelta_md5_digest(txdelta_stream);
