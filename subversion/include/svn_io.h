@@ -652,6 +652,37 @@ svn_stream_t *
 svn_stream_disown(svn_stream_t *stream,
                   apr_pool_t *pool);
 
+
+/** Create a stream to read the file at @a path. It will be opened using
+ * the APR_BUFFERED and APR_BINARY flag, and APR_OS_DEFAULT for the perms.
+ * If you'd like to use different values, then open the file yourself, and
+ * use the svn_stream_from_aprfile2() interface.
+ *
+ * The stream will be returned in @a stream, and allocated from @a result_pool.
+ * Temporary allocations will be performed in @a scratch_pool.
+ */
+svn_error_t *
+svn_stream_open_readonly(svn_stream_t **stream,
+                         const char *path,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
+
+
+/** Create a stream to write the file at @a path. It will be opened using
+ * the APR_BUFFERED and APR_BINARY flag, and APR_OS_DEFAULT for the perms.
+ * If you'd like to use different values, then open the file yourself, and
+ * use the svn_stream_from_aprfile2() interface.
+ *
+ * The stream will be returned in @a stream, and allocated from @a result_pool.
+ * Temporary allocations will be performed in @a scratch_pool.
+ */
+svn_error_t *
+svn_stream_open_writable(svn_stream_t **stream,
+                         const char *path,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
+
+
 /** Create a stream from an APR file.  For convenience, if @a file is
  * @c NULL, an empty stream created by svn_stream_empty() is returned.
  *

@@ -367,6 +367,38 @@ close_handler_apr(void *baton)
 }
 
 
+svn_error_t *
+svn_stream_open_readonly(svn_stream_t **stream,
+                         const char *path,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
+{
+  apr_file_t *file;
+
+  SVN_ERR(svn_io_file_open(&file, path, APR_READ | APR_BUFFERED | APR_BINARY,
+                           APR_OS_DEFAULT, result_pool));
+  *stream = svn_stream_from_aprfile2(file, FALSE, result_pool);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_stream_open_writable(svn_stream_t **stream,
+                         const char *path,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
+{
+  apr_file_t *file;
+
+  SVN_ERR(svn_io_file_open(&file, path, APR_WRITE | APR_BUFFERED | APR_BINARY,
+                           APR_OS_DEFAULT, result_pool));
+  *stream = svn_stream_from_aprfile2(file, FALSE, result_pool);
+
+  return SVN_NO_ERROR;
+}
+
+
 svn_stream_t *
 svn_stream_from_aprfile2(apr_file_t *file,
                          svn_boolean_t disown,
