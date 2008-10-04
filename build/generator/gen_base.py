@@ -783,7 +783,7 @@ def build_path_split(path):
 
 def build_path_splitfile(path):
   """Return the filename and directory portions of a file path"""
-  pos = string.rfind(path, '/')
+  pos = path.rfind('/')
   if pos > 0:
     return path[:pos], path[pos+1:]
   elif pos == 0:
