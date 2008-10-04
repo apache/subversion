@@ -547,7 +547,7 @@ class TargetSWIG(TargetLib):
     if self.lang == "ruby":
       lib_filename = module_name + lib_extension
     elif self.lang == "perl":
-      lib_filename = '_' + string.capitalize(module_name) + lib_extension
+      lib_filename = '_' + module_name.capitalize() + lib_extension
     else:
       lib_filename = '_' + module_name + lib_extension
 
