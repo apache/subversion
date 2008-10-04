@@ -271,7 +271,7 @@ class SWIGObject(ObjectFile):
     self.lang_abbrev = lang_abbrev[lang]
     self.source_generated = 1
     ### hmm. this is Makefile-specific
-    self.compile_cmd = '$(COMPILE_%s_WRAPPER)' % string.upper(self.lang_abbrev)
+    self.compile_cmd = '$(COMPILE_%s_WRAPPER)' % self.lang_abbrev.upper()
 
 class HeaderFile(DependencyNode):
   def __init__(self, filename, classname = None, compile_cmd = None):
@@ -523,7 +523,7 @@ class TargetSWIG(TargetLib):
     self.include_runtime = options.get('include-runtime') == 'yes'
 
     ### hmm. this is Makefile-specific
-    self.link_cmd = '$(LINK_%s_WRAPPER)' % string.upper(lang_abbrev[lang])
+    self.link_cmd = '$(LINK_%s_WRAPPER)' % lang_abbrev[lang].upper()
 
   def add_dependencies(self):
     # Look in source directory for dependencies
