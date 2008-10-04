@@ -13,7 +13,7 @@ def find(file, dirs=None):
      If no directories are given, search according to the PATH
      environment variable."""
   if not dirs:
-    dirs = string.split(os.environ["PATH"], os.pathsep)
+    dirs = os.environ["PATH"].split(os.pathsep)
   for path in dirs:
     if is_executable(os.path.join(path, file)):
       return os.path.join(path, file)

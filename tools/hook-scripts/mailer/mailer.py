@@ -219,9 +219,9 @@ class MailedOutput(OutputBase):
     if len(to_addr_in) >= 3 and to_addr_in[0] == '[' \
                             and to_addr_in[2] == ']':
       self.to_addrs = \
-        filter(None, string.split(to_addr_in[3:], to_addr_in[1]))
+        filter(None, to_addr_in[3:].split(to_addr_in[1]))
     else:
-      self.to_addrs = filter(None, string.split(to_addr_in))
+      self.to_addrs = filter(None, to_addr_in.split())
     self.from_addr = self.cfg.get('from_addr', group, params) \
                      or self.repos.author or 'no_author'
     # if the from_addr (also) starts with '[.]' (may happen if one
@@ -297,7 +297,7 @@ class PipeOutput(MailedOutput):
     MailedOutput.__init__(self, cfg, repos, prefix_param)
 
     # figure out the command for delivery
-    self.cmd = string.split(cfg.general.mail_command)
+    self.cmd = cfg.general.mail_command.split()
 
   def start(self, group, params):
     MailedOutput.start(self, group, params)
@@ -496,10 +496,10 @@ def get_commondir(dirlist):
     commondir = ''
     newdirs = dirlist
   else:
-    common = string.split(dirlist[0], '/')
+    common = dirlist[0].split('/')
     for j in range(1, len(dirlist)):
       d = dirlist[j]
-      parts = string.split(d, '/')
+      parts = d.split('/')
       for i in range(len(common)):
         if i == len(parts) or common[i] != parts[i]:
           del common[i:]
@@ -594,7 +594,7 @@ class DiffSelections:
     ### don't have an option anywhere in your configuration file, it
     ### still gets returned as non-None.
     if len(gen_diffs):
-      list = string.split(gen_diffs, " ")
+      list = gen_diffs.split(" ")
       for item in list:
         if item == 'add':
           self.add = True
@@ -1168,7 +1168,7 @@ class Config:
     The option is specified as a dotted symbol, such as 'general.mail_command'
     """
     ob = self
-    for part in string.split(option, '.'):
+    for part in option.split('.'):
       if not hasattr(ob, part):
         return None
       ob = getattr(ob, part)
@@ -1204,7 +1204,7 @@ class Config:
   def get_diff_cmd(self, group, args):
     "Get a diff command as a list of argv elements."
     ### do some better splitting to enable quoting of spaces
-    diff_cmd = string.split(self.get('diff', group, None))
+    diff_cmd = self.get('diff', group, None).split()
 
     cmd = [ ]
     for part in diff_cmd:

@@ -470,7 +470,7 @@ class WinGeneratorBase(GeneratorBase):
                                  custom_build=cbuild, custom_target=jarfile))
 
     if isinstance(target, gen_base.TargetSWIG):
-      swig_options = string.split(self.swig.opts[target.lang])
+      swig_options = self.swig.opts[target.lang].split()
       swig_options.append('-DWIN32')
       swig_deps = []
 

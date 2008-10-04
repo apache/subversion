@@ -221,7 +221,7 @@ class SVNShell(Cmd):
     sys.exit(0)
 
   def _path_to_parts(self, path):
-    return filter(None, string.split(path, '/'))
+    return filter(None, path.split('/'))
 
   def _parts_to_path(self, parts):
     return '/' + string.join(parts, '/')

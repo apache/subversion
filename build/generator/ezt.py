@@ -466,7 +466,7 @@ def _prepare_ref(refname, for_names, file_args):
       if idx < len(file_args):
         return file_args[idx]
 
-  parts = string.split(refname, '.')
+  parts = refname.split('.')
   start = parts[0]
   rest = parts[1:]
   while rest and (start in for_names):
