@@ -104,8 +104,8 @@ class build(_build):
     # Distutils doesn't appear to like when you have --dry-run after the build
     # build command so fail out if this is the case.
     if self.dry_run != self.distribution.dry_run:
-      raise DistutilsOptionError, "The --dry-run flag must be specified " \
-                                  "before the 'build' command"
+      raise DistutilsOptionError("The --dry-run flag must be specified " \
+                                 "before the 'build' command")
 
   # finalize_options()
 
@@ -259,10 +259,10 @@ class build(_build):
   def validate_options(self):
     # Validate apr
     if not self.apr:
-      raise DistutilsOptionError, "The --apr option is mandatory and " \
-                                  "must point to a valid apr installation " \
-                                  "or to either the apr-config file or the " \
-                                  "apr-1-config file"
+      raise DistutilsOptionError("The --apr option is mandatory and " \
+                                 "must point to a valid apr installation " \
+                                 "or to either the apr-config file or the " \
+                                 "apr-1-config file")
 
     if os.path.exists(self.apr):
       if os.path.isdir(self.apr):
@@ -280,17 +280,17 @@ class build(_build):
       self.apr_config = None
 
     if not self.apr_config:
-      raise DistutilsOptionError, "The --apr option is not valid.  It must " \
-                                  "point to a valid apr installation or " \
-                                  "to either the apr-config file or the " \
-                                  "apr-1-config file"
+      raise DistutilsOptionError("The --apr option is not valid.  It must " \
+                                 "point to a valid apr installation or " \
+                                 "to either the apr-config file or the " \
+                                 "apr-1-config file")
 
     # Validate apr-util
     if not self.apr_util:
-      raise DistutilsOptionError, "The --apr-util option is mandatory and " \
-                                  "must point to a valid apr-util " \
-                                  "installation or to either the apu-config " \
-                                  "file or the apu-1-config file"
+      raise DistutilsOptionError("The --apr-util option is mandatory and " \
+                                 "must point to a valid apr-util " \
+                                 "installation or to either the apu-config " \
+                                 "file or the apu-1-config file")
 
     if os.path.exists(self.apr_util):
       if os.path.isdir(self.apr_util):
@@ -308,28 +308,28 @@ class build(_build):
       self.apu_config = None
 
     if not self.apu_config:
-      raise DistutilsOptionError, "The --apr-util option is not valid.  It " \
-                                  "must point to a valid apr-util " \
-                                  "installation or to either the apu-config " \
-                                  "file or the apu-1-config file"
+      raise DistutilsOptionError("The --apr-util option is not valid.  It " \
+                                 "must point to a valid apr-util " \
+                                 "installation or to either the apu-config " \
+                                 "file or the apu-1-config file")
 
     # Validate subversion
     if not self.subversion:
-      raise DistutilsOptionError, "The --subversion option is mandatory and " \
-                                  "must point to a valid Subversion " \
-                                  "installation"
+      raise DistutilsOptionError("The --subversion option is mandatory and " \
+                                 "must point to a valid Subversion " \
+                                 "installation")
 
     if not os.path.exists(os.path.join(self.subversion, "include",
                                        "subversion-1", "svn_client.h")):
-      raise DistutilsOptionError, "The --subversion option is not valid. " \
-                                  "Could not locate %s/include/" \
-                                  "subversion-1/svn_client.h" % self.subversion
+      raise DistutilsOptionError("The --subversion option is not valid. " \
+                                 "Could not locate %s/include/" \
+                                 "subversion-1/svn_client.h" % self.subversion)
 
     # Validate ctypesgen
     if not self.ctypesgen:
-      raise DistutilsOptionError, "The --ctypesgen option is mandatory and " \
-                                  "must point to a valid ctypesgen " \
-                                  "installation"
+      raise DistutilsOptionError("The --ctypesgen option is mandatory and " \
+                                 "must point to a valid ctypesgen " \
+                                 "installation")
 
     if os.path.exists(self.ctypesgen):
       if os.path.isdir(self.ctypesgen):
@@ -350,10 +350,10 @@ class build(_build):
       self.ctypesgen_py = None
 
     if not self.ctypesgen_py:
-      raise DistutilsOptionError, "The --ctypesgen option is not valid.  It " \
-                                  "must point to a valid ctypesgen " \
-                                  "installation, a ctypesgen source tree or " \
-                                  "to the ctypesgen.py script"
+      raise DistutilsOptionError("The --ctypesgen option is not valid.  It " \
+                                 "must point to a valid ctypesgen " \
+                                 "installation, a ctypesgen source tree or " \
+                                 "to the ctypesgen.py script")
 
   # validate_functions()
 
@@ -363,8 +363,8 @@ class build(_build):
                                        "csvn", "core",
                                        "functions.py")):
       if 'build' not in self.distribution.commands:
-        raise DistutilsOptionError, "You must run 'build' explicitly before " \
-                         "you can proceed"
+        raise DistutilsOptionError("You must run 'build' explicitly before " \
+                                   "you can proceed")
 
       # Validate the command line options
       self.validate_options()
