@@ -4606,7 +4606,7 @@ svn_wc_get_pristine_contents(svn_stream_t **contents,
 /** Returns a path to the pristine copy of @a path. Should use
  * svn_wc_get_pristine_contents() instead.
  *
- * @deprecated Provided for backwards compatibility with the 1.0 API.
+ * @deprecated Provided for backwards compatibility with the 1.5 API.
  */
 SVN_DEPRECATED
 svn_error_t *
