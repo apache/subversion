@@ -129,30 +129,9 @@ copy_one_versioned_file(const char *from,
     }
   else
     {
-      apr_finfo_t finfo;
-      svn_string_t *buf;
       svn_wc_status2_t *status;
 
-      /* ### NOTE: this section of code is similar to that found in
-         ### libsvn_subr/subst.c::detranslate_special_file_to_stream() */
-
-      SVN_ERR(svn_io_stat(&finfo, from, APR_FINFO_MIN | APR_FINFO_LINK, pool));
-
-      switch (finfo.filetype) {
-      case APR_LNK:
-        /* Determine the destination of the link. */
-        SVN_ERR(svn_io_read_link(&buf, from, pool));
-        source = svn_stream_from_stringbuf(
-            svn_stringbuf_createf(pool, "link %s", buf->data),
-            pool);
-        break;
-
-      default:
-        /* Nothing special to do here, just copy the original file's
-           contents. */
-        SVN_ERR(svn_stream_open_readonly(&source, from, pool, pool));
-        break;
-      }
+      SVN_ERR(svn_subst_get_detranslated_stream(&source, from, pool, pool));
 
       SVN_ERR(svn_wc_prop_list(&props, from, adm_access, pool));
       SVN_ERR(svn_wc_status2(&status, from, adm_access, pool));
