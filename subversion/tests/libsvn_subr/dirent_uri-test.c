@@ -1482,11 +1482,11 @@ test_dirent_get_absolute(const char **msg,
     return SVN_NO_ERROR;
 
 #if defined(WIN32) || defined(__CYGWIN__)
-  if (! getcwd(buf, sizeof(buf)))
-    return svn_error_create(SVN_ERR_BASE, NULL, "getcwd() failed");
-#else  /* WIN32 or Cygwin */
    if (! getdcwd(3, buf, sizeof(buf))) /* 3 stands for drive C: */
     return svn_error_create(SVN_ERR_BASE, NULL, "getdcwd() failed");
+#else  /* WIN32 or Cygwin */
+  if (! getcwd(buf, sizeof(buf)))
+    return svn_error_create(SVN_ERR_BASE, NULL, "getcwd() failed");
 #endif /* non-WIN32 */
 
   curdir = svn_path_internal_style(buf, pool);
