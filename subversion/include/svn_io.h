@@ -660,6 +660,8 @@ svn_stream_disown(svn_stream_t *stream,
  *
  * The stream will be returned in @a stream, and allocated from @a result_pool.
  * Temporary allocations will be performed in @a scratch_pool.
+ *
+ * @since New in 1.6
  */
 svn_error_t *
 svn_stream_open_readonly(svn_stream_t **stream,
@@ -675,6 +677,8 @@ svn_stream_open_readonly(svn_stream_t **stream,
  *
  * The stream will be returned in @a stream, and allocated from @a result_pool.
  * Temporary allocations will be performed in @a scratch_pool.
+ *
+ * @since New in 1.6
  */
 svn_error_t *
 svn_stream_open_writable(svn_stream_t **stream,
