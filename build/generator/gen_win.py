@@ -261,7 +261,7 @@ class WinGeneratorBase(GeneratorBase):
     #Make the project files directory if it doesn't exist
     #TODO win32 might not be the best path as win64 stuff will go here too
     self.projfilesdir=os.path.join("build","win32",subdir)
-    self.rootpath = ".." + "\\.." * string.count(self.projfilesdir, os.sep)
+    self.rootpath = ".." + "\\.." * self.projfilesdir.count(os.sep)
     if not os.path.exists(self.projfilesdir):
       os.makedirs(self.projfilesdir)
 
