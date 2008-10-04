@@ -801,7 +801,7 @@ def build_path_basename(path):
 
 def build_path_retreat(path):
   "Given a relative directory, return ../ paths to retreat to the origin."
-  return ".." + "/.." * string.count(path, '/')
+  return ".." + "/.." * path.count('/')
 
 def build_path_strip(path, files):
   "Strip the given path from each file."
