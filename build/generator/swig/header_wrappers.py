@@ -41,7 +41,7 @@ class Generator(generator.swig.Generator):
         '%s: %s %s\n' % (wrapper_fname, fname, python_script) +
         '\t$(GEN_SWIG_WRAPPER) %s\n\n' % fname
       )
-    makefile.write('SWIG_WRAPPERS = %s\n\n' % string.join(wrapper_fnames))
+    makefile.write('SWIG_WRAPPERS = %s\n\n' % ' '.join(wrapper_fnames))
     for short_name in self.short.values():
       makefile.write('autogen-swig-%s: $(SWIG_WRAPPERS)\n' % short_name)
     makefile.write('\n\n')
@@ -73,15 +73,15 @@ class Generator(generator.swig.Generator):
     """Write out an individual callback"""
 
     # Get rid of any extra spaces or newlines
-    return_type = string.join(return_type.split())
-    params = string.join(params.split())
+    return_type = ' '.join(return_type.split())
+    params = ' '.join(params.split())
 
     # Calculate parameters
     if params == "void":
       param_names = ""
       params = "%s _obj" % type
     else:
-      param_names = string.join(self._re_param_names.findall(params), ", ")
+      param_names = ", ".join(self._re_param_names.findall(params))
       params = "%s _obj, %s" % (type, params)
 
     invoke_callback = "%s(%s)" % (callee, param_names)

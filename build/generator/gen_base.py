@@ -775,7 +775,7 @@ def build_path(path):
 
 def build_path_join(*path_parts):
   """Join path components into a build path"""
-  return string.join(path_parts, '/')
+  return '/'.join(path_parts)
 
 def build_path_split(path):
   """Return list of components in a build path"""

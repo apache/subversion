@@ -99,7 +99,7 @@ class Generator(gen_win.WinGeneratorBase):
       myhash = hash.hexdigest()
     except AttributeError:
       # Python 1.5.2
-      myhash = string.join(map(lambda x: '%02x' % ord(x), hash.digest()), '')
+      myhash = ''.join(map(lambda x: '%02x' % ord(x), hash.digest()))
 
     guid = ("{%s-%s-%s-%s-%s}" % (myhash[0:8], myhash[8:12],
                                   myhash[12:16], myhash[16:20],
