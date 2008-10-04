@@ -4589,12 +4589,26 @@ svn_wc_merge_prop_diffs(svn_wc_notify_state_t *state,
                         apr_pool_t *pool);
 
 
-
-/** Given a @a path to a wc file, return a @a pristine_path which points to a
- * pristine version of the file.  This is needed so clients can do
+/** Given a @a path to a wc file, return a stream to the @a contents of
+ * the pristine copy of the file.  This is needed so clients can do
  * diffs.  If the WC has no text-base, return a @c NULL instead of a
- * path.
+ * stream.
+ *
+ * @since New in 1.6.
  */
+svn_error_t *
+svn_wc_get_pristine_contents(svn_stream_t **contents,
+                             const char *path,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
+
+
+/** Returns a path to the pristine copy of @a path. Should use
+ * svn_wc_get_pristine_contents() instead.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.0 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_get_pristine_copy_path(const char *path,
                               const char **pristine_path,
