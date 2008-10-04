@@ -249,19 +249,12 @@ svn_wc__db_pristine_read(svn_stream_t **contents,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
-  apr_file_t *fh;
   const char *path;
 
   SVN_ERR(get_pristine_fname(&path, pdh, checksum, FALSE /* create_subdir */,
-                             result_pool, scratch_pool));
+                             scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_io_file_open(&fh, path,
-                           APR_READ
-                             | APR_BINARY,
-                           APR_OS_DEFAULT, result_pool));
-  *contents = svn_stream_from_aprfile2(fh, FALSE, result_pool);
-
-  return SVN_NO_ERROR;
+  return svn_stream_open_readonly(contents, path, result_pool, scratch_pool);
 }
 
 
@@ -272,20 +265,12 @@ svn_wc__db_pristine_write(svn_stream_t **contents,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
-  apr_file_t *fh;
   const char *path;
 
   SVN_ERR(get_pristine_fname(&path, pdh, checksum, TRUE /* create_subdir */,
-                             result_pool, scratch_pool));
+                             scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_io_file_open(&fh, path,
-                           APR_WRITE
-                             | APR_CREATE
-                             | APR_EXCL
-                             | APR_BINARY,
-                           APR_OS_DEFAULT, result_pool));
-
-  *contents = svn_stream_from_aprfile2(fh, FALSE, result_pool);
+  SVN_ERR(svn_stream_open_writable(contents, path, result_pool, scratch_pool));
 
   /* ### we should wrap the stream. count the bytes. at close, then we
      ### should write the count into the sqlite database. */
