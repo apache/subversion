@@ -3257,7 +3257,9 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
          or -rN from the line item array.  If it is found, rev_idx
          contains the index into line_parts where '-r' was found and
          set item->revision to the parsed revision. */
-      SVN_ERR(find_and_remove_externals_revision(&rev_idx, line_parts,
+      /* ### ugh. stupid cast. */
+      SVN_ERR(find_and_remove_externals_revision(&rev_idx,
+                                                 (const char **)line_parts,
                                                  num_line_parts, item,
                                                  parent_directory_display,
                                                  line, pool));
