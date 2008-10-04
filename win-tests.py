@@ -279,7 +279,7 @@ def locate_libs():
 
 def fix_case(path):
     path = os.path.normpath(path)
-    parts = string.split(path, os.path.sep)
+    parts = path.split(os.path.sep)
     drive = parts[0].upper()
     parts = parts[1:]
     path = drive + os.path.sep

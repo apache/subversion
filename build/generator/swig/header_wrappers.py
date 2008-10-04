@@ -73,8 +73,8 @@ class Generator(generator.swig.Generator):
     """Write out an individual callback"""
 
     # Get rid of any extra spaces or newlines
-    return_type = string.join(string.split(return_type))
-    params = string.join(string.split(params))
+    return_type = string.join(return_type.split())
+    params = string.join(params.split())
 
     # Calculate parameters
     if params == "void":

@@ -115,7 +115,7 @@ def main():
     elif opt == "--verbose":
       verbose = 1
     elif opt == "--milestones":
-      for mstone in string.split(arg, ","):
+      for mstone in arg.split(","):
         if mstone == "noncore":
           _milestone_filter = noncore_milestone_filter
         elif mstone == "beta":
@@ -354,7 +354,7 @@ class Issue:
   "Represents a single issue from the exported IssueZilla data."
 
   def __init__(self, line):
-    row = string.split(string.strip(line), '\t')
+    row = string.strip(line).split('\t')
 
     self.id = int(row[0])
     self.type = row[1]
