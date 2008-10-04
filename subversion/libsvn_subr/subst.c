@@ -1228,7 +1228,6 @@ detranslated_stream_special(svn_stream_t **translated_stream_p,
                             apr_pool_t *pool)
 {
   apr_finfo_t finfo;
-  apr_file_t *s;
   svn_string_t *buf;
   svn_stringbuf_t *strbuf;
 
@@ -1240,18 +1239,16 @@ detranslated_stream_special(svn_stream_t **translated_stream_p,
   case APR_REG:
     /* Nothing special to do here, just create stream from the original
        file's contents. */
-    SVN_ERR(svn_io_file_open(&s, src, APR_READ | APR_BUFFERED,
-                             APR_OS_DEFAULT, pool));
-    *translated_stream_p = svn_stream_from_aprfile2(s, FALSE, pool);
-
+    SVN_ERR(svn_stream_open_readonly(translated_stream_p, src, pool, pool));
     break;
+
   case APR_LNK:
     /* Determine the destination of the link. */
     SVN_ERR(svn_io_read_link(&buf, src, pool));
     strbuf = svn_stringbuf_createf(pool, "link %s", buf->data);
     *translated_stream_p = svn_stream_from_stringbuf(strbuf, pool);
-
     break;
+
   default:
     SVN_ERR_MALFUNCTION();
   }
@@ -1269,7 +1266,6 @@ svn_subst_stream_detranslated(svn_stream_t **stream_p,
                               svn_boolean_t special,
                               apr_pool_t *pool)
 {
-  apr_file_t *file_h;
   svn_stream_t *src_stream;
 
   if (special)
@@ -1281,10 +1277,7 @@ svn_subst_stream_detranslated(svn_stream_t **stream_p,
               || eol_style == svn_subst_eol_style_none))
     return svn_error_create(SVN_ERR_IO_UNKNOWN_EOL, NULL, NULL);
 
-  SVN_ERR(svn_io_file_open(&file_h, src, APR_READ,
-                           APR_OS_DEFAULT, pool));
-
-  src_stream = svn_stream_from_aprfile2(file_h, FALSE, pool);
+  SVN_ERR(svn_stream_open_readonly(&src_stream, src, pool, pool));
 
   *stream_p = svn_subst_stream_translated(
     src_stream, eol_str,
@@ -1494,7 +1487,6 @@ detranslate_special_file_to_stream(svn_stream_t **src_stream,
                                    apr_pool_t *pool)
 {
   apr_finfo_t finfo;
-  apr_file_t *s;
   svn_string_t *buf;
 
   /* First determine what type of special file we are
@@ -1505,21 +1497,19 @@ detranslate_special_file_to_stream(svn_stream_t **src_stream,
   case APR_REG:
     /* Nothing special to do here, just copy the original file's
        contents. */
-    SVN_ERR(svn_io_file_open(&s, src, APR_READ | APR_BUFFERED,
-                              APR_OS_DEFAULT, pool));
-    *src_stream = svn_stream_from_aprfile2(s, TRUE, pool);
-
+    SVN_ERR(svn_stream_open_readonly(src_stream, src, pool, pool));
     break;
+
   case APR_LNK:
     /* Determine the destination of the link. */
 
-    *src_stream = svn_stream_from_stringbuf(svn_stringbuf_create ("", pool),
+    *src_stream = svn_stream_from_stringbuf(svn_stringbuf_create("", pool),
                                             pool);
     SVN_ERR(svn_io_read_link(&buf, src, pool));
 
-    SVN_ERR(svn_stream_printf(*src_stream, pool, "link %s",
-                              buf->data));
+    SVN_ERR(svn_stream_printf(*src_stream, pool, "link %s", buf->data));
     break;
+
   default:
     SVN_ERR_MALFUNCTION();
   }
@@ -1536,12 +1526,10 @@ detranslate_special_file(const char *src, const char *dst, apr_pool_t *pool)
   apr_file_t *d;
   svn_stream_t *src_stream, *dst_stream;
 
-
   /* Open a temporary destination that we will eventually atomically
      rename into place. */
   SVN_ERR(svn_io_open_unique_file2(&d, &dst_tmp, dst,
                                    ".tmp", svn_io_file_del_none, pool));
-
   dst_stream = svn_stream_from_aprfile2(d, FALSE, pool);
 
   SVN_ERR(detranslate_special_file_to_stream(&src_stream, src, pool));
@@ -1691,7 +1679,7 @@ svn_subst_copy_and_translate3(const char *src,
 {
   const char *dst_tmp = NULL;
   svn_stream_t *src_stream, *dst_stream;
-  apr_file_t *s = NULL, *d = NULL;  /* init to null important for APR */
+  apr_file_t *d;
   svn_error_t *err;
   svn_node_kind_t kind;
   svn_boolean_t path_special;
@@ -1713,18 +1701,14 @@ svn_subst_copy_and_translate3(const char *src,
     return svn_io_copy_file(src, dst, FALSE, pool);
 
   /* Open source file. */
-  SVN_ERR(svn_io_file_open(&s, src, APR_READ | APR_BUFFERED,
-                           APR_OS_DEFAULT, pool));
+  SVN_ERR(svn_stream_open_readonly(&src_stream, src, pool, pool));
 
   /* For atomicity, we translate to a tmp file and
      then rename the tmp file over the real destination. */
   SVN_ERR(svn_io_open_unique_file2(&d, &dst_tmp, dst,
                                    ".tmp", svn_io_file_del_on_pool_cleanup,
                                    pool));
-
-  /* Now convert our two open files into streams. */
-  src_stream = svn_stream_from_aprfile2(s, TRUE, pool);
-  dst_stream = svn_stream_from_aprfile2(d, TRUE, pool);
+  dst_stream = svn_stream_from_aprfile2(d, FALSE, pool);
 
   /* Translate src stream into dst stream. */
   err = svn_subst_translate_stream3(src_stream, dst_stream, eol_str,
@@ -1743,8 +1727,59 @@ svn_subst_copy_and_translate3(const char *src,
   /* clean up nicely. */
   SVN_ERR(svn_stream_close(src_stream));
   SVN_ERR(svn_stream_close(dst_stream));
-  SVN_ERR(svn_io_file_close(s, pool));
-  SVN_ERR(svn_io_file_close(d, pool));
+
+  /* Now that dst_tmp contains the translated data, do the atomic rename. */
+  return svn_io_file_rename(dst_tmp, dst, pool);
+}
+
+
+svn_error_t *
+svn_subst_create_translated(svn_stream_t *src_stream,
+                            const char *dst,
+                            const char *eol_str,
+                            svn_boolean_t repair,
+                            apr_hash_t *keywords,
+                            svn_boolean_t expand,
+                            svn_boolean_t special,
+                            apr_pool_t *pool)
+{
+  const char *dst_tmp;
+  svn_stream_t *dst_stream;
+  apr_file_t *d;
+
+  /* If this is a 'special' file, then we need to create the thing... */
+  if (special)
+    {
+      svn_stringbuf_t *contents;
+      svn_boolean_t eof;
+
+      /* The special file normal form doesn't have line endings,
+       * so, read all of the file into the stringbuf */
+      SVN_ERR(svn_stream_readline(src_stream, &contents, "\n", &eof, pool));
+      return create_special_file_from_stringbuf(contents, dst, pool);
+    }
+
+  /* For atomicity, we translate to a tmp file and
+     then rename the tmp file over the real destination. */
+  SVN_ERR(svn_io_open_unique_file2(&d, &dst_tmp, dst,
+                                   ".tmp", svn_io_file_del_on_pool_cleanup,
+                                   pool));
+  dst_stream = svn_stream_from_aprfile2(d, FALSE, pool);
+
+  /* The easy way out:  no translation needed, just copy. */
+  if (! (eol_str || (keywords && (apr_hash_count(keywords) > 0))))
+    {
+      /* ### should use copy2() and a cancel func/baton. */
+      SVN_ERR(svn_stream_copy(src_stream, dst_stream, pool));
+    }
+  else
+    {
+      /* Translate src stream into dst stream. */
+      SVN_ERR(svn_subst_translate_stream3(src_stream, dst_stream, eol_str,
+                                          repair, keywords, expand, pool));
+    }
+
+  SVN_ERR(svn_stream_close(dst_stream));
 
   /* Now that dst_tmp contains the translated data, do the atomic rename. */
   return svn_io_file_rename(dst_tmp, dst, pool);

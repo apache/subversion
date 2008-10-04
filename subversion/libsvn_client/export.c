@@ -101,11 +101,11 @@ copy_one_versioned_file(const char *from,
   apr_hash_t *kw = NULL;
   svn_subst_eol_style_t style;
   apr_hash_t *props;
-  const char *base;
   svn_string_t *eol_style, *keywords, *executable, *special;
   const char *eol = NULL;
   svn_boolean_t local_mod = FALSE;
   apr_time_t tm;
+  svn_stream_t *source;
 
   SVN_ERR(svn_wc_entry(&entry, from, adm_access, FALSE, pool));
 
@@ -124,20 +124,38 @@ copy_one_versioned_file(const char *from,
 
   if (revision->kind != svn_opt_revision_working)
     {
-      SVN_ERR(svn_wc_get_pristine_copy_path(from, &base,
-                                            pool));
-      SVN_ERR(svn_wc_get_prop_diffs(NULL, &props, from,
-                                    adm_access, pool));
+      SVN_ERR(svn_wc_get_pristine_contents(&source, from, pool, pool));
+      SVN_ERR(svn_wc_get_prop_diffs(NULL, &props, from, adm_access, pool));
     }
   else
     {
+      apr_finfo_t finfo;
+      svn_string_t *buf;
       svn_wc_status2_t *status;
 
-      base = from;
-      SVN_ERR(svn_wc_prop_list(&props, from,
-                               adm_access, pool));
-      SVN_ERR(svn_wc_status2(&status, from,
-                             adm_access, pool));
+      /* ### NOTE: this section of code is similar to that found in
+         ### libsvn_subr/subst.c::detranslate_special_file_to_stream() */
+
+      SVN_ERR(svn_io_stat(&finfo, from, APR_FINFO_MIN | APR_FINFO_LINK, pool));
+
+      switch (finfo.filetype) {
+      case APR_LNK:
+        /* Determine the destination of the link. */
+        SVN_ERR(svn_io_read_link(&buf, from, pool));
+        source = svn_stream_from_stringbuf(
+            svn_stringbuf_createf(pool, "link %s", buf->data),
+            pool);
+        break;
+
+      default:
+        /* Nothing special to do here, just copy the original file's
+           contents. */
+        SVN_ERR(svn_stream_open_readonly(&source, from, pool, pool));
+        break;
+      }
+
+      SVN_ERR(svn_wc_prop_list(&props, from, adm_access, pool));
+      SVN_ERR(svn_wc_status2(&status, from, adm_access, pool));
       if (status->text_status != svn_wc_status_normal)
         local_mod = TRUE;
     }
@@ -191,13 +209,12 @@ copy_one_versioned_file(const char *from,
                entry->url, tm, author, pool));
     }
 
-  SVN_ERR(svn_subst_copy_and_translate3(base, to, eol, FALSE,
-                                        kw, TRUE,
-                                        special ? TRUE : FALSE,
-                                        pool));
+  SVN_ERR(svn_subst_create_translated(source, to, eol, FALSE,
+                                      kw, TRUE,
+                                      special ? TRUE : FALSE,
+                                      pool));
   if (executable)
-    SVN_ERR(svn_io_set_file_executable(to, TRUE,
-                                       FALSE, pool));
+    SVN_ERR(svn_io_set_file_executable(to, TRUE, FALSE, pool));
 
   if (! special)
     SVN_ERR(svn_io_set_file_affected_time(tm, to, pool));
