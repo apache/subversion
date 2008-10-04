@@ -1342,14 +1342,7 @@ window_handler(svn_txdelta_window_t *window,
   if (!window)
     {
       SVN_ERR(svn_io_file_close(b->temp_file, b->pool));
-
-      if (b->added)
-        SVN_ERR(svn_io_file_close(b->original_file, b->pool));
-      else
-        {
-          SVN_ERR(svn_wc__close_text_base(b->original_file, b->path, 0,
-                                          b->pool));
-        }
+      SVN_ERR(svn_io_file_close(b->original_file, b->pool));
     }
 
   return SVN_NO_ERROR;

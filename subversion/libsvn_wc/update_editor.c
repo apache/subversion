@@ -757,17 +757,14 @@ window_handler(svn_txdelta_window_t *window, void *baton)
      case, clean up the handler.  */
   if (hb->source)
     {
-      if (fb->copied_text_base)
-        err2 = svn_io_file_close(hb->source, hb->pool);
-      else
-        err2 = svn_wc__close_text_base(hb->source, fb->path, 0, hb->pool);
+      err2 = svn_io_file_close(hb->source, hb->pool);
 
       if (err2 && !err)
         err = err2;
       else
         svn_error_clear(err2);
     }
-  err2 = svn_wc__close_text_base(hb->dest, fb->path, 0, hb->pool);
+  err2 = svn_io_file_close(hb->dest, hb->pool);
   if (err2)
     {
       if (!err)
