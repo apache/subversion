@@ -581,7 +581,7 @@ class WinGeneratorBase(GeneratorBase):
         continue
 
       name = target.name
-      pos = string.find(name, '-test')
+      pos = name.find('-test')
       if pos >= 0:
         proj_name = 'test_' + string.replace(name[:pos], '-', '_')
       elif isinstance(target, gen_base.TargetSWIG):

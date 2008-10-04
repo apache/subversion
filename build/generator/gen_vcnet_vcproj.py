@@ -113,7 +113,7 @@ class Generator(gen_win.WinGeneratorBase):
       line = proj.readline()
       while len(line) > 0:
         l = string.lower(line)
-        pos = string.find(l, 'projectguid="{')
+        pos = l.find('projectguid="{')
         if pos >= 0:
           guid = line[pos+13:pos+13+38]
           return guid
