@@ -464,7 +464,7 @@ class WinGeneratorBase(GeneratorBase):
       jarfile = msvc_path_join(classdir, target.jar)
       cbuild = "%s cf %s -C %s %s" \
                % (self.quote(jar_exe), jarfile, classdir,
-                  string.join(target.packages))
+                  " ".join(target.packages))
       deps = map(lambda x: x.custom_target, sources)
       sources.append(ProjectItem(path='makejar', reldir='', user_deps=deps,
                                  custom_build=cbuild, custom_target=jarfile))
@@ -496,7 +496,7 @@ class WinGeneratorBase(GeneratorBase):
                   continue
 
                 cbuild = '%s %s -o %s $(InputPath)' \
-                         % (self.swig_exe, string.join(swig_options), cout)
+                         % (self.swig_exe, " ".join(swig_options), cout)
 
                 sources.append(ProjectItem(path=isrc, reldir=None,
                                            custom_build=cbuild,
@@ -512,7 +512,7 @@ class WinGeneratorBase(GeneratorBase):
         deps.append(self.path('subversion/include', header))
 
       cbuild = "python $(InputPath) %s > %s" \
-               % (string.join(deps), def_file)
+               % (" ".join(deps), def_file)
 
       sources.append(ProjectItem(path=gsrc, reldir=None, custom_build=cbuild,
                                  user_deps=deps, custom_target=def_file))
@@ -1399,4 +1399,4 @@ def msvc_path(path):
 
 def msvc_path_join(*path_parts):
   """Join path components into an msvc path"""
-  return string.join(path_parts, '\\')
+  return '\\'.join(path_parts)

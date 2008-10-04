@@ -92,5 +92,5 @@ for c in xrange(256):
     if len(bits) == 0:
         flags = '0'
     else:
-        flags = string.join(bits, ' | ')
+        flags = ' | '.join(bits)
     print '    /* %s */ %s,' % (name, flags)

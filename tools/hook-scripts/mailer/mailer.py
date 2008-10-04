@@ -26,7 +26,6 @@
 
 import os
 import sys
-import string
 try:
   # Python >=3.0
   import configparser
@@ -55,14 +54,14 @@ try:
 except ImportError:
   sys.stderr.write(
     "You need version %s or better of the Subversion Python bindings.\n" \
-    % string.join(map(lambda x: str(x), _MIN_SVN_VERSION), '.'))
+    % ".".join(map(lambda x: str(x), _MIN_SVN_VERSION)))
   sys.exit(1)
 if _MIN_SVN_VERSION > [svn.core.SVN_VER_MAJOR,
                        svn.core.SVN_VER_MINOR,
                        svn.core.SVN_VER_PATCH]:
   sys.stderr.write(
     "You need version %s or better of the Subversion Python bindings.\n" \
-    % string.join(map(lambda x: str(x), _MIN_SVN_VERSION), '.'))
+    % ".".join(map(lambda x: str(x), _MIN_SVN_VERSION)))
   sys.exit(1)
 
 
@@ -249,7 +248,7 @@ class MailedOutput(OutputBase):
            'MIME-Version: 1.0\n' \
            'Content-Type: text/plain; charset=UTF-8\n' \
            'Content-Transfer-Encoding: 8bit\n' \
-           % (self.from_addr, string.join(self.to_addrs, ', '), subject)
+           % (self.from_addr, ', '.join(self.to_addrs), subject)
     if self.reply_to:
       hdrs = '%sReply-To: %s\n' % (hdrs, self.reply_to)
     return hdrs + '\n'
@@ -386,7 +385,7 @@ class Commit(Messenger):
 
     # compose the basic subject line. later, we can prefix it.
     dirlist.sort()
-    dirlist = string.join(dirlist)
+    dirlist = ' '.join(dirlist)
     if commondir:
       self.output.subject = 'r%d - in %s: %s' % (repos.rev, commondir, dirlist)
     else:
@@ -504,7 +503,7 @@ def get_commondir(dirlist):
         if i == len(parts) or common[i] != parts[i]:
           del common[i:]
           break
-    commondir = string.join(common, '/')
+    commondir = '/'.join(common)
     if commondir:
       # strip the common portion from each directory
       l = len(commondir) + 1
@@ -552,7 +551,7 @@ class Lock(Messenger):
 
     # compose the basic subject line. later, we can prefix it.
     dirlist.sort()
-    dirlist = string.join(dirlist)
+    dirlist = ' '.join(dirlist)
     if commondir:
       self.output.subject = '%s: %s' % (commondir, dirlist)
     else:

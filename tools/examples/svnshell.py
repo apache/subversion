@@ -17,7 +17,6 @@
 #
 
 import sys
-import string
 import time
 import re
 from cmd import Cmd
@@ -224,7 +223,7 @@ class SVNShell(Cmd):
     return filter(None, path.split('/'))
 
   def _parts_to_path(self, parts):
-    return '/' + string.join(parts, '/')
+    return '/' + '/'.join(parts)
 
   def _parse_path(self, path):
     # cleanup leading, trailing, and duplicate '/' characters

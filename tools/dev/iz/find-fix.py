@@ -141,7 +141,7 @@ def main():
 
   if verbose:
     sys.stderr.write("%s: Filtering out milestones %s.\n"
-                     % (me, string.join(_milestone_filter, ", ")))
+                     % (me, ", ".join(_milestone_filter)))
 
   if len(args) == 2:
     if verbose:
