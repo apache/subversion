@@ -194,8 +194,8 @@ class Generator(gen_win.WinGeneratorBase):
     # the path name in the .sln template is already enclosed with ""
     # therefore, remove them from the path itself
     for target in targets:
-      target.path = string.rstrip(target.path, '"')
-      target.path = string.lstrip(target.path, '"')
+      target.path = target.path.rstrip('"')
+      target.path = target.path.lstrip('"')
 
     targets.sort(lambda x, y: cmp(x.name, y.name))
 

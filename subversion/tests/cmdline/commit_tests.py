@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import string, sys, os, re
+import sys, os, re
 
 # Our testing module
 import svntest
@@ -1816,7 +1816,7 @@ def from_wc_top_with_bad_editor(sbox):
     None, svntest.verify.AnyOutput,
     'ci', '--editor-cmd', 'no_such-editor')
 
-  err = " ".join(map(string.strip, err))
+  err = " ".join(map(str.strip, err))
   if not (re.match(".*no_such-editor.*", err)
           and re.match(".*Commit failed.*", err)):
     print "Commit failed, but not in the way expected."

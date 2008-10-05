@@ -29,7 +29,7 @@
 
 ######################################################################
 
-import sys, os, getopt, stat, string, re, time, shutil
+import sys, os, getopt, stat, re, time, shutil
 
 # Try to import the subprocess mode.  It works better then os.popen3
 # and os.spawnl on Windows when spaces appear in any of the svnadmin,
@@ -213,9 +213,9 @@ def get_youngest_revision():
 
   if stderr_lines:
     raise Exception("Unable to find the youngest revision for repository '%s'"
-                    ": %s" % (repo_dir, string.rstrip(stderr_lines[0])))
+                    ": %s" % (repo_dir, stderr_lines[0].rstrip()))
 
-  return string.strip(stdout_lines[0])
+  return stdout_lines[0].strip()
 
 ######################################################################
 # Main
