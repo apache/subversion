@@ -4174,9 +4174,7 @@ test_list = [ None,
               unneeded_parents,
               double_parents_with_url,
               copy_into_absent_dir,
-              # svn_path_is_ancestor() is broken; see r33211.
-              XFail(find_copyfrom_information_upstairs,
-                    svntest.main.is_os_windows),
+              find_copyfrom_information_upstairs,
               path_move_and_copy_between_wcs_2475,
               path_copy_in_repo_2475,
              ]
