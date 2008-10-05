@@ -130,12 +130,3 @@ Candidate changes for 1.5.3:
 
 Approved changes:
 =================
-
- * r32409
-   Fix an incompatibility with BSD make, which was introduced in r24293.
-   Justification:
-     Trivial fix. Fixes out-of-tree build of the bindings on BSD.
-     Might help downstream packagers for these systems.
-   Votes:
-     +1: stsp, arfrever, gstein
-     +0: cmpilato
