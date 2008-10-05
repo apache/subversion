@@ -196,21 +196,10 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
          an absolute path so we can walk up and out of the WC
          if necessary.  If we are using LIMIT_PATH it needs to
          be absolute too. */
-#if defined(WIN32) || defined(__CYGWIN__)
-      /* On Windows a path is also absolute when it starts with
-         'H:/' where 'H' is any upper or lower case letter. */
-      if (strlen(wcpath) == 0
-          || ((strlen(wcpath) > 0 && wcpath[0] != '/')
-               && !(strlen(wcpath) > 2
-                    && wcpath[1] == ':'
-                    && wcpath[2] == '/'
-                    && ((wcpath[0] >= 'A' && wcpath[0] <= 'Z')
-                        || (wcpath[0] >= 'a' && wcpath[0] <= 'z')))))
-#else
-      if (!(strlen(wcpath) > 0 && wcpath[0] == '/'))
-#endif /* WIN32 or Cygwin */
+
+      if (! svn_dirent_is_absolute(wcpath))
         {
-          SVN_ERR(svn_path_get_absolute(&wcpath, wcpath, pool));
+          SVN_ERR(svn_dirent_get_absolute(&wcpath, wcpath, pool));
         }
 
       if (wc_mergeinfo == NULL &&
