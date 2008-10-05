@@ -1451,6 +1451,9 @@ test_dirent_get_absolute(const char **msg,
   char *result, *expect_abs;
   const char *curdir;
   char buf[8192];
+#if defined(WIN32) || defined(__CYGWIN__)
+  const char *curdironc;
+#endif /* WIN32 */
 
   struct {
     const char *path;
@@ -1460,10 +1463,11 @@ test_dirent_get_absolute(const char **msg,
     { "abc", "%/abc" },
     { SVN_EMPTY_PATH, "%" },
 #if defined(WIN32) || defined(__CYGWIN__)
+    /* '@' will be replaced by the current working dir on C:\. */
     { "C:/", "C:/" },
     { "C:/abc", "C:/abc" },
-    { "C:abc", "%/abc" },
-    { "C:", "%" },
+    { "C:abc", "@/abc" },
+    { "C:", "@" },
     /* svn_dirent_get_absolute will check existence of this UNC shares on the
        test machine, so we can't really test this.
     { "//srv/shr",      "//srv/shr" },
@@ -1481,16 +1485,18 @@ test_dirent_get_absolute(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-#if defined(WIN32) || defined(__CYGWIN__)
-   if (! getdcwd(3, buf, sizeof(buf))) /* 3 stands for drive C: */
-    return svn_error_create(SVN_ERR_BASE, NULL, "getdcwd() failed");
-#else  /* WIN32 or Cygwin */
   if (! getcwd(buf, sizeof(buf)))
     return svn_error_create(SVN_ERR_BASE, NULL, "getcwd() failed");
-#endif /* non-WIN32 */
 
   curdir = svn_path_internal_style(buf, pool);
- 
+
+#if defined(WIN32) || defined(__CYGWIN__)
+  if (! getdcwd(3, buf, sizeof(buf))) /* 3 stands for drive C: */
+    return svn_error_create(SVN_ERR_BASE, NULL, "getdcwd() failed");
+
+  curdironc = svn_path_internal_style(buf, pool);
+#endif /* WIN32 */
+
   for (i = 0 ; i < sizeof(tests) / sizeof(tests[0]) ; i++ )
     {
       const char *path = tests[i].path;
@@ -1499,6 +1505,10 @@ test_dirent_get_absolute(const char **msg,
       expect_abs = expect;
       if (*expect == '%')
         expect_abs = apr_pstrcat(pool, curdir, expect + 1, NULL);
+#if defined(WIN32) || defined(__CYGWIN__)
+      if (*expect == '@')
+        expect_abs = apr_pstrcat(pool, curdironc, expect + 1, NULL);
+#endif /* WIN32 */
 
       SVN_ERR(svn_dirent_get_absolute(&result, path, pool));
       if (strcmp(result, expect_abs))
