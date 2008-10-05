@@ -139,12 +139,3 @@ Candidate changes for 1.5.3:
 
 Approved changes:
 =================
-
- * r33109, r33121, r33369
-   Correctly URI-encode paths when they are converted to URIs.
-   Justification: merging a file whose name had spaces was broken,
-                  and relative externals expanded incorrectly
-   Notes: Similar fixes may be needed elsewhere, and if they are made,
-          they should probably also be proposed for backport.
-   Votes:
-     +1: kfogel, blair, rhuijben
