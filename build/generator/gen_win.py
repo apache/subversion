@@ -509,7 +509,7 @@ class WinGeneratorBase(GeneratorBase):
     if def_file is not None:
       gsrc = self.path("build/generator/extractor.py")
 
-      deps = []
+      deps = [self.path('build.conf')]
       for header in target.msvc_export:
         deps.append(self.path('subversion/include', header))
 
