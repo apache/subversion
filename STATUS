@@ -113,6 +113,9 @@ Candidate changes for 1.5.3:
    Votes:     
      +1: lgo
 
+Approved changes:
+=================
+
  * r33447
    libsvn_subr: Remove actual disk IO from svn_path_get_absolute.
    Notes:
@@ -126,7 +129,4 @@ Candidate changes for 1.5.3:
      This removes an enourmous slowdown on the merge code on Windows. 
      (>30% on my tests).
    Votes:
-     +1: rhuijben, gstein
-
-Approved changes:
-=================
+     +1: rhuijben, gstein, lgo
