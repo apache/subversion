@@ -4,7 +4,6 @@
 
 import os
 import sys
-import string
 import glob
 import re
 import fileinput
@@ -643,7 +642,7 @@ class TargetJavaHeaders(TargetJava):
 
       class_header = build_path_join(self.headers, class_name + '.h')
       class_header_win = build_path_join(self.headers,
-                                         string.replace(self.package,".", "_")
+                                         self.package.replace(".", "_")
                                          + "_" + class_name + '.h')
       class_pkg_list = self.package.split('.')
       class_pkg = apply(build_path_join, class_pkg_list)
@@ -764,13 +763,13 @@ class GenError(Exception):
 
 def native_path(path):
   """Convert a build path to a native path"""
-  return string.replace(path, '/', os.sep)
+  return path.replace('/', os.sep)
 
 def build_path(path):
   """Convert a native path to a build path"""
-  path = string.replace(path, os.sep, '/')
+  path = path.replace(os.sep, '/')
   if os.altsep:
-    path = string.replace(path, os.altsep, '/')
+    path = path.replace(os.altsep, '/')
   return path
 
 def build_path_join(*path_parts):

@@ -4,7 +4,6 @@
 
 import os
 import sys
-import string
 try:
   # Python >=3.0
   import configparser
@@ -264,7 +263,7 @@ class Generator(gen_base.GeneratorBase):
           if not nonlib.external_lib:
             deps.append(nonlib.filename)
 
-      targ_varname = string.replace(target, '-', '_')
+      targ_varname = target.replace('-', '_')
       objnames = ' '.join(build_path_strip(path, objects))
 
       # Output value of path variable
@@ -389,7 +388,7 @@ class Generator(gen_base.GeneratorBase):
           # cd to dirname before install to work around libtool 1.4.2 bug.
           dirname, fname = build_path_splitfile(file)
           base, ext = os.path.splitext(fname)
-          name = string.replace(base, 'mod_', '')
+          name = base.replace('mod_', '')
           self.ofile.write('\tcd %s ; '
                            '$(MKDIR) "$(APACHE_LIBEXECDIR)" ; '
                            '$(INSTALL_MOD_SHARED) -n %s %s\n'
@@ -397,7 +396,7 @@ class Generator(gen_base.GeneratorBase):
         self.ofile.write('\n')
 
       elif area != 'test' and area != 'bdb-test':
-        area_var = string.replace(area, '-', '_')
+        area_var = area.replace('-', '_')
         upper_var = area_var.upper()
         self.ofile.write('install-%s: %s\n'
                          '\t$(MKDIR) $(DESTDIR)$(%sdir)\n'

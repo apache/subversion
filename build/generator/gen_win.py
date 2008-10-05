@@ -4,7 +4,6 @@
 
 import os
 import sys
-import string
 import fnmatch
 import re
 import glob
@@ -583,11 +582,11 @@ class WinGeneratorBase(GeneratorBase):
       name = target.name
       pos = name.find('-test')
       if pos >= 0:
-        proj_name = 'test_' + string.replace(name[:pos], '-', '_')
+        proj_name = 'test_' + name[:pos].replace('-', '_')
       elif isinstance(target, gen_base.TargetSWIG):
-        proj_name = 'swig_' + string.replace(name, '-', '_')
+        proj_name = 'swig_' + name.replace('-', '_')
       else:
-        proj_name = string.replace(name, '-', '_')
+        proj_name = name.replace('-', '_')
       target.proj_name = proj_name
 
   def get_external_project(self, target, proj_ext):
@@ -632,7 +631,7 @@ class WinGeneratorBase(GeneratorBase):
     # for this target.
     if name == 'javahl-javah' or name == 'libsvnjavahl':
       for dep in re.findall('\$\(([^\)]*)_DEPS\)', target.add_deps):
-        dep = string.replace(dep, '_', '-')
+        dep = dep.replace('_', '-')
         depends.extend(self.sections[dep].get_targets())
 
     return depends
@@ -865,8 +864,7 @@ class WinGeneratorBase(GeneratorBase):
   def get_win_lib_dirs(self, target, cfg):
     "Return the list of library directories for target"
 
-    libcfg = string.replace(string.replace(cfg, "Debug", "LibD"),
-                            "Release", "LibR")
+    libcfg = cfg.replace("Debug", "LibD").replace("Release", "LibR")
 
     fakelibdirs = [ self.apath(self.bdb_path, "lib"),
                     self.apath(self.neon_path),
@@ -1373,12 +1371,12 @@ if sys.platform == "win32":
     arg = re.sub(_escape_shell_arg_re, r'\1\1\2', arg)
 
     # surround by quotes and escape quotes inside
-    arg = '"' + string.replace(arg, '"', '"^""') + '"'
+    arg = '"' + arg.replace('"', '"^""') + '"'
     return arg
 
 else:
   def escape_shell_arg(str):
-    return "'" + string.replace(str, "'", "'\\''") + "'"
+    return "'" + str.replace("'", "'\\''") + "'"
 
 # ============================================================================
 
@@ -1395,7 +1393,7 @@ class POFile:
 # MSVC paths always use backslashes regardless of current platform
 def msvc_path(path):
   """Convert a build path to an msvc path"""
-  return string.replace(path, '/', '\\')
+  return path.replace('/', '\\')
 
 def msvc_path_join(*path_parts):
   """Join path components into an msvc path"""

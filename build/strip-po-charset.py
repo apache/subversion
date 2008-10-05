@@ -3,12 +3,11 @@
 # strip-po-charset.py
 #
 
-import sys, string
+import sys
 
 def strip_po_charset(inp, out):
 
-    out.write(string.replace(inp.read(),
-                             "\"Content-Type: text/plain; charset=UTF-8\\n\"\n",""))
+    out.write(inp.read().replace("\"Content-Type: text/plain; charset=UTF-8\\n\"\n",""))
 
 def main():
 

@@ -4,7 +4,6 @@
 
 import os
 import md5
-import string
 
 import gen_base
 import gen_win
@@ -186,7 +185,7 @@ class Generator(gen_win.WinGeneratorBase):
                                            ))
       targets.append(
         gen_win.ProjectItem(name=target.name,
-                            path=string.replace(fname, os.sep, '\\'),
+                            path=fname.replace(os.sep, '\\'),
                             guid=guids[target.name],
                             depends=deplist,
                             ))
