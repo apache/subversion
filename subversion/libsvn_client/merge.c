@@ -2351,7 +2351,8 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
       SVN_ERR(get_full_mergeinfo(&(child->pre_merge_mergeinfo), 
                                  &(child->implicit_mergeinfo), child_entry,
                                  &(child->indirect_mergeinfo),
-                                 svn_mergeinfo_inherited, NULL, child->path,
+                                 svn_mergeinfo_inherited, ra_session,
+                                 child->path,
                                  MAX(revision1, revision2),
                                  MIN(revision1, revision2),
                                  adm_access, merge_b->ctx, pool));
@@ -5341,6 +5342,40 @@ do_directory_merge(const char *url1,
   return err;
 }
 
+/** Ensure the caller receives a RA_SESSION object to URL. This function will
+ * reuse RA_SESSION if it is not NULL and is opened to the same repository as
+ * URL is pointing to. Otherwise a new session object will be created.
+ */
+static svn_error_t *
+ensure_ra_session_url(svn_ra_session_t **ra_session,
+                      const char *url,
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *pool)
+{
+  svn_error_t *err = SVN_NO_ERROR;
+
+  if (*ra_session)
+    {
+      const char *old_session_url;
+      err = svn_client__ensure_ra_session_url(&old_session_url,
+                                              *ra_session,
+                                              url,
+                                              pool);
+    }
+
+  /* SVN_ERR_RA_ILLEGAL_URL is raised when url doesn't point to the same
+     repository as ra_session. */
+  if (! *ra_session || (err && err->apr_err == SVN_ERR_RA_ILLEGAL_URL))
+    {
+      svn_error_clear(err);
+      err = svn_client__open_ra_session_internal(ra_session, url,
+                                                 NULL, NULL, NULL,
+                                                 FALSE, TRUE, ctx, pool);
+    }
+  SVN_ERR(err);
+
+  return SVN_NO_ERROR;
+}
 
 /* Drive a merge of MERGE_SOURCES into working copy path TARGET (with
    associated TARGET_ENTRY and ADM_ACCESS baton).  
@@ -5387,6 +5422,7 @@ do_merge(apr_array_header_t *merge_sources,
   const char *diff3_cmd;
   int i;
   svn_boolean_t checked_mergeinfo_capability = FALSE;
+  svn_ra_session_t *ra_session1 = NULL, *ra_session2 = NULL;
 
   /* Check from some special conditions when in record-only mode
      (which is a merge-tracking thing). */
@@ -5457,7 +5493,6 @@ do_merge(apr_array_header_t *merge_sources,
         APR_ARRAY_IDX(merge_sources, i, merge_source_t *);
       const char *url1, *url2;
       svn_revnum_t rev1, rev2;
-      svn_ra_session_t *ra_session1, *ra_session2;
 
       svn_pool_clear(subpool);
 
@@ -5472,14 +5507,10 @@ do_merge(apr_array_header_t *merge_sources,
       if ((strcmp(url1, url2) == 0) && (rev1 == rev2))
         continue;
 
-      /* Establish RA sessions to our URLs. */
-      SVN_ERR(svn_client__open_ra_session_internal(&ra_session1, url1,
-                                                   NULL, NULL, NULL, 
-                                                   FALSE, TRUE, ctx, subpool));
-      SVN_ERR(svn_client__open_ra_session_internal(&ra_session2, url2,
-                                                   NULL, NULL, NULL, 
-                                                   FALSE, TRUE, ctx, subpool));
-
+      /* Establish RA sessions to our URLs, reuse where possible. */
+      SVN_ERR(ensure_ra_session_url(&ra_session1, url1, ctx, pool));
+      SVN_ERR(ensure_ra_session_url(&ra_session2, url2, ctx, pool));
+ 
       /* Populate the portions of the merge context baton that need to
          be reset for each merge source iteration. */
       merge_cmd_baton.url = url2;
