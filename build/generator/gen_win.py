@@ -456,7 +456,8 @@ class WinGeneratorBase(GeneratorBase):
           rsrc = '"%s"' % rsrc
 
         sources.append(ProjectItem(path=rsrc, reldir=reldir, user_deps=[],
-                                   custom_build=cbuild, custom_target=ctarget))
+                                   custom_build=cbuild, custom_target=ctarget,
+                                   extension=os.path.splitext(rsrc)[1]))
 
     if isinstance(target, gen_base.TargetJavaClasses) and target.jar:
       classdir = self.path(target.classes)
@@ -466,7 +467,8 @@ class WinGeneratorBase(GeneratorBase):
                   " ".join(target.packages))
       deps = map(lambda x: x.custom_target, sources)
       sources.append(ProjectItem(path='makejar', reldir='', user_deps=deps,
-                                 custom_build=cbuild, custom_target=jarfile))
+                                 custom_build=cbuild, custom_target=jarfile,
+                                 extension=''))
 
     if isinstance(target, gen_base.TargetSWIG):
       swig_options = self.swig.opts[target.lang].split()
@@ -500,7 +502,8 @@ class WinGeneratorBase(GeneratorBase):
                 sources.append(ProjectItem(path=isrc, reldir=None,
                                            custom_build=cbuild,
                                            custom_target=csrc,
-                                           user_deps=user_deps))
+                                           user_deps=user_deps,
+                                           extension=''))
 
     def_file = self.get_def_file(target)
     if def_file is not None:
@@ -513,11 +516,13 @@ class WinGeneratorBase(GeneratorBase):
       cbuild = "python $(InputPath) %s > %s" \
                % (" ".join(deps), def_file)
 
-      sources.append(ProjectItem(path=gsrc, reldir=None, custom_build=cbuild,
-                                 user_deps=deps, custom_target=def_file))
+      sources.append(ProjectItem(path=gsrc, reldir=None, custom_build=cbuild,                                 
+                                 user_deps=deps, custom_target=def_file,
+                                 extension=''))
 
       sources.append(ProjectItem(path=def_file, reldir=None,
-                                 custom_build=None, user_deps=[]))
+                                 custom_build=None, user_deps=[],
+                                 extension=''))
 
     sources.sort(lambda x, y: cmp(x.path, y.path))
     return sources
