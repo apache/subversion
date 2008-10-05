@@ -113,6 +113,16 @@ Candidate changes for 1.5.3:
    Votes:     
      +1: lgo
 
+ * r33465
+   Reuse ra_sessions where possible during merge. This reduces the number of
+   connections opened during merge drastically (to a third) thereby improving
+   performance.
+   Justification:
+     Not a critical issue, but any performance improvements to 'svn merge' are 
+     more than welcome.
+   Votes:
+     +1: lgo
+
 Approved changes:
 =================
 
