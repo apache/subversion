@@ -46,7 +46,7 @@ def output(cmd, strip=None):
     output = stdout.read()
     assert(not stdout.close())
   if strip:
-    return string.strip(output)
+    return output.strip()
   else:
     return output
 

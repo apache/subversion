@@ -36,7 +36,6 @@ import os
 import os.path
 import pydoc
 import re
-import string
 import sys
 import time
 
@@ -354,7 +353,7 @@ class Issue:
   "Represents a single issue from the exported IssueZilla data."
 
   def __init__(self, line):
-    row = string.strip(line).split('\t')
+    row = line.strip().split('\t')
 
     self.id = int(row[0])
     self.type = row[1]

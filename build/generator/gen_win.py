@@ -1111,7 +1111,7 @@ class WinGeneratorBase(GeneratorBase):
       num = fp.readline()
       if num:
         msg = 'Found installed perl version number.'
-        self.perl_lib = 'perl' + string.rstrip(num) + '.lib'
+        self.perl_lib = 'perl' + num.rstrip() + '.lib'
       else:
         msg = 'Could not detect perl version.'
         self.perl_lib = 'perl56.lib'
@@ -1237,7 +1237,7 @@ class WinGeneratorBase(GeneratorBase):
   def _find_swig_libdir(self):
     fp = os.popen(self.swig_exe + ' -swiglib', 'r')
     try:
-      libdir = string.rstrip(fp.readline())
+      libdir = fp.readline().rstrip()
       if libdir:
         sys.stderr.write('Using SWIG library directory %s\n' % libdir)
         return libdir
