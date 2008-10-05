@@ -5,7 +5,7 @@
 #                     header files
 #
 
-import os, re, string, sys, glob, shutil
+import os, re, sys, glob, shutil
 if __name__ == "__main__":
   parent_dir = os.path.dirname(os.path.abspath(os.path.dirname(sys.argv[0])))
   sys.path[0:0] = [ parent_dir, os.path.dirname(parent_dir) ]
@@ -48,7 +48,7 @@ class Generator(generator.swig.Generator):
 
   def proxy_filename(self, include_filename):
     """Convert a .h filename into a _h.swg filename"""
-    return string.replace(include_filename,".h","_h.swg")
+    return include_filename.replace(".h","_h.swg")
 
   def _write_nodefault_calls(self, structs):
     """Write proxy definitions to a SWIG interface file"""
