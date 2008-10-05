@@ -20,22 +20,13 @@ Candidate changes for 1.5.3:
    Votes:
      +1: kfogel, danielsh
 
- * r32409
-   Fix an incompatibility with BSD make, which was introduced in r24293.
-   Justification:
-     Trivial fix. Fixes out-of-tree build of the bindings on BSD.
-     Might help downstream packagers for these systems.
-   Votes:
-     +1: stsp, arfrever
-     +0: cmpilato
-
  * r32771
    po-update.sh: Search for messages in svn_fs_util.h.
    Justification:
      po-update.sh without this change doesn't add messages from svn_fs_util.h
      to .po files, so these messages are untranslated.
    Votes:
-     +1: arfrever
+     +1: arfrever, gstein
 
  * r32968, r32975
    Fix bug which occurs when a merge adds explicit mergeinfo to a subtree that
@@ -135,7 +126,16 @@ Candidate changes for 1.5.3:
      This removes an enourmous slowdown on the merge code on Windows. 
      (>30% on my tests).
    Votes:
-     +1: rhuijben
+     +1: rhuijben, gstein
 
 Approved changes:
 =================
+
+ * r32409
+   Fix an incompatibility with BSD make, which was introduced in r24293.
+   Justification:
+     Trivial fix. Fixes out-of-tree build of the bindings on BSD.
+     Might help downstream packagers for these systems.
+   Votes:
+     +1: stsp, arfrever, gstein
+     +0: cmpilato
