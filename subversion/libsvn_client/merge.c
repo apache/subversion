@@ -2300,7 +2300,7 @@ adjust_deleted_subtree_ranges(svn_client__merge_path_t *child,
 
               /* PRIMARY_URL@older_rev exists, so it was deleted at some
                  revision prior to peg_rev, find that revision. */
-              err = svn_ra_get_deleted_rev(ra_session, mergeinfo_path,
+              err = svn_ra_get_deleted_rev(ra_session, rel_source_path,
                                            older_rev, younger_rev,
                                            &revision_primary_url_deleted,
                                            pool);

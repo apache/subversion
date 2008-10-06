@@ -1760,7 +1760,8 @@ svn_ra_has_capability(svn_ra_session_t *session,
 /**
  * Given @a path at revision @a peg_revision, set @a *revision_deleted to the
  * revision @a path was first deleted, within the inclusive revision range
- * defined by @a peg_revision and @a end_revision.
+ * defined by @a peg_revision and @a end_revision.  @a path is relative
+ * to the URL in @a session.
  *
  * If @a path does not exist at @a peg_revision or was not deleted within
  * the specified range, then set @a *revision_deleted to @c SVN_INVALID_REVNUM.

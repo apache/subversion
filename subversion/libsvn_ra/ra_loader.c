@@ -1407,6 +1407,9 @@ svn_ra_get_deleted_rev(svn_ra_session_t *session,
                        svn_revnum_t *revision_deleted,
                        apr_pool_t *pool)
 {
+  /* Path must be relative. */
+  SVN_ERR_ASSERT(*path != '/');
+
   if (!SVN_IS_VALID_REVNUM(peg_revision))
     return svn_error_createf(SVN_ERR_CLIENT_BAD_REVISION, NULL,
                              _("Invalid peg revision %ld"), peg_revision);
