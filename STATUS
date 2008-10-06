@@ -81,16 +81,6 @@ Candidate changes for 1.5.3:
 Approved changes:
 =================
 
- * r33136, r33137
-   Fix issue #3285 - 'svn log -g' mistakes property change for
-   mergeinfo removal.
-   Notes:
-     r33136 adds the regression test.  r33137 is the fix.
-   Justification:
-     This is a regression from 1.5.0.
-   Votes:
-     +1: cmpilato, pburba, hwright
-
  * r33173
    ra_serf: Fix the svn_ra_replay API, which got broken when svn_ra_replay_range
    was added. This API is not used anymore in svnsync. Bug was reported and fix 
