@@ -163,10 +163,15 @@ file_open(apr_file_t **f,
           const char *fname,
           apr_int32_t flag,
           apr_fileperms_t perm,
+          svn_boolean_t retry_on_failure,
           apr_pool_t *pool)
 {
   apr_status_t status = apr_file_open(f, fname, flag, perm, pool);
-  WIN32_RETRY_LOOP(status, apr_file_open(f, fname, flag, perm, pool));
+
+  if (retry_on_failure)
+    {
+      WIN32_RETRY_LOOP(status, apr_file_open(f, fname, flag, perm, pool));
+    }
   return status;
 }
 
@@ -298,7 +303,7 @@ svn_io_open_unique_file2(apr_file_t **f,
                                          pool));
 
       apr_err = file_open(&file, unique_name_apr, flag,
-                          APR_OS_DEFAULT, pool);
+                          APR_OS_DEFAULT, FALSE, pool);
 
       if (APR_STATUS_IS_EEXIST(apr_err))
         continue;
@@ -955,40 +960,37 @@ svn_io_filesizes_different_p(svn_boolean_t *different_p,
 
 
 svn_error_t *
+svn_io_file_checksum2(svn_checksum_t **checksum,
+                      const char *file,
+                      svn_checksum_kind_t kind,
+                      apr_pool_t *pool)
+{
+  svn_stream_t *file_stream;
+  svn_stream_t *checksum_stream;
+  apr_file_t* f;
+
+  SVN_ERR(svn_io_file_open(&f, file, APR_READ, APR_OS_DEFAULT, pool));
+  file_stream = svn_stream_from_aprfile2(f, FALSE, pool);
+  checksum_stream = svn_stream_checksummed2(file_stream, checksum, kind,
+                                            NULL, svn_checksum_md5, TRUE,
+                                            pool);
+
+  /* Because the checksummed stream will force the reading (and
+     checksumming) of all the file's bytes, we can just close the stream
+     and let its magic work. */
+  return svn_stream_close(checksum_stream);
+}
+
+
+svn_error_t *
 svn_io_file_checksum(unsigned char digest[],
                      const char *file,
                      apr_pool_t *pool)
 {
-  struct apr_md5_ctx_t context;
-  apr_file_t *f = NULL;
-  svn_error_t *err;
-  char *buf = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
-  apr_size_t len;
+  svn_checksum_t *checksum;
 
-  /* ### The apr_md5 functions return apr_status_t, but they only
-     return success, and really, what could go wrong?  So below, we
-     ignore their return values. */
-
-  apr_md5_init(&context);
-
-  SVN_ERR(svn_io_file_open(&f, file, APR_READ, APR_OS_DEFAULT, pool));
-
-  len = SVN__STREAM_CHUNK_SIZE;
-  err = svn_io_file_read(f, buf, &len, pool);
-  while (! err)
-    {
-      apr_md5_update(&context, buf, len);
-      len = SVN__STREAM_CHUNK_SIZE;
-      err = svn_io_file_read(f, buf, &len, pool);
-    };
-
-  if (err && ! APR_STATUS_IS_EOF(err->apr_err))
-    return err;
-  svn_error_clear(err);
-
-  SVN_ERR(svn_io_file_close(f, pool));
-
-  apr_md5_final(digest, &context);
+  SVN_ERR(svn_io_file_checksum2(&checksum, file, svn_checksum_md5, pool));
+  memcpy(digest, checksum->digest, APR_MD5_DIGESTSIZE);
 
   return SVN_NO_ERROR;
 }
@@ -2468,7 +2470,8 @@ svn_io_file_open(apr_file_t **new_file, const char *fname,
   apr_status_t status;
 
   SVN_ERR(svn_path_cstring_from_utf8(&fname_apr, fname, pool));
-  status = file_open(new_file, fname_apr, flag | APR_BINARY, perm, pool);
+  status = file_open(new_file, fname_apr, flag | APR_BINARY, perm, TRUE,
+                     pool);
 
   if (status)
     return svn_error_wrap_apr(status, _("Can't open file '%s'"),
@@ -2800,6 +2803,10 @@ dir_make(const char *path, apr_fileperms_t perm,
     }
 #endif
 
+/* Windows does not implement sgid. Skip here because retrieving 
+   the file permissions via APR_FINFO_PROT | APR_FINFO_OWNER is documented 
+   to be 'incredibly expensive'. */
+#ifndef WIN32
   if (sgid)
     {
       apr_finfo_t finfo;
@@ -2811,6 +2818,7 @@ dir_make(const char *path, apr_fileperms_t perm,
       if (!status)
         apr_file_perms_set(path_apr, finfo.protection | APR_GSETID);
     }
+#endif
 
   return SVN_NO_ERROR;
 }

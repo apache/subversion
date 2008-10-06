@@ -3,7 +3,7 @@
 #
 ######################################################################
 #
-# Copyright (c) 2002-2006 CollabNet.  All rights reserved.
+# Copyright (c) 2002-2006, 2008 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -23,13 +23,14 @@ import sys
 import os
 
 def usage():
-  print 'USAGE: python %s WHAT' % sys.argv[0]
-  print '  Returns information about how to build Python extensions.'
-  print '  WHAT may be one of:'
-  print "    --includes : return -I include flags"
-  print "    --compile  : return a compile command"
-  print "    --link     : return a link command"
-  print "    --libs     : return just the library options for linking"
+  print('USAGE: python %s WHAT' % sys.argv[0])
+  print('  Returns information about how to build Python extensions.')
+  print('  WHAT may be one of:')
+  print("    --includes : return -I include flags")
+  print("    --compile  : return a compile command")
+  print("    --link     : return a link command")
+  print("    --libs     : return just the library options for linking")
+  print("    --site     : return the path to site-packages")
   sys.exit(1)
 
 if len(sys.argv) != 2:
@@ -39,16 +40,16 @@ try:
   from distutils import sysconfig
 except ImportError:
   # No information available
-  print "none"
+  print("none")
   sys.exit(1)
 
 if sys.argv[1] == '--includes':
   inc = sysconfig.get_python_inc()
   plat = sysconfig.get_python_inc(plat_specific=1)
   if inc == plat:
-    print "-I" + inc
+    print("-I" + inc)
   else:
-    print "-I%s -I%s" % (inc, plat)
+    print("-I%s -I%s" % (inc, plat))
   sys.exit(0)
 
 if sys.argv[1] == '--compile':
@@ -56,7 +57,7 @@ if sys.argv[1] == '--compile':
       sysconfig.get_config_vars('CC', 'BASECFLAGS', 'OPT', 'CCSHARED')
   if basecflags:
     opt = basecflags + ' ' + opt
-  print cc, opt, ccshared
+  print("%s %s %s" % (cc, opt, ccshared))
   sys.exit(0)
 
 def add_option(options, name, value=None):
@@ -139,11 +140,15 @@ def lib_options():
   return options
 
 if sys.argv[1] == '--link':
-  print " ".join(link_options())
+  print(" ".join(link_options()))
   sys.exit(0)
 
 if sys.argv[1] == '--libs':
-  print " ".join(lib_options())
+  print(" ".join(lib_options()))
+  sys.exit(0)
+
+if sys.argv[1] == '--site':
+  print(sysconfig.get_python_lib())
   sys.exit(0)
 
 usage()

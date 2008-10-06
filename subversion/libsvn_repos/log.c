@@ -552,6 +552,7 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
       svn_fs_path_change_t *change;
       const char *changed_path, *base_path = NULL;
       svn_revnum_t base_rev = SVN_INVALID_REVNUM;
+      svn_fs_root_t *base_root = NULL;
       svn_string_t *prev_mergeinfo_value = NULL, *mergeinfo_value;
 
       svn_pool_clear(iterpool);
@@ -623,32 +624,67 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
           continue;
         }
 
-      /* If there was a base location, fetch its (possibly inherited)
-         mergeinfo property value. */
+      /* If there was a base location, fetch its mergeinfo property value. */
       if (base_path && SVN_IS_VALID_REVNUM(base_rev))
         {
-          svn_fs_root_t *base_root;
-          apr_array_header_t *query_paths =
-            apr_array_make(iterpool, 1, sizeof(const char *));
-          svn_mergeinfo_t base_mergeinfo;
-          svn_mergeinfo_catalog_t base_catalog;
-
           SVN_ERR(svn_fs_revision_root(&base_root, fs, base_rev, iterpool));
-          APR_ARRAY_PUSH(query_paths, const char *) = base_path;
-          SVN_ERR(svn_fs_get_mergeinfo(&base_catalog, base_root, query_paths,
-                                       svn_mergeinfo_inherited, FALSE,
-                                       iterpool));
-          base_mergeinfo = apr_hash_get(base_catalog, base_path,
-                                        APR_HASH_KEY_STRING);
-          if (base_mergeinfo)
-            SVN_ERR(svn_mergeinfo_to_string(&prev_mergeinfo_value,
-                                            base_mergeinfo,
-                                            iterpool));
+          SVN_ERR(svn_fs_node_prop(&prev_mergeinfo_value, base_root, base_path,
+                                   SVN_PROP_MERGEINFO, iterpool));
         }
 
       /* Now fetch the current (as of REV) mergeinfo property value. */
       SVN_ERR(svn_fs_node_prop(&mergeinfo_value, root, changed_path,
                                SVN_PROP_MERGEINFO, iterpool));
+
+      /* No mergeinfo on either the new or previous location?  Just
+         skip it.  (If there *was* a change, it would have been in
+         inherited mergeinfo only, which should be picked up by the
+         iteration of this loop that finds the parent paths that
+         really got changed.)  */
+      if (! (mergeinfo_value || prev_mergeinfo_value))
+        continue;
+
+      /* If mergeinfo was explicitly added or removed on this path, we
+         need to check to see if that was a real semantic change of
+         meaning.  So, fill in the "missing" mergeinfo value with the
+         inherited mergeinfo for that path/revision.  */
+      if (prev_mergeinfo_value && (! mergeinfo_value))
+        {
+          apr_array_header_t *query_paths =
+            apr_array_make(iterpool, 1, sizeof(const char *));
+          svn_mergeinfo_t tmp_mergeinfo;
+          svn_mergeinfo_catalog_t tmp_catalog;
+
+          APR_ARRAY_PUSH(query_paths, const char *) = changed_path;
+          SVN_ERR(svn_fs_get_mergeinfo(&tmp_catalog, root, 
+                                       query_paths, svn_mergeinfo_inherited,
+                                       FALSE, iterpool));
+          tmp_mergeinfo = apr_hash_get(tmp_catalog, changed_path,
+                                        APR_HASH_KEY_STRING);
+          if (tmp_mergeinfo)
+            SVN_ERR(svn_mergeinfo_to_string(&mergeinfo_value,
+                                            tmp_mergeinfo,
+                                            iterpool));
+        }
+      else if (mergeinfo_value && (! prev_mergeinfo_value)
+               && base_path && SVN_IS_VALID_REVNUM(base_rev))
+        {
+          apr_array_header_t *query_paths =
+            apr_array_make(iterpool, 1, sizeof(const char *));
+          svn_mergeinfo_t tmp_mergeinfo;
+          svn_mergeinfo_catalog_t tmp_catalog;
+
+          APR_ARRAY_PUSH(query_paths, const char *) = base_path;
+          SVN_ERR(svn_fs_get_mergeinfo(&tmp_catalog, base_root, 
+                                       query_paths, svn_mergeinfo_inherited,
+                                       FALSE, iterpool));
+          tmp_mergeinfo = apr_hash_get(tmp_catalog, base_path,
+                                        APR_HASH_KEY_STRING);
+          if (tmp_mergeinfo)
+            SVN_ERR(svn_mergeinfo_to_string(&prev_mergeinfo_value,
+                                            tmp_mergeinfo,
+                                            iterpool));
+        }
 
       /* If the old and new mergeinfo differ in any way, store the
          before and after mergeinfo values in our return hashes. */

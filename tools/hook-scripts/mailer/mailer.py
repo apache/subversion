@@ -26,8 +26,12 @@
 
 import os
 import sys
-import string
-import ConfigParser
+try:
+  # Python >=3.0
+  import configparser
+except ImportError:
+  # Python <3.0
+  import ConfigParser as configparser
 import time
 import popen2
 import cStringIO
@@ -50,14 +54,14 @@ try:
 except ImportError:
   sys.stderr.write(
     "You need version %s or better of the Subversion Python bindings.\n" \
-    % string.join(map(lambda x: str(x), _MIN_SVN_VERSION), '.'))
+    % ".".join(map(lambda x: str(x), _MIN_SVN_VERSION)))
   sys.exit(1)
 if _MIN_SVN_VERSION > [svn.core.SVN_VER_MAJOR,
                        svn.core.SVN_VER_MINOR,
                        svn.core.SVN_VER_PATCH]:
   sys.stderr.write(
     "You need version %s or better of the Subversion Python bindings.\n" \
-    % string.join(map(lambda x: str(x), _MIN_SVN_VERSION), '.'))
+    % ".".join(map(lambda x: str(x), _MIN_SVN_VERSION)))
   sys.exit(1)
 
 
@@ -214,9 +218,9 @@ class MailedOutput(OutputBase):
     if len(to_addr_in) >= 3 and to_addr_in[0] == '[' \
                             and to_addr_in[2] == ']':
       self.to_addrs = \
-        filter(None, string.split(to_addr_in[3:], to_addr_in[1]))
+        filter(None, to_addr_in[3:].split(to_addr_in[1]))
     else:
-      self.to_addrs = filter(None, string.split(to_addr_in))
+      self.to_addrs = filter(None, to_addr_in.split())
     self.from_addr = self.cfg.get('from_addr', group, params) \
                      or self.repos.author or 'no_author'
     # if the from_addr (also) starts with '[.]' (may happen if one
@@ -244,7 +248,7 @@ class MailedOutput(OutputBase):
            'MIME-Version: 1.0\n' \
            'Content-Type: text/plain; charset=UTF-8\n' \
            'Content-Transfer-Encoding: 8bit\n' \
-           % (self.from_addr, string.join(self.to_addrs, ', '), subject)
+           % (self.from_addr, ', '.join(self.to_addrs), subject)
     if self.reply_to:
       hdrs = '%sReply-To: %s\n' % (hdrs, self.reply_to)
     return hdrs + '\n'
@@ -292,7 +296,7 @@ class PipeOutput(MailedOutput):
     MailedOutput.__init__(self, cfg, repos, prefix_param)
 
     # figure out the command for delivery
-    self.cmd = string.split(cfg.general.mail_command)
+    self.cmd = cfg.general.mail_command.split()
 
   def start(self, group, params):
     MailedOutput.start(self, group, params)
@@ -356,7 +360,7 @@ class Commit(Messenger):
         param_list = params.items()
         param_list.sort()
         # collect the set of paths belonging to this group
-        if self.groups.has_key( (group, tuple(param_list)) ):
+        if (group, tuple(param_list)) in self.groups:
           old_param, paths = self.groups[group, tuple(param_list)]
         else:
           paths = { }
@@ -369,7 +373,7 @@ class Commit(Messenger):
       if change.item_kind == svn.core.svn_node_dir:
         dirs[path] = None
       else:
-        idx = string.rfind(path, '/')
+        idx = path.rfind('/')
         if idx == -1:
           dirs[''] = None
         else:
@@ -381,7 +385,7 @@ class Commit(Messenger):
 
     # compose the basic subject line. later, we can prefix it.
     dirlist.sort()
-    dirlist = string.join(dirlist)
+    dirlist = ' '.join(dirlist)
     if commondir:
       self.output.subject = 'r%d - in %s: %s' % (repos.rev, commondir, dirlist)
     else:
@@ -460,7 +464,7 @@ class PropChange(Messenger):
                         % (self.author, self.repos.rev, self.propname,
                            actions.get(self.action, 'Unknown (\'%s\')' \
                                        % self.action)))
-      if self.action == 'A' or not actions.has_key(self.action):
+      if self.action == 'A' or self.action not in actions:
         self.output.write('Property value:\n')
         propvalue = self.repos.get_rev_prop(self.propname)
         self.output.write(propvalue)
@@ -491,15 +495,15 @@ def get_commondir(dirlist):
     commondir = ''
     newdirs = dirlist
   else:
-    common = string.split(dirlist[0], '/')
+    common = dirlist[0].split('/')
     for j in range(1, len(dirlist)):
       d = dirlist[j]
-      parts = string.split(d, '/')
+      parts = d.split('/')
       for i in range(len(common)):
         if i == len(parts) or common[i] != parts[i]:
           del common[i:]
           break
-    commondir = string.join(common, '/')
+    commondir = '/'.join(common)
     if commondir:
       # strip the common portion from each directory
       l = len(commondir) + 1
@@ -536,7 +540,7 @@ class Lock(Messenger):
         param_list = params.items()
         param_list.sort()
         # collect the set of paths belonging to this group
-        if self.groups.has_key( (group, tuple(param_list)) ):
+        if (group, tuple(param_list)) in self.groups:
           old_param, paths = self.groups[group, tuple(param_list)]
         else:
           paths = { }
@@ -547,7 +551,7 @@ class Lock(Messenger):
 
     # compose the basic subject line. later, we can prefix it.
     dirlist.sort()
-    dirlist = string.join(dirlist)
+    dirlist = ' '.join(dirlist)
     if commondir:
       self.output.subject = '%s: %s' % (commondir, dirlist)
     else:
@@ -589,7 +593,7 @@ class DiffSelections:
     ### don't have an option anywhere in your configuration file, it
     ### still gets returned as non-None.
     if len(gen_diffs):
-      list = string.split(gen_diffs, " ")
+      list = gen_diffs.split(" ")
       for item in list:
         if item == 'add':
           self.add = True
@@ -710,7 +714,7 @@ def generate_list(changekind, changelist, paths, in_paths):
 
   items = [ ]
   for path, change in changelist:
-    if selection(change) and paths.has_key(path) == in_paths:
+    if selection(change) and (path in paths) == in_paths:
       item = _data(
         path=path,
         is_dir=change.item_kind == svn.core.svn_node_dir,
@@ -775,7 +779,7 @@ class DiffGenerator:
         continue
 
       # is this change in (or out of) the set of matched paths?
-      if self.paths.has_key(path) != self.in_paths:
+      if (path in self.paths) != self.in_paths:
         continue
 
       if change.base_rev != -1:
@@ -1123,7 +1127,7 @@ class Config:
   _predefined = ('general', 'defaults', 'maps')
 
   def __init__(self, fname, repos, global_params):
-    cp = ConfigParser.ConfigParser()
+    cp = configparser.ConfigParser()
     cp.read(fname)
 
     # record the (non-default) groups that we find
@@ -1163,7 +1167,7 @@ class Config:
     The option is specified as a dotted symbol, such as 'general.mail_command'
     """
     ob = self
-    for part in string.split(option, '.'):
+    for part in option.split('.'):
       if not hasattr(ob, part):
         return None
       ob = getattr(ob, part)
@@ -1199,7 +1203,7 @@ class Config:
   def get_diff_cmd(self, group, args):
     "Get a diff command as a list of argv elements."
     ### do some better splitting to enable quoting of spaces
-    diff_cmd = string.split(self.get('diff', group, None))
+    diff_cmd = self.get('diff', group, None).split()
 
     cmd = [ ]
     for part in diff_cmd:

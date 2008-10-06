@@ -56,6 +56,7 @@
 #include "bdb/locks-table.h"
 #include "bdb/lock-tokens-table.h"
 #include "bdb/node-origins-table.h"
+#include "bdb/metadata-table.h"
 
 #include "../libsvn_fs/fs-loader.h"
 #include "private/svn_fs_util.h"
@@ -169,6 +170,7 @@ cleanup_fs(svn_fs_t *fs)
   SVN_ERR(cleanup_fs_db(fs, &bfd->locks, "locks"));
   SVN_ERR(cleanup_fs_db(fs, &bfd->lock_tokens, "lock-tokens"));
   SVN_ERR(cleanup_fs_db(fs, &bfd->node_origins, "node-origins"));
+  SVN_ERR(cleanup_fs_db(fs, &bfd->metadata, "metadata"));
 
   /* Finally, close the environment.  */
   bfd->bdb = 0;
@@ -618,6 +620,17 @@ open_databases(svn_fs_t *fs,
                                                            create)));
     }
 
+
+  if (format >= SVN_FS_BASE__MIN_METADATA_FORMAT)
+    {
+      SVN_ERR(BDB_WRAP(fs, (create
+                            ? "creating 'metadata' table"
+                            : "opening 'matadata' table"),
+                       svn_fs_bdb__open_metadata_table(&bfd->metadata,
+                                                       bfd->bdb->env,
+                                                       create)));
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -796,10 +809,46 @@ static svn_error_t *
 base_upgrade(svn_fs_t *fs, const char *path, apr_pool_t *pool,
              apr_pool_t *common_pool)
 {
-  /* Currently, upgrading just means bumping the format file's stored
-     version number. */
-  return svn_io_write_version_file(svn_path_join(path, FORMAT_FILE, pool),
-                                   SVN_FS_BASE__FORMAT_NUMBER, pool);
+  const char *version_file_path;
+  int old_format_number;
+  
+  version_file_path = svn_path_join(path, FORMAT_FILE, pool);
+
+  /* Read the old number so we've got it on hand later on. */
+  SVN_ERR(svn_io_read_version_file(&old_format_number, version_file_path,
+                                   pool));
+
+  /* Bump the format file's stored version number. */
+  SVN_ERR(svn_io_write_version_file(version_file_path,
+                                    SVN_FS_BASE__FORMAT_NUMBER, pool));
+
+  /* Check and see if we need to record the "bump" revision. */
+  if (old_format_number < SVN_FS_BASE__MIN_FORWARD_DELTAS_FORMAT)
+    {
+      apr_pool_t *subpool = svn_pool_create(pool);
+      svn_revnum_t youngest_rev;
+      const char *value;
+
+      /* Open the filesystem in a subpool (so we can control its
+         closure) and do our fiddling.
+
+         NOTE: By using base_open() here instead of open_databases(),
+         we will end up re-reading the format file that we just wrote.
+         But it's better to use the existing encapsulation of "opening
+         the filesystem" rather than duplicating (or worse, partially
+         duplicating) that logic here.  */
+      SVN_ERR(base_open(fs, path, subpool, common_pool));
+
+      /* Fetch the youngest rev, and record it */
+      SVN_ERR(svn_fs_base__youngest_rev(&youngest_rev, fs, subpool));
+      value = apr_psprintf(subpool, "%ld", youngest_rev);
+      SVN_ERR(svn_fs_base__metadata_set(fs,
+                                  SVN_FS_BASE__METADATA_FORWARD_DELTA_UPGRADE,
+                                  value, subpool));
+      svn_pool_destroy(subpool);
+    }
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *

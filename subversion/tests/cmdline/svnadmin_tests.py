@@ -160,7 +160,7 @@ def test_create(sbox):
 
   svntest.actions.run_and_verify_svn(
     "Running verbose status",
-    ["                0        0  ?           %s\n" % wc_dir], [],
+    ["                 0        0  ?           %s\n" % wc_dir], [],
     "status", "--verbose", wc_dir)
 
   # success

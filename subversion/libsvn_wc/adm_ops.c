@@ -7,7 +7,7 @@
  *            file in the working copy).
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -28,7 +28,6 @@
 #include <apr_pools.h>
 #include <apr_tables.h>
 #include <apr_hash.h>
-#include <apr_md5.h>
 #include <apr_file_io.h>
 #include <apr_time.h>
 #include <apr_errno.h>
@@ -41,7 +40,6 @@
 #include "svn_hash.h"
 #include "svn_wc.h"
 #include "svn_io.h"
-#include "svn_md5.h"
 #include "svn_xml.h"
 #include "svn_time.h"
 #include "svn_diff.h"
@@ -349,8 +347,14 @@ process_committed_leaf(int log_number,
   svn_wc_entry_t tmp_entry;
   apr_uint64_t modify_flags = 0;
   svn_stringbuf_t *logtags = svn_stringbuf_create("", pool);
+  svn_checksum_t *checksum = NULL;
 
   SVN_ERR(svn_wc__adm_write_check(adm_access));
+  if (digest)
+    {
+      checksum = svn_checksum_create(svn_checksum_md5, pool);
+      checksum->digest = digest;
+    }
 
   /* Set PATH's working revision to NEW_REVNUM; if REV_DATE and
      REV_AUTHOR are both non-NULL, then set the 'committed-rev',
@@ -366,8 +370,8 @@ process_committed_leaf(int log_number,
       SVN_ERR(remove_revert_file(&logtags, adm_access, path, FALSE, pool));
       SVN_ERR(remove_revert_file(&logtags, adm_access, path, TRUE, pool));
 
-      if (digest)
-        hex_digest = svn_md5_digest_to_cstring(digest, pool);
+      if (checksum)
+        hex_digest = svn_checksum_to_cstring(checksum, pool);
       else
         {
           /* There may be a new text base sitting in the adm tmp area
@@ -386,20 +390,22 @@ process_committed_leaf(int log_number,
           */
           const char *latest_base;
           svn_error_t *err;
-          unsigned char local_digest[APR_MD5_DIGESTSIZE];
+          svn_checksum_t *local_checksum;
 
           latest_base = svn_wc__text_base_path(path, TRUE, pool);
-          err = svn_io_file_checksum(local_digest, latest_base, pool);
+          err = svn_io_file_checksum2(&local_checksum, latest_base,
+                                      svn_checksum_md5, pool);
 
           if (err && APR_STATUS_IS_ENOENT(err->apr_err))
             {
               svn_error_clear(err);
               latest_base = svn_wc__text_base_path(path, FALSE, pool);
-              err = svn_io_file_checksum(local_digest, latest_base, pool);
+              err = svn_io_file_checksum2(&local_checksum, latest_base,
+                                          svn_checksum_md5, pool);
             }
 
           if (! err)
-            hex_digest = svn_md5_digest_to_cstring(local_digest, pool);
+            hex_digest = svn_checksum_to_cstring(local_checksum, pool);
           else if (APR_STATUS_IS_ENOENT(err->apr_err))
             svn_error_clear(err);
           else
@@ -1188,6 +1194,17 @@ svn_wc_delete3(const char *path,
   if (!entry)
     return erase_unversioned_from_wc(path, cancel_func, cancel_baton, pool);
 
+  /* A file external should not be deleted since the file external is
+     implemented as a switched file and it would delete the file the
+     file external is switched to, which is not the behavior the user
+     would probably want. */
+  if (entry->file_external_path)
+    return svn_error_createf(SVN_ERR_WC_CANNOT_DELETE_FILE_EXTERNAL, NULL,
+                             _("Cannot remove the file external at '%s'; "
+                               "please propedit or propdel the svn:externals "
+                               "description that created it"),
+                             svn_path_local_style(path, pool));
+
   /* Note: Entries caching?  What happens to this entry when the entries
      file is updated?  Lets play safe and copy the values */
   was_schedule = entry->schedule;
@@ -1781,20 +1798,19 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
   /* Deal with properties. */
   if (entry->schedule == svn_wc_schedule_replace)
     {
-       revert_base = entry->schedule == svn_wc_schedule_replace;
+      /* Refer to the original base, before replacement. */
+      revert_base = TRUE;
+
       /* Use the revertpath as the new propsbase if it exists. */
 
       baseprops = apr_hash_make(pool);
-      SVN_ERR(svn_wc__load_props((! revert_base) ? &baseprops : NULL,
-                                 NULL,
-                                 revert_base ? &baseprops : NULL,
+      SVN_ERR(svn_wc__load_props(NULL, NULL, &baseprops,
                                  adm_access, fullpath, pool));
 
       /* Ensure the revert propfile gets removed. */
-      if (revert_base)
-        SVN_ERR(svn_wc__loggy_props_delete(&log_accum,
-                                           fullpath, svn_wc__props_revert,
-                                           adm_access, pool));
+      SVN_ERR(svn_wc__loggy_props_delete(&log_accum,
+                                         fullpath, svn_wc__props_revert,
+                                         adm_access, pool));
       *reverted = TRUE;
     }
 
@@ -2008,11 +2024,12 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
       if (entry->kind == svn_node_file && entry->copyfrom_url)
         {
           const char *base_path;
-          unsigned char digest[APR_MD5_DIGESTSIZE];
+          svn_checksum_t *checksum;
 
           base_path = svn_wc__text_revert_path(fullpath, FALSE, pool);
-          SVN_ERR(svn_io_file_checksum(digest, base_path, pool));
-          tmp_entry.checksum = svn_md5_digest_to_cstring(digest, pool);
+          SVN_ERR(svn_io_file_checksum2(&checksum, base_path,
+                                        svn_checksum_md5, pool));
+          tmp_entry.checksum = svn_checksum_to_cstring(checksum, pool);
           flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
         }
 
@@ -2028,6 +2045,16 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
       flags |= SVN_WC__ENTRY_MODIFY_SCHEDULE;
       tmp_entry.schedule = svn_wc_schedule_normal;
       *reverted = TRUE;
+    }
+
+  /* If the entry is for this_dir, delete tree conflict data. */
+  if ((strcmp(name, SVN_WC_ENTRY_THIS_DIR) == 0) 
+      && entry->tree_conflict_data)
+    {
+      flags |= SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA;
+      tmp_entry.tree_conflict_data = NULL;
+      *reverted = TRUE;
+
     }
 
   /* Modify the entry, loggily. */
@@ -2437,6 +2464,24 @@ svn_wc_get_pristine_copy_path(const char *path,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc_get_pristine_contents(svn_stream_t **contents,
+                             const char *path,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
+{
+  const char *text_base = svn_wc__text_base_path(path, FALSE, scratch_pool);
+
+  if (text_base == NULL)
+    {
+      *contents = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  return svn_stream_open_readonly(contents, text_base, result_pool,
+                                  scratch_pool);
+}
+
 
 svn_error_t *
 svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
@@ -2719,8 +2764,9 @@ attempt_deletion(const char *parent_dir,
 
    PATH is the path to the item to be resolved, BASE_NAME is the basename
    of PATH, and CONFLICT_DIR is the access baton for PATH.  ORIG_ENTRY is
-   the entry prior to resolution. RESOLVE_TEXT and RESOLVE_PROPS are TRUE
-   if text and property conficts respectively are to be resolved.
+   the entry prior to resolution. RESOLVE_TEXT, RESOLVE_PROPS and
+   RESOLVE_TREE are TRUE if text, property and tree conflicts respectively
+   are to be resolved.
 
    See svn_wc_resolved_conflict3() for how CONFLICT_CHOICE behaves.
 */
@@ -2731,6 +2777,7 @@ resolve_conflict_on_entry(const char *path,
                           const char *base_name,
                           svn_boolean_t resolve_text,
                           svn_boolean_t resolve_props,
+                          svn_boolean_t resolve_tree,
                           svn_wc_conflict_choice_t conflict_choice,
                           svn_wc_notify_func2_t notify_func,
                           void *notify_baton,
@@ -2846,6 +2893,14 @@ resolve_conflict_on_entry(const char *path,
       need_feedback |= was_present;
     }
 
+  if (resolve_tree && (entry->kind == svn_node_dir)
+      && entry->tree_conflict_data) 
+    {
+      modify_flags |= SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA;
+      entry->tree_conflict_data = NULL;
+      need_feedback = TRUE;
+    }
+
   if (modify_flags)
     {
       /* Although removing the files is sufficient to indicate that the
@@ -2863,12 +2918,14 @@ resolve_conflict_on_entry(const char *path,
           /* Sanity check:  see if libsvn_wc *still* thinks this item is in a
              state of conflict that we have asked to resolve.  If not, report
              the successful resolution.  */
-          svn_boolean_t text_conflict, prop_conflict;
-          SVN_ERR(svn_wc_conflicted_p(&text_conflict, &prop_conflict,
-                                      svn_wc_adm_access_path(conflict_dir),
-                                      entry, pool));
+          svn_boolean_t text_conflict, prop_conflict, tree_conflict;
+          SVN_ERR(svn_wc_conflicted_p2(&text_conflict, &prop_conflict,
+                                       &tree_conflict,
+                                       svn_wc_adm_access_path(conflict_dir),
+                                       entry, pool));
           if ((! (resolve_text && text_conflict))
-              && (! (resolve_props && prop_conflict)))
+              && (! (resolve_props && prop_conflict))
+              && (! (resolve_tree && tree_conflict)))
             (*notify_func)(notify_baton,
                            svn_wc_create_notify(path, svn_wc_notify_resolved,
                                                 pool), pool);
@@ -2886,6 +2943,8 @@ struct resolve_callback_baton
   svn_boolean_t resolve_text;
   /* TRUE if property conflicts are to be resolved. */
   svn_boolean_t resolve_props;
+  /* TRUE if tree conflicts are to be resolved. */
+  svn_boolean_t resolve_tree;
   /* The type of automatic conflict resolution to perform */
   svn_wc_conflict_choice_t conflict_choice;
   /* An access baton for the tree, with write access */
@@ -2922,6 +2981,7 @@ resolve_found_entry_callback(const char *path,
 
   return resolve_conflict_on_entry(path, entry, adm_access, base_name,
                                    baton->resolve_text, baton->resolve_props,
+                                   baton->resolve_tree,
                                    baton->conflict_choice, baton->notify_func,
                                    baton->notify_baton, pool);
 }
@@ -2990,10 +3050,32 @@ svn_wc_resolved_conflict3(const char *path,
                           void *cancel_baton,
                           apr_pool_t *pool)
 {
+  return svn_wc_resolved_conflict4(path, adm_access, resolve_text,
+                                   resolve_props, FALSE, depth,
+                                   svn_wc_conflict_choose_merged,
+                                   notify_func, notify_baton, cancel_func,
+                                   cancel_baton, pool);
+}
+
+svn_error_t *
+svn_wc_resolved_conflict4(const char *path,
+                          svn_wc_adm_access_t *adm_access,
+                          svn_boolean_t resolve_text,
+                          svn_boolean_t resolve_props,
+                          svn_boolean_t resolve_tree,
+                          svn_depth_t depth,
+                          svn_wc_conflict_choice_t conflict_choice,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          apr_pool_t *pool)
+{
   struct resolve_callback_baton *baton = apr_pcalloc(pool, sizeof(*baton));
 
   baton->resolve_text = resolve_text;
   baton->resolve_props = resolve_props;
+  baton->resolve_tree = resolve_tree;
   baton->adm_access = adm_access;
   baton->notify_func = notify_func;
   baton->notify_baton = notify_baton;
@@ -3134,6 +3216,43 @@ svn_wc_set_changelist(const char *path,
       notify->changelist_name = changelist;
       notify_func(notify_baton, notify, pool);
     }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__set_file_external_location(svn_wc_adm_access_t *adm_access,
+                                   const char *name,
+                                   const char *url,
+                                   const svn_opt_revision_t *peg_rev,
+                                   const svn_opt_revision_t *rev,
+                                   const char *repos_root_url,
+                                   apr_pool_t *pool)
+{
+  apr_hash_t *entries;
+  svn_wc_entry_t entry = { 0 };
+
+  SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, pool));
+
+  if (url)
+    {
+      /* A repository root relative path is stored in the entry. */
+      SVN_ERR_ASSERT(peg_rev);
+      SVN_ERR_ASSERT(rev);
+      entry.file_external_path = url + strlen(repos_root_url);
+      entry.file_external_peg_rev = *peg_rev;
+      entry.file_external_rev = *rev;
+    }
+  else
+    {
+      entry.file_external_path = NULL;
+      entry.file_external_peg_rev.kind = svn_opt_revision_unspecified;
+      entry.file_external_rev.kind = svn_opt_revision_unspecified;
+    }
+
+  SVN_ERR(svn_wc__entry_modify(adm_access, name, &entry,
+                               SVN_WC__ENTRY_MODIFY_FILE_EXTERNAL, TRUE,
+                               pool));
 
   return SVN_NO_ERROR;
 }

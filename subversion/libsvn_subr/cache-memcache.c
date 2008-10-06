@@ -16,10 +16,11 @@
  * ====================================================================
  */
 
+#include <apr_md5.h>
+
 #include "svn_cache.h"
 #include "svn_pools.h"
 #include "svn_base64.h"
-#include "svn_md5.h"
 #include "svn_path.h"
 
 #include "svn_private_config.h"
@@ -104,13 +105,13 @@ build_key(memcache_t *cache,
      MAX_MEMCACHED_KEY_LEN bytes long. */
   if (long_key_len > MEMCACHED_KEY_UNHASHED_LEN)
     {
-      unsigned char digest[APR_MD5_DIGESTSIZE];
-      apr_md5(digest, long_key, long_key_len);
+      svn_checksum_t *checksum;
+      svn_checksum(&checksum, svn_checksum_md5, long_key, long_key_len, pool);
 
       long_key = apr_pstrcat(pool,
                              apr_pstrmemdup(pool, long_key,
                                             MEMCACHED_KEY_UNHASHED_LEN),
-                             svn_md5_digest_to_cstring_display(digest, pool),
+                             svn_checksum_to_cstring_display(checksum, pool),
                              NULL);
     }
 

@@ -46,6 +46,7 @@ SVN_GNOME_KEYRING_LIBS = @SVN_GNOME_KEYRING_LIBS@
 SVN_KWALLET_LIBS = @SVN_KWALLET_LIBS@
 SVN_SASL_LIBS = @SVN_SASL_LIBS@
 SVN_SERF_LIBS = @SVN_SERF_LIBS@
+SVN_SQLITE_LIBS = @SVN_SQLITE_LIBS@
 SVN_ZLIB_LIBS = @SVN_ZLIB_LIBS@
 
 LIBS = @LIBS@
@@ -110,7 +111,8 @@ LT_CXX_LIBADD = @LT_CXX_LIBADD@
 INCLUDES = -I$(top_srcdir)/subversion/include -I$(top_builddir)/subversion \
            @SVN_APR_INCLUDES@ @SVN_APRUTIL_INCLUDES@ @SVN_APR_MEMCACHE_INCLUDES@ \
            @SVN_GNOME_KEYRING_INCLUDES@ @SVN_KWALLET_INCLUDES@ @SVN_NEON_INCLUDES@ \
-           @SVN_SASL_INCLUDES@ @SVN_SERF_INCLUDES@ @SVN_ZLIB_INCLUDES@
+           @SVN_SASL_INCLUDES@ @SVN_SERF_INCLUDES@ @SVN_ZLIB_INCLUDES@ \
+           @SVN_SQLITE_INCLUDES@
 
 APACHE_INCLUDES = @APACHE_INCLUDES@
 APACHE_LIBEXECDIR = $(DESTDIR)@APACHE_LIBEXECDIR@
@@ -335,7 +337,7 @@ fast-distclean: fast-clean
 	$(SVN_CONFIG_SCRIPT_FILES)
 
 # clean everything out, returning to before './autogen.sh' was run.
-local-extraclean: local-distclean extraclean-swig
+local-extraclean: local-distclean extraclean-swig extraclean-ctypes-python
 	rm -f $(top_srcdir)/build-outputs.mk \
               $(top_srcdir)/subversion/svn_private_config.h.in \
               $(top_srcdir)/configure \
@@ -349,7 +351,7 @@ local-extraclean: local-distclean extraclean-swig
               $(top_srcdir)/build/ltmain.sh
 
 # clean everything, including test output.
-local-clean: fast-clean check-clean clean-swig
+local-clean: fast-clean check-clean clean-swig clean-ctypes-python
 
 # clean everything, including test output.
 local-distclean: fast-distclean check-clean
@@ -756,3 +758,28 @@ extraclean-swig-rb: clean-swig-rb
 
 install-swig-rb-doc:
 	$(RDOC) --all --ri --op "$(SWIG_RB_RI_DATADIR)" "$(SWIG_RB_SRC_DIR)/svn"
+
+# ctypes-python variables and make targets
+CTYPESGEN = @CTYPESGEN@
+CTYPES_PYTHON_SRC_DIR = $(abs_srcdir)/subversion/bindings/ctypes-python
+
+ctypes-python:
+	cd $(CTYPES_PYTHON_SRC_DIR); \
+	  $(PYTHON) setup.py build --subversion="$(prefix)" \
+	  --apr="$(SVN_APR_PREFIX)" --apr-util="$(SVN_APRUTIL_PREFIX)" \
+	  --ctypesgen="$(CTYPESGEN)" --cppflags="$(CPPFLAGS)" \
+	  --ldflags="$(EXTRA_CTYPES_LDFLAGS)"
+
+install-ctypes-python: ctypes-python
+	cd $(CTYPES_PYTHON_SRC_DIR); \
+	  $(PYTHON) setup.py install --prefix="$(DESTDIR)$(prefix)"
+
+check-ctypes-python: ctypes-python
+	cd $(CTYPES_PYTHON_SRC_DIR); \
+	  $(PYTHON) test/run_all.py
+
+clean-ctypes-python:
+	cd $(CTYPES_PYTHON_SRC_DIR); \
+	  $(PYTHON) setup.py clean --all
+
+extraclean-ctypes-python: clean-ctypes-python

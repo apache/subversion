@@ -98,6 +98,7 @@ typedef enum {
   opt_keep_local,
   opt_with_revprop,
   opt_with_all_revprops,
+  opt_with_no_revprops,
   opt_parents,
   opt_accept,
   opt_show_revs,
@@ -247,6 +248,8 @@ const apr_getopt_option_t svn_cl__options[] =
   {"keep-local",    opt_keep_local, 0, N_("keep path in working copy")},
   {"with-all-revprops",  opt_with_all_revprops, 0,
                     N_("retrieve all revision properties")},
+  {"with-no-revprops",  opt_with_no_revprops, 0,
+                    N_("retrieve no revision properties")},
   {"with-revprop",  opt_with_revprop, 1,
                     N_("set revision property ARG in new revision\n"
                        "                             "
@@ -570,7 +573,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    svn log http://www.example.com/repo/project/foo.c\n"
      "    svn log http://www.example.com/repo/project foo.c bar.c\n"),
     {'r', 'q', 'v', 'g', 'c', opt_targets, opt_stop_on_copy, opt_incremental,
-     opt_xml, 'l', opt_with_all_revprops, opt_with_revprop},
+     opt_xml, 'l', opt_with_all_revprops, opt_with_no_revprops, opt_with_revprop},
     {{opt_with_revprop, N_("retrieve revision property ARG")},
      {'c', N_("the change made in revision ARG")}} },
 
@@ -820,7 +823,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "      'I' Ignored\n"
      "      'M' Modified\n"
      "      'R' Replaced\n"
-     "      'X' item is unversioned, but is used by an externals definition\n"
+     "      'X' an unversioned directory created by an externals definition\n"
      "      '?' item is not under version control\n"
      "      '!' item is missing (removed by non-svn command) or incomplete\n"
      "      '~' versioned item obstructed by some item of a different kind\n"
@@ -834,9 +837,10 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    Fourth column: Scheduled commit will contain addition-with-history\n"
      "      ' ' no history scheduled with commit\n"
      "      '+' history scheduled with commit\n"
-     "    Fifth column: Whether the item is switched relative to its parent\n"
+     "    Fifth column: Whether the item is switched or a file external\n"
      "      ' ' normal\n"
-     "      'S' switched\n"
+     "      'S' the item has a Switched URL relative to the parent\n"
+     "      'X' a versioned file created by an eXternals definition\n"
      "    Sixth column: Repository lock token\n"
      "      (without -u)\n"
      "      ' ' no lock token\n"
@@ -1458,6 +1462,9 @@ main(int argc, const char *argv[])
          * --with-revprops options, --with-all-revprops takes precedence. */
         opt_state.all_revprops = TRUE;
         break;
+      case opt_with_no_revprops:
+        opt_state.no_revprops = TRUE;
+        break;
       case opt_with_revprop:
         err = svn_opt_parse_revprop(&opt_state.revprop_table, opt_arg, pool);
         if (err != SVN_NO_ERROR)
@@ -1643,6 +1650,26 @@ main(int argc, const char *argv[])
       return svn_cmdline_handle_exit_error(err, pool, "svn: ");
     }
 
+  /* Disallow simultaneous use of both --with-all-revprops and
+     --with-no-revprops.  */
+  if (opt_state.all_revprops && opt_state.no_revprops)
+    {
+      err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("--with-all-revprops and --with-no-revprops "
+                               "are mutually exclusive"));
+      return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+    }
+
+  /* Disallow simultaneous use of both --with-revprop and
+     --with-no-revprops.  */
+  if (opt_state.revprop_table && opt_state.no_revprops)
+    {
+      err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("--with-revprop and --with-no-revprops "
+                               "are mutually exclusive"));
+      return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+    }
+
   /* --trust-server-cert can only be used with --non-interactive */
   if (opt_state.trust_server_cert && !opt_state.non_interactive)
     {
@@ -1795,7 +1822,7 @@ main(int argc, const char *argv[])
       /* Fallback to default config if the config directory isn't readable. */
       if (err->apr_err == APR_EACCES)
         {
-          svn_handle_warning(stderr, err);
+          svn_handle_warning2(stderr, err, "svn: ");
           svn_error_clear(err);
         }
       else

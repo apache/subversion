@@ -82,6 +82,10 @@ svn_error_t *svn_fs_base__err_corrupt_lock(svn_fs_t *fs,
 svn_error_t *svn_fs_base__err_no_such_node_origin(svn_fs_t *fs,
                                                   const char *node_id);
 
+/* SVN_ERR_FS_NO_SUCH_METADATA: no recorded metadata for KEY in FS.  */
+svn_error_t *svn_fs_base__err_no_such_metadata(svn_fs_t *fs,
+                                               const char *key);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

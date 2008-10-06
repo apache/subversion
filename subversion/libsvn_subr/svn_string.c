@@ -4,7 +4,7 @@
  *
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -22,7 +22,6 @@
 
 #include <string.h>      /* for memcpy(), memcmp(), strlen() */
 #include <apr_lib.h>     /* for apr_isspace() */
-#include <apr_md5.h>
 #include <apr_fnmatch.h>
 #include "svn_string.h"  /* loads "svn_types.h" and <apr_pools.h> */
 #include "svn_ctype.h"
@@ -415,8 +414,6 @@ svn_stringbuf_appendcstr(svn_stringbuf_t *targetstr, const char *cstr)
 {
   svn_stringbuf_appendbytes(targetstr, cstr, strlen(cstr));
 }
-
-
 
 
 svn_stringbuf_t *

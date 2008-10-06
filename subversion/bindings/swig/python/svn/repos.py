@@ -6,7 +6,7 @@
 #
 ######################################################################
 #
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -48,7 +48,7 @@ class ChangedPath:
     self.path = path
     if action not in [None, CHANGE_ACTION_MODIFY, CHANGE_ACTION_ADD,
                       CHANGE_ACTION_DELETE, CHANGE_ACTION_REPLACE]:
-      raise Exception, "unsupported change type"
+      raise Exception("unsupported change type")
     self.action = action
 
     ### it would be nice to avoid this flag. however, without it, it would
@@ -139,7 +139,7 @@ class ChangeCollector(_svndelta.Editor):
 
   def add_directory(self, path, parent_baton,
                     copyfrom_path, copyfrom_revision, dir_pool=None):
-    action = self.changes.has_key(path) and CHANGE_ACTION_REPLACE \
+    action = path in self.changes and CHANGE_ACTION_REPLACE \
              or CHANGE_ACTION_ADD
     self.changes[path] = ChangedPath(_svncore.svn_node_dir,
                                      False,
@@ -163,7 +163,7 @@ class ChangeCollector(_svndelta.Editor):
 
   def change_dir_prop(self, dir_baton, name, value, pool=None):
     dir_path = dir_baton[0]
-    if self.changes.has_key(dir_path):
+    if dir_path in self.changes:
       self.changes[dir_path].prop_changes = True
     else:
       # can't be added or deleted, so this must be CHANGED
@@ -179,7 +179,7 @@ class ChangeCollector(_svndelta.Editor):
 
   def add_file(self, path, parent_baton,
                copyfrom_path, copyfrom_revision, file_pool=None):
-    action = self.changes.has_key(path) and CHANGE_ACTION_REPLACE \
+    action = path in self.changes and CHANGE_ACTION_REPLACE \
              or CHANGE_ACTION_ADD
     self.changes[path] = ChangedPath(_svncore.svn_node_file,
                                      False,
@@ -203,7 +203,7 @@ class ChangeCollector(_svndelta.Editor):
 
   def apply_textdelta(self, file_baton, base_checksum):
     file_path = file_baton[0]
-    if self.changes.has_key(file_path):
+    if file_path in self.changes:
       self.changes[file_path].text_changed = True
     else:
       # an add would have inserted a change record already, and it can't
@@ -223,7 +223,7 @@ class ChangeCollector(_svndelta.Editor):
 
   def change_file_prop(self, file_baton, name, value, pool=None):
     file_path = file_baton[0]
-    if self.changes.has_key(file_path):
+    if file_path in self.changes:
       self.changes[file_path].prop_changes = True
     else:
       # an add would have inserted a change record already, and it can't

@@ -171,23 +171,6 @@ svn_error_t *svn_wc__open_revert_base(apr_file_t **handle,
                                       apr_int32_t flags,
                                       apr_pool_t *pool);
 
-/* Close the text-base for FILE.
- * FP was obtained from svn_wc__open_text_base().
- * Behaves like svn_wc__close_adm_file(), which see.
- */
-svn_error_t *svn_wc__close_text_base(apr_file_t *fp,
-                                     const char *file,
-                                     int sync,
-                                     apr_pool_t *pool);
-
-/* Close the revert-base for FILE.
- * FP was obtained from svn_wc__open_revert_base().
- * Behaves like svn_wc__close_adm_file(), which see.
- */
-svn_error_t *svn_wc__close_revert_base(apr_file_t *fp,
-                                       const char *file,
-                                       int sync,
-                                       apr_pool_t *pool);
 
 /* Open the property file for PATH.
  * PATH can be any kind of path, either file or dir.

@@ -470,10 +470,25 @@ svn_io_filesizes_different_p(svn_boolean_t *different_p,
                              apr_pool_t *pool);
 
 
+/** Return in @a *checksum the checksum of type @a kind of @a file
+ * Use @a pool for temporary allocations and to allocate @a *checksum.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_io_file_checksum2(svn_checksum_t **checksum,
+                      const char *file,
+                      svn_checksum_kind_t kind,
+                      apr_pool_t *pool);
+
+
 /** Put the md5 checksum of @a file into @a digest.
  * @a digest points to @c APR_MD5_DIGESTSIZE bytes of storage.
  * Use @a pool only for temporary allocations.
+ *
+ * @deprecated Provided for backward compatibility with the 1.5 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_io_file_checksum(unsigned char digest[],
                      const char *file,
@@ -636,6 +651,41 @@ svn_stream_empty(apr_pool_t *pool);
 svn_stream_t *
 svn_stream_disown(svn_stream_t *stream,
                   apr_pool_t *pool);
+
+
+/** Create a stream to read the file at @a path. It will be opened using
+ * the APR_BUFFERED and APR_BINARY flag, and APR_OS_DEFAULT for the perms.
+ * If you'd like to use different values, then open the file yourself, and
+ * use the svn_stream_from_aprfile2() interface.
+ *
+ * The stream will be returned in @a stream, and allocated from @a result_pool.
+ * Temporary allocations will be performed in @a scratch_pool.
+ *
+ * @since New in 1.6
+ */
+svn_error_t *
+svn_stream_open_readonly(svn_stream_t **stream,
+                         const char *path,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
+
+
+/** Create a stream to write the file at @a path. It will be opened using
+ * the APR_BUFFERED and APR_BINARY flag, and APR_OS_DEFAULT for the perms.
+ * If you'd like to use different values, then open the file yourself, and
+ * use the svn_stream_from_aprfile2() interface.
+ *
+ * The stream will be returned in @a stream, and allocated from @a result_pool.
+ * Temporary allocations will be performed in @a scratch_pool.
+ *
+ * @since New in 1.6
+ */
+svn_error_t *
+svn_stream_open_writable(svn_stream_t **stream,
+                         const char *path,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
+
 
 /** Create a stream from an APR file.  For convenience, if @a file is
  * @c NULL, an empty stream created by svn_stream_empty() is returned.

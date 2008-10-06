@@ -281,7 +281,7 @@ def get_admin_name():
   "Return name of SVN administrative subdirectory."
 
   if (windows or sys.platform == 'cygwin') \
-      and os.environ.has_key('SVN_ASP_DOT_NET_HACK'):
+      and 'SVN_ASP_DOT_NET_HACK' in os.environ:
     return '_svn'
   else:
     return '.svn'
@@ -1176,7 +1176,7 @@ def run_one_test(n, test_list, parallel = 0, finished_tests = None):
   """
 
   if (n < 1) or (n > len(test_list) - 1):
-    print "There is no test", `n` + ".\n"
+    print "There is no test", repr(n) + ".\n"
     return 1
 
   # Run the test.

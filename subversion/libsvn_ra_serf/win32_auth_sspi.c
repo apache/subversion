@@ -63,41 +63,25 @@
 #include "ra_serf.h"
 #include "win32_auth_sspi.h"
 
+#include "private/svn_atomic.h"
+
 #ifdef SVN_RA_SERF_SSPI_ENABLED
 
 /*** Global variables ***/
-HANDLE security_dll = INVALID_HANDLE_VALUE;
-INIT_SECURITY_INTERFACE InitSecurityInterface_;
+static svn_atomic_t sspi_initialized = 0;
 static PSecurityFunctionTable sspi = NULL;
 static unsigned int ntlm_maxtokensize = 0;
 
-#define SECURITY_DLL "security.dll"
-
-/* Loads security.dll in memory on the first call. Afterwards the
-   function table SSPI is loaded which we can use it to call SSPI's
-   public functions. */
+/* Loads the SSPI function table we can use to call SSPI's public functions. 
+ * Accepted by svn_atomic__init_once()
+ */
 static svn_error_t *
-load_security_dll()
+initialize_sspi(apr_pool_t* pool)
 {
-  if (security_dll != INVALID_HANDLE_VALUE)
+  sspi = InitSecurityInterface();
+
+  if (sspi)
     return SVN_NO_ERROR;
-
-  security_dll = LoadLibrary(SECURITY_DLL);
-  if (security_dll != INVALID_HANDLE_VALUE)
-    {
-      /* Load the function(s) */
-      InitSecurityInterface_ =
-        (INIT_SECURITY_INTERFACE)GetProcAddress(security_dll,
-                                                "InitSecurityInterfaceA");
-      sspi = InitSecurityInterface_();
-
-      if (sspi)
-        return SVN_NO_ERROR;
-    }
-
-  /* Initialization failed, clean up and raise error */
-  if (security_dll)
-    FreeLibrary(security_dll);
 
   return svn_error_createf
           (SVN_ERR_RA_SERF_SSPI_INITIALISATION_FAILED, NULL,
@@ -134,7 +118,7 @@ init_sspi_connection(svn_ra_serf__session_t *session,
   const char *tmp;
   apr_size_t tmp_len;
 
-  SVN_ERR(load_security_dll());
+  SVN_ERR(svn_atomic__init_once(&sspi_initialized, initialize_sspi, pool));
 
   conn->sspi_context = (serf_sspi_context_t*)
     apr_palloc(pool, sizeof(serf_sspi_context_t));
@@ -316,7 +300,7 @@ init_proxy_sspi_connection(svn_ra_serf__session_t *session,
   const char *tmp;
   apr_size_t tmp_len;
 
-  SVN_ERR(load_security_dll());
+  SVN_ERR(svn_atomic__init_once(&sspi_initialized, initialize_sspi, pool));
 
   conn->proxy_sspi_context = (serf_sspi_context_t*)
     apr_palloc(pool, sizeof(serf_sspi_context_t));

@@ -160,7 +160,7 @@ svn_client_get_simple_provider(svn_auth_provider_object_t **provider,
                                apr_pool_t *pool);
 
 
-#if (defined(WIN32) && !defined(__MINGW32__)) || defined(DOXYGEN)
+#if (defined(WIN32) && !defined(__MINGW32__)) || defined(DOXYGEN) || defined(CTYPESGEN)
 /**
  * Create and return @a *provider, an authentication provider of type @c
  * svn_auth_cred_simple_t that gets/sets information from the user's
@@ -187,7 +187,7 @@ SVN_DEPRECATED
 void
 svn_client_get_windows_simple_provider(svn_auth_provider_object_t **provider,
                                        apr_pool_t *pool);
-#endif /* WIN32 || DOXYGEN */
+#endif /* WIN32 && !__MINGW32__ || DOXYGEN || CTYPESGEN */
 
 /** Create and return @a *provider, an authentication provider of type @c
  * svn_auth_cred_username_t that gets/sets information from a user's
@@ -4453,6 +4453,7 @@ typedef struct svn_info_t
    * @since New in 1.5.
    */
   apr_size_t working_size;
+
   /** @} */
 
   /**
@@ -4463,6 +4464,17 @@ typedef struct svn_info_t
    * @since New in 1.5.
    */
   apr_size_t size;
+
+  /**
+   * For a directory only, all tree-conflicted children, stored
+   * in an array of @c svn_wc_conflict_description_t, 
+   * @since New in 1.6.
+   * @name Working-copy path fields
+   * @{
+   */
+  apr_array_header_t *tree_conflicts;
+
+  /** @} */
 
 } svn_info_t;
 

@@ -25,6 +25,7 @@
 #include <string.h>
 #include "svn_pools.h"
 #include "svn_error.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 
 #include "wc.h"
@@ -316,8 +317,15 @@ get_copyfrom_url_rev_via_parent(const char *src_path,
                                 svn_wc_adm_access_t *src_access,
                                 apr_pool_t *pool)
 {
-  const char *parent_path = svn_path_dirname(src_path, pool);
-  const char *rest = svn_path_basename(src_path, pool);
+  const char *parent_path;
+  const char *rest;
+  const char *abs_src_path;
+
+  SVN_ERR(svn_path_get_absolute(&abs_src_path, src_path, pool));
+
+  parent_path = svn_path_dirname(abs_src_path, pool);
+  rest = svn_path_basename(abs_src_path, pool);
+
   *copyfrom_url = NULL;
 
   while (! *copyfrom_url)
@@ -327,8 +335,8 @@ get_copyfrom_url_rev_via_parent(const char *src_path,
 
       /* Don't look for parent_path in src_access if it can't be
          there... */
-      if (svn_path_is_ancestor(svn_wc_adm_access_path(src_access),
-                               parent_path))
+      if (svn_dirent_is_ancestor(svn_wc_adm_access_path(src_access),
+                                 parent_path))
         {
           SVN_ERR(svn_wc_adm_retrieve(&parent_access, src_access,
                                       parent_path, pool));
@@ -353,9 +361,25 @@ get_copyfrom_url_rev_via_parent(const char *src_path,
         }
       else
         {
+          const char *last_parent_path = parent_path;
+
           rest = svn_path_join(svn_path_basename(parent_path, pool),
                                rest, pool);
           parent_path = svn_path_dirname(parent_path, pool);
+
+          if (strcmp(parent_path, last_parent_path) == 0)
+            {
+              /* If this happens, it probably means that parent_path is "".
+                 But there's no reason to limit ourselves to just that case;
+                 given everything else that's going on in this function, a
+                 strcmp() is pretty cheap, and the result we're trying to
+                 prevent is an infinite loop if svn_path_dirname() returns
+                 its input unchanged. */
+              return svn_error_createf
+                (SVN_ERR_WC_COPYFROM_PATH_NOT_FOUND, NULL,
+                 _("no parent with copyfrom information found above '%s'"),
+                 svn_path_local_style(src_path, pool));
+            }
         }
     }
 

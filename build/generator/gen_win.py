@@ -4,7 +4,6 @@
 
 import os
 import sys
-import string
 import fnmatch
 import re
 import glob
@@ -50,6 +49,7 @@ class GeneratorBase(gen_base.GeneratorBase):
     self.swig_path = None
     self.vsnet_version = '7.00'
     self.vsnet_proj_ver = '7.00'
+    self.sqlite_path = None
     self.skip_sections = { 'mod_dav_svn': None,
                            'mod_authz_svn': None }
 
@@ -94,6 +94,8 @@ class GeneratorBase(gen_base.GeneratorBase):
         self.zlib_path = val
       elif opt == '--with-swig':
         self.swig_path = val
+      elif opt == '--with-sqlite':
+        self.sqlite_path = val
       elif opt == '--with-sasl':
         self.sasl_path = val
       elif opt == '--with-openssl':
@@ -165,6 +167,12 @@ class WinGeneratorBase(GeneratorBase):
     # Initialize parent
     GeneratorBase.__init__(self, fname, verfname, options)
 
+### SQLite is optional for now, so don't perform this check (yet)
+#    if self.sqlite_path is None:
+#      sys.stderr.write('ERROR: SQLite path not specifed. ' + \
+#                       'Use --with-sqlite option.')
+#      sys.exit(1)
+
     if self.bdb_lib is not None:
       sys.stderr.write("Found %s.lib in %s\n" % (self.bdb_lib, self.bdb_path))
     else:
@@ -227,9 +235,9 @@ class WinGeneratorBase(GeneratorBase):
       svnissrel = os.path.join("packages","win32-innosetup","svn.iss.release")
       svnissdeb = os.path.join("packages","win32-innosetup","svn.iss.debug")
       if self.write_file_if_changed(svnissrel, buf.replace("@CONFIG@", "Release")):
-        print 'Wrote %s' % svnissrel
+        print('Wrote %s' % svnissrel)
       if self.write_file_if_changed(svnissdeb, buf.replace("@CONFIG@", "Debug")):
-        print 'Wrote %s' % svnissdeb
+        print('Wrote %s' % svnissdeb)
 
     # Generate the build_zlib.bat file
     if self.zlib_path:
@@ -252,7 +260,7 @@ class WinGeneratorBase(GeneratorBase):
     #Make the project files directory if it doesn't exist
     #TODO win32 might not be the best path as win64 stuff will go here too
     self.projfilesdir=os.path.join("build","win32",subdir)
-    self.rootpath = ".." + "\\.." * string.count(self.projfilesdir, os.sep)
+    self.rootpath = ".." + "\\.." * self.projfilesdir.count(os.sep)
     if not os.path.exists(self.projfilesdir):
       os.makedirs(self.projfilesdir)
 
@@ -274,7 +282,7 @@ class WinGeneratorBase(GeneratorBase):
                    generator.swig.external_runtime):
         swig.Generator(self.conf, self.swig_exe).write()
     else:
-      print "%s not found; skipping SWIG file generation..." % self.swig_exe
+      print("%s not found; skipping SWIG file generation..." % self.swig_exe)
 
   def path(self, *paths):
     """Convert build path to msvc path and prepend root"""
@@ -392,7 +400,7 @@ class WinGeneratorBase(GeneratorBase):
     for cfg in self.configs:
       configs.append(
         ProjectItem(name=cfg,
-                    lower=string.lower(cfg),
+                    lower=cfg.lower(),
                     defines=self.get_win_defines(target, cfg),
                     libdirs=self.get_win_lib_dirs(target, cfg),
                     libs=self.get_win_libs(target, cfg),
@@ -448,20 +456,22 @@ class WinGeneratorBase(GeneratorBase):
           rsrc = '"%s"' % rsrc
 
         sources.append(ProjectItem(path=rsrc, reldir=reldir, user_deps=[],
-                                   custom_build=cbuild, custom_target=ctarget))
+                                   custom_build=cbuild, custom_target=ctarget,
+                                   extension=os.path.splitext(rsrc)[1]))
 
     if isinstance(target, gen_base.TargetJavaClasses) and target.jar:
       classdir = self.path(target.classes)
       jarfile = msvc_path_join(classdir, target.jar)
       cbuild = "%s cf %s -C %s %s" \
                % (self.quote(jar_exe), jarfile, classdir,
-                  string.join(target.packages))
+                  " ".join(target.packages))
       deps = map(lambda x: x.custom_target, sources)
       sources.append(ProjectItem(path='makejar', reldir='', user_deps=deps,
-                                 custom_build=cbuild, custom_target=jarfile))
+                                 custom_build=cbuild, custom_target=jarfile,
+                                 extension=''))
 
     if isinstance(target, gen_base.TargetSWIG):
-      swig_options = string.split(self.swig.opts[target.lang])
+      swig_options = self.swig.opts[target.lang].split()
       swig_options.append('-DWIN32')
       swig_deps = []
 
@@ -487,29 +497,32 @@ class WinGeneratorBase(GeneratorBase):
                   continue
 
                 cbuild = '%s %s -o %s $(InputPath)' \
-                         % (self.swig_exe, string.join(swig_options), cout)
+                         % (self.swig_exe, " ".join(swig_options), cout)
 
                 sources.append(ProjectItem(path=isrc, reldir=None,
                                            custom_build=cbuild,
                                            custom_target=csrc,
-                                           user_deps=user_deps))
+                                           user_deps=user_deps,
+                                           extension=''))
 
     def_file = self.get_def_file(target)
     if def_file is not None:
       gsrc = self.path("build/generator/extractor.py")
 
-      deps = []
+      deps = [self.path('build.conf')]
       for header in target.msvc_export:
         deps.append(self.path('subversion/include', header))
 
       cbuild = "python $(InputPath) %s > %s" \
-               % (string.join(deps), def_file)
+               % (" ".join(deps), def_file)
 
-      sources.append(ProjectItem(path=gsrc, reldir=None, custom_build=cbuild,
-                                 user_deps=deps, custom_target=def_file))
+      sources.append(ProjectItem(path=gsrc, reldir=None, custom_build=cbuild,                                 
+                                 user_deps=deps, custom_target=def_file,
+                                 extension=''))
 
       sources.append(ProjectItem(path=def_file, reldir=None,
-                                 custom_build=None, user_deps=[]))
+                                 custom_build=None, user_deps=[],
+                                 extension=''))
 
     sources.sort(lambda x, y: cmp(x.path, y.path))
     return sources
@@ -572,13 +585,13 @@ class WinGeneratorBase(GeneratorBase):
         continue
 
       name = target.name
-      pos = string.find(name, '-test')
+      pos = name.find('-test')
       if pos >= 0:
-        proj_name = 'test_' + string.replace(name[:pos], '-', '_')
+        proj_name = 'test_' + name[:pos].replace('-', '_')
       elif isinstance(target, gen_base.TargetSWIG):
-        proj_name = 'swig_' + string.replace(name, '-', '_')
+        proj_name = 'swig_' + name.replace('-', '_')
       else:
-        proj_name = string.replace(name, '-', '_')
+        proj_name = name.replace('-', '_')
       target.proj_name = proj_name
 
   def get_external_project(self, target, proj_ext):
@@ -623,7 +636,7 @@ class WinGeneratorBase(GeneratorBase):
     # for this target.
     if name == 'javahl-javah' or name == 'libsvnjavahl':
       for dep in re.findall('\$\(([^\)]*)_DEPS\)', target.add_deps):
-        dep = string.replace(dep, '_', '-')
+        dep = dep.replace('_', '-')
         depends.extend(self.sections[dep].get_targets())
 
     return depends
@@ -715,7 +728,7 @@ class WinGeneratorBase(GeneratorBase):
         # we don't add the dll to the list.
         if is_lib and dep.msvc_export and not self.disable_shared:
           static_dep = self.graph.get_sources(gen_base.DT_LINK, dep.name)[0]
-          if deps.has_key(static_dep):
+          if static_dep in deps:
             continue
         deps[dep] = dep_kind
 
@@ -839,9 +852,10 @@ class WinGeneratorBase(GeneratorBase):
       if target.lang == "ruby":
         fakeincludes.extend(self.ruby_includes)
 
-    fakeincludes.extend([
-                         self.apath(self.zlib_path),
-                         ])
+    fakeincludes.append(self.apath(self.zlib_path))
+    
+    if self.sqlite_path:
+      fakeincludes.append(self.apath(self.sqlite_path, 'inc'))
 
     if self.sasl_path:
       fakeincludes.append(self.apath(self.sasl_path, 'include'))
@@ -855,13 +869,14 @@ class WinGeneratorBase(GeneratorBase):
   def get_win_lib_dirs(self, target, cfg):
     "Return the list of library directories for target"
 
-    libcfg = string.replace(string.replace(cfg, "Debug", "LibD"),
-                            "Release", "LibR")
+    libcfg = cfg.replace("Debug", "LibD").replace("Release", "LibR")
 
     fakelibdirs = [ self.apath(self.bdb_path, "lib"),
                     self.apath(self.neon_path),
                     self.apath(self.zlib_path),
                     ]
+    if self.sqlite_path:
+      fakelibdirs.append(self.apath(self.sqlite_path, "lib"))
     if self.sasl_path:
       fakelibdirs.append(self.apath(self.sasl_path, "lib"))
     if self.serf_lib:
@@ -939,6 +954,11 @@ class WinGeneratorBase(GeneratorBase):
       if dep.external_lib == '$(SVN_DB_LIBS)':
         nondeplibs.append(dblib)
 
+      # SQLite is optional for now, so only add the dependency when the path
+      # the the libs has been specified.
+      if dep.external_lib == '$(SVN_SQLITE_LIBS)' and self.sqlite_path:
+        nondeplibs.append('sqlite3.lib')
+
       if self.neon_lib and dep.external_lib == '$(NEON_LIBS)':
         nondeplibs.append(neonlib)
 
@@ -997,7 +1017,7 @@ class WinGeneratorBase(GeneratorBase):
       old_contents = None
     if old_contents != new_contents:
       open(fname, 'wb').write(new_contents)
-      print "Wrote:", fname
+      print("Wrote: %s" % fname)
 
   def write_with_template(self, fname, tname, data):
     fout = StringIO()
@@ -1094,7 +1114,7 @@ class WinGeneratorBase(GeneratorBase):
       num = fp.readline()
       if num:
         msg = 'Found installed perl version number.'
-        self.perl_lib = 'perl' + string.rstrip(num) + '.lib'
+        self.perl_lib = 'perl' + num.rstrip() + '.lib'
       else:
         msg = 'Could not detect perl version.'
         self.perl_lib = 'perl56.lib'
@@ -1220,7 +1240,7 @@ class WinGeneratorBase(GeneratorBase):
   def _find_swig_libdir(self):
     fp = os.popen(self.swig_exe + ' -swiglib', 'r')
     try:
-      libdir = string.rstrip(fp.readline())
+      libdir = fp.readline().rstrip()
       if libdir:
         sys.stderr.write('Using SWIG library directory %s\n' % libdir)
         return libdir
@@ -1356,12 +1376,12 @@ if sys.platform == "win32":
     arg = re.sub(_escape_shell_arg_re, r'\1\1\2', arg)
 
     # surround by quotes and escape quotes inside
-    arg = '"' + string.replace(arg, '"', '"^""') + '"'
+    arg = '"' + arg.replace('"', '"^""') + '"'
     return arg
 
 else:
   def escape_shell_arg(str):
-    return "'" + string.replace(str, "'", "'\\''") + "'"
+    return "'" + str.replace("'", "'\\''") + "'"
 
 # ============================================================================
 
@@ -1378,8 +1398,8 @@ class POFile:
 # MSVC paths always use backslashes regardless of current platform
 def msvc_path(path):
   """Convert a build path to an msvc path"""
-  return string.replace(path, '/', '\\')
+  return path.replace('/', '\\')
 
 def msvc_path_join(*path_parts):
   """Join path components into an msvc path"""
-  return string.join(path_parts, '\\')
+  return '\\'.join(path_parts)

@@ -5,7 +5,7 @@
 #
 ######################################################################
 #
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -17,7 +17,6 @@
 #
 
 import sys
-import string
 import time
 import re
 from cmd import Cmd
@@ -221,10 +220,10 @@ class SVNShell(Cmd):
     sys.exit(0)
 
   def _path_to_parts(self, path):
-    return filter(None, string.split(path, '/'))
+    return filter(None, path.split('/'))
 
   def _parts_to_path(self, parts):
-    return '/' + string.join(parts, '/')
+    return '/' + '/'.join(parts)
 
   def _parse_path(self, path):
     # cleanup leading, trailing, and duplicate '/' characters
@@ -335,7 +334,7 @@ class SVNShell(Cmd):
 
 def _basename(path):
   "Return the basename for a '/'-separated path."
-  idx = string.rfind(path, '/')
+  idx = path.rfind('/')
   if idx == -1:
     return path
   return path[idx+1:]

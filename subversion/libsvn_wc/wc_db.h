@@ -43,6 +43,23 @@ extern "C" {
 /** Context data structure for interacting with the administrative data. */
 typedef struct svn_wc__db_t svn_wc__db_t;
 
+/**
+ * Directory handle for working with pristine files associatd with a specific
+ * BASE/WORKING/ACTUAL directory.
+ */
+typedef struct svn_wc__db_pdh_t svn_wc__db_pdh_t;
+
+
+/**
+ * Enumerated constants for how to open a WC datastore.
+ */
+typedef enum {
+  svn_wc__db_openmode_default,    /* Open in the default mode (r/w now). */
+  svn_wc__db_openmode_readonly,   /* Changes will definitely NOT be made. */
+  svn_wc__db_openmode_readwrite   /* Changes will definitely be made. */
+
+} svn_wc__db_openmode_t;
+
 
 /* Enum indicating what kind of versioned object we're talking about.
  *
@@ -58,7 +75,7 @@ typedef struct svn_wc__db_t svn_wc__db_t;
  * ### the interfaces in here give a lot of prominence to absence; I'm
  * ### wondering why we're treating it so specially.
  */
-typedef enum svn_wc__db_kind_t {
+typedef enum {
     svn_wc__db_kind_dir,
     svn_wc__db_kind_file,
     svn_wc__db_kind_symlink,
@@ -69,12 +86,16 @@ typedef enum svn_wc__db_kind_t {
 } svn_wc__db_kind_t;
 
 
-typedef enum svn_wc__db_status_t {
+typedef enum {
     svn_wc__db_status_normal,
+    svn_wc__db_status_changed,  /* ### text may be modified. or props_mod. */
     svn_wc__db_status_added,  /* ### no history. text_mod set to TRUE */
-    svn_wc__db_status_moved,  /* ### has history */
+    svn_wc__db_status_moved_src,  /* ### deleted */
+    svn_wc__db_status_moved_dst,  /* ### has history */
     svn_wc__db_status_copied,  /* ### has history */
     svn_wc__db_status_deleted  /* ### text_mod, prop_mod will be FALSE */
+
+    /* ### copied+changed?  moved_dst+changed? */
 } svn_wc__db_status_t;
 
 
@@ -90,8 +111,12 @@ typedef enum svn_wc__db_status_t {
    ### like it is "Right".
 */
 
-/* ### where/how to handle: text_time, prop_time, locks, working_size
- */
+/* ### where/how to handle: text_time, prop_time, locks, working_size */
+
+/* ### update docstrings: all paths should be internal/canonical */
+
+
+/* ### some kind of _create() call to set things up? */
 
 /**
  * Open the administrative database for the working copy identified by the
@@ -119,16 +144,40 @@ typedef enum svn_wc__db_status_t {
  */
 svn_error_t *
 svn_wc__db_open(svn_wc__db_t **db,
+                svn_wc__db_openmode_t mode,
                 const char *path,
                 svn_config_t *config,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool);
 
+/**
+ * In most cases, svn operations will deal with multiple targets. Each
+ * target may have a different administrative database, and others will
+ * be sharing a database. This function will open all relevant databases
+ * for the paths identified in @a paths. One handle is returned which
+ * will handle the interaction with all the relevant databases.
+ *
+ * The @a config will be used to identify how to locate the database
+ * for each target listed in @a paths.
+ *
+ * Results will be alloated in @a result_pool, and temporary allocations
+ * will be made in @a scratch_pool.
+ */
+svn_error_t *
+svn_wc__db_open_many(svn_wc__db_t **db,
+                     svn_wc__db_openmode_t mode,
+                     const apr_array_header_t *paths,
+                     svn_config_t *config,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool);
 
 /**
  * @defgroup svn_wc__db_base  BASE tree management
  * @{
  */
+
+/* ### should we allow props to be optional? any reason for that? toss
+   ### the set_props() interface? */
 
 /* ### base_add_* can also replace. should be okay? */
 
@@ -142,22 +191,32 @@ svn_wc__db_open(svn_wc__db_t **db,
  */
 svn_error_t *
 svn_wc__db_base_add_directory(svn_wc__db_t *db,
-                              const char *path,
+                              const char *local_path,
+                              const char *repos_path,
                               svn_revnum_t revision,
-                              apr_hash_t *props,
-                              const apr_array_header_t *children,
-                              const char *repos_url,
+                              const apr_hash_t *props,
+                              svn_revnum_t changed_rev,
+                              apr_time_t changed_date,
+                              const char *changed_author,
+                              const char *repos_base_url,
                               const char *repos_uuid,
+                              const apr_array_header_t *children,
+                              svn_depth_t depth,
                               apr_pool_t *scratch_pool);
 
 
-/* ### contents, props, checksum are optional */
+/* ### props are optional */
 svn_error_t *
 svn_wc__db_base_add_file(svn_wc__db_t *db,
-                         const char *path,
+                         const char *local_path,
+                         const char *repos_path,
                          svn_revnum_t revision,
-                         apr_hash_t *props,
-                         svn_stream_t *contents,
+                         const apr_hash_t *props,
+                         svn_revnum_t changed_rev,
+                         apr_time_t changed_date,
+                         const char *changed_author,
+                         const char *repos_base_url,
+                         const char *repos_uuid,
                          svn_checksum_t *checksum,
                          apr_pool_t *scratch_pool);
 
@@ -167,29 +226,6 @@ svn_wc__db_base_set_props(svn_wc__db_t *db,
                           const char *path,
                           apr_hash_t *props,
                           apr_pool_t *scratch_pool);
-
-
-/* ### lib pulls contents into storage. resulting content's checksum is
-   ### given by @a checksum. (checksum optional; if omitted, it will be
-   ### computed during stream-read) */
-svn_error_t *
-svn_wc__db_base_set_contents(svn_wc__db_t *db,
-                             const char *path,
-                             svn_stream_t *contents,
-                             svn_checksum_t *checksum,
-                             apr_pool_t *scratch_pool);
-
-
-/* ### caller pushes contents into storage. the resulting (pushed) content
-   ### will have @a checksum recorded. (checksum optional; if omitted, it
-   ### will be computed to stream-write) */
-svn_error_t *
-svn_wc__db_base_get_writable_contents(svn_stream_t **contents,
-                                      svn_wc__db_t *db,
-                                      const char *path,
-                                      svn_checksum_t *checksum,
-                                      apr_pool_t *result_pool,
-                                      apr_pool_t *scratch_pool);
 
 
 /* ### what data to keep for a symlink? props optional.
@@ -216,9 +252,15 @@ svn_wc__db_base_get_writable_contents(svn_stream_t **contents,
  */
 svn_error_t *
 svn_wc__db_base_add_symlink(svn_wc__db_t *db,
-                            const char *path,
+                            const char *local_path,
+                            const char *repos_path,
                             svn_revnum_t revision,
-                            apr_hash_t *props,
+                            const apr_hash_t *props,
+                            svn_revnum_t changed_rev,
+                            apr_time_t changed_date,
+                            const char *changed_author,
+                            const char *repos_base_url,
+                            const char *repos_uuid,
                             const char *target,
                             apr_pool_t *scratch_pool);
 
@@ -261,12 +303,22 @@ svn_wc__db_base_move(svn_wc__db_t *db,
                      apr_pool_t *scratch_pool);
 
 
-/* ### NULL may be given for OUT params */
+/* ### NULL may be given for OUT params
+   ### @a switched means this directory is different from what parent/filename
+   ### would imply for @a repos_path.
+*/
 svn_error_t *
 svn_wc__db_base_get_info(svn_wc__db_kind_t *kind,
                          svn_revnum_t *revision,
-                         const char **url,
-                         const char **repos_url,
+                         const char **repos_path,
+                         svn_revnum_t *changed_rev,
+                         apr_time_t *changed_date,
+                         const char **changed_author,
+                         svn_depth_t *depth,
+                         svn_checksum_t **checksum,  /* ### for files only */
+                         svn_filesize_t *actual_size,
+                         svn_boolean_t *switched,  /* ### derived */
+                         const char **repos_base_url,
                          const char **repos_uuid,
                          svn_wc__db_t *db,
                          const char *path,
@@ -309,15 +361,6 @@ svn_wc__db_base_get_children(const apr_array_header_t **children,
                              apr_pool_t *scratch_pool);
 
 
-/* ### NULL allowed for OUT params */
-svn_error_t *
-svn_wc__db_base_get_contents(svn_stream_t **contents,
-                             svn_checksum_t **checksum,
-                             svn_wc__db_t *db,
-                             const char *path,
-                             apr_pool_t *result_pool,
-                             apr_pool_t *scratch_pool);
-
 /* ### KFF: Hm, yeah, see earlier about symlink questions. */
 svn_error_t *
 svn_wc__db_base_get_symlink_target(const char **target,
@@ -335,6 +378,134 @@ svn_wc__db_base_get_symlink_target(const char **target,
 
 /* ### anything else needed for maintaining the BASE tree? */
 
+
+/** @} */
+
+/**
+ * @defgroup svn_wc__db_pristine  Pristine ("text base") management
+ * @{
+ */
+
+/* ### ASSUMPTION: we always have a pristine file's checksum before it is
+   ### ever presented to us. thus, we never need to compute it as we store
+   ### the pristine file into our storage area. */
+
+/**
+ * Enumerated constants for how hard svn_wc__db_pristine_check() should
+ * work on checking for the pristine file.
+ */
+typedef enum {
+
+  /* The caller wants to be sure the pristine file is present and usable.
+     This is the typical mode to use.
+
+     Implementation note: the SQLite database is opened (if not already)
+       and its state is verified against the file in the filesystem. */
+  svn_wc__db_checkmode_usable,
+
+  /* The caller is performing just this one check. The implementation will
+     optimize around the assumption no further calls to _check() will occur
+     (but of course has no problem if they do).
+
+     Note: this test is best used for detecting a *missing* file
+     rather than for detecting a usable file.
+
+     Implementation note: this will examine the presence of the pristine file
+       in the filesystem. The SQLite database is untouched, though if it is
+       (already) open, then it will be used instead. */
+  svn_wc__db_checkmode_single,
+
+  /* The caller is going to perform multiple calls, so the implementation
+     should optimize its operation around that.
+
+     Note: this test is best used for detecting a *missing* file
+     rather than for detecting a usable file.
+
+     Implementation note: the SQLite database will be opened (if not already),
+       and all checks will simply look in the TEXT_BASE table to see if the
+       given key is present. Note that the file may not e present. */
+  svn_wc__db_checkmode_multi,
+
+  /* Similar to _usable, but the file is checksum'd to ensure that it has
+     not been corrupted in some way. */
+  svn_wc__db_checkmode_validate
+
+} svn_wc__db_checkmode_t;
+
+
+/* ### checksums have no path component, so we need to get the pristine
+   ### database associated with a specific directory (the smallest granularity
+   ### that a particular configuration can allow). this directory handle
+   ### can then be used for further operations on pristine files associated
+   ### with the BASE/WORKING/ACTUAL contents in that directory. */
+svn_error_t *
+svn_wc__db_pristine_dirhandle(svn_wc__db_pdh_t **pdh,
+                              svn_wc__db_t *db,
+                              const char *dirpath,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
+
+
+/* ### @a contents may NOT be NULL. */
+svn_error_t *
+svn_wc__db_pristine_read(svn_stream_t **contents,
+                         svn_wc__db_pdh_t *pdh,
+                         svn_checksum_t *checksum,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
+
+
+/* ### caller pushes contents into storage, keyed by @a checksum.
+   ### note: if caller has a source stream, then it should use
+   ###   svn_stream_copy to pull/push the content into storage. */
+/* ### @a contents may NOT be NULL. */
+svn_error_t *
+svn_wc__db_pristine_write(svn_stream_t **contents,
+                          svn_wc__db_pdh_t *pdh,
+                          svn_checksum_t *checksum,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
+
+
+/* ### check for presence, according to the given mode (on how hard we
+   ### should examine things)
+
+   ### NULL may be provided for @a refcount (NOT for @a present).
+*/
+svn_error_t *
+svn_wc__db_pristine_check(svn_boolean_t *present,
+                          int *refcount,
+                          svn_wc__db_pdh_t *pdh,
+                          svn_checksum_t *checksum,
+                          svn_wc__db_checkmode_t mode,
+                          apr_pool_t *scratch_pool);
+
+
+/* ### if _check() returns "corrupted pristine file", then this function
+   ### can be used to repair it. It will attempt to restore integrity
+   ### between the SQLite database and the filesystem. Failing that, then
+   ### it will attempt to clean out the record and/or file. Failing that,
+   ### then it will return SOME_ERROR. */
+svn_error_t *
+svn_wc__db_pristine_repair(svn_wc__db_pdh_t *pdh,
+                           svn_checksum_t *checksum,
+                           apr_pool_t *scratch_pool);
+
+
+/* ### @a new_refcount may be NULL */
+svn_error_t *
+svn_wc__db_pristine_incref(int *new_refcount,
+                           svn_wc__db_pdh_t *pdh,
+                           svn_checksum_t *checksum,
+                           apr_pool_t *scratch_pool);
+
+
+/* ### @a new_refcount may be NULL */
+svn_error_t *
+svn_wc__db_pristine_decref(int *new_refcount,
+                           svn_wc__db_pdh_t *pdh,
+                           svn_checksum_t *checksum,
+                           apr_pool_t *scratch_pool);
 
 /** @} */
 
@@ -359,7 +530,7 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_op_copy_url(svn_wc__db_t *db,
                        const char *path,
-                       const char *copyfrom_url,
+                       const char *copyfrom_repos_path,
                        svn_revnum_t copyfrom_revision,
                        apr_pool_t *scratch_pool);
 
@@ -481,7 +652,7 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
 /* ### NULL may be given for OUT params.
 
    ### if the node has not been committed (after adding):
-   ###   url, repos_* will be NULL
+   ###   repos_* will be NULL
    ###   revision will be SVN_INVALID_REVNUM
    ###   status will be svn_wc__db_status_added
    ###   text_mod will be TRUE
@@ -491,7 +662,7 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
    ### put all these OUT params into a structure? but this interface allows
    ### us to query for one or all pieces of information (harder with a struct)
 
-   ### original_url will be NULL if this node is not copied/moved
+   ### original_repos_path will be NULL if this node is not copied/moved
    ### original_rev will be SVN_INVALID_REVNUM if this node is not copied/moved
 
    ### KFF: The position of 'db' in the parameter list is sort of
@@ -499,21 +670,33 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
    ### Would be nice to keep it consistent.  For example, it always
    ### comes first, or always comes first after any result params, or
    ### whatever.
+
+   ### note that @a base_shadowed can be derived. if the status specifies
+   ### an add/copy/move *and* there is a corresponding node in BASE, then
+   ### the BASE has been deleted to open the way for this node.
 */
 svn_error_t *
 svn_wc__db_read_info(svn_wc__db_kind_t *kind,
                      svn_revnum_t *revision,
-                     const char **url,
-                     const char **repos_url,
-                     const char **repos_uuid,
+                     const char **repos_path,
                      const char **changelist,
                      svn_wc__db_status_t *status,
                      svn_boolean_t *text_mod,  /* ### possibly modified */
                      svn_boolean_t *props_mod,
                      svn_boolean_t *base_shadowed,  /* ### WORKING shadows a
                                                        ### deleted BASE? */
-                     const char **original_url,
+
+                     /* ### the following fields if copied/moved (history) */
+                     const char **original_repos_path,
                      svn_revnum_t *original_rev,
+                     svn_checksum_t **checksum,
+                     svn_filesize_t *actual_size,
+                     svn_revnum_t *changed_rev,
+                     apr_time_t *changed_date,
+                     const char **changed_author,
+
+                     const char **repos_base_url,
+                     const char **repos_uuid,
                      svn_wc__db_t *db,
                      const char *path,
                      apr_pool_t *result_pool,
@@ -566,8 +749,6 @@ svn_wc__db_read_symlink_target(const char **target,
    ### are these things? are we okay with an in-memory array? examine other
    ### changelist usage -- we may already assume the list fits in memory.
   */
-
-/* ### bulk stuff like revision_status. */
 
 
 /** @} */

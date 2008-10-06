@@ -26,6 +26,7 @@
 #include "svn_io.h"
 #include "svn_types.h"
 #include "svn_error.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "wc.h"   /* just for prototypes of things in this .c file */
 #include "private/svn_wc_private.h"
@@ -324,5 +325,23 @@ svn_wc_conflict_description_create_prop(const char *path,
   conflict->kind = svn_wc_conflict_kind_property;
   conflict->access = adm_access;
   conflict->property_name = property_name;
+  return conflict;
+}
+
+svn_wc_conflict_description_t *
+svn_wc_conflict_description_create_tree(const char *path,
+                                        svn_wc_adm_access_t *adm_access,
+                                        svn_node_kind_t node_kind,
+                                        svn_wc_operation_t operation,
+                                        apr_pool_t *pool)
+{
+  svn_wc_conflict_description_t *conflict;
+
+  conflict = apr_palloc(pool, sizeof(*conflict));
+  conflict->path = path;
+  conflict->node_kind = node_kind;
+  conflict->kind = svn_wc_conflict_kind_tree;
+  conflict->access = adm_access;
+  conflict->operation = operation;
   return conflict;
 }

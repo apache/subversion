@@ -25,7 +25,6 @@
 #include <apr_general.h>
 #include <apr_strings.h>
 #include <apr_network_io.h>
-#include <apr_md5.h>
 #include <apr_uri.h>
 
 #include "svn_types.h"
@@ -39,7 +38,6 @@
 #include "svn_ra.h"
 #include "../libsvn_ra/ra_loader.h"
 #include "svn_ra_svn.h"
-#include "svn_md5.h"
 #include "svn_props.h"
 #include "svn_mergeinfo.h"
 
@@ -918,9 +916,8 @@ static svn_error_t *ra_svn_get_file(svn_ra_session_t *session, const char *path,
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
   apr_array_header_t *proplist;
-  unsigned char digest[APR_MD5_DIGESTSIZE];
   const char *expected_checksum, *hex_digest;
-  apr_md5_ctx_t md5_context;
+  svn_checksum_ctx_t *checksum_ctx;
   apr_pool_t *iterpool;
 
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "get-file", "c(?r)bb", path,
@@ -940,7 +937,7 @@ static svn_error_t *ra_svn_get_file(svn_ra_session_t *session, const char *path,
     return SVN_NO_ERROR;
 
   if (expected_checksum)
-    apr_md5_init(&md5_context);
+    checksum_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
 
   /* Read the file's contents. */
   iterpool = svn_pool_create(pool);
@@ -957,8 +954,8 @@ static svn_error_t *ra_svn_get_file(svn_ra_session_t *session, const char *path,
         break;
 
       if (expected_checksum)
-        apr_md5_update(&md5_context, item->u.string->data,
-                       item->u.string->len);
+        SVN_ERR(svn_checksum_update(checksum_ctx, item->u.string->data,
+                                    item->u.string->len));
 
       SVN_ERR(svn_stream_write(stream, item->u.string->data,
                                &item->u.string->len));
@@ -969,8 +966,10 @@ static svn_error_t *ra_svn_get_file(svn_ra_session_t *session, const char *path,
 
   if (expected_checksum)
     {
-      apr_md5_final(digest, &md5_context);
-      hex_digest = svn_md5_digest_to_cstring_display(digest, pool);
+      svn_checksum_t *checksum;
+
+      svn_checksum_final(&checksum, checksum_ctx, pool);
+      hex_digest = svn_checksum_to_cstring_display(checksum, pool);
       if (strcmp(hex_digest, expected_checksum) != 0)
         return svn_error_createf
           (SVN_ERR_CHECKSUM_MISMATCH, NULL,

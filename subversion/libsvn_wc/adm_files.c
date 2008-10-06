@@ -75,7 +75,7 @@ svn_wc_set_adm_dir(const char *name, apr_pool_t *pool)
 
      FIXME:
      An identical list is used in
-       libsvn_subr/opt.c:svn_opt_args_to_target_array3(),
+       libsvn_subr/opt.c:svn_opt__args_to_target_array(),
      but that function can't use this list, because that use would
      create a circular dependency between libsvn_wc and libsvn_subr.
      Make sure changes to the lists are always synchronized! */
@@ -643,33 +643,6 @@ svn_wc__open_revert_base(apr_file_t **handle,
   return open_adm_file(handle, parent_path, SVN_WC__REVERT_EXT, APR_OS_DEFAULT,
                        flags, pool, SVN_WC__ADM_TEXT_BASE, base_name, NULL);
 }
-
-
-
-svn_error_t *
-svn_wc__close_text_base(apr_file_t *fp,
-                        const char *path,
-                        int write,
-                        apr_pool_t *pool)
-{
-  const char *parent_path, *base_name;
-  svn_path_split(path, &parent_path, &base_name, pool);
-  return close_adm_file(fp, parent_path, SVN_WC__BASE_EXT, write, pool,
-                        SVN_WC__ADM_TEXT_BASE, base_name, NULL);
-}
-
-svn_error_t *
-svn_wc__close_revert_base(apr_file_t *fp,
-                          const char *path,
-                          int write,
-                          apr_pool_t *pool)
-{
-  const char *parent_path, *base_name;
-  svn_path_split(path, &parent_path, &base_name, pool);
-  return close_adm_file(fp, parent_path, SVN_WC__REVERT_EXT, write, pool,
-                        SVN_WC__ADM_TEXT_BASE, base_name, NULL);
-}
-
 
 
 svn_error_t *

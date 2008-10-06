@@ -51,7 +51,7 @@ typedef enum
 typedef struct svn_checksum_t
 {
   /** The bytes of the checksum. */
-  unsigned char *digest;
+  const unsigned char *digest;
 
   /** The type of the checksum.  This should never be changed by consumers
       of the APIs. */
@@ -192,6 +192,15 @@ svn_error_t *
 svn_checksum_final(svn_checksum_t **checksum,
                    const svn_checksum_ctx_t *ctx,
                    apr_pool_t *pool);
+
+
+/**
+ * Return the digest size of @a checksum.
+ *
+ * @since New in 1.6.
+ */
+apr_size_t
+svn_checksum_size(svn_checksum_t *checksum);
 
 
 #ifdef __cplusplus

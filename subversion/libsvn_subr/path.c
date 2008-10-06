@@ -23,8 +23,10 @@
 
 #include <apr_file_info.h>
 #include <apr_lib.h>
+#include <apr_uri.h>
 
 #include "svn_string.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_private_config.h"         /* for SVN_PATH_LOCAL_SEPARATOR */
 #include "svn_utf.h"
@@ -49,51 +51,15 @@
 const char *
 svn_path_internal_style(const char *path, apr_pool_t *pool)
 {
-  if ('/' != SVN_PATH_LOCAL_SEPARATOR)
-    {
-      char *p = apr_pstrdup(pool, path);
-      path = p;
-
-      /* Convert all local-style separators to the canonical ones. */
-      for (; *p != '\0'; ++p)
-        if (*p == SVN_PATH_LOCAL_SEPARATOR)
-          *p = '/';
-    }
-
-  return svn_path_canonicalize(path, pool);
-  /* FIXME: Should also remove trailing /.'s, if the style says so. */
+  return svn_uri_internal_style(path, pool);
 }
 
 
 const char *
 svn_path_local_style(const char *path, apr_pool_t *pool)
 {
-  path = svn_path_canonicalize(path, pool);
-  /* FIXME: Should also remove trailing /.'s, if the style says so. */
-
-  /* Internally, Subversion represents the current directory with the
-     empty string.  But users like to see "." . */
-  if (SVN_PATH_IS_EMPTY(path))
-    return ".";
-
-  /* If PATH is a URL, the "local style" is the same as the input. */
-  if (svn_path_is_url(path))
-    return apr_pstrdup(pool, path);
-
-  if ('/' != SVN_PATH_LOCAL_SEPARATOR)
-    {
-      char *p = apr_pstrdup(pool, path);
-      path = p;
-
-      /* Convert all canonical separators to the local-style ones. */
-      for (; *p != '\0'; ++p)
-        if (*p == '/')
-          *p = SVN_PATH_LOCAL_SEPARATOR;
-    }
-
-  return path;
+  return svn_uri_local_style(path, pool);
 }
-
 
 
 #ifndef NDEBUG
@@ -444,50 +410,6 @@ svn_path_is_empty(const char *path)
   return 0;
 }
 
-
-/* We decided against using apr_filepath_root here because of the negative
-   performance impact (creating a pool and converting strings ). */
-svn_boolean_t
-svn_dirent_is_root(const char *dirent, apr_size_t len)
-{
-  /* directory is root if it's equal to '/' */
-  if (len == 1 && dirent[0] == '/')
-    return TRUE;
-
-#if defined(WIN32) || defined(__CYGWIN__)
-  /* On Windows and Cygwin, 'H:' or 'H:/' (where 'H' is any letter)
-     are also root directories */
-  if ((len == 2 || len == 3) &&
-      (dirent[1] == ':') &&
-      ((dirent[0] >= 'A' && dirent[0] <= 'Z') ||
-       (dirent[0] >= 'a' && dirent[0] <= 'z')) &&
-      (len == 2 || (dirent[2] == '/' && len == 3)))
-    return TRUE;
-
-  /* On Windows and Cygwin, both //drive and //drive//share are root
-     directories */
-  if (len >= 2 && dirent[0] == '/' && dirent[1] == '/'
-      && dirent[len - 1] != '/')
-    {
-      int segments = 0;
-      int i;
-      for (i = len; i >= 2; i--)
-        {
-          if (dirent[i] == '/')
-            {
-              segments ++;
-              if (segments > 1)
-                return FALSE;
-            }
-        }
-      return (segments <= 1);
-    }
-#endif /* WIN32 or Cygwin */
-
-  return FALSE;
-}
-
-
 int
 svn_path_compare_paths(const char *path1,
                        const char *path2)
@@ -526,201 +448,27 @@ svn_path_compare_paths(const char *path1,
   return (unsigned char)(path1[i]) < (unsigned char)(path2[i]) ? -1 : 1;
 }
 
-
-/* Return the string length of the longest common ancestor of PATH1 and PATH2.
- *
- * This function handles everything except the URL-handling logic
- * of svn_path_get_longest_ancestor, and assumes that PATH1 and
- * PATH2 are *not* URLs.
- *
- * If the two paths do not share a common ancestor, return 0.
- *
- * New strings are allocated in POOL.
- */
-static apr_size_t
-get_path_ancestor_length(const char *path1,
-                         const char *path2,
-                         apr_pool_t *pool)
-{
-  apr_size_t path1_len, path2_len;
-  apr_size_t i = 0;
-  apr_size_t last_dirsep = 0;
-
-  path1_len = strlen(path1);
-  path2_len = strlen(path2);
-
-  if (SVN_PATH_IS_EMPTY(path1) || SVN_PATH_IS_EMPTY(path2))
-    return 0;
-
-  while (path1[i] == path2[i])
-    {
-      /* Keep track of the last directory separator we hit. */
-      if (path1[i] == '/')
-        last_dirsep = i;
-
-      i++;
-
-      /* If we get to the end of either path, break out. */
-      if ((i == path1_len) || (i == path2_len))
-        break;
-    }
-
-  /* two special cases:
-     1. '/' is the longest common ancestor of '/' and '/foo'
-     2. '/' is the longest common ancestor of '/rif' and '/raf' */
-  if (i == 1 && path1[0] == '/' && path2[0] == '/')
-    return 1;
-
-  /* last_dirsep is now the offset of the last directory separator we
-     crossed before reaching a non-matching byte.  i is the offset of
-     that non-matching byte. */
-  if (((i == path1_len) && (path2[i] == '/'))
-           || ((i == path2_len) && (path1[i] == '/'))
-           || ((i == path1_len) && (i == path2_len)))
-    return i;
-  else
-    if (last_dirsep == 0 && path1[0] == '/' && path2[0] == '/')
-      return 1;
-    return last_dirsep;
-}
-
-
 char *
 svn_path_get_longest_ancestor(const char *path1,
                               const char *path2,
                               apr_pool_t *pool)
 {
-  svn_boolean_t path1_is_url, path2_is_url;
-  path1_is_url = svn_path_is_url(path1);
-  path2_is_url = svn_path_is_url(path2);
-
-  if (path1_is_url && path2_is_url)
-    {
-      apr_size_t path_ancestor_len;
-      apr_size_t i = 0;
-
-      /* Find ':' */
-      while (1)
-        {
-          /* No shared protocol => no common prefix */
-          if (path1[i] != path2[i])
-            return apr_pmemdup(pool, SVN_EMPTY_PATH,
-                               sizeof(SVN_EMPTY_PATH));
-
-          if (path1[i] == ':')
-            break;
-
-          /* They're both URLs, so EOS can't come before ':' */
-          assert((path1[i] != '\0') && (path2[i] != '\0'));
-
-          i++;
-        }
-
-      i += 3;  /* Advance past '://' */
-
-      path_ancestor_len = get_path_ancestor_length(path1 + i, path2 + i,
-                                                   pool);
-
-      if (path_ancestor_len == 0 ||
-          (path_ancestor_len == 1 && (path1 + i)[0] == '/'))
-        return apr_pmemdup(pool, SVN_EMPTY_PATH, sizeof(SVN_EMPTY_PATH));
-      else
-        return apr_pstrndup(pool, path1, path_ancestor_len + i);
-    }
-
-  else if ((! path1_is_url) && (! path2_is_url))
-    {
-      return apr_pstrndup(pool, path1,
-                          get_path_ancestor_length(path1, path2, pool));
-    }
-
-  else
-    {
-      /* A URL and a non-URL => no common prefix */
-      return apr_pmemdup(pool, SVN_EMPTY_PATH, sizeof(SVN_EMPTY_PATH));
-    }
+  return svn_uri_get_longest_ancestor(path1, path2, pool);
 }
-
 
 const char *
 svn_path_is_child(const char *path1,
                   const char *path2,
                   apr_pool_t *pool)
 {
-  apr_size_t i;
-
-#ifndef NDEBUG
-  if (pool)
-    {
-      assert(svn_path_is_canonical(path1, pool));
-      assert(svn_path_is_canonical(path2, pool));
-    }
-  else
-    {
-      assert(is_canonical(path1, strlen(path1)));
-      assert(is_canonical(path2, strlen(path2)));
-    }
-#endif
-
-  /* Allow "" and "foo" to be parent/child */
-  if (SVN_PATH_IS_EMPTY(path1))               /* "" is the parent  */
-    {
-      if (SVN_PATH_IS_EMPTY(path2)            /* "" not a child    */
-          || path2[0] == '/')                  /* "/foo" not a child */
-        return NULL;
-      else
-        /* everything else is child */
-        return pool ? apr_pstrdup(pool, path2) : path2;
-    }
-
-  /* Reach the end of at least one of the paths.  How should we handle
-     things like path1:"foo///bar" and path2:"foo/bar/baz"?  It doesn't
-     appear to arise in the current Subversion code, it's not clear to me
-     if they should be parent/child or not. */
-  for (i = 0; path1[i] && path2[i]; i++)
-    if (path1[i] != path2[i])
-      return NULL;
-
-  /* There are two cases that are parent/child
-          ...      path1[i] == '\0'
-          .../foo  path2[i] == '/'
-      or
-          /        path1[i] == '\0'
-          /foo     path2[i] != '/'
-  */
-  if (path1[i] == '\0' && path2[i])
-    {
-      if (path2[i] == '/')
-        return pool ? apr_pstrdup(pool, path2 + i + 1) : path2 + i + 1;
-      else if (i == 1 && path1[0] == '/')
-        return pool ? apr_pstrdup(pool, path2 + 1) : path2 + 1;
-    }
-
-  /* Otherwise, path2 isn't a child. */
-  return NULL;
+  return svn_uri_is_child(path1, path2, pool);
 }
 
 
 svn_boolean_t
 svn_path_is_ancestor(const char *path1, const char *path2)
 {
-  apr_size_t path1_len = strlen(path1);
-
-  /* If path1 is empty and path2 is not absoulte, then path1 is an ancestor. */
-  if (SVN_PATH_IS_EMPTY(path1))
-    return *path2 != '/';
-
-  /* If path1 is a prefix of path2, then:
-     - If path1 ends in a path separator,
-     - If the paths are of the same length
-     OR
-     - path2 starts a new path component after the common prefix,
-     then path1 is an ancestor. */
-  if (strncmp(path1, path2, path1_len) == 0)
-    return path1[path1_len - 1] == '/'
-      || (path2[path1_len] == '/' || path2[path1_len] == '\0');
-
-  return FALSE;
+  return svn_uri_is_ancestor(path1, path2);
 }
 
 
@@ -842,24 +590,55 @@ svn_path_is_single_path_component(const char *name)
 
 
 svn_boolean_t
+svn_path_is_dotpath_present(const char *path)
+{
+  int len;
+
+  /* The empty string does not have a dotpath */
+  if (path[0] == '\0')
+    return FALSE;
+
+  /* Handle "." or a leading "./" */
+  if (path[0] == '.' && (path[1] == '\0' || path[1] == '/'))
+    return TRUE;
+
+  /* Paths of length 1 (at this point) have no dotpath present. */
+  if (path[1] == '\0')
+    return FALSE;
+
+  /* If any segment is "/./", then a dotpath is present. */
+  if (strstr(path, "/./") != NULL)
+    return TRUE;
+
+  /* Does the path end in "/." ? */
+  len = strlen(path);
+  return path[len - 2] == '/' && path[len - 1] == '.';
+}
+
+svn_boolean_t
 svn_path_is_backpath_present(const char *path)
 {
-  int len = strlen(path);
+  int len;
 
-  if (! strcmp(path, ".."))
+  /* 0 and 1-length paths do not have a backpath */
+  if (path[0] == '\0' || path[1] == '\0')
+    return FALSE;
+
+  /* Handle ".." or a leading "../" */
+  if (path[0] == '.' && path[1] == '.' && (path[2] == '\0' || path[2] == '/'))
     return TRUE;
 
-  if (! strncmp(path, "../", 3))
-    return TRUE;
+  /* Paths of length 2 (at this point) have no backpath present. */
+  if (path[2] == '\0')
+    return FALSE;
 
+  /* If any segment is "..", then a backpath is present. */
   if (strstr(path, "/../") != NULL)
     return TRUE;
 
-  if (len >= 3
-      && (! strncmp(path + len - 3, "/..", 3)))
-    return TRUE;
-
-  return FALSE;
+  /* Does the path end in "/.." ? */
+  len = strlen(path);
+  return path[len - 3] == '/' && path[len - 2] == '.' && path[len - 1] == '.';
 }
 
 
@@ -1175,31 +954,13 @@ svn_path_get_absolute(const char **pabsolute,
                       const char *relative,
                       apr_pool_t *pool)
 {
-  char *buffer;
-  apr_status_t apr_err;
-  const char *path_apr;
-
   if (svn_path_is_url(relative))
     {
       *pabsolute = apr_pstrdup(pool, relative);
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(svn_path_cstring_from_utf8(&path_apr, relative, pool));
-
-  apr_err = apr_filepath_merge(&buffer, NULL,
-                               path_apr,
-                               APR_FILEPATH_NOTRELATIVE
-                               | APR_FILEPATH_TRUENAME,
-                               pool);
-  if (apr_err)
-    return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
-                             _("Couldn't determine absolute path of '%s'"),
-                             svn_path_local_style(relative, pool));
-
-  SVN_ERR(svn_path_cstring_to_utf8(pabsolute, buffer, pool));
-  *pabsolute = svn_path_canonicalize(*pabsolute, pool);
-  return SVN_NO_ERROR;
+  return svn_dirent_get_absolute(pabsolute, relative, pool);
 }
 
 
@@ -1242,107 +1003,14 @@ svn_path_split_if_file(const char *path,
 const char *
 svn_path_canonicalize(const char *path, apr_pool_t *pool)
 {
-  char *canon, *dst;
-  const char *src;
-  apr_size_t seglen;
-  apr_size_t canon_segments = 0;
-  svn_boolean_t uri;
-
-  /* "" is already canonical, so just return it; note that later code
-     depends on path not being zero-length.  */
-  if (! *path)
-    return path;
-
-  dst = canon = apr_pcalloc(pool, strlen(path) + 1);
-
-  /* Copy over the URI scheme if present. */
-  src = skip_uri_scheme(path);
-  if (src)
-    {
-      uri = TRUE;
-      memcpy(dst, path, src - path);
-      dst += (src - path);
-    }
-  else
-    {
-      uri = FALSE;
-      src = path;
-    }
-
-  /* If this is an absolute path, then just copy over the initial
-     separator character. */
-  if (*src == '/')
-    {
-      *(dst++) = *(src++);
-
-#if defined(WIN32) || defined(__CYGWIN__)
-      /* On Windows permit two leading separator characters which means an
-       * UNC path.  However, a double slash in a URI after the scheme is never
-       * valid. */
-      if (!uri && *src == '/')
-        *(dst++) = *(src++);
-#endif /* WIN32 or Cygwin */
-
-    }
-
-  while (*src)
-    {
-      /* Parse each segment, find the closing '/' */
-      const char *next = src;
-      while (*next && (*next != '/'))
-        ++next;
-
-      seglen = next - src;
-
-      if (seglen == 0 || (seglen == 1 && src[0] == '.'))
-        {
-          /* Noop segment, so do nothing. */
-        }
-      else
-        {
-          /* An actual segment, append it to the destination path */
-          if (*next)
-            seglen++;
-          memcpy(dst, src, seglen);
-          dst += seglen;
-          canon_segments++;
-        }
-
-      /* Skip over trailing slash to the next segment. */
-      src = next;
-      if (*src)
-        src++;
-    }
-
-  /* Remove the trailing slash if necessary. */
-  if (*(dst - 1) == '/')
-    {
-      /* If we had any path components, we always remove the trailing slash. */
-      if (canon_segments > 0)
-        dst --;
-      /* Otherwise, make sure to strip the third slash from URIs which
-       * have an empty hostname part, such as http:/// or file:/// */
-      else if (uri && strcmp(skip_uri_scheme(canon), "/") == 0)
-        dst--;
-    }
-
-  *dst = '\0';
-
-#if defined(WIN32) || defined(__CYGWIN__)
-  /* Skip leading double slashes when there are less than 2
-   * canon segments. UNC paths *MUST* have two segments. */
-  if (canon_segments < 2 && canon[0] == '/' && canon[1] == '/')
-    return canon + 1;
-#endif /* WIN32 or Cygwin */
-
-  return canon;
+  return svn_uri_canonicalize(path, pool);
 }
 
 
 svn_boolean_t
 svn_path_is_canonical(const char *path, apr_pool_t *pool)
 {
-  return (strcmp(path, svn_path_canonicalize(path, pool)) == 0);
+  return svn_uri_is_canonical(path, pool);
 }
 
 
