@@ -59,7 +59,9 @@ Candidate changes for 1.5.3:
      suggestions, which speeds up merge significantly in some cases,
      see http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=143030.
    Votes:
-     +1: pburba, markphip, julianfoad (r29969, r33112 only; tests not reviewed)
+     +1: pburba, rhuijben
+     +1: julianfoad (r29969, r33112 only; tests not reviewed)
+     +1: markphip (by testing)
 
  * r30257, r33024, r33026
    Don't try to filter natural history from added mergeinfo during
