@@ -1402,10 +1402,10 @@ svn_ra_local__get_deleted_rev(svn_ra_session_t *session,
                               apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
+  const char *abs_path = svn_path_join(sess->fs_path->data, path, pool);
 
-  *revision_deleted = SVN_INVALID_REVNUM;
   SVN_ERR(svn_repos_deleted_rev(sess->fs,
-                                path,
+                                abs_path,
                                 peg_revision,
                                 end_revision,
                                 revision_deleted,
