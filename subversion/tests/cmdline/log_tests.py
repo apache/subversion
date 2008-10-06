@@ -1613,7 +1613,7 @@ def merge_sensitive_log_propmod_merge_inheriting_path(sbox):
       4 : [7],
       3 : [7],
       }
-    exit_code, output, err = svntest.actions.run_and_verify_svn(
+    output, err = svntest.actions.run_and_verify_svn(
       None, None, [], 'log', '-g', '-r7', log_target)
     log_chain = parse_log_output(output)
     check_merge_results(log_chain, expected_merges)
@@ -1623,7 +1623,7 @@ def merge_sensitive_log_propmod_merge_inheriting_path(sbox):
   # Check that log -g -r8 on wc_dir/A_COPY/D/H/psi and parents show no merges.
   def run_log_g_r8(log_target):
     expected_merges = { 8 : [] }
-    exit_code, output, err = svntest.actions.run_and_verify_svn(
+    output, err = svntest.actions.run_and_verify_svn(
       None, None, [], 'log', '-g', '-r8', log_target)
     log_chain = parse_log_output(output)
     check_merge_results(log_chain, expected_merges)
