@@ -1448,7 +1448,6 @@ test_dirent_get_absolute(const char **msg,
                          apr_pool_t *pool)
 {
   int i;
-  char *result, *expect_abs;
   const char *curdir;
   char buf[8192];
 #if defined(WIN32) || defined(__CYGWIN__)
@@ -1501,6 +1500,7 @@ test_dirent_get_absolute(const char **msg,
     {
       const char *path = tests[i].path;
       const char *expect = tests[i].result;
+      const char *expect_abs, *result;
 
       expect_abs = expect;
       if (*expect == '%')

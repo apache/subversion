@@ -19,6 +19,7 @@
 
 #include <apr_md5.h>
 #include "md5.h"
+#include "svn_md5.h"
 
 
 

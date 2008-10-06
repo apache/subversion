@@ -2321,7 +2321,6 @@ apply_textdelta(void *file_baton,
   svn_boolean_t use_revert_base;
   svn_stream_t *source;
   apr_file_t *target_file;
-  svn_stream_t *target;
 
   if (fb->skipped)
     {
