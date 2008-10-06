@@ -35,12 +35,16 @@ http://svn.collab.net/repos/svn/tags/1.5.2
   * Reuse network sessions during 'svn merge', improving performance (r33476)
   * fixed: merging files with spaces in name (r33109, -121, -369)
   * fixed: incorrect relative externals expansion (r33109, -121, -369)
+  * fixed: 'svn mv' hangs and consumes infinite memory (r33201, -12)
+  * fixed: correctness regression in 'svn log -g' (issue #3285)
 
  Developer-visible changes:
   * Allow the tests to run as non-administrator on Windows Vista (r31203)
   * Allow out-of-tree build of bindings on BSD (r32409)
+  * Translate messages in svn_fs_util.h (r32771)
   * fixed: bindings test for Perl 5.10 (r31546)
   * fixed: building bindings and C API tests with VS2008 (r32012)
+  * fixed: svn_ra_replay API over ra_serf (r33173)
 
 
 Version 1.5.2
