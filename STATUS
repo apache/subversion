@@ -81,12 +81,6 @@ Candidate changes for 1.5.3:
 Approved changes:
 =================
 
- * r33201, r33212
-   Fix a bug whereby 'svn mv' could cause the client to loop forever.
-   Justification: hanging forever while memory grows is double-plus ungood.
-   Votes:
-     +1: kfogel, danielsh, hwright
-
  * r32771
    po-update.sh: Search for messages in svn_fs_util.h.
    Justification:
