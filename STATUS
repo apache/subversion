@@ -80,14 +80,3 @@ Candidate changes for 1.5.3:
 
 Approved changes:
 =================
-
- * r33173
-   ra_serf: Fix the svn_ra_replay API, which got broken when svn_ra_replay_range
-   was added. This API is not used anymore in svnsync. Bug was reported and fix 
-   tested by durin42 over IRC.
-   Notes:
-     There's a small trailing whitespace conflict during merge.
-   Justification:
-     Regression introduced in 1.5.0.
-   Votes:     
-     +1: lgo, gstein, hwright
