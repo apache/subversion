@@ -68,7 +68,7 @@ Candidate changes for 1.5.3:
      Warnings are bad. Especially if they show us an unused but assigned 
      variable.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, danielsh
 
 Approved changes:
 =================
