@@ -30,10 +30,17 @@ http://svn.collab.net/repos/svn/tags/1.5.2
 
  User-visible changes:
   * Allow switch to continue after deleting locally modified dirs (issue #2505)
+  * Update bash_completion to be compatible with 1.5 (r32900, -11, -12)
+  * Improve 'svn merge' execution time by 30% on Windows (r33447)
+  * Reuse network sessions during 'svn merge', improving performance (r33476)
+  * fixed: merging files with spaces in name (r33109, -121, -369)
+  * fixed: incorrect relative externals expansion (r33109, -121, -369)
 
  Developer-visible changes:
   * Allow the tests to run as non-administrator on Windows Vista (r31203)
+  * Allow out-of-tree build of bindings on BSD (r32409)
   * fixed: bindings test for Perl 5.10 (r31546)
+  * fixed: building bindings and C API tests with VS2008 (r32012)
 
 
 Version 1.5.2
