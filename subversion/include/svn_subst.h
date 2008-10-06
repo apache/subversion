@@ -387,6 +387,41 @@ svn_subst_copy_and_translate(const char *src,
 
 
 /**
+ * Create a new, translated file.
+ *
+ * This is similar to svn_subst_copy_and_translate3() except that it
+ * takes a source stream.
+ *
+ * Translates the stream @a src into a file at path @a dst.  The
+ * parameters @a *eol_str, @a repair, @a *keywords and @a expand are
+ * defined the same as in svn_subst_translate_stream3().
+ *
+ * If @a special is TRUE, then the stream should define a special fine,
+ * and be in "normal form". The file @a dst will then be a special file.
+ *
+ * The contents will be copied/translated into a temporary file, and then
+ * moved to @a dst atomically.
+ *
+ * If anything goes wrong during the copy, attempt to delete @a dst (if
+ * it exists).
+ *
+ * If @a eol_str and @a keywords are @c NULL, behavior is just a byte-for-byte
+ * copy.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_subst_create_translated(svn_stream_t *src,
+                            const char *dst,
+                            const char *eol_str,
+                            svn_boolean_t repair,
+                            apr_hash_t *keywords,
+                            svn_boolean_t expand,
+                            svn_boolean_t special,
+                            apr_pool_t *scratch_pool);
+
+
+/**
  * Convenience routine: a variant of svn_subst_translate_stream3() which
  * operates on cstrings.
  *
@@ -504,6 +539,21 @@ svn_error_t *svn_subst_detranslate_string(svn_string_t **new_value,
                                           svn_boolean_t for_output,
                                           apr_pool_t *pool);
 
+
+/** Get a stream that contains the (detranslated) "normal form" of the
+ * file located at @a path. If the file is not special, then a normal,
+ * readonly stream is opened up on it.
+ *
+ * The stream is allocated in @a result_pool, and all temporary allocations
+ * are performed in @a scratch_pool.
+ *
+ * @since New in 1.6
+ */
+svn_error_t *
+svn_subst_get_detranslated_stream(svn_stream_t **stream,
+                                  const char *path,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
 
 
 #ifdef __cplusplus

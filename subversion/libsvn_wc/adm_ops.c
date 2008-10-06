@@ -28,7 +28,6 @@
 #include <apr_pools.h>
 #include <apr_tables.h>
 #include <apr_hash.h>
-#include <apr_md5.h>
 #include <apr_file_io.h>
 #include <apr_time.h>
 #include <apr_errno.h>
@@ -41,7 +40,6 @@
 #include "svn_hash.h"
 #include "svn_wc.h"
 #include "svn_io.h"
-#include "svn_md5.h"
 #include "svn_xml.h"
 #include "svn_time.h"
 #include "svn_diff.h"
@@ -2466,6 +2464,24 @@ svn_wc_get_pristine_copy_path(const char *path,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc_get_pristine_contents(svn_stream_t **contents,
+                             const char *path,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
+{
+  const char *text_base = svn_wc__text_base_path(path, FALSE, scratch_pool);
+
+  if (text_base == NULL)
+    {
+      *contents = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  return svn_stream_open_readonly(contents, text_base, result_pool,
+                                  scratch_pool);
+}
+
 
 svn_error_t *
 svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
@@ -2882,7 +2898,7 @@ resolve_conflict_on_entry(const char *path,
     {
       modify_flags |= SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA;
       entry->tree_conflict_data = NULL;
-      need_feedback |= was_present;
+      need_feedback = TRUE;
     }
 
   if (modify_flags)

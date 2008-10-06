@@ -20,7 +20,6 @@
 #define SVN_LIBSVN_SUBR_MD5_H
 
 #include <apr_pools.h>
-#include <apr_md5.h>
 
 #include "svn_types.h"
 

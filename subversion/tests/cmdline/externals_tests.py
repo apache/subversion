@@ -1096,6 +1096,28 @@ def can_place_file_external_into_dir_external(sbox):
                                      'up',
                                      repo_url, wc_dir)
 
+#----------------------------------------------------------------------
+
+# Issue #2461.
+def external_into_path_with_spaces(sbox):
+  "allow spaces in external local paths"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repo_url = sbox.repo_url
+
+  ext = '^/A/D        "A/copy of D"\n' +\
+        '^/A/D        A/another\ copy\ of\ D'
+  change_external(wc_dir, ext)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'up',
+                                     repo_url, wc_dir)
+  probe_paths_exist([
+      os.path.join(wc_dir, 'A', 'copy of D'),
+      os.path.join(wc_dir, 'A', 'another copy of D'),
+  ])
+
 ########################################################################
 # Run the tests
 
@@ -1118,6 +1140,7 @@ test_list = [ None,
               old_style_externals_ignore_peg_reg,
               cannot_move_or_remove_file_externals,
               can_place_file_external_into_dir_external,
+              external_into_path_with_spaces,
              ]
 
 if __name__ == '__main__':

@@ -772,7 +772,7 @@ ctypes-python:
 
 install-ctypes-python: ctypes-python
 	cd $(CTYPES_PYTHON_SRC_DIR); \
-	  $(PYTHON) setup.py install --prefix=$(prefix)
+	  $(PYTHON) setup.py install --prefix="$(DESTDIR)$(prefix)"
 
 check-ctypes-python: ctypes-python
 	cd $(CTYPES_PYTHON_SRC_DIR); \
