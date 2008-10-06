@@ -4893,7 +4893,6 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   if (noderev->prop_rep && noderev->prop_rep->txn_id)
     {
       apr_hash_t *proplist;
-      representation_t *old_rep;
 
       SVN_ERR(svn_fs_fs__get_proplist(&proplist, fs, noderev, pool));
       SVN_ERR(get_file_offset(&noderev->prop_rep->offset, file, pool));
@@ -4903,16 +4902,6 @@ write_final_rev(const svn_fs_id_t **new_id_p,
 
       noderev->prop_rep->txn_id = NULL;
       noderev->prop_rep->revision = rev;
-
-      /* Now check and see if we've already got a rep that looks exactly like the one
-         we just wrote out, if so, use it. */
-      SVN_ERR(svn_fs_fs__get_rep_reference(&old_rep, fs, noderev->prop_rep->checksum,
-                                           pool));
-      if (old_rep)
-        {
-          SVN_ERR(svn_io_file_trunc(file, noderev->prop_rep->offset, pool));
-          noderev->prop_rep = old_rep;
-        }
     }
 
 
@@ -4961,11 +4950,9 @@ write_final_rev(const svn_fs_id_t **new_id_p,
                                    svn_fs_fs__fs_supports_mergeinfo(fs),
                                    pool));
 
-  /* Save the representations' hashes in the rep cache. */
+  /* Save the data representation's hash in the rep cache. */
   if (noderev->data_rep && noderev->kind == svn_node_file)
     SVN_ERR(svn_fs_fs__set_rep_reference(fs, noderev->data_rep, FALSE, pool));
-  if (noderev->prop_rep)
-    SVN_ERR(svn_fs_fs__set_rep_reference(fs, noderev->prop_rep, FALSE, pool));
 
   /* Return our ID that references the revision file. */
   *new_id_p = noderev->id;
