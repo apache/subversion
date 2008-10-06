@@ -37,7 +37,8 @@ make_pot()
     -name tests -prune -or \
     -name bindings -prune -or \
     -name "*.c" -print -or \
-    -name "svn_error_codes.h" -print | \
+    -name "svn_error_codes.h" -print -or \
+    -name "svn_fs_util.h" -print | \
     $XGETTEXT --sort-by-file -k_ -kN_ -kSVN_ERRDEF:3 \
     --flag=_:1:pass-c-format \
     --flag=N_:1:pass-c-format \
