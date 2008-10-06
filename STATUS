@@ -111,7 +111,7 @@ Candidate changes for 1.5.3:
    Justification:
      Regression introduced in 1.5.0.
    Votes:     
-     +1: lgo
+     +1: lgo, gstein
 
  * r33465
    Reuse ra_sessions where possible during merge. This reduces the number of
@@ -123,7 +123,8 @@ Candidate changes for 1.5.3:
      Not a critical issue, but any performance improvements to 'svn merge' are 
      more than welcome.
    Votes:
-     +1: lgo
+     +1: lgo, gstein
+
 
 Approved changes:
 =================
