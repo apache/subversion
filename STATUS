@@ -116,21 +116,6 @@ Candidate changes for 1.5.3:
 Approved changes:
 =================
 
- * r33447
-   libsvn_subr: Remove actual disk IO from svn_path_get_absolute.
-   Notes:
-     This removes the automatic casing fixes from svn_path_get_absolute. These
-     casing fixes where not part of the documented behavior and where not
-     expected  by the code using svn_path_get_absolute.
-     There is a backport branch with this change applied at:
-     http://svn.collab.net/repos/svn/branches/1.5.x-r33447
-     (The code has moved to another file in trunk)
-   Justification:
-     This removes an enourmous slowdown on the merge code on Windows. 
-     (>30% on my tests).
-   Votes:
-     +1: rhuijben, gstein, lgo
-
  * r33465
    Reuse ra_sessions where possible during merge. This reduces the number of
    connections opened during merge drastically (to a third) thereby improving
