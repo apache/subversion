@@ -78,6 +78,10 @@ Candidate changes for 1.5.3:
    Votes:
      +1: pburba
 
+
+Approved changes:
+=================
+
  * r33464
    libsvn_subr: Use a new filename instead of retrying when opening a unique
    temporary file fails on Windows. This removes unneeded extra delays on
@@ -86,7 +90,4 @@ Candidate changes for 1.5.3:
      Wait loops are evil. Especially if they are not usefull, like on naming
      unique files.
    Votes:
-     +1: rhuijben, danielsh
-
-Approved changes:
-=================
+     +1: rhuijben, danielsh, gstein
