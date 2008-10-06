@@ -164,6 +164,7 @@ file_open(apr_file_t **f,
           const char *fname,
           apr_int32_t flag,
           apr_fileperms_t perm,
+          svn_boolean_t retry_on_failure,
           apr_pool_t *pool)
 {
   apr_status_t status;
@@ -244,7 +245,11 @@ file_open(apr_file_t **f,
     }
 #endif /* AS400 */
   status = apr_file_open(f, fname, flag, perm, pool);
-  WIN32_RETRY_LOOP(status, apr_file_open(f, fname, flag, perm, pool));
+
+  if (retry_on_failure)
+    {
+      WIN32_RETRY_LOOP(status, apr_file_open(f, fname, flag, perm, pool));
+    }
   return status;
 }
 
@@ -376,7 +381,7 @@ svn_io_open_unique_file2(apr_file_t **f,
                                          pool));
 
       apr_err = file_open(&file, unique_name_apr, flag,
-                          APR_OS_DEFAULT, pool);
+                          APR_OS_DEFAULT, FALSE, pool);
 
       if (APR_STATUS_IS_EEXIST(apr_err))
         continue;
@@ -2620,7 +2625,8 @@ svn_io_file_open(apr_file_t **new_file, const char *fname,
   apr_status_t status;
 
   SVN_ERR(svn_path_cstring_from_utf8(&fname_apr, fname, pool));
-  status = file_open(new_file, fname_apr, flag | APR_BINARY, perm, pool);
+  status = file_open(new_file, fname_apr, flag | APR_BINARY, perm, TRUE,
+                     pool);
 
   if (status)
     return svn_error_wrap_apr(status, _("Can't open file '%s'"),
