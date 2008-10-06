@@ -2898,7 +2898,7 @@ resolve_conflict_on_entry(const char *path,
     {
       modify_flags |= SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA;
       entry->tree_conflict_data = NULL;
-      need_feedback |= was_present;
+      need_feedback = TRUE;
     }
 
   if (modify_flags)
