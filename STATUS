@@ -14,20 +14,6 @@ delay a release, etc.
 Candidate changes for 1.5.3:
 ============================
 
- * r33201, r33212
-   Fix a bug whereby 'svn mv' could cause the client to loop forever.
-   Justification: hanging forever while memory grows is double-plus ungood.
-   Votes:
-     +1: kfogel, danielsh
-
- * r32771
-   po-update.sh: Search for messages in svn_fs_util.h.
-   Justification:
-     po-update.sh without this change doesn't add messages from svn_fs_util.h
-     to .po files, so these messages are untranslated.
-   Votes:
-     +1: arfrever, gstein
-
  * r32968, r32975
    Fix bug which occurs when a merge adds explicit mergeinfo to a subtree that
    had no explicit mergeinfo prior to the merge.  This new mergeinfo could
@@ -50,7 +36,7 @@ Candidate changes for 1.5.3:
    Justification:
      Server logic fault tolerance.  Code mo'-betta-ness.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, hwright
 
  * r29969, r33013, r33016, r33022, r33112
    Fix a merge bug and greatly improve merge performance in a common
@@ -92,6 +78,23 @@ Candidate changes for 1.5.3:
    Votes:
      +1: pburba
 
+Approved changes:
+=================
+
+ * r33201, r33212
+   Fix a bug whereby 'svn mv' could cause the client to loop forever.
+   Justification: hanging forever while memory grows is double-plus ungood.
+   Votes:
+     +1: kfogel, danielsh, hwright
+
+ * r32771
+   po-update.sh: Search for messages in svn_fs_util.h.
+   Justification:
+     po-update.sh without this change doesn't add messages from svn_fs_util.h
+     to .po files, so these messages are untranslated.
+   Votes:
+     +1: arfrever, gstein, hwright
+
  * r33136, r33137
    Fix issue #3285 - 'svn log -g' mistakes property change for
    mergeinfo removal.
@@ -100,7 +103,7 @@ Candidate changes for 1.5.3:
    Justification:
      This is a regression from 1.5.0.
    Votes:
-     +1: cmpilato, pburba
+     +1: cmpilato, pburba, hwright
 
  * r33173
    ra_serf: Fix the svn_ra_replay API, which got broken when svn_ra_replay_range
@@ -111,7 +114,4 @@ Candidate changes for 1.5.3:
    Justification:
      Regression introduced in 1.5.0.
    Votes:     
-     +1: lgo, gstein
-
-Approved changes:
-=================
+     +1: lgo, gstein, hwright
