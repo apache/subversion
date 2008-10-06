@@ -78,5 +78,15 @@ Candidate changes for 1.5.3:
    Votes:
      +1: pburba
 
+ * r33464
+   libsvn_subr: Use a new filename instead of retrying when opening a unique
+   temporary file fails on Windows. This removes unneeded extra delays on
+   naming collisions. (Not only on directories, but also on in-use files).
+   Justification:
+     Wait loops are evil. Especially if they are not usefull, like on naming
+     unique files.
+   Votes:
+     +1: rhuijben
+
 Approved changes:
 =================
