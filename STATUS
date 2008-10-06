@@ -86,7 +86,7 @@ Candidate changes for 1.5.3:
      Wait loops are evil. Especially if they are not usefull, like on naming
      unique files.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, danielsh
 
 Approved changes:
 =================
