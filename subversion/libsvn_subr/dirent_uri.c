@@ -188,7 +188,7 @@ canonicalize(svn_boolean_t uri, const char *path, apr_pool_t *pool)
 #if defined(WIN32) || defined(__CYGWIN__)
           /* On Windows permit two leading separator characters which means an
            * UNC path. */
-          if (*src == '/')
+          if (! uri && *src == '/')
             *(dst++) = *(src++);
 #endif /* WIN32 or Cygwin */
         }
@@ -902,8 +902,7 @@ svn_dirent_get_absolute(const char **pabsolute,
 
   apr_err = apr_filepath_merge(&buffer, NULL,
                                path_apr,
-                               APR_FILEPATH_NOTRELATIVE
-                               | APR_FILEPATH_TRUENAME,
+                               APR_FILEPATH_NOTRELATIVE,
                                pool);
   if (apr_err)
     return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,

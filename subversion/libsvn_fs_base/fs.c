@@ -56,6 +56,7 @@
 #include "bdb/locks-table.h"
 #include "bdb/lock-tokens-table.h"
 #include "bdb/node-origins-table.h"
+#include "bdb/metadata-table.h"
 #include "bdb/checksum-reps-table.h"
 
 #include "../libsvn_fs/fs-loader.h"

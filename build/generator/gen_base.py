@@ -4,7 +4,6 @@
 
 import os
 import sys
-import string
 import glob
 import re
 import fileinput
@@ -76,16 +75,16 @@ class GeneratorBase:
     self.private_includes = \
         _collect_paths(parser.get('options', 'private-includes'))
     self.private_built_includes = \
-        string.split(parser.get('options', 'private-built-includes'))
+        parser.get('options', 'private-built-includes').split()
     self.scripts = \
         _collect_paths(parser.get('options', 'test-scripts'))
     self.bdb_scripts = \
         _collect_paths(parser.get('options', 'bdb-test-scripts'))
 
     self.include_wildcards = \
-      string.split(parser.get('options', 'include-wildcards'))
-    self.swig_lang = string.split(parser.get('options', 'swig-languages'))
-    self.swig_dirs = string.split(parser.get('options', 'swig-dirs'))
+      parser.get('options', 'include-wildcards').split()
+    self.swig_lang = parser.get('options', 'swig-languages').split()
+    self.swig_dirs = parser.get('options', 'swig-dirs').split()
 
     # SWIG Generator
     self.swig = generator.swig.Generator(self.conf, "swig")
@@ -133,7 +132,7 @@ class GeneratorBase:
       for dep_type, dep_names in dependencies:
         # Translate string names to Section objects
         dep_section_objects = []
-        for section_name in string.split(dep_names):
+        for section_name in dep_names.split():
           if section_name in self.sections:
             dep_section_objects.append(self.sections[section_name])
 
@@ -271,7 +270,7 @@ class SWIGObject(ObjectFile):
     self.lang_abbrev = lang_abbrev[lang]
     self.source_generated = 1
     ### hmm. this is Makefile-specific
-    self.compile_cmd = '$(COMPILE_%s_WRAPPER)' % string.upper(self.lang_abbrev)
+    self.compile_cmd = '$(COMPILE_%s_WRAPPER)' % self.lang_abbrev.upper()
 
 class HeaderFile(DependencyNode):
   def __init__(self, filename, classname = None, compile_cmd = None):
@@ -363,7 +362,7 @@ class TargetLinked(Target):
 
     self.external_lib = options.get('external-lib')
     self.external_project = options.get('external-project')
-    self.msvc_libs = string.split(options.get('msvc-libs', ''))
+    self.msvc_libs = options.get('msvc-libs', '').split()
 
   def add_dependencies(self):
     if self.external_lib or self.external_project:
@@ -399,7 +398,7 @@ class TargetLinked(Target):
     ### we should collect this from the dependency nodes rather than
     ### the sources. "what dir are you going to put yourself into?"
     self.gen_obj.target_dirs.append(self.path)
-    for pattern in string.split(self.sources):
+    for pattern in self.sources.split():
       dirname = build_path_dirname(pattern)
       if dirname:
         self.gen_obj.target_dirs.append(build_path_join(self.path, dirname))
@@ -429,7 +428,7 @@ class TargetExe(TargetLinked):
       if self.testing != 'skip':
         self.gen_obj.bdb_test_progs.append(self.filename)
 
-    self.gen_obj.manpages.extend(string.split(self.manpages))
+    self.gen_obj.manpages.extend(self.manpages.split())
 
 class TargetScript(Target):
   def add_dependencies(self):
@@ -456,7 +455,7 @@ class TargetLib(TargetLinked):
 
     self.msvc_static = options.get('msvc-static') == 'yes' # is a static lib
     self.msvc_fake = options.get('msvc-fake') == 'yes' # has fake target
-    self.msvc_export = string.split(options.get('msvc-export', ''))
+    self.msvc_export = options.get('msvc-export', '').split()
 
 class TargetApacheMod(TargetLib):
 
@@ -523,7 +522,7 @@ class TargetSWIG(TargetLib):
     self.include_runtime = options.get('include-runtime') == 'yes'
 
     ### hmm. this is Makefile-specific
-    self.link_cmd = '$(LINK_%s_WRAPPER)' % string.upper(lang_abbrev[lang])
+    self.link_cmd = '$(LINK_%s_WRAPPER)' % lang_abbrev[lang].upper()
 
   def add_dependencies(self):
     # Look in source directory for dependencies
@@ -547,7 +546,7 @@ class TargetSWIG(TargetLib):
     if self.lang == "ruby":
       lib_filename = module_name + lib_extension
     elif self.lang == "perl":
-      lib_filename = '_' + string.capitalize(module_name) + lib_extension
+      lib_filename = '_' + module_name.capitalize() + lib_extension
     else:
       lib_filename = '_' + module_name + lib_extension
 
@@ -618,7 +617,7 @@ class TargetJava(TargetLinked):
   def __init__(self, name, options, gen_obj):
     TargetLinked.__init__(self, name, options, gen_obj)
     self.link_cmd = options.get('link-cmd')
-    self.packages = string.split(options.get('package-roots', ''))
+    self.packages = options.get('package-roots', '').split()
     self.jar = options.get('jar')
     self.deps = [ ]
 
@@ -643,9 +642,9 @@ class TargetJavaHeaders(TargetJava):
 
       class_header = build_path_join(self.headers, class_name + '.h')
       class_header_win = build_path_join(self.headers,
-                                         string.replace(self.package,".", "_")
+                                         self.package.replace(".", "_")
                                          + "_" + class_name + '.h')
-      class_pkg_list = string.split(self.package, '.')
+      class_pkg_list = self.package.split('.')
       class_pkg = apply(build_path_join, class_pkg_list)
       class_file = ObjectFile(build_path_join(self.classes, class_pkg,
                                               class_name + self.objext))
@@ -668,7 +667,7 @@ class TargetJavaHeaders(TargetJava):
     self.gen_obj.target_dirs.append(self.path)
     self.gen_obj.target_dirs.append(self.classes)
     self.gen_obj.target_dirs.append(self.headers)
-    for pattern in string.split(self.sources):
+    for pattern in self.sources.split():
       dirname = build_path_dirname(pattern)
       if dirname:
         self.gen_obj.target_dirs.append(build_path_join(self.path, dirname))
@@ -725,7 +724,7 @@ class TargetJavaClasses(TargetJava):
     ### the sources. "what dir are you going to put yourself into?"
     self.gen_obj.target_dirs.append(self.path)
     self.gen_obj.target_dirs.append(self.classes)
-    for pattern in string.split(self.sources):
+    for pattern in self.sources.split():
       dirname = build_path_dirname(pattern)
       if dirname:
         self.gen_obj.target_dirs.append(build_path_join(self.path, dirname))
@@ -764,26 +763,26 @@ class GenError(Exception):
 
 def native_path(path):
   """Convert a build path to a native path"""
-  return string.replace(path, '/', os.sep)
+  return path.replace('/', os.sep)
 
 def build_path(path):
   """Convert a native path to a build path"""
-  path = string.replace(path, os.sep, '/')
+  path = path.replace(os.sep, '/')
   if os.altsep:
-    path = string.replace(path, os.altsep, '/')
+    path = path.replace(os.altsep, '/')
   return path
 
 def build_path_join(*path_parts):
   """Join path components into a build path"""
-  return string.join(path_parts, '/')
+  return '/'.join(path_parts)
 
 def build_path_split(path):
   """Return list of components in a build path"""
-  return string.split(path, '/')
+  return path.split('/')
 
 def build_path_splitfile(path):
   """Return the filename and directory portions of a file path"""
-  pos = string.rfind(path, '/')
+  pos = path.rfind('/')
   if pos > 0:
     return path[:pos], path[pos+1:]
   elif pos == 0:
@@ -801,7 +800,7 @@ def build_path_basename(path):
 
 def build_path_retreat(path):
   "Given a relative directory, return ../ paths to retreat to the origin."
-  return ".." + "/.." * string.count(path, '/')
+  return ".." + "/.." * path.count('/')
 
 def build_path_strip(path, files):
   "Strip the given path from each file."
@@ -828,7 +827,7 @@ def _collect_paths(pats, path=None):
   glob pattern which matched the file before its last forward slash (/)
   """
   result = [ ]
-  for base_pat in string.split(pats):
+  for base_pat in pats.split():
     if path:
       pattern = build_path_join(path, base_pat)
     else:

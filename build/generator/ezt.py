@@ -412,7 +412,7 @@ class Template:
   def _cmd_is(self, args, fp, ctx):
     ((left_ref, right_ref), t_section, f_section) = args
     value = _get_value(right_ref, ctx)
-    value = string.lower(_get_value(left_ref, ctx)) == string.lower(value)
+    value = _get_value(left_ref, ctx).lower() == value.lower()
     self._do_if(value, t_section, f_section, fp, ctx)
 
   def _do_if(self, value, t_section, f_section, fp, ctx):
@@ -466,7 +466,7 @@ def _prepare_ref(refname, for_names, file_args):
       if idx < len(file_args):
         return file_args[idx]
 
-  parts = string.split(refname, '.')
+  parts = refname.split('.')
   start = parts[0]
   rest = parts[1:]
   while rest and (start in for_names):

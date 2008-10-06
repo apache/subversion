@@ -19,6 +19,14 @@
 #include <stdio.h>
 #include <string.h>
 
+#ifdef _MSC_VER
+#include <direct.h>
+#define getcwd _getcwd
+#define getdcwd _getdcwd
+#else
+#include <unistd.h> /* for getcwd() */
+#endif
+
 #include <apr_general.h>
 
 #include "svn_pools.h"
@@ -1433,6 +1441,86 @@ test_uri_is_child(const char **msg,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_dirent_get_absolute(const char **msg,
+                         svn_boolean_t msg_only,
+                         svn_test_opts_t *opts,
+                         apr_pool_t *pool)
+{
+  int i;
+  const char *curdir;
+  char buf[8192];
+#if defined(WIN32) || defined(__CYGWIN__)
+  const char *curdironc;
+#endif /* WIN32 */
+
+  struct {
+    const char *path;
+    const char *result;
+  } tests[] = {
+    /* '%' will be replaced by the current working dir. */
+    { "abc", "%/abc" },
+    { SVN_EMPTY_PATH, "%" },
+#if defined(WIN32) || defined(__CYGWIN__)
+    /* '@' will be replaced by the current working dir on C:\. */
+    { "C:/", "C:/" },
+    { "C:/abc", "C:/abc" },
+    { "C:abc", "@/abc" },
+    { "C:", "@" },
+    /* svn_dirent_get_absolute will check existence of this UNC shares on the
+       test machine, so we can't really test this.
+    { "//srv/shr",      "//srv/shr" },
+    { "//srv/shr/fld",  "//srv/shr" },
+    { "//srv/shr/fld/subfld", "//srv/shr/fld" }, */
+#else  /* WIN32 or Cygwin */
+    { "/abc", "/abc" },
+    { "/x/abc", "/x/abc" },
+    { "X:", "%/X:" },
+    { "X:abc", "%/X:abc" },
+#endif /* non-WIN32 */
+  };
+
+  *msg = "test svn_dirent_get_absolute";
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  if (! getcwd(buf, sizeof(buf)))
+    return svn_error_create(SVN_ERR_BASE, NULL, "getcwd() failed");
+
+  curdir = svn_path_internal_style(buf, pool);
+
+#if defined(WIN32) || defined(__CYGWIN__)
+  if (! getdcwd(3, buf, sizeof(buf))) /* 3 stands for drive C: */
+    return svn_error_create(SVN_ERR_BASE, NULL, "getdcwd() failed");
+
+  curdironc = svn_path_internal_style(buf, pool);
+#endif /* WIN32 */
+
+  for (i = 0 ; i < sizeof(tests) / sizeof(tests[0]) ; i++ )
+    {
+      const char *path = tests[i].path;
+      const char *expect = tests[i].result;
+      const char *expect_abs, *result;
+
+      expect_abs = expect;
+      if (*expect == '%')
+        expect_abs = apr_pstrcat(pool, curdir, expect + 1, NULL);
+#if defined(WIN32) || defined(__CYGWIN__)
+      if (*expect == '@')
+        expect_abs = apr_pstrcat(pool, curdironc, expect + 1, NULL);
+#endif /* WIN32 */
+
+      SVN_ERR(svn_dirent_get_absolute(&result, path, pool));
+      if (strcmp(result, expect_abs))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_dirent_get_absolute(\"%s\") returned "
+                                 "\"%s\". expected \"%s\"",
+                                 path, result, expect_abs);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 /* The test table.  */
 
@@ -1457,5 +1545,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(test_uri_is_child),
     SVN_TEST_PASS(test_dirent_is_ancestor),
     SVN_TEST_PASS(test_uri_is_ancestor),
+    SVN_TEST_PASS(test_dirent_get_absolute),
     SVN_TEST_NULL
   };

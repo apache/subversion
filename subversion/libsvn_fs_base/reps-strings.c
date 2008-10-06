@@ -1,7 +1,7 @@
 /* reps-strings.c : intepreting representations with respect to strings
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -16,14 +16,12 @@
  */
 
 #include <assert.h>
-#include <apr_md5.h>
 
 #define APU_WANT_DB
 #include <apu_want.h>
 
 #include "svn_fs.h"
 #include "svn_pools.h"
-#include "svn_md5.h"
 
 #include "fs.h"
 #include "err.h"

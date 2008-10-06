@@ -2,7 +2,7 @@
  * fetch.c :  routines for fetching updates and checkouts
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -26,7 +26,6 @@
 #include <apr_pools.h>
 #include <apr_tables.h>
 #include <apr_strings.h>
-#include <apr_md5.h>
 #include <apr_xml.h>
 
 #include <ne_basic.h>
@@ -35,7 +34,6 @@
 #include "svn_pools.h"
 #include "svn_delta.h"
 #include "svn_io.h"
-#include "svn_md5.h"
 #include "svn_base64.h"
 #include "svn_ra.h"
 #include "../libsvn_ra/ra_loader.h"
