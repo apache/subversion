@@ -59,7 +59,7 @@ AC_DEFUN(SVN_LIB_SQLITE,
     if test -z "$svn_lib_sqlite"; then
       SVN_SQLITE_CONFIG("")
       if test -z "$svn_lib_sqlite"; then
-        AC_MSG_WARN([SQLite not found - libsvn_ra_local will be disabled.])
+        AC_MSG_WARN([no suitable sqlite found])
         SVN_DOWNLOAD_SQLITE
       fi
     fi
@@ -127,6 +127,5 @@ AC_DEFUN(SVN_DOWNLOAD_SQLITE,
   echo "unpack the archive using tar/gunzip and rename the resulting"
   echo "directory from ./sqlite-${SQLITE_RECOMMENDED_VER}/ to ./sqlite/"
   echo ""
-  AC_MSG_RESULT([no suitable sqlite found])
-  svn_lib_sqlite="no"
+  AC_MSG_ERROR([Subversion requires SQLite])
 ])
