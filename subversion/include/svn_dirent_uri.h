@@ -241,7 +241,7 @@ const char *svn_dirent_canonicalize(const char *dirent, apr_pool_t *pool);
  */
 const char *svn_uri_canonicalize(const char *uri, apr_pool_t *pool);
 
-/** Return @c TRUE iff dirent is canonical.  Use @a pool for temporary
+/** Return @c TRUE iff @a dirent is canonical.  Use @a pool for temporary
  * allocations.
  *
  * @note The test for canonicalization is currently defined as
@@ -252,7 +252,7 @@ const char *svn_uri_canonicalize(const char *uri, apr_pool_t *pool);
  */
 svn_boolean_t svn_dirent_is_canonical(const char *dirent, apr_pool_t *pool);
 
-/** Return @c TRUE iff uri is canonical.  Use @a pool for temporary
+/** Return @c TRUE iff @a uri is canonical.  Use @a pool for temporary
  * allocations.
  *
  * @note The test for canonicalization is currently defined as

@@ -49,6 +49,12 @@
 
 /**** Internal implementation functions *****/
 
+/* Return an internal-style new path based on PATH, allocated in POOL.
+ * Pass true for URI if PATH is a uri instead of a regular path.
+ *
+ * "Internal-style" means that separators are all '/', and the new
+ * path is canonicalized.
+ */
 static const char *
 internal_style(svn_boolean_t uri, const char *path, apr_pool_t *pool)
 {
@@ -68,6 +74,13 @@ internal_style(svn_boolean_t uri, const char *path, apr_pool_t *pool)
   /* FIXME: Should also remove trailing /.'s, if the style says so. */
 }
 
+/* Return a local-style new path based on PATH, allocated in POOL.
+ * Pass true for URI if PATH is a uri instead of a regular path.
+ *
+ * "Local-style" means a path that looks like what users are
+ * accustomed to seeing, including native separators.  The new path
+ * will still be canonicalized.
+ */
 static const char *
 local_style(svn_boolean_t uri, const char *path, apr_pool_t *pool)
 {
