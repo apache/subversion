@@ -59,16 +59,3 @@ Candidate changes for 1.5.3:
 
 Approved changes:
 =================
-
- * r33296 (only subversion/libsvn_client/merge.c)
-   Resolves:
-     merge.c: In function 'filter_self_referential_mergeinfo':
-     merge.c:521: warning: declaration of 'merge_source_root_url' shadows a
-                 previous local
-   Notes:
-     Small followup on the r33112 group
-   Justification:
-     Warnings are bad. Especially if they show us an unused but assigned 
-     variable.
-   Votes:
-     +1: rhuijben, danielsh, hwright
