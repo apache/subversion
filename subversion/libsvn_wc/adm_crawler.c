@@ -958,7 +958,7 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
   apr_file_t *tempbasefile;
   const char *base_digest_hex = NULL;
   svn_checksum_t *base_checksum = NULL;
-  svn_checksum_t *local_checksum = NULL;
+  svn_checksum_t *local_checksum;
   svn_error_t *err;
   const svn_wc_entry_t *ent;
   svn_stream_t *base_stream;
@@ -1009,7 +1009,7 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
           svn_checksum_t *tmp_checksum;
 
           /* If there's no checksum in this entry, calculate one */
-          const char *tb = svn_wc__text_base_path (path, FALSE, pool);
+          const char *tb = svn_wc__text_base_path(path, FALSE, pool);
 
           SVN_ERR (svn_io_file_checksum2(&tmp_checksum, tb, svn_checksum_md5,
                                          pool));
@@ -1035,12 +1035,12 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
       = svn_stream_checksummed2(base_stream, &base_checksum, svn_checksum_md5,
                                 NULL, svn_checksum_md5, TRUE, pool);
 
-  /* Create a text-delta stream object that pulls
-     data out of the two files. */
-  svn_txdelta(&txdelta_stream, base_stream, local_stream, pool);
-
-  /* Pull windows from the delta stream and feed to the consumer. */
-  err = svn_txdelta_send_txstream(txdelta_stream, handler, wh_baton, pool);
+  /* Run diff processing, throwing windows at the handler. */
+  err = svn_txdelta_run(base_stream, local_stream,
+                        handler, wh_baton,
+                        svn_checksum_md5, &local_checksum,
+                        NULL, NULL,
+                        pool, pool);
 
   /* Close the two streams to force writing the digest,
      if we already have an error, ignore this one. */
@@ -1098,9 +1098,6 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
   SVN_ERR_W(err, apr_psprintf(pool,
                               _("While preparing '%s' for commit"),
                               svn_path_local_style(path, pool)));
-
-  local_checksum = svn_checksum_create(svn_checksum_md5, pool);
-  local_checksum->digest = svn_txdelta_md5_digest(txdelta_stream);
 
   if (digest)
     memcpy(digest, local_checksum->digest, svn_checksum_size(local_checksum));

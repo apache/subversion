@@ -26,6 +26,8 @@
 #include "svn_delta.h"
 #include "svn_io.h"
 #include "svn_pools.h"
+#include "svn_checksum.h"
+
 #include "delta.h"
 
 
@@ -50,12 +52,10 @@ struct txdelta_baton {
   svn_filesize_t pos;           /* Offset of next read in source file. */
   char *buf;                    /* Buffer for input data. */
 
-  apr_md5_ctx_t context;        /* APR's MD5 context container. */
+  svn_checksum_ctx_t *context;  /* Context for computing the checksum. */
+  svn_checksum_t *checksum;     /* If non-NULL, the checksum of TARGET. */
 
-  /* Calculated digest from MD5 operations.
-     NOTE:  This is only valid after this stream has returned the NULL
-     (final) window.  */
-  unsigned char digest[APR_MD5_DIGESTSIZE];
+  apr_pool_t *result_pool;      /* For results (e.g. checksum) */
 };
 
 
@@ -325,28 +325,21 @@ txdelta_next_window(svn_txdelta_window_t **window,
     source_len = 0;
 
   /* Read the target stream. */
-  SVN_ERR(svn_stream_read(b->target, b->buf + source_len,
-                          &target_len));
+  SVN_ERR(svn_stream_read(b->target, b->buf + source_len, &target_len));
   b->pos += source_len;
 
-  /* ### The apr_md5 functions always return APR_SUCCESS.  At one
-     point, we proposed to APR folks that the interfaces change to
-     return void, but for some people that was apparently not a good
-     idea, and we didn't bother pressing the matter.  In the meantime,
-     we just ignore their return values below. */
   if (target_len == 0)
     {
       /* No target data?  We're done; return the final window. */
-      apr_md5_final(b->digest, &(b->context));
+      if (b->context != NULL)
+        SVN_ERR(svn_checksum_final(&b->checksum, b->context, pool));
+
       *window = NULL;
       b->more = FALSE;
       return SVN_NO_ERROR;
     }
-  else
-    {
-      apr_md5_update(&(b->context), b->buf + source_len,
-                     target_len);
-    }
+  else if (b->context != NULL)
+    SVN_ERR(svn_checksum_update(b->context, b->buf + source_len, target_len));
 
   *window = compute_window(b->buf, source_len, target_len,
                            b->pos - source_len, pool);
@@ -365,7 +358,60 @@ txdelta_md5_digest(void *baton)
   if (b->more)
     return NULL;
 
-  return b->digest;
+  /* The checksum should be there. */
+  return b->checksum->digest;
+}
+
+
+svn_error_t *
+svn_txdelta_run(svn_stream_t *source,
+                svn_stream_t *target,
+                svn_txdelta_window_handler_t handler,
+                void *handler_baton,
+                svn_checksum_kind_t checksum_kind,
+                svn_checksum_t **checksum,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  struct txdelta_baton tb = { 0 };
+  svn_txdelta_window_t *window;
+
+  tb.source = source;
+  tb.target = target;
+  tb.more_source = TRUE;
+  tb.more = TRUE;
+  tb.pos = 0;
+  tb.buf = apr_palloc(scratch_pool, 2 * SVN_DELTA_WINDOW_SIZE);
+  tb.result_pool = result_pool;
+
+  if (checksum != NULL)
+    tb.context = svn_checksum_ctx_create(checksum_kind, scratch_pool);
+
+  do
+    {
+      /* free the window (if any) */
+      svn_pool_clear(iterpool);
+
+      /* read in a single delta window */
+      SVN_ERR(txdelta_next_window(&window, &tb, iterpool));
+
+      /* shove it at the handler */
+      SVN_ERR((*handler)(window, handler_baton));
+
+      if (cancel_func)
+        SVN_ERR(cancel_func(cancel_baton));
+    }
+  while (window != NULL);
+
+  svn_pool_destroy(iterpool);
+
+  if (checksum != NULL)
+    *checksum = tb.checksum;  /* should be there! */
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -375,19 +421,18 @@ svn_txdelta(svn_txdelta_stream_t **stream,
             svn_stream_t *target,
             apr_pool_t *pool)
 {
-  struct txdelta_baton *b = apr_palloc(pool, sizeof(*b));
+  struct txdelta_baton *b = apr_pcalloc(pool, sizeof(*b));
+
   b->source = source;
   b->target = target;
   b->more_source = TRUE;
   b->more = TRUE;
-  b->pos = 0;
   b->buf = apr_palloc(pool, 2 * SVN_DELTA_WINDOW_SIZE);
-
-  /* Initialize MD5 digest calculation. */
-  apr_md5_init(&(b->context));
+  b->context = svn_checksum_ctx_create(svn_checksum_md5, pool);
+  b->result_pool = pool;
 
   *stream = svn_txdelta_stream_create(b, txdelta_next_window,
-                                     txdelta_md5_digest, pool);
+                                      txdelta_md5_digest, pool);
 }
 
 
