@@ -68,6 +68,7 @@ Candidate changes for 1.5.3:
      This patch resolves two of these cases. The first by removing the
      calculation and the second by disabling the code on Windows completely.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, danielsh
+
 Approved changes:
 =================
