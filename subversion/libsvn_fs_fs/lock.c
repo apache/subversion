@@ -1,7 +1,7 @@
 /* lock.c :  functions for manipulating filesystem locks.
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -23,12 +23,10 @@
 #include "svn_hash.h"
 #include "svn_time.h"
 #include "svn_utf.h"
-#include "svn_md5.h"
 
 #include <apr_uuid.h>
 #include <apr_file_io.h>
 #include <apr_file_info.h>
-#include <apr_md5.h>
 
 #include "lock.h"
 #include "tree.h"

@@ -679,9 +679,18 @@ rather than the "loggy" mechanics of wc-1.0.
            used as a work queue, and that is easily handled in sqlite.
 
 Base text data will be stored in a multi-level directory structure,
-keyed/named by the MD5 of the file. The database will record
-appropriate mappings, content/compression types, and refcounts for the
-base text files (for the shared case).
+keyed/named by the checksum (MD5 or SHA1) of the file. The database
+will record appropriate mappings, content/compression types, and
+refcounts for the base text files (for the shared case). We will use a
+single level of directories:
+
+  TEXT_BASE/7c/7ca344...
+
+With 100k files spread across all of a user's working copies, that
+will put 390 files into each subdirectory, which is quite fine. If the
+user grows to a million files, then 3900 per subdir is still
+reasonable. Two levels would effectively mean one file per subdir in
+typical situations, which is a lot of disk overhead.
 
 When the metadata is recorded in a central area (rather than the WC
 root), then it is possible for the metadata and the base files to
@@ -697,91 +706,12 @@ metadata at the wc-root (this time)), and other consistency checks.
 Metadata Schemas
 ----------------
 
-BASE schema
-  name         string
-  kind         enum
-  checksum     string     ### string should indicate what kind of checksum?
-  props        blob       ### serialized props. maybe keep unserialized?
-                          ###   maybe some props should be broken out?
-  children     [string]   ### someting more than array-of-string?
-  cmt_rev      integer64
-  cmt_date     integer64  ### is there a time type?
-  cmt_author   string     ### normalize?  (besides utf8, what does "normalize" mean?)
-
-  absent       boolean    ### really? maybe state instead, such as "omitted"?
-  revision     integer64
-  url          string     ### should be computed value?
-  repos_url    string     ### shared, per-dir?
-  repos_uuid   string     ### shared, per-dir?
-  ### lock information? in this table, or a separate locks table?
-  ### KFF: in this table, I think.  It's rare to tell Subversion "Show
-  ### me everything that's locked", but it's common to say "Tell me if
-  ### this particular path [or set of paths] is locked".
-  ###
-  ### depth?
+see libsvn_wc/wc-metatdata.sql3
 
 
-WORKING schema
-  name         string     ###
-  kind         enum
-  checksum     string
-  props        blob       ### serialized props. maybe keep unserialized?
-                          ###   maybe some props should be broken out?
-  children     [string]   ### someting more than array-of-string?
-  ### following are set when a copyfrom occurs. do we really need these?
-  cmt_rev      integer64
-  cmt_date     integer64  ### is there a time type?
-  cmt_author   string     ### normalize?
 
-  deleted      boolean
-  copyfrom_url string
-  copyfrom_rev integer64
-  conflict_old string     ### conflict data goes on WORKING, right?
-  conflict_new string
-  conflict_wrk string
-  prejfile     string
-  changelist   string
-  ### KFF: With changelists, it's the opposite of locks: one
-  ### frequently says "show me all the files in changelist X"; I'm
-  ### not sure how frequently we need to say "show me all the
-  ### changelists this file is part of".  But anyway, the need to
-  ### discover all the files in changelist X implies that it might be
-  ### better to make a changelist table?
-
-  ### how to represent renames?
-  ### repos_url, repos_uuid: combined working copies, and/or a foreign
-  ###   repos brought in and about to be linked via svn:externals. ??
-  ### depth?
-
-
-ACTUAL schema  (what we know about the ACTUAL tree)
-  name         string
-  ### cache the checksum? probably unreliable, but could be a marker
-  ###   for "we've already noted the file is different from WORKING"
-  ### cache the kind? assume that kind, then on exception do extended
-  ###   processing to figure out the "right" thing.
-
-  lastmod      integer64  ### is there a time type?
-
-  ### note that we can't really hold any/much data here since ACTUAL
-      could change at any point in time. anything stored here should
-      simply be optimization indicators on how to approach the ACTUAL
-      tree (i.e. what assumptions to make).
-
-
-BASETEXT schema
-  checksum     string     ### KFF: how is this different from the
-                          ### checksum in the "BASE" schema above?
-  present      enum       ### something like: yes, no, cached, notyet
-  refcount     integer
-  compressed   boolean    ### enum for various storage styles?
-
-  ### learn from GIT storage? can we somehow compress across this
-      entire storage heirarchy? (eg. use history and deltas to
-      reassemble fulltexts from line-of-descent)
-
-
-Note that 'children' applies only to kind==DIRECTORY
+Random Notes
+------------
 
 ### break down all modification operations to things that operate on a
     small/fixed set of rows. if a large sequence of operations fails,

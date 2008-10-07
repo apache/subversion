@@ -51,51 +51,15 @@
 const char *
 svn_path_internal_style(const char *path, apr_pool_t *pool)
 {
-  if ('/' != SVN_PATH_LOCAL_SEPARATOR)
-    {
-      char *p = apr_pstrdup(pool, path);
-      path = p;
-
-      /* Convert all local-style separators to the canonical ones. */
-      for (; *p != '\0'; ++p)
-        if (*p == SVN_PATH_LOCAL_SEPARATOR)
-          *p = '/';
-    }
-
-  return svn_path_canonicalize(path, pool);
-  /* FIXME: Should also remove trailing /.'s, if the style says so. */
+  return svn_uri_internal_style(path, pool);
 }
 
 
 const char *
 svn_path_local_style(const char *path, apr_pool_t *pool)
 {
-  path = svn_path_canonicalize(path, pool);
-  /* FIXME: Should also remove trailing /.'s, if the style says so. */
-
-  /* Internally, Subversion represents the current directory with the
-     empty string.  But users like to see "." . */
-  if (SVN_PATH_IS_EMPTY(path))
-    return ".";
-
-  /* If PATH is a URL, the "local style" is the same as the input. */
-  if (svn_path_is_url(path))
-    return apr_pstrdup(pool, path);
-
-  if ('/' != SVN_PATH_LOCAL_SEPARATOR)
-    {
-      char *p = apr_pstrdup(pool, path);
-      path = p;
-
-      /* Convert all canonical separators to the local-style ones. */
-      for (; *p != '\0'; ++p)
-        if (*p == '/')
-          *p = SVN_PATH_LOCAL_SEPARATOR;
-    }
-
-  return path;
+  return svn_uri_local_style(path, pool);
 }
-
 
 
 #ifndef NDEBUG
@@ -504,23 +468,7 @@ svn_path_is_child(const char *path1,
 svn_boolean_t
 svn_path_is_ancestor(const char *path1, const char *path2)
 {
-  apr_size_t path1_len = strlen(path1);
-
-  /* If path1 is empty and path2 is not absoulte, then path1 is an ancestor. */
-  if (SVN_PATH_IS_EMPTY(path1))
-    return *path2 != '/';
-
-  /* If path1 is a prefix of path2, then:
-     - If path1 ends in a path separator,
-     - If the paths are of the same length
-     OR
-     - path2 starts a new path component after the common prefix,
-     then path1 is an ancestor. */
-  if (strncmp(path1, path2, path1_len) == 0)
-    return path1[path1_len - 1] == '/'
-      || (path2[path1_len] == '/' || path2[path1_len] == '\0');
-
-  return FALSE;
+  return svn_uri_is_ancestor(path1, path2);
 }
 
 
@@ -1055,156 +1003,14 @@ svn_path_split_if_file(const char *path,
 const char *
 svn_path_canonicalize(const char *path, apr_pool_t *pool)
 {
-  char *canon, *dst;
-  const char *src;
-  apr_size_t seglen;
-  apr_size_t canon_segments = 0;
-  svn_boolean_t uri;
-  apr_uri_t host_uri;
-
-  /* "" is already canonical, so just return it; note that later code
-     depends on path not being zero-length.  */
-  if (! *path)
-    return path;
-
-  dst = canon = apr_pcalloc(pool, strlen(path) + 1);
-
-  /* Try to parse the path as an URI. */
-  if (apr_uri_parse(pool, path, &host_uri) == APR_SUCCESS &&
-      host_uri.scheme && host_uri.hostname)
-    {
-      /* convert scheme and hostname to lowercase */
-      apr_size_t offset;
-      int i;
-
-      uri = TRUE;
-      for(i = 0; host_uri.scheme[i]; i++)
-        host_uri.scheme[i] = tolower(host_uri.scheme[i]);
-      for(i = 0; host_uri.hostname[i]; i++)
-        host_uri.hostname[i] = tolower(host_uri.hostname[i]);
-
-      /* path will be pointing to a new memory location, so update src to
-       * point to the new location too. */
-      offset = strlen(host_uri.scheme) + 3; /* "(scheme)://" */
-      path = apr_uri_unparse(pool, &host_uri, APR_URI_UNP_REVEALPASSWORD);
-
-      /* skip 3rd '/' in file:/// uri */
-      if (path[offset] == '/')
-        offset++;
-
-      /* copy src to dst */
-      memcpy(dst, path, offset);
-      dst += offset;
-
-      src = path + offset;
-    }
-  else
-    {
-      uri = FALSE;
-      src = path;
-      /* If this is an absolute path, then just copy over the initial
-         separator character. */
-      if (*src == '/')
-        {
-          *(dst++) = *(src++);
-
-#if defined(WIN32) || defined(__CYGWIN__)
-          /* On Windows permit two leading separator characters which means an
-           * UNC path. */
-          if (*src == '/')
-            *(dst++) = *(src++);
-#endif /* WIN32 or Cygwin */
-        }
-    }
-
-  while (*src)
-    {
-      /* Parse each segment, find the closing '/' */
-      const char *next = src;
-      while (*next && (*next != '/'))
-        ++next;
-
-      seglen = next - src;
-
-      if (seglen == 0 || (seglen == 1 && src[0] == '.'))
-        {
-          /* Noop segment, so do nothing. */
-        }
-#if defined(WIN32) || defined(__CYGWIN__)
-      /* If this is the first path segment of a file:// URI and it contains a
-         windows drive letter, convert the drive letter to upper case. */
-      else if (uri && canon_segments == 0 && seglen == 2 &&
-          strcmp(host_uri.scheme, "file") == 0 &&
-          src[0] >= 'a' && src[0] <= 'z' && src[1] == ':')
-        {
-          *(dst++) = toupper(src[0]);
-          *(dst++) = ':';
-          if (*next)
-            *(dst++) = *next;
-          canon_segments++;
-        }
-#endif /* WIN32 or Cygwin */
-      else
-        {
-          /* An actual segment, append it to the destination path */
-          if (*next)
-            seglen++;
-          memcpy(dst, src, seglen);
-          dst += seglen;
-          canon_segments++;
-        }
-
-      /* Skip over trailing slash to the next segment. */
-      src = next;
-      if (*src)
-        src++;
-    }
-
-  /* Remove the trailing slash if necessary. */
-  if (*(dst - 1) == '/')
-    {
-      /* If we had any path components, we always remove the trailing slash. */
-      if (canon_segments > 0)
-        dst --;
-      /* Otherwise, make sure to strip the third slash from URIs which
-       * have an empty hostname part, such as http:/// or file:/// */
-      else if (uri && host_uri.hostname[0] == '\0' &&
-               host_uri.path && host_uri.path[0] == '/')
-              dst--;
-    }
-
-  *dst = '\0';
-
-#if defined(WIN32) || defined(__CYGWIN__)
-  /* Skip leading double slashes when there are less than 2
-   * canon segments. UNC paths *MUST* have two segments. */
-  if (canon[0] == '/' && canon[1] == '/')
-    {
-      if (canon_segments < 2)
-        return canon + 1;
-      else
-        {
-          /* Now we're sure this is a valid UNC path, convert the server name 
-             (the first path segment) to lowercase as Windows treats it as case
-             insensitive. 
-             Note: normally the share name is treated as case insensitive too,
-             but it seems to be possible to configure Samba to treat those as
-             case sensitive, so better leave that alone. */
-          dst = canon + 2;
-          while (*dst && *dst != '/')
-            *(dst++) = tolower(*dst);
-        }
-    }
-#endif /* WIN32 or Cygwin */
-
-  return canon;
+  return svn_uri_canonicalize(path, pool);
 }
 
 
 svn_boolean_t
 svn_path_is_canonical(const char *path, apr_pool_t *pool)
 {
-  return (strcmp(path, svn_path_canonicalize(path, pool)) == 0);
+  return svn_uri_is_canonical(path, pool);
 }
 
 

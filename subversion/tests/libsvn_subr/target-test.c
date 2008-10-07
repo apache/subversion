@@ -58,13 +58,14 @@ condense_targets_tests_helper(const char* title,
 {
   apr_array_header_t *targets;
   apr_array_header_t *condensed_targets;
-  const char *common_path, *common_path2;
+  const char *common_path, *common_path2, *curdir;
   char *token, *iter, *exp_common_abs = (char*)exp_common;
   int i;
-  const char curdir[8192];
+  char buf[8192];
 
-  if (! getcwd(curdir, sizeof(curdir)))
+  if (! getcwd(buf, sizeof(buf)))
     return svn_error_create(SVN_ERR_BASE, NULL, "getcwd() failed");
+  curdir = svn_path_internal_style(buf, pool);
 
   /* Create the target array */
   targets = apr_array_make(pool, sizeof(test_targets), sizeof(const char *));

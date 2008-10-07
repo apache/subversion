@@ -2189,6 +2189,57 @@ link_path(void *report_baton,
   return APR_SUCCESS;
 }
 
+/** Max. number of connctions we'll open to the server. */
+#define MAX_NR_OF_CONNS 4
+/** Minimum nr. of outstanding requests needed before a new connection is
+ *  opened. (actual number used will be 2 ^ EXP_REQS_PER_CONN. */
+#define EXP_REQS_PER_CONN 3
+
+/** This function creates a new connection for this serf session, but only
+ * if the number of ACTIVE_REQS > 8 (arbitrary chosen number) or if there
+ * currently is only one main connection open.
+ */
+static void
+open_connection_if_needed(svn_ra_serf__session_t *sess, int active_reqs)
+{
+  /* For each 8 outstanding requests open a new connection, with a minimum of
+     1 extra connection. */
+  if (sess->num_conns == 1 ||
+      ((active_reqs >> EXP_REQS_PER_CONN) > sess->num_conns))
+    {
+      int cur = sess->num_conns;
+
+      sess->conns[cur] = apr_palloc(sess->pool, sizeof(*sess->conns[cur]));
+      sess->conns[cur]->bkt_alloc = serf_bucket_allocator_create(sess->pool,
+                                                                 NULL, NULL);
+      sess->conns[cur]->address = sess->conns[0]->address;
+      sess->conns[cur]->hostinfo = sess->conns[0]->hostinfo;
+      sess->conns[cur]->using_ssl = sess->conns[0]->using_ssl;
+      sess->conns[cur]->using_compression = sess->conns[0]->using_compression;
+      sess->conns[cur]->proxy_auth_header = sess->conns[0]->proxy_auth_header;
+      sess->conns[cur]->proxy_auth_value = sess->conns[0]->proxy_auth_value;
+      sess->conns[cur]->useragent = sess->conns[0]->useragent;
+      sess->conns[cur]->last_status_code = -1;
+      sess->conns[cur]->ssl_context = NULL;
+      sess->conns[cur]->session = sess;
+      sess->conns[cur]->conn = serf_connection_create(sess->context,
+                                                      sess->conns[cur]->address,
+                                                      svn_ra_serf__conn_setup,
+                                                      sess->conns[cur],
+                                                      svn_ra_serf__conn_closed,
+                                                      sess->conns[cur],
+                                                      sess->pool);
+      sess->num_conns++;
+
+      /* Authentication protocol specific initalization. */
+      if (sess->auth_protocol)
+        sess->auth_protocol->init_conn_func(sess, sess->conns[cur], sess->pool);
+      if (sess->proxy_auth_protocol)
+        sess->proxy_auth_protocol->init_conn_func(sess, sess->conns[cur],
+                                                  sess->pool);
+    }
+}
+
 static svn_error_t *
 finish_report(void *report_baton,
               apr_pool_t *pool)
@@ -2252,36 +2303,8 @@ finish_report(void *report_baton,
 
   svn_ra_serf__request_create(handler);
 
-  for (i = sess->num_conns; i < 4; i++)
-    {
-      sess->conns[i] = apr_palloc(sess->pool, sizeof(*sess->conns[i]));
-      sess->conns[i]->bkt_alloc = serf_bucket_allocator_create(sess->pool,
-                                                               NULL, NULL);
-      sess->conns[i]->address = sess->conns[0]->address;
-      sess->conns[i]->hostinfo = sess->conns[0]->hostinfo;
-      sess->conns[i]->using_ssl = sess->conns[0]->using_ssl;
-      sess->conns[i]->using_compression = sess->conns[0]->using_compression;
-      sess->conns[i]->proxy_auth_header = sess->conns[0]->proxy_auth_header;
-      sess->conns[i]->proxy_auth_value = sess->conns[0]->proxy_auth_value;
-      sess->conns[i]->useragent = sess->conns[0]->useragent;
-      sess->conns[i]->last_status_code = -1;
-      sess->conns[i]->ssl_context = NULL;
-      sess->conns[i]->session = sess;
-      sess->conns[i]->conn = serf_connection_create(sess->context,
-                                                    sess->conns[i]->address,
-                                                    svn_ra_serf__conn_setup,
-                                                    sess->conns[i],
-                                                    svn_ra_serf__conn_closed,
-                                                    sess->conns[i],
-                                                    sess->pool);
-      sess->num_conns++;
-
-      /* Authentication protocol specific initalization. */
-      if (sess->auth_protocol)
-        sess->auth_protocol->init_conn_func(sess, sess->conns[i], pool);
-      if (sess->proxy_auth_protocol)
-        sess->proxy_auth_protocol->init_conn_func(sess, sess->conns[i], pool);
-    }
+  /* Open the first extra connection. */
+  open_connection_if_needed(sess, 0);
 
   sess->cur_conn = 1;
   closed_root = FALSE;
@@ -2305,6 +2328,11 @@ finish_report(void *report_baton,
                                     status);
         }
 
+      /* Open extra connections if we have enough requests to send. */
+      if (sess->num_conns < MAX_NR_OF_CONNS)
+        open_connection_if_needed(sess, report->active_fetches + 
+                                        report->active_propfinds);
+ 
       /* Switch our connection. */
       if (!report->done)
          if (++sess->cur_conn == sess->num_conns)
@@ -2438,6 +2466,8 @@ finish_report(void *report_baton,
   /* FIXME subpool */
   return report->update_editor->close_edit(report->update_baton, sess->pool);
 }
+#undef MAX_NR_OF_CONNS
+#undef EXP_REQS_PER_CONN
 
 static svn_error_t *
 abort_report(void *report_baton,
