@@ -500,7 +500,6 @@ copy_file_administratively(const char *src_path,
   /* Schedule the new file for addition in its parent, WITH HISTORY. */
   {
     const char *copyfrom_url;
-    const char *tmp_wc_text;
     svn_revnum_t copyfrom_rev;
     apr_hash_t *props, *base_props;
     svn_stream_t *base_contents;
