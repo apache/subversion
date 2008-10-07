@@ -73,6 +73,9 @@ class build(_build):
                               "apu-1-config file"))
   _build.user_options.append(("subversion=", None, "full path to where "
                               "Subversion is installed"))
+  _build.user_options.append(("svn-headers=", None, "Full path to the "
+                              "Subversion header files, if they are not in a "
+                              "standard location"))
   _build.user_options.append(("ctypesgen=", None, "full path to where ctypesgen "
                               "is installed, to the ctypesgen source tree or "
                               "the full path to ctypesgen.py"))
@@ -91,6 +94,7 @@ class build(_build):
     self.apr_util = None
     self.ctypesgen = None
     self.subversion = None
+    self.svn_headers = None
     self.cppflags = ""
     self.ldflags = ""
     self.lib_dirs = None
@@ -152,10 +156,9 @@ class build(_build):
           "/usr"
           ]
         
-        svn_include_dir = "%s/include/subversion-1" % self.subversion
         if self.subversion != "/usr":
           ldflags.append("-L%s/lib" % self.subversion)
-        flags.append("-I%s" % svn_include_dir)
+        flags.append("-I%s" % self.svn_include_dir)
 
         # List the libraries in the order they should be loaded
         libraries = [ 
@@ -170,8 +173,7 @@ class build(_build):
           ]
           
         for lib in libraries:
-          if glob("%s/lib/*%s*" % (self.subversion, lib)):
-            ldflags.append("-l%s" % lib)
+          ldflags.append("-l%s" % lib)
           
         if apr_prefix != '/usr':
           library_path.append("%s/lib" % apr_prefix)
@@ -192,8 +194,8 @@ class build(_build):
      library_path) = self.get_apr_config()
     tempdir = mkdtemp()
     try:
-      includes = ('%s/include/subversion-1/svn_*.h '
-                  '%s/ap[ru]_*.h' % (self.subversion, apr_include_dir))
+      includes = ('%s/svn_*.h '
+                  '%s/ap[ru]_*.h' % (self.svn_include_dir, apr_include_dir))
       cmd = ["cd %s && %s %s --cpp '%s %s' %s "
              "%s -o svn_all.py --no-macro-warnings" % (tempdir, sys.executable,
                                                        self.ctypesgen_py, cpp,
@@ -319,11 +321,37 @@ class build(_build):
                                  "must point to a valid Subversion " \
                                  "installation")
 
-    if not os.path.exists(os.path.join(self.subversion, "include",
-                                       "subversion-1", "svn_client.h")):
-      raise DistutilsOptionError("The --subversion option is not valid. " \
-                                 "Could not locate %s/include/" \
-                                 "subversion-1/svn_client.h" % self.subversion)
+    # Validate svn-headers, if present
+    if self.svn_headers:
+      if os.path.isdir(self.svn_headers):
+        if os.path.exists(os.path.join(self.svn_headers, "svn_client.h")):
+          self.svn_include_dir = self.svn_headers
+        elif os.path.exists(os.path.join(self.svn_headers, "subversion-1",
+                                         "svn_client.h")):
+          self.svn_include_dir = os.path.join(self.svn_headers, "subversion-1")
+        else:
+          self.svn_include_dir = None
+      else:
+        self.svn_include_dir = None
+    elif os.path.exists(os.path.join(self.subversion, "include",
+                                     "subversion-1")):
+      self.svn_include_dir = "%s/include/subversion-1" % self.subversion
+    else:
+      self.svn_include_dir = None
+
+    if not self.svn_include_dir:
+      msg = ""
+
+      if self.svn_headers:
+        msg = "The --svn-headers options is not valid.  It must point to " \
+              "either a Subversion include directory or the Subversion " \
+              "include/subversion-1 directory."
+      else:
+        msg = "The --subversion option is not valid. " \
+              "Could not locate %s/include/" \
+              "subversion-1/svn_client.h" % self.subversion
+
+      raise DistutilsOptionError(msg)
 
     # Validate ctypesgen
     if not self.ctypesgen:
@@ -341,11 +369,10 @@ class build(_build):
                                            "ctypesgen.py")
         else:
           self.ctypesgen_py = None
-      else:
-        if os.path.basename(self.ctypesgen) == "ctypesgen.py":
+      elif os.path.basename(self.ctypesgen) == "ctypesgen.py":
           self.ctypesgen_py = self.ctypesgen
-        else:
-          self.ctypesgen_py = None
+      else:
+        self.ctypesgen_py = None
     else:
       self.ctypesgen_py = None
 

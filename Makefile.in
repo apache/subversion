@@ -167,6 +167,9 @@ COMPILE_CXX = $(CXX) $(CPPFLAGS) $(CXXFLAGS) $(INCLUDES)
 LT_COMPILE = $(LIBTOOL) $(LTFLAGS) --mode=compile $(COMPILE)
 LT_COMPILE_CXX = $(LIBTOOL) $(LTCXXFLAGS) --mode=compile $(COMPILE_CXX)
 
+# Execute a command that loads libraries from the build dir
+LT_EXECUTE = $(LIBTOOL) $(LTFLAGS) --mode=execute `for f in $(abs_builddir)/subversion/*/*.la; do echo -dlopen $$f; done`
+
 # special compilation for files destined for mod_dav_svn
 COMPILE_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS) $(APACHE_INCLUDES) $(INCLUDES) -o $@ -c
 
@@ -765,10 +768,10 @@ CTYPES_PYTHON_SRC_DIR = $(abs_srcdir)/subversion/bindings/ctypes-python
 
 ctypes-python:
 	cd $(CTYPES_PYTHON_SRC_DIR); \
-	  $(PYTHON) setup.py build --subversion="$(prefix)" \
+	  $(LT_EXECUTE) $(PYTHON) setup.py build --subversion="$(prefix)" \
 	  --apr="$(SVN_APR_PREFIX)" --apr-util="$(SVN_APRUTIL_PREFIX)" \
-	  --ctypesgen="$(CTYPESGEN)" --cppflags="$(CPPFLAGS)" \
-	  --ldflags="$(EXTRA_CTYPES_LDFLAGS)"
+	  --ctypesgen="$(CTYPESGEN)" --svn-headers="$(abs_srcdir)/subversion/include" \
+	  --cppflags="$(CPPFLAGS)" --ldflags="$(EXTRA_CTYPES_LDFLAGS)"
 
 install-ctypes-python: ctypes-python
 	cd $(CTYPES_PYTHON_SRC_DIR); \
@@ -776,7 +779,7 @@ install-ctypes-python: ctypes-python
 
 check-ctypes-python: ctypes-python
 	cd $(CTYPES_PYTHON_SRC_DIR); \
-	  $(PYTHON) test/run_all.py
+	  $(LT_EXECUTE) $(PYTHON) test/run_all.py
 
 clean-ctypes-python:
 	cd $(CTYPES_PYTHON_SRC_DIR); \

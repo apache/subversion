@@ -15,10 +15,6 @@
  * ====================================================================
  */
 
-/* ### don't compile this code into normal builds (yet), to avoid a hard
-   ### dependency upon SQLite at this point. */
-#ifdef ENABLE_SQLITE_TESTING
-
 #include <apr_pools.h>
 
 #include <sqlite3.h>
@@ -414,5 +410,3 @@ svn_sqlite__close(svn_sqlite__db_t *db, svn_error_t *err)
   SQLITE_ERR(result, db);
   return SVN_NO_ERROR;
 }
-
-#endif /* ENABLE_SQLITE_TESTING */
