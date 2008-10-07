@@ -4302,6 +4302,11 @@ svn_wc_add_repos_file3(const char *dst_path,
                                  svn_wc__copy_translate,
                                  tmp_text_path, dst_path, FALSE,
                                  pool));
+
+      /* After copying to the working directory, lose the temp file. */
+      SVN_ERR(svn_wc__loggy_remove(&log_accum, adm_access,
+                                   tmp_text_path,
+                                   pool));
     }
   else
     {
