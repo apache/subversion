@@ -3110,19 +3110,20 @@ svn_wc_add(const char *path,
            apr_pool_t *pool);
 
 /** Add a file to a working copy at @a dst_path, obtaining the text-base's
- * contents from @a new_text_base_path, the wc file's content from
- * @a new_text_path, its base properties from @a new_base_props and
+ * contents from @a new_base_contents, the wc file's content from
+ * @a new_contents, its base properties from @a new_base_props and
  * wc properties from @a new_props.
+ *
  * The base text and props normally come from the repository file
  * represented by the copyfrom args, see below.  The new file will
  * be scheduled for addition with history.
  *
- * Automatically remove @a new_text_base_path and @a new_text_path
- * upon successful completion.
- *
- * @a new_text_path and @a new_props may be NULL, in which case
+ * @a new_contents and @a new_props may be NULL, in which case
  * the working copy text and props are taken from the base files with
  * appropriate translation of the file's content.
+ *
+ * @a new_contents must be provided in Normal Form. This is required
+ * in order to pass both special and non-special files through a stream.
  *
  * @a adm_access, or an access baton in its associated set, must
  * contain a write lock for the parent of @a dst_path.
@@ -3131,7 +3132,14 @@ svn_wc_add(const char *path,
  * valid revision number, and together they are the copyfrom history
  * for the new file.
  *
- * Use @a pool for temporary allocations.
+ * The @a cancel_func and @cancel_baton are a standard cancellation
+ * callback, or NULL if no callback is needed. @a notify_func and
+ * @notify_baton are a notification callback, and will be notified
+ * of the addition of this file.
+ *
+ * Use @a scratch_pool for temporary allocations.
+ *
+ * ### NOTE: the notification callback/baton is not yet used.
  *
  * ### This function is very redundant with svn_wc_add().  Ideally,
  * we'd merge them, so that svn_wc_add() would just take optional
@@ -3145,7 +3153,28 @@ svn_wc_add(const char *path,
  * etc, etc.  So another part of the Ideal Plan is that that
  * functionality of svn_wc_add() would move into a separate function.
  *
- * @since New in 1.4
+ * @since New in 1.6
+ */
+svn_error_t *
+svn_wc_add_repos_file3(const char *dst_path,
+                       svn_wc_adm_access_t *adm_access,
+                       svn_stream_t *new_base_contents,
+                       svn_stream_t *new_contents,
+                       apr_hash_t *new_base_props,
+                       apr_hash_t *new_props,
+                       const char *copyfrom_url,
+                       svn_revnum_t copyfrom_rev,
+                       svn_cancel_func_t cancel_func,
+                       void *cancel_baton,
+                       svn_wc_notify_func_t notify_func,
+                       void *notify_baton,
+                       apr_pool_t *scratch_pool);
+
+
+/** Same as svn_wc_add_repos_file3(), except that it has pathnames rather
+ * than streams for the text base, and actual text, and has no cancellation.
+ *
+ * @deprecated Provided for compatibility with the 1.5 API
  */
 svn_error_t *
 svn_wc_add_repos_file2(const char *dst_path,
@@ -3158,13 +3187,11 @@ svn_wc_add_repos_file2(const char *dst_path,
                        svn_revnum_t copyfrom_rev,
                        apr_pool_t *pool);
 
-/** Same as svn_wc_add_repos_file2(), except that it doesn't have the
- * new_text_base_path and new_base_props arguments.
+/** Same as svn_wc_add_repos_file3(), except that it doesn't have the
+ * BASE arguments or cancellation.
  *
  * @deprecated Provided for compatibility with the 1.3 API
- *
  */
-
 SVN_DEPRECATED
 svn_error_t *
 svn_wc_add_repos_file(const char *dst_path,
