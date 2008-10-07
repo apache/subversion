@@ -803,7 +803,8 @@ enum {
   ELEM_mergeinfo_path,
   ELEM_mergeinfo_info,
   ELEM_has_children,
-  ELEM_merged_revision
+  ELEM_merged_revision,
+  ELEM_deleted_rev_report
 };
 
 /* ### docco */
