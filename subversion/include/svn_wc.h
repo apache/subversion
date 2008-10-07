@@ -3057,7 +3057,7 @@ svn_wc_delete(const char *path,
  * ### broken out into a separate function, but its all intertwined in
  * ### the code right now.  Ben, thoughts?  Hard?  Easy?  Mauve?</pre>
  *
- * ### Update: see "###" comment in svn_wc_add_repos_file()'s doc
+ * ### Update: see "###" comment in svn_wc_add_repos_file3()'s doc
  * string about this.
  *
  * @since New in 1.6.
@@ -3078,6 +3078,7 @@ svn_wc_add3(const char *path,
  * Similar to svn_wc_add3(), but with the @a depth parameter always
  * @c svn_depth_infinity.
  *
+ * @since New in 1.2.
  * @deprecated Provided for backward compatibility with the 1.5 API.
  */
 SVN_DEPRECATED
