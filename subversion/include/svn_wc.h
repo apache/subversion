@@ -3166,7 +3166,7 @@ svn_wc_add_repos_file3(const char *dst_path,
                        svn_revnum_t copyfrom_rev,
                        svn_cancel_func_t cancel_func,
                        void *cancel_baton,
-                       svn_wc_notify_func_t notify_func,
+                       svn_wc_notify_func2_t notify_func,
                        void *notify_baton,
                        apr_pool_t *scratch_pool);
 
