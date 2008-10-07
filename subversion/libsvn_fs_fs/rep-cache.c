@@ -19,12 +19,7 @@
 
 #include "fs.h"
 #include "rep-cache.h"
-
 #include "../libsvn_fs/fs-loader.h"
-
-/* ### Right now, the sqlite support is experiemental, so we need to guard
-   this implementation. */
-#ifdef ENABLE_SQLITE_TESTING
 
 #include "svn_path.h"
 
@@ -172,35 +167,3 @@ svn_fs_fs__set_rep_reference(svn_fs_t *fs,
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   return svn_sqlite__finalize(stmt);
 }
-
-#else
-/* The checksum->rep mapping doesn't exist, so just pretend it exists, but is
-   empty. */
-
-svn_error_t *
-svn_fs_fs__open_rep_cache(svn_fs_t *fs,
-                          apr_pool_t *pool)
-{
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_fs_fs__get_rep_reference(representation_t **rep,
-                             svn_fs_t *fs,
-                             svn_checksum_t *checksum,
-                             apr_pool_t *pool)
-{
-  *rep = NULL;
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_fs_fs__set_rep_reference(svn_fs_t *fs,
-                             representation_t *rep_ref,
-                             svn_boolean_t reject_dup,
-                             apr_pool_t *pool)
-{
-  return SVN_NO_ERROR;
-}
-
-#endif /* ENABLE_SQLITE_TESTING */

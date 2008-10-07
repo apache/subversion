@@ -203,10 +203,8 @@ typedef struct
   /* Data shared between all svn_fs_t objects for a given filesystem. */
   fs_fs_shared_data_t *shared;
 
-#ifdef ENABLE_SQLITE_TESTING
   /* The sqlite database used for rep caching. */
   svn_sqlite__db_t *rep_cache;
-#endif
 } fs_fs_data_t;
 
 
