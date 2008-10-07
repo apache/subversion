@@ -4283,9 +4283,6 @@ svn_wc_add_repos_file3(const char *dst_path,
       svn_stream_t *tmp_contents;
       const char *tmp_text_path;
 
-      /* ### I think this has to be del-on-cleanup since we only "cp" the
-         ### file rather than move it into place. investigating soon... */
-
       SVN_ERR(svn_wc_create_tmp_file2(&contents_file, &tmp_text_path, adm_path,
                                       svn_io_file_del_none, pool));
       tmp_contents = svn_stream_from_aprfile2(contents_file, FALSE, pool);
