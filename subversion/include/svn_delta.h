@@ -34,6 +34,7 @@
 #include "svn_error.h"
 #include "svn_io.h"
 #include "svn_version.h"
+#include "svn_checksum.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -232,6 +233,37 @@ svn_txdelta_apply_instructions(svn_txdelta_window_t *window,
  */
 typedef svn_error_t *(*svn_txdelta_window_handler_t)
   (svn_txdelta_window_t *window, void *baton);
+
+
+/** This function will generate delta windows that turn @source into
+ * @target, and pushing these windows into the @a handler window handler
+ * callback (passing @a handler_baton to each invocation).
+ *
+ * If @a checksum is not NULL, then a checksum (of kind @a checksum_kind)
+ * will be computed for the target stream, and placed into *checksum.
+ *
+ * If @a cancel_func is not NULL, then it should refer to a cancellation
+ * function (along with @a cancel_baton).
+ *
+ * Results (the checksum) will be allocated from @a result_pool, and all
+ * temporary allocations will be performed in @a scratch_pool.
+ *
+ * Note: this function replaces the combination of svn_txdelta() and
+ *   svn_txdelta_send_txstream().
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_txdelta_run(svn_stream_t *source,
+                svn_stream_t *target,
+                svn_txdelta_window_handler_t handler,
+                void *handler_baton,
+                svn_checksum_kind_t checksum_kind,
+                svn_checksum_t **checksum,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool);
 
 
 /** A delta stream --- this is the hat from which we pull a series of
