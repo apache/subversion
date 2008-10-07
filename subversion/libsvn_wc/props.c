@@ -1635,18 +1635,211 @@ apply_single_prop_delete(svn_wc_notify_state_t *state,
 }
 
 
+/* Merge a change to the mergeinfo property. The same as
+   apply_single_prop_change(), except that the PROPNAME is always
+   SVN_PROP_MERGEINFO. */
+/* ### This function is extracted straight from the previous all-in-one
+   version of apply_single_prop_change() by removing the code paths that
+   were not followed for this property, but with no attempt to rationalize
+   the remainder. */
+static svn_error_t *
+apply_single_mergeinfo_prop_change(svn_wc_notify_state_t *state,
+                                   const char *path,
+                                   svn_boolean_t is_dir,
+                                   apr_hash_t *working_props,
+                                   svn_string_t **conflict,
+                                   const char *propname,
+                                   const svn_string_t *base_val,
+                                   const svn_string_t *old_val,
+                                   const svn_string_t *new_val,
+                                   svn_wc_conflict_resolver_func_t conflict_func,
+                                   void *conflict_baton,
+                                   svn_wc_adm_access_t *adm_access,
+                                   apr_pool_t *pool)
+{
+  svn_boolean_t got_conflict = FALSE;
+  svn_string_t *working_val
+    = apr_hash_get(working_props, propname, APR_HASH_KEY_STRING);
+
+  if ((working_val && ! base_val)
+      || (! working_val && base_val)
+      || (working_val && base_val
+          && !svn_string_compare(working_val, base_val)))
+    {
+      /* Locally changed property */
+      if (working_val)
+        {
+          if (svn_string_compare(working_val, new_val))
+            /* The new value equals the changed value: a no-op merge */
+            set_prop_merge_state(state, svn_wc_notify_state_merged);
+          else
+            {
+                  /* We have base, WC, and new values.  Discover
+                     deltas between base <-> WC, and base <->
+                     incoming.  Combine those deltas, and apply
+                     them to base to get the new value. */
+                  SVN_ERR(combine_forked_mergeinfo_props(&new_val, old_val,
+                                                         working_val,
+                                                         new_val, pool));
+                  apr_hash_set(working_props, propname,
+                               APR_HASH_KEY_STRING, new_val);
+                  set_prop_merge_state(state, svn_wc_notify_state_merged);
+            }
+        }
+
+      else
+        {
+          /* There is a base_val but no working_val */
+          SVN_ERR(maybe_generate_propconflict(&got_conflict, path, adm_access,
+                                              is_dir, propname, working_props,
+                                              old_val, new_val,
+                                              base_val, working_val,
+                                              conflict_func, conflict_baton,
+                                              pool));
+          if (got_conflict)
+            *conflict = svn_string_createf
+                (pool,
+                 _("Trying to change property '%s' from '%s' to '%s',\n"
+                   "but it has been locally deleted."),
+                 propname, old_val->data, new_val->data);
+        }
+    }
+
+  else if (! working_val) /* means !working_val && !base_val due
+                             to conditions above: no prop at all */
+    {
+          /* Discover any mergeinfo additions in the
+             incoming value relative to the base, and
+             "combine" those with the empty WC value. */
+          svn_mergeinfo_t deleted_mergeinfo, added_mergeinfo;
+          SVN_ERR(diff_mergeinfo_props(&deleted_mergeinfo,
+                                       &added_mergeinfo,
+                                       old_val, new_val, pool));
+          SVN_ERR(svn_mergeinfo_to_string((svn_string_t **)&new_val,
+                                          added_mergeinfo, pool));
+          apr_hash_set(working_props, propname, APR_HASH_KEY_STRING, new_val);
+    }
+
+  else /* means working && base && svn_string_compare(working, base) */
+    {
+      if (svn_string_compare(old_val, base_val))
+        apr_hash_set(working_props, propname, APR_HASH_KEY_STRING, new_val);
+
+      else
+        {
+              /* We have base, WC, and new values.  Discover
+                 deltas between base <-> WC, and base <->
+                 incoming.  Combine those deltas, and apply
+                 them to base to get the new value. */
+              SVN_ERR(combine_forked_mergeinfo_props(&new_val, old_val,
+                                                     working_val,
+                                                     new_val, pool));
+              apr_hash_set(working_props, propname,
+                           APR_HASH_KEY_STRING, new_val);
+              set_prop_merge_state(state, svn_wc_notify_state_merged);
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Merge a change to a property, using the rule that if the working value
+   is the same as OLD_VAL then apply the change as a simple update
+   (replacement), otherwise invoke maybe_generate_propconflict().
+   The definition of the arguments and behaviour is the same as
+   apply_single_prop_change(). */
+static svn_error_t *
+apply_single_generic_prop_change(svn_wc_notify_state_t *state,
+                                 const char *path,
+                                 svn_boolean_t is_dir,
+                                 apr_hash_t *working_props,
+                                 svn_string_t **conflict,
+                                 const char *propname,
+                                 const svn_string_t *base_val,
+                                 const svn_string_t *old_val,
+                                 const svn_string_t *new_val,
+                                 svn_wc_conflict_resolver_func_t conflict_func,
+                                 void *conflict_baton,
+                                 svn_wc_adm_access_t *adm_access,
+                                 apr_pool_t *pool)
+{
+  svn_boolean_t got_conflict = FALSE;
+  svn_string_t *working_val
+    = apr_hash_get(working_props, propname, APR_HASH_KEY_STRING);
+
+  /* If working_val is the same as old_val... */
+  if ((!working_val && !old_val)
+      || (working_val && old_val
+          && svn_string_compare(working_val, old_val)))
+    {
+      /* A trivial update: change it to new_val. */
+      apr_hash_set(working_props, propname, APR_HASH_KEY_STRING, new_val);
+    }
+  else
+    {
+      /* Merge the change. */
+      SVN_ERR(maybe_generate_propconflict(&got_conflict, path, adm_access,
+                                          is_dir, propname, working_props,
+                                          old_val, new_val,
+                                          base_val, working_val,
+                                          conflict_func, conflict_baton,
+                                          pool));
+      if (got_conflict)
+        {
+          /* Describe the conflict, referring to base_val as well as
+             working_val for the user's convenience. */
+          if (working_val && base_val
+              && svn_string_compare(working_val, base_val))
+            *conflict = svn_string_createf
+              (pool,
+               _("Trying to change property '%s' from '%s' to '%s',\n"
+                 "but property already exists with value '%s'."),
+               propname, old_val->data, new_val->data, working_val->data);
+          else if (working_val && base_val)
+            *conflict = svn_string_createf
+              (pool,
+               _("Trying to change property '%s' from '%s' to '%s',\n"
+                 "but the property has been locally changed from '%s' to "
+                 "'%s'."),
+               propname, old_val->data, new_val->data,
+               base_val->data, working_val->data);
+          else if (working_val)
+            *conflict = svn_string_createf
+              (pool,
+               _("Trying to change property '%s' from '%s' to '%s',\n"
+                 "but property has been locally added with value "
+                 "'%s'."),
+               propname, old_val->data, new_val->data, working_val->data);
+          else if (base_val)
+            *conflict = svn_string_createf
+              (pool,
+               _("Trying to change property '%s' from '%s' to '%s',\n"
+                 "but it has been locally deleted."),
+               propname, old_val->data, new_val->data);
+          else
+            *conflict = svn_string_createf
+              (pool,
+               _("Trying to change property '%s' from '%s' to '%s',\n"
+                 "but the property does not exist."),
+               propname, old_val->data, new_val->data);
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Change the property with name PROPNAME in the set of WORKING_PROPS
- * on PATH, setting *STATE or *CONFLICT according to merge outcomes.
+ * on PATH, setting *STATE or *CONFLICT according to the merge outcome.
  *
  * *STATE is an input and output parameter, its value is to be
- * set using set_merge_prop_state().
+ * set using set_prop_merge_state(). (May be null.).
  *
- * BASE_VAL contains the working copy base property value
+ * BASE_VAL contains the working copy base property value. (May be null.)
  *
- * OLD_VAL contains the value the of the property the server
- * thinks it's overwriting
+ * OLD_VAL contains the value of the property the server
+ * thinks it's overwriting. (Not null.)
  *
- * NEW_VAL contains the value to be set.
+ * NEW_VAL contains the value to be set. (Not null.)
  *
  * CONFLICT_FUNC/BATON is a callback to be called before declaring a
  * property conflict;  it gives the client a chance to resolve the
@@ -1668,157 +1861,35 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
                          svn_wc_adm_access_t *adm_access,
                          apr_pool_t *pool)
 {
-  svn_boolean_t got_conflict = FALSE;
-  svn_string_t *working_val
-    = apr_hash_get(working_props, propname, APR_HASH_KEY_STRING);
+  /* Note: The purpose is to apply the change (old_val -> new_val) onto
+     (working_val). There is no need for base_val to be involved in the
+     process except as a bit of context to help the user understand and
+     resolve any conflict. */
 
-  if ((working_val && ! base_val)
-      || (! working_val && base_val)
-      || (working_val && base_val
-          && !svn_string_compare(working_val, base_val)))
+  /* Decide how to merge, based on whether we know anything special about
+     the property. */
+  if (strcmp(propname, SVN_PROP_MERGEINFO) == 0)
     {
-      /* Locally changed property */
-      if (working_val)
-        {
-          if (svn_string_compare(working_val, new_val))
-            /* The new value equals the changed value: a merge */
-            set_prop_merge_state(state, svn_wc_notify_state_merged);
-          else
-            {
-              if (strcmp(propname, SVN_PROP_MERGEINFO) == 0)
-                {
-                  /* We have base, WC, and new values.  Discover
-                     deltas between base <-> WC, and base <->
-                     incoming.  Combine those deltas, and apply
-                     them to base to get the new value. */
-                  SVN_ERR(combine_forked_mergeinfo_props(&new_val, old_val,
-                                                         working_val,
-                                                         new_val, pool));
-                  apr_hash_set(working_props, propname,
-                               APR_HASH_KEY_STRING, new_val);
-                  set_prop_merge_state(state, svn_wc_notify_state_merged);
-                }
-              else
-                {
-                  SVN_ERR(maybe_generate_propconflict(&got_conflict,
-                                                      path, adm_access, is_dir,
-                                                      propname, working_props,
-                                                      old_val, new_val,
-                                                      base_val, working_val,
-                                                      conflict_func,
-                                                      conflict_baton,
-                                                      pool));
-                  if (got_conflict)
-                    {
-                      if (base_val)
-                        *conflict = svn_string_createf
-                        (pool,
-                         _("Trying to change property '%s' from '%s' to '%s',\n"
-                           "but property has been locally changed "
-                           "from '%s' to '%s'."),
-                         propname, old_val->data, new_val->data,
-                          base_val->data, working_val->data);
-                      else
-                        *conflict = svn_string_createf
-                        (pool,
-                         _("Trying to change property '%s' from '%s' to '%s',\n"
-                           "but property has been locally added with "
-                           "value '%s'."),
-                         propname, old_val->data, new_val->data,
-                         working_val->data);
-                      }
-                }
-            }
-        }
+      /* We know how to merge any mergeinfo property change. */
 
-      else
-        {
-          SVN_ERR(maybe_generate_propconflict(&got_conflict, path, adm_access,
-                                              is_dir, propname, working_props,
-                                              old_val, new_val,
-                                              base_val, working_val,
-                                              conflict_func, conflict_baton,
-                                              pool));
-          if (got_conflict)
-            *conflict = svn_string_createf
-                (pool,
-                 _("Trying to change property '%s' from '%s' to '%s',\n"
-                   "but it has been locally deleted."),
-                 propname, old_val->data, new_val->data);
-        }
+      SVN_ERR(apply_single_mergeinfo_prop_change(state, path, is_dir,
+                                                 working_props, conflict,
+                                                 propname, base_val, old_val,
+                                                 new_val, conflict_func,
+                                                 conflict_baton, adm_access,
+                                                 pool));
     }
-
-  else if (! working_val) /* means !working_val && !base_val due
-                             to conditions above: no prop at all */
+  else
     {
-      if (strcmp(propname, SVN_PROP_MERGEINFO) == 0)
-        {
-          /* Discover any mergeinfo additions in the
-             incoming value relative to the base, and
-             "combine" those with the empty WC value. */
-          svn_mergeinfo_t deleted_mergeinfo, added_mergeinfo;
-          SVN_ERR(diff_mergeinfo_props(&deleted_mergeinfo,
-                                       &added_mergeinfo,
-                                       old_val, new_val, pool));
-          SVN_ERR(svn_mergeinfo_to_string((svn_string_t **)&new_val,
-                                          added_mergeinfo, pool));
-          apr_hash_set(working_props, propname, APR_HASH_KEY_STRING, new_val);
-        }
-      else
-        {
-          SVN_ERR(maybe_generate_propconflict(&got_conflict, path, adm_access,
-                                              is_dir, propname, working_props,
-                                              old_val, new_val,
-                                              base_val, working_val,
-                                              conflict_func, conflict_baton,
-                                              pool));
-          if (got_conflict)
-            *conflict = svn_string_createf
-                (pool,
-                 _("Trying to change property '%s' from '%s' to '%s',\n"
-                   "but the property does not exist."),
-                 propname, old_val->data, new_val->data);
-        }
-    }
+      /* The standard method: perform a simple update automatically, but
+         pass any other kind of merge to maybe_generate_propconflict(). */
 
-  else /* means working && base && svn_string_compare(working, base) */
-    {
-      if (svn_string_compare(old_val, base_val))
-        apr_hash_set(working_props, propname, APR_HASH_KEY_STRING, new_val);
-
-      else
-        {
-          if (strcmp(propname, SVN_PROP_MERGEINFO) == 0)
-            {
-              /* We have base, WC, and new values.  Discover
-                 deltas between base <-> WC, and base <->
-                 incoming.  Combine those deltas, and apply
-                 them to base to get the new value. */
-              SVN_ERR(combine_forked_mergeinfo_props(&new_val, old_val,
-                                                     working_val,
-                                                     new_val, pool));
-              apr_hash_set(working_props, propname,
-                           APR_HASH_KEY_STRING, new_val);
-              set_prop_merge_state(state, svn_wc_notify_state_merged);
-            }
-          else
-            {
-              SVN_ERR(maybe_generate_propconflict(&got_conflict, path,
-                                                  adm_access, is_dir,
-                                                  propname, working_props,
-                                                  old_val, new_val,
-                                                  base_val, working_val,
-                                                  conflict_func, conflict_baton,
-                                                  pool));
-              if (got_conflict)
-                *conflict = svn_string_createf
-                    (pool,
-                     _("Trying to change property '%s' from '%s' to '%s',\n"
-                       "but property already exists with value '%s'."),
-                     propname, old_val->data, new_val->data,
-                     working_val->data);
-            }
-        }
+      SVN_ERR(apply_single_generic_prop_change(state, path, is_dir,
+                                               working_props, conflict,
+                                               propname, base_val, old_val,
+                                               new_val, conflict_func,
+                                               conflict_baton, adm_access,
+                                               pool));
     }
 
   return SVN_NO_ERROR;
@@ -3097,21 +3168,23 @@ svn_wc_get_prop_diffs(apr_array_header_t **propchanges,
  */
 static svn_error_t *
 find_and_remove_externals_revision(int *rev_idx,
-                                   apr_array_header_t *line_parts,
+                                   const char **line_parts,
+                                   int num_line_parts,
                                    svn_wc_external_item2_t *item,
                                    const char *parent_directory_display,
-                                   const char *line)
+                                   const char *line,
+                                   apr_pool_t *pool)
 {
   int i;
 
   for (i = 0; i < 2; ++i)
     {
-      const char *token = APR_ARRAY_IDX(line_parts, i, const char *);
+      const char *token = line_parts[i];
 
       if (token[0] == '-' && token[1] == 'r')
         {
+          svn_opt_revision_t end_revision = { svn_opt_revision_unspecified };
           const char *digits_ptr;
-          const char *end_ptr;
           int shift_count;
           int j;
 
@@ -3121,40 +3194,40 @@ find_and_remove_externals_revision(int *rev_idx,
             {
               /* There must be a total of four elements in the line if
                  -r N is used. */
-              if (line_parts->nelts != 4)
+              if (num_line_parts != 4)
                 goto parse_error;
 
               shift_count = 2;
-              digits_ptr = APR_ARRAY_IDX(line_parts, i+1, const char *);
+              digits_ptr = line_parts[i+1];
             }
           else
             {
               /* There must be a total of three elements in the line
                  if -rN is used. */
-              if (line_parts->nelts != 3)
+              if (num_line_parts != 3)
                 goto parse_error;
 
               shift_count = 1;
               digits_ptr = token+2;
             }
 
-          item->revision.kind = svn_opt_revision_number;
-          SVN_ERR(svn_revnum_parse(&item->revision.value.number,
-                                   digits_ptr,
-                                   &end_ptr));
-
-          /* If there's trailing garbage after the digits, then treat
-             the revision as invalid. */
-          if (*end_ptr != '\0')
+          if (svn_opt_parse_revision(&item->revision,
+                                     &end_revision,
+                                     digits_ptr, pool) != 0)
+            goto parse_error;
+          /* We want a single revision, not a range. */
+          if (end_revision.kind != svn_opt_revision_unspecified)
+            goto parse_error;
+          /* Allow only numbers and dates, not keywords. */
+          if (item->revision.kind != svn_opt_revision_number
+              && item->revision.kind != svn_opt_revision_date)
             goto parse_error;
 
           /* Shift any line elements past the revision specification
              down over the revision specification. */
-          for (j = i; j < line_parts->nelts-shift_count; ++j)
-            APR_ARRAY_IDX(line_parts, j, const char *) =
-              APR_ARRAY_IDX(line_parts, j+shift_count, const char *);
-          for (j = 0; j < shift_count; ++j)
-            apr_array_pop(line_parts);
+          for (j = i; j < num_line_parts-shift_count; ++j)
+            line_parts[j] = line_parts[j+shift_count];
+          line_parts[num_line_parts-shift_count] = NULL;
 
           /* Found the revision, so leave the function immediately, do
            * not continue looking for additional revisions. */
@@ -3164,7 +3237,7 @@ find_and_remove_externals_revision(int *rev_idx,
 
   /* No revision was found, so there must be exactly two items in the
      line array. */
-  if (line_parts->nelts == 2)
+  if (num_line_parts == 2)
     return SVN_NO_ERROR;
 
  parse_error:
@@ -3194,7 +3267,9 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
   for (i = 0; i < lines->nelts; i++)
     {
       const char *line = APR_ARRAY_IDX(lines, i, const char *);
-      apr_array_header_t *line_parts;
+      apr_status_t status;
+      char **line_parts;
+      int num_line_parts;
       svn_wc_external_item2_t *item;
       const char *token0;
       const char *token1;
@@ -3210,7 +3285,14 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
 
       /* else proceed */
 
-      line_parts = svn_cstring_split(line, " \t", TRUE, pool);
+      status = apr_tokenize_to_argv(line, &line_parts, pool);
+      if (status)
+        return svn_error_wrap_apr(status,
+                                  _("Can't split line into components: '%s'"),
+                                  line);
+      /* Count the number of tokens. */
+      for (num_line_parts = 0; line_parts[num_line_parts]; num_line_parts++)
+        ;
 
       SVN_ERR(svn_wc_external_item_create
               ((const svn_wc_external_item2_t **) &item, pool));
@@ -3234,7 +3316,7 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
        * relative URL like /svn/repos/trunk, so this case is taken as
        * case 4).
        */
-      if (line_parts->nelts < 2 || line_parts->nelts > 4)
+      if (num_line_parts < 2 || num_line_parts > 4)
         return svn_error_createf
           (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, NULL,
            _("Error parsing %s property on '%s': '%s'"),
@@ -3246,12 +3328,15 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
          or -rN from the line item array.  If it is found, rev_idx
          contains the index into line_parts where '-r' was found and
          set item->revision to the parsed revision. */
-      SVN_ERR(find_and_remove_externals_revision(&rev_idx, line_parts, item,
+      /* ### ugh. stupid cast. */
+      SVN_ERR(find_and_remove_externals_revision(&rev_idx,
+                                                 (const char **)line_parts,
+                                                 num_line_parts, item,
                                                  parent_directory_display,
-                                                 line));
+                                                 line, pool));
 
-      token0 = APR_ARRAY_IDX(line_parts, 0, const char *);
-      token1 = APR_ARRAY_IDX(line_parts, 1, const char *);
+      token0 = line_parts[0];
+      token1 = line_parts[1];
 
       token0_is_url = svn_path_is_url(token0);
       token1_is_url = svn_path_is_url(token1);

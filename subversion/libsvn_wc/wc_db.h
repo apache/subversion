@@ -50,6 +50,17 @@ typedef struct svn_wc__db_t svn_wc__db_t;
 typedef struct svn_wc__db_pdh_t svn_wc__db_pdh_t;
 
 
+/**
+ * Enumerated constants for how to open a WC datastore.
+ */
+typedef enum {
+  svn_wc__db_openmode_default,    /* Open in the default mode (r/w now). */
+  svn_wc__db_openmode_readonly,   /* Changes will definitely NOT be made. */
+  svn_wc__db_openmode_readwrite   /* Changes will definitely be made. */
+
+} svn_wc__db_openmode_t;
+
+
 /* Enum indicating what kind of versioned object we're talking about.
  *
  * ### KFF: That is, my understanding is that this is *not* an enum
@@ -64,7 +75,7 @@ typedef struct svn_wc__db_pdh_t svn_wc__db_pdh_t;
  * ### the interfaces in here give a lot of prominence to absence; I'm
  * ### wondering why we're treating it so specially.
  */
-typedef enum svn_wc__db_kind_t {
+typedef enum {
     svn_wc__db_kind_dir,
     svn_wc__db_kind_file,
     svn_wc__db_kind_symlink,
@@ -75,7 +86,7 @@ typedef enum svn_wc__db_kind_t {
 } svn_wc__db_kind_t;
 
 
-typedef enum svn_wc__db_status_t {
+typedef enum {
     svn_wc__db_status_normal,
     svn_wc__db_status_changed,  /* ### text may be modified. or props_mod. */
     svn_wc__db_status_added,  /* ### no history. text_mod set to TRUE */
@@ -105,6 +116,8 @@ typedef enum svn_wc__db_status_t {
 /* ### update docstrings: all paths should be internal/canonical */
 
 
+/* ### some kind of _create() call to set things up? */
+
 /**
  * Open the administrative database for the working copy identified by the
  * (absolute) @a path. The (opaque) handle for interacting with the database
@@ -131,6 +144,7 @@ typedef enum svn_wc__db_status_t {
  */
 svn_error_t *
 svn_wc__db_open(svn_wc__db_t **db,
+                svn_wc__db_openmode_t mode,
                 const char *path,
                 svn_config_t *config,
                 apr_pool_t *result_pool,
@@ -151,6 +165,7 @@ svn_wc__db_open(svn_wc__db_t **db,
  */
 svn_error_t *
 svn_wc__db_open_many(svn_wc__db_t **db,
+                     svn_wc__db_openmode_t mode,
                      const apr_array_header_t *paths,
                      svn_config_t *config,
                      apr_pool_t *result_pool,
@@ -301,6 +316,7 @@ svn_wc__db_base_get_info(svn_wc__db_kind_t *kind,
                          const char **changed_author,
                          svn_depth_t *depth,
                          svn_checksum_t **checksum,  /* ### for files only */
+                         svn_filesize_t *actual_size,
                          svn_boolean_t *switched,  /* ### derived */
                          const char **repos_base_url,
                          const char **repos_uuid,
@@ -374,6 +390,49 @@ svn_wc__db_base_get_symlink_target(const char **target,
    ### ever presented to us. thus, we never need to compute it as we store
    ### the pristine file into our storage area. */
 
+/**
+ * Enumerated constants for how hard svn_wc__db_pristine_check() should
+ * work on checking for the pristine file.
+ */
+typedef enum {
+
+  /* The caller wants to be sure the pristine file is present and usable.
+     This is the typical mode to use.
+
+     Implementation note: the SQLite database is opened (if not already)
+       and its state is verified against the file in the filesystem. */
+  svn_wc__db_checkmode_usable,
+
+  /* The caller is performing just this one check. The implementation will
+     optimize around the assumption no further calls to _check() will occur
+     (but of course has no problem if they do).
+
+     Note: this test is best used for detecting a *missing* file
+     rather than for detecting a usable file.
+
+     Implementation note: this will examine the presence of the pristine file
+       in the filesystem. The SQLite database is untouched, though if it is
+       (already) open, then it will be used instead. */
+  svn_wc__db_checkmode_single,
+
+  /* The caller is going to perform multiple calls, so the implementation
+     should optimize its operation around that.
+
+     Note: this test is best used for detecting a *missing* file
+     rather than for detecting a usable file.
+
+     Implementation note: the SQLite database will be opened (if not already),
+       and all checks will simply look in the TEXT_BASE table to see if the
+       given key is present. Note that the file may not e present. */
+  svn_wc__db_checkmode_multi,
+
+  /* Similar to _usable, but the file is checksum'd to ensure that it has
+     not been corrupted in some way. */
+  svn_wc__db_checkmode_validate
+
+} svn_wc__db_checkmode_t;
+
+
 /* ### checksums have no path component, so we need to get the pristine
    ### database associated with a specific directory (the smallest granularity
    ### that a particular configuration can allow). this directory handle
@@ -408,20 +467,29 @@ svn_wc__db_pristine_write(svn_stream_t **contents,
                           apr_pool_t *scratch_pool);
 
 
-/* ### NULL may be provided for @a actual_size and @a refcount.
-   ### (NOT for @a present)
+/* ### check for presence, according to the given mode (on how hard we
+   ### should examine things)
 
-   ### we may have a text-base, but not (yet) know what the translated
-   ### size will/should be; in this situation, @a present is TRUE, and
-   ### @a actual_size is SVN_INVALID_FILESIZE.
+   ### NULL may be provided for @a refcount (NOT for @a present).
 */
 svn_error_t *
 svn_wc__db_pristine_check(svn_boolean_t *present,
-                          svn_filesize_t *actual_size,
                           int *refcount,
                           svn_wc__db_pdh_t *pdh,
                           svn_checksum_t *checksum,
+                          svn_wc__db_checkmode_t mode,
                           apr_pool_t *scratch_pool);
+
+
+/* ### if _check() returns "corrupted pristine file", then this function
+   ### can be used to repair it. It will attempt to restore integrity
+   ### between the SQLite database and the filesystem. Failing that, then
+   ### it will attempt to clean out the record and/or file. Failing that,
+   ### then it will return SOME_ERROR. */
+svn_error_t *
+svn_wc__db_pristine_repair(svn_wc__db_pdh_t *pdh,
+                           svn_checksum_t *checksum,
+                           apr_pool_t *scratch_pool);
 
 
 /* ### @a new_refcount may be NULL */
@@ -617,11 +685,16 @@ svn_wc__db_read_info(svn_wc__db_kind_t *kind,
                      svn_boolean_t *props_mod,
                      svn_boolean_t *base_shadowed,  /* ### WORKING shadows a
                                                        ### deleted BASE? */
+
+                     /* ### the following fields if copied/moved (history) */
                      const char **original_repos_path,
                      svn_revnum_t *original_rev,
+                     svn_checksum_t **checksum,
+                     svn_filesize_t *actual_size,
                      svn_revnum_t *changed_rev,
                      apr_time_t *changed_date,
                      const char **changed_author,
+
                      const char **repos_base_url,
                      const char **repos_uuid,
                      svn_wc__db_t *db,

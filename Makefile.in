@@ -167,6 +167,9 @@ COMPILE_CXX = $(CXX) $(CPPFLAGS) $(CXXFLAGS) $(INCLUDES)
 LT_COMPILE = $(LIBTOOL) $(LTFLAGS) --mode=compile $(COMPILE)
 LT_COMPILE_CXX = $(LIBTOOL) $(LTCXXFLAGS) --mode=compile $(COMPILE_CXX)
 
+# Execute a command that loads libraries from the build dir
+LT_EXECUTE = $(LIBTOOL) $(LTFLAGS) --mode=execute `for f in $(abs_builddir)/subversion/*/*.la; do echo -dlopen $$f; done`
+
 # special compilation for files destined for mod_dav_svn
 COMPILE_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CPPFLAGS) $(CFLAGS) $(APACHE_INCLUDES) $(INCLUDES) -o $@ -c
 
@@ -337,7 +340,7 @@ fast-distclean: fast-clean
 	$(SVN_CONFIG_SCRIPT_FILES)
 
 # clean everything out, returning to before './autogen.sh' was run.
-local-extraclean: local-distclean extraclean-swig
+local-extraclean: local-distclean extraclean-swig extraclean-ctypes-python
 	rm -f $(top_srcdir)/build-outputs.mk \
               $(top_srcdir)/subversion/svn_private_config.h.in \
               $(top_srcdir)/configure \
@@ -351,7 +354,7 @@ local-extraclean: local-distclean extraclean-swig
               $(top_srcdir)/build/ltmain.sh
 
 # clean everything, including test output.
-local-clean: fast-clean check-clean clean-swig
+local-clean: fast-clean check-clean clean-swig clean-ctypes-python
 
 # clean everything, including test output.
 local-distclean: fast-distclean check-clean
@@ -758,3 +761,28 @@ extraclean-swig-rb: clean-swig-rb
 
 install-swig-rb-doc:
 	$(RDOC) --all --ri --op "$(SWIG_RB_RI_DATADIR)" "$(SWIG_RB_SRC_DIR)/svn"
+
+# ctypes-python variables and make targets
+CTYPESGEN = @CTYPESGEN@
+CTYPES_PYTHON_SRC_DIR = $(abs_srcdir)/subversion/bindings/ctypes-python
+
+ctypes-python:
+	cd $(CTYPES_PYTHON_SRC_DIR); \
+	  $(LT_EXECUTE) $(PYTHON) setup.py build --subversion="$(prefix)" \
+	  --apr="$(SVN_APR_PREFIX)" --apr-util="$(SVN_APRUTIL_PREFIX)" \
+	  --ctypesgen="$(CTYPESGEN)" --svn-headers="$(abs_srcdir)/subversion/include" \
+	  --cppflags="$(CPPFLAGS)" --ldflags="$(EXTRA_CTYPES_LDFLAGS)"
+
+install-ctypes-python: ctypes-python
+	cd $(CTYPES_PYTHON_SRC_DIR); \
+	  $(PYTHON) setup.py install --prefix="$(DESTDIR)$(prefix)"
+
+check-ctypes-python: ctypes-python
+	cd $(CTYPES_PYTHON_SRC_DIR); \
+	  $(LT_EXECUTE) $(PYTHON) test/run_all.py
+
+clean-ctypes-python:
+	cd $(CTYPES_PYTHON_SRC_DIR); \
+	  $(PYTHON) setup.py clean --all
+
+extraclean-ctypes-python: clean-ctypes-python

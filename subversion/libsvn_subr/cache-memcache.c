@@ -16,10 +16,11 @@
  * ====================================================================
  */
 
+#include <apr_md5.h>
+
 #include "svn_cache.h"
 #include "svn_pools.h"
 #include "svn_base64.h"
-#include "svn_md5.h"
 #include "svn_path.h"
 
 #include "svn_private_config.h"

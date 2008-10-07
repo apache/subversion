@@ -36,7 +36,6 @@ import os
 import os.path
 import pydoc
 import re
-import string
 import sys
 import time
 
@@ -115,7 +114,7 @@ def main():
     elif opt == "--verbose":
       verbose = 1
     elif opt == "--milestones":
-      for mstone in string.split(arg, ","):
+      for mstone in arg.split(","):
         if mstone == "noncore":
           _milestone_filter = noncore_milestone_filter
         elif mstone == "beta":
@@ -141,7 +140,7 @@ def main():
 
   if verbose:
     sys.stderr.write("%s: Filtering out milestones %s.\n"
-                     % (me, string.join(_milestone_filter, ", ")))
+                     % (me, ", ".join(_milestone_filter)))
 
   if len(args) == 2:
     if verbose:
@@ -354,7 +353,7 @@ class Issue:
   "Represents a single issue from the exported IssueZilla data."
 
   def __init__(self, line):
-    row = string.split(string.strip(line), '\t')
+    row = line.strip().split('\t')
 
     self.id = int(row[0])
     self.type = row[1]

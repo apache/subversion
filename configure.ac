@@ -809,6 +809,8 @@ fi
 
 SVN_CHECK_SWIG
 
+SVN_CHECK_CTYPESGEN
+
 dnl decide whether we want to link against the RA/FS libraries
 AC_ARG_ENABLE(runtime-module-search,
 AS_HELP_STRING([--enable-runtime-module-search],

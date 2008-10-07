@@ -2,7 +2,7 @@
  * update_editor.c :  main editor for checkouts and updates
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -37,7 +37,6 @@
 #include "svn_xml.h"
 #include "svn_error.h"
 #include "svn_io.h"
-#include "svn_md5.h"
 #include "svn_private_config.h"
 #include "svn_time.h"
 #include "svn_config.h"
@@ -244,8 +243,6 @@ struct bump_dir_info
 
 struct handler_baton
 {
-  apr_file_t *source;
-  apr_file_t *dest;
   svn_txdelta_window_handler_t apply_handler;
   void *apply_baton;
   apr_pool_t *pool;
@@ -747,35 +744,12 @@ window_handler(svn_txdelta_window_t *window, void *baton)
 {
   struct handler_baton *hb = baton;
   struct file_baton *fb = hb->fb;
-  svn_error_t *err, *err2;
+  svn_error_t *err;
 
   /* Apply this window.  We may be done at that point.  */
   err = hb->apply_handler(window, hb->apply_baton);
   if (window != NULL && !err)
     return err;
-
-  /* Either we're done (window is NULL) or we had an error.  In either
-     case, clean up the handler.  */
-  if (hb->source)
-    {
-      if (fb->copied_text_base)
-        err2 = svn_io_file_close(hb->source, hb->pool);
-      else
-        err2 = svn_wc__close_text_base(hb->source, fb->path, 0, hb->pool);
-
-      if (err2 && !err)
-        err = err2;
-      else
-        svn_error_clear(err2);
-    }
-  err2 = svn_wc__close_text_base(hb->dest, fb->path, 0, hb->pool);
-  if (err2)
-    {
-      if (!err)
-        err = err2;
-      else
-        svn_error_clear(err2);
-    }
 
   if (err)
     {
@@ -2345,6 +2319,8 @@ apply_textdelta(void *file_baton,
   const char *checksum;
   svn_boolean_t replaced;
   svn_boolean_t use_revert_base;
+  svn_stream_t *source;
+  apr_file_t *target_file;
 
   if (fb->skipped)
     {
@@ -2358,6 +2334,7 @@ apply_textdelta(void *file_baton,
   /* Before applying incoming svndiff data to text base, make sure
      text base hasn't been corrupted, and that its checksum
      matches the expected base checksum. */
+
   SVN_ERR(choose_base_paths(&checksum, &replaced, &use_revert_base,
                             fb, pool));
 
@@ -2416,34 +2393,39 @@ apply_textdelta(void *file_baton,
   if (! fb->added)
     {
       if (use_revert_base)
-        SVN_ERR(svn_wc__open_revert_base(&hb->source, fb->path,
-                                         APR_READ,
-                                         handler_pool));
-      else
-        SVN_ERR(svn_wc__open_text_base(&hb->source, fb->path, APR_READ,
-                                       handler_pool));
+        {
+          apr_file_t *revert_file;
 
+          SVN_ERR(svn_wc__open_revert_base(&revert_file, fb->path,
+                                           APR_READ,
+                                           handler_pool));
+          source = svn_stream_from_aprfile2(revert_file, FALSE, handler_pool);
+        }
+      else
+        {
+          SVN_ERR(svn_wc_get_pristine_contents(&source, fb->path,
+                                               handler_pool, handler_pool));
+        }
     }
   else
     {
       if (fb->copied_text_base)
-        SVN_ERR(svn_io_file_open(&hb->source, fb->copied_text_base,
-                                 APR_READ, APR_OS_DEFAULT, handler_pool));
+        SVN_ERR(svn_stream_open_readonly(&source, fb->copied_text_base,
+                                         handler_pool, handler_pool));
       else
-        hb->source = NULL;
+        source = svn_stream_empty(handler_pool);
     }
 
   /* Open the text base for writing (this will get us a temporary file).  */
 
   if (use_revert_base)
-    err = svn_wc__open_revert_base(&hb->dest, fb->path,
+    err = svn_wc__open_revert_base(&target_file, fb->path,
                                    (APR_WRITE | APR_TRUNCATE | APR_CREATE),
                                    handler_pool);
   else
-    err = svn_wc__open_text_base(&hb->dest, fb->path,
+    err = svn_wc__open_text_base(&target_file, fb->path,
                                  (APR_WRITE | APR_TRUNCATE | APR_CREATE),
                                  handler_pool);
-
   if (err)
     {
       svn_pool_destroy(handler_pool);
@@ -2451,8 +2433,8 @@ apply_textdelta(void *file_baton,
     }
 
   /* Prepare to apply the delta.  */
-  svn_txdelta_apply(svn_stream_from_aprfile2(hb->source, TRUE, handler_pool),
-                    svn_stream_from_aprfile2(hb->dest, TRUE, handler_pool),
+  svn_txdelta_apply(source,
+                    svn_stream_from_aprfile2(target_file, FALSE, handler_pool),
                     fb->digest, fb->new_text_base_path, handler_pool,
                     &hb->apply_handler, &hb->apply_baton);
 
@@ -4174,22 +4156,27 @@ install_added_props(svn_stringbuf_t *log_accum,
 }
 
 svn_error_t *
-svn_wc_add_repos_file2(const char *dst_path,
+svn_wc_add_repos_file3(const char *dst_path,
                        svn_wc_adm_access_t *adm_access,
-                       const char *new_text_base_path,
-                       const char *new_text_path,
+                       svn_stream_t *new_base_contents,
+                       svn_stream_t *new_contents,
                        apr_hash_t *new_base_props,
                        apr_hash_t *new_props,
                        const char *copyfrom_url,
                        svn_revnum_t copyfrom_rev,
+                       svn_cancel_func_t cancel_func,
+                       void *cancel_baton,
+                       svn_wc_notify_func2_t notify_func,
+                       void *notify_baton,
                        apr_pool_t *pool)
 {
   const char *new_URL;
   const char *adm_path = svn_wc_adm_access_path(adm_access);
-  const char *tmp_text_base_path =
-    svn_wc__text_base_path(dst_path, TRUE, pool);
-  const char *text_base_path =
-    svn_wc__text_base_path(dst_path, FALSE, pool);
+  apr_file_t *base_file;
+  const char *tmp_text_base_path;
+  svn_checksum_t *base_checksum;
+  svn_stream_t *tmp_base_contents;
+  const char *text_base_path = svn_wc__text_base_path(dst_path, FALSE, pool);
   const svn_wc_entry_t *ent;
   const svn_wc_entry_t *dst_entry;
   svn_stringbuf_t *log_accum;
@@ -4222,8 +4209,7 @@ svn_wc_add_repos_file2(const char *dst_path,
   SVN_ERR(svn_wc_entry(&dst_entry, dst_path, adm_access, FALSE, pool));
   if (dst_entry && dst_entry->schedule == svn_wc_schedule_delete)
     {
-      const char *dst_rtext = svn_wc__text_revert_path(dst_path, FALSE,
-                                                       pool);
+      const char *dst_rtext = svn_wc__text_revert_path(dst_path, FALSE, pool);
       const char *dst_txtb = svn_wc__text_base_path(dst_path, FALSE, pool);
 
       SVN_ERR(svn_wc__loggy_move(&log_accum, NULL,
@@ -4268,44 +4254,54 @@ svn_wc_add_repos_file2(const char *dst_path,
                             dst_entry ? dst_entry->revision : ent->revision,
                             new_URL, pool));
 
+  /* Install the props first, so that the loggy translation has access to
+     the properties for this file. */
   SVN_ERR(install_added_props(log_accum, adm_access, dst_path,
                               new_base_props, new_props, pool));
 
-  /* Make sure the text base is where our log file can refer to it. */
-  if (strcmp(tmp_text_base_path, new_text_base_path) != 0)
-    SVN_ERR(svn_io_file_move(new_text_base_path, tmp_text_base_path,
-                             pool));
+  /* Copy the text base contents into a temporary file so our log
+     can refer to it. Compute its checksum as we copy. */
+  SVN_ERR(svn_wc_create_tmp_file2(&base_file, &tmp_text_base_path, adm_path,
+                                  svn_io_file_del_none, pool));
+  new_base_contents = svn_stream_checksummed2(new_base_contents,
+                                              &base_checksum, svn_checksum_md5,
+                                              NULL, 0,
+                                              TRUE, pool);
+  tmp_base_contents = svn_stream_from_aprfile2(base_file, FALSE, pool);
+  SVN_ERR(svn_stream_copy2(new_base_contents, tmp_base_contents,
+                           cancel_func, cancel_baton,
+                           pool));
+  /* ### ugh. shouldn't copy2() close the streams when it is done? */
+  SVN_ERR(svn_stream_close(new_base_contents));
+  SVN_ERR(svn_stream_close(tmp_base_contents));
 
   /* Install working file. */
-  if (new_text_path)
+  if (new_contents)
     {
-      /* If the caller gave us a new working file, move it in place. */
+      /* If the caller gave us a new working file, copy it in place. */
+      apr_file_t *contents_file;
+      svn_stream_t *tmp_contents;
       const char *tmp_text_path;
 
-      /* Move new text to temporary file in adm_access. */
-      SVN_ERR(svn_wc_create_tmp_file2(NULL, &tmp_text_path, adm_path,
+      /* ### I think this has to be del-on-cleanup since we only "cp" the
+         ### file rather than move it into place. investigating soon... */
+
+      SVN_ERR(svn_wc_create_tmp_file2(&contents_file, &tmp_text_path, adm_path,
                                       svn_io_file_del_none, pool));
+      tmp_contents = svn_stream_from_aprfile2(contents_file, FALSE, pool);
+      SVN_ERR(svn_stream_copy2(new_contents,
+                               tmp_contents,
+                               cancel_func, cancel_baton,
+                               pool));
+      /* ### ugh. AGAIN: need these closed (to flush the new file). */
+      SVN_ERR(svn_stream_close(new_contents));
+      SVN_ERR(svn_stream_close(tmp_contents));
 
-      SVN_ERR(svn_io_file_move(new_text_path, tmp_text_path, pool));
-
-      /* Translate/rename new temporary text file to working text. */
-      if (svn_wc__has_special_property(new_base_props))
-        {
-          SVN_ERR(svn_wc__loggy_copy(&log_accum, NULL, adm_access,
-                                     svn_wc__copy_translate_special_only,
-                                     tmp_text_path,
-                                     dst_path, FALSE, pool));
-          /* Remove the copy-source, making it look like a move */
-          SVN_ERR(svn_wc__loggy_remove(&log_accum, adm_access,
-                                       tmp_text_path, pool));
-        }
-      else
-        SVN_ERR(svn_wc__loggy_move(&log_accum, NULL, adm_access,
-                                   tmp_text_path, dst_path,
-                                   FALSE, pool));
-
-      SVN_ERR(svn_wc__loggy_maybe_set_readonly(&log_accum, adm_access,
-                                               dst_path, pool));
+      /* Translate new temporary text file to working text. */
+      SVN_ERR(svn_wc__loggy_copy(&log_accum, NULL, adm_access,
+                                 svn_wc__copy_translate,
+                                 tmp_text_path, dst_path, FALSE,
+                                 pool));
     }
   else
     {
@@ -4324,7 +4320,6 @@ svn_wc_add_repos_file2(const char *dst_path,
 
   /* Install new text base. */
   {
-    svn_checksum_t *checksum;
     svn_wc_entry_t tmp_entry;
 
     /* Write out log commands to set up the new text base and its
@@ -4335,21 +4330,113 @@ svn_wc_add_repos_file2(const char *dst_path,
     SVN_ERR(svn_wc__loggy_set_readonly(&log_accum, adm_access,
                                        text_base_path, pool));
 
-    SVN_ERR(svn_io_file_checksum2(&checksum, tmp_text_base_path,
-                                  svn_checksum_md5, pool));
-
-    tmp_entry.checksum = svn_checksum_to_cstring(checksum, pool);
+    tmp_entry.checksum = svn_checksum_to_cstring(base_checksum, pool);
     SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_access,
                                        dst_path, &tmp_entry,
                                        SVN_WC__ENTRY_MODIFY_CHECKSUM,
                                        pool));
   }
 
-
   /* Write our accumulation of log entries into a log file */
   SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
 
   return svn_wc__run_log(adm_access, NULL, pool);
+}
+
+
+svn_error_t *
+svn_wc_add_repos_file2(const char *dst_path,
+                       svn_wc_adm_access_t *adm_access,
+                       const char *new_text_base_path,
+                       const char *new_text_path,
+                       apr_hash_t *new_base_props,
+                       apr_hash_t *new_props,
+                       const char *copyfrom_url,
+                       svn_revnum_t copyfrom_rev,
+                       apr_pool_t *pool)
+{
+  svn_stream_t *new_base_contents;
+  svn_stream_t *new_contents = NULL;
+
+  SVN_ERR(svn_stream_open_readonly(&new_base_contents, new_text_base_path,
+                                   pool, pool));
+
+  if (new_text_path)
+    {
+      /* NOTE: the specified path may *not* be under version control.
+         It is most likely sitting in .svn/tmp/. Thus, we cannot use the
+         typical WC functions to access "special", "keywords" or "EOL"
+         information. We need to look at the properties given to us. */
+
+      /* If the new file is special, then we can simply open the given
+         contents since it is already in normal form. */
+      if (apr_hash_get(new_props,
+                       SVN_PROP_SPECIAL, APR_HASH_KEY_STRING) != NULL)
+        {
+          SVN_ERR(svn_stream_open_readonly(&new_contents, new_text_path,
+                                           pool, pool));
+        }
+      else
+        {
+          /* The new text contents need to be detrans'd into normal form. */
+          svn_subst_eol_style_t eol_style;
+          const char *eol_str;
+          apr_hash_t *keywords = NULL;
+          svn_string_t *list;
+
+          list = apr_hash_get(new_props,
+                              SVN_PROP_KEYWORDS, APR_HASH_KEY_STRING);
+          if (list != NULL)
+            {
+              /* Since we are detranslating, all of the keyword values
+                 can be "". */
+              SVN_ERR(svn_subst_build_keywords2(&keywords,
+                                                list->data,
+                                                "", "", 0, "",
+                                                pool));
+              if (apr_hash_count(keywords) == 0)
+                keywords = NULL;
+            }
+
+          svn_subst_eol_style_from_value(&eol_style, &eol_str,
+                                         apr_hash_get(new_props,
+                                                      SVN_PROP_EOL_STYLE,
+                                                      APR_HASH_KEY_STRING));
+
+          if (svn_subst_translation_required(eol_style, eol_str, keywords,
+                                             FALSE, FALSE))
+            {
+              SVN_ERR(svn_subst_stream_detranslated(&new_contents,
+                                                    new_text_path,
+                                                    eol_style, eol_str,
+                                                    FALSE,
+                                                    keywords,
+                                                    FALSE,
+                                                    pool));
+            }
+          else
+            {
+              SVN_ERR(svn_stream_open_readonly(&new_contents, new_text_path,
+                                               pool, pool));
+            }
+        }
+    }
+
+  SVN_ERR(svn_wc_add_repos_file3(dst_path, adm_access,
+                                 new_base_contents, new_contents,
+                                 new_base_props, new_props,
+                                 copyfrom_url, copyfrom_rev,
+                                 NULL, NULL, NULL, NULL,
+                                 pool));
+
+  /* The API contract states that the text files will be removed upon
+     successful completion. add_repos_file3() does not remove the files
+     since it only has streams on them. Toss 'em now. */
+  svn_error_clear(svn_io_remove_file(new_text_base_path, pool));
+  if (new_text_path)
+    svn_error_clear(svn_io_remove_file(new_text_path, pool));
+
+  return SVN_NO_ERROR;
 }
 
 

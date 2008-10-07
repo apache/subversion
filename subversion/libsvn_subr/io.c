@@ -163,10 +163,15 @@ file_open(apr_file_t **f,
           const char *fname,
           apr_int32_t flag,
           apr_fileperms_t perm,
+          svn_boolean_t retry_on_failure,
           apr_pool_t *pool)
 {
   apr_status_t status = apr_file_open(f, fname, flag, perm, pool);
-  WIN32_RETRY_LOOP(status, apr_file_open(f, fname, flag, perm, pool));
+
+  if (retry_on_failure)
+    {
+      WIN32_RETRY_LOOP(status, apr_file_open(f, fname, flag, perm, pool));
+    }
   return status;
 }
 
@@ -298,7 +303,7 @@ svn_io_open_unique_file2(apr_file_t **f,
                                          pool));
 
       apr_err = file_open(&file, unique_name_apr, flag,
-                          APR_OS_DEFAULT, pool);
+                          APR_OS_DEFAULT, FALSE, pool);
 
       if (APR_STATUS_IS_EEXIST(apr_err))
         continue;
@@ -595,6 +600,24 @@ svn_io_copy_file(const char *src,
   const char *src_apr, *dst_tmp_apr;
   const char *dst_tmp;
   svn_error_t *err, *err2;
+
+  /* ### NOTE: sometimes src == dst. In this case, because we copy to a
+     ###   temporary file, and then rename over the top of the destination,
+     ###   the net result is resetting the permissions on src/dst.
+     ###
+     ### Note: specifically, this can happen during a switch when the desired
+     ###   permissions for a file change from one branch to another. See
+     ###   switch_tests 17.
+     ###
+     ### ... yes, we should avoid copying to the same file, and we should
+     ###     make the "reset perms" explicit. The switch *happens* to work
+     ###     because of this copy-to-temp-then-rename implementation. If it
+     ###     weren't for that, the switch would break.
+  */
+#ifdef CHECK_FOR_SAME_FILE
+  if (strcmp(src, dst) == 0)
+    return SVN_NO_ERROR;
+#endif
 
   SVN_ERR(svn_path_cstring_from_utf8(&src_apr, src, pool));
 
@@ -1464,7 +1487,7 @@ svn_stringbuf_from_file2(svn_stringbuf_t **result,
                          const char *filename,
                          apr_pool_t *pool)
 {
-  apr_file_t *f = NULL;
+  apr_file_t *f;
 
   if (filename[0] == '-' && filename[1] == '\0')
     {
@@ -2465,7 +2488,8 @@ svn_io_file_open(apr_file_t **new_file, const char *fname,
   apr_status_t status;
 
   SVN_ERR(svn_path_cstring_from_utf8(&fname_apr, fname, pool));
-  status = file_open(new_file, fname_apr, flag | APR_BINARY, perm, pool);
+  status = file_open(new_file, fname_apr, flag | APR_BINARY, perm, TRUE,
+                     pool);
 
   if (status)
     return svn_error_wrap_apr(status, _("Can't open file '%s'"),
