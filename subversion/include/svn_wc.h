@@ -3174,8 +3174,10 @@ svn_wc_add_repos_file3(const char *dst_path,
 /** Same as svn_wc_add_repos_file3(), except that it has pathnames rather
  * than streams for the text base, and actual text, and has no cancellation.
  *
+ * @since New in 1.4.
  * @deprecated Provided for compatibility with the 1.5 API
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_add_repos_file2(const char *dst_path,
                        svn_wc_adm_access_t *adm_access,
