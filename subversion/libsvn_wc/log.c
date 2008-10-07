@@ -245,10 +245,6 @@ enum svn_wc__xfer_action {
                                        the current property vals of VERSIONED
                                        or, if that's NULL, those of NAME.
 
-      When SPECIAL_ONLY is TRUE, only translate special,
-      not keywords and eol-style. ### SPECIAL_ONLY is ignored:
-      ### see <http://svn.haxx.se/dev/archive-2008-08/0089.shtml>.
-
 */
 static svn_error_t *
 file_xfer_under_path(svn_wc_adm_access_t *adm_access,
@@ -256,7 +252,6 @@ file_xfer_under_path(svn_wc_adm_access_t *adm_access,
                      const char *dest,
                      const char *versioned,
                      enum svn_wc__xfer_action action,
-                     svn_boolean_t special_only,
                      svn_boolean_t rerun,
                      apr_pool_t *pool)
 {
@@ -603,14 +598,10 @@ log_do_file_xfer(struct log_runner *loggy,
   svn_error_t *err;
   const char *dest = NULL;
   const char *versioned;
-  svn_boolean_t special_only;
 
   /* We have the name (src), and the destination is absolutely required. */
   dest = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_DEST, atts);
-  special_only =
-    svn_xml_get_attr_value(SVN_WC__LOG_ATTR_ARG_1, atts) != NULL;
-  versioned =
-    svn_xml_get_attr_value(SVN_WC__LOG_ATTR_ARG_2, atts);
+  versioned = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_ARG_2, atts);
 
   if (! dest)
     return svn_error_createf(pick_error_code(loggy), NULL,
@@ -620,7 +611,7 @@ log_do_file_xfer(struct log_runner *loggy,
                               loggy->pool));
 
   err = file_xfer_under_path(loggy->adm_access, name, dest, versioned,
-                             action, special_only, loggy->rerun, loggy->pool);
+                             action, loggy->rerun, loggy->pool);
   if (err)
     SIGNAL_ERROR(loggy, err);
 
@@ -1875,14 +1866,11 @@ svn_wc__rerun_log(svn_wc_adm_access_t *adm_access,
  * either MOVE_COPY_OP has been executed, or DST_PATH was removed.
  *
  * SRC_PATH and DST_PATH are relative to ADM_ACCESS.
- *
- * For SPECIAL_ONLY, see that argument of file_xfer_under_path().
  */
 static svn_error_t *
 loggy_move_copy_internal(svn_stringbuf_t **log_accum,
                          svn_boolean_t *dst_modified,
                          const char *move_copy_op,
-                         svn_boolean_t special_only,
                          svn_wc_adm_access_t *adm_access,
                          const char *src_path, const char *dst_path,
                          svn_boolean_t remove_dst_if_no_src,
@@ -1909,8 +1897,6 @@ loggy_move_copy_internal(svn_stringbuf_t **log_accum,
                             src_path,
                             SVN_WC__LOG_ATTR_DEST,
                             dst_path,
-                            SVN_WC__LOG_ATTR_ARG_1,
-                            special_only ? "true" : NULL,
                             NULL);
       if (dst_modified)
         *dst_modified = TRUE;
@@ -1995,13 +1981,12 @@ svn_wc__loggy_copy(svn_stringbuf_t **log_accum,
     {
       SVN_WC__LOG_CP,
       SVN_WC__LOG_CP_AND_TRANSLATE,
-      SVN_WC__LOG_CP_AND_TRANSLATE,
       SVN_WC__LOG_CP_AND_DETRANSLATE
     };
 
   return loggy_move_copy_internal
     (log_accum, dst_modified,
-     copy_op[copy_type], copy_type == svn_wc__copy_translate_special_only,
+     copy_op[copy_type],
      adm_access,
      loggy_path(src_path, adm_access),
      loggy_path(dst_path, adm_access), remove_dst_if_no_src, pool);
@@ -2278,7 +2263,7 @@ svn_wc__loggy_move(svn_stringbuf_t **log_accum,
                    apr_pool_t *pool)
 {
   return loggy_move_copy_internal(log_accum, dst_modified,
-                                  SVN_WC__LOG_MV, FALSE, adm_access,
+                                  SVN_WC__LOG_MV, adm_access,
                                   loggy_path(src_path, adm_access),
                                   loggy_path(dst_path, adm_access),
                                   remove_dst_if_no_src, pool);
