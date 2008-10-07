@@ -601,6 +601,24 @@ svn_io_copy_file(const char *src,
   const char *dst_tmp;
   svn_error_t *err, *err2;
 
+  /* ### NOTE: sometimes src == dst. In this case, because we copy to a
+     ###   temporary file, and then rename over the top of the destination,
+     ###   the net result is resetting the permissions on src/dst.
+     ###
+     ### Note: specifically, this can happen during a switch when the desired
+     ###   permissions for a file change from one branch to another. See
+     ###   switch_tests 17.
+     ###
+     ### ... yes, we should avoid copying to the same file, and we should
+     ###     make the "reset perms" explicit. The switch *happens* to work
+     ###     because of this copy-to-temp-then-rename implementation. If it
+     ###     weren't for that, the switch would break.
+  */
+#ifdef CHECK_FOR_SAME_FILE
+  if (strcmp(src, dst) == 0)
+    return SVN_NO_ERROR;
+#endif
+
   SVN_ERR(svn_path_cstring_from_utf8(&src_apr, src, pool));
 
   SVN_ERR(svn_io_file_open(&from_file, src, APR_READ | APR_BINARY,
@@ -1469,7 +1487,7 @@ svn_stringbuf_from_file2(svn_stringbuf_t **result,
                          const char *filename,
                          apr_pool_t *pool)
 {
-  apr_file_t *f = NULL;
+  apr_file_t *f;
 
   if (filename[0] == '-' && filename[1] == '\0')
     {

@@ -251,17 +251,17 @@ svn_wc__get_keywords(apr_hash_t **keywords,
       SVN_ERR(svn_wc_prop_get(&propval, SVN_PROP_KEYWORDS, path, adm_access,
                               pool));
 
-      list = propval ? propval->data : NULL;
+      /* The easy answer. */
+      if (propval == NULL)
+        {
+          *keywords = NULL;
+          return SVN_NO_ERROR;
+        }
+
+      list = propval->data;
     }
   else
     list = force_list;
-
-  /* The easy answer. */
-  if (list == NULL)
-    {
-      *keywords = NULL;
-      return SVN_NO_ERROR;
-    }
 
   SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
 

@@ -183,11 +183,37 @@ class Generator(gen_win.WinGeneratorBase):
         deplist.append(gen_win.ProjectItem(guid=guids[depends[i].name],
                                            index=i,
                                            ))
+                                           
+      groupname = ''
+      
+      if isinstance(target, gen_base.TargetLib):
+        if isinstance(target, gen_base.TargetSWIGLib) \
+           or isinstance(target, gen_base.TargetSWIG):
+          groupname = 'swiglib'
+        elif target.msvc_fake:
+          groupname = 'fake'
+        elif target.msvc_export:
+          groupname = 'dll'
+        else:
+          groupname = 'lib'
+      elif isinstance(target, gen_base.TargetSWIGProject):
+        groupname = 'swiglib'
+      elif isinstance(target, gen_base.TargetJava):
+        groupname = 'java'
+      elif isinstance(target, gen_base.TargetExe):
+        if target.name.endswith('-test') \
+           or target.name.endswith('-tests') \
+           or target.name.startswith('diff'):
+          groupname = 'test'
+        else:
+          groupname = 'exe'
+      
       targets.append(
         gen_win.ProjectItem(name=target.name,
                             path=fname.replace(os.sep, '\\'),
                             guid=guids[target.name],
                             depends=deplist,
+                            group=groupname,
                             ))
 
     # the path name in the .sln template is already enclosed with ""
