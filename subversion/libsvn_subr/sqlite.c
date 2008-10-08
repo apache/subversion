@@ -339,7 +339,8 @@ init_sqlite()
     return svn_error_create(SVN_ERR_SQLITE_ERROR, NULL,
                             _("SQLite is required to be compiled and run in "
                               "thread-safe mode"));
-
+#endif
+#if SQLITE_VERSION_AT_LEAST(3,6,0)
   SQLITE_ERR_MSG(sqlite3_initialize(), "Could not initialize SQLite");
   SQLITE_ERR_MSG(sqlite3_config(SQLITE_CONFIG_MULTITHREAD),
                  "Could not configure SQLite");
