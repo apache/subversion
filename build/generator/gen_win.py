@@ -49,7 +49,7 @@ class GeneratorBase(gen_base.GeneratorBase):
     self.swig_path = None
     self.vsnet_version = '7.00'
     self.vsnet_proj_ver = '7.00'
-    self.sqlite_path = None
+    self.sqlite_path = 'sqlite'
     self.skip_sections = { 'mod_dav_svn': None,
                            'mod_authz_svn': None }
 
@@ -165,12 +165,7 @@ class WinGeneratorBase(GeneratorBase):
     """
 
     # Initialize parent
-    GeneratorBase.__init__(self, fname, verfname, options)
-
-    if self.sqlite_path is None:
-      sys.stderr.write('ERROR: SQLite path not specifed. ' + \
-                       'Use --with-sqlite option.')
-      sys.exit(1)
+    GeneratorBase.__init__(self, fname, verfname, options)                                            
 
     if self.bdb_lib is not None:
       sys.stderr.write("Found %s.lib in %s\n" % (self.bdb_lib, self.bdb_path))
@@ -211,6 +206,9 @@ class WinGeneratorBase(GeneratorBase):
     # Find APR and APR-util version
     self._find_apr()
     self._find_apr_util()
+    
+    # Find Sqlite
+    self._find_sqlite()
 
     # Look for ML
     if self.zlib_path:
@@ -1350,6 +1348,41 @@ class WinGeneratorBase(GeneratorBase):
       self.aprutil_lib = 'libaprutil-%d.lib' % major_ver
     else:
       self.aprutil_lib = 'libaprutil.lib'
+      
+  def _find_sqlite(self):
+    "Find the Sqlite library and version"
+    
+    header_file = os.path.join(self.sqlite_path, 'inc', 'sqlite3.h')
+    lib_file = os.path.join(self.sqlite_path, 'lib', 'sqlite3.lib')
+    
+    if not os.path.exists(header_file):
+      sys.stderr.write("ERROR: '%s' not found.\n" % header_file)
+      sys.stderr.write("Use '--with-sqlite' option to configure sqlite location.\n");
+      sys.exit(1)
+      
+    if not os.path.exists(lib_file):
+      sys.stderr.write("ERROR: '%s' not found.\n" % lib_file)
+      sys.stderr.write("Use '--with-sqlite' option to configure sqlite location.\n");
+      sys.exit(1)
+
+    fp = open(header_file)
+    txt = fp.read()
+    fp.close()
+    vermatch = re.compile(r'^\s*#define\s+SQLITE_VERSION\s+"(\d+)\.(\d+)\.(\d+)"', re.M) \
+                 .search(txt)
+
+    version = (int(vermatch.group(1)),
+               int(vermatch.group(2)),
+               int(vermatch.group(3)))
+
+    self.sqlite_version = '%d.%d.%d' % version
+
+    msg = 'Found SQLite version %s\n'
+
+    if version[0] < 3 or (version[0] == 3 and version[1] < 4):
+      msg = "WARNING: SQLite 3.4.0 or higher is required (%s found)\n"
+
+    sys.stderr.write(msg % self.sqlite_version)
 
 class ProjectItem:
   "A generic item class for holding sources info, config info, etc for a project"
