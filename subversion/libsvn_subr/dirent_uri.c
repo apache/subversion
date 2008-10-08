@@ -204,7 +204,7 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
 #if defined(WIN32) || defined(__CYGWIN__)
           /* On Windows permit two leading separator characters which means an
            * UNC path. */
-          if (! uri && *src == '/')
+          if ((type == type_dirent) && *src == '/')
             *(dst++) = *(src++);
 #endif /* WIN32 or Cygwin */
         }
@@ -271,7 +271,7 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
 #if defined(WIN32) || defined(__CYGWIN__)
   /* Skip leading double slashes when there are less than 2
    * canon segments. UNC paths *MUST* have two segments. */
-  if (! uri && canon[0] == '/' && canon[1] == '/')
+  if ((type == type_dirent) && canon[0] == '/' && canon[1] == '/')
     {
       if (canon_segments < 2)
         return canon + 1;
@@ -380,7 +380,7 @@ get_longest_ancestor_length(path_type_t types,
             return 1;
 #if defined(WIN32) || defined(__CYGWIN__)
           /* X:/foo and X:/bar returns X:/ */
-          if (!uris &&
+          if ((types == type_dirent) &&
               last_dirsep == 2 && path1[1] == ':' && path1[2] == '/'
                                && path2[1] == ':' && path2[2] == '/')
             return 3;
@@ -436,7 +436,7 @@ is_child(path_type_t type, const char *path1, const char *path2,
     {
       if (path1[i - 1] == '/'
 #if defined(WIN32) || defined(__CYGWIN__)
-          || (! uri && path1[i - 1] == ':')
+          || ((type == type_dirent) && path1[i - 1] == ':')
 #endif /* WIN32 or Cygwin */
            )
         if (path2[i] == '/')
@@ -473,7 +473,7 @@ is_ancestor(path_type_t type, const char *path1, const char *path2)
   if (strncmp(path1, path2, path1_len) == 0)
     return path1[path1_len - 1] == '/'
 #if defined(WIN32) || defined(__CYGWIN__)
-      || (! uri && path1[path1_len - 1] == ':')
+      || ((type == type_dirent) && path1[path1_len - 1] == ':')
 #endif /* WIN32 or Cygwin */
       || (path2[path1_len] == '/' || path2[path1_len] == '\0');
 
