@@ -873,9 +873,10 @@ merge_props_changed(svn_wc_adm_access_t *adm_access,
                   if (!merge_b->paths_with_new_mergeinfo)
                     merge_b->paths_with_new_mergeinfo =
                       apr_hash_make(merge_b->pool);
-                    apr_hash_set(merge_b->paths_with_new_mergeinfo,
-                                 apr_pstrdup(merge_b->pool, path),
-                                 APR_HASH_KEY_STRING, path);
+
+                  apr_hash_set(merge_b->paths_with_new_mergeinfo,
+                               apr_pstrdup(merge_b->pool, path),
+                               APR_HASH_KEY_STRING, path);
                 }
             }
         }
