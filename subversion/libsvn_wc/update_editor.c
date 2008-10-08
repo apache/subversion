@@ -3322,7 +3322,6 @@ add_file_with_history(const char *path,
   apr_hash_t *base_props, *working_props;
   const svn_wc_entry_t *path_entry;
   svn_error_t *err;
-  svn_stringbuf_t *log_accum = svn_stringbuf_create("", pool);
 
   /* The file_pool can stick around for a *long* time, so we want to
      use a subpool for any temporary allocations. */
@@ -3346,10 +3345,6 @@ add_file_with_history(const char *path,
 
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, pb->edit_baton->adm_access,
                               pb->path, subpool));
-
-  /* Raise a tree conflict if there's already something versioned here. */
-  SVN_ERR(check_tree_conflict(log_accum, path, path_entry, adm_access,
-                              svn_wc_conflict_action_add, pool));
 
   /* Make a unique file name for the copyfrom text-base. */
   SVN_ERR(svn_wc_create_tmp_file2(NULL, &tfb->copied_text_base,
