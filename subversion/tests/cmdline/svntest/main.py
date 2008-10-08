@@ -1449,11 +1449,11 @@ def run_tests(test_list, serial_only = False):
   if serial_only or len(testnums) < 2:
     parallel = 0
 
-  # Setup the pristine repository
-  actions.setup_pristine_repository()
-
   # Build out the default configuration directory
   create_config_dir(default_config_dir)
+
+  # Setup the pristine repository
+  actions.setup_pristine_repository()
 
   # Run the tests.
   exit_code = _internal_run_tests(test_list, testnums, parallel)
