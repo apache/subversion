@@ -201,7 +201,9 @@ class Generator(gen_win.WinGeneratorBase):
       elif isinstance(target, gen_base.TargetSWIGProject):
         groupname = 'swiglib'
       elif isinstance(target, gen_base.TargetJava):
-        groupname = 'java'
+        # Keep the buildbot happy        
+        groupname = 'root'
+        # groupname = 'java'
       elif isinstance(target, gen_base.TargetExe):
         if target.name.endswith('-test') \
            or target.name.endswith('-tests') \
