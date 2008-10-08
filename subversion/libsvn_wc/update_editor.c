@@ -3348,7 +3348,7 @@ add_file_with_history(const char *path,
                               pb->path, subpool));
 
   /* Raise a tree conflict if there's already something versioned here. */
-  SVN_ERR(check_tree_conflict(log_accum, pb->path, path_entry, adm_access,
+  SVN_ERR(check_tree_conflict(log_accum, path, path_entry, adm_access,
                               svn_wc_conflict_action_add, pool));
 
   /* Make a unique file name for the copyfrom text-base. */
