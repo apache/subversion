@@ -963,21 +963,15 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
   const svn_wc_entry_t *ent;
   svn_stream_t *base_stream;
   svn_stream_t *local_stream;
-  apr_time_t wf_time;
 
   SVN_ERR(svn_wc_entry(&ent, path, adm_access, FALSE, pool));
-
-  /* Get timestamp of working file, to check for modifications during
-     commit. */
-  SVN_ERR(svn_io_file_affected_time(&wf_time, path, pool));
 
   /* Translated input */
   SVN_ERR(svn_wc_translated_stream(&local_stream, path, path,
                                    adm_access, SVN_WC_TRANSLATE_TO_NF, pool));
 
-
-
   tmp_base = svn_wc__text_base_path(path, TRUE, pool);
+
   /* Alert the caller that we have created a temporary file that might
      need to be cleaned up, if he asked for one. */
   if (tempfile)

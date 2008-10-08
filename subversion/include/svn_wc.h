@@ -3382,9 +3382,8 @@ typedef struct svn_wc_committed_queue_t svn_wc_committed_queue_t;
  * Create a queue for use with svn_wc_queue_committed() and
  * svn_wc_process_committed_queue().
  *
- * The returned queue and all further
- * allocations required for queueing new items will also be done
- * from @a pool.
+ * The returned queue and all further allocations required for queueing
+ * new items will also be done from @a pool.
  *
  * @since New in 1.5.
  */
@@ -3392,23 +3391,62 @@ svn_wc_committed_queue_t *
 svn_wc_committed_queue_create(apr_pool_t *pool);
 
 
-
 /**
  * Queue committed items to be processed later by
  * svn_wc_process_committed_queue().
  *
- * The first time this function is called, @a *queue should
- * be @c NULL to signal that initialization is required.
+ * All pointer data passed to this function (@a path, @a adm_access,
+ * @a wcprop_changes and @a digest) should remain valid until the queue
+ * has been processed by svn_wc_process_committed_queue().
  *
- * All pointer data passed to this function
- * (@a path, @a adm_access, @a wcprop_changes
- * and @a digest) should remain valid until the queue has been
- * processed by svn_wc_process_committed_queue().
+ * Record in @a queue that @a path will need to be bumped after a commit
+ * succeeds. @a adm_access must hold a write lock appropriate for @a path.
  *
- * The parameters have the same meaning as those
- * for svn_wc_process_committed4().
+ * If non-NULL, @a wcprop_changes is an array of <tt>svn_prop_t *</tt>
+ * changes to wc properties; if an @c svn_prop_t->value is NULL, then
+ * that property is deleted.
  *
- * @since New in 1.5.
+ * If @a remove_lock is @c TRUE, any entryprops related to a repository
+ * lock will be removed.
+ *
+ * If @a remove_changelist is @c TRUE, any association with a
+ * changelist will be removed.
+ *
+ * If @a path is a file and @a checksum is non-NULL, use @a checksum as
+ * the checksum for the new text base. Otherwise, calculate the checksum
+ * if needed.
+ *
+ * If @a recurse is TRUE and @a path is a directory, then bump every
+ * versioned object at or under @a path.  This is usually done for
+ * copied trees.
+ *
+ * @note the @recurse parameter should be used with extreme care since
+ * it will bump ALL nodes under the directory, regardless of their
+ * actual inclusion in the new revision.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_wc_queue_committed2(svn_wc_committed_queue_t *queue,
+                        const char *path,
+                        svn_wc_adm_access_t *adm_access,
+                        svn_boolean_t recurse,
+                        apr_array_header_t *wcprop_changes,
+                        svn_boolean_t remove_lock,
+                        svn_boolean_t remove_changelist,
+                        svn_checksum_t *checksum,
+                        apr_pool_t *pool);
+
+
+/** Same as svn_wc_queue_committed2() but the @a queue parameter has an
+ * extra indirection and @a digest is supplied instead of a checksum type.
+ *
+ * @note despite the extra indirection, this function does NOT allocate
+ *   the queue for you. svn_wc_committed_queue_create() must be called.
+ *
+ * @since New in 1.5
+ *
+ * @deprecated Provided for backwards compatibility with 1.5
  */
 svn_error_t *
 svn_wc_queue_committed(svn_wc_committed_queue_t **queue,
@@ -3423,8 +3461,12 @@ svn_wc_queue_committed(svn_wc_committed_queue_t **queue,
 
 
 /**
- * Like svn_wc_process_committed4(), but batch processes
- * items queued with svn_wc_queue_committed().
+ * Bump all items in @a queue to @a new_revnum after a commit succeeds.
+ * @a rev_date and @a rev_author are the (server-side) date and author
+ * of the new revision; one or both may be @c NULL.
+ *
+ * @a adm_access must be associated with all affected directories, and
+ * must hold a write lock in each one.
  *
  * @since New in 1.5.
  */
@@ -3438,33 +3480,15 @@ svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
 
 
 /**
- * Bump a successfully committed absolute @a path to @a new_revnum after a
- * commit succeeds.  @a rev_date and @a rev_author are the (server-side)
- * date and author of the new revision; one or both may be @c NULL.
- * @a adm_access must hold a write lock appropriate for @a path.
+ * @note this function has improper expectations around the operation and
+ *   execution of other parts of the Subversion WC library. The resulting
+ *   coupling makes this interface near-impossible to support. Documentation
+ *   has been removed, as a result.
  *
- * If non-NULL, @a wcprop_changes is an array of <tt>svn_prop_t *</tt>
- * changes to wc properties; if an @c svn_prop_t->value is NULL, then
- * that property is deleted.
- *
- * If @a remove_lock is @c TRUE, any entryprops related to a repository
- * lock will be removed.
- *
- * If @a remove_changelist is @c TRUE, any association with a
- * changelist will be removed.
- *
- * If @a path is a member of a changelist, remove that association.
- *
- * If @a path is a file and @a digest is non-NULL, use @a digest as
- * the checksum for the new text base.  Else, calculate the checksum
- * if needed.
- *
- * If @a recurse is TRUE and @a path is a directory, then bump every
- * versioned object at or under @a path.  This is usually done for
- * copied trees.
- *
- * @since New in 1.5.
+ * @deprecated Use the svn_wc_committed_queue_* functions instead. Provided
+ *   for backwards compatibility with the 1.5 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_process_committed4(const char *path,
                           svn_wc_adm_access_t *adm_access,
@@ -3478,12 +3502,10 @@ svn_wc_process_committed4(const char *path,
                           const unsigned char *digest,
                           apr_pool_t *pool);
 
-/** Similar to svn_wc_process_committed4(), but with @a
- * remove_changelist set to FALSE.
+/** @see svn_wc_process_committed4()
  *
- * @since New in 1.4.
- *
- * @deprecated Provided for backwards compatibility with the 1.4 API.
+ * @deprecated Use the svn_wc_committed_queue_* functions instead. Provided
+ *   for backwards compatibility with the 1.4 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -3498,12 +3520,10 @@ svn_wc_process_committed3(const char *path,
                           const unsigned char *digest,
                           apr_pool_t *pool);
 
-/** Similar to svn_wc_process_committed3(), but with @a digest set to
- * NULL.
+/** @see svn_wc_process_committed4()
  *
- * @since New in 1.2.
- *
- * @deprecated Provided for backwards compatibility with the 1.3 API.
+ * @deprecated Use the svn_wc_committed_queue_* functions instead. Provided
+ *   for backwards compatibility with the 1.3 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -3517,11 +3537,10 @@ svn_wc_process_committed2(const char *path,
                           svn_boolean_t remove_lock,
                           apr_pool_t *pool);
 
-/**
- * Similar to svn_wc_process_committed2(), but with @a remove_lock set to
- * @c FALSE.
+/** @see svn_wc_process_committed4()
  *
- * @deprecated Provided for backward compatibility with the 1.1 API.
+ * @deprecated Use the svn_wc_committed_queue_* functions instead. Provided
+ *   for backward compatibility with the 1.1 API.
  */
 SVN_DEPRECATED
 svn_error_t *
