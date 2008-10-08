@@ -36,7 +36,9 @@ except:
 ### 1.3 and lower.  It could be rolled into this script.
 
 LATEST_FORMATS = { "1.4" : 8,
-                   "1.5" : 9 }
+                   "1.5" : 9,
+                   "1.6" : 10,
+                 }
 
 def usage_and_exit(error_msg=None):
   """Write usage information and exit.  If ERROR_MSG is provide, that
@@ -164,7 +166,17 @@ class Entries:
     "keep-local",
     "working-size",
     "depth",
+    "tree-conflicts",
+    "file-external",
   )
+
+  # The format number.
+  format_nbr = -1
+
+  # How many bytes the format number takes in the file.  (The format number
+  # may have leading zeroes after using this script to convert format 10 to
+  # format 9 -- which would write the format number as '09'.)
+  format_nbr_bytes = -1
 
   def __init__(self, path):
     self.path = path
@@ -176,15 +188,17 @@ class Entries:
 
     input = open(self.path, "r")
 
-    # Read and discard WC format number from INPUT.  Validate that it
+    # Read WC format number from INPUT.  Validate that it
     # is a supported format for conversion.
     format_line = input.readline()
     try:
-      format_nbr = int(format_line)
+      self.format_nbr = int(format_line)
+      self.format_nbr_bytes = len(format_line.rstrip()) # remove '\n'
     except ValueError:
-      format_nbr = -1
-    if not format_nbr in LATEST_FORMATS.values():
-      raise UnrecognizedWCFormatException(format_nbr, self.path)
+      self.format_nbr = -1
+      self.format_nbr_bytes = -1
+    if not self.format_nbr in LATEST_FORMATS.values():
+      raise UnrecognizedWCFormatException(self.format_nbr, self.path)
 
     # Parse file into individual entries, to later inspect for
     # non-convertable data.
@@ -233,18 +247,30 @@ class Entries:
     return entry
 
   def write_format(self, format_nbr):
+    # Overwrite all bytes of the format number (which are the first bytes in
+    # the file).  Overwrite format '10' by format '09', which will be converted
+    # to '9' by Subversion when it rewrites the file.  (Subversion 1.4 and later
+    # ignore leading zeroes in the format number.)
+    assert len(str(format_nbr)) <= self.format_nbr_bytes
+    format_string = '%0' + str(self.format_nbr_bytes) + 'd'
+
     os.chmod(self.path, 0600)
     output = open(self.path, "r+", 0)
-    output.write("%d" % format_nbr)
+    output.write(format_string % format_nbr)
     output.close()
     os.chmod(self.path, 0400)
 
 class Entry:
   "Describes an entry in a WC."
 
-  # The list of field indices within an entry's record which must be
-  # retained for 1.5 -> 1.4 migration (changelist, keep-local, and depth).
-  must_retain_fields = (30, 31, 33)
+  # Maps format numbers to indices of fields within an entry's record that must
+  # be retained when downgrading to that format.
+  must_retain_fields = {
+      # Not in 1.4: changelist, keep-local, depth, tree-conflicts, file-externals
+      8  : (30, 31, 33, 34, 35),
+      # Not in 1.5: tree-conflicts, file-externals
+      9  : (34, 35),
+      }
 
   def __init__(self):
     self.fields = []
@@ -254,7 +280,7 @@ class Entry:
 
     # Check whether lossy conversion is being attempted.
     lossy_fields = []
-    for field_index in self.must_retain_fields:
+    for field_index in self.must_retain_fields[format_nbr]:
       if len(self.fields) - 1 >= field_index and self.fields[field_index]:
         lossy_fields.append(Entries.entry_fields[field_index])
     if lossy_fields:
