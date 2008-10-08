@@ -81,42 +81,39 @@ class WCFormatConverter:
     mode, and unconvertable WC data is encountered."""
 
     # Avoid iterating in unversioned directories.
-    if not get_adm_dir() in paths:
+    if not (get_adm_dir() in paths):
       del paths[:]
       return
 
-    for path in paths:
-      # Process the entries file for this versioned directory.
-      if path == get_adm_dir():
-        if self.verbosity:
-          print "Processing directory '%s'" % dirname
-        entries = Entries(os.path.join(dirname, path, "entries"))
+    # Process the entries file for this versioned directory.
+    if self.verbosity:
+      print "Processing directory '%s'" % dirname
+    entries = Entries(os.path.join(dirname, get_adm_dir(), "entries"))
 
-        if self.verbosity:
-          print "Parsing file '%s'" % entries.path
-        try:
-          entries.parse(self.verbosity)
-        except UnrecognizedWCFormatException, e:
-          if self.error_on_unrecognized:
-            raise
-          print >>sys.stderr, "%s, skipping" % (e,)
+    if self.verbosity:
+      print "Parsing file '%s'" % entries.path
+    try:
+      entries.parse(self.verbosity)
+    except UnrecognizedWCFormatException, e:
+      if self.error_on_unrecognized:
+        raise
+      print >>sys.stderr, "%s, skipping" % (e,)
 
-        if self.verbosity:
-          print "Checking whether WC format can be converted"
-        try:
-          entries.assert_valid_format(format_nbr, self.verbosity)
-        except LossyConversionException, e:
-          # In --force mode, ignore complaints about lossy conversion.
-          if self.force:
-            print "WARNING: WC format conversion will be lossy. Dropping "\
-                  "field(s) %s " % ", ".join(e.lossy_fields)
-          else:
-            raise
+    if self.verbosity:
+      print "Checking whether WC format can be converted"
+    try:
+      entries.assert_valid_format(format_nbr, self.verbosity)
+    except LossyConversionException, e:
+      # In --force mode, ignore complaints about lossy conversion.
+      if self.force:
+        print "WARNING: WC format conversion will be lossy. Dropping "\
+              "field(s) %s " % ", ".join(e.lossy_fields)
+      else:
+        raise
 
-        if self.verbosity:
-          print "Writing WC format"
-        entries.write_format(format_nbr)
-        break
+    if self.verbosity:
+      print "Writing WC format"
+    entries.write_format(format_nbr)
 
   def change_wc_format(self, format_nbr):
     """Walk all paths in a WC tree, and change their format to
