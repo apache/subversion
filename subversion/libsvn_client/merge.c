@@ -6095,9 +6095,12 @@ do_directory_merge(const char *url1,
   return err;
 }
 
-/** Ensure the caller receives a RA_SESSION object to URL. This function will
- * reuse RA_SESSION if it is not NULL and is opened to the same repository as
- * URL is pointing to. Otherwise a new session object will be created.
+/** Ensure that *RA_SESSION is opened to URL, either by reusing
+ * *RA_SESSION if it is non-null and already opened to URL's
+ * repository, or by allocating a new *RA_SESSION in POOL.
+ * (RA_SESSION itself cannot be null, of course.)
+ *
+ * CTX is used as for svn_client__open_ra_session_internal().
  */
 static svn_error_t *
 ensure_ra_session_url(svn_ra_session_t **ra_session,
