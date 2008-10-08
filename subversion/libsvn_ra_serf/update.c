@@ -2192,20 +2192,20 @@ link_path(void *report_baton,
 /** Max. number of connctions we'll open to the server. */
 #define MAX_NR_OF_CONNS 4
 /** Minimum nr. of outstanding requests needed before a new connection is
- *  opened. (actual number used will be 2 ^ EXP_REQS_PER_CONN. */
-#define EXP_REQS_PER_CONN 3
+ *  opened. */
+#define REQS_PER_CONN 8
 
 /** This function creates a new connection for this serf session, but only
- * if the number of ACTIVE_REQS > 8 (arbitrary chosen number) or if there
- * currently is only one main connection open.
+ * if the number of ACTIVE_REQS > REQS_PER_CONN or if there currently is 
+ * only one main connection open.
  */
 static void
 open_connection_if_needed(svn_ra_serf__session_t *sess, int active_reqs)
 {
-  /* For each 8 outstanding requests open a new connection, with a minimum of
-     1 extra connection. */
+  /* For each REQS_PER_CONN outstanding requests open a new connection, with
+   * a minimum of 1 extra connection. */
   if (sess->num_conns == 1 ||
-      ((active_reqs >> EXP_REQS_PER_CONN) > sess->num_conns))
+      ((active_reqs / REQS_PER_CONN) > sess->num_conns))
     {
       int cur = sess->num_conns;
 
