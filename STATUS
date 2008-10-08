@@ -49,19 +49,6 @@ Candidate changes for 1.5.3:
    Votes:
      +1: pburba
 
- * r33178, r33185
-   Avoid calling apr_status with APR_FINFO_PROT | APR_FINFO_OWNER on 
-   Windows, as this call is documented to be 'incredibly expensive, but 
-   accurate' and the result is ignored anyway.
-   Notes:
-     r33185 contains some documentation that should have been in r33178.
-   Justification:
-     Doing costly calculations and then ignoring the result is not good.
-     This patch resolves two of these cases. The first by removing the
-     calculation and the second by disabling the code on Windows completely.
-   Votes:
-     +1: rhuijben, danielsh
-
 Approved changes:
 =================
 
@@ -72,3 +59,16 @@ Approved changes:
      Server logic fault tolerance.  Code mo'-betta-ness.
    Votes:
      +1: cmpilato, hwright, rhuijben
+
+ * r33178, r33185
+   Avoid calling apr_stat with APR_FINFO_PROT | APR_FINFO_OWNER on 
+   Windows, as this call is documented to be 'incredibly expensive, but 
+   accurate' and the result is ignored anyway.
+   Notes:
+     r33185 contains some documentation that should have been in r33178.
+   Justification:
+     Doing costly calculations and then ignoring the result is not good.
+     This patch resolves two of these cases. The first by removing the
+     calculation and the second by disabling the code on Windows completely.
+   Votes:
+     +1: rhuijben, danielsh, lgo
