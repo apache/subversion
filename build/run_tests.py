@@ -70,12 +70,17 @@ class TestHarness:
       cnt += 1
     self._open_log('r')
     log_lines = self.log.readlines()
+    # Print summaries from least interesting to most interesting.
     skipped = filter(lambda x: x[:6] == 'SKIP: ', log_lines)
     if skipped:
-      print 'At least one test was SKIPPED, checking ' + self.logfile
+      print('At least one test was SKIPPED, checking ' + self.logfile)
       map(sys.stdout.write, skipped)
+    xfailed = filter(lambda x: x[:6] == 'XFAIL:', log_lines)
+    if xfailed:
+      print('At least one test XFAILED, checking ' + self.logfile)
+      map(sys.stdout.write, xfailed)
     if failed:
-      print 'At least one test FAILED, checking ' + self.logfile
+      print('At least one test FAILED, checking ' + self.logfile)
       map(sys.stdout.write, filter(lambda x: x[:6] in ('FAIL: ', 'XPASS:'),
                                    log_lines))
     self._close_log()
@@ -93,7 +98,7 @@ class TestHarness:
       self.log = None
 
   def _run_test(self, prog, test_nr, total_tests):
-    'Run a single test.'
+    "Run a single test. Return the test's exit code."
 
     def quote(arg):
       if sys.platform == 'win32':
@@ -105,7 +110,8 @@ class TestHarness:
     # Using write here because we don't want even a trailing space
     sys.stdout.write('Running all tests in %s [%d/%d]...' % (
       progbase, test_nr + 1, total_tests))
-    print >> self.log, 'START: ' + progbase
+    self.log.write('START: %s\n' % progbase)
+    self.log.flush()
 
     if progbase[-3:] == '.py':
       progname = sys.executable
@@ -126,7 +132,7 @@ class TestHarness:
       if self.config_file is not None:
         cmdline.append(quote('--config-file=' + self.config_file))
     else:
-      print 'Don\'t know what to do about ' + progbase
+      print('Don\'t know what to do about ' + progbase)
       sys.exit(1)
 
     if self.verbose is not None:
@@ -158,17 +164,20 @@ class TestHarness:
     # probably means the test didn't run at all and probably didn't
     # output any failure info.
     if failed == 1:
-      print 'FAILURE'
+      print('FAILURE')
     elif failed:
-      print >> self.log, 'FAIL:  ' + progbase + ': Unknown test failure see tests.log.\n'
-      print 'FAILURE'
+      self.log.write('FAIL:  %s: Unknown test failure see tests.log.\n\n' % progbase)
+      self.log.flush()
+      print('FAILURE')
     else:
-      print 'success'
-    print >> self.log, 'END: ' + progbase + '\n'
+      print('success')
+    self.log.write('END: %s\n\n' % progbase)
     return failed
 
-  def _run_prog(self, progname, cmdline):
-    'Execute COMMAND, redirecting standard output and error to the log file.'
+  def _run_prog(self, progname, arglist):
+    '''Execute the file PROGNAME in a subprocess, with ARGLIST as its
+    arguments (a list/tuple of arg0..argN), redirecting standard output and
+    error to the log file. Return the command's exit code.'''
     def restore_streams(stdout, stderr):
       os.dup2(stdout, 1)
       os.dup2(stderr, 2)
@@ -183,7 +192,7 @@ class TestHarness:
     try:
       os.dup2(self.log.fileno(), 1)
       os.dup2(self.log.fileno(), 2)
-      rv = os.spawnv(os.P_WAIT, progname, cmdline)
+      rv = os.spawnv(os.P_WAIT, progname, arglist)
     except:
       restore_streams(old_stdout, old_stderr)
       raise
@@ -202,7 +211,7 @@ def main():
     args = []
 
   if len(args) < 3:
-    print __doc__
+    print(__doc__)
     sys.exit(2)
 
   base_url, fs_type, verbose, cleanup, enable_sasl, http_library, \

@@ -172,11 +172,9 @@ ssl_client_cert_prompt_next_cred(void **credentials_p,
     }
   ib->retries++;
 
-  SVN_ERR(ib->pb->prompt_func((svn_auth_cred_ssl_client_cert_t **)
-                              credentials_p, ib->pb->prompt_baton,
-                              ib->realmstring, ! no_auth_cache, pool));
-
-  return SVN_NO_ERROR;
+  return ib->pb->prompt_func((svn_auth_cred_ssl_client_cert_t **)
+                             credentials_p, ib->pb->prompt_baton,
+                             ib->realmstring, ! no_auth_cache, pool);
 }
 
 

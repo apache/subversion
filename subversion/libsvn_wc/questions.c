@@ -2,7 +2,7 @@
  * questions.c:  routines for asking questions about working copies
  *
  * ====================================================================
- * Copyright (c) 2000-2004, 2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004, 2006, 2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -38,9 +38,6 @@
 #include "entries.h"
 #include "props.h"
 #include "translate.h"
-
-#include "svn_md5.h"
-#include <apr_md5.h>
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
@@ -280,7 +277,7 @@ compare_and_verify(svn_boolean_t *modified_p,
   if (verify_checksum || need_translation)
     {
       /* Reading files is necessary. */
-      const unsigned char *digest;
+      svn_checksum_t *checksum;
       /* "v_" means versioned_file, "b_" means base_file. */
       apr_file_t *v_file_h, *b_file_h;
       svn_stream_t *v_stream, *b_stream;
@@ -299,8 +296,9 @@ compare_and_verify(svn_boolean_t *modified_p,
                                          TRUE, pool));
 
           if (entry->checksum)
-            b_stream = svn_stream_checksummed(b_stream, &digest, NULL, TRUE,
-                                              pool);
+            b_stream = svn_stream_checksummed2(b_stream, &checksum,
+                                               svn_checksum_md5, NULL,
+                                               svn_checksum_md5, TRUE, pool);
         }
 
       if (compare_textbases && need_translation)
@@ -335,9 +333,9 @@ compare_and_verify(svn_boolean_t *modified_p,
 
       if (verify_checksum && entry->checksum)
         {
-          const char *checksum;
-          checksum = svn_md5_digest_to_cstring_display(digest, pool);
-          if (strcmp(checksum, entry->checksum) != 0)
+          const char *digest;
+          digest = svn_checksum_to_cstring_display(checksum, pool);
+          if (strcmp(digest, entry->checksum) != 0)
             {
               return svn_error_createf
                 (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
@@ -346,7 +344,7 @@ compare_and_verify(svn_boolean_t *modified_p,
                     "     actual:  %s\n"),
                   svn_path_local_style(base_file, pool),
                   entry->checksum,
-                  checksum);
+                  digest);
             }
         }
     }
@@ -547,11 +545,12 @@ svn_wc_text_modified_p(svn_boolean_t *modified_p,
 
 
 svn_error_t *
-svn_wc_conflicted_p(svn_boolean_t *text_conflicted_p,
-                    svn_boolean_t *prop_conflicted_p,
-                    const char *dir_path,
-                    const svn_wc_entry_t *entry,
-                    apr_pool_t *pool)
+svn_wc_conflicted_p2(svn_boolean_t *text_conflicted_p,
+                     svn_boolean_t *prop_conflicted_p,
+                     svn_boolean_t *has_tree_conflicted_children,
+                     const char *dir_path,
+                     const svn_wc_entry_t *entry,
+                     apr_pool_t *pool)
 {
   const char *path;
   svn_node_kind_t kind;
@@ -559,6 +558,7 @@ svn_wc_conflicted_p(svn_boolean_t *text_conflicted_p,
 
   *text_conflicted_p = FALSE;
   *prop_conflicted_p = FALSE;
+  *has_tree_conflicted_children = FALSE;
 
   /* Look for any text conflict, exercising only as much effort as
      necessary to obtain a definitive answer.  This only applies to
@@ -599,11 +599,29 @@ svn_wc_conflicted_p(svn_boolean_t *text_conflicted_p,
         *prop_conflicted_p = TRUE;
     }
 
+  /* Check for tree conflicts (only "this-dir" entries have tree conflicts). */
+  if ((strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) == 0)
+      && entry->tree_conflict_data)
+    {
+      *has_tree_conflicted_children = TRUE;
+    }
+
   svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
-
+svn_error_t *
+svn_wc_conflicted_p(svn_boolean_t *text_conflicted_p,
+                    svn_boolean_t *prop_conflicted_p,
+                    const char *dir_path,
+                    const svn_wc_entry_t *entry,
+                    apr_pool_t *pool)
+{
+  svn_boolean_t has_tree_conflicted_children;
+  return svn_wc_conflicted_p2(text_conflicted_p, prop_conflicted_p,
+                              &has_tree_conflicted_children, dir_path, entry,
+                              pool);
+}
 
 
 

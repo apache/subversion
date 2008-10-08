@@ -273,11 +273,9 @@ username_prompt_next_creds(void **credentials_p,
     }
   ib->retries++;
 
-  SVN_ERR(prompt_for_username_creds
-          ((svn_auth_cred_username_t **) credentials_p, pb,
-           parameters, realmstring, FALSE, ! no_auth_cache, pool));
-
-  return SVN_NO_ERROR;
+  return prompt_for_username_creds
+         ((svn_auth_cred_username_t **) credentials_p, pb,
+          parameters, realmstring, FALSE, ! no_auth_cache, pool);
 }
 
 

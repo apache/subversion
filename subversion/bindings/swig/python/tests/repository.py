@@ -1,4 +1,4 @@
-import unittest, os, setup_path, StringIO
+import unittest, os, setup_path, StringIO, tempfile
 from svn import core, repos, fs, delta
 from svn.core import SubversionException
 
@@ -37,7 +37,7 @@ class SubversionRepositoryTestCase(unittest.TestCase):
        using a config hash"""
     fs_config = { "fs-type": "fsfs" }
     for i in range(5):
-      path = os.path.join(REPOS_PATH, "test" + str(i))
+      path = tempfile.mkdtemp("-test" + str(i))
       repos.create(path, "", "", None, fs_config)
       repos.delete(path)
 

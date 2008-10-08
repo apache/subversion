@@ -49,12 +49,12 @@ def main():
         if node.kind == "file":
           rep = skel.Rep(ctx.reps_db[node.datarep])
           if rep.kind == "fulltext":
-            if ctx.strings_db.has_key(rep.str):
+            if rep.str in ctx.strings_db:
               del ctx.strings_db[rep.str]
             ctx.reps_db[node.datarep] = empty_fulltext_rep_skel
           else:
             for w in rep.windows:
-              if ctx.strings_db.has_key(w.str):
+              if w.str in ctx.strings_db:
                 del ctx.strings_db[w.str]
             ctx.reps_db[node.datarep] = empty_fulltext_rep_skel
       rec = cur.next()

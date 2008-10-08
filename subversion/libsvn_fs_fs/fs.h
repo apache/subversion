@@ -1,7 +1,7 @@
 /* fs.h : interface to Subversion filesystem, private to libsvn_fs
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -20,7 +20,6 @@
 
 #include <apr_pools.h>
 #include <apr_hash.h>
-#include <apr_md5.h>
 #include <apr_thread_mutex.h>
 #include <apr_network_io.h>
 
@@ -231,14 +230,14 @@ typedef struct
  * svn_fs_fs__rep_copy. */
 typedef struct
 {
-  /* MD5 checksum for the contents produced by this representation.
+  /* Checksum for the contents produced by this representation.
      This checksum is for the contents the rep shows to consumers,
      regardless of how the rep stores the data under the hood.  It is
      independent of the storage (fulltext, delta, whatever).
 
-     If all the bytes are 0, then for compatibility behave as though
-     this checksum matches the expected checksum. */
-  unsigned char checksum[APR_MD5_DIGESTSIZE];
+     If checksum is NULL, then for compatibility behave as though this
+     checksum matches the expected checksum. */
+  svn_checksum_t *checksum;
 
   /* Revision where this representation is located. */
   svn_revnum_t revision;

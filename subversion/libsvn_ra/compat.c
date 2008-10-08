@@ -20,7 +20,6 @@
 
 /*** Includes. ***/
 #include <apr_pools.h>
-#include <assert.h>
 
 #include "svn_error.h"
 #include "svn_pools.h"
@@ -731,7 +730,7 @@ svn_ra__file_revs_from_log(svn_ra_session_t *ra_session,
               (&file, &temp_path,
                svn_path_join(temp_dir, "tmp", currpool), ".tmp",
                svn_io_file_del_on_pool_cleanup, currpool));
-      stream = svn_stream_from_aprfile(file, currpool);
+      stream = svn_stream_from_aprfile2(file, TRUE, currpool);
       SVN_ERR(svn_ra_get_file(ra_session, rev->path + 1, rev->revision,
                               stream, NULL, &props, currpool));
       SVN_ERR(svn_stream_close(stream));

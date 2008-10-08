@@ -252,7 +252,5 @@ svn_client_get_changelists(const char *path,
   SVN_ERR(svn_wc_walk_entries3(path, adm_access, &get_cl_entry_callbacks, &geb,
                                depth, FALSE, /* don't show hidden entries */
                                ctx->cancel_func, ctx->cancel_baton, pool));
-  SVN_ERR(svn_wc_adm_close(adm_access));
-
-  return SVN_NO_ERROR;
+  return svn_wc_adm_close(adm_access);
 }

@@ -4,7 +4,7 @@
  * in here.
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -432,7 +432,7 @@ svn_cl__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
       (finfo_before.size != finfo_after.size))
     {
       svn_stringbuf_t *edited_contents_s;
-      err = svn_stringbuf_from_file(&edited_contents_s, tmpfile_name, pool);
+      err = svn_stringbuf_from_file2(&edited_contents_s, tmpfile_name, pool);
       if (err)
         goto cleanup;
 
@@ -800,10 +800,10 @@ svn_cl__get_log_message(const char **log_msg,
       if (! message)
         {
           const char *reply;
-          SVN_ERR(svn_cmdline_prompt_user
+          SVN_ERR(svn_cmdline_prompt_user2
                   (&reply,
                    _("\nLog message unchanged or not specified\n"
-                     "(a)bort, (c)ontinue, (e)dit:\n"), pool));
+                     "(a)bort, (c)ontinue, (e)dit:\n"), NULL, pool));
           if (reply)
             {
               char letter = apr_tolower(reply[0]);
@@ -906,7 +906,7 @@ svn_cl__try(svn_error_t *err,
           if (err->apr_err == apr_err)
             {
               if (! quiet)
-                svn_handle_warning(stderr, err);
+                svn_handle_warning2(stderr, err, "svn: ");
               svn_error_clear(err);
               return SVN_NO_ERROR;
             }

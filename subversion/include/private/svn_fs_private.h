@@ -20,6 +20,8 @@
 #ifndef SVN_FS_PRIVATE_H
 #define SVN_FS_PRIVATE_H
 
+#include "svn_fs.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -37,6 +39,19 @@ extern "C" {
      1    -> '\0'
  */
 #define SVN_FS__TXN_MAX_LEN 220
+
+/** Retrieve the lock-tokens associated in the context @a access_ctx.
+ * The tokens are in a hash keyed with <tt>const char *</tt> tokens,
+ * and with <tt>const char *</tt> values for the paths associated.
+ *
+ * You should always use svn_fs_access_add_lock_token2() if you intend
+ * to use this function.  The result of the function is not guaranteed
+ * if you use it with the deprecated svn_fs_access_add_lock_token()
+ * API.
+ *
+ * @since New in 1.6. */
+apr_hash_t *
+svn_fs__access_get_lock_tokens(svn_fs_access_t *access_ctx);
 
 #ifdef __cplusplus
 }

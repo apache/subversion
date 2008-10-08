@@ -100,9 +100,6 @@ typedef enum svn_wc__copy_t
   /* Copy, translate using file properties */
   svn_wc__copy_translate,
 
-  /* Copy, translate using only the svn:special property, if any */
-  svn_wc__copy_translate_special_only,
-
   /* Copy, detranslate using file properties */
   svn_wc__copy_detranslate
 } svn_wc__copy_t;

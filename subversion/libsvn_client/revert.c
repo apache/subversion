@@ -95,9 +95,7 @@ revert(const char *path,
         return err;
     }
 
-  SVN_ERR(svn_wc_adm_close(adm_access));
-
-  return SVN_NO_ERROR;
+  return svn_wc_adm_close(adm_access);
 }
 
 

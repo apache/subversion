@@ -40,8 +40,6 @@
  *
  */
 
-#include <assert.h>
-
 #include <apr_hash.h>
 
 #include "svn_pools.h"
@@ -211,12 +209,8 @@ struct file_baton {
   const char *path;
   const char *wc_path;
 
- /* When constructing the requested repository version of the file,
-    ORIGINAL_FILE is version of the file in the working copy. TEMP_FILE is
-    the pristine repository file obtained by applying the repository diffs
-    to ORIGINAL_FILE. */
-  apr_file_t *original_file;
-  apr_file_t *temp_file;
+ /* When constructing the requested repository version of the file, we
+    drop the result into a file at TEMP_FILE_PATH. */
   const char *temp_file_path;
 
   /* The list of incoming BASE->repos propchanges. */
@@ -538,6 +532,33 @@ file_diff(struct dir_baton *dir_baton,
 
   /* Prep these two paths early. */
   textbase = svn_wc__text_base_path(path, FALSE, pool);
+
+  /* If the regular text base is not there, we fall back to the revert
+     text base (if that's not present either, we'll error later).  But
+     the logic here is subtler than one might at first expect.
+
+     When the file has some non-replacement scheduling, then it can be
+     expected to still have its regular text base.  But what about
+     when it's replaced or replaced-with-history?  In both cases, a
+     revert text-base will be present; in the latter case only, a
+     regular text-base be present as well.  So which text-base do we
+     want to use for the diff?
+     
+     One could argue that we should never diff against the revert
+     base, and instead diff against the empty-file for both types of
+     replacement.  After all, there is no ancestry relationship
+     between the working file and the base file.  But my guess is that
+     in practice, users want to see the diff between their working
+     file and "the nearest versioned thing", whatever that is.  I'm
+     not 100% sure this is the right decision, but it at least seems
+     to match our test suite's expectations. */
+  {
+    svn_node_kind_t kind;
+    SVN_ERR(svn_io_check_path(textbase, &kind, pool));
+    if (kind == svn_node_none)
+      textbase = svn_wc__text_revert_path(path, FALSE, pool);
+  }
+
   SVN_ERR(get_empty_file(eb, &empty_file));
 
   /* Get property diffs if this is not schedule delete. */
@@ -877,16 +898,14 @@ report_wc_file_as_added(struct dir_baton *dir_baton,
            | SVN_WC_TRANSLATE_USE_GLOBAL_TMP,
            pool));
 
-  SVN_ERR(eb->callbacks->file_added
+  return eb->callbacks->file_added
           (adm_access, NULL, NULL,
            path,
            empty_file, translated_file,
            0, entry->revision,
            NULL, mimetype,
            propchanges, emptyprops,
-           eb->callback_baton));
-
-  return SVN_NO_ERROR;
+           eb->callback_baton);
 }
 
 /* Report an existing directory in the working copy (either in BASE
@@ -1314,22 +1333,7 @@ window_handler(svn_txdelta_window_t *window,
 {
   struct file_baton *b = window_baton;
 
-  SVN_ERR(b->apply_handler(window, b->apply_baton));
-
-  if (!window)
-    {
-      SVN_ERR(svn_io_file_close(b->temp_file, b->pool));
-
-      if (b->added)
-        SVN_ERR(svn_io_file_close(b->original_file, b->pool));
-      else
-        {
-          SVN_ERR(svn_wc__close_text_base(b->original_file, b->path, 0,
-                                          b->pool));
-        }
-    }
-
-  return SVN_NO_ERROR;
+  return b->apply_handler(window, b->apply_baton);
 }
 
 /* An editor function. */
@@ -1344,6 +1348,8 @@ apply_textdelta(void *file_baton,
   struct edit_baton *eb = b->edit_baton;
   const svn_wc_entry_t *entry;
   const char *parent, *base_name;
+  svn_stream_t *source;
+  apr_file_t *temp_file;
 
   SVN_ERR(svn_wc_entry(&entry, b->wc_path, eb->anchor, FALSE, b->pool));
 
@@ -1357,31 +1363,25 @@ apply_textdelta(void *file_baton,
 
   if (b->added)
     {
-      /* An empty file is the starting point if the file is being added */
-      const char *empty_file;
-
-      SVN_ERR(get_empty_file(eb, &empty_file));
-      SVN_ERR(svn_io_file_open(&b->original_file, empty_file,
-                               APR_READ, APR_OS_DEFAULT, pool));
+      source = svn_stream_empty(pool);
     }
   else
     {
       /* The current text-base is the starting point if replacing */
-      SVN_ERR(svn_wc__open_text_base(&b->original_file, b->path,
-                                     APR_READ, b->pool));
+      SVN_ERR(svn_wc_get_pristine_contents(&source, b->path, b->pool, b->pool));
     }
 
   /* This is the file that will contain the pristine repository version. It
      is created in the admin temporary area. This file continues to exists
      until after the diff callback is run, at which point it is deleted. */
-  SVN_ERR(svn_wc_create_tmp_file2(&b->temp_file, &b->temp_file_path,
+  SVN_ERR(svn_wc_create_tmp_file2(&temp_file, &b->temp_file_path,
                                   parent, svn_io_file_del_on_pool_cleanup,
                                   b->pool));
 
-  svn_txdelta_apply(svn_stream_from_aprfile(b->original_file, b->pool),
-                    svn_stream_from_aprfile(b->temp_file, b->pool),
+  svn_txdelta_apply(source,
+                    svn_stream_from_aprfile2(temp_file, FALSE, b->pool),
                     NULL,
-                    b->temp_file_path,
+                    b->temp_file_path /* error_info */,
                     b->pool,
                     &b->apply_handler, &b->apply_baton);
 
@@ -1828,15 +1828,13 @@ svn_wc_get_diff_editor5(svn_wc_adm_access_t *anchor,
                                                 anchor,
                                                 pool));
 
-  SVN_ERR(svn_delta_get_cancellation_editor(cancel_func,
-                                            cancel_baton,
-                                            inner_editor,
-                                            inner_baton,
-                                            editor,
-                                            edit_baton,
-                                            pool));
-
-  return SVN_NO_ERROR;
+  return svn_delta_get_cancellation_editor(cancel_func,
+                                           cancel_baton,
+                                           inner_editor,
+                                           inner_baton,
+                                           editor,
+                                           edit_baton,
+                                           pool);
 }
 
 svn_error_t *
@@ -1982,9 +1980,7 @@ svn_wc_diff5(svn_wc_adm_access_t *anchor,
   else
     b = make_dir_baton(eb->anchor_path, NULL, eb, FALSE, depth, eb->pool);
 
-  SVN_ERR(directory_elements_diff(b));
-
-  return SVN_NO_ERROR;
+  return directory_elements_diff(b);
 }
 
 svn_error_t *

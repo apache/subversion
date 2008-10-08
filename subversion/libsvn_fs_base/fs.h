@@ -1,7 +1,7 @@
 /* fs.h : interface to Subversion filesystem, private to libsvn_fs
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -23,7 +23,6 @@
 
 #include <apr_pools.h>
 #include <apr_hash.h>
-#include <apr_md5.h>
 #include "svn_fs.h"
 
 #include "bdb/env.h"
@@ -41,6 +40,9 @@ extern "C" {
    what changes and features were added in which versions of this
    back-end's format.  */
 #define SVN_FS_BASE__FORMAT_NUMBER                4
+
+/* Minimum format number that supports explicit metadata */
+#define SVN_FS_BASE__MIN_METADATA_FORMAT          4
 
 /* Minimum format number that supports forward deltas */
 #define SVN_FS_BASE__MIN_FORWARD_DELTAS_FORMAT    4
@@ -60,6 +62,13 @@ svn_error_t *
 svn_fs_base__test_required_feature_format(svn_fs_t *fs,
                                           const char *feature,
                                           int requires);
+
+
+
+/*** Metadata keys. ***/
+
+/* Revision at which the repo started using forward deltas. */
+#define SVN_FS_BASE__METADATA_FORWARD_DELTA_UPGRADE  "forward-delta-rev"
 
 
 
@@ -83,6 +92,7 @@ typedef struct
   DB *locks;
   DB *lock_tokens;
   DB *node_origins;
+  DB *metadata;
 
   /* A boolean for tracking when we have a live Berkeley DB
      transaction trail alive. */
@@ -231,14 +241,14 @@ typedef struct
      transaction). */
   const char *txn_id;
 
-  /* MD5 checksum for the contents produced by this representation.
+  /* Checksum for the contents produced by this representation.
      This checksum is for the contents the rep shows to consumers,
      regardless of how the rep stores the data under the hood.  It is
      independent of the storage (fulltext, delta, whatever).
 
-     If all the bytes are 0, then for compatibility behave as though
+     If this is NULL, then for compatibility behave as though
      this checksum matches the expected checksum. */
-  unsigned char checksum[APR_MD5_DIGESTSIZE];
+  svn_checksum_t *checksum;
 
   /* kind-specific stuff */
   union

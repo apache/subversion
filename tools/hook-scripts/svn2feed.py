@@ -78,7 +78,7 @@ if sys.version_info < (2, 3):
 
 import getopt
 import os
-import popen2
+import subprocess
 import cPickle as pickle
 import datetime
 import time
@@ -127,18 +127,14 @@ class Svn2Feed:
         revision = str(revision)
 
         cmd = [self.svnlook_cmd, 'info', '-r', revision, self.repos_path]
-        child_out, child_in, child_err = popen2.popen3(cmd)
-        info_lines = child_out.readlines()
-        child_out.close()
-        child_in.close()
-        child_err.close()
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+        proc.wait()
+        info_lines = proc.stdout.readlines()
 
         cmd = [self.svnlook_cmd, 'changed', '-r', revision, self.repos_path]
-        child_out, child_in, child_err = popen2.popen3(cmd)
-        changed_data = child_out.read()
-        child_out.close()
-        child_in.close()
-        child_err.close()
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+        proc.wait()
+        changed_data = proc.stdout.readlines()
 
         desc = ("\nRevision: %s\nLog: %sModified: \n%s"
                 % (revision, info_lines[3], changed_data))
@@ -411,13 +407,10 @@ def main():
         svnlook_cmd = 'svnlook'
         if svn_path is not None:
             svnlook_cmd = os.path.join(svn_path, 'svnlook')
-        child_out, child_in, child_err = popen2.popen3([svnlook_cmd,
-                                                        'youngest',
-                                                        repos_path])
-        cmd_out = child_out.readlines()
-        child_out.close()
-        child_in.close()
-        child_err.close()
+        cmd = [svnlook_cmd, 'youngest', repos_path]
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+        proc.wait()
+        cmd_out = proc.stdout.readlines()
         try:
             revisions = [int(cmd_out[0])]
         except IndexError, msg:

@@ -33,8 +33,6 @@
 #include "svn_mergeinfo.h"
 #include "repos.h"
 
-#include <assert.h>
-
 
 /* Note:  this binary search assumes that the datestamp properties on
    each revision are in chronological order.  That is if revision A >
@@ -66,9 +64,7 @@ get_time(apr_time_t *tm,
       (SVN_ERR_FS_GENERAL, NULL,
        _("Failed to find time on revision %ld"), rev);
 
-  SVN_ERR(svn_time_from_cstring(tm, date_str->data, pool));
-
-  return SVN_NO_ERROR;
+  return svn_time_from_cstring(tm, date_str->data, pool);
 }
 
 

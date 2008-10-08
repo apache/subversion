@@ -58,13 +58,11 @@ svn_client_resolve(const char *path,
                                  ctx->cancel_func, ctx->cancel_baton,
                                  pool));
 
-  SVN_ERR(svn_wc_resolved_conflict3(path, adm_access, TRUE, TRUE, depth,
-                                    conflict_choice,
+  SVN_ERR(svn_wc_resolved_conflict4(path, adm_access, TRUE, TRUE, TRUE,
+                                    depth, conflict_choice,
                                     ctx->notify_func2, ctx->notify_baton2,
                                     ctx->cancel_func, ctx->cancel_baton,
                                     pool));
 
-  SVN_ERR(svn_wc_adm_close(adm_access));
-
-  return SVN_NO_ERROR;
+  return svn_wc_adm_close(adm_access);
 }

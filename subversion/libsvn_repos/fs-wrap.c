@@ -448,6 +448,7 @@ svn_repos_fs_lock(svn_lock_t **lock,
   svn_error_t *err;
   svn_fs_access_t *access_ctx = NULL;
   const char *username = NULL;
+  const char *new_token;
   apr_array_header_t *paths;
 
   /* Setup an array of paths in anticipation of the ra layers handling
@@ -467,8 +468,10 @@ svn_repos_fs_lock(svn_lock_t **lock,
 
   /* Run pre-lock hook.  This could throw error, preventing
      svn_fs_lock() from happening. */
-  SVN_ERR(svn_repos__hooks_pre_lock(repos, path, username, comment,
+  SVN_ERR(svn_repos__hooks_pre_lock(repos, &new_token, path, username, comment,
                                     steal_lock, pool));
+  if (*new_token)
+    token = new_token;
 
   /* Lock. */
   SVN_ERR(svn_fs_lock(lock, repos->fs, path, token, comment, is_dav_comment,

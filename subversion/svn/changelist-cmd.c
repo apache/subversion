@@ -96,27 +96,24 @@ svn_cl__changelist(apr_getopt_t *os,
 
   if (changelist_name)
     {
-      SVN_ERR(svn_cl__try
+      return svn_cl__try
               (svn_client_add_to_changelist(targets, changelist_name,
                                             depth, opt_state->changelists,
                                             ctx, pool),
                NULL, opt_state->quiet,
                SVN_ERR_UNVERSIONED_RESOURCE,
                SVN_ERR_WC_PATH_NOT_FOUND,
-               SVN_NO_ERROR));
+               SVN_NO_ERROR);
     }
   else
     {
-      SVN_ERR(svn_cl__try
+      return svn_cl__try
               (svn_client_remove_from_changelists(targets, depth,
                                                   opt_state->changelists,
                                                   ctx, pool),
                NULL, opt_state->quiet,
                SVN_ERR_UNVERSIONED_RESOURCE,
                SVN_ERR_WC_PATH_NOT_FOUND,
-               SVN_NO_ERROR));
+               SVN_NO_ERROR);
     }
-
-
-  return SVN_NO_ERROR;
 }

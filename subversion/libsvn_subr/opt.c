@@ -2,7 +2,7 @@
  * opt.c :  option and argument parsing for Subversion command lines
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -343,8 +343,8 @@ print_command_info(const svn_opt_subcommand_desc_t *cmd,
 
               /* convert each option code into an option */
               option =
-                svn_opt_get_option_from_code(cmd->valid_options[i],
-                                             options_table);
+                svn_opt_get_option_from_code2(cmd->valid_options[i],
+                                              options_table, NULL, pool);
 
               /* print the option's docstring */
               if (option && option->description)
@@ -894,7 +894,7 @@ svn_opt_args_to_target_array2(apr_array_header_t **targets_p,
 /* Note: This is substantially copied into svn_client_args_to_target_array() in
  * order to move to libsvn_client while maintaining backward compatibility. */
 svn_error_t *
-svn_opt_args_to_target_array3(apr_array_header_t **targets_p,
+svn_opt__args_to_target_array(apr_array_header_t **targets_p,
                               apr_getopt_t *os,
                               apr_array_header_t *known_targets,
                               apr_pool_t *pool)
@@ -1003,6 +1003,14 @@ svn_opt_args_to_target_array3(apr_array_header_t **targets_p,
   return err;
 }
 
+svn_error_t *
+svn_opt_args_to_target_array3(apr_array_header_t **targets_p,
+                              apr_getopt_t *os,
+                              apr_array_header_t *known_targets,
+                              apr_pool_t *pool)
+{
+  return svn_opt__args_to_target_array(targets_p, os,known_targets, pool);
+}
 
 svn_error_t *
 svn_opt_args_to_target_array(apr_array_header_t **targets_p,
@@ -1203,10 +1211,7 @@ print_version_info(const char *pgm_name,
                    apr_pool_t *pool)
 {
   if (quiet)
-    {
-      SVN_ERR(svn_cmdline_printf(pool, "%s\n", SVN_VER_NUMBER));
-      return SVN_NO_ERROR;
-    }
+    return svn_cmdline_printf(pool, "%s\n", SVN_VER_NUMBER);
 
   SVN_ERR(svn_cmdline_printf(pool, _("%s, version %s\n"
                                      "   compiled %s, %s\n\n"), pgm_name,

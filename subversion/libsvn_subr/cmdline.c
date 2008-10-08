@@ -384,33 +384,54 @@ get_auth_provider(svn_auth_provider_object_t **provider,
                   apr_pool_t *pool)
 {
   apr_dso_handle_t *dso;
-  apr_dso_handle_sym_t symbol;
-  const char *libname;
-  const char *funcname;
+  apr_dso_handle_sym_t provider_function_symbol, version_function_symbol;
+  const char *library_label, *library_name;
+  const char *provider_function_name, *version_function_name;
   *provider = NULL;
-  libname = apr_psprintf(pool,
-                         "libsvn_auth_%s-%d.so.0",
-                         provider_name,
-                         SVN_VER_MAJOR);
-  funcname = apr_psprintf(pool,
-                          "svn_auth_get_%s_%s_provider",
-                          provider_name, provider_type);
-  SVN_ERR(svn_dso_load(&dso, libname));
+  library_name = apr_psprintf(pool,
+                              "libsvn_auth_%s-%d.so.0",
+                              provider_name,
+                              SVN_VER_MAJOR);
+  library_label = apr_psprintf(pool, "svn_%s", provider_name);
+  provider_function_name = apr_psprintf(pool,
+                                        "svn_auth_get_%s_%s_provider",
+                                        provider_name, provider_type);
+  version_function_name = apr_psprintf(pool,
+                                       "svn_auth_%s_version",
+                                       provider_name);
+  SVN_ERR(svn_dso_load(&dso, library_name));
   if (dso)
     {
-      if (! apr_dso_sym(&symbol, dso, funcname))
+      if (apr_dso_sym(&version_function_symbol,
+                      dso,
+                      version_function_name) == 0)
+        {
+          svn_version_func_t version_function;
+          version_function = (svn_version_func_t) version_function_symbol;
+          const svn_version_checklist_t checklist[] =
+            {
+              { library_label, version_function },
+              { NULL, NULL }
+            };
+          SVN_ERR(svn_ver_check_list(svn_subr_version(), checklist));
+        }
+      if (apr_dso_sym(&provider_function_symbol,
+                      dso,
+                      provider_function_name) == 0)
         {
           if (strcmp(provider_type, "simple") == 0)
             {
-              svn_auth_simple_provider_func_t func;
-              func = (svn_auth_simple_provider_func_t) symbol;
-              func(provider, pool);
+              svn_auth_simple_provider_func_t provider_function;
+              provider_function = (svn_auth_simple_provider_func_t)
+                provider_function_symbol;
+              provider_function(provider, pool);
             }
           else if (strcmp(provider_type, "ssl_client_cert_pw") == 0)
             {
-              svn_auth_ssl_client_cert_pw_provider_func_t func;
-              func = (svn_auth_ssl_client_cert_pw_provider_func_t) symbol;
-              func(provider, pool);
+              svn_auth_ssl_client_cert_pw_provider_func_t provider_function;
+              provider_function = (svn_auth_ssl_client_cert_pw_provider_func_t)
+                provider_function_symbol;
+              provider_function(provider, pool);
             }
         }
     }
@@ -510,6 +531,9 @@ svn_cmdline_set_up_auth_baton(svn_auth_baton_t **ab,
 #ifdef SVN_HAVE_KEYCHAIN_SERVICES
           svn_auth_get_keychain_simple_provider(&provider, pool);
           APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+
+          svn_auth_get_keychain_ssl_client_cert_pw_provider(&provider, pool);
+          APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 #endif
           continue;
         }
@@ -530,8 +554,8 @@ svn_cmdline_set_up_auth_baton(svn_auth_baton_t **ab,
                                     pool));
           if (provider)
             {
-              APR_ARRAY_PUSH(providers,
-                             svn_auth_provider_object_t *) = provider;
+              APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *)
+                = provider;
             }
           SVN_ERR(get_auth_provider(&provider, "gnome_keyring",
                                     "ssl_client_cert_pw", pool));
@@ -550,8 +574,15 @@ svn_cmdline_set_up_auth_baton(svn_auth_baton_t **ab,
           SVN_ERR(get_auth_provider(&provider, "kwallet", "simple",  pool));
           if (provider)
             {
-              APR_ARRAY_PUSH(providers,
-                             svn_auth_provider_object_t *) = provider;
+              APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *)
+                = provider;
+            }
+          SVN_ERR(get_auth_provider(&provider, "kwallet",
+                                    "ssl_client_cert_pw", pool));
+          if (provider)
+            {
+              APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *)
+                = provider;
             }
 #endif
           continue;
@@ -741,7 +772,8 @@ svn_cmdline__print_xml_prop(svn_stringbuf_t **outstr,
     }
   else
     {
-      const svn_string_t *base64ed = svn_base64_encode_string(propval, pool);
+      const svn_string_t *base64ed = svn_base64_encode_string2(propval, TRUE,
+                                                               pool);
       encoding = "base64";
       xml_safe = base64ed->data;
     }

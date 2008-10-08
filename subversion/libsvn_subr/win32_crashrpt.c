@@ -20,10 +20,7 @@
 #ifdef SVN_USE_WIN32_CRASHHANDLER
 
 /*** Includes. ***/
-#ifdef APR_HAVE_IPV6
-#include <winsock2.h>
-#endif
-#include <windows.h>
+#include <apr.h>
 #include <dbghelp.h>
 #include <stdio.h>
 #include <stdlib.h>

@@ -138,7 +138,8 @@ dav_svn__get_locks_report(const dav_resource *resource,
 
           owner_string.data = lock->owner;
           owner_string.len = strlen(lock->owner);
-          encoded_owner = svn_base64_encode_string(&owner_string, subpool);
+          encoded_owner = svn_base64_encode_string2(&owner_string, TRUE,
+                                                    subpool);
           owner_to_send = encoded_owner->data;
           owner_base64 = TRUE;
         }
@@ -167,8 +168,8 @@ dav_svn__get_locks_report(const dav_resource *resource,
 
               comment_string.data = lock->comment;
               comment_string.len = strlen(lock->comment);
-              encoded_comment = svn_base64_encode_string(&comment_string,
-                                                         subpool);
+              encoded_comment = svn_base64_encode_string2(&comment_string,
+                                                          TRUE, subpool);
               comment_to_send = encoded_comment->data;
               comment_base64 = TRUE;
             }

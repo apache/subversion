@@ -1,5 +1,5 @@
 /*
- * gnome_keyring.c: GNOME Keyring provider for SVN_AUTH_CRED_SIMPLE
+ * gnome_keyring.c: GNOME Keyring provider for SVN_AUTH_CRED_*
  *
  * ====================================================================
  * Copyright (c) 2008 CollabNet.  All rights reserved.
@@ -24,7 +24,6 @@
 
 #include <apr_pools.h>
 #include "svn_auth.h"
-#include "svn_auth_dso.h"
 #include "svn_error.h"
 
 #include "private/svn_auth_private.h"
@@ -192,6 +191,12 @@ svn_auth_get_gnome_keyring_simple_provider
 
   gnome_keyring_init();
 }
+
+
+/*-----------------------------------------------------------------------*/
+/* GNOME Keyring SSL client certificate passphrase provider,             */
+/* puts passphrases in GNOME Keyring                                     */
+/*-----------------------------------------------------------------------*/
 
 /* Get cached encrypted credentials from the ssl client cert password
    provider's cache. */

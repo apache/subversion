@@ -70,9 +70,7 @@ proplist_receiver_xml(void *baton,
   /* "</target>" */
   svn_xml_make_close_tag(&sb, pool, "target");
 
-  SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
-
-  return SVN_NO_ERROR;
+  return svn_cl__error_checked_fputs(sb->data, stdout);
 }
 
 
@@ -94,10 +92,7 @@ proplist_receiver(void *baton,
 
   if (!opt_state->quiet)
     SVN_ERR(svn_cmdline_printf(pool, _("Properties on '%s':\n"), name_local));
-  SVN_ERR(svn_cl__print_prop_hash(prop_hash, (! opt_state->verbose),
-                                  pool));
-
-  return SVN_NO_ERROR;
+  return svn_cl__print_prop_hash(prop_hash, (! opt_state->verbose), pool);
 }
 
 

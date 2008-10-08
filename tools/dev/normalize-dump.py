@@ -2,7 +2,6 @@
 
 import sys
 import re
-import string
 
 header_re = re.compile(r'^([^:]*): ?(.*)$')
 
@@ -37,7 +36,7 @@ def parse_header_block(fp):
         line = fp.readline()
         if line == '':
             return headers, 1
-        line = string.strip(line)
+        line = line.strip()
         if line == '':
             return headers, 0
         matches = header_re.match(line)
@@ -55,7 +54,7 @@ def parse_file(fp):
         headers, eof = parse_header_block(fp)
 
         # This is a revision header block
-        if headers.has_key('Revision-number'):
+        if 'Revision-number' in headers:
 
             # If there was a previous revision, dump it
             if current_rev:
@@ -70,7 +69,7 @@ def parse_file(fp):
             fp.read(int(prop_len))
 
         # This is a node header block
-        elif headers.has_key('Node-path'):
+        elif 'Node-path' in headers:
 
             # Make a new NodePath object, and add it to the
             # dictionary thereof

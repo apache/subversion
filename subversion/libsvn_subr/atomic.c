@@ -59,7 +59,7 @@ svn_atomic__init_once(volatile svn_atomic_t *global_status,
   else while (status != SVN_ATOMIC_INITIALIZED)
     {
       if (status == SVN_ATOMIC_INIT_FAILED)
-        return svn_error_create(SVN_ERR_FS_GENERAL, NULL,
+        return svn_error_create(SVN_ERR_ATOMIC_INIT_FAILURE, NULL,
                                 "Couldn't perform atomic initialization");
 
       apr_sleep(APR_USEC_PER_SEC / 1000);

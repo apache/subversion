@@ -4,15 +4,17 @@
 
 import os
 import sys
-import string
-import ConfigParser
+try:
+  # Python >=3.0
+  import configparser
+except ImportError:
+  # Python <3.0
+  import ConfigParser as configparser
 
 import gen_base
 import generator.swig.header_wrappers
 import generator.swig.checkout_swig_header
 import generator.swig.external_runtime
-import generator.util.executable
-_exec = generator.util.executable
 
 from gen_base import build_path_join, build_path_strip, build_path_splitfile, \
       build_path_basename, build_path_dirname, build_path_retreat, unique
@@ -54,7 +56,7 @@ class Generator(gen_base.GeneratorBase):
     install_deps = self.graph.get_deps(gen_base.DT_INSTALL)
     install_sources = self.graph.get_all_sources(gen_base.DT_INSTALL)
 
-    cp = ConfigParser.ConfigParser()
+    cp = configparser.ConfigParser()
     cp.read('gen-make.opts')
     if cp.has_option('options', '--installed-libs'):
       self.installed_libs = cp.get('options', '--installed-libs').split(',')
@@ -72,7 +74,7 @@ class Generator(gen_base.GeneratorBase):
       if isinstance(target, gen_base.TargetRaModule) or \
          isinstance(target, gen_base.TargetFsModule):
         # name of the module: strip 'libsvn_' and upper-case it
-        name = string.upper(target.name[7:])
+        name = target.name[7:].upper()
 
         # construct a list of the other .la libs to link against
         retreat = build_path_retreat(target.path)
@@ -91,8 +93,8 @@ class Generator(gen_base.GeneratorBase):
           link.append(build_path_join(retreat, source.filename))
 
         self.ofile.write('%s_DEPS = %s\n'
-                         '%s_LINK = %s\n\n' % (name, string.join(deps, ' '),
-                                               name, string.join(link, ' ')))
+                         '%s_LINK = %s\n\n' % (name, ' '.join(deps),
+                                               name, ' '.join(link)))
 
     # write a list of directories in which things are built
     #   get all the test scripts' directories
@@ -101,21 +103,21 @@ class Generator(gen_base.GeneratorBase):
     #   remove duplicate directories between targets and tests
     build_dirs = unique(self.target_dirs + script_dirs + self.swig_dirs)
 
-    self.ofile.write('BUILD_DIRS = %s\n\n' % string.join(build_dirs))
+    self.ofile.write('BUILD_DIRS = %s\n\n' % ' '.join(build_dirs))
 
     # write lists of test files
     # deps = all, progs = not including those marked "testing = skip"
     self.ofile.write('BDB_TEST_DEPS = %s\n\n' %
-                     string.join(self.bdb_test_deps + self.bdb_scripts))
+                     ' '.join(self.bdb_test_deps + self.bdb_scripts))
     self.ofile.write('BDB_TEST_PROGRAMS = %s\n\n' %
-                     string.join(self.bdb_test_progs + self.bdb_scripts))
+                     ' '.join(self.bdb_test_progs + self.bdb_scripts))
     self.ofile.write('TEST_DEPS = %s\n\n' %
-                     string.join(self.test_deps + self.scripts))
+                     ' '.join(self.test_deps + self.scripts))
     self.ofile.write('TEST_PROGRAMS = %s\n\n' %
-                     string.join(self.test_progs + self.scripts))
+                     ' '.join(self.test_progs + self.scripts))
 
     # write list of all manpages
-    self.ofile.write('MANPAGES = %s\n\n' % string.join(self.manpages))
+    self.ofile.write('MANPAGES = %s\n\n' % ' '.join(self.manpages))
 
     # write a list of files to remove during "make clean"
     cfiles = [ ]
@@ -130,7 +132,7 @@ class Generator(gen_base.GeneratorBase):
          and target.filename[-3:] != '.la':
         cfiles.append(target.filename)
     cfiles.sort()
-    self.ofile.write('CLEAN_FILES = %s\n\n' % string.join(cfiles))
+    self.ofile.write('CLEAN_FILES = %s\n\n' % ' '.join(cfiles))
 
     # this is here because autogen-standalone needs it too
     self.ofile.write('SWIG_INCLUDES = -I$(abs_srcdir)/subversion/include \\\n'
@@ -170,7 +172,7 @@ class Generator(gen_base.GeneratorBase):
       swig_lang_deps[lang].append(str(objname))
 
     for lang in self.swig.langs:
-      lang_deps = string.join(swig_lang_deps[lang])
+      lang_deps = ' '.join(swig_lang_deps[lang])
       self.ofile.write(
         'autogen-swig-%s: %s\n' % (short[lang], lang_deps) +
         'autogen-swig: autogen-swig-%s\n' % short[lang] +
@@ -181,7 +183,7 @@ class Generator(gen_base.GeneratorBase):
     self.begin_section('Rules to build SWIG .c files from .i files')
 
     for objname, sources in swig_c_deps:
-      deps = string.join(map(str, sources))
+      deps = ' '.join(map(str, sources))
       source = str(sources[0])
       source_dir = build_path_dirname(source)
       opts = self.swig.opts[objname.lang]
@@ -261,8 +263,8 @@ class Generator(gen_base.GeneratorBase):
           if not nonlib.external_lib:
             deps.append(nonlib.filename)
 
-      targ_varname = string.replace(target, '-', '_')
-      objnames = string.join(build_path_strip(path, objects))
+      targ_varname = target.replace('-', '_')
+      objnames = ' '.join(build_path_strip(path, objects))
 
       # Output value of path variable
       self.ofile.write('%s_PATH = %s\n' % (targ_varname, path))
@@ -278,12 +280,12 @@ class Generator(gen_base.GeneratorBase):
           '%s_OBJECTS = %s\n'
           '%s_DEPS = $(%s_HEADERS) $(%s_OBJECTS) %s %s\n'
           '%s: $(%s_DEPS)\n'
-          % (targ_varname, string.join(headers),
+          % (targ_varname, ' '.join(headers),
 
-             targ_varname, string.join(objects),
+             targ_varname, ' '.join(objects),
 
              targ_varname, targ_varname, targ_varname, target_ob.add_deps,
-             string.join(deps),
+             ' '.join(deps),
 
              target_ob.name, targ_varname))
 
@@ -294,9 +296,9 @@ class Generator(gen_base.GeneratorBase):
             '%s_CLASSES = %s\n'
             '$(%s_HEADERS): $(%s_CLASS_FILENAMES)\n'
             '\t%s -d %s -classpath %s:$(%s_CLASSPATH) $(%s_CLASSES)\n'
-            % (targ_varname, string.join(header_class_filenames),
+            % (targ_varname, ' '.join(header_class_filenames),
 
-               targ_varname, string.join(header_classes),
+               targ_varname, ' '.join(header_classes),
 
                targ_varname, targ_varname,
 
@@ -309,7 +311,7 @@ class Generator(gen_base.GeneratorBase):
             '%s_SRC = %s\n'
             '$(%s_OBJECTS): $(%s_SRC)\n'
             '\t%s -d %s -classpath %s:$(%s_CLASSPATH) $(%s_SRC)\n'
-            % (targ_varname, string.join(object_srcs),
+            % (targ_varname, ' '.join(object_srcs),
 
                targ_varname, targ_varname,
 
@@ -322,14 +324,14 @@ class Generator(gen_base.GeneratorBase):
           self.ofile.write('\n\t$(JAR) cf %s -C %s %s' %
                            (build_path_join(target_ob.classes, target_ob.jar),
                             target_ob.classes,
-                            string.join(target_ob.packages, ' ')))
+                            ' '.join(target_ob.packages)))
 
         self.ofile.write('\n\n')
       elif isinstance(target_ob, gen_base.TargetI18N):
         self.ofile.write(
           '%s_DEPS = %s %s\n'
           '%s: $(%s_DEPS)\n\n'
-          % (targ_varname, target_ob.add_deps, string.join(objects + deps),
+          % (targ_varname, target_ob.add_deps, ' '.join(objects + deps),
              target_ob.name, targ_varname))
       else:
         self.ofile.write(
@@ -337,7 +339,7 @@ class Generator(gen_base.GeneratorBase):
           '%s_OBJECTS = %s\n'
           '%s: $(%s_DEPS)\n'
           '\tcd %s && %s -o %s %s $(%s_OBJECTS) %s $(LIBS)\n\n'
-          % (targ_varname, target_ob.add_deps, string.join(objects + deps),
+          % (targ_varname, target_ob.add_deps, ' '.join(objects + deps),
 
              targ_varname, objnames,
 
@@ -347,7 +349,7 @@ class Generator(gen_base.GeneratorBase):
              build_path_basename(target_ob.filename),
              (isinstance(target_ob, gen_base.TargetLib) and not
                target_ob.undefined_lib_symbols) and '$(LT_NO_UNDEFINED)' or "",
-             targ_varname, string.join(gen_base.unique(libs)))
+             targ_varname, ' '.join(gen_base.unique(libs)))
           )
 
     ########################################
@@ -364,7 +366,7 @@ class Generator(gen_base.GeneratorBase):
       for t in i_targets:
         if hasattr(t, 'filename'):
           outputs.append(t.filename)
-      self.ofile.write('%s: %s\n\n' % (itype, string.join(outputs)))
+      self.ofile.write('%s: %s\n\n' % (itype, ' '.join(outputs)))
 
     ########################################
     self.begin_section('Install-Group install targets')
@@ -381,12 +383,12 @@ class Generator(gen_base.GeneratorBase):
       files = gen_base._sorted_files(self.graph, area)
 
       if area == 'apache-mod':
-        self.ofile.write('install-mods-shared: %s\n' % (string.join(files),))
+        self.ofile.write('install-mods-shared: %s\n' % (' '.join(files)))
         for file in files:
           # cd to dirname before install to work around libtool 1.4.2 bug.
           dirname, fname = build_path_splitfile(file)
           base, ext = os.path.splitext(fname)
-          name = string.replace(base, 'mod_', '')
+          name = base.replace('mod_', '')
           self.ofile.write('\tcd %s ; '
                            '$(MKDIR) "$(APACHE_LIBEXECDIR)" ; '
                            '$(INSTALL_MOD_SHARED) -n %s %s\n'
@@ -394,11 +396,11 @@ class Generator(gen_base.GeneratorBase):
         self.ofile.write('\n')
 
       elif area != 'test' and area != 'bdb-test':
-        area_var = string.replace(area, '-', '_')
-        upper_var = string.upper(area_var)
+        area_var = area.replace('-', '_')
+        upper_var = area_var.upper()
         self.ofile.write('install-%s: %s\n'
                          '\t$(MKDIR) $(DESTDIR)$(%sdir)\n'
-                         % (area, string.join(files), area_var))
+                         % (area, ' '.join(files), area_var))
         for file in files:
           # cd to dirname before install to work around libtool 1.4.2 bug.
           dirname, fname = build_path_splitfile(file)
@@ -430,7 +432,7 @@ class Generator(gen_base.GeneratorBase):
                                  'subversion-%s' % self.version)
     self.ofile.write('install-include: %s\n'
                      '\t$(MKDIR) $(DESTDIR)%s\n'
-                     % (string.join(self.includes), includedir))
+                     % (' '.join(self.includes), includedir))
     for file in self.includes:
       self.ofile.write('\t$(INSTALL_INCLUDE) %s $(DESTDIR)%s\n'
                        % (build_path_join('$(abs_srcdir)', file),
@@ -456,7 +458,7 @@ class Generator(gen_base.GeneratorBase):
     obj_deps.sort(lambda (t1, s1), (t2, s2): cmp(t1.filename, t2.filename))
 
     for objname, sources in obj_deps:
-      deps = string.join(map(str, sources))
+      deps = ' '.join(map(str, sources))
       self.ofile.write('%s: %s\n' % (objname, deps))
       cmd = objname.compile_cmd
       if cmd:

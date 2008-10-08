@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -22,9 +22,8 @@
 #ifndef SVN_BASE64_H
 #define SVN_BASE64_H
 
-#include <apr_md5.h>
-
 #include "svn_io.h"
+#include "svn_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -43,13 +42,17 @@ extern "C" {
  * close the stream when done writing in order to squeeze out the last
  * bit of encoded data.  The stream is allocated in @c pool.
  */
-svn_stream_t *svn_base64_encode(svn_stream_t *output, apr_pool_t *pool);
+svn_stream_t *
+svn_base64_encode(svn_stream_t *output,
+                  apr_pool_t *pool);
 
 /** Return a writable generic stream which will decode base64-encoded
  * data and write the decoded data to @c output.  The stream is allocated
  * in @c pool.
  */
-svn_stream_t *svn_base64_decode(svn_stream_t *output, apr_pool_t *pool);
+svn_stream_t *
+svn_base64_decode(svn_stream_t *output,
+                  apr_pool_t *pool);
 
 
 /** Encode an @c svn_stringbuf_t into base64.
@@ -62,9 +65,10 @@ svn_stream_t *svn_base64_decode(svn_stream_t *output, apr_pool_t *pool);
  *
  * @since New in 1.6.
  */
-const svn_string_t *svn_base64_encode_string2(const svn_string_t *str,
-                                              svn_boolean_t break_lines,
-                                              apr_pool_t *pool);
+const svn_string_t *
+svn_base64_encode_string2(const svn_string_t *str,
+                          svn_boolean_t break_lines,
+                          apr_pool_t *pool);
 
 /**
  * Same as svn_base64_encode_string2, but with @a break_lines always
@@ -72,8 +76,10 @@ const svn_string_t *svn_base64_encode_string2(const svn_string_t *str,
  *
  * @deprecated Provided for backward compatibility with the 1.5 API.
  */
-const svn_string_t *svn_base64_encode_string(const svn_string_t *str,
-                                             apr_pool_t *pool);
+SVN_DEPRECATED
+const svn_string_t *
+svn_base64_encode_string(const svn_string_t *str,
+                         apr_pool_t *pool);
 
 /** Decode an @c svn_stringbuf_t from base64.
  *
@@ -82,17 +88,33 @@ const svn_string_t *svn_base64_encode_string(const svn_string_t *str,
  * pool.
  *
  */
-const svn_string_t *svn_base64_decode_string(const svn_string_t *str,
-                                             apr_pool_t *pool);
+const svn_string_t *
+svn_base64_decode_string(const svn_string_t *str,
+                         apr_pool_t *pool);
 
+
+/** Return a base64-encoded checksum for finalized @a checksum.
+ * Allocate the returned checksum in @a pool.
+ *
+ * If @a checksum->kind is not recognized, return @c 0.
+ *
+ * @since New in 1.6.
+ */
+svn_stringbuf_t *
+svn_base64_from_checksum(svn_checksum_t *checksum,
+                         apr_pool_t *pool);
 
 /** Return a base64-encoded checksum for finalized @c digest.
  *
  * @c digest contains @c APR_MD5_DIGESTSIZE bytes of finalized data.
  * Allocate the returned checksum in @c pool.
+ *
+ * @deprecated Provided for backward compatibility with the 1.5 API.
  */
-svn_stringbuf_t *svn_base64_from_md5(unsigned char digest[],
-                                     apr_pool_t *pool);
+SVN_DEPRECATED
+svn_stringbuf_t *
+svn_base64_from_md5(unsigned char digest[],
+                    apr_pool_t *pool);
 
 
 /** @} end group: Base64 encoding/decoding functions */

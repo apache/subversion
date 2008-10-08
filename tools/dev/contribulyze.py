@@ -167,7 +167,7 @@ class Contributor:
     generate the arguments."""
     c = None
     for key in username, real_name, email:
-      if key and Contributor.all_contributors.has_key(key):
+      if key and key in Contributor.all_contributors:
         c = Contributor.all_contributors[key]
         break
     # If we didn't get a Contributor, create one now.
@@ -459,7 +459,7 @@ class LogMessage:
     # Map field names (e.g., "Patch", "Review", "Suggested") onto
     # Field objects.
     self.fields = { }
-    if LogMessage.all_logs.has_key(revision):
+    if revision in LogMessage.all_logs:
       complain("Revision '%s' seen more than once" % revision, True)
     LogMessage.all_logs[revision] = self
     rev_as_number = int(revision[1:])
@@ -560,7 +560,7 @@ def graze(input):
               while m:
                 if not field:
                   ident = m.group(1)
-                  if field_aliases.has_key(ident):
+                  if ident in field_aliases:
                     field = Field(field_aliases[ident], ident)
                   else:
                     field = Field(ident)
@@ -655,7 +655,7 @@ def drop(revision_url_pattern):
   sorted_contributors = Contributor.all_contributors.values()
   sorted_contributors.sort()
   for c in sorted_contributors:
-    if not seen_contributors.has_key(c):
+    if c not in seen_contributors:
       if c.score() > 0:
         if c.is_full_committer:
           # Don't even bother to print out full committers.  They are

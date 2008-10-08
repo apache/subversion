@@ -148,7 +148,7 @@ class SvnClientTest < Test::Unit::TestCase
     dir = "dir"
     dir2 = "dir2"
     dirs = [dir, dir2]
-    dirs_path = dirs.collect {|d| Pathname(@wc_path) + d}
+    dirs_path = dirs.collect {|d| Pathname.new(@wc_path) + d}
     dirs_full_path = dirs_path.collect {|path| path.expand_path}
 
     ctx = make_context(log)
@@ -190,7 +190,7 @@ class SvnClientTest < Test::Unit::TestCase
     log = "sample log"
     dir = "parent"
     child_dir = "parent/child"
-    dir_path = Pathname(@wc_path) + dir
+    dir_path = Pathname.new(@wc_path) + dir
     child_dir_path = dir_path + "child"
     full_paths = [dir_path, child_dir_path].collect {|path| path.expand_path}
 
@@ -990,8 +990,13 @@ class SvnClientTest < Test::Unit::TestCase
     assert(File.exist?(trunk_path))
 
     yield(ctx, branch, rev3, rev4, trunk, nil, false, true)
-    assert_not_changed(ctx, trunk)
-
+    statuses = []
+    ctx.status(trunk) do |_, status|
+      statuses << status
+    end
+    assert_equal(1, statuses.size, "Only one entry should have changed")
+    assert_equal(Svn::Wc::STATUS_NORMAL, statuses.first.text_status, "No changes to file content expected")
+    assert_equal(Svn::Wc::STATUS_MODIFIED, statuses.first.prop_status, "merge info changes")
 
     ctx.propdel("svn:mergeinfo", trunk)
     rev6 = ctx.commit(@wc_path).revision
@@ -1138,8 +1143,8 @@ class SvnClientTest < Test::Unit::TestCase
     src = "source\n"
     file1 = "sample1.txt"
     file2 = "sample2.txt"
-    path1 = Pathname(@wc_path) + file1
-    path2 = Pathname(@wc_path) + file2
+    path1 = Pathname.new(@wc_path) + file1
+    path2 = Pathname.new(@wc_path) + file2
     full_path2 = path2.expand_path
 
     ctx = make_context(log)

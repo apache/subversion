@@ -250,8 +250,17 @@ drive(struct operation *operation,
 
           SVN_ERR(editor->apply_textdelta(file_baton, NULL, subpool,
                                           &handler, &handler_baton));
-          SVN_ERR(svn_io_file_open(&f, child->src_file, APR_READ,
-                                   APR_OS_DEFAULT, pool));
+          if (strcmp(child->src_file, "-"))
+            {
+              SVN_ERR(svn_io_file_open(&f, child->src_file, APR_READ,
+                                       APR_OS_DEFAULT, pool));
+            }
+          else
+            {
+              apr_status_t apr_err = apr_file_open_stdin(&f, pool);
+              if (apr_err)
+                return svn_error_wrap_apr(apr_err, "Can't open stdin");
+            }
           contents = svn_stream_from_aprfile(f, pool);
           SVN_ERR(svn_txdelta_send_stream(contents, handler,
                                           handler_baton, NULL, pool));
@@ -657,10 +666,10 @@ usage(apr_pool_t *pool, int exit_val)
     "  mkdir URL             create new directory URL\n"
     "  mv URL1 URL2          move URL1 to URL2\n"
     "  rm URL                delete URL\n"
-    "  put SRC-FILE URL      add or modify file URL with contents copied\n"
-    "                        from SRC-FILE\n"
-    "  propset NAME VAL URL  Set property NAME on URL to value VAL\n"
-    "  propdel NAME URL      Delete property NAME from URL\n"
+    "  put SRC-FILE URL      add or modify file URL with contents copied from\n"
+    "                        SRC-FILE (use \"-\" to read from standard input)\n"
+    "  propset NAME VAL URL  set property NAME on URL to value VAL\n"
+    "  propdel NAME URL      delete property NAME from URL\n"
     "\nOptions:\n"
     "  -h, --help            display this text\n"
     "  -m, --message ARG     use ARG as a log message\n"

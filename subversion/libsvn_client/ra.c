@@ -19,7 +19,6 @@
 
 
 #include <apr_pools.h>
-#include <assert.h>
 
 #include "svn_error.h"
 #include "svn_pools.h"
@@ -45,10 +44,8 @@ open_admin_tmp_file(apr_file_t **fp,
 {
   svn_client__callback_baton_t *cb = callback_baton;
 
-  SVN_ERR(svn_wc_create_tmp_file2(fp, NULL, cb->base_dir,
-                                  svn_io_file_del_on_close, pool));
-
-  return SVN_NO_ERROR;
+  return svn_wc_create_tmp_file2(fp, NULL, cb->base_dir,
+                                 svn_io_file_del_on_close, pool);
 }
 
 
@@ -69,10 +66,8 @@ open_tmp_file(apr_file_t **fp,
   truepath = svn_path_join(truepath, "tempfile", pool);
 
   /* Open a unique file;  use APR_DELONCLOSE. */
-  SVN_ERR(svn_io_open_unique_file2(fp, NULL, truepath, ".tmp",
-                                   svn_io_file_del_on_close, pool));
-
-  return SVN_NO_ERROR;
+  return svn_io_open_unique_file2(fp, NULL, truepath, ".tmp",
+                                  svn_io_file_del_on_close, pool);
 }
 
 
@@ -251,12 +246,10 @@ invalidate_wc_props(void *baton,
   path = svn_path_join(cb->base_dir, path, pool);
   SVN_ERR(svn_wc_adm_probe_retrieve(&adm_access, cb->base_access, path,
                                     pool));
-  SVN_ERR(svn_wc_walk_entries3(path, adm_access, &walk_callbacks, &wb,
-                               svn_depth_infinity, FALSE,
-                               cb->ctx->cancel_func, cb->ctx->cancel_baton,
-                               pool));
-
-  return SVN_NO_ERROR;
+  return svn_wc_walk_entries3(path, adm_access, &walk_callbacks, &wb,
+                              svn_depth_infinity, FALSE,
+                              cb->ctx->cancel_func, cb->ctx->cancel_baton,
+                              pool);
 }
 
 
@@ -321,10 +314,8 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
         uuid = entry->uuid;
     }
 
-  SVN_ERR(svn_ra_open3(ra_session, base_url, uuid, cbtable, cb,
-                       ctx->config, pool));
-
-  return SVN_NO_ERROR;
+  return svn_ra_open3(ra_session, base_url, uuid, cbtable, cb,
+                      ctx->config, pool);
 }
 
 svn_error_t *

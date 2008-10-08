@@ -34,6 +34,7 @@
 #include "cl.h"
 
 #include "svn_private_config.h"
+#include "tree-conflicts.h"
 
 
 /*** Code. ***/
@@ -46,8 +47,7 @@ svn_cl__info_print_time(apr_time_t atime,
   const char *time_utf8;
 
   time_utf8 = svn_time_to_human_cstring(atime, pool);
-  SVN_ERR(svn_cmdline_printf(pool, "%s: %s\n", desc, time_utf8));
-  return SVN_NO_ERROR;
+  return svn_cmdline_printf(pool, "%s: %s\n", desc, time_utf8);
 }
 
 
@@ -220,6 +220,25 @@ print_info_xml(void *baton,
 
       /* "</lock>" */
       svn_xml_make_close_tag(&sb, pool, "lock");
+    }
+
+  if (info->tree_conflicts)
+    {
+      svn_wc_conflict_description_t *conflict;
+      int i;
+
+      /* "<tree-conflicts>" */
+      svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "tree-conflicts", NULL);
+
+      for (i = 0; i < info->tree_conflicts->nelts; i++)
+        {
+          conflict = APR_ARRAY_IDX(info->tree_conflicts, i, 
+                                   svn_wc_conflict_description_t *);
+          SVN_ERR(svn_cl__append_tree_conflict_info_xml(sb, conflict, pool));
+        }
+
+      /* "</tree-conflicts>" */
+      svn_xml_make_close_tag(&sb, pool, "tree-conflicts");
     }
 
   /* "</entry>" */
@@ -428,10 +447,32 @@ print_info(void *baton,
     SVN_ERR(svn_cmdline_printf(pool, _("Changelist: %s\n"),
                                info->changelist));
 
-  /* Print extra newline separator. */
-  SVN_ERR(svn_cmdline_printf(pool, "\n"));
+  if (info->tree_conflicts)
+    {
+      svn_wc_conflict_description_t *tree_conflict;
+      svn_stringbuf_t *tree_conflict_descs = svn_stringbuf_create("", pool);
+      int i;
 
-  return SVN_NO_ERROR;
+      for (i = 0; i < info->tree_conflicts->nelts; i++)
+        {
+          svn_stringbuf_appendcstr(tree_conflict_descs, "\n");
+          tree_conflict = APR_ARRAY_IDX(info->tree_conflicts, i,
+                                        svn_wc_conflict_description_t *);
+          SVN_ERR(svn_cl__append_human_readable_tree_conflict_description(
+                                                           tree_conflict_descs,
+                                                           tree_conflict,
+                                                           pool));
+        }
+
+      if (tree_conflict_descs->len > 0)
+        {
+          svn_cmdline_printf(pool, "Tree conflicts:%s",
+                             tree_conflict_descs->data);
+        }
+    }
+
+  /* Print extra newline separator. */
+  return svn_cmdline_printf(pool, "\n");
 }
 
 

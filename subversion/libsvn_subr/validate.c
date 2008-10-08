@@ -41,7 +41,7 @@ svn_mime_type_validate(const char *mime_type, apr_pool_t *pool)
      only looking at the media type here. */
   const apr_size_t len = strcspn(mime_type, "; ");
   const char *const slash_pos = strchr(mime_type, '/');
-  int i;
+  apr_size_t i;
   const char *tspecials = "()<>@,;:\\\"/[]?=";
 
   if (len == 0)

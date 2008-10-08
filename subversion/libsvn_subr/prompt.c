@@ -29,6 +29,7 @@
 #include "svn_string.h"
 #include "svn_auth.h"
 #include "svn_error.h"
+#include "svn_path.h"
 
 #include "svn_private_config.h"
 
@@ -154,9 +155,7 @@ prompt(const char **result,
         return svn_error_wrap_apr(status, _("Can't get password"));
     }
 
-  SVN_ERR(svn_cmdline_cstring_to_utf8(result, strbuf->data, pool));
-
-  return SVN_NO_ERROR;
+  return svn_cmdline_cstring_to_utf8(result, strbuf->data, pool);
 }
 
 
@@ -335,14 +334,16 @@ svn_cmdline_auth_ssl_client_cert_prompt
 {
   svn_auth_cred_ssl_client_cert_t *cred = NULL;
   const char *cert_file = NULL;
+  const char *abs_cert_file = NULL;
   svn_cmdline_prompt_baton2_t *pb = baton;
 
   SVN_ERR(maybe_print_realm(realm, pool));
   SVN_ERR(prompt(&cert_file, _("Client certificate filename: "),
                  FALSE, pb, pool));
+  SVN_ERR(svn_path_get_absolute(&abs_cert_file, cert_file, pool));
 
   cred = apr_palloc(pool, sizeof(*cred));
-  cred->cert_file = cert_file;
+  cred->cert_file = abs_cert_file;
   cred->may_save = may_save;
   *cred_p = cred;
 
@@ -451,10 +452,9 @@ svn_cmdline_auth_plaintext_prompt(svn_boolean_t *may_save_plaintext,
     "-----------------------------------------------------------------------\n"
     );
 
-  SVN_ERR(plaintext_prompt_helper(may_save_plaintext, realmstring,
-                                  prompt_string, prompt_text, baton,
-                                  pool));
-  return SVN_NO_ERROR;
+  return plaintext_prompt_helper(may_save_plaintext, realmstring,
+                                 prompt_string, prompt_text, baton,
+                                 pool);
 }
 
 /* This implements 'svn_auth_plaintext_passphrase_prompt_func_t'. */
@@ -481,10 +481,9 @@ svn_cmdline_auth_plaintext_passphrase_prompt(svn_boolean_t *may_save_plaintext,
     "-----------------------------------------------------------------------\n"
     );
 
-  SVN_ERR(plaintext_prompt_helper(may_save_plaintext, realmstring,
-                                  prompt_string, prompt_text, baton,
-                                  pool));
-  return SVN_NO_ERROR;
+  return plaintext_prompt_helper(may_save_plaintext, realmstring,
+                                 prompt_string, prompt_text, baton,
+                                 pool);
 }
 
 

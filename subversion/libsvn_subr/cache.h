@@ -46,7 +46,7 @@ typedef struct {
 
 struct svn_cache_t {
   const svn_cache__vtable_t *vtable;
-  svn_cache_error_handler_t *error_handler;
+  svn_cache_error_handler_t error_handler;
   void *error_baton;
   void *cache_internal;
 };

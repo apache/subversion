@@ -1,6 +1,6 @@
 /*
  * ====================================================================
- * Copyright (c) 2005-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2005-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -23,6 +23,8 @@
 #include "svn_auth.h"
 #include "svn_opt.h"
 #include "svn_ra.h"
+
+#include "private/svn_opt_private.h"
 
 #include "svn_private_config.h"
 
@@ -61,7 +63,7 @@ enum {
                              svnsync_opt_config_dir, \
                              'q'
 
-static const svn_opt_subcommand_desc_t svnsync_cmd_table[] =
+static const svn_opt_subcommand_desc2_t svnsync_cmd_table[] =
   {
     { "initialize", initialize_cmd, { "init" },
       N_("usage: svnsync initialize DEST_URL SOURCE_URL\n"
@@ -72,6 +74,9 @@ static const svn_opt_subcommand_desc_t svnsync_cmd_table[] =
          "The destination URL must point to the root of a repository with\n"
          "no committed revisions.  The destination repository must allow\n"
          "revision property changes.\n"
+         "\n"
+         "If the source URL is not the root of a repository, only the\n"
+         "specified part of the repository will be synchronized.\n"
          "\n"
          "You should not commit to, or make revision property changes in,\n"
          "the destination repository by any method other than 'svnsync'.\n"
@@ -690,7 +695,7 @@ initialize_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
   apr_array_header_t *targets;
   subcommand_baton_t *baton;
 
-  SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
+  SVN_ERR(svn_opt__args_to_target_array(&targets, os,
                                         apr_array_make(pool, 0,
                                                        sizeof(const char *)),
                                         pool));
@@ -1621,7 +1626,7 @@ synchronize_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
   subcommand_baton_t *baton;
   const char *to_url;
 
-  SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
+  SVN_ERR(svn_opt__args_to_target_array(&targets, os,
                                         apr_array_make(pool, 0,
                                                        sizeof(const char *)),
                                         pool));
@@ -1718,7 +1723,7 @@ copy_revprops_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
 
   /* If there are two args, the last one is a revision range.  We'll
      effectively pop it from the end of the list.  Why?  Because
-     svn_opt_args_to_target_array2() does waaaaay too many useful
+     svn_opt__args_to_target_array() does waaaaay too many useful
      things for us not to use it.  */
   if (os->argc - os->ind == 2)
     {
@@ -1773,7 +1778,7 @@ copy_revprops_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
         }
     }
 
-  SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
+  SVN_ERR(svn_opt__args_to_target_array(&targets, os,
                                         apr_array_make(pool, 1,
                                                        sizeof(const char *)),
                                         pool));
@@ -1822,11 +1827,11 @@ help_cmd(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   SVN_ERR(svn_ra_print_modules(version_footer, pool));
 
-  SVN_ERR(svn_opt_print_help(os, "svnsync",
-                             opt_baton ? opt_baton->version : FALSE,
-                             FALSE, version_footer->data, header,
-                             svnsync_cmd_table, svnsync_options, NULL,
-                             pool));
+  SVN_ERR(svn_opt_print_help3(os, "svnsync",
+                              opt_baton ? opt_baton->version : FALSE,
+                              FALSE, version_footer->data, header,
+                              svnsync_cmd_table, svnsync_options, NULL,
+                              NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1838,7 +1843,7 @@ help_cmd(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 int
 main(int argc, const char *argv[])
 {
-  const svn_opt_subcommand_desc_t *subcommand = NULL;
+  const svn_opt_subcommand_desc2_t *subcommand = NULL;
   apr_array_header_t *received_opts;
   opt_baton_t opt_baton;
   svn_config_t *config;
@@ -1963,7 +1968,7 @@ main(int argc, const char *argv[])
     }
 
   if (opt_baton.help)
-    subcommand = svn_opt_get_canonical_subcommand(svnsync_cmd_table, "help");
+    subcommand = svn_opt_get_canonical_subcommand2(svnsync_cmd_table, "help");
 
   /* Disallow the mixing --username/password with their --source- and
      --sync- variants.  Treat "--username FOO" as "--source-username
@@ -2014,7 +2019,7 @@ main(int argc, const char *argv[])
           if (opt_baton.version)
             {
               /* Use the "help" subcommand to handle "--version". */
-              static const svn_opt_subcommand_desc_t pseudo_cmd =
+              static const svn_opt_subcommand_desc2_t pseudo_cmd =
                 { "--version", help_cmd, {0}, "",
                   {svnsync_opt_version,  /* must accept its own option */
                   } };
@@ -2031,8 +2036,8 @@ main(int argc, const char *argv[])
       else
         {
           const char *first_arg = os->argv[os->ind++];
-          subcommand = svn_opt_get_canonical_subcommand(svnsync_cmd_table,
-                                                        first_arg);
+          subcommand = svn_opt_get_canonical_subcommand2(svnsync_cmd_table,
+                                                         first_arg);
           if (subcommand == NULL)
             {
               help_cmd(NULL, NULL, pool);
@@ -2049,11 +2054,12 @@ main(int argc, const char *argv[])
       if (opt_id == 'h' || opt_id == '?')
         continue;
 
-      if (! svn_opt_subcommand_takes_option(subcommand, opt_id))
+      if (! svn_opt_subcommand_takes_option3(subcommand, opt_id, NULL))
         {
           const char *optstr;
           const apr_getopt_option_t *badopt =
-            svn_opt_get_option_from_code(opt_id, svnsync_options);
+            svn_opt_get_option_from_code2(opt_id, svnsync_options, subcommand,
+                                          pool);
           svn_opt_format_option(&optstr, badopt, FALSE, pool);
           if (subcommand->name[0] == '-')
             {

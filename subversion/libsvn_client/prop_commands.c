@@ -206,9 +206,7 @@ do_url_propset(const char *propname,
       SVN_ERR(editor->change_dir_prop(root_baton, propname, propval, pool));
     }
 
-  SVN_ERR(editor->close_directory(root_baton, pool));
-
-  return SVN_NO_ERROR;
+  return editor->close_directory(root_baton, pool);
 }
 
 static svn_error_t *
@@ -312,9 +310,7 @@ propset_on_url(svn_commit_info_t **commit_info_p,
     }
 
   /* Close the edit. */
-  SVN_ERR(editor->close_edit(edit_baton, pool));
-
-  return SVN_NO_ERROR;
+  return editor->close_edit(edit_baton, pool);
 }
 
 
@@ -378,9 +374,9 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
                                  _("Setting property '%s' on non-local target "
                                    "'%s' is not supported"), propname, target);
 
-      SVN_ERR(propset_on_url(commit_info_p, propname, propval, target,
-                             skip_checks, base_revision_for_url, revprop_table,
-                             ctx, pool));
+      return propset_on_url(commit_info_p, propname, propval, target,
+                            skip_checks, base_revision_for_url, revprop_table,
+                            ctx, pool);
     }
   else
     {
@@ -421,10 +417,8 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
           SVN_ERR(svn_wc_prop_set2(propname, propval, target,
                                    adm_access, skip_checks, pool));
         }
-      SVN_ERR(svn_wc_adm_close(adm_access));
+      return svn_wc_adm_close(adm_access);
     }
-
-  return SVN_NO_ERROR;
 }
 
 
@@ -529,10 +523,8 @@ svn_client_revprop_set2(const char *propname,
     }
 
   /* The actual RA call. */
-  SVN_ERR(svn_ra_change_rev_prop(ra_session, *set_rev, propname, propval,
-                                 pool));
-
-  return SVN_NO_ERROR;
+  return svn_ra_change_rev_prop(ra_session, *set_rev, propname, propval,
+                                pool);
 }
 
 
@@ -567,11 +559,9 @@ pristine_or_working_props(apr_hash_t **props,
                           apr_pool_t *pool)
 {
   if (pristine)
-    SVN_ERR(svn_wc_get_prop_diffs(NULL, props, path, adm_access, pool));
+    return svn_wc_get_prop_diffs(NULL, props, path, adm_access, pool);
   else
-    SVN_ERR(svn_wc_prop_list(props, path, adm_access, pool));
-
-  return SVN_NO_ERROR;
+    return svn_wc_prop_list(props, path, adm_access, pool);
 }
 
 
@@ -992,9 +982,7 @@ svn_client_revprop_get(const char *propname,
           (set_rev, NULL, ra_session, revision, NULL, pool));
 
   /* The actual RA call. */
-  SVN_ERR(svn_ra_rev_prop(ra_session, *set_rev, propname, propval, pool));
-
-  return SVN_NO_ERROR;
+  return svn_ra_rev_prop(ra_session, *set_rev, propname, propval, pool);
 }
 
 
@@ -1198,10 +1186,7 @@ proplist_walk_cb(const char *path,
 
   SVN_ERR(pristine_or_working_props(&hash, path, wb->base_access,
                                     wb->pristine, pool));
-  SVN_ERR(call_receiver(path, hash, wb->receiver, wb->receiver_baton,
-                        pool));
-
-  return SVN_NO_ERROR;
+  return call_receiver(path, hash, wb->receiver, wb->receiver_baton, pool);
 }
 
 
@@ -1357,11 +1342,9 @@ svn_client_proplist2(apr_array_header_t **props,
   pl_baton.props = *props;
   pl_baton.pool = pool;
 
-  SVN_ERR(svn_client_proplist3(target, peg_revision, revision,
-                               SVN_DEPTH_INFINITY_OR_EMPTY(recurse), NULL,
-                               proplist_receiver_cb, &pl_baton, ctx, pool));
-
-  return SVN_NO_ERROR;
+  return svn_client_proplist3(target, peg_revision, revision,
+                              SVN_DEPTH_INFINITY_OR_EMPTY(recurse), NULL,
+                              proplist_receiver_cb, &pl_baton, ctx, pool);
 }
 
 

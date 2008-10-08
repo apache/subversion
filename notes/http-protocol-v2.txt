@@ -1,0 +1,293 @@
+               A Streamlined HTTP Protocol for Subversion
+
+GOAL
+====
+
+Write a new HTTP protocol for svn, one which is entirely proprietary
+and designed for speed.
+
+
+PURPOSE / HISTORY
+=================
+
+Subversion standardized on Apache and the WebDAV/DeltaV protocol as a
+back in the earliest days of development, based on some very strong
+value propositions:
+
+  A. Able to go through corporate firewalls
+  B. Zillions of authn/authz options via Apache
+  C. Standardized encryption (SSL)
+  D. Excellent logging
+  E. Built-in repository browsing
+  F. Interoperability with other WebDAV clients
+  G. Caching within intermediate proxies
+
+Unfortunately, DeltaV is an insanely complex and inefficient protocol,
+and doesn't fit Subversion's model well at all.  The result is that
+Subversion speaks a "limited portion" of DeltaV, and pays a huge price
+for this complexity:  speed.
+
+A typical network trace involves dozens of unnecessary turnarounds
+where the client keeps asking for the same information over and over
+again, all for the sake of following DeltaV.  And then once the client
+has "discovered" the information it needs, it often ends up making a
+custom REPORT request anyway.  Most svn operations are at least twice
+as slow over HTTP than over the custom svnserve protocol.
+
+
+PROPOSAL
+========
+
+Write a new HTTP protocol for svn ("HTTP v2").  Map RA requests
+directly to HTTP requests.
+
+  * svn over HTTP should be much faster (eliminate turnarounds)
+ 
+  * svn over HTTP should be almost as easy to extend as svnserve.
+
+  * svn over HTTP should be comprehensible to devs and users both
+    (require no knowledge of DeltaV concepts).
+
+  * svn over HTTP should be designed for optimum cacheability by
+    proxy-servers.
+
+
+MILE-HIGH DESIGN
+================
+
+  * Write new mod_svn module.  Design it to run side-by-side with
+    mod_dav_svn on the same public URI.
+
+  * Extend libsvn_ra_serf to detect the Apache feature and if present,
+    speak the new protocol.
+
+  * Client/server compatibility:
+
+      - newer clients can still operate against old servers: they look
+        for new protocol in OPTIONS response; if not available, fall
+        back to making DeltaV requests.
+
+      - older clients can still operate against new servers: mod_svn
+        DECLINEs any old-style DeltaV request, allowing mod_dav_svn to
+        handle it instead.
+
+  * To upgrade a service, admins simply install mod_svn next to
+    mod_dav_svn.  They then ask their users to "upgrade the client to
+    get better HTTP speed".
+
+In theory, mod_svn should operate completely standalone (and should be
+tested this way.)  If an admin wants to support older clients, or add
+webdav functionality (such as autoversioning), then mod_dav_svn can be
+installed "behind" mod_svn.
+
+
+
+DESIGN
+======
+
+
+1. Client-Server Negotiation
+----------------------------
+
+  The administrator makes an svn repository available via mod_svn at a
+  specific URI, which we'll refer to as the "repository root URI".
+  (This same URI might also be serviced by mod_dav_svn too.)
+
+  mod_svn then advertises the new protocol in an OPTIONS response
+  against the repository root URI.  It specifically includes a mininum
+  and maximum version number of the protocol it understands.
+
+  ra_serf always starts an RA session with an OPTIONS request against
+  the repository root URI.  If new protocol isn't present (or an
+  unsuitable version), it falls back to DeltaV protocol.
+
+  TODO: like svnserve, mod_svn may also want to advertise specific
+  features in its OPTIONS response.
+
+
+2. General Command Mechanism
+----------------------------
+
+  From here, the client initiates HTTP requests match up with the
+  svn_ra.h interfaces.  Each RA 'command' takes a set of parameters
+  and represents a single network turnaround.
+
+  The standard pattern is to follow the lead of the mercurial network
+  protocol and embed these commands in either HTTP/1.1 GET or POST
+  methods against the repository root URI.  The command and parameters
+  are embedded into the request URI itself as standard query syntax.
+
+  For example, if the repository is available at the root URI
+  '/repos', then a client might send requests like these:
+
+     GET /repos?cmd=get-latest-rev
+
+     GET /repos?cmd=rev-proplist&r=23
+
+     GET /repos/trunk/foo.c?cmd=get-file&r=23
+
+  In general, we try to make these requests line up with the
+  corresponding RA APIs.  One exception, however, is that we don't
+  split the RA_session URI and the 'path' parameter into two pieces.
+  Using 'path' as a query parameter is weird.  So for an RA call like
+  this:
+
+      svn_ra_open(&ra_session, "/repos/trunk/src");
+      svn_ra_blort(ra_session, "foo.c", 23);
+
+  ...we'd issue a command like this:
+
+      GET /repos/trunk/src/foo.c?cmd=blort&rev=23
+
+  For requests which require real input data in the bodies, (such as
+  'update' or 'commit') we use a POST request.  For example:
+
+     POST /repos?cmd=update&targetrev=100
+
+     [body contains complete 'update report' describing working copy's
+     revisions;  response is a complete editor-drive.]
+
+     POST /repos?cmd=commit&keeplocks=true
+
+     [body contains complete editor-drive from client, including
+     possible revision-props that need changing (like svn:log), as
+     well as any necessary lock-tokens.  response is the newly
+     committed revision number.]
+
+
+3. Representation of structured data in request/response bodies
+---------------------------------------------------------------
+
+  XML is out : there's a huge performance penalty for producing and
+  consuming it, which is why companies like Facebook and Google have
+  released 'fast wire serialization' libraries like Thrift and
+  Protocol Buffers.  Unfortunately, these libraries require entire
+  structures to be held in memory in order to serialize/deserialze
+  them, and this isn't an option when dealing with something
+  (potentially) infinitely large like an editor-drive.
+
+  Luckily, svnserve already has a nice lisp-like representation of the
+  editor drive, and we can share its parsing/unparsing code.
+
+  We can also use this same representation for things like property
+  lists.
+
+  ## TODO:  flesh out examples here
+
+
+4. Commands
+-----------
+
+In the list of commands, all commands are assumed to be attached as
+?cmd=command to the request URI.  Command parameters are all
+query-encoded (&parm=val), and optional parameters are listed in
+square brackets.  Server response values are assumed to be in response
+bodies.
+
+
+  get-latest-rev
+
+    GET /repos[/path]?cmd=get-latest-rev
+
+    response: revnum
+
+  get-dated-rev
+
+    GET /repos[/path]?cmd=get-dated-rev&date=string
+
+    response: revnum
+
+  change-rev-prop
+
+    POST /repos[/path]?cmd=change-rev-prop&rev=num&name=string
+
+    [body contains binary value.  If body is empty rev-prop is deleted.]
+
+  rev-proplist
+
+    GET /repos[/path]?cmd=rev-proplist&rev=num
+
+    response:  proplist
+
+  rev-prop
+
+    GET /repos[/path]?cmd=rev-prop&rev=num&name=string
+
+    response:  propval (may be binary data)
+
+  commit
+
+    POST /repos[/path]?cmd=commit[&keep-locks=bool]
+
+    [body contains:
+             optional list of revprops (including svn:log)
+             optional list of lockpath:locktoken pairs
+             editor-drive relative to /repos[/path] ]
+
+    response:  new revnum OR commit-error-message
+
+  get-file
+
+    GET /repos/path&cmd=get-file[&rev=num&want-props=bool&want-contents=bool]
+
+    If optional params aren't specified, rev defaults to HEAD, and
+    want-props and want-contents default to 'true'.
+
+    response: an s-expression containing:
+                 revnum
+                 checksum
+                 props [if requested]
+                 contents [if requested]
+
+     *** Note that two simpler URI forms work for fetching *raw* file
+         contents as well (no checksum, props, rev):
+
+            GET /repos/path
+            GET /repos/path?rev=number
+
+    ## TODO: need to design cacheability of both the long-form and
+       short-form of these requests.
+
+
+  .... NOT YET FINISHED ....
+
+
+
+5. Implementation details
+
+
+  A.  (new) mod_svn module
+
+      mod_svn requirements:
+
+         * operates completely standalone
+         * provides reasonable opportunity for proxy caching
+         * provides reasonable opportunity for pipelining clients
+         * must DECLINE DeltaV requests, so mod_dav_svn can be
+           installed 'behind it' on the same <Location>, for
+           compatibility with old clients.
+
+
+  B.  (new) libsvn_ra_http.so library
+
+      Uses serf library like libsvn_ra_serf, but speaks new http v2
+      protocol.
+
+      When libsvn_ra (the switching library) decides that some http RA
+      module is necessary, have it first call a utility function to do
+      an OPTIONS probe, then decide to use either ra_http or ra_serf.
+
+      This strategy aligns with the way in which libsvn_ra currently
+      "chooses" either ra_neon or ra_serf based on a runtime config
+      file.
+
+
+
+6. Optimization Possibilities
+
+
+   * Have the svn client stash some metadata which records whether a
+     working copy comes from a 'v2' HTTP server or not.  This would
+     save us from doing an extra OPTIONS probe at the start of each RA
+     session.
+

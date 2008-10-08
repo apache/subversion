@@ -958,8 +958,7 @@ svn_rangelist_diff(apr_array_header_t **deleted, apr_array_header_t **added,
                                pool));
   /* The items that are present in to, but not in from, must have been
      added.  */
-  SVN_ERR(svn_rangelist_remove(added, from, to, consider_inheritance, pool));
-  return SVN_NO_ERROR;
+  return svn_rangelist_remove(added, from, to, consider_inheritance, pool);
 }
 
 struct mergeinfo_diff_baton
@@ -1034,9 +1033,7 @@ walk_mergeinfo_hash_for_diff(svn_mergeinfo_t from, svn_mergeinfo_t to,
   mdb.consider_inheritance = consider_inheritance;
   mdb.pool = pool;
 
-  SVN_ERR(svn_hash_diff(from, to, mergeinfo_hash_diff_cb, &mdb, pool));
-
-  return SVN_NO_ERROR;
+  return svn_hash_diff(from, to, mergeinfo_hash_diff_cb, &mdb, pool);
 }
 
 svn_error_t *
@@ -1187,9 +1184,8 @@ svn_mergeinfo_remove(svn_mergeinfo_t *mergeinfo, svn_mergeinfo_t eraser,
                      svn_mergeinfo_t whiteboard, apr_pool_t *pool)
 {
   *mergeinfo = apr_hash_make(pool);
-  SVN_ERR(walk_mergeinfo_hash_for_diff(whiteboard, eraser, *mergeinfo, NULL,
-                                       TRUE, pool));
-  return SVN_NO_ERROR;
+  return walk_mergeinfo_hash_for_diff(whiteboard, eraser, *mergeinfo, NULL,
+                                      TRUE, pool);
 }
 
 svn_error_t *

@@ -48,11 +48,9 @@ set_target_revision(void *edit_baton,
 
   SVN_ERR(eb->cancel_func(eb->cancel_baton));
 
-  SVN_ERR(eb->wrapped_editor->set_target_revision(eb->wrapped_edit_baton,
-                                                  target_revision,
-                                                  pool));
-
-  return SVN_NO_ERROR;
+  return eb->wrapped_editor->set_target_revision(eb->wrapped_edit_baton,
+                                                 target_revision,
+                                                 pool);
 }
 
 static svn_error_t *
@@ -89,12 +87,10 @@ delete_entry(const char *path,
 
   SVN_ERR(eb->cancel_func(eb->cancel_baton));
 
-  SVN_ERR(eb->wrapped_editor->delete_entry(path,
-                                           base_revision,
-                                           pb->wrapped_dir_baton,
-                                           pool));
-
-  return SVN_NO_ERROR;
+  return eb->wrapped_editor->delete_entry(path,
+                                          base_revision,
+                                          pb->wrapped_dir_baton,
+                                          pool);
 }
 
 static svn_error_t *
@@ -213,13 +209,11 @@ apply_textdelta(void *file_baton,
 
   SVN_ERR(eb->cancel_func(eb->cancel_baton));
 
-  SVN_ERR(eb->wrapped_editor->apply_textdelta(fb->wrapped_file_baton,
-                                              base_checksum,
-                                              pool,
-                                              handler,
-                                              handler_baton));
-
-  return SVN_NO_ERROR;
+  return eb->wrapped_editor->apply_textdelta(fb->wrapped_file_baton,
+                                             base_checksum,
+                                             pool,
+                                             handler,
+                                             handler_baton);
 }
 
 static svn_error_t *
@@ -232,10 +226,8 @@ close_file(void *file_baton,
 
   SVN_ERR(eb->cancel_func(eb->cancel_baton));
 
-  SVN_ERR(eb->wrapped_editor->close_file(fb->wrapped_file_baton,
-                                         text_checksum, pool));
-
-  return SVN_NO_ERROR;
+  return eb->wrapped_editor->close_file(fb->wrapped_file_baton,
+                                        text_checksum, pool);
 }
 
 static svn_error_t *
@@ -248,10 +240,8 @@ absent_file(const char *path,
 
   SVN_ERR(eb->cancel_func(eb->cancel_baton));
 
-  SVN_ERR(eb->wrapped_editor->absent_file(path, fb->wrapped_file_baton,
-                                          pool));
-
-  return SVN_NO_ERROR;
+  return eb->wrapped_editor->absent_file(path, fb->wrapped_file_baton,
+                                         pool);
 }
 
 static svn_error_t *
@@ -263,10 +253,7 @@ close_directory(void *dir_baton,
 
   SVN_ERR(eb->cancel_func(eb->cancel_baton));
 
-  SVN_ERR(eb->wrapped_editor->close_directory(db->wrapped_dir_baton,
-                                              pool));
-
-  return SVN_NO_ERROR;
+  return eb->wrapped_editor->close_directory(db->wrapped_dir_baton, pool);
 }
 
 static svn_error_t *
@@ -279,10 +266,8 @@ absent_directory(const char *path,
 
   SVN_ERR(eb->cancel_func(eb->cancel_baton));
 
-  SVN_ERR(eb->wrapped_editor->absent_directory(path, db->wrapped_dir_baton,
-                                               pool));
-
-  return SVN_NO_ERROR;
+  return eb->wrapped_editor->absent_directory(path, db->wrapped_dir_baton,
+                                              pool);
 }
 
 static svn_error_t *
@@ -296,12 +281,8 @@ change_file_prop(void *file_baton,
 
   SVN_ERR(eb->cancel_func(eb->cancel_baton));
 
-  SVN_ERR(eb->wrapped_editor->change_file_prop(fb->wrapped_file_baton,
-                                               name,
-                                               value,
-                                               pool));
-
-  return SVN_NO_ERROR;
+  return eb->wrapped_editor->change_file_prop(fb->wrapped_file_baton,
+                                              name, value, pool);
 }
 
 static svn_error_t *
@@ -315,12 +296,10 @@ change_dir_prop(void *dir_baton,
 
   SVN_ERR(eb->cancel_func(eb->cancel_baton));
 
-  SVN_ERR(eb->wrapped_editor->change_dir_prop(db->wrapped_dir_baton,
-                                              name,
-                                              value,
-                                              pool));
-
-  return SVN_NO_ERROR;
+  return eb->wrapped_editor->change_dir_prop(db->wrapped_dir_baton,
+                                             name,
+                                             value,
+                                             pool);
 }
 
 static svn_error_t *
@@ -331,9 +310,7 @@ close_edit(void *edit_baton,
 
   SVN_ERR(eb->cancel_func(eb->cancel_baton));
 
-  SVN_ERR(eb->wrapped_editor->close_edit(eb->wrapped_edit_baton, pool));
-
-  return SVN_NO_ERROR;
+  return eb->wrapped_editor->close_edit(eb->wrapped_edit_baton, pool);
 }
 
 static svn_error_t *
@@ -344,9 +321,7 @@ abort_edit(void *edit_baton,
 
   SVN_ERR(eb->cancel_func(eb->cancel_baton));
 
-  SVN_ERR(eb->wrapped_editor->abort_edit(eb->wrapped_edit_baton, pool));
-
-  return SVN_NO_ERROR;
+  return eb->wrapped_editor->abort_edit(eb->wrapped_edit_baton, pool);
 }
 
 svn_error_t *

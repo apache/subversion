@@ -1,12 +1,12 @@
 ;;; dsvn.el --- Subversion interface
 
-;; Copyright 2006-2007 Virtutech AB
+;; Copyright 2006-2008 Virtutech AB
 
 ;; Author: David Kågedal <david@virtutech.com>
 ;;	Mattias Engdegård <mattias@virtutech.com>
 ;; Maintainer: David Kågedal <david@virtutech.com>
 ;; Created: 27 Jan 2006
-;; Version: 1.5
+;; Version: 1.6
 ;; Keywords: docs
 
 ;; This program is free software; you can redistribute it and/or
@@ -80,6 +80,7 @@
 ;;   U      Revert files
 ;;   P      View or edit properties of the file or directory under point
 ;;            (does not use marks)
+;;   l      Show log of file or directory under point (does not use marks)
 ;;
 ;; These commands update what is shown in the status buffer:
 ;;
@@ -97,7 +98,7 @@
 ;;   M-s    Switch working copy to another branch.
 ;;   M-m    Merge in changes using "svn merge".
 ;;
-;; To view the Subversion log type "M-x svn-log".
+;; To view the Subversion log, type "M-x svn-log".
 ;;
 ;; Bugs and missing features:
 ;; 
@@ -108,6 +109,7 @@
 
 (require 'vc)
 (require 'log-edit)
+(require 'uniquify)
 
 (defconst svn-status-msg-col   1)
 (defconst svn-status-flags-col 11)
@@ -122,6 +124,11 @@
   "*The svn program to run"
   :type 'string
   :group 'dsvn)  
+
+(defcustom svn-restore-windows nil
+  "*Non-nil means that the window configuration is restored after commit"
+  :type 'boolean
+  :group 'dsvn)
 
 (defun svn-call-process (program buffer &rest args)
   "Run svn and wait for it to finish.
@@ -145,8 +152,7 @@ Return non-NIL if there was any output."
   (let ((buf (get-buffer-create "*svn output*"))
         (dir default-directory)
         (inhibit-read-only t))
-    (save-current-buffer
-      (set-buffer buf)
+    (with-current-buffer buf
       (erase-buffer)
       (if mode
           (funcall mode)
@@ -171,7 +177,8 @@ Return non-NIL if there was any output."
 (defun svn-run-hidden (command args)
   "Run 'svn' without showing output.
 Argument COMMAND is the command to run.
-Optional argument ARGS is a list of arguments."
+Optional argument ARGS is a list of arguments.
+Returns the buffer that holds the output from 'svn'."
   (let ((buf (get-buffer-create " *svn*"))
         (dir default-directory))
     (with-current-buffer buf
@@ -195,19 +202,12 @@ Argument STR is the output string."
   (save-excursion
     (set-buffer (process-buffer proc))
     (goto-char (process-mark proc))
+    ;; put point back where it was to avoid scrolling for long output
+    ;; (e.g., large diffs)
     (let ((p (point))
           (inhibit-read-only t))
       (insert-before-markers str)
-      (goto-char p)
-      (while (search-forward "\r" (process-mark proc) t)
-        (save-excursion
-          (beginning-of-line)
-          (delete-region (point) (match-beginning 0))))
       (goto-char p))))
-
-(defvar svn-status-buffer nil
-  "svn-status buffer describing the files that a commit operation applies to")
-(make-variable-buffer-local 'svn-status-buffer)
 
 (defvar svn-todo-queue '()
   "A queue of commands to run when the current command finishes.")
@@ -219,6 +219,13 @@ Argument STR is the output string."
     (if (re-search-backward "^URL: \\(.*\\)$" nil t)
         (match-string 1)
       (error "Couldn't find the current URL"))))
+
+(defun svn-repository-root ()
+  "Get the repository root."
+  (with-current-buffer (svn-run-hidden 'info ())
+    (if (re-search-backward "^Repository Root: \\(.*\\)$" nil t)
+        (match-string 1)
+      (error "Couldn't find the repository root"))))
 
 (defun svn-run (command args &optional description)
   "Run subversion command COMMAND with ARGS.
@@ -250,8 +257,7 @@ buffer to describe what is going on."
     proc))
 
 (defun svn-check-running ()
-  (when (and svn-running
-             (eq (process-status (cadr svn-running)) 'run))
+  (when svn-running
     (error "Can't run two svn processes from the same buffer")))
 
 (defun svn-run-async (command args &optional file-filter)
@@ -260,8 +266,7 @@ buffer to describe what is going on."
 Optional third argument FILE-FILTER is the file filter to be in effect
 during the run."
 
-  (if (and svn-running
-           (eq (process-status (cadr svn-running)) 'run))
+  (if svn-running
       (setq svn-todo-queue
 	    (nconc svn-todo-queue
 		   (list (list command args file-filter))))
@@ -316,18 +321,22 @@ Argument ARG are the command line arguments."
   (interactive)
   (save-some-buffers)
   (let ((status-buf (current-buffer))
-        (commit-buf (get-buffer-create "*svn commit*")))
-    (switch-to-buffer-other-window commit-buf)
-    (log-edit 'svn-confirm-commit)
-    (setq svn-status-buffer status-buf)))
+        (commit-buf (get-buffer-create "*svn commit*"))
+        (window-conf (and svn-restore-windows (current-window-configuration))))
+    (log-edit 'svn-confirm-commit t
+              (lambda () (with-current-buffer log-edit-parent-buffer
+                           (svn-action-files)))
+              commit-buf)
+    (set (make-local-variable 'saved-window-configuration) window-conf)))
 
 (defun svn-confirm-commit ()
   "Commit changes with the current buffer as commit message."
   (interactive)
-  (let ((files (with-current-buffer svn-status-buffer
+  (let ((files (with-current-buffer log-edit-parent-buffer
                  (svn-action-files)))
         (commit-buf (current-buffer))
-        (status-buf svn-status-buffer)
+        (status-buf log-edit-parent-buffer)
+        (window-conf saved-window-configuration)
 	;; XEmacs lacks make-temp-file but has make-temp-name + temp-directory
         (msg-file (if (fboundp 'make-temp-file)
 		      (make-temp-file "svn-commit")
@@ -350,7 +359,9 @@ Argument ARG are the command line arguments."
       (make-local-variable 'svn-commit-files)
       (setq svn-commit-msg-file msg-file)
       (setq svn-commit-files files)
-      (svn-run 'commit (append (list "-N" "-F" msg-file) files)))))
+      (svn-run 'commit (append (list "-N" "-F" msg-file) files)))
+    (if window-conf
+        (set-window-configuration window-conf))))
 
 (defun svn-commit-filter (proc str)
   "Output filter function for `svn commit'."
@@ -379,10 +390,7 @@ Argument ARG are the command line arguments."
 (defun svn-commit-sentinel (proc reason)
   "Sentinel function for `svn commit'."
   (with-current-buffer (process-buffer proc)
-    (setq svn-running nil)
-    (if (/= (process-exit-status proc) 0)
-        (set-svn-process-status 'failed)
-      (set-svn-process-status 'finished)
+    (when (= (process-exit-status proc) 0)
       (while svn-commit-files
         (let* ((file (car svn-commit-files))
                (path (concat default-directory file))
@@ -401,15 +409,27 @@ Argument ARG are the command line arguments."
                                (vc-svn-workfile-version buffer-file-name))
               (vc-mode-line buffer-file-name))))
         (setq svn-commit-files (cdr svn-commit-files))))
-    (delete-file svn-commit-msg-file)))
+    (delete-file svn-commit-msg-file))
+  (svn-default-sentinel proc reason))
 
 ;;; Svn log
 
+(defun svn-file-log (pos)
+  "List the change log of the selected file or directory."
+  (interactive "d")
+  (let ((file (or (svn-getprop pos 'file)
+                  (svn-getprop pos 'dir))))
+    (unless file
+      (error "No file or directory on this line"))
+    (svn-log (list file))))
+
 (defun svn-log (arg)
   "Run `svn log'.
-Argument ARG is the command-line arguments, as a string."
+Argument ARG is the command-line arguments, as a string or a list."
   (interactive "ssvn log arguments: ")
-  (svn-run-with-output "log" (split-string arg)
+  (when (stringp arg)
+    (setq arg (split-string arg)))
+  (svn-run-with-output "log" arg
                        'svn-log-mode))
 
 (defvar svn-log-mode-map nil
@@ -419,10 +439,53 @@ Argument ARG is the command-line arguments, as a string."
   (define-key svn-log-mode-map "\r" 'svn-log-show-diff)
   (define-key svn-log-mode-map "n" 'svn-log-next)
   (define-key svn-log-mode-map "p" 'svn-log-prev)
+  (define-key svn-log-mode-map "e" 'svn-log-edit)
+  (define-key svn-log-mode-map "+" 'svn-log-expand)
+  (define-key svn-log-mode-map "-" 'svn-log-compact)
+  (define-key svn-log-mode-map "=" 'svn-log-diff)
   )
 
+(defun svn-update-log-entry (verbose-p)
+  "Update the log entry under point, using verbose output if
+VERBOSE-P."
+  (save-excursion
+    (end-of-line)
+    (re-search-backward svn-log-entry-start-re nil t)
+    (let ((start (point)))
+      (unless (re-search-forward "^r\\([0-9]+\\) |" nil t)
+        (error "Found no commit"))
+      (let* ((commit-id (string-to-int (match-string 1)))
+             (new (svn-run-hidden 'log
+                                  (append (and verbose-p '("-v"))
+                                          '("-r")
+                                          (list (int-to-string commit-id)))))
+             (text (with-current-buffer new
+                     (goto-char (point-min))
+                     (unless (re-search-forward svn-log-entry-start-re nil t)
+                       (error "Failed finding log entry start"))
+                     (unless (re-search-forward svn-log-entry-start-re nil t)
+                       (error "Failed finding log entry end"))
+                     (buffer-substring (point-min) (match-beginning 0))))
+             (inhibit-read-only t))
+        (re-search-forward svn-log-entry-start-re nil 'limit)
+        (goto-char (match-beginning 0))
+        (delete-region start (point))
+        (insert text)))))
+
+(defun svn-log-expand ()
+  "Show verbose log entry information."
+  (interactive)
+  (svn-update-log-entry t))
+
+(defun svn-log-compact ()
+  "Show compact log entry information."
+  (interactive)
+  (svn-update-log-entry nil))
+
 (defun svn-log-mode ()
-  "Major mode for viewing Subversion logs."
+  "Major mode for viewing Subversion logs.
+
+\\{svn-log-mode-map}"
   (interactive)
   (kill-all-local-variables)
   (setq major-mode 'svn-log-mode
@@ -430,13 +493,31 @@ Argument ARG is the command-line arguments, as a string."
   (use-local-map svn-log-mode-map)
   (setq paragraph-start "^commit"))
 
+(defconst svn-log-entry-start-re "^-\\{72\\}$")
+
+(defun svn-log-find-revision (commit-id)
+  (let (found start)
+    (save-excursion
+      (goto-char (point-min))
+      (while (and (re-search-forward svn-log-entry-start-re nil t)
+                  (setq start (point))
+                  (re-search-forward "^r\\([0-9]+\\) |" nil t)
+                  (if (/= (string-to-int (match-string 1)) commit-id)
+                      t
+                    (setq found t)
+                    nil))))
+    (when found
+      (goto-char start)
+      (beginning-of-line)
+      t)))
 
 (defun svn-log-current-commit ()
   (save-excursion
     (end-of-line)
+    (re-search-backward svn-log-entry-start-re nil t)
     (unless (re-search-forward "^r\\([0-9]+\\) |" nil t)
       (error "Found no commit"))
-    (string-to-number (match-string 1))))
+    (string-to-int (match-string 1))))
 
 (defun svn-log-show-diff ()
   "Show the changes introduced by the changeset under point."
@@ -446,8 +527,7 @@ Argument ARG is the command-line arguments, as a string."
         (dir default-directory)
         (inhibit-read-only t))
     (display-buffer diff-buf)
-    (save-current-buffer
-      (set-buffer diff-buf)
+    (with-current-buffer diff-buf
       (diff-mode)
       (setq buffer-read-only t)
       (erase-buffer)
@@ -456,11 +536,73 @@ Argument ARG is the command-line arguments, as a string."
                         "diff" "-r"
                         (format "%d:%d" (1- commit-id) commit-id)))))
 
+(defun svn-log-edit-files (commit-id)
+  (let ((root (svn-repository-root))
+        result)
+    (with-current-buffer
+        (svn-run-hidden 'log (list "-v" "-r"
+                                    (int-to-string commit-id)
+                                    root))
+      (goto-char (point-min))
+      (unless (re-search-forward "^Changed paths:" nil t)
+        (error "Cannot find list of changes"))
+      (while (re-search-forward
+              "^   \\(\\S-+\\)\\s-+\\(.*?\\)\\( (from .*)$\\)?$"
+              nil t)
+        (let ((how (match-string 1))
+              (file (match-string 2))
+              (tail (match-string 3)))
+          (when (string-match "\\([^/]*/\\)?\\([^/]*\\)$" file)
+            (setq file (match-string 0 file)))
+          (setq result (cons (concat how " " file) result)))))
+    (nreverse result)))
+
+(defun svn-log-diff ()
+  "Run `svn diff' for the current log entry."
+  (interactive)
+  (let ((commit-id (svn-log-current-commit)))
+    (svn-run-with-output "diff" (list "-c" (number-to-string commit-id))
+                         'diff-mode)))
+
+(defun svn-log-edit ()
+  "Edit the log message for the revision under point."
+  (interactive)
+  (let* ((commit-id (svn-log-current-commit))
+	 (log (svn-propget commit-id "svn:log"))
+         (cwd default-directory)
+         (parent-buffer (current-buffer))
+	 (buffer (get-buffer-create (format "*svn log message of r%d*"
+					    commit-id))))
+    (log-edit 'svn-log-edit-done t
+              `(lambda () (svn-log-edit-files ,commit-id))
+              buffer)
+    (insert log)
+    (set (make-local-variable 'svn-commit-id) commit-id)
+    (set (make-local-variable 'svn-directory) cwd)
+    (set (make-local-variable 'svn-parent-buffer) parent-buffer)
+    (setq default-directory cwd)
+    (message (substitute-command-keys
+	      "Press \\[log-edit-done] when you are done editing."))))
+
+(defun svn-log-edit-done ()
+  (interactive)
+  (setq default-directory svn-directory) ; just in case the user cd'd
+  (message "Changing log message...")
+  (let ((commit-id svn-commit-id))
+    (svn-propset commit-id "svn:log" (buffer-string))
+    (when (buffer-name svn-parent-buffer)
+      (save-excursion
+        (set-buffer svn-parent-buffer)
+        (when (svn-log-find-revision commit-id)
+          (svn-update-log-entry nil)))))
+  (kill-buffer nil)
+  (message "Changing log message... done"))
+
 (defun svn-log-next ()
   "Move to the next changeset in the log."
   (interactive)
   (end-of-line)
-  (unless (re-search-forward "^------------------------------------------------------------------------$" nil t)
+  (unless (re-search-forward svn-log-entry-start-re nil t)
     (error "Found no commit"))
   (beginning-of-line)
   (svn-log-show-diff))
@@ -469,7 +611,7 @@ Argument ARG is the command-line arguments, as a string."
   "Move to the previous changeset in the log."
   (interactive)
   (beginning-of-line)
-  (unless (re-search-backward "^------------------------------------------------------------------------$" nil t)
+  (unless (re-search-backward svn-log-entry-start-re nil t)
     (error "Found no commit"))
   (svn-log-show-diff))
 
@@ -493,9 +635,27 @@ Argument ARG is the command-line arguments, as a string."
 
 ;;; Svn propedit
 
-(defun svn-propget (file propname)
-  "Return the Subversion property PROPNAME of FILE."
-  (with-current-buffer (svn-run-hidden 'propget (list propname file))
+(defun svn-prop-args (file-or-rev)
+  "Returns a list of arguments to the 'svn prop...' commands, to
+make them act on FILE-OR-REV (a file name or a revision number)."
+  (if (integerp file-or-rev)
+      (list "--revprop" "-r" (int-to-string file-or-rev))
+    (list file-or-rev)))
+
+(defun svn-prop-description (file-or-rev)
+  "Returns a human-readable description of FILE-OR-REV (a file
+name or revision number)."
+  (if (integerp file-or-rev)
+      (format "revision %d" file-or-rev)
+    file-or-rev))
+
+(defun svn-propget (file-or-rev propname)
+  "Return the Subversion property PROPNAME of FILE-OR-REV (file
+name or revision number)."
+  (with-current-buffer
+      (svn-run-hidden 'propget
+		      (cons propname
+			    (svn-prop-args file-or-rev)))
     (substring (buffer-string) 0 -1)))	; trim final newline added by svn
 
 (defun svn-get-props (file)
@@ -618,7 +778,7 @@ Argument ARG is the command-line arguments, as a string."
 		 (set-text-properties 0 (length prop-name) nil prop-name)
 		 (set-text-properties 0 (length value) nil value)
 		 (when (assoc prop-name prop-alist)
-		   (error "Duplicated property '%s'" prop-name))
+		   (error "Duplicated property %s" prop-name))
 		 (setq prop-alist (cons (cons prop-name value) prop-alist))))
 	      ((looking-at "^>\\(.*\\)$")
 	       (let ((extra-line (match-string 1)))
@@ -644,9 +804,19 @@ Argument ARG is the command-line arguments, as a string."
   "Delete FILE's property PROP-NAME."
   (svn-run-hidden 'propdel (list prop-name file)))
 
-(defun svn-propset (file prop-name prop-value)
-  "Set FILE's property PROP-NAME to PROP-VALUE."
-  (svn-run-hidden 'propset (list prop-name prop-value file)))
+(defun svn-propset (file-or-rev prop-name prop-value)
+  "Set the property PROP-NAME to PROP-VALUE for FILE-OR-REV (a
+file name or revision number)."
+  (let ((buf (svn-run-hidden 'propset (append (list prop-name prop-value)
+                                              (svn-prop-args file-or-rev)))))
+    (unless
+        (with-current-buffer buf
+          (goto-char (point-min))
+          (looking-at "^property '.*' set on "))
+      (switch-to-buffer buf)
+      (error "Failed setting property %s of %s"
+             prop-name
+             (svn-prop-description file-or-rev)))))
 
 (defun svn-propedit-done ()
   "Apply property changes to the file."
@@ -699,6 +869,7 @@ Argument DIR is the directory to run svn in."
   (let ((status-buf (create-file-buffer (concat dir "*svn*")))
         (inhibit-read-only t))
     (with-current-buffer status-buf
+      (setq default-directory dir)
       (svn-status-mode)
 
       (make-local-variable 'svn-url-label)
@@ -706,7 +877,6 @@ Argument DIR is the directory to run svn in."
       (make-local-variable 'svn-running-label)
       (make-local-variable 'svn-output-marker)
 
-      (setq default-directory dir)
       (insert "Svn status for " dir) (newline)
       (insert "URL: ") (setq svn-url-label (svn-new-label))
       (insert " revision " ) (setq svn-revision-label (svn-new-label))
@@ -756,6 +926,8 @@ Argument DIR is the directory to run svn status in."
   (let ((proc (svn-run 'info ())))
     (while (eq (process-status proc) 'run)
       (accept-process-output proc 2 10000)))
+  ;; The sentinel isn't run by a-p-o, so we hack around it
+  (setq svn-running nil)
   (svn-refresh)
   (message
    (substitute-command-keys
@@ -763,7 +935,7 @@ Argument DIR is the directory to run svn status in."
 
 (defun svn-refresh (&optional clear)
   "Run `svn status'.
-If optional argument CLEAR is non-NIL, clear the buffer first."
+If optional prefix argument CLEAR is non-NIL, clear the buffer first."
   (interactive "P")
   (svn-check-running)
   (let ((inhibit-read-only t))
@@ -860,13 +1032,19 @@ outside."
       (goto-char (point-max))
       (insert str)
       (goto-char svn-output-marker)
-      (while (looking-at
-              "\\([ ACDGIMRX?!~][ CM][ L][ +][ S][ KOTB]\\) \\(.*\\)\n")
-        (let ((status (match-string 1))
-              (filename (match-string 2)))
-          (delete-region (match-beginning 0)
-                         (match-end 0))
-          (svn-insert-file filename status))))))
+      (while (cond ((looking-at
+                     "\\([ ACDGIMRX?!~][ CM][ L][ +][ S][ KOTB]\\) \\(.*\\)\n")
+                    (let ((status (match-string 1))
+                          (filename (match-string 2)))
+                      (delete-region (match-beginning 0)
+                                     (match-end 0))
+                      (svn-insert-file filename status))
+                    t)
+                   ((looking-at
+                     "\n\\|Performing status on external item at .*\n")
+                    (delete-region (match-beginning 0)
+                                   (match-end 0))
+                    t))))))
 
 (defun svn-status-sentinel (proc reason)
   (with-current-buffer (process-buffer proc)
@@ -919,9 +1097,6 @@ outside."
                (forward-line 1))
               (t
                (setq nomore t)))))))
-
-(defun svn-info-sentinel (proc reason)
-  (svn-default-sentinel proc reason))
 
 ;; update
 
@@ -1034,8 +1209,9 @@ been modified."
     (when (and buf (not (buffer-modified-p buf)))
       (with-current-buffer buf
 	(let ((was-ro buffer-read-only))
-	  (ignore-errors
-	    (revert-buffer t t))
+	  (condition-case nil
+	      (revert-buffer t t)
+	    (error nil))
 	  (when was-ro (toggle-read-only 1)))))))
 
 (defun svn-complete-url (url pred all)
@@ -1282,6 +1458,7 @@ been modified."
   (define-key svn-status-mode-map "=" 'svn-diff-file)
   (define-key svn-status-mode-map "p" 'svn-previous-file)
   (define-key svn-status-mode-map "n" 'svn-next-file)
+  (define-key svn-status-mode-map "l" 'svn-file-log)
   (define-key svn-status-mode-map "s" 'svn-refresh-file)
   (define-key svn-status-mode-map "S" 'svn-refresh-one)
   (define-key svn-status-mode-map "x" 'svn-expunge)
@@ -1310,6 +1487,9 @@ been modified."
   (make-local-variable 'svn-last-inserted-marker)
   (make-local-variable 'svn-last-inserted-filename)
   (make-local-variable 'svn-running)
+
+  (set (make-local-variable 'list-buffers-directory)
+       (expand-file-name "*svn*"))
 
   (setq major-mode 'svn-status-mode
         mode-name "Svn status")
@@ -1463,12 +1643,6 @@ argument."
           (delete-region (match-beginning 0)
                          (match-end 0))
           (svn-insert-file filename status))))))
-
-(defun svn-add-sentinel (proc reason)
-  (with-current-buffer (process-buffer proc)
-    (setq svn-running nil)
-    (set-svn-process-status 'finished))
-  (svn-default-sentinel proc reason))
 
 (defun svn-can-undo-deletion-p (actions)
   "Whether all marked files/directories can be deleted undoably"
@@ -1799,6 +1973,7 @@ files instead."
 		  '((svn-find-file "visit file")
 		    (svn-find-file-other-window "visit file other win")
 		    (svn-diff-file "show file diff")
+		    (svn-file-log "show file log")
 		    (svn-refresh "refresh all files")
 		    (svn-refresh-file "refresh marked files")
 		    (svn-refresh-one "refresh named file")
@@ -1898,20 +2073,21 @@ where the file information is."
 
 (add-hook 'vc-checkin-hook 'svn-after-commit)
 
-(defadvice vc-svn-register (after svn-vc-svn-register activate)
-  (svn-foreach-svn-buffer
-   (buffer-file-name)
-   (lambda (local-file-name file-pos)
-     (svn-refresh-item local-file-name t))))
+(defun svn-after-vc-command (command file flags)
+  (when (and (string= command "svn")
+             ;; Ignore command that do not modify file
+             (not (member (car flags) '("ann" "annotate" "blame"
+                                        "diff" "praise" "status"))))
+    (svn-foreach-svn-buffer
+     file
+     (lambda (local-file-name file-pos)
+       (svn-refresh-item local-file-name t)))))
 
-;;; To get reasonable uniquify behaviour, tell it what path to use
-;;; for the status buffers.
-(defadvice uniquify-buffer-file-name (after svn-uniquify activate)
-  (unless ad-return-value
-    ;; buffer is not visiting any file
-    (with-current-buffer (ad-get-arg 0)
-      (when (eq major-mode 'svn-status-mode)
-        (setq ad-return-value (expand-file-name "*svn*"))))))
+(add-hook 'vc-post-command-functions 'svn-after-vc-command)
+
+(setq uniquify-list-buffers-directory-modes
+      (cons 'svn-status-mode
+            uniquify-list-buffers-directory-modes))
 
 (provide 'dsvn)
 

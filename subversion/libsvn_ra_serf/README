@@ -35,7 +35,9 @@ Completed tasks
   - 4 connections are open on an update (matches browser's default behavior)
   - 1 connection is used for the REPORT; 3 are used to fetch files & props
 - Supports http-compression config flag
-- SSL client certificates
+- SSL client and server certificates
+- Proxy support
+- NTLM/SSPI integration for Windows folks
 
 Regression test status
 ----------------------
@@ -43,18 +45,16 @@ All current regression tests are known to pass on:
   - Debian/AMD64 with APR 1.3.x
   - Mac OS X
   - Solaris
-
-ra_serf is also known to compile and work on:
   - Windows
 
-Things to do before the next release (1.5.x timeframe)
+Things to do before the next release (1.6.x timeframe)
 ------------------------------------------------------
-
-- Proxy support
 
 - Digest authentication
 
-- NTLM/SSPI integration for Windows folks
+- Fix the issue where REPORT body buckets can't be read twice (#3212)
+
+- Fix the editor API violation (TBC, #2932)
 
 Nice to haves
 -------------
@@ -62,7 +62,7 @@ Nice to haves
 - Move some of the code from ra_serf into serf.  Serf doesn't have a very
   high-level API; but the code in util.c can go a long way towards that.
 
-- Commit paralleization/pipelining
+- Commit parallellization/pipelining
   - Determine how to use HTTP pipelining and multiple connections for commit
   - May need response from CHECKOUT to issue PUT/PROPPATCH
   - ra_svn has a custom commit pipelining that may be worth investigating too
@@ -81,3 +81,5 @@ Nice to haves
   gzip compression on the REPORT requests.)
 
 - Remove remaining abort()s - ;-) aka add better debug logging
+
+- Support for HTTP/1.0 pnly proxies.

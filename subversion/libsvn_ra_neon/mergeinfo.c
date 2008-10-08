@@ -144,9 +144,7 @@ cdata_handler(void *baton, int state, const char *cdata, size_t len)
     default:
       break;
     }
-  SVN_ERR(mb->err);
-
-  return SVN_NO_ERROR;
+  return mb->err;
 }
 
 /* Request a mergeinfo-report from the URL attached to SESSION,

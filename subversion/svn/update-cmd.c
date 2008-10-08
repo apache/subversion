@@ -81,12 +81,10 @@ svn_cl__update(apr_getopt_t *os,
       depth_is_sticky = FALSE;
     }
 
-  SVN_ERR(svn_client_update3(NULL, targets,
-                             &(opt_state->start_revision),
-                             depth, depth_is_sticky,
-                             opt_state->ignore_externals,
-                             opt_state->force,
-                             ctx, pool));
-
-  return SVN_NO_ERROR;
+  return svn_client_update3(NULL, targets,
+                            &(opt_state->start_revision),
+                            depth, depth_is_sticky,
+                            opt_state->ignore_externals,
+                            opt_state->force,
+                            ctx, pool);
 }

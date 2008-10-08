@@ -89,6 +89,22 @@
 							<File Source="..\..\..\work\svn-win32-ap20x\bin\svnversion.exe" Name="svnversion.exe" Id="svnversion.exe" />
 							<Condition>APACHEVERSION = "Apache20"</Condition>
 						</Component>
+						<Component Guid="C48BC6A3-3789-4477-AB62-ABDB15E10664" Id="Svnmucc" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\bin\svnmucc.exe" Name="svnmucc.exe" Id="svnmucc.exe" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="8B8123F8-3CCB-4FD9-A238-5C8221C94E44" Id="Svnpop" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\bin\svn-populate-node-origins-index.exe" Name="svn-populate-node-origins-index.exe" Id="svnpopulatenodeoriginsindex.exe" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="EB638BAF-4FD9-4500-BA33-D20A4A728BE1" Id="Svnpush" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\bin\svn-push.exe" Name="svn-push.exe" Id="svnpush.exe" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
+						<Component Guid="3F94F729-4184-447D-B266-43DD7CA5FBB3" Id="Svnauthval" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap20x\bin\svnauthz-validate.exe" Name="svnauthz-validate.exe" Id="svnauthzvalidate.exe" />
+							<Condition>APACHEVERSION = "Apache20"</Condition>
+						</Component>
 						<Component Guid="A58EE2D5-CADA-4233-947B-74CAE3779951" Id="READMETxtap20x" DiskId="1">
 							<File Source="..\..\..\work\svn-win32-ap20x\README.txt" Name="README.txt" Id="flREADMEtxtap20x">
 								<Shortcut Name="README" Id="readmesctap20x" Description="Subversion ReadMe" Directory="SubversionMenuFolder" Advertise="yes" Icon="readmeap20x.txt">

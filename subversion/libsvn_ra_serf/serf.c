@@ -585,9 +585,7 @@ svn_ra_serf__open(svn_ra_session_t *session,
 
   session->priv = serf_sess;
 
-  SVN_ERR(exchange_capabilities(serf_sess, pool));
-
-  return SVN_NO_ERROR;
+  return exchange_capabilities(serf_sess, pool);
 }
 
 static svn_error_t *
@@ -637,12 +635,10 @@ svn_ra_serf__get_latest_revnum(svn_ra_session_t *ra_session,
   const char *relative_url, *basecoll_url;
   svn_ra_serf__session_t *session = ra_session->priv;
 
-  SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url,
-                                         session, session->repos_url.path,
-                                         SVN_INVALID_REVNUM, latest_revnum,
-                                         pool));
-
-  return SVN_NO_ERROR;
+  return svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url,
+                                        session, session->repos_url.path,
+                                        SVN_INVALID_REVNUM, latest_revnum,
+                                        pool);
 }
 
 static svn_error_t *

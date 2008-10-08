@@ -196,7 +196,7 @@ static svn_error_t *try_auth(svn_ra_svn_conn_t *conn,
       arg = svn_string_ncreate(out, outlen, pool);
       /* Encode what we send to the client. */
       if (use_base64)
-        arg = svn_base64_encode_string(arg, pool);
+        arg = svn_base64_encode_string2(arg, TRUE, pool);
 
       SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(s)", "step", arg));
 
@@ -216,8 +216,8 @@ static svn_error_t *try_auth(svn_ra_svn_conn_t *conn,
 
   /* Send our last response, if necessary. */
   if (outlen)
-    arg = svn_base64_encode_string(svn_string_ncreate(out, outlen, pool),
-                                   pool);
+    arg = svn_base64_encode_string2(svn_string_ncreate(out, outlen, pool), TRUE,
+                                    pool);
   else
     arg = NULL;
 

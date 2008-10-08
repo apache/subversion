@@ -18,6 +18,7 @@
 
 # General modules
 import stat, os, re, shutil
+from string import lower, upper
 
 # Our testing module
 import svntest
@@ -3941,6 +3942,158 @@ def copy_into_absent_dir(sbox):
                                      'cleanup', wc_dir)
 
 
+def find_copyfrom_information_upstairs(sbox):
+  "renaming inside a copied subtree shouldn't hang"
+
+  # The final command in this series would cause the client to hang...
+  # 
+  #    ${SVN} cp A A2
+  #    cd A2/B
+  #    ${SVN} mkdir blah
+  #    ${SVN} mv lambda blah
+  # 
+  # ...because it wouldn't walk up past "" to find copyfrom information
+  # (which would be in A2/.svn/entries, not on A2/B/.svn/entries).
+  # Instead, it would keep thinking the parent of "" is "", and so
+  # loop forever, gobbling a little bit more memory with each iteration.
+  #
+  # Two things fixed this:
+  #
+  #   1) The client walks upward beyond CWD now, so it finds the
+  #      copyfrom information.
+  #
+  #   2) Even if we do top out at "" without finding copyfrom information
+  #      (say, because someone has corrupted their working copy), we'll
+  #      still detect it and error, thus breaking the loop.
+  #
+  # This only tests case (1).  We could test that (2) gets the expected
+  # error ("no parent with copyfrom information found above 'lambda'"),
+  # but we'd need to chroot to the top of the working copy or manually
+  # corrupt the wc by removing the copyfrom lines from A2/.svn/entries.
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  A_path = os.path.join(wc_dir, 'A')
+  A2_path = os.path.join(wc_dir, 'A2')
+  B2_path = os.path.join(A2_path, 'B')
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp', A_path, A2_path)
+  saved_cwd = os.getcwd()
+  try:
+    os.chdir(B2_path)
+    svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', 'blah')
+    svntest.actions.run_and_verify_svn(None, None, [], 'mv', 'lambda', 'blah')
+  finally:
+    os.chdir(saved_cwd)
+
+#----------------------------------------------------------------------
+
+def change_case_of_hostname(input):
+  "Change the case of the hostname, try uppercase first"
+  
+  m = re.match(r"^(.*://)([^/]*)(.*)", input)
+  if m:
+    scheme = m.group(1)
+    host = upper(m.group(2))
+    if host == m.group(2):
+      host = lower(m.group(2))
+      
+    path = m.group(3)
+    
+  return scheme + host + path
+
+# regression test for issue #2475 - move file and folder
+def path_move_and_copy_between_wcs_2475(sbox):
+  "issue #2475 - move and copy between working copies"
+  sbox.build()
+
+  # checkout a second working copy, use repository url with different case
+  wc2_dir = sbox.wc_dir + '2'
+  repo_url2 = change_case_of_hostname(sbox.repo_url)
+
+  expected_output = svntest.main.greek_state.copy()
+  expected_output.wc_dir = wc2_dir
+  expected_output.tweak(status='A ', contents=None)
+
+  expected_wc = svntest.main.greek_state
+
+  # Do a checkout, and verify the resulting output and disk contents.
+  svntest.actions.run_and_verify_checkout(repo_url2,
+                          wc2_dir,
+                          expected_output,
+                          expected_wc)
+
+  # Copy a file from wc to wc2
+  mu_path = os.path.join(sbox.wc_dir, 'A', 'mu')
+  E_path = os.path.join(wc2_dir, 'A', 'B', 'E')
+
+  svntest.main.run_svn(None, 'cp', mu_path, E_path)
+
+  # Copy a folder from wc to wc2
+  C_path = os.path.join(sbox.wc_dir, 'A', 'C')
+  B_path = os.path.join(wc2_dir, 'A', 'B')
+
+  svntest.main.run_svn(None, 'cp', C_path, B_path)
+
+  # Move a file from wc to wc2
+  mu_path = os.path.join(sbox.wc_dir, 'A', 'mu')
+  B_path = os.path.join(wc2_dir, 'A', 'B')
+
+  svntest.main.run_svn(None, 'mv', mu_path, B_path)
+
+  # Move a folder from wc to wc2
+  C_path = os.path.join(sbox.wc_dir, 'A', 'C')
+  D_path = os.path.join(wc2_dir, 'A', 'D')
+
+  svntest.main.run_svn(None, 'mv', C_path, D_path)
+
+  # Verify modified status
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  expected_status.tweak('A/mu', 'A/C', status='D ')
+  svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
+  expected_status2 = svntest.actions.get_virginal_state(wc2_dir, 1)
+  expected_status2.add({ 'A/B/mu' :
+                        Item(status='A ', copied='+', wc_rev='-') })
+  expected_status2.add({ 'A/B/C' :
+                        Item(status='A ', copied='+', wc_rev='-') })
+  expected_status2.add({ 'A/B/E/mu' :
+                        Item(status='A ', copied='+', wc_rev='-') })
+  expected_status2.add({ 'A/D/C' :
+                        Item(status='A ', copied='+', wc_rev='-') })
+  svntest.actions.run_and_verify_status(wc2_dir, expected_status2)
+
+
+# regression test for issue #2475 - direct copy in the repository
+# this test handles the 'direct move' case too, that uses the same code.
+def path_copy_in_repo_2475(sbox):
+  "issue #2475 - direct copy in the repository"
+  sbox.build()
+
+  repo_url2 = change_case_of_hostname(sbox.repo_url)
+
+  # Copy a file from repo to repo2
+  mu_url = sbox.repo_url + '/A/mu'
+  E_url = repo_url2 + '/A/B/E'
+
+  svntest.main.run_svn(None, 'cp', mu_url, E_url, '-m', 'copy mu to /A/B/E')
+
+  # For completeness' sake, update to HEAD, and verify we have a full
+  # greek tree again, all at revision 2.
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+    'A/B/E/mu'  : Item(status='A '),
+    })
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({'A/B/E/mu' : Item("This is the file 'mu'.\n") })
+
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 2)
+  expected_status.add({'A/B/E/mu' : Item(status='  ', wc_rev=2) })
+  svntest.actions.run_and_verify_update(sbox.wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
 
 ########################################################################
 # Run the tests
@@ -4021,6 +4174,9 @@ test_list = [ None,
               unneeded_parents,
               double_parents_with_url,
               copy_into_absent_dir,
+              find_copyfrom_information_upstairs,
+              path_move_and_copy_between_wcs_2475,
+              path_copy_in_repo_2475,
              ]
 
 if __name__ == '__main__':

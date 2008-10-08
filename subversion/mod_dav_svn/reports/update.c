@@ -2,7 +2,7 @@
  * update.c: handle the update-report request and response
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -19,7 +19,6 @@
 #include <apr_pools.h>
 #include <apr_strings.h>
 #include <apr_xml.h>
-#include <apr_md5.h>
 
 #include <http_request.h>
 #include <http_log.h>
@@ -28,7 +27,6 @@
 #include "svn_pools.h"
 #include "svn_repos.h"
 #include "svn_fs.h"
-#include "svn_md5.h"
 #include "svn_base64.h"
 #include "svn_xml.h"
 #include "svn_path.h"
@@ -299,11 +297,12 @@ add_helper(svn_boolean_t is_dir,
       if (! is_dir)
         {
           /* files have checksums */
-          unsigned char digest[APR_MD5_DIGESTSIZE];
-          SVN_ERR(svn_fs_file_md5_checksum
-                  (digest, uc->rev_root, real_path, pool));
+          svn_checksum_t *checksum;
+          SVN_ERR(svn_fs_file_checksum(&checksum, svn_checksum_md5,
+                                       uc->rev_root, real_path, TRUE,
+                                       pool));
 
-          child->text_checksum = svn_md5_digest_to_cstring(digest, pool);
+          child->text_checksum = svn_checksum_to_cstring(checksum, pool);
         }
       else
         {
@@ -658,7 +657,7 @@ upd_change_xxx_prop(void *baton,
             }
           else
             {
-              qval = svn_base64_encode_string(value, pool)->data;
+              qval = svn_base64_encode_string2(value, TRUE, pool)->data;
               SVN_ERR(dav_svn__send_xml(b->uc->bb, b->uc->output,
                                         "<S:set-prop name=\"%s\" "
                                         "encoding=\"base64\">" DEBUG_CR,

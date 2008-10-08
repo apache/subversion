@@ -20,7 +20,6 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <assert.h>
 
 #include <apr_general.h>
 #include <apr_pools.h>

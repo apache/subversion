@@ -183,7 +183,7 @@ class SVNTreeNode:
 
 
   def pprint(self, stream = sys.stdout):
-    "Pretty-print the meta data for this node."
+    "Pretty-print the meta data for this node to STREAM."
     print >> stream, " * Node name:  ", self.name
     print >> stream, "    Path:      ", self.path
     mime_type = self.props.get("svn:mime-type")
@@ -207,11 +207,78 @@ class SVNTreeNode:
     else:
       print >> stream, "    Children:  None (node is probably a file)"
 
+  def print_script(self, stream = sys.stdout, subtree = ""):
+    """Python-script-print the meta data for this node to STREAM.
+    Print only those nodes whose path string starts with the string SUBTREE,
+    and print only the part of the path string that remains after SUBTREE."""
+
+    # remove some occurrences of root_node_name = "__SVN_ROOT_NODE",
+    # it is in the way when matching for a subtree, and looks bad.
+    path = self.path
+    if path.startswith(root_node_name + os.sep):
+      path = path[len(root_node_name + os.sep):]
+
+    # remove the subtree path, skip this node if necessary.
+    if path.startswith(subtree):
+      path = path[len(subtree):]
+    else:
+      return
+
+    line = "  %-20s: Item(" % ("'%s'" % path)
+    comma = False
+
+    mime_type = self.props.get("svn:mime-type")
+    if not mime_type or mime_type.startswith("text/"):
+      if self.contents is not None:
+        # Escape some characters for nicer script and readability.
+        # (This is error output. I guess speed is no consideration here.)
+        line += "contents=\"%s\"" % (self.contents
+                                     .replace('\n','\\n')
+                                     .replace('"','\\"')
+                                     .replace('\r','\\r')
+                                     .replace('\t','\\t'))
+        comma = True
+    else:
+      line += 'content is binary data'
+      comma = True
+
+    if self.props:
+      if comma:
+        line += ", "
+      line += "props={"
+      comma = False
+
+      for name in self.props:
+        if comma:
+          line += ", "
+        line += "'%s':'%s'" % (name, self.props[name])
+        comma = True
+
+      line += "}"
+      comma = True
+
+    for name in self.atts:
+      if comma:
+        line += ", "
+      line += "%s='%s'" % (name, self.atts[name])
+      comma = True
+
+    line += "),"
+    print >> stream, line
+
+
   def __str__(self):
     import StringIO
     s = StringIO.StringIO()
     self.pprint(s)
     return s.getvalue()
+
+
+  def __cmp__(self, other):
+    """Define a simple ordering of two nodes without regard to their full
+    path (i.e. position in the tree). This can be used for sorting the
+    children within a directory."""
+    return cmp(self.name, other.name)
 
 
 # reserved name of the root of the tree
@@ -239,30 +306,35 @@ def add_elements_as_path(top_node, element_list):
     prev_node = new_node
 
 
-# Sorting function -- sort 2 nodes by their names.
-def node_is_greater(a, b):
-  "Sort the names of two nodes."
-  # Interal use only
-  if a.name == b.name:
-    return 0
-  if a.name > b.name:
+def compare_atts(a, b):
+  """Compare two dictionaries of attributes, A (actual) and B (expected).
+  If the attribute 'treeconflict' in B is missing or is 'None', ignore it.
+  Return 0 if the same, 1 otherwise."""
+  a = a.copy()
+  b = b.copy()
+  # Remove any attributes to ignore.
+  for att in ['treeconflict']:
+    if (att not in b) or (b[att] is None):
+      if att in a:
+        del a[att]
+      if att in b:
+        del b[att]
+  if a != b:
     return 1
-  else:
-    return -1
-
+  return 0
 
 # Helper for compare_trees
 def compare_file_nodes(a, b):
-  """Compare two nodes' names, contents, and properties, ignoring
-  children.  Return 0 if the same, 1 otherwise."""
+  """Compare two nodes, A (actual) and B (expected). Compare their names,
+  contents, properties and attributes, ignoring children.  Return 0 if the
+  same, 1 otherwise."""
   if a.name != b.name:
     return 1
   if a.contents != b.contents:
     return 1
   if a.props != b.props:
     return 1
-  if a.atts != b.atts:
-    return 1
+  return compare_atts(a.atts, b.atts)
 
 
 # Internal utility used by most build_tree_from_foo() routines.
@@ -397,8 +469,8 @@ def handle_dir(path, current_parent, load_props, ignore_svn):
     else:
       dprops = {}
     new_dir_node = SVNTreeNode(os.path.basename(d), None, None, dprops)
-    handle_dir(d, new_dir_node, load_props, ignore_svn)
     current_parent.add_child(new_dir_node)
+    handle_dir(d, new_dir_node, load_props, ignore_svn)
 
 def get_child(node, name):
   """If SVNTreeNode NODE contains a child named NAME, return child;
@@ -503,7 +575,7 @@ def compare_trees(label,
     # They're both directories.
     else:
       # First, compare the directories' two hashes.
-      if (a.props != b.props) or (a.atts != b.atts):
+      if (a.props != b.props) or compare_atts(a.atts, b.atts):
         display_nodes(a, b)
         raise SVNTreeUnequal
 
@@ -544,13 +616,12 @@ def compare_trees(label,
 # Visually show a tree's structure
 
 def dump_tree(n,indent=""):
-  "Print out a nice representation of the tree's structure."
+  """Print out a nice representation of the structure of the tree in
+  the SVNTreeNode N. Prefix each line with the string INDENT."""
 
   # Code partially stolen from Dave Beazley
-  if n.children is None:
-    tmp_children = []
-  else:
-    tmp_children = n.children
+  tmp_children = n.children or []
+  tmp_children.sort()
 
   if n.name == root_node_name:
     print "%s%s" % (indent, "ROOT")
@@ -561,11 +632,32 @@ def dump_tree(n,indent=""):
   indent = indent.replace("+", " ")
   for i in range(len(tmp_children)):
     c = tmp_children[i]
-    if i == len(tmp_children
-                )-1:
+    if i == len(tmp_children)-1:
       dump_tree(c,indent + "  +-- ")
     else:
       dump_tree(c,indent + "  |-- ")
+
+
+def dump_tree_script__crawler(n, subtree=""):
+  "Helper for dump_tree_script. See that comment."
+
+  # skip printing the root node.
+  if n.name != root_node_name:
+    n.print_script(subtree=subtree)
+
+  for child in n.children or []:
+    dump_tree_script__crawler(child, subtree)
+
+
+def dump_tree_script(n, subtree=""):
+  """Print out a python script representation of the structure of the tree
+  in the SVNTreeNode N. Print only those nodes whose path string starts
+  with the string SUBTREE, and print only the part of the path string
+  that remains after SUBTREE."""
+
+  print "svntest.wc.State('%s', {" % subtree
+  dump_tree_script__crawler(n, subtree)
+  print "})"
 
 
 ###################################################################
@@ -662,7 +754,8 @@ def build_tree_from_commit(lines):
 #   Tree nodes will contain no contents, and these atts:
 #
 #          'status', 'wc_rev',
-#             ... and possibly 'locked', 'copied', 'writelocked',
+#             ... and possibly 'locked', 'copied', 'switched',
+#             'writelocked' and 'treeconflict',
 #             IFF columns non-empty.
 #
 
@@ -673,7 +766,7 @@ def build_tree_from_status(lines):
 
   # 'status -v' output looks like this:
   #
-  #      "%c%c%c%c%c%c %c   %6s   %6s %-12s %s\n"
+  #      "%c%c%c%c%c%c%c %c   %6s   %6s %-12s %s\n"
   #
   # (Taken from 'print_status' in subversion/svn/status.c.)
   #
@@ -686,29 +779,30 @@ def build_tree_from_status(lines):
   #    - copied flag           (3)  (single letter: "+" or " ")
   #    - switched flag         (4)  (single letter: "S" or " ")
   #    - repos lock status     (5)  (single letter: "K", "O", "B", "T", " ")
+  #    - tree conflict flag    (6)  (single letter: "C" or " ")
   #
   #    [one space]
   #
-  #    - out-of-date flag      (6)  (single letter: "*" or " ")
+  #    - out-of-date flag      (7)  (single letter: "*" or " ")
   #
   #    [three spaces]
   #
-  #    - working revision      (7)  (either digits or "-")
+  #    - working revision      (8)  (either digits or "-")
   #
   #    [one space]
   #
-  #    - last-changed revision (8)  (either digits or "?")
+  #    - last-changed revision (9)  (either digits or "?")
   #
   #    [one space]
   #
-  #    - last author           (9)  (string of non-whitespace characters)
+  #    - last author          (10)  (string of non-whitespace characters)
   #
   #    [one space]
   #
-  #    - path                 (10)  (string of characters until newline)
+  #    - path                 (11)  (string of characters until newline)
 
   # Try http://www.wordsmith.org/anagram/anagram.cgi?anagram=ACDRMGU
-  rm = re.compile('^([!MACDRUG_ ][MACDRUG_ ])([L ])([+ ])([S ])([KOBT ]) ([* ])   [^0-9-]*(\d+|-|\?) +(\d|-|\?)+ +(\S+) +(.+)')
+  rm = re.compile('^([!MACDRUG_ ][MACDRUG_ ])([L ])([+ ])([S ])([KOBT ])([C ]) ([* ])   [^0-9-]*(\d+|-|\?) +(\d|-|\?)+ +(\S+) +(.+)')
   for line in lines:
 
     # Quit when we hit an externals status announcement (### someday we can fix
@@ -719,9 +813,9 @@ def build_tree_from_status(lines):
 
     match = rm.search(line)
     if match and match.groups():
-      if match.group(9) != '-': # ignore items that only exist on repos
+      if match.group(10) != '-': # ignore items that only exist on repos
         atthash = {'status' : match.group(1),
-                   'wc_rev' : match.group(7)}
+                   'wc_rev' : match.group(8)}
         if match.group(2) != ' ':
           atthash['locked'] = match.group(2)
         if match.group(3) != ' ':
@@ -730,7 +824,8 @@ def build_tree_from_status(lines):
           atthash['switched'] = match.group(4)
         if match.group(5) != ' ':
           atthash['writelocked'] = match.group(5)
-        new_branch = create_from_path(match.group(10), None, {}, atthash)
+        atthash['treeconflict'] = match.group(6)
+        new_branch = create_from_path(match.group(11), None, {}, atthash)
 
       root.add_child(new_branch)
 

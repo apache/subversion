@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -34,6 +34,7 @@
 #include "svn_utf.h"
 #include "svn_auth.h"
 #include "svn_config.h"
+#include "svn_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -49,34 +50,40 @@ extern "C" {
  * @note This function should be called exactly once at program startup,
  *       before calling any other APR or Subversion functions.
  */
-int svn_cmdline_init(const char *progname, FILE *error_stream);
+int
+svn_cmdline_init(const char *progname,
+                 FILE *error_stream);
 
 
 /** Set @a *dest to an output-encoded C string from UTF-8 C string @a
  * src; allocate @a *dest in @a pool.
  */
-svn_error_t *svn_cmdline_cstring_from_utf8(const char **dest,
-                                           const char *src,
-                                           apr_pool_t *pool);
+svn_error_t *
+svn_cmdline_cstring_from_utf8(const char **dest,
+                              const char *src,
+                              apr_pool_t *pool);
 
 /** Like svn_utf_cstring_from_utf8_fuzzy(), but converts to an
  * output-encoded C string. */
-const char *svn_cmdline_cstring_from_utf8_fuzzy(const char *src,
-                                                apr_pool_t *pool);
+const char *
+svn_cmdline_cstring_from_utf8_fuzzy(const char *src,
+                                    apr_pool_t *pool);
 
 /** Set @a *dest to a UTF-8-encoded C string from input-encoded C
  * string @a src; allocate @a *dest in @a pool.
  */
-svn_error_t * svn_cmdline_cstring_to_utf8(const char **dest,
-                                          const char *src,
-                                          apr_pool_t *pool);
+svn_error_t *
+svn_cmdline_cstring_to_utf8(const char **dest,
+                            const char *src,
+                            apr_pool_t *pool);
 
 /** Set @a *dest to an output-encoded natively-formatted path string
  * from canonical path @a src; allocate @a *dest in @a pool.
  */
-svn_error_t *svn_cmdline_path_local_style_from_utf8(const char **dest,
-                                                    const char *src,
-                                                    apr_pool_t *pool);
+svn_error_t *
+svn_cmdline_path_local_style_from_utf8(const char **dest,
+                                       const char *src,
+                                       apr_pool_t *pool);
 
 /** Write to stdout, using a printf-like format string @a fmt, passed
  * through apr_pvsprintf().  All string arguments are in UTF-8; the output
@@ -85,9 +92,10 @@ svn_error_t *svn_cmdline_path_local_style_from_utf8(const char **dest,
  *
  * @since New in 1.1.
  */
-svn_error_t *svn_cmdline_printf(apr_pool_t *pool,
-                                const char *fmt,
-                                ...)
+svn_error_t *
+svn_cmdline_printf(apr_pool_t *pool,
+                   const char *fmt,
+                   ...)
        __attribute__((format(printf, 2, 3)));
 
 /** Write to the stdio @a stream, using a printf-like format string @a fmt,
@@ -97,10 +105,11 @@ svn_error_t *svn_cmdline_printf(apr_pool_t *pool,
  *
  * @since New in 1.1.
  */
-svn_error_t *svn_cmdline_fprintf(FILE *stream,
-                                 apr_pool_t *pool,
-                                 const char *fmt,
-                                 ...)
+svn_error_t *
+svn_cmdline_fprintf(FILE *stream,
+                    apr_pool_t *pool,
+                    const char *fmt,
+                    ...)
        __attribute__((format(printf, 3, 4)));
 
 /** Output the @a string to the stdio @a stream, converting from UTF-8
@@ -108,9 +117,10 @@ svn_error_t *svn_cmdline_fprintf(FILE *stream,
  *
  * @since New in 1.1.
  */
-svn_error_t *svn_cmdline_fputs(const char *string,
-                               FILE *stream,
-                               apr_pool_t *pool);
+svn_error_t *
+svn_cmdline_fputs(const char *string,
+                  FILE *stream,
+                  apr_pool_t *pool);
 
 /** Flush output buffers of the stdio @a stream, returning an error if that
  * fails.  This is just a wrapper for the standard fflush() function for
@@ -118,7 +128,8 @@ svn_error_t *svn_cmdline_fputs(const char *string,
  *
  * @since New in 1.1.
  */
-svn_error_t *svn_cmdline_fflush(FILE *stream);
+svn_error_t *
+svn_cmdline_fflush(FILE *stream);
 
 /** Return the name of the output encoding allocated in @a pool, or @c
  * APR_LOCALE_CHARSET if the output encoding is the same as the locale
@@ -126,7 +137,8 @@ svn_error_t *svn_cmdline_fflush(FILE *stream);
  *
  * @since New in 1.3.
  */
-const char *svn_cmdline_output_encoding(apr_pool_t *pool);
+const char *
+svn_cmdline_output_encoding(apr_pool_t *pool);
 
 /** Handle @a error in preparation for immediate exit from a
  * command-line client.  Specifically:
@@ -136,9 +148,10 @@ const char *svn_cmdline_output_encoding(apr_pool_t *pool);
  *
  * @since New in 1.3.
  */
-int svn_cmdline_handle_exit_error(svn_error_t *error,
-                                  apr_pool_t *pool,
-                                  const char *prefix);
+int
+svn_cmdline_handle_exit_error(svn_error_t *error,
+                              apr_pool_t *pool,
+                              const char *prefix);
 
 /** A cancellation function/baton pair, and the path to the configuration
  * directory. To be passed as the baton argument to the
@@ -180,6 +193,7 @@ svn_cmdline_prompt_user2(const char **result,
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_cmdline_prompt_user(const char **result,
                         const char *prompt_str,
@@ -237,6 +251,8 @@ svn_cmdline_auth_ssl_server_trust_prompt
 /** An implementation of @c svn_auth_ssl_client_cert_prompt_func_t that
  * prompts the user for the filename of their SSL client certificate via
  * the command line.
+ * 
+ * Records absolute path of the SSL client certificate file.
  *
  * @since New in 1.4.
  *
@@ -321,12 +337,14 @@ svn_cmdline_set_up_auth_baton(svn_auth_baton_t **ab,
  * 
  * @since New in 1.4.
  * @deprecated Provided for backward compatibility with the 1.5 API.
+ * Use svn_cmdline_set_up_auth_baton() instead.
  *
  * @note This deprecation does not follow the usual pattern of putting
  * a new number on end of the function's name.  Instead, the new
  * function name is distinguished from the old by a grammatical
  * improvement: the verb "set_up" instead of the noun "setup".
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
                              svn_boolean_t non_interactive,

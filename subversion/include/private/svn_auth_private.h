@@ -94,6 +94,28 @@ svn_auth__simple_save_creds_helper(svn_boolean_t *saved,
                                    const char *passtype,
                                    apr_pool_t *pool);
 
+/* Implementation of svn_auth__password_get_t that retrieves
+   the plaintext password from CREDS when USERNAME matches the stored 
+   credentials. */
+svn_boolean_t
+svn_auth__simple_password_get(const char **password,
+                              apr_hash_t *creds,
+                              const char *realmstring,
+                              const char *username,
+                              svn_boolean_t non_interactive,
+                              apr_pool_t *pool);
+
+/* Implementation of svn_auth__password_set_t that stores
+   the plaintext password in CREDS. */
+svn_boolean_t
+svn_auth__simple_password_set(apr_hash_t *creds,
+                              const char *realmstring,
+                              const char *username,
+                              const char *password,
+                              svn_boolean_t non_interactive,
+                              apr_pool_t *pool);
+
+
 /* Common implementation for ssl_client_cert_pw_file_first_credentials.
    Uses PARAMETERS, REALMSTRING and the ssl client passphrase auth provider's
    passphrase cache to fill the CREDENTIALS. PASSPHRASE_GET is used to obtain

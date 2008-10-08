@@ -6,7 +6,7 @@
  *              information is kept.
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -23,7 +23,6 @@
 
 
 #include <stdarg.h>
-#include <assert.h>
 #include <apr_pools.h>
 #include <apr_file_io.h>
 #include <apr_strings.h>
@@ -76,7 +75,7 @@ svn_wc_set_adm_dir(const char *name, apr_pool_t *pool)
 
      FIXME:
      An identical list is used in
-       libsvn_subr/opt.c:svn_opt_args_to_target_array3(),
+       libsvn_subr/opt.c:svn_opt__args_to_target_array(),
      but that function can't use this list, because that use would
      create a circular dependency between libsvn_wc and libsvn_subr.
      Make sure changes to the lists are always synchronized! */
@@ -292,7 +291,7 @@ svn_wc__check_killme(svn_wc_adm_access_t *adm_access,
   path = extend_with_adm_name(svn_wc_adm_access_path(adm_access),
                               NULL, FALSE, pool, SVN_WC__ADM_KILLME, NULL);
 
-  err = svn_stringbuf_from_file(&contents, path, pool);
+  err = svn_stringbuf_from_file2(&contents, path, pool);
 
   if (err)
     {
@@ -344,9 +343,7 @@ sync_adm_file(const char *path,
 
   /* Rename. */
   SVN_ERR(svn_io_file_rename(tmp_path, path, pool));
-  SVN_ERR(svn_io_set_file_read_only(path, FALSE, pool));
-
-  return SVN_NO_ERROR;
+  return svn_io_set_file_read_only(path, FALSE, pool);
 }
 
 
@@ -578,9 +575,7 @@ close_adm_file(apr_file_t *fp,
 
       /* Rename. */
       SVN_ERR(svn_io_file_rename(tmp_path, path, pool));
-      SVN_ERR(svn_io_set_file_read_only(path, FALSE, pool));
-
-      return SVN_NO_ERROR;
+      return svn_io_set_file_read_only(path, FALSE, pool);
     }
 
   return SVN_NO_ERROR;
@@ -619,9 +614,7 @@ svn_wc__remove_adm_file(const char *path, apr_pool_t *pool, ...)
   path = v_extend_with_adm_name(path, NULL, 0, pool, ap);
   va_end(ap);
 
-  SVN_ERR(svn_io_remove_file(path, pool));
-
-  return SVN_NO_ERROR;
+  return svn_io_remove_file(path, pool);
 }
 
 
@@ -650,33 +643,6 @@ svn_wc__open_revert_base(apr_file_t **handle,
   return open_adm_file(handle, parent_path, SVN_WC__REVERT_EXT, APR_OS_DEFAULT,
                        flags, pool, SVN_WC__ADM_TEXT_BASE, base_name, NULL);
 }
-
-
-
-svn_error_t *
-svn_wc__close_text_base(apr_file_t *fp,
-                        const char *path,
-                        int write,
-                        apr_pool_t *pool)
-{
-  const char *parent_path, *base_name;
-  svn_path_split(path, &parent_path, &base_name, pool);
-  return close_adm_file(fp, parent_path, SVN_WC__BASE_EXT, write, pool,
-                        SVN_WC__ADM_TEXT_BASE, base_name, NULL);
-}
-
-svn_error_t *
-svn_wc__close_revert_base(apr_file_t *fp,
-                          const char *path,
-                          int write,
-                          apr_pool_t *pool)
-{
-  const char *parent_path, *base_name;
-  svn_path_split(path, &parent_path, &base_name, pool);
-  return close_adm_file(fp, parent_path, SVN_WC__REVERT_EXT, write, pool,
-                        SVN_WC__ADM_TEXT_BASE, base_name, NULL);
-}
-
 
 
 svn_error_t *
@@ -887,8 +853,7 @@ static svn_error_t *
 make_empty_adm(const char *path, apr_pool_t *pool)
 {
   path = extend_with_adm_name(path, NULL, 0, pool, NULL);
-  SVN_ERR(svn_io_dir_make_hidden(path, APR_OS_DEFAULT, pool));
-  return SVN_NO_ERROR;
+  return svn_io_dir_make_hidden(path, APR_OS_DEFAULT, pool);
 }
 
 
@@ -912,10 +877,8 @@ init_adm_tmp_area(svn_wc_adm_access_t *adm_access,
                                  svn_node_dir, perms, 1, pool));
 
   /* SVN_WC__ADM_TMP/SVN_WC__ADM_PROPS */
-  SVN_ERR(svn_wc__make_adm_thing(adm_access, SVN_WC__ADM_PROPS,
-                                 svn_node_dir, perms, 1, pool));
-
-  return SVN_NO_ERROR;
+  return svn_wc__make_adm_thing(adm_access, SVN_WC__ADM_PROPS,
+                                svn_node_dir, perms, 1, pool);
 }
 
 
@@ -981,10 +944,7 @@ init_adm(const char *path,
 
   /* Now unlock it.  It's now a valid working copy directory, that
      just happens to be at revision 0. */
-  SVN_ERR(svn_wc_adm_close(adm_access));
-
-  /* Else no problems, we're outta here. */
-  return SVN_NO_ERROR;
+  return svn_wc_adm_close(adm_access);
 }
 
 svn_error_t *
@@ -1039,9 +999,7 @@ svn_wc__adm_destroy(svn_wc_adm_access_t *adm_access,
   path = extend_with_adm_name(svn_wc_adm_access_path(adm_access),
                               NULL, FALSE, pool, NULL);
   SVN_ERR(svn_io_remove_dir2(path, FALSE, NULL, NULL, pool));
-  SVN_ERR(svn_wc_adm_close(adm_access));
-
-  return SVN_NO_ERROR;
+  return svn_wc_adm_close(adm_access);
 }
 
 
@@ -1059,9 +1017,7 @@ svn_wc__adm_cleanup_tmp_area(svn_wc_adm_access_t *adm_access,
 
   SVN_ERR(svn_io_remove_dir2(tmp_path, TRUE, NULL, NULL, pool));
   /* Now, rebuild the tmp area. */
-  SVN_ERR(init_adm_tmp_area(adm_access, pool));
-
-  return SVN_NO_ERROR;
+  return init_adm_tmp_area(adm_access, pool);
 }
 
 

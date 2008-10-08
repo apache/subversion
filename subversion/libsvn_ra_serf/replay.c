@@ -178,10 +178,13 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
       svn_ra_serf__walk_all_props(ctx->revs_props, ctx->vcc_url, ctx->revision,
                                   svn_ra_serf__set_bare_props,
                                   ctx->props, ctx->pool);
-      SVN_ERR(ctx->revstart_func(ctx->revision, ctx->replay_baton,
-                                 &ctx->editor, &ctx->editor_baton,
-                                 ctx->props,
-                                 ctx->pool));
+      if (ctx->revstart_func)
+        {
+          SVN_ERR(ctx->revstart_func(ctx->revision, ctx->replay_baton,
+                                     &ctx->editor, &ctx->editor_baton,
+                                     ctx->props,
+                                     ctx->pool));
+        }
     }
   else if (state == REPORT &&
            strcmp(name.name, "target-revision") == 0)
@@ -448,10 +451,13 @@ end_replay(svn_ra_serf__xml_parser_t *parser,
       strcmp(name.name, "editor-report") == 0)
     {
       svn_ra_serf__xml_pop_state(parser);
-      SVN_ERR(ctx->revfinish_func(ctx->revision, ctx->replay_baton,
-                                  ctx->editor, ctx->editor_baton,
-                                  ctx->props,
-                                  ctx->pool));
+      if (ctx->revfinish_func)
+        {
+          SVN_ERR(ctx->revfinish_func(ctx->revision, ctx->replay_baton,
+                                      ctx->editor, ctx->editor_baton,
+                                      ctx->props,
+                                      ctx->pool));
+        }
     }
   else if (state == OPEN_DIR && strcmp(name.name, "open-directory") == 0)
     {
@@ -606,14 +612,27 @@ svn_ra_serf__replay(svn_ra_session_t *ra_session,
   svn_ra_serf__session_t *session = ra_session->priv;
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
+  svn_error_t *err;
+  /* We're not really interested in the status code here in replay, but
+     the XML parsing code will abort on error if it doesn't have a place
+     to store the response status code. */
+  int status_code;
+  const char *vcc_url;
+
+  SVN_ERR(svn_ra_serf__discover_root(&vcc_url, NULL,
+                                     session, session->conns[0],
+                                     session->repos_url.path, pool));
 
   replay_ctx = apr_pcalloc(pool, sizeof(*replay_ctx));
   replay_ctx->pool = pool;
   replay_ctx->editor = editor;
   replay_ctx->editor_baton = edit_baton;
   replay_ctx->done = FALSE;
+  replay_ctx->revision = revision;
   replay_ctx->low_water_mark = low_water_mark;
   replay_ctx->send_deltas = send_deltas;
+  replay_ctx->vcc_url = vcc_url;
+  replay_ctx->revs_props = apr_hash_make(replay_ctx->pool);
 
   handler = apr_pcalloc(pool, sizeof(*handler));
 
@@ -632,12 +651,24 @@ svn_ra_serf__replay(svn_ra_session_t *ra_session,
   parser_ctx->start = start_replay;
   parser_ctx->end = end_replay;
   parser_ctx->cdata = cdata_replay;
+  parser_ctx->status_code = &status_code;
   parser_ctx->done = &replay_ctx->done;
 
   handler->response_handler = svn_ra_serf__handle_xml_parser;
   handler->response_baton = parser_ctx;
 
+  /* This is only needed to handle errors during XML parsing. */
+  replay_ctx->parser_ctx = parser_ctx;
+
   svn_ra_serf__request_create(handler);
+
+  err = svn_ra_serf__context_run_wait(&replay_ctx->done, session, pool);
+
+  if (parser_ctx->error) {
+    svn_error_clear(err);
+    return parser_ctx->error;
+  }
+  SVN_ERR(err);
 
   return SVN_NO_ERROR;
 }

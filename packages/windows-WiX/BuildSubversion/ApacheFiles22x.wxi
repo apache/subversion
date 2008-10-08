@@ -89,6 +89,22 @@
 							<File Source="..\..\..\work\svn-win32-ap22x\bin\svnversion.exe" Name="svnversion.exe" Id="svnversion.exe22x" />
 							<Condition>APACHEVERSION = "Apache22"</Condition>
 						</Component>
+						<Component Guid="9AFBFBAC-8BDE-4919-92E7-6C7DD51A3A0A" Id="Svnmucc22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\bin\svnmucc.exe" Name="svnmucc.exe" Id="svnmucc.exe22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="40C123F9-D4A2-4BA1-B2DE-C6CEAA409ED4" Id="Svnpop22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\bin\svn-populate-node-origins-index.exe" Name="svn-populate-node-origins-index.exe" Id="svnpopulatenodeoriginsindex.exe22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="33F182D3-3628-42E7-A972-DB07BCFFB5D8" Id="Svnpush22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\bin\svn-push.exe" Name="svn-push.exe" Id="svnpush.exe22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
+						<Component Guid="C7BBC2A1-4928-4DE6-A54B-BA065D935495" Id="Svnauthval22x" DiskId="1">
+							<File Source="..\..\..\work\svn-win32-ap22x\bin\svnauthz-validate.exe" Name="svnauthz-validate.exe" Id="svnauthzvalidate.exe22x" />
+							<Condition>APACHEVERSION = "Apache22"</Condition>
+						</Component>
 						<Component Guid="34395389-E8B9-42E2-9232-D9CEBEF335A0" Id="READMETxtap22x" DiskId="1">
 							<File Source="..\..\..\work\svn-win32-ap22x\README.txt" Name="README.txt" Id="flREADMEtxtap22x">
 								<Shortcut Name="README" Id="readmesctap22x" Description="Subversion ReadMe" Directory="SubversionMenuFolder" Advertise="yes" Icon="readmeap22x.txt">

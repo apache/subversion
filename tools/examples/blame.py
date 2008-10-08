@@ -56,7 +56,7 @@ def blame(path, filename, rev=None):
     k = 0
     for j in diffresult:
       if j[0] == ' ':
-        if annotresult.has_key (k):
+        if k in annotresult:
           k = k + 1
           continue
         else:

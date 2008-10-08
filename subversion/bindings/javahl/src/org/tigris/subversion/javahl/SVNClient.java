@@ -108,8 +108,8 @@ public class SVNClient implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #status(String, int, boolean, boolean,
-     *                                boolean, boolean, StatusCallback)}
-     *             instead.
+     *                                boolean, boolean, String[],
+     *                                StatusCallback)} instead.
      * @since 1.0
      */
     public Status singleStatus(String path, boolean onServer)
@@ -123,8 +123,8 @@ public class SVNClient implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #status(String, int, boolean, boolean,
-     *                                boolean, boolean, StatusCallback)}
-     *             instead.
+     *                                boolean, boolean, String[],
+     *                                StatusCallback)} instead.
      * @since 1.0
      */
     public Status[] status(String path, boolean descend, boolean onServer,
@@ -136,8 +136,8 @@ public class SVNClient implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #status(String, int, boolean, boolean,
-     *                                boolean, boolean, StatusCallback)}
-     *             instead.
+     *                                boolean, boolean, String[],
+     *                                StatusCallback)} instead.
      * @since 1.0
      */
     public Status[] status(String path, boolean descend,
@@ -150,8 +150,8 @@ public class SVNClient implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #status(String, int, boolean, boolean,
-     *                                boolean, boolean, StatusCallback)}
-     *             instead.
+     *                                boolean, boolean, String[],
+     *                                StatusCallback)} instead.
      * @since 1.2
      */
     public Status[] status(String path, boolean descend, boolean onServer,
@@ -371,7 +371,7 @@ public class SVNClient implements SVNClientInterface
     public native void commitMessageHandler(CommitMessage messageHandler);
 
     /**
-     * @deprecated Use {@link #remove(String[], String, boolean, boolean)}
+     * @deprecated Use {@link #remove(String[], String, boolean, boolean, Map)}
      *             instead.
      * @since 1.0
      */
@@ -389,7 +389,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException;
 
     /**
-     * @deprecated Use {@link #revert(String, int)} instead.
+     * @deprecated Use {@link #revert(String, int, String[])} instead.
      * @since 1.0
      */
     public void revert(String path, boolean recurse)
@@ -480,7 +480,7 @@ public class SVNClient implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #commit(String[], String, int, boolean, boolean,
-     *                                String[])} instead.
+     *                                String[], Map)} instead.
      * @since 1.0
      */
     public long commit(String[] path, String message, boolean recurse)
@@ -491,7 +491,7 @@ public class SVNClient implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #commit(String[], String, int, boolean, boolean,
-     *                                String[])} instead.
+     *                                String[], Map)} instead.
      * @since 1.2
      */
     public long commit(String[] path, String message, boolean recurse,
@@ -520,7 +520,7 @@ public class SVNClient implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #copy(CopySource[], String, String, boolean,
-     *                              boolean)} instead.
+     *                              boolean, Map)} instead.
      * @since 1.0
      */
     public void copy(String srcPath, String destPath, String message,
@@ -542,7 +542,7 @@ public class SVNClient implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #move(String[], String, String, boolean, boolean,
-     *                              boolean)} instead.
+     *                              boolean, Map)} instead.
      * @since 1.2
      */
     public void move(String srcPath, String destPath, String message,
@@ -555,7 +555,7 @@ public class SVNClient implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #move(String[], String, String, boolean, boolean,
-     *                              boolean)} instead.
+     *                              boolean, Map)} instead.
      * @since 1.0
      */
     public void move(String srcPath, String destPath, String message,
@@ -574,7 +574,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException;
 
     /**
-     * @deprecated Use {@link #mkdir(String[], String, boolean)} instead.
+     * @deprecated Use {@link #mkdir(String[], String, boolean, Map)} instead.
      * @since 1.0
      */
     public void mkdir(String[] path, String message)
@@ -675,7 +675,7 @@ public class SVNClient implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #doImport(String, String, String, int, boolean,
-     *                                  boolean)} instead.
+     *                                  boolean, Map)} instead.
      * @since 1.0
      */
     public void doImport(String path, String url, String message,
@@ -796,8 +796,8 @@ public class SVNClient implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #diff(String, Revision, String, Revision,
-     *                              String, String, int, boolean, boolean,
-     *                              boolean)} instead.
+     *                              String, String, int, String[], boolean,
+     *                              boolean, boolean)} instead.
      * @since 1.0
      */
     public void diff(String target1, Revision revision1, String target2,
@@ -811,8 +811,8 @@ public class SVNClient implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #diff(String, Revision, String, Revision,
-     *                              String, String, int, boolean, boolean,
-     *                              boolean)} instead.
+     *                              String, String, int, String[], boolean,
+     *                              boolean, boolean)} instead.
      * @since 1.2
      */
     public void diff(String target1, Revision revision1, String target2,
@@ -838,8 +838,8 @@ public class SVNClient implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #diff(String, Revision, Revision, Revision,
-     *                              String, String, int, boolean, boolean,
-     *                              boolean)} instead.
+     *                              String, String, int, String[], boolean,
+     *                              boolean, boolean)} instead.
      * @since 1.2
      */
     public void diff(String target, Revision pegRevision,
@@ -888,7 +888,8 @@ public class SVNClient implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #properties(String, Revision, Revision,
-     *                                    int, ProplistCallback)} instead.
+     *                                    int, String[], ProplistCallback)}
+     *             instead.
      * @since 1.0
      */
     public PropertyData[] properties(String path) throws ClientException
@@ -898,7 +899,8 @@ public class SVNClient implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #properties(String, Revision, Revision,
-     *                                    int, ProplistCallback)} instead.
+     *                                    int, String[], ProplistCallback)}
+     *             instead.
      * @since 1.2
      */
     public PropertyData[] properties(String path, Revision revision)
@@ -909,7 +911,8 @@ public class SVNClient implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #properties(String, Revision, Revision,
-     *                                    int, ProplistCallback)} instead.
+     *                                    int, String[], ProplistCallback)}
+     *             instead.
      * @since 1.2
      */
     public PropertyData[] properties(String path, Revision revision,
@@ -948,7 +951,7 @@ public class SVNClient implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #propertySet(String, String, String, int,
-     *                                     boolean)} instead.
+     *                                     String[], boolean, Map)} instead.
      * @since 1.0
      */
     public void propertySet(String path, String name, String value,
@@ -960,7 +963,7 @@ public class SVNClient implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #propertySet(String, String, String, int,
-     *                                     boolean)} instead.
+     *                                     String[], boolean, Map)} instead.
      * @since 1.2
      */
     public void propertySet(String path, String name, String value,
@@ -973,7 +976,7 @@ public class SVNClient implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #propertySet(String, String, String, int,
-     *                                     boolean)} instead.
+     *                                     String[], boolean, Map)} instead.
      * @since 1.0
      */
     public void propertySet(String path, String name, byte[] value,
@@ -985,7 +988,7 @@ public class SVNClient implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #propertySet(String, String, String, int,
-     *                                     boolean)} instead.
+     *                                     String[], boolean, Map)} instead.
      * @since 1.2
      */
     public void propertySet(String path, String name, byte[] value,
@@ -1004,7 +1007,8 @@ public class SVNClient implements SVNClientInterface
             throws ClientException;
 
     /**
-     * @deprecated Use {@link #propertyRemove(String, String, int)} instead.
+     * @deprecated Use {@link #propertyRemove(String, String, int, String[])}
+                   instead.
      * @since 1.0
      */
     public void propertyRemove(String path, String name, boolean recurse)
@@ -1025,7 +1029,7 @@ public class SVNClient implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #propertyCreate(String, String, String, int,
-     *                                        boolean)} instead.
+     *                                        String[], boolean)} instead.
      * @since 1.0
      */
     public void propertyCreate(String path, String name, String value,
@@ -1037,7 +1041,7 @@ public class SVNClient implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #propertyCreate(String, String, String, int,
-     *                                        boolean)} instead.
+     *                                        String[], boolean)} instead.
      * @since 1.2
      */
     public void propertyCreate(String path, String name, String value,
@@ -1049,7 +1053,7 @@ public class SVNClient implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #propertyCreate(String, String, String, int,
-     *                                        boolean)} instead.
+     *                                        String[], boolean)} instead.
      * @since 1.0
      */
     public void propertyCreate(String path, String name, byte[] value,
@@ -1061,7 +1065,7 @@ public class SVNClient implements SVNClientInterface
 
     /**
      * @deprecated Use {@link #propertyCreate(String, String, String, int,
-     *                                        boolean)} instead.
+     *                                        String[], boolean)} instead.
      * @since 1.2
      */
     public void propertyCreate(String path, String name, byte[] value,
@@ -1245,7 +1249,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException;
 
     /**
-     * @deprecated Use {@link #info2(String, Revision, Revision, int,
+     * @deprecated Use {@link #info2(String, Revision, Revision, int, String[],
      *                               InfoCallback)} instead.
      * @since 1.0
      */
@@ -1337,7 +1341,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException;
 
     /**
-     * @deprecated Use {@link #info2(String, Revision, Revision, int,
+     * @deprecated Use {@link #info2(String, Revision, Revision, int, String[],
      *                               InfoCallback)} instead.
      * @since 1.2
      */

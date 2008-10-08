@@ -269,13 +269,14 @@ def forced_checkout_with_versioned_obstruction(sbox):
   svntest.main.copy_repos(repo_dir, other_repo_dir, 1, 1)
 
   other_wc_dir = sbox.add_wc_path("other")
+  other_wc_dir_A = os.path.join(other_wc_dir, "A")
   os.mkdir(other_wc_dir)
 
   # Checkout "A/" from the other repos.
   svntest.actions.run_and_verify_svn("Unexpected error during co",
                                      svntest.verify.AnyOutput, [],
                                      "co", other_repo_url + "/A",
-                                     os.path.join(other_wc_dir, "A"))
+                                     other_wc_dir_A)
 
   # Checkout the first repos into "other/A".  This should fail since the
   # obstructing versioned directory points to a different URL.
@@ -283,8 +284,28 @@ def forced_checkout_with_versioned_obstruction(sbox):
     "Expected error during co", None, svntest.verify.AnyOutput,
     "co", "--force", sbox.repo_url, other_wc_dir)
 
-  test_stderr("svn: Failed to add directory '.*A': a versioned directory " \
-              "of the same name already exists", serr)
+  test_stderr("svn: URL '.*A' doesn't match existing URL '.*A' in '.*A'", serr)
+
+
+  #ensure that other_wc_dir_A is not affected by this forced checkout.
+  svntest.actions.run_and_verify_svn("empty status output", None,
+                                     [], "st", other_wc_dir_A)
+  exit_code, sout, serr = svntest.actions.run_and_verify_svn(
+    "it should still point to other_repo_url/A", None, [], "info",
+    other_wc_dir_A)
+
+  #TODO rename test_stderr to test_regex or something.
+  test_stderr("URL: " + other_repo_url + '/A$', sout)
+
+  #ensure that other_wc_dir is in a consistent state though it may be
+  #missing few items.
+  exit_code, sout, serr = svntest.actions.run_and_verify_svn(
+    "it should still point to other_repo_url", None, [], "info",
+    other_wc_dir)
+  #TODO rename test_stderr to test_regex or something.
+  test_stderr("URL: " + sbox.repo_url + '$', sout)
+
+
 
 #----------------------------------------------------------------------
 # Ensure that an import followed by a checkout in place works correctly.
@@ -720,7 +741,7 @@ test_list = [ None,
               checkout_creates_intermediate_folders,
               checkout_peg_rev,
               checkout_peg_rev_date,
-              co_with_obstructing_local_adds,
+              XFail(co_with_obstructing_local_adds),
             ]
 
 if __name__ == "__main__":

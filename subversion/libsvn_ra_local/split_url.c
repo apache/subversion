@@ -17,7 +17,6 @@
  */
 
 #include "ra_local.h"
-#include <assert.h>
 #include <string.h>
 #include "svn_path.h"
 #include "svn_private_config.h"

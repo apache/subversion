@@ -3,8 +3,7 @@
 	ProjectType="Visual C++"
 	Version="[version]"
 	Name="__CONFIG__"
-	SccProjectName=""
-	SccLocalPath=""
+	ProjectGUID="{638FEA9B-E592-4B88-93B7-08B8A32CAD1F}"
 	Keyword="MakeFileProj">
 	<Platforms>
 [for platforms]		<Platform
