@@ -165,7 +165,6 @@ class Editor(delta.Editor):
       return ' <%s>' % fs.unparse_id(id)
     return ''
 
-
 class DirsChangedEditor(delta.Editor):
   def open_root(self, base_revision, dir_pool):
     return [ 1, '' ]
@@ -197,7 +196,6 @@ class DirsChangedEditor(delta.Editor):
       # the directory hasn't been printed yet. do it.
       print baton[1] + '/'
       baton[0] = 0
-
 
 class ChangedEditor(delta.Editor):
   def __init__(self, root, base_root):
@@ -259,6 +257,7 @@ class DiffEditor(delta.Editor):
   def __init__(self, root, base_root):
     self.root = root
     self.base_root = base_root
+    self.target_revision = 0
 
   def _do_diff(self, base_path, path):
     if base_path is None:
@@ -288,15 +287,51 @@ class DiffEditor(delta.Editor):
       print line,
     print ""
 
+  def _do_prop_diff(self, path, prop_name, prop_val, pool):
+    print "Property changes on: " + path
+    print "_______________________________________________________________" + \
+          "_______________"
+
+    old_prop_val = None
+
+    try:
+      old_prop_val = fs.node_prop(self.base_root, path, prop_name, pool)
+    except core.SubversionException:
+      pass # Must be a new path
+
+    if old_prop_val:
+      if prop_val:
+        print "Modified: " + prop_name
+        print "   - " + str(old_prop_val)
+        print "   + " + str(prop_val)
+      else:
+        print "Deleted: " + prop_name
+        print "   - " + str(old_prop_val)
+    else:
+      print "Added: " + prop_name
+      print "   + " + str(prop_val)
+
+    print ""
+
   def delete_entry(self, path, revision, parent_baton, pool):
     ### need more logic to detect 'replace'
     if not fs.is_dir(self.base_root, '/' + path):
       self._do_diff(path, None)
 
+  def add_directory(self, path, parent_baton, copyfrom_path,
+                    copyfrom_revision, dir_pool):
+    return [ 1, path ]
+
   def add_file(self, path, parent_baton,
                copyfrom_path, copyfrom_revision, file_pool):
     self._do_diff(None, path)
     return [ '_', ' ', None ]
+
+  def open_root(self, base_revision, dir_pool):
+    return [ 1, '' ]
+  
+  def open_directory(self, path, parent_baton, base_revision, dir_pool):
+    return [ 1, path ]
 
   def open_file(self, path, parent_baton, base_revision, file_pool):
     return [ '_', ' ', path ]
@@ -305,6 +340,19 @@ class DiffEditor(delta.Editor):
     if file_baton[2] is not None:
       self._do_diff(file_baton[2], file_baton[2])
     return None
+
+  def change_file_prop(self, file_baton, name, value, pool):
+    if file_baton[2] is not None:
+      self._do_prop_diff(file_baton[2], name, value, pool)
+    return None
+
+  def change_dir_prop(self, dir_baton, name, value, pool):
+    if dir_baton[1] is not None:
+      self._do_prop_diff(dir_baton[1], name, value, pool)
+    return None
+
+  def set_target_revision(self, target_revision):
+    self.target_revision = target_revision
 
 def _basename(path):
   "Return the basename for a '/'-separated path."

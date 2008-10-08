@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -177,7 +177,9 @@ extern const apr_uint32_t *const svn_ctype_table;
  *
  * @since New in 1.5.
  */
-int svn_ctype_casecmp(int a, int b);
+int
+svn_ctype_casecmp(int a,
+                  int b);
 
 
 /** @} */

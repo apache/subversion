@@ -245,10 +245,6 @@ enum svn_wc__xfer_action {
                                        the current property vals of VERSIONED
                                        or, if that's NULL, those of NAME.
 
-      When SPECIAL_ONLY is TRUE, only translate special,
-      not keywords and eol-style. ### SPECIAL_ONLY is ignored:
-      ### see <http://svn.haxx.se/dev/archive-2008-08/0089.shtml>.
-
 */
 static svn_error_t *
 file_xfer_under_path(svn_wc_adm_access_t *adm_access,
@@ -256,7 +252,6 @@ file_xfer_under_path(svn_wc_adm_access_t *adm_access,
                      const char *dest,
                      const char *versioned,
                      enum svn_wc__xfer_action action,
-                     svn_boolean_t special_only,
                      svn_boolean_t rerun,
                      apr_pool_t *pool)
 {
@@ -325,10 +320,8 @@ file_xfer_under_path(svn_wc_adm_access_t *adm_access,
         SVN_ERR(svn_wc__maybe_set_read_only(NULL, full_dest_path,
                                             adm_access, pool));
 
-        SVN_ERR(svn_wc__maybe_set_executable(NULL, full_dest_path,
-                                             adm_access, pool));
-
-        return SVN_NO_ERROR;
+        return svn_wc__maybe_set_executable(NULL, full_dest_path,
+                                            adm_access, pool);
       }
     case svn_wc__xfer_cp_and_detranslate:
       {
@@ -341,9 +334,7 @@ file_xfer_under_path(svn_wc_adm_access_t *adm_access,
                  SVN_WC_TRANSLATE_TO_NF
                  | SVN_WC_TRANSLATE_FORCE_COPY,
                  pool));
-        SVN_ERR(svn_io_file_rename(tmp_file, full_dest_path, pool));
-
-        return SVN_NO_ERROR;
+        return svn_io_file_rename(tmp_file, full_dest_path, pool);
       }
 
     case svn_wc__xfer_mv:
@@ -607,14 +598,10 @@ log_do_file_xfer(struct log_runner *loggy,
   svn_error_t *err;
   const char *dest = NULL;
   const char *versioned;
-  svn_boolean_t special_only;
 
   /* We have the name (src), and the destination is absolutely required. */
   dest = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_DEST, atts);
-  special_only =
-    svn_xml_get_attr_value(SVN_WC__LOG_ATTR_ARG_1, atts) != NULL;
-  versioned =
-    svn_xml_get_attr_value(SVN_WC__LOG_ATTR_ARG_2, atts);
+  versioned = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_ARG_2, atts);
 
   if (! dest)
     return svn_error_createf(pick_error_code(loggy), NULL,
@@ -624,7 +611,7 @@ log_do_file_xfer(struct log_runner *loggy,
                               loggy->pool));
 
   err = file_xfer_under_path(loggy->adm_access, name, dest, versioned,
-                             action, special_only, loggy->rerun, loggy->pool);
+                             action, loggy->rerun, loggy->pool);
   if (err)
     SIGNAL_ERROR(loggy, err);
 
@@ -660,10 +647,8 @@ log_do_file_maybe_executable(struct log_runner *loggy,
     = svn_path_join(svn_wc_adm_access_path(loggy->adm_access), name,
                     loggy->pool);
 
-  SVN_ERR(svn_wc__maybe_set_executable(NULL, full_path, loggy->adm_access,
-                                      loggy->pool));
-
-  return SVN_NO_ERROR;
+  return svn_wc__maybe_set_executable(NULL, full_path, loggy->adm_access,
+                                     loggy->pool);
 }
 
 /* Maybe make file NAME in log's CWD readonly */
@@ -675,10 +660,8 @@ log_do_file_maybe_readonly(struct log_runner *loggy,
     = svn_path_join(svn_wc_adm_access_path(loggy->adm_access), name,
                     loggy->pool);
 
-  SVN_ERR(svn_wc__maybe_set_read_only(NULL, full_path, loggy->adm_access,
-                                      loggy->pool));
-
-  return SVN_NO_ERROR;
+  return svn_wc__maybe_set_read_only(NULL, full_path, loggy->adm_access,
+                                     loggy->pool);
 }
 
 /* Set file NAME in log's CWD to timestamp value in ATTS. */
@@ -1358,6 +1341,7 @@ log_do_committed(struct log_runner *loggy,
   entry->copyfrom_rev = SVN_INVALID_REVNUM;
   entry->has_prop_mods = FALSE;
   entry->working_size = finfo.size;
+  entry->tree_conflict_data = NULL;
   if ((err = svn_wc__entry_modify(loggy->adm_access, name, entry,
                                   (SVN_WC__ENTRY_MODIFY_REVISION
                                    | SVN_WC__ENTRY_MODIFY_SCHEDULE
@@ -1374,6 +1358,7 @@ log_do_committed(struct log_runner *loggy,
                                       : 0)
                                    | SVN_WC__ENTRY_MODIFY_HAS_PROP_MODS
                                    | SVN_WC__ENTRY_MODIFY_WORKING_SIZE
+                                   | SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA
                                    | SVN_WC__ENTRY_MODIFY_FORCE),
                                   FALSE, pool)))
     return svn_error_createf
@@ -1715,9 +1700,7 @@ run_log_from_memory(svn_wc_adm_access_t *adm_access,
   SVN_ERR(svn_xml_parse(parser, buf, buf_len, 0));
 
   /* Pacify Expat with a pointless closing element tag. */
-  SVN_ERR(svn_xml_parse(parser, log_end, strlen(log_end), 1));
-
-  return SVN_NO_ERROR;
+  return svn_xml_parse(parser, log_end, strlen(log_end), 1);
 }
 
 
@@ -1884,14 +1867,11 @@ svn_wc__rerun_log(svn_wc_adm_access_t *adm_access,
  * either MOVE_COPY_OP has been executed, or DST_PATH was removed.
  *
  * SRC_PATH and DST_PATH are relative to ADM_ACCESS.
- *
- * For SPECIAL_ONLY, see that argument of file_xfer_under_path().
  */
 static svn_error_t *
 loggy_move_copy_internal(svn_stringbuf_t **log_accum,
                          svn_boolean_t *dst_modified,
                          const char *move_copy_op,
-                         svn_boolean_t special_only,
                          svn_wc_adm_access_t *adm_access,
                          const char *src_path, const char *dst_path,
                          svn_boolean_t remove_dst_if_no_src,
@@ -1918,8 +1898,6 @@ loggy_move_copy_internal(svn_stringbuf_t **log_accum,
                             src_path,
                             SVN_WC__LOG_ATTR_DEST,
                             dst_path,
-                            SVN_WC__LOG_ATTR_ARG_1,
-                            special_only ? "true" : NULL,
                             NULL);
       if (dst_modified)
         *dst_modified = TRUE;
@@ -2004,13 +1982,12 @@ svn_wc__loggy_copy(svn_stringbuf_t **log_accum,
     {
       SVN_WC__LOG_CP,
       SVN_WC__LOG_CP_AND_TRANSLATE,
-      SVN_WC__LOG_CP_AND_TRANSLATE,
       SVN_WC__LOG_CP_AND_DETRANSLATE
     };
 
   return loggy_move_copy_internal
     (log_accum, dst_modified,
-     copy_op[copy_type], copy_type == svn_wc__copy_translate_special_only,
+     copy_op[copy_type],
      adm_access,
      loggy_path(src_path, adm_access),
      loggy_path(dst_path, adm_access), remove_dst_if_no_src, pool);
@@ -2236,6 +2213,10 @@ svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
                  SVN_WC__LOG_ATTR_FORCE,
                  "true");
 
+  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA,
+                 SVN_WC__ENTRY_ATTR_TREE_CONFLICT_DATA,
+                 entry->tree_conflict_data ? entry->tree_conflict_data : "");
+
 #undef ADD_ENTRY_ATTR
 
   if (apr_hash_count(prop_hash) == 0)
@@ -2283,7 +2264,7 @@ svn_wc__loggy_move(svn_stringbuf_t **log_accum,
                    apr_pool_t *pool)
 {
   return loggy_move_copy_internal(log_accum, dst_modified,
-                                  SVN_WC__LOG_MV, FALSE, adm_access,
+                                  SVN_WC__LOG_MV, adm_access,
                                   loggy_path(src_path, adm_access),
                                   loggy_path(dst_path, adm_access),
                                   remove_dst_if_no_src, pool);
@@ -2453,10 +2434,8 @@ svn_wc__write_log(svn_wc_adm_access_t *adm_access,
             apr_psprintf(pool, _("Error writing log for '%s'"),
                          svn_path_local_style(logfile_name, pool)));
 
-  SVN_ERR(svn_wc__close_adm_file(log_file, adm_path, logfile_name,
-                                 TRUE, pool));
-
-  return SVN_NO_ERROR;
+  return svn_wc__close_adm_file(log_file, adm_path, logfile_name,
+                                TRUE, pool);
 }
 
 
@@ -2569,7 +2548,5 @@ svn_wc_cleanup2(const char *path,
   if (svn_wc__adm_path_exists(path, 0, pool, NULL))
     SVN_ERR(svn_wc__adm_cleanup_tmp_area(adm_access, pool));
 
-  SVN_ERR(svn_wc_adm_close(adm_access));
-
-  return SVN_NO_ERROR;
+  return svn_wc_adm_close(adm_access);
 }

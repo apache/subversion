@@ -1,7 +1,7 @@
 /* svndiff-test.c -- test driver for text deltas
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -19,6 +19,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <apr_general.h>
+
+#include "../svn_test.h"
+
 #include "svn_base64.h"
 #include "svn_quoprint.h"
 #include "svn_pools.h"

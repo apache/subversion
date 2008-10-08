@@ -2,7 +2,7 @@
  * reporter.c : `reporter' vtable routines for updates.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006, 2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -23,7 +23,6 @@
 #include "svn_fs.h"
 #include "svn_repos.h"
 #include "svn_pools.h"
-#include "svn_md5.h"
 #include "svn_props.h"
 #include "repos.h"
 #include "svn_private_config.h"
@@ -526,7 +525,7 @@ delta_files(report_baton_t *b, void *file_baton, svn_revnum_t s_rev,
   svn_boolean_t changed;
   svn_fs_root_t *s_root = NULL;
   svn_txdelta_stream_t *dstream = NULL;
-  unsigned char s_digest[APR_MD5_DIGESTSIZE];
+  svn_checksum_t *s_checksum;
   const char *s_hex_digest = NULL;
   svn_txdelta_window_handler_t dhandler;
   void *dbaton;
@@ -554,8 +553,9 @@ delta_files(report_baton_t *b, void *file_baton, svn_revnum_t s_rev,
       if (!changed)
         return SVN_NO_ERROR;
 
-      SVN_ERR(svn_fs_file_md5_checksum(s_digest, s_root, s_path, pool));
-      s_hex_digest = svn_md5_digest_to_cstring(s_digest, pool);
+      SVN_ERR(svn_fs_file_checksum(&s_checksum, svn_checksum_md5, s_root,
+                                   s_path, TRUE, pool));
+      s_hex_digest = svn_checksum_to_cstring(s_checksum, pool);
     }
 
   /* Send the delta stream if desired, or just a NULL window if not. */
@@ -701,10 +701,9 @@ add_file_smartly(report_baton_t *b,
         }
     }
 
-  SVN_ERR(b->editor->add_file(path, parent_baton,
-                              *copyfrom_path, *copyfrom_rev,
-                              pool, new_file_baton));
-  return SVN_NO_ERROR;
+  return b->editor->add_file(path, parent_baton,
+                             *copyfrom_path, *copyfrom_rev,
+                             pool, new_file_baton);
 }
 
 
@@ -747,7 +746,7 @@ update_entry(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
   svn_fs_root_t *s_root;
   svn_boolean_t allowed, related;
   void *new_baton;
-  unsigned char digest[APR_MD5_DIGESTSIZE];
+  svn_checksum_t *checksum;
   const char *hex_digest;
   int distance;
 
@@ -866,8 +865,9 @@ update_entry(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
                                 t_path, info ? info->lock_token : NULL, pool));
         }
 
-      SVN_ERR(svn_fs_file_md5_checksum(digest, b->t_root, t_path, pool));
-      hex_digest = svn_md5_digest_to_cstring(digest, pool);
+      SVN_ERR(svn_fs_file_checksum(&checksum, svn_checksum_md5, b->t_root,
+                                   t_path, TRUE, pool));
+      hex_digest = svn_checksum_to_cstring(checksum, pool);
       return b->editor->close_file(new_baton, hex_digest, pool);
     }
 }

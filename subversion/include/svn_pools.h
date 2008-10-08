@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -50,13 +50,15 @@ extern "C" {
  * The return pool will have an abort function set, which will call
  * abort() on OOM.
  */
-apr_pool_t *svn_pool_create_ex(apr_pool_t *parent_pool,
-                               apr_allocator_t *allocator);
+apr_pool_t *
+svn_pool_create_ex(apr_pool_t *parent_pool,
+                   apr_allocator_t *allocator);
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
-apr_pool_t *svn_pool_create_ex_debug(apr_pool_t *parent_pool,
-                                     apr_allocator_t *allocator,
-                                     const char *file_line);
+apr_pool_t *
+svn_pool_create_ex_debug(apr_pool_t *parent_pool,
+                         apr_allocator_t *allocator,
+                         const char *file_line);
 
 #if APR_POOL_DEBUG
 #define svn_pool_create_ex(pool, allocator) \

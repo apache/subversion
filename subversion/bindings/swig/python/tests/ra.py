@@ -56,14 +56,14 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
 
   def test_get_dir2(self):
     (dirents,_,props) = ra.get_dir2(self.ra_ctx, '', 1, core.SVN_DIRENT_KIND)
-    self.assert_(dirents.has_key('trunk'))
-    self.assert_(dirents.has_key('branches'))
-    self.assert_(dirents.has_key('tags'))
+    self.assert_('trunk' in dirents)
+    self.assert_('branches' in dirents)
+    self.assert_('tags' in dirents)
     self.assertEqual(dirents['trunk'].kind, core.svn_node_dir)
     self.assertEqual(dirents['branches'].kind, core.svn_node_dir)
     self.assertEqual(dirents['tags'].kind, core.svn_node_dir)
-    self.assert_(props.has_key(core.SVN_PROP_ENTRY_UUID))
-    self.assert_(props.has_key(core.SVN_PROP_ENTRY_LAST_AUTHOR))
+    self.assert_(core.SVN_PROP_ENTRY_UUID in props)
+    self.assert_(core.SVN_PROP_ENTRY_LAST_AUTHOR in props)
 
     (dirents,_,_) = ra.get_dir2(self.ra_ctx, 'trunk', 1, core.SVN_DIRENT_KIND)
 
@@ -71,7 +71,7 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
 
     (dirents,_,_) = ra.get_dir2(self.ra_ctx, 'trunk', 10, core.SVN_DIRENT_KIND)
 
-    self.assert_(dirents.has_key('README2.txt'))
+    self.assert_('README2.txt' in dirents)
     self.assertEqual(dirents['README2.txt'].kind,core.svn_node_file)
 
   def test_commit3(self):

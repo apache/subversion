@@ -2,8 +2,6 @@
 """getctype.py - Generate the svn_ctype character classification table.
 """
 
-import string
-
 # Table of ASCII character names
 names = ('nul', 'soh', 'stx', 'etx', 'eot', 'enq', 'ack', 'bel',
          'bs',  'ht',  'nl',  'vt',  'np',  'cr',  'so',  'si',
@@ -40,9 +38,9 @@ for c in xrange(256):
         bits.append('SVN_CTYPE_ASCII')
 
         if len(names[c]) == 1:
-            name = string.center(names[c], 3)
+            name = names[c].center(3)
         else:
-            name = string.ljust(names[c], 3)
+            name = names[c].ljust(3)
 
         # Control characters
         if c < 32 or c == 127:
@@ -92,5 +90,5 @@ for c in xrange(256):
     if len(bits) == 0:
         flags = '0'
     else:
-        flags = string.join(bits, ' | ')
+        flags = ' | '.join(bits)
     print '    /* %s */ %s,' % (name, flags)

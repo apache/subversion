@@ -102,9 +102,7 @@ summarize_xml(const svn_client_diff_summarize_t *summary,
   svn_xml_escape_cdata_cstring(&sb, path, pool);
   svn_xml_make_close_tag(&sb, pool, "path");
 
-  SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
-
-  return SVN_NO_ERROR;
+  return svn_cl__error_checked_fputs(sb->data, stdout);
 }
 
 /* Print summary information about a given change, implements the
@@ -134,9 +132,7 @@ summarize_regular(const svn_client_diff_summarize_t *summary,
                              summary->prop_changed ? 'M' : ' ',
                              path));
 
-  SVN_ERR(svn_cmdline_fflush(stdout));
-
-  return SVN_NO_ERROR;
+  return svn_cmdline_fflush(stdout);
 }
 
 /* An svn_opt_subcommand_t to handle the 'diff' command.

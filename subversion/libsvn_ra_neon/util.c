@@ -966,7 +966,7 @@ parse_spool_file(svn_ra_neon__session_t *ras,
 
   SVN_ERR(svn_io_file_open(&spool_file, spool_file_name,
                            (APR_READ | APR_BUFFERED), APR_OS_DEFAULT, pool));
-  spool_stream = svn_stream_from_aprfile(spool_file, pool);
+  spool_stream = svn_stream_from_aprfile2(spool_file, TRUE, pool);
   while (1)
     {
       if (ras->callbacks &&
@@ -1366,10 +1366,7 @@ svn_ra_neon__maybe_store_auth_info(svn_ra_neon__session_t *ras,
     return SVN_NO_ERROR;
 
   /* If we ever got credentials, ask the iter_baton to save them.  */
-  SVN_ERR(svn_auth_save_credentials(ras->auth_iterstate,
-                                    pool));
-
-  return SVN_NO_ERROR;
+  return svn_auth_save_credentials(ras->auth_iterstate, pool);
 }
 
 

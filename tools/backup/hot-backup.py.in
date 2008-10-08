@@ -9,7 +9,7 @@
 #  See http://subversion.tigris.org for more information.
 #    
 # ====================================================================
-# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -29,7 +29,7 @@
 
 ######################################################################
 
-import sys, os, getopt, stat, string, re, time, shutil
+import sys, os, getopt, stat, re, time, shutil
 
 # Try to import the subprocess mode.  It works better then os.popen3
 # and os.spawnl on Windows when spaces appear in any of the svnadmin,
@@ -156,7 +156,7 @@ ext_re = ""
 
 # Do we want to create an archive of the backup
 if archive_type:
-  if archive_map.has_key(archive_type):
+  if archive_type in archive_map:
     # Additionally find files with the archive extension.
     ext_re = "(" + re.escape(archive_map[archive_type]) + ")?"
   else:
@@ -213,9 +213,9 @@ def get_youngest_revision():
 
   if stderr_lines:
     raise Exception("Unable to find the youngest revision for repository '%s'"
-                    ": %s" % (repo_dir, string.rstrip(stderr_lines[0])))
+                    ": %s" % (repo_dir, stderr_lines[0].rstrip()))
 
-  return string.strip(stdout_lines[0])
+  return stdout_lines[0].strip()
 
 ######################################################################
 # Main

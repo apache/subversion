@@ -22,7 +22,6 @@
 
 /*** Includes. ***/
 
-#include <assert.h>
 #include "svn_client.h"
 #include "svn_string.h"
 #include "svn_error.h"
@@ -53,12 +52,10 @@ cat_local_file(const char *path,
   apr_hash_t *kw = NULL;
   svn_subst_eol_style_t style;
   apr_hash_t *props;
-  const char *base;
   svn_string_t *eol_style, *keywords, *special;
   const char *eol = NULL;
   svn_boolean_t local_mod = FALSE;
   apr_time_t tm;
-  apr_file_t *input_file;
   svn_stream_t *input;
 
   SVN_ERR_ASSERT(SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(revision->kind));
@@ -72,14 +69,15 @@ cat_local_file(const char *path,
 
   if (revision->kind != svn_opt_revision_working)
     {
-      SVN_ERR(svn_wc_get_pristine_copy_path(path, &base, pool));
+      SVN_ERR(svn_wc_get_pristine_contents(&input, path, pool, pool));
       SVN_ERR(svn_wc_get_prop_diffs(NULL, &props, path, adm_access, pool));
     }
   else
     {
       svn_wc_status2_t *status;
 
-      base = path;
+      SVN_ERR(svn_stream_open_readonly(&input, path, pool, pool));
+
       SVN_ERR(svn_wc_prop_list(&props, path, adm_access, pool));
       SVN_ERR(svn_wc_status2(&status, path, adm_access, pool));
       if (status->text_status != svn_wc_status_normal)
@@ -133,19 +131,13 @@ cat_local_file(const char *path,
                entry->url, tm, author, pool));
     }
 
-  SVN_ERR(svn_io_file_open(&input_file, base,
-                           APR_READ, APR_OS_DEFAULT, pool));
-  input = svn_stream_from_aprfile2(input_file, FALSE, pool);
-
   if ( eol || kw )
     SVN_ERR(svn_subst_translate_stream3(input, output, eol, FALSE, kw,
                                         TRUE, pool));
   else
-    SVN_ERR(svn_stream_copy(input, output, pool));
+    SVN_ERR(svn_stream_copy2(input, output, NULL, NULL, pool));
 
-  SVN_ERR(svn_stream_close(input));
-
-  return SVN_NO_ERROR;
+  return svn_stream_close(input);
 }
 
 svn_error_t *
@@ -192,9 +184,7 @@ svn_client_cat2(svn_stream_t *out,
 
       SVN_ERR(cat_local_file(path_or_url, out, adm_access, revision, pool));
 
-      SVN_ERR(svn_wc_adm_close(adm_access));
-
-      return SVN_NO_ERROR;
+      return svn_wc_adm_close(adm_access);
     }
 
   /* Get an RA plugin for this filesystem object. */

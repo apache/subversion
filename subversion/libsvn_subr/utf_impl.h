@@ -50,9 +50,6 @@ const char *svn_utf__cstring_from_utf8_fuzzy(const char *src,
  */
 const char *svn_utf__last_valid(const char *src, apr_size_t len);
 
-/* As for svn_utf__is_valid but SRC is NULL terminated. */
-svn_boolean_t svn_utf__cstring_is_valid(const char *src);
-
 /* As for svn_utf__last_valid but uses a different implementation without
    lookup tables.  It avoids the table memory use (about 400 bytes) but the
    function is longer (about 200 bytes extra) and likely to be slower when

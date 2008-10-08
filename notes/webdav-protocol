@@ -318,7 +318,8 @@ Request:
     <S:discover-changed-paths/> (optional)
     <S:strict-node-history/> (optional)
     <S:include-merged-revisions/> (optional)
-    <S:revprop>REVPROP</S:revprop>... | <S:all-revprops/> (optional)
+    <S:revprop>REVPROP</S:revprop>... | <S:all-revprops/> | <S:no-revprops/>
+      ('revprop', 'all-revprops', and 'no-revprops' are all optional)
     <S:path></S:path>... (optional)
   </S:log-report>
 

@@ -18,9 +18,9 @@
 
 #include <apr_pools.h>
 #include <apr_strings.h>
-#include <assert.h>
 
 #include "svn_pools.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_string.h"
 #include "svn_opt.h"
@@ -42,6 +42,25 @@
 
 
 
+svn_client__merge_path_t *
+svn_client__merge_path_dup(const svn_client__merge_path_t *old,
+                           apr_pool_t *pool)
+{
+  svn_client__merge_path_t *new = apr_pmemdup(pool, old, sizeof(*old));
+
+  new->path = apr_pstrdup(pool, old->path);
+  if (new->remaining_ranges)
+    new->remaining_ranges = svn_rangelist_dup(old->remaining_ranges, pool);
+  if (new->pre_merge_mergeinfo)
+    new->pre_merge_mergeinfo = svn_mergeinfo_dup(old->pre_merge_mergeinfo,
+                                                 pool);
+  if (new->implicit_mergeinfo)
+    new->implicit_mergeinfo = svn_mergeinfo_dup(old->implicit_mergeinfo,
+                                                 pool);
+
+  return new;
+}
+
 svn_error_t *
 svn_client__parse_mergeinfo(svn_mergeinfo_t *mergeinfo,
                             const svn_wc_entry_t *entry,
@@ -62,11 +81,12 @@ svn_client__parse_mergeinfo(svn_mergeinfo_t *mergeinfo,
                                        svn_depth_empty, NULL, ctx, pool));
   propval = apr_hash_get(props, wcpath, APR_HASH_KEY_STRING);
   if (propval)
-    SVN_ERR(svn_mergeinfo_parse(mergeinfo, propval->data, pool));
+    return svn_mergeinfo_parse(mergeinfo, propval->data, pool);
   else
-    *mergeinfo = NULL;
-
-  return SVN_NO_ERROR;
+    {
+      *mergeinfo = NULL;
+      return SVN_NO_ERROR;
+    }
 }
 
 svn_error_t *
@@ -176,21 +196,10 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
          an absolute path so we can walk up and out of the WC
          if necessary.  If we are using LIMIT_PATH it needs to
          be absolute too. */
-#if defined(WIN32) || defined(__CYGWIN__)
-      /* On Windows a path is also absolute when it starts with
-         'H:/' where 'H' is any upper or lower case letter. */
-      if (strlen(wcpath) == 0
-          || ((strlen(wcpath) > 0 && wcpath[0] != '/')
-               && !(strlen(wcpath) > 2
-                    && wcpath[1] == ':'
-                    && wcpath[2] == '/'
-                    && ((wcpath[0] >= 'A' && wcpath[0] <= 'Z')
-                        || (wcpath[0] >= 'a' && wcpath[0] <= 'z')))))
-#else
-      if (!(strlen(wcpath) > 0 && wcpath[0] == '/'))
-#endif /* WIN32 or Cygwin */
+
+      if (! svn_dirent_is_absolute(wcpath))
         {
-          SVN_ERR(svn_path_get_absolute(&wcpath, wcpath, pool));
+          SVN_ERR(svn_dirent_get_absolute(&wcpath, wcpath, pool));
         }
 
       if (wc_mergeinfo == NULL &&
@@ -1171,9 +1180,9 @@ location_from_path_and_rev(const char **url,
   svn_pool_destroy(subpool);
 
   if (adm_access)
-    SVN_ERR(svn_wc_adm_close(adm_access));
-
-  return SVN_NO_ERROR;
+    return svn_wc_adm_close(adm_access);
+  else
+    return SVN_NO_ERROR;
 }
 
 

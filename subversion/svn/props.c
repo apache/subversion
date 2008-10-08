@@ -2,7 +2,7 @@
  * props.c: Utility functions for property handling
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -185,7 +185,7 @@ svn_cl__check_boolean_prop_val(const char *propname, const char *propval,
          _("To turn off the %s property, use 'svn propdel';\n"
            "setting the property to '%s' will not turn it off."),
            propname, propval);
-      svn_handle_warning(stderr, err);
+      svn_handle_warning2(stderr, err, "svn: ");
       svn_error_clear(err);
     }
 }

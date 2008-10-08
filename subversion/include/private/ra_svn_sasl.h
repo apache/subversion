@@ -42,24 +42,28 @@ extern "C" {
 extern volatile svn_atomic_t svn_ra_svn__sasl_status;
 
 /* Initialize secprops with default values. */
-void svn_ra_svn__default_secprops(sasl_security_properties_t *secprops);
+void
+svn_ra_svn__default_secprops(sasl_security_properties_t *secprops);
 
 /* This function is called by the client and the server before
    calling sasl_{client, server}_init, pool is used for allocations. */
-apr_status_t svn_ra_svn__sasl_common_init(apr_pool_t *pool);
+apr_status_t
+svn_ra_svn__sasl_common_init(apr_pool_t *pool);
 
 /* Sets local_addrport and remote_addrport to a string containing the
    remote and local IP address and port, formatted like this: a.b.c.d;port. */
-svn_error_t *svn_ra_svn__get_addresses(const char **local_addrport,
-                                       const char **remote_addrport,
-                                       svn_ra_svn_conn_t *conn,
-                                       apr_pool_t *pool);
+svn_error_t *
+svn_ra_svn__get_addresses(const char **local_addrport,
+                          const char **remote_addrport,
+                          svn_ra_svn_conn_t *conn,
+                          apr_pool_t *pool);
 
 /* If a security layer was negotiated during the authentication exchange,
    create an encrypted stream for conn. */
-svn_error_t *svn_ra_svn__enable_sasl_encryption(svn_ra_svn_conn_t *conn,
-                                                sasl_conn_t *sasl_ctx,
-                                                apr_pool_t *pool);
+svn_error_t *
+svn_ra_svn__enable_sasl_encryption(svn_ra_svn_conn_t *conn,
+                                   sasl_conn_t *sasl_ctx,
+                                   apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

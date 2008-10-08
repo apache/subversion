@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2006, 2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -27,6 +27,7 @@
 #include <apr_dso.h>
 
 #include "svn_error.h"
+#include "svn_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -50,7 +51,8 @@ extern "C" {
  *
  * @since New in 1.6.
  */
-svn_error_t *svn_dso_initialize2(void);
+svn_error_t *
+svn_dso_initialize2(void);
 
 /**
  * Initialize the DSO loading routines.
@@ -71,7 +73,9 @@ svn_error_t *svn_dso_initialize2(void);
  *
  * @since New in 1.4.
  */
-void svn_dso_initialize(void);
+SVN_DEPRECATED
+void
+svn_dso_initialize(void);
 
 #if APR_HAS_DSO
 /**
@@ -87,7 +91,9 @@ void svn_dso_initialize(void);
  *
  * @since New in 1.4.
  */
-svn_error_t *svn_dso_load(apr_dso_handle_t **dso, const char *libname);
+svn_error_t *
+svn_dso_load(apr_dso_handle_t **dso,
+             const char *libname);
 #endif /* APR_HAS_DSO */
 
 #ifdef __cplusplus

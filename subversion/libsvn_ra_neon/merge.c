@@ -190,12 +190,10 @@ static svn_error_t *bump_resource(merge_ctx_t *mc,
     vsn_url_str.data = vsn_url;
     vsn_url_str.len = strlen(vsn_url);
 
-    SVN_ERR((*mc->push_prop)(mc->cb_baton, path,
-                             SVN_RA_NEON__LP_VSN_URL, &vsn_url_str,
-                             pool));
+    return (*mc->push_prop)(mc->cb_baton, path,
+                            SVN_RA_NEON__LP_VSN_URL, &vsn_url_str,
+                            pool);
   }
-
-  return SVN_NO_ERROR;
 }
 
 static svn_error_t * handle_resource(merge_ctx_t *mc,

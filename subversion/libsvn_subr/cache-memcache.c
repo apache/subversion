@@ -16,12 +16,11 @@
  * ====================================================================
  */
 
-#include <assert.h>
+#include <apr_md5.h>
 
 #include "svn_cache.h"
 #include "svn_pools.h"
 #include "svn_base64.h"
-#include "svn_md5.h"
 #include "svn_path.h"
 
 #include "svn_private_config.h"
@@ -54,8 +53,8 @@ typedef struct {
 
 
   /* Used to marshal values in and out of the cache. */
-  svn_cache_serialize_func_t *serialize_func;
-  svn_cache_deserialize_func_t *deserialize_func;
+  svn_cache_serialize_func_t serialize_func;
+  svn_cache_deserialize_func_t deserialize_func;
 } memcache_t;
 
 /* The wrapper around apr_memcache_t. */
@@ -106,13 +105,13 @@ build_key(memcache_t *cache,
      MAX_MEMCACHED_KEY_LEN bytes long. */
   if (long_key_len > MEMCACHED_KEY_UNHASHED_LEN)
     {
-      unsigned char digest[APR_MD5_DIGESTSIZE];
-      apr_md5(digest, long_key, long_key_len);
+      svn_checksum_t *checksum;
+      svn_checksum(&checksum, svn_checksum_md5, long_key, long_key_len, pool);
 
       long_key = apr_pstrcat(pool,
                              apr_pstrmemdup(pool, long_key,
                                             MEMCACHED_KEY_UNHASHED_LEN),
-                             svn_md5_digest_to_cstring_display(digest, pool),
+                             svn_checksum_to_cstring_display(checksum, pool),
                              NULL);
     }
 
@@ -227,8 +226,8 @@ static svn_cache__vtable_t memcache_vtable = {
 svn_error_t *
 svn_cache_create_memcache(svn_cache_t **cache_p,
                           svn_memcache_t *memcache,
-                          svn_cache_serialize_func_t *serialize_func,
-                          svn_cache_deserialize_func_t *deserialize_func,
+                          svn_cache_serialize_func_t serialize_func,
+                          svn_cache_deserialize_func_t deserialize_func,
                           apr_ssize_t klen,
                           const char *prefix,
                           apr_pool_t *pool)
@@ -339,8 +338,8 @@ struct svn_memcache_t {
 svn_error_t *
 svn_cache_create_memcache(svn_cache_t **cache_p,
                           svn_memcache_t *memcache,
-                          svn_cache_serialize_func_t *serialize_func,
-                          svn_cache_deserialize_func_t *deserialize_func,
+                          svn_cache_serialize_func_t serialize_func,
+                          svn_cache_deserialize_func_t deserialize_func,
                           apr_ssize_t klen,
                           const char *prefix,
                           apr_pool_t *pool)

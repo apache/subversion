@@ -140,6 +140,7 @@ svn_subst_build_keywords2(apr_hash_t **kw,
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_subst_build_keywords(svn_subst_keywords_t *kw,
                          const char *keywords_string,
@@ -177,6 +178,7 @@ svn_subst_keywords_differ2(apr_hash_t *a,
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
+SVN_DEPRECATED
 svn_boolean_t
 svn_subst_keywords_differ(const svn_subst_keywords_t *a,
                           const svn_subst_keywords_t *b,
@@ -291,6 +293,7 @@ svn_subst_stream_from_specialfile(svn_stream_t **stream,
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_subst_translate_stream2(svn_stream_t *src,
                             svn_stream_t *dst,
@@ -308,6 +311,7 @@ svn_subst_translate_stream2(svn_stream_t *src,
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_subst_translate_stream(svn_stream_t *src,
                            svn_stream_t *dst,
@@ -354,6 +358,7 @@ svn_subst_copy_and_translate3(const char *src,
  * @deprecated Provided for backward compatibility with the 1.2 API.
  * @since New in 1.1.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_subst_copy_and_translate2(const char *src,
                               const char *dst,
@@ -370,6 +375,7 @@ svn_subst_copy_and_translate2(const char *src,
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_subst_copy_and_translate(const char *src,
                              const char *dst,
@@ -378,6 +384,41 @@ svn_subst_copy_and_translate(const char *src,
                              const svn_subst_keywords_t *keywords,
                              svn_boolean_t expand,
                              apr_pool_t *pool);
+
+
+/**
+ * Create a new, translated file.
+ *
+ * This is similar to svn_subst_copy_and_translate3() except that it
+ * takes a source stream.
+ *
+ * Translates the stream @a src into a file at path @a dst.  The
+ * parameters @a *eol_str, @a repair, @a *keywords and @a expand are
+ * defined the same as in svn_subst_translate_stream3().
+ *
+ * If @a special is TRUE, then the stream should define a special fine,
+ * and be in "normal form". The file @a dst will then be a special file.
+ *
+ * The contents will be copied/translated into a temporary file, and then
+ * moved to @a dst atomically.
+ *
+ * If anything goes wrong during the copy, attempt to delete @a dst (if
+ * it exists).
+ *
+ * If @a eol_str and @a keywords are @c NULL, behavior is just a byte-for-byte
+ * copy.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_subst_create_translated(svn_stream_t *src,
+                            const char *dst,
+                            const char *eol_str,
+                            svn_boolean_t repair,
+                            apr_hash_t *keywords,
+                            svn_boolean_t expand,
+                            svn_boolean_t special,
+                            apr_pool_t *scratch_pool);
 
 
 /**
@@ -408,6 +449,7 @@ svn_subst_translate_cstring2(const char *src,
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_subst_translate_cstring(const char *src,
                             const char **dst,
@@ -497,6 +539,21 @@ svn_error_t *svn_subst_detranslate_string(svn_string_t **new_value,
                                           svn_boolean_t for_output,
                                           apr_pool_t *pool);
 
+
+/** Get a stream that contains the (detranslated) "normal form" of the
+ * file located at @a path. If the file is not special, then a normal,
+ * readonly stream is opened up on it.
+ *
+ * The stream is allocated in @a result_pool, and all temporary allocations
+ * are performed in @a scratch_pool.
+ *
+ * @since New in 1.6
+ */
+svn_error_t *
+svn_subst_get_detranslated_stream(svn_stream_t **stream,
+                                  const char *path,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
 
 
 #ifdef __cplusplus

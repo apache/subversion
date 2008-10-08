@@ -91,7 +91,7 @@ use case this will impact is vendor branches.</p>
   <li>URL to URL</li>
 </ul>
 
-<p>These operations always propogate both explicit and implicit merge
+<p>These operations always propagate both explicit and implicit merge
 info.  Other than the inclusion of merge info, operation is
 effectively the same as pre-Merge Tracking.</p>
 
@@ -105,20 +105,20 @@ no repository access).  This is a typical behavior of refactoring
 tools (e.g. IDEs like Eclipse), and is very useful when offline
 (e.g. on an airplane or subway, or at a cafe).</p>
 
-<p>However, to propogate merge info during copy/move operations,
+<p>However, to propagate merge info during copy/move operations,
 access to both a path's comprehensive merge info and its history is
 necessary.  To preserve offline operation, the Merge Tracking
 implementation supports two modes:</p>
 
 <ul>
   <li>A compatibility mode, which neither contacts the repository, nor
-    does any merge info propogation (unless a copy source's merge info
-    has been locally modified, in which its value is propogated the as
+    does any merge info propagation (unless a copy source's merge info
+    has been locally modified, in which its value is propagated the as
     any Subversion revision property).  This is the default mode of
     operation.</li>
 
   <li>A mode which requires repository access (e.g. isn't offline),
-    but which propogates all merge info from source path to
+    but which propagates all merge info from source path to
     destination.  This mode is activated via the
     <code>--use-merge-history</code> option.</li>
 </ul>

@@ -2,7 +2,7 @@
  * liveprops.c: mod_dav_svn live property provider functions for Subversion
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -17,17 +17,16 @@
  */
 
 #include <apr_tables.h>
-#include <apr_md5.h>
 
 #include <httpd.h>
 #include <http_core.h>
 #include <util_xml.h>
 #include <mod_dav.h>
 
+#include "svn_checksum.h"
 #include "svn_pools.h"
 #include "svn_time.h"
 #include "svn_dav.h"
-#include "svn_md5.h"
 #include "svn_props.h"
 
 #include "private/svn_dav_protocol.h"
@@ -628,11 +627,11 @@ insert_prop(const dav_resource *resource,
               || resource->type == DAV_RESOURCE_TYPE_WORKING
               || resource->type == DAV_RESOURCE_TYPE_VERSION))
         {
-          unsigned char digest[APR_MD5_DIGESTSIZE];
+          svn_checksum_t *checksum;
 
-          serr = svn_fs_file_md5_checksum(digest,
-                                          resource->info->root.root,
-                                          resource->info->repos_path, p);
+          serr = svn_fs_file_checksum(&checksum, svn_checksum_md5,
+                                      resource->info->root.root,
+                                      resource->info->repos_path, TRUE, p);
           if (serr != NULL)
             {
               /* ### what to do? */
@@ -641,7 +640,7 @@ insert_prop(const dav_resource *resource,
               break;
             }
 
-          value = svn_md5_digest_to_cstring(digest, p);
+          value = svn_checksum_to_cstring(checksum, p);
 
           if (! value)
             return DAV_PROP_INSERT_NOTSUPP;

@@ -29,7 +29,7 @@
 
 #include "../svn_test.h"
 
-static svn_cache_dup_func_t dup_revnum;
+/* Implements svn_cache_dup_func_t */
 static svn_error_t *
 dup_revnum(void **out,
            void *in,
@@ -44,7 +44,7 @@ dup_revnum(void **out,
   return SVN_NO_ERROR;
 }
 
-static svn_cache_serialize_func_t serialize_revnum;
+/* Implements svn_cache_serialize_func_t */
 static svn_error_t *
 serialize_revnum(char **data,
                  apr_size_t *data_len,
@@ -58,7 +58,7 @@ serialize_revnum(char **data,
 }
 
 
-static svn_cache_deserialize_func_t deserialize_revnum;
+/* Implements svn_cache_deserialize_func_t */
 static svn_error_t *
 deserialize_revnum(void **out,
                    const char *data,

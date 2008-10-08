@@ -27,6 +27,10 @@
 %include svn_global.swg
 %import core.i
 
+#ifdef SWIGRUBY
+%ignore svn_compat_wrap_file_rev_handler;
+#endif
+
 /* -----------------------------------------------------------------------
    %apply-ing of typemaps defined elsewhere
 */

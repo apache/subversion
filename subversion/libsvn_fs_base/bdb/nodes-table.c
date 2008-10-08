@@ -173,13 +173,11 @@ svn_fs_bdb__delete_nodes_entry(svn_fs_t *fs,
   DBT key;
 
   svn_fs_base__trail_debug(trail, "nodes", "del");
-  SVN_ERR(BDB_WRAP(fs, _("deleting entry from 'nodes' table"),
-                   bfd->nodes->del(bfd->nodes,
-                                   trail->db_txn,
-                                   svn_fs_base__id_to_dbt(&key, id, pool),
-                                   0)));
-
-  return SVN_NO_ERROR;
+  return BDB_WRAP(fs, _("deleting entry from 'nodes' table"),
+                  bfd->nodes->del(bfd->nodes,
+                                  trail->db_txn,
+                                  svn_fs_base__id_to_dbt(&key, id, pool),
+                                  0));
 }
 
 

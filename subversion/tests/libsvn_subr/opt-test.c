@@ -2,7 +2,7 @@
  * opt-test.c -- test the option functions
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -17,10 +17,11 @@
  */
 
 #include <string.h>
-#include "svn_opt.h"
 #include <apr_general.h>
 
 #include "../svn_test.h"
+
+#include "svn_opt.h"
 
 
 static svn_error_t *

@@ -108,7 +108,7 @@ Server requirement(s):
    per-connection.
  - Avoid contamination of environment used by other code (e.g. other
    Apache modules running in the same server as mod_dav_svn).
- - Allow for propogation of the language to use to hook scripts.
+ - Allow for propagation of the language to use to hook scripts.
  - Continue to inter-op with generic HTTP/DAV clients, and stay
    compatible with SVN clients of various versions (as per existing
    compatibility rules).

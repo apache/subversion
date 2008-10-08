@@ -40,7 +40,8 @@ svn_fs__canonicalize_abspath(const char *path, apr_pool_t *pool);
    otherwise, verify that FS refers to an unopened database.  Return
    an appropriate error if the expecation fails to match the
    reality.  */
-svn_error_t *svn_fs__check_fs(svn_fs_t *fs, svn_boolean_t expect_open);
+svn_error_t *
+svn_fs__check_fs(svn_fs_t *fs, svn_boolean_t expect_open);
 
 /* Constructing nice error messages for roots.  */
 
@@ -121,7 +122,7 @@ svn_error_t *svn_fs__check_fs(svn_fs_t *fs, svn_boolean_t expect_open);
 #define SVN_FS__ERR_LOCK_EXPIRED(fs, token)                      \
   svn_error_createf                                              \
     (SVN_ERR_FS_LOCK_EXPIRED, 0,                                 \
-     _("Lock has expired:  lock-token '%s' in filesystem '%s'"), \
+     _("Lock has expired: lock-token '%s' in filesystem '%s'"), \
      token, fs->path)
 
 /* FS is of type "svn fs_t *". */

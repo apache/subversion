@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -63,7 +63,8 @@ extern "C" {
  *
  * @since New in 1.1.
  */
-const svn_version_t *svn_diff_version(void);
+const svn_version_t *
+svn_diff_version(void);
 
 
 /* Diffs. */
@@ -144,20 +145,22 @@ typedef struct svn_diff_fns_t
  * return a diff object in @a *diff that represents a difference between
  * an "original" and "modified" datasource.  Do all allocation in @a pool.
  */
-svn_error_t *svn_diff_diff(svn_diff_t **diff,
-                           void *diff_baton,
-                           const svn_diff_fns_t *diff_fns,
-                           apr_pool_t *pool);
+svn_error_t *
+svn_diff_diff(svn_diff_t **diff,
+              void *diff_baton,
+              const svn_diff_fns_t *diff_fns,
+              apr_pool_t *pool);
 
 /** Given a vtable of @a diff_fns/@a diff_baton for reading datasources,
  * return a diff object in @a *diff that represents a difference between
  * three datasources: "original", "modified", and "latest".  Do all
  * allocation in @a pool.
  */
-svn_error_t *svn_diff_diff3(svn_diff_t **diff,
-                            void *diff_baton,
-                            const svn_diff_fns_t *diff_fns,
-                            apr_pool_t *pool);
+svn_error_t *
+svn_diff_diff3(svn_diff_t **diff,
+               void *diff_baton,
+               const svn_diff_fns_t *diff_fns,
+               apr_pool_t *pool);
 
 /** Given a vtable of @a diff_fns/@a diff_baton for reading datasources,
  * return a diff object in @a *diff that represents a difference between
@@ -165,10 +168,11 @@ svn_error_t *svn_diff_diff3(svn_diff_t **diff,
  * difference between "original", "modified" and "latest" using "ancestor".
  * Do all allocation in @a pool.
  */
-svn_error_t *svn_diff_diff4(svn_diff_t **diff,
-                            void *diff_baton,
-                            const svn_diff_fns_t *diff_fns,
-                            apr_pool_t *pool);
+svn_error_t *
+svn_diff_diff4(svn_diff_t **diff,
+               void *diff_baton,
+               const svn_diff_fns_t *diff_fns,
+               apr_pool_t *pool);
 
 
 /* Utility functions */
@@ -424,6 +428,7 @@ svn_diff_file_diff_2(svn_diff_t **diff,
  *
  * @deprecated Provided for backwards compatibility with the 1.3 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_diff_file_diff(svn_diff_t **diff,
                    const char *original,
@@ -453,6 +458,7 @@ svn_diff_file_diff3_2(svn_diff_t **diff,
  *
  * @deprecated Provided for backwards compatibility with the 1.3 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_diff_file_diff3(svn_diff_t **diff,
                     const char *original,
@@ -484,6 +490,7 @@ svn_diff_file_diff4_2(svn_diff_t **diff,
  *
  * @deprecated Provided for backwards compatibility with the 1.3 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_diff_file_diff4(svn_diff_t **diff,
                     const char *original,
@@ -527,6 +534,7 @@ svn_diff_file_output_unified3(svn_stream_t *output_stream,
  *
  * @deprecated Provided for backwards compatibility with the 1.3 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_diff_file_output_unified2(svn_stream_t *output_stream,
                               svn_diff_t *diff,
@@ -542,6 +550,7 @@ svn_diff_file_output_unified2(svn_stream_t *output_stream,
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_diff_file_output_unified(svn_stream_t *output_stream,
                              svn_diff_t *diff,
@@ -593,6 +602,7 @@ svn_diff_file_output_merge2(svn_stream_t *output_stream,
  *
  * @deprecated Provided for backward compatibility with the 1.5 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_diff_file_output_merge(svn_stream_t *output_stream,
                            svn_diff_t *diff,
@@ -712,6 +722,7 @@ svn_diff_mem_string_output_merge2(svn_stream_t *output_stream,
  *
  * @deprecated Provided for backward compatibility with the 1.5 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_diff_mem_string_output_merge(svn_stream_t *output_stream,
                                  svn_diff_t *diff,

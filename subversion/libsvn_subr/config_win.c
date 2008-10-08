@@ -2,7 +2,7 @@
  * config_win.c :  parsing configuration data from the registry
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -21,21 +21,19 @@
 #include "svn_private_config.h"
 
 #ifdef WIN32
+/* We must include windows.h ourselves or apr.h includes it for us with
+   many ignore options set. Including Winsock is required to resolve IPv6
+   compilation errors. APR_HAVE_IPV6 is only defined after including
+   apr.h, so we can't detect this case here. */
+
 #define WIN32_LEAN_AND_MEAN
-#ifdef APR_HAVE_IPV6
+/* winsock2.h includes windows.h */
 #include <winsock2.h>
 #include <Ws2tcpip.h>
-#include <Wspiapi.h>
-#endif
-#include <windows.h>
+
 #include <shlobj.h>
 
 #include <apr_file_info.h>
-/* FIXME: We're using an internal APR header here, which means we
-   have to build Subversion with APR sources. This being Win32-only,
-   that should be fine for now, but a better solution must be found in
-   combination with issue #850. */
-#include <arch/win32/apr_arch_utf8.h>
 
 #include "svn_error.h"
 #include "svn_path.h"
@@ -52,132 +50,41 @@ svn_config__win_config_path(const char **folder, int system_path,
   const int csidl = ((system_path ? CSIDL_COMMON_APPDATA : CSIDL_APPDATA)
                      | CSIDL_FLAG_CREATE);
 
-  int style;
-  apr_status_t apr_err = apr_filepath_encoding(&style, pool);
+  WCHAR folder_ucs2[MAX_PATH];
+  apr_size_t inwords, outbytes, outlength;
+  char *folder_utf8;
 
-  if (apr_err)
-    return svn_error_wrap_apr(apr_err,
-                              "Can't determine the native path encoding");
-
-  if (style == APR_FILEPATH_ENCODING_UTF8)
-    {
-      WCHAR folder_ucs2[MAX_PATH];
-      apr_size_t inwords, outbytes, outlength;
-      char *folder_utf8;
-
-      if (S_OK != SHGetFolderPathW(NULL, csidl, NULL, SHGFP_TYPE_CURRENT,
-                                   folder_ucs2))
-        goto no_folder_path;
-
-      /* ### When mapping from UCS-2 to UTF-8, we need at most 3 bytes
-             per wide char, plus extra space for the nul terminator. */
-      inwords = lstrlenW(folder_ucs2);
-      outbytes = outlength = 3 * (inwords + 1);
-      folder_utf8 = apr_palloc(pool, outlength);
-
-      apr_err = apr_conv_ucs2_to_utf8(folder_ucs2, &inwords,
-                                      folder_utf8, &outbytes);
-      if (!apr_err && (inwords > 0 || outbytes == 0))
-        apr_err = APR_INCOMPLETE;
-      if (apr_err)
-        return svn_error_wrap_apr(apr_err,
-                                  "Can't convert config path to UTF-8");
-
-      /* Note that apr_conv_ucs2_to_utf8 does _not_ terminate the
-         outgoing buffer. */
-      folder_utf8[outlength - outbytes] = '\0';
-      *folder = folder_utf8;
-    }
-  else if (style == APR_FILEPATH_ENCODING_LOCALE)
-    {
-      char folder_ansi[MAX_PATH];
-      if (S_OK != SHGetFolderPathA(NULL, csidl, NULL, SHGFP_TYPE_CURRENT,
-                                   folder_ansi))
-        goto no_folder_path;
-      SVN_ERR(svn_utf_cstring_to_utf8(folder, folder_ansi, pool));
-    }
-  else
-    {
-      /* There is no third option on Windows; we should never get here. */
-      return svn_error_createf(APR_EINVAL, NULL,
-                               "Unknown native path encoding (%d)", style);
-    }
-
-  *folder = svn_path_internal_style(*folder, pool);
-  return SVN_NO_ERROR;
-
- no_folder_path:
-  return svn_error_create(SVN_ERR_BAD_FILENAME, NULL,
+  if (S_OK != SHGetFolderPathW(NULL, csidl, NULL, SHGFP_TYPE_CURRENT,
+                               folder_ucs2))
+    return svn_error_create(SVN_ERR_BAD_FILENAME, NULL,
                           (system_path
                            ? "Can't determine the system config path"
                            : "Can't determine the user's config path"));
-}
 
-/* Convert UTF8, a UTF-8 encoded string, to UCS2, a UCS-2 encoded
-   string, using POOL for temporary allocations. */
-static svn_error_t *
-utf8_to_ucs2(WCHAR **ucs2, const char *utf8, apr_pool_t *pool)
-{
-  apr_size_t inbytes, outwords, outlength;
-  apr_status_t apr_err;
+  /* ### When mapping from UCS-2 to UTF-8, we need at most 3 bytes
+         per wide char, plus extra space for the nul terminator. */
+  inwords = lstrlenW(folder_ucs2);
+  outbytes = outlength = 3 * (inwords + 1);
 
-  inbytes = lstrlenA(utf8);
-  outwords = outlength = inbytes + 1; /* Include terminating null. */
-  *ucs2 = apr_palloc(pool, outwords * sizeof(WCHAR));
-  apr_err = apr_conv_utf8_to_ucs2(utf8, &inbytes, *ucs2, &outwords);
+  folder_utf8 = apr_palloc(pool, outlength);
 
-  if (!apr_err && (inbytes > 0 || outwords == 0))
-    apr_err = APR_INCOMPLETE;
-  if (apr_err)
-    return svn_error_wrap_apr(apr_err, "Can't convert config path to UCS-2");
+  outbytes = WideCharToMultiByte(CP_UTF8, 0, folder_ucs2, inwords, 
+                                 folder_utf8, outbytes, NULL, NULL);
 
-  /* Note that apr_conv_utf8_to_ucs2 does _not_ terminate the
+  if (outbytes == 0)
+    return svn_error_wrap_apr(apr_get_os_error(),
+                              "Can't convert config path to UTF-8");
+
+  /* Note that WideCharToMultiByte does _not_ terminate the
      outgoing buffer. */
-  (*ucs2)[outlength - outwords] = L'\0';
+  folder_utf8[outbytes] = '\0';
+  *folder = folder_utf8;
+
   return SVN_NO_ERROR;
 }
-
 
 
 #include "config_impl.h"
-
-svn_error_t *
-svn_config__open_file(FILE **pfile,
-                      const char *filename,
-                      const char *mode,
-                      apr_pool_t *pool)
-{
-  int style;
-  apr_status_t apr_err = apr_filepath_encoding(&style, pool);
-
-  if (apr_err)
-    return svn_error_wrap_apr(apr_err,
-                              "Can't determine the native path encoding");
-
-  if (style == APR_FILEPATH_ENCODING_UTF8)
-    {
-      WCHAR *filename_ucs2;
-      WCHAR *mode_ucs2;
-
-      SVN_ERR(utf8_to_ucs2(&filename_ucs2, filename, pool));
-      SVN_ERR(utf8_to_ucs2(&mode_ucs2, mode, pool));
-      *pfile = _wfopen(filename_ucs2, mode_ucs2);
-    }
-  else if (style == APR_FILEPATH_ENCODING_LOCALE)
-    {
-      const char *filename_native;
-      SVN_ERR(svn_utf_cstring_from_utf8(&filename_native, filename, pool));
-      *pfile = fopen(filename_native, mode);
-    }
-  else
-    {
-      /* There is no third option on Windows; we should never get here. */
-      return svn_error_createf(APR_EINVAL, NULL,
-                               "Unknown native path encoding (%d)", style);
-    }
-
-  return SVN_NO_ERROR;
-}
 
 /* ### These constants are insanely large, but (a) we want to avoid
    reallocating strings if possible, and (b) the realloc logic might

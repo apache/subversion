@@ -139,20 +139,3 @@ svn_client__get_revision_number(svn_revnum_t *revnum,
 
   return SVN_NO_ERROR;
 }
-
-
-svn_boolean_t
-svn_client__compare_revisions(svn_opt_revision_t *revision1,
-                              svn_opt_revision_t *revision2)
-{
-  if ((revision1->kind != revision2->kind)
-      || ((revision1->kind == svn_opt_revision_number)
-          && (revision1->value.number != revision2->value.number))
-      || ((revision1->kind == svn_opt_revision_date)
-          && (revision1->value.date != revision2->value.date)))
-    return FALSE;
-
-  /* Else. */
-  return TRUE;
-}
-

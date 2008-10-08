@@ -20,7 +20,7 @@
 
 svn_error_t *
 svn_cache_set_error_handler(svn_cache_t *cache,
-                            svn_cache_error_handler_t *handler,
+                            svn_cache_error_handler_t handler,
                             void *baton,
                             apr_pool_t *pool)
 {
@@ -33,7 +33,7 @@ svn_cache_set_error_handler(svn_cache_t *cache,
 /* Give the error handler callback a chance to replace or ignore the
    error. */
 static svn_error_t *
-handle_error(svn_cache_t *cache,
+handle_error(const svn_cache_t *cache,
              svn_error_t *err,
              apr_pool_t *pool)
 {
@@ -46,7 +46,7 @@ handle_error(svn_cache_t *cache,
 svn_error_t *
 svn_cache_get(void **value_p,
               svn_boolean_t *found,
-              svn_cache_t *cache,
+              const svn_cache_t *cache,
               const void *key,
               apr_pool_t *pool)
 {
@@ -79,7 +79,7 @@ svn_cache_set(svn_cache_t *cache,
 
 svn_error_t *
 svn_cache_iter(svn_boolean_t *completed,
-               svn_cache_t *cache,
+               const svn_cache_t *cache,
                svn_iter_apr_hash_cb_t user_cb,
                void *user_baton,
                apr_pool_t *pool)

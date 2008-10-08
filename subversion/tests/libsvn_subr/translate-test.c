@@ -2,7 +2,7 @@
  * translate-test.c -- test the eol and keyword translation subroutine
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -32,10 +32,12 @@
 #include <string.h>
 #include <apr_general.h>
 #include <apr_file_io.h>
+
+#include "../svn_test.h"
+
 #include "svn_pools.h"
 #include "svn_subst.h"
 
-#include "../svn_test.h"
 
 
 /*** Helpers ***/

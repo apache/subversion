@@ -58,13 +58,13 @@ class Pool
 // The following one-line functions are best inlined by the compiler, and
 // need to be implemented in the header file for that to happen.
 
-APR_INLINE
+inline
 apr_pool_t *Pool::pool() const
 {
   return m_pool;
 }
 
-APR_INLINE
+inline
 void Pool::clear() const
 {
   svn_pool_clear(m_pool);
