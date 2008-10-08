@@ -1309,7 +1309,6 @@ do_entry_deletion(struct edit_baton *eb,
 
   SVN_ERR(svn_wc__entry_versioned(&entry, full_path, adm_access, TRUE, pool));
 
-<<<<<<< .working
   /* Receive the remote removal of excluded entry. Do not notify. */
   if (entry->depth == svn_depth_exclude)
     {
@@ -1323,14 +1322,12 @@ do_entry_deletion(struct edit_baton *eb,
       return SVN_NO_ERROR;
     }
 
-=======
   SVN_ERR(check_tree_conflict(log_item, full_path, entry, adm_access,
                               svn_wc_conflict_action_delete, pool));
 
   SVN_ERR(svn_wc__loggy_delete_entry(&log_item, adm_access, full_path,
                                      pool));
 
->>>>>>> .merge-right.r33535
   /* If the thing being deleted is the *target* of this update, then
      we need to recreate a 'deleted' entry, so that parent can give
      accurate reports about itself in the future. */

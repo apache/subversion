@@ -503,7 +503,6 @@ depth:
    entries and pulls new entries with depth infinity as well.
    Default is infinite (`').
 
-<<<<<<< .working
    Apart from above normal values, there is still a special `exclude',
    which means the directory is excluded from wc even if the depth of
    parent directory is infinity or immediates. The directory in
@@ -511,7 +510,6 @@ depth:
    can only store the `exclude' value in the corresponding entry of
    the entries file in parent directory. 
 
-=======
 tree-conflicts:
    A list of details of the tree conflicts that children are currently
    suffering. This is only allowed on the this_dir entry.
@@ -526,7 +524,6 @@ file-external:
    the file external and the peg revision it is checked out from in
    a path peg revision format PATH@URL.
 
->>>>>>> .merge-right.r33535
 The only fields allowed in an entry for a directory (other than the
 this_dir entry) are name, absent, deleted, schedule, copied,
 copyfrom-url, copyfrom-rev, kind and depth (only when the value says
