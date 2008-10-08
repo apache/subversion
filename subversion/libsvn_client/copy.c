@@ -1435,9 +1435,10 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
       const char *new_text_path;
       apr_hash_t *new_props;
       const char *src_rel;
+      svn_stream_t *new_base_contents;
 
       SVN_ERR(svn_io_open_unique_file2(&fp, &new_text_path, pair->dst, ".tmp",
-                                       svn_io_file_del_none, pool));
+                                       svn_io_file_del_on_pool_cleanup, pool));
 
       fstream = svn_stream_from_aprfile2(fp, FALSE, pool);
       SVN_ERR(svn_client__path_relative_to_session(&src_rel, ra_session,
@@ -1452,11 +1453,15 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
       if (! SVN_IS_VALID_REVNUM(src_revnum))
         src_revnum = real_rev;
 
-      SVN_ERR(svn_wc_add_repos_file2
+      SVN_ERR(svn_stream_open_readonly(&new_base_contents, new_text_path,
+                                       pool, pool));
+      SVN_ERR(svn_wc_add_repos_file3
         (pair->dst, adm_access,
-         new_text_path, NULL, new_props, NULL,
+         new_base_contents, NULL, new_props, NULL,
          same_repositories ? pair->src : NULL,
          same_repositories ? src_revnum : SVN_INVALID_REVNUM,
+         ctx->cancel_func, ctx->cancel_baton,
+         ctx->notify_func2, ctx->notify_baton2,
          pool));
 
       SVN_ERR(svn_wc_entry(&dst_entry, pair->dst, adm_access, FALSE, pool));

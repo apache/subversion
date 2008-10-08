@@ -1223,6 +1223,7 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
           {
             const char *copyfrom_url = NULL;
             svn_revnum_t copyfrom_rev = SVN_INVALID_REVNUM;
+            svn_stream_t *new_base_contents;
 
             /* If this is a merge from the same repository as our working copy,
                we handle adds as add-with-history.  Otherwise, we'll use a pure
@@ -1240,15 +1241,23 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
                 SVN_ERR(check_scheme_match(adm_access, copyfrom_url));
               }
 
+            SVN_ERR(svn_stream_open_readonly(&new_base_contents, yours,
+                                             subpool, subpool));
+
             /* Since 'mine' doesn't exist, and this is
                'merge_file_added', I hope it's safe to assume that
                'older' is empty, and 'yours' is the full file.  Merely
                copying 'yours' to 'mine', isn't enough; we need to get
                the whole text-base and props installed too, just as if
                we had called 'svn cp wc wc'. */
-            SVN_ERR(svn_wc_add_repos_file2(mine, adm_access, yours, NULL,
-                                           new_props, NULL, copyfrom_url,
-                                           copyfrom_rev, subpool));
+            /* ### would be nice to have cancel/notify funcs to pass */
+            SVN_ERR(svn_wc_add_repos_file3(
+                        mine, adm_access,
+                        new_base_contents, NULL, new_props, NULL,
+                        copyfrom_url, copyfrom_rev,
+                        NULL, NULL, NULL, NULL, subpool));
+
+            /* ### delete 'yours' ? */
           }
         if (content_state)
           *content_state = svn_wc_notify_state_changed;
