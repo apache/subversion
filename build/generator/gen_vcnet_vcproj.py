@@ -186,7 +186,9 @@ class Generator(gen_win.WinGeneratorBase):
                                            
       groupname = ''
       
-      if isinstance(target, gen_base.TargetLib):
+      if target.name.startswith('__'):
+        groupname = 'root'
+      elif isinstance(target, gen_base.TargetLib):
         if isinstance(target, gen_base.TargetSWIGLib) \
            or isinstance(target, gen_base.TargetSWIG):
           groupname = 'swiglib'
