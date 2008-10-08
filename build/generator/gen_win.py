@@ -1210,9 +1210,7 @@ class WinGeneratorBase(GeneratorBase):
         vermatch = None
 
       if vermatch:
-        version = (int(vermatch.group(1)),
-                   int(vermatch.group(2)),
-                   int(vermatch.group(3)))
+        version = tuple(map(int, vermatch.groups()))
         # build/ac-macros/swig.m4 explains the next incantation
         vernum = int('%d%02d%03d' % version)
         sys.stderr.write('Found installed SWIG version %d.%d.%d\n' % version)
@@ -1277,9 +1275,7 @@ class WinGeneratorBase(GeneratorBase):
                      .search(txt)
 
         if vermatch:
-          version = (int(vermatch.group(1)),
-                     int(vermatch.group(2)),
-                     int(vermatch.group(3)))
+          version = tuple(map(int, vermatch.groups()))
           # build/ac-macros/swig.m4 explains the next incantation
           self.neon_ver = int('%d%02d%03d' % version)
           msg = 'Found neon version %d.%d.%d\n' % version
@@ -1317,8 +1313,7 @@ class WinGeneratorBase(GeneratorBase):
     fp = open(version_file_path)
     txt = fp.read()
     fp.close()
-    vermatch = re.compile(r'^\s*#define\s+APR_MAJOR_VERSION\s+(\d+)', re.M) \
-                 .search(txt)
+    vermatch = re.search(r'^\s*#define\s+APR_MAJOR_VERSION\s+(\d+)', txt, re.M)
 
     major_ver = int(vermatch.group(1))
     if major_ver > 0:
@@ -1340,8 +1335,7 @@ class WinGeneratorBase(GeneratorBase):
     fp = open(version_file_path)
     txt = fp.read()
     fp.close()
-    vermatch = re.compile(r'^\s*#define\s+APU_MAJOR_VERSION\s+(\d+)', re.M) \
-                 .search(txt)
+    vermatch = re.search(r'^\s*#define\s+APU_MAJOR_VERSION\s+(\d+)', txt, re.M)
 
     major_ver = int(vermatch.group(1))
     if major_ver > 0:
@@ -1368,18 +1362,16 @@ class WinGeneratorBase(GeneratorBase):
     fp = open(header_file)
     txt = fp.read()
     fp.close()
-    vermatch = re.compile(r'^\s*#define\s+SQLITE_VERSION\s+"(\d+)\.(\d+)\.(\d+)"', re.M) \
-                 .search(txt)
+    vermatch = re.search(r'^\s*#define\s+SQLITE_VERSION\s+"(\d+)\.(\d+)\.(\d+)"', txt, re.M)
 
-    version = (int(vermatch.group(1)),
-               int(vermatch.group(2)),
-               int(vermatch.group(3)))
+    version = tuple(map(int, vermatch.groups()))
 
     self.sqlite_version = '%d.%d.%d' % version
 
     msg = 'Found SQLite version %s\n'
 
-    if version[0] < 3 or (version[0] == 3 and version[1] < 4):
+    major, minor, patch = version
+    if major < 3 or (major == 3 and minor < 4):
       msg = "WARNING: SQLite 3.4.0 or higher is required (%s found)\n"
 
     sys.stderr.write(msg % self.sqlite_version)
