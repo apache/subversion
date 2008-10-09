@@ -616,6 +616,21 @@ svn_wc_committed_queue_create(apr_pool_t *pool)
 }
 
 svn_error_t *
+svn_wc_queue_committed2(svn_wc_committed_queue_t *queue,
+                        const char *path,
+                        svn_wc_adm_access_t *adm_access,
+                        svn_boolean_t recurse,
+                        apr_array_header_t *wcprop_changes,
+                        svn_boolean_t remove_lock,
+                        svn_boolean_t remove_changelist,
+                        svn_checksum_t *checksum,
+                        apr_pool_t *pool)
+{
+  /* ### fill this in... */
+  SVN_ERR_MALFUNCTION();
+}
+
+svn_error_t *
 svn_wc_queue_committed(svn_wc_committed_queue_t **queue,
                        const char *path,
                        svn_wc_adm_access_t *adm_access,
