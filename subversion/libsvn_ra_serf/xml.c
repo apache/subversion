@@ -190,13 +190,13 @@ svn_ra_serf__add_open_tag_buckets(serf_bucket_t *agg_bucket,
           tmp = SERF_BUCKET_SIMPLE_STRING(key, bkt_alloc);
           serf_bucket_aggregate_append(agg_bucket, tmp);
 
-          tmp = SERF_BUCKET_SIMPLE_STRING("=\"", bkt_alloc);
+          tmp = SERF_BUCKET_SIMPLE_STRING_LEN("=\"", 2, bkt_alloc);
           serf_bucket_aggregate_append(agg_bucket, tmp);
 
           tmp = SERF_BUCKET_SIMPLE_STRING(val, bkt_alloc);
           serf_bucket_aggregate_append(agg_bucket, tmp);
 
-          tmp = SERF_BUCKET_SIMPLE_STRING("\"", bkt_alloc);
+          tmp = SERF_BUCKET_SIMPLE_STRING_LEN("\"", 1, bkt_alloc);
           serf_bucket_aggregate_append(agg_bucket, tmp);
         }
     }
