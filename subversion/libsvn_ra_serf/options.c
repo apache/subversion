@@ -204,15 +204,21 @@ cdata_options(svn_ra_serf__xml_parser_t *parser,
   return SVN_NO_ERROR;
 }
 
-#define OPTIONS_BODY "<?xml version=\"1.0\" encoding=\"utf-8\"?><D:options xmlns:D=\"DAV:\"><D:activity-collection-set/></D:options>"
-
 static serf_bucket_t*
 create_options_body(void *baton,
                     serf_bucket_alloc_t *alloc,
                     apr_pool_t *pool)
 {
-  return SERF_BUCKET_SIMPLE_STRING_LEN(OPTIONS_BODY,
-                                       sizeof(OPTIONS_BODY) - 1, alloc);
+  serf_bucket_t *body;
+  body = serf_bucket_aggregate_create(alloc);
+  svn_ra_serf__add_xml_header_buckets(body, alloc);
+  svn_ra_serf__add_open_tag_buckets(body, alloc, "D:options",
+                                    "xmlns:D", "DAV:",
+                                    NULL);
+  svn_ra_serf__add_tag_buckets(body, "D:activity-collection-set", NULL, alloc);
+  svn_ra_serf__add_close_tag_buckets(body, alloc, "D:options");
+
+  return body;
 }
 
 svn_boolean_t*
