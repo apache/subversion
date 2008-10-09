@@ -973,6 +973,7 @@ svn_boolean_t
 svn_uri_is_canonical(const char *uri)
 {
   char *ptr = (char*)uri, *seg = (char*)uri;
+  svn_boolean_t file_scheme = FALSE;
 
   /* URI is canonical if it has:
    *  - no '.' segments
@@ -1001,6 +1002,10 @@ svn_uri_is_canonical(const char *uri)
               ptr++;
             }
           ptr += 3;
+#if defined(WIN32) || defined(__CYGWIN__)
+          if (strncmp(uri, "file", 4) == 0)
+            file_scheme = TRUE;
+#endif /* WIN32 or Cygwin */
 
           /* This might be the hostname */
           seg = ptr;
@@ -1031,6 +1036,12 @@ svn_uri_is_canonical(const char *uri)
 
       if (seglen == 1 && *seg == '.')
         return FALSE;  /*  /./   */
+
+#if defined(WIN32) || defined(__CYGWIN__)
+      if (file_scheme && seglen == 2 && *(ptr-1) == ':' &&
+          ! (*(ptr-2) >= 'A' && *(ptr-2) <= 'Z'))
+        return FALSE;
+#endif /* WIN32 or Cygwin */
 
       if (*ptr == '/' && *(ptr+1) == '/')
         return FALSE;  /*  //    */
