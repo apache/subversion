@@ -1109,13 +1109,15 @@ entry_has_local_mods(svn_boolean_t *modified,
   return SVN_NO_ERROR;
 }
 
-/* Raise a tree conflict on the parent directory if the ACTION on FULL_PATH
- * would conflict with FULL_PATH's scheduled change. ENTRY must be the wc-entry
- * for FULL_PATH, if there is one (even if schedule-delete etc.), or NULL if
- * FULL_PATH is unversioned.
- * PARENT_ADM_ACCESS is the admin access baton of FULL_PATH's parent directory.
+/* Check whether the incoming change ACTION on FULL_PATH would conflict with
+ * FULL_PATH's scheduled change. If so, then raise a tree conflict with
+ * FULL_PATH as the victim, by appending log actions to LOG_ACCUM.
+ *
+ * ENTRY is the wc-entry for FULL_PATH, if there is one (even if
+ * schedule-delete etc.), or NULL if FULL_PATH is unversioned.
+ * PARENT_ADM_ACCESS is the admin access baton of FULL_PATH's parent
+ * directory.
  */
-
 static svn_error_t *
 check_tree_conflict(svn_stringbuf_t *log_accum,
                     const char *full_path,
@@ -1126,8 +1128,8 @@ check_tree_conflict(svn_stringbuf_t *log_accum,
 {
   svn_wc_conflict_reason_t reason = (svn_wc_conflict_reason_t)(-1);
 
-  /* Test whether CONFLICT_ACTION conflicts with the state of ENTRY.
-   * If so, set CONFLICT_REASON to an appropriate value. */
+  /* Test whether ACTION conflicts with the state of ENTRY.
+   * If so, set REASON to an appropriate value. */
   switch (action)
     {
     case svn_wc_conflict_action_edit:
@@ -1163,7 +1165,7 @@ check_tree_conflict(svn_stringbuf_t *log_accum,
         reason = (entry->schedule == svn_wc_schedule_delete
                   ? svn_wc_conflict_reason_deleted
                   : svn_wc_conflict_reason_obstructed);  /* replace, add, etc. */
-      else
+      else /* schedule is normal, but item might be modified or missing */
         {
           svn_boolean_t modified;
           svn_node_kind_t kind;
@@ -1179,8 +1181,6 @@ check_tree_conflict(svn_stringbuf_t *log_accum,
             reason = svn_wc_conflict_reason_missing;
           else
             {
-             
-
               /* If we are about to delete a path that has local mods,
                * mark the containing directory as tree conflicted.
                * This is tree conflict use case 2 as described in the
@@ -1204,15 +1204,17 @@ check_tree_conflict(svn_stringbuf_t *log_accum,
                */
 #endif
 
-               if (modified)
-                 {
-                   reason = svn_wc_conflict_reason_edited;
-                 }
+              if (modified)
+                {
+                  reason = svn_wc_conflict_reason_edited;
+                }
             }
         }
       break;
     }
 
+  /* If a conflict was detected, append log commands to the log accumulator
+   * to record it. */
   if (reason != (svn_wc_conflict_reason_t)(-1))
     {
       svn_wc_conflict_description_t *conflict;
