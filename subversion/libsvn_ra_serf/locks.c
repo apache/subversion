@@ -427,24 +427,26 @@ handle_lock(serf_request_t *request,
   return status;
 }
 
-#define GET_LOCK "<?xml version=\"1.0\" encoding=\"utf-8\"?><propfind xmlns=\"DAV:\"><prop><lockdiscovery/></prop></propfind>"
-
 static serf_bucket_t*
 create_getlock_body(void *baton,
                     serf_bucket_alloc_t *alloc,
                     apr_pool_t *pool)
 {
-  serf_bucket_t *buckets, *tmp;
+  serf_bucket_t *buckets;
 
   buckets = serf_bucket_aggregate_create(alloc);
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(GET_LOCK, sizeof(GET_LOCK)-1, alloc);
-  serf_bucket_aggregate_append(buckets, tmp);
+
+  svn_ra_serf__add_xml_header_buckets(buckets, alloc);
+  svn_ra_serf__add_open_tag_buckets(buckets, alloc, "propfind",
+                                    "xmlns", "DAV:",
+                                    NULL);
+  svn_ra_serf__add_open_tag_buckets(buckets, alloc, "prop", NULL);
+  svn_ra_serf__add_tag_buckets(buckets, "lockdiscovery", NULL, alloc);
+  svn_ra_serf__add_close_tag_buckets(buckets, alloc, "prop");
+  svn_ra_serf__add_close_tag_buckets(buckets, alloc, "propfind");
 
   return buckets;
 }
-
-#define LOCK_HEADER "<?xml version=\"1.0\" encoding=\"utf-8\"?><lockinfo xmlns=\"DAV:\">"
-#define LOCK_TRAILER "</lockinfo>"
 
 static serf_bucket_t*
 create_lock_body(void *baton,
@@ -452,33 +454,30 @@ create_lock_body(void *baton,
                  apr_pool_t *pool)
 {
   lock_info_t *ctx = baton;
-  serf_bucket_t *buckets, *tmp;
+  serf_bucket_t *buckets;
 
   buckets = serf_bucket_aggregate_create(alloc);
 
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(LOCK_HEADER, sizeof(LOCK_HEADER)-1,
-                                      alloc);
-  serf_bucket_aggregate_append(buckets, tmp);
+  svn_ra_serf__add_xml_header_buckets(buckets, alloc);
+  svn_ra_serf__add_open_tag_buckets(buckets, alloc, "lockinfo",
+                                    "xmlns", "DAV:",
+                                    NULL);
 
-  svn_ra_serf__add_tag_buckets(buckets, "lockscope", "<exclusive/>", alloc);
+  svn_ra_serf__add_open_tag_buckets(buckets, alloc, "lockscope", NULL);
+  svn_ra_serf__add_tag_buckets(buckets, "exclusive", NULL, alloc);
+  svn_ra_serf__add_close_tag_buckets(buckets, alloc, "lockscope");
 
-  svn_ra_serf__add_tag_buckets(buckets, "locktype", "<write/>", alloc);
+  svn_ra_serf__add_open_tag_buckets(buckets, alloc, "locktype", NULL);
+  svn_ra_serf__add_tag_buckets(buckets, "write", NULL, alloc);
+  svn_ra_serf__add_close_tag_buckets(buckets, alloc, "locktype");
 
   if (ctx->lock->comment)
     {
-      svn_stringbuf_t *xml_esc = NULL;
-      svn_string_t val;
-
-      val.data = ctx->lock->comment;
-      val.len = strlen(ctx->lock->comment);
-
-      svn_xml_escape_cdata_string(&xml_esc, &val, pool);
-      svn_ra_serf__add_tag_buckets(buckets, "owner", xml_esc->data, alloc);
+      svn_ra_serf__add_tag_buckets(buckets, "owner", ctx->lock->comment,
+                                   alloc);
     }
 
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(LOCK_TRAILER, sizeof(LOCK_TRAILER)-1,
-                                      alloc);
-  serf_bucket_aggregate_append(buckets, tmp);
+  svn_ra_serf__add_close_tag_buckets(buckets, alloc, "lockinfo");
 
   return buckets;
 }

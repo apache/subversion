@@ -1971,81 +1971,33 @@ set_path(void *report_baton,
          apr_pool_t *pool)
 {
   report_context_t *report = report_baton;
-  serf_bucket_t *tmp;
-  svn_stringbuf_t *path_buf;
 
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("<S:entry rev=\"",
-                                      sizeof("<S:entry rev=\"")-1,
-                                      report->sess->bkt_alloc);
-  serf_bucket_aggregate_append(report->buckets, tmp);
+  /* Copy data to report pool. */
+  lock_token = apr_pstrdup(report->pool, lock_token);
+  path  = apr_pstrdup(report->pool, path);
 
-  tmp = SERF_BUCKET_SIMPLE_STRING(apr_ltoa(report->pool, revision),
-                                  report->sess->bkt_alloc);
-  serf_bucket_aggregate_append(report->buckets, tmp);
-
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("\"", sizeof("\"")-1,
-                                      report->sess->bkt_alloc);
-  serf_bucket_aggregate_append(report->buckets, tmp);
+  svn_ra_serf__add_open_tag_buckets(report->buckets, report->sess->bkt_alloc,
+                                    "S:entry",
+                                    "rev", apr_ltoa(report->pool, revision),
+                                    "lock-token", lock_token,
+                                    "depth", svn_depth_to_word(depth),
+                                    "start-empty", start_empty ? "true" : NULL,
+                                    NULL);
 
   if (lock_token)
     {
       apr_hash_set(report->lock_path_tokens,
-                   apr_pstrdup(report->pool, path),
+                   path,
                    APR_HASH_KEY_STRING,
-                   apr_pstrdup(report->pool, lock_token));
-
-      tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" lock-token=\"",
-                                          sizeof(" lock-token=\"")-1,
-                                          report->sess->bkt_alloc);
-      serf_bucket_aggregate_append(report->buckets, tmp);
-
-      tmp = SERF_BUCKET_SIMPLE_STRING(lock_token,
-                                      report->sess->bkt_alloc);
-      serf_bucket_aggregate_append(report->buckets, tmp);
-
-      tmp = SERF_BUCKET_SIMPLE_STRING_LEN("\"", sizeof("\"")-1,
-                                          report->sess->bkt_alloc);
-      serf_bucket_aggregate_append(report->buckets, tmp);
+                   lock_token);
     }
 
-  /* Depth. */
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" depth=\"",
-                                      sizeof(" depth=\"")-1,
-                                      report->sess->bkt_alloc);
-  serf_bucket_aggregate_append(report->buckets, tmp);
+  svn_ra_serf__add_cdata_len_buckets(report->buckets, report->sess->bkt_alloc,
+                                     path, strlen(path));
 
-  tmp = SERF_BUCKET_SIMPLE_STRING(svn_depth_to_word(depth),
-                                  report->sess->bkt_alloc);
-  serf_bucket_aggregate_append(report->buckets, tmp);
+  svn_ra_serf__add_close_tag_buckets(report->buckets, report->sess->bkt_alloc,
+                                     "S:entry");
 
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("\"", sizeof("\"")-1,
-                                      report->sess->bkt_alloc);
-  serf_bucket_aggregate_append(report->buckets, tmp);
-
-  if (start_empty)
-    {
-      tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" start-empty=\"true\"",
-                                          sizeof(" start-empty=\"true\"")-1,
-                                          report->sess->bkt_alloc);
-      serf_bucket_aggregate_append(report->buckets, tmp);
-    }
-
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(">", sizeof(">")-1,
-                                      report->sess->bkt_alloc);
-  serf_bucket_aggregate_append(report->buckets, tmp);
-
-  path_buf = NULL;
-  svn_xml_escape_cdata_cstring(&path_buf, path, report->pool);
-
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(path_buf->data, path_buf->len,
-                                      report->sess->bkt_alloc);
-  serf_bucket_aggregate_append(report->buckets, tmp);
-
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("</S:entry>",
-                                      sizeof("</S:entry>")-1,
-                                      report->sess->bkt_alloc);
-
-  serf_bucket_aggregate_append(report->buckets, tmp);
   return APR_SUCCESS;
 }
 
@@ -2055,22 +2007,10 @@ delete_path(void *report_baton,
             apr_pool_t *pool)
 {
   report_context_t *report = report_baton;
-  serf_bucket_t *tmp;
 
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("<S:missing>",
-                                      sizeof("<S:missing>")-1,
-                                      report->sess->bkt_alloc);
-  serf_bucket_aggregate_append(report->buckets, tmp);
-
-  tmp = SERF_BUCKET_SIMPLE_STRING(apr_pstrdup(report->pool, path),
-                                  report->sess->bkt_alloc);
-  serf_bucket_aggregate_append(report->buckets, tmp);
-
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("</S:missing>",
-                                      sizeof("</S:missing>")-1,
-                                      report->sess->bkt_alloc);
-
-  serf_bucket_aggregate_append(report->buckets, tmp);
+  svn_ra_serf__add_tag_buckets(report->buckets, "S:missing",
+                               apr_pstrdup(report->pool, path),
+                               report->sess->bkt_alloc);
   return APR_SUCCESS;
 }
 
@@ -2085,71 +2025,9 @@ link_path(void *report_baton,
           apr_pool_t *pool)
 {
   report_context_t *report = report_baton;
-  serf_bucket_t *tmp;
   const char *link, *vcc_url;
   apr_uri_t uri;
   apr_status_t status;
-
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("<S:entry rev=\"",
-                                      sizeof("<S:entry rev=\"")-1,
-                                      report->sess->bkt_alloc);
-  serf_bucket_aggregate_append(report->buckets, tmp);
-
-  tmp = SERF_BUCKET_SIMPLE_STRING(apr_ltoa(report->pool, revision),
-                                  report->sess->bkt_alloc);
-  serf_bucket_aggregate_append(report->buckets, tmp);
-
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("\"", sizeof("\"")-1,
-                                      report->sess->bkt_alloc);
-  serf_bucket_aggregate_append(report->buckets, tmp);
-
-  if (lock_token)
-    {
-      apr_hash_set(report->lock_path_tokens,
-                   apr_pstrdup(report->pool, path),
-                   APR_HASH_KEY_STRING,
-                   apr_pstrdup(report->pool, lock_token));
-
-      tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" lock-token=\"",
-                                          sizeof(" lock-token=\"")-1,
-                                          report->sess->bkt_alloc);
-      serf_bucket_aggregate_append(report->buckets, tmp);
-
-      tmp = SERF_BUCKET_SIMPLE_STRING(lock_token,
-                                      report->sess->bkt_alloc);
-      serf_bucket_aggregate_append(report->buckets, tmp);
-
-      tmp = SERF_BUCKET_SIMPLE_STRING_LEN("\"", sizeof("\"")-1,
-                                          report->sess->bkt_alloc);
-      serf_bucket_aggregate_append(report->buckets, tmp);
-    }
-
-  /* Depth. */
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" depth=\"",
-                                      sizeof(" depth=\"")-1,
-                                      report->sess->bkt_alloc);
-  serf_bucket_aggregate_append(report->buckets, tmp);
-
-  tmp = SERF_BUCKET_SIMPLE_STRING(svn_depth_to_word(depth),
-                                  report->sess->bkt_alloc);
-  serf_bucket_aggregate_append(report->buckets, tmp);
-
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("\"", sizeof("\"")-1,
-                                      report->sess->bkt_alloc);
-  serf_bucket_aggregate_append(report->buckets, tmp);
-
-  if (start_empty)
-    {
-      tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" start-empty=\"true\"",
-                                          sizeof(" start-empty=\"true\"")-1,
-                                          report->sess->bkt_alloc);
-      serf_bucket_aggregate_append(report->buckets, tmp);
-    }
-
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" linkpath=\"/",
-                                      sizeof(" linkpath=\"/")-1,
-                                      report->sess->bkt_alloc);
-  serf_bucket_aggregate_append(report->buckets, tmp);
 
   /* We need to pass in the baseline relative path.
    *
@@ -2165,27 +2043,34 @@ link_path(void *report_baton,
   SVN_ERR(svn_ra_serf__discover_root(&vcc_url, &link, report->sess,
                                      report->sess->conns[0], uri.path, pool));
 
-  tmp = SERF_BUCKET_SIMPLE_STRING(apr_pstrdup(report->pool, link),
-                                  report->sess->bkt_alloc);
-  serf_bucket_aggregate_append(report->buckets, tmp);
+  /* Copy parameters to reporter's pool. */
+  lock_token = apr_pstrdup(report->pool, lock_token);
+  link = apr_pstrcat(report->pool, "/", link, NULL);
+  path = apr_pstrdup(report->pool, path);
 
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("\"", sizeof("\"")-1,
-                                      report->sess->bkt_alloc);
-  serf_bucket_aggregate_append(report->buckets, tmp);
+  svn_ra_serf__add_open_tag_buckets(report->buckets, report->sess->bkt_alloc,
+                                    "S:entry",
+                                    "rev", apr_ltoa(report->pool, revision),
+                                    "lock-token", lock_token,
+                                    "depth", svn_depth_to_word(depth),
+                                    "start-empty", start_empty ? "true" : NULL,
+                                    "linkpath", link,
+                                    NULL);
 
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(">", sizeof(">")-1,
-                                      report->sess->bkt_alloc);
-  serf_bucket_aggregate_append(report->buckets, tmp);
+  if (lock_token)
+    {
+      apr_hash_set(report->lock_path_tokens,
+                   path,
+                   APR_HASH_KEY_STRING,
+                   lock_token);
+    }
 
-  tmp = SERF_BUCKET_SIMPLE_STRING(apr_pstrdup(report->pool, path),
-                                  report->sess->bkt_alloc);
-  serf_bucket_aggregate_append(report->buckets, tmp);
+  svn_ra_serf__add_cdata_len_buckets(report->buckets, report->sess->bkt_alloc,
+                                     path, strlen(path));
 
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("</S:entry>",
-                                      sizeof("</S:entry>")-1,
-                                      report->sess->bkt_alloc);
+  svn_ra_serf__add_close_tag_buckets(report->buckets, report->sess->bkt_alloc,
+                                     "S:entry");
 
-  serf_bucket_aggregate_append(report->buckets, tmp);
   return APR_SUCCESS;
 }
 
@@ -2249,17 +2134,14 @@ finish_report(void *report_baton,
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
   svn_ra_serf__list_t *done_list;
-  serf_bucket_t *tmp;
   const char *vcc_url;
   apr_hash_t *props;
   apr_status_t status;
   svn_boolean_t closed_root;
   int status_code, i;
 
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("</S:update-report>",
-                                      sizeof("</S:update-report>")-1,
-                                      report->sess->bkt_alloc);
-  serf_bucket_aggregate_append(report->buckets, tmp);
+  svn_ra_serf__add_close_tag_buckets(report->buckets, report->sess->bkt_alloc,
+                                     "S:update-report");
 
   props = apr_hash_make(pool);
 
@@ -2507,8 +2389,6 @@ make_update_reporter(svn_ra_session_t *ra_session,
                      apr_pool_t *pool)
 {
   report_context_t *report;
-  serf_bucket_t *tmp;
-  svn_stringbuf_t *path_buf;
   const svn_delta_editor_t *filter_editor;
   void *filter_baton;
   svn_boolean_t has_target = *update_target ? TRUE : FALSE;
@@ -2544,26 +2424,9 @@ make_update_reporter(svn_ra_session_t *ra_session,
   report->text_deltas = text_deltas;
   report->lock_path_tokens = apr_hash_make(pool);
 
-  if (src_path)
-    {
-      path_buf = NULL;
-      svn_xml_escape_cdata_cstring(&path_buf, src_path, report->pool);
-      report->source = path_buf->data;
-    }
-
-  if (dest_path)
-    {
-      path_buf = NULL;
-      svn_xml_escape_cdata_cstring(&path_buf, dest_path, report->pool);
-      report->destination = path_buf->data;
-    }
-
-  if (update_target)
-    {
-      path_buf = NULL;
-      svn_xml_escape_cdata_cstring(&path_buf, update_target, report->pool);
-      report->update_target = path_buf->data;
-    }
+  report->source = src_path;
+  report->destination = dest_path;
+  report->update_target = update_target;
 
   report->update_editor = update_editor;
   report->update_baton = update_baton;
@@ -2574,20 +2437,10 @@ make_update_reporter(svn_ra_session_t *ra_session,
 
   report->buckets = serf_bucket_aggregate_create(report->sess->bkt_alloc);
 
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("<S:update-report xmlns:S=\"",
-                                      sizeof("<S:update-report xmlns:S=\"")-1,
-                                      report->sess->bkt_alloc);
-  serf_bucket_aggregate_append(report->buckets, tmp);
-
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(SVN_XML_NAMESPACE,
-                                      sizeof(SVN_XML_NAMESPACE)-1,
-                                      report->sess->bkt_alloc);
-  serf_bucket_aggregate_append(report->buckets, tmp);
-
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("\">",
-                                      sizeof("\">")-1,
-                                      report->sess->bkt_alloc);
-  serf_bucket_aggregate_append(report->buckets, tmp);
+  svn_ra_serf__add_open_tag_buckets(report->buckets, report->sess->bkt_alloc,
+                                    "S:update-report",
+                                    "xmlns:S", SVN_XML_NAMESPACE,
+                                    NULL);
 
   svn_ra_serf__add_tag_buckets(report->buckets,
                                "S:src-path", report->source,
