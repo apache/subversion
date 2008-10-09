@@ -22,9 +22,11 @@
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_pools.h"
+#include "svn_io.h"
 
 #include "private/svn_sqlite.h"
 #include "svn_private_config.h"
+#include "private/svn_dep_compat.h"
 
 
 #ifdef SQLITE3_DEBUG
@@ -322,6 +324,13 @@ check_format(svn_sqlite__db_t *db, int latest_schema,
 static svn_error_t *
 init_sqlite()
 {
+  if (sqlite3_libversion_number() < SQLITE_VERSION_NUMBER) {
+    return svn_error_createf(SVN_ERR_SQLITE_ERROR, NULL,
+                             _("SQLite compiled for %s, but running with %s"),
+                             SQLITE_VERSION, sqlite3_libversion());
+  }
+
+#if SQLITE_VERSION_AT_LEAST(3,5,0)
   /* SQLite 3.5 allows verification of its thread-safety at runtime.
      Older versions are simply expected to have been configured with
      --enable-threadsafe, which compiles with -DSQLITE_THREADSAFE=1
@@ -330,9 +339,8 @@ init_sqlite()
     return svn_error_create(SVN_ERR_SQLITE_ERROR, NULL,
                             _("SQLite is required to be compiled and run in "
                               "thread-safe mode"));
-
-  /* ### need some autoconf magic to detect these */
-#if 0
+#endif
+#if SQLITE_VERSION_AT_LEAST(3,6,0)
   SQLITE_ERR_MSG(sqlite3_initialize(), "Could not initialize SQLite");
   SQLITE_ERR_MSG(sqlite3_config(SQLITE_CONFIG_MULTITHREAD),
                  "Could not configure SQLite");
@@ -364,6 +372,7 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
   /* ### use a pool cleanup to close this? (instead of __close()) */
   *db = apr_palloc(result_pool, sizeof(**db));
 
+#if SQLITE_VERSION_AT_LEAST(3,5,0)
   if (mode == svn_sqlite__mode_readonly)
     flags = SQLITE_OPEN_READONLY;
   else if (mode == svn_sqlite__mode_readwrite)
@@ -387,6 +396,33 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
      occurs (except for out-of-memory); thus, we can safely use it to
      extract an error message and construct an svn_error_t. */
   SQLITE_ERR(sqlite3_open_v2(path, &(*db)->db3, flags, NULL), *db);
+#else
+  /* Older versions of SQLite (pre-3.5.x) will always create the database
+     if it doesn't exist.  So, if we are asked to be read-only or read-write,
+     we ensure the database already exists - if it doesn't, then we will
+     explicitly error out before asking SQLite to do anything.
+
+     Pre-3.5.x SQLite versions also don't support read-only ops either.
+   */
+  if (mode == svn_sqlite__mode_readonly || mode == svn_sqlite__mode_readwrite)
+    {
+      svn_node_kind_t kind;
+      SVN_ERR(svn_io_check_path(path, &kind, scratch_pool));
+      if (kind != svn_node_file) {
+          return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
+                                   _("Expected SQLite database not found: %s"),
+                                   svn_path_local_style(path, scratch_pool));
+      }
+    }
+  else if (mode == svn_sqlite__mode_rwcreate)
+    {
+      /* do nothing - older SQLite's will create automatically. */
+    }
+  else
+    SVN_ERR_MALFUNCTION();
+
+  SQLITE_ERR(sqlite3_open(path, &(*db)->db3), *db);
+#endif
 
   /* Retry until timeout when database is busy. */
   SQLITE_ERR(sqlite3_busy_timeout((*db)->db3, BUSY_TIMEOUT), *db);

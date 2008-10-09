@@ -21,10 +21,6 @@ MSBUILD subversion_vcnet.sln /t:__SWIG_PYTHON__ /p:Configuration=Release
 IF ERRORLEVEL 1 GOTO ERROR
 MSBUILD subversion_vcnet.sln /t:__SWIG_PERL__ /p:Configuration=Release
 IF ERRORLEVEL 1 GOTO ERROR
-MSBUILD subversion_vcnet.sln /t:javahl-java /p:Configuration=Release
-IF ERRORLEVEL 1 GOTO ERROR
-MSBUILD subversion_vcnet.sln /t:javahl-javah /p:Configuration=Release
-IF ERRORLEVEL 1 GOTO ERROR
 MSBUILD subversion_vcnet.sln /t:__JAVAHL__ /p:Configuration=Release
 IF ERRORLEVEL 1 GOTO ERROR
 

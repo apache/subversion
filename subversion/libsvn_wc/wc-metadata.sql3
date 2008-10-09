@@ -81,10 +81,10 @@ CREATE TABLE NODE (
   checksum  TEXT,
 
   /* ### do we need to deal with repos-size vs. eol-style-size?
-     ### this value is the pristine size of ACTUAL (after appropriate
+     ### this value is the size of WORKING (which is BASE plus the
      ### transforms as defined for this node), so we can quickly detect
      ### differences. */
-  actual_size  INTEGER NOT NULL,
+  working_size  INTEGER NOT NULL,
 
   /* Information about the last change to this node */
   changed_rev  INTEGER NOT NULL,
@@ -119,7 +119,7 @@ CREATE TABLE PROPERTIES (
 CREATE UNIQUE INDEX I_NODE_PROPS ON PROPERTIES (node_id);
 
 
-CREATE TABLE TEXT_BASE (
+CREATE TABLE PRISTINE (
   /* ### the hash algorithm (MD5 or SHA-1) is encoded in this value */
   checksum  TEXT NOT NULL PRIMARY KEY,
 
@@ -129,7 +129,7 @@ CREATE TABLE TEXT_BASE (
 
   /* ### used to verify the pristine file is "proper". NULL if unknown,
      ### and (thus) the pristine copy is incomplete/unusable. */
-  stored_size  INTEGER,
+  size  INTEGER,
 
   refcount  INTEGER NOT NULL
   );
@@ -155,7 +155,7 @@ CREATE TABLE NODE_CHANGES (
   original_repos_path  TEXT,
   original_revnum  INTEGER,
   checksum  TEXT,
-  actual_size  INTEGER,
+  working_size  INTEGER,
   changed_rev  INTEGER,
   changed_date  INTEGER,  /* an APR date/time (usec since 1970) */
   changed_author  TEXT,

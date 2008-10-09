@@ -267,29 +267,14 @@ create_getlocks_body(void *baton,
                      serf_bucket_alloc_t *alloc,
                      apr_pool_t *pool)
 {
-  serf_bucket_t *buckets, *tmp;
+  serf_bucket_t *buckets;
 
   buckets = serf_bucket_aggregate_create(alloc);
 
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("<S:get-locks-report xmlns:S=\"",
-                                  sizeof("<S:get-locks-report xmlns:S=\"")-1,
-                                  alloc);
-  serf_bucket_aggregate_append(buckets, tmp);
-
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(SVN_XML_NAMESPACE,
-                                      sizeof(SVN_XML_NAMESPACE)-1,
-                                      alloc);
-  serf_bucket_aggregate_append(buckets, tmp);
-
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("\">",
-                                      sizeof("\">")-1,
-                                      alloc);
-  serf_bucket_aggregate_append(buckets, tmp);
-
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("</S:get-locks-report>",
-                                      sizeof("</S:get-locks-report>")-1,
-                                      alloc);
-  serf_bucket_aggregate_append(buckets, tmp);
+  svn_ra_serf__add_open_tag_buckets(buckets, alloc, "S:get-locks-report",
+                                    "xmlns:S", SVN_XML_NAMESPACE,
+                                    NULL);
+  svn_ra_serf__add_close_tag_buckets(buckets, alloc, "S:get-locks-report");
 
   return buckets;
 }

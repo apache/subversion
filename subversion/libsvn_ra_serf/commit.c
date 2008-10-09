@@ -222,34 +222,29 @@ return_response_err(svn_ra_serf__handler_t *handler,
                            ctx->status, ctx->reason);
 }
 
-#define CHECKOUT_HEADER "<?xml version=\"1.0\" encoding=\"utf-8\"?><D:checkout xmlns:D=\"DAV:\"><D:activity-set><D:href>"
-
-#define CHECKOUT_TRAILER "</D:href></D:activity-set></D:checkout>"
-
 static serf_bucket_t *
 create_checkout_body(void *baton,
                      serf_bucket_alloc_t *alloc,
                      apr_pool_t *pool)
 {
   checkout_context_t *ctx = baton;
-  serf_bucket_t *body_bkt, *tmp_bkt;
+  serf_bucket_t *body_bkt;
 
   body_bkt = serf_bucket_aggregate_create(alloc);
 
-  tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN(CHECKOUT_HEADER,
-                                          sizeof(CHECKOUT_HEADER) - 1,
-                                          alloc);
-  serf_bucket_aggregate_append(body_bkt, tmp_bkt);
+  svn_ra_serf__add_xml_header_buckets(body_bkt, alloc);
+  svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:checkout",
+                                    "xmlns:D", "DAV:",
+                                    NULL);
+  svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:activity-set", NULL);
+  svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:href", NULL);
 
-  tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN(ctx->activity_url,
-                                          ctx->activity_url_len,
-                                          alloc);
-  serf_bucket_aggregate_append(body_bkt, tmp_bkt);
+  svn_ra_serf__add_cdata_len_buckets(body_bkt, alloc,
+                                     ctx->activity_url, ctx->activity_url_len);
 
-  tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN(CHECKOUT_TRAILER,
-                                          sizeof(CHECKOUT_TRAILER) - 1,
-                                          alloc);
-  serf_bucket_aggregate_append(body_bkt, tmp_bkt);
+  svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:href");
+  svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:activity-set");
+  svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:checkout");
 
   return body_bkt;
 }
@@ -621,7 +616,6 @@ proppatch_walker(void *baton,
                  apr_pool_t *pool)
 {
   serf_bucket_t *body_bkt = baton;
-  serf_bucket_t *tmp_bkt;
   serf_bucket_alloc_t *alloc;
   svn_boolean_t binary_prop;
   char *prop_name;
@@ -645,55 +639,24 @@ proppatch_walker(void *baton,
 
   alloc = body_bkt->allocator;
 
-  tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN("<",
-                                          sizeof("<") - 1,
-                                          alloc);
-  serf_bucket_aggregate_append(body_bkt, tmp_bkt);
-
-  tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN(prop_name, name_len, alloc);
-  serf_bucket_aggregate_append(body_bkt, tmp_bkt);
+  svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, prop_name,
+                                    "V:encoding", binary_prop ? "base64" : NULL,
+                                    NULL);
 
   if (binary_prop == TRUE)
     {
-      tmp_bkt =
-          SERF_BUCKET_SIMPLE_STRING_LEN(" V:encoding=\"base64\"",
-                                        sizeof(" V:encoding=\"base64\"") - 1,
-                                        alloc);
-      serf_bucket_aggregate_append(body_bkt, tmp_bkt);
-    }
-
-  tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN(">",
-                                          sizeof(">") - 1,
-                                          alloc);
-  serf_bucket_aggregate_append(body_bkt, tmp_bkt);
-
-  if (binary_prop == TRUE)
-    {
+      serf_bucket_t *tmp_bkt;
       val = svn_base64_encode_string2(val, TRUE, pool);
+      tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN(val->data, val->len, alloc);
+      serf_bucket_aggregate_append(body_bkt, tmp_bkt);
     }
   else
     {
-      svn_stringbuf_t *prop_buf = svn_stringbuf_create("", pool);
-      svn_xml_escape_cdata_string(&prop_buf, val, pool);
-      val = svn_string_create_from_buf(prop_buf, pool);
+      svn_ra_serf__add_cdata_len_buckets(body_bkt, alloc, val->data, val->len);
     }
 
-  tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN(val->data, val->len, alloc);
-  serf_bucket_aggregate_append(body_bkt, tmp_bkt);
 
-  tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN("</",
-                                          sizeof("</") - 1,
-                                          alloc);
-  serf_bucket_aggregate_append(body_bkt, tmp_bkt);
-
-  tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN(prop_name, name_len, alloc);
-  serf_bucket_aggregate_append(body_bkt, tmp_bkt);
-
-  tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN(">",
-                                          sizeof(">") - 1,
-                                          alloc);
-  serf_bucket_aggregate_append(body_bkt, tmp_bkt);
-
+  svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, prop_name);
   return SVN_NO_ERROR;
 }
 
@@ -724,87 +687,51 @@ setup_proppatch_headers(serf_bucket_t *headers,
   return APR_SUCCESS;
 }
 
-#define PROPPATCH_HEADER "<?xml version=\"1.0\" encoding=\"utf-8\"?>"\
-                         "<D:propertyupdate xmlns:D=\"DAV:\" "\
-                         "xmlns:V=\"" SVN_DAV_PROP_NS_DAV "\" "\
-                         "xmlns:C=\"" SVN_DAV_PROP_NS_CUSTOM "\" "\
-                         "xmlns:S=\"" SVN_DAV_PROP_NS_SVN "\">"
-
-#define PROPPATCH_TRAILER "</D:propertyupdate>"
-
 static serf_bucket_t *
 create_proppatch_body(void *baton,
                       serf_bucket_alloc_t *alloc,
                       apr_pool_t *pool)
 {
   proppatch_context_t *ctx = baton;
-  serf_bucket_t *body_bkt, *tmp_bkt;
+  serf_bucket_t *body_bkt;
 
   body_bkt = serf_bucket_aggregate_create(alloc);
 
-  tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN(PROPPATCH_HEADER,
-                                          sizeof(PROPPATCH_HEADER) - 1,
-                                          alloc);
-  serf_bucket_aggregate_append(body_bkt, tmp_bkt);
+  svn_ra_serf__add_xml_header_buckets(body_bkt, alloc);
+  svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:propertyupdate",
+                                    "xmlns:D", "DAV:",
+                                    "xmlns:V", SVN_DAV_PROP_NS_DAV,
+                                    "xmlns:C", SVN_DAV_PROP_NS_CUSTOM,
+                                    "xmlns:S", SVN_DAV_PROP_NS_SVN,
+                                    NULL);
 
   if (apr_hash_count(ctx->changed_props) > 0)
     {
-      tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN("<D:set>",
-                                              sizeof("<D:set>") - 1,
-                                              alloc);
-      serf_bucket_aggregate_append(body_bkt, tmp_bkt);
-
-      tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN("<D:prop>",
-                                              sizeof("<D:prop>") - 1,
-                                              alloc);
-      serf_bucket_aggregate_append(body_bkt, tmp_bkt);
+      svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:set", NULL);
+      svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:prop", NULL);
 
       svn_ra_serf__walk_all_props(ctx->changed_props, ctx->path,
                                   SVN_INVALID_REVNUM,
                                   proppatch_walker, body_bkt, pool);
 
-      tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN("</D:prop>",
-                                              sizeof("</D:prop>") - 1,
-                                              alloc);
-      serf_bucket_aggregate_append(body_bkt, tmp_bkt);
-
-      tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN("</D:set>",
-                                              sizeof("</D:set>") - 1,
-                                              alloc);
-      serf_bucket_aggregate_append(body_bkt, tmp_bkt);
+      svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:prop");
+      svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:set");
     }
 
   if (apr_hash_count(ctx->removed_props) > 0)
     {
-      tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN("<D:remove>",
-                                              sizeof("<D:remove>") - 1,
-                                              alloc);
-      serf_bucket_aggregate_append(body_bkt, tmp_bkt);
-
-      tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN("<D:prop>",
-                                              sizeof("<D:prop>") - 1,
-                                              alloc);
-      serf_bucket_aggregate_append(body_bkt, tmp_bkt);
+      svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:remove", NULL);
+      svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:prop", NULL);
 
       svn_ra_serf__walk_all_props(ctx->removed_props, ctx->path,
                                   SVN_INVALID_REVNUM,
                                   proppatch_walker, body_bkt, pool);
 
-      tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN("</D:prop>",
-                                              sizeof("</D:prop>") - 1,
-                                              alloc);
-      serf_bucket_aggregate_append(body_bkt, tmp_bkt);
-
-      tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN("</D:remove>",
-                                              sizeof("</D:remove>") - 1,
-                                              alloc);
-      serf_bucket_aggregate_append(body_bkt, tmp_bkt);
+      svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:prop");
+      svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:remove");
     }
 
-  tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN(PROPPATCH_TRAILER,
-                                          sizeof(PROPPATCH_TRAILER) - 1,
-                                          alloc);
-  serf_bucket_aggregate_append(body_bkt, tmp_bkt);
+  svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:propertyupdate");
 
   return body_bkt;
 }
@@ -1015,21 +942,17 @@ setup_delete_headers(serf_bucket_t *headers,
   return APR_SUCCESS;
 }
 
-#define XML_HEADER "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
-
 static serf_bucket_t *
 create_delete_body(void *baton,
                    serf_bucket_alloc_t *alloc,
                    apr_pool_t *pool)
 {
   delete_context_t *ctx = baton;
-  serf_bucket_t *body, *tmp;
+  serf_bucket_t *body;
 
   body = serf_bucket_aggregate_create(alloc);
 
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(XML_HEADER, sizeof(XML_HEADER) - 1,
-                                      alloc);
-  serf_bucket_aggregate_append(body, tmp);
+  svn_ra_serf__add_xml_header_buckets(body, alloc);
 
   svn_ra_serf__merge_lock_token_list(ctx->lock_token_hash, ctx->path,
                                      body, alloc, pool);

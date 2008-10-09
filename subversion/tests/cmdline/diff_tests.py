@@ -2980,6 +2980,89 @@ def diff_external_diffcmd(sbox):
                                      'diff', '--diff-cmd', diff_script_path,
                                      iota_path)
 
+
+#----------------------------------------------------------------------
+# Diffing an unrelated repository URL against working copy with
+# local modifications (i.e. not committed). This is issue #3295 (diff
+# local changes against arbitrary URL@REV ignores local add).
+
+# Helper
+def make_file_edit_del_add(dir):
+  "make a file mod (M), a deletion (D) and an addition (A)."
+  alpha = os.path.join(dir, 'B', 'E', 'alpha')
+  beta = os.path.join(dir, 'B', 'E', 'beta')
+  theta = os.path.join(dir, 'B', 'E', 'theta')
+
+  # modify alpha, remove beta and add theta.
+  svntest.main.file_append(alpha, "Edited file alpha.\n")
+  svntest.main.run_svn(None, 'remove', beta)
+  svntest.main.file_append(theta, "Created file theta.\n")
+
+  svntest.main.run_svn(None, 'add', theta)
+
+
+def diff_url_against_local_mods(sbox):
+  "diff URL against working copy with local mods"
+
+  sbox.build()
+  os.chdir(sbox.wc_dir)
+
+  A = 'A'
+  A_url = sbox.repo_url + '/A'
+
+  # First, just make a copy.
+  A2 = 'A2'
+  A2_url = sbox.repo_url + '/A2'
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', '-m', 'log msg',
+                                     A_url, A2_url)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'up')
+
+  # In A, add, remove and change a file, and commit.
+  make_file_edit_del_add(A);
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'committing A')
+
+  # In A2, do the same changes but leave uncommitted.
+  make_file_edit_del_add(A2);
+
+  # Diff URL of A against working copy of A2. Output should be empty.
+  expected_output = []
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', '--old', A_url, '--new', A2)
+
+
+#----------------------------------------------------------------------
+# Diff rev against working copy of a removed and locally re-added file.
+# This is issue #1675 ("svn diff -rN added-file" has odd behavior).
+
+def diff_preexisting_rev_against_local_add(sbox):
+  "diff -r1 of removed file to its local addition"
+  sbox.build()
+  os.chdir(sbox.wc_dir)
+
+  beta = os.path.join('A', 'B', 'E', 'beta')
+
+  # remove
+  svntest.main.run_svn(None, 'remove', beta)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'removing beta')
+
+  # re-add, without committing
+  svntest.main.file_append(beta, "Re-created file beta.\n")
+  svntest.main.run_svn(None, 'add', beta)
+
+  # diff against -r1, the diff should show both removal and re-addition
+  exit_code, diff_output, err_output = svntest.main.run_svn(
+                        None, 'diff', '-r1', 'A')
+
+  verify_expected_output(diff_output, "-This is the file 'beta'.")
+  verify_expected_output(diff_output, "+Re-created file beta.")
+
+
 ########################################################################
 #Run the tests
 
@@ -3034,6 +3117,8 @@ test_list = [ None,
               diff_file_depth_empty,
               diff_wrong_extension_type,
               diff_external_diffcmd,
+              XFail(diff_url_against_local_mods),
+              XFail(diff_preexisting_rev_against_local_add),
               ]
 
 if __name__ == '__main__':
