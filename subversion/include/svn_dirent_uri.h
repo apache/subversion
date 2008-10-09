@@ -90,7 +90,7 @@ svn_uri_local_style(const char *uri, apr_pool_t *pool);
  * If the @a component is an absolute dirent, then it is copied and returned.
  * Exactly one slash character ('/') is used to joined the components,
  * accounting for any trailing slash in @a base, except on Windows when
- * @base is "X:".
+ * @a base is "X:".
  *
  * This function is NOT appropriate for native (local) file
  * dirents. Only for "internal" canonicalized dirents, since it uses '/'

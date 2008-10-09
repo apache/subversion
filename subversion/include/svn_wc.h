@@ -3133,9 +3133,9 @@ svn_wc_add(const char *path,
  * valid revision number, and together they are the copyfrom history
  * for the new file.
  *
- * The @a cancel_func and @cancel_baton are a standard cancellation
+ * The @a cancel_func and @a cancel_baton are a standard cancellation
  * callback, or NULL if no callback is needed. @a notify_func and
- * @notify_baton are a notification callback, and will be notified
+ * @a notify_baton are a notification callback, and will be notified
  * of the addition of this file.
  *
  * Use @a scratch_pool for temporary allocations.
