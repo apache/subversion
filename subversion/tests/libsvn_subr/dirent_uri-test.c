@@ -1464,7 +1464,7 @@ test_dirent_get_absolute(const char **msg,
     { SVN_EMPTY_PATH, "%" },
 #if defined(WIN32) || defined(__CYGWIN__)
     /* '@' will be replaced by the current working dir on C:\. */
-    /* '$' will be replaced by the current drive letter */
+    /* '$' will be replaced by the current drive */
     { "C:/", "C:/" },
     { "C:/abc", "C:/abc" },
     { "C:abc", "@/abc" },
