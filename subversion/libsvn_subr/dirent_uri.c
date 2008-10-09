@@ -970,7 +970,84 @@ svn_dirent_is_canonical(const char *dirent, apr_pool_t *pool)
 }
 
 svn_boolean_t
-svn_uri_is_canonical(const char *uri, apr_pool_t *pool)
+svn_uri_is_canonical(const char *uri)
 {
-  return (strcmp(uri, svn_uri_canonicalize(uri, pool)) == 0);
+  char *ptr = (char*)uri, *seg = (char*)uri;
+
+  /* URI is canonical if it has:
+   *  - no '.' segments
+   *  - no closing '/', unless for the root path '/' itself
+   *  - no '//' 
+   *  - lowercase URL scheme
+   *  - lowercase URL hostname
+   */
+
+  if (*uri == '\0')
+    return TRUE;
+
+  if (*ptr != '/')
+    {
+      while (*ptr && (*ptr != '/') && (*ptr != ':'))
+        ptr++;
+
+      if (*ptr == ':' && *(ptr+1) == '/' && *(ptr+2) == '/')
+        {
+          /* Found a scheme, check that it's all lowercase. */
+          ptr = (char*)uri;
+          while (*ptr != ':')
+            {
+              if (*ptr >= 'A' && *ptr <= 'Z')
+                return FALSE;
+              ptr++;
+            }
+          ptr += 3;
+
+          /* This might be the hostname */
+          seg = ptr;
+          while (*ptr && (*ptr != '/') && (*ptr != '@'))
+            ptr++;
+
+          if (! *ptr)
+            return TRUE;
+
+          if (*ptr == '@')
+            seg = ptr + 1; 
+
+          /* Found a hostname, check that it's all lowercase. */
+          ptr = seg;
+          while (*ptr != '/')
+            {
+              if (*ptr >= 'A' && *ptr <= 'Z')
+                return FALSE;
+              ptr++;
+            }
+        }
+    }
+
+  /* Now validate the rest of the URI. */
+  while(1)
+    {
+      int seglen = ptr - seg;
+
+      if (seglen == 1 && *seg == '.')
+        return FALSE;  /*  /./   */
+
+      if (*ptr == '/' && *(ptr+1) == '/')
+        return FALSE;  /*  //    */
+
+      if (! *ptr && *(ptr - 1) == '/' && ptr - 1 != uri)
+        return FALSE;  /* foo/  */
+
+      if (! *ptr)
+        break;
+
+      if (*ptr == '/')
+        ptr++;
+      seg = ptr;
+
+      while (*ptr && (*ptr != '/'))
+        ptr++;
+    }
+
+  return TRUE;
 }

@@ -261,7 +261,7 @@ svn_boolean_t svn_dirent_is_canonical(const char *dirent, apr_pool_t *pool);
  *
  * @since New in 1.6.
  */
-svn_boolean_t svn_uri_is_canonical(const char *uri, apr_pool_t *pool);
+svn_boolean_t svn_uri_is_canonical(const char *uri);
 
 /** Return the longest common dirent shared by two canonicalized dirents,
  * @a dirent1 and @a dirent2.  If there's no common ancestor, return the
