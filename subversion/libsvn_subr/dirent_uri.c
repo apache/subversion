@@ -151,8 +151,7 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
   const char *src;
   apr_size_t seglen;
   apr_size_t canon_segments = 0;
-  apr_uri_t host_uri;
-  svn_boolean_t url;
+  svn_boolean_t url, file_scheme = FALSE;
 
   /* "" is already canonical, so just return it; note that later code
      depends on path not being zero-length.  */
@@ -162,38 +161,60 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
   dst = canon = apr_pcalloc(pool, strlen(path) + 1);
 
   /* Try to parse the path as an URI. */
-  if (type == type_uri && apr_uri_parse(pool, path, &host_uri) == APR_SUCCESS &&
-      host_uri.scheme && host_uri.hostname)
+  url = FALSE;
+  src = path;
+
+  if (type == type_uri && *src != '/')
     {
-      /* convert scheme and hostname to lowercase */
-      apr_size_t offset;
-      int i;
+      while (*src && (*src != '/') && (*src != ':'))
+        src++;
 
-      url = TRUE;
+      if (*src == ':' && *(src+1) == '/' && *(src+2) == '/')
+        {
+          const char *seg;
 
-      for(i = 0; host_uri.scheme[i]; i++)
-        host_uri.scheme[i] = tolower(host_uri.scheme[i]);
-      for(i = 0; host_uri.hostname[i]; i++)
-        host_uri.hostname[i] = tolower(host_uri.hostname[i]);
+          url = TRUE;
 
-      /* path will be pointing to a new memory location, so update src to
-       * point to the new location too. */
-      offset = strlen(host_uri.scheme) + 3; /* "(scheme)://" */
-      path = apr_uri_unparse(pool, &host_uri, APR_URI_UNP_REVEALPASSWORD);
+          /* Found a scheme, convert to lowercase and copy to dst. */
+          src = (char*)path;
+          while (*src != ':')
+            *(dst++) = tolower((*src++));
+          *(dst++) = ':';
+          *(dst++) = '/';
+          *(dst++) = '/';
+          src += 3;
+#if defined(WIN32) || defined(__CYGWIN__)
+          if (strncmp(canon, "file", 4) == 0)
+            file_scheme = TRUE;
+#endif /* WIN32 or Cygwin */
 
-      /* skip 3rd '/' in file:/// uri */
-      if (path[offset] == '/')
-        offset++;
+          /* This might be the hostname */
+          seg = src;
+          while (*src && (*src != '/') && (*src != '@'))
+            src++;
 
-      /* copy src to dst */
-      memcpy(dst, path, offset);
-      dst += offset;
+          if (*src == '@')
+            {
+              /* Copy the username & password. */
+              seglen = src - seg + 1;
+              memcpy(dst, seg, seglen);
+              dst += seglen;
+              src++;
+            }
+          else
+            src = seg;
 
-      src = path + offset;
+          /* Found a hostname, convert to lowercase and copy to dst. */
+          while (*src != '/')
+            *(dst++) = tolower((*src++));
+          *(dst++) = *(src++);
+
+          canon_segments = 1;
+        }
     }
-  else
+
+  if (! url)
     {
-      url = FALSE;
       src = path;
       /* If this is an absolute path, then just copy over the initial
          separator character. */
@@ -226,9 +247,9 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
 #if defined(WIN32) || defined(__CYGWIN__)
       /* If this is the first path segment of a file:// URI and it contains a
          windows drive letter, convert the drive letter to upper case. */
-      else if (url && canon_segments == 0 && seglen == 2 &&
-          strcmp(host_uri.scheme, "file") == 0 &&
-          src[0] >= 'a' && src[0] <= 'z' && src[1] == ':')
+      else if (url && canon_segments == 1 && seglen == 2 &&
+               file_scheme == TRUE &&
+               src[0] >= 'a' && src[0] <= 'z' && src[1] == ':')
         {
           *(dst++) = toupper(src[0]);
           *(dst++) = ':';
@@ -254,16 +275,9 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
     }
 
   /* Remove the trailing slash if necessary. */
-  if (*(dst - 1) == '/')
+  if (*(dst - 1) == '/' && canon_segments > 0)
     {
-      /* If we had any path components, we always remove the trailing slash. */
-      if (canon_segments > 0)
-        dst --;
-      /* Otherwise, make sure to strip the third slash from URIs which
-       * have an empty hostname part, such as http:/// or file:/// */
-      else if (url && host_uri.hostname[0] == '\0' &&
-               host_uri.path && host_uri.path[0] == '/')
-              dst--;
+      dst --;
     }
 
   *dst = '\0';
