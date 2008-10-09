@@ -1071,37 +1071,29 @@ leftmod_error_chain(svn_error_t *err,
   return err;
 }
 
-/* Set *MODIFIED to true iff the item described by ENTRY has local
- * modifications.
+/* Set *MODIFIED to true iff the item described by (ADM_ACCESS, FULL_PATH,
+ * KIND) has local modifications.
  * For a file, this means text mods or property mods.
- * For a directory, this means property mods, adds and deletes of
- * items in the directory, or modifications to the items in the directory.
- * PARENT_ADM_ACCESS is the admin access baton of FULL_PATH's parent dir.
+ * For a directory, this means property mods.
  */
 static svn_error_t *
 entry_has_local_mods(svn_boolean_t *modified,
-                     svn_wc_adm_access_t *parent_adm_access,
-                     const svn_wc_entry_t *entry,
+                     svn_wc_adm_access_t *adm_access,
+                     svn_node_kind_t kind,
                      const char *full_path,
                      apr_pool_t *pool)
 {
   svn_boolean_t text_modified;
   svn_boolean_t props_modified;
-  svn_wc_adm_access_t *adm_access;
 
-  if (entry->kind == svn_node_file)
-    {
-      SVN_ERR(svn_wc_text_modified_p(&text_modified, full_path, FALSE,
-                                     parent_adm_access, pool));
-      adm_access = parent_adm_access;
-    }
+  /* Check for text modifications */
+  if (kind == svn_node_file)
+    SVN_ERR(svn_wc_text_modified_p(&text_modified, full_path, FALSE,
+                                   adm_access, pool));
   else
-    {
-      text_modified = FALSE;
-      SVN_ERR(svn_wc_adm_retrieve(&adm_access, parent_adm_access,
-                                  full_path, pool));
-      /* TODO: Check for added/deleted files or directories. */
-    }
+    text_modified = FALSE;
+
+  /* Check for property modifications */
   SVN_ERR(svn_wc_props_modified_p(&props_modified, full_path,
                                   adm_access, pool));
 
@@ -1150,7 +1142,7 @@ check_tree_conflict(svn_stringbuf_t *log_accum,
         reason = svn_wc_conflict_reason_missing;
       else if (entry->schedule != svn_wc_schedule_normal)
         /* If we are about to delete a path that has been scheduled
-         * for deletion, mark the containing directory as tree conflicted.
+         * for deletion, it's a tree conflict.
          * This _could_ be tree conflict use case 3 as described in the
          * paper attached to issue #2282
          *
@@ -1173,7 +1165,7 @@ check_tree_conflict(svn_stringbuf_t *log_accum,
           SVN_ERR(svn_io_check_path(full_path, &kind, pool));
 
           /* If we are about to delete a path that is locally missing,
-           * mark the containing directory as tree conflicted.
+           * it's a tree conflict.
            * This is tree conflict use case 3.
            * See also notes/tree-conflicts/detection.txt
            */
@@ -1181,14 +1173,18 @@ check_tree_conflict(svn_stringbuf_t *log_accum,
             reason = svn_wc_conflict_reason_missing;
           else
             {
+              svn_wc_adm_access_t *adm_access;
+
               /* If we are about to delete a path that has local mods,
-               * mark the containing directory as tree conflicted.
+               * it's a tree conflict.
                * This is tree conflict use case 2 as described in the
                * paper attached to issue #2282
                * See also notes/tree-conflicts/detection.txt
                */
-              SVN_ERR(entry_has_local_mods(&modified, parent_adm_access,
-                                           entry, full_path, pool));
+              SVN_ERR(svn_wc_adm_probe_retrieve(&adm_access, parent_adm_access,
+                                                full_path, pool));
+              SVN_ERR(entry_has_local_mods(&modified, adm_access,
+                                           entry->kind, full_path, pool));
 
 
               /* ### TODO: Also detect deep modifications in a directory tree.
@@ -1200,8 +1196,6 @@ check_tree_conflict(svn_stringbuf_t *log_accum,
 #if 0
               SVN_ERR(subtrees_have_local_mods(&modified, parent_adm_access,
                                                 entry, full_path, pool));
-              /* Alternatively, have entry_has_local_mods() do the recursion.
-               */
 #endif
 
               if (modified)
