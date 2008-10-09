@@ -252,12 +252,7 @@ const char *svn_uri_canonicalize(const char *uri, apr_pool_t *pool);
  */
 svn_boolean_t svn_dirent_is_canonical(const char *dirent, apr_pool_t *pool);
 
-/** Return @c TRUE iff @a uri is canonical.  Use @a pool for temporary
- * allocations.
- *
- * @note The test for canonicalization is currently defined as
- * "looks exactly the same as @c svn_uri_canonicalize() would make
- * it look".
+/** Return @c TRUE iff @a uri is canonical.
  *
  * @since New in 1.6.
  */
