@@ -1071,6 +1071,10 @@ leftmod_error_chain(svn_error_t *err,
   return err;
 }
 
+
+/* ===================================================================== */
+/* Checking for local modifications. */
+
 /* Set *MODIFIED to true iff the item described by (ADM_ACCESS, FULL_PATH,
  * KIND) has local modifications.
  * For a file, this means text mods or property mods.
@@ -1098,6 +1102,88 @@ entry_has_local_mods(svn_boolean_t *modified,
                                   adm_access, pool));
 
   *modified = (text_modified || props_modified);
+  return SVN_NO_ERROR;
+}
+
+/* A baton for use with modcheck_found_entry(). */
+typedef struct modcheck_baton_t {
+  svn_wc_adm_access_t *adm_access;  /* access for the root of the sub-tree */
+  svn_boolean_t found_mod;  /* whether a modification has been found */
+} modcheck_baton_t;
+
+static svn_error_t *
+modcheck_found_entry(const char *path,
+                     const svn_wc_entry_t *entry,
+                     void *walk_baton,
+                     apr_pool_t *pool)
+{
+  modcheck_baton_t *baton = walk_baton;
+  svn_error_t *err;
+  svn_wc_adm_access_t *adm_access;
+  svn_boolean_t modified;
+
+  /* Try to get a WC access baton for this node. */
+  err = svn_wc_adm_probe_retrieve(&adm_access, baton->adm_access, path, pool);
+
+  /* If this node is not locked, e.g. because of a shallow update command
+   * such as "svn update --depth=immediates", then acquire a deep lock on
+   * this node. */
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_WC_NOT_LOCKED)
+        {
+          svn_error_clear(err);
+          SVN_ERR(svn_wc_adm_open3(&adm_access, baton->adm_access, path,
+                                   FALSE /* read-only */, -1 /* infinite */,
+                                   NULL, NULL /* no cancellation */, pool));
+        }
+      else
+        return err;
+    }
+
+  SVN_ERR(entry_has_local_mods(&modified, adm_access, entry->kind, path, pool));
+  if (modified)
+    baton->found_mod = TRUE;
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+modcheck_handle_error(const char *path,
+                      svn_error_t *err,
+                      void *walk_baton,
+                      apr_pool_t *pool)
+{
+  return err;
+}
+
+/* Set *MODIFIED to true iff there are any local modifications within the
+ * tree rooted at PATH whose admin access baton is ADM_ACCESS. PATH may be a
+ * file or a directory. */
+static svn_error_t *
+tree_has_local_mods(svn_boolean_t *modified,
+                    const char *path,
+                    svn_wc_adm_access_t *adm_access,
+                    apr_pool_t *pool)
+{
+
+  static svn_wc_entry_callbacks2_t modcheck_callbacks =
+    { modcheck_found_entry, modcheck_handle_error };
+  modcheck_baton_t modcheck_baton = { NULL, FALSE };
+
+  modcheck_baton.adm_access = adm_access;
+
+  /* Walk the WC tree to its full depth, looking for any local modifications.
+   * If it's a "sparse" directory, that's OK: there can be no local mods in
+   * the pieces that aren't present in the WC. */
+
+  SVN_ERR(svn_wc_walk_entries3(path, adm_access,
+                               &modcheck_callbacks, &modcheck_baton,
+                               svn_depth_infinity, FALSE /* show_hidden */,
+                               NULL /* cancel_func */, NULL /* cancel_baton */,
+                               pool));
+
+  *modified = modcheck_baton.found_mod;
   return SVN_NO_ERROR;
 }
 
@@ -1183,21 +1269,13 @@ check_tree_conflict(svn_stringbuf_t *log_accum,
                */
               SVN_ERR(svn_wc_adm_probe_retrieve(&adm_access, parent_adm_access,
                                                 full_path, pool));
-              SVN_ERR(entry_has_local_mods(&modified, adm_access,
-                                           entry->kind, full_path, pool));
 
-
-              /* ### TODO: Also detect deep modifications in a directory tree.
-               *   The update editor will not visit subdirectories of a
-               *   directory it wants to delete. Therefore, we need to start
-               *   a separate crawl here to make sure the directory tree we
-               *   are about to delete hasn't been locally modified anywhere.
-               */
-#if 0
-              SVN_ERR(subtrees_have_local_mods(&modified, parent_adm_access,
-                                                entry, full_path, pool));
-#endif
-
+              /* Detect deep modifications in a directory tree.
+               * The update editor will not visit subdirectories of a
+               * directory it wants to delete. Therefore, we need to start
+               * a separate crawl here. */
+              SVN_ERR(tree_has_local_mods(&modified, full_path, adm_access,
+                                          pool));
               if (modified)
                 {
                   reason = svn_wc_conflict_reason_edited;
