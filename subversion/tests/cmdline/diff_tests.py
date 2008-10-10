@@ -2889,7 +2889,7 @@ def diff_summarize_xml(sbox):
 
   # 3) Test working copy summarize
   svntest.actions.run_and_verify_diff_summarize_xml(
-    ".*Summarizing diff can only compare repository to repository",
+    ".*summarizing diff was called in a way that is not yet supported",
     None, wc_dir, None, None, wc_dir)
 
   # 4) Test --summarize --xml on -c2

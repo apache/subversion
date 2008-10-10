@@ -1683,6 +1683,69 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
+/* ====================== Support for dirs_same_p ====================== */
+
+typedef struct dirs_same_baton_t {
+  svn_boolean_t was_modified;
+} dirs_same_baton_t;
+
+/* Collect change information, implements the
+ * svn_client_diff_summarize_func_t interface. */
+static svn_error_t *
+dirs_same_summarize(const svn_client_diff_summarize_t *summary,
+                    void *baton,
+                    apr_pool_t *pool)
+{
+  dirs_same_baton_t *b = (dirs_same_baton_t*)baton;
+
+  if (summary->summarize_kind != svn_client_diff_summarize_kind_normal ||
+      summary->prop_changed){
+    b->was_modified = TRUE;
+  }
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Compare the directory trees SOURCE_URL@SOURCE_REV and MINE
+ * (with its properties obtained from its WC admin area ADM_ACCESS). Set
+ * *SAME to true if they are the same or false if they differ, ignoring
+ * the "svn:mergeinfo" property, and allowing for differences due to keyword
+ * expansion and end-of-line style.
+ * Use *CTX for authentication if necessary. */
+static svn_error_t *
+dirs_same_p(svn_boolean_t *same,
+            const char *source_url,
+            const svn_revnum_t source_rev,
+            const char *mine,
+            svn_ra_session_t *ra_session,
+            svn_wc_adm_access_t *adm_access,
+            svn_client_ctx_t *ctx,
+            apr_pool_t *pool)
+{
+  dirs_same_baton_t summarize_baton;
+  svn_opt_revision_t rev1, rev2;
+
+  rev1.kind = svn_opt_revision_number;
+  rev1.value.number = source_rev;
+  
+  rev2.kind = svn_opt_revision_working;
+  
+  summarize_baton.was_modified = FALSE;
+  
+  SVN_ERR(svn_client_diff_summarize2(source_url, &rev1,
+                                     mine, &rev2,
+                                     svn_depth_infinity,
+                                     TRUE /* ignore ancestry */,
+                                     NULL /* no changelist */,
+                                     dirs_same_summarize, &summarize_baton,
+                                     ctx, pool));
+
+  *same = !summarize_baton.was_modified;
+
+  return SVN_NO_ERROR;
+}
+
 /* An svn_wc_diff_callbacks3_t function. */
 static svn_error_t *
 merge_dir_deleted(svn_wc_adm_access_t *adm_access,
@@ -1694,9 +1757,6 @@ merge_dir_deleted(svn_wc_adm_access_t *adm_access,
   apr_pool_t *subpool = svn_pool_create(merge_b->pool);
   svn_node_kind_t kind;
   const svn_wc_entry_t *entry;
-  svn_wc_adm_access_t *parent_access;
-  const char *parent_path;
-  svn_error_t *err;
 
   /* Easy out:  if we have no adm_access for the parent directory,
      then this portion of the tree-delta "patch" must be inapplicable.
@@ -1721,32 +1781,61 @@ merge_dir_deleted(svn_wc_adm_access_t *adm_access,
       {
         if (entry && (entry->schedule != svn_wc_schedule_delete))
           {
-            /* ### TODO: Before deleting, we should ensure that this dir
+            /* Before deleting, ensure that this dir
                tree is equal to the one we're being asked to delete.
                If not, mark this directory as a tree conflict victim,
                because this could be use case 5 as described in
                notes/tree-conflicts/detection.txt.
              */
 
-            svn_path_split(path, &parent_path, NULL, subpool);
-            SVN_ERR(svn_wc_adm_retrieve(&parent_access, adm_access, parent_path,
-                                        subpool));
-            /* Passing NULL for the notify_func and notify_baton because
-               repos_diff.c:delete_entry() will do it for us. */
-            err = svn_client__wc_delete(path, parent_access, merge_b->force,
-                                        merge_b->dry_run, FALSE,
-                                        NULL, NULL,
-                                        merge_b->ctx, subpool);
-            if (err)
+            svn_boolean_t same;
+            const char *child = svn_path_is_child(merge_b->target, path, subpool);
+            merge_source_t child_source;
+
+            child_source.url1 = svn_path_url_add_component(
+                                  merge_b->merge_source.url1, child, subpool);
+            child_source.url2 = svn_path_url_add_component(
+                                  merge_b->merge_source.url2, child, subpool);
+
+            SVN_ERR(dirs_same_p(&same, child_source.url1,
+                                merge_b->merge_source.rev1, path,
+                                merge_b->ra_session1, adm_access,
+                                merge_b->ctx, subpool));
+            if (same || merge_b->force)
               {
-                if (state)
-                  *state = svn_wc_notify_state_obstructed;
-                svn_error_clear(err);
+                svn_wc_adm_access_t *parent_access;
+                const char *parent_path;
+                svn_error_t *err;
+
+                svn_path_split(path, &parent_path, NULL, subpool);
+                SVN_ERR(svn_wc_adm_retrieve(&parent_access, adm_access,
+                                            parent_path, subpool));
+                /* Passing NULL for the notify_func and notify_baton because
+                   repos_diff.c:delete_entry() will do it for us. */
+                err = svn_client__wc_delete(path, parent_access,
+                                            merge_b->force,
+                                            merge_b->dry_run, FALSE,
+                                            NULL, NULL,
+                                            merge_b->ctx, subpool);
+                if (err)
+                  {
+                    if (state)
+                      *state = svn_wc_notify_state_obstructed;
+                    svn_error_clear(err);
+                  }
+                else
+                  {
+                    if (state)
+                      *state = svn_wc_notify_state_changed;
+                  }
               }
             else
               {
-                if (state)
-                  *state = svn_wc_notify_state_changed;
+                /* The dirs differ, so raise a tree conflict */
+                SVN_ERR(tree_conflict(merge_b, adm_access, path,
+                                      svn_node_dir,
+                                      svn_wc_conflict_action_delete,
+                                      svn_wc_conflict_reason_edited));
               }
           }
         else

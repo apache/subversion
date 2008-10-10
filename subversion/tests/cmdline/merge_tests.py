@@ -12086,6 +12086,13 @@ def svn_modfile(path):
   svntest.actions.run_and_verify_svn(None, None, [], 'propset',
                                      'newprop', 'v', path)
 
+def svn_moddir(path):
+  "Make content and property mods to a WC dir."
+  svn_mkfile(path+"/newfile")
+  path = local_path(path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'propset',
+                                     'newprop', 'v', path)
+
 def svn_copy(s_rev, path1, path2):
   "Copy a WC path locally."
   path1 = local_path(path1)
@@ -12204,10 +12211,9 @@ def del_differing_file(sbox):
   saved_cwd = os.getcwd()
   os.chdir(sbox.wc_dir)
 
+  # Set up deletions in the source.
   source = 'A/D/G'
-  s_rev_orig = 1
-
-  # Delete files in the source
+  s_rev_orig = svn_commit.repo_rev
   svn_delete(source+"/tau")
   s_rev_tau = svn_commit(source)
   svn_delete(source+"/pi")
@@ -13414,61 +13420,44 @@ def tree_conflicts_on_merge_local_ci_5_1(sbox):
   # 5.1) local leaf edit, incoming tree delete
 
   expected_output = svntest.wc.State('', {
-    'D'                 : Item(),
+    'D'                 : Item(status='C '),
     'D/D1'              : Item(status='D '),
     'F'                 : Item(status='C '),
-    'DD'                : Item(),
+    'DD'                : Item(status='C '),
     'DD/D1'             : Item(status='D '),
-    'DF'                : Item(),
+    'DF'                : Item(status='C '),
     'DF/D1'             : Item(status='D '),
-    'DDD'               : Item(),
+    'DDD'               : Item(status='C '),
     'DDD/D1'            : Item(status='D '),
-    'DDF'               : Item(),
+    'DDF'               : Item(status='C '),
     'DDF/D1'            : Item(status='D '),
     })
 
-  expected_disk = svntest.wc.State('', {
-    'DF'                : Item(),
-    'DF/D1'             : Item(),
-    'DDF'               : Item(),
-    'DDF/D1'            : Item(),
-    'DDF/D1/D2'         : Item(),
-    'F'                 : Item(),
-    'F/alpha'           : Item(contents="This is the file 'alpha'.\nMore text for file alpha.\n"),
-    'DDD'               : Item(),
-    'DDD/D1'            : Item(),
-    'DDD/D1/D2'         : Item(),
-    'DDD/D1/D2/D3'      : Item(),
-    'DD'                : Item(),
-    'DD/D1'             : Item(),
-    'DD/D1/D2'          : Item(),
-    'D'                 : Item(),
-    'D/D1'              : Item(),
-    })
+  expected_disk = state_after_leaf_edit
 
   expected_status = svntest.wc.State('', {
     ''                  : Item(status=' M', wc_rev='3'),
-    'D'                 : Item(status='  ', wc_rev='3'),
-    'D/D1'              : Item(status='D ', wc_rev='3'),
-    'D/D1/delta'        : Item(status='D ', wc_rev='4'),
-    'F'                 : Item(status='C ', wc_rev='3'),
-    'F/alpha'           : Item(status=' M', wc_rev='4'),
-    'DD'                : Item(status='  ', wc_rev='3'),
-    'DD/D1'             : Item(status='D ', wc_rev='3'),
-    'DD/D1/D2'          : Item(status='D ', wc_rev='3'),
-    'DD/D1/D2/epsilon'  : Item(status='D ', wc_rev='4'),
-    'DF'                : Item(status='  ', wc_rev='3'),
-    'DF/D1'             : Item(status='D ', wc_rev='3'),
-    'DF/D1/beta'        : Item(status='D ', wc_rev='4'),
-    'DDD'               : Item(status='  ', wc_rev='3'),
-    'DDD/D1'            : Item(status='D ', wc_rev='3'),
-    'DDD/D1/D2'         : Item(status='D ', wc_rev='3'),
-    'DDD/D1/D2/D3'      : Item(status='D ', wc_rev='3'),
-    'DDD/D1/D2/D3/zeta' : Item(status='D ', wc_rev='4'),
-    'DDF'               : Item(status='  ', wc_rev='3'),
-    'DDF/D1'            : Item(status='D ', wc_rev='3'),
-    'DDF/D1/D2'         : Item(status='D ', wc_rev='3'),
-    'DDF/D1/D2/gamma'   : Item(status='D ', wc_rev='4'),
+    'D'                 : Item(status='C ', treeconflict=' ', wc_rev='3'),
+    'D/D1'              : Item(status='  ', treeconflict='C', wc_rev='3'),
+    'D/D1/delta'        : Item(status='  ', treeconflict=' ', wc_rev='4'),
+    'DD'                : Item(status='C ', treeconflict=' ', wc_rev='3'),
+    'DD/D1'             : Item(status='  ', treeconflict='C', wc_rev='3'),
+    'DD/D1/D2'          : Item(status='  ', treeconflict=' ', wc_rev='3'),
+    'DD/D1/D2/epsilon'  : Item(status='  ', treeconflict=' ', wc_rev='4'),
+    'DDD'               : Item(status='C ', treeconflict=' ', wc_rev='3'),
+    'DDD/D1'            : Item(status='  ', treeconflict='C', wc_rev='3'),
+    'DDD/D1/D2'         : Item(status='  ', treeconflict=' ', wc_rev='3'),
+    'DDD/D1/D2/D3'      : Item(status='  ', treeconflict=' ', wc_rev='3'),
+    'DDD/D1/D2/D3/zeta' : Item(status='  ', treeconflict=' ', wc_rev='4'),
+    'DDF'               : Item(status='C ', treeconflict=' ', wc_rev='3'),
+    'DDF/D1'            : Item(status='  ', treeconflict='C', wc_rev='3'),
+    'DDF/D1/D2'         : Item(status='  ', treeconflict=' ', wc_rev='3'),
+    'DDF/D1/D2/gamma'   : Item(status='  ', treeconflict=' ', wc_rev='4'),
+    'DF'                : Item(status='C ', treeconflict=' ', wc_rev='3'),
+    'DF/D1'             : Item(status='  ', treeconflict='C', wc_rev='3'),
+    'DF/D1/beta'        : Item(status='  ', treeconflict=' ', wc_rev='4'),
+    'F'                 : Item(status='C ', treeconflict=' ', wc_rev='3'),
+    'F/alpha'           : Item(status=' M', treeconflict='C', wc_rev='4'),
     })
 
   expected_skip = svntest.wc.State('', {
@@ -13493,40 +13482,32 @@ def tree_conflicts_on_merge_local_ci_5_2(sbox):
   expected_output = svntest.wc.State('', {
     'D'                 : Item(status='C '),
     'F'                 : Item(status='C '),
-    'DD'                : Item(),
+    'DD'                : Item(status='C '),
     'DD/D1'             : Item(status='D '),
-    'DF'                : Item(),
+    'DF'                : Item(status='C '),
     'DF/D1'             : Item(status='D '),
-    'DDD'               : Item(),
+    'DDD'               : Item(status='C '),
     'DDD/D1'            : Item(status='D '),
-    'DDF'               : Item(),
+    'DDF'               : Item(status='C '),
     'DDF/D1'            : Item(status='D '),
     })
 
-
-  expected_disk = svntest.wc.State('', {
-    'F'                 : Item(),
-    'D'                 : Item(),
-    'DF/D1'             : Item(),
-    'DD/D1'             : Item(),
-    'DDF/D1/D2'         : Item(),
-    'DDD/D1/D2'         : Item(),
-    })
+  expected_disk = state_after_leaf_del
 
   expected_status = svntest.wc.State('', {
     ''                  : Item(status=' M', wc_rev='3'),
-    'D'                 : Item(status='C ', wc_rev='3'),
-    'F'                 : Item(status='C ', wc_rev='3'),
-    'DD'                : Item(status='  ', wc_rev='3'),
-    'DD/D1'             : Item(status='D ', wc_rev='3'),
-    'DF'                : Item(status='  ', wc_rev='3'),
-    'DF/D1'             : Item(status='D ', wc_rev='3'),
-    'DDD'               : Item(status='  ', wc_rev='3'),
-    'DDD/D1'            : Item(status='D ', wc_rev='3'),
-    'DDD/D1/D2'         : Item(status='D ', wc_rev='3'),
-    'DDF'               : Item(status='  ', wc_rev='3'),
-    'DDF/D1'            : Item(status='D ', wc_rev='3'),
-    'DDF/D1/D2'         : Item(status='D ', wc_rev='3'),
+    'D'                 : Item(status='C ', treeconflict=' ', wc_rev='3'),
+    'DD'                : Item(status='C ', treeconflict=' ', wc_rev='3'),
+    'DD/D1'             : Item(status='  ', treeconflict='C', wc_rev='3'),
+    'DDD'               : Item(status='C ', treeconflict=' ', wc_rev='3'),
+    'DDD/D1'            : Item(status='  ', treeconflict='C', wc_rev='3'),
+    'DDD/D1/D2'         : Item(status='  ', treeconflict=' ', wc_rev='3'),
+    'DDF'               : Item(status='C ', treeconflict=' ', wc_rev='3'),
+    'DDF/D1'            : Item(status='  ', treeconflict='C', wc_rev='3'),
+    'DDF/D1/D2'         : Item(status='  ', treeconflict=' ', wc_rev='3'),
+    'DF'                : Item(status='C ', treeconflict=' ', wc_rev='3'),
+    'DF/D1'             : Item(status='  ', treeconflict='C', wc_rev='3'),
+    'F'                 : Item(status='C ', treeconflict=' ', wc_rev='3'),
     })
 
   expected_skip = svntest.wc.State('', {
@@ -14051,6 +14032,111 @@ def subtree_gets_changes_even_if_ultimately_deleted(sbox):
                                        expected_status, expected_skip,
                                        None, None, None, None, None, 1)
 
+
+def del_identical_dir(sbox):
+  "merge tries to delete a dir of identical content"
+
+  # Set up a standard greek tree in r1.
+  sbox.build()
+  svn_commit.repo_rev = 1
+
+  saved_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+
+  # Set up a modification and deletion in the source branch.
+  source = 'A/B'
+  s_rev_orig = svn_commit.repo_rev
+  svn_moddir(source+"/E")
+  s_rev_mod = svn_commit(source)
+  svn_delete(source+"/E")
+  s_rev_del = svn_commit(source)
+
+  # Make an identical copy, and merge a deletion to it.
+  target = 'A/B2'
+  svn_copy(s_rev_mod, source, target)
+  svn_commit(target)
+  # Should be deleted quietly.
+  svn_merge(s_rev_del, source, target, '--- Merging|D ')
+
+  # Make a differing copy, locally modify it so it's the same,
+  # and merge a deletion to it.
+  target = 'A/B3'
+  svn_copy(s_rev_orig, source, target)
+  svn_commit(target)
+  svn_moddir(target+"/E")
+  # Should be deleted quietly.
+  svn_merge(s_rev_del, source, target, '--- Merging|D ')
+
+  os.chdir(saved_cwd)
+
+def del_sched_add_hist_dir(sbox):
+  "merge tries to delete identical sched-add dir"
+
+  # Setup a standard greek tree in r1.
+  sbox.build()
+  svn_commit.repo_rev = 1
+
+  saved_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+
+  source = 'A/B'
+  s_rev_orig = svn_commit.repo_rev
+
+  # Merge a creation, and delete by reverse-merging into uncommitted WC.
+  target = 'A/B2'
+  svn_copy(s_rev_orig, source, target)
+  s_rev = svn_commit('.')
+  svn_mkfile(source+"/dir")
+  s_rev = svn_commit('.')
+  svn_merge(s_rev, source, target, '--- Merging|A ')
+  # Should be deleted quietly.
+  svn_merge(-s_rev, source, target, '--- Reverse-merging|D ')
+
+  os.chdir(saved_cwd)
+
+def del_differing_dir(sbox):
+  "merge tries to delete a dir of different content"
+
+  # Setup a standard greek tree in r1.
+  sbox.build()
+  svn_commit.repo_rev = 1
+
+  saved_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+
+  source = 'A/B'
+  s_rev_orig = svn_commit.repo_rev
+
+  # Delete dirs in the source: one with content change, one with prop change
+  svn_delete(source+"/E")  # will have content change
+  s_rev_e = svn_commit(source)
+  svn_delete(source+"/F")  # will have prop change
+  s_rev_f = svn_commit(source)
+
+  # Copy a dir, modify it, and merge a deletion to it.
+  target = 'A/B2'
+  svn_copy(s_rev_orig, source, target)
+  svn_mkfile(target+"/E/newfile")
+  svntest.actions.run_and_verify_svn(None, None, [], 'propset',
+                                     'newprop', 'v', target+"/F")
+  # Should raise tree conflicts.
+  svn_merge(s_rev_e, source, target, '(C |D |--- Merg).*' + target)
+  svn_merge(s_rev_f, source, target, '(C |D |--- Merg).*' + target)
+
+  # Copy a dir, modify it, commit, and merge a deletion to it.
+  target = 'A/B3'
+  svn_copy(s_rev_orig, source, target)
+  svn_mkfile(target+"/E/newfile")
+  svntest.actions.run_and_verify_svn(None, None, [], 'propset',
+                                     'newprop', 'v', target+"/F")
+  svn_commit(target)
+  # Should raise tree conflicts.
+  svn_merge(s_rev_e, source, target, '(C |D |--- Merg).*' + target)
+  svn_merge(s_rev_f, source, target, '(C |D |--- Merg).*' + target)
+
+  os.chdir(saved_cwd)
+
+
 ########################################################################
 # Run the tests
 
@@ -14252,6 +14338,9 @@ test_list = [ None,
               tree_conflicts_on_merge_no_local_ci_6,
               XFail(SkipUnless(subtree_gets_changes_even_if_ultimately_deleted,
                                server_has_mergeinfo)),
+              XFail(del_identical_dir),
+              del_sched_add_hist_dir,
+              del_differing_dir,
              ]
 
 if __name__ == '__main__':

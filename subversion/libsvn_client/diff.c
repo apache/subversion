@@ -1452,6 +1452,119 @@ diff_summarize_repos_repos(const struct diff_parameters *diff_param,
   return reporter->finish_report(report_baton, pool);
 }
 
+/* Perform a diff summary between a repository path and a working copy. */
+static svn_error_t *
+diff_summarize_repos_wc(const struct diff_parameters *diff_param,
+                        svn_boolean_t reverse,
+                        svn_client_diff_summarize_func_t summarize_func,
+                        void *summarize_baton,
+                        svn_client_ctx_t *ctx,
+                        apr_pool_t *pool)
+{
+  const char *url1, *anchor, *anchor_url, *target;
+  svn_wc_adm_access_t *adm_access, *dir_access;
+  const svn_wc_entry_t *entry;
+  svn_revnum_t rev;
+  svn_ra_session_t *ra_session;
+  const svn_ra_reporter3_t *reporter;
+  void *report_baton;
+  const svn_delta_editor_t *diff_editor;
+  void *diff_edit_baton;
+  int levels_to_lock = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(diff_param->depth);
+  svn_boolean_t server_supports_depth;
+
+  SVN_ERR_ASSERT(! svn_path_is_url(diff_param->path2));
+
+  /* Convert path1 to a URL to feed to do_diff. */
+  SVN_ERR(convert_to_url(&url1, diff_param->path1, pool));
+
+  SVN_ERR(svn_wc_adm_open_anchor(&adm_access, &dir_access, &target,
+                                 diff_param->path2, FALSE, levels_to_lock,
+                                 ctx->cancel_func, ctx->cancel_baton,
+                                 pool));
+  anchor = svn_wc_adm_access_path(adm_access);
+
+  /* Fetch the URL of the anchor directory. */
+  SVN_ERR(svn_wc__entry_versioned(&entry, anchor, adm_access, FALSE, pool));
+  if (! entry->url)
+    return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
+                             _("Directory '%s' has no URL"),
+                             svn_path_local_style(anchor, pool));
+  anchor_url = apr_pstrdup(pool, entry->url);
+
+  /* If we are performing a pegged diff, we need to find out what our
+     actual URLs will be. */
+  if (diff_param->peg_revision->kind != svn_opt_revision_unspecified)
+    {
+      svn_opt_revision_t *start_ignore, *end_ignore, end;
+      const char *url_ignore;
+
+      end.kind = svn_opt_revision_unspecified;
+
+      SVN_ERR(svn_client__repos_locations(&url1, &start_ignore,
+                                          &url_ignore, &end_ignore,
+                                          NULL,
+                                          diff_param->path1,
+                                          diff_param->peg_revision,
+                                          diff_param->revision1, &end,
+                                          ctx, pool));
+    }
+
+  /* Establish RA session to path2's anchor */
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, anchor_url,
+                                               NULL, NULL, NULL, FALSE, TRUE,
+                                               ctx, pool));
+
+  /* Get a revision number from the svn_opt_revision_t */
+  SVN_ERR(svn_client__get_revision_number
+          (&rev, NULL, ra_session, diff_param->revision1,
+           (diff_param->path1 == url1) ? NULL : diff_param->path1, pool));
+
+  /* Set up the repos_diff editor. */
+  SVN_ERR(svn_client__get_diff_summarize_editor
+          (target, summarize_func,
+           summarize_baton, ra_session, rev,
+           ctx->cancel_func, ctx->cancel_baton,
+           &diff_editor, &diff_edit_baton, pool));
+           /*
+  SVN_ERR(svn_wc_get_diff_editor5(adm_access, target,
+                                  callbacks, callback_baton,
+                                  diff_param->depth,
+                                  diff_param->ignore_ancestry,
+                                  rev2_is_base,
+                                  reverse,
+                                  ctx->cancel_func, ctx->cancel_baton,
+                                  diff_param->changelists,
+                                  &diff_editor, &diff_edit_baton,
+                                  pool));
+*/
+  /* Tell the RA layer we want a delta to change our txn to URL1 */
+
+  SVN_ERR(svn_ra_do_diff3(ra_session,
+                          &reporter, &report_baton,
+                          rev,
+                          target ? svn_path_uri_decode(target, pool) : NULL,
+                          diff_param->depth,
+                          diff_param->ignore_ancestry,
+                          FALSE,  /* do not produce text deltas */
+                          url1,
+                          diff_editor, diff_edit_baton, pool));
+
+  SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
+                                SVN_RA_CAPABILITY_DEPTH, pool));
+
+  /* Create a txn mirror of path2;  the diff editor will print
+     diffs in reverse.  :-)  */
+  SVN_ERR(svn_wc_crawl_revisions3(diff_param->path2, dir_access,
+                                  reporter, report_baton,
+                                  FALSE, diff_param->depth,
+                                  (! server_supports_depth),
+                                  FALSE, NULL, NULL, /* notification is N/A */
+                                  NULL, pool));
+
+  return svn_wc_adm_close(adm_access);
+}
+
 /* This is basically just the guts of svn_client_diff_summarize[_peg](). */
 static svn_error_t *
 do_diff_summarize(const struct diff_parameters *diff_param,
@@ -1465,13 +1578,39 @@ do_diff_summarize(const struct diff_parameters *diff_param,
   /* Check if paths/revisions are urls/local. */
   SVN_ERR(check_paths(diff_param, &diff_paths));
 
-  if (diff_paths.is_repos1 && diff_paths.is_repos2)
-    return diff_summarize_repos_repos(diff_param, summarize_func,
-                                      summarize_baton, ctx, pool);
+  if (diff_paths.is_repos1)
+    {
+      if (diff_paths.is_repos2)
+        return diff_summarize_repos_repos(diff_param, summarize_func,
+                                          summarize_baton, ctx, pool);
+      else
+        /* path 2 is a working copy */
+        return diff_summarize_repos_wc(diff_param, FALSE, summarize_func,
+                                       summarize_baton, ctx, pool);
+    }
+  else
+  if (diff_paths.is_repos2)
+    {
+      /* path 1 is a working copy, path 2 is a repos url.
+       * Things need to be reversed, because only the second path
+       * argument is allowed to be a working copy.
+       */
+      struct diff_parameters *reversed_diff_param =
+        apr_palloc(pool, sizeof(*diff_param));
+      memcpy(reversed_diff_param, diff_param, sizeof(*diff_param));
+
+      reversed_diff_param->path1 = diff_param->path2;
+      reversed_diff_param->revision1 = diff_param->revision2;
+      reversed_diff_param->path2 = diff_param->path1;
+      reversed_diff_param->revision2 = diff_param->revision1;
+
+      return diff_summarize_repos_wc(reversed_diff_param, TRUE, summarize_func,
+                                     summarize_baton, ctx, pool);
+    }
   else
     return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                            _("Summarizing diff can only compare repository "
-                              "to repository"));
+                            _("Sorry, summarizing diff was called in a way "
+                              "that is not yet supported"));
 }
 
 
