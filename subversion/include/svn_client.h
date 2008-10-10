@@ -406,7 +406,7 @@ typedef struct svn_client_commit_info_t
 
 /** The commit candidate structure.  In order to avoid backwards
  * compatibility problems clients should use
- * svn_client_commit_item_create() to allocate and intialize this
+ * svn_client_commit_item_create2() to allocate and intialize this
  * structure instead of doing so themselves.
  *
  * @since New in 1.5.
