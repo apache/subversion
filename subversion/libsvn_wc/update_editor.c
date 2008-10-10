@@ -1166,8 +1166,7 @@ tree_has_local_mods(svn_boolean_t *modified,
                     svn_wc_adm_access_t *adm_access,
                     apr_pool_t *pool)
 {
-
-  static svn_wc_entry_callbacks2_t modcheck_callbacks =
+  static const svn_wc_entry_callbacks2_t modcheck_callbacks =
     { modcheck_found_entry, modcheck_handle_error };
   modcheck_baton_t modcheck_baton = { NULL, FALSE };
 
