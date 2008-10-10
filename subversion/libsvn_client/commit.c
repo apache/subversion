@@ -1367,6 +1367,10 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
   SVN_ERR(svn_path_condense_targets(&base_dir, &rel_targets, targets,
                                     depth == svn_depth_infinity, pool));
 
+  /* No targets means nothing to commit, so just return. */
+  if (! base_dir)
+    goto cleanup;
+
   /* When svn_path_condense_targets() was written, we didn't have real
    * depths, we just had recursive / nonrecursive.
    *
@@ -1418,18 +1422,17 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
    */
   if (depth == svn_depth_files || depth == svn_depth_immediates)
     {
-      const char *rel_target;
       for (i = 0; i < rel_targets->nelts; ++i)
         {
-          rel_target = APR_ARRAY_IDX(rel_targets, i, const char *);
+          const char *rel_target = APR_ARRAY_IDX(rel_targets, i, const char *);
+
           if (rel_target[0] == '\0')
-            lock_base_dir_recursive = TRUE;
+            {
+              lock_base_dir_recursive = TRUE;
+              break;
+            }
         }
     }
-
-  /* No targets means nothing to commit, so just return. */
-  if (! base_dir)
-    goto cleanup;
 
   /* Prepare an array to accumulate dirs to lock */
   dirs_to_lock = apr_array_make(pool, 1, sizeof(target));
