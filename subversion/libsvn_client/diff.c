@@ -774,6 +774,266 @@ diff_dir_closed(svn_wc_adm_access_t *adm_access,
 
 /*-----------------------------------------------------------------*/
 
+/*** Callbacks for 'svn diff --summarize', invoked by the repos-diff
+ *   editor. ***/
+
+
+typedef struct diff_summarize_baton_t {
+  /* Callback function to report the summaries to. */
+  svn_client_diff_summarize_func_t summarize_func;
+  void *summarize_func_baton;
+  
+  apr_pool_t *pool;
+
+} diff_summarize_baton_t;
+
+
+/* An svn_wc_diff_callbacks3_t function for summarizing diff.
+ * Delegates to content and prop change handlers.
+ */
+static svn_error_t *
+diff_summarize_file_changed(svn_wc_adm_access_t *adm_access,
+                            svn_wc_notify_state_t *content_state,
+                            svn_wc_notify_state_t *prop_state,
+                            const char *path,
+                            const char *tmpfile1,
+                            const char *tmpfile2,
+                            svn_revnum_t rev1,
+                            svn_revnum_t rev2,
+                            const char *mimetype1,
+                            const char *mimetype2,
+                            const apr_array_header_t *prop_changes,
+                            apr_hash_t *original_props,
+                            void *diff_summarize_baton)
+{
+  diff_summarize_baton_t *baton = diff_summarize_baton;
+  apr_pool_t *subpool = svn_pool_create(baton->pool);
+  apr_array_header_t *props;
+  svn_boolean_t props_changed = FALSE;
+  svn_boolean_t content_changed = FALSE;
+
+  if (content_state)
+    *content_state = svn_wc_notify_state_unknown;
+
+  if (prop_state)
+    *prop_state = svn_wc_notify_state_unknown;
+
+  SVN_ERR(svn_categorize_props(prop_changes, NULL, NULL, &props, subpool));
+  if (props->nelts > 0)
+    {
+      props_changed = TRUE;
+    }
+
+  if (tmpfile1 != NULL)
+    {
+      content_changed = TRUE;
+    }
+
+  if (props_changed || content_changed)
+    {
+      svn_client_diff_summarize_t diff;
+      
+      diff.path = path;
+      diff.summarize_kind = content_changed ?
+                              svn_client_diff_summarize_kind_modified :
+                              svn_client_diff_summarize_kind_normal;
+      diff.prop_changed = props_changed;
+      diff.node_kind = svn_node_file;
+
+      SVN_ERR(baton->summarize_func(&diff, baton->summarize_func_baton,
+                                    baton->pool));
+    }
+
+  svn_pool_destroy(subpool);
+  return SVN_NO_ERROR;
+}
+
+/* An svn_wc_diff_callbacks3_t function for summarizing diff. */
+static svn_error_t *
+diff_summarize_file_added(svn_wc_adm_access_t *adm_access,
+                          svn_wc_notify_state_t *content_state,
+                          svn_wc_notify_state_t *prop_state,
+                          const char *path,
+                          const char *tmpfile1,
+                          const char *tmpfile2,
+                          svn_revnum_t rev1,
+                          svn_revnum_t rev2,
+                          const char *mimetype1,
+                          const char *mimetype2,
+                          const apr_array_header_t *prop_changes,
+                          apr_hash_t *original_props,
+                          void *diff_summarize_baton)
+{
+  diff_summarize_baton_t *baton = diff_summarize_baton;
+  apr_pool_t *subpool = svn_pool_create(baton->pool);
+  apr_array_header_t *props;
+  svn_boolean_t props_changed = FALSE;
+  svn_client_diff_summarize_t diff;
+
+  if (content_state)
+    *content_state = svn_wc_notify_state_unknown;
+
+  if (prop_state)
+    *prop_state = svn_wc_notify_state_unknown;
+
+  SVN_ERR(svn_categorize_props(prop_changes, NULL, NULL, &props, subpool));
+  if (props->nelts > 0)
+    {
+      props_changed = TRUE;
+    }
+  
+  diff.path = path;
+  diff.summarize_kind = svn_client_diff_summarize_kind_added;
+  diff.prop_changed = props_changed;
+  diff.node_kind = svn_node_file;
+
+  SVN_ERR(baton->summarize_func(&diff, baton->summarize_func_baton,
+                                baton->pool));
+
+  svn_pool_destroy(subpool);
+  return SVN_NO_ERROR;
+}
+
+/* An svn_wc_diff_callbacks3_t function for summarizing diff. */
+static svn_error_t *
+diff_summarize_file_deleted(svn_wc_adm_access_t *adm_access,
+                            svn_wc_notify_state_t *state,
+                            const char *path,
+                            const char *tmpfile1,
+                            const char *tmpfile2,
+                            const char *mimetype1,
+                            const char *mimetype2,
+                            apr_hash_t *original_props,
+                            void *diff_summarize_baton)
+{
+  diff_summarize_baton_t *baton = diff_summarize_baton;
+  svn_client_diff_summarize_t diff;
+
+  if (state)
+    *state = svn_wc_notify_state_unknown;
+
+  diff.path = path;
+  diff.summarize_kind = svn_client_diff_summarize_kind_deleted;
+  diff.prop_changed = FALSE;
+  diff.node_kind = svn_node_file;
+
+  SVN_ERR(baton->summarize_func(&diff, baton->summarize_func_baton,
+                                baton->pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* An svn_wc_diff_callbacks3_t function for summarizing diff. */
+static svn_error_t *
+diff_summarize_dir_added(svn_wc_adm_access_t *adm_access,
+                         svn_wc_notify_state_t *state,
+                         const char *path,
+                         svn_revnum_t rev,
+                         void *diff_summarize_baton)
+{
+  diff_summarize_baton_t *baton = diff_summarize_baton;
+  svn_client_diff_summarize_t diff;
+
+  printf("dir added %s\n", path);
+
+  if (state)
+    *state = svn_wc_notify_state_unknown;
+
+  diff.path = path;
+  diff.summarize_kind = svn_client_diff_summarize_kind_added;
+  diff.prop_changed = FALSE;
+  diff.node_kind = svn_node_dir;
+
+  SVN_ERR(baton->summarize_func(&diff, baton->summarize_func_baton,
+                                baton->pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* An svn_wc_diff_callbacks3_t function for summarizing diff. */
+static svn_error_t *
+diff_summarize_dir_deleted(svn_wc_adm_access_t *adm_access,
+                 svn_wc_notify_state_t *state,
+                 const char *path,
+                 void *diff_summarize_baton)
+{
+  diff_summarize_baton_t *baton = diff_summarize_baton;
+  svn_client_diff_summarize_t diff;
+
+  if (state)
+    *state = svn_wc_notify_state_unknown;
+  printf("dir deleted %s\n", path);
+
+  diff.path = path;
+  diff.summarize_kind = svn_client_diff_summarize_kind_deleted;
+  diff.prop_changed = FALSE;
+  diff.node_kind = svn_node_dir;
+
+  SVN_ERR(baton->summarize_func(&diff, baton->summarize_func_baton,
+                                baton->pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* An svn_wc_diff_callbacks3_t function for summarizing diff. */
+static svn_error_t *
+diff_summarize_dir_props_changed(svn_wc_adm_access_t *adm_access,
+                                 svn_wc_notify_state_t *prop_state,
+                                 const char *path,
+                                 const apr_array_header_t *prop_changes,
+                                 apr_hash_t *original_props,
+                                 void *diff_summarize_baton)
+{
+  diff_summarize_baton_t *baton = diff_summarize_baton;
+  apr_pool_t *subpool = svn_pool_create(baton->pool);
+  apr_array_header_t *props;
+
+  if (prop_state)
+    *prop_state = svn_wc_notify_state_unknown;
+
+  SVN_ERR(svn_categorize_props(prop_changes, NULL, NULL, &props, subpool));
+  if (props->nelts > 0)
+    {
+      svn_client_diff_summarize_t diff;
+      diff.path = path;
+      diff.summarize_kind = svn_client_diff_summarize_kind_normal;
+      diff.prop_changed = TRUE;
+      diff.node_kind = svn_node_dir;
+
+      SVN_ERR(baton->summarize_func(&diff, baton->summarize_func_baton,
+                                    baton->pool));
+    }
+
+  svn_pool_destroy(subpool);
+  return SVN_NO_ERROR;
+}
+
+/* An svn_wc_diff_callbacks3_t function for summarizing diff. */
+static svn_error_t *
+diff_summarize_dir_opened(svn_wc_adm_access_t *adm_access,
+                          const char *path,
+                          svn_revnum_t rev,
+                          void *diff_summarize_baton)
+{
+  return SVN_NO_ERROR;
+}
+
+/* An svn_wc_diff_callbacks3_t function for summarizing diff. */
+static svn_error_t *
+diff_summarize_dir_closed(svn_wc_adm_access_t *adm_access,
+                          svn_wc_notify_state_t *state,
+                          const char *path,
+                          void *diff_summarize_baton)
+{
+  if (state)
+    *state = svn_wc_notify_state_unknown;
+
+  return SVN_NO_ERROR;
+}
+
+
+/*-----------------------------------------------------------------*/
+
 /** The logic behind 'svn diff' and 'svn merge'.  */
 
 
@@ -1091,6 +1351,8 @@ unsupported_diff_error(svn_error_t *child_err)
 }
 
 
+/* diff_* functions (not summarizing) */
+
 /* Perform a diff between two working-copy paths.
 
    PATH1 and PATH2 are both working copy paths.  REVISION1 and
@@ -1405,11 +1667,73 @@ do_diff(const struct diff_parameters *diff_param,
     }
 }
 
-/* Perform a diff summary between two repository paths. */
+
+
+/* diff_summarize_* functions.
+ * These are an almost exact copy-and-paste of the diff_* functions above.
+ * Only those parts that edited the callback_baton are removed. */
+
+/* Perform a summarizing diff between two working-copy paths.
+
+   PATH1 and PATH2 are both working copy paths.  REVISION1 and
+   REVISION2 are their respective revisions.
+
+   All other options are the same as those passed to svn_client_diff4(). */
+static svn_error_t *
+diff_summarize_wc_wc(const char *path1,
+                     const svn_opt_revision_t *revision1,
+                     const char *path2,
+                     const svn_opt_revision_t *revision2,
+                     svn_depth_t depth,
+                     svn_boolean_t ignore_ancestry,
+                     const apr_array_header_t *changelists,
+                     const svn_wc_diff_callbacks3_t *callbacks,
+                     diff_summarize_baton_t *callback_baton,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool)
+{
+  svn_wc_adm_access_t *adm_access, *target_access;
+  const char *target;
+  int levels_to_lock = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
+
+  SVN_ERR_ASSERT(! svn_path_is_url(path1));
+  SVN_ERR_ASSERT(! svn_path_is_url(path2));
+
+  /* Currently we support only the case where path1 and path2 are the
+     same path. */
+  if ((strcmp(path1, path2) != 0)
+      || (! ((revision1->kind == svn_opt_revision_base)
+             && (revision2->kind == svn_opt_revision_working))))
+    return unsupported_diff_error
+      (svn_error_create
+       (SVN_ERR_INCORRECT_PARAMS, NULL,
+        _("Only diffs between a path's text-base "
+          "and its working files are supported at this time")));
+
+  SVN_ERR(svn_wc_adm_open_anchor(&adm_access, &target_access, &target,
+                                 path1, FALSE, levels_to_lock,
+                                 ctx->cancel_func, ctx->cancel_baton,
+                                 pool));
+
+  SVN_ERR(svn_wc_diff5(adm_access, target, callbacks, callback_baton,
+                       depth, ignore_ancestry, changelists, pool));
+  return svn_wc_adm_close(adm_access);
+}
+
+
+/* Perform a summarizing diff between two repository paths.
+
+   DIFF_PARAM.PATH1 and DIFF_PARAM.PATH2 may be either URLs or the working
+   copy paths. DIFF_PARAM.REVISION1 and DIFF_PARAM.REVISION2 are their
+   respective revisions. If DIFF_PARAM.PEG_REVISION is specified,
+   DIFF_PARAM.PATH2 is the path at the peg revision, and the actual two
+   paths compared are determined by following copy history from PATH2.
+
+   All other options are the same as those passed to svn_client_diff4(). */
 static svn_error_t *
 diff_summarize_repos_repos(const struct diff_parameters *diff_param,
-                           svn_client_diff_summarize_func_t summarize_func,
-                           void *summarize_baton,
+                           const svn_wc_diff_callbacks3_t *callbacks,
+                           diff_summarize_baton_t *callback_baton,
                            svn_client_ctx_t *ctx,
                            apr_pool_t *pool)
 {
@@ -1427,37 +1751,60 @@ diff_summarize_repos_repos(const struct diff_parameters *diff_param,
   SVN_ERR(diff_prepare_repos_repos(diff_param, &drr, ctx, pool));
 
   /* Now, we open an extra RA session to the correct anchor
-     location for URL1.  This is used to get the kind of deleted paths.  */
+     location for URL1.  This is used during the editor calls to fetch file
+     contents.  */
   SVN_ERR(svn_client__open_ra_session_internal
-          (&extra_ra_session, drr.anchor1, NULL, NULL, NULL, FALSE, TRUE,
-           ctx, pool));
+          (&extra_ra_session, drr.anchor1, NULL, NULL, NULL, FALSE, TRUE, ctx,
+           pool));
 
-  /* Set up the repos_diff editor. */
-  SVN_ERR(svn_client__get_diff_summarize_editor
-          (drr.target2, summarize_func,
-           summarize_baton, extra_ra_session, drr.rev1, ctx->cancel_func,
-           ctx->cancel_baton, &diff_editor, &diff_edit_baton, pool));
+  /* Set up the repos_diff editor on BASE_PATH, if available.
+     Otherwise, we just use "". */
+  SVN_ERR(svn_client__get_diff_editor
+          (drr.base_path ? drr.base_path : "",
+           NULL, callbacks, callback_baton, diff_param->depth,
+           FALSE /* doesn't matter for diff */, extra_ra_session, drr.rev1,
+           NULL /* no notify_func */, NULL /* no notify_baton */,
+           ctx->cancel_func, ctx->cancel_baton,
+           &diff_editor, &diff_edit_baton, pool));
 
   /* We want to switch our txn into URL2 */
   SVN_ERR(svn_ra_do_diff3
           (drr.ra_session, &reporter, &report_baton, drr.rev2, drr.target1,
-           diff_param->depth, diff_param->ignore_ancestry,
-           FALSE /* do not create text delta */, drr.url2, diff_editor,
-           diff_edit_baton, pool));
+           diff_param->depth, diff_param->ignore_ancestry, TRUE,
+           drr.url2, diff_editor, diff_edit_baton, pool));
 
   /* Drive the reporter; do the diff. */
   SVN_ERR(reporter->set_path(report_baton, "", drr.rev1,
                              svn_depth_infinity,
-                             FALSE, NULL, pool));
+                             FALSE, NULL,
+                             pool));
   return reporter->finish_report(report_baton, pool);
 }
 
-/* Perform a diff summary between a repository path and a working copy. */
+
+/* Perform a summarizing diff between a repository path and a working-copy
+   path.
+
+   PATH1 may be either a URL or a working copy path.  PATH2 is a
+   working copy path.  REVISION1 and REVISION2 are their respective
+   revisions.  If REVERSE is TRUE, the diff will be done in reverse.
+   If PEG_REVISION is specified, then PATH1 is the path in the peg
+   revision, and the actual repository path to be compared is
+   determined by following copy history.
+
+   All other options are the same as those passed to svn_client_diff4(). */
 static svn_error_t *
-diff_summarize_repos_wc(const struct diff_parameters *diff_param,
+diff_summarize_repos_wc(const char *path1,
+                        const svn_opt_revision_t *revision1,
+                        const svn_opt_revision_t *peg_revision,
+                        const char *path2,
+                        const svn_opt_revision_t *revision2,
                         svn_boolean_t reverse,
-                        svn_client_diff_summarize_func_t summarize_func,
-                        void *summarize_baton,
+                        svn_depth_t depth,
+                        svn_boolean_t ignore_ancestry,
+                        const apr_array_header_t *changelists,
+                        const svn_wc_diff_callbacks3_t *callbacks,
+                        diff_summarize_baton_t *callback_baton,
                         svn_client_ctx_t *ctx,
                         apr_pool_t *pool)
 {
@@ -1470,16 +1817,17 @@ diff_summarize_repos_wc(const struct diff_parameters *diff_param,
   void *report_baton;
   const svn_delta_editor_t *diff_editor;
   void *diff_edit_baton;
-  int levels_to_lock = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(diff_param->depth);
+  svn_boolean_t rev2_is_base = (revision2->kind == svn_opt_revision_base);
+  int levels_to_lock = SVN_WC__LEVELS_TO_LOCK_FROM_DEPTH(depth);
   svn_boolean_t server_supports_depth;
 
-  SVN_ERR_ASSERT(! svn_path_is_url(diff_param->path2));
+  SVN_ERR_ASSERT(! svn_path_is_url(path2));
 
   /* Convert path1 to a URL to feed to do_diff. */
-  SVN_ERR(convert_to_url(&url1, diff_param->path1, pool));
+  SVN_ERR(convert_to_url(&url1, path1, pool));
 
   SVN_ERR(svn_wc_adm_open_anchor(&adm_access, &dir_access, &target,
-                                 diff_param->path2, FALSE, levels_to_lock,
+                                 path2, FALSE, levels_to_lock,
                                  ctx->cancel_func, ctx->cancel_baton,
                                  pool));
   anchor = svn_wc_adm_access_path(adm_access);
@@ -1494,7 +1842,7 @@ diff_summarize_repos_wc(const struct diff_parameters *diff_param,
 
   /* If we are performing a pegged diff, we need to find out what our
      actual URLs will be. */
-  if (diff_param->peg_revision->kind != svn_opt_revision_unspecified)
+  if (peg_revision->kind != svn_opt_revision_unspecified)
     {
       svn_opt_revision_t *start_ignore, *end_ignore, end;
       const char *url_ignore;
@@ -1504,9 +1852,9 @@ diff_summarize_repos_wc(const struct diff_parameters *diff_param,
       SVN_ERR(svn_client__repos_locations(&url1, &start_ignore,
                                           &url_ignore, &end_ignore,
                                           NULL,
-                                          diff_param->path1,
-                                          diff_param->peg_revision,
-                                          diff_param->revision1, &end,
+                                          path1,
+                                          peg_revision,
+                                          revision1, &end,
                                           ctx, pool));
     }
 
@@ -1515,38 +1863,29 @@ diff_summarize_repos_wc(const struct diff_parameters *diff_param,
                                                NULL, NULL, NULL, FALSE, TRUE,
                                                ctx, pool));
 
-  /* Get a revision number from the svn_opt_revision_t */
-  SVN_ERR(svn_client__get_revision_number
-          (&rev, NULL, ra_session, diff_param->revision1,
-           (diff_param->path1 == url1) ? NULL : diff_param->path1, pool));
-
-  /* Set up the repos_diff editor. */
-  SVN_ERR(svn_client__get_diff_summarize_editor
-          (target, summarize_func,
-           summarize_baton, ra_session, rev,
-           ctx->cancel_func, ctx->cancel_baton,
-           &diff_editor, &diff_edit_baton, pool));
-           /*
   SVN_ERR(svn_wc_get_diff_editor5(adm_access, target,
                                   callbacks, callback_baton,
-                                  diff_param->depth,
-                                  diff_param->ignore_ancestry,
+                                  depth,
+                                  ignore_ancestry,
                                   rev2_is_base,
                                   reverse,
                                   ctx->cancel_func, ctx->cancel_baton,
-                                  diff_param->changelists,
+                                  changelists,
                                   &diff_editor, &diff_edit_baton,
                                   pool));
-*/
+
   /* Tell the RA layer we want a delta to change our txn to URL1 */
+  SVN_ERR(svn_client__get_revision_number
+          (&rev, NULL, ra_session, revision1,
+           (path1 == url1) ? NULL : path1, pool));
 
   SVN_ERR(svn_ra_do_diff3(ra_session,
                           &reporter, &report_baton,
                           rev,
                           target ? svn_path_uri_decode(target, pool) : NULL,
-                          diff_param->depth,
-                          diff_param->ignore_ancestry,
-                          FALSE,  /* do not produce text deltas */
+                          depth,
+                          ignore_ancestry,
+                          TRUE,  /* text_deltas */
                           url1,
                           diff_editor, diff_edit_baton, pool));
 
@@ -1555,25 +1894,41 @@ diff_summarize_repos_wc(const struct diff_parameters *diff_param,
 
   /* Create a txn mirror of path2;  the diff editor will print
      diffs in reverse.  :-)  */
-  SVN_ERR(svn_wc_crawl_revisions3(diff_param->path2, dir_access,
+  SVN_ERR(svn_wc_crawl_revisions3(path2, dir_access,
                                   reporter, report_baton,
-                                  FALSE, diff_param->depth,
-                                  (! server_supports_depth),
+                                  FALSE, depth, (! server_supports_depth),
                                   FALSE, NULL, NULL, /* notification is N/A */
                                   NULL, pool));
 
   return svn_wc_adm_close(adm_access);
 }
 
-/* This is basically just the guts of svn_client_diff_summarize[_peg](). */
+
+/* This is basically just the guts of svn_client_diff_summarize2(). */
 static svn_error_t *
 do_diff_summarize(const struct diff_parameters *diff_param,
                   svn_client_diff_summarize_func_t summarize_func,
-                  void *summarize_baton,
+                  void *summarize_func_baton,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
 {
   struct diff_paths diff_paths;
+  svn_wc_diff_callbacks3_t diff_callbacks;
+  diff_summarize_baton_t diff_summarize_baton;
+
+  /* setup callback and baton */
+  diff_callbacks.file_changed = diff_summarize_file_changed;
+  diff_callbacks.file_added = diff_summarize_file_added;
+  diff_callbacks.file_deleted = diff_summarize_file_deleted;
+  diff_callbacks.dir_added = diff_summarize_dir_added;
+  diff_callbacks.dir_deleted = diff_summarize_dir_deleted;
+  diff_callbacks.dir_props_changed = diff_summarize_dir_props_changed;
+  diff_callbacks.dir_opened = diff_summarize_dir_opened;
+  diff_callbacks.dir_closed = diff_summarize_dir_closed;
+
+  diff_summarize_baton.summarize_func = summarize_func;
+  diff_summarize_baton.summarize_func_baton = summarize_func_baton;
+  diff_summarize_baton.pool = pool;
 
   /* Check if paths/revisions are urls/local. */
   SVN_ERR(check_paths(diff_param, &diff_paths));
@@ -1581,37 +1936,49 @@ do_diff_summarize(const struct diff_parameters *diff_param,
   if (diff_paths.is_repos1)
     {
       if (diff_paths.is_repos2)
-        return diff_summarize_repos_repos(diff_param, summarize_func,
-                                          summarize_baton, ctx, pool);
-      else
-        /* path 2 is a working copy */
-        return diff_summarize_repos_wc(diff_param, FALSE, summarize_func,
-                                       summarize_baton, ctx, pool);
+        {
+          return diff_summarize_repos_repos(diff_param, &diff_callbacks,
+                                            &diff_summarize_baton,
+                                            ctx, pool);
+        }
+      else /* path2 is a working copy path */
+        {
+          return diff_summarize_repos_wc(
+                   diff_param->path1, diff_param->revision1,
+                   diff_param->peg_revision,
+                   diff_param->path2, diff_param->revision2,
+                   FALSE, diff_param->depth,
+                   diff_param->ignore_ancestry,
+                   diff_param->changelists,
+                   &diff_callbacks, &diff_summarize_baton, ctx, pool);
+        }
     }
-  else
-  if (diff_paths.is_repos2)
+  else /* path1 is a working copy path */
     {
-      /* path 1 is a working copy, path 2 is a repos url.
-       * Things need to be reversed, because only the second path
-       * argument is allowed to be a working copy.
-       */
-      struct diff_parameters *reversed_diff_param =
-        apr_palloc(pool, sizeof(*diff_param));
-      memcpy(reversed_diff_param, diff_param, sizeof(*diff_param));
-
-      reversed_diff_param->path1 = diff_param->path2;
-      reversed_diff_param->revision1 = diff_param->revision2;
-      reversed_diff_param->path2 = diff_param->path1;
-      reversed_diff_param->revision2 = diff_param->revision1;
-
-      return diff_summarize_repos_wc(reversed_diff_param, TRUE, summarize_func,
-                                     summarize_baton, ctx, pool);
+      if (diff_paths.is_repos2)
+        {
+          return diff_summarize_repos_wc(
+                   diff_param->path2, diff_param->revision2,
+                   diff_param->peg_revision,
+                   diff_param->path1, diff_param->revision1,
+                   TRUE, diff_param->depth,
+                   diff_param->ignore_ancestry,
+                   diff_param->changelists,
+                   &diff_callbacks, &diff_summarize_baton, ctx, pool);
+        }
+      else /* path2 is a working copy path */
+        {
+          return diff_summarize_wc_wc(
+                   diff_param->path1, diff_param->revision1,
+                   diff_param->path2, diff_param->revision2,
+                   diff_param->depth,
+                   diff_param->ignore_ancestry,
+                   diff_param->changelists,
+                   &diff_callbacks, &diff_summarize_baton, ctx, pool);
+        }
     }
-  else
-    return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                            _("Sorry, summarizing diff was called in a way "
-                              "that is not yet supported"));
 }
+
 
 
 /* Initialize DIFF_CMD_BATON.diff_cmd and DIFF_CMD_BATON.options,
