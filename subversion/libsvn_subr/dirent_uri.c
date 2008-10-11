@@ -151,7 +151,10 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
   const char *src;
   apr_size_t seglen;
   apr_size_t canon_segments = 0;
-  svn_boolean_t url, file_scheme = FALSE;
+  svn_boolean_t url = FALSE;
+#if defined(WIN32) || defined(__CYGWIN__)
+  svn_boolean_t file_scheme = FALSE;
+#endif /* WIN32 or Cygwin */
 
   /* "" is already canonical, so just return it; note that later code
      depends on path not being zero-length.  */
@@ -987,7 +990,9 @@ svn_boolean_t
 svn_uri_is_canonical(const char *uri)
 {
   char *ptr = (char*)uri, *seg = (char*)uri;
+#if defined(WIN32) || defined(__CYGWIN__)
   svn_boolean_t file_scheme = FALSE;
+#endif /* WIN32 or Cygwin */
 
   /* URI is canonical if it has:
    *  - no '.' segments
