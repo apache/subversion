@@ -934,8 +934,6 @@ diff_summarize_dir_added(svn_wc_adm_access_t *adm_access,
   diff_summarize_baton_t *baton = diff_summarize_baton;
   svn_client_diff_summarize_t diff;
 
-  printf("dir added %s\n", path);
-
   if (state)
     *state = svn_wc_notify_state_unknown;
 
@@ -962,7 +960,6 @@ diff_summarize_dir_deleted(svn_wc_adm_access_t *adm_access,
 
   if (state)
     *state = svn_wc_notify_state_unknown;
-  printf("dir deleted %s\n", path);
 
   diff.path = path;
   diff.summarize_kind = svn_client_diff_summarize_kind_deleted;
