@@ -851,7 +851,7 @@ def build_tree_from_skipped(lines):
 def build_tree_from_diff_summarize(lines):
   "Build a tree from output of diff --summarize"
   root = SVNTreeNode(root_node_name)
-  rm = re.compile ("^([MAD ][M ])     (.+)\n")
+  rm = re.compile ("^([MAD ][M ])      (.+)\n")
 
   for line in lines:
     match = rm.search(line)
