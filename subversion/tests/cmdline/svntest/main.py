@@ -25,6 +25,7 @@ import time    # for time()
 import traceback # for print_exc()
 import threading
 import Queue
+import urllib
 
 import getopt
 try:
@@ -119,6 +120,20 @@ wc_author2 = 'jconstant' # use the same password as wc_author
 # Set C locale for command line programs
 os.environ['LC_ALL'] = 'C'
 
+# This function mimics the Python 2.3 urllib function of the same name.
+def pathname2url(path):
+  """Convert the pathname PATH from the local syntax for a path to the form
+  used in the path component of a URL. This does not produce a complete URL.
+  The return value will already be quoted using the quote() function."""
+  return urllib.quote(path.replace('\\', '/'))
+
+# This function mimics the Python 2.3 urllib function of the same name.
+def url2pathname(path):
+  """Convert the path component PATH from an encoded URL to the local syntax
+  for a path. This does not accept a complete URL. This function uses
+  unquote() to decode PATH."""
+  return os.path.normpath(urllib.unquote(path))
+
 ######################################################################
 # Global variables set during option parsing.  These should not be used
 # until the variable command_line_parsed has been set to True, as is
@@ -171,9 +186,7 @@ server_minor_version = 5
 is_child_process = False
 
 # Global URL to testing area.  Default to ra_local, current working dir.
-test_area_url = file_scheme_prefix + os.path.abspath(os.getcwd())
-if windows:
-  test_area_url = test_area_url.replace('\\', '/')
+test_area_url = file_scheme_prefix + pathname2url(os.path.abspath(os.getcwd()))
 
 # Location to the pristine repository, will be calculated from test_area_url
 # when we know what the user specified for --url.
@@ -914,7 +927,7 @@ class Sandbox:
     self.wc_dir = os.path.join(general_wc_dir, self.name)
     if not read_only:
       self.repo_dir = os.path.join(general_repo_dir, self.name)
-      self.repo_url = test_area_url + '/' + self.repo_dir
+      self.repo_url = test_area_url + '/' + pathname2url(self.repo_dir)
     else:
       self.repo_dir = pristine_dir
       self.repo_url = pristine_url
@@ -936,8 +949,6 @@ class Sandbox:
     elif self.repo_url.startswith("svn"):
       self.authz_file = os.path.join(self.repo_dir, "conf", "authz")
 
-    if windows:
-      self.repo_url = self.repo_url.replace('\\', '/')
     self.test_paths = [self.wc_dir, self.repo_dir]
 
   def clone_dependent(self, copy_wc=False):
@@ -970,9 +981,7 @@ class Sandbox:
 
   def add_repo_path(self, suffix, remove=1):
     path = os.path.join(general_repo_dir, self.name)  + '.' + suffix
-    url  = test_area_url + '/' + path
-    if windows:
-      url = url.replace('\\', '/')
+    url  = test_area_url + '/' + pathname2url(path)
     self.add_test_path(path, remove)
     return path, url
 
@@ -1400,9 +1409,7 @@ def run_tests(test_list, serial_only = False):
     sys.exit(1)
 
   # Calculate pristine_url from test_area_url.
-  pristine_url = test_area_url + '/' + pristine_dir
-  if windows:
-    pristine_url = pristine_url.replace('\\', '/')
+  pristine_url = test_area_url + '/' + pathname2url(pristine_dir)
 
   if use_jsvn:
     if svn_bin is None:

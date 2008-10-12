@@ -837,8 +837,7 @@ def build_tree_from_status(lines):
 def build_tree_from_skipped(lines):
 
   root = SVNTreeNode(root_node_name)
-  ### Will get confused by spaces in the filename
-  rm = re.compile ("^Skipped.* '([^ ]+)'\n")
+  rm = re.compile ("^Skipped.* '(.+)'\n")
 
   for line in lines:
     match = rm.search(line)
