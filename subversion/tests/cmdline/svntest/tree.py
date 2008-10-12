@@ -802,7 +802,7 @@ def build_tree_from_status(lines):
   #    - path                 (11)  (string of characters until newline)
 
   # Try http://www.wordsmith.org/anagram/anagram.cgi?anagram=ACDRMGU
-  rm = re.compile('^([!MACDRUG_ ][MACDRUG_ ])([L ])([+ ])([S ])([KOBT ])([C ]) ([* ])   [^0-9-]*(\d+|-|\?) +(\d|-|\?)+ +(\S+) +(.+)')
+  rm = re.compile('^([!MACDRUG_ ][MACDRUG_ ])([L ])([+ ])([S ])([KOBT ])([C ]) ([* ]) +(\d+|-|\?) +(\d|-|\?)+ +(\S+) +(.+)')
   for line in lines:
 
     # Quit when we hit an externals status announcement (### someday we can fix
