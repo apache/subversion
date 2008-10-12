@@ -2857,6 +2857,7 @@ def diff_summarize_xml(sbox):
   # A directory addition
   svntest.main.run_svn(None, "mkdir", os.path.join(wc_dir, 'newdir'))
 
+  # Commit all of those changes as r2.
   expected_output = svntest.wc.State(wc_dir, {
     'A/mu': Item(verb='Sending'),
     'iota': Item(verb='Sending'),
@@ -2877,6 +2878,19 @@ def diff_summarize_xml(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, wc_dir)
 
+  # Make a local change that is the reverse of all of those changes
+  svntest.actions.run_and_verify_update(wc_dir, None, None, None)
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge', '-r2:1', wc_dir,
+                                     wc_dir)
+
+  # Describe the changes
+  paths = ['A/mu',    'iota',    'A/D/G/tau','newfile','A/B/lambda','newdir']
+  items = ['modified','none',    'modified', 'added',  'deleted',   'added']
+  props = ['none',    'modified','modified', 'none',   'none',      'none']
+  kinds = ['file',    'file',    'file',     'file',   'file',      'dir']
+  items_reverse = [
+           'modified','none',    'modified', 'deleted','added',     'deleted']
+
   # 1) Test --xml without --summarize
   svntest.actions.run_and_verify_svn(
     None, None, ".*--xml' option only valid with '--summarize' option",
@@ -2889,36 +2903,23 @@ def diff_summarize_xml(sbox):
 
   # 3) Test working copy summarize
   svntest.actions.run_and_verify_diff_summarize_xml(
-    ".*summarizing diff was called in a way that is not yet supported",
-    None, wc_dir, None, None, wc_dir)
+    [], wc_dir, paths, items_reverse, props, kinds, wc_dir)
 
   # 4) Test --summarize --xml on -c2
-  paths = ['iota',]
-  items = ['none',]
-  kinds = ['file',]
-  props = ['modified',]
+  paths1 = ['iota',]
+  items1 = ['none',]
+  props1 = ['modified',]
+  kinds1 = ['file',]
 
   svntest.actions.run_and_verify_diff_summarize_xml(
-    [], wc_dir, paths, items, props, kinds, '-c2',
+    [], wc_dir, paths1, items1, props1, kinds1, '-c2',
     os.path.join(wc_dir, 'iota'))
 
   # 5) Test --summarize --xml on -r1:2
-  paths = ['A/mu', 'iota', 'A/D/G/tau', 'newfile', 'A/B/lambda',
-           'newdir',]
-  items = ['modified', 'none', 'modified', 'added', 'deleted', 'added',]
-  kinds = ['file','file','file','file','file', 'dir',]
-  props = ['none', 'modified', 'modified', 'none', 'none', 'none',]
-
   svntest.actions.run_and_verify_diff_summarize_xml(
     [], wc_dir, paths, items, props, kinds, '-r1:2', wc_dir)
 
   # 6) Same as test #5 but ran against a URL instead of a WC path
-  paths = ['A/mu', 'iota', 'A/D/G/tau', 'newfile', 'A/B/lambda',
-           'newdir',]
-  items = ['modified', 'none', 'modified', 'added', 'deleted', 'added',]
-  kinds = ['file','file','file','file','file', 'dir',]
-  props = ['none', 'modified', 'modified', 'none', 'none', 'none',]
-
   svntest.actions.run_and_verify_diff_summarize_xml(
     [], sbox.repo_url, paths, items, props, kinds, '-r1:2', sbox.repo_url)
 
