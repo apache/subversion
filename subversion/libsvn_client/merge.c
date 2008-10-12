@@ -283,6 +283,10 @@ typedef struct merge_cmd_baton_t {
   /* A list of directories containing tree conflicts. */
   apr_array_header_t *tree_conflicted_dirs;
 
+  /* During the merge, *USE_SLEEP is set to TRUE if a sleep will be required
+     afterwards to ensure timestamp integrity, or unchanged if not. */
+  svn_boolean_t *use_sleep;
+
   /* Pool which has a lifetime limited to one iteration over a given
      merge source, i.e. it is cleared on every call to do_directory_merge()
      or do_file_merge() in do_merge(). */
@@ -3366,9 +3370,6 @@ remove_absent_children(const char *target_wcpath,
    historical ancestor of URL2@REVISION2, or vice-versa (see
    `MERGEINFO MERGE SOURCE NORMALIZATION' for more requirements around
    the values of URL1, REVISION1, URL2, and REVISION2 in this case).
-
-   *USE_SLEEP will be set TRUE if a sleep is required to ensure timestamp
-   integrity, *USE_SLEEP will be unchanged if no sleep is required.
 */
 static svn_error_t *
 drive_merge_report_editor(const char *target_wcpath,
@@ -3382,7 +3383,6 @@ drive_merge_report_editor(const char *target_wcpath,
                           svn_wc_adm_access_t *adm_access,
                           const svn_wc_diff_callbacks3_t *callbacks,
                           merge_cmd_baton_t *merge_b,
-                          svn_boolean_t *use_sleep,
                           apr_pool_t *pool)
 {
   const svn_ra_reporter3_t *reporter;
@@ -3578,7 +3578,7 @@ drive_merge_report_editor(const char *target_wcpath,
     SVN_ERR(svn_ra_reparent(merge_b->ra_session2, old_sess2_url, pool));
 
   /* Caller must call svn_sleep_for_timestamps() */
-  *use_sleep = TRUE;
+  *(merge_b->use_sleep) = TRUE;
 
   return SVN_NO_ERROR;
 }
@@ -5070,9 +5070,6 @@ filter_natural_history_from_mergeinfo(apr_array_header_t **filtered_rangelist,
    cousins thrice removed, etc...).  (This is used to simulate the
    history checks that the repository logic does in the directory case.)
 
-   *USE_SLEEP will be set TRUE if a sleep is required to ensure timestamp
-   integrity, *USE_SLEEP will be unchanged if no sleep is required.
-
    Note: MERGE_B->RA_SESSION1 must be associated with URL1 and
    MERGE_B->RA_SESSION2 with URL2.
 */
@@ -5086,7 +5083,6 @@ do_file_merge(const char *url1,
               svn_wc_adm_access_t *adm_access,
               notification_receiver_baton_t *notify_b,
               merge_cmd_baton_t *merge_b,
-              svn_boolean_t *use_sleep,
               apr_pool_t *pool)
 {
   apr_hash_t *props1, *props2;
@@ -5379,7 +5375,7 @@ do_file_merge(const char *url1,
   svn_pool_destroy(subpool);
 
   /* Caller must call svn_sleep_for_timestamps() */
-  *use_sleep = TRUE;
+  *(merge_b->use_sleep) = TRUE;
 
   /* If our multi-pass merge terminated early due to conflicts, return
      that fact as an error. */
@@ -5559,9 +5555,6 @@ process_children_with_new_mergeinfo(merge_cmd_baton_t *merge_b,
 
    Handle DEPTH as documented for svn_client_merge3().
 
-   *USE_SLEEP will be set TRUE if a sleep is required to ensure timestamp
-   integrity, *USE_SLEEP will be unchanged if no sleep is required.
-
    NOTE: This is a wrapper around drive_merge_report_editor() which
    handles the complexities inherent to situations where a given
    directory's children may have intersecting merges (because they
@@ -5577,7 +5570,6 @@ do_directory_merge(const char *url1,
                    svn_depth_t depth,
                    notification_receiver_baton_t *notify_b,
                    merge_cmd_baton_t *merge_b,
-                   svn_boolean_t *use_sleep,
                    apr_pool_t *pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
@@ -5630,7 +5622,7 @@ do_directory_merge(const char *url1,
                                        url1, revision1, url2, revision2,
                                        NULL, depth, notify_b,
                                        adm_access, &merge_callbacks,
-                                       merge_b, use_sleep, pool);
+                                       merge_b, pool);
     }
 
   /*** If we get here, we're dealing with related sources from the
@@ -5792,7 +5784,7 @@ do_directory_merge(const char *url1,
                 notify_b->children_with_mergeinfo,
                 depth, notify_b, adm_access,
                 &merge_callbacks, merge_b,
-                use_sleep, iterpool));
+                iterpool));
               if (old_sess1_url)
                 SVN_ERR(svn_ra_reparent(merge_b->ra_session1,
                                         old_sess1_url, iterpool));
@@ -5847,7 +5839,7 @@ do_directory_merge(const char *url1,
                                             NULL,
                                             depth, notify_b, adm_access,
                                             &merge_callbacks, merge_b,
-                                            use_sleep, pool));
+                                            pool));
         }
     }
 
@@ -6245,6 +6237,7 @@ do_merge(apr_array_header_t *merge_sources,
   merge_cmd_baton.pool = subpool;
   merge_cmd_baton.merge_options = merge_options;
   merge_cmd_baton.diff3_cmd = diff3_cmd;
+  merge_cmd_baton.use_sleep = use_sleep;
 
   /* Build the notification receiver baton. */
   notify_baton.wrapped_func = ctx->notify_func2;
@@ -6313,13 +6306,13 @@ do_merge(apr_array_header_t *merge_sources,
         {
           SVN_ERR(do_file_merge(url1, rev1, url2, rev2, target,
                                 sources_related, adm_access, &notify_baton,
-                                &merge_cmd_baton, use_sleep, subpool));
+                                &merge_cmd_baton, subpool));
         }
       else if (target_entry->kind == svn_node_dir)
         {
           SVN_ERR(do_directory_merge(url1, rev1, url2, rev2, target_entry,
                                      adm_access, depth, &notify_baton,
-                                     &merge_cmd_baton, use_sleep, subpool));
+                                     &merge_cmd_baton, subpool));
         }
 
       /* The final mergeinfo on TARGET_WCPATH may itself elide. */
