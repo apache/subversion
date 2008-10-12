@@ -4,7 +4,6 @@
 
 import os
 import sys
-import string
 
 import gen_base
 import gen_win
@@ -118,7 +117,7 @@ class Generator(gen_win.WinGeneratorBase):
 
       targets.append(
         gen_win.ProjectItem(name=target.proj_name,
-                            dsp=string.replace(fname, os.sep, '\\'),
+                            dsp=fname.replace(os.sep, '\\'),
                             depends=dep_names))
 
     targets.sort(lambda x, y: cmp(x.name, y.name))

@@ -72,6 +72,11 @@ AC_DEFUN(SVN_LIB_APRUTIL,
     AC_MSG_ERROR([apu-config --includes failed])
   fi
 
+  SVN_APRUTIL_PREFIX="`$apu_config --prefix`"
+  if test $? -ne 0; then
+    AC_MSG_ERROR([apu-config --prefix failed])
+  fi
+
   dnl When APR stores the dependent libs in the .la file, we don't need
   dnl --libs.
   SVN_APRUTIL_LIBS="`$apu_config --link-libtool --libs`"

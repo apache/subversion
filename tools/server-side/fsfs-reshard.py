@@ -378,7 +378,6 @@ def main():
   sys.exit(0)
 
 if __name__ == '__main__':
-  raise Exception, \
-    """This script is unfinished and not ready to be used on live data.
-    Trust us."""
+  raise Exception("""This script is unfinished and not ready to be used on live data.
+    Trust us.""")
   main()

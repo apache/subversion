@@ -40,7 +40,7 @@ class HistoryChecker:
         return 1
       if path == '/':
         return 0
-      idx = string.rfind(path, '/')
+      idx = path.rfind('/')
       if idx != -1:
         path = path[:idx]
       else:

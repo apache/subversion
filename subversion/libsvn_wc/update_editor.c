@@ -2,7 +2,7 @@
  * update_editor.c :  main editor for checkouts and updates
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -37,7 +37,6 @@
 #include "svn_xml.h"
 #include "svn_error.h"
 #include "svn_io.h"
-#include "svn_md5.h"
 #include "svn_private_config.h"
 #include "svn_time.h"
 #include "svn_config.h"
@@ -244,8 +243,6 @@ struct bump_dir_info
 
 struct handler_baton
 {
-  apr_file_t *source;
-  apr_file_t *dest;
   svn_txdelta_window_handler_t apply_handler;
   void *apply_baton;
   apr_pool_t *pool;
@@ -747,35 +744,12 @@ window_handler(svn_txdelta_window_t *window, void *baton)
 {
   struct handler_baton *hb = baton;
   struct file_baton *fb = hb->fb;
-  svn_error_t *err, *err2;
+  svn_error_t *err;
 
   /* Apply this window.  We may be done at that point.  */
   err = hb->apply_handler(window, hb->apply_baton);
   if (window != NULL && !err)
     return err;
-
-  /* Either we're done (window is NULL) or we had an error.  In either
-     case, clean up the handler.  */
-  if (hb->source)
-    {
-      if (fb->copied_text_base)
-        err2 = svn_io_file_close(hb->source, hb->pool);
-      else
-        err2 = svn_wc__close_text_base(hb->source, fb->path, 0, hb->pool);
-
-      if (err2 && !err)
-        err = err2;
-      else
-        svn_error_clear(err2);
-    }
-  err2 = svn_wc__close_text_base(hb->dest, fb->path, 0, hb->pool);
-  if (err2)
-    {
-      if (!err)
-        err = err2;
-      else
-        svn_error_clear(err2);
-    }
 
   if (err)
     {
@@ -2345,6 +2319,8 @@ apply_textdelta(void *file_baton,
   const char *checksum;
   svn_boolean_t replaced;
   svn_boolean_t use_revert_base;
+  svn_stream_t *source;
+  apr_file_t *target_file;
 
   if (fb->skipped)
     {
@@ -2358,6 +2334,7 @@ apply_textdelta(void *file_baton,
   /* Before applying incoming svndiff data to text base, make sure
      text base hasn't been corrupted, and that its checksum
      matches the expected base checksum. */
+
   SVN_ERR(choose_base_paths(&checksum, &replaced, &use_revert_base,
                             fb, pool));
 
@@ -2368,11 +2345,12 @@ apply_textdelta(void *file_baton,
      compatibility we assume that no checksum always matches. */
   if (checksum)
     {
-      unsigned char digest[APR_MD5_DIGESTSIZE];
+      svn_checksum_t *digest;
       const char *hex_digest;
 
-      SVN_ERR(svn_io_file_checksum(digest, fb->text_base_path, pool));
-      hex_digest = svn_md5_digest_to_cstring_display(digest, pool);
+      SVN_ERR(svn_io_file_checksum2(&digest, fb->text_base_path,
+                                    svn_checksum_md5, pool));
+      hex_digest = svn_checksum_to_cstring_display(digest, pool);
 
       /* Compare the base_checksum here, rather than in the window
          handler, because there's no guarantee that the handler will
@@ -2415,34 +2393,39 @@ apply_textdelta(void *file_baton,
   if (! fb->added)
     {
       if (use_revert_base)
-        SVN_ERR(svn_wc__open_revert_base(&hb->source, fb->path,
-                                         APR_READ,
-                                         handler_pool));
-      else
-        SVN_ERR(svn_wc__open_text_base(&hb->source, fb->path, APR_READ,
-                                       handler_pool));
+        {
+          apr_file_t *revert_file;
 
+          SVN_ERR(svn_wc__open_revert_base(&revert_file, fb->path,
+                                           APR_READ,
+                                           handler_pool));
+          source = svn_stream_from_aprfile2(revert_file, FALSE, handler_pool);
+        }
+      else
+        {
+          SVN_ERR(svn_wc_get_pristine_contents(&source, fb->path,
+                                               handler_pool, handler_pool));
+        }
     }
   else
     {
       if (fb->copied_text_base)
-        SVN_ERR(svn_io_file_open(&hb->source, fb->copied_text_base,
-                                 APR_READ, APR_OS_DEFAULT, handler_pool));
+        SVN_ERR(svn_stream_open_readonly(&source, fb->copied_text_base,
+                                         handler_pool, handler_pool));
       else
-        hb->source = NULL;
+        source = svn_stream_empty(handler_pool);
     }
 
   /* Open the text base for writing (this will get us a temporary file).  */
 
   if (use_revert_base)
-    err = svn_wc__open_revert_base(&hb->dest, fb->path,
+    err = svn_wc__open_revert_base(&target_file, fb->path,
                                    (APR_WRITE | APR_TRUNCATE | APR_CREATE),
                                    handler_pool);
   else
-    err = svn_wc__open_text_base(&hb->dest, fb->path,
+    err = svn_wc__open_text_base(&target_file, fb->path,
                                  (APR_WRITE | APR_TRUNCATE | APR_CREATE),
                                  handler_pool);
-
   if (err)
     {
       svn_pool_destroy(handler_pool);
@@ -2450,8 +2433,8 @@ apply_textdelta(void *file_baton,
     }
 
   /* Prepare to apply the delta.  */
-  svn_txdelta_apply(svn_stream_from_aprfile2(hb->source, TRUE, handler_pool),
-                    svn_stream_from_aprfile2(hb->dest, TRUE, handler_pool),
+  svn_txdelta_apply(source,
+                    svn_stream_from_aprfile2(target_file, FALSE, handler_pool),
                     fb->digest, fb->new_text_base_path, handler_pool,
                     &hb->apply_handler, &hb->apply_baton);
 
@@ -2935,7 +2918,10 @@ merge_file(svn_wc_notify_state_t *content_state,
          on replaced files. */
       if (!is_replaced)
         {
-          tmp_entry.checksum = svn_md5_digest_to_cstring(fb->digest, pool);
+          svn_checksum_t *checksum = svn_checksum_create(svn_checksum_md5,
+                                                         pool);
+          checksum->digest = fb->digest;
+          tmp_entry.checksum = svn_checksum_to_cstring(checksum, pool);
           flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
         }
     }
@@ -3022,6 +3008,8 @@ close_file(void *file_baton,
   /* Was this an add-with-history, with no apply_textdelta? */
   if (fb->added_with_history && ! fb->received_textdelta)
     {
+      svn_checksum_t *checksum;
+
       SVN_ERR_ASSERT(! fb->text_base_path && ! fb->new_text_base_path
                      && fb->copied_text_base);
 
@@ -3032,15 +3020,22 @@ close_file(void *file_baton,
       SVN_ERR(svn_io_copy_file(fb->copied_text_base,
                                fb->new_text_base_path,
                                TRUE, pool));
-      SVN_ERR(svn_io_file_checksum(fb->digest,
-                                   fb->new_text_base_path,
-                                   pool));
+      SVN_ERR(svn_io_file_checksum2(&checksum,
+                                    fb->new_text_base_path,
+                                    svn_checksum_md5,
+                                    pool));
+      memcpy(fb->digest, checksum->digest, svn_checksum_size(checksum));
     }
 
   /* window-handler assembles new pristine text in .svn/tmp/text-base/  */
   if (fb->new_text_base_path && text_checksum)
     {
-      const char *real_sum = svn_md5_digest_to_cstring(fb->digest, pool);
+      svn_checksum_t *checksum;
+      const char *real_sum;
+      
+      checksum = svn_checksum_create(svn_checksum_md5, pool);
+      checksum->digest = fb->digest;
+      real_sum = svn_checksum_to_cstring(checksum, pool);
 
       if (real_sum && (strcmp(text_checksum, real_sum) != 0))
         return svn_error_createf
@@ -4311,7 +4306,7 @@ svn_wc_add_repos_file2(const char *dst_path,
 
   /* Install new text base. */
   {
-    unsigned char digest[APR_MD5_DIGESTSIZE];
+    svn_checksum_t *checksum;
     svn_wc_entry_t tmp_entry;
 
     /* Write out log commands to set up the new text base and its
@@ -4322,9 +4317,10 @@ svn_wc_add_repos_file2(const char *dst_path,
     SVN_ERR(svn_wc__loggy_set_readonly(&log_accum, adm_access,
                                        text_base_path, pool));
 
-    SVN_ERR(svn_io_file_checksum(digest, tmp_text_base_path, pool));
+    SVN_ERR(svn_io_file_checksum2(&checksum, tmp_text_base_path,
+                                  svn_checksum_md5, pool));
 
-    tmp_entry.checksum = svn_md5_digest_to_cstring(digest, pool);
+    tmp_entry.checksum = svn_checksum_to_cstring(checksum, pool);
     SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_access,
                                        dst_path, &tmp_entry,
                                        SVN_WC__ENTRY_MODIFY_CHECKSUM,

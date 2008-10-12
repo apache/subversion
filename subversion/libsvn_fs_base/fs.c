@@ -56,6 +56,7 @@
 #include "bdb/locks-table.h"
 #include "bdb/lock-tokens-table.h"
 #include "bdb/node-origins-table.h"
+#include "bdb/metadata-table.h"
 
 #include "../libsvn_fs/fs-loader.h"
 #include "private/svn_fs_util.h"
