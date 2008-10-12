@@ -25,6 +25,7 @@
 #include <string.h>
 #include "svn_pools.h"
 #include "svn_error.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 
 #include "wc.h"
@@ -334,8 +335,8 @@ get_copyfrom_url_rev_via_parent(const char *src_path,
 
       /* Don't look for parent_path in src_access if it can't be
          there... */
-      if (svn_path_is_ancestor(svn_wc_adm_access_path(src_access),
-                               parent_path))
+      if (svn_dirent_is_ancestor(svn_wc_adm_access_path(src_access),
+                                 parent_path))
         {
           SVN_ERR(svn_wc_adm_retrieve(&parent_access, src_access,
                                       parent_path, pool));

@@ -86,8 +86,8 @@ class Generator(generator.swig.Generator):
 
 if __name__ == "__main__":
   if len(sys.argv) != 4:
-    print "Usage: %s build.conf swig"
-    print "Generates external runtime files for SWIG"
+    print("Usage: %s build.conf swig")
+    print("Generates external runtime files for SWIG")
   else:
     gen = Generator(sys.argv[1], sys.argv[2])
     gen.write_external_runtime(sys.argv[3])

@@ -1,7 +1,7 @@
 /* fs_skels.c --- conversion between fs native types and skeletons
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -16,6 +16,7 @@
  */
 
 #include <string.h>
+#include <apr_md5.h>
 #include "svn_error.h"
 #include "svn_string.h"
 #include "svn_types.h"
@@ -525,8 +526,8 @@ svn_fs_base__parse_representation_skel(representation_t **rep_p,
       if (svn_fs_base__matches_atom(checksum_skel->children, "md5"))
         {
           rep->checksum = svn_checksum_create(svn_checksum_md5, pool);
-          memcpy(rep->checksum->digest, checksum_skel->children->next->data,
-                 APR_MD5_DIGESTSIZE);
+          memcpy((unsigned char *)rep->checksum->digest,
+                 checksum_skel->children->next->data, APR_MD5_DIGESTSIZE);
         }
       else
         return skel_err("checksum type");

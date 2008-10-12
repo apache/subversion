@@ -480,7 +480,13 @@ test_path_join(const char **msg,
     { "X:", "/def", "/def" },
     { "X:abc", "/d", "/d" },
     { "X:abc", "/", "/" },
-
+    { "file://", "foo", "file:///foo" },
+    { "file:///foo", "bar", "file:///foo/bar" },
+    { "file:///foo", SVN_EMPTY_PATH, "file:///foo" },
+    { SVN_EMPTY_PATH, "file:///foo", "file:///foo" },
+    { "file:///X:", "bar", "file:///X:/bar" },
+    { "file:///X:foo", "bar", "file:///X:foo/bar" },
+    { "http://svn.dm.net", "repos", "http://svn.dm.net/repos" },
 #if defined(WIN32) || defined(__CYGWIN__)
 /* These will fail, see issue #2028
     { "//srv/shr",     "fld",     "//srv/shr/fld" },
@@ -520,6 +526,10 @@ test_path_join(const char **msg,
                                  "svn_path_join(\"%s\", \"%s\") returned "
                                  "\"%s\". expected \"%s\"",
                                  base, comp, result, expect);
+
+      /* svn_path_join_many does not support URLs, so skip the URL tests. */
+      if (svn_path_is_url(base))
+        continue;
 
       result = svn_path_join_many(pool, base, comp, NULL);
       if (strcmp(result, expect))
@@ -703,10 +713,9 @@ test_path_dirname(const char **msg,
     { SVN_EMPTY_PATH, SVN_EMPTY_PATH },
     { "X:abc/def", "X:abc" },
 #if defined(WIN32) || defined(__CYGWIN__)
+/* These will fail, see issue #2028
     { "//srv/shr/fld",  "//srv/shr" },
     { "//srv/shr/fld/subfld", "//srv/shr/fld" },
-
-/* These will fail, see issue #2028
     { "X:/", "X:/" },
     { "X:/abc", "X:/" },
     { "X:", "X:" },
@@ -872,12 +881,12 @@ test_path_canonicalize(const char **msg,
     /* We permit UNC paths on Windows.  By definition UNC
      * paths must have two components so we should remove the
      * double slash if there is only one component. */
+/* These will fail, see issue #2028
     { "//hst",                "/hst" },
     { "//hst/./",             "/hst" },
     { "//server/share/",      "//server/share" },
     { "//server/SHare/",      "//server/SHare" },
     { "//SERVER/SHare/",      "//server/SHare" },
-/* These will fail, see issue #2028
     { "X:/",                  "X:/" },
 */
 #else /* WIN32 or Cygwin */
@@ -1059,12 +1068,12 @@ test_path_is_ancestor(const char **msg,
 */
     { "X:foo",           "X:bar",         FALSE},
 #if defined(WIN32) || defined(__CYGWIN__)
+/* These will fail, see issue #2028
     { "//srv/shr",       "//srv",         FALSE},
     { "//srv/shr",       "//srv/shr/fld", TRUE },
     { "//srv",           "//srv/shr/fld", TRUE },
     { "//srv/shr/fld",   "//srv/shr",     FALSE },
     { "//srv/shr/fld",   "//srv2/shr/fld", FALSE },
-/* These will fail, see issue #2028
     { "X:/",             "X:/",           TRUE},
     { "X:/foo",          "X:/",           FALSE},
     { "X:/",             "X:/foo",        TRUE},
@@ -1484,11 +1493,13 @@ test_path_is_canonical(const char **msg,
     { "file:///c:/temp/repos", FALSE },
     { "file:///c:/temp/REPOS", FALSE },
     { "file:///C:/temp/REPOS", TRUE },
+    { "C:/folder/subfolder/file", TRUE },
+/* These will fail, see issue #2028
     { "//server/share/",       FALSE },
     { "//server/share",        TRUE },
     { "//server/SHare",        TRUE },
     { "//SERVER/SHare",        FALSE },
-    { "C:/folder/subfolder/file", TRUE },
+*/
 #else /* WIN32 or Cygwin */
     { "file:///c:/temp/repos", TRUE },
     { "file:///c:/temp/REPOS", TRUE },

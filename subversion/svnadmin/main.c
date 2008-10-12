@@ -341,8 +341,11 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     "portable format, sending feedback to stderr.  Dump revisions\n"
     "LOWER rev through UPPER rev.  If no revisions are given, dump all\n"
     "revision trees.  If only LOWER is given, dump that one revision tree.\n"
-    "If --incremental is passed, then the first revision dumped will be\n"
-    "a diff against the previous revision, instead of the usual fulltext.\n"),
+    "If --incremental is passed, the first revision dumped will describe\n"
+    "only the paths changed in that revision; otherwise it will describe\n"
+    "every path present in the repository as of that revision.  (In either\n"
+    "case, the second and subsequent revisions, if any, describe only paths\n"
+    "changed in those revisions.)\n"),
    {'r', svnadmin__incremental, svnadmin__deltas, 'q'} },
 
   {"help", subcommand_help, {"?", "h"}, N_

@@ -4,7 +4,6 @@
 
 import os
 import md5
-import string
 
 import gen_base
 import gen_win
@@ -99,11 +98,11 @@ class Generator(gen_win.WinGeneratorBase):
       myhash = hash.hexdigest()
     except AttributeError:
       # Python 1.5.2
-      myhash = string.join(map(lambda x: '%02x' % ord(x), hash.digest()), '')
+      myhash = ''.join(map(lambda x: '%02x' % ord(x), hash.digest()))
 
-    guid = string.upper("{%s-%s-%s-%s-%s}" % (myhash[0:8], myhash[8:12],
-                                              myhash[12:16], myhash[16:20],
-                                              myhash[20:32]))
+    guid = ("{%s-%s-%s-%s-%s}" % (myhash[0:8], myhash[8:12],
+                                  myhash[12:16], myhash[16:20],
+                                  myhash[20:32])).upper()
     return guid
 
   def getguid(self, path):
@@ -112,8 +111,8 @@ class Generator(gen_win.WinGeneratorBase):
       proj = open(path)
       line = proj.readline()
       while len(line) > 0:
-        l = string.lower(line)
-        pos = string.find(l, 'projectguid="{')
+        l = line.lower()
+        pos = l.find('projectguid="{')
         if pos >= 0:
           guid = line[pos+13:pos+13+38]
           return guid
@@ -186,7 +185,7 @@ class Generator(gen_win.WinGeneratorBase):
                                            ))
       targets.append(
         gen_win.ProjectItem(name=target.name,
-                            path=string.replace(fname, os.sep, '\\'),
+                            path=fname.replace(os.sep, '\\'),
                             guid=guids[target.name],
                             depends=deplist,
                             ))
@@ -194,8 +193,8 @@ class Generator(gen_win.WinGeneratorBase):
     # the path name in the .sln template is already enclosed with ""
     # therefore, remove them from the path itself
     for target in targets:
-      target.path = string.rstrip(target.path, '"')
-      target.path = string.lstrip(target.path, '"')
+      target.path = target.path.rstrip('"')
+      target.path = target.path.lstrip('"')
 
     targets.sort(lambda x, y: cmp(x.name, y.name))
 

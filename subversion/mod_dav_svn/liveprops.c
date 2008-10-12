@@ -2,7 +2,7 @@
  * liveprops.c: mod_dav_svn live property provider functions for Subversion
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -17,17 +17,16 @@
  */
 
 #include <apr_tables.h>
-#include <apr_md5.h>
 
 #include <httpd.h>
 #include <http_core.h>
 #include <util_xml.h>
 #include <mod_dav.h>
 
+#include "svn_checksum.h"
 #include "svn_pools.h"
 #include "svn_time.h"
 #include "svn_dav.h"
-#include "svn_md5.h"
 #include "svn_props.h"
 
 #include "private/svn_dav_protocol.h"

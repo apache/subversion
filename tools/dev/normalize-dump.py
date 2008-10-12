@@ -2,7 +2,6 @@
 
 import sys
 import re
-import string
 
 header_re = re.compile(r'^([^:]*): ?(.*)$')
 
@@ -37,7 +36,7 @@ def parse_header_block(fp):
         line = fp.readline()
         if line == '':
             return headers, 1
-        line = string.strip(line)
+        line = line.strip()
         if line == '':
             return headers, 0
         matches = header_re.match(line)
