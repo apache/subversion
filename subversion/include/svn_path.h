@@ -234,8 +234,8 @@ svn_dirent_is_root(const char *dirent, apr_size_t len);
 const char *
 svn_path_canonicalize(const char *path, apr_pool_t *pool);
 
-/** Return @c TRUE iff path is canonical.  The @a pool is not used and
- * may be NULL.
+/** Return @c TRUE iff path is canonical. Use @a pool for temporary
+ * allocations.
  *
  * @since New in 1.5.
  */
