@@ -2143,17 +2143,17 @@ msgstr "ustaw uuid repozytorium"
 #: ../libsvn_fs_base/dag.c:218
 #, c-format
 msgid "Corrupt DB: initial transaction id not '0' in filesystem '%s'"
-msgstr "Uszkodzona DB: identyfikator transakcji nie jest '0' w systemie plików '%s'"
+msgstr "Uszkodzona baza danych: identyfikator transakcji nie jest '0' w systemie plików '%s'"
 
 #: ../libsvn_fs_base/dag.c:226
 #, c-format
 msgid "Corrupt DB: initial copy id not '0' in filesystem '%s'"
-msgstr "Uszkodzona DB: identyfikator kopii nie jest '0' w systemie plików '%s'"
+msgstr "Uszkodzona baza danych: identyfikator kopii nie jest '0' w systemie plików '%s'"
 
 #: ../libsvn_fs_base/dag.c:235
 #, c-format
 msgid "Corrupt DB: initial revision number is not '0' in filesystem '%s'"
-msgstr "Uszkodzona DB: początkowy numer wersji nie jest '0' w systemie plików '%s'"
+msgstr "Uszkodzona baza danych: początkowy numer wersji nie jest '0' w systemie plików '%s'"
 
 #: ../libsvn_fs_base/dag.c:283 ../libsvn_fs_base/dag.c:458
 #: ../libsvn_fs_fs/dag.c:378
@@ -2527,7 +2527,7 @@ msgstr "Nie można porównać wartości atrybutów w dwóch różnych systemach 
 
 #: ../libsvn_fs_base/tree.c:1792 ../libsvn_fs_base/tree.c:1858
 msgid "Corrupt DB: faulty predecessor count"
-msgstr "Uszkodzona DB: błędny licznik poprzednika"
+msgstr "Uszkodzona baza danych: błędny licznik poprzednika"
 
 #: ../libsvn_fs_base/tree.c:1914 ../libsvn_fs_fs/tree.c:1150
 #, c-format
@@ -5175,7 +5175,7 @@ msgstr "Skończono parsowanie lisy zakresu przed osiągnięciem znaku nowej lini
 
 #: ../libsvn_subr/mergeinfo.c:565
 msgid "Pathname not terminated by ':'"
-msgstr "Ścieżka nie zakończona znakiem ':'"
+msgstr "Ścieżka niezakończona znakiem ':'"
 
 #: ../libsvn_subr/mergeinfo.c:573
 #, c-format
@@ -7169,7 +7169,7 @@ msgid ""
 "the change made by revision ARG (like -r ARG-1:ARG)\n"
 "                             If ARG is negative this is like -r ARG:ARG-1"
 msgstr ""
-"zmiana zrobiona w wersji ARG (jak -r ARG-1:ARG)\n"
+"zmiana wykonana w wersji ARG (jak -r ARG-1:ARG)\n"
 "                             Jeśli ARG jest ujemne, wtedy ta opcja działa jak -r ARG:ARG-1"
 
 #: ../svn/main.c:129
@@ -9201,7 +9201,7 @@ msgstr "'%s' nie wygląda na ścieżkę kopii roboczej"
 #: ../svn/propedit-cmd.c:278
 #, c-format
 msgid "Set new value for property '%s' on '%s'\n"
-msgstr "Ustaw nową wartość atrybutu '%s' dla '%s'\n"
+msgstr "Ustawiona nowa wartość atrybutu '%s' dla '%s'\n"
 
 #: ../svn/propedit-cmd.c:288
 #, c-format
