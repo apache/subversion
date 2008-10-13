@@ -776,16 +776,15 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
   /* Get the URL of the parent directory by appending a portion of
      parent_dir to from_url.  from_url is the URL for to_path and
      to_path is a substring of parent_dir, so append any characters in
-     parent_dir past strlen(to_path) to from_url, making sure to move
-     past a '/' in parent_dir, otherwise svn_path_join() will use the
-     absolute path in parent_dir instead of joining from_url with the
-     parent_dir substring. */
+     parent_dir past strlen(to_path) to from_url (making sure to move
+     past a '/' in parent_dir, otherwise svn_path_url_add_component()
+     will error. */
   len = strlen(cb->to_path);
   if (ib.parent_dir[len] == '/')
     ++len;
-  ib.parent_dir_url = svn_path_join(cb->from_url,
-                                    ib.parent_dir + len,
-                                    cb->pool);
+  ib.parent_dir_url = svn_path_url_add_component(cb->from_url,
+                                                 ib.parent_dir + len,
+                                                 cb->pool);
 
   /* We must use a custom version of svn_hash_diff so that the diff
      entries are processed in the order they were originally specified

@@ -29,6 +29,8 @@ Revisions included:
   * r32874 backported from trunk via r33251
   * r33269 backported from trunk via r33289
   * r33304:33307 backported from trunk via r33308
+  * Merge r32768:33570 from 1.5.x branch to bring it up-to-date with 1.5.3
+    release.
 
 Features:
   * Don't save plaintext passwords without prompting

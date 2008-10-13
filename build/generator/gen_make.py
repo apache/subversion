@@ -186,7 +186,7 @@ class Generator(gen_base.GeneratorBase):
       source_dir = build_path_dirname(source)
       opts = self.swig.opts[objname.lang]
       if not self.release_mode:
-        self.ofile.write('$(top_builddir)/%s: %s\n' % (objname, deps) +
+        self.ofile.write('%s: %s\n' % (objname, deps) +
           '\t$(SWIG) $(SWIG_INCLUDES) %s ' % opts +
           '-o $@ $(top_srcdir)/%s\n' % source
         )

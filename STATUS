@@ -1,3 +1,9 @@
+     * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+     *                                                     *
+     *  THIS RELEASE STREAM IS OPEN TO BUG FIXES.          *
+     *                                                     *
+     * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
 This file tracks the status of releases in the 1.5.x line.
 
 See "Stabilizing and maintaining releases" in trunk/www/hacking.html for
@@ -8,48 +14,40 @@ delay a release, etc.
 Candidate changes for 1.5.3:
 ============================
 
- * r32409
-   Fix an incompatibility with BSD make, which was introduced in r24293.
+ * r32968, r32975
+   Fix bug which occurs when a merge adds explicit mergeinfo to a subtree that
+   had no explicit mergeinfo prior to the merge.  This new mergeinfo could
+   obstruct any mergeinfo the path previously inherited and the new path
+   was not getting mergeinfo set that described the merge itself -- See 
+   http://subversion.tigris.org/servlets/ReadMsg?listName=dev&msgNo=142460.
+   Notes:
+     r32968 is a new test for this problem and r32975 is the fix.
    Justification:
-     Trivial fix. Fixes out-of-tree build of the bindings on BSD.
-     Might help downstream packagers for these systems.
-   Votes:
-     +1: stsp, arfrever
-     +0: cmpilato
-
- * r32012
-   Fix Visual Studio meta-projects on VS2008 and allow 1.5.x to fully
-   build when using VS2008. (Makes these projects utility projects instead of
-   executable projects)
-   Justification:
-     Not a code change, just a tweak to the Windows build system to
-     support VS2008.  Without this change you can't build the C API
-     tests or the bindings from the command line.
+     Incorrect mergeinfo results when this bug is encountered and it has
+     already been encountered in our own repository as described in the
+     aforementioned thread.
    Votes:
      +1: pburba, rhuijben
-     +0: danielsh (I confirm the justification, but don't understand
-                   the change itself)
+     +0: arfrever
 
- * r32790, r32796, r32798
-   Fix issue #2505: make switch continue after deleting locally modified
-   directories, as it update and merge do.
+ * r30257, r33024, r33026
+   Don't try to filter natural history from added mergeinfo during
+   reverse merges.
    Notes:
-     r32796 updates the docstring.
-     r32798 is an obvious fix.
+     r30257 is the urelated removal of an unused private struct in merge.c,
+     not required but avoids a conflict with r33024.  r33024 is a change to
+     include more information in the merge command baton, it results in no
+     functional change itself but r33026 relies on this new information.
+     There's a single trailing whitespace conflict during merge of r33024.
+     r33026 is the core change.
    Justification:
-     Small fix (with test).  User requests.
+     A reverse merge should simply return mergeinfo to a previous
+     representation -- see
+     http://subversion.tigris.org/servlets/ReadMsg?listName=dev&msgNo=142777.
+     This change also improves reverse merge performance as it eliminates
+     some unnecessary communication with the repository.
    Votes:
-     +1: danielsh
-
- * r31203
-   Update build.conf to remove the magic word 'update' from the description to
-   allow running the test as non-administrator on Windows Vista.
-   Justification:
-     Not a code change. Just makes it possible to run the tests as non-
-     administrator without having to type your administrator password (or using
-     a local patch).
-   Votes:
-     +1: rhuijben
+     +1: pburba
 
 Approved changes:
 =================

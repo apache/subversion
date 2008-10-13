@@ -221,8 +221,7 @@ sub add_file {
 
 sub apply_textdelta {
     my ($self, $baton, $base_checksum, $pool) = @_;
-    my $data = $baton->{data} = \'';
-    open my $out_fh, '>', $data
+    open my $out_fh, '>', \$baton->{data}
         or die "error opening in-memory file to store Subversion update: $!";
     open my $in_fh, '<', \''
         or die "error opening in-memory file for delta source: $!";

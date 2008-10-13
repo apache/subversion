@@ -1161,8 +1161,7 @@ svn_path_get_absolute(const char **pabsolute,
 
   apr_err = apr_filepath_merge(&buffer, NULL,
                                path_apr,
-                               APR_FILEPATH_NOTRELATIVE
-                               | APR_FILEPATH_TRUENAME,
+                               APR_FILEPATH_NOTRELATIVE,
                                pool);
   if (apr_err)
     return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
