@@ -452,7 +452,22 @@ svn_io_set_file_affected_time(apr_time_t apr_time,
                               const char *path,
                               apr_pool_t *pool);
 
-
+/** Sleep to ensure that any files modified after we exit have a different
+ * timestamp than the one we recorded. If @a path is not NULL, check if we
+ * can determine how long we should wait for a new timestamp on the filesystem
+ * containing @path, an existing file or directory. If @path is NULL or we 
+ * can't determine the timestamp resolution, sleep until the next second.
+ *
+ * Use @a pool for any necessary allocations. @a pool can be null if @a path
+ * is NULL.
+ *
+ * Errors while retrieving the timestamp resolution will result in sleeping
+ * to the next second, to keep the working copy stable in error conditions.
+ *
+ * @since New in 1.6.
+ */
+void
+svn_io_sleep_for_timestamps(const char *path, apr_pool_t *pool);
 
 /** Set @a *different_p to non-zero if @a file1 and @a file2 have different
  * sizes, else set to zero.  Both @a file1 and @a file2 are utf8-encoded.

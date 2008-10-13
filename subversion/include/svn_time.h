@@ -74,8 +74,11 @@ svn_parse_date(svn_boolean_t *matched,
 
 /** Sleep until the next second, to ensure that any files modified
  * after we exit have a different timestamp than the one we recorded.
+ *
+ * @deprecated Provided for backward compatibility with the 1.5 API.
+ * Use svn_io_sleep_for_timestamps() instead.
  */
-void
+SVN_DEPRECATED void
 svn_sleep_for_timestamps(void);
 
 #ifdef __cplusplus
