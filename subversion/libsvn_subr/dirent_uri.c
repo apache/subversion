@@ -201,7 +201,7 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
             src = seg;
 
           /* Found a hostname, convert to lowercase and copy to dst. */
-          while (*src != '/')
+           while (*src && (*src != '/'))
             *(dst++) = tolower((*src++));
           *(dst++) = *(src++);
 
