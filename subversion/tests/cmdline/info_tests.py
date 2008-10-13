@@ -180,44 +180,40 @@ def info_with_tree_conflicts(sbox):
   wc_dir = sbox.wc_dir
   G = os.path.join(wc_dir, 'A', 'D', 'G')
 
-  # check info of G
-  exit_code, output, error = svntest.actions.run_and_verify_svn(None, None,
-                                                                [], 'info', G)
+  scenarios = [
+    # (filename, action_verb, action, reason)
+    ('pi',  'edit',   'edited',  'deleted'),
+    ('rho', 'delete', 'deleted', 'edited'),
+    ('tau', 'delete', 'deleted', 'deleted'),
+    ]
 
-  verify_lines(output,
-               ["Tree conflicts:",
-                "The update attempted to edit 'pi'.",
-                "The update attempted to delete 'rho'",
-                "The update attempted to delete 'tau'",
-                ])
+  for fname, action_verb, action, reason in scenarios:
+    path = os.path.join(G, fname)
 
-  # check XML info of G
-  exit_code, output, error = svntest.actions.run_and_verify_svn(None, None,
-                                                                [], 'info', G,
-                                                                '--xml')
+    # check plain info
+    exit_code, output, error = svntest.actions.run_and_verify_svn(None, None,
+                                                                  [], 'info',
+                                                                  path)
+    expected_str1 = "The update attempted to " + action_verb + " '" + fname
+    verify_lines(output, [expected_str1])
 
-  verify_xml_elements(output,
-                      [('tree-conflict', {'victim'   : 'pi',
-                                          'kind'     : 'file',
-                                          'operation': 'update',
-                                          'action'   : 'edited',
-                                          'reason'   : 'deleted'}),
-                       ('tree-conflict', {'victim'   : 'rho',
-                                          'kind'     : 'file',
-                                          'operation': 'update',
-                                          'action'   : 'deleted',
-                                          'reason'   : 'edited'}),
-                       ('tree-conflict', {'victim'   : 'tau',
-                                          'kind'     : 'file',
-                                          'operation': 'update',
-                                          'action'   : 'deleted',
-                                          'reason'   : 'deleted'}),
-                       ])
+    # check XML info
+    exit_code, output, error = svntest.actions.run_and_verify_svn(None, None,
+                                                                  [], 'info',
+                                                                  path,
+                                                                  '--xml')
 
-
+    # In the XML, action and reason are past tense: 'edited' not 'edit'.
+    verify_xml_elements(output,
+                        [('tree-conflict', {'victim'   : fname,
+                                            'kind'     : 'file',
+                                            'operation': 'update',
+                                            'action'   : action,
+                                            'reason'   : reason,
+                                            },
+                          )])
 ########################################################################
 # Run the tests
-
 
 # list all tests here, starting with None:
 test_list = [ None,

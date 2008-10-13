@@ -4361,13 +4361,12 @@ typedef struct svn_info_t
   apr_size_t size;
 
   /**
-   * For a directory only, all tree-conflicted children, stored
-   * in an array of @c svn_wc_conflict_description_t, 
+   * Info on any tree conflict of which this node is a victim. Otherwise NULL.
    * @since New in 1.6.
    * @name Working-copy path fields
    * @{
    */
-  apr_array_header_t *tree_conflicts;
+  svn_wc_conflict_description_t *tree_conflict;
 
   /** @} */
 

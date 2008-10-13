@@ -13280,7 +13280,7 @@ def tree_conflicts_and_obstructions(sbox):
                                        expected_skip)
 
   # Make sure all victims have been found.
-  verify_tree_conflict_info(branch_path,
+  verify_tree_conflict_info(br_alpha_moved,
                             [('add', 'alpha-moved')])
 
 
