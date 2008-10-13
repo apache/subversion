@@ -152,9 +152,6 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
   apr_size_t seglen;
   apr_size_t canon_segments = 0;
   svn_boolean_t url = FALSE;
-#if defined(WIN32) || defined(__CYGWIN__)
-  svn_boolean_t file_scheme = FALSE;
-#endif /* WIN32 or Cygwin */
 
   /* "" is already canonical, so just return it; note that later code
      depends on path not being zero-length.  */
@@ -179,17 +176,13 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
           url = TRUE;
 
           /* Found a scheme, convert to lowercase and copy to dst. */
-          src = (char*)path;
+          src = path;
           while (*src != ':')
             *(dst++) = tolower((*src++));
           *(dst++) = ':';
           *(dst++) = '/';
           *(dst++) = '/';
           src += 3;
-#if defined(WIN32) || defined(__CYGWIN__)
-          if (strncmp(canon, "file", 4) == 0)
-            file_scheme = TRUE;
-#endif /* WIN32 or Cygwin */
 
           /* This might be the hostname */
           seg = src;
@@ -251,7 +244,7 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
       /* If this is the first path segment of a file:// URI and it contains a
          windows drive letter, convert the drive letter to upper case. */
       else if (url && canon_segments == 1 && seglen == 2 &&
-               file_scheme == TRUE &&
+               (strncmp(canon, "file:", 5) == 0) &&
                src[0] >= 'a' && src[0] <= 'z' && src[1] == ':')
         {
           *(dst++) = toupper(src[0]);
@@ -989,10 +982,7 @@ svn_dirent_is_canonical(const char *dirent, apr_pool_t *pool)
 svn_boolean_t
 svn_uri_is_canonical(const char *uri)
 {
-  char *ptr = (char*)uri, *seg = (char*)uri;
-#if defined(WIN32) || defined(__CYGWIN__)
-  svn_boolean_t file_scheme = FALSE;
-#endif /* WIN32 or Cygwin */
+  const char *ptr = uri, *seg = uri;
 
   /* URI is canonical if it has:
    *  - no '.' segments
@@ -1013,18 +1003,15 @@ svn_uri_is_canonical(const char *uri)
       if (*ptr == ':' && *(ptr+1) == '/' && *(ptr+2) == '/')
         {
           /* Found a scheme, check that it's all lowercase. */
-          ptr = (char*)uri;
+          ptr = uri;
           while (*ptr != ':')
             {
               if (*ptr >= 'A' && *ptr <= 'Z')
                 return FALSE;
               ptr++;
             }
+          /* Skip :// */
           ptr += 3;
-#if defined(WIN32) || defined(__CYGWIN__)
-          if (strncmp(uri, "file", 4) == 0)
-            file_scheme = TRUE;
-#endif /* WIN32 or Cygwin */
 
           /* This might be the hostname */
           seg = ptr;
@@ -1048,6 +1035,16 @@ svn_uri_is_canonical(const char *uri)
         }
     }
 
+#if defined(WIN32) || defined(__CYGWIN__)
+    /* If this is a file url, ptr now points to the third '/' in 
+       file:///C:/path. Check that if we have such a URL the drive
+       letter is in uppercase. */
+      if (strncmp(uri, "file:", 5) == 0 &&
+          ! (*(ptr+1) >= 'A' && *(ptr+1) <= 'Z') &&
+          *(ptr+2) == ':')
+        return FALSE;
+#endif /* WIN32 or Cygwin */
+
   /* Now validate the rest of the URI. */
   while(1)
     {
@@ -1055,12 +1052,6 @@ svn_uri_is_canonical(const char *uri)
 
       if (seglen == 1 && *seg == '.')
         return FALSE;  /*  /./   */
-
-#if defined(WIN32) || defined(__CYGWIN__)
-      if (file_scheme && seglen == 2 && *(ptr-1) == ':' &&
-          ! (*(ptr-2) >= 'A' && *(ptr-2) <= 'Z'))
-        return FALSE;
-#endif /* WIN32 or Cygwin */
 
       if (*ptr == '/' && *(ptr+1) == '/')
         return FALSE;  /*  //    */
