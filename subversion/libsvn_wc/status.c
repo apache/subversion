@@ -301,7 +301,7 @@ assemble_status(svn_wc_status2_t **status,
   {
     svn_wc_conflict_description_t *conflict;
 
-    SVN_ERR(svn_wc_get_tree_conflict(&conflict, path, adm_access, pool));
+    SVN_ERR(svn_wc_get_tree_conflict(&conflict, path, adm_access, FALSE, pool));
     tree_conflicted_p = (conflict != NULL);
   }
 

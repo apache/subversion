@@ -86,9 +86,7 @@ print_info_xml(void *baton,
   if (SVN_IS_VALID_REVNUM(info->rev))
     rev_str = apr_psprintf(pool, "%ld", info->rev);
   else
-    return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
-                             _("'%s' has invalid revision"),
-                             svn_path_local_style(target, pool));
+    rev_str = apr_pstrdup(pool, "Resource is not under version control.");
 
   /* "<entry ...>" */
   svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "entry",
@@ -222,24 +220,9 @@ print_info_xml(void *baton,
       svn_xml_make_close_tag(&sb, pool, "lock");
     }
 
-  if (info->tree_conflicts)
-    {
-      svn_wc_conflict_description_t *conflict;
-      int i;
-
-      /* "<tree-conflicts>" */
-      svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "tree-conflicts", NULL);
-
-      for (i = 0; i < info->tree_conflicts->nelts; i++)
-        {
-          conflict = APR_ARRAY_IDX(info->tree_conflicts, i, 
-                                   svn_wc_conflict_description_t *);
-          SVN_ERR(svn_cl__append_tree_conflict_info_xml(sb, conflict, pool));
-        }
-
-      /* "</tree-conflicts>" */
-      svn_xml_make_close_tag(&sb, pool, "tree-conflicts");
-    }
+  if (info->tree_conflict)
+    SVN_ERR(svn_cl__append_tree_conflict_info_xml(sb, info->tree_conflict,
+                                                  pool));
 
   /* "</entry>" */
   svn_xml_make_close_tag(&sb, pool, "entry");
@@ -447,28 +430,14 @@ print_info(void *baton,
     SVN_ERR(svn_cmdline_printf(pool, _("Changelist: %s\n"),
                                info->changelist));
 
-  if (info->tree_conflicts)
+  if (info->tree_conflict)
     {
-      svn_wc_conflict_description_t *tree_conflict;
-      svn_stringbuf_t *tree_conflict_descs = svn_stringbuf_create("", pool);
-      int i;
+      svn_stringbuf_t *desc = svn_stringbuf_create("", pool);
 
-      for (i = 0; i < info->tree_conflicts->nelts; i++)
-        {
-          svn_stringbuf_appendcstr(tree_conflict_descs, "\n");
-          tree_conflict = APR_ARRAY_IDX(info->tree_conflicts, i,
-                                        svn_wc_conflict_description_t *);
-          SVN_ERR(svn_cl__append_human_readable_tree_conflict_description(
-                                                           tree_conflict_descs,
-                                                           tree_conflict,
-                                                           pool));
-        }
+      SVN_ERR(svn_cl__append_human_readable_tree_conflict_description(
+                desc, info->tree_conflict, pool));
 
-      if (tree_conflict_descs->len > 0)
-        {
-          svn_cmdline_printf(pool, "Tree conflicts:%s",
-                             tree_conflict_descs->data);
-        }
+      svn_cmdline_printf(pool, "Tree conflicts:\n%s", desc->data);
     }
 
   /* Print extra newline separator. */
