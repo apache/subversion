@@ -62,6 +62,7 @@ Blanket commit access:
       stylesen   Senthil Kumaran S <senthil@collab.net>
      steveking   Stefan Küng <tortoisesvn@gmail.com>
          neels   Neels J. Hofmeyr <neels@elego.de>
+     jwhitlock   Jeremy Whitlock <jcscoobyrs@gmail.com>
 
 Commit access for specific areas:
 
@@ -160,8 +161,6 @@ giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
                                                               callbacks3 br.)
     firemeteor   Guo Rui <timmyguo@mail.ustc.edu.cn>         (issue-2843-dev
                                                               br.)
-     jwhitlock   Jeremy Whitlock <jcscoobyrs@gmail.com>      (ctypes-python-
-                                                              bindings br.)
 
   Subprojects that are complete, abandoned or have moved elsewhere:
 

@@ -29,6 +29,21 @@ Item = svntest.wc.StateItem
 
 
 ######################################################################
+# Generate expected output
+
+def make_diff_header(path, old_tag, new_tag):
+  """Generate the expected diff header for file PATH, with its old and new
+  versions described in parentheses by OLD_TAG and NEW_TAG. Return the header
+  as an array of newline-terminated strings."""
+  path_as_shown = path.replace('\\', '/')
+  return [
+    "Index: " + path_as_shown + "\n",
+    "===================================================================\n",
+    "--- " + path_as_shown + "\t(" + old_tag + ")\n",
+    "+++ " + path_as_shown + "\t(" + new_tag + ")\n",
+    ]
+
+######################################################################
 # Diff output checker
 #
 # Looks for the correct filenames and a suitable number of +/- lines
@@ -864,11 +879,8 @@ def diff_base_to_repos(sbox):
   def strip_eols(lines):
     return [x.replace("\r", "").replace("\n", "") for x in lines]
 
-  expected_output_lines = [
-    "Index: svn-test-work/working_copies/diff_tests-14/iota\n",
-    "===================================================================\n",
-    "--- svn-test-work/working_copies/diff_tests-14/iota\t(revision 1)\n",
-    "+++ svn-test-work/working_copies/diff_tests-14/iota\t(working copy)\n",
+  expected_output_lines = make_diff_header(iota_path, "revision 1",
+                                           "working copy") + [
     "@@ -1 +1,3 @@\n",
     " This is the file 'iota'.\n",
     "+some rev2 iota text.\n",
@@ -883,11 +895,8 @@ def diff_base_to_repos(sbox):
   exit_code, diff_output, err = svntest.actions.run_and_verify_svn(
     None, None, [], 'diff', '-r', 'BASE:1', wc_dir)
 
-  expected_output_lines = [
-    "Index: svn-test-work/working_copies/diff_tests-14/iota\n",
-    "===================================================================\n",
-    "--- svn-test-work/working_copies/diff_tests-14/iota\t(working copy)\n",
-    "+++ svn-test-work/working_copies/diff_tests-14/iota\t(revision 1)\n",
+  expected_output_lines = make_diff_header(iota_path, "working copy",
+                                           "revision 1") + [
     "@@ -1,2 +1 @@\n",
     " This is the file 'iota'.\n",
     "-some rev2 iota text.\n"]
@@ -1904,48 +1913,33 @@ def diff_schedule_delete(sbox):
 
   sbox.build()
 
-  expected_output_r2_working = [
-  "Index: foo\n",
-  "===================================================================\n",
-  "--- foo\t(revision 2)\n",
-  "+++ foo\t(working copy)\n",
+  expected_output_r2_working = make_diff_header("foo", "revision 2",
+                                                "working copy") + [
   "@@ -1 +0,0 @@\n",
   "-xxx\n"
   ]
 
-  expected_output_r2_base = [
-  "Index: foo\n",
-  "===================================================================\n",
-  "--- foo\t(revision 2)\n",
-  "+++ foo\t(working copy)\n",
+  expected_output_r2_base = make_diff_header("foo", "revision 2",
+                                                "working copy") + [
   "@@ -1 +1,2 @@\n",
   " xxx\n",
   "+yyy\n"
   ]
-  expected_output_base_r2 = [
-  "Index: foo\n",
-  "===================================================================\n",
-  "--- foo\t(working copy)\n",
-  "+++ foo\t(revision 2)\n",
+  expected_output_base_r2 = make_diff_header("foo", "working copy",
+                                                "revision 2") + [
   "@@ -1,2 +1 @@\n",
   " xxx\n",
   "-yyy\n"
   ]
 
-  expected_output_r1_base = [
-  "Index: foo\n",
-  "===================================================================\n",
-  "--- foo\t(revision 0)\n",
-  "+++ foo\t(revision 3)\n",
+  expected_output_r1_base = make_diff_header("foo", "revision 0",
+                                                "revision 3") + [
   "@@ -0,0 +1,2 @@\n",
   "+xxx\n",
   "+yyy\n"
   ]
-  expected_output_base_r1 = [
-  "Index: foo\n",
-  "===================================================================\n",
-  "--- foo\t(working copy)\n",
-  "+++ foo\t(revision 1)\n",
+  expected_output_base_r1 = make_diff_header("foo", "working copy",
+                                                "revision 1") + [
   "@@ -1,2 +0,0 @@\n",
   "-xxx\n",
   "-yyy\n"
@@ -2000,20 +1994,14 @@ def diff_mime_type_changes(sbox):
 
   sbox.build()
 
-  expected_output_r1_wc = [
-    "Index: iota\n",
-    "===================================================================\n",
-    "--- iota\t(revision 1)\n",
-    "+++ iota\t(working copy)\n",
+  expected_output_r1_wc = make_diff_header("iota", "revision 1",
+                                                "working copy") + [
     "@@ -1 +1,2 @@\n",
     " This is the file 'iota'.\n",
     "+revision 2 text.\n" ]
 
-  expected_output_wc_r1 = [
-    "Index: iota\n",
-    "===================================================================\n",
-    "--- iota\t(working copy)\n",
-    "+++ iota\t(revision 1)\n",
+  expected_output_wc_r1 = make_diff_header("iota", "working copy",
+                                                "revision 1") + [
     "@@ -1,2 +1 @@\n",
     " This is the file 'iota'.\n",
     "-revision 2 text.\n" ]
@@ -2146,11 +2134,8 @@ def diff_repos_wc_add_with_props(sbox):
 
   sbox.build()
 
-  expected_output_r1_r3 = [
-    "Index: foo\n",
-    "===================================================================\n",
-    "--- foo\t(revision 0)\n",
-    "+++ foo\t(revision 3)\n",
+  expected_output_r1_r3 = make_diff_header("foo", "revision 0",
+                                                "revision 3") + [
     "@@ -0,0 +1 @@\n",
     "+content\n",
     "\n",
@@ -2165,10 +2150,7 @@ def diff_repos_wc_add_with_props(sbox):
     "Added: propname\n",
     "   + propvalue\n",
     "\n",
-    "Index: X/bar\n",
-    "===================================================================\n",
-    "--- X/bar\t(revision 0)\n",
-    "+++ X/bar\t(revision 3)\n",
+  ] + make_diff_header("X/bar", "revision 0", "revision 3") + [
     "@@ -0,0 +1 @@\n",
     "+content\n",
     "\n",
@@ -2258,18 +2240,12 @@ def diff_repos_working_added_dir(sbox):
 
   sbox.build()
 
-  expected_output_r1_BASE = [
-    "Index: X/bar\n",
-    "===================================================================\n",
-    "--- X/bar\t(revision 0)\n",
-    "+++ X/bar\t(revision 2)\n",
+  expected_output_r1_BASE = make_diff_header("X/bar", "revision 0",
+                                                "revision 2") + [
     "@@ -0,0 +1 @@\n",
     "+content\n" ]
-  expected_output_r1_WORKING = [
-    "Index: X/bar\n",
-    "===================================================================\n",
-    "--- X/bar\t(revision 0)\n",
-    "+++ X/bar\t(revision 2)\n",
+  expected_output_r1_WORKING = make_diff_header("X/bar", "revision 0",
+                                                "revision 2") + [
     "@@ -0,0 +1,2 @@\n",
     "+content\n",
     "+more content\n" ]
@@ -2450,11 +2426,7 @@ def diff_weird_author(sbox):
                                      "pget", "--revprop", "-r" "2",
                                      "svn:author", sbox.repo_url)
 
-  expected_output = [
-    "Index: A/mu\n",
-    "===================================================================\n",
-    "--- A/mu\t(revision 1)\n",
-    "+++ A/mu\t(revision 2)\n",
+  expected_output = make_diff_header("A/mu", "revision 1", "revision 2") + [
     "@@ -1 +1 @@\n",
     "-This is the file 'mu'.\n",
     "+new content\n"
@@ -2498,11 +2470,8 @@ def diff_ignore_whitespace(sbox):
                           "Xxxx X\n"
                           "   Bb b  \n"
                           "    C    c    \n")
-  expected_output = [
-    "Index: svn-test-work/working_copies/diff_tests-39/iota\n",
-    "===================================================================\n",
-    "--- svn-test-work/working_copies/diff_tests-39/iota\t(revision 2)\n",
-    "+++ svn-test-work/working_copies/diff_tests-39/iota\t(working copy)\n",
+  expected_output = make_diff_header(file_path, "revision 2",
+                                     "working copy") + [
     "@@ -1,3 +1,4 @@\n",
     " Aa\n",
     "-Bb\n",
@@ -2538,11 +2507,8 @@ def diff_ignore_eolstyle(sbox):
                           "Bb\r"
                           "Cc")
 
-  expected_output = [
-    "Index: svn-test-work/working_copies/diff_tests-40/iota\n",
-    "===================================================================\n",
-    "--- svn-test-work/working_copies/diff_tests-40/iota\t(revision 2)\n",
-    "+++ svn-test-work/working_copies/diff_tests-40/iota\t(working copy)\n",
+  expected_output = make_diff_header(file_path, "revision 2",
+                                     "working copy") + [
     "@@ -1,3 +1,3 @@\n",
     " Aa\n",
     " Bb\n",
@@ -2589,11 +2555,8 @@ def diff_in_renamed_folder(sbox):
     svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                           None, None, wc_dir)
 
-  expected_output = [
-    "Index: svn-test-work/working_copies/diff_tests-41/A/D/C/kappa\n",
-    "===================================================================\n",
-    "--- svn-test-work/working_copies/diff_tests-41/A/D/C/kappa\t(revision 3)\n",
-    "+++ svn-test-work/working_copies/diff_tests-41/A/D/C/kappa\t(revision 4)\n",
+  expected_output = make_diff_header(kappa_path, "revision 3",
+                                     "revision 4") + [
     "@@ -1,2 +1,3 @@\n",
     " this is file kappa.\n",
     " 3\n",
@@ -2811,11 +2774,8 @@ def diff_backward_repos_wc_copy(sbox):
   svntest.main.run_svn(None, 'up', '-r1')
 
   # diff r2 against working copy
-  diff_repos_wc = [
-    "Index: A/mucopy\n",
-    "===================================================================\n",
-    "--- A/mucopy\t(revision 2)\n",
-    "+++ A/mucopy\t(working copy)\n",
+  diff_repos_wc = make_diff_header("A/mucopy", "revision 2", "working copy")
+  diff_repos_wc += [
     "@@ -1 +0,0 @@\n",
     "-This is the file 'mu'.\n",
   ]
@@ -2950,12 +2910,14 @@ def diff_external_diffcmd(sbox):
   "svn diff --diff-cmd provides the correct arguments"
 
   sbox.build(read_only = True)
+  os.chdir(sbox.wc_dir)
 
-  iota_path = os.path.join(sbox.wc_dir, 'iota')
+  iota_path = 'iota'
   svntest.main.file_append(iota_path, "new text in iota")
 
   # Create a small diff mock object that prints its arguments to stdout.
-  diff_script_path = os.path.join(sbox.wc_dir, 'diff')
+  # (This path needs an explicit directory component to avoid searching.)
+  diff_script_path = os.path.join('.', 'diff')
   # TODO: make the create function return the actual script name, and rename
   # it to something more generic.
   svntest.main.create_python_hook_script(diff_script_path, 'import sys\n'
@@ -2964,15 +2926,15 @@ def diff_external_diffcmd(sbox):
     diff_script_path = "%s.bat" % diff_script_path
 
   expected_output = svntest.verify.ExpectedOutput([
-"Index: svn-test-work/working_copies/diff_tests-48/iota\n",
-"===================================================================\n",
-"-u\n",
-"-L\n",
-"svn-test-work/working_copies/diff_tests-48/iota\t(revision 1)\n",
-"-L\n",
-"svn-test-work/working_copies/diff_tests-48/iota\t(working copy)\n",
-"%s\n" % os.path.join(sbox.wc_dir, '.svn', 'text-base', 'iota.svn-base'),
-"%s\n" % os.path.join(sbox.wc_dir, 'iota')])
+    "Index: iota\n",
+    "===================================================================\n",
+    "-u\n",
+    "-L\n",
+    "iota\t(revision 1)\n",
+    "-L\n",
+    "iota\t(working copy)\n",
+    os.path.join('.svn', 'text-base', 'iota.svn-base') + "\n",
+    "iota\n"])
 
   # Check that the output of diff corresponds with the expected arguments,
   # in the correct order.

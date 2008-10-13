@@ -802,7 +802,7 @@ def build_tree_from_status(lines):
   #    - path                 (11)  (string of characters until newline)
 
   # Try http://www.wordsmith.org/anagram/anagram.cgi?anagram=ACDRMGU
-  rm = re.compile('^([!MACDRUG_ ][MACDRUG_ ])([L ])([+ ])([S ])([KOBT ])([C ]) ([* ])   [^0-9-]*(\d+|-|\?) +(\d|-|\?)+ +(\S+) +(.+)')
+  rm = re.compile('^([!MACDRUG_ ][MACDRUG_ ])([L ])([+ ])([S ])([KOBT ])([C ]) ([* ]) +(\d+|-|\?) +(\d|-|\?)+ +(\S+) +(.+)')
   for line in lines:
 
     # Quit when we hit an externals status announcement (### someday we can fix
@@ -837,8 +837,7 @@ def build_tree_from_status(lines):
 def build_tree_from_skipped(lines):
 
   root = SVNTreeNode(root_node_name)
-  ### Will get confused by spaces in the filename
-  rm = re.compile ("^Skipped.* '([^ ]+)'\n")
+  rm = re.compile ("^Skipped.* '(.+)'\n")
 
   for line in lines:
     match = rm.search(line)
@@ -851,7 +850,7 @@ def build_tree_from_skipped(lines):
 def build_tree_from_diff_summarize(lines):
   "Build a tree from output of diff --summarize"
   root = SVNTreeNode(root_node_name)
-  rm = re.compile ("^([MAD ][M ])     (.+)\n")
+  rm = re.compile ("^([MAD ][M ])      (.+)\n")
 
   for line in lines:
     match = rm.search(line)

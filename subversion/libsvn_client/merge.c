@@ -283,6 +283,10 @@ typedef struct merge_cmd_baton_t {
   /* A list of directories containing tree conflicts. */
   apr_array_header_t *tree_conflicted_dirs;
 
+  /* During the merge, *USE_SLEEP is set to TRUE if a sleep will be required
+     afterwards to ensure timestamp integrity, or unchanged if not. */
+  svn_boolean_t *use_sleep;
+
   /* Pool which has a lifetime limited to one iteration over a given
      merge source, i.e. it is cleared on every call to do_directory_merge()
      or do_file_merge() in do_merge(). */
@@ -3558,8 +3562,8 @@ drive_merge_report_editor(const char *target_wcpath,
   if (old_sess2_url)
     SVN_ERR(svn_ra_reparent(merge_b->ra_session2, old_sess2_url, pool));
 
-  /* Sleep to ensure timestamp integrity. */
-  svn_sleep_for_timestamps();
+  /* Caller must call svn_sleep_for_timestamps() */
+  *(merge_b->use_sleep) = TRUE;
 
   return SVN_NO_ERROR;
 }
@@ -5355,8 +5359,8 @@ do_file_merge(const char *url1,
 
   svn_pool_destroy(subpool);
 
-  /* Sleep to ensure timestamp integrity. */
-  svn_sleep_for_timestamps();
+  /* Caller must call svn_sleep_for_timestamps() */
+  *(merge_b->use_sleep) = TRUE;
 
   /* If our multi-pass merge terminated early due to conflicts, return
      that fact as an error. */
@@ -6139,6 +6143,9 @@ ensure_ra_session_url(svn_ra_session_t **ra_session,
 
    FORCE, DRY_RUN, RECORD_ONLY, IGNORE_ANCESTRY, DEPTH, MERGE_OPTIONS,
    and CTX are as described in the docstring for svn_client_merge_peg3().
+
+   *USE_SLEEP will be set TRUE if a sleep is required to ensure timestamp
+   integrity, *USE_SLEEP will be unchanged if no sleep is required.
 */
 static svn_error_t *
 do_merge(apr_array_header_t *merge_sources,
@@ -6154,6 +6161,7 @@ do_merge(apr_array_header_t *merge_sources,
          svn_boolean_t record_only,
          svn_depth_t depth,
          const apr_array_header_t *merge_options,
+         svn_boolean_t *use_sleep,
          svn_client_ctx_t *ctx,
          apr_pool_t *pool)
 {
@@ -6214,6 +6222,7 @@ do_merge(apr_array_header_t *merge_sources,
   merge_cmd_baton.pool = subpool;
   merge_cmd_baton.merge_options = merge_options;
   merge_cmd_baton.diff3_cmd = diff3_cmd;
+  merge_cmd_baton.use_sleep = use_sleep;
 
   /* Build the notification receiver baton. */
   notify_baton.wrapped_func = ctx->notify_func2;
@@ -6281,8 +6290,8 @@ do_merge(apr_array_header_t *merge_sources,
       if (target_entry->kind == svn_node_file)
         {
           SVN_ERR(do_file_merge(url1, rev1, url2, rev2, target,
-                                sources_related, adm_access,
-                                &notify_baton, &merge_cmd_baton, subpool));
+                                sources_related, adm_access, &notify_baton,
+                                &merge_cmd_baton, subpool));
         }
       else if (target_entry->kind == svn_node_dir)
         {
@@ -6312,6 +6321,9 @@ do_merge(apr_array_header_t *merge_sources,
    source URL and the target working copy.  ENTRY is the wc entry for
    TARGET_WCPATH.  Other arguments are as in all of the public merge
    APIs.
+
+   *USE_SLEEP will be set TRUE if a sleep is required to ensure timestamp
+   integrity, *USE_SLEEP will be unchanged if no sleep is required.
  */
 static svn_error_t *
 merge_cousins_and_supplement_mergeinfo(const char *target_wcpath,
@@ -6331,6 +6343,7 @@ merge_cousins_and_supplement_mergeinfo(const char *target_wcpath,
                                        svn_boolean_t record_only,
                                        svn_boolean_t dry_run,
                                        const apr_array_header_t *merge_options,
+                                       svn_boolean_t *use_sleep,
                                        svn_client_ctx_t *ctx,
                                        apr_pool_t *pool)
 {
@@ -6387,8 +6400,8 @@ merge_cousins_and_supplement_mergeinfo(const char *target_wcpath,
       APR_ARRAY_PUSH(faux_sources, merge_source_t *) = faux_source;
       SVN_ERR(do_merge(faux_sources, target_wcpath, entry, adm_access,
                        FALSE, TRUE, same_repos,
-                       ignore_ancestry, force, dry_run,
-                       FALSE, depth, merge_options, ctx, pool));
+                       ignore_ancestry, force, dry_run, FALSE,
+                       depth, merge_options, use_sleep, ctx, pool));
     }
   else if (! same_repos)
     {
@@ -6406,12 +6419,12 @@ merge_cousins_and_supplement_mergeinfo(const char *target_wcpath,
     {
       SVN_ERR(do_merge(add_sources, target_wcpath, entry,
                        adm_access, TRUE, TRUE, same_repos,
-                       ignore_ancestry, force, dry_run,
-                       TRUE, depth, merge_options, ctx, pool));
+                       ignore_ancestry, force, dry_run, TRUE,
+                       depth, merge_options, use_sleep, ctx, pool));
       SVN_ERR(do_merge(remove_sources, target_wcpath, entry,
                        adm_access, TRUE, TRUE, same_repos,
-                       ignore_ancestry, force, dry_run,
-                       TRUE, depth, merge_options, ctx, pool));
+                       ignore_ancestry, force, dry_run, TRUE,
+                       depth, merge_options, use_sleep, ctx, pool));
     }
   return SVN_NO_ERROR;
 }
@@ -6446,6 +6459,8 @@ svn_client_merge3(const char *source1,
   apr_array_header_t *merge_sources;
   merge_source_t *merge_source;
   svn_opt_revision_t working_rev;
+  svn_error_t *err;
+  svn_boolean_t use_sleep = FALSE;
   const char *yc_path = NULL;
   svn_revnum_t yc_rev = SVN_INVALID_REVNUM;
   apr_pool_t *sesspool;
@@ -6594,19 +6609,27 @@ svn_client_merge3(const char *source1,
          side, and merge the right. */
       else
         {
-          SVN_ERR(merge_cousins_and_supplement_mergeinfo(target_wcpath, entry,
-                                                         adm_access,
-                                                         ra_session1,
-                                                         URL1, rev1,
-                                                         URL2, rev2,
-                                                         yc_rev,
-                                                         source_repos_root,
-                                                         wc_repos_root,
-                                                         depth,
-                                                         ignore_ancestry, force,
-                                                         record_only, dry_run,
-                                                         merge_options, ctx,
-                                                         pool));
+          err = merge_cousins_and_supplement_mergeinfo(target_wcpath, entry,
+                                                       adm_access,
+                                                       ra_session1,
+                                                       URL1, rev1,
+                                                       URL2, rev2,
+                                                       yc_rev,
+                                                       source_repos_root,
+                                                       wc_repos_root,
+                                                       depth,
+                                                       ignore_ancestry, force,
+                                                       record_only, dry_run,
+                                                       merge_options,
+                                                       &use_sleep, ctx, 
+                                                       pool);
+          if (err)
+            {
+              if (use_sleep)
+                svn_sleep_for_timestamps();
+
+              return err;
+            }
 
           /* Close our temporary RA sessions (this could've happened
              after the second call to normalize_merge_sources() inside
@@ -6631,10 +6654,16 @@ svn_client_merge3(const char *source1,
   /* Close our temporary RA sessions. */
   svn_pool_destroy(sesspool);
 
-  SVN_ERR(do_merge(merge_sources, target_wcpath, entry, adm_access,
-                   ancestral, related, same_repos,
-                   ignore_ancestry, force, dry_run,
-                   record_only, depth, merge_options, ctx, pool));
+  err = do_merge(merge_sources, target_wcpath, entry, adm_access,
+                 ancestral, related, same_repos,
+                 ignore_ancestry, force, dry_run,
+                 record_only, depth, merge_options, &use_sleep, ctx, pool);
+
+  if (use_sleep)
+    svn_sleep_for_timestamps();
+
+  if (err)
+    return err;
 
   return svn_wc_adm_close(adm_access);
 }
@@ -7034,7 +7063,8 @@ svn_client_merge_reintegrate(const char *source,
   const char *url1, *url2;
   svn_revnum_t rev1, rev2;
   svn_mergeinfo_t source_mergeinfo;
-
+  svn_boolean_t use_sleep = FALSE;
+  svn_error_t *err;
 
   /* Open an admistrative session with the working copy. */
   SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target_wcpath,
@@ -7146,16 +7176,22 @@ svn_client_merge_reintegrate(const char *source,
      ### of the other (what's erroneously referred to as "ancestrally
      ### related" in this source file).  We can merge to trunk without
      ### implementing this. */
-  SVN_ERR(merge_cousins_and_supplement_mergeinfo(target_wcpath, entry,
-                                                 adm_access, ra_session,
-                                                 url1, rev1, url2, rev2,
-                                                 yc_ancestor_rev,
-                                                 source_repos_root,
-                                                 wc_repos_root,
-                                                 svn_depth_infinity,
-                                                 FALSE,
-                                                 FALSE, FALSE, dry_run,
-                                                 merge_options, ctx, pool));
+  err = merge_cousins_and_supplement_mergeinfo(target_wcpath, entry,
+                                               adm_access, ra_session,
+                                               url1, rev1, url2, rev2,
+                                               yc_ancestor_rev,
+                                               source_repos_root,
+                                               wc_repos_root,
+                                               svn_depth_infinity,
+                                               FALSE, FALSE, FALSE, dry_run,
+                                               merge_options, &use_sleep,
+                                               ctx, pool);
+
+  if (use_sleep)
+    svn_sleep_for_timestamps();
+
+  if (err)
+    return err;
 
   /* Shutdown the administrative session. */
   return svn_wc_adm_close(adm_access);
@@ -7185,6 +7221,8 @@ svn_client_merge_peg3(const char *source,
   svn_opt_revision_t working_rev;
   svn_ra_session_t *ra_session;
   apr_pool_t *sesspool;
+  svn_boolean_t use_sleep;
+  svn_error_t *err;
 
   /* No ranges to merge?  No problem. */
   if (ranges_to_merge->nelts == 0)
@@ -7228,11 +7266,17 @@ svn_client_merge_peg3(const char *source,
 
   /* Do the real merge!  (We say with confidence that our merge
      sources are both ancestral and related.) */
-  SVN_ERR(do_merge(merge_sources, target_wcpath, entry, adm_access,
-                   TRUE, TRUE,
-                   (strcmp(wc_repos_root, source_repos_root) == 0),
-                   ignore_ancestry, force, dry_run, record_only, depth,
-                   merge_options, ctx, pool));
+  err = do_merge(merge_sources, target_wcpath, entry, adm_access,
+                 TRUE, TRUE,
+                 (strcmp(wc_repos_root, source_repos_root) == 0),
+                 ignore_ancestry, force, dry_run, record_only, depth,
+                 merge_options, &use_sleep, ctx, pool);
+
+  if (use_sleep)
+    svn_sleep_for_timestamps();
+
+  if (err)
+    return err;
 
   /* Shutdown the administrative session. */
   return svn_wc_adm_close(adm_access);

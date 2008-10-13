@@ -696,9 +696,10 @@ def run_and_verify_update(wc_dir_name,
 
   Else if ERROR_RE_STRING is None, then:
 
-  The subcommand output will be verified against OUTPUT_TREE, and the
-  working copy itself will be verified against DISK_TREE.  If optional
-  STATUS_TREE is given, then 'svn status' output will be compared.
+  If OUTPUT_TREE is not None, the subcommand output will be verified
+  against OUTPUT_TREE.  If DISK_TREE is not None, the working copy
+  itself will be verified against DISK_TREE.  If STATUS_TREE is not
+  None, the 'svn status' output will be verified against STATUS_TREE.
   (This is a good way to check that revision numbers were bumped.)
 
   For the DISK_TREE verification, SINGLETON_HANDLER_A and
