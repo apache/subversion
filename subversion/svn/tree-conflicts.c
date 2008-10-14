@@ -201,14 +201,15 @@ svn_cl__append_human_readable_tree_conflict_description(
   svn_stringbuf_t *their_phrase_with_victim, *our_phrase_with_victim;
   struct tree_conflict_phrases *phrases = new_tree_conflict_phrases(pool);
 
+  victim_name = svn_path_basename(conflict->path, pool);
   their_phrase = select_their_phrase(conflict, phrases);
   our_phrase = select_our_phrase(conflict, phrases);
   if (! our_phrase || ! their_phrase)
-    return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-                            _("Invalid tree conflict data"));
+    return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
+                             _("Invalid tree conflict data for victim %s"),
+                             victim_name);
 
   /* Substitute the '%s' format in the phrases with the victim path. */
-  victim_name = svn_path_basename(conflict->path, pool);
   their_phrase_with_victim = svn_stringbuf_createf(pool, their_phrase,
                                                    victim_name);
   our_phrase_with_victim = svn_stringbuf_createf(pool, our_phrase,
