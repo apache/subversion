@@ -646,7 +646,8 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
                   apr_hash_this(hi, &key, NULL, &value);
                   source_path = key;
                   rangelist = value;
-                  merge_source_url = svn_path_join(merge_source_root_url,
+                  merge_source_url =
+                        svn_path_url_add_component(merge_source_root_url,
                                                    source_path + 1, pool);
 
                   for (j = 0; j < rangelist->nelts; j++)
@@ -2974,8 +2975,8 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
       else
         child_repos_path = child->path +
           (merge_target_len ? merge_target_len + 1 : 0);
-      child_url1 = svn_path_join(url1, child_repos_path, iterpool);
-      child_url2 = svn_path_join(url2, child_repos_path, iterpool);
+      child_url1 = svn_path_url_add_component(url1, child_repos_path, iterpool);
+      child_url2 = svn_path_url_add_component(url2, child_repos_path, iterpool);
 
       SVN_ERR(svn_wc__entry_versioned(&child_entry, child->path, adm_access,
                                       FALSE, iterpool));
@@ -4703,12 +4704,12 @@ combine_range_with_segments(apr_array_header_t **merge_source_ts_p,
 
       /* Build our merge source structure. */
       merge_source = apr_pcalloc(pool, sizeof(*merge_source));
-      merge_source->url1 = svn_path_join(source_root_url,
-                                         svn_path_uri_encode(path1,
-                                                             pool), pool);
-      merge_source->url2 = svn_path_join(source_root_url,
-                                         svn_path_uri_encode(segment->path,
-                                                             pool), pool);
+      merge_source->url1 = svn_path_url_add_component(source_root_url,
+                                                      path1,
+                                                      pool);
+      merge_source->url2 = svn_path_url_add_component(source_root_url,
+                                                      segment->path,
+                                                      pool);
       merge_source->rev1 = rev1;
       merge_source->rev2 = MIN(segment->range_end, maxrev);
 
@@ -6583,8 +6584,7 @@ svn_client_merge3(const char *source1,
       related = TRUE;
 
       /* Make YC_PATH into a full URL. */
-      yc_path = svn_path_join(source_repos_root,
-                              svn_path_uri_encode(yc_path, pool), pool);
+      yc_path = svn_path_url_add_component(source_repos_root, yc_path, pool);
 
       /* If the common ancestor matches the right side of our merge,
          then we only need to reverse-merge the left side. */
