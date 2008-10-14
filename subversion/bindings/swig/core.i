@@ -217,7 +217,7 @@
 %ignore svn_path_cstring_from_utf8;
 %ignore svn_path_cstring_to_utf8;
 
-%import "../../../svn_private_config.h"
+%import "svn_private_config.h"
 
 /* svn_auth.h: Conditionally include OS X auth providers. */
 #if !defined(SVN_HAVE_KEYCHAIN_SERVICES)
