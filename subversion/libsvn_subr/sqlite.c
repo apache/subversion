@@ -322,7 +322,7 @@ check_format(svn_sqlite__db_t *db, int latest_schema,
 /* If possible, verify that SQLite was compiled in a thread-safe
    manner. */
 static svn_error_t *
-init_sqlite()
+init_sqlite(void)
 {
   if (sqlite3_libversion_number() < SQLITE_VERSION_NUMBER) {
     return svn_error_createf(SVN_ERR_SQLITE_ERROR, NULL,
