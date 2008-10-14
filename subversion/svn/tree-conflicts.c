@@ -84,8 +84,8 @@ new_tree_conflict_phrases(apr_pool_t *pool)
                                " branch you are merging from.\n");
 
   phrases->we_added_merge = _("Either you have added '%s' locally,\n"
-                               "or it has been added in the history of"
-                               " the branch you are merging into.\n");
+                              "or it has been added in the history of"
+                              " the branch you are merging into.\n");
 
 
   phrases->missing_merge = _("'%s' does not exist locally.\n"
@@ -94,7 +94,7 @@ new_tree_conflict_phrases(apr_pool_t *pool)
                              "you are merging into?\n");
 
   phrases->obstructed = _("This action was obstructed by an item"
-                           " in the working copy.\n");
+                          " in the working copy.\n");
 
   phrases->unversioned = _("'%s' is unversioned.\n");
 
