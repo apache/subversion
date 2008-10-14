@@ -200,7 +200,8 @@ static svn_opt_subcommand_t
   subcommand_setrevprop,
   subcommand_setuuid,
   subcommand_upgrade,
-  subcommand_verify;
+  subcommand_verify,
+  subcommand_pack;
 
 enum
   {
@@ -456,6 +457,12 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
    ("usage: svnadmin verify REPOS_PATH\n\n"
     "Verifies the data stored in the repository.\n"),
    {'r', 'q'} },
+
+  {"pack", subcommand_pack, {0}, N_
+   ("usage: svnadmin verify REPOS_PATH\n\n"
+    "Possibly compact the repository into a more effecient storage model.\n"
+    "This may not apply to all repositories, in which case, exit.\n"),
+  {0} },
 
   { NULL, NULL, {0}, NULL, {0} }
 };
@@ -1101,6 +1108,19 @@ subcommand_setlog(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   return set_revprop(SVN_PROP_REVISION_LOG,
                      APR_ARRAY_IDX(args, 0, const char *),
                      opt_state, pool);
+}
+
+
+/* This implements 'svn_opt_subcommand_t'. */
+static svn_error_t *
+subcommand_pack(apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  struct svnadmin_opt_state *opt_state = baton;
+  svn_repos_t *repos;
+
+  SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
+
+  return svn_repos_fs_pack(repos, pool);
 }
 
 

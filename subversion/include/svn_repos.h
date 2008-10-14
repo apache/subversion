@@ -306,6 +306,18 @@ svn_repos_hotcopy(const char *src_path,
                   svn_boolean_t clean_logs,
                   apr_pool_t *pool);
 
+
+/**
+ * Possibly update the repository, @a repos, to use a more efficient
+ * filesystem representation.  Use @a pool for allocations.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_repos_fs_pack(svn_repos_t *repos,
+                  apr_pool_t *pool);
+
+
 /**
  * Run database recovery procedures on the repository at @a path,
  * returning the database to a consistent state.  Use @a pool for all
