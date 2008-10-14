@@ -663,6 +663,13 @@ svn_repos_fs_get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_repos_fs_pack(svn_repos_t *repos,
+                  apr_pool_t *pool)
+{
+  return svn_fs_pack(repos->db_path, pool);
+}
+
 
 
 /*
