@@ -7027,8 +7027,8 @@ calculate_left_hand_side(const char **url_left,
                 = APR_ARRAY_IDX(rangelist, rangelist->nelts - 1,
                                 svn_merge_range_t *);
               *rev_left = last_range->end;
-              *url_left = svn_path_join(source_repos_root, segment->path,
-                                        pool);
+              *url_left = svn_path_url_add_component(source_repos_root,
+                                                     segment->path, pool);
               *source_mergeinfo_p = svn_mergeinfo_dup(source_mergeinfo, pool);
               svn_pool_destroy(iterpool);
               svn_pool_destroy(subpool);
