@@ -34,10 +34,10 @@ struct tree_conflict_phrases
   const char *we_deleted;
   const char *we_added;
   const char *we_edited_update;
-  const char *does_not_exist_update;
+  const char *missing_update;
   const char *we_edited_merge;
   const char *we_added_merge;
-  const char *does_not_exist_merge;
+  const char *missing_merge;
   const char *obstructed;
   const char *unversioned;
 };
@@ -71,8 +71,8 @@ new_tree_conflict_phrases(apr_pool_t *pool)
 
   phrases->we_edited_update = _("You have edited '%s' locally.\n");
 
-  phrases->does_not_exist_update = _("'%s' does not exist locally.\n"
-                                     "Maybe you renamed it?\n");
+  phrases->missing_update = _("'%s' does not exist locally.\n"
+                              "Maybe you renamed it?\n");
 
   /* This one only comes up together with merge_deleted, never with
    * merge_edited. Otherwise we would have a text conflict. So we can
@@ -88,10 +88,10 @@ new_tree_conflict_phrases(apr_pool_t *pool)
                                " the branch you are merging into.\n");
 
 
-  phrases->does_not_exist_merge = _("'%s' does not exist locally.\n"
-                                    "Maybe you renamed it? Or has it been"
-                                    " renamed in the history of the branch\n"
-                                    "you are merging into?\n");
+  phrases->missing_merge = _("'%s' does not exist locally.\n"
+                             "Maybe you renamed it? Or has it been"
+                             " renamed in the history of the branch\n"
+                             "you are merging into?\n");
 
   phrases->obstructed = _("This action was obstructed by an item"
                            " in the working copy.\n");
@@ -177,11 +177,11 @@ select_our_phrase(const svn_wc_conflict_description_t *conflict,
         if (conflict->operation == svn_wc_operation_update
             || conflict->operation == svn_wc_operation_switch)
           {
-            return phrases->does_not_exist_update;
+            return phrases->missing_update;
           }
         else if (conflict->operation == svn_wc_operation_merge)
           {
-            return phrases->does_not_exist_merge;
+            return phrases->missing_merge;
           }
         break;
       
