@@ -6641,7 +6641,7 @@ svn_client_merge3(const char *source1,
           if (err)
             {
               if (use_sleep)
-                svn_sleep_for_timestamps();
+                svn_io_sleep_for_timestamps(target_wcpath, pool);
 
               return err;
             }
@@ -6675,7 +6675,7 @@ svn_client_merge3(const char *source1,
                  record_only, depth, merge_options, &use_sleep, ctx, pool);
 
   if (use_sleep)
-    svn_sleep_for_timestamps();
+    svn_io_sleep_for_timestamps(target_wcpath, pool);
 
   if (err)
     return err;
@@ -7203,7 +7203,7 @@ svn_client_merge_reintegrate(const char *source,
                                                ctx, pool);
 
   if (use_sleep)
-    svn_sleep_for_timestamps();
+    svn_io_sleep_for_timestamps(target_wcpath, pool);
 
   if (err)
     return err;
@@ -7288,7 +7288,7 @@ svn_client_merge_peg3(const char *source,
                  merge_options, &use_sleep, ctx, pool);
 
   if (use_sleep)
-    svn_sleep_for_timestamps();
+    svn_io_sleep_for_timestamps(target_wcpath, pool);
 
   if (err)
     return err;
