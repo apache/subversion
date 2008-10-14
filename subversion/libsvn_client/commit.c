@@ -1723,7 +1723,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
     }
 
   /* Sleep to ensure timestamp integrity. */
-  svn_sleep_for_timestamps();
+  svn_io_sleep_for_timestamps(base_dir, pool);
 
  cleanup:
   /* Abort the commit if it is still in progress. */
