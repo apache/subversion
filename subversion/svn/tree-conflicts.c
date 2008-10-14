@@ -104,10 +104,11 @@ select_their_phrase(const svn_wc_conflict_description_t *conflict,
     {
       switch (conflict->action)
         {
-          case svn_wc_conflict_action_delete:
-            return phrases->update_deleted;
+          /* Order of cases follows definition of svn_wc_conflict_action_t. */
           case svn_wc_conflict_action_edit:
             return phrases->update_edited;
+          case svn_wc_conflict_action_delete:
+            return phrases->update_deleted;
           default:
             return NULL; /* Should never happen! */
         }
@@ -116,12 +117,13 @@ select_their_phrase(const svn_wc_conflict_description_t *conflict,
     {
       switch (conflict->action)
         {
-          case svn_wc_conflict_action_delete:
-            return phrases->merge_deleted;
+          /* Order of cases follows definition of svn_wc_conflict_action_t. */
           case svn_wc_conflict_action_edit:
             return phrases->merge_edited;
           case svn_wc_conflict_action_add:
             return phrases->merge_added;
+          case svn_wc_conflict_action_delete:
+            return phrases->merge_deleted;
           default:
             return NULL; /* Should never happen! */
         }
@@ -135,9 +137,7 @@ select_our_phrase(const svn_wc_conflict_description_t *conflict,
 {
   switch (conflict->reason)
     {
-      case svn_wc_conflict_reason_deleted:
-        return phrases->we_deleted;
-
+      /* Order of cases follows definition of svn_wc_conflict_reason_t. */
       case svn_wc_conflict_reason_edited:
         if (conflict->operation == svn_wc_operation_update
             || conflict->operation == svn_wc_operation_switch)
@@ -147,18 +147,6 @@ select_our_phrase(const svn_wc_conflict_description_t *conflict,
         else if (conflict->operation == svn_wc_operation_merge)
           {
             return phrases->we_edited_merge;
-          }
-        return NULL; /* Should never happen! */
-
-      case svn_wc_conflict_reason_missing:
-        if (conflict->operation == svn_wc_operation_update
-            || conflict->operation == svn_wc_operation_switch)
-          {
-            return phrases->does_not_exist_update;
-          }
-        else if (conflict->operation == svn_wc_operation_merge)
-          {
-            return phrases->does_not_exist_merge;
           }
         return NULL; /* Should never happen! */
 
@@ -174,6 +162,9 @@ select_our_phrase(const svn_wc_conflict_description_t *conflict,
           }
         return NULL; /* Should never happen! */
 
+      case svn_wc_conflict_reason_deleted:
+        return phrases->we_deleted;
+
       case svn_wc_conflict_reason_added:
         if (conflict->operation == svn_wc_operation_update
             || conflict->operation == svn_wc_operation_switch)
@@ -183,6 +174,18 @@ select_our_phrase(const svn_wc_conflict_description_t *conflict,
         else if (conflict->operation == svn_wc_operation_merge)
           {
             return phrases->merge_added;
+          }
+        return NULL; /* Should never happen! */
+
+      case svn_wc_conflict_reason_missing:
+        if (conflict->operation == svn_wc_operation_update
+            || conflict->operation == svn_wc_operation_switch)
+          {
+            return phrases->does_not_exist_update;
+          }
+        else if (conflict->operation == svn_wc_operation_merge)
+          {
+            return phrases->does_not_exist_merge;
           }
         return NULL; /* Should never happen! */
 
@@ -266,6 +269,7 @@ svn_cl__append_tree_conflict_info_xml(
 
   switch (conflict->action)
     {
+      /* Order of cases follows definition of svn_wc_conflict_action_t. */
       case svn_wc_conflict_action_edit:
         tmp = "edited";
         break;
@@ -280,20 +284,21 @@ svn_cl__append_tree_conflict_info_xml(
 
   switch (conflict->reason)
     {
+      /* Order of cases follows definition of svn_wc_conflict_reason_t. */
       case svn_wc_conflict_reason_edited:
         tmp = "edited";
-        break;
-      case svn_wc_conflict_reason_deleted:
-        tmp = "deleted";
-        break;
-      case svn_wc_conflict_reason_missing:
-        tmp = "missing";
         break;
       case svn_wc_conflict_reason_obstructed:
         tmp = "obstructed";
         break;
+      case svn_wc_conflict_reason_deleted:
+        tmp = "deleted";
+        break;
       case svn_wc_conflict_reason_added:
         tmp = "added";
+        break;
+      case svn_wc_conflict_reason_missing:
+        tmp = "missing";
         break;
       default:
         return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
