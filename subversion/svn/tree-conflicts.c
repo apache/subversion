@@ -109,8 +109,6 @@ select_their_phrase(const svn_wc_conflict_description_t *conflict,
             return phrases->update_edited;
           case svn_wc_conflict_action_delete:
             return phrases->update_deleted;
-          default:
-            return NULL; /* Should never happen! */
         }
     }
   else if (conflict->operation == svn_wc_operation_merge)
@@ -124,8 +122,6 @@ select_their_phrase(const svn_wc_conflict_description_t *conflict,
             return phrases->merge_added;
           case svn_wc_conflict_action_delete:
             return phrases->merge_deleted;
-          default:
-            return NULL; /* Should never happen! */
         }
     }
   return NULL; /* Should never happen! */
@@ -148,7 +144,7 @@ select_our_phrase(const svn_wc_conflict_description_t *conflict,
           {
             return phrases->we_edited_merge;
           }
-        return NULL; /* Should never happen! */
+        break;
 
       case svn_wc_conflict_reason_obstructed:
         if (conflict->operation == svn_wc_operation_update
@@ -160,7 +156,7 @@ select_our_phrase(const svn_wc_conflict_description_t *conflict,
           {
             return phrases->obstructed;
           }
-        return NULL; /* Should never happen! */
+        break;
 
       case svn_wc_conflict_reason_deleted:
         return phrases->we_deleted;
@@ -175,7 +171,7 @@ select_our_phrase(const svn_wc_conflict_description_t *conflict,
           {
             return phrases->merge_added;
           }
-        return NULL; /* Should never happen! */
+        break;
 
       case svn_wc_conflict_reason_missing:
         if (conflict->operation == svn_wc_operation_update
@@ -187,11 +183,9 @@ select_our_phrase(const svn_wc_conflict_description_t *conflict,
           {
             return phrases->does_not_exist_merge;
           }
-        return NULL; /* Should never happen! */
-
-     default:
-        return NULL; /* Should never happen! */
+        break;
     }
+  return NULL; /* Should never happen! */
 }
 
 svn_error_t *
