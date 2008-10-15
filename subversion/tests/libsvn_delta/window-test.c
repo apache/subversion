@@ -51,7 +51,7 @@ stream_window_test(const char **msg,
   memcpy(source, "a\nb\nc\nd\ne", 9);
   for (i = 100; i--; )
     *p++ = '\n';
-  for (i = 1000; i--; p += 109)
+  for (i = 999; i--; p += 109)
     memcpy(p, source, 109);
   source[109000] = '\0';
 
@@ -59,7 +59,7 @@ stream_window_test(const char **msg,
   for (i = 1000; i--; )
     target[i*109 + 4] = 'X';
 
-  svn_checksum(&expected, svn_checksum_md5, target, 109000, pool);
+  SVN_ERR(svn_checksum(&expected, svn_checksum_md5, target, 109000, pool));
   /* f6fd44565e14c6e44b35292719deb77e */
   printf("expected: %s\n", svn_checksum_to_cstring(expected, pool));
 
@@ -87,6 +87,12 @@ stream_window_test(const char **msg,
   actual = svn_checksum_create(svn_checksum_md5, pool);
   actual->digest = svn_txdelta_md5_digest(txstream);
   printf("  actual: %s\n", svn_checksum_to_cstring(actual, pool));
+
+  if (!svn_checksum_match(expected, actual))
+    {
+      return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                              "Checksums did not match.");
+    }
 
   return SVN_NO_ERROR;
 }
