@@ -516,4 +516,12 @@ svn_error_t *
 svn_fs_fs__initialize_caches(svn_fs_t *fs, apr_pool_t *pool);
 
 
+/* Possibly pack the repository at PATH.  This just take full shards, and
+   combines all the revision files into a single one, with a manifest header.
+
+   Existing filesystem references need not change.  */
+svn_error_t *
+svn_fs_fs__pack(const char *fs_path, apr_pool_t *pool);
+
+
 #endif
