@@ -56,6 +56,13 @@ svn_fs_fs__set_rep_reference(svn_fs_t *fs,
                              svn_boolean_t reject_dup,
                              apr_pool_t *pool);
 
+/* Incremenent the usage count of the reference used by REP->CHECKSUM,
+   and return the new value in REP->REUSE_COUNT. */
+svn_error_t *
+svn_fs_fs__inc_rep_reuse(svn_fs_t *fs,
+                         representation_t *rep,
+                         apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

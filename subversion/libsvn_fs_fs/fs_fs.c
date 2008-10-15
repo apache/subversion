@@ -1636,7 +1636,19 @@ read_rep_offsets(representation_t **rep_p,
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Malformed text rep offset line in node-rev"));
 
-  return svn_checksum_parse_hex(&rep->checksum, svn_checksum_md5, str, pool);
+  SVN_ERR(svn_checksum_parse_hex(&rep->checksum, svn_checksum_md5, str, pool));
+
+  /* Read the reuse count. */
+  str = apr_strtok(NULL, " ", &last_str);
+  if (str == NULL)
+    {
+      /* The reuse_count field is only in formats >= 4. */
+      return SVN_NO_ERROR;
+    }
+
+  rep->reuse_count = apr_atoi64(str);
+
+  return SVN_NO_ERROR;
 }
 
 /* See svn_fs_fs__get_node_revision, which wraps this and adds another
@@ -1850,11 +1862,12 @@ representation_string(representation_t *rep,
     return "-1";
   else
     return apr_psprintf(pool, "%ld %" APR_OFF_T_FMT " %" SVN_FILESIZE_T_FMT
-                        " %" SVN_FILESIZE_T_FMT " %s",
+                        " %" SVN_FILESIZE_T_FMT " %s %" APR_INT64_T_FMT,
                         rep->revision, rep->offset, rep->size,
                         rep->expanded_size,
                         svn_checksum_to_cstring_display(rep->checksum,
-                                                        pool));
+                                                        pool),
+                        rep->reuse_count);
 }
 
 
@@ -3207,6 +3220,9 @@ svn_fs_fs__noderev_same_rep_key(representation_t *a,
     return FALSE;
 
   if (a->revision != b->revision)
+    return FALSE;
+
+  if (a->reuse_count != b->reuse_count)
     return FALSE;
 
   return TRUE;
@@ -4584,6 +4600,9 @@ rep_write_contents_close(void *baton)
 
       /* Use the old rep for this content. */
       b->noderev->data_rep = old_rep;
+
+      /* Get the reuse count and put it in the node-rev. */
+      SVN_ERR(svn_fs_fs__inc_rep_reuse(b->fs, b->noderev->data_rep, b->pool));
     }
   else
     {

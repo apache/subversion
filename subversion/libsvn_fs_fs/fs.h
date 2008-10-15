@@ -263,6 +263,10 @@ typedef struct
   /* Is this representation a transaction? */
   const char *txn_id;
 
+  /* Is this representation reusing another one, and how much is that rep
+     being reused? */
+  apr_int64_t reuse_count;
+
 } representation_t;
 
 
