@@ -341,9 +341,9 @@ init_sqlite(void)
                               "thread-safe mode"));
 #endif
 #if SQLITE_VERSION_AT_LEAST(3,6,0)
-  SQLITE_ERR_MSG(sqlite3_initialize(), "Could not initialize SQLite");
   SQLITE_ERR_MSG(sqlite3_config(SQLITE_CONFIG_MULTITHREAD),
                  "Could not configure SQLite");
+  SQLITE_ERR_MSG(sqlite3_initialize(), "Could not initialize SQLite");
 #endif
 
   /* NOTE: if more work is performed here, then consider using
