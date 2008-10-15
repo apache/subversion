@@ -863,6 +863,7 @@ Berkeley DB tables
                 "locks" : btree(TOKEN -> LOCK)
           "lock-tokens" : btree(PATH -> TOKEN)
         "checksum-reps" : btree(MD5SUM -> REP)
+        "miscellaneous" : btree(STRING -> STRING)
 
 Syntactic elements
 ------------------
