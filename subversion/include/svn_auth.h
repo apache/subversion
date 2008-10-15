@@ -134,10 +134,6 @@ typedef struct svn_auth_provider_t
    * reasons, return FALSE.  If the provider never saves data, then
    * this function pointer should simply be NULL. @a realmstring comes
    * from the svn_auth_first_credentials() call.
-   *
-   * All allocations should be done in @a pool, which can be assumed
-   * to survive across RA sessions; auth providers that store passwords
-   * in plaintext rely on this.
    */
   svn_error_t * (*save_credentials)(svn_boolean_t *saved,
                                     void *credentials,
@@ -480,12 +476,6 @@ typedef svn_error_t *(*svn_auth_ssl_client_cert_pw_prompt_func_t)
  * @a baton is an implementation-specific closure.
  * All allocations should be done in @a pool.
  *
- * This callback is called only once per authentication realm,
- * not once per RA session. This means that clients implementing
- * this callback must make sure that the pool passed to any
- * implementation of save_credentials (part of svn_auth_provider_t)
- * survives across RA sessions.
- *
  * If this callback is NULL it is not called. This matches the
  * deprecated behaviour of storing unencrypted passwords by default,
  * and is only done this way for backward compatibility reasons.
@@ -514,12 +504,6 @@ typedef svn_error_t *(*svn_auth_plaintext_prompt_func_t)
  * The answer is returned in @a *may_save_plaintext.
  * @a baton is an implementation-specific closure.
  * All allocations should be done in @a pool.
- *
- * This callback is called only once per authentication realm,
- * not once per RA session. This means that clients implementing
- * this callback must make sure that the pool passed to any
- * implementation of save_credentials (part of svn_auth_provider_t)
- * survives across RA sessions.
  *
  * If this callback is NULL it is not called.
  * Client developers are highly encouraged to provide this callback
@@ -690,9 +674,7 @@ svn_auth_next_credentials(void **credentials,
  *
  * Ask @a state to store the most recently returned credentials,
  * presumably because they successfully authenticated.
- * All allocations should be done in @a pool, which is
- * assumed to survive across RA sessions; auth providers that store
- * passwords in plaintext rely on this.
+ * All allocations should be done in @a pool.
  *
  * If no credentials were ever returned, do nothing.
  */
