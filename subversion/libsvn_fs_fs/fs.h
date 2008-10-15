@@ -98,6 +98,10 @@ extern "C" {
    noderev fields. */
 #define SVN_FS_FS__MIN_MERGEINFO_FORMAT 3
 
+/* The minimum format number that maintains minfo-here and minfo-count
+   noderev fields. */
+#define SVN_FS_FS__MIN_REP_SHARING_FORMAT 4
+
 /* The minimum format number that supports packed shards. */
 #define SVN_FS_FS__MIN_PACKED_FORMAT 4
 
