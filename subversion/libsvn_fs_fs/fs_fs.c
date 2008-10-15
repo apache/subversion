@@ -6370,10 +6370,25 @@ svn_fs_fs__begin_txn(svn_fs_txn_t **txn_p,
 }
 
 
+/****** Packing FSFS shards *********/
+svn_error_t *
+pack_shard(const char *revs_dir,
+           apr_int64_t shard,
+           apr_pool_t *pool)
+{
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_fs_fs__pack(const char *fs_path, apr_pool_t *pool)
 {
   int format, max_files_per_dir;
+  int completed_shards;
+  apr_int64_t i;
+  svn_revnum_t youngest;
+  apr_pool_t *iterpool;
+  const char *data_path, *revprops_path;
 
   SVN_ERR(read_format(&format, &max_files_per_dir,
                       svn_path_join(fs_path, PATH_FORMAT, pool),
@@ -6389,5 +6404,21 @@ svn_fs_fs__pack(const char *fs_path, apr_pool_t *pool)
     return svn_error_create(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
       _("FS format too old to pack, please upgrade."));
 
+  SVN_ERR(get_youngest(&youngest, fs_path, pool));
+  completed_shards = youngest / max_files_per_dir;
+
+  data_path = svn_path_join(fs_path, PATH_REVS_DIR, pool);
+  revprops_path = svn_path_join(fs_path, PATH_REVPROPS_DIR, pool);
+
+  iterpool = svn_pool_create(pool);
+  for (i = 0; i < completed_shards; i++)
+    {
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(pack_shard(data_path, i, iterpool));
+      SVN_ERR(pack_shard(revprops_path, i, iterpool));
+    }
+
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
