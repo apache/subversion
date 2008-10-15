@@ -27,10 +27,6 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/* ### These functions are currently implemented only if Subversion is
-   ### compiled with ENABLE_SQLITE_TESTING.  Otherwise, these functions are
-   ### compiled, but implemented as no-ops. */
-
 /* Open (and create, if needed) the rep cache database associated with FS.
    Use POOL for temporary allocations. */
 svn_error_t *
