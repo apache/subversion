@@ -3429,7 +3429,7 @@ svn_wc_committed_queue_create(apr_pool_t *pool);
  * versioned object at or under @a path.  This is usually done for
  * copied trees.
  *
- * @note the @recurse parameter should be used with extreme care since
+ * @note the @a recurse parameter should be used with extreme care since
  * it will bump ALL nodes under the directory, regardless of their
  * actual inclusion in the new revision.
  *
