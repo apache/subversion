@@ -75,7 +75,7 @@ extern "C" {
 /* The format number of this filesystem.
    This is independent of the repository format number, and
    independent of any other FS back ends. */
-#define SVN_FS_FS__FORMAT_NUMBER   3
+#define SVN_FS_FS__FORMAT_NUMBER   4
 
 /* The minimum format number that supports svndiff version 1.  */
 #define SVN_FS_FS__MIN_SVNDIFF1_FORMAT 2
@@ -97,6 +97,9 @@ extern "C" {
 /* The minimum format number that maintains minfo-here and minfo-count
    noderev fields. */
 #define SVN_FS_FS__MIN_MERGEINFO_FORMAT 3
+
+/* The minimum format number that supports packed shards. */
+#define SVN_FS_FS__MIN_PACKED_FORMAT 4
 
 /* Private FSFS-specific data shared between all svn_txn_t objects that
    relate to a particular transaction in a filesystem (as identified
