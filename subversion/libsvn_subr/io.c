@@ -51,6 +51,8 @@
 #include "svn_utf.h"
 #include "svn_config.h"
 #include "svn_private_config.h"
+
+#define SVN_SLEEP_ENV_VAR "SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_SLEEP_FOR_TIMESTAMPS"
 
 /*
   Windows is 'aided' by a number of types of applications that
@@ -927,6 +929,68 @@ svn_io_set_file_affected_time(apr_time_t apr_time,
        svn_path_local_style(path, pool));
 
   return SVN_NO_ERROR;
+}
+
+
+void
+svn_io_sleep_for_timestamps(const char *path, apr_pool_t *pool)
+{
+  apr_time_t now, then;
+  svn_error_t *err;
+  char *sleep_env_var;
+
+  sleep_env_var = getenv(SVN_SLEEP_ENV_VAR);
+
+  if (sleep_env_var && apr_strnatcasecmp(sleep_env_var, "yes") == 0)
+    return; /* Allow skipping for testing */
+
+  now = apr_time_now();
+
+  /* Calculate 0.02 seconds after the next second wallclock tick. */
+  then = apr_time_make(apr_time_sec(now) + 1, APR_USEC_PER_SEC / 50);
+
+  /* Worst case is waiting one second, so we can use that time to determine
+     if we can sleep shorter than that */
+  if (path)
+    {
+      apr_finfo_t finfo;
+
+      err = svn_io_stat(&finfo, path, APR_FINFO_MTIME | APR_FINFO_LINK, pool);
+
+      if (err)
+        {
+          svn_error_clear(err); /* Fall back on original behavior */
+        }
+      else if (finfo.mtime % APR_USEC_PER_SEC)
+        {          
+          /* Very simplistic but safe approach:
+		      If the filesystem has < sec mtime we can be reasonably sure
+              that the filesystem has <= millisecond precision.
+
+             ## Perhaps find a better algorithm here. This will fail once
+                in every 1000 cases on a millisecond precision filesystem.
+
+                But better to fail once in every thousand cases than every
+                time, like we did before. 
+				(All tested filesystems I know have at least microsecond precision.)
+
+             Note for further research on algorithm:
+               FAT32 has < 1 sec precision on ctime, but 2 sec on mtime */
+
+          /* Sleep for at least 1 millisecond.
+             (t < 1000 will be round to 0 in apr) */
+          apr_sleep(1000); 
+
+          return;
+        }
+
+      now = apr_time_now(); /* Extract the time used for the path stat */
+
+      if (now >= then)
+        return; /* Passing negative values may suspend indefinately (Windows) */
+    }
+
+  apr_sleep(then - now);
 }
 
 

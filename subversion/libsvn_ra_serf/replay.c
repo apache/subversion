@@ -559,24 +559,14 @@ create_replay_body(void *baton,
                    apr_pool_t *pool)
 {
   replay_context_t *ctx = baton;
-  serf_bucket_t *body_bkt, *tmp;
+  serf_bucket_t *body_bkt;
 
   body_bkt = serf_bucket_aggregate_create(alloc);
 
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("<S:replay-report xmlns:S=\"",
-                                      sizeof("<S:replay-report xmlns:S=\"")-1,
-                                      alloc);
-  serf_bucket_aggregate_append(body_bkt, tmp);
-
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(SVN_XML_NAMESPACE,
-                                      sizeof(SVN_XML_NAMESPACE)-1,
-                                      alloc);
-  serf_bucket_aggregate_append(body_bkt, tmp);
-
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("\">",
-                                      sizeof("\">")-1,
-                                      alloc);
-  serf_bucket_aggregate_append(body_bkt, tmp);
+  svn_ra_serf__add_open_tag_buckets(body_bkt, alloc,
+                                    "S:replay-report",
+                                    "xmlns:S", SVN_XML_NAMESPACE,
+                                    NULL);
 
   svn_ra_serf__add_tag_buckets(body_bkt,
                                "S:revision", apr_ltoa(ctx->pool, ctx->revision),
@@ -591,10 +581,7 @@ create_replay_body(void *baton,
                                apr_ltoa(ctx->pool, ctx->send_deltas),
                                alloc);
 
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("</S:replay-report>",
-                                      sizeof("</S:replay-report>")-1,
-                                      alloc);
-  serf_bucket_aggregate_append(body_bkt, tmp);
+  svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "S:replay-report");
 
   return body_bkt;
 }

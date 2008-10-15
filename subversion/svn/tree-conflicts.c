@@ -27,20 +27,19 @@ struct tree_conflict_phrases
 {
   const char *update_deleted;
   const char *update_edited;
+  const char *update_added;
   const char *merge_deleted;
   const char *merge_edited;
   const char *merge_added;
   const char *we_deleted;
-
-  /* Used during update. */
+  const char *we_added;
   const char *we_edited_update;
-  const char *does_not_exist_update;
-
-  /* Used during merge. */
+  const char *missing_update;
   const char *we_edited_merge;
   const char *we_added_merge;
-  const char *does_not_exist_merge;
+  const char *missing_merge;
   const char *obstructed;
+  const char *unversioned;
 };
 
 /* Return a new (possibly localised)
@@ -56,6 +55,8 @@ new_tree_conflict_phrases(apr_pool_t *pool)
 
   phrases->update_edited = _("The update attempted to edit '%s'.\n");
 
+  phrases->update_added = _("The update attempted to add '%s'.\n");
+
   phrases->merge_deleted = _("The merge attempted to delete '%s'\n"
                              "(possibly as part of a rename operation).\n");
 
@@ -66,10 +67,12 @@ new_tree_conflict_phrases(apr_pool_t *pool)
   phrases->we_deleted = _("You have deleted '%s' locally.\n"
                           "Maybe you renamed it?\n");
 
+  phrases->we_added = _("You have added '%s' locally.\n");
+
   phrases->we_edited_update = _("You have edited '%s' locally.\n");
 
-  phrases->does_not_exist_update = _("'%s' does not exist locally.\n"
-                                     "Maybe you renamed it?\n");
+  phrases->missing_update = _("'%s' does not exist locally.\n"
+                              "Maybe you renamed it?\n");
 
   /* This one only comes up together with merge_deleted, never with
    * merge_edited. Otherwise we would have a text conflict. So we can
@@ -81,17 +84,20 @@ new_tree_conflict_phrases(apr_pool_t *pool)
                                " branch you are merging from.\n");
 
   phrases->we_added_merge = _("Either you have added '%s' locally,\n"
-                               "or it has been added in the history of"
-                               " the branch you are merging into.\n");
+                              "or it has been added in the history of"
+                              " the branch you are merging into.\n");
 
 
-  phrases->does_not_exist_merge = _("'%s' does not exist locally.\n"
-                                    "Maybe you renamed it? Or has it been"
-                                    " renamed in the history of the branch\n"
-                                    "you are merging into?\n");
+  phrases->missing_merge = _("'%s' does not exist locally.\n"
+                             "Maybe you renamed it? Or has it been"
+                             " renamed in the history of the branch\n"
+                             "you are merging into?\n");
 
   phrases->obstructed = _("This action was obstructed by an item"
-                           " in the working copy.\n");
+                          " in the working copy.\n");
+
+  phrases->unversioned = _("'%s' is unversioned.\n");
+
   return phrases;
 }
 
@@ -104,26 +110,26 @@ select_their_phrase(const svn_wc_conflict_description_t *conflict,
     {
       switch (conflict->action)
         {
-          case svn_wc_conflict_action_delete:
-            return phrases->update_deleted;
+          /* Order of cases follows definition of svn_wc_conflict_action_t. */
           case svn_wc_conflict_action_edit:
             return phrases->update_edited;
-          default:
-            return NULL; /* Should never happen! */
+          case svn_wc_conflict_action_add:
+            return phrases->update_added;
+          case svn_wc_conflict_action_delete:
+            return phrases->update_deleted;
         }
     }
   else if (conflict->operation == svn_wc_operation_merge)
     {
       switch (conflict->action)
         {
-          case svn_wc_conflict_action_delete:
-            return phrases->merge_deleted;
+          /* Order of cases follows definition of svn_wc_conflict_action_t. */
           case svn_wc_conflict_action_edit:
             return phrases->merge_edited;
           case svn_wc_conflict_action_add:
             return phrases->merge_added;
-          default:
-            return NULL; /* Should never happen! */
+          case svn_wc_conflict_action_delete:
+            return phrases->merge_deleted;
         }
     }
   return NULL; /* Should never happen! */
@@ -135,9 +141,7 @@ select_our_phrase(const svn_wc_conflict_description_t *conflict,
 {
   switch (conflict->reason)
     {
-      case svn_wc_conflict_reason_deleted:
-        return phrases->we_deleted;
-
+      /* Order of cases follows definition of svn_wc_conflict_reason_t. */
       case svn_wc_conflict_reason_edited:
         if (conflict->operation == svn_wc_operation_update
             || conflict->operation == svn_wc_operation_switch)
@@ -148,47 +152,43 @@ select_our_phrase(const svn_wc_conflict_description_t *conflict,
           {
             return phrases->we_edited_merge;
           }
-        return NULL; /* Should never happen! */
-
-      case svn_wc_conflict_reason_missing:
-        if (conflict->operation == svn_wc_operation_update
-            || conflict->operation == svn_wc_operation_switch)
-          {
-            return phrases->does_not_exist_update;
-          }
-        else if (conflict->operation == svn_wc_operation_merge)
-          {
-            return phrases->does_not_exist_merge;
-          }
-        return NULL; /* Should never happen! */
+        break;
 
       case svn_wc_conflict_reason_obstructed:
-        if (conflict->operation == svn_wc_operation_update
-            || conflict->operation == svn_wc_operation_switch)
-          {
-            return NULL; /* Should never happen! */
-          }
-        else if (conflict->operation == svn_wc_operation_merge)
-          {
-            return phrases->obstructed;
-          }
-        return NULL; /* Should never happen! */
+        return phrases->obstructed;
+        break;
+
+      case svn_wc_conflict_reason_deleted:
+        return phrases->we_deleted;
 
       case svn_wc_conflict_reason_added:
         if (conflict->operation == svn_wc_operation_update
             || conflict->operation == svn_wc_operation_switch)
           {
-            return NULL; /* Should never happen! */
+            return phrases->we_added;
           }
         else if (conflict->operation == svn_wc_operation_merge)
           {
-            return phrases->merge_added;
+            return phrases->we_added_merge;
           }
-        return NULL; /* Should never happen! */
+        break;
 
-     default:
-        return NULL; /* Should never happen! */
+      case svn_wc_conflict_reason_missing:
+        if (conflict->operation == svn_wc_operation_update
+            || conflict->operation == svn_wc_operation_switch)
+          {
+            return phrases->missing_update;
+          }
+        else if (conflict->operation == svn_wc_operation_merge)
+          {
+            return phrases->missing_merge;
+          }
+        break;
+      
+      case svn_wc_conflict_reason_unversioned:
+        return phrases->unversioned;
     }
+  return NULL; /* Should never happen! */
 }
 
 svn_error_t *
@@ -201,14 +201,15 @@ svn_cl__append_human_readable_tree_conflict_description(
   svn_stringbuf_t *their_phrase_with_victim, *our_phrase_with_victim;
   struct tree_conflict_phrases *phrases = new_tree_conflict_phrases(pool);
 
+  victim_name = svn_path_basename(conflict->path, pool);
   their_phrase = select_their_phrase(conflict, phrases);
   our_phrase = select_our_phrase(conflict, phrases);
   if (! our_phrase || ! their_phrase)
-    return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-                            _("Invalid tree conflict data"));
+    return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
+                             _("Invalid tree conflict data for victim %s"),
+                             victim_name);
 
   /* Substitute the '%s' format in the phrases with the victim path. */
-  victim_name = svn_path_basename(conflict->path, pool);
   their_phrase_with_victim = svn_stringbuf_createf(pool, their_phrase,
                                                    victim_name);
   our_phrase_with_victim = svn_stringbuf_createf(pool, our_phrase,
@@ -266,8 +267,12 @@ svn_cl__append_tree_conflict_info_xml(
 
   switch (conflict->action)
     {
+      /* Order of cases follows definition of svn_wc_conflict_action_t. */
       case svn_wc_conflict_action_edit:
         tmp = "edited";
+        break;
+      case svn_wc_conflict_action_add:
+        tmp = "added";
         break;
       case svn_wc_conflict_action_delete:
         tmp = "deleted";
@@ -280,20 +285,24 @@ svn_cl__append_tree_conflict_info_xml(
 
   switch (conflict->reason)
     {
+      /* Order of cases follows definition of svn_wc_conflict_reason_t. */
       case svn_wc_conflict_reason_edited:
         tmp = "edited";
-        break;
-      case svn_wc_conflict_reason_deleted:
-        tmp = "deleted";
-        break;
-      case svn_wc_conflict_reason_missing:
-        tmp = "missing";
         break;
       case svn_wc_conflict_reason_obstructed:
         tmp = "obstructed";
         break;
+      case svn_wc_conflict_reason_deleted:
+        tmp = "deleted";
+        break;
       case svn_wc_conflict_reason_added:
         tmp = "added";
+        break;
+      case svn_wc_conflict_reason_missing:
+        tmp = "missing";
+        break;
+      case svn_wc_conflict_reason_unversioned:
+        tmp = "unversioned";
         break;
       default:
         return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,

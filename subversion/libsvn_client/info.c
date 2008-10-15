@@ -58,7 +58,7 @@ build_info_from_dirent(svn_info_t **info,
   tmpinfo->depth                = svn_depth_unknown;
   tmpinfo->working_size         = SVN_INFO_SIZE_UNKNOWN;
   tmpinfo->size                 = dirent->size;
-  tmpinfo->tree_conflicts       = NULL;
+  tmpinfo->tree_conflict        = NULL;
 
   *info = tmpinfo;
   return SVN_NO_ERROR;
@@ -102,16 +102,6 @@ build_info_from_entry(svn_info_t **info,
   tmpinfo->working_size         = entry->working_size;
   tmpinfo->size                 = SVN_INFO_SIZE_UNKNOWN;
 
-  /* Check for tree conflicts (only "this-dir" entries have tree conflicts). */
-  if ((strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) == 0)
-      && entry->tree_conflict_data)
-    {
-      tmpinfo->tree_conflicts = apr_array_make(pool, 1,
-                                     sizeof(svn_wc_conflict_description_t *));
-      SVN_ERR(svn_wc_read_tree_conflicts_from_entry(tmpinfo->tree_conflicts,
-                                                    entry, path, pool));
-    }
-
   /* lock stuff */
   if (entry->lock_token)  /* the token is the critical bit. */
     {
@@ -122,6 +112,34 @@ build_info_from_entry(svn_info_t **info,
       tmpinfo->lock->comment    = entry->lock_comment;
       tmpinfo->lock->creation_date = entry->lock_creation_date;
     }
+
+  *info = tmpinfo;
+  return SVN_NO_ERROR;
+}
+
+
+/* Helper: build an svn_info_t *INFO struct with minimal content, to be
+   used in reporting info for unversioned tree conflict victims. */
+/* ### Some fields we could fill out based on the parent dir's entry
+       or by looking at an obstructing item. */
+static svn_error_t *
+build_info_for_unversioned(svn_info_t **info,
+                           apr_pool_t *pool)
+{
+  svn_info_t *tmpinfo = apr_pcalloc(pool, sizeof(*tmpinfo));
+
+  tmpinfo->URL                  = NULL;
+  tmpinfo->rev                  = SVN_INVALID_REVNUM;
+  tmpinfo->kind                 = svn_node_none;
+  tmpinfo->repos_UUID           = NULL;
+  tmpinfo->repos_root_URL       = NULL;
+  tmpinfo->last_changed_rev     = SVN_INVALID_REVNUM;
+  tmpinfo->last_changed_date    = 0;
+  tmpinfo->last_changed_author  = NULL;
+  tmpinfo->lock                 = NULL;
+  tmpinfo->working_size         = SVN_INFO_SIZE_UNKNOWN;
+  tmpinfo->size                 = 0;
+  tmpinfo->tree_conflict        = NULL;
 
   *info = tmpinfo;
   return SVN_NO_ERROR;
@@ -222,8 +240,10 @@ struct found_entry_baton
   apr_hash_t *changelist_hash;
   svn_info_receiver_t receiver;
   void *receiver_baton;
+  svn_wc_adm_access_t *adm_access;  /* adm access baton for root of walk */
 };
 
+/* An svn_wc_entry_callbacks2_t callback function. */
 static svn_error_t *
 info_found_entry_callback(const char *path,
                           const svn_wc_entry_t *entry,
@@ -242,19 +262,67 @@ info_found_entry_callback(const char *path,
   if (SVN_WC__CL_MATCH(fe_baton->changelist_hash, entry))
     {
       svn_info_t *info;
+      svn_wc_adm_access_t *adm_access;
+
       SVN_ERR(build_info_from_entry(&info, entry, path, pool));
+      SVN_ERR(svn_wc_adm_probe_try3(&adm_access, fe_baton->adm_access, path,
+                               FALSE /* read-only */, 0 /* levels */,
+                               NULL, NULL, pool));
+      SVN_ERR(svn_wc_get_tree_conflict(&info->tree_conflict, path, adm_access, 
+                                       FALSE, pool));
       SVN_ERR(fe_baton->receiver(fe_baton->receiver_baton, path, info, pool));
     }
   return SVN_NO_ERROR;
 }
 
+/* An svn_wc_entry_callbacks2_t callback function.
+   Handle an error encountered by the walker.
+   If the error is "unversioned resource" and, upon checking the
+   parent dir's tree conflict data, we find that PATH is a tree
+   conflict victim, cancel the error and send a minimal info struct.
+   Otherwise re-raise the error.
+*/
+static svn_error_t *
+info_error_handler(const char *path,
+                   svn_error_t *err,
+                   void *walk_baton,
+                   apr_pool_t *pool)
+{
+  if (err && (err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE))
+    {
+      struct found_entry_baton *fe_baton = walk_baton;
+      svn_wc_adm_access_t *adm_access;
+      svn_wc_conflict_description_t *tree_conflict;
 
+      SVN_ERR(svn_wc_adm_probe_try3(&adm_access, fe_baton->adm_access,
+                                    svn_path_dirname(path, pool),
+                                    FALSE, 0, NULL, NULL, pool));
+      SVN_ERR(svn_wc_get_tree_conflict(&tree_conflict, path, adm_access,
+                                       TRUE, pool));
+
+      if (tree_conflict)
+        {
+          svn_info_t *info;
+
+          svn_error_clear(err);
+
+          SVN_ERR(build_info_for_unversioned(&info, pool));
+          info->tree_conflict = tree_conflict;
+
+          SVN_ERR(fe_baton->receiver(fe_baton->receiver_baton, path, info,
+                                     pool));
+          return SVN_NO_ERROR;
+        }
+    }
+
+  return err;
+}
 
 static const svn_wc_entry_callbacks2_t
 entry_walk_callbacks =
   {
     info_found_entry_callback,
-    svn_client__default_walker_error_handler
+    info_error_handler
   };
 
 
@@ -280,6 +348,7 @@ crawl_entries(const char *wcpath,
   fe_baton.changelist_hash = changelist_hash;
   fe_baton.receiver = receiver;
   fe_baton.receiver_baton = receiver_baton;
+  fe_baton.adm_access = adm_access;
   return svn_wc_walk_entries3(wcpath, adm_access,
                               &entry_walk_callbacks, &fe_baton,
                               depth, FALSE, ctx->cancel_func,

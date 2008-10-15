@@ -150,10 +150,26 @@ svn_ra_serf__expand_string(const char **cur, apr_size_t *cur_len,
     }
 }
 
-void svn_ra_serf__add_tag_buckets(serf_bucket_t *agg_bucket, const char *tag,
-                                  const char *value,
-                                  serf_bucket_alloc_t *bkt_alloc)
+#define XML_HEADER "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+
+void
+svn_ra_serf__add_xml_header_buckets(serf_bucket_t *agg_bucket,
+                                    serf_bucket_alloc_t *bkt_alloc)
 {
+  serf_bucket_t *tmp;
+
+  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(XML_HEADER, sizeof(XML_HEADER) - 1,
+                                      bkt_alloc);
+  serf_bucket_aggregate_append(agg_bucket, tmp);
+}
+
+void
+svn_ra_serf__add_open_tag_buckets(serf_bucket_t *agg_bucket,
+                                  serf_bucket_alloc_t *bkt_alloc,
+                                  const char *tag, ...)
+{
+  va_list ap;
+  const char *key;
   serf_bucket_t *tmp;
 
   tmp = SERF_BUCKET_SIMPLE_STRING_LEN("<", 1, bkt_alloc);
@@ -162,14 +178,40 @@ void svn_ra_serf__add_tag_buckets(serf_bucket_t *agg_bucket, const char *tag,
   tmp = SERF_BUCKET_SIMPLE_STRING(tag, bkt_alloc);
   serf_bucket_aggregate_append(agg_bucket, tmp);
 
+  va_start(ap, tag);
+  while ((key = va_arg(ap, char *)) != NULL)
+    {
+      const char *val = va_arg(ap, const char *);
+      if (val)
+        {
+          tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" ", 1, bkt_alloc);
+          serf_bucket_aggregate_append(agg_bucket, tmp);
+
+          tmp = SERF_BUCKET_SIMPLE_STRING(key, bkt_alloc);
+          serf_bucket_aggregate_append(agg_bucket, tmp);
+
+          tmp = SERF_BUCKET_SIMPLE_STRING_LEN("=\"", 2, bkt_alloc);
+          serf_bucket_aggregate_append(agg_bucket, tmp);
+
+          tmp = SERF_BUCKET_SIMPLE_STRING(val, bkt_alloc);
+          serf_bucket_aggregate_append(agg_bucket, tmp);
+
+          tmp = SERF_BUCKET_SIMPLE_STRING_LEN("\"", 1, bkt_alloc);
+          serf_bucket_aggregate_append(agg_bucket, tmp);
+        }
+    }
+  va_end(ap);
+
   tmp = SERF_BUCKET_SIMPLE_STRING_LEN(">", 1, bkt_alloc);
   serf_bucket_aggregate_append(agg_bucket, tmp);
+}
 
-  if (value)
-    {
-      tmp = SERF_BUCKET_SIMPLE_STRING(value, bkt_alloc);
-      serf_bucket_aggregate_append(agg_bucket, tmp);
-    }
+void
+svn_ra_serf__add_close_tag_buckets(serf_bucket_t *agg_bucket,
+                                   serf_bucket_alloc_t *bkt_alloc,
+                                   const char *tag)
+{
+  serf_bucket_t *tmp;
 
   tmp = SERF_BUCKET_SIMPLE_STRING_LEN("</", 2, bkt_alloc);
   serf_bucket_aggregate_append(agg_bucket, tmp);
@@ -179,6 +221,84 @@ void svn_ra_serf__add_tag_buckets(serf_bucket_t *agg_bucket, const char *tag,
 
   tmp = SERF_BUCKET_SIMPLE_STRING_LEN(">", 1, bkt_alloc);
   serf_bucket_aggregate_append(agg_bucket, tmp);
+}
+
+void
+svn_ra_serf__add_cdata_len_buckets(serf_bucket_t *agg_bucket,
+                                   serf_bucket_alloc_t *bkt_alloc,
+                                   const char *data, apr_size_t len)
+{
+  const char *end = data + len;
+  const char *p = data, *q;
+  serf_bucket_t *tmp_bkt;
+
+  while (1)
+    {
+      /* Find a character which needs to be quoted and append bytes up
+         to that point.  Strictly speaking, '>' only needs to be
+         quoted if it follows "]]", but it's easier to quote it all
+         the time.
+
+         So, why are we escaping '\r' here?  Well, according to the
+         XML spec, '\r\n' gets converted to '\n' during XML parsing.
+         Also, any '\r' not followed by '\n' is converted to '\n'.  By
+         golly, if we say we want to escape a '\r', we want to make
+         sure it remains a '\r'!  */
+      q = p;
+      while (q < end && *q != '&' && *q != '<' && *q != '>' && *q != '\r')
+        q++;
+
+
+      tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN(p, q - p, bkt_alloc);
+      serf_bucket_aggregate_append(agg_bucket, tmp_bkt);
+
+      /* We may already be a winner.  */
+      if (q == end)
+        break;
+
+      /* Append the entity reference for the character.  */
+      if (*q == '&')
+        {
+          tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN("&amp;", sizeof("&amp;") - 1,
+                                                  bkt_alloc);
+          serf_bucket_aggregate_append(agg_bucket, tmp_bkt);
+        }
+      else if (*q == '<')
+        {
+          tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN("&lt;", sizeof("&lt;") - 1,
+                                                  bkt_alloc);
+          serf_bucket_aggregate_append(agg_bucket, tmp_bkt);
+        }
+      else if (*q == '>')
+        {
+          tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN("&gt;", sizeof("&gt;") - 1,
+                                                  bkt_alloc);
+          serf_bucket_aggregate_append(agg_bucket, tmp_bkt);
+        }
+      else if (*q == '\r')
+        {
+          tmp_bkt = SERF_BUCKET_SIMPLE_STRING_LEN("&#13;", sizeof("&#13;") - 1,
+                                                  bkt_alloc);
+          serf_bucket_aggregate_append(agg_bucket, tmp_bkt);
+        }
+
+      p = q + 1;
+    }
+}
+
+void svn_ra_serf__add_tag_buckets(serf_bucket_t *agg_bucket, const char *tag,
+                                  const char *value,
+                                  serf_bucket_alloc_t *bkt_alloc)
+{
+  svn_ra_serf__add_open_tag_buckets(agg_bucket, bkt_alloc, tag, NULL);
+
+  if (value)
+    {
+      svn_ra_serf__add_cdata_len_buckets(agg_bucket, bkt_alloc,
+                                         value, strlen(value));
+    }
+
+  svn_ra_serf__add_close_tag_buckets(agg_bucket, bkt_alloc, tag);
 }
 
 void

@@ -406,7 +406,7 @@ typedef struct svn_client_commit_info_t
 
 /** The commit candidate structure.  In order to avoid backwards
  * compatibility problems clients should use
- * svn_client_commit_item_create() to allocate and intialize this
+ * svn_client_commit_item_create2() to allocate and intialize this
  * structure instead of doing so themselves.
  *
  * @since New in 1.5.
@@ -525,18 +525,23 @@ typedef struct svn_client_commit_item_t
 
 } svn_client_commit_item_t;
 
-/** Initialize a commit item.
- * Set @a *item to a commit item object, allocated in @a pool.
+/** Return a new commit item object, allocated in @a pool.
  *
  * In order to avoid backwards compatibility problems, this function
  * is used to intialize and allocate the @c svn_client_commit_item3_t
  * structure rather than doing so explicitly, as the size of this
  * structure may change in the future.
  *
- * The current implementation never returns error, but callers should
- * still check for error, for compatibility with future versions.
+ * @since New in 1.6.
+ */
+svn_client_commit_item3_t *
+svn_client_commit_item_create2(apr_pool_t *pool);
+
+/** Like svn_client_commit_item_create2() but with a stupid "const"
+ * qualifier on the returned structure, and it returns an error that
+ * will never happen.
  *
- * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.5 API.
  */
 svn_error_t *
 svn_client_commit_item_create(const svn_client_commit_item3_t **item,
@@ -4356,13 +4361,12 @@ typedef struct svn_info_t
   apr_size_t size;
 
   /**
-   * For a directory only, all tree-conflicted children, stored
-   * in an array of @c svn_wc_conflict_description_t, 
+   * Info on any tree conflict of which this node is a victim. Otherwise NULL.
    * @since New in 1.6.
    * @name Working-copy path fields
    * @{
    */
-  apr_array_header_t *tree_conflicts;
+  svn_wc_conflict_description_t *tree_conflict;
 
   /** @} */
 
