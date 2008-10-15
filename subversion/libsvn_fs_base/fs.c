@@ -1201,6 +1201,8 @@ base_hotcopy(const char *src_path,
                               "lock-tokens", pagesize, TRUE, pool));
   SVN_ERR(copy_db_file_safely(src_path, dest_path,
                               "node-origins", pagesize, TRUE, pool));
+  SVN_ERR(copy_db_file_safely(src_path, dest_path,
+                              "miscellaneous", pagesize, TRUE, pool));
 
   {
     apr_array_header_t *logfiles;
