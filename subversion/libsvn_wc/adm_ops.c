@@ -338,7 +338,7 @@ process_committed_leaf(int log_number,
   apr_uint64_t modify_flags = 0;
   svn_stringbuf_t *logtags = svn_stringbuf_create("", pool);
 
-  SVN_ERR(svn_wc__adm_write_check(adm_access));
+  SVN_ERR(svn_wc__adm_write_check(adm_access, pool));
 
   /* Set PATH's working revision to NEW_REVNUM; if REV_DATE and
      REV_AUTHOR are both non-NULL, then set the 'committed-rev',
