@@ -55,11 +55,17 @@ string_hash_dup(apr_hash_t *hash, apr_pool_t *pool)
   return new_hash;
 }
 
+svn_client_commit_item3_t *
+svn_client_commit_item_create2(apr_pool_t *pool)
+{
+  return apr_pcalloc(pool, sizeof(svn_client_commit_item3_t));
+}
+
 svn_error_t *
 svn_client_commit_item_create(const svn_client_commit_item3_t **item,
-                              apr_pool_t *pool)
+                               apr_pool_t *pool)
 {
-  *item = apr_pcalloc(pool, sizeof(svn_client_commit_item3_t));
+  *item = svn_client_commit_item_create2(pool);
   return SVN_NO_ERROR;
 }
 

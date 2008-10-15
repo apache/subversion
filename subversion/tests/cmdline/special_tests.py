@@ -501,11 +501,11 @@ def diff_symlink_to_dir(sbox):
   "diff a symlink to a directory"
 
   sbox.build(read_only = True)
-  wc_dir = sbox.wc_dir
+  os.chdir(sbox.wc_dir)
 
   # Create a symlink to A/D/.
   d_path = os.path.join('A', 'D')
-  link_path = os.path.join(wc_dir, 'link')
+  link_path = 'link'
   os.symlink(d_path, link_path)
 
   # Add the symlink.
@@ -513,21 +513,21 @@ def diff_symlink_to_dir(sbox):
 
   # Now diff the wc itself and check the results.
   expected_output = [
-    "Index: svn-test-work/working_copies/special_tests-10/link\n",
+    "Index: link\n",
     "===================================================================\n",
-    "--- svn-test-work/working_copies/special_tests-10/link\t(revision 0)\n",
-    "+++ svn-test-work/working_copies/special_tests-10/link\t(revision 0)\n",
+    "--- link\t(revision 0)\n",
+    "+++ link\t(revision 0)\n",
     "@@ -0,0 +1 @@\n",
     "+link " + d_path + "\n",
     "\ No newline at end of file\n",
     "\n",
-    "Property changes on: svn-test-work/working_copies/special_tests-10/link\n",
+    "Property changes on: link\n",
     "___________________________________________________________________\n",
     "Added: svn:special\n",
     "   + *\n",
     "\n" ]
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff',
-                                     wc_dir)
+                                     '.')
   # We should get the same output if we the diff the symlink itself.
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff',
                                      link_path)

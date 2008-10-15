@@ -207,7 +207,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
     {
       /* Don't rely on the error handling to handle the sleep later, do
          it now */
-      svn_sleep_for_timestamps();
+      svn_io_sleep_for_timestamps(path, pool);
       return err;
     }
   *use_sleep = TRUE;
@@ -223,7 +223,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   /* Sleep to ensure timestamp integrity (we do this regardless of
      errors in the actual switch operation(s)). */
   if (sleep_here)
-    svn_sleep_for_timestamps();
+    svn_io_sleep_for_timestamps(path, pool);
 
   /* Return errors we might have sustained. */
   if (err)

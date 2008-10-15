@@ -29,6 +29,11 @@
 %import svn_delta.i
 %import svn_wc.i
 
+/* svn_client.h: Conditionally include Windows auth provider. */
+#if !defined(SWIGWIN)
+%ignore svn_client_get_windows_simple_provider;
+#endif
+
 /* -----------------------------------------------------------------------
    %apply-ing of typemaps defined elsewhere
 */

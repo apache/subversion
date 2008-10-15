@@ -656,6 +656,7 @@ def update_delete_modified_files(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'A/B/E'       : Item(status='C '), # tree conflict (issue #2282)
     'A/B/E/alpha' : Item(status='D '),
+    'A/D'         : Item(status='C '), # tree conflict (issue #2282)
     'A/D/G'       : Item(status='D '),
     })
   expected_disk = svntest.main.greek_state.copy()
@@ -670,6 +671,7 @@ def update_delete_modified_files(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak('A/B/E', status='C ') # tree conflict (issue #2282)
   expected_status.remove('A/B/E/alpha')
+  expected_status.tweak('A/D', status='C ') # tree conflict (issue #2282)
   expected_status.remove('A/D/G')
   expected_status.remove('A/D/G/pi')
   expected_status.remove('A/D/G/rho')

@@ -220,13 +220,13 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
     {
       /* Don't rely on the error handling to handle the sleep later, do
          it now */
-      svn_sleep_for_timestamps();
+      svn_io_sleep_for_timestamps(path, pool);
       return err;
     }
   *use_sleep = TRUE;
 
   if (sleep_here)
-    svn_sleep_for_timestamps();
+    svn_io_sleep_for_timestamps(path, pool);
 
   return SVN_NO_ERROR;
 }

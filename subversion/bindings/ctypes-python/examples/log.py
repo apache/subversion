@@ -65,20 +65,20 @@ for entry in \
                  stop_on_copy=options.stop_on_copy):
 
     num_lines = count_lines(entry.message)
-    print "-" * 72
-    print "r%d | %s | %s | %s" % (entry.revision, entry.author,
-                                  entry.date.as_human_string(), num_lines)
+    print("-" * 72)
+    print("r%d | %s | %s | %s" % (entry.revision, entry.author,
+                                  entry.date.as_human_string(), num_lines))
     if options.verbose:
-        print "Changed paths:"
+        print("Changed paths:")
         for key, value in entry.changed_paths.iteritems():
             value = value[0]
             if value.copyfrom_rev != SVN_INVALID_REVNUM:
-                print "   %s %s (from %s:%d)" % (value.action, key,
+                print("   %s %s (from %s:%d)" % (value.action, key,
                                                  value.copyfrom_path,
-                                                 value.copyfrom_rev)
+                                                 value.copyfrom_rev))
             else:
-                print "   %s %s" % (value.action, key)
-    print
-    print entry.message
+                print("   %s %s" % (value.action, key))
+    print("")
+    print(entry.message)
 
-print "-" * 72
+print("-" * 72)
