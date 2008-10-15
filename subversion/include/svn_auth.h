@@ -827,7 +827,7 @@ svn_auth_get_keychain_ssl_client_cert_pw_provider
    apr_pool_t *pool);
 #endif /* DARWIN || DOXYGEN || CTYPESGEN || SWIG */
 
-#if (!defined(DARWIN) && !defined(WIN32)) || defined(DOXYGEN) || defined(SWIG)
+#if (!defined(DARWIN) && !defined(WIN32)) || defined(DOXYGEN) || defined(CTYPESGEN) || defined(SWIG)
 /**
  * Get libsvn_auth_gnome_keyring version information.
  *
@@ -919,7 +919,7 @@ void
 svn_auth_get_kwallet_ssl_client_cert_pw_provider
   (svn_auth_provider_object_t **provider,
    apr_pool_t *pool);
-#endif /* (!DARWIN && !WIN32) || DOXYGEN || SWIG */
+#endif /* (!DARWIN && !WIN32) || DOXYGEN || CTYPESGEN || SWIG */
 
 
 /** Create and return @a *provider, an authentication provider of type @c
