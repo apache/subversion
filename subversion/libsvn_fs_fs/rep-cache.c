@@ -26,7 +26,6 @@
 #include "private/svn_sqlite.h"
 
 /* A few magic values */
-#define REP_CACHE_DB_NAME        "rep-cache.db"
 #define REP_CACHE_SCHEMA_FORMAT   1
 
 const char *upgrade_sql[] = { NULL,
