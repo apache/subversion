@@ -57,7 +57,7 @@
 #include "bdb/changes-table.h"
 #include "bdb/copies-table.h"
 #include "bdb/node-origins-table.h"
-#include "bdb/metadata-table.h"
+#include "bdb/miscellaneous-table.h"
 #include "../libsvn_fs/fs-loader.h"
 #include "private/svn_fs_util.h"
 #include "private/svn_mergeinfo_private.h"
@@ -1402,52 +1402,52 @@ base_props_changed(svn_boolean_t *changed_p,
 
 
 
-/* Metadata table handling */
-struct metadata_set_args
+/* Miscellaneous table handling */
+
+struct miscellaneous_set_args
 {
   const char *key;
   const char *val;
 };
 
 static svn_error_t *
-txn_body_metadata_set(void *baton, trail_t *trail)
+txn_body_miscellaneous_set(void *baton, trail_t *trail)
 {
-  struct metadata_set_args *msa = baton;
+  struct miscellaneous_set_args *msa = baton;
 
-  return svn_fs_bdb__metadata_set(trail->fs, msa->key, msa->val, trail,
-                                  trail->pool);
+  return svn_fs_bdb__miscellaneous_set(trail->fs, msa->key, msa->val, trail,
+                                       trail->pool);
 }
 
 svn_error_t *
-svn_fs_base__metadata_set(svn_fs_t *fs,
-                          const char *key,
-                          const char *val,
-                          apr_pool_t *pool)
+svn_fs_base__miscellaneous_set(svn_fs_t *fs,
+                               const char *key,
+                               const char *val,
+                               apr_pool_t *pool)
 {
-  struct metadata_set_args msa;
+  struct miscellaneous_set_args msa;
   msa.key = key;
   msa.val = val;
 
-  return svn_fs_base__retry_txn(fs, txn_body_metadata_set, &msa, pool);
+  return svn_fs_base__retry_txn(fs, txn_body_miscellaneous_set, &msa, pool);
 }
 
-
-struct metadata_get_args
+struct miscellaneous_get_args
 {
   const char *key;
   const char **val;
 };
 
 static svn_error_t *
-txn_body_metadata_get(void *baton, trail_t *trail)
+txn_body_miscellaneous_get(void *baton, trail_t *trail)
 {
-  struct metadata_get_args *mga = baton;
+  struct miscellaneous_get_args *mga = baton;
   svn_error_t *err;
 
-  err = svn_fs_bdb__metadata_get(mga->val, trail->fs, mga->key, trail,
-                                 trail->pool);
+  err = svn_fs_bdb__miscellaneous_get(mga->val, trail->fs, mga->key, trail,
+                                      trail->pool);
 
-  if (err && err->apr_err == SVN_ERR_FS_NO_SUCH_METADATA)
+  if (err && err->apr_err == SVN_ERR_FS_NO_SUCH_MISCELLANY)
     {
       svn_error_clear(err);
       err = SVN_NO_ERROR;
@@ -1458,16 +1458,16 @@ txn_body_metadata_get(void *baton, trail_t *trail)
 }
 
 svn_error_t *
-svn_fs_base__metadata_get(const char **val,
-                          svn_fs_t *fs,
-                          const char *key,
-                          apr_pool_t *pool)
+svn_fs_base__miscellaneous_get(const char **val,
+                               svn_fs_t *fs,
+                               const char *key,
+                               apr_pool_t *pool)
 {
-  struct metadata_get_args mga;
+  struct miscellaneous_get_args mga;
   mga.key = key;
   mga.val = val;
 
-  return svn_fs_base__retry_txn(fs, txn_body_metadata_get, &mga, pool);
+  return svn_fs_base__retry_txn(fs, txn_body_miscellaneous_get, &mga, pool);
 }
 
 
@@ -2807,9 +2807,8 @@ svn_fs_base__deltify(svn_fs_t *fs,
   const char *val;
   svn_revnum_t forward_delta_rev;
 
-  SVN_ERR(svn_fs_base__metadata_get(&val, fs,
-                                    SVN_FS_BASE__METADATA_FORWARD_DELTA_UPGRADE,
-                                    pool));
+  SVN_ERR(svn_fs_base__miscellaneous_get
+          (&val, fs, SVN_FS_BASE__MISCELLANEOUS_FORWARD_DELTA_UPGRADE, pool));
 
   if (val != NULL)
     {
