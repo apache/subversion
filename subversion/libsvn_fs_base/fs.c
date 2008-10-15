@@ -56,7 +56,7 @@
 #include "bdb/locks-table.h"
 #include "bdb/lock-tokens-table.h"
 #include "bdb/node-origins-table.h"
-#include "bdb/metadata-table.h"
+#include "bdb/miscellaneous-table.h"
 
 #include "../libsvn_fs/fs-loader.h"
 #include "private/svn_fs_util.h"
@@ -170,7 +170,7 @@ cleanup_fs(svn_fs_t *fs)
   SVN_ERR(cleanup_fs_db(fs, &bfd->locks, "locks"));
   SVN_ERR(cleanup_fs_db(fs, &bfd->lock_tokens, "lock-tokens"));
   SVN_ERR(cleanup_fs_db(fs, &bfd->node_origins, "node-origins"));
-  SVN_ERR(cleanup_fs_db(fs, &bfd->metadata, "metadata"));
+  SVN_ERR(cleanup_fs_db(fs, &bfd->miscellaneous, "miscellaneous"));
 
   /* Finally, close the environment.  */
   bfd->bdb = 0;
@@ -624,11 +624,11 @@ open_databases(svn_fs_t *fs,
   if (format >= SVN_FS_BASE__MIN_METADATA_FORMAT)
     {
       SVN_ERR(BDB_WRAP(fs, (create
-                            ? "creating 'metadata' table"
-                            : "opening 'matadata' table"),
-                       svn_fs_bdb__open_metadata_table(&bfd->metadata,
-                                                       bfd->bdb->env,
-                                                       create)));
+                            ? "creating 'miscellaneous' table"
+                            : "opening 'miscellaneous' table"),
+                       svn_fs_bdb__open_miscellaneous_table(&bfd->miscellaneous,
+                                                            bfd->bdb->env,
+                                                            create)));
     }
 
   return SVN_NO_ERROR;
@@ -842,9 +842,9 @@ base_upgrade(svn_fs_t *fs, const char *path, apr_pool_t *pool,
       /* Fetch the youngest rev, and record it */
       SVN_ERR(svn_fs_base__youngest_rev(&youngest_rev, fs, subpool));
       value = apr_psprintf(subpool, "%ld", youngest_rev);
-      SVN_ERR(svn_fs_base__metadata_set(fs,
-                                  SVN_FS_BASE__METADATA_FORWARD_DELTA_UPGRADE,
-                                  value, subpool));
+      SVN_ERR(svn_fs_base__miscellaneous_set
+              (fs, SVN_FS_BASE__MISCELLANEOUS_FORWARD_DELTA_UPGRADE, 
+               value, subpool));
       svn_pool_destroy(subpool);
     }
 
