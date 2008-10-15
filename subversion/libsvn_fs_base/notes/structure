@@ -862,7 +862,7 @@ Berkeley DB tables
                 "uuids" : recno(UUID)
                 "locks" : btree(TOKEN -> LOCK)
           "lock-tokens" : btree(PATH -> TOKEN)
-        "checksum-reps" : btree(MD5SUM -> REP)
+        "checksum-reps" : btree(SHA1SUM -> REP)
         "miscellaneous" : btree(STRING -> STRING)
 
 Syntactic elements
