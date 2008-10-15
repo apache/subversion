@@ -6369,3 +6369,21 @@ svn_fs_fs__begin_txn(svn_fs_txn_t **txn_p,
 
   return svn_fs_fs__change_txn_props(*txn_p, props, pool);
 }
+
+
+svn_error_t *
+svn_fs_fs__pack(const char *fs_path, apr_pool_t *pool)
+{
+  int format, max_files_per_dir;
+
+  SVN_ERR(read_format(&format, &max_files_per_dir,
+                      svn_path_join(fs_path, PATH_FORMAT, pool),
+                      pool));
+  SVN_ERR(check_format(format));
+
+  /* If we aren't using sharding, we can't do any packing, so quit. */
+  if (!max_files_per_dir)
+    return SVN_NO_ERROR;
+
+  return SVN_NO_ERROR;
+}

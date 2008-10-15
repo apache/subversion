@@ -307,13 +307,6 @@ fs_get_description(void)
   return _("Module for working with a plain file (FSFS) repository.");
 }
 
-static svn_error_t *
-fs_pack(const char *path, apr_pool_t *pool)
-{
-  /* Pack is a no op -- until it gets implemented. :) */
-  return SVN_NO_ERROR;
-}
-
 
 
 /* Base FS library vtable, used by the FS loader library. */
@@ -328,7 +321,7 @@ static fs_library_vtable_t library_vtable = {
   fs_hotcopy,
   fs_get_description,
   svn_fs_fs__recover,
-  fs_pack,
+  svn_fs_fs__pack,
   fs_logfiles
 };
 
