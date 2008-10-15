@@ -1395,6 +1395,12 @@ svn_fs_fs__hotcopy(const char *src_path,
                                         PATH_NODE_ORIGINS_DIR, TRUE, NULL,
                                         NULL, pool));
 
+  /* Now copy the rep cache. */
+  src_subdir = svn_path_join(src_path, REP_CACHE_DB_NAME, pool);
+  SVN_ERR(svn_io_check_path(src_subdir, &kind, pool));
+  if (kind == svn_node_file)
+    SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, REP_CACHE_DB_NAME, pool));
+
   /* Copy the txn-current file. */
   if (format >= SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
     SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, PATH_TXN_CURRENT, pool));

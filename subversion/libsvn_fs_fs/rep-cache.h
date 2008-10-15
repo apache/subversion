@@ -27,6 +27,8 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+#define REP_CACHE_DB_NAME        "rep-cache.db"
+
 /* Open (and create, if needed) the rep cache database associated with FS.
    Use POOL for temporary allocations. */
 svn_error_t *
