@@ -3,8 +3,8 @@
 GOAL
 ====
 
-Write a new HTTP protocol for svn, one which is entirely proprietary
-and designed for speed.
+Write a new HTTP protocol for svn -- one which is entirely proprietary
+and designed for speed and comprehensibility.
 
 
 PURPOSE / HISTORY
@@ -19,47 +19,53 @@ value propositions:
   C. Standardized encryption (SSL)
   D. Excellent logging
   E. Built-in repository browsing
-  F. Interoperability with other WebDAV clients
-  G. Caching within intermediate proxies
+  F. Caching within intermediate proxies
+  G. Interoperability with other WebDAV clients
 
 Unfortunately, DeltaV is an insanely complex and inefficient protocol,
 and doesn't fit Subversion's model well at all.  The result is that
-Subversion speaks a "limited portion" of DeltaV, and pays a huge price
-for this complexity:  speed.
+Subversion speaks a "limited portion" of DeltaV, and pays a huge
+performance price for this complexity.
 
 A typical network trace involves dozens of unnecessary turnarounds
 where the client keeps asking for the same information over and over
 again, all for the sake of following DeltaV.  And then once the client
 has "discovered" the information it needs, it often ends up making a
 custom REPORT request anyway.  Most svn operations are at least twice
-as slow over HTTP than over the custom svnserve protocol.
+as slow over HTTP than over the custom svnserve protocol.  
+
+The existing HTTP protocol is also devilishly hard to comprehend or
+extend, since it requires understanding of the DeltaV spec, and
+exactly to what partial-degree we support that standrd.
 
 
-PROPOSAL
-========
+REQUIREMENTS
+============
 
 Write a new HTTP protocol for svn ("HTTP v2").  Map RA requests
 directly to HTTP requests.
 
-  * svn over HTTP should be much faster (eliminate turnarounds)
+  * svn over HTTP should be much faster (eliminate extra turnarounds)
  
   * svn over HTTP should be almost as easy to extend as svnserve.
 
   * svn over HTTP should be comprehensible to devs and users both
     (require no knowledge of DeltaV concepts).
 
-  * svn over HTTP should be designed for optimum cacheability by
-    proxy-servers.
+  * svn over HTTP should be designed for optimum cacheability by web
+    proxies.
+
+  * svn over HTTP should make use of pipelined requests when possible.
 
 
 MILE-HIGH DESIGN
 ================
 
-  * Write new mod_svn module.  Design it to run side-by-side with
-    mod_dav_svn on the same public URI.
+  * Write new mod_svn module.  Design it to (optionally) run
+    side-by-side with mod_dav_svn on the same public URI.
 
-  * Extend libsvn_ra_serf to detect the Apache feature and if present,
-    speak the new protocol.
+  * Extend libsvn_ra_serf to detect the new Apache protocol and if
+    present, use it.
 
   * Client/server compatibility:
 
@@ -76,10 +82,9 @@ MILE-HIGH DESIGN
     get better HTTP speed".
 
 In theory, mod_svn should operate completely standalone (and should be
-tested this way.)  If an admin wants to support older clients, or add
+tested this way.)  If an admin wants to support older clients or add
 webdav functionality (such as autoversioning), then mod_dav_svn can be
-installed "behind" mod_svn.
-
+installed "behind" mod_svn at the same URI.
 
 
 DESIGN
@@ -98,7 +103,7 @@ DESIGN
   and maximum version number of the protocol it understands.
 
   ra_serf always starts an RA session with an OPTIONS request against
-  the repository root URI.  If new protocol isn't present (or an
+  the repository root URI.  If new protocol isn't present (or is an
   unsuitable version), it falls back to DeltaV protocol.
 
   TODO: like svnserve, mod_svn may also want to advertise specific
@@ -175,78 +180,150 @@ DESIGN
   ## TODO:  flesh out examples here
 
 
-4. Commands
+4. Requests
 -----------
 
-In the list of commands, all commands are assumed to be attached as
-?cmd=command to the request URI.  Command parameters are all
-query-encoded (&parm=val), and optional parameters are listed in
-square brackets.  Server response values are assumed to be in response
-bodies.
+The following request types generally correspond to the routines
+svn_ra.h API;  where they diverge, they do so in order to improve
+performance, cacheability, or pipelining potential.
+
+According to proper HTTP specs, GET requests do not contain request
+bodies;  if a request needs a body, we use POST instead.
 
 
-  get-latest-rev
+ * get-latest-rev
 
-    GET /repos[/path]?cmd=get-latest-rev
-
-    response: revnum
-
-  get-dated-rev
-
-    GET /repos[/path]?cmd=get-dated-rev&date=string
+    GET /repos[/path]/|get-latest-rev
 
     response: revnum
+    cacheable:  NO, this value changes all the time.
 
-  change-rev-prop
+    Note: The [/path] portion is tolerated but ignored by the server,
+    since the HEAD revision is a repository-wide attribute.
 
-    POST /repos[/path]?cmd=change-rev-prop&rev=num&name=string
 
-    [body contains binary value.  If body is empty rev-prop is deleted.]
+ * get-dated-rev
 
-  rev-proplist
+    GET /repos[/path]/!get-dated-rev/DATESTRING
 
-    GET /repos[/path]?cmd=rev-proplist&rev=num
+    DATESTRING must be in subversion standard format
+    (e.g. 2008-10-15T12:29:52.526295Z).  See svn_time.h.
 
-    response:  proplist
+    response: revnum
+    cacheable:  SOMETIMES: assuming it's a non-HEAD rev
 
-  rev-prop
+    Note: The [/path] portion is tolerated but ignored by the server,
+    since the revision being fetched is part of repository's general
+    history.
+    
 
-    GET /repos[/path]?cmd=rev-prop&rev=num&name=string
+ * change-rev-prop
 
-    response:  propval (may be binary data)
+    POST /repos[/path]/!change-rev-prop/REV/PROPNAME
 
-  commit
+    REV is a revision number.
+    PROPNAME is the name of a revision property, properly URI-encoded.
+    The body of the request contains eithr a binary value, or is empty
+    (in which case the revprop is deleted.)
 
-    POST /repos[/path]?cmd=commit[&keep-locks=bool]
+    response:  no body response. (response code 200 implies success.)
+    cacheable:  NO, this is a write request.
 
-    [body contains:
-             optional list of revprops (including svn:log)
-             optional list of lockpath:locktoken pairs
-             editor-drive relative to /repos[/path] ]
+    Note: The [/path] portion is tolerated but ignored by the server,
+    since the revprop being changed is a repository-wide feature.
 
-    response:  new revnum OR commit-error-message
 
-  get-file
+ * rev-proplist
 
-    GET /repos/path&cmd=get-file[&rev=num&want-props=bool&want-contents=bool]
+    GET /repos[/path]/!rev-proplist/REV
 
-    If optional params aren't specified, rev defaults to HEAD, and
-    want-props and want-contents default to 'true'.
+    REV is a revision number.
 
-    response: an s-expression containing:
+    response:  a list of property/value pairs (format TBD)
+    cacheable:  NO, because revprops are mutable.
+
+    Note: The [/path] portion is tolerated but ignored by the server,
+    since the revprops are a repository-wide feature.
+
+
+ * rev-prop
+
+    GET /repos[/path]/!rev-prop/REV/PROPNAME
+
+    REV is a revision number.
+    PROPNAME is the name of a revision property, properly URI-encoded.
+
+    response:  a binary property value (200), or 404 if not found.
+    cacheable:  NO, because revprops are mutable.
+
+    Note: The [/path] portion is tolerated but ignored by the server,
+    since the revprop is a repository-wide feature.
+
+
+ * get-file
+
+    GET /repos/path/!get-file/REV/[tp]
+
+    REV is either a revision number or the string 'HEAD'.
+    Final path component is either 't', 'p', 'tp', or non-existent:
+       't' means the file's text is wanted.
+       'p' means the file's properties are wanted.
+       'tp' (or non-existence) means both text and props are wanted.
+
+    response: (structural encoding TBD:)
                  revnum
-                 checksum
-                 props [if requested]
-                 contents [if requested]
+                 checksum of text (if text requested)
+                 proplist (if props requested)
+                 text  (if text requested)
+    cacheable:  YES, but only if a specific revnum was requested
+                 (i.e. not HEAD)
 
-     *** Note that two simpler URI forms work for fetching *raw* file
-         contents as well (no checksum, props, rev):
+    Note: two simpler, alternate URI forms work for fetching *just*
+    the file's contents (no revnum, checksum, or props):
 
             GET /repos/path
             GET /repos/path?rev=number
 
-    ## TODO: need to design cacheability of both the long-form and
-       short-form of these requests.
+    cacheable: YES, but only if a specific revnum is given in the
+               query arg.
+
+
+ * get-dir
+
+    GET /repos/path/!get-dir/REV/[kshctla]/[tp]
+
+    REV is either a revision number or the string 'HEAD'.
+    Penultimate path component is a set of characters indicating which
+      dirent fields to return:
+          k  kind
+          s  size
+          h  has-props?
+          c  created-rev
+          t  time (created-date)
+          l  last-author
+          a  all fields
+    Final path component is either 't', 'p', 'tp', or non-existent:
+       't' means the directory's dirents are wanted.
+       'p' means the directory's properties are wanted.
+       'tp' (or non-existence) means both text and props are wanted.
+
+    response:  (structural encoding TBD):
+               revnum
+               proplist (if props requested)
+               list of dirents: (name, kind, size, has-props,
+                                 created-rev, time, last-author)
+
+    cacheable:  YES, but only if specific revnum is requested.
+
+    examples:
+
+     Get all dirents of path@38:
+         GET /repos/path/!get-dir/38/a
+
+     Get only dirent names and kinds for path@HEAD, no properties:
+         GET /repos/path/!get-dir/HEAD/k/t
+
+
 
 
   .... NOT YET FINISHED ....
