@@ -536,8 +536,8 @@ svn_fs_base__parse_representation_skel(representation_t **rep_p,
       else if (svn_fs_base__matches_atom(checksum_skel->children, "sha1"))
         {
           rep->checksum = svn_checksum_create(svn_checksum_sha1, pool);
-          memcpy(rep->checksum->digest, checksum_skel->children->next->data,
-                 APR_SHA1_DIGESTSIZE);
+          memcpy((unsigned char *)rep->checksum->digest,
+                  checksum_skel->children->next->data, APR_SHA1_DIGESTSIZE);
         }
       else
         return skel_err("checksum type");
