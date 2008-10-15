@@ -235,8 +235,8 @@ typedef svn_error_t *(*svn_txdelta_window_handler_t)
   (svn_txdelta_window_t *window, void *baton);
 
 
-/** This function will generate delta windows that turn @source into
- * @target, and pushing these windows into the @a handler window handler
+/** This function will generate delta windows that turn @a source into
+ * @a target, and pushing these windows into the @a handler window handler
  * callback (passing @a handler_baton to each invocation).
  *
  * If @a checksum is not NULL, then a checksum (of kind @a checksum_kind)
