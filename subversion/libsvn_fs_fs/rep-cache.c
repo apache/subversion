@@ -36,7 +36,7 @@ const char *upgrade_sql[] = { NULL,
   "                        offset integer not null,          "
   "                        size integer not null,            "
   "                        expanded_size integer not null,   "
-  "                        reuse_count not null);            "
+  "                        reuse_count integer not null);    "
   APR_EOL_STR
   "create unique index i_hash on rep_cache(hash);            "
   APR_EOL_STR
@@ -93,7 +93,7 @@ svn_fs_fs__get_rep_reference(representation_t **rep,
 
   SVN_ERR(svn_sqlite__prepare(&stmt, ffd->rep_cache,
                 "select revision, offset, size, expanded_size from rep_cache "
-                "where hash = ?", pool));
+                "where hash = :1", pool));
   SVN_ERR(svn_sqlite__bind_text(stmt, 1, svn_checksum_to_cstring(checksum,
                                                                  pool)));
 
@@ -156,7 +156,7 @@ svn_fs_fs__set_rep_reference(svn_fs_t *fs,
   SVN_ERR(svn_sqlite__prepare(&stmt, ffd->rep_cache,
                 "insert into rep_cache (hash, revision, offset, size, "
                 "expanded_size, reuse_count) "
-                "values (?, ?, ?, ?, ?, 0);", pool));
+                "values (:1, :2, :3, :4, :5, 0);", pool));
   SVN_ERR(svn_sqlite__bind_text(stmt, 1, svn_checksum_to_cstring(rep->checksum,
                                                                  pool)));
   SVN_ERR(svn_sqlite__bind_int64(stmt, 2, rep->revision));
@@ -179,7 +179,7 @@ svn_fs_fs__inc_rep_reuse(svn_fs_t *fs,
 
   /* Fetch the current count. */
   SVN_ERR(svn_sqlite__prepare(&stmt, ffd->rep_cache,
-                "select reuse_count from rep_cache where hash = ?", pool));
+                "select reuse_count from rep_cache where hash = :1", pool));
   SVN_ERR(svn_sqlite__bind_text(stmt, 1, svn_checksum_to_cstring(rep->checksum,
                                                                  pool)));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
@@ -195,8 +195,8 @@ svn_fs_fs__inc_rep_reuse(svn_fs_t *fs,
 
   /* Update the reuse_count. */
   SVN_ERR(svn_sqlite__prepare(&stmt, ffd->rep_cache,
-                          "update rep_cache set reuse_count = ? where hash = ?",
-                          pool));
+                       "update rep_cache set reuse_count = :1 where hash = :2",
+                       pool));
   SVN_ERR(svn_sqlite__bind_int64(stmt, 1, rep->reuse_count));
   SVN_ERR(svn_sqlite__bind_text(stmt, 2, svn_checksum_to_cstring(rep->checksum,
                                                                  pool)));
