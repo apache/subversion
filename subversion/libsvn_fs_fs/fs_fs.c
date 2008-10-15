@@ -6379,11 +6379,16 @@ svn_fs_fs__pack(const char *fs_path, apr_pool_t *pool)
   SVN_ERR(read_format(&format, &max_files_per_dir,
                       svn_path_join(fs_path, PATH_FORMAT, pool),
                       pool));
-  SVN_ERR(check_format(format));
 
   /* If we aren't using sharding, we can't do any packing, so quit. */
   if (!max_files_per_dir)
     return SVN_NO_ERROR;
+
+  /* If the repository isn't a new enough format, we don't support packing.
+     Return a friendly error to that effect. */
+  if (format < SVN_FS_FS__MIN_PACKED_FORMAT)
+    return svn_error_create(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
+      _("FS format too old to pack, please upgrade."));
 
   return SVN_NO_ERROR;
 }
