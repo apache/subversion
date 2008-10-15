@@ -1119,9 +1119,8 @@ upgrade_body(void *baton, apr_pool_t *pool)
               (svn_path_join(fs->path, PATH_TXN_PROTOS_DIR, pool), pool));
     }
 
-  /* Bump the format file.  We pass 0 for the max_files_per_dir here
-     so we don't have to fuss with sharding directories ourselves. */
-  return write_format(format_path, SVN_FS_FS__FORMAT_NUMBER, 0,
+  /* Bump the format file. */
+  return write_format(format_path, SVN_FS_FS__FORMAT_NUMBER, max_files_per_dir,
                       TRUE, pool);
 }
 
