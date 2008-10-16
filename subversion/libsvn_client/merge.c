@@ -6651,7 +6651,7 @@ svn_client_merge3(const char *source1,
              the merge_cousins_and_supplement_mergeinfo() routine). */
           svn_pool_destroy(sesspool);
 
-          return svn_wc_adm_close(adm_access);
+          return svn_wc_adm_close2(adm_access, pool);
         }
     }
   else
@@ -6680,7 +6680,7 @@ svn_client_merge3(const char *source1,
   if (err)
     return err;
 
-  return svn_wc_adm_close(adm_access);
+  return svn_wc_adm_close2(adm_access, pool);
 }
 
 svn_error_t *
@@ -7209,7 +7209,7 @@ svn_client_merge_reintegrate(const char *source,
     return err;
 
   /* Shutdown the administrative session. */
-  return svn_wc_adm_close(adm_access);
+  return svn_wc_adm_close2(adm_access, pool);
 }
 
 
@@ -7294,7 +7294,7 @@ svn_client_merge_peg3(const char *source,
     return err;
 
   /* Shutdown the administrative session. */
-  return svn_wc_adm_close(adm_access);
+  return svn_wc_adm_close2(adm_access, pool);
 }
 
 

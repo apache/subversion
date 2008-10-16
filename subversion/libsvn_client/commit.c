@@ -1737,7 +1737,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
      clean-up. */
   if (! bump_err)
     {
-      unlock_err = svn_wc_adm_close(base_dir_access);
+      unlock_err = svn_wc_adm_close2(base_dir_access, pool);
 
       if (! unlock_err)
         cleanup_err = remove_tmpfiles(tempfiles, pool);

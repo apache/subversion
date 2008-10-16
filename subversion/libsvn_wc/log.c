@@ -1415,7 +1415,7 @@ log_do_committed(struct log_runner *loggy,
       }
 
     if (unassociated)
-      SVN_ERR(svn_wc_adm_close(paccess));
+      SVN_ERR(svn_wc_adm_close2(paccess, pool));
   }
 
   return SVN_NO_ERROR;
@@ -2547,5 +2547,5 @@ svn_wc_cleanup2(const char *path,
   if (svn_wc__adm_path_exists(path, 0, pool, NULL))
     SVN_ERR(svn_wc__adm_cleanup_tmp_area(adm_access, pool));
 
-  return svn_wc_adm_close(adm_access);
+  return svn_wc_adm_close2(adm_access, pool);
 }
