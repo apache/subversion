@@ -163,6 +163,8 @@ class build(_build):
         # List the libraries in the order they should be loaded
         libraries = [ 
           "svn_subr-1",
+          "svn_auth_kwallet-1",
+          "svn_auth_gnome_keyring-1",
           "svn_diff-1",
           "svn_delta-1",
           "svn_fs-1",

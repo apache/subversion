@@ -41,8 +41,8 @@ extern "C" {
    back-end's format.  */
 #define SVN_FS_BASE__FORMAT_NUMBER                4
 
-/* Minimum format number that supports explicit metadata */
-#define SVN_FS_BASE__MIN_METADATA_FORMAT          4
+/* Minimum format number that supports the 'miscellaneous' table */
+#define SVN_FS_BASE__MIN_MISCELLANY_FORMAT        4
 
 /* Minimum format number that supports forward deltas */
 #define SVN_FS_BASE__MIN_FORWARD_DELTAS_FORMAT    4
@@ -65,10 +65,10 @@ svn_fs_base__test_required_feature_format(svn_fs_t *fs,
 
 
 
-/*** Metadata keys. ***/
+/*** Miscellany keys. ***/
 
 /* Revision at which the repo started using forward deltas. */
-#define SVN_FS_BASE__METADATA_FORWARD_DELTA_UPGRADE  "forward-delta-rev"
+#define SVN_FS_BASE__MISCELLANEOUS_FORWARD_DELTA_UPGRADE  "forward-delta-rev"
 
 
 
@@ -92,7 +92,7 @@ typedef struct
   DB *locks;
   DB *lock_tokens;
   DB *node_origins;
-  DB *metadata;
+  DB *miscellaneous;
 
   /* A boolean for tracking when we have a live Berkeley DB
      transaction trail alive. */

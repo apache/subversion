@@ -609,7 +609,7 @@ svn_wc_get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
 
   /* If we opened a temporary admin access baton, close it. */
   if (parent_adm_access_is_temporary)
-    SVN_ERR(svn_wc_adm_close(parent_adm_access));
+    SVN_ERR(svn_wc_adm_close2(parent_adm_access, pool));
 
   return SVN_NO_ERROR;
 }

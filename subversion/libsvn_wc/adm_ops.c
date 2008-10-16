@@ -338,7 +338,7 @@ process_committed_leaf(int log_number,
   apr_uint64_t modify_flags = 0;
   svn_stringbuf_t *logtags = svn_stringbuf_create("", pool);
 
-  SVN_ERR(svn_wc__adm_write_check(adm_access));
+  SVN_ERR(svn_wc__adm_write_check(adm_access, pool));
 
   /* Set PATH's working revision to NEW_REVNUM; if REV_DATE and
      REV_AUTHOR are both non-NULL, then set the 'committed-rev',
@@ -526,15 +526,20 @@ process_committed_internal(int *log_number,
           if (current_entry->kind == svn_node_dir)
             {
               svn_wc_adm_access_t *child_access;
+              int inner_log = 0;
 
               SVN_ERR(svn_wc_adm_retrieve(&child_access, adm_access,
                                           this_path, subpool));
-              SVN_ERR(svn_wc_process_committed4
-                      (this_path, child_access,
-                       TRUE /* recurse */,
-                       new_revnum, rev_date, rev_author, NULL,
-                       FALSE /* remove_lock */,
-                       remove_changelist, NULL, subpool));
+
+              SVN_ERR(process_committed_internal(&inner_log,
+                                                 this_path, child_access,
+                                                 TRUE /* recurse */,
+                                                 new_revnum, rev_date,
+                                                 rev_author,
+                                                 NULL, FALSE /* remove_lock */,
+                                                 remove_changelist, NULL,
+                                                 subpool));
+              SVN_ERR(svn_wc__run_log(child_access, NULL, pool));
             }
           else
             {

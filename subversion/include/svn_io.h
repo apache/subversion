@@ -455,7 +455,7 @@ svn_io_set_file_affected_time(apr_time_t apr_time,
 /** Sleep to ensure that any files modified after we exit have a different
  * timestamp than the one we recorded. If @a path is not NULL, check if we
  * can determine how long we should wait for a new timestamp on the filesystem
- * containing @path, an existing file or directory. If @path is NULL or we 
+ * containing @a path, an existing file or directory. If @a path is NULL or we
  * can't determine the timestamp resolution, sleep until the next second.
  *
  * Use @a pool for any necessary allocations. @a pool can be null if @a path
