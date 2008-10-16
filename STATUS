@@ -19,7 +19,7 @@ Candidate changes for 1.5.4:
    URL-encode paths when appending them to URLs.
    Justification: silly bug, easy fix; similar to previously-ported fixes.
    Votes:
-     +1: kfogel (r33641 only), danielsh
+     +1: kfogel (r33641 only), danielsh, kameshj
 
  * r32968, r32975
    Fix bug which occurs when a merge adds explicit mergeinfo to a subtree that
