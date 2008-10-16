@@ -168,6 +168,17 @@ path_lock(svn_fs_t *fs, apr_pool_t *pool)
 }
 
 static const char *
+path_rev_packed(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  assert(ffd->max_files_per_dir);
+  return svn_path_join_many(pool, fs->path, PATH_REVS_DIR,
+                            apr_psprintf(pool, "%ld.pack",
+                                         rev / ffd->max_files_per_dir), NULL);
+}
+
+static const char *
 path_rev_shard(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
@@ -2064,23 +2075,63 @@ get_fs_id_at_offset(svn_fs_id_t **id_p,
   return SVN_NO_ERROR;
 }
 
+/* Open the correct revision file for REV.  If the filesystem FS has
+   been packed, *FILE will be set to the packed file and *PACKED will
+   be set to TRUE.  Otherwise, set *FILE to the revision file for REV
+   and *PACKED to FALSE.  Use POOL for allocations. */
+static svn_error_t *
+open_pack_or_rev_file(apr_file_t **file,
+                      svn_boolean_t *packed,
+                      svn_fs_t *fs,
+                      svn_revnum_t rev,
+                      apr_pool_t *pool)
+{
+  svn_error_t *err;
+
+  *packed = FALSE;
+  err = svn_io_file_open(file, svn_fs_fs__path_rev(fs, rev, pool),
+                         APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool);
+  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+    {
+      svn_error_clear(err);
+
+      /* Try and open the packed revision. */
+      err = svn_io_file_open(file, path_rev_shard(fs, rev, pool),
+                             APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool);
+      if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+        {
+          svn_error_clear(err);
+          return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                                   _("No such revision %ld"), rev);
+        }
+      *packed = TRUE;
+      err = SVN_NO_ERROR;
+    }
+
+  return err;
+}
 
 /* Given an open revision file REV_FILE, locate the trailer that
    specifies the offset to the root node-id and to the changed path
    information.  Store the root node offset in *ROOT_OFFSET and the
    changed path offset in *CHANGES_OFFSET.  If either of these
-   pointers is NULL, do nothing with it. Allocate temporary variables
-   from POOL. */
+   pointers is NULL, do nothing with it.  If PACKED is true, REV_FILE
+   should be a packed shard file.  Allocate temporary variables from POOL. */
 static svn_error_t *
 get_root_changes_offset(apr_off_t *root_offset,
                         apr_off_t *changes_offset,
                         apr_file_t *rev_file,
+                        svn_boolean_t packed,
                         apr_pool_t *pool)
 {
   apr_off_t offset;
   char buf[64];
   int i, num_bytes;
   apr_size_t len;
+
+  /* XXX: Just so I don't forget... */
+  if (packed)
+    abort();
 
   /* We will assume that the last line containing the two offsets
      will never be longer than 64 characters. */
@@ -2153,6 +2204,7 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
   svn_fs_id_t *root_id;
   svn_error_t *err;
   svn_boolean_t is_cached;
+  svn_boolean_t packed;
 
   SVN_ERR(ensure_revision_exists(fs, rev, pool));
 
@@ -2161,19 +2213,9 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
   if (is_cached)
     return SVN_NO_ERROR;
 
-  err = svn_io_file_open(&revision_file, svn_fs_fs__path_rev(fs, rev, pool),
-                         APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool);
-  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
-    {
-      svn_error_clear(err);
-      return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-                               _("No such revision %ld"), rev);
-    }
-  else if (err)
-    return err;
-
-
-  SVN_ERR(get_root_changes_offset(&root_offset, NULL, revision_file, pool));
+  SVN_ERR(open_pack_or_rev_file(&revision_file, &packed, fs, rev, pool));
+  SVN_ERR(get_root_changes_offset(&root_offset, NULL, revision_file, packed,
+                                  pool));
 
   SVN_ERR(get_fs_id_at_offset(&root_id, revision_file, root_offset, pool));
 
@@ -3666,13 +3708,13 @@ svn_fs_fs__paths_changed(apr_hash_t **changed_paths_p,
   apr_off_t changes_offset;
   apr_hash_t *changed_paths;
   apr_file_t *revision_file;
+  svn_boolean_t packed;
 
   SVN_ERR(ensure_revision_exists(fs, rev, pool));
 
-  SVN_ERR(svn_io_file_open(&revision_file, svn_fs_fs__path_rev(fs, rev, pool),
-                           APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
+  SVN_ERR(open_pack_or_rev_file(&revision_file, &packed, fs, rev, pool));
 
-  SVN_ERR(get_root_changes_offset(NULL, &changes_offset, revision_file,
+  SVN_ERR(get_root_changes_offset(NULL, &changes_offset, revision_file, packed,
                                   pool));
 
   SVN_ERR(svn_io_file_seek(revision_file, APR_SET, &changes_offset, pool));
@@ -5850,17 +5892,15 @@ recover_body(void *baton, apr_pool_t *pool)
         {
           apr_file_t *rev_file;
           apr_off_t root_offset;
+          svn_boolean_t packed;
 
           svn_pool_clear(iterpool);
 
           if (b->cancel_func)
             SVN_ERR(b->cancel_func(b->cancel_baton));
 
-          SVN_ERR(svn_io_file_open(&rev_file,
-                                   svn_fs_fs__path_rev(fs, rev, iterpool),
-                                   APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
-                                   iterpool));
-          SVN_ERR(get_root_changes_offset(&root_offset, NULL, rev_file,
+          SVN_ERR(open_pack_or_rev_file(&rev_file, &packed, fs, rev, iterpool));
+          SVN_ERR(get_root_changes_offset(&root_offset, NULL, rev_file, packed,
                                           iterpool));
           SVN_ERR(recover_find_max_ids(fs, rev, rev_file, root_offset,
                                        max_node_id, max_copy_id, iterpool));
