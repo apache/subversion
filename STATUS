@@ -58,7 +58,7 @@ Candidate changes for 1.5.4:
    Votes:
      +1: pburba
 
- * r33693
+ * r33693, r33704
    Fix merge bug introduced in the backport of the r29969, r32463, r33013,
    r33016, r33022, r33112 group in 1.5.3.
    Notes:
