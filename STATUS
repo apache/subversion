@@ -28,7 +28,9 @@ Candidate changes for 1.5.4:
    was not getting mergeinfo set that described the merge itself -- See 
    http://subversion.tigris.org/servlets/ReadMsg?listName=dev&msgNo=142460.
    Notes:
-     r32968 is a new test for this problem and r32975 is the fix.
+     r32968 is a new test for this problem and r32975 is the fix.  When merging
+     these changes there are some minor conflicts...Minor but sufficiently
+     annoying to disuade review, hence the backport branch 1.5.x-r32968.
    Justification:
      Incorrect mergeinfo results when this bug is encountered and it has
      already been encountered in our own repository as described in the
