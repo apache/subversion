@@ -2023,6 +2023,8 @@ svn_fs_print_modules(svn_stringbuf_t *output,
  */
 svn_error_t *
 svn_fs_pack(const char *db_path,
+            svn_cancel_func_t cancel_func,
+            void *cancel_baton,
             apr_pool_t *pool);
 
 
