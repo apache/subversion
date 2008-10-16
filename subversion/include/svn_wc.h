@@ -404,7 +404,16 @@ svn_wc_adm_probe_try(svn_wc_adm_access_t **adm_access,
  * subdirectories of @a adm_access.  Any physical locks will be removed from
  * the working copy.  Lock removal is unconditional, there is no check to
  * determine if cleanup is required.
+ *
+ * Any temporary allocations are performed using @a scratch_pool.
+ *
+ * @since New in 1.6
  */
+svn_error_t *svn_wc_adm_close2(svn_wc_adm_access_t *adm_access,
+                               apr_pool_t *scratch_pool);
+
+/* @deprecated Provided for backward compabibility with the 1.5 API. */
+SVN_DEPRECATED
 svn_error_t *svn_wc_adm_close(svn_wc_adm_access_t *adm_access);
 
 /** Return the path used to open the access baton @a adm_access */
@@ -3420,7 +3429,7 @@ svn_wc_committed_queue_create(apr_pool_t *pool);
  * versioned object at or under @a path.  This is usually done for
  * copied trees.
  *
- * @note the @recurse parameter should be used with extreme care since
+ * @note the @a recurse parameter should be used with extreme care since
  * it will bump ALL nodes under the directory, regardless of their
  * actual inclusion in the new revision.
  *

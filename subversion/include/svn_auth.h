@@ -767,7 +767,7 @@ svn_auth_get_simple_provider(svn_auth_provider_object_t **provider,
                              apr_pool_t *pool);
 
 
-#if (defined(WIN32) && !defined(__MINGW32__)) || defined(DOXYGEN) || defined(CTYPESGEN)
+#if (defined(WIN32) && !defined(__MINGW32__)) || defined(DOXYGEN) || defined(CTYPESGEN) || defined(SWIG)
 /**
  * Create and return @a *provider, an authentication provider of type @c
  * svn_auth_cred_simple_t that gets/sets information from the user's
@@ -790,9 +790,9 @@ svn_auth_get_simple_provider(svn_auth_provider_object_t **provider,
 void
 svn_auth_get_windows_simple_provider(svn_auth_provider_object_t **provider,
                                      apr_pool_t *pool);
-#endif /* WIN32 && !__MINGW32__ || DOXYGEN || CTYPESGEN */
+#endif /* WIN32 && !__MINGW32__ || DOXYGEN || CTYPESGEN || SWIG */
 
-#if defined(DARWIN) || defined(DOXYGEN) || defined(CTYPESGEN)
+#if defined(DARWIN) || defined(DOXYGEN) || defined(CTYPESGEN) || defined(SWIG)
 /**
  * Create and return @a *provider, an authentication provider of type @c
  * svn_auth_cred_simple_t that gets/sets information from the user's
@@ -825,9 +825,9 @@ void
 svn_auth_get_keychain_ssl_client_cert_pw_provider
   (svn_auth_provider_object_t **provider,
    apr_pool_t *pool);
-#endif /* DARWIN || DOXYGEN || CTYPESGEN */
+#endif /* DARWIN || DOXYGEN || CTYPESGEN || SWIG */
 
-#if (!defined(DARWIN) && !defined(WIN32)) || defined(DOXYGEN)
+#if (!defined(DARWIN) && !defined(WIN32)) || defined(DOXYGEN) || defined(CTYPESGEN) || defined(SWIG)
 /**
  * Get libsvn_auth_gnome_keyring version information.
  *
@@ -919,7 +919,7 @@ void
 svn_auth_get_kwallet_ssl_client_cert_pw_provider
   (svn_auth_provider_object_t **provider,
    apr_pool_t *pool);
-#endif /* (!DARWIN && !WIN32) || DOXYGEN */
+#endif /* (!DARWIN && !WIN32) || DOXYGEN || CTYPESGEN || SWIG */
 
 
 /** Create and return @a *provider, an authentication provider of type @c
@@ -953,7 +953,7 @@ svn_auth_get_ssl_server_trust_file_provider
    apr_pool_t *pool);
 
 
-#if (defined(WIN32) && !defined(__MINGW32__)) || defined(DOXYGEN) || defined(CTYPESGEN)
+#if (defined(WIN32) && !defined(__MINGW32__)) || defined(DOXYGEN) || defined(CTYPESGEN) || defined(SWIG)
 /**
  * Create and return @a *provider, an authentication provider of type @c
  * svn_auth_cred_ssl_server_trust_t, allocated in @a pool.
@@ -970,7 +970,7 @@ void
 svn_auth_get_windows_ssl_server_trust_provider
   (svn_auth_provider_object_t **provider,
    apr_pool_t *pool);
-#endif /* WIN32 && !__MINGW32__ || DOXYGEN || CTYPESGEN */
+#endif /* WIN32 && !__MINGW32__ || DOXYGEN || CTYPESGEN || SWIG */
 
 /** Create and return @a *provider, an authentication provider of type @c
  * svn_auth_cred_ssl_client_cert_t, allocated in @a pool.

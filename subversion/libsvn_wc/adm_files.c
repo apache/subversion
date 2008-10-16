@@ -220,7 +220,7 @@ svn_wc__adm_path_exists(const char *path,
  * be empty after this no matter what.
  */
 svn_error_t *
-svn_wc__make_adm_thing(svn_wc_adm_access_t *adm_access,
+svn_wc__make_adm_thing(const char *path,
                        const char *thing,
                        svn_node_kind_t type,
                        apr_fileperms_t perms,
@@ -229,16 +229,13 @@ svn_wc__make_adm_thing(svn_wc_adm_access_t *adm_access,
 {
   svn_error_t *err = SVN_NO_ERROR;
   apr_file_t *f = NULL;
-  const char *path;
+  const char *fullpath;
 
-  SVN_ERR(svn_wc__adm_write_check(adm_access));
-
-  path = extend_with_adm_name(svn_wc_adm_access_path(adm_access),
-                              NULL, tmp, pool, thing, NULL);
+  fullpath = extend_with_adm_name(path, NULL, tmp, pool, thing, NULL);
 
   if (type == svn_node_file)
     {
-      SVN_ERR(svn_io_file_open(&f, path,
+      SVN_ERR(svn_io_file_open(&f, fullpath,
                                (APR_WRITE | APR_CREATE | APR_EXCL),
                                perms,
                                pool));
@@ -248,7 +245,7 @@ svn_wc__make_adm_thing(svn_wc_adm_access_t *adm_access,
     }
   else if (type == svn_node_dir)
     {
-      SVN_ERR(svn_io_dir_make(path, perms, pool));
+      SVN_ERR(svn_io_dir_make(fullpath, perms, pool));
     }
   else   /* unknown type argument, wrongness */
     {
@@ -270,7 +267,7 @@ svn_wc__make_killme(svn_wc_adm_access_t *adm_access,
 {
   const char *path;
 
-  SVN_ERR(svn_wc__adm_write_check(adm_access));
+  SVN_ERR(svn_wc__adm_write_check(adm_access, pool));
 
   path = extend_with_adm_name(svn_wc_adm_access_path(adm_access),
                               NULL, FALSE, pool, SVN_WC__ADM_KILLME, NULL);
@@ -863,22 +860,27 @@ init_adm_tmp_area(svn_wc_adm_access_t *adm_access,
 {
   /* Default perms */
   apr_fileperms_t perms = APR_OS_DEFAULT;
+  const char *path;
+
+  SVN_ERR(svn_wc__adm_write_check(adm_access, pool));
+
+  path = svn_wc_adm_access_path(adm_access);
 
   /* SVN_WC__ADM_TMP */
-  SVN_ERR(svn_wc__make_adm_thing(adm_access, SVN_WC__ADM_TMP,
-                                 svn_node_dir, perms, 0, pool));
+  SVN_ERR(svn_wc__make_adm_thing(path, SVN_WC__ADM_TMP,
+                                 svn_node_dir, perms, FALSE, pool));
 
   /* SVN_WC__ADM_TMP/SVN_WC__ADM_TEXT_BASE */
-  SVN_ERR(svn_wc__make_adm_thing(adm_access, SVN_WC__ADM_TEXT_BASE,
-                                 svn_node_dir, perms, 1, pool));
+  SVN_ERR(svn_wc__make_adm_thing(path, SVN_WC__ADM_TEXT_BASE,
+                                 svn_node_dir, perms, TRUE, pool));
 
   /* SVN_WC__ADM_TMP/SVN_WC__ADM_PROP_BASE */
-  SVN_ERR(svn_wc__make_adm_thing(adm_access, SVN_WC__ADM_PROP_BASE,
-                                 svn_node_dir, perms, 1, pool));
+  SVN_ERR(svn_wc__make_adm_thing(path, SVN_WC__ADM_PROP_BASE,
+                                 svn_node_dir, perms, TRUE, pool));
 
   /* SVN_WC__ADM_TMP/SVN_WC__ADM_PROPS */
-  return svn_wc__make_adm_thing(adm_access, SVN_WC__ADM_PROPS,
-                                svn_node_dir, perms, 1, pool);
+  return svn_wc__make_adm_thing(path, SVN_WC__ADM_PROPS,
+                                svn_node_dir, perms, TRUE, pool);
 }
 
 
@@ -911,16 +913,16 @@ init_adm(const char *path,
   /** Make subdirectories. ***/
 
   /* SVN_WC__ADM_TEXT_BASE */
-  SVN_ERR(svn_wc__make_adm_thing(adm_access, SVN_WC__ADM_TEXT_BASE,
-                                 svn_node_dir, perms, 0, pool));
+  SVN_ERR(svn_wc__make_adm_thing(path, SVN_WC__ADM_TEXT_BASE,
+                                 svn_node_dir, perms, FALSE, pool));
 
   /* SVN_WC__ADM_PROP_BASE */
-  SVN_ERR(svn_wc__make_adm_thing(adm_access, SVN_WC__ADM_PROP_BASE,
-                                 svn_node_dir, perms, 0, pool));
+  SVN_ERR(svn_wc__make_adm_thing(path, SVN_WC__ADM_PROP_BASE,
+                                 svn_node_dir, perms, FALSE, pool));
 
   /* SVN_WC__ADM_PROPS */
-  SVN_ERR(svn_wc__make_adm_thing(adm_access, SVN_WC__ADM_PROPS,
-                                 svn_node_dir, perms, 0, pool));
+  SVN_ERR(svn_wc__make_adm_thing(path, SVN_WC__ADM_PROPS,
+                                 svn_node_dir, perms, FALSE, pool));
 
   /** Init the tmp area. ***/
   SVN_ERR(init_adm_tmp_area(adm_access, pool));
@@ -988,36 +990,38 @@ svn_wc_ensure_adm(const char *path,
 
 svn_error_t *
 svn_wc__adm_destroy(svn_wc_adm_access_t *adm_access,
-                    apr_pool_t *pool)
+                    apr_pool_t *scratch_pool)
 {
   const char *path;
 
-  SVN_ERR(svn_wc__adm_write_check(adm_access));
+  SVN_ERR(svn_wc__adm_write_check(adm_access, scratch_pool));
 
   /* Well, the coast is clear for blowing away the administrative
      directory, which also removes the lock file */
   path = extend_with_adm_name(svn_wc_adm_access_path(adm_access),
-                              NULL, FALSE, pool, NULL);
-  SVN_ERR(svn_io_remove_dir2(path, FALSE, NULL, NULL, pool));
+                              NULL, FALSE, scratch_pool, NULL);
+  SVN_ERR(svn_io_remove_dir2(path, FALSE, NULL, NULL, scratch_pool));
   return svn_wc_adm_close(adm_access);
 }
 
 
 svn_error_t *
 svn_wc__adm_cleanup_tmp_area(svn_wc_adm_access_t *adm_access,
-                             apr_pool_t *pool)
+                             apr_pool_t *scratch_pool)
 {
   const char *tmp_path;
 
-  SVN_ERR(svn_wc__adm_write_check(adm_access));
+  SVN_ERR(svn_wc__adm_write_check(adm_access, scratch_pool));
 
   /* Get the path to the tmp area, and blow it away. */
   tmp_path = extend_with_adm_name(svn_wc_adm_access_path(adm_access),
-                                  NULL, 0, pool, SVN_WC__ADM_TMP, NULL);
+                                  NULL, 0, scratch_pool, SVN_WC__ADM_TMP,
+                                  NULL);
 
-  SVN_ERR(svn_io_remove_dir2(tmp_path, TRUE, NULL, NULL, pool));
+  SVN_ERR(svn_io_remove_dir2(tmp_path, TRUE, NULL, NULL, scratch_pool));
+
   /* Now, rebuild the tmp area. */
-  return init_adm_tmp_area(adm_access, pool);
+  return init_adm_tmp_area(adm_access, scratch_pool);
 }
 
 

@@ -1673,6 +1673,15 @@ deltify_mutable(svn_fs_t *fs,
   apr_hash_t *entries = NULL;
   struct txn_deltify_args td_args;
   base_fs_data_t *bfd = fs->fsap_data;
+  const char *delta_rev;
+  svn_revnum_t delta_flag_rev;
+
+  /* Make sure that we can even deltify this revision.  We don't want to
+     deltify revisions prior to the forward delta change. */
+  SVN_ERR(svn_fs_base__miscellaneous_get
+            (&delta_rev, fs, SVN_FS_BASE__MISCELLANEOUS_FORWARD_DELTA_UPGRADE,
+             pool));
+  delta_flag_rev = atol(delta_rev);
 
   /* Get the ID for PATH under ROOT if it wasn't provided. */
   if (! node_id)
@@ -1773,7 +1782,8 @@ deltify_mutable(svn_fs_t *fs,
 
     subpools[0] = svn_pool_create(pool);
     subpools[1] = svn_pool_create(pool);
-    if (bfd->format >= SVN_FS_BASE__MIN_FORWARD_DELTAS_FORMAT)
+    if (bfd->format >= SVN_FS_BASE__MIN_FORWARD_DELTAS_FORMAT
+          && delta_flag_rev <= root->rev)
       {
         /**** FORWARD DELTA STORAGE ****/
 
