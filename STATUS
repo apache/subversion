@@ -60,7 +60,9 @@ Candidate changes for 1.5.4:
    Fix merge bug introduced in the backport of the r29969, r32463, r33013,
    r33016, r33022, r33112 group in 1.5.3.
    Notes:
-     There is a minor whitespace conflict in merge.c.
+     There is a minor whitespace conflict in merge.c.  The new merge test
+     added for this test will not pass unless the r32968 and r32975 is merged
+     first.
    Justification:
      This bug is a regression in 1.5.3, breaks mergeinfo aware merges when
      ecountered, and has already been seen a couple times in our own repos,
