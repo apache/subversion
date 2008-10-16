@@ -1027,7 +1027,7 @@ svn_io_get_dirents(apr_hash_t **dirents,
                    apr_pool_t *pool);
 
 
-/** Callback function type for svn_io_dir_walk() */
+/** Callback function type for svn_io_dir_walk2() */
 typedef svn_error_t * (*svn_io_walk_func_t)(void *baton,
                                             const char *path,
                                             const apr_finfo_t *finfo,
