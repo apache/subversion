@@ -6376,6 +6376,27 @@ pack_shard(const char *revs_dir,
            apr_int64_t shard,
            apr_pool_t *pool)
 {
+  svn_node_kind_t pack_kind;
+  svn_node_kind_t shard_kind;
+  const char *pack_file_path = svn_path_join(revs_dir,
+                                             apr_psprintf(pool, "%ld.pack",
+                                                          shard), pool);
+  const char *shard_path = svn_path_join(revs_dir,
+                                         apr_psprintf(pool, "%ld", shard),
+                                         pool);
+
+  /* Do some consistency checking. */
+  SVN_ERR(svn_io_check_path(pack_file_path, &pack_kind, pool));
+  SVN_ERR(svn_io_check_path(shard_path, &shard_kind, pool));
+  if (pack_kind == svn_node_file)
+    {
+      if (shard_kind == svn_node_dir)
+        SVN_ERR(svn_io_remove_file(pack_file_path, pool));
+      else
+        /* We have already packed this shard, so just leave. */
+        return SVN_NO_ERROR;
+    }
+
   return SVN_NO_ERROR;
 }
 
