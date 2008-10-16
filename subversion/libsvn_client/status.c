@@ -384,7 +384,7 @@ svn_client_status4(svn_revnum_t *result_rev,
   /* Close the access baton here, as svn_client__do_external_status()
      calls back into this function and thus will be re-opening the
      working copy. */
-  SVN_ERR(svn_wc_adm_close(anchor_access));
+  SVN_ERR(svn_wc_adm_close2(anchor_access, pool));
 
   /* If there are svn:externals set, we don't want those to show up as
      unversioned or unrecognized, so patch up the hash.  If caller wants

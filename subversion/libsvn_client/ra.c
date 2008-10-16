@@ -607,7 +607,7 @@ svn_client__repos_locations(const char **start_url,
                                      FALSE, 0, ctx->cancel_func,
                                      ctx->cancel_baton, pool));
       SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
-      SVN_ERR(svn_wc_adm_close(adm_access));
+      SVN_ERR(svn_wc_adm_close2(adm_access, pool));
       if (entry->copyfrom_url && revision->kind == svn_opt_revision_working)
         {
           url = entry->copyfrom_url;

@@ -28,6 +28,9 @@ struct tree_conflict_phrases
   const char *update_deleted;
   const char *update_edited;
   const char *update_added;
+  const char *switch_deleted;
+  const char *switch_edited;
+  const char *switch_added;
   const char *merge_deleted;
   const char *merge_edited;
   const char *merge_added;
@@ -50,53 +53,71 @@ new_tree_conflict_phrases(apr_pool_t *pool)
   struct tree_conflict_phrases *phrases =
     apr_pcalloc(pool, sizeof(struct tree_conflict_phrases));
 
-  phrases->update_deleted = _("The update attempted to delete '%s'\n"
-                              "(possibly as part of a rename operation).\n");
+  phrases->update_deleted = _(
+    "  The update attempted to delete '%s'\n"
+    "  (possibly as part of a rename operation).\n");
 
-  phrases->update_edited = _("The update attempted to edit '%s'.\n");
+  phrases->update_edited = _(
+    "  The update attempted to edit '%s'.\n");
 
-  phrases->update_added = _("The update attempted to add '%s'.\n");
+  phrases->update_added = _(
+    "  The update attempted to add '%s'.\n");
 
-  phrases->merge_deleted = _("The merge attempted to delete '%s'\n"
-                             "(possibly as part of a rename operation).\n");
+  phrases->switch_deleted = _(
+    "  The switch attempted to delete '%s'\n"
+    "  (possibly as part of a rename operation).\n");
 
-  phrases->merge_edited = _("The merge attempted to edit '%s'.\n");
+  phrases->switch_edited = _(
+    "  The switch attempted to edit '%s'.\n");
 
-  phrases->merge_added = _("The merge attempted to add '%s'.\n");
+  phrases->switch_added = _(
+    "  The switch attempted to add '%s'.\n");
 
-  phrases->we_deleted = _("You have deleted '%s' locally.\n"
-                          "Maybe you renamed it?\n");
+  phrases->merge_deleted = _(
+    "  The merge attempted to delete '%s'\n"
+    "  (possibly as part of a rename operation).\n");
 
-  phrases->we_added = _("You have added '%s' locally.\n");
+  phrases->merge_edited = _(
+    "  The merge attempted to edit '%s'.\n");
 
-  phrases->we_edited_update = _("You have edited '%s' locally.\n");
+  phrases->merge_added = _(
+    "  The merge attempted to add '%s'.\n");
 
-  phrases->missing_update = _("'%s' does not exist locally.\n"
-                              "Maybe you renamed it?\n");
+  phrases->we_deleted = _(
+    "  You have deleted '%s' locally.\n"
+    "  Maybe you renamed it?\n");
+
+  phrases->we_added = _(
+    "  You have added '%s' locally.\n");
+
+  phrases->we_edited_update = _(
+    "  You have edited '%s' locally.\n");
+
+  phrases->missing_update = _(
+    "  '%s' does not exist locally.\n"
+    "  Maybe you renamed it?\n");
 
   /* This one only comes up together with merge_deleted, never with
    * merge_edited. Otherwise we would have a text conflict. So we can
    * provide a more detailed hint here as to what might have happened. */
-  phrases->we_edited_merge = _("Either you have edited '%s' locally,\n"
-                               "or it has been edited in the history of"
-                               " the branch you are merging into,\n"
-                               "but those edits are not present on the"
-                               " branch you are merging from.\n");
+  phrases->we_edited_merge = _(
+    "Either you have edited '%s' locally, or it has been edited in the\n"
+    "history of the branch you are merging into, but those edits are not\n"
+    "present on the branch you are merging from.\n");
 
-  phrases->we_added_merge = _("Either you have added '%s' locally,\n"
-                              "or it has been added in the history of"
-                              " the branch you are merging into.\n");
+  phrases->we_added_merge = _(
+    "Either you have added '%s' locally, or it has been added in the\n"
+    "history of the branch you are merging into.\n");
 
+  phrases->missing_merge = _(
+    "'%s' does not exist locally. Maybe you renamed it? Or has it been\n"
+    "renamed in the history of the branch you are merging into?\n");
 
-  phrases->missing_merge = _("'%s' does not exist locally.\n"
-                             "Maybe you renamed it? Or has it been"
-                             " renamed in the history of the branch\n"
-                             "you are merging into?\n");
+  phrases->obstructed = _(
+    "This action was obstructed by an item in the working copy.\n");
 
-  phrases->obstructed = _("This action was obstructed by an item"
-                          " in the working copy.\n");
-
-  phrases->unversioned = _("'%s' is unversioned.\n");
+  phrases->unversioned = _(
+    "'%s' is unversioned.\n");
 
   return phrases;
 }
@@ -105,8 +126,7 @@ static const char *
 select_their_phrase(const svn_wc_conflict_description_t *conflict,
                     struct tree_conflict_phrases *phrases)
 {
-  if (conflict->operation == svn_wc_operation_update
-      || conflict->operation == svn_wc_operation_switch)
+  if (conflict->operation == svn_wc_operation_update)
     {
       switch (conflict->action)
         {
@@ -117,6 +137,19 @@ select_their_phrase(const svn_wc_conflict_description_t *conflict,
             return phrases->update_added;
           case svn_wc_conflict_action_delete:
             return phrases->update_deleted;
+        }
+    }
+  else if (conflict->operation == svn_wc_operation_switch)
+    {
+      switch (conflict->action)
+        {
+          /* Order of cases follows definition of svn_wc_conflict_action_t. */
+          case svn_wc_conflict_action_edit:
+            return phrases->switch_edited;
+          case svn_wc_conflict_action_add:
+            return phrases->switch_added;
+          case svn_wc_conflict_action_delete:
+            return phrases->switch_deleted;
         }
     }
   else if (conflict->operation == svn_wc_operation_merge)

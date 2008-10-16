@@ -117,7 +117,8 @@ void svn_wc__adm_set_wc_format(svn_wc_adm_access_t *adm_access,
  * when the library expects a write lock, and where it is an error for the
  * lock not to be present.  Applications are not expected to call it.
  */
-svn_error_t *svn_wc__adm_write_check(svn_wc_adm_access_t *adm_access);
+svn_error_t *svn_wc__adm_write_check(svn_wc_adm_access_t *adm_access,
+                                     apr_pool_t *scratch_pool);
 
 /* Ensure ADM_ACCESS has a lock and for an entire WC tree (all the way
    to its leaf nodes).  While locking a tree up front using
@@ -126,6 +127,21 @@ svn_error_t *svn_wc__adm_write_check(svn_wc_adm_access_t *adm_access);
    lock is taken out.  Use POOL for temporary allocations. */
 svn_error_t *svn_wc__adm_extend_lock_to_tree(svn_wc_adm_access_t *adm_access,
                                              apr_pool_t *pool);
+
+
+/* Hacky function to save a working copy file's new pristine file (text base
+   into the access baton's state. It will be retrieved during post-commit
+   processing. */
+void
+svn_wc__adm_save_pristine_path(svn_wc_adm_access_t *adm_access,
+                               const char *wc_path,
+                               const char *new_pristine_path);
+
+/* Fetch a saved (new) pristine file's path from the access baton. */
+const char *
+svn_wc__adm_get_pristine_path(svn_wc_adm_access_t *adm_access,
+                              const char *wc_path);
+
 
 #ifdef __cplusplus
 }

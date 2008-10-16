@@ -279,7 +279,7 @@ svn_client_delete3(svn_commit_info_t **commit_info_p,
                                         ctx->notify_func2,
                                         ctx->notify_baton2,
                                         ctx, subpool));
-          SVN_ERR(svn_wc_adm_close(adm_access));
+          SVN_ERR(svn_wc_adm_close2(adm_access, subpool));
         }
       svn_pool_destroy(subpool);
     }
