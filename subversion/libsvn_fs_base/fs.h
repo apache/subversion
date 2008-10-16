@@ -41,8 +41,8 @@ extern "C" {
    back-end's format.  */
 #define SVN_FS_BASE__FORMAT_NUMBER                4
 
-/* Minimum format number that supports explicit metadata */
-#define SVN_FS_BASE__MIN_METADATA_FORMAT          4
+/* Minimum format number that supports the 'miscellaneous' table */
+#define SVN_FS_BASE__MIN_MISCELLANY_FORMAT        4
 
 /* Minimum format number that supports forward deltas */
 #define SVN_FS_BASE__MIN_FORWARD_DELTAS_FORMAT    4

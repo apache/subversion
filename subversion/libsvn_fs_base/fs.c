@@ -621,7 +621,7 @@ open_databases(svn_fs_t *fs,
     }
 
 
-  if (format >= SVN_FS_BASE__MIN_METADATA_FORMAT)
+  if (format >= SVN_FS_BASE__MIN_MISCELLANY_FORMAT)
     {
       SVN_ERR(BDB_WRAP(fs, (create
                             ? "creating 'miscellaneous' table"
