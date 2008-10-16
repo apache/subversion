@@ -6380,6 +6380,8 @@ struct packer_baton
   apr_off_t next_offset;
   svn_stream_t *pack_stream;
   svn_stream_t *manifest_stream;
+  svn_cancel_func_t cancel_func;
+  void *cancel_baton;
 };
 
 /* Walker function used by pack_shard().
@@ -6409,19 +6411,23 @@ packer_func(void *baton,
   
   /* Copy all the bits from the rev file to the end of the pack file. */
   SVN_ERR(svn_stream_open_readonly(&rev_stream, path, pool, pool));
-  SVN_ERR(svn_stream_copy2(rev_stream, pb->pack_stream, NULL, NULL, pool));
+  SVN_ERR(svn_stream_copy2(rev_stream, pb->pack_stream, pb->cancel_func,
+                           pb->cancel_baton, pool));
   svn_stream_close(rev_stream);
 
   return SVN_NO_ERROR;
 }
 
 /* Pack a single shard SHARD in REVS_DIR, using POOL for allocations.
+   CANCEL_FUNC and CANCEL_BATON are what you think they are.
 
    If for some reason we detect a partial packing already performed, we
    remove the pack file and start again. */
 svn_error_t *
 pack_shard(const char *revs_dir,
            apr_int64_t shard,
+           svn_cancel_func_t cancel_func,
+           void *cancel_baton,
            apr_pool_t *pool)
 {
   svn_node_kind_t pack_kind;
@@ -6462,6 +6468,8 @@ pack_shard(const char *revs_dir,
   pb.next_offset = 0;
   pb.pack_stream = svn_stream_from_aprfile2(pack_file, FALSE, pool);
   pb.manifest_stream = svn_stream_from_aprfile2(manifest_file, FALSE, pool);
+  pb.cancel_func = cancel_func;
+  pb.cancel_baton = cancel_baton;
   SVN_ERR(svn_io_dir_walk(shard_path,
                           APR_FINFO_TYPE | APR_FINFO_NAME | APR_FINFO_SIZE,
                           packer_func, &pb, pool));
@@ -6470,18 +6478,21 @@ pack_shard(const char *revs_dir,
   /* Copy the manifest to the end of the pack file. */
   SVN_ERR(svn_stream_open_readonly(&pb.manifest_stream, tmp_file_path, pool,
                                    pool));
-  SVN_ERR(svn_stream_copy2(pb.manifest_stream, pb.pack_stream, NULL, NULL,
-                           pool));
+  SVN_ERR(svn_stream_copy2(pb.manifest_stream, pb.pack_stream, cancel_func,
+                           cancel_baton, pool));
   SVN_ERR(svn_stream_close(pb.manifest_stream));
   SVN_ERR(svn_stream_close(pb.pack_stream));
 
   /* Finally, remove the existing shard directory. */
-  return svn_io_remove_dir2(shard_path, TRUE, NULL, NULL, pool);
+  return svn_io_remove_dir2(shard_path, TRUE, cancel_func, cancel_baton, pool);
 }
 
 
 svn_error_t *
-svn_fs_fs__pack(const char *fs_path, apr_pool_t *pool)
+svn_fs_fs__pack(const char *fs_path,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                apr_pool_t *pool)
 {
   int format, max_files_per_dir;
   int completed_shards;
@@ -6515,8 +6526,12 @@ svn_fs_fs__pack(const char *fs_path, apr_pool_t *pool)
     {
       svn_pool_clear(iterpool);
 
-      SVN_ERR(pack_shard(data_path, i, iterpool));
-      SVN_ERR(pack_shard(revprops_path, i, iterpool));
+      if (cancel_func)
+        SVN_ERR(cancel_func(cancel_baton));
+
+      SVN_ERR(pack_shard(data_path, i, cancel_func, cancel_baton, iterpool));
+      SVN_ERR(pack_shard(revprops_path, i, cancel_func, cancel_baton,
+                         iterpool));
     }
 
   svn_pool_destroy(iterpool);

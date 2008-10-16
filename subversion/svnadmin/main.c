@@ -1120,7 +1120,7 @@ subcommand_pack(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
 
-  return svn_repos_fs_pack(repos, pool);
+  return svn_repos_fs_pack(repos, check_cancel, NULL, pool);
 }
 
 
