@@ -6413,9 +6413,7 @@ packer_func(void *baton,
   SVN_ERR(svn_stream_open_readonly(&rev_stream, path, pool, pool));
   SVN_ERR(svn_stream_copy2(rev_stream, pb->pack_stream, pb->cancel_func,
                            pb->cancel_baton, pool));
-  svn_stream_close(rev_stream);
-
-  return SVN_NO_ERROR;
+  return svn_stream_close(rev_stream);
 }
 
 /* Pack a single shard SHARD in REVS_DIR, using POOL for allocations.
