@@ -128,7 +128,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                                      ctx->cancel_baton, pool));
       anchor = svn_wc_adm_access_path(adm_access);
       dir_access_path = svn_wc_adm_access_path(dir_access);
-      SVN_ERR(svn_wc_adm_close(adm_access));
+      SVN_ERR(svn_wc_adm_close2(adm_access, pool));
 
       SVN_ERR(svn_wc_adm_retrieve(&adm_access, a, anchor, pool));
       SVN_ERR(svn_wc_adm_retrieve(&dir_access, a, dir_access_path, pool));
@@ -230,7 +230,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
     return err;
 
   if (close_adm_access)
-    SVN_ERR(svn_wc_adm_close(adm_access));
+    SVN_ERR(svn_wc_adm_close2(adm_access, pool));
 
   /* Let everyone know we're finished here. */
   if (ctx->notify_func2)

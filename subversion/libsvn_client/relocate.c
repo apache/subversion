@@ -134,5 +134,5 @@ svn_client_relocate(const char *path,
                            recurse, validator_func, &vb, pool));
 
   /* All done.  Clean up, and move on out. */
-  return svn_wc_adm_close(adm_access);
+  return svn_wc_adm_close2(adm_access, pool);
 }

@@ -179,7 +179,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
                                FALSE, 0, ctx->cancel_func,
                                ctx->cancel_baton, pool));
       SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
-      SVN_ERR(svn_wc_adm_close(adm_access));
+      SVN_ERR(svn_wc_adm_close2(adm_access, pool));
 
       /* If PATH's existing URL matches the incoming one, then
          just update.  This allows 'svn co' to restart an
