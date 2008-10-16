@@ -56,5 +56,18 @@ Candidate changes for 1.5.4:
    Votes:
      +1: pburba
 
+ * r33693
+   Fix merge bug introduced in the backport of the r29969, r32463, r33013,
+   r33016, r33022, r33112 group in 1.5.3.
+   Notes:
+     There is a minor whitespace conflict in merge.c.
+   Justification:
+     This bug is a regression in 1.5.3, breaks mergeinfo aware merges when
+     ecountered, and has already been seen a couple times in our own repos,
+     see http://subversion.tigris.org/servlets/ReadMsg?list=dev&&msgNo=144187
+     and http://subversion.tigris.org/issues/show_bug.cgi?id=3294#desc1.
+   Votes:
+     +1: pburba
+
 Approved changes:
 =================
