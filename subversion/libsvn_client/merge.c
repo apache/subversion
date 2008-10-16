@@ -557,7 +557,8 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
   /* If PATH itself is newly added there is no need to filter. */
   SVN_ERR(svn_wc__entry_versioned(&target_entry, path, adm_access,
                                   FALSE, pool));
-  if (target_entry->schedule == svn_wc_schedule_add)
+  if (target_entry->schedule == svn_wc_schedule_add
+      || target_entry->schedule == svn_wc_schedule_replace)
     return SVN_NO_ERROR;
 
   adjusted_props = apr_array_make(pool, (*props)->nelts, sizeof(svn_prop_t));
