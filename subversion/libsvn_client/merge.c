@@ -547,10 +547,18 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
   svn_boolean_t honor_mergeinfo;
   apr_array_header_t *adjusted_props;
   int i;
+  const svn_wc_entry_t *target_entry;
 
   /* If we aren't honoring mergeinfo, get outta here. */
   mergeinfo_behavior(&honor_mergeinfo, NULL, merge_b);
   if (! honor_mergeinfo)
+    return SVN_NO_ERROR;
+
+  /* If PATH itself is newly added there is no need to filter. */
+  SVN_ERR(svn_wc__entry_versioned(&target_entry, path, adm_access,
+                                  FALSE, pool));
+  if (target_entry->schedule == svn_wc_schedule_add
+      || target_entry->schedule == svn_wc_schedule_replace)
     return SVN_NO_ERROR;
 
   adjusted_props = apr_array_make(pool, (*props)->nelts, sizeof(svn_prop_t));
@@ -575,12 +583,7 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
           svn_mergeinfo_t filtered_mergeinfo = NULL;
           svn_mergeinfo_t filtered_younger_mergeinfo = NULL;
           const char *target_url;
-          const svn_wc_entry_t *target_entry;
           const char *old_url = NULL;
-
-          /* Get an entry for PATH so we can find its base revision. */
-          SVN_ERR(svn_wc__entry_versioned(&target_entry, path, adm_access,
-                                          FALSE, pool));
 
           /* Temporarily reparent our RA session to the merge
              target's URL. */
@@ -6651,7 +6654,7 @@ svn_client_merge3(const char *source1,
              the merge_cousins_and_supplement_mergeinfo() routine). */
           svn_pool_destroy(sesspool);
 
-          return svn_wc_adm_close(adm_access);
+          return svn_wc_adm_close2(adm_access, pool);
         }
     }
   else
@@ -6680,7 +6683,7 @@ svn_client_merge3(const char *source1,
   if (err)
     return err;
 
-  return svn_wc_adm_close(adm_access);
+  return svn_wc_adm_close2(adm_access, pool);
 }
 
 svn_error_t *
@@ -7209,7 +7212,7 @@ svn_client_merge_reintegrate(const char *source,
     return err;
 
   /* Shutdown the administrative session. */
-  return svn_wc_adm_close(adm_access);
+  return svn_wc_adm_close2(adm_access, pool);
 }
 
 
@@ -7294,7 +7297,7 @@ svn_client_merge_peg3(const char *source,
     return err;
 
   /* Shutdown the administrative session. */
-  return svn_wc_adm_close(adm_access);
+  return svn_wc_adm_close2(adm_access, pool);
 }
 
 

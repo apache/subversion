@@ -35,18 +35,10 @@ txn_body_reserve_fsguid(void *baton, trail_t *trail)
   const char **fsguid_p = baton;
   const char *next_fsguid;
   const char *new_fsguid;
-  svn_error_t *err;
 
-  err = svn_fs_bdb__miscellaneous_get(&next_fsguid, trail->fs, 
-                                      SVN_FS_BASE__MISC_NEXT_FSGUID,
-                                      trail, trail->pool);
-  if (err && (err->apr_err == SVN_ERR_FS_NO_SUCH_MISCELLANY))
-    {
-      next_fsguid = NULL;
-      svn_error_clear(err);
-      err = SVN_NO_ERROR;
-    }
-  SVN_ERR(err);
+  SVN_ERR(svn_fs_bdb__miscellaneous_get(&next_fsguid, trail->fs, 
+                                        SVN_FS_BASE__MISC_NEXT_FSGUID,
+                                        trail, trail->pool));
 
   /* If we've no next-fsguid value, let's hope it's because this is the
      first time we're asking for one -- we'll use '0' as the next key,

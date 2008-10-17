@@ -2780,6 +2780,9 @@ apply_textdelta(void *file_baton,
 
       SVN_ERR(svn_io_file_checksum2(&digest, fb->text_base_path,
                                     svn_checksum_md5, pool));
+
+      /* ### screw hex_digest. use svn_checksum_match() */
+
       hex_digest = svn_checksum_to_cstring_display(digest, pool);
 
       /* Compare the base_checksum here, rather than in the window
@@ -4141,7 +4144,7 @@ svn_wc_get_actual_target(const char *path,
   SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path, FALSE, 0,
                                  NULL, NULL, pool));
   SVN_ERR(check_wc_root(&is_wc_root, &kind, path, adm_access, pool));
-  SVN_ERR(svn_wc_adm_close(adm_access));
+  SVN_ERR(svn_wc_adm_close2(adm_access, pool));
 
   /* If PATH is not a WC root, or if it is a file, lop off a basename. */
   if ((! is_wc_root) || (kind == svn_node_file))

@@ -400,7 +400,7 @@ add_dir_recursive(const char *dirname,
     }
 
   /* Opened by svn_wc_add */
-  SVN_ERR(svn_wc_adm_close(dir_access));
+  SVN_ERR(svn_wc_adm_close2(dir_access, subpool));
 
   /* Destroy the per-iteration pool. */
   svn_pool_destroy(subpool);
@@ -523,7 +523,7 @@ svn_client_add4(const char *path,
 
       subpool = svn_pool_create(pool);
       SVN_ERR(add_parent_dirs(parent_dir, &adm_access, ctx, subpool));
-      SVN_ERR(svn_wc_adm_close(adm_access));
+      SVN_ERR(svn_wc_adm_close2(adm_access, subpool));
       svn_pool_destroy(subpool);
     }
   else
@@ -537,7 +537,7 @@ svn_client_add4(const char *path,
 
   err = add(path, depth, force, no_ignore, adm_access, ctx, pool);
 
-  err2 = svn_wc_adm_close(adm_access);
+  err2 = svn_wc_adm_close2(adm_access, pool);
   if (err2)
     {
       if (err)

@@ -1442,19 +1442,8 @@ static svn_error_t *
 txn_body_miscellaneous_get(void *baton, trail_t *trail)
 {
   struct miscellaneous_get_args *mga = baton;
-  svn_error_t *err;
-
-  err = svn_fs_bdb__miscellaneous_get(mga->val, trail->fs, mga->key, trail,
-                                      trail->pool);
-
-  if (err && err->apr_err == SVN_ERR_FS_NO_SUCH_MISCELLANY)
-    {
-      svn_error_clear(err);
-      err = SVN_NO_ERROR;
-      *mga->val = NULL;
-    }
-
-  return err;
+  return svn_fs_bdb__miscellaneous_get(mga->val, trail->fs, mga->key, trail,
+                                       trail->pool);
 }
 
 svn_error_t *

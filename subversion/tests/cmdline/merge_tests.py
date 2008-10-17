@@ -14051,6 +14051,142 @@ def subtree_gets_changes_even_if_ultimately_deleted(sbox):
                                        expected_status, expected_skip,
                                        None, None, None, None, None, 1)
 
+def no_self_referential_filtering_on_added_path(sbox):
+  "no self referential filtering on added path"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Some paths we'll care about
+  C_COPY_path   = os.path.join(wc_dir, "A_COPY", "C")
+  A_path        = os.path.join(wc_dir, "A")
+  C_path        = os.path.join(wc_dir, "A", "C")
+  A_COPY_2_path = os.path.join(wc_dir, "A_COPY_2")
+
+  # r1-r7: Setup a 'trunk' and two 'branches'.
+  wc_disk, wc_status = set_up_branch(sbox, False, 2)
+
+  # r8: Make a prop change on A_COPY/C.
+  svntest.actions.run_and_verify_svn(None,
+                                     ["property 'propname' set on '" +
+                                      C_COPY_path + "'\n"], [],
+                                     'ps', 'propname', 'propval',
+                                     C_COPY_path)
+  expected_output = svntest.wc.State(wc_dir,
+                                     {'A_COPY/C' : Item(verb='Sending')})
+  wc_status.tweak('A_COPY/C', wc_rev=8)
+  wc_disk.tweak("A_COPY/C",
+                props={'propname' : 'propval'})
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output, wc_status,
+                                        None, wc_dir)
+
+  # r9: Merge r8 from A_COPY to A.
+  #
+  # Update first to avoid an out of date error.
+  svntest.actions.run_and_verify_svn(None, ["At revision 8.\n"], [], 'up',
+                                     wc_dir)
+  wc_status.tweak(wc_rev=8)
+  svntest.actions.run_and_verify_svn(None,
+                                     expected_merge_output([[8]], ' U   ' +
+                                                           C_path + '\n'),
+                                     [], 'merge', '-c8',
+                                     sbox.repo_url + '/A_COPY',
+                                     A_path)
+  expected_output = svntest.wc.State(wc_dir,
+                                     {'A'   : Item(verb='Sending'),
+                                      'A/C' : Item(verb='Sending')})
+  wc_status.tweak('A', 'A/C', wc_rev=9)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output, wc_status,
+                                        None, wc_dir)
+
+  wc_disk.tweak("A/C",
+                props={'propname' : 'propval'})
+  wc_disk.tweak("A",
+                props={SVN_PROP_MERGEINFO : '/A_COPY:8'})
+
+  # r10: Move A/C to A/C_MOVED.
+  svntest.actions.run_and_verify_svn(None,
+                                     ['\n', 'Committed revision 10.\n'],
+                                     [], 'move',
+                                     sbox.repo_url + '/A/C',
+                                     sbox.repo_url + '/A/C_MOVED',
+                                     '-m', 'Copy A/C to A/C_MOVED')
+  svntest.actions.run_and_verify_svn(None, None, [], 'up',
+                                     wc_dir)
+
+  # Now try to merge all available revisions from A to A_COPY_2.
+  # This should try to add the directory A_COPY_2/C_MOVED which has
+  # explicit mergeinfo.  This should not break self-referential mergeinfo
+  # filtering logic...in fact there is no reason to even attempt such
+  # filtering since the file is *new*.
+
+  expected_output = wc.State(A_COPY_2_path, {
+    ''          : Item(status=' U'),
+    'B/E/beta'  : Item(status='U '),
+    'D/G/rho'   : Item(status='U '),
+    'D/H/psi'   : Item(status='U '),
+    'D/H/omega' : Item(status='U '),
+    'C'         : Item(status='D '),
+    'C_MOVED'   : Item(status='A '),
+    })
+  expected_A_COPY_2_status = wc.State(A_COPY_2_path, {
+    ''          : Item(status=' M', wc_rev=10),
+    'B'         : Item(status='  ', wc_rev=10),
+    'mu'        : Item(status='  ', wc_rev=10),
+    'B/E'       : Item(status='  ', wc_rev=10),
+    'B/E/alpha' : Item(status='  ', wc_rev=10),
+    'B/E/beta'  : Item(status='M ', wc_rev=10),
+    'B/lambda'  : Item(status='  ', wc_rev=10),
+    'B/F'       : Item(status='  ', wc_rev=10),
+    'C'         : Item(status='D ', wc_rev=10),
+    'C_MOVED'   : Item(status='A ', wc_rev='-', copied='+'),
+    'D'         : Item(status='  ', wc_rev=10),
+    'D/G'       : Item(status='  ', wc_rev=10),
+    'D/G/pi'    : Item(status='  ', wc_rev=10),
+    'D/G/rho'   : Item(status='M ', wc_rev=10),
+    'D/G/tau'   : Item(status='  ', wc_rev=10),
+    'D/gamma'   : Item(status='  ', wc_rev=10),
+    'D/H'       : Item(status='  ', wc_rev=10),
+    'D/H/chi'   : Item(status='  ', wc_rev=10),
+    'D/H/psi'   : Item(status='M ', wc_rev=10),
+    'D/H/omega' : Item(status='M ', wc_rev=10),
+    })
+  expected_A_COPY_2_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGEINFO : '/A:3-10\n/A_COPY:8'}),
+    'B'         : Item(),
+    'mu'        : Item("This is the file 'mu'.\n"),
+    'B/E'       : Item(),
+    'B/E/alpha' : Item("This is the file 'alpha'.\n"),
+    'B/E/beta'  : Item("New content"),
+    'B/lambda'  : Item("This is the file 'lambda'.\n"),
+    'B/F'       : Item(),
+    'C_MOVED'   : Item(props={SVN_PROP_MERGEINFO : '/A/C_MOVED:3-10\n' +
+                              '/A_COPY/C:8\n' +
+                              '/A_COPY/C_MOVED:8',
+                              'propname' : 'propval'}),
+    'C'         : Item(),
+    'D'         : Item(),
+    'D/G'       : Item(),
+    'D/G/pi'    : Item("This is the file 'pi'.\n"),
+    'D/G/rho'   : Item("New content"),
+    'D/G/tau'   : Item("This is the file 'tau'.\n"),
+    'D/gamma'   : Item("This is the file 'gamma'.\n"),
+    'D/H'       : Item(),
+    'D/H/chi'   : Item("This is the file 'chi'.\n"),
+    'D/H/psi'   : Item("New content"),
+    'D/H/omega' : Item("New content"),
+    })
+  expected_A_COPY_2_skip = wc.State(A_COPY_2_path, { })
+  svntest.actions.run_and_verify_merge(A_COPY_2_path, None, None,
+                                       sbox.repo_url + \
+                                       '/A',
+                                       expected_output,
+                                       expected_A_COPY_2_disk,
+                                       expected_A_COPY_2_status,
+                                       expected_A_COPY_2_skip,
+                                       None, None, None, None,
+                                       None, 1)
+
 ########################################################################
 # Run the tests
 
@@ -14252,6 +14388,8 @@ test_list = [ None,
               tree_conflicts_on_merge_no_local_ci_6,
               XFail(SkipUnless(subtree_gets_changes_even_if_ultimately_deleted,
                                server_has_mergeinfo)),
+              SkipUnless(no_self_referential_filtering_on_added_path,
+                         server_has_mergeinfo),
              ]
 
 if __name__ == '__main__':

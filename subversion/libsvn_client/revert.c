@@ -95,7 +95,7 @@ revert(const char *path,
         return err;
     }
 
-  return svn_wc_adm_close(adm_access);
+  return svn_wc_adm_close2(adm_access, pool);
 }
 
 
