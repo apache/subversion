@@ -159,16 +159,6 @@ svn_fs_base__err_no_such_node_origin(svn_fs_t *fs, const char *node_id)
 }
 
 svn_error_t *
-svn_fs_base__err_no_such_miscellany(svn_fs_t *fs, const char *key)
-{
-  return
-    svn_error_createf
-    (SVN_ERR_FS_NO_SUCH_MISCELLANY, 0,
-     _("No record in 'miscellaneous' table for key '%s' in filesystem '%s'"),
-     key, fs->path);
-}
-
-svn_error_t *
 svn_fs_base__err_no_such_checksum_rep(svn_fs_t *fs, svn_checksum_t *checksum)
 {
   return

@@ -350,7 +350,7 @@ get_copyfrom_url_rev_via_parent(const char *src_path,
                                          NULL, NULL, pool));
           SVN_ERR(svn_wc__entry_versioned(&entry, parent_path, parent_access,
                                          FALSE, pool));
-          SVN_ERR(svn_wc_adm_close(parent_access));
+          SVN_ERR(svn_wc_adm_close2(parent_access, pool));
         }
 
       if (entry->copyfrom_url)
@@ -837,7 +837,7 @@ copy_dir_administratively(const char *src_path,
         copyfrom_url = tmp;
       }
 
-    SVN_ERR(svn_wc_adm_close(adm_access));
+    SVN_ERR(svn_wc_adm_close2(adm_access, pool));
 
     return svn_wc_add3(dst_path, dst_parent, svn_depth_infinity,
                        copyfrom_url, copyfrom_rev,
@@ -935,7 +935,7 @@ svn_wc_copy2(const char *src_path,
         }
     }
 
-  return svn_wc_adm_close(adm_access);
+  return svn_wc_adm_close2(adm_access, pool);
 }
 
 

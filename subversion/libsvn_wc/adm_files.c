@@ -816,7 +816,7 @@ check_adm_exists(svn_boolean_t *exists,
     return SVN_NO_ERROR;
 
   SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
-  SVN_ERR(svn_wc_adm_close(adm_access));
+  SVN_ERR(svn_wc_adm_close2(adm_access, pool));
 
   /* When the directory exists and is scheduled for deletion do not
    * check the revision or the URL.  The revision can be any
@@ -946,7 +946,7 @@ init_adm(const char *path,
 
   /* Now unlock it.  It's now a valid working copy directory, that
      just happens to be at revision 0. */
-  return svn_wc_adm_close(adm_access);
+  return svn_wc_adm_close2(adm_access, pool);
 }
 
 svn_error_t *
@@ -1001,7 +1001,7 @@ svn_wc__adm_destroy(svn_wc_adm_access_t *adm_access,
   path = extend_with_adm_name(svn_wc_adm_access_path(adm_access),
                               NULL, FALSE, scratch_pool, NULL);
   SVN_ERR(svn_io_remove_dir2(path, FALSE, NULL, NULL, scratch_pool));
-  return svn_wc_adm_close(adm_access);
+  return svn_wc_adm_close2(adm_access, scratch_pool);
 }
 
 

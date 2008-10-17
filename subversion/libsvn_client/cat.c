@@ -184,7 +184,7 @@ svn_client_cat2(svn_stream_t *out,
 
       SVN_ERR(cat_local_file(path_or_url, out, adm_access, revision, pool));
 
-      return svn_wc_adm_close(adm_access);
+      return svn_wc_adm_close2(adm_access, pool);
     }
 
   /* Get an RA plugin for this filesystem object. */

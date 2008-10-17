@@ -30,7 +30,7 @@
 %import svn_wc.i
 
 /* svn_client.h: Subversion Windows-specific auth provider */
-PLATFORM_SPECIFIC_WRAPPER(svn_client_get_windows_simple_provider, WIN32)
+PLATFORM_SPECIFIC_WRAPPER(svn_client_get_windows_simple_provider, SWIGWIN)
 
 /* -----------------------------------------------------------------------
    %apply-ing of typemaps defined elsewhere

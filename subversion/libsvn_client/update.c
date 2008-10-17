@@ -262,7 +262,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   if (sleep_here)
     svn_io_sleep_for_timestamps(path, pool);
 
-  SVN_ERR(svn_wc_adm_close(adm_access));
+  SVN_ERR(svn_wc_adm_close2(adm_access, pool));
 
   /* Let everyone know we're finished here. */
   if (ctx->notify_func2)

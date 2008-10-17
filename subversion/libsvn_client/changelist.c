@@ -130,7 +130,7 @@ svn_client_add_to_changelist(const apr_array_header_t *paths,
                                    ctx->cancel_func, ctx->cancel_baton,
                                    subpool));
 
-      SVN_ERR(svn_wc_adm_close(adm_access));
+      SVN_ERR(svn_wc_adm_close2(adm_access, subpool));
     }
 
   svn_pool_destroy(subpool);
@@ -178,7 +178,7 @@ svn_client_remove_from_changelists(const apr_array_header_t *paths,
                                    ctx->cancel_func, ctx->cancel_baton,
                                    subpool));
 
-      SVN_ERR(svn_wc_adm_close(adm_access));
+      SVN_ERR(svn_wc_adm_close2(adm_access, subpool));
     }
 
   svn_pool_destroy(subpool);
@@ -252,5 +252,5 @@ svn_client_get_changelists(const char *path,
   SVN_ERR(svn_wc_walk_entries3(path, adm_access, &get_cl_entry_callbacks, &geb,
                                depth, FALSE, /* don't show hidden entries */
                                ctx->cancel_func, ctx->cancel_baton, pool));
-  return svn_wc_adm_close(adm_access);
+  return svn_wc_adm_close2(adm_access, pool);
 }

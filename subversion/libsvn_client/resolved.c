@@ -64,5 +64,5 @@ svn_client_resolve(const char *path,
                                     ctx->cancel_func, ctx->cancel_baton,
                                     pool));
 
-  return svn_wc_adm_close(adm_access);
+  return svn_wc_adm_close2(adm_access, pool);
 }
