@@ -55,16 +55,11 @@ struct notify_baton
 
 
 /* Print conflict stats accumulated in notify baton NB.
- * Do not print anything if a print error has already been
- * flagged in the baton. Return any error encountered.
+ * Return any error encountered during printing.
  * Do all allocations in POOL.*/
 static svn_error_t *
 print_conflict_stats(struct notify_baton *nb, apr_pool_t *pool)
 {
-
-  if (nb->had_print_error)
-    return SVN_NO_ERROR;
-
   if (nb->text_conflicts > 0 || nb->prop_conflicts > 0
     || nb->tree_conflicts > 0 || nb->skipped_paths > 0)
       SVN_ERR(svn_cmdline_printf(pool, _("Summary of conflicts:\n")));
