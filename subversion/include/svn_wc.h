@@ -864,15 +864,21 @@ typedef enum svn_wc_notify_state_t
  *
  * @since New in 1.2.
  */
-typedef enum svn_wc_notify_lock_state_t {
+typedef enum svn_wc_notify_lock_state_t
+{
   svn_wc_notify_lock_state_inapplicable = 0,
+
   svn_wc_notify_lock_state_unknown,
+
   /** The lock wasn't changed. */
   svn_wc_notify_lock_state_unchanged,
+
   /** The item was locked. */
   svn_wc_notify_lock_state_locked,
+
   /** The item was unlocked. */
   svn_wc_notify_lock_state_unlocked
+
 } svn_wc_notify_lock_state_t;
 
 /**
@@ -901,47 +907,61 @@ typedef enum svn_wc_notify_lock_state_t {
  * @since New in 1.2.
  */
 typedef struct svn_wc_notify_t {
+
   /** Path, either absolute or relative to the current working directory
    * (i.e., not relative to an anchor). */
   const char *path;
+
   /** Action that describes what happened to @c path. */
   svn_wc_notify_action_t action;
+
   /** Node kind of @c path. */
   svn_node_kind_t kind;
+
   /** If non-NULL, indicates the mime-type of @c path.
    * It is always @c NULL for directories. */
   const char *mime_type;
+
   /** Points to the lock structure received from the repository when
    * @c action is @c svn_wc_notify_locked.  For other actions, it is
    * @c NULL. */
   const svn_lock_t *lock;
+
   /** Points to an error describing the reason for the failure when @c
    * action is @c svn_wc_notify_failed_lock or @c svn_wc_notify_failed_unlock.
    * Is @c NULL otherwise. */
   svn_error_t *err;
+
   /** The type of notification that is occurring about node content. */
   svn_wc_notify_state_t content_state;
+
   /** The type of notification that is occurring about node properties. */
   svn_wc_notify_state_t prop_state;
+
   /** Reflects the addition or removal of a lock token in the working copy. */
   svn_wc_notify_lock_state_t lock_state;
+
   /** When @c action is @c svn_wc_notify_update_completed, target revision
    * of the update, or @c SVN_INVALID_REVNUM if not available; when @c
    * action is @c svn_wc_notify_blame_revision, processed revision.
    * In all other cases, it is @c SVN_INVALID_REVNUM. */
   svn_revnum_t revision;
+
   /** When @c action is @c svn_wc_notify_changelist_add or name.  In all other
    * cases, it is @c NULL.  @since New in 1.5 */
   const char *changelist_name;
+
   /** When @c action is @c svn_wc_notify_merge_begin, and both the
    * left and right sides of the merge are from the same URL.  In all
    * other cases, it is @c NULL.  @since New in 1.5 */
   svn_merge_range_t *merge_range;
+
   /** If non-NULL, specifies an absolute path prefix that can be subtracted
    * from the start of the absolute path in @c path.  Its purpose is to
    * allow notification to remove a common prefix from all the paths
    * displayed for an operation.  @since New in 1.6 */
   const char *path_prefix;
+
   /* NOTE: Add new fields at the end to preserve binary compatibility.
      Also, if you add fields here, you have to update svn_wc_create_notify
      and svn_wc_dup_notify. */
