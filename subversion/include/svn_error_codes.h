@@ -673,11 +673,6 @@ SVN_ERROR_START
              SVN_ERR_FS_CATEGORY_START + 47,
              "Filesystem upgrade is not supported")
 
-  /** @since New in 1.6. */
-  SVN_ERRDEF(SVN_ERR_FS_NO_SUCH_MISCELLANY,
-             SVN_ERR_FS_CATEGORY_START + 48,
-             "Filesystem has no such miscellany record")
-
   /* repos errors */
 
   SVN_ERRDEF(SVN_ERR_REPOS_LOCKED,

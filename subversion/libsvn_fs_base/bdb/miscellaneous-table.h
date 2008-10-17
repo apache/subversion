@@ -49,8 +49,8 @@ svn_fs_bdb__miscellaneous_set(svn_fs_t *fs,
                               apr_pool_t *pool);
 
 
-/* Retrieve data cooresponding to KEY in FS and put it into *VAL
-   allocated in POOL, all as part of TRAIL.  */
+/* Set *VAL to the value of data cooresponding to KEY in the
+   `miscellaneous' table of FS, or to NULL if that key isn't found. */
 svn_error_t *
 svn_fs_bdb__miscellaneous_get(const char **val,
                               svn_fs_t *fs,
