@@ -6325,6 +6325,20 @@ do_merge(apr_array_header_t *merge_sources,
                                             adm_access, ctx, subpool));
     }
 
+  /* Let everyone know we're finished here. */
+  if (ctx->notify_func2)
+    {
+      svn_wc_notify_t *notify
+        = svn_wc_create_notify(target, svn_wc_notify_merge_completed,
+                               subpool);
+      notify->kind = svn_node_none;
+      notify->content_state = notify->prop_state
+        = svn_wc_notify_state_inapplicable;
+      notify->lock_state = svn_wc_notify_lock_state_inapplicable;
+      notify->revision = SVN_INVALID_REVNUM;
+      (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+    }
+
   svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
