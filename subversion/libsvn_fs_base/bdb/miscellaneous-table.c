@@ -64,7 +64,7 @@ svn_fs_bdb__open_miscellaneous_table(DB **miscellaneous_p,
       BDB_ERR(miscellaneous->put
               (miscellaneous, 0,
                svn_fs_base__str_to_dbt
-               (&key, SVN_FS_BASE__MISCELLANEOUS_FORWARD_DELTA_UPGRADE),
+               (&key, SVN_FS_BASE__MISC_FORWARD_DELTA_UPGRADE),
                svn_fs_base__str_to_dbt(&value, "0"), 0));
     }
 

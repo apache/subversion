@@ -1679,8 +1679,7 @@ deltify_mutable(svn_fs_t *fs,
   /* Make sure that we can even deltify this revision.  We don't want to
      deltify revisions prior to the forward delta change. */
   SVN_ERR(svn_fs_base__miscellaneous_get
-            (&delta_rev, fs, SVN_FS_BASE__MISCELLANEOUS_FORWARD_DELTA_UPGRADE,
-             pool));
+          (&delta_rev, fs, SVN_FS_BASE__MISC_FORWARD_DELTA_UPGRADE, pool));
   delta_flag_rev = atol(delta_rev);
 
   /* Get the ID for PATH under ROOT if it wasn't provided. */
@@ -2840,7 +2839,7 @@ svn_fs_base__deltify(svn_fs_t *fs,
   svn_revnum_t forward_delta_rev;
 
   SVN_ERR(svn_fs_base__miscellaneous_get
-          (&val, fs, SVN_FS_BASE__MISCELLANEOUS_FORWARD_DELTA_UPGRADE, pool));
+          (&val, fs, SVN_FS_BASE__MISC_FORWARD_DELTA_UPGRADE, pool));
 
   if (val != NULL)
     {
