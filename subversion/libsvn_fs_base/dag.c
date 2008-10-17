@@ -33,6 +33,7 @@
 #include "reps-strings.h"
 #include "revs-txns.h"
 #include "id.h"
+#include "fsguid.h"
 
 #include "util/fs_skels.h"
 
@@ -1217,6 +1218,7 @@ svn_fs_base__dag_finalize_edits(dag_node_t *file,
   svn_fs_t *fs = file->fs;   /* just for nicer indentation */
   node_revision_t *noderev;
   const char *old_data_key, *new_data_key, *useless_data_key = NULL;
+  const char *data_key_uniquifier = NULL;
   svn_checksum_t *rep_checksum;
   base_fs_data_t *bfd = fs->fsap_data;
 
@@ -1265,13 +1267,18 @@ svn_fs_base__dag_finalize_edits(dag_node_t *file,
      representation that describes content already represented
      immutably in our database, we don't even need to keep these edits.
      We can simply point our data_key at that pre-existing
-     representation and throw away our work!  */
+     representation and throw away our work!  In this situation,
+     though, we'll need a unique ID to help other code distinguish
+     between "the contents weren't touched" and "the contents were
+     touched but still look the same" (to state it oversimply).  */
   old_data_key = noderev->data_key;
   err = svn_fs_bdb__get_checksum_rep(&new_data_key, fs, rep_checksum, 
                                      trail, pool);
   if (! err)
     {
       useless_data_key = noderev->edit_key;
+      err = svn_fs_base__reserve_fsguid(trail->fs, &data_key_uniquifier, 
+                                        trail, pool);
     }
   else if (err && (err->apr_err == SVN_ERR_FS_NO_SUCH_CHECKSUM_REP))
     {
@@ -1281,6 +1288,7 @@ svn_fs_base__dag_finalize_edits(dag_node_t *file,
     }
   SVN_ERR(err);
   noderev->data_key = new_data_key;
+  noderev->data_key_uniquifier = data_key_uniquifier;
   noderev->edit_key = NULL;
 
   SVN_ERR(svn_fs_bdb__put_node_revision(fs, file->id, noderev, trail, pool));
@@ -1486,18 +1494,26 @@ svn_fs_base__dag_deltify(dag_node_t *target,
 }
 
 
-/* Store a `checksum-reps' index record for the representation whose
-   key is REP. */
+/* Maybe store a `checksum-reps' index record for the representation whose
+   key is REP.  (If there's already a rep for this checksum, we don't
+   bother overwriting it.)  */
 static svn_error_t *
-store_checksum_rep(const char *rep,
-                   trail_t *trail,
-                   apr_pool_t *pool)
+maybe_store_checksum_rep(const char *rep,
+                         trail_t *trail,
+                         apr_pool_t *pool)
 {
+  svn_error_t *err;
   svn_fs_t *fs = trail->fs;
   svn_checksum_t *checksum;
-
+  
   SVN_ERR(svn_fs_base__rep_contents_checksum(&checksum, fs, rep, trail, pool));
-  return svn_fs_bdb__set_checksum_rep(fs, checksum, rep, trail, pool);
+  err = svn_fs_bdb__set_checksum_rep(fs, checksum, rep, trail, pool);
+  if (err && (err->apr_err == SVN_ERR_FS_ALREADY_EXISTS))
+    {
+      svn_error_clear(err);
+      err = SVN_NO_ERROR;
+    }
+  return err;
 }
 
 svn_error_t *
@@ -1510,9 +1526,9 @@ svn_fs_base__dag_index_checksums(dag_node_t *node,
   SVN_ERR(svn_fs_bdb__get_node_revision(&node_rev, trail->fs, node->id,
                                         trail, pool));
   if ((node_rev->kind == svn_node_file) && node_rev->data_key)
-    SVN_ERR(store_checksum_rep(node_rev->data_key, trail, pool));
+    SVN_ERR(maybe_store_checksum_rep(node_rev->data_key, trail, pool));
   if (node_rev->prop_key)
-    SVN_ERR(store_checksum_rep(node_rev->prop_key, trail, pool));
+    SVN_ERR(maybe_store_checksum_rep(node_rev->prop_key, trail, pool));
 
   return SVN_NO_ERROR;
 }

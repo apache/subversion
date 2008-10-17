@@ -93,9 +93,7 @@ svn_error_t *svn_fs_bdb__set_checksum_rep(svn_fs_t *fs,
 {
   base_fs_data_t *bfd = fs->fsap_data;
   DBT key, value;
-#ifdef SVN_DISALLOW_CHECKSUM_REP_CHANGES
   int db_err;
-#endif
 
   /* We only allow SHA1 checksums in this table. */
   if (checksum->kind != svn_checksum_sha1)
@@ -106,7 +104,6 @@ svn_error_t *svn_fs_bdb__set_checksum_rep(svn_fs_t *fs,
   /* Create a key from our CHECKSUM. */
   svn_fs_base__checksum_to_dbt(&key, checksum);
 
-#ifdef SVN_DISALLOW_CHECKSUM_REP_CHANGES
   /* Check to see if we already have a mapping for CHECKSUM.  If so,
      and the value is the same one we were about to write, that's
      cool -- just do nothing.  If, however, the value is *different*,
@@ -117,17 +114,12 @@ svn_error_t *svn_fs_bdb__set_checksum_rep(svn_fs_t *fs,
   svn_fs_base__track_dbt(&value, pool);
   if (db_err != DB_NOTFOUND)
     {
-      const char *old_rep_key = apr_pstrmemdup(pool, value.data, value.size);
-      if (strcmp(rep_key, old_rep_key) != 0)
-        return svn_error_createf
-          (SVN_ERR_FS_CORRUPT, NULL,
-           _("Representation key for checksum '%s' exists in filesystem '%s' "
-             "with a different value (%s) than what we were about to store "
-             "(%s)"), checksum, fs->path, old_rep_key, rep_key);
-      else
-        return SVN_NO_ERROR;
+      const char *sum_str = svn_checksum_to_cstring_display(checksum, pool);
+      return svn_error_createf
+        (SVN_ERR_FS_ALREADY_EXISTS, NULL,
+         _("Representation key for checksum '%s' exists in filesystem '%s'."),
+         sum_str, fs->path);
     }
-#endif
   
   /* Create a value from our REP_KEY, and add this record to the table. */
   svn_fs_base__str_to_dbt(&value, rep_key);

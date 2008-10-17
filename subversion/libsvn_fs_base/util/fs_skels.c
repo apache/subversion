@@ -256,33 +256,50 @@ static svn_boolean_t
 is_valid_node_revision_skel(skel_t *skel)
 {
   int len = svn_fs_base__list_length(skel);
+  skel_t *header = skel->children;
+  skel_t *kind;
 
-  if (len >= 1)
+  if (len < 1)
+    return FALSE;
+
+  if (! is_valid_node_revision_header_skel(header, &kind))
+    return FALSE;
+
+  if (svn_fs_base__matches_atom(kind, "dir"))
     {
-      skel_t *header = skel->children;
-      skel_t *kind;
-
-      if (is_valid_node_revision_header_skel(header, &kind))
-        {
-          if (svn_fs_base__matches_atom(kind, "dir")
-              && len == 3
-              && header->next->is_atom
-              && header->next->next->is_atom)
-            return TRUE;
-
-          if (svn_fs_base__matches_atom(kind, "file")
-              && ((len == 3) || (len == 4))
-              && header->next->is_atom
-              && header->next->next->is_atom)
-            {
-              if ((len == 4) && (! header->next->next->next->is_atom))
-                return FALSE;
-              return TRUE;
-            }
-        }
+      if (! ((len == 3)
+             && header->next->is_atom
+             && header->next->next->is_atom))
+        return FALSE;
     }
+  else if (svn_fs_base__matches_atom(kind, "file"))
+    {
+      if (len < 3)
+        return FALSE;
 
-  return FALSE;
+      if (! header->next->is_atom)
+        return FALSE;
+
+      /* As of SVN_FS_BASE__MIN_REP_SHARING_FORMAT version, the
+         DATA-KEY slot can be a 2-tuple. */
+      if (! header->next->next->is_atom)
+        {
+          if (! ((svn_fs_base__list_length(header->next->next) == 2)
+                 && header->next->next->children->is_atom
+                 && header->next->next->children->len
+                 && header->next->next->children->next->is_atom
+                 && header->next->next->children->next->len))
+            return FALSE;
+        }
+
+      if ((len > 3) && (! header->next->next->next->is_atom))
+        return FALSE;
+
+      if (len > 4)
+        return FALSE;
+    }
+  
+  return TRUE;
 }
 
 
@@ -684,9 +701,27 @@ svn_fs_base__parse_node_revision_skel(node_revision_t **noderev_p,
                                        skel->children->next->len);
 
   /* DATA-KEY */
-  if (skel->children->next->next->len)
-    noderev->data_key = apr_pstrmemdup(pool, skel->children->next->next->data,
-                                       skel->children->next->next->len);
+  if (skel->children->next->next->is_atom)
+    {
+      /* This is a real data rep key. */
+      if (skel->children->next->next->len)
+        noderev->data_key = apr_pstrmemdup(pool,
+                                           skel->children->next->next->data,
+                                           skel->children->next->next->len);
+      noderev->data_key_uniquifier = NULL;
+    }
+  else
+    {
+      /* This is a 2-tuple with a data rep key and a uniquifier. */
+      noderev->data_key = 
+        apr_pstrmemdup(pool, 
+                       skel->children->next->next->children->data,
+                       skel->children->next->next->children->len);
+      noderev->data_key_uniquifier = 
+        apr_pstrmemdup(pool, 
+                       skel->children->next->next->children->next->data,
+                       skel->children->next->next->children->next->len);
+    }
 
   /* EDIT-DATA-KEY (optional, files only) */
   if ((noderev->kind == svn_node_file)
@@ -1298,12 +1333,37 @@ svn_fs_base__unparse_node_revision_skel(skel_t **skel_p,
     svn_fs_base__prepend(svn_fs_base__str_atom(noderev->edit_key, pool),
                          skel);
 
-  /* DATA-KEY */
-  if ((noderev->data_key) && (*noderev->data_key))
-    svn_fs_base__prepend(svn_fs_base__str_atom(noderev->data_key, pool),
-                         skel);
+  /* DATA-KEY | (DATA-KEY DATA-KEY-UNIQID) */
+  if ((noderev->data_key_uniquifier) && (*noderev->data_key_uniquifier))
+    {
+      /* Build a 2-tuple with a rep key and uniquifier. */
+      skel_t *data_key_skel = svn_fs_base__make_empty_list(pool);
+      
+      /* DATA-KEY-UNIQID */
+      svn_fs_base__prepend(svn_fs_base__str_atom(noderev->data_key_uniquifier,
+                                                 pool),
+                           data_key_skel);
+
+      /* DATA-KEY */
+      if ((noderev->data_key) && (*noderev->data_key))
+        svn_fs_base__prepend(svn_fs_base__str_atom(noderev->data_key, pool),
+                             data_key_skel);
+      else
+        svn_fs_base__prepend(svn_fs_base__mem_atom(NULL, 0, pool),
+                             data_key_skel);
+
+      /* Add our 2-tuple to the main skel. */
+      svn_fs_base__prepend(data_key_skel, skel);
+    }
   else
-    svn_fs_base__prepend(svn_fs_base__mem_atom(NULL, 0, pool), skel);
+    {
+      /* Just store the rep key (or empty placeholder) in the main skel. */
+      if ((noderev->data_key) && (*noderev->data_key))
+        svn_fs_base__prepend(svn_fs_base__str_atom(noderev->data_key, pool),
+                             skel);
+      else
+        svn_fs_base__prepend(svn_fs_base__mem_atom(NULL, 0, pool), skel);
+    }
 
   /* PROP-KEY */
   if ((noderev->prop_key) && (*noderev->prop_key))
