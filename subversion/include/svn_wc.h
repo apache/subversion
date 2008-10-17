@@ -826,7 +826,10 @@ typedef enum svn_wc_notify_action_t
   svn_wc_notify_update_replace,
 
   /** Property updated. @since New in 1.6. */
-  svn_wc_notify_property_updated
+  svn_wc_notify_property_updated,
+
+  /** The last notification in a merge. @since New in 1.6. */
+  svn_wc_notify_merge_completed
 
 } svn_wc_notify_action_t;
 
