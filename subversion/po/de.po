@@ -1,6 +1,5 @@
-#
-# German translations for Subversion
-# Deutsche Übersetzung für Subversion
+# German translation of Subversion
+# Deutsche Übersetzung von Subversion
 #
 # Copyright (C) 2004-2006 CollabNet.
 # This file is distributed under the same license as the subversion package.
@@ -80,14 +79,13 @@ msgstr ""
 "Project-Id-Version: subversion 1.6\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2008-10-17 21:59+0200\n"
-"PO-Revision-Date: 2008-10-17 22:19+0200\n"
+"PO-Revision-Date: 2008-10-18 01:49+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: German <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
-"X-Poedit-Basepath: ..\n"
 
 #. Constructing nice error messages for roots.
 #. Build an SVN_ERR_FS_NOT_FOUND error, with a detailed error text,
@@ -150,10 +148,9 @@ msgstr "Pfad »%s« ist bereits vom Benutzer »%s« im Dateisystem »%s« gesper
 msgid "No lock on path '%s' in filesystem '%s'"
 msgstr "Keine Sperre für Pfad »%s« im Dateisystem »%s«"
 
-# | msgid "Lock has expired:  lock-token '%s' in filesystem '%s'"
 #. FS is of type "svn fs_t *".
 #: ../include/private/svn_fs_util.h:125
-#, fuzzy, c-format
+#, c-format
 msgid "Lock has expired: lock-token '%s' in filesystem '%s'"
 msgstr "Sperre lief aus: Sperrmarke »%s« in Dateisystem »%s«"
 
@@ -435,17 +432,13 @@ msgstr "Pfad von »copyfrom« konnte in der Arbeitskopie nicht gefunden werden"
 msgid "Moving a path from one changelist to another"
 msgstr "Verschieben eines Pfades von einer Änderungsliste in eine andere"
 
-# | msgid "Can't get file name"
 #: ../include/svn_error_codes.h:453
-#, fuzzy
 msgid "Cannot delete a file external"
-msgstr "Kann keinen Dateinamen holen"
+msgstr "Kann externen Dateiverweis nicht löschen"
 
-# | msgid "Cannot move path '%s' into itself"
 #: ../include/svn_error_codes.h:458
-#, fuzzy
 msgid "Cannot move a file external"
-msgstr "Kann »%s« nicht auf sich selbst verschieben"
+msgstr "Kann externen Dateiverweis nicht verschieben"
 
 #: ../include/svn_error_codes.h:464
 msgid "General filesystem error"
@@ -719,11 +712,9 @@ msgstr "Der Server kann nur von der Basis des Projektarchivs fortfahren"
 msgid "Repository UUID does not match expected UUID"
 msgstr "Die UUID des Projektarchivs entspricht nicht der erwarteten UUID"
 
-# | msgid "Repository UUID does not match expected UUID"
 #: ../include/svn_error_codes.h:778
-#, fuzzy
 msgid "Repository root URL does not match expected root URL"
-msgstr "Die UUID des Projektarchivs entspricht nicht der erwarteten UUID"
+msgstr "Die URL der Projektarchivwurzel entspricht nicht der erwarteten Wurzel-URL"
 
 #: ../include/svn_error_codes.h:784
 msgid "RA layer failed to init socket layer"
@@ -1096,23 +1087,17 @@ msgstr "Die apr-memcache-Bibliothek ist nicht verfügbar"
 msgid "Couldn't perform atomic initialization"
 msgstr ""
 
-# | msgid "Write error"
 #: ../include/svn_error_codes.h:1215
-#, fuzzy
 msgid "SQLite error"
-msgstr "Schreibfehler"
+msgstr "SQLite-Fehler"
 
-# | msgid "Attempted to write to non-transaction"
 #: ../include/svn_error_codes.h:1220
-#, fuzzy
 msgid "Attempted to write to readonly SQLite db"
-msgstr "Versuch, in eine Nicht-Transaktion zu schreiben"
+msgstr "Versuch, in eine nur lesbare SQLite-Datenbank zu schreiben"
 
-# | msgid "Unsupported checksum type"
 #: ../include/svn_error_codes.h:1225
-#, fuzzy
 msgid "Unsupported schema found in SQLite db"
-msgstr "Nicht unterstützter Prüfsummentyp"
+msgstr "Nicht unterstütztes Schema in SQLite-Datenbank gefunden"
 
 #: ../include/svn_error_codes.h:1231
 msgid "Error parsing arguments"
@@ -1666,17 +1651,15 @@ msgstr ""
 msgid "Unrecognized format for the relative external URL '%s'"
 msgstr "Unbekanntes Format für die relative externe URL »%s«"
 
-# | msgid "URL '%s' doesn't exist"
 #: ../libsvn_client/externals.c:791
-#, fuzzy, c-format
+#, c-format
 msgid "URL '%s' at revision %ld doesn't exist"
-msgstr "Die URL »%s« existiert nicht"
+msgstr "URL »%s« existiert nicht in Revision %ld"
 
-# | msgid "'%s' is not a file or directory"
 #: ../libsvn_client/externals.c:797
-#, fuzzy, c-format
+#, c-format
 msgid "URL '%s' at revision %ld is not a file or a directory"
-msgstr "»%s« ist weder eine Datei noch ein Verzeichnis"
+msgstr "URL »%s« in Revision %ld ist weder eine Datei noch ein Verzeichnis"
 
 #: ../libsvn_client/externals.c:1079
 #, c-format
@@ -2140,17 +2123,15 @@ msgstr "Unbekannter Dateisystemtyp »%s«"
 msgid "Can't allocate FS mutex"
 msgstr "Kann FS Mutex nicht anlegen"
 
-# | msgid "Path '%s' is not a URL"
 #: ../libsvn_fs/fs-loader.c:341
-#, fuzzy, c-format
+#, c-format
 msgid "Path '%s' is not in UTF-8"
-msgstr "Pfad »%s« ist keine URL"
+msgstr "Pfad »%s« ist kein UTF-8"
 
-# | msgid "URL '%s' contains a '..' element"
 #: ../libsvn_fs/fs-loader.c:349
-#, fuzzy, c-format
+#, c-format
 msgid "Path '%s' contains '.' or '..' element"
-msgstr "URL »%s« enthält ein »..« Element"
+msgstr "Pfad »%s« enthält ein Element ».« oder »..«"
 
 #: ../libsvn_fs/fs-loader.c:1099
 #, c-format
@@ -2755,11 +2736,10 @@ msgstr ""
 msgid "Transaction '%s' out-of-date with respect to revision '%s'"
 msgstr "Transaktion »%s« ist in Bezug auf Revision »%s« veraltet"
 
-# | msgid "Cannot specify a revision range with two URLs"
 #: ../libsvn_fs_base/tree.c:2819
-#, fuzzy, c-format
+#, c-format
 msgid "Cannot deltify revisions prior to r%ld"
-msgstr "Die Angabe eines Revisionsbereichs mit zwei URLs ist nicht möglich"
+msgstr "Die Erstellung von Deltas für Revisionen vor r%ld ist nicht möglich"
 
 #: ../libsvn_fs_base/tree.c:2936 ../libsvn_fs_fs/tree.c:1897
 msgid "The root directory cannot be deleted"
@@ -4409,11 +4389,10 @@ msgstr "Verzeichnis »%s« ist veraltet"
 msgid "File '%s' is out of date"
 msgstr "Datei »%s« ist veraltet"
 
-# | msgid "Directory '%s' is out of date"
 #: ../libsvn_repos/commit.c:129
-#, fuzzy, c-format
+#, c-format
 msgid "File or directory '%s' is out of date"
-msgstr "Verzeichnis »%s« ist veraltet"
+msgstr "Datei oder Verzeichnis »%s« ist veraltet"
 
 #: ../libsvn_repos/commit.c:296 ../libsvn_repos/commit.c:441
 #, c-format
@@ -6105,20 +6084,18 @@ msgstr "Die URL »%s« hat eine andere Projektarchiv-Basis als ihr Vorgänger"
 msgid "Error restoring text for '%s'"
 msgstr "Fehler beim Wiederherstellen des Textes für »%s«"
 
-# | msgid "Unknown or unexpected kind for path '%s'"
 #: ../libsvn_wc/adm_ops.c:1902
-#, fuzzy, c-format
+#, c-format
 msgid "unexpected kind for revert-base '%s'"
-msgstr "Unbekannte oder unerwartete Art für Pfad »%s«"
+msgstr "Unerwartete Art für revert-base »%s«"
 
 #: ../libsvn_wc/adm_ops.c:2143
 msgid ""
 "Cannot revert addition of current directory; please try again from the "
 "parent directory"
 msgstr ""
-"Kann Hinzufügen von aktuellem Verzeichnis nicht zurück nehmen; bitte "
-"versuchen\n"
-"Sie es aus dem Elternverzeichnis erneut"
+"Kann Hinzufügen des aktuellen Verzeichnisses nicht zurücknehmen; bitte "
+"versuchen Sie es aus dem Elternverzeichnis erneut"
 
 #: ../libsvn_wc/adm_ops.c:2174
 #, c-format
@@ -6236,11 +6213,10 @@ msgstr "Ungültiger Wert für Feld »%s«"
 msgid "Found an unexpected \\0 in the file external '%s'"
 msgstr ""
 
-# | msgid "File not found: revision %ld, path '%s'"
 #: ../libsvn_wc/entries.c:388
-#, fuzzy, c-format
+#, c-format
 msgid "Illegal file external revision kind %d for path '%s'"
-msgstr "Datei nicht gefunden: Revision %ld, Pfad »%s«"
+msgstr "Ungültiger Revisionstyp des externen Dateiverweises %d für Pfad »%s«"
 
 #: ../libsvn_wc/entries.c:500 ../libsvn_wc/entries.c:769
 #, c-format
@@ -6686,11 +6662,8 @@ msgstr ""
 "Versuch, die Eigenschaft »%s« von »%s« in »%s« zu ändern,\n"
 "aber die Eigenschaft existiert bereits mit dem Wert »%s«."
 
-# | msgid ""
-# | "Trying to change property '%s' from '%s' to '%s',\n"
-# | "but property has been locally changed from '%s' to '%s'."
 #: ../libsvn_wc/props.c:1801
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Trying to change property '%s' from '%s' to '%s',\n"
 "but the property has been locally changed from '%s' to '%s'."
@@ -6761,11 +6734,10 @@ msgstr "Stil für Zeilenende für »%s« nicht erkannt"
 msgid "Error parsing %s property on '%s': '%s'"
 msgstr "Fehler beim Analysieren der %s Eigenschaft für »%s«: »%s«"
 
-# | msgid "Can't read length line in file '%s'"
 #: ../libsvn_wc/props.c:3291
-#, fuzzy, c-format
+#, c-format
 msgid "Can't split line into components: '%s'"
-msgstr "Kann Längenzeile nicht aus Datei »%s« lesen"
+msgstr "Zeile kann nicht in Komponenten zerlegt werden: »%s«"
 
 #: ../libsvn_wc/props.c:3347
 #, c-format
@@ -6872,11 +6844,9 @@ msgstr ""
 msgid "No delimiter after 'node_kind' in tree conflict description"
 msgstr ""
 
-# | msgid "Invalid operation on the current working directory"
 #: ../libsvn_wc/tree_conflicts.c:173
-#, fuzzy
 msgid "Invalid 'operation' field in tree conflict description"
-msgstr "Ungültige Operation auf dem aktuellen Arbeitsverzeichnis"
+msgstr "Ungültiges Feld »operation« in Baumkonfliktbeschreibung"
 
 #: ../libsvn_wc/tree_conflicts.c:177
 msgid "No delimiter after 'operation' in tree conflict description"
@@ -6924,11 +6894,9 @@ msgstr ""
 msgid "Bad reason in tree conflict description"
 msgstr ""
 
-# | msgid "Attempted to create entry that already exists"
 #: ../libsvn_wc/tree_conflicts.c:525
-#, fuzzy
 msgid "Attempt to add tree conflict that already exists"
-msgstr "Versuchte, Eintrag anzulegen, der bereits existiert"
+msgstr "Es wurde versucht, einen Baumkonflikt hinzuzufügen, den es bereits gibt"
 
 #: ../libsvn_wc/update_editor.c:481
 #, c-format
@@ -7448,11 +7416,10 @@ msgstr "Zu viele Parameter für Import Befehl"
 msgid "Invalid URL '%s'"
 msgstr "Ungültige URL »%s«"
 
-# | msgid "'%s' is not under version control"
+# CHECKME: full stop?
 #: ../svn/info-cmd.c:88
-#, fuzzy
 msgid "Resource is not under version control."
-msgstr "»%s« ist nicht unter Versionskontrolle"
+msgstr "Ressource ist nicht unter Versionskontrolle."
 
 #: ../svn/info-cmd.c:240 ../svnadmin/main.c:1204
 #, c-format
@@ -7709,14 +7676,12 @@ msgstr "Zusammengeführt mittels:"
 msgid "'with-all-revprops' option only valid in XML mode"
 msgstr "Option »with-all-revprops« ist nur im XML-Modus gültig"
 
-# TODO: combine
-# | msgid "'with-revprop' option only valid in XML mode"
 #: ../svn/log-cmd.c:455
-#, fuzzy
 msgid "'with-no-revprops' option only valid in XML mode"
-msgstr "Option »with-revprop« ist nur im XML-Modus gültig"
+msgstr "Option »with-no-revprops« ist nur im XML-Modus gültig"
 
 # TODO: combine
+# CHECKME: s/with-revprop/with-revprops/ ???
 #: ../svn/log-cmd.c:459
 msgid "'with-revprop' option only valid in XML mode"
 msgstr "Option »with-revprop« ist nur im XML-Modus gültig"
@@ -8054,11 +8019,9 @@ msgstr "Pfad in Arbeitskopie beibehalten"
 msgid "retrieve all revision properties"
 msgstr "alle Revisionseigenschaften abfragen"
 
-# | msgid "retrieve all revision properties"
 #: ../svn/main.c:251
-#, fuzzy
 msgid "retrieve no revision properties"
-msgstr "alle Revisionseigenschaften abfragen"
+msgstr "keine Revisionseigenschaften abfragen"
 
 #: ../svn/main.c:253
 msgid ""
@@ -9088,81 +9051,7 @@ msgstr ""
 "wieder\n"
 "  herstellen.\n"
 
-# | msgid ""
-# | "Print the status of working copy files and directories.\n"
-# | "usage: status [PATH...]\n"
-# | "\n"
-# | "  With no args, print only locally modified items (no network access).\n"
-# | "  With -q, print only summary information about locally modified items.\n"
-# | "  With -u, add working revision and server out-of-date information.\n"
-# | "  With -v, print full revision information on every item.\n"
-# | "\n"
-# | "  The first six columns in the output are each one character wide:\n"
-# | "    First column: Says if item was added, deleted, or otherwise changed\n"
-# | "      ' ' no modifications\n"
-# | "      'A' Added\n"
-# | "      'C' Conflicted\n"
-# | "      'D' Deleted\n"
-# | "      'I' Ignored\n"
-# | "      'M' Modified\n"
-# | "      'R' Replaced\n"
-# | "      'X' item is unversioned, but is used by an externals definition\n"
-# | "      '?' item is not under version control\n"
-# | "      '!' item is missing (removed by non-svn command) or incomplete\n"
-# | "      '~' versioned item obstructed by some item of a different kind\n"
-# | "    Second column: Modifications of a file's or directory's properties\n"
-# | "      ' ' no modifications\n"
-# | "      'C' Conflicted\n"
-# | "      'M' Modified\n"
-# | "    Third column: Whether the working copy directory is locked\n"
-# | "      ' ' not locked\n"
-# | "      'L' locked\n"
-# | "    Fourth column: Scheduled commit will contain addition-with-history\n"
-# | "      ' ' no history scheduled with commit\n"
-# | "      '+' history scheduled with commit\n"
-# | "    Fifth column: Whether the item is switched relative to its parent\n"
-# | "      ' ' normal\n"
-# | "      'S' switched\n"
-# | "    Sixth column: Repository lock token\n"
-# | "      (without -u)\n"
-# | "      ' ' no lock token\n"
-# | "      'K' lock token present\n"
-# | "      (with -u)\n"
-# | "      ' ' not locked in repository, no lock token\n"
-# | "      'K' locked in repository, lock toKen present\n"
-# | "      'O' locked in repository, lock token in some Other working copy\n"
-# | "      'T' locked in repository, lock token present but sTolen\n"
-# | "      'B' not locked in repository, lock token present but Broken\n"
-# | "\n"
-# | "  The out-of-date information appears in the eighth column (with -u):\n"
-# | "      '*' a newer revision exists on the server\n"
-# | "      ' ' the working copy is up to date\n"
-# | "\n"
-# | "  Remaining fields are variable width and delimited by spaces:\n"
-# | "    The working revision (with -u or -v)\n"
-# | "    The last committed revision and last committed author (with -v)\n"
-# | "    The working copy path is always the final field, so it can\n"
-# | "      include spaces.\n"
-# | "\n"
-# | "  Example output:\n"
-# | "    svn status wc\n"
-# | "     M     wc/bar.c\n"
-# | "    A  +   wc/qax.c\n"
-# | "\n"
-# | "    svn status -u wc\n"
-# | "     M           965    wc/bar.c\n"
-# | "           *     965    wc/foo.c\n"
-# | "    A  +         965    wc/qax.c\n"
-# | "    Status against revision:   981\n"
-# | "\n"
-# | "    svn status --show-updates --verbose wc\n"
-# | "     M           965       938 kfogel       wc/bar.c\n"
-# | "           *     965       922 sussman      wc/foo.c\n"
-# | "    A  +         965       687 joe          wc/qax.c\n"
-# | "                 965       687 joe          wc/zig.c\n"
-# | "    Status against revision:   981\n"
 #: ../svn/main.c:806
-#, fuzzy
 msgid ""
 "Print the status of working copy files and directories.\n"
 "usage: status [PATH...]\n"
@@ -9259,9 +9148,7 @@ msgstr ""
 "      »I« Ignored    - ignoriert\n"
 "      »M« Modified   - verändert\n"
 "      »R« Replaced   - ersetzt\n"
-"      »X« Objekt ist nicht versioniert, wird aber von einem »svn:"
-"externals«-\n"
-"          Verweis verwendet\n"
+"      »X« nicht versioniertes, von »svn:externals«-Verweis erzeugtes Verzeichnis\n"
 "      »?« Objekt ist nicht unter Versionskontrolle\n"
 "      »!« Objekt fehlt (durch nicht-svn-Befehl entfernt) oder unvollständig\n"
 "      »~« versioniertes Objekt von einem Objekt anderer Art behindert\n"
@@ -9276,10 +9163,10 @@ msgstr ""
 "                   enthalten\n"
 "      » « Übertragung wird keine Historie enthalten\n"
 "      »+« Übertragung wird Historie enthalten\n"
-"    Fünfte Spalte: Ob das Objekt relativ zu seinem Elternteil umgestellt "
-"wurde\n"
+"    Fünfte Spalte: Wurde Objekt umgestellt oder ist ein externer Dateiverweis?\n"
 "      » « normal\n"
-"      »S« Switched   - umgestellt\n"
+"      »S« das Objekt hat eine umgeStellte URL relativ zu seinem Elternteil\n"
+"      »X« eine von einem eXternen Verweis erzeugte versionierte Datei\n"
 "    Sechste Spalte: Sperre im Projektarchiv\n"
 "      (ohne -u)\n"
 "      » « keine Sperre\n"
@@ -9599,17 +9486,13 @@ msgstr "-r und -c können nicht mit --reintegrate verwendet werden"
 msgid "--depth and --set-depth are mutually exclusive"
 msgstr "--depth und --set-depth schließen sich gegenseitig aus"
 
-# | msgid "--auto-props and --no-auto-props are mutually exclusive"
 #: ../svn/main.c:1652
-#, fuzzy
 msgid "--with-all-revprops and --with-no-revprops are mutually exclusive"
-msgstr "--auto-props und --no-auto-props schließen sich gegenseitig aus"
+msgstr "--with-all-revprops und --with-no-revprops schließen sich gegenseitig aus"
 
-# | msgid "--auto-props and --no-auto-props are mutually exclusive"
 #: ../svn/main.c:1662
-#, fuzzy
 msgid "--with-revprop and --with-no-revprops are mutually exclusive"
-msgstr "--auto-props und --no-auto-props schließen sich gegenseitig aus"
+msgstr "--with-revprop und --with-no-revprops schließen sich gegenseitig aus"
 
 #: ../svn/main.c:1671 ../svnsync/main.c:2006
 msgid "--trust-server-cert requires --non-interactive"
@@ -9734,11 +9617,10 @@ msgstr ""
 msgid "  Text conflicts: %u\n"
 msgstr ""
 
-# | msgid "Property not found"
 #: ../svn/notify.c:78
-#, fuzzy, c-format
+#, c-format
 msgid "  Property conflicts: %u\n"
-msgstr "Eigenschaft nicht gefunden"
+msgstr "  Eigenschaftskonflikte: %u\n"
 
 #: ../svn/notify.c:82
 #, c-format
@@ -10255,17 +10137,14 @@ msgid ""
 "renamed in the history of the branch you are merging into?\n"
 msgstr ""
 
-# | msgid "Path '%s' is not in the working copy"
 #: ../svn/tree-conflicts.c:117
-#, fuzzy
 msgid "This action was obstructed by an item in the working copy.\n"
-msgstr "Pfad »%s« ist nicht in der Arbeitskopie enthalten"
+msgstr "Diese Aktion wurde von einem Objekt in der Arbeitskopie behindert.\n"
 
-# | msgid "'%s' unlocked.\n"
 #: ../svn/tree-conflicts.c:120
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is unversioned.\n"
-msgstr "»%s« freigegeben.\n"
+msgstr "»%s« ist nicht versioniert.\n"
 
 #: ../svn/tree-conflicts.c:242
 #, c-format
@@ -10546,17 +10425,7 @@ msgstr ""
 "Revision gespeichert werden. Falls keine Revisionen angegeben wurden, wird\n"
 "nur die HEAD-Revision deltifiziert.\n"
 
-# | msgid ""
-# | "usage: svnadmin dump REPOS_PATH [-r LOWER[:UPPER]] [--incremental]\n"
-# | "\n"
-# | "Dump the contents of filesystem to stdout in a 'dumpfile'\n"
-# | "portable format, sending feedback to stderr.  Dump revisions\n"
-# | "LOWER rev through UPPER rev.  If no revisions are given, dump all\n"
-# | "revision trees.  If only LOWER is given, dump that one revision tree.\n"
-# | "If --incremental is passed, then the first revision dumped will be\n"
-# | "a diff against the previous revision, instead of the usual fulltext.\n"
 #: ../svnadmin/main.c:339
-#, fuzzy
 msgid ""
 "usage: svnadmin dump REPOS_PATH [-r LOWER[:UPPER]] [--incremental]\n"
 "\n"
@@ -10572,14 +10441,15 @@ msgid ""
 msgstr ""
 "Aufruf: svnadmin dump ARCHIV_PFAD [-r VON[:BIS]] [--incremental]\n"
 "\n"
-"Gibt einen Abzug des Projektarchivs in einem portablen »Dump«-Format auf "
-"die\n"
-"Standardausgabe aus. Rückmeldungen gehen an die Standardfehlerausgabe.\n"
+"Gibt einen Abzug des Projektarchivs in einem portablen »Dump«-Format auf die\n"
+"Standardausgabe aus. Rückmeldungen gehen auf den Standardfehlerkanal.\n"
 "Gibt die Revisionen VON:BIS aus. Ohne Angabe eines Bereichs werden alle\n"
-"Revisionen ausgegeben. Falls nur VON angegeben wurde, werden diese und alle\n"
-"darauf folgenden Revisionen ausgegeben. Falls »--incremental« übergeben\n"
-"wurde, ist die erste ausgegebene Revision ein Vergleich mit der vorher-\n"
-"gehenden Version, anstelle des üblichen vollständigen Inhaltes.\n"
+"Revisionen ausgegeben. Falls nur VON angegeben wurde, wird nur diese\n"
+"Revision ausgegeben. Bei Angabe von »--incremental«, wird die erste ausgegebene\n"
+"Revision nur die in dieser Revision geänderten Pfade enthalten. Andernfalls\n"
+"wird jeder Pfad im Projektarchiv dieser Revision ausgegeben. (In jedem Fall\n"
+"werden für die zweite und folgende Revisionen, nur in diesen Revisionen\n"
+"geänderte Pfade ausgegeben.)\n"
 
 #: ../svnadmin/main.c:352
 msgid ""
@@ -11939,22 +11809,7 @@ msgstr ""
 "Der Dienst konnte nicht gestartet werden; ein interner Fehler trat beim "
 "Starten des Dienstes auf"
 
-# | msgid ""
-# | "usage: svnsync initialize DEST_URL SOURCE_URL\n"
-# | "\n"
-# | "Initialize a destination repository for synchronization from\n"
-# | "another repository.\n"
-# | "\n"
-# | "The destination URL must point to the root of a repository with\n"
-# | "no committed revisions.  The destination repository must allow\n"
-# | "revision property changes.\n"
-# | "\n"
-# | "You should not commit to, or make revision property changes in,\n"
-# | "the destination repository by any method other than 'svnsync'.\n"
-# | "In other words, the destination repository should be a read-only\n"
-# | "mirror of the source repository.\n"
 #: ../svnsync/main.c:69
-#, fuzzy
 msgid ""
 "usage: svnsync initialize DEST_URL SOURCE_URL\n"
 "\n"
@@ -11981,6 +11836,9 @@ msgstr ""
 "Die Ziel-URL muss auf die Basis eines leeren Projektarchivs ohne\n"
 "übertragene Revisionen zeigen. Das Zielprojektarchiv muss Änderungen\n"
 "an Revisionseigenschaften zulassen.\n"
+"\n"
+"Falls die Quell-URL nicht die Wurzel eines Projektarchivs ist, wird nur\n"
+"der angegebene Teil des Projektarchivs synchronisiert.\n"
 "\n"
 "Übertragungen in das oder Eigenschaftsänderungen im Zielprojektarchiv\n"
 "sollten ausschließlich mit »svnsync« vorgenommen werden.\n"
