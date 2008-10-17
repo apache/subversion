@@ -65,20 +65,20 @@ print_conflict_stats(struct notify_baton *nb, apr_pool_t *pool)
       SVN_ERR(svn_cmdline_printf(pool, _("Summary of conflicts:\n")));
 
   if (nb->text_conflicts > 0)
-      SVN_ERR(svn_cmdline_printf
-          (pool, _("  Text conflicts: %u\n"), nb->text_conflicts));
+    SVN_ERR(svn_cmdline_printf
+      (pool, _("  Text conflicts: %u\n"), nb->text_conflicts));
 
   if (nb->prop_conflicts > 0)
-      SVN_ERR(svn_cmdline_printf
-          (pool, _("  Property conflicts: %u\n"), nb->prop_conflicts));
+    SVN_ERR(svn_cmdline_printf
+      (pool, _("  Property conflicts: %u\n"), nb->prop_conflicts));
 
   if (nb->tree_conflicts > 0)
-      SVN_ERR(svn_cmdline_printf
-          (pool, _("  Tree conflicts: %u\n"), nb->tree_conflicts));
+    SVN_ERR(svn_cmdline_printf
+      (pool, _("  Tree conflicts: %u\n"), nb->tree_conflicts));
 
   if (nb->skipped_paths > 0)
-      SVN_ERR(svn_cmdline_printf
-          (pool,_("   Skipped paths: %u\n"), nb->skipped_paths));
+    SVN_ERR(svn_cmdline_printf
+      (pool,_("   Skipped paths: %u\n"), nb->skipped_paths));
 
   return SVN_NO_ERROR;
 }
