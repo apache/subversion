@@ -541,7 +541,6 @@ svn_error_t *
 svn_wc_get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
                          const char *victim_path,
                          svn_wc_adm_access_t *adm_access,
-                         svn_boolean_t adm_access_is_parent,
                          apr_pool_t *pool)
 {
   const char *parent_path = svn_path_dirname(victim_path, pool);
@@ -552,39 +551,32 @@ svn_wc_get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
   const svn_wc_entry_t *entry;
   int i;
 
-  if (adm_access_is_parent)
+  /* Try to get the parent's admin access baton from the baton set. */
+  err = svn_wc_adm_retrieve(&parent_adm_access, adm_access, parent_path,
+                            pool);
+  if (err && (err->apr_err == SVN_ERR_WC_NOT_LOCKED))
     {
-      parent_adm_access = adm_access;
-    }
-  else
-    {
-      /* Try to get the parent's admin access baton from the baton set. */
-      err = svn_wc_adm_retrieve(&parent_adm_access, adm_access, parent_path,
-                                pool);
-      if (err && (err->apr_err == SVN_ERR_WC_NOT_LOCKED))
+      svn_error_clear(err);
+
+      /* Try to access the parent dir independently. We can't add
+         a parent's access baton to the existing access baton set
+         of its child, because the lifetimes would be wrong
+         according to doc string of svn_wc_adm_open3(), so we get
+         open it temporarily and close it after use. */
+      err = svn_wc_adm_open3(&parent_adm_access, NULL, parent_path,
+                             FALSE, 0, NULL, NULL, pool);
+      parent_adm_access_is_temporary = TRUE;
+
+      /* If the parent isn't a WC dir, the child can't be
+         tree-conflicted. */
+      if (err && (err->apr_err == SVN_ERR_WC_NOT_DIRECTORY))
         {
           svn_error_clear(err);
-
-          /* Try to access the parent dir independently. We can't add
-             a parent's access baton to the existing access baton set
-             of its child, because the lifetimes would be wrong
-             according to doc string of svn_wc_adm_open3(), so we get
-             open it temporarily and close it after use. */
-          err = svn_wc_adm_open3(&parent_adm_access, NULL, parent_path,
-                                 FALSE, 0, NULL, NULL, pool);
-          parent_adm_access_is_temporary = TRUE;
-
-          /* If the parent isn't a WC dir, the child can't be
-             tree-conflicted. */
-          if (err && (err->apr_err == SVN_ERR_WC_NOT_DIRECTORY))
-            {
-              svn_error_clear(err);
-              *tree_conflict = NULL;
-              return SVN_NO_ERROR;
-            }
+          *tree_conflict = NULL;
+          return SVN_NO_ERROR;
         }
-      SVN_ERR(err);
     }
+  SVN_ERR(err);
 
   conflicts = apr_array_make(pool, 0,
                              sizeof(svn_wc_conflict_description_t *));
