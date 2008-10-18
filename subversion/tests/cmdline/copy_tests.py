@@ -4009,7 +4009,7 @@ def path_move_and_copy_between_wcs_2475(sbox):
   sbox.build()
 
   # checkout a second working copy, use repository url with different case
-  wc2_dir = sbox.wc_dir + '2'
+  wc2_dir = sbox.add_wc_path('2')
   repo_url2 = change_case_of_hostname(sbox.repo_url)
 
   expected_output = svntest.main.greek_state.copy()
