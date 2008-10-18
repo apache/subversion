@@ -54,6 +54,8 @@ StatusCallback::callback(void *baton,
 {
   if (baton)
     ((StatusCallback *)baton)->doStatus(path, status);
+
+  return SVN_NO_ERROR;
 }
 
 /**
