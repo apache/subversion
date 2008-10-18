@@ -63,6 +63,7 @@ Blanket commit access:
      steveking   Stefan Küng <tortoisesvn@gmail.com>
          neels   Neels J. Hofmeyr <neels@elego.de>
      jwhitlock   Jeremy Whitlock <jcscoobyrs@gmail.com>
+       sbutler   Stephen Butler <sbutler@elego.de>
 
 Commit access for specific areas:
 
@@ -156,9 +157,6 @@ giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
                                                               bindings br.)
        cacknin   Charles Acknin <charlesacknin@gmail.com>    (svnpatch-diff 
                                                               br.)
-       sbutler   Stephen Butler <sbutler@elego.de>           (tree-conflicts
-                                                              br., diff-
-                                                              callbacks3 br.)
     firemeteor   Guo Rui <timmyguo@mail.ustc.edu.cn>         (issue-2843-dev
                                                               br.)
 

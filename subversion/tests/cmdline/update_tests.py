@@ -3624,7 +3624,9 @@ def update_accept_conflicts(sbox):
   # the --non-interactive option.
   svntest.actions.run_and_verify_svn(None,
                                      ['C    %s\n' % (iota_path_backup,),
-                                      'Updated to revision 2.\n'],
+                                      'Updated to revision 2.\n',
+                                      'Summary of conflicts:\n',
+                                      '  Text conflicts: 1\n'],
                                      [],
                                      'update', iota_path_backup)
 
@@ -3632,7 +3634,9 @@ def update_accept_conflicts(sbox):
   # Just leave the conflicts alone.
   svntest.actions.run_and_verify_svn(None,
                                      ['C    %s\n' % (lambda_path_backup,),
-                                      'Updated to revision 2.\n'],
+                                      'Updated to revision 2.\n',
+                                      'Summary of conflicts:\n',
+                                      '  Text conflicts: 1\n'],
                                      [],
                                      'update', '--accept=postpone',
                                      lambda_path_backup)
