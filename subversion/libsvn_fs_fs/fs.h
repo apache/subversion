@@ -99,8 +99,7 @@ extern "C" {
    noderev fields. */
 #define SVN_FS_FS__MIN_MERGEINFO_FORMAT 3
 
-/* The minimum format number that maintains minfo-here and minfo-count
-   noderev fields. */
+/* The minimum format number that allows rep sharing. */
 #define SVN_FS_FS__MIN_REP_SHARING_FORMAT 4
 
 /* Private FSFS-specific data shared between all svn_txn_t objects that
