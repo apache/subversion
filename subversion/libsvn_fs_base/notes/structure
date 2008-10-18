@@ -862,6 +862,7 @@ Berkeley DB tables
                 "uuids" : recno(UUID)
                 "locks" : btree(TOKEN -> LOCK)
           "lock-tokens" : btree(PATH -> TOKEN)
+        "checksum-reps" : btree(SHA1SUM -> REP)
         "miscellaneous" : btree(STRING -> STRING)
 
 Syntactic elements
@@ -927,7 +928,7 @@ Entries lists:
 Node revisions:
 
           NODE-REVISION ::= FILE | DIR ;
-                   FILE ::= (HEADER PROP-KEY DATA-KEY [EDIT-DATA-KEY]) ;
+                   FILE ::= (HEADER PROP-KEY DATA-INFO [EDIT-DATA-KEY]) ;
                     DIR ::= (HEADER PROP-KEY ENTRIES-KEY) ; 
                  HEADER ::= (KIND CREATED-PATH 
                              [PRED-ID [PRED-COUNT 
@@ -937,7 +938,9 @@ Node revisions:
              PRED-COUNT ::= number | "" ;
            CREATED-PATH ::= atom ;
                PROP-KEY ::= atom ;
+              DATA-INFO ::= DATA-KEY | (DATA-KEY DATA-KEY-UNIQID)
                DATA-KEY ::= atom ;
+        DATA-KEY-UNIQID ::= atom ;
           EDIT-DATA-KEY ::= atom ;
           HAS-MERGEINFO ::= "0" | "1" ;
         MERGEINFO-COUNT ::= number ;
@@ -960,8 +963,11 @@ Representations:
                    KIND ::= "fulltext" | "delta" ;
              
                    SIZE ::= number ;
-               CHECKSUM ::= ("md5" BYTES) ;
-                  BYTES ::= atom ;
+               CHECKSUM ::= MD5 | SHA1;
+                    MD5 ::= ("md5" MD5SUM) ;
+                   SHA1 ::= ("sha1" SHA1SUM) ;
+                 MD5SUM ::= atom ;
+                SHA1SUM ::= atom ;
 
 
 Strings:
@@ -1001,7 +1007,7 @@ Node origins:
 
                 NODE-ID ::= NODE-REV-ID ;
 
-        
+
 Lexical elements
 ----------------
 
