@@ -557,7 +557,8 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
   /* If PATH itself is newly added there is no need to filter. */
   SVN_ERR(svn_wc__entry_versioned(&target_entry, path, adm_access,
                                   FALSE, pool));
-  if (target_entry->schedule == svn_wc_schedule_add)
+  if (target_entry->schedule == svn_wc_schedule_add
+      || target_entry->schedule == svn_wc_schedule_replace)
     return SVN_NO_ERROR;
 
   adjusted_props = apr_array_make(pool, (*props)->nelts, sizeof(svn_prop_t));
@@ -6322,6 +6323,20 @@ do_merge(apr_array_header_t *merge_sources,
       if (! dry_run)
         SVN_ERR(svn_client__elide_mergeinfo(target, NULL, target_entry,
                                             adm_access, ctx, subpool));
+    }
+
+  /* Let everyone know we're finished here. */
+  if (ctx->notify_func2)
+    {
+      svn_wc_notify_t *notify
+        = svn_wc_create_notify(target, svn_wc_notify_merge_completed,
+                               subpool);
+      notify->kind = svn_node_none;
+      notify->content_state = notify->prop_state
+        = svn_wc_notify_state_inapplicable;
+      notify->lock_state = svn_wc_notify_lock_state_inapplicable;
+      notify->revision = SVN_INVALID_REVNUM;
+      (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
     }
 
   svn_pool_destroy(subpool);

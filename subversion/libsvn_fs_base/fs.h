@@ -41,6 +41,9 @@ extern "C" {
    back-end's format.  */
 #define SVN_FS_BASE__FORMAT_NUMBER                4
 
+/* Minimum format number that supports representation sharing */
+#define SVN_FS_BASE__MIN_REP_SHARING_FORMAT       4
+
 /* Minimum format number that supports the 'miscellaneous' table */
 #define SVN_FS_BASE__MIN_MISCELLANY_FORMAT        4
 
@@ -68,7 +71,10 @@ svn_fs_base__test_required_feature_format(svn_fs_t *fs,
 /*** Miscellany keys. ***/
 
 /* Revision at which the repo started using forward deltas. */
-#define SVN_FS_BASE__MISCELLANEOUS_FORWARD_DELTA_UPGRADE  "forward-delta-rev"
+#define SVN_FS_BASE__MISC_FORWARD_DELTA_UPGRADE  "forward-delta-rev"
+
+/* Next filesystem-global unique identifier value (base36). */
+#define SVN_FS_BASE__MISC_NEXT_FSGUID            "next-fsguid"
 
 
 
@@ -93,6 +99,7 @@ typedef struct
   DB *lock_tokens;
   DB *node_origins;
   DB *miscellaneous;
+  DB *checksum_reps;
 
   /* A boolean for tracking when we have a live Berkeley DB
      transaction trail alive. */
@@ -176,6 +183,16 @@ typedef struct
   /* representation key for this node's text data (files) or entries
      list (dirs).  may be NULL if there are no contents.  */
   const char *data_key;
+
+  /* data representation instance identifier.  Sounds fancy, but is
+     really just a way to distinguish between "I use the same rep key
+     as another node because we share ancestry and haven't had our
+     text touched at all" and "I use the same rep key as another node
+     only because one or both of us decided to pick up a shared
+     representation after-the-fact."  May be NULL (if this node
+     revision isn't using a shared rep, or isn't the original
+     "assignee" of a shared rep). */
+  const char *data_key_uniquifier;
 
   /* representation key for this node's text-data-in-progess (files
      only).  NULL if no edits are currently in-progress.  This field

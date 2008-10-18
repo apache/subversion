@@ -123,10 +123,8 @@ char *
 svn_path_basename(const char *path, apr_pool_t *pool);
 
 /** Get the dirname of the specified canonicalized @a path, defined as
- * the path with its basename removed.
- *
- * Get the dirname of the specified @a path, defined as the path with its
- * basename removed.  If @a path is root ("/"), it is returned unchanged.
+ * the path with its basename removed.  If @a path is root ("/"), it is
+ * returned unchanged.
  *
  * The returned dirname will be allocated in @a pool.
  */
