@@ -1740,7 +1740,7 @@ svn_fs_youngest_rev(svn_revnum_t *youngest_p,
                     apr_pool_t *pool);
 
 
-/** Provide filesystem @a fs the opprotunity to compress storage relating to
+/** Provide filesystem @a fs the opportunity to compress storage relating to
  * associated with  @a revision in filesystem @a fs.  Use @a pool for all
  * allocations.
  *
