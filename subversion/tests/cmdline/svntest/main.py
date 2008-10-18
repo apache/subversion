@@ -1258,9 +1258,9 @@ def usage():
   print "%s " % (" " * len(prog_name))
   print "%s [--list] [<test> ...]\n" % prog_name
   print "Arguments:"
-  print " test            The number of the test to run, or a range of test\n"\
-        "                 numbers, like 10-12. Multiple numbers and ranges\n"\
-        "                 are ok. If you supply none, all tests are run.\n"
+  print " <test>  The number of the test to run, or a range of test\n"\
+        "         numbers, like 10:12 or 10-12. Multiple numbers and\n"\
+        "         ranges are ok. If you supply none, all tests are run.\n"
   print "Options:"
   print " --list          Print test doc strings instead of running them"
   print " --fs-type       Subversion file system type (fsfs or bdb)"
@@ -1353,9 +1353,11 @@ def run_tests(test_list, serial_only = False):
       if not appended:
         try:
           # Check if the argument is a range
-          numberstrings = arg.split('-');
+          numberstrings = arg.split(':');
           if len(numberstrings) != 2:
-            raise ValueError
+            numberstrings = arg.split('-');
+            if len(numberstrings) != 2:
+              raise ValueError
           left = int(numberstrings[0])
           right = int(numberstrings[1])
           if left > right:
