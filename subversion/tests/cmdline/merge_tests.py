@@ -12220,8 +12220,22 @@ def del_differing_file(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'propset',
                                      'newprop', 'v', target+"/pi")
   # Should complain and "skip" it.
-  svn_merge(s_rev_tau, source, target, 'Skipped.*tau')
-  svn_merge(s_rev_pi, source, target, 'Skipped.*pi')
+  svn_merge(s_rev_tau, source, target, [
+      "Skipped 'A/D/G2/tau'\n",
+      "--- Merging r2 into 'A/D/G2':\n",
+      "C    A/D/G2\n",
+      "Summary of conflicts:\n",
+      "  Tree conflicts: 1\n",
+      "   Skipped paths: 1\n"])
+
+  svn_merge(s_rev_pi, source, target, [
+      "Skipped 'A/D/G2/pi'\n",
+      "--- Merging r3 into 'A/D/G2':\n",
+      "C    A/D/G2\n",
+      "Summary of conflicts:\n",
+      "  Tree conflicts: 1\n",
+      "   Skipped paths: 1\n"])
+
 
   # Copy a file, modify it, commit, and merge a deletion to it.
   target = 'A/D/G3'
@@ -12231,8 +12245,21 @@ def del_differing_file(sbox):
                                      'newprop', 'v', target+"/pi")
   svn_commit(target)
   # Should complain and "skip" it.
-  svn_merge(s_rev_tau, source, target, 'Skipped.*tau')
-  svn_merge(s_rev_pi, source, target, 'Skipped.*pi')
+  svn_merge(s_rev_tau, source, target, [
+      "Skipped 'A/D/G3/tau'\n",
+      "--- Merging r2 into 'A/D/G3':\n",
+      "C    A/D/G3\n",
+      "Summary of conflicts:\n",
+      "  Tree conflicts: 1\n",
+      "   Skipped paths: 1\n"])
+
+  svn_merge(s_rev_pi, source, target, [
+      "Skipped 'A/D/G3/pi'\n",
+      "--- Merging r3 into 'A/D/G3':\n",
+      "C    A/D/G3\n",
+      "Summary of conflicts:\n",
+      "  Tree conflicts: 1\n",
+      "   Skipped paths: 1\n"])
 
   os.chdir(saved_cwd)
 
