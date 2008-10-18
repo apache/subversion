@@ -6537,7 +6537,7 @@ svn_fs_fs__pack(const char *fs_path,
   apr_int64_t i;
   svn_revnum_t youngest;
   apr_pool_t *iterpool;
-  const char *data_path, *revprops_path;
+  const char *data_path;
 
   SVN_ERR(read_format(&format, &max_files_per_dir,
                       svn_path_join(fs_path, PATH_FORMAT, pool),
@@ -6557,7 +6557,6 @@ svn_fs_fs__pack(const char *fs_path,
   completed_shards = youngest / max_files_per_dir;
 
   data_path = svn_path_join(fs_path, PATH_REVS_DIR, pool);
-  revprops_path = svn_path_join(fs_path, PATH_REVPROPS_DIR, pool);
 
   iterpool = svn_pool_create(pool);
   for (i = 0; i < completed_shards; i++)
@@ -6568,8 +6567,9 @@ svn_fs_fs__pack(const char *fs_path,
         SVN_ERR(cancel_func(cancel_baton));
 
       SVN_ERR(pack_shard(data_path, i, cancel_func, cancel_baton, iterpool));
-      SVN_ERR(pack_shard(revprops_path, i, cancel_func, cancel_baton,
-                         iterpool));
+      /* We can't pack revprops, because they aren't immutable :(
+         If we ever do get clever and figure out how to pack revprops,
+         this is the place to do it. */
     }
 
   svn_pool_destroy(iterpool);
