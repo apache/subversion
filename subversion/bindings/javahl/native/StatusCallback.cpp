@@ -53,7 +53,7 @@ StatusCallback::callback(void *baton,
                          apr_pool_t *pool)
 {
   if (baton)
-    ((StatusCallback *)baton)->doStatus(path, status);
+    return ((StatusCallback *)baton)->doStatus(path, status);
 
   return SVN_NO_ERROR;
 }
