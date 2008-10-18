@@ -1164,6 +1164,8 @@ static svn_error_t *
 tree_has_local_mods(svn_boolean_t *modified,
                     const char *path,
                     svn_wc_adm_access_t *adm_access,
+                    svn_cancel_func_t cancel_func,
+                    void *cancel_baton,
                     apr_pool_t *pool)
 {
   static const svn_wc_entry_callbacks2_t modcheck_callbacks =
@@ -1179,7 +1181,7 @@ tree_has_local_mods(svn_boolean_t *modified,
   SVN_ERR(svn_wc_walk_entries3(path, adm_access,
                                &modcheck_callbacks, &modcheck_baton,
                                svn_depth_infinity, FALSE /* show_hidden */,
-                               NULL /* cancel_func */, NULL /* cancel_baton */,
+                               cancel_func, cancel_baton,
                                pool));
 
   *modified = modcheck_baton.found_mod;
@@ -1278,6 +1280,7 @@ check_tree_conflict(struct edit_baton *eb,
                * directory it wants to delete. Therefore, we need to start
                * a separate crawl here. */
               SVN_ERR(tree_has_local_mods(&modified, full_path, adm_access,
+                                          eb->cancel_func, eb->cancel_baton,
                                           pool));
               if (modified)
                 {
@@ -2401,8 +2404,8 @@ add_file_with_history(const char *path,
         }
       else
         {
-          src_text_base_path = svn_wc__text_base_path(src_path,
-                                                      FALSE, subpool);
+          src_text_base_path = svn_wc__text_base_path(src_path, FALSE,
+                                                      subpool);
           SVN_ERR(svn_wc__load_props(&base_props, &working_props, NULL,
                                      src_access, src_path, pool));
         }
@@ -2679,11 +2682,10 @@ open_file(const char *path,
    entry is replaced with history) to the permanent and temporary
    revert-base paths respectively.
 
-   If REPLACED_P and USE_REVERT_BASE are non-NULL, set *REPLACED_P and
-   *USE_REVERT_BASE_P to whether or not the entry is replaced, and to
-   whether or not it needs to use the revert base (i.e., it's replaced
-   with history), respectively.  If CHECKSUM_P is non-NULL and the
-   path already has an entry, set *CHECKSUM_P to the entry's checksum.
+   If REPLACED_P is non-NULL, set *REPLACED_P to whether or not the
+   entry is replaced (which also implies whether or not it needs to
+   use the revert base).  If CHECKSUM_P is non-NULL and the path
+   already has an entry, set *CHECKSUM_P to the entry's checksum.
 
    Use POOL for temporary allocation and for *CHECKSUM_P (if
    applicable), but allocate FB->text_base_path and
@@ -2691,22 +2693,20 @@ open_file(const char *path,
 static svn_error_t *
 choose_base_paths(const char **checksum_p,
                   svn_boolean_t *replaced_p,
-                  svn_boolean_t *use_revert_base_p,
                   struct file_baton *fb,
                   apr_pool_t *pool)
 {
   struct edit_baton *eb = fb->edit_baton;
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *ent;
-  svn_boolean_t replaced, use_revert_base;
+  svn_boolean_t replaced;
 
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access,
                               svn_path_dirname(fb->path, pool), pool));
   SVN_ERR(svn_wc_entry(&ent, fb->path, adm_access, FALSE, pool));
 
   replaced = ent && ent->schedule == svn_wc_schedule_replace;
-  use_revert_base = replaced;
-  if (use_revert_base)
+  if (replaced)
     {
       fb->text_base_path = svn_wc__text_revert_path(fb->path, FALSE, fb->pool);
       fb->new_text_base_path = svn_wc__text_revert_path(fb->path, TRUE,
@@ -2727,8 +2727,6 @@ choose_base_paths(const char **checksum_p,
     }
   if (replaced_p)
     *replaced_p = replaced;
-  if (use_revert_base_p)
-    *use_revert_base_p = use_revert_base;
 
   return SVN_NO_ERROR;
 }
@@ -2748,7 +2746,6 @@ apply_textdelta(void *file_baton,
   svn_error_t *err;
   const char *checksum;
   svn_boolean_t replaced;
-  svn_boolean_t use_revert_base;
   svn_stream_t *source;
   apr_file_t *target_file;
 
@@ -2765,8 +2762,7 @@ apply_textdelta(void *file_baton,
      text base hasn't been corrupted, and that its checksum
      matches the expected base checksum. */
 
-  SVN_ERR(choose_base_paths(&checksum, &replaced, &use_revert_base,
-                            fb, pool));
+  SVN_ERR(choose_base_paths(&checksum, &replaced, fb, pool));
 
   /* Only compare checksums if this file has an entry, and the entry has
      a checksum.  If there's no entry, it just means the file is
@@ -2825,7 +2821,7 @@ apply_textdelta(void *file_baton,
 
   if (! fb->added)
     {
-      if (use_revert_base)
+      if (replaced)
         {
           apr_file_t *revert_file;
 
@@ -2851,7 +2847,7 @@ apply_textdelta(void *file_baton,
 
   /* Open the text base for writing (this will get us a temporary file).  */
 
-  if (use_revert_base)
+  if (replaced)
     err = svn_wc__open_revert_base(&target_file, fb->path,
                                    (APR_WRITE | APR_TRUNCATE | APR_CREATE),
                                    handler_pool);
@@ -2868,7 +2864,8 @@ apply_textdelta(void *file_baton,
   /* Prepare to apply the delta.  */
   svn_txdelta_apply(source,
                     svn_stream_from_aprfile2(target_file, FALSE, handler_pool),
-                    fb->digest, fb->new_text_base_path, handler_pool,
+                    fb->digest, fb->new_text_base_path /* error_info */,
+                    handler_pool,
                     &hb->apply_handler, &hb->apply_baton);
 
   hb->pool = handler_pool;
@@ -3061,6 +3058,10 @@ loggy_tweak_entry(svn_stringbuf_t *log_accum,
  * installation.  If an error is returned, the value of these three
  * variables is undefined.
  *
+ * ACTUAL_CHECKSUM is the checksum that was computed as we constructed
+ * the (new) text base. That was performed during a txdelta apply, or
+ * during a copy of an add-with-history.
+ *
  * POOL is used for all bookkeeping work during the installation.
  */
 static svn_error_t *
@@ -3068,6 +3069,7 @@ merge_file(svn_wc_notify_state_t *content_state,
            svn_wc_notify_state_t *prop_state,
            svn_wc_notify_lock_state_t *lock_state,
            struct file_baton *fb,
+           const svn_checksum_t *actual_checksum,
            apr_pool_t *pool)
 {
   const char *parent_dir;
@@ -3346,17 +3348,8 @@ merge_file(svn_wc_notify_state_t *content_state,
                                  fb->text_base_path, FALSE, pool));
       SVN_ERR(svn_wc__loggy_set_readonly(&log_accum, adm_access,
                                          fb->text_base_path, pool));
-
-      /* If the file is replaced don't write the checksum.  Checksum is blank
-         on replaced files. */
-      if (!is_replaced)
-        {
-          svn_checksum_t *checksum = svn_checksum_create(svn_checksum_md5,
-                                                         pool);
-          checksum->digest = fb->digest;
-          tmp_entry.checksum = svn_checksum_to_cstring(checksum, pool);
-          flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
-        }
+      tmp_entry.checksum = svn_checksum_to_cstring(actual_checksum, pool);
+      flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
     }
 
   /* Do the entry modifications we've accumulated. */
@@ -3427,57 +3420,75 @@ merge_file(svn_wc_notify_state_t *content_state,
 /* Mostly a wrapper around merge_file. */
 static svn_error_t *
 close_file(void *file_baton,
-           const char *text_checksum,
+           const char *expected_hex_digest,
            apr_pool_t *pool)
 {
   struct file_baton *fb = file_baton;
   struct edit_baton *eb = fb->edit_baton;
   svn_wc_notify_state_t content_state, prop_state;
   svn_wc_notify_lock_state_t lock_state;
+  svn_checksum_t *expected_checksum = NULL;
+  svn_checksum_t *actual_checksum;
 
   if (fb->skipped)
     return maybe_bump_dir_info(eb, fb->bump_info, pool);
 
+  if (expected_hex_digest)
+    SVN_ERR(svn_checksum_parse_hex(&expected_checksum, svn_checksum_md5,
+                                   expected_hex_digest, pool));
+
   /* Was this an add-with-history, with no apply_textdelta? */
   if (fb->added_with_history && ! fb->received_textdelta)
     {
-      svn_checksum_t *checksum;
+      svn_stream_t *source;
+      svn_stream_t *target;
 
       SVN_ERR_ASSERT(! fb->text_base_path && ! fb->new_text_base_path
                      && fb->copied_text_base);
 
       /* Set up the base paths like apply_textdelta does. */
-      SVN_ERR(choose_base_paths(NULL, NULL, NULL, fb, pool));
+      SVN_ERR(choose_base_paths(NULL, NULL, fb, pool));
 
-      /* Now simulate applying a trivial delta. */
-      SVN_ERR(svn_io_copy_file(fb->copied_text_base,
-                               fb->new_text_base_path,
-                               TRUE, pool));
-      SVN_ERR(svn_io_file_checksum2(&checksum,
-                                    fb->new_text_base_path,
-                                    svn_checksum_md5,
-                                    pool));
-      memcpy(fb->digest, checksum->digest, svn_checksum_size(checksum));
+      /* Copy the file, computing its checksum in the process. */
+      SVN_ERR(svn_stream_open_readonly(&source, fb->copied_text_base,
+                                       pool, pool));
+      source = svn_stream_checksummed2(source,
+                                       &actual_checksum, svn_checksum_md5,
+                                       NULL, 0,
+                                       TRUE, pool);
+      SVN_ERR(svn_stream_open_writable(&target, fb->new_text_base_path,
+                                       pool, pool));
+      SVN_ERR(svn_stream_copy2(source, target,
+                               eb->cancel_func, eb->cancel_baton, pool));
+      SVN_ERR(svn_stream_close(source));
+      SVN_ERR(svn_stream_close(target));
+
+      /* Copy the permissions onto the temporary file. */
+      /* ### the perms should probably be set during a translate back
+         ### into ACTUAL. we shouldn't need this. */
+      SVN_ERR(svn_io_copy_perms(fb->copied_text_base,
+                                fb->new_text_base_path,
+                                pool));
+    }
+  else
+    {
+      /* Pull the actual checksum from the file_baton, computed during
+         the application of a text delta. */
+      actual_checksum = svn_checksum_create(svn_checksum_md5, pool);
+      actual_checksum->digest = fb->digest;
     }
 
   /* window-handler assembles new pristine text in .svn/tmp/text-base/  */
-  if (fb->new_text_base_path && text_checksum)
-    {
-      svn_checksum_t *checksum;
-      const char *real_sum;
-      
-      checksum = svn_checksum_create(svn_checksum_md5, pool);
-      checksum->digest = fb->digest;
-      real_sum = svn_checksum_to_cstring(checksum, pool);
+  if (fb->new_text_base_path && expected_checksum
+      && !svn_checksum_match(expected_checksum, actual_checksum))
+    return svn_error_createf
+      (SVN_ERR_CHECKSUM_MISMATCH, NULL,
+       _("Checksum mismatch for '%s'; expected: '%s', actual: '%s'"),
+       svn_path_local_style(fb->path, pool), expected_hex_digest,
+       svn_checksum_to_cstring_display(actual_checksum, pool));
 
-      if (real_sum && (strcmp(text_checksum, real_sum) != 0))
-        return svn_error_createf
-          (SVN_ERR_CHECKSUM_MISMATCH, NULL,
-           _("Checksum mismatch for '%s'; expected: '%s', actual: '%s'"),
-           svn_path_local_style(fb->path, pool), text_checksum, real_sum);
-    }
-
-  SVN_ERR(merge_file(&content_state, &prop_state, &lock_state, fb, pool));
+  SVN_ERR(merge_file(&content_state, &prop_state, &lock_state, fb,
+                     actual_checksum, pool));
 
   /* We have one less referrer to the directory's bump information. */
   SVN_ERR(maybe_bump_dir_info(eb, fb->bump_info, pool));

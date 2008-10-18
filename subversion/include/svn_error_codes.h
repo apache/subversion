@@ -674,9 +674,9 @@ SVN_ERROR_START
              "Filesystem upgrade is not supported")
 
   /** @since New in 1.6. */
-  SVN_ERRDEF(SVN_ERR_FS_NO_SUCH_MISCELLANY,
-             SVN_ERR_FS_CATEGORY_START + 48,
-             "Filesystem has no such miscellany record")
+  SVN_ERRDEF(SVN_ERR_FS_NO_SUCH_CHECKSUM_REP,
+             SVN_ERR_FS_CATEGORY_START + 49,
+             "Filesystem has no such checksum-representation index record")
 
   /* repos errors */
 

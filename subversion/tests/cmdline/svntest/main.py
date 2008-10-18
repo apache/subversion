@@ -1258,8 +1258,9 @@ def usage():
   print "%s " % (" " * len(prog_name))
   print "%s [--list] [<test> ...]\n" % prog_name
   print "Arguments:"
-  print " test          The number of the test to run (multiple okay), " \
-        "or all tests\n"
+  print " test            The number of the test to run, or a range of test\n"\
+        "                 numbers, like 10-12. Multiple numbers and ranges\n"\
+        "                 are ok. If you supply none, all tests are run.\n"
   print "Options:"
   print " --list          Print test doc strings instead of running them"
   print " --fs-type       Subversion file system type (fsfs or bdb)"
@@ -1341,10 +1342,34 @@ def run_tests(test_list, serial_only = False):
     elif arg.startswith('BASE_URL='):
       test_area_url = arg[9:]
     else:
+      appended = False
       try:
         testnums.append(int(arg))
+        appended = True
       except ValueError:
-        print "ERROR:  invalid test number '%s'\n" % arg
+        # Do nothing for now.
+        appended = False
+
+      if not appended:
+        try:
+          # Check if the argument is a range
+          numberstrings = arg.split('-');
+          if len(numberstrings) != 2:
+            raise ValueError
+          left = int(numberstrings[0])
+          right = int(numberstrings[1])
+          if left > right:
+            raise ValueError
+
+          for nr in range(left,right+1):
+            testnums.append(nr)
+          else:
+            appended = True
+        except ValueError:
+          appended = False
+
+      if not appended:
+        print "ERROR: invalid test number or range '%s'\n" % arg
         usage()
         sys.exit(1)
 

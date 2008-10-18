@@ -64,7 +64,7 @@ svn_fs_bdb__open_miscellaneous_table(DB **miscellaneous_p,
       BDB_ERR(miscellaneous->put
               (miscellaneous, 0,
                svn_fs_base__str_to_dbt
-               (&key, SVN_FS_BASE__MISCELLANEOUS_FORWARD_DELTA_UPGRADE),
+               (&key, SVN_FS_BASE__MISC_FORWARD_DELTA_UPGRADE),
                svn_fs_base__str_to_dbt(&value, "0"), 0));
     }
 
@@ -114,15 +114,17 @@ svn_fs_bdb__miscellaneous_get(const char **val,
   DBT key, value;
   int db_err;
 
+  *val = NULL;
   svn_fs_base__trail_debug(trail, "miscellaneous", "get");
   db_err = bfd->miscellaneous->get(bfd->miscellaneous, trail->db_txn,
                                    svn_fs_base__str_to_dbt(&key, key_str),
                                    svn_fs_base__result_dbt(&value), 0);
   svn_fs_base__track_dbt(&value, pool);
 
-  if (db_err == DB_NOTFOUND)
-    return svn_fs_base__err_no_such_miscellany(fs, key_str);
-
-  *val = apr_pstrmemdup(pool, value.data, value.size);
+  if (db_err != DB_NOTFOUND)
+    {
+      SVN_ERR(BDB_WRAP(fs, "fetching miscellaneous record", db_err));
+      *val = apr_pstrmemdup(pool, value.data, value.size);
+    }
   return SVN_NO_ERROR;
 }
