@@ -546,13 +546,13 @@ int main(int argc, const char *argv[])
 
   if (mode_opt_count != 1)
     {
-      svn_error_clear(svn_cmdline_fputs
+      svn_error_clear(svn_cmdline_fputs(
 #ifdef WIN32
-                      (_("You must specify exactly one of -d, -i, -t, "
+                      _("You must specify exactly one of -d, -i, -t, "
                          "--service or -X.\n"),
 #else
-                      (_("You must specify exactly one of -d, -i, -t or -X.\n"),
-#endif
+                      _("You must specify exactly one of -d, -i, -t or -X.\n"),
+#endif 
                        stderr, pool));
       usage(argv[0], pool);
     }
