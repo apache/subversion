@@ -1,0 +1,80 @@
+This branch exists to play with ideas around shared storage of
+repository data strings and such.  See also this issue:
+
+   http://subversion.tigris.org/issues/show_bug.cgi?id=2286
+   ("Identical files should share storage space in repository")
+
+::: CURRENT PROBLEMS :::
+
+The libsvn_fs_base implementation suffers from a major problem:
+representation delta chain cycles.  The problem is simple to trigger.
+Simply add a file to version control and commit; add some text to the
+end of the file and commit; revert the file to the previous state and
+commit.  Under the hood, we see the following happen:
+
+  1. the first commit adds the file, with rep key X for its data.
+
+  2. the second commit adds a new fulltext with rep key Y for its
+     data; X is deltafied against Y.
+
+  3. the third (reverting) commit sees that the file's contents
+     already have representation, so it uses rep key X for its data; Y
+     is deltafied against X -- OOPS!
+
+Here's a script to reproduce the problem.   
+
+   #!/bin/sh
+   
+   SVNADMIN=/home/cmpilato/projects/fs-rep-sharing/subversion/svnadmin/svnadmin
+   SVNSYNC=/home/cmpilato/projects/fs-rep-sharing/subversion/svnsync/svnsync
+   SVN=/home/cmpilato/projects/fs-rep-sharing/subversion/svn/svn
+   REPOS=fs-rep-sharing-test2
+   
+   # Cleanup old test data.
+   rm -rf ${REPOS}
+   
+   # Create a new repository.
+   ${SVNADMIN} create --fs-type bdb ${REPOS}
+   
+   # Get the repository full path with some shell trickery.
+   OLDDIR=`pwd`
+   cd ${REPOS}
+   REPOS=`pwd`
+   cd ${OLDDIR}
+   
+   # Set some limitations
+   ulimit -v 100000
+   ulimit -m 100000
+   ulimit -c unlimited
+   
+   # Checkout, and generate some commits
+   ${SVN} co -q file://${REPOS} ${REPOS}/wc
+   cat > ${REPOS}/wc/some-file <<EOF
+   012345678901234567890123456789012345678901234567890123456789
+   abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz
+   012345678901234567890123456789012345678901234567890123456789
+   abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz
+   012345678901234567890123456789012345678901234567890123456789
+   abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz
+   012345678901234567890123456789012345678901234567890123456789
+   abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz
+   012345678901234567890123456789012345678901234567890123456789
+   abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz
+   EOF
+   
+   ${SVN} add -q ${REPOS}/wc/some-file
+   ${SVN} ci -q ${REPOS}/wc -m 'Add file'
+   db4.6_dump -kp ${REPOS}/db/representations
+   
+   echo 'looloo' >> ${REPOS}/wc/some-file
+   ${SVN} ci -q ${REPOS}/wc -m 'Change file'
+   db4.6_dump -kp ${REPOS}/db/representations
+   
+   head -10 ${REPOS}/wc/some-file > /tmp/tmpfile
+   mv /tmp/tmpfile ${REPOS}/wc/some-file
+   ${SVN} ci -q ${REPOS}/wc -m 'Revert file'
+   db4.6_dump -kp ${REPOS}/db/representations
+   
+   echo 'foofoo' >> ${REPOS}/wc/some-file
+   ${SVN} ci ${REPOS}/wc -m 'Change file again'
+   

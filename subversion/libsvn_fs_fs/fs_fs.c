@@ -47,6 +47,7 @@
 #include "key-gen.h"
 #include "fs_fs.h"
 #include "id.h"
+#include "rep-cache.h"
 
 #include "private/svn_fs_util.h"
 #include "../libsvn_fs/fs-loader.h"
@@ -1063,6 +1064,9 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
 
   SVN_ERR(svn_io_file_close(uuid_file, pool));
 
+  /* Open (and possibly create) the rep cache. */
+  SVN_ERR(svn_fs_fs__open_rep_cache(fs, fs->pool));
+
   return get_youngest(&(ffd->youngest_rev_cache), path, pool);
 }
 
@@ -1115,9 +1119,8 @@ upgrade_body(void *baton, apr_pool_t *pool)
               (svn_path_join(fs->path, PATH_TXN_PROTOS_DIR, pool), pool));
     }
 
-  /* Bump the format file.  We pass 0 for the max_files_per_dir here
-     so we don't have to fuss with sharding directories ourselves. */
-  return write_format(format_path, SVN_FS_FS__FORMAT_NUMBER, 0,
+  /* Bump the format file. */
+  return write_format(format_path, SVN_FS_FS__FORMAT_NUMBER, max_files_per_dir,
                       TRUE, pool);
 }
 
@@ -1392,6 +1395,12 @@ svn_fs_fs__hotcopy(const char *src_path,
                                         PATH_NODE_ORIGINS_DIR, TRUE, NULL,
                                         NULL, pool));
 
+  /* Now copy the rep cache. */
+  src_subdir = svn_path_join(src_path, REP_CACHE_DB_NAME, pool);
+  SVN_ERR(svn_io_check_path(src_subdir, &kind, pool));
+  if (kind == svn_node_file)
+    SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, REP_CACHE_DB_NAME, pool));
+
   /* Copy the txn-current file. */
   if (format >= SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
     SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, PATH_TXN_CURRENT, pool));
@@ -1633,7 +1642,19 @@ read_rep_offsets(representation_t **rep_p,
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Malformed text rep offset line in node-rev"));
 
-  return svn_checksum_parse_hex(&rep->checksum, svn_checksum_md5, str, pool);
+  SVN_ERR(svn_checksum_parse_hex(&rep->checksum, svn_checksum_md5, str, pool));
+
+  /* Read the reuse count. */
+  str = apr_strtok(NULL, " ", &last_str);
+  if (str == NULL)
+    {
+      /* The reuse_count field is only in formats >= 4. */
+      return SVN_NO_ERROR;
+    }
+
+  rep->reuse_count = apr_atoi64(str);
+
+  return SVN_NO_ERROR;
 }
 
 /* See svn_fs_fs__get_node_revision, which wraps this and adds another
@@ -1847,11 +1868,12 @@ representation_string(representation_t *rep,
     return "-1";
   else
     return apr_psprintf(pool, "%ld %" APR_OFF_T_FMT " %" SVN_FILESIZE_T_FMT
-                        " %" SVN_FILESIZE_T_FMT " %s",
+                        " %" SVN_FILESIZE_T_FMT " %s %" APR_INT64_T_FMT,
                         rep->revision, rep->offset, rep->size,
                         rep->expanded_size,
                         svn_checksum_to_cstring_display(rep->checksum,
-                                                        pool));
+                                                        pool),
+                        rep->reuse_count);
 }
 
 
@@ -3206,6 +3228,9 @@ svn_fs_fs__noderev_same_rep_key(representation_t *a,
   if (a->revision != b->revision)
     return FALSE;
 
+  if (a->reuse_count != b->reuse_count)
+    return FALSE;
+
   return TRUE;
 }
 
@@ -4547,6 +4572,7 @@ rep_write_contents_close(void *baton)
 {
   struct rep_write_baton *b = baton;
   representation_t *rep;
+  representation_t *old_rep;
   apr_off_t offset;
 
   rep = apr_pcalloc(b->parent_pool, sizeof(*rep));
@@ -4569,10 +4595,28 @@ rep_write_contents_close(void *baton)
   /* Finalize the checksum. */
   svn_checksum_final(&rep->checksum, b->checksum_ctx, b->parent_pool);
 
-  /* Write out our cosmetic end marker. */
-  SVN_ERR(svn_stream_printf(b->rep_stream, b->pool, "ENDREP\n"));
+  /* Check and see if we already have a representation somewhere that's
+     identical to the one we just wrote out. */
+  SVN_ERR(svn_fs_fs__get_rep_reference(&old_rep, b->fs, rep->checksum,
+                                       b->parent_pool));
+  if (old_rep)
+    {
+      /* We need to erase from the protorev the data we just wrote. */
+      SVN_ERR(svn_io_file_trunc(b->file, b->rep_offset, b->pool));
 
-  b->noderev->data_rep = rep;
+      /* Use the old rep for this content. */
+      b->noderev->data_rep = old_rep;
+
+      /* Get the reuse count and put it in the node-rev. */
+      SVN_ERR(svn_fs_fs__inc_rep_reuse(b->fs, b->noderev->data_rep, b->pool));
+    }
+  else
+    {
+      /* Write out our cosmetic end marker. */
+      SVN_ERR(svn_stream_printf(b->rep_stream, b->pool, "ENDREP\n"));
+
+      b->noderev->data_rep = rep;
+    }
 
   /* Write out the new node-rev information. */
   SVN_ERR(svn_fs_fs__put_node_revision(b->fs, b->noderev->id, b->noderev, FALSE,
@@ -4928,6 +4972,10 @@ write_final_rev(const svn_fs_id_t **new_id_p,
                                    noderev,
                                    svn_fs_fs__fs_supports_mergeinfo(fs),
                                    pool));
+
+  /* Save the data representation's hash in the rep cache. */
+  if (noderev->data_rep && noderev->kind == svn_node_file)
+    SVN_ERR(svn_fs_fs__set_rep_reference(fs, noderev->data_rep, FALSE, pool));
 
   /* Return our ID that references the revision file. */
   *new_id_p = noderev->id;
@@ -5515,6 +5563,9 @@ svn_fs_fs__create(svn_fs_t *fs,
   SVN_ERR(svn_fs_fs__set_uuid(fs, svn_uuid_generate(pool), pool));
 
   SVN_ERR(write_revision_zero(fs));
+
+  /* Create the rep cache. */
+  SVN_ERR(svn_fs_fs__open_rep_cache(fs, fs->pool));
 
   /* Create the txn-current file if the repository supports
      the transaction sequence file. */

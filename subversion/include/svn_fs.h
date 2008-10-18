@@ -31,6 +31,7 @@
 #include "svn_delta.h"
 #include "svn_io.h"
 #include "svn_mergeinfo.h"
+#include "svn_checksum.h"
 
 
 #ifdef __cplusplus

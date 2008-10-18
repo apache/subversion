@@ -27,6 +27,7 @@
 #include "svn_cache.h"
 #include "svn_config.h"
 #include "private/svn_fs_private.h"
+#include "private/svn_sqlite.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -75,7 +76,7 @@ extern "C" {
 /* The format number of this filesystem.
    This is independent of the repository format number, and
    independent of any other FS back ends. */
-#define SVN_FS_FS__FORMAT_NUMBER   3
+#define SVN_FS_FS__FORMAT_NUMBER   4
 
 /* The minimum format number that supports svndiff version 1.  */
 #define SVN_FS_FS__MIN_SVNDIFF1_FORMAT 2
@@ -97,6 +98,10 @@ extern "C" {
 /* The minimum format number that maintains minfo-here and minfo-count
    noderev fields. */
 #define SVN_FS_FS__MIN_MERGEINFO_FORMAT 3
+
+/* The minimum format number that maintains minfo-here and minfo-count
+   noderev fields. */
+#define SVN_FS_FS__MIN_REP_SHARING_FORMAT 4
 
 /* Private FSFS-specific data shared between all svn_txn_t objects that
    relate to a particular transaction in a filesystem (as identified
@@ -201,6 +206,9 @@ typedef struct
 
   /* Data shared between all svn_fs_t objects for a given filesystem. */
   fs_fs_shared_data_t *shared;
+
+  /* The sqlite database used for rep caching. */
+  svn_sqlite__db_t *rep_cache;
 } fs_fs_data_t;
 
 
@@ -254,6 +262,10 @@ typedef struct
 
   /* Is this representation a transaction? */
   const char *txn_id;
+
+  /* Is this representation reusing another one, and how much is that rep
+     being reused? */
+  apr_int64_t reuse_count;
 
 } representation_t;
 
