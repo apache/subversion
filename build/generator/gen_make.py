@@ -98,7 +98,7 @@ class Generator(gen_base.GeneratorBase):
 
     # write a list of directories in which things are built
     #   get all the test scripts' directories
-    script_dirs = map(build_path_dirname, self.scripts + self.bdb_scripts)
+    script_dirs = list(map(build_path_dirname, self.scripts + self.bdb_scripts))
 
     #   remove duplicate directories between targets and tests
     build_dirs = unique(self.target_dirs + script_dirs + self.swig_dirs)

@@ -13228,9 +13228,9 @@ def verify_lines(lines, regexes):
         " occurrences of '" + regex + "'")
       if svntest.main.verbose_mode:
         print " Actual output:"
-        map(lambda x: sys.stdout.write("  " + x), lines)
+        list(map(lambda x: sys.stdout.write("  " + x), lines))
         print " Expected regexes:"
-        map(lambda x: sys.stdout.write("  " + x + "\n"), regexes)
+        list(map(lambda x: sys.stdout.write("  " + x + "\n"), regexes))
       return False
   return True
 
@@ -13242,9 +13242,9 @@ def verify_tree_conflict_info(path, actions_and_victims):
      and VICTIM is a regex that matches the victim path."""
   exit_code, output, error = svntest.main.run_svn(None, 'info', path)
   if not verify_lines(output,
-                      map(lambda (action, victim):
+                      list(map(lambda (action, victim):
                           "attempted to " + action + ".*" + victim,
-                          actions_and_victims)):
+                          actions_and_victims))):
     raise svntest.Failure("Wrong tree-conflict result")
 
 

@@ -422,7 +422,7 @@ def spawn_process(command, binary_mode=0,stdin_lines=None, *varargs):
   infile, outfile, errfile, kid = open_pipe(command + ' ' + args, mode)
 
   if stdin_lines:
-    map(infile.write, stdin_lines)
+    list(map(infile.write, stdin_lines))
 
   infile.close()
 
@@ -457,12 +457,12 @@ def run_command_stdin(command, error_expected, binary_mode=0,
   if verbose_mode:
     stop = time.time()
     print '<TIME = %.6f>' % (stop - start)
-    map(sys.stdout.write, stdout_lines)
-    map(sys.stdout.write, stderr_lines)
+    list(map(sys.stdout.write, stdout_lines))
+    list(map(sys.stdout.write, stderr_lines))
 
   if (not error_expected) and (stderr_lines):
     if not verbose_mode:
-      map(sys.stdout.write, stderr_lines)
+      list(map(sys.stdout.write, stderr_lines))
     raise Failure
 
   return exit_code, stdout_lines, stderr_lines

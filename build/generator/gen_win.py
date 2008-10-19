@@ -283,17 +283,17 @@ class WinGeneratorBase(GeneratorBase):
 
   def path(self, *paths):
     """Convert build path to msvc path and prepend root"""
-    return msvc_path_join(self.rootpath, *map(msvc_path, paths))
+    return msvc_path_join(self.rootpath, *list(map(msvc_path, paths)))
 
   def apath(self, path, *paths):
     """Convert build path to msvc path and prepend root if not absolute"""
     ### On Unix, os.path.isabs won't do the right thing if "item"
     ### contains backslashes or drive letters
     if os.path.isabs(path):
-      return msvc_path_join(msvc_path(path), *map(msvc_path, paths))
+      return msvc_path_join(msvc_path(path), *list(map(msvc_path, paths)))
     else:
       return msvc_path_join(self.rootpath, msvc_path(path),
-                            *map(msvc_path, paths))
+                            *list(map(msvc_path, paths)))
 
   def get_install_targets(self):
     "Generate the list of targets"
@@ -462,7 +462,7 @@ class WinGeneratorBase(GeneratorBase):
       cbuild = "%s cf %s -C %s %s" \
                % (self.quote(jar_exe), jarfile, classdir,
                   " ".join(target.packages))
-      deps = map(lambda x: x.custom_target, sources)
+      deps = [x.custom_target for x in sources]
       sources.append(ProjectItem(path='makejar', reldir='', user_deps=deps,
                                  custom_build=cbuild, custom_target=jarfile,
                                  extension=''))
