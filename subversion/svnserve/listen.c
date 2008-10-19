@@ -40,8 +40,6 @@ struct parsed_address {
  * and accept system calls. */
 #define CONNECTION_BACKLOG 7
 
-static apr_array_header_t *listeners;
-
 /* Parse each address in ADDRESSES, and return an array with
  * elements of type struct parsed_address in *PARSED_ADDRESSES.
  *
@@ -102,7 +100,8 @@ parse_addresses(apr_array_header_t **parsed_addresses,
   return SVN_NO_ERROR;
 }
 
-svn_error_t* init_listeners(apr_array_header_t *addresses,
+svn_error_t* init_listeners(apr_array_header_t **listeners,
+                            apr_array_header_t *addresses,
                             apr_pool_t *pool)
 {
   apr_status_t status;
@@ -111,11 +110,13 @@ svn_error_t* init_listeners(apr_array_header_t *addresses,
   apr_socket_t *sock;
   apr_array_header_t *parsed_addresses;
   apr_pool_t *parse_pool;
+  apr_array_header_t *new_listeners;
 
   /* If no addresses were specified, error out. */
   SVN_ERR_ASSERT(addresses->nelts > 0);
 
-  listeners = apr_array_make(pool, 1, sizeof(struct listener));
+  *listeners = NULL;
+  new_listeners = apr_array_make(pool, 1, sizeof(struct listener));
 
 #if APR_HAVE_IPV6
   /* Make sure we have IPV6 support first before giving apr_sockaddr_info_get
@@ -190,18 +191,22 @@ svn_error_t* init_listeners(apr_array_header_t *addresses,
           listener = apr_palloc(pool, sizeof(struct listener));
           listener->sock = sock;
           listener->sa = sa;
-          APR_ARRAY_PUSH(listeners, struct listener *) = listener;
+          APR_ARRAY_PUSH(new_listeners, struct listener *) = listener;
 
           sa = sa->next;
         }
     }
+
+  *listeners = new_listeners;
 
   svn_pool_destroy(parse_pool);
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-wait_for_client(apr_socket_t **usock, apr_pool_t *pool)
+wait_for_client(apr_socket_t **usock,
+                apr_array_header_t *listeners,
+                apr_pool_t *pool)
 {
   struct listener *listener;
   apr_status_t status;

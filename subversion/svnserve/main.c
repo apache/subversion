@@ -373,7 +373,7 @@ int main(int argc, const char *argv[])
   svn_boolean_t foreground = FALSE;
   apr_socket_t *sock, *usock;
   apr_file_t *in_file, *out_file;
-  apr_array_header_t *addresses;
+  apr_array_header_t *addresses, *listeners;
   svn_stringbuf_t *buf;
   apr_pool_t *pool;
   apr_pool_t *connection_pool;
@@ -727,7 +727,7 @@ int main(int argc, const char *argv[])
 #endif
     }
 
-  err = init_listeners(addresses, pool);
+  err = init_listeners(&listeners, addresses, pool);
   if (err)
     return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
 
@@ -776,7 +776,7 @@ int main(int argc, const char *argv[])
       connection_pool = svn_pool_create(NULL);
 
       /* Start accepting connections. */
-      err = wait_for_client(&usock, pool);
+      err = wait_for_client(&usock, listeners, pool);
 
       if (handling_mode == connection_mode_fork)
         {
