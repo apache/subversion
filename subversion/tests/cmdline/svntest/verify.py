@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -279,12 +279,14 @@ def display_lines(message, label, expected, actual, expected_is_regexp=None,
       output += ' (unordered)'
     output += ':'
     print output
-    list(map(sys.stdout.write, expected))
+    for x in expected:
+      sys.stdout.write(x)
     if expected_is_regexp:
-      list(map(sys.stdout.write, '\n'))
+      sys.stdout.write('\n')
   if actual is not None:
     print 'ACTUAL %s:' % label
-    list(map(sys.stdout.write, actual))
+    for x in actual:
+      sys.stdout.write(x)
 
 def compare_and_display_lines(message, label, expected, actual,
                               raisable=main.SVNLineUnequal):

@@ -854,9 +854,11 @@ def run_and_verify_merge2(dir, rev1, rev2, url1, url2,
     print "============================================================="
     print "Merge outputs differ"
     print "The dry-run merge output:"
-    list(map(sys.stdout.write, out_dry))
+    for x in out_dry:
+      sys.stdout.write(x)
     print "The full merge output:"
-    list(map(sys.stdout.write, out))
+    for x in out:
+      sys.stdout.write(x)
     print "============================================================="
     raise main.SVNUnmatchedError
 
