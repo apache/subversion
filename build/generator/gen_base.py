@@ -698,7 +698,7 @@ class TargetJavaClasses(TargetJava):
         while sourcedirs:
           if sourcedirs.pop() in self.packages:
             sourcepath = build_path_join(*sourcedirs)
-            objname = build_path_join(*[self.classes] + dirs[len(sourcedirs):])
+            objname = build_path_join(self.classes, *dirs[len(sourcedirs):])
             break
         else:
           raise GenError('Unable to find Java package root in path "%s"' % objname)

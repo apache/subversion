@@ -6,7 +6,7 @@
 #
 ######################################################################
 #
-# Copyright (c) 2003-2007 CollabNet.  All rights reserved.
+# Copyright (c) 2003-2008 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -280,4 +280,4 @@ def run_app(func, *args, **kw):
   APR is initialized, and an application pool is created. Cleanup is
   performed as the function exits (normally or via an exception).
   '''
-  return func(*(application_pool,) + args, **kw)
+  return func(application_pool, *args, **kw)

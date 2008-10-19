@@ -5,7 +5,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2006, 2008 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -87,16 +87,16 @@ class State:
         except KeyError, e:
           e.args = ["Path '%s' not present in WC state descriptor" % path]
           raise
-        path_ref.tweak(*(), **kw)
+        path_ref.tweak(**kw)
     else:
       for item in self.desc.values():
-        item.tweak(*(), **kw)
+        item.tweak(**kw)
 
   def tweak_some(self, filter, **kw):
     "Tweak the items for which the filter returns true."
     for path, item in self.desc.items():
       if filter(path, item):
-        item.tweak(*(), **kw)
+        item.tweak(**kw)
 
   def subtree(self, subtree_path):
     """Return a State object which is a deep copy of the sub-tree
