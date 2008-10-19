@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -13228,9 +13228,11 @@ def verify_lines(lines, regexes):
         " occurrences of '" + regex + "'")
       if svntest.main.verbose_mode:
         print " Actual output:"
-        list(map(lambda x: sys.stdout.write("  " + x), lines))
+        for line in lines:
+          sys.stdout.write("  %s" % line)
         print " Expected regexes:"
-        list(map(lambda x: sys.stdout.write("  " + x + "\n"), regexes))
+        for regex in regexes:
+          sys.stdout.write("  %s\n" % regex)
       return False
   return True
 

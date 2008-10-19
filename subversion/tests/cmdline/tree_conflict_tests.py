@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -40,7 +40,8 @@ def verbose_print(line):
 # If verbose mode is enabled, print the (assumed newline-terminated) LINES.
 def verbose_printlines(lines):
   if main.verbose_mode:
-    list(map(sys.stdout.write, lines))
+    for line in lines:
+      sys.stdout.write(line)
 
 ######################################################################
 # Tests
@@ -475,7 +476,8 @@ def ensure_tree_conflict(sbox, operation,
         # fail. When the feature is stable, the "try" and "except" can go away.
         (exc_type, exc_val) = sys.exc_info()[:2]
         print "EXCEPTION for", str(inc_action), "onto", str(loc_action) + ": ",
-        list(map(sys.stdout.write, traceback.format_exception_only(exc_type, exc_val)))
+        for x in traceback.format_exception_only(exc_type, exc_val):
+          sys.stdout.write(x)
         print
 
         failures += 1

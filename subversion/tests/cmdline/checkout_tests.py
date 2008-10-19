@@ -7,7 +7,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2006, 2008 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -39,7 +39,8 @@ def test_stderr(re_string, stderr):
     if exp_err_re.search(line):
       return
   if svntest.main.verbose_mode:
-    list(map(sys.stdout.write, stderr))
+    for x in stderr:
+      sys.stdout.write(x)
     print "Expected stderr reg-ex: '" + re_string + "'"
   raise svntest.Failure("Checkout failed but not in the expected way")
 
