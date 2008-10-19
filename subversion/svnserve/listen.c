@@ -31,25 +31,90 @@ struct listener {
   apr_sockaddr_t *sa;
 };
 
+struct parsed_address {
+  const char *host;
+  apr_port_t port;
+};
+
 /* Number of connections allowed to queue up between listen
  * and accept system calls. */
 #define CONNECTION_BACKLOG 7
 
 static apr_array_header_t *listeners;
 
+/* Parse each address in ADDRESSES, and return an array with
+ * elements of type struct parsed_address in *PARSED_ADDRESSES.
+ *
+ * Do all allocations in POOL.
+ */
+static svn_error_t*
+parse_addresses(apr_array_header_t **parsed_addresses,
+                apr_array_header_t *addresses,
+                apr_pool_t *pool)
+{
+  int i;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  *parsed_addresses = apr_array_make(pool, 1, sizeof(struct parsed_address));
+
+  for (i = 0; i < addresses->nelts; i++)
+    {
+      const char *address;
+      char *host, *scope_id;
+      apr_port_t port;
+      struct parsed_address *parsed_address;
+      apr_status_t status;
+
+      svn_pool_clear(iterpool);
+
+      address = APR_ARRAY_IDX(addresses, i, const char*);
+      status = apr_parse_addr_port(&host, &scope_id, &port, address, iterpool);
+      if (status)
+        return svn_error_wrap_apr(status,
+                                  _("Cannot parse address '%s'"), address);
+
+      if (port == 0) /* unspecified */
+        port = SVN_RA_SVN_PORT;
+
+      if (host == NULL)
+        {
+          /* Looks like only a port was specified, which is legal from
+           * apr_parse_addr_port()'s point of view. Fall back to the
+           * unspecified address in all available address families. */
+#if APR_HAVE_IPV6
+          parsed_address = apr_palloc(pool, sizeof(struct parsed_address));
+          parsed_address->host = "::"; /* unspecified */
+          parsed_address->port = port;
+          APR_ARRAY_PUSH(*parsed_addresses, struct parsed_address *)
+            = parsed_address;
+#endif
+          host = (char *)APR_ANYADDR;
+          /* fall through */
+        }
+
+      parsed_address = apr_palloc(pool, sizeof(struct parsed_address));
+      parsed_address->host = host;
+      parsed_address->port = port;
+      APR_ARRAY_PUSH(*parsed_addresses, struct parsed_address *)
+        = parsed_address;
+    }
+
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
+}
+
 svn_error_t* init_listeners(apr_array_header_t *addresses,
                             apr_pool_t *pool)
 {
   apr_status_t status;
   int i;
-  apr_pool_t *iterpool;
   int family = AF_INET;
   apr_socket_t *sock;
+  apr_array_header_t *parsed_addresses;
+  apr_pool_t *parse_pool;
 
   /* If no addresses were specified, error out. */
   SVN_ERR_ASSERT(addresses->nelts > 0);
 
-  iterpool = svn_pool_create(pool);
   listeners = apr_array_make(pool, 1, sizeof(struct listener));
 
 #if APR_HAVE_IPV6
@@ -70,28 +135,21 @@ svn_error_t* init_listeners(apr_array_header_t *addresses,
     }
 #endif
 
-  for (i = 0; i < addresses->nelts; i++)
+  parse_pool = svn_pool_create(pool);
+  SVN_ERR(parse_addresses(&parsed_addresses, addresses, parse_pool));
+  SVN_ERR_ASSERT(parsed_addresses->nelts > 0);
+
+  /* Set up listeners */
+  for (i = 0; i < parsed_addresses->nelts; i++)
     {
-      const char *host;
-      char *addr, *scope_id;
-      apr_port_t port;
+      struct parsed_address *parsed_address;
       apr_sockaddr_t *sa;
       struct listener *listener;
-      
-      svn_pool_clear(iterpool);
 
-      host = APR_ARRAY_IDX(addresses, i, const char*);
-      status = apr_parse_addr_port(&addr, &scope_id, &port, host, iterpool);
-      if (status)
-        return svn_error_wrap_apr(status, _("Cannot parse address '%s'"), host);
-
-      if (addr == NULL)
-        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                   _("Cannot parse address '%s'"), host);
-      if (port == 0)
-        port = SVN_RA_SVN_PORT;
-
-      status = apr_sockaddr_info_get(&sa, addr, family, port, 0, pool);
+      parsed_address = APR_ARRAY_IDX(parsed_addresses, i,
+                                     struct parsed_address *);
+      status = apr_sockaddr_info_get(&sa, parsed_address->host, family,
+                                     parsed_address->port, 0, pool);
       if (status)
         return svn_error_wrap_apr(status, _("Can't get address info"));
 
@@ -138,6 +196,7 @@ svn_error_t* init_listeners(apr_array_header_t *addresses,
         }
     }
 
+  svn_pool_destroy(parse_pool);
   return SVN_NO_ERROR;
 }
 
@@ -150,14 +209,15 @@ wait_for_client(apr_socket_t **usock, apr_pool_t *pool)
   /* If we have no listener yet, error out. */
   SVN_ERR_ASSERT(listeners->nelts > 0);
 
-  /* If we have only one listener, we can let apr_socket_listen() do our job. */
+  /* Straightforward case: If we have only one listener,
+   * we do not need to poll across multiple sockets. */
   if (listeners->nelts == 1)
     {
       listener = APR_ARRAY_IDX(listeners, 0, struct listener *);
       status = apr_socket_listen(listener->sock, CONNECTION_BACKLOG);
       if (status)
         return svn_error_wrap_apr(status, _("Cannot listen on socket"));
-      status = apr_socket_accept(*usock, listener->sock, pool);
+      status = apr_socket_accept(usock, listener->sock, pool);
       if (status)
         return svn_error_wrap_apr(status, _("Cannot accept connection"));
       return SVN_NO_ERROR; 
