@@ -742,6 +742,7 @@ int main(int argc, const char *argv[])
     SVN_INT_ERR(write_pid_file(pid_filename, pool));
 
 #ifdef WIN32
+  /* TODO: Fix Win32, the socket passed here isn't initialised. */
   status = apr_os_sock_get(&winservice_svnserve_accept_socket, sock);
   if (status)
     winservice_svnserve_accept_socket = INVALID_SOCKET;
@@ -793,7 +794,6 @@ int main(int argc, const char *argv[])
           svn_error_clear(err);
 
           apr_socket_close(usock);
-          apr_socket_close(sock);
           // TODO: stop_listeners();
           exit(0);
         }
@@ -805,7 +805,6 @@ int main(int argc, const char *argv[])
           status = apr_proc_fork(&proc, connection_pool);
           if (status == APR_INCHILD)
             {
-              apr_socket_close(sock);
               err = serve(conn, &params, connection_pool);
               log_error(err, params.log_file,
                         svn_ra_svn_conn_remote_host(conn),
