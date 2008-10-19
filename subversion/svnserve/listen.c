@@ -52,7 +52,7 @@ parse_addresses(apr_array_header_t **parsed_addresses,
 {
   int i;
   apr_pool_t *iterpool = svn_pool_create(pool);
-  *parsed_addresses = apr_array_make(pool, 1, sizeof(struct parsed_address));
+  *parsed_addresses = apr_array_make(pool, 1, sizeof(struct parsed_address *));
 
   for (i = 0; i < addresses->nelts; i++)
     {
