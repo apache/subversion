@@ -381,7 +381,7 @@ do_wc_to_wc_copies(const apr_array_header_t *copy_pairs,
     }
   svn_pool_destroy(iterpool);
 
-  svn_sleep_for_timestamps();
+  svn_io_sleep_for_timestamps(dst_parent, pool);
   SVN_ERR(err);
 
   return svn_wc_adm_close2(dst_access, pool);
@@ -392,6 +392,7 @@ do_wc_to_wc_copies(const apr_array_header_t *copy_pairs,
    afterwards.  Use POOL for temporary allocations. */
 static svn_error_t *
 do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
+                  const char *dst_path,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
 {
@@ -477,13 +478,15 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
     }
   svn_pool_destroy(iterpool);
 
-  svn_sleep_for_timestamps();
+  svn_io_sleep_for_timestamps(dst_path, pool);
+
   return err;
 }
 
 
 static svn_error_t *
 wc_to_wc_copy(const apr_array_header_t *copy_pairs,
+              const char *dst_path,
               svn_boolean_t is_move,
               svn_boolean_t make_parents,
               svn_client_ctx_t *ctx,
@@ -540,7 +543,7 @@ wc_to_wc_copy(const apr_array_header_t *copy_pairs,
 
   /* Copy or move all targets. */
   if (is_move)
-    return do_wc_to_wc_moves(copy_pairs, ctx, pool);
+    return do_wc_to_wc_moves(copy_pairs, dst_path, ctx, pool);
   else
     return do_wc_to_wc_copies(copy_pairs, ctx, pool);
 }
@@ -1474,7 +1477,7 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
           (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
         }
 
-      svn_sleep_for_timestamps();
+      svn_io_sleep_for_timestamps(pair->dst, pool);
     }
 
   return SVN_NO_ERROR;
@@ -1957,7 +1960,7 @@ try_copy(svn_commit_info_t **commit_info_p,
   if ((! srcs_are_urls) && (! dst_is_url))
     {
       *commit_info_p = NULL;
-      return wc_to_wc_copy(copy_pairs, is_move, make_parents, ctx, pool);
+      return wc_to_wc_copy(copy_pairs, dst_path_in, is_move, make_parents, ctx, pool);
     }
   else if ((! srcs_are_urls) && (dst_is_url))
     {
