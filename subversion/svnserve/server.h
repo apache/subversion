@@ -145,6 +145,33 @@ void
 log_error(svn_error_t *err, apr_file_t *log_file, const char *remote_host,
           const char *user, const char *repos, apr_pool_t *pool);
 
+/* Initialise listeners for every address in the ADDRESSES array.
+ * Each address must be a const char* pointing to a string which must
+ * be parsable by apr_parse_addr_port(). See its documentation for a
+ * description of valid input.
+ *
+ * It is an error to call this function without specifying any address.
+ * If a string does not specify a port to listen on, the default port
+ * (SVN_RA_SVN_PORT) will be used.
+ *
+ * Do all allocations in POOL.
+ */ 
+svn_error_t* init_listeners(apr_array_header_t *addresses,
+                            apr_pool_t *pool);
+
+/* Wait for an incoming connection request, and return the socket
+ * the request was made on in *SOCK. apr_socket_accept() should
+ * be called on the returned socket to enable communication with
+ * the client.
+ *
+ * Do all allocations in POOL.
+ *
+ * It is an error to call this function when listeners are not
+ * set up (i.e. you have to call init_listeners() first, see above).
+ */
+svn_error_t*
+wait_for_client(apr_socket_t **sock, apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

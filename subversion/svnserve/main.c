@@ -136,7 +136,8 @@ void winservice_notify_stop(void)
 #define SVNSERVE_OPT_PID_FILE    261
 #define SVNSERVE_OPT_SERVICE     262
 #define SVNSERVE_OPT_CONFIG_FILE 263
-#define SVNSERVE_OPT_LOG_FILE 264
+#define SVNSERVE_OPT_LOG_FILE    264
+#define SVNSERVE_OPT_LISTEN      265
 
 static const apr_getopt_option_t svnserve__options[] =
   {
@@ -155,11 +156,11 @@ static const apr_getopt_option_t svnserve__options[] =
      N_("read configuration from file ARG")},
     {"listen-port",       SVNSERVE_OPT_LISTEN_PORT, 1,
 #ifdef WIN32
-     N_("listen port\n"
+     N_("listen port (deprecated, use --listen)\n"
         "                             "
         "[mode: daemon, service, listen-once]")},
 #else
-     N_("listen port\n"
+     N_("listen port (deprecated, use --listen)\n"
         "                             "
         "[mode: daemon, listen-once]")},
 #endif
@@ -167,12 +168,31 @@ static const apr_getopt_option_t svnserve__options[] =
 #ifdef WIN32
      N_("listen hostname or IP address\n"
         "                             "
+        "(deprecated, use --listen)\n"
+        "                             "
         "[mode: daemon, service, listen-once]")},
 #else
      N_("listen hostname or IP address\n"
         "                             "
+        "(deprecated, use --listen\n"
+        "                             "
         "[mode: daemon, listen-once]")},
 #endif
+    {"listen",       SVNSERVE_OPT_LISTEN, 1,
+#ifdef WIN32
+     N_("listen on hostname|IP[:port]\n"
+        "                             "
+        "Can be specified multiple times.\n"
+        "                             "
+        "[mode: daemon, service, listen-once]")},
+#else
+     N_("listen on hostname|IP[:port]\n"
+        "                             "
+        "Can be specified multiple times.\n"
+        "                             "
+        "[mode: daemon, listen-once]")},
+#endif
+
 #ifdef CONNECTION_HAVE_THREAD_OPTION
     /* ### Making the assumption here that WIN32 never has fork and so
      * ### this option never exists when --service exists. */
@@ -353,7 +373,8 @@ int main(int argc, const char *argv[])
   svn_boolean_t foreground = FALSE;
   apr_socket_t *sock, *usock;
   apr_file_t *in_file, *out_file;
-  apr_sockaddr_t *sa;
+  apr_array_header_t *addresses;
+  svn_stringbuf_t *buf;
   apr_pool_t *pool;
   apr_pool_t *connection_pool;
   svn_error_t *err;
@@ -371,9 +392,8 @@ int main(int argc, const char *argv[])
   struct serve_thread_t *thread_data;
 #endif
   enum connection_handling_mode handling_mode = CONNECTION_DEFAULT;
-  apr_uint16_t port = SVN_RA_SVN_PORT;
+  const char *port = NULL;
   const char *host = NULL;
-  int family = APR_INET;
   int mode_opt_count = 0;
   const char *config_filename = NULL;
   const char *pid_filename = NULL;
@@ -414,6 +434,8 @@ int main(int argc, const char *argv[])
   params.authzdb = NULL;
   params.log_file = NULL;
 
+  addresses = apr_array_make(pool, 1, sizeof(const char *));
+
   while (1)
     {
       status = apr_getopt_long(os, svnserve__options, &opt, &arg);
@@ -453,7 +475,7 @@ int main(int argc, const char *argv[])
           break;
 
         case SVNSERVE_OPT_LISTEN_PORT:
-          port = atoi(arg);
+          port = arg;
           break;
 
         case SVNSERVE_OPT_LISTEN_HOST:
@@ -537,6 +559,10 @@ int main(int argc, const char *argv[])
           log_filename = svn_path_internal_style(log_filename, pool);
           SVN_INT_ERR(svn_path_get_absolute(&log_filename, log_filename,
                                             pool));
+          break;
+
+        case SVNSERVE_OPT_LISTEN:
+          APR_ARRAY_PUSH(addresses, const char*) = arg;
           break;
 
         }
@@ -655,58 +681,59 @@ int main(int argc, const char *argv[])
     }
 #endif /* WIN32 */
 
-  /* Make sure we have IPV6 support first before giving apr_sockaddr_info_get
-     APR_UNSPEC, because it may give us back an IPV6 address even if we can't
-     create IPV6 sockets. */
-
+  /* Process old --listen-host and --listen-port options.
+   * While they are deprecated, we still allow them and
+   * convert them to an equivalent --listen option. */
+  buf = svn_stringbuf_create("", pool);
+  if (host && port)
+    {
+      svn_stringbuf_appendcstr(buf, host);
+      svn_stringbuf_appendcstr(buf, ":");
+      svn_stringbuf_appendcstr(buf, port);
+      APR_ARRAY_PUSH(addresses, const char *) = buf->data;
+    }
+  else if (host)
+    {
+      svn_stringbuf_appendcstr(buf, host);
+      /* init_listeners() will use the default port if unspecified. */
+      APR_ARRAY_PUSH(addresses, const char *) = buf->data;
+    }
+  else if (port)
+    {
+      /* We just got a port. Bind to this port with the unspecified
+       * address in all available address families. */
+      svn_stringbuf_appendcstr(buf, APR_ANYADDR);
+      svn_stringbuf_appendcstr(buf, ":");
+      svn_stringbuf_appendcstr(buf, port);
+      APR_ARRAY_PUSH(addresses, const char *) = buf->data;
 #if APR_HAVE_IPV6
-#ifdef MAX_SECS_TO_LINGER
-  /* ### old APR interface */
-  status = apr_socket_create(&sock, APR_INET6, SOCK_STREAM, pool);
-#else
-  status = apr_socket_create(&sock, APR_INET6, SOCK_STREAM, APR_PROTO_TCP,
-                             pool);
+      /* In case you're not familiar with IPv6: The first two colons
+       * represent the unspecified address, while the third colon
+       * separates the address from the port, like in IPv4. */
+      svn_stringbuf_appendcstr(buf, ":::");
+      svn_stringbuf_appendcstr(buf, port);
+      APR_ARRAY_PUSH(addresses, const char *) = buf->data;
 #endif
-  if (status == 0)
-    {
-      apr_socket_close(sock);
-      family = APR_UNSPEC;
     }
+
+  if (addresses->nelts == 0)
+    {
+      /* No addresses to listen on were provided, so default to
+       * listen on the default port on the unspecified address
+       * in all available address families. */
+      APR_ARRAY_PUSH(addresses, const char *) = APR_ANYADDR;
+#if APR_HAVE_IPV6
+      APR_ARRAY_PUSH(addresses, const char *) = "::";
 #endif
-
-  status = apr_sockaddr_info_get(&sa, host, family, port, 0, pool);
-  if (status)
-    {
-      err = svn_error_wrap_apr(status, _("Can't get address info"));
-      return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
     }
 
-
-#ifdef MAX_SECS_TO_LINGER
-  /* ### old APR interface */
-  status = apr_socket_create(&sock, sa->family, SOCK_STREAM, pool);
-#else
-  status = apr_socket_create(&sock, sa->family, SOCK_STREAM, APR_PROTO_TCP,
-                             pool);
-#endif
-  if (status)
-    {
-      err = svn_error_wrap_apr(status, _("Can't create server socket"));
-      return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
-    }
-
-  /* Prevents "socket in use" errors when server is killed and quickly
-   * restarted. */
-  apr_socket_opt_set(sock, APR_SO_REUSEADDR, 1);
-
-  status = apr_socket_bind(sock, sa);
-  if (status)
-    {
-      err = svn_error_wrap_apr(status, _("Can't bind server socket"));
-      return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
-    }
-
-  apr_socket_listen(sock, 7);
+  /* Start accepting connections. */
+  err = init_listeners(addresses, pool);
+  if (err)
+    return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
+  err = wait_for_client(&sock, pool);
+  if (err)
+    return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
 
 #if APR_HAS_FORK
   if (run_mode != run_mode_listen_once && !foreground)
