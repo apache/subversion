@@ -645,7 +645,7 @@ class TargetJavaHeaders(TargetJava):
                                          self.package.replace(".", "_")
                                          + "_" + class_name + '.h')
       class_pkg_list = self.package.split('.')
-      class_pkg = apply(build_path_join, class_pkg_list)
+      class_pkg = build_path_join(*class_pkg_list)
       class_file = ObjectFile(build_path_join(self.classes, class_pkg,
                                               class_name + self.objext))
       class_file.source_generated = 1
@@ -697,9 +697,8 @@ class TargetJavaClasses(TargetJava):
         sourcedirs = dirs[:-1]  # Last element is the .class file name.
         while sourcedirs:
           if sourcedirs.pop() in self.packages:
-            sourcepath = apply(build_path_join, sourcedirs)
-            objname = apply(build_path_join,
-                            [self.classes] + dirs[len(sourcedirs):])
+            sourcepath = build_path_join(*sourcedirs)
+            objname = build_path_join(*[self.classes] + dirs[len(sourcedirs):])
             break
         else:
           raise GenError('Unable to find Java package root in path "%s"' % objname)

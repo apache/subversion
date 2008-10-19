@@ -115,12 +115,10 @@ def run_one_test(sbox, basename, *varargs):
 
   # special case the 'svn' test so that no extra arguments are added
   if basename != 'svn':
-    exit_code, actual_stdout, actual_stderr = apply(svntest.main.run_svn,
-                                                    (1,) + varargs)
+    exit_code, actual_stdout, actual_stderr = svntest.main.run_svn(*(1,) + varargs)
   else:
-    exit_code, actual_stdout, actual_stderr = apply(svntest.main.run_command,
-                                                    (svntest.main.svn_binary,
-                                                     1, 0) + varargs)
+    exit_code, actual_stdout, actual_stderr = svntest.main.run_command(*(svntest.main.svn_binary,
+                                                                         1, 0) + varargs)
 
   # Delete and perform search and replaces on the lines from the
   # actual and expected output that may differ between build

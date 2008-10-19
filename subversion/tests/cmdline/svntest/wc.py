@@ -87,16 +87,16 @@ class State:
         except KeyError, e:
           e.args = ["Path '%s' not present in WC state descriptor" % path]
           raise
-        apply(path_ref.tweak, (), kw)
+        path_ref.tweak(*(), **kw)
     else:
       for item in self.desc.values():
-        apply(item.tweak, (), kw)
+        item.tweak(*(), **kw)
 
   def tweak_some(self, filter, **kw):
     "Tweak the items for which the filter returns true."
     for path, item in self.desc.items():
       if filter(path, item):
-        apply(item.tweak, (), kw)
+        item.tweak(*(), **kw)
 
   def subtree(self, subtree_path):
     """Return a State object which is a deep copy of the sub-tree
