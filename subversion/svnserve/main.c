@@ -777,8 +777,6 @@ int main(int argc, const char *argv[])
 
       /* Start accepting connections. */
       err = wait_for_client(&usock, pool);
-      if (err)
-        return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
 
       if (handling_mode == connection_mode_fork)
         {
@@ -787,17 +785,14 @@ int main(int argc, const char *argv[])
                                          connection_pool) == APR_CHILD_DONE)
             ;
         }
-      if (APR_STATUS_IS_EINTR(status))
+      if (err && APR_STATUS_IS_EINTR(err->apr_err))
         {
           svn_pool_destroy(connection_pool);
+          svn_error_clear(err);
           continue;
         }
-      if (status)
-        {
-          err = svn_error_wrap_apr
-            (status, _("Can't accept client connection"));
-          return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
-        }
+      else if (err)
+        return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
 
       conn = svn_ra_svn_create_conn(usock, NULL, NULL, connection_pool);
 
@@ -811,6 +806,7 @@ int main(int argc, const char *argv[])
 
           apr_socket_close(usock);
           apr_socket_close(sock);
+          // TODO: stop_listeners();
           exit(0);
         }
 
