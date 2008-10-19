@@ -31,8 +31,8 @@ struct listener {
   apr_sockaddr_t *sa;
 };
 
-/* Number of outstanding connections allowed in the sockets listen queue.
- * This queue is managed by APR and does not really concern us much. */
+/* Number of connections allowed to queue up between listen
+ * and accept system calls. */
 #define CONNECTION_BACKLOG 7
 
 static apr_array_header_t *listeners;
