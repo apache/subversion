@@ -160,9 +160,8 @@ svn_error_t* init_listeners(apr_array_header_t *addresses,
                             apr_pool_t *pool);
 
 /* Wait for an incoming connection request, and return the socket
- * the request was made on in *SOCK. apr_socket_accept() should
- * be called on the returned socket to enable communication with
- * the client.
+ * for communication with the client in *USOCK.
+ * When done, the caller should close *USOCK with apr_socket_close().
  *
  * Do all allocations in POOL.
  *
@@ -170,7 +169,7 @@ svn_error_t* init_listeners(apr_array_header_t *addresses,
  * set up (i.e. you have to call init_listeners() first, see above).
  */
 svn_error_t*
-wait_for_client(apr_socket_t **sock, apr_pool_t *pool);
+wait_for_client(apr_socket_t **usock, apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

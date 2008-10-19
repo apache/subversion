@@ -727,11 +727,7 @@ int main(int argc, const char *argv[])
 #endif
     }
 
-  /* Start accepting connections. */
   err = init_listeners(addresses, pool);
-  if (err)
-    return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
-  err = wait_for_client(&sock, pool);
   if (err)
     return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
 
@@ -779,7 +775,11 @@ int main(int argc, const char *argv[])
          separate pools, that can be cleared at thread exit, are used */
       connection_pool = svn_pool_create(NULL);
 
-      status = apr_socket_accept(&usock, sock, connection_pool);
+      /* Start accepting connections. */
+      err = wait_for_client(&usock, pool);
+      if (err)
+        return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
+
       if (handling_mode == connection_mode_fork)
         {
           /* Collect any zombie child processes. */

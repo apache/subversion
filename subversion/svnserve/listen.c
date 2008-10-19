@@ -142,9 +142,10 @@ svn_error_t* init_listeners(apr_array_header_t *addresses,
 }
 
 svn_error_t *
-wait_for_client(apr_socket_t **sock, apr_pool_t *pool)
+wait_for_client(apr_socket_t **usock, apr_pool_t *pool)
 {
   struct listener *listener;
+  apr_status_t status;
 
   /* If we have no listener yet, error out. */
   SVN_ERR_ASSERT(listeners->nelts > 0);
@@ -153,8 +154,12 @@ wait_for_client(apr_socket_t **sock, apr_pool_t *pool)
   if (listeners->nelts == 1)
     {
       listener = APR_ARRAY_IDX(listeners, 0, struct listener *);
-      apr_socket_listen(listener->sock, CONNECTION_BACKLOG);
-      *sock = listener->sock;
+      status = apr_socket_listen(listener->sock, CONNECTION_BACKLOG);
+      if (status)
+        return svn_error_wrap_apr(status, _("Cannot listen on socket"));
+      status = apr_socket_accept(*usock, listener->sock, pool);
+      if (status)
+        return svn_error_wrap_apr(status, _("Cannot accept connection"));
       return SVN_NO_ERROR; 
     }
 
