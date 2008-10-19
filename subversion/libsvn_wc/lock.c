@@ -758,6 +758,8 @@ do_open(svn_wc_adm_access_t **adm_access,
               apr_hash_this(hi, &key, NULL, &val);
               entry_path = key;
               entry_access = val;
+              apr_hash_set(shared->set, entry_path, APR_HASH_KEY_STRING,
+                           entry_access);
 
               if (entry_access == &missing)
                 {
@@ -765,8 +767,6 @@ do_open(svn_wc_adm_access_t **adm_access,
                   continue; /* Skip or we will write read only memory */
                 }
 
-              apr_hash_set(shared->set, entry_path, APR_HASH_KEY_STRING,
-                           entry_access);
               entry_access->shared = shared;
             }
           lock->shared = shared;
