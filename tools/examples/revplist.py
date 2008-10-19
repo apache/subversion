@@ -65,7 +65,7 @@ def main():
     elif name == '-h':
       home = value
 
-  apply(plist, (rev, home) + tuple(args))
+  plist(*(rev, home) + tuple(args))
 
 if __name__ == '__main__':
   main()

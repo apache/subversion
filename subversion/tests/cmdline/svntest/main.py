@@ -1122,7 +1122,7 @@ class TestRunner:
 
     saved_dir = os.getcwd()
     try:
-      rc = apply(self.pred.run, (), kw)
+      rc = self.pred.run(*(), **kw)
       if rc is not None:
         print 'STYLE ERROR in',
         self._print_name()

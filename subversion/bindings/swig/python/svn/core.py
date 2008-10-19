@@ -280,4 +280,4 @@ def run_app(func, *args, **kw):
   APR is initialized, and an application pool is created. Cleanup is
   performed as the function exits (normally or via an exception).
   '''
-  return apply(func, (application_pool,) + args, kw)
+  return func(*(application_pool,) + args, **kw)
