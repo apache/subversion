@@ -374,7 +374,6 @@ int main(int argc, const char *argv[])
   apr_socket_t *sock, *usock;
   apr_file_t *in_file, *out_file;
   apr_array_header_t *addresses, *listeners;
-  svn_stringbuf_t *buf;
   apr_pool_t *pool;
   apr_pool_t *connection_pool;
   svn_error_t *err;
@@ -684,35 +683,24 @@ int main(int argc, const char *argv[])
   /* Process old --listen-host and --listen-port options.
    * While they are deprecated, we still allow them and
    * convert them to an equivalent --listen option. */
-  buf = svn_stringbuf_create("", pool);
   if (host && port)
-    {
-      svn_stringbuf_appendcstr(buf, host);
-      svn_stringbuf_appendcstr(buf, ":");
-      svn_stringbuf_appendcstr(buf, port);
-      APR_ARRAY_PUSH(addresses, const char *) = buf->data;
-    }
+      APR_ARRAY_PUSH(addresses, const char *) = apr_psprintf(pool, "%s:%s",
+                                                             host, port);
   else if (host)
-    {
-      svn_stringbuf_appendcstr(buf, host);
       /* init_listeners() will use the default port if unspecified. */
-      APR_ARRAY_PUSH(addresses, const char *) = buf->data;
-    }
+      APR_ARRAY_PUSH(addresses, const char *) = host;
   else if (port)
     {
       /* We just got a port. Bind to this port with the unspecified
        * address in all available address families. */
-      svn_stringbuf_appendcstr(buf, APR_ANYADDR);
-      svn_stringbuf_appendcstr(buf, ":");
-      svn_stringbuf_appendcstr(buf, port);
-      APR_ARRAY_PUSH(addresses, const char *) = buf->data;
+      APR_ARRAY_PUSH(addresses, const char *) = apr_psprintf(pool, "%s:%s",
+                                                             APR_ANYADDR, port);
 #if APR_HAVE_IPV6
       /* In case you're not familiar with IPv6: The first two colons
        * represent the unspecified address, while the third colon
        * separates the address from the port, like in IPv4. */
-      svn_stringbuf_appendcstr(buf, ":::");
-      svn_stringbuf_appendcstr(buf, port);
-      APR_ARRAY_PUSH(addresses, const char *) = buf->data;
+      APR_ARRAY_PUSH(addresses, const char *) = apr_psprintf(pool, ":::%s",
+                                                             port);
 #endif
     }
 
