@@ -102,8 +102,8 @@ svn_error_t* init_listeners(apr_array_header_t *addresses,
           int sock_family;
 
 #if APR_HAVE_IPV6
-          /* Make sure we're trying to bind to an address with the
-           * correct family. */
+          /* Make sure we don't try to bind sockaddrs to sockets
+           * with mismatching address families. */
           if (sa->family == AF_INET6)
               sock_family = APR_INET6;
           else
@@ -149,7 +149,7 @@ wait_for_client(apr_socket_t **sock, apr_pool_t *pool)
   /* If we have no listener yet, error out. */
   SVN_ERR_ASSERT(listeners->nelts > 0);
 
-  /* If we only have one listener, we can let apr_socket_listen() do our job. */
+  /* If we have only one listener, we can let apr_socket_listen() do our job. */
   if (listeners->nelts == 1)
     {
       listener = APR_ARRAY_IDX(listeners, 0, struct listener *);
