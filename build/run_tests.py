@@ -74,15 +74,15 @@ class TestHarness:
     skipped = filter(lambda x: x[:6] == 'SKIP: ', log_lines)
     if skipped:
       print('At least one test was SKIPPED, checking ' + self.logfile)
-      map(sys.stdout.write, skipped)
+      list(map(sys.stdout.write, skipped))
     xfailed = filter(lambda x: x[:6] == 'XFAIL:', log_lines)
     if xfailed:
       print('At least one test XFAILED, checking ' + self.logfile)
-      map(sys.stdout.write, xfailed)
+      list(map(sys.stdout.write, xfailed))
     if failed:
       print('At least one test FAILED, checking ' + self.logfile)
-      map(sys.stdout.write, filter(lambda x: x[:6] in ('FAIL: ', 'XPASS:'),
-                                   log_lines))
+      list(map(sys.stdout.write, filter(lambda x: x[:6] in ('FAIL: ', 'XPASS:'),
+                                   log_lines)))
     self._close_log()
     return failed
 

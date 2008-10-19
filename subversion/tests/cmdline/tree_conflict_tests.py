@@ -40,7 +40,7 @@ def verbose_print(line):
 # If verbose mode is enabled, print the (assumed newline-terminated) LINES.
 def verbose_printlines(lines):
   if main.verbose_mode:
-    map(sys.stdout.write, lines)
+    list(map(sys.stdout.write, lines))
 
 ######################################################################
 # Tests
@@ -475,7 +475,7 @@ def ensure_tree_conflict(sbox, operation,
         # fail. When the feature is stable, the "try" and "except" can go away.
         (exc_type, exc_val) = sys.exc_info()[:2]
         print "EXCEPTION for", str(inc_action), "onto", str(loc_action) + ": ",
-        map(sys.stdout.write, traceback.format_exception_only(exc_type, exc_val))
+        list(map(sys.stdout.write, traceback.format_exception_only(exc_type, exc_val)))
         print
 
         failures += 1

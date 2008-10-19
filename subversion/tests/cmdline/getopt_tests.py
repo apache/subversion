@@ -132,11 +132,11 @@ def run_one_test(sbox, basename, *varargs):
     print "Standard output does not match."
     print "Expected standard output:"
     print "====="
-    map(sys.stdout.write, exp_stdout)
+    list(map(sys.stdout.write, exp_stdout))
     print "====="
     print "Actual standard output:"
     print "====="
-    map(sys.stdout.write, actual_stdout)
+    list(map(sys.stdout.write, actual_stdout))
     print "====="
     raise svntest.Failure
 
@@ -144,11 +144,11 @@ def run_one_test(sbox, basename, *varargs):
     print "Standard error does not match."
     print "Expected standard error:"
     print "====="
-    map(sys.stdout.write, exp_stderr)
+    list(map(sys.stdout.write, exp_stderr))
     print "====="
     print "Actual standard error:"
     print "====="
-    map(sys.stdout.write, actual_stderr)
+    list(map(sys.stdout.write, actual_stderr))
     print "====="
     raise svntest.Failure
 

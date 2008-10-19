@@ -150,7 +150,7 @@ class GeneratorBase:
 
   def compute_hdrs(self):
     """Get a list of the header files"""
-    all_includes = map(native_path, self.includes + self.private_includes)
+    all_includes = list(map(native_path, self.includes + self.private_includes))
     for d in unique(self.target_dirs):
       for wildcard in self.include_wildcards:
         hdrs = glob.glob(os.path.join(native_path(d), wildcard))
@@ -161,7 +161,7 @@ class GeneratorBase:
     """Compute the dependencies of each header file"""
 
     include_deps = IncludeDependencyInfo(self.compute_hdrs(),
-        map(native_path, self.private_built_includes))
+        list(map(native_path, self.private_built_includes)))
 
     for objectfile, sources in self.graph.get_deps(DT_OBJECT):
       assert len(sources) == 1

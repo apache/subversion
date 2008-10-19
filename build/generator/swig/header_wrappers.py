@@ -20,8 +20,8 @@ class Generator(generator.swig.Generator):
     generator.swig.Generator.__init__(self, conf, swig_path)
 
     # Build list of header files
-    self.header_files = map(native_path, self.includes)
-    self.header_basenames = map(os.path.basename, self.header_files)
+    self.header_files = list(map(native_path, self.includes))
+    self.header_basenames = list(map(os.path.basename, self.header_files))
 
   # Ignore svn_repos_parse_fns_t because SWIG can't parse it
   _ignores = ["svn_repos_parse_fns_t"]

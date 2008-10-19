@@ -279,12 +279,12 @@ def display_lines(message, label, expected, actual, expected_is_regexp=None,
       output += ' (unordered)'
     output += ':'
     print output
-    map(sys.stdout.write, expected)
+    list(map(sys.stdout.write, expected))
     if expected_is_regexp:
-      map(sys.stdout.write, '\n')
+      list(map(sys.stdout.write, '\n'))
   if actual is not None:
     print 'ACTUAL %s:' % label
-    map(sys.stdout.write, actual)
+    list(map(sys.stdout.write, actual))
 
 def compare_and_display_lines(message, label, expected, actual,
                               raisable=main.SVNLineUnequal):
