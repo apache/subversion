@@ -54,6 +54,16 @@ parse_addresses(apr_array_header_t **parsed_addresses,
   apr_pool_t *iterpool = svn_pool_create(pool);
   *parsed_addresses = apr_array_make(pool, 1, sizeof(struct parsed_address *));
 
+  /* If no addresses were provided, listen on the default port
+   * on the unspecified address in all available address families. */
+  if (addresses->nelts == 0)
+    {
+      APR_ARRAY_PUSH(addresses, const char *) = APR_ANYADDR;
+#if APR_HAVE_IPV6
+      APR_ARRAY_PUSH(addresses, const char *) = "::";
+#endif
+    }
+
   for (i = 0; i < addresses->nelts; i++)
     {
       const char *address;
@@ -64,7 +74,7 @@ parse_addresses(apr_array_header_t **parsed_addresses,
 
       svn_pool_clear(iterpool);
 
-      address = APR_ARRAY_IDX(addresses, i, const char*);
+      address = APR_ARRAY_IDX(addresses, i, const char *);
       status = apr_parse_addr_port(&host, &scope_id, &port, address, iterpool);
       if (status)
         return svn_error_wrap_apr(status,
@@ -90,7 +100,7 @@ parse_addresses(apr_array_header_t **parsed_addresses,
         }
 
       parsed_address = apr_palloc(pool, sizeof(struct parsed_address));
-      parsed_address->host = host;
+      parsed_address->host = apr_pstrdup(pool, host);
       parsed_address->port = port;
       APR_ARRAY_PUSH(*parsed_addresses, struct parsed_address *)
         = parsed_address;
@@ -111,9 +121,6 @@ svn_error_t* init_listeners(apr_array_header_t **listeners,
   apr_array_header_t *parsed_addresses;
   apr_pool_t *parse_pool;
   apr_array_header_t *new_listeners;
-
-  /* If no addresses were specified, error out. */
-  SVN_ERR_ASSERT(addresses->nelts > 0);
 
   *listeners = NULL;
   new_listeners = apr_array_make(pool, 1, sizeof(struct listener));

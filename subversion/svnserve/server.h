@@ -153,9 +153,14 @@ log_error(svn_error_t *err, apr_file_t *log_file, const char *remote_host,
  * Return an array of initialised listeners in *LISTENERS.
  * This should be passed to wait_for_client(), see below.
  *
- * It is an error to call this function without specifying any address.
- * If a string does not specify a port to listen on, the default port
+ * If an address does not specify a hostname, the unspecified address
+ * will be used (APR_ANYADDR for IPv4, "::" for IPv6).
+ *
+ * If an address does not specify a port to listen on, the default port
  * (SVN_RA_SVN_PORT) will be used.
+ *
+ * If no addresses are provided, listen on the default port
+ * on the unspecified address in all available address families.
  *
  * Do all allocations in POOL.
  */ 

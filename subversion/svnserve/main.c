@@ -704,17 +704,6 @@ int main(int argc, const char *argv[])
 #endif
     }
 
-  if (addresses->nelts == 0)
-    {
-      /* No addresses to listen on were provided, so default to
-       * listen on the default port on the unspecified address
-       * in all available address families. */
-      APR_ARRAY_PUSH(addresses, const char *) = APR_ANYADDR;
-#if APR_HAVE_IPV6
-      APR_ARRAY_PUSH(addresses, const char *) = "::";
-#endif
-    }
-
   err = init_listeners(&listeners, addresses, pool);
   if (err)
     return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
