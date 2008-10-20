@@ -1639,7 +1639,7 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
        not exist.  ### TODO:  we should probably walk up the wc here,
        in case the parent dir has an imaginary URL.  */
     if (copy_pairs->nelts == 1)
-      svn_path_split(top_dst_path, &parent, NULL, pool);
+      parent = svn_path_dirname(top_dst_path, pool);
     else
       parent = top_dst_path;
     dst_err = svn_client_uuid_from_path(&dst_uuid, parent, adm_access,
