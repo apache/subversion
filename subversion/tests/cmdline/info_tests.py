@@ -84,7 +84,7 @@ def verify_xml_elements(lines, exprs):
   (unmatched_str, unmatched_exprs) = match_xml_element(str, exprs)
   if unmatched_exprs:
     print "Failed to find the following expressions:"
-    for expr in expr_remaining:
+    for expr in unmatched_exprs:
       print expr
     raise SVNTreeUnequal
 
@@ -152,10 +152,10 @@ def match_xml_element(str, exprs):
       e_content = ''
       if len(expr) > 2:
         e_content = expr[2]
-      if (e_content != content):
+      if (not re.search(e_content, content)):
         continue
       # success!
-      exprs = exprs.remove(expr)
+      exprs.remove(expr)
   return (str, exprs)
 
 def same_dict(d1, d2):
