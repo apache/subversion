@@ -212,12 +212,103 @@ def info_with_tree_conflicts(sbox):
                                             'reason'   : reason,
                                             },
                           )])
+
+def info_on_added_file(sbox):
+  """info on added file"""
+  
+  svntest.actions.make_repo_and_wc(sbox)
+  wc_dir = sbox.wc_dir
+  
+  # create new file
+  new_file = os.path.join(wc_dir, 'new_file')
+  svntest.main.file_append(new_file, '')
+
+  svntest.main.run_svn(None, 'add', new_file)
+  
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None, None,
+                                                                [], 'info',
+                                                                new_file)
+
+  uuid_regex = '[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}'
+
+  # check that we have a Repository Root and Repository UUID
+  expected = ['Path: %s\n' % new_file.replace('\\', '\\\\'),
+              'Name: new_file',
+              'URL: .*/new_file',
+              'Repository Root: .*',
+              'Revision: 0',
+              'Node Kind: file',
+              'Schedule: add',
+              'Repository UUID: %s' % uuid_regex]
+
+  verify_lines(output, expected)
+  
+  # check XML info
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None, None,
+                                                                [], 'info',
+                                                                new_file,
+                                                                '--xml')
+
+  verify_xml_elements(output,
+                      [('entry',    {'kind'     : 'file',
+                                     'path'     : new_file,
+                                     'revision' : '0'}),
+                       ('url',      {}, '.*/new_file'),
+                       ('root',     {}, '.*'),
+                       ('uuid',     {}, uuid_regex),
+                       ('depth',    {}, 'infinity'),
+                       ('schedule', {}, 'add')])
+
+def info_on_mkdir(sbox):
+  """info on new dir with mkdir"""
+  svntest.actions.make_repo_and_wc(sbox)
+  wc_dir = sbox.wc_dir
+  
+  # create a new directory using svn mkdir
+  new_dir = os.path.join(wc_dir, 'new_dir')
+  svntest.main.run_svn(None, 'mkdir', new_dir)
+  
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None, None,
+                                                                [], 'info',
+                                                                new_dir)
+
+  uuid_regex = '[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}'
+
+  # check that we have a Repository Root and Repository UUID
+  expected = ['Path: %s\n' % new_dir.replace('\\', '\\\\'),
+              'URL: .*/new_dir',
+              'Repository Root: .*',
+              'Revision: 0',
+              'Node Kind: directory',
+              'Schedule: add',
+              'Repository UUID: %s' % uuid_regex]
+
+  verify_lines(output, expected)
+  
+  # check XML info
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None, None,
+                                                                [], 'info',
+                                                                new_dir,
+                                                                '--xml')
+  print 'output: %s \n\n' % output
+  verify_xml_elements(output,
+                      [('entry',    {'kind'     : 'dir',
+                                     'path'     : new_dir,
+                                     'revision' : '0'}),
+                       ('url',      {}, '.*/new_dir'),
+                       ('root',     {}, '.*'),
+                       ('uuid',     {}, uuid_regex),
+                       ('depth',    {}, 'infinity'),
+                       ('schedule', {}, 'add')])
+
 ########################################################################
 # Run the tests
 
 # list all tests here, starting with None:
 test_list = [ None,
               info_with_tree_conflicts,
+              XFail(info_on_added_file),
+              XFail(info_on_mkdir)
              ]
 
 if __name__ == '__main__':
