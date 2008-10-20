@@ -326,7 +326,7 @@ svn_wc_read_tree_conflicts_from_entry(apr_array_header_t *conflicts,
     /* Not all conflicts have been read from the entry, but no error
      * has been thrown yet. We should not even be here! */
     return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-        _("Invalid tree conflict data in entries file, "
+        _("Invalid tree conflict data in 'entries' file, "
           "but no idea what went wrong"));
 
   return SVN_NO_ERROR;
