@@ -12232,7 +12232,7 @@ def del_differing_file(sbox):
       "C    %s\n" % dir_G2,
       "Summary of conflicts:\n",
       "  Tree conflicts: 1\n",
-      "   Skipped paths: 1\n"])
+      "  Skipped paths: 1\n"])
 
   svn_merge(s_rev_pi, source, target, [
       "Skipped '%s'\n" % pi,
@@ -12240,7 +12240,7 @@ def del_differing_file(sbox):
       "C    %s\n" % dir_G2,
       "Summary of conflicts:\n",
       "  Tree conflicts: 1\n",
-      "   Skipped paths: 1\n"])
+      "  Skipped paths: 1\n"])
 
 
   # Copy a file, modify it, commit, and merge a deletion to it.
@@ -12263,7 +12263,7 @@ def del_differing_file(sbox):
       "C    %s\n" % dir_G3,
       "Summary of conflicts:\n",
       "  Tree conflicts: 1\n",
-      "   Skipped paths: 1\n"])
+      "  Skipped paths: 1\n"])
 
   svn_merge(s_rev_pi, source, target, [
       "Skipped '%s'\n" % pi,
@@ -12271,7 +12271,7 @@ def del_differing_file(sbox):
       "C    %s\n" % dir_G3,
       "Summary of conflicts:\n",
       "  Tree conflicts: 1\n",
-      "   Skipped paths: 1\n"])
+      "  Skipped paths: 1\n"])
 
   os.chdir(saved_cwd)
 
