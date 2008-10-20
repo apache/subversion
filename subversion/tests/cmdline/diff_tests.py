@@ -3064,6 +3064,91 @@ def diff_preexisting_rev_against_local_add(sbox):
   verify_expected_output(diff_output, "+Re-created file beta.")
 
 
+#----------------------------------------------------------------------
+def full_diff_summarize(sbox):
+  "full diff summarize"
+
+  sbox.build()
+  os.chdir(sbox.wc_dir)
+  wc_dir = ''
+
+  # A content modification.
+  svntest.main.file_append(os.path.join(wc_dir, "A", "mu"), "New mu content")
+
+  # A prop modification.
+  svntest.main.run_svn(None,
+                       "propset", "prop", "val",
+                       os.path.join(wc_dir, 'iota'))
+
+  # Both content and prop mods.
+  tau_path = os.path.join(wc_dir, "A", "D", "G", "tau")
+  svntest.main.file_append(tau_path, "tautau")
+  svntest.main.run_svn(None,
+                       "propset", "prop", "val", tau_path)
+
+  # A file addition.
+  newfile_path = os.path.join(wc_dir, 'newfile')
+  svntest.main.file_append(newfile_path, 'newfile')
+  svntest.main.run_svn(None, 'add', newfile_path)
+
+  # A file deletion.
+  svntest.main.run_svn(None, "delete", os.path.join(wc_dir, 'A', 'B',
+                                                    'lambda'))
+
+  # A directory addition.
+  newdir_path = os.path.join(wc_dir, 'Newdir')
+  svntest.main.run_svn(None, 'mkdir', newdir_path)
+
+  # A directory deletion.
+  svntest.main.run_svn(None, "delete", os.path.join(wc_dir, 'A', 'C'))
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu': Item(verb='Sending'),
+    'iota': Item(verb='Sending'),
+    'newfile': Item(verb='Adding'),
+    'A/D/G/tau': Item(verb='Sending'),
+    'A/B/lambda': Item(verb='Deleting'),
+    'Newdir':     Item(verb='Adding'),
+    'A/C':        Item(verb='Deleting'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'newfile': Item(status='  ', wc_rev=2),
+    'Newdir':  Item(status='  ', wc_rev=2),
+    })
+  expected_status.tweak("A/mu", "iota", "A/D/G/tau", wc_rev=2)
+  expected_status.remove("A/B/lambda", "A/C")
+
+  expected_diff = svntest.wc.State(wc_dir, {
+    'A/mu': Item(status='M '),
+    'iota': Item(status=' M'),
+    'A/D/G/tau': Item(status='MM'),
+    'newfile': Item(status='A '),
+    'A/B/lambda': Item(status='D '),
+    'Newdir':     Item(status='A '),
+    'A/C':        Item(status='D '),
+    })
+
+  # Test diff of BASE:WC
+  svntest.actions.run_and_verify_diff_summarize(expected_diff, None,
+                                                None, None, None, None,
+                                                wc_dir)
+
+  # Test diff of repos:WC
+  svntest.actions.run_and_verify_diff_summarize(expected_diff, None,
+                                                None, None, None, None,
+                                                wc_dir, '-r1')
+
+  # Commit
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  # Test diff of repos:repos
+  svntest.actions.run_and_verify_diff_summarize(expected_diff, None,
+                                                None, None, None, None,
+                                                wc_dir, '-r1:2')
+
+
 ########################################################################
 #Run the tests
 
@@ -3120,6 +3205,7 @@ test_list = [ None,
               diff_external_diffcmd,
               XFail(diff_url_against_local_mods),
               XFail(diff_preexisting_rev_against_local_add),
+              XFail(full_diff_summarize),
               ]
 
 if __name__ == '__main__':
