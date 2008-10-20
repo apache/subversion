@@ -107,7 +107,7 @@ print_conflict_stats(struct notify_baton *nb, apr_pool_t *pool)
 
   if (skipped_paths > 0)
     SVN_ERR(svn_cmdline_printf
-      (pool,_("   Skipped paths: %u\n"), skipped_paths));
+      (pool, _("  Skipped paths: %u\n"), skipped_paths));
 
   return SVN_NO_ERROR;
 }
