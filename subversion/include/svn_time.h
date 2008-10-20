@@ -26,6 +26,7 @@
 #include <apr_time.h>
 
 #include "svn_error.h"
+#include "svn_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -78,7 +79,8 @@ svn_parse_date(svn_boolean_t *matched,
  * @deprecated Provided for backward compatibility with the 1.5 API.
  * Use svn_io_sleep_for_timestamps() instead.
  */
-SVN_DEPRECATED void
+SVN_DEPRECATED
+void
 svn_sleep_for_timestamps(void);
 
 #ifdef __cplusplus

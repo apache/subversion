@@ -1904,7 +1904,7 @@ cancel(void *baton)
         return SVN_NO_ERROR;
 }
 
-/* An svn_wc_status_func3_t callback function for anaylyzing status
+/* An svn_wc_status_func3_t callback function for analyzing status
  * structures. */
 static svn_error_t *
 analyze_status(void *baton,

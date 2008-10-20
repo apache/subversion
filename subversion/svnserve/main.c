@@ -549,7 +549,7 @@ int main(int argc, const char *argv[])
       svn_error_clear(svn_cmdline_fputs(
 #ifdef WIN32
                       _("You must specify exactly one of -d, -i, -t, "
-                         "--service or -X.\n"),
+                        "--service or -X.\n"),
 #else
                       _("You must specify exactly one of -d, -i, -t or -X.\n"),
 #endif 
