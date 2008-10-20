@@ -12219,19 +12219,24 @@ def del_differing_file(sbox):
   svntest.main.file_append(target+"/tau", "An extra line in the target.\n")
   svntest.actions.run_and_verify_svn(None, None, [], 'propset',
                                      'newprop', 'v', target+"/pi")
+
+  dir_D = os.path.join('A','D')
+  dir_G2 = os.path.join(dir_D, 'G2')
+  tau = os.path.join(dir_D,'G2','tau')
+  pi = os.path.join(dir_D, 'G2', 'pi')
   # Should complain and "skip" it.
   svn_merge(s_rev_tau, source, target, [
-      "Skipped 'A/D/G2/tau'\n",
-      "--- Merging r2 into 'A/D/G2':\n",
-      "C    A/D/G2\n",
+      "Skipped '%s'\n" % tau,
+      "--- Merging r2 into '%s':\n" % dir_G2,
+      "C    %s\n" % dir_G2,
       "Summary of conflicts:\n",
       "  Tree conflicts: 1\n",
       "   Skipped paths: 1\n"])
 
   svn_merge(s_rev_pi, source, target, [
-      "Skipped 'A/D/G2/pi'\n",
-      "--- Merging r3 into 'A/D/G2':\n",
-      "C    A/D/G2\n",
+      "Skipped '%s'\n" % pi,
+      "--- Merging r3 into '%s':\n" % dir_G2,
+      "C    %s\n" % dir_G2,
       "Summary of conflicts:\n",
       "  Tree conflicts: 1\n",
       "   Skipped paths: 1\n"])
@@ -12244,19 +12249,25 @@ def del_differing_file(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'propset',
                                      'newprop', 'v', target+"/pi")
   svn_commit(target)
+  
+  
+  dir_G3 = os.path.join(dir_D, 'G3')
+  tau = os.path.join(dir_D,'G3','tau')
+  pi = os.path.join(dir_D, 'G3', 'pi')
+
   # Should complain and "skip" it.
   svn_merge(s_rev_tau, source, target, [
-      "Skipped 'A/D/G3/tau'\n",
-      "--- Merging r2 into 'A/D/G3':\n",
-      "C    A/D/G3\n",
+      "Skipped '%s'\n" % tau,
+      "--- Merging r2 into '%s':\n" % dir_G3,
+      "C    %s\n" % dir_G3,
       "Summary of conflicts:\n",
       "  Tree conflicts: 1\n",
       "   Skipped paths: 1\n"])
 
   svn_merge(s_rev_pi, source, target, [
-      "Skipped 'A/D/G3/pi'\n",
-      "--- Merging r3 into 'A/D/G3':\n",
-      "C    A/D/G3\n",
+      "Skipped '%s'\n" % pi,
+      "--- Merging r3 into '%s':\n" % dir_G3,
+      "C    %s\n" % dir_G3,
       "Summary of conflicts:\n",
       "  Tree conflicts: 1\n",
       "   Skipped paths: 1\n"])
