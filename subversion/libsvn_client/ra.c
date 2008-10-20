@@ -381,15 +381,28 @@ svn_client_uuid_from_path(const char **uuid,
       /* Workingcopies have a single uuid, as all contents is from a single
          repository */
 
-      /* Get the uuid from the parent entry */
-      return svn_client_uuid_from_path(uuid, svn_path_dirname(path, pool),
-                                       adm_access, ctx, pool);
+      svn_error_t *err;
+      svn_wc_adm_access_t *parent_access;
+      const char *parent = svn_path_dirname(path, pool);
+
+      /* Open the parents administrative area to fetch the uuid.
+         Subversion 1.0 and later have the uuid in every checkout root */
+
+      SVN_ERR(svn_wc_adm_open3(&parent_access, NULL, parent, FALSE, 0,
+                               ctx->cancel_func, ctx->cancel_baton, pool));
+      
+      err = svn_client_uuid_from_path(uuid, svn_path_dirname(path, pool),
+                                      parent_access, ctx, pool);
+
+      svn_error_clear(svn_wc_adm_close2(parent_access, pool));
+
+      return err;
     }
     
   /* We may have a workingcopy without uuid */     
   if (entry->url)
     {
-      /* You can enter this case by copying a new subdirectory with pre 1.6
+      /* You can enter this case by copying a new subdirectory with 1.0-1.5
        * # svn mkdir newdir
        * # cp newdir /tmp/new-wc
        * and then check /tmp/new-wc
