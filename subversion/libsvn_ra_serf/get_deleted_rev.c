@@ -36,12 +36,6 @@ typedef enum {
 } drev_state_e;
 
 typedef struct {
-  /* The currently collected value as we build it up */
-  const char *tmp;
-  apr_size_t tmp_len;
-} drev_info_t;
-
-typedef struct {
   apr_pool_t *pool;
 
   const char *path;
@@ -58,7 +52,7 @@ typedef struct {
 } drev_context_t;
 
 
-static drev_info_t *
+static svn_string_t *
 push_state(svn_ra_serf__xml_parser_t *parser,
            drev_context_t *drev_ctx,
            drev_state_e state)
@@ -67,9 +61,7 @@ push_state(svn_ra_serf__xml_parser_t *parser,
 
   if (state == VERSION_NAME)
     {
-      drev_info_t *info;
-
-      info = apr_pcalloc(parser->state->pool, sizeof(*info));
+      svn_string_t *info = apr_pcalloc(parser->state->pool, sizeof(*info));
 
       parser->state->private = info;
     }
@@ -104,7 +96,7 @@ end_getdrev(svn_ra_serf__xml_parser_t *parser,
 {
   drev_context_t *drev_ctx = userData;
   drev_state_e state;
-  drev_info_t *info;
+  svn_string_t *info;
 
   state = parser->state->current_state;
   info = parser->state->private;
@@ -112,7 +104,7 @@ end_getdrev(svn_ra_serf__xml_parser_t *parser,
   if (state == VERSION_NAME &&
       strcmp(name.name, SVN_DAV__VERSION_NAME) == 0)
     {
-      *drev_ctx->revision_deleted = SVN_STR_TO_REV(info->tmp);
+      *drev_ctx->revision_deleted = SVN_STR_TO_REV(info->data);
       svn_ra_serf__xml_pop_state(parser);
     }
 
@@ -127,18 +119,17 @@ cdata_getdrev(svn_ra_serf__xml_parser_t *parser,
 {
   drev_context_t *drev_ctx = userData;
   drev_state_e state;
-  drev_info_t *info;
+  svn_string_t **info;
 
   UNUSED_CTX(drev_ctx);
 
   state = parser->state->current_state;
-  info = parser->state->private;
+  info = &((svn_string_t *)parser->state->private);
 
   switch (state)
     {
     case VERSION_NAME:
-        svn_ra_serf__expand_string(&info->tmp, &info->tmp_len,
-                                   data, len, parser->state->pool);
+        *info = svn_string_ncreate(data, len, parser->state->pool);
         break;
     default:
         break;
