@@ -82,7 +82,8 @@ typedef enum
   svn_cl__accept_edit,
 
   /* Launch user's resolver and resolve conflict with edited file. */
-  svn_cl__accept_launch,
+  svn_cl__accept_launch
+
 } svn_cl__accept_t;
 
 /* --accept action user input words */

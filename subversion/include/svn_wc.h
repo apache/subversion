@@ -1147,7 +1147,7 @@ typedef enum svn_wc_operation_t
 {
   svn_wc_operation_update,
   svn_wc_operation_switch,
-  svn_wc_operation_merge,
+  svn_wc_operation_merge
 
 } svn_wc_operation_t;
 
