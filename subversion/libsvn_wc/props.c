@@ -1195,28 +1195,6 @@ set_prop_merge_state(svn_wc_notify_state_t *state,
   *state = new_value;
 }
 
-
-/* Create a temporary file in the same directory as PATH. Fill it with
- * the data in VAL. Set *NEW_PATH to its path.
- * Allocate the file metadata in POOL in such a way that the file will be
- * deleted when the pool is cleared. */
-static svn_error_t *
-write_tmp_file(const char **new_path,
-               const char *path, const svn_string_t *val,
-               apr_pool_t *pool)
-{
-  apr_file_t *new_file;
-
-  SVN_ERR(svn_io_open_unique_file2(&new_file, new_path,
-                                   path, ".tmp",
-                                   svn_io_file_del_on_pool_cleanup,
-                                   pool));
-  SVN_ERR(svn_io_file_write_full(new_file, val->data,
-                                 val->len, NULL, pool));
-  return svn_io_file_close(new_file, pool);
-}
-
-
 /* Helper function for the three apply_* functions below, used when
  * merging properties together.
  *
@@ -1271,10 +1249,14 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
 
   /* Create a tmpfile for each of the string_t's we've got.  */
   if (working_val)
-    SVN_ERR(write_tmp_file(&cdesc->my_file, path, working_val, filepool));
+    SVN_ERR(svn_io_write_unique(&cdesc->my_file, path, working_val->data,
+                                working_val->len,
+                                svn_io_file_del_on_pool_cleanup, filepool));
 
   if (new_val)
-    SVN_ERR(write_tmp_file(&cdesc->their_file, path, new_val, filepool));
+    SVN_ERR(svn_io_write_unique(&cdesc->their_file, path, new_val->data,
+                                new_val->len, svn_io_file_del_on_pool_cleanup,
+                                filepool));
 
   if (!base_val && !old_val)
     {
@@ -1295,7 +1277,9 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
 
       const svn_string_t *the_val = base_val ? base_val : old_val;
 
-      SVN_ERR(write_tmp_file(&cdesc->base_file, path, the_val, filepool));
+      SVN_ERR(svn_io_write_unique(&cdesc->base_file, path, the_val->data,
+                                  the_val->len, svn_io_file_del_on_pool_cleanup,
+                                  filepool));
     }
 
   else  /* base and old are both non-NULL */
@@ -1328,7 +1312,9 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
           the_val = base_val;
         }
 
-      SVN_ERR(write_tmp_file(&cdesc->base_file, path, the_val, filepool));
+      SVN_ERR(svn_io_write_unique(&cdesc->base_file, path, the_val->data,
+                                  the_val->len, svn_io_file_del_on_pool_cleanup,
+                                  filepool));
 
       if (working_val && new_val)
         {

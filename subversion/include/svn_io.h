@@ -1391,6 +1391,22 @@ svn_io_file_write_full(apr_file_t *file,
                        apr_size_t *bytes_written,
                        apr_pool_t *pool);
 
+/**
+ * Open a unique file in @a dirpath, and write @a nbytes from @a buf to
+ * the file before closing it.  If @a tmp_path is not @c NULL, return the
+ * name of the newly created file in @a *tmp_path, allocated in @a pool.
+ *
+ * The file will be deleted according to @a delete_when.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_io_write_unique(const char **tmp_path,
+                    const char *dirpath,
+                    const void *buf,
+                    apr_size_t nbytes,
+                    svn_io_file_del_t delete_when,
+                    apr_pool_t *pool);
 
 /** Wrapper for apr_file_trunc().
   * @since New in 1.6. */

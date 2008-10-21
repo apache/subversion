@@ -1561,18 +1561,8 @@ create_special_file_from_stringbuf(svn_stringbuf_t *src, const char *dst,
   /* If nothing else worked, write out the internal representation to
      a file that can be edited by the user. */
   if (create_using_internal_representation)
-    {
-      apr_file_t *dst_tmp_file;
-      apr_size_t written;
-
-
-      SVN_ERR(svn_io_open_unique_file2(&dst_tmp_file, &dst_tmp,
-                                       dst, ".tmp", svn_io_file_del_none,
-                                       pool));
-      SVN_ERR(svn_io_file_write_full(dst_tmp_file, src->data, src->len,
-                                     &written, pool));
-      SVN_ERR(svn_io_file_close(dst_tmp_file, pool));
-    }
+    SVN_ERR(svn_io_write_unique(&dst_tmp, dst, src->data, src->len,
+                                svn_io_file_del_none, pool));
 
   /* Do the atomic rename from our temporary location. */
   return svn_io_file_rename(dst_tmp, dst, pool);
