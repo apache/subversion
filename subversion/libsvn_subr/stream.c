@@ -442,7 +442,7 @@ svn_stream_open_unique(svn_stream_t **stream,
 
   prefix = svn_path_join(dirpath, "tempfile", scratch_pool);
 
-  SVN_ERR(svn_io_open_unique_file2(&file, temp_path, prefix, "tmp",
+  SVN_ERR(svn_io_open_unique_file2(&file, temp_path, prefix, ".tmp",
                                    delete_when, result_pool));
   *stream = svn_stream_from_aprfile2(file, FALSE, result_pool);
 
