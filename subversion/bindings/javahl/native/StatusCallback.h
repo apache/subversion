@@ -35,12 +35,13 @@ class StatusCallback
   StatusCallback(jobject jcallback);
   ~StatusCallback();
 
-  static void callback(void *baton,
-                       const char *path,
-                       svn_wc_status2_t *status);
+  static svn_error_t* callback(void *baton,
+                               const char *path,
+                               svn_wc_status2_t *status,
+                               apr_pool_t *pool);
 
  protected:
-  void doStatus(const char *path, svn_wc_status2_t *status);
+  svn_error_t *doStatus(const char *path, svn_wc_status2_t *status);
 
  private:
   /**

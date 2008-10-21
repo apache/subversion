@@ -649,8 +649,8 @@ write_wcprops(svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
     {
       svn_error_t *err;
 
-      err = svn_wc__remove_adm_file(svn_wc_adm_access_path(adm_access), pool,
-                                    SVN_WC__ADM_ALL_WCPROPS, NULL);
+      err = svn_wc__remove_adm_file(adm_access, SVN_WC__ADM_ALL_WCPROPS,
+                                    subpool);
       if (err && APR_STATUS_IS_ENOENT(err->apr_err))
         {
           svn_error_clear(err);
@@ -2203,7 +2203,6 @@ svn_wc__wcprop_set(const char *name,
                    apr_pool_t *pool)
 {
   apr_hash_t *prophash;
-  apr_file_t *fp = NULL;
   apr_pool_t *cache_pool = svn_wc_adm_access_pool(adm_access);
   const svn_wc_entry_t *entry;
 
@@ -2231,30 +2230,7 @@ svn_wc__wcprop_set(const char *name,
     }
   else
     {
-      /* For backwards compatibility.  We don't use the cache in this case,
-         so write to disk regardless of force_write. */
-      svn_stream_t *stream;
-
-      /* Open the propfile for writing. */
-      SVN_ERR(svn_wc__open_props(&fp,
-                                 path, /* open in PATH */ entry->kind,
-                                 (APR_WRITE | APR_CREATE | APR_BUFFERED),
-                                 0, /* not base props */
-                                 1, /* we DO want wcprops */
-                                 pool));
-      /* Write. */
-      stream = svn_stream_from_aprfile2(fp, TRUE, pool);
-      SVN_ERR_W(svn_hash_write2(prophash, stream, SVN_HASH_TERMINATOR,
-                                pool),
-                apr_psprintf(pool,
-                             _("Cannot write property hash for '%s'"),
-                             svn_path_local_style(path, pool)));
-      svn_stream_close(stream);
-
-      /* Close file, doing an atomic "move". */
-      SVN_ERR(svn_wc__close_props(fp, path, entry->kind, 0, 1,
-                                  1, /* sync! */
-                                  pool));
+      SVN_ERR(svn_wc__write_old_wcprops(path, prophash, entry->kind, pool));
     }
 
   return SVN_NO_ERROR;
@@ -2444,24 +2420,18 @@ get_file_for_validation(const svn_string_t **mime_type,
     SVN_ERR(svn_wc_prop_get(mime_type, SVN_PROP_MIME_TYPE,
                             gb->path, gb->adm_access, pool));
 
-  if (stream) {
-    apr_file_t *fp;
-    svn_stream_t *read_stream;
+  if (stream)
+    {
+      svn_stream_t *read_stream;
 
-    /* Open PATH. */
-    SVN_ERR(svn_io_file_open(&fp, gb->path,
-                             (APR_READ | APR_BINARY | APR_BUFFERED),
-                             0, pool));
+      /* Open PATH. */
+      SVN_ERR(svn_stream_open_readonly(&read_stream, gb->path,
+                                       pool, pool));
 
-    /* Get a READ_STREAM from the file we just opened. */
-    read_stream = svn_stream_from_aprfile2(fp, TRUE, pool);
-
-    /* Copy from the file into the translating stream. */
-    SVN_ERR(svn_stream_copy2(read_stream, stream, NULL, NULL, pool));
-
-    SVN_ERR(svn_stream_close(read_stream));
-    SVN_ERR(svn_io_file_close(fp, pool));
-  }
+      /* Copy from the file into the translating stream. */
+      SVN_ERR(svn_stream_copy3(read_stream, svn_stream_disown(stream, pool),
+                               NULL, NULL, pool));
+    }
 
   return SVN_NO_ERROR;
 }

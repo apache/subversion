@@ -183,7 +183,6 @@ svn_io_open_unique_file2(apr_file_t **f,
  * @note In 1.4 the API was extended to require either @a f or
  *       @a unique_name_p (the other can be NULL).  Before that, both were
  *       required.
- *
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -714,6 +713,26 @@ svn_stream_open_writable(svn_stream_t **stream,
                          apr_pool_t *scratch_pool);
 
 
+/** Create a writable stream to a file in the directory @a dirpath.
+ * The file will have an arbitrary and unique name, and the full path
+ * will be returned in @a temp_path. The stream will be returned in
+ * @a stream. Both will be allocated from @a result_pool.
+ *
+ * The file will be deleted according to @a delete_when.
+ *
+ * Temporary allocations will be performed in @a scratch_pool.
+ *
+ * @since New in 1.6
+ */
+svn_error_t *
+svn_stream_open_unique(svn_stream_t **stream,
+                       const char **temp_path,
+                       const char *dirpath,
+                       svn_io_file_del_t delete_when,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool);
+
+
 /** Create a stream from an APR file.  For convenience, if @a file is
  * @c NULL, an empty stream created by svn_stream_empty() is returned.
  *
@@ -884,14 +903,35 @@ svn_stream_readline(svn_stream_t *stream,
                     svn_boolean_t *eof,
                     apr_pool_t *pool);
 
+
 /**
  * Read the contents of the readable stream @a from and write them to the
  * writable stream @a to calling @a cancel_func before copying each chunk.
  *
  * @a cancel_func may be @c NULL.
  *
- * @since New in 1.5.
+ * @note both @a from and @a to will be closed upon successul completion of
+ * the copy (but an error may still be returned, based on trying to close
+ * the two streams). If the closure is not desired, then you can use
+ * @see svn_stream_disown() to protect either or both of the streams from
+ * being closed.
+ *
+ * @since New in 1.6.
  */
+svn_error_t *
+svn_stream_copy3(svn_stream_t *from,
+                 svn_stream_t *to,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
+                 apr_pool_t *pool);
+
+/**
+ * Same as svn_stream_copy3() but the streams are not closed.
+ *
+ * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.5 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_stream_copy2(svn_stream_t *from,
                  svn_stream_t *to,
@@ -899,9 +939,9 @@ svn_stream_copy2(svn_stream_t *from,
                  void *cancel_baton,
                  apr_pool_t *pool);
 
-
 /**
- * Same as svn_stream_copy2(), but without the cancellation function.
+ * Same as svn_stream_copy3(), but without the cancellation function
+ * or stream closing.
  *
  * @since New in 1.1.
  * @deprecated Provided for backward compatibility with the 1.4 API.
@@ -911,6 +951,7 @@ svn_error_t *
 svn_stream_copy(svn_stream_t *from,
                 svn_stream_t *to,
                 apr_pool_t *pool);
+
 
 /** Set @a *same to TRUE if @a stream1 and @a stream2 have the same
  * contents, else set it to FALSE.  Use @a pool for temporary allocations.

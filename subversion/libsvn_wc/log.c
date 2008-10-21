@@ -1827,8 +1827,7 @@ run_log(svn_wc_adm_access_t *adm_access,
 
           /* No 'killme'?  Remove the logfile; its commands have been
              executed. */
-          SVN_ERR(svn_wc__remove_adm_file(svn_wc_adm_access_path(adm_access),
-                                          iterpool, logfile_path, NULL));
+          SVN_ERR(svn_wc__remove_adm_file(adm_access, logfile_path, iterpool));
         }
     }
 

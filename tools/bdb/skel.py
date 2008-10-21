@@ -192,7 +192,7 @@ class Rep:
           if len(sk) == 2 and sk[0][0] == "fulltext":
             self.str = sk[1]
           elif len(sk) >= 2 and sk[0][0] == "delta":
-            self.windows = map(SvnDiffWindow, sk[1:])
+            self.windows = list(map(SvnDiffWindow, sk[1:]))
     else:
       raise ValueError("Invalid representation skel: %s" % repr(skelstring))
 

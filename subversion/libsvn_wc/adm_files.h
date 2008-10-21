@@ -93,6 +93,14 @@ const char *svn_wc__text_base_path(const char *path,
                                    apr_pool_t *pool);
 
 
+/* Return a readonly stream on the PATH's revert file. */
+svn_error_t *
+svn_wc__get_revert_contents(svn_stream_t **contents,
+                            const char *path,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
+
 /* Return a path to PATH's revert file.
    If TMP is set, return a path to the tmp revert file. */
 const char *
@@ -149,61 +157,31 @@ svn_error_t *svn_wc__close_adm_file(apr_file_t *fp,
                                     int sync,
                                     apr_pool_t *pool);
 
-/* Remove `PATH/<adminstrative_subdir>/THING'. */
-svn_error_t *svn_wc__remove_adm_file(const char *path,
-                                     apr_pool_t *pool,
-                                     ...);
-
-/* Open the text-base for FILE.
- * FILE can be any kind of path ending with a filename.
- * Behaves like svn_wc__open_adm_file(), which see.
- */
-svn_error_t *svn_wc__open_text_base(apr_file_t **handle,
-                                    const char *file,
-                                    apr_int32_t flags,
-                                    apr_pool_t *pool);
-
-/* Open the revert-base for FILE.
- * FILE can be any kind of path ending with a filename.
- * Behaves like svn_wc__open_adm_file(), which see.
- */
-svn_error_t *svn_wc__open_revert_base(apr_file_t **handle,
-                                      const char *file,
-                                      apr_int32_t flags,
-                                      apr_pool_t *pool);
+/* Remove `PATH/<adminstrative_subdir>/FILENAME'. */
+svn_error_t *svn_wc__remove_adm_file(const svn_wc_adm_access_t *adm_access,
+                                     const char *filename,
+                                     apr_pool_t *scratch_pool);
 
 
-/* Open the property file for PATH.
- * PATH can be any kind of path, either file or dir.
- *
- * If BASE is set, then the "pristine" property file will be opened.
- * If WCPROPS is set, then the "wc" property file will be opened.
- *
- * (Don't set BASE and WCPROPS at the same time; this is meaningless.)
- */
-svn_error_t *svn_wc__open_props(apr_file_t **handle,
-                                const char *path,
-                                svn_node_kind_t kind,
-                                apr_int32_t flags,
-                                svn_boolean_t base,
-                                svn_boolean_t wcprops,
-                                apr_pool_t *pool);
+/* Open the normal or revert text base, associated with PATH, for writing.
+   The selection is based on NEED_REVERT_BASE. The opened stream will be
+   returned in STREAM and the selected path will be returned in,
+   TEMP_BASE_PATH, and both will be allocated in RESULT_POOL. Any temporary
+   allocations will be performed in SCRATCH_POOL. */
+svn_error_t *
+svn_wc__open_writable_base(svn_stream_t **stream,
+                           const char **temp_base_path,
+                           const char *path,
+                           svn_boolean_t need_revert_base,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
 
-/* Close the property file for PATH.
- * FP was obtained from svn_wc__open_props().
- *
- * The BASE and WCPROPS must have the same state used to open the file!
- *
- * Like svn_wc__close_adm_file(), SYNC indicates the file should be
- * atomically written.
- */
-svn_error_t *svn_wc__close_props(apr_file_t *fp,
-                                 const char *path,
-                                 svn_node_kind_t kind,
-                                 svn_boolean_t base,
-                                 svn_boolean_t wcprops,
-                                 int sync,
-                                 apr_pool_t *pool);
+
+/* Write old-style wcprops files (rather than one big file). */
+svn_error_t *svn_wc__write_old_wcprops(const char *path,
+                                       apr_hash_t *prophash,
+                                       svn_node_kind_t kind,
+                                       apr_pool_t *scratch_pool);
 
 
 /* Blow away the admistrative directory associated with the access baton
