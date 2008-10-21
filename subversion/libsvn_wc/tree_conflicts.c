@@ -354,7 +354,7 @@ svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
       len = strlen(path);
       if (len == 0)
         return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-                        _("Empty victim path in tree conflict description"));
+                        "Empty victim path in tree conflict description");
 
       /* Escape separator chars while writing victim path. */
       for (j = 0; j < len; j++)
