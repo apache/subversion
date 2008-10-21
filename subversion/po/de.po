@@ -79,7 +79,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.6\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2008-10-17 21:59+0200\n"
-"PO-Revision-Date: 2008-10-20 17:01+0200\n"
+"PO-Revision-Date: 2008-10-21 11:01+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: German <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -5950,9 +5950,9 @@ msgid ""
 "followed by invalid UTF-8 sequence\n"
 "(hex:%s)"
 msgstr ""
-"Auf gültige UTF-8 Daten\n"
+"Auf gültige UTF-8-Daten\n"
 "(hex:%s)\n"
-"folgte eine ungültige UTF-8 Sequenz\n"
+"folgte eine ungültige UTF-8-Sequenz\n"
 "(hex:%s)"
 
 #: ../libsvn_subr/validate.c:50
@@ -6261,7 +6261,7 @@ msgstr "Standardeintrag hat keine URL"
 #: ../libsvn_wc/entries.c:1382
 #, c-format
 msgid "Invalid version line in entries file of '%s'"
-msgstr "Ungültige Versionszeile in Eintragsdatei von »%s«"
+msgstr "Ungültige Versionszeile in Datei »entry« von »%s«"
 
 #: ../libsvn_wc/entries.c:1399
 msgid "Missing entry terminator"
@@ -6891,10 +6891,6 @@ msgstr ""
 #: ../libsvn_wc/tree_conflicts.c:329
 msgid "Invalid tree conflict data in entries file, but no idea what went wrong"
 msgstr "Ungültige Baumkonfliktdaten in Datei »entries«, Ursache ist unbekannt"
-
-#: ../libsvn_wc/tree_conflicts.c:357
-msgid "Empty victim path in tree conflict description"
-msgstr ""
 
 #: ../libsvn_wc/tree_conflicts.c:383 ../svn/tree-conflicts.c:280
 msgid "Bad node_kind in tree conflict description"
@@ -10183,11 +10179,6 @@ msgstr "Diese Aktion wurde von einem Objekt in der Arbeitskopie behindert.\n"
 msgid "'%s' is unversioned.\n"
 msgstr "»%s« ist nicht versioniert.\n"
 
-#: ../svn/tree-conflicts.c:242
-#, c-format
-msgid "Invalid tree conflict data for victim %s"
-msgstr ""
-
 #: ../svn/util.c:64
 #, c-format
 msgid ""
@@ -12079,9 +12070,9 @@ msgid ""
 msgstr ""
 "Aufruf: svnsync UNTERBEFEHL ZIEL_URL [Optionen & Parameter ...]\n"
 "Geben Sie »svnsync help <Unterbefehl>« ein, um Hilfe zu einem\n"
-"          Unterbefehl zu erhalten.\n"
-"Geben Sie »svnsync --version« ein, um die Programmversion und die Zugriffs-\n"
-"          module zu sehen.\n"
+"Unterbefehl zu erhalten.\n"
+"Geben Sie »svnsync --version« ein, um die Programmversion und die\n"
+"Zugriffsmodule zu sehen.\n"
 "\n"
 "Verfügbare Unterbefehle:\n"
 
