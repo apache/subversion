@@ -2444,24 +2444,18 @@ get_file_for_validation(const svn_string_t **mime_type,
     SVN_ERR(svn_wc_prop_get(mime_type, SVN_PROP_MIME_TYPE,
                             gb->path, gb->adm_access, pool));
 
-  if (stream) {
-    apr_file_t *fp;
-    svn_stream_t *read_stream;
+  if (stream)
+    {
+      svn_stream_t *read_stream;
 
-    /* Open PATH. */
-    SVN_ERR(svn_io_file_open(&fp, gb->path,
-                             (APR_READ | APR_BINARY | APR_BUFFERED),
-                             0, pool));
+      /* Open PATH. */
+      SVN_ERR(svn_stream_open_readonly(&read_stream, gb->path,
+                                       pool, pool));
 
-    /* Get a READ_STREAM from the file we just opened. */
-    read_stream = svn_stream_from_aprfile2(fp, TRUE, pool);
-
-    /* Copy from the file into the translating stream. */
-    SVN_ERR(svn_stream_copy2(read_stream, stream, NULL, NULL, pool));
-
-    SVN_ERR(svn_stream_close(read_stream));
-    SVN_ERR(svn_io_file_close(fp, pool));
-  }
+      /* Copy from the file into the translating stream. */
+      SVN_ERR(svn_stream_copy3(read_stream, svn_stream_disown(stream, pool),
+                               NULL, NULL, pool));
+    }
 
   return SVN_NO_ERROR;
 }
