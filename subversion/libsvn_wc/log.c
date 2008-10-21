@@ -1544,10 +1544,10 @@ start_handler(void *userData, const char *eltname, const char **atts)
     err = log_do_file_xfer(loggy, name, svn_wc__xfer_cp, atts);
   }
   else if (strcmp(eltname, SVN_WC__LOG_CP_AND_TRANSLATE) == 0) {
-    err = log_do_file_xfer(loggy, name,svn_wc__xfer_cp_and_translate, atts);
+    err = log_do_file_xfer(loggy, name, svn_wc__xfer_cp_and_translate, atts);
   }
   else if (strcmp(eltname, SVN_WC__LOG_CP_AND_DETRANSLATE) == 0) {
-    err = log_do_file_xfer(loggy, name,svn_wc__xfer_cp_and_detranslate, atts);
+    err = log_do_file_xfer(loggy, name, svn_wc__xfer_cp_and_detranslate, atts);
   }
   else if (strcmp(eltname, SVN_WC__LOG_APPEND) == 0) {
     err = log_do_file_xfer(loggy, name, svn_wc__xfer_append, atts);
@@ -1857,34 +1857,22 @@ svn_wc__rerun_log(svn_wc_adm_access_t *adm_access,
 /*** Log file generation helpers ***/
 
 /* Extend LOG_ACCUM with log operations to do MOVE_COPY_OP to SRC_PATH and
- * DST_PATH, removing DST_PATH if no SRC_PATH exists when
- * REMOVE_DST_IF_NO_SRC is true.
- *
- * Set *DST_MODIFIED (if DST_MODIFIED isn't NULL) to indicate whether the
- * destination path has been modified after running the log:
- * either MOVE_COPY_OP has been executed, or DST_PATH was removed.
+ * DST_PATH.
  *
  * SRC_PATH and DST_PATH are relative to ADM_ACCESS.
  */
 static svn_error_t *
 loggy_move_copy_internal(svn_stringbuf_t **log_accum,
-                         svn_boolean_t *dst_modified,
                          const char *move_copy_op,
                          svn_wc_adm_access_t *adm_access,
                          const char *src_path, const char *dst_path,
-                         svn_boolean_t remove_dst_if_no_src,
                          apr_pool_t *pool)
 {
   svn_node_kind_t kind;
   const char *full_src = svn_path_join(svn_wc_adm_access_path(adm_access),
                                        src_path, pool);
-  const char *full_dst = svn_path_join(svn_wc_adm_access_path(adm_access),
-                                       dst_path, pool);
 
   SVN_ERR(svn_io_check_path(full_src, &kind, pool));
-
-  if (dst_modified)
-    *dst_modified = FALSE;
 
   /* Does this file exist? */
   if (kind != svn_node_none)
@@ -1897,16 +1885,6 @@ loggy_move_copy_internal(svn_stringbuf_t **log_accum,
                             SVN_WC__LOG_ATTR_DEST,
                             dst_path,
                             NULL);
-      if (dst_modified)
-        *dst_modified = TRUE;
-    }
-  /* File doesn't exist, and the caller wants dst_path to be removed. */
-  else if (kind == svn_node_none && remove_dst_if_no_src)
-    {
-      SVN_ERR(svn_wc__loggy_remove(log_accum, adm_access, full_dst, pool));
-
-      if (dst_modified)
-        *dst_modified = TRUE;
     }
 
   return SVN_NO_ERROR;
@@ -1969,26 +1947,16 @@ svn_wc__loggy_committed(svn_stringbuf_t **log_accum,
 
 svn_error_t *
 svn_wc__loggy_copy(svn_stringbuf_t **log_accum,
-                   svn_boolean_t *dst_modified,
                    svn_wc_adm_access_t *adm_access,
-                   svn_wc__copy_t copy_type,
                    const char *src_path, const char *dst_path,
-                   svn_boolean_t remove_dst_if_no_src,
                    apr_pool_t *pool)
 {
-  static const char *copy_op[] =
-    {
-      SVN_WC__LOG_CP,
-      SVN_WC__LOG_CP_AND_TRANSLATE,
-      SVN_WC__LOG_CP_AND_DETRANSLATE
-    };
-
-  return loggy_move_copy_internal
-    (log_accum, dst_modified,
-     copy_op[copy_type],
-     adm_access,
-     loggy_path(src_path, adm_access),
-     loggy_path(dst_path, adm_access), remove_dst_if_no_src, pool);
+  return loggy_move_copy_internal(log_accum,
+                                  SVN_WC__LOG_CP_AND_TRANSLATE,
+                                  adm_access,
+                                  loggy_path(src_path, adm_access),
+                                  loggy_path(dst_path, adm_access),
+                                  pool);
 }
 
 svn_error_t *
@@ -2255,17 +2223,15 @@ svn_wc__loggy_modify_wcprop(svn_stringbuf_t **log_accum,
 
 svn_error_t *
 svn_wc__loggy_move(svn_stringbuf_t **log_accum,
-                   svn_boolean_t *dst_modified,
                    svn_wc_adm_access_t *adm_access,
                    const char *src_path, const char *dst_path,
-                   svn_boolean_t remove_dst_if_no_src,
                    apr_pool_t *pool)
 {
-  return loggy_move_copy_internal(log_accum, dst_modified,
+  return loggy_move_copy_internal(log_accum,
                                   SVN_WC__LOG_MV, adm_access,
                                   loggy_path(src_path, adm_access),
                                   loggy_path(dst_path, adm_access),
-                                  remove_dst_if_no_src, pool);
+                                  pool);
 }
 
 svn_error_t *

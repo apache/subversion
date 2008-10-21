@@ -3185,10 +3185,9 @@ merge_file(svn_wc_notify_state_t *content_state,
              For replaced files, though, we want to merge in the changes
              even if the file is not modified compared to the (non-revert)
              text-base. */
-          SVN_ERR(svn_wc__loggy_copy(&log_accum, NULL, adm_access,
-                                     svn_wc__copy_translate,
+          SVN_ERR(svn_wc__loggy_copy(&log_accum, adm_access,
                                      fb->new_text_base_path,
-                                     fb->path, FALSE, pool));
+                                     fb->path, pool));
         }
       else   /* working file or obstruction is locally modified... */
         {
@@ -3199,10 +3198,9 @@ merge_file(svn_wc_notify_state_t *content_state,
             {
               /* working file is missing?!
                  Just copy the new text-base to the file. */
-              SVN_ERR(svn_wc__loggy_copy(&log_accum, NULL, adm_access,
-                                         svn_wc__copy_translate,
+              SVN_ERR(svn_wc__loggy_copy(&log_accum, adm_access,
                                          fb->new_text_base_path,
-                                         fb->path, FALSE, pool));
+                                         fb->path, pool));
             }
           else if (! fb->existed)
             /* Working file exists and has local mods
@@ -3320,9 +3318,8 @@ merge_file(svn_wc_notify_state_t *content_state,
              it back to the working file.
              Now, since this is done during the execution of the log file, this
              retranslation is actually done according to the new props. */
-          SVN_ERR(svn_wc__loggy_copy(&log_accum, NULL, adm_access,
-                                     svn_wc__copy_translate,
-                                     tmptext, fb->path, FALSE, pool));
+          SVN_ERR(svn_wc__loggy_copy(&log_accum, adm_access,
+                                     tmptext, fb->path, pool));
         }
 
       if (*lock_state == svn_wc_notify_lock_state_unlocked)
@@ -3335,9 +3332,9 @@ merge_file(svn_wc_notify_state_t *content_state,
   /* Deal with installation of the new textbase, if appropriate. */
   if (fb->new_text_base_path)
     {
-      SVN_ERR(svn_wc__loggy_move(&log_accum, NULL,
+      SVN_ERR(svn_wc__loggy_move(&log_accum,
                                  adm_access, fb->new_text_base_path,
-                                 fb->text_base_path, FALSE, pool));
+                                 fb->text_base_path, pool));
       SVN_ERR(svn_wc__loggy_set_readonly(&log_accum, adm_access,
                                          fb->text_base_path, pool));
       tmp_entry.checksum = svn_checksum_to_cstring(actual_checksum, pool);
@@ -4267,9 +4264,9 @@ svn_wc_add_repos_file3(const char *dst_path,
       const char *dst_rtext = svn_wc__text_revert_path(dst_path, FALSE, pool);
       const char *dst_txtb = svn_wc__text_base_path(dst_path, FALSE, pool);
 
-      SVN_ERR(svn_wc__loggy_move(&log_accum, NULL,
+      SVN_ERR(svn_wc__loggy_move(&log_accum,
                                  adm_access, dst_txtb, dst_rtext,
-                                 FALSE, pool));
+                                 pool));
       SVN_ERR(svn_wc__loggy_revert_props_create(&log_accum,
                                                 dst_path, adm_access,
                                                 TRUE, pool));
@@ -4344,9 +4341,8 @@ svn_wc_add_repos_file3(const char *dst_path,
                                pool));
 
       /* Translate new temporary text file to working text. */
-      SVN_ERR(svn_wc__loggy_copy(&log_accum, NULL, adm_access,
-                                 svn_wc__copy_translate,
-                                 tmp_text_path, dst_path, FALSE,
+      SVN_ERR(svn_wc__loggy_copy(&log_accum, adm_access,
+                                 tmp_text_path, dst_path,
                                  pool));
 
       /* After copying to the working directory, lose the temp file. */
@@ -4358,9 +4354,8 @@ svn_wc_add_repos_file3(const char *dst_path,
     {
       /* No working file provided by the caller, copy and translate the
          text base. */
-      SVN_ERR(svn_wc__loggy_copy(&log_accum, NULL, adm_access,
-                                 svn_wc__copy_translate,
-                                 tmp_text_base_path, dst_path, FALSE,
+      SVN_ERR(svn_wc__loggy_copy(&log_accum, adm_access,
+                                 tmp_text_base_path, dst_path,
                                  pool));
       SVN_ERR(svn_wc__loggy_set_entry_timestamp_from_wc
               (&log_accum, adm_access,
@@ -4375,9 +4370,9 @@ svn_wc_add_repos_file3(const char *dst_path,
 
     /* Write out log commands to set up the new text base and its
        checksum. */
-    SVN_ERR(svn_wc__loggy_move(&log_accum, NULL,
+    SVN_ERR(svn_wc__loggy_move(&log_accum,
                                adm_access, tmp_text_base_path,
-                               text_base_path, FALSE, pool));
+                               text_base_path, pool));
     SVN_ERR(svn_wc__loggy_set_readonly(&log_accum, adm_access,
                                        text_base_path, pool));
 
