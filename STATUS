@@ -50,13 +50,3 @@ Candidate changes for 1.5.4:
 
 Approved changes:
 =================
-
- * r33641, r33644
-   Bug in which merging a path containing spaces would fail.  Generally
-   URL-encode paths when appending them to URLs.
-   Justification: silly bug, easy fix; similar to previously-ported fixes.
-   Notes:
-     There is a minor conflict with r33644 due to the whitespace cleanup
-     done in r31766.
-   Votes:
-     +1: kfogel (r33641 only), danielsh, kameshj, pburba
