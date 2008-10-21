@@ -33,6 +33,9 @@ Candidate changes for 1.5.4:
    Votes:
      +1: pburba
 
+Approved changes:
+=================
+
  * r33693, r33704
    Fix merge bug introduced in the backport of the r29969, r32463, r33013,
    r33016, r33022, r33112 group in 1.5.3.
@@ -44,8 +47,5 @@ Candidate changes for 1.5.4:
      see http://subversion.tigris.org/servlets/ReadMsg?list=dev&&msgNo=144187
      and http://subversion.tigris.org/issues/show_bug.cgi?id=3294#desc1.
    Votes:
-     +1: pburba, rhuijben
+     +1: pburba, rhuijben, kameshj
      +0: julianfoad (looks reasonable, but not a thorough review)
-
-Approved changes:
-=================
