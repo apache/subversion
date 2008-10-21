@@ -181,37 +181,11 @@ svn_error_t *svn_wc__open_revert_base(apr_file_t **handle,
                                       apr_pool_t *pool);
 
 
-/* Open the property file for PATH.
- * PATH can be any kind of path, either file or dir.
- *
- * If BASE is set, then the "pristine" property file will be opened.
- * If WCPROPS is set, then the "wc" property file will be opened.
- *
- * (Don't set BASE and WCPROPS at the same time; this is meaningless.)
- */
-svn_error_t *svn_wc__open_props(apr_file_t **handle,
-                                const char *path,
-                                svn_node_kind_t kind,
-                                apr_int32_t flags,
-                                svn_boolean_t base,
-                                svn_boolean_t wcprops,
-                                apr_pool_t *pool);
-
-/* Close the property file for PATH.
- * FP was obtained from svn_wc__open_props().
- *
- * The BASE and WCPROPS must have the same state used to open the file!
- *
- * Like svn_wc__close_adm_file(), SYNC indicates the file should be
- * atomically written.
- */
-svn_error_t *svn_wc__close_props(apr_file_t *fp,
-                                 const char *path,
-                                 svn_node_kind_t kind,
-                                 svn_boolean_t base,
-                                 svn_boolean_t wcprops,
-                                 int sync,
-                                 apr_pool_t *pool);
+/* Write old-style wcprops files (rather than one big file). */
+svn_error_t *svn_wc__write_old_wcprops(const char *path,
+                                       apr_hash_t *prophash,
+                                       svn_node_kind_t kind,
+                                       apr_pool_t *scratch_pool);
 
 
 /* Blow away the admistrative directory associated with the access baton
