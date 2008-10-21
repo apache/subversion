@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -2885,8 +2885,23 @@ def merge_file_with_space_in_its_name(sbox):
 def merge_dir_branches(sbox):
   "merge between branches (Issue #2222)"
 
+  def get_wc_uuid(wc_dir):
+    "Return the UUID of the working copy at WC_DIR."
+
+    exit_code, output, errput = svntest.main.run_svn(None, 'info', wc_dir)
+    if errput:
+      raise svntest.verify.SVNUnexpectedStderr(errput)
+
+    for line in output:
+      if line.startswith('Repository UUID:'):
+        return line[17:].rstrip()
+
+    # No 'Repository UUID' line in 'svn info'?
+    raise svntest.verify.SVNUnexpectedStdout(output)
+
   sbox.build()
   wc_dir = sbox.wc_dir
+  wc_uuid = get_wc_uuid(wc_dir)
 
   F_path = os.path.join(wc_dir, 'A', 'B', 'F')
   F_url = sbox.repo_url + '/A/B/F'
@@ -2924,6 +2939,7 @@ def merge_dir_branches(sbox):
   expected_output = ["Path: " + foo_path + "\n",
                      "URL: " + sbox.repo_url + "/foo\n",
                      "Repository Root: " + sbox.repo_url + "\n",
+                     "Repository UUID: %s\n" % wc_uuid,
                      "Revision: 2\n",
                      "Node Kind: directory\n",
                      "Schedule: add\n",
@@ -12219,9 +12235,28 @@ def del_differing_file(sbox):
   svntest.main.file_append(target+"/tau", "An extra line in the target.\n")
   svntest.actions.run_and_verify_svn(None, None, [], 'propset',
                                      'newprop', 'v', target+"/pi")
+
+  dir_D = os.path.join('A','D')
+  dir_G2 = os.path.join(dir_D, 'G2')
+  tau = os.path.join(dir_D,'G2','tau')
+  pi = os.path.join(dir_D, 'G2', 'pi')
   # Should complain and "skip" it.
-  svn_merge(s_rev_tau, source, target, 'Skipped.*tau')
-  svn_merge(s_rev_pi, source, target, 'Skipped.*pi')
+  svn_merge(s_rev_tau, source, target, [
+      "Skipped '%s'\n" % tau,
+      "--- Merging r2 into '%s':\n" % dir_G2,
+      "C    %s\n" % dir_G2,
+      "Summary of conflicts:\n",
+      "  Tree conflicts: 1\n",
+      "  Skipped paths: 1\n"])
+
+  svn_merge(s_rev_pi, source, target, [
+      "Skipped '%s'\n" % pi,
+      "--- Merging r3 into '%s':\n" % dir_G2,
+      "C    %s\n" % dir_G2,
+      "Summary of conflicts:\n",
+      "  Tree conflicts: 1\n",
+      "  Skipped paths: 1\n"])
+
 
   # Copy a file, modify it, commit, and merge a deletion to it.
   target = 'A/D/G3'
@@ -12230,9 +12265,28 @@ def del_differing_file(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'propset',
                                      'newprop', 'v', target+"/pi")
   svn_commit(target)
+  
+  
+  dir_G3 = os.path.join(dir_D, 'G3')
+  tau = os.path.join(dir_D,'G3','tau')
+  pi = os.path.join(dir_D, 'G3', 'pi')
+
   # Should complain and "skip" it.
-  svn_merge(s_rev_tau, source, target, 'Skipped.*tau')
-  svn_merge(s_rev_pi, source, target, 'Skipped.*pi')
+  svn_merge(s_rev_tau, source, target, [
+      "Skipped '%s'\n" % tau,
+      "--- Merging r2 into '%s':\n" % dir_G3,
+      "C    %s\n" % dir_G3,
+      "Summary of conflicts:\n",
+      "  Tree conflicts: 1\n",
+      "  Skipped paths: 1\n"])
+
+  svn_merge(s_rev_pi, source, target, [
+      "Skipped '%s'\n" % pi,
+      "--- Merging r3 into '%s':\n" % dir_G3,
+      "C    %s\n" % dir_G3,
+      "Summary of conflicts:\n",
+      "  Tree conflicts: 1\n",
+      "  Skipped paths: 1\n"])
 
   os.chdir(saved_cwd)
 
@@ -13201,9 +13255,11 @@ def verify_lines(lines, regexes):
         " occurrences of '" + regex + "'")
       if svntest.main.verbose_mode:
         print " Actual output:"
-        map(lambda x: sys.stdout.write("  " + x), lines)
+        for line in lines:
+          sys.stdout.write("  %s" % line)
         print " Expected regexes:"
-        map(lambda x: sys.stdout.write("  " + x + "\n"), regexes)
+        for regex in regexes:
+          sys.stdout.write("  %s\n" % regex)
       return False
   return True
 
@@ -13215,9 +13271,9 @@ def verify_tree_conflict_info(path, actions_and_victims):
      and VICTIM is a regex that matches the victim path."""
   exit_code, output, error = svntest.main.run_svn(None, 'info', path)
   if not verify_lines(output,
-                      map(lambda (action, victim):
+                      list(map(lambda (action, victim):
                           "attempted to " + action + ".*" + victim,
-                          actions_and_victims)):
+                          actions_and_victims))):
     raise svntest.Failure("Wrong tree-conflict result")
 
 
@@ -14363,7 +14419,7 @@ test_list = [ None,
                          svntest.main.is_ra_type_dav),
               del_identical_file,
               del_sched_add_hist_file,
-              XFail(del_differing_file),
+              del_differing_file,
               SkipUnless(subtree_merges_dont_cause_spurious_conflicts,
                          server_has_mergeinfo),
               SkipUnless(merge_target_and_subtrees_need_nonintersecting_ranges,

@@ -854,9 +854,11 @@ def run_and_verify_merge2(dir, rev1, rev2, url1, url2,
     print "============================================================="
     print "Merge outputs differ"
     print "The dry-run merge output:"
-    map(sys.stdout.write, out_dry)
+    for x in out_dry:
+      sys.stdout.write(x)
     print "The full merge output:"
-    map(sys.stdout.write, out)
+    for x in out:
+      sys.stdout.write(x)
     print "============================================================="
     raise main.SVNUnmatchedError
 
@@ -906,7 +908,7 @@ def run_and_verify_mergeinfo(error_re_string = None,
     verify.verify_outputs(None, None, err, None, expected_err)
     return
 
-  out = filter(None, map(lambda x: int(x.rstrip()[1:]), out))
+  out = filter(None, [int(x.rstrip()[1:]) for x in out])
   out.sort()
   expected_output.sort()
 
@@ -922,8 +924,8 @@ def run_and_verify_mergeinfo(error_re_string = None,
     raise Exception("Unexpected 'svn mergeinfo' output:\n"
                     "  expected but not found: %s\n"
                     "  found but not expected: %s"
-                    % (', '.join(map(lambda x: str(x), extra_exp)),
-                       ', '.join(map(lambda x: str(x), extra_out))))
+                    % (', '.join([str(x) for x in extra_exp]),
+                       ', '.join([str(x) for x in extra_out])))
 
 
 def run_and_verify_switch(wc_dir_name,

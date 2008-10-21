@@ -454,7 +454,6 @@ svn_cache_create_inprocess(svn_cache_t **cache_p,
 
   wrapper->vtable = &inprocess_cache_vtable;
   wrapper->cache_internal = cache;
-  wrapper->error_handler = wrapper->error_baton = NULL;
 
   *cache_p = wrapper;
   return SVN_NO_ERROR;

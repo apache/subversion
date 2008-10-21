@@ -239,7 +239,7 @@ svn_cl__append_human_readable_tree_conflict_description(
   our_phrase = select_our_phrase(conflict, phrases);
   if (! our_phrase || ! their_phrase)
     return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
-                             _("Invalid tree conflict data for victim %s"),
+                             "Invalid tree conflict data for victim %s",
                              victim_name);
 
   /* Substitute the '%s' format in the phrases with the victim path. */

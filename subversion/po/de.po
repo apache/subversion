@@ -79,7 +79,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.6\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2008-10-17 21:59+0200\n"
-"PO-Revision-Date: 2008-10-18 01:49+0200\n"
+"PO-Revision-Date: 2008-10-21 11:01+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: German <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -964,6 +964,8 @@ msgstr ""
 #: ../include/svn_error_codes.h:1077
 msgid "A file external cannot overwrite an existing versioned item"
 msgstr ""
+"Ein externer Dateiverweis kann kein existierendes versioniertes "
+"Objekt überschreiben"
 
 #: ../include/svn_error_codes.h:1083
 msgid "A problem occurred; see other errors for details"
@@ -1085,7 +1087,7 @@ msgstr "Die apr-memcache-Bibliothek ist nicht verfügbar"
 
 #: ../include/svn_error_codes.h:1210
 msgid "Couldn't perform atomic initialization"
-msgstr ""
+msgstr "Eine atomare Initialisierung konnte nicht durchgeführt werden"
 
 #: ../include/svn_error_codes.h:1215
 msgid "SQLite error"
@@ -1443,6 +1445,8 @@ msgid ""
 "Cannot move the file external at '%s'; please propedit the svn:externals "
 "description that created it"
 msgstr ""
+"Externer Dateiverweis bei »%s« kann nicht verschoben werden; bitte "
+"bearbeiten Sie die für die Erstellung verantwortliche Eigenschaft svn:externals"
 
 #: ../libsvn_client/copy.c:1854
 #, c-format
@@ -1609,6 +1613,8 @@ msgid ""
 "Cannot insert a file external from '%s' into a working copy from a different "
 "repository rooted at '%s'"
 msgstr ""
+"Ein externer Dateiverweis von »%s« kann nicht in die Arbeitskopie eines "
+"anderen Projektarchivs mit der Wurzel »%s« eingefügt werden"
 
 #: ../libsvn_client/externals.c:368
 #, c-format
@@ -1616,6 +1622,8 @@ msgid ""
 "The file external from '%s' cannot overwrite the existing versioned item at "
 "'%s'"
 msgstr ""
+"Der externe Dateiverweis von »%s« kann nicht das existierende versionierte "
+"Objekt bei »%s« überschreiben"
 
 #: ../libsvn_client/externals.c:394
 #, c-format
@@ -1623,6 +1631,8 @@ msgid ""
 "The file external from '%s' cannot be written to '%s' while '%s' remains in "
 "conflict"
 msgstr ""
+"Der externe Dateiverweis von »%s« kann nicht in »%s« geschrieben werden, "
+"solange »%s« in Konflikt steht"
 
 #: ../libsvn_client/externals.c:535
 #, c-format
@@ -5840,30 +5850,30 @@ msgstr "Konfigurationsfehler: Ungültiger Wert »%s« für Option »%s«"
 
 #: ../libsvn_subr/sqlite.c:120
 msgid "Expected database row missing"
-msgstr ""
+msgstr "Erwartete Zeile der Datenbank fehlt"
 
 #: ../libsvn_subr/sqlite.c:121
 msgid "Extra database row found"
-msgstr ""
+msgstr "Zusätzliche Zeile der Datenbank wurde gefunden"
 
 #: ../libsvn_subr/sqlite.c:318
 #, c-format
 msgid "Schema format %d not recognized"
-msgstr ""
+msgstr "Schema-Format %d wird nicht erkannt"
 
 #: ../libsvn_subr/sqlite.c:329
 #, c-format
 msgid "SQLite compiled for %s, but running with %s"
-msgstr ""
+msgstr "SQLite wurde für %s kompiliert, läuft aber mit %s"
 
 #: ../libsvn_subr/sqlite.c:340
 msgid "SQLite is required to be compiled and run in thread-safe mode"
-msgstr ""
+msgstr "Es wird erwartet, dass SQLite im Thread-sicheren Modus kompiliert und gestartet wird"
 
 #: ../libsvn_subr/sqlite.c:413
 #, c-format
 msgid "Expected SQLite database not found: %s"
-msgstr ""
+msgstr "Erwartete SQLite-Datenbank wurde nicht gefunden: %s"
 
 #: ../libsvn_subr/subst.c:1687 ../libsvn_wc/props.c:2508
 #, c-format
@@ -5940,9 +5950,9 @@ msgid ""
 "followed by invalid UTF-8 sequence\n"
 "(hex:%s)"
 msgstr ""
-"Auf gültige UTF-8 Daten\n"
+"Auf gültige UTF-8-Daten\n"
 "(hex:%s)\n"
-"folgte eine ungültige UTF-8 Sequenz\n"
+"folgte eine ungültige UTF-8-Sequenz\n"
 "(hex:%s)"
 
 #: ../libsvn_subr/validate.c:50
@@ -6037,6 +6047,9 @@ msgid ""
 "Cannot remove the file external at '%s'; please propedit or propdel the svn:"
 "externals description that created it"
 msgstr ""
+"Externer Dateiverweis bei »%s« kann nicht entfernt werden; bitte "
+"bearbeiten oder löschen Sie die für die Erstellung verantwortliche "
+"Eigenschaft svn:externals"
 
 #: ../libsvn_wc/adm_ops.c:1415
 #, c-format
@@ -6146,7 +6159,7 @@ msgstr "Fehler beim rekursiven Kopieren von »%s«"
 #: ../libsvn_wc/copy.c:380
 #, c-format
 msgid "no parent with copyfrom information found above '%s'"
-msgstr ""
+msgstr "kein Elternteil mit »copyfrom«-Information wurde oberhalb »%s« gefunden"
 
 #: ../libsvn_wc/copy.c:469
 #, c-format
@@ -6211,7 +6224,7 @@ msgstr "Ungültiger Wert für Feld »%s«"
 #: ../libsvn_wc/entries.c:344
 #, c-format
 msgid "Found an unexpected \\0 in the file external '%s'"
-msgstr ""
+msgstr "Ein nicht geschütztes \\0 wurde im externen Dateiverweis »%s« gefunden"
 
 #: ../libsvn_wc/entries.c:388
 #, c-format
@@ -6248,7 +6261,7 @@ msgstr "Standardeintrag hat keine URL"
 #: ../libsvn_wc/entries.c:1382
 #, c-format
 msgid "Invalid version line in entries file of '%s'"
-msgstr "Ungültige Versionszeile in Eintragsdatei von »%s«"
+msgstr "Ungültige Versionszeile in Datei »entry« von »%s«"
 
 #: ../libsvn_wc/entries.c:1399
 msgid "Missing entry terminator"
@@ -6810,39 +6823,42 @@ msgstr "Relocate kann nur den Projektarchivteil der URL ändern"
 #: ../libsvn_wc/tree_conflicts.c:163 ../libsvn_wc/tree_conflicts.c:196
 #: ../libsvn_wc/tree_conflicts.c:227 ../libsvn_wc/tree_conflicts.c:267
 msgid "Expected tree conflict data but got none"
-msgstr ""
+msgstr "Daten zu einem Baumkonflikt wurden erwartet aber nichts erhalten"
 
 #: ../libsvn_wc/tree_conflicts.c:78
 msgid ""
 "Unexpected end of tree conflict description, within escape sequence in "
 "'victim_path'"
 msgstr ""
+"Unerwartetes Ende der Baumkonfliktbeschreibung innerhalb einer Escape-Sequenz in "
+"»victim_path«"
 
 #: ../libsvn_wc/tree_conflicts.c:85
 msgid "Illegal escaped character in 'victim_path' of tree conflict description"
-msgstr ""
+msgstr "Ungültiges geschütztes Zeichen in »victim_path« der Baumkonfliktbeschreibung"
 
 #: ../libsvn_wc/tree_conflicts.c:95
 msgid ""
 "Unescaped description delimiter inside 'victim_path' in tree conflict "
 "description"
 msgstr ""
+"Nicht geschützter Beschreibungstrenner innerhalb von »victim_path« der Baumkonfliktbeschreibung"
 
 #: ../libsvn_wc/tree_conflicts.c:106
 msgid "Empty 'victim_path' in tree conflict description"
-msgstr ""
+msgstr "»victim_path« in Baumkonfliktbeschreibung ist leer"
 
 #: ../libsvn_wc/tree_conflicts.c:112
 msgid "No delimiter after 'victim_path' in tree conflict description"
-msgstr ""
+msgstr "Kein Trenner nach »victim_path« in Baumkonfliktbeschreibung"
 
 #: ../libsvn_wc/tree_conflicts.c:140
 msgid "Invalid 'node_kind' field in tree conflict description"
-msgstr ""
+msgstr "Ungültiges Feld »node_kind« in Baumkonfliktbeschreibung"
 
 #: ../libsvn_wc/tree_conflicts.c:144
 msgid "No delimiter after 'node_kind' in tree conflict description"
-msgstr ""
+msgstr "Kein Trenner nach »node_kind« in Baumkonfliktbeschreibung"
 
 #: ../libsvn_wc/tree_conflicts.c:173
 msgid "Invalid 'operation' field in tree conflict description"
@@ -6850,49 +6866,47 @@ msgstr "Ungültiges Feld »operation« in Baumkonfliktbeschreibung"
 
 #: ../libsvn_wc/tree_conflicts.c:177
 msgid "No delimiter after 'operation' in tree conflict description"
-msgstr ""
+msgstr "Kein Trenner nach »operation« in Baumkonfliktbeschreibung"
 
 #: ../libsvn_wc/tree_conflicts.c:206
 msgid "Invalid 'action' field in tree conflict description"
-msgstr ""
+msgstr "Ungültiges Feld »action« in Baumkonfliktbeschreibung«"
 
 #: ../libsvn_wc/tree_conflicts.c:210
 msgid "No delimiter after 'action' in tree conflict description"
-msgstr ""
+msgstr "Kein Trenner nach »action« in Baumkonfliktbeschreibung"
 
 #: ../libsvn_wc/tree_conflicts.c:241
 msgid "Invalid 'reason' field in tree conflict description"
-msgstr ""
+msgstr "Ungültiges Feld »reason« in Baumkonfliktbeschreibung"
 
 #: ../libsvn_wc/tree_conflicts.c:289
 msgid ""
 "No delimiter at end of tree conflict description, even though there is still "
 "data left to read"
 msgstr ""
+"Es befindet sich kein Trenner am Ende der Baumkonfliktbeschreibung, obwohl "
+"weitere zu lesende Daten vorhanden sind"
 
 #: ../libsvn_wc/tree_conflicts.c:329
 msgid "Invalid tree conflict data in entries file, but no idea what went wrong"
-msgstr ""
-
-#: ../libsvn_wc/tree_conflicts.c:357
-msgid "Empty victim path in tree conflict description"
-msgstr ""
+msgstr "Ungültige Baumkonfliktdaten in Datei »entries«, Ursache ist unbekannt"
 
 #: ../libsvn_wc/tree_conflicts.c:383 ../svn/tree-conflicts.c:280
 msgid "Bad node_kind in tree conflict description"
-msgstr ""
+msgstr "Fehlerhafter Wert von »node_kind« in Baumkonfliktbeschreibung"
 
 #: ../libsvn_wc/tree_conflicts.c:401 ../svn/tree-conflicts.c:297
 msgid "Bad operation in tree conflict description"
-msgstr ""
+msgstr "Fehlerhafter Wert von »operation« in Baumkonfliktbeschreibung"
 
 #: ../libsvn_wc/tree_conflicts.c:419 ../svn/tree-conflicts.c:315
 msgid "Bad action in tree conflict description"
-msgstr ""
+msgstr "Fehlerhafter Wert von »action« in Baumkonfliktbeschreibung"
 
 #: ../libsvn_wc/tree_conflicts.c:443 ../svn/tree-conflicts.c:342
 msgid "Bad reason in tree conflict description"
-msgstr ""
+msgstr "Fehlerhafter Wert von »reason« in Baumkonfliktbeschreibung"
 
 #: ../libsvn_wc/tree_conflicts.c:525
 msgid "Attempt to add tree conflict that already exists"
@@ -7617,6 +7631,8 @@ msgid ""
 "Tree conflict:\n"
 "%s"
 msgstr ""
+"Baumkonflikt:\n"
+"%s"
 
 #: ../svn/info-cmd.c:523
 #, c-format
@@ -9610,12 +9626,12 @@ msgstr "Versuchen Sie »svn mkdir --parents« stattdessen?"
 #: ../svn/notify.c:70
 #, c-format
 msgid "Summary of conflicts:\n"
-msgstr ""
+msgstr "Konfliktübersicht:\n"
 
 #: ../svn/notify.c:74
 #, c-format
 msgid "  Text conflicts: %u\n"
-msgstr ""
+msgstr "  Textkonflikte: %u\n"
 
 #: ../svn/notify.c:78
 #, c-format
@@ -9625,12 +9641,12 @@ msgstr "  Eigenschaftskonflikte: %u\n"
 #: ../svn/notify.c:82
 #, c-format
 msgid "  Tree conflicts: %u\n"
-msgstr ""
+msgstr "  Baumkonflikte: %u\n"
 
 #: ../svn/notify.c:86
 #, c-format
 msgid "   Skipped paths: %u\n"
-msgstr ""
+msgstr "  Übersprungene Pfade: %u\n"
 
 #: ../svn/notify.c:123
 #, c-format
@@ -10046,16 +10062,18 @@ msgid ""
 "  The update attempted to delete '%s'\n"
 "  (possibly as part of a rename operation).\n"
 msgstr ""
+"  Die Aktualisierung versuchte »%s« zu löschen\n"
+"  (möglicherweise als Teil einer Umbenennung).\n"
 
 #: ../svn/tree-conflicts.c:61
 #, c-format
 msgid "  The update attempted to edit '%s'.\n"
-msgstr ""
+msgstr "  Die Aktualisierung versuchte »%s« zu bearbeiten.\n"
 
 #: ../svn/tree-conflicts.c:64
 #, c-format
 msgid "  The update attempted to add '%s'.\n"
-msgstr ""
+msgstr "  Die Aktualisierung versuchte »%s« hinzuzufügen.\n"
 
 #: ../svn/tree-conflicts.c:67
 #, c-format
@@ -10063,16 +10081,18 @@ msgid ""
 "  The switch attempted to delete '%s'\n"
 "  (possibly as part of a rename operation).\n"
 msgstr ""
+"  Die Umstellung versuchte »%s« zu löschen\n"
+"  (möglicherweise als Teil einer Umbenennung).\n"
 
 #: ../svn/tree-conflicts.c:71
 #, c-format
 msgid "  The switch attempted to edit '%s'.\n"
-msgstr ""
+msgstr "  Die Umstellung versuchte »%s« zu bearbeiten.\n"
 
 #: ../svn/tree-conflicts.c:74
 #, c-format
 msgid "  The switch attempted to add '%s'.\n"
-msgstr ""
+msgstr "  Die Umstellung versuchte »%s« hinzuzufügen.\n"
 
 #: ../svn/tree-conflicts.c:77
 #, c-format
@@ -10080,16 +10100,18 @@ msgid ""
 "  The merge attempted to delete '%s'\n"
 "  (possibly as part of a rename operation).\n"
 msgstr ""
+"  Die Zusammenführung versuchte »%s« zu löschen\n"
+"  (möglicherweise als Teil einer Umbenennung).\n"
 
 #: ../svn/tree-conflicts.c:81
 #, c-format
 msgid "  The merge attempted to edit '%s'.\n"
-msgstr ""
+msgstr "  Die Zusammenführung versuchte »%s« zu bearbeiten.\n"
 
 #: ../svn/tree-conflicts.c:84
 #, c-format
 msgid "  The merge attempted to add '%s'.\n"
-msgstr ""
+msgstr "  Die Zusammenführung versuchte »%s« hinzuzufügen.\n"
 
 #: ../svn/tree-conflicts.c:87
 #, c-format
@@ -10097,16 +10119,18 @@ msgid ""
 "  You have deleted '%s' locally.\n"
 "  Maybe you renamed it?\n"
 msgstr ""
+"  »%s« wurde lokal gelöscht.\n"
+"  Eventuell wurde das Objekt umbenannt?\n"
 
 #: ../svn/tree-conflicts.c:91
 #, c-format
 msgid "  You have added '%s' locally.\n"
-msgstr ""
+msgstr "  »%s« wurde lokal hinzugefügt.\n"
 
 #: ../svn/tree-conflicts.c:94
 #, c-format
 msgid "  You have edited '%s' locally.\n"
-msgstr ""
+msgstr "  »%s« wurde lokal bearbeitet.\n"
 
 #: ../svn/tree-conflicts.c:97
 #, c-format
@@ -10114,6 +10138,8 @@ msgid ""
 "  '%s' does not exist locally.\n"
 "  Maybe you renamed it?\n"
 msgstr ""
+"  »%s« existiert lokal nicht.\n"
+"  Eventuell wurde das Objekt umbenannt?\n"
 
 #: ../svn/tree-conflicts.c:104
 #, c-format
@@ -10122,6 +10148,9 @@ msgid ""
 "history of the branch you are merging into, but those edits are not\n"
 "present on the branch you are merging from.\n"
 msgstr ""
+"Entweder wurde »%s« lokal bearbeitet oder in der Geschichte des\n"
+"Zweiges, in den zusammengeführt wird, editiert, aber diese\n"
+"Veränderungen befinden sich nicht im Zweig, aus dem zusammengeführt wird.\n"
 
 #: ../svn/tree-conflicts.c:109
 #, c-format
@@ -10129,6 +10158,8 @@ msgid ""
 "Either you have added '%s' locally, or it has been added in the\n"
 "history of the branch you are merging into.\n"
 msgstr ""
+"Entweder wurde »%s« lokal hinzugefügt oder dies geschah in der\n"
+"Geschichte des Zweiges, in den zusammengeführt wird.\n"
 
 #: ../svn/tree-conflicts.c:113
 #, c-format
@@ -10136,6 +10167,8 @@ msgid ""
 "'%s' does not exist locally. Maybe you renamed it? Or has it been\n"
 "renamed in the history of the branch you are merging into?\n"
 msgstr ""
+"»%s« existiert lokal nicht. Eventuell wurde es umbenannt? Oder es wurde\n"
+"in der Geschichte des Zweiges, in den zusammengeführt wird, umbenannt?\n"
 
 #: ../svn/tree-conflicts.c:117
 msgid "This action was obstructed by an item in the working copy.\n"
@@ -10145,11 +10178,6 @@ msgstr "Diese Aktion wurde von einem Objekt in der Arbeitskopie behindert.\n"
 #, c-format
 msgid "'%s' is unversioned.\n"
 msgstr "»%s« ist nicht versioniert.\n"
-
-#: ../svn/tree-conflicts.c:242
-#, c-format
-msgid "Invalid tree conflict data for victim %s"
-msgstr ""
 
 #: ../svn/util.c:64
 #, c-format
@@ -12042,9 +12070,9 @@ msgid ""
 msgstr ""
 "Aufruf: svnsync UNTERBEFEHL ZIEL_URL [Optionen & Parameter ...]\n"
 "Geben Sie »svnsync help <Unterbefehl>« ein, um Hilfe zu einem\n"
-"          Unterbefehl zu erhalten.\n"
-"Geben Sie »svnsync --version« ein, um die Programmversion und die Zugriffs-\n"
-"          module zu sehen.\n"
+"Unterbefehl zu erhalten.\n"
+"Geben Sie »svnsync --version« ein, um die Programmversion und die\n"
+"Zugriffsmodule zu sehen.\n"
 "\n"
 "Verfügbare Unterbefehle:\n"
 

@@ -417,16 +417,16 @@ SVN_DEPRECATED
 svn_error_t *svn_wc_adm_close(svn_wc_adm_access_t *adm_access);
 
 /** Return the path used to open the access baton @a adm_access */
-const char *svn_wc_adm_access_path(svn_wc_adm_access_t *adm_access);
+const char *svn_wc_adm_access_path(const svn_wc_adm_access_t *adm_access);
 
 /** Return the pool used by access baton @a adm_access */
-apr_pool_t *svn_wc_adm_access_pool(svn_wc_adm_access_t *adm_access);
+apr_pool_t *svn_wc_adm_access_pool(const svn_wc_adm_access_t *adm_access);
 
 /** Return @c TRUE is the access baton @a adm_access has a write lock,
  * @c FALSE otherwise. Compared to svn_wc_locked() this is a cheap, fast
  * function that doesn't access the filesystem.
  */
-svn_boolean_t svn_wc_adm_locked(svn_wc_adm_access_t *adm_access);
+svn_boolean_t svn_wc_adm_locked(const svn_wc_adm_access_t *adm_access);
 
 /** Set @a *locked to non-zero if @a path is locked, else set it to zero. */
 svn_error_t *
@@ -1147,7 +1147,7 @@ typedef enum svn_wc_operation_t
 {
   svn_wc_operation_update,
   svn_wc_operation_switch,
-  svn_wc_operation_merge,
+  svn_wc_operation_merge
 
 } svn_wc_operation_t;
 

@@ -2356,6 +2356,8 @@ add_file_with_history(const char *path,
   apr_hash_t *base_props, *working_props;
   const svn_wc_entry_t *path_entry;
   svn_error_t *err;
+  svn_stream_t *copied_stream;
+  const char *temp_dir_path;
 
   /* The file_pool can stick around for a *long* time, so we want to
      use a subpool for any temporary allocations. */
@@ -2376,11 +2378,13 @@ add_file_with_history(const char *path,
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, pb->edit_baton->adm_access,
                               pb->path, subpool));
 
-  /* Make a unique file name for the copyfrom text-base. */
-  SVN_ERR(svn_wc_create_tmp_file2(NULL, &tfb->copied_text_base,
-                                  svn_wc_adm_access_path(adm_access),
-                                  svn_io_file_del_none,
-                                  pool));
+  temp_dir_path = svn_wc__adm_path(svn_wc_adm_access_path(adm_access), TRUE,
+                                   pool, NULL);
+  SVN_ERR(svn_stream_open_unique(&copied_stream,
+                                 &tfb->copied_text_base,
+                                 temp_dir_path,
+                                 svn_io_file_del_none,
+                                 pool, pool));
 
   if (src_path != NULL) /* Found a file to copy */
     {
@@ -2389,13 +2393,13 @@ add_file_with_history(const char *path,
          the text base and props from the usual place or from the
          revert place, depending on scheduling. */
 
-      const char *src_text_base_path;
+      svn_stream_t *source_text_base;
 
       if (src_entry->schedule == svn_wc_schedule_replace
           && src_entry->copyfrom_url)
         {
-          src_text_base_path = svn_wc__text_revert_path(src_path,
-                                                        FALSE, subpool);
+          SVN_ERR(svn_wc__get_revert_contents(&source_text_base, src_path,
+                                              subpool, subpool));
           SVN_ERR(svn_wc__load_props(NULL, NULL, &base_props,
                                      src_access, src_path, pool));
           /* The old working props are lost, just like the old
@@ -2404,20 +2408,17 @@ add_file_with_history(const char *path,
         }
       else
         {
-          src_text_base_path = svn_wc__text_base_path(src_path, FALSE,
-                                                      subpool);
+          SVN_ERR(svn_wc_get_pristine_contents(&source_text_base, src_path,
+                                               subpool, subpool));
           SVN_ERR(svn_wc__load_props(&base_props, &working_props, NULL,
                                      src_access, src_path, pool));
         }
 
-      SVN_ERR(svn_io_copy_file(src_text_base_path, tfb->copied_text_base,
-                               TRUE, subpool));
+      SVN_ERR(svn_stream_copy3(source_text_base, copied_stream,
+                               eb->cancel_func, eb->cancel_baton, pool));
     }
   else  /* Couldn't find a file to copy  */
     {
-      apr_file_t *textbase_file;
-      svn_stream_t *textbase_stream;
-
       /* Fall back to fetching it from the repository instead. */
 
       if (! eb->fetch_func)
@@ -2426,17 +2427,13 @@ add_file_with_history(const char *path,
 
       /* Fetch the repository file's text-base and base-props;
          svn_stream_close() automatically closes the text-base file for us. */
-      SVN_ERR(svn_io_file_open(&textbase_file, tfb->copied_text_base,
-                               (APR_WRITE | APR_TRUNCATE | APR_CREATE),
-                               APR_OS_DEFAULT, subpool));
-      textbase_stream = svn_stream_from_aprfile2(textbase_file, FALSE, pool);
 
       /* copyfrom_path is a absolute path, fetch_func requires a path relative
          to the root of the repository so skip the first '/'. */
       SVN_ERR(eb->fetch_func(eb->fetch_baton, copyfrom_path + 1, copyfrom_rev,
-                             textbase_stream,
+                             copied_stream,
                              NULL, &base_props, pool));
-      SVN_ERR(svn_stream_close(textbase_stream));
+      SVN_ERR(svn_stream_close(copied_stream));
       working_props = base_props;
     }
 
@@ -2747,7 +2744,7 @@ apply_textdelta(void *file_baton,
   const char *checksum;
   svn_boolean_t replaced;
   svn_stream_t *source;
-  apr_file_t *target_file;
+  svn_stream_t *target;
 
   if (fb->skipped)
     {
@@ -2822,19 +2819,11 @@ apply_textdelta(void *file_baton,
   if (! fb->added)
     {
       if (replaced)
-        {
-          apr_file_t *revert_file;
-
-          SVN_ERR(svn_wc__open_revert_base(&revert_file, fb->path,
-                                           APR_READ,
-                                           handler_pool));
-          source = svn_stream_from_aprfile2(revert_file, FALSE, handler_pool);
-        }
+        SVN_ERR(svn_wc__get_revert_contents(&source, fb->path,
+                                            handler_pool, handler_pool));
       else
-        {
-          SVN_ERR(svn_wc_get_pristine_contents(&source, fb->path,
-                                               handler_pool, handler_pool));
-        }
+        SVN_ERR(svn_wc_get_pristine_contents(&source, fb->path,
+                                             handler_pool, handler_pool));
     }
   else
     {
@@ -2847,23 +2836,26 @@ apply_textdelta(void *file_baton,
 
   /* Open the text base for writing (this will get us a temporary file).  */
 
-  if (replaced)
-    err = svn_wc__open_revert_base(&target_file, fb->path,
-                                   (APR_WRITE | APR_TRUNCATE | APR_CREATE),
-                                   handler_pool);
-  else
-    err = svn_wc__open_text_base(&target_file, fb->path,
-                                 (APR_WRITE | APR_TRUNCATE | APR_CREATE),
-                                 handler_pool);
-  if (err)
-    {
-      svn_pool_destroy(handler_pool);
-      return err;
-    }
+  {
+    /* For now, we ignore the path result from open_writable_base. It
+       SHOULD be the same as fb->new_text_base_path, so we'll assert that.
+       In the future, it will be a random path once we clean up a lot of
+       the assumptions about paths made throughout the library. */
+    const char *ignored;
+
+    err = svn_wc__open_writable_base(&target, &ignored, fb->path,
+                                     replaced /* need_revert_base */,
+                                     handler_pool, pool);
+    SVN_ERR_ASSERT(strcmp(ignored, fb->new_text_base_path) == 0);
+    if (err)
+      {
+        svn_pool_destroy(handler_pool);
+        return err;
+      }
+  }
 
   /* Prepare to apply the delta.  */
-  svn_txdelta_apply(source,
-                    svn_stream_from_aprfile2(target_file, FALSE, handler_pool),
+  svn_txdelta_apply(source, target,
                     fb->digest, fb->new_text_base_path /* error_info */,
                     handler_pool,
                     &hb->apply_handler, &hb->apply_baton);
@@ -3458,17 +3450,8 @@ close_file(void *file_baton,
                                        TRUE, pool);
       SVN_ERR(svn_stream_open_writable(&target, fb->new_text_base_path,
                                        pool, pool));
-      SVN_ERR(svn_stream_copy2(source, target,
+      SVN_ERR(svn_stream_copy3(source, target,
                                eb->cancel_func, eb->cancel_baton, pool));
-      SVN_ERR(svn_stream_close(source));
-      SVN_ERR(svn_stream_close(target));
-
-      /* Copy the permissions onto the temporary file. */
-      /* ### the perms should probably be set during a translate back
-         ### into ACTUAL. we shouldn't need this. */
-      SVN_ERR(svn_io_copy_perms(fb->copied_text_base,
-                                fb->new_text_base_path,
-                                pool));
     }
   else
     {
@@ -4340,12 +4323,9 @@ svn_wc_add_repos_file3(const char *dst_path,
                                               NULL, 0,
                                               TRUE, pool);
   tmp_base_contents = svn_stream_from_aprfile2(base_file, FALSE, pool);
-  SVN_ERR(svn_stream_copy2(new_base_contents, tmp_base_contents,
+  SVN_ERR(svn_stream_copy3(new_base_contents, tmp_base_contents,
                            cancel_func, cancel_baton,
                            pool));
-  /* ### ugh. shouldn't copy2() close the streams when it is done? */
-  SVN_ERR(svn_stream_close(new_base_contents));
-  SVN_ERR(svn_stream_close(tmp_base_contents));
 
   /* Install working file. */
   if (new_contents)
@@ -4358,13 +4338,10 @@ svn_wc_add_repos_file3(const char *dst_path,
       SVN_ERR(svn_wc_create_tmp_file2(&contents_file, &tmp_text_path, adm_path,
                                       svn_io_file_del_none, pool));
       tmp_contents = svn_stream_from_aprfile2(contents_file, FALSE, pool);
-      SVN_ERR(svn_stream_copy2(new_contents,
+      SVN_ERR(svn_stream_copy3(new_contents,
                                tmp_contents,
                                cancel_func, cancel_baton,
                                pool));
-      /* ### ugh. AGAIN: need these closed (to flush the new file). */
-      SVN_ERR(svn_stream_close(new_contents));
-      SVN_ERR(svn_stream_close(tmp_contents));
 
       /* Translate new temporary text file to working text. */
       SVN_ERR(svn_wc__loggy_copy(&log_accum, NULL, adm_access,

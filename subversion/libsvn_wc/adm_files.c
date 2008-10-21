@@ -31,6 +31,7 @@
 #include "svn_error.h"
 #include "svn_io.h"
 #include "svn_path.h"
+#include "svn_hash.h"
 
 #include "wc.h"
 #include "adm_files.h"
@@ -316,47 +317,30 @@ svn_wc__check_killme(svn_wc_adm_access_t *adm_access,
 
 /*** Syncing files in the adm area. ***/
 
-static svn_error_t *
-sync_adm_file(const char *path,
-              const char *extension,
-              apr_pool_t *pool,
-              ...)
-{
-  /* Some code duplication with close_adm_file() seems unavoidable,
-     given how C va_lists work. */
-
-  const char *tmp_path;
-  va_list ap;
-
-  /* Extend tmp name. */
-  va_start(ap, pool);
-  tmp_path = v_extend_with_adm_name(path, extension, 1, pool, ap);
-  va_end(ap);
-
-  /* Extend real name. */
-  va_start(ap, pool);
-  path = v_extend_with_adm_name(path, extension, 0, pool, ap);
-  va_end(ap);
-
-  /* Rename. */
-  SVN_ERR(svn_io_file_rename(tmp_path, path, pool));
-  return svn_io_set_file_read_only(path, FALSE, pool);
-}
-
 
 /* Rename a tmp text-base file to its real text-base name.
    The file had better already be closed. */
 svn_error_t *
 svn_wc__sync_text_base(const char *path, apr_pool_t *pool)
 {
-  const char *parent_path, *base_name;
+  const char *parent_path;
+  const char *base_name;
+  const char *tmp_path;
+  const char *base_path;
+
   svn_path_split(path, &parent_path, &base_name, pool);
-  return sync_adm_file(parent_path,
-                       SVN_WC__BASE_EXT,
-                       pool,
-                       SVN_WC__ADM_TEXT_BASE,
-                       base_name,
-                       NULL);
+
+  /* Extend tmp name. */
+  tmp_path = extend_with_adm_name(parent_path, SVN_WC__BASE_EXT, TRUE, pool,
+                                  SVN_WC__ADM_TEXT_BASE, base_name, NULL);
+
+  /* Extend real name. */
+  base_path = extend_with_adm_name(parent_path, SVN_WC__BASE_EXT, FALSE, pool,
+                                   SVN_WC__ADM_TEXT_BASE, base_name, NULL);
+
+  /* Rename. */
+  SVN_ERR(svn_io_file_rename(tmp_path, base_path, pool));
+  return svn_io_set_file_read_only(base_path, FALSE, pool);
 }
 
 const char *
@@ -392,6 +376,26 @@ svn_wc__text_revert_path(const char *path,
                               base_name,
                               NULL);
 }
+
+
+svn_error_t *
+svn_wc__get_revert_contents(svn_stream_t **contents,
+                            const char *path,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
+{
+  const char *revert_base = svn_wc__text_revert_path(path, FALSE, scratch_pool);
+
+  if (revert_base == NULL)
+    {
+      *contents = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  return svn_stream_open_readonly(contents, revert_base, result_pool,
+                                  scratch_pool);
+}
+
 
 svn_error_t *
 svn_wc__prop_path(const char **prop_path,
@@ -465,9 +469,9 @@ svn_wc__prop_path(const char **prop_path,
  */
 static svn_error_t *
 open_adm_file(apr_file_t **handle,
+              const char **selected_path,
               const char *path,
               const char *extension,
-              apr_fileperms_t protection,
               apr_int32_t flags,
               apr_pool_t *pool,
               ...)
@@ -503,13 +507,16 @@ open_adm_file(apr_file_t **handle,
       va_end(ap);
     }
 
-  err = svn_io_file_open(handle, path, flags, protection, pool);
+  if (selected_path)
+    *selected_path = path;
+
+  err = svn_io_file_open(handle, path, flags, APR_OS_DEFAULT, pool);
   if ((flags & APR_WRITE) && err && APR_STATUS_IS_EEXIST(err->apr_err))
     {
       /* Exclusive open failed, delete and retry */
       svn_error_clear(err);
       SVN_ERR(svn_io_remove_file(path, pool));
-      err = svn_io_file_open(handle, path, flags, protection, pool);
+      err = svn_io_file_open(handle, path, flags, APR_OS_DEFAULT, pool);
     }
 
   if (err)
@@ -536,49 +543,6 @@ open_adm_file(apr_file_t **handle,
 }
 
 
-/* Close the file indicated by FP (PATH is passed to make error
- * reporting better).  If SYNC is non-zero, then the file will be
- * sync'd from the adm tmp area to its permanent location, otherwise
- * it will remain in the tmp area.  See open_adm_file().
- */
-static svn_error_t *
-close_adm_file(apr_file_t *fp,
-               const char *path,
-               const char *extension,
-               svn_boolean_t sync,
-               apr_pool_t *pool,
-               ...)
-{
-  const char *tmp_path;
-  va_list ap;
-
-  /* Get the full name of the thing we're closing. */
-  va_start(ap, pool);
-  tmp_path = v_extend_with_adm_name(path, extension, sync, pool, ap);
-  va_end(ap);
-
-  SVN_ERR(svn_io_file_close(fp, pool));
-
-  /* If we're syncing a tmp file, it needs to be renamed after closing. */
-  if (sync)
-    {
-      /* Some code duplication with sync_adm_file() seems unavoidable,
-         given how C va_lists work. */
-
-      /* Obtain dest name. */
-      va_start(ap, pool);
-      path = v_extend_with_adm_name(path, extension, 0, pool, ap);
-      va_end(ap);
-
-      /* Rename. */
-      SVN_ERR(svn_io_file_rename(tmp_path, path, pool));
-      return svn_io_set_file_read_only(path, FALSE, pool);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
 svn_error_t *
 svn_wc__open_adm_file(apr_file_t **handle,
                       const char *path,
@@ -586,8 +550,7 @@ svn_wc__open_adm_file(apr_file_t **handle,
                       apr_int32_t flags,
                       apr_pool_t *pool)
 {
-  return open_adm_file(handle, path, NULL, APR_OS_DEFAULT, flags, pool,
-                       fname, NULL);
+  return open_adm_file(handle, NULL, path, NULL, flags, pool, fname, NULL);
 }
 
 
@@ -598,60 +561,79 @@ svn_wc__close_adm_file(apr_file_t *fp,
                        int sync,
                        apr_pool_t *pool)
 {
-  return close_adm_file(fp, path, NULL, sync, pool, fname, NULL);
+  SVN_ERR(svn_io_file_close(fp, pool));
+
+  /* If we're syncing a tmp file, it needs to be renamed after closing. */
+  if (sync)
+    {
+      const char *tmp_path = extend_with_adm_name(path, NULL, TRUE, pool,
+                                                  fname, NULL);
+      const char *dst_path = extend_with_adm_name(path, NULL, FALSE, pool,
+                                                  fname, NULL);
+
+      /* Rename. */
+      SVN_ERR(svn_io_file_rename(tmp_path, dst_path, pool));
+      return svn_io_set_file_read_only(dst_path, FALSE, pool);
+    }
+
+  return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
-svn_wc__remove_adm_file(const char *path, apr_pool_t *pool, ...)
+svn_wc__remove_adm_file(const svn_wc_adm_access_t *adm_access,
+                        const char *filename,
+                        apr_pool_t *scratch_pool)
 {
-  va_list ap;
-
-  va_start(ap, pool);
-  path = v_extend_with_adm_name(path, NULL, 0, pool, ap);
-  va_end(ap);
-
-  return svn_io_remove_file(path, pool);
-}
-
-
-
-svn_error_t *
-svn_wc__open_text_base(apr_file_t **handle,
-                       const char *path,
-                       apr_int32_t flags,
-                       apr_pool_t *pool)
-{
-  const char *parent_path, *base_name;
-  svn_path_split(path, &parent_path, &base_name, pool);
-  return open_adm_file(handle, parent_path, SVN_WC__BASE_EXT, APR_OS_DEFAULT,
-                       flags, pool, SVN_WC__ADM_TEXT_BASE, base_name, NULL);
+  const char *path = extend_with_adm_name(svn_wc_adm_access_path(adm_access),
+                                          NULL, FALSE, scratch_pool,
+                                          filename, NULL);
+  return svn_io_remove_file(path, scratch_pool);
 }
 
 
 svn_error_t *
-svn_wc__open_revert_base(apr_file_t **handle,
-                         const char *path,
-                         apr_int32_t flags,
-                         apr_pool_t *pool)
+svn_wc__open_writable_base(svn_stream_t **stream,
+                           const char **temp_base_path,
+                           const char *path,
+                           svn_boolean_t need_revert_base,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
 {
-  const char *parent_path, *base_name;
-  svn_path_split(path, &parent_path, &base_name, pool);
-  return open_adm_file(handle, parent_path, SVN_WC__REVERT_EXT, APR_OS_DEFAULT,
-                       flags, pool, SVN_WC__ADM_TEXT_BASE, base_name, NULL);
+  const char *parent_path;
+  const char *base_name;
+  apr_file_t *temp_file;
+
+  svn_path_split(path, &parent_path, &base_name, scratch_pool);
+  SVN_ERR(open_adm_file(&temp_file, temp_base_path,
+                        parent_path,
+                        need_revert_base
+                          ? SVN_WC__REVERT_EXT
+                          : SVN_WC__BASE_EXT,
+                        APR_WRITE | APR_TRUNCATE | APR_CREATE,
+                        result_pool,
+                        SVN_WC__ADM_TEXT_BASE,
+                        base_name,
+                        NULL));
+  *stream = svn_stream_from_aprfile2(temp_file, FALSE, result_pool);
+
+  return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
-svn_wc__open_props(apr_file_t **handle,
-                   const char *path,
-                   svn_node_kind_t kind,
-                   apr_int32_t flags,
-                   svn_boolean_t base,
-                   svn_boolean_t wcprops,
-                   apr_pool_t *pool)
+svn_wc__write_old_wcprops(const char *path,
+                          apr_hash_t *prophash,
+                          svn_node_kind_t kind,
+                          apr_pool_t *scratch_pool)
 {
-  const char *parent_dir, *base_name;
+  apr_pool_t *pool = scratch_pool;
+  const char *parent_dir;
+  const char *base_name;
+  svn_stream_t *stream;
+  const char *temp_dir_path;
+  const char *temp_prop_path;
+  const char *prop_path;
   int wc_format_version;
 
   if (kind == svn_node_dir)
@@ -663,118 +645,30 @@ svn_wc__open_props(apr_file_t **handle,
      of parent_dir.  First check that parent_dir is a working copy: */
   SVN_ERR(svn_wc_check_wc(parent_dir, &wc_format_version, pool));
   if (wc_format_version == 0)
-    return svn_error_createf
-      (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-       _("'%s' is not a working copy"),
-       svn_path_local_style(parent_dir, pool));
+    return svn_error_createf(SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+                             _("'%s' is not a working copy"),
+                             svn_path_local_style(parent_dir, pool));
 
-  /* Then examine the flags to know -which- kind of prop file to get. */
+  /* Write to a temp file, then rename into place. */
+  temp_dir_path = svn_wc__adm_path(parent_dir, TRUE, pool, NULL);
+  SVN_ERR(svn_stream_open_unique(&stream, &temp_prop_path,
+                                 temp_dir_path,
+                                 svn_io_file_del_none,
+                                 pool, pool));
+  SVN_ERR_W(svn_hash_write2(prophash, stream, SVN_HASH_TERMINATOR,
+                            pool),
+            apr_psprintf(pool,
+                         _("Cannot write property hash for '%s'"),
+                         svn_path_local_style(path, pool)));
+  svn_stream_close(stream);
 
-  if (base && wcprops)
-    return svn_error_create(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                            _("No such thing as 'base' "
-                              "working copy properties!"));
+  /* Close file, then do an atomic "move". */
 
-  else if (base)
-    {
-      if (kind == svn_node_dir)
-        return open_adm_file(handle, parent_dir, NULL, APR_OS_DEFAULT, flags,
-                             pool, SVN_WC__ADM_DIR_PROP_BASE, NULL);
-      else
-        return open_adm_file(handle, parent_dir, SVN_WC__BASE_EXT,
-                             APR_OS_DEFAULT, flags, pool,
-                             SVN_WC__ADM_PROP_BASE, base_name, NULL);
-    }
-  else if (wcprops)
-    {
-      if (kind == svn_node_dir)
-        return open_adm_file(handle, parent_dir, NULL, APR_OS_DEFAULT, flags,
-                             pool, SVN_WC__ADM_DIR_WCPROPS, NULL);
-      else
-        {
-          return open_adm_file
-            (handle, parent_dir,
-             SVN_WC__WORK_EXT, APR_OS_DEFAULT,
-             flags, pool, SVN_WC__ADM_WCPROPS, base_name, NULL);
-        }
-    }
-  else /* plain old property file */
-    {
-      if (kind == svn_node_dir)
-        return open_adm_file(handle, parent_dir, NULL, APR_OS_DEFAULT, flags,
-                             pool, SVN_WC__ADM_DIR_PROPS, NULL);
-      else
-        {
-          return open_adm_file
-            (handle, parent_dir,
-             SVN_WC__WORK_EXT, APR_OS_DEFAULT,
-             flags, pool, SVN_WC__ADM_PROPS, base_name, NULL);
-        }
-    }
+  SVN_ERR(svn_wc__prop_path(&prop_path, path, kind, svn_wc__props_wcprop,
+                            FALSE, pool));
+  SVN_ERR(svn_io_file_rename(temp_prop_path, prop_path, pool));
+  return svn_io_set_file_read_only(prop_path, FALSE, pool);
 }
-
-
-
-svn_error_t *
-svn_wc__close_props(apr_file_t *fp,
-                    const char *path,
-                    svn_node_kind_t kind,
-                    svn_boolean_t base,
-                    svn_boolean_t wcprops,
-                    int sync,
-                    apr_pool_t *pool)
-{
-  const char *parent_dir, *base_name;
-
-  if (kind == svn_node_dir)
-    parent_dir = path;
-  else
-    svn_path_split(path, &parent_dir, &base_name, pool);
-
-  /* At this point, we know we need to close a file in the admin area
-     of parent_dir.  Since the file must be open already, we know that
-     parent_dir is a working copy. */
-
-  /* Then examine the flags to know -which- kind of prop file to get. */
-
-  if (base && wcprops)
-    return svn_error_create(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                            _("No such thing as 'base' "
-                              "working copy properties!"));
-
-  else if (base)
-    {
-      if (kind == svn_node_dir)
-        return close_adm_file(fp, parent_dir, NULL, sync, pool,
-                              SVN_WC__ADM_DIR_PROP_BASE, NULL);
-      else
-        return close_adm_file(fp, parent_dir, SVN_WC__BASE_EXT, sync, pool,
-                              SVN_WC__ADM_PROP_BASE, base_name, NULL);
-    }
-  else if (wcprops)
-    {
-      if (kind == svn_node_dir)
-        return close_adm_file(fp, parent_dir, NULL, sync, pool,
-                              SVN_WC__ADM_DIR_WCPROPS, NULL);
-      else
-        return close_adm_file
-          (fp, parent_dir,
-           SVN_WC__WORK_EXT,
-           sync, pool, SVN_WC__ADM_WCPROPS, base_name, NULL);
-    }
-  else /* plain old property file */
-    {
-      if (kind == svn_node_dir)
-        return close_adm_file(fp, parent_dir, NULL, sync, pool,
-                              SVN_WC__ADM_DIR_PROPS, NULL);
-      else
-        return close_adm_file
-          (fp, parent_dir,
-           SVN_WC__WORK_EXT,
-           sync, pool, SVN_WC__ADM_PROPS, base_name, NULL);
-    }
-}
-
 
 
 
