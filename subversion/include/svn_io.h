@@ -713,6 +713,17 @@ svn_stream_open_writable(svn_stream_t **stream,
                          apr_pool_t *scratch_pool);
 
 
+/** Create a writable stream to a file in the directory @a dirpath.
+ * The file will have an arbitrary and unique name, and the full path
+ * will be returned in @a temp_path. The stream will be returned in
+ * @a stream. Both will be allocated from @a result_pool.
+ *
+ * The file will be deleted according to @a delete_when.
+ *
+ * Temporary allocations will be performed in @a scratch_pool.
+ *
+ * @since New in 1.6
+ */
 svn_error_t *
 svn_stream_open_unique(svn_stream_t **stream,
                        const char **temp_path,
