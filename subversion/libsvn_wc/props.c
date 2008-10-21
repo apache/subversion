@@ -376,10 +376,10 @@ install_props_file(svn_stringbuf_t **log_accum,
                          FALSE, pool));
 
   /* Write a log entry to move tmp file to real file. */
-  SVN_ERR(svn_wc__loggy_move(log_accum, NULL, adm_access,
+  SVN_ERR(svn_wc__loggy_move(log_accum, adm_access,
                              propfile_tmp_path,
                              propfile_path,
-                             FALSE, pool));
+                             pool));
 
   /* Make the props file read-only */
   return svn_wc__loggy_set_readonly(log_accum, adm_access,
@@ -865,14 +865,14 @@ svn_wc__loggy_revert_props_create(svn_stringbuf_t **log_accum,
   if (kind == svn_node_file)
     {
       if (destroy_baseprops)
-        SVN_ERR(svn_wc__loggy_move(log_accum, NULL,
+        SVN_ERR(svn_wc__loggy_move(log_accum,
                                    adm_access, dst_bprop, dst_rprop,
-                                   FALSE, pool));
+                                   pool));
       else
         {
           SVN_ERR(svn_io_copy_file(dst_bprop, tmp_rprop, TRUE, pool));
-          SVN_ERR(svn_wc__loggy_move(log_accum, NULL, adm_access,
-                                     tmp_rprop, dst_rprop, FALSE, pool));
+          SVN_ERR(svn_wc__loggy_move(log_accum, adm_access,
+                                     tmp_rprop, dst_rprop, pool));
         }
     }
   else if (kind == svn_node_none)
@@ -887,9 +887,9 @@ svn_wc__loggy_revert_props_create(svn_stringbuf_t **log_accum,
 
       SVN_ERR(save_prop_file(dst_bprop, apr_hash_make(pool), TRUE, pool));
 
-      SVN_ERR(svn_wc__loggy_move(log_accum, NULL,
+      SVN_ERR(svn_wc__loggy_move(log_accum,
                                  adm_access, dst_bprop, dst_rprop,
-                                 FALSE, pool));
+                                 pool));
     }
 
   return SVN_NO_ERROR;
@@ -968,8 +968,8 @@ svn_wc__loggy_revert_props_restore(svn_stringbuf_t **log_accum,
   SVN_ERR(svn_wc__prop_path(&revert_file, path, entry->kind,
                             svn_wc__props_revert, FALSE, pool));
 
-  return svn_wc__loggy_move(log_accum, NULL, adm_access,
-                            revert_file, base_file, FALSE, pool);
+  return svn_wc__loggy_move(log_accum, adm_access,
+                            revert_file, base_file, pool);
 }
 
 
