@@ -603,7 +603,7 @@ svn_fs_base__dag_set_proplist(dag_node_t *node,
                                         trail, pool));
   rep_key = noderev->prop_key;
 
-  /* Flatten the proplist into a string, and calculate its md5 hash. */
+  /* Flatten the proplist into a string, and calculate its sha1 hash. */
   SVN_ERR(svn_fs_base__unparse_proplist_skel(&proplist_skel,
                                              proplist, pool));
   raw_proplist_buf = svn_fs_base__unparse_skel(proplist_skel, pool);
@@ -624,12 +624,14 @@ svn_fs_base__dag_set_proplist(dag_node_t *node,
       return svn_fs_bdb__put_node_revision(fs, node->id, noderev,
                                            trail, pool);
     }
-  else if (err && (err->apr_err == SVN_ERR_FS_NO_SUCH_CHECKSUM_REP))
+  else if (err)
     {
+      if (err->apr_err != SVN_ERR_FS_NO_SUCH_CHECKSUM_REP)
+        return err;
+
       svn_error_clear(err);
       err = SVN_NO_ERROR;
     }
-  SVN_ERR(err);
 
   /* Get a mutable version of this rep (updating the node revision if
      this isn't a NOOP)  */
@@ -1280,13 +1282,16 @@ svn_fs_base__dag_finalize_edits(dag_node_t *file,
       err = svn_fs_base__reserve_fsguid(trail->fs, &data_key_uniquifier, 
                                         trail, pool);
     }
-  else if (err && (err->apr_err == SVN_ERR_FS_NO_SUCH_CHECKSUM_REP))
+  else if (err)
     {
+      if (err->apr_err != SVN_ERR_FS_NO_SUCH_CHECKSUM_REP)
+        return err;
+
       svn_error_clear(err);
       err = SVN_NO_ERROR;
       new_data_key = noderev->edit_key;
     }
-  SVN_ERR(err);
+
   noderev->data_key = new_data_key;
   noderev->data_key_uniquifier = data_key_uniquifier;
   noderev->edit_key = NULL;
