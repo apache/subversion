@@ -393,6 +393,26 @@ svn_wc__text_revert_path(const char *path,
                               NULL);
 }
 
+
+svn_error_t *
+svn_wc__get_revert_contents(svn_stream_t **contents,
+                            const char *path,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
+{
+  const char *revert_base = svn_wc__text_revert_path(path, FALSE, scratch_pool);
+
+  if (revert_base == NULL)
+    {
+      *contents = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  return svn_stream_open_readonly(contents, revert_base, result_pool,
+                                  scratch_pool);
+}
+
+
 svn_error_t *
 svn_wc__prop_path(const char **prop_path,
                   const char *path,

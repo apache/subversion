@@ -93,6 +93,14 @@ const char *svn_wc__text_base_path(const char *path,
                                    apr_pool_t *pool);
 
 
+/* Return a readonly stream on the PATH's revert file. */
+svn_error_t *
+svn_wc__get_revert_contents(svn_stream_t **contents,
+                            const char *path,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
+
 /* Return a path to PATH's revert file.
    If TMP is set, return a path to the tmp revert file. */
 const char *
