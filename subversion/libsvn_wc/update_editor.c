@@ -2744,7 +2744,7 @@ apply_textdelta(void *file_baton,
   const char *checksum;
   svn_boolean_t replaced;
   svn_stream_t *source;
-  apr_file_t *target_file;
+  svn_stream_t *target;
 
   if (fb->skipped)
     {
@@ -2819,19 +2819,11 @@ apply_textdelta(void *file_baton,
   if (! fb->added)
     {
       if (replaced)
-        {
-          apr_file_t *revert_file;
-
-          SVN_ERR(svn_wc__open_revert_base(&revert_file, fb->path,
-                                           APR_READ,
-                                           handler_pool));
-          source = svn_stream_from_aprfile2(revert_file, FALSE, handler_pool);
-        }
+        SVN_ERR(svn_wc__get_revert_contents(&source, fb->path,
+                                            handler_pool, handler_pool));
       else
-        {
-          SVN_ERR(svn_wc_get_pristine_contents(&source, fb->path,
-                                               handler_pool, handler_pool));
-        }
+        SVN_ERR(svn_wc_get_pristine_contents(&source, fb->path,
+                                             handler_pool, handler_pool));
     }
   else
     {
@@ -2844,23 +2836,26 @@ apply_textdelta(void *file_baton,
 
   /* Open the text base for writing (this will get us a temporary file).  */
 
-  if (replaced)
-    err = svn_wc__open_revert_base(&target_file, fb->path,
-                                   (APR_WRITE | APR_TRUNCATE | APR_CREATE),
-                                   handler_pool);
-  else
-    err = svn_wc__open_text_base(&target_file, fb->path,
-                                 (APR_WRITE | APR_TRUNCATE | APR_CREATE),
-                                 handler_pool);
-  if (err)
-    {
-      svn_pool_destroy(handler_pool);
-      return err;
-    }
+  {
+    /* For now, we ignore the path result from open_writable_base. It
+       SHOULD be the same as fb->new_text_base_path, so we'll assert that.
+       In the future, it will be a random path once we clean up a lot of
+       the assumptions about paths made throughout the library. */
+    const char *ignored;
+
+    err = svn_wc__open_writable_base(&target, &ignored, fb->path,
+                                     replaced /* need_revert_base */,
+                                     handler_pool, pool);
+    SVN_ERR_ASSERT(strcmp(ignored, fb->new_text_base_path) == 0);
+    if (err)
+      {
+        svn_pool_destroy(handler_pool);
+        return err;
+      }
+  }
 
   /* Prepare to apply the delta.  */
-  svn_txdelta_apply(source,
-                    svn_stream_from_aprfile2(target_file, FALSE, handler_pool),
+  svn_txdelta_apply(source, target,
                     fb->digest, fb->new_text_base_path /* error_info */,
                     handler_pool,
                     &hb->apply_handler, &hb->apply_baton);

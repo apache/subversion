@@ -388,24 +388,6 @@ create_lock(const char *path, int wait_for, apr_pool_t *pool)
 }
 
 
-/* Remove the physical lock in the admin directory for PATH. It is
-   acceptable for the administrative area to have disappeared, such as when
-   the directory is removed from the working copy.  It is an error for the
-   lock to have disappeared if the administrative area still exists. */
-static svn_error_t *
-remove_lock(const char *path, apr_pool_t *pool)
-{
-  svn_error_t *err = svn_wc__remove_adm_file(path, pool, SVN_WC__ADM_LOCK,
-                                             NULL);
-  if (err)
-    {
-      if (svn_wc__adm_path_exists(path, FALSE, pool, NULL))
-        return err;
-      svn_error_clear(err);
-    }
-  return SVN_NO_ERROR;
-}
-
 /* An APR pool cleanup handler.  This handles access batons that have not
    been closed when their pool gets destroyed.  The physical locks
    associated with such batons remain in the working copy if they are
@@ -1388,7 +1370,6 @@ do_close(svn_wc_adm_access_t *adm_access,
          svn_boolean_t recurse,
          apr_pool_t *scratch_pool)
 {
-
   if (adm_access->type == svn_wc__adm_access_closed)
     return SVN_NO_ERROR;
 
@@ -1432,7 +1413,23 @@ do_close(svn_wc_adm_access_t *adm_access,
     {
       if (adm_access->lock_exists && ! preserve_lock)
         {
-          SVN_ERR(remove_lock(adm_access->path, scratch_pool));
+          /* Remove the physical lock in the admin directory for
+             PATH. It is acceptable for the administrative area to
+             have disappeared, such as when the directory is removed
+             from the working copy.  It is an error for the lock to
+             have disappeared if the administrative area still exists. */
+
+          svn_error_t *err = svn_wc__remove_adm_file(adm_access,
+                                                     SVN_WC__ADM_LOCK,
+                                                     scratch_pool);
+          if (err)
+            {
+              if (svn_wc__adm_path_exists(adm_access->path, FALSE,
+                                          scratch_pool, NULL))
+                return err;
+              svn_error_clear(err);
+            }
+
           adm_access->lock_exists = FALSE;
         }
     }
@@ -1473,13 +1470,13 @@ svn_wc_adm_close(svn_wc_adm_access_t *adm_access)
 }
 
 svn_boolean_t
-svn_wc_adm_locked(svn_wc_adm_access_t *adm_access)
+svn_wc_adm_locked(const svn_wc_adm_access_t *adm_access)
 {
   return adm_access->type == svn_wc__adm_access_write_lock;
 }
 
 svn_error_t *
-svn_wc__adm_write_check(svn_wc_adm_access_t *adm_access,
+svn_wc__adm_write_check(const svn_wc_adm_access_t *adm_access,
                         apr_pool_t *scratch_pool)
 {
   if (adm_access->type == svn_wc__adm_access_write_lock)
@@ -1537,14 +1534,14 @@ svn_wc_locked(svn_boolean_t *locked, const char *path, apr_pool_t *pool)
 
 
 const char *
-svn_wc_adm_access_path(svn_wc_adm_access_t *adm_access)
+svn_wc_adm_access_path(const svn_wc_adm_access_t *adm_access)
 {
   return adm_access->path;
 }
 
 
 apr_pool_t *
-svn_wc_adm_access_pool(svn_wc_adm_access_t *adm_access)
+svn_wc_adm_access_pool(const svn_wc_adm_access_t *adm_access)
 {
   return adm_access->pool;
 }
@@ -1552,7 +1549,7 @@ svn_wc_adm_access_pool(svn_wc_adm_access_t *adm_access)
 
 svn_error_t *
 svn_wc__adm_is_cleanup_required(svn_boolean_t *cleanup,
-                                svn_wc_adm_access_t *adm_access,
+                                const svn_wc_adm_access_t *adm_access,
                                 apr_pool_t *pool)
 {
   if (adm_access->type == svn_wc__adm_access_write_lock)
@@ -1667,14 +1664,14 @@ svn_wc__adm_access_set_wcprops(svn_wc_adm_access_t *adm_access,
 }
 
 apr_hash_t *
-svn_wc__adm_access_wcprops(svn_wc_adm_access_t *adm_access)
+svn_wc__adm_access_wcprops(const svn_wc_adm_access_t *adm_access)
 {
   return adm_access->wcprops;
 }
 
 
 int
-svn_wc__adm_wc_format(svn_wc_adm_access_t *adm_access)
+svn_wc__adm_wc_format(const svn_wc_adm_access_t *adm_access)
 {
   return adm_access->wc_format;
 }
@@ -1688,7 +1685,7 @@ svn_wc__adm_set_wc_format(svn_wc_adm_access_t *adm_access,
 
 
 svn_boolean_t
-svn_wc__adm_missing(svn_wc_adm_access_t *adm_access,
+svn_wc__adm_missing(const svn_wc_adm_access_t *adm_access,
                     const char *path)
 {
   if (adm_access->shared

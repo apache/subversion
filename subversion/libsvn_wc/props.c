@@ -649,8 +649,8 @@ write_wcprops(svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
     {
       svn_error_t *err;
 
-      err = svn_wc__remove_adm_file(svn_wc_adm_access_path(adm_access), pool,
-                                    SVN_WC__ADM_ALL_WCPROPS, NULL);
+      err = svn_wc__remove_adm_file(adm_access, SVN_WC__ADM_ALL_WCPROPS,
+                                    subpool);
       if (err && APR_STATUS_IS_ENOENT(err->apr_err))
         {
           svn_error_clear(err);
@@ -2203,7 +2203,6 @@ svn_wc__wcprop_set(const char *name,
                    apr_pool_t *pool)
 {
   apr_hash_t *prophash;
-  apr_file_t *fp = NULL;
   apr_pool_t *cache_pool = svn_wc_adm_access_pool(adm_access);
   const svn_wc_entry_t *entry;
 
