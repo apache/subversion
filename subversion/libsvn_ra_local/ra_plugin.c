@@ -1018,10 +1018,14 @@ svn_ra_local__get_file(svn_ra_session_t *session,
          svn_fs_file_contents() directly, which already checks the
          stored checksum, and all we're doing here is writing bytes in
          a loop.  Truly, Nothing Can Go Wrong :-).  But RA layers that
-         go over a network should confirm the checksum. */
-      SVN_ERR(svn_stream_copy2(contents, stream,
+         go over a network should confirm the checksum.
+
+         Note: we are not supposed to close the passed-in stream, so
+         disown the thing.
+      */
+      SVN_ERR(svn_stream_copy3(contents, svn_stream_disown(stream, pool),
                                sess->callbacks
-                               ? sess->callbacks->cancel_func : NULL,
+                                 ? sess->callbacks->cancel_func : NULL,
                                sess->callback_baton,
                                pool));
     }
