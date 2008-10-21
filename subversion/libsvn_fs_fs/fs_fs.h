@@ -91,7 +91,7 @@ svn_error_t *svn_fs_fs__rev_get_root(svn_fs_id_t **root_id,
                                      apr_pool_t *pool);
 
 /* Serialize a directory contents hash.
-   Implements svn_cache_serialize_func_t */
+   Implements svn_cache__serialize_func_t */
 svn_error_t *
 svn_fs_fs__dir_entries_serialize(char **data,
                                  apr_size_t *data_len,
@@ -99,7 +99,7 @@ svn_fs_fs__dir_entries_serialize(char **data,
                                  apr_pool_t *pool);
 
 /* Deserialize a directory contents hash. 
-   Implements svn_cache_deserialize_func_t */
+   Implements svn_cache__deserialize_func_t */
 svn_error_t *
 svn_fs_fs__dir_entries_deserialize(void **out,
                                    const char *data,
@@ -510,7 +510,7 @@ svn_fs_fs__get_node_origin(const svn_fs_id_t **origin_id,
                            apr_pool_t *pool);
 
 
-/* Sets up the svn_cache_t structures in FS.  POOL is used for
+/* Sets up the svn_cache__t structures in FS.  POOL is used for
    temporary allocations. */
 svn_error_t *
 svn_fs_fs__initialize_caches(svn_fs_t *fs, apr_pool_t *pool);
