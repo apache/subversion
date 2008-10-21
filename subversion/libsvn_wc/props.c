@@ -2231,30 +2231,7 @@ svn_wc__wcprop_set(const char *name,
     }
   else
     {
-      /* For backwards compatibility.  We don't use the cache in this case,
-         so write to disk regardless of force_write. */
-      svn_stream_t *stream;
-
-      /* Open the propfile for writing. */
-      SVN_ERR(svn_wc__open_props(&fp,
-                                 path, /* open in PATH */ entry->kind,
-                                 (APR_WRITE | APR_CREATE | APR_BUFFERED),
-                                 0, /* not base props */
-                                 1, /* we DO want wcprops */
-                                 pool));
-      /* Write. */
-      stream = svn_stream_from_aprfile2(fp, TRUE, pool);
-      SVN_ERR_W(svn_hash_write2(prophash, stream, SVN_HASH_TERMINATOR,
-                                pool),
-                apr_psprintf(pool,
-                             _("Cannot write property hash for '%s'"),
-                             svn_path_local_style(path, pool)));
-      svn_stream_close(stream);
-
-      /* Close file, doing an atomic "move". */
-      SVN_ERR(svn_wc__close_props(fp, path, entry->kind, 0, 1,
-                                  1, /* sync! */
-                                  pool));
+      SVN_ERR(svn_wc__write_old_wcprops(path, prophash, entry->kind, pool));
     }
 
   return SVN_NO_ERROR;
