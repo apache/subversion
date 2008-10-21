@@ -2719,6 +2719,24 @@ svn_io_file_write_full(apr_file_t *file, const void *buf,
 
 
 svn_error_t *
+svn_io_write_unique(const char **tmp_path,
+                    const char *dirpath,
+                    const void *buf,
+                    apr_size_t nbytes,
+                    svn_io_file_del_t delete_when,
+                    apr_pool_t *pool)
+{
+  apr_file_t *new_file;
+
+  SVN_ERR(svn_io_open_unique_file2(&new_file, tmp_path, dirpath, ".tmp",
+                                   delete_when, pool));
+  SVN_ERR(svn_io_file_write_full(new_file, buf, nbytes, NULL, pool));
+  SVN_ERR(svn_io_file_flush_to_disk(new_file, pool));
+  return svn_io_file_close(new_file, pool);
+}
+
+
+svn_error_t *
 svn_io_file_trunc(apr_file_t *file, apr_off_t offset, apr_pool_t *pool)
 {
   return do_io_file_wrapper_cleanup
@@ -3220,16 +3238,9 @@ svn_io_write_version_file(const char *path,
     return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
                              _("Version %d is not non-negative"), version);
 
-  /* Create a temporary file to write the data to */
-  SVN_ERR(svn_io_open_unique_file2(&format_file, &path_tmp, path, ".tmp",
-                                   svn_io_file_del_none, pool));
-
-  /* ...dump out our version number string... */
-  SVN_ERR(svn_io_file_write_full(format_file, format_contents,
-                                 strlen(format_contents), NULL, pool));
-
-  /* ...and close the file. */
-  SVN_ERR(svn_io_file_close(format_file, pool));
+  SVN_ERR(svn_io_write_unique(&path_tmp, path, format_contents,
+                              strlen(format_contents), svn_io_file_del_none,
+                              pool));
 
 #ifdef WIN32
   /* make the destination writable, but only on Windows, because
