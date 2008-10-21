@@ -6503,9 +6503,8 @@ packer_func(void *baton,
   
   /* Copy all the bits from the rev file to the end of the pack file. */
   SVN_ERR(svn_stream_open_readonly(&rev_stream, path, pool, pool));
-  SVN_ERR(svn_stream_copy2(rev_stream, pb->pack_stream, pb->cancel_func,
-                           pb->cancel_baton, pool));
-  return svn_stream_close(rev_stream);
+  return svn_stream_copy3(rev_stream, svn_stream_disown(pb->pack_stream, pool),
+                          pb->cancel_func, pb->cancel_baton, pool);
 }
 
 /* Pack a single shard SHARD in REVS_DIR, using POOL for allocations.
@@ -6523,8 +6522,6 @@ pack_shard(const char *revs_dir,
   svn_node_kind_t pack_kind;
   svn_node_kind_t shard_kind;
   apr_file_t *pack_file;
-  apr_file_t *manifest_file;
-  const char *manifest_path;
   const char *tmp_file_path;
   const char *pack_file_path = svn_path_join(revs_dir,
                                              apr_psprintf(pool, "%ld.pack",
@@ -6552,12 +6549,10 @@ pack_shard(const char *revs_dir,
   SVN_ERR(svn_io_file_open(&pack_file, pack_file_path,
                            APR_WRITE | APR_CREATE | APR_BUFFERED,
                            APR_OS_DEFAULT, pool));
-  SVN_ERR(svn_io_open_unique_file2(&manifest_file, &tmp_file_path, 
-                                   manifest_path, ".manifest",
-                                   svn_io_file_del_on_pool_cleanup, pool));
+  SVN_ERR(svn_stream_open_unique(&pb.manifest_stream, &tmp_file_path, revs_dir,
+                                 svn_io_file_del_on_pool_cleanup, pool, pool));
   pb.next_offset = 0;
   pb.pack_stream = svn_stream_from_aprfile2(pack_file, FALSE, pool);
-  pb.manifest_stream = svn_stream_from_aprfile2(manifest_file, FALSE, pool);
   pb.cancel_func = cancel_func;
   pb.cancel_baton = cancel_baton;
   SVN_ERR(svn_io_dir_walk(shard_path,
@@ -6568,10 +6563,8 @@ pack_shard(const char *revs_dir,
   /* Copy the manifest to the end of the pack file. */
   SVN_ERR(svn_stream_open_readonly(&pb.manifest_stream, tmp_file_path, pool,
                                    pool));
-  SVN_ERR(svn_stream_copy2(pb.manifest_stream, pb.pack_stream, cancel_func,
+  SVN_ERR(svn_stream_copy3(pb.manifest_stream, pb.pack_stream, cancel_func,
                            cancel_baton, pool));
-  SVN_ERR(svn_stream_close(pb.manifest_stream));
-  SVN_ERR(svn_stream_close(pb.pack_stream));
 
   /* Finally, remove the existing shard directory. */
   return svn_io_remove_dir2(shard_path, TRUE, cancel_func, cancel_baton, pool);
