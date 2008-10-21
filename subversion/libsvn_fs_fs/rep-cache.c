@@ -28,7 +28,7 @@
 /* A few magic values */
 #define REP_CACHE_SCHEMA_FORMAT   1
 
-static const char *upgrade_sql[] = { NULL,
+static const char * const upgrade_sql[] = { NULL,
   "pragma auto_vacuum = 1;"
   APR_EOL_STR
   "create table rep_cache (hash text not null primary key,   "
