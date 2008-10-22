@@ -2168,12 +2168,14 @@ push_range(apr_array_header_t *rangelist,
    CHILD, a subtree of the merge target.  Like calculate_remaining_ranges()
    this function should only be called when honoring mergeinfo.
 
-   CHILD, PARENT, MERGEINFO_PATH, REVISION1, REVISION2, PRIMARY_URL,
-   RA_SESSION, and CTX are all cascaded from filter_merged_revisions() - see
-   that function for more information on each.  In particular, note that PARENT
-   must have been processed already by this function.  More specifically, this
-   means that PARENT->REMAINING_RANGES must already be populated -- it can be
-   an empty rangelist but cannot be NULL.
+   CHILD, PARENT, MERGEINFO_PATH, REVISION1, REVISION2, and CTX are all
+   cascaded from filter_merged_revisions() - see that function for more
+   information on each.  In particular, note that PARENT must have been
+   processed already by this function.  More specifically, this means that
+   PARENT->REMAINING_RANGES must already be populated -- it can be an empty
+   rangelist but cannot be NULL.  PRIMARY_URL is the younger of the
+   url1@revision1 and url2@revision2 arguments to calculate_remaining_ranges().
+   RA_SESSION is the session for PRIMARY_URL.
 
    Since this function is only invoked for subtrees of the merge target, the
    guarantees afforded by normalize_merge_sources() don't apply - see the
@@ -2314,14 +2316,10 @@ adjust_deleted_subtree_ranges(svn_client__merge_path_t *child,
 
               /* PRIMARY_URL@older_rev exists, so it was deleted at some
                  revision prior to peg_rev, find that revision. */
-              err = svn_ra_get_deleted_rev(ra_session, rel_source_path,
-                                           older_rev, younger_rev,
-                                           &revision_primary_url_deleted,
-                                           pool);
-
-              /* ### 3067ds TODO: What if svn_ra_get_deleted_rev() isn't
-                 ### implemented on the server? */
-              SVN_ERR(err);
+              SVN_ERR(svn_ra_get_deleted_rev(ra_session, rel_source_path,
+                                             older_rev, younger_rev,
+                                             &revision_primary_url_deleted,
+                                             pool));
 
               /* ### 3067ds TODO: svn_ra_get_deleted_rev() should never
                  ### set revision_primary_url_deleted to an invalid revision
@@ -2618,9 +2616,11 @@ filter_merged_revisions(svn_client__merge_path_t *child,
    been merged to CHILD->PATH and populate CHILD->REMAINING_RANGES with the
    ranges that still need merging.
 
-   SOURCE_ROOT_URL, URL1, REVISION1, URL2, REVISION2, TARGET_MERGEINFO,
-   IMPLICIT_MERGEINFO, RA_SESSION, and CTX are all cascaded from the
-   caller's arguments of the same names.
+   URL1, REVISION1, URL2, REVISION2, TARGET_MERGEINFO, IMPLICIT_MERGEINFO, and
+   CTX are all cascaded from the caller's arguments of the same names.
+
+   RA_SESSION is the session for, and SOURCE_ROOT_URL is the repository root
+   for, the younger of URL1@REVISION1 and URL2@REVISION2.
 
    If IS_SUBTREE is FALSE then CHILD describes the merge target and the
    requirements around the values of URL1, REVISION1, URL2, and REVISION2
@@ -2676,19 +2676,19 @@ calculate_remaining_ranges(svn_client__merge_path_t *parent,
 
   if (is_subtree)
     {
-      /* If CHILD is the merge target we then know that PRIMARY_URL,
+      /* If CHILD is the merge target we then know that primary_url,
          REVISION1, and REVISION2 are provided by normalize_merge_sources()
          -- see 'MERGEINFO MERGE SOURCE NORMALIZATION'.  Due to this
-         normalization we know that PRIMARY_URL@REVISION1 and
-         PRIMARY_URL@REVISION2 describe an unbroken line of history such
+         normalization we know that primary_url@REVISION1 and
+         primary_url@REVISION2 describe an unbroken line of history such
          that the entire range described by REVISION1:REVISION2 can
          potentially be merged to CHILD.  So we simply convert REVISION1 and
          REVISION2 to a rangelist and proceed to the filtering of merged
          revisions.
 
          But if CHILD is a subtree we don't have the same guarantees about
-         PRIMARY_URL, REVISION1, and REVISION2 as we do for the merge target.
-         PRIMARY_URL@REVSION1 and/or PRIMARY_URL@REVSION2 might not exist.
+         primary_url, REVISION1, and REVISION2 as we do for the merge target.
+         primary_url@REVSION1 and/or primary_url@REVSION2 might not exist.
 
          If one or both doesn't exist, we need to know so we don't later try
          to describe these invalid subtrees in drive_merge_report_editor(),
