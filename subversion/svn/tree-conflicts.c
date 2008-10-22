@@ -237,7 +237,10 @@ svn_cl__append_human_readable_tree_conflict_description(
   victim_name = svn_path_basename(conflict->path, pool);
   their_phrase = select_their_phrase(conflict, phrases);
   our_phrase = select_our_phrase(conflict, phrases);
-  SVN_ERR_ASSERT(our_phrase && their_phrase);
+  if (! our_phrase || ! their_phrase)
+    return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
+                             "Invalid tree conflict data for victim %s",
+                             victim_name);
 
   /* Substitute the '%s' format in the phrases with the victim path. */
   their_phrase_with_victim = svn_stringbuf_createf(pool, their_phrase,
@@ -273,7 +276,8 @@ svn_cl__append_tree_conflict_info_xml(
         tmp = "file";
         break;
       default:
-        SVN_ERR_MALFUNCTION();
+        return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
+            _("Bad node_kind in tree conflict description"));
     }
   apr_hash_set(att_hash, "kind", APR_HASH_KEY_STRING, tmp);
 
@@ -289,7 +293,8 @@ svn_cl__append_tree_conflict_info_xml(
         tmp = "merge";
         break;
       default:
-        SVN_ERR_MALFUNCTION();
+        return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
+            _("Bad operation in tree conflict description"));
     }
   apr_hash_set(att_hash, "operation", APR_HASH_KEY_STRING, tmp);
 
@@ -306,7 +311,8 @@ svn_cl__append_tree_conflict_info_xml(
         tmp = "deleted";
         break;
       default:
-        SVN_ERR_MALFUNCTION();
+        return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
+            _("Bad action in tree conflict description"));
     }
   apr_hash_set(att_hash, "action", APR_HASH_KEY_STRING, tmp);
 
@@ -332,7 +338,8 @@ svn_cl__append_tree_conflict_info_xml(
         tmp = "unversioned";
         break;
       default:
-        SVN_ERR_MALFUNCTION();
+        return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
+            _("Bad reason in tree conflict description"));
     }
   apr_hash_set(att_hash, "reason", APR_HASH_KEY_STRING, tmp);
 

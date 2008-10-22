@@ -419,7 +419,6 @@ fi
 
 AH_BOTTOM(
 #define N_(x) x
-#define U_(x) x
 #ifdef ENABLE_NLS
 #include <locale.h>
 #include <libintl.h>
