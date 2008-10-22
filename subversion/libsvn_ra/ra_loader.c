@@ -1407,6 +1407,8 @@ svn_ra_get_deleted_rev(svn_ra_session_t *session,
                        svn_revnum_t *revision_deleted,
                        apr_pool_t *pool)
 {
+  svn_error_t *err;
+
   /* Path must be relative. */
   SVN_ERR_ASSERT(*path != '/');
 
@@ -1419,11 +1421,22 @@ svn_ra_get_deleted_rev(svn_ra_session_t *session,
   if (end_revision <= peg_revision)
     return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL,
                             _("Peg revision must precede end revision"));
-  return session->vtable->get_deleted_rev(session, path,
-                                          peg_revision,
-                                          end_revision,
-                                          revision_deleted,
-                                          pool);
+  err = session->vtable->get_deleted_rev(session, path,
+                                         peg_revision,
+                                         end_revision,
+                                         revision_deleted,
+                                         pool);
+  if (err && (err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE     /* serf */
+              || err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)) /* neon */
+    {
+      svn_error_clear(err);
+
+      /* Do it the slow way, using get-logs, for older servers. */
+      err = svn_ra__get_deleted_rev_from_log(session, path, peg_revision,
+                                             end_revision, revision_deleted,
+                                             pool);
+    }
+  return err;
 }
 
 
