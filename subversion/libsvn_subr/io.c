@@ -2728,6 +2728,9 @@ svn_io_write_unique(const char **tmp_path,
 {
   apr_file_t *new_file;
 
+  if (!dirpath)
+    SVN_ERR(svn_io_temp_dir(&dirpath, pool));
+
   SVN_ERR(svn_io_open_unique_file2(&new_file, tmp_path, dirpath, ".tmp",
                                    delete_when, pool));
   SVN_ERR(svn_io_file_write_full(new_file, buf, nbytes, NULL, pool));
