@@ -158,10 +158,6 @@ struct dir_baton
   apr_time_t ood_last_cmt_date;
   svn_node_kind_t ood_kind;
   const char *ood_last_cmt_author;
-
-  /* This means (in terms of 'svn status') that some child is involved in
-     a tree conflict. */
-  svn_boolean_t has_tree_conflicted_children;
 };
 
 
@@ -260,7 +256,6 @@ assemble_status(svn_wc_status2_t **status,
   svn_boolean_t prop_modified_p = FALSE;
   svn_boolean_t locked_p = FALSE;
   svn_boolean_t switched_p = FALSE;
-  svn_boolean_t has_tree_conflicted_children = FALSE;
   svn_boolean_t tree_conflicted_p;
   svn_boolean_t file_external_p = FALSE;
 #ifdef HAVE_SYMLINK
@@ -317,8 +312,7 @@ assemble_status(svn_wc_status2_t **status,
       stat->locked = FALSE;
       stat->copied = FALSE;
       stat->switched = FALSE;
-      stat->has_tree_conflicted_children = FALSE;
-      stat->is_tree_conflict_victim = tree_conflicted_p;
+      stat->tree_conflicted = tree_conflicted_p;
       stat->file_external = FALSE;
 
       /* If this path has no entry, but IS present on disk, it's
@@ -333,6 +327,11 @@ assemble_status(svn_wc_status2_t **status,
           else
             stat->text_status = svn_wc_status_unversioned;
         }
+
+      /* If this path has no entry, is NOT present on disk, and IS a
+         tree conflict victim, count it as missing. */
+      if ((path_kind == svn_node_none) && tree_conflicted_p)
+        stat->text_status = svn_wc_status_missing;
 
       stat->repos_lock = repos_lock;
       stat->url = NULL;
@@ -425,10 +424,9 @@ assemble_status(svn_wc_status2_t **status,
         final_prop_status = svn_wc_status_modified;
 
       if (entry->prejfile || entry->conflict_old ||
-          entry->conflict_new || entry->conflict_wrk ||
-          entry->tree_conflict_data)
+          entry->conflict_new || entry->conflict_wrk)
         {
-          svn_boolean_t text_conflict_p, prop_conflict_p;
+          svn_boolean_t text_conflict_p, prop_conflict_p, dummy;
           const char *parent_dir;
 
           if (entry->kind == svn_node_dir)
@@ -440,8 +438,7 @@ assemble_status(svn_wc_status2_t **status,
              marked it as resolved by deleting the artifact files, so check
              for that. */
           SVN_ERR(svn_wc_conflicted_p2(&text_conflict_p, &prop_conflict_p,
-                                       &has_tree_conflicted_children,
-                                       parent_dir, entry, pool));
+                                       &dummy, parent_dir, entry, pool));
 
           if (text_conflict_p)
             final_text_status = svn_wc_status_conflicted;
@@ -524,7 +521,7 @@ assemble_status(svn_wc_status2_t **status,
             || (final_prop_status == svn_wc_status_normal))
         && (! locked_p) && (! switched_p) && (! file_external_p)
         && (! entry->lock_token) && (! repos_lock) && (! entry->changelist)
-        && (! tree_conflicted_p) && (! has_tree_conflicted_children))
+        && (! tree_conflicted_p))
       {
         *status = NULL;
         return SVN_NO_ERROR;
@@ -549,8 +546,7 @@ assemble_status(svn_wc_status2_t **status,
   stat->ood_last_cmt_date = 0;
   stat->ood_kind = svn_node_none;
   stat->ood_last_cmt_author = NULL;
-  stat->has_tree_conflicted_children = has_tree_conflicted_children;
-  stat->is_tree_conflict_victim = tree_conflicted_p;
+  stat->tree_conflicted = tree_conflicted_p;
 
   *status = stat;
 
@@ -847,6 +843,8 @@ get_dir_status(struct edit_baton *eb,
   apr_hash_t *dirents;
   apr_array_header_t *patterns = NULL;
   apr_pool_t *iterpool, *subpool = svn_pool_create(pool);
+  apr_array_header_t *tree_conflicts;
+  int j;
 
   /* See if someone wants to cancel this operation. */
   if (cancel_func)
@@ -945,6 +943,29 @@ get_dir_status(struct edit_baton *eb,
                                         eb->repos_locks, eb->repos_root,
                                         status_func, status_baton, subpool));
         }
+      /* Otherwise, if it doesn't exist, but is a tree conflict victim,
+         send its unversioned status. */
+      else
+        {
+          svn_wc_conflict_description_t *tree_conflict;
+          SVN_ERR(svn_wc_get_tree_conflict(&tree_conflict, 
+                                           svn_path_join(path, entry, subpool),
+                                           adm_access, subpool));
+          if (tree_conflict)
+            {
+              /* A tree conflict will block commit, so we'll pass TRUE
+                 instead of the user's no_ignore arg. */
+              if (ignore_patterns && ! patterns)
+                SVN_ERR(collect_ignore_patterns(&patterns, ignore_patterns,
+                                                adm_access, subpool));
+              SVN_ERR(send_unversioned_item(entry, svn_node_none, FALSE,
+                                            adm_access, patterns,
+                                            eb->externals, TRUE,
+                                            eb->repos_locks, eb->repos_root,
+                                            status_func, status_baton,
+                                            subpool));
+            }
+        }
 
       /* Regardless, we're done here.  Let's go home. */
       return SVN_NO_ERROR;
@@ -1003,6 +1024,40 @@ get_dir_status(struct edit_baton *eb,
                                     eb->repos_locks, eb->repos_root,
                                     status_func, status_baton, iterpool));
     }
+
+  /* Add empty status structures for nonexistent tree conflict victims. */
+  tree_conflicts = apr_array_make(pool, 0,
+                                  sizeof(svn_wc_conflict_description_t *));
+  SVN_ERR(svn_wc_read_tree_conflicts_from_entry(tree_conflicts, dir_entry,
+                                                path, subpool));
+
+  for (j = 0; j < tree_conflicts->nelts; j++)
+    {
+      svn_wc_conflict_description_t *conflict;
+      char *basename;
+
+      svn_pool_clear(iterpool);
+
+      conflict = APR_ARRAY_IDX(tree_conflicts, j,
+                               svn_wc_conflict_description_t *);
+
+      /* Skip versioned and non-versioned things. */
+      basename = svn_path_basename(conflict->path, iterpool);
+      if (apr_hash_get(entries, basename, APR_HASH_KEY_STRING)
+          || apr_hash_get(dirents, basename, APR_HASH_KEY_STRING))
+        continue;
+
+      if (ignore_patterns && ! patterns)
+        SVN_ERR(collect_ignore_patterns(&patterns, ignore_patterns,
+                                        adm_access, subpool));
+
+      SVN_ERR(send_unversioned_item(basename, svn_node_none, FALSE, 
+                                    adm_access, patterns, eb->externals, 
+                                    no_ignore, eb->repos_locks, eb->repos_root,
+                                    status_func, status_baton, iterpool));
+    }
+
+
 
   /* Loop over entries hash */
   for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
@@ -1425,9 +1480,7 @@ svn_wc__is_sendable_status(const svn_wc_status2_t *status,
   if ((status->prop_status != svn_wc_status_none)
       && (status->prop_status != svn_wc_status_normal))
     return TRUE;
-  if (status->has_tree_conflicted_children)
-    return TRUE;
-  if (status->is_tree_conflict_victim)
+  if (status->tree_conflicted)
     return TRUE;
 
   /* If it's locked or switched, send it. */
@@ -1792,9 +1845,6 @@ close_directory(void *dir_baton,
               eb->anchor_status->ood_last_cmt_author =
                 apr_pstrdup(pool, db->ood_last_cmt_author);
             }
-
-          if (eb->anchor_status->entry->tree_conflict_data)
-            eb->anchor_status->has_tree_conflicted_children = TRUE;
         }
     }
 
