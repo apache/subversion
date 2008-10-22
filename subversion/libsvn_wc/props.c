@@ -1318,18 +1318,14 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
 
       if (working_val && new_val)
         {
-          apr_file_t *merged_file;
           svn_stream_t *mergestream;
           svn_diff_t *diff;
           svn_diff_file_options_t *options =
             svn_diff_file_options_create(filepool);
 
-          SVN_ERR(svn_io_open_unique_file2(&merged_file, &cdesc->merged_file,
-                                           path, ".tmp",
-                                           svn_io_file_del_on_pool_cleanup,
-                                           filepool));
-          mergestream = svn_stream_from_aprfile2(merged_file, FALSE,
-                                                 filepool);
+          SVN_ERR(svn_stream_open_unique(&mergestream, &cdesc->merged_file,
+                                         path, svn_io_file_del_on_pool_cleanup,
+                                         filepool, pool));
           SVN_ERR(svn_diff_mem_string_diff3(&diff, the_val, working_val,
                                             new_val, options, filepool));
           SVN_ERR(svn_diff_mem_string_output_merge2
