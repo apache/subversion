@@ -6521,7 +6521,6 @@ pack_shard(const char *revs_dir,
 {
   svn_node_kind_t pack_kind;
   svn_node_kind_t shard_kind;
-  apr_file_t *pack_file;
   const char *tmp_file_path;
   const char *pack_file_path = svn_path_join(revs_dir,
                                              apr_psprintf(pool, "%ld.pack",
@@ -6546,13 +6545,11 @@ pack_shard(const char *revs_dir,
     }
 
   /* Create the new pack file. */
-  SVN_ERR(svn_io_file_open(&pack_file, pack_file_path,
-                           APR_WRITE | APR_CREATE | APR_BUFFERED,
-                           APR_OS_DEFAULT, pool));
+  SVN_ERR(svn_stream_open_writable(&pb.pack_stream, pack_file_path, pool,
+                                    pool));
   SVN_ERR(svn_stream_open_unique(&pb.manifest_stream, &tmp_file_path, revs_dir,
                                  svn_io_file_del_on_pool_cleanup, pool, pool));
   pb.next_offset = 0;
-  pb.pack_stream = svn_stream_from_aprfile2(pack_file, FALSE, pool);
   pb.cancel_func = cancel_func;
   pb.cancel_baton = cancel_baton;
   SVN_ERR(svn_io_dir_walk(shard_path,
