@@ -2262,24 +2262,24 @@ adjust_deleted_subtree_ranges(svn_client__merge_path_t *child,
   const char *rel_source_path;
   const char *session_url;
   svn_error_t *err;
-
-  /* ### 3067ds TODO: Use a subpool? */
+  apr_pool_t *subpool = svn_pool_create(pool);
 
   SVN_ERR_ASSERT(parent->remaining_ranges);
 
   /* We want to know about PRIMARY_URL@peg_rev, but we need PRIMARY_URL's
      path relative to RA_SESSION's URL. */
-  SVN_ERR(svn_ra_get_session_url(ra_session, &session_url, pool));
+  SVN_ERR(svn_ra_get_session_url(ra_session, &session_url, subpool));
   SVN_ERR(svn_client__path_relative_to_root(&rel_source_path,
                                             primary_url,
                                             session_url,
                                             FALSE,
                                             ra_session,
                                             NULL,
-                                            pool));
+                                            subpool));
   err = svn_client__repos_location_segments(&segments, ra_session,
                                             rel_source_path, peg_rev,
-                                            younger_rev, older_rev, ctx, pool);
+                                            younger_rev, older_rev, ctx,
+                                            subpool);
 
   /* If PRIMARY_URL@peg_rev doesn't exist then
       svn_client__repos_location_segments() typically returns an
@@ -2301,14 +2301,14 @@ adjust_deleted_subtree_ranges(svn_client__merge_path_t *child,
           svn_error_clear(err);
           err = NULL;
           SVN_ERR(svn_ra_check_path(ra_session, rel_source_path,
-                                    older_rev, &kind, pool));
+                                    older_rev, &kind, subpool));
           if (kind == svn_node_none)
             {
               /* Neither PRIMARY_URL@peg_rev nor PRIMARY_URL@older_rev exist,
                  so there is nothing to merge.  Set CHILD->REMAINING_RANGES
                  identical to PARENT's. */
               child->remaining_ranges =
-                svn_rangelist_dup(parent->remaining_ranges, pool);
+                svn_rangelist_dup(parent->remaining_ranges, subpool);
             }
           else
             {
@@ -2319,27 +2319,25 @@ adjust_deleted_subtree_ranges(svn_client__merge_path_t *child,
               SVN_ERR(svn_ra_get_deleted_rev(ra_session, rel_source_path,
                                              older_rev, younger_rev,
                                              &revision_primary_url_deleted,
-                                             pool));
+                                             subpool));
 
-              /* ### 3067ds TODO: svn_ra_get_deleted_rev() should never
-                 ### set revision_primary_url_deleted to an invalid revision
-                 ### but what if it does?  Is setting CHILD->REMAINING_RANGES
-                 ### eqaul to PARENT's as good a solution as any?
-              if (!SVN_IS_VALID_REVNUM(revision_primary_url_deleted))
-                {
-                  child->remaining_ranges =
-                    svn_rangelist_dup(parent->remaining_ranges, pool);
-                }*/
+              /* PRIMARY_URL@older_rev exists and PRIMARY_URL@peg_rev doesn't,
+                 so svn_ra_get_deleted_rev() should always find the revision
+                 PRIMARY_URL@older_rev was deleted. */
+              SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(
+                revision_primary_url_deleted));
 
               /* If this is a reverse merge reorder CHILD->REMAINING_RANGES and
                  PARENT->REMAINING_RANGES so both will work with the
                  svn_rangelist_* APIs below. */
               if (is_rollback)
                 {
+                  /* svn_rangelist_reverse operates in place so it's safe
+                     to use our subpool. */
                   SVN_ERR(svn_rangelist_reverse(child->remaining_ranges,
-                                                pool));
+                                                subpool));
                   SVN_ERR(svn_rangelist_reverse(parent->remaining_ranges,
-                                                pool));
+                                                subpool));
                 }
 
               /* Create a rangelist describing the range PRIMARY_URL@older_rev
@@ -2347,11 +2345,11 @@ adjust_deleted_subtree_ranges(svn_client__merge_path_t *child,
                  CHILD->REMAINING_RANGES. */
               exists_rangelist =
                 init_rangelist(older_rev, revision_primary_url_deleted - 1,
-                               TRUE, pool);
+                               TRUE, subpool);
               SVN_ERR(svn_rangelist_intersect(&(child->remaining_ranges),
                                               exists_rangelist,
                                               child->remaining_ranges,
-                                              FALSE, pool));
+                                              FALSE, subpool));
 
               /* Create a second rangelist describing the range beginning when
                  PRIMARY_URL@older_rev was deleted until younger_rev.  Then
@@ -2360,22 +2358,23 @@ adjust_deleted_subtree_ranges(svn_client__merge_path_t *child,
                  store the result in CHILD->REMANING_RANGES. */
               deleted_rangelist =
                 init_rangelist(revision_primary_url_deleted - 1, peg_rev,
-                               TRUE, pool);
+                               TRUE, subpool);
               SVN_ERR(svn_rangelist_intersect(&deleted_rangelist,
                                               deleted_rangelist,
                                               parent->remaining_ranges,
-                                              FALSE, pool));
+                                              FALSE, subpool));
+
               SVN_ERR(svn_rangelist_merge(&(child->remaining_ranges),
-                                          deleted_rangelist, pool));
+                                          deleted_rangelist, subpool));
 
               /* Return CHILD->REMAINING_RANGES and PARENT->REMAINING_RANGES
                  to reverse order if necessary. */
               if (is_rollback)
                 {
                   SVN_ERR(svn_rangelist_reverse(child->remaining_ranges,
-                                                pool));
+                                                subpool));
                   SVN_ERR(svn_rangelist_reverse(parent->remaining_ranges,
-                                                pool));
+                                                subpool));
                 }
             }
         }
@@ -2405,8 +2404,8 @@ adjust_deleted_subtree_ranges(svn_client__merge_path_t *child,
          svn_rangelist_* APIs below. */
       if (is_rollback)
         {
-          SVN_ERR(svn_rangelist_reverse(child->remaining_ranges, pool));
-          SVN_ERR(svn_rangelist_reverse(parent->remaining_ranges, pool));
+          SVN_ERR(svn_rangelist_reverse(child->remaining_ranges, subpool));
+          SVN_ERR(svn_rangelist_reverse(parent->remaining_ranges, subpool));
         }
 
       /* Since segment doesn't span older_rev:peg_rev we know
@@ -2415,11 +2414,11 @@ adjust_deleted_subtree_ranges(svn_client__merge_path_t *child,
          range where PRIMARY_URL exists and find the intersection of that
          range and CHILD->REMAINING_RANGELIST. */
       exists_rangelist = init_rangelist(segment->range_start, peg_rev,
-                                        TRUE, pool);
+                                        TRUE, subpool);
       SVN_ERR(svn_rangelist_intersect(&(child->remaining_ranges),
                                       exists_rangelist,
                                       child->remaining_ranges,
-                                      FALSE, pool));
+                                      FALSE, subpool));
 
       /* Create a second rangelist describing the range before
          PRIMARY_URL@peg_rev came into existence and find the intersection of
@@ -2427,22 +2426,27 @@ adjust_deleted_subtree_ranges(svn_client__merge_path_t *child,
          with exists_rangelist and store the result in
          CHILD->REMANING_RANGES. */
       non_existent_rangelist = init_rangelist(older_rev, segment->range_start,
-                                              TRUE, pool);
+                                              TRUE, subpool);
       SVN_ERR(svn_rangelist_intersect(&non_existent_rangelist,
                                       non_existent_rangelist,
                                       parent->remaining_ranges,
-                                      FALSE, pool));
+                                      FALSE, subpool));
+
       SVN_ERR(svn_rangelist_merge(&(child->remaining_ranges),
-                                  non_existent_rangelist, pool));
+                                  non_existent_rangelist, subpool));
 
       /* Return CHILD->REMAINING_RANGES and PARENT->REMAINING_RANGES
          to reverse order if necessary. */
       if (is_rollback)
         {
-          SVN_ERR(svn_rangelist_reverse(child->remaining_ranges, pool));
-          SVN_ERR(svn_rangelist_reverse(parent->remaining_ranges, pool));
+          SVN_ERR(svn_rangelist_reverse(child->remaining_ranges, subpool));
+          SVN_ERR(svn_rangelist_reverse(parent->remaining_ranges, subpool));
         }
     }
+
+  /* Make a lasting copy of CHILD->REMAINING_RANGES using POOL. */
+  child->remaining_ranges = svn_rangelist_dup(child->remaining_ranges, pool);
+  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
