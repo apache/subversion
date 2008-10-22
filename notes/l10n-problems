@@ -55,7 +55,7 @@ linked against 2 iconv libraries (apr_iconv as well as libiconv).
 Translations on the client
 ==========================
 
-The translation effort is to translate all error messages generated on
+The translation effort is to translate most error messages generated on
 the system on which the user has invoked his subversion command (svnadmin,
 svnlook, svndumpfilter, svnversion or svn).
 
