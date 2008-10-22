@@ -718,6 +718,11 @@ svn_stream_open_writable(svn_stream_t **stream,
  * will be returned in @a temp_path. The stream will be returned in
  * @a stream. Both will be allocated from @a result_pool.
  *
+ * If @a dirpath is @c NULL, use the path returned from svn_io_temp_dir().
+ * (Note that when using the system-provided temp directory, it may not
+ * be possibly to atomically rename the resulting file due to cross-device
+ * issues.)
+ *
  * The file will be deleted according to @a delete_when.
  *
  * Temporary allocations will be performed in @a scratch_pool.
