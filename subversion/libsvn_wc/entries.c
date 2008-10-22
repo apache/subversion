@@ -1343,21 +1343,21 @@ resolve_to_defaults(apr_hash_t *entries,
 static svn_error_t *
 read_entries(svn_wc_adm_access_t *adm_access,
              svn_boolean_t show_hidden,
-             apr_pool_t *pool)
+             apr_pool_t *scratch_pool)
 {
+  apr_pool_t *result_pool = svn_wc_adm_access_pool(adm_access);
   const char *path = svn_wc_adm_access_path(adm_access);
-  apr_file_t *infile = NULL;
-  svn_stringbuf_t *buf = svn_stringbuf_create("", pool);
-  apr_hash_t *entries = apr_hash_make(svn_wc_adm_access_pool(adm_access));
+  apr_hash_t *entries = apr_hash_make(result_pool);
   char *curp, *endp;
   svn_wc_entry_t *entry;
   int entryno, entries_format;
+  svn_stream_t *stream;
+  svn_string_t *buf;
 
   /* Open the entries file. */
-  SVN_ERR(svn_wc__open_adm_file(&infile, path,
-                                SVN_WC__ADM_ENTRIES, APR_READ, pool));
-
-  SVN_ERR(svn_stringbuf_from_aprfile(&buf, infile, pool));
+  SVN_ERR(svn_wc__open_adm_stream(&stream, path, SVN_WC__ADM_ENTRIES,
+                                  scratch_pool, scratch_pool));
+  SVN_ERR(svn_string_from_stream(&buf, stream, scratch_pool, scratch_pool));
 
   curp = buf->data;
   endp = buf->data + buf->len;
@@ -1366,7 +1366,7 @@ read_entries(svn_wc_adm_access_t *adm_access,
      format. */
   if (curp != endp && !svn_ctype_isdigit(*curp))
     SVN_ERR(parse_entries_xml(adm_access, entries, show_hidden,
-                              buf->data, buf->len, pool));
+                              buf->data, buf->len, scratch_pool));
   else
     {
       const char *val;
@@ -1381,14 +1381,13 @@ read_entries(svn_wc_adm_access_t *adm_access,
         return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
                                  _("Invalid version line in entries file "
                                    "of '%s'"),
-                                 svn_path_local_style(path, pool));
+                                 svn_path_local_style(path, scratch_pool));
       entryno = 1;
 
       while (curp != endp)
         {
           svn_error_t *err = read_entry(&entry, &curp, endp,
-                                        entries_format,
-                                        svn_wc_adm_access_pool(adm_access));
+                                        entries_format, result_pool);
           if (! err)
             {
               /* We allow extra fields at the end of the line, for
@@ -1405,7 +1404,8 @@ read_entries(svn_wc_adm_access_t *adm_access,
             return svn_error_createf(err->apr_err, err,
                                      _("Error at entry %d in entries file for "
                                        "'%s':"),
-                                     entryno, svn_path_local_style(path, pool));
+                                     entryno,
+                                     svn_path_local_style(path, scratch_pool));
 
           ++curp;
           ++entryno;
@@ -1419,12 +1419,8 @@ read_entries(svn_wc_adm_access_t *adm_access,
         }
     }
 
-  /* Close the entries file. */
-  SVN_ERR(svn_wc__close_adm_file(infile, svn_wc_adm_access_path(adm_access),
-                                 SVN_WC__ADM_ENTRIES, 0, pool));
-
   /* Fill in any implied fields. */
-  SVN_ERR(resolve_to_defaults(entries, svn_wc_adm_access_pool(adm_access)));
+  SVN_ERR(resolve_to_defaults(entries, result_pool));
 
   svn_wc__adm_access_set_entries(adm_access, show_hidden, entries);
 
@@ -2255,9 +2251,11 @@ svn_wc__entries_write(apr_hash_t *entries,
 {
   svn_error_t *err = SVN_NO_ERROR;
   svn_stringbuf_t *bigstr = NULL;
-  apr_file_t *outfile = NULL;
+  svn_stream_t *stream;
+  const char *temp_file_path;
   apr_hash_index_t *hi;
   svn_wc_entry_t *this_dir;
+  apr_size_t len;
 
   SVN_ERR(svn_wc__adm_write_check(adm_access, pool));
 
@@ -2280,11 +2278,11 @@ svn_wc__entries_write(apr_hash_t *entries,
    * tags such as SVN_WC__LOG_MV to move entries files so any existing file
    * is not "valuable".
    */
-  SVN_ERR(svn_wc__open_adm_file(&outfile,
-                                svn_wc_adm_access_path(adm_access),
-                                SVN_WC__ADM_ENTRIES,
-                                (APR_WRITE | APR_CREATE),
-                                pool));
+  SVN_ERR(svn_wc__open_adm_writable(&stream,
+                                    &temp_file_path,
+                                    svn_wc_adm_access_path(adm_access),
+                                    SVN_WC__ADM_ENTRIES,
+                                    pool, pool));
 
   if (svn_wc__adm_wc_format(adm_access) > SVN_WC__XML_ENTRIES_VERSION)
     {
@@ -2321,16 +2319,16 @@ svn_wc__entries_write(apr_hash_t *entries,
     /* This is needed during cleanup of a not yet upgraded WC. */
     SVN_ERR(write_entries_xml(&bigstr, entries, this_dir, pool));
 
-  SVN_ERR_W(svn_io_file_write_full(outfile, bigstr->data,
-                                   bigstr->len, NULL, pool),
+  len = bigstr->len;
+  SVN_ERR_W(svn_stream_write(stream, bigstr->data, &len),
             apr_psprintf(pool,
                          _("Error writing to '%s'"),
                          svn_path_local_style
                          (svn_wc_adm_access_path(adm_access), pool)));
 
-  err = svn_wc__close_adm_file(outfile,
-                               svn_wc_adm_access_path(adm_access),
-                               SVN_WC__ADM_ENTRIES, 1, pool);
+  err = svn_wc__close_adm_stream(stream, temp_file_path,
+                                 svn_wc_adm_access_path(adm_access),
+                                 SVN_WC__ADM_ENTRIES, pool);
 
   svn_wc__adm_access_set_entries(adm_access, TRUE, entries);
   svn_wc__adm_access_set_entries(adm_access, FALSE, NULL);
@@ -3061,10 +3059,12 @@ svn_wc__entries_init(const char *path,
                      svn_depth_t depth,
                      apr_pool_t *pool)
 {
-  apr_file_t *f = NULL;
+  svn_stream_t *stream;
+  const char *temp_file_path;
   svn_stringbuf_t *accum = svn_stringbuf_createf(pool, "%d\n",
                                                  SVN_WC__VERSION);
   svn_wc_entry_t *entry = alloc_entry(pool);
+  apr_size_t len;
 
   SVN_ERR_ASSERT(! repos || svn_path_is_ancestor(repos, url));
   SVN_ERR_ASSERT(depth == svn_depth_empty
@@ -3073,8 +3073,8 @@ svn_wc__entries_init(const char *path,
                  || depth == svn_depth_infinity);
 
   /* Create the entries file, which must not exist prior to this. */
-  SVN_ERR(svn_wc__open_adm_file(&f, path, SVN_WC__ADM_ENTRIES,
-                                (APR_WRITE | APR_CREATE | APR_EXCL), pool));
+  SVN_ERR(svn_wc__open_adm_writable(&stream, &temp_file_path,
+                                    path, SVN_WC__ADM_ENTRIES, pool, pool));
 
   /* Add an entry for the dir itself.  The directory has no name.  It
      might have a UUID, but otherwise only the revision and default
@@ -3095,14 +3095,16 @@ svn_wc__entries_init(const char *path,
 
   SVN_ERR(write_entry(accum, entry, SVN_WC_ENTRY_THIS_DIR, entry, pool));
 
-  SVN_ERR_W(svn_io_file_write_full(f, accum->data, accum->len, NULL, pool),
+  len = accum->len;
+  SVN_ERR_W(svn_stream_write(stream, accum->data, &len),
             apr_psprintf(pool,
                          _("Error writing entries file for '%s'"),
                          svn_path_local_style(path, pool)));
 
   /* Now we have a `entries' file with exactly one entry, an entry
      for this dir.  Close the file and sync it up. */
-  return svn_wc__close_adm_file(f, path, SVN_WC__ADM_ENTRIES, 1, pool);
+  return svn_wc__close_adm_stream(stream, temp_file_path, path,
+                                  SVN_WC__ADM_ENTRIES, pool);
 }
 
 

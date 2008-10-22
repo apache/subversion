@@ -78,18 +78,10 @@
 /* Move file SVN_WC__LOG_ATTR_NAME to SVN_WC__LOG_ATTR_DEST. */
 #define SVN_WC__LOG_MV                  "mv"
 
-/* Copy file SVN_WC__LOG_ATTR_NAME to SVN_WC__LOG_ATTR_DEST. */
-#define SVN_WC__LOG_CP                  "cp"
-
 /* Copy file SVN_WC__LOG_ATTR_NAME to SVN_WC__LOG_ATTR_DEST, but
    expand any keywords and use any eol-style defined by properties of
    the DEST. */
 #define SVN_WC__LOG_CP_AND_TRANSLATE    "cp-and-translate"
-
-/* Copy file SVN_WC__LOG_ATTR_NAME to SVN_WC__LOG_ATTR_DEST, but
-   contract any keywords and convert to LF eol, according to
-   properties of NAME. */
-#define SVN_WC__LOG_CP_AND_DETRANSLATE    "cp-and-detranslate"
 
 /* Remove file SVN_WC__LOG_ATTR_NAME. */
 #define SVN_WC__LOG_RM                  "rm"
@@ -128,6 +120,47 @@
 #define SVN_WC__LOG_MODIFY_WCPROP        "modify-wcprop"
 
 
+/* Upgrade the WC format, both .svn/format and the format number in the
+   entries file to SVN_WC__LOG_ATTR_FORMAT. */
+#define SVN_WC__LOG_UPGRADE_FORMAT "upgrade-format"
+
+/** Log attributes.  See the documentation above for log actions for
+    how these are used. **/
+
+#define SVN_WC__LOG_ATTR_NAME           "name"
+#define SVN_WC__LOG_ATTR_DEST           "dest"
+#define SVN_WC__LOG_ATTR_REVISION       "revision"
+#define SVN_WC__LOG_ATTR_TIMESTAMP      "timestamp"
+#define SVN_WC__LOG_ATTR_PROPNAME       "propname"
+#define SVN_WC__LOG_ATTR_PROPVAL        "propval"
+#define SVN_WC__LOG_ATTR_FORMAT         "format"
+#define SVN_WC__LOG_ATTR_FORCE          "force"
+
+/* This one is for SVN_WC__LOG_MERGE. */
+#define SVN_WC__LOG_ATTR_ARG_1          "arg1"
+/* This one is for SVN_WC__LOG_MERGE
+   and optionally SVN_WC__LOG_CP_AND_(DE)TRANSLATE to indicate a versioned
+   path to take its translation properties from */
+#define SVN_WC__LOG_ATTR_ARG_2          "arg2"
+/* The rest are for SVN_WC__LOG_MERGE.  Extend as necessary. */
+#define SVN_WC__LOG_ATTR_ARG_3          "arg3"
+#define SVN_WC__LOG_ATTR_ARG_4          "arg4"
+#define SVN_WC__LOG_ATTR_ARG_5          "arg5"
+
+
+
+/* DEPRECATED, left for compat with older format working copies
+
+   Copy file SVN_WC__LOG_ATTR_NAME to SVN_WC__LOG_ATTR_DEST. */
+#define SVN_WC__LOG_CP                  "cp"
+
+/* DEPRECATED, left for compat with older format working copies
+
+   Copy file SVN_WC__LOG_ATTR_NAME to SVN_WC__LOG_ATTR_DEST, but
+   contract any keywords and convert to LF eol, according to
+   properties of NAME. */
+#define SVN_WC__LOG_CP_AND_DETRANSLATE    "cp-and-detranslate"
+
 /* DEPRECATED, left for compat with pre-v8 format working copies
 
    A log command which runs svn_wc_merge2().
@@ -147,39 +180,6 @@
    they're just basenames within loggy->path.)
  */
 #define SVN_WC__LOG_MERGE        "merge"
-
-/* Upgrade the WC format, both .svn/format and the format number in the
-   entries file to SVN_WC__LOG_ATTR_FORMAT. */
-#define SVN_WC__LOG_UPGRADE_FORMAT "upgrade-format"
-
-/** Log attributes.  See the documentation above for log actions for
-    how these are used. **/
-
-#define SVN_WC__LOG_ATTR_NAME           "name"
-#define SVN_WC__LOG_ATTR_DEST           "dest"
-#define SVN_WC__LOG_ATTR_REVISION       "revision"
-#define SVN_WC__LOG_ATTR_TIMESTAMP      "timestamp"
-#define SVN_WC__LOG_ATTR_PROPNAME       "propname"
-#define SVN_WC__LOG_ATTR_PROPVAL        "propval"
-
-/* This one is for SVN_WC__LOG_MERGE
-   and optionally SVN_WC__LOG_CP_AND_(DE)TRANSLATE to indicate special-only */
-#define SVN_WC__LOG_ATTR_ARG_1          "arg1"
-/* This one is for SVN_WC__LOG_MERGE
-   and optionally SVN_WC__LOG_CP_AND_(DE)TRANSLATE to indicate a versioned
-   path to take its translation properties from */
-#define SVN_WC__LOG_ATTR_ARG_2          "arg2"
-/* The rest are for SVN_WC__LOG_MERGE.  Extend as necessary. */
-#define SVN_WC__LOG_ATTR_ARG_3          "arg3"
-#define SVN_WC__LOG_ATTR_ARG_4          "arg4"
-#define SVN_WC__LOG_ATTR_ARG_5          "arg5"
-/* For upgrade-format. */
-#define SVN_WC__LOG_ATTR_FORMAT         "format"
-/* For modify-entry */
-#define SVN_WC__LOG_ATTR_FORCE          "force"
-
-
-
 
 
 /*** Userdata for the callbacks. ***/
@@ -1710,12 +1710,9 @@ run_log(svn_wc_adm_access_t *adm_access,
         const char *diff3_cmd,
         apr_pool_t *pool)
 {
-  svn_error_t *err, *err2;
   svn_xml_parser_t *parser;
   struct log_runner *loggy = apr_pcalloc(pool, sizeof(*loggy));
   char *buf = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
-  apr_size_t buf_len;
-  apr_file_t *f = NULL;
   const char *logfile_path;
   int log_number;
   apr_pool_t *iterpool = svn_pool_create(pool);
@@ -1749,11 +1746,18 @@ run_log(svn_wc_adm_access_t *adm_access,
 
   for (log_number = 0; ; log_number++)
     {
+      svn_stream_t *stream;
+      svn_error_t *err;
+      apr_size_t len = SVN__STREAM_CHUNK_SIZE;
+
       svn_pool_clear(iterpool);
       logfile_path = svn_wc__logfile_path(log_number, iterpool);
+
       /* Parse the log file's contents. */
-      err = svn_wc__open_adm_file(&f, svn_wc_adm_access_path(adm_access),
-                                  logfile_path, APR_READ, iterpool);
+      err = svn_wc__open_adm_stream(&stream,
+                                    svn_wc_adm_access_path(adm_access),
+                                    logfile_path,
+                                    iterpool, iterpool);
       if (err)
         {
           if (APR_STATUS_IS_ENOENT(err->apr_err))
@@ -1768,28 +1772,13 @@ run_log(svn_wc_adm_access_t *adm_access,
         }
 
       do {
-        buf_len = SVN__STREAM_CHUNK_SIZE;
+        SVN_ERR(svn_stream_read(stream, buf, &len));
+        SVN_ERR(svn_xml_parse(parser, buf, len, 0));
 
-        err = svn_io_file_read(f, buf, &buf_len, iterpool);
-        if (err && !APR_STATUS_IS_EOF(err->apr_err))
-          return svn_error_createf
-            (err->apr_err, err,
-             _("Error reading administrative log file in '%s'"),
-             svn_path_local_style(svn_wc_adm_access_path(adm_access),
-                                  iterpool));
+      } while (len == SVN__STREAM_CHUNK_SIZE);
 
-        err2 = svn_xml_parse(parser, buf, buf_len, 0);
-        if (err2)
-          {
-            svn_error_clear(err);
-            SVN_ERR(err2);
-          }
-      } while (! err);
-
-      svn_error_clear(err);
-      SVN_ERR(svn_io_file_close(f, iterpool));
+      SVN_ERR(svn_stream_close(stream));
     }
-
 
   /* Pacify Expat with a pointless closing element tag. */
   SVN_ERR(svn_xml_parse(parser, log_end, strlen(log_end), 1));
@@ -1805,12 +1794,11 @@ run_log(svn_wc_adm_access_t *adm_access,
   if (loggy->entries_modified == TRUE)
     {
       apr_hash_t *entries;
-      SVN_ERR(svn_wc_entries_read(&entries, loggy->adm_access, TRUE, pool));
-      SVN_ERR(svn_wc__entries_write(entries, loggy->adm_access, pool));
+      SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, pool));
+      SVN_ERR(svn_wc__entries_write(entries, adm_access, pool));
     }
   if (loggy->wcprops_modified)
-    SVN_ERR(svn_wc__props_flush(svn_wc_adm_access_path(adm_access),
-                                svn_wc__props_wcprop, loggy->adm_access, pool));
+    SVN_ERR(svn_wc__wcprops_flush(adm_access, pool));
 
   /* Check for a 'killme' file in the administrative area. */
   SVN_ERR(svn_wc__check_killme(adm_access, &killme, &kill_adm_only, pool));
@@ -1863,7 +1851,7 @@ svn_wc__rerun_log(svn_wc_adm_access_t *adm_access,
  */
 static svn_error_t *
 loggy_move_copy_internal(svn_stringbuf_t **log_accum,
-                         const char *move_copy_op,
+                         svn_boolean_t is_move,
                          svn_wc_adm_access_t *adm_access,
                          const char *src_path, const char *dst_path,
                          apr_pool_t *pool)
@@ -1879,7 +1867,9 @@ loggy_move_copy_internal(svn_stringbuf_t **log_accum,
     {
       svn_xml_make_open_tag(log_accum, pool,
                             svn_xml_self_closing,
-                            move_copy_op,
+                            is_move
+                              ? SVN_WC__LOG_MV
+                              : SVN_WC__LOG_CP_AND_TRANSLATE,
                             SVN_WC__LOG_ATTR_NAME,
                             src_path,
                             SVN_WC__LOG_ATTR_DEST,
@@ -1951,9 +1941,7 @@ svn_wc__loggy_copy(svn_stringbuf_t **log_accum,
                    const char *src_path, const char *dst_path,
                    apr_pool_t *pool)
 {
-  return loggy_move_copy_internal(log_accum,
-                                  SVN_WC__LOG_CP_AND_TRANSLATE,
-                                  adm_access,
+  return loggy_move_copy_internal(log_accum, FALSE, adm_access,
                                   loggy_path(src_path, adm_access),
                                   loggy_path(dst_path, adm_access),
                                   pool);
@@ -2227,8 +2215,7 @@ svn_wc__loggy_move(svn_stringbuf_t **log_accum,
                    const char *src_path, const char *dst_path,
                    apr_pool_t *pool)
 {
-  return loggy_move_copy_internal(log_accum,
-                                  SVN_WC__LOG_MV, adm_access,
+  return loggy_move_copy_internal(log_accum, TRUE, adm_access,
                                   loggy_path(src_path, adm_access),
                                   loggy_path(dst_path, adm_access),
                                   pool);
@@ -2386,20 +2373,21 @@ svn_wc__write_log(svn_wc_adm_access_t *adm_access,
                   int log_number, svn_stringbuf_t *log_content,
                   apr_pool_t *pool)
 {
-  apr_file_t *log_file;
+  svn_stream_t *stream;
+  const char *temp_file_path;
   const char *logfile_name = svn_wc__logfile_path(log_number, pool);
   const char *adm_path = svn_wc_adm_access_path(adm_access);
+  apr_size_t len = log_content->len;
 
-  SVN_ERR(svn_wc__open_adm_file(&log_file, adm_path, logfile_name,
-                                (APR_WRITE | APR_CREATE), pool));
+  SVN_ERR(svn_wc__open_adm_writable(&stream, &temp_file_path,
+                                    adm_path, logfile_name, pool, pool));
 
-  SVN_ERR_W(svn_io_file_write_full(log_file, log_content->data,
-                                   log_content->len, NULL, pool),
+  SVN_ERR_W(svn_stream_write(stream, log_content->data, &len),
             apr_psprintf(pool, _("Error writing log for '%s'"),
                          svn_path_local_style(logfile_name, pool)));
 
-  return svn_wc__close_adm_file(log_file, adm_path, logfile_name,
-                                TRUE, pool);
+  return svn_wc__close_adm_stream(stream, temp_file_path, adm_path,
+                                  logfile_name, pool);
 }
 
 
