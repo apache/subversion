@@ -3229,14 +3229,10 @@ svn_io_write_version_file(const char *path,
                           int version,
                           apr_pool_t *pool)
 {
-  apr_file_t *format_file = NULL;
   const char *path_tmp;
   const char *format_contents = apr_psprintf(pool, "%d\n", version);
 
-  /* We only promise to handle non-negative integers. */
-  if (version < 0)
-    return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                             _("Version %d is not non-negative"), version);
+  SVN_ERR_ASSERT(version >= 0);
 
   SVN_ERR(svn_io_write_unique(&path_tmp, path, format_contents,
                               strlen(format_contents), svn_io_file_del_none,
