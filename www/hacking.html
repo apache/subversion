@@ -3044,6 +3044,13 @@ passed to gettext translation routines whenever referenced in the
 code.  For an example, look at how the header and footer are handled
 in subversion/svn/help-cmd.c.</p>
 
+<p>Beside _() and N_() macros also U_() is used to mark strings which
+will not be translated because it's in general not useful to translate
+internal error messages. This should affect only obscure error messages
+most users should never ever see (caused by bugs in Subversion or
+very special repository corruptions). The reason for using U_() is to
+explicitly note that a gettext call was not just forgetten.</p>
+
 <p>When using direct calls to gettext routines (*gettext or
 *dgettext), keep in mind that most of Subversion code is library code.
 Therefore the default domain is not necessarily Subversion's own
