@@ -969,6 +969,26 @@ svn_stream_contents_same(svn_boolean_t *same,
                          svn_stream_t *stream2,
                          apr_pool_t *pool);
 
+
+/** Read the contents of @a stream into memory, returning the data in
+ * @a result. The stream will be closed when it has been successfully and
+ * completely read.
+ *
+ * The returned memory is allocated in @a result_pool, and any temporary
+ * allocations are performed in @a scratch_pool.
+ *
+ * @note due to memory pseudo-reallocation behavior (due to pools), this
+ *   can be a memory-intensive operation for large files.
+ *
+ * @since New in 1.6
+ */
+svn_error_t *
+svn_string_from_stream(svn_string_t **result,
+                       svn_stream_t *stream,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool);
+
+
 /** @} */
 
 /** Set @a *result to a string containing the contents of @a
@@ -980,6 +1000,9 @@ svn_stream_contents_same(svn_boolean_t *same,
  * stdin-reading processes abound.  For example, if a program tries
  * both to invoke an external editor and to read from stdin, stdin
  * could be trashed and the editor might act funky or die outright.
+ *
+ * @note due to memory pseudo-reallocation behavior (due to pools), this
+ *   can be a memory-intensive operation for large files.
  *
  * @since New in 1.5.
  */
@@ -1003,6 +1026,9 @@ svn_stringbuf_from_file(svn_stringbuf_t **result,
 /** Sets @a *result to a string containing the contents of the already opened
  * @a file.  Reads from the current position in file to the end.  Does not
  * close the file or reset the cursor position.
+ *
+ * @note due to memory pseudo-reallocation behavior (due to pools), this
+ *   can be a memory-intensive operation for large files.
  */
 svn_error_t *
 svn_stringbuf_from_aprfile(svn_stringbuf_t **result,

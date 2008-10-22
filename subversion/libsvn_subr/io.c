@@ -1577,6 +1577,10 @@ svn_stringbuf_from_file2(svn_stringbuf_t **result,
       SVN_ERR(svn_io_file_open(&f, filename, APR_READ, APR_OS_DEFAULT, pool));
     }
 
+  /* ### ugh. we should stat() the file, get its length, and read that
+     ### much data into memory. the _from_aprfile() function uses a
+     ### realloc-style that chews up memory needlessly. */
+
   SVN_ERR(svn_stringbuf_from_aprfile(result, f, pool));
   return svn_io_file_close(f, pool);
 }
@@ -1643,9 +1647,6 @@ svn_stringbuf_from_aprfile(svn_stringbuf_t **result,
   if (err && !APR_STATUS_IS_EOF(err->apr_err))
     return err;
   svn_error_clear(err);
-
-  /* Null terminate the stringbuf. */
-  res->data[res->len] = 0;
 
   *result = res;
   return SVN_NO_ERROR;
