@@ -352,7 +352,9 @@ svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
 
       path = svn_path_basename(conflict->path, pool);
       len = strlen(path);
-      SVN_ERR_ASSERT(len > 0);
+      if (len == 0)
+        return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
+                        "Empty victim path in tree conflict description");
 
       /* Escape separator chars while writing victim path. */
       for (j = 0; j < len; j++)
@@ -377,7 +379,8 @@ svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
             svn_stringbuf_appendcstr(buf, SVN_WC__NODE_FILE);
             break;
           default:
-            SVN_ERR_MALFUNCTION();
+            return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
+                _("Bad node_kind in tree conflict description"));
         }
 
       svn_stringbuf_appendbytes(buf, &field_separator, 1);
@@ -394,7 +397,8 @@ svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
             svn_stringbuf_appendcstr(buf, SVN_WC__OPERATION_MERGE);
             break;
           default:
-            SVN_ERR_MALFUNCTION();
+            return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
+                _("Bad operation in tree conflict description"));
         }
 
       svn_stringbuf_appendbytes(buf, &field_separator, 1);
@@ -411,7 +415,8 @@ svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
             svn_stringbuf_appendcstr(buf, SVN_WC__CONFLICT_ACTION_ADDED);
             break;
           default:
-            SVN_ERR_MALFUNCTION();
+            return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
+                _("Bad action in tree conflict description"));
         }
 
       svn_stringbuf_appendbytes(buf, &field_separator, 1);
@@ -434,7 +439,8 @@ svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
             svn_stringbuf_appendcstr(buf, SVN_WC__CONFLICT_REASON_OBSTRUCTED);
             break;
           default:
-            SVN_ERR_MALFUNCTION();
+            return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
+                _("Bad reason in tree conflict description"));
         }
 
       if (i < (conflicts->nelts - 1))
