@@ -1099,10 +1099,23 @@ public class SVNClient implements SVNClientInterface
             throws ClientException;
 
     /**
+     * @deprecated Use {@link #setRevProperty(String, String, Revision, String,
+     *                                        String, boolean)} instead.
      * @since 1.2
      */
+    public void setRevProperty(String path, String name, Revision rev,
+                               String value, boolean force)
+            throws ClientException
+    {
+        setRevProperty(path, name, rev, value, null, force);
+    }
+
+    /**
+     * @since 1.6
+     */
     public native void setRevProperty(String path, String name, Revision rev,
-                                      String value, boolean force)
+                                      String value, String originalValue,
+                                      boolean force)
             throws ClientException;
 
     /**
