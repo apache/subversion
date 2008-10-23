@@ -1768,6 +1768,18 @@ deep_trees_after_tree_del = wc.State('', {
   })
 
 
+# The items that should be reported conflicted in a tree-conflict that
+# involves deep_trees_tree_del.
+deep_trees_conflicts_after_tree_del = wc.State('', {
+  'F/alpha'           : Item(status='  C'),
+  'D/D1'              : Item(status='  C'),
+  'DF/D1'             : Item(status='  C'),
+  'DD/D1'             : Item(status='  C'),
+  'DDF/D1'            : Item(status='  C'),
+  'DDD/D1'            : Item(status='  C'),
+  })
+
+
 
 
 class DeepTreesTestCase:

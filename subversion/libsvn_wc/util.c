@@ -129,6 +129,9 @@ svn_wc_create_notify(const char *path,
   ret->changelist_name = NULL;
   ret->merge_range = NULL;
   ret->path_prefix = NULL;
+  ret->is_tree_conflict_victim = FALSE;
+  ret->tree_conflict_action = (svn_wc_conflict_action_t)(-1);
+  ret->tree_conflict_reason = (svn_wc_conflict_reason_t)(-1);
 
   return ret;
 }
