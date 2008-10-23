@@ -376,7 +376,7 @@ switch_file_external(const char *path,
       apr_file_t *f;
       svn_boolean_t text_conflicted;
       svn_boolean_t prop_conflicted;
-      svn_boolean_t has_tree_conflicted_children;
+      svn_boolean_t tree_conflicted;
 
       /* Check for a conflict on the containing directory.  Because a
          switch is done on the added file later, it will leave a
@@ -386,9 +386,10 @@ switch_file_external(const char *path,
       SVN_ERR(svn_wc__entry_versioned(&anchor_dir_entry, anchor,
                                       target_adm_access, FALSE, subpool));
       SVN_ERR(svn_wc_conflicted_p2(&text_conflicted, &prop_conflicted,
-                                   &has_tree_conflicted_children,
-                                   anchor, anchor_dir_entry, subpool));
-      if (text_conflicted || prop_conflicted)
+                                   &tree_conflicted, NULL, anchor,
+                                   anchor_dir_entry, target_adm_access,
+                                   subpool));
+      if (text_conflicted || prop_conflicted || tree_conflicted)
         return svn_error_createf
           (SVN_ERR_WC_FOUND_CONFLICT, 0,
            _("The file external from '%s' cannot be written to '%s' while "

@@ -3969,6 +3969,7 @@ leaf_del = svntest.actions.deep_trees_leaf_del
 state_after_leaf_edit = svntest.actions.deep_trees_after_leaf_edit
 state_after_leaf_del = svntest.actions.deep_trees_after_leaf_del
 state_after_tree_del = svntest.actions.deep_trees_after_tree_del
+conflicts_after_tree_del = svntest.actions.deep_trees_conflicts_after_tree_del
 
 DeepTreesTestCase = svntest.actions.DeepTreesTestCase
 
@@ -3979,21 +3980,15 @@ def tree_conflicts_on_update_1_1(sbox):
   # use case 1, as in notes/tree-conflicts/use-cases.txt
   # 1.1) local tree delete, incoming leaf edit
 
-  expected_output = wc.State('', {
-    'F'                 : Item(status='C '),
-    'D'                 : Item(status='C '),
-    'DF'                : Item(status='C '),
-    'DD'                : Item(status='C '),
-    'DDF'               : Item(status='C '),
-    'DDD'               : Item(status='C '),
-    })
+  expected_output = conflicts_after_tree_del;
 
   expected_disk = state_after_tree_del
 
-  expected_status = state_after_tree_del.copy()
+  expected_status = conflicts_after_tree_del.copy()
   expected_status.add({ '' : Item(status='  ') }) # also set root's attributes
   expected_status.tweak(wc_rev=3)
-  expected_status.tweak('F', 'D', 'DF', 'DD', 'DDF', 'DDD', status='C ')
+  expected_status.tweak('F/alpha', 'D/D1', 'DF/D1', 'DD/D1', 'DDF/D1', 'DDD/D1',
+                        status='      C')
 
   svntest.actions.deep_trees_run_tests_scheme_for_update(sbox,
     [ DeepTreesTestCase("local_tree_del_incoming_leaf_edit",

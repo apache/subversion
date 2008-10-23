@@ -426,7 +426,7 @@ assemble_status(svn_wc_status2_t **status,
       if (entry->prejfile || entry->conflict_old ||
           entry->conflict_new || entry->conflict_wrk)
         {
-          svn_boolean_t text_conflict_p, prop_conflict_p, dummy;
+          svn_boolean_t text_conflict_p, prop_conflict_p;
           const char *parent_dir;
 
           if (entry->kind == svn_node_dir)
@@ -438,7 +438,8 @@ assemble_status(svn_wc_status2_t **status,
              marked it as resolved by deleting the artifact files, so check
              for that. */
           SVN_ERR(svn_wc_conflicted_p2(&text_conflict_p, &prop_conflict_p,
-                                       &dummy, parent_dir, entry, pool));
+                                       NULL, &has_tree_conflicted_children,
+                                       parent_dir, entry, adm_access, pool));
 
           if (text_conflict_p)
             final_text_status = svn_wc_status_conflicted;

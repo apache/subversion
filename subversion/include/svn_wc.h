@@ -884,6 +884,41 @@ typedef enum svn_wc_notify_lock_state_t
 
 } svn_wc_notify_lock_state_t;
 
+
+/* These two enums were originally found further down in this
+ * file, in the section called "Interactive conflict handling",
+ * but they were added to svn_wc_notify_t and needed up here.
+ */
+
+/** The type of action being attempted on an object.
+ *
+ * @since New in 1.5.
+ */
+typedef enum svn_wc_conflict_action_t
+{
+  svn_wc_conflict_action_edit,    /* attempting to change text or props */
+  svn_wc_conflict_action_add,     /* attempting to add object */
+  svn_wc_conflict_action_delete   /* attempting to delete object */
+
+} svn_wc_conflict_action_t;
+
+
+/** The pre-existing condition which is causing a state of conflict.
+ *
+ * @since New in 1.5.
+ */
+typedef enum svn_wc_conflict_reason_t
+{
+  svn_wc_conflict_reason_edited,     /* local edits are already present */
+  svn_wc_conflict_reason_obstructed, /* another object is in the way */
+  svn_wc_conflict_reason_deleted,    /* object is already schedule-delete */
+  svn_wc_conflict_reason_added,      /* object is already added or schedule-add */
+  svn_wc_conflict_reason_missing,    /* object is unknown or missing */
+  svn_wc_conflict_reason_unversioned /* object is unversioned */
+
+} svn_wc_conflict_reason_t;
+
+
 /**
  * Structure used in the @c svn_wc_notify_func2_t function.
  *
@@ -964,6 +999,22 @@ typedef struct svn_wc_notify_t {
    * allow notification to remove a common prefix from all the paths
    * displayed for an operation.  @since New in 1.6 */
   const char *path_prefix;
+
+  /** Whether @c path is a victim of a tree-conflict.
+   * @since New in 1.6 */
+  svn_boolean_t is_tree_conflict_victim;
+
+  /** If IS_TREE_CONFLICT_VICTIM is TRUE, this supplies the corresponding
+   * conflict action, i.e. what subversion tried to do but couldn't because
+   * it encountered a tree-conflict.
+   * @since New in 1.6 */
+  svn_wc_conflict_action_t tree_conflict_action;
+
+  /** If IS_TREE_CONFLICT_VICTIM is TRUE, this supplies the corresponding
+   * conflict reason, i.e. what is found in the working copy or the target
+   * and prevents an action that subversion wanted to carry out.
+   * @since New in 1.6 */
+  svn_wc_conflict_reason_t tree_conflict_reason;
 
   /* NOTE: Add new fields at the end to preserve binary compatibility.
      Also, if you add fields here, you have to update svn_wc_create_notify
@@ -1095,34 +1146,6 @@ typedef svn_error_t *(*svn_wc_get_file_t)(void *baton,
  *    - return the merged file in the @c svn_wc_conflict_result_t.
  *
  */
-
-/** The type of action being attempted on an object.
- *
- * @since New in 1.5.
- */
-typedef enum svn_wc_conflict_action_t
-{
-  svn_wc_conflict_action_edit,    /* attempting to change text or props */
-  svn_wc_conflict_action_add,     /* attempting to add object */
-  svn_wc_conflict_action_delete   /* attempting to delete object */
-
-} svn_wc_conflict_action_t;
-
-
-/** The pre-existing condition which is causing a state of conflict.
- *
- * @since New in 1.5.
- */
-typedef enum svn_wc_conflict_reason_t
-{
-  svn_wc_conflict_reason_edited,     /* local edits are already present */
-  svn_wc_conflict_reason_obstructed, /* another object is in the way */
-  svn_wc_conflict_reason_deleted,    /* object is already schedule-delete */
-  svn_wc_conflict_reason_added,      /* object is already added or schedule-add */
-  svn_wc_conflict_reason_missing,    /* object is unknown or missing */
-  svn_wc_conflict_reason_unversioned /* object is unversioned */
-
-} svn_wc_conflict_reason_t;
 
 
 /** The type of conflict being described by an @c
@@ -2144,12 +2167,18 @@ svn_wc_entry_dup(const svn_wc_entry_t *entry,
 
 /** Given a @a dir_path under version control, decide if one of its
  * entries (@a entry) is in state of conflict; return the answers in
- * @a text_conflicted_p, @a prop_conflicted_p and @a
- * has_tree_conflicted_children.
+ * @a text_conflicted_p, @a prop_conflicted_p, @a tree_conflicted_p and
+ * @a has_tree_conflicted_children_p.
+ *
+ * Only @a tree_conflicted_p and @a has_tree_conflicted_children_p can
+ * be NULL, in which case no answer is supplied, repsectively.
+ *
+ * An @a adm_access is (only) needed to determine @a tree_conflicted_p.
+ * If @a tree_conflicted_p is NULL, @a adm_access may be NULL as well.
  *
  * If @a entry is the THIS_DIR entry of @a dir_path, and this directory
  * currently contains one or more tree-conflicted children, then set
- * @a *has_tree_conflicted_children to true, else set it to false.
+ * @a *has_tree_conflicted_children_p to true, else set it to false.
  *
  * If the @a entry mentions that a text conflict file (.rej suffix)
  * exists, but it cannot be found, assume the text conflict has been
@@ -2160,6 +2189,9 @@ svn_wc_entry_dup(const svn_wc_entry_t *entry,
  * conflicts have been resolved by the user and return FALSE in
  * @a *prop_conflicted_p.
  *
+ * @a *tree_conflicted_p and @a *has_tree_conflicted_children_p are
+ * not auto-resolved in this fashion, an explicit `resolved' is needed.
+ *
  * The @a entry is not updated.
  *
  * @since New in 1.6.
@@ -2167,9 +2199,11 @@ svn_wc_entry_dup(const svn_wc_entry_t *entry,
 svn_error_t *
 svn_wc_conflicted_p2(svn_boolean_t *text_conflicted_p,
                      svn_boolean_t *prop_conflicted_p,
-                     svn_boolean_t *has_tree_conflicted_children,
+                     svn_boolean_t *tree_conflicted_p,
+                     svn_boolean_t *has_tree_conflicted_children_p,
                      const char *dir_path,
                      const svn_wc_entry_t *entry,
+                     svn_wc_adm_access_t *adm_access,
                      apr_pool_t *pool);
 
 /** Like svn_wc_conflicted_p2, but without the capability to

@@ -318,31 +318,25 @@ harvest_committables(apr_hash_t *committables,
                                           APR_HASH_KEY_STRING))))
         {
           entry = e;
-          SVN_ERR(svn_wc_conflicted_p2(&tc, &pc, &treec, path, entry, pool));
+          SVN_ERR(svn_wc_conflicted_p2(&tc, &pc, &treec, NULL, path, entry,
+                                       adm_access, pool));
         }
 
       /* No new entry?  Just check the parent's pointer for
          conflicts. */
       else
         {
-          SVN_ERR(svn_wc_conflicted_p2(&tc, &pc, &treec, p_path, entry,
-                                       pool));
+          SVN_ERR(svn_wc_conflicted_p2(&tc, &pc, &treec, NULL, p_path, entry,
+                                       adm_access, pool));
         }
     }
 
   /* If this is not a directory, check for conflicts using the
-     parent's path. */
+     parent's path, passing this node's entry. */
   else
     {
-      /* ### Maybe the tree-conflict test should be a separate function. */
-      svn_boolean_t dummy;
-      const svn_wc_entry_t *p_entry;
-
-      SVN_ERR(svn_wc_entry(&p_entry, p_path, adm_access, TRUE, pool));
-      SVN_ERR(svn_wc_conflicted_p2(&dummy, &dummy, &treec, p_path,
-                                   p_entry, pool));
-
-      SVN_ERR(svn_wc_conflicted_p2(&tc, &pc, &dummy, p_path, entry, pool));
+      SVN_ERR(svn_wc_conflicted_p2(&tc, &pc, &treec, NULL, p_path, entry,
+                                   adm_access, pool));
     }
 
   /* Bail now if any conflicts exist for the ENTRY. */

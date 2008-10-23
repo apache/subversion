@@ -542,9 +542,11 @@ svn_wc_text_modified_p(svn_boolean_t *modified_p,
 svn_error_t *
 svn_wc_conflicted_p2(svn_boolean_t *text_conflicted_p,
                      svn_boolean_t *prop_conflicted_p,
-                     svn_boolean_t *has_tree_conflicted_children,
+                     svn_boolean_t *tree_conflicted_p,
+                     svn_boolean_t *has_tree_conflicted_children_p,
                      const char *dir_path,
                      const svn_wc_entry_t *entry,
+                     svn_wc_adm_access_t *adm_access,
                      apr_pool_t *pool)
 {
   const char *path;
@@ -553,7 +555,10 @@ svn_wc_conflicted_p2(svn_boolean_t *text_conflicted_p,
 
   *text_conflicted_p = FALSE;
   *prop_conflicted_p = FALSE;
-  *has_tree_conflicted_children = FALSE;
+  if (tree_conflicted_p != NULL)
+    *tree_conflicted_p = FALSE;
+  if (has_tree_conflicted_children_p != NULL)
+    *has_tree_conflicted_children_p = FALSE;
 
   /* Look for any text conflict, exercising only as much effort as
      necessary to obtain a definitive answer.  This only applies to
@@ -594,11 +599,23 @@ svn_wc_conflicted_p2(svn_boolean_t *text_conflicted_p,
         *prop_conflicted_p = TRUE;
     }
 
-  /* Check for tree conflicts (only "this-dir" entries have tree conflicts). */
-  if ((strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) == 0)
+  /* Find out whether it's a tree conflict victim. */
+  if (tree_conflicted_p != NULL)
+    {
+      svn_wc_conflict_description_t *conflict;
+      SVN_ERR_ASSERT(adm_access != NULL);
+      path = svn_path_join(dir_path, entry->name, subpool);
+      SVN_ERR(svn_wc_get_tree_conflict(&conflict, path, adm_access, subpool));
+      *tree_conflicted_p = (conflict != NULL);
+    }
+
+  /* Check for contained tree conflicts (only "this-dir" entries
+   * contain tree conflicts). */
+  if ((has_tree_conflicted_children_p != NULL) &&
+      (strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) == 0)
       && entry->tree_conflict_data)
     {
-      *has_tree_conflicted_children = TRUE;
+      *has_tree_conflicted_children_p = TRUE;
     }
 
   svn_pool_destroy(subpool);
@@ -612,10 +629,8 @@ svn_wc_conflicted_p(svn_boolean_t *text_conflicted_p,
                     const svn_wc_entry_t *entry,
                     apr_pool_t *pool)
 {
-  svn_boolean_t has_tree_conflicted_children;
   return svn_wc_conflicted_p2(text_conflicted_p, prop_conflicted_p,
-                              &has_tree_conflicted_children, dir_path, entry,
-                              pool);
+                              NULL, NULL, dir_path, entry, NULL, pool);
 }
 
 
