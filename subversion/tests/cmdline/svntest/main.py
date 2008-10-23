@@ -422,7 +422,8 @@ def spawn_process(command, binary_mode=0,stdin_lines=None, *varargs):
   infile, outfile, errfile, kid = open_pipe(command + ' ' + args, mode)
 
   if stdin_lines:
-    map(infile.write, stdin_lines)
+    for x in stdin_lines:
+      infile.write(x)
 
   infile.close()
 
@@ -457,12 +458,15 @@ def run_command_stdin(command, error_expected, binary_mode=0,
   if verbose_mode:
     stop = time.time()
     print '<TIME = %.6f>' % (stop - start)
-    map(sys.stdout.write, stdout_lines)
-    map(sys.stdout.write, stderr_lines)
+    for x in stdout_lines:
+      sys.stdout.write(x)
+    for x in stderr_lines:
+      sys.stdout.write(x)
 
   if (not error_expected) and (stderr_lines):
     if not verbose_mode:
-      map(sys.stdout.write, stderr_lines)
+      for x in stderr_lines:
+        sys.stdout.write(x)
     raise Failure
 
   return exit_code, stdout_lines, stderr_lines
@@ -1122,7 +1126,7 @@ class TestRunner:
 
     saved_dir = os.getcwd()
     try:
-      rc = apply(self.pred.run, (), kw)
+      rc = self.pred.run(**kw)
       if rc is not None:
         print 'STYLE ERROR in',
         self._print_name()
@@ -1258,8 +1262,9 @@ def usage():
   print "%s " % (" " * len(prog_name))
   print "%s [--list] [<test> ...]\n" % prog_name
   print "Arguments:"
-  print " test          The number of the test to run (multiple okay), " \
-        "or all tests\n"
+  print " <test>  The number of the test to run, or a range of test\n"\
+        "         numbers, like 10:12 or 10-12. Multiple numbers and\n"\
+        "         ranges are ok. If you supply none, all tests are run.\n"
   print "Options:"
   print " --list          Print test doc strings instead of running them"
   print " --fs-type       Subversion file system type (fsfs or bdb)"
@@ -1341,10 +1346,36 @@ def run_tests(test_list, serial_only = False):
     elif arg.startswith('BASE_URL='):
       test_area_url = arg[9:]
     else:
+      appended = False
       try:
         testnums.append(int(arg))
+        appended = True
       except ValueError:
-        print "ERROR:  invalid test number '%s'\n" % arg
+        # Do nothing for now.
+        appended = False
+
+      if not appended:
+        try:
+          # Check if the argument is a range
+          numberstrings = arg.split(':');
+          if len(numberstrings) != 2:
+            numberstrings = arg.split('-');
+            if len(numberstrings) != 2:
+              raise ValueError
+          left = int(numberstrings[0])
+          right = int(numberstrings[1])
+          if left > right:
+            raise ValueError
+
+          for nr in range(left,right+1):
+            testnums.append(nr)
+          else:
+            appended = True
+        except ValueError:
+          appended = False
+
+      if not appended:
+        print "ERROR: invalid test number or range '%s'\n" % arg
         usage()
         sys.exit(1)
 

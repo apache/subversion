@@ -84,7 +84,7 @@ def verify_xml_elements(lines, exprs):
   (unmatched_str, unmatched_exprs) = match_xml_element(str, exprs)
   if unmatched_exprs:
     print "Failed to find the following expressions:"
-    for expr in expr_remaining:
+    for expr in unmatched_exprs:
       print expr
     raise SVNTreeUnequal
 
@@ -152,10 +152,10 @@ def match_xml_element(str, exprs):
       e_content = ''
       if len(expr) > 2:
         e_content = expr[2]
-      if (e_content != content):
+      if (not re.search(e_content, content)):
         continue
       # success!
-      exprs = exprs.remove(expr)
+      exprs.remove(expr)
   return (str, exprs)
 
 def same_dict(d1, d2):
@@ -180,48 +180,135 @@ def info_with_tree_conflicts(sbox):
   wc_dir = sbox.wc_dir
   G = os.path.join(wc_dir, 'A', 'D', 'G')
 
-  # check info of G
-  exit_code, output, error = svntest.actions.run_and_verify_svn(None, None,
-                                                                [], 'info', G)
+  scenarios = [
+    # (filename, action_verb, action, reason)
+    ('pi',  'edit',   'edited',  'deleted'),
+    ('rho', 'delete', 'deleted', 'edited'),
+    ('tau', 'delete', 'deleted', 'deleted'),
+    ]
 
-  verify_lines(output,
-               ["Tree conflicts:",
-                "The update attempted to edit 'pi'.",
-                "The update attempted to delete 'rho'",
-                "The update attempted to delete 'tau'",
-                ])
+  for fname, action_verb, action, reason in scenarios:
+    path = os.path.join(G, fname)
 
-  # check XML info of G
+    # check plain info
+    exit_code, output, error = svntest.actions.run_and_verify_svn(None, None,
+                                                                  [], 'info',
+                                                                  path)
+    expected_str1 = "The update attempted to " + action_verb + " '" + fname
+    verify_lines(output, [expected_str1])
+
+    # check XML info
+    exit_code, output, error = svntest.actions.run_and_verify_svn(None, None,
+                                                                  [], 'info',
+                                                                  path,
+                                                                  '--xml')
+
+    # In the XML, action and reason are past tense: 'edited' not 'edit'.
+    verify_xml_elements(output,
+                        [('tree-conflict', {'victim'   : fname,
+                                            'kind'     : 'file',
+                                            'operation': 'update',
+                                            'action'   : action,
+                                            'reason'   : reason,
+                                            },
+                          )])
+
+def info_on_added_file(sbox):
+  """info on added file"""
+  
+  svntest.actions.make_repo_and_wc(sbox)
+  wc_dir = sbox.wc_dir
+  
+  # create new file
+  new_file = os.path.join(wc_dir, 'new_file')
+  svntest.main.file_append(new_file, '')
+
+  svntest.main.run_svn(None, 'add', new_file)
+  
   exit_code, output, error = svntest.actions.run_and_verify_svn(None, None,
-                                                                [], 'info', G,
+                                                                [], 'info',
+                                                                new_file)
+
+  uuid_regex = '[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}'
+
+  # check that we have a Repository Root and Repository UUID
+  expected = ['Path: %s\n' % new_file.replace('\\', '\\\\'),
+              'Name: new_file',
+              'URL: .*/new_file',
+              'Repository Root: .*',
+              'Revision: 0',
+              'Node Kind: file',
+              'Schedule: add',
+              'Repository UUID: %s' % uuid_regex]
+
+  verify_lines(output, expected)
+  
+  # check XML info
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None, None,
+                                                                [], 'info',
+                                                                new_file,
                                                                 '--xml')
 
   verify_xml_elements(output,
-                      [('tree-conflict', {'victim'   : 'pi',
-                                          'kind'     : 'file',
-                                          'operation': 'update',
-                                          'action'   : 'edited',
-                                          'reason'   : 'deleted'}),
-                       ('tree-conflict', {'victim'   : 'rho',
-                                          'kind'     : 'file',
-                                          'operation': 'update',
-                                          'action'   : 'deleted',
-                                          'reason'   : 'edited'}),
-                       ('tree-conflict', {'victim'   : 'tau',
-                                          'kind'     : 'file',
-                                          'operation': 'update',
-                                          'action'   : 'deleted',
-                                          'reason'   : 'deleted'}),
-                       ])
+                      [('entry',    {'kind'     : 'file',
+                                     'path'     : new_file,
+                                     'revision' : '0'}),
+                       ('url',      {}, '.*/new_file'),
+                       ('root',     {}, '.*'),
+                       ('uuid',     {}, uuid_regex),
+                       ('depth',    {}, 'infinity'),
+                       ('schedule', {}, 'add')])
 
+def info_on_mkdir(sbox):
+  """info on new dir with mkdir"""
+  svntest.actions.make_repo_and_wc(sbox)
+  wc_dir = sbox.wc_dir
+  
+  # create a new directory using svn mkdir
+  new_dir = os.path.join(wc_dir, 'new_dir')
+  svntest.main.run_svn(None, 'mkdir', new_dir)
+  
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None, None,
+                                                                [], 'info',
+                                                                new_dir)
+
+  uuid_regex = '[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}'
+
+  # check that we have a Repository Root and Repository UUID
+  expected = ['Path: %s\n' % new_dir.replace('\\', '\\\\'),
+              'URL: .*/new_dir',
+              'Repository Root: .*',
+              'Revision: 0',
+              'Node Kind: directory',
+              'Schedule: add',
+              'Repository UUID: %s' % uuid_regex]
+
+  verify_lines(output, expected)
+  
+  # check XML info
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None, None,
+                                                                [], 'info',
+                                                                new_dir,
+                                                                '--xml')
+  print 'output: %s \n\n' % output
+  verify_xml_elements(output,
+                      [('entry',    {'kind'     : 'dir',
+                                     'path'     : new_dir,
+                                     'revision' : '0'}),
+                       ('url',      {}, '.*/new_dir'),
+                       ('root',     {}, '.*'),
+                       ('uuid',     {}, uuid_regex),
+                       ('depth',    {}, 'infinity'),
+                       ('schedule', {}, 'add')])
 
 ########################################################################
 # Run the tests
 
-
 # list all tests here, starting with None:
 test_list = [ None,
               info_with_tree_conflicts,
+              XFail(info_on_added_file),
+              info_on_mkdir
              ]
 
 if __name__ == '__main__':

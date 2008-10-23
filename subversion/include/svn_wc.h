@@ -404,20 +404,29 @@ svn_wc_adm_probe_try(svn_wc_adm_access_t **adm_access,
  * subdirectories of @a adm_access.  Any physical locks will be removed from
  * the working copy.  Lock removal is unconditional, there is no check to
  * determine if cleanup is required.
+ *
+ * Any temporary allocations are performed using @a scratch_pool.
+ *
+ * @since New in 1.6
  */
+svn_error_t *svn_wc_adm_close2(svn_wc_adm_access_t *adm_access,
+                               apr_pool_t *scratch_pool);
+
+/* @deprecated Provided for backward compabibility with the 1.5 API. */
+SVN_DEPRECATED
 svn_error_t *svn_wc_adm_close(svn_wc_adm_access_t *adm_access);
 
 /** Return the path used to open the access baton @a adm_access */
-const char *svn_wc_adm_access_path(svn_wc_adm_access_t *adm_access);
+const char *svn_wc_adm_access_path(const svn_wc_adm_access_t *adm_access);
 
 /** Return the pool used by access baton @a adm_access */
-apr_pool_t *svn_wc_adm_access_pool(svn_wc_adm_access_t *adm_access);
+apr_pool_t *svn_wc_adm_access_pool(const svn_wc_adm_access_t *adm_access);
 
 /** Return @c TRUE is the access baton @a adm_access has a write lock,
  * @c FALSE otherwise. Compared to svn_wc_locked() this is a cheap, fast
  * function that doesn't access the filesystem.
  */
-svn_boolean_t svn_wc_adm_locked(svn_wc_adm_access_t *adm_access);
+svn_boolean_t svn_wc_adm_locked(const svn_wc_adm_access_t *adm_access);
 
 /** Set @a *locked to non-zero if @a path is locked, else set it to zero. */
 svn_error_t *
@@ -817,7 +826,10 @@ typedef enum svn_wc_notify_action_t
   svn_wc_notify_update_replace,
 
   /** Property updated. @since New in 1.6. */
-  svn_wc_notify_property_updated
+  svn_wc_notify_property_updated,
+
+  /** The last notification in a merge. @since New in 1.6. */
+  svn_wc_notify_merge_completed
 
 } svn_wc_notify_action_t;
 
@@ -855,15 +867,21 @@ typedef enum svn_wc_notify_state_t
  *
  * @since New in 1.2.
  */
-typedef enum svn_wc_notify_lock_state_t {
+typedef enum svn_wc_notify_lock_state_t
+{
   svn_wc_notify_lock_state_inapplicable = 0,
+
   svn_wc_notify_lock_state_unknown,
+
   /** The lock wasn't changed. */
   svn_wc_notify_lock_state_unchanged,
+
   /** The item was locked. */
   svn_wc_notify_lock_state_locked,
+
   /** The item was unlocked. */
   svn_wc_notify_lock_state_unlocked
+
 } svn_wc_notify_lock_state_t;
 
 /**
@@ -892,47 +910,61 @@ typedef enum svn_wc_notify_lock_state_t {
  * @since New in 1.2.
  */
 typedef struct svn_wc_notify_t {
+
   /** Path, either absolute or relative to the current working directory
    * (i.e., not relative to an anchor). */
   const char *path;
+
   /** Action that describes what happened to @c path. */
   svn_wc_notify_action_t action;
+
   /** Node kind of @c path. */
   svn_node_kind_t kind;
+
   /** If non-NULL, indicates the mime-type of @c path.
    * It is always @c NULL for directories. */
   const char *mime_type;
+
   /** Points to the lock structure received from the repository when
    * @c action is @c svn_wc_notify_locked.  For other actions, it is
    * @c NULL. */
   const svn_lock_t *lock;
+
   /** Points to an error describing the reason for the failure when @c
    * action is @c svn_wc_notify_failed_lock or @c svn_wc_notify_failed_unlock.
    * Is @c NULL otherwise. */
   svn_error_t *err;
+
   /** The type of notification that is occurring about node content. */
   svn_wc_notify_state_t content_state;
+
   /** The type of notification that is occurring about node properties. */
   svn_wc_notify_state_t prop_state;
+
   /** Reflects the addition or removal of a lock token in the working copy. */
   svn_wc_notify_lock_state_t lock_state;
+
   /** When @c action is @c svn_wc_notify_update_completed, target revision
    * of the update, or @c SVN_INVALID_REVNUM if not available; when @c
    * action is @c svn_wc_notify_blame_revision, processed revision.
    * In all other cases, it is @c SVN_INVALID_REVNUM. */
   svn_revnum_t revision;
+
   /** When @c action is @c svn_wc_notify_changelist_add or name.  In all other
    * cases, it is @c NULL.  @since New in 1.5 */
   const char *changelist_name;
+
   /** When @c action is @c svn_wc_notify_merge_begin, and both the
    * left and right sides of the merge are from the same URL.  In all
    * other cases, it is @c NULL.  @since New in 1.5 */
   svn_merge_range_t *merge_range;
+
   /** If non-NULL, specifies an absolute path prefix that can be subtracted
    * from the start of the absolute path in @c path.  Its purpose is to
    * allow notification to remove a common prefix from all the paths
    * displayed for an operation.  @since New in 1.6 */
   const char *path_prefix;
+
   /* NOTE: Add new fields at the end to preserve binary compatibility.
      Also, if you add fields here, you have to update svn_wc_create_notify
      and svn_wc_dup_notify. */
@@ -1115,7 +1147,7 @@ typedef enum svn_wc_operation_t
 {
   svn_wc_operation_update,
   svn_wc_operation_switch,
-  svn_wc_operation_merge,
+  svn_wc_operation_merge
 
 } svn_wc_operation_t;
 
@@ -2543,15 +2575,10 @@ typedef struct svn_wc_status2_t
 
   /** @} */
 
-  /** Set @c TRUE if the entry is a directory containing tree conflicts.
-   * @since New in 1.6
-   */
-  svn_boolean_t has_tree_conflicted_children;
-
   /** True if the entry is the victim of a tree conflict.
    * @since New in 1.6
    */
-  svn_boolean_t is_tree_conflict_victim;
+  svn_boolean_t tree_conflicted;
 
   /** If the item is a file that was added to the working copy with an
       svn:externals; if file_external is TRUE, then switched is always
@@ -3420,7 +3447,7 @@ svn_wc_committed_queue_create(apr_pool_t *pool);
  * versioned object at or under @a path.  This is usually done for
  * copied trees.
  *
- * @note the @recurse parameter should be used with extreme care since
+ * @note the @a recurse parameter should be used with extreme care since
  * it will bump ALL nodes under the directory, regardless of their
  * actual inclusion in the new revision.
  *
@@ -5229,10 +5256,11 @@ svn_wc_set_changelist(const char *path,
 
 /** @} */
 
-/** Set @a *tree_conflict to a newly allocated @c svn_wc_conflict_description_t
- * structure describing the tree conflict state of @a victim_path, or to null
- * if @a victim_path is not in a state of tree conflict. @a adm_access is the
- * admin access baton for @a victim_path. Use @a pool for all allocations.
+/** Set @a *tree_conflict to a newly allocated @c
+ * svn_wc_conflict_description_t structure describing the tree
+ * conflict state of @a victim_path, or to @c NULL if @a victim_path
+ * is not in a state of tree conflict. @a adm_access is the admin
+ * access baton for @a victim_path. Use @a pool for all allocations.
  *
  * @since New in 1.6.
  */
@@ -5258,8 +5286,9 @@ svn_wc_read_tree_conflicts_from_entry(apr_array_header_t *conflicts,
                                       apr_pool_t *pool);
 
 /**
- * Add a tree conflict to the directory entry belonging to @a adm_access.
- * Pass a description of the new tree conflict in @a conflict.
+ * Add the tree conflict described by CONFLICT to the directory entry
+ * belonging to ADM_ACCESS. Append to the log accumulator LOG_ACCUM
+ * a command to rewrite the entry field.
  * Do all allocations in @a pool.
  *
  * @since New in 1.6.

@@ -11,7 +11,7 @@ if os.path.exists("/tmp/test-repos"):
     svn_repos_delete("/tmp/test-repos", Pool())
 user = User(username="joecommitter")
 repos = LocalRepository("/tmp/test-repos", user=user, create=True)
-print "Repos UUID: ", repos.uuid()
+print("Repos UUID: %s" % repos.uuid())
 
 # Create a new transaction
 txn = repos.txn()
@@ -32,7 +32,7 @@ txn.mkdir("a/d")
 # Commit the transaction
 new_rev = txn.commit("Create file1.txt and file2.txt. "
                      "Also create some directories")
-print "Committed revision %d" % new_rev
+print("Committed revision %d" % new_rev)
 
 
 # Transaction number 2
@@ -53,7 +53,7 @@ txn.upload("file1.txt", local_path="/tmp/contents.txt")
 # Commit our changes
 new_rev = txn.commit("Create copies of file1.txt, file2.txt, and some "
                      "random directories. Also modify file1.txt.")
-print "Committed revision %d" % new_rev
+print("Committed revision %d" % new_rev)
 
 # Transaction number 3
 txn = repos.txn()
@@ -65,7 +65,7 @@ txn.copy(src_path="file1.txt", src_rev=2,
 
 # Commit our changes
 new_rev = txn.commit("Replace file3.txt with a new copy of file1.txt")
-print "Committed revision %d" % new_rev
+print("Committed revision %d" % new_rev)
 
 session = RemoteRepository("file:///tmp/test-repos", user=user)
 
@@ -86,7 +86,7 @@ txn.mkdir("blahdir/dj/a/b/c/d/e/f/g")
 txn.upload("blahdir/dj/a/b/c/d/e/f/g/h.txt", "/tmp/contents.txt")
 
 rev = txn.commit("create blahdir and descendents")
-print "Committed revision %d" % rev
+print("Committed revision %d" % rev)
 
 def ignore(path, kind):
     basename = os.path.basename(path)
@@ -110,10 +110,10 @@ txn.ignore(ignore)
 txn.autoprop(autoprop)
 txn.upload("csvn", local_path="csvn")
 rev = txn.commit("import csvn dir")
-print "Committed revision %d" % rev
+print("Committed revision %d" % rev)
 
 txn = session.txn()
 txn.copy(src_path="csvn", dest_path="csvn2")
 txn.upload("csvn2/core/functions.py","/tmp/contents.txt")
 rev = txn.commit("Copied csvn to csvn2, messing around with functions.py")
-print "Committed revision %d" % rev
+print("Committed revision %d" % rev)

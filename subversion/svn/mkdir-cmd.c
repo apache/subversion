@@ -77,7 +77,7 @@ svn_cl__mkdir(apr_getopt_t *os,
                           opt_state->revprop_table, ctx, pool);
 
   if (ctx->log_msg_func3)
-    err = svn_cl__cleanup_log_msg(ctx->log_msg_baton3, err);
+    err = svn_cl__cleanup_log_msg(ctx->log_msg_baton3, err, pool);
 
   if (err)
     {

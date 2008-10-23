@@ -63,7 +63,7 @@ svn_client_commit_item_create2(apr_pool_t *pool)
 
 svn_error_t *
 svn_client_commit_item_create(const svn_client_commit_item3_t **item,
-                               apr_pool_t *pool)
+                              apr_pool_t *pool)
 {
   *item = svn_client_commit_item_create2(pool);
   return SVN_NO_ERROR;
@@ -231,7 +231,7 @@ svn_client__path_relative_to_root(const char **rel_path,
  cleanup:
   if (need_wc_cleanup)
     {
-      svn_error_t *err2 = svn_wc_adm_close(adm_access);
+      svn_error_t *err2 = svn_wc_adm_close2(adm_access, pool);
       if (! err)
         err = err2;
       else
@@ -301,7 +301,7 @@ svn_client__get_repos_root(const char **repos_root,
 
   if (need_wc_cleanup)
     {
-      svn_error_t *err2 = svn_wc_adm_close(adm_access);
+      svn_error_t *err2 = svn_wc_adm_close2(adm_access, pool);
       if (! err)
         err = err2;
       else

@@ -166,13 +166,11 @@ svn_wc__props_delete(const char *path,
                      apr_pool_t *pool);
 
 
-/* Flushes props for PATH of PROPS_KIND cached in ADM_ACCESS to disk
-   using POOL for temporary allocations. */
+/* Flushes wcprops cached in ADM_ACCESS to disk using SCRATCH_POOL for
+   temporary allocations. */
 svn_error_t *
-svn_wc__props_flush(const char *path,
-                    svn_wc__props_kind_t props_kind,
-                    svn_wc_adm_access_t *adm_access,
-                    apr_pool_t *pool);
+svn_wc__wcprops_flush(svn_wc_adm_access_t *adm_access,
+                      apr_pool_t *scratch_pool);
 
 /* Install PATHs working props as base props, clearing the
    has_prop_mods cache value in the entries file.

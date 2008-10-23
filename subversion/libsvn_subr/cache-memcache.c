@@ -18,12 +18,12 @@
 
 #include <apr_md5.h>
 
-#include "svn_cache.h"
 #include "svn_pools.h"
 #include "svn_base64.h"
 #include "svn_path.h"
 
 #include "svn_private_config.h"
+#include "private/svn_cache.h"
 
 #include "cache.h"
 
@@ -53,8 +53,8 @@ typedef struct {
 
 
   /* Used to marshal values in and out of the cache. */
-  svn_cache_serialize_func_t serialize_func;
-  svn_cache_deserialize_func_t deserialize_func;
+  svn_cache__serialize_func_t serialize_func;
+  svn_cache__deserialize_func_t deserialize_func;
 } memcache_t;
 
 /* The wrapper around apr_memcache_t. */
@@ -224,15 +224,15 @@ static svn_cache__vtable_t memcache_vtable = {
 };
 
 svn_error_t *
-svn_cache_create_memcache(svn_cache_t **cache_p,
+svn_cache__create_memcache(svn_cache__t **cache_p,
                           svn_memcache_t *memcache,
-                          svn_cache_serialize_func_t serialize_func,
-                          svn_cache_deserialize_func_t deserialize_func,
+                          svn_cache__serialize_func_t serialize_func,
+                          svn_cache__deserialize_func_t deserialize_func,
                           apr_ssize_t klen,
                           const char *prefix,
                           apr_pool_t *pool)
 {
-  svn_cache_t *wrapper = apr_pcalloc(pool, sizeof(*wrapper));
+  svn_cache__t *wrapper = apr_pcalloc(pool, sizeof(*wrapper));
   memcache_t *cache = apr_pcalloc(pool, sizeof(*cache));
 
   cache->serialize_func = serialize_func;
@@ -336,10 +336,10 @@ struct svn_memcache_t {
 };
 
 svn_error_t *
-svn_cache_create_memcache(svn_cache_t **cache_p,
+svn_cache__create_memcache(svn_cache__t **cache_p,
                           svn_memcache_t *memcache,
-                          svn_cache_serialize_func_t serialize_func,
-                          svn_cache_deserialize_func_t deserialize_func,
+                          svn_cache__serialize_func_t serialize_func,
+                          svn_cache__deserialize_func_t deserialize_func,
                           apr_ssize_t klen,
                           const char *prefix,
                           apr_pool_t *pool)
@@ -361,7 +361,7 @@ nop_enumerator(const char *name,
 }
 
 svn_error_t *
-svn_cache_make_memcache_from_config(svn_memcache_t **memcache_p,
+svn_cache__make_memcache_from_config(svn_memcache_t **memcache_p,
                                     svn_config_t *config,
                                     apr_pool_t *pool)
 {
