@@ -5286,9 +5286,8 @@ svn_wc_read_tree_conflicts_from_entry(apr_array_header_t *conflicts,
                                       apr_pool_t *pool);
 
 /**
- * Add the tree conflict described by CONFLICT to the directory entry
- * belonging to ADM_ACCESS. Append to the log accumulator LOG_ACCUM
- * a command to rewrite the entry field.
+ * Add the tree conflict described by @a conflict to the directory entry
+ * belonging to @a adm_access.
  * Do all allocations in @a pool.
  *
  * @since New in 1.6.
