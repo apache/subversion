@@ -46,15 +46,6 @@ svn_boolean_t svn_wc__adm_area_exists(const svn_wc_adm_access_t *adm_access,
                                       apr_pool_t *pool);
 
 
-/* Make `PATH/<adminstrative_subdir>/THING'. The caller should ensure
-   that a write lock is active for PATH. */
-svn_error_t *svn_wc__make_adm_thing(const char *path,
-                                    const char *thing,
-                                    svn_node_kind_t type,
-                                    apr_fileperms_t perms,
-                                    svn_boolean_t tmp,
-                                    apr_pool_t *scratch_pool);
-
 /* Create a killme file in the administrative area, indicating that the
    directory containing the administrative area should be removed.
 
