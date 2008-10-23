@@ -2255,4 +2255,26 @@ class SvnClientTest < Test::Unit::TestCase
       changelists
     end
   end
+
+  def test_set_revision_by_date
+    log = "sample log"
+    file = "hello.txt"
+    src = "Hello"
+    src_after = "Hello World"
+    path = File.join(@wc_path, file)
+    uri = "#{@repos_uri}/#{file}"
+
+    ctx = make_context(log)
+    File.open(path, "w") {|f| f.print(src)}
+    ctx.add(path)
+    ctx.commit(@wc_path)
+
+    first_commit_time = Time.now
+    sleep(1)
+
+    File.open(path, "w") {|f| f.print(src_after)}
+    ctx.commit(@wc_path)
+
+    assert_equal(src, ctx.cat(uri, first_commit_time))
+  end
 end
