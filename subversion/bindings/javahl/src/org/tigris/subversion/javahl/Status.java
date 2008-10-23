@@ -100,6 +100,12 @@ public class Status implements java.io.Serializable
     private boolean switched;
 
     /**
+     * @since 1.6
+     * is this item in a tree conflicted state
+     */
+    private boolean treeConflicted;
+
+    /**
      * the file or directory status of base (See StatusKind)
      */
     private int repositoryTextStatus;
@@ -219,6 +225,7 @@ public class Status implements java.io.Serializable
      * @param locked                if the item is locked (running or aborted
      *                              operation)
      * @param copied                if the item is copy
+     * @param treeConflicted        if the item is part of a tree conflict
      * @param conflictOld           in case of conflict, the file name of the
      *                              the common base version
      * @param conflictNew           in case of conflict, the file name of new
@@ -248,7 +255,8 @@ public class Status implements java.io.Serializable
                   long lastChangedRevision, long lastChangedDate,
                   String lastCommitAuthor, int textStatus, int propStatus,
                   int repositoryTextStatus, int repositoryPropStatus,
-                  boolean locked, boolean copied, String conflictOld,
+                  boolean locked, boolean copied, boolean treeConflicted,
+                  String conflictOld,
                   String conflictNew, String conflictWorking,
                   String urlCopiedFrom, long revisionCopiedFrom,
                   boolean switched, String lockToken, String lockOwner,
@@ -267,6 +275,7 @@ public class Status implements java.io.Serializable
         this.propStatus = propStatus;
         this.locked = locked;
         this.copied = copied;
+        this.treeConflicted = treeConflicted;
         this.repositoryTextStatus = repositoryTextStatus;
         this.repositoryPropStatus = repositoryPropStatus;
         this.conflictOld = conflictOld;
@@ -721,6 +730,15 @@ public class Status implements java.io.Serializable
     public String getChangelist()
     {
         return changelist;
+    }
+
+    /**
+     * @return the tree conflicted state
+     * @since 1.6
+     */
+    public boolean getTreeConflicted()
+    {
+        return treeConflicted;
     }
 
     /**
