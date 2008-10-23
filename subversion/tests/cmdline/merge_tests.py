@@ -13161,6 +13161,352 @@ def natural_history_filtering(sbox):
                                        None, None, None, None,
                                        None, 1)
 
+def merge_adds_mergeinfo_correctly(sbox):
+  "merge adds mergeinfo to subtrees correctly"
+
+  # A merge may add explicit mergeinfo to the subtree of a merge target
+  # as a result of changes in the merge source.  These paths may have
+  # inherited mergeinfo prior to the merge, if so the subtree should end up
+  # with mergeinfo that reflects all of the following:
+  #
+  #  A) The mergeinfo added from the merge source
+  #
+  #  B) The mergeinfo the subtree inherited prior to the merge.
+  #
+  #  C) Mergeinfo describing the merge performed.
+  #
+  # See http://subversion.tigris.org/servlets/ReadMsg?listName=dev&msgNo=142460
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Setup a 'trunk' and two branches.
+  wc_disk, wc_status = set_up_branch(sbox, False, 2)
+
+  # Some paths we'll care about
+  A_COPY_path   = os.path.join(wc_dir, "A_COPY")
+  A_COPY_2_path = os.path.join(wc_dir, "A_COPY_2")
+  D_COPY_2_path = os.path.join(wc_dir, "A_COPY_2", "D")
+
+  # Update working copy to allow full inheritance and elision.
+  svntest.actions.run_and_verify_svn(None, ["At revision 7.\n"], [],
+                                     'up', wc_dir)
+  wc_status.tweak(wc_rev=7)
+
+  # Merge r5 from A to A_COPY and commit as r8.
+  # This creates explicit mergeinfo on A_COPY of '/A:5'.
+  expected_output = wc.State(A_COPY_path, {
+    'D/G/rho': Item(status='U '),
+    })
+  expected_status = wc.State(A_COPY_path, {
+    ''          : Item(status=' M', wc_rev=7),
+    'B'         : Item(status='  ', wc_rev=7),
+    'mu'        : Item(status='  ', wc_rev=7),
+    'B/E'       : Item(status='  ', wc_rev=7),
+    'B/E/alpha' : Item(status='  ', wc_rev=7),
+    'B/E/beta'  : Item(status='  ', wc_rev=7),
+    'B/lambda'  : Item(status='  ', wc_rev=7),
+    'B/F'       : Item(status='  ', wc_rev=7),
+    'C'         : Item(status='  ', wc_rev=7),
+    'D'         : Item(status='  ', wc_rev=7),
+    'D/G'       : Item(status='  ', wc_rev=7),
+    'D/G/pi'    : Item(status='  ', wc_rev=7),
+    'D/G/rho'   : Item(status='M ', wc_rev=7),
+    'D/G/tau'   : Item(status='  ', wc_rev=7),
+    'D/gamma'   : Item(status='  ', wc_rev=7),
+    'D/H'       : Item(status='  ', wc_rev=7),
+    'D/H/chi'   : Item(status='  ', wc_rev=7),
+    'D/H/psi'   : Item(status='  ', wc_rev=7),
+    'D/H/omega' : Item(status='  ', wc_rev=7),
+    })
+  expected_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGEINFO : '/A:5'}),
+    'B'         : Item(),
+    'mu'        : Item("This is the file 'mu'.\n"),
+    'B/E'       : Item(),
+    'B/E/alpha' : Item("This is the file 'alpha'.\n"),
+    'B/E/beta'  : Item("This is the file 'beta'.\n"),
+    'B/lambda'  : Item("This is the file 'lambda'.\n"),
+    'B/F'       : Item(),
+    'C'         : Item(),
+    'D'         : Item(),
+    'D/G'       : Item(),
+    'D/G/pi'    : Item("This is the file 'pi'.\n"),
+    'D/G/rho'   : Item("New content"),
+    'D/G/tau'   : Item("This is the file 'tau'.\n"),
+    'D/gamma'   : Item("This is the file 'gamma'.\n"),
+    'D/H'       : Item(),
+    'D/H/chi'   : Item("This is the file 'chi'.\n"),
+    'D/H/psi'   : Item("This is the file 'psi'.\n"),
+    'D/H/omega' : Item("This is the file 'omega'.\n"),
+    })
+  expected_skip = wc.State(A_COPY_path, { })
+  svntest.actions.run_and_verify_merge(A_COPY_path, '4', '5',
+                                       sbox.repo_url + '/A',
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1)
+  wc_status.tweak('A_COPY',
+                  'A_COPY/D/G/rho',
+                  wc_rev=8)
+  expected_output = wc.State(wc_dir, {
+    'A_COPY'           : Item(verb='Sending'),
+    'A_COPY/D/G/rho'   : Item(verb='Sending'),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output, wc_status,
+                                        None, wc_dir)
+
+  # Merge r7 from A/D to A_COPY_2/D and commit as r9.
+  # This creates explicit mergeinfo on A_COPY_2/D of '/A/D:7'.
+  expected_output = wc.State(D_COPY_2_path, {
+    'H/omega': Item(status='U '),
+    })
+  expected_status = wc.State(D_COPY_2_path, {
+    ''          : Item(status=' M', wc_rev=7),
+    'G'       : Item(status='  ', wc_rev=7),
+    'G/pi'    : Item(status='  ', wc_rev=7),
+    'G/rho'   : Item(status='  ', wc_rev=7),
+    'G/tau'   : Item(status='  ', wc_rev=7),
+    'gamma'   : Item(status='  ', wc_rev=7),
+    'H'       : Item(status='  ', wc_rev=7),
+    'H/chi'   : Item(status='  ', wc_rev=7),
+    'H/psi'   : Item(status='  ', wc_rev=7),
+    'H/omega' : Item(status='M ', wc_rev=7),
+    })
+  expected_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGEINFO : '/A/D:7'}),
+    'G'       : Item(),
+    'G/pi'    : Item("This is the file 'pi'.\n"),
+    'G/rho'   : Item("This is the file 'rho'.\n"),
+    'G/tau'   : Item("This is the file 'tau'.\n"),
+    'gamma'   : Item("This is the file 'gamma'.\n"),
+    'H'       : Item(),
+    'H/chi'   : Item("This is the file 'chi'.\n"),
+    'H/psi'   : Item("This is the file 'psi'.\n"),
+    'H/omega' : Item("New content"),
+    })
+  expected_skip = wc.State(A_COPY_path, { })
+  svntest.actions.run_and_verify_merge(D_COPY_2_path, '6', '7',
+                                       sbox.repo_url + '/A/D',
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1)
+  wc_status.tweak('A_COPY_2/D',
+                  'A_COPY_2/D/H/omega',
+                  wc_rev=9)
+  expected_output = wc.State(wc_dir, {
+    'A_COPY_2/D'         : Item(verb='Sending'),
+    'A_COPY_2/D/H/omega' : Item(verb='Sending'),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output, wc_status,
+                                        None, wc_dir)
+
+  # Merge r9 from A_COPY_2 to A_COPY.  A_COPY/D gets the explicit mergeinfo
+  # '/A/D/:7' added from r9.  But it prior to the merge it inherited '/A/D:5'
+  # from A_COPY, so this should be present in its explicit mergeinfo.  Lastly,
+  # the mergeinfo describing this merge '/A_COPY_2:9' should also be present
+  # in A_COPY's explicit mergeinfo.
+    # Update working copy to allow full inheritance and elision.
+  svntest.actions.run_and_verify_svn(None, ["At revision 9.\n"], [],
+                                     'up', wc_dir)
+  expected_output = wc.State(A_COPY_path, {
+    'D'        : Item(status=' U'),
+    'D/H/omega': Item(status='U '),
+    })
+  expected_status = wc.State(A_COPY_path, {
+    ''          : Item(status=' M', wc_rev=9),
+    'B'         : Item(status='  ', wc_rev=9),
+    'mu'        : Item(status='  ', wc_rev=9),
+    'B/E'       : Item(status='  ', wc_rev=9),
+    'B/E/alpha' : Item(status='  ', wc_rev=9),
+    'B/E/beta'  : Item(status='  ', wc_rev=9),
+    'B/lambda'  : Item(status='  ', wc_rev=9),
+    'B/F'       : Item(status='  ', wc_rev=9),
+    'C'         : Item(status='  ', wc_rev=9),
+    'D'         : Item(status=' M', wc_rev=9),
+    'D/G'       : Item(status='  ', wc_rev=9),
+    'D/G/pi'    : Item(status='  ', wc_rev=9),
+    'D/G/rho'   : Item(status='  ', wc_rev=9),
+    'D/G/tau'   : Item(status='  ', wc_rev=9),
+    'D/gamma'   : Item(status='  ', wc_rev=9),
+    'D/H'       : Item(status='  ', wc_rev=9),
+    'D/H/chi'   : Item(status='  ', wc_rev=9),
+    'D/H/psi'   : Item(status='  ', wc_rev=9),
+    'D/H/omega' : Item(status='M ', wc_rev=9),
+    })
+  expected_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGEINFO : '/A:5\n/A_COPY_2:9'}),
+    'B'         : Item(),
+    'mu'        : Item("This is the file 'mu'.\n"),
+    'B/E'       : Item(),
+    'B/E/alpha' : Item("This is the file 'alpha'.\n"),
+    'B/E/beta'  : Item("This is the file 'beta'.\n"),
+    'B/lambda'  : Item("This is the file 'lambda'.\n"),
+    'B/F'       : Item(),
+    'C'         : Item(),
+    'D'         : Item(props={SVN_PROP_MERGEINFO : '/A/D:5,7\n/A_COPY_2/D:9'}),
+    'D/G'       : Item(),
+    'D/G/pi'    : Item("This is the file 'pi'.\n"),
+    'D/G/rho'   : Item("New content"),
+    'D/G/tau'   : Item("This is the file 'tau'.\n"),
+    'D/gamma'   : Item("This is the file 'gamma'.\n"),
+    'D/H'       : Item(),
+    'D/H/chi'   : Item("This is the file 'chi'.\n"),
+    'D/H/psi'   : Item("This is the file 'psi'.\n"),
+    'D/H/omega' : Item("New content"),
+    })
+  expected_skip = wc.State(A_COPY_path, { })
+  svntest.actions.run_and_verify_merge(A_COPY_path, '8', '9',
+                                       sbox.repo_url + '/A_COPY_2',
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1)
+
+def no_self_referential_filtering_on_added_path(sbox):
+  "no self referential filtering on added path"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Some paths we'll care about
+  C_COPY_path   = os.path.join(wc_dir, "A_COPY", "C")
+  A_path        = os.path.join(wc_dir, "A")
+  C_path        = os.path.join(wc_dir, "A", "C")
+  A_COPY_2_path = os.path.join(wc_dir, "A_COPY_2")
+
+  # r1-r7: Setup a 'trunk' and two 'branches'.
+  wc_disk, wc_status = set_up_branch(sbox, False, 2)
+
+  # r8: Make a prop change on A_COPY/C.
+  svntest.actions.run_and_verify_svn(None,
+                                     ["property 'propname' set on '" +
+                                      C_COPY_path + "'\n"], [],
+                                     'ps', 'propname', 'propval',
+                                     C_COPY_path)
+  expected_output = svntest.wc.State(wc_dir,
+                                     {'A_COPY/C' : Item(verb='Sending')})
+  wc_status.tweak('A_COPY/C', wc_rev=8)
+  wc_disk.tweak("A_COPY/C",
+                props={'propname' : 'propval'})
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output, wc_status,
+                                        None, wc_dir)
+
+  # r9: Merge r8 from A_COPY to A.
+  #
+  # Update first to avoid an out of date error.
+  svntest.actions.run_and_verify_svn(None, ["At revision 8.\n"], [], 'up',
+                                     wc_dir)
+  wc_status.tweak(wc_rev=8)
+  svntest.actions.run_and_verify_svn(None,
+                                     expected_merge_output([[8]], ' U   ' +
+                                                           C_path + '\n'),
+                                     [], 'merge', '-c8',
+                                     sbox.repo_url + '/A_COPY',
+                                     A_path)
+  expected_output = svntest.wc.State(wc_dir,
+                                     {'A'   : Item(verb='Sending'),
+                                      'A/C' : Item(verb='Sending')})
+  wc_status.tweak('A', 'A/C', wc_rev=9)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output, wc_status,
+                                        None, wc_dir)
+
+  wc_disk.tweak("A/C",
+                props={'propname' : 'propval'})
+  wc_disk.tweak("A",
+                props={SVN_PROP_MERGEINFO : '/A_COPY:8'})
+
+  # r10: Move A/C to A/C_MOVED.
+  svntest.actions.run_and_verify_svn(None,
+                                     ['\n', 'Committed revision 10.\n'],
+                                     [], 'move',
+                                     sbox.repo_url + '/A/C',
+                                     sbox.repo_url + '/A/C_MOVED',
+                                     '-m', 'Copy A/C to A/C_MOVED')
+  svntest.actions.run_and_verify_svn(None, None, [], 'up',
+                                     wc_dir)
+
+  # Now try to merge all available revisions from A to A_COPY_2.
+  # This should try to add the directory A_COPY_2/C_MOVED which has
+  # explicit mergeinfo.  This should not break self-referential mergeinfo
+  # filtering logic...in fact there is no reason to even attempt such
+  # filtering since the file is *new*.
+
+  expected_output = wc.State(A_COPY_2_path, {
+    ''          : Item(status=' U'),
+    'B/E/beta'  : Item(status='U '),
+    'D/G/rho'   : Item(status='U '),
+    'D/H/psi'   : Item(status='U '),
+    'D/H/omega' : Item(status='U '),
+    'C'         : Item(status='D '),
+    'C_MOVED'   : Item(status='A '),
+    })
+  expected_A_COPY_2_status = wc.State(A_COPY_2_path, {
+    ''          : Item(status=' M', wc_rev=10),
+    'B'         : Item(status='  ', wc_rev=10),
+    'mu'        : Item(status='  ', wc_rev=10),
+    'B/E'       : Item(status='  ', wc_rev=10),
+    'B/E/alpha' : Item(status='  ', wc_rev=10),
+    'B/E/beta'  : Item(status='M ', wc_rev=10),
+    'B/lambda'  : Item(status='  ', wc_rev=10),
+    'B/F'       : Item(status='  ', wc_rev=10),
+    'C'         : Item(status='D ', wc_rev=10),
+    'C_MOVED'   : Item(status='A ', wc_rev='-', copied='+'),
+    'D'         : Item(status='  ', wc_rev=10),
+    'D/G'       : Item(status='  ', wc_rev=10),
+    'D/G/pi'    : Item(status='  ', wc_rev=10),
+    'D/G/rho'   : Item(status='M ', wc_rev=10),
+    'D/G/tau'   : Item(status='  ', wc_rev=10),
+    'D/gamma'   : Item(status='  ', wc_rev=10),
+    'D/H'       : Item(status='  ', wc_rev=10),
+    'D/H/chi'   : Item(status='  ', wc_rev=10),
+    'D/H/psi'   : Item(status='M ', wc_rev=10),
+    'D/H/omega' : Item(status='M ', wc_rev=10),
+    })
+  expected_A_COPY_2_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGEINFO : '/A:3-10\n/A_COPY:8'}),
+    'B'         : Item(),
+    'mu'        : Item("This is the file 'mu'.\n"),
+    'B/E'       : Item(),
+    'B/E/alpha' : Item("This is the file 'alpha'.\n"),
+    'B/E/beta'  : Item("New content"),
+    'B/lambda'  : Item("This is the file 'lambda'.\n"),
+    'B/F'       : Item(),
+    'C_MOVED'   : Item(props={SVN_PROP_MERGEINFO : '/A/C_MOVED:3-10\n' +
+                              '/A_COPY/C:8\n' +
+                              '/A_COPY/C_MOVED:8',
+                              'propname' : 'propval'}),
+    'C'         : Item(),
+    'D'         : Item(),
+    'D/G'       : Item(),
+    'D/G/pi'    : Item("This is the file 'pi'.\n"),
+    'D/G/rho'   : Item("New content"),
+    'D/G/tau'   : Item("This is the file 'tau'.\n"),
+    'D/gamma'   : Item("This is the file 'gamma'.\n"),
+    'D/H'       : Item(),
+    'D/H/chi'   : Item("This is the file 'chi'.\n"),
+    'D/H/psi'   : Item("New content"),
+    'D/H/omega' : Item("New content"),
+    })
+  expected_A_COPY_2_skip = wc.State(A_COPY_2_path, { })
+  svntest.actions.run_and_verify_merge(A_COPY_2_path, None, None,
+                                       sbox.repo_url + \
+                                       '/A',
+                                       expected_output,
+                                       expected_A_COPY_2_disk,
+                                       expected_A_COPY_2_status,
+                                       expected_A_COPY_2_skip,
+                                       None, None, None, None,
+                                       None, 1)
+
 ########################################################################
 # Run the tests
 
@@ -13339,6 +13685,10 @@ test_list = [ None,
               SkipUnless(merge_target_and_subtrees_need_nonintersecting_ranges,
                          server_has_mergeinfo),
               SkipUnless(natural_history_filtering,
+                         server_has_mergeinfo),
+              SkipUnless(merge_adds_mergeinfo_correctly,
+                         server_has_mergeinfo),
+              SkipUnless(no_self_referential_filtering_on_added_path,
                          server_has_mergeinfo),
              ]
 

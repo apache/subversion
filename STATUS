@@ -11,24 +11,8 @@ details on how release lines and voting work, what kinds of bugs can
 delay a release, etc.
 
 
-Candidate changes for 1.5.3:
+Candidate changes for 1.5.4:
 ============================
-
- * r32968, r32975
-   Fix bug which occurs when a merge adds explicit mergeinfo to a subtree that
-   had no explicit mergeinfo prior to the merge.  This new mergeinfo could
-   obstruct any mergeinfo the path previously inherited and the new path
-   was not getting mergeinfo set that described the merge itself -- See 
-   http://subversion.tigris.org/servlets/ReadMsg?listName=dev&msgNo=142460.
-   Notes:
-     r32968 is a new test for this problem and r32975 is the fix.
-   Justification:
-     Incorrect mergeinfo results when this bug is encountered and it has
-     already been encountered in our own repository as described in the
-     aforementioned thread.
-   Votes:
-     +1: pburba, rhuijben
-     +0: arfrever
 
  * r30257, r33024, r33026
    Don't try to filter natural history from added mergeinfo during

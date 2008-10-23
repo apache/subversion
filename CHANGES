@@ -1,3 +1,13 @@
+Version 1.5.4
+(24 Oct 2008, from /branches/1.5.x)
+http://svn.collab.net/repos/svn/tags/1.5.4
+
+ User-visible changes:
+  * Properly handle explicit mergeinfo added in merge source (r32968, -75)
+  * fixed: merging of paths containing spaces (r33641, -44)
+  * fixed: regression in mergeinfo-aware merges against 1.5.3 (r33693, -704)
+
+
 Version 1.5.3
 (10 Oct 2008, from /branches/1.5.x)
 http://svn.collab.net/repos/svn/tags/1.5.3
