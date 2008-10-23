@@ -357,27 +357,30 @@ maybe_upgrade_format(svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
 static svn_error_t *
 create_lock(const char *path, int wait_for, apr_pool_t *pool)
 {
+  const char *lock_path = svn_wc__adm_child(path, SVN_WC__ADM_LOCK, pool);
   svn_error_t *err;
 
   for (;;)
     {
-      err = svn_wc__make_adm_thing(path, SVN_WC__ADM_LOCK,
-                                   svn_node_file, APR_OS_DEFAULT, FALSE, pool);
-      if (err)
+      apr_file_t *file;
+
+      err = svn_io_file_open(&file, lock_path,
+                             APR_WRITE | APR_CREATE | APR_EXCL,
+                             APR_OS_DEFAULT,
+                             pool);
+      if (err == NULL)
+        return svn_io_file_close(file, pool);
+
+      if (APR_STATUS_IS_EEXIST(err->apr_err))
         {
-          if (APR_STATUS_IS_EEXIST(err->apr_err))
-            {
-              svn_error_clear(err);
-              if (wait_for <= 0)
-                break;
-              wait_for--;
-              apr_sleep(apr_time_from_sec(1));  /* micro-seconds */
-            }
-          else
-            return err;
+          svn_error_clear(err);
+          if (wait_for <= 0)
+            break;
+          wait_for--;
+          apr_sleep(apr_time_from_sec(1));  /* micro-seconds */
         }
       else
-        return SVN_NO_ERROR;
+        return err;
     }
 
   return svn_error_createf(SVN_ERR_WC_LOCKED, NULL,
