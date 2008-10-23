@@ -2459,6 +2459,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(node_location_segments),
     SVN_TEST_PASS(reporter_depth_exclude),
     SVN_TEST_PASS(prop_validation),
-    SVN_TEST_XFAIL(get_logs),
+    SVN_TEST_PASS(get_logs),
     SVN_TEST_NULL
   };
