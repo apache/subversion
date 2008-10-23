@@ -33,5 +33,16 @@ Candidate changes for 1.5.5:
    Votes:
      +1: pburba
 
+ * r33866
+   Make ra_svn's Cyrus auth implementation (like the internal auth
+   implementation) always prefer EXTERNAL to ANONYMOUS.  This prevents
+   a weird regression vs 1.4 where svn+ssh:// would be treated as
+   anonymous in some cases.
+   Justification:
+     Regression against 1.4 which can prevent users from even checking
+     out repositories that they could check out with a 1.4 client.
+   Votes:
+     +1: glasser
+
 Approved changes:
 =================
