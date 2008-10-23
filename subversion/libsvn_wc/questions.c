@@ -51,10 +51,11 @@ svn_wc_check_wc(const char *path,
                 int *wc_format,
                 apr_pool_t *pool)
 {
-  svn_error_t *err = SVN_NO_ERROR;
+  svn_error_t *err;
+  const char *format_file_path = svn_wc__adm_child(path, SVN_WC__ADM_ENTRIES,
+                                                   pool);
 
-  const char *format_file_path
-    = svn_wc__adm_path(path, FALSE, pool, SVN_WC__ADM_ENTRIES, NULL);
+  /* ### this logic is duplicated in lock.c */
 
   /* First try to read the format number from the entries file. */
   err = svn_io_read_version_file(wc_format, format_file_path, pool);
@@ -68,8 +69,7 @@ svn_wc_check_wc(const char *path,
          Note that the format file might not exist in newer working copies
          (format 7 and higher), but in that case, the entries file should
          have contained the format number. */
-      format_file_path
-        = svn_wc__adm_path(path, FALSE, pool, SVN_WC__ADM_FORMAT, NULL);
+      format_file_path = svn_wc__adm_child(path, SVN_WC__ADM_FORMAT, pool);
 
       err = svn_io_read_version_file(wc_format, format_file_path, pool);
     }
