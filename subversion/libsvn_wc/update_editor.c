@@ -1385,8 +1385,9 @@ do_entry_deletion(struct edit_baton *eb,
         {
           svn_wc_adm_access_t *child_access;
           const char *logfile_path
-            = svn_wc__adm_path(parent_path, FALSE, pool,
-                               svn_wc__logfile_path(*log_number, pool), NULL);
+            = svn_wc__adm_child(parent_path,
+                                svn_wc__logfile_path(*log_number, pool),
+                                pool);
 
           SVN_ERR(svn_wc_adm_retrieve
                   (&child_access, eb->adm_access,
@@ -2378,8 +2379,8 @@ add_file_with_history(const char *path,
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, pb->edit_baton->adm_access,
                               pb->path, subpool));
 
-  temp_dir_path = svn_wc__adm_path(svn_wc_adm_access_path(adm_access), TRUE,
-                                   pool, NULL);
+  temp_dir_path = svn_wc__adm_child(svn_wc_adm_access_path(adm_access),
+                                    SVN_WC__ADM_TMP, pool);
   SVN_ERR(svn_stream_open_unique(&copied_stream,
                                  &tfb->copied_text_base,
                                  temp_dir_path,

@@ -34,22 +34,16 @@ extern "C" {
 
 
 
-/* Return a path to something in PATH's administrative area.
- * Return path to the thing in the tmp area if TMP is non-zero.
- * Varargs are (const char *)'s, the final one must be NULL.
- */
-const char * svn_wc__adm_path(const char *path,
-                              svn_boolean_t tmp,
-                              apr_pool_t *pool,
-                              ...);
+/* Return a path to CHILD in the administrative area of PATH. If CHILD is
+   NULL, then the path to the admin area is returned. The result is
+   allocated in RESULT_POOL. */
+const char *svn_wc__adm_child(const char *path,
+                              const char *child,
+                              apr_pool_t *result_pool);
 
-
-/* Return TRUE if a thing in the administrative area exists, FALSE
-   otherwise. */
-svn_boolean_t svn_wc__adm_path_exists(const char *path,
-                                      svn_boolean_t tmp,
-                                      apr_pool_t *pool,
-                                      ...);
+/* Return TRUE if the administrative area exists for this directory. */
+svn_boolean_t svn_wc__adm_area_exists(const svn_wc_adm_access_t *adm_access,
+                                      apr_pool_t *pool);
 
 
 /* Make `PATH/<adminstrative_subdir>/THING'. The caller should ensure
@@ -204,9 +198,10 @@ svn_error_t *svn_wc__adm_destroy(svn_wc_adm_access_t *adm_access,
 
 
 /* Cleanup the temporary storage area of the administrative
-   directory. */
-svn_error_t *svn_wc__adm_cleanup_tmp_area(svn_wc_adm_access_t *adm_access,
-                                          apr_pool_t *scratch_pool);
+   directory (assuming temp and admin areas exist). */
+svn_error_t *
+svn_wc__adm_cleanup_tmp_area(const svn_wc_adm_access_t *adm_access,
+                             apr_pool_t *scratch_pool);
 
 
 #ifdef __cplusplus
