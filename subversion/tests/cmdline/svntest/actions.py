@@ -1767,7 +1767,24 @@ deep_trees_after_tree_del = wc.State('', {
   'DDD'               : Item(),
   })
 
+# Expected merge/update/switch output if tree conflict detection really works.
+deep_trees_conflict_output = wc.State('', {
+  'F/alpha'           : Item(treeconflict='C'),
+  'D/D1'              : Item(treeconflict='C'),
+  'DF/D1'             : Item(treeconflict='C'),
+  'DD/D1'             : Item(treeconflict='C'),
+  'DDF/D1'            : Item(treeconflict='C'),
+  'DDD/D1'            : Item(treeconflict='C'),
+  })
 
+# Expected status output if tree conflict detection really works.
+def deep_trees_conflict_status(expected_disk):
+  """Add tree conflicts and default status stuff to a disk-state dict."""
+  status = expected_disk.copy()
+  status.tweak('F', 'D', 'DF', 'DD', 'DDF', 'DDD', treeconflict='C ')
+  status.add({ '' : Item(status='  ') })
+  status.tweak(wc_rev=3)
+  return status
 
 
 class DeepTreesTestCase:
