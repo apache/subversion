@@ -1741,8 +1741,14 @@ open_directory(const char *path,
   SVN_ERR(svn_wc_adm_retrieve(&parent_adm_access, eb->adm_access,
                               pb->path, pool));
 
-  /* Skip this directory if it has property or tree conflicts. */
   SVN_ERR(svn_wc_entry(&entry, db->path, adm_access, FALSE, pool));
+  if (entry)
+    {
+      db->ambient_depth = entry->depth;
+      db->was_incomplete = entry->incomplete;
+    }
+
+  /* Skip this directory if it already had (property or tree) conflicts. */
   if (entry)
     {
       /* Text conflicts can't happen for a directory, but we need to supply
@@ -1750,9 +1756,6 @@ open_directory(const char *path,
       svn_boolean_t text_conflicted;
       svn_boolean_t prop_conflicted;
       svn_boolean_t has_tree_conflicted_children;
-
-      db->ambient_depth = entry->depth;
-      db->was_incomplete = entry->incomplete;
 
       SVN_ERR(svn_wc_conflicted_p2(&text_conflicted, &prop_conflicted,
                                    &has_tree_conflicted_children, db->path,
@@ -1768,7 +1771,10 @@ open_directory(const char *path,
               svn_wc_notify_t *notify
                 = svn_wc_create_notify(db->path, svn_wc_notify_skip, pool);
               notify->kind = svn_node_dir;
-              notify->prop_state = svn_wc_notify_state_conflicted;
+              if (prop_conflicted)
+                notify->prop_state = svn_wc_notify_state_conflicted;
+              /* ### if (tree_conflicted)
+                notify->tree_conflict_state = svn_wc_notify_state_conflicted; */
               (*eb->notify_func)(eb->notify_baton, notify, pool);
             }
           return SVN_NO_ERROR;
@@ -2646,10 +2652,11 @@ open_file(const char *path,
   /* It is interesting to note: everything below is just validation. We
      aren't actually doing any "work" or fetching any persistent data. */
 
-  /* If the file is in conflict, don't mess with it. */
+  /* If the file was already in conflict, don't mess with it. */
   SVN_ERR(svn_wc_conflicted_p2(&text_conflicted, &prop_conflicted,
                                &has_tree_conflicted_children, pb->path, entry,
                                pool));
+  SVN_ERR_ASSERT(! has_tree_conflicted_children);
   if (text_conflicted || prop_conflicted)
     {
       fb->skipped = TRUE;
