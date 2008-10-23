@@ -1460,9 +1460,9 @@ log_do_upgrade_format(struct log_runner *loggy,
 {
   const char *fmtstr = svn_xml_get_attr_value(SVN_WC__LOG_ATTR_FORMAT, atts);
   int fmt;
-  const char *path = svn_wc__adm_path(svn_wc_adm_access_path(loggy->adm_access),
-                                      FALSE, loggy->pool,
-                                      SVN_WC__ADM_FORMAT, NULL);
+  const char *path
+    = svn_wc__adm_child(svn_wc_adm_access_path(loggy->adm_access),
+                        SVN_WC__ADM_FORMAT, loggy->pool);
 
   if (! fmtstr || (fmt = atoi(fmtstr)) == 0)
     return svn_error_create(pick_error_code(loggy), NULL,
@@ -2497,8 +2497,7 @@ svn_wc_cleanup2(const char *path,
   /* Cleanup the tmp area of the admin subdir, if running the log has not
      removed it!  The logs have been run, so anything left here has no hope
      of being useful. */
-  if (svn_wc__adm_path_exists(path, 0, pool, NULL))
-    SVN_ERR(svn_wc__adm_cleanup_tmp_area(adm_access, pool));
+  SVN_ERR(svn_wc__adm_cleanup_tmp_area(adm_access, pool));
 
   return svn_wc_adm_close2(adm_access, pool);
 }
