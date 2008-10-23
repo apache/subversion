@@ -696,7 +696,7 @@ def process_committers(committers):
     if line == 'Committers who have asked to be listed as dormant:\n':
       in_full_committers = True
     elif line.find('@') >= 0:
-      line = line.strip()
+      line = line.lstrip()
       m = matcher.match(line)
       user = m.group(1)
       real_and_email = m.group(2).strip()
