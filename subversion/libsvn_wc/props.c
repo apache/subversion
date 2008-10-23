@@ -1309,7 +1309,7 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
             svn_diff_file_options_create(filepool);
 
           SVN_ERR(svn_stream_open_unique(&mergestream, &cdesc->merged_file,
-                                         path, svn_io_file_del_on_pool_cleanup,
+                                         NULL, svn_io_file_del_on_pool_cleanup,
                                          filepool, pool));
           SVN_ERR(svn_diff_mem_string_diff3(&diff, the_val, working_val,
                                             new_val, options, filepool));
