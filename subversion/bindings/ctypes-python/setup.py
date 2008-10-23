@@ -163,6 +163,8 @@ class build(_build):
         # List the libraries in the order they should be loaded
         libraries = [ 
           "svn_subr-1",
+          "svn_auth_kwallet-1",
+          "svn_auth_gnome_keyring-1",
           "svn_diff-1",
           "svn_delta-1",
           "svn_fs-1",
@@ -261,10 +263,17 @@ class build(_build):
   def validate_options(self):
     # Validate apr
     if not self.apr:
-      raise DistutilsOptionError("The --apr option is mandatory and " \
-                                 "must point to a valid apr installation " \
-                                 "or to either the apr-config file or the " \
-                                 "apr-1-config file")
+      self.apr = find_in_path('apr-config')
+
+      if not self.apr:
+        self.apr = find_in_path('apr-1-config')
+
+      if self.apr:
+        log.info("Found %s" % self.apr)
+      else:
+        raise DistutilsOptionError("Could not find apr-config or " \
+                                   "apr-1-config.  Please rerun with the " \
+                                   "--apr option.")
 
     if os.path.exists(self.apr):
       if os.path.isdir(self.apr):
@@ -289,10 +298,17 @@ class build(_build):
 
     # Validate apr-util
     if not self.apr_util:
-      raise DistutilsOptionError("The --apr-util option is mandatory and " \
-                                 "must point to a valid apr-util " \
-                                 "installation or to either the apu-config " \
-                                 "file or the apu-1-config file")
+      self.apr_util = find_in_path('apu-config')
+
+      if not self.apr_util:
+        self.apr_util = find_in_path('apu-1-config')
+
+      if self.apr_util:
+        log.info("Found %s" % self.apr_util)
+      else:
+        raise DistutilsOptionError("Could not find apu-config or " \
+                                   "apu-1-config.  Please rerun with the " \
+                                   "--apr-util option.")
 
     if os.path.exists(self.apr_util):
       if os.path.isdir(self.apr_util):
@@ -317,9 +333,16 @@ class build(_build):
 
     # Validate subversion
     if not self.subversion:
-      raise DistutilsOptionError("The --subversion option is mandatory and " \
-                                 "must point to a valid Subversion " \
-                                 "installation")
+      self.subversion = find_in_path('svn')
+
+      if self.subversion:
+        log.info("Found %s" % self.subversion)
+        # Get the installation root instead of path to 'svn'
+        self.subversion = os.path.normpath(os.path.join(self.subversion, "..",
+                                                        ".."))
+      else:
+        raise DistutilsOptionError("Could not find Subversion.  Please rerun " \
+                                   "with the --subversion option.")
 
     # Validate svn-headers, if present
     if self.svn_headers:
@@ -355,9 +378,13 @@ class build(_build):
 
     # Validate ctypesgen
     if not self.ctypesgen:
-      raise DistutilsOptionError("The --ctypesgen option is mandatory and " \
-                                 "must point to a valid ctypesgen " \
-                                 "installation")
+      self.ctypesgen = find_in_path('ctypesgen.py')
+
+      if self.ctypesgen:
+        log.info("Found %s" % self.ctypesgen)
+      else:
+        raise DistutilsOptionError("Could not find ctypesgen.  Please rerun " \
+                                   "with the --ctypesgen option.")
 
     if os.path.exists(self.ctypesgen):
       if os.path.isdir(self.ctypesgen):
@@ -407,6 +434,21 @@ class build(_build):
   # run()
 
 # class build
+
+def find_in_path(file):
+  paths = []
+  if os.environ.has_key('PATH'):
+    paths = os.environ['PATH'].split(os.pathsep)
+  
+  for path in paths:
+    file_path = os.path.join(path, file)
+
+    if os.path.exists(file_path):
+      # Return the path to the first existing file found in PATH
+      return os.path.abspath(file_path)
+
+  return None
+# find_in_path()
 
 setup(cmdclass={'build': build, 'clean': clean},
       name='svn-ctypes-python-bindings',

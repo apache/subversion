@@ -669,9 +669,7 @@ def update_delete_modified_files(sbox):
   expected_disk.remove('A/D/G/rho')
   expected_disk.remove('A/D/G/tau')
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak('A/B/E', status='C ') # tree conflict (issue #2282)
   expected_status.remove('A/B/E/alpha')
-  expected_status.tweak('A/D', status='C ') # tree conflict (issue #2282)
   expected_status.remove('A/D/G')
   expected_status.remove('A/D/G/pi')
   expected_status.remove('A/D/G/rho')
@@ -949,8 +947,7 @@ def prop_update_on_scheduled_delete(sbox):
 
   # Expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(other_wc, 2)
-  expected_status.tweak('', status='C ') # tree conflict (issue #2282)
-  expected_status.tweak('iota', status='D ')
+  expected_status.tweak('iota', status='D ', treeconflict='C')
 
   # Do the update and check the results in three ways.
   svntest.actions.run_and_verify_update(other_wc,
@@ -1037,7 +1034,6 @@ def update_deleted_missing_dir(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta')
   expected_status.remove('A/D/H', 'A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi')
-  expected_status.tweak('A/B', 'A/D', status='C ')
 
   # Do the update, specifying the deleted paths explicitly.
   svntest.actions.run_and_verify_update(wc_dir,
@@ -1046,6 +1042,14 @@ def update_deleted_missing_dir(sbox):
                                         expected_status,
                                         None, None, None, None, None,
                                         0, "-r", "2", E_path, H_path)
+
+  # Check tree conflict status
+  unquiet_status = expected_status.copy()
+  unquiet_status.add({
+    'A/B/E' : Item(status='! ', treeconflict='C'),
+    'A/D/H' : Item(status='! ', treeconflict='C'),
+    })
+  svntest.actions.run_and_verify_unquiet_status(wc_dir, unquiet_status)
 
   # This update created tree conflicts ("update tried to
   # delete a directory that was locally deleted"), marking
@@ -3624,7 +3628,9 @@ def update_accept_conflicts(sbox):
   # the --non-interactive option.
   svntest.actions.run_and_verify_svn(None,
                                      ['C    %s\n' % (iota_path_backup,),
-                                      'Updated to revision 2.\n'],
+                                      'Updated to revision 2.\n',
+                                      'Summary of conflicts:\n',
+                                      '  Text conflicts: 1\n'],
                                      [],
                                      'update', iota_path_backup)
 
@@ -3632,7 +3638,9 @@ def update_accept_conflicts(sbox):
   # Just leave the conflicts alone.
   svntest.actions.run_and_verify_svn(None,
                                      ['C    %s\n' % (lambda_path_backup,),
-                                      'Updated to revision 2.\n'],
+                                      'Updated to revision 2.\n',
+                                      'Summary of conflicts:\n',
+                                      '  Text conflicts: 1\n'],
                                      [],
                                      'update', '--accept=postpone',
                                      lambda_path_backup)

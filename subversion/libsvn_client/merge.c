@@ -547,10 +547,18 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
   svn_boolean_t honor_mergeinfo;
   apr_array_header_t *adjusted_props;
   int i;
+  const svn_wc_entry_t *target_entry;
 
   /* If we aren't honoring mergeinfo, get outta here. */
   mergeinfo_behavior(&honor_mergeinfo, NULL, merge_b);
   if (! honor_mergeinfo)
+    return SVN_NO_ERROR;
+
+  /* If PATH itself is newly added or replaced there is no need to filter. */
+  SVN_ERR(svn_wc__entry_versioned(&target_entry, path, adm_access,
+                                  FALSE, pool));
+  if (target_entry->schedule == svn_wc_schedule_add
+      || target_entry->schedule == svn_wc_schedule_replace)
     return SVN_NO_ERROR;
 
   adjusted_props = apr_array_make(pool, (*props)->nelts, sizeof(svn_prop_t));
@@ -575,12 +583,7 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
           svn_mergeinfo_t filtered_mergeinfo = NULL;
           svn_mergeinfo_t filtered_younger_mergeinfo = NULL;
           const char *target_url;
-          const svn_wc_entry_t *target_entry;
           const char *old_url = NULL;
-
-          /* Get an entry for PATH so we can find its base revision. */
-          SVN_ERR(svn_wc__entry_versioned(&target_entry, path, adm_access,
-                                          FALSE, pool));
 
           /* Temporarily reparent our RA session to the merge
              target's URL. */
@@ -646,7 +649,8 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
                   apr_hash_this(hi, &key, NULL, &value);
                   source_path = key;
                   rangelist = value;
-                  merge_source_url = svn_path_join(merge_source_root_url,
+                  merge_source_url =
+                        svn_path_url_add_component(merge_source_root_url,
                                                    source_path + 1, pool);
 
                   for (j = 0; j < rangelist->nelts; j++)
@@ -2958,8 +2962,8 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
       else
         child_repos_path = child->path +
           (merge_target_len ? merge_target_len + 1 : 0);
-      child_url1 = svn_path_join(url1, child_repos_path, iterpool);
-      child_url2 = svn_path_join(url2, child_repos_path, iterpool);
+      child_url1 = svn_path_url_add_component(url1, child_repos_path, iterpool);
+      child_url2 = svn_path_url_add_component(url2, child_repos_path, iterpool);
 
       SVN_ERR(svn_wc__entry_versioned(&child_entry, child->path, adm_access,
                                       FALSE, iterpool));
@@ -4692,12 +4696,12 @@ combine_range_with_segments(apr_array_header_t **merge_source_ts_p,
 
       /* Build our merge source structure. */
       merge_source = apr_pcalloc(pool, sizeof(*merge_source));
-      merge_source->url1 = svn_path_join(source_root_url,
-                                         svn_path_uri_encode(path1,
-                                                             pool), pool);
-      merge_source->url2 = svn_path_join(source_root_url,
-                                         svn_path_uri_encode(segment->path,
-                                                             pool), pool);
+      merge_source->url1 = svn_path_url_add_component(source_root_url,
+                                                      path1,
+                                                      pool);
+      merge_source->url2 = svn_path_url_add_component(source_root_url,
+                                                      segment->path,
+                                                      pool);
       merge_source->rev1 = rev1;
       merge_source->rev2 = MIN(segment->range_end, maxrev);
 
@@ -6310,6 +6314,20 @@ do_merge(apr_array_header_t *merge_sources,
                                             adm_access, ctx, subpool));
     }
 
+  /* Let everyone know we're finished here. */
+  if (ctx->notify_func2)
+    {
+      svn_wc_notify_t *notify
+        = svn_wc_create_notify(target, svn_wc_notify_merge_completed,
+                               subpool);
+      notify->kind = svn_node_none;
+      notify->content_state = notify->prop_state
+        = svn_wc_notify_state_inapplicable;
+      notify->lock_state = svn_wc_notify_lock_state_inapplicable;
+      notify->revision = SVN_INVALID_REVNUM;
+      (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+    }
+
   svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
@@ -6572,8 +6590,7 @@ svn_client_merge3(const char *source1,
       related = TRUE;
 
       /* Make YC_PATH into a full URL. */
-      yc_path = svn_path_join(source_repos_root,
-                              svn_path_uri_encode(yc_path, pool), pool);
+      yc_path = svn_path_url_add_component(source_repos_root, yc_path, pool);
 
       /* If the common ancestor matches the right side of our merge,
          then we only need to reverse-merge the left side. */
@@ -6630,7 +6647,7 @@ svn_client_merge3(const char *source1,
           if (err)
             {
               if (use_sleep)
-                svn_sleep_for_timestamps();
+                svn_io_sleep_for_timestamps(target_wcpath, pool);
 
               return err;
             }
@@ -6640,7 +6657,7 @@ svn_client_merge3(const char *source1,
              the merge_cousins_and_supplement_mergeinfo() routine). */
           svn_pool_destroy(sesspool);
 
-          return svn_wc_adm_close(adm_access);
+          return svn_wc_adm_close2(adm_access, pool);
         }
     }
   else
@@ -6664,12 +6681,12 @@ svn_client_merge3(const char *source1,
                  record_only, depth, merge_options, &use_sleep, ctx, pool);
 
   if (use_sleep)
-    svn_sleep_for_timestamps();
+    svn_io_sleep_for_timestamps(target_wcpath, pool);
 
   if (err)
     return err;
 
-  return svn_wc_adm_close(adm_access);
+  return svn_wc_adm_close2(adm_access, pool);
 }
 
 svn_error_t *
@@ -7016,8 +7033,8 @@ calculate_left_hand_side(const char **url_left,
                 = APR_ARRAY_IDX(rangelist, rangelist->nelts - 1,
                                 svn_merge_range_t *);
               *rev_left = last_range->end;
-              *url_left = svn_path_join(source_repos_root, segment->path,
-                                        pool);
+              *url_left = svn_path_url_add_component(source_repos_root,
+                                                     segment->path, pool);
               *source_mergeinfo_p = svn_mergeinfo_dup(source_mergeinfo, pool);
               svn_pool_destroy(iterpool);
               svn_pool_destroy(subpool);
@@ -7192,13 +7209,13 @@ svn_client_merge_reintegrate(const char *source,
                                                ctx, pool);
 
   if (use_sleep)
-    svn_sleep_for_timestamps();
+    svn_io_sleep_for_timestamps(target_wcpath, pool);
 
   if (err)
     return err;
 
   /* Shutdown the administrative session. */
-  return svn_wc_adm_close(adm_access);
+  return svn_wc_adm_close2(adm_access, pool);
 }
 
 
@@ -7277,13 +7294,13 @@ svn_client_merge_peg3(const char *source,
                  merge_options, &use_sleep, ctx, pool);
 
   if (use_sleep)
-    svn_sleep_for_timestamps();
+    svn_io_sleep_for_timestamps(target_wcpath, pool);
 
   if (err)
     return err;
 
   /* Shutdown the administrative session. */
-  return svn_wc_adm_close(adm_access);
+  return svn_wc_adm_close2(adm_access, pool);
 }
 
 

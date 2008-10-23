@@ -338,7 +338,7 @@ process_committed_leaf(int log_number,
   apr_uint64_t modify_flags = 0;
   svn_stringbuf_t *logtags = svn_stringbuf_create("", pool);
 
-  SVN_ERR(svn_wc__adm_write_check(adm_access));
+  SVN_ERR(svn_wc__adm_write_check(adm_access, pool));
 
   /* Set PATH's working revision to NEW_REVNUM; if REV_DATE and
      REV_AUTHOR are both non-NULL, then set the 'committed-rev',
@@ -526,15 +526,20 @@ process_committed_internal(int *log_number,
           if (current_entry->kind == svn_node_dir)
             {
               svn_wc_adm_access_t *child_access;
+              int inner_log = 0;
 
               SVN_ERR(svn_wc_adm_retrieve(&child_access, adm_access,
                                           this_path, subpool));
-              SVN_ERR(svn_wc_process_committed4
-                      (this_path, child_access,
-                       TRUE /* recurse */,
-                       new_revnum, rev_date, rev_author, NULL,
-                       FALSE /* remove_lock */,
-                       remove_changelist, NULL, subpool));
+
+              SVN_ERR(process_committed_internal(&inner_log,
+                                                 this_path, child_access,
+                                                 TRUE /* recurse */,
+                                                 new_revnum, rev_date,
+                                                 rev_author,
+                                                 NULL, FALSE /* remove_lock */,
+                                                 remove_changelist, NULL,
+                                                 subpool));
+              SVN_ERR(svn_wc__run_log(child_access, NULL, pool));
             }
           else
             {
@@ -1290,9 +1295,9 @@ svn_wc_delete3(const char *path,
 
           if (was_kind != svn_node_dir) /* Dirs don't have text-bases */
             /* Restore the original text-base */
-            SVN_ERR(svn_wc__loggy_move(&log_accum, NULL, adm_access,
+            SVN_ERR(svn_wc__loggy_move(&log_accum, adm_access,
                                        text_revert, text_base,
-                                       FALSE, pool));
+                                       pool));
 
           SVN_ERR(svn_wc__loggy_revert_props_restore(&log_accum,
                                                      path, adm_access, pool));
@@ -1549,8 +1554,8 @@ svn_wc_add3(const char *path,
         {
           const char *textb = svn_wc__text_base_path(path, FALSE, pool);
           const char *rtextb = svn_wc__text_revert_path(path, FALSE, pool);
-          SVN_ERR(svn_wc__loggy_move(&log_accum, NULL, adm_access,
-                                     textb, rtextb, FALSE, pool));
+          SVN_ERR(svn_wc__loggy_move(&log_accum, adm_access,
+                                     textb, rtextb, pool));
         }
       SVN_ERR(svn_wc__loggy_revert_props_create(&log_accum, path,
                                                 adm_access, TRUE, pool));
@@ -1576,8 +1581,8 @@ svn_wc_add3(const char *path,
 
           /* Make sure this new directory has an admistrative subdirectory
              created inside of it */
-          SVN_ERR(svn_wc_ensure_adm3(path, NULL, new_url, p_entry->repos,
-                                     0, depth, pool));
+          SVN_ERR(svn_wc_ensure_adm3(path, p_entry->uuid, new_url, 
+                                     p_entry->repos, 0, depth, pool));
         }
       else
         {
@@ -1585,7 +1590,7 @@ svn_wc_add3(const char *path,
              the admin directory already in existence, then the dir will
              contain the copyfrom settings.  So we need to pass the
              copyfrom arguments to the ensure call. */
-          SVN_ERR(svn_wc_ensure_adm3(path, NULL, copyfrom_url,
+          SVN_ERR(svn_wc_ensure_adm3(path, parent_entry->uuid, copyfrom_url,
                                      parent_entry->repos, copyfrom_rev,
                                      depth, pool));
         }
@@ -1914,12 +1919,12 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
 
       if (revert_base_path)
         {
-          SVN_ERR(svn_wc__loggy_copy
-                  (&log_accum, NULL, adm_access, svn_wc__copy_translate,
-                   revert_base_path, fullpath, FALSE, pool));
-          SVN_ERR(svn_wc__loggy_move
-                  (&log_accum, NULL, adm_access,
-                   revert_base_path, regular_base_path, FALSE, pool));
+          SVN_ERR(svn_wc__loggy_copy(&log_accum, adm_access,
+                                     revert_base_path, fullpath,
+                                     pool));
+          SVN_ERR(svn_wc__loggy_move(&log_accum, adm_access,
+                                     revert_base_path, regular_base_path,
+                                     pool));
           *reverted = TRUE;
         }
       else
@@ -1935,9 +1940,9 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
 
           if (reinstall_working)
             {
-              SVN_ERR(svn_wc__loggy_copy
-                      (&log_accum, NULL, adm_access, svn_wc__copy_translate,
-                       regular_base_path, fullpath, FALSE, pool));
+              SVN_ERR(svn_wc__loggy_copy(&log_accum, adm_access,
+                                         regular_base_path, fullpath,
+                                         pool));
               *reverted = TRUE;
             }
         }

@@ -105,17 +105,9 @@ print_status(const char *path,
   enum svn_wc_status_kind text_status = status->text_status;
   char tree_status_code = ' ';
 
-  /* To signal that a directory contains tree conflicts, we "hijack"
-   * the text status column if it is blank. */
-  if (status->entry 
-      && (status->entry->kind == svn_node_dir)
-      && (status->text_status == svn_wc_status_normal)
-      && (status->has_tree_conflicted_children))
-    text_status = svn_wc_status_conflicted;
-
   /* To indicate this node is the victim of a tree conflict, we show
      'C' in the tree-conflict column, overriding any other status. */
-  if (status->is_tree_conflict_victim)
+  if (status->tree_conflicted)
     tree_status_code = 'C';
 
   if (detailed)
@@ -258,8 +250,8 @@ svn_cl__print_status_xml(const char *path,
   if (status->entry && ! status->entry->copied)
     apr_hash_set(att_hash, "revision", APR_HASH_KEY_STRING,
                  apr_psprintf(pool, "%ld", status->entry->revision));
-  if (status->has_tree_conflicted_children)
-    apr_hash_set(att_hash, "has-tree-conflicted-children", APR_HASH_KEY_STRING,
+  if (status->tree_conflicted)
+    apr_hash_set(att_hash, "tree-conflicted", APR_HASH_KEY_STRING,
                  "true");
   svn_xml_make_open_tag_hash(&sb, pool, svn_xml_normal, "wc-status",
                              att_hash);

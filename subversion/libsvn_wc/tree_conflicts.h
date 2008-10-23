@@ -165,7 +165,8 @@ svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
                                       apr_pool_t *pool);
 
 /*
- * Search in CONFLICTS for a conflict with the given victim_path.
+ * Search in CONFLICTS (an array of svn_wc_conflict_description_t tree
+ * conflicts) for a conflict with the given victim_path.
  *
  * This function is used in a unit test in tests/libsvn_wc.
  */

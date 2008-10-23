@@ -128,7 +128,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                                      ctx->cancel_baton, pool));
       anchor = svn_wc_adm_access_path(adm_access);
       dir_access_path = svn_wc_adm_access_path(dir_access);
-      SVN_ERR(svn_wc_adm_close(adm_access));
+      SVN_ERR(svn_wc_adm_close2(adm_access, pool));
 
       SVN_ERR(svn_wc_adm_retrieve(&adm_access, a, anchor, pool));
       SVN_ERR(svn_wc_adm_retrieve(&dir_access, a, dir_access_path, pool));
@@ -207,7 +207,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
     {
       /* Don't rely on the error handling to handle the sleep later, do
          it now */
-      svn_sleep_for_timestamps();
+      svn_io_sleep_for_timestamps(path, pool);
       return err;
     }
   *use_sleep = TRUE;
@@ -223,14 +223,14 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   /* Sleep to ensure timestamp integrity (we do this regardless of
      errors in the actual switch operation(s)). */
   if (sleep_here)
-    svn_sleep_for_timestamps();
+    svn_io_sleep_for_timestamps(path, pool);
 
   /* Return errors we might have sustained. */
   if (err)
     return err;
 
   if (close_adm_access)
-    SVN_ERR(svn_wc_adm_close(adm_access));
+    SVN_ERR(svn_wc_adm_close2(adm_access, pool));
 
   /* Let everyone know we're finished here. */
   if (ctx->notify_func2)

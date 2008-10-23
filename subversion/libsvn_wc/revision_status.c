@@ -125,7 +125,7 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
 
   SVN_ERR(editor->close_edit(edit_baton, pool));
 
-  SVN_ERR(svn_wc_adm_close(anchor_access));
+  SVN_ERR(svn_wc_adm_close2(anchor_access, pool));
 
   if ((! result->switched) && (trail_url != NULL))
     {

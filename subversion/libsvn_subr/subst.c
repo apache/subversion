@@ -1481,25 +1481,25 @@ svn_subst_copy_and_translate(const char *src,
 /* Given a special file at SRC, generate a textual representation of
    it in a normal file at DST.  Perform all allocations in POOL. */
 static svn_error_t *
-detranslate_special_file(const char *src, const char *dst, apr_pool_t *pool)
+detranslate_special_file(const char *src, const char *dst,
+                         apr_pool_t *scratch_pool)
 {
   const char *dst_tmp;
-  apr_file_t *d;
-  svn_stream_t *src_stream, *dst_stream;
+  svn_stream_t *src_stream;
+  svn_stream_t *dst_stream;
 
   /* Open a temporary destination that we will eventually atomically
      rename into place. */
-  SVN_ERR(svn_io_open_unique_file2(&d, &dst_tmp, dst,
-                                   ".tmp", svn_io_file_del_none, pool));
-  dst_stream = svn_stream_from_aprfile2(d, FALSE, pool);
-
-  SVN_ERR(svn_subst_get_detranslated_stream(&src_stream, src, pool, pool));
-  SVN_ERR(svn_stream_copy2(src_stream, dst_stream, NULL, NULL, pool));
-
-  SVN_ERR(svn_stream_close(dst_stream));
+  SVN_ERR(svn_stream_open_unique(&dst_stream, &dst_tmp,
+                                 svn_path_dirname(dst, scratch_pool),
+                                 svn_io_file_del_none,
+                                 scratch_pool, scratch_pool));
+  SVN_ERR(svn_subst_get_detranslated_stream(&src_stream, src,
+                                            scratch_pool, scratch_pool));
+  SVN_ERR(svn_stream_copy3(src_stream, dst_stream, NULL, NULL, scratch_pool));
 
   /* Do the atomic rename from our temporary location. */
-  return svn_io_file_rename(dst_tmp, dst, pool);
+  return svn_io_file_rename(dst_tmp, dst, scratch_pool);
 }
 
 /* Creates a special file DST from the internal representation given
@@ -1561,18 +1561,8 @@ create_special_file_from_stringbuf(svn_stringbuf_t *src, const char *dst,
   /* If nothing else worked, write out the internal representation to
      a file that can be edited by the user. */
   if (create_using_internal_representation)
-    {
-      apr_file_t *dst_tmp_file;
-      apr_size_t written;
-
-
-      SVN_ERR(svn_io_open_unique_file2(&dst_tmp_file, &dst_tmp,
-                                       dst, ".tmp", svn_io_file_del_none,
-                                       pool));
-      SVN_ERR(svn_io_file_write_full(dst_tmp_file, src->data, src->len,
-                                     &written, pool));
-      SVN_ERR(svn_io_file_close(dst_tmp_file, pool));
-    }
+    SVN_ERR(svn_io_write_unique(&dst_tmp, dst, src->data, src->len,
+                                svn_io_file_del_none, pool));
 
   /* Do the atomic rename from our temporary location. */
   return svn_io_file_rename(dst_tmp, dst, pool);
