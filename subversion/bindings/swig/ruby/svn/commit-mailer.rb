@@ -370,6 +370,11 @@ module Svn
       body << "\n"
       body << "  New Revision: #{@info.revision}\n"
       body << "\n"
+      body << "  Log:\n"
+      @info.log.rstrip.each_line do |line|
+        body << "    #{line}"
+      end
+      body << "\n"
       body << added_dirs
       body << added_files
       body << copied_dirs
@@ -378,11 +383,6 @@ module Svn
       body << deleted_files
       body << modified_dirs
       body << modified_files
-      body << "\n"
-      body << "  Log:\n"
-      @info.log.each_line do |line|
-        body << "    #{line}"
-      end
       body << "\n"
       body << change_info
       body
