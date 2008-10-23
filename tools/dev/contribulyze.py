@@ -545,6 +545,7 @@ def graze(input):
           log = LogMessage(m.group(1), m.group(2), m.group(3))
           num_lines = int(m.group(4))
           just_saw_separator = False
+          saw_patch = False
           line = input.readline()
           # Handle 'svn log -v' by waiting for the blank line.
           while line != '\n':
@@ -574,6 +575,8 @@ def graze(input):
                   user = log.committer
                 c = Contributor.get(user, real, email)
                 c.add_activity(field.name, log)
+                if (field.name == 'Patch'):
+                  saw_patch = True
                 field.add_contributor(c)
                 line = input.readline()
                 if line == log_separator:
@@ -596,6 +599,9 @@ def graze(input):
                   log.add_field(field)
                   field = None
             num_lines -= 1
+          if not saw_patch and log.committer != '(no author)':
+            c = Contributor.get(log.committer, None, None)
+            c.add_activity('Patch', log)
         continue
 
 index_introduction = '''
