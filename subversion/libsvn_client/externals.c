@@ -386,8 +386,7 @@ switch_file_external(const char *path,
       SVN_ERR(svn_wc__entry_versioned(&anchor_dir_entry, anchor,
                                       target_adm_access, FALSE, subpool));
       SVN_ERR(svn_wc_conflicted_p2(&text_conflicted, &prop_conflicted,
-                                   &tree_conflicted, NULL, anchor,
-                                   anchor_dir_entry, target_adm_access,
+                                   &tree_conflicted, anchor, target_adm_access,
                                    subpool));
       if (text_conflicted || prop_conflicted || tree_conflicted)
         return svn_error_createf
@@ -447,18 +446,6 @@ switch_file_external(const char *path,
       revert_file = FALSE;
       remove_from_revision_control = TRUE;
 
-      /* Switching a newly added file causes a conflict on the anchor
-         directory, so resolve it. */
-      err = svn_wc_resolved_conflict4(anchor, 
-                                      target_adm_access,
-                                      FALSE, FALSE, TRUE,
-                                      svn_depth_empty,
-                                      svn_wc_conflict_choose_merged,
-                                      NULL, /* svn_wc_notify_func2_t */
-                                      NULL, /* void * */
-                                      ctx->cancel_func,
-                                      ctx->cancel_baton,
-                                      subpool);
       if (err)
         goto cleanup;
   }

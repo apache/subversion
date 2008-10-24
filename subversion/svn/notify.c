@@ -118,9 +118,9 @@ static void
 notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 {
   struct notify_baton *nb = baton;
-  char statchar_buf[4] = "   ";
-  char tree_conflict_char_buf[8] = "       ";
+  char statchar_buf[5] = "    ";
   const char *path_local = n->path;
+  char tree_conflict = ' ';
   svn_error_t *err;
 
   if (n->path_prefix)
@@ -138,52 +138,11 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 
   path_local = svn_path_local_style(path_local, pool);
 
-  if (n->is_tree_conflict_victim)
+  if (n->tree_conflicted)
     {
+      tree_conflict = 'C';
       nb->in_external ? nb->ext_tree_conflicts++
                       : nb->tree_conflicts++;
-
-      memcpy(tree_conflict_char_buf, "C( -> )", 7);
-
-      switch (n->tree_conflict_action){
-        case svn_wc_conflict_action_add:
-          tree_conflict_char_buf[2] = 'A';
-          break;
-        case svn_wc_conflict_action_edit:
-          tree_conflict_char_buf[2] = 'M';
-          break;
-        case svn_wc_conflict_action_delete:
-          tree_conflict_char_buf[2] = 'D';
-          break;
-        default:
-          tree_conflict_char_buf[2] = '#';
-          break;
-      }
-
-      switch (n->tree_conflict_action){
-        case svn_wc_conflict_reason_added:
-          tree_conflict_char_buf[5] = 'A';
-          break;
-        case svn_wc_conflict_reason_edited:
-          tree_conflict_char_buf[5] = 'M';
-          break;
-        case svn_wc_conflict_reason_deleted:
-          tree_conflict_char_buf[5] = 'D';
-          break;
-        case svn_wc_conflict_reason_unversioned:
-          tree_conflict_char_buf[5] = '?';
-          break;
-        case svn_wc_conflict_reason_obstructed:
-          tree_conflict_char_buf[5] = '~';
-          break;
-        case svn_wc_conflict_reason_missing:
-          tree_conflict_char_buf[5] = '!';
-          break;
-        default:
-          tree_conflict_char_buf[5] = '#';
-          break;
-      }
-
     }
 
   switch (n->action)
@@ -208,14 +167,14 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 
     case svn_wc_notify_update_delete:
       nb->received_some_change = TRUE;
-      if ((err = svn_cmdline_printf(pool, "D  %s %s\n", tree_conflict_char_buf,
+      if ((err = svn_cmdline_printf(pool, "D  %c %s\n", tree_conflict,
                                     path_local)))
         goto print_error;
       break;
 
     case svn_wc_notify_update_replace:
       nb->received_some_change = TRUE;
-      if ((err = svn_cmdline_printf(pool, "R  %s %s\n", tree_conflict_char_buf,
+      if ((err = svn_cmdline_printf(pool, "R  %c %s\n", tree_conflict,
                                     path_local)))
         goto print_error;
       break;
@@ -226,15 +185,13 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
         {
           nb->in_external ? nb->ext_text_conflicts++
                           : nb->text_conflicts++;
-          if ((err = svn_cmdline_printf(pool, "C  %s %s\n",
-                                        tree_conflict_char_buf,
+          if ((err = svn_cmdline_printf(pool, "C  %c %s\n", tree_conflict,
                                         path_local)))
             goto print_error;
         }
       else
         {
-          if ((err = svn_cmdline_printf(pool, "A  %s %s\n",
-                                        tree_conflict_char_buf,
+          if ((err = svn_cmdline_printf(pool, "A  %c %s\n", tree_conflict,
                                         path_local)))
             goto print_error;
         }
@@ -260,9 +217,9 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       else if (n->prop_state == svn_wc_notify_state_merged)
         statchar_buf[1] = 'G';
 
-      if ((err = svn_cmdline_printf(pool, "%s%s %s\n", statchar_buf,
-                                    tree_conflict_char_buf,
-                                    path_local)))
+      statchar_buf[3] = tree_conflict;
+
+      if ((err = svn_cmdline_printf(pool, "%s %s\n", statchar_buf, path_local)))
         goto print_error;
       break;
 
@@ -298,15 +255,13 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
          is a binary addition. */
       if (n->mime_type && (svn_mime_type_is_binary(n->mime_type)))
         {
-          if ((err = svn_cmdline_printf(pool, "A  %s(bin) %s\n",
-                                        tree_conflict_char_buf,
+          if ((err = svn_cmdline_printf(pool, "A  (bin)  %s\n",
                                         path_local)))
             goto print_error;
         }
       else
         {
-          if ((err = svn_cmdline_printf(pool, "A  %s      %s\n",
-                                        tree_conflict_char_buf,
+          if ((err = svn_cmdline_printf(pool, "A         %s\n",
                                         path_local)))
             goto print_error;
         }
@@ -314,8 +269,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 
     case svn_wc_notify_delete:
       nb->received_some_change = TRUE;
-      if ((err = svn_cmdline_printf(pool, "D  %s      %s\n",
-                                    tree_conflict_char_buf,
+      if ((err = svn_cmdline_printf(pool, "D         %s\n",
                                     path_local)))
         goto print_error;
       break;
@@ -350,17 +304,16 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
         if (n->lock_state == svn_wc_notify_lock_state_unlocked)
           statchar_buf[2] = 'B';
 
-        if (statchar_buf[0] != ' ' || statchar_buf[1] != ' '
-            || n->is_tree_conflict_victim)
+        statchar_buf[3] = tree_conflict;
+
+        if (statchar_buf[0] != ' ' || statchar_buf[1] != ' ')
           nb->received_some_change = TRUE;
 
         if (statchar_buf[0] != ' ' || statchar_buf[1] != ' '
-            || statchar_buf[2] != ' ' || n->is_tree_conflict_victim)
+            || statchar_buf[2] != ' ' || statchar_buf[3] != ' ')
           {
-            if ((err = svn_cmdline_printf(pool, "%s%s %s\n",
-                                          statchar_buf,
-                                          tree_conflict_char_buf,
-                                          path_local)))
+            if ((err = svn_cmdline_printf(pool, "%s %s\n",
+                                          statchar_buf, path_local)))
               goto print_error;
           }
       }

@@ -1002,19 +1002,7 @@ typedef struct svn_wc_notify_t {
 
   /** Whether @c path is a victim of a tree-conflict.
    * @since New in 1.6 */
-  svn_boolean_t is_tree_conflict_victim;
-
-  /** If IS_TREE_CONFLICT_VICTIM is TRUE, this supplies the corresponding
-   * conflict action, i.e. what subversion tried to do but couldn't because
-   * it encountered a tree-conflict.
-   * @since New in 1.6 */
-  svn_wc_conflict_action_t tree_conflict_action;
-
-  /** If IS_TREE_CONFLICT_VICTIM is TRUE, this supplies the corresponding
-   * conflict reason, i.e. what is found in the working copy or the target
-   * and prevents an action that subversion wanted to carry out.
-   * @since New in 1.6 */
-  svn_wc_conflict_reason_t tree_conflict_reason;
+  svn_boolean_t tree_conflicted;
 
   /* NOTE: Add new fields at the end to preserve binary compatibility.
      Also, if you add fields here, you have to update svn_wc_create_notify
@@ -2165,34 +2153,27 @@ svn_wc_entry_dup(const svn_wc_entry_t *entry,
                  apr_pool_t *pool);
 
 
-/** Given a @a dir_path under version control, decide if one of its
- * entries (@a entry) is in state of conflict; return the answers in
- * @a text_conflicted_p, @a prop_conflicted_p, @a tree_conflicted_p and
- * @a has_tree_conflicted_children_p.
+/** Given a @a path in a dir under version control, decide if it is in
+ * state of conflict; return the answers in @a *text_conflicted_p, @a
+ * *prop_conflicted_p, and @a *tree_conflicted_p.  If one or two of the
+ * answers are uninteresting, simply pass @c NULL pointers.
  *
- * Only @a tree_conflicted_p and @a has_tree_conflicted_children_p can
- * be NULL, in which case no answer is supplied, repsectively.
+ * If @path is unversioned or does not exist, @a *text_conflicted_p and
+ * @a *prop_conflicted_p will be @c FALSE if non-NULL.
  *
- * An @a adm_access is (only) needed to determine @a tree_conflicted_p.
- * If @a tree_conflicted_p is NULL, @a adm_access may be NULL as well.
+ * @a adm_access is the admin access baton of the parent directory.
  *
- * If @a entry is the THIS_DIR entry of @a dir_path, and this directory
- * currently contains one or more tree-conflicted children, then set
- * @a *has_tree_conflicted_children_p to true, else set it to false.
+ * If the @a path has a corresponding text conflict file (with suffix
+ * .mine, .theirs, etc.) that cannot be found, assume that the text
+ * conflict has been resolved by the user and return @c FALSE in @a
+ * *text_conflicted_p.
  *
- * If the @a entry mentions that a text conflict file (.rej suffix)
- * exists, but it cannot be found, assume the text conflict has been
- * resolved by the user and return FALSE in @a *text_conflicted_p.
+ * Similarly, if a property conflicts file (.prej suffix) exists, but
+ * it cannot be found, assume that the property conflicts have been
+ * resolved by the user and return @c FALSE in @a *prop_conflicted_p.
  *
- * Similarly, if the @a entry mentions that a property conflicts file
- * (.prej suffix) exists, but it cannot be found, assume the property
- * conflicts have been resolved by the user and return FALSE in
- * @a *prop_conflicted_p.
- *
- * @a *tree_conflicted_p and @a *has_tree_conflicted_children_p are
- * not auto-resolved in this fashion, an explicit `resolved' is needed.
- *
- * The @a entry is not updated.
+ * @a *tree_conflicted_p can't be auto-resolved in this fashion.  An
+ * explicit `resolved' is needed.
  *
  * @since New in 1.6.
  */
@@ -2200,9 +2181,7 @@ svn_error_t *
 svn_wc_conflicted_p2(svn_boolean_t *text_conflicted_p,
                      svn_boolean_t *prop_conflicted_p,
                      svn_boolean_t *tree_conflicted_p,
-                     svn_boolean_t *has_tree_conflicted_children_p,
-                     const char *dir_path,
-                     const svn_wc_entry_t *entry,
+                     const char *path,
                      svn_wc_adm_access_t *adm_access,
                      apr_pool_t *pool);
 

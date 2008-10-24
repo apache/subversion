@@ -2917,9 +2917,8 @@ resolve_conflict_on_entry(const char *path,
              the successful resolution.  */
           svn_boolean_t text_conflict, prop_conflict, tree_conflict;
           SVN_ERR(svn_wc_conflicted_p2(&text_conflict, &prop_conflict,
-                                       &tree_conflict, NULL,
-                                       svn_wc_adm_access_path(conflict_dir),
-                                       entry, conflict_dir, pool));
+                                       &tree_conflict, path, conflict_dir,
+                                       pool));
           if ((! (resolve_text && text_conflict))
               && (! (resolve_props && prop_conflict))
               && (! (resolve_tree && tree_conflict)))
