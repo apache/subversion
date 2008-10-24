@@ -21,6 +21,7 @@
 
 #include "SVNClient.h"
 #include "InfoCallback.h"
+#include "ConflictResolverCallback.h"
 #include "EnumMapper.h"
 #include "JNIUtil.h"
 #include "svn_time.h"
@@ -118,7 +119,8 @@ InfoCallback::createJavaInfo2(const char *path, const svn_info_t *info,
                              "ZILjava/lang/String;JJJ"
                              "Ljava/lang/String;Ljava/lang/String;"
                              "Ljava/lang/String;Ljava/lang/String;"
-                             "Ljava/lang/String;Ljava/lang/String;JJI)V");
+                             "Ljava/lang/String;Ljava/lang/String;JJI"
+                             "L"JAVA_PACKAGE"/ConflictDescriptor;)V");
       if (mid == 0 || JNIUtil::isJavaExceptionThrown())
         return NULL;
     }
@@ -176,6 +178,11 @@ InfoCallback::createJavaInfo2(const char *path, const svn_info_t *info,
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
+  jobject jdesc = ConflictResolverCallback::createJConflictDescriptor(
+                                                            info->tree_conflict);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
   jlong jworkingSize = info->working_size == SVN_INFO_SIZE_UNKNOWN
     ? -1 : (jlong) info->working_size;
   jlong jreposSize = info->size == SVN_INFO_SIZE_UNKNOWN
@@ -195,7 +202,7 @@ InfoCallback::createJavaInfo2(const char *path, const svn_info_t *info,
                                   jconflictOld, jconflictNew, jconflictWrk,
                                   jprejfile, jchangelist,
                                   jworkingSize, jreposSize,
-                                  EnumMapper::mapDepth(info->depth));
+                                  EnumMapper::mapDepth(info->depth), jdesc);
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
@@ -248,6 +255,10 @@ InfoCallback::createJavaInfo2(const char *path, const svn_info_t *info,
     return NULL;
 
   env->DeleteLocalRef(jchangelist);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  env->DeleteLocalRef(jdesc);
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
