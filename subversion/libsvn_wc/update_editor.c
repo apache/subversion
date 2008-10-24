@@ -1199,9 +1199,13 @@ tree_has_local_mods(svn_boolean_t *modified,
  * schedule-delete etc.), or NULL if FULL_PATH is unversioned.
  * PARENT_ADM_ACCESS is the admin access baton of FULL_PATH's parent
  * directory.
+ *
+ * If PCONFLICT is not null, set *PCONFLICT to the conflict description if
+ * there is one or else to null.
  */
 static svn_error_t *
-check_tree_conflict(struct edit_baton *eb,
+check_tree_conflict(svn_wc_conflict_description_t **pconflict,
+                    struct edit_baton *eb,
                     svn_stringbuf_t *log_accum,
                     const char *full_path,
                     const svn_wc_entry_t *entry,
@@ -1291,6 +1295,9 @@ check_tree_conflict(struct edit_baton *eb,
       break;
     }
 
+  if (pconflict)
+    *pconflict = NULL;
+
   /* If a conflict was detected, append log commands to the log accumulator
    * to record it. */
   if (reason != (svn_wc_conflict_reason_t)(-1))
@@ -1307,6 +1314,9 @@ check_tree_conflict(struct edit_baton *eb,
 
       SVN_ERR(svn_wc__loggy_add_tree_conflict_data(log_accum, conflict,
                                                    parent_adm_access, pool));
+
+      if (pconflict)
+        *pconflict = conflict;
     }
 
   return SVN_NO_ERROR;
@@ -1334,7 +1344,7 @@ do_entry_deletion(struct edit_baton *eb,
 
   SVN_ERR(svn_wc__entry_versioned(&entry, full_path, adm_access, FALSE, pool));
 
-  SVN_ERR(check_tree_conflict(eb, log_item, full_path, entry, adm_access,
+  SVN_ERR(check_tree_conflict(NULL, eb, log_item, full_path, entry, adm_access,
                               svn_wc_conflict_action_delete, pool));
 
   SVN_ERR(svn_wc__loggy_delete_entry(&log_item, adm_access, full_path,
@@ -1569,8 +1579,8 @@ add_directory(const char *path,
                                           pb->path, pool));
 
               /* Raise a tree conflict if this directory is already present. */
-              SVN_ERR(check_tree_conflict(eb, pb->log_accum, db->path, entry,
-                                          parent_adm_access,
+              SVN_ERR(check_tree_conflict(NULL, eb, pb->log_accum, db->path,
+                                          entry, parent_adm_access,
                                           svn_wc_conflict_action_add, pool));
 
               /*
@@ -1782,7 +1792,7 @@ open_directory(const char *path,
     }
 
   /* Raise a tree conflict if scheduled for deletion or similar. */
-  SVN_ERR(check_tree_conflict(eb, pb->log_accum, db->path, entry,
+  SVN_ERR(check_tree_conflict(NULL, eb, pb->log_accum, db->path, entry,
                               parent_adm_access, svn_wc_conflict_action_edit,
                               pool));
 
@@ -2525,7 +2535,7 @@ add_file(const char *path,
   /* Sanity checks. */
 
   /* Raise a tree conflict if there's already something versioned here. */
-  SVN_ERR(check_tree_conflict(eb, pb->log_accum, path, entry, adm_access,
+  SVN_ERR(check_tree_conflict(NULL, eb, pb->log_accum, path, entry, adm_access,
                               svn_wc_conflict_action_add, pool));
 
   /* When adding, there should be nothing with this name unless unversioned
@@ -2646,8 +2656,8 @@ open_file(const char *path,
    * This is use case 1 described in the paper attached to issue #2282
    * See also notes/tree-conflicts/detection.txt
    */
-  SVN_ERR(check_tree_conflict(eb, pb->log_accum, fb->path, entry, adm_access,
-                              svn_wc_conflict_action_edit, pool));
+  SVN_ERR(check_tree_conflict(NULL, eb, pb->log_accum, fb->path, entry,
+                              adm_access, svn_wc_conflict_action_edit, pool));
 
   /* It is interesting to note: everything below is just validation. We
      aren't actually doing any "work" or fetching any persistent data. */
