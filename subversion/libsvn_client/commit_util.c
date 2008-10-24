@@ -292,13 +292,9 @@ harvest_committables(apr_hash_t *committables,
          svn_path_local_style(path, pool));
     }
 
-  /* Get a fully populated entry for PATH if we can, and check for
-     conflicts. If this is a directory ... */
   if (entry->kind == svn_node_dir)
     {
-      /* ... then try to read its own entries file so we have a full
-         entry for it (we were going to have to do this eventually to
-         recurse anyway, so... ) */
+      /* Read the dir's own entries for use when recursing. */
       svn_error_t *err;
       const svn_wc_entry_t *e = NULL;
       err = svn_wc_entries_read(&entries, adm_access, copy_mode, pool);
@@ -312,25 +308,13 @@ harvest_committables(apr_hash_t *committables,
         }
 
       /* If we got an entries hash, and the "this dir" entry is
-         present, override our current ENTRY with it, and check for
-         conflicts. */
-      if ((entries) && (apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR,
-                                     APR_HASH_KEY_STRING)))
-        SVN_ERR(svn_wc_conflicted_p2(&tc, &pc, &treec, path, adm_access,
-                                     pool));
-
-      /* No new entry?  Just check the parent's pointer for
-         conflicts. */
-      else
-        SVN_ERR(svn_wc_conflicted_p2(&tc, &pc, &treec, p_path, adm_access,
-                                     pool));
+         present, try to override our current ENTRY with it. */
+      if ((entries) && ((e = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR,
+                                          APR_HASH_KEY_STRING))))
+          entry = e;
     }
 
-  /* If this is not a directory, check for conflicts using the
-     parent's path, passing this node's entry. */
-  else
-    SVN_ERR(svn_wc_conflicted_p2(&tc, &pc, &treec, p_path, adm_access,
-                                 pool));
+  SVN_ERR(svn_wc_conflicted_p2(&tc, &pc, &treec, path, adm_access, pool));
 
   /* Bail now if any conflicts exist for the ENTRY. */
   if (tc || pc || treec)

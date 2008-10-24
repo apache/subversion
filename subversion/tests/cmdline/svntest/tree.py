@@ -712,10 +712,10 @@ def build_tree_from_checkout(lines, include_skipped=1):
   for line in lines:
     match = rm1.search(line)
     if match and match.groups():
-      new_branch = create_from_path(match.group(4), None, {},
-                                    {'status'       : match.group(1),
-                                     'treeconflict' : match.group(3),
-                                     })
+      atts = {'status' : match.group(1)}
+      if match.group(3) == 'C':
+        atts['treeconflict'] = 'C'
+      new_branch = create_from_path(match.group(4), None, {}, atts)
       root.add_child(new_branch)
     else:
       match = rm2.search(line)

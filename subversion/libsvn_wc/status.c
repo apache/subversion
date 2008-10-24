@@ -423,11 +423,7 @@ assemble_status(svn_wc_status2_t **status,
           entry->conflict_new || entry->conflict_wrk)
         {
           svn_boolean_t text_conflict_p, prop_conflict_p;
-          const char *parent_dir;
 
-          if (entry->kind == svn_node_dir)
-            parent_dir = path;
-          else  /* non-directory, that's all we need to know */
           /* The entry says there was a conflict, but the user might have
              marked it as resolved by deleting the artifact files, so check
              for that. */
