@@ -703,7 +703,7 @@ def build_tree_from_checkout(lines, include_skipped=1):
   "Return a tree derived by parsing the output LINES from 'co' or 'up'."
 
   root = SVNTreeNode(root_node_name)
-  rm1 = re.compile ('^([RMAGCUDE_ ][MAGCUDE_ ])([B ])\s+(.+)')
+  rm1 = re.compile ('^([RMAGCUDE_ ][MAGCUDE_ ])([B ])([C ])\s+(.+)')
   if include_skipped:
     rm2 = re.compile ('^(Restored|Skipped)\s+\'(.+)\'')
   else:
@@ -712,8 +712,10 @@ def build_tree_from_checkout(lines, include_skipped=1):
   for line in lines:
     match = rm1.search(line)
     if match and match.groups():
-      new_branch = create_from_path(match.group(3), None, {},
-                                    {'status' : match.group(1)})
+      new_branch = create_from_path(match.group(4), None, {},
+                                    {'status'       : match.group(1),
+                                     'treeconflict' : match.group(3),
+                                     })
       root.add_child(new_branch)
     else:
       match = rm2.search(line)
