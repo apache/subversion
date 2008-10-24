@@ -596,7 +596,12 @@ svn_wc_conflicted_p2(svn_boolean_t *text_conflicted_p,
 
       if (entry && entry->prejfile)
         {
-          path = svn_path_join(dir_path, entry->prejfile, pool);
+          /* A dir's .prej file is _inside_ the dir. */
+          if (entry->kind == svn_node_dir)
+            path = svn_path_join(path, entry->prejfile, pool);
+          else
+            path = svn_path_join(dir_path, entry->prejfile, pool);
+
           SVN_ERR(svn_io_check_path(path, &kind, pool));
           *prop_conflicted_p = (kind == svn_node_file);
         }

@@ -2663,7 +2663,12 @@ open_file(const char *path,
       if (eb->notify_func)
         {
           svn_wc_notify_t *notify
-            = svn_wc_create_notify(fb->path, svn_wc_notify_skip, pool);
+            = svn_wc_create_notify(fb->path,
+                                   tree_conflicted
+                                     ? svn_wc_notify_update_update
+                                     : svn_wc_notify_skip,
+                                   pool);
+
           notify->kind = svn_node_file;
 
           notify->content_state = text_conflicted
