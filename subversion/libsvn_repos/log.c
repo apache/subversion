@@ -1605,8 +1605,6 @@ svn_repos_get_logs4(svn_repos_t *repos,
   svn_revnum_t head = SVN_INVALID_REVNUM;
   svn_fs_t *fs = repos->fs;
   svn_boolean_t descending_order;
-  svn_revnum_t hist_start = start;
-  svn_revnum_t hist_end = end;
 
   /* Setup log range. */
   SVN_ERR(svn_fs_youngest_rev(&head, fs, pool));
@@ -1627,11 +1625,14 @@ svn_repos_get_logs4(svn_repos_t *repos,
       (SVN_ERR_FS_NO_SUCH_REVISION, 0,
        _("No such revision %ld"), end);
 
+  /* Ensure a youngest-to-oldest revision crawl ordering using our
+     (possibly sanitized) range values. */
   descending_order = start >= end;
   if (descending_order)
     {
-      hist_start = end;
-      hist_end = start;
+      svn_revnum_t tmp_rev = start;
+      start = end;
+      end = tmp_rev;
     }
 
   if (! paths)
@@ -1652,17 +1653,17 @@ svn_repos_get_logs4(svn_repos_t *repos,
       int i;
       apr_pool_t *iterpool = svn_pool_create(pool);
 
-      send_count = hist_end - hist_start + 1;
+      send_count = end - start + 1;
       if (limit && send_count > limit)
         send_count = limit;
       for (i = 0; i < send_count; ++i)
         {
-          svn_revnum_t rev = hist_start + i;
+          svn_revnum_t rev = start + i;
 
           svn_pool_clear(iterpool);
 
           if (descending_order)
-            rev = hist_end - i;
+            rev = end - i;
           SVN_ERR(send_log(rev, fs, discover_changed_paths, revprops, FALSE,
                            receiver, receiver_baton, authz_read_func,
                            authz_read_baton, iterpool));
@@ -1672,7 +1673,7 @@ svn_repos_get_logs4(svn_repos_t *repos,
       return SVN_NO_ERROR;
     }
 
-  return do_logs(repos->fs, paths, hist_start, hist_end, limit,
+  return do_logs(repos->fs, paths, start, end, limit,
                  discover_changed_paths, strict_node_history,
                  include_merged_revisions, revprops, descending_order,
                  receiver, receiver_baton,

@@ -812,7 +812,7 @@ msgstr "Commande du protocole svn inconnue"
 
 #: ../include/svn_error_codes.h:846
 msgid "Network connection closed unexpectedly"
-msgstr "La connection réseau a été fermée de façon inattendue"
+msgstr "La connexion réseau a été fermée de façon inattendue"
 
 #: ../include/svn_error_codes.h:850
 msgid "Network read/write error"

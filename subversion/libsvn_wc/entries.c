@@ -1348,7 +1348,8 @@ read_entries(svn_wc_adm_access_t *adm_access,
   apr_pool_t *result_pool = svn_wc_adm_access_pool(adm_access);
   const char *path = svn_wc_adm_access_path(adm_access);
   apr_hash_t *entries = apr_hash_make(result_pool);
-  char *curp, *endp;
+  char *curp;
+  const char *endp;
   svn_wc_entry_t *entry;
   int entryno, entries_format;
   svn_stream_t *stream;
@@ -1359,7 +1360,8 @@ read_entries(svn_wc_adm_access_t *adm_access,
                                   scratch_pool, scratch_pool));
   SVN_ERR(svn_string_from_stream(&buf, stream, scratch_pool, scratch_pool));
 
-  curp = buf->data;
+  /* We own the returned data; it is modifiable, so cast away... */
+  curp = (char *)buf->data;
   endp = buf->data + buf->len;
 
   /* If the first byte of the file is not a digit, then it is probably in XML
@@ -1371,9 +1373,9 @@ read_entries(svn_wc_adm_access_t *adm_access,
     {
       const char *val;
 
-      /* Read the format line from the entries file. In case we're in the middle
-         of upgrading a working copy, this line will contain the original format 
-         pre-upgrade. */
+      /* Read the format line from the entries file. In case we're in the
+         middle of upgrading a working copy, this line will contain the
+         original format pre-upgrade. */
       SVN_ERR(read_val(&val, &curp, endp));
       if (val)
         entries_format = (apr_off_t)apr_strtoi64(val, NULL, 0);
