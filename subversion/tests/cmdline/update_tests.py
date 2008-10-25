@@ -4062,8 +4062,6 @@ def tree_conflicts_on_update_1_2(sbox):
 
   # 1.2) local tree delete, incoming leaf delete
 
-  ### This test should have the same output and status as 1.1, above.
-
   expected_output = svntest.wc.State('', {
     'D/D1'              : Item(status='D ', treeconflict='C'),
     'F/alpha'           : Item(status='D ', treeconflict='C'),
@@ -4080,11 +4078,6 @@ def tree_conflicts_on_update_1_2(sbox):
     })
 
   expected_disk = svntest.actions.deep_trees_after_leaf_del
-
-  expected_status = state_after_tree_del.copy()
-  expected_status.add({ '' : Item(status='  ') }) # also set root's attributes
-  expected_status.tweak(wc_rev=3)
-  expected_status.tweak('F', 'D', 'DF', 'DD', 'DDF', 'DDD', status='C ')
 
   expected_status = svntest.wc.State('', {
     ''                  : Item(status='  ', wc_rev='3'),
@@ -4127,6 +4120,8 @@ def tree_conflicts_on_update_2_1(sbox):
     'DDF/D1'            : Item(status='D ', treeconflict='C'),
     })
 
+  expected_disk = state_after_leaf_edit
+
   expected_status = svntest.wc.State('', {
     ''                  : Item(status='  ', wc_rev='3'),
     'D'                 : Item(status='  ', wc_rev='3'),
@@ -4142,7 +4137,7 @@ def tree_conflicts_on_update_2_1(sbox):
                         leaf_edit,
                         tree_del,
                         expected_output,
-                        state_after_leaf_edit,
+                        expected_disk,
                         expected_status) ] )
 
   expected_status.add({
@@ -4164,6 +4159,9 @@ def tree_conflicts_on_update_2_2(sbox):
 
   # 2.2) local leaf delete, incoming tree delete
 
+  ### Current behaviour fails to show conflicts when deleting
+  ### a directory tree that has modifications. (Will be solved
+  ### when dirs_same_p() is implemented)
   expected_output = svntest.wc.State('', {
     'D/D1'              : Item(status='D ', treeconflict='C'),
     'F/alpha'           : Item(status='D ', treeconflict='C'),
@@ -4172,6 +4170,8 @@ def tree_conflicts_on_update_2_2(sbox):
     'DDD/D1'            : Item(status='D '),
     'DDF/D1'            : Item(status='D '),
     })
+
+  expected_disk = state_after_tree_del
 
   expected_status = svntest.wc.State('', {
     ''                  : Item(status='  ', wc_rev='3'),
@@ -4188,7 +4188,7 @@ def tree_conflicts_on_update_2_2(sbox):
                         leaf_del,
                         tree_del,
                         expected_output,
-                        state_after_tree_del,
+                        expected_disk,
                         expected_status) ] )
 
   expected_status.add({
