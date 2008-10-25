@@ -3990,53 +3990,55 @@ def tree_conflicts_on_update_1_1(sbox):
   # use case 1, as in notes/tree-conflicts/use-cases.txt
   # 1.1) local tree delete, incoming leaf edit
 
-  ### Current behavior (rather messy, isn't it?)
   expected_output = svntest.wc.State('', {
     'F/alpha'           : Item(status='  ', treeconflict='C'),
     'D/D1'              : Item(status='  ', treeconflict='C'),
-    'D/D1/delta'        : Item(status='A '),
+    'D/D1/delta'        : Item(status='A ', treeconflict='C'),
     'DF/D1'             : Item(status='  ', treeconflict='C'),
     'DF/D1/beta'        : Item(status='  ', treeconflict='C'),
     'DD/D1'             : Item(status='  ', treeconflict='C'),
     'DD/D1/D2'          : Item(status='  ', treeconflict='C'),
-    'DD/D1/D2/epsilon'  : Item(status='A '),
+    'DD/D1/D2/epsilon'  : Item(status='A ', treeconflict='C'),
     'DDF/D1'            : Item(status='  ', treeconflict='C'),
     'DDF/D1/D2'         : Item(status='  ', treeconflict='C'),
     'DDF/D1/D2/gamma'   : Item(status='  ', treeconflict='C'),
     'DDD/D1'            : Item(status='  ', treeconflict='C'),
     'DDD/D1/D2'         : Item(status='  ', treeconflict='C'),
     'DDD/D1/D2/D3'      : Item(status='  ', treeconflict='C'),
-    'DDD/D1/D2/D3/zeta' : Item(status='A '),
+    'DDD/D1/D2/D3/zeta' : Item(status='A ', treeconflict='C'),
     })
 
-  ### Current behavior carries out deletions in conflicted trees.
-  expected_state = state_after_leaf_edit.copy()
-  expected_state.remove('F/alpha', 'DF/D1/beta', 'DDF/D1/D2/gamma')
+  # The directory structure is scheduled for delete but is still
+  # found on disk, because the way directory deletes are handled by svn.
+  # No files are present because alpha, beta, gamma were locally removed
+  # and delta, epsilon, zeta weren't added due to tree-conflicts in their
+  # parent directory.
+  expected_disk = state_after_leaf_edit.copy()
+  expected_disk.remove('F/alpha', 'DF/D1/beta', 'DDF/D1/D2/gamma',
+                       'D/D1/delta', 'DD/D1/D2/epsilon', 'DDD/D1/D2/D3/zeta')
 
-  ### Current behavior records redundant conflicts!
+  ### Current behavior fails to show a status on files that would
+  ### have been added if there hadn't been a tree-conflict.
   expected_status = svntest.wc.State('', {
     ''                  : Item(status='  ', wc_rev='3'),
     'D'                 : Item(status='  ', wc_rev='3'),
-    'D/D1'              : Item(status='D ', wc_rev='3', treeconflict='C'),
-    'D/D1/delta'        : Item(status='  ', wc_rev='3'),
-    'F'                 : Item(status='  ', wc_rev='3'),
-    'F/alpha'           : Item(status='D ', wc_rev='2', treeconflict='C'),
+    'D/D1'              : Item(status='D ', treeconflict='C', wc_rev='3'),
     'DD'                : Item(status='  ', wc_rev='3'),
-    'DD/D1'             : Item(status='D ', wc_rev='3', treeconflict='C'),
-    'DD/D1/D2'          : Item(status='D ', wc_rev='3', treeconflict='C'),
-    'DD/D1/D2/epsilon'  : Item(status='  ', wc_rev='3'),
-    'DF'                : Item(status='  ', wc_rev='3'),
-    'DF/D1'             : Item(status='D ', wc_rev='3', treeconflict='C'),
-    'DF/D1/beta'        : Item(status='D ', wc_rev='2', treeconflict='C'),
+    'DD/D1'             : Item(status='D ', treeconflict='C', wc_rev='3'),
+    'DD/D1/D2'          : Item(status='D ', treeconflict='C', wc_rev='3'),
     'DDD'               : Item(status='  ', wc_rev='3'),
-    'DDD/D1'            : Item(status='D ', wc_rev='3', treeconflict='C'),
-    'DDD/D1/D2'         : Item(status='D ', wc_rev='3', treeconflict='C'),
-    'DDD/D1/D2/D3'      : Item(status='D ', wc_rev='3', treeconflict='C'),
-    'DDD/D1/D2/D3/zeta' : Item(status='  ', wc_rev='3'),
+    'DDD/D1'            : Item(status='D ', treeconflict='C', wc_rev='3'),
+    'DDD/D1/D2'         : Item(status='D ', treeconflict='C', wc_rev='3'),
+    'DDD/D1/D2/D3'      : Item(status='D ', treeconflict='C', wc_rev='3'),
     'DDF'               : Item(status='  ', wc_rev='3'),
-    'DDF/D1'            : Item(status='D ', wc_rev='3', treeconflict='C'),
-    'DDF/D1/D2'         : Item(status='D ', wc_rev='3', treeconflict='C'),
-    'DDF/D1/D2/gamma'   : Item(status='D ', wc_rev='2', treeconflict='C'),
+    'DDF/D1'            : Item(status='D ', treeconflict='C', wc_rev='3'),
+    'DDF/D1/D2'         : Item(status='D ', treeconflict='C', wc_rev='3'),
+    'DDF/D1/D2/gamma'   : Item(status='D ', treeconflict='C', wc_rev='2'),
+    'DF'                : Item(status='  ', wc_rev='3'),
+    'DF/D1'             : Item(status='D ', treeconflict='C', wc_rev='3'),
+    'DF/D1/beta'        : Item(status='D ', treeconflict='C', wc_rev='2'),
+    'F'                 : Item(status='  ', wc_rev='3'),
+    'F/alpha'           : Item(status='D ', treeconflict='C', wc_rev='2'),
     })
 
   svntest.actions.deep_trees_run_tests_scheme_for_update(sbox,
@@ -4044,7 +4046,7 @@ def tree_conflicts_on_update_1_1(sbox):
                         tree_del,
                         leaf_edit,
                         expected_output,
-                        expected_state,
+                        expected_disk,
                         expected_status) ] )
 
   ### This test (and others like it) will eventually be much simpler:

@@ -2519,11 +2519,51 @@ add_file(const char *path,
 
   /* Sanity checks. */
 
-  /* Raise a tree conflict if there's already something versioned here. */
-  SVN_ERR(check_tree_conflict(&tree_conflicted, eb, pb->log_accum, path, entry,
-                              adm_access, svn_wc_conflict_action_add, pool));
+  /* Skip file addition if parent directory is in tree-conflict. */
+  if (pb->tree_conflicted)
+    {
+      /* This case isn't covered by check_tree_conflict(), so let's
+       * raise one here. (Tried to add a file into a conflicted dir) */
+      svn_wc_conflict_description_t *conflict;
 
-  /* ### TODO: Skip file update on tree conflict. */
+      conflict = svn_wc_conflict_description_create_tree(
+        path, adm_access, svn_node_file,
+        eb->switch_url ? svn_wc_operation_switch : svn_wc_operation_update,
+        pool);
+      conflict->action = svn_wc_conflict_action_add;
+      conflict->reason = svn_wc_conflict_reason_obstructed;
+
+      SVN_ERR(svn_wc__loggy_add_tree_conflict_data(pb->log_accum, conflict,
+                                                   adm_access, pool));
+
+      /* Tree-conflict is recorded. Now still skip the rest of this add,
+       * and notify about the tree-conflict. */
+      fb->skipped = TRUE;
+      apr_hash_set(eb->skipped_paths, apr_pstrdup(eb->pool, fb->path),
+                   APR_HASH_KEY_STRING, (void*)1);
+
+      if (eb->notify_func)
+        {
+          svn_wc_notify_t *notify
+            = svn_wc_create_notify(fb->path,
+                                   svn_wc_notify_update_add,
+                                   pool);
+
+          notify->kind = svn_node_file;
+
+          notify->tree_conflicted = TRUE;
+          notify->content_state = svn_wc_notify_state_unknown;
+          notify->prop_state = svn_wc_notify_state_unknown;
+          
+          (*eb->notify_func)(eb->notify_baton, notify, pool);
+        }
+    }
+  else
+    /* The parent directory is not in conflict.
+     * Raise a tree conflict if there's already something versioned here. */
+    SVN_ERR(check_tree_conflict(&tree_conflicted, eb, pb->log_accum,
+                                path, entry, adm_access,
+                                svn_wc_conflict_action_add, pool));
 
 
   /* When adding, there should be nothing with this name unless unversioned
@@ -2587,7 +2627,7 @@ add_file(const char *path,
   svn_pool_destroy(subpool);
 
   /* Now, if this is an add with history, do the history part. */
-  if (copyfrom_path)
+  if (copyfrom_path && !fb->skipped)
     {
       SVN_ERR(add_file_with_history(path, pb, copyfrom_path, copyfrom_rev,
                                     fb, pool));
