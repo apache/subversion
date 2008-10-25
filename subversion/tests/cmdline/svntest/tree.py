@@ -806,7 +806,7 @@ def build_tree_from_status(lines):
   # only if the item is missing.  
 
   # Try http://www.wordsmith.org/anagram/anagram.cgi?anagram=ACDRMGU
-  rm = re.compile('^([!MACDRUG_ ][MACDRUG_ ])([L ])([+ ])([S ])([KOBT ])([C ]) ([* ]) +((?P<wc_rev>\d+|-|\?) +(\d|-|\?)+ +(\S+) +)?(?P<path>.+)$')
+  rm = re.compile('^([?!MACDRUG_ ][MACDRUG_ ])([L ])([+ ])([S ])([KOBT ])([C ]) ([* ]) +((?P<wc_rev>\d+|-|\?) +(\d|-|\?)+ +(\S+) +)?(?P<path>.+)$')
   for line in lines:
 
     # Quit when we hit an externals status announcement (### someday we can fix
