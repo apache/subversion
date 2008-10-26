@@ -1352,7 +1352,29 @@ do_entry_deletion(struct edit_baton *eb,
   SVN_ERR(check_tree_conflict(&tree_conflicted, eb, log_item, full_path, entry,
                               adm_access, svn_wc_conflict_action_delete, pool));
 
-  /* ### TODO: If this raised a tree-conflict, notify and bail out. */
+  /* Notify and bail out if this raised a tree-conflict. */
+  if (tree_conflicted)
+    {
+      SVN_ERR(svn_wc__write_log(adm_access, *log_number, log_item, pool));
+
+      /* Note: these two lines are duplicated from the end of this function:
+       */
+      SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
+      *log_number = 0;
+
+      if (eb->notify_func)
+        {
+          /* Don't notify about a delete, just about a conflict. */
+          notify = svn_wc_create_notify(full_path, svn_wc_notify_update_update,
+                                        pool);
+          notify->tree_conflicted = TRUE;
+
+          (*eb->notify_func)(eb->notify_baton, notify, pool);
+        }
+
+      return SVN_NO_ERROR;
+    }
+
   SVN_ERR(svn_wc__loggy_delete_entry(&log_item, adm_access, full_path,
                                      pool));
 
@@ -1422,15 +1444,17 @@ do_entry_deletion(struct edit_baton *eb,
         }
     }
 
+  /* Note: these two lines are duplicated in the tree-conflicts bail out
+   * above. */
   SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
   *log_number = 0;
 
-  notify = svn_wc_create_notify(full_path, svn_wc_notify_update_delete, pool);
-  notify->tree_conflicted = tree_conflicted;
-
   if (eb->notify_func)
-    (*eb->notify_func)
-      (eb->notify_baton, notify, pool);
+    {
+      notify = svn_wc_create_notify(full_path, svn_wc_notify_update_delete,
+                                    pool);
+      (*eb->notify_func)(eb->notify_baton, notify, pool);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -1465,7 +1489,6 @@ add_directory(const char *path,
   struct edit_baton *eb = pb->edit_baton;
   struct dir_baton *db;
   svn_node_kind_t kind;
-  svn_wc_conflict_reason_t conflict_reason = (svn_wc_conflict_reason_t)(-1);
 
   SVN_ERR(make_dir_baton(&db, path, eb, pb, TRUE, pool));
   *child_baton = db;
@@ -1753,8 +1776,9 @@ open_directory(const char *path,
   SVN_ERR(svn_wc_adm_retrieve(&parent_adm_access, eb->adm_access,
                               pb->path, pool));
 
-  /* Skip this directory if it has property or tree conflicts. */
   SVN_ERR(svn_wc_entry(&entry, db->path, adm_access, FALSE, pool));
+
+  /* Skip this directory if it has property and/or tree conflicts */
   if (entry)
     {
       svn_boolean_t prop_conflicted;
@@ -1887,7 +1911,6 @@ close_directory(void *dir_baton,
   apr_array_header_t *entry_props, *wc_props, *regular_props;
   apr_hash_t *base_props = NULL, *working_props = NULL;
   svn_wc_adm_access_t *adm_access;
-  const svn_wc_entry_t *entry;
 
   SVN_ERR(svn_categorize_props(db->propchanges, &entry_props, &wc_props,
                                &regular_props, pool));
@@ -2522,8 +2545,20 @@ add_file(const char *path,
   /* Skip file addition if parent directory is in tree-conflict. */
   if (pb->tree_conflicted)
     {
-      /* This case isn't covered by check_tree_conflict(), so let's
-       * raise one here. (Tried to add a file into a conflicted dir) */
+      /* Trying to add a file into a conflicted directory.
+       * The case where the directory raised a tree-conflict just now
+       * doesn't need to report another tree-conflict. The parent
+       * directory already reported one. */
+
+      /* Skip the this add */
+      fb->skipped = TRUE;
+      apr_hash_set(eb->skipped_paths, apr_pstrdup(eb->pool, fb->path),
+                   APR_HASH_KEY_STRING, (void*)1);
+
+      /* ### TODO: check whether pb->tree_conflicted also reflects
+       * persisting tree-conflicts (older ones), and decide whether to
+       * raise a new one here if so. This is how we would raise it: */
+      /*
       svn_wc_conflict_description_t *conflict;
 
       conflict = svn_wc_conflict_description_create_tree(
@@ -2535,12 +2570,6 @@ add_file(const char *path,
 
       SVN_ERR(svn_wc__loggy_add_tree_conflict_data(pb->log_accum, conflict,
                                                    adm_access, pool));
-
-      /* Tree-conflict is recorded. Now still skip the rest of this add,
-       * and notify about the tree-conflict. */
-      fb->skipped = TRUE;
-      apr_hash_set(eb->skipped_paths, apr_pstrdup(eb->pool, fb->path),
-                   APR_HASH_KEY_STRING, (void*)1);
 
       if (eb->notify_func)
         {
@@ -2557,6 +2586,8 @@ add_file(const char *path,
           
           (*eb->notify_func)(eb->notify_baton, notify, pool);
         }
+      */
+
     }
   else
     /* The parent directory is not in conflict.
