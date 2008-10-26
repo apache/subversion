@@ -97,6 +97,43 @@
 #endif
 
 
+/* Set *NAME_P to the UTF-8 representation of directory entry NAME.
+ * NAME is in the the internal encoding used by APR; PARENT is in
+ * UTF-8 and in internal (not local) style.
+ *
+ * Use PARENT only for generating an error string if the conversion
+ * fails because NAME could not be represented in UTF-8.  In that
+ * case, return a two-level error in which the outer error's message
+ * mentions PARENT, but the inner error's message does not mention
+ * NAME (except possibly in hex) since NAME may not be printable.
+ * Such a compound error at least allows the user to go looking in the
+ * right directory for the problem.
+ *
+ * If there is any other error, just return that error directly.
+ *
+ * If there is any error, the effect on *NAME_P is undefined.
+ *
+ * *NAME_P and NAME may refer to the same storage.
+ */
+static svn_error_t *
+entry_name_to_utf8(const char **name_p,
+                   const char *name,
+                   const char *parent,
+                   apr_pool_t *pool)
+{
+  svn_error_t *err = svn_path_cstring_to_utf8(name_p, name, pool);
+  if (err && err->apr_err == APR_EINVAL)
+    {
+      return svn_error_createf(err->apr_err, err,
+                               _("Error converting entry "
+                                 "in directory '%s' to UTF8"),
+                               svn_path_local_style(parent, pool));
+    }
+  return err;
+}
+
+
+
 static void
 map_apr_finfo_to_node_kind(svn_node_kind_t *kind,
                            svn_boolean_t *is_special,
@@ -800,8 +837,8 @@ svn_error_t *svn_io_copy_dir_recursively(const char *src,
           if (cancel_func)
             SVN_ERR(cancel_func(cancel_baton));
 
-          SVN_ERR(svn_path_cstring_to_utf8(&entryname_utf8,
-                                           this_entry.name, subpool));
+          SVN_ERR(entry_name_to_utf8(&entryname_utf8, this_entry.name,
+                                     src, subpool));
           src_target = svn_path_join(src, entryname_utf8, subpool);
 
           if (this_entry.filetype == APR_REG) /* regular file */
@@ -1784,8 +1821,8 @@ svn_io_remove_dir2(const char *path, svn_boolean_t ignore_enoent,
               need_rewind = TRUE;
 #endif
 
-              SVN_ERR(svn_path_cstring_to_utf8(&entry_utf8, this_entry.name,
-                                               subpool));
+              SVN_ERR(entry_name_to_utf8(&entry_utf8, this_entry.name,
+                                         path_apr, subpool));
 
               fullpath = svn_path_join(path, entry_utf8, subpool);
 
@@ -1871,7 +1908,7 @@ svn_io_get_dir_filenames(apr_hash_t **dirents,
       else
         {
           const char *name;
-          SVN_ERR(svn_path_cstring_to_utf8(&name, this_entry.name, pool));
+          SVN_ERR(entry_name_to_utf8(&name, this_entry.name, path, pool));
           apr_hash_set(*dirents, name, APR_HASH_KEY_STRING, name);
         }
     }
@@ -1918,7 +1955,7 @@ svn_io_get_dirents2(apr_hash_t **dirents,
           const char *name;
           svn_io_dirent_t *dirent = apr_palloc(pool, sizeof(*dirent));
 
-          SVN_ERR(svn_path_cstring_to_utf8(&name, this_entry.name, pool));
+          SVN_ERR(entry_name_to_utf8(&name, this_entry.name, path, pool));
 
           map_apr_finfo_to_node_kind(&(dirent->kind),
                                      &(dirent->special),
@@ -3026,6 +3063,10 @@ svn_io_dir_read(apr_finfo_t *finfo,
   if (status)
     return svn_error_wrap_apr(status, _("Can't read directory"));
 
+  /* It would be nice to use entry_name_to_utf8() below, but can we
+     get the dir's path out of an apr_dir_t?  I don't see a reliable
+     way to do it. */
+
   if (finfo->fname)
     SVN_ERR(svn_path_cstring_to_utf8(&finfo->fname, finfo->fname, pool));
 
@@ -3107,8 +3148,8 @@ svn_io_dir_walk(const char *dirname,
 
           /* some other directory. recurse. it will be passed to the
              callback inside the recursion. */
-          SVN_ERR(svn_path_cstring_to_utf8(&name_utf8, finfo.name,
-                                           subpool));
+          SVN_ERR(entry_name_to_utf8(&name_utf8, finfo.name, dirname,
+                                     subpool));
           full_path = svn_path_join(dirname, name_utf8, subpool);
           SVN_ERR(svn_io_dir_walk(full_path,
                                   wanted,
@@ -3119,8 +3160,8 @@ svn_io_dir_walk(const char *dirname,
       else if (finfo.filetype == APR_REG)
         {
           /* some other directory. pass it to the callback. */
-          SVN_ERR(svn_path_cstring_to_utf8(&name_utf8, finfo.name,
-                                           subpool));
+          SVN_ERR(entry_name_to_utf8(&name_utf8, finfo.name, dirname,
+                                     subpool));
           full_path = svn_path_join(dirname, name_utf8, subpool);
           SVN_ERR((*walk_func)(walk_baton,
                                full_path,
