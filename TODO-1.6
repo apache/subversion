@@ -7,10 +7,15 @@ Tasks which need to happen before the 1.6.0 release, but aren't related to when
 we branch should be put in the issue tracker with the 1.6 milestone.
 
 Blocker:
- * Properly wrap BDB rep-sharing code for use in pre-1.6 FS formats, as
-   mentioned by cmpilato here: http://svn.haxx.se/dev/archive-2008-10/0968.shtml
 
+ * Properly wrap BDB rep-sharing code for use in pre-1.6 FS formats, as
+   noted by cmpilato here: http://svn.haxx.se/dev/archive-2008-10/0968.shtml
+   [STATUS:  cmpilato is on this]
+
+ * Add 'svnadmin --pre-1.6-compatible', or preferably something more
+   generic (--compatible-with=X.Y or somesuch).
 
 Optional:
+
  * Merge the sparse-directories deselection branch, as noted by kfogel:
    http://svn.haxx.se/dev/archive-2008-10/1001.shtml
