@@ -3115,7 +3115,7 @@ svn_wc__entries_init(const char *path,
 /*** Generic Entry Walker */
 
 
-/* A recursive entry-walker, helper for svn_wc_walk_entries2 */
+/* A recursive entry-walker, helper for svn_wc_walk_entries3 */
 static svn_error_t *
 walker_helper(const char *dirpath,
               svn_wc_adm_access_t *adm_access,
