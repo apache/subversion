@@ -802,29 +802,6 @@ svn_wc_ensure_adm3(const char *path,
 }
 
 svn_error_t *
-svn_wc_ensure_adm2(const char *path,
-                   const char *uuid,
-                   const char *url,
-                   const char *repos,
-                   svn_revnum_t revision,
-                   apr_pool_t *pool)
-{
-  return svn_wc_ensure_adm3(path, uuid, url, repos, revision,
-                            svn_depth_infinity, pool);
-}
-
-
-svn_error_t *
-svn_wc_ensure_adm(const char *path,
-                  const char *uuid,
-                  const char *url,
-                  svn_revnum_t revision,
-                  apr_pool_t *pool)
-{
-  return svn_wc_ensure_adm2(path, uuid, url, NULL, revision, pool);
-}
-
-svn_error_t *
 svn_wc__adm_destroy(svn_wc_adm_access_t *adm_access,
                     apr_pool_t *scratch_pool)
 {
