@@ -52,6 +52,7 @@ windows_password_encrypter(apr_hash_t *creds,
                            const char *realmstring,
                            const char *username,
                            const char *in,
+                           svn_config_t *config,
                            svn_boolean_t non_interactive,
                            apr_pool_t *pool)
 {
@@ -83,6 +84,7 @@ windows_password_decrypter(const char **out,
                            apr_hash_t *creds,
                            const char *realmstring,
                            const char *username,
+                           svn_config_t *config,
                            svn_boolean_t non_interactive,
                            apr_pool_t *pool)
 {

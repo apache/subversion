@@ -24,6 +24,7 @@
 
 #include <apr_pools.h>
 #include "svn_auth.h"
+#include "svn_config.h"
 #include "svn_error.h"
 #include "svn_version.h"
 
@@ -52,6 +53,7 @@ kwallet_password_get(const char **password,
                      apr_hash_t *creds,
                      const char *realmstring,
                      const char *username,
+                     svn_config_t *config,
                      svn_boolean_t non_interactive,
                      apr_pool_t *pool)
 {
@@ -114,6 +116,7 @@ kwallet_password_set(apr_hash_t *creds,
                      const char *realmstring,
                      const char *username,
                      const char *password,
+                     svn_config_t *config,
                      svn_boolean_t non_interactive,
                      apr_pool_t *pool)
 {
