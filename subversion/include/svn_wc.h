@@ -3341,6 +3341,7 @@ svn_wc_resolved_conflict4(const char *path,
  *
  * @deprecated Provided for backward compatibility with the 1.5 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_resolved_conflict3(const char *path,
                           svn_wc_adm_access_t *adm_access,
