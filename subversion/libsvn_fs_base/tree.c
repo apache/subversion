@@ -1662,14 +1662,6 @@ deltify_mutable(svn_fs_t *fs,
   apr_hash_t *entries = NULL;
   struct txn_deltify_args td_args;
   base_fs_data_t *bfd = fs->fsap_data;
-  const char *delta_rev;
-  svn_revnum_t delta_flag_rev;
-
-  /* Make sure that we can even deltify this revision.  We don't want to
-     deltify revisions prior to the forward delta change. */
-  SVN_ERR(svn_fs_base__miscellaneous_get
-          (&delta_rev, fs, SVN_FS_BASE__MISC_FORWARD_DELTA_UPGRADE, pool));
-  delta_flag_rev = atol(delta_rev);
 
   /* Get the ID for PATH under ROOT if it wasn't provided. */
   if (! node_id)
@@ -1758,6 +1750,7 @@ deltify_mutable(svn_fs_t *fs,
     struct txn_pred_count_args tpc_args;
     apr_pool_t *subpools[2];
     int active_subpool = 0;
+    svn_revnum_t forward_delta_rev = 0;
 
     tpc_args.id = id;
     SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_pred_count, &tpc_args,
@@ -1770,8 +1763,25 @@ deltify_mutable(svn_fs_t *fs,
 
     subpools[0] = svn_pool_create(pool);
     subpools[1] = svn_pool_create(pool);
+
+    /* If we support the 'miscellaneous' table, check it to see if
+       there is a point in time before which we don't want to do
+       deltification. */
+    /* ### FIXME:  I think this is an unnecessary restriction.  We
+       ### should be able to do something meaningful for most
+       ### deltification requests -- what that is depends on the
+       ### directory of the deltas for that revision, though. */
+    if (bfd->format >= SVN_FS_BASE__MIN_MISCELLANY_FORMAT)
+      {
+        const char *val;
+        SVN_ERR(svn_fs_base__miscellaneous_get
+                (&val, fs, SVN_FS_BASE__MISC_FORWARD_DELTA_UPGRADE, pool));
+        if (val)
+          SVN_ERR(svn_revnum_parse(&forward_delta_rev, val, NULL));
+      }
+
     if (bfd->format >= SVN_FS_BASE__MIN_FORWARD_DELTAS_FORMAT
-          && delta_flag_rev <= root->rev)
+          && forward_delta_rev <= root->rev)
       {
         /**** FORWARD DELTA STORAGE ****/
 
@@ -2824,16 +2834,19 @@ svn_fs_base__deltify(svn_fs_t *fs,
   svn_fs_root_t *root;
   const char *txn_id;
   struct rev_get_txn_id_args args;
-  const char *val;
-  svn_revnum_t forward_delta_rev;
+  base_fs_data_t *bfd = fs->fsap_data;
 
-  SVN_ERR(svn_fs_base__miscellaneous_get
-          (&val, fs, SVN_FS_BASE__MISC_FORWARD_DELTA_UPGRADE, pool));
-
-  if (val != NULL)
+  if (bfd->format >= SVN_FS_BASE__MIN_MISCELLANY_FORMAT)
     {
-      SVN_ERR(svn_revnum_parse(&forward_delta_rev, val, NULL));
+      const char *val;
+      svn_revnum_t forward_delta_rev = 0;
 
+      SVN_ERR(svn_fs_base__miscellaneous_get
+              (&val, fs, SVN_FS_BASE__MISC_FORWARD_DELTA_UPGRADE, pool));
+      if (val)
+        SVN_ERR(svn_revnum_parse(&forward_delta_rev, val, NULL));
+
+      /* ### FIXME:  Unnecessarily harsh requirement? (cmpilato). */
       if (revision <= forward_delta_rev)
         return svn_error_createf
           (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
