@@ -31,6 +31,7 @@
 
 #include "svn_private_config.h"
 
+#include <dbus/dbus.h>
 #include <QtCore/QString>
 
 #include <kaboutdata.h>
@@ -59,7 +60,7 @@ kwallet_password_get(const char **password,
       return FALSE;
     }
 
-  if (! KWallet::Wallet::isEnabled())
+  if (! dbus_bus_get(DBUS_BUS_SESSION, NULL))
     {
       return FALSE;
     }
@@ -121,7 +122,7 @@ kwallet_password_set(apr_hash_t *creds,
       return FALSE;
     }
 
-  if (! KWallet::Wallet::isEnabled())
+  if (! dbus_bus_get(DBUS_BUS_SESSION, NULL))
     {
       return FALSE;
     }
