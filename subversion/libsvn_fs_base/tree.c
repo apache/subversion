@@ -1578,6 +1578,7 @@ txn_body_txn_deltify(void *baton, trail_t *trail)
 {
   struct txn_deltify_args *args = baton;
   dag_node_t *tgt_node, *base_node;
+  base_fs_data_t *bfd = trail->fs->fsap_data;
 
   SVN_ERR(svn_fs_base__dag_get_node(&tgt_node, trail->fs, args->tgt_id,
                                     trail, trail->pool));
@@ -1590,9 +1591,12 @@ txn_body_txn_deltify(void *baton, trail_t *trail)
                                        args->txn_id, trail, trail->pool));
     }
 
-  /* If this isn't a directory, record a mapping of TGT_NODE's data
-     checksum to its representation key. */
-  return svn_fs_base__dag_index_checksums(tgt_node, trail, trail->pool);
+  /* If we support rep sharing, and this isn't a directory, record a
+     mapping of TGT_NODE's data checksum to its representation key. */
+  if (bfd->format >= SVN_FS_BASE__MIN_REP_SHARING_FORMAT)
+    SVN_ERR(svn_fs_base__dag_index_checksums(tgt_node, trail, trail->pool));
+
+  return SVN_NO_ERROR;
 }
 
 
