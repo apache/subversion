@@ -655,8 +655,8 @@ def update_delete_modified_files(sbox):
   # expected success (see issue #1806), and now we expect tree conflicts
   # (see issue #2282) on the missing items.
   expected_output = svntest.wc.State(wc_dir, {
-    'A/B/E/alpha' : Item(status='D ', treeconflict='C'),
-    'A/D/G'       : Item(status='D ', treeconflict='C'),
+    'A/B/E/alpha' : Item(status='  ', treeconflict='C'),
+    'A/D/G'       : Item(status='  ', treeconflict='C'),
     })
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/B/E/alpha',
@@ -665,24 +665,19 @@ def update_delete_modified_files(sbox):
   expected_disk.tweak('A/D/G/pi',
                       contents=\
                       "This is the file 'pi'.\nappended pi text\n")
-  expected_disk.remove('A/D/G/rho')
-  expected_disk.remove('A/D/G/tau')
+  expected_disk.tweak('A/D/G/rho', contents="This is the file 'rho'.\n")
+  expected_disk.tweak('A/D/G/tau', contents="This is the file 'tau'.\n")
+
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.remove('A/B/E/alpha')
-  expected_status.remove('A/D/G')
-  expected_status.remove('A/D/G/pi')
-  expected_status.remove('A/D/G/rho')
-  expected_status.remove('A/D/G/tau')
+  expected_status.tweak('A/B/E/alpha', status='M ', treeconflict='C')
+  expected_status.tweak('A/D/G', treeconflict='C')
+  expected_status.tweak('A/D/G/pi', status='M ')
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,
                                         expected_status)
 
   # Check status of tree conflict victims.
-  expected_status.add({
-    'A/B/E/alpha' : Item(status='? ', treeconflict='C'),
-    'A/D/G'       : Item(status='? ', treeconflict='C'),
-    })
   svntest.actions.run_and_verify_unquiet_status(wc_dir, expected_status)
 
 
@@ -1026,8 +1021,8 @@ def update_deleted_missing_dir(sbox):
 
   # Create expected output tree for an update of the missing items by name
   expected_output = svntest.wc.State(wc_dir, {
-    'A/B/E' : Item(status='D '),
-    'A/D/H' : Item(status='D '),
+    'A/B/E' : Item(status='  ', treeconflict='C'),
+    'A/D/H' : Item(status='  ', treeconflict='C'),
     })
 
   # Create expected disk tree for the update.
@@ -1037,8 +1032,10 @@ def update_deleted_missing_dir(sbox):
 
   # Create expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta')
-  expected_status.remove('A/D/H', 'A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi')
+  expected_status.tweak('A/B/E', status='! ', treeconflict='C', wc_rev='?')
+  expected_status.tweak('A/D/H', status='! ', treeconflict='C', wc_rev='?')
+  expected_status.remove('A/B/E/alpha', 'A/B/E/beta')
+  expected_status.remove('A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi')
 
   # Do the update, specifying the deleted paths explicitly.
   svntest.actions.run_and_verify_update(wc_dir,
@@ -1051,8 +1048,8 @@ def update_deleted_missing_dir(sbox):
   # Check tree conflict status
   unquiet_status = expected_status.copy()
   unquiet_status.add({
-    'A/B/E' : Item(status='! ', treeconflict='C'),
-    'A/D/H' : Item(status='! ', treeconflict='C'),
+    'A/B/E' : Item(status='! ', treeconflict='C', wc_rev='?'),
+    'A/D/H' : Item(status='! ', treeconflict='C', wc_rev='?'),
     })
   svntest.actions.run_and_verify_unquiet_status(wc_dir, unquiet_status)
 
@@ -1073,7 +1070,14 @@ def update_deleted_missing_dir(sbox):
   svntest.main.safe_rmtree(E_path)
   svntest.main.safe_rmtree(H_path)
 
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E' : Item(status='D '),
+    'A/D/H' : Item(status='D '),
+    })
+
   # This time we're updating the whole working copy
+  expected_status.remove('A/B/E')
+  expected_status.remove('A/D/H')
   expected_status.tweak(wc_rev=2)
   expected_status.tweak('A/B', 'A/D', status='  ')
 
@@ -1124,8 +1128,8 @@ def another_hudson_problem(sbox):
   # Sigh, I can't get run_and_verify_update to work (but not because
   # of issue 919 as far as I can tell)
   svntest.actions.run_and_verify_svn(None,
-                                     ['D  C '+G_path+'\n',
-                                      'Updated to revision 3.\n',
+                                     ['   C '+G_path+'\n',
+                                      'At revision 3.\n',
                                       'Summary of conflicts:\n',
                                       '  Tree conflicts: 1\n',
                                       ], [],
@@ -1133,17 +1137,19 @@ def another_hudson_problem(sbox):
 
   # This update created a tree conflict ("update tried to
   # delete a directory that was locally deleted"), marking
-  # C  A/D. Just ignore it, i.e. resolve it.
+  #    C A/D. Just ignore it, i.e. resolve it.
   D_path = os.path.join(wc_dir, 'A', 'D')
   svntest.actions.run_and_verify_svn(None,
     ["Resolved conflicted state of '" + D_path + "'\n"], [],
     'resolved',  D_path)
 
   # Both G and gamma should be 'deleted', update should produce no output
-  expected_output = svntest.wc.State(wc_dir, { })
+  expected_output = svntest.wc.State(wc_dir, {'A/D/G' : Item(status='D ')})
+
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
   expected_status.remove('A/D/G', 'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau',
                          'A/D/gamma')
+  
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.remove('A/D/G', 'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau',
                        'A/D/gamma')
