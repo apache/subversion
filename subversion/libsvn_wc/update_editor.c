@@ -1359,13 +1359,13 @@ do_entry_deletion(struct edit_baton *eb,
 
       tmp_entry.revision = *(eb->target_revision);
       tmp_entry.kind =
-        (entry->kind == svn_node_file) ? svn_node_file : svn_node_dir;  /* ### redundant? */
+        (entry->kind == svn_node_file) ? svn_node_file : svn_node_dir;
       tmp_entry.deleted = TRUE;
 
       SVN_ERR(svn_wc__loggy_entry_modify(&log_item, adm_access,
                                          full_path, &tmp_entry,
                                          SVN_WC__ENTRY_MODIFY_REVISION
-                                         | SVN_WC__ENTRY_MODIFY_KIND  /* ### redundant change? */
+                                         | SVN_WC__ENTRY_MODIFY_KIND
                                          | SVN_WC__ENTRY_MODIFY_DELETED,
                                          pool));
 
@@ -1550,7 +1550,6 @@ add_directory(const char *path,
 
           /* Anything other than a dir scheduled for addition without
              history is an error. */
-          /* ### what's this "add_existed" clause for? */
           if (entry
               && entry->schedule == svn_wc_schedule_add
               && ! entry->copied)
@@ -2541,8 +2540,6 @@ add_file(const char *path,
   /* When adding, there should be nothing with this name unless unversioned
      obstructions are permitted or the obstruction is scheduled for addition
      (or replacement) without history. */
-  /* ### " or the obstruction is scheduled for addition
-     without history." ??? */
   if (kind != svn_node_none)
     {
       if (eb->allow_unver_obstructions
