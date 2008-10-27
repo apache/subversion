@@ -326,7 +326,7 @@ svn_wc_read_tree_conflicts_from_entry(apr_array_header_t *conflicts,
     /* Not all conflicts have been read from the entry, but no error
      * has been thrown yet. We should not even be here! */
     return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-        _("Invalid tree conflict data in entries file, "
+        _("Invalid tree conflict data in 'entries' file, "
           "but no idea what went wrong"));
 
   return SVN_NO_ERROR;
@@ -352,9 +352,7 @@ svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
 
       path = svn_path_basename(conflict->path, pool);
       len = strlen(path);
-      if (len == 0)
-        return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-                        _("Empty victim path in tree conflict description"));
+      SVN_ERR_ASSERT(len > 0);
 
       /* Escape separator chars while writing victim path. */
       for (j = 0; j < len; j++)
@@ -379,8 +377,7 @@ svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
             svn_stringbuf_appendcstr(buf, SVN_WC__NODE_FILE);
             break;
           default:
-            return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-                _("Bad node_kind in tree conflict description"));
+            SVN_ERR_MALFUNCTION();
         }
 
       svn_stringbuf_appendbytes(buf, &field_separator, 1);
@@ -397,8 +394,7 @@ svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
             svn_stringbuf_appendcstr(buf, SVN_WC__OPERATION_MERGE);
             break;
           default:
-            return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-                _("Bad operation in tree conflict description"));
+            SVN_ERR_MALFUNCTION();
         }
 
       svn_stringbuf_appendbytes(buf, &field_separator, 1);
@@ -415,8 +411,7 @@ svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
             svn_stringbuf_appendcstr(buf, SVN_WC__CONFLICT_ACTION_ADDED);
             break;
           default:
-            return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-                _("Bad action in tree conflict description"));
+            SVN_ERR_MALFUNCTION();
         }
 
       svn_stringbuf_appendbytes(buf, &field_separator, 1);
@@ -439,8 +434,7 @@ svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
             svn_stringbuf_appendcstr(buf, SVN_WC__CONFLICT_REASON_OBSTRUCTED);
             break;
           default:
-            return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-                _("Bad reason in tree conflict description"));
+            SVN_ERR_MALFUNCTION();
         }
 
       if (i < (conflicts->nelts - 1))
@@ -552,21 +546,23 @@ svn_wc_get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
   int i;
 
   /* Try to get the parent's admin access baton from the baton set. */
-  err = svn_wc_adm_retrieve(&parent_adm_access, adm_access, parent_path, pool);
+  err = svn_wc_adm_retrieve(&parent_adm_access, adm_access, parent_path,
+                            pool);
   if (err && (err->apr_err == SVN_ERR_WC_NOT_LOCKED))
     {
       svn_error_clear(err);
 
-      /* Try to access the parent dir independently. We can't add a parent's
-         access baton to the existing access baton set of its child, because
-         the lifetimes would be wrong according to doc string of
-         svn_wc_adm_open3(), so we get open it temporarily and close it after
-         use. */
+      /* Try to access the parent dir independently. We can't add
+         a parent's access baton to the existing access baton set
+         of its child, because the lifetimes would be wrong
+         according to doc string of svn_wc_adm_open3(), so we get
+         open it temporarily and close it after use. */
       err = svn_wc_adm_open3(&parent_adm_access, NULL, parent_path,
                              FALSE, 0, NULL, NULL, pool);
       parent_adm_access_is_temporary = TRUE;
 
-      /* If the parent isn't a WC dir, the child can't be tree-conflicted. */
+      /* If the parent isn't a WC dir, the child can't be
+         tree-conflicted. */
       if (err && (err->apr_err == SVN_ERR_WC_NOT_DIRECTORY))
         {
           svn_error_clear(err);
@@ -599,7 +595,7 @@ svn_wc_get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
 
   /* If we opened a temporary admin access baton, close it. */
   if (parent_adm_access_is_temporary)
-    SVN_ERR(svn_wc_adm_close(parent_adm_access));
+    SVN_ERR(svn_wc_adm_close2(parent_adm_access, pool));
 
   return SVN_NO_ERROR;
 }

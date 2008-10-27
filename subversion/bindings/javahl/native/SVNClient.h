@@ -173,7 +173,8 @@ class SVNClient :public SVNBase
   jobject revProperty(jobject jthis, const char *path, const char *name,
                       Revision &rev);
   void setRevProperty(jobject jthis, const char *path, const char *name,
-                      Revision &rev, const char *value, bool force);
+                      Revision &rev, const char *value,
+                      const char *original_value, bool force);
   jstring getVersionInfo(const char *path, const char *trailUrl,
                          bool lastChanged);
   jobject propertyGet(jobject jthis, const char *path, const char *name,

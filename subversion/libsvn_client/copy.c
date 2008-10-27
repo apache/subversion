@@ -376,15 +376,15 @@ do_wc_to_wc_copies(const apr_array_header_t *copy_pairs,
             break;
 
           if (src_access != dst_access)
-            SVN_ERR(svn_wc_adm_close(src_access));
+            SVN_ERR(svn_wc_adm_close2(src_access, iterpool));
         }
     }
   svn_pool_destroy(iterpool);
 
-  svn_sleep_for_timestamps();
+  svn_io_sleep_for_timestamps(dst_parent, pool);
   SVN_ERR(err);
 
-  return svn_wc_adm_close(dst_access);
+  return svn_wc_adm_close2(dst_access, pool);
 }
 
 
@@ -392,6 +392,7 @@ do_wc_to_wc_copies(const apr_array_header_t *copy_pairs,
    afterwards.  Use POOL for temporary allocations. */
 static svn_error_t *
 do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
+                  const char *dst_path,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
 {
@@ -472,18 +473,20 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
                              iterpool));
 
       if (dst_access != src_access)
-        SVN_ERR(svn_wc_adm_close(dst_access));
-      SVN_ERR(svn_wc_adm_close(src_access));
+        SVN_ERR(svn_wc_adm_close2(dst_access, iterpool));
+      SVN_ERR(svn_wc_adm_close2(src_access, iterpool));
     }
   svn_pool_destroy(iterpool);
 
-  svn_sleep_for_timestamps();
+  svn_io_sleep_for_timestamps(dst_path, pool);
+
   return err;
 }
 
 
 static svn_error_t *
 wc_to_wc_copy(const apr_array_header_t *copy_pairs,
+              const char *dst_path,
               svn_boolean_t is_move,
               svn_boolean_t make_parents,
               svn_client_ctx_t *ctx,
@@ -540,7 +543,7 @@ wc_to_wc_copy(const apr_array_header_t *copy_pairs,
 
   /* Copy or move all targets. */
   if (is_move)
-    return do_wc_to_wc_moves(copy_pairs, ctx, pool);
+    return do_wc_to_wc_moves(copy_pairs, dst_path, ctx, pool);
   else
     return do_wc_to_wc_copies(copy_pairs, ctx, pool);
 }
@@ -943,9 +946,7 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
             {
               const char *url = APR_ARRAY_IDX(new_dirs, i, const char *);
 
-              SVN_ERR(svn_client_commit_item_create
-                      ((const svn_client_commit_item3_t **) &item, pool));
-
+              item = svn_client_commit_item_create2(pool);
               item->url = svn_path_join(top_url, url, pool);
               item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
               APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
@@ -957,9 +958,7 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
           path_driver_info_t *info = APR_ARRAY_IDX(path_infos, i,
                                                    path_driver_info_t *);
 
-          SVN_ERR(svn_client_commit_item_create
-                  ((const svn_client_commit_item3_t **) &item, pool));
-
+          item = svn_client_commit_item_create2(pool);
           item->url = svn_path_join(top_url, info->dst_path, pool);
           item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
           APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
@@ -1182,9 +1181,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
             {
               const char *url = APR_ARRAY_IDX(new_dirs, i, const char *);
 
-              SVN_ERR(svn_client_commit_item_create
-                      ((const svn_client_commit_item3_t **) &item, pool));
-
+              item = svn_client_commit_item_create2(pool);
               item->url = url;
               item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
               APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
@@ -1196,9 +1193,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
           svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                             svn_client__copy_pair_t *);
 
-          SVN_ERR(svn_client_commit_item_create
-                  ((const svn_client_commit_item3_t **) &item, pool));
-
+          item = svn_client_commit_item_create2(pool);
           item->url = pair->dst;
           item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
           APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
@@ -1207,7 +1202,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
       SVN_ERR(svn_client__get_log_msg(&message, &tmp_file, commit_items,
                                       ctx, pool));
       if (! message)
-        return svn_wc_adm_close(adm_access);
+        return svn_wc_adm_close2(adm_access, pool);
     }
   else
     message = "";
@@ -1235,7 +1230,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
                                      SVN_CLIENT__SINGLE_REPOS_NAME,
                                      APR_HASH_KEY_STRING)))
     {
-      return svn_wc_adm_close(adm_access);
+      return svn_wc_adm_close2(adm_access, pool);
     }
 
   /* If we are creating intermediate directories, tack them onto the list
@@ -1247,9 +1242,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
           const char *url = APR_ARRAY_IDX(new_dirs, i, const char *);
           svn_client_commit_item3_t *item;
 
-          SVN_ERR(svn_client_commit_item_create
-                  ((const svn_client_commit_item3_t **) &item, pool));
-
+          item = svn_client_commit_item_create2(pool);
           item->url = url;
           item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
           item->incoming_prop_changes = apr_array_make(pool, 1,
@@ -1332,7 +1325,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
   svn_sleep_for_timestamps();
 
   /* It's only a read lock, so unlocking is harmless. */
-  return svn_wc_adm_close(adm_access);
+  return svn_wc_adm_close2(adm_access, pool);
 }
 
 /* Peform each individual copy operation for a repos -> wc copy.  A
@@ -1435,9 +1428,10 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
       const char *new_text_path;
       apr_hash_t *new_props;
       const char *src_rel;
+      svn_stream_t *new_base_contents;
 
       SVN_ERR(svn_io_open_unique_file2(&fp, &new_text_path, pair->dst, ".tmp",
-                                       svn_io_file_del_none, pool));
+                                       svn_io_file_del_on_pool_cleanup, pool));
 
       fstream = svn_stream_from_aprfile2(fp, FALSE, pool);
       SVN_ERR(svn_client__path_relative_to_session(&src_rel, ra_session,
@@ -1452,11 +1446,15 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
       if (! SVN_IS_VALID_REVNUM(src_revnum))
         src_revnum = real_rev;
 
-      SVN_ERR(svn_wc_add_repos_file2
+      SVN_ERR(svn_stream_open_readonly(&new_base_contents, new_text_path,
+                                       pool, pool));
+      SVN_ERR(svn_wc_add_repos_file3
         (pair->dst, adm_access,
-         new_text_path, NULL, new_props, NULL,
+         new_base_contents, NULL, new_props, NULL,
          same_repositories ? pair->src : NULL,
          same_repositories ? src_revnum : SVN_INVALID_REVNUM,
+         ctx->cancel_func, ctx->cancel_baton,
+         ctx->notify_func2, ctx->notify_baton2,
          pool));
 
       SVN_ERR(svn_wc_entry(&dst_entry, pair->dst, adm_access, FALSE, pool));
@@ -1479,7 +1477,7 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
           (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
         }
 
-      svn_sleep_for_timestamps();
+      svn_io_sleep_for_timestamps(pair->dst, pool);
     }
 
   return SVN_NO_ERROR;
@@ -1641,7 +1639,7 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
        not exist.  ### TODO:  we should probably walk up the wc here,
        in case the parent dir has an imaginary URL.  */
     if (copy_pairs->nelts == 1)
-      svn_path_split(top_dst_path, &parent, NULL, pool);
+      parent = svn_path_dirname(top_dst_path, pool);
     else
       parent = top_dst_path;
     dst_err = svn_client_uuid_from_path(&dst_uuid, parent, adm_access,
@@ -1677,7 +1675,7 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
     }
 
   svn_pool_destroy(iterpool);
-  return svn_wc_adm_close(adm_access);
+  return svn_wc_adm_close2(adm_access, pool);
 }
 
 #define NEED_REPOS_REVNUM(revision) \
@@ -1830,7 +1828,7 @@ try_copy(svn_commit_info_t **commit_info_p,
                                          ctx->cancel_baton, iterpool));
           SVN_ERR(svn_wc__entry_versioned(&entry, pair->src, adm_access, FALSE,
                                           iterpool));
-          SVN_ERR(svn_wc_adm_close(adm_access));
+          SVN_ERR(svn_wc_adm_close2(adm_access, iterpool));
 
           if (entry->file_external_path)
             return svn_error_createf(SVN_ERR_WC_CANNOT_MOVE_FILE_EXTERNAL,
@@ -1923,7 +1921,7 @@ try_copy(svn_commit_info_t **commit_info_p,
                   SVN_ERR(svn_wc__entry_versioned(&entry, pair->src,
                                                   adm_access, FALSE,
                                                   iterpool));
-                  SVN_ERR(svn_wc_adm_close(adm_access));
+                  SVN_ERR(svn_wc_adm_close2(adm_access, iterpool));
 
                   url = (entry->copied ? entry->copyfrom_url : entry->url);
                   if (url == NULL)
@@ -1962,7 +1960,7 @@ try_copy(svn_commit_info_t **commit_info_p,
   if ((! srcs_are_urls) && (! dst_is_url))
     {
       *commit_info_p = NULL;
-      return wc_to_wc_copy(copy_pairs, is_move, make_parents, ctx, pool);
+      return wc_to_wc_copy(copy_pairs, dst_path_in, is_move, make_parents, ctx, pool);
     }
   else if ((! srcs_are_urls) && (dst_is_url))
     {

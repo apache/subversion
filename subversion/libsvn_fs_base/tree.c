@@ -57,7 +57,7 @@
 #include "bdb/changes-table.h"
 #include "bdb/copies-table.h"
 #include "bdb/node-origins-table.h"
-#include "bdb/metadata-table.h"
+#include "bdb/miscellaneous-table.h"
 #include "../libsvn_fs/fs-loader.h"
 #include "private/svn_fs_util.h"
 #include "private/svn_mergeinfo_private.h"
@@ -1402,72 +1402,61 @@ base_props_changed(svn_boolean_t *changed_p,
 
 
 
-/* Metadata table handling */
-struct metadata_set_args
+/* Miscellaneous table handling */
+
+struct miscellaneous_set_args
 {
   const char *key;
   const char *val;
 };
 
 static svn_error_t *
-txn_body_metadata_set(void *baton, trail_t *trail)
+txn_body_miscellaneous_set(void *baton, trail_t *trail)
 {
-  struct metadata_set_args *msa = baton;
+  struct miscellaneous_set_args *msa = baton;
 
-  return svn_fs_bdb__metadata_set(trail->fs, msa->key, msa->val, trail,
-                                  trail->pool);
+  return svn_fs_bdb__miscellaneous_set(trail->fs, msa->key, msa->val, trail,
+                                       trail->pool);
 }
 
 svn_error_t *
-svn_fs_base__metadata_set(svn_fs_t *fs,
-                          const char *key,
-                          const char *val,
-                          apr_pool_t *pool)
+svn_fs_base__miscellaneous_set(svn_fs_t *fs,
+                               const char *key,
+                               const char *val,
+                               apr_pool_t *pool)
 {
-  struct metadata_set_args msa;
+  struct miscellaneous_set_args msa;
   msa.key = key;
   msa.val = val;
 
-  return svn_fs_base__retry_txn(fs, txn_body_metadata_set, &msa, pool);
+  return svn_fs_base__retry_txn(fs, txn_body_miscellaneous_set, &msa, pool);
 }
 
-
-struct metadata_get_args
+struct miscellaneous_get_args
 {
   const char *key;
   const char **val;
 };
 
 static svn_error_t *
-txn_body_metadata_get(void *baton, trail_t *trail)
+txn_body_miscellaneous_get(void *baton, trail_t *trail)
 {
-  struct metadata_get_args *mga = baton;
-  svn_error_t *err;
-
-  err = svn_fs_bdb__metadata_get(mga->val, trail->fs, mga->key, trail,
-                                 trail->pool);
-
-  if (err && err->apr_err == SVN_ERR_FS_NO_SUCH_METADATA)
-    {
-      svn_error_clear(err);
-      err = SVN_NO_ERROR;
-      *mga->val = NULL;
-    }
-
-  return err;
+  struct miscellaneous_get_args *mga = baton;
+  return svn_fs_bdb__miscellaneous_get(mga->val, trail->fs, mga->key, trail,
+                                       trail->pool);
 }
 
 svn_error_t *
-svn_fs_base__metadata_get(const char **val,
-                          svn_fs_t *fs,
-                          const char *key,
-                          apr_pool_t *pool)
+svn_fs_base__miscellaneous_get(const char **val,
+                               svn_fs_t *fs,
+                               const char *key,
+                               apr_pool_t *pool)
 {
-  struct metadata_get_args mga;
+  struct miscellaneous_get_args mga;
   mga.key = key;
   mga.val = val;
 
-  return svn_fs_base__retry_txn(fs, txn_body_metadata_get, &mga, pool);
+  return svn_fs_base__retry_txn(fs, txn_body_miscellaneous_get, &mga, pool);
 }
 
 
@@ -1563,12 +1552,17 @@ struct deltify_committed_args
 
 struct txn_deltify_args
 {
+  /* The transaction ID whose nodes are being deltified. */
+  const char *txn_id;
+
   /* The target is what we're deltifying. */
   const svn_fs_id_t *tgt_id;
 
   /* The base is what we're deltifying against.  It's not necessarily
      the "next" revision of the node; skip deltas mean we sometimes
-     deltify against a successor many generations away. */
+     deltify against a successor many generations away.  This may be
+     NULL, in which case we'll avoid deltification and simply index
+     TGT_ID's data checksum. */
   const svn_fs_id_t *base_id;
 
   /* We only deltify props for directories.
@@ -1587,10 +1581,18 @@ txn_body_txn_deltify(void *baton, trail_t *trail)
 
   SVN_ERR(svn_fs_base__dag_get_node(&tgt_node, trail->fs, args->tgt_id,
                                     trail, trail->pool));
-  SVN_ERR(svn_fs_base__dag_get_node(&base_node, trail->fs, args->base_id,
-                                    trail, trail->pool));
-  return svn_fs_base__dag_deltify(tgt_node, base_node, args->is_dir,
-                                  trail, trail->pool);
+  /* If we have something to deltify against, do so. */
+  if (args->base_id)
+    {
+      SVN_ERR(svn_fs_base__dag_get_node(&base_node, trail->fs, args->base_id,
+                                        trail, trail->pool));
+      SVN_ERR(svn_fs_base__dag_deltify(tgt_node, base_node, args->is_dir,
+                                       args->txn_id, trail, trail->pool));
+    }
+
+  /* If this isn't a directory, record a mapping of TGT_NODE's data
+     checksum to its representation key. */
+  return svn_fs_base__dag_index_checksums(tgt_node, trail, trail->pool);
 }
 
 
@@ -1660,6 +1662,14 @@ deltify_mutable(svn_fs_t *fs,
   apr_hash_t *entries = NULL;
   struct txn_deltify_args td_args;
   base_fs_data_t *bfd = fs->fsap_data;
+  const char *delta_rev;
+  svn_revnum_t delta_flag_rev;
+
+  /* Make sure that we can even deltify this revision.  We don't want to
+     deltify revisions prior to the forward delta change. */
+  SVN_ERR(svn_fs_base__miscellaneous_get
+          (&delta_rev, fs, SVN_FS_BASE__MISC_FORWARD_DELTA_UPGRADE, pool));
+  delta_flag_rev = atol(delta_rev);
 
   /* Get the ID for PATH under ROOT if it wasn't provided. */
   if (! node_id)
@@ -1703,7 +1713,14 @@ deltify_mutable(svn_fs_t *fs,
       svn_pool_destroy(subpool);
     }
 
-  /* Finally, deltify nodes appropriately. */
+  /* Index ID's data checksum. */
+  td_args.txn_id = txn_id;
+  td_args.tgt_id = id;
+  td_args.base_id = NULL;
+  td_args.is_dir = (kind == svn_node_dir);
+  SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_txn_deltify, &td_args, pool));
+
+  /* Finally, deltify old data against this node. */
   {
     /* Prior to 1.6, we use the following algorithm to deltify nodes:
     
@@ -1753,7 +1770,8 @@ deltify_mutable(svn_fs_t *fs,
 
     subpools[0] = svn_pool_create(pool);
     subpools[1] = svn_pool_create(pool);
-    if (bfd->format >= SVN_FS_BASE__MIN_FORWARD_DELTAS_FORMAT)
+    if (bfd->format >= SVN_FS_BASE__MIN_FORWARD_DELTAS_FORMAT
+          && delta_flag_rev <= root->rev)
       {
         /**** FORWARD DELTA STORAGE ****/
 
@@ -1794,6 +1812,7 @@ deltify_mutable(svn_fs_t *fs,
           }
 
         /* Finally, do the deltification. */
+        td_args.txn_id = txn_id;
         td_args.tgt_id = id;
         td_args.base_id = pred_id;
         td_args.is_dir = (kind == svn_node_dir);
@@ -1861,6 +1880,7 @@ deltify_mutable(svn_fs_t *fs,
               }
 
             /* Finally, do the deltification. */
+            td_args.txn_id = NULL;  /* Don't require mutable reps */
             td_args.tgt_id = pred_id;
             td_args.base_id = id;
             td_args.is_dir = (kind == svn_node_dir);
@@ -2807,9 +2827,8 @@ svn_fs_base__deltify(svn_fs_t *fs,
   const char *val;
   svn_revnum_t forward_delta_rev;
 
-  SVN_ERR(svn_fs_base__metadata_get(&val, fs,
-                                    SVN_FS_BASE__METADATA_FORWARD_DELTA_UPGRADE,
-                                    pool));
+  SVN_ERR(svn_fs_base__miscellaneous_get
+          (&val, fs, SVN_FS_BASE__MISC_FORWARD_DELTA_UPGRADE, pool));
 
   if (val != NULL)
     {
@@ -3649,7 +3668,12 @@ txn_body_apply_textdelta(void *baton, trail_t *trail)
          contents, in other words, the base text. */
       SVN_ERR(svn_fs_base__dag_file_checksum(&checksum, tb->node,
                                              trail, trail->pool));
-      if (!svn_checksum_match(tb->base_checksum, checksum))
+      /* TODO: This only compares checksums if they are the same kind, but
+         we're calculating both SHA1 and MD5 checksums somewhere in
+         reps-strings.c.  Could we keep them both around somehow so this
+         check could be more comprehensive? */
+      if (tb->base_checksum->kind == checksum->kind 
+            && !svn_checksum_match(tb->base_checksum, checksum))
         return svn_error_createf
           (SVN_ERR_CHECKSUM_MISMATCH,
            NULL,

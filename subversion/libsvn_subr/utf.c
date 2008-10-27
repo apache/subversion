@@ -563,10 +563,10 @@ check_non_ascii(const char *data, apr_size_t len, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-/* Construct an error with a suitable message to describe the invalid UTF-8
- * sequence DATA of length LEN (which may have embedded NULLs).  We can't
- * simply print the data, almost by definition we don't really know how it
- * is encoded.
+/* Construct an error with code APR_EINVAL and with a suitable message
+ * to describe the invalid UTF-8 sequence DATA of length LEN (which
+ * may have embedded NULLs).  We can't simply print the data, almost
+ * by definition we don't really know how it is encoded.
  */
 static svn_error_t *
 invalid_utf8(const char *data, apr_size_t len, apr_pool_t *pool)
@@ -600,7 +600,8 @@ invalid_utf8(const char *data, apr_size_t len, apr_pool_t *pool)
                            valid_txt, invalid_txt);
 }
 
-/* Verify that the sequence DATA of length LEN is valid UTF-8 */
+/* Verify that the sequence DATA of length LEN is valid UTF-8.
+   If it is not, return an error with code APR_EINVAL. */
 static svn_error_t *
 check_utf8(const char *data, apr_size_t len, apr_pool_t *pool)
 {
@@ -609,7 +610,8 @@ check_utf8(const char *data, apr_size_t len, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-/* Verify that the NULL terminated sequence DATA is valid UTF-8 */
+/* Verify that the NULL terminated sequence DATA is valid UTF-8.
+   If it is not, return an error with code APR_EINVAL. */
 static svn_error_t *
 check_cstring_utf8(const char *data, apr_pool_t *pool)
 {

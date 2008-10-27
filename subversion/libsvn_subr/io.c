@@ -51,6 +51,8 @@
 #include "svn_utf.h"
 #include "svn_config.h"
 #include "svn_private_config.h"
+
+#define SVN_SLEEP_ENV_VAR "SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_SLEEP_FOR_TIMESTAMPS"
 
 /*
   Windows is 'aided' by a number of types of applications that
@@ -93,6 +95,43 @@
 #else
 #define WIN32_RETRY_LOOP(err, expr) ((void)0)
 #endif
+
+
+/* Set *NAME_P to the UTF-8 representation of directory entry NAME.
+ * NAME is in the the internal encoding used by APR; PARENT is in
+ * UTF-8 and in internal (not local) style.
+ *
+ * Use PARENT only for generating an error string if the conversion
+ * fails because NAME could not be represented in UTF-8.  In that
+ * case, return a two-level error in which the outer error's message
+ * mentions PARENT, but the inner error's message does not mention
+ * NAME (except possibly in hex) since NAME may not be printable.
+ * Such a compound error at least allows the user to go looking in the
+ * right directory for the problem.
+ *
+ * If there is any other error, just return that error directly.
+ *
+ * If there is any error, the effect on *NAME_P is undefined.
+ *
+ * *NAME_P and NAME may refer to the same storage.
+ */
+static svn_error_t *
+entry_name_to_utf8(const char **name_p,
+                   const char *name,
+                   const char *parent,
+                   apr_pool_t *pool)
+{
+  svn_error_t *err = svn_path_cstring_to_utf8(name_p, name, pool);
+  if (err && err->apr_err == APR_EINVAL)
+    {
+      return svn_error_createf(err->apr_err, err,
+                               _("Error converting entry "
+                                 "in directory '%s' to UTF8"),
+                               svn_path_local_style(parent, pool));
+    }
+  return err;
+}
+
 
 
 static void
@@ -601,6 +640,24 @@ svn_io_copy_file(const char *src,
   const char *dst_tmp;
   svn_error_t *err, *err2;
 
+  /* ### NOTE: sometimes src == dst. In this case, because we copy to a
+     ###   temporary file, and then rename over the top of the destination,
+     ###   the net result is resetting the permissions on src/dst.
+     ###
+     ### Note: specifically, this can happen during a switch when the desired
+     ###   permissions for a file change from one branch to another. See
+     ###   switch_tests 17.
+     ###
+     ### ... yes, we should avoid copying to the same file, and we should
+     ###     make the "reset perms" explicit. The switch *happens* to work
+     ###     because of this copy-to-temp-then-rename implementation. If it
+     ###     weren't for that, the switch would break.
+  */
+#ifdef CHECK_FOR_SAME_FILE
+  if (strcmp(src, dst) == 0)
+    return SVN_NO_ERROR;
+#endif
+
   SVN_ERR(svn_path_cstring_from_utf8(&src_apr, src, pool));
 
   SVN_ERR(svn_io_file_open(&from_file, src, APR_READ | APR_BINARY,
@@ -646,38 +703,51 @@ svn_io_copy_file(const char *src,
      atomically inherited in the upcoming rename.  But note that we
      had to wait until now to set perms, because if they say
      read-only, then we'd have failed filling dst_tmp's contents. */
-
-  /* ### FIXME: apr_file_copy with perms may fail on Win32.  We need a
-     platform-specific implementation to get the permissions right. */
-#ifndef WIN32
   if (copy_perms)
-    {
-      apr_file_t *s;
-      apr_finfo_t finfo;
-
-      SVN_ERR(svn_io_file_open(&s, src, APR_READ, APR_OS_DEFAULT, pool));
-      SVN_ERR(svn_io_file_info_get(&finfo, APR_FINFO_PROT, s, pool));
-      SVN_ERR(svn_io_file_close(s, pool));
-
-      apr_err = apr_file_perms_set(dst_tmp_apr, finfo.protection);
-
-      /* We shouldn't be able to get APR_INCOMPLETE or APR_ENOTIMPL
-         here under normal circumstances, because the perms themselves
-         came from a call to apr_file_info_get(), and we already know
-         this is the non-Win32 case.  But if it does happen, it's not
-         an error. */
-      if ((apr_err != APR_SUCCESS)
-          && (apr_err != APR_INCOMPLETE)
-          && (apr_err != APR_ENOTIMPL))
-        {
-          return svn_error_wrap_apr
-            (apr_err, _("Can't set permissions on '%s'"),
-             svn_path_local_style(dst_tmp, pool));
-        }
-    }
-#endif /* ! WIN32 */
+    SVN_ERR(svn_io_copy_perms(src, dst_tmp, pool));
 
   return svn_io_file_rename(dst_tmp, dst, pool);
+}
+
+
+svn_error_t *
+svn_io_copy_perms(const char *src,
+                  const char *dst,
+                  apr_pool_t *pool)
+{
+  /* ### FIXME: apr_file_copy with perms may fail on Win32.  We need a
+     platform-specific implementation to get the permissions right. */
+
+#ifndef WIN32
+  {
+    apr_file_t *src_file;
+    apr_finfo_t finfo;
+    const char *dst_apr;
+    apr_status_t apr_err;
+
+    SVN_ERR(svn_io_file_open(&src_file, src, APR_READ, APR_OS_DEFAULT, pool));
+    SVN_ERR(svn_io_file_info_get(&finfo, APR_FINFO_PROT, src_file, pool));
+    SVN_ERR(svn_io_file_close(src_file, pool));
+
+    SVN_ERR(svn_path_cstring_from_utf8(&dst_apr, dst, pool));
+    apr_err = apr_file_perms_set(dst_apr, finfo.protection);
+
+    /* We shouldn't be able to get APR_INCOMPLETE or APR_ENOTIMPL
+       here under normal circumstances, because the perms themselves
+       came from a call to apr_file_info_get(), and we already know
+       this is the non-Win32 case.  But if it does happen, it's not
+       an error. */
+    if (apr_err != APR_SUCCESS
+        && apr_err != APR_INCOMPLETE
+        && apr_err != APR_ENOTIMPL)
+      {
+        return svn_error_wrap_apr(apr_err, _("Can't set permissions on '%s'"),
+                                  svn_path_local_style(dst, pool));
+      }
+  }
+#endif /* ! WIN32 */
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -767,8 +837,8 @@ svn_error_t *svn_io_copy_dir_recursively(const char *src,
           if (cancel_func)
             SVN_ERR(cancel_func(cancel_baton));
 
-          SVN_ERR(svn_path_cstring_to_utf8(&entryname_utf8,
-                                           this_entry.name, subpool));
+          SVN_ERR(entry_name_to_utf8(&entryname_utf8, this_entry.name,
+                                     src, subpool));
           src_target = svn_path_join(src, entryname_utf8, subpool);
 
           if (this_entry.filetype == APR_REG) /* regular file */
@@ -909,6 +979,68 @@ svn_io_set_file_affected_time(apr_time_t apr_time,
        svn_path_local_style(path, pool));
 
   return SVN_NO_ERROR;
+}
+
+
+void
+svn_io_sleep_for_timestamps(const char *path, apr_pool_t *pool)
+{
+  apr_time_t now, then;
+  svn_error_t *err;
+  char *sleep_env_var;
+
+  sleep_env_var = getenv(SVN_SLEEP_ENV_VAR);
+
+  if (sleep_env_var && apr_strnatcasecmp(sleep_env_var, "yes") == 0)
+    return; /* Allow skipping for testing */
+
+  now = apr_time_now();
+
+  /* Calculate 0.02 seconds after the next second wallclock tick. */
+  then = apr_time_make(apr_time_sec(now) + 1, APR_USEC_PER_SEC / 50);
+
+  /* Worst case is waiting one second, so we can use that time to determine
+     if we can sleep shorter than that */
+  if (path)
+    {
+      apr_finfo_t finfo;
+
+      err = svn_io_stat(&finfo, path, APR_FINFO_MTIME | APR_FINFO_LINK, pool);
+
+      if (err)
+        {
+          svn_error_clear(err); /* Fall back on original behavior */
+        }
+      else if (finfo.mtime % APR_USEC_PER_SEC)
+        {          
+          /* Very simplistic but safe approach:
+		      If the filesystem has < sec mtime we can be reasonably sure
+              that the filesystem has <= millisecond precision.
+
+             ## Perhaps find a better algorithm here. This will fail once
+                in every 1000 cases on a millisecond precision filesystem.
+
+                But better to fail once in every thousand cases than every
+                time, like we did before. 
+				(All tested filesystems I know have at least microsecond precision.)
+
+             Note for further research on algorithm:
+               FAT32 has < 1 sec precision on ctime, but 2 sec on mtime */
+
+          /* Sleep for at least 1 millisecond.
+             (t < 1000 will be round to 0 in apr) */
+          apr_sleep(1000); 
+
+          return;
+        }
+
+      now = apr_time_now(); /* Extract the time used for the path stat */
+
+      if (now >= then)
+        return; /* Passing negative values may suspend indefinately (Windows) */
+    }
+
+  apr_sleep(then - now);
 }
 
 
@@ -1469,7 +1601,7 @@ svn_stringbuf_from_file2(svn_stringbuf_t **result,
                          const char *filename,
                          apr_pool_t *pool)
 {
-  apr_file_t *f = NULL;
+  apr_file_t *f;
 
   if (filename[0] == '-' && filename[1] == '\0')
     {
@@ -1481,6 +1613,10 @@ svn_stringbuf_from_file2(svn_stringbuf_t **result,
     {
       SVN_ERR(svn_io_file_open(&f, filename, APR_READ, APR_OS_DEFAULT, pool));
     }
+
+  /* ### ugh. we should stat() the file, get its length, and read that
+     ### much data into memory. the _from_aprfile() function uses a
+     ### realloc-style that chews up memory needlessly. */
 
   SVN_ERR(svn_stringbuf_from_aprfile(result, f, pool));
   return svn_io_file_close(f, pool);
@@ -1548,9 +1684,6 @@ svn_stringbuf_from_aprfile(svn_stringbuf_t **result,
   if (err && !APR_STATUS_IS_EOF(err->apr_err))
     return err;
   svn_error_clear(err);
-
-  /* Null terminate the stringbuf. */
-  res->data[res->len] = 0;
 
   *result = res;
   return SVN_NO_ERROR;
@@ -1688,8 +1821,8 @@ svn_io_remove_dir2(const char *path, svn_boolean_t ignore_enoent,
               need_rewind = TRUE;
 #endif
 
-              SVN_ERR(svn_path_cstring_to_utf8(&entry_utf8, this_entry.name,
-                                               subpool));
+              SVN_ERR(entry_name_to_utf8(&entry_utf8, this_entry.name,
+                                         path_apr, subpool));
 
               fullpath = svn_path_join(path, entry_utf8, subpool);
 
@@ -1775,7 +1908,7 @@ svn_io_get_dir_filenames(apr_hash_t **dirents,
       else
         {
           const char *name;
-          SVN_ERR(svn_path_cstring_to_utf8(&name, this_entry.name, pool));
+          SVN_ERR(entry_name_to_utf8(&name, this_entry.name, path, pool));
           apr_hash_set(*dirents, name, APR_HASH_KEY_STRING, name);
         }
     }
@@ -1822,7 +1955,7 @@ svn_io_get_dirents2(apr_hash_t **dirents,
           const char *name;
           svn_io_dirent_t *dirent = apr_palloc(pool, sizeof(*dirent));
 
-          SVN_ERR(svn_path_cstring_to_utf8(&name, this_entry.name, pool));
+          SVN_ERR(entry_name_to_utf8(&name, this_entry.name, path, pool));
 
           map_apr_finfo_to_node_kind(&(dirent->kind),
                                      &(dirent->special),
@@ -2461,6 +2594,7 @@ svn_io_detect_mimetype(const char **mimetype,
   return svn_io_detect_mimetype2(mimetype, file, NULL, pool);
 }
 
+
 svn_error_t *
 svn_io_file_open(apr_file_t **new_file, const char *fname,
                  apr_int32_t flag, apr_fileperms_t perm,
@@ -2619,6 +2753,39 @@ svn_io_file_write_full(apr_file_t *file, const void *buf,
      N_("Can't write to file '%s'"),
      N_("Can't write to stream"),
      pool);
+}
+
+
+svn_error_t *
+svn_io_write_unique(const char **tmp_path,
+                    const char *dirpath,
+                    const void *buf,
+                    apr_size_t nbytes,
+                    svn_io_file_del_t delete_when,
+                    apr_pool_t *pool)
+{
+  apr_file_t *new_file;
+
+  if (!dirpath)
+    SVN_ERR(svn_io_temp_dir(&dirpath, pool));
+
+  SVN_ERR(svn_io_open_unique_file2(&new_file, tmp_path, dirpath, ".tmp",
+                                   delete_when, pool));
+  SVN_ERR(svn_io_file_write_full(new_file, buf, nbytes, NULL, pool));
+  SVN_ERR(svn_io_file_flush_to_disk(new_file, pool));
+  return svn_io_file_close(new_file, pool);
+}
+
+
+svn_error_t *
+svn_io_file_trunc(apr_file_t *file, apr_off_t offset, apr_pool_t *pool)
+{
+  return do_io_file_wrapper_cleanup
+    (file, apr_file_trunc(file, offset),
+     N_("Can't truncate file '%s'"),
+     N_("Can't truncate stream"),
+     pool);
+  return SVN_NO_ERROR;
 }
 
 
@@ -2896,6 +3063,10 @@ svn_io_dir_read(apr_finfo_t *finfo,
   if (status)
     return svn_error_wrap_apr(status, _("Can't read directory"));
 
+  /* It would be nice to use entry_name_to_utf8() below, but can we
+     get the dir's path out of an apr_dir_t?  I don't see a reliable
+     way to do it. */
+
   if (finfo->fname)
     SVN_ERR(svn_path_cstring_to_utf8(&finfo->fname, finfo->fname, pool));
 
@@ -2977,8 +3148,8 @@ svn_io_dir_walk(const char *dirname,
 
           /* some other directory. recurse. it will be passed to the
              callback inside the recursion. */
-          SVN_ERR(svn_path_cstring_to_utf8(&name_utf8, finfo.name,
-                                           subpool));
+          SVN_ERR(entry_name_to_utf8(&name_utf8, finfo.name, dirname,
+                                     subpool));
           full_path = svn_path_join(dirname, name_utf8, subpool);
           SVN_ERR(svn_io_dir_walk(full_path,
                                   wanted,
@@ -2989,8 +3160,8 @@ svn_io_dir_walk(const char *dirname,
       else if (finfo.filetype == APR_REG)
         {
           /* some other directory. pass it to the callback. */
-          SVN_ERR(svn_path_cstring_to_utf8(&name_utf8, finfo.name,
-                                           subpool));
+          SVN_ERR(entry_name_to_utf8(&name_utf8, finfo.name, dirname,
+                                     subpool));
           full_path = svn_path_join(dirname, name_utf8, subpool);
           SVN_ERR((*walk_func)(walk_baton,
                                full_path,
@@ -3103,25 +3274,14 @@ svn_io_write_version_file(const char *path,
                           int version,
                           apr_pool_t *pool)
 {
-  apr_file_t *format_file = NULL;
   const char *path_tmp;
   const char *format_contents = apr_psprintf(pool, "%d\n", version);
 
-  /* We only promise to handle non-negative integers. */
-  if (version < 0)
-    return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                             _("Version %d is not non-negative"), version);
+  SVN_ERR_ASSERT(version >= 0);
 
-  /* Create a temporary file to write the data to */
-  SVN_ERR(svn_io_open_unique_file2(&format_file, &path_tmp, path, ".tmp",
-                                   svn_io_file_del_none, pool));
-
-  /* ...dump out our version number string... */
-  SVN_ERR(svn_io_file_write_full(format_file, format_contents,
-                                 strlen(format_contents), NULL, pool));
-
-  /* ...and close the file. */
-  SVN_ERR(svn_io_file_close(format_file, pool));
+  SVN_ERR(svn_io_write_unique(&path_tmp, path, format_contents,
+                              strlen(format_contents), svn_io_file_del_none,
+                              pool));
 
 #ifdef WIN32
   /* make the destination writable, but only on Windows, because

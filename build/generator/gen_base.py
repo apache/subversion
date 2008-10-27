@@ -150,7 +150,7 @@ class GeneratorBase:
 
   def compute_hdrs(self):
     """Get a list of the header files"""
-    all_includes = map(native_path, self.includes + self.private_includes)
+    all_includes = list(map(native_path, self.includes + self.private_includes))
     for d in unique(self.target_dirs):
       for wildcard in self.include_wildcards:
         hdrs = glob.glob(os.path.join(native_path(d), wildcard))
@@ -161,7 +161,7 @@ class GeneratorBase:
     """Compute the dependencies of each header file"""
 
     include_deps = IncludeDependencyInfo(self.compute_hdrs(),
-        map(native_path, self.private_built_includes))
+        list(map(native_path, self.private_built_includes)))
 
     for objectfile, sources in self.graph.get_deps(DT_OBJECT):
       assert len(sources) == 1
@@ -645,7 +645,7 @@ class TargetJavaHeaders(TargetJava):
                                          self.package.replace(".", "_")
                                          + "_" + class_name + '.h')
       class_pkg_list = self.package.split('.')
-      class_pkg = apply(build_path_join, class_pkg_list)
+      class_pkg = build_path_join(*class_pkg_list)
       class_file = ObjectFile(build_path_join(self.classes, class_pkg,
                                               class_name + self.objext))
       class_file.source_generated = 1
@@ -697,9 +697,8 @@ class TargetJavaClasses(TargetJava):
         sourcedirs = dirs[:-1]  # Last element is the .class file name.
         while sourcedirs:
           if sourcedirs.pop() in self.packages:
-            sourcepath = apply(build_path_join, sourcedirs)
-            objname = apply(build_path_join,
-                            [self.classes] + dirs[len(sourcedirs):])
+            sourcepath = build_path_join(*sourcedirs)
+            objname = build_path_join(self.classes, *dirs[len(sourcedirs):])
             break
         else:
           raise GenError('Unable to find Java package root in path "%s"' % objname)

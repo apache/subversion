@@ -338,8 +338,10 @@ svn_handle_warning(FILE *stream,
  *
  * @since New in 1.6.
  */
-#define SVN_ERR_MALFUNCTION()                               \
-  SVN_ERR(svn_error__malfunction(__FILE__, __LINE__, NULL))
+#define SVN_ERR_MALFUNCTION()                                   \
+  do {                                                          \
+    return svn_error__malfunction(__FILE__, __LINE__, NULL);    \
+  } while (0)
 
 /** Check that a condition is true: if not, report an error and possibly
  * terminate the program.

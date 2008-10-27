@@ -346,7 +346,7 @@ def extract(data, details, d_start, d_end):
 
 def load_data(datafile):
   "Return a list of Issue objects for the specified data."
-  return map(Issue, open(datafile).readlines())
+  return list(map(Issue, open(datafile).readlines()))
 
 
 class Issue:

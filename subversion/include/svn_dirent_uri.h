@@ -25,15 +25,14 @@
  *  - a URI is a path in a repository or a URL
  *    examples: "/trunk/README", "http://hostname/svn/repos"
  *
- * This distiniction is needed because on Windows we have to handle some 
- * dirents and URIs differently. Since it's not possible to determine from 
- * the path string if it's a dirent or a URI, it's up to the API user to 
+ * This distinction is needed because on Windows we have to handle some
+ * dirents and URIs differently. Since it's not possible to determine from
+ * the path string if it's a dirent or a URI, it's up to the API user to
  * make this choice. See also issue #2028.
  *
- * ###TODO: add description in line with svn_path.h, once more functions
+ * ### TODO: add description in line with svn_path.h, once more functions
  * are moved.
- * ###END TODO
- * 
+ * ### END TODO
  */
 
 #ifndef SVN_DIRENT_URI_H
@@ -90,7 +89,7 @@ svn_uri_local_style(const char *uri, apr_pool_t *pool);
  * If the @a component is an absolute dirent, then it is copied and returned.
  * Exactly one slash character ('/') is used to joined the components,
  * accounting for any trailing slash in @a base, except on Windows when
- * @base is "X:".
+ * @a base is "X:".
  *
  * This function is NOT appropriate for native (local) file
  * dirents. Only for "internal" canonicalized dirents, since it uses '/'
@@ -241,7 +240,7 @@ const char *svn_dirent_canonicalize(const char *dirent, apr_pool_t *pool);
  */
 const char *svn_uri_canonicalize(const char *uri, apr_pool_t *pool);
 
-/** Return @c TRUE iff dirent is canonical.  Use @a pool for temporary
+/** Return @c TRUE iff @a dirent is canonical.  Use @a pool for temporary
  * allocations.
  *
  * @note The test for canonicalization is currently defined as
@@ -252,16 +251,11 @@ const char *svn_uri_canonicalize(const char *uri, apr_pool_t *pool);
  */
 svn_boolean_t svn_dirent_is_canonical(const char *dirent, apr_pool_t *pool);
 
-/** Return @c TRUE iff uri is canonical.  Use @a pool for temporary
- * allocations.
- *
- * @note The test for canonicalization is currently defined as
- * "looks exactly the same as @c svn_uri_canonicalize() would make
- * it look".
+/** Return @c TRUE iff @a uri is canonical.
  *
  * @since New in 1.6.
  */
-svn_boolean_t svn_uri_is_canonical(const char *uri, apr_pool_t *pool);
+svn_boolean_t svn_uri_is_canonical(const char *uri);
 
 /** Return the longest common dirent shared by two canonicalized dirents,
  * @a dirent1 and @a dirent2.  If there's no common ancestor, return the

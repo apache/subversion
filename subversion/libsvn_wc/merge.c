@@ -436,14 +436,14 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                                                    ".edited",
                                                    svn_io_file_del_none,
                                                    pool));
-                  SVN_ERR(svn_wc__loggy_copy
-                          (log_accum, NULL, adm_access,
-                           svn_wc__copy_translate,
-                           /* Look for callback's own merged-file first: */
-                           result->merged_file
-                           ? result->merged_file : result_target,
-                           edited_copy,
-                           FALSE, pool));
+                  SVN_ERR(svn_wc__loggy_copy(log_accum, adm_access,
+                                             /* Look for callback's own
+                                                merged-file first: */
+                                             result->merged_file
+                                               ? result->merged_file
+                                               : result_target,
+                                             edited_copy,
+                                             pool));
                 }
 
               switch (result->choice)
@@ -452,22 +452,18 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                      to resolve the conflict, so be it.*/
                   case svn_wc_conflict_choose_base:
                     {
-                      SVN_ERR(svn_wc__loggy_copy
-                              (log_accum, NULL, adm_access,
-                               svn_wc__copy_translate,
-                               left, merge_target,
-                               FALSE, pool));
+                      SVN_ERR(svn_wc__loggy_copy(log_accum, adm_access,
+                                                 left, merge_target,
+                                                 pool));
                       *merge_outcome = svn_wc_merge_merged;
                       contains_conflicts = FALSE;
                       goto merge_complete;
                     }
                   case svn_wc_conflict_choose_theirs_full:
                     {
-                      SVN_ERR(svn_wc__loggy_copy
-                              (log_accum, NULL, adm_access,
-                               svn_wc__copy_translate,
-                               right, merge_target,
-                               FALSE, pool));
+                      SVN_ERR(svn_wc__loggy_copy(log_accum, adm_access,
+                                                 right, merge_target,
+                                                 pool));
                       *merge_outcome = svn_wc_merge_merged;
                       contains_conflicts = FALSE;
                       goto merge_complete;
@@ -511,12 +507,9 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                                                           style,
                                                           pool));
                       SVN_ERR(svn_stream_close(chosen_stream));
-                      SVN_ERR(svn_wc__loggy_copy
-                              (log_accum, NULL, adm_access,
-                               /* ### XXX: translation needed here? */
-                               svn_wc__copy_translate,
-                               chosen_path, merge_target,
-                               FALSE, pool));
+                      SVN_ERR(svn_wc__loggy_copy(log_accum, adm_access,
+                                                 chosen_path, merge_target,
+                                                 pool));
                       *merge_outcome = svn_wc_merge_merged;
                       contains_conflicts = FALSE;
                       goto merge_complete;
@@ -530,14 +523,14 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                        good to use". */
                   case svn_wc_conflict_choose_merged:
                     {
-                      SVN_ERR(svn_wc__loggy_copy
-                              (log_accum, NULL, adm_access,
-                               svn_wc__copy_translate,
-                               /* Look for callback's own merged-file first: */
-                               result->merged_file ?
-                                  result->merged_file : result_target,
-                               merge_target,
-                               FALSE, pool));
+                      SVN_ERR(svn_wc__loggy_copy(log_accum, adm_access,
+                                                 /* Look for callback's own
+                                                    merged-file first: */
+                                                 result->merged_file
+                                                   ? result->merged_file
+                                                   : result_target,
+                                                 merge_target,
+                                                 pool));
                       *merge_outcome = svn_wc_merge_merged;
                       contains_conflicts = FALSE;
                       goto merge_complete;
@@ -697,11 +690,10 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
 
       if (*merge_outcome != svn_wc_merge_unchanged && ! dry_run)
         /* replace MERGE_TARGET with the new merged file, expanding. */
-        SVN_ERR(svn_wc__loggy_copy(log_accum, NULL,
+        SVN_ERR(svn_wc__loggy_copy(log_accum,
                                    adm_access,
-                                   svn_wc__copy_translate,
                                    result_target, merge_target,
-                                   FALSE, pool));
+                                   pool));
 
     } /* end of merging for text files */
 
@@ -743,22 +735,18 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                  unless the conflict-callback did the merging itself. */
               case svn_wc_conflict_choose_base:
                 {
-                  SVN_ERR(svn_wc__loggy_copy
-                          (log_accum, NULL, adm_access,
-                           svn_wc__copy_translate,
-                           left, merge_target,
-                           FALSE, pool));
+                  SVN_ERR(svn_wc__loggy_copy(log_accum, adm_access,
+                                             left, merge_target,
+                                             pool));
                   *merge_outcome = svn_wc_merge_merged;
                   contains_conflicts = FALSE;
                   goto merge_complete;
                 }
               case svn_wc_conflict_choose_theirs_full:
                 {
-                  SVN_ERR(svn_wc__loggy_copy
-                          (log_accum, NULL, adm_access,
-                           svn_wc__copy_translate,
-                           right, merge_target,
-                           FALSE, pool));
+                  SVN_ERR(svn_wc__loggy_copy(log_accum, adm_access,
+                                             right, merge_target,
+                                             pool));
                   *merge_outcome = svn_wc_merge_merged;
                   contains_conflicts = FALSE;
                   goto merge_complete;
@@ -786,11 +774,10 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                     }
                   else
                     {
-                      SVN_ERR(svn_wc__loggy_copy
-                              (log_accum, NULL, adm_access,
-                               svn_wc__copy_translate,
-                               result->merged_file, merge_target,
-                               FALSE, pool));
+                      SVN_ERR(svn_wc__loggy_copy(log_accum, adm_access,
+                                                 result->merged_file,
+                                                 merge_target,
+                                                 pool));
                       *merge_outcome = svn_wc_merge_merged;
                       contains_conflicts = FALSE;
                       goto merge_complete;
@@ -837,11 +824,11 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                                            target_label,
                                            svn_io_file_del_none,
                                            pool));
-          SVN_ERR(svn_wc__loggy_move(log_accum, NULL,
+          SVN_ERR(svn_wc__loggy_move(log_accum,
                                      adm_access,
                                      tmp_target,
                                      mine_copy,
-                                     FALSE, pool));
+                                     pool));
           mine_copy = svn_path_is_child(adm_path, mine_copy, pool);
           tmp_entry.conflict_wrk = mine_copy;
         }

@@ -851,7 +851,7 @@ test_uri_is_canonical(const char **msg,
     {
       svn_boolean_t canonical;
 
-      canonical = svn_uri_is_canonical(tests[i].path, pool);
+      canonical = svn_uri_is_canonical(tests[i].path);
       if (tests[i].canonical != canonical)
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "svn_uri_is_canonical(\"%s\") returned "
@@ -1452,6 +1452,7 @@ test_dirent_get_absolute(const char **msg,
   char buf[8192];
 #if defined(WIN32) || defined(__CYGWIN__)
   const char *curdironc;
+  char curdrive[3] = "C:";
 #endif /* WIN32 */
 
   struct {
@@ -1463,10 +1464,13 @@ test_dirent_get_absolute(const char **msg,
     { SVN_EMPTY_PATH, "%" },
 #if defined(WIN32) || defined(__CYGWIN__)
     /* '@' will be replaced by the current working dir on C:\. */
+    /* '$' will be replaced by the current drive */
     { "C:/", "C:/" },
     { "C:/abc", "C:/abc" },
     { "C:abc", "@/abc" },
     { "C:", "@" },
+    { "/", "$/" },
+    { "/x/abc", "$/x/abc" },
     /* svn_dirent_get_absolute will check existence of this UNC shares on the
        test machine, so we can't really test this.
     { "//srv/shr",      "//srv/shr" },
@@ -1494,6 +1498,7 @@ test_dirent_get_absolute(const char **msg,
     return svn_error_create(SVN_ERR_BASE, NULL, "getdcwd() failed");
 
   curdironc = svn_path_internal_style(buf, pool);
+  curdrive[0] = curdir[0];
 #endif /* WIN32 */
 
   for (i = 0 ; i < sizeof(tests) / sizeof(tests[0]) ; i++ )
@@ -1508,6 +1513,9 @@ test_dirent_get_absolute(const char **msg,
 #if defined(WIN32) || defined(__CYGWIN__)
       if (*expect == '@')
         expect_abs = apr_pstrcat(pool, curdironc, expect + 1, NULL);
+
+      if (*expect == '$')
+        expect_abs = apr_pstrcat(pool, curdrive, expect + 1, NULL);
 #endif /* WIN32 */
 
       SVN_ERR(svn_dirent_get_absolute(&result, path, pool));

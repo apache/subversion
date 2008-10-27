@@ -19,7 +19,7 @@
 #ifndef SVN_LIBSVN_SUBR_CACHE_H
 #define SVN_LIBSVN_SUBR_CACHE_H
 
-#include "svn_cache.h"
+#include "private/svn_cache.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -44,9 +44,9 @@ typedef struct {
                        apr_pool_t *pool);
 } svn_cache__vtable_t;
 
-struct svn_cache_t {
+struct svn_cache__t {
   const svn_cache__vtable_t *vtable;
-  svn_cache_error_handler_t error_handler;
+  svn_cache__error_handler_t error_handler;
   void *error_baton;
   void *cache_internal;
 };

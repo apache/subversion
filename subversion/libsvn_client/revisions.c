@@ -85,7 +85,7 @@ svn_client__get_revision_number(svn_revnum_t *revnum,
         SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path, FALSE,
                                        0, NULL, NULL, pool));
         SVN_ERR(svn_wc__entry_versioned(&ent, path, adm_access, FALSE, pool));
-        SVN_ERR(svn_wc_adm_close(adm_access));
+        SVN_ERR(svn_wc_adm_close2(adm_access, pool));
 
         if ((revision->kind == svn_opt_revision_base)
             || (revision->kind == svn_opt_revision_working))
