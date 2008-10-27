@@ -331,6 +331,42 @@ dnl pkg-config (required for support for KWallet and GNOME Keyring) ------------
 AC_CHECK_PROG(HAVE_PKG_CONFIG, pkg-config, yes)
 
 
+dnl D-Bus (required for support for GNOME Keyring) -------------------
+
+if test "$HAVE_PKG_CONFIG" = "yes"; then
+  AC_MSG_CHECKING([for D-Bus .pc file])
+  if pkg-config --exists dbus-1; then
+    AC_MSG_RESULT([yes])
+    old_CPPFLAGS="$CPPFLAGS"
+    old_LIBS="$LIBS"
+    DBUS_CPPFLAGS="`pkg-config --cflags dbus-1`"
+    AC_MSG_CHECKING([D-Bus version])
+    DBUS_VERSION="`pkg-config --modversion dbus-1`"
+    AC_MSG_RESULT([$DBUS_VERSION])
+    # D-Bus 0.* requires DBUS_API_SUBJECT_TO_CHANGE
+    if test -n ["`echo "$DBUS_VERSION" | $GREP '^0\.[[:digit:]]\+'`"]; then
+      DBUS_CPPFLAGS="$DBUS_CPPFLAGS -DDBUS_API_SUBJECT_TO_CHANGE"
+    fi
+    DBUS_LIBS="`pkg-config --libs dbus-1`"
+    CPPFLAGS="$CPPFLAGS $DBUS_CPPFLAGS"
+    LIBS="$LIBS $DBUS_LIBS"
+    AC_MSG_CHECKING([for D-Bus])
+    AC_LINK_IFELSE([
+#include <dbus/dbus.h>
+int main()
+{dbus_bus_get(DBUS_BUS_SESSION, NULL);}], HAVE_DBUS="yes", HAVE_DBUS="no")
+    if test "$HAVE_DBUS" = "yes"; then
+      AC_MSG_RESULT([yes])
+    else
+      AC_MSG_RESULT([no])
+    fi
+    CPPFLAGS="$old_CPPFLAGS"
+    LIBS="$old_LIBS"
+  else
+    AC_MSG_RESULT([no])
+  fi
+fi
+
 dnl GNOME Keyring -------------------
 
 AC_ARG_WITH(gnome_keyring,
@@ -345,34 +381,31 @@ if test "$with_gnome_keyring" != "no"; then
   if test "$enable_shared" = "yes"; then
     if test "$APR_HAS_DSO" = "yes"; then
       if test "$HAVE_PKG_CONFIG" = "yes"; then
-        AC_MSG_CHECKING([for GLib, D-Bus and GNOME Keyring .pc files])
-        if pkg-config --exists glib-2.0 dbus-1 gnome-keyring-1; then
-          AC_MSG_RESULT([yes])
-          AC_MSG_CHECKING([D-Bus version])
-          DBUS_VERSION="`pkg-config --modversion dbus-1`"
-          AC_MSG_RESULT([$DBUS_VERSION])
-          # D-Bus 0.* requires DBUS_API_SUBJECT_TO_CHANGE
-          if test -n ["`echo "$DBUS_VERSION" | $GREP '^0\.[[:digit:]]\+'`"]; then
-            CPPFLAGS="$CPPFLAGS -DDBUS_API_SUBJECT_TO_CHANGE"
-          fi
-          old_CPPFLAGS="$CPPFLAGS"
-          SVN_GNOME_KEYRING_INCLUDES="`pkg-config --cflags glib-2.0 dbus-1 gnome-keyring-1`"
-          CPPFLAGS="$CPPFLAGS $SVN_GNOME_KEYRING_INCLUDES"
-          AC_CHECK_HEADER(gnome-keyring.h, with_gnome_keyring=yes, with_gnome_keyring=no)
-          AC_MSG_CHECKING([for GNOME Keyring])
-          if test "$with_gnome_keyring" = "yes"; then
+        if test "$HAVE_DBUS" = "yes"; then
+          AC_MSG_CHECKING([for GLib and GNOME Keyring .pc files])
+          if pkg-config --exists glib-2.0 gnome-keyring-1; then
             AC_MSG_RESULT([yes])
-            AC_DEFINE([SVN_HAVE_GNOME_KEYRING], [1], 
-                      [Is GNOME Keyring support enabled?])
-            CPPFLAGS="$old_CPPFLAGS"
-            SVN_GNOME_KEYRING_LIBS="`pkg-config --libs glib-2.0 dbus-1 gnome-keyring-1`"
+            old_CPPFLAGS="$CPPFLAGS"
+            SVN_GNOME_KEYRING_INCLUDES="$DBUS_CPPFLAGS `pkg-config --cflags glib-2.0 gnome-keyring-1`"
+            CPPFLAGS="$CPPFLAGS $SVN_GNOME_KEYRING_INCLUDES"
+            AC_CHECK_HEADER(gnome-keyring.h, with_gnome_keyring=yes, with_gnome_keyring=no)
+            AC_MSG_CHECKING([for GNOME Keyring])
+            if test "$with_gnome_keyring" = "yes"; then
+              AC_MSG_RESULT([yes])
+              AC_DEFINE([SVN_HAVE_GNOME_KEYRING], [1], 
+                        [Is GNOME Keyring support enabled?])
+              CPPFLAGS="$old_CPPFLAGS"
+              SVN_GNOME_KEYRING_LIBS="$DBUS_LIBS `pkg-config --libs glib-2.0 gnome-keyring-1`"
+            else
+              AC_MSG_RESULT([no])
+              AC_MSG_ERROR([cannot find GNOME Keyring])
+            fi
           else
             AC_MSG_RESULT([no])
-            AC_MSG_ERROR([cannot find GNOME Keyring])
+            AC_MSG_ERROR([cannot find GLib and GNOME Keyring .pc files])
           fi
         else
-          AC_MSG_RESULT([no])
-          AC_MSG_ERROR([cannot find GLib, D-Bus and GNOME Keyring .pc files])
+          AC_MSG_ERROR([cannot find D-Bus])
         fi
       else
         AC_MSG_ERROR([cannot find pkg-config])
