@@ -862,6 +862,7 @@ Berkeley DB tables
                 "uuids" : recno(UUID)
                 "locks" : btree(TOKEN -> LOCK)
           "lock-tokens" : btree(PATH -> TOKEN)
+         "node-origins" : btree(NODE-ID -> ID)
         "checksum-reps" : btree(SHA1SUM -> REP)
         "miscellaneous" : btree(STRING -> STRING)
 
