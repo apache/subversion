@@ -1216,7 +1216,6 @@ svn_fs_base__dag_finalize_edits(dag_node_t *file,
                                 trail_t *trail,
                                 apr_pool_t *pool)
 {
-  svn_error_t *err = SVN_NO_ERROR;
   svn_fs_t *fs = file->fs;   /* just for nicer indentation */
   node_revision_t *noderev;
   const char *old_data_key, *new_data_key, *useless_data_key = NULL;
@@ -1274,21 +1273,27 @@ svn_fs_base__dag_finalize_edits(dag_node_t *file,
      between "the contents weren't touched" and "the contents were
      touched but still look the same" (to state it oversimply).  */
   old_data_key = noderev->data_key;
-  err = svn_fs_bdb__get_checksum_rep(&new_data_key, fs, rep_checksum, 
-                                     trail, pool);
-  if (! err)
+  if (bfd->format >= SVN_FS_BASE__MIN_REP_SHARING_FORMAT)
     {
-      useless_data_key = noderev->edit_key;
-      err = svn_fs_base__reserve_fsguid(trail->fs, &data_key_uniquifier, 
-                                        trail, pool);
+      svn_error_t *err = svn_fs_bdb__get_checksum_rep(&new_data_key, fs, 
+                                                      rep_checksum, 
+                                                      trail, pool);
+      if (! err)
+        {
+          useless_data_key = noderev->edit_key;
+          err = svn_fs_base__reserve_fsguid(trail->fs, &data_key_uniquifier, 
+                                            trail, pool);
+        }
+      else if (err && (err->apr_err == SVN_ERR_FS_NO_SUCH_CHECKSUM_REP))
+        {
+          svn_error_clear(err);
+          err = SVN_NO_ERROR;
+          new_data_key = noderev->edit_key;
+        }
+      SVN_ERR(err);
     }
-  else if (err)
+  else
     {
-      if (err->apr_err != SVN_ERR_FS_NO_SUCH_CHECKSUM_REP)
-        return err;
-
-      svn_error_clear(err);
-      err = SVN_NO_ERROR;
       new_data_key = noderev->edit_key;
     }
 
