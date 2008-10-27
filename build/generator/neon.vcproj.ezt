@@ -3,8 +3,7 @@
 	ProjectType="Visual C++"
 	Version="[version]"
 	Name="neon"
-	SccProjectName=""
-	SccLocalPath=""
+	ProjectGUID="{5BA0C76C-0CE4-4858-A206-22C5C45E4648}"
 	Keyword="MakeFileProj">
 	<Platforms>
 [for platforms]		<Platform

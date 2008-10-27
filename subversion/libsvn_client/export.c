@@ -218,7 +218,6 @@ copy_versioned_files(const char *from,
   apr_pool_t *iterpool;
   apr_hash_t *entries;
   apr_hash_index_t *hi;
-  apr_finfo_t finfo;
 
   SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, from, FALSE,
                                  0, ctx->cancel_func, ctx->cancel_baton,
@@ -252,6 +251,7 @@ copy_versioned_files(const char *from,
 #ifdef WIN32      
       err = svn_io_dir_make(to, APR_OS_DEFAULT, pool);      
 #else
+      apr_finfo_t finfo;
       SVN_ERR(svn_io_stat(&finfo, from, APR_FINFO_PROT, pool));
       err = svn_io_dir_make(to, finfo.protection, pool);
 #endif
@@ -376,7 +376,7 @@ copy_versioned_files(const char *from,
                                       native_eol, pool));
     }
 
-  return svn_wc_adm_close(adm_access);
+  return svn_wc_adm_close2(adm_access, pool);
 }
 
 

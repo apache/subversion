@@ -77,43 +77,18 @@ svn_wc__loggy_committed(svn_stringbuf_t **log_accum,
                         apr_pool_t *pool);
 
 
-/* Extend **LOG_ACCUM with log instructions to copy the file SRC_PATH to
-   DST_PATH, if it exists. If it doesn't and REMOVE_DST_IF_NO_SRC is TRUE
-   the file at DST_PATH will be deleted if any.
+/* Extend **LOG_ACCUM with log instructions to copy (and translate!) the
+   file SRC_PATH to DST_PATH, if it exists. If it doesn't and
+   REMOVE_DST_IF_NO_SRC is TRUE the file at DST_PATH will be deleted if any.
 
    The test for existence is made during this call, not at log running time.
 
    SRC_PATH and DST_PATH are relative to ADM_ACCESS.
-
-   Perform textual translations, or not, according to COPY_TYPE.
-
-   Set *DST_MODIFIED (if DST_MODIFIED isn't NULL) to indicate whether the
-   destination path will have been modified after running the log: if either
-   the copy or the remove will have been carried out.
 */
-
-typedef enum svn_wc__copy_t
-{
-  /* Normal copy, no translation */
-  svn_wc__copy_normal = 0,
-
-  /* Copy, translate using file properties */
-  svn_wc__copy_translate,
-
-  /* Copy, translate using only the svn:special property, if any */
-  svn_wc__copy_translate_special_only,
-
-  /* Copy, detranslate using file properties */
-  svn_wc__copy_detranslate
-} svn_wc__copy_t;
-
 svn_error_t *
 svn_wc__loggy_copy(svn_stringbuf_t **log_accum,
-                   svn_boolean_t *dst_modified,
                    svn_wc_adm_access_t *adm_access,
-                   svn_wc__copy_t copy_type,
                    const char *src_path, const char *dst_path,
-                   svn_boolean_t remove_dst_if_no_src,
                    apr_pool_t *pool);
 
 
@@ -202,10 +177,8 @@ svn_wc__loggy_modify_wcprop(svn_stringbuf_t **log_accum,
 */
 svn_error_t *
 svn_wc__loggy_move(svn_stringbuf_t **log_accum,
-                   svn_boolean_t *dst_modified,
                    svn_wc_adm_access_t *adm_access,
                    const char *src_path, const char *dst_path,
-                   svn_boolean_t remove_dst_if_no_src,
                    apr_pool_t *pool);
 
 

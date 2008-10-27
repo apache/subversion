@@ -275,7 +275,7 @@ svn_wc__path_switched(const char *wc_path,
 
   SVN_ERR(svn_wc__entry_versioned(&parent_entry, wc_parent_path,
                                   parent_adm_access, FALSE, pool));
-  SVN_ERR(svn_wc_adm_close(parent_adm_access));
+  SVN_ERR(svn_wc_adm_close2(parent_adm_access, pool));
 
   /* Without complete entries (and URLs) for WC_PATH and it's parent
      we return SVN_ERR_ENTRY_MISSING_URL. */

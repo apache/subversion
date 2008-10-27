@@ -62,7 +62,7 @@ for rev in sys.argv[3:]:
   revs.append(rev)
 
 # Make an easily reviewable logfile
-logfile = "-".join(map(lambda x: str(x), revs)) + ".log"
+logfile = "-".join([str(x) for x in revs]) + ".log"
 log = open(logfile, 'w')
 
 for rev in revs:

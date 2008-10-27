@@ -140,5 +140,5 @@ if options.file:
 
 # Finally commit
 txn.commit(message)
-print "r%ld committed by %s at %s" % (txn.committed_rev, options.username,
-                                      txn.committed_date)
+print("r%ld committed by %s at %s" % (txn.committed_rev, options.username,
+                                      txn.committed_date))

@@ -69,6 +69,8 @@ class ConflictResolverCallback
                   void *baton,
                   apr_pool_t *pool);
 
+  static jobject
+  createJConflictDescriptor(const svn_wc_conflict_description_t *desc);
  protected:
   /**
    * Delegate to m_conflictResolver.resolve(), which provides the

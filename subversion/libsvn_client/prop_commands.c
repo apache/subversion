@@ -271,11 +271,9 @@ propset_on_url(svn_commit_info_t **commit_info_p,
     {
       svn_client_commit_item3_t *item;
       const char *tmp_file;
-      apr_array_header_t *commit_items
-        = apr_array_make(pool, 1, sizeof(item));
+      apr_array_header_t *commit_items = apr_array_make(pool, 1, sizeof(item));
 
-      SVN_ERR(svn_client_commit_item_create
-              ((const svn_client_commit_item3_t **) &item, pool));
+      item = svn_client_commit_item_create2(pool);
       item->url = target;
       item->state_flags = SVN_CLIENT_COMMIT_ITEM_PROP_MODS;
       APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
@@ -417,7 +415,7 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
           SVN_ERR(svn_wc_prop_set2(propname, propval, target,
                                    adm_access, skip_checks, pool));
         }
-      return svn_wc_adm_close(adm_access);
+      return svn_wc_adm_close2(adm_access, pool);
     }
 }
 
@@ -897,7 +895,7 @@ svn_client_propget3(apr_hash_t **props,
                                            pristine, node, adm_access,
                                            depth, changelists, ctx, pool));
 
-      SVN_ERR(svn_wc_adm_close(adm_access));
+      SVN_ERR(svn_wc_adm_close2(adm_access, pool));
     }
   else
     {
@@ -1271,7 +1269,7 @@ svn_client_proplist3(const char *path_or_url,
 
         }
 
-      SVN_ERR(svn_wc_adm_close(adm_access));
+      SVN_ERR(svn_wc_adm_close2(adm_access, pool));
     }
   else /* remote target */
     {

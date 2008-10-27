@@ -1010,7 +1010,7 @@ svn_path_canonicalize(const char *path, apr_pool_t *pool)
 svn_boolean_t
 svn_path_is_canonical(const char *path, apr_pool_t *pool)
 {
-  return svn_uri_is_canonical(path, pool);
+  return svn_uri_is_canonical(path);
 }
 
 

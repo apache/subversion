@@ -696,9 +696,10 @@ def run_and_verify_update(wc_dir_name,
 
   Else if ERROR_RE_STRING is None, then:
 
-  The subcommand output will be verified against OUTPUT_TREE, and the
-  working copy itself will be verified against DISK_TREE.  If optional
-  STATUS_TREE is given, then 'svn status' output will be compared.
+  If OUTPUT_TREE is not None, the subcommand output will be verified
+  against OUTPUT_TREE.  If DISK_TREE is not None, the working copy
+  itself will be verified against DISK_TREE.  If STATUS_TREE is not
+  None, the 'svn status' output will be verified against STATUS_TREE.
   (This is a good way to check that revision numbers were bumped.)
 
   For the DISK_TREE verification, SINGLETON_HANDLER_A and
@@ -853,9 +854,11 @@ def run_and_verify_merge2(dir, rev1, rev2, url1, url2,
     print "============================================================="
     print "Merge outputs differ"
     print "The dry-run merge output:"
-    map(sys.stdout.write, out_dry)
+    for x in out_dry:
+      sys.stdout.write(x)
     print "The full merge output:"
-    map(sys.stdout.write, out)
+    for x in out:
+      sys.stdout.write(x)
     print "============================================================="
     raise main.SVNUnmatchedError
 
@@ -1023,7 +1026,7 @@ def run_and_verify_mergeinfo(error_re_string = None,
     verify.verify_outputs(None, None, err, None, expected_err)
     return
 
-  out = filter(None, map(lambda x: int(x.rstrip()[1:]), out))
+  out = filter(None, [int(x.rstrip()[1:]) for x in out])
   out.sort()
   expected_output.sort()
 
@@ -1039,8 +1042,8 @@ def run_and_verify_mergeinfo(error_re_string = None,
     raise Exception("Unexpected 'svn mergeinfo' output:\n"
                     "  expected but not found: %s\n"
                     "  found but not expected: %s"
-                    % (', '.join(map(lambda x: str(x), extra_exp)),
-                       ', '.join(map(lambda x: str(x), extra_out))))
+                    % (', '.join([str(x) for x in extra_exp]),
+                       ', '.join([str(x) for x in extra_out])))
 
 
 def run_and_verify_switch(wc_dir_name,
@@ -1882,7 +1885,24 @@ deep_trees_after_tree_del = wc.State('', {
   'DDD'               : Item(),
   })
 
+# Expected merge/update/switch output if tree conflict detection really works.
+deep_trees_conflict_output = wc.State('', {
+  'F/alpha'           : Item(treeconflict='C'),
+  'D/D1'              : Item(treeconflict='C'),
+  'DF/D1'             : Item(treeconflict='C'),
+  'DD/D1'             : Item(treeconflict='C'),
+  'DDF/D1'            : Item(treeconflict='C'),
+  'DDD/D1'            : Item(treeconflict='C'),
+  })
 
+# Expected status output if tree conflict detection really works.
+def deep_trees_conflict_status(expected_disk):
+  """Add tree conflicts and default status stuff to a disk-state dict."""
+  status = expected_disk.copy()
+  status.tweak('F', 'D', 'DF', 'DD', 'DDF', 'DDD', treeconflict='C ')
+  status.add({ '' : Item(status='  ') })
+  status.tweak(wc_rev=3)
+  return status
 
 
 class DeepTreesTestCase:

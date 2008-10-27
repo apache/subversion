@@ -51,10 +51,11 @@ svn_wc_check_wc(const char *path,
                 int *wc_format,
                 apr_pool_t *pool)
 {
-  svn_error_t *err = SVN_NO_ERROR;
+  svn_error_t *err;
+  const char *format_file_path = svn_wc__adm_child(path, SVN_WC__ADM_ENTRIES,
+                                                   pool);
 
-  const char *format_file_path
-    = svn_wc__adm_path(path, FALSE, pool, SVN_WC__ADM_ENTRIES, NULL);
+  /* ### this logic is duplicated in lock.c */
 
   /* First try to read the format number from the entries file. */
   err = svn_io_read_version_file(wc_format, format_file_path, pool);
@@ -68,8 +69,7 @@ svn_wc_check_wc(const char *path,
          Note that the format file might not exist in newer working copies
          (format 7 and higher), but in that case, the entries file should
          have contained the format number. */
-      format_file_path
-        = svn_wc__adm_path(path, FALSE, pool, SVN_WC__ADM_FORMAT, NULL);
+      format_file_path = svn_wc__adm_child(path, SVN_WC__ADM_FORMAT, pool);
 
       err = svn_io_read_version_file(wc_format, format_file_path, pool);
     }
@@ -278,15 +278,11 @@ compare_and_verify(svn_boolean_t *modified_p,
     {
       /* Reading files is necessary. */
       svn_checksum_t *checksum;
-      /* "v_" means versioned_file, "b_" means base_file. */
-      apr_file_t *v_file_h, *b_file_h;
-      svn_stream_t *v_stream, *b_stream;
+      svn_stream_t *v_stream;  /* versioned_file */
+      svn_stream_t *b_stream;  /* base_file */
       const svn_wc_entry_t *entry;
 
-      SVN_ERR(svn_io_file_open(&b_file_h, base_file, APR_READ,
-                               APR_OS_DEFAULT, pool));
-
-      b_stream = svn_stream_from_aprfile2(b_file_h, FALSE, pool);
+      SVN_ERR(svn_stream_open_readonly(&b_stream, base_file, pool, pool));
 
       if (verify_checksum)
         {
@@ -313,9 +309,8 @@ compare_and_verify(svn_boolean_t *modified_p,
         }
       else
         {
-          SVN_ERR(svn_io_file_open(&v_file_h, versioned_file, APR_READ,
-                              APR_OS_DEFAULT, pool));
-          v_stream = svn_stream_from_aprfile2(v_file_h, FALSE, pool);
+          SVN_ERR(svn_stream_open_readonly(&v_stream, versioned_file,
+                                           pool, pool));
 
           if (need_translation)
             {

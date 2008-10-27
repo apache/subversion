@@ -18,6 +18,14 @@
  *  else, in every Subversion .i file.
  */
 
+/* 
+ * Explicitly define SVN_DEPRECATED so SWIG doesn't have issues parsing
+ * our headers.
+ */
+#ifndef SVN_DEPRECATED
+#define SVN_DEPRECATED
+#endif
+
 %include typemaps.i
 %include constraints.i
 %include exception.i
@@ -203,3 +211,25 @@ static VALUE *_global_vresult_address = &vresult;
 /* Now, include the main Subversion typemap library. */
 %include svn_types.swg
 %include proxy.swg
+
+/* -----------------------------------------------------------------------
+   Simple macro to enable you to "pretend" to wrap platform-specific functions
+   not compiled into your version of Subversion and handle these exceptions
+   gracefully.
+*/
+
+%define PLATFORM_SPECIFIC_WRAPPER(func_name, macro)
+%exception func_name {
+%#ifdef macro
+#ifdef SWIGPYTHON
+svn_swig_py_release_py_lock();
+#endif
+$action
+#ifdef SWIGPYTHON
+svn_swig_py_acquire_py_lock();
+#endif
+%#else
+SWIG_exception(SWIG_RuntimeError, "'$symname' is not available on this platform.");
+%#endif
+}
+%enddef

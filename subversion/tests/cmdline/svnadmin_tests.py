@@ -72,7 +72,7 @@ def get_txns(repo_dir):
 
   exit_code, output_lines, error_lines = svntest.main.run_svnadmin('lstxns',
                                                                    repo_dir)
-  txns = map(output_lines.strip, output_lines)
+  txns = list(map(output_lines.strip, output_lines))
 
   # sort, just in case
   txns.sort()

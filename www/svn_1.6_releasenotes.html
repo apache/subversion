@@ -43,10 +43,8 @@ describes what is planned for the release.</p>
       >[BRANCH] svn patch</a></li>
   <li><a href="#tree-conflicts"
       >Improved handling of tree conflicts</a></li>
-  <li><a href="#fsfs-memcached"
-      >FSFS repositories: Support for Memcached</a></li>
-  <li><a href="#bdb-reverse-deltas"
-      >BDB repositories: Reverse deltas</a></li>
+  <li><a href="#filesystem-improvements"
+      >Filesystem storage improvements</a></li>
   <li><a href="#ctypes-python-bindings"
       >Ctypes Python Bindings</a></li>
   <li><a href="#improved-interactive-conflict-resolution"
@@ -374,8 +372,55 @@ href="http://svnbook.red-bean.com/nightly/en/svn.advanced.externals.html"
 
 </div>  <!-- tree-conflicts -->
 
-<div class="h3" id="fsfs-memcached" title="fsfs-memcached">
-<h3>FSFS repositories: Support for Memcached (<em>server</em>)</h3>
+<div class="h3" id="filesystem-improvements" title="filesystem-improvements">
+<h3>Filesystem Storage Improvements</h3>
+
+<p>Subversion 1.6 contains several improvements to both the Berkeley DB and FSFS
+backends.  These are designed to improve storage space, and can result in
+drastically smaller repositories.  These changes include:</p>
+<ul>
+  <li><a href="#rep-sharing"
+      >Representation sharing</a></li>
+  <li><a href="#fsfs-packing"
+      >[BRANCH] FSFS inode packing</a></li>
+  <li><a href="#fsfs-memcached"
+      >FSFS repositories: Support for Memcached</a></li>
+  <li><a href="#bdb-reverse-deltas"
+      >BDB repositories: Reverse deltas</a></li>
+</ul>
+
+<div class="h4" id="rep-sharing" title="rep-sharing">
+<h4>Sharing multiple common representations
+  (<em><a href="/issues/show_bug.cgi?id=2286">issue 2286</a></em>,
+   <em>server</em>)</h4>
+<p>XXX:When using many branches and merging between them often, it is common to
+have files with similar lines of history which contain the exact same content.
+In the past, Subversion has stored these files as deltas against previous
+versions of the file.  Subversion 1.6 will now use existing representations in
+the filesystem for duplicate storage.  Depending on the size of the repository,
+and the degree of branching and merging, this can cause an up to 20% space
+reduction for Berkeley DB repositories and a 15% reduction for FSFS
+repositories.</p>
+
+</div> <!-- rep-sharing -->
+
+<div class="h4" id="fsfs-packing" title="fsfs-memcached">
+<h4>FSFS repositories: Packing completed shards (<em>server</em>)</h4>
+
+<p>XXX: Subversion 1.5 introduced the ability for FSFS repositories to be
+<em><a href="svn_1.5_releasenotes.html#fsfs-sharding">sharded</a></em> into
+multiple directories for revision and revprop files.  Subversion 1.6 takes
+the sharding concept further, and allows full shard directory to be
+<em>packed</em> into one file.  Packed FSFS repositories have significant
+space savings over their unpacked counterparts, especially repositories which
+contain many small commits.</p>
+
+<p>See <code>svnadmin pack</code> for more details.</p>
+
+</div> <!-- fs-packing -->
+
+<div class="h4" id="fsfs-memcached" title="fsfs-memcached">
+<h4>FSFS repositories: Support for Memcached (<em>server</em>)</h4>
 
 <p>XXX: <a href="http://www.danga.com/memcached/">Memcached</a> can cache
 data of FSFS repositories.</p>
@@ -385,12 +430,14 @@ data of FSFS repositories.</p>
 
 </div> <!-- fsfs-memcached -->
 
-<div class="h3" id="bdb-reverse-deltas" title="bdb-reverse-deltas">
-<h3>BDB repositories: Reverse deltas (<em>server</em>)</h3>
+<div class="h4" id="bdb-reverse-deltas" title="bdb-reverse-deltas">
+<h4>BDB repositories: Reverse deltas (<em>server</em>)</h4>
 
 <p>XXX</p>
 
 </div> <!-- bdb-reverse-deltas -->
+
+</div> <!-- filesystem-improvements -->
 
 <div class="h3" id="ctypes-python-bindings" title="ctypes-python-bindings">
 <h3>Ctypes Python Bindings</h3>
@@ -515,6 +562,16 @@ more 1.4.x bugfix releases, except perhaps for absolutely critical
 security or data-loss bugs.</p>
 
 </div>  <!-- svn-1.4-deprecation -->
+
+<div class="h2" id="sqlite" title="deps-now">
+<h2>New Dependency: SQLite</h2>
+
+<p>XXX: We now require <a href="http://www.sqlite.org/">SQLite</a> for both
+the server and client.  We recommend 3.5.9 or greater, but work with anything
+better than 3.4.0.</p>
+
+</div>  <!-- deps-sqlite -->
+
 
 <div class="h2" id="deps" title="deps">
 <h2>Subversion Dependencies Distribution: Binary Compatibility Issues</h2>

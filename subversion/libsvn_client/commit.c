@@ -74,6 +74,9 @@ typedef struct import_ctx_t
 
    Fill DIGEST with the md5 checksum of the sent file; DIGEST must be
    at least APR_MD5_DIGESTSIZE bytes long. */
+
+/* ### how does this compare against svn_wc_transmit_text_deltas2() ??? */
+
 static svn_error_t *
 send_file_contents(const char *path,
                    void *file_baton,
@@ -86,7 +89,6 @@ send_file_contents(const char *path,
   svn_stream_t *contents;
   svn_txdelta_window_handler_t handler;
   void *handler_baton;
-  apr_file_t *f;
   const svn_string_t *eol_style_val = NULL, *keywords_val = NULL;
   svn_boolean_t special = FALSE;
   svn_subst_eol_style_t eol_style;
@@ -123,12 +125,16 @@ send_file_contents(const char *path,
   else
     keywords = NULL;
 
+  /* ### bogus. we should open path as a stream, or we should get a
+     ### stream of the Normal Form. we should not use a temporary file. */
+
   /* If we have EOL styles or keywords to de-translate, do it.  */
   if (svn_subst_translation_required(eol_style, eol, keywords, special, TRUE))
     {
       const char *temp_dir;
 
-      /* Now create a new tempfile, and open a stream to it. */
+      /* Now create a new tempfile, and open a stream to it. The temp file
+         is removed by the pool cleanup run by the caller */
       SVN_ERR(svn_io_temp_dir(&temp_dir, pool));
       SVN_ERR(svn_io_open_unique_file2
               (NULL, &tmpfile_path,
@@ -142,17 +148,13 @@ send_file_contents(const char *path,
 
   /* Open our contents file, either the original path or the temporary
      copy we might have made above. */
-  SVN_ERR(svn_io_file_open(&f, tmpfile_path ? tmpfile_path : path,
-                           APR_READ, APR_OS_DEFAULT, pool));
-  contents = svn_stream_from_aprfile2(f, TRUE, pool);
+  SVN_ERR(svn_stream_open_readonly(&contents,
+                                   tmpfile_path ? tmpfile_path : path,
+                                   pool, pool));
 
   /* Send the file's contents to the delta-window handler. */
-  SVN_ERR(svn_txdelta_send_stream(contents, handler, handler_baton,
-                                  digest, pool));
-
-  /* Close our contents file. */
-  return svn_io_file_close(f, pool);
-  /* The temp file is removed by the pool cleanup run by the caller */
+  return svn_txdelta_send_stream(contents, handler, handler_baton,
+                                 digest, pool);
 }
 
 
@@ -592,7 +594,6 @@ import(const char *path,
 
 static svn_error_t *
 get_ra_editor(svn_ra_session_t **ra_session,
-              svn_revnum_t *latest_rev,
               const svn_delta_editor_t **editor,
               void **edit_baton,
               svn_client_ctx_t *ctx,
@@ -631,10 +632,6 @@ get_ra_editor(svn_ra_session_t **ra_session,
                                  _("Path '%s' does not exist"),
                                  base_url);
     }
-
-  /* Fetch the latest revision if requested. */
-  if (latest_rev)
-    SVN_ERR(svn_ra_get_latest_revnum(*ra_session, latest_rev, pool));
 
   SVN_ERR(svn_client__ensure_revprop_table(&commit_revprops, revprop_table,
                                            log_msg, ctx, pool));
@@ -687,8 +684,7 @@ svn_client_import3(svn_commit_info_t **commit_info_p,
       apr_array_header_t *commit_items
         = apr_array_make(pool, 1, sizeof(item));
 
-      SVN_ERR(svn_client_commit_item_create
-              ((const svn_client_commit_item3_t **) &item, pool));
+      item = svn_client_commit_item_create2(pool);
       item->path = apr_pstrdup(pool, path);
       item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
       APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
@@ -737,7 +733,7 @@ svn_client_import3(svn_commit_info_t **commit_info_p,
           url = temp;
         }
     }
-  while ((err = get_ra_editor(&ra_session, NULL,
+  while ((err = get_ra_editor(&ra_session,
                               &editor, &edit_baton, ctx, url, base_dir,
                               NULL, log_msg, NULL, revprop_table,
                               commit_info_p, FALSE, NULL, TRUE, subpool)));
@@ -797,20 +793,7 @@ svn_client_import3(svn_commit_info_t **commit_info_p,
 
   /* Transfer *COMMIT_INFO from the subpool to the callers pool */
   if (*commit_info_p)
-    {
-      svn_commit_info_t *tmp_commit_info;
-
-      tmp_commit_info = svn_create_commit_info(pool);
-      *tmp_commit_info = **commit_info_p;
-      if (tmp_commit_info->date)
-        tmp_commit_info->date = apr_pstrdup(pool, tmp_commit_info->date);
-      if (tmp_commit_info->author)
-        tmp_commit_info->author = apr_pstrdup(pool, tmp_commit_info->author);
-      if (tmp_commit_info->post_commit_err)
-        tmp_commit_info->post_commit_err
-          = apr_pstrdup(pool, tmp_commit_info->post_commit_err);
-      *commit_info_p = tmp_commit_info;
-    }
+    *commit_info_p = svn_commit_info_dup(*commit_info_p, pool);
 
   svn_pool_destroy(subpool);
 
@@ -1384,6 +1367,10 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
   SVN_ERR(svn_path_condense_targets(&base_dir, &rel_targets, targets,
                                     depth == svn_depth_infinity, pool));
 
+  /* No targets means nothing to commit, so just return. */
+  if (! base_dir)
+    goto cleanup;
+
   /* When svn_path_condense_targets() was written, we didn't have real
    * depths, we just had recursive / nonrecursive.
    *
@@ -1435,18 +1422,17 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
    */
   if (depth == svn_depth_files || depth == svn_depth_immediates)
     {
-      const char *rel_target;
       for (i = 0; i < rel_targets->nelts; ++i)
         {
-          rel_target = APR_ARRAY_IDX(rel_targets, i, const char *);
+          const char *rel_target = APR_ARRAY_IDX(rel_targets, i, const char *);
+
           if (rel_target[0] == '\0')
-            lock_base_dir_recursive = TRUE;
+            {
+              lock_base_dir_recursive = TRUE;
+              break;
+            }
         }
     }
-
-  /* No targets means nothing to commit, so just return. */
-  if (! base_dir)
-    goto cleanup;
 
   /* Prepare an array to accumulate dirs to lock */
   dirs_to_lock = apr_array_make(pool, 1, sizeof(target));
@@ -1681,7 +1667,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
                                      pool)))
     goto cleanup;
 
-  if ((cmt_err = get_ra_editor(&ra_session, NULL,
+  if ((cmt_err = get_ra_editor(&ra_session,
                                &editor, &edit_baton, ctx,
                                base_url, base_dir, base_dir_access, log_msg,
                                commit_items, revprop_table, commit_info_p,
@@ -1737,7 +1723,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
     }
 
   /* Sleep to ensure timestamp integrity. */
-  svn_sleep_for_timestamps();
+  svn_io_sleep_for_timestamps(base_dir, pool);
 
  cleanup:
   /* Abort the commit if it is still in progress. */
@@ -1751,7 +1737,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
      clean-up. */
   if (! bump_err)
     {
-      unlock_err = svn_wc_adm_close(base_dir_access);
+      unlock_err = svn_wc_adm_close2(base_dir_access, pool);
 
       if (! unlock_err)
         cleanup_err = remove_tmpfiles(tempfiles, pool);

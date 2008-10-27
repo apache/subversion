@@ -770,7 +770,7 @@ def build_tree_from_status(lines):
   #
   # (Taken from 'print_status' in subversion/svn/status.c.)
   #
-  # Here are the parameters.  The middle number in parens is the
+  # Here are the parameters.  The middle number or string in parens is the
   # match.group(), followed by a brief description of the field:
   #
   #    - text status           (1)  (single letter)
@@ -787,22 +787,26 @@ def build_tree_from_status(lines):
   #
   #    [three spaces]
   #
-  #    - working revision      (8)  (either digits or "-")
+  #    - working revision ('wc_rev') (either digits or "-" or " ")
   #
   #    [one space]
   #
-  #    - last-changed revision (9)  (either digits or "?")
+  #    - last-changed revision      (either digits or "?" or " ")
   #
   #    [one space]
   #
-  #    - last author          (10)  (string of non-whitespace characters)
+  #    - last author                (optional string of non-whitespace
+  #                                  characters)
   #
-  #    [one space]
+  #    [spaces]
   #
-  #    - path                 (11)  (string of characters until newline)
+  #    - path              ('path') (string of characters until newline)
+  #
+  # Working revision, last-changed revision, and last author are whitespace
+  # only if the item is missing.  
 
   # Try http://www.wordsmith.org/anagram/anagram.cgi?anagram=ACDRMGU
-  rm = re.compile('^([!MACDRUG_ ][MACDRUG_ ])([L ])([+ ])([S ])([KOBT ])([C ]) ([* ])   [^0-9-]*(\d+|-|\?) +(\d|-|\?)+ +(\S+) +(.+)')
+  rm = re.compile('^([?!MACDRUG_ ][MACDRUG_ ])([L ])([+ ])([S ])([KOBT ])([C ]) ([* ]) +((?P<wc_rev>\d+|-|\?) +(\d|-|\?)+ +(\S+) +)?(?P<path>.+)$')
   for line in lines:
 
     # Quit when we hit an externals status announcement (### someday we can fix
@@ -814,8 +818,7 @@ def build_tree_from_status(lines):
     match = rm.search(line)
     if match and match.groups():
       if match.group(10) != '-': # ignore items that only exist on repos
-        atthash = {'status' : match.group(1),
-                   'wc_rev' : match.group(8)}
+        atthash = {'status' : match.group(1)} 
         if match.group(2) != ' ':
           atthash['locked'] = match.group(2)
         if match.group(3) != ' ':
@@ -824,8 +827,11 @@ def build_tree_from_status(lines):
           atthash['switched'] = match.group(4)
         if match.group(5) != ' ':
           atthash['writelocked'] = match.group(5)
-        atthash['treeconflict'] = match.group(6)
-        new_branch = create_from_path(match.group(11), None, {}, atthash)
+        if match.group(6) != ' ':
+          atthash['treeconflict'] = match.group(6)
+        if match.group('wc_rev'):
+          atthash['wc_rev'] = match.group('wc_rev')
+        new_branch = create_from_path(match.group('path'), None, {}, atthash)
 
       root.add_child(new_branch)
 
@@ -837,8 +843,7 @@ def build_tree_from_status(lines):
 def build_tree_from_skipped(lines):
 
   root = SVNTreeNode(root_node_name)
-  ### Will get confused by spaces in the filename
-  rm = re.compile ("^Skipped.* '([^ ]+)'\n")
+  rm = re.compile ("^Skipped.* '(.+)'\n")
 
   for line in lines:
     match = rm.search(line)
@@ -851,7 +856,7 @@ def build_tree_from_skipped(lines):
 def build_tree_from_diff_summarize(lines):
   "Build a tree from output of diff --summarize"
   root = SVNTreeNode(root_node_name)
-  rm = re.compile ("^([MAD ][M ])     (.+)\n")
+  rm = re.compile ("^([MAD ][M ])      (.+)\n")
 
   for line in lines:
     match = rm.search(line)
