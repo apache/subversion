@@ -2277,12 +2277,6 @@ svn_client_move(svn_client_commit_info_t **commit_info_p,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool)
 {
-  svn_commit_info_t *commit_info = NULL;
-  svn_error_t *err;
-  svn_client_copy_source_t copy_source;
-  apr_array_header_t *sources = apr_array_make(pool, 1,
-                                  sizeof(const svn_client_copy_source_t *));
-
   /* It doesn't make sense to specify revisions in a move. */
 
   /* ### todo: this check could fail wrongly.  For example,
@@ -2298,21 +2292,5 @@ svn_client_move(svn_client_commit_info_t **commit_info_p,
          _("Cannot specify revisions (except HEAD) with move operations"));
     }
 
-  copy_source.path = src_path;
-  copy_source.revision = src_revision;
-  copy_source.peg_revision = src_revision;
-
-  APR_ARRAY_PUSH(sources, const svn_client_copy_source_t *) = &copy_source;
-
-  err = try_copy(&commit_info,
-                 sources, dst_path,
-                 TRUE /* is_move */,
-                 force,
-                 FALSE /* make_parents */,
-                 NULL,
-                 ctx,
-                 pool);
-  /* These structs have the same layout for the common fields. */
-  *commit_info_p = (svn_client_commit_info_t *) commit_info;
-  return err;
+  return svn_client_move2(commit_info_p, src_path, dst_path, force, ctx, pool);
 }
