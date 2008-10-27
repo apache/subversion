@@ -3214,20 +3214,6 @@ walker_helper(const char *dirpath,
   return SVN_NO_ERROR;
 }
 
-
-svn_error_t *
-svn_wc_walk_entries(const char *path,
-                    svn_wc_adm_access_t *adm_access,
-                    const svn_wc_entry_callbacks_t *walk_callbacks,
-                    void *walk_baton,
-                    svn_boolean_t show_hidden,
-                    apr_pool_t *pool)
-{
-  return svn_wc_walk_entries2(path, adm_access, walk_callbacks,
-                              walk_baton, show_hidden, NULL, NULL,
-                              pool);
-}
-
 svn_error_t *
 svn_wc__walker_default_error_handler(const char *path,
                                      svn_error_t *err,
@@ -3237,22 +3223,6 @@ svn_wc__walker_default_error_handler(const char *path,
   return err;
 }
 
-svn_error_t *
-svn_wc_walk_entries2(const char *path,
-                     svn_wc_adm_access_t *adm_access,
-                     const svn_wc_entry_callbacks_t *walk_callbacks,
-                     void *walk_baton,
-                     svn_boolean_t show_hidden,
-                     svn_cancel_func_t cancel_func,
-                     void *cancel_baton,
-                     apr_pool_t *pool)
-{
-  svn_wc_entry_callbacks2_t walk_cb2 = { walk_callbacks->found_entry,
-                                         svn_wc__walker_default_error_handler };
-  return svn_wc_walk_entries3(path, adm_access,
-                              &walk_cb2, walk_baton, svn_depth_infinity,
-                              show_hidden, cancel_func, cancel_baton, pool);
-}
 
 /* The public API. */
 svn_error_t *
