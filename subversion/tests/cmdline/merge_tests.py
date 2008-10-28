@@ -12256,7 +12256,7 @@ def del_differing_file(sbox):
       "--- Merging r2 into '%s':\n" % dir_G2,
       "C    %s\n" % dir_G2,
       "Summary of conflicts:\n",
-      "  Tree conflicts: 1\n",
+      "  Text conflicts: 1\n",
       "  Skipped paths: 1\n"])
 
   svn_merge(s_rev_pi, source, target, [
@@ -12264,7 +12264,7 @@ def del_differing_file(sbox):
       "--- Merging r3 into '%s':\n" % dir_G2,
       "C    %s\n" % dir_G2,
       "Summary of conflicts:\n",
-      "  Tree conflicts: 1\n",
+      "  Text conflicts: 1\n",
       "  Skipped paths: 1\n"])
 
 
@@ -12287,7 +12287,7 @@ def del_differing_file(sbox):
       "--- Merging r2 into '%s':\n" % dir_G3,
       "C    %s\n" % dir_G3,
       "Summary of conflicts:\n",
-      "  Tree conflicts: 1\n",
+      "  Text conflicts: 1\n",
       "  Skipped paths: 1\n"])
 
   svn_merge(s_rev_pi, source, target, [
@@ -12295,7 +12295,7 @@ def del_differing_file(sbox):
       "--- Merging r3 into '%s':\n" % dir_G3,
       "C    %s\n" % dir_G3,
       "Summary of conflicts:\n",
-      "  Tree conflicts: 1\n",
+      "  Text conflicts: 1\n",
       "  Skipped paths: 1\n"])
 
   os.chdir(saved_cwd)

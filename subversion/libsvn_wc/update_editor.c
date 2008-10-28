@@ -1236,7 +1236,12 @@ check_tree_conflict(svn_wc_conflict_description_t **pconflict,
       break;
 
     case svn_wc_conflict_action_add:
-      if (entry)
+      /* When checking out a file-external, add_file() is called twice: 
+       * 1.) In the main update, a minimal entry is created.
+       * 2.) In the external update, the file is added properly.
+       * Don't raise a tree conflict the second time!
+       */
+      if (entry && (!entry->file_external_path)) 
         reason = svn_wc_conflict_reason_added;
       break;
 
