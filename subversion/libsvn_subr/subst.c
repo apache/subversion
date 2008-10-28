@@ -1592,6 +1592,7 @@ svn_subst_create_translated(svn_stream_t *src_stream,
   /* The easy way out:  no translation needed, just copy. */
   if (! (eol_str || (keywords && (apr_hash_count(keywords) > 0))))
     {
+      /* ###: use cancel func/baton in place of NULL/NULL below. */
       SVN_ERR(svn_stream_copy3(svn_stream_disown(src_stream, pool),
                                dst_stream, NULL, NULL, pool));
     }
