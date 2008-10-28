@@ -639,6 +639,10 @@ svn_cl__get_notifier(svn_wc_notify_func2_t *notify_func_p,
   nb->prop_conflicts = 0;
   nb->tree_conflicts = 0;
   nb->skipped_paths = 0;
+  nb->ext_text_conflicts = 0;
+  nb->ext_prop_conflicts = 0;
+  nb->ext_tree_conflicts = 0;
+  nb->ext_skipped_paths = 0;
 
   *notify_func_p = notify;
   *notify_baton_p = nb;

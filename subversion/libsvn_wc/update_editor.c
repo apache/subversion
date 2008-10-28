@@ -1196,22 +1196,23 @@ tree_has_local_mods(svn_boolean_t *modified,
   return SVN_NO_ERROR;
 }
 
-/* Check whether the incoming change ACTION on FULL_PATH would
- * conflict with FULL_PATH's scheduled change. If so, then raise a
- * tree conflict with FULL_PATH as the victim, by appending log
- * actions to LOG_ACCUM, and setting TREE_CONFLICTED to TRUE.  If not,
- * set TREE_CONFLICTED to FALSE.
+/* Check whether the incoming change ACTION on FULL_PATH would conflict with
+ * FULL_PATH's scheduled change. If so, then raise a tree conflict with
+ * FULL_PATH as the victim, by appending log actions to LOG_ACCUM.
  *
- * The edit baton EB gives information including whether the operation
- * is an update or a switch.
+ * The edit baton EB gives information including whether the operation is
+ * an update or a switch.
  *
  * ENTRY is the wc-entry for FULL_PATH, if there is one (even if
  * schedule-delete etc.), or NULL if FULL_PATH is unversioned or does
  * not exist.  PARENT_ADM_ACCESS is the admin access baton of
  * FULL_PATH's parent directory.
+ *
+ * If PCONFLICT is not null, set *PCONFLICT to the conflict description if
+ * there is one or else to null.
  */
 static svn_error_t *
-check_tree_conflict(svn_boolean_t *tree_conflicted,
+check_tree_conflict(svn_wc_conflict_description_t **pconflict,
                     struct edit_baton *eb,
                     svn_stringbuf_t *log_accum,
                     const char *full_path,
@@ -1220,7 +1221,6 @@ check_tree_conflict(svn_boolean_t *tree_conflicted,
                     svn_wc_conflict_action_t action,
                     apr_pool_t *pool)
 {
-  *tree_conflicted = FALSE;
   svn_wc_conflict_reason_t reason = (svn_wc_conflict_reason_t)(-1);
 
   /* Test whether ACTION conflicts with the state of ENTRY.
@@ -1303,6 +1303,9 @@ check_tree_conflict(svn_boolean_t *tree_conflicted,
       break;
     }
 
+  if (pconflict)
+    *pconflict = NULL;
+
   /* If a conflict was detected, append log commands to the log accumulator
    * to record it. */
   if (reason != (svn_wc_conflict_reason_t)(-1))
@@ -1310,7 +1313,6 @@ check_tree_conflict(svn_boolean_t *tree_conflicted,
       svn_wc_conflict_description_t *conflict;
 
       /* The entry is a tree conflict victim. */
-      *tree_conflicted = TRUE;
       conflict = svn_wc_conflict_description_create_tree(
         full_path, parent_adm_access, entry->kind,
         eb->switch_url ? svn_wc_operation_switch : svn_wc_operation_update,
@@ -1320,6 +1322,9 @@ check_tree_conflict(svn_boolean_t *tree_conflicted,
 
       SVN_ERR(svn_wc__loggy_add_tree_conflict_data(log_accum, conflict,
                                                    parent_adm_access, pool));
+
+      if (pconflict)
+        *pconflict = conflict;
     }
 
   return SVN_NO_ERROR;
@@ -1341,7 +1346,7 @@ do_entry_deletion(struct edit_baton *eb,
   const svn_wc_entry_t *entry;
   const char *full_path = svn_path_join(eb->anchor, path, pool);
   svn_stringbuf_t *log_item = svn_stringbuf_create("", pool);
-  svn_boolean_t tree_conflicted;
+  svn_wc_conflict_description_t *tree_conflict;
   svn_wc_notify_t *notify;
 
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access,
@@ -1349,11 +1354,11 @@ do_entry_deletion(struct edit_baton *eb,
 
   SVN_ERR(svn_wc__entry_versioned(&entry, full_path, adm_access, FALSE, pool));
 
-  SVN_ERR(check_tree_conflict(&tree_conflicted, eb, log_item, full_path, entry,
+  SVN_ERR(check_tree_conflict(&tree_conflict, eb, log_item, full_path, entry,
                               adm_access, svn_wc_conflict_action_delete, pool));
 
   /* Notify and bail out if this raised a tree-conflict. */
-  if (tree_conflicted)
+  if (tree_conflict)
     {
       SVN_ERR(svn_wc__write_log(adm_access, *log_number, log_item, pool));
 
@@ -1407,13 +1412,13 @@ do_entry_deletion(struct edit_baton *eb,
 
       tmp_entry.revision = *(eb->target_revision);
       tmp_entry.kind =
-        (entry->kind == svn_node_file) ? svn_node_file : svn_node_dir;  /* ### redundant? */
+        (entry->kind == svn_node_file) ? svn_node_file : svn_node_dir;
       tmp_entry.deleted = TRUE;
 
       SVN_ERR(svn_wc__loggy_entry_modify(&log_item, adm_access,
                                          full_path, &tmp_entry,
                                          SVN_WC__ENTRY_MODIFY_REVISION
-                                         | SVN_WC__ENTRY_MODIFY_KIND  /* ### redundant change? */
+                                         | SVN_WC__ENTRY_MODIFY_KIND
                                          | SVN_WC__ENTRY_MODIFY_DELETED,
                                          pool));
 
@@ -1601,7 +1606,6 @@ add_directory(const char *path,
 
           /* Anything other than a dir scheduled for addition without
              history is an error. */
-          /* ### what's this "add_existed" clause for? */
           if (entry
               && entry->schedule == svn_wc_schedule_add
               && ! entry->copied)
@@ -1612,6 +1616,8 @@ add_directory(const char *path,
             {
               svn_wc_adm_access_t *parent_adm_access;
               const char *repos;
+              svn_wc_conflict_description_t *tree_conflict;
+
               /* Use the repository root of the anchor, but only if it 
                  actually is an ancestor of the URL of this directory. */
               if (eb->repos && svn_path_is_ancestor(eb->repos, db->new_URL))
@@ -1630,10 +1636,11 @@ add_directory(const char *path,
                                           pb->path, pool));
 
               /* Raise a tree conflict if this directory is already present. */
-              SVN_ERR(check_tree_conflict(&db->tree_conflicted, eb,
+              SVN_ERR(check_tree_conflict(&tree_conflict, eb,
                                           pb->log_accum, db->path, entry,
                                           parent_adm_access,
                                           svn_wc_conflict_action_add, pool));
+              db->tree_conflicted = (tree_conflict != NULL);
             }
         }
     }
@@ -1782,6 +1789,7 @@ open_directory(const char *path,
 
   svn_wc_adm_access_t *adm_access;
   svn_wc_adm_access_t *parent_adm_access;
+  svn_wc_conflict_description_t *tree_conflict;
 
   SVN_ERR(make_dir_baton(&db, path, eb, pb, FALSE, pool));
   *child_baton = db;
@@ -1797,15 +1805,17 @@ open_directory(const char *path,
                               pb->path, pool));
 
   SVN_ERR(svn_wc_entry(&entry, db->path, adm_access, FALSE, pool));
+  if (entry)
+    {
+      db->ambient_depth = entry->depth;
+      db->was_incomplete = entry->incomplete;
+    }
 
-  /* Skip this directory if it has property and/or tree conflicts */
+  /* Skip this directory if it already had (property or tree) conflicts. */
   if (entry)
     {
       svn_boolean_t prop_conflicted;
       svn_boolean_t tree_conflicted;
-
-      db->ambient_depth = entry->depth;
-      db->was_incomplete = entry->incomplete;
 
       SVN_ERR(svn_wc_conflicted_p2(NULL, &prop_conflicted, &tree_conflicted,
                                    db->path, adm_access, pool));
@@ -1830,9 +1840,10 @@ open_directory(const char *path,
     }
 
   /* Raise a tree conflict if scheduled for deletion or similar. */
-  SVN_ERR(check_tree_conflict(&db->tree_conflicted, eb, pb->log_accum,
+  SVN_ERR(check_tree_conflict(&tree_conflict, eb, pb->log_accum,
                               db->path, entry, parent_adm_access,
                               svn_wc_conflict_action_edit, pool));
+  db->tree_conflicted = (tree_conflict != NULL);
 
   /* Mark directory as being at target_revision and URL, but incomplete. */
   tmp_entry.revision = *(eb->target_revision);
@@ -2532,7 +2543,6 @@ add_file(const char *path,
   svn_node_kind_t kind;
   svn_wc_adm_access_t *adm_access;
   apr_pool_t *subpool;
-  svn_boolean_t tree_conflicted;
 
   if (copyfrom_path || SVN_IS_VALID_REVNUM(copyfrom_rev))
     {
@@ -2612,16 +2622,13 @@ add_file(const char *path,
   else
     /* The parent directory is not in conflict.
      * Raise a tree conflict if there's already something versioned here. */
-    SVN_ERR(check_tree_conflict(&tree_conflicted, eb, pb->log_accum,
-                                path, entry, adm_access,
+    SVN_ERR(check_tree_conflict(NULL, eb, pb->log_accum, path, entry, adm_access,
                                 svn_wc_conflict_action_add, pool));
 
 
   /* When adding, there should be nothing with this name unless unversioned
      obstructions are permitted or the obstruction is scheduled for addition
      (or replacement) without history. */
-  /* ### " or the obstruction is scheduled for addition
-     without history." ??? */
   if (kind != svn_node_none)
     {
       if (eb->allow_unver_obstructions
@@ -2704,7 +2711,7 @@ open_file(const char *path,
   svn_wc_adm_access_t *adm_access;
   svn_boolean_t text_conflicted;
   svn_boolean_t prop_conflicted;
-  svn_boolean_t tree_conflicted;
+  svn_wc_conflict_description_t *tree_conflict;
 
   /* the file_pool can stick around for a *long* time, so we want to use
      a subpool for any temporary allocations. */
@@ -2735,18 +2742,18 @@ open_file(const char *path,
    * This is use case 1 described in the paper attached to issue #2282
    * See also notes/tree-conflicts/detection.txt
    */
-  SVN_ERR(check_tree_conflict(&tree_conflicted, eb, pb->log_accum, fb->path,
+  SVN_ERR(check_tree_conflict(&tree_conflict, eb, pb->log_accum, fb->path,
                               entry, adm_access, svn_wc_conflict_action_edit,
                               subpool));
 
   /* It is interesting to note: everything below is just validation. We
      aren't actually doing any "work" or fetching any persistent data. */
 
+  /* If the file was already or is now in conflict, don't mess with it. */
   SVN_ERR(svn_wc_conflicted_p2(&text_conflicted, &prop_conflicted, NULL,
                                fb->path, adm_access, subpool));
 
-  /* If the file is in conflict, don't mess with it. */
-  if (text_conflicted || prop_conflicted || tree_conflicted)
+  if (text_conflicted || prop_conflicted || (tree_conflict != NULL))
     {
       fb->skipped = TRUE;
       apr_hash_set(eb->skipped_paths, apr_pstrdup(eb->pool, fb->path),
@@ -2755,7 +2762,7 @@ open_file(const char *path,
         {
           svn_wc_notify_t *notify
             = svn_wc_create_notify(fb->path,
-                                   tree_conflicted
+                                   (tree_conflict != NULL)
                                      ? svn_wc_notify_update_update
                                      : svn_wc_notify_skip,
                                    pool);
@@ -2770,7 +2777,7 @@ open_file(const char *path,
             ? svn_wc_notify_state_conflicted
             : svn_wc_notify_state_unknown;
 
-          notify->tree_conflicted = tree_conflicted;
+          notify->tree_conflicted = (tree_conflict != NULL);
           
           (*eb->notify_func)(eb->notify_baton, notify, pool);
         }

@@ -1050,3 +1050,23 @@ Character classes:
            base16.class ::= [0-9a-f]
            base36.class ::= [a-z0-9]
          anything.class ::= anything at all ;
+
+
+
+Appendix: 'miscellaneous' table contents
+======================================
+
+The 'miscellaneous' table contains string keys mapped to string
+values.  Here is a table of the supported keys, the descriptions of
+their values, and the filesystem format version in which they were
+introduced.
+
+   Fmt   Key                  Value
+   ---   ------------------   ------------------------------------
+    4    forward-delta-rev    Youngest revision in the repository as of
+                              the moment when it was upgraded to support
+                              forward deltas.
+
+    4    next-fsguid          Next filesystem-global unique identifier
+                              available for use.
+                                 
