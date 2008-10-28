@@ -8,12 +8,11 @@ we branch should be put in the issue tracker with the 1.6 milestone.
 
 Blocker:
 
- * Properly wrap BDB rep-sharing code for use in pre-1.6 FS formats, as
-   noted by cmpilato here: http://svn.haxx.se/dev/archive-2008-10/0968.shtml
-   [STATUS:  cmpilato is on this]
-
- * Add 'svnadmin --pre-1.6-compatible', or preferably something more
-   generic (--compatible-with=X.Y or somesuch).
+ * Lose the FSGUIDs BDB stuff, and use a unique key specific to the
+   checksum-reps table.  (It was a fine idea, but cmpilato worries
+   about the additional contention if we move toward a universal
+   source of uniqueness.)  This also will simply some of the
+   rep-sharing format-conditional logic.
 
 Optional:
 

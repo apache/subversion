@@ -286,30 +286,3 @@ svn_client_delete3(svn_commit_info_t **commit_info_p,
 
   return SVN_NO_ERROR;
 }
-
-svn_error_t *
-svn_client_delete2(svn_commit_info_t **commit_info_p,
-                   const apr_array_header_t *paths,
-                   svn_boolean_t force,
-                   svn_client_ctx_t *ctx,
-                   apr_pool_t *pool)
-{
-  return svn_client_delete3(commit_info_p, paths, force, FALSE, NULL,
-                            ctx, pool);
-}
-
-svn_error_t *
-svn_client_delete(svn_client_commit_info_t **commit_info_p,
-                  const apr_array_header_t *paths,
-                  svn_boolean_t force,
-                  svn_client_ctx_t *ctx,
-                  apr_pool_t *pool)
-{
-  svn_commit_info_t *commit_info = NULL;
-  svn_error_t *err = NULL;
-
-  err = svn_client_delete2(&commit_info, paths, force, ctx, pool);
-  /* These structs have the same layout for the common fields. */
-  *commit_info_p = (svn_client_commit_info_t *) commit_info;
-  return err;
-}
