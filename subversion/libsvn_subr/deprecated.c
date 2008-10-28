@@ -32,6 +32,7 @@
 #include "svn_cmdline.h"
 
 #include "opt.h"
+#include "private/svn_opt_private.h"
 
 #include "svn_private_config.h"
 
