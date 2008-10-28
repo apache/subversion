@@ -25,15 +25,6 @@
 extern "C" {
 #endif /* __cplusplus */
 
-/* Note: This is substantially copied into svn_client_args_to_target_array() in
- * order to move to libsvn_client while maintaining backward compatibility.
- * See that function for argument definiations. */
-svn_error_t *
-svn_opt__args_to_target_array(apr_array_header_t **targets_p,
-                              apr_getopt_t *os,
-                              apr_array_header_t *known_targets,
-                              apr_pool_t *pool);
-
 /* Print version info for PGM_NAME.  If QUIET is  true, print in
  * brief.  Else if QUIET is not true, print the version more
  * verbosely, and if FOOTER is non-null, print it following the
@@ -51,4 +42,4 @@ svn_opt__print_version_info(const char *pgm_name,
 }
 #endif /* __cplusplus */
 
-#endif /* SVN_LIBSVN_SUBR_CACHE_H */
+#endif /* SVN_LIBSVN_SUBR_OPT_H */
