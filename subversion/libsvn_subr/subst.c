@@ -280,60 +280,6 @@ keyword_printf(const char *fmt,
   return svn_string_create_from_buf(value, pool);
 }
 
-/* Convert an old-style svn_subst_keywords_t struct * into a new-style
- * keywords hash.  Keyword values are shallow copies, so the produced
- * hash must not be assumed to have lifetime longer than the struct it
- * is based on.  A NULL input causes a NULL output. */
-static apr_hash_t *
-kwstruct_to_kwhash(const svn_subst_keywords_t *kwstruct,
-                   apr_pool_t *pool)
-{
-  apr_hash_t *kwhash;
-
-  if (kwstruct == NULL)
-    return NULL;
-
-  kwhash = apr_hash_make(pool);
-
-  if (kwstruct->revision)
-    {
-      apr_hash_set(kwhash, SVN_KEYWORD_REVISION_LONG,
-                   APR_HASH_KEY_STRING, kwstruct->revision);
-      apr_hash_set(kwhash, SVN_KEYWORD_REVISION_MEDIUM,
-                   APR_HASH_KEY_STRING, kwstruct->revision);
-      apr_hash_set(kwhash, SVN_KEYWORD_REVISION_SHORT,
-                   APR_HASH_KEY_STRING, kwstruct->revision);
-    }
-  if (kwstruct->date)
-    {
-      apr_hash_set(kwhash, SVN_KEYWORD_DATE_LONG,
-                   APR_HASH_KEY_STRING, kwstruct->date);
-      apr_hash_set(kwhash, SVN_KEYWORD_DATE_SHORT,
-                   APR_HASH_KEY_STRING, kwstruct->date);
-    }
-  if (kwstruct->author)
-    {
-      apr_hash_set(kwhash, SVN_KEYWORD_AUTHOR_LONG,
-                   APR_HASH_KEY_STRING, kwstruct->author);
-      apr_hash_set(kwhash, SVN_KEYWORD_AUTHOR_SHORT,
-                   APR_HASH_KEY_STRING, kwstruct->author);
-    }
-  if (kwstruct->url)
-    {
-      apr_hash_set(kwhash, SVN_KEYWORD_URL_LONG,
-                   APR_HASH_KEY_STRING, kwstruct->url);
-      apr_hash_set(kwhash, SVN_KEYWORD_URL_SHORT,
-                   APR_HASH_KEY_STRING, kwstruct->url);
-    }
-  if (kwstruct->id)
-    {
-      apr_hash_set(kwhash, SVN_KEYWORD_ID,
-                   APR_HASH_KEY_STRING, kwstruct->id);
-    }
-
-  return kwhash;
-}
-
 svn_error_t *
 svn_subst_build_keywords(svn_subst_keywords_t *kw,
                          const char *keywords_val,
@@ -851,20 +797,6 @@ svn_subst_keywords_differ2(apr_hash_t *a,
     }
 
   return FALSE;
-}
-
-svn_error_t *
-svn_subst_translate_stream2(svn_stream_t *s, /* src stream */
-                            svn_stream_t *d, /* dst stream */
-                            const char *eol_str,
-                            svn_boolean_t repair,
-                            const svn_subst_keywords_t *keywords,
-                            svn_boolean_t expand,
-                            apr_pool_t *pool)
-{
-  apr_hash_t *kh = kwstruct_to_kwhash(keywords, pool);
-
-  return svn_subst_translate_stream3(s, d, eol_str, repair, kh, expand, pool);
 }
 
 /* Baton for translate_chunk() to store its state in. */
@@ -1385,38 +1317,6 @@ svn_subst_translate_stream3(svn_stream_t *s, /* src stream */
   return SVN_NO_ERROR;
 }
 
-
-svn_error_t *
-svn_subst_translate_stream(svn_stream_t *s, /* src stream */
-                           svn_stream_t *d, /* dst stream */
-                           const char *eol_str,
-                           svn_boolean_t repair,
-                           const svn_subst_keywords_t *keywords,
-                           svn_boolean_t expand)
-{
-  apr_pool_t *pool = svn_pool_create(NULL);
-  svn_error_t *err = svn_subst_translate_stream2(s, d, eol_str, repair,
-                                                 keywords, expand, pool);
-  svn_pool_destroy(pool);
-  return err;
-}
-
-
-svn_error_t *
-svn_subst_translate_cstring(const char *src,
-                            const char **dst,
-                            const char *eol_str,
-                            svn_boolean_t repair,
-                            const svn_subst_keywords_t *keywords,
-                            svn_boolean_t expand,
-                            apr_pool_t *pool)
-{
-  apr_hash_t *kh = kwstruct_to_kwhash(keywords, pool);
-
-  return svn_subst_translate_cstring2(src, dst, eol_str, repair,
-                                      kh, expand, pool);
-}
-
 svn_error_t *
 svn_subst_translate_cstring2(const char *src,
                              const char **dst,
@@ -1462,21 +1362,6 @@ svn_subst_translate_cstring2(const char *src,
   *dst = dst_stringbuf->data;
   return SVN_NO_ERROR;
 }
-
-
-svn_error_t *
-svn_subst_copy_and_translate(const char *src,
-                             const char *dst,
-                             const char *eol_str,
-                             svn_boolean_t repair,
-                             const svn_subst_keywords_t *keywords,
-                             svn_boolean_t expand,
-                             apr_pool_t *pool)
-{
-  return svn_subst_copy_and_translate2(src, dst, eol_str, repair, keywords,
-                                       expand, FALSE, pool);
-}
-
 
 /* Given a special file at SRC, generate a textual representation of
    it in a normal file at DST.  Perform all allocations in POOL. */
@@ -1603,24 +1488,6 @@ create_special_file(const char *src, const char *dst, apr_pool_t *pool)
     SVN_ERR(svn_stringbuf_from_file2(&contents, src, pool));
 
   return create_special_file_from_stringbuf(contents, dst, pool);
-}
-
-
-svn_error_t *
-svn_subst_copy_and_translate2(const char *src,
-                              const char *dst,
-                              const char *eol_str,
-                              svn_boolean_t repair,
-                              const svn_subst_keywords_t *keywords,
-                              svn_boolean_t expand,
-                              svn_boolean_t special,
-                              apr_pool_t *pool)
-{
-  apr_hash_t *kh = kwstruct_to_kwhash(keywords, pool);
-
-  return svn_subst_copy_and_translate3(src, dst, eol_str,
-                                       repair, kh, expand, special,
-                                       pool);
 }
 
 svn_error_t *
