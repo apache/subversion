@@ -294,12 +294,8 @@ assemble_status(svn_wc_status2_t **status,
                                       pool));
 
   /* Find out whether it's a tree conflict victim. */
-  {
-    svn_wc_conflict_description_t *conflict;
-
-    SVN_ERR(svn_wc_get_tree_conflict(&conflict, path, adm_access, pool));
-    tree_conflicted_p = (conflict != NULL);
-  }
+  SVN_ERR(svn_wc_conflicted_p2(NULL, NULL, &tree_conflicted_p, path, adm_access,
+                               pool));
 
   if (! entry)
     {
@@ -427,19 +423,13 @@ assemble_status(svn_wc_status2_t **status,
       if (entry->prejfile || entry->conflict_old ||
           entry->conflict_new || entry->conflict_wrk)
         {
-          svn_boolean_t text_conflict_p, prop_conflict_p, dummy;
-          const char *parent_dir;
-
-          if (entry->kind == svn_node_dir)
-            parent_dir = path;
-          else  /* non-directory, that's all we need to know */
-            parent_dir = svn_path_dirname(path, pool);
+          svn_boolean_t text_conflict_p, prop_conflict_p;
 
           /* The entry says there was a conflict, but the user might have
              marked it as resolved by deleting the artifact files, so check
              for that. */
-          SVN_ERR(svn_wc_conflicted_p2(&text_conflict_p, &prop_conflict_p,
-                                       &dummy, parent_dir, entry, pool));
+            SVN_ERR(svn_wc_conflicted_p2(&text_conflict_p, &prop_conflict_p,
+                                         NULL, path, adm_access, pool));
 
           if (text_conflict_p)
             final_text_status = svn_wc_status_conflicted;
