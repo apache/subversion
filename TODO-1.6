@@ -8,12 +8,6 @@ we branch should be put in the issue tracker with the 1.6 milestone.
 
 Blocker:
 
- * Lose the FSGUIDs BDB stuff, and use a unique key specific to the
-   checksum-reps table.  (It was a fine idea, but cmpilato worries
-   about the additional contention if we move toward a universal
-   source of uniqueness.)  This also will simply some of the
-   rep-sharing format-conditional logic.
-
 Optional:
 
  * Merge the sparse-directories deselection branch, as noted by kfogel:
