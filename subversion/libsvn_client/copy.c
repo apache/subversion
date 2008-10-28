@@ -1322,7 +1322,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
             _("Commit failed (details follow):"));
 
   /* Sleep to ensure timestamp integrity. */
-  svn_sleep_for_timestamps();
+  svn_io_sleep_for_timestamps(top_src_path, pool);
 
   /* It's only a read lock, so unlocking is harmless. */
   return svn_wc_adm_close2(adm_access, pool);
