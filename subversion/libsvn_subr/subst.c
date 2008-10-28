@@ -1725,17 +1725,16 @@ svn_subst_create_translated(svn_stream_t *src_stream,
   /* The easy way out:  no translation needed, just copy. */
   if (! (eol_str || (keywords && (apr_hash_count(keywords) > 0))))
     {
-      /* ### should use copy2() and a cancel func/baton. */
-      SVN_ERR(svn_stream_copy(src_stream, dst_stream, pool));
+      SVN_ERR(svn_stream_copy3(svn_stream_disown(src_stream, pool),
+                               dst_stream, NULL, NULL, pool));
     }
   else
     {
       /* Translate src stream into dst stream. */
       SVN_ERR(svn_subst_translate_stream3(src_stream, dst_stream, eol_str,
                                           repair, keywords, expand, pool));
+      SVN_ERR(svn_stream_close(dst_stream));
     }
-
-  SVN_ERR(svn_stream_close(dst_stream));
 
   /* Now that dst_tmp contains the translated data, do the atomic rename. */
   return svn_io_file_rename(dst_tmp, dst, pool);
