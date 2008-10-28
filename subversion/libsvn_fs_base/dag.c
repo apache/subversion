@@ -33,7 +33,6 @@
 #include "reps-strings.h"
 #include "revs-txns.h"
 #include "id.h"
-#include "fsguid.h"
 
 #include "util/fs_skels.h"
 
@@ -1289,8 +1288,8 @@ svn_fs_base__dag_finalize_edits(dag_node_t *file,
       if (! err)
         {
           useless_data_key = noderev->edit_key;
-          err = svn_fs_base__reserve_fsguid(trail->fs, &data_key_uniquifier, 
-                                            trail, pool);
+          err = svn_fs_bdb__reserve_rep_reuse_id(&data_key_uniquifier,
+                                                 trail->fs, trail, pool);
         }
       else if (err && (err->apr_err == SVN_ERR_FS_NO_SUCH_CHECKSUM_REP))
         {
@@ -1317,9 +1316,9 @@ svn_fs_base__dag_finalize_edits(dag_node_t *file,
     SVN_ERR(svn_fs_base__delete_rep_if_mutable(fs, old_data_key, txn_id,
                                                trail, pool));
 
-  /* Throw away our edit -- there was an existing representation whose
-     contents matched our goal. */
-  if (useless_data_key && (bfd->format >= SVN_FS_BASE__MIN_REP_SHARING_FORMAT))
+  /* If we've got a discardable rep (probably because we ended us
+     re-using a preexisting one).  Throw out the discardable rep. */
+  if (useless_data_key)
     SVN_ERR(svn_fs_base__delete_rep_if_mutable(fs, useless_data_key,
                                                txn_id, trail, pool));
 
