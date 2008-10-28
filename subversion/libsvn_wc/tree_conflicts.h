@@ -141,8 +141,8 @@
 #define SVN_WC__CONFLICT_REASON_OBSTRUCTED "obstructed"
 
 
-/* Like svn_wc_add_tree_conflict_data, but also takes a log accumulator
- * LOC_ACCUM, and does not flush the log.
+/* Like svn_wc_add_tree_conflict_data(), but append to the log accumulator
+ * LOG_ACCUM a command to rewrite the entry field, and do not flush the log.
  * This function is meant to be used in the working copy library where
  * log accumulators are usually readily available.
  */
