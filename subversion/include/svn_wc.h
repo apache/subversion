@@ -5272,21 +5272,6 @@ svn_wc_get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
                          apr_pool_t *pool);
 
 /**
- * Read tree conflict descriptions from @a dir_entry.
- * Append pointers to newly allocated svn_wc_conflict_description_t
- * objects to the array pointed to by @a conflicts.
- * @a dir_path is the path to the WC directory whose conflicts are being read.
- * Do all allocations in @a pool.
- *
- * @since New in 1.6.
- */
-svn_error_t *
-svn_wc_read_tree_conflicts_from_entry(apr_array_header_t *conflicts,
-                                      const svn_wc_entry_t *dir_entry,
-                                      const char *dir_path,
-                                      apr_pool_t *pool);
-
-/**
  * Add the tree conflict described by @a conflict to the directory entry
  * belonging to @a adm_access.
  * Do all allocations in @a pool.
