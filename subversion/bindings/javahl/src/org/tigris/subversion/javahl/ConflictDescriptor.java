@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2007-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -71,9 +71,15 @@ public class ConflictDescriptor
     private String myPath;
     private String mergedPath;
 
+    /**
+     * @see Operation
+     */
+    private int operation;
+
+    /** This constructor should only be called from JNI code. */
     ConflictDescriptor(String path, int conflictKind, int nodeKind,
                        String propertyName, boolean isBinary, String mimeType,
-                       int action, int reason,
+                       int action, int reason, int operation,
                        String basePath, String theirPath,
                        String myPath, String mergedPath)
     {
@@ -89,6 +95,7 @@ public class ConflictDescriptor
         this.theirPath = theirPath;
         this.myPath = myPath;
         this.mergedPath = mergedPath;
+        this.operation = operation;
     }
 
     public String getPath()
@@ -161,6 +168,11 @@ public class ConflictDescriptor
     public String getMergedPath()
     {
         return mergedPath;
+    }
+
+    public int getOperation()
+    {
+        return operation;
     }
 
     /**

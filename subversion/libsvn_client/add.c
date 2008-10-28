@@ -549,38 +549,6 @@ svn_client_add4(const char *path,
   return err;
 }
 
-svn_error_t *
-svn_client_add3(const char *path,
-                svn_boolean_t recursive,
-                svn_boolean_t force,
-                svn_boolean_t no_ignore,
-                svn_client_ctx_t *ctx,
-                apr_pool_t *pool)
-{
-  return svn_client_add4(path, SVN_DEPTH_INFINITY_OR_EMPTY(recursive),
-                         force, no_ignore, FALSE, ctx,
-                         pool);
-}
-
-svn_error_t *
-svn_client_add2(const char *path,
-                svn_boolean_t recursive,
-                svn_boolean_t force,
-                svn_client_ctx_t *ctx,
-                apr_pool_t *pool)
-{
-  return svn_client_add3(path, recursive, force, FALSE, ctx, pool);
-}
-
-svn_error_t *
-svn_client_add(const char *path,
-               svn_boolean_t recursive,
-               svn_client_ctx_t *ctx,
-               apr_pool_t *pool)
-{
-  return svn_client_add3(path, recursive, FALSE, FALSE, ctx, pool);
-}
-
 
 static svn_error_t *
 path_driver_cb_func(void **dir_baton,
@@ -855,30 +823,4 @@ svn_client_mkdir3(svn_commit_info_t **commit_info_p,
     }
 
   return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_client_mkdir2(svn_commit_info_t **commit_info_p,
-                  const apr_array_header_t *paths,
-                  svn_client_ctx_t *ctx,
-                  apr_pool_t *pool)
-{
-  return svn_client_mkdir3(commit_info_p, paths, FALSE, NULL, ctx, pool);
-}
-
-
-svn_error_t *
-svn_client_mkdir(svn_client_commit_info_t **commit_info_p,
-                 const apr_array_header_t *paths,
-                 svn_client_ctx_t *ctx,
-                 apr_pool_t *pool)
-{
-  svn_commit_info_t *commit_info = NULL;
-  svn_error_t *err;
-
-  err = svn_client_mkdir2(&commit_info, paths, ctx, pool);
-  /* These structs have the same layout for the common fields. */
-  *commit_info_p = (svn_client_commit_info_t *) commit_info;
-  return err;
 }
