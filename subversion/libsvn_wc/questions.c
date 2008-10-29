@@ -542,66 +542,81 @@ svn_wc_text_modified_p(svn_boolean_t *modified_p,
 svn_error_t *
 svn_wc_conflicted_p2(svn_boolean_t *text_conflicted_p,
                      svn_boolean_t *prop_conflicted_p,
-                     svn_boolean_t *has_tree_conflicted_children,
-                     const char *dir_path,
-                     const svn_wc_entry_t *entry,
+                     svn_boolean_t *tree_conflicted_p,
+                     const char *path,
+                     svn_wc_adm_access_t *adm_access,
                      apr_pool_t *pool)
 {
-  const char *path;
   svn_node_kind_t kind;
-  apr_pool_t *subpool = svn_pool_create(pool);  /* ### Why? */
+  const svn_wc_entry_t *entry;
+  const char* dir_path = svn_path_dirname(path, pool);
 
-  *text_conflicted_p = FALSE;
-  *prop_conflicted_p = FALSE;
-  *has_tree_conflicted_children = FALSE;
+  SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, pool));
 
-  /* Look for any text conflict, exercising only as much effort as
-     necessary to obtain a definitive answer.  This only applies to
-     files, but we don't have to explicitly check that entry is a
-     file, since these attributes would never be set on a directory
-     anyway.  A conflict file entry notation only counts if the
-     conflict file still exists on disk.  */
-  if (entry->conflict_old)
+  if (text_conflicted_p)
     {
-      path = svn_path_join(dir_path, entry->conflict_old, subpool);
-      SVN_ERR(svn_io_check_path(path, &kind, subpool));
-      if (kind == svn_node_file)
-        *text_conflicted_p = TRUE;
-    }
+      *text_conflicted_p = FALSE;
 
-  if ((! *text_conflicted_p) && (entry->conflict_new))
-    {
-      path = svn_path_join(dir_path, entry->conflict_new, subpool);
-      SVN_ERR(svn_io_check_path(path, &kind, subpool));
-      if (kind == svn_node_file)
-        *text_conflicted_p = TRUE;
-    }
+      if (entry)
+        {
+          /* Look for any text conflict, exercising only as much effort as
+             necessary to obtain a definitive answer.  This only applies to
+             files, but we don't have to explicitly check that entry is a
+             file, since these attributes would never be set on a directory
+             anyway.  A conflict file entry notation only counts if the
+             conflict file still exists on disk.  */
 
-  if ((! *text_conflicted_p) && (entry->conflict_wrk))
-    {
-      path = svn_path_join(dir_path, entry->conflict_wrk, subpool);
-      SVN_ERR(svn_io_check_path(path, &kind, subpool));
-      if (kind == svn_node_file)
-        *text_conflicted_p = TRUE;
+          if (entry->conflict_old)
+            {
+              path = svn_path_join(dir_path, entry->conflict_old, pool);
+              SVN_ERR(svn_io_check_path(path, &kind, pool));
+              *text_conflicted_p = (kind == svn_node_file);
+            }
+
+          if ((! *text_conflicted_p) && (entry->conflict_new))
+            {
+              path = svn_path_join(dir_path, entry->conflict_new, pool);
+              SVN_ERR(svn_io_check_path(path, &kind, pool));
+              *text_conflicted_p = (kind == svn_node_file);
+            }
+
+          if ((! *text_conflicted_p) && (entry->conflict_wrk))
+            {
+              path = svn_path_join(dir_path, entry->conflict_wrk, pool);
+              SVN_ERR(svn_io_check_path(path, &kind, pool));
+              *text_conflicted_p = (kind == svn_node_file);
+            }
+        }
     }
 
   /* What about prop conflicts? */
-  if (entry->prejfile)
+  if (prop_conflicted_p)
     {
-      path = svn_path_join(dir_path, entry->prejfile, subpool);
-      SVN_ERR(svn_io_check_path(path, &kind, subpool));
-      if (kind == svn_node_file)
-        *prop_conflicted_p = TRUE;
+      *prop_conflicted_p = FALSE;
+
+      if (entry && entry->prejfile)
+        {
+          /* A dir's .prej file is _inside_ the dir. */
+          if (entry->kind == svn_node_dir)
+            path = svn_path_join(path, entry->prejfile, pool);
+          else
+            path = svn_path_join(dir_path, entry->prejfile, pool);
+
+          SVN_ERR(svn_io_check_path(path, &kind, pool));
+          *prop_conflicted_p = (kind == svn_node_file);
+        }
     }
 
-  /* Check for tree conflicts (only "this-dir" entries have tree conflicts). */
-  if ((strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) == 0)
-      && entry->tree_conflict_data)
+  /* Find out whether it's a tree conflict victim. */
+  if (tree_conflicted_p)
     {
-      *has_tree_conflicted_children = TRUE;
+      svn_wc_conflict_description_t *conflict;
+
+      SVN_ERR_ASSERT(adm_access != NULL);
+      SVN_ERR(svn_wc_get_tree_conflict(&conflict, path, adm_access, pool));
+      *tree_conflicted_p = (conflict != NULL);
     }
 
-  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
@@ -612,10 +627,38 @@ svn_wc_conflicted_p(svn_boolean_t *text_conflicted_p,
                     const svn_wc_entry_t *entry,
                     apr_pool_t *pool)
 {
-  svn_boolean_t has_tree_conflicted_children;
-  return svn_wc_conflicted_p2(text_conflicted_p, prop_conflicted_p,
-                              &has_tree_conflicted_children, dir_path, entry,
-                              pool);
+  svn_node_kind_t kind;
+  const char *path;
+
+  if (entry->conflict_old)
+    {
+      path = svn_path_join(dir_path, entry->conflict_old, pool);
+      SVN_ERR(svn_io_check_path(path, &kind, pool));
+      *text_conflicted_p = (kind == svn_node_file);
+    }
+
+  if ((! *text_conflicted_p) && (entry->conflict_new))
+    {
+      path = svn_path_join(dir_path, entry->conflict_new, pool);
+      SVN_ERR(svn_io_check_path(path, &kind, pool));
+      *text_conflicted_p = (kind == svn_node_file);
+    }
+
+  if ((! *text_conflicted_p) && (entry->conflict_wrk))
+    {
+      path = svn_path_join(dir_path, entry->conflict_wrk, pool);
+      SVN_ERR(svn_io_check_path(path, &kind, pool));
+      *text_conflicted_p = (kind == svn_node_file);
+    }
+
+  if (entry->prejfile)
+    {
+      path = svn_path_join(dir_path, entry->prejfile, pool);
+      SVN_ERR(svn_io_check_path(path, &kind, pool));
+      *prop_conflicted_p = (kind == svn_node_file);
+    }
+
+  return SVN_NO_ERROR;
 }
 
 

@@ -27,6 +27,7 @@
 #include "../include/org_tigris_subversion_javahl_NotifyAction.h"
 #include "../include/org_tigris_subversion_javahl_NotifyStatus.h"
 #include "../include/org_tigris_subversion_javahl_NodeKind.h"
+#include "../include/org_tigris_subversion_javahl_Operation.h"
 #include "../include/org_tigris_subversion_javahl_LockStatus.h"
 #include "../include/org_tigris_subversion_javahl_StatusKind.h"
 #include "../include/org_tigris_subversion_javahl_Revision.h"
@@ -453,5 +454,18 @@ jint EnumMapper::mapDepth(svn_depth_t depth)
 
     case svn_depth_infinity:
       return org_tigris_subversion_javahl_Depth_infinity;
+    }
+}
+
+jint EnumMapper::mapOperation(svn_wc_operation_t operation)
+{
+  switch (operation)
+    {
+    case svn_wc_operation_update:
+      return org_tigris_subversion_javahl_Operation_update;
+    case svn_wc_operation_switch:
+      return org_tigris_subversion_javahl_Operation_switched;
+    case svn_wc_operation_merge:
+      return org_tigris_subversion_javahl_Operation_merge;
     }
 }
