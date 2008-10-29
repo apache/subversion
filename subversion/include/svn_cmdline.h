@@ -338,12 +338,12 @@ svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
  * 
  * @since New in 1.4.
  * @deprecated Provided for backward compatibility with the 1.5 API.
- * Use svn_cmdline_set_up_auth_baton() instead.
+ * Use svn_cmdline_create_auth_baton() instead.
  *
  * @note This deprecation does not follow the usual pattern of putting
  * a new number on end of the function's name.  Instead, the new
  * function name is distinguished from the old by a grammatical
- * improvement: the verb "set_up" instead of the noun "setup".
+ * improvement: the verb "create" instead of the noun "setup".
  */
 SVN_DEPRECATED
 svn_error_t *
