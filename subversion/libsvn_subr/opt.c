@@ -32,6 +32,7 @@
 #include "svn_version.h"
 #include "svn_types.h"
 #include "svn_opt.h"
+#include "opt.h"
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_utf.h"
