@@ -476,7 +476,7 @@ ssl_trust_unknown_server_cert
 
 
 svn_error_t *
-svn_cmdline_set_up_auth_baton(svn_auth_baton_t **ab,
+svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
                               svn_boolean_t non_interactive,
                               const char *auth_username,
                               const char *auth_password,
@@ -731,7 +731,7 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
                              void *cancel_baton,
                              apr_pool_t *pool)
 {
-  return svn_cmdline_set_up_auth_baton(ab, non_interactive,
+  return svn_cmdline_create_auth_baton(ab, non_interactive,
                                        auth_username, auth_password,
                                        config_dir, no_auth_cache, FALSE,
                                        cfg, cancel_func, cancel_baton, pool);
