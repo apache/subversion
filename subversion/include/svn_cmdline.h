@@ -304,8 +304,9 @@ svn_cmdline_auth_plaintext_passphrase_prompt(svn_boolean_t *may_save_plaintext,
                                              void *baton,
                                              apr_pool_t *pool);
 
-/** Initialize auth baton @a ab with the standard set of authentication
- * providers used by the command line client.
+/** Set @a *ab to an authentication baton allocated from @a pool and
+ * initialized with the standard set of authentication providers used
+ * by the command line client.
  *
  * @a non_interactive, @a username, @a password, @a config_dir,
  * @a no_auth_cache, and @a trust_server_cert are the values of the
@@ -320,7 +321,7 @@ svn_cmdline_auth_plaintext_passphrase_prompt(svn_boolean_t *may_save_plaintext,
  * @since New in 1.6.
  */
 svn_error_t *
-svn_cmdline_set_up_auth_baton(svn_auth_baton_t **ab,
+svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
                               svn_boolean_t non_interactive,
                               const char *username,
                               const char *password,
@@ -332,7 +333,7 @@ svn_cmdline_set_up_auth_baton(svn_auth_baton_t **ab,
                               void *cancel_baton,
                               apr_pool_t *pool);
 
-/** Similar to svn_cmdline_set_up_auth_baton(), but with 
+/** Similar to svn_cmdline_create_auth_baton(), but with 
  * @a trust_server_cert always set to false.
  * 
  * @since New in 1.4.
