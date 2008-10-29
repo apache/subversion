@@ -3,7 +3,7 @@
  * SVN_AUTH_CRED_SSL_CLIENT_CERT_PW
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -66,6 +66,7 @@ simple_passphrase_get(const char **passphrase,
                       apr_hash_t *creds,
                       const char *realmstring,
                       const char *username,
+                      svn_config_t *config,
                       svn_boolean_t non_interactive,
                       apr_pool_t *pool)
 {
@@ -86,6 +87,7 @@ simple_passphrase_set(apr_hash_t *creds,
                       const char *realmstring,
                       const char *username,
                       const char *passphrase,
+                      svn_config_t *config,
                       svn_boolean_t non_interactive,
                       apr_pool_t *pool)
 {
@@ -134,7 +136,7 @@ svn_auth__ssl_client_cert_pw_file_first_creds_helper
       if (! err && creds_hash)
         {
           if (!passphrase_get(&password, creds_hash, realmstring,
-                              NULL, non_interactive, pool))
+                              NULL, cfg, non_interactive, pool))
             password = NULL;
         }
     }
@@ -167,6 +169,9 @@ svn_auth__ssl_client_cert_pw_file_save_creds_helper
   svn_auth_cred_ssl_client_cert_pw_t *creds = credentials;
   apr_hash_t *creds_hash = NULL;
   const char *config_dir;
+  svn_config_t *cfg = apr_hash_get(parameters,
+                                   SVN_AUTH_PARAM_CONFIG,
+                                   APR_HASH_KEY_STRING);
   svn_error_t *err;
   svn_boolean_t dont_store_passphrase =
     apr_hash_get(parameters,
@@ -297,7 +302,7 @@ svn_auth__ssl_client_cert_pw_file_save_creds_helper
       if (may_save_passphrase)
         {
           *saved = passphrase_set(creds_hash, realmstring,
-                                  NULL, creds->password,
+                                  NULL, creds->password, cfg,
                                   non_interactive, pool);
 
           if (*saved && passtype)

@@ -24,8 +24,8 @@
 #include <apr_network_io.h>
 
 #include "svn_fs.h"
-#include "svn_cache.h"
 #include "svn_config.h"
+#include "private/svn_cache.h"
 #include "private/svn_fs_private.h"
 #include "private/svn_sqlite.h"
 
@@ -201,23 +201,23 @@ typedef struct
   svn_config_t *config;
 
   /* Caches of immutable data.  (Note that if these are created with
-     svn_cache_create_memcache, the data can be shared between
+     svn_cache__create_memcache, the data can be shared between
      multiple svn_fs_t's for the same filesystem.) */
 
   /* A cache of revision root IDs, mapping from (svn_revnum_t *) to
      (svn_fs_id_t *).  (Not threadsafe.) */
-  svn_cache_t *rev_root_id_cache;
+  svn_cache__t *rev_root_id_cache;
 
   /* DAG node cache for immutable nodes */
-  svn_cache_t *rev_node_cache;
+  svn_cache__t *rev_node_cache;
 
   /* A cache of the contents of immutable directories; maps from
      unparsed FS ID to ###x. */
-  svn_cache_t *dir_cache;
+  svn_cache__t *dir_cache;
 
   /* Fulltext cache; currently only used with memcached.  Maps from
      rep key to svn_string_t. */
-  svn_cache_t *fulltext_cache;
+  svn_cache__t *fulltext_cache;
 
   /* Data shared between all svn_fs_t objects for a given filesystem. */
   fs_fs_shared_data_t *shared;

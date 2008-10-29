@@ -67,7 +67,7 @@ def verbose_printlines(lines):
 
 # A "tree conflict on file P/F" means:
 #   - the operation reports action code "C" on path P 
-#   - "svn status" reports status code "C" on path P
+#   - "svn status" reports status code "C" on path P/F
 #   - "svn info P" reports details of the conflict on F
 #   - "svn commit" fails if the user-requested targets include path F
 #   - "svn commit" fails if the user-requested targets include path P
@@ -75,7 +75,7 @@ def verbose_printlines(lines):
 
 # A "tree conflict on dir P/D" means:
 #   - the operation reports action code "C" on path P
-#   - "svn status" reports status code "C" on path P
+#   - "svn status" reports status code "C" on path P/D
 #   - "svn info P" reports details of the conflict on D
 #   - "svn commit" fails if the user-requested targets include path D
 #   - "svn commit" fails if the user-requested targets include path P
@@ -339,24 +339,6 @@ def set_up_repos(wc_dir, br_dir, scenarios):
 
 #----------------------------------------------------------------------
 
-# Ensure "svn status" on path PARENT shows a Conflict on PARENT.
-def ensure_status_c_on_parent(parent):
-  expected_stdout = svntest.verify.RegexOutput("^C.* " + re.escape(parent)
-                                               + "$",
-                                               match_all=False)
-  run_and_verify_svn(None, expected_stdout, [],
-                     'status', parent)
-
-# Ensure "svn status" on path PARENT shows no Conflicts.
-def ensure_no_status_c_on_parent(parent):
-  exitcode, stdout, stderr = run_and_verify_svn(None, None, [],
-                                                'status', parent)
-  for line in stdout:
-    if line[0] == 'C': # and line.endswith(victim + '\n'):
-      raise svntest.Failure("unexpected status C") # on path '" + victim + "'")
-
-#----------------------------------------------------------------------
-
 # Apply each of the changes in INCOMING_SCENARIOS to each of the local
 # modifications in LOCALMOD_SCENARIOS.
 # Ensure that the result in each case includes a tree conflict on the parent.
@@ -443,17 +425,26 @@ def ensure_tree_conflict(sbox, operation,
       else:
         raise "unknown operation: '" + operation + "'"
 
+      if modaction.startswith('f'):
+        victim = os.path.join(target_path, 'F')
+      else:
+        victim = os.path.join(target_path, 'D')
+
       verbose_print("--- Trying to commit (expecting 'conflict' error)")
       ### run_and_verify_commit() requires an "output_tree" argument, but
       # here we get away with passing None because we know an implementation
       # detail: namely that it's not going to look at that argument if it
       # gets the stderr that we're expecting.
-      run_and_verify_commit(".", None, None, ".*conflict.*",
-                            target_path)
+      run_and_verify_commit(".", None, None, ".*conflict.*", victim)
 
       verbose_print("--- Checking that 'status' reports the conflict")
-      ensure_status_c_on_parent(target_path)
+      expected_stdout = svntest.verify.RegexOutput("..+C.* " + 
+                                                   re.escape(victim) + "$",
+                                                   match_all=False)
+      run_and_verify_svn(None, expected_stdout, [],
+                         'status', victim)
 
+  
       verbose_print("--- Resolving the conflict")
       run_and_verify_svn(None,
                          "Resolved .* '" + re.escape(target_path) + "'", [],
@@ -461,6 +452,11 @@ def ensure_tree_conflict(sbox, operation,
 
       #verbose_print("--- Checking that 'status' does not report a conflict")
       #ensure_no_status_c_on_parent(target_path)
+      #exitcode, stdout, stderr = run_and_verify_svn(None, None, [],
+      #                                          'status', victim)
+      #for line in stdout:
+      #  if line[6] == 'C': # and line.endswith(victim + '\n'):
+      #    raise svntest.Failure("unexpected status C") # on path '" + victim + "'")
 
       #verbose_print("--- Committing (should now succeed)")
       #run_and_verify_svn(None, None, [],

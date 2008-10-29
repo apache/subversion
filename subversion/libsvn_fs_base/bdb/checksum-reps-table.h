@@ -68,6 +68,15 @@ svn_error_t *svn_fs_bdb__delete_checksum_rep(svn_fs_t *fs,
                                              trail_t *trail,
                                              apr_pool_t *pool);
 
+/* Reserve a unique reuse ID in the `checksum-reps' table in FS for a
+   new instance of a re-used representation as part of TRAIL.  Return
+   the slot's id in *REUSE_ID_P, allocated in POOL.  */
+svn_error_t *svn_fs_bdb__reserve_rep_reuse_id(const char **reuse_id_p,
+                                              svn_fs_t *fs,
+                                              trail_t *trail,
+                                              apr_pool_t *pool);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

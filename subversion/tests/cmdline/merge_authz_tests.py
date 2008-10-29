@@ -135,7 +135,7 @@ def mergeinfo_and_skipped_paths(sbox):
     'D/H/chi'   : Item(status='  ', wc_rev=8),
     'D/H/psi'   : Item(status='M ', wc_rev=8),
     'D/H/omega' : Item(status='!M', wc_rev=8),
-    'D/H'       : Item(status='C ', wc_rev=8),
+    'D/H'       : Item(status='  ', wc_rev=8),
     'D/G/pi'    : Item(status='  ', wc_rev=8),
     'D/G/rho'   : Item(status='M ', wc_rev=8),
     'D/G/tau'   : Item(status='  ', wc_rev=8),
@@ -215,9 +215,9 @@ def mergeinfo_and_skipped_paths(sbox):
     ''          : Item(status=' M', wc_rev=8),
     'D/H/chi'   : Item(status=' M', wc_rev=8),
     'D/H/omega' : Item(status='MM', wc_rev=8),
-    'D/H'       : Item(status='CM', wc_rev=8),
+    'D/H'       : Item(status=' M', wc_rev=8),
     'D/gamma'   : Item(status=' M', wc_rev=8),
-    'D'         : Item(status='CM', wc_rev=8),
+    'D'         : Item(status=' M', wc_rev=8),
     'B/lambda'  : Item(status='  ', wc_rev=8),
     'B/E'       : Item(status=' M', wc_rev=8),
     'B/E/alpha' : Item(status='  ', wc_rev=8),
@@ -335,7 +335,7 @@ def mergeinfo_and_skipped_paths(sbox):
     'omega' : Item(status='U '),
     })
   expected_status = wc.State(A_COPY_2_H_path, {
-    ''      : Item(status='CM', wc_rev=8),
+    ''      : Item(status=' M', wc_rev=8),
     'chi'   : Item(status=' M', wc_rev=8),
     'omega' : Item(status='MM', wc_rev=8),
     })

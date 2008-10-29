@@ -29,7 +29,7 @@
 
 
 /** Caching SVN_FS_ID_T values. **/
-/* Implements svn_cache_dup_func_t */
+/* Implements svn_cache__dup_func_t */
 static svn_error_t *
 dup_id(void **out,
        void *in,
@@ -40,7 +40,7 @@ dup_id(void **out,
   return SVN_NO_ERROR;
 }
 
-/* Implements svn_cache_serialize_func_t */
+/* Implements svn_cache__serialize_func_t */
 static svn_error_t *
 serialize_id(char **data,
              apr_size_t *data_len,
@@ -56,7 +56,7 @@ serialize_id(char **data,
 }
 
 
-/* Implements svn_cache_deserialize_func_t */
+/* Implements svn_cache__deserialize_func_t */
 static svn_error_t *
 deserialize_id(void **out,
                const char *data,
@@ -76,7 +76,7 @@ deserialize_id(void **out,
 
 
 /** Caching directory listings. **/
-/* Implements svn_cache_dup_func_t */
+/* Implements svn_cache__dup_func_t */
 static svn_error_t *
 dup_dir_listing(void **out,
                 void *in,
@@ -118,7 +118,7 @@ read_config(svn_memcache_t **memcache_p,
   svn_config_t *config;
 
   SVN_ERR(svn_fs_fs__get_config(&config, fs, pool));
-  SVN_ERR(svn_cache_make_memcache_from_config(memcache_p, config,
+  SVN_ERR(svn_cache__make_memcache_from_config(memcache_p, config,
                                               fs->pool));
   return svn_config_get_bool(config, fail_stop,
                              CONFIG_SECTION_CACHES, CONFIG_OPTION_FAIL_STOP,
@@ -126,7 +126,7 @@ read_config(svn_memcache_t **memcache_p,
 }
 
 
-/* Implements svn_cache_error_handler_t */
+/* Implements svn_cache__error_handler_t */
 static svn_error_t *
 warn_on_cache_errors(svn_error_t *err,
                      void *baton,
@@ -162,76 +162,76 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
    * default pool size is 8192, so about a hundred should fit
    * comfortably. */
   if (memcache)
-    SVN_ERR(svn_cache_create_memcache(&(ffd->rev_root_id_cache),
-                                      memcache,
-                                      serialize_id,
-                                      deserialize_id,
-                                      sizeof(svn_revnum_t),
-                                      apr_pstrcat(pool, prefix, "RRI",
-                                                  NULL),
-                                      fs->pool));
+    SVN_ERR(svn_cache__create_memcache(&(ffd->rev_root_id_cache),
+                                       memcache,
+                                       serialize_id,
+                                       deserialize_id,
+                                       sizeof(svn_revnum_t),
+                                       apr_pstrcat(pool, prefix, "RRI",
+                                                   NULL),
+                                       fs->pool));
   else
-    SVN_ERR(svn_cache_create_inprocess(&(ffd->rev_root_id_cache),
-                                       dup_id, sizeof(svn_revnum_t),
-                                       1, 100, FALSE, fs->pool));
+    SVN_ERR(svn_cache__create_inprocess(&(ffd->rev_root_id_cache),
+                                        dup_id, sizeof(svn_revnum_t),
+                                        1, 100, FALSE, fs->pool));
   if (! no_handler)
-    SVN_ERR(svn_cache_set_error_handler(ffd->rev_root_id_cache,
-                                        warn_on_cache_errors, fs, pool));
+    SVN_ERR(svn_cache__set_error_handler(ffd->rev_root_id_cache,
+                                         warn_on_cache_errors, fs, pool));
 
 
   /* Rough estimate: revision DAG nodes have size around 320 bytes, so
    * let's put 16 on a page. */
   if (memcache)
-    SVN_ERR(svn_cache_create_memcache(&(ffd->rev_node_cache),
-                                      memcache,
-                                      svn_fs_fs__dag_serialize,
-                                      svn_fs_fs__dag_deserialize,
-                                      APR_HASH_KEY_STRING,
-                                      apr_pstrcat(pool, prefix, "DAG",
-                                                  NULL),
-                                      fs->pool));
-  else
-    SVN_ERR(svn_cache_create_inprocess(&(ffd->rev_node_cache),
-                                       svn_fs_fs__dag_dup_for_cache,
+    SVN_ERR(svn_cache__create_memcache(&(ffd->rev_node_cache),
+                                       memcache,
+                                       svn_fs_fs__dag_serialize,
+                                       svn_fs_fs__dag_deserialize,
                                        APR_HASH_KEY_STRING,
-                                       1024, 16, FALSE, fs->pool));
+                                       apr_pstrcat(pool, prefix, "DAG",
+                                                   NULL),
+                                       fs->pool));
+  else
+    SVN_ERR(svn_cache__create_inprocess(&(ffd->rev_node_cache),
+                                        svn_fs_fs__dag_dup_for_cache,
+                                        APR_HASH_KEY_STRING,
+                                        1024, 16, FALSE, fs->pool));
   if (! no_handler)
-    SVN_ERR(svn_cache_set_error_handler(ffd->rev_node_cache,
-                                        warn_on_cache_errors, fs, pool));
+    SVN_ERR(svn_cache__set_error_handler(ffd->rev_node_cache,
+                                         warn_on_cache_errors, fs, pool));
 
 
   /* Very rough estimate: 1K per directory. */
   if (memcache)
-    SVN_ERR(svn_cache_create_memcache(&(ffd->dir_cache),
-                                      memcache,
-                                      svn_fs_fs__dir_entries_serialize,
-                                      svn_fs_fs__dir_entries_deserialize,
-                                      APR_HASH_KEY_STRING,
-                                      apr_pstrcat(pool, prefix, "DIR",
-                                                  NULL),
-                                      fs->pool));
+    SVN_ERR(svn_cache__create_memcache(&(ffd->dir_cache),
+                                       memcache,
+                                       svn_fs_fs__dir_entries_serialize,
+                                       svn_fs_fs__dir_entries_deserialize,
+                                       APR_HASH_KEY_STRING,
+                                       apr_pstrcat(pool, prefix, "DIR",
+                                                   NULL),
+                                       fs->pool));
   else
-    SVN_ERR(svn_cache_create_inprocess(&(ffd->dir_cache),
-                                       dup_dir_listing, APR_HASH_KEY_STRING,
-                                       1024, 8, FALSE, fs->pool));
+    SVN_ERR(svn_cache__create_inprocess(&(ffd->dir_cache),
+                                        dup_dir_listing, APR_HASH_KEY_STRING,
+                                        1024, 8, FALSE, fs->pool));
 
   if (! no_handler)
-    SVN_ERR(svn_cache_set_error_handler(ffd->dir_cache,
-                                        warn_on_cache_errors, fs, pool));
+    SVN_ERR(svn_cache__set_error_handler(ffd->dir_cache,
+                                         warn_on_cache_errors, fs, pool));
 
   if (memcache)
     {
-      SVN_ERR(svn_cache_create_memcache(&(ffd->fulltext_cache),
-                                        memcache,
-                                        /* Values are svn_string_t */
-                                        NULL, NULL,
-                                        APR_HASH_KEY_STRING,
-                                        apr_pstrcat(pool, prefix, "TEXT",
-                                                    NULL),
-                                        fs->pool));
+      SVN_ERR(svn_cache__create_memcache(&(ffd->fulltext_cache),
+                                         memcache,
+                                         /* Values are svn_string_t */
+                                         NULL, NULL,
+                                         APR_HASH_KEY_STRING,
+                                         apr_pstrcat(pool, prefix, "TEXT",
+                                                     NULL),
+                                         fs->pool));
       if (! no_handler)
-        SVN_ERR(svn_cache_set_error_handler(ffd->fulltext_cache,
-                                            warn_on_cache_errors, fs, pool));
+        SVN_ERR(svn_cache__set_error_handler(ffd->fulltext_cache,
+                                             warn_on_cache_errors, fs, pool));
     }
   else
     ffd->fulltext_cache = NULL;

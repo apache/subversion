@@ -39,6 +39,7 @@
 
 #include "private/svn_opt_private.h"
 
+#include "opt.h"
 #include "svn_private_config.h"
 
 
@@ -67,32 +68,6 @@ svn_opt_get_canonical_subcommand2(const svn_opt_subcommand_desc2_t *table,
   /* If we get here, there was no matching subcommand name or alias. */
   return NULL;
 }
-
-
-const svn_opt_subcommand_desc_t *
-svn_opt_get_canonical_subcommand(const svn_opt_subcommand_desc_t *table,
-                                 const char *cmd_name)
-{
-  int i = 0;
-
-  if (cmd_name == NULL)
-    return NULL;
-
-  while (table[i].name) {
-    int j;
-    if (strcmp(cmd_name, table[i].name) == 0)
-      return table + i;
-    for (j = 0; (j < SVN_OPT_MAX_ALIASES) && table[i].aliases[j]; j++)
-      if (strcmp(cmd_name, table[i].aliases[j]) == 0)
-        return table + i;
-
-    i++;
-  }
-
-  /* If we get here, there was no matching subcommand name or alias. */
-  return NULL;
-}
-
 
 const apr_getopt_option_t *
 svn_opt_get_option_from_code2(int code,
@@ -287,84 +262,6 @@ print_command_info2(const svn_opt_subcommand_desc2_t *cmd,
   return SVN_NO_ERROR;
 }
 
-
-/* Same as print_command_info2(), but with deprecated struct revision. */
-static svn_error_t *
-print_command_info(const svn_opt_subcommand_desc_t *cmd,
-                   const apr_getopt_option_t *options_table,
-                   svn_boolean_t help,
-                   apr_pool_t *pool,
-                   FILE *stream)
-{
-  svn_boolean_t first_time;
-  apr_size_t i;
-
-  /* Print the canonical command name. */
-  SVN_ERR(svn_cmdline_fputs(cmd->name, stream, pool));
-
-  /* Print the list of aliases. */
-  first_time = TRUE;
-  for (i = 0; i < SVN_OPT_MAX_ALIASES; i++)
-    {
-      if (cmd->aliases[i] == NULL)
-        break;
-
-      if (first_time) {
-        SVN_ERR(svn_cmdline_fputs(" (", stream, pool));
-        first_time = FALSE;
-      }
-      else
-        SVN_ERR(svn_cmdline_fputs(", ", stream, pool));
-
-      SVN_ERR(svn_cmdline_fputs(cmd->aliases[i], stream, pool));
-    }
-
-  if (! first_time)
-    SVN_ERR(svn_cmdline_fputs(")", stream, pool));
-
-  if (help)
-    {
-      const apr_getopt_option_t *option;
-      svn_boolean_t have_options = FALSE;
-
-      SVN_ERR(svn_cmdline_fprintf(stream, pool, ": %s", _(cmd->help)));
-
-      /* Loop over all valid option codes attached to the subcommand */
-      for (i = 0; i < SVN_OPT_MAX_OPTIONS; i++)
-        {
-          if (cmd->valid_options[i])
-            {
-              if (have_options == FALSE)
-                {
-                  SVN_ERR(svn_cmdline_fputs(_("\nValid options:\n"),
-                                            stream, pool));
-                  have_options = TRUE;
-                }
-
-              /* convert each option code into an option */
-              option =
-                svn_opt_get_option_from_code2(cmd->valid_options[i],
-                                              options_table, NULL, pool);
-
-              /* print the option's docstring */
-              if (option && option->description)
-                {
-                  const char *optstr;
-                  svn_opt_format_option(&optstr, option, TRUE, pool);
-                  SVN_ERR(svn_cmdline_fprintf(stream, pool, "  %s\n",
-                                              optstr));
-                }
-            }
-        }
-
-      if (have_options)
-        SVN_ERR(svn_cmdline_fprintf(stream, pool, "\n"));
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
 void
 svn_opt_print_generic_help2(const char *header,
                             const svn_opt_subcommand_desc2_t *cmd_table,
@@ -403,46 +300,6 @@ svn_opt_print_generic_help2(const char *header,
   svn_handle_error2(err, stderr, FALSE, "svn: ");
   svn_error_clear(err);
 }
-
-
-void
-svn_opt_print_generic_help(const char *header,
-                           const svn_opt_subcommand_desc_t *cmd_table,
-                           const apr_getopt_option_t *opt_table,
-                           const char *footer,
-                           apr_pool_t *pool, FILE *stream)
-{
-  int i = 0;
-  svn_error_t *err;
-
-  if (header)
-    if ((err = svn_cmdline_fputs(header, stream, pool)))
-      goto print_error;
-
-  while (cmd_table[i].name)
-    {
-      if ((err = svn_cmdline_fputs("   ", stream, pool))
-          || (err = print_command_info(cmd_table + i, opt_table, FALSE,
-                                       pool, stream))
-          || (err = svn_cmdline_fputs("\n", stream, pool)))
-        goto print_error;
-      i++;
-    }
-
-  if ((err = svn_cmdline_fputs("\n", stream, pool)))
-    goto print_error;
-
-  if (footer)
-    if ((err = svn_cmdline_fputs(footer, stream, pool)))
-      goto print_error;
-
-  return;
-
- print_error:
-  svn_handle_error2(err, stderr, FALSE, "svn: ");
-  svn_error_clear(err);
-}
-
 
 void
 svn_opt_format_option(const char **string,
@@ -489,39 +346,6 @@ svn_opt_subcommand_help3(const char *subcommand,
   if (cmd)
     err = print_command_info2(cmd, options_table, global_options,
                               TRUE, pool, stdout);
-  else
-    err = svn_cmdline_fprintf(stderr, pool,
-                              _("\"%s\": unknown command.\n\n"), subcommand);
-
-  if (err) {
-    svn_handle_error2(err, stderr, FALSE, "svn: ");
-    svn_error_clear(err);
-  }
-}
-
-void
-svn_opt_subcommand_help2(const char *subcommand,
-                         const svn_opt_subcommand_desc2_t *table,
-                         const apr_getopt_option_t *options_table,
-                         apr_pool_t *pool)
-{
-  svn_opt_subcommand_help3(subcommand, table, options_table,
-                           NULL, pool);
-}
-
-
-void
-svn_opt_subcommand_help(const char *subcommand,
-                        const svn_opt_subcommand_desc_t *table,
-                        const apr_getopt_option_t *options_table,
-                        apr_pool_t *pool)
-{
-  const svn_opt_subcommand_desc_t *cmd =
-    svn_opt_get_canonical_subcommand(table, subcommand);
-  svn_error_t *err;
-
-  if (cmd)
-    err = print_command_info(cmd, options_table, TRUE, pool, stdout);
   else
     err = svn_cmdline_fprintf(stderr, pool,
                               _("\"%s\": unknown command.\n\n"), subcommand);
@@ -872,24 +696,6 @@ svn_opt_parse_path(svn_opt_revision_t *rev,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_opt_args_to_target_array2(apr_array_header_t **targets_p,
-                              apr_getopt_t *os,
-                              apr_array_header_t *known_targets,
-                              apr_pool_t *pool)
-{
-  svn_error_t *err = svn_opt_args_to_target_array3(targets_p, os,
-                                                   known_targets, pool);
-
-  if (err && err->apr_err == SVN_ERR_RESERVED_FILENAME_SPECIFIED)
-    {
-      svn_error_clear(err);
-      return SVN_NO_ERROR;
-    }
-
-  return err;
-}
-
 
 /* Note: This is substantially copied into svn_client_args_to_target_array() in
  * order to move to libsvn_client while maintaining backward compatibility. */
@@ -1002,63 +808,6 @@ svn_opt__args_to_target_array(apr_array_header_t **targets_p,
 
   return err;
 }
-
-svn_error_t *
-svn_opt_args_to_target_array3(apr_array_header_t **targets_p,
-                              apr_getopt_t *os,
-                              apr_array_header_t *known_targets,
-                              apr_pool_t *pool)
-{
-  return svn_opt__args_to_target_array(targets_p, os,known_targets, pool);
-}
-
-svn_error_t *
-svn_opt_args_to_target_array(apr_array_header_t **targets_p,
-                             apr_getopt_t *os,
-                             apr_array_header_t *known_targets,
-                             svn_opt_revision_t *start_revision,
-                             svn_opt_revision_t *end_revision,
-                             svn_boolean_t extract_revisions,
-                             apr_pool_t *pool)
-{
-  apr_array_header_t *output_targets;
-
-  SVN_ERR(svn_opt_args_to_target_array2(&output_targets, os,
-                                        known_targets, pool));
-
-  if (extract_revisions)
-    {
-      svn_opt_revision_t temprev;
-      const char *path;
-
-      if (output_targets->nelts > 0)
-        {
-          path = APR_ARRAY_IDX(output_targets, 0, const char *);
-          SVN_ERR(svn_opt_parse_path(&temprev, &path, path, pool));
-          if (temprev.kind != svn_opt_revision_unspecified)
-            {
-              APR_ARRAY_IDX(output_targets, 0, const char *) = path;
-              start_revision->kind = temprev.kind;
-              start_revision->value = temprev.value;
-            }
-        }
-      if (output_targets->nelts > 1)
-        {
-          path = APR_ARRAY_IDX(output_targets, 1, const char *);
-          SVN_ERR(svn_opt_parse_path(&temprev, &path, path, pool));
-          if (temprev.kind != svn_opt_revision_unspecified)
-            {
-              APR_ARRAY_IDX(output_targets, 1, const char *) = path;
-              end_revision->kind = temprev.kind;
-              end_revision->value = temprev.value;
-            }
-        }
-    }
-
-  *targets_p = output_targets;
-  return SVN_NO_ERROR;
-}
-
 
 svn_error_t *
 svn_opt_parse_revprop(apr_hash_t **revprop_table_p, const char *revprop_spec,
@@ -1197,18 +946,11 @@ svn_opt__arg_canonicalize_path(const char **path_out, const char *path_in,
   return SVN_NO_ERROR;
 }
 
-/* Print version info for PGM_NAME.  If QUIET is  true, print in
- * brief.  Else if QUIET is not true, print the version more
- * verbosely, and if FOOTER is non-null, print it following the
- * version information.
- *
- * Use POOL for temporary allocations.
- */
-static svn_error_t *
-print_version_info(const char *pgm_name,
-                   const char *footer,
-                   svn_boolean_t quiet,
-                   apr_pool_t *pool)
+svn_error_t *
+svn_opt__print_version_info(const char *pgm_name,
+                            const char *footer,
+                            svn_boolean_t quiet,
+                            apr_pool_t *pool)
 {
   if (quiet)
     return svn_cmdline_printf(pool, "%s\n", SVN_VER_NUMBER);
@@ -1259,7 +1001,8 @@ svn_opt_print_help3(apr_getopt_t *os,
                                  global_options, pool);
       }
   else if (print_version)   /* just --version */
-    SVN_ERR(print_version_info(pgm_name, version_footer, quiet, pool));
+    SVN_ERR(svn_opt__print_version_info(pgm_name, version_footer, quiet,
+                                        pool));
   else if (os && !targets->nelts)            /* `-h', `--help', or `help' */
     svn_opt_print_generic_help2(header,
                                 cmd_table,
@@ -1267,73 +1010,6 @@ svn_opt_print_help3(apr_getopt_t *os,
                                 footer,
                                 pool,
                                 stdout);
-  else                                       /* unknown option or cmd */
-    SVN_ERR(svn_cmdline_fprintf(stderr, pool,
-                                _("Type '%s help' for usage.\n"), pgm_name));
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_opt_print_help2(apr_getopt_t *os,
-                    const char *pgm_name,
-                    svn_boolean_t print_version,
-                    svn_boolean_t quiet,
-                    const char *version_footer,
-                    const char *header,
-                    const svn_opt_subcommand_desc2_t *cmd_table,
-                    const apr_getopt_option_t *option_table,
-                    const char *footer,
-                    apr_pool_t *pool)
-{
-  return svn_opt_print_help3(os,
-                             pgm_name,
-                             print_version,
-                             quiet,
-                             version_footer,
-                             header,
-                             cmd_table,
-                             option_table,
-                             NULL,
-                             footer,
-                             pool);
-}
-
-
-svn_error_t *
-svn_opt_print_help(apr_getopt_t *os,
-                   const char *pgm_name,
-                   svn_boolean_t print_version,
-                   svn_boolean_t quiet,
-                   const char *version_footer,
-                   const char *header,
-                   const svn_opt_subcommand_desc_t *cmd_table,
-                   const apr_getopt_option_t *option_table,
-                   const char *footer,
-                   apr_pool_t *pool)
-{
-  apr_array_header_t *targets = NULL;
-  int i;
-
-  if (os)
-    SVN_ERR(svn_opt_parse_all_args(&targets, os, pool));
-
-  if (os && targets->nelts)  /* help on subcommand(s) requested */
-    for (i = 0; i < targets->nelts; i++)
-      {
-        svn_opt_subcommand_help(APR_ARRAY_IDX(targets, i, const char *),
-                                cmd_table, option_table, pool);
-      }
-  else if (print_version)   /* just --version */
-    SVN_ERR(print_version_info(pgm_name, version_footer, quiet, pool));
-  else if (os && !targets->nelts)            /* `-h', `--help', or `help' */
-    svn_opt_print_generic_help(header,
-                               cmd_table,
-                               option_table,
-                               footer,
-                               pool,
-                               stdout);
   else                                       /* unknown option or cmd */
     SVN_ERR(svn_cmdline_fprintf(stderr, pool,
                                 _("Type '%s help' for usage.\n"), pgm_name));
