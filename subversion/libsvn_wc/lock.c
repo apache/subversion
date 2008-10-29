@@ -140,7 +140,6 @@ introduce_propcaching(svn_stringbuf_t *log_accum,
   apr_hash_t *entries;
   apr_hash_index_t *hi;
   apr_pool_t *subpool = svn_pool_create(pool);
-  const char *adm_path = svn_wc_adm_access_path(adm_access);
 
   SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, pool));
 
@@ -163,7 +162,7 @@ introduce_propcaching(svn_stringbuf_t *log_accum,
 
       svn_pool_clear(subpool);
 
-      entrypath = svn_path_join(adm_path, entry->name, subpool);
+      entrypath = svn_path_join(adm_access->path, entry->name, subpool);
       SVN_ERR(svn_wc__load_props(&base_props, &props, NULL, adm_access,
                                  entrypath, subpool));
       SVN_ERR(svn_wc__install_props(&log_accum, adm_access, entrypath,
@@ -212,8 +211,7 @@ convert_wcprops(svn_stringbuf_t *log_accum,
       apr_hash_this(hi, NULL, NULL, &val);
       entry = val;
 
-      full_path = svn_path_join(svn_wc_adm_access_path(adm_access),
-                                entry->name, pool);
+      full_path = svn_path_join(adm_access->path, entry->name, pool);
 
       if (entry->kind != svn_node_file
           && strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) != 0)
@@ -293,24 +291,24 @@ maybe_upgrade_format(svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
 
       if (adm_access->wc_format <= SVN_WC__WCPROPS_MANY_FILES_VERSION)
         {
-          const char *access_path = svn_wc_adm_access_path(adm_access);
           /* Remove wcprops directory, dir-props, README.txt and empty-file
              files.
              We just silently ignore errors, because keeping these files is
              not catastrophic. */
 
-          svn_error_clear(svn_io_remove_dir2
-            (svn_wc__adm_path(access_path, FALSE, pool, SVN_WC__ADM_WCPROPS,
-                              NULL), FALSE, NULL, NULL, pool));
-          svn_error_clear(svn_io_remove_file
-            (svn_wc__adm_path(access_path, FALSE, pool,
-                              SVN_WC__ADM_DIR_WCPROPS, NULL), pool));
-          svn_error_clear(svn_io_remove_file
-            (svn_wc__adm_path(access_path, FALSE, pool,
-                              SVN_WC__ADM_EMPTY_FILE, NULL), pool));
-          svn_error_clear(svn_io_remove_file
-            (svn_wc__adm_path(access_path, FALSE, pool,
-                              SVN_WC__ADM_README, NULL), pool));
+          svn_error_clear(svn_io_remove_dir2(
+              svn_wc__adm_child(adm_access->path, SVN_WC__ADM_WCPROPS, pool),
+              FALSE, NULL, NULL, pool));
+          svn_error_clear(svn_io_remove_file(
+              svn_wc__adm_child(adm_access->path, SVN_WC__ADM_DIR_WCPROPS,
+                                pool),
+              pool));
+          svn_error_clear(svn_io_remove_file(
+              svn_wc__adm_child(adm_access->path, SVN_WC__ADM_EMPTY_FILE, pool),
+              pool));
+          svn_error_clear(svn_io_remove_file(
+              svn_wc__adm_child(adm_access->path, SVN_WC__ADM_README, pool),
+              pool));
         }
 
       SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
@@ -359,27 +357,30 @@ maybe_upgrade_format(svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
 static svn_error_t *
 create_lock(const char *path, int wait_for, apr_pool_t *pool)
 {
+  const char *lock_path = svn_wc__adm_child(path, SVN_WC__ADM_LOCK, pool);
   svn_error_t *err;
 
   for (;;)
     {
-      err = svn_wc__make_adm_thing(path, SVN_WC__ADM_LOCK,
-                                   svn_node_file, APR_OS_DEFAULT, FALSE, pool);
-      if (err)
+      apr_file_t *file;
+
+      err = svn_io_file_open(&file, lock_path,
+                             APR_WRITE | APR_CREATE | APR_EXCL,
+                             APR_OS_DEFAULT,
+                             pool);
+      if (err == NULL)
+        return svn_io_file_close(file, pool);
+
+      if (APR_STATUS_IS_EEXIST(err->apr_err))
         {
-          if (APR_STATUS_IS_EEXIST(err->apr_err))
-            {
-              svn_error_clear(err);
-              if (wait_for <= 0)
-                break;
-              wait_for--;
-              apr_sleep(apr_time_from_sec(1));  /* micro-seconds */
-            }
-          else
-            return err;
+          svn_error_clear(err);
+          if (wait_for <= 0)
+            break;
+          wait_for--;
+          apr_sleep(apr_time_from_sec(1));  /* micro-seconds */
         }
       else
-        return SVN_NO_ERROR;
+        return err;
     }
 
   return svn_error_createf(SVN_ERR_WC_LOCKED, NULL,
@@ -387,24 +388,6 @@ create_lock(const char *path, int wait_for, apr_pool_t *pool)
                            svn_path_local_style(path, pool));
 }
 
-
-/* Remove the physical lock in the admin directory for PATH. It is
-   acceptable for the administrative area to have disappeared, such as when
-   the directory is removed from the working copy.  It is an error for the
-   lock to have disappeared if the administrative area still exists. */
-static svn_error_t *
-remove_lock(const char *path, apr_pool_t *pool)
-{
-  svn_error_t *err = svn_wc__remove_adm_file(path, pool, SVN_WC__ADM_LOCK,
-                                             NULL);
-  if (err)
-    {
-      if (svn_wc__adm_path_exists(path, FALSE, pool, NULL))
-        return err;
-      svn_error_clear(err);
-    }
-  return SVN_NO_ERROR;
-}
 
 /* An APR pool cleanup handler.  This handles access batons that have not
    been closed when their pool gets destroyed.  The physical locks
@@ -601,14 +584,16 @@ do_open(svn_wc_adm_access_t **adm_access,
 
   if (! under_construction)
     {
+      /* ### this logic is duplicated in questions.c */
+
       /* By reading the format file we check both that PATH is a directory
          and that it is a working copy. */
       /* ### We will read the entries file later.  Maybe read the whole
          file here instead to avoid reopening it. */
       err = svn_io_read_version_file(&wc_format,
-                                     svn_wc__adm_path(path, FALSE, subpool,
-                                                      SVN_WC__ADM_ENTRIES,
-                                                      NULL),
+                                     svn_wc__adm_child(path,
+                                                       SVN_WC__ADM_ENTRIES,
+                                                       subpool),
                                      subpool);
       /* If the entries file doesn't start with a version number, we're dealing
          with a pre-format 7 working copy, so we need to get the format from
@@ -617,9 +602,9 @@ do_open(svn_wc_adm_access_t **adm_access,
         {
           svn_error_clear(err);
           err = svn_io_read_version_file(&wc_format,
-                                         svn_wc__adm_path(path, FALSE, subpool,
-                                                          SVN_WC__ADM_FORMAT,
-                                                          NULL),
+                                         svn_wc__adm_child(path,
+                                                           SVN_WC__ADM_FORMAT,
+                                                           subpool),
                                          subpool);
         }
       if (err)
@@ -1026,7 +1011,7 @@ svn_wc_adm_retrieve(svn_wc_adm_access_t **adm_access,
             }
         }
 
-      wcpath = svn_wc__adm_path(path, FALSE, pool, NULL);
+      wcpath = svn_wc__adm_child(path, NULL, pool);
       err = svn_io_check_path(wcpath, &wckind, pool);
 
       /* If we can't check the path, we can't make a good error
@@ -1388,7 +1373,6 @@ do_close(svn_wc_adm_access_t *adm_access,
          svn_boolean_t recurse,
          apr_pool_t *scratch_pool)
 {
-
   if (adm_access->type == svn_wc__adm_access_closed)
     return SVN_NO_ERROR;
 
@@ -1432,7 +1416,22 @@ do_close(svn_wc_adm_access_t *adm_access,
     {
       if (adm_access->lock_exists && ! preserve_lock)
         {
-          SVN_ERR(remove_lock(adm_access->path, scratch_pool));
+          /* Remove the physical lock in the admin directory for
+             PATH. It is acceptable for the administrative area to
+             have disappeared, such as when the directory is removed
+             from the working copy.  It is an error for the lock to
+             have disappeared if the administrative area still exists. */
+
+          svn_error_t *err = svn_wc__remove_adm_file(adm_access,
+                                                     SVN_WC__ADM_LOCK,
+                                                     scratch_pool);
+          if (err)
+            {
+              if (svn_wc__adm_area_exists(adm_access, scratch_pool))
+                return err;
+              svn_error_clear(err);
+            }
+
           adm_access->lock_exists = FALSE;
         }
     }
@@ -1473,13 +1472,13 @@ svn_wc_adm_close(svn_wc_adm_access_t *adm_access)
 }
 
 svn_boolean_t
-svn_wc_adm_locked(svn_wc_adm_access_t *adm_access)
+svn_wc_adm_locked(const svn_wc_adm_access_t *adm_access)
 {
   return adm_access->type == svn_wc__adm_access_write_lock;
 }
 
 svn_error_t *
-svn_wc__adm_write_check(svn_wc_adm_access_t *adm_access,
+svn_wc__adm_write_check(const svn_wc_adm_access_t *adm_access,
                         apr_pool_t *scratch_pool)
 {
   if (adm_access->type == svn_wc__adm_access_write_lock)
@@ -1519,8 +1518,7 @@ svn_error_t *
 svn_wc_locked(svn_boolean_t *locked, const char *path, apr_pool_t *pool)
 {
   svn_node_kind_t kind;
-  const char *lockfile
-    = svn_wc__adm_path(path, 0, pool, SVN_WC__ADM_LOCK, NULL);
+  const char *lockfile = svn_wc__adm_child(path, SVN_WC__ADM_LOCK, pool);
 
   SVN_ERR(svn_io_check_path(lockfile, &kind, pool));
   if (kind == svn_node_file)
@@ -1537,14 +1535,14 @@ svn_wc_locked(svn_boolean_t *locked, const char *path, apr_pool_t *pool)
 
 
 const char *
-svn_wc_adm_access_path(svn_wc_adm_access_t *adm_access)
+svn_wc_adm_access_path(const svn_wc_adm_access_t *adm_access)
 {
   return adm_access->path;
 }
 
 
 apr_pool_t *
-svn_wc_adm_access_pool(svn_wc_adm_access_t *adm_access)
+svn_wc_adm_access_pool(const svn_wc_adm_access_t *adm_access)
 {
   return adm_access->pool;
 }
@@ -1552,15 +1550,14 @@ svn_wc_adm_access_pool(svn_wc_adm_access_t *adm_access)
 
 svn_error_t *
 svn_wc__adm_is_cleanup_required(svn_boolean_t *cleanup,
-                                svn_wc_adm_access_t *adm_access,
+                                const svn_wc_adm_access_t *adm_access,
                                 apr_pool_t *pool)
 {
   if (adm_access->type == svn_wc__adm_access_write_lock)
     {
       svn_node_kind_t kind;
-      const char *log_path
-        = svn_wc__adm_path(svn_wc_adm_access_path(adm_access),
-                           FALSE, pool, SVN_WC__ADM_LOG, NULL);
+      const char *log_path = svn_wc__adm_child(adm_access->path,
+                                               SVN_WC__ADM_LOG, pool);
 
       /* The presence of a log file demands cleanup */
       SVN_ERR(svn_io_check_path(log_path, &kind, pool));
@@ -1667,14 +1664,14 @@ svn_wc__adm_access_set_wcprops(svn_wc_adm_access_t *adm_access,
 }
 
 apr_hash_t *
-svn_wc__adm_access_wcprops(svn_wc_adm_access_t *adm_access)
+svn_wc__adm_access_wcprops(const svn_wc_adm_access_t *adm_access)
 {
   return adm_access->wcprops;
 }
 
 
 int
-svn_wc__adm_wc_format(svn_wc_adm_access_t *adm_access)
+svn_wc__adm_wc_format(const svn_wc_adm_access_t *adm_access)
 {
   return adm_access->wc_format;
 }
@@ -1688,7 +1685,7 @@ svn_wc__adm_set_wc_format(svn_wc_adm_access_t *adm_access,
 
 
 svn_boolean_t
-svn_wc__adm_missing(svn_wc_adm_access_t *adm_access,
+svn_wc__adm_missing(const svn_wc_adm_access_t *adm_access,
                     const char *path)
 {
   if (adm_access->shared

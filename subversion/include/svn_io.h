@@ -183,7 +183,6 @@ svn_io_open_unique_file2(apr_file_t **f,
  * @note In 1.4 the API was extended to require either @a f or
  *       @a unique_name_p (the other can be NULL).  Before that, both were
  *       required.
- *
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -714,6 +713,31 @@ svn_stream_open_writable(svn_stream_t **stream,
                          apr_pool_t *scratch_pool);
 
 
+/** Create a writable stream to a file in the directory @a dirpath.
+ * The file will have an arbitrary and unique name, and the full path
+ * will be returned in @a temp_path. The stream will be returned in
+ * @a stream. Both will be allocated from @a result_pool.
+ *
+ * If @a dirpath is @c NULL, use the path returned from svn_io_temp_dir().
+ * (Note that when using the system-provided temp directory, it may not
+ * be possibly to atomically rename the resulting file due to cross-device
+ * issues.)
+ *
+ * The file will be deleted according to @a delete_when.
+ *
+ * Temporary allocations will be performed in @a scratch_pool.
+ *
+ * @since New in 1.6
+ */
+svn_error_t *
+svn_stream_open_unique(svn_stream_t **stream,
+                       const char **temp_path,
+                       const char *dirpath,
+                       svn_io_file_del_t delete_when,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool);
+
+
 /** Create a stream from an APR file.  For convenience, if @a file is
  * @c NULL, an empty stream created by svn_stream_empty() is returned.
  *
@@ -884,14 +908,35 @@ svn_stream_readline(svn_stream_t *stream,
                     svn_boolean_t *eof,
                     apr_pool_t *pool);
 
+
 /**
  * Read the contents of the readable stream @a from and write them to the
  * writable stream @a to calling @a cancel_func before copying each chunk.
  *
  * @a cancel_func may be @c NULL.
  *
- * @since New in 1.5.
+ * @note both @a from and @a to will be closed upon successul completion of
+ * the copy (but an error may still be returned, based on trying to close
+ * the two streams). If the closure is not desired, then you can use
+ * @see svn_stream_disown() to protect either or both of the streams from
+ * being closed.
+ *
+ * @since New in 1.6.
  */
+svn_error_t *
+svn_stream_copy3(svn_stream_t *from,
+                 svn_stream_t *to,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
+                 apr_pool_t *pool);
+
+/**
+ * Same as svn_stream_copy3() but the streams are not closed.
+ *
+ * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.5 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_stream_copy2(svn_stream_t *from,
                  svn_stream_t *to,
@@ -899,9 +944,9 @@ svn_stream_copy2(svn_stream_t *from,
                  void *cancel_baton,
                  apr_pool_t *pool);
 
-
 /**
- * Same as svn_stream_copy2(), but without the cancellation function.
+ * Same as svn_stream_copy3(), but without the cancellation function
+ * or stream closing.
  *
  * @since New in 1.1.
  * @deprecated Provided for backward compatibility with the 1.4 API.
@@ -911,6 +956,7 @@ svn_error_t *
 svn_stream_copy(svn_stream_t *from,
                 svn_stream_t *to,
                 apr_pool_t *pool);
+
 
 /** Set @a *same to TRUE if @a stream1 and @a stream2 have the same
  * contents, else set it to FALSE.  Use @a pool for temporary allocations.
@@ -923,6 +969,26 @@ svn_stream_contents_same(svn_boolean_t *same,
                          svn_stream_t *stream2,
                          apr_pool_t *pool);
 
+
+/** Read the contents of @a stream into memory, returning the data in
+ * @a result. The stream will be closed when it has been successfully and
+ * completely read.
+ *
+ * The returned memory is allocated in @a result_pool, and any temporary
+ * allocations are performed in @a scratch_pool.
+ *
+ * @note due to memory pseudo-reallocation behavior (due to pools), this
+ *   can be a memory-intensive operation for large files.
+ *
+ * @since New in 1.6
+ */
+svn_error_t *
+svn_string_from_stream(svn_string_t **result,
+                       svn_stream_t *stream,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool);
+
+
 /** @} */
 
 /** Set @a *result to a string containing the contents of @a
@@ -934,6 +1000,9 @@ svn_stream_contents_same(svn_boolean_t *same,
  * stdin-reading processes abound.  For example, if a program tries
  * both to invoke an external editor and to read from stdin, stdin
  * could be trashed and the editor might act funky or die outright.
+ *
+ * @note due to memory pseudo-reallocation behavior (due to pools), this
+ *   can be a memory-intensive operation for large files.
  *
  * @since New in 1.5.
  */
@@ -957,6 +1026,9 @@ svn_stringbuf_from_file(svn_stringbuf_t **result,
 /** Sets @a *result to a string containing the contents of the already opened
  * @a file.  Reads from the current position in file to the end.  Does not
  * close the file or reset the cursor position.
+ *
+ * @note due to memory pseudo-reallocation behavior (due to pools), this
+ *   can be a memory-intensive operation for large files.
  */
 svn_error_t *
 svn_stringbuf_from_aprfile(svn_stringbuf_t **result,
@@ -1350,6 +1422,27 @@ svn_io_file_write_full(apr_file_t *file,
                        apr_size_t *bytes_written,
                        apr_pool_t *pool);
 
+/**
+ * Open a unique file in @a dirpath, and write @a nbytes from @a buf to
+ * the file before closing it.  Return the name of the newly created file
+ * in @a *tmp_path, allocated in @a pool.
+ *
+ * If @a dirpath is @c NULL, use the path returned from svn_io_temp_dir().
+ * (Note that when using the system-provided temp directory, it may not
+ * be possibly to atomically rename the resulting file due to cross-device
+ * issues.)
+ *
+ * The file will be deleted according to @a delete_when.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_io_write_unique(const char **tmp_path,
+                    const char *dirpath,
+                    const void *buf,
+                    apr_size_t nbytes,
+                    svn_io_file_del_t delete_when,
+                    apr_pool_t *pool);
 
 /** Wrapper for apr_file_trunc().
   * @since New in 1.6. */

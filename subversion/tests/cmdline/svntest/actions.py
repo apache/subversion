@@ -1106,19 +1106,19 @@ def run_and_verify_status(wc_dir_name, output_tree,
 
 # A variant of previous func, but doesn't pass '-q'.  This allows us
 # to verify unversioned or nonexistent items in the list.
-def run_and_verify_unquiet_status(wc_dir_name, output_tree,
+def run_and_verify_unquiet_status(wc_dir_name, status_tree,
                                   singleton_handler_a = None,
                                   a_baton = None,
                                   singleton_handler_b = None,
                                   b_baton = None):
   """Run 'status' on WC_DIR_NAME and compare it with the
-  expected OUTPUT_TREE.  SINGLETON_HANDLER_A and SINGLETON_HANDLER_B will
+  expected STATUS_TREE  SINGLETON_HANDLER_A and SINGLETON_HANDLER_B will
   be passed to tree.compare_trees - see that function's doc string for
   more details.
   Returns on success, raises on failure."""
 
-  if isinstance(output_tree, wc.State):
-    output_tree = output_tree.old_tree()
+  if isinstance(status_tree, wc.State):
+    status_tree = status_tree.old_tree()
 
   exit_code, output, errput = main.run_svn(None, 'status', '-v',
                                            '-u', wc_dir_name)
@@ -1127,11 +1127,11 @@ def run_and_verify_unquiet_status(wc_dir_name, output_tree,
 
   # Verify actual output against expected output.
   try:
-    tree.compare_trees ("output", actual, output_tree,
+    tree.compare_trees ("UNQUIET STATUS", actual, status_tree,
                         singleton_handler_a, a_baton,
                         singleton_handler_b, b_baton)
   except tree.SVNTreeError:
-    print "ACTUAL OUTPUT TREE:"
+    print "ACTUAL UNQUIET STATUS TREE:"
     tree.dump_tree_script(actual, wc_dir_name + os.sep)
     raise
 
@@ -1767,7 +1767,43 @@ deep_trees_after_tree_del = wc.State('', {
   'DDD'               : Item(),
   })
 
+# deep trees state without any files
+deep_trees_empty_dirs = wc.State('', {
+  'F'               : Item(),
+  'D'               : Item(),
+  'D/D1'            : Item(),
+  'DF'              : Item(),
+  'DF/D1'           : Item(),
+  'DD'              : Item(),
+  'DD/D1'           : Item(),
+  'DD/D1/D2'        : Item(),
+  'DDF'             : Item(),
+  'DDF/D1'          : Item(),
+  'DDF/D1/D2'       : Item(),
+  'DDD'             : Item(),
+  'DDD/D1'          : Item(),
+  'DDD/D1/D2'       : Item(),
+  'DDD/D1/D2/D3'    : Item(),
+  })
 
+# Expected merge/update/switch output if tree conflict detection really works.
+deep_trees_conflict_output = wc.State('', {
+  'F/alpha'           : Item(treeconflict='C'),
+  'D/D1'              : Item(treeconflict='C'),
+  'DF/D1'             : Item(treeconflict='C'),
+  'DD/D1'             : Item(treeconflict='C'),
+  'DDF/D1'            : Item(treeconflict='C'),
+  'DDD/D1'            : Item(treeconflict='C'),
+  })
+
+# Expected status output if tree conflict detection really works.
+def deep_trees_conflict_status(expected_disk):
+  """Add tree conflicts and default status stuff to a disk-state dict."""
+  status = expected_disk.copy()
+  status.tweak('F', 'D', 'DF', 'DD', 'DDF', 'DDD', treeconflict='C ')
+  status.add({ '' : Item(status='  ') })
+  status.tweak(wc_rev=3)
+  return status
 
 
 class DeepTreesTestCase:

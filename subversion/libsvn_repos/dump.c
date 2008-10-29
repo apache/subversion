@@ -574,7 +574,8 @@ dump_node(struct edit_baton *eb,
       else
         SVN_ERR(svn_fs_file_contents(&contents, eb->fs_root, path, pool));
 
-      SVN_ERR(svn_stream_copy2(contents, eb->stream, NULL, NULL, pool));
+      SVN_ERR(svn_stream_copy3(contents, svn_stream_disown(eb->stream, pool),
+                               NULL, NULL, pool));
     }
 
   len = 2;
@@ -1075,22 +1076,6 @@ svn_repos_dump_fs2(svn_repos_t *repos,
   svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_repos_dump_fs(svn_repos_t *repos,
-                  svn_stream_t *stream,
-                  svn_stream_t *feedback_stream,
-                  svn_revnum_t start_rev,
-                  svn_revnum_t end_rev,
-                  svn_boolean_t incremental,
-                  svn_cancel_func_t cancel_func,
-                  void *cancel_baton,
-                  apr_pool_t *pool)
-{
-  return svn_repos_dump_fs2(repos, stream, feedback_stream, start_rev,
-                            end_rev, incremental, FALSE, cancel_func,
-                            cancel_baton, pool);
 }
 
 

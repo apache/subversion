@@ -22,14 +22,14 @@
 #include <apr_lib.h>
 #include <apr_time.h>
 
-#include "svn_cache.h"
 #include "svn_pools.h"
 
+#include "private/svn_cache.h"
 #include "svn_private_config.h"
 
 #include "../svn_test.h"
 
-/* Implements svn_cache_dup_func_t */
+/* Implements svn_cache__dup_func_t */
 static svn_error_t *
 dup_revnum(void **out,
            void *in,
@@ -44,7 +44,7 @@ dup_revnum(void **out,
   return SVN_NO_ERROR;
 }
 
-/* Implements svn_cache_serialize_func_t */
+/* Implements svn_cache__serialize_func_t */
 static svn_error_t *
 serialize_revnum(char **data,
                  apr_size_t *data_len,
@@ -58,7 +58,7 @@ serialize_revnum(char **data,
 }
 
 
-/* Implements svn_cache_deserialize_func_t */
+/* Implements svn_cache__deserialize_func_t */
 static svn_error_t *
 deserialize_revnum(void **out,
                    const char *data,
@@ -77,7 +77,7 @@ deserialize_revnum(void **out,
 }
 
 static svn_error_t *
-basic_cache_test(svn_cache_t *cache,
+basic_cache_test(svn_cache__t *cache,
                  svn_boolean_t size_is_one,
                  apr_pool_t *pool)
 {
@@ -90,16 +90,16 @@ basic_cache_test(svn_cache_t *cache,
    * actually saved away in the cache's pools. */
   subpool = svn_pool_create(pool);
 
-  SVN_ERR(svn_cache_get((void **) &answer, &found, cache, "twenty", subpool));
+  SVN_ERR(svn_cache__get((void **) &answer, &found, cache, "twenty", subpool));
   if (found)
     return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
                             "cache found an entry that wasn't there");
   svn_pool_clear(subpool);
 
-  SVN_ERR(svn_cache_set(cache, "twenty", &twenty, subpool));
+  SVN_ERR(svn_cache__set(cache, "twenty", &twenty, subpool));
   svn_pool_clear(subpool);
 
-  SVN_ERR(svn_cache_get((void **) &answer, &found, cache, "twenty", subpool));
+  SVN_ERR(svn_cache__get((void **) &answer, &found, cache, "twenty", subpool));
   if (! found)
     return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
                             "cache failed to find entry for 'twenty'");
@@ -108,10 +108,10 @@ basic_cache_test(svn_cache_t *cache,
                              "expected 20 but found '%ld'", *answer);
   svn_pool_clear(subpool);
 
-  SVN_ERR(svn_cache_set(cache, "thirty", &thirty, subpool));
+  SVN_ERR(svn_cache__set(cache, "thirty", &thirty, subpool));
   svn_pool_clear(subpool);
 
-  SVN_ERR(svn_cache_get((void **) &answer, &found, cache, "thirty", subpool));
+  SVN_ERR(svn_cache__get((void **) &answer, &found, cache, "thirty", subpool));
   if (! found)
     return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
                             "cache failed to find entry for 'thirty'");
@@ -121,7 +121,7 @@ basic_cache_test(svn_cache_t *cache,
 
   if (size_is_one)
     {
-      SVN_ERR(svn_cache_get((void **) &answer, &found, cache, "twenty", subpool));
+      SVN_ERR(svn_cache__get((void **) &answer, &found, cache, "twenty", subpool));
       if (found)
         return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
                                 "cache found entry for 'twenty' that should have "
@@ -138,7 +138,7 @@ test_inprocess_cache_basic(const char **msg,
                            svn_test_opts_t *opts,
                            apr_pool_t *pool)
 {
-  svn_cache_t *cache;
+  svn_cache__t *cache;
 
   *msg = "basic inprocess svn_cache test";
 
@@ -146,7 +146,7 @@ test_inprocess_cache_basic(const char **msg,
     return SVN_NO_ERROR;
 
   /* Create a cache with just one entry. */
-  SVN_ERR(svn_cache_create_inprocess(&cache,
+  SVN_ERR(svn_cache__create_inprocess(&cache,
                                      dup_revnum,
                                      APR_HASH_KEY_STRING,
                                      1,
@@ -163,7 +163,7 @@ test_memcache_basic(const char **msg,
                     svn_test_opts_t *opts,
                     apr_pool_t *pool)
 {
-  svn_cache_t *cache;
+  svn_cache__t *cache;
   svn_config_t *config;
   svn_memcache_t *memcache = NULL;
   const char *prefix = apr_psprintf(pool,
@@ -178,7 +178,7 @@ test_memcache_basic(const char **msg,
   if (opts->config_file)
     {
       SVN_ERR(svn_config_read(&config, opts->config_file, TRUE, pool));
-      SVN_ERR(svn_cache_make_memcache_from_config(&memcache, config, pool));
+      SVN_ERR(svn_cache__make_memcache_from_config(&memcache, config, pool));
     }
 
   if (! memcache)
@@ -187,7 +187,7 @@ test_memcache_basic(const char **msg,
 
 
   /* Create a memcache-based cache. */
-  SVN_ERR(svn_cache_create_memcache(&cache,
+  SVN_ERR(svn_cache__create_memcache(&cache,
                                     memcache,
                                     serialize_revnum,
                                     deserialize_revnum,
@@ -206,7 +206,7 @@ test_memcache_long_key(const char **msg,
                        svn_test_opts_t *opts,
                        apr_pool_t *pool)
 {
-  svn_cache_t *cache;
+  svn_cache__t *cache;
   svn_config_t *config;
   svn_memcache_t *memcache = NULL;
   svn_revnum_t fifty = 50, *answer;
@@ -231,7 +231,7 @@ test_memcache_long_key(const char **msg,
   if (opts->config_file)
     {
       SVN_ERR(svn_config_read(&config, opts->config_file, TRUE, pool));
-      SVN_ERR(svn_cache_make_memcache_from_config(&memcache, config, pool));
+      SVN_ERR(svn_cache__make_memcache_from_config(&memcache, config, pool));
     }
 
   if (! memcache)
@@ -240,7 +240,7 @@ test_memcache_long_key(const char **msg,
 
 
   /* Create a memcache-based cache. */
-  SVN_ERR(svn_cache_create_memcache(&cache,
+  SVN_ERR(svn_cache__create_memcache(&cache,
                                     memcache,
                                     serialize_revnum,
                                     deserialize_revnum,
@@ -248,8 +248,8 @@ test_memcache_long_key(const char **msg,
                                     prefix,
                                     pool));
 
-  SVN_ERR(svn_cache_set(cache, long_key, &fifty, pool));
-  SVN_ERR(svn_cache_get((void **) &answer, &found, cache, long_key, pool));
+  SVN_ERR(svn_cache__set(cache, long_key, &fifty, pool));
+  SVN_ERR(svn_cache__get((void **) &answer, &found, cache, long_key, pool));
 
   if (! found)
     return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
