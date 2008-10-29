@@ -36,6 +36,7 @@
 #include "svn_string.h"
 #include "svn_utf.h"
 #include "svn_checksum.h"
+#include "svn_path.h"
 
 
 struct svn_stream_t {
@@ -203,20 +204,21 @@ svn_stream_readline(svn_stream_t *stream,
 }
 
 
-svn_error_t *svn_stream_copy2(svn_stream_t *from, svn_stream_t *to,
+svn_error_t *svn_stream_copy3(svn_stream_t *from, svn_stream_t *to,
                               svn_cancel_func_t cancel_func,
                               void *cancel_baton,
-                              apr_pool_t *pool)
+                              apr_pool_t *scratch_pool)
 {
-  char *buf = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
-  apr_size_t len;
+  char *buf = apr_palloc(scratch_pool, SVN__STREAM_CHUNK_SIZE);
+  svn_error_t *err;
+  svn_error_t *err2;
 
   /* Read and write chunks until we get a short read, indicating the
      end of the stream.  (We can't get a short write without an
      associated error.) */
   while (1)
     {
-      len = SVN__STREAM_CHUNK_SIZE;
+      apr_size_t len = SVN__STREAM_CHUNK_SIZE;
 
       if (cancel_func)
         SVN_ERR(cancel_func(cancel_baton));
@@ -227,14 +229,36 @@ svn_error_t *svn_stream_copy2(svn_stream_t *from, svn_stream_t *to,
       if (len != SVN__STREAM_CHUNK_SIZE)
         break;
     }
-  return SVN_NO_ERROR;
+
+  err = svn_stream_close(from);
+  err2 = svn_stream_close(to);
+  if (err)
+    {
+      /* ### it would be nice to compose the two errors in some way */
+      svn_error_clear(err2);  /* note: might be NULL */
+      return err;
+    }
+  return err2;
+}
+
+svn_error_t *svn_stream_copy2(svn_stream_t *from, svn_stream_t *to,
+                              svn_cancel_func_t cancel_func,
+                              void *cancel_baton,
+                              apr_pool_t *scratch_pool)
+{
+  return svn_stream_copy3(svn_stream_disown(from, scratch_pool),
+                          svn_stream_disown(to, scratch_pool),
+                          cancel_func, cancel_baton, scratch_pool);
 }
 
 svn_error_t *svn_stream_copy(svn_stream_t *from, svn_stream_t *to,
-                             apr_pool_t *pool)
+                             apr_pool_t *scratch_pool)
 {
-  return svn_stream_copy2(from, to, NULL, NULL, pool);
+  return svn_stream_copy3(svn_stream_disown(from, scratch_pool),
+                          svn_stream_disown(to, scratch_pool),
+                          NULL, NULL, scratch_pool);
 }
+
 
 svn_error_t *
 svn_stream_contents_same(svn_boolean_t *same,
@@ -398,6 +422,30 @@ svn_stream_open_writable(svn_stream_t **stream,
                              | APR_CREATE
                              | APR_EXCL,
                            APR_OS_DEFAULT, result_pool));
+  *stream = svn_stream_from_aprfile2(file, FALSE, result_pool);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_stream_open_unique(svn_stream_t **stream,
+                       const char **temp_path,
+                       const char *dirpath,
+                       svn_io_file_del_t delete_when,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
+{
+  const char *prefix;
+  apr_file_t *file;
+
+  if (!dirpath)
+    SVN_ERR(svn_io_temp_dir(&dirpath, scratch_pool));
+
+  prefix = svn_path_join(dirpath, "tempfile", scratch_pool);
+
+  SVN_ERR(svn_io_open_unique_file2(&file, temp_path, prefix, ".tmp",
+                                   delete_when, result_pool));
   *stream = svn_stream_from_aprfile2(file, FALSE, result_pool);
 
   return SVN_NO_ERROR;
@@ -1023,6 +1071,37 @@ svn_stream_for_stdout(svn_stream_t **out, apr_pool_t *pool)
     return svn_error_wrap_apr(apr_err, "Can't open stdout");
 
   *out = svn_stream_from_aprfile2(stdout_file, TRUE, pool);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_string_from_stream(svn_string_t **result,
+                       svn_stream_t *stream,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
+{
+  svn_stringbuf_t *work = svn_stringbuf_create_ensure(SVN__STREAM_CHUNK_SIZE,
+                                                      result_pool);
+  char *buffer = apr_palloc(scratch_pool, SVN__STREAM_CHUNK_SIZE);
+
+  while (1)
+    {
+      apr_size_t len = SVN__STREAM_CHUNK_SIZE;
+
+      SVN_ERR(svn_stream_read(stream, buffer, &len));
+      svn_stringbuf_appendbytes(work, buffer, len);
+
+      if (len < SVN__STREAM_CHUNK_SIZE)
+        break;
+    }
+
+  SVN_ERR(svn_stream_close(stream));
+
+  *result = apr_palloc(result_pool, sizeof(**result));
+  (*result)->data = work->data;
+  (*result)->len = work->len;
 
   return SVN_NO_ERROR;
 }

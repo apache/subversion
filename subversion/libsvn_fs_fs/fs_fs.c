@@ -929,19 +929,10 @@ write_format(const char *path, int format, int max_files_per_dir,
     }
   else
     {
-      apr_file_t *format_file;
       const char *path_tmp;
 
-      /* Create a temporary file to write the data to */
-      SVN_ERR(svn_io_open_unique_file2(&format_file, &path_tmp, path, ".tmp",
-                                       svn_io_file_del_none, pool));
-
-      /* ...dump out our version number string... */
-      SVN_ERR(svn_io_file_write_full(format_file, contents,
-                                     strlen(contents), NULL, pool));
-
-      /* ...and close the file. */
-      SVN_ERR(svn_io_file_close(format_file, pool));
+      SVN_ERR(svn_io_write_unique(&path_tmp, path, contents, strlen(contents),
+                                  svn_io_file_del_none, pool));
 
 #ifdef WIN32
       /* make the destination writable, but only on Windows, because
@@ -2175,8 +2166,8 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
 
   SVN_ERR(ensure_revision_exists(fs, rev, pool));
 
-  SVN_ERR(svn_cache_get((void **) root_id_p, &is_cached, ffd->rev_root_id_cache,
-                        &rev, pool));
+  SVN_ERR(svn_cache__get((void **) root_id_p, &is_cached, ffd->rev_root_id_cache,
+                         &rev, pool));
   if (is_cached)
     return SVN_NO_ERROR;
 
@@ -2198,7 +2189,7 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
 
   SVN_ERR(svn_io_file_close(revision_file, pool));
 
-  SVN_ERR(svn_cache_set(ffd->rev_root_id_cache, &rev, root_id, pool));
+  SVN_ERR(svn_cache__set(ffd->rev_root_id_cache, &rev, root_id, pool));
 
   *root_id_p = root_id;
 
@@ -2785,8 +2776,8 @@ rep_read_contents(void *baton,
   if (rb->off == rb->len && rb->current_fulltext)
     {
       fs_fs_data_t *ffd = rb->fs->fsap_data;
-      SVN_ERR(svn_cache_set(ffd->fulltext_cache, rb->fulltext_cache_key,
-                            rb->current_fulltext, rb->pool));
+      SVN_ERR(svn_cache__set(ffd->fulltext_cache, rb->fulltext_cache_key,
+                             rb->current_fulltext, rb->pool));
       rb->current_fulltext = NULL;
     }
 
@@ -2838,8 +2829,8 @@ read_representation(svn_stream_t **contents_p,
           svn_boolean_t is_cached;
           fulltext_key = apr_psprintf(pool, "%ld/%" APR_OFF_T_FMT,
                                       rep->revision, rep->offset);
-          SVN_ERR(svn_cache_get((void **) &fulltext, &is_cached,
-                                ffd->fulltext_cache, fulltext_key, pool));
+          SVN_ERR(svn_cache__get((void **) &fulltext, &is_cached,
+                                 ffd->fulltext_cache, fulltext_key, pool));
           if (is_cached)
             {
               *contents_p = svn_stream_from_string(fulltext, pool);
@@ -3142,8 +3133,8 @@ svn_fs_fs__rep_contents_dir(apr_hash_t **entries_p,
       svn_boolean_t found;
 
       unparsed_id = svn_fs_fs__id_unparse(noderev->id, pool)->data;
-      SVN_ERR(svn_cache_get((void **) entries_p, &found, ffd->dir_cache,
-                            unparsed_id, pool));
+      SVN_ERR(svn_cache__get((void **) entries_p, &found, ffd->dir_cache,
+                             unparsed_id, pool));
       if (found)
         return SVN_NO_ERROR;
     }
@@ -3155,7 +3146,7 @@ svn_fs_fs__rep_contents_dir(apr_hash_t **entries_p,
 
   /* If this is an immutable directory, let's cache the contents. */
   if (! svn_fs_fs__id_txn_id(noderev->id))
-    SVN_ERR(svn_cache_set(ffd->dir_cache, unparsed_id, parsed_entries, pool));
+    SVN_ERR(svn_cache__set(ffd->dir_cache, unparsed_id, parsed_entries, pool));
 
   *entries_p = parsed_entries;
   return SVN_NO_ERROR;
@@ -3802,20 +3793,8 @@ get_and_increment_txn_key_body(void *baton, apr_pool_t *pool)
   ++len;
   next_txn_id[len] = '\0';
 
-  SVN_ERR(svn_io_open_unique_file2(&txn_current_file, &tmp_filename,
-                                   txn_current_filename, ".tmp",
-                                   svn_io_file_del_none, pool));
-
-  SVN_ERR(svn_io_file_write_full(txn_current_file,
-                                 next_txn_id,
-                                 len,
-                                 NULL,
-                                 pool));
-
-  SVN_ERR(svn_io_file_flush_to_disk(txn_current_file, pool));
-
-  SVN_ERR(svn_io_file_close(txn_current_file, pool));
-
+  SVN_ERR(svn_io_write_unique(&tmp_filename, txn_current_filename,
+                              next_txn_id, len, svn_io_file_del_none, pool));
   SVN_ERR(svn_fs_fs__move_into_place(tmp_filename, txn_current_filename,
                                      txn_current_filename, pool));
 
@@ -5138,7 +5117,6 @@ write_current(svn_fs_t *fs, svn_revnum_t rev, const char *next_node_id,
 {
   char *buf;
   const char *tmp_name, *name;
-  apr_file_t *file;
   fs_fs_data_t *ffd = fs->fsap_data;
 
   /* Now we can just write out this line. */
@@ -5148,14 +5126,8 @@ write_current(svn_fs_t *fs, svn_revnum_t rev, const char *next_node_id,
     buf = apr_psprintf(pool, "%ld %s %s\n", rev, next_node_id, next_copy_id);
 
   name = svn_fs_fs__path_current(fs, pool);
-  SVN_ERR(svn_io_open_unique_file2(&file, &tmp_name, name, ".tmp",
-                                   svn_io_file_del_none, pool));
-
-  SVN_ERR(svn_io_file_write_full(file, buf, strlen(buf), NULL, pool));
-
-  SVN_ERR(svn_io_file_flush_to_disk(file, pool));
-
-  SVN_ERR(svn_io_file_close(file, pool));
+  SVN_ERR(svn_io_write_unique(&tmp_name, name, buf, strlen(buf),
+                              svn_io_file_del_none, pool));
 
   return svn_fs_fs__move_into_place(tmp_name, name, name, pool);
 }
@@ -5522,6 +5494,9 @@ svn_fs_fs__create(svn_fs_t *fs,
       else if (apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE,
                                         APR_HASH_KEY_STRING))
         format = 2;
+      else if (apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE,
+                                        APR_HASH_KEY_STRING))
+        format = 3;
     }
   ffd->format = format;
 

@@ -759,19 +759,3 @@ svn_repos_replay2(svn_fs_root_t *root,
                                SVN_INVALID_REVNUM, paths,
                                path_driver_cb_func, &cb_baton, pool);
 }
-
-svn_error_t *
-svn_repos_replay(svn_fs_root_t *root,
-                 const svn_delta_editor_t *editor,
-                 void *edit_baton,
-                 apr_pool_t *pool)
-{
-  return svn_repos_replay2(root,
-                           "" /* the whole tree */,
-                           SVN_INVALID_REVNUM, /* no low water mark */
-                           FALSE /* no text deltas */,
-                           editor, edit_baton,
-                           NULL /* no authz func */,
-                           NULL /* no authz baton */,
-                           pool);
-}

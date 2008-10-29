@@ -380,7 +380,7 @@ backends.  These are designed to improve storage space, and can result in
 drastically smaller repositories.  These changes include:</p>
 <ul>
   <li><a href="#rep-sharing"
-      >[BRANCH] Representation sharing</a></li>
+      >Representation sharing</a></li>
   <li><a href="#fsfs-packing"
       >[BRANCH] FSFS inode packing</a></li>
   <li><a href="#fsfs-memcached"
@@ -393,8 +393,14 @@ drastically smaller repositories.  These changes include:</p>
 <h4>Sharing multiple common representations
   (<em><a href="/issues/show_bug.cgi?id=2286">issue 2286</a></em>,
    <em>server</em>)</h4>
-<p>XXX: We did some nifty stuff with representation sharing, and should
-describe it here.  (Oh, and it's for both BDB and FSFS.)</p>
+<p>XXX:When using many branches and merging between them often, it is common to
+have files with similar lines of history which contain the exact same content.
+In the past, Subversion has stored these files as deltas against previous
+versions of the file.  Subversion 1.6 will now use existing representations in
+the filesystem for duplicate storage.  Depending on the size of the repository,
+and the degree of branching and merging, this can cause an up to 20% space
+reduction for Berkeley DB repositories and a 15% reduction for FSFS
+repositories.</p>
 
 </div> <!-- rep-sharing -->
 

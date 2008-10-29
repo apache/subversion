@@ -159,16 +159,7 @@ svn_fs_base__str_to_dbt(DBT *dbt, const char *str)
 DBT *
 svn_fs_base__checksum_to_dbt(DBT *dbt, svn_checksum_t *checksum)
 {
-  switch (checksum->kind)
-    {
-      case svn_checksum_md5:
-        svn_fs_base__set_dbt(dbt, checksum->digest, APR_MD5_DIGESTSIZE);
-        break;
-
-      case svn_checksum_sha1:
-        svn_fs_base__set_dbt(dbt, checksum->digest, APR_SHA1_DIGESTSIZE);
-        break;
-    }
+  svn_fs_base__set_dbt(dbt, checksum->digest, svn_checksum_size(checksum));
 
   return dbt;
 }

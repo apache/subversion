@@ -1438,6 +1438,20 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
+     * @since 1.6
+     */
+    public void setRevProperty(String path, String name, Revision rev,
+                               String value, String originalValue,
+                               boolean force)
+            throws ClientException
+    {
+        synchronized(clazz)
+        {
+            worker.setRevProperty(path, name, rev, value, originalValue, force);
+        }
+    }
+
+    /**
      * @deprecated Use {@link #propertyGet(String, String, Revision)} instead.
      * @since 1.0
      */

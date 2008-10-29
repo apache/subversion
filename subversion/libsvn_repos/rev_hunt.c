@@ -173,25 +173,6 @@ svn_repos_get_committed_info(svn_revnum_t *committed_rev,
   return SVN_NO_ERROR;
 }
 
-
-/* Deprecated. */
-svn_error_t *
-svn_repos_history(svn_fs_t *fs,
-                  const char *path,
-                  svn_repos_history_func_t history_func,
-                  void *history_baton,
-                  svn_revnum_t start,
-                  svn_revnum_t end,
-                  svn_boolean_t cross_copies,
-                  apr_pool_t *pool)
-{
-  return svn_repos_history2(fs, path, history_func, history_baton,
-                            NULL, NULL,
-                            start, end, cross_copies, pool);
-}
-
-
-
 svn_error_t *
 svn_repos_history2(svn_fs_t *fs,
                    const char *path,
@@ -1503,26 +1484,4 @@ svn_repos_get_file_revs2(svn_repos_t *repos,
   svn_pool_destroy(sb.iter_pool);
 
   return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_repos_get_file_revs(svn_repos_t *repos,
-                        const char *path,
-                        svn_revnum_t start,
-                        svn_revnum_t end,
-                        svn_repos_authz_func_t authz_read_func,
-                        void *authz_read_baton,
-                        svn_repos_file_rev_handler_t handler,
-                        void *handler_baton,
-                        apr_pool_t *pool)
-{
-  svn_file_rev_handler_t handler2;
-  void *handler2_baton;
-
-  svn_compat_wrap_file_rev_handler(&handler2, &handler2_baton, handler,
-                                   handler_baton, pool);
-
-  return svn_repos_get_file_revs2(repos, path, start, end, FALSE,
-                                  authz_read_func, authz_read_baton,
-                                  handler2, handler2_baton, pool);
 }

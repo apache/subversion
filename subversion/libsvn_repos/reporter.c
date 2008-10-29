@@ -1300,22 +1300,6 @@ svn_repos_set_path3(void *baton, const char *path, svn_revnum_t rev,
 }
 
 svn_error_t *
-svn_repos_set_path2(void *baton, const char *path, svn_revnum_t rev,
-                    svn_boolean_t start_empty, const char *lock_token,
-                    apr_pool_t *pool)
-{
-  return svn_repos_set_path3(baton, path, rev, svn_depth_infinity,
-                             start_empty, lock_token, pool);
-}
-
-svn_error_t *
-svn_repos_set_path(void *baton, const char *path, svn_revnum_t rev,
-                   svn_boolean_t start_empty, apr_pool_t *pool)
-{
-  return svn_repos_set_path2(baton, path, rev, start_empty, NULL, pool);
-}
-
-svn_error_t *
 svn_repos_link_path3(void *baton, const char *path, const char *link_path,
                      svn_revnum_t rev, svn_depth_t depth,
                      svn_boolean_t start_empty,
@@ -1327,24 +1311,6 @@ svn_repos_link_path3(void *baton, const char *path, const char *link_path,
 
   return write_path_info(baton, path, link_path, rev, depth,
                          start_empty, lock_token, pool);
-}
-
-svn_error_t *
-svn_repos_link_path2(void *baton, const char *path, const char *link_path,
-                     svn_revnum_t rev, svn_boolean_t start_empty,
-                     const char *lock_token, apr_pool_t *pool)
-{
-  return svn_repos_link_path3(baton, path, link_path, rev, svn_depth_infinity,
-                              start_empty, lock_token, pool);
-}
-
-svn_error_t *
-svn_repos_link_path(void *baton, const char *path, const char *link_path,
-                    svn_revnum_t rev, svn_boolean_t start_empty,
-                    apr_pool_t *pool)
-{
-  return svn_repos_link_path2(baton, path, link_path, rev, start_empty,
-                              NULL, pool);
 }
 
 svn_error_t *
@@ -1431,39 +1397,4 @@ svn_repos_begin_report2(void **report_baton,
   /* Hand reporter back to client. */
   *report_baton = b;
   return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_repos_begin_report(void **report_baton,
-                       svn_revnum_t revnum,
-                       const char *username,
-                       svn_repos_t *repos,
-                       const char *fs_base,
-                       const char *s_operand,
-                       const char *switch_path,
-                       svn_boolean_t text_deltas,
-                       svn_boolean_t recurse,
-                       svn_boolean_t ignore_ancestry,
-                       const svn_delta_editor_t *editor,
-                       void *edit_baton,
-                       svn_repos_authz_func_t authz_read_func,
-                       void *authz_read_baton,
-                       apr_pool_t *pool)
-{
-  return svn_repos_begin_report2(report_baton,
-                                 revnum,
-                                 repos,
-                                 fs_base,
-                                 s_operand,
-                                 switch_path,
-                                 text_deltas,
-                                 SVN_DEPTH_INFINITY_OR_FILES(recurse),
-                                 ignore_ancestry,
-                                 FALSE, /* don't send copyfrom args */
-                                 editor,
-                                 edit_baton,
-                                 authz_read_func,
-                                 authz_read_baton,
-                                 pool);
 }

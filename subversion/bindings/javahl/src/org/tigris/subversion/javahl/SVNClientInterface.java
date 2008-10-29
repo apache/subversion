@@ -1495,6 +1495,21 @@ public interface SVNClientInterface
             throws ClientException;
 
     /**
+     * set one revsision property of one item
+     * @param path      path of the item
+     * @param name      name of the property
+     * @param rev       revision to retrieve
+     * @param value     value of the property
+     * @param originalValue the original value of the property.
+     * @param force     use force to set
+     * @throws ClientException
+     * @since 1.6
+     */
+    void setRevProperty(String path, String name, Revision rev, String value,
+                        String originalValue, boolean force)
+            throws ClientException;
+
+    /**
      * Retrieve one property of one item
      * @param path      path of the item
      * @param name      name of property

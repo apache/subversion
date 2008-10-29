@@ -141,8 +141,8 @@
 #define SVN_WC__CONFLICT_REASON_OBSTRUCTED "obstructed"
 
 
-/* Like svn_wc_add_tree_conflict_data, but also takes a log accumulator
- * LOC_ACCUM, and does not flush the log.
+/* Like svn_wc_add_tree_conflict_data(), but append to the log accumulator
+ * LOG_ACCUM a command to rewrite the entry field, and do not flush the log.
  * This function is meant to be used in the working copy library where
  * log accumulators are usually readily available.
  */
@@ -152,6 +152,21 @@ svn_wc__loggy_add_tree_conflict_data(
   const svn_wc_conflict_description_t *conflict,
   svn_wc_adm_access_t *adm_access,
   apr_pool_t *pool);
+
+/**
+ * Read tree conflict descriptions from @a dir_entry.
+ * Append pointers to newly allocated svn_wc_conflict_description_t
+ * objects to the array pointed to by @a conflicts.
+ * @a dir_path is the path to the WC directory whose conflicts are being read.
+ * Do all allocations in @a pool.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_wc__read_tree_conflicts_from_entry(apr_array_header_t *conflicts,
+                                       const svn_wc_entry_t *dir_entry,
+                                       const char *dir_path,
+                                       apr_pool_t *pool);
 
 /*
  * Write tree conflicts (svn_wc_conflict_description_t)
@@ -165,7 +180,8 @@ svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
                                       apr_pool_t *pool);
 
 /*
- * Search in CONFLICTS for a conflict with the given victim_path.
+ * Search in CONFLICTS (an array of svn_wc_conflict_description_t tree
+ * conflicts) for a conflict with the given victim_path.
  *
  * This function is used in a unit test in tests/libsvn_wc.
  */

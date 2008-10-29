@@ -554,7 +554,7 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
   if (! honor_mergeinfo)
     return SVN_NO_ERROR;
 
-  /* If PATH itself is newly added there is no need to filter. */
+  /* If PATH itself is newly added or replaced there is no need to filter. */
   SVN_ERR(svn_wc__entry_versioned(&target_entry, path, adm_access,
                                   FALSE, pool));
   if (target_entry->schedule == svn_wc_schedule_add
@@ -6700,45 +6700,6 @@ svn_client_merge3(const char *source1,
   return svn_wc_adm_close2(adm_access, pool);
 }
 
-svn_error_t *
-svn_client_merge2(const char *source1,
-                  const svn_opt_revision_t *revision1,
-                  const char *source2,
-                  const svn_opt_revision_t *revision2,
-                  const char *target_wcpath,
-                  svn_boolean_t recurse,
-                  svn_boolean_t ignore_ancestry,
-                  svn_boolean_t force,
-                  svn_boolean_t dry_run,
-                  const apr_array_header_t *merge_options,
-                  svn_client_ctx_t *ctx,
-                  apr_pool_t *pool)
-{
-  return svn_client_merge3(source1, revision1, source2, revision2,
-                           target_wcpath,
-                           SVN_DEPTH_INFINITY_OR_FILES(recurse),
-                           ignore_ancestry, force, FALSE, dry_run,
-                           merge_options, ctx, pool);
-}
-
-svn_error_t *
-svn_client_merge(const char *source1,
-                 const svn_opt_revision_t *revision1,
-                 const char *source2,
-                 const svn_opt_revision_t *revision2,
-                 const char *target_wcpath,
-                 svn_boolean_t recurse,
-                 svn_boolean_t ignore_ancestry,
-                 svn_boolean_t force,
-                 svn_boolean_t dry_run,
-                 svn_client_ctx_t *ctx,
-                 apr_pool_t *pool)
-{
-  return svn_client_merge2(source1, revision1, source2, revision2,
-                           target_wcpath, recurse, ignore_ancestry, force,
-                           dry_run, NULL, ctx, pool);
-}
-
 
 /* If TARGET_WCPATH does not reflect a single-revision,
    svn_depth_infinity, pristine, unswitched working copy -- in other
@@ -7312,52 +7273,4 @@ svn_client_merge_peg3(const char *source,
 
   /* Shutdown the administrative session. */
   return svn_wc_adm_close2(adm_access, pool);
-}
-
-
-svn_error_t *
-svn_client_merge_peg2(const char *source,
-                      const svn_opt_revision_t *revision1,
-                      const svn_opt_revision_t *revision2,
-                      const svn_opt_revision_t *peg_revision,
-                      const char *target_wcpath,
-                      svn_boolean_t recurse,
-                      svn_boolean_t ignore_ancestry,
-                      svn_boolean_t force,
-                      svn_boolean_t dry_run,
-                      const apr_array_header_t *merge_options,
-                      svn_client_ctx_t *ctx,
-                      apr_pool_t *pool)
-{
-  svn_opt_revision_range_t range;
-  apr_array_header_t *ranges_to_merge =
-    apr_array_make(pool, 1, sizeof(svn_opt_revision_range_t *));
-
-  range.start = *revision1;
-  range.end = *revision2;
-  APR_ARRAY_PUSH(ranges_to_merge, svn_opt_revision_range_t *) = &range;
-  return svn_client_merge_peg3(source, ranges_to_merge,
-                               peg_revision,
-                               target_wcpath,
-                               SVN_DEPTH_INFINITY_OR_FILES(recurse),
-                               ignore_ancestry, force, FALSE, dry_run,
-                               merge_options, ctx, pool);
-}
-
-svn_error_t *
-svn_client_merge_peg(const char *source,
-                     const svn_opt_revision_t *revision1,
-                     const svn_opt_revision_t *revision2,
-                     const svn_opt_revision_t *peg_revision,
-                     const char *target_wcpath,
-                     svn_boolean_t recurse,
-                     svn_boolean_t ignore_ancestry,
-                     svn_boolean_t force,
-                     svn_boolean_t dry_run,
-                     svn_client_ctx_t *ctx,
-                     apr_pool_t *pool)
-{
-  return svn_client_merge_peg2(source, revision1, revision2, peg_revision,
-                               target_wcpath, recurse, ignore_ancestry, force,
-                               dry_run, NULL, ctx, pool);
 }

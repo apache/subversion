@@ -1849,7 +1849,8 @@ void SVNClient::unlock(Targets &targets, bool force)
 }
 void SVNClient::setRevProperty(jobject jthis, const char *path,
                                const char *name, Revision &rev,
-                               const char *value, bool force)
+                               const char *value, const char *original_value,
+                               bool force)
 {
     Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path, "path", );
@@ -1873,11 +1874,16 @@ void SVNClient::setRevProperty(jobject jthis, const char *path,
     }
 
     svn_string_t *val = svn_string_create(value, requestPool.pool());
+    svn_string_t *orig_val;
+    if (original_value != NULL)
+      orig_val = svn_string_create(original_value, requestPool.pool());
+    else
+      orig_val = NULL;
 
     svn_revnum_t set_revision;
-    SVN_JNI_ERR(svn_client_revprop_set(name, val, URL, rev.revision(),
-                                       &set_revision, force, ctx,
-                                       requestPool.pool()), );
+    SVN_JNI_ERR(svn_client_revprop_set2(name, val, orig_val, URL, rev.revision(),
+                                        &set_revision, force, ctx,
+                                        requestPool.pool()), );
 }
 
 struct version_status_baton
