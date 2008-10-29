@@ -1051,7 +1051,7 @@ Java_org_tigris_subversion_javahl_SVNClient_revProperties
 JNIEXPORT void JNICALL
 Java_org_tigris_subversion_javahl_SVNClient_setRevProperty
 (JNIEnv *env, jobject jthis, jstring jpath, jstring jname, jobject jrevision,
- jstring jvalue, jboolean jforce)
+ jstring jvalue, jstring joriginalValue, jboolean jforce)
 {
   JNIEntry(SVNClient, setRevProperty);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -1076,7 +1076,11 @@ Java_org_tigris_subversion_javahl_SVNClient_setRevProperty
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->setRevProperty(jthis, path, name, revision, value,
+  JNIStringHolder original_value(joriginalValue);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  cl->setRevProperty(jthis, path, name, revision, value, original_value,
                      jforce ? true: false);
 }
 

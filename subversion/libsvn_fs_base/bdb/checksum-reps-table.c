@@ -20,6 +20,7 @@
 #include "bdb_compat.h"
 #include "../fs.h"
 #include "../err.h"
+#include "../key-gen.h"
 #include "dbt.h"
 #include "../trail.h"
 #include "bdb-err.h"
@@ -48,6 +49,15 @@ int svn_fs_bdb__open_checksum_reps_table(DB **checksum_reps_p,
     {
       BDB_ERR(checksum_reps->close(checksum_reps, 0));
       return svn_fs_bdb__open_checksum_reps_table(checksum_reps_p, env, TRUE);
+    }
+
+  /* Create the initial `next-key' table entry.  */
+  if (create)
+    {
+      DBT key, value;
+      BDB_ERR(checksum_reps->put(checksum_reps, 0,
+                                 svn_fs_base__str_to_dbt(&key, NEXT_KEY_KEY),
+                                 svn_fs_base__str_to_dbt(&value, "0"), 0));
     }
   
   BDB_ERR(error);
@@ -150,4 +160,44 @@ svn_error_t *svn_fs_bdb__delete_checksum_rep(svn_fs_t *fs,
                    bfd->checksum_reps->del(bfd->checksum_reps,
                                            trail->db_txn, &key, 0)));
   return SVN_NO_ERROR;
+}
+
+svn_error_t *svn_fs_bdb__reserve_rep_reuse_id(const char **id_p,
+                                              svn_fs_t *fs,
+                                              trail_t *trail,
+                                              apr_pool_t *pool)
+{
+  base_fs_data_t *bfd = fs->fsap_data;
+  DBT query, result;
+  apr_size_t len;
+  char next_key[MAX_KEY_SIZE];
+  int db_err;
+
+  svn_fs_base__str_to_dbt(&query, NEXT_KEY_KEY);
+
+  /* Get the current value associated with the `next-key' key in the
+     `checksum-reps' table.  */
+  svn_fs_base__trail_debug(trail, "checksum-reps", "get");
+  SVN_ERR(BDB_WRAP(fs, _("allocating new representation reuse ID "
+                         "(getting 'next-key')"),
+                   bfd->checksum_reps->get(bfd->checksum_reps, trail->db_txn, 
+                                           &query,
+                                           svn_fs_base__result_dbt(&result),
+                                           0)));
+  svn_fs_base__track_dbt(&result, pool);
+
+  /* Set our return value. */
+  *id_p = apr_pstrmemdup(pool, result.data, result.size);
+
+  /* Bump to future key. */
+  len = result.size;
+  svn_fs_base__next_key(result.data, &len, next_key);
+  svn_fs_base__trail_debug(trail, "checksum_reps", "put");
+  db_err = bfd->checksum_reps->put(bfd->checksum_reps, trail->db_txn,
+                                   svn_fs_base__str_to_dbt(&query, 
+                                                           NEXT_KEY_KEY),
+                                   svn_fs_base__str_to_dbt(&result, next_key),
+                                   0);
+
+  return BDB_WRAP(fs, _("bumping next copy key"), db_err);
 }

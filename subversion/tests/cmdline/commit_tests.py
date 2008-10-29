@@ -2653,9 +2653,9 @@ def tree_conflicts_resolved(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'resolved', G)
   
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak('A/D/G/pi',  status='D ')
-  expected_status.remove('A/D/G/rho',
-                         'A/D/G/tau')
+  expected_status.tweak('A/D/G/pi',  status='D ', wc_rev='1')
+  expected_status.tweak('A/D/G/rho', status='M ')
+  expected_status.tweak('A/D/G/tau', status='D ')
 
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 

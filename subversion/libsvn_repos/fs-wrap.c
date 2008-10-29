@@ -310,37 +310,6 @@ svn_repos_fs_change_rev_prop3(svn_repos_t *repos,
 
 
 svn_error_t *
-svn_repos_fs_change_rev_prop2(svn_repos_t *repos,
-                              svn_revnum_t rev,
-                              const char *author,
-                              const char *name,
-                              const svn_string_t *new_value,
-                              svn_repos_authz_func_t authz_read_func,
-                              void *authz_read_baton,
-                              apr_pool_t *pool)
-{
-  return svn_repos_fs_change_rev_prop3(repos, rev, author, name, new_value,
-                                       TRUE, TRUE, authz_read_func,
-                                       authz_read_baton, pool);
-}
-
-
-
-svn_error_t *
-svn_repos_fs_change_rev_prop(svn_repos_t *repos,
-                             svn_revnum_t rev,
-                             const char *author,
-                             const char *name,
-                             const svn_string_t *new_value,
-                             apr_pool_t *pool)
-{
-  return svn_repos_fs_change_rev_prop2(repos, rev, author, name, new_value,
-                                       NULL, NULL, pool);
-}
-
-
-
-svn_error_t *
 svn_repos_fs_revision_prop(svn_string_t **value_p,
                            svn_repos_t *repos,
                            svn_revnum_t rev,

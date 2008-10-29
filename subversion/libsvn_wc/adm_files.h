@@ -34,32 +34,17 @@ extern "C" {
 
 
 
-/* Return a path to something in PATH's administrative area.
- * Return path to the thing in the tmp area if TMP is non-zero.
- * Varargs are (const char *)'s, the final one must be NULL.
- */
-const char * svn_wc__adm_path(const char *path,
-                              svn_boolean_t tmp,
-                              apr_pool_t *pool,
-                              ...);
+/* Return a path to CHILD in the administrative area of PATH. If CHILD is
+   NULL, then the path to the admin area is returned. The result is
+   allocated in RESULT_POOL. */
+const char *svn_wc__adm_child(const char *path,
+                              const char *child,
+                              apr_pool_t *result_pool);
 
+/* Return TRUE if the administrative area exists for this directory. */
+svn_boolean_t svn_wc__adm_area_exists(const svn_wc_adm_access_t *adm_access,
+                                      apr_pool_t *pool);
 
-/* Return TRUE if a thing in the administrative area exists, FALSE
-   otherwise. */
-svn_boolean_t svn_wc__adm_path_exists(const char *path,
-                                      svn_boolean_t tmp,
-                                      apr_pool_t *pool,
-                                      ...);
-
-
-/* Make `PATH/<adminstrative_subdir>/THING'. The caller should ensure
-   that a write lock is active for PATH. */
-svn_error_t *svn_wc__make_adm_thing(const char *path,
-                                    const char *thing,
-                                    svn_node_kind_t type,
-                                    apr_fileperms_t perms,
-                                    svn_boolean_t tmp,
-                                    apr_pool_t *scratch_pool);
 
 /* Create a killme file in the administrative area, indicating that the
    directory containing the administrative area should be removed.
@@ -127,6 +112,9 @@ svn_error_t *svn_wc__prop_path(const char **prop_path,
 
 /* Yo, read this if you open and close files in the adm area:
  *
+ * ### obsolete documentation. see implementation for now. this entire
+ * ### section is likely to be tossed out "soon".
+ *
  * When you open a file for writing with svn_wc__open_foo(), the file
  * is actually opened in the corresponding location in the tmp/
  * directory.  Opening with APR_APPEND is not supported.  You are
@@ -142,20 +130,29 @@ svn_error_t *svn_wc__prop_path(const char **prop_path,
  * atomically, but you get some control over when the rename happens.
  */
 
-/* Open `PATH/<adminstrative_subdir>/FNAME'. */
-svn_error_t *svn_wc__open_adm_file(apr_file_t **handle,
-                                   const char *path,
-                                   const char *fname,
-                                   apr_int32_t flags,
-                                   apr_pool_t *pool);
-
+/* Open `PATH/<adminstrative_subdir>/FNAME'. Note: STREAM and TEMP_FILE_PATH
+   should be passed to svn_wc__close_adm_stream when you're done writing. */
+svn_error_t *svn_wc__open_adm_writable(svn_stream_t **stream,
+                                       const char **temp_file_path,
+                                       const char *path,
+                                       const char *fname,
+                                       apr_pool_t *result_pool,
+                                       apr_pool_t *scratch_pool);
 
 /* Close `PATH/<adminstrative_subdir>/FNAME'. */
-svn_error_t *svn_wc__close_adm_file(apr_file_t *fp,
-                                    const char *path,
-                                    const char *fname,
-                                    int sync,
-                                    apr_pool_t *pool);
+svn_error_t *svn_wc__close_adm_stream(svn_stream_t *stream,
+                                      const char *temp_file_path,
+                                      const char *path,
+                                      const char *fname,
+                                      apr_pool_t *scratch_pool);
+
+/* Open `PATH/<adminstrative_subdir>/FNAME'. */
+svn_error_t *svn_wc__open_adm_stream(svn_stream_t **stream,
+                                     const char *path,
+                                     const char *fname,
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool);
+
 
 /* Remove `PATH/<adminstrative_subdir>/FILENAME'. */
 svn_error_t *svn_wc__remove_adm_file(const svn_wc_adm_access_t *adm_access,
@@ -192,9 +189,10 @@ svn_error_t *svn_wc__adm_destroy(svn_wc_adm_access_t *adm_access,
 
 
 /* Cleanup the temporary storage area of the administrative
-   directory. */
-svn_error_t *svn_wc__adm_cleanup_tmp_area(svn_wc_adm_access_t *adm_access,
-                                          apr_pool_t *scratch_pool);
+   directory (assuming temp and admin areas exist). */
+svn_error_t *
+svn_wc__adm_cleanup_tmp_area(const svn_wc_adm_access_t *adm_access,
+                             apr_pool_t *scratch_pool);
 
 
 #ifdef __cplusplus

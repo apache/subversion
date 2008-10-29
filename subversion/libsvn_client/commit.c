@@ -801,40 +801,6 @@ svn_client_import3(svn_commit_info_t **commit_info_p,
 }
 
 
-svn_error_t *
-svn_client_import2(svn_commit_info_t **commit_info_p,
-                   const char *path,
-                   const char *url,
-                   svn_boolean_t nonrecursive,
-                   svn_boolean_t no_ignore,
-                   svn_client_ctx_t *ctx,
-                   apr_pool_t *pool)
-{
-  return svn_client_import3(commit_info_p,
-                            path, url,
-                            SVN_DEPTH_INFINITY_OR_FILES(! nonrecursive),
-                            no_ignore, FALSE, NULL, ctx, pool);
-}
-
-svn_error_t *
-svn_client_import(svn_client_commit_info_t **commit_info_p,
-                  const char *path,
-                  const char *url,
-                  svn_boolean_t nonrecursive,
-                  svn_client_ctx_t *ctx,
-                  apr_pool_t *pool)
-{
-  svn_commit_info_t *commit_info = NULL;
-  svn_error_t *err;
-
-  err = svn_client_import2(&commit_info,
-                           path, url, nonrecursive,
-                           FALSE, ctx, pool);
-  /* These structs have the same layout for the common fields. */
-  *commit_info_p = (svn_client_commit_info_t *) commit_info;
-  return err;
-}
-
 static svn_error_t *
 remove_tmpfiles(apr_hash_t *tempfiles,
                 apr_pool_t *pool)
@@ -1749,49 +1715,4 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
     *commit_info_p = svn_create_commit_info(pool);
 
   return reconcile_errors(cmt_err, unlock_err, bump_err, cleanup_err, pool);
-}
-
-svn_error_t *
-svn_client_commit3(svn_commit_info_t **commit_info_p,
-                   const apr_array_header_t *targets,
-                   svn_boolean_t recurse,
-                   svn_boolean_t keep_locks,
-                   svn_client_ctx_t *ctx,
-                   apr_pool_t *pool)
-{
-  svn_depth_t depth = SVN_DEPTH_INFINITY_OR_FILES(recurse);
-
-  return svn_client_commit4(commit_info_p, targets, depth, keep_locks,
-                            FALSE, NULL, NULL, ctx, pool);
-}
-
-svn_error_t *
-svn_client_commit2(svn_client_commit_info_t **commit_info_p,
-                   const apr_array_header_t *targets,
-                   svn_boolean_t recurse,
-                   svn_boolean_t keep_locks,
-                   svn_client_ctx_t *ctx,
-                   apr_pool_t *pool)
-{
-  svn_commit_info_t *commit_info = NULL;
-  svn_error_t *err;
-
-  err = svn_client_commit3(&commit_info, targets, recurse, keep_locks,
-                           ctx, pool);
-  /* These structs have the same layout for the common fields. */
-  *commit_info_p = (svn_client_commit_info_t *) commit_info;
-  return err;
-}
-
-svn_error_t *
-svn_client_commit(svn_client_commit_info_t **commit_info_p,
-                  const apr_array_header_t *targets,
-                  svn_boolean_t nonrecursive,
-                  svn_client_ctx_t *ctx,
-                  apr_pool_t *pool)
-{
-  return svn_client_commit2(commit_info_p, targets,
-                            nonrecursive ? FALSE : TRUE,
-                            TRUE,
-                            ctx, pool);
 }

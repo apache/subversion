@@ -875,23 +875,26 @@ def revert_tree_conflicts_in_updated_files(sbox):
   expected_output = svntest.verify.UnorderedOutput(
    ["Reverted '%s'\n" % G,
     "Reverted '%s'\n" % os.path.join(G, 'pi'),
+    "Reverted '%s'\n" % os.path.join(G, 'rho'),
+    "Reverted '%s'\n" % os.path.join(G, 'tau'),
     ])
   svntest.actions.run_and_verify_svn(None, expected_output, [], 
                                      'revert', '-R', G)
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak('A/D/G',     status='  ')
-  expected_status.tweak('A/D/G/pi',  status='  ')
-  expected_status.remove('A/D/G/rho',
-                         'A/D/G/tau')
+  expected_status.tweak('A/D/G/pi',  status='  ', wc_rev='1')
+
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
   
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/D/G/pi',
-                      contents="This is the file 'pi'.\nIncoming edit.\n")
-  expected_disk.tweak('A/D/G/rho',
-                      contents="This is the file 'rho'.\nLocal edit.\n")
-  expected_disk.remove('A/D/G/tau')
+                      contents="This is the file 'pi'.\n")
+  expected_disk.tweak('A/D/G/rho', status=None,
+                      contents="This is the file 'rho'.\n")
+  ### TODO: Why does the local edit not show in rho? Is that ok?
+  expected_disk.tweak('A/D/G/tau',
+                      contents="This is the file 'tau'.\n")
   svntest.actions.verify_disk(wc_dir, expected_disk)
   
   # Revert only G in wc 2
@@ -903,6 +906,8 @@ def revert_tree_conflicts_in_updated_files(sbox):
 
   expected_status.wc_dir = wc_dir_2
   expected_status.tweak('A/D/G/pi',  status='D ') # not a recursive revert
+  expected_status.tweak('A/D/G/rho',  status='M ') # not a recursive revert
+  expected_status.tweak('A/D/G/tau',  status='D ') # not a recursive revert
   svntest.actions.run_and_verify_status(wc_dir_2, expected_status)
   
   

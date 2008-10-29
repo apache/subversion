@@ -804,54 +804,6 @@ svn_wc_process_committed4(const char *path,
   return svn_wc__run_log(adm_access, NULL, pool);
 }
 
-svn_error_t *
-svn_wc_process_committed3(const char *path,
-                          svn_wc_adm_access_t *adm_access,
-                          svn_boolean_t recurse,
-                          svn_revnum_t new_revnum,
-                          const char *rev_date,
-                          const char *rev_author,
-                          apr_array_header_t *wcprop_changes,
-                          svn_boolean_t remove_lock,
-                          const unsigned char *digest,
-                          apr_pool_t *pool)
-{
-  return svn_wc_process_committed4(path, adm_access, recurse, new_revnum,
-                                   rev_date, rev_author, wcprop_changes,
-                                   remove_lock, FALSE, digest, pool);
-}
-
-svn_error_t *
-svn_wc_process_committed2(const char *path,
-                          svn_wc_adm_access_t *adm_access,
-                          svn_boolean_t recurse,
-                          svn_revnum_t new_revnum,
-                          const char *rev_date,
-                          const char *rev_author,
-                          apr_array_header_t *wcprop_changes,
-                          svn_boolean_t remove_lock,
-                          apr_pool_t *pool)
-{
-  return svn_wc_process_committed3(path, adm_access, recurse, new_revnum,
-                                   rev_date, rev_author, wcprop_changes,
-                                   remove_lock, NULL, pool);
-}
-
-svn_error_t *
-svn_wc_process_committed(const char *path,
-                         svn_wc_adm_access_t *adm_access,
-                         svn_boolean_t recurse,
-                         svn_revnum_t new_revnum,
-                         const char *rev_date,
-                         const char *rev_author,
-                         apr_array_header_t *wcprop_changes,
-                         apr_pool_t *pool)
-{
-  return svn_wc_process_committed2(path, adm_access, recurse, new_revnum,
-                                   rev_date, rev_author, wcprop_changes,
-                                   FALSE, pool);
-}
-
 /* Remove FILE if it exists and is a file.  If it does not exist, do
    nothing.  If it is not a file, error. */
 static svn_error_t *
@@ -1295,9 +1247,9 @@ svn_wc_delete3(const char *path,
 
           if (was_kind != svn_node_dir) /* Dirs don't have text-bases */
             /* Restore the original text-base */
-            SVN_ERR(svn_wc__loggy_move(&log_accum, NULL, adm_access,
+            SVN_ERR(svn_wc__loggy_move(&log_accum, adm_access,
                                        text_revert, text_base,
-                                       FALSE, pool));
+                                       pool));
 
           SVN_ERR(svn_wc__loggy_revert_props_restore(&log_accum,
                                                      path, adm_access, pool));
@@ -1332,37 +1284,6 @@ svn_wc_delete3(const char *path,
     }
 
   return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_wc_delete2(const char *path,
-               svn_wc_adm_access_t *adm_access,
-               svn_cancel_func_t cancel_func,
-               void *cancel_baton,
-               svn_wc_notify_func2_t notify_func,
-               void *notify_baton,
-               apr_pool_t *pool)
-{
-  return svn_wc_delete3(path, adm_access, cancel_func, cancel_baton,
-                        notify_func, notify_baton, FALSE, pool);
-}
-
-svn_error_t *
-svn_wc_delete(const char *path,
-              svn_wc_adm_access_t *adm_access,
-              svn_cancel_func_t cancel_func,
-              void *cancel_baton,
-              svn_wc_notify_func_t notify_func,
-              void *notify_baton,
-              apr_pool_t *pool)
-{
-  svn_wc__compat_notify_baton_t nb;
-
-  nb.func = notify_func;
-  nb.baton = notify_baton;
-
-  return svn_wc_delete2(path, adm_access, cancel_func, cancel_baton,
-                        svn_wc__compat_call_notify_func, &nb, pool);
 }
 
 svn_error_t *
@@ -1554,8 +1475,8 @@ svn_wc_add3(const char *path,
         {
           const char *textb = svn_wc__text_base_path(path, FALSE, pool);
           const char *rtextb = svn_wc__text_revert_path(path, FALSE, pool);
-          SVN_ERR(svn_wc__loggy_move(&log_accum, NULL, adm_access,
-                                     textb, rtextb, FALSE, pool));
+          SVN_ERR(svn_wc__loggy_move(&log_accum, adm_access,
+                                     textb, rtextb, pool));
         }
       SVN_ERR(svn_wc__loggy_revert_props_create(&log_accum, path,
                                                 adm_access, TRUE, pool));
@@ -1666,44 +1587,6 @@ svn_wc_add3(const char *path,
     }
 
   return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_wc_add2(const char *path,
-            svn_wc_adm_access_t *parent_access,
-            const char *copyfrom_url,
-            svn_revnum_t copyfrom_rev,
-            svn_cancel_func_t cancel_func,
-            void *cancel_baton,
-            svn_wc_notify_func2_t notify_func,
-            void *notify_baton,
-            apr_pool_t *pool)
-{
-  return svn_wc_add3(path, parent_access, svn_depth_infinity,
-                     copyfrom_url, copyfrom_rev,
-                     cancel_func, cancel_baton,
-                     notify_func, notify_baton, pool);
-}
-
-svn_error_t *
-svn_wc_add(const char *path,
-           svn_wc_adm_access_t *parent_access,
-           const char *copyfrom_url,
-           svn_revnum_t copyfrom_rev,
-           svn_cancel_func_t cancel_func,
-           void *cancel_baton,
-           svn_wc_notify_func_t notify_func,
-           void *notify_baton,
-           apr_pool_t *pool)
-{
-  svn_wc__compat_notify_baton_t nb;
-
-  nb.func = notify_func;
-  nb.baton = notify_baton;
-
-  return svn_wc_add2(path, parent_access, copyfrom_url, copyfrom_rev,
-                     cancel_func, cancel_baton,
-                     svn_wc__compat_call_notify_func, &nb, pool);
 }
 
 
@@ -1919,12 +1802,12 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
 
       if (revert_base_path)
         {
-          SVN_ERR(svn_wc__loggy_copy
-                  (&log_accum, NULL, adm_access, svn_wc__copy_translate,
-                   revert_base_path, fullpath, FALSE, pool));
-          SVN_ERR(svn_wc__loggy_move
-                  (&log_accum, NULL, adm_access,
-                   revert_base_path, regular_base_path, FALSE, pool));
+          SVN_ERR(svn_wc__loggy_copy(&log_accum, adm_access,
+                                     revert_base_path, fullpath,
+                                     pool));
+          SVN_ERR(svn_wc__loggy_move(&log_accum, adm_access,
+                                     revert_base_path, regular_base_path,
+                                     pool));
           *reverted = TRUE;
         }
       else
@@ -1940,9 +1823,9 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
 
           if (reinstall_working)
             {
-              SVN_ERR(svn_wc__loggy_copy
-                      (&log_accum, NULL, adm_access, svn_wc__copy_translate,
-                       regular_base_path, fullpath, FALSE, pool));
+              SVN_ERR(svn_wc__loggy_copy(&log_accum, adm_access,
+                                         regular_base_path, fullpath,
+                                         pool));
               *reverted = TRUE;
             }
         }
@@ -2414,45 +2297,6 @@ svn_wc_revert3(const char *path,
 
 
 svn_error_t *
-svn_wc_revert2(const char *path,
-               svn_wc_adm_access_t *parent_access,
-               svn_boolean_t recursive,
-               svn_boolean_t use_commit_times,
-               svn_cancel_func_t cancel_func,
-               void *cancel_baton,
-               svn_wc_notify_func2_t notify_func,
-               void *notify_baton,
-               apr_pool_t *pool)
-{
-  return svn_wc_revert3(path, parent_access,
-                        SVN_DEPTH_INFINITY_OR_EMPTY(recursive),
-                        use_commit_times, NULL, cancel_func, cancel_baton,
-                        notify_func, notify_baton, pool);
-}
-
-
-svn_error_t *
-svn_wc_revert(const char *path,
-              svn_wc_adm_access_t *parent_access,
-              svn_boolean_t recursive,
-              svn_boolean_t use_commit_times,
-              svn_cancel_func_t cancel_func,
-              void *cancel_baton,
-              svn_wc_notify_func_t notify_func,
-              void *notify_baton,
-              apr_pool_t *pool)
-{
-  svn_wc__compat_notify_baton_t nb;
-
-  nb.func = notify_func;
-  nb.baton = notify_baton;
-
-  return svn_wc_revert2(path, parent_access, recursive, use_commit_times,
-                        cancel_func, cancel_baton,
-                        svn_wc__compat_call_notify_func, &nb, pool);
-}
-
-svn_error_t *
 svn_wc_get_pristine_copy_path(const char *path,
                               const char **pristine_path,
                               apr_pool_t *pool)
@@ -2917,9 +2761,8 @@ resolve_conflict_on_entry(const char *path,
              the successful resolution.  */
           svn_boolean_t text_conflict, prop_conflict, tree_conflict;
           SVN_ERR(svn_wc_conflicted_p2(&text_conflict, &prop_conflict,
-                                       &tree_conflict,
-                                       svn_wc_adm_access_path(conflict_dir),
-                                       entry, pool));
+                                       &tree_conflict, path, conflict_dir,
+                                       pool));
           if ((! (resolve_text && text_conflict))
               && (! (resolve_props && prop_conflict))
               && (! (resolve_tree && tree_conflict)))
@@ -2992,68 +2835,6 @@ resolve_walk_callbacks =
 
 
 /* The public function */
-svn_error_t *
-svn_wc_resolved_conflict(const char *path,
-                         svn_wc_adm_access_t *adm_access,
-                         svn_boolean_t resolve_text,
-                         svn_boolean_t resolve_props,
-                         svn_boolean_t recurse,
-                         svn_wc_notify_func_t notify_func,
-                         void *notify_baton,
-                         apr_pool_t *pool)
-{
-  svn_wc__compat_notify_baton_t nb;
-
-  nb.func = notify_func;
-  nb.baton = notify_baton;
-
-  return svn_wc_resolved_conflict2(path, adm_access,
-                                   resolve_text, resolve_props, recurse,
-                                   svn_wc__compat_call_notify_func, &nb,
-                                   NULL, NULL, pool);
-
-}
-
-svn_error_t *
-svn_wc_resolved_conflict2(const char *path,
-                          svn_wc_adm_access_t *adm_access,
-                          svn_boolean_t resolve_text,
-                          svn_boolean_t resolve_props,
-                          svn_boolean_t recurse,
-                          svn_wc_notify_func2_t notify_func,
-                          void *notify_baton,
-                          svn_cancel_func_t cancel_func,
-                          void *cancel_baton,
-                          apr_pool_t *pool)
-{
-  return svn_wc_resolved_conflict3(path, adm_access, resolve_text,
-                                   resolve_props,
-                                   SVN_DEPTH_INFINITY_OR_EMPTY(recurse),
-                                   svn_wc_conflict_choose_merged,
-                                   notify_func, notify_baton, cancel_func,
-                                   cancel_baton, pool);
-}
-
-svn_error_t *
-svn_wc_resolved_conflict3(const char *path,
-                          svn_wc_adm_access_t *adm_access,
-                          svn_boolean_t resolve_text,
-                          svn_boolean_t resolve_props,
-                          svn_depth_t depth,
-                          svn_wc_conflict_choice_t conflict_choice,
-                          svn_wc_notify_func2_t notify_func,
-                          void *notify_baton,
-                          svn_cancel_func_t cancel_func,
-                          void *cancel_baton,
-                          apr_pool_t *pool)
-{
-  return svn_wc_resolved_conflict4(path, adm_access, resolve_text,
-                                   resolve_props, FALSE, depth,
-                                   svn_wc_conflict_choose_merged,
-                                   notify_func, notify_baton, cancel_func,
-                                   cancel_baton, pool);
-}
-
 svn_error_t *
 svn_wc_resolved_conflict4(const char *path,
                           svn_wc_adm_access_t *adm_access,

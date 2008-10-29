@@ -630,7 +630,7 @@ svn_error_t *
 svn_fs_begin_txn(svn_fs_txn_t **txn_p, svn_fs_t *fs, svn_revnum_t rev,
                  apr_pool_t *pool)
 {
-  return fs->vtable->begin_txn(txn_p, fs, rev, 0, pool);
+  return svn_fs_begin_txn2(txn_p, fs, rev, 0, pool);
 }
 
 svn_error_t *

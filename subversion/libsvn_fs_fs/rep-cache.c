@@ -28,7 +28,7 @@
 /* A few magic values */
 #define REP_CACHE_SCHEMA_FORMAT   1
 
-static const char *upgrade_sql[] = { NULL,
+static const char * const upgrade_sql[] = { NULL,
   "pragma auto_vacuum = 1;"
   APR_EOL_STR
   "create table rep_cache (hash text not null primary key,   "
@@ -49,33 +49,21 @@ cleanup_db_apr(void *data)
   svn_fs_t *fs = data;
   fs_fs_data_t *ffd = fs->fsap_data;
   svn_error_t *err;
+  int i;
 
-  if (ffd->rep_cache.get_rep_stmt) 
-    {
-      err = svn_sqlite__finalize(ffd->rep_cache.get_rep_stmt);
-      if (err)
-        goto err_cleanup;
-    }
+  svn_sqlite__stmt_t *stmts[] = { ffd->rep_cache.get_rep_stmt,
+                                  ffd->rep_cache.set_rep_stmt,
+                                  ffd->rep_cache.inc_select_stmt,
+                                  ffd->rep_cache.inc_update_stmt };
 
-  if (ffd->rep_cache.set_rep_stmt) 
+  for (i = 0; i < 4; i++)
     {
-      err = svn_sqlite__finalize(ffd->rep_cache.set_rep_stmt);
-      if (err)
-        goto err_cleanup;
-    }
-
-  if (ffd->rep_cache.inc_select_stmt)
-    {
-      err = svn_sqlite__finalize(ffd->rep_cache.inc_select_stmt);
-      if (err)
-        goto err_cleanup;
-    }
-
-  if (ffd->rep_cache.inc_update_stmt)
-    {
-      err = svn_sqlite__finalize(ffd->rep_cache.inc_update_stmt);
-      if (err)
-        goto err_cleanup;
+      if (stmts[i])
+        {
+          err = svn_sqlite__finalize(stmts[i]);
+          if (err)
+            goto err_cleanup;
+        }
     }
 
   err = svn_sqlite__close(ffd->rep_cache.db, SVN_NO_ERROR);
