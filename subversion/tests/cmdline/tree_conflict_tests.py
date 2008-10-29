@@ -425,19 +425,19 @@ def ensure_tree_conflict(sbox, operation,
       else:
         raise "unknown operation: '" + operation + "'"
 
+      if modaction.startswith('f'):
+        victim = os.path.join(target_path, 'F')
+      else:
+        victim = os.path.join(target_path, 'D')
+
       verbose_print("--- Trying to commit (expecting 'conflict' error)")
       ### run_and_verify_commit() requires an "output_tree" argument, but
       # here we get away with passing None because we know an implementation
       # detail: namely that it's not going to look at that argument if it
       # gets the stderr that we're expecting.
-      run_and_verify_commit(".", None, None, ".*conflict.*",
-                            target_path)
+      run_and_verify_commit(".", None, None, ".*conflict.*", victim)
 
       verbose_print("--- Checking that 'status' reports the conflict")
-      if modaction.startswith('f'):
-        victim = os.path.join(target_path, 'F')
-      else:
-        victim = os.path.join(target_path, 'D')
       expected_stdout = svntest.verify.RegexOutput("..+C.* " + 
                                                    re.escape(victim) + "$",
                                                    match_all=False)

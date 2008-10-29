@@ -84,51 +84,6 @@ struct node_baton
 };
 
 
-
-/*----------------------------------------------------------------------*/
-
-/** A conversion function between the two vtable types. **/
-static svn_repos_parser_fns_t *
-fns_from_fns2(const svn_repos_parse_fns2_t *fns2,
-              apr_pool_t *pool)
-{
-  svn_repos_parser_fns_t *fns;
-
-  fns = apr_palloc(pool, sizeof(*fns));
-  fns->new_revision_record = fns2->new_revision_record;
-  fns->uuid_record = fns2->uuid_record;
-  fns->new_node_record = fns2->new_node_record;
-  fns->set_revision_property = fns2->set_revision_property;
-  fns->set_node_property = fns2->set_node_property;
-  fns->remove_node_props = fns2->remove_node_props;
-  fns->set_fulltext = fns2->set_fulltext;
-  fns->close_node = fns2->close_node;
-  fns->close_revision = fns2->close_revision;
-  return fns;
-}
-
-static svn_repos_parse_fns2_t *
-fns2_from_fns(const svn_repos_parser_fns_t *fns,
-              apr_pool_t *pool)
-{
-  svn_repos_parse_fns2_t *fns2;
-
-  fns2 = apr_palloc(pool, sizeof(*fns2));
-  fns2->new_revision_record = fns->new_revision_record;
-  fns2->uuid_record = fns->uuid_record;
-  fns2->new_node_record = fns->new_node_record;
-  fns2->set_revision_property = fns->set_revision_property;
-  fns2->set_node_property = fns->set_node_property;
-  fns2->remove_node_props = fns->remove_node_props;
-  fns2->set_fulltext = fns->set_fulltext;
-  fns2->close_node = fns->close_node;
-  fns2->close_revision = fns->close_revision;
-  fns2->delete_node_property = NULL;
-  fns2->apply_textdelta = NULL;
-  return fns2;
-}
-
-
 /*----------------------------------------------------------------------*/
 
 /** The parser and related helper funcs **/
@@ -849,20 +804,6 @@ svn_repos_parse_dumpstream2(svn_stream_t *stream,
 }
 
 
-svn_error_t *
-svn_repos_parse_dumpstream(svn_stream_t *stream,
-                           const svn_repos_parser_fns_t *parse_fns,
-                           void *parse_baton,
-                           svn_cancel_func_t cancel_func,
-                           void *cancel_baton,
-                           apr_pool_t *pool)
-{
-  svn_repos_parse_fns2_t *fns2 = fns2_from_fns(parse_fns, pool);
-
-  return svn_repos_parse_dumpstream2(stream, fns2, parse_baton,
-                                     cancel_func, cancel_baton, pool);
-}
-
 /*----------------------------------------------------------------------*/
 
 /** vtable for doing commits to a fs **/
@@ -1448,29 +1389,6 @@ svn_repos_get_fs_build_parser2(const svn_repos_parse_fns2_t **callbacks,
 }
 
 
-
-svn_error_t *
-svn_repos_get_fs_build_parser(const svn_repos_parser_fns_t **parser_callbacks,
-                              void **parse_baton,
-                              svn_repos_t *repos,
-                              svn_boolean_t use_history,
-                              enum svn_repos_load_uuid uuid_action,
-                              svn_stream_t *outstream,
-                              const char *parent_dir,
-                              apr_pool_t *pool)
-{
-  const svn_repos_parse_fns2_t *fns2;
-
-  SVN_ERR(svn_repos_get_fs_build_parser2(&fns2, parse_baton, repos,
-                                         use_history, uuid_action, outstream,
-                                         parent_dir, pool));
-
-  *parser_callbacks = fns_from_fns2(fns2, pool);
-  return SVN_NO_ERROR;
-}
-
-
-
 svn_error_t *
 svn_repos_load_fs2(svn_repos_t *repos,
                    svn_stream_t *dumpstream,
@@ -1505,20 +1423,4 @@ svn_repos_load_fs2(svn_repos_t *repos,
 
   return svn_repos_parse_dumpstream2(dumpstream, parser, parse_baton,
                                      cancel_func, cancel_baton, pool);
-}
-
-
-svn_error_t *
-svn_repos_load_fs(svn_repos_t *repos,
-                  svn_stream_t *dumpstream,
-                  svn_stream_t *feedback_stream,
-                  enum svn_repos_load_uuid uuid_action,
-                  const char *parent_dir,
-                  svn_cancel_func_t cancel_func,
-                  void *cancel_baton,
-                  apr_pool_t *pool)
-{
-  return svn_repos_load_fs2(repos, dumpstream, feedback_stream,
-                            uuid_action, parent_dir, FALSE, FALSE,
-                            cancel_func, cancel_baton, pool);
 }

@@ -583,7 +583,7 @@ svn_cl__cleanup_log_msg(void *log_msg_baton,
                           svn_path_local_style(lmb->tmpfile_left, pool));
   svn_error_compose(commit_err,
                     svn_error_create(commit_err->apr_err, err,
-                      _("Your commit message was left in"
+                      _("Your commit message was left in "
                         "a temporary file:")));
   return commit_err;
 }

@@ -62,6 +62,7 @@ svn_auth__simple_password_get(const char **password,
                               apr_hash_t *creds,
                               const char *realmstring,
                               const char *username,
+                              svn_config_t *config,
                               svn_boolean_t non_interactive,
                               apr_pool_t *pool)
 {
@@ -86,6 +87,7 @@ svn_auth__simple_password_set(apr_hash_t *creds,
                               const char *realmstring,
                               const char *username,
                               const char *password,
+                              svn_config_t *config,
                               svn_boolean_t non_interactive,
                               apr_pool_t *pool)
 {
@@ -204,7 +206,7 @@ svn_auth__simple_first_creds_helper(void **credentials,
           if (have_passtype)
             {
               if (!password_get(&default_password, creds_hash, realmstring,
-                                username, non_interactive, pool))
+                                username, cfg, non_interactive, pool))
                 {
                   need_to_save = TRUE;
                 }
@@ -234,7 +236,7 @@ svn_auth__simple_first_creds_helper(void **credentials,
               else
                 {
                   if (!password_get(&password, creds_hash, realmstring,
-                                    username, non_interactive, pool))
+                                    username, cfg, non_interactive, pool))
                     password = NULL;
 
                   /* If the auth data didn't contain a password type,
@@ -300,6 +302,9 @@ svn_auth__simple_save_creds_helper(svn_boolean_t *saved,
   svn_auth_cred_simple_t *creds = credentials;
   apr_hash_t *creds_hash = NULL;
   const char *config_dir;
+  svn_config_t *cfg = apr_hash_get(parameters,
+                                   SVN_AUTH_PARAM_CONFIG,
+                                   APR_HASH_KEY_STRING);
   svn_error_t *err;
   svn_boolean_t dont_store_passwords =
     apr_hash_get(parameters,
@@ -445,7 +450,7 @@ svn_auth__simple_save_creds_helper(svn_boolean_t *saved,
         {
           *saved = password_set(creds_hash, realmstring,
                                 creds->username, creds->password,
-                                non_interactive, pool);
+                                cfg, non_interactive, pool);
           if (*saved && passtype)
             /* Store the password type with the auth data, so that we
                know which provider owns the password. */

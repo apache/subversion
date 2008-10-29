@@ -198,7 +198,8 @@ svn_wc__adm_area_exists(const svn_wc_adm_access_t *adm_access,
 /*** Making and using files in the adm area. ***/
 
 
-svn_error_t *
+/* */
+static svn_error_t *
 make_adm_subdir(const char *path,
                 const char *subdir,
                 svn_boolean_t tmp,
@@ -702,8 +703,6 @@ static svn_error_t *
 init_adm_tmp_area(const svn_wc_adm_access_t *adm_access,
                   apr_pool_t *pool)
 {
-  /* Default perms */
-  apr_fileperms_t perms = APR_OS_DEFAULT;
   const char *path;
 
   SVN_ERR(svn_wc__adm_write_check(adm_access, pool));
@@ -738,9 +737,6 @@ init_adm(const char *path,
          apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
-
-  /* Default perms */
-  apr_fileperms_t perms = APR_OS_DEFAULT;
 
   /* First, make an empty administrative area. */
   SVN_ERR(make_empty_adm(path, pool));
@@ -799,29 +795,6 @@ svn_wc_ensure_adm3(const char *path,
   SVN_ERR(check_adm_exists(&exists_already, path, url, revision, pool));
   return (exists_already ? SVN_NO_ERROR :
           init_adm(path, uuid, url, repos, revision, depth, pool));
-}
-
-svn_error_t *
-svn_wc_ensure_adm2(const char *path,
-                   const char *uuid,
-                   const char *url,
-                   const char *repos,
-                   svn_revnum_t revision,
-                   apr_pool_t *pool)
-{
-  return svn_wc_ensure_adm3(path, uuid, url, repos, revision,
-                            svn_depth_infinity, pool);
-}
-
-
-svn_error_t *
-svn_wc_ensure_adm(const char *path,
-                  const char *uuid,
-                  const char *url,
-                  svn_revnum_t revision,
-                  apr_pool_t *pool)
-{
-  return svn_wc_ensure_adm2(path, uuid, url, NULL, revision, pool);
 }
 
 svn_error_t *

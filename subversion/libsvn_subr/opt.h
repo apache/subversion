@@ -1,4 +1,5 @@
-/* fsguid.h : internal interface to operations on FS-global unique identifiers
+/*
+ * opt.h: share svn_opt__* functions
  *
  * ====================================================================
  * Copyright (c) 2008 CollabNet.  All rights reserved.
@@ -15,29 +16,30 @@
  * ====================================================================
  */
 
-#ifndef SVN_LIBSVN_FS_FSGUID_H
-#define SVN_LIBSVN_FS_FSGUID_H
+#ifndef SVN_LIBSVN_SUBR_OPT_H
+#define SVN_LIBSVN_SUBR_OPT_H
+
+#include "svn_opt.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
-
-
-/* Reserve for use a unique identifier global in scope within FS, and return
-   that identifier in *FSGUID.  Use POOL for allocations.  If TRAIL
-   is non-NULL, use it (otherwise a one-off trail will be used, so be
-   careful not to pass a NULL TRAIL if the code stack is really
-   inside a Berkeley DB transaction).  */
+/* Print version info for PGM_NAME.  If QUIET is  true, print in
+ * brief.  Else if QUIET is not true, print the version more
+ * verbosely, and if FOOTER is non-null, print it following the
+ * version information.
+ *
+ * Use POOL for temporary allocations.
+ */
 svn_error_t *
-svn_fs_base__reserve_fsguid(svn_fs_t *fs, 
-                            const char **fsguid,
-                            trail_t *trail,
+svn_opt__print_version_info(const char *pgm_name,
+                            const char *footer,
+                            svn_boolean_t quiet,
                             apr_pool_t *pool);
-
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
-#endif /* SVN_LIBSVN_FS_FSGUID_H */
+#endif /* SVN_LIBSVN_SUBR_OPT_H */

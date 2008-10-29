@@ -1590,27 +1590,6 @@ svn_repos_recover3(const char *path,
   return SVN_NO_ERROR;
 }
 
-
-svn_error_t *
-svn_repos_recover2(const char *path,
-                   svn_boolean_t nonblocking,
-                   svn_error_t *(*start_callback)(void *baton),
-                   void *start_callback_baton,
-                   apr_pool_t *pool)
-{
-  return svn_repos_recover3(path, nonblocking,
-                            start_callback, start_callback_baton,
-                            NULL, NULL,
-                            pool);
-}
-
-svn_error_t *
-svn_repos_recover(const char *path,
-                  apr_pool_t *pool)
-{
-  return svn_repos_recover2(path, FALSE, NULL, NULL, pool);
-}
-
 svn_error_t *svn_repos_db_logfiles(apr_array_header_t **logfiles,
                                    const char *path,
                                    svn_boolean_t only_unused,
