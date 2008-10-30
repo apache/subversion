@@ -1056,7 +1056,8 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
   SVN_ERR(svn_io_file_close(uuid_file, pool));
 
   /* Open (and possibly create) the rep cache. */
-  SVN_ERR(svn_fs_fs__open_rep_cache(fs, fs->pool));
+  if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT)
+    SVN_ERR(svn_fs_fs__open_rep_cache(fs, fs->pool));
 
   return get_youngest(&(ffd->youngest_rev_cache), path, pool);
 }
@@ -4559,6 +4560,7 @@ static svn_error_t *
 rep_write_contents_close(void *baton)
 {
   struct rep_write_baton *b = baton;
+  fs_fs_data_t *ffd = b->fs->fsap_data;
   representation_t *rep;
   representation_t *old_rep;
   apr_off_t offset;
@@ -4586,8 +4588,12 @@ rep_write_contents_close(void *baton)
 
   /* Check and see if we already have a representation somewhere that's
      identical to the one we just wrote out. */
-  SVN_ERR(svn_fs_fs__get_rep_reference(&old_rep, b->fs, rep->checksum,
-                                       b->parent_pool));
+  if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT)
+    SVN_ERR(svn_fs_fs__get_rep_reference(&old_rep, b->fs, rep->checksum,
+                                         b->parent_pool));
+  else
+    old_rep = NULL;
+
   if (old_rep)
     {
       /* We need to erase from the protorev the data we just wrote. */
@@ -4963,7 +4969,8 @@ write_final_rev(const svn_fs_id_t **new_id_p,
                                    pool));
 
   /* Save the data representation's hash in the rep cache. */
-  if (noderev->data_rep && noderev->kind == svn_node_file)
+  if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT
+        && noderev->data_rep && noderev->kind == svn_node_file)
     SVN_ERR(svn_fs_fs__set_rep_reference(fs, noderev->data_rep, FALSE, pool));
 
   /* Return our ID that references the revision file. */
@@ -5550,7 +5557,8 @@ svn_fs_fs__create(svn_fs_t *fs,
   SVN_ERR(write_revision_zero(fs));
 
   /* Create the rep cache. */
-  SVN_ERR(svn_fs_fs__open_rep_cache(fs, fs->pool));
+  if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT)
+    SVN_ERR(svn_fs_fs__open_rep_cache(fs, fs->pool));
 
   /* Create the txn-current file if the repository supports
      the transaction sequence file. */
