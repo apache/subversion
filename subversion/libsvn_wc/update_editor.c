@@ -148,6 +148,19 @@ struct edit_baton
 };
 
 
+/* Record in the edit baton EB that PATH's base version is not being updated.
+ *
+ * Add to EB->skipped_paths a copy (allocated in EB->pool) of the string
+ * PATH.
+ */
+static void
+remember_skipped_path(struct edit_baton *eb, const char *path)
+{
+  apr_hash_set(eb->skipped_paths, apr_pstrdup(eb->pool, path),
+               APR_HASH_KEY_STRING, (void*)1);
+}
+
+
 struct dir_baton
 {
   /* The path to this directory. */
@@ -1847,8 +1860,7 @@ open_directory(const char *path,
       if (prop_conflicted || tree_conflicted)
         {
           db->bump_info->skipped = TRUE;
-          apr_hash_set(eb->skipped_paths, apr_pstrdup(eb->pool, db->path),
-                       APR_HASH_KEY_STRING, (void*)1);
+          remember_skipped_path(eb, db->path);
           if (eb->notify_func)
             {
               svn_wc_notify_t *notify
@@ -2616,8 +2628,7 @@ add_file(const char *path,
 
       /* Skip the this add */
       fb->skipped = TRUE;
-      apr_hash_set(eb->skipped_paths, apr_pstrdup(eb->pool, fb->path),
-                   APR_HASH_KEY_STRING, (void*)1);
+      remember_skipped_path(eb, fb->path);
 
       /* ### TODO: check whether pb->tree_conflicted also reflects
        * persisting tree-conflicts (older ones), and decide whether to
@@ -2792,8 +2803,7 @@ open_file(const char *path,
   if (text_conflicted || prop_conflicted || (tree_conflict != NULL))
     {
       fb->skipped = TRUE;
-      apr_hash_set(eb->skipped_paths, apr_pstrdup(eb->pool, fb->path),
-                   APR_HASH_KEY_STRING, (void*)1);
+      remember_skipped_path(eb, fb->path);
       if (eb->notify_func)
         {
           svn_wc_notify_t *notify
