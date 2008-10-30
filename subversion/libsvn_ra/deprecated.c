@@ -28,6 +28,7 @@
 #define SVN_DEPRECATED
 
 #include "svn_ra.h"
+#include "svn_path.h"
 #include "svn_compat.h"
 #include "ra_loader.h"
 
