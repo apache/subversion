@@ -255,6 +255,9 @@ a <tt>file:</tt> URL?</a></li>
     "relocation R_X86_64_32 against `a local symbol' can not be used
     when making a shared object" when building the Neon library on 64-bit
     Linux.</a></li>
+<li><a href="#secure-connection-truncated">Why am I getting an error
+    saying "Could not read response body: Secure connection truncated"
+    when doing a checkout from Apache?</a></li>
 </ul>
 
 <h4>Developer questions:</h4>
@@ -3689,6 +3692,44 @@ thread</a> on the developers' list about this.</p>
 
 <p>The solution is to supply the "--enable-shared" option to Subversion's
 configure script.</p>
+
+</div>
+
+<div class="h3"
+     id="secure-connection-truncated"
+     title="secure-connection-truncated">
+<h3>Why am I getting an error saying "Could not read response body:
+    Secure connection truncated" when doing a checkout from
+    Apache?</h3>
+
+<p>The Subversion client tries to keep working copies in a sane state
+   at all times.  One way it does this during checkouts is by
+   squirreling away the pristine versions of checked-out files until
+   all the files and subdirectories for a given directory have been
+   fetched.  Once all the data for a directory has been downloaded,
+   the client "finalizes" that directory, copying the pristine versions
+   of files out into the working area, diddling administrative data,
+   and so on.  While this directory finalization is happening, the
+   client is focused on that task and is <em>not</em> tending to the
+   checkout network stream.  Sometimes &mdash; typically in situations
+   where a versioned directory contains an abnormally large number of
+   files, or a bunch of abnormally large files &mdash; the client can
+   spend so much time finalizing a directory (and ignoring the network
+   stream) that Apache thinks the client has gone away for good, so
+   Apache terminates the connection.  When the client finally turns
+   its attention back to the network stream, it finds that the server
+   has given up on the connection, and it reports this as an error.</p>
+
+<p>One workaround for this situation is to increase the amount of time
+   Apache is willing to wait for a client to prove it is still
+   listening to the network stream.  You do this by adjusting upward
+   the Apache <tt>Timeout</tt> configuration value.  You are
+   encouraged, however, to evaluate your data set.  If having a huge
+   number of files in a single directory is causing problems for you
+   during checkouts, there is some chance that it will cause
+   additional problems elsewhere, too.  If it is possible for you to
+   split your collection of files up into a few subdirectories with
+   smaller file counts, this could prove universally beneficial.</p>
 
 </div>
 
