@@ -2109,9 +2109,9 @@ close_directory(void *dir_baton,
      maybe_bump_dir_info() for more information.  */
   SVN_ERR(maybe_bump_dir_info(db->edit_baton, db->bump_info, db->pool));
 
-  /* Notify of any prop changes on this directory -- but do nothing
-     if it's an added or skipped directory, because notification has already
-     happened in that case - unless the add was obstructed by a dir
+  /* Notify of any prop changes or tree conflict on this directory -- but do
+     nothing if it's an added or skipped directory, because notification has
+     already happened in that case - unless the add was obstructed by a dir
      scheduled for addition without history, in which case we handle
      notification here). */
   if (! db->bump_info->skipped && (db->add_existed || (! db->added))
@@ -2126,8 +2126,8 @@ close_directory(void *dir_baton,
       notify->kind = svn_node_dir;
       notify->prop_state = prop_state;
       notify->tree_conflicted = db->tree_conflicted;
-    (*db->edit_baton->notify_func)(db->edit_baton->notify_baton,
-                                   notify, pool);
+      (*db->edit_baton->notify_func)(db->edit_baton->notify_baton,
+                                     notify, pool);
     }
 
   return SVN_NO_ERROR;
