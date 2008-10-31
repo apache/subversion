@@ -8,8 +8,7 @@ we branch should be put in the issue tracker with the 1.6 milestone.
 
 Blocker:
 
- * Make SHA1 code in FS backends conditional on format version.
-   (cmpilato will handle BDB; hwright will handle FSFS)
+ * Make SHA1 code in FSFS backend conditional on format version. [hwright]
 
  * Fix a bunch of rep-sharing issues in FSFS (or remove the feature):
 
@@ -18,7 +17,7 @@ Blocker:
      penalties; at the very least, we should figure out which one of
      those it is doing and make sure we're making the right
      decision. I'd recommend just storing both though (or removing
-     rep-sharing from FSFS).
+     rep-sharing from FSFS).  [BDB is now storing both.]
 
    - If a commit gets aborted (or the server crashes, or whatever)
      after having written new references to the database, the database
