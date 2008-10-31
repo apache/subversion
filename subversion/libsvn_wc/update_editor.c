@@ -1474,7 +1474,7 @@ do_entry_deletion(struct edit_baton *eb,
   SVN_ERR(check_tree_conflict(&tree_conflict, eb, log_item, full_path, entry,
                               adm_access, svn_wc_conflict_action_delete, pool));
 
-  /* Notify and bail out if this raised a tree-conflict. */
+  /* If this raised a tree-conflict, record.  Continue deleting the entry. */
   if (tree_conflict)
     {
       SVN_ERR(svn_wc__write_log(adm_access, *log_number, log_item, pool));
@@ -1495,26 +1495,7 @@ do_entry_deletion(struct edit_baton *eb,
                                              SVN_WC__ENTRY_MODIFY_REVISION
                                              | SVN_WC__ENTRY_MODIFY_KIND,
                                              pool));
-
-          eb->target_deleted = TRUE;
         }
-
-      /* Note: these two lines are duplicated from the end of this function:
-       */
-      SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
-      *log_number = 0;
-
-      if (eb->notify_func)
-        {
-          /* Don't notify about a delete, just about a conflict. */
-          notify = svn_wc_create_notify(full_path, svn_wc_notify_update_update,
-                                        pool);
-          notify->tree_conflicted = TRUE;
-
-          (*eb->notify_func)(eb->notify_baton, notify, pool);
-        }
-
-      return SVN_NO_ERROR;
     }
 
   SVN_ERR(svn_wc__loggy_delete_entry(&log_item, adm_access, full_path,
@@ -1595,6 +1576,9 @@ do_entry_deletion(struct edit_baton *eb,
     {
       notify = svn_wc_create_notify(full_path, svn_wc_notify_update_delete,
                                     pool);
+      if (tree_conflict != NULL)
+        notify->tree_conflicted = TRUE;
+
       (*eb->notify_func)(eb->notify_baton, notify, pool);
     }
 
