@@ -1078,22 +1078,6 @@ svn_repos_dump_fs2(svn_repos_t *repos,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_repos_dump_fs(svn_repos_t *repos,
-                  svn_stream_t *stream,
-                  svn_stream_t *feedback_stream,
-                  svn_revnum_t start_rev,
-                  svn_revnum_t end_rev,
-                  svn_boolean_t incremental,
-                  svn_cancel_func_t cancel_func,
-                  void *cancel_baton,
-                  apr_pool_t *pool)
-{
-  return svn_repos_dump_fs2(repos, stream, feedback_stream, start_rev,
-                            end_rev, incremental, FALSE, cancel_func,
-                            cancel_baton, pool);
-}
-
 
 /*----------------------------------------------------------------------*/
 

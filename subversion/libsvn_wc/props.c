@@ -91,8 +91,6 @@ load_prop_file(const char *propfile_path,
   svn_stream_t *stream;
   apr_finfo_t finfo;
 
-  apr_file_t *propfile = NULL;
-
   /* We shouldn't be calling load_prop_file() with an empty file, but
      we do.  This check makes sure that we don't call svn_hash_read2()
      on an empty stream.  Ugly, hacky and crude. */
@@ -107,9 +105,7 @@ load_prop_file(const char *propfile_path,
   if (finfo.size == 0)
     return SVN_NO_ERROR;
 
-  err = svn_io_file_open(&propfile, propfile_path,
-                         APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
-                         pool);
+  err = svn_stream_open_readonly(&stream, propfile_path, pool, pool);
 
   if (err && (APR_STATUS_IS_ENOENT(err->apr_err)
               || APR_STATUS_IS_ENOTDIR(err->apr_err)))
@@ -120,7 +116,6 @@ load_prop_file(const char *propfile_path,
 
   SVN_ERR(err);
 
-  stream = svn_stream_from_aprfile2(propfile, FALSE, pool);
   SVN_ERR_W(svn_hash_read2(hash, stream, SVN_HASH_TERMINATOR, pool),
             apr_psprintf(pool, _("Can't parse '%s'"),
                          svn_path_local_style(propfile_path, pool)));
@@ -3349,74 +3344,6 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
         APR_ARRAY_PUSH(*externals_p, svn_wc_external_item2_t *) = item;
     }
 
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_wc_parse_externals_description2(apr_array_header_t **externals_p,
-                                    const char *parent_directory,
-                                    const char *desc,
-                                    apr_pool_t *pool)
-{
-  apr_array_header_t *list;
-  apr_pool_t *subpool = svn_pool_create(pool);
-  int i;
-
-  SVN_ERR(svn_wc_parse_externals_description3(externals_p ? &list : NULL,
-                                              parent_directory, desc,
-                                              TRUE, subpool));
-
-  if (externals_p)
-    {
-      *externals_p = apr_array_make(pool, list->nelts,
-                                    sizeof(svn_wc_external_item_t *));
-      for (i = 0; i < list->nelts; i++)
-        {
-          svn_wc_external_item2_t *item2 = APR_ARRAY_IDX(list, i,
-                                             svn_wc_external_item2_t *);
-          svn_wc_external_item_t *item = apr_palloc(pool, sizeof (*item));
-
-          if (item2->target_dir)
-            item->target_dir = apr_pstrdup(pool, item2->target_dir);
-          if (item2->url)
-            item->url = apr_pstrdup(pool, item2->url);
-          item->revision = item2->revision;
-
-          APR_ARRAY_PUSH(*externals_p, svn_wc_external_item_t *) = item;
-        }
-    }
-
-  svn_pool_destroy(subpool);
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc_parse_externals_description(apr_hash_t **externals_p,
-                                   const char *parent_directory,
-                                   const char *desc,
-                                   apr_pool_t *pool)
-{
-  apr_array_header_t *list;
-  int i;
-
-  SVN_ERR(svn_wc_parse_externals_description2(externals_p ? &list : NULL,
-                                              parent_directory, desc, pool));
-
-  /* Store all of the items into the hash if that was requested. */
-  if (externals_p)
-    {
-      *externals_p = apr_hash_make(pool);
-      for (i = 0; i < list->nelts; i++)
-        {
-          svn_wc_external_item_t *item;
-          item = APR_ARRAY_IDX(list, i, svn_wc_external_item_t *);
-
-          apr_hash_set(*externals_p, item->target_dir,
-                       APR_HASH_KEY_STRING, item);
-        }
-    }
   return SVN_NO_ERROR;
 }
 

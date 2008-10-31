@@ -2241,18 +2241,23 @@ fs_file_length(svn_filesize_t *length_p,
 }
 
 
-/* Set DIGEST to the checksum of PATH under ROOT.  Temporary
-   allocations are from POOL. */
+/* Set *CHECKSUM to the checksum of type KIND for PATH under ROOT, or
+   NULL if that information isn't available.  Temporary allocations
+   are from POOL. */
 static svn_error_t *
 fs_file_checksum(svn_checksum_t **checksum,
+                 svn_checksum_kind_t kind,
                  svn_fs_root_t *root,
                  const char *path,
                  apr_pool_t *pool)
 {
   dag_node_t *file;
+  svn_checksum_t *file_checksum;
 
   SVN_ERR(get_dag(&file, root, path, pool));
-  return svn_fs_fs__dag_file_checksum(checksum, file, pool);
+  SVN_ERR(svn_fs_fs__dag_file_checksum(&file_checksum, file, pool));
+  *checksum = (file_checksum->kind == kind) ? file_checksum : NULL;
+  return SVN_NO_ERROR;
 }
 
 
@@ -2421,7 +2426,8 @@ apply_textdelta(void *baton, apr_pool_t *pool)
       /* Until we finalize the node, its data_key points to the old
          contents, in other words, the base text. */
       SVN_ERR(svn_fs_fs__dag_file_checksum(&checksum, tb->node, pool));
-      if (!svn_checksum_match(tb->base_checksum, checksum))
+      if (tb->base_checksum->kind == checksum->kind
+          && !svn_checksum_match(tb->base_checksum, checksum))
         return svn_error_createf
           (SVN_ERR_CHECKSUM_MISMATCH,
            NULL,

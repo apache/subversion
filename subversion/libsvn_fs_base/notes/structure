@@ -862,7 +862,8 @@ Berkeley DB tables
                 "uuids" : recno(UUID)
                 "locks" : btree(TOKEN -> LOCK)
           "lock-tokens" : btree(PATH -> TOKEN)
-        "checksum-reps" : btree(SHA1SUM -> REP)
+         "node-origins" : btree(NODE-ID -> ID)
+        "checksum-reps" : btree(SHA1SUM -> REP, "next-key" -> number-36)
         "miscellaneous" : btree(STRING -> STRING)
 
 Syntactic elements
@@ -959,11 +960,10 @@ Representations:
                  OFFSET ::= number ;
              REP-OFFSET ::= number ;
 
-                 HEADER ::= (KIND TXN [CHECKSUM]) ;
+                 HEADER ::= (KIND TXN [MD5 [SHA1]]) ;
                    KIND ::= "fulltext" | "delta" ;
              
                    SIZE ::= number ;
-               CHECKSUM ::= MD5 | SHA1;
                     MD5 ::= ("md5" MD5SUM) ;
                    SHA1 ::= ("sha1" SHA1SUM) ;
                  MD5SUM ::= atom ;
@@ -1066,7 +1066,3 @@ introduced.
     4    forward-delta-rev    Youngest revision in the repository as of
                               the moment when it was upgraded to support
                               forward deltas.
-
-    4    next-fsguid          Next filesystem-global unique identifier
-                              available for use.
-                                 
