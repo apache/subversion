@@ -290,7 +290,6 @@ def info_on_mkdir(sbox):
                                                                 [], 'info',
                                                                 new_dir,
                                                                 '--xml')
-  print 'output: %s \n\n' % output
   verify_xml_elements(output,
                       [('entry',    {'kind'     : 'dir',
                                      'path'     : new_dir,
