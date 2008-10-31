@@ -57,6 +57,86 @@
 
 
 
+/*
+ * This code handles "checkout" and "update" and "switch".
+ * A checkout is similar to an update that is only adding new items.
+ *
+ * The intended behaviour of "update" and "switch", focusing on the checks
+ * to be made before applying a change, is:
+ *
+ *   For each incoming change:
+ *     if target is already in conflict or obstructed:
+ *       skip this change
+ *     else
+ *     if this action will cause a tree conflict:
+ *       record the tree conflict
+ *       skip this change
+ *     else:
+ *       make this change
+ *
+ * In more detail:
+ *
+ *   For each incoming change:
+ *
+ *   1.   if  # Incoming change is inside an item already in conflict:
+ *    a.    tree/text/prop change to node beneath tree-conflicted dir
+ *        then  # Skip all changes in this conflicted subtree [*1]:
+ *          do not update the Base nor the Working
+ *          notify "skipped because already in conflict" just once
+ *            for the whole conflicted subtree
+ *
+ *        if  # Incoming change affects an item already in conflict:
+ *    b.    tree/text/prop change to tree-conflicted dir/file, or
+ *    c.    tree change to a text/prop-conflicted file/dir, or
+ *    d.    text/prop change to a text/prop-conflicted file/dir [*2], or
+ *    e.    tree change to a dir tree containing any conflicts,
+ *        then  # Skip this change [*1]:
+ *          do not update the Base nor the Working
+ *          notify "skipped because already in conflict"
+ *
+ *   2.   if  # Incoming change affects an item that's "obstructed":
+ *    a.    on-disk node kind doesn't match recorded Working node kind
+ *            (including an absence/presence mis-match),
+ *        then  # Skip this change [*1]:
+ *          do not update the Base nor the Working
+ *          notify "skipped because obstructed"
+ *
+ *   3.   if  # Incoming change raises a tree conflict:
+ *    a.    tree/text/prop change to node beneath sched-delete dir, or
+ *    b.    tree/text/prop change to sched-delete dir/file, or
+ *    c.    text/prop change to tree-scheduled dir/file,
+ *        then  # Skip this change:
+ *          do not update the Base nor the Working [*3]
+ *          notify "tree conflict"
+ *
+ *   4.   Apply the change:
+ *          update the Base
+ *          update the Working, possibly raising text/prop conflicts
+ *          notify
+ *
+ * Notes:
+ *
+ *      "Tree change" here refers to an add or delete of the target node,
+ *      including the add or delete part of a copy or move or rename.
+ *
+ * [*1] We should skip changes to an entire node, as the base revision number
+ *      applies to the entire node. Not sure how this affects attempts to
+ *      handle text and prop changes separately.
+ *
+ * [*2] Details of which combinations of property and text changes conflict
+ *      are not specified here.
+ *
+ * [*3] For now, we skip the update, and require the user to:
+ *        - Modify the WC to be compatible with the incoming change;
+ *        - Mark the conflict as resolved;
+ *        - Repeat the update.
+ *      Ideally, it would be possible to resolve any conflict without
+ *      repeating the update. To achieve this, we would have to store the
+ *      necessary data at conflict detection time, and delay the update of
+ *      the Base until the time of resolving.
+ */
+
+
 /*** batons ***/
 
 struct edit_baton
