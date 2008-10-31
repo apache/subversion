@@ -741,6 +741,78 @@ def run_and_verify_update(wc_dir_name,
                  check_props)
 
 
+def run_and_parse_info(*args):
+  """Run 'svn info' and parse its output into a list of dicts,
+  one dict per target."""
+
+  # the returned array
+  all_infos = []
+
+  # per-target variables
+  iter_info = {}
+  prev_key = None
+
+  exit_code, output, errput = main.run_svn(None, 'info', *args)
+
+  for line in output:
+    line = line[:-1] # trim '\n'
+    if len(line) == 0:
+      # separator line between items
+      all_infos.append(iter_info)
+      iter_info = {}
+      prev_key = None
+    elif line[0].isspace():
+      # continuation line (for tree conflicts)
+      iter_info[prev_key] += line[1:]
+    else:
+      # normal line
+      key, value = line.split(':', 1)
+      if len(value) > 1:
+        iter_info[key] = value[1:]
+      else:
+        # it's a "Tree conflict:\n" line; value is in continuation lines
+        iter_info[key] = ''
+      prev_key = key
+  
+  return all_infos
+
+def run_and_verify_info(expected_infos, *args):
+  """Run 'svn info' with the arguments in *ARGS and verify the results
+  against expected_infos.  The latter should be a list of dicts (in the
+  same order as the targets).
+  
+  In the dicts, each key is the before-the-colon part of the 'svn info' output,
+  and each value is either None (meaning that the key should *not* appear in
+  the 'svn info' output) or a regex matching the output value.  Output lines
+  not matching a key in the dict are ignored.
+  
+  Return if successful, raise on failure."""
+
+  actual_infos = run_and_parse_info(*args)
+
+  try:
+    for actual, expected in zip(actual_infos, expected_infos):
+      # compare dicts
+      for key, value in expected.iteritems():
+        if value is None and key in actual:
+          raise main.SVNLineUnequal("Found unexpected key '%s' with value '%s'"
+                                    % (key, actual[key]))
+        if value is not None and key not in actual:
+          raise main.SVNLineUnequal("Expected key '%s' (with value '%s') "
+                                    "not found" % (key, value))
+        if value is not None and not re.search(value, actual[key]):
+          raise verify.SVNUnexpectedStdout("Values of key '%s' don't match:\n"
+                                           "  Expected: '%s'\n"
+                                           "  Found:    '%s'\n"
+                                           % (key, value, actual[key]))
+
+  except:
+    sys.stderr.write("Bad 'svn info' output:\n"
+                     "  Received: %s\n"
+                     "  Expected: %s\n"
+                     % (actual_infos, expected_infos))
+    raise
+
 def run_and_verify_merge(dir, rev1, rev2, url,
                          output_tree, disk_tree, status_tree, skip_tree,
                          error_re_string = None,
@@ -1369,6 +1441,10 @@ def lock_admin_dir(wc_dir):
 
   path = os.path.join(wc_dir, main.get_admin_name(), 'lock')
   main.file_append(path, "stop looking!")
+
+def get_wc_uuid(wc_dir):
+  "Return the UUID of the working copy at WC_DIR."
+  return run_and_parse_info(wc_dir)[0]['Repository UUID']
 
 def create_failing_hook(repo_dir, hook_name, text):
   """Create a HOOK_NAME hook in REPO_DIR that prints TEXT to stderr and exits
