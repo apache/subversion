@@ -1422,7 +1422,9 @@ def check_prop(name, path, exp_out):
   exit_code, out, err = main.run_command(main.svn_binary, None, 1, 'pg',
                                          '--strict', name, path,
                                          '--config-dir',
-                                         main.default_config_dir)
+                                         main.default_config_dir,
+                                         '--username', main.wc_author,
+                                         '--password', main.wc_passwd)
   if out != exp_out:
     print "svn pg --strict", name, "output does not match expected."
     print "Expected standard output: ", exp_out, "\n"
