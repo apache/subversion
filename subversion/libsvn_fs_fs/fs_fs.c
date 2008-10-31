@@ -2964,18 +2964,15 @@ get_dir_contents(apr_hash_t *entries,
 
   if (noderev->data_rep && noderev->data_rep->txn_id)
     {
-      apr_file_t *dir_file;
       const char *filename = path_txn_node_children(fs, noderev->id, pool);
 
       /* The representation is mutable.  Read the old directory
          contents from the mutable children file, followed by the
          changes we've made in this transaction. */
-      SVN_ERR(svn_io_file_open(&dir_file, filename, APR_READ | APR_BUFFERED,
-                               APR_OS_DEFAULT, pool));
-      contents = svn_stream_from_aprfile2(dir_file, TRUE, pool);
+      SVN_ERR(svn_stream_open_readonly(&contents, filename, pool, pool));
       SVN_ERR(svn_hash_read2(entries, contents, SVN_HASH_TERMINATOR, pool));
       SVN_ERR(svn_hash_read_incremental(entries, contents, NULL, pool));
-      SVN_ERR(svn_io_file_close(dir_file, pool));
+      SVN_ERR(svn_stream_close(contents));
     }
   else if (noderev->data_rep)
     {
@@ -3175,15 +3172,11 @@ svn_fs_fs__get_proplist(apr_hash_t **proplist_p,
 
   if (noderev->prop_rep && noderev->prop_rep->txn_id)
     {
-      apr_file_t *props_file;
       const char *filename = path_txn_node_props(fs, noderev->id, pool);
 
-      SVN_ERR(svn_io_file_open(&props_file, filename,
-                               APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
-                               pool));
-      stream = svn_stream_from_aprfile2(props_file, TRUE, pool);
+      SVN_ERR(svn_stream_open_readonly(&stream, filename, pool, pool));
       SVN_ERR(svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR, pool));
-      SVN_ERR(svn_io_file_close(props_file, pool));
+      SVN_ERR(svn_stream_close(stream));
     }
   else if (noderev->prop_rep)
     {
@@ -3942,19 +3935,16 @@ get_txn_proplist(apr_hash_t *proplist,
                  const char *txn_id,
                  apr_pool_t *pool)
 {
-  apr_file_t *txn_prop_file;
+  svn_stream_t *stream;
 
   /* Open the transaction properties file. */
-  SVN_ERR(svn_io_file_open(&txn_prop_file, path_txn_props(fs, txn_id, pool),
-                           APR_READ | APR_BUFFERED,
-                           APR_OS_DEFAULT, pool));
+  SVN_ERR(svn_stream_open_readonly(&stream, path_txn_props(fs, txn_id, pool),
+                                   pool, pool));
 
   /* Read in the property list. */
-  SVN_ERR(svn_hash_read2(proplist,
-                         svn_stream_from_aprfile2(txn_prop_file, TRUE, pool),
-                         SVN_HASH_TERMINATOR, pool));
+  SVN_ERR(svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR, pool));
 
-  return svn_io_file_close(txn_prop_file, pool);
+  return svn_stream_close(stream);
 }
 
 svn_error_t *
@@ -6082,7 +6072,6 @@ set_node_origins_for_file(svn_fs_t *fs,
                           svn_string_t *node_rev_id,
                           apr_pool_t *pool)
 {
-  apr_file_t *fd;
   const char *path_tmp;
   svn_stream_t *stream;
   apr_hash_t *origins_hash;
@@ -6119,9 +6108,9 @@ set_node_origins_for_file(svn_fs_t *fs,
      locking overhead. */
 
   /* Create a temporary file, write out our hash, and close the file. */
-  SVN_ERR(svn_io_open_unique_file2(&fd, &path_tmp, node_origins_path, ".tmp",
-                                   svn_io_file_del_none, pool));
-  stream = svn_stream_from_aprfile2(fd, FALSE, pool);
+  SVN_ERR(svn_stream_open_unique(&stream, &path_tmp,
+                                 svn_path_dirname(node_origins_path, pool),
+                                 svn_io_file_del_none, pool, pool));
   SVN_ERR(svn_hash_write2(origins_hash, stream, SVN_HASH_TERMINATOR, pool));
   SVN_ERR(svn_stream_close(stream));
 
