@@ -3857,13 +3857,11 @@ single_file_merge_get_file(const char **filename,
                            const char *wc_target,
                            apr_pool_t *pool)
 {
-  apr_file_t *fp;
   svn_stream_t *stream;
 
-  SVN_ERR(svn_io_open_unique_file2(&fp, filename,
-                                   wc_target, ".tmp",
-                                   svn_io_file_del_none, pool));
-  stream = svn_stream_from_aprfile2(fp, FALSE, pool);
+  SVN_ERR(svn_stream_open_unique(&stream, filename,
+                                 svn_path_dirname(wc_target, pool),
+                                 svn_io_file_del_none, pool, pool));
   SVN_ERR(svn_ra_get_file(ra_session, "", rev,
                           stream, NULL, props, pool));
   return svn_stream_close(stream);
