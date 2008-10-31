@@ -66,11 +66,11 @@ class build(_build):
   description = "build the Subversion ctypes Python bindings"
 
   _build.user_options.append(("apr=", None, "full path to where apr is "
-                              "installed or the full path to the apr-config or "
-                              "apr-1-config file"))
+                              "installed or the full path to the apr-1-config or "
+                              "apr-config file"))
   _build.user_options.append(("apr-util=", None, "full path to where apr-util "
-                              "is installed or the full path to the apu-config"
-                              "apu-1-config file"))
+                              "is installed or the full path to the apu-1-config or "
+                              "apu-config file"))
   _build.user_options.append(("subversion=", None, "full path to where "
                               "Subversion is installed"))
   _build.user_options.append(("svn-headers=", None, "Full path to the "
@@ -263,27 +263,27 @@ class build(_build):
   def validate_options(self):
     # Validate apr
     if not self.apr:
-      self.apr = find_in_path('apr-config')
+      self.apr = find_in_path('apr-1-config')
 
       if not self.apr:
-        self.apr = find_in_path('apr-1-config')
+        self.apr = find_in_path('apr-config')
 
       if self.apr:
         log.info("Found %s" % self.apr)
       else:
-        raise DistutilsOptionError("Could not find apr-config or " \
-                                   "apr-1-config.  Please rerun with the " \
+        raise DistutilsOptionError("Could not find apr-1-config or " \
+                                   "apr-config.  Please rerun with the " \
                                    "--apr option.")
 
     if os.path.exists(self.apr):
       if os.path.isdir(self.apr):
-        if os.path.exists(os.path.join(self.apr, "bin", "apr-config")):
-          self.apr_config = os.path.join(self.apr, "bin", "apr-config")
-        elif os.path.exists(os.path.join(self.apr, "bin", "apr-1-config")):
+        if os.path.exists(os.path.join(self.apr, "bin", "apr-1-config")):
           self.apr_config = os.path.join(self.apr, "bin", "apr-1-config")
+        elif os.path.exists(os.path.join(self.apr, "bin", "apr-config")):
+          self.apr_config = os.path.join(self.apr, "bin", "apr-config")
         else:
           self.apr_config = None
-      elif os.path.basename(self.apr) in ("apr-config", "apr-1-config"):
+      elif os.path.basename(self.apr) in ("apr-1-config", "apr-config"):
         self.apr_config = self.apr
       else:
         self.apr_config = None
@@ -293,32 +293,32 @@ class build(_build):
     if not self.apr_config:
       raise DistutilsOptionError("The --apr option is not valid.  It must " \
                                  "point to a valid apr installation or " \
-                                 "to either the apr-config file or the " \
-                                 "apr-1-config file")
+                                 "to either the apr-1-config file or the " \
+                                 "apr-config file")
 
     # Validate apr-util
     if not self.apr_util:
-      self.apr_util = find_in_path('apu-config')
+      self.apr_util = find_in_path('apu-1-config')
 
       if not self.apr_util:
-        self.apr_util = find_in_path('apu-1-config')
+        self.apr_util = find_in_path('apu-config')
 
       if self.apr_util:
         log.info("Found %s" % self.apr_util)
       else:
-        raise DistutilsOptionError("Could not find apu-config or " \
-                                   "apu-1-config.  Please rerun with the " \
+        raise DistutilsOptionError("Could not find apu-1-config or " \
+                                   "apu-config.  Please rerun with the " \
                                    "--apr-util option.")
 
     if os.path.exists(self.apr_util):
       if os.path.isdir(self.apr_util):
-        if os.path.exists(os.path.join(self.apr_util, "bin", "apu-config")):
-          self.apu_config = os.path.join(self.apr_util, "bin", "apu-config")
-        elif os.path.exists(os.path.join(self.apr_util, "bin", "apu-1-config")):
+        if os.path.exists(os.path.join(self.apr_util, "bin", "apu-1-config")):
           self.apu_config = os.path.join(self.apr_util, "bin", "apu-1-config")
+        elif os.path.exists(os.path.join(self.apr_util, "bin", "apu-config")):
+          self.apu_config = os.path.join(self.apr_util, "bin", "apu-config")
         else:
           self.apu_config = None
-      elif os.path.basename(self.apr_util) in ("apu-config", "apu-1-config"):
+      elif os.path.basename(self.apr_util) in ("apu-1-config", "apu-config"):
         self.apu_config = self.apr_util
       else:
         self.apu_config = None
@@ -328,8 +328,8 @@ class build(_build):
     if not self.apu_config:
       raise DistutilsOptionError("The --apr-util option is not valid.  It " \
                                  "must point to a valid apr-util " \
-                                 "installation or to either the apu-config " \
-                                 "file or the apu-1-config file")
+                                 "installation or to either the apu-1-config " \
+                                 "file or the apu-config file")
 
     # Validate subversion
     if not self.subversion:
