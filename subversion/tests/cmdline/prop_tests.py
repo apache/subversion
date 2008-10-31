@@ -1703,8 +1703,8 @@ def added_moved_file(sbox):
 
   # the property should get committed, too
   svntest.main.run_svn(None, 'commit', '-m', 'set prop on added moved file',
-                             wc_dir)
-  svntest.actions.check_prop('someprop', foo2_url,  ['someval'])
+                       wc_dir)
+  svntest.actions.check_prop('someprop', foo2_url, ['someval'])
 
 
 ########################################################################
