@@ -349,11 +349,9 @@ svn_config__parse_file(svn_config_t *cfg, const char *file,
   svn_error_t *err = SVN_NO_ERROR;
   parse_context_t ctx;
   int ch, count;
-  apr_file_t *f;
+  svn_stream_t *stream;
 
-  /* No need for buffering; a translated stream buffers */
-  err = svn_io_file_open(&f, file, APR_BINARY | APR_READ,
-                         APR_OS_DEFAULT, pool);
+  err = svn_stream_open_readonly(&stream, file, pool, pool);
 
   if (! must_exist && err && APR_STATUS_IS_ENOENT(err->apr_err))
     {
@@ -365,9 +363,8 @@ svn_config__parse_file(svn_config_t *cfg, const char *file,
 
   ctx.cfg = cfg;
   ctx.file = file;
-  ctx.stream = svn_subst_stream_translated(svn_stream_from_aprfile2(f, TRUE,
-                                                                    pool),
-                                           "\n", TRUE, NULL, FALSE, pool);
+  ctx.stream = svn_subst_stream_translated(stream, "\n", TRUE, NULL, FALSE,
+                                           pool);
   ctx.line = 1;
   ctx.have_ungotten_char = FALSE;
   ctx.section = svn_stringbuf_create("", pool);
@@ -430,9 +427,8 @@ svn_config__parse_file(svn_config_t *cfg, const char *file,
     }
   while (ch != EOF);
 
-  /* Close the file and streams (and other cleanup): */
-  SVN_ERR(svn_stream_close(ctx.stream));
-  return svn_io_file_close(f, pool);
+  /* Close the streams (and other cleanup): */
+  return svn_stream_close(ctx.stream);
 }
 
 
