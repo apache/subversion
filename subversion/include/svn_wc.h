@@ -969,6 +969,10 @@ typedef struct svn_wc_notify_t {
    * displayed for an operation.  @since New in 1.6 */
   const char *path_prefix;
 
+  /** Whether @c path is a victim of a tree-conflict.
+   * @since New in 1.6 */
+  svn_boolean_t tree_conflicted;
+
   /* NOTE: Add new fields at the end to preserve binary compatibility.
      Also, if you add fields here, you have to update svn_wc_create_notify
      and svn_wc_dup_notify. */
@@ -2161,34 +2165,36 @@ svn_wc_entry_dup(const svn_wc_entry_t *entry,
                  apr_pool_t *pool);
 
 
-/** Given a @a dir_path under version control, decide if one of its
- * entries (@a entry) is in state of conflict; return the answers in
- * @a text_conflicted_p, @a prop_conflicted_p and @a
- * has_tree_conflicted_children.
+/** Given a @a path in a dir under version control, decide if it is in
+ * state of conflict; return the answers in @a *text_conflicted_p, @a
+ * *prop_conflicted_p, and @a *tree_conflicted_p.  If one or two of the
+ * answers are uninteresting, simply pass @c NULL pointers.
  *
- * If @a entry is the THIS_DIR entry of @a dir_path, and this directory
- * currently contains one or more tree-conflicted children, then set
- * @a *has_tree_conflicted_children to true, else set it to false.
+ * If @path is unversioned or does not exist, @a *text_conflicted_p and
+ * @a *prop_conflicted_p will be @c FALSE if non-NULL.
  *
- * If the @a entry mentions that a text conflict file (.rej suffix)
- * exists, but it cannot be found, assume the text conflict has been
- * resolved by the user and return FALSE in @a *text_conflicted_p.
+ * @a adm_access is the admin access baton of the parent directory.
  *
- * Similarly, if the @a entry mentions that a property conflicts file
- * (.prej suffix) exists, but it cannot be found, assume the property
- * conflicts have been resolved by the user and return FALSE in
- * @a *prop_conflicted_p.
+ * If the @a path has a corresponding text conflict file (with suffix
+ * .mine, .theirs, etc.) that cannot be found, assume that the text
+ * conflict has been resolved by the user and return @c FALSE in @a
+ * *text_conflicted_p.
  *
- * The @a entry is not updated.
+ * Similarly, if a property conflicts file (.prej suffix) exists, but
+ * it cannot be found, assume that the property conflicts have been
+ * resolved by the user and return @c FALSE in @a *prop_conflicted_p.
+ *
+ * @a *tree_conflicted_p can't be auto-resolved in this fashion.  An
+ * explicit `resolved' is needed.
  *
  * @since New in 1.6.
  */
 svn_error_t *
 svn_wc_conflicted_p2(svn_boolean_t *text_conflicted_p,
                      svn_boolean_t *prop_conflicted_p,
-                     svn_boolean_t *has_tree_conflicted_children,
-                     const char *dir_path,
-                     const svn_wc_entry_t *entry,
+                     svn_boolean_t *tree_conflicted_p,
+                     const char *path,
+                     svn_wc_adm_access_t *adm_access,
                      apr_pool_t *pool);
 
 /** Like svn_wc_conflicted_p2, but without the capability to
@@ -3362,6 +3368,7 @@ svn_wc_resolved_conflict4(const char *path,
  *
  * @deprecated Provided for backward compatibility with the 1.5 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_resolved_conflict3(const char *path,
                           svn_wc_adm_access_t *adm_access,
@@ -5305,21 +5312,6 @@ svn_wc_get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
                          const char *victim_path,
                          svn_wc_adm_access_t *adm_access,
                          apr_pool_t *pool);
-
-/**
- * Read tree conflict descriptions from @a dir_entry.
- * Append pointers to newly allocated svn_wc_conflict_description_t
- * objects to the array pointed to by @a conflicts.
- * @a dir_path is the path to the WC directory whose conflicts are being read.
- * Do all allocations in @a pool.
- *
- * @since New in 1.6.
- */
-svn_error_t *
-svn_wc_read_tree_conflicts_from_entry(apr_array_header_t *conflicts,
-                                      const svn_wc_entry_t *dir_entry,
-                                      const char *dir_path,
-                                      apr_pool_t *pool);
 
 /**
  * Add the tree conflict described by @a conflict to the directory entry

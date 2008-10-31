@@ -231,7 +231,7 @@ ConflictResolverCallback::createJConflictDescriptor(
   if (ctor == 0)
     {
       ctor = env->GetMethodID(clazz, "<init>", "(Ljava/lang/String;II"
-                              "Ljava/lang/String;ZLjava/lang/String;II"
+                              "Ljava/lang/String;ZLjava/lang/String;III"
                               "Ljava/lang/String;Ljava/lang/String;"
                               "Ljava/lang/String;Ljava/lang/String;)V");
       if (JNIUtil::isJavaExceptionThrown() || ctor == 0)
@@ -268,6 +268,7 @@ ConflictResolverCallback::createJConflictDescriptor(
                                  (jboolean) desc->is_binary, jmimeType,
                                  EnumMapper::mapConflictAction(desc->action),
                                  EnumMapper::mapConflictReason(desc->reason),
+                                 EnumMapper::mapOperation(desc->operation),
                                  jbasePath, jreposPath, juserPath,
                                  jmergedPath);
   if (JNIUtil::isJavaExceptionThrown())
