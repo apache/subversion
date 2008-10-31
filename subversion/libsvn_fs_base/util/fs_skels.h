@@ -130,12 +130,12 @@ svn_fs_base__unparse_transaction_skel(skel_t **skel_p,
                                       apr_pool_t *pool);
 
 /* Unparse REP into a `REPRESENTATION' skel *SKEL_P.  Use POOL for all
-   allocations.  */
+   allocations.  FORMAT is the format version of the filesystem. */
 svn_error_t *
 svn_fs_base__unparse_representation_skel(skel_t **skel_p,
                                          const representation_t *rep,
+                                         int format,
                                          apr_pool_t *pool);
-
 
 /* Unparse NODEREV into a `NODE-REVISION' skel *SKEL_P.  Use POOL for
    all allocations.  FORMAT is the format version of the filesystem. */

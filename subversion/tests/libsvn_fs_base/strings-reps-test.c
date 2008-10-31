@@ -26,6 +26,8 @@
 
 #include "../svn_test.h"
 #include "../svn_test_fs.h"
+#include "../../libsvn_fs/fs-loader.h"
+#include "../../libsvn_fs_base/fs.h"
 #include "../../libsvn_fs_base/util/skel.h"
 #include "../../libsvn_fs_base/util/fs_skels.h"
 #include "../../libsvn_fs_base/bdb/strings-table.h"
@@ -70,9 +72,10 @@ txn_body_read_rep(void *baton, trail_t *trail)
 {
   struct rep_args *b = (struct rep_args *) baton;
   representation_t *rep;
+  base_fs_data_t *bfd = b->fs->fsap_data;
   SVN_ERR(svn_fs_bdb__read_rep(&rep, b->fs, b->key, trail, trail->pool));
   return svn_fs_base__unparse_representation_skel(&(b->skel), rep,
-                                                  trail->pool);
+                                                  bfd->format, trail->pool);
 }
 
 
