@@ -1288,6 +1288,35 @@ svn_mergeinfo_sort(svn_mergeinfo_t input, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+svn_mergeinfo_catalog_t
+svn_mergeinfo_catalog_dup(svn_mergeinfo_catalog_t mergeinfo_catalog,
+                          apr_pool_t *pool)
+{
+  svn_mergeinfo_t new_mergeinfo_catalog = apr_hash_make(pool);
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(pool, mergeinfo_catalog);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const void *key;
+      void *val;
+      const char *path;
+
+      svn_mergeinfo_t mergeinfo, mergeinfo_copy;
+      apr_hash_this(hi, &key, NULL, &val);
+      path = key;
+      mergeinfo = val;
+      mergeinfo_copy = svn_mergeinfo_dup(mergeinfo, pool);
+      apr_hash_set(new_mergeinfo_catalog,
+                   apr_pstrdup(pool, path),
+                   APR_HASH_KEY_STRING,
+                   mergeinfo_copy);
+    }
+
+  return new_mergeinfo_catalog;
+}
+
 svn_mergeinfo_t
 svn_mergeinfo_dup(svn_mergeinfo_t mergeinfo, apr_pool_t *pool)
 {
