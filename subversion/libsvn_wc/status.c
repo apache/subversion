@@ -1025,7 +1025,7 @@ get_dir_status(struct edit_baton *eb,
   for (j = 0; j < tree_conflicts->nelts; j++)
     {
       svn_wc_conflict_description_t *conflict;
-      char *basename;
+      char *tree_basename;
 
       svn_pool_clear(iterpool);
 
@@ -1033,16 +1033,16 @@ get_dir_status(struct edit_baton *eb,
                                svn_wc_conflict_description_t *);
 
       /* Skip versioned and non-versioned things. */
-      basename = svn_path_basename(conflict->path, iterpool);
-      if (apr_hash_get(entries, basename, APR_HASH_KEY_STRING)
-          || apr_hash_get(dirents, basename, APR_HASH_KEY_STRING))
+      tree_basename = svn_path_basename(conflict->path, iterpool);
+      if (apr_hash_get(entries, tree_basename, APR_HASH_KEY_STRING)
+          || apr_hash_get(dirents, tree_basename, APR_HASH_KEY_STRING))
         continue;
 
       if (ignore_patterns && ! patterns)
         SVN_ERR(collect_ignore_patterns(&patterns, ignore_patterns,
                                         adm_access, subpool));
 
-      SVN_ERR(send_unversioned_item(basename, svn_node_none, FALSE, 
+      SVN_ERR(send_unversioned_item(tree_basename, svn_node_none, FALSE, 
                                     adm_access, patterns, eb->externals, 
                                     no_ignore, eb->repos_locks, eb->repos_root,
                                     status_func, status_baton, iterpool));

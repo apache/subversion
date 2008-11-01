@@ -941,7 +941,7 @@ svn_fs_file_checksum(svn_checksum_t **checksum,
                      svn_boolean_t force,
                      apr_pool_t *pool)
 {
-  SVN_ERR(root->vtable->file_checksum(checksum, root, path, pool));
+  SVN_ERR(root->vtable->file_checksum(checksum, kind, root, path, pool));
 
   if (force && (*checksum == NULL || (*checksum)->kind != kind))
     {

@@ -2886,23 +2886,9 @@ def merge_file_with_space_in_its_name(sbox):
 def merge_dir_branches(sbox):
   "merge between branches (Issue #2222)"
 
-  def get_wc_uuid(wc_dir):
-    "Return the UUID of the working copy at WC_DIR."
-
-    exit_code, output, errput = svntest.main.run_svn(None, 'info', wc_dir)
-    if errput:
-      raise svntest.verify.SVNUnexpectedStderr(errput)
-
-    for line in output:
-      if line.startswith('Repository UUID:'):
-        return line[17:].rstrip()
-
-    # No 'Repository UUID' line in 'svn info'?
-    raise svntest.verify.SVNUnexpectedStdout(output)
-
   sbox.build()
   wc_dir = sbox.wc_dir
-  wc_uuid = get_wc_uuid(wc_dir)
+  wc_uuid = svntest.actions.get_wc_uuid(wc_dir)
 
   F_path = os.path.join(wc_dir, 'A', 'B', 'F')
   F_url = sbox.repo_url + '/A/B/F'
@@ -2937,17 +2923,17 @@ def merge_dir_branches(sbox):
                                      'merge', C_url, F_url, wc_dir)
 
   # Run info to check the copied rev to make sure it's right
-  expected_output = ["Path: " + foo_path + "\n",
-                     "URL: " + sbox.repo_url + "/foo\n",
-                     "Repository Root: " + sbox.repo_url + "\n",
-                     "Repository UUID: %s\n" % wc_uuid,
-                     "Revision: 2\n",
-                     "Node Kind: directory\n",
-                     "Schedule: add\n",
-                     "Copied From URL: " + F_url + "/foo\n",
-                     "Copied From Rev: 2\n", "\n"]
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
-                                     'info', foo_path)
+  expected_info = {"Path" : re.escape(foo_path), # escape backslashes
+                   "URL" : sbox.repo_url + "/foo",
+                   "Repository Root" : sbox.repo_url,
+                   "Repository UUID" : wc_uuid,
+                   "Revision" : "2",
+                   "Node Kind" : "directory",
+                   "Schedule" : "add",
+                   "Copied From URL" : F_url + "/foo",
+                   "Copied From Rev" : "2",
+                  }
+  svntest.actions.run_and_verify_info([expected_info], foo_path)
 
 
 #----------------------------------------------------------------------
