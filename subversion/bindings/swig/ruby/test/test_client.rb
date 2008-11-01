@@ -986,6 +986,7 @@ class SvnClientTest < Test::Unit::TestCase
     ctx.revert(trunk_path)
     File.open(trunk_path, "a") {|f| f.print(src)}
     yield(ctx, branch, rev3, rev4, trunk)
+    ctx.resolved(trunk,false)
     rev5 = ctx.commit(@wc_path).revision
     assert(File.exist?(trunk_path))
 
