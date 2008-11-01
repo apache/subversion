@@ -452,9 +452,8 @@ def checkout_peg_rev_date(sbox):
   # note the current time to use it as peg revision date.
   current_time = time.strftime("%Y-%m-%dT%H:%M:%S")
 
-  # sleep till the next minute.
-  current_sec = time.localtime().tm_sec
-  time.sleep(62-current_sec)
+  # sleep till the next second.
+  time.sleep(1.1)
 
   # create a new revision
   mu_path = os.path.join(wc_dir, 'A', 'mu')
