@@ -1943,7 +1943,7 @@ main(int argc, const char *argv[])
 #endif
 
   /* Set up Authentication stuff. */
-  if ((err = svn_cmdline_set_up_auth_baton(&ab,
+  if ((err = svn_cmdline_create_auth_baton(&ab,
                                            opt_state.non_interactive,
                                            opt_state.auth_username,
                                            opt_state.auth_password,

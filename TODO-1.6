@@ -8,6 +8,60 @@ we branch should be put in the issue tracker with the 1.6 milestone.
 
 Blocker:
 
+ * Make SHA1 code in FSFS backend conditional on format version. [hwright]
+
+ * Fix a bunch of rep-sharing issues in FSFS (or remove the feature):
+
+   - Storing only SHA1 checksums and not MD5 for new files almost
+     certainly leads to less robust updates/commits or performance
+     penalties; at the very least, we should figure out which one of
+     those it is doing and make sure we're making the right
+     decision. I'd recommend just storing both though (or removing
+     rep-sharing from FSFS).  [BDB is now storing both.]
+
+   - If a commit gets aborted (or the server crashes, or whatever)
+     after having written new references to the database, the database
+     will still contain the references; future commits of files with
+     the same contents will then use the garbage at those offsets.
+     You can probably fix this by opening a SQLite transaction at the
+     top of commit_body and commit it after updating "current".  (If
+     there's a crash between updating "current" and committing the
+     transaction, then the only downside is that you fail to do a bit
+     of sharing, which is OK.)
+
+   - svn_fs_fs__inc_rep_reuse (unlike svn_fs_fs__set_rep_reference) is
+     used outside of the control of the FSFS lock.  Thus its
+     read-modify-write can have race conditions, leading to two
+     different rep key with the same reuse number.  Now, I'm not 100%
+     sure how much of a problem this is; it would be good to document
+     the point of the reuse number somewhere (unless I'm missing it).
+     But I think it's to enable our dumb
+     compare-if-a-node-has-changed-by-if-its-rep-key-has-changed thing
+     to work, right?  And so there could be a subtle,
+     difficult-to-diagnose problem if two reps end up with the same
+     reuse number.  You could try to do this by wrapping the read and
+     write inside a transaction (with retry loop), but I don't
+     remember if SQLite transactions work that way.
+
+     A potentially better solution: The point of the reuse column,
+     AFAICT, is *not* to do a reference count.  It's just to uniquify
+     references to the rep.  So switch it from a number to a string,
+     and qualify the string by the name of the transaction that is
+     creating the reference.  You can stick a counter for the current
+     transaction in foo.txn/next-ids or something.  (Then you still
+     might have to worry about concurrent writes to the same
+     transaction, but of course that situation is full of problematic
+     race conditions in FSFS anyway; fortunately all you have to avoid
+     those is to avoid mod_dav_svn like the plague.)
+
+   - 'structure' has not been updated.
+
+ * Tree conflicts:
+   - "svn resolved" target must be a victim, not a parent.
+
+   - Tree conflicts can break working copy as noted by markphip:
+     http://svn.haxx.se/dev/archive-2008-10/1090.shtml
+
 Optional:
 
  * Merge the sparse-directories deselection branch, as noted by kfogel:

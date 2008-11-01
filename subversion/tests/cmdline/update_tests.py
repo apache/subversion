@@ -653,31 +653,33 @@ def update_delete_modified_files(sbox):
   # version control, but leave them on disk.  It used to be we would
   # expect an 'obstructed update' error (see issue #1196), then we
   # expected success (see issue #1806), and now we expect tree conflicts
-  # (see issue #2282) on the missing items.
+  # (see issue #2282) on the missing or unversioned items.
   expected_output = svntest.wc.State(wc_dir, {
-    'A/B/E/alpha' : Item(status='  ', treeconflict='C'),
-    'A/D/G'       : Item(status='  ', treeconflict='C'),
+    'A/B/E/alpha' : Item(status='D ', treeconflict='C'),
+    'A/D/G'       : Item(status='D ', treeconflict='C'),
     })
   expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/D/G/rho', 'A/D/G/tau')
   expected_disk.tweak('A/B/E/alpha',
                       contents=\
                       "This is the file 'alpha'.\nappended alpha text\n")
   expected_disk.tweak('A/D/G/pi',
                       contents=\
                       "This is the file 'pi'.\nappended pi text\n")
-  expected_disk.tweak('A/D/G/rho', contents="This is the file 'rho'.\n")
-  expected_disk.tweak('A/D/G/tau', contents="This is the file 'tau'.\n")
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak('A/B/E/alpha', status='M ', treeconflict='C')
-  expected_status.tweak('A/D/G', treeconflict='C')
-  expected_status.tweak('A/D/G/pi', status='M ')
+  expected_status.remove('A/D/G', 'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau',
+                         'A/B/E/alpha')
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,
                                         expected_status)
 
   # Check status of tree conflict victims.
+  expected_status.add({
+    'A/B/E/alpha' : Item(status='? ', treeconflict='C'),
+    'A/D/G'       : Item(status='? ', treeconflict='C'),
+    })
   svntest.actions.run_and_verify_unquiet_status(wc_dir, expected_status)
 
 
@@ -1021,8 +1023,8 @@ def update_deleted_missing_dir(sbox):
 
   # Create expected output tree for an update of the missing items by name
   expected_output = svntest.wc.State(wc_dir, {
-    'A/B/E' : Item(status='  ', treeconflict='C'),
-    'A/D/H' : Item(status='  ', treeconflict='C'),
+    'A/B/E' : Item(status='D ', treeconflict='C'),
+    'A/D/H' : Item(status='D ', treeconflict='C'),
     })
 
   # Create expected disk tree for the update.
@@ -1032,10 +1034,8 @@ def update_deleted_missing_dir(sbox):
 
   # Create expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak('A/B/E', status='! ', treeconflict='C', wc_rev='?')
-  expected_status.tweak('A/D/H', status='! ', treeconflict='C', wc_rev='?')
-  expected_status.remove('A/B/E/alpha', 'A/B/E/beta')
-  expected_status.remove('A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi')
+  expected_status.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta')
+  expected_status.remove('A/D/H', 'A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi')
 
   # Do the update, specifying the deleted paths explicitly.
   svntest.actions.run_and_verify_update(wc_dir,
@@ -1048,8 +1048,8 @@ def update_deleted_missing_dir(sbox):
   # Check tree conflict status
   unquiet_status = expected_status.copy()
   unquiet_status.add({
-    'A/B/E' : Item(status='! ', treeconflict='C', wc_rev='?'),
-    'A/D/H' : Item(status='! ', treeconflict='C', wc_rev='?'),
+    'A/B/E' : Item(status='! ', treeconflict='C'),
+    'A/D/H' : Item(status='! ', treeconflict='C'),
     })
   svntest.actions.run_and_verify_unquiet_status(wc_dir, unquiet_status)
 
@@ -1076,10 +1076,7 @@ def update_deleted_missing_dir(sbox):
     })
 
   # This time we're updating the whole working copy
-  expected_status.remove('A/B/E')
-  expected_status.remove('A/D/H')
   expected_status.tweak(wc_rev=2)
-  expected_status.tweak('A/B', 'A/D', status='  ')
 
   # Do the update, on the whole working copy this time
   svntest.actions.run_and_verify_update(wc_dir,
@@ -1128,8 +1125,8 @@ def another_hudson_problem(sbox):
   # Sigh, I can't get run_and_verify_update to work (but not because
   # of issue 919 as far as I can tell)
   svntest.actions.run_and_verify_svn(None,
-                                     ['   C '+G_path+'\n',
-                                      'At revision 3.\n',
+                                     ['D  C '+G_path+'\n',
+                                      'Updated to revision 3.\n',
                                       'Summary of conflicts:\n',
                                       '  Tree conflicts: 1\n',
                                       ], [],
@@ -1144,8 +1141,6 @@ def another_hudson_problem(sbox):
     'resolved',  D_path)
 
   # Both G and gamma should be 'deleted', update should produce no output
-  expected_output = svntest.wc.State(wc_dir, {'A/D/G' : Item(status='D ')})
-
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
   expected_status.remove('A/D/G', 'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau',
                          'A/D/gamma')
@@ -1154,7 +1149,7 @@ def another_hudson_problem(sbox):
   expected_disk.remove('A/D/G', 'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau',
                        'A/D/gamma')
   svntest.actions.run_and_verify_update(wc_dir,
-                                        expected_output,
+                                        "",
                                         expected_disk,
                                         expected_status)
 
@@ -3851,20 +3846,6 @@ interactive-conflicts = true
 def update_uuid_changed(sbox):
   "update fails when repos uuid changed"
 
-  def wc_uuid(wc_dir):
-    "Return the UUID of the working copy at WC_DIR."
-
-    exit_code, output, errput = svntest.main.run_svn(None, 'info', wc_dir)
-    if errput:
-      raise svntest.verify.SVNUnexpectedStderr(errput)
-
-    for line in output:
-      if line.startswith('Repository UUID:'):
-        return line[17:].rstrip()
-
-    # No 'Repository UUID' line in 'svn info'?
-    raise svntest.verify.SVNUnexpectedStdout(output)
-
   # read_only=False, since we don't want to run setuuid on the (shared)
   # pristine repository.
   sbox.build(read_only = False) 
@@ -3872,7 +3853,7 @@ def update_uuid_changed(sbox):
   wc_dir = sbox.wc_dir
   repo_dir = sbox.repo_dir
 
-  uuid_before = wc_uuid(wc_dir)
+  uuid_before = svntest.actions.get_wc_uuid(wc_dir)
 
   # Change repository's uuid.
   svntest.actions.run_and_verify_svnadmin(None, None, [],
@@ -3883,7 +3864,7 @@ def update_uuid_changed(sbox):
                                      'update', wc_dir)
 
   # ...and didn't overwrite the old uuid.
-  uuid_after = wc_uuid(wc_dir)
+  uuid_after = svntest.actions.get_wc_uuid(wc_dir)
   if uuid_before != uuid_after:
     raise svntest.Failure
 
@@ -4068,47 +4049,36 @@ def tree_conflicts_on_update_1_2(sbox):
   # 1.2) local tree delete, incoming leaf delete
 
   expected_output = svntest.wc.State('', {
-    'D/D1'              : Item(status='  ', treeconflict='C'),
-    'F/alpha'           : Item(status='  ', treeconflict='C'),
-    'DD/D1'             : Item(status='  ', treeconflict='C'),
-    'DD/D1/D2'          : Item(status='  ', treeconflict='C'),
+    'F/alpha'           : Item(status='D ', treeconflict='C'),
+    'D/D1'              : Item(status='D ', treeconflict='C'),
     'DF/D1'             : Item(status='  ', treeconflict='C'),
-    'DF/D1/beta'        : Item(status='  ', treeconflict='C'),
-    'DDD/D1'            : Item(status='  ', treeconflict='C'),
-    'DDD/D1/D2'         : Item(status='  ', treeconflict='C'),
-    'DDD/D1/D2/D3'      : Item(status='  ', treeconflict='C'),
+    'DF/D1/beta'        : Item(status='D ', treeconflict='C'),
+    'DD/D1'             : Item(status='  ', treeconflict='C'),
+    'DD/D1/D2'          : Item(status='D ', treeconflict='C'),
     'DDF/D1'            : Item(status='  ', treeconflict='C'),
     'DDF/D1/D2'         : Item(status='  ', treeconflict='C'),
-    'DDF/D1/D2/gamma'   : Item(status='  ', treeconflict='C'),
+    'DDF/D1/D2/gamma'   : Item(status='D ', treeconflict='C'),
+    'DDD/D1'            : Item(status='  ', treeconflict='C'),
+    'DDD/D1/D2'         : Item(status='  ', treeconflict='C'),
+    'DDD/D1/D2/D3'      : Item(status='D ', treeconflict='C'),
     })
 
-  expected_disk = state_after_leaf_del.copy()
-  expected_disk.add({
-                    'D/D1' : Item(),
-                    'DD/D1/D2' : Item(),
-                    'DDD/D1/D2/D3' : Item()
-                    })
+  expected_disk = state_after_leaf_del
 
   expected_status = svntest.wc.State('', {
     ''                  : Item(status='  ', wc_rev='3'),
     'D'                 : Item(status='  ', wc_rev='3'),
-    'D/D1'              : Item(status='D ', wc_rev='3'),
     'DD'                : Item(status='  ', wc_rev='3'),
     'DD/D1'             : Item(status='D ', treeconflict='C', wc_rev='3'),
-    'DD/D1/D2'          : Item(status='D ', wc_rev='3'),
     'DDD'               : Item(status='  ', wc_rev='3'),
     'DDD/D1'            : Item(status='D ', treeconflict='C', wc_rev='3'),
     'DDD/D1/D2'         : Item(status='D ', treeconflict='C', wc_rev='3'),
-    'DDD/D1/D2/D3'      : Item(status='D ', wc_rev='3'),
     'DDF'               : Item(status='  ', wc_rev='3'),
     'DDF/D1'            : Item(status='D ', treeconflict='C', wc_rev='3'),
     'DDF/D1/D2'         : Item(status='D ', treeconflict='C', wc_rev='3'),
-    'DDF/D1/D2/gamma'   : Item(status='D ', wc_rev='3'),
     'DF'                : Item(status='  ', wc_rev='3'),
     'DF/D1'             : Item(status='D ', treeconflict='C', wc_rev='3'),
-    'DF/D1/beta'        : Item(status='D ', wc_rev='3'),
     'F'                 : Item(status='  ', wc_rev='3'),
-    'F/alpha'           : Item(status='D ', wc_rev='3'),
     })
 
   svntest.actions.deep_trees_run_tests_scheme_for_update(sbox,
@@ -4128,12 +4098,12 @@ def tree_conflicts_on_update_2_1(sbox):
   # 2.1) local leaf edit, incoming tree delete
 
   expected_output = svntest.wc.State('', {
-    'D/D1'              : Item(status='  ', treeconflict='C'),
-    'F/alpha'           : Item(status='  ', treeconflict='C'),
-    'DD/D1'             : Item(status='  ', treeconflict='C'),
-    'DF/D1'             : Item(status='  ', treeconflict='C'),
-    'DDD/D1'            : Item(status='  ', treeconflict='C'),
-    'DDF/D1'            : Item(status='  ', treeconflict='C'),
+    'D/D1'              : Item(status='D ', treeconflict='C'),
+    'F/alpha'           : Item(status='D ', treeconflict='C'),
+    'DD/D1'             : Item(status='D ', treeconflict='C'),
+    'DF/D1'             : Item(status='D ', treeconflict='C'),
+    'DDD/D1'            : Item(status='D ', treeconflict='C'),
+    'DDF/D1'            : Item(status='D ', treeconflict='C'),
     })
 
   expected_disk = state_after_leaf_edit
@@ -4141,26 +4111,11 @@ def tree_conflicts_on_update_2_1(sbox):
   expected_status = svntest.wc.State('', {
     ''                  : Item(status='  ', wc_rev='3'),
     'D'                 : Item(status='  ', wc_rev='3'),
-    'D/D1'              : Item(status='  ', wc_rev='3'),
-    'D/D1/delta'        : Item(status='A ', wc_rev='0'),
     'DD'                : Item(status='  ', wc_rev='3'),
-    'DD/D1'             : Item(status='  ', wc_rev='3'),
-    'DD/D1/D2'          : Item(status='  ', wc_rev='3'),
-    'DD/D1/D2/epsilon'  : Item(status='A ', wc_rev='0'),
     'DDD'               : Item(status='  ', wc_rev='3'),
-    'DDD/D1'            : Item(status='  ', wc_rev='3'),
-    'DDD/D1/D2'         : Item(status='  ', wc_rev='3'),
-    'DDD/D1/D2/D3'      : Item(status='  ', wc_rev='3'),
-    'DDD/D1/D2/D3/zeta' : Item(status='A ', wc_rev='0'),
     'DDF'               : Item(status='  ', wc_rev='3'),
-    'DDF/D1'            : Item(status='  ', wc_rev='3'),
-    'DDF/D1/D2'         : Item(status='  ', wc_rev='3'),
-    'DDF/D1/D2/gamma'   : Item(status='M ', wc_rev='3'),
     'DF'                : Item(status='  ', wc_rev='3'),
-    'DF/D1'             : Item(status='  ', wc_rev='3'),
-    'DF/D1/beta'        : Item(status='M ', wc_rev='3'),
     'F'                 : Item(status='  ', wc_rev='3'),
-    'F/alpha'           : Item(status='M ', wc_rev='3'),
     })
 
   svntest.actions.deep_trees_run_tests_scheme_for_update(sbox,
@@ -4172,12 +4127,12 @@ def tree_conflicts_on_update_2_1(sbox):
                         expected_status) ] )
 
   expected_status.add({
-    'D/D1'              : Item(status='  ', treeconflict='C', wc_rev='3'),
-    'F/alpha'           : Item(status='M ', treeconflict='C', wc_rev='3'),
-    'DD/D1'             : Item(status='  ', treeconflict='C', wc_rev='3'),
-    'DF/D1'             : Item(status='  ', treeconflict='C', wc_rev='3'),
-    'DDD/D1'            : Item(status='  ', treeconflict='C', wc_rev='3'),
-    'DDF/D1'            : Item(status='  ', treeconflict='C', wc_rev='3'),
+    'D/D1'              : Item(status='? ', treeconflict='C'),
+    'F/alpha'           : Item(status='? ', treeconflict='C'),
+    'DD/D1'             : Item(status='? ', treeconflict='C'),
+    'DF/D1'             : Item(status='? ', treeconflict='C'),
+    'DDD/D1'            : Item(status='? ', treeconflict='C'),
+    'DDF/D1'            : Item(status='? ', treeconflict='C'),
     })
 
   svntest.actions.run_and_verify_unquiet_status(
@@ -4195,27 +4150,24 @@ def tree_conflicts_on_update_2_2(sbox):
   ### a directory tree that has modifications. (Will be solved
   ### when dirs_same_p() is implemented)
   expected_output = svntest.wc.State('', {
-    'D/D1'              : Item(status='  ', treeconflict='C'),
-    'F/alpha'           : Item(status='  ', treeconflict='C'),
+    'D/D1'              : Item(status='D ', treeconflict='C'),
+    'F/alpha'           : Item(status='D ', treeconflict='C'),
     'DD/D1'             : Item(status='D '),
     'DF/D1'             : Item(status='D '),
     'DDD/D1'            : Item(status='D '),
     'DDF/D1'            : Item(status='D '),
     })
 
-  expected_disk = state_after_tree_del.copy()
-  expected_disk.add({ 'D/D1' : Item() })
+  expected_disk = state_after_tree_del
 
   expected_status = svntest.wc.State('', {
     ''                  : Item(status='  ', wc_rev='3'),
     'D'                 : Item(status='  ', wc_rev='3'),
-    'D/D1'              : Item(status='D ', treeconflict='C', wc_rev='3'),
     'DD'                : Item(status='  ', wc_rev='3'),
     'DDD'               : Item(status='  ', wc_rev='3'),
     'DDF'               : Item(status='  ', wc_rev='3'),
     'DF'                : Item(status='  ', wc_rev='3'),
     'F'                 : Item(status='  ', wc_rev='3'),
-    'F/alpha'           : Item(status='D ', treeconflict='C', wc_rev='3'),
     })
 
   svntest.actions.deep_trees_run_tests_scheme_for_update(sbox,
@@ -4227,9 +4179,10 @@ def tree_conflicts_on_update_2_2(sbox):
                         expected_status) ] )
 
   expected_status.add({
-    'D/D1'              : Item(status='D ', treeconflict='C', wc_rev='3'),
-    'F/alpha'           : Item(status='D ', treeconflict='C', wc_rev='3'),
+    'D/D1'              : Item(status='! ', treeconflict='C'),
+    'F/alpha'           : Item(status='! ', treeconflict='C'),
     })
+
   svntest.actions.run_and_verify_unquiet_status(
     os.path.join(sbox.wc_dir, "local_leaf_del_incoming_tree_del"),
     expected_status)
@@ -4242,36 +4195,24 @@ def tree_conflicts_on_update_3(sbox):
   # local tree delete, incoming tree delete
 
   expected_output = svntest.wc.State('', {
-    'D/D1'              : Item(status='  ', treeconflict='C'),
-    'F/alpha'           : Item(status='  ', treeconflict='C'),
-    'DD/D1'             : Item(status='  ', treeconflict='C'),
-    'DF/D1'             : Item(status='  ', treeconflict='C'),
-    'DDD/D1'            : Item(status='  ', treeconflict='C'),
-    'DDF/D1'            : Item(status='  ', treeconflict='C'),
+    'D/D1'              : Item(status='D ', treeconflict='C'),
+    'F/alpha'           : Item(status='D ', treeconflict='C'),
+    'DD/D1'             : Item(status='D ', treeconflict='C'),
+    'DF/D1'             : Item(status='D ', treeconflict='C'),
+    'DDD/D1'            : Item(status='D ', treeconflict='C'),
+    'DDF/D1'            : Item(status='D ', treeconflict='C'),
     })
 
-  expected_disk = state_empty_dirs
+  expected_disk = state_after_tree_del
 
   expected_status = svntest.wc.State('', {
     ''                  : Item(status='  ', wc_rev='3'),
     'D'                 : Item(status='  ', wc_rev='3'),
-    'D/D1'              : Item(status='D ', treeconflict='C', wc_rev='3'),
     'DD'                : Item(status='  ', wc_rev='3'),
-    'DD/D1'             : Item(status='D ', treeconflict='C', wc_rev='3'),
-    'DD/D1/D2'          : Item(status='D ', wc_rev='3'),
     'DDD'               : Item(status='  ', wc_rev='3'),
-    'DDD/D1'            : Item(status='D ', treeconflict='C', wc_rev='3'),
-    'DDD/D1/D2'         : Item(status='D ', wc_rev='3'),
-    'DDD/D1/D2/D3'      : Item(status='D ', wc_rev='3'),
     'DDF'               : Item(status='  ', wc_rev='3'),
-    'DDF/D1'            : Item(status='D ', treeconflict='C', wc_rev='3'),
-    'DDF/D1/D2'         : Item(status='D ', wc_rev='3'),
-    'DDF/D1/D2/gamma'   : Item(status='D ', wc_rev='3'),
     'DF'                : Item(status='  ', wc_rev='3'),
-    'DF/D1'             : Item(status='D ', treeconflict='C', wc_rev='3'),
-    'DF/D1/beta'        : Item(status='D ', wc_rev='3'),
     'F'                 : Item(status='  ', wc_rev='3'),
-    'F/alpha'           : Item(status='D ', treeconflict='C', wc_rev='3'),
     })
 
   svntest.actions.deep_trees_run_tests_scheme_for_update(sbox,
@@ -4281,6 +4222,15 @@ def tree_conflicts_on_update_3(sbox):
                         expected_output,
                         expected_disk,
                         expected_status) ] )
+
+  expected_status.add({
+    'D/D1'              : Item(status='! ', treeconflict='C'),
+    'F/alpha'           : Item(status='! ', treeconflict='C'),
+    'DD/D1'             : Item(status='! ', treeconflict='C'),
+    'DF/D1'             : Item(status='! ', treeconflict='C'),
+    'DDD/D1'            : Item(status='! ', treeconflict='C'),
+    'DDF/D1'            : Item(status='! ', treeconflict='C'),
+    })
 
   svntest.actions.run_and_verify_unquiet_status(
     os.path.join(sbox.wc_dir, "local_tree_del_incoming_tree_del"),

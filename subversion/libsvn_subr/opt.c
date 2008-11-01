@@ -39,6 +39,7 @@
 
 #include "private/svn_opt_private.h"
 
+#include "opt.h"
 #include "svn_private_config.h"
 
 

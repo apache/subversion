@@ -288,24 +288,19 @@ get_file_mime_types(const char **mimetype1,
 static svn_error_t *
 get_file_from_ra(struct file_baton *b, svn_revnum_t revision)
 {
-  apr_file_t *file;
   svn_stream_t *fstream;
-  const char *temp_dir;
 
-  SVN_ERR(svn_io_temp_dir(&temp_dir, b->pool));
-  SVN_ERR(svn_io_open_unique_file2(&file, &(b->path_start_revision),
-                                   svn_path_join(temp_dir, "tmp", b->pool),
-                                   "", svn_io_file_del_on_pool_cleanup,
-                                   b->pool));
+  SVN_ERR(svn_stream_open_unique(&fstream, &(b->path_start_revision), NULL,
+                                 svn_io_file_del_on_pool_cleanup, b->pool,
+                                 b->pool));
 
-  fstream = svn_stream_from_aprfile2(file, TRUE, b->pool);
   SVN_ERR(svn_ra_get_file(b->edit_baton->ra_session,
                           b->path,
                           revision,
                           fstream, NULL,
                           &(b->pristine_props),
                           b->pool));
-  return svn_io_file_close(file, b->pool);
+  return svn_stream_close(fstream);
 }
 
 /* Get the props attached to a directory in the repository at BASE_REVISION. */

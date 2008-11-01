@@ -140,8 +140,9 @@ Notify2::onNotify(const svn_wc_notify_t *wcNotify, apr_pool_t *pool)
       midCT = env->GetMethodID(clazz, "<init>",
                                "(Ljava/lang/String;IILjava/lang/String;"
                                "Lorg/tigris/subversion/javahl/Lock;"
-                               "Ljava/lang/String;IIIJLjava/lang/String;L"
-                               JAVA_PACKAGE "/RevisionRange;)V");
+                               "Ljava/lang/String;IIIJLjava/lang/String;"
+                               "L" JAVA_PACKAGE "/RevisionRange;"
+                               "Ljava/lang/String;Z)V");
       if (JNIUtil::isJavaExceptionThrown() || midCT == 0)
         return;
     }
@@ -185,12 +186,17 @@ Notify2::onNotify(const svn_wc_notify_t *wcNotify, apr_pool_t *pool)
       jMergeRange = NULL;
     }
 
+  jstring jpathPrefix = JNIUtil::makeJString(wcNotify->path_prefix);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+
   // call the Java method
   jobject jInfo = env->NewObject(clazz, midCT, jPath, jAction,
                                  jKind, jMimeType, jLock, jErr,
                                  jContentState, jPropState, jLockState,
                                  (jlong) wcNotify->revision, jChangelistName,
-                                 jMergeRange);
+                                 jMergeRange, jpathPrefix,
+                                 (jboolean) wcNotify->tree_conflicted);
   if (JNIUtil::isJavaExceptionThrown())
     return;
 
@@ -216,6 +222,10 @@ Notify2::onNotify(const svn_wc_notify_t *wcNotify, apr_pool_t *pool)
     return;
 
   env->DeleteLocalRef(jChangelistName);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+
+  env->DeleteLocalRef(jpathPrefix);
   if (JNIUtil::isJavaExceptionThrown())
     return;
 

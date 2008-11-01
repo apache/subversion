@@ -1679,6 +1679,33 @@ def same_replacement_props(sbox):
   svntest.actions.run_and_verify_svn(None, expected_out, [],
                                      'proplist', '-v', foo_url)
 
+def added_moved_file(sbox):
+  "'svn mv added_file' preserves props"
+  
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # create it
+  foo_path = os.path.join(sbox.wc_dir, 'foo')
+  foo2_path = os.path.join(sbox.wc_dir, 'foo2')
+  foo2_url = sbox.repo_url + '/foo2'
+  open(foo_path, 'w').close()
+
+  # add it
+  svntest.main.run_svn(None, 'add', foo_path)
+  svntest.main.run_svn(None, 'propset', 'someprop', 'someval', foo_path)
+
+  # move it
+  svntest.main.run_svn(None, 'mv', foo_path, foo2_path)
+
+  # should still have the property
+  svntest.actions.check_prop('someprop', foo2_path, ['someval'])
+
+  # the property should get committed, too
+  svntest.main.run_svn(None, 'commit', '-m', 'set prop on added moved file',
+                       wc_dir)
+  svntest.actions.check_prop('someprop', foo2_url, ['someval'])
+
 
 ########################################################################
 # Run the tests
@@ -1717,6 +1744,7 @@ test_list = [ None,
               SkipUnless(XFail(invalid_propvalues, svntest.main.is_ra_type_dav),
                     svntest.main.server_enforces_date_syntax),
               same_replacement_props,
+              added_moved_file,
              ]
 
 if __name__ == '__main__':
