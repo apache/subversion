@@ -1461,6 +1461,7 @@ typedef struct svn_wc_diff_callbacks3_t
   svn_error_t *(*file_changed)(svn_wc_adm_access_t *adm_access,
                                svn_wc_notify_state_t *contentstate,
                                svn_wc_notify_state_t *propstate,
+                               svn_boolean_t *tree_conflicted,
                                const char *path,
                                const char *tmpfile1,
                                const char *tmpfile2,
@@ -1491,6 +1492,7 @@ typedef struct svn_wc_diff_callbacks3_t
   svn_error_t *(*file_added)(svn_wc_adm_access_t *adm_access,
                              svn_wc_notify_state_t *contentstate,
                              svn_wc_notify_state_t *propstate,
+                             svn_boolean_t *tree_conflicted,
                              const char *path,
                              const char *tmpfile1,
                              const char *tmpfile2,
@@ -1514,6 +1516,7 @@ typedef struct svn_wc_diff_callbacks3_t
    */
   svn_error_t *(*file_deleted)(svn_wc_adm_access_t *adm_access,
                                svn_wc_notify_state_t *state,
+                               svn_boolean_t *tree_conflicted,
                                const char *path,
                                const char *tmpfile1,
                                const char *tmpfile2,
@@ -1528,6 +1531,7 @@ typedef struct svn_wc_diff_callbacks3_t
    */
   svn_error_t *(*dir_added)(svn_wc_adm_access_t *adm_access,
                             svn_wc_notify_state_t *state,
+                            svn_boolean_t *tree_conflicted,
                             const char *path,
                             svn_revnum_t rev,
                             void *diff_baton);
@@ -1537,6 +1541,7 @@ typedef struct svn_wc_diff_callbacks3_t
    */
   svn_error_t *(*dir_deleted)(svn_wc_adm_access_t *adm_access,
                               svn_wc_notify_state_t *state,
+                              svn_boolean_t *tree_conflicted,
                               const char *path,
                               void *diff_baton);
 
@@ -1552,6 +1557,7 @@ typedef struct svn_wc_diff_callbacks3_t
    */
   svn_error_t *(*dir_props_changed)(svn_wc_adm_access_t *adm_access,
                                     svn_wc_notify_state_t *propstate,
+                                    svn_boolean_t *tree_conflicted,
                                     const char *path,
                                     const apr_array_header_t *propchanges,
                                     apr_hash_t *original_props,
@@ -1563,6 +1569,7 @@ typedef struct svn_wc_diff_callbacks3_t
    *
    */
   svn_error_t *(*dir_opened)(svn_wc_adm_access_t *adm_access,
+                             svn_boolean_t *tree_conflicted,
                              const char *path,
                              svn_revnum_t rev,
                              void *diff_baton);
@@ -1578,6 +1585,7 @@ typedef struct svn_wc_diff_callbacks3_t
    */
   svn_error_t *(*dir_closed)(svn_wc_adm_access_t *adm_access,
                              svn_wc_notify_state_t *state,
+                             svn_boolean_t *tree_conflicted,
                              const char *path,
                              void *diff_baton);
 
