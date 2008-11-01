@@ -1819,7 +1819,7 @@ def from_wc_top_with_bad_editor(sbox):
   err = " ".join(map(str.strip, err))
   if not (re.match(".*no_such-editor.*", err)
           and re.match(".*Commit failed.*", err)):
-    print "Commit failed, but not in the way expected."
+    print("Commit failed, but not in the way expected.")
     raise svntest.Failure
 
 

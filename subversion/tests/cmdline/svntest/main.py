@@ -263,9 +263,9 @@ def wrap_ex(func):
       if ex.__class__ != Failure or ex.args:
         ex_args = str(ex)
         if ex_args:
-          print 'EXCEPTION: %s: %s' % (ex.__class__.__name__, ex_args)
+          print('EXCEPTION: %s: %s' % (ex.__class__.__name__, ex_args))
         else:
-          print 'EXCEPTION:', ex.__class__.__name__
+          print('EXCEPTION: %s' % ex.__class__.__name__)
   return w
 
 def setup_development_mode():
@@ -412,7 +412,8 @@ def spawn_process(command, binary_mode=0,stdin_lines=None, *varargs):
 
   # Log the command line
   if verbose_mode and not command.endswith('.py'):
-    print 'CMD:', os.path.basename(command) + ' ' + args,
+    sys.stdout.write('CMD: %s %s ' % (os.path.basename(command), args))
+    sys.stdout.flush()
 
   if binary_mode:
     mode = 'b'
@@ -457,7 +458,7 @@ def run_command_stdin(command, error_expected, binary_mode=0,
 
   if verbose_mode:
     stop = time.time()
-    print '<TIME = %.6f>' % (stop - start)
+    print('<TIME = %.6f>' % (stop - start))
     for x in stdout_lines:
       sys.stdout.write(x)
     for x in stderr_lines:
@@ -679,8 +680,9 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
   if ignore_uuid:
     load_args = load_args + " --ignore-uuid"
   if verbose_mode:
-    print 'CMD:', os.path.basename(svnadmin_binary) + dump_args, \
-          '|', os.path.basename(svnadmin_binary) + load_args,
+    sys.stdout.write('CMD: %s%s | %s%s ' % (os.path.basename(svnadmin_binary), \
+                     dump_args, os.path.basename(svnadmin_binary), load_args))
+    sys.stdout.flush()
   start = time.time()
 
   dump_in, dump_out, dump_err, dump_kid = \
@@ -690,7 +692,7 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
            open_pipe(svnadmin_binary + load_args, 'b')
   stop = time.time()
   if verbose_mode:
-    print '<TIME = %.6f>' % (stop - start)
+    print('<TIME = %.6f>' % (stop - start))
 
   while 1:
     data = dump_out.read(1024*1024)  # Arbitrary buffer size
@@ -714,11 +716,12 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
   for dump_line in dump_lines:
     match = dump_re.match(dump_line)
     if not match or match.group(1) != str(expect_revision):
-      print 'ERROR:  dump failed:', dump_line,
+      sys.stdout.write('ERROR:  dump failed: %s ' % dump_line)
+      sys.stdout.flush()
       raise SVNRepositoryCopyFailure
     expect_revision += 1
   if expect_revision != head_revision + 1:
-    print 'ERROR:  dump failed; did not see revision', head_revision
+    print('ERROR:  dump failed; did not see revision %s' % head_revision)
     raise SVNRepositoryCopyFailure
 
   load_re = re.compile(r'^------- Committed revision (\d+) >>>\r?$')
@@ -727,11 +730,12 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1):
     match = load_re.match(load_line)
     if match:
       if match.group(1) != str(expect_revision):
-        print 'ERROR:  load failed:', load_line,
+        sys.stdout.write('ERROR:  load failed: %s ' % load_line)
+        sys.stdout.flush()
         raise SVNRepositoryCopyFailure
       expect_revision += 1
   if expect_revision != head_revision + 1:
-    print 'ERROR:  load failed; did not see revision', head_revision
+    print('ERROR:  load failed; did not see revision %s' % head_revision)
     raise SVNRepositoryCopyFailure
 
 
@@ -1017,14 +1021,14 @@ def _cleanup_deferred_test_paths():
 def _cleanup_test_path(path, retrying=None):
   if verbose_mode:
     if retrying:
-      print "CLEANUP: RETRY:", path
+      print("CLEANUP: RETRY: %s" % path)
     else:
-      print "CLEANUP:", path
+      print("CLEANUP: %s" % path)
   try:
     safe_rmtree(path)
   except:
     if verbose_mode:
-      print "WARNING: cleanup failed, will try again later"
+      print("WARNING: cleanup failed, will try again later")
     _deferred_test_paths.append(path)
 
 class TestSpawningThread(threading.Thread):
@@ -1085,14 +1089,14 @@ class TestRunner:
     self.index = index
 
   def list(self):
-    print " %2d     %-5s  %s" % (self.index,
+    print(" %2d     %-5s  %s" % (self.index,
                                  self.pred.list_mode(),
-                                 self.pred.get_description())
+                                 self.pred.get_description()))
     self.pred.check_description()
 
   def _print_name(self):
-    print os.path.basename(sys.argv[0]), str(self.index) + ":", \
-          self.pred.get_description()
+    print("%s %s: %s" % (os.path.basename(sys.argv[0]), str(self.index), \
+          self.pred.get_description()))
     self.pred.check_description()
 
   def run(self):
@@ -1128,9 +1132,10 @@ class TestRunner:
     try:
       rc = self.pred.run(**kw)
       if rc is not None:
-        print 'STYLE ERROR in',
+        sys.stdout.write('STYLE ERROR in ')
+        sys.stdout.flush()
         self._print_name()
-        print 'Test driver returned a status code.'
+        print('Test driver returned a status code.')
         sys.exit(255)
       result = 0
     except Skip, ex:
@@ -1144,28 +1149,30 @@ class TestRunner:
       if ex.__class__ != Failure or ex.args:
         ex_args = str(ex)
         if ex_args:
-          print 'EXCEPTION: %s: %s' % (ex.__class__.__name__, ex_args)
+          print('EXCEPTION: %s: %s' % (ex.__class__.__name__, ex_args))
         else:
-          print 'EXCEPTION:', ex.__class__.__name__
+          print('EXCEPTION: %s' % ex.__class__.__name__)
       traceback.print_exc(file=sys.stdout)
     except KeyboardInterrupt:
-      print 'Interrupted'
+      print('Interrupted')
       sys.exit(0)
     except SystemExit, ex:
-      print 'EXCEPTION: SystemExit(%d), skipping cleanup' % ex.code
-      print ex.code and 'FAIL: ' or 'PASS: ',
+      print('EXCEPTION: SystemExit(%d), skipping cleanup' % ex.code)
+      sys.stdout.write(ex.code and 'FAIL:  ' or 'PASS:  ')
+      sys.stdout.flush()
       self._print_name()
       raise
     except:
       result = 1
-      print 'UNEXPECTED EXCEPTION:'
+      print('UNEXPECTED EXCEPTION:')
       traceback.print_exc(file=sys.stdout)
 
     os.chdir(saved_dir)
     result = self.pred.convert_result(result)
     (result_text, result_benignity) = self.pred.run_text(result)
     if not (quiet_mode and result_benignity):
-      print result_text,
+      sys.stdout.write("%s " % result_text)
+      sys.stdout.flush()
       self._print_name()
       sys.stdout.flush()
     if sandbox is not None and result != 1 and cleanup_mode:
@@ -1189,7 +1196,7 @@ def run_one_test(n, test_list, parallel = 0, finished_tests = None):
   """
 
   if (n < 1) or (n > len(test_list) - 1):
-    print "There is no test", repr(n) + ".\n"
+    print("There is no test %s.\n" % n)
     return 1
 
   # Run the test.
@@ -1236,7 +1243,7 @@ def _internal_run_tests(test_list, testnums, parallel):
     results.sort()
 
     # terminate the line of dots
-    print
+    print("")
 
     # all tests are finished, find out the result and print the logs.
     for (index, result, stdout_lines, stderr_lines) in results:
@@ -1255,37 +1262,37 @@ def _internal_run_tests(test_list, testnums, parallel):
 
 def usage():
   prog_name = os.path.basename(sys.argv[0])
-  print "%s [--url] [--fs-type] [--verbose|--quiet] [--parallel] \\" % \
-        prog_name
-  print "%s [--enable-sasl] [--cleanup] [--bin] [<test> ...]" \
-      % (" " * len(prog_name))
-  print "%s " % (" " * len(prog_name))
-  print "%s [--list] [<test> ...]\n" % prog_name
-  print "Arguments:"
-  print " <test>  The number of the test to run, or a range of test\n"\
+  print("%s [--url] [--fs-type] [--verbose|--quiet] [--parallel] \\" % \
+        prog_name)
+  print("%s [--enable-sasl] [--cleanup] [--bin] [<test> ...]" \
+      % (" " * len(prog_name)))
+  print("%s " % (" " * len(prog_name)))
+  print("%s [--list] [<test> ...]\n" % prog_name)
+  print("Arguments:")
+  print(" <test>  The number of the test to run, or a range of test\n"\
         "         numbers, like 10:12 or 10-12. Multiple numbers and\n"\
-        "         ranges are ok. If you supply none, all tests are run.\n"
-  print "Options:"
-  print " --list          Print test doc strings instead of running them"
-  print " --fs-type       Subversion file system type (fsfs or bdb)"
-  print " --http-library  DAV library to use (neon or serf)"
-  print " --url           Base url to the repos (e.g. svn://localhost)"
-  print " --verbose       Print binary command-lines (not with --quiet)"
-  print " --quiet         Print only unexpected results (not with --verbose)"
-  print " --cleanup       Whether to clean up"
-  print " --enable-sasl   Whether to enable SASL authentication"
-  print " --parallel      Run the tests in parallel"
-  print " --bin           Use the svn binaries installed in this path"
-  print " --use-jsvn      Use the jsvn (SVNKit based) binaries. Can be\n" \
-        "                 combined with --bin to point to a specific path"
-  print " --development   Test development mode: provides more detailed test\n"\
+        "         ranges are ok. If you supply none, all tests are run.\n")
+  print("Options:")
+  print(" --list          Print test doc strings instead of running them")
+  print(" --fs-type       Subversion file system type (fsfs or bdb)")
+  print(" --http-library  DAV library to use (neon or serf)")
+  print(" --url           Base url to the repos (e.g. svn://localhost)")
+  print(" --verbose       Print binary command-lines (not with --quiet)")
+  print(" --quiet         Print only unexpected results (not with --verbose)")
+  print(" --cleanup       Whether to clean up")
+  print(" --enable-sasl   Whether to enable SASL authentication")
+  print(" --parallel      Run the tests in parallel")
+  print(" --bin           Use the svn binaries installed in this path")
+  print(" --use-jsvn      Use the jsvn (SVNKit based) binaries. Can be\n" \
+        "                 combined with --bin to point to a specific path")
+  print(" --development   Test development mode: provides more detailed test\n"\
         "                 output and ignores all exceptions in the \n"  \
         "                 run_and_verify* functions. This option is only \n" \
-        "                 useful during test development!"
-  print " --server-minor-version  Set the minor version for the server.\n" \
-        "                 Supports version 4 or 5."
-  print " --config-file   Configuration file for tests."
-  print " --help          This information"
+        "                 useful during test development!")
+  print(" --server-minor-version  Set the minor version for the server.\n" \
+        "                 Supports version 4 or 5.")
+  print(" --config-file   Configuration file for tests.")
+  print(" --help          This information")
 
 
 # Main func.  This is the "entry point" that all the test scripts call
@@ -1335,7 +1342,7 @@ def run_tests(test_list, serial_only = False):
                             'bin=', 'http-library=', 'server-minor-version=',
                             'use-jsvn', 'development', 'config-file='])
   except getopt.GetoptError, e:
-    print "ERROR: %s\n" % e
+    print("ERROR: %s\n" % e)
     usage()
     sys.exit(1)
 
@@ -1375,7 +1382,7 @@ def run_tests(test_list, serial_only = False):
           appended = False
 
       if not appended:
-        print "ERROR: invalid test number or range '%s'\n" % arg
+        print("ERROR: invalid test number or range '%s'\n" % arg)
         usage()
         sys.exit(1)
 
@@ -1420,7 +1427,7 @@ def run_tests(test_list, serial_only = False):
     elif opt == '--server-minor-version':
       server_minor_version = int(val)
       if server_minor_version < 4 or server_minor_version > 6:
-        print "ERROR: test harness only supports server minor version 4 or 5"
+        print("ERROR: test harness only supports server minor version 4 or 5")
         sys.exit(1)
 
     elif opt == '--use-jsvn':
@@ -1474,8 +1481,8 @@ def run_tests(test_list, serial_only = False):
     testnums = range(1, len(test_list))
 
   if list_tests:
-    print "Test #  Mode   Test Description"
-    print "------  -----  ----------------"
+    print("Test #  Mode   Test Description")
+    print("------  -----  ----------------")
     for testnum in testnums:
       TestRunner(test_list[testnum], testnum).list()
 

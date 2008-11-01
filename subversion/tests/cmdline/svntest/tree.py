@@ -5,7 +5,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2001, 2006 CollabNet.  All rights reserved.
+# Copyright (c) 2001, 2006, 2008 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -184,18 +184,18 @@ class SVNTreeNode:
 
   def pprint(self, stream = sys.stdout):
     "Pretty-print the meta data for this node to STREAM."
-    print >> stream, " * Node name:  ", self.name
-    print >> stream, "    Path:      ", self.path
+    stream.write(" * Node name:   %s\n" % self.name)
+    stream.write("    Path:       %s\n" % self.path)
     mime_type = self.props.get("svn:mime-type")
     if not mime_type or mime_type.startswith("text/"):
       if self.children is not None:
-        print >> stream, "    Contents:   N/A (node is a directory)"
+        stream.write("    Contents:   N/A (node is a directory)\n")
       else:
-        print >> stream, "    Contents:  ", self.contents
+        stream.write("    Contents:   %s\n" % self.contents)
     else:
-      print >> stream, "    Contents:   %d bytes (binary)" % len(self.contents)
-    print >> stream, "    Properties:", self.props
-    print >> stream, "    Attributes:", self.atts
+      stream.write("    Contents:   %d bytes (binary)\n" % len(self.contents))
+    stream.write("    Properties: %s\n" % self.props)
+    stream.write("    Attributes: %s\n" % self.atts)
     ### FIXME: I'd like to be able to tell the difference between
     ### self.children is None (file) and self.children == [] (empty
     ### directory), but it seems that most places that construct
@@ -203,9 +203,10 @@ class SVNTreeNode:
     ###
     ### See issue #1611 about this problem.  -kfogel
     if self.children is not None:
-      print >> stream, "    Children:  ", len(self.children)
+      stream.write("    Children:   %s\n" % len(self.children))
     else:
-      print >> stream, "    Children:  None (node is probably a file)"
+      stream.write("    Children:  None (node is probably a file)\n")
+    stream.flush()
 
   def print_script(self, stream = sys.stdout, subtree = ""):
     """Python-script-print the meta data for this node to STREAM.
@@ -264,7 +265,8 @@ class SVNTreeNode:
       comma = True
 
     line += "),"
-    print >> stream, line
+    stream.write("%s\n" % line)
+    stream.flush()
 
 
   def __str__(self):
@@ -488,7 +490,7 @@ def get_child(node, name):
 def default_singleton_handler(node, description):
   """Print SVNTreeNode NODE's name, describing it with the string
   DESCRIPTION, then raise SVNTreeUnequal."""
-  print "Couldn't find node '%s' in %s tree" % (node.name, description)
+  print("Couldn't find node '%s' in %s tree" % (node.name, description))
   node.pprint()
   raise SVNTreeUnequal
 
@@ -506,7 +508,7 @@ def detect_conflict_files(node, extra_files):
       break
   else:
     msg = "Encountered unexpected disk path '" + node.name + "'"
-    print msg
+    print(msg)
     node.pprint()
     raise SVNTreeUnequal(msg)
 
@@ -541,16 +543,16 @@ def compare_trees(label,
 
   def display_nodes(a, b):
     'Display two nodes, expected and actual.'
-    print "============================================================="
-    print "Expected '%s' and actual '%s' in %s tree are different!" \
-          % (b.name, a.name, label)
-    print "============================================================="
-    print "EXPECTED NODE TO BE:"
-    print "============================================================="
+    print("=============================================================")
+    print("Expected '%s' and actual '%s' in %s tree are different!" \
+          % (b.name, a.name, label))
+    print("=============================================================")
+    print("EXPECTED NODE TO BE:")
+    print("=============================================================")
     b.pprint()
-    print "============================================================="
-    print "ACTUAL NODE FOUND:"
-    print "============================================================="
+    print("=============================================================")
+    print("ACTUAL NODE FOUND:")
+    print("=============================================================")
     a.pprint()
 
   # Setup singleton handlers
@@ -598,17 +600,17 @@ def compare_trees(label,
         if (b_child not in accounted_for):
           singleton_handler_b(b_child, b_baton)
   except SVNTypeMismatch:
-    print 'Unequal Types: one Node is a file, the other is a directory'
+    print('Unequal Types: one Node is a file, the other is a directory')
     raise SVNTreeUnequal
   except SVNTreeIsNotDirectory:
-    print "Error: Foolish call to get_child."
+    print("Error: Foolish call to get_child.")
     sys.exit(1)
   except IndexError:
-    print "Error: unequal number of children"
+    print("Error: unequal number of children")
     raise SVNTreeUnequal
   except SVNTreeUnequal:
     if a.name != root_node_name:
-      print "Unequal at node %s" % a.name
+      print("Unequal at node %s" % a.name)
     raise
 
 
@@ -624,9 +626,9 @@ def dump_tree(n,indent=""):
   tmp_children.sort()
 
   if n.name == root_node_name:
-    print "%s%s" % (indent, "ROOT")
+    print("%s%s" % (indent, "ROOT"))
   else:
-    print "%s%s" % (indent, n.name)
+    print("%s%s" % (indent, n.name))
 
   indent = indent.replace("-", " ")
   indent = indent.replace("+", " ")
@@ -655,9 +657,9 @@ def dump_tree_script(n, subtree=""):
   with the string SUBTREE, and print only the part of the path string
   that remains after SUBTREE."""
 
-  print "svntest.wc.State('%s', {" % subtree
+  print("svntest.wc.State('%s', {" % subtree)
   dump_tree_script__crawler(n, subtree)
-  print "})"
+  print("})")
 
 
 ###################################################################

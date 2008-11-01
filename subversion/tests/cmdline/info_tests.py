@@ -65,9 +65,9 @@ def verify_xml_elements(lines, exprs):
     str = str[m.end():] # skip xml version tag
   (unmatched_str, unmatched_exprs) = match_xml_element(str, exprs)
   if unmatched_exprs:
-    print "Failed to find the following expressions:"
+    print("Failed to find the following expressions:")
     for expr in unmatched_exprs:
-      print expr
+      print(expr)
     raise SVNTreeUnequal
 
 def match_xml_element(str, exprs):
@@ -106,7 +106,7 @@ def match_xml_element(str, exprs):
     content_re = re.compile(content_re_str % name, re.DOTALL)
     m = content_re.match(str)
     if not m:
-      print "No XML end-tag for '%s' found in '%s...'" % (name, str[:100])
+      print("No XML end-tag for '%s' found in '%s...'" % (name, str[:100]))
       raise(SVNTreeUnequal)
     content = m.group('content')
     str = str[m.end():]

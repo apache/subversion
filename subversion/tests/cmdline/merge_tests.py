@@ -1218,7 +1218,7 @@ def merge_one_file_helper(sbox, arg_flav, record_only = 0):
   else:
     expected_text = "This is the file 'rho'.\nA new line in rho.\n"
   if rho_text != expected_text:
-    print
+    print("")
     raise svntest.Failure("Unexpected text merged to 'rho' in '" +
                           G_path + "'")
   os.chdir(saved_cwd)
@@ -13226,13 +13226,13 @@ def verify_lines(lines, regexes):
       if re.search(regex, line):
         num_patterns_found += 1
     if num_patterns_found != 1:
-      print("UNEXPECTED OUTPUT: " + str(num_patterns_found) +
-        " occurrences of '" + regex + "'")
+      print(("UNEXPECTED OUTPUT: " + str(num_patterns_found) +
+        " occurrences of '" + regex + "'"))
       if svntest.main.verbose_mode:
-        print " Actual output:"
+        print(" Actual output:")
         for line in lines:
           sys.stdout.write("  %s" % line)
-        print " Expected regexes:"
+        print(" Expected regexes:")
         for regex in regexes:
           sys.stdout.write("  %s\n" % regex)
       return False

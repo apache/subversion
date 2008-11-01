@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -78,7 +78,7 @@ def detect_extra_files(node, extra_files):
           extra_files.pop(extra_files.index(fdata)) # delete pattern from list
           return
 
-  print "Found unexpected object:", node.name
+  print("Found unexpected object: %s" % node.name)
   raise svntest.tree.SVNTreeUnequal
 
 
@@ -184,8 +184,8 @@ def update_binary_file(sbox):
 
   # verify that the extra_files list is now empty.
   if len(extra_files) != 0:
-    print "Not all extra reject files have been accounted for:"
-    print extra_files
+    print("Not all extra reject files have been accounted for:")
+    print(extra_files)
     raise svntest.Failure
 
 #----------------------------------------------------------------------
@@ -587,7 +587,7 @@ def update_to_resolve_text_conflicts(sbox):
 
   # verify that the extra_files list is now empty.
   if len(extra_files) != 0:
-    print "didn't get expected extra files"
+    print("didn't get expected extra files")
     raise svntest.Failure
 
   # remove the conflicting files to clear text conflict but not props conflict
@@ -600,7 +600,7 @@ def update_to_resolve_text_conflicts(sbox):
   exit_code, stdout_lines, stdout_lines = svntest.main.run_svn(None, 'up',
                                                                wc_backup)
   if len (stdout_lines) > 0:
-    print "update 2 failed"
+    print("update 2 failed")
     raise svntest.Failure
 
   # Create expected status tree
