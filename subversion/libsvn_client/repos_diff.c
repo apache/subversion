@@ -72,7 +72,7 @@ struct edit_baton {
   apr_hash_t *empty_hash;
 
   /* Hash used to check replaced paths. Key is path relative CWD,
-   * Value is *kind_action_state_t.
+   * Value is *deleted_path_notify_t.
    * All allocations are from edit_baton's pool. */
   apr_hash_t *deleted_paths;
 
@@ -83,13 +83,13 @@ struct edit_baton {
   apr_pool_t *pool;
 };
 
-typedef struct kind_action_state_t
+typedef struct deleted_path_notify_t
 {
   svn_node_kind_t kind;
   svn_wc_notify_action_t action;
   svn_wc_notify_state_t state;
   svn_boolean_t tree_conflicted;
-} kind_action_state_t;
+} deleted_path_notify_t;
 
 /* Directory level baton.
  */
@@ -529,13 +529,13 @@ delete_entry(const char *path,
   if (eb->notify_func)
     {
       const char* deleted_path;
-      kind_action_state_t *kas = apr_palloc(eb->pool, sizeof(*kas));
+      deleted_path_notify_t *dpn = apr_palloc(eb->pool, sizeof(*dpn));
       deleted_path = svn_path_join(eb->target, path, eb->pool);
-      kas->kind = kind;
-      kas->action = tree_conflicted ? svn_wc_notify_update_update : action;
-      kas->state = state;
-      kas->tree_conflicted = tree_conflicted;
-      apr_hash_set(eb->deleted_paths, deleted_path, APR_HASH_KEY_STRING, kas);
+      dpn->kind = kind;
+      dpn->action = tree_conflicted ? svn_wc_notify_update_update : action;
+      dpn->state = state;
+      dpn->tree_conflicted = tree_conflicted;
+      apr_hash_set(eb->deleted_paths, deleted_path, APR_HASH_KEY_STRING, dpn);
     }
   return SVN_NO_ERROR;
 }
@@ -590,25 +590,25 @@ add_directory(const char *path,
     {
       svn_wc_notify_t *notify;
       svn_boolean_t is_replace = FALSE;
-      kind_action_state_t *kas = apr_hash_get(eb->deleted_paths, b->wcpath,
+      deleted_path_notify_t *dpn = apr_hash_get(eb->deleted_paths, b->wcpath,
                                               APR_HASH_KEY_STRING);
-      if (kas)
+      if (dpn)
         {
           svn_wc_notify_action_t new_action;
-          if ((! kas->tree_conflicted)
-              && kas->action == svn_wc_notify_update_delete
+          if ((! dpn->tree_conflicted)
+              && dpn->action == svn_wc_notify_update_delete
               && action == svn_wc_notify_update_add)
             {
               is_replace = TRUE;
               new_action = svn_wc_notify_update_replace;
             }
           else
-            new_action = kas->action;
+            new_action = dpn->action;
           notify = svn_wc_create_notify(b->wcpath, new_action, pool);
-          notify->kind = kas->kind;
-          notify->content_state = notify->prop_state = kas->state;
+          notify->kind = dpn->kind;
+          notify->content_state = notify->prop_state = dpn->state;
           notify->lock_state = svn_wc_notify_lock_state_inapplicable;
-          notify->tree_conflicted = kas->tree_conflicted;
+          notify->tree_conflicted = dpn->tree_conflicted;
           (*eb->notify_func)(eb->notify_baton, notify, pool);
           apr_hash_set(eb->deleted_paths, b->wcpath,
                        APR_HASH_KEY_STRING, NULL);
@@ -892,25 +892,25 @@ close_file(void *file_baton,
     {
       svn_wc_notify_t *notify;
       svn_boolean_t is_replace = FALSE;
-      kind_action_state_t *kas = apr_hash_get(eb->deleted_paths, b->wcpath,
+      deleted_path_notify_t *dpn = apr_hash_get(eb->deleted_paths, b->wcpath,
                                               APR_HASH_KEY_STRING);
-      if (kas)
+      if (dpn)
         {
           svn_wc_notify_action_t new_action;
-          if ((! kas->tree_conflicted)
-              && kas->action == svn_wc_notify_update_delete
+          if ((! dpn->tree_conflicted)
+              && dpn->action == svn_wc_notify_update_delete
               && action == svn_wc_notify_update_add)
             {
               is_replace = TRUE;
               new_action = svn_wc_notify_update_replace;
             }
           else
-            new_action = kas->action;
+            new_action = dpn->action;
           notify  = svn_wc_create_notify(b->wcpath, new_action, pool);
-          notify->kind = kas->kind;
-          notify->content_state = notify->prop_state = kas->state;
+          notify->kind = dpn->kind;
+          notify->content_state = notify->prop_state = dpn->state;
           notify->lock_state = svn_wc_notify_lock_state_inapplicable;
-          notify->tree_conflicted = kas->tree_conflicted;
+          notify->tree_conflicted = dpn->tree_conflicted;
           (*eb->notify_func)(eb->notify_baton, notify, pool);
           apr_hash_set(eb->deleted_paths, b->wcpath,
                        APR_HASH_KEY_STRING, NULL);
@@ -1002,13 +1002,13 @@ close_directory(void *dir_baton,
            hi = apr_hash_next(hi))
         {
           const void *deleted_path;
-          kind_action_state_t *kas;
-          apr_hash_this(hi, &deleted_path, NULL, (void *)&kas);
-          notify = svn_wc_create_notify(deleted_path, kas->action, pool);
-          notify->kind = kas->kind;
-          notify->content_state = notify->prop_state = kas->state;
+          deleted_path_notify_t *dpn;
+          apr_hash_this(hi, &deleted_path, NULL, (void *)&dpn);
+          notify = svn_wc_create_notify(deleted_path, dpn->action, pool);
+          notify->kind = dpn->kind;
+          notify->content_state = notify->prop_state = dpn->state;
           notify->lock_state = svn_wc_notify_lock_state_inapplicable;
-          notify->tree_conflicted = kas->tree_conflicted;
+          notify->tree_conflicted = dpn->tree_conflicted;
           (*eb->notify_func)(eb->notify_baton, notify, pool);
           apr_hash_set(eb->deleted_paths, deleted_path,
                        APR_HASH_KEY_STRING, NULL);
