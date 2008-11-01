@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2004, 2007 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2004, 2007-2008 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -44,9 +44,9 @@ def run_svnlook(*varargs):
 
 def expect(tag, expected, got):
   if expected != got:
-    print "When testing: %s" % tag
-    print "Expected: %s" % expected
-    print "     Got: %s" % got
+    print("When testing: %s" % tag)
+    print("Expected: %s" % expected)
+    print("     Got: %s" % got)
     raise svntest.Failure
 
 
@@ -115,9 +115,9 @@ def test_misc(sbox):
     if n != 0:
       test = "/" + test
     if not path == test:
-      print "Unexpected result from tree with --full-paths:"
-      print "  entry            : %s" % entry.rstrip()
-      print "  with --full-paths: %s" % treelistfull[n].rstrip()
+      print("Unexpected result from tree with --full-paths:")
+      print("  entry            : %s" % entry.rstrip())
+      print("  with --full-paths: %s" % treelistfull[n].rstrip())
       raise svntest.Failure
     n = n + 1
 
@@ -129,9 +129,9 @@ def test_misc(sbox):
   treelistfull = run_svnlook('tree', '--full-paths', repo_dir, '/A/B')
   for entry in treelist:
     if not treelistfull[n].endswith(entry.lstrip()):
-      print "Unexpected result from tree with --full-paths:"
-      print "  entry            : %s" % entry.rstrip()
-      print "  with --full-paths: %s" % treelistfull[n].rstrip()
+      print("Unexpected result from tree with --full-paths:")
+      print("  entry            : %s" % entry.rstrip())
+      print("  with --full-paths: %s" % treelistfull[n].rstrip())
       raise svntest.Failure
     n = n + 1
 
@@ -150,7 +150,7 @@ def test_misc(sbox):
   # We cannot rely on svn:author's presence. ra_svn doesn't set it.
   if not (proplist == [ 'svn:author', 'svn:date', 'svn:log' ]
       or proplist == [ 'svn:date', 'svn:log' ]):
-    print "Unexpected result from proplist: %s" % proplist
+    print("Unexpected result from proplist: %s" % proplist)
     raise svntest.Failure
 
   prop_name = 'foo:bar-baz-quux'
@@ -378,12 +378,12 @@ def tree_non_recursive(sbox):
   treelist = run_svnlook('tree', '--non-recursive', repo_dir)
   for entry in treelist:
     if not entry.rstrip() in expected_results_root:
-      print "Unexpected result from tree with --non-recursive:"
-      print "  entry            : %s" % entry.rstrip()
+      print("Unexpected result from tree with --non-recursive:")
+      print("  entry            : %s" % entry.rstrip())
       raise svntest.Failure
   if len(treelist) != len(expected_results_root):
-    print "Expected %i output entries, found %i" \
-          % (len(expected_results_root), len(treelist))
+    print("Expected %i output entries, found %i" \
+          % (len(expected_results_root), len(treelist)))
     raise svntest.Failure
 
   # check the output of svnlook --non-recursive on a
@@ -391,12 +391,12 @@ def tree_non_recursive(sbox):
   treelist = run_svnlook('tree', '--non-recursive', repo_dir, '/A/B')
   for entry in treelist:
     if not entry.rstrip() in expected_results_deep:
-      print "Unexpected result from tree with --non-recursive:"
-      print "  entry            : %s" % entry.rstrip()
+      print("Unexpected result from tree with --non-recursive:")
+      print("  entry            : %s" % entry.rstrip())
       raise svntest.Failure
   if len(treelist) != len(expected_results_deep):
-    print "Expected %i output entries, found %i" \
-          % (len(expected_results_deep), len(treelist))
+    print("Expected %i output entries, found %i" \
+          % (len(expected_results_deep), len(treelist)))
     raise svntest.Failure
 
 #----------------------------------------------------------------------

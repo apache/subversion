@@ -5,7 +5,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -42,11 +42,11 @@ class TestCase:
     description = self.get_description()
 
     if len(description) > 50:
-      print 'WARNING: Test doc string exceeds 50 characters'
+      print('WARNING: Test doc string exceeds 50 characters')
     if description[-1] == '.':
-      print 'WARNING: Test doc string ends in a period (.)'
+      print('WARNING: Test doc string ends in a period (.)')
     if not description[0].lower() == description[0]:
-      print 'WARNING: Test doc string is capitalized'
+      print('WARNING: Test doc string is capitalized')
 
   def need_sandbox(self):
     """Return True iff this test needs a Sandbox for its execution."""

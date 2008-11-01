@@ -41,7 +41,7 @@ def test_stderr(re_string, stderr):
   if svntest.main.verbose_mode:
     for x in stderr:
       sys.stdout.write(x)
-    print "Expected stderr reg-ex: '" + re_string + "'"
+    print("Expected stderr reg-ex: '" + re_string + "'")
   raise svntest.Failure("Checkout failed but not in the expected way")
 
 #----------------------------------------------------------------------

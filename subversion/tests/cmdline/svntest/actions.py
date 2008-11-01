@@ -70,9 +70,9 @@ def setup_pristine_repository():
     cm = re.compile ("(Committed|Imported) revision [0-9]+.")
     match = cm.search (lastline)
     if not match:
-      print "ERROR:  import did not succeed, while creating greek repos."
-      print "The final line from 'svn import' was:"
-      print lastline
+      print("ERROR:  import did not succeed, while creating greek repos.")
+      print("The final line from 'svn import' was:")
+      print(lastline)
       sys.exit(1)
     output_tree = tree.build_tree_from_commit(output)
 
@@ -111,13 +111,13 @@ def guarantee_greek_repository(path):
   nothing but the greek-tree at revision 1."""
 
   if path == main.pristine_dir:
-    print "ERROR:  attempt to overwrite the pristine repos!  Aborting."
+    print("ERROR:  attempt to overwrite the pristine repos!  Aborting.")
     sys.exit(1)
 
   # copy the pristine repository to PATH.
   main.safe_rmtree(path)
   if main.copy_repos(main.pristine_dir, path, 1):
-    print "ERROR:  copying repository failed."
+    print("ERROR:  copying repository failed.")
     sys.exit(1)
 
   # make the repos world-writeable, for mod_dav_svn's sake.
@@ -387,7 +387,7 @@ def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
   try:
     tree.compare_trees ("output", actual, output_tree)
   except tree.SVNTreeUnequal:
-    print "ACTUAL OUTPUT TREE:"
+    print("ACTUAL OUTPUT TREE:")
     tree.dump_tree_script(actual, wc_dir_name + os.sep)
     raise
 
@@ -400,7 +400,7 @@ def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
                         singleton_handler_a, a_baton,
                         singleton_handler_b, b_baton)
   except tree.SVNTreeUnequal:
-    print "ACTUAL DISK TREE:"
+    print("ACTUAL DISK TREE:")
     tree.dump_tree_script(actual, wc_dir_name + os.sep)
     raise
 
@@ -436,7 +436,7 @@ def run_and_verify_export(URL, export_dir_name, output_tree, disk_tree,
   try:
     tree.compare_trees ("output", actual, output_tree)
   except tree.SVNTreeUnequal:
-    print "ACTUAL OUTPUT TREE:"
+    print("ACTUAL OUTPUT TREE:")
     tree.dump_tree_script(actual, export_dir_name + os.sep)
     raise
 
@@ -451,7 +451,7 @@ def run_and_verify_export(URL, export_dir_name, output_tree, disk_tree,
                         singleton_handler_a, a_baton,
                         singleton_handler_b, b_baton)
   except tree.SVNTreeUnequal:
-    print "ACTUAL DISK TREE:"
+    print("ACTUAL DISK TREE:")
     tree.dump_tree_script(actual, export_dir_name + os.sep)
     raise
 
@@ -631,7 +631,7 @@ def verify_update(actual_output, wc_dir_name,
     try:
       tree.compare_trees ("output", actual_output, output_tree)
     except tree.SVNTreeUnequal:
-      print "ACTUAL OUTPUT TREE:"
+      print("ACTUAL OUTPUT TREE:")
       tree.dump_tree_script(actual_output, wc_dir_name + os.sep)
       raise
 
@@ -643,7 +643,7 @@ def verify_update(actual_output, wc_dir_name,
                           singleton_handler_a, a_baton,
                           singleton_handler_b, b_baton)
     except tree.SVNTreeUnequal:
-      print "ACTUAL DISK TREE:"
+      print("ACTUAL DISK TREE:")
       tree.dump_tree_script(actual_disk)
       raise
 
@@ -903,9 +903,9 @@ def run_and_verify_merge2(dir, rev1, rev2, url1, url2,
     try:
       tree.compare_trees("disk", post_disk, pre_disk)
     except tree.SVNTreeError:
-      print "============================================================="
-      print "Dry-run merge altered working copy"
-      print "============================================================="
+      print("=============================================================")
+      print("Dry-run merge altered working copy")
+      print("=============================================================")
       raise
 
 
@@ -923,26 +923,26 @@ def run_and_verify_merge2(dir, rev1, rev2, url1, url2,
     raise verify.SVNUnexpectedStderr(err)
 
   if dry_run and out != out_dry:
-    print "============================================================="
-    print "Merge outputs differ"
-    print "The dry-run merge output:"
+    print("=============================================================")
+    print("Merge outputs differ")
+    print("The dry-run merge output:")
     for x in out_dry:
       sys.stdout.write(x)
-    print "The full merge output:"
+    print("The full merge output:")
     for x in out:
       sys.stdout.write(x)
-    print "============================================================="
+    print("=============================================================")
     raise main.SVNUnmatchedError
 
   def missing_skip(a, b):
-    print "============================================================="
-    print "Merge failed to skip: " + a.path
-    print "============================================================="
+    print("=============================================================")
+    print("Merge failed to skip: " + a.path)
+    print("=============================================================")
     raise Failure
   def extra_skip(a, b):
-    print "============================================================="
-    print "Merge unexpectedly skipped: " + a.path
-    print "============================================================="
+    print("=============================================================")
+    print("Merge unexpectedly skipped: " + a.path)
+    print("=============================================================")
     raise Failure
 
   myskiptree = tree.build_tree_from_skipped(out)
@@ -950,7 +950,7 @@ def run_and_verify_merge2(dir, rev1, rev2, url1, url2,
     tree.compare_trees("skip", myskiptree, skip_tree,
                        extra_skip, None, missing_skip, None)
   except tree.SVNTreeUnequal:
-    print "ACTUAL SKIP TREE:"
+    print("ACTUAL SKIP TREE:")
     tree.dump_tree_script(myskiptree, dir + os.sep)
     raise
 
@@ -1106,9 +1106,9 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_tree,
     cm = re.compile("(Committed|Imported) revision [0-9]+.")
     match = cm.search(lastline)
     if not match:
-      print "ERROR:  commit did not succeed."
-      print "The final line from 'svn ci' was:"
-      print lastline
+      print("ERROR:  commit did not succeed.")
+      print("The final line from 'svn ci' was:")
+      print(lastline)
       raise main.SVNCommitFailure
 
   # The new 'final' line in the output is either a regular line that
@@ -1134,7 +1134,7 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_tree,
   except tree.SVNTreeError:
       verify.display_trees("Output of commit is unexpected",
                            "OUTPUT TREE", output_tree, actual)
-      print "ACTUAL OUTPUT TREE:"
+      print("ACTUAL OUTPUT TREE:")
       tree.dump_tree_script(actual, wc_dir_name + os.sep)
       raise
 
@@ -1171,7 +1171,7 @@ def run_and_verify_status(wc_dir_name, output_tree,
                         singleton_handler_b, b_baton)
   except tree.SVNTreeError:
     verify.display_trees(None, 'STATUS OUTPUT TREE', output_tree, actual)
-    print "ACTUAL STATUS TREE:"
+    print("ACTUAL STATUS TREE:")
     tree.dump_tree_script(actual, wc_dir_name + os.sep)
     raise
 
@@ -1203,7 +1203,7 @@ def run_and_verify_unquiet_status(wc_dir_name, status_tree,
                         singleton_handler_a, a_baton,
                         singleton_handler_b, b_baton)
   except tree.SVNTreeError:
-    print "ACTUAL UNQUIET STATUS TREE:"
+    print("ACTUAL UNQUIET STATUS TREE:")
     tree.dump_tree_script(actual, wc_dir_name + os.sep)
     raise
 
@@ -1259,7 +1259,7 @@ def run_and_verify_diff_summarize_xml(error_re_string = [],
       modified_path = modified_path.replace(os.sep, "/")
 
     if modified_path not in expected_paths:
-      print "ERROR: %s not expected in the changed paths." % modified_path
+      print("ERROR: %s not expected in the changed paths." % modified_path)
       raise Failure
 
     index = expected_paths.index(modified_path)
@@ -1271,15 +1271,15 @@ def run_and_verify_diff_summarize_xml(error_re_string = [],
     actual_prop = path.getAttribute('props')
 
     if expected_item != actual_item:
-      print "ERROR: expected:", expected_item, "actual:", actual_item
+      print("ERROR: expected: %s actual: %s" % (expected_item, actual_item))
       raise Failure
 
     if expected_kind != actual_kind:
-      print "ERROR: expected:", expected_kind, "actual:", actual_kind
+      print("ERROR: expected: %s actual: %s" % (expected_kind, actual_kind))
       raise Failure
 
     if expected_prop != actual_prop:
-      print "ERROR: expected:", expected_prop, "actual:", actual_prop
+      print("ERROR: expected: %s actual: %s" % (expected_prop, actual_prop))
       raise Failure
 
 def run_and_verify_diff_summarize(output_tree, error_re_string = None,
@@ -1320,7 +1320,7 @@ def run_and_verify_diff_summarize(output_tree, error_re_string = None,
                         singleton_handler_b, b_baton)
   except tree.SVNTreeError:
     verify.display_trees(None, 'DIFF OUTPUT TREE', output_tree, actual)
-    print "ACTUAL DIFF OUTPUT TREE:"
+    print("ACTUAL DIFF OUTPUT TREE:")
     tree.dump_tree_script(actual)
     raise
 
@@ -1502,9 +1502,9 @@ def check_prop(name, path, exp_out):
                                          '--username', main.wc_author,
                                          '--password', main.wc_passwd)
   if out != exp_out:
-    print "svn pg --strict", name, "output does not match expected."
-    print "Expected standard output: ", exp_out, "\n"
-    print "Actual standard output: ", out, "\n"
+    print("svn pg --strict %s output does not match expected." % name)
+    print("Expected standard output:  %s\n" % exp_out)
+    print("Actual standard output:  %s\n" % out)
     raise Failure
 
 def fill_file_with_lines(wc_path, line_nbr, line_descrip=None,
@@ -1972,8 +1972,8 @@ def deep_trees_run_tests_scheme_for_update(sbox, greater_scheme):
     try:
       add_deep_trees(sbox, test_case.name)
     except:
-      print "ERROR IN: Tests scheme for update: " \
-          + "while setting up deep trees in '%s'" % test_case.name
+      print("ERROR IN: Tests scheme for update: " \
+          + "while setting up deep trees in '%s'" % test_case.name)
       raise
 
 
@@ -1988,8 +1988,8 @@ def deep_trees_run_tests_scheme_for_update(sbox, greater_scheme):
     try:
       test_case.incoming_action(j(sbox.wc_dir, test_case.name))
     except:
-      print "ERROR IN: Tests scheme for update: " \
-          + "while performing incoming action in '%s'" % test_case.name
+      print("ERROR IN: Tests scheme for update: " \
+          + "while performing incoming action in '%s'" % test_case.name)
       raise
 
 
@@ -2009,8 +2009,8 @@ def deep_trees_run_tests_scheme_for_update(sbox, greater_scheme):
     try:
       test_case.local_action(j(wc_dir, test_case.name))
     except:
-      print "ERROR IN: Tests scheme for update: " \
-          + "while performing local action in '%s'" % test_case.name
+      print("ERROR IN: Tests scheme for update: " \
+          + "while performing local action in '%s'" % test_case.name)
       raise
 
 
@@ -2037,8 +2037,8 @@ def deep_trees_run_tests_scheme_for_update(sbox, greater_scheme):
       run_and_verify_update(base, x_out, x_disk, x_status,
                             error_re_string = test_case.error_re_string)
     except:
-      print "ERROR IN: Tests scheme for update: " \
-          + "while verifying in '%s'" % test_case.name
+      print("ERROR IN: Tests scheme for update: " \
+          + "while verifying in '%s'" % test_case.name)
       raise
 
 
@@ -2097,8 +2097,8 @@ def deep_trees_run_tests_scheme_for_switch(sbox, greater_scheme):
       make_deep_trees(j(base, "incoming"))
       main.run_svn(None, 'add', base)
     except:
-      print "ERROR IN: Tests scheme for switch: " \
-          + "while setting up deep trees in '%s'" % test_case.name
+      print("ERROR IN: Tests scheme for switch: " \
+          + "while setting up deep trees in '%s'" % test_case.name)
       raise
 
 
@@ -2113,8 +2113,8 @@ def deep_trees_run_tests_scheme_for_switch(sbox, greater_scheme):
     try:
       test_case.incoming_action(j(sbox.wc_dir, test_case.name, "incoming"))
     except:
-      print "ERROR IN: Tests scheme for switch: " \
-          + "while performing incoming action in '%s'" % test_case.name
+      print("ERROR IN: Tests scheme for switch: " \
+          + "while performing incoming action in '%s'" % test_case.name)
       raise
 
 
@@ -2129,8 +2129,8 @@ def deep_trees_run_tests_scheme_for_switch(sbox, greater_scheme):
     try:
       test_case.local_action(j(sbox.wc_dir, test_case.name, "local"))
     except:
-      print "ERROR IN: Tests scheme for switch: " \
-          + "while performing local action in '%s'" % test_case.name
+      print("ERROR IN: Tests scheme for switch: " \
+          + "while performing local action in '%s'" % test_case.name)
       raise
 
 
@@ -2158,8 +2158,8 @@ def deep_trees_run_tests_scheme_for_switch(sbox, greater_scheme):
       run_and_verify_switch(local, local, incoming, x_out, x_disk, x_status,
                             error_re_string = test_case.error_re_string)
     except:
-      print "ERROR IN: Tests scheme for switch: " \
-          + "while verifying in '%s'" % test_case.name
+      print("ERROR IN: Tests scheme for switch: " \
+          + "while verifying in '%s'" % test_case.name)
       raise
 
 
@@ -2225,8 +2225,8 @@ def deep_trees_run_tests_scheme_for_merge(sbox, greater_scheme,
       make_deep_trees(j(base, "incoming"))
       main.run_svn(None, 'add', base)
     except:
-      print "ERROR IN: Tests scheme for merge: " \
-          + "while setting up deep trees in '%s'" % test_case.name
+      print("ERROR IN: Tests scheme for merge: " \
+          + "while setting up deep trees in '%s'" % test_case.name)
       raise
 
 
@@ -2245,8 +2245,8 @@ def deep_trees_run_tests_scheme_for_merge(sbox, greater_scheme,
       main.run_svn(None, 'cp', incoming_url, local_url, '-m',
                    'copy incoming to local')
     except:
-      print "ERROR IN: Tests scheme for merge: " \
-          + "while copying deep trees in '%s'" % test_case.name
+      print("ERROR IN: Tests scheme for merge: " \
+          + "while copying deep trees in '%s'" % test_case.name)
       raise
 
   # 4) Update to load all of the "/local" subdirs into the working copies.
@@ -2254,8 +2254,8 @@ def deep_trees_run_tests_scheme_for_merge(sbox, greater_scheme,
   try:
     main.run_svn(None, 'up', sbox.wc_dir)
   except:
-    print "ERROR IN: Tests scheme for merge: " \
-          + "while updating local subdirs"
+    print("ERROR IN: Tests scheme for merge: " \
+          + "while updating local subdirs")
     raise
 
 
@@ -2265,8 +2265,8 @@ def deep_trees_run_tests_scheme_for_merge(sbox, greater_scheme,
     try:
       test_case.incoming_action(j(sbox.wc_dir, test_case.name, "incoming"))
     except:
-      print "ERROR IN: Tests scheme for merge: " \
-          + "while performing incoming action in '%s'" % test_case.name
+      print("ERROR IN: Tests scheme for merge: " \
+          + "while performing incoming action in '%s'" % test_case.name)
       raise
 
 
@@ -2277,8 +2277,8 @@ def deep_trees_run_tests_scheme_for_merge(sbox, greater_scheme,
       main.run_svn(None, 'ci', '-m', 'Committing incoming actions',
                    sbox.wc_dir)
     except:
-      print "ERROR IN: Tests scheme for merge: " \
-          + "while committing incoming actions"
+      print("ERROR IN: Tests scheme for merge: " \
+          + "while committing incoming actions")
       raise
 
 
@@ -2288,8 +2288,8 @@ def deep_trees_run_tests_scheme_for_merge(sbox, greater_scheme,
     try:
       test_case.local_action(j(sbox.wc_dir, test_case.name, "local"))
     except:
-      print "ERROR IN: Tests scheme for merge: " \
-          + "while performing local action in '%s'" % test_case.name
+      print("ERROR IN: Tests scheme for merge: " \
+          + "while performing local action in '%s'" % test_case.name)
       raise
   
 
@@ -2300,8 +2300,8 @@ def deep_trees_run_tests_scheme_for_merge(sbox, greater_scheme,
       main.run_svn(None, 'ci', '-m', 'Committing incoming and local actions', 
                    sbox.wc_dir)
     except:
-      print "ERROR IN: Tests scheme for merge: " \
-          + "while committing incoming and local actions"
+      print("ERROR IN: Tests scheme for merge: " \
+          + "while committing incoming and local actions")
       raise
 
 
@@ -2336,8 +2336,8 @@ def deep_trees_run_tests_scheme_for_merge(sbox, greater_scheme,
                            error_re_string = test_case.error_re_string,
                            dry_run = False)
     except:
-      print "ERROR IN: Tests scheme for merge: " \
-          + "while verifying in '%s'" % test_case.name
+      print("ERROR IN: Tests scheme for merge: " \
+          + "while verifying in '%s'" % test_case.name)
       raise
 
 

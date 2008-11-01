@@ -789,7 +789,7 @@ def copy_preserve_executable_bit(sbox):
   mode2 = os.stat(newpath1)[stat.ST_MODE]
 
   if mode1 == mode2:
-    print "setting svn:executable did not change file's permissions"
+    print("setting svn:executable did not change file's permissions")
     raise svntest.Failure
 
   # Commit the file
@@ -804,7 +804,7 @@ def copy_preserve_executable_bit(sbox):
 
   # The mode on the original and copied file should be identical
   if mode2 != mode3:
-    print "permissions on the copied file are not identical to original file"
+    print("permissions on the copied file are not identical to original file")
     raise svntest.Failure
 
 #----------------------------------------------------------------------
@@ -918,13 +918,13 @@ def repos_to_wc(sbox):
   # Modification will only show up if timestamps differ
   exit_code, out, err = svntest.main.run_svn(None, 'diff', pi_path)
   if err or not out:
-    print "diff failed"
+    print("diff failed")
     raise svntest.Failure
   for line in out:
     if line == '+zig\n': # Crude check for diff-like output
       break
   else:
-    print "diff output incorrect", out
+    print("diff output incorrect %s" % out)
     raise svntest.Failure
 
   # Revert everything and verify.
@@ -1340,7 +1340,7 @@ def revision_kinds_local_source(sbox):
       if line.rstrip() == "Copied From Rev: " + str(from_rev):
         break
     else:
-      print dst, "should have been copied from revision", from_rev
+      print("%s should have been copied from revision %s" % (dst, from_rev))
       raise svntest.Failure
 
   # Check that the new files have the right contents
@@ -1611,7 +1611,7 @@ def url_to_non_existent_url_path(sbox):
     if re.match (msg, err_line):
       break
   else:
-    print "message \"" + msg + "\" not found in error output: ", err
+    print("message \"%s\" not found in error output: %s" % (msg, err))
     raise svntest.Failure
 
 

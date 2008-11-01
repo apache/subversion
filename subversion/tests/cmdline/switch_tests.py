@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -694,19 +694,19 @@ def nonrecursive_switching(sbox):
   exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                            'info', wc2_B_dir)
   if out[1].find('/A/B') == -1:
-    print out[1]
+    print(out[1])
     raise svntest.Failure
 
   exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                            'info', wc2_C_dir)
   if out[1].find('/A/C') == -1:
-    print out[1]
+    print(out[1])
     raise svntest.Failure
 
   exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                            'info', wc2_D_dir)
   if out[1].find('/A/D') == -1:
-    print out[1]
+    print(out[1])
     raise svntest.Failure
 
   # Check the URLs of the switched files.
@@ -716,14 +716,14 @@ def nonrecursive_switching(sbox):
   exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                            'info', wc2_mu_file)
   if out[2].find('/branch/version1/mu') == -1:
-    print out[2]
+    print(out[2])
     raise svntest.Failure
   # newfile: wrong URL
   exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                            'info',
                                                            wc2_new_file)
   if out[2].find('/branch/version1/newfile') == -1:
-    print out[2]
+    print(out[2])
     raise svntest.Failure
 
 

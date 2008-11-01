@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2008 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -557,7 +557,7 @@ def get_last_changed_date(path):
   for line in out:
     if re.match("^Last Changed Date", line):
       return line
-  print "Didn't find Last Changed Date for " + path
+  print("Didn't find Last Changed Date for " + path)
   raise svntest.Failure
 
 # Helper for timestamp_behaviour test
@@ -568,7 +568,7 @@ def get_text_timestamp(path):
   for line in out:
     if re.match("^Text Last Updated", line):
       return line
-  print "Didn't find text-time for " + path
+  print("Didn't find text-time for " + path)
   raise svntest.Failure
 
 # Helper for timestamp_behaviour test
@@ -815,7 +815,7 @@ def status_in_xml(sbox):
 
   for i in range(0, len(output)):
     if output[i] != template[i]:
-      print "ERROR: expected:", template[i], "actual:", output[i]
+      print("ERROR: expected: %s actual: %s" % (template[i], output[i]))
       raise svntest.Failure
 
 #----------------------------------------------------------------------
@@ -1569,18 +1569,18 @@ def status_with_tree_conflicts(sbox):
       # check if the path should be a victim
       m = re.search('tree-conflicted="true"', entry)
       if (m is None) and should_be_victim[path]:
-        print "ERROR: expected '%s' to be a tree conflict victim." % path
-        print "ACTUAL STATUS OUTPUT:"
-        print output_str
+        print("ERROR: expected '%s' to be a tree conflict victim." % path)
+        print("ACTUAL STATUS OUTPUT:")
+        print(output_str)
         raise svntest.Failure
       if m and not should_be_victim[path]:
-        print "ERROR: did NOT expect '%s' to be a tree conflict victim." % path
-        print "ACTUAL STATUS OUTPUT:"
-        print output_str
+        print("ERROR: did NOT expect '%s' to be a tree conflict victim." % path)
+        print("ACTUAL STATUS OUTPUT:")
+        print(output_str)
         raise svntest.Failure
         
   if real_entry_count != len(should_be_victim):
-    print "ERROR: 'status --xml' output is incomplete."
+    print("ERROR: 'status --xml' output is incomplete.")
     raise svntest.Failure
 
 
