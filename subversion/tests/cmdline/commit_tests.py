@@ -1697,12 +1697,12 @@ def commit_out_of_date_deletions(sbox):
   # A commit of any one of these files or dirs should fail
   error_re = "out of date"
   commit(wc_backup, None, None, error_re, C_path)
-  commit(wc_backup, None, None, "File not found: transaction", I_path)
+  commit(wc_backup, None, None, error_re, I_path)
   commit(wc_backup, None, None, error_re, F_path)
   commit(wc_backup, None, None, error_re, omega_path)
   commit(wc_backup, None, None, error_re, alpha_path)
-  commit(wc_backup, None, None, "File not found: transaction", chi_path)
-  commit(wc_backup, None, None, "File not found: transaction", beta_path)
+  commit(wc_backup, None, None, error_re, chi_path)
+  commit(wc_backup, None, None, error_re, beta_path)
   commit(wc_backup, None, None, error_re, psi_path)
                                         
 def commit_with_bad_log_message(sbox):
