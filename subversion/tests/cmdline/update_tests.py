@@ -4049,18 +4049,18 @@ def tree_conflicts_on_update_1_2(sbox):
   # 1.2) local tree delete, incoming leaf delete
 
   expected_output = svntest.wc.State('', {
-    'F/alpha'           : Item(status='D ', treeconflict='C'),
-    'D/D1'              : Item(status='D ', treeconflict='C'),
+    'F/alpha'           : Item(status='  ', treeconflict='C'),
+    'D/D1'              : Item(status='  ', treeconflict='C'),
     'DF/D1'             : Item(status='  ', treeconflict='C'),
-    'DF/D1/beta'        : Item(status='D ', treeconflict='C'),
+    'DF/D1/beta'        : Item(status='  ', treeconflict='C'),
     'DD/D1'             : Item(status='  ', treeconflict='C'),
-    'DD/D1/D2'          : Item(status='D ', treeconflict='C'),
+    'DD/D1/D2'          : Item(status='  ', treeconflict='C'),
     'DDF/D1'            : Item(status='  ', treeconflict='C'),
     'DDF/D1/D2'         : Item(status='  ', treeconflict='C'),
-    'DDF/D1/D2/gamma'   : Item(status='D ', treeconflict='C'),
+    'DDF/D1/D2/gamma'   : Item(status='  ', treeconflict='C'),
     'DDD/D1'            : Item(status='  ', treeconflict='C'),
     'DDD/D1/D2'         : Item(status='  ', treeconflict='C'),
-    'DDD/D1/D2/D3'      : Item(status='D ', treeconflict='C'),
+    'DDD/D1/D2/D3'      : Item(status='  ', treeconflict='C'),
     })
 
   expected_disk = state_after_leaf_del
@@ -4098,12 +4098,12 @@ def tree_conflicts_on_update_2_1(sbox):
   # 2.1) local leaf edit, incoming tree delete
 
   expected_output = svntest.wc.State('', {
-    'D/D1'              : Item(status='D ', treeconflict='C'),
-    'F/alpha'           : Item(status='D ', treeconflict='C'),
-    'DD/D1'             : Item(status='D ', treeconflict='C'),
-    'DF/D1'             : Item(status='D ', treeconflict='C'),
-    'DDD/D1'            : Item(status='D ', treeconflict='C'),
-    'DDF/D1'            : Item(status='D ', treeconflict='C'),
+    'D/D1'              : Item(status='  ', treeconflict='C'),
+    'F/alpha'           : Item(status='  ', treeconflict='C'),
+    'DD/D1'             : Item(status='  ', treeconflict='C'),
+    'DF/D1'             : Item(status='  ', treeconflict='C'),
+    'DDD/D1'            : Item(status='  ', treeconflict='C'),
+    'DDF/D1'            : Item(status='  ', treeconflict='C'),
     })
 
   expected_disk = state_after_leaf_edit
@@ -4150,8 +4150,8 @@ def tree_conflicts_on_update_2_2(sbox):
   ### a directory tree that has modifications. (Will be solved
   ### when dirs_same_p() is implemented)
   expected_output = svntest.wc.State('', {
-    'D/D1'              : Item(status='D ', treeconflict='C'),
-    'F/alpha'           : Item(status='D ', treeconflict='C'),
+    'D/D1'              : Item(status='  ', treeconflict='C'),
+    'F/alpha'           : Item(status='  ', treeconflict='C'),
     'DD/D1'             : Item(status='D '),
     'DF/D1'             : Item(status='D '),
     'DDD/D1'            : Item(status='D '),
@@ -4195,12 +4195,12 @@ def tree_conflicts_on_update_3(sbox):
   # local tree delete, incoming tree delete
 
   expected_output = svntest.wc.State('', {
-    'D/D1'              : Item(status='D ', treeconflict='C'),
-    'F/alpha'           : Item(status='D ', treeconflict='C'),
-    'DD/D1'             : Item(status='D ', treeconflict='C'),
-    'DF/D1'             : Item(status='D ', treeconflict='C'),
-    'DDD/D1'            : Item(status='D ', treeconflict='C'),
-    'DDF/D1'            : Item(status='D ', treeconflict='C'),
+    'D/D1'              : Item(status='  ', treeconflict='C'),
+    'F/alpha'           : Item(status='  ', treeconflict='C'),
+    'DD/D1'             : Item(status='  ', treeconflict='C'),
+    'DF/D1'             : Item(status='  ', treeconflict='C'),
+    'DDD/D1'            : Item(status='  ', treeconflict='C'),
+    'DDF/D1'            : Item(status='  ', treeconflict='C'),
     })
 
   expected_disk = state_after_tree_del

@@ -1958,7 +1958,8 @@ find_nearest_ancestor(apr_array_header_t *children_with_mergeinfo,
                      || notify->prop_state == svn_wc_notify_state_conflicted \
                      || notify->prop_state == svn_wc_notify_state_merged     \
                      || notify->prop_state == svn_wc_notify_state_changed    \
-                     || notify->action == svn_wc_notify_update_add)
+                     || notify->action == svn_wc_notify_update_add \
+                     || notify->action == svn_wc_notify_tree_conflict)
 
 /* Our svn_wc_notify_func2_t wrapper.*/
 static void
@@ -3857,7 +3858,6 @@ single_file_merge_notify(void *notify_baton,
                          svn_wc_notify_action_t action,
                          svn_wc_notify_state_t text_state,
                          svn_wc_notify_state_t prop_state,
-                         svn_boolean_t tree_conflicted,
                          svn_wc_notify_t *header_notification,
                          svn_boolean_t *header_sent,
                          apr_pool_t *pool)
@@ -3866,7 +3866,6 @@ single_file_merge_notify(void *notify_baton,
   notify->kind = svn_node_file;
   notify->content_state = text_state;
   notify->prop_state = prop_state;
-  notify->tree_conflicted = tree_conflicted;
   if (notify->content_state == svn_wc_notify_state_missing)
     notify->action = svn_wc_notify_skip;
 
@@ -5259,10 +5258,12 @@ do_file_merge(const char *url1,
                                          props1,
                                          merge_b));
               single_file_merge_notify(notify_b, target_wcpath,
-                                       svn_wc_notify_update_delete, text_state,
+                                       tree_conflicted
+                                         ? svn_wc_notify_tree_conflict
+                                         : svn_wc_notify_update_delete,
+                                       text_state,
                                        svn_wc_notify_state_unknown,
-                                       tree_conflicted, n,
-                                       &header_sent, subpool);
+                                       n, &header_sent, subpool);
 
               /* ...plus add... */
               SVN_ERR(merge_file_added(adm_access,
@@ -5277,9 +5278,11 @@ do_file_merge(const char *url1,
                                        propchanges, props1,
                                        merge_b));
               single_file_merge_notify(notify_b, target_wcpath,
-                                       svn_wc_notify_update_add, text_state,
-                                       prop_state, tree_conflicted,
-                                       n, &header_sent, subpool);
+                                       tree_conflicted
+                                         ? svn_wc_notify_tree_conflict
+                                         : svn_wc_notify_update_add,
+                                       text_state, prop_state, n,
+                                       &header_sent, subpool);
               /* ... equals replace. */
             }
           else
@@ -5296,9 +5299,11 @@ do_file_merge(const char *url1,
                                          propchanges, props1,
                                          merge_b));
               single_file_merge_notify(notify_b, target_wcpath,
-                                       svn_wc_notify_update_update, text_state,
-                                       prop_state, tree_conflicted,
-                                       n, &header_sent, subpool);
+                                       tree_conflicted
+                                         ? svn_wc_notify_tree_conflict
+                                         : svn_wc_notify_update_update,
+                                       text_state, prop_state, n,
+                                       &header_sent, subpool);
             }
 
           /* Ignore if temporary file not found. It may have been renamed. */

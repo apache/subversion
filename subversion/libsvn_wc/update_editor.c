@@ -1574,10 +1574,11 @@ do_entry_deletion(struct edit_baton *eb,
 
   if (eb->notify_func)
     {
-      notify = svn_wc_create_notify(full_path, svn_wc_notify_update_delete,
+      notify = svn_wc_create_notify(full_path,
+                                    (tree_conflict != NULL)
+                                      ? svn_wc_notify_tree_conflict
+                                      : svn_wc_notify_update_delete,
                                     pool);
-      if (tree_conflict != NULL)
-        notify->tree_conflicted = TRUE;
 
       (*eb->notify_func)(eb->notify_baton, notify, pool);
     }
@@ -1862,11 +1863,13 @@ add_directory(const char *path,
     {
       svn_wc_notify_t *notify = svn_wc_create_notify(
         db->path,
-        db->existed ?
-        svn_wc_notify_exists : svn_wc_notify_update_add,
+        db->tree_conflicted
+          ? svn_wc_notify_tree_conflict
+          : (db->existed
+               ? svn_wc_notify_exists
+               : svn_wc_notify_update_add),
         pool);
       notify->kind = svn_node_dir;
-      notify->tree_conflicted = db->tree_conflicted;
       (*eb->notify_func)(eb->notify_baton, notify, pool);
     }
 
@@ -1928,12 +1931,15 @@ open_directory(const char *path,
           if (eb->notify_func)
             {
               svn_wc_notify_t *notify
-                = svn_wc_create_notify(db->path, svn_wc_notify_skip, pool);
+                = svn_wc_create_notify(db->path,
+                                       tree_conflicted
+                                         ? svn_wc_notify_tree_conflict
+                                         : svn_wc_notify_skip,
+                                       pool);
               notify->kind = svn_node_dir;
               notify->prop_state = prop_conflicted
                   ? svn_wc_notify_state_conflicted
                   : svn_wc_notify_state_unknown;
-              notify->tree_conflicted = tree_conflicted;
               (*eb->notify_func)(eb->notify_baton, notify, pool);
             }
           return SVN_NO_ERROR;
@@ -2183,13 +2189,14 @@ close_directory(void *dir_baton,
     {
       svn_wc_notify_t *notify
         = svn_wc_create_notify(db->path,
-                               db->existed || db->add_existed
-                               ? svn_wc_notify_exists
-                               : svn_wc_notify_update_update,
+                               db->tree_conflicted
+                                 ? svn_wc_notify_tree_conflict
+                                 : (db->existed || db->add_existed
+                                      ? svn_wc_notify_exists
+                                      : svn_wc_notify_update_update),
                                pool);
       notify->kind = svn_node_dir;
       notify->prop_state = prop_state;
-      notify->tree_conflicted = db->tree_conflicted;
       (*db->edit_baton->notify_func)(db->edit_baton->notify_baton,
                                      notify, pool);
     }
@@ -2873,7 +2880,7 @@ open_file(const char *path,
           svn_wc_notify_t *notify
             = svn_wc_create_notify(fb->path,
                                    (tree_conflict != NULL)
-                                     ? svn_wc_notify_update_update
+                                     ? svn_wc_notify_tree_conflict
                                      : svn_wc_notify_skip,
                                    pool);
 
@@ -2887,8 +2894,6 @@ open_file(const char *path,
             ? svn_wc_notify_state_conflicted
             : svn_wc_notify_state_unknown;
 
-          notify->tree_conflicted = (tree_conflict != NULL);
-          
           (*eb->notify_func)(eb->notify_baton, notify, pool);
         }
     }
@@ -3695,7 +3700,9 @@ close_file(void *file_baton,
       svn_wc_notify_t *notify;
       svn_wc_notify_action_t action = svn_wc_notify_update_update;
 
-      if (fb->existed || fb->add_existed)
+      if (fb->tree_conflicted)
+        action = svn_wc_notify_tree_conflict;
+      else if (fb->existed || fb->add_existed)
         {
           if (content_state != svn_wc_notify_state_conflicted)
             action = svn_wc_notify_exists;
@@ -3710,7 +3717,6 @@ close_file(void *file_baton,
       notify->content_state = content_state;
       notify->prop_state = prop_state;
       notify->lock_state = lock_state;
-      notify->tree_conflicted = fb->tree_conflicted;
       /* ### use merge_file() mimetype here */
       (*eb->notify_func)(eb->notify_baton, notify, pool);
     }
