@@ -53,7 +53,7 @@ kwallet_password_get(const char **password,
                      apr_hash_t *creds,
                      const char *realmstring,
                      const char *username,
-                     svn_config_t *config,
+                     apr_hash_t *parameters,
                      svn_boolean_t non_interactive,
                      apr_pool_t *pool)
 {
@@ -116,7 +116,7 @@ kwallet_password_set(apr_hash_t *creds,
                      const char *realmstring,
                      const char *username,
                      const char *password,
-                     svn_config_t *config,
+                     apr_hash_t *parameters,
                      svn_boolean_t non_interactive,
                      apr_pool_t *pool)
 {
