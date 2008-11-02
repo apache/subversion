@@ -801,16 +801,16 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
 
       /* Imagine a situation where the user tries to copy an existing source
          directory to nonexistent directory with --parents options specified:
-            
+
             svn copy --parents URL/src URL/dst
-            
+
          where src exists and dst does not.  The svn_path_dirname() call above
          will produce a string equivalent to top_url, which means
          svn_path_is_child() will return NULL.  In this case, do not try to add
          dst to the new_dirs list since it will be added to the commit items
          array later in this function. */
 
-      if (dir) 
+      if (dir)
         {
           SVN_ERR(svn_ra_check_path(ra_session, dir, SVN_INVALID_REVNUM, &kind,
                                     iterpool));

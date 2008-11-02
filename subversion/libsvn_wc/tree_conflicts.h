@@ -74,7 +74,7 @@
  * svn_wc_conflict_description_t.
  */
 
-/* 
+/*
  * When multiple tree conflict descriptions are present in an entry,
  * they are separated by the following character:
  */
@@ -86,7 +86,7 @@
  *
  *   foo.c:file:update:deleted:edited|bar.h:file:update:edited:deleted
  */
- 
+
 /*
  * If the field separator occurs in the victim_path, it must be escaped
  * with the following character:
@@ -94,7 +94,7 @@
 
 #define SVN_WC__TREE_CONFLICT_ESCAPE_CHAR '\\'
 
-/* 
+/*
  * Likewise, if a description separator character is present in the
  * victim_path, it must also escaped. A literal escape character
  * occurring in the victim_path must also be escaped.
@@ -103,7 +103,7 @@
  * also apply, but are transparent to the tree conflicts code.
  */
 
-/* 
+/*
  * The other fields have the following mappings to character strings:
  *
  *  node_kind:

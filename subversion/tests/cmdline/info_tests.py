@@ -195,16 +195,16 @@ def info_with_tree_conflicts(sbox):
 
 def info_on_added_file(sbox):
   """info on added file"""
-  
+
   svntest.actions.make_repo_and_wc(sbox)
   wc_dir = sbox.wc_dir
-  
+
   # create new file
   new_file = os.path.join(wc_dir, 'new_file')
   svntest.main.file_append(new_file, '')
 
   svntest.main.run_svn(None, 'add', new_file)
-  
+
   uuid_regex = '[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}'
 
   # check that we have a Repository Root and Repository UUID
@@ -219,7 +219,7 @@ def info_on_added_file(sbox):
              }
 
   svntest.actions.run_and_verify_info([expected], new_file)
-  
+
   # check XML info
   exit_code, output, error = svntest.actions.run_and_verify_svn(None, None,
                                                                 [], 'info',
@@ -240,11 +240,11 @@ def info_on_mkdir(sbox):
   """info on new dir with mkdir"""
   svntest.actions.make_repo_and_wc(sbox)
   wc_dir = sbox.wc_dir
-  
+
   # create a new directory using svn mkdir
   new_dir = os.path.join(wc_dir, 'new_dir')
   svntest.main.run_svn(None, 'mkdir', new_dir)
-  
+
   uuid_regex = '[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}'
 
   # check that we have a Repository Root and Repository UUID

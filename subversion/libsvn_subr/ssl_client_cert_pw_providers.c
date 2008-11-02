@@ -60,7 +60,7 @@ typedef struct
 
 /* This implements the svn_auth__password_get_t interface.
    Set **PASSPHRASE to the plaintext passphrase retrieved from CREDS;
-   ignore other parameters. */  
+   ignore other parameters. */
 static svn_boolean_t
 simple_passphrase_get(const char **passphrase,
                       apr_hash_t *creds,
@@ -81,7 +81,7 @@ simple_passphrase_get(const char **passphrase,
 }
 
 /* This implements the svn_auth__password_set_t interface.
-   Store PASSPHRASE in CREDS; ignore other parameters. */ 
+   Store PASSPHRASE in CREDS; ignore other parameters. */
 static svn_boolean_t
 simple_passphrase_set(apr_hash_t *creds,
                       const char *realmstring,
@@ -181,7 +181,7 @@ svn_auth__ssl_client_cert_pw_file_save_creds_helper
   svn_boolean_t non_interactive = apr_hash_get(parameters,
                                                SVN_AUTH_PARAM_NON_INTERACTIVE,
                                                APR_HASH_KEY_STRING) != NULL;
-  ssl_client_cert_pw_file_provider_baton_t *b = 
+  ssl_client_cert_pw_file_provider_baton_t *b =
     (ssl_client_cert_pw_file_provider_baton_t *)provider_baton;
 
   svn_boolean_t no_auth_cache =

@@ -3946,12 +3946,12 @@ def find_copyfrom_information_upstairs(sbox):
   "renaming inside a copied subtree shouldn't hang"
 
   # The final command in this series would cause the client to hang...
-  # 
+  #
   #    ${SVN} cp A A2
   #    cd A2/B
   #    ${SVN} mkdir blah
   #    ${SVN} mv lambda blah
-  # 
+  #
   # ...because it wouldn't walk up past "" to find copyfrom information
   # (which would be in A2/.svn/entries, not on A2/B/.svn/entries).
   # Instead, it would keep thinking the parent of "" is "", and so
@@ -3991,16 +3991,16 @@ def find_copyfrom_information_upstairs(sbox):
 
 def change_case_of_hostname(input):
   "Change the case of the hostname, try uppercase first"
-  
+
   m = re.match(r"^(.*://)([^/]*)(.*)", input)
   if m:
     scheme = m.group(1)
     host = upper(m.group(2))
     if host == m.group(2):
       host = lower(m.group(2))
-      
+
     path = m.group(3)
-    
+
   return scheme + host + path
 
 # regression test for issue #2475 - move file and folder

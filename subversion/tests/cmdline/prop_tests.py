@@ -1681,7 +1681,7 @@ def same_replacement_props(sbox):
 
 def added_moved_file(sbox):
   "'svn mv added_file' preserves props"
-  
+
   sbox.build()
   wc_dir = sbox.wc_dir
 

@@ -537,7 +537,7 @@ file_diff(struct dir_baton *dir_baton,
      revert text-base will be present; in the latter case only, a
      regular text-base be present as well.  So which text-base do we
      want to use for the diff?
-     
+
      One could argue that we should never diff against the revert
      base, and instead diff against the empty-file for both types of
      replacement.  After all, there is no ancestry relationship

@@ -3053,7 +3053,7 @@ fs_node_origin_rev(svn_revnum_t *revision,
            Because svn_fs_fs__dag_get_predecessor_id() doesn't
            necessarily honor the passed-in pool, and might return a
            value cached in the node (which is allocated in
-           SUBPOOL... maybe). */ 
+           SUBPOOL... maybe). */
         svn_pool_clear(predidpool);
         SVN_ERR(svn_fs_fs__dag_get_predecessor_id(&pred_id, node, subpool));
         pred_id = pred_id ? svn_fs_fs__id_copy(pred_id, predidpool) : NULL;

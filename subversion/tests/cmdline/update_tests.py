@@ -1144,7 +1144,7 @@ def another_hudson_problem(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
   expected_status.remove('A/D/G', 'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau',
                          'A/D/gamma')
-  
+
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.remove('A/D/G', 'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau',
                        'A/D/gamma')
@@ -3848,7 +3848,7 @@ def update_uuid_changed(sbox):
 
   # read_only=False, since we don't want to run setuuid on the (shared)
   # pristine repository.
-  sbox.build(read_only = False) 
+  sbox.build(read_only = False)
 
   wc_dir = sbox.wc_dir
   repo_dir = sbox.repo_dir
@@ -3879,7 +3879,7 @@ def restarted_update_should_delete_dir_prop(sbox):
   "restarted update should delete dir prop"
   sbox.build()
   wc_dir = sbox.wc_dir
-  
+
   A_path = os.path.join(wc_dir, 'A')
   zeta_path = os.path.join(A_path, 'zeta')
 
@@ -4139,7 +4139,7 @@ def tree_conflicts_on_update_2_1(sbox):
     os.path.join(sbox.wc_dir, "local_leaf_edit_incoming_tree_del"),
     expected_status)
 
- 
+
 
 def tree_conflicts_on_update_2_2(sbox):
   "tree conflicts on update 2.2"

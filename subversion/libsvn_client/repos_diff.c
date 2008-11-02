@@ -1016,7 +1016,7 @@ close_directory(void *dir_baton,
        * sets content_state appropriately. So copy the state into the
        * notify_t to make sure conflicts get displayed. */
       notify->content_state = content_state;
-      
+
       notify->prop_state = prop_state;
       notify->lock_state = svn_wc_notify_lock_state_inapplicable;
       (*eb->notify_func)(eb->notify_baton, notify, pool);

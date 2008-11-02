@@ -725,7 +725,7 @@ svn_ra__file_revs_from_log(svn_ra_session_t *ra_session,
 
       /* Get the contents of the file from the repository, and put them in
          a temporary local file. */
-      SVN_ERR(svn_stream_open_unique(&stream, &temp_path, NULL, 
+      SVN_ERR(svn_stream_open_unique(&stream, &temp_path, NULL,
                                      svn_io_file_del_on_pool_cleanup,
                                      currpool, currpool));
       SVN_ERR(svn_ra_get_file(ra_session, rev->path + 1, rev->revision,

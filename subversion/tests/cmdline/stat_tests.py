@@ -1506,10 +1506,10 @@ def status_dash_u_type_change(sbox):
 #----------------------------------------------------------------------
 
 def status_with_tree_conflicts(sbox):
-  "status with tree conflicts" 
-  
+  "status with tree conflicts"
+
   # Status messages reflecting tree conflict status.
-  # These tests correspond to use cases 1-3 in 
+  # These tests correspond to use cases 1-3 in
   # notes/tree-conflicts/use-cases.txt.
 
   svntest.actions.build_greek_tree_conflicts(sbox)
@@ -1578,7 +1578,7 @@ def status_with_tree_conflicts(sbox):
         print("ACTUAL STATUS OUTPUT:")
         print(output_str)
         raise svntest.Failure
-        
+
   if real_entry_count != len(should_be_victim):
     print("ERROR: 'status --xml' output is incomplete.")
     raise svntest.Failure

@@ -460,7 +460,7 @@ switch_file_external(const char *path,
  cleanup:
   if (revert_file)
     {
-      svn_error_t *e = 
+      svn_error_t *e =
         svn_wc_revert3(path, target_adm_access, svn_depth_empty,
                        use_commit_times,
                        NULL, /* apr_array_header_t *changelists */
@@ -776,14 +776,14 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
 
       if (svn_node_none == kind)
         return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                                 _("URL '%s' at revision %ld doesn't exist"), 
+                                 _("URL '%s' at revision %ld doesn't exist"),
                                  ra_cache.ra_session_url,
                                  ra_cache.ra_revnum);
 
       if (svn_node_dir != kind && svn_node_file != kind)
         return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
                                  _("URL '%s' at revision %ld is not a file "
-                                   "or a directory"), 
+                                   "or a directory"),
                                  ra_cache.ra_session_url,
                                  ra_cache.ra_revnum);
 

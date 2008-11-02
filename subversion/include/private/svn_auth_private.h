@@ -97,7 +97,7 @@ svn_auth__simple_save_creds_helper(svn_boolean_t *saved,
                                    apr_pool_t *pool);
 
 /* Implementation of svn_auth__password_get_t that retrieves
-   the plaintext password from CREDS when USERNAME matches the stored 
+   the plaintext password from CREDS when USERNAME matches the stored
    credentials. */
 svn_boolean_t
 svn_auth__simple_password_get(const char **password,

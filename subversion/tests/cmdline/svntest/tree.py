@@ -807,7 +807,7 @@ def build_tree_from_status(lines):
   #    - path              ('path') (string of characters until newline)
   #
   # Working revision, last-changed revision, and last author are whitespace
-  # only if the item is missing.  
+  # only if the item is missing.
 
   # Try http://www.wordsmith.org/anagram/anagram.cgi?anagram=ACDRMGU
   rm = re.compile('^([?!MACDRUG_ ][MACDRUG_ ])([L ])([+ ])([S ])([KOBT ])([C ]) ([* ]) +((?P<wc_rev>\d+|-|\?) +(\d|-|\?)+ +(\S+) +)?(?P<path>.+)$')
@@ -822,7 +822,7 @@ def build_tree_from_status(lines):
     match = rm.search(line)
     if match and match.groups():
       if match.group(10) != '-': # ignore items that only exist on repos
-        atthash = {'status' : match.group(1)} 
+        atthash = {'status' : match.group(1)}
         if match.group(2) != ' ':
           atthash['locked'] = match.group(2)
         if match.group(3) != ' ':
