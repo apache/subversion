@@ -9742,9 +9742,31 @@ def reintegrate_branch_never_merged_to(sbox):
     'D/G/pi'       : Item("This is the file 'pi'.\n"),
     'D/G/rho'      : Item("New content"),
     'D/G/tau'      : Item("This is the file 'tau'.\n"),
-    'D/G/tauprime' : Item("This is the file 'tau'.\n",
-                          ### TODO(reint): why empty?
-                          props={SVN_PROP_MERGEINFO: ''}),
+    # Why no explicit mergeinfo on 'A/D/G/tauprime'?  The underlying 2-URL
+    # merge initially adds the empty mergeinfo from the source
+    # 'A_COPY/D/G/tauprime' and this is initially the *only* explicit
+    # mergeinfo on the entire tree rooted at 'A'.  But then the merge
+    # logic sets mergeinfo describing the reintegration merge of A_COPY@2
+    # through A_COPY@8, this creates the following mergeinfo on 'A':
+    #
+    #  Properties on 'A':
+    #    svn:mergeinfo
+    #      /A_COPY:2-8
+    #  Properties on 'A/D/G/tauprime':
+    #    svn:mergeinfo
+    #      /A_COPY/D/G/tauprime:2-8
+    #
+    # But wait, 'A_COPY/D/G/tauprime' doesn't come into existence until r8,
+    # so the mergeinfo on A/D/G/tauprime' describes non-existent ranges!
+    # This is a known drawback of mergeinfo's inheritable nature, see
+    # http://subversion.tigris.org/issues/show_bug.cgi?id=3157#desc8.  But
+    # until that issue is resolved the above is the correct and expected
+    # behavior under the current implementation.  And even that isn't the
+    # end of the story, since after the above mergeinfo is set, the mergeinfo
+    # on 'A/D/G/tauprime' elides to 'A'.  So at the end of the reintegrate
+    # merge the only explict mergeinfo on the tree rooted at 'A' is on 'A'
+    # itself.    
+    'D/G/tauprime' : Item("This is the file 'tau'.\n"),
     'D/H'          : Item(),
     'D/H/chi'      : Item("This is the file 'chi'.\n"),
     'D/H/omega'    : Item("New content"),
