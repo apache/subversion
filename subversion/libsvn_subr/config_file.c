@@ -942,6 +942,12 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
 #else
         "# password-stores = gnome-keyring,kwallet"                          NL
 #endif
+#ifdef SVN_HAVE_KWALLET
+        "###"                                                                NL
+        "### Set KWallet wallet used by Subversion. If empty or unset,"      NL
+        "### then the default network wallet will be used."                  NL
+        "# kwallet-wallet ="                                                 NL
+#endif
         "###"                                                                NL
         "### The rest of this section in this file has been deprecated."     NL
         "### Both 'store-passwords' and 'store-auth-creds' can now be"       NL
