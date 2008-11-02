@@ -548,7 +548,7 @@ svn_wc_traversed_depths(apr_hash_t **depths,
  * canonicalized.
  *
  * In order to avoid backwards compatibility problems clients should use
- * svn_wc_external_item_create() to allocate and intialize this structure
+ * svn_wc_external_item_create() to allocate and initialize this structure
  * instead of doing so themselves.
  *
  * @since New in 1.5.
@@ -582,7 +582,7 @@ typedef struct svn_wc_external_item2_t
  * Set @a *item to an external item object, allocated in @a pool.
  *
  * In order to avoid backwards compatibility problems, this function
- * is used to intialize and allocate the @c svn_wc_external_item2_t
+ * is used to initialize and allocate the @c svn_wc_external_item2_t
  * structure rather than doing so explicitly, as the size of this
  * structure may change in the future.
  *

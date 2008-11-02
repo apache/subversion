@@ -406,7 +406,7 @@ typedef struct svn_client_commit_info_t
 
 /** The commit candidate structure.  In order to avoid backwards
  * compatibility problems clients should use
- * svn_client_commit_item_create2() to allocate and intialize this
+ * svn_client_commit_item_create2() to allocate and initialize this
  * structure instead of doing so themselves.
  *
  * @since New in 1.5.
@@ -528,7 +528,7 @@ typedef struct svn_client_commit_item_t
 /** Return a new commit item object, allocated in @a pool.
  *
  * In order to avoid backwards compatibility problems, this function
- * is used to intialize and allocate the @c svn_client_commit_item3_t
+ * is used to initialize and allocate the @c svn_client_commit_item3_t
  * structure rather than doing so explicitly, as the size of this
  * structure may change in the future.
  *
@@ -808,7 +808,7 @@ typedef svn_error_t *(*svn_client_diff_summarize_func_t)
  * batons, serves as a cache for configuration options, and other various
  * and sundry things.  In order to avoid backwards compatibility problems
  * clients should use svn_client_create_context() to allocate and
- * intialize this structure instead of doing so themselves.
+ * initialize this structure instead of doing so themselves.
  */
 typedef struct svn_client_ctx_t
 {
@@ -907,7 +907,7 @@ typedef struct svn_client_ctx_t
  * represents a particular instance of an svn client.
  *
  * In order to avoid backwards compatibility problems, clients must
- * use this function to intialize and allocate the
+ * use this function to initialize and allocate the
  * @c svn_client_ctx_t structure rather than doing so themselves, as
  * the size of this structure may change in the future.
  *
