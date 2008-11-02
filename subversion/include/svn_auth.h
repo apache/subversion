@@ -626,7 +626,8 @@ svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
   "ssl:cert-info"
 
 /** Some providers need access to the @c svn_config_t configuration. */
-#define SVN_AUTH_PARAM_CONFIG SVN_AUTH_PARAM_PREFIX "config"
+#define SVN_AUTH_PARAM_CONFIG SVN_AUTH_PARAM_PREFIX "config-server"
+#define SVN_AUTH_PARAM_CONFIG_CLIENT SVN_AUTH_PARAM_PREFIX "config-client"
 
 /** The current server group. */
 #define SVN_AUTH_PARAM_SERVER_GROUP SVN_AUTH_PARAM_PREFIX "server-group"
