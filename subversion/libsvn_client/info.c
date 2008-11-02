@@ -268,7 +268,7 @@ info_found_entry_callback(const char *path,
       SVN_ERR(svn_wc_adm_probe_try3(&adm_access, fe_baton->adm_access, path,
                                FALSE /* read-only */, 0 /* levels */,
                                NULL, NULL, pool));
-      SVN_ERR(svn_wc_get_tree_conflict(&info->tree_conflict, path, adm_access, 
+      SVN_ERR(svn_wc_get_tree_conflict(&info->tree_conflict, path, adm_access,
                                        pool));
       SVN_ERR(fe_baton->receiver(fe_baton->receiver_baton, path, info, pool));
     }

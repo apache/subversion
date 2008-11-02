@@ -373,7 +373,7 @@ svn_client_uuid_from_path(const char **uuid,
     }
 
   /* ## Probably never reached after the 1.6/1.7 WC rewrite */
-  
+
   SVN_ERR(svn_wc_is_wc_root(&is_root, path, adm_access, pool));
 
   if (!is_root)
@@ -390,7 +390,7 @@ svn_client_uuid_from_path(const char **uuid,
 
       SVN_ERR(svn_wc_adm_open3(&parent_access, NULL, parent, FALSE, 0,
                                ctx->cancel_func, ctx->cancel_baton, pool));
-      
+
       err = svn_client_uuid_from_path(uuid, svn_path_dirname(path, pool),
                                       parent_access, ctx, pool);
 
@@ -398,8 +398,8 @@ svn_client_uuid_from_path(const char **uuid,
 
       return err;
     }
-    
-  /* We may have a workingcopy without uuid */     
+
+  /* We may have a workingcopy without uuid */
   if (entry->url)
     {
       /* You can enter this case by copying a new subdirectory with 1.0-1.5

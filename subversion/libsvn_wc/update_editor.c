@@ -1348,12 +1348,12 @@ check_tree_conflict(svn_wc_conflict_description_t **pconflict,
       break;
 
     case svn_wc_conflict_action_add:
-      /* When checking out a file-external, add_file() is called twice: 
+      /* When checking out a file-external, add_file() is called twice:
        * 1.) In the main update, a minimal entry is created.
        * 2.) In the external update, the file is added properly.
        * Don't raise a tree conflict the second time!
        */
-      if (entry && (!entry->file_external_path)) 
+      if (entry && (!entry->file_external_path))
         reason = svn_wc_conflict_reason_added;
       break;
 
@@ -1721,7 +1721,7 @@ add_directory(const char *path,
               const char *repos;
               svn_wc_conflict_description_t *tree_conflict;
 
-              /* Use the repository root of the anchor, but only if it 
+              /* Use the repository root of the anchor, but only if it
                  actually is an ancestor of the URL of this directory. */
               if (eb->repos && svn_path_is_ancestor(eb->repos, db->new_URL))
                 repos = eb->repos;
@@ -2729,7 +2729,7 @@ add_file(const char *path,
           notify->tree_conflicted = TRUE;
           notify->content_state = svn_wc_notify_state_unknown;
           notify->prop_state = svn_wc_notify_state_unknown;
-          
+
           (*eb->notify_func)(eb->notify_baton, notify, pool);
         }
       */
@@ -2889,7 +2889,7 @@ open_file(const char *path,
           notify->content_state = text_conflicted
             ? svn_wc_notify_state_conflicted
             : svn_wc_notify_state_unknown;
-          
+
           notify->prop_state = prop_conflicted
             ? svn_wc_notify_state_conflicted
             : svn_wc_notify_state_unknown;

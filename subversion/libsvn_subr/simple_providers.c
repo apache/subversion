@@ -114,7 +114,7 @@ simple_username_get(const char **username,
   return FALSE;
 }
 
-/* Common implementation for simple_first_creds. Uses PARAMETERS, REALMSTRING 
+/* Common implementation for simple_first_creds. Uses PARAMETERS, REALMSTRING
    and the simple auth provider's username and password cache to fill a set of
    CREDENTIALS. PASSWORD_GET is used to obtain the password value.
    PASSTYPE identifies the type of the cached password. CREDENTIALS are
@@ -286,8 +286,8 @@ svn_auth__simple_first_creds_helper(void **credentials,
 }
 
 
-/* Common implementation for simple_save_creds. Uses PARAMETERS and 
-   REALMSTRING to save a set of CREDENTIALS to the simple auth provider's 
+/* Common implementation for simple_save_creds. Uses PARAMETERS and
+   REALMSTRING to save a set of CREDENTIALS to the simple auth provider's
    username and password cache. PASSWORD_SET is used to store the password.
    PASSTYPE identifies the type of the cached password. Allocates from POOL. */
 svn_error_t *

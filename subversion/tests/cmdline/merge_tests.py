@@ -12248,8 +12248,8 @@ def del_differing_file(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'propset',
                                      'newprop', 'v', target+"/pi")
   svn_commit(target)
-  
-  
+
+
   dir_G3 = os.path.join(dir_D, 'G3')
   tau = os.path.join(dir_D,'G3','tau')
   pi = os.path.join(dir_D, 'G3', 'pi')
@@ -12279,7 +12279,7 @@ def subtree_merges_dont_cause_spurious_conflicts(sbox):
   # affect parts of the merge target other than the subtree.  An actual case
   # where our own epository encountered this problem is described here:
   # http://subversion.tigris.org/servlets/ReadMsg?listName=dev&msgNo=141832
-  
+
   sbox.build()
   wc_dir = sbox.wc_dir
 
@@ -12491,7 +12491,7 @@ def merge_target_and_subtrees_need_nonintersecting_ranges(sbox):
   beta_COPY_path   = os.path.join(wc_dir, "A_COPY", "B", "E", "beta")
   rho_COPY_path    = os.path.join(wc_dir, "A_COPY", "D", "G", "rho")
   psi_COPY_path    = os.path.join(wc_dir, "A_COPY", "D", "H", "psi")
-  
+
   # Make a branch to merge to.
   wc_disk, wc_status = set_up_branch(sbox, False, 1)
 
@@ -12503,7 +12503,7 @@ def merge_target_and_subtrees_need_nonintersecting_ranges(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         wc_status, None, wc_dir)
 
-  # Make a text mod to A/D/G/nu in r8.  
+  # Make a text mod to A/D/G/nu in r8.
   svntest.main.file_write(nu_path, "New content")
   expected_output = wc.State(wc_dir, {'A/D/G/nu' : Item(verb='Sending')})
   wc_status.tweak('A/D/G/nu', wc_rev=8)
@@ -12976,7 +12976,7 @@ def natural_history_filtering(sbox):
   #      'branch2' should have explicit merginfo for both 'branch1' *and* for
   #      the revisions on 'trunk' which occured after 'branch2' was copied as
   #      these are not part of 'branch2's natural history.
-  
+
   sbox.build()
   wc_dir = sbox.wc_dir
 
@@ -12984,7 +12984,7 @@ def natural_history_filtering(sbox):
   A_COPY_path   = os.path.join(wc_dir, "A_COPY")
   A_COPY_2_path = os.path.join(wc_dir, "A_COPY_2")
   chi_path      = os.path.join(wc_dir, "A", "D", "H", "chi")
-  
+
   # r1-r6: Setup a 'trunk' (A) and a 'branch' (A_COPY).
   wc_disk, wc_status = set_up_branch(sbox, False, 1)
 
@@ -13069,7 +13069,7 @@ def natural_history_filtering(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         wc_status, None, wc_dir)
   wc_disk.tweak('A/D/H/psi', contents="New content")
-  
+
   # r9: Merge all available revisions from A to A_COPY.  But first
   # update working copy to allow full inheritance and elision.
   svntest.actions.run_and_verify_svn(None, ["At revision 8.\n"], [],
@@ -13151,12 +13151,12 @@ def natural_history_filtering(sbox):
     })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output, wc_status,
                                         None, wc_dir)
-  
+
   # Again update the working copy to allow full inheritance and elision.
   svntest.actions.run_and_verify_svn(None, ["At revision 9.\n"], [],
                                      'up', wc_dir)
   wc_status.tweak(wc_rev=9)
-  
+
   # Merge all available revisions from A_COPY to A_COPY_2.  The mergeinfo on
   # A_COPY_2 should reflect both the merge of revisions 2-9 from A_COPY *and*
   # revisions 7-8 from A.  Reivisions 2-6 from A should not be part of the

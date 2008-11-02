@@ -251,7 +251,7 @@ svn_cmdline_auth_ssl_server_trust_prompt
 /** An implementation of @c svn_auth_ssl_client_cert_prompt_func_t that
  * prompts the user for the filename of their SSL client certificate via
  * the command line.
- * 
+ *
  * Records absolute path of the SSL client certificate file.
  *
  * @since New in 1.4.
@@ -333,9 +333,9 @@ svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
                               void *cancel_baton,
                               apr_pool_t *pool);
 
-/** Similar to svn_cmdline_create_auth_baton(), but with 
+/** Similar to svn_cmdline_create_auth_baton(), but with
  * @a trust_server_cert always set to false.
- * 
+ *
  * @since New in 1.4.
  * @deprecated Provided for backward compatibility with the 1.5 API.
  * Use svn_cmdline_create_auth_baton() instead.

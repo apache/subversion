@@ -1611,7 +1611,7 @@ def merge_sensitive_log_propmod_merge_inheriting_path(sbox):
   svntest.main.run_svn(None, 'ci', '-m',
                        'Set property "foo" to "bar" on A_COPY/D/H/psi', wc_dir)
   svntest.main.run_svn(None, 'up', wc_dir)
-  
+
   # Check that log -g -r7 on wc_dir/A_COPY and parents show merges of r3-r6.
   def run_log_g_r7(log_target):
     expected_merges = {

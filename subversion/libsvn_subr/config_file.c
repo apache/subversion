@@ -788,7 +788,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###"                                                                NL
         "### Note store-ssl-client-cert-pp only prevents the saving of *new*"NL
         "### passphrases; it doesn't invalidate existing passphrases.  To do"NL
-        "### that, remove the cache files by hand as described in the"       NL 
+        "### that, remove the cache files by hand as described in the"       NL
         "### Subversion book at http://svnbook.red-bean.com/nightly/en/\\"   NL
         "###                    svn.serverconfig.netmodel.html\\"            NL
         "###                    #svn.serverconfig.netmodel.credcache"        NL

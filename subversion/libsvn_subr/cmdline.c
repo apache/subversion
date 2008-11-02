@@ -449,7 +449,7 @@ get_auth_provider(svn_auth_provider_object_t **provider,
 
    Ignore MAY_SAVE; we don't save certs we never prompted for.
 
-   Ignore BATON, REALM, and CERT_INFO, 
+   Ignore BATON, REALM, and CERT_INFO,
 
    Ignore any further films by George Lucas. */
 static svn_error_t *
@@ -550,7 +550,7 @@ svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
       if (apr_strnatcmp(password_store, "gnome-keyring") == 0)
         {
 #ifdef SVN_HAVE_GNOME_KEYRING
-          SVN_ERR(get_auth_provider(&provider, "gnome_keyring", "simple", 
+          SVN_ERR(get_auth_provider(&provider, "gnome_keyring", "simple",
                                     pool));
           if (provider)
             {

@@ -515,7 +515,7 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
           else
             want_custom_revprops = TRUE;
         }
-      if (revprops->nelts == 0) 
+      if (revprops->nelts == 0)
 	{
 	  svn_ra_serf__add_tag_buckets(buckets,
 				       "S:no-revprops", NULL,
