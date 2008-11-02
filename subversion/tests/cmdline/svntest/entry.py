@@ -43,7 +43,7 @@ class svn_entry:
     print("  Revision: %s" % self.atts['revision'])
     print("  Ancestor: %s" % self.atts['ancestor'])
     print("  all atts: %s" % self.atts)
-    print()
+    print("")
 
 class svn_entryparser:
   "A class to parse an 'entries' file."
