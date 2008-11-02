@@ -382,7 +382,7 @@ def tree_non_recursive(sbox):
       print("  entry            : %s" % entry.rstrip())
       raise svntest.Failure
   if len(treelist) != len(expected_results_root):
-    print("Expected %i output entries, found %i" \
+    print("Expected %i output entries, found %i"
           % (len(expected_results_root), len(treelist)))
     raise svntest.Failure
 
@@ -395,7 +395,7 @@ def tree_non_recursive(sbox):
       print("  entry            : %s" % entry.rstrip())
       raise svntest.Failure
   if len(treelist) != len(expected_results_deep):
-    print("Expected %i output entries, found %i" \
+    print("Expected %i output entries, found %i"
           % (len(expected_results_deep), len(treelist)))
     raise svntest.Failure
 

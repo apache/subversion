@@ -1972,7 +1972,7 @@ def deep_trees_run_tests_scheme_for_update(sbox, greater_scheme):
     try:
       add_deep_trees(sbox, test_case.name)
     except:
-      print("ERROR IN: Tests scheme for update: " \
+      print("ERROR IN: Tests scheme for update: "
           + "while setting up deep trees in '%s'" % test_case.name)
       raise
 
@@ -1988,7 +1988,7 @@ def deep_trees_run_tests_scheme_for_update(sbox, greater_scheme):
     try:
       test_case.incoming_action(j(sbox.wc_dir, test_case.name))
     except:
-      print("ERROR IN: Tests scheme for update: " \
+      print("ERROR IN: Tests scheme for update: "
           + "while performing incoming action in '%s'" % test_case.name)
       raise
 
@@ -2009,7 +2009,7 @@ def deep_trees_run_tests_scheme_for_update(sbox, greater_scheme):
     try:
       test_case.local_action(j(wc_dir, test_case.name))
     except:
-      print("ERROR IN: Tests scheme for update: " \
+      print("ERROR IN: Tests scheme for update: "
           + "while performing local action in '%s'" % test_case.name)
       raise
 
@@ -2037,7 +2037,7 @@ def deep_trees_run_tests_scheme_for_update(sbox, greater_scheme):
       run_and_verify_update(base, x_out, x_disk, x_status,
                             error_re_string = test_case.error_re_string)
     except:
-      print("ERROR IN: Tests scheme for update: " \
+      print("ERROR IN: Tests scheme for update: "
           + "while verifying in '%s'" % test_case.name)
       raise
 
@@ -2097,7 +2097,7 @@ def deep_trees_run_tests_scheme_for_switch(sbox, greater_scheme):
       make_deep_trees(j(base, "incoming"))
       main.run_svn(None, 'add', base)
     except:
-      print("ERROR IN: Tests scheme for switch: " \
+      print("ERROR IN: Tests scheme for switch: "
           + "while setting up deep trees in '%s'" % test_case.name)
       raise
 
@@ -2113,7 +2113,7 @@ def deep_trees_run_tests_scheme_for_switch(sbox, greater_scheme):
     try:
       test_case.incoming_action(j(sbox.wc_dir, test_case.name, "incoming"))
     except:
-      print("ERROR IN: Tests scheme for switch: " \
+      print("ERROR IN: Tests scheme for switch: "
           + "while performing incoming action in '%s'" % test_case.name)
       raise
 
@@ -2129,7 +2129,7 @@ def deep_trees_run_tests_scheme_for_switch(sbox, greater_scheme):
     try:
       test_case.local_action(j(sbox.wc_dir, test_case.name, "local"))
     except:
-      print("ERROR IN: Tests scheme for switch: " \
+      print("ERROR IN: Tests scheme for switch: "
           + "while performing local action in '%s'" % test_case.name)
       raise
 
@@ -2158,7 +2158,7 @@ def deep_trees_run_tests_scheme_for_switch(sbox, greater_scheme):
       run_and_verify_switch(local, local, incoming, x_out, x_disk, x_status,
                             error_re_string = test_case.error_re_string)
     except:
-      print("ERROR IN: Tests scheme for switch: " \
+      print("ERROR IN: Tests scheme for switch: "
           + "while verifying in '%s'" % test_case.name)
       raise
 
@@ -2225,7 +2225,7 @@ def deep_trees_run_tests_scheme_for_merge(sbox, greater_scheme,
       make_deep_trees(j(base, "incoming"))
       main.run_svn(None, 'add', base)
     except:
-      print("ERROR IN: Tests scheme for merge: " \
+      print("ERROR IN: Tests scheme for merge: "
           + "while setting up deep trees in '%s'" % test_case.name)
       raise
 
@@ -2245,7 +2245,7 @@ def deep_trees_run_tests_scheme_for_merge(sbox, greater_scheme,
       main.run_svn(None, 'cp', incoming_url, local_url, '-m',
                    'copy incoming to local')
     except:
-      print("ERROR IN: Tests scheme for merge: " \
+      print("ERROR IN: Tests scheme for merge: "
           + "while copying deep trees in '%s'" % test_case.name)
       raise
 
@@ -2254,7 +2254,7 @@ def deep_trees_run_tests_scheme_for_merge(sbox, greater_scheme,
   try:
     main.run_svn(None, 'up', sbox.wc_dir)
   except:
-    print("ERROR IN: Tests scheme for merge: " \
+    print("ERROR IN: Tests scheme for merge: "
           + "while updating local subdirs")
     raise
 
@@ -2265,7 +2265,7 @@ def deep_trees_run_tests_scheme_for_merge(sbox, greater_scheme,
     try:
       test_case.incoming_action(j(sbox.wc_dir, test_case.name, "incoming"))
     except:
-      print("ERROR IN: Tests scheme for merge: " \
+      print("ERROR IN: Tests scheme for merge: "
           + "while performing incoming action in '%s'" % test_case.name)
       raise
 
@@ -2277,7 +2277,7 @@ def deep_trees_run_tests_scheme_for_merge(sbox, greater_scheme,
       main.run_svn(None, 'ci', '-m', 'Committing incoming actions',
                    sbox.wc_dir)
     except:
-      print("ERROR IN: Tests scheme for merge: " \
+      print("ERROR IN: Tests scheme for merge: "
           + "while committing incoming actions")
       raise
 
@@ -2288,7 +2288,7 @@ def deep_trees_run_tests_scheme_for_merge(sbox, greater_scheme,
     try:
       test_case.local_action(j(sbox.wc_dir, test_case.name, "local"))
     except:
-      print("ERROR IN: Tests scheme for merge: " \
+      print("ERROR IN: Tests scheme for merge: "
           + "while performing local action in '%s'" % test_case.name)
       raise
   
@@ -2300,7 +2300,7 @@ def deep_trees_run_tests_scheme_for_merge(sbox, greater_scheme,
       main.run_svn(None, 'ci', '-m', 'Committing incoming and local actions', 
                    sbox.wc_dir)
     except:
-      print("ERROR IN: Tests scheme for merge: " \
+      print("ERROR IN: Tests scheme for merge: "
           + "while committing incoming and local actions")
       raise
 
@@ -2336,7 +2336,7 @@ def deep_trees_run_tests_scheme_for_merge(sbox, greater_scheme,
                            error_re_string = test_case.error_re_string,
                            dry_run = False)
     except:
-      print("ERROR IN: Tests scheme for merge: " \
+      print("ERROR IN: Tests scheme for merge: "
           + "while verifying in '%s'" % test_case.name)
       raise
 
