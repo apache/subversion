@@ -1095,7 +1095,7 @@ class TestRunner:
     self.pred.check_description()
 
   def _print_name(self):
-    print("%s %s: %s" % (os.path.basename(sys.argv[0]), str(self.index), \
+    print("%s %s: %s" % (os.path.basename(sys.argv[0]), str(self.index),
           self.pred.get_description()))
     self.pred.check_description()
 
@@ -1262,15 +1262,15 @@ def _internal_run_tests(test_list, testnums, parallel):
 
 def usage():
   prog_name = os.path.basename(sys.argv[0])
-  print("%s [--url] [--fs-type] [--verbose|--quiet] [--parallel] \\" % \
+  print("%s [--url] [--fs-type] [--verbose|--quiet] [--parallel] \\" %
         prog_name)
-  print("%s [--enable-sasl] [--cleanup] [--bin] [<test> ...]" \
+  print("%s [--enable-sasl] [--cleanup] [--bin] [<test> ...]"
       % (" " * len(prog_name)))
   print("%s " % (" " * len(prog_name)))
   print("%s [--list] [<test> ...]\n" % prog_name)
   print("Arguments:")
-  print(" <test>  The number of the test to run, or a range of test\n"\
-        "         numbers, like 10:12 or 10-12. Multiple numbers and\n"\
+  print(" <test>  The number of the test to run, or a range of test\n"
+        "         numbers, like 10:12 or 10-12. Multiple numbers and\n"
         "         ranges are ok. If you supply none, all tests are run.\n")
   print("Options:")
   print(" --list          Print test doc strings instead of running them")
@@ -1283,13 +1283,13 @@ def usage():
   print(" --enable-sasl   Whether to enable SASL authentication")
   print(" --parallel      Run the tests in parallel")
   print(" --bin           Use the svn binaries installed in this path")
-  print(" --use-jsvn      Use the jsvn (SVNKit based) binaries. Can be\n" \
+  print(" --use-jsvn      Use the jsvn (SVNKit based) binaries. Can be\n"
         "                 combined with --bin to point to a specific path")
-  print(" --development   Test development mode: provides more detailed test\n"\
-        "                 output and ignores all exceptions in the \n"  \
-        "                 run_and_verify* functions. This option is only \n" \
+  print(" --development   Test development mode: provides more detailed test\n"
+        "                 output and ignores all exceptions in the \n"
+        "                 run_and_verify* functions. This option is only \n"
         "                 useful during test development!")
-  print(" --server-minor-version  Set the minor version for the server.\n" \
+  print(" --server-minor-version  Set the minor version for the server.\n"
         "                 Supports version 4 or 5.")
   print(" --config-file   Configuration file for tests.")
   print(" --help          This information")
