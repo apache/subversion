@@ -829,7 +829,12 @@ typedef enum svn_wc_notify_action_t
   svn_wc_notify_property_updated,
 
   /** The last notification in a merge. @since New in 1.6. */
-  svn_wc_notify_merge_completed
+  svn_wc_notify_merge_completed,
+
+  /** The path is a tree-conflict victim of the intended action (*not*
+   * a persistent tree-conflict from an earlier operation, but *this*
+   * operation caused the tree-conflict). @since New in 1.6. */
+  svn_wc_notify_tree_conflict
 
 } svn_wc_notify_action_t;
 
@@ -964,10 +969,6 @@ typedef struct svn_wc_notify_t {
    * allow notification to remove a common prefix from all the paths
    * displayed for an operation.  @since New in 1.6 */
   const char *path_prefix;
-
-  /** Whether @c path is a victim of a tree-conflict.
-   * @since New in 1.6 */
-  svn_boolean_t tree_conflicted;
 
   /* NOTE: Add new fields at the end to preserve binary compatibility.
      Also, if you add fields here, you have to update svn_wc_create_notify

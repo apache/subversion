@@ -12229,11 +12229,13 @@ def del_differing_file(sbox):
   pi = os.path.join(dir_D, 'G2', 'pi')
   # Should complain and "skip" it.
   svn_merge(s_rev_tau, source, target, [
+      "--- Merging r2 into '%s':\n" % dir_G2,
       "   C %s\n" % tau,
       "Summary of conflicts:\n",
       "  Tree conflicts: 1\n"])
 
   svn_merge(s_rev_pi, source, target, [
+      "--- Merging r3 into '%s':\n" % dir_G2,
       "   C %s\n" % pi,
       "Summary of conflicts:\n",
       "  Tree conflicts: 1\n"])
@@ -12254,11 +12256,13 @@ def del_differing_file(sbox):
 
   # Should complain and "skip" it.
   svn_merge(s_rev_tau, source, target, [
+      "--- Merging r2 into '%s':\n" % dir_G3,
       "   C %s\n" % tau,
       "Summary of conflicts:\n",
       "  Tree conflicts: 1\n"])
 
   svn_merge(s_rev_pi, source, target, [
+      "--- Merging r3 into '%s':\n" % dir_G3,
       "   C %s\n" % pi,
       "Summary of conflicts:\n",
       "  Tree conflicts: 1\n"])
@@ -13446,11 +13450,11 @@ def tree_conflicts_on_merge_local_ci_5_1(sbox):
 
   expected_output = svntest.wc.State('', {
     'F/alpha'           : Item(status='  ', treeconflict='C'),
-    'D/D1'              : Item(status=' U', treeconflict='C'),
-    'DF/D1'             : Item(status=' U', treeconflict='C'),
-    'DD/D1'             : Item(status=' U', treeconflict='C'),
-    'DDF/D1'            : Item(status=' U', treeconflict='C'),
-    'DDD/D1'            : Item(status=' U', treeconflict='C'),
+    'D/D1'              : Item(status='  ', treeconflict='C'),
+    'DF/D1'             : Item(status='  ', treeconflict='C'),
+    'DD/D1'             : Item(status='  ', treeconflict='C'),
+    'DDF/D1'            : Item(status='  ', treeconflict='C'),
+    'DDD/D1'            : Item(status='  ', treeconflict='C'),
     })
 
   expected_disk = svntest.wc.State('', {
@@ -13512,10 +13516,10 @@ def tree_conflicts_on_merge_local_ci_5_2(sbox):
   expected_output = svntest.wc.State('', {
     'F/alpha'           : Item(status='  ', treeconflict='C'),
     'D/D1'              : Item(status='  ', treeconflict='C'),
-    'DF/D1'             : Item(status=' U', treeconflict='C'),
-    'DD/D1'             : Item(status=' U', treeconflict='C'),
-    'DDF/D1'            : Item(status=' U', treeconflict='C'),
-    'DDD/D1'            : Item(status=' U', treeconflict='C'),
+    'DF/D1'             : Item(status='  ', treeconflict='C'),
+    'DD/D1'             : Item(status='  ', treeconflict='C'),
+    'DDF/D1'            : Item(status='  ', treeconflict='C'),
+    'DDD/D1'            : Item(status='  ', treeconflict='C'),
     })
 
 
@@ -13812,10 +13816,10 @@ def tree_conflicts_on_merge_no_local_ci_5_2(sbox):
   expected_output = svntest.wc.State('', {
     'F/alpha'           : Item(status='  ', treeconflict='C'),
     'D/D1'              : Item(status='  ', treeconflict='C'),
-    'DF/D1'             : Item(status=' U', treeconflict='C'),
-    'DD/D1'             : Item(status=' U', treeconflict='C'),
-    'DDF/D1'            : Item(status=' U', treeconflict='C'),
-    'DDD/D1'            : Item(status=' U', treeconflict='C'),
+    'DF/D1'             : Item(status='  ', treeconflict='C'),
+    'DD/D1'             : Item(status='  ', treeconflict='C'),
+    'DDF/D1'            : Item(status='  ', treeconflict='C'),
+    'DDD/D1'            : Item(status='  ', treeconflict='C'),
     })
 
 
