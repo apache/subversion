@@ -416,30 +416,12 @@ svn_client_uuid_from_path(const char **uuid,
     }
   else
     {
-<<<<<<< .working
       /* Excluded path will fall into this code branch, since the missed
          fields in the entry for excluded path is not filled. But it is just
          ok. */
-
-      /* Try the parent if it's the same working copy.  It's not
-         entirely clear how this happens (possibly an old wc?) but it
-         has been triggered by TSVN, see
-         http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=101831
-         Message-ID: <877jgjtkus.fsf@debian2.lan> */
-      svn_boolean_t is_root;
-      SVN_ERR(svn_wc_is_wc_root(&is_root, path, adm_access, pool));
-      if (is_root)
-        return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
-                                 _("'%s' has no URL"),
-                                 svn_path_local_style(path, pool));
-      else
-        return svn_client_uuid_from_path(uuid, svn_path_dirname(path, pool),
-                                         adm_access, ctx, pool);
-=======
       return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                                _("'%s' has no URL"),
                                svn_path_local_style(path, pool));
->>>>>>> .merge-right.r34008
     }
 
   return SVN_NO_ERROR;
