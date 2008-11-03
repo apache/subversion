@@ -711,7 +711,6 @@ svn_ra__file_revs_from_log(svn_ra_session_t *ra_session,
   for (rev = lmb.eldest; rev; rev = rev->next)
     {
       const char *temp_path;
-      const char *temp_dir;
       apr_pool_t *tmppool;
       apr_hash_t *props;
       apr_file_t *file;
