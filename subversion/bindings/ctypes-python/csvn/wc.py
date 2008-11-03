@@ -110,7 +110,7 @@ class WC(object):
 
     def add(self, path, recurse = True, force = False, no_ignore = False):
         """Schedule path to be added.
-        
+
         Keyword arguments:
         path -- path to be marked for addition
         recurse -- if True, the contents of directories will also be
@@ -128,7 +128,7 @@ class WC(object):
 
         This operation does not actually change path at all, it just marks the
         conflict as resolved.
-        
+
         Keyword arguments:
         path -- path to be marked as resolved
         recurse -- if True, directories will be recursed (default True)"""
@@ -138,7 +138,7 @@ class WC(object):
 
     def revert(self, paths, recurse = False):
         """Revert paths to the most recent version.
-        
+
         Keyword arguments:
         paths -- list of paths to be reverted
         recurse -- if True, directories will be recursed (default True)"""
@@ -149,12 +149,12 @@ class WC(object):
 
     def _build_path_list(self, paths):
         """Build a list of canonicalized WC paths.
-        
+
         In general, the user does not need to call this method, paths will be
         canonicalized as needed for you.
-        
+
         Returns an array of canonicalized paths.
-        
+
         Keyword arguments:
         paths -- list of paths to be canonicalized"""
 
@@ -167,12 +167,12 @@ class WC(object):
 
     def _build_path(self, path):
         """Build a canonicalized path.
-        
+
         In general, the user does not need to call this method, paths will be
         canonicalized as needed for you.
-        
+
         Returns a canonical path.
-        
+
         Keyword arguments:
         path -- path to be canonicalized"""
         joined_path = os.path.join(self.path.replace("/", os.sep), path.replace("/", os.sep))
@@ -181,11 +181,11 @@ class WC(object):
     def set_notify_func(self, notify_func):
         """Setup a callback so that you can be notified when paths are
         affected by WC operations.
-           
+
         When paths are affected, we will call the function with an
         svn_wc_notify_t object. For details on the contents of an
         svn_wc_notify_t object, see the documentation for svn_wc_notify_t.
-           
+
         Keyword arguments:
         notify_func -- function to be used in the callback"""
         self._notify_func = notify_func
@@ -202,10 +202,10 @@ class WC(object):
 
     def set_cancel_func(self, cancel_func):
         """Setup a callback so that you can cancel operations.
-        
+
         At various times the cancel function will be called, giving
         the option of cancelling the operation.
-        
+
         Keyword arguments:
         cancel_func -- function to be used in the callback"""
 
@@ -219,7 +219,7 @@ class WC(object):
 
     def set_progress_func(self, progress_func):
         """Setup a callback for network progress information.
-        
+
         This callback should accept two intergers, being the number of bytes
         sent and the number of bytes to send.
 
@@ -300,7 +300,7 @@ class WC(object):
 
     def cleanup(self, path=""):
         """Recursively cleanup the working copy.
-        
+
         Cleanup means: finish any incomplete operations and release all locks.
 
         Keyword arguments:
@@ -316,7 +316,7 @@ class WC(object):
 
         An export creates a clean copy of the exported items, with no
         subversion metadata.
-        
+
         Keyword arguments:
         from_path -- path to export
         to_path -- location to export to
@@ -330,7 +330,7 @@ class WC(object):
 
         rev = svn_opt_revision_t()
         peg_rev = svn_opt_revision_t()
-        
+
         svn_client_export3(POINTER(svn_revnum_t)(),
                            self._build_path(from_path),
                            self._build_path(to_path), byref(peg_rev),
@@ -351,7 +351,7 @@ class WC(object):
 
     def mkdir(self, paths):
         """Create directories in the working copy.
-        
+
         Keyword arguments:
         paths -- list of paths to be created"""
         paths = self._build_path_list(paths)
@@ -387,7 +387,7 @@ class WC(object):
 
     def proplist(self, target="", recurse=True):
         """List the values of the normal properties of target.
-        
+
         Returns an array of svn_client_proplist_item_t objects.
 
         Keyword arguments:
@@ -411,7 +411,7 @@ class WC(object):
 
     def propget(self, propname, target="", recurse=True):
         """Get the the value of propname for target.
-        
+
         Returns a hash the keys of which are file paths and the values are the
         value of PROPNAME for the corresponding file. The values of the hash
         are c_char_p objects, which can be treated much like strings.
@@ -448,7 +448,7 @@ class WC(object):
     def set_status_func(self, status):
         """Set a callback function to be used the next time the status method
         is called.
-        
+
         Keyword arguments:
         status -- function to be used in status callback"""
         self._status = status
@@ -460,7 +460,7 @@ class WC(object):
 
         The status callback (which can be set when this method is called or
         earlier) wil be called for each item.
-        
+
         Keyword arguments:
         path -- items to get status for (defaults to WC root)
         status -- callback to be used (defaults to previously registered
@@ -507,7 +507,7 @@ class WC(object):
 
         The callback function should accept a path and a svn_info_t object as
         arguments.
-        
+
         Keyword arguments:
         info -- callback to be used to process information during a call to
             the info method."""
@@ -515,7 +515,7 @@ class WC(object):
 
     def info(self, path="", recurse=True, info_func=None):
         """Get info about path.
-         
+
         Keyword arguments:
         path -- path to get info about (defaults to WC root)
         recurse -- if True, directories will be recursed
@@ -534,7 +534,7 @@ class WC(object):
     def checkout(self, url, revnum=None, path=None, recurse=True,
                  ignore_externals=False):
         """Checkout a new working copy.
-        
+
         Keyword arguments:
         url -- url to check out from, should be of the form url@peg_revision
         revnum -- revision number to check out
@@ -566,14 +566,14 @@ class WC(object):
     def set_log_func(self, log_func):
         """Register a callback to get a log message for commit and commit-like
         operations.
-        
+
         LOG_FUNC should take an array as an argument,vwhich holds the files to
         be commited. It should return a list of thevform [LOG, FILE] where LOG
         is a log message and FILE is the temporary file, if one was created
         instead of a log message. If LOG is None, the operation will be
         canceled and FILE will be treated as the temporary file holding the
         temporary commit message.
-        
+
         Keyword arguments:
         log_func -- callback to be used for getting log messages"""
         self._log_func = log_func
@@ -595,7 +595,7 @@ class WC(object):
 
     def commit(self, paths=[""], recurse=True, keep_locks=False):
         """Commit changes in the working copy.
-        
+
         Keyword arguments:
         paths -- list of paths that should be commited (defaults to WC root)
         recurse -- if True, the contents of directories to be committed will
@@ -612,10 +612,10 @@ class WC(object):
     def update(self, paths=[""], revnum=None, recurse=True,
                 ignore_externals=True):
         """Update paths to a given revision number.
-        
+
         Returns an array of revision numbers to which the revision number was
         resolved.
-        
+
         Keyword arguments:
         paths -- list of path to be updated (defaults to WC root)
         revnum -- revision number to update to (defaults to head revision)
@@ -653,14 +653,14 @@ class WC(object):
 
     def set_list_func(self, list_func):
         """Set the callback function for list operations.
-        
+
         Keyword arguments:
         list_func -- function to be used for callbacks"""
         self._list = list_func
 
     def list(self, path="", recurse=True, fetch_locks=False, list_func=None):
         """List items in the working copy using a callback.
-        
+
         Keyword arguments:
         path -- path to list (defaults to WC root)
         recurse -- if True, list contents of directories as well (default True)
@@ -687,7 +687,7 @@ class WC(object):
         """Modify a working copy directory, changing repository URLs. that begin with FROM_URL to begin with
         TO_URL instead, recursing into subdirectories if RECURSE is True
         (True by default).
-         
+
         Keyword arguments:
         from_url -- url to be replaced, if this url is matched at the beginning
             of a url it will be replaced with to_url
@@ -702,7 +702,7 @@ class WC(object):
 
     def switch(self, path, url, revnum=None, recurse=True):
         """Switch part of a working copy to a new url.
-        
+
         Keyword arguments:
         path -- path to be changed to a new url
         url -- url to be used
@@ -724,7 +724,7 @@ class WC(object):
 
     def lock(self, paths, comment=NULL, steal_lock=False):
         """Lock items.
-        
+
         Keyword arguments:
         paths -- list of paths to be locked, may be WC paths (in which
             case this is a local operation) or urls (in which case this is a
@@ -738,7 +738,7 @@ class WC(object):
 
     def unlock(self, paths, break_lock=False):
         """Unlock items.
-        
+
         Keyword arguments:
         paths - list of paths to be unlocked, may be WC paths (in which
             case this is a local operation) or urls (in which case this is a
@@ -752,10 +752,10 @@ class WC(object):
                 recurse=True, ignore_ancestry=False, force=False,
                 dry_run=False, merge_options=[]):
         """Merge changes.
-        
+
         This method merges the changes from source1@revnum1 to
         source2@revnum2 into target_wcpath.
-        
+
         Keyword arguments:
         source1 -- path for beginning revision of changes to be merged
         revnum1 -- starting revnum

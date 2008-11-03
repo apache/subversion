@@ -98,7 +98,7 @@ svn_fs_fs__dir_entries_serialize(char **data,
                                  void *in,
                                  apr_pool_t *pool);
 
-/* Deserialize a directory contents hash. 
+/* Deserialize a directory contents hash.
    Implements svn_cache__deserialize_func_t */
 svn_error_t *
 svn_fs_fs__dir_entries_deserialize(void **out,

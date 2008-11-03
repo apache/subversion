@@ -36,7 +36,7 @@
                        (k) == svn_checksum_sha1 ? APR_SHA1_DIGESTSIZE : 0)
 
 
-/* Check to see if KIND is something we recognize.  If not, return 
+/* Check to see if KIND is something we recognize.  If not, return
  * SVN_ERR_BAD_CHECKSUM_KIND */
 static svn_error_t *
 validate_kind(svn_checksum_kind_t kind)
@@ -157,7 +157,7 @@ svn_checksum_parse_hex(svn_checksum_t **checksum,
         return svn_error_create
           (SVN_ERR_BAD_CHECKSUM_PARSE, NULL, NULL);
 
-      ((unsigned char *)(*checksum)->digest)[i] = 
+      ((unsigned char *)(*checksum)->digest)[i] =
         (( isalpha(hex[i*2]) ? hex[i*2] - 'a' + 10 : hex[i*2] - '0') << 4) |
         ( isalpha(hex[i*2+1]) ? hex[i*2+1] - 'a' + 10 : hex[i*2+1] - '0');
     }
@@ -172,7 +172,7 @@ svn_checksum_dup(const svn_checksum_t *src,
   apr_size_t size;
   svn_checksum_t *dest;
   svn_error_t *err;
-  
+
   /* The duplicate of a NULL checksum is a NULL... */
   if (src == NULL)
     return NULL;

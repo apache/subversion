@@ -130,7 +130,7 @@ svn_wc__versioned_file_modcheck(svn_boolean_t *modified_p,
  * Return a boolean answer to the question "Is @a status something that
  * should be reported?".  @a no_ignore and @a get_all are the same as
  * svn_wc_get_status_editor4().
- * 
+ *
  * @since New in 1.6.
  */
 svn_boolean_t

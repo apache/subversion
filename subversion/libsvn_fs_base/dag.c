@@ -615,11 +615,11 @@ svn_fs_base__dag_set_proplist(dag_node_t *node,
       svn_error_t *err;
       const char *dup_rep_key;
       svn_checksum_t *checksum;
-      
+
       SVN_ERR(svn_checksum(&checksum, svn_checksum_sha1, raw_proplist_buf->data,
                            raw_proplist_buf->len, pool));
 
-      err = svn_fs_bdb__get_checksum_rep(&dup_rep_key, fs, checksum, 
+      err = svn_fs_bdb__get_checksum_rep(&dup_rep_key, fs, checksum,
                                          trail, pool);
       if (! err)
         {
@@ -634,7 +634,7 @@ svn_fs_base__dag_set_proplist(dag_node_t *node,
         {
           if (err->apr_err != SVN_ERR_FS_NO_SUCH_CHECKSUM_REP)
             return err;
-          
+
           svn_error_clear(err);
           err = SVN_NO_ERROR;
         }
@@ -1137,6 +1137,7 @@ svn_fs_base__dag_file_length(svn_filesize_t *length,
 
 svn_error_t *
 svn_fs_base__dag_file_checksum(svn_checksum_t **checksum,
+                               svn_checksum_kind_t checksum_kind,
                                dag_node_t *file,
                                trail_t *trail,
                                apr_pool_t *pool)
@@ -1150,14 +1151,22 @@ svn_fs_base__dag_file_checksum(svn_checksum_t **checksum,
 
   SVN_ERR(svn_fs_bdb__get_node_revision(&noderev, file->fs, file->id,
                                         trail, pool));
-  if (noderev->data_key)
-    SVN_ERR(svn_fs_base__rep_contents_checksum(checksum, file->fs,
-                                               noderev->data_key,
-                                               trail, pool));
-  else
-    *checksum = NULL;
+  if (! noderev->data_key)
+    {
+      *checksum = NULL;
+      return SVN_NO_ERROR;
+    }
 
-  return SVN_NO_ERROR;
+  if (checksum_kind == svn_checksum_md5)
+    return svn_fs_base__rep_contents_checksums(checksum, NULL, file->fs,
+                                               noderev->data_key,
+                                               trail, pool);
+  else if (checksum_kind == svn_checksum_sha1)
+    return svn_fs_base__rep_contents_checksums(NULL, checksum, file->fs,
+                                               noderev->data_key,
+                                               trail, pool);
+  else
+    return svn_error_create(SVN_ERR_BAD_CHECKSUM_KIND, NULL, NULL);
 }
 
 
@@ -1227,7 +1236,7 @@ svn_fs_base__dag_finalize_edits(dag_node_t *file,
   node_revision_t *noderev;
   const char *old_data_key, *new_data_key, *useless_data_key = NULL;
   const char *data_key_uniquifier = NULL;
-  svn_checksum_t *rep_checksum;
+  svn_checksum_t *md5_checksum, *sha1_checksum;
   base_fs_data_t *bfd = fs->fsap_data;
 
   /* Make sure our node is a file. */
@@ -1250,26 +1259,38 @@ svn_fs_base__dag_finalize_edits(dag_node_t *file,
   if (! noderev->edit_key)
     return SVN_NO_ERROR;
 
-  /* Get our representation's checksum. */
-  SVN_ERR(svn_fs_base__rep_contents_checksum(&rep_checksum, fs,
-                                             noderev->edit_key, trail, pool));
+  /* Get our representation's checksums. */
+  SVN_ERR(svn_fs_base__rep_contents_checksums(&md5_checksum, &sha1_checksum,
+                                              fs, noderev->edit_key,
+                                              trail, pool));
 
   /* If our caller provided a checksum of the right kind to compare, do so. */
-  if (checksum
-        && checksum->kind == rep_checksum->kind
-        && !svn_checksum_match(checksum, rep_checksum))
-    return svn_error_createf(SVN_ERR_CHECKSUM_MISMATCH, NULL,
-                             _("Checksum mismatch, rep '%s':\n"
-                               "   expected:  %s\n"
-                               "     actual:  %s\n"),
-                             noderev->edit_key,
-                        svn_checksum_to_cstring_display(checksum, pool),
-                        svn_checksum_to_cstring_display(rep_checksum, pool));
+  if (checksum)
+    {
+      svn_checksum_t *test_checksum;
+
+      if (checksum->kind == svn_checksum_md5)
+        test_checksum = md5_checksum;
+      else if (checksum->kind == svn_checksum_sha1)
+        test_checksum = sha1_checksum;
+      else
+        return svn_error_create(SVN_ERR_BAD_CHECKSUM_KIND, NULL, NULL);
+
+      if (! svn_checksum_match(checksum, test_checksum))
+        return svn_error_createf
+          (SVN_ERR_CHECKSUM_MISMATCH, NULL,
+           _("Checksum mismatch, rep '%s':\n"
+             "   expected:  %s\n"
+             "     actual:  %s\n"),
+           noderev->edit_key,
+           svn_checksum_to_cstring_display(checksum, pool),
+           svn_checksum_to_cstring_display(test_checksum, pool));
+    }
 
   /* Now, we want to delete the old representation and replace it with
      the new.  Of course, we don't actually delete anything until
      everything is being properly referred to by the node-revision
-     skel.  
+     skel.
 
      Now, if the result of all this editing is that we've created a
      representation that describes content already represented
@@ -1280,10 +1301,10 @@ svn_fs_base__dag_finalize_edits(dag_node_t *file,
      between "the contents weren't touched" and "the contents were
      touched but still look the same" (to state it oversimply).  */
   old_data_key = noderev->data_key;
-  if (bfd->format >= SVN_FS_BASE__MIN_REP_SHARING_FORMAT)
+  if (sha1_checksum && bfd->format >= SVN_FS_BASE__MIN_REP_SHARING_FORMAT)
     {
-      svn_error_t *err = svn_fs_bdb__get_checksum_rep(&new_data_key, fs, 
-                                                      rep_checksum, 
+      svn_error_t *err = svn_fs_bdb__get_checksum_rep(&new_data_key, fs,
+                                                      sha1_checksum,
                                                       trail, pool);
       if (! err)
         {
@@ -1460,7 +1481,7 @@ maybe_deltify_mutable_rep(const char *target_rep_key,
                           trail_t *trail,
                           apr_pool_t *pool)
 {
-  if (! (target_rep_key && source_rep_key 
+  if (! (target_rep_key && source_rep_key
          && (strcmp(target_rep_key, source_rep_key) != 0)))
     return SVN_NO_ERROR;
 
@@ -1472,7 +1493,7 @@ maybe_deltify_mutable_rep(const char *target_rep_key,
       if (strcmp(target_rep->txn_id, txn_id) != 0)
         return SVN_NO_ERROR;
     }
-  
+
   return svn_fs_base__rep_deltify(trail->fs, target_rep_key, source_rep_key,
                                   trail, pool);
 }
@@ -1521,10 +1542,12 @@ maybe_store_checksum_rep(const char *rep,
 {
   svn_error_t *err;
   svn_fs_t *fs = trail->fs;
-  svn_checksum_t *checksum;
-  
-  SVN_ERR(svn_fs_base__rep_contents_checksum(&checksum, fs, rep, trail, pool));
-  err = svn_fs_bdb__set_checksum_rep(fs, checksum, rep, trail, pool);
+  svn_checksum_t *sha1_checksum;
+
+  /* We want the SHA1 checksum, if any. */
+  SVN_ERR(svn_fs_base__rep_contents_checksums(NULL, &sha1_checksum,
+                                              fs, rep, trail, pool));
+  err = svn_fs_bdb__set_checksum_rep(fs, sha1_checksum, rep, trail, pool);
   if (err && (err->apr_err == SVN_ERR_FS_ALREADY_EXISTS))
     {
       svn_error_clear(err);
@@ -1534,8 +1557,8 @@ maybe_store_checksum_rep(const char *rep,
 }
 
 svn_error_t *
-svn_fs_base__dag_index_checksums(dag_node_t *node, 
-                                 trail_t *trail, 
+svn_fs_base__dag_index_checksums(dag_node_t *node,
+                                 trail_t *trail,
                                  apr_pool_t *pool)
 {
   node_revision_t *node_rev;
@@ -1628,7 +1651,7 @@ svn_fs_base__things_different(svn_boolean_t *props_changed,
 
   /* Compare contents keys and their (optional) uniquifiers. */
   if (contents_changed != NULL)
-    *contents_changed = 
+    *contents_changed =
       (! (svn_fs_base__same_keys(noderev1->data_key,
                                  noderev2->data_key)
           /* Technically, these uniquifiers aren't used and "keys",
