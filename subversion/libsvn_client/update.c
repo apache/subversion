@@ -165,7 +165,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
       /* If we are asked to exclude a target, we can just stop now. */
       if (depth == svn_depth_exclude)
         {
-          SVN_ERR(svn_wc_adm_close(adm_access));
+          SVN_ERR(svn_wc_adm_close2(adm_access, pool));
           return SVN_NO_ERROR;
         }
     }
