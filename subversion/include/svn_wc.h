@@ -1568,6 +1568,8 @@ typedef struct svn_wc_diff_callbacks3_t
    * A directory @a path has been opened.  @a rev is the revision that the
    * directory came from.
    *
+   * This function is called for @a path before any of the callbacks are
+   * called for a child of @a path.
    */
   svn_error_t *(*dir_opened)(svn_wc_adm_access_t *adm_access,
                              svn_boolean_t *tree_conflicted,
