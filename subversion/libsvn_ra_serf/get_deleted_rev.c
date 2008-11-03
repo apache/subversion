@@ -52,7 +52,7 @@ typedef struct {
 } drev_context_t;
 
 
-static svn_string_t *
+static void
 push_state(svn_ra_serf__xml_parser_t *parser,
            drev_context_t *drev_ctx,
            drev_state_e state)
@@ -60,13 +60,7 @@ push_state(svn_ra_serf__xml_parser_t *parser,
   svn_ra_serf__xml_push_state(parser, state);
 
   if (state == VERSION_NAME)
-    {
-      svn_string_t *info = apr_pcalloc(parser->state->pool, sizeof(*info));
-
-      parser->state->private = info;
-    }
-
-  return parser->state->private;
+    parser->state->private = NULL;
 }
 
 static svn_error_t *
@@ -102,7 +96,8 @@ end_getdrev(svn_ra_serf__xml_parser_t *parser,
   info = parser->state->private;
 
   if (state == VERSION_NAME &&
-      strcmp(name.name, SVN_DAV__VERSION_NAME) == 0)
+      strcmp(name.name, SVN_DAV__VERSION_NAME) == 0 &&
+      info)
     {
       *drev_ctx->revision_deleted = SVN_STR_TO_REV(info->data);
       svn_ra_serf__xml_pop_state(parser);
@@ -119,17 +114,15 @@ cdata_getdrev(svn_ra_serf__xml_parser_t *parser,
 {
   drev_context_t *drev_ctx = userData;
   drev_state_e state;
-  svn_string_t **info;
 
   UNUSED_CTX(drev_ctx);
 
   state = parser->state->current_state;
-  info = &((svn_string_t *)parser->state->private);
-
   switch (state)
     {
     case VERSION_NAME:
-        *info = svn_string_ncreate(data, len, parser->state->pool);
+        parser->state->private = svn_string_ncreate(data, len,
+                                                    parser->state->pool);
         break;
     default:
         break;
