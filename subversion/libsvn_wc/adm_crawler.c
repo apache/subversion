@@ -720,7 +720,6 @@ svn_wc_crawl_revisions4(const char *path,
   return err;
 }
 
-<<<<<<< .working
 svn_error_t *
 svn_wc_crawl_revisions3(const char *path,
                         svn_wc_adm_access_t *adm_access,
@@ -956,8 +955,6 @@ svn_wc_crawl_revisions(const char *path,
 }
 
 
-=======
->>>>>>> .merge-right.r34008
 /*** Copying stream ***/
 
 /* A copying stream is a bit like the unix tee utility:

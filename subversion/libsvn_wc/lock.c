@@ -698,16 +698,12 @@ do_open(svn_wc_adm_access_t **adm_access,
           if (entry->kind != svn_node_dir
               || ! strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR))
             continue;
-<<<<<<< .working
 
           /* Also skip the excluded subdir. */
           if (entry->depth == svn_depth_exclude)
             continue;
 
-          entry_path = svn_path_join(lock->path, entry->name, subpool);
-=======
           entry_path = svn_path_join(path, entry->name, subpool);
->>>>>>> .merge-right.r34008
 
           /* Don't use the subpool pool here, the lock needs to persist */
           err = do_open(&entry_access, lock_shared, entry_path, write_lock,
