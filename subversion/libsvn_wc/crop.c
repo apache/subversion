@@ -52,7 +52,7 @@
  * If NOTIFY_FUNC is not null, each file and ROOT of subtree will be reported
  * upon remove.
  */
-svn_error_t *
+static svn_error_t *
 crop_children(svn_wc_adm_access_t *adm_access,
               const char *dir_path,
               svn_depth_t depth,
