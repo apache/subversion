@@ -655,8 +655,8 @@ def update_delete_modified_files(sbox):
   # expected success (see issue #1806), and now we expect tree conflicts
   # (see issue #2282) on the missing or unversioned items.
   expected_output = svntest.wc.State(wc_dir, {
-    'A/B/E/alpha' : Item(status='D ', treeconflict='C'),
-    'A/D/G'       : Item(status='D ', treeconflict='C'),
+    'A/B/E/alpha' : Item(status='  ', treeconflict='C'),
+    'A/D/G'       : Item(status='  ', treeconflict='C'),
     })
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.remove('A/D/G/rho', 'A/D/G/tau')
@@ -1023,8 +1023,8 @@ def update_deleted_missing_dir(sbox):
 
   # Create expected output tree for an update of the missing items by name
   expected_output = svntest.wc.State(wc_dir, {
-    'A/B/E' : Item(status='D ', treeconflict='C'),
-    'A/D/H' : Item(status='D ', treeconflict='C'),
+    'A/B/E' : Item(status='  ', treeconflict='C'),
+    'A/D/H' : Item(status='  ', treeconflict='C'),
     })
 
   # Create expected disk tree for the update.
@@ -1125,8 +1125,8 @@ def another_hudson_problem(sbox):
   # Sigh, I can't get run_and_verify_update to work (but not because
   # of issue 919 as far as I can tell)
   svntest.actions.run_and_verify_svn(None,
-                                     ['D  C '+G_path+'\n',
-                                      'Updated to revision 3.\n',
+                                     ['   C '+G_path+'\n',
+                                      'At revision 3.\n',
                                       'Summary of conflicts:\n',
                                       '  Tree conflicts: 1\n',
                                       ], [],
