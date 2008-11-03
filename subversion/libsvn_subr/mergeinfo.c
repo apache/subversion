@@ -1221,11 +1221,14 @@ svn_rangelist_to_string(svn_string_t **output,
   return SVN_NO_ERROR;
 }
 
-/* Converts a mergeinfo @a input to an unparsed mergeinfo in @a
- * output.  If @a input contains no elements, return the empty string.
+/* Converts a mergeinfo INPUT to an unparsed mergeinfo in OUTPUT.  If PREFIX
+   is not NULL then prepend PREFIX to each line in OUTPUT.  If INPUT contains
+   no elements, return the empty string.
  */
 static svn_error_t *
-mergeinfo_to_stringbuf(svn_stringbuf_t **output, svn_mergeinfo_t input,
+mergeinfo_to_stringbuf(svn_stringbuf_t **output,
+                       svn_mergeinfo_t input,
+                       const char *prefix,
                        apr_pool_t *pool)
 {
   *output = svn_stringbuf_create("", pool);
@@ -1243,7 +1246,8 @@ mergeinfo_to_stringbuf(svn_stringbuf_t **output, svn_mergeinfo_t input,
 
           SVN_ERR(svn_rangelist_to_string(&revlist, elt.value, pool));
           svn_stringbuf_appendcstr(*output,
-                                   apr_psprintf(pool, "%s:%s",
+                                   apr_psprintf(pool, "%s%s:%s",
+                                                prefix ? prefix : "",
                                                 (char *) elt.key,
                                                 revlist->data));
           if (i < sorted->nelts - 1)
@@ -1261,7 +1265,7 @@ svn_mergeinfo_to_string(svn_string_t **output, svn_mergeinfo_t input,
   if (apr_hash_count(input) > 0)
     {
       svn_stringbuf_t *mergeinfo_buf;
-      SVN_ERR(mergeinfo_to_stringbuf(&mergeinfo_buf, input, pool));
+      SVN_ERR(mergeinfo_to_stringbuf(&mergeinfo_buf, input, NULL, pool));
       *output = svn_string_create_from_buf(mergeinfo_buf, pool);
     }
   else
@@ -1523,3 +1527,105 @@ svn_merge_range_contains_rev(svn_merge_range_t *range, svn_revnum_t rev)
   else
     return rev > range->end && rev <= range->start;
 }
+
+svn_error_t *
+svn_mergeinfo__catalog_to_formatted_string(svn_string_t **output,
+                                           svn_mergeinfo_catalog_t catalog,
+                                           const char *key_prefix,
+                                           const char *val_prefix,
+                                           apr_pool_t *pool)
+{
+  svn_stringbuf_t *output_buf = svn_stringbuf_create("", pool);
+
+  if (catalog && apr_hash_count(catalog))
+    {
+      apr_array_header_t *sorted_catalog =
+        svn_sort__hash(catalog, svn_sort_compare_items_as_paths, pool);
+      int i;
+
+      for (i = 0; i < sorted_catalog->nelts; i++)
+        {
+          svn_sort__item_t elt =
+            APR_ARRAY_IDX(sorted_catalog, i, svn_sort__item_t);
+          const char *path1;
+          svn_mergeinfo_t mergeinfo;
+          svn_stringbuf_t *mergeinfo_output_buf;
+
+          path1 = elt.key;
+          mergeinfo = elt.value;
+          if (key_prefix)
+            svn_stringbuf_appendcstr(output_buf,
+                                     apr_pstrdup(pool, key_prefix));
+          svn_stringbuf_appendcstr(output_buf,
+                                   apr_pstrdup(pool, path1));
+          svn_stringbuf_appendcstr(output_buf, "\n");
+          SVN_ERR(mergeinfo_to_stringbuf(&mergeinfo_output_buf,
+                                         mergeinfo,
+                                         val_prefix ? val_prefix : "",
+                                         pool));
+          svn_stringbuf_appendstr(output_buf, mergeinfo_output_buf);
+          svn_stringbuf_appendcstr(output_buf, "\n");
+        }
+    }
+#if SVN_DEBUG
+  else if (!catalog)
+    {
+      if (key_prefix)
+        svn_stringbuf_appendcstr(output_buf,
+                                 apr_pstrdup(pool, key_prefix));
+      svn_stringbuf_appendcstr(output_buf,
+                               _("NULL mergeinfo catalog\n"));
+    }
+  else if(apr_hash_count(catalog) == 0)
+    {
+      if (key_prefix)
+        svn_stringbuf_appendcstr(output_buf,
+                                 apr_pstrdup(pool, key_prefix));
+      svn_stringbuf_appendcstr(output_buf,
+                               _("empty mergeinfo catalog\n"));
+    }
+#endif
+  else
+    {
+      *output = svn_string_create("\n", pool);
+    }
+  *output = svn_string_create_from_buf(output_buf, pool);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_mergeinfo__to_formatted_string(svn_string_t **output,
+                                   svn_mergeinfo_t mergeinfo,
+                                   const char *prefix,
+                                   apr_pool_t *pool)
+{
+  svn_stringbuf_t *mergeinfo_output_buf = svn_stringbuf_create("", pool);
+
+  if (mergeinfo && apr_hash_count(mergeinfo))
+    {
+      SVN_ERR(mergeinfo_to_stringbuf(&mergeinfo_output_buf,
+                                     mergeinfo,
+                                     prefix ? prefix : "",
+                                     pool));
+      svn_stringbuf_appendcstr(mergeinfo_output_buf, "\n");
+    }
+#if SVN_DEBUG
+  else if (!mergeinfo)
+    {
+      if (prefix)
+        svn_stringbuf_appendcstr(mergeinfo_output_buf,
+                                 apr_pstrdup(pool, prefix));
+      svn_stringbuf_appendcstr(mergeinfo_output_buf, _("NULL mergeinfo\n"));
+    }
+  else if(apr_hash_count(mergeinfo) == 0)
+    {
+      if (prefix)
+        svn_stringbuf_appendcstr(mergeinfo_output_buf,
+                                 apr_pstrdup(pool, prefix));
+      svn_stringbuf_appendcstr(mergeinfo_output_buf, _("empty mergeinfo\n"));
+    }
+#endif
+  *output = svn_string_create_from_buf(mergeinfo_output_buf, pool);
+  return SVN_NO_ERROR;
+}
+

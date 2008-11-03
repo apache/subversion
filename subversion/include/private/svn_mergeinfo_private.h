@@ -73,6 +73,31 @@ svn_mergeinfo__remove_prefix_from_catalog(svn_mergeinfo_catalog_t *out_catalog,
                                           const char *prefix,
                                           apr_pool_t *pool);
 
+/* Create a string representation of CATALOG in *OUTPUT, allocated in POOL.
+   The hash keys of CATALOG and the merge source paths of each key's mergeinfo
+   are represented in sorted order as per svn_sort_compare_items_as_paths.
+   If CATALOG is empty or NULL then *OUTPUT->DATA is set to "\n".  If SVN_DEBUG
+   is true, then a NULL or empty CATALOG causes *OUTPUT to be set to an
+   appropriate newline terminated string.  If KEY_PREFIX is not NULL then
+   KEY_PREFIX to each key (path) in *OUTPUT.  if VAL_PREFIX is not NULL then
+   prepend VAL_PREFIX to each merge source:rangelist line in *OUTPUT. */
+svn_error_t *
+svn_mergeinfo__catalog_to_formatted_string(svn_string_t **output,
+                                           svn_mergeinfo_catalog_t catalog,
+                                           const char *key_prefix,
+                                           const char *val_prefix,
+                                           apr_pool_t *pool);
+
+/* Create a string representation of MERGEINFO in *OUTPUT, allocated in POOL.
+   Unlike svn_mergeinfo_to_string(), NULL MERGEINFO is tolerated and results
+   in *OUTPUT set to "\n".  If SVN_DEBUG is true, then NULL or empty MERGEINFO
+   causes *OUTPUT to be set to an appropriate newline terminated string.  If
+   PREFIX is not NULL then prepend PREFIX to each line in *OUTPUT. */
+svn_error_t *
+svn_mergeinfo__to_formatted_string(svn_string_t **output,
+                                   svn_mergeinfo_t mergeinfo,
+                                   const char *prefix,
+                                   apr_pool_t *pool);
 
 #ifdef __cplusplus
 }
