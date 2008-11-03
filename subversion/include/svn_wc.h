@@ -1438,6 +1438,11 @@ typedef svn_error_t *(*svn_wc_conflict_resolver_func_t)
  * state.  Functions concerned with property state have separate
  * @a contentstate and @a propstate arguments.
  *
+ * If @a tree_conflicted is non-NULL, set @a *tree_conflicted to true if
+ * this operation caused a tree conflict, else to false. (Like with @a
+ * state, this is only useful with merge, not diff; diff callbacks
+ * should set this to false.)
+ *
  * @since New in 1.6.
  */
 typedef struct svn_wc_diff_callbacks3_t
