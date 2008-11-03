@@ -1575,21 +1575,6 @@ typedef struct svn_wc_diff_callbacks3_t
                              svn_revnum_t rev,
                              void *diff_baton);
 
-  /**
-   * A directory @a path has been closed.
-   *
-   * If @a state is non-NULL, set @a *state to the tree-conflict state
-   * of the directory.
-   *
-   * The client may now report the final state of the directory's
-   * children (e.g., report a path as 'replaced').
-   */
-  svn_error_t *(*dir_closed)(svn_wc_adm_access_t *adm_access,
-                             svn_wc_notify_state_t *state,
-                             svn_boolean_t *tree_conflicted,
-                             const char *path,
-                             void *diff_baton);
-
 } svn_wc_diff_callbacks3_t;
 
 /**
