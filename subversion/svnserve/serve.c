@@ -2712,6 +2712,29 @@ static svn_error_t *replay_range(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+get_deleted_rev(svn_ra_svn_conn_t *conn,
+                apr_pool_t *pool,
+                apr_array_header_t *params,
+                void *baton)
+{
+  server_baton_t *b = baton;
+  const char *path, *full_path;
+  svn_revnum_t peg_revision;
+  svn_revnum_t end_revision;
+  svn_revnum_t revision_deleted;
+
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "crr",
+                                 &path, &peg_revision, &end_revision));
+  full_path = svn_path_join(b->fs_path->data,
+                            svn_path_canonicalize(path, pool), pool);
+  SVN_ERR(log_command(b, conn, pool, "get-deleted-rev"));
+  SVN_ERR(trivial_auth_request(conn, pool, b));
+  SVN_ERR(svn_repos_deleted_rev(b->fs, full_path, peg_revision, end_revision,
+                                &revision_deleted, pool));
+  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "r", revision_deleted));
+  return SVN_NO_ERROR;
+}
 
 static const svn_ra_svn_cmd_entry_t main_commands[] = {
   { "reparent",        reparent },
@@ -2742,6 +2765,7 @@ static const svn_ra_svn_cmd_entry_t main_commands[] = {
   { "get-locks",       get_locks },
   { "replay",          replay },
   { "replay-range",    replay_range },
+  { "get-deleted-rev", get_deleted_rev },
   { NULL }
 };
 
