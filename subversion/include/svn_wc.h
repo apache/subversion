@@ -548,7 +548,7 @@ svn_wc_traversed_depths(apr_hash_t **depths,
  * canonicalized.
  *
  * In order to avoid backwards compatibility problems clients should use
- * svn_wc_external_item_create() to allocate and intialize this structure
+ * svn_wc_external_item_create() to allocate and initialize this structure
  * instead of doing so themselves.
  *
  * @since New in 1.5.
@@ -582,7 +582,7 @@ typedef struct svn_wc_external_item2_t
  * Set @a *item to an external item object, allocated in @a pool.
  *
  * In order to avoid backwards compatibility problems, this function
- * is used to intialize and allocate the @c svn_wc_external_item2_t
+ * is used to initialize and allocate the @c svn_wc_external_item2_t
  * structure rather than doing so explicitly, as the size of this
  * structure may change in the future.
  *
@@ -829,7 +829,12 @@ typedef enum svn_wc_notify_action_t
   svn_wc_notify_property_updated,
 
   /** The last notification in a merge. @since New in 1.6. */
-  svn_wc_notify_merge_completed
+  svn_wc_notify_merge_completed,
+
+  /** The path is a tree-conflict victim of the intended action (*not*
+   * a persistent tree-conflict from an earlier operation, but *this*
+   * operation caused the tree-conflict). @since New in 1.6. */
+  svn_wc_notify_tree_conflict
 
 } svn_wc_notify_action_t;
 
@@ -964,10 +969,6 @@ typedef struct svn_wc_notify_t {
    * allow notification to remove a common prefix from all the paths
    * displayed for an operation.  @since New in 1.6 */
   const char *path_prefix;
-
-  /** Whether @c path is a victim of a tree-conflict.
-   * @since New in 1.6 */
-  svn_boolean_t tree_conflicted;
 
   /* NOTE: Add new fields at the end to preserve binary compatibility.
      Also, if you add fields here, you have to update svn_wc_create_notify
@@ -1461,6 +1462,7 @@ typedef struct svn_wc_diff_callbacks3_t
   svn_error_t *(*file_changed)(svn_wc_adm_access_t *adm_access,
                                svn_wc_notify_state_t *contentstate,
                                svn_wc_notify_state_t *propstate,
+                               svn_boolean_t *tree_conflicted,
                                const char *path,
                                const char *tmpfile1,
                                const char *tmpfile2,
@@ -1491,6 +1493,7 @@ typedef struct svn_wc_diff_callbacks3_t
   svn_error_t *(*file_added)(svn_wc_adm_access_t *adm_access,
                              svn_wc_notify_state_t *contentstate,
                              svn_wc_notify_state_t *propstate,
+                             svn_boolean_t *tree_conflicted,
                              const char *path,
                              const char *tmpfile1,
                              const char *tmpfile2,
@@ -1514,6 +1517,7 @@ typedef struct svn_wc_diff_callbacks3_t
    */
   svn_error_t *(*file_deleted)(svn_wc_adm_access_t *adm_access,
                                svn_wc_notify_state_t *state,
+                               svn_boolean_t *tree_conflicted,
                                const char *path,
                                const char *tmpfile1,
                                const char *tmpfile2,
@@ -1528,6 +1532,7 @@ typedef struct svn_wc_diff_callbacks3_t
    */
   svn_error_t *(*dir_added)(svn_wc_adm_access_t *adm_access,
                             svn_wc_notify_state_t *state,
+                            svn_boolean_t *tree_conflicted,
                             const char *path,
                             svn_revnum_t rev,
                             void *diff_baton);
@@ -1537,6 +1542,7 @@ typedef struct svn_wc_diff_callbacks3_t
    */
   svn_error_t *(*dir_deleted)(svn_wc_adm_access_t *adm_access,
                               svn_wc_notify_state_t *state,
+                              svn_boolean_t *tree_conflicted,
                               const char *path,
                               void *diff_baton);
 
@@ -1552,6 +1558,7 @@ typedef struct svn_wc_diff_callbacks3_t
    */
   svn_error_t *(*dir_props_changed)(svn_wc_adm_access_t *adm_access,
                                     svn_wc_notify_state_t *propstate,
+                                    svn_boolean_t *tree_conflicted,
                                     const char *path,
                                     const apr_array_header_t *propchanges,
                                     apr_hash_t *original_props,
@@ -1563,6 +1570,7 @@ typedef struct svn_wc_diff_callbacks3_t
    *
    */
   svn_error_t *(*dir_opened)(svn_wc_adm_access_t *adm_access,
+                             svn_boolean_t *tree_conflicted,
                              const char *path,
                              svn_revnum_t rev,
                              void *diff_baton);
@@ -1578,6 +1586,7 @@ typedef struct svn_wc_diff_callbacks3_t
    */
   svn_error_t *(*dir_closed)(svn_wc_adm_access_t *adm_access,
                              svn_wc_notify_state_t *state,
+                             svn_boolean_t *tree_conflicted,
                              const char *path,
                              void *diff_baton);
 

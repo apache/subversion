@@ -126,7 +126,7 @@ out_of_date(const char *path, svn_node_kind_t kind)
                             ? _("Directory '%s' is out of date")
                             : kind == svn_node_file
 			    ? _("File '%s' is out of date")
-			    : _("File or directory '%s' is out of date")),
+			    : _("'%s' is out of date")),
 			   path);
 }
 

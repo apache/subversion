@@ -529,7 +529,7 @@ def parse_log_output(log_lines):
         this_item['msg'] = msg
         chain.append(this_item)
     else:  # if didn't see separator now, then something's wrong
-      print this_line
+      print(this_line)
       raise SVNLogParseError("trailing garbage after log message")
 
   return chain
@@ -1611,7 +1611,7 @@ def merge_sensitive_log_propmod_merge_inheriting_path(sbox):
   svntest.main.run_svn(None, 'ci', '-m',
                        'Set property "foo" to "bar" on A_COPY/D/H/psi', wc_dir)
   svntest.main.run_svn(None, 'up', wc_dir)
-  
+
   # Check that log -g -r7 on wc_dir/A_COPY and parents show merges of r3-r6.
   def run_log_g_r7(log_target):
     expected_merges = {

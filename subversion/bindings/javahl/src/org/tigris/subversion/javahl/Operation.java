@@ -27,7 +27,7 @@ public final class Operation
     public static final int update = 0;
 
     /* switch */
-    /* Note: this is different that svn_wc.h, because 'switch' is a 
+    /* Note: this is different that svn_wc.h, because 'switch' is a
      * reserved word in java  :(  */
     public static final int switched = 1;
 

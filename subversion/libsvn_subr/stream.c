@@ -963,7 +963,7 @@ svn_stream_checksummed(svn_stream_t *stream,
 
   baton->proxy = svn_stream_checksummed2(stream, &baton->read_checksum,
                                          svn_checksum_md5,
-                                         &baton->write_checksum, 
+                                         &baton->write_checksum,
                                          svn_checksum_md5, read_all, pool);
 
   s = svn_stream_create(baton, pool);

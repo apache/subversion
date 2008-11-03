@@ -22,6 +22,8 @@
 
 /*** Includes. ***/
 
+#include <string.h>
+
 #include <apr_pools.h>
 #include "svn_auth.h"
 #include "svn_config.h"
@@ -46,6 +48,29 @@
 /* KWallet simple provider, puts passwords in KWallet                    */
 /*-----------------------------------------------------------------------*/
 
+static QString
+get_wallet_name(apr_hash_t *parameters)
+{
+  svn_config_t *config =
+    static_cast<svn_config_t *> (apr_hash_get(parameters,
+                                              SVN_AUTH_PARAM_CONFIG_CLIENT,
+                                              APR_HASH_KEY_STRING));
+  const char *wallet_name;
+  svn_config_get(config,
+                 &wallet_name,
+                 SVN_CONFIG_SECTION_AUTH,
+                 SVN_CONFIG_OPTION_KWALLET_WALLET,
+                 "");
+  if (strcmp(wallet_name, "") == 0)
+    {
+      return KWallet::Wallet::NetworkWallet();
+    }
+  else
+    {
+      return QString::fromUtf8(wallet_name);
+    }
+}
+
 /* Implementation of svn_auth__password_get_t that retrieves
    the password from KWallet. */
 static svn_boolean_t
@@ -53,7 +78,7 @@ kwallet_password_get(const char **password,
                      apr_hash_t *creds,
                      const char *realmstring,
                      const char *username,
-                     svn_config_t *config,
+                     apr_hash_t *parameters,
                      svn_boolean_t non_interactive,
                      apr_pool_t *pool)
 {
@@ -77,7 +102,7 @@ kwallet_password_get(const char **password,
                      KCmdLineArgs::CmdLineArgKDE);
   KComponentData component_data(KCmdLineArgs::aboutData());
   svn_boolean_t ret = FALSE;
-  QString wallet_name = KWallet::Wallet::NetworkWallet();
+  QString wallet_name = get_wallet_name(parameters);
   QString folder = QString::fromUtf8("Subversion");
   QString key =
     QString::fromUtf8(username) + "@" + QString::fromUtf8(realmstring);
@@ -116,7 +141,7 @@ kwallet_password_set(apr_hash_t *creds,
                      const char *realmstring,
                      const char *username,
                      const char *password,
-                     svn_config_t *config,
+                     apr_hash_t *parameters,
                      svn_boolean_t non_interactive,
                      apr_pool_t *pool)
 {
@@ -141,7 +166,7 @@ kwallet_password_set(apr_hash_t *creds,
   KComponentData component_data(KCmdLineArgs::aboutData());
   svn_boolean_t ret = FALSE;
   QString q_password = QString::fromUtf8(password);
-  QString wallet_name = KWallet::Wallet::NetworkWallet();
+  QString wallet_name = get_wallet_name(parameters);
   QString folder = QString::fromUtf8("Subversion");
   KWallet::Wallet *wallet =
     KWallet::Wallet::openWallet(wallet_name,

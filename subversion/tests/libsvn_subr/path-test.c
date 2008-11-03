@@ -602,13 +602,13 @@ test_path_join(const char **msg,
 
   TEST_MANY((pool, "//srv/shr", "def", "ghi", NULL), "//srv/shr/def/ghi");
   TEST_MANY((pool, "//srv", "shr", "def", "ghi", NULL), "//srv/shr/def/ghi");
-  TEST_MANY((pool, "//srv/shr/fld", "def", "ghi", NULL), 
+  TEST_MANY((pool, "//srv/shr/fld", "def", "ghi", NULL),
             "//srv/shr/fld/def/ghi");
   TEST_MANY((pool, "//srv/shr/fld", "def", "//srv/shr", NULL), "//srv/shr");
   TEST_MANY((pool, "//srv", "shr", "//srv/shr", NULL), "//srv/shr");
   TEST_MANY((pool, SVN_EMPTY_PATH, "//srv/shr/fld", "def", "ghi", NULL),
             "//srv/shr/fld/def/ghi");
-  TEST_MANY((pool, SVN_EMPTY_PATH, "//srv/shr/fld", "def", "//srv/shr", NULL), 
+  TEST_MANY((pool, SVN_EMPTY_PATH, "//srv/shr/fld", "def", "//srv/shr", NULL),
             "//srv/shr");
 */
 #else /* WIN32 or Cygwin */
@@ -1484,7 +1484,7 @@ test_path_is_canonical(const char **msg,
     { "http://HST/FOO/BaR",    FALSE },
     { "svn+ssh://j.raNDom@HST/BaR", FALSE },
     { "svn+SSH://j.random:jRaY@HST/BaR", FALSE },
-    { "SVN+ssh://j.raNDom:jray@HST/BaR", FALSE },    
+    { "SVN+ssh://j.raNDom:jray@HST/BaR", FALSE },
     { "svn+ssh://j.raNDom:jray@hst/BaR", TRUE },
     { "fILe:///Users/jrandom/wc", FALSE },
     { "fiLE:///",              FALSE },

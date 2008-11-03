@@ -113,7 +113,7 @@ svn_fs_fs__get_rep_reference(representation_t **rep,
     return svn_error_create(SVN_ERR_BAD_CHECKSUM_KIND, NULL,
                             _("Only SHA1 checksums can be used as keys in the "
                               "rep_cache table.\n"));
-  
+
   if (!ffd->rep_cache.get_rep_stmt)
     SVN_ERR(svn_sqlite__prepare(&ffd->rep_cache.get_rep_stmt, ffd->rep_cache.db,
                   "select revision, offset, size, expanded_size from rep_cache "
@@ -184,7 +184,7 @@ svn_fs_fs__set_rep_reference(svn_fs_t *fs,
       else
         return SVN_NO_ERROR;
     }
-    
+
   if (!ffd->rep_cache.set_rep_stmt)
     SVN_ERR(svn_sqlite__prepare(&ffd->rep_cache.set_rep_stmt, ffd->rep_cache.db,
                   "insert into rep_cache (hash, revision, offset, size, "

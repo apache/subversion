@@ -68,7 +68,7 @@ svn_config__win_config_path(const char **folder, int system_path,
 
   folder_utf8 = apr_palloc(pool, outlength);
 
-  outbytes = WideCharToMultiByte(CP_UTF8, 0, folder_ucs2, inwords, 
+  outbytes = WideCharToMultiByte(CP_UTF8, 0, folder_ucs2, inwords,
                                  folder_utf8, outbytes, NULL, NULL);
 
   if (outbytes == 0)

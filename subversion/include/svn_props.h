@@ -323,7 +323,7 @@ svn_prop_name_is_valid(const char *prop_name);
  * the "plain" subversion doesn't use them (yet?).
  * ====================================================================
  *
- * The following properties are used for storing meta-data about 
+ * The following properties are used for storing meta-data about
  * individual entries in the meta-data branches of subversion,
  * see issue #1256 or browseable at
  * http://svn.collab.net/viewvc/svn/branches/meta-data-versioning/ .
@@ -332,14 +332,14 @@ svn_prop_name_is_valid(const char *prop_name);
  *
  * Please note that these formats are very UNIX-centric currently;
  * a bit of discussion about Windows can be read at
- * http://article.gmane.org/gmane.comp.version-control.subversion.devel/103991 
+ * http://article.gmane.org/gmane.comp.version-control.subversion.devel/103991
  *
  * @defgroup svn_prop_meta_data Meta-data properties
  * @{ */
 
 /** The files' last modification time.
- * This is stored as string in the form @c "2008-08-07T07:38:51.008782Z", to 
- * be converted by the functions @c svn_time_to_cstring() and 
+ * This is stored as string in the form @c "2008-08-07T07:38:51.008782Z", to
+ * be converted by the functions @c svn_time_to_cstring() and
  * @c svn_time_from_cstring(). */
 #define SVN_PROP_TEXT_TIME  SVN_PROP_PREFIX "text-time"
 

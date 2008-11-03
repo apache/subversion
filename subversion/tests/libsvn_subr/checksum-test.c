@@ -1,5 +1,5 @@
 /*
- * checksum-test.c:  tests checksum functions. 
+ * checksum-test.c:  tests checksum functions.
  *
  * ====================================================================
  * Copyright (c) 2008 CollabNet.  All rights reserved.

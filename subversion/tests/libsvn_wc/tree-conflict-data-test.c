@@ -398,7 +398,7 @@ test_exists_0(const char **msg,
 
   conflicts = apr_array_make(pool, 0,
       sizeof(svn_wc_conflict_description_t *));
- 
+
   if (svn_wc__tree_conflict_exists(conflicts, "Foo.c", pool))
     return fail(pool, "Bogus TRUE result searching for tree conflict");
 

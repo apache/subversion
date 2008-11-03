@@ -512,7 +512,7 @@ typedef svn_error_t *(*svn_auth_plaintext_prompt_func_t)
  *
  * Clients can however set the callback to NULL and set
  * SVN_AUTH_PARAM_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT to SVN_CONFIG_FALSE or
- * SVN_CONFIG_TRUE to enforce a certain behaviour. 
+ * SVN_CONFIG_TRUE to enforce a certain behaviour.
  *
  * @since New in 1.6
  */
@@ -626,7 +626,8 @@ svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
   "ssl:cert-info"
 
 /** Some providers need access to the @c svn_config_t configuration. */
-#define SVN_AUTH_PARAM_CONFIG SVN_AUTH_PARAM_PREFIX "config"
+#define SVN_AUTH_PARAM_CONFIG SVN_AUTH_PARAM_PREFIX "config-server"
+#define SVN_AUTH_PARAM_CONFIG_CLIENT SVN_AUTH_PARAM_PREFIX "config-client"
 
 /** The current server group. */
 #define SVN_AUTH_PARAM_SERVER_GROUP SVN_AUTH_PARAM_PREFIX "server-group"

@@ -48,7 +48,7 @@ svn_error_t *svn_fs_base__txn_root(svn_fs_root_t **root_p, svn_fs_txn_t *txn,
 
 /* Set the value of miscellaneous records KEY to VAL in FS.  To remove
    a value altogether, pass NULL for VAL.
-   
+
    KEY and VAL should be NULL-terminated strings. */
 svn_error_t *
 svn_fs_base__miscellaneous_set(svn_fs_t *fs,
@@ -59,7 +59,7 @@ svn_fs_base__miscellaneous_set(svn_fs_t *fs,
 /* Retrieve the miscellany records for KEY into *VAL for FS, allocated
    in POOL.  If the fs doesn't support miscellany storage, or the value
    does not exist, *VAL is set to NULL.
-   
+
    KEY should be a NULL-terminated string. */
 svn_error_t *
 svn_fs_base__miscellaneous_get(const char **val,
