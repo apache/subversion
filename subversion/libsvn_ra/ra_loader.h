@@ -247,6 +247,12 @@ typedef struct svn_ra__vtable_t {
                   svn_ra_replay_revfinish_callback_t revfinish_func,
                   void *replay_baton,
                   apr_pool_t *pool);
+  svn_error_t *(*get_deleted_rev)(svn_ra_session_t *session,
+                                  const char *path,
+                                  svn_revnum_t peg_revision,
+                                  svn_revnum_t end_revision,
+                                  svn_revnum_t *revision_deleted,
+                                  apr_pool_t *pool);
 } svn_ra__vtable_t;
 
 /* The RA session object. */
@@ -376,6 +382,33 @@ svn_ra__file_revs_from_log(svn_ra_session_t *session,
                            svn_file_rev_handler_t handler,
                            void *handler_baton,
                            apr_pool_t *pool);
+
+
+/**
+ * Given a path REL_DELETED_PATH, relative to the URL of SESSION, which
+ * exists at PEG_REVISION, and an END_REVISION > PEG_REVISION at which
+ * REL_DELETED_PATH no longer exists, set *REVISION_DELETED to the revision
+ * REL_DELETED_PATH was first deleted or replaced, within the inclusive
+ * revision range defined by PEG_REVISION and END_REVISION.
+ *
+ * If REL_DELETED_PATH does not exist at PEG_REVISION or was not deleted prior
+ * to END_REVISION within the specified range, then set *REVISION_DELETED to
+ * SVN_INVALID_REVNUM.  If PEG_REVISION or END_REVISION are invalid or if
+ * END_REVISION <= PEG_REVISION, then return SVN_ERR_CLIENT_BAD_REVISION.
+ *
+ * Use POOL for all allocations.
+ *
+ * NOTE: This function uses the RA get_log interfaces to do its work,
+ * as a fallback mechanism for servers which don't support the native
+ * get_deleted_rev API.
+ */
+svn_error_t *
+svn_ra__get_deleted_rev_from_log(svn_ra_session_t *session,
+                                 const char *rel_deleted_path,
+                                 svn_revnum_t peg_revision,
+                                 svn_revnum_t end_revision,
+                                 svn_revnum_t *revision_deleted,
+                                 apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

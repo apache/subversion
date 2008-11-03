@@ -180,7 +180,7 @@ class RemoteRepository(object):
 
         return self.proplist(path, rev)[name]
 
-    def log(self, start_rev, end_rev, paths=None, limit=0, 
+    def log(self, start_rev, end_rev, paths=None, limit=0,
             discover_changed_paths=FALSE, stop_on_copy=FALSE):
         """A generator function which returns information about the revisions
            between START_REV and END_REV. Each return value is a

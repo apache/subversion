@@ -1261,7 +1261,7 @@ svn_client_status3(svn_revnum_t *result_rev,
   return svn_client_status4(result_rev, path, revision, status3_wrapper_func,
                             &swb, depth, get_all, update, no_ignore,
                             ignore_externals, changelists, ctx, pool);
-            
+
 }
 
 svn_error_t *

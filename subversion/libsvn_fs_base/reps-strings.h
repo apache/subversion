@@ -76,15 +76,24 @@ svn_error_t *svn_fs_base__rep_contents_size(svn_filesize_t *size_p,
                                             apr_pool_t *pool);
 
 
-/* Put into CHECKSUM the checksum for REP_KEY in FS, as part of TRAIL.  This
-   is the prerecorded checksum for the rep's contents' fulltext.  If no checksum
-   is stored, do not calculate one dynamically, just put NULL into CHECKSUM.
-   (By convention, the NULL checksum is considered to match any checksum.) */
-svn_error_t *svn_fs_base__rep_contents_checksum(svn_checksum_t **checksum,
-                                                svn_fs_t *fs,
-                                                const char *rep_key,
-                                                trail_t *trail,
-                                                apr_pool_t *pool);
+/* If MD5_CHECKSUM is non-NULL, set *MD5_CHECKSUM to the MD5 checksum
+   for REP_KEY in FS, as part of TRAIL.
+
+   If SHA1_CHECKSUM is non-NULL, set *SHA1_CHECKSUM to the SHA1
+   checksum for REP_KEY in FS, as part of TRAIL.
+
+   These are the prerecorded checksums for the rep's contents'
+   fulltext.  If one or both of the checksums is not stored, do not
+   calculate one dynamically, just put NULL into the respective return
+   value.  (By convention, the NULL checksum is considered to match
+   any checksum.) */
+svn_error_t *
+svn_fs_base__rep_contents_checksums(svn_checksum_t **md5_checksum,
+                                    svn_checksum_t **sha1_checksum,
+                                    svn_fs_t *fs,
+                                    const char *rep_key,
+                                    trail_t *trail,
+                                    apr_pool_t *pool);
 
 
 /* Set STR->data to the contents of REP_KEY in FS, and STR->len to the

@@ -349,11 +349,9 @@ svn_config__parse_file(svn_config_t *cfg, const char *file,
   svn_error_t *err = SVN_NO_ERROR;
   parse_context_t ctx;
   int ch, count;
-  apr_file_t *f;
+  svn_stream_t *stream;
 
-  /* No need for buffering; a translated stream buffers */
-  err = svn_io_file_open(&f, file, APR_BINARY | APR_READ,
-                         APR_OS_DEFAULT, pool);
+  err = svn_stream_open_readonly(&stream, file, pool, pool);
 
   if (! must_exist && err && APR_STATUS_IS_ENOENT(err->apr_err))
     {
@@ -365,9 +363,8 @@ svn_config__parse_file(svn_config_t *cfg, const char *file,
 
   ctx.cfg = cfg;
   ctx.file = file;
-  ctx.stream = svn_subst_stream_translated(svn_stream_from_aprfile2(f, TRUE,
-                                                                    pool),
-                                           "\n", TRUE, NULL, FALSE, pool);
+  ctx.stream = svn_subst_stream_translated(stream, "\n", TRUE, NULL, FALSE,
+                                           pool);
   ctx.line = 1;
   ctx.have_ungotten_char = FALSE;
   ctx.section = svn_stringbuf_create("", pool);
@@ -430,9 +427,8 @@ svn_config__parse_file(svn_config_t *cfg, const char *file,
     }
   while (ch != EOF);
 
-  /* Close the file and streams (and other cleanup): */
-  SVN_ERR(svn_stream_close(ctx.stream));
-  return svn_io_file_close(f, pool);
+  /* Close the streams (and other cleanup): */
+  return svn_stream_close(ctx.stream);
 }
 
 
@@ -792,7 +788,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###"                                                                NL
         "### Note store-ssl-client-cert-pp only prevents the saving of *new*"NL
         "### passphrases; it doesn't invalidate existing passphrases.  To do"NL
-        "### that, remove the cache files by hand as described in the"       NL 
+        "### that, remove the cache files by hand as described in the"       NL
         "### Subversion book at http://svnbook.red-bean.com/nightly/en/\\"   NL
         "###                    svn.serverconfig.netmodel.html\\"            NL
         "###                    #svn.serverconfig.netmodel.credcache"        NL
@@ -945,6 +941,12 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "# password-stores = windows-cryptoapi"                              NL
 #else
         "# password-stores = gnome-keyring,kwallet"                          NL
+#endif
+#ifdef SVN_HAVE_KWALLET
+        "###"                                                                NL
+        "### Set KWallet wallet used by Subversion. If empty or unset,"      NL
+        "### then the default network wallet will be used."                  NL
+        "# kwallet-wallet ="                                                 NL
 #endif
         "###"                                                                NL
         "### The rest of this section in this file has been deprecated."     NL

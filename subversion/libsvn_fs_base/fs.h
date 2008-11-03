@@ -41,7 +41,8 @@ extern "C" {
    back-end's format.  */
 #define SVN_FS_BASE__FORMAT_NUMBER                4
 
-/* Minimum format number that supports representation sharing */
+/* Minimum format number that supports representation sharing.  This
+   also brings in the support for storing SHA1 checksums.   */
 #define SVN_FS_BASE__MIN_REP_SHARING_FORMAT       4
 
 /* Minimum format number that supports the 'miscellaneous' table */
@@ -258,14 +259,15 @@ typedef struct
      transaction). */
   const char *txn_id;
 
-  /* Checksum for the contents produced by this representation.
-     This checksum is for the contents the rep shows to consumers,
+  /* Checksums for the contents produced by this representation.
+     These checksum is for the contents the rep shows to consumers,
      regardless of how the rep stores the data under the hood.  It is
      independent of the storage (fulltext, delta, whatever).
 
      If this is NULL, then for compatibility behave as though
      this checksum matches the expected checksum. */
-  svn_checksum_t *checksum;
+  svn_checksum_t *md5_checksum;
+  svn_checksum_t *sha1_checksum;
 
   /* kind-specific stuff */
   union

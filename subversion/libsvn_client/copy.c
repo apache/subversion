@@ -801,16 +801,16 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
 
       /* Imagine a situation where the user tries to copy an existing source
          directory to nonexistent directory with --parents options specified:
-            
+
             svn copy --parents URL/src URL/dst
-            
+
          where src exists and dst does not.  The svn_path_dirname() call above
          will produce a string equivalent to top_url, which means
          svn_path_is_child() will return NULL.  In this case, do not try to add
          dst to the new_dirs list since it will be added to the commit items
          array later in this function. */
 
-      if (dir) 
+      if (dir)
         {
           SVN_ERR(svn_ra_check_path(ra_session, dir, SVN_INVALID_REVNUM, &kind,
                                     iterpool));
@@ -1422,7 +1422,6 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
 
   else if (pair->src_kind == svn_node_file)
     {
-      apr_file_t *fp;
       svn_stream_t *fstream;
       svn_revnum_t real_rev;
       const char *new_text_path;
@@ -1430,10 +1429,10 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
       const char *src_rel;
       svn_stream_t *new_base_contents;
 
-      SVN_ERR(svn_io_open_unique_file2(&fp, &new_text_path, pair->dst, ".tmp",
-                                       svn_io_file_del_on_pool_cleanup, pool));
+      SVN_ERR(svn_stream_open_unique(&fstream, &new_text_path, NULL,
+                                     svn_io_file_del_on_pool_cleanup, pool,
+                                     pool));
 
-      fstream = svn_stream_from_aprfile2(fp, FALSE, pool);
       SVN_ERR(svn_client__path_relative_to_session(&src_rel, ra_session,
                                                    pair->src, pool));
       SVN_ERR(svn_ra_get_file(ra_session, src_rel, src_revnum, fstream,

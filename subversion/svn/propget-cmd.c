@@ -281,7 +281,7 @@ svn_cl__propget(apr_getopt_t *os,
       /* Strict mode only makes sense for a single target.  So make
          sure we have only a single target, and that we're not being
          asked to recurse on that target. */
-      if (opt_state->strict 
+      if (opt_state->strict
           && ((targets->nelts > 1) || (opt_state->depth != svn_depth_empty)))
         return svn_error_create
           (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
