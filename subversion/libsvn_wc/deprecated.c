@@ -656,22 +656,6 @@ dir_opened(svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
-/* An svn_wc_diff_callbacks3_t function for wrapping svn_wc_diff_callbacks_t
-   and svn_wc_diff_callbacks2_t. */
-static svn_error_t *
-dir_closed(svn_wc_adm_access_t *adm_access,
-           svn_wc_notify_state_t *state,
-           svn_boolean_t *tree_conflicted,
-           const char *path,
-           void *diff_baton)
-{
-  if (state)
-    *state = svn_wc_notify_state_unknown;
-  if (tree_conflicted)
-    *tree_conflicted = FALSE;
-  /* Do nothing. */
-  return SVN_NO_ERROR;
-}
 
 /* Used to wrap svn_diff_callbacks_t as an svn_wc_diff_callbacks3_t. */
 static struct svn_wc_diff_callbacks3_t callbacks_wrapper = {
@@ -681,8 +665,7 @@ static struct svn_wc_diff_callbacks3_t callbacks_wrapper = {
   dir_added,
   dir_deleted,
   dir_props_changed,
-  dir_opened,
-  dir_closed
+  dir_opened
 };
 
 
@@ -838,8 +821,7 @@ static struct svn_wc_diff_callbacks3_t callbacks2_wrapper = {
   dir_added2,
   dir_deleted2,
   dir_props_changed2,
-  dir_opened,
-  dir_closed
+  dir_opened
 };
 
 

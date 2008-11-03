@@ -783,24 +783,6 @@ diff_dir_opened(svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
-/* An svn_wc_diff_callbacks3_t function. */
-static svn_error_t *
-diff_dir_closed(svn_wc_adm_access_t *adm_access,
-                svn_wc_notify_state_t *state,
-                svn_boolean_t *tree_conflicted,
-                const char *path,
-                void *diff_baton)
-{
-  if (state)
-    *state = svn_wc_notify_state_unknown;
-  if (tree_conflicted)
-    *tree_conflicted = FALSE;
-
-  /* Do nothing. */
-
-  return SVN_NO_ERROR;
-}
-
 
 /*-----------------------------------------------------------------*/
 
@@ -1637,7 +1619,6 @@ svn_client_diff4(const apr_array_header_t *options,
   diff_callbacks.dir_deleted = diff_dir_deleted;
   diff_callbacks.dir_props_changed = diff_props_changed;
   diff_callbacks.dir_opened = diff_dir_opened;
-  diff_callbacks.dir_closed = diff_dir_closed;
 
   diff_cmd_baton.orig_path_1 = path1;
   diff_cmd_baton.orig_path_2 = path2;
@@ -1708,7 +1689,6 @@ svn_client_diff_peg4(const apr_array_header_t *options,
   diff_callbacks.dir_deleted = diff_dir_deleted;
   diff_callbacks.dir_props_changed = diff_props_changed;
   diff_callbacks.dir_opened = diff_dir_opened;
-  diff_callbacks.dir_closed = diff_dir_closed;
 
   diff_cmd_baton.orig_path_1 = path;
   diff_cmd_baton.orig_path_2 = path;
