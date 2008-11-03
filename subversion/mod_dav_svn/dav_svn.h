@@ -520,6 +520,7 @@ static const dav_report_elem dav_svn__reports_list[] = {
   { SVN_XML_NAMESPACE, "file-revs-report" },
   { SVN_XML_NAMESPACE, "get-locks-report" },
   { SVN_XML_NAMESPACE, "replay-report" },
+  { SVN_XML_NAMESPACE, "get-deleted-rev-report" },
   { SVN_XML_NAMESPACE, SVN_DAV__MERGEINFO_REPORT },
   { NULL, NULL },
 };
@@ -563,6 +564,10 @@ dav_svn__get_locks_report(const dav_resource *resource,
                           const apr_xml_doc *doc,
                           ap_filter_t *output);
 
+dav_error *
+dav_svn__get_deleted_rev_report(const dav_resource *resource,
+                                const apr_xml_doc *doc,
+                                ap_filter_t *output);
 
 /*** authz.c ***/
 
