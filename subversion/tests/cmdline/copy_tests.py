@@ -789,7 +789,7 @@ def copy_preserve_executable_bit(sbox):
   mode2 = os.stat(newpath1)[stat.ST_MODE]
 
   if mode1 == mode2:
-    print "setting svn:executable did not change file's permissions"
+    print("setting svn:executable did not change file's permissions")
     raise svntest.Failure
 
   # Commit the file
@@ -804,7 +804,7 @@ def copy_preserve_executable_bit(sbox):
 
   # The mode on the original and copied file should be identical
   if mode2 != mode3:
-    print "permissions on the copied file are not identical to original file"
+    print("permissions on the copied file are not identical to original file")
     raise svntest.Failure
 
 #----------------------------------------------------------------------
@@ -918,13 +918,13 @@ def repos_to_wc(sbox):
   # Modification will only show up if timestamps differ
   exit_code, out, err = svntest.main.run_svn(None, 'diff', pi_path)
   if err or not out:
-    print "diff failed"
+    print("diff failed")
     raise svntest.Failure
   for line in out:
     if line == '+zig\n': # Crude check for diff-like output
       break
   else:
-    print "diff output incorrect", out
+    print("diff output incorrect %s" % out)
     raise svntest.Failure
 
   # Revert everything and verify.
@@ -1340,7 +1340,7 @@ def revision_kinds_local_source(sbox):
       if line.rstrip() == "Copied From Rev: " + str(from_rev):
         break
     else:
-      print dst, "should have been copied from revision", from_rev
+      print("%s should have been copied from revision %s" % (dst, from_rev))
       raise svntest.Failure
 
   # Check that the new files have the right contents
@@ -1611,7 +1611,7 @@ def url_to_non_existent_url_path(sbox):
     if re.match (msg, err_line):
       break
   else:
-    print "message \"" + msg + "\" not found in error output: ", err
+    print("message \"%s\" not found in error output: %s" % (msg, err))
     raise svntest.Failure
 
 
@@ -3946,12 +3946,12 @@ def find_copyfrom_information_upstairs(sbox):
   "renaming inside a copied subtree shouldn't hang"
 
   # The final command in this series would cause the client to hang...
-  # 
+  #
   #    ${SVN} cp A A2
   #    cd A2/B
   #    ${SVN} mkdir blah
   #    ${SVN} mv lambda blah
-  # 
+  #
   # ...because it wouldn't walk up past "" to find copyfrom information
   # (which would be in A2/.svn/entries, not on A2/B/.svn/entries).
   # Instead, it would keep thinking the parent of "" is "", and so
@@ -3991,16 +3991,16 @@ def find_copyfrom_information_upstairs(sbox):
 
 def change_case_of_hostname(input):
   "Change the case of the hostname, try uppercase first"
-  
+
   m = re.match(r"^(.*://)([^/]*)(.*)", input)
   if m:
     scheme = m.group(1)
     host = upper(m.group(2))
     if host == m.group(2):
       host = lower(m.group(2))
-      
+
     path = m.group(3)
-    
+
   return scheme + host + path
 
 # regression test for issue #2475 - move file and folder
@@ -4009,7 +4009,7 @@ def path_move_and_copy_between_wcs_2475(sbox):
   sbox.build()
 
   # checkout a second working copy, use repository url with different case
-  wc2_dir = sbox.wc_dir + '2'
+  wc2_dir = sbox.add_wc_path('2')
   repo_url2 = change_case_of_hostname(sbox.repo_url)
 
   expected_output = svntest.main.greek_state.copy()

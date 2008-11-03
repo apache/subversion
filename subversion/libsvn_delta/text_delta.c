@@ -332,7 +332,7 @@ txdelta_next_window(svn_txdelta_window_t **window,
     {
       /* No target data?  We're done; return the final window. */
       if (b->context != NULL)
-        SVN_ERR(svn_checksum_final(&b->checksum, b->context, pool));
+        SVN_ERR(svn_checksum_final(&b->checksum, b->context, b->result_pool));
 
       *window = NULL;
       b->more = FALSE;

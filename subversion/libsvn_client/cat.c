@@ -46,6 +46,8 @@ cat_local_file(const char *path,
                svn_stream_t *output,
                svn_wc_adm_access_t *adm_access,
                const svn_opt_revision_t *revision,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
                apr_pool_t *pool)
 {
   const svn_wc_entry_t *entry;
@@ -135,9 +137,13 @@ cat_local_file(const char *path,
     SVN_ERR(svn_subst_translate_stream3(input, output, eol, FALSE, kw,
                                         TRUE, pool));
   else
-    SVN_ERR(svn_stream_copy2(input, output, NULL, NULL, pool));
+    {
+      /* We are not supposed to close the output stream, so "disown" it */
+      SVN_ERR(svn_stream_copy3(input, svn_stream_disown(output, pool),
+                               cancel_func, cancel_baton, pool));
+    }
 
-  return svn_stream_close(input);
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -182,9 +188,10 @@ svn_client_cat2(svn_stream_t *out,
                                0, ctx->cancel_func, ctx->cancel_baton,
                                pool));
 
-      SVN_ERR(cat_local_file(path_or_url, out, adm_access, revision, pool));
+      SVN_ERR(cat_local_file(path_or_url, out, adm_access, revision,
+                             ctx->cancel_func, ctx->cancel_baton, pool));
 
-      return svn_wc_adm_close(adm_access);
+      return svn_wc_adm_close2(adm_access, pool);
     }
 
   /* Get an RA plugin for this filesystem object. */

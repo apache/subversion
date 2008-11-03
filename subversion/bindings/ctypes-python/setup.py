@@ -66,11 +66,11 @@ class build(_build):
   description = "build the Subversion ctypes Python bindings"
 
   _build.user_options.append(("apr=", None, "full path to where apr is "
-                              "installed or the full path to the apr-config or "
-                              "apr-1-config file"))
+                              "installed or the full path to the apr-1-config or "
+                              "apr-config file"))
   _build.user_options.append(("apr-util=", None, "full path to where apr-util "
-                              "is installed or the full path to the apu-config"
-                              "apu-1-config file"))
+                              "is installed or the full path to the apu-1-config or "
+                              "apu-config file"))
   _build.user_options.append(("subversion=", None, "full path to where "
                               "Subversion is installed"))
   _build.user_options.append(("svn-headers=", None, "Full path to the "
@@ -122,7 +122,7 @@ class build(_build):
     library_path = []
     ferr = None
     apr_include_dir = None
-    
+
     fout = self.run_cmd("%s --includes --cppflags" % self.apr_config)
     if fout:
       flags = fout.split()
@@ -138,7 +138,7 @@ class build(_build):
         log.error(ferr)
         raise DistutilsExecError("Problem running '%s'.  Check the output " \
                                  "for details" % self.apr_config)
-          
+
       fout = self.run_cmd("%s --includes" % self.apu_config)
       if fout:
         flags += fout.split()
@@ -149,20 +149,22 @@ class build(_build):
           log.error(ferr)
           raise DistutilsExecError("Problem running '%s'.  Check the output " \
                                    "for details" % self.apr_config)
-          
+
         subversion_prefixes = [
           self.subversion,
           "/usr/local",
           "/usr"
           ]
-        
+
         if self.subversion != "/usr":
           ldflags.append("-L%s/lib" % self.subversion)
         flags.append("-I%s" % self.svn_include_dir)
 
         # List the libraries in the order they should be loaded
-        libraries = [ 
+        libraries = [
           "svn_subr-1",
+          "svn_auth_kwallet-1",
+          "svn_auth_gnome_keyring-1",
           "svn_diff-1",
           "svn_delta-1",
           "svn_fs-1",
@@ -171,10 +173,10 @@ class build(_build):
           "svn_ra-1",
           "svn_client-1",
           ]
-          
+
         for lib in libraries:
           ldflags.append("-l%s" % lib)
-          
+
         if apr_prefix != '/usr':
           library_path.append("%s/lib" % apr_prefix)
           if self.subversion != '/usr' and self.subversion != apr_prefix:
@@ -183,7 +185,7 @@ class build(_build):
         return (apr_prefix, apr_include_dir, cpp + " " + self.cppflags,
                 " ".join(ldflags) + " " + self.ldflags, " ".join(flags),
                 ":".join(library_path))
-  
+
   # get_apr_config()
 
   ##############################################################################
@@ -215,7 +217,7 @@ class build(_build):
         f = os.popen(cmd, 'r')
         f.read() # Required to avoide the 'Broken pipe' error.
         status = f.close() # None is returned for the usual 0 return code
-      
+
       if os.name == "posix" and status and status != 0:
         if os.WIFEXITED(status):
           status = os.WEXITSTATUS(status)
@@ -255,26 +257,33 @@ class build(_build):
 
   def run_cmd(self, cmd):
     return os.popen(cmd).read()
-  
+
   # run_cmd()
 
   def validate_options(self):
     # Validate apr
     if not self.apr:
-      raise DistutilsOptionError("The --apr option is mandatory and " \
-                                 "must point to a valid apr installation " \
-                                 "or to either the apr-config file or the " \
-                                 "apr-1-config file")
+      self.apr = find_in_path('apr-1-config')
+
+      if not self.apr:
+        self.apr = find_in_path('apr-config')
+
+      if self.apr:
+        log.info("Found %s" % self.apr)
+      else:
+        raise DistutilsOptionError("Could not find apr-1-config or " \
+                                   "apr-config.  Please rerun with the " \
+                                   "--apr option.")
 
     if os.path.exists(self.apr):
       if os.path.isdir(self.apr):
-        if os.path.exists(os.path.join(self.apr, "bin", "apr-config")):
-          self.apr_config = os.path.join(self.apr, "bin", "apr-config")
-        elif os.path.exists(os.path.join(self.apr, "bin", "apr-1-config")):
+        if os.path.exists(os.path.join(self.apr, "bin", "apr-1-config")):
           self.apr_config = os.path.join(self.apr, "bin", "apr-1-config")
+        elif os.path.exists(os.path.join(self.apr, "bin", "apr-config")):
+          self.apr_config = os.path.join(self.apr, "bin", "apr-config")
         else:
           self.apr_config = None
-      elif os.path.basename(self.apr) in ("apr-config", "apr-1-config"):
+      elif os.path.basename(self.apr) in ("apr-1-config", "apr-config"):
         self.apr_config = self.apr
       else:
         self.apr_config = None
@@ -284,25 +293,32 @@ class build(_build):
     if not self.apr_config:
       raise DistutilsOptionError("The --apr option is not valid.  It must " \
                                  "point to a valid apr installation or " \
-                                 "to either the apr-config file or the " \
-                                 "apr-1-config file")
+                                 "to either the apr-1-config file or the " \
+                                 "apr-config file")
 
     # Validate apr-util
     if not self.apr_util:
-      raise DistutilsOptionError("The --apr-util option is mandatory and " \
-                                 "must point to a valid apr-util " \
-                                 "installation or to either the apu-config " \
-                                 "file or the apu-1-config file")
+      self.apr_util = find_in_path('apu-1-config')
+
+      if not self.apr_util:
+        self.apr_util = find_in_path('apu-config')
+
+      if self.apr_util:
+        log.info("Found %s" % self.apr_util)
+      else:
+        raise DistutilsOptionError("Could not find apu-1-config or " \
+                                   "apu-config.  Please rerun with the " \
+                                   "--apr-util option.")
 
     if os.path.exists(self.apr_util):
       if os.path.isdir(self.apr_util):
-        if os.path.exists(os.path.join(self.apr_util, "bin", "apu-config")):
-          self.apu_config = os.path.join(self.apr_util, "bin", "apu-config")
-        elif os.path.exists(os.path.join(self.apr_util, "bin", "apu-1-config")):
+        if os.path.exists(os.path.join(self.apr_util, "bin", "apu-1-config")):
           self.apu_config = os.path.join(self.apr_util, "bin", "apu-1-config")
+        elif os.path.exists(os.path.join(self.apr_util, "bin", "apu-config")):
+          self.apu_config = os.path.join(self.apr_util, "bin", "apu-config")
         else:
           self.apu_config = None
-      elif os.path.basename(self.apr_util) in ("apu-config", "apu-1-config"):
+      elif os.path.basename(self.apr_util) in ("apu-1-config", "apu-config"):
         self.apu_config = self.apr_util
       else:
         self.apu_config = None
@@ -312,14 +328,21 @@ class build(_build):
     if not self.apu_config:
       raise DistutilsOptionError("The --apr-util option is not valid.  It " \
                                  "must point to a valid apr-util " \
-                                 "installation or to either the apu-config " \
-                                 "file or the apu-1-config file")
+                                 "installation or to either the apu-1-config " \
+                                 "file or the apu-config file")
 
     # Validate subversion
     if not self.subversion:
-      raise DistutilsOptionError("The --subversion option is mandatory and " \
-                                 "must point to a valid Subversion " \
-                                 "installation")
+      self.subversion = find_in_path('svn')
+
+      if self.subversion:
+        log.info("Found %s" % self.subversion)
+        # Get the installation root instead of path to 'svn'
+        self.subversion = os.path.normpath(os.path.join(self.subversion, "..",
+                                                        ".."))
+      else:
+        raise DistutilsOptionError("Could not find Subversion.  Please rerun " \
+                                   "with the --subversion option.")
 
     # Validate svn-headers, if present
     if self.svn_headers:
@@ -355,9 +378,13 @@ class build(_build):
 
     # Validate ctypesgen
     if not self.ctypesgen:
-      raise DistutilsOptionError("The --ctypesgen option is mandatory and " \
-                                 "must point to a valid ctypesgen " \
-                                 "installation")
+      self.ctypesgen = find_in_path('ctypesgen.py')
+
+      if self.ctypesgen:
+        log.info("Found %s" % self.ctypesgen)
+      else:
+        raise DistutilsOptionError("Could not find ctypesgen.  Please rerun " \
+                                   "with the --ctypesgen option.")
 
     if os.path.exists(self.ctypesgen):
       if os.path.isdir(self.ctypesgen):
@@ -407,6 +434,21 @@ class build(_build):
   # run()
 
 # class build
+
+def find_in_path(file):
+  paths = []
+  if os.environ.has_key('PATH'):
+    paths = os.environ['PATH'].split(os.pathsep)
+
+  for path in paths:
+    file_path = os.path.join(path, file)
+
+    if os.path.exists(file_path):
+      # Return the path to the first existing file found in PATH
+      return os.path.abspath(file_path)
+
+  return None
+# find_in_path()
 
 setup(cmdclass={'build': build, 'clean': clean},
       name='svn-ctypes-python-bindings',

@@ -159,33 +159,27 @@ cdata_getdate(svn_ra_serf__xml_parser_t *parser,
   return SVN_NO_ERROR;
 }
 
-#define GETDATE_HEADER "<S:dated-rev-report xmlns:S=\"" SVN_XML_NAMESPACE "\" xmlns:D=\"DAV:\">"
-#define GETDATE_FOOTER "</S:dated-rev-report>"
-
 static serf_bucket_t*
 create_getdate_body(void *baton,
                     serf_bucket_alloc_t *alloc,
                     apr_pool_t *pool)
 {
-  serf_bucket_t *buckets, *tmp;
+  serf_bucket_t *buckets;
   date_context_t *date_ctx = baton;
 
   buckets = serf_bucket_aggregate_create(alloc);
 
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(GETDATE_HEADER,
-                                      sizeof(GETDATE_HEADER) - 1,
-                                      alloc);
-  serf_bucket_aggregate_append(buckets, tmp);
+  svn_ra_serf__add_open_tag_buckets(buckets, alloc, "S:dated-rev-report",
+                                    "xmlns:S", SVN_XML_NAMESPACE,
+                                    "xmlns:D", "DAV:",
+                                    NULL);
 
   svn_ra_serf__add_tag_buckets(buckets,
                                "D:" SVN_DAV__CREATIONDATE,
                                svn_time_to_cstring(date_ctx->time, pool),
                                alloc);
 
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(GETDATE_FOOTER,
-                                      sizeof(GETDATE_FOOTER)-1,
-                                      alloc);
-  serf_bucket_aggregate_append(buckets, tmp);
+  svn_ra_serf__add_close_tag_buckets(buckets, alloc, "S:dated-rev-report");
 
   return buckets;
 }

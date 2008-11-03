@@ -27,6 +27,7 @@
 #include "../include/org_tigris_subversion_javahl_NotifyAction.h"
 #include "../include/org_tigris_subversion_javahl_NotifyStatus.h"
 #include "../include/org_tigris_subversion_javahl_NodeKind.h"
+#include "../include/org_tigris_subversion_javahl_Operation.h"
 #include "../include/org_tigris_subversion_javahl_LockStatus.h"
 #include "../include/org_tigris_subversion_javahl_StatusKind.h"
 #include "../include/org_tigris_subversion_javahl_Revision.h"
@@ -235,6 +236,14 @@ jint EnumMapper::mapNotifyAction(svn_wc_notify_action_t action)
     case svn_wc_notify_foreign_merge_begin:
       /* A merge operation from a foreign repository has begun. */
       return org_tigris_subversion_javahl_NotifyAction_foreign_merge_begin;
+
+    case svn_wc_notify_property_updated:
+      /* Property updated */
+      return org_tigris_subversion_javahl_NotifyAction_property_updated;
+
+    case svn_wc_notify_merge_completed:
+      /* Final notification in a merge */
+      return org_tigris_subversion_javahl_NotifyAction_merge_completed;
 
     default:
       return -1;
@@ -453,5 +462,18 @@ jint EnumMapper::mapDepth(svn_depth_t depth)
 
     case svn_depth_infinity:
       return org_tigris_subversion_javahl_Depth_infinity;
+    }
+}
+
+jint EnumMapper::mapOperation(svn_wc_operation_t operation)
+{
+  switch (operation)
+    {
+    case svn_wc_operation_update:
+      return org_tigris_subversion_javahl_Operation_update;
+    case svn_wc_operation_switch:
+      return org_tigris_subversion_javahl_Operation_switched;
+    case svn_wc_operation_merge:
+      return org_tigris_subversion_javahl_Operation_merge;
     }
 }

@@ -17,6 +17,8 @@
  *
  * @file svn_utf.h
  * @brief UTF-8 conversion routines
+ * Whenever a conversion routine cannot convert to or from UTF-8, the
+ * error returned has code @c APR_EINVAL.
  */
 
 

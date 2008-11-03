@@ -180,7 +180,7 @@ class RemoteRepository(object):
 
         return self.proplist(path, rev)[name]
 
-    def log(self, start_rev, end_rev, paths=None, limit=0, 
+    def log(self, start_rev, end_rev, paths=None, limit=0,
             discover_changed_paths=FALSE, stop_on_copy=FALSE):
         """A generator function which returns information about the revisions
            between START_REV and END_REV. Each return value is a
@@ -315,7 +315,7 @@ class RemoteRepository(object):
 
     def _log_func_wrapper(self, log_msg, tmp_file, commit_items, baton, pool):
         log_msg[0].raw = NULL
-        tmp_file[0].raw = NULL
+        tmp_file[0] = NULL
 
         if self._log_func:
             [log, file] = self._log_func(_types.Array(String, commit_items))
@@ -323,7 +323,7 @@ class RemoteRepository(object):
             if log:
                 log_msg[0].raw = apr_pstrdup(pool, String(log)).raw
             if file:
-                tmp_file[0].raw = apr_pstrdup(pool, String(file)).raw
+                tmp_file[0] = apr_pstrdup(pool, String(file)).raw
 
     def svnimport(self, path, url=None, nonrecursive=False, no_ignore=True, log_func=None):
 
@@ -333,14 +333,13 @@ class RemoteRepository(object):
         if log_func:
             self.set_log_func(log_func)
 
+        pool = Pool()
         commit_info = POINTER(svn_commit_info_t)()
         svn_client_import2(byref(commit_info), path, url, nonrecursive,
-                            no_ignore, self.client, self.iterpool)
+                           no_ignore, self.client, pool)
 
-        try:
-            return commit_info.contents
-        finally:
-            self.iterpool.clear()
+        commit_info[0].pool = pool
+        return commit_info[0]
 
 class LocalRepository(object):
     """A client which accesses the repository directly. This class

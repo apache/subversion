@@ -132,7 +132,7 @@ svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
   svn_ra_serf__session_t *session = ra_session->priv;
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
-  serf_bucket_t *buckets, *tmp;
+  serf_bucket_t *buckets;
   const char *relative_url, *basecoll_url, *req_url;
   svn_error_t *err;
 
@@ -146,21 +146,10 @@ svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
 
   buckets = serf_bucket_aggregate_create(session->bkt_alloc);
 
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("<S:get-location-segments xmlns:S=\"",
-                                      sizeof("<S:get-location-segments "
-                                             "xmlns:S=\"")-1,
-                                      session->bkt_alloc);
-  serf_bucket_aggregate_append(buckets, tmp);
-
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN(SVN_XML_NAMESPACE,
-                                      sizeof(SVN_XML_NAMESPACE)-1,
-                                      session->bkt_alloc);
-  serf_bucket_aggregate_append(buckets, tmp);
-
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("\">",
-                                      sizeof("\">")-1,
-                                      session->bkt_alloc);
-  serf_bucket_aggregate_append(buckets, tmp);
+  svn_ra_serf__add_open_tag_buckets(buckets, session->bkt_alloc,
+                                    "S:get-location-segments",
+                                    "xmlns:S", SVN_XML_NAMESPACE,
+                                    NULL);
 
   svn_ra_serf__add_tag_buckets(buckets,
                                "S:path", path,
@@ -181,10 +170,8 @@ svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
                                apr_ltoa(pool, end_rev),
                                session->bkt_alloc);
 
-  tmp = SERF_BUCKET_SIMPLE_STRING_LEN("</S:get-location-segments>",
-                                      sizeof("</S:get-location-segments>")-1,
-                                      session->bkt_alloc);
-  serf_bucket_aggregate_append(buckets, tmp);
+  svn_ra_serf__add_close_tag_buckets(buckets, session->bkt_alloc,
+                                     "S:get-location-segments");
 
   SVN_ERR(svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url,
                                          session, NULL, peg_revision, NULL,

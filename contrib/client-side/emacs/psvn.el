@@ -3742,7 +3742,7 @@ When called with a prefix argument, ask the user for the revision."
          (rev-arg (concat lower-rev ":" upper-rev)))
     (when user-confirmation
       (setq rev-arg (read-string "Revision for changeset: " rev-arg)))
-    (svn-run nil t 'diff "diff" (concat "-r" rev-arg))
+    (svn-run nil t 'diff "diff" svn-status-default-diff-arguments (concat "-r" rev-arg))
     (svn-status-activate-diff-mode)))
 
 (defun svn-status-show-svn-diff-internal (line-infos recursive revision)

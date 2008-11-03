@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2006, 2008 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -72,7 +72,7 @@ def get_txns(repo_dir):
 
   exit_code, output_lines, error_lines = svntest.main.run_svnadmin('lstxns',
                                                                    repo_dir)
-  txns = map(output_lines.strip, output_lines)
+  txns = list(map(output_lines.strip, output_lines))
 
   # sort, just in case
   txns.sort()
@@ -369,7 +369,7 @@ def hotcopy_format(sbox):
                                                         sbox.repo_dir,
                                                         backup_dir)
   if errput:
-    print "Error: hotcopy failed"
+    print("Error: hotcopy failed")
     raise svntest.Failure
 
   # verify that the db/format files are the same
@@ -382,7 +382,7 @@ def hotcopy_format(sbox):
   fp2.close()
 
   if contents1 != contents2:
-    print "Error: db/format file contents do not match after hotcopy"
+    print("Error: db/format file contents do not match after hotcopy")
     raise svntest.Failure
 
 #----------------------------------------------------------------------
@@ -399,7 +399,7 @@ def setrevprop(sbox):
                                                         "--bypass-hooks",
                                                         iota_path)
   if errput:
-    print "Error: 'setlog' failed"
+    print("Error: 'setlog' failed")
     raise svntest.Failure
 
   # Verify that the revprop value matches what we set when retrieved
@@ -418,7 +418,7 @@ def setrevprop(sbox):
                                                         "-r0", "svn:author",
                                                         foo_path)
   if errput:
-    print "Error: 'setrevprop' failed"
+    print("Error: 'setrevprop' failed")
     raise svntest.Failure
 
   # Verify that the revprop value matches what we set when retrieved
@@ -729,7 +729,7 @@ def set_uuid(sbox):
     raise SVNUnexpectedStderr(errput)
   new_uuid = output[0].rstrip()
   if new_uuid == orig_uuid:
-    print "Error: new UUID matches the original one"
+    print("Error: new UUID matches the original one")
     raise svntest.Failure
 
   # Now, try setting the UUID back to the original value.
@@ -740,7 +740,7 @@ def set_uuid(sbox):
     raise SVNUnexpectedStderr(errput)
   new_uuid = output[0].rstrip()
   if new_uuid != orig_uuid:
-    print "Error: new UUID doesn't match the original one"
+    print("Error: new UUID doesn't match the original one")
     raise svntest.Failure
 
 #----------------------------------------------------------------------

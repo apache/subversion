@@ -19,10 +19,10 @@
 #include "cache.h"
 
 svn_error_t *
-svn_cache_set_error_handler(svn_cache_t *cache,
-                            svn_cache_error_handler_t handler,
-                            void *baton,
-                            apr_pool_t *pool)
+svn_cache__set_error_handler(svn_cache__t *cache,
+                             svn_cache__error_handler_t handler,
+                             void *baton,
+                             apr_pool_t *pool)
 {
   cache->error_handler = handler;
   cache->error_baton = baton;
@@ -33,7 +33,7 @@ svn_cache_set_error_handler(svn_cache_t *cache,
 /* Give the error handler callback a chance to replace or ignore the
    error. */
 static svn_error_t *
-handle_error(const svn_cache_t *cache,
+handle_error(const svn_cache__t *cache,
              svn_error_t *err,
              apr_pool_t *pool)
 {
@@ -44,11 +44,11 @@ handle_error(const svn_cache_t *cache,
 
 
 svn_error_t *
-svn_cache_get(void **value_p,
-              svn_boolean_t *found,
-              const svn_cache_t *cache,
-              const void *key,
-              apr_pool_t *pool)
+svn_cache__get(void **value_p,
+               svn_boolean_t *found,
+               const svn_cache__t *cache,
+               const void *key,
+               apr_pool_t *pool)
 {
   /* In case any errors happen and are quelched, make sure we start
      out with FOUND set to false. */
@@ -63,10 +63,10 @@ svn_cache_get(void **value_p,
 }
 
 svn_error_t *
-svn_cache_set(svn_cache_t *cache,
-              const void *key,
-              void *value,
-              apr_pool_t *pool)
+svn_cache__set(svn_cache__t *cache,
+               const void *key,
+               void *value,
+               apr_pool_t *pool)
 {
   return handle_error(cache,
                       (cache->vtable->set)(cache->cache_internal,
@@ -78,11 +78,11 @@ svn_cache_set(svn_cache_t *cache,
 
 
 svn_error_t *
-svn_cache_iter(svn_boolean_t *completed,
-               const svn_cache_t *cache,
-               svn_iter_apr_hash_cb_t user_cb,
-               void *user_baton,
-               apr_pool_t *pool)
+svn_cache__iter(svn_boolean_t *completed,
+                const svn_cache__t *cache,
+                svn_iter_apr_hash_cb_t user_cb,
+                void *user_baton,
+                apr_pool_t *pool)
 {
   return (cache->vtable->iter)(completed,
                                cache->cache_internal,

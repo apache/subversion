@@ -12,6 +12,7 @@ Contents:
        A. Audience
        B. Dependency Overview
        C. Dependencies in Detail
+       D. Documentation
 
     II. INSTALLATION
        A. Building from a Tarball or RPM
@@ -551,7 +552,10 @@ I.    INTRODUCTION
       version if MASM is not compatible with MSVC 6).
 
 
-      13. Documentation
+      13. SQLite 3.4.x, 3.5.x or 3.6.x
+
+
+  D. Documentation
 
       The primary documentation for Subversion is the free book
       "Version Control with Subversion", a.k.a. "The Subversion Book",

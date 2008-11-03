@@ -62,7 +62,7 @@ svn_nls_init(void)
       apr_pool_t* pool;
       apr_status_t apr_err;
       apr_size_t inwords, outbytes, outlength;
-  
+
       apr_pool_create(&pool, 0);
       /* get exe name - our locale info will be in '../share/locale' */
       inwords = GetModuleFileNameW(0, ucs2_path,
@@ -72,7 +72,7 @@ svn_nls_init(void)
           /* We must be on a Win9x machine, so attempt to get an ANSI path,
              and convert it to Unicode. */
           CHAR ansi_path[MAX_PATH];
-  
+
           if (GetModuleFileNameA(0, ansi_path, sizeof(ansi_path)))
             {
               inwords =
@@ -92,7 +92,7 @@ svn_nls_init(void)
                                      _("Can't get module file name"));
             }
         }
-  
+
       if (! err)
         {
           outbytes = outlength = 3 * (inwords + 1);

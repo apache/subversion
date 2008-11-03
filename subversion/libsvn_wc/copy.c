@@ -354,7 +354,7 @@ get_copyfrom_url_rev_via_parent(const char *src_path,
                                          NULL, NULL, pool));
           SVN_ERR(svn_wc__entry_versioned(&entry, parent_path, parent_access,
                                          FALSE, pool));
-          SVN_ERR(svn_wc_adm_close(parent_access));
+          SVN_ERR(svn_wc_adm_close2(parent_access, pool));
         }
 
       if (entry->copyfrom_url)
@@ -619,7 +619,7 @@ post_copy_cleanup(svn_wc_adm_access_t *adm_access,
      hidden. */
 #ifdef APR_FILE_ATTR_HIDDEN
   {
-    const char *adm_dir = svn_wc__adm_path(path, FALSE, pool, NULL);
+    const char *adm_dir = svn_wc__adm_child(path, NULL, pool);
     const char *path_apr;
     apr_status_t status;
     SVN_ERR(svn_path_cstring_from_utf8(&path_apr, adm_dir, pool));
@@ -844,7 +844,7 @@ copy_dir_administratively(const char *src_path,
         copyfrom_url = tmp;
       }
 
-    SVN_ERR(svn_wc_adm_close(adm_access));
+    SVN_ERR(svn_wc_adm_close2(adm_access, pool));
 
     return svn_wc_add3(dst_path, dst_parent, svn_depth_infinity,
                        copyfrom_url, copyfrom_rev,
@@ -957,7 +957,7 @@ svn_wc_copy2(const char *src_path,
         }
     }
 
-  return svn_wc_adm_close(adm_access);
+  return svn_wc_adm_close2(adm_access, pool);
 }
 
 

@@ -34,6 +34,7 @@
 
 #include "svn_md5.h"
 #include "svn_diff.h"
+#include "svn_private_config.h"
 %}
 
 #ifdef SWIGRUBY
@@ -216,6 +217,18 @@
 %ignore svn_path_uri_autoescape;
 %ignore svn_path_cstring_from_utf8;
 %ignore svn_path_cstring_to_utf8;
+
+/* svn_auth.h: Subversion platform-specific auth providers */
+PLATFORM_SPECIFIC_WRAPPER(svn_auth_get_keychain_simple_provider, SVN_HAVE_KEYCHAIN_SERVICES)
+PLATFORM_SPECIFIC_WRAPPER(svn_auth_get_keychain_ssl_client_cert_pw_provider, SVN_HAVE_KEYCHAIN_SERVICES)
+PLATFORM_SPECIFIC_WRAPPER(svn_auth_get_windows_simple_provider, SWIGWIN)
+PLATFORM_SPECIFIC_WRAPPER(svn_auth_get_windows_ssl_server_trust_provider, SWIGWIN)
+PLATFORM_SPECIFIC_WRAPPER(svn_auth_gnome_keyring_version, SVN_HAVE_GNOME_KEYRING)
+PLATFORM_SPECIFIC_WRAPPER(svn_auth_get_gnome_keyring_simple_provider, SVN_HAVE_GNOME_KEYRING)
+PLATFORM_SPECIFIC_WRAPPER(svn_auth_get_gnome_keyring_ssl_client_cert_pw_provider, SVN_HAVE_GNOME_KEYRING)
+PLATFORM_SPECIFIC_WRAPPER(svn_auth_kwallet_version, SVN_HAVE_KWALLET)
+PLATFORM_SPECIFIC_WRAPPER(svn_auth_get_kwallet_simple_provider, SVN_HAVE_KWALLET)
+PLATFORM_SPECIFIC_WRAPPER(svn_auth_get_kwallet_ssl_client_cert_pw_provider, SVN_HAVE_KWALLET)
 
 /* Other files */
 /* bad pool convention */

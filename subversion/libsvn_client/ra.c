@@ -361,6 +361,7 @@ svn_client_uuid_from_path(const char **uuid,
                           apr_pool_t *pool)
 {
   const svn_wc_entry_t *entry;
+  svn_boolean_t is_root;
 
   SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access,
                                   TRUE,  /* show deleted */ pool));
@@ -368,14 +369,54 @@ svn_client_uuid_from_path(const char **uuid,
   if (entry->uuid)
     {
       *uuid = entry->uuid;
+      return SVN_NO_ERROR;
     }
-  else if (entry->url)
+
+  /* ## Probably never reached after the 1.6/1.7 WC rewrite */
+
+  SVN_ERR(svn_wc_is_wc_root(&is_root, path, adm_access, pool));
+
+  if (!is_root)
     {
+      /* Workingcopies have a single uuid, as all contents is from a single
+         repository */
+
+      svn_error_t *err;
+      svn_wc_adm_access_t *parent_access;
+      const char *parent = svn_path_dirname(path, pool);
+
+      /* Open the parents administrative area to fetch the uuid.
+         Subversion 1.0 and later have the uuid in every checkout root */
+
+      SVN_ERR(svn_wc_adm_open3(&parent_access, NULL, parent, FALSE, 0,
+                               ctx->cancel_func, ctx->cancel_baton, pool));
+
+      err = svn_client_uuid_from_path(uuid, svn_path_dirname(path, pool),
+                                      parent_access, ctx, pool);
+
+      svn_error_clear(svn_wc_adm_close2(parent_access, pool));
+
+      return err;
+    }
+
+  /* We may have a workingcopy without uuid */
+  if (entry->url)
+    {
+      /* You can enter this case by copying a new subdirectory with 1.0-1.5
+       * # svn mkdir newdir
+       * # cp newdir /tmp/new-wc
+       * and then check /tmp/new-wc
+       *
+       * See also:
+       * http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=101831
+       * Message-ID: <877jgjtkus.fsf@debian2.lan> */
+
       /* fallback to using the network. */
       SVN_ERR(svn_client_uuid_from_url(uuid, entry->url, ctx, pool));
     }
   else
     {
+<<<<<<< .working
       /* Excluded path will fall into this code branch, since the missed
          fields in the entry for excluded path is not filled. But it is just
          ok. */
@@ -394,12 +435,15 @@ svn_client_uuid_from_path(const char **uuid,
       else
         return svn_client_uuid_from_path(uuid, svn_path_dirname(path, pool),
                                          adm_access, ctx, pool);
+=======
+      return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
+                               _("'%s' has no URL"),
+                               svn_path_local_style(path, pool));
+>>>>>>> .merge-right.r34008
     }
 
   return SVN_NO_ERROR;
 }
-
-
 
 
 
@@ -611,7 +655,7 @@ svn_client__repos_locations(const char **start_url,
                                      FALSE, 0, ctx->cancel_func,
                                      ctx->cancel_baton, pool));
       SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
-      SVN_ERR(svn_wc_adm_close(adm_access));
+      SVN_ERR(svn_wc_adm_close2(adm_access, pool));
       if (entry->copyfrom_url && revision->kind == svn_opt_revision_working)
         {
           url = entry->copyfrom_url;

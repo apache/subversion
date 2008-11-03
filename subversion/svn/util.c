@@ -557,9 +557,11 @@ svn_cl__make_log_msg_baton(void **baton,
 
 svn_error_t *
 svn_cl__cleanup_log_msg(void *log_msg_baton,
-                        svn_error_t *commit_err)
+                        svn_error_t *commit_err,
+                        apr_pool_t *pool)
 {
   struct log_msg_baton *lmb = log_msg_baton;
+  svn_error_t *err;
 
   /* If there was no tmpfile left, or there is no log message baton,
      return COMMIT_ERR. */
@@ -575,11 +577,12 @@ svn_cl__cleanup_log_msg(void *log_msg_baton,
      chain.  Then return COMMIT_ERR.  If the conversion from UTF-8 to
      native encoding fails, we have to compose that error with the
      commit error chain, too. */
-  svn_error_compose
-    (commit_err,
-     svn_error_create(commit_err->apr_err,
-                      svn_error_createf(commit_err->apr_err, NULL,
-                                        "   '%s'", lmb->tmpfile_left),
+
+  err = svn_error_createf(commit_err->apr_err, NULL,
+                          "   '%s'",
+                          svn_path_local_style(lmb->tmpfile_left, pool));
+  svn_error_compose(commit_err,
+                    svn_error_create(commit_err->apr_err, err,
                       _("Your commit message was left in "
                         "a temporary file:")));
   return commit_err;
@@ -658,7 +661,7 @@ svn_cl__get_log_message(const char **log_msg,
 
       /* Trim incoming messages of the EOF marker text and the junk
          that follows it.  */
-      truncate_buffer_at_prefix(&(log_msg_buf->len), log_msg_buf->data, 
+      truncate_buffer_at_prefix(&(log_msg_buf->len), log_msg_buf->data,
                                 EDITOR_EOF_PREFIX);
 
       /* Make a string from a stringbuf, sharing the data allocation. */
