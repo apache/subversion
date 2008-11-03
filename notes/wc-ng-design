@@ -54,31 +54,41 @@ defined.  When explicitly considering which trees relate to the
 working copy at one time or another, the following trees can be
 found:
 
- * BASE: The tree as it was in unmodified form
- * WORKING: The tree as it is in modified form, based on the
-     administrative information recorded by the transforming
-     'svn ..' commands
-     Note: This tree will -as far as text bases goes- generally
-           overlap with BASE, but isn't required to;
-           e.g. "add-with-history"
- * ACTUAL: The tree as it is in modified form on the local disk.
-    This tree may differ from WORKING when having been modified
-    with non-Subversion transforming commands (such as plain 'rm').
-   
-   Potential differences from WORKING
-   * node in ACTUAL is not present in WORKING ("unversioned" node)
-   * node not present in ACTUAL is in WORKING ("missing" node)
-   * node in ACTUAL has different kind from associated node in WORKING
-     ("obstructed" node)
-     
-   Properties are recorded in WORKING; ACTUAL has no properties.
-   File contents are recorded in ACTUAL; WORKING has no contents.
+ * BASE: The tree of nodes from the repository, against which local changes
+     are made.  Also known as "pristine".  Each node is as it was in the
+     repository at a particular revision and URL, as recorded per node in
+     the WC metadata.  A directory node in the BASE tree knows something
+     about the children it had in the repository (### details?), but its set
+     of children in the WC is independent of that.  In a node or tree
+     scheduled for replacement the BASE is the pristine version of the
+     to-be-added node or tree, not of the deleted one.  For a node that is
+     scheduled for add without history, there is no BASE node.
+
+ * WORKING: The tree that represent's the user's view of the WC with their
+     local modifications (assuming the user told Subversion about these
+     modifications with "svn add" etc. as required).  In implementation, the
+     WORKING tree has the structure and properties recorded in the WC, and
+     the file content present on the local disk.  (If a file cannot be
+     accessed because the tree structure on the local disk is incompatible,
+     this is an error, known as an "obstruction".)
+
+ * ACTUAL: The tree on the local disk, ignoring Subversion
+     administrative directories and other nodes that Subversion has
+     knowingly put there such as conflict reject files, and regarding
+     every node as having no Subversion properties.
+
+     (Variations to consider: Construct properties such as
+     svn:executable, svn:special, and any svn: time-stamp properties
+     from the operating system meta-data. Construct properties from
+     auto-props. Exclude nodes that the operating system says are
+     hidden.)
 
 In the context of the 'svn update' command:
 
  * BASE-TARGET: The tree to which BASE is being updated and for
      which the changes w.r.t. BASE are integrated into
      WORKING and ACTUAL
+
  * WORKING-TARGET, ACTUAL-TARGET: Trees in which the above mentioned
      changes have been integrated, but which haven't "gone live" yet;
      these trees generally represent "in transition" or "intermediary"
@@ -88,6 +98,7 @@ Additionally, two more trees may be related to the working copy
 when considering the 'svn merge' command:
 
  * START: The tree used as the base state for the 'merge' command
+
  * END: The tree used as the ending state for the 'merge' command
     The difference between these trees will be merged into the
     WORKING and ACTUAL trees.
@@ -109,6 +120,12 @@ the parent which got copied in, not the base as was deleted, because
 otherwise it won't be possible to delete files from the replaced subdir:
 there would be no way to express a deletion against the new dir.)
 
+A tree can be said to have its files in repository-normal format or
+working-copy format; the difference relates to line endings and keyword
+expansion, as defined elsewhere.  A BASE tree presents itself in
+repository-normal format by default and can be converted to working-copy
+format. A WORKING or ACTUAL tree presents itself in working-copy format by
+default and can be converted to repository-normal format.
 
 
 Requirements

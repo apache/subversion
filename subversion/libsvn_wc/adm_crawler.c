@@ -83,8 +83,8 @@ restore_file(const char *file_path,
   SVN_ERR(svn_wc__maybe_set_executable(NULL, file_path, adm_access, pool));
 
   /* Remove any text conflict */
-  SVN_ERR(svn_wc_resolved_conflict3(file_path, adm_access, TRUE, FALSE,
-                                    svn_depth_empty,
+  SVN_ERR(svn_wc_resolved_conflict4(file_path, adm_access, TRUE, FALSE,
+                                    FALSE, svn_depth_empty,
                                     svn_wc_conflict_choose_merged,
                                     NULL, NULL, NULL, NULL, pool));
 
@@ -720,6 +720,7 @@ svn_wc_crawl_revisions4(const char *path,
   return err;
 }
 
+<<<<<<< .working
 svn_error_t *
 svn_wc_crawl_revisions3(const char *path,
                         svn_wc_adm_access_t *adm_access,
@@ -955,6 +956,8 @@ svn_wc_crawl_revisions(const char *path,
 }
 
 
+=======
+>>>>>>> .merge-right.r34008
 /*** Copying stream ***/
 
 /* A copying stream is a bit like the unix tee utility:
@@ -1025,37 +1028,30 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
                              void *file_baton,
                              apr_pool_t *pool)
 {
-  const char *tmp_base;
   svn_txdelta_window_handler_t handler;
   void *wh_baton;
-  svn_txdelta_stream_t *txdelta_stream;
-  apr_file_t *tempbasefile;
-  const char *base_digest_hex = NULL;
-  svn_checksum_t *base_checksum = NULL;
+  const char *base_digest_hex;
+  svn_checksum_t *expected_checksum = NULL;
+  svn_checksum_t *verify_checksum = NULL;
   svn_checksum_t *local_checksum;
   svn_error_t *err;
   const svn_wc_entry_t *ent;
   svn_stream_t *base_stream;
   svn_stream_t *local_stream;
-  apr_time_t wf_time;
 
   SVN_ERR(svn_wc_entry(&ent, path, adm_access, FALSE, pool));
-
-  /* Get timestamp of working file, to check for modifications during
-     commit. */
-  SVN_ERR(svn_io_file_affected_time(&wf_time, path, pool));
 
   /* Translated input */
   SVN_ERR(svn_wc_translated_stream(&local_stream, path, path,
                                    adm_access, SVN_WC_TRANSLATE_TO_NF, pool));
 
-
-
-  tmp_base = svn_wc__text_base_path(path, TRUE, pool);
   /* Alert the caller that we have created a temporary file that might
      need to be cleaned up, if he asked for one. */
   if (tempfile)
     {
+      const char *tmp_base = svn_wc__text_base_path(path, TRUE, pool);
+      apr_file_t *tempbasefile;
+
       *tempfile = tmp_base;
 
       /* Make an untranslated copy of the working file in the
@@ -1077,37 +1073,53 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
 
   if (! fulltext)
     {
-      if (! ent->checksum)
+      /* Compute delta against the pristine contents */
+      SVN_ERR(svn_wc_get_pristine_contents(&base_stream, path, pool, pool));
+
+      /* ### We want ent->checksum to ALWAYS be present, but on old
+         ### working copies maybe it won't be (unclear?). If it is there,
+         ### then we can use it as an expected value. If it is NOT there,
+         ### then we must compute it for the apply_textdelta() call. */
+      if (ent->checksum)
         {
-          /*### FIXME: The entries file should hold a checksum */
-          svn_checksum_t *tmp_checksum;
+          /* Convert MD5 hex checksum to a checksum structure */
+          SVN_ERR(svn_checksum_parse_hex(&expected_checksum, svn_checksum_md5,
+                                         ent->checksum, pool));
 
-          /* If there's no checksum in this entry, calculate one */
-          const char *tb = svn_wc__text_base_path(path, FALSE, pool);
-
-          SVN_ERR (svn_io_file_checksum2(&tmp_checksum, tb, svn_checksum_md5,
-                                         pool));
-          base_digest_hex = svn_checksum_to_cstring_display(tmp_checksum, pool);
+          /* Compute a checksum for what is *actually* found */
+          base_stream = svn_stream_checksummed2(base_stream, &verify_checksum,
+                                                svn_checksum_md5, NULL,
+                                                svn_checksum_md5, TRUE, pool);
         }
       else
-        base_digest_hex = ent->checksum;
+        {
+          svn_stream_t *p_stream;
 
-      SVN_ERR(svn_wc_get_pristine_contents(&base_stream, path, pool, pool));
+          /* ### we should ALREADY have the checksum for pristine. */
+          SVN_ERR(svn_wc_get_pristine_contents(&p_stream, path, pool, pool));
+          p_stream = svn_stream_checksummed2(p_stream, &expected_checksum,
+                                             svn_checksum_md5, NULL,
+                                             svn_checksum_md5, TRUE, pool);
+
+          /* Closing this will cause a full read/checksum. */
+          SVN_ERR(svn_stream_close(p_stream));
+        }
+
+      /* apply_textdelta() is working against a base with this checksum */
+      base_digest_hex = svn_checksum_to_cstring_display(expected_checksum,
+                                                        pool);
     }
   else
     {
+      /* Send a fulltext. */
       base_stream = svn_stream_empty(pool);
+      base_digest_hex = NULL;
     }
 
   /* Tell the editor that we're about to apply a textdelta to the
      file baton; the editor returns to us a window consumer and baton.  */
-  SVN_ERR(editor->apply_textdelta
-          (file_baton, base_digest_hex, pool, &handler, &wh_baton));
-
-  if (! fulltext)
-    base_stream
-      = svn_stream_checksummed2(base_stream, &base_checksum, svn_checksum_md5,
-                                NULL, svn_checksum_md5, TRUE, pool);
+  SVN_ERR(editor->apply_textdelta(file_baton, base_digest_hex, pool,
+                                  &handler, &wh_baton));
 
   /* Run diff processing, throwing windows at the handler. */
   err = svn_txdelta_run(base_stream, local_stream,
@@ -1131,41 +1143,36 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
 
   /* If we have an error, it may be caused by a corrupt text base.
      Check the checksum and discard `err' if they don't match. */
-  if (! fulltext && ent->checksum && base_checksum)
+  if (expected_checksum && verify_checksum
+      && !svn_checksum_match(expected_checksum, verify_checksum))
     {
-      /*### FIXME: The entries file should hold a checksum,
-        meaning the above condition should not include ent->checksum */
+      /* The entry checksum does not match the actual text
+         base checksum.  Extreme badness. Of course,
+         theoretically we could just switch to
+         fulltext transmission here, and everything would
+         work fine; after all, we're going to replace the
+         text base with a new one in a moment anyway, and
+         we'd fix the checksum then.  But it's better to
+         error out.  People should know that their text
+         bases are getting corrupted, so they can
+         investigate.  Other commands could be affected,
+         too, such as `svn diff'.  */
 
-      base_digest_hex = svn_checksum_to_cstring_display(base_checksum, pool);
+      /* Deliberately ignore errors; the error about the
+         checksum mismatch is more important to return. */
+      svn_error_clear(err);
+      if (tempfile)
+        svn_error_clear(svn_io_remove_file(*tempfile, pool));
 
-      if (strcmp(base_digest_hex, ent->checksum) != 0)
-        {
-          /* The entry checksum does not match the actual text
-             base checksum.  Extreme badness. Of course,
-             theoretically we could just switch to
-             fulltext transmission here, and everything would
-             work fine; after all, we're going to replace the
-             text base with a new one in a moment anyway, and
-             we'd fix the checksum then.  But it's better to
-             error out.  People should know that their text
-             bases are getting corrupted, so they can
-             investigate.  Other commands could be affected,
-             too, such as `svn diff'.  */
-
-          /* Deliberately ignore errors; the error about the
-             checksum mismatch is more important to return. */
-          svn_error_clear(err);
-          svn_error_clear(svn_io_remove_file(tmp_base, pool));
-
-          return svn_error_createf
-            (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
-             _("Checksum mismatch for '%s'; "
-               "expected: '%s', actual: '%s'"),
-             svn_path_local_style(svn_wc__text_base_path(path, FALSE, pool),
-                                   pool),
-             ent->checksum, base_digest_hex);
-        }
-   }
+      return svn_error_createf
+        (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
+         _("Checksum mismatch for '%s'; "
+           "expected: '%s', actual: '%s'"),
+         svn_path_local_style(svn_wc__text_base_path(path, FALSE, pool),
+                              pool),
+         svn_checksum_to_cstring_display(expected_checksum, pool),
+         svn_checksum_to_cstring_display(verify_checksum, pool));
+    }
 
   /* Now, handle that delta transmission error if any, so we can stop
      thinking about it after this point. */

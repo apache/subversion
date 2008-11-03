@@ -959,14 +959,11 @@ parse_spool_file(svn_ra_neon__session_t *ras,
                  ne_xml_parser *success_parser,
                  apr_pool_t *pool)
 {
-  apr_file_t *spool_file;
   svn_stream_t *spool_stream;
   char *buf = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
   apr_size_t len;
 
-  SVN_ERR(svn_io_file_open(&spool_file, spool_file_name,
-                           (APR_READ | APR_BUFFERED), APR_OS_DEFAULT, pool));
-  spool_stream = svn_stream_from_aprfile2(spool_file, TRUE, pool);
+  SVN_ERR(svn_stream_open_readonly(&spool_stream, spool_file_name, pool, pool));
   while (1)
     {
       if (ras->callbacks &&
@@ -984,7 +981,7 @@ parse_spool_file(svn_ra_neon__session_t *ras,
       if (len != SVN__STREAM_CHUNK_SIZE)
         break;
     }
-  return SVN_NO_ERROR;
+  return svn_stream_close(spool_stream);
 }
 
 

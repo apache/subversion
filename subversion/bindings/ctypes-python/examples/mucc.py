@@ -100,7 +100,7 @@ for arg in args:
             # so, we should treat copyfrom paths as possible
             # repository roots
             may_be_root = (len(action) == 2 and action[0] == "cp")
-           
+
             if not may_be_root:
                 arg = arg.dirname()
 
@@ -140,5 +140,5 @@ if options.file:
 
 # Finally commit
 txn.commit(message)
-print "r%ld committed by %s at %s" % (txn.committed_rev, options.username,
-                                      txn.committed_date)
+print("r%ld committed by %s at %s" % (txn.committed_rev, options.username,
+                                      txn.committed_date))

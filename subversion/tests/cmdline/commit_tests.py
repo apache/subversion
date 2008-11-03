@@ -1630,13 +1630,13 @@ def commit_out_of_date_deletions(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  
+
   # Need another empty dir
   I_path = os.path.join(wc_dir, 'A', 'I')
   os.mkdir(I_path)
   svntest.main.run_svn(None, 'add', I_path)
   svntest.main.run_svn(None, 'ci', '-m', 'prep', wc_dir)
-  svntest.main.run_svn(None, 'up', wc_dir)  
+  svntest.main.run_svn(None, 'up', wc_dir)
 
   # Make a backup copy of the working copy
   wc_backup = sbox.add_wc_path('backup')
@@ -1684,7 +1684,7 @@ def commit_out_of_date_deletions(sbox):
   svntest.main.run_svn(None, 'propset', 'fooprop', 'foopropval', I_path)
   svntest.main.file_append(chi_path, 'appended chi text')
   svntest.main.run_svn(None, 'propset', 'fooprop', 'foopropval', beta_path)
-  
+
   # Deletions in wc backup
   C_path = os.path.join(wc_backup, 'A', 'C')
   F_path = os.path.join(wc_backup, 'A', 'B', 'F')
@@ -1697,14 +1697,14 @@ def commit_out_of_date_deletions(sbox):
   # A commit of any one of these files or dirs should fail
   error_re = "out of date"
   commit(wc_backup, None, None, error_re, C_path)
-  commit(wc_backup, None, None, "File not found: transaction", I_path)
+  commit(wc_backup, None, None, error_re, I_path)
   commit(wc_backup, None, None, error_re, F_path)
   commit(wc_backup, None, None, error_re, omega_path)
   commit(wc_backup, None, None, error_re, alpha_path)
-  commit(wc_backup, None, None, "File not found: transaction", chi_path)
-  commit(wc_backup, None, None, "File not found: transaction", beta_path)
+  commit(wc_backup, None, None, error_re, chi_path)
+  commit(wc_backup, None, None, error_re, beta_path)
   commit(wc_backup, None, None, error_re, psi_path)
-                                        
+
 def commit_with_bad_log_message(sbox):
   "commit with a log message containing bad data"
 
@@ -1819,7 +1819,7 @@ def from_wc_top_with_bad_editor(sbox):
   err = " ".join(map(str.strip, err))
   if not (re.match(".*no_such-editor.*", err)
           and re.match(".*Commit failed.*", err)):
-    print "Commit failed, but not in the way expected."
+    print("Commit failed, but not in the way expected.")
     raise svntest.Failure
 
 
@@ -2614,10 +2614,10 @@ def commit_fails_at_path(path, wc_dir, error_re):
                                         path)
 
 def tree_conflicts_block_commit(sbox):
-  "tree conflicts block commit" 
-  
+  "tree conflicts block commit"
+
   # Commit is not allowed in a directory containing tree conflicts.
-  # This test corresponds to use cases 1-3 (with file victims) in 
+  # This test corresponds to use cases 1-3 (with file victims) in
   # notes/tree-conflicts/use-cases.txt.
 
   svntest.actions.build_greek_tree_conflicts(sbox)
@@ -2633,12 +2633,12 @@ def tree_conflicts_block_commit(sbox):
   commit_fails_at_path(G, G, error_re)
   commit_fails_at_path(os.path.join(G, 'pi'), G, error_re)
 
-                                        
+
 def tree_conflicts_resolved(sbox):
-  "tree conflicts resolved" 
-  
+  "tree conflicts resolved"
+
   # Commit is allowed after tree conflicts are resolved.
-  # This test corresponds to use cases 1-3 in 
+  # This test corresponds to use cases 1-3 in
   # notes/tree-conflicts/use-cases.txt.
 
   svntest.actions.build_greek_tree_conflicts(sbox)
@@ -2646,16 +2646,15 @@ def tree_conflicts_resolved(sbox):
 
   # Duplicate wc for tests
   wc_dir_2 = sbox.add_wc_path('2')
-  svntest.actions.duplicate_dir(wc_dir, wc_dir_2)  
+  svntest.actions.duplicate_dir(wc_dir, wc_dir_2)
 
   # Resolved in directory containing tree conflicts
   G = os.path.join(wc_dir, 'A', 'D', 'G')
   svntest.actions.run_and_verify_svn(None, None, [], 'resolved', G)
-  
+
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak('A/D/G/pi',  status='D ')
-  expected_status.remove('A/D/G/rho',
-                         'A/D/G/tau')
+  expected_status.tweak('A/D/G/pi',  status='D ', wc_rev='1')
+  expected_status.remove('A/D/G/rho', 'A/D/G/tau')
 
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 

@@ -576,9 +576,9 @@ def test(list_class=TestList):
   """
   Unit test main routine.
   """
-  print 'Testing:'
+  print('Testing:')
   test_list_mixin(list_class)
-  print '  ListMixin:     OK'
+  print('  ListMixin:     OK')
 
 
 if __name__ == '__main__':

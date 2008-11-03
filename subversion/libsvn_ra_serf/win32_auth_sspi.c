@@ -72,7 +72,7 @@ static svn_atomic_t sspi_initialized = 0;
 static PSecurityFunctionTable sspi = NULL;
 static unsigned int ntlm_maxtokensize = 0;
 
-/* Loads the SSPI function table we can use to call SSPI's public functions. 
+/* Loads the SSPI function table we can use to call SSPI's public functions.
  * Accepted by svn_atomic__init_once()
  */
 static svn_error_t *

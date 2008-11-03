@@ -108,7 +108,7 @@ relegate_dir_external(const char *path,
 
   /* ### Ugly. Unlock only if not going to return an error. Revisit */
   if (!err || err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD)
-    SVN_ERR(svn_wc_adm_close(adm_access));
+    SVN_ERR(svn_wc_adm_close2(adm_access, pool));
 
   if (err && (err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
     {
@@ -178,7 +178,7 @@ switch_dir_external(const char *path,
                                ctx->cancel_func, ctx->cancel_baton, subpool));
       SVN_ERR(svn_wc_entry(&entry, path, adm_access,
                            FALSE, subpool));
-      SVN_ERR(svn_wc_adm_close(adm_access));
+      SVN_ERR(svn_wc_adm_close2(adm_access, subpool));
 
       if (entry && entry->url)
         {
@@ -361,7 +361,7 @@ switch_file_external(const char *path,
       if (! entry->file_external_path)
         {
           if (close_adm_access)
-            SVN_ERR(svn_wc_adm_close(target_adm_access));
+            SVN_ERR(svn_wc_adm_close2(target_adm_access, subpool));
 
           return svn_error_createf
             (SVN_ERR_CLIENT_FILE_EXTERNAL_OVERWRITE_VERSIONED, 0,
@@ -376,7 +376,7 @@ switch_file_external(const char *path,
       apr_file_t *f;
       svn_boolean_t text_conflicted;
       svn_boolean_t prop_conflicted;
-      svn_boolean_t has_tree_conflicted_children;
+      svn_boolean_t tree_conflicted;
 
       /* Check for a conflict on the containing directory.  Because a
          switch is done on the added file later, it will leave a
@@ -386,9 +386,9 @@ switch_file_external(const char *path,
       SVN_ERR(svn_wc__entry_versioned(&anchor_dir_entry, anchor,
                                       target_adm_access, FALSE, subpool));
       SVN_ERR(svn_wc_conflicted_p2(&text_conflicted, &prop_conflicted,
-                                   &has_tree_conflicted_children,
-                                   anchor, anchor_dir_entry, subpool));
-      if (text_conflicted || prop_conflicted)
+                                   &tree_conflicted, anchor, target_adm_access,
+                                   subpool));
+      if (text_conflicted || prop_conflicted || tree_conflicted)
         return svn_error_createf
           (SVN_ERR_WC_FOUND_CONFLICT, 0,
            _("The file external from '%s' cannot be written to '%s' while "
@@ -446,31 +446,21 @@ switch_file_external(const char *path,
       revert_file = FALSE;
       remove_from_revision_control = TRUE;
 
-      /* Switching a newly added file causes a conflict on the anchor
-         directory, so resolve it. */
-      err = svn_wc_resolved_conflict4(anchor, 
-                                      target_adm_access,
-                                      FALSE, FALSE, TRUE,
-                                      svn_depth_empty,
-                                      svn_wc_conflict_choose_merged,
-                                      NULL, /* svn_wc_notify_func2_t */
-                                      NULL, /* void * */
-                                      ctx->cancel_func,
-                                      ctx->cancel_baton,
-                                      subpool);
       if (err)
         goto cleanup;
   }
 
   if (close_adm_access)
-    SVN_ERR(svn_wc_adm_close(target_adm_access));
+    SVN_ERR(svn_wc_adm_close2(target_adm_access, subpool));
+
+  /* ### should destroy the subpool... */
 
   return SVN_NO_ERROR;
 
  cleanup:
   if (revert_file)
     {
-      svn_error_t *e = 
+      svn_error_t *e =
         svn_wc_revert3(path, target_adm_access, svn_depth_empty,
                        use_commit_times,
                        NULL, /* apr_array_header_t *changelists */
@@ -503,7 +493,9 @@ switch_file_external(const char *path,
     }
 
   if (close_adm_access)
-    SVN_ERR(svn_wc_adm_close(target_adm_access));
+    SVN_ERR(svn_wc_adm_close2(target_adm_access, subpool));
+
+  /* ### should destroy the subpool */
 
   return err;
 }
@@ -784,14 +776,14 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
 
       if (svn_node_none == kind)
         return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                                 _("URL '%s' at revision %ld doesn't exist"), 
+                                 _("URL '%s' at revision %ld doesn't exist"),
                                  ra_cache.ra_session_url,
                                  ra_cache.ra_revnum);
 
       if (svn_node_dir != kind && svn_node_file != kind)
         return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
                                  _("URL '%s' at revision %ld is not a file "
-                                   "or a directory"), 
+                                   "or a directory"),
                                  ra_cache.ra_session_url,
                                  ra_cache.ra_revnum);
 
@@ -941,7 +933,7 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
       if (close_access_baton_when_done &&
           (!err || err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
         {
-          svn_error_t *err2 = svn_wc_adm_close(adm_access);
+          svn_error_t *err2 = svn_wc_adm_close2(adm_access, ib->iter_pool);
           if (err2)
             {
               if (!err)

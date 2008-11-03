@@ -103,7 +103,7 @@ print_finish_target_xml(svn_revnum_t repos_rev,
 
 /* Function which *actually* causes a status structure to be output to
    the user.  Called by both print_status() and svn_cl__status(). */
-static svn_error_t * 
+static svn_error_t *
 print_status_normal_or_xml(void *baton,
                            const char *path,
                            const svn_wc_status2_t *status,

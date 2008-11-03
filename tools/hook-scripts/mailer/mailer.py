@@ -54,14 +54,14 @@ try:
 except ImportError:
   sys.stderr.write(
     "You need version %s or better of the Subversion Python bindings.\n" \
-    % ".".join(map(lambda x: str(x), _MIN_SVN_VERSION)))
+    % ".".join([str(x) for x in _MIN_SVN_VERSION]))
   sys.exit(1)
 if _MIN_SVN_VERSION > [svn.core.SVN_VER_MAJOR,
                        svn.core.SVN_VER_MINOR,
                        svn.core.SVN_VER_PATCH]:
   sys.stderr.write(
     "You need version %s or better of the Subversion Python bindings.\n" \
-    % ".".join(map(lambda x: str(x), _MIN_SVN_VERSION)))
+    % ".".join([str(x) for x in _MIN_SVN_VERSION]))
   sys.exit(1)
 
 
@@ -530,7 +530,7 @@ class Lock(Messenger):
                         or 'unlock_subject_prefix'))
 
     # read all the locked paths from STDIN and strip off the trailing newlines
-    self.dirlist = map(lambda x: x.rstrip(), sys.stdin.readlines())
+    self.dirlist = [x.rstrip() for x in sys.stdin.readlines()]
 
     # collect the set of groups and the unique sets of params for the options
     self.groups = { }

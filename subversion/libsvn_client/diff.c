@@ -374,6 +374,7 @@ diff_label(const char *path,
 static svn_error_t *
 diff_props_changed(svn_wc_adm_access_t *adm_access,
                    svn_wc_notify_state_t *state,
+                   svn_boolean_t *tree_conflicted,
                    const char *path,
                    const apr_array_header_t *propchanges,
                    apr_hash_t *original_props,
@@ -394,6 +395,8 @@ diff_props_changed(svn_wc_adm_access_t *adm_access,
 
   if (state)
     *state = svn_wc_notify_state_unknown;
+  if (tree_conflicted)
+    *tree_conflicted = FALSE;
 
   svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
@@ -604,6 +607,7 @@ static svn_error_t *
 diff_file_changed(svn_wc_adm_access_t *adm_access,
                   svn_wc_notify_state_t *content_state,
                   svn_wc_notify_state_t *prop_state,
+                  svn_boolean_t *tree_conflicted,
                   const char *path,
                   const char *tmpfile1,
                   const char *tmpfile2,
@@ -620,12 +624,15 @@ diff_file_changed(svn_wc_adm_access_t *adm_access,
                                  tmpfile1, tmpfile2, rev1, rev2,
                                  mimetype1, mimetype2, diff_baton));
   if (prop_changes->nelts > 0)
-    SVN_ERR(diff_props_changed(adm_access, prop_state, path, prop_changes,
+    SVN_ERR(diff_props_changed(adm_access, prop_state, tree_conflicted,
+                               path, prop_changes,
                                original_props, diff_baton));
   if (content_state)
     *content_state = svn_wc_notify_state_unknown;
   if (prop_state)
     *prop_state = svn_wc_notify_state_unknown;
+  if (tree_conflicted)
+    *tree_conflicted = FALSE;
   return SVN_NO_ERROR;
 }
 
@@ -638,6 +645,7 @@ static svn_error_t *
 diff_file_added(svn_wc_adm_access_t *adm_access,
                 svn_wc_notify_state_t *content_state,
                 svn_wc_notify_state_t *prop_state,
+                svn_boolean_t *tree_conflicted,
                 const char *path,
                 const char *tmpfile1,
                 const char *tmpfile2,
@@ -658,7 +666,8 @@ diff_file_added(svn_wc_adm_access_t *adm_access,
      user see that *something* happened. */
   diff_cmd_baton->force_empty = TRUE;
 
-  SVN_ERR(diff_file_changed(adm_access, content_state, prop_state, path,
+  SVN_ERR(diff_file_changed(adm_access, content_state, prop_state,
+                            tree_conflicted, path,
                             tmpfile1, tmpfile2,
                             rev1, rev2,
                             mimetype1, mimetype2,
@@ -673,6 +682,7 @@ diff_file_added(svn_wc_adm_access_t *adm_access,
 static svn_error_t *
 diff_file_deleted_with_diff(svn_wc_adm_access_t *adm_access,
                             svn_wc_notify_state_t *state,
+                            svn_boolean_t *tree_conflicted,
                             const char *path,
                             const char *tmpfile1,
                             const char *tmpfile2,
@@ -684,7 +694,7 @@ diff_file_deleted_with_diff(svn_wc_adm_access_t *adm_access,
   struct diff_cmd_baton *diff_cmd_baton = diff_baton;
 
   /* We don't list all the deleted properties. */
-  return diff_file_changed(adm_access, state, NULL, path,
+  return diff_file_changed(adm_access, state, NULL, tree_conflicted, path,
                            tmpfile1, tmpfile2,
                            diff_cmd_baton->revnum1, diff_cmd_baton->revnum2,
                            mimetype1, mimetype2,
@@ -697,6 +707,7 @@ diff_file_deleted_with_diff(svn_wc_adm_access_t *adm_access,
 static svn_error_t *
 diff_file_deleted_no_diff(svn_wc_adm_access_t *adm_access,
                           svn_wc_notify_state_t *state,
+                          svn_boolean_t *tree_conflicted,
                           const char *path,
                           const char *tmpfile1,
                           const char *tmpfile2,
@@ -709,6 +720,8 @@ diff_file_deleted_no_diff(svn_wc_adm_access_t *adm_access,
 
   if (state)
     *state = svn_wc_notify_state_unknown;
+  if (tree_conflicted)
+    *tree_conflicted = FALSE;
 
   return file_printf_from_utf8
           (diff_cmd_baton->outfile,
@@ -717,21 +730,22 @@ diff_file_deleted_no_diff(svn_wc_adm_access_t *adm_access,
            path, equal_string);
 }
 
-/* An svn_wc_diff_callbacks3_t function.
-   For now, let's have 'svn diff' send feedback to the top-level
-   application, so that something reasonable about directories and
-   propsets gets printed to stdout. */
+/* An svn_wc_diff_callbacks3_t function. */
 static svn_error_t *
 diff_dir_added(svn_wc_adm_access_t *adm_access,
                svn_wc_notify_state_t *state,
+               svn_boolean_t *tree_conflicted,
                const char *path,
                svn_revnum_t rev,
                void *diff_baton)
 {
   if (state)
     *state = svn_wc_notify_state_unknown;
+  if (tree_conflicted)
+    *tree_conflicted = FALSE;
 
-  /* ### todo:  send feedback to app */
+  /* Do nothing. */
+
   return SVN_NO_ERROR;
 }
 
@@ -739,11 +753,16 @@ diff_dir_added(svn_wc_adm_access_t *adm_access,
 static svn_error_t *
 diff_dir_deleted(svn_wc_adm_access_t *adm_access,
                  svn_wc_notify_state_t *state,
+                 svn_boolean_t *tree_conflicted,
                  const char *path,
                  void *diff_baton)
 {
   if (state)
     *state = svn_wc_notify_state_unknown;
+  if (tree_conflicted)
+    *tree_conflicted = FALSE;
+
+  /* Do nothing. */
 
   return SVN_NO_ERROR;
 }
@@ -751,10 +770,16 @@ diff_dir_deleted(svn_wc_adm_access_t *adm_access,
 /* An svn_wc_diff_callbacks3_t function. */
 static svn_error_t *
 diff_dir_opened(svn_wc_adm_access_t *adm_access,
+                svn_boolean_t *tree_conflicted,
                 const char *path,
                 svn_revnum_t rev,
                 void *diff_baton)
 {
+  if (tree_conflicted)
+    *tree_conflicted = FALSE;
+
+  /* Do nothing. */
+
   return SVN_NO_ERROR;
 }
 
@@ -762,11 +787,16 @@ diff_dir_opened(svn_wc_adm_access_t *adm_access,
 static svn_error_t *
 diff_dir_closed(svn_wc_adm_access_t *adm_access,
                 svn_wc_notify_state_t *state,
+                svn_boolean_t *tree_conflicted,
                 const char *path,
                 void *diff_baton)
 {
   if (state)
     *state = svn_wc_notify_state_unknown;
+  if (tree_conflicted)
+    *tree_conflicted = FALSE;
+
+  /* Do nothing. */
 
   return SVN_NO_ERROR;
 }
@@ -824,7 +854,7 @@ convert_to_url(const char **url,
   SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path, FALSE,
                                  0, NULL, NULL, pool));
   SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
-  SVN_ERR(svn_wc_adm_close(adm_access));
+  SVN_ERR(svn_wc_adm_close2(adm_access, pool));
 
   if (entry->url)
     *url = apr_pstrdup(pool, entry->url);
@@ -1140,7 +1170,7 @@ diff_wc_wc(const char *path1,
 
   SVN_ERR(svn_wc_diff5(adm_access, target, callbacks, callback_baton,
                        depth, ignore_ancestry, changelists, pool));
-  return svn_wc_adm_close(adm_access);
+  return svn_wc_adm_close2(adm_access, pool);
 }
 
 
@@ -1346,7 +1376,7 @@ diff_repos_wc(const char *path1,
                                   FALSE, NULL, NULL, /* notification is N/A */
                                   NULL, pool));
 
-  return svn_wc_adm_close(adm_access);
+  return svn_wc_adm_close2(adm_access, pool);
 }
 
 
@@ -1629,70 +1659,6 @@ svn_client_diff4(const apr_array_header_t *options,
 }
 
 svn_error_t *
-svn_client_diff3(const apr_array_header_t *options,
-                 const char *path1,
-                 const svn_opt_revision_t *revision1,
-                 const char *path2,
-                 const svn_opt_revision_t *revision2,
-                 svn_boolean_t recurse,
-                 svn_boolean_t ignore_ancestry,
-                 svn_boolean_t no_diff_deleted,
-                 svn_boolean_t ignore_content_type,
-                 const char *header_encoding,
-                 apr_file_t *outfile,
-                 apr_file_t *errfile,
-                 svn_client_ctx_t *ctx,
-                 apr_pool_t *pool)
-{
-  return svn_client_diff4(options, path1, revision1, path2,
-                          revision2, NULL,
-                          SVN_DEPTH_INFINITY_OR_FILES(recurse),
-                          ignore_ancestry, no_diff_deleted,
-                          ignore_content_type, header_encoding,
-                          outfile, errfile, NULL, ctx, pool);
-}
-
-svn_error_t *
-svn_client_diff2(const apr_array_header_t *options,
-                 const char *path1,
-                 const svn_opt_revision_t *revision1,
-                 const char *path2,
-                 const svn_opt_revision_t *revision2,
-                 svn_boolean_t recurse,
-                 svn_boolean_t ignore_ancestry,
-                 svn_boolean_t no_diff_deleted,
-                 svn_boolean_t ignore_content_type,
-                 apr_file_t *outfile,
-                 apr_file_t *errfile,
-                 svn_client_ctx_t *ctx,
-                 apr_pool_t *pool)
-{
-  return svn_client_diff3(options, path1, revision1, path2, revision2,
-                          recurse, ignore_ancestry, no_diff_deleted,
-                          ignore_content_type, SVN_APR_LOCALE_CHARSET,
-                          outfile, errfile, ctx, pool);
-}
-
-svn_error_t *
-svn_client_diff(const apr_array_header_t *options,
-                const char *path1,
-                const svn_opt_revision_t *revision1,
-                const char *path2,
-                const svn_opt_revision_t *revision2,
-                svn_boolean_t recurse,
-                svn_boolean_t ignore_ancestry,
-                svn_boolean_t no_diff_deleted,
-                apr_file_t *outfile,
-                apr_file_t *errfile,
-                svn_client_ctx_t *ctx,
-                apr_pool_t *pool)
-{
-  return svn_client_diff2(options, path1, revision1, path2, revision2,
-                          recurse, ignore_ancestry, no_diff_deleted, FALSE,
-                          outfile, errfile, ctx, pool);
-}
-
-svn_error_t *
 svn_client_diff_peg4(const apr_array_header_t *options,
                      const char *path,
                      const svn_opt_revision_t *peg_revision,
@@ -1764,83 +1730,6 @@ svn_client_diff_peg4(const apr_array_header_t *options,
 }
 
 svn_error_t *
-svn_client_diff_peg3(const apr_array_header_t *options,
-                     const char *path,
-                     const svn_opt_revision_t *peg_revision,
-                     const svn_opt_revision_t *start_revision,
-                     const svn_opt_revision_t *end_revision,
-                     svn_boolean_t recurse,
-                     svn_boolean_t ignore_ancestry,
-                     svn_boolean_t no_diff_deleted,
-                     svn_boolean_t ignore_content_type,
-                     const char *header_encoding,
-                     apr_file_t *outfile,
-                     apr_file_t *errfile,
-                     svn_client_ctx_t *ctx,
-                     apr_pool_t *pool)
-{
-  return svn_client_diff_peg4(options,
-                              path,
-                              peg_revision,
-                              start_revision,
-                              end_revision,
-                              NULL,
-                              SVN_DEPTH_INFINITY_OR_FILES(recurse),
-                              ignore_ancestry,
-                              no_diff_deleted,
-                              ignore_content_type,
-                              header_encoding,
-                              outfile,
-                              errfile,
-                              NULL,
-                              ctx,
-                              pool);
-}
-
-svn_error_t *
-svn_client_diff_peg2(const apr_array_header_t *options,
-                     const char *path,
-                     const svn_opt_revision_t *peg_revision,
-                     const svn_opt_revision_t *start_revision,
-                     const svn_opt_revision_t *end_revision,
-                     svn_boolean_t recurse,
-                     svn_boolean_t ignore_ancestry,
-                     svn_boolean_t no_diff_deleted,
-                     svn_boolean_t ignore_content_type,
-                     apr_file_t *outfile,
-                     apr_file_t *errfile,
-                     svn_client_ctx_t *ctx,
-                     apr_pool_t *pool)
-{
-  return svn_client_diff_peg3(options, path, peg_revision, start_revision,
-                              end_revision,
-                              SVN_DEPTH_INFINITY_OR_FILES(recurse),
-                              ignore_ancestry, no_diff_deleted,
-                              ignore_content_type, SVN_APR_LOCALE_CHARSET,
-                              outfile, errfile, ctx, pool);
-}
-
-svn_error_t *
-svn_client_diff_peg(const apr_array_header_t *options,
-                    const char *path,
-                    const svn_opt_revision_t *peg_revision,
-                    const svn_opt_revision_t *start_revision,
-                    const svn_opt_revision_t *end_revision,
-                    svn_boolean_t recurse,
-                    svn_boolean_t ignore_ancestry,
-                    svn_boolean_t no_diff_deleted,
-                    apr_file_t *outfile,
-                    apr_file_t *errfile,
-                    svn_client_ctx_t *ctx,
-                    apr_pool_t *pool)
-{
-  return svn_client_diff_peg2(options, path, peg_revision,
-                              start_revision, end_revision, recurse,
-                              ignore_ancestry, no_diff_deleted, FALSE,
-                              outfile, errfile, ctx, pool);
-}
-
-svn_error_t *
 svn_client_diff_summarize2(const char *path1,
                            const svn_opt_revision_t *revision1,
                            const char *path2,
@@ -1875,25 +1764,6 @@ svn_client_diff_summarize2(const char *path1,
 }
 
 svn_error_t *
-svn_client_diff_summarize(const char *path1,
-                          const svn_opt_revision_t *revision1,
-                          const char *path2,
-                          const svn_opt_revision_t *revision2,
-                          svn_boolean_t recurse,
-                          svn_boolean_t ignore_ancestry,
-                          svn_client_diff_summarize_func_t summarize_func,
-                          void *summarize_baton,
-                          svn_client_ctx_t *ctx,
-                          apr_pool_t *pool)
-{
-  return svn_client_diff_summarize2(path1, revision1, path2,
-                                    revision2,
-                                    SVN_DEPTH_INFINITY_OR_FILES(recurse),
-                                    ignore_ancestry, NULL, summarize_func,
-                                    summarize_baton, ctx, pool);
-}
-
-svn_error_t *
 svn_client_diff_summarize_peg2(const char *path,
                                const svn_opt_revision_t *peg_revision,
                                const svn_opt_revision_t *start_revision,
@@ -1921,27 +1791,6 @@ svn_client_diff_summarize_peg2(const char *path,
 
   return do_diff_summarize(&diff_params, summarize_func, summarize_baton,
                            ctx, pool);
-}
-
-
-svn_error_t *
-svn_client_diff_summarize_peg(const char *path,
-                              const svn_opt_revision_t *peg_revision,
-                              const svn_opt_revision_t *start_revision,
-                              const svn_opt_revision_t *end_revision,
-                              svn_boolean_t recurse,
-                              svn_boolean_t ignore_ancestry,
-                              svn_client_diff_summarize_func_t summarize_func,
-                              void *summarize_baton,
-                              svn_client_ctx_t *ctx,
-                              apr_pool_t *pool)
-{
-  return svn_client_diff_summarize_peg2(path, peg_revision,
-                                        start_revision, end_revision,
-                                        SVN_DEPTH_INFINITY_OR_FILES(recurse),
-                                        ignore_ancestry, NULL,
-                                        summarize_func, summarize_baton,
-                                        ctx, pool);
 }
 
 svn_client_diff_summarize_t *

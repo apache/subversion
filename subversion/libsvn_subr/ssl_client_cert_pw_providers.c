@@ -3,7 +3,7 @@
  * SVN_AUTH_CRED_SSL_CLIENT_CERT_PW
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -60,12 +60,13 @@ typedef struct
 
 /* This implements the svn_auth__password_get_t interface.
    Set **PASSPHRASE to the plaintext passphrase retrieved from CREDS;
-   ignore other parameters. */  
+   ignore other parameters. */
 static svn_boolean_t
 simple_passphrase_get(const char **passphrase,
                       apr_hash_t *creds,
                       const char *realmstring,
                       const char *username,
+                      apr_hash_t *parameters,
                       svn_boolean_t non_interactive,
                       apr_pool_t *pool)
 {
@@ -80,12 +81,13 @@ simple_passphrase_get(const char **passphrase,
 }
 
 /* This implements the svn_auth__password_set_t interface.
-   Store PASSPHRASE in CREDS; ignore other parameters. */ 
+   Store PASSPHRASE in CREDS; ignore other parameters. */
 static svn_boolean_t
 simple_passphrase_set(apr_hash_t *creds,
                       const char *realmstring,
                       const char *username,
                       const char *passphrase,
+                      apr_hash_t *parameters,
                       svn_boolean_t non_interactive,
                       apr_pool_t *pool)
 {
@@ -134,7 +136,7 @@ svn_auth__ssl_client_cert_pw_file_first_creds_helper
       if (! err && creds_hash)
         {
           if (!passphrase_get(&password, creds_hash, realmstring,
-                              NULL, non_interactive, pool))
+                              NULL, parameters, non_interactive, pool))
             password = NULL;
         }
     }
@@ -179,7 +181,7 @@ svn_auth__ssl_client_cert_pw_file_save_creds_helper
   svn_boolean_t non_interactive = apr_hash_get(parameters,
                                                SVN_AUTH_PARAM_NON_INTERACTIVE,
                                                APR_HASH_KEY_STRING) != NULL;
-  ssl_client_cert_pw_file_provider_baton_t *b = 
+  ssl_client_cert_pw_file_provider_baton_t *b =
     (ssl_client_cert_pw_file_provider_baton_t *)provider_baton;
 
   svn_boolean_t no_auth_cache =
@@ -243,6 +245,8 @@ svn_auth__ssl_client_cert_pw_file_save_creds_helper
                     }
                   else
                     {
+                      apr_pool_t *cached_answer_pool;
+
                       /* Nothing cached for this realm, prompt the user. */
                       SVN_ERR((*b->plaintext_passphrase_prompt_func)
                                (&may_save_passphrase,
@@ -253,33 +257,15 @@ svn_auth__ssl_client_cert_pw_file_save_creds_helper
                       /* Cache the user's answer in case we're called again
                        * for the same realm.
                        *
-                       * XXX: Hopefully, our caller has passed us
-                       * a pool that survives across RA sessions!
-                       * We use that pool to cache user answers, and
-                       * we may be called again for the same realm when the
-                       * current RA session is reparented, or when a different
-                       * RA session using the same realm is opened.
-                       * If the pool does not survive until then, caching
-                       * won't work, and for some reason the call to
-                       * apr_hash_set() below may even end up crashing in
-                       * apr_palloc().
-                       *
-                       * ### TODO(2489): this comment is duplicated from
-                       * simple_providers.c, and refers to a kluge that
-                       * is discussed in more detail here:
-                       *
-                       *   http://subversion.tigris.org/servlets/ReadMsg?\
-                       *   listName=dev&msgNo=137872
-                       *
-                       * Today (14 July 2008) in IRC, stsp and some
-                       * others appear to have decided that the original
-                       * kluge is too fragile, and that a more robust
-                       * solution (but one involving API revs) is
-                       * needed.  danielsh filed issue #3236 about
-                       * this, so this comment should be redone; same
-                       * goes for the comment in simple_providers.c.
+                       * We allocate the answer cache in the hash table's pool
+                       * to make sure that is has the same life time as the
+                       * hash table itself. This means that the answer will
+                       * survive across RA sessions -- which is important,
+                       * because otherwise we'd prompt users once per RA session.
                        */
-                      cached_answer = apr_palloc(pool, sizeof(*cached_answer));
+                      cached_answer_pool = apr_hash_pool_get(b->plaintext_answers);
+                      cached_answer = apr_palloc(cached_answer_pool,
+                                                 sizeof(*cached_answer));
                       *cached_answer = may_save_passphrase;
                       apr_hash_set(b->plaintext_answers, realmstring,
                                    APR_HASH_KEY_STRING, cached_answer);
@@ -313,7 +299,7 @@ svn_auth__ssl_client_cert_pw_file_save_creds_helper
       if (may_save_passphrase)
         {
           *saved = passphrase_set(creds_hash, realmstring,
-                                  NULL, creds->password,
+                                  NULL, creds->password, parameters,
                                   non_interactive, pool);
 
           if (*saved && passtype)

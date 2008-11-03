@@ -1,4 +1,4 @@
-import unittest, os, setup_path
+import unittest, os, setup_path, sys
 
 from svn import core
 
@@ -88,6 +88,34 @@ class SubversionAuthTestCase(unittest.TestCase):
     creds = core.svn_auth_first_credentials(
                 core.SVN_AUTH_CRED_SSL_SERVER_TRUST, "somerealm", baton)
     self.assert_(creds is not None)
+
+  def test_conditional_auth_provider_support(self):
+    fail_msg = "Should not be able to obtain a %s auth provider."
+    try:
+      provider = core.svn_auth_get_keychain_simple_provider()
+      self.failUnless(sys.platform == "darwin", fail_msg % "Keychain")
+    except RuntimeError:
+      pass
+
+    try:
+      provider = core.svn_auth_get_windows_simple_provider()
+      self.failUnless(sys.platform == "win32", fail_msg % "Windows")
+    except RuntimeError:
+      pass
+
+    try:
+      provider = core.svn_auth_get_gnome_keyring_simple_provider()
+      self.failUnless(sys.platform not in ("win32", "darwin"),
+                      fail_msg % "Gnome Keyring")
+    except RuntimeError:
+      pass
+
+    try:
+      provider = core.svn_auth_get_kwallet_simple_provider()
+      self.failUnless(sys.platform not in ("win32", "darwin"),
+                      fail_msg % "Kwallet")
+    except RuntimeError:
+      pass
 
 def suite():
     return unittest.makeSuite(SubversionAuthTestCase, 'test')

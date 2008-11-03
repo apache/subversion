@@ -111,7 +111,7 @@ dnl Find Apache with a recent-enough magic module number
 SVN_FIND_APACHE(20020903)
 
 dnl Search for SQLite
-SQLITE_ALLOWED_PATTERN="(3\.5|3\.6)($|\..*)"
+SQLITE_ALLOWED_PATTERN="(3\.4|3\.5|3\.6)($|\..*)"
 SQLITE_RECOMMENDED_VER="3.5.9"
 SQLITE_URL="http://www.sqlite.org/sqlite-${SQLITE_RECOMMENDED_VER}.tar.gz"
 SVN_LIB_SQLITE(${SQLITE_ALLOWED_PATTERN}, ${SQLITE_RECOMMENDED_VER},
@@ -331,6 +331,42 @@ dnl pkg-config (required for support for KWallet and GNOME Keyring) ------------
 AC_CHECK_PROG(HAVE_PKG_CONFIG, pkg-config, yes)
 
 
+dnl D-Bus (required for support for KWallet and GNOME Keyring) -------------------
+
+if test "$HAVE_PKG_CONFIG" = "yes"; then
+  AC_MSG_CHECKING([for D-Bus .pc file])
+  if pkg-config --exists dbus-1; then
+    AC_MSG_RESULT([yes])
+    old_CPPFLAGS="$CPPFLAGS"
+    old_LIBS="$LIBS"
+    DBUS_CPPFLAGS="`pkg-config --cflags dbus-1`"
+    AC_MSG_CHECKING([D-Bus version])
+    DBUS_VERSION="`pkg-config --modversion dbus-1`"
+    AC_MSG_RESULT([$DBUS_VERSION])
+    # D-Bus 0.* requires DBUS_API_SUBJECT_TO_CHANGE
+    if test -n ["`echo "$DBUS_VERSION" | $GREP '^0\.[[:digit:]]\+'`"]; then
+      DBUS_CPPFLAGS="$DBUS_CPPFLAGS -DDBUS_API_SUBJECT_TO_CHANGE"
+    fi
+    DBUS_LIBS="`pkg-config --libs dbus-1`"
+    CPPFLAGS="$CPPFLAGS $DBUS_CPPFLAGS"
+    LIBS="$LIBS $DBUS_LIBS"
+    AC_MSG_CHECKING([for D-Bus])
+    AC_LINK_IFELSE([
+#include <dbus/dbus.h>
+int main()
+{dbus_bus_get(DBUS_BUS_SESSION, NULL);}], HAVE_DBUS="yes", HAVE_DBUS="no")
+    if test "$HAVE_DBUS" = "yes"; then
+      AC_MSG_RESULT([yes])
+    else
+      AC_MSG_RESULT([no])
+    fi
+    CPPFLAGS="$old_CPPFLAGS"
+    LIBS="$old_LIBS"
+  else
+    AC_MSG_RESULT([no])
+  fi
+fi
+
 dnl GNOME Keyring -------------------
 
 AC_ARG_WITH(gnome_keyring,
@@ -345,34 +381,31 @@ if test "$with_gnome_keyring" != "no"; then
   if test "$enable_shared" = "yes"; then
     if test "$APR_HAS_DSO" = "yes"; then
       if test "$HAVE_PKG_CONFIG" = "yes"; then
-        AC_MSG_CHECKING([for GLib, D-Bus and GNOME Keyring .pc files])
-        if pkg-config --exists glib-2.0 dbus-1 gnome-keyring-1; then
-          AC_MSG_RESULT([yes])
-          AC_MSG_CHECKING([D-Bus version])
-          DBUS_VERSION="`pkg-config --modversion dbus-1`"
-          AC_MSG_RESULT([$DBUS_VERSION])
-          # D-Bus 0.* requires DBUS_API_SUBJECT_TO_CHANGE
-          if test -n ["`echo "$DBUS_VERSION" | $GREP '^0\.[[:digit:]]\+'`"]; then
-            CPPFLAGS="$CPPFLAGS -DDBUS_API_SUBJECT_TO_CHANGE"
-          fi
-          old_CPPFLAGS="$CPPFLAGS"
-          SVN_GNOME_KEYRING_INCLUDES="`pkg-config --cflags glib-2.0 dbus-1 gnome-keyring-1`"
-          CPPFLAGS="$CPPFLAGS $SVN_GNOME_KEYRING_INCLUDES"
-          AC_CHECK_HEADER(gnome-keyring.h, with_gnome_keyring=yes, with_gnome_keyring=no)
-          AC_MSG_CHECKING([for GNOME Keyring])
-          if test "$with_gnome_keyring" = "yes"; then
+        if test "$HAVE_DBUS" = "yes"; then
+          AC_MSG_CHECKING([for GLib and GNOME Keyring .pc files])
+          if pkg-config --exists glib-2.0 gnome-keyring-1; then
             AC_MSG_RESULT([yes])
-            AC_DEFINE([SVN_HAVE_GNOME_KEYRING], [1], 
-                      [Is GNOME Keyring support enabled?])
-            CPPFLAGS="$old_CPPFLAGS"
-            SVN_GNOME_KEYRING_LIBS="`pkg-config --libs glib-2.0 dbus-1 gnome-keyring-1`"
+            old_CPPFLAGS="$CPPFLAGS"
+            SVN_GNOME_KEYRING_INCLUDES="$DBUS_CPPFLAGS `pkg-config --cflags glib-2.0 gnome-keyring-1`"
+            CPPFLAGS="$CPPFLAGS $SVN_GNOME_KEYRING_INCLUDES"
+            AC_CHECK_HEADER(gnome-keyring.h, with_gnome_keyring=yes, with_gnome_keyring=no)
+            AC_MSG_CHECKING([for GNOME Keyring])
+            if test "$with_gnome_keyring" = "yes"; then
+              AC_MSG_RESULT([yes])
+              AC_DEFINE([SVN_HAVE_GNOME_KEYRING], [1], 
+                        [Is GNOME Keyring support enabled?])
+              CPPFLAGS="$old_CPPFLAGS"
+              SVN_GNOME_KEYRING_LIBS="$DBUS_LIBS `pkg-config --libs glib-2.0 gnome-keyring-1`"
+            else
+              AC_MSG_RESULT([no])
+              AC_MSG_ERROR([cannot find GNOME Keyring])
+            fi
           else
             AC_MSG_RESULT([no])
-            AC_MSG_ERROR([cannot find GNOME Keyring])
+            AC_MSG_ERROR([cannot find GLib and GNOME Keyring .pc files])
           fi
         else
-          AC_MSG_RESULT([no])
-          AC_MSG_ERROR([cannot find GLib, D-Bus and GNOME Keyring .pc files])
+          AC_MSG_ERROR([cannot find D-Bus])
         fi
       else
         AC_MSG_ERROR([cannot find pkg-config])
@@ -419,6 +452,7 @@ fi
 
 AH_BOTTOM(
 #define N_(x) x
+#define U_(x) x
 #ifdef ENABLE_NLS
 #include <locale.h>
 #include <libintl.h>
@@ -470,68 +504,72 @@ if test "$with_kwallet" != "no"; then
     if test "$APR_HAS_DSO" = "yes"; then
       if test "$USE_NLS" = "yes"; then
         if test "$HAVE_PKG_CONFIG" = "yes"; then
-          AC_MSG_CHECKING([for QtCore, QtDBus, QtGui])
-          if pkg-config --exists QtCore QtDBus QtGui; then
-            AC_MSG_RESULT([yes])
-            if test "$with_kwallet" != "yes"; then
-              AC_MSG_CHECKING([for kde4-config])
-              kde4_config="$with_kwallet/bin/kde4-config"
-              if test -f "$kde4_config" && test -x "$kde4_config"; then
-                HAVE_KDE4_CONFIG="yes"
-                AC_MSG_RESULT([yes])
+          if test "$HAVE_DBUS" = "yes"; then
+            AC_MSG_CHECKING([for QtCore, QtDBus, QtGui])
+            if pkg-config --exists QtCore QtDBus QtGui; then
+              AC_MSG_RESULT([yes])
+              if test "$with_kwallet" != "yes"; then
+                AC_MSG_CHECKING([for kde4-config])
+                kde4_config="$with_kwallet/bin/kde4-config"
+                if test -f "$kde4_config" && test -x "$kde4_config"; then
+                  HAVE_KDE4_CONFIG="yes"
+                  AC_MSG_RESULT([yes])
+                else
+                  AC_MSG_RESULT([no])
+                fi
               else
-                AC_MSG_RESULT([no])
+                AC_CHECK_PROG(HAVE_KDE4_CONFIG, kde4-config, yes)
+                kde4_config="kde4-config"
               fi
-            else
-              AC_CHECK_PROG(HAVE_KDE4_CONFIG, kde4-config, yes)
-              kde4_config="kde4-config"
-            fi
-            if test "$HAVE_KDE4_CONFIG" = "yes"; then
-              AC_MSG_CHECKING([for KWallet])
-              old_CXXFLAGS="$CXXFLAGS"
-              old_LDFLAGS="$LDFLAGS"
-              old_LIBS="$LIBS"
-              for d in [`pkg-config --cflags QtCore QtDBus QtGui | $GREP -o -- -D[^[:space:]]*`]; do
-                CPPFLAGS="$CPPFLAGS $d"
-              done
-              qt_include_dirs=""
-              for i in [`pkg-config --cflags QtCore QtDBus QtGui | $GREP -o -- -I[^[:space:]]*`]; do
-                qt_include_dirs="$qt_include_dirs $i"
-              done
-              qt_include_dirs="${qt_include_dirs## }"
-              kde_dir="`$kde4_config --prefix`"
-              SVN_KWALLET_INCLUDES="$qt_include_dirs -I$kde_dir/include"
-              SVN_KWALLET_LIBS="-lQtCore -lQtDBus -lQtGui -lkdecore -lkdeui"
-              CXXFLAGS="$CXXFLAGS $SVN_KWALLET_INCLUDES"
-              LIBS="$LIBS $SVN_KWALLET_LIBS"
-              qt_lib_dirs=""
-              for l in [`pkg-config --libs QtCore QtDBus QtGui | $GREP -o -- -L[^[:space:]]*`]; do
-                qt_lib_dirs="$qt_lib_dirs $l"
-              done
-              qt_lib_dirs="${qt_lib_dirs## }"
-              LDFLAGS="$old_LDFLAGS $qt_lib_dirs -L$kde_dir/lib`$kde4_config --libsuffix`"
-              AC_LANG(C++)
-              AC_LINK_IFELSE([
+              if test "$HAVE_KDE4_CONFIG" = "yes"; then
+                AC_MSG_CHECKING([for KWallet])
+                old_CXXFLAGS="$CXXFLAGS"
+                old_LDFLAGS="$LDFLAGS"
+                old_LIBS="$LIBS"
+                for d in [`pkg-config --cflags QtCore QtDBus QtGui | $GREP -o -- -D[^[:space:]]*`]; do
+                  CPPFLAGS="$CPPFLAGS $d"
+                done
+                qt_include_dirs=""
+                for i in [`pkg-config --cflags QtCore QtDBus QtGui | $GREP -o -- -I[^[:space:]]*`]; do
+                  qt_include_dirs="$qt_include_dirs $i"
+                done
+                qt_include_dirs="${qt_include_dirs## }"
+                kde_dir="`$kde4_config --prefix`"
+                SVN_KWALLET_INCLUDES="$DBUS_CPPFLAGS $qt_include_dirs -I$kde_dir/include"
+                SVN_KWALLET_LIBS="$DBUS_LIBS -lQtCore -lQtDBus -lQtGui -lkdecore -lkdeui"
+                CXXFLAGS="$CXXFLAGS $SVN_KWALLET_INCLUDES"
+                LIBS="$LIBS $SVN_KWALLET_LIBS"
+                qt_lib_dirs=""
+                for l in [`pkg-config --libs QtCore QtDBus QtGui | $GREP -o -- -L[^[:space:]]*`]; do
+                  qt_lib_dirs="$qt_lib_dirs $l"
+                done
+                qt_lib_dirs="${qt_lib_dirs## }"
+                LDFLAGS="$old_LDFLAGS $qt_lib_dirs -L$kde_dir/lib`$kde4_config --libsuffix`"
+                AC_LANG(C++)
+                AC_LINK_IFELSE([
 #include <kwallet.h>
 int main()
 {KWallet::Wallet::walletList();}], with_kwallet="yes", with_kwallet="no")
-              AC_LANG(C)
-              if test "$with_kwallet" = "yes"; then
-                AC_DEFINE([SVN_HAVE_KWALLET], [1],
-                          [Is KWallet support enabled?])
-                AC_MSG_RESULT([yes])
-                CXXFLAGS="$old_CXXFLAGS"
-                LIBS="$old_LIBS"
+                AC_LANG(C)
+                if test "$with_kwallet" = "yes"; then
+                  AC_DEFINE([SVN_HAVE_KWALLET], [1],
+                            [Is KWallet support enabled?])
+                  AC_MSG_RESULT([yes])
+                  CXXFLAGS="$old_CXXFLAGS"
+                  LIBS="$old_LIBS"
+                else
+                  AC_MSG_RESULT([no])
+                  AC_MSG_ERROR([cannot find KWallet])
+                fi
               else
-                AC_MSG_RESULT([no])
-                AC_MSG_ERROR([cannot find KWallet])
+                AC_MSG_ERROR([cannot find kde4-config])
               fi
             else
-              AC_MSG_ERROR([cannot find kde4-config])
+              AC_MSG_RESULT([no])
+              AC_MSG_ERROR([cannot find QtCore, QtDBus, QtGui])
             fi
           else
-            AC_MSG_RESULT([no])
-            AC_MSG_ERROR([cannot find QtCore, QtDBus, QtGui])
+            AC_MSG_ERROR([cannot find D-Bus])
           fi
         else
           AC_MSG_ERROR([cannot find pkg-config])

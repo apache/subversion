@@ -46,8 +46,8 @@ extern "C" {
    but that's a risk we'll live with for now. */
 #define MAX_KEY_SIZE 200
 
-/* In the `representations' and `strings', the value at this key is
-   the key to use when storing a new rep or string. */
+/* In many of the databases, the value at this key is the key to use
+   when storing a new record. */
 #define NEXT_KEY_KEY "next-key"
 
 

@@ -262,7 +262,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
     {
       /* Don't rely on the error handling to handle the sleep later, do
          it now */
-      svn_sleep_for_timestamps();
+      svn_io_sleep_for_timestamps(path, pool);
       return err;
     }
   *use_sleep = TRUE;
@@ -280,9 +280,9 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                                          use_sleep, ctx, pool));
 
   if (sleep_here)
-    svn_sleep_for_timestamps();
+    svn_io_sleep_for_timestamps(path, pool);
 
-  SVN_ERR(svn_wc_adm_close(adm_access));
+  SVN_ERR(svn_wc_adm_close2(adm_access, pool));
 
   /* Let everyone know we're finished here. */
   if (ctx->notify_func2)
@@ -318,6 +318,7 @@ svn_client_update3(apr_array_header_t **result_revs,
   int i;
   svn_error_t *err = SVN_NO_ERROR;
   apr_pool_t *subpool = svn_pool_create(pool);
+  const char *path = NULL;
 
   if (result_revs)
     *result_revs = apr_array_make(pool, paths->nelts, sizeof(svn_revnum_t));
@@ -326,7 +327,7 @@ svn_client_update3(apr_array_header_t **result_revs,
     {
       svn_boolean_t sleep;
       svn_revnum_t result_rev;
-      const char *path = APR_ARRAY_IDX(paths, i, const char *);
+      path = APR_ARRAY_IDX(paths, i, const char *);
 
       svn_pool_clear(subpool);
 
@@ -358,7 +359,7 @@ svn_client_update3(apr_array_header_t **result_revs,
     }
 
   svn_pool_destroy(subpool);
-  svn_sleep_for_timestamps();
+  svn_io_sleep_for_timestamps((paths->nelts == 1) ? path : NULL, pool);
 
   return err;
 }

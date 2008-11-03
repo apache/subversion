@@ -24,19 +24,33 @@ http://svn.collab.net/repos/svn/tags/1.6.0
  * Bindings
 
 
+Version 1.5.4
+(24 Oct 2008, from /branches/1.5.x)
+http://svn.collab.net/repos/svn/tags/1.5.4
+
+ User-visible changes:
+  * Properly handle explicit mergeinfo added in merge source (r32968, -75)
+  * fixed: merging of paths containing spaces (r33641, -44)
+  * fixed: regression in mergeinfo-aware merges against 1.5.3 (r33693, -704)
+
+
 Version 1.5.3
-(?? ??? 2008, from /branches/1.5.x)
-http://svn.collab.net/repos/svn/tags/1.5.2
+(10 Oct 2008, from /branches/1.5.x)
+http://svn.collab.net/repos/svn/tags/1.5.3
 
  User-visible changes:
   * Allow switch to continue after deleting locally modified dirs (issue #2505)
   * Update bash_completion to be compatible with 1.5 (r32900, -11, -12)
   * Improve 'svn merge' execution time by 30% on Windows (r33447)
   * Reuse network sessions during 'svn merge', improving performance (r33476)
+  * Improve temp file creation time on Windows (r33464)
+  * Greatly improve merge performance (r29969, r32463, r33013, -016, -022, -112)
+  * Improve file IO performance on Windows (r33178, -85)
   * fixed: merging files with spaces in name (r33109, -121, -369)
   * fixed: incorrect relative externals expansion (r33109, -121, -369)
   * fixed: 'svn mv' hangs and consumes infinite memory (r33201, -12)
   * fixed: correctness regression in 'svn log -g' (issue #3285)
+  * fixed: current early bailout of 'svn log -g' (r32977)
 
  Developer-visible changes:
   * Allow the tests to run as non-administrator on Windows Vista (r31203)

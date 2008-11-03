@@ -811,7 +811,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  With -u, add working revision and server out-of-date information.\n"
      "  With -v, print full revision information on every item.\n"
      "\n"
-     "  The first six columns in the output are each one character wide:\n"
+     "  The first seven columns in the output are each one character wide:\n"
      "    First column: Says if item was added, deleted, or otherwise changed\n"
      "      ' ' no modifications\n"
      "      'A' Added\n"
@@ -848,8 +848,11 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "      'O' locked in repository, lock token in some Other working copy\n"
      "      'T' locked in repository, lock token present but sTolen\n"
      "      'B' not locked in repository, lock token present but Broken\n"
+     "    Seventh column: Whether the item is the victim of a tree conflict\n"
+     "      ' ' normal\n"
+     "      'C' tree-Conflicted\n"
      "\n"
-     "  The out-of-date information appears in the eighth column (with -u):\n"
+     "  The out-of-date information appears in the ninth column (with -u):\n"
      "      '*' a newer revision exists on the server\n"
      "      ' ' the working copy is up to date\n"
      "\n"
@@ -1940,7 +1943,7 @@ main(int argc, const char *argv[])
 #endif
 
   /* Set up Authentication stuff. */
-  if ((err = svn_cmdline_set_up_auth_baton(&ab,
+  if ((err = svn_cmdline_create_auth_baton(&ab,
                                            opt_state.non_interactive,
                                            opt_state.auth_username,
                                            opt_state.auth_password,

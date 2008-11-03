@@ -31,6 +31,7 @@
 #include "svn_delta.h"
 #include "svn_io.h"
 #include "svn_mergeinfo.h"
+#include "svn_checksum.h"
 
 
 #ifdef __cplusplus
@@ -86,6 +87,13 @@ typedef struct svn_fs_t svn_fs_t;
  * @since New in 1.5.
  */
 #define SVN_FS_CONFIG_PRE_1_5_COMPATIBLE        "pre-1.5-compatible"
+
+/** Create repository format compatible with Subversion versions
+ * earlier than 1.6.
+ *
+ * @since New in 1.6.
+ */
+#define SVN_FS_CONFIG_PRE_1_6_COMPATIBLE        "pre-1.6-compatible"
 /** @} */
 
 
@@ -1739,12 +1747,13 @@ svn_fs_youngest_rev(svn_revnum_t *youngest_p,
                     apr_pool_t *pool);
 
 
-/** Deltify predecessors of paths modified in @a revision in
- * filesystem @a fs.  Use @a pool for all allocations.
+/** Provide filesystem @a fs the opportunity to compress storage relating to
+ * associated with  @a revision in filesystem @a fs.  Use @a pool for all
+ * allocations.
  *
  * @note This can be a time-consuming process, depending the breadth
  * of the changes made in @a revision, and the depth of the history of
- * those changed paths.
+ * those changed paths.  This may also be a no op.
  */
 svn_error_t *
 svn_fs_deltify_revision(svn_fs_t *fs,

@@ -458,17 +458,17 @@ svn_error_t *svn_fs_base__dag_file_length(svn_filesize_t *length,
                                           trail_t *trail,
                                           apr_pool_t *pool);
 
-/* Put the recorded checksum of FILE into CHECKSUM, as part of
- * TRAIL.
+/* Put the checksum of type CHECKSUM_KIND recorded for FILE into
+ * CHECKSUM, as part of TRAIL.
  *
- * If no stored checksum is available, do not calculate the checksum,
- * just put NULL into CHECKSUM.
+ * If no stored checksum of the requested kind is available, do not
+ * calculate the checksum, just put NULL into CHECKSUM.
  */
-svn_error_t *
-svn_fs_base__dag_file_checksum(svn_checksum_t **checksum,
-                               dag_node_t *file,
-                               trail_t *trail,
-                               apr_pool_t *pool);
+svn_error_t *svn_fs_base__dag_file_checksum(svn_checksum_t **checksum,
+                                            svn_checksum_kind_t checksum_kind,
+                                            dag_node_t *file,
+                                            trail_t *trail,
+                                            apr_pool_t *pool);
 
 /* Create a new mutable file named NAME in PARENT, as part of TRAIL.
    Set *CHILD_P to a reference to the new node, allocated in
@@ -519,6 +519,10 @@ svn_error_t *svn_fs_base__dag_copy(dag_node_t *to_node,
    return success.  If PROPS_ONLY is non-zero, only the node property
    portion of TARGET will be deltified.
 
+   If TXN_ID is non-NULL, it is the transaction ID in which TARGET's
+   representation(s) must have been created (otherwise deltification
+   is silently not attempted).
+
    WARNING WARNING WARNING: Do *NOT* call this with a mutable SOURCE
    node.  Things will go *very* sour if you deltify TARGET against a
    node that might just disappear from the filesystem in the (near)
@@ -526,8 +530,16 @@ svn_error_t *svn_fs_base__dag_copy(dag_node_t *to_node,
 svn_error_t *svn_fs_base__dag_deltify(dag_node_t *target,
                                       dag_node_t *source,
                                       svn_boolean_t props_only,
+                                      const char *txn_id,
                                       trail_t *trail,
                                       apr_pool_t *pool);
+
+
+/* Index NODE's backing data representations by their checksum.  Do
+   this as part of TRAIL.  Use POOL for allocations. */
+svn_error_t *svn_fs_base__dag_index_checksums(dag_node_t *node,
+                                              trail_t *trail,
+                                              apr_pool_t *pool);
 
 
 /* Comparison */

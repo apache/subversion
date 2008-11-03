@@ -123,10 +123,8 @@ char *
 svn_path_basename(const char *path, apr_pool_t *pool);
 
 /** Get the dirname of the specified canonicalized @a path, defined as
- * the path with its basename removed.
- *
- * Get the dirname of the specified @a path, defined as the path with its
- * basename removed.  If @a path is root ("/"), it is returned unchanged.
+ * the path with its basename removed.  If @a path is root ("/"), it is
+ * returned unchanged.
  *
  * The returned dirname will be allocated in @a pool.
  */
@@ -234,12 +232,8 @@ svn_dirent_is_root(const char *dirent, apr_size_t len);
 const char *
 svn_path_canonicalize(const char *path, apr_pool_t *pool);
 
-/** Return @c TRUE iff path is canonical.  Use @a pool for temporary
+/** Return @c TRUE iff path is canonical. Use @a pool for temporary
  * allocations.
- *
- * @note The test for canonicalization is currently defined as
- * "looks exactly the same as @c svn_path_canonicalize() would make
- * it look".
  *
  * @since New in 1.5.
  */
@@ -519,7 +513,7 @@ svn_path_uri_decode(const char *path, apr_pool_t *pool);
  *       <tt>svn_path_join(url, component, pool)</tt> instead.
  *
  * @note gstein suggests this for when @a component begins with '/':
- * 
+ *
  *       "replace the path entirely
  *        https://example.com:4444/base/path joined with /leading/slash,
  *        should return: https://example.com:4444/leading/slash

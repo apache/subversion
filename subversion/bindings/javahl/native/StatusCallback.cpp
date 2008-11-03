@@ -46,19 +46,22 @@ StatusCallback::~StatusCallback()
   // in parameter to the Java SVNClient.status method.
 }
 
-void
+svn_error_t *
 StatusCallback::callback(void *baton,
                          const char *path,
-                         svn_wc_status2_t *status)
+                         svn_wc_status2_t *status,
+                         apr_pool_t *pool)
 {
   if (baton)
-    ((StatusCallback *)baton)->doStatus(path, status);
+    return ((StatusCallback *)baton)->doStatus(path, status);
+
+  return SVN_NO_ERROR;
 }
 
 /**
  * Callback called for a single status item.
  */
-void
+svn_error_t *
 StatusCallback::doStatus(const char *path, svn_wc_status2_t *status)
 {
   JNIEnv *env = JNIUtil::getEnv();
@@ -70,29 +73,30 @@ StatusCallback::doStatus(const char *path, svn_wc_status2_t *status)
     {
       jclass clazz = env->FindClass(JAVA_PACKAGE"/StatusCallback");
       if (JNIUtil::isJavaExceptionThrown())
-        return;
+        return SVN_NO_ERROR;
 
       mid = env->GetMethodID(clazz, "doStatus",
                              "(L"JAVA_PACKAGE"/Status;)V");
       if (JNIUtil::isJavaExceptionThrown() || mid == 0)
-        return;
+        return SVN_NO_ERROR;
 
       env->DeleteLocalRef(clazz);
       if (JNIUtil::isJavaExceptionThrown())
-        return;
+        return SVN_NO_ERROR;
     }
 
   jobject jStatus = createJavaStatus(path, status);
   if (JNIUtil::isJavaExceptionThrown())
-    return;
+    return SVN_NO_ERROR;
 
   env->CallVoidMethod(m_callback, mid, jStatus);
   if (JNIUtil::isJavaExceptionThrown())
-    return;
+    return SVN_NO_ERROR;
 
   env->DeleteLocalRef(jStatus);
   // We return here regardless of whether an exception is thrown or not,
   // so we do not need to explicitly check for one.
+  return SVN_NO_ERROR;
 }
 
 jobject
@@ -109,7 +113,7 @@ StatusCallback::createJavaStatus(const char *path,
     {
       mid = env->GetMethodID(clazz, "<init>",
                              "(Ljava/lang/String;Ljava/lang/String;"
-                             "IJJJLjava/lang/String;IIIIZZ"
+                             "IJJJLjava/lang/String;IIIIZZZ"
                              "Ljava/lang/String;Ljava/lang/String;"
                              "Ljava/lang/String;Ljava/lang/String;"
                              "JZLjava/lang/String;Ljava/lang/String;"
@@ -137,6 +141,7 @@ StatusCallback::createJavaStatus(const char *path,
   jboolean jIsLocked = JNI_FALSE;
   jboolean jIsCopied = JNI_FALSE;
   jboolean jIsSwitched = JNI_FALSE;
+  jboolean jIsTreeConflicted = JNI_FALSE;
   jstring jConflictOld = NULL;
   jstring jConflictNew = NULL;
   jstring jConflictWorking = NULL;
@@ -165,6 +170,7 @@ StatusCallback::createJavaStatus(const char *path,
       jIsCopied = (status->copied == 1) ? JNI_TRUE: JNI_FALSE;
       jIsLocked = (status->locked == 1) ? JNI_TRUE: JNI_FALSE;
       jIsSwitched = (status->switched == 1) ? JNI_TRUE: JNI_FALSE;
+      jIsTreeConflicted = (status->tree_conflicted == 1) ? JNI_TRUE: JNI_FALSE;
       jLock = SVNClient::createJavaLock(status->repos_lock);
       if (JNIUtil::isJavaExceptionThrown())
         return NULL;
@@ -232,8 +238,8 @@ StatusCallback::createJavaStatus(const char *path,
                                jLastChangedRevision, jLastChangedDate,
                                jLastCommitAuthor, jTextType, jPropType,
                                jRepositoryTextType, jRepositoryPropType,
-                               jIsLocked, jIsCopied, jConflictOld,
-                               jConflictNew, jConflictWorking,
+                               jIsLocked, jIsCopied, jIsTreeConflicted,
+                               jConflictOld, jConflictNew, jConflictWorking,
                                jURLCopiedFrom, jRevisionCopiedFrom,
                                jIsSwitched, jLockToken, jLockOwner,
                                jLockComment, jLockCreationDate, jLock,
