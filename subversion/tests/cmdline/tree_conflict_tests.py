@@ -607,62 +607,6 @@ def merge_dir_add_onto_not_none(sbox):
   test_tc_merge(sbox, d_adds, br_scen = d_adds)  ### + f_adds (at path "D")
   test_tc_merge(sbox, d_adds, wc_scen = d_adds)  ### + f_adds (at path "D")
 
-#----------------------------------------------------------------------
-
-# Tests for update/switch affecting a file, where the incoming change
-# is compatible with the scheduled change in the WC but the disk file
-# is obstructed (unexpectedly missing, unexpectedly present, or wrong
-# node type).
-
-def up_sw_file_mod_onto_obstr(sbox):
-  "up/sw file: modify onto obstructed"
-  # Incoming: f_mods
-  # WC sched: text-sched:normal, possibly with prop-mods
-  # WC state: {missing, is-directory}
-  raise svntest.Skip  ###
-
-def up_sw_file_del_onto_obstr(sbox):
-  "up/sw file: del/rpl/mv onto obstructed"
-  # Incoming: f_dels + f_rpls
-  # WC sched: text-sched:normal, possibly with prop-mods
-  # WC state: {missing, is-directory}
-  raise svntest.Skip  ###
-
-def up_sw_file_add_onto_obstr(sbox):
-  "up/sw file: add onto obstructed"
-  # Incoming: f_adds
-  # WC sched: unversioned
-  # WC state: {is-file, is-directory}
-  raise svntest.Skip  ###
-
-#----------------------------------------------------------------------
-
-# Tests for update/switch affecting a dir, where the incoming change
-# is compatible with the scheduled change in the WC but the disk dir
-# is obstructed (unexpectedly missing, unexpectedly present, or wrong
-# node type).
-
-def up_sw_dir_mod_onto_obstr(sbox):
-  "up/sw dir: modify onto obstructed"
-  # Incoming: d_mods
-  # WC sched: (dir is known to its WC parent)
-  # WC state: {missing, is-file}
-  raise svntest.Skip  ###
-
-def up_sw_dir_del_onto_obstr(sbox):
-  "up/sw dir: del/rpl/mv onto obstructed"
-  # Incoming: d_dels + d_rpls
-  # WC sched: (dir is known to its WC parent)
-  # WC state: {missing, is-file}
-  raise svntest.Skip  ###
-
-def up_sw_dir_add_onto_obstr(sbox):
-  "up/sw dir: add onto obstructed"
-  # Incoming: d_adds
-  # WC sched: (dir is not known to its WC parent)
-  # WC state: {is-file, is-directory}
-  raise svntest.Skip  ###
-
 
 #######################################################################
 # Run the tests
@@ -686,12 +630,6 @@ test_list = [ None,
               XFail(merge_dir_del_onto_not_same),
               merge_dir_del_onto_not_dir,
               merge_dir_add_onto_not_none,
-              up_sw_file_mod_onto_obstr,
-              up_sw_file_del_onto_obstr,
-              up_sw_file_add_onto_obstr,
-              up_sw_dir_mod_onto_obstr,
-              up_sw_dir_del_onto_obstr,
-              up_sw_dir_add_onto_obstr,
              ]
 
 if __name__ == '__main__':
