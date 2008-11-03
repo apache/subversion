@@ -2111,26 +2111,6 @@ init_rangelist(svn_revnum_t start,
   return rangelist;
 }
 
-/* Helper for the numerous times we need to allocate a svn_merge_range_t
-   and push it onto a rangelist.
-
-   Push onto RANGELIST an svn_merge_range_t * element allocated in
-   POOL and defined by START, END, and INHERITABLE. */
-static void
-push_range(apr_array_header_t *rangelist,
-           svn_revnum_t start,
-           svn_revnum_t end,
-           svn_boolean_t inheritable,
-           apr_pool_t *pool)
-{
-  svn_merge_range_t *range = apr_pcalloc(pool, sizeof(*range));
-
-  range->start = start;
-  range->end = end;
-  range->inheritable = inheritable;
-  APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = range;
-}
-
 /* Helper for calculate_remaining_ranges() when that function is operating on
    CHILD, a subtree of the merge target.  Like calculate_remaining_ranges()
    this function should only be called when honoring mergeinfo.
