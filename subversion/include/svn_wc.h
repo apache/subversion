@@ -1585,8 +1585,8 @@ typedef struct svn_wc_diff_callbacks3_t
 } svn_wc_diff_callbacks3_t;
 
 /**
- * Similar to @c svn_wc_diff_callbacks3_t, but without dir_opened or
- * dir_closed functions.
+ * Similar to @c svn_wc_diff_callbacks3_t, but without the dir_opened()
+ * function, and without the 'tree_conflicted' argument to the functions.
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
