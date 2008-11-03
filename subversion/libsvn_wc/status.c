@@ -939,7 +939,7 @@ get_dir_status(struct edit_baton *eb,
       else
         {
           svn_wc_conflict_description_t *tree_conflict;
-          SVN_ERR(svn_wc_get_tree_conflict(&tree_conflict, 
+          SVN_ERR(svn_wc_get_tree_conflict(&tree_conflict,
                                            svn_path_join(path, entry, subpool),
                                            adm_access, subpool));
           if (tree_conflict)
@@ -1042,8 +1042,8 @@ get_dir_status(struct edit_baton *eb,
         SVN_ERR(collect_ignore_patterns(&patterns, ignore_patterns,
                                         adm_access, subpool));
 
-      SVN_ERR(send_unversioned_item(tree_basename, svn_node_none, FALSE, 
-                                    adm_access, patterns, eb->externals, 
+      SVN_ERR(send_unversioned_item(tree_basename, svn_node_none, FALSE,
+                                    adm_access, patterns, eb->externals,
                                     no_ignore, eb->repos_locks, eb->repos_root,
                                     status_func, status_baton, iterpool));
     }

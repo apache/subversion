@@ -1353,7 +1353,7 @@ main(int argc, const char *argv[])
 
   if (subcommand->cmd_func != subcommand_help)
     {
-      
+
       opt_state.prefixes = apr_array_make(pool, os->argc - os->ind,
                                           sizeof(const char *));
       for (i = os->ind ; i< os->argc; i++)
@@ -1389,7 +1389,7 @@ main(int argc, const char *argv[])
                                                       TRUE, pool),
                                     opt_state.prefixes);
         }
-      
+
       if (apr_is_empty_array(opt_state.prefixes))
         {
           svn_error_clear(svn_cmdline_fprintf

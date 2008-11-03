@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # USAGE: ./dist.sh -v VERSION -r REVISION -pr REPOS-PATH
-#                  [-alpha ALPHA_NUM|-beta BETA_NUM|-rc RC_NUM]
+#                  [-alpha ALPHA_NUM|-beta BETA_NUM|-rc RC_NUM|pre PRE_NUM]
 #                  [-apr PATH-TO-APR ] [-apru PATH-TO-APR-UTIL] 
 #                  [-apri PATH-TO-APR-ICONV] [-neon PATH-TO-NEON]
 #                  [-serf PATH-TO-SERF] [-zlib PATH-TO-ZLIB]
@@ -31,7 +31,7 @@
 #   When building alpha, beta or rc tarballs pass the appropriate flag
 #   followed by a number.  For example "-alpha 5", "-beta 3", "-rc 2".
 # 
-#   If neither an -alpha, -beta or -rc option is specified, a release
+#   If neither an -alpha, -beta, -pre or -rc option is specified, a release
 #   tarball will be built.
 #  
 #   To build a Windows zip file package, additionally pass -zip and the
@@ -39,7 +39,7 @@
 
 
 USAGE="USAGE: ./dist.sh -v VERSION -r REVISION -pr REPOS-PATH \
-[-alpha ALPHA_NUM|-beta BETA_NUM|-rc RC_NUM] \
+[-alpha ALPHA_NUM|-beta BETA_NUM|-rc RC_NUM|-pre PRE_NUM] \
 [-apr APR_PATH ] [-apru APR_UTIL_PATH] [-apri APR_ICONV_PATH] \
 [-neon NEON_PATH ] [-serf SERF_PATH] [-zlib ZLIB_PATH] [-zip] [-sign] \
 [-nodeps]
@@ -48,6 +48,7 @@ USAGE="USAGE: ./dist.sh -v VERSION -r REVISION -pr REPOS-PATH \
            ./dist.sh -v 0.36.0 -r 8282 -rs 8278 -pr tags/0.36.0
            ./dist.sh -v 0.36.0 -r 8282 -rs 8278 -pr tags/0.36.0 -alpha 1
            ./dist.sh -v 0.36.0 -r 8282 -rs 8278 -pr tags/0.36.0 -beta 1
+           ./dist.sh -v 0.36.0 -r 8282 -rs 8278 -pr tags/0.36.0 -pre 1
            ./dist.sh -v 0.36.0 -r 8282 -rs 8278 -pr tags/0.36.0 -nightly r8282"
 
 # Let's check and set all the arguments
@@ -62,6 +63,7 @@ do
         -pr)  REPOS_PATH="$ARG" ;;
      -alpha)  ALPHA="$ARG" ;;
       -beta)  BETA="$ARG" ;;
+       -pre)  PRE="$ARG" ;;
    -nightly)  NIGHTLY="$ARG" ;;
         -rc)  RC="$ARG" ;;
        -apr)  APR_PATH="$ARG" ;;
@@ -74,7 +76,7 @@ do
     ARG_PREV=""
   else
     case $ARG in
-      -v|-r|-rs|-pr|-alpha|-beta|-rc|-apr|-apru|-apri|-zlib|-neon|-serf|-nightly)
+      -v|-r|-rs|-pr|-alpha|-beta|-pre|-rc|-apr|-apru|-apri|-zlib|-neon|-serf|-nightly)
         ARG_PREV=$ARG
         ;;
       -zip) ZIP=1 ;;
@@ -88,10 +90,11 @@ do
   fi
 done
 
-if [ -n "$ALPHA" ] && [ -n "$BETA" ] && [ -n "$NIGHTLY" ] ||
-   [ -n "$ALPHA" ] && [ -n "$RC" ] && [ -n "$NIGHTLY" ] ||
-   [ -n "$BETA" ] && [ -n "$RC" ] && [ -n "$NIGHTLY" ] ||
-   [ -n "$ALPHA" ] && [ -n "$BETA" ] && [ -n "$RC" ]; then
+if [ -n "$ALPHA" ] && [ -n "$BETA" ] && [ -n "$NIGHTLY" ] && [ -n "$PRE" ] ||
+   [ -n "$ALPHA" ] && [ -n "$RC" ] && [ -n "$NIGHTLY" ] && [ -n "$PRE" ] ||
+   [ -n "$BETA" ] && [ -n "$RC" ] && [ -n "$NIGHTLY" ] && [ -n "$PRE" ] ||
+   [ -n "$ALPHA" ] && [ -n "$BETA" ] && [ -n "$RC" ] && [ -n "$PRE" ] ||
+   [ -n "$ALPHA" ] && [ -n "$BETA" ] && [ -n "$RC" ] && [ -n "$PRE" ]; then
   echo " $USAGE"
   exit 1
 elif [ -n "$ALPHA" ] ; then
@@ -106,6 +109,9 @@ elif [ -n "$RC" ] ; then
 elif [ -n "$NIGHTLY" ] ; then
   VER_TAG="Nightly Build ($NIGHTLY)"
   VER_NUMTAG="-nightly-$NIGHTLY"
+elif [ -n "$PRE" ] ; then
+  VER_TAG="Pre-release $PRE"
+  VER_NUMTAG="-pre$PRE"
 else
   VER_TAG="r$REVISION"
   VER_NUMTAG=""

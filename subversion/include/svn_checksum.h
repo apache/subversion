@@ -113,7 +113,7 @@ svn_checksum_to_cstring_display(const svn_checksum_t *checksum,
 
 /** Return the hex representation of @a checksum, allocating the
  * string in @a pool.  If @a checksum->digest is all zeros (that is,
- * 0, not '0'), then return NULL. 
+ * 0, not '0'), then return NULL.
  *
  * @since New in 1.6.
  */

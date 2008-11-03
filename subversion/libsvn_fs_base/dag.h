@@ -458,17 +458,17 @@ svn_error_t *svn_fs_base__dag_file_length(svn_filesize_t *length,
                                           trail_t *trail,
                                           apr_pool_t *pool);
 
-/* Put the recorded checksum of FILE into CHECKSUM, as part of
- * TRAIL.
+/* Put the checksum of type CHECKSUM_KIND recorded for FILE into
+ * CHECKSUM, as part of TRAIL.
  *
- * If no stored checksum is available, do not calculate the checksum,
- * just put NULL into CHECKSUM.
+ * If no stored checksum of the requested kind is available, do not
+ * calculate the checksum, just put NULL into CHECKSUM.
  */
-svn_error_t *
-svn_fs_base__dag_file_checksum(svn_checksum_t **checksum,
-                               dag_node_t *file,
-                               trail_t *trail,
-                               apr_pool_t *pool);
+svn_error_t *svn_fs_base__dag_file_checksum(svn_checksum_t **checksum,
+                                            svn_checksum_kind_t checksum_kind,
+                                            dag_node_t *file,
+                                            trail_t *trail,
+                                            apr_pool_t *pool);
 
 /* Create a new mutable file named NAME in PARENT, as part of TRAIL.
    Set *CHILD_P to a reference to the new node, allocated in
@@ -537,8 +537,8 @@ svn_error_t *svn_fs_base__dag_deltify(dag_node_t *target,
 
 /* Index NODE's backing data representations by their checksum.  Do
    this as part of TRAIL.  Use POOL for allocations. */
-svn_error_t *svn_fs_base__dag_index_checksums(dag_node_t *node, 
-                                              trail_t *trail, 
+svn_error_t *svn_fs_base__dag_index_checksums(dag_node_t *node,
+                                              trail_t *trail,
                                               apr_pool_t *pool);
 
 

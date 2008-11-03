@@ -57,6 +57,86 @@
 
 
 
+/*
+ * This code handles "checkout" and "update" and "switch".
+ * A checkout is similar to an update that is only adding new items.
+ *
+ * The intended behaviour of "update" and "switch", focusing on the checks
+ * to be made before applying a change, is:
+ *
+ *   For each incoming change:
+ *     if target is already in conflict or obstructed:
+ *       skip this change
+ *     else
+ *     if this action will cause a tree conflict:
+ *       record the tree conflict
+ *       skip this change
+ *     else:
+ *       make this change
+ *
+ * In more detail:
+ *
+ *   For each incoming change:
+ *
+ *   1.   if  # Incoming change is inside an item already in conflict:
+ *    a.    tree/text/prop change to node beneath tree-conflicted dir
+ *        then  # Skip all changes in this conflicted subtree [*1]:
+ *          do not update the Base nor the Working
+ *          notify "skipped because already in conflict" just once
+ *            for the whole conflicted subtree
+ *
+ *        if  # Incoming change affects an item already in conflict:
+ *    b.    tree/text/prop change to tree-conflicted dir/file, or
+ *    c.    tree change to a text/prop-conflicted file/dir, or
+ *    d.    text/prop change to a text/prop-conflicted file/dir [*2], or
+ *    e.    tree change to a dir tree containing any conflicts,
+ *        then  # Skip this change [*1]:
+ *          do not update the Base nor the Working
+ *          notify "skipped because already in conflict"
+ *
+ *   2.   if  # Incoming change affects an item that's "obstructed":
+ *    a.    on-disk node kind doesn't match recorded Working node kind
+ *            (including an absence/presence mis-match),
+ *        then  # Skip this change [*1]:
+ *          do not update the Base nor the Working
+ *          notify "skipped because obstructed"
+ *
+ *   3.   if  # Incoming change raises a tree conflict:
+ *    a.    tree/text/prop change to node beneath sched-delete dir, or
+ *    b.    tree/text/prop change to sched-delete dir/file, or
+ *    c.    text/prop change to tree-scheduled dir/file,
+ *        then  # Skip this change:
+ *          do not update the Base nor the Working [*3]
+ *          notify "tree conflict"
+ *
+ *   4.   Apply the change:
+ *          update the Base
+ *          update the Working, possibly raising text/prop conflicts
+ *          notify
+ *
+ * Notes:
+ *
+ *      "Tree change" here refers to an add or delete of the target node,
+ *      including the add or delete part of a copy or move or rename.
+ *
+ * [*1] We should skip changes to an entire node, as the base revision number
+ *      applies to the entire node. Not sure how this affects attempts to
+ *      handle text and prop changes separately.
+ *
+ * [*2] Details of which combinations of property and text changes conflict
+ *      are not specified here.
+ *
+ * [*3] For now, we skip the update, and require the user to:
+ *        - Modify the WC to be compatible with the incoming change;
+ *        - Mark the conflict as resolved;
+ *        - Repeat the update.
+ *      Ideally, it would be possible to resolve any conflict without
+ *      repeating the update. To achieve this, we would have to store the
+ *      necessary data at conflict detection time, and delay the update of
+ *      the Base until the time of resolving.
+ */
+
+
 /*** batons ***/
 
 struct edit_baton
@@ -146,6 +226,19 @@ struct edit_baton
 
   apr_pool_t *pool;
 };
+
+
+/* Record in the edit baton EB that PATH's base version is not being updated.
+ *
+ * Add to EB->skipped_paths a copy (allocated in EB->pool) of the string
+ * PATH.
+ */
+static void
+remember_skipped_path(struct edit_baton *eb, const char *path)
+{
+  apr_hash_set(eb->skipped_paths, apr_pstrdup(eb->pool, path),
+               APR_HASH_KEY_STRING, (void*)1);
+}
 
 
 struct dir_baton
@@ -1255,12 +1348,12 @@ check_tree_conflict(svn_wc_conflict_description_t **pconflict,
       break;
 
     case svn_wc_conflict_action_add:
-      /* When checking out a file-external, add_file() is called twice: 
+      /* When checking out a file-external, add_file() is called twice:
        * 1.) In the main update, a minimal entry is created.
        * 2.) In the external update, the file is added properly.
        * Don't raise a tree conflict the second time!
        */
-      if (entry && (!entry->file_external_path)) 
+      if (entry && (!entry->file_external_path))
         reason = svn_wc_conflict_reason_added;
       break;
 
@@ -1381,7 +1474,7 @@ do_entry_deletion(struct edit_baton *eb,
   SVN_ERR(check_tree_conflict(&tree_conflict, eb, log_item, full_path, entry,
                               adm_access, svn_wc_conflict_action_delete, pool));
 
-  /* Notify and bail out if this raised a tree-conflict. */
+  /* If this raised a tree-conflict, record.  Continue deleting the entry. */
   if (tree_conflict)
     {
       SVN_ERR(svn_wc__write_log(adm_access, *log_number, log_item, pool));
@@ -1402,26 +1495,7 @@ do_entry_deletion(struct edit_baton *eb,
                                              SVN_WC__ENTRY_MODIFY_REVISION
                                              | SVN_WC__ENTRY_MODIFY_KIND,
                                              pool));
-
-          eb->target_deleted = TRUE;
         }
-
-      /* Note: these two lines are duplicated from the end of this function:
-       */
-      SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
-      *log_number = 0;
-
-      if (eb->notify_func)
-        {
-          /* Don't notify about a delete, just about a conflict. */
-          notify = svn_wc_create_notify(full_path, svn_wc_notify_update_update,
-                                        pool);
-          notify->tree_conflicted = TRUE;
-
-          (*eb->notify_func)(eb->notify_baton, notify, pool);
-        }
-
-      return SVN_NO_ERROR;
     }
 
   SVN_ERR(svn_wc__loggy_delete_entry(&log_item, adm_access, full_path,
@@ -1436,13 +1510,13 @@ do_entry_deletion(struct edit_baton *eb,
 
       tmp_entry.revision = *(eb->target_revision);
       tmp_entry.kind =
-        (entry->kind == svn_node_file) ? svn_node_file : svn_node_dir;
+        (entry->kind == svn_node_file) ? svn_node_file : svn_node_dir;  /* ### redundant? */
       tmp_entry.deleted = TRUE;
 
       SVN_ERR(svn_wc__loggy_entry_modify(&log_item, adm_access,
                                          full_path, &tmp_entry,
                                          SVN_WC__ENTRY_MODIFY_REVISION
-                                         | SVN_WC__ENTRY_MODIFY_KIND
+                                         | SVN_WC__ENTRY_MODIFY_KIND  /* ### redundant change? */
                                          | SVN_WC__ENTRY_MODIFY_DELETED,
                                          pool));
 
@@ -1500,8 +1574,12 @@ do_entry_deletion(struct edit_baton *eb,
 
   if (eb->notify_func)
     {
-      notify = svn_wc_create_notify(full_path, svn_wc_notify_update_delete,
+      notify = svn_wc_create_notify(full_path,
+                                    (tree_conflict != NULL)
+                                      ? svn_wc_notify_tree_conflict
+                                      : svn_wc_notify_update_delete,
                                     pool);
+
       (*eb->notify_func)(eb->notify_baton, notify, pool);
     }
 
@@ -1630,6 +1708,7 @@ add_directory(const char *path,
 
           /* Anything other than a dir scheduled for addition without
              history is an error. */
+          /* ### what's this "add_existed" clause for? */
           if (entry
               && entry->schedule == svn_wc_schedule_add
               && ! entry->copied)
@@ -1642,7 +1721,7 @@ add_directory(const char *path,
               const char *repos;
               svn_wc_conflict_description_t *tree_conflict;
 
-              /* Use the repository root of the anchor, but only if it 
+              /* Use the repository root of the anchor, but only if it
                  actually is an ancestor of the URL of this directory. */
               if (eb->repos && svn_path_is_ancestor(eb->repos, db->new_URL))
                 repos = eb->repos;
@@ -1784,11 +1863,13 @@ add_directory(const char *path,
     {
       svn_wc_notify_t *notify = svn_wc_create_notify(
         db->path,
-        db->existed ?
-        svn_wc_notify_exists : svn_wc_notify_update_add,
+        db->tree_conflicted
+          ? svn_wc_notify_tree_conflict
+          : (db->existed
+               ? svn_wc_notify_exists
+               : svn_wc_notify_update_add),
         pool);
       notify->kind = svn_node_dir;
-      notify->tree_conflicted = db->tree_conflicted;
       (*eb->notify_func)(eb->notify_baton, notify, pool);
     }
 
@@ -1846,17 +1927,19 @@ open_directory(const char *path,
       if (prop_conflicted || tree_conflicted)
         {
           db->bump_info->skipped = TRUE;
-          apr_hash_set(eb->skipped_paths, apr_pstrdup(eb->pool, db->path),
-                       APR_HASH_KEY_STRING, (void*)1);
+          remember_skipped_path(eb, db->path);
           if (eb->notify_func)
             {
               svn_wc_notify_t *notify
-                = svn_wc_create_notify(db->path, svn_wc_notify_skip, pool);
+                = svn_wc_create_notify(db->path,
+                                       tree_conflicted
+                                         ? svn_wc_notify_tree_conflict
+                                         : svn_wc_notify_skip,
+                                       pool);
               notify->kind = svn_node_dir;
               notify->prop_state = prop_conflicted
                   ? svn_wc_notify_state_conflicted
                   : svn_wc_notify_state_unknown;
-              notify->tree_conflicted = tree_conflicted;
               (*eb->notify_func)(eb->notify_baton, notify, pool);
             }
           return SVN_NO_ERROR;
@@ -2096,9 +2179,9 @@ close_directory(void *dir_baton,
      maybe_bump_dir_info() for more information.  */
   SVN_ERR(maybe_bump_dir_info(db->edit_baton, db->bump_info, db->pool));
 
-  /* Notify of any prop changes on this directory -- but do nothing
-     if it's an added or skipped directory, because notification has already
-     happened in that case - unless the add was obstructed by a dir
+  /* Notify of any prop changes or tree conflict on this directory -- but do
+     nothing if it's an added or skipped directory, because notification has
+     already happened in that case - unless the add was obstructed by a dir
      scheduled for addition without history, in which case we handle
      notification here). */
   if (! db->bump_info->skipped && (db->add_existed || (! db->added))
@@ -2106,15 +2189,16 @@ close_directory(void *dir_baton,
     {
       svn_wc_notify_t *notify
         = svn_wc_create_notify(db->path,
-                               db->existed || db->add_existed
-                               ? svn_wc_notify_exists
-                               : svn_wc_notify_update_update,
+                               db->tree_conflicted
+                                 ? svn_wc_notify_tree_conflict
+                                 : (db->existed || db->add_existed
+                                      ? svn_wc_notify_exists
+                                      : svn_wc_notify_update_update),
                                pool);
       notify->kind = svn_node_dir;
       notify->prop_state = prop_state;
-      notify->tree_conflicted = db->tree_conflicted;
-    (*db->edit_baton->notify_func)(db->edit_baton->notify_baton,
-                                   notify, pool);
+      (*db->edit_baton->notify_func)(db->edit_baton->notify_baton,
+                                     notify, pool);
     }
 
   return SVN_NO_ERROR;
@@ -2615,8 +2699,7 @@ add_file(const char *path,
 
       /* Skip the this add */
       fb->skipped = TRUE;
-      apr_hash_set(eb->skipped_paths, apr_pstrdup(eb->pool, fb->path),
-                   APR_HASH_KEY_STRING, (void*)1);
+      remember_skipped_path(eb, fb->path);
 
       /* ### TODO: check whether pb->tree_conflicted also reflects
        * persisting tree-conflicts (older ones), and decide whether to
@@ -2646,7 +2729,7 @@ add_file(const char *path,
           notify->tree_conflicted = TRUE;
           notify->content_state = svn_wc_notify_state_unknown;
           notify->prop_state = svn_wc_notify_state_unknown;
-          
+
           (*eb->notify_func)(eb->notify_baton, notify, pool);
         }
       */
@@ -2662,6 +2745,8 @@ add_file(const char *path,
   /* When adding, there should be nothing with this name unless unversioned
      obstructions are permitted or the obstruction is scheduled for addition
      (or replacement) without history. */
+  /* ### " or the obstruction is scheduled for addition
+     without history." ??? */
   if (kind != svn_node_none)
     {
       if (eb->allow_unver_obstructions
@@ -2789,14 +2874,13 @@ open_file(const char *path,
   if (text_conflicted || prop_conflicted || (tree_conflict != NULL))
     {
       fb->skipped = TRUE;
-      apr_hash_set(eb->skipped_paths, apr_pstrdup(eb->pool, fb->path),
-                   APR_HASH_KEY_STRING, (void*)1);
+      remember_skipped_path(eb, fb->path);
       if (eb->notify_func)
         {
           svn_wc_notify_t *notify
             = svn_wc_create_notify(fb->path,
                                    (tree_conflict != NULL)
-                                     ? svn_wc_notify_update_update
+                                     ? svn_wc_notify_tree_conflict
                                      : svn_wc_notify_skip,
                                    pool);
 
@@ -2805,13 +2889,11 @@ open_file(const char *path,
           notify->content_state = text_conflicted
             ? svn_wc_notify_state_conflicted
             : svn_wc_notify_state_unknown;
-          
+
           notify->prop_state = prop_conflicted
             ? svn_wc_notify_state_conflicted
             : svn_wc_notify_state_unknown;
 
-          notify->tree_conflicted = (tree_conflict != NULL);
-          
           (*eb->notify_func)(eb->notify_baton, notify, pool);
         }
     }
@@ -3618,7 +3700,9 @@ close_file(void *file_baton,
       svn_wc_notify_t *notify;
       svn_wc_notify_action_t action = svn_wc_notify_update_update;
 
-      if (fb->existed || fb->add_existed)
+      if (fb->tree_conflicted)
+        action = svn_wc_notify_tree_conflict;
+      else if (fb->existed || fb->add_existed)
         {
           if (content_state != svn_wc_notify_state_conflicted)
             action = svn_wc_notify_exists;
@@ -3633,7 +3717,6 @@ close_file(void *file_baton,
       notify->content_state = content_state;
       notify->prop_state = prop_state;
       notify->lock_state = lock_state;
-      notify->tree_conflicted = fb->tree_conflicted;
       /* ### use merge_file() mimetype here */
       (*eb->notify_func)(eb->notify_baton, notify, pool);
     }

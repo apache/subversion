@@ -2081,7 +2081,7 @@ link_path(void *report_baton,
 #define REQS_PER_CONN 8
 
 /** This function creates a new connection for this serf session, but only
- * if the number of ACTIVE_REQS > REQS_PER_CONN or if there currently is 
+ * if the number of ACTIVE_REQS > REQS_PER_CONN or if there currently is
  * only one main connection open.
  */
 static void
@@ -2212,9 +2212,9 @@ finish_report(void *report_baton,
 
       /* Open extra connections if we have enough requests to send. */
       if (sess->num_conns < MAX_NR_OF_CONNS)
-        open_connection_if_needed(sess, report->active_fetches + 
+        open_connection_if_needed(sess, report->active_fetches +
                                         report->active_propfinds);
- 
+
       /* Switch our connection. */
       if (!report->done)
          if (++sess->cur_conn == sess->num_conns)
