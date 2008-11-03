@@ -12,7 +12,7 @@ import svntypes
 def full_suite():
   """Run everything"""
   suite = unittest.TestSuite()
- 
+
   suite.addTest(localrepos.suite())
   suite.addTest(remoterepos.suite())
   suite.addTest(wc.suite())

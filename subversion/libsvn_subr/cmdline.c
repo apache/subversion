@@ -449,7 +449,7 @@ get_auth_provider(svn_auth_provider_object_t **provider,
 
    Ignore MAY_SAVE; we don't save certs we never prompted for.
 
-   Ignore BATON, REALM, and CERT_INFO, 
+   Ignore BATON, REALM, and CERT_INFO,
 
    Ignore any further films by George Lucas. */
 static svn_error_t *
@@ -476,7 +476,7 @@ ssl_trust_unknown_server_cert
 
 
 svn_error_t *
-svn_cmdline_set_up_auth_baton(svn_auth_baton_t **ab,
+svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
                               svn_boolean_t non_interactive,
                               const char *auth_username,
                               const char *auth_password,
@@ -550,7 +550,7 @@ svn_cmdline_set_up_auth_baton(svn_auth_baton_t **ab,
       if (apr_strnatcmp(password_store, "gnome-keyring") == 0)
         {
 #ifdef SVN_HAVE_GNOME_KEYRING
-          SVN_ERR(get_auth_provider(&provider, "gnome_keyring", "simple", 
+          SVN_ERR(get_auth_provider(&provider, "gnome_keyring", "simple",
                                     pool));
           if (provider)
             {
@@ -731,7 +731,7 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
                              void *cancel_baton,
                              apr_pool_t *pool)
 {
-  return svn_cmdline_set_up_auth_baton(ab, non_interactive,
+  return svn_cmdline_create_auth_baton(ab, non_interactive,
                                        auth_username, auth_password,
                                        config_dir, no_auth_cache, FALSE,
                                        cfg, cancel_func, cancel_baton, pool);

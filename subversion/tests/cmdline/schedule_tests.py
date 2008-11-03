@@ -7,7 +7,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -258,8 +258,8 @@ def check_reversion(files, output):
   output.sort()
   expected_output.sort()
   if output != expected_output:
-    print "Expected output:", expected_output
-    print "Actual output:  ", output
+    print("Expected output: %s" % expected_output)
+    print("Actual output:   %s" % output)
     raise svntest.Failure
 
 #----------------------------------------------------------------------

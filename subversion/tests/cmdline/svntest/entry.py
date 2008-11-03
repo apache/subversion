@@ -38,12 +38,12 @@ class svn_entry:
     self.atts = attributes
 
   def prettyprint(self):
-    print " Entryname:", self.atts['name']
-    print "      Kind:", self.atts['kind']
-    print "  Revision:", self.atts['revision']
-    print "  Ancestor:", self.atts['ancestor']
-    print "  all atts:", self.atts
-    print
+    print(" Entryname: %s" % self.atts['name'])
+    print("      Kind: %s" % self.atts['kind'])
+    print("  Revision: %s" % self.atts['revision'])
+    print("  Ancestor: %s" % self.atts['ancestor'])
+    print("  all atts: %s" % self.atts)
+    print("")
 
 class svn_entryparser:
   "A class to parse an 'entries' file."

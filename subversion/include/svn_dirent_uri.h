@@ -173,7 +173,7 @@ void svn_dirent_split(const char *dirent,
                       const char **base_name,
                       apr_pool_t *pool);
 
-/** Return TRUE if @a dirent is considered absolute on the platform at 
+/** Return TRUE if @a dirent is considered absolute on the platform at
  * hand, amongst which '/foo' on all platforms or 'X:/foo', '\\\\?\\X:/foo',
  * '\\\\server\\share\\foo' on Windows.
  *
@@ -196,10 +196,10 @@ svn_boolean_t svn_uri_is_absolute(const char *dirent);
 svn_boolean_t
 svn_dirent_is_root(const char *dirent, apr_size_t len);
 
-/** Return TRUE if @a uri is a root path, so starts with '/'. 
+/** Return TRUE if @a uri is a root path, so starts with '/'.
  *
  * Do not use this function with URLs.
- * 
+ *
  * @since New in 1.6
  */
 svn_boolean_t

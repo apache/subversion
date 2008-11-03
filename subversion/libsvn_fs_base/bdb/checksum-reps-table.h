@@ -50,7 +50,7 @@ svn_error_t *svn_fs_bdb__get_checksum_rep(const char **rep_key,
 
 /* Store in the `checksum-reps' table a mapping of CHECKSUM to
    representation key REP_KEY in FS.  Do this as part of TRAIL.  Use
-   POOL for temporary allocations. 
+   POOL for temporary allocations.
 
    WARNING: NEVER store a record that maps a checksum to a mutable
    representation.  Ever.  Under pain of dismemberment and death.  */

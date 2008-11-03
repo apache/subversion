@@ -302,9 +302,9 @@ class SvnDeltaTest < Test::Unit::TestCase
     ctx.add(file8_path)
     ctx.cp(file1_path, file9_path)
     ctx.cp(file2_path, file10_path)
-    ctx.rm(dir1_path)
     ctx.mv(dir2_path, dir3_path)
     ctx.cp(dir1_path, dir4_path)
+    ctx.rm(dir1_path)
 
     commit_info = ctx.commit(@wc_path)
     second_rev = commit_info.revision

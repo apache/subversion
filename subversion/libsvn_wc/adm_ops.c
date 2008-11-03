@@ -1502,7 +1502,7 @@ svn_wc_add3(const char *path,
 
           /* Make sure this new directory has an admistrative subdirectory
              created inside of it */
-          SVN_ERR(svn_wc_ensure_adm3(path, p_entry->uuid, new_url, 
+          SVN_ERR(svn_wc_ensure_adm3(path, p_entry->uuid, new_url,
                                      p_entry->repos, 0, depth, pool));
         }
       else
@@ -1638,10 +1638,10 @@ svn_wc_add3(const char *path,
 
 */
 
-/* Revert ENTRY for NAME in directory represented by ADM_ACCESS. 
+/* Revert ENTRY for NAME in directory represented by ADM_ACCESS.
 
    Set *REVERTED to TRUE if something (text or props or both) is
-   reverted, FALSE otherwise.  
+   reverted, FALSE otherwise.
 
    If something is reverted and USE_COMMIT_TIMES is true, then update
    the entry's timestamp to the last-committed-time; otherwise don't
@@ -1928,7 +1928,7 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
     }
 
   /* If the entry is for this_dir, delete tree conflict data. */
-  if ((strcmp(name, SVN_WC_ENTRY_THIS_DIR) == 0) 
+  if ((strcmp(name, SVN_WC_ENTRY_THIS_DIR) == 0)
       && entry->tree_conflict_data)
     {
       flags |= SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA;
@@ -2735,7 +2735,7 @@ resolve_conflict_on_entry(const char *path,
     }
 
   if (resolve_tree && (entry->kind == svn_node_dir)
-      && entry->tree_conflict_data) 
+      && entry->tree_conflict_data)
     {
       modify_flags |= SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA;
       entry->tree_conflict_data = NULL;

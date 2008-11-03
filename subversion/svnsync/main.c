@@ -2112,7 +2112,7 @@ main(int argc, const char *argv[])
   apr_signal(SIGXFSZ, SIG_IGN);
 #endif
 
-  err = svn_cmdline_set_up_auth_baton(&opt_baton.source_auth_baton,
+  err = svn_cmdline_create_auth_baton(&opt_baton.source_auth_baton,
                                       opt_baton.non_interactive,
                                       opt_baton.source_username,
                                       opt_baton.source_password,
@@ -2123,7 +2123,7 @@ main(int argc, const char *argv[])
                                       check_cancel, NULL,
                                       pool);
   if (! err)
-    err = svn_cmdline_set_up_auth_baton(&opt_baton.sync_auth_baton,
+    err = svn_cmdline_create_auth_baton(&opt_baton.sync_auth_baton,
                                         opt_baton.non_interactive,
                                         opt_baton.sync_username,
                                         opt_baton.sync_password,

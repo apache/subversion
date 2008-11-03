@@ -95,6 +95,18 @@ public class NotifyInformation extends EventObject
     private RevisionRange mergeRange;
 
     /**
+     * A common absolute path prefix that can be subtracted from .path.
+     * @since 1.6
+     */
+    private String pathPrefix;
+
+    /**
+     * Whether .path is the victim of a tree-conflict.
+     * @since 1.6
+     */
+    private boolean treeConflicted;
+
+    /**
      * This constructor is to be used by the native code.
      *
      * @param path The path of the item, which is the source of the event.
@@ -111,11 +123,14 @@ public class NotifyInformation extends EventObject
      * @param revision The revision of the item.
      * @param changelistName The name of the changelist.
      * @param mergeRange The range of the merge just beginning to occur.
+     * @param pathPrefix A common path prefix.
+     * @param treeConflicted Whether this path is a victim of a tree conflict.
      */
     NotifyInformation(String path, int action, int kind, String mimeType,
                       Lock lock, String errMsg, int contentState,
                       int propState, int lockState, long revision,
-                      String changelistName, RevisionRange mergeRange)
+                      String changelistName, RevisionRange mergeRange,
+                      String pathPrefix, boolean treeConflicted)
     {
         super(path);
         this.action = action;
@@ -129,6 +144,8 @@ public class NotifyInformation extends EventObject
         this.revision = revision;
         this.changelistName = changelistName;
         this.mergeRange = mergeRange;
+        this.pathPrefix = pathPrefix;
+        this.treeConflicted = treeConflicted;
     }
 
     /**
@@ -227,5 +244,23 @@ public class NotifyInformation extends EventObject
     public RevisionRange getMergeRange()
     {
         return mergeRange;
+    }
+
+    /**
+     * @return The common absolute path prefix.
+     * @since 1.6
+     */
+    public String getPathPrefix()
+    {
+        return pathPrefix;
+    }
+
+    /**
+     * @return Whether the .path is tree conflicted.
+     * @since 1.6
+     */
+    public boolean getTreeConflicted()
+    {
+        return treeConflicted;
     }
 }
