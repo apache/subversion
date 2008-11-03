@@ -38,10 +38,10 @@ typedef svn_error_t *(*condense_targets_func_t)
                             svn_boolean_t remove_redundancies,
                             apr_pool_t *pool);
 
-/** Executes function CONDENSE_TARGETS twice - with and without requesting the 
+/** Executes function CONDENSE_TARGETS twice - with and without requesting the
  * condensed targets list -  on TEST_TARGETS (comma sep. string) and compares
  * the results with EXP_COMMON and EXP_TARGETS (comma sep. string).
- * 
+ *
  * @note: a '%' character at the beginning of EXP_COMMON or EXP_TARGETS will
  * be replaced by the current working directory.
  *
@@ -108,7 +108,7 @@ condense_targets_tests_helper(const char* title,
             (SVN_ERR_TEST_FAILED, NULL,
              "%s (test %s) couldn't find %s in expected targets list",
                func_name, title,
-               target); 
+               target);
         }
       token = apr_strtok(NULL, ",", &iter);
     }
@@ -124,7 +124,7 @@ condense_targets_tests_helper(const char* title,
          "%s (test %s): Common path without getting targets %s does not match" \
          "common path with targets %s",
           func_name, title,
-          common_path2, common_path); 
+          common_path2, common_path);
     }
 
   return SVN_NO_ERROR;
@@ -156,7 +156,7 @@ test_path_condense_targets(const char **msg,
      "%/z/A/file", "" },
     {"URLs", "http://host/A/C,http://host/A/C/D,http://host/A/B/D",
      "http://host/A", "C,B/D" },
-    {"URLs with no common prefix", 
+    {"URLs with no common prefix",
      "http://host1/A/C,http://host2/A/C/D,http://host3/A/B/D",
      "", "http://host1/A/C,http://host2/A/C/D,http://host3/A/B/D" },
     {"file URLs with no common prefix", "file:///A/C,file:///B/D",
@@ -176,7 +176,7 @@ test_path_condense_targets(const char **msg,
 
   for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i++)
     {
-      SVN_ERR(condense_targets_tests_helper(tests[i].title, 
+      SVN_ERR(condense_targets_tests_helper(tests[i].title,
                                             tests[i].targets,
                                             tests[i].exp_common,
                                             tests[i].exp_targets,

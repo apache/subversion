@@ -2,7 +2,7 @@
  * session.c :  routines for maintaining sessions state (to the DAV server)
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006, 2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -791,7 +791,7 @@ exchange_capabilities(svn_ra_neon__session_t *ras, apr_pool_t *pool)
   svn_error_t *err = SVN_NO_ERROR;
 
   rar = svn_ra_neon__request_create(ras, "OPTIONS", ras->url->data, pool);
-  
+
   /* Client capabilities are sent with every request.
      See issue #3255 for more details. */
   err = svn_ra_neon__request_dispatch(&http_ret_code, rar,
@@ -994,7 +994,7 @@ svn_ra_neon__open(svn_ra_session_t *session,
   svn_ra_neon__session_t *ras;
   int is_ssl_session;
   svn_boolean_t compression;
-  svn_config_t *cfg;
+  svn_config_t *cfg, *cfg_client;
   const char *server_group;
   char *itr;
   unsigned int neon_auth_types = 0;
@@ -1052,6 +1052,9 @@ svn_ra_neon__open(svn_ra_session_t *session,
   cfg = config ? apr_hash_get(config,
                               SVN_CONFIG_CATEGORY_SERVERS,
                               APR_HASH_KEY_STRING) : NULL;
+  cfg_client = config ? apr_hash_get(config,
+                                     SVN_CONFIG_CATEGORY_CONFIG,
+                                     APR_HASH_KEY_STRING) : NULL;
   if (cfg)
     server_group = svn_config_find_group(cfg, uri->host,
                                          SVN_CONFIG_SECTION_GROUPS, pool);
@@ -1169,6 +1172,8 @@ svn_ra_neon__open(svn_ra_session_t *session,
   /* save config and server group in the auth parameter hash */
   svn_auth_set_parameter(ras->callbacks->auth_baton,
                          SVN_AUTH_PARAM_CONFIG, cfg);
+  svn_auth_set_parameter(ras->callbacks->auth_baton,
+                         SVN_AUTH_PARAM_CONFIG_CLIENT, cfg_client);
   svn_auth_set_parameter(ras->callbacks->auth_baton,
                          SVN_AUTH_PARAM_SERVER_GROUP, server_group);
 

@@ -2,7 +2,7 @@
  * serf.c :  entry point for ra_serf
  *
  * ====================================================================
- * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2006-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -334,7 +334,7 @@ load_config(svn_ra_serf__session_t *session,
             apr_hash_t *config_hash,
             apr_pool_t *pool)
 {
-  svn_config_t *config;
+  svn_config_t *config, *config_client;
   const char *server_group;
 #if SERF_VERSION_AT_LEAST(0, 1, 3)
   const char *proxy_host = NULL, *port_str = NULL;
@@ -343,6 +343,8 @@ load_config(svn_ra_serf__session_t *session,
 
   config = apr_hash_get(config_hash, SVN_CONFIG_CATEGORY_SERVERS,
                         APR_HASH_KEY_STRING);
+  config_client = apr_hash_get(config_hash, SVN_CONFIG_CATEGORY_CONFIG,
+                               APR_HASH_KEY_STRING);
 
   SVN_ERR(svn_config_get_bool(config, &session->using_compression,
                               SVN_CONFIG_SECTION_GLOBAL,
@@ -350,6 +352,8 @@ load_config(svn_ra_serf__session_t *session,
 
   svn_auth_set_parameter(session->wc_callbacks->auth_baton,
                          SVN_AUTH_PARAM_CONFIG, config);
+  svn_auth_set_parameter(session->wc_callbacks->auth_baton,
+                         SVN_AUTH_PARAM_CONFIG_CLIENT, config_client);
 
 #if SERF_VERSION_AT_LEAST(0, 1, 3)
   /* Load the global proxy server settings, if set. */

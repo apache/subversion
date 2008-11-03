@@ -129,31 +129,31 @@ def run_one_test(sbox, basename, *varargs):
   actual_stderr = process_lines(actual_stderr)
 
   if exp_stdout != actual_stdout:
-    print "Standard output does not match."
-    print "Expected standard output:"
-    print "====="
+    print("Standard output does not match.")
+    print("Expected standard output:")
+    print("=====")
     for x in exp_stdout:
       sys.stdout.write(x)
-    print "====="
-    print "Actual standard output:"
-    print "====="
+    print("=====")
+    print("Actual standard output:")
+    print("=====")
     for x in actual_stdout:
       sys.stdout.write(x)
-    print "====="
+    print("=====")
     raise svntest.Failure
 
   if exp_stderr != actual_stderr:
-    print "Standard error does not match."
-    print "Expected standard error:"
-    print "====="
+    print("Standard error does not match.")
+    print("Expected standard error:")
+    print("=====")
     for x in exp_stderr:
       sys.stdout.write(x)
-    print "====="
-    print "Actual standard error:"
-    print "====="
+    print("=====")
+    print("Actual standard error:")
+    print("=====")
     for x in actual_stderr:
       sys.stdout.write(x)
-    print "====="
+    print("=====")
     raise svntest.Failure
 
 def getopt_no_args(sbox):

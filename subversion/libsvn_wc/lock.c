@@ -2,7 +2,7 @@
  * lock.c:  routines for locking working copy subdirectories.
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -428,7 +428,7 @@ pool_cleanup_child(void *p)
   return APR_SUCCESS;
 }
 
-/* Allocate from POOL, intialise and return an access baton. TYPE and PATH
+/* Allocate from POOL, initialise and return an access baton. TYPE and PATH
    are used to initialise the baton.  */
 static svn_wc_adm_access_t *
 adm_access_alloc(enum svn_wc__adm_access_type type,

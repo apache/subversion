@@ -1012,7 +1012,7 @@ svn_io_sleep_for_timestamps(const char *path, apr_pool_t *pool)
           svn_error_clear(err); /* Fall back on original behavior */
         }
       else if (finfo.mtime % APR_USEC_PER_SEC)
-        {          
+        {
           /* Very simplistic but safe approach:
 		      If the filesystem has < sec mtime we can be reasonably sure
               that the filesystem has <= millisecond precision.
@@ -1021,7 +1021,7 @@ svn_io_sleep_for_timestamps(const char *path, apr_pool_t *pool)
                 in every 1000 cases on a millisecond precision filesystem.
 
                 But better to fail once in every thousand cases than every
-                time, like we did before. 
+                time, like we did before.
 				(All tested filesystems I know have at least microsecond precision.)
 
              Note for further research on algorithm:
@@ -1029,7 +1029,7 @@ svn_io_sleep_for_timestamps(const char *path, apr_pool_t *pool)
 
           /* Sleep for at least 1 millisecond.
              (t < 1000 will be round to 0 in apr) */
-          apr_sleep(1000); 
+          apr_sleep(1000);
 
           return;
         }
@@ -2970,8 +2970,8 @@ dir_make(const char *path, apr_fileperms_t perm,
     }
 #endif
 
-/* Windows does not implement sgid. Skip here because retrieving 
-   the file permissions via APR_FINFO_PROT | APR_FINFO_OWNER is documented 
+/* Windows does not implement sgid. Skip here because retrieving
+   the file permissions via APR_FINFO_PROT | APR_FINFO_OWNER is documented
    to be 'incredibly expensive'. */
 #ifndef WIN32
   if (sgid)

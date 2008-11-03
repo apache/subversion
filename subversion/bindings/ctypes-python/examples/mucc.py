@@ -100,7 +100,7 @@ for arg in args:
             # so, we should treat copyfrom paths as possible
             # repository roots
             may_be_root = (len(action) == 2 and action[0] == "cp")
-           
+
             if not may_be_root:
                 arg = arg.dirname()
 

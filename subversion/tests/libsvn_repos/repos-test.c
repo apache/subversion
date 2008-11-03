@@ -2369,7 +2369,7 @@ get_logs(const char **msg,
   svn_fs_root_t *txn_root;
   svn_revnum_t start, end, youngest_rev = 0;
   apr_pool_t *subpool = svn_pool_create(pool);
-  
+
   *msg = "test svn_repos_get_logs ranges and limits";
 
   if (msg_only)
@@ -2389,22 +2389,22 @@ get_logs(const char **msg,
   /* Revision 2:  Tweak A/mu and A/B/E/alpha. */
   SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
-  SVN_ERR(svn_test__set_file_contents(txn_root, "A/mu", 
+  SVN_ERR(svn_test__set_file_contents(txn_root, "A/mu",
                                       "Revision 2", subpool));
-  SVN_ERR(svn_test__set_file_contents(txn_root, "A/B/E/alpha", 
+  SVN_ERR(svn_test__set_file_contents(txn_root, "A/B/E/alpha",
                                       "Revision 2", subpool));
   SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, subpool));
 
   /* Revision 3:  Tweak A/B/E/alpha and A/B/E/beta. */
   SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
-  SVN_ERR(svn_test__set_file_contents(txn_root, "A/B/E/alpha", 
+  SVN_ERR(svn_test__set_file_contents(txn_root, "A/B/E/alpha",
                                       "Revision 3", subpool));
-  SVN_ERR(svn_test__set_file_contents(txn_root, "A/B/E/beta", 
+  SVN_ERR(svn_test__set_file_contents(txn_root, "A/B/E/beta",
                                       "Revision 3", subpool));
   SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, subpool));
 
-  
+
   for (start = 0; start <= youngest_rev; start++)
     {
       for (end = 0; end <= youngest_rev; end++)
@@ -2423,15 +2423,15 @@ get_logs(const char **msg,
 
               svn_pool_clear(subpool);
               num_logs = 0;
-              SVN_ERR(svn_repos_get_logs4(repos, NULL, start_arg, end_arg, 
+              SVN_ERR(svn_repos_get_logs4(repos, NULL, start_arg, end_arg,
                                           limit, FALSE, FALSE, FALSE, NULL,
                                           NULL, NULL, log_receiver, &num_logs,
                                           subpool));
               if (num_logs != num_expected)
                 return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                          "Log with start=%ld,end=%ld,limit=%d "
-                                         "returned %d entries (expected %d)", 
-                                         start_arg, end_arg, limit, 
+                                         "returned %d entries (expected %d)",
+                                         start_arg, end_arg, limit,
                                          num_logs, max_logs);
             }
         }

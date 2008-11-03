@@ -35,7 +35,7 @@ AnyOutput = svntest.verify.AnyOutput
 # If verbose mode is enabled, print the LINE and a newline.
 def verbose_print(line):
   if main.verbose_mode:
-    print line
+    print(line)
 
 # If verbose mode is enabled, print the (assumed newline-terminated) LINES.
 def verbose_printlines(lines):
@@ -66,7 +66,7 @@ def verbose_printlines(lines):
 #   - interactive conflict resolution
 
 # A "tree conflict on file P/F" means:
-#   - the operation reports action code "C" on path P 
+#   - the operation reports action code "C" on path P
 #   - "svn status" reports status code "C" on path P/F
 #   - "svn info P" reports details of the conflict on F
 #   - "svn commit" fails if the user-requested targets include path F
@@ -438,13 +438,13 @@ def ensure_tree_conflict(sbox, operation,
       run_and_verify_commit(".", None, None, ".*conflict.*", victim)
 
       verbose_print("--- Checking that 'status' reports the conflict")
-      expected_stdout = svntest.verify.RegexOutput("..+C.* " + 
+      expected_stdout = svntest.verify.RegexOutput("..+C.* " +
                                                    re.escape(victim) + "$",
                                                    match_all=False)
       run_and_verify_svn(None, expected_stdout, [],
                          'status', victim)
 
-  
+
       verbose_print("--- Resolving the conflict")
       run_and_verify_svn(None,
                          "Resolved .* '" + re.escape(target_path) + "'", [],

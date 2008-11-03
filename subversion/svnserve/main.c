@@ -552,7 +552,7 @@ int main(int argc, const char *argv[])
                         "--service or -X.\n"),
 #else
                       _("You must specify exactly one of -d, -i, -t or -X.\n"),
-#endif 
+#endif
                        stderr, pool));
       usage(argv[0], pool);
     }

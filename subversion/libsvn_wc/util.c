@@ -129,7 +129,6 @@ svn_wc_create_notify(const char *path,
   ret->changelist_name = NULL;
   ret->merge_range = NULL;
   ret->path_prefix = NULL;
-  ret->tree_conflicted = FALSE;
 
   return ret;
 }

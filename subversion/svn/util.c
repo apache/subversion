@@ -579,7 +579,7 @@ svn_cl__cleanup_log_msg(void *log_msg_baton,
      commit error chain, too. */
 
   err = svn_error_createf(commit_err->apr_err, NULL,
-                          "   '%s'", 
+                          "   '%s'",
                           svn_path_local_style(lmb->tmpfile_left, pool));
   svn_error_compose(commit_err,
                     svn_error_create(commit_err->apr_err, err,
@@ -661,7 +661,7 @@ svn_cl__get_log_message(const char **log_msg,
 
       /* Trim incoming messages of the EOF marker text and the junk
          that follows it.  */
-      truncate_buffer_at_prefix(&(log_msg_buf->len), log_msg_buf->data, 
+      truncate_buffer_at_prefix(&(log_msg_buf->len), log_msg_buf->data,
                                 EDITOR_EOF_PREFIX);
 
       /* Make a string from a stringbuf, sharing the data allocation. */

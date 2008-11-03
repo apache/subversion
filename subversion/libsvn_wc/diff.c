@@ -537,7 +537,7 @@ file_diff(struct dir_baton *dir_baton,
      revert text-base will be present; in the latter case only, a
      regular text-base be present as well.  So which text-base do we
      want to use for the diff?
-     
+
      One could argue that we should never diff against the revert
      base, and instead diff against the empty-file for both types of
      replacement.  After all, there is no ancestry relationship
@@ -586,7 +586,7 @@ file_diff(struct dir_baton *dir_baton,
                                 adm_access, path, pool));
 
       SVN_ERR(dir_baton->edit_baton->callbacks->file_deleted
-              (NULL, NULL, path,
+              (NULL, NULL, NULL, path,
                textbase,
                empty_file,
                base_mimetype,
@@ -610,7 +610,7 @@ file_diff(struct dir_baton *dir_baton,
                pool));
 
       SVN_ERR(dir_baton->edit_baton->callbacks->file_added
-              (NULL, NULL, NULL, path,
+              (NULL, NULL, NULL, NULL, path,
                empty_file,
                translated,
                0, entry->revision,
@@ -648,7 +648,7 @@ file_diff(struct dir_baton *dir_baton,
                                        adm_access, path, pool));
 
           SVN_ERR(dir_baton->edit_baton->callbacks->file_changed
-                  (NULL, NULL, NULL,
+                  (NULL, NULL, NULL, NULL,
                    path,
                    modified ? textbase : NULL,
                    translated,
@@ -727,7 +727,7 @@ directory_elements_diff(struct dir_baton *dir_baton)
                                         dir_baton->pool));
 
           SVN_ERR(dir_baton->edit_baton->callbacks->dir_props_changed
-                  (adm_access, NULL,
+                  (adm_access, NULL, NULL,
                    dir_baton->path,
                    propchanges, baseprops,
                    dir_baton->edit_baton->callback_baton));
@@ -893,7 +893,7 @@ report_wc_file_as_added(struct dir_baton *dir_baton,
            pool));
 
   return eb->callbacks->file_added
-          (adm_access, NULL, NULL,
+          (adm_access, NULL, NULL, NULL,
            path,
            empty_file, translated_file,
            0, entry->revision,
@@ -947,7 +947,7 @@ report_wc_directory_as_added(struct dir_baton *dir_baton,
 
       if (propchanges->nelts > 0)
         SVN_ERR(eb->callbacks->dir_props_changed
-                (adm_access, NULL,
+                (adm_access, NULL, NULL,
                  dir_baton->path,
                  propchanges, emptyprops,
                  eb->callback_baton));
@@ -1104,7 +1104,7 @@ delete_entry(const char *path,
                                     adm_access, full_path, pool));
 
           SVN_ERR(pb->edit_baton->callbacks->file_deleted
-                  (NULL, NULL, full_path,
+                  (NULL, NULL, NULL, full_path,
                    textbase,
                    empty_file,
                    base_mimetype,
@@ -1243,7 +1243,7 @@ close_directory(void *dir_baton,
         reverse_propchanges(originalprops, b->propchanges, b->pool);
 
       SVN_ERR(b->edit_baton->callbacks->dir_props_changed
-              (NULL, NULL,
+              (NULL, NULL, NULL,
                b->path,
                b->propchanges,
                originalprops,
@@ -1453,7 +1453,7 @@ close_file(void *file_baton,
     {
       if (eb->reverse_order)
         return b->edit_baton->callbacks->file_added
-                (NULL, NULL, NULL, b->path,
+                (NULL, NULL, NULL, NULL, b->path,
                  empty_file,
                  temp_file_path,
                  0,
@@ -1465,7 +1465,7 @@ close_file(void *file_baton,
                  b->edit_baton->callback_baton);
       else
           return b->edit_baton->callbacks->file_deleted
-                  (NULL, NULL, b->path,
+                  (NULL, NULL, NULL, b->path,
                    temp_file_path,
                    empty_file,
                    repos_mimetype,
@@ -1524,7 +1524,7 @@ close_file(void *file_baton,
         reverse_propchanges(originalprops, b->propchanges, b->pool);
 
       SVN_ERR(b->edit_baton->callbacks->file_changed
-              (NULL, NULL, NULL,
+              (NULL, NULL, NULL, NULL,
                b->path,
                eb->reverse_order ? localfile : temp_file_path,
                eb->reverse_order ? temp_file_path : localfile,

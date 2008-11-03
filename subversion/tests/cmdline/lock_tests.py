@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2005-2006 CollabNet.  All rights reserved.
+# Copyright (c) 2005-2006, 2008 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -356,8 +356,8 @@ def enforce_lock(sbox):
     if ((os.stat(iota_path)[0] & mode)
         or (os.stat(lambda_path)[0] & mode)
         or (os.stat(mu_path)[0] & mode)):
-      print "Setting 'svn:needs-lock' property on a file failed to set"
-      print "file mode to read-only."
+      print("Setting 'svn:needs-lock' property on a file failed to set")
+      print("file mode to read-only.")
       raise svntest.Failure
 
     # obtain a lock on one of these files...
@@ -366,7 +366,7 @@ def enforce_lock(sbox):
 
     # ...and verify that the write bit gets set...
     if not (os.stat(iota_path)[0] & mode):
-      print "Locking a file with 'svn:needs-lock' failed to set write bit."
+      print("Locking a file with 'svn:needs-lock' failed to set write bit.")
       raise svntest.Failure
 
     # ...and unlock it...
@@ -375,13 +375,13 @@ def enforce_lock(sbox):
 
     # ...and verify that the write bit gets unset
     if (os.stat(iota_path)[0] & mode):
-      print "Unlocking a file with 'svn:needs-lock' failed to unset write bit."
+      print("Unlocking a file with 'svn:needs-lock' failed to unset write bit.")
       raise svntest.Failure
 
     # Verify that removing the property restores the file to read-write
     svntest.main.run_svn(None, 'propdel', 'svn:needs-lock', iota_path)
     if not (os.stat(iota_path)[0] & mode):
-      print "Deleting 'svn:needs-lock' failed to set write bit."
+      print("Deleting 'svn:needs-lock' failed to set write bit.")
       raise svntest.Failure
 
 #----------------------------------------------------------------------
@@ -458,8 +458,8 @@ def defunct_lock(sbox):
 
   # make sure that iota got set to read-only
   if (os.stat(iota_path_b)[0] & mode):
-    print "Upon removal of a defunct lock, a file with 'svn:needs-lock'"
-    print "was not set back to read-only"
+    print("Upon removal of a defunct lock, a file with 'svn:needs-lock'")
+    print("was not set back to read-only")
     raise svntest.Failure
 
 
@@ -679,7 +679,7 @@ def lock_non_existent_file(sbox):
     if line.find(error_msg) != -1:
       break
   else:
-    print "Error:", error_msg, ": not found in:", error
+    print("Error: %s : not found in: %s" % (error_msg, error))
     raise svntest.Failure
 
 #----------------------------------------------------------------------
@@ -732,8 +732,8 @@ def revert_lock(sbox):
 
   # make sure that iota got set to read-only
   if (os.stat(iota_path)[0] & mode):
-    print "Committing a file with 'svn:needs-lock'"
-    print "did not set the file to read-only"
+    print("Committing a file with 'svn:needs-lock'")
+    print("did not set the file to read-only")
     raise svntest.Failure
 
   # verify status is as we expect
@@ -747,8 +747,8 @@ def revert_lock(sbox):
 
   # make sure that iota got read-only-ness removed
   if (os.stat(iota_path)[0] & mode == 0):
-    print "Deleting the 'svn:needs-lock' property "
-    print "did not remove read-only-ness"
+    print("Deleting the 'svn:needs-lock' property ")
+    print("did not remove read-only-ness")
     raise svntest.Failure
 
   # revert the change
@@ -756,8 +756,8 @@ def revert_lock(sbox):
 
   # make sure that iota got set back to read-only
   if (os.stat(iota_path)[0] & mode):
-    print "Reverting a file with 'svn:needs-lock'"
-    print "did not set the file back to read-only"
+    print("Reverting a file with 'svn:needs-lock'")
+    print("did not set the file back to read-only")
     raise svntest.Failure
 
   # try propdel and revert from a different directory so
@@ -781,8 +781,8 @@ def revert_lock(sbox):
 
   # make sure it is still writable since we have the lock
   if (os.stat(iota_path)[0] & mode == 0):
-    print "Reverting a 'svn:needs-lock' file (with lock in wc) "
-    print "did not leave the file writable"
+    print("Reverting a 'svn:needs-lock' file (with lock in wc) ")
+    print("did not leave the file writable")
     raise svntest.Failure
 
 
@@ -955,8 +955,8 @@ def lock_and_exebit1(sbox):
   if (not gamma_stat & mode_r
       or gamma_stat & mode_w
       or not gamma_stat & mode_x):
-    print "Committing a file with 'svn:needs-lock, svn:executable'"
-    print "did not set the file to read-only, executable"
+    print("Committing a file with 'svn:needs-lock, svn:executable'")
+    print("did not set the file to read-only, executable")
     raise svntest.Failure
 
   # lock
@@ -967,8 +967,8 @@ def lock_and_exebit1(sbox):
   if (not gamma_stat & mode_r
       or not gamma_stat & mode_w
       or not gamma_stat & mode_x):
-    print "Locking a file with 'svn:needs-lock, svn:executable'"
-    print "did not set the file to read-write, executable"
+    print("Locking a file with 'svn:needs-lock, svn:executable'")
+    print("did not set the file to read-write, executable")
     raise svntest.Failure
 
   # modify
@@ -983,8 +983,8 @@ def lock_and_exebit1(sbox):
   if (not gamma_stat & mode_r
       or gamma_stat & mode_w
       or not gamma_stat & mode_x):
-    print "Unlocking a file with 'svn:needs-lock, svn:executable'"
-    print "did not set the file to read-only, executable"
+    print("Unlocking a file with 'svn:needs-lock, svn:executable'")
+    print("did not set the file to read-only, executable")
     raise svntest.Failure
 
   # ci
@@ -996,8 +996,8 @@ def lock_and_exebit1(sbox):
   if (not gamma_stat & mode_r
       or gamma_stat & mode_w
       or not gamma_stat & mode_x):
-    print "Commiting a file with 'svn:needs-lock, svn:executable'"
-    print "after unlocking modified file's permissions"
+    print("Commiting a file with 'svn:needs-lock, svn:executable'")
+    print("after unlocking modified file's permissions")
     raise svntest.Failure
 
 
@@ -1031,8 +1031,8 @@ def lock_and_exebit2(sbox):
   if (not gamma_stat & mode_r
       or gamma_stat & mode_w
       or not gamma_stat & mode_x):
-    print "Committing a file with 'svn:needs-lock, svn:executable'"
-    print "did not set the file to read-only, executable"
+    print("Committing a file with 'svn:needs-lock, svn:executable'")
+    print("did not set the file to read-only, executable")
     raise svntest.Failure
 
   # lock
@@ -1043,8 +1043,8 @@ def lock_and_exebit2(sbox):
   if (not gamma_stat & mode_r
       or not gamma_stat & mode_w
       or not gamma_stat & mode_x):
-    print "Locking a file with 'svn:needs-lock, svn:executable'"
-    print "did not set the file to read-write, executable"
+    print("Locking a file with 'svn:needs-lock, svn:executable'")
+    print("did not set the file to read-write, executable")
     raise svntest.Failure
 
   # modify
@@ -1059,8 +1059,8 @@ def lock_and_exebit2(sbox):
   if (not gamma_stat & mode_r
       or gamma_stat & mode_w
       or not gamma_stat & mode_x):
-    print "Commiting a file with 'svn:needs-lock, svn:executable'"
-    print "did not set the file to read-only, executable"
+    print("Commiting a file with 'svn:needs-lock, svn:executable'")
+    print("did not set the file to read-only, executable")
     raise svntest.Failure
 
 def commit_xml_unsafe_file_unlock(sbox):
@@ -1127,7 +1127,7 @@ def repos_lock_with_info(sbox):
       repos_lock_token = line[12:]
       break
   else:
-    print "Error: Lock token not found"
+    print("Error: Lock token not found")
     raise svntest.Failure
 
   # info with revision option
@@ -1140,11 +1140,11 @@ def repos_lock_with_info(sbox):
       lock_token = line[12:]
       break
   else:
-    print "Error: Lock token not found"
+    print("Error: Lock token not found")
     raise svntest.Failure
 
   if (repos_lock_token != lock_token):
-    print "Error: expected repository lock information not found."
+    print("Error: expected repository lock information not found.")
     raise svntest.Failure
 
   # info with peg revision
@@ -1156,11 +1156,11 @@ def repos_lock_with_info(sbox):
       lock_token = line[12:]
       break
   else:
-    print "Error: Lock token not found"
+    print("Error: Lock token not found")
     raise svntest.Failure
 
   if (repos_lock_token != lock_token):
-    print "Error: expected repository lock information not found."
+    print("Error: expected repository lock information not found.")
     raise svntest.Failure
 
 #----------------------------------------------------------------------
@@ -1273,10 +1273,10 @@ def info_moved_path(sbox):
     if line.find("URL:") >= 0:
       got_url = 1
     if line.find("Lock Token:") >= 0:
-      print fname2 + " was reported as locked."
+      print(fname2 + " was reported as locked.")
       raise svntest.Failure
   if not got_url:
-    print "Info didn't output an URL."
+    print("Info didn't output an URL.")
     raise svntest.Failure
 
 #----------------------------------------------------------------------

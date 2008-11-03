@@ -141,7 +141,7 @@ test_dirent_is_absolute(const char **msg,
   apr_size_t i;
 
   /* Paths to test and their expected results. */
-  struct { 
+  struct {
     const char *path;
     svn_boolean_t result;
   } tests[] = {
@@ -182,7 +182,7 @@ test_dirent_is_absolute(const char **msg,
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
            "svn_dirent_is_absolute (%s) returned %s instead of %s",
-           tests[i].path, retval ? "TRUE" : "FALSE", 
+           tests[i].path, retval ? "TRUE" : "FALSE",
            tests[i].result ? "TRUE" : "FALSE");
     }
 
@@ -198,7 +198,7 @@ test_uri_is_absolute(const char **msg,
   apr_size_t i;
 
   /* Paths to test and their expected results. */
-  struct { 
+  struct {
     const char *path;
     svn_boolean_t result;
   } tests[] = {
@@ -231,7 +231,7 @@ test_uri_is_absolute(const char **msg,
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
            "svn_uri_is_absolute (%s) returned %s instead of %s",
-           tests[i].path, retval ? "TRUE" : "FALSE", 
+           tests[i].path, retval ? "TRUE" : "FALSE",
            tests[i].result ? "TRUE" : "FALSE");
     }
 
@@ -820,7 +820,7 @@ test_uri_is_canonical(const char **msg,
     { "http://HST/FOO/BaR",    FALSE },
     { "svn+ssh://j.raNDom@HST/BaR", FALSE },
     { "svn+SSH://j.random:jRaY@HST/BaR", FALSE },
-    { "SVN+ssh://j.raNDom:jray@HST/BaR", FALSE },    
+    { "SVN+ssh://j.raNDom:jray@HST/BaR", FALSE },
     { "svn+ssh://j.raNDom:jray@hst/BaR", TRUE },
     { "fILe:///Users/jrandom/wc", FALSE },
     { "fiLE:///",              FALSE },
@@ -872,7 +872,7 @@ test_dirent_split(const char **msg,
 {
   apr_size_t i;
 
-  static const char * const paths[][3] = { 
+  static const char * const paths[][3] = {
     { "/foo/bar",        "/foo",          "bar" },
     { "/foo/bar/ ",       "/foo/bar",      " " },
     { "/foo",            "/",             "foo" },
@@ -899,7 +899,7 @@ test_dirent_split(const char **msg,
     { "X:foo",           SVN_EMPTY_PATH,  "X:foo" },
 #endif /* non-WIN32 */
   };
-  
+
   *msg = "test svn_dirent_split";
 
   if (msg_only)
@@ -1224,7 +1224,7 @@ test_dirent_is_child(const char **msg,
 
 #define NUM_TEST_PATHS 25
 
-  static const char * const paths[] = { 
+  static const char * const paths[] = {
     "/foo/bar",
     "/foo/bars",
     "/foo/baz",
@@ -1253,68 +1253,68 @@ test_dirent_is_child(const char **msg,
     "H:foo/baz",
 #endif /* Win32 and Cygwin */
     };
-  
+
   static const char * const
     remainders[sizeof(paths) / sizeof(paths[0])][NUM_TEST_PATHS] = {
-    { 0, 0, 0, "baz", 0, "baz/bing/boom", 0, 0, 0, 0, 0, 
+    { 0, 0, 0, "baz", 0, "baz/bing/boom", 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, "bing/boom", 0, 0, 0, 0, 0, 
+    { 0, 0, 0, 0, 0, "bing/boom", 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, "foo", ".foo", 0, "foo2", 
+    { 0, 0, 0, 0, 0, 0, 0, "foo", ".foo", 0, "foo2",
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
     { "foo/bar", "foo/bars", "foo/baz", "foo/bar/baz", "flu/blar/blaz",
-      "foo/bar/baz/bing/boom", 0, 0, 0, 0, 0, 
+      "foo/bar/baz/bing/boom", 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
 #if defined(WIN32) || defined(__CYGWIN__)
     /* //srv paths */
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, "shr", "shr/fld", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, "fld", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
     /* H:/ paths */
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0, 0, "baz", 0, "baz/bing/boom", 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0, 0, 0, 0, "bing/boom", 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-      0, 0, 0, 0, "foo/bar", "foo/baz", "foo/bar/baz", "flu/blar/blaz", 
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, "foo/bar", "foo/baz", "foo/bar/baz", "flu/blar/blaz",
       "foo/bar/baz/bing/boom", 0, "iota", 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
     /* H: paths */
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, "foo", "foo/baz" },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, "baz" },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
 #endif /* Win32 and Cygwin */
   };
-  
+
   *msg = "test svn_dirent_is_child";
 
   if (msg_only)
@@ -1334,7 +1334,7 @@ test_dirent_is_child(const char **msg,
             return svn_error_createf
               (SVN_ERR_TEST_FAILED, NULL,
                "svn_dirent_is_child (%s, %s) returned '%s' instead of '%s'",
-               paths[i], paths[j], 
+               paths[i], paths[j],
                remainder ? remainder : "(null)",
                remainders[i][j] ? remainders[i][j] : "(null)" );
         }
@@ -1354,7 +1354,7 @@ test_uri_is_child(const char **msg,
 
 #define NUM_TEST_PATHS 16
 
-  static const char * const paths[] = { 
+  static const char * const paths[] = {
     "/foo/bar",
     "/foo/bars",
     "/foo/baz",
@@ -1372,46 +1372,46 @@ test_uri_is_child(const char **msg,
     "H:foo",
     "H:foo/baz",
     };
-  
+
   static const char * const
     remainders[sizeof(paths) / sizeof(paths[0])][NUM_TEST_PATHS] = {
-    { 0, 0, 0, "baz", 0, "baz/bing/boom", 0, 0, 0, 0, 0, 
+    { 0, 0, 0, "baz", 0, "baz/bing/boom", 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, "bing/boom", 0, 0, 0, 0, 0, 
+    { 0, 0, 0, 0, 0, "bing/boom", 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, "foo", ".foo", 0, "foo2", 
+    { 0, 0, 0, 0, 0, 0, 0, "foo", ".foo", 0, "foo2",
       "H:/foo/bar", "H:/foo/baz", "H:", "H:foo", "H:foo/baz" },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0 },
     { "foo/bar", "foo/bars", "foo/baz", "foo/bar/baz", "flu/blar/blaz",
-      "foo/bar/baz/bing/boom", 0, 0, 0, 0, 0, 
+      "foo/bar/baz/bing/boom", 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0 },
     /* H:/ paths */
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0 },
     /* H: paths */
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       "foo/bar", "foo/baz", 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 0, "baz" },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0 },
   };
-  
+
   *msg = "test svn_uri_is_child";
 
   if (msg_only)
@@ -1431,7 +1431,7 @@ test_uri_is_child(const char **msg,
             return svn_error_createf
               (SVN_ERR_TEST_FAILED, NULL,
                "svn_uri_is_child (%s, %s) returned '%s' instead of '%s'",
-               paths[i], paths[j], 
+               paths[i], paths[j],
                remainder ? remainder : "(null)",
                remainders[i][j] ? remainders[i][j] : "(null)" );
         }
