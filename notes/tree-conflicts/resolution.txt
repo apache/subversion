@@ -1,6 +1,11 @@
                            Resolving Tree Conflicts
                            ========================
 
+############################################################################
+### NOTE: This file describes what I'd like, not what Subversion does.   ###
+###   - Julian Foad, 2008                                                ###
+############################################################################
+
 Resolution of tree conflicts includes:
 
   (i)   A known state of the WC after the conflict is raised.
