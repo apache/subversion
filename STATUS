@@ -50,9 +50,13 @@ Candidate changes for 1.5.5:
    Votes:
      +1: glasser, cmpilato
 
- * r34050, r34051
+ * r34050, r34051, r34053
    Fix a bug in which files added via merge from a foreign repository
    kept the UUID of the foreign repository.
+   Notes:
+     r34050 adds an XFail regression test.
+     r34050 fixes the bug and expects the regression test to pass.
+     r34053 expands the test to cover directory adds, too.
    Votes:
      +1: cmpilato
 
