@@ -85,7 +85,8 @@ svn_client__can_delete(const char *path,
      be deleted. */
   return svn_client_status4
          (NULL, path, &revision, find_undeletables, NULL,
-          svn_depth_infinity, FALSE, FALSE, FALSE, FALSE, NULL, ctx, pool);
+          svn_depth_infinity, FALSE, FALSE, FALSE, FALSE, NULL, FALSE,
+          ctx, pool);
 }
 
 
