@@ -55,10 +55,10 @@ Candidate changes for 1.5.5:
    kept the UUID of the foreign repository.
    Notes:
      r34050 adds an XFail regression test.
-     r34050 fixes the bug and expects the regression test to pass.
+     r34051 fixes the bug and expects the regression test to pass.
      r34053 expands the test to cover directory adds, too.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, danielsh
 
 Approved changes:
 =================
