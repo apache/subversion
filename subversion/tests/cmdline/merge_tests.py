@@ -595,36 +595,6 @@ def delete_file_and_dir(sbox):
                                        None, None, None, None, None,
                                        True)
 
-  # Revert the previous merge attempt and redo the local changes to B2.
-  # Why do we need to do this?  Because 'B2' already has mergeinfo reflecting
-  # r3 has been merged.  If we didn't revert we'd need to use
-  # --ignore-ancestry' to force B2's children 'E' and 'lamda' to actually be
-  # deleted.  This is another facet of issue #2898.
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                       'revert', '-R', wc_dir)
-  modify_B2()
-
-  expected_output = wc.State(B2_path, {
-    'E'       : Item(status='D '),
-    'lambda'  : Item(status='D '),
-    })
-  expected_disk.remove('E/alpha', 'E/beta', 'lambda')
-  expected_disk.tweak('E', props={'foo' : 'foo_val'})
-  expected_status2.tweak('E', 'E/alpha', 'E/beta', 'lambda', status='D ')
-  expected_status2.tweak('', status=' M')
-
-  ### Full-to-dry-run automatic comparison disabled because a) dry-run
-  ### doesn't descend into deleted directories, and b) the full merge
-  ### notifies deleted directories twice.
-  svntest.actions.run_and_verify_merge(B2_path, '2', '3', B_url,
-                                       expected_output,
-                                       expected_disk,
-                                       expected_status2,
-                                       expected_skip,
-                                       None, None, None, None, None,
-                                       True, 0, '--force')
-
-
 
 #----------------------------------------------------------------------
 
