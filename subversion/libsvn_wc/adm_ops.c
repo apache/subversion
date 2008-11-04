@@ -2610,6 +2610,11 @@ attempt_deletion(const char *parent_dir,
    are to be resolved.
 
    See svn_wc_resolved_conflict3() for how CONFLICT_CHOICE behaves.
+
+   ### FIXME: This function should be loggy, otherwise an interruption can
+   ### leave, for example, one of the conflict artifact files deleted but
+   ### the entry still referring to it and trying to use it for the next
+   ### attempt at resolving.
 */
 static svn_error_t *
 resolve_conflict_on_entry(const char *path,
