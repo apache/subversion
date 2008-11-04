@@ -49,7 +49,7 @@ class GeneratorBase(gen_base.GeneratorBase):
     self.swig_path = None
     self.vsnet_version = '7.00'
     self.vsnet_proj_ver = '7.00'
-    self.sqlite_path = None
+    self.sqlite_path = 'sqlite'
     self.skip_sections = { 'mod_dav_svn': None,
                            'mod_authz_svn': None }
 
@@ -165,13 +165,7 @@ class WinGeneratorBase(GeneratorBase):
     """
 
     # Initialize parent
-    GeneratorBase.__init__(self, fname, verfname, options)
-
-### SQLite is optional for now, so don't perform this check (yet)
-#    if self.sqlite_path is None:
-#      sys.stderr.write('ERROR: SQLite path not specifed. ' + \
-#                       'Use --with-sqlite option.')
-#      sys.exit(1)
+    GeneratorBase.__init__(self, fname, verfname, options)                                            
 
     if self.bdb_lib is not None:
       sys.stderr.write("Found %s.lib in %s\n" % (self.bdb_lib, self.bdb_path))
@@ -212,6 +206,9 @@ class WinGeneratorBase(GeneratorBase):
     # Find APR and APR-util version
     self._find_apr()
     self._find_apr_util()
+    
+    # Find Sqlite
+    self._find_sqlite()
 
     # Look for ML
     if self.zlib_path:
@@ -286,17 +283,17 @@ class WinGeneratorBase(GeneratorBase):
 
   def path(self, *paths):
     """Convert build path to msvc path and prepend root"""
-    return msvc_path_join(self.rootpath, *map(msvc_path, paths))
+    return msvc_path_join(self.rootpath, *list(map(msvc_path, paths)))
 
   def apath(self, path, *paths):
     """Convert build path to msvc path and prepend root if not absolute"""
     ### On Unix, os.path.isabs won't do the right thing if "item"
     ### contains backslashes or drive letters
     if os.path.isabs(path):
-      return msvc_path_join(msvc_path(path), *map(msvc_path, paths))
+      return msvc_path_join(msvc_path(path), *list(map(msvc_path, paths)))
     else:
       return msvc_path_join(self.rootpath, msvc_path(path),
-                            *map(msvc_path, paths))
+                            *list(map(msvc_path, paths)))
 
   def get_install_targets(self):
     "Generate the list of targets"
@@ -465,7 +462,7 @@ class WinGeneratorBase(GeneratorBase):
       cbuild = "%s cf %s -C %s %s" \
                % (self.quote(jar_exe), jarfile, classdir,
                   " ".join(target.packages))
-      deps = map(lambda x: x.custom_target, sources)
+      deps = [x.custom_target for x in sources]
       sources.append(ProjectItem(path='makejar', reldir='', user_deps=deps,
                                  custom_build=cbuild, custom_target=jarfile,
                                  extension=''))
@@ -852,10 +849,10 @@ class WinGeneratorBase(GeneratorBase):
       if target.lang == "ruby":
         fakeincludes.extend(self.ruby_includes)
 
-    fakeincludes.append(self.apath(self.zlib_path))
-    
-    if self.sqlite_path:
-      fakeincludes.append(self.apath(self.sqlite_path, 'inc'))
+    fakeincludes.extend([
+                         self.apath(self.zlib_path),
+                         self.apath(self.sqlite_path, 'inc'),
+                         ])
 
     if self.sasl_path:
       fakeincludes.append(self.apath(self.sasl_path, 'include'))
@@ -874,9 +871,8 @@ class WinGeneratorBase(GeneratorBase):
     fakelibdirs = [ self.apath(self.bdb_path, "lib"),
                     self.apath(self.neon_path),
                     self.apath(self.zlib_path),
+                    self.apath(self.sqlite_path, "lib"),
                     ]
-    if self.sqlite_path:
-      fakelibdirs.append(self.apath(self.sqlite_path, "lib"))
     if self.sasl_path:
       fakelibdirs.append(self.apath(self.sasl_path, "lib"))
     if self.serf_lib:
@@ -954,9 +950,7 @@ class WinGeneratorBase(GeneratorBase):
       if dep.external_lib == '$(SVN_DB_LIBS)':
         nondeplibs.append(dblib)
 
-      # SQLite is optional for now, so only add the dependency when the path
-      # the the libs has been specified.
-      if dep.external_lib == '$(SVN_SQLITE_LIBS)' and self.sqlite_path:
+      if dep.external_lib == '$(SVN_SQLITE_LIBS)':
         nondeplibs.append('sqlite3.lib')
 
       if self.neon_lib and dep.external_lib == '$(NEON_LIBS)':
@@ -1216,9 +1210,7 @@ class WinGeneratorBase(GeneratorBase):
         vermatch = None
 
       if vermatch:
-        version = (int(vermatch.group(1)),
-                   int(vermatch.group(2)),
-                   int(vermatch.group(3)))
+        version = tuple(map(int, vermatch.groups()))
         # build/ac-macros/swig.m4 explains the next incantation
         vernum = int('%d%02d%03d' % version)
         sys.stderr.write('Found installed SWIG version %d.%d.%d\n' % version)
@@ -1283,9 +1275,7 @@ class WinGeneratorBase(GeneratorBase):
                      .search(txt)
 
         if vermatch:
-          version = (int(vermatch.group(1)),
-                     int(vermatch.group(2)),
-                     int(vermatch.group(3)))
+          version = tuple(map(int, vermatch.groups()))
           # build/ac-macros/swig.m4 explains the next incantation
           self.neon_ver = int('%d%02d%03d' % version)
           msg = 'Found neon version %d.%d.%d\n' % version
@@ -1323,8 +1313,7 @@ class WinGeneratorBase(GeneratorBase):
     fp = open(version_file_path)
     txt = fp.read()
     fp.close()
-    vermatch = re.compile(r'^\s*#define\s+APR_MAJOR_VERSION\s+(\d+)', re.M) \
-                 .search(txt)
+    vermatch = re.search(r'^\s*#define\s+APR_MAJOR_VERSION\s+(\d+)', txt, re.M)
 
     major_ver = int(vermatch.group(1))
     if major_ver > 0:
@@ -1346,14 +1335,46 @@ class WinGeneratorBase(GeneratorBase):
     fp = open(version_file_path)
     txt = fp.read()
     fp.close()
-    vermatch = re.compile(r'^\s*#define\s+APU_MAJOR_VERSION\s+(\d+)', re.M) \
-                 .search(txt)
+    vermatch = re.search(r'^\s*#define\s+APU_MAJOR_VERSION\s+(\d+)', txt, re.M)
 
     major_ver = int(vermatch.group(1))
     if major_ver > 0:
       self.aprutil_lib = 'libaprutil-%d.lib' % major_ver
     else:
       self.aprutil_lib = 'libaprutil.lib'
+      
+  def _find_sqlite(self):
+    "Find the Sqlite library and version"
+    
+    header_file = os.path.join(self.sqlite_path, 'inc', 'sqlite3.h')
+    lib_file = os.path.join(self.sqlite_path, 'lib', 'sqlite3.lib')
+    
+    if not os.path.exists(header_file):
+      sys.stderr.write("ERROR: '%s' not found.\n" % header_file)
+      sys.stderr.write("Use '--with-sqlite' option to configure sqlite location.\n");
+      sys.exit(1)
+      
+    if not os.path.exists(lib_file):
+      sys.stderr.write("ERROR: '%s' not found.\n" % lib_file)
+      sys.stderr.write("Use '--with-sqlite' option to configure sqlite location.\n");
+      sys.exit(1)
+
+    fp = open(header_file)
+    txt = fp.read()
+    fp.close()
+    vermatch = re.search(r'^\s*#define\s+SQLITE_VERSION\s+"(\d+)\.(\d+)\.(\d+)"', txt, re.M)
+
+    version = tuple(map(int, vermatch.groups()))
+
+    self.sqlite_version = '%d.%d.%d' % version
+
+    msg = 'Found SQLite version %s\n'
+
+    major, minor, patch = version
+    if major < 3 or (major == 3 and minor < 4):
+      msg = "WARNING: SQLite 3.4.0 or higher is required (%s found)\n"
+
+    sys.stderr.write(msg % self.sqlite_version)
 
 class ProjectItem:
   "A generic item class for holding sources info, config info, etc for a project"

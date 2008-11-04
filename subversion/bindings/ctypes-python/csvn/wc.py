@@ -69,15 +69,15 @@ class WC(object):
         dest -- new file name"""
         opt_rev = svn_opt_revision_t()
         dummy_rev = svn_opt_revision_t()
+        info = POINTER(svn_commit_info_t)()
         svn_opt_parse_revision(byref(opt_rev), byref(dummy_rev),
                                str(rev), self.iterpool)
 
-        svn_client_copy3(NULL,
+        svn_client_copy3(byref(info),
                          self._build_path(src),
                          byref(opt_rev),
                          self._build_path(dest),
                          self.client, self.iterpool)
-
         self.iterpool.clear()
 
     def move(self, src, dest, force = False):
@@ -87,7 +87,9 @@ class WC(object):
         src -- current file name
         dest -- new file name
         force -- if True, operation will be forced (default False)"""
-        svn_client_move3(NULL,
+
+        info = POINTER(svn_commit_info_t)()
+        svn_client_move3(byref(info),
                          self._build_path(src),
                          self._build_path(dest),
                          force,
@@ -101,7 +103,8 @@ class WC(object):
         paths -- list of paths to marked for deletion
         force -- if True, operation will be forced (default False)"""
 
-        svn_client_delete2(NULL, self._build_path_list(paths),
+        info = POINTER(svn_commit_info_t)()
+        svn_client_delete2(byref(info), self._build_path_list(paths),
                            force, self.client, self.iterpool)
         self.iterpool.clear()
 
@@ -192,6 +195,9 @@ class WC(object):
     def _notify_func_wrapper(self, baton, notify, pool):
         """Used to wrap the user callback."""
         if self._notify_func:
+            pool = Pool()
+            notify = svn_wc_dup_notify(notify, pool)[0]
+            notify.pool = pool
             self._notify_func(notify[0])
 
     def set_cancel_func(self, cancel_func):
@@ -434,7 +440,10 @@ class WC(object):
     def _status_wrapper(self, baton, path, status):
         """Wrapper for status callback."""
         if self._status:
-            self._status(path, status.contents)
+            pool = Pool()
+            status = svn_wc_dup_status2(status, pool)[0]
+            status.pool = pool
+            self._status(path, status)
 
     def set_status_func(self, status):
         """Set a callback function to be used the next time the status method
@@ -487,7 +496,10 @@ class WC(object):
     def _info_wrapper(self, baton, path, info, pool):
         """Internal wrapper for info method callbacks."""
         if self._info:
-            self._info(path, info.contents)
+            pool = Pool()
+            info = svn_info_dup(info, pool)[0]
+            info.pool = pool
+            self._info(path, info)
 
     def set_info_func(self, info):
         """Set a callback to be used to process svn_info_t objects during
@@ -590,13 +602,12 @@ class WC(object):
             also be commited (default True)
         keep_locks -- if True, locks will not be released during commit
             (default False)"""
-        try:
-            commit_info = POINTER(svn_commit_info_t)()
-            svn_client_commit3(byref(commit_info), self._build_path_list(paths),
-                               recurse, keep_locks, self.client, self.iterpool)
-            return commit_info.value
-        finally:
-            self.iterpool.clear()
+        commit_info = POINTER(svn_commit_info_t)()
+        pool = Pool()
+        svn_client_commit3(byref(commit_info), self._build_path_list(paths),
+                           recurse, keep_locks, self.client, pool)
+        commit_info[0].pool = pool
+        return commit_info[0]
 
     def update(self, paths=[""], revnum=None, recurse=True,
                 ignore_externals=True):
@@ -633,7 +644,12 @@ class WC(object):
     def _list_wrapper(self, baton, path, dirent, abs_path, pool):
         """Internal method to wrap list callback."""
         if self._list:
-            self._list(path, dirent.contents, lock.contents, abs_path)
+            pool = Pool()
+            dirent = svn_dirent_dup(dirent, pool)[0]
+            lock = svn_lock_dup(lock, pool)[0]
+            dirent.pool = pool
+            lock.pool = pool
+            self._list(path, dirent, lock, abs_path)
 
     def set_list_func(self, list_func):
         """Set the callback function for list operations.

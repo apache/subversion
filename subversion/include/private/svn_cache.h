@@ -39,7 +39,7 @@ extern "C" {
 
 
 /**
- * @defgroup svn_cache_support In-memory caching
+ * @defgroup svn_cache__support In-memory caching
  * @{
  */
 
@@ -49,58 +49,48 @@ extern "C" {
  *
  * @since New in 1.6.
 */
-typedef svn_error_t *(*svn_cache_dup_func_t)(void **out,
-                                             void *in,
-                                             apr_pool_t *pool);
+typedef svn_error_t *(*svn_cache__dup_func_t)(void **out,
+                                              void *in,
+                                              apr_pool_t *pool);
 
 /**
  * A function type for deserializing an object @a *out from the string
  * @a data of length @a data_len in the pool @a pool.
- *
- * @since New in 1.6.
 */
-typedef svn_error_t *(*svn_cache_deserialize_func_t)(void **out,
-                                                     const char *data,
-                                                     apr_size_t data_len,
-                                                     apr_pool_t *pool);
+typedef svn_error_t *(*svn_cache__deserialize_func_t)(void **out,
+                                                      const char *data,
+                                                      apr_size_t data_len,
+                                                      apr_pool_t *pool);
 
 /**
  * A function type for serializing an object @a in into bytes.  The
  * function should allocate the serialized value in @a pool, set @a
  * *data to the serialized value, and set *data_len to its length.
- *
- * @since New in 1.6.
 */
-typedef svn_error_t *(*svn_cache_serialize_func_t)(char **data,
-                                                   apr_size_t *data_len,
-                                                   void *in,
-                                                   apr_pool_t *pool);
+typedef svn_error_t *(*svn_cache__serialize_func_t)(char **data,
+                                                    apr_size_t *data_len,
+                                                    void *in,
+                                                    apr_pool_t *pool);
 
 /**
  * A function type for transforming or ignoring errors.  @a pool may
  * be used for temporary allocations.
- *
- * @since New in 1.6.
  */
-typedef svn_error_t *(*svn_cache_error_handler_t)(svn_error_t *err,
-                                                  void *baton,
-                                                  apr_pool_t *pool);
+typedef svn_error_t *(*svn_cache__error_handler_t)(svn_error_t *err,
+                                                   void *baton,
+                                                   apr_pool_t *pool);
 
 /**
  * A wrapper around apr_memcache_t, provided essentially so that the
  * Subversion public API doesn't depend on whether or not you have
  * access to the APR memcache libraries.
- *
- * @since New in 1.6.
  */
 typedef struct svn_memcache_t svn_memcache_t;
 
 /**
  * Opaque type for an in-memory cache.
- *
- * @since New in 1.6.
  */
-typedef struct svn_cache_t svn_cache_t;
+typedef struct svn_cache__t svn_cache__t;
 
 /**
  * Creates a new cache in @a *cache_p.  This cache will use @a pool
@@ -124,17 +114,15 @@ typedef struct svn_cache_t svn_cache_t;
  * will not be called on it).
  *
  * It is not safe for @a dup_func to interact with the cache itself.
- *
- * @since New in 1.6.
  */
 svn_error_t *
-svn_cache_create_inprocess(svn_cache_t **cache_p,
-                           svn_cache_dup_func_t dup_func,
-                           apr_ssize_t klen,
-                           apr_int64_t pages,
-                           apr_int64_t items_per_page,
-                           svn_boolean_t thread_safe,
-                           apr_pool_t *pool);
+svn_cache__create_inprocess(svn_cache__t **cache_p,
+                            svn_cache__dup_func_t dup_func,
+                            apr_ssize_t klen,
+                            apr_int64_t pages,
+                            apr_int64_t items_per_page,
+                            svn_boolean_t thread_safe,
+                            apr_pool_t *pool);
 /**
  * Creates a new cache in @a *cache_p, communicating to a memcached
  * process via @a memcache.  The elements in the cache will be indexed
@@ -151,21 +139,19 @@ svn_cache_create_inprocess(svn_cache_t **cache_p,
  *
  * These caches are always thread safe.
  *
- * These caches do not support svn_cache_iter.
+ * These caches do not support svn_cache__iter.
  *
  * If Subversion was not built with apr_memcache support, always
  * raises SVN_ERR_NO_APR_MEMCACHE.
- *
- * @since New in 1.6.
  */
 svn_error_t *
-svn_cache_create_memcache(svn_cache_t **cache_p,
-                          svn_memcache_t *memcache,
-                          svn_cache_serialize_func_t serialize_func,
-                          svn_cache_deserialize_func_t deserialize_func,
-                          apr_ssize_t klen,
-                          const char *prefix,
-                          apr_pool_t *pool);
+svn_cache__create_memcache(svn_cache__t **cache_p,
+                           svn_memcache_t *memcache,
+                           svn_cache__serialize_func_t serialize_func,
+                           svn_cache__deserialize_func_t deserialize_func,
+                           apr_ssize_t klen,
+                           const char *prefix,
+                           apr_pool_t *pool);
 
 /**
  * Given @a config, returns an APR memcached interface in @a
@@ -176,30 +162,26 @@ svn_cache_create_memcache(svn_cache_t **cache_p,
  * If Subversion was not built with apr_memcache_support, then raises
  * SVN_ERR_NO_APR_MEMCACHE if and only if @a config is configured to
  * use memcache.
- *
- * @since New in 1.6.
  */
 svn_error_t *
-svn_cache_make_memcache_from_config(svn_memcache_t **memcache_p,
-                                    svn_config_t *config,
-                                    apr_pool_t *pool);
+svn_cache__make_memcache_from_config(svn_memcache_t **memcache_p,
+                                     svn_config_t *config,
+                                     apr_pool_t *pool);
 
 /**
  * Sets @a handler to be @a cache's error handling routine.  If any
- * error is returned from a call to svn_cache_get or svn_cache_set, @a
+ * error is returned from a call to svn_cache__get or svn_cache__set, @a
  * handler will be called with @a baton and the error, and the
  * original function will return whatever error @a handler returns
  * instead (possibly SVN_NO_ERROR); @a handler will receive the pool
  * passed to the svn_cache_* function.  @a pool is used for temporary
  * allocations.
- *
- * @since New in 1.6.
  */
 svn_error_t *
-svn_cache_set_error_handler(svn_cache_t *cache,
-                            svn_cache_error_handler_t handler,
-                            void *baton,
-                            apr_pool_t *pool);
+svn_cache__set_error_handler(svn_cache__t *cache,
+                             svn_cache__error_handler_t handler,
+                             void *baton,
+                             apr_pool_t *pool);
 
 
 #define SVN_CACHE_CONFIG_CATEGORY_MEMCACHED_SERVERS "memcached-servers"
@@ -209,15 +191,13 @@ svn_cache_set_error_handler(svn_cache_t *cache,
  * setting @a *found to TRUE iff it is in the cache and FALSE if it is
  * not found.  The value is copied into @a pool using the copy
  * function provided to the cache's constructor.
- *
- * @since New in 1.6.
  */
 svn_error_t *
-svn_cache_get(void **value,
-              svn_boolean_t *found,
-              const svn_cache_t *cache,
-              const void *key,
-              apr_pool_t *pool);
+svn_cache__get(void **value,
+               svn_boolean_t *found,
+               const svn_cache__t *cache,
+               const void *key,
+               apr_pool_t *pool);
 
 /**
  * Stores the value @a value under the key @a key in @a cache.  @a pool
@@ -230,14 +210,12 @@ svn_cache_get(void **value,
  * the cache's copy of the previous value may not be immediately
  * cleared); it is only guaranteed to not leak for caches created with
  * @a items_per_page equal to 1.
- *
- * @since New in 1.6.
  */
 svn_error_t *
-svn_cache_set(svn_cache_t *cache,
-              const void *key,
-              void *value,
-              apr_pool_t *pool);
+svn_cache__set(svn_cache__t *cache,
+               const void *key,
+               void *value,
+               apr_pool_t *pool);
 
 /**
  * Iterates over the elements currently in @a cache, calling @a func
@@ -251,22 +229,20 @@ svn_cache_set(svn_cache_t *cache,
  * error is returned.  When @a func returns @c SVN_ERR_ITER_BREAK,
  * iteration is interrupted, but no error is returned and @a
  * *completed is set to @c FALSE.  (The error handler set by
- * svn_cache_set_error_handler is not used for svn_cache_iter.)
+ * svn_cache__set_error_handler is not used for svn_cache__iter.)
  *
  * It is not legal to perform any other cache operations on @a cache
  * inside @a func.
  *
- * svn_cache_iter is not supported by all cache implementations; see
- * the svn_cache_create_* function for details.
- *
- * @since New in 1.6.
+ * svn_cache__iter is not supported by all cache implementations; see
+ * the svn_cache__create_* function for details.
  */
 svn_error_t *
-svn_cache_iter(svn_boolean_t *completed,
-               const svn_cache_t *cache,
-               svn_iter_apr_hash_cb_t func,
-               void *baton,
-               apr_pool_t *pool);
+svn_cache__iter(svn_boolean_t *completed,
+                const svn_cache__t *cache,
+                svn_iter_apr_hash_cb_t func,
+                void *baton,
+                apr_pool_t *pool);
 /** @} */
 
 

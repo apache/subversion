@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -115,12 +115,10 @@ def run_one_test(sbox, basename, *varargs):
 
   # special case the 'svn' test so that no extra arguments are added
   if basename != 'svn':
-    exit_code, actual_stdout, actual_stderr = apply(svntest.main.run_svn,
-                                                    (1,) + varargs)
+    exit_code, actual_stdout, actual_stderr = svntest.main.run_svn(1, *varargs)
   else:
-    exit_code, actual_stdout, actual_stderr = apply(svntest.main.run_command,
-                                                    (svntest.main.svn_binary,
-                                                     1, 0) + varargs)
+    exit_code, actual_stdout, actual_stderr = svntest.main.run_command(svntest.main.svn_binary,
+                                                                       1, 0, *varargs)
 
   # Delete and perform search and replaces on the lines from the
   # actual and expected output that may differ between build
@@ -134,11 +132,13 @@ def run_one_test(sbox, basename, *varargs):
     print "Standard output does not match."
     print "Expected standard output:"
     print "====="
-    map(sys.stdout.write, exp_stdout)
+    for x in exp_stdout:
+      sys.stdout.write(x)
     print "====="
     print "Actual standard output:"
     print "====="
-    map(sys.stdout.write, actual_stdout)
+    for x in actual_stdout:
+      sys.stdout.write(x)
     print "====="
     raise svntest.Failure
 
@@ -146,11 +146,13 @@ def run_one_test(sbox, basename, *varargs):
     print "Standard error does not match."
     print "Expected standard error:"
     print "====="
-    map(sys.stdout.write, exp_stderr)
+    for x in exp_stderr:
+      sys.stdout.write(x)
     print "====="
     print "Actual standard error:"
     print "====="
-    map(sys.stdout.write, actual_stderr)
+    for x in actual_stderr:
+      sys.stdout.write(x)
     print "====="
     raise svntest.Failure
 

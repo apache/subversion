@@ -108,7 +108,7 @@ relegate_dir_external(const char *path,
 
   /* ### Ugly. Unlock only if not going to return an error. Revisit */
   if (!err || err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD)
-    SVN_ERR(svn_wc_adm_close(adm_access));
+    SVN_ERR(svn_wc_adm_close2(adm_access, pool));
 
   if (err && (err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
     {
@@ -178,7 +178,7 @@ switch_dir_external(const char *path,
                                ctx->cancel_func, ctx->cancel_baton, subpool));
       SVN_ERR(svn_wc_entry(&entry, path, adm_access,
                            FALSE, subpool));
-      SVN_ERR(svn_wc_adm_close(adm_access));
+      SVN_ERR(svn_wc_adm_close2(adm_access, subpool));
 
       if (entry && entry->url)
         {
@@ -361,7 +361,7 @@ switch_file_external(const char *path,
       if (! entry->file_external_path)
         {
           if (close_adm_access)
-            SVN_ERR(svn_wc_adm_close(target_adm_access));
+            SVN_ERR(svn_wc_adm_close2(target_adm_access, subpool));
 
           return svn_error_createf
             (SVN_ERR_CLIENT_FILE_EXTERNAL_OVERWRITE_VERSIONED, 0,
@@ -463,7 +463,9 @@ switch_file_external(const char *path,
   }
 
   if (close_adm_access)
-    SVN_ERR(svn_wc_adm_close(target_adm_access));
+    SVN_ERR(svn_wc_adm_close2(target_adm_access, subpool));
+
+  /* ### should destroy the subpool... */
 
   return SVN_NO_ERROR;
 
@@ -503,7 +505,9 @@ switch_file_external(const char *path,
     }
 
   if (close_adm_access)
-    SVN_ERR(svn_wc_adm_close(target_adm_access));
+    SVN_ERR(svn_wc_adm_close2(target_adm_access, subpool));
+
+  /* ### should destroy the subpool */
 
   return err;
 }
@@ -941,7 +945,7 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
       if (close_access_baton_when_done &&
           (!err || err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
         {
-          svn_error_t *err2 = svn_wc_adm_close(adm_access);
+          svn_error_t *err2 = svn_wc_adm_close2(adm_access, ib->iter_pool);
           if (err2)
             {
               if (!err)

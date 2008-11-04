@@ -202,8 +202,7 @@ def guarantee_repos_and_wc(sbox):
 
 def merge_history_repos(sbox):
   """Make a repos with varied and interesting merge history, similar
-to the repos found at:
-http://merge-tracking.open.collab.net/servlets/ProjectProcess?documentContainer=c2__Sample%20repository"""
+to the repos found at: log_tests_data/merge_history_dump.png"""
 
   upsilon_path = os.path.join('A', 'upsilon')
   omicron_path = os.path.join('blocked', 'omicron')

@@ -140,17 +140,23 @@ svn_wc_translated_file2(const char **xlated_path,
     }
   else  /* some translation (or copying) is necessary */
     {
-      const char *tmp_dir, *tmp_vfile;
+      const char *tmp_vfile;
+      const char *tmp_dir;
       svn_boolean_t repair_forced = flags & SVN_WC_TRANSLATE_FORCE_EOL_REPAIR;
 
-      svn_path_split(versioned_file, &tmp_dir, &tmp_vfile, pool);
       if (flags & SVN_WC_TRANSLATE_USE_GLOBAL_TMP)
         {
           SVN_ERR(svn_io_temp_dir(&tmp_dir, pool));
           tmp_vfile = svn_path_join(tmp_dir, "svndiff", pool);
         }
       else
-        tmp_vfile = svn_wc__adm_path(tmp_dir, 1, pool, tmp_vfile, NULL);
+        {
+          const char *parent_dir;
+
+          svn_path_split(versioned_file, &parent_dir, &tmp_vfile, pool);
+          tmp_dir = svn_wc__adm_child(parent_dir, SVN_WC__ADM_TMP, pool);
+          tmp_vfile = svn_path_join(tmp_dir, tmp_vfile, pool);
+        }
 
       SVN_ERR(svn_io_open_unique_file2
               (NULL, &tmp_vfile,
@@ -251,17 +257,17 @@ svn_wc__get_keywords(apr_hash_t **keywords,
       SVN_ERR(svn_wc_prop_get(&propval, SVN_PROP_KEYWORDS, path, adm_access,
                               pool));
 
-      list = propval ? propval->data : NULL;
+      /* The easy answer. */
+      if (propval == NULL)
+        {
+          *keywords = NULL;
+          return SVN_NO_ERROR;
+        }
+
+      list = propval->data;
     }
   else
     list = force_list;
-
-  /* The easy answer. */
-  if (list == NULL)
-    {
-      *keywords = NULL;
-      return SVN_NO_ERROR;
-    }
 
   SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
 

@@ -95,7 +95,7 @@ revert(const char *path,
         return err;
     }
 
-  return svn_wc_adm_close(adm_access);
+  return svn_wc_adm_close2(adm_access, pool);
 }
 
 
@@ -140,10 +140,20 @@ svn_client_revert2(const apr_array_header_t *paths,
 
  errorful:
 
-  svn_pool_destroy(subpool);
+  if (!use_commit_times)
+    {
+      /* Sleep to ensure timestamp integrity. */
+      const char* sleep_path = NULL;
 
-  /* Sleep to ensure timestamp integrity. */
-  svn_sleep_for_timestamps();
+      /* Only specify a path if we are certain all paths are on the
+         same filesystem */
+      if (paths->nelts == 1)
+        sleep_path = APR_ARRAY_IDX(paths, 0, const char *);
+
+      svn_io_sleep_for_timestamps(sleep_path, subpool);
+    }
+
+  svn_pool_destroy(subpool);
 
   return err;
 }

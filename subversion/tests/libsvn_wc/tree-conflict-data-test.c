@@ -288,6 +288,9 @@ test_write_invalid_tree_conflicts(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
+  /* Configure so that we can test for errors caught by SVN_ERR_ASSERT. */
+  svn_error_set_malfunction_handler(svn_error_raise_on_malfunction);
+
   entry = apr_pcalloc(pool, sizeof(svn_wc_entry_t));
 
   /* victim path */

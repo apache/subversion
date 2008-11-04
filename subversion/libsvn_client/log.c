@@ -396,7 +396,7 @@ svn_client_log4(const apr_array_header_t *targets,
                svn_path_local_style(target, pool));
 
           URL = apr_pstrdup(pool, entry->url);
-          SVN_ERR(svn_wc_adm_close(adm_access));
+          SVN_ERR(svn_wc_adm_close2(adm_access, iterpool));
           APR_ARRAY_PUSH(target_urls, const char *) = URL;
           APR_ARRAY_PUSH(real_targets, const char *) = target;
         }

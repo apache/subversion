@@ -288,7 +288,7 @@ def import_eol_style(sbox):
   "import should honor the eol-style property"
 
   sbox.build()
-  wc_dir = sbox.wc_dir
+  os.chdir(sbox.wc_dir)
 
   # setup a custom config, we need autoprops
   config_contents = '''\
@@ -304,8 +304,8 @@ enable-auto-props = yes
 
   # create a new file and import it
   file_name = "test.dsp"
-  file_path = os.path.join(wc_dir, file_name)
-  imp_dir_path = os.path.join(wc_dir, 'dir')
+  file_path = file_name
+  imp_dir_path = 'dir'
   imp_file_path = os.path.join(imp_dir_path, file_name)
 
   os.mkdir(imp_dir_path, 0755)
@@ -317,7 +317,7 @@ enable-auto-props = yes
                                      sbox.repo_url,
                                      '--config-dir', config_dir)
 
-  svntest.main.run_svn(None, 'update', wc_dir, '--config-dir', config_dir)
+  svntest.main.run_svn(None, 'update', '.', '--config-dir', config_dir)
 
   # change part of the file
   svntest.main.file_append(file_path, "Extra line\n")
@@ -337,10 +337,10 @@ enable-auto-props = yes
   else:
     crlf = '\r\n'
   expected_output = [
-  "Index: svn-test-work/working_copies/import_tests-5/test.dsp\n",
+  "Index: test.dsp\n",
   "===================================================================\n",
-  "--- svn-test-work/working_copies/import_tests-5/test.dsp\t(revision 2)\n",
-  "+++ svn-test-work/working_copies/import_tests-5/test.dsp\t(working copy)\n",
+  "--- test.dsp\t(revision 2)\n",
+  "+++ test.dsp\t(working copy)\n",
   "@@ -1 +1,2 @@\n",
   " This is file test.dsp." + crlf,
   "+Extra line" + crlf

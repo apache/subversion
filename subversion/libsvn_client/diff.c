@@ -843,7 +843,7 @@ convert_to_url(const char **url,
   SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path, FALSE,
                                  0, NULL, NULL, pool));
   SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
-  SVN_ERR(svn_wc_adm_close(adm_access));
+  SVN_ERR(svn_wc_adm_close2(adm_access, pool));
 
   if (entry->url)
     *url = apr_pstrdup(pool, entry->url);
@@ -1159,7 +1159,7 @@ diff_wc_wc(const char *path1,
 
   SVN_ERR(svn_wc_diff5(adm_access, target, callbacks, callback_baton,
                        depth, ignore_ancestry, changelists, pool));
-  return svn_wc_adm_close(adm_access);
+  return svn_wc_adm_close2(adm_access, pool);
 }
 
 
@@ -1365,7 +1365,7 @@ diff_repos_wc(const char *path1,
                                   FALSE, NULL, NULL, /* notification is N/A */
                                   NULL, pool));
 
-  return svn_wc_adm_close(adm_access);
+  return svn_wc_adm_close2(adm_access, pool);
 }
 
 

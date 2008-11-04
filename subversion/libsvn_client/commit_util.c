@@ -85,8 +85,7 @@ add_committable(apr_hash_t *committables,
 
   /* Now update pointer values, ensuring that their allocations live
      in POOL. */
-  svn_client_commit_item_create((const svn_client_commit_item3_t **) &new_item,
-                                pool);
+  new_item = svn_client_commit_item_create2(pool);
   new_item->path           = apr_pstrdup(pool, path);
   new_item->kind           = kind;
   new_item->url            = apr_pstrdup(pool, url);
@@ -1072,7 +1071,6 @@ struct path_driver_cb_baton
   const svn_delta_editor_t *editor;    /* commit editor */
   void *edit_baton;                    /* commit editor's baton */
   apr_hash_t *file_mods;               /* hash: path->file_mod_t */
-  apr_hash_t *tempfiles;               /* hash of tempfiles created */
   const char *notify_path_prefix;      /* notification path prefix
                                           (NULL is okay, else abs path) */
   svn_client_ctx_t *ctx;               /* client context baton */
@@ -1364,7 +1362,7 @@ svn_client__do_commit(const char *base_url,
 {
   apr_hash_t *file_mods = apr_hash_make(pool);
   apr_hash_t *items_hash = apr_hash_make(pool);
-  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(pool);
   apr_hash_index_t *hi;
   int i;
   struct path_driver_cb_baton cb_baton;
@@ -1405,7 +1403,6 @@ svn_client__do_commit(const char *base_url,
   cb_baton.editor = editor;
   cb_baton.edit_baton = edit_baton;
   cb_baton.file_mods = file_mods;
-  cb_baton.tempfiles = tempfiles ? *tempfiles : NULL;
   cb_baton.notify_path_prefix = notify_path_prefix;
   cb_baton.ctx = ctx;
   cb_baton.commit_items = items_hash;
@@ -1426,7 +1423,7 @@ svn_client__do_commit(const char *base_url,
       svn_boolean_t fulltext = FALSE;
       svn_wc_adm_access_t *item_access;
 
-      svn_pool_clear(subpool);
+      svn_pool_clear(iterpool);
       /* Get the next entry. */
       apr_hash_this(hi, NULL, NULL, &val);
       mod = val;
@@ -1443,25 +1440,25 @@ svn_client__do_commit(const char *base_url,
           svn_wc_notify_t *notify;
           notify = svn_wc_create_notify(item->path,
                                         svn_wc_notify_commit_postfix_txdelta,
-                                        subpool);
+                                        iterpool);
           notify->kind = svn_node_file;
           notify->path_prefix = notify_path_prefix;
-          (*ctx->notify_func2)(ctx->notify_baton2, notify, subpool);
+          (*ctx->notify_func2)(ctx->notify_baton2, notify, iterpool);
         }
 
       if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
         fulltext = TRUE;
 
-      dir_path = svn_path_dirname(item->path, subpool);
+      dir_path = svn_path_dirname(item->path, iterpool);
       SVN_ERR(svn_wc_adm_retrieve(&item_access, adm_access, dir_path,
-                                  subpool));
+                                  iterpool));
       SVN_ERR(svn_wc_transmit_text_deltas2(tempfiles ? &tempfile : NULL,
                                            digest, item->path,
                                            item_access, fulltext, editor,
-                                           file_baton, subpool));
-      if (tempfiles && tempfile && *tempfiles)
+                                           file_baton, iterpool));
+      if (tempfiles && tempfile)
         {
-          tempfile = apr_pstrdup(apr_hash_pool_get(*tempfiles), tempfile);
+          tempfile = apr_pstrdup(pool, tempfile);
           apr_hash_set(*tempfiles, tempfile, APR_HASH_KEY_STRING, (void *)1);
         }
       if (digests)
@@ -1472,7 +1469,7 @@ svn_client__do_commit(const char *base_url,
         }
     }
 
-  svn_pool_destroy(subpool);
+  svn_pool_destroy(iterpool);
 
   /* Close the edit. */
   return editor->close_edit(edit_baton, pool);

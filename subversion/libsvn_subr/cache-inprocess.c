@@ -33,7 +33,7 @@ typedef struct {
   apr_ssize_t klen;
 
   /* Used to copy values in and out of the cache. */
-  svn_cache_dup_func_t dup_func;
+  svn_cache__dup_func_t dup_func;
 
   /* The number of pages we're allowed to allocate before having to
    * try to reuse one. */
@@ -55,7 +55,7 @@ typedef struct {
    * currently on PARTIAL_PAGE. */
   apr_int64_t partial_page_number_filled;
 
-  /* The pool that the svn_cache_t itself, HASH, and all pages are
+  /* The pool that the svn_cache__t itself, HASH, and all pages are
    * allocated in; subpools of this pool are used for the cache_entry
    * structs, as well as the dup'd values and hash keys.
    */
@@ -364,7 +364,7 @@ inprocess_cache_set(void *cache_void,
   return unlock_cache(cache, err);
 }
 
-/* Baton type for svn_cache_iter. */
+/* Baton type for svn_cache__iter. */
 struct cache_iter_baton {
   svn_iter_apr_hash_cb_t user_cb;
   void *user_baton;
@@ -411,15 +411,15 @@ static svn_cache__vtable_t inprocess_cache_vtable = {
 };
 
 svn_error_t *
-svn_cache_create_inprocess(svn_cache_t **cache_p,
-                           svn_cache_dup_func_t dup_func,
-                           apr_ssize_t klen,
-                           apr_int64_t pages,
-                           apr_int64_t items_per_page,
-                           svn_boolean_t thread_safe,
-                           apr_pool_t *pool)
+svn_cache__create_inprocess(svn_cache__t **cache_p,
+                            svn_cache__dup_func_t dup_func,
+                            apr_ssize_t klen,
+                            apr_int64_t pages,
+                            apr_int64_t items_per_page,
+                            svn_boolean_t thread_safe,
+                            apr_pool_t *pool)
 {
-  svn_cache_t *wrapper = apr_pcalloc(pool, sizeof(*wrapper));
+  svn_cache__t *wrapper = apr_pcalloc(pool, sizeof(*wrapper));
   inprocess_cache_t *cache = apr_pcalloc(pool, sizeof(*cache));
 
   cache->hash = apr_hash_make(pool);
@@ -454,7 +454,6 @@ svn_cache_create_inprocess(svn_cache_t **cache_p,
 
   wrapper->vtable = &inprocess_cache_vtable;
   wrapper->cache_internal = cache;
-  wrapper->error_handler = wrapper->error_baton = NULL;
 
   *cache_p = wrapper;
   return SVN_NO_ERROR;

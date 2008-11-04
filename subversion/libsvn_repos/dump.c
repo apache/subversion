@@ -574,7 +574,8 @@ dump_node(struct edit_baton *eb,
       else
         SVN_ERR(svn_fs_file_contents(&contents, eb->fs_root, path, pool));
 
-      SVN_ERR(svn_stream_copy2(contents, eb->stream, NULL, NULL, pool));
+      SVN_ERR(svn_stream_copy3(contents, svn_stream_disown(eb->stream, pool),
+                               NULL, NULL, pool));
     }
 
   len = 2;

@@ -3205,8 +3205,11 @@ svn_swig_rb_set_revision(svn_opt_revision_t *rev, VALUE value)
   default:
     if (rb_obj_is_kind_of(value,
                           rb_const_get(rb_cObject, rb_intern("Time")))) {
-      rev->kind = svn_opt_revision_date;
-      rev->value.date = NUM2LONG(rb_funcall(value, rb_intern("to_i"), 0));
+	long sec;
+
+	sec = NUM2LONG(rb_funcall(value, rb_intern("to_i"), 0));
+	rev->kind = svn_opt_revision_date;
+	rev->value.date = apr_time_from_sec(sec);
     } else {
       rb_raise(rb_eArgError,
                "invalid type: %s",

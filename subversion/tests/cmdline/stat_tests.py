@@ -94,18 +94,11 @@ def status_update_with_nested_adds(sbox):
   # Now we go to the backup working copy, still at revision 1.
   # We will run 'svn st -u', and make sure that newdir/newfile is reported
   # as a nonexistent (but pending) path.
-
-  # Create expected status tree; all local revisions should be at 1,
-  # but newdir and newfile should be present with 'blank' attributes.
   expected_status = svntest.actions.get_virginal_state(wc_backup, 1)
-
-  # Verify status.  Notice that we're running status *without* the
-  # --quiet flag, so the unversioned items will appear.
-  # Unfortunately, the regexp that we currently use to parse status
-  # output is unable to parse a line that has no working revision!  If
-  # an error happens, we'll catch it here.  So that's a good enough
-  # regression test for now.  Someday, though, it would be nice to
-  # positively match the mostly-empty lines.
+  expected_status.add({
+    'newdir'         : Item(status='  '),
+    'newdir/newfile' : Item(status='  '),
+    })
   svntest.actions.run_and_verify_unquiet_status(wc_backup,
                                                 expected_status)
 
@@ -1572,12 +1565,13 @@ def status_with_tree_conflicts(sbox):
   G = os.path.join(wc_dir, 'A', 'D', 'G')
   pi = os.path.join(G, 'pi')
   rho = os.path.join(G, 'rho')
+  tau = os.path.join(G, 'tau')
 
   # check status of G
   expected = svntest.verify.UnorderedOutput(
-         ["C       %s\n" % G,
-          "D     C %s\n" % pi,
+         ["D     C %s\n" % pi,
           "?     C %s\n" % rho,
+          "!     C %s\n" % tau,
           ])
 
   svntest.actions.run_and_verify_svn(None,
@@ -1587,9 +1581,10 @@ def status_with_tree_conflicts(sbox):
 
   # check status of G, with -v
   expected = svntest.verify.UnorderedOutput(
-         ["C                2        2 jrandom      %s\n" % G,
+         ["                 2        2 jrandom      %s\n" % G,
           "D     C          2        2 jrandom      %s\n" % pi,
           "?     C                                  %s\n" % rho,
+          "!     C                                  %s\n" % tau,
           ])
 
   svntest.actions.run_and_verify_svn(None,
@@ -1598,36 +1593,43 @@ def status_with_tree_conflicts(sbox):
                                      "status", "-v", G)
 
   # check status of G, with -xml
-  exit_code, output, error = svntest.main.run_svn(None, 'status', G, '--xml')
+  exit_code, output, error = svntest.main.run_svn(None, 'status', G, '--xml',
+                                                  '-v')
 
-  template = ["<?xml version=\"1.0\"?>\n",
-              "<status>\n",
-              "<target\n",
-              "   path=\"%s\">\n" % G,
-              "<entry\n",
-              "   path=\"%s\">\n" % G,
-              "<wc-status\n",
-              "   props=\"none\"\n",
-              "   has-tree-conflicted-children=\"true\"\n",  # <-- true!
-              "   item=\"normal\"\n",
-              "   revision=\"2\">\n",
-              "<commit\n",
-              "   revision=\"2\">\n",
-              "<author>%s</author>\n" % svntest.main.wc_author,
-              "<date></date>\n", # will be ignored
-              "</commit>\n",
-              "</wc-status>\n",
-              "</entry>\n",
-             ]
+  should_be_victim = {
+    G:   False,
+    pi:  True,
+    rho: True,
+    tau: True,
+    }
 
-  for i in range(0, len(output)):
-    if output[i].startswith("<date>"):
-      continue # ignore <date>
-    if output[i] == "</entry>\n":
-      break # read only the first entry
-    if output[i] != template[i]:
-      print "ERROR: expected:", template[i], "actual:", output[i]
-      raise svntest.Failure
+  real_entry_count = 0
+  output_str = r"".join(output)
+  # skip the first string, which contains only 'status' and 'target' elements
+  entries = output_str.split("<entry")[1:]
+
+  for entry in entries:
+    # get the entry's path
+    m = re.search('path="([^"]+)"', entry)
+    if m:
+      real_entry_count += 1
+      path = m.group(1)
+      # check if the path should be a victim
+      m = re.search('tree-conflicted="true"', entry)
+      if (m is None) and should_be_victim[path]:
+        print "ERROR: expected '%s' to be a tree conflict victim." % path
+        print "ACTUAL STATUS OUTPUT:"
+        print output_str
+        raise svntest.Failure
+      if m and not should_be_victim[path]:
+        print "ERROR: did NOT expect '%s' to be a tree conflict victim." % path
+        print "ACTUAL STATUS OUTPUT:"
+        print output_str
+        raise svntest.Failure
+        
+  if real_entry_count != len(should_be_victim):
+    print "ERROR: 'status --xml' output is incomplete."
+    raise svntest.Failure
 
 
 ########################################################################

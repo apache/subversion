@@ -404,20 +404,29 @@ svn_wc_adm_probe_try(svn_wc_adm_access_t **adm_access,
  * subdirectories of @a adm_access.  Any physical locks will be removed from
  * the working copy.  Lock removal is unconditional, there is no check to
  * determine if cleanup is required.
+ *
+ * Any temporary allocations are performed using @a scratch_pool.
+ *
+ * @since New in 1.6
  */
+svn_error_t *svn_wc_adm_close2(svn_wc_adm_access_t *adm_access,
+                               apr_pool_t *scratch_pool);
+
+/* @deprecated Provided for backward compabibility with the 1.5 API. */
+SVN_DEPRECATED
 svn_error_t *svn_wc_adm_close(svn_wc_adm_access_t *adm_access);
 
 /** Return the path used to open the access baton @a adm_access */
-const char *svn_wc_adm_access_path(svn_wc_adm_access_t *adm_access);
+const char *svn_wc_adm_access_path(const svn_wc_adm_access_t *adm_access);
 
 /** Return the pool used by access baton @a adm_access */
-apr_pool_t *svn_wc_adm_access_pool(svn_wc_adm_access_t *adm_access);
+apr_pool_t *svn_wc_adm_access_pool(const svn_wc_adm_access_t *adm_access);
 
 /** Return @c TRUE is the access baton @a adm_access has a write lock,
  * @c FALSE otherwise. Compared to svn_wc_locked() this is a cheap, fast
  * function that doesn't access the filesystem.
  */
-svn_boolean_t svn_wc_adm_locked(svn_wc_adm_access_t *adm_access);
+svn_boolean_t svn_wc_adm_locked(const svn_wc_adm_access_t *adm_access);
 
 /** Set @a *locked to non-zero if @a path is locked, else set it to zero. */
 svn_error_t *
@@ -817,7 +826,10 @@ typedef enum svn_wc_notify_action_t
   svn_wc_notify_update_replace,
 
   /** Property updated. @since New in 1.6. */
-  svn_wc_notify_property_updated
+  svn_wc_notify_property_updated,
+
+  /** The last notification in a merge. @since New in 1.6. */
+  svn_wc_notify_merge_completed
 
 } svn_wc_notify_action_t;
 
@@ -855,15 +867,21 @@ typedef enum svn_wc_notify_state_t
  *
  * @since New in 1.2.
  */
-typedef enum svn_wc_notify_lock_state_t {
+typedef enum svn_wc_notify_lock_state_t
+{
   svn_wc_notify_lock_state_inapplicable = 0,
+
   svn_wc_notify_lock_state_unknown,
+
   /** The lock wasn't changed. */
   svn_wc_notify_lock_state_unchanged,
+
   /** The item was locked. */
   svn_wc_notify_lock_state_locked,
+
   /** The item was unlocked. */
   svn_wc_notify_lock_state_unlocked
+
 } svn_wc_notify_lock_state_t;
 
 /**
@@ -892,47 +910,61 @@ typedef enum svn_wc_notify_lock_state_t {
  * @since New in 1.2.
  */
 typedef struct svn_wc_notify_t {
+
   /** Path, either absolute or relative to the current working directory
    * (i.e., not relative to an anchor). */
   const char *path;
+
   /** Action that describes what happened to @c path. */
   svn_wc_notify_action_t action;
+
   /** Node kind of @c path. */
   svn_node_kind_t kind;
+
   /** If non-NULL, indicates the mime-type of @c path.
    * It is always @c NULL for directories. */
   const char *mime_type;
+
   /** Points to the lock structure received from the repository when
    * @c action is @c svn_wc_notify_locked.  For other actions, it is
    * @c NULL. */
   const svn_lock_t *lock;
+
   /** Points to an error describing the reason for the failure when @c
    * action is @c svn_wc_notify_failed_lock or @c svn_wc_notify_failed_unlock.
    * Is @c NULL otherwise. */
   svn_error_t *err;
+
   /** The type of notification that is occurring about node content. */
   svn_wc_notify_state_t content_state;
+
   /** The type of notification that is occurring about node properties. */
   svn_wc_notify_state_t prop_state;
+
   /** Reflects the addition or removal of a lock token in the working copy. */
   svn_wc_notify_lock_state_t lock_state;
+
   /** When @c action is @c svn_wc_notify_update_completed, target revision
    * of the update, or @c SVN_INVALID_REVNUM if not available; when @c
    * action is @c svn_wc_notify_blame_revision, processed revision.
    * In all other cases, it is @c SVN_INVALID_REVNUM. */
   svn_revnum_t revision;
+
   /** When @c action is @c svn_wc_notify_changelist_add or name.  In all other
    * cases, it is @c NULL.  @since New in 1.5 */
   const char *changelist_name;
+
   /** When @c action is @c svn_wc_notify_merge_begin, and both the
    * left and right sides of the merge are from the same URL.  In all
    * other cases, it is @c NULL.  @since New in 1.5 */
   svn_merge_range_t *merge_range;
+
   /** If non-NULL, specifies an absolute path prefix that can be subtracted
    * from the start of the absolute path in @c path.  Its purpose is to
    * allow notification to remove a common prefix from all the paths
    * displayed for an operation.  @since New in 1.6 */
   const char *path_prefix;
+
   /* NOTE: Add new fields at the end to preserve binary compatibility.
      Also, if you add fields here, you have to update svn_wc_create_notify
      and svn_wc_dup_notify. */
@@ -1115,7 +1147,7 @@ typedef enum svn_wc_operation_t
 {
   svn_wc_operation_update,
   svn_wc_operation_switch,
-  svn_wc_operation_merge,
+  svn_wc_operation_merge
 
 } svn_wc_operation_t;
 
@@ -2543,15 +2575,10 @@ typedef struct svn_wc_status2_t
 
   /** @} */
 
-  /** Set @c TRUE if the entry is a directory containing tree conflicts.
-   * @since New in 1.6
-   */
-  svn_boolean_t has_tree_conflicted_children;
-
   /** True if the entry is the victim of a tree conflict.
    * @since New in 1.6
    */
-  svn_boolean_t is_tree_conflict_victim;
+  svn_boolean_t tree_conflicted;
 
   /** If the item is a file that was added to the working copy with an
       svn:externals; if file_external is TRUE, then switched is always
@@ -3057,7 +3084,7 @@ svn_wc_delete(const char *path,
  * ### broken out into a separate function, but its all intertwined in
  * ### the code right now.  Ben, thoughts?  Hard?  Easy?  Mauve?</pre>
  *
- * ### Update: see "###" comment in svn_wc_add_repos_file()'s doc
+ * ### Update: see "###" comment in svn_wc_add_repos_file3()'s doc
  * string about this.
  *
  * @since New in 1.6.
@@ -3078,6 +3105,7 @@ svn_wc_add3(const char *path,
  * Similar to svn_wc_add3(), but with the @a depth parameter always
  * @c svn_depth_infinity.
  *
+ * @since New in 1.2.
  * @deprecated Provided for backward compatibility with the 1.5 API.
  */
 SVN_DEPRECATED
@@ -3110,19 +3138,20 @@ svn_wc_add(const char *path,
            apr_pool_t *pool);
 
 /** Add a file to a working copy at @a dst_path, obtaining the text-base's
- * contents from @a new_text_base_path, the wc file's content from
- * @a new_text_path, its base properties from @a new_base_props and
+ * contents from @a new_base_contents, the wc file's content from
+ * @a new_contents, its base properties from @a new_base_props and
  * wc properties from @a new_props.
+ *
  * The base text and props normally come from the repository file
  * represented by the copyfrom args, see below.  The new file will
  * be scheduled for addition with history.
  *
- * Automatically remove @a new_text_base_path and @a new_text_path
- * upon successful completion.
- *
- * @a new_text_path and @a new_props may be NULL, in which case
+ * @a new_contents and @a new_props may be NULL, in which case
  * the working copy text and props are taken from the base files with
  * appropriate translation of the file's content.
+ *
+ * @a new_contents must be provided in Normal Form. This is required
+ * in order to pass both special and non-special files through a stream.
  *
  * @a adm_access, or an access baton in its associated set, must
  * contain a write lock for the parent of @a dst_path.
@@ -3131,7 +3160,14 @@ svn_wc_add(const char *path,
  * valid revision number, and together they are the copyfrom history
  * for the new file.
  *
- * Use @a pool for temporary allocations.
+ * The @a cancel_func and @a cancel_baton are a standard cancellation
+ * callback, or NULL if no callback is needed. @a notify_func and
+ * @a notify_baton are a notification callback, and will be notified
+ * of the addition of this file.
+ *
+ * Use @a scratch_pool for temporary allocations.
+ *
+ * ### NOTE: the notification callback/baton is not yet used.
  *
  * ### This function is very redundant with svn_wc_add().  Ideally,
  * we'd merge them, so that svn_wc_add() would just take optional
@@ -3145,8 +3181,31 @@ svn_wc_add(const char *path,
  * etc, etc.  So another part of the Ideal Plan is that that
  * functionality of svn_wc_add() would move into a separate function.
  *
- * @since New in 1.4
+ * @since New in 1.6
  */
+svn_error_t *
+svn_wc_add_repos_file3(const char *dst_path,
+                       svn_wc_adm_access_t *adm_access,
+                       svn_stream_t *new_base_contents,
+                       svn_stream_t *new_contents,
+                       apr_hash_t *new_base_props,
+                       apr_hash_t *new_props,
+                       const char *copyfrom_url,
+                       svn_revnum_t copyfrom_rev,
+                       svn_cancel_func_t cancel_func,
+                       void *cancel_baton,
+                       svn_wc_notify_func2_t notify_func,
+                       void *notify_baton,
+                       apr_pool_t *scratch_pool);
+
+
+/** Same as svn_wc_add_repos_file3(), except that it has pathnames rather
+ * than streams for the text base, and actual text, and has no cancellation.
+ *
+ * @since New in 1.4.
+ * @deprecated Provided for compatibility with the 1.5 API
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_add_repos_file2(const char *dst_path,
                        svn_wc_adm_access_t *adm_access,
@@ -3158,13 +3217,11 @@ svn_wc_add_repos_file2(const char *dst_path,
                        svn_revnum_t copyfrom_rev,
                        apr_pool_t *pool);
 
-/** Same as svn_wc_add_repos_file2(), except that it doesn't have the
- * new_text_base_path and new_base_props arguments.
+/** Same as svn_wc_add_repos_file3(), except that it doesn't have the
+ * BASE arguments or cancellation.
  *
  * @deprecated Provided for compatibility with the 1.3 API
- *
  */
-
 SVN_DEPRECATED
 svn_error_t *
 svn_wc_add_repos_file(const char *dst_path,
@@ -3352,9 +3409,8 @@ typedef struct svn_wc_committed_queue_t svn_wc_committed_queue_t;
  * Create a queue for use with svn_wc_queue_committed() and
  * svn_wc_process_committed_queue().
  *
- * The returned queue and all further
- * allocations required for queueing new items will also be done
- * from @a pool.
+ * The returned queue and all further allocations required for queueing
+ * new items will also be done from @a pool.
  *
  * @since New in 1.5.
  */
@@ -3362,23 +3418,62 @@ svn_wc_committed_queue_t *
 svn_wc_committed_queue_create(apr_pool_t *pool);
 
 
-
 /**
  * Queue committed items to be processed later by
  * svn_wc_process_committed_queue().
  *
- * The first time this function is called, @a *queue should
- * be @c NULL to signal that initialization is required.
+ * All pointer data passed to this function (@a path, @a adm_access,
+ * @a wcprop_changes and @a digest) should remain valid until the queue
+ * has been processed by svn_wc_process_committed_queue().
  *
- * All pointer data passed to this function
- * (@a path, @a adm_access, @a wcprop_changes
- * and @a digest) should remain valid until the queue has been
- * processed by svn_wc_process_committed_queue().
+ * Record in @a queue that @a path will need to be bumped after a commit
+ * succeeds. @a adm_access must hold a write lock appropriate for @a path.
  *
- * The parameters have the same meaning as those
- * for svn_wc_process_committed4().
+ * If non-NULL, @a wcprop_changes is an array of <tt>svn_prop_t *</tt>
+ * changes to wc properties; if an @c svn_prop_t->value is NULL, then
+ * that property is deleted.
  *
- * @since New in 1.5.
+ * If @a remove_lock is @c TRUE, any entryprops related to a repository
+ * lock will be removed.
+ *
+ * If @a remove_changelist is @c TRUE, any association with a
+ * changelist will be removed.
+ *
+ * If @a path is a file and @a checksum is non-NULL, use @a checksum as
+ * the checksum for the new text base. Otherwise, calculate the checksum
+ * if needed.
+ *
+ * If @a recurse is TRUE and @a path is a directory, then bump every
+ * versioned object at or under @a path.  This is usually done for
+ * copied trees.
+ *
+ * @note the @a recurse parameter should be used with extreme care since
+ * it will bump ALL nodes under the directory, regardless of their
+ * actual inclusion in the new revision.
+ *
+ * @since New in 1.6.
+ */
+svn_error_t *
+svn_wc_queue_committed2(svn_wc_committed_queue_t *queue,
+                        const char *path,
+                        svn_wc_adm_access_t *adm_access,
+                        svn_boolean_t recurse,
+                        apr_array_header_t *wcprop_changes,
+                        svn_boolean_t remove_lock,
+                        svn_boolean_t remove_changelist,
+                        svn_checksum_t *checksum,
+                        apr_pool_t *pool);
+
+
+/** Same as svn_wc_queue_committed2() but the @a queue parameter has an
+ * extra indirection and @a digest is supplied instead of a checksum type.
+ *
+ * @note despite the extra indirection, this function does NOT allocate
+ *   the queue for you. svn_wc_committed_queue_create() must be called.
+ *
+ * @since New in 1.5
+ *
+ * @deprecated Provided for backwards compatibility with 1.5
  */
 svn_error_t *
 svn_wc_queue_committed(svn_wc_committed_queue_t **queue,
@@ -3393,8 +3488,12 @@ svn_wc_queue_committed(svn_wc_committed_queue_t **queue,
 
 
 /**
- * Like svn_wc_process_committed4(), but batch processes
- * items queued with svn_wc_queue_committed().
+ * Bump all items in @a queue to @a new_revnum after a commit succeeds.
+ * @a rev_date and @a rev_author are the (server-side) date and author
+ * of the new revision; one or both may be @c NULL.
+ *
+ * @a adm_access must be associated with all affected directories, and
+ * must hold a write lock in each one.
  *
  * @since New in 1.5.
  */
@@ -3408,33 +3507,15 @@ svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
 
 
 /**
- * Bump a successfully committed absolute @a path to @a new_revnum after a
- * commit succeeds.  @a rev_date and @a rev_author are the (server-side)
- * date and author of the new revision; one or both may be @c NULL.
- * @a adm_access must hold a write lock appropriate for @a path.
+ * @note this function has improper expectations around the operation and
+ *   execution of other parts of the Subversion WC library. The resulting
+ *   coupling makes this interface near-impossible to support. Documentation
+ *   has been removed, as a result.
  *
- * If non-NULL, @a wcprop_changes is an array of <tt>svn_prop_t *</tt>
- * changes to wc properties; if an @c svn_prop_t->value is NULL, then
- * that property is deleted.
- *
- * If @a remove_lock is @c TRUE, any entryprops related to a repository
- * lock will be removed.
- *
- * If @a remove_changelist is @c TRUE, any association with a
- * changelist will be removed.
- *
- * If @a path is a member of a changelist, remove that association.
- *
- * If @a path is a file and @a digest is non-NULL, use @a digest as
- * the checksum for the new text base.  Else, calculate the checksum
- * if needed.
- *
- * If @a recurse is TRUE and @a path is a directory, then bump every
- * versioned object at or under @a path.  This is usually done for
- * copied trees.
- *
- * @since New in 1.5.
+ * @deprecated Use the svn_wc_committed_queue_* functions instead. Provided
+ *   for backwards compatibility with the 1.5 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_process_committed4(const char *path,
                           svn_wc_adm_access_t *adm_access,
@@ -3448,12 +3529,10 @@ svn_wc_process_committed4(const char *path,
                           const unsigned char *digest,
                           apr_pool_t *pool);
 
-/** Similar to svn_wc_process_committed4(), but with @a
- * remove_changelist set to FALSE.
+/** @see svn_wc_process_committed4()
  *
- * @since New in 1.4.
- *
- * @deprecated Provided for backwards compatibility with the 1.4 API.
+ * @deprecated Use the svn_wc_committed_queue_* functions instead. Provided
+ *   for backwards compatibility with the 1.4 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -3468,12 +3547,10 @@ svn_wc_process_committed3(const char *path,
                           const unsigned char *digest,
                           apr_pool_t *pool);
 
-/** Similar to svn_wc_process_committed3(), but with @a digest set to
- * NULL.
+/** @see svn_wc_process_committed4()
  *
- * @since New in 1.2.
- *
- * @deprecated Provided for backwards compatibility with the 1.3 API.
+ * @deprecated Use the svn_wc_committed_queue_* functions instead. Provided
+ *   for backwards compatibility with the 1.3 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -3487,11 +3564,10 @@ svn_wc_process_committed2(const char *path,
                           svn_boolean_t remove_lock,
                           apr_pool_t *pool);
 
-/**
- * Similar to svn_wc_process_committed2(), but with @a remove_lock set to
- * @c FALSE.
+/** @see svn_wc_process_committed4()
  *
- * @deprecated Provided for backward compatibility with the 1.1 API.
+ * @deprecated Use the svn_wc_committed_queue_* functions instead. Provided
+ *   for backward compatibility with the 1.1 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -5180,10 +5256,11 @@ svn_wc_set_changelist(const char *path,
 
 /** @} */
 
-/** Set @a *tree_conflict to a newly allocated @c svn_wc_conflict_description_t
- * structure describing the tree conflict state of @a victim_path, or to null
- * if @a victim_path is not in a state of tree conflict. @a adm_access is the
- * admin access baton for @a victim_path. Use @a pool for all allocations.
+/** Set @a *tree_conflict to a newly allocated @c
+ * svn_wc_conflict_description_t structure describing the tree
+ * conflict state of @a victim_path, or to @c NULL if @a victim_path
+ * is not in a state of tree conflict. @a adm_access is the admin
+ * access baton for @a victim_path. Use @a pool for all allocations.
  *
  * @since New in 1.6.
  */
@@ -5209,8 +5286,8 @@ svn_wc_read_tree_conflicts_from_entry(apr_array_header_t *conflicts,
                                       apr_pool_t *pool);
 
 /**
- * Add a tree conflict to the directory entry belonging to @a adm_access.
- * Pass a description of the new tree conflict in @a conflict.
+ * Add the tree conflict described by @a conflict to the directory entry
+ * belonging to @a adm_access.
  * Do all allocations in @a pool.
  *
  * @since New in 1.6.
