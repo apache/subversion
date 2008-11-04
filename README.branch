@@ -1,0 +1,13 @@
+This branch started with the motto of implementing issue-2897 branch
+as per new state of backend storage schema.
+
+As of today(r34038) we have 'per commit mergeinfo_delta' implemented in bdb fs.
+
+In the subconf Julian has given a suggestion to compute the
+'per commit mergeinfo_delta' using 'log -g client code' so 
+that one could try 'trunk svn merge --reintegrate' and 
+'issue-2897-take2 svn merge' compare and contrast easily.
+
+So I am going to implement 'svn_client__get_commit_and_merge_ranges'
+using 'log -g' code as a proof of concept and port rest of client code
+from issue-2897 branch.
