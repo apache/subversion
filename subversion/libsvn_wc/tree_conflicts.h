@@ -153,6 +153,26 @@ svn_wc__loggy_add_tree_conflict_data(
   svn_wc_adm_access_t *adm_access,
   apr_pool_t *pool);
 
+/* Like svn_wc__del_tree_conflict_data(), but append to the log accumulator
+ * LOG_ACCUM a command to rewrite the entry field, and do not flush the log.
+ * This function is meant to be used in the working copy library where
+ * log accumulators are usually readily available.
+ */
+svn_error_t *
+svn_wc__loggy_del_tree_conflict_data(svn_stringbuf_t *log_accum,
+                                     const char *victim_path,
+                                     svn_wc_adm_access_t *adm_access,
+                                     apr_pool_t *pool);
+
+/* Remove any tree conflict on victim VICTIM_PATH from the directory entry
+ * belonging to ADM_ACCESS. (If there is no such conflict recorded. do
+ * nothing.)
+ * Do all allocations in POOL. */
+svn_error_t *
+svn_wc__del_tree_conflict_data(const char *victim_path,
+                               svn_wc_adm_access_t *adm_access,
+                               apr_pool_t *pool);
+
 /**
  * Read tree conflict descriptions from @a dir_entry.
  * Append pointers to newly allocated svn_wc_conflict_description_t
@@ -181,7 +201,7 @@ svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
 
 /*
  * Search in CONFLICTS (an array of svn_wc_conflict_description_t tree
- * conflicts) for a conflict with the given victim_path.
+ * conflicts) for a conflict with the given VICTIM_BASENAME.
  *
  * This function is used in a unit test in tests/libsvn_wc.
  */
