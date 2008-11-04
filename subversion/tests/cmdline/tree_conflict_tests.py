@@ -66,20 +66,18 @@ def verbose_printlines(lines):
 #   - interactive conflict resolution
 
 # A "tree conflict on file P/F" means:
-#   - the operation reports action code "C" on path P
+#   - the operation reports action code "C" on path P/F
 #   - "svn status" reports status code "C" on path P/F
-#   - "svn info P" reports details of the conflict on F
-#   - "svn commit" fails if the user-requested targets include path F
-#   - "svn commit" fails if the user-requested targets include path P
-#   - "svn merge" fails if the merge tries to modify anything under P  ### except...?
+#   - "svn info" reports details of the conflict on path P/F
+#   - "svn commit" fails if the user-requested targets include path P/F
+#   - "svn merge/update/switch" fails if it tries to modify P/F in any way
 
 # A "tree conflict on dir P/D" means:
-#   - the operation reports action code "C" on path P
+#   - the operation reports action code "C" on path P/D
 #   - "svn status" reports status code "C" on path P/D
-#   - "svn info P" reports details of the conflict on D
-#   - "svn commit" fails if the user-requested targets include path D
-#   - "svn commit" fails if the user-requested targets include path P
-#   - "svn merge" fails if the merge tries to modify anything under P  ### except...?
+#   - "svn info" reports details of the conflict on P/D
+#   - "svn commit" fails if it includes any part of the P/D sub-tree
+#   - "svn merge/up/sw" fails if it modifies any part of the P/D sub-tree
 
 #----------------------------------------------------------------------
 
@@ -405,63 +403,94 @@ def ensure_tree_conflict(sbox, operation,
                            '-m', 'Mods in target branch.')
         head_rev += 1
 
-      #verbose_print("--- Trying to commit (expecting 'out-of-date' error)")
-      #run_and_verify_commit(".", None, None, "Commit failed",
-      #                      target_path)
+      # What do we want to test for? (This selection could in future be
+      # passed in to this function as a parameter.)
+      test_what = [
+        'commit-ood',
+        'action',  # required for any of the following ones to work
+        'notify',
+        'commit-c',
+        'status-c',
+        'resolve',  # required for any of the following ones to work
+        'status-nc',
+        #'commit-ok',
+        ]
 
-      # Perform the operation that tries to apply the changes to the WC.
-      # The command is expected to do something (and give some output),
-      # and it should raise a conflict but not an error.
-      if operation == 'update':
-        verbose_print("--- Updating")
-        run_and_verify_svn(None, AnyOutput, [],
-                           'update', target_path)
-      elif operation == 'merge':
-        verbose_print("--- Merging")
-        run_and_verify_svn(None, AnyOutput, [],
-                           'merge', '--ignore-ancestry',
-                           '-r', str(source_left_rev) + ':' + str(source_right_rev),
-                           source_url, target_path)
-      else:
-        raise "unknown operation: '" + operation + "'"
+      if 'commit-ood' in test_what:
+        # For update/switch, verify the pre-condition that WC is out of date.
+        # For merge, there is no such precondition.
+        if operation != 'merge':
+          verbose_print("--- Trying to commit (expecting 'out-of-date' error)")
+          run_and_verify_commit(".", None, None, "Commit failed",
+                                target_path)
 
       if modaction.startswith('f'):
         victim = os.path.join(target_path, 'F')
       else:
         victim = os.path.join(target_path, 'D')
 
-      verbose_print("--- Trying to commit (expecting 'conflict' error)")
-      ### run_and_verify_commit() requires an "output_tree" argument, but
-      # here we get away with passing None because we know an implementation
-      # detail: namely that it's not going to look at that argument if it
-      # gets the stderr that we're expecting.
-      run_and_verify_commit(".", None, None, ".*conflict.*", victim)
+      # Perform the operation that tries to apply the changes to the WC.
+      # The command is expected to do something (and give some output),
+      # and it should raise a conflict but not an error.
+      if 'action' in test_what:
+        # Determine what notification to expect
+        if 'notify' in test_what:
+          expected_stdout = svntest.verify.RegexOutput("   C " +
+                                                       re.escape(victim) + "$",
+                                                       match_all=False)
+        else:
+          expected_stdout = svntest.verify.AnyOutput
+        # Do the main action
+        if operation == 'update':
+          verbose_print("--- Updating")
+          run_and_verify_svn(None, expected_stdout, [],
+                             'update', target_path)
+        elif operation == 'merge':
+          verbose_print("--- Merging")
+          run_and_verify_svn(None, expected_stdout, [],
+                             'merge', '--ignore-ancestry',
+                             '-r', str(source_left_rev) + ':' + str(source_right_rev),
+                             source_url, target_path)
+        else:
+          raise "unknown operation: '" + operation + "'"
 
-      verbose_print("--- Checking that 'status' reports the conflict")
-      expected_stdout = svntest.verify.RegexOutput("..+C.* " +
-                                                   re.escape(victim) + "$",
-                                                   match_all=False)
-      run_and_verify_svn(None, expected_stdout, [],
-                         'status', victim)
+      if 'commit-c' in test_what:
+        verbose_print("--- Trying to commit (expecting 'conflict' error)")
+        ### run_and_verify_commit() requires an "output_tree" argument, but
+        # here we get away with passing None because we know an implementation
+        # detail: namely that it's not going to look at that argument if it
+        # gets the stderr that we're expecting.
+        run_and_verify_commit(".", None, None, ".*conflict.*", victim)
 
+      if 'status-c' in test_what:
+        verbose_print("--- Checking that 'status' reports the conflict")
+        expected_stdout = svntest.verify.RegexOutput("^......C.* " +
+                                                     re.escape(victim) + "$",
+                                                     match_all=False)
+        run_and_verify_svn(None, expected_stdout, [],
+                           'status', victim)
 
-      verbose_print("--- Resolving the conflict")
-      run_and_verify_svn(None,
-                         "Resolved .* '" + re.escape(target_path) + "'", [],
-                         'resolved', target_path)
+      if 'resolve' in test_what:
+        verbose_print("--- Resolving the conflict")
+        # Resolve recursively on the parent, because per-victim resolve is
+        # not yet implemented.
+        run_and_verify_svn(None,
+                           "Resolved .* '" + re.escape(target_path) + "'", [],
+                           'resolved', '-R', target_path)
 
-      #verbose_print("--- Checking that 'status' does not report a conflict")
-      #ensure_no_status_c_on_parent(target_path)
-      #exitcode, stdout, stderr = run_and_verify_svn(None, None, [],
-      #                                          'status', victim)
-      #for line in stdout:
-      #  if line[6] == 'C': # and line.endswith(victim + '\n'):
-      #    raise svntest.Failure("unexpected status C") # on path '" + victim + "'")
+      if 'status-nc' in test_what:
+        verbose_print("--- Checking that 'status' does not report a conflict")
+        exitcode, stdout, stderr = run_and_verify_svn(None, None, [],
+                                                  'status', victim)
+        for line in stdout:
+          if line[6] == 'C': # and line.endswith(victim + '\n'):
+            raise svntest.Failure("unexpected status C") # on path '" + victim + "'")
 
-      #verbose_print("--- Committing (should now succeed)")
-      #run_and_verify_svn(None, None, [],
-      #                   'commit', '-m', '', target_path)
-      #target_start_rev += 1
+      if 'commit-ok' in test_what:
+        verbose_print("--- Committing (should now succeed)")
+        run_and_verify_svn(None, None, [],
+                           'commit', '-m', '', target_path)
+        target_start_rev += 1
 
       verbose_print("")
 
@@ -617,7 +646,7 @@ test_list = [ None,
               up_sw_file_mod_onto_del,
               up_sw_file_del_onto_mod,
               up_sw_file_del_onto_del,
-              up_sw_file_add_onto_add,
+              XFail(up_sw_file_add_onto_add),
               up_sw_dir_mod_onto_del,
               up_sw_dir_del_onto_mod,
               up_sw_dir_del_onto_del,
