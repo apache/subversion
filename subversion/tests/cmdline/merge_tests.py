@@ -10411,6 +10411,65 @@ def foreign_repos(sbox):
                               None, None, None, None, 1)
 
 
+def foreign_repos_uuid(sbox):
+  "verify uuid of file added via foreign repo merge"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  wc_uuid = svntest.actions.get_wc_uuid(wc_dir)
+
+  # Make a copy of this repository and associated working copy.  Both
+  # should have nothing but a Greek tree in them, and the two
+  # repository UUIDs should differ.
+  sbox2 = sbox.clone_dependent(True)
+  sbox2.build()
+  wc_dir2 = sbox2.wc_dir
+  wc2_uuid = svntest.actions.get_wc_uuid(wc_dir2)
+
+  # Convenience variables for working copy paths.
+  zeta_path = os.path.join(wc_dir, 'A', 'D', 'G', 'zeta')
+
+  # Add new files
+  zeta_contents = "This is the file 'zeta'.\n"
+  svntest.main.file_append(zeta_path, zeta_contents)
+  svntest.main.run_svn(None, 'add', zeta_path)
+
+  # Commit up these changes.
+  expected_output = wc.State(wc_dir, {
+    'A/D/G/zeta' : Item(verb='Adding'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/D/G/zeta' : Item(status='  ', wc_rev=2),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'A/D/G/zeta' : Item(contents=zeta_contents),
+    })
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        wc_dir)
+  svntest.actions.verify_disk(wc_dir, expected_disk,
+                              None, None, None, None, 1)
+
+  svntest.main.run_svn(None, 'merge', '-c2', sbox.repo_url, wc_dir2)
+  svntest.main.run_svn(None, 'ci', '-m', 'Merge from foreign repos', wc_dir2)
+  
+  # Run info to check the copied rev to make sure it's right
+  zeta2_path = os.path.join(wc_dir2, 'A', 'D', 'G', 'zeta')
+  expected_info = {"Path" : re.escape(zeta2_path), # escape backslashes
+                   "URL" : sbox2.repo_url + "/A/D/G/zeta",
+                   "Repository Root" : sbox2.repo_url,
+                   "Repository UUID" : wc2_uuid,
+                   "Revision" : "2",
+                   "Node Kind" : "file",
+                   "Schedule" : "normal",
+                  }
+  svntest.actions.run_and_verify_info([expected_info], zeta2_path)
+
 def foreign_repos_2_url(sbox):
   "2-url merge from a foreign repository"
 
@@ -14302,6 +14361,7 @@ test_list = [ None,
                          server_has_mergeinfo),
               merge_range_predates_history,
               foreign_repos,
+              XFail(foreign_repos_uuid),
               foreign_repos_2_url,
               XFail(merge_added_subtree),
               SkipUnless(merge_unknown_url,
