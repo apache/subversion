@@ -1474,3 +1474,263 @@ svn_client_suggest_merge_sources(apr_array_header_t **suggestions,
   *suggestions = list;
   return SVN_NO_ERROR;
 }
+
+
+/* Baton for log_entry_receiver() and log_entry_receiver_xml(). */
+struct log_receiver_baton
+{
+  /* Check for cancellation on each invocation of a log receiver. */
+  svn_cancel_func_t cancel_func;
+  void *cancel_baton;
+
+  /* Stack which keeps track of merge revision nesting, using svn_revnum_t's */
+  apr_array_header_t *merge_stack;
+
+  apr_array_header_t *merge_ranges_list;
+  apr_array_header_t *commit_rangelist;
+  const char *merge_target;
+
+  /* Pool for persistent allocations. */
+  apr_pool_t *pool;
+};
+
+static svn_error_t *
+log_entry_receiver(void *baton,
+                   svn_log_entry_t *log_entry,
+                   apr_pool_t *pool)
+{
+  struct log_receiver_baton *lb = baton;
+
+  if (lb->cancel_func)
+    SVN_ERR(lb->cancel_func(lb->cancel_baton));
+
+  if ((!log_entry->has_children) && (lb->merge_stack->nelts == 0))
+    return SVN_NO_ERROR;
+
+  if (! SVN_IS_VALID_REVNUM(log_entry->revision))
+    {
+      apr_array_pop(lb->merge_stack);
+      return SVN_NO_ERROR;
+    }
+
+  /* We are interested in child commits only.
+     We need to examine the changed paths in the child commit and see if
+     they are the child of LB->MERGE_TARGET */
+  if (log_entry->changed_paths && (lb->merge_stack->nelts != 0))
+    {
+      apr_array_header_t *sorted_paths;
+      int i;
+      svn_boolean_t is_a_merge_commit_from_relevant_target = FALSE;
+
+      /* Get an array of sorted hash keys. */
+      sorted_paths = svn_sort__hash(log_entry->changed_paths,
+                                    svn_sort_compare_items_as_paths, pool);
+
+      for (i = 0; i < sorted_paths->nelts; i++)
+        {
+          svn_sort__item_t *item = &(APR_ARRAY_IDX(sorted_paths, i,
+                                                   svn_sort__item_t));
+          const char *path = item->key;
+          if (svn_path_is_child(path, lb->merge_target, pool))
+            {
+              is_a_merge_commit_from_relevant_target = TRUE;
+              break;
+            }
+        }
+      if (is_a_merge_commit_from_relevant_target)
+        {
+          /* Take this log_entry->revision as merged_rev
+             from LB->MERGE_TARGET */
+          /* Take LB->MERGE_STACK[0] and add it to LB->COMMIT_RANGELIST
+             as only the first(bottom most) item in the LB->MERGE_STACK 
+             correspond to LB->MERGE_TARGET rest are all indirect ones. */
+          if (lb->commit_rangelist->nelts)
+            {
+              svn_merge_range_t *last_commit_single_rev_range
+                = APR_ARRAY_IDX(lb->commit_rangelist,
+                                lb->commit_rangelist->nelts - 1,
+                                svn_merge_range_t *);
+              if (last_commit_single_rev_range->end
+                  == APR_ARRAY_IDX(lb->merge_stack, 0, svn_revnum_t))
+                {
+                  /*Append to last merged_ranges_list */
+                  apr_array_header_t *cur_merged_rev_rangelist;
+                  svn_merge_range_t *merged_single_rev_range
+                    = apr_pcalloc(lb->pool, sizeof(*merged_single_rev_range));
+                  merged_single_rev_range->start = log_entry->revision - 1;
+                  merged_single_rev_range->end = log_entry->revision;
+                  merged_single_rev_range->inheritable = TRUE;
+                  cur_merged_rev_rangelist
+                    = APR_ARRAY_IDX(lb->merge_ranges_list,
+                                    lb->merge_ranges_list->nelts - 1,
+                                    apr_array_header_t *);
+                  APR_ARRAY_PUSH(cur_merged_rev_rangelist, svn_merge_range_t *)
+                    = merged_single_rev_range;
+                }
+              else
+                {
+                  apr_array_header_t *merged_rev_rangelist;
+                  svn_merge_range_t *merged_single_rev_range
+                    = apr_pcalloc(lb->pool, sizeof(*merged_single_rev_range));
+                  svn_merge_range_t *commit_single_rev_range
+                    = apr_pcalloc(lb->pool, sizeof(*commit_single_rev_range));
+                  commit_single_rev_range->start
+                    = APR_ARRAY_IDX(lb->merge_stack, 0, svn_revnum_t) - 1;
+                  commit_single_rev_range->end
+                    = APR_ARRAY_IDX(lb->merge_stack, 0, svn_revnum_t);
+                  commit_single_rev_range->inheritable = TRUE;
+                  APR_ARRAY_PUSH(lb->commit_rangelist, svn_merge_range_t *)
+                    = commit_single_rev_range;
+                  merged_single_rev_range->start = log_entry->revision - 1;
+                  merged_single_rev_range->end = log_entry->revision;
+                  merged_single_rev_range->inheritable = TRUE;
+                  merged_rev_rangelist
+                    = apr_array_make(lb->pool, 0, sizeof(svn_merge_range_t *));
+                  APR_ARRAY_PUSH(merged_rev_rangelist, svn_merge_range_t *)
+                    = merged_single_rev_range;
+                  APR_ARRAY_PUSH(lb->merge_ranges_list, apr_array_header_t *)
+                    = merged_rev_rangelist;
+                }
+            }
+          else
+            {
+              apr_array_header_t *merged_rev_rangelist;
+              svn_merge_range_t *merged_single_rev_range
+                = apr_pcalloc(lb->pool, sizeof(*merged_single_rev_range));
+              svn_merge_range_t *commit_single_rev_range
+                = apr_pcalloc(lb->pool, sizeof(*commit_single_rev_range));
+              commit_single_rev_range->start
+                = APR_ARRAY_IDX(lb->merge_stack, 0, svn_revnum_t) - 1;
+              commit_single_rev_range->end
+                = APR_ARRAY_IDX(lb->merge_stack, 0, svn_revnum_t);
+              commit_single_rev_range->inheritable = TRUE;
+              APR_ARRAY_PUSH(lb->commit_rangelist, svn_merge_range_t *)
+                = commit_single_rev_range;
+              merged_single_rev_range->start = log_entry->revision - 1;
+              merged_single_rev_range->end = log_entry->revision;
+              merged_single_rev_range->inheritable = TRUE;
+              merged_rev_rangelist
+                = apr_array_make(lb->pool, 0, sizeof(svn_merge_range_t *));
+              APR_ARRAY_PUSH(merged_rev_rangelist, svn_merge_range_t *)
+                = merged_single_rev_range;
+              APR_ARRAY_PUSH(lb->merge_ranges_list, apr_array_header_t *)
+                = merged_rev_rangelist;
+            }
+        }
+    }
+
+  if (log_entry->has_children)
+    APR_ARRAY_PUSH(lb->merge_stack, svn_revnum_t) = log_entry->revision;
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+get_commit_and_merge_ranges(svn_ra_session_t *session,
+                            apr_array_header_t **merge_ranges_list,
+                            apr_array_header_t **commit_rangelist,
+                            const char *merge_target,
+                            const char *merge_source,
+                            svn_revnum_t min_commit_rev,
+                            svn_revnum_t max_commit_rev,
+                            svn_mergeinfo_inheritance_t inherit,
+                            svn_client_ctx_t *ctx,
+                            apr_pool_t *pool)
+{
+  apr_array_header_t *targets;
+  apr_array_header_t *revprops;
+  struct log_receiver_baton lb;
+  svn_opt_revision_t min_commit_rev_opt, max_commit_rev_opt;
+  SVN_ERR_ASSERT(*merge_target != '/');
+  SVN_ERR_ASSERT(*merge_source != '/');
+  targets = apr_array_make(pool, 1, sizeof(const char *));
+  APR_ARRAY_PUSH(targets, const char *) = merge_source;
+  revprops = apr_array_make(pool, 0, sizeof(char *));
+  min_commit_rev_opt.kind = svn_opt_revision_number;
+  max_commit_rev_opt.kind = svn_opt_revision_number;
+  min_commit_rev_opt.value.number = min_commit_rev;
+  max_commit_rev_opt.value.number = max_commit_rev;
+  lb.cancel_func = ctx->cancel_func;
+  lb.cancel_baton = ctx->cancel_baton;
+  lb.merge_stack = apr_array_make(pool, 0, sizeof(svn_revnum_t));
+  lb.merge_ranges_list = apr_array_make(pool, 0, sizeof(apr_array_header_t *));
+  lb.commit_rangelist = apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
+  lb.merge_target = merge_target;
+  lb.pool = pool;
+  SVN_ERR(svn_client_log4(targets,
+                          &max_commit_rev_opt,
+                          &min_commit_rev_opt,
+                          &max_commit_rev_opt,
+                          0,
+                          TRUE,
+                          FALSE,
+                          TRUE,
+                          revprops,
+                          log_entry_receiver,
+                          &lb,
+                          ctx,
+                          pool));
+  *merge_ranges_list = lb.merge_ranges_list;
+  *commit_rangelist = lb.commit_rangelist;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client__get_commit_and_merge_ranges
+(svn_ra_session_t *session,
+ apr_array_header_t **merge_ranges_list,
+ apr_array_header_t **commit_rangelist,
+ apr_array_header_t **merge_source_path_segments,
+ const char *merge_target,
+ const char *merge_source,
+ svn_revnum_t merge_source_peg_rev,
+ svn_revnum_t min_commit_rev,
+ svn_revnum_t max_commit_rev,
+ svn_mergeinfo_inheritance_t inherit,
+ svn_client_ctx_t *ctx,
+ apr_pool_t *pool)
+{
+  apr_array_header_t *source_segments;
+  int i;
+  *merge_ranges_list = apr_array_make(pool, 0, sizeof(apr_array_header_t *));
+  *commit_rangelist = apr_array_make(pool, 0, sizeof(svn_merge_range_t *));
+  *merge_source_path_segments = apr_array_make(pool, 0, sizeof(const char *));
+  SVN_ERR(svn_client__repos_location_segments(&source_segments, session,
+                                              merge_source,
+                                              merge_source_peg_rev,
+                                              max_commit_rev,
+                                              min_commit_rev, ctx, pool));
+  for (i = 0; i < source_segments->nelts; i++)
+    {
+      apr_array_header_t *merge_ranges_list_for_segment;
+      apr_array_header_t *commit_rangelist_for_segment;
+      int j;
+      svn_location_segment_t *segment =
+        APR_ARRAY_IDX(source_segments, i, svn_location_segment_t *);
+      /* No path segment?  Skip it. */
+      if (! segment->path)
+        continue;
+      SVN_ERR(get_commit_and_merge_ranges
+              (session, &merge_ranges_list_for_segment,
+               &commit_rangelist_for_segment, merge_target, segment->path,
+               segment->range_start, segment->range_end,
+               svn_mergeinfo_inherited, ctx, pool));
+      for (j = 0; j < commit_rangelist_for_segment->nelts; j++)
+        {
+          svn_merge_range_t *commit_range;
+          apr_array_header_t *merge_ranges;
+
+          commit_range = APR_ARRAY_IDX(commit_rangelist_for_segment, j,
+                                       svn_merge_range_t *);
+          merge_ranges = APR_ARRAY_IDX(merge_ranges_list_for_segment, j,
+                                       apr_array_header_t *);
+          APR_ARRAY_PUSH(*commit_rangelist,
+                         svn_merge_range_t *) = commit_range;
+          APR_ARRAY_PUSH(*merge_ranges_list,
+                         apr_array_header_t *) = merge_ranges;
+          APR_ARRAY_PUSH(*merge_source_path_segments,
+                         const char *) = segment->path;
+        }
+    }
+  return SVN_NO_ERROR;
+}
