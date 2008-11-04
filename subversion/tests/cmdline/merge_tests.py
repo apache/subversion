@@ -10412,7 +10412,7 @@ def foreign_repos(sbox):
 
 
 def foreign_repos_uuid(sbox):
-  "verify uuid of file added via foreign repo merge"
+  "verify uuid of items added via foreign repo merge"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -10428,25 +10428,29 @@ def foreign_repos_uuid(sbox):
 
   # Convenience variables for working copy paths.
   zeta_path = os.path.join(wc_dir, 'A', 'D', 'G', 'zeta')
-
-  # Add new files
+  Z_path = os.path.join(wc_dir, 'A', 'Z')
+  
+  # Add new file and directory.
   zeta_contents = "This is the file 'zeta'.\n"
   svntest.main.file_append(zeta_path, zeta_contents)
-  svntest.main.run_svn(None, 'add', zeta_path)
-
+  os.mkdir(Z_path)
+  svntest.main.run_svn(None, 'add', zeta_path, Z_path)
+  
   # Commit up these changes.
   expected_output = wc.State(wc_dir, {
     'A/D/G/zeta' : Item(verb='Adding'),
+    'A/Z'        : Item(verb='Adding'),
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/D/G/zeta' : Item(status='  ', wc_rev=2),
+    'A/Z'        : Item(status='  ', wc_rev=2),
     })
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
     'A/D/G/zeta' : Item(contents=zeta_contents),
+    'A/Z'        : Item(),
     })
-
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
@@ -10469,6 +10473,18 @@ def foreign_repos_uuid(sbox):
                    "Schedule" : "normal",
                   }
   svntest.actions.run_and_verify_info([expected_info], zeta2_path)
+
+  # Run info to check the copied rev to make sure it's right
+  Z2_path = os.path.join(wc_dir2, 'A', 'Z')
+  expected_info = {"Path" : re.escape(Z2_path), # escape backslashes
+                   "URL" : sbox2.repo_url + "/A/Z",
+                   "Repository Root" : sbox2.repo_url,
+                   "Repository UUID" : wc2_uuid,
+                   "Revision" : "2",
+                   "Node Kind" : "directory",
+                   "Schedule" : "normal",
+                  }
+  svntest.actions.run_and_verify_info([expected_info], Z2_path)
 
 def foreign_repos_2_url(sbox):
   "2-url merge from a foreign repository"
