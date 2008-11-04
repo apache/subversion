@@ -187,7 +187,7 @@ svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
  */
 svn_boolean_t
 svn_wc__tree_conflict_exists(apr_array_header_t *conflicts,
-                             const char *victim_path,
+                             const char *victim_basename,
                              apr_pool_t *pool);
 
 #endif /* SVN_LIBSVN_WC_TREE_CONFLICTS_H */

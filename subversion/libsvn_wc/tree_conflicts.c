@@ -304,7 +304,6 @@ svn_wc__read_tree_conflicts_from_entry(apr_array_header_t *conflicts,
 
   if (dir_entry->tree_conflict_data == NULL)
     {
-      conflicts = NULL;
       return SVN_NO_ERROR;
     }
 
@@ -452,7 +451,7 @@ svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
  */
 svn_boolean_t
 svn_wc__tree_conflict_exists(apr_array_header_t *conflicts,
-                             const char *victim_path,
+                             const char *victim_basename,
                              apr_pool_t *pool)
 {
   const svn_wc_conflict_description_t *conflict;
@@ -462,7 +461,7 @@ svn_wc__tree_conflict_exists(apr_array_header_t *conflicts,
     {
       conflict = APR_ARRAY_IDX(conflicts, i,
                                svn_wc_conflict_description_t *);
-      if (strcmp(svn_path_basename(conflict->path, pool), victim_path) == 0)
+      if (strcmp(svn_path_basename(conflict->path, pool), victim_basename) == 0)
         return TRUE;
     }
 
