@@ -165,7 +165,7 @@ class WinGeneratorBase(GeneratorBase):
     """
 
     # Initialize parent
-    GeneratorBase.__init__(self, fname, verfname, options)                                            
+    GeneratorBase.__init__(self, fname, verfname, options)
 
     if self.bdb_lib is not None:
       sys.stderr.write("Found %s.lib in %s\n" % (self.bdb_lib, self.bdb_path))
@@ -206,7 +206,7 @@ class WinGeneratorBase(GeneratorBase):
     # Find APR and APR-util version
     self._find_apr()
     self._find_apr_util()
-    
+
     # Find Sqlite
     self._find_sqlite()
 
@@ -513,7 +513,7 @@ class WinGeneratorBase(GeneratorBase):
       cbuild = "python $(InputPath) %s > %s" \
                % (" ".join(deps), def_file)
 
-      sources.append(ProjectItem(path=gsrc, reldir=None, custom_build=cbuild,                                 
+      sources.append(ProjectItem(path=gsrc, reldir=None, custom_build=cbuild,
                                  user_deps=deps, custom_target=def_file,
                                  extension=''))
 
@@ -1342,18 +1342,18 @@ class WinGeneratorBase(GeneratorBase):
       self.aprutil_lib = 'libaprutil-%d.lib' % major_ver
     else:
       self.aprutil_lib = 'libaprutil.lib'
-      
+
   def _find_sqlite(self):
     "Find the Sqlite library and version"
-    
+
     header_file = os.path.join(self.sqlite_path, 'inc', 'sqlite3.h')
     lib_file = os.path.join(self.sqlite_path, 'lib', 'sqlite3.lib')
-    
+
     if not os.path.exists(header_file):
       sys.stderr.write("ERROR: '%s' not found.\n" % header_file)
       sys.stderr.write("Use '--with-sqlite' option to configure sqlite location.\n");
       sys.exit(1)
-      
+
     if not os.path.exists(lib_file):
       sys.stderr.write("ERROR: '%s' not found.\n" % lib_file)
       sys.stderr.write("Use '--with-sqlite' option to configure sqlite location.\n");

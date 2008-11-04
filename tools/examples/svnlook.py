@@ -329,7 +329,7 @@ class DiffEditor(delta.Editor):
 
   def open_root(self, base_revision, dir_pool):
     return [ 1, '' ]
-  
+
   def open_directory(self, path, parent_baton, base_revision, dir_pool):
     return [ 1, path ]
 

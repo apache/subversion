@@ -62,7 +62,7 @@ svn_dso_initialize2(void)
   dso_pool = svn_pool_create(NULL);
 
 #if APR_HAS_THREADS
-  status = apr_thread_mutex_create(&dso_mutex, 
+  status = apr_thread_mutex_create(&dso_mutex,
                                    APR_THREAD_MUTEX_DEFAULT, dso_pool);
   if (status)
     return svn_error_wrap_apr(status, _("Can't create DSO mutex"));

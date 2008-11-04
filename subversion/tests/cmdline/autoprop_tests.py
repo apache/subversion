@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -35,8 +35,8 @@ def check_proplist(path, exp_out):
 
   props = svntest.tree.get_props(path)
   if props != exp_out:
-    print "Expected properties:", exp_out
-    print "Actual properties:  ", props
+    print("Expected properties: %s" % exp_out)
+    print("Actual properties:   %s" % props)
     raise svntest.Failure
 
 

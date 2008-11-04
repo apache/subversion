@@ -1056,7 +1056,8 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
   SVN_ERR(svn_io_file_close(uuid_file, pool));
 
   /* Open (and possibly create) the rep cache. */
-  SVN_ERR(svn_fs_fs__open_rep_cache(fs, fs->pool));
+  if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT)
+    SVN_ERR(svn_fs_fs__open_rep_cache(fs, fs->pool));
 
   return get_youngest(&(ffd->youngest_rev_cache), path, pool);
 }
@@ -1588,6 +1589,7 @@ read_rep_offsets(representation_t **rep_p,
 {
   representation_t *rep;
   char *str, *last_str;
+  int len;
 
   rep = apr_pcalloc(pool, sizeof(*rep));
   *rep_p = rep;
@@ -1627,13 +1629,22 @@ read_rep_offsets(representation_t **rep_p,
 
   rep->expanded_size = apr_atoi64(str);
 
-  /* Read in the MD5 hash. */
+  /* Read in the hash. */
   str = apr_strtok(NULL, " ", &last_str);
-  if ((str == NULL) || (strlen(str) != (APR_MD5_DIGESTSIZE * 2)))
+  if (str == NULL)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Malformed text rep offset line in node-rev"));
 
-  SVN_ERR(svn_checksum_parse_hex(&rep->checksum, svn_checksum_md5, str, pool));
+  len = strlen(str);
+  if (len == (APR_MD5_DIGESTSIZE * 2) )
+    SVN_ERR(svn_checksum_parse_hex(&rep->checksum, svn_checksum_md5, str,
+                                   pool));
+  else if (len == (APR_SHA1_DIGESTSIZE * 2) )
+    SVN_ERR(svn_checksum_parse_hex(&rep->checksum, svn_checksum_sha1, str,
+                                   pool));
+  else
+    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                            _("Malformed text rep offset line in node-rev"));
 
   /* Read the reuse count. */
   str = apr_strtok(NULL, " ", &last_str);
@@ -2474,7 +2485,7 @@ rep_read_get_baton(struct rep_read_baton **rb_p,
   b->fs = fs;
   b->chunk_index = 0;
   b->buf = NULL;
-  b->checksum_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
+  b->checksum_ctx = svn_checksum_ctx_create(rep->checksum->kind, pool);
   b->checksum_finalized = FALSE;
   b->checksum = svn_checksum_dup(rep->checksum, pool);
   b->len = rep->expanded_size;
@@ -2750,8 +2761,7 @@ rep_read_contents(void *baton,
 
   /* Perform checksumming.  We want to check the checksum as soon as
      the last byte of data is read, in case the caller never performs
-     a short read, but we don't want to finalize the MD5 context
-     twice. */
+     a short read, but we don't want to finalize the context twice. */
   if (!rb->checksum_finalized)
     {
       SVN_ERR(svn_checksum_update(rb->checksum_ctx, buf, *len));
@@ -2954,18 +2964,15 @@ get_dir_contents(apr_hash_t *entries,
 
   if (noderev->data_rep && noderev->data_rep->txn_id)
     {
-      apr_file_t *dir_file;
       const char *filename = path_txn_node_children(fs, noderev->id, pool);
 
       /* The representation is mutable.  Read the old directory
          contents from the mutable children file, followed by the
          changes we've made in this transaction. */
-      SVN_ERR(svn_io_file_open(&dir_file, filename, APR_READ | APR_BUFFERED,
-                               APR_OS_DEFAULT, pool));
-      contents = svn_stream_from_aprfile2(dir_file, TRUE, pool);
+      SVN_ERR(svn_stream_open_readonly(&contents, filename, pool, pool));
       SVN_ERR(svn_hash_read2(entries, contents, SVN_HASH_TERMINATOR, pool));
       SVN_ERR(svn_hash_read_incremental(entries, contents, NULL, pool));
-      SVN_ERR(svn_io_file_close(dir_file, pool));
+      SVN_ERR(svn_stream_close(contents));
     }
   else if (noderev->data_rep)
     {
@@ -3165,15 +3172,11 @@ svn_fs_fs__get_proplist(apr_hash_t **proplist_p,
 
   if (noderev->prop_rep && noderev->prop_rep->txn_id)
     {
-      apr_file_t *props_file;
       const char *filename = path_txn_node_props(fs, noderev->id, pool);
 
-      SVN_ERR(svn_io_file_open(&props_file, filename,
-                               APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
-                               pool));
-      stream = svn_stream_from_aprfile2(props_file, TRUE, pool);
+      SVN_ERR(svn_stream_open_readonly(&stream, filename, pool, pool));
       SVN_ERR(svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR, pool));
-      SVN_ERR(svn_io_file_close(props_file, pool));
+      SVN_ERR(svn_stream_close(stream));
     }
   else if (noderev->prop_rep)
     {
@@ -3932,19 +3935,16 @@ get_txn_proplist(apr_hash_t *proplist,
                  const char *txn_id,
                  apr_pool_t *pool)
 {
-  apr_file_t *txn_prop_file;
+  svn_stream_t *stream;
 
   /* Open the transaction properties file. */
-  SVN_ERR(svn_io_file_open(&txn_prop_file, path_txn_props(fs, txn_id, pool),
-                           APR_READ | APR_BUFFERED,
-                           APR_OS_DEFAULT, pool));
+  SVN_ERR(svn_stream_open_readonly(&stream, path_txn_props(fs, txn_id, pool),
+                                   pool, pool));
 
   /* Read in the property list. */
-  SVN_ERR(svn_hash_read2(proplist,
-                         svn_stream_from_aprfile2(txn_prop_file, TRUE, pool),
-                         SVN_HASH_TERMINATOR, pool));
+  SVN_ERR(svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR, pool));
 
-  return svn_io_file_close(txn_prop_file, pool);
+  return svn_stream_close(stream);
 }
 
 svn_error_t *
@@ -4490,7 +4490,7 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
 
   b = apr_pcalloc(pool, sizeof(*b));
 
-  b->checksum_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
+  b->checksum_ctx = svn_checksum_ctx_create(svn_checksum_sha1, pool);
 
   b->fs = fs;
   b->parent_pool = pool;
@@ -4550,6 +4550,7 @@ static svn_error_t *
 rep_write_contents_close(void *baton)
 {
   struct rep_write_baton *b = baton;
+  fs_fs_data_t *ffd = b->fs->fsap_data;
   representation_t *rep;
   representation_t *old_rep;
   apr_off_t offset;
@@ -4572,12 +4573,17 @@ rep_write_contents_close(void *baton)
   rep->revision = SVN_INVALID_REVNUM;
 
   /* Finalize the checksum. */
-  svn_checksum_final(&rep->checksum, b->checksum_ctx, b->parent_pool);
+  SVN_ERR(svn_checksum_final(&rep->checksum, b->checksum_ctx,
+                              b->parent_pool));
 
   /* Check and see if we already have a representation somewhere that's
      identical to the one we just wrote out. */
-  SVN_ERR(svn_fs_fs__get_rep_reference(&old_rep, b->fs, rep->checksum,
-                                       b->parent_pool));
+  if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT)
+    SVN_ERR(svn_fs_fs__get_rep_reference(&old_rep, b->fs, rep->checksum,
+                                         b->parent_pool));
+  else
+    old_rep = NULL;
+
   if (old_rep)
     {
       /* We need to erase from the protorev the data we just wrote. */
@@ -4953,7 +4959,8 @@ write_final_rev(const svn_fs_id_t **new_id_p,
                                    pool));
 
   /* Save the data representation's hash in the rep cache. */
-  if (noderev->data_rep && noderev->kind == svn_node_file)
+  if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT
+        && noderev->data_rep && noderev->kind == svn_node_file)
     SVN_ERR(svn_fs_fs__set_rep_reference(fs, noderev->data_rep, FALSE, pool));
 
   /* Return our ID that references the revision file. */
@@ -5494,6 +5501,9 @@ svn_fs_fs__create(svn_fs_t *fs,
       else if (apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE,
                                         APR_HASH_KEY_STRING))
         format = 2;
+      else if (apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE,
+                                        APR_HASH_KEY_STRING))
+        format = 3;
     }
   ffd->format = format;
 
@@ -5537,7 +5547,8 @@ svn_fs_fs__create(svn_fs_t *fs,
   SVN_ERR(write_revision_zero(fs));
 
   /* Create the rep cache. */
-  SVN_ERR(svn_fs_fs__open_rep_cache(fs, fs->pool));
+  if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT)
+    SVN_ERR(svn_fs_fs__open_rep_cache(fs, fs->pool));
 
   /* Create the txn-current file if the repository supports
      the transaction sequence file. */
@@ -6061,7 +6072,6 @@ set_node_origins_for_file(svn_fs_t *fs,
                           svn_string_t *node_rev_id,
                           apr_pool_t *pool)
 {
-  apr_file_t *fd;
   const char *path_tmp;
   svn_stream_t *stream;
   apr_hash_t *origins_hash;
@@ -6098,9 +6108,9 @@ set_node_origins_for_file(svn_fs_t *fs,
      locking overhead. */
 
   /* Create a temporary file, write out our hash, and close the file. */
-  SVN_ERR(svn_io_open_unique_file2(&fd, &path_tmp, node_origins_path, ".tmp",
-                                   svn_io_file_del_none, pool));
-  stream = svn_stream_from_aprfile2(fd, FALSE, pool);
+  SVN_ERR(svn_stream_open_unique(&stream, &path_tmp,
+                                 svn_path_dirname(node_origins_path, pool),
+                                 svn_io_file_del_none, pool, pool));
   SVN_ERR(svn_hash_write2(origins_hash, stream, SVN_HASH_TERMINATOR, pool));
   SVN_ERR(svn_stream_close(stream));
 

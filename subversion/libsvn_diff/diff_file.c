@@ -1249,37 +1249,6 @@ svn_diff_file_output_unified3(svn_stream_t *output_stream,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_diff_file_output_unified2(svn_stream_t *output_stream,
-                              svn_diff_t *diff,
-                              const char *original_path,
-                              const char *modified_path,
-                              const char *original_header,
-                              const char *modified_header,
-                              const char *header_encoding,
-                              apr_pool_t *pool)
-{
-  return svn_diff_file_output_unified3(output_stream, diff,
-                                       original_path, modified_path,
-                                       original_header, modified_header,
-                                       header_encoding, NULL, FALSE, pool);
-}
-
-svn_error_t *
-svn_diff_file_output_unified(svn_stream_t *output_stream,
-                             svn_diff_t *diff,
-                             const char *original_path,
-                             const char *modified_path,
-                             const char *original_header,
-                             const char *modified_header,
-                             apr_pool_t *pool)
-{
-  return svn_diff_file_output_unified2(output_stream, diff,
-                                       original_path, modified_path,
-                                       original_header, modified_header,
-                                       SVN_APR_LOCALE_CHARSET, pool);
-}
-
 
 /** Display diff3 **/
 

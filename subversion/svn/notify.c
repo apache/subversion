@@ -173,15 +173,8 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       nb->received_some_change = TRUE;
       if (n->content_state == svn_wc_notify_state_conflicted)
         {
-          /* TODO: This needs to be adjusted once we report
-           * tree conflict victims, instead of their parent
-           * directories, on update/merge. */
-          if (n->kind == svn_node_dir)
-            nb->in_external ? nb->ext_tree_conflicts++
-                            : nb->tree_conflicts++;
-          else
-            nb->in_external ? nb->ext_text_conflicts++
-                            : nb->text_conflicts++;
+          nb->in_external ? nb->ext_text_conflicts++
+                          : nb->text_conflicts++;
           if ((err = svn_cmdline_printf(pool, "C    %s\n", path_local)))
             goto print_error;
         }
@@ -196,15 +189,8 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       nb->received_some_change = TRUE;
       if (n->content_state == svn_wc_notify_state_conflicted)
         {
-          /* TODO: This needs to be adjusted once we report
-           * tree conflict victims, instead of their parent
-           * directories, on update/merge. */
-          if (n->kind == svn_node_dir)
-            nb->in_external ? nb->ext_tree_conflicts++
-                            : nb->tree_conflicts++;
-          else
-            nb->in_external ? nb->ext_text_conflicts++
-                            : nb->text_conflicts++;
+          nb->in_external ? nb->ext_text_conflicts++
+                          : nb->text_conflicts++;
           statchar_buf[0] = 'C';
         }
       else
@@ -278,15 +264,8 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       {
         if (n->content_state == svn_wc_notify_state_conflicted)
           {
-            /* TODO: This needs to be adjusted once we report
-             * tree conflict victims, instead of their parent
-             * directories, on update/merge. */
-            if (n->kind == svn_node_dir)
-              nb->in_external ? nb->ext_tree_conflicts++
-                              : nb->tree_conflicts++;
-            else
-              nb->in_external ? nb->ext_text_conflicts++
-                              : nb->text_conflicts++;
+            nb->in_external ? nb->ext_text_conflicts++
+                            : nb->text_conflicts++;
             statchar_buf[0] = 'C';
           }
         else if (n->kind == svn_node_file)
@@ -598,6 +577,13 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
                                  n->merge_range->start,
                                  n->merge_range->end + 1, path_local);
       if (err)
+        goto print_error;
+      break;
+
+    case svn_wc_notify_tree_conflict:
+      nb->in_external ? nb->ext_tree_conflicts++
+                      : nb->tree_conflicts++;
+      if ((err = svn_cmdline_printf(pool, "   C %s\n", path_local)))
         goto print_error;
       break;
 

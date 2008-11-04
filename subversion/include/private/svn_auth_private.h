@@ -47,6 +47,7 @@ typedef svn_boolean_t (*svn_auth__password_get_t)
    apr_hash_t *creds,
    const char *realmstring,
    const char *username,
+   apr_hash_t *parameters,
    svn_boolean_t non_interactive,
    apr_pool_t *pool);
 
@@ -60,6 +61,7 @@ typedef svn_boolean_t (*svn_auth__password_set_t)
    const char *realmstring,
    const char *username,
    const char *password,
+   apr_hash_t *parameters,
    svn_boolean_t non_interactive,
    apr_pool_t *pool);
 
@@ -95,13 +97,14 @@ svn_auth__simple_save_creds_helper(svn_boolean_t *saved,
                                    apr_pool_t *pool);
 
 /* Implementation of svn_auth__password_get_t that retrieves
-   the plaintext password from CREDS when USERNAME matches the stored 
+   the plaintext password from CREDS when USERNAME matches the stored
    credentials. */
 svn_boolean_t
 svn_auth__simple_password_get(const char **password,
                               apr_hash_t *creds,
                               const char *realmstring,
                               const char *username,
+                              apr_hash_t *parameters,
                               svn_boolean_t non_interactive,
                               apr_pool_t *pool);
 
@@ -112,6 +115,7 @@ svn_auth__simple_password_set(apr_hash_t *creds,
                               const char *realmstring,
                               const char *username,
                               const char *password,
+                              apr_hash_t *parameters,
                               svn_boolean_t non_interactive,
                               apr_pool_t *pool);
 

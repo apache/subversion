@@ -801,16 +801,16 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
 
       /* Imagine a situation where the user tries to copy an existing source
          directory to nonexistent directory with --parents options specified:
-            
+
             svn copy --parents URL/src URL/dst
-            
+
          where src exists and dst does not.  The svn_path_dirname() call above
          will produce a string equivalent to top_url, which means
          svn_path_is_child() will return NULL.  In this case, do not try to add
          dst to the new_dirs list since it will be added to the commit items
          array later in this function. */
 
-      if (dir) 
+      if (dir)
         {
           SVN_ERR(svn_ra_check_path(ra_session, dir, SVN_INVALID_REVNUM, &kind,
                                     iterpool));
@@ -1322,7 +1322,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
             _("Commit failed (details follow):"));
 
   /* Sleep to ensure timestamp integrity. */
-  svn_sleep_for_timestamps();
+  svn_io_sleep_for_timestamps(top_src_path, pool);
 
   /* It's only a read lock, so unlocking is harmless. */
   return svn_wc_adm_close2(adm_access, pool);
@@ -1422,7 +1422,6 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
 
   else if (pair->src_kind == svn_node_file)
     {
-      apr_file_t *fp;
       svn_stream_t *fstream;
       svn_revnum_t real_rev;
       const char *new_text_path;
@@ -1430,10 +1429,10 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
       const char *src_rel;
       svn_stream_t *new_base_contents;
 
-      SVN_ERR(svn_io_open_unique_file2(&fp, &new_text_path, pair->dst, ".tmp",
-                                       svn_io_file_del_on_pool_cleanup, pool));
+      SVN_ERR(svn_stream_open_unique(&fstream, &new_text_path, NULL,
+                                     svn_io_file_del_on_pool_cleanup, pool,
+                                     pool));
 
-      fstream = svn_stream_from_aprfile2(fp, FALSE, pool);
       SVN_ERR(svn_client__path_relative_to_session(&src_rel, ra_session,
                                                    pair->src, pool));
       SVN_ERR(svn_ra_get_file(ra_session, src_rel, src_revnum, fstream,
@@ -2051,79 +2050,6 @@ svn_client_copy4(svn_commit_info_t **commit_info_p,
 
 
 svn_error_t *
-svn_client_copy3(svn_commit_info_t **commit_info_p,
-                 const char *src_path,
-                 const svn_opt_revision_t *src_revision,
-                 const char *dst_path,
-                 svn_client_ctx_t *ctx,
-                 apr_pool_t *pool)
-{
-  apr_array_header_t *sources = apr_array_make(pool, 1,
-                                  sizeof(const svn_client_copy_source_t *));
-  svn_client_copy_source_t copy_source;
-
-  copy_source.path = src_path;
-  copy_source.revision = src_revision;
-  copy_source.peg_revision = src_revision;
-
-  APR_ARRAY_PUSH(sources, const svn_client_copy_source_t *) = &copy_source;
-
-  return svn_client_copy4(commit_info_p, sources, dst_path, FALSE, FALSE,
-                          NULL, ctx, pool);
-}
-
-
-svn_error_t *
-svn_client_copy2(svn_commit_info_t **commit_info_p,
-                 const char *src_path,
-                 const svn_opt_revision_t *src_revision,
-                 const char *dst_path,
-                 svn_client_ctx_t *ctx,
-                 apr_pool_t *pool)
-{
-  svn_error_t *err;
-
-  err = svn_client_copy3(commit_info_p, src_path, src_revision,
-                         dst_path, ctx, pool);
-
-  /* If the target exists, try to copy the source as a child of the target.
-     This will obviously fail if target is not a directory, but that's exactly
-     what we want. */
-  if (err && (err->apr_err == SVN_ERR_ENTRY_EXISTS
-              || err->apr_err == SVN_ERR_FS_ALREADY_EXISTS))
-    {
-      const char *src_basename = svn_path_basename(src_path, pool);
-
-      svn_error_clear(err);
-
-      return svn_client_copy3(commit_info_p, src_path, src_revision,
-                              svn_path_join(dst_path, src_basename, pool),
-                              ctx, pool);
-    }
-
-  return err;
-}
-
-svn_error_t *
-svn_client_copy(svn_client_commit_info_t **commit_info_p,
-                const char *src_path,
-                const svn_opt_revision_t *src_revision,
-                const char *dst_path,
-                svn_client_ctx_t *ctx,
-                apr_pool_t *pool)
-{
-  svn_commit_info_t *commit_info = NULL;
-  svn_error_t *err;
-
-  err = svn_client_copy2(&commit_info, src_path, src_revision, dst_path,
-                         ctx, pool);
-  /* These structs have the same layout for the common fields. */
-  *commit_info_p = (svn_client_commit_info_t *) commit_info;
-  return err;
-}
-
-
-svn_error_t *
 svn_client_move5(svn_commit_info_t **commit_info_p,
                  apr_array_header_t *src_paths,
                  const char *dst_path,
@@ -2201,118 +2127,5 @@ svn_client_move5(svn_commit_info_t **commit_info_p,
     }
 
   svn_pool_destroy(subpool);
-  return err;
-}
-
-svn_error_t *
-svn_client_move4(svn_commit_info_t **commit_info_p,
-                 const char *src_path,
-                 const char *dst_path,
-                 svn_boolean_t force,
-                 svn_client_ctx_t *ctx,
-                 apr_pool_t *pool)
-{
-  apr_array_header_t *src_paths =
-    apr_array_make(pool, 1, sizeof(const char *));
-  APR_ARRAY_PUSH(src_paths, const char *) = src_path;
-
-  return svn_client_move5(commit_info_p, src_paths, dst_path, force, FALSE,
-                          FALSE, NULL, ctx, pool);
-}
-
-svn_error_t *
-svn_client_move3(svn_commit_info_t **commit_info_p,
-                 const char *src_path,
-                 const char *dst_path,
-                 svn_boolean_t force,
-                 svn_client_ctx_t *ctx,
-                 apr_pool_t *pool)
-{
-  svn_error_t *err;
-
-  err = svn_client_move4(commit_info_p, src_path, dst_path, force, ctx, pool);
-
-  /* If the target exists, try to move the source as a child of the target.
-     This will obviously fail if target is not a directory, but that's exactly
-     what we want. */
-  if (err && (err->apr_err == SVN_ERR_ENTRY_EXISTS
-              || err->apr_err == SVN_ERR_FS_ALREADY_EXISTS))
-    {
-      const char *src_basename = svn_path_basename(src_path, pool);
-
-      svn_error_clear(err);
-
-      return svn_client_move4(commit_info_p, src_path,
-                              svn_path_join(dst_path, src_basename, pool),
-                              force, ctx, pool);
-    }
-
-  return err;
-}
-
-svn_error_t *
-svn_client_move2(svn_client_commit_info_t **commit_info_p,
-                 const char *src_path,
-                 const char *dst_path,
-                 svn_boolean_t force,
-                 svn_client_ctx_t *ctx,
-                 apr_pool_t *pool)
-{
-  svn_commit_info_t *commit_info = NULL;
-  svn_error_t *err;
-
-  err = svn_client_move3(&commit_info, src_path, dst_path, force, ctx, pool);
-  /* These structs have the same layout for the common fields. */
-  *commit_info_p = (svn_client_commit_info_t *) commit_info;
-  return err;
-}
-
-
-svn_error_t *
-svn_client_move(svn_client_commit_info_t **commit_info_p,
-                const char *src_path,
-                const svn_opt_revision_t *src_revision,
-                const char *dst_path,
-                svn_boolean_t force,
-                svn_client_ctx_t *ctx,
-                apr_pool_t *pool)
-{
-  svn_commit_info_t *commit_info = NULL;
-  svn_error_t *err;
-  svn_client_copy_source_t copy_source;
-  apr_array_header_t *sources = apr_array_make(pool, 1,
-                                  sizeof(const svn_client_copy_source_t *));
-
-  /* It doesn't make sense to specify revisions in a move. */
-
-  /* ### todo: this check could fail wrongly.  For example,
-     someone could pass in an svn_opt_revision_number that just
-     happens to be the HEAD.  It's fair enough to punt then, IMHO,
-     and just demand that the user not specify a revision at all;
-     beats mucking up this function with RA calls and such. */
-  if (src_revision->kind != svn_opt_revision_unspecified
-      && src_revision->kind != svn_opt_revision_head)
-    {
-      return svn_error_create
-        (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-         _("Cannot specify revisions (except HEAD) with move operations"));
-    }
-
-  copy_source.path = src_path;
-  copy_source.revision = src_revision;
-  copy_source.peg_revision = src_revision;
-
-  APR_ARRAY_PUSH(sources, const svn_client_copy_source_t *) = &copy_source;
-
-  err = try_copy(&commit_info,
-                 sources, dst_path,
-                 TRUE /* is_move */,
-                 force,
-                 FALSE /* make_parents */,
-                 NULL,
-                 ctx,
-                 pool);
-  /* These structs have the same layout for the common fields. */
-  *commit_info_p = (svn_client_commit_info_t *) commit_info;
   return err;
 }

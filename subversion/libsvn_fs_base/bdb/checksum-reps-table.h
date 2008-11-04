@@ -50,7 +50,7 @@ svn_error_t *svn_fs_bdb__get_checksum_rep(const char **rep_key,
 
 /* Store in the `checksum-reps' table a mapping of CHECKSUM to
    representation key REP_KEY in FS.  Do this as part of TRAIL.  Use
-   POOL for temporary allocations. 
+   POOL for temporary allocations.
 
    WARNING: NEVER store a record that maps a checksum to a mutable
    representation.  Ever.  Under pain of dismemberment and death.  */
@@ -67,6 +67,15 @@ svn_error_t *svn_fs_bdb__delete_checksum_rep(svn_fs_t *fs,
                                              svn_checksum_t *checksum,
                                              trail_t *trail,
                                              apr_pool_t *pool);
+
+/* Reserve a unique reuse ID in the `checksum-reps' table in FS for a
+   new instance of a re-used representation as part of TRAIL.  Return
+   the slot's id in *REUSE_ID_P, allocated in POOL.  */
+svn_error_t *svn_fs_bdb__reserve_rep_reuse_id(const char **reuse_id_p,
+                                              svn_fs_t *fs,
+                                              trail_t *trail,
+                                              apr_pool_t *pool);
+
 
 #ifdef __cplusplus
 }

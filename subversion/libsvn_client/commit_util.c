@@ -44,6 +44,22 @@
 #define SVN_CLIENT_COMMIT_DEBUG
 */
 
+/* Wrap an RA error in an out-of-date error if warranted. */
+static svn_error_t *
+fixup_out_of_date_error(const char *path,
+                        svn_node_kind_t kind,
+                        svn_error_t *err)
+{
+  if (err->apr_err == SVN_ERR_FS_NOT_FOUND
+      || err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND)
+    return  svn_error_createf(SVN_ERR_WC_NOT_UP_TO_DATE, err,
+                              (kind == svn_node_dir
+                               ? _("Directory '%s' is out of date")
+                               : _("File '%s' is out of date")),
+                              path);
+  else
+    return err;
+}
 
 
 /*** Harvesting Commit Candidates ***/
@@ -292,13 +308,9 @@ harvest_committables(apr_hash_t *committables,
          svn_path_local_style(path, pool));
     }
 
-  /* Get a fully populated entry for PATH if we can, and check for
-     conflicts. If this is a directory ... */
   if (entry->kind == svn_node_dir)
     {
-      /* ... then try to read its own entries file so we have a full
-         entry for it (we were going to have to do this eventually to
-         recurse anyway, so... ) */
+      /* Read the dir's own entries for use when recursing. */
       svn_error_t *err;
       const svn_wc_entry_t *e = NULL;
       err = svn_wc_entries_read(&entries, adm_access, copy_mode, pool);
@@ -312,38 +324,13 @@ harvest_committables(apr_hash_t *committables,
         }
 
       /* If we got an entries hash, and the "this dir" entry is
-         present, override our current ENTRY with it, and check for
-         conflicts. */
+         present, try to override our current ENTRY with it. */
       if ((entries) && ((e = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR,
                                           APR_HASH_KEY_STRING))))
-        {
           entry = e;
-          SVN_ERR(svn_wc_conflicted_p2(&tc, &pc, &treec, path, entry, pool));
-        }
-
-      /* No new entry?  Just check the parent's pointer for
-         conflicts. */
-      else
-        {
-          SVN_ERR(svn_wc_conflicted_p2(&tc, &pc, &treec, p_path, entry,
-                                       pool));
-        }
     }
 
-  /* If this is not a directory, check for conflicts using the
-     parent's path. */
-  else
-    {
-      /* ### Maybe the tree-conflict test should be a separate function. */
-      svn_boolean_t dummy;
-      const svn_wc_entry_t *p_entry;
-
-      SVN_ERR(svn_wc_entry(&p_entry, p_path, adm_access, TRUE, pool));
-      SVN_ERR(svn_wc_conflicted_p2(&dummy, &dummy, &treec, p_path,
-                                   p_entry, pool));
-
-      SVN_ERR(svn_wc_conflicted_p2(&tc, &pc, &dummy, p_path, entry, pool));
-    }
+  SVN_ERR(svn_wc_conflicted_p2(&tc, &pc, &treec, path, adm_access, pool));
 
   /* Bail now if any conflicts exist for the ENTRY. */
   if (tc || pc || treec)
@@ -1097,6 +1084,7 @@ do_item_commit(void **dir_baton,
   const svn_delta_editor_t *editor = cb_baton->editor;
   apr_hash_t *file_mods = cb_baton->file_mods;
   svn_client_ctx_t *ctx = cb_baton->ctx;
+  svn_error_t *err = SVN_NO_ERROR;
 
   /* Do some initializations. */
   *dir_baton = NULL;
@@ -1196,8 +1184,11 @@ do_item_commit(void **dir_baton,
   if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
     {
       SVN_ERR_ASSERT(parent_baton);
-      SVN_ERR(editor->delete_entry(path, item->revision,
-                                   parent_baton, pool));
+      err = editor->delete_entry(path, item->revision,
+                                 parent_baton, pool);
+
+      if (err)
+        return fixup_out_of_date_error(path, item->kind, err);
     }
 
   /* If this item is supposed to be added, do so. */
@@ -1253,9 +1244,12 @@ do_item_commit(void **dir_baton,
           if (! file_baton)
             {
               SVN_ERR_ASSERT(parent_baton);
-              SVN_ERR(editor->open_file(path, parent_baton,
-                                        item->revision,
-                                        file_pool, &file_baton));
+              err = editor->open_file(path, parent_baton,
+                                      item->revision,
+                                      file_pool, &file_baton);
+
+              if (err)
+                return fixup_out_of_date_error(path, kind, err);
             }
         }
       else
@@ -1278,6 +1272,18 @@ do_item_commit(void **dir_baton,
         }
 
       SVN_ERR(svn_wc_entry(&tmp_entry, item->path, adm_access, TRUE, pool));
+
+      /* When committing a directory that no longer exists in the
+         repository, a "not found" error does not occur immediately
+         upon opening the directory.  It appears here during the delta
+         transmisssion. */
+      err = svn_wc_transmit_prop_deltas
+        (item->path, adm_access, tmp_entry, editor,
+         (kind == svn_node_dir) ? *dir_baton : file_baton, NULL, pool);
+
+      if (err)
+        return fixup_out_of_date_error(path, kind, err);
+
       SVN_ERR(svn_wc_transmit_prop_deltas
               (item->path, adm_access, tmp_entry, editor,
                (kind == svn_node_dir) ? *dir_baton : file_baton, NULL, pool));
@@ -1317,9 +1323,12 @@ do_item_commit(void **dir_baton,
       if (! file_baton)
         {
           SVN_ERR_ASSERT(parent_baton);
-          SVN_ERR(editor->open_file(path, parent_baton,
+          err = editor->open_file(path, parent_baton,
                                     item->revision,
-                                    file_pool, &file_baton));
+                                    file_pool, &file_baton);
+
+          if (err)
+            return fixup_out_of_date_error(path, item->kind, err);
         }
 
       /* Add this file mod to the FILE_MODS hash. */

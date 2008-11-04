@@ -43,7 +43,7 @@ svn_fs_bdb__open_miscellaneous_table(DB **miscellaneous_p,
   BDB_ERR(svn_fs_bdb__check_version());
   BDB_ERR(db_create(&miscellaneous, env, 0));
   error = (miscellaneous->open)(SVN_BDB_OPEN_PARAMS(miscellaneous, NULL),
-                                "miscellaneous", 0, DB_BTREE, 
+                                "miscellaneous", 0, DB_BTREE,
                                 open_flags, 0666);
 
   /* Create the table if it doesn't yet exist.  This is a form of
@@ -88,7 +88,7 @@ svn_fs_bdb__miscellaneous_set(svn_fs_t *fs,
     {
       svn_fs_base__trail_debug(trail, "miscellaneous", "del");
       return BDB_WRAP(fs, "deleting record from 'miscellaneous' table",
-                      bfd->miscellaneous->del(bfd->miscellaneous, 
+                      bfd->miscellaneous->del(bfd->miscellaneous,
                                               trail->db_txn, &key, 0));
     }
   else
@@ -96,7 +96,7 @@ svn_fs_bdb__miscellaneous_set(svn_fs_t *fs,
       svn_fs_base__str_to_dbt(&value, val);
       svn_fs_base__trail_debug(trail, "miscellaneous", "add");
       return BDB_WRAP(fs, "storing miscellaneous record",
-                      bfd->miscellaneous->put(bfd->miscellaneous, 
+                      bfd->miscellaneous->put(bfd->miscellaneous,
                                               trail->db_txn,
                                               &key, &value, 0));
     }

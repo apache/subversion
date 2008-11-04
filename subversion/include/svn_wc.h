@@ -548,7 +548,7 @@ svn_wc_traversed_depths(apr_hash_t **depths,
  * canonicalized.
  *
  * In order to avoid backwards compatibility problems clients should use
- * svn_wc_external_item_create() to allocate and intialize this structure
+ * svn_wc_external_item_create() to allocate and initialize this structure
  * instead of doing so themselves.
  *
  * @since New in 1.5.
@@ -582,7 +582,7 @@ typedef struct svn_wc_external_item2_t
  * Set @a *item to an external item object, allocated in @a pool.
  *
  * In order to avoid backwards compatibility problems, this function
- * is used to intialize and allocate the @c svn_wc_external_item2_t
+ * is used to initialize and allocate the @c svn_wc_external_item2_t
  * structure rather than doing so explicitly, as the size of this
  * structure may change in the future.
  *
@@ -829,7 +829,12 @@ typedef enum svn_wc_notify_action_t
   svn_wc_notify_property_updated,
 
   /** The last notification in a merge. @since New in 1.6. */
-  svn_wc_notify_merge_completed
+  svn_wc_notify_merge_completed,
+
+  /** The path is a tree-conflict victim of the intended action (*not*
+   * a persistent tree-conflict from an earlier operation, but *this*
+   * operation caused the tree-conflict). @since New in 1.6. */
+  svn_wc_notify_tree_conflict
 
 } svn_wc_notify_action_t;
 
@@ -1433,6 +1438,11 @@ typedef svn_error_t *(*svn_wc_conflict_resolver_func_t)
  * state.  Functions concerned with property state have separate
  * @a contentstate and @a propstate arguments.
  *
+ * If @a tree_conflicted is non-NULL, set @a *tree_conflicted to true if
+ * this operation caused a tree conflict, else to false. (Like with @a
+ * state, this is only useful with merge, not diff; diff callbacks
+ * should set this to false.)
+ *
  * @since New in 1.6.
  */
 typedef struct svn_wc_diff_callbacks3_t
@@ -1457,6 +1467,7 @@ typedef struct svn_wc_diff_callbacks3_t
   svn_error_t *(*file_changed)(svn_wc_adm_access_t *adm_access,
                                svn_wc_notify_state_t *contentstate,
                                svn_wc_notify_state_t *propstate,
+                               svn_boolean_t *tree_conflicted,
                                const char *path,
                                const char *tmpfile1,
                                const char *tmpfile2,
@@ -1487,6 +1498,7 @@ typedef struct svn_wc_diff_callbacks3_t
   svn_error_t *(*file_added)(svn_wc_adm_access_t *adm_access,
                              svn_wc_notify_state_t *contentstate,
                              svn_wc_notify_state_t *propstate,
+                             svn_boolean_t *tree_conflicted,
                              const char *path,
                              const char *tmpfile1,
                              const char *tmpfile2,
@@ -1510,6 +1522,7 @@ typedef struct svn_wc_diff_callbacks3_t
    */
   svn_error_t *(*file_deleted)(svn_wc_adm_access_t *adm_access,
                                svn_wc_notify_state_t *state,
+                               svn_boolean_t *tree_conflicted,
                                const char *path,
                                const char *tmpfile1,
                                const char *tmpfile2,
@@ -1524,6 +1537,7 @@ typedef struct svn_wc_diff_callbacks3_t
    */
   svn_error_t *(*dir_added)(svn_wc_adm_access_t *adm_access,
                             svn_wc_notify_state_t *state,
+                            svn_boolean_t *tree_conflicted,
                             const char *path,
                             svn_revnum_t rev,
                             void *diff_baton);
@@ -1533,6 +1547,7 @@ typedef struct svn_wc_diff_callbacks3_t
    */
   svn_error_t *(*dir_deleted)(svn_wc_adm_access_t *adm_access,
                               svn_wc_notify_state_t *state,
+                              svn_boolean_t *tree_conflicted,
                               const char *path,
                               void *diff_baton);
 
@@ -1548,6 +1563,7 @@ typedef struct svn_wc_diff_callbacks3_t
    */
   svn_error_t *(*dir_props_changed)(svn_wc_adm_access_t *adm_access,
                                     svn_wc_notify_state_t *propstate,
+                                    svn_boolean_t *tree_conflicted,
                                     const char *path,
                                     const apr_array_header_t *propchanges,
                                     apr_hash_t *original_props,
@@ -1557,31 +1573,20 @@ typedef struct svn_wc_diff_callbacks3_t
    * A directory @a path has been opened.  @a rev is the revision that the
    * directory came from.
    *
+   * This function is called for @a path before any of the callbacks are
+   * called for a child of @a path.
    */
   svn_error_t *(*dir_opened)(svn_wc_adm_access_t *adm_access,
+                             svn_boolean_t *tree_conflicted,
                              const char *path,
                              svn_revnum_t rev,
-                             void *diff_baton);
-
-  /**
-   * A directory @a path has been closed.
-   *
-   * If @a state is non-NULL, set @a *state to the tree-conflict state
-   * of the directory.
-   *
-   * The client may now report the final state of the directory's
-   * children (e.g., report a path as 'replaced').
-   */
-  svn_error_t *(*dir_closed)(svn_wc_adm_access_t *adm_access,
-                             svn_wc_notify_state_t *state,
-                             const char *path,
                              void *diff_baton);
 
 } svn_wc_diff_callbacks3_t;
 
 /**
- * Similar to @c svn_wc_diff_callbacks3_t, but without dir_opened or
- * dir_closed functions.
+ * Similar to @c svn_wc_diff_callbacks3_t, but without the dir_opened()
+ * function, and without the 'tree_conflicted' argument to the functions.
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
@@ -2142,34 +2147,36 @@ svn_wc_entry_dup(const svn_wc_entry_t *entry,
                  apr_pool_t *pool);
 
 
-/** Given a @a dir_path under version control, decide if one of its
- * entries (@a entry) is in state of conflict; return the answers in
- * @a text_conflicted_p, @a prop_conflicted_p and @a
- * has_tree_conflicted_children.
+/** Given a @a path in a dir under version control, decide if it is in
+ * state of conflict; return the answers in @a *text_conflicted_p, @a
+ * *prop_conflicted_p, and @a *tree_conflicted_p.  If one or two of the
+ * answers are uninteresting, simply pass @c NULL pointers.
  *
- * If @a entry is the THIS_DIR entry of @a dir_path, and this directory
- * currently contains one or more tree-conflicted children, then set
- * @a *has_tree_conflicted_children to true, else set it to false.
+ * If @path is unversioned or does not exist, @a *text_conflicted_p and
+ * @a *prop_conflicted_p will be @c FALSE if non-NULL.
  *
- * If the @a entry mentions that a text conflict file (.rej suffix)
- * exists, but it cannot be found, assume the text conflict has been
- * resolved by the user and return FALSE in @a *text_conflicted_p.
+ * @a adm_access is the admin access baton of the parent directory.
  *
- * Similarly, if the @a entry mentions that a property conflicts file
- * (.prej suffix) exists, but it cannot be found, assume the property
- * conflicts have been resolved by the user and return FALSE in
- * @a *prop_conflicted_p.
+ * If the @a path has a corresponding text conflict file (with suffix
+ * .mine, .theirs, etc.) that cannot be found, assume that the text
+ * conflict has been resolved by the user and return @c FALSE in @a
+ * *text_conflicted_p.
  *
- * The @a entry is not updated.
+ * Similarly, if a property conflicts file (.prej suffix) exists, but
+ * it cannot be found, assume that the property conflicts have been
+ * resolved by the user and return @c FALSE in @a *prop_conflicted_p.
+ *
+ * @a *tree_conflicted_p can't be auto-resolved in this fashion.  An
+ * explicit `resolved' is needed.
  *
  * @since New in 1.6.
  */
 svn_error_t *
 svn_wc_conflicted_p2(svn_boolean_t *text_conflicted_p,
                      svn_boolean_t *prop_conflicted_p,
-                     svn_boolean_t *has_tree_conflicted_children,
-                     const char *dir_path,
-                     const svn_wc_entry_t *entry,
+                     svn_boolean_t *tree_conflicted_p,
+                     const char *path,
+                     svn_wc_adm_access_t *adm_access,
                      apr_pool_t *pool);
 
 /** Like svn_wc_conflicted_p2, but without the capability to
@@ -3341,6 +3348,7 @@ svn_wc_resolved_conflict4(const char *path,
  *
  * @deprecated Provided for backward compatibility with the 1.5 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_resolved_conflict3(const char *path,
                           svn_wc_adm_access_t *adm_access,
@@ -5269,21 +5277,6 @@ svn_wc_get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
                          const char *victim_path,
                          svn_wc_adm_access_t *adm_access,
                          apr_pool_t *pool);
-
-/**
- * Read tree conflict descriptions from @a dir_entry.
- * Append pointers to newly allocated svn_wc_conflict_description_t
- * objects to the array pointed to by @a conflicts.
- * @a dir_path is the path to the WC directory whose conflicts are being read.
- * Do all allocations in @a pool.
- *
- * @since New in 1.6.
- */
-svn_error_t *
-svn_wc_read_tree_conflicts_from_entry(apr_array_header_t *conflicts,
-                                      const svn_wc_entry_t *dir_entry,
-                                      const char *dir_path,
-                                      apr_pool_t *pool);
 
 /**
  * Add the tree conflict described by @a conflict to the directory entry

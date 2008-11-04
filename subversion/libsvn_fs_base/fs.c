@@ -622,7 +622,6 @@ open_databases(svn_fs_t *fs,
                                                            create)));
     }
 
-
   if (format >= SVN_FS_BASE__MIN_MISCELLANY_FORMAT)
     {
       SVN_ERR(BDB_WRAP(fs, (create
@@ -633,12 +632,15 @@ open_databases(svn_fs_t *fs,
                                                             create)));
     }
 
-  SVN_ERR(BDB_WRAP(fs, (create
-                        ? "creating 'checksum-reps' table"
-                        : "opening 'checksum-reps' table"),
-                   svn_fs_bdb__open_checksum_reps_table(&bfd->checksum_reps,
-                                                        bfd->bdb->env,
-                                                        create)));
+  if (format >= SVN_FS_BASE__MIN_REP_SHARING_FORMAT)
+    {
+      SVN_ERR(BDB_WRAP(fs, (create
+                            ? "creating 'checksum-reps' table"
+                            : "opening 'checksum-reps' table"),
+                       svn_fs_bdb__open_checksum_reps_table(&bfd->checksum_reps,
+                                                            bfd->bdb->env,
+                                                            create)));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -650,6 +652,11 @@ base_create(svn_fs_t *fs, const char *path, apr_pool_t *pool,
 {
   int format = SVN_FS_BASE__FORMAT_NUMBER;
   svn_error_t *svn_err;
+
+  /* See if we had an explicitly specified pre-1.5-compatible.  */
+  if (fs->config && apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_6_COMPATIBLE,
+                                 APR_HASH_KEY_STRING))
+    format = 3;
 
   /* See if we had an explicitly specified pre-1.5-compatible.  */
   if (fs->config && apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_5_COMPATIBLE,
@@ -820,7 +827,7 @@ base_upgrade(svn_fs_t *fs, const char *path, apr_pool_t *pool,
 {
   const char *version_file_path;
   int old_format_number;
-  
+
   version_file_path = svn_path_join(path, FORMAT_FILE, pool);
 
   /* Read the old number so we've got it on hand later on. */
@@ -852,7 +859,7 @@ base_upgrade(svn_fs_t *fs, const char *path, apr_pool_t *pool,
       SVN_ERR(svn_fs_base__youngest_rev(&youngest_rev, fs, subpool));
       value = apr_psprintf(subpool, "%ld", youngest_rev);
       SVN_ERR(svn_fs_base__miscellaneous_set
-              (fs, SVN_FS_BASE__MISC_FORWARD_DELTA_UPGRADE, 
+              (fs, SVN_FS_BASE__MISC_FORWARD_DELTA_UPGRADE,
                value, subpool));
       svn_pool_destroy(subpool);
     }

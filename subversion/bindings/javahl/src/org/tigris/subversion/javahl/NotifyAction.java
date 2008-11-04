@@ -152,6 +152,24 @@ public interface NotifyAction
     public static final int update_replaced = 30;
 
     /**
+     * @since 1.6
+     * Property updated.
+     */
+    public static final int property_updated = 31;
+
+    /**
+     * @since 1.6
+     * The last notification in a merge
+     */
+    public static final int merge_completed = 32;
+
+    /**
+     * @since 1.6
+     * The path is a tree-conflict victim of the intended action
+     */
+    public static final int tree_conflict = 33;
+
+    /**
      * textual representation of the action types
      */
     public static final String[] actionNames =
@@ -186,6 +204,9 @@ public interface NotifyAction
         "changelist cleared",
         "merge begin",
         "foreign merge begin",
-        "replaced"
+        "replaced",
+        "property updated",
+        "merge completed",
+        "tree conflict"
     };
 }

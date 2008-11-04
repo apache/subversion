@@ -1578,6 +1578,7 @@ txn_body_txn_deltify(void *baton, trail_t *trail)
 {
   struct txn_deltify_args *args = baton;
   dag_node_t *tgt_node, *base_node;
+  base_fs_data_t *bfd = trail->fs->fsap_data;
 
   SVN_ERR(svn_fs_base__dag_get_node(&tgt_node, trail->fs, args->tgt_id,
                                     trail, trail->pool));
@@ -1590,9 +1591,12 @@ txn_body_txn_deltify(void *baton, trail_t *trail)
                                        args->txn_id, trail, trail->pool));
     }
 
-  /* If this isn't a directory, record a mapping of TGT_NODE's data
-     checksum to its representation key. */
-  return svn_fs_base__dag_index_checksums(tgt_node, trail, trail->pool);
+  /* If we support rep sharing, and this isn't a directory, record a
+     mapping of TGT_NODE's data checksum to its representation key. */
+  if (bfd->format >= SVN_FS_BASE__MIN_REP_SHARING_FORMAT)
+    SVN_ERR(svn_fs_base__dag_index_checksums(tgt_node, trail, trail->pool));
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -1662,14 +1666,6 @@ deltify_mutable(svn_fs_t *fs,
   apr_hash_t *entries = NULL;
   struct txn_deltify_args td_args;
   base_fs_data_t *bfd = fs->fsap_data;
-  const char *delta_rev;
-  svn_revnum_t delta_flag_rev;
-
-  /* Make sure that we can even deltify this revision.  We don't want to
-     deltify revisions prior to the forward delta change. */
-  SVN_ERR(svn_fs_base__miscellaneous_get
-          (&delta_rev, fs, SVN_FS_BASE__MISC_FORWARD_DELTA_UPGRADE, pool));
-  delta_flag_rev = atol(delta_rev);
 
   /* Get the ID for PATH under ROOT if it wasn't provided. */
   if (! node_id)
@@ -1723,7 +1719,7 @@ deltify_mutable(svn_fs_t *fs,
   /* Finally, deltify old data against this node. */
   {
     /* Prior to 1.6, we use the following algorithm to deltify nodes:
-    
+
        Redeltify predecessor node-revisions of the one we added.  The
        idea is to require at most 2*lg(N) deltas to be applied to get
        to any node-revision in a chain of N predecessors.  We do this
@@ -1749,7 +1745,7 @@ deltify_mutable(svn_fs_t *fs,
        expensive and doesn't help retrieve any other revision.
        (Retrieving the oldest node-revision will still be fast, just
        not as blindingly so.)
-       
+
        For 1.6 and beyond, we just deltify the current node against its
        predecessors, using skip deltas similar to the was FSFS does.*/
 
@@ -1758,6 +1754,7 @@ deltify_mutable(svn_fs_t *fs,
     struct txn_pred_count_args tpc_args;
     apr_pool_t *subpools[2];
     int active_subpool = 0;
+    svn_revnum_t forward_delta_rev = 0;
 
     tpc_args.id = id;
     SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_pred_count, &tpc_args,
@@ -1770,8 +1767,25 @@ deltify_mutable(svn_fs_t *fs,
 
     subpools[0] = svn_pool_create(pool);
     subpools[1] = svn_pool_create(pool);
+
+    /* If we support the 'miscellaneous' table, check it to see if
+       there is a point in time before which we don't want to do
+       deltification. */
+    /* ### FIXME:  I think this is an unnecessary restriction.  We
+       ### should be able to do something meaningful for most
+       ### deltification requests -- what that is depends on the
+       ### directory of the deltas for that revision, though. */
+    if (bfd->format >= SVN_FS_BASE__MIN_MISCELLANY_FORMAT)
+      {
+        const char *val;
+        SVN_ERR(svn_fs_base__miscellaneous_get
+                (&val, fs, SVN_FS_BASE__MISC_FORWARD_DELTA_UPGRADE, pool));
+        if (val)
+          SVN_ERR(svn_revnum_parse(&forward_delta_rev, val, NULL));
+      }
+
     if (bfd->format >= SVN_FS_BASE__MIN_FORWARD_DELTAS_FORMAT
-          && delta_flag_rev <= root->rev)
+          && forward_delta_rev <= root->rev)
       {
         /**** FORWARD DELTA STORAGE ****/
 
@@ -1786,7 +1800,7 @@ deltify_mutable(svn_fs_t *fs,
            the node has ten predecessors and we want the eighth node, walk back
            two predecessors. */
         pred_id = id;
-          
+
         /* We need to use two alternating pools because the id used in the
            call to txn_body_pred_id is allocated by the previous inner
            loop iteration.  If we would clear the pool each iteration we
@@ -2824,16 +2838,19 @@ svn_fs_base__deltify(svn_fs_t *fs,
   svn_fs_root_t *root;
   const char *txn_id;
   struct rev_get_txn_id_args args;
-  const char *val;
-  svn_revnum_t forward_delta_rev;
+  base_fs_data_t *bfd = fs->fsap_data;
 
-  SVN_ERR(svn_fs_base__miscellaneous_get
-          (&val, fs, SVN_FS_BASE__MISC_FORWARD_DELTA_UPGRADE, pool));
-
-  if (val != NULL)
+  if (bfd->format >= SVN_FS_BASE__MIN_MISCELLANY_FORMAT)
     {
-      SVN_ERR(svn_revnum_parse(&forward_delta_rev, val, NULL));
+      const char *val;
+      svn_revnum_t forward_delta_rev = 0;
 
+      SVN_ERR(svn_fs_base__miscellaneous_get
+              (&val, fs, SVN_FS_BASE__MISC_FORWARD_DELTA_UPGRADE, pool));
+      if (val)
+        SVN_ERR(svn_revnum_parse(&forward_delta_rev, val, NULL));
+
+      /* ### FIXME:  Unnecessarily harsh requirement? (cmpilato). */
       if (revision <= forward_delta_rev)
         return svn_error_createf
           (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
@@ -3412,6 +3429,7 @@ struct file_checksum_args
 {
   svn_fs_root_t *root;
   const char *path;
+  svn_checksum_kind_t kind;
   svn_checksum_t **checksum;  /* OUT parameter */
 };
 
@@ -3424,12 +3442,13 @@ txn_body_file_checksum(void *baton,
 
   SVN_ERR(get_dag(&file, args->root, args->path, trail, trail->pool));
 
-  return svn_fs_base__dag_file_checksum(args->checksum, file,
+  return svn_fs_base__dag_file_checksum(args->checksum, args->kind, file,
                                         trail, trail->pool);
 }
 
 static svn_error_t *
 base_file_checksum(svn_checksum_t **checksum,
+                   svn_checksum_kind_t kind,
                    svn_fs_root_t *root,
                    const char *path,
                    apr_pool_t *pool)
@@ -3438,6 +3457,7 @@ base_file_checksum(svn_checksum_t **checksum,
 
   args.root = root;
   args.path = path;
+  args.kind = kind;
   args.checksum = checksum;
   return svn_fs_base__retry_txn(root->fs, txn_body_file_checksum, &args,
                                 pool);
@@ -3666,13 +3686,14 @@ txn_body_apply_textdelta(void *baton, trail_t *trail)
 
       /* Until we finalize the node, its data_key points to the old
          contents, in other words, the base text. */
-      SVN_ERR(svn_fs_base__dag_file_checksum(&checksum, tb->node,
-                                             trail, trail->pool));
+      SVN_ERR(svn_fs_base__dag_file_checksum(&checksum,
+                                             tb->base_checksum->kind,
+                                             tb->node, trail, trail->pool));
       /* TODO: This only compares checksums if they are the same kind, but
          we're calculating both SHA1 and MD5 checksums somewhere in
          reps-strings.c.  Could we keep them both around somehow so this
          check could be more comprehensive? */
-      if (tb->base_checksum->kind == checksum->kind 
+      if (tb->base_checksum->kind == checksum->kind
             && !svn_checksum_match(tb->base_checksum, checksum))
         return svn_error_createf
           (SVN_ERR_CHECKSUM_MISMATCH,
