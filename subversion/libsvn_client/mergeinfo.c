@@ -1570,6 +1570,8 @@ log_entry_receiver(void *baton,
               else
                 {
                   apr_array_header_t *merged_rev_rangelist;
+                  apr_array_header_t *last_merged_rev_rangelist;
+                  int left_index;
                   svn_merge_range_t *merged_single_rev_range
                     = apr_pcalloc(lb->pool, sizeof(*merged_single_rev_range));
                   svn_merge_range_t *commit_single_rev_range
@@ -1588,6 +1590,32 @@ log_entry_receiver(void *baton,
                     = apr_array_make(lb->pool, 0, sizeof(svn_merge_range_t *));
                   APR_ARRAY_PUSH(merged_rev_rangelist, svn_merge_range_t *)
                     = merged_single_rev_range;
+                  /* Last array of merge_ranges in merge_ranges_list would be
+                     in descending order of revisions, so we need to reverse
+                     it for any useful consumption by mergeinfo APIs.
+                  */
+                  last_merged_rev_rangelist
+                    = APR_ARRAY_IDX(lb->merge_ranges_list,
+                                    lb->merge_ranges_list->nelts - 1,
+                                    apr_array_header_t *);
+                  for (left_index = 0;
+                       left_index < (last_merged_rev_rangelist->nelts)/2;
+                       ++left_index)
+                    {
+                      int right_index
+                        = (last_merged_rev_rangelist->nelts -1) - left_index;
+                      svn_merge_range_t *temp
+                        = APR_ARRAY_IDX(last_merged_rev_rangelist,
+                                        left_index, svn_merge_range_t *);
+                      APR_ARRAY_IDX(last_merged_rev_rangelist,
+                                    left_index,
+                                    svn_merge_range_t *)
+                        = APR_ARRAY_IDX(last_merged_rev_rangelist,
+                                        right_index, svn_merge_range_t *);
+                      APR_ARRAY_IDX(last_merged_rev_rangelist,
+                                    right_index,
+                                    svn_merge_range_t *) = temp;
+                    }
                   APR_ARRAY_PUSH(lb->merge_ranges_list, apr_array_header_t *)
                     = merged_rev_rangelist;
                 }
@@ -1640,6 +1668,8 @@ get_commit_and_merge_ranges(svn_ra_session_t *session,
   apr_array_header_t *targets;
   apr_array_header_t *revprops;
   struct log_receiver_baton lb;
+  int left_index;
+  apr_array_header_t *last_merged_rev_rangelist;
   svn_opt_revision_t min_commit_rev_opt, max_commit_rev_opt;
   SVN_ERR_ASSERT(*merge_target != '/');
   SVN_ERR_ASSERT(*merge_source != '/');
@@ -1670,6 +1700,27 @@ get_commit_and_merge_ranges(svn_ra_session_t *session,
                           &lb,
                           ctx,
                           pool));
+
+  last_merged_rev_rangelist
+    = APR_ARRAY_IDX(lb.merge_ranges_list,
+                    lb.merge_ranges_list->nelts - 1,
+                    apr_array_header_t *);
+  for (left_index = 0; left_index < (last_merged_rev_rangelist->nelts)/2;
+       ++left_index)
+    {
+      int right_index = (last_merged_rev_rangelist->nelts -1) - left_index;
+      svn_merge_range_t *temp
+        = APR_ARRAY_IDX(last_merged_rev_rangelist,
+                        left_index, svn_merge_range_t *);
+      APR_ARRAY_IDX(last_merged_rev_rangelist,
+                    left_index,
+                    svn_merge_range_t *)
+        = APR_ARRAY_IDX(last_merged_rev_rangelist,
+                        right_index, svn_merge_range_t *);
+      APR_ARRAY_IDX(last_merged_rev_rangelist,
+                    right_index,
+                    svn_merge_range_t *) = temp;
+    }
   *merge_ranges_list = lb.merge_ranges_list;
   *commit_rangelist = lb.commit_rangelist;
   return SVN_NO_ERROR;
