@@ -14231,6 +14231,7 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   mu_path           = os.path.join(wc_dir, "A", "mu")
   mu_COPY_path      = os.path.join(wc_dir, "A_COPY", "mu")
   A_COPY_path       = os.path.join(wc_dir, "A_COPY")
+  D_COPY_path       = os.path.join(wc_dir, "A_COPY")
   beta_COPY_path    = os.path.join(wc_dir, "A_COPY", "B", "E", "beta")
   gamma_COPY_path   = os.path.join(wc_dir, "A_COPY", "D", "gamma")
   rho_COPY_path     = os.path.join(wc_dir, "A_COPY", "D", "G", "rho")
@@ -14419,7 +14420,60 @@ def reintegrate_with_subtree_mergeinfo(sbox):
                                        expected_A_skip,
                                        None, None, None, None,
                                        None, 1, 1, "--reintegrate")
-  
+
+  # Make some more changes to A_COPY so that the same revisions have *not*
+  # been uniformly applied from A to A_COPY.  In this case the reintegrate
+  # merge should fail, but should provide a helpful message as to where the
+  # problems are.
+  #
+  # First revert the previous reintegrate merge
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'revert', '-R', wc_dir)
+
+  # r15 - Reverse Merge r8 from A/D to A_COPY/D.
+  svntest.actions.run_and_verify_svn(None,
+                                     expected_merge_output([[-8]], 'U    ' +
+                                                           omega_COPY_path +
+                                                           '\n'),
+                                     [], 'merge', '-c-8',
+                                     sbox.repo_url + '/A/D',
+                                     D_COPY_path)
+  expected_output = wc.State(wc_dir,
+                             {'A_COPY/D'         : Item(verb='Sending'),
+                              'A_COPY/D/H/omega' : Item(verb='Sending')})
+  expected_status.tweak('A_COPY/D', 'A_COPY/D/H/omega', wc_rev=15)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  # Now reintegrate A_COPY back to A.  Since A_COPY/D no longer has r8 merged
+  # to it from A, the merge should fail.  Further we expect an error message
+  # that highlights the fact that A_COPY/D is the offending subtree. 
+  #
+  # The actions.run_and_verify_* methods are happy if one line of the error
+  # matches the regex, but we want to know that the error actually provides
+  # specific information about the paths that are stopping --reintegrate from
+  # working.  So we will pass the stderr to svntest.verify.verify_outputs()
+  # ourselves, but as the 'actual_stdout' argument, that way each line of
+  # error must match the regex.
+  exit_code, out, err = svntest.actions.run_and_verify_svn(
+    None, [], svntest.verify.AnyOutput,
+    'merge', '--reintegrate', sbox.repo_url + '/A_COPY', A_path)
+
+  svntest.verify.verify_outputs("Reintegrate failed but not "
+                                "in the way expected",
+                                err, None,
+                                "(svn: Reintegrate can only be used if the "
+                                "revisions previously merged from the "
+                                "reintegrate target to '.*A_COPY' are the "
+                                "same, but there are differences:\n)"
+                                "|(  A_COPY\n)"
+                                "|(    /A:2-12\n)"
+                                "|(  A_COPY/D\n)"
+                                "|(    /A/D:2-7,9-12\n)"
+                                "|(\n)",
+                                None,
+                                True) # Match *all* lines of stdout
+
 ########################################################################
 # Run the tests
 
@@ -14562,8 +14616,8 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(basic_reintegrate,
                          server_has_mergeinfo),
-              XFail(reintegrate_with_rename),
-              XFail(reintegrate_branch_never_merged_to),
+              reintegrate_with_rename,
+              reintegrate_branch_never_merged_to,
               reintegrate_fail_on_modified_wc,
               reintegrate_fail_on_mixed_rev_wc,
               reintegrate_fail_on_switched_wc,
@@ -14623,8 +14677,8 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(no_self_referential_filtering_on_added_path,
                          server_has_mergeinfo),
-              XFail(SkipUnless(reintegrate_with_subtree_mergeinfo,
-                               server_has_mergeinfo)),
+              SkipUnless(reintegrate_with_subtree_mergeinfo,
+                         server_has_mergeinfo),
              ]
 
 if __name__ == '__main__':
