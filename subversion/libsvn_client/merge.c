@@ -6761,42 +6761,132 @@ ensure_all_missing_ranges_are_phantoms(svn_ra_session_t *ra_session,
 }
 
 
-/* Return a new catalog in *CATALOG_P equal to CATALOG, but containing
-   only source ranges from the segments in SEGMENTS (whose elements
-   are of type svn_location_segment_t *).  The returned values are
-   (deeply) allocated in POOL. */
+/* Helper for calculate_left_hand_side() which filters the mergeinfo catalog
+   on a reintegrate source down to only that which came from the reintegrate
+   target.
+
+   SOURCE_CATALOG is the collection of explicit mergeinfo on
+   SOURCE_REPOS_REL_PATH@SORUCE_REV and all its children, i.e. the mergeinfo
+   catalog for the reintegrate source.
+
+   TARGET_SEGMENTS_HASH is a hash of (const char *) paths mapped to
+   (apr_array_header_t *) arrays of svn_location_segment_t *.  Each of these
+   path keys represent a path in the reintegrate target, relative to the
+   repository root, which has explicit mergeinfo and/or is the reintegrate
+   target itself.  The segment arrays contain the natural history of each
+   path@TARGET_REV.  Effectively this is the mergeinfo catalog on the
+   reintegrate target.
+
+   SOURCE_REPOS_REL_PATH is the path of the reintegrate source relative to
+   the root of the repository.  TARGET_REPOS_REL_PATH is the path of the
+   reintegrate target relative to the root of the repository.
+
+   TARGET_REV is the working revision the entire WC tree rooted at
+   TARGET_REPOS_REL_PATH is at.  SOURCE_REV is the peg revision of the
+   reintegrate source.
+
+   RA_SESSION is a session opened to the repository root.
+   
+   Return a new catalog in *FILTERED_CATALOG_P equal to SOURCE_CATALOG, but
+   containing only mergeinfo which came from TARGET_REPOS_REL_PATH@TARGET_REV's
+   natural history.  *FILTERED_CATALOG_P is (deeply) allocated in POOL. */
 static svn_error_t *
-remove_irrelevant_ranges(svn_mergeinfo_catalog_t *catalog_p,
-                         svn_mergeinfo_catalog_t catalog,
-                         apr_array_header_t *segments,
+remove_irrelevant_ranges(svn_mergeinfo_catalog_t *filtered_source_catalog_p,
+                         svn_mergeinfo_catalog_t source_catalog,
+                         apr_hash_t *target_segments_hash,
                          const char *source_repos_rel_path,
+                         const char *target_repos_rel_path,
+                         svn_revnum_t target_rev,
+                         svn_revnum_t source_rev,
+                         svn_ra_session_t *ra_session,
+                         svn_client_ctx_t *ctx,
                          apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
   svn_mergeinfo_catalog_t new_catalog = apr_hash_make(pool);
   svn_mergeinfo_t history_as_mergeinfo;
+  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(subpool);
 
-  SVN_ERR(svn_client__mergeinfo_from_segments(&history_as_mergeinfo,
-                                              segments,
-                                              pool));
-
-  for (hi = apr_hash_first(pool, catalog);
+  /* Examine the natural history of each path in the reintegrate target
+     with explicit mergeinfo. */
+  for (hi = apr_hash_first(subpool, target_segments_hash);
        hi;
        hi = apr_hash_next(hi))
     {
       const void *key;
       void *val;
-      const char *path;
-      svn_mergeinfo_t mergeinfo, filtered_mergeinfo;
+      const char *path, *source_path;
+      apr_array_header_t *segments;
+      svn_mergeinfo_t source_mergeinfo, filtered_mergeinfo;
 
+      svn_pool_clear(iterpool);      
       apr_hash_this(hi, &key, NULL, &val);
       path = key;
-      mergeinfo = val;
+      segments = val;
 
+      source_path = path + strlen(target_repos_rel_path);      
+      if (source_path[0] == '/') /* Remove leading '/' for svn_path_join. */
+        source_path++;
+      source_path = svn_path_join(source_repos_rel_path, source_path,
+        iterpool);
+      
+      SVN_ERR(svn_client__mergeinfo_from_segments(&history_as_mergeinfo,
+                                                  segments,
+                                                  iterpool));
+
+      /* If we find mergeinfo for source_path remove that from
+         SOURCE_CATALOG.  When this iteration over TARGET_SEGMENTS_HASH is
+         complete all that should be left in SOURCE_CATALOG are subtrees that
+         have explicit mergeinfo on the reintegrate source where there is no
+         corresponding explicit mergeinfo on the reintegrate target. */
+      source_mergeinfo = apr_hash_get(source_catalog, source_path,
+                                      APR_HASH_KEY_STRING);
+      if (source_mergeinfo)
+        {
+          apr_hash_set(source_catalog, source_path, APR_HASH_KEY_STRING,
+                       NULL);
+        }
+      else
+        {
+          /* There is no mergeinfo on source_path *or* source_path doesn't
+             exist at all.  If simply doesn't exist we can ignore it
+             altogether. */
+          svn_node_kind_t kind;
+          svn_mergeinfo_catalog_t subtree_catalog;
+          apr_array_header_t *source_repos_rel_path_as_array;
+          SVN_ERR(svn_ra_check_path(ra_session, source_path, source_rev,
+                                    &kind, iterpool));
+          if (kind == svn_node_none)
+              continue;
+          /* Else source_path does exist though it has no explicit mergeinfo.
+             Find its inherited mergeinfo.  If it doesn't have any then simply
+             set source_mergeinfo to an empty hash. */
+          source_repos_rel_path_as_array =
+            apr_array_make(iterpool, 1, sizeof(const char *));
+          APR_ARRAY_PUSH(source_repos_rel_path_as_array, const char *)
+            = source_path;
+          SVN_ERR(svn_ra_get_mergeinfo(ra_session, &subtree_catalog,
+                                       source_repos_rel_path_as_array,
+                                       source_rev, svn_mergeinfo_inherited,
+                                       FALSE, iterpool));
+          if (subtree_catalog)
+            source_mergeinfo = apr_hash_get(subtree_catalog, source_path,
+                                            APR_HASH_KEY_STRING);
+
+          /* A path might not have any inherited mergeinfo either. */
+          if(!source_mergeinfo)
+            source_mergeinfo = apr_hash_make(iterpool);
+        }
+
+      /* Use subpool rather than iterpool because filtered_mergeinfo is
+         going into new_catalog below and needs to last to the end of
+         this function. */
       SVN_ERR(svn_mergeinfo_intersect(&filtered_mergeinfo,
-                                      mergeinfo,
+                                      source_mergeinfo,
                                       history_as_mergeinfo,
-                                      pool));
+                                      subpool));
+
       /* Don't put an empty hash in the catalog for the root of the source.
          An empty hash represents empty mergeinfo as opposed to *no*
          mergeinfo.  We need to do this for the root of the source because
@@ -6811,25 +6901,125 @@ remove_irrelevant_ranges(svn_mergeinfo_catalog_t *catalog_p,
          http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=136908
          */
       if (apr_hash_count(filtered_mergeinfo)
-          || strcmp(source_repos_rel_path, path) != 0)
-        apr_hash_set(new_catalog,
-                     apr_pstrdup(pool, path),
-                     APR_HASH_KEY_STRING,
-                     filtered_mergeinfo);
+          || (strcmp(source_repos_rel_path, source_path) != 0
+              && (apr_hash_count(source_mergeinfo) == 0)))
+        {
+          /* As with svn_mergeinfo_intersect above, we need to use subpool
+             rather than iterpool. */
+          apr_hash_set(new_catalog,
+                       apr_pstrdup(subpool, source_path),
+                       APR_HASH_KEY_STRING,
+                       filtered_mergeinfo);
+        }
     }
 
-  *catalog_p = new_catalog;
+  /* Are there any subtrees with explicit mergeinfo still left in the merge
+     source where there was no explicit mergeinfo for the corresponding path
+     in the merge target?  If so, add the intersection of those path's
+     mergeinfo and the corresponding target path's mergeinfo to
+     new_catalog. */
+  if (apr_hash_count(source_catalog))
+    {
+      for (hi = apr_hash_first(subpool, source_catalog);
+           hi;
+           hi = apr_hash_next(hi))
+        {   
+          const void *key;
+          void *val;
+          const char *source_path;
+          svn_mergeinfo_t source_mergeinfo, filtered_mergeinfo;
+          const char *target_path;
+          apr_array_header_t *segments;
+          svn_error_t *err;
+ 
+          svn_pool_clear(iterpool);
+          apr_hash_this(hi, &key, NULL, &val);
+          source_path = key;
+          source_mergeinfo = val;
+          
+          target_path = source_path + strlen(source_repos_rel_path);      
+          if (target_path[0] == '/') /* Remove leading '/' for svn_path_join */
+            target_path++;
+          target_path = svn_path_join(target_repos_rel_path, target_path,
+                                      iterpool);
+
+          err = svn_client__repos_location_segments(&segments,
+                                                    ra_session,
+                                                    target_path,
+                                                    target_rev, target_rev,
+                                                    SVN_INVALID_REVNUM,
+                                                    ctx, iterpool);
+          if (err)
+            {
+              if (err->apr_err == SVN_ERR_FS_NOT_FOUND
+                  || err->apr_err == SVN_ERR_RA_DAV_REQUEST_FAILED)
+                {
+                  /* This path with explicit mergeinfo in the source doesn't exist
+                     on the target. */
+                  svn_error_clear(err);
+                  err = NULL;
+                }
+              else
+                {
+                  return err;
+                }
+            }
+          else
+            {
+              SVN_ERR(svn_client__mergeinfo_from_segments(&history_as_mergeinfo,
+                                                          segments,
+                                                          iterpool));
+              /* Use subpool rather than iterpool because filtered_mergeinfo
+                 is  going into new_catalog below and needs to last to the
+                 end of this function. */
+              SVN_ERR(svn_mergeinfo_intersect(&filtered_mergeinfo,
+                                              source_mergeinfo,
+                                              history_as_mergeinfo,
+                                              subpool));
+              if (apr_hash_count(filtered_mergeinfo))
+                apr_hash_set(new_catalog,
+                             apr_pstrdup(subpool, source_path),
+                             APR_HASH_KEY_STRING,
+                             filtered_mergeinfo);
+            }
+        }
+    }
+
+  /* Make a shiny new copy before blowing away all the temporary pools. */
+  *filtered_source_catalog_p = svn_mergeinfo_catalog_dup(new_catalog, pool);
+
+  /* iterpool was allocated out of subpool so this destroys both. */
+  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
-/* TODO(reint): Document.
+/* Helper for svn_client_merge_reintegrate() which calculates the
+   'left hand side' of the underlying two-URL merge that a --reintegrate
+   merge actually performs.
 
-   RA_SESSION must be opened at the repository root. */
+   TARGET_REPOS_REL_PATH is the path of the reintegrate target relative to
+   the root of the repository.  SOURCE_REPOS_REL_PATH is the path of the
+   reintegrate source relative to the root of the repository.
+
+   SUBTREES_WITH_MERGEINFO is a hash of (const char *) paths in the
+   reintegrate target, relative to the root of the repository, which have
+   explicit mergeinfo set on them.  The reintegrate target itself should
+   always be in this hash, regardless of whether it has explicit mergeinfo.
+
+   TARGET_REV is the working revision the entire WC tree rooted at
+   TARGET_REPOS_REL_PATH is at.  SOURCE_REV is the peg revision of the
+   reintegrate source.
+
+   RA_SESSION is a session opened to the repository root.
+   
+   Check that mergeinfo in SUBTREES_WITH_MERGEINFO 
+   */
 static svn_error_t *
 calculate_left_hand_side(const char **url_left,
                          svn_revnum_t *rev_left,
                          svn_mergeinfo_t *source_mergeinfo_p,
                          const char *target_repos_rel_path,
+                         apr_hash_t *subtrees_with_mergeinfo,
                          svn_revnum_t target_rev,
                          const char *source_repos_rel_path,
                          const char *source_repos_root,
@@ -6841,18 +7031,35 @@ calculate_left_hand_side(const char **url_left,
   apr_array_header_t *segments; /* array of (svn_location_segment_t *) */
   svn_boolean_t have_mergeinfo_for_source = FALSE,
     have_mergeinfo_for_descendants = FALSE;
-  svn_mergeinfo_catalog_t mergeinfo_catalog;
+  svn_mergeinfo_catalog_t mergeinfo_catalog, filtered_mergeinfo_catalog;
   apr_array_header_t *source_repos_rel_path_as_array
     = apr_array_make(pool, 1, sizeof(const char *));
   apr_pool_t *subpool = svn_pool_create(pool);
+  apr_hash_index_t *hi;
+  /* hash of paths mapped to arrays of svn_location_segment_t *. */
+  apr_hash_t *segments_hash = apr_hash_make(pool); 
 
-  /* Get the history (segments) for the target */
-  SVN_ERR(svn_client__repos_location_segments(&segments,
-                                              ra_session,
-                                              target_repos_rel_path,
-                                              target_rev, target_rev,
-                                              SVN_INVALID_REVNUM,
-                                              ctx, subpool));
+  /* Get the history (segments) for the target and any of it's subtrees. */
+  for (hi = apr_hash_first(pool, subtrees_with_mergeinfo);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const void *key;
+      void *val;
+      const char *path;
+
+      apr_hash_this(hi, &key, NULL, &val);
+      path = key;
+      SVN_ERR(svn_client__repos_location_segments(&segments,
+                                                  ra_session,
+                                                  path,
+                                                  target_rev, target_rev,
+                                                  SVN_INVALID_REVNUM,
+                                                  ctx, subpool));
+      apr_hash_set(segments_hash, 
+                   apr_pstrdup(subpool, path),
+                   APR_HASH_KEY_STRING, segments);
+    }
 
   /* Get the mergeinfo from the source, including its descendants. */
   APR_ARRAY_PUSH(source_repos_rel_path_as_array, const char *)
@@ -6860,19 +7067,28 @@ calculate_left_hand_side(const char **url_left,
   SVN_ERR(svn_ra_get_mergeinfo(ra_session, &mergeinfo_catalog,
                                source_repos_rel_path_as_array, source_rev,
                                svn_mergeinfo_inherited, TRUE, subpool));
+
   if (!mergeinfo_catalog)
     mergeinfo_catalog = apr_hash_make(subpool);
 
-  /* Filter mergeinfo_catalog so that all of the ranges come from
-     the target's history */
-  SVN_ERR(remove_irrelevant_ranges(&mergeinfo_catalog,
+  /* Filter the source's mergeinfo catalog so that all mergeinfo
+     comes from the target's history.  */
+  SVN_ERR(remove_irrelevant_ranges(&filtered_mergeinfo_catalog,
                                    mergeinfo_catalog,
-                                   segments,
+                                   segments_hash,
                                    source_repos_rel_path,
+                                   target_repos_rel_path,
+                                   target_rev,
+                                   source_rev,
+                                   ra_session,
+                                   ctx,
                                    subpool));
 
-  /* Elide! */
-  SVN_ERR(svn_client__elide_mergeinfo_catalog(mergeinfo_catalog, subpool));
+  /* We can tolerate subtrees with mergeinfo on the source if the
+     mergeinfo on each subtree that came from the target elides
+     to SOURCE_REPOS_REL_PATH. */
+  SVN_ERR(svn_client__elide_mergeinfo_catalog(filtered_mergeinfo_catalog,
+                                              subpool));
 
   /* See which case we fall into: */
   /* TODO(reint): make sure we look things up with keys that start
@@ -6882,11 +7098,12 @@ calculate_left_hand_side(const char **url_left,
      start with a slash (or at least, it will behave in a way we
      probably don't want if the component *does* start with slash).
   */
-  if (apr_hash_get(mergeinfo_catalog, source_repos_rel_path,
+  if (apr_hash_get(filtered_mergeinfo_catalog, source_repos_rel_path,
                    APR_HASH_KEY_STRING))
     have_mergeinfo_for_source = TRUE;
-  if (apr_hash_count(mergeinfo_catalog) > 1 ||
-      (! have_mergeinfo_for_source && apr_hash_count(mergeinfo_catalog) == 1))
+  if (apr_hash_count(filtered_mergeinfo_catalog) > 1 ||
+      (! have_mergeinfo_for_source
+       && apr_hash_count(filtered_mergeinfo_catalog) == 1))
     have_mergeinfo_for_descendants = TRUE;
 
   if (! have_mergeinfo_for_source && ! have_mergeinfo_for_descendants)
@@ -6922,11 +7139,15 @@ calculate_left_hand_side(const char **url_left,
   else if (! have_mergeinfo_for_descendants)
     {
       /* Easy case: return the last path/rev in the mergeinfo. */
-      svn_mergeinfo_t source_mergeinfo = apr_hash_get(mergeinfo_catalog,
+      svn_mergeinfo_t source_mergeinfo = apr_hash_get(filtered_mergeinfo_catalog,
                                                       source_repos_rel_path,
                                                       APR_HASH_KEY_STRING);
       apr_pool_t *iterpool = svn_pool_create(subpool);
       int i;
+      
+      /* Get the segments for the reintegrate target. */
+      segments = apr_hash_get(segments_hash, target_repos_rel_path,
+                             APR_HASH_KEY_STRING);
       for (i = segments->nelts - 1; i >= 0; i--)
         {
           svn_location_segment_t *segment
@@ -6964,21 +7185,90 @@ calculate_left_hand_side(const char **url_left,
   else
     {
       const char *full_url;
+      svn_string_t *filtered_mergeinfo_catalog_string;
+
       SVN_ERR(svn_ra_get_session_url(ra_session, &full_url, pool));
       full_url = svn_path_url_add_component(full_url, source_repos_rel_path,
                                             pool);
+
+      SVN_ERR(svn_mergeinfo__catalog_to_formatted_string(
+        &filtered_mergeinfo_catalog_string, filtered_mergeinfo_catalog,
+        "  ", "    ", pool));
       return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
-                               "Cannot reintegrate from '%s' yet:\n"
-                               "Some revisions have been merged under it "
-                               "that have not been merged\n"
-                               "into the reintegration target; "
-                               "merge them first, then retry.", full_url);
-      /* TODO(reint): It would be even better to print out mergeinfo_catalog
-         here.  Is there a helper function for that? */
+                               _("Reintegrate can only be used if the "
+                                 "revisions previously merged from the "
+                                 "reintegrate target to '%s' are the same, "
+                                 "but there are differences:\n%s"),
+                                 full_url,
+                                 filtered_mergeinfo_catalog_string->data);
     }
   return SVN_NO_ERROR;
 }
 
+/* A baton for get_subtree_mergeinfo_walk_cb. */
+struct get_subtree_mergeinfo_walk_baton
+{
+  /* Merge target and target relative to repository root. */
+  const char *target_path;
+  const char *target_repos_root;
+
+  /* Hash of paths (const char *) that have explicit mergeinfo. */
+  apr_hash_t *subtrees_with_mergeinfo;
+
+  /* Access for the tree being walked. */
+  svn_wc_adm_access_t *base_access;
+  svn_client_ctx_t *ctx;
+};
+
+/* svn_wc_entry_callbacks2_t found_entry() callback for get_mergeinfo_paths.
+
+   Given the working copy path PATH, its corresponding ENTRY, and WALK_BATON,
+   where WALK_BATON is of type get_subtree_mergeinfo_walk_baton *:
+   
+   If PATH has explicit mergeinfo or is the same as WALK_BATON->TARGET_PATH,
+   then store a copy of PATH in WALK_BATON->SUBTREES_WITH_MERGEINFO.  The copy
+   is allocated in WALK_BATON->SUBTREES_WITH_MERGEINFO's pool.
+   
+   POOL is used only for temporary allocations. */
+static svn_error_t *
+get_subtree_mergeinfo_walk_cb(const char *path,
+                              const svn_wc_entry_t *entry,
+                              void *walk_baton,
+                              apr_pool_t *pool)
+{
+  struct get_subtree_mergeinfo_walk_baton *wb = walk_baton;
+  const svn_string_t *propval;
+  
+  /* We're going to receive dirents twice;  we want to ignore the
+     first one (where it's a child of a parent dir), and only use
+     the second one (where we're looking at THIS_DIR).  The exception
+     is absent dirs, these only come through once, so continue. */
+  if ((entry->kind == svn_node_dir)
+      && (strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) != 0)
+      && !entry->absent)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_wc_prop_get(&propval, SVN_PROP_MERGEINFO, path,
+                          wb->base_access, pool));
+
+  /* We always want to include the reintegrate target even if it has
+     no explicit mergeinfo.  It still has natural history we'll need
+     to consider. */
+  if (propval || strcmp(path, wb->target_path) == 0)
+    {
+      const char *stored_path;
+
+      SVN_ERR(svn_client__path_relative_to_root(&stored_path, path,
+                                                wb->target_repos_root, FALSE,
+                                                NULL, wb->base_access, pool));
+      stored_path = apr_pstrdup(apr_hash_pool_get(wb->subtrees_with_mergeinfo),
+                                stored_path);
+      apr_hash_set(wb->subtrees_with_mergeinfo, stored_path,
+                   APR_HASH_KEY_STRING, stored_path);
+    }
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_client_merge_reintegrate(const char *source,
@@ -7002,6 +7292,9 @@ svn_client_merge_reintegrate(const char *source,
   svn_mergeinfo_t source_mergeinfo;
   svn_boolean_t use_sleep = FALSE;
   svn_error_t *err;
+  static const svn_wc_entry_callbacks2_t walk_callbacks =
+    { get_subtree_mergeinfo_walk_cb, get_mergeinfo_error_handler };
+  struct get_subtree_mergeinfo_walk_baton wb;
 
   /* Open an admistrative session with the working copy. */
   SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target_wcpath,
@@ -7053,12 +7346,23 @@ svn_client_merge_reintegrate(const char *source,
                                             target_wcpath, wc_repos_root,
                                             FALSE, ra_session, NULL, pool));
 
+  /* Find all the subtree's in TARGET_WCPATH that have explicit mergeinfo. */
+  wb.target_path = target_wcpath;
+  wb.target_repos_root = wc_repos_root;
+  wb.base_access = adm_access;
+  wb.subtrees_with_mergeinfo = apr_hash_make(pool);
+  wb.ctx = ctx;
+  SVN_ERR(svn_wc_walk_entries3(target_wcpath, adm_access, &walk_callbacks,
+                               &wb, svn_depth_infinity, TRUE,
+                               ctx->cancel_func, ctx->cancel_baton, pool));
+
   SVN_ERR(svn_client__get_revision_number(&rev2, NULL,
                                           ra_session, peg_revision,
                                           source_repos_rel_path, pool));
 
   SVN_ERR(calculate_left_hand_side(&url1, &rev1, &source_mergeinfo,
                                    target_repos_rel_path,
+                                   wb.subtrees_with_mergeinfo,
                                    rev1,
                                    source_repos_rel_path,
                                    source_repos_root,

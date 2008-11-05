@@ -1173,7 +1173,9 @@ svn_mergeinfo_intersect(svn_mergeinfo_t *mergeinfo,
                                           (apr_array_header_t *) val,
                                           rangelist, TRUE, pool));
           if (rangelist->nelts > 0)
-            apr_hash_set(*mergeinfo, path, APR_HASH_KEY_STRING, rangelist);
+            apr_hash_set(*mergeinfo,
+                         apr_pstrdup(pool, path),
+                         APR_HASH_KEY_STRING, rangelist);
         }
     }
   return SVN_NO_ERROR;
