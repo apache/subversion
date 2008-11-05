@@ -304,7 +304,6 @@ svn_wc__read_tree_conflicts_from_entry(apr_array_header_t *conflicts,
 
   if (dir_entry->tree_conflict_data == NULL)
     {
-      conflicts = NULL;
       return SVN_NO_ERROR;
     }
 
@@ -452,7 +451,7 @@ svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
  */
 svn_boolean_t
 svn_wc__tree_conflict_exists(apr_array_header_t *conflicts,
-                             const char *victim_path,
+                             const char *victim_basename,
                              apr_pool_t *pool)
 {
   const svn_wc_conflict_description_t *conflict;
@@ -462,11 +461,29 @@ svn_wc__tree_conflict_exists(apr_array_header_t *conflicts,
     {
       conflict = APR_ARRAY_IDX(conflicts, i,
                                svn_wc_conflict_description_t *);
-      if (strcmp(svn_path_basename(conflict->path, pool), victim_path) == 0)
+      if (strcmp(svn_path_basename(conflict->path, pool), victim_basename) == 0)
         return TRUE;
     }
 
   return FALSE;
+}
+
+svn_error_t *
+svn_wc__del_tree_conflict_data(const char *victim_path,
+                               svn_wc_adm_access_t *adm_access,
+                               apr_pool_t *pool)
+{
+  svn_stringbuf_t *log_accum = svn_stringbuf_create("", pool);
+
+  SVN_ERR(svn_wc__loggy_del_tree_conflict_data(log_accum,
+                                               victim_path,
+                                               adm_access,
+                                               pool));
+
+  SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
+  SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -483,6 +500,77 @@ svn_wc_add_tree_conflict_data(const svn_wc_conflict_description_t *conflict,
 
   SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
   SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Remove, from the array ARRAY, the element at index REMOVE_INDEX, possibly
+ * changing the order of the remaining elements. (If there is no element
+ * at index INDEX, do nothing.) */
+static void
+array_remove_unordered(apr_array_header_t *array, int remove_index)
+{
+  void *last_element = apr_array_pop(array);
+
+  if (remove_index < array->nelts)
+    memcpy(array->elts + remove_index * array->elt_size, last_element,
+           array->elt_size);
+}
+
+svn_error_t *
+svn_wc__loggy_del_tree_conflict_data(svn_stringbuf_t *log_accum,
+                                     const char *victim_path,
+                                     svn_wc_adm_access_t *adm_access,
+                                     apr_pool_t *pool)
+{
+  const char *dir_path;
+  const svn_wc_entry_t *entry;
+  apr_array_header_t *conflicts;
+  svn_wc_entry_t tmp_entry;
+  const char *victim_basename = svn_path_basename(victim_path, pool);
+
+  /* Make sure the node is a directory.
+   * Otherwise we should not have been called. */
+  dir_path = svn_wc_adm_access_path(adm_access);
+  SVN_ERR(svn_wc_entry(&entry, dir_path, adm_access, TRUE, pool));
+  SVN_ERR_ASSERT(entry->kind == svn_node_dir);
+
+  conflicts = apr_array_make(pool, 0,
+                             sizeof(svn_wc_conflict_description_t *));
+  SVN_ERR(svn_wc__read_tree_conflicts_from_entry(conflicts, entry, dir_path,
+                                                 pool));
+
+  /* If CONFLICTS has a tree conflict with the same victim path as the
+   * new conflict, then remove it. */
+  if (svn_wc__tree_conflict_exists(conflicts, victim_basename, pool))
+    {
+      int i;
+
+      /* Delete the element that matches VICTIM_BASENAME */
+      for (i = 0; i < conflicts->nelts; i++)
+        {
+          const svn_wc_conflict_description_t *conflict
+            = APR_ARRAY_IDX(conflicts, i, svn_wc_conflict_description_t *);
+
+          if (strcmp(svn_path_basename(conflict->path, pool), victim_basename)
+              == 0)
+            {
+              array_remove_unordered(conflicts, i);
+
+              break;
+            }
+        }
+
+      /* Rewrite the entry. */
+      SVN_ERR(svn_wc__write_tree_conflicts_to_entry(conflicts, &tmp_entry,
+                                                    pool));
+      SVN_ERR(svn_wc__loggy_entry_modify(&log_accum,
+                                         adm_access,
+                                         dir_path,
+                                         &tmp_entry,
+                                         SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA,
+                                         pool));
+    }
 
   return SVN_NO_ERROR;
 }

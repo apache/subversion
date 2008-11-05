@@ -1306,7 +1306,7 @@ def forced_switch_failures(sbox):
     "A/D/G/rho"         : Item(status='D '),
     "A/D/G/tau"         : Item(status='D '),
     "A/D/G/chi"         : Item(status='A '),
-    "A/D/G/I"           : Item(status='A ', treeconflict='C'),
+    "A/D/G/I"           : Item(status='  ', treeconflict='C'),
     "A/D/G/omega"       : Item(status='A '),
     "A/D/G/psi"         : Item(status='A '),
     })

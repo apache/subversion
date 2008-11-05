@@ -790,7 +790,7 @@ typedef struct log_path_del_rev_t
    ((log_path_del_rev_t *)BATON)->PATH was first deleted or replaced.
    Stores that revision in ((log_path_del_rev_t *)BATON)->REVISION_DELETED.
  */
-svn_error_t *
+static svn_error_t *
 log_path_del_receiver(void *baton,
                       svn_log_entry_t *log_entry,
                       apr_pool_t *pool)
