@@ -36,9 +36,9 @@ extern "C" {
  *
  * NOTES
  *
- *  * When a doc string says "Extend **LOG_ACCUM" it means if *LOG_ACCUM is
- *    NULL then set *LOG_ACCUM to a new stringbug allocated in POOL, else
- *    append to the existing stringbuf there.
+ *  * When a doc string says "Extend **LOG_ACCUM", it means: "if *LOG_ACCUM is
+ *    NULL then set *LOG_ACCUM to a new stringbuf allocated in POOL, else
+ *    append to the existing stringbuf there."
  */
 
 
