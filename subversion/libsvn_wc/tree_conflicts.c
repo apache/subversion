@@ -505,16 +505,24 @@ svn_wc_add_tree_conflict_data(const svn_wc_conflict_description_t *conflict,
 }
 
 /* Remove, from the array ARRAY, the element at index REMOVE_INDEX, possibly
- * changing the order of the remaining elements. (If there is no element
- * at index INDEX, do nothing.) */
+ * changing the order of the remaining elements.
+ */
 static void
 array_remove_unordered(apr_array_header_t *array, int remove_index)
 {
+  /* Get the address of the last element, and mark it as removed. Rely on
+   * that element's memory being preserved intact for the moment. (This
+   * guarantee is implied as it is how 'pop' returns the value.) */
   void *last_element = apr_array_pop(array);
 
+  /* If the element to remove is not the last, overwrite it with the old
+   * last element. (We have just decremented the array size, so check that
+   * the index is still inside the array.) */
   if (remove_index < array->nelts)
     memcpy(array->elts + remove_index * array->elt_size, last_element,
            array->elt_size);
+
+  /* The memory at LAST_ELEMENT need no longer be preserved. */
 }
 
 svn_error_t *
