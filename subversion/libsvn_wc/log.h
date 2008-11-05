@@ -32,6 +32,17 @@ extern "C" {
 
 
 
+/* OVERVIEW OF THE LOGGY API
+ *
+ * NOTES
+ *
+ *  * When a doc string says "Extend **LOG_ACCUM" it means if *LOG_ACCUM is
+ *    NULL then set *LOG_ACCUM to a new stringbug allocated in POOL, else
+ *    append to the existing stringbuf there.
+ */
+
+
+
 /* Return the filename (with no path components) to use for logfile number
    LOG_NUMBER.  The returned string will be allocated from POOL.
 
