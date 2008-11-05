@@ -5278,17 +5278,16 @@ svn_wc_get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
                          svn_wc_adm_access_t *adm_access,
                          apr_pool_t *pool);
 
-/**
- * Add the tree conflict described by @a conflict to the directory entry
- * belonging to @a adm_access.
- * Do all allocations in @a pool.
+/** Record the tree conflict described by @a conflict in the WC.
+ * @a adm_access must be a write-access baton for the parent directory of
+ * @a victim->path. Use @a pool for all allocations.
  *
  * @since New in 1.6.
  */
 svn_error_t *
-svn_wc_add_tree_conflict_data(const svn_wc_conflict_description_t *conflict,
-                              svn_wc_adm_access_t *adm_access,
-                              apr_pool_t *pool);
+svn_wc_add_tree_conflict(const svn_wc_conflict_description_t *conflict,
+                         svn_wc_adm_access_t *adm_access,
+                         apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

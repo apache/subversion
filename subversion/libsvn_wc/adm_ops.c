@@ -2218,7 +2218,7 @@ revert_internal(const char *path,
       SVN_ERR(svn_wc_get_tree_conflict(&conflict, path, parent_access, pool));
       if (conflict)
         {
-          SVN_ERR(svn_wc__del_tree_conflict_data(path, parent_access, pool));
+          SVN_ERR(svn_wc__del_tree_conflict(path, parent_access, pool));
           reverted = TRUE;
         }
 

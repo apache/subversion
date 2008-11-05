@@ -1437,8 +1437,8 @@ check_tree_conflict(svn_wc_conflict_description_t **pconflict,
       conflict->action = action;
       conflict->reason = reason;
 
-      SVN_ERR(svn_wc__loggy_add_tree_conflict_data(log_accum, conflict,
-                                                   parent_adm_access, pool));
+      SVN_ERR(svn_wc__loggy_add_tree_conflict(&log_accum, conflict,
+                                              parent_adm_access, pool));
 
       if (pconflict)
         *pconflict = conflict;
@@ -2714,8 +2714,8 @@ add_file(const char *path,
       conflict->action = svn_wc_conflict_action_add;
       conflict->reason = svn_wc_conflict_reason_obstructed;
 
-      SVN_ERR(svn_wc__loggy_add_tree_conflict_data(pb->log_accum, conflict,
-                                                   adm_access, pool));
+      SVN_ERR(svn_wc__loggy_add_tree_conflict(&pb->log_accum, conflict,
+                                              adm_access, pool));
 
       if (eb->notify_func)
         {
