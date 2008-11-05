@@ -1810,6 +1810,27 @@ get_resource(request_rec *r,
   if (parse_uri(comb, relative + 1, label, use_checked_in))
     goto malformed_URI;
 
+  /* Check for a query string on a regular-type resource;  this allows
+     us to discover a "universal" rev-path URI of the form "path?r=REV" */
+  if ((comb->res.type == DAV_RESOURCE_TYPE_REGULAR)
+      && (r->parsed_uri.query != NULL))
+    {
+      /* ### TODO: someday we should parse *all* query args into an
+             apr_table_t, the way mod_form does. */
+      svn_revnum_t revnum;
+      int match = sscanf(r->parsed_uri.query, "r=%" SVN_REVNUM_T_FMT,
+                         &revnum);
+      if (match)
+        {
+          if (!SVN_IS_VALID_REVNUM(revnum))
+            return dav_new_error(r->pool, HTTP_BAD_REQUEST, 0,
+                                 "invalid revnum specified in query string");
+          /* If we fill in priv.root.rev, then prep_regular() will assume
+             it's a baseline collection.  Which is exactly what we want. */
+          comb->priv.root.rev = revnum;
+        }
+    }
+
 #ifdef SVN_DEBUG
   if (comb->res.type == DAV_RESOURCE_TYPE_UNKNOWN)
     {
