@@ -173,7 +173,7 @@ def info_with_tree_conflicts(sbox):
     path = os.path.join(G, fname)
 
     # check plain info
-    expected_str1 = "The update attempted to " + action_verb + " '" + fname
+    expected_str1 = ".*The update attempted to %s '%s'.*" % (action_verb, fname)
     expected_info = { 'Tree conflict' : expected_str1 }
     svntest.actions.run_and_verify_info([expected_info], path)
 
@@ -193,6 +193,23 @@ def info_with_tree_conflicts(sbox):
                                             },
                           )])
 
+  # Check recursive info.  Just ensure that all victims are listed.
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None, None,
+                                                                [], 'info',
+                                                                G, '-R')
+  for fname, action_verb, action, reason in scenarios:
+    found = False
+    expected = ".*The update attempted to %s '%s'.*" % (action_verb, fname)
+    for item in output:
+      if re.search(expected, item):
+        found = True
+        break
+    if not found:
+      raise svntest.verify.SVNUnexpectedStdout(
+        "Tree conflict missing in svn info -R output:\n"
+        "  Expected: '%s'\n"
+        "  Found: '%s'" % (expected, output))
+  
 def info_on_added_file(sbox):
   """info on added file"""
 
@@ -279,7 +296,7 @@ def info_on_mkdir(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              info_with_tree_conflicts,
+              XFail(info_with_tree_conflicts),
               XFail(info_on_added_file),
               info_on_mkdir
              ]
