@@ -1143,6 +1143,12 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
       if (svn_property_kind(NULL, prop->name) == svn_prop_wc_kind)
         continue;
 
+      /* And in the foreign repository merge case, we only want
+         regular properties. */
+      if ((! merge_b->same_repos) 
+          && (svn_property_kind(NULL, prop->name) != svn_prop_regular_kind))
+        continue;
+
       apr_hash_set(new_props, prop->name, APR_HASH_KEY_STRING, prop->value);
     }
 

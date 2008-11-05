@@ -1438,6 +1438,11 @@ typedef svn_error_t *(*svn_wc_conflict_resolver_func_t)
  * state.  Functions concerned with property state have separate
  * @a contentstate and @a propstate arguments.
  *
+ * If @a tree_conflicted is non-NULL, set @a *tree_conflicted to true if
+ * this operation caused a tree conflict, else to false. (Like with @a
+ * state, this is only useful with merge, not diff; diff callbacks
+ * should set this to false.)
+ *
  * @since New in 1.6.
  */
 typedef struct svn_wc_diff_callbacks3_t
@@ -1568,6 +1573,8 @@ typedef struct svn_wc_diff_callbacks3_t
    * A directory @a path has been opened.  @a rev is the revision that the
    * directory came from.
    *
+   * This function is called for @a path before any of the callbacks are
+   * called for a child of @a path.
    */
   svn_error_t *(*dir_opened)(svn_wc_adm_access_t *adm_access,
                              svn_boolean_t *tree_conflicted,
@@ -1578,8 +1585,8 @@ typedef struct svn_wc_diff_callbacks3_t
 } svn_wc_diff_callbacks3_t;
 
 /**
- * Similar to @c svn_wc_diff_callbacks3_t, but without dir_opened or
- * dir_closed functions.
+ * Similar to @c svn_wc_diff_callbacks3_t, but without the dir_opened()
+ * function, and without the 'tree_conflicted' argument to the functions.
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */

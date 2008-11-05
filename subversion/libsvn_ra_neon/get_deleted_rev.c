@@ -114,7 +114,6 @@ svn_ra_neon__get_deleted_rev(svn_ra_session_t *session,
                              apr_pool_t *pool)
 {
   svn_ra_neon__session_t *ras = session->priv;
-  const char *url = svn_path_url_add_component(ras->url->data, path, pool);
   const char *body, *final_bc_url;
   svn_string_t bc_url, bc_relative;
   int status_code;

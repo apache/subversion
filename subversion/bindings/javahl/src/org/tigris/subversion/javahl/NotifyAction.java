@@ -164,6 +164,12 @@ public interface NotifyAction
     public static final int merge_completed = 32;
 
     /**
+     * @since 1.6
+     * The path is a tree-conflict victim of the intended action
+     */
+    public static final int tree_conflict = 33;
+
+    /**
      * textual representation of the action types
      */
     public static final String[] actionNames =
@@ -200,6 +206,7 @@ public interface NotifyAction
         "foreign merge begin",
         "replaced",
         "property updated",
-        "merge completed"
+        "merge completed",
+        "tree conflict"
     };
 }
