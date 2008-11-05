@@ -13676,7 +13676,12 @@ def tree_conflicts_on_merge_no_local_ci_4_1(sbox):
   # 4.1) local tree delete, incoming leaf edit
 
   expected_output = svntest.wc.State('', {
+    'D/D1'              : Item(status='  ', treeconflict='C'),
     'F/alpha'           : Item(status='  ', treeconflict='C'),
+    'DD/D1'             : Item(status='  ', treeconflict='C'),
+    'DF/D1'             : Item(status='  ', treeconflict='C'),
+    'DDD/D1'            : Item(status='  ', treeconflict='C'),
+    'DDF/D1'            : Item(status='  ', treeconflict='C'),
     })
 
   expected_disk = svntest.wc.State('', {
@@ -13731,8 +13736,12 @@ def tree_conflicts_on_merge_no_local_ci_4_2(sbox):
   # 4.2) local tree delete, incoming leaf delete
 
   expected_output = svntest.wc.State('', {
-    'F/alpha'           : Item(status='  ', treeconflict='C'),
     'D/D1'              : Item(status='  ', treeconflict='C'),
+    'F/alpha'           : Item(status='  ', treeconflict='C'),
+    'DD/D1'             : Item(status='  ', treeconflict='C'),
+    'DF/D1'             : Item(status='  ', treeconflict='C'),
+    'DDD/D1'            : Item(status='  ', treeconflict='C'),
+    'DDF/D1'            : Item(status='  ', treeconflict='C'),
     })
 
   expected_disk = svntest.wc.State('', {
