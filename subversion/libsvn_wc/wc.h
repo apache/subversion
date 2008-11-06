@@ -312,6 +312,21 @@ svn_wc__ambient_depth_filter_editor(const svn_delta_editor_t **editor,
                                     svn_wc_adm_access_t *adm_access,
                                     apr_pool_t *pool);
 
+/* Similar to svn_wc_walk_entries3(), but also visit unversioned paths that
+ * are tree conflict victims. For such a path, call the "found_entry"
+ * callback but with a null "entry" parameter. Walk all entries including
+ * hidden and schedule-delete entries, like with "show_hidden = TRUE" in
+ * svn_wc_walk_entries3(). */
+svn_error_t *
+svn_wc__walk_entries_and_tc(const char *path,
+                            svn_wc_adm_access_t *adm_access,
+                            const svn_wc_entry_callbacks2_t *walk_callbacks,
+                            void *walk_baton,
+                            svn_depth_t depth,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
+                            apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
