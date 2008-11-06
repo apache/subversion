@@ -970,23 +970,6 @@ svn_fs_fs__fs_supports_mergeinfo(svn_fs_t *fs)
   return ffd->format >= SVN_FS_FS__MIN_MERGEINFO_FORMAT;
 }
 
-svn_error_t *
-svn_fs_fs__get_config(svn_config_t **config,
-                      svn_fs_t *fs,
-                      apr_pool_t *pool)
-{
-  fs_fs_data_t *ffd = fs->fsap_data;
-
-  if (! ffd->config)
-    SVN_ERR(svn_config_read(&(ffd->config),
-                            svn_path_join(fs->path, PATH_CONFIG, pool),
-                            FALSE,
-                            fs->pool));
-
-  *config = ffd->config;
-  return SVN_NO_ERROR;
-}
-
 static svn_error_t *
 write_config(svn_fs_t *fs,
              apr_pool_t *pool)
@@ -1054,6 +1037,11 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
   ffd->uuid = apr_pstrdup(fs->pool, buf);
 
   SVN_ERR(svn_io_file_close(uuid_file, pool));
+
+  /* Read the configuration file. */
+  SVN_ERR(svn_config_read(&ffd->config,
+                          svn_path_join(fs->path, PATH_CONFIG, pool),
+                          FALSE, fs->pool));
 
   /* Open (and possibly create) the rep cache. */
   if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT)
@@ -5546,6 +5534,14 @@ svn_fs_fs__create(svn_fs_t *fs,
 
   SVN_ERR(write_revision_zero(fs));
 
+  SVN_ERR(write_config(fs, pool));
+
+  /* Read the configuration file. */
+  SVN_ERR(svn_config_read(&ffd->config,
+                          svn_path_join(fs->path, PATH_CONFIG, pool),
+                          FALSE, fs->pool));
+
+
   /* Create the rep cache. */
   if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT)
     SVN_ERR(svn_fs_fs__open_rep_cache(fs, fs->pool));
@@ -5559,8 +5555,6 @@ svn_fs_fs__create(svn_fs_t *fs,
       SVN_ERR(svn_io_file_create(path_txn_current_lock(fs, pool),
                                  "", pool));
     }
-
-  SVN_ERR(write_config(fs, pool));
 
   /* This filesystem is ready.  Stamp it with a format number. */
   SVN_ERR(write_format(path_format(fs, pool),
