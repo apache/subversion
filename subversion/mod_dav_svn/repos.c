@@ -1504,8 +1504,9 @@ parse_querystring(const char *query, dav_resource_combined *comb,
   svn_error_t *serr;
   svn_revnum_t working_rev, peg_rev;
   apr_table_t *pairs = querystring_to_table(query, pool);
-
   const char *prevstr = apr_table_get(pairs, "p");
+  const char *wrevstr;
+  
   if (prevstr)
     {
       peg_rev = SVN_STR_TO_REV(prevstr);
@@ -1522,7 +1523,7 @@ parse_querystring(const char *query, dav_resource_combined *comb,
                                     "Couldn't fetch youngest rev.", pool);
     }
 
-  const char *wrevstr = apr_table_get(pairs, "r");
+  wrevstr = apr_table_get(pairs, "r");
   if (wrevstr)
     {
       working_rev = SVN_STR_TO_REV(wrevstr);
