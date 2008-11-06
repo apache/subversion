@@ -383,7 +383,7 @@ svn_auth_get_platform_specific_provider(svn_auth_provider_object_t **provider,
   if (apr_strnatcmp(provider_name, "gnome_keyring") == 0 ||
       apr_strnatcmp(provider_name, "kwallet") == 0)
     {
-#ifdef SVN_HAVE_GNOME_KEYRING || SVN_HAVE_KWALLET
+#if defined(SVN_HAVE_GNOME_KEYRING) || defined(SVN_HAVE_KWALLET)
       apr_dso_handle_t *dso;
       apr_dso_handle_sym_t provider_function_symbol, version_function_symbol;
       const char *library_label, *library_name;
