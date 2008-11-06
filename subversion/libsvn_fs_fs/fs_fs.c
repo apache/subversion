@@ -999,6 +999,21 @@ write_config(svn_fs_t *fs,
 "### configured (and ignoring it with file:// access).  To make"             NL
 "### Subversion never ignore cache errors, uncomment this line."             NL
 "# " CONFIG_OPTION_FAIL_STOP " = true"                                       NL
+""                                                                           NL
+"[" CONFIG_SECTION_REP_SHARING "]"                                           NL
+"### To conserve space, the filesystem can optionally avoid storing"         NL
+"### duplicate representations.  This comes at a slight cost in performace," NL
+"### as maintaining a database of shared representations can increase"       NL
+"### commit times.  The space savings are dependent upon the size of the"    NL
+"### repository, the number of objects it contains and the amount of"        NL
+"### duplication between them, usually a function of the branching and"      NL
+"### merging process."                                                       NL
+"###"                                                                        NL
+"### The following parameter enable rep-sharing in the repository.  It can"  NL
+"### be switched on and off at will, but for best space-saving results"      NL
+"### should be enabled consistently over the life of the repository."        NL
+"# " CONFIG_OPTION_ENABLE_REP_SHARING " = true"                              NL
+
 ;
 #undef NL
   return svn_io_file_create(svn_path_join(fs->path, PATH_CONFIG, pool),
@@ -1016,6 +1031,7 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
   int format, max_files_per_dir;
   char buf[APR_UUID_FORMATTED_LENGTH + 2];
   apr_size_t limit;
+  svn_boolean_t rep_sharing_allowed;
 
   fs->path = apr_pstrdup(fs->pool, path);
 
@@ -1042,9 +1058,13 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
   SVN_ERR(svn_config_read(&ffd->config,
                           svn_path_join(fs->path, PATH_CONFIG, pool),
                           FALSE, fs->pool));
+  SVN_ERR(svn_config_get_bool(ffd->config, &rep_sharing_allowed,
+                              CONFIG_SECTION_REP_SHARING,
+                              CONFIG_OPTION_ENABLE_REP_SHARING, FALSE));
 
-  /* Open (and possibly create) the rep cache. */
-  if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT)
+  /* Open the rep cache. */
+  if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT
+        && rep_sharing_allowed)
     SVN_ERR(svn_fs_fs__open_rep_cache(fs, fs->pool));
 
   return get_youngest(&(ffd->youngest_rev_cache), path, pool);
@@ -5478,6 +5498,7 @@ svn_fs_fs__create(svn_fs_t *fs,
 {
   int format = SVN_FS_FS__FORMAT_NUMBER;
   fs_fs_data_t *ffd = fs->fsap_data;
+  svn_boolean_t rep_sharing_allowed;
 
   fs->path = apr_pstrdup(pool, path);
   /* See if we had an explicitly requested pre-1.4- or pre-1.5-compatible.  */
@@ -5540,10 +5561,13 @@ svn_fs_fs__create(svn_fs_t *fs,
   SVN_ERR(svn_config_read(&ffd->config,
                           svn_path_join(fs->path, PATH_CONFIG, pool),
                           FALSE, fs->pool));
-
+  SVN_ERR(svn_config_get_bool(ffd->config, &rep_sharing_allowed,
+                              CONFIG_SECTION_REP_SHARING,
+                              CONFIG_OPTION_ENABLE_REP_SHARING, FALSE));
 
   /* Create the rep cache. */
-  if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT)
+  if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT
+        && rep_sharing_allowed)
     SVN_ERR(svn_fs_fs__open_rep_cache(fs, fs->pool));
 
   /* Create the txn-current file if the repository supports
