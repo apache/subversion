@@ -3115,7 +3115,18 @@ svn_wc__entries_init(const char *path,
 /*** Generic Entry Walker */
 
 
-/* A recursive entry-walker, helper for svn_wc_walk_entries3 */
+/* A recursive entry-walker, helper for svn_wc_walk_entries3().
+ *
+ * For this directory (DIRPATH, ADM_ACCESS), call the "found_entry" callback
+ * in WALK_CALLBACKS, passing WALK_BATON to it. Then, for each versioned
+ * entry in this directory, call the "found entry" callback and then recurse
+ * (if it is a directory and if DEPTH allows).
+ *
+ * If SHOW_HIDDEN is true, include entries that are in a 'deleted' or
+ * 'absent' state (and not scheduled for re-addition), else skip them.
+ *
+ * Call CANCEL_FUNC with CANCEL_BATON to allow cancellation.
+ */
 static svn_error_t *
 walker_helper(const char *dirpath,
               svn_wc_adm_access_t *adm_access,
@@ -3146,6 +3157,10 @@ walker_helper(const char *dirpath,
                                   svn_path_local_style(dirpath, pool)),
        walk_baton, pool);
 
+  /* Call the "found entry" callback for this directory as a "this dir"
+   * entry. Note that if this directory has been reached by recusrion, this
+   * is the second visit as it will already have been visited once as a
+   * child entry of its parent. */
   SVN_ERR(walk_callbacks->handle_error
           (dirpath,
            walk_callbacks->found_entry(dirpath, dot_entry, walk_baton, pool),
@@ -3171,11 +3186,14 @@ walker_helper(const char *dirpath,
       apr_hash_this(hi, &key, NULL, &val);
       current_entry = val;
 
+      /* Skip the "this dir" entry. */
       if (strcmp(current_entry->name, SVN_WC_ENTRY_THIS_DIR) == 0)
         continue;
 
       entrypath = svn_path_join(dirpath, key, subpool);
 
+      /* Call the "found entry" callback for this entry. (For a directory,
+       * this is the first visit: as a child.) */
       if (current_entry->kind == svn_node_file
           || depth >= svn_depth_immediates)
         {
@@ -3186,6 +3204,7 @@ walker_helper(const char *dirpath,
                    walk_baton, pool));
         }
 
+      /* Recurse into this entry if appropriate. */
       if (current_entry->kind == svn_node_dir
           && depth >= svn_depth_immediates)
         {
