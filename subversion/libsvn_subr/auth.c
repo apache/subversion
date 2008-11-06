@@ -24,6 +24,7 @@
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_auth.h"
+#include "svn_private_config.h"
 
 /* The good way to think of this machinery is as a set of tables.
 
@@ -369,4 +370,103 @@ svn_auth_ssl_server_cert_info_dup
   new_info->ascii_cert = apr_pstrdup(pool, new_info->ascii_cert);
 
   return new_info;
+}
+
+svn_error_t *
+svn_auth_get_platform_specific_provider(svn_auth_provider_object_t **provider,
+                                        const char *provider_name,
+                                        const char *provider_type,
+                                        apr_pool_t *pool)
+{
+  *provider = NULL;
+
+  if (apr_strnatcmp(provider_name, "gnome_keyring") == 0 ||
+      apr_strnatcmp(provider_name, "kwallet") == 0)
+    {
+#ifdef SVN_HAVE_GNOME_KEYRING || SVN_HAVE_KWALLET
+      apr_dso_handle_t *dso;
+      apr_dso_handle_sym_t provider_function_symbol, version_function_symbol;
+      const char *library_label, *library_name;
+      const char *provider_function_name, *version_function_name;
+      library_name = apr_psprintf(pool,
+                                  "libsvn_auth_%s-%d.so.0",
+                                  provider_name,
+                                  SVN_VER_MAJOR);
+      library_label = apr_psprintf(pool, "svn_%s", provider_name);
+      provider_function_name = apr_psprintf(pool,
+                                            "svn_auth_get_%s_%s_provider",
+                                            provider_name, provider_type);
+      version_function_name = apr_psprintf(pool,
+                                           "svn_auth_%s_version",
+                                           provider_name);
+      SVN_ERR(svn_dso_load(&dso, library_name));
+      if (dso)
+        {
+          if (apr_dso_sym(&version_function_symbol,
+                          dso,
+                          version_function_name) == 0)
+            {
+              svn_version_func_t version_function;
+              version_function = (svn_version_func_t) version_function_symbol;
+              const svn_version_checklist_t checklist[] =
+                {
+                  { library_label, version_function },
+                  { NULL, NULL }
+                };
+              SVN_ERR(svn_ver_check_list(svn_subr_version(), checklist));
+            }
+          if (apr_dso_sym(&provider_function_symbol,
+                          dso,
+                          provider_function_name) == 0)
+            {
+              if (strcmp(provider_type, "simple") == 0)
+                {
+                  svn_auth_simple_provider_func_t provider_function;
+                  provider_function = (svn_auth_simple_provider_func_t)
+                    provider_function_symbol;
+                  provider_function(provider, pool);
+                }
+              else if (strcmp(provider_type, "ssl_client_cert_pw") == 0)
+                {
+                  svn_auth_ssl_client_cert_pw_provider_func_t provider_function;
+                  provider_function =
+                    (svn_auth_ssl_client_cert_pw_provider_func_t)
+                    provider_function_symbol;
+                  provider_function(provider, pool);
+                }
+            }
+        }
+#endif
+    }
+  else
+    {
+#ifdef SVN_HAVE_KEYCHAIN_SERVICES
+      if (strcmp(provider_name, "keychain") == 0 &&
+          strcmp(provider_type, "simple") == 0)
+        {
+          svn_auth_get_keychain_simple_provider(provider, pool);
+        }
+      else if (strcmp(provider_name, "keychain") == 0 &&
+               strcmp(provider_type, "ssl_client_cert_pw") == 0)
+        {
+          svn_auth_get_keychain_ssl_client_cert_pw_provider(provider, pool);
+        }
+#endif
+
+#if defined(WIN32) && !defined(__MINGW32__)
+      if (strcmp(provider_name, "windows") == 0 &&
+          strcmp(provider_type, "simple") == 0)
+        {
+          svn_auth_get_windows_simple_provider(provider, pool);
+        }
+
+      if (strcmp(provider_name, "windows") == 0 &&
+          strcmp(provider_type, "ssl_server_trust") == 0)
+        {
+          svn_auth_get_windows_simple_provider(provider, pool);
+        }
+#endif
+    }
+
+  return SVN_NO_ERROR;
 }
