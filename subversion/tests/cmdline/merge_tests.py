@@ -14208,6 +14208,175 @@ def no_self_referential_filtering_on_added_path(sbox):
                                        None, None, None, None,
                                        None, 1)
 
+def merge_range_prior_to_rename_source_existence(sbox):
+  "merge prior to rename src existence still dels src"
+
+  # Replicate a merge bug found while synching up a feature branch on the
+  # Subversion repository with trunk.  See r34047 of
+  # http://svn.collab.net/repos/svn/branches/ignore-mergeinfo, in which
+  # a move was merged to the target, but the delete half of the move
+  # didn't occur.
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Some paths we'll care about
+  nu_path         = os.path.join(wc_dir, "A", "D", "H", "nu")
+  nu_moved_path   = os.path.join(wc_dir, "A", "D", "H", "nu_moved")
+  A_path          = os.path.join(wc_dir, "A")
+  A_COPY_path     = os.path.join(wc_dir, "A_COPY")
+  B_COPY_path     = os.path.join(wc_dir, "A_COPY", "B")
+  beta_COPY_path  = os.path.join(wc_dir, "A_COPY", "B", "E", "beta")
+  gamma_COPY_path = os.path.join(wc_dir, "A_COPY", "D", "gamma")
+  rho_COPY_path   = os.path.join(wc_dir, "A_COPY", "D", "G", "rho")
+  omega_COPY_path = os.path.join(wc_dir, "A_COPY", "D", "H", "omega")
+  psi_COPY_path   = os.path.join(wc_dir, "A_COPY", "D", "H", "psi")
+  nu_COPY_path    = os.path.join(wc_dir, "A_COPY", "D", "H", "nu")
+  
+  # Setup our basic 'trunk' and 'branch':
+  # r2 - Copy A to A_COPY
+  # r3 - Text change to A/D/H/psi
+  # r4 - Text change to A/D/G/rho
+  # r5 - Text change to A/B/E/beta
+  # r6 - Text change to A/D/H/omega
+  wc_disk, wc_status = set_up_branch(sbox, False, 1)
+
+  # r7 - Add the file A/D/H/nu
+  svntest.main.file_write(nu_path, "This is the file 'nu'.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', nu_path)
+  expected_output = wc.State(wc_dir, {'A/D/H/nu' : Item(verb='Adding')})
+  wc_status.add({'A/D/H/nu' : Item(status='  ', wc_rev=7)})
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        wc_status, None, wc_dir)
+  
+  # r8 - Merge all available revisions (i.e. -r1:7) from A to A_COPY.
+  svntest.actions.run_and_verify_svn(None, ["At revision 7.\n"], [], 'up',
+                                     wc_dir)
+  wc_status.tweak(wc_rev=7)
+  svntest.actions.run_and_verify_svn(
+    None,
+    expected_merge_output([[2,7]],
+                          ['A    ' + nu_COPY_path  + '\n',
+                           'U    ' + beta_COPY_path  + '\n',
+                           'U    ' + rho_COPY_path   + '\n',
+                           'U    ' + omega_COPY_path + '\n',
+                           'U    ' + psi_COPY_path   + '\n']),
+    [], 'merge', sbox.repo_url + '/A', A_COPY_path)
+  expected_output = wc.State(wc_dir,
+                             {'A_COPY'           : Item(verb='Sending'),
+                              'A_COPY/D/H/nu'    : Item(verb='Adding'),
+                              'A_COPY/B/E/beta'  : Item(verb='Sending'),
+                              'A_COPY/D/G/rho'   : Item(verb='Sending'),
+                              'A_COPY/D/H/omega' : Item(verb='Sending'),
+                              'A_COPY/D/H/psi'   : Item(verb='Sending')})
+  wc_status.tweak('A_COPY',
+                  'A_COPY/B/E/beta',
+                  'A_COPY/D/G/rho',
+                  'A_COPY/D/H/omega',
+                  'A_COPY/D/H/psi',
+                  wc_rev=8)
+  wc_status.add({'A_COPY/D/H/nu' : Item(status='  ', wc_rev=8)})
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        wc_status, None, wc_dir)
+
+  # r9 - Reverse merge -r7:1 from A/B to A_COPY/B
+  svntest.actions.run_and_verify_svn(None, ["At revision 8.\n"], [], 'up',
+                                     wc_dir)
+  wc_status.tweak(wc_rev=8)
+  svntest.actions.run_and_verify_svn(
+    None,
+    expected_merge_output([[7,2]], ['U    ' + beta_COPY_path  + '\n']),
+    [], 'merge', sbox.repo_url + '/A/B', B_COPY_path, '-r7:1')
+  expected_output = wc.State(wc_dir,
+                             {'A_COPY/B'        : Item(verb='Sending'),
+                              'A_COPY/B/E/beta' : Item(verb='Sending')})
+  wc_status.tweak('A_COPY/B',
+                  'A_COPY/B/E/beta',
+                  wc_rev=9)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        wc_status, None, wc_dir)
+
+  # r10 - Move A/D/H/nu to A/D/H/nu_moved
+  svntest.actions.run_and_verify_svn(None, ["\n",
+                                            "Committed revision 10.\n"], [],
+                                     'move', sbox.repo_url + '/A/D/H/nu',
+                                     sbox.repo_url + '/A/D/H/nu_moved',
+                                     '-m', 'Move nu to nu_moved')
+  svntest.actions.run_and_verify_svn(None,
+                                     ["D    " + nu_path + "\n",
+                                      "A    " + nu_moved_path + "\n",
+                                      "Updated to revision 10.\n"],
+                                     [], 'up', wc_dir)
+
+  # Now merge all available revisions (i.e. -r1:10) from A to A_COPY.
+  # A_COPY needs only -r7:10, which amounts only to the rename of nu.
+  # The subtree A_COPY/B needs the entire range -r1:10 because of
+  # the reverse merge we performed in r9; this amounts to the text change
+  # to A_COPY/B/E/beta from r5
+  #
+  # This merge currently fails because the delete half of the A_COPY/D/H/nu
+  # to A_COPY/D/H/nu_moved move is reported in the notifications, but doesn't
+  # actually happen.
+  expected_output = wc.State(A_COPY_path, {
+    'B/E/beta'     : Item(status='U '),
+    'D/H/nu'       : Item(status='D '),
+    'D/H/nu_moved' : Item(status='A '),
+    })
+  expected_status = wc.State(A_COPY_path, {
+    ''             : Item(status=' M', wc_rev=10),
+    'B'            : Item(status=' M', wc_rev=10),
+    'mu'           : Item(status='  ', wc_rev=10),
+    'B/E'          : Item(status='  ', wc_rev=10),
+    'B/E/alpha'    : Item(status='  ', wc_rev=10),
+    'B/E/beta'     : Item(status='M ', wc_rev=10),
+    'B/lambda'     : Item(status='  ', wc_rev=10),
+    'B/F'          : Item(status='  ', wc_rev=10),
+    'C'            : Item(status='  ', wc_rev=10),
+    'D'            : Item(status='  ', wc_rev=10),
+    'D/G'          : Item(status='  ', wc_rev=10),
+    'D/G/pi'       : Item(status='  ', wc_rev=10),
+    'D/G/rho'      : Item(status='  ', wc_rev=10),
+    'D/G/tau'      : Item(status='  ', wc_rev=10),
+    'D/gamma'      : Item(status='  ', wc_rev=10),
+    'D/H'          : Item(status='  ', wc_rev=10),
+    'D/H/nu'       : Item(status='D ', wc_rev='10'),
+    'D/H/nu_moved' : Item(status='A ', wc_rev='-', copied='+'),
+    'D/H/chi'      : Item(status='  ', wc_rev=10),
+    'D/H/psi'      : Item(status='  ', wc_rev=10),
+    'D/H/omega'    : Item(status='  ', wc_rev=10),
+    })
+  expected_disk = wc.State('', {
+    ''             : Item(props={SVN_PROP_MERGEINFO : '/A:2-10'}),
+    'mu'           : Item("This is the file 'mu'.\n"),
+    'B'            : Item(),
+    'B/E'          : Item(),
+    'B/E/alpha'    : Item("This is the file 'alpha'.\n"),
+    'B/E/beta'     : Item("New content"),
+    'B/lambda'     : Item("This is the file 'lambda'.\n"),
+    'B/F'          : Item(),
+    'C'            : Item(),
+    'D'            : Item(),
+    'D/G'          : Item(),
+    'D/G/pi'       : Item("This is the file 'pi'.\n"),
+    'D/G/rho'      : Item("New content"),
+    'D/G/tau'      : Item("This is the file 'tau'.\n"),
+    'D/gamma'      : Item("This is the file 'gamma'.\n"),
+    'D/H'          : Item(),
+    'D/H/nu_moved' : Item("This is the file 'nu'.\n"),
+    'D/H/chi'      : Item("This is the file 'chi'.\n"),
+    'D/H/psi'      : Item("New content"),
+    'D/H/omega'    : Item("New content"),
+    })
+  expected_skip = wc.State(A_COPY_path, {})
+  svntest.actions.run_and_verify_merge(A_COPY_path, None, None,
+                                       sbox.repo_url + '/A',
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None,
+                                       None, 1, 1)
+
 ########################################################################
 # Run the tests
 
@@ -14412,6 +14581,8 @@ test_list = [ None,
                          server_has_mergeinfo),
               SkipUnless(no_self_referential_filtering_on_added_path,
                          server_has_mergeinfo),
+              XFail(SkipUnless(merge_range_prior_to_rename_source_existence,
+                               server_has_mergeinfo)),
              ]
 
 if __name__ == '__main__':
