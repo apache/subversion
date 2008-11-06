@@ -97,7 +97,7 @@ need.
       youngest revision:  number
             "root stub":  !svn/me
           "pegrev stub":  !svn/bc
-         "revprop stub":  !svn/rev
+        "revision stub":  !svn/rev
 
    The presence of these new stubs tells ra_serf that this is a new
    server, and that the new streamlined HTTP protocol can be used.
@@ -124,7 +124,7 @@ need.
      PROPFINDs to discover it -- we get the stub right up front when
      the session is opened.
 
-   - revprop stub: represents an opaque string to append to, whenever
+   - revision stub: represents an opaque string to append to, whenever
      the client wants to access a revision's revprops (either reading
      or writing).  Specifically, /REV is appended, e.g.
 
@@ -145,7 +145,7 @@ need.
    PROPFIND.
 
    The only changes here is that we no longer need to "discover"
-   pegrev or revprop URIs with extra turnarounds; instead we construct
+   pegrev or revision URIs with extra turnarounds; instead we construct
    them directly.
 
     get-latest-rev    -> already present in ra_session (via OPTIONS)
@@ -154,9 +154,9 @@ need.
 
     get-dir           -> PROPFIND depth 1 (against a pegrev URI)
 
-    rev-prop          -> PROPFIND (against a revprop URI)
+    rev-prop          -> PROPFIND (against a revision URI)
 
-    rev-proplist      -> PROPFIND (against a revprop URI, but recursive)
+    rev-proplist      -> PROPFIND (against a revision URI, but recursive)
 
     check-path        -> PROPFIND (against a pegrev URI)
 
@@ -227,7 +227,7 @@ need.
 
 * Simple write requests
 
-   change-rev-prop          -> PROPPATCH (against a revprop URI)
+   change-rev-prop          -> PROPPATCH (against a revision URI)
 
    lock                     -> LOCK (against a public HEAD URI)
 
