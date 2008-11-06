@@ -74,7 +74,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.6\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2008-09-07 06:18+0200\n"
-"PO-Revision-Date: 2008-09-07 12:36+0200\n"
+"PO-Revision-Date: 2008-09-24 18:34+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -3543,7 +3543,7 @@ msgstr "Depotet er midlertidig flyttet til «%s»; relokalisering nødvendig"
 #: ../libsvn_ra_neon/util.c:565
 #, c-format
 msgid "Server sent unexpected return value (%d %s) in response to %s request for '%s'"
-msgstr "Tjeneren sendte uventet returverdi (%d %s) som repons på %s-forespørsel for «%s»"
+msgstr "Tjeneren sendte uventet returverdi (%d %s) som respons på %s-forespørsel for «%s»"
 
 #: ../libsvn_ra_neon/util.c:577
 #, c-format

@@ -2,7 +2,7 @@
  * commit_util.c:  Driver for the WC commit process.
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -23,13 +23,13 @@
 
 #include <apr_pools.h>
 #include <apr_hash.h>
+#include <apr_md5.h>
 
 #include "client.h"
 #include "svn_path.h"
 #include "svn_types.h"
 #include "svn_pools.h"
 #include "svn_props.h"
-#include "svn_md5.h"
 #include "svn_iter.h"
 #include "svn_hash.h"
 

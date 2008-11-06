@@ -25,6 +25,7 @@
 #include <apr_pools.h>
 
 #include "svn_types.h"
+#include "svn_version.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -784,7 +785,7 @@ svn_auth_get_simple_provider(svn_auth_provider_object_t **provider,
                              apr_pool_t *pool);
 
 
-#if (defined(WIN32) && !defined(__MINGW32__)) || defined(DOXYGEN)
+#if (defined(WIN32) && !defined(__MINGW32__)) || defined(DOXYGEN) || defined(CTYPESGEN)
 /**
  * Create and return @a *provider, an authentication provider of type @c
  * svn_auth_cred_simple_t that gets/sets information from the user's
@@ -807,9 +808,9 @@ svn_auth_get_simple_provider(svn_auth_provider_object_t **provider,
 void
 svn_auth_get_windows_simple_provider(svn_auth_provider_object_t **provider,
                                      apr_pool_t *pool);
-#endif /* WIN32 || DOXYGEN */
+#endif /* WIN32 && !__MINGW32__ || DOXYGEN || CTYPESGEN */
 
-#if defined(DARWIN) || defined(DOXYGEN)
+#if defined(DARWIN) || defined(DOXYGEN) || defined(CTYPESGEN)
 /**
  * Create and return @a *provider, an authentication provider of type @c
  * svn_auth_cred_simple_t that gets/sets information from the user's
@@ -842,7 +843,101 @@ void
 svn_auth_get_keychain_ssl_client_cert_pw_provider
   (svn_auth_provider_object_t **provider,
    apr_pool_t *pool);
-#endif /* DARWIN || DOXYGEN */
+#endif /* DARWIN || DOXYGEN || CTYPESGEN */
+
+#if (!defined(DARWIN) && !defined(WIN32)) || defined(DOXYGEN)
+/**
+ * Get libsvn_auth_gnome_keyring version information.
+ *
+ * @since New in 1.6
+ */
+const svn_version_t *
+svn_auth_gnome_keyring_version(void);
+
+
+/**
+ * Create and return @a *provider, an authentication provider of type @c
+ * svn_auth_cred_simple_t that gets/sets information from the user's
+ * ~/.subversion configuration directory.  Allocate @a *provider in
+ * @a pool.
+ *
+ * This is like svn_client_get_simple_provider(), except that the
+ * password is stored in GNOME Keyring.
+ *
+ * @since New in 1.6
+ * @note This function actually works only on systems with
+ * libsvn_auth_gnome_keyring and GNOME Keyring installed.
+ */
+void
+svn_auth_get_gnome_keyring_simple_provider
+    (svn_auth_provider_object_t **provider,
+     apr_pool_t *pool);
+
+
+/**
+ * Create and return @a *provider, an authentication provider of type @c
+ * svn_auth_cred_ssl_client_cert_pw_t that gets/sets information from the
+ * user's ~/.subversion configuration directory.  Allocate @a *provider in
+ * @a pool.
+ *
+ * This is like svn_client_get_ssl_client_cert_pw_file_provider(), except
+ * that the password is stored in GNOME Keyring.
+ *
+ * @since New in 1.6
+ * @note This function actually works only on systems with
+ * libsvn_auth_gnome_keyring and GNOME Keyring installed.
+ */
+void
+svn_auth_get_gnome_keyring_ssl_client_cert_pw_provider
+  (svn_auth_provider_object_t **provider,
+   apr_pool_t *pool);
+
+
+/**
+ * Get libsvn_auth_kwallet version information.
+ *
+ * @since New in 1.6
+ */
+const svn_version_t *
+svn_auth_kwallet_version(void);
+
+
+/**
+ * Create and return @a *provider, an authentication provider of type @c
+ * svn_auth_cred_simple_t that gets/sets information from the user's
+ * ~/.subversion configuration directory.  Allocate @a *provider in
+ * @a pool.
+ *
+ * This is like svn_client_get_simple_provider(), except that the
+ * password is stored in KWallet.
+ *
+ * @since New in 1.6
+ * @note This function actually works only on systems with libsvn_auth_kwallet
+ * and KWallet installed.
+ */
+void
+svn_auth_get_kwallet_simple_provider(svn_auth_provider_object_t **provider,
+                                     apr_pool_t *pool);
+
+
+/**
+ * Create and return @a *provider, an authentication provider of type @c
+ * svn_auth_cred_ssl_client_cert_pw_t that gets/sets information from the
+ * user's ~/.subversion configuration directory.  Allocate @a *provider in
+ * @a pool.
+ *
+ * This is like svn_client_get_ssl_client_cert_pw_file_provider(), except
+ * that the password is stored in KWallet.
+ *
+ * @since New in 1.6
+ * @note This function actually works only on systems with libsvn_auth_kwallet
+ * and KWallet installed.
+ */
+void
+svn_auth_get_kwallet_ssl_client_cert_pw_provider
+  (svn_auth_provider_object_t **provider,
+   apr_pool_t *pool);
+#endif /* (!DARWIN && !WIN32) || DOXYGEN */
 
 
 /** Create and return @a *provider, an authentication provider of type @c
@@ -876,7 +971,7 @@ svn_auth_get_ssl_server_trust_file_provider
    apr_pool_t *pool);
 
 
-#if (defined(WIN32) && !defined(__MINGW32__)) || defined(DOXYGEN)
+#if (defined(WIN32) && !defined(__MINGW32__)) || defined(DOXYGEN) || defined(CTYPESGEN)
 /**
  * Create and return @a *provider, an authentication provider of type @c
  * svn_auth_cred_ssl_server_trust_t, allocated in @a pool.
@@ -893,7 +988,7 @@ void
 svn_auth_get_windows_ssl_server_trust_provider
   (svn_auth_provider_object_t **provider,
    apr_pool_t *pool);
-#endif /* WIN32 || DOXYGEN */
+#endif /* WIN32 && !__MINGW32__ || DOXYGEN || CTYPESGEN */
 
 /** Create and return @a *provider, an authentication provider of type @c
  * svn_auth_cred_ssl_client_cert_t, allocated in @a pool.

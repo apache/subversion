@@ -20,6 +20,7 @@
 #include <apr_time.h>
 
 #include "svn_pools.h"
+#include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_sorts.h"
 #include "svn_types.h"

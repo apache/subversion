@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2001-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -190,16 +190,18 @@ typedef struct svn_version_t
  *
  * @since New in 1.1.
  */
-svn_boolean_t svn_ver_compatible(const svn_version_t *my_version,
-                                 const svn_version_t *lib_version);
+svn_boolean_t
+svn_ver_compatible(const svn_version_t *my_version,
+                   const svn_version_t *lib_version);
 
 /**
  * Check if @a my_version and @a lib_version encode the same version number.
  *
  * @since New in 1.2.
  */
-svn_boolean_t svn_ver_equal(const svn_version_t *my_version,
-                            const svn_version_t *lib_version);
+svn_boolean_t
+svn_ver_equal(const svn_version_t *my_version,
+              const svn_version_t *lib_version);
 
 
 /**
@@ -226,8 +228,17 @@ typedef struct svn_version_checklist_t
  *
  * @since New in 1.1.
  */
-svn_error_t *svn_ver_check_list(const svn_version_t *my_version,
-                                const svn_version_checklist_t *checklist);
+svn_error_t *
+svn_ver_check_list(const svn_version_t *my_version,
+                   const svn_version_checklist_t *checklist);
+
+
+/**
+ * Type of function returning library version.
+ *
+ * @since New in 1.6.
+ */
+typedef const svn_version_t *(*svn_version_func_t)(void);
 
 
 /* libsvn_subr doesn't have an svn_subr header, so put the prototype here. */
@@ -236,7 +247,8 @@ svn_error_t *svn_ver_check_list(const svn_version_t *my_version,
  *
  * @since New in 1.1.
  */
-const svn_version_t *svn_subr_version(void);
+const svn_version_t *
+svn_subr_version(void);
 
 
 #ifdef __cplusplus

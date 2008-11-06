@@ -422,7 +422,7 @@ diff_content_changed(const char *path,
   const char *label1, *label2;
   svn_boolean_t mt1_binary = FALSE, mt2_binary = FALSE;
   const char *path1, *path2;
-  int i;
+  apr_size_t len;
 
   /* Get a stream from our output file. */
   os = svn_stream_from_aprfile2(diff_cmd_baton->outfile, TRUE, subpool);
@@ -444,19 +444,9 @@ diff_content_changed(const char *path,
 
   path1 = diff_cmd_baton->orig_path_1;
   path2 = diff_cmd_baton->orig_path_2;
-
-  for (i = 0; path1[i] && path2[i] && (path1[i] == path2[i]); i++)
-    ;
-
-  /* Make sure the prefix is made of whole components. (Issue #1771) */
-  if (path1[i] || path2[i])
-    {
-      for ( ; (i > 0) && (path1[i] != '/'); i--)
-        ;
-    }
-
-  path1 = path1 + i;
-  path2 = path2 + i;
+  len = strlen(svn_path_get_longest_ancestor(path1, path2, subpool));
+  path1 = path1 + len;
+  path2 = path2 + len;
 
   /* ### Should diff labels print paths in local style?  Is there
      already a standard for this?  In any case, this code depends on

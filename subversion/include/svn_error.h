@@ -233,7 +233,10 @@ svn_handle_warning2(FILE *stream,
                     const char *prefix);
 
 /** Like svn_handle_warning2() but with @c prefix set to "svn: "
+ *
+ * @deprecated Provided for backward compatibility with the 1.1 API.
  */
+SVN_DEPRECATED
 void
 svn_handle_warning(FILE *stream,
                    svn_error_t *error);

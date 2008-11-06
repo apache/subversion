@@ -2,7 +2,7 @@
  * notify.c:  feedback handlers for cmdline client.
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -394,7 +394,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 
     case svn_wc_notify_failed_lock:
     case svn_wc_notify_failed_unlock:
-      svn_handle_warning(stderr, n->err);
+      svn_handle_warning2(stderr, n->err, "svn: ");
       break;
 
     case svn_wc_notify_changelist_set:
@@ -413,7 +413,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       break;
 
     case svn_wc_notify_changelist_moved:
-      svn_handle_warning(stderr, n->err);
+      svn_handle_warning2(stderr, n->err, "svn: ");
       break;
 
     case svn_wc_notify_merge_begin:

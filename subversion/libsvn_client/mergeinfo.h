@@ -63,6 +63,11 @@ typedef struct svn_client__merge_path_t
   svn_boolean_t scheduled_for_deletion; /* PATH is scheduled for deletion. */
 } svn_client__merge_path_t;
 
+/* Return a deep copy of the merge-path structure OLD, allocated in POOL. */
+svn_client__merge_path_t *
+svn_client__merge_path_dup(const svn_client__merge_path_t *old,
+                           apr_pool_t *pool);
+
 
 
 /*** Functions ***/

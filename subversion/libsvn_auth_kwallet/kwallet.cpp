@@ -24,7 +24,6 @@
 
 #include <apr_pools.h>
 #include "svn_auth.h"
-#include "svn_auth_dso.h"
 #include "svn_error.h"
 #include "svn_version.h"
 

@@ -2,9 +2,17 @@
 # generator.swig: Base class for SWIG-related generators
 #
 
-import shutil, ConfigParser, re, os
+import os
+import re
+import shutil
 import generator.util.executable as _exec
 from generator.gen_base import _collect_paths
+try:
+  # Python >=3.0
+  import configparser
+except ImportError:
+  # Python <3.0
+  import ConfigParser as configparser
 
 class Generator:
   """Base class for SWIG-related generators"""
@@ -15,7 +23,7 @@ class Generator:
     """Read build.conf"""
 
     # Now read and parse build.conf
-    parser = ConfigParser.ConfigParser()
+    parser = configparser.ConfigParser()
     parser.read(conf)
 
     # Read configuration options

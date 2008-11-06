@@ -2,7 +2,7 @@
  * delete.c:  wrappers around wc delete functionality.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004, 2008 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -36,36 +36,25 @@
 
 /*** Code. ***/
 
-struct status_baton
-{
-  svn_error_t *err; /* the error generated for an undeletable path. */
-  apr_pool_t *pool; /* for temporary allocations */
-};
 
-
-/* An svn_wc_status_func_t callback function for finding
+/* An svn_wc_status_func3_t callback function for finding
    status structures which are not safely deletable. */
-static void
+static svn_error_t *
 find_undeletables(void *baton,
                   const char *path,
-                  svn_wc_status2_t *status)
+                  svn_wc_status2_t *status,
+                  apr_pool_t *pool)
 {
-  struct status_baton *sb = baton;
-
-  /* If we already have an error, don't lose that fact. */
-  if (sb->err)
-    return;
-
   /* Check for error-ful states. */
   if (status->text_status == svn_wc_status_obstructed)
-    sb->err = svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
-                                _("'%s' is in the way of the resource "
-                                  "actually under version control"),
-                                svn_path_local_style(path, sb->pool));
+    return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
+                             _("'%s' is in the way of the resource "
+                               "actually under version control"),
+                             svn_path_local_style(path, pool));
   else if (! status->entry)
-    sb->err = svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                                _("'%s' is not under version control"),
-                                svn_path_local_style(path, sb->pool));
+    return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                             _("'%s' is not under version control"),
+                             svn_path_local_style(path, pool));
 
   else if ((status->text_status != svn_wc_status_normal
             && status->text_status != svn_wc_status_deleted
@@ -73,9 +62,11 @@ find_undeletables(void *baton,
            ||
            (status->prop_status != svn_wc_status_none
             && status->prop_status != svn_wc_status_normal))
-    sb->err = svn_error_createf(SVN_ERR_CLIENT_MODIFIED, NULL,
-                                _("'%s' has local modifications"),
-                                svn_path_local_style(path, sb->pool));
+    return svn_error_createf(SVN_ERR_CLIENT_MODIFIED, NULL,
+                             _("'%s' has local modifications"),
+                             svn_path_local_style(path, pool));
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -84,21 +75,17 @@ svn_client__can_delete(const char *path,
                        svn_client_ctx_t *ctx,
                        apr_pool_t *pool)
 {
-  struct status_baton sb;
   svn_opt_revision_t revision;
   revision.kind = svn_opt_revision_unspecified;
-  sb.err = SVN_NO_ERROR;
-  sb.pool = pool;
 
   /* Use an infinite-depth status check to see if there's anything in
      or under PATH which would make it unsafe for deletion.  The
      status callback function find_undeletables() makes the
-     determination, setting sb.err if it finds anything that shouldn't
+     determination, returning an error if it finds anything that shouldn't
      be deleted. */
-  SVN_ERR(svn_client_status3
-          (NULL, path, &revision, find_undeletables, &sb,
-           svn_depth_infinity, FALSE, FALSE, FALSE, FALSE, NULL, ctx, pool));
-  return sb.err;
+  return svn_client_status4
+         (NULL, path, &revision, find_undeletables, NULL,
+          svn_depth_infinity, FALSE, FALSE, FALSE, FALSE, NULL, ctx, pool);
 }
 
 

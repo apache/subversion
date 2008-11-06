@@ -5,7 +5,7 @@
 #                     header files
 #
 
-import os, re, string, sys, glob, shutil
+import os, re, sys, glob, shutil
 if __name__ == "__main__":
   parent_dir = os.path.dirname(os.path.abspath(os.path.dirname(sys.argv[0])))
   sys.path[0:0] = [ parent_dir, os.path.dirname(parent_dir) ]
@@ -41,14 +41,14 @@ class Generator(generator.swig.Generator):
         '%s: %s %s\n' % (wrapper_fname, fname, python_script) +
         '\t$(GEN_SWIG_WRAPPER) %s\n\n' % fname
       )
-    makefile.write('SWIG_WRAPPERS = %s\n\n' % string.join(wrapper_fnames))
+    makefile.write('SWIG_WRAPPERS = %s\n\n' % ' '.join(wrapper_fnames))
     for short_name in self.short.values():
       makefile.write('autogen-swig-%s: $(SWIG_WRAPPERS)\n' % short_name)
     makefile.write('\n\n')
 
   def proxy_filename(self, include_filename):
     """Convert a .h filename into a _h.swg filename"""
-    return string.replace(include_filename,".h","_h.swg")
+    return include_filename.replace(".h","_h.swg")
 
   def _write_nodefault_calls(self, structs):
     """Write proxy definitions to a SWIG interface file"""
@@ -73,15 +73,15 @@ class Generator(generator.swig.Generator):
     """Write out an individual callback"""
 
     # Get rid of any extra spaces or newlines
-    return_type = string.join(string.split(return_type))
-    params = string.join(string.split(params))
+    return_type = ' '.join(return_type.split())
+    params = ' '.join(params.split())
 
     # Calculate parameters
     if params == "void":
       param_names = ""
       params = "%s _obj" % type
     else:
-      param_names = string.join(self._re_param_names.findall(params), ", ")
+      param_names = ", ".join(self._re_param_names.findall(params))
       params = "%s _obj, %s" % (type, params)
 
     invoke_callback = "%s(%s)" % (callee, param_names)
@@ -302,10 +302,10 @@ class Generator(generator.swig.Generator):
 
 if __name__ == "__main__":
   if len(sys.argv) < 3:
-    print """Usage: %s build.conf swig [ subversion/include/header_file.h ]
+    print("""Usage: %s build.conf swig [ subversion/include/header_file.h ]
 Generates SWIG proxy wrappers around Subversion header files. If no header
 files are specified, generate wrappers for subversion/include/*.h. """ % \
-    os.path.basename(sys.argv[0])
+    os.path.basename(sys.argv[0]))
   else:
     gen = Generator(sys.argv[1], sys.argv[2])
     if len(sys.argv) > 3:

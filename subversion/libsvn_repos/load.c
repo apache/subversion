@@ -88,6 +88,25 @@ struct node_baton
 /*----------------------------------------------------------------------*/
 
 /** A conversion function between the two vtable types. **/
+static svn_repos_parser_fns_t *
+fns_from_fns2(const svn_repos_parse_fns2_t *fns2,
+              apr_pool_t *pool)
+{
+  svn_repos_parser_fns_t *fns;
+
+  fns = apr_palloc(pool, sizeof(*fns));
+  fns->new_revision_record = fns2->new_revision_record;
+  fns->uuid_record = fns2->uuid_record;
+  fns->new_node_record = fns2->new_node_record;
+  fns->set_revision_property = fns2->set_revision_property;
+  fns->set_node_property = fns2->set_node_property;
+  fns->remove_node_props = fns2->remove_node_props;
+  fns->set_fulltext = fns2->set_fulltext;
+  fns->close_node = fns2->close_node;
+  fns->close_revision = fns2->close_revision;
+  return fns;
+}
+
 static svn_repos_parse_fns2_t *
 fns2_from_fns(const svn_repos_parser_fns_t *fns,
               apr_pool_t *pool)
@@ -1399,18 +1418,32 @@ svn_repos_get_fs_build_parser2(const svn_repos_parse_fns2_t **callbacks,
                                const char *parent_dir,
                                apr_pool_t *pool)
 {
-  const svn_repos_parser_fns_t *fns;
-  svn_repos_parse_fns2_t *parser;
+  svn_repos_parse_fns2_t *parser = apr_pcalloc(pool, sizeof(*parser));
+  struct parse_baton *pb = apr_pcalloc(pool, sizeof(*pb));
 
-  /* Fetch the old-style vtable and baton, convert the vtable to a
-   * new-style vtable, and set the new callbacks. */
-  SVN_ERR(svn_repos_get_fs_build_parser(&fns, parse_baton, repos,
-                                        use_history, uuid_action, outstream,
-                                        parent_dir, pool));
-  parser = fns2_from_fns(fns, pool);
+  parser->new_revision_record = new_revision_record;
+  parser->new_node_record = new_node_record;
+  parser->uuid_record = uuid_record;
+  parser->set_revision_property = set_revision_property;
+  parser->set_node_property = set_node_property;
+  parser->remove_node_props = remove_node_props;
+  parser->set_fulltext = set_fulltext;
+  parser->close_node = close_node;
+  parser->close_revision = close_revision;
   parser->delete_node_property = delete_node_property;
   parser->apply_textdelta = apply_textdelta;
+
+  pb->repos = repos;
+  pb->fs = svn_repos_fs(repos);
+  pb->use_history = use_history;
+  pb->outstream = outstream ? outstream : svn_stream_empty(pool);
+  pb->uuid_action = uuid_action;
+  pb->parent_dir = parent_dir;
+  pb->pool = pool;
+  pb->rev_map = apr_hash_make(pool);
+
   *callbacks = parser;
+  *parse_baton = pb;
   return SVN_NO_ERROR;
 }
 
@@ -1426,30 +1459,13 @@ svn_repos_get_fs_build_parser(const svn_repos_parser_fns_t **parser_callbacks,
                               const char *parent_dir,
                               apr_pool_t *pool)
 {
-  svn_repos_parser_fns_t *parser = apr_pcalloc(pool, sizeof(*parser));
-  struct parse_baton *pb = apr_pcalloc(pool, sizeof(*pb));
+  const svn_repos_parse_fns2_t *fns2;
 
-  parser->new_revision_record = new_revision_record;
-  parser->new_node_record = new_node_record;
-  parser->uuid_record = uuid_record;
-  parser->set_revision_property = set_revision_property;
-  parser->set_node_property = set_node_property;
-  parser->remove_node_props = remove_node_props;
-  parser->set_fulltext = set_fulltext;
-  parser->close_node = close_node;
-  parser->close_revision = close_revision;
+  SVN_ERR(svn_repos_get_fs_build_parser2(&fns2, parse_baton, repos,
+                                         use_history, uuid_action, outstream,
+                                         parent_dir, pool));
 
-  pb->repos = repos;
-  pb->fs = svn_repos_fs(repos);
-  pb->use_history = use_history;
-  pb->outstream = outstream ? outstream : svn_stream_empty(pool);
-  pb->uuid_action = uuid_action;
-  pb->parent_dir = parent_dir;
-  pb->pool = pool;
-  pb->rev_map = apr_hash_make(pool);
-
-  *parser_callbacks = parser;
-  *parse_baton = pb;
+  *parser_callbacks = fns_from_fns2(fns2, pool);
   return SVN_NO_ERROR;
 }
 

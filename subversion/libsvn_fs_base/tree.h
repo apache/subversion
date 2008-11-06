@@ -44,6 +44,32 @@ svn_error_t *svn_fs_base__txn_root(svn_fs_root_t **root_p, svn_fs_txn_t *txn,
 
 
 
+/* Inserting and retrieving metadata about the fs */
+
+/* Set the metadata value for KEY to VAL in FS.  To remove a value from the
+   metadata, pass NULL for VAL.
+   
+   KEY and VAL should be NULL-terminated strings. */
+svn_error_t *
+svn_fs_base__metadata_set(svn_fs_t *fs,
+                          const char *key,
+                          const char *val,
+                          apr_pool_t *pool);
+
+/* Retrieve the metadata value for KEY into *VAL for FS, allocated in POOL.
+   If the fs doesn't support metadata storage, or the value does not exist,
+   *VAL is set to NULL.
+   
+   KEY should be a NULL-terminated string. */
+svn_error_t *
+svn_fs_base__metadata_get(const char **val,
+                          svn_fs_t *fs,
+                          const char *key,
+                          apr_pool_t *pool);
+
+
+
+
 
 /* Helper func: in the context of TRAIL, return the KIND of PATH in
    head revision.   If PATH doesn't exist, set *KIND to svn_node_none.*/

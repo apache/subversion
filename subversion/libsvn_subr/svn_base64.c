@@ -374,27 +374,40 @@ svn_base64_decode_string(const svn_string_t *str, apr_pool_t *pool)
 
 
 svn_stringbuf_t *
-svn_base64_from_md5(unsigned char digest[], apr_pool_t *pool)
+svn_base64_from_checksum(svn_checksum_t *checksum, apr_pool_t *pool)
 {
-  svn_stringbuf_t *md5str;
+  svn_stringbuf_t *checksum_str;
   unsigned char ingroup[3];
   int ingrouplen = 0, linelen = 0;
-  md5str = svn_stringbuf_create("", pool);
+  checksum_str = svn_stringbuf_create("", pool);
 
   /* This cast is safe because we know encode_bytes does a memcpy and
    * does an implicit unsigned char * cast.
    */
-  encode_bytes(md5str, (char*)digest, APR_MD5_DIGESTSIZE, ingroup,
-               &ingrouplen, &linelen, TRUE);
-  encode_partial_group(md5str, ingroup, ingrouplen, linelen, TRUE);
+  encode_bytes(checksum_str, (char*)checksum->digest,
+               svn_checksum_size(checksum), ingroup, &ingrouplen,
+               &linelen, TRUE);
+  encode_partial_group(checksum_str, ingroup, ingrouplen, linelen, TRUE);
 
   /* Our base64-encoding routines append a final newline if any data
      was created at all, so let's hack that off. */
-  if ((md5str)->len)
+  if (checksum_str->len)
     {
-      (md5str)->len--;
-      (md5str)->data[(md5str)->len] = 0;
+      checksum_str->len--;
+      checksum_str->data[checksum_str->len] = 0;
     }
 
-  return md5str;
+  return checksum_str;
+}
+
+
+svn_stringbuf_t *
+svn_base64_from_md5(unsigned char digest[], apr_pool_t *pool)
+{
+  svn_checksum_t *checksum;
+
+  checksum = svn_checksum_create(svn_checksum_md5, pool);
+  checksum->digest = digest;
+
+  return svn_base64_from_checksum(checksum, pool);
 }

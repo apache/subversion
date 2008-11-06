@@ -159,7 +159,7 @@ class Popen24Compat:
         if isinstance(args, list):
             args = tuple(args)
         elif not isinstance(args, tuple):
-            raise RipperException, "Popen24Compat: args is not tuple or list"
+            raise RipperException("Popen24Compat: args is not tuple or list")
 
         self.stdin = None
         self.stdout = None
@@ -197,7 +197,7 @@ class Popen24Compat:
 
         self.pid = os.fork()
         if self.pid < 0:
-            raise Exception, "Popen24Compat: fork"
+            raise Exception("Popen24Compat: fork")
         if self.pid == 0:
             # child
             os.close(err_read)
@@ -240,12 +240,12 @@ class Popen24Compat:
             sr, sw, se = select.select([ err_read ], [], [ err_read ])
             if len(se) == 1:
                 os.close(err_read)
-                raise Exception, "Popen24Compat: err pipe read error"
+                raise Exception("Popen24Compat: err pipe read error")
             if len(sr) == 1:
                 err = os.read(err_read, 1024)
             os.close(err_read)
             if len(err) != 0:
-                raise Exception, "Popen24Compat: exec error: " + err
+                raise Exception("Popen24Compat: exec error: " + err)
 
     def poll(self):
         self.__wait(os.WNOHANG)
@@ -361,11 +361,9 @@ class SvnBackup:
         # need 3 args: progname, reposname, dumpdir
         if len(args) != 3:
             if len(args) < 3:
-                raise SvnBackupException, \
-                    "too few arguments, specify repospath and dumpdir."
+                raise SvnBackupException("too few arguments, specify repospath and dumpdir.")
             else:
-                raise SvnBackupException, \
-                    "too many arguments, specify repospath and dumpdir only."
+                raise SvnBackupException("too many arguments, specify repospath and dumpdir only.")
         self.__repospath = args[1]
         self.__dumpdir = args[2]
         # check repospath
@@ -374,28 +372,22 @@ class SvnBackup:
             # repospath without trailing slash
             self.__repospath = rpathparts[0]
         if not os.path.exists(self.__repospath):
-            raise SvnBackupException, \
-                "repos '%s' does not exist." % self.__repospath
+            raise SvnBackupException("repos '%s' does not exist." % self.__repospath)
         if not os.path.isdir(self.__repospath):
-            raise SvnBackupException, \
-                "repos '%s' is not a directory." % self.__repospath
+            raise SvnBackupException("repos '%s' is not a directory." % self.__repospath)
         for subdir in [ "db", "conf", "hooks" ]:
             dir = os.path.join(self.__repospath, "db")
             if not os.path.isdir(dir):
-                raise SvnBackupException, \
-                    "repos '%s' is not a repository." % self.__repospath
+                raise SvnBackupException("repos '%s' is not a repository." % self.__repospath)
         rpathparts = os.path.split(self.__repospath)
         self.__reposname = rpathparts[1]
         if self.__reposname in [ "", ".", ".." ]:
-            raise SvnBackupException, \
-                "couldn't extract repos name from '%s'." % self.__repospath
+            raise SvnBackupException("couldn't extract repos name from '%s'." % self.__repospath)
         # check dumpdir
         if not os.path.exists(self.__dumpdir):
-            raise SvnBackupException, \
-                "dumpdir '%s' does not exist." % self.__dumpdir
+            raise SvnBackupException("dumpdir '%s' does not exist." % self.__dumpdir)
         elif not os.path.isdir(self.__dumpdir):
-            raise SvnBackupException, \
-                "dumpdir '%s' is not a directory." % self.__dumpdir
+            raise SvnBackupException("dumpdir '%s' is not a directory." % self.__dumpdir)
         # set options
         self.__rev_nr = options.rev
         self.__count = options.cnt
@@ -413,14 +405,11 @@ class SvnBackup:
             self.__transfer = options.transfer.split(":")
             if len(self.__transfer) != 5:
                 if len(self.__transfer) < 5:
-                    raise SvnBackupException, \
-                        "too few fields for transfer '%s'." % self.__transfer
+                    raise SvnBackupException("too few fields for transfer '%s'." % self.__transfer)
                 else:
-                    raise SvnBackupException, \
-                        "too many fields for transfer '%s'." % self.__transfer
+                    raise SvnBackupException("too many fields for transfer '%s'." % self.__transfer)
             if self.__transfer[0] not in [ "ftp", "smb" ]:
-                raise SvnBackupException, \
-                    "unknown transfer method '%s'." % self.__transfer[0]
+                raise SvnBackupException("unknown transfer method '%s'." % self.__transfer[0])
 
     def set_nonblock(self, fileobj):
         fd = fileobj.fileno()
@@ -513,9 +502,8 @@ class SvnBackup:
             rc = len(ifd.read(1)) == 0
             ifd.close()
         except Exception, e:
-            raise SvnBackupException, \
-                "ftp transfer failed:\n  file:  '%s'\n  error: %s" % \
-                    (absfilename, str(e))
+            raise SvnBackupException("ftp transfer failed:\n  file:  '%s'\n  error: %s" % \
+                    (absfilename, str(e)))
         return rc
 
     def transfer_smb(self, absfilename, filename):

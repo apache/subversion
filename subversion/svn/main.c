@@ -1816,7 +1816,7 @@ main(int argc, const char *argv[])
       /* Fallback to default config if the config directory isn't readable. */
       if (err->apr_err == APR_EACCES)
         {
-          svn_handle_warning(stderr, err);
+          svn_handle_warning2(stderr, err, "svn: ");
           svn_error_clear(err);
         }
       else
