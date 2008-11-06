@@ -3206,6 +3206,7 @@ walker_helper(const char *dirpath,
 
       /* Recurse into this entry if appropriate. */
       if (current_entry->kind == svn_node_dir
+          && !current_entry->deleted && !current_entry->absent
           && depth >= svn_depth_immediates)
         {
           svn_wc_adm_access_t *entry_access;
