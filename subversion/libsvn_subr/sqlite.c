@@ -22,9 +22,12 @@
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_pools.h"
+#include "svn_io.h"
+#include "svn_path.h"
 
 #include "private/svn_sqlite.h"
 #include "svn_private_config.h"
+#include "private/svn_dep_compat.h"
 
 
 #ifdef SQLITE3_DEBUG
@@ -82,7 +85,7 @@ svn_sqlite__exec(svn_sqlite__db_t *db, const char *sql)
 
   if (sqlite_err != SQLITE_OK)
     {
-      svn_error_t *err = svn_error_create(SQLITE_ERROR_CODE(sqlite_err), NULL, 
+      svn_error_t *err = svn_error_create(SQLITE_ERROR_CODE(sqlite_err), NULL,
                                           err_msg);
       sqlite3_free(err_msg);
       return err;
@@ -104,7 +107,7 @@ svn_sqlite__prepare(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
 }
 
 static svn_error_t *
-step_with_expectation(svn_sqlite__stmt_t* stmt, 
+step_with_expectation(svn_sqlite__stmt_t* stmt,
                       svn_boolean_t expecting_row)
 {
   svn_boolean_t got_row;
@@ -165,7 +168,7 @@ svn_sqlite__bind_text(svn_sqlite__stmt_t *stmt,
                       int slot,
                       const char *val)
 {
-  SQLITE_ERR(sqlite3_bind_text(stmt->s3stmt, slot, val, -1, SQLITE_TRANSIENT), 
+  SQLITE_ERR(sqlite3_bind_text(stmt->s3stmt, slot, val, -1, SQLITE_TRANSIENT),
              stmt->db);
   return SVN_NO_ERROR;
 }
@@ -296,7 +299,7 @@ check_format(svn_sqlite__db_t *db, int latest_schema,
 {
   svn_sqlite__stmt_t *stmt;
   int current_schema;
-  
+
   SVN_ERR(svn_sqlite__prepare(&stmt, db, "PRAGMA user_version;", scratch_pool));
   SVN_ERR(svn_sqlite__step_row(stmt));
 
@@ -320,8 +323,15 @@ check_format(svn_sqlite__db_t *db, int latest_schema,
 /* If possible, verify that SQLite was compiled in a thread-safe
    manner. */
 static svn_error_t *
-init_sqlite()
+init_sqlite(void)
 {
+  if (sqlite3_libversion_number() < SQLITE_VERSION_NUMBER) {
+    return svn_error_createf(SVN_ERR_SQLITE_ERROR, NULL,
+                             _("SQLite compiled for %s, but running with %s"),
+                             SQLITE_VERSION, sqlite3_libversion());
+  }
+
+#if SQLITE_VERSION_AT_LEAST(3,5,0)
   /* SQLite 3.5 allows verification of its thread-safety at runtime.
      Older versions are simply expected to have been configured with
      --enable-threadsafe, which compiles with -DSQLITE_THREADSAFE=1
@@ -330,12 +340,11 @@ init_sqlite()
     return svn_error_create(SVN_ERR_SQLITE_ERROR, NULL,
                             _("SQLite is required to be compiled and run in "
                               "thread-safe mode"));
-
-  /* ### need some autoconf magic to detect these */
-#if 0
-  SQLITE_ERR_MSG(sqlite3_initialize(), "Could not initialize SQLite");
+#endif
+#if SQLITE_VERSION_AT_LEAST(3,6,0)
   SQLITE_ERR_MSG(sqlite3_config(SQLITE_CONFIG_MULTITHREAD),
                  "Could not configure SQLite");
+  SQLITE_ERR_MSG(sqlite3_initialize(), "Could not initialize SQLite");
 #endif
 
   /* NOTE: if more work is performed here, then consider using
@@ -351,7 +360,6 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
                  apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   static svn_boolean_t sqlite_initialized = FALSE;
-  int flags;
 
   if (! sqlite_initialized)
     {
@@ -364,29 +372,61 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
   /* ### use a pool cleanup to close this? (instead of __close()) */
   *db = apr_palloc(result_pool, sizeof(**db));
 
-  if (mode == svn_sqlite__mode_readonly)
-    flags = SQLITE_OPEN_READONLY;
-  else if (mode == svn_sqlite__mode_readwrite)
-    flags = SQLITE_OPEN_READWRITE;
+#if SQLITE_VERSION_AT_LEAST(3,5,0)
+  {
+    int flags;
+
+    if (mode == svn_sqlite__mode_readonly)
+      flags = SQLITE_OPEN_READONLY;
+    else if (mode == svn_sqlite__mode_readwrite)
+      flags = SQLITE_OPEN_READWRITE;
+    else if (mode == svn_sqlite__mode_rwcreate)
+      flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE;
+    else
+      SVN_ERR_MALFUNCTION();
+
+    /* If this flag is defined (3.6.x), then let's turn off SQLite's mutexes.
+       All svn objects are single-threaded, so we can already guarantee that
+       our use of the SQLite handle will be serialized properly.
+       Note: in 3.6.x, we've already config'd SQLite into MULTITHREAD mode,
+       so this is probably redundant... */
+    /* ### yeah. remove when autoconf magic is done for init/config. */
+#ifdef SQLITE_OPEN_NOMUTEX
+    flags |= SQLITE_OPEN_NOMUTEX;
+#endif
+
+    /* Open the database. Note that a handle is returned, even when an error
+       occurs (except for out-of-memory); thus, we can safely use it to
+       extract an error message and construct an svn_error_t. */
+    SQLITE_ERR(sqlite3_open_v2(path, &(*db)->db3, flags, NULL), *db);
+  }
+#else
+  /* Older versions of SQLite (pre-3.5.x) will always create the database
+     if it doesn't exist.  So, if we are asked to be read-only or read-write,
+     we ensure the database already exists - if it doesn't, then we will
+     explicitly error out before asking SQLite to do anything.
+
+     Pre-3.5.x SQLite versions also don't support read-only ops either.
+   */
+  if (mode == svn_sqlite__mode_readonly || mode == svn_sqlite__mode_readwrite)
+    {
+      svn_node_kind_t kind;
+      SVN_ERR(svn_io_check_path(path, &kind, scratch_pool));
+      if (kind != svn_node_file) {
+          return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
+                                   _("Expected SQLite database not found: %s"),
+                                   svn_path_local_style(path, scratch_pool));
+      }
+    }
   else if (mode == svn_sqlite__mode_rwcreate)
-    flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE;
+    {
+      /* do nothing - older SQLite's will create automatically. */
+    }
   else
     SVN_ERR_MALFUNCTION();
 
-  /* If this flag is defined (3.6.x), then let's turn off SQLite's mutexes.
-     All svn objects are single-threaded, so we can already guarantee that
-     our use of the SQLite handle will be serialized properly.
-     Note: in 3.6.x, we've already config'd SQLite into MULTITHREAD mode,
-     so this is probably redundant... */
-  /* ### yeah. remove when autoconf magic is done for init/config. */
-#ifdef SQLITE_OPEN_NOMUTEX
-  flags |= SQLITE_OPEN_NOMUTEX;
+  SQLITE_ERR(sqlite3_open(path, &(*db)->db3), *db);
 #endif
-
-  /* Open the database. Note that a handle is returned, even when an error
-     occurs (except for out-of-memory); thus, we can safely use it to
-     extract an error message and construct an svn_error_t. */
-  SQLITE_ERR(sqlite3_open_v2(path, &(*db)->db3, flags, NULL), *db);
 
   /* Retry until timeout when database is busy. */
   SQLITE_ERR(sqlite3_busy_timeout((*db)->db3, BUSY_TIMEOUT), *db);

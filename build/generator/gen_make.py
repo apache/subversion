@@ -98,7 +98,7 @@ class Generator(gen_base.GeneratorBase):
 
     # write a list of directories in which things are built
     #   get all the test scripts' directories
-    script_dirs = map(build_path_dirname, self.scripts + self.bdb_scripts)
+    script_dirs = list(map(build_path_dirname, self.scripts + self.bdb_scripts))
 
     #   remove duplicate directories between targets and tests
     build_dirs = unique(self.target_dirs + script_dirs + self.swig_dirs)
@@ -135,7 +135,8 @@ class Generator(gen_base.GeneratorBase):
     self.ofile.write('CLEAN_FILES = %s\n\n' % ' '.join(cfiles))
 
     # this is here because autogen-standalone needs it too
-    self.ofile.write('SWIG_INCLUDES = -I$(abs_srcdir)/subversion/include \\\n'
+    self.ofile.write('SWIG_INCLUDES = -I$(abs_srcdir)/subversion \\\n'
+        '  -I$(abs_srcdir)/subversion/include \\\n'
         '  -I$(abs_srcdir)/subversion/bindings/swig \\\n'
         '  -I$(abs_srcdir)/subversion/bindings/swig/include \\\n'
         '  -I$(abs_srcdir)/subversion/bindings/swig/proxy \\\n'

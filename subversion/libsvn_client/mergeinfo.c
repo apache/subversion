@@ -890,7 +890,7 @@ get_mergeinfo(svn_mergeinfo_t *mergeinfo,
                                                     svn_mergeinfo_inherited,
                                                     NULL, path_or_url,
                                                     adm_access, ctx, pool));
-      SVN_ERR(svn_wc_adm_close(adm_access));
+      SVN_ERR(svn_wc_adm_close2(adm_access, subpool));
     }
 
   svn_pool_destroy(subpool);
@@ -1180,7 +1180,7 @@ location_from_path_and_rev(const char **url,
   svn_pool_destroy(subpool);
 
   if (adm_access)
-    return svn_wc_adm_close(adm_access);
+    return svn_wc_adm_close2(adm_access, pool);
   else
     return SVN_NO_ERROR;
 }

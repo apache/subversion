@@ -53,7 +53,7 @@ typedef struct svn_client__merge_path_t
      reverse merge cases the ranges should never overlap.  This rangelist
      may be NULL or empty. */
   apr_array_header_t *remaining_ranges;
-  
+
   svn_mergeinfo_t pre_merge_mergeinfo;  /* Mergeinfo on PATH prior to a
                                            merge.*/
   svn_mergeinfo_t implicit_mergeinfo;   /* Implicit mergeinfo on PATH prior
@@ -135,7 +135,7 @@ svn_client__get_repos_mergeinfo(svn_ra_session_t *ra_session,
    get it from the repository.  RA_SESSION should be an open RA session
    pointing at ENTRY->URL, or NULL, in which case this function will open
    its own temporary session.
-   
+
    (opening a new RA session if RA_SESSION
    is NULL).  Store any mergeinfo obtained for TARGET_WCPATH -- which
    is reflected by ENTRY -- in *TARGET_MERGEINFO, if no mergeinfo is

@@ -108,7 +108,7 @@ typedef struct
 {
   /* Cache of txn DAG nodes (without their nested noderevs, because
    * it's mutable). */
-  svn_cache_t *txn_node_cache;
+  svn_cache__t *txn_node_cache;
 } fs_txn_root_data_t;
 
 /* Declared here to resolve the circular dependencies. */
@@ -130,7 +130,7 @@ static svn_error_t *make_txn_root(svn_fs_root_t **root_p,
 /* Find and return the DAG node cache for ROOT and the key that
    should be used for PATH. */
 static void
-locate_cache(svn_cache_t **cache,
+locate_cache(svn_cache__t **cache,
              const char **key,
              svn_fs_root_t *root,
              const char *path,
@@ -161,14 +161,14 @@ dag_node_cache_get(dag_node_t **node_p,
 {
   svn_boolean_t found;
   dag_node_t *node;
-  svn_cache_t *cache;
+  svn_cache__t *cache;
   const char *key;
 
   SVN_ERR_ASSERT(*path == '/');
 
   locate_cache(&cache, &key, root, path, pool);
 
-  SVN_ERR(svn_cache_get((void **) &node, &found, cache, key, pool));
+  SVN_ERR(svn_cache__get((void **) &node, &found, cache, key, pool));
   if (found && node)
     {
       /* Patch up the FS, since this might have come from an old FS
@@ -189,14 +189,14 @@ dag_node_cache_set(svn_fs_root_t *root,
                    dag_node_t *node,
                    apr_pool_t *pool)
 {
-  svn_cache_t *cache;
+  svn_cache__t *cache;
   const char *key;
 
   SVN_ERR_ASSERT(*path == '/');
 
   locate_cache(&cache, &key, root, path, pool);
 
-  return svn_cache_set(cache, key, node, pool);
+  return svn_cache__set(cache, key, node, pool);
 }
 
 
@@ -234,7 +234,7 @@ dag_node_cache_invalidate(svn_fs_root_t *root,
                           apr_pool_t *pool)
 {
   struct fdic_baton b;
-  svn_cache_t *cache;
+  svn_cache__t *cache;
   apr_pool_t *iterpool;
   int i;
 
@@ -246,7 +246,7 @@ dag_node_cache_invalidate(svn_fs_root_t *root,
   locate_cache(&cache, NULL, root, NULL, b.pool);
 
 
-  SVN_ERR(svn_cache_iter(NULL, cache, find_descendents_in_cache,
+  SVN_ERR(svn_cache__iter(NULL, cache, find_descendents_in_cache,
                          &b, b.pool));
 
   iterpool = svn_pool_create(b.pool);
@@ -255,7 +255,7 @@ dag_node_cache_invalidate(svn_fs_root_t *root,
     {
       const char *descendent = APR_ARRAY_IDX(b.list, i, const char *);
       svn_pool_clear(iterpool);
-      SVN_ERR(svn_cache_set(cache, descendent, NULL, iterpool));
+      SVN_ERR(svn_cache__set(cache, descendent, NULL, iterpool));
     }
 
   svn_pool_destroy(iterpool);
@@ -2241,18 +2241,23 @@ fs_file_length(svn_filesize_t *length_p,
 }
 
 
-/* Set DIGEST to the checksum of PATH under ROOT.  Temporary
-   allocations are from POOL. */
+/* Set *CHECKSUM to the checksum of type KIND for PATH under ROOT, or
+   NULL if that information isn't available.  Temporary allocations
+   are from POOL. */
 static svn_error_t *
 fs_file_checksum(svn_checksum_t **checksum,
+                 svn_checksum_kind_t kind,
                  svn_fs_root_t *root,
                  const char *path,
                  apr_pool_t *pool)
 {
   dag_node_t *file;
+  svn_checksum_t *file_checksum;
 
   SVN_ERR(get_dag(&file, root, path, pool));
-  return svn_fs_fs__dag_file_checksum(checksum, file, pool);
+  SVN_ERR(svn_fs_fs__dag_file_checksum(&file_checksum, file, pool));
+  *checksum = (file_checksum->kind == kind) ? file_checksum : NULL;
+  return SVN_NO_ERROR;
 }
 
 
@@ -2421,7 +2426,8 @@ apply_textdelta(void *baton, apr_pool_t *pool)
       /* Until we finalize the node, its data_key points to the old
          contents, in other words, the base text. */
       SVN_ERR(svn_fs_fs__dag_file_checksum(&checksum, tb->node, pool));
-      if (!svn_checksum_match(tb->base_checksum, checksum))
+      if (tb->base_checksum->kind == checksum->kind
+          && !svn_checksum_match(tb->base_checksum, checksum))
         return svn_error_createf
           (SVN_ERR_CHECKSUM_MISMATCH,
            NULL,
@@ -3047,7 +3053,7 @@ fs_node_origin_rev(svn_revnum_t *revision,
            Because svn_fs_fs__dag_get_predecessor_id() doesn't
            necessarily honor the passed-in pool, and might return a
            value cached in the node (which is allocated in
-           SUBPOOL... maybe). */ 
+           SUBPOOL... maybe). */
         svn_pool_clear(predidpool);
         SVN_ERR(svn_fs_fs__dag_get_predecessor_id(&pred_id, node, subpool));
         pred_id = pred_id ? svn_fs_fs__id_copy(pred_id, predidpool) : NULL;
@@ -3753,9 +3759,9 @@ make_txn_root(svn_fs_root_t **root_p,
   /* Because this cache actually tries to invalidate elements, keep
      the number of elements per page down.
 
-     Note that since dag_node_cache_invalidate uses svn_cache_iter,
+     Note that since dag_node_cache_invalidate uses svn_cache__iter,
      this *cannot* be a memcache-based cache.  */
-  SVN_ERR(svn_cache_create_inprocess(&(frd->txn_node_cache),
+  SVN_ERR(svn_cache__create_inprocess(&(frd->txn_node_cache),
                                      svn_fs_fs__dag_dup_for_cache,
                                      APR_HASH_KEY_STRING,
                                      32, 20, FALSE, root->pool));

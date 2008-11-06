@@ -31,7 +31,7 @@ def _usage_exit():
 
   print("Driver for running the tests on Windows.")
   print("Usage: python win-tests.py [option] [test-path]")
-  print()
+  print("")
   print("Valid options:")
   print("  -r, --release          : test the Release configuration")
   print("  -d, --debug            : test the Debug configuration (default)")
@@ -321,7 +321,7 @@ class Svnserve:
     try:
       import win32process
       import win32con
-      args = ' '.join(map(lambda x: self._quote(x), args))
+      args = ' '.join([self._quote(x) for x in args])
       self.proc_handle = (
         win32process.CreateProcess(self._quote(self.path), args,
                                    None, None, 0,

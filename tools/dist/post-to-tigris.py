@@ -16,7 +16,7 @@ post-to-tigris.py <username> <password> <folderId> <release>
     release - the full name of the release, such as 1.5.0-beta1
 '''
 
-import sys, cookielib, urllib2, urllib
+import sys, cookielib, urllib2, urllib, re
 
 
 def login(username, password, folderId):
@@ -56,6 +56,11 @@ def add_items(opener, folderId, release_name):
     "Add the 12(!) items for a release to the given folder"
     folder_add_url = 'http://subversion.tigris.org/servlets/ProjectDocumentAdd?folderID=%d&action=Add%%20document' % folderId
 
+    if re.match('^\d*\.\d*\.\d*$', release_name):
+      status = 'Stable'
+    else:
+      status = 'Draft'
+
     md5sums = get_md5sums()
 
     for ext in ['.zip', '.tar.gz', '.tar.bz2']:
@@ -67,7 +72,7 @@ def add_items(opener, folderId, release_name):
 
             params = {
                 'name' : filename,
-                'status' : 'Draft',
+                'status' : status,
                 'description' : '%s (MD5: %s)' % (desc, md5sums[filename]),
                 'type': 'link',
                 'url': 'http://subversion.tigris.org/downloads/%s' % filename,

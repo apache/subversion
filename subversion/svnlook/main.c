@@ -610,17 +610,23 @@ print_changed_tree(svn_repos_node_t *node,
 
 
 static svn_error_t *
-dump_contents(apr_file_t *fh,
+dump_contents(svn_stream_t *stream,
               svn_fs_root_t *root,
               const char *path /* UTF-8! */,
               apr_pool_t *pool)
 {
-  svn_stream_t *contents, *file_stream;
+  if (root == NULL)
+    SVN_ERR(svn_stream_close(stream));  /* leave an empty file */
+  else
+    {
+      svn_stream_t *contents;
 
-  /* Grab the contents and copy them into fh. */
-  SVN_ERR(svn_fs_file_contents(&contents, root, path, pool));
-  file_stream = svn_stream_from_aprfile2(fh, TRUE, pool);
-  return svn_stream_copy2(contents, file_stream, NULL, NULL, pool);
+      /* Grab the contents and copy them into the given stream. */
+      SVN_ERR(svn_fs_file_contents(&contents, root, path, pool));
+      SVN_ERR(svn_stream_copy3(contents, stream, NULL, NULL, pool));
+    }
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -648,7 +654,7 @@ prepare_tmpfiles(const char **tmpfile1,
                  apr_pool_t *pool)
 {
   svn_string_t *mimetype;
-  apr_file_t *fh;
+  svn_stream_t *stream;
 
   /* Init the return values. */
   *tmpfile1 = NULL;
@@ -682,19 +688,17 @@ prepare_tmpfiles(const char **tmpfile1,
 
   /* Now, prepare the two temporary files, each of which will either
      be empty, or will have real contents.  */
-  SVN_ERR(svn_io_open_unique_file2(&fh, tmpfile2,
-                                   apr_psprintf(pool, "%s/diff", tmpdir),
-                                   ".tmp", svn_io_file_del_none, pool));
-  if (root2)
-    SVN_ERR(dump_contents(fh, root2, path2, pool));
-  apr_file_close(fh);
+  SVN_ERR(svn_stream_open_unique(&stream, tmpfile1,
+                                 tmpdir,
+                                 svn_io_file_del_none,
+                                 pool, pool));
+  SVN_ERR(dump_contents(stream, root1, path1, pool));
 
-  /* The second file is constructed from the first one's path. */
-  SVN_ERR(svn_io_open_unique_file2(&fh, tmpfile1, *tmpfile2,
-                                   ".tmp", svn_io_file_del_none, pool));
-  if (root1)
-    SVN_ERR(dump_contents(fh, root1, path1, pool));
-  apr_file_close(fh);
+  SVN_ERR(svn_stream_open_unique(&stream, tmpfile2,
+                                 tmpdir,
+                                 svn_io_file_del_none,
+                                 pool, pool));
+  SVN_ERR(dump_contents(stream, root2, path2, pool));
 
   return SVN_NO_ERROR;
 }
@@ -961,7 +965,7 @@ print_diff_tree(svn_fs_root_t *root,
         {
           svn_stringbuf_appendcstr(header, _("(Binary files differ)\n\n"));
           SVN_ERR(svn_cmdline_printf(pool, header->data));
-        }          
+        }
       else
         {
           svn_diff_t *diff;

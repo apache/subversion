@@ -20,7 +20,7 @@
 
 #include "svn_fs.h"
 #include "svn_delta.h"
-#include "svn_cache.h"
+#include "private/svn_cache.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -72,23 +72,23 @@ svn_fs_fs__dag_get_node(dag_node_t **node,
 dag_node_t *svn_fs_fs__dag_dup(dag_node_t *node,
                                apr_pool_t *pool);
 
-/* Like svn_fs_fs__dag_dup, but implementing the svn_cache_dup_func_t
+/* Like svn_fs_fs__dag_dup, but implementing the svn_cache__dup_func_t
    prototype, and NULLing the FS field. */
 svn_error_t *
 svn_fs_fs__dag_dup_for_cache(void **out,
                              void *in,
                              apr_pool_t *pool);
 
-/* Serialize a DAG node. 
-   Implements svn_cache_serialize_func_t */
+/* Serialize a DAG node.
+   Implements svn_cache__serialize_func_t */
 svn_error_t *
 svn_fs_fs__dag_serialize(char **data,
                          apr_size_t *data_len,
                          void *in,
                          apr_pool_t *pool);
 
-/* Deserialize a DAG node. 
-   Implements svn_cache_deserialize_func_t */
+/* Deserialize a DAG node.
+   Implements svn_cache__deserialize_func_t */
 svn_error_t *
 svn_fs_fs__dag_deserialize(void **out,
                            const char *data,

@@ -7,7 +7,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2006, 2008 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -39,8 +39,9 @@ def test_stderr(re_string, stderr):
     if exp_err_re.search(line):
       return
   if svntest.main.verbose_mode:
-    map(sys.stdout.write, stderr)
-    print "Expected stderr reg-ex: '" + re_string + "'"
+    for x in stderr:
+      sys.stdout.write(x)
+    print("Expected stderr reg-ex: '" + re_string + "'")
   raise svntest.Failure("Checkout failed but not in the expected way")
 
 #----------------------------------------------------------------------
@@ -451,9 +452,8 @@ def checkout_peg_rev_date(sbox):
   # note the current time to use it as peg revision date.
   current_time = time.strftime("%Y-%m-%dT%H:%M:%S")
 
-  # sleep till the next minute.
-  current_sec = time.localtime().tm_sec
-  time.sleep(62-current_sec)
+  # sleep till the next second.
+  time.sleep(1.1)
 
   # create a new revision
   mu_path = os.path.join(wc_dir, 'A', 'mu')

@@ -175,7 +175,7 @@ SVNClient::status(const char *path, svn_depth_t depth,
 
     rev.kind = svn_opt_revision_unspecified;
 
-    SVN_JNI_ERR(svn_client_status3(&youngest, checkedPath.c_str(),
+    SVN_JNI_ERR(svn_client_status4(&youngest, checkedPath.c_str(),
                                    &rev, StatusCallback::callback,
                                    callback,
                                    depth,
@@ -1849,7 +1849,8 @@ void SVNClient::unlock(Targets &targets, bool force)
 }
 void SVNClient::setRevProperty(jobject jthis, const char *path,
                                const char *name, Revision &rev,
-                               const char *value, bool force)
+                               const char *value, const char *original_value,
+                               bool force)
 {
     Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path, "path", );
@@ -1873,11 +1874,16 @@ void SVNClient::setRevProperty(jobject jthis, const char *path,
     }
 
     svn_string_t *val = svn_string_create(value, requestPool.pool());
+    svn_string_t *orig_val;
+    if (original_value != NULL)
+      orig_val = svn_string_create(original_value, requestPool.pool());
+    else
+      orig_val = NULL;
 
     svn_revnum_t set_revision;
-    SVN_JNI_ERR(svn_client_revprop_set(name, val, URL, rev.revision(),
-                                       &set_revision, force, ctx,
-                                       requestPool.pool()), );
+    SVN_JNI_ERR(svn_client_revprop_set2(name, val, orig_val, URL, rev.revision(),
+                                        &set_revision, force, ctx,
+                                        requestPool.pool()), );
 }
 
 struct version_status_baton
@@ -1904,20 +1910,21 @@ cancel(void *baton)
         return SVN_NO_ERROR;
 }
 
-/* An svn_wc_status_func2_t callback function for anaylyzing status
+/* An svn_wc_status_func3_t callback function for analyzing status
  * structures. */
-static void
+static svn_error_t *
 analyze_status(void *baton,
                const char *path,
-               svn_wc_status2_t *status)
+               svn_wc_status2_t *status,
+               apr_pool_t *pool)
 {
     struct version_status_baton *sb = (version_status_baton *)baton;
 
     if (sb->done)
-        return;
+        return SVN_NO_ERROR;
 
     if (! status->entry)
-        return;
+        return SVN_NO_ERROR;
 
     /* Added files have a revision of no interest */
     if (status->text_status != svn_wc_status_added)
@@ -1943,6 +1950,8 @@ analyze_status(void *baton,
         && (strcmp(path, sb->wc_path) == 0)
         && (status->entry))
         sb->wc_url = apr_pstrdup(sb->pool, status->entry->url);
+
+    return SVN_NO_ERROR;
 }
 
 
@@ -2020,7 +2029,7 @@ jstring SVNClient::getVersionInfo(const char *path, const char *trailUrl,
     ctx.cancel_baton = &sb;
 
     svn_error_t *err;
-    err = svn_client_status3(NULL, intPath.c_str(), &rev, analyze_status,
+    err = svn_client_status4(NULL, intPath.c_str(), &rev, analyze_status,
                              &sb, svn_depth_infinity, TRUE, FALSE, FALSE,
                              FALSE, NULL, &ctx, requestPool.pool());
     if (err && (err->apr_err == SVN_ERR_CANCELLED))

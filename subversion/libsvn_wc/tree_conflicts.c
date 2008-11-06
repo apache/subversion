@@ -294,17 +294,16 @@ read_one_tree_conflict(svn_wc_conflict_description_t **conflict,
 }
 
 svn_error_t *
-svn_wc_read_tree_conflicts_from_entry(apr_array_header_t *conflicts,
-                                      const svn_wc_entry_t *dir_entry,
-                                      const char *dir_path,
-                                      apr_pool_t *pool)
+svn_wc__read_tree_conflicts_from_entry(apr_array_header_t *conflicts,
+                                       const svn_wc_entry_t *dir_entry,
+                                       const char *dir_path,
+                                       apr_pool_t *pool)
 {
   const char *start, *end;
   svn_wc_conflict_description_t *conflict = NULL;
 
   if (dir_entry->tree_conflict_data == NULL)
     {
-      conflicts = NULL;
       return SVN_NO_ERROR;
     }
 
@@ -326,7 +325,7 @@ svn_wc_read_tree_conflicts_from_entry(apr_array_header_t *conflicts,
     /* Not all conflicts have been read from the entry, but no error
      * has been thrown yet. We should not even be here! */
     return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-        _("Invalid tree conflict data in entries file, "
+        _("Invalid tree conflict data in 'entries' file, "
           "but no idea what went wrong"));
 
   return SVN_NO_ERROR;
@@ -352,9 +351,7 @@ svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
 
       path = svn_path_basename(conflict->path, pool);
       len = strlen(path);
-      if (len == 0)
-        return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-                        _("Empty victim path in tree conflict description"));
+      SVN_ERR_ASSERT(len > 0);
 
       /* Escape separator chars while writing victim path. */
       for (j = 0; j < len; j++)
@@ -379,8 +376,7 @@ svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
             svn_stringbuf_appendcstr(buf, SVN_WC__NODE_FILE);
             break;
           default:
-            return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-                _("Bad node_kind in tree conflict description"));
+            SVN_ERR_MALFUNCTION();
         }
 
       svn_stringbuf_appendbytes(buf, &field_separator, 1);
@@ -397,8 +393,7 @@ svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
             svn_stringbuf_appendcstr(buf, SVN_WC__OPERATION_MERGE);
             break;
           default:
-            return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-                _("Bad operation in tree conflict description"));
+            SVN_ERR_MALFUNCTION();
         }
 
       svn_stringbuf_appendbytes(buf, &field_separator, 1);
@@ -415,8 +410,7 @@ svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
             svn_stringbuf_appendcstr(buf, SVN_WC__CONFLICT_ACTION_ADDED);
             break;
           default:
-            return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-                _("Bad action in tree conflict description"));
+            SVN_ERR_MALFUNCTION();
         }
 
       svn_stringbuf_appendbytes(buf, &field_separator, 1);
@@ -439,8 +433,7 @@ svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
             svn_stringbuf_appendcstr(buf, SVN_WC__CONFLICT_REASON_OBSTRUCTED);
             break;
           default:
-            return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-                _("Bad reason in tree conflict description"));
+            SVN_ERR_MALFUNCTION();
         }
 
       if (i < (conflicts->nelts - 1))
@@ -458,7 +451,7 @@ svn_wc__write_tree_conflicts_to_entry(apr_array_header_t *conflicts,
  */
 svn_boolean_t
 svn_wc__tree_conflict_exists(apr_array_header_t *conflicts,
-                             const char *victim_path,
+                             const char *victim_basename,
                              apr_pool_t *pool)
 {
   const svn_wc_conflict_description_t *conflict;
@@ -466,9 +459,9 @@ svn_wc__tree_conflict_exists(apr_array_header_t *conflicts,
 
   for (i = 0; i < conflicts->nelts; i++)
     {
-      conflict = APR_ARRAY_IDX(conflicts, i, 
+      conflict = APR_ARRAY_IDX(conflicts, i,
                                svn_wc_conflict_description_t *);
-      if (strcmp(svn_path_basename(conflict->path, pool), victim_path) == 0)
+      if (strcmp(svn_path_basename(conflict->path, pool), victim_basename) == 0)
         return TRUE;
     }
 
@@ -476,16 +469,14 @@ svn_wc__tree_conflict_exists(apr_array_header_t *conflicts,
 }
 
 svn_error_t *
-svn_wc_add_tree_conflict_data(const svn_wc_conflict_description_t *conflict,
-                              svn_wc_adm_access_t *adm_access,
-                              apr_pool_t *pool)
+svn_wc__del_tree_conflict(const char *victim_path,
+                          svn_wc_adm_access_t *adm_access,
+                          apr_pool_t *pool)
 {
-  svn_stringbuf_t *log_accum = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *log_accum = NULL;
 
-  SVN_ERR(svn_wc__loggy_add_tree_conflict_data(log_accum,
-                                               conflict,
-                                               adm_access,
-                                               pool));
+  SVN_ERR(svn_wc__loggy_del_tree_conflict(&log_accum, victim_path, adm_access,
+                                          pool));
 
   SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
   SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
@@ -494,11 +485,103 @@ svn_wc_add_tree_conflict_data(const svn_wc_conflict_description_t *conflict,
 }
 
 svn_error_t *
-svn_wc__loggy_add_tree_conflict_data(
-  svn_stringbuf_t *log_accum,
-  const svn_wc_conflict_description_t *conflict,
-  svn_wc_adm_access_t *adm_access,
-  apr_pool_t *pool)
+svn_wc_add_tree_conflict(const svn_wc_conflict_description_t *conflict,
+                         svn_wc_adm_access_t *adm_access,
+                         apr_pool_t *pool)
+{
+  svn_stringbuf_t *log_accum = NULL;
+
+  SVN_ERR(svn_wc__loggy_add_tree_conflict(&log_accum, conflict, adm_access,
+                                          pool));
+
+  SVN_ERR(svn_wc__write_log(adm_access, 0, log_accum, pool));
+  SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Remove, from the array ARRAY, the element at index REMOVE_INDEX, possibly
+ * changing the order of the remaining elements.
+ */
+static void
+array_remove_unordered(apr_array_header_t *array, int remove_index)
+{
+  /* Get the address of the last element, and mark it as removed. Rely on
+   * that element's memory being preserved intact for the moment. (This
+   * guarantee is implied as it is how 'pop' returns the value.) */
+  void *last_element = apr_array_pop(array);
+
+  /* If the element to remove is not the last, overwrite it with the old
+   * last element. (We have just decremented the array size, so check that
+   * the index is still inside the array.) */
+  if (remove_index < array->nelts)
+    memcpy(array->elts + remove_index * array->elt_size, last_element,
+           array->elt_size);
+
+  /* The memory at LAST_ELEMENT need no longer be preserved. */
+}
+
+svn_error_t *
+svn_wc__loggy_del_tree_conflict(svn_stringbuf_t **log_accum,
+                                const char *victim_path,
+                                svn_wc_adm_access_t *adm_access,
+                                apr_pool_t *pool)
+{
+  const char *dir_path;
+  const svn_wc_entry_t *entry;
+  apr_array_header_t *conflicts;
+  svn_wc_entry_t tmp_entry;
+  const char *victim_basename = svn_path_basename(victim_path, pool);
+
+  /* Make sure the node is a directory.
+   * Otherwise we should not have been called. */
+  dir_path = svn_wc_adm_access_path(adm_access);
+  SVN_ERR(svn_wc_entry(&entry, dir_path, adm_access, TRUE, pool));
+  SVN_ERR_ASSERT(entry->kind == svn_node_dir);
+
+  conflicts = apr_array_make(pool, 0,
+                             sizeof(svn_wc_conflict_description_t *));
+  SVN_ERR(svn_wc__read_tree_conflicts_from_entry(conflicts, entry, dir_path,
+                                                 pool));
+
+  /* If CONFLICTS has a tree conflict with the same victim path as the
+   * new conflict, then remove it. */
+  if (svn_wc__tree_conflict_exists(conflicts, victim_basename, pool))
+    {
+      int i;
+
+      /* Delete the element that matches VICTIM_BASENAME */
+      for (i = 0; i < conflicts->nelts; i++)
+        {
+          const svn_wc_conflict_description_t *conflict
+            = APR_ARRAY_IDX(conflicts, i, svn_wc_conflict_description_t *);
+
+          if (strcmp(svn_path_basename(conflict->path, pool), victim_basename)
+              == 0)
+            {
+              array_remove_unordered(conflicts, i);
+
+              break;
+            }
+        }
+
+      /* Rewrite the entry. */
+      SVN_ERR(svn_wc__write_tree_conflicts_to_entry(conflicts, &tmp_entry,
+                                                    pool));
+      SVN_ERR(svn_wc__loggy_entry_modify(log_accum, adm_access, dir_path,
+                                         &tmp_entry,
+                                         SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA,
+                                         pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__loggy_add_tree_conflict(svn_stringbuf_t **log_accum,
+                                const svn_wc_conflict_description_t *conflict,
+                                svn_wc_adm_access_t *adm_access,
+                                apr_pool_t *pool)
 {
   const char *dir_path;
   const svn_wc_entry_t *entry;
@@ -513,8 +596,8 @@ svn_wc__loggy_add_tree_conflict_data(
 
   conflicts = apr_array_make(pool, 0,
                              sizeof(svn_wc_conflict_description_t *));
-  SVN_ERR(svn_wc_read_tree_conflicts_from_entry(conflicts, entry, dir_path,
-                                                pool));
+  SVN_ERR(svn_wc__read_tree_conflicts_from_entry(conflicts, entry, dir_path,
+                                                 pool));
 
   /* If CONFLICTS has a tree conflict with the same victim path as the
    * new conflict, then the working copy has been corrupted. */
@@ -527,9 +610,7 @@ svn_wc__loggy_add_tree_conflict_data(
   APR_ARRAY_PUSH(conflicts, const svn_wc_conflict_description_t *) = conflict;
 
   SVN_ERR(svn_wc__write_tree_conflicts_to_entry(conflicts, &tmp_entry, pool));
-  SVN_ERR(svn_wc__loggy_entry_modify(&log_accum,
-                                     adm_access,
-                                     dir_path,
+  SVN_ERR(svn_wc__loggy_entry_modify(log_accum, adm_access, dir_path,
                                      &tmp_entry,
                                      SVN_WC__ENTRY_MODIFY_TREE_CONFLICT_DATA,
                                      pool));
@@ -552,21 +633,23 @@ svn_wc_get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
   int i;
 
   /* Try to get the parent's admin access baton from the baton set. */
-  err = svn_wc_adm_retrieve(&parent_adm_access, adm_access, parent_path, pool);
+  err = svn_wc_adm_retrieve(&parent_adm_access, adm_access, parent_path,
+                            pool);
   if (err && (err->apr_err == SVN_ERR_WC_NOT_LOCKED))
     {
       svn_error_clear(err);
 
-      /* Try to access the parent dir independently. We can't add a parent's
-         access baton to the existing access baton set of its child, because
-         the lifetimes would be wrong according to doc string of
-         svn_wc_adm_open3(), so we get open it temporarily and close it after
-         use. */
+      /* Try to access the parent dir independently. We can't add
+         a parent's access baton to the existing access baton set
+         of its child, because the lifetimes would be wrong
+         according to doc string of svn_wc_adm_open3(), so we get
+         open it temporarily and close it after use. */
       err = svn_wc_adm_open3(&parent_adm_access, NULL, parent_path,
                              FALSE, 0, NULL, NULL, pool);
       parent_adm_access_is_temporary = TRUE;
 
-      /* If the parent isn't a WC dir, the child can't be tree-conflicted. */
+      /* If the parent isn't a WC dir, the child can't be
+         tree-conflicted. */
       if (err && (err->apr_err == SVN_ERR_WC_NOT_DIRECTORY))
         {
           svn_error_clear(err);
@@ -579,8 +662,8 @@ svn_wc_get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
   conflicts = apr_array_make(pool, 0,
                              sizeof(svn_wc_conflict_description_t *));
   SVN_ERR(svn_wc_entry(&entry, parent_path, parent_adm_access, TRUE, pool));
-  SVN_ERR(svn_wc_read_tree_conflicts_from_entry(conflicts, entry, parent_path,
-                                                pool));
+  SVN_ERR(svn_wc__read_tree_conflicts_from_entry(conflicts, entry, parent_path,
+                                                 pool));
 
   *tree_conflict = NULL;
   for (i = 0; i < conflicts->nelts; i++)
@@ -599,7 +682,7 @@ svn_wc_get_tree_conflict(svn_wc_conflict_description_t **tree_conflict,
 
   /* If we opened a temporary admin access baton, close it. */
   if (parent_adm_access_is_temporary)
-    SVN_ERR(svn_wc_adm_close(parent_adm_access));
+    SVN_ERR(svn_wc_adm_close2(parent_adm_access, pool));
 
   return SVN_NO_ERROR;
 }

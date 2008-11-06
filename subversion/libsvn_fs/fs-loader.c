@@ -618,7 +618,7 @@ svn_error_t *
 svn_fs_begin_txn(svn_fs_txn_t **txn_p, svn_fs_t *fs, svn_revnum_t rev,
                  apr_pool_t *pool)
 {
-  return fs->vtable->begin_txn(txn_p, fs, rev, 0, pool);
+  return svn_fs_begin_txn2(txn_p, fs, rev, 0, pool);
 }
 
 svn_error_t *
@@ -941,7 +941,7 @@ svn_fs_file_checksum(svn_checksum_t **checksum,
                      svn_boolean_t force,
                      apr_pool_t *pool)
 {
-  SVN_ERR(root->vtable->file_checksum(checksum, root, path, pool));
+  SVN_ERR(root->vtable->file_checksum(checksum, kind, root, path, pool));
 
   if (force && (*checksum == NULL || (*checksum)->kind != kind))
     {
@@ -967,7 +967,7 @@ svn_fs_file_md5_checksum(unsigned char digest[],
                          apr_pool_t *pool)
 {
   svn_checksum_t *md5sum;
-  
+
   SVN_ERR(svn_fs_file_checksum(&md5sum, svn_checksum_md5, root, path, TRUE,
                                pool));
   memcpy(digest, md5sum->digest, APR_MD5_DIGESTSIZE);

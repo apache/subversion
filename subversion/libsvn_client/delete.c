@@ -142,8 +142,8 @@ delete_urls(svn_commit_info_t **commit_info_p,
       for (i = 0; i < targets->nelts; i++)
         {
           const char *path = APR_ARRAY_IDX(targets, i, const char *);
-          SVN_ERR(svn_client_commit_item_create
-                  ((const svn_client_commit_item3_t **) &item, pool));
+
+          item = svn_client_commit_item_create2(pool);
           item->url = svn_path_join(common, path, pool);
           item->state_flags = SVN_CLIENT_COMMIT_ITEM_DELETE;
           APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
@@ -279,37 +279,10 @@ svn_client_delete3(svn_commit_info_t **commit_info_p,
                                         ctx->notify_func2,
                                         ctx->notify_baton2,
                                         ctx, subpool));
-          SVN_ERR(svn_wc_adm_close(adm_access));
+          SVN_ERR(svn_wc_adm_close2(adm_access, subpool));
         }
       svn_pool_destroy(subpool);
     }
 
   return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_client_delete2(svn_commit_info_t **commit_info_p,
-                   const apr_array_header_t *paths,
-                   svn_boolean_t force,
-                   svn_client_ctx_t *ctx,
-                   apr_pool_t *pool)
-{
-  return svn_client_delete3(commit_info_p, paths, force, FALSE, NULL,
-                            ctx, pool);
-}
-
-svn_error_t *
-svn_client_delete(svn_client_commit_info_t **commit_info_p,
-                  const apr_array_header_t *paths,
-                  svn_boolean_t force,
-                  svn_client_ctx_t *ctx,
-                  apr_pool_t *pool)
-{
-  svn_commit_info_t *commit_info = NULL;
-  svn_error_t *err = NULL;
-
-  err = svn_client_delete2(&commit_info, paths, force, ctx, pool);
-  /* These structs have the same layout for the common fields. */
-  *commit_info_p = (svn_client_commit_info_t *) commit_info;
-  return err;
 }

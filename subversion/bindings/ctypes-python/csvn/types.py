@@ -32,26 +32,21 @@ class Hash(DictMixin):
         self.type = type
         self.pool = Pool()
         self.wrapper = wrapper
-        if isinstance(items, POINTER(apr_hash_t)):
-            if dup:
-                self.hash = apr_hash_copy(self.pool, items)
-            else:
-                self.hash = items
+        self.dup = dup
+        if dup:
+            self.hash = apr_hash_make(self.pool)
+            if items is None or isinstance(items, POINTER(apr_hash_t)):
+                items = Hash(type, items)
+            self.update(items)
+        elif isinstance(items, POINTER(apr_hash_t)):
+            self.hash = items
         elif items is None:
             self.hash = POINTER(apr_hash_t)()
         elif isinstance(items, Hash):
-            if dup:
-                self.hash = apr_hash_copy(self.pool, items)
-            else:
-                self.hash = items.hash
+            self.hash = items.hash
         else:
             self.hash = apr_hash_make(self.pool)
             self.update(items)
-
-        if dup:
-            # Copy items into our pool
-            for key, value in self.iteritems():
-                self[key] = dup(value, self.pool)
 
     def __getitem__(self, key):
         value = apr_hash_get(self, cast(key, c_void_p), len(key))
@@ -65,7 +60,9 @@ class Hash(DictMixin):
     def __setitem__(self, key, value):
         if self.wrapper:
             value = self.wrapper.to_param(value, self.pool)
-        apr_hash_set(self, key, len(key), value)
+        if self.dup:
+            value = self.dup(value, self.pool)
+        apr_hash_set(self, apr_pstrdup(self.pool, key), len(key), value)
 
     def __delitem__(self, key):
         apr_hash_set(self, key, len(key), NULL)

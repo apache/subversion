@@ -71,8 +71,8 @@ svn_xml_is_xml_safe(const char *data,
 /** Create or append in @a *outstr an xml-escaped version of @a string,
  * suitable for output as character data.
  *
- * If @a *outstr is @c NULL, store a new stringbuf, else append to the
- * existing stringbuf there.
+ * If @a *outstr is @c NULL, set @a *outstr to a new stringbuf allocated
+ * in @a pool, else append to the existing stringbuf there.
  */
 void
 svn_xml_escape_cdata_stringbuf(svn_stringbuf_t **outstr,
@@ -99,8 +99,8 @@ svn_xml_escape_cdata_cstring(svn_stringbuf_t **outstr,
 /** Create or append in @a *outstr an xml-escaped version of @a string,
  * suitable for output as an attribute value.
  *
- * If @a *outstr is @c NULL, store a new stringbuf, else append to the
- * existing stringbuf there.
+ * If @a *outstr is @c NULL, set @a *outstr to a new stringbuf allocated
+ * in @a pool, else append to the existing stringbuf there.
  */
 void
 svn_xml_escape_attr_stringbuf(svn_stringbuf_t **outstr,
@@ -291,8 +291,8 @@ svn_xml_make_header(svn_stringbuf_t **str,
 
 /** Store a new xml tag @a tagname in @a *str.
  *
- * If @a str is @c NULL, allocate @a *str in @a pool; else append the new
- * tag to @a *str, allocating in @a str's pool
+ * If @a *str is @c NULL, set @a *str to a new stringbuf allocated
+ * in @a pool, else append to the existing stringbuf there.
  *
  * Take the tag's attributes from varargs, a NULL-terminated list of
  * alternating <tt>char *</tt> key and <tt>char *</tt> val.  Do xml-escaping
@@ -345,7 +345,11 @@ svn_xml_make_open_tag_hash(svn_stringbuf_t **str,
                            apr_hash_t *attributes);
 
 
-/** Makes a close tag. */
+/** Store an xml close tag @a tagname in @a str.
+ *
+ * If @a *str is @c NULL, set @a *str to a new stringbuf allocated
+ * in @a pool, else append to the existing stringbuf there.
+ */
 void
 svn_xml_make_close_tag(svn_stringbuf_t **str,
                        apr_pool_t *pool,

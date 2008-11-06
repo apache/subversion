@@ -134,10 +134,6 @@ typedef struct svn_auth_provider_t
    * reasons, return FALSE.  If the provider never saves data, then
    * this function pointer should simply be NULL. @a realmstring comes
    * from the svn_auth_first_credentials() call.
-   *
-   * All allocations should be done in @a pool, which can be assumed
-   * to survive across RA sessions; auth providers that store passwords
-   * in plaintext rely on this.
    */
   svn_error_t * (*save_credentials)(svn_boolean_t *saved,
                                     void *credentials,
@@ -480,12 +476,6 @@ typedef svn_error_t *(*svn_auth_ssl_client_cert_pw_prompt_func_t)
  * @a baton is an implementation-specific closure.
  * All allocations should be done in @a pool.
  *
- * This callback is called only once per authentication realm,
- * not once per RA session. This means that clients implementing
- * this callback must make sure that the pool passed to any
- * implementation of save_credentials (part of svn_auth_provider_t)
- * survives across RA sessions.
- *
  * If this callback is NULL it is not called. This matches the
  * deprecated behaviour of storing unencrypted passwords by default,
  * and is only done this way for backward compatibility reasons.
@@ -515,12 +505,6 @@ typedef svn_error_t *(*svn_auth_plaintext_prompt_func_t)
  * @a baton is an implementation-specific closure.
  * All allocations should be done in @a pool.
  *
- * This callback is called only once per authentication realm,
- * not once per RA session. This means that clients implementing
- * this callback must make sure that the pool passed to any
- * implementation of save_credentials (part of svn_auth_provider_t)
- * survives across RA sessions.
- *
  * If this callback is NULL it is not called.
  * Client developers are highly encouraged to provide this callback
  * to ensure their users are made aware of the fact that their passphrase
@@ -528,7 +512,7 @@ typedef svn_error_t *(*svn_auth_plaintext_prompt_func_t)
  *
  * Clients can however set the callback to NULL and set
  * SVN_AUTH_PARAM_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT to SVN_CONFIG_FALSE or
- * SVN_CONFIG_TRUE to enforce a certain behaviour. 
+ * SVN_CONFIG_TRUE to enforce a certain behaviour.
  *
  * @since New in 1.6
  */
@@ -642,7 +626,8 @@ svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
   "ssl:cert-info"
 
 /** Some providers need access to the @c svn_config_t configuration. */
-#define SVN_AUTH_PARAM_CONFIG SVN_AUTH_PARAM_PREFIX "config"
+#define SVN_AUTH_PARAM_CONFIG SVN_AUTH_PARAM_PREFIX "config-server"
+#define SVN_AUTH_PARAM_CONFIG_CLIENT SVN_AUTH_PARAM_PREFIX "config-client"
 
 /** The current server group. */
 #define SVN_AUTH_PARAM_SERVER_GROUP SVN_AUTH_PARAM_PREFIX "server-group"
@@ -690,9 +675,7 @@ svn_auth_next_credentials(void **credentials,
  *
  * Ask @a state to store the most recently returned credentials,
  * presumably because they successfully authenticated.
- * All allocations should be done in @a pool, which is
- * assumed to survive across RA sessions; auth providers that store
- * passwords in plaintext rely on this.
+ * All allocations should be done in @a pool.
  *
  * If no credentials were ever returned, do nothing.
  */
@@ -785,7 +768,7 @@ svn_auth_get_simple_provider(svn_auth_provider_object_t **provider,
                              apr_pool_t *pool);
 
 
-#if (defined(WIN32) && !defined(__MINGW32__)) || defined(DOXYGEN) || defined(CTYPESGEN)
+#if (defined(WIN32) && !defined(__MINGW32__)) || defined(DOXYGEN) || defined(CTYPESGEN) || defined(SWIG)
 /**
  * Create and return @a *provider, an authentication provider of type @c
  * svn_auth_cred_simple_t that gets/sets information from the user's
@@ -808,9 +791,9 @@ svn_auth_get_simple_provider(svn_auth_provider_object_t **provider,
 void
 svn_auth_get_windows_simple_provider(svn_auth_provider_object_t **provider,
                                      apr_pool_t *pool);
-#endif /* WIN32 && !__MINGW32__ || DOXYGEN || CTYPESGEN */
+#endif /* WIN32 && !__MINGW32__ || DOXYGEN || CTYPESGEN || SWIG */
 
-#if defined(DARWIN) || defined(DOXYGEN) || defined(CTYPESGEN)
+#if defined(DARWIN) || defined(DOXYGEN) || defined(CTYPESGEN) || defined(SWIG)
 /**
  * Create and return @a *provider, an authentication provider of type @c
  * svn_auth_cred_simple_t that gets/sets information from the user's
@@ -843,9 +826,9 @@ void
 svn_auth_get_keychain_ssl_client_cert_pw_provider
   (svn_auth_provider_object_t **provider,
    apr_pool_t *pool);
-#endif /* DARWIN || DOXYGEN || CTYPESGEN */
+#endif /* DARWIN || DOXYGEN || CTYPESGEN || SWIG */
 
-#if (!defined(DARWIN) && !defined(WIN32)) || defined(DOXYGEN)
+#if (!defined(DARWIN) && !defined(WIN32)) || defined(DOXYGEN) || defined(CTYPESGEN) || defined(SWIG)
 /**
  * Get libsvn_auth_gnome_keyring version information.
  *
@@ -937,7 +920,7 @@ void
 svn_auth_get_kwallet_ssl_client_cert_pw_provider
   (svn_auth_provider_object_t **provider,
    apr_pool_t *pool);
-#endif /* (!DARWIN && !WIN32) || DOXYGEN */
+#endif /* (!DARWIN && !WIN32) || DOXYGEN || CTYPESGEN || SWIG */
 
 
 /** Create and return @a *provider, an authentication provider of type @c
@@ -971,7 +954,7 @@ svn_auth_get_ssl_server_trust_file_provider
    apr_pool_t *pool);
 
 
-#if (defined(WIN32) && !defined(__MINGW32__)) || defined(DOXYGEN) || defined(CTYPESGEN)
+#if (defined(WIN32) && !defined(__MINGW32__)) || defined(DOXYGEN) || defined(CTYPESGEN) || defined(SWIG)
 /**
  * Create and return @a *provider, an authentication provider of type @c
  * svn_auth_cred_ssl_server_trust_t, allocated in @a pool.
@@ -988,7 +971,7 @@ void
 svn_auth_get_windows_ssl_server_trust_provider
   (svn_auth_provider_object_t **provider,
    apr_pool_t *pool);
-#endif /* WIN32 && !__MINGW32__ || DOXYGEN || CTYPESGEN */
+#endif /* WIN32 && !__MINGW32__ || DOXYGEN || CTYPESGEN || SWIG */
 
 /** Create and return @a *provider, an authentication provider of type @c
  * svn_auth_cred_ssl_client_cert_t, allocated in @a pool.

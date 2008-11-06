@@ -718,6 +718,53 @@ svn_ra_serf__add_tag_buckets(serf_bucket_t *agg_bucket,
                              serf_bucket_alloc_t *bkt_alloc);
 
 /*
+ * Add the appropriate serf buckets to AGG_BUCKET with standard XML header:
+ *  <?xml version="1.0" encoding="utf-8"?>
+ *
+ * The bucket will be allocated from BKT_ALLOC.
+ */
+void
+svn_ra_serf__add_xml_header_buckets(serf_bucket_t *agg_bucket,
+                                    serf_bucket_alloc_t *bkt_alloc);
+
+/*
+ * Add the appropriate serf buckets to AGG_BUCKET representing xml tag open
+ * with name TAG.
+ *
+ * Take the tag's attributes from varargs, a NULL-terminated list of
+ * alternating <tt>char *</tt> key and <tt>char *</tt> val.  Do xml-escaping
+ * on each val. Attribute will be ignored if it's value is NULL.
+ *
+ * The bucket will be allocated from BKT_ALLOC.
+ */
+void
+svn_ra_serf__add_open_tag_buckets(serf_bucket_t *agg_bucket,
+                                  serf_bucket_alloc_t *bkt_alloc,
+                                  const char *tag,
+                                  ...);
+
+/*
+ * Add the appropriate serf buckets to AGG_BUCKET representing xml tag close
+ * with name TAG.
+ *
+ * The bucket will be allocated from BKT_ALLOC.
+ */
+void
+svn_ra_serf__add_close_tag_buckets(serf_bucket_t *agg_bucket,
+                                   serf_bucket_alloc_t *bkt_alloc,
+                                   const char *tag);
+
+/*
+ * Add the appropriate serf buckets to AGG_BUCKET with xml-escaped
+ * version of DATA.
+ *
+ * The bucket will be allocated from BKT_ALLOC.
+ */
+void
+svn_ra_serf__add_cdata_len_buckets(serf_bucket_t *agg_bucket,
+                                   serf_bucket_alloc_t *bkt_alloc,
+                                   const char *data, apr_size_t len);
+/*
  * Look up the @a attrs array for namespace definitions and add each one
  * to the @a ns_list of namespaces.
  *
@@ -1194,6 +1241,15 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
                             svn_boolean_t *has,
                             const char *capability,
                             apr_pool_t *pool);
+
+/* Implements the get_deleted_rev RA layer function. */
+svn_error_t *
+svn_ra_serf__get_deleted_rev(svn_ra_session_t *session,
+                             const char *path,
+                             svn_revnum_t peg_revision,
+                             svn_revnum_t end_revision,
+                             svn_revnum_t *revision_deleted,
+                             apr_pool_t *pool);
 
 /*** Authentication handler declarations ***/
 

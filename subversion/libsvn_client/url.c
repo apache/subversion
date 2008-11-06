@@ -96,7 +96,7 @@ svn_client__derive_location(const char **url,
                                          pool));
           SVN_ERR(svn_wc__entry_versioned(&entry, path_or_url, adm_access,
                                           FALSE, pool));
-          SVN_ERR(svn_wc_adm_close(adm_access));
+          SVN_ERR(svn_wc_adm_close2(adm_access, pool));
         }
 
       SVN_ERR(svn_client__entry_location(url, peg_revnum, path_or_url,

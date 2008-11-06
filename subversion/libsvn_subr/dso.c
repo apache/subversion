@@ -42,7 +42,7 @@ static int not_there_sentinel;
 #define NOT_THERE ((void *) &not_there_sentinel)
 
 void
-svn_dso_initialize()
+svn_dso_initialize(void)
 {
   svn_error_t *err = svn_dso_initialize2();
   if (err)
@@ -53,7 +53,7 @@ svn_dso_initialize()
 }
 
 svn_error_t *
-svn_dso_initialize2()
+svn_dso_initialize2(void)
 {
   apr_status_t status;
   if (dso_pool)
@@ -62,7 +62,7 @@ svn_dso_initialize2()
   dso_pool = svn_pool_create(NULL);
 
 #if APR_HAS_THREADS
-  status = apr_thread_mutex_create(&dso_mutex, 
+  status = apr_thread_mutex_create(&dso_mutex,
                                    APR_THREAD_MUTEX_DEFAULT, dso_pool);
   if (status)
     return svn_error_wrap_apr(status, _("Can't create DSO mutex"));

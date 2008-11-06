@@ -95,6 +95,12 @@ public class NotifyInformation extends EventObject
     private RevisionRange mergeRange;
 
     /**
+     * A common absolute path prefix that can be subtracted from .path.
+     * @since 1.6
+     */
+    private String pathPrefix;
+
+    /**
      * This constructor is to be used by the native code.
      *
      * @param path The path of the item, which is the source of the event.
@@ -111,11 +117,13 @@ public class NotifyInformation extends EventObject
      * @param revision The revision of the item.
      * @param changelistName The name of the changelist.
      * @param mergeRange The range of the merge just beginning to occur.
+     * @param pathPrefix A common path prefix.
      */
     NotifyInformation(String path, int action, int kind, String mimeType,
                       Lock lock, String errMsg, int contentState,
                       int propState, int lockState, long revision,
-                      String changelistName, RevisionRange mergeRange)
+                      String changelistName, RevisionRange mergeRange,
+                      String pathPrefix)
     {
         super(path);
         this.action = action;
@@ -129,6 +137,7 @@ public class NotifyInformation extends EventObject
         this.revision = revision;
         this.changelistName = changelistName;
         this.mergeRange = mergeRange;
+        this.pathPrefix = pathPrefix;
     }
 
     /**
@@ -227,5 +236,14 @@ public class NotifyInformation extends EventObject
     public RevisionRange getMergeRange()
     {
         return mergeRange;
+    }
+
+    /**
+     * @return The common absolute path prefix.
+     * @since 1.6
+     */
+    public String getPathPrefix()
+    {
+        return pathPrefix;
     }
 }

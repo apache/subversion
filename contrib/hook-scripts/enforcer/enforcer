@@ -412,15 +412,27 @@ try:
             continue
 
         if state is 31: # Expecting property name (follows bar)
-            assert line.startswith("Name: ")
+            for label in (
+                "Name",                        # svn versions < 1.5
+                "Added", "Modified", "Deleted" # svn versions >= 1.5
+            ):
+                if line.startswith(label + " :"):
+                    break
+            else:
+                raise AssertionError("Unexpected property name line: %r" % line)
+
             state = 300
             # Fall through to state 300
 
         if state is 300:
-            if line.startswith("Name: "):
-                current_property = line[6:]
-                current_verify_property_function = None
-                continue
+            for label in (
+                "Name",                        # svn versions < 1.5
+                "Added", "Modified", "Deleted" # svn versions >= 1.5
+            ):
+                if line.startswith(label + ": "):
+                    current_property = line[len(label)+2:]
+                    current_verify_property_function = None
+                    continue
 
             for prefix, verify in (
                 ("   - ", verify_property_line_removed),
