@@ -1460,6 +1460,116 @@ capabilities_as_list(apr_hash_t *capabilities, apr_pool_t *pool)
 }
 
 
+/* Given a non-NULL QUERY string of the form "key1=val1&key2=val2&...",  
+ * parse the keys and values into an apr table.  Allocate the table in
+ * POOL;  dup all keys and values into POOL as well.
+ *
+ * Note that repeating the same key will cause table overwrites
+ * (e.g. "r=3&r=5"), and that a lack of value ("p=") is legal, but
+ * equivalent to not specifying the key at all.
+ */
+static apr_table_t *
+querystring_to_table(const char *query, apr_pool_t *pool)
+{
+  apr_table_t *table = apr_table_make(pool, 2);
+  apr_array_header_t *array = svn_cstring_split(query, "&", TRUE, pool);
+  int i;
+  for (i = 0; i < array->nelts; i++)
+    {
+      char *keyval = APR_ARRAY_IDX(array, i, char *);
+      char *equals = strchr(keyval, '=');
+      if (equals != NULL)
+        {
+          *equals = '\0';
+          apr_table_set(table, keyval, equals + 1);
+        }
+    }
+  return table;
+}
+
+
+/* Helper for get_resource().
+ *
+ * Given a fully fleshed out COMB object which has already been parsed
+ * via parse_uri(), parse the querystring in QUERY.
+ *
+ * Specifically, look for optional 'p=PEGREV' and 'r=WORKINGREV'
+ * values in the querystring, and modify COMB so that prep_regular()
+ * opens the correct revision and path.
+ */
+static dav_error *
+parse_querystring(const char *query, dav_resource_combined *comb,
+                  apr_pool_t *pool)
+{
+  svn_error_t *serr;
+  svn_revnum_t working_rev, peg_rev;
+  apr_table_t *pairs = querystring_to_table(query, pool);
+  const char *prevstr = apr_table_get(pairs, "p");
+  const char *wrevstr;
+  
+  if (prevstr)
+    {
+      peg_rev = SVN_STR_TO_REV(prevstr);
+      if (!SVN_IS_VALID_REVNUM(peg_rev))
+        return dav_new_error(pool, HTTP_BAD_REQUEST, 0,
+                             "invalid peg rev in query string");
+    }
+  else
+    {
+      /* No peg-rev?  Default to HEAD, just like the cmdline client. */
+      serr = svn_fs_youngest_rev(&peg_rev, comb->priv.repos->fs, pool);
+      if (serr != NULL)
+        return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                    "Couldn't fetch youngest rev.", pool);
+    }
+
+  wrevstr = apr_table_get(pairs, "r");
+  if (wrevstr)
+    {
+      working_rev = SVN_STR_TO_REV(wrevstr);
+      if (!SVN_IS_VALID_REVNUM(working_rev))
+        return dav_new_error(pool, HTTP_BAD_REQUEST, 0,
+                             "invalid working rev in query string");
+    }
+  else
+    /* No working-rev?  Assume it's equal to the peg-rev, just
+       like the cmdline client does. */
+    working_rev = peg_rev;
+
+  if (working_rev == peg_rev)
+    comb->priv.root.rev = peg_rev;
+  else if (working_rev > peg_rev)
+    return dav_new_error(pool, HTTP_CONFLICT, 0,
+                         "working rev greater than peg rev.");
+  else /* working_rev < peg_rev */
+    {
+      const char *newpath;
+      apr_hash_t *locations;
+      apr_array_header_t *loc_revs = apr_array_make(pool, 1,
+                                                    sizeof(svn_revnum_t));
+      APR_ARRAY_PUSH(loc_revs, svn_revnum_t) = working_rev;
+      serr = svn_repos_trace_node_locations(comb->priv.repos->fs, &locations,
+                                            comb->priv.repos_path, peg_rev,
+                                            loc_revs, NULL, NULL, pool);
+      if (serr != NULL)
+        return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                    "Couldn't trace history.", pool);
+      newpath = apr_hash_get(locations, &working_rev, sizeof(svn_revnum_t));
+      if (newpath != NULL)
+        {
+          comb->priv.root.rev = working_rev;
+          comb->priv.repos_path = newpath;
+        }
+      else
+        return dav_new_error(pool, HTTP_NOT_FOUND, 0,
+                             "path doesn't exist in that revision.");
+    }
+
+  return NULL;
+}
+
+
+
 static dav_error *
 get_resource(request_rec *r,
              const char *root_path,
@@ -1809,6 +1919,14 @@ get_resource(request_rec *r,
   /* skip over the leading "/" in the relative URI */
   if (parse_uri(comb, relative + 1, label, use_checked_in))
     goto malformed_URI;
+
+  /* Check for a query string on a regular-type resource; this allows
+     us to discover and parse  a "universal" rev-path URI of the form
+     "path?[r=REV][&p=PEGREV]" */
+  if ((comb->res.type == DAV_RESOURCE_TYPE_REGULAR)
+      && (r->parsed_uri.query != NULL))
+    if ((err = parse_querystring(r->parsed_uri.query, comb, r->pool)) != NULL)
+      return err;
 
 #ifdef SVN_DEBUG
   if (comb->res.type == DAV_RESOURCE_TYPE_UNKNOWN)
