@@ -145,33 +145,38 @@
  * LOG_ACCUM a command to rewrite the entry field, and do not flush the log.
  * This function is meant to be used in the working copy library where
  * log accumulators are usually readily available.
+ *
+ * If *LOG_ACCUM is NULL then set *LOG_ACCUM to a new stringbug allocated in
+ * POOL, else append to the existing stringbuf there.
  */
 svn_error_t *
-svn_wc__loggy_add_tree_conflict_data(
-  svn_stringbuf_t *log_accum,
-  const svn_wc_conflict_description_t *conflict,
-  svn_wc_adm_access_t *adm_access,
-  apr_pool_t *pool);
+svn_wc__loggy_add_tree_conflict(svn_stringbuf_t **log_accum,
+                                const svn_wc_conflict_description_t *conflict,
+                                svn_wc_adm_access_t *adm_access,
+                                apr_pool_t *pool);
 
-/* Like svn_wc__del_tree_conflict_data(), but append to the log accumulator
+/* Like svn_wc__del_tree_conflict(), but append to the log accumulator
  * LOG_ACCUM a command to rewrite the entry field, and do not flush the log.
  * This function is meant to be used in the working copy library where
  * log accumulators are usually readily available.
+ *
+ * If *LOG_ACCUM is NULL then set *LOG_ACCUM to a new stringbug allocated in
+ * POOL, else append to the existing stringbuf there.
  */
 svn_error_t *
-svn_wc__loggy_del_tree_conflict_data(svn_stringbuf_t *log_accum,
-                                     const char *victim_path,
-                                     svn_wc_adm_access_t *adm_access,
-                                     apr_pool_t *pool);
+svn_wc__loggy_del_tree_conflict(svn_stringbuf_t **log_accum,
+                                const char *victim_path,
+                                svn_wc_adm_access_t *adm_access,
+                                apr_pool_t *pool);
 
 /* Remove any tree conflict on victim VICTIM_PATH from the directory entry
  * belonging to ADM_ACCESS. (If there is no such conflict recorded. do
  * nothing.)
  * Do all allocations in POOL. */
 svn_error_t *
-svn_wc__del_tree_conflict_data(const char *victim_path,
-                               svn_wc_adm_access_t *adm_access,
-                               apr_pool_t *pool);
+svn_wc__del_tree_conflict(const char *victim_path,
+                          svn_wc_adm_access_t *adm_access,
+                          apr_pool_t *pool);
 
 /**
  * Read tree conflict descriptions from @a dir_entry.

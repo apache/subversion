@@ -115,12 +115,11 @@ read_config(svn_memcache_t **memcache_p,
             svn_fs_t *fs,
             apr_pool_t *pool)
 {
-  svn_config_t *config;
+  fs_fs_data_t *ffd = fs->fsap_data;
 
-  SVN_ERR(svn_fs_fs__get_config(&config, fs, pool));
-  SVN_ERR(svn_cache__make_memcache_from_config(memcache_p, config,
+  SVN_ERR(svn_cache__make_memcache_from_config(memcache_p, ffd->config,
                                               fs->pool));
-  return svn_config_get_bool(config, fail_stop,
+  return svn_config_get_bool(ffd->config, fail_stop,
                              CONFIG_SECTION_CACHES, CONFIG_OPTION_FAIL_STOP,
                              FALSE);
 }

@@ -350,7 +350,7 @@ tree_conflict(merge_cmd_baton_t *merge_b,
     victim_path, adm_access, node_kind, svn_wc_operation_merge, merge_b->pool);
   conflict->action = action;
   conflict->reason = reason;
-  SVN_ERR(svn_wc_add_tree_conflict_data(conflict, adm_access, merge_b->pool));
+  SVN_ERR(svn_wc_add_tree_conflict(conflict, adm_access, merge_b->pool));
   return SVN_NO_ERROR;
 }
 
@@ -782,6 +782,11 @@ merge_props_changed(svn_wc_adm_access_t *adm_access,
   apr_pool_t *subpool = svn_pool_create(merge_b->pool);
   svn_error_t *err;
 
+  if (tree_conflicted)
+    *tree_conflicted = FALSE;
+
+  /* ### TODO check tree-conflicts! */
+
   SVN_ERR(svn_categorize_props(propchanges, NULL, NULL, &props, subpool));
 
   /* We only want to merge "regular" version properties:  by
@@ -843,10 +848,11 @@ merge_props_changed(svn_wc_adm_access_t *adm_access,
       if (err && (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND
                   || err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE))
         {
-          /* if the entry doesn't exist in the wc, just 'skip' over
-             this part of the tree-delta. */
+          /* If the entry doesn't exist in the wc, this is a tree-conflict. */
           if (state)
             *state = svn_wc_notify_state_missing;
+          if (tree_conflicted)
+            *tree_conflicted = TRUE;
           svn_error_clear(err);
           svn_pool_destroy(subpool);
           return SVN_NO_ERROR;
@@ -1010,8 +1016,22 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
   /* Do property merge before text merge so that keyword expansion takes
      into account the new property values. */
   if (prop_changes->nelts > 0)
-    SVN_ERR(merge_props_changed(adm_access, prop_state, tree_conflicted,
-                                mine, prop_changes, original_props, baton));
+    {
+      svn_boolean_t tree_conflicted2;
+
+      SVN_ERR(merge_props_changed(adm_access, prop_state, &tree_conflicted2,
+                                  mine, prop_changes, original_props, baton));
+      
+      /* If the prop change caused a tree-conflict, just bail. */
+      if (tree_conflicted2)
+        {
+          if (tree_conflicted != NULL)
+            *tree_conflicted = TRUE;
+
+          svn_pool_destroy(subpool);
+          return SVN_NO_ERROR;
+        }
+    }
   else
     if (prop_state)
       *prop_state = svn_wc_notify_state_unchanged;
@@ -1416,6 +1436,9 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
   apr_pool_t *subpool = svn_pool_create(merge_b->pool);
   svn_node_kind_t kind;
 
+  if (*tree_conflicted)
+    tree_conflicted = FALSE;
+
   /* Easy out:  if we have no adm_access for the parent directory,
      then this portion of the tree-delta "patch" must be inapplicable.
      Send a 'missing' state back;  the repos-diff editor should then
@@ -1523,6 +1546,9 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
   const char *copyfrom_url = NULL, *child;
   svn_revnum_t copyfrom_rev = SVN_INVALID_REVNUM;
 
+  if (tree_conflicted)
+    *tree_conflicted = FALSE;
+
   /* Easy out:  if we have no adm_access for the parent directory,
      then this portion of the tree-delta "patch" must be inapplicable.
      Send a 'missing' state back;  the repos-diff editor should then
@@ -1544,9 +1570,6 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
       svn_pool_destroy(subpool);
       return SVN_NO_ERROR;
     }
-
-  if (tree_conflicted)
-    *tree_conflicted = FALSE;
 
   child = svn_path_is_child(merge_b->target, path, subpool);
   SVN_ERR_ASSERT(child != NULL);
@@ -1689,6 +1712,9 @@ merge_dir_deleted(svn_wc_adm_access_t *adm_access,
   const char *parent_path;
   svn_error_t *err;
 
+  if (tree_conflicted)
+    *tree_conflicted = FALSE;
+
   /* Easy out:  if we have no adm_access for the parent directory,
      then this portion of the tree-delta "patch" must be inapplicable.
      Send a 'missing' state back;  the repos-diff editor should then
@@ -1704,9 +1730,6 @@ merge_dir_deleted(svn_wc_adm_access_t *adm_access,
       svn_pool_destroy(subpool);
       return SVN_NO_ERROR;
     }
-
-  if (tree_conflicted)
-    *tree_conflicted = TRUE;
 
   /* Find the version-control state of this path */
   SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, subpool));
