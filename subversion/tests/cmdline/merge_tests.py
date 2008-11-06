@@ -13416,6 +13416,12 @@ def tree_conflicts_on_merge_local_ci_4_1(sbox):
     'DD'                : Item(status='  ', wc_rev='3'),
     'DDF'               : Item(status='  ', wc_rev='3'),
     'DDD'               : Item(status='  ', wc_rev='3'),
+    'D/D1'              : Item(status='! ', treeconflict='C'),
+    'F/alpha'           : Item(status='! ', treeconflict='C'),
+    'DD/D1'             : Item(status='! ', treeconflict='C'),
+    'DF/D1'             : Item(status='! ', treeconflict='C'),
+    'DDD/D1'            : Item(status='! ', treeconflict='C'),
+    'DDF/D1'            : Item(status='! ', treeconflict='C'),
     })
 
   expected_skip = svntest.wc.State('', {
@@ -13429,19 +13435,6 @@ def tree_conflicts_on_merge_local_ci_4_1(sbox):
                         expected_disk,
                         expected_status,
                         expected_skip) ], True)
-
-  # Check for nonexistent tree conflict victims.
-  expected_status.add({
-    'D/D1'              : Item(status='! ', treeconflict='C'),
-    'F/alpha'           : Item(status='! ', treeconflict='C'),
-    'DD/D1'             : Item(status='! ', treeconflict='C'),
-    'DF/D1'             : Item(status='! ', treeconflict='C'),
-    'DDD/D1'            : Item(status='! ', treeconflict='C'),
-    'DDF/D1'            : Item(status='! ', treeconflict='C'),
-    })
-  svntest.actions.run_and_verify_unquiet_status(
-    os.path.join(sbox.wc_dir, "local_tree_del_incoming_leaf_edit", "local"),
-    expected_status)
 
 
 def tree_conflicts_on_merge_local_ci_4_2(sbox):
@@ -13468,6 +13461,12 @@ def tree_conflicts_on_merge_local_ci_4_2(sbox):
     'DD'                : Item(status='  ', wc_rev='3'),
     'DDF'               : Item(status='  ', wc_rev='3'),
     'DDD'               : Item(status='  ', wc_rev='3'),
+    'F/alpha'           : Item(status='! ', treeconflict='C'),
+    'D/D1'              : Item(status='! ', treeconflict='C'),
+    'DF/D1'             : Item(status='! ', treeconflict='C'),
+    'DD/D1'             : Item(status='! ', treeconflict='C'),
+    'DDF/D1'            : Item(status='! ', treeconflict='C'),
+    'DDD/D1'            : Item(status='! ', treeconflict='C'),
     })
 
   expected_skip = svntest.wc.State('', {
@@ -13589,6 +13588,8 @@ def tree_conflicts_on_merge_local_ci_5_2(sbox):
     'DDF'               : Item(status='  ', wc_rev='3'),
     'DDF/D1'            : Item(status='D ', wc_rev='3'), # tree conflict?
     'DDF/D1/D2'         : Item(status='D ', wc_rev='3'),
+    'D/D1'              : Item(status='! ', treeconflict='C'),
+    'F/alpha'           : Item(status='! ', treeconflict='C'),
     })
 
   expected_skip = svntest.wc.State('', {
@@ -13602,16 +13603,6 @@ def tree_conflicts_on_merge_local_ci_5_2(sbox):
                         expected_disk,
                         expected_status,
                         expected_skip) ], True)
-
-  # Check for nonexistent tree conflict victims.  When we skip victims,
-  # this check will not be necessary.
-  expected_status.add({
-    'D/D1'              : Item(status='! ', treeconflict='C'),
-    'F/alpha'           : Item(status='! ', treeconflict='C'),
-    })
-  svntest.actions.run_and_verify_unquiet_status(
-    os.path.join(sbox.wc_dir, "local_leaf_del_incoming_tree_del", "local"),
-    expected_status)
 
 
 def tree_conflicts_on_merge_local_ci_6(sbox):
@@ -13639,6 +13630,12 @@ def tree_conflicts_on_merge_local_ci_6(sbox):
     'DF'                : Item(status='  ', wc_rev='3'),
     'DDD'               : Item(status='  ', wc_rev='3'),
     'DDF'               : Item(status='  ', wc_rev='3'),
+    'D/D1'              : Item(status='! ', treeconflict='C'),
+    'F/alpha'           : Item(status='! ', treeconflict='C'),
+    'DD/D1'             : Item(status='! ', treeconflict='C'),
+    'DF/D1'             : Item(status='! ', treeconflict='C'),
+    'DDD/D1'            : Item(status='! ', treeconflict='C'),
+    'DDF/D1'            : Item(status='! ', treeconflict='C'),
     })
 
   expected_skip = svntest.wc.State('', {
@@ -13652,19 +13649,6 @@ def tree_conflicts_on_merge_local_ci_6(sbox):
                         expected_disk,
                         expected_status,
                         expected_skip) ], True)
-
-  # Check for nonexistent tree conflict victims.
-  expected_status.add({
-    'D/D1'              : Item(status='! ', treeconflict='C'),
-    'F/alpha'           : Item(status='! ', treeconflict='C'),
-    'DD/D1'             : Item(status='! ', treeconflict='C'),
-    'DF/D1'             : Item(status='! ', treeconflict='C'),
-    'DDD/D1'            : Item(status='! ', treeconflict='C'),
-    'DDF/D1'            : Item(status='! ', treeconflict='C'),
-    })
-  svntest.actions.run_and_verify_unquiet_status(
-    os.path.join(sbox.wc_dir, "local_tree_del_incoming_tree_del", "local"),
-    expected_status)
 
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
