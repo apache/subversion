@@ -60,15 +60,13 @@ Candidate changes for 1.5.5:
    Votes:
      +1: cmpilato, danielsh
 
- * r34082
+ * r34082, r34096
    Fix issue #3275 by making WebDAV proxy slave servers pass through
    any GET or PROPFIND requests aimed at working resource URLs, even
    though those requests are read-only.  Why?  It does no good for the
    slave server to try to answer a read request aimed at an
    uncommitted transaction when said transaction's data lives solely
    on the master server.
-   Notes:
-     This change could really stand another set of developer eyes!
    Votes:
      +1: cmpilato
 
